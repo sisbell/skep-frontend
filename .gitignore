@@ -1,0 +1,13 @@
+# Build output
+/dist/
+/build/
+/target/
+/node_modules/
+
+# Local scratch; never committed
+/_workspace/
+
+# Editors and the OS
+/.idea/
+/.vscode/
+.DS_Store
