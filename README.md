@@ -28,8 +28,9 @@ come in later lanes.
 
 ## Where the design lives
 
-The UX designs, the wire's affordance inventory and the lane briefs
-live in the design repository, which is not published. The daemon and
+This repository is <https://github.com/sisbell/skep-frontend>. The UX
+designs, the wire's affordance inventory and the lane briefs live in
+the design repository, which is not published. The daemon and
 its wire document live at <https://github.com/sisbell/skep>; the wire
 document there (`docs/wire.md`) is what this client is built against.
 
