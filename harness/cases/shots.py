@@ -1,11 +1,13 @@
 """SHOTS — the threshold set (T5; S3's Shift+Z set as a case): a screenshot at
 each LOD threshold of `web/plane/lod.js` (the page names them in
 `window.__skep.thresholds`) and at each B1 screen this lane built — produced
-for the typography and a11y seats, not asserted beyond "written". Chrome
-composites the DOM text layer into the shot (C5 (b))."""
+for the typography and a11y seats, not asserted beyond "written", save that
+a screen whose caption claims an element asserts it in view (inside its clip
+and the viewport, by the page's `visible` oracle). Chrome composites the DOM
+text layer into the shot (C5 (b))."""
 import json
 
-from . import DOC, GHOST, WINDOW, Result
+from . import DOC, GHOST, WINDOW, XFAIL_CLIP, Result
 
 
 def run(ctx):
@@ -23,8 +25,11 @@ def run(ctx):
     r.check(len(written) == len(thresholds), 'one shot per threshold', len(written))
     # the B1 screens built
     screens = []
-    def screen(sid, what, rel):
+    def screen(sid, what, rel, claims=()):
         screens.append({'screen': sid, 'what': what, 'shot': ctx.shot(f'screens/{rel}.png')})
+        for selector, claimed, xfail in claims:
+            vis = ctx.js('window.__skep.visible(%s)' % json.dumps(selector))
+            r.check(bool(vis) and all(v['inClip'] and v['inView'] for v in vis), f'{sid}: {claimed} is in view, as the caption claims (inside its clip and the viewport)', [{'rect': v['rect'], 'clip': v['clip'], 'inClip': v['inClip'], 'inView': v['inView']} for v in vis][:3], xfail=xfail)
     ctx.leap(DOC, WINDOW[0])
     screen('B1-S1', 'arrive and read: the first edition at reading scale, the owner\'s links in place, the byline, the state line, the presence indicator', 'B1-S1-arrive-and-read')
     ctx.view_doc_px(DOC, 160)
@@ -47,7 +52,8 @@ def run(ctx):
     frac = 0.12 + 0.8 * ((WINDOW[0] - 1) / doc['extent'])
     ctx.view_doc_em(DOC, 14)
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, ctx.camera()['scale'])
-    screen('B1-S7', 'the window run: C-33\'s mark for the entitled reader (the guest\'s withheld box is the pure test\'s)', 'B1-S7-window-run')
+    screen('B1-S7', 'the window run: C-33\'s mark for the entitled reader (the guest\'s withheld box is the pure test\'s)', 'B1-S7-window-run',
+           claims=[('#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC, 'C-33\'s mark', XFAIL_CLIP)])
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(GHOST)); ctx.settle(); ctx.frames(2)
     screen('B1-S8', 'a dead reference: the ghost address faced', 'B1-S8-ghost')
     ctx.esc()

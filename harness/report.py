@@ -71,8 +71,8 @@ def main():
         ['local_trust', (h0.get('auth') or {}).get('local_trust')], ['chain_head', h0.get('chain_head')], ['writes halted', (h0.get('writes') or {}).get('halted')],
     ], ['what', 'value']))
     L.append('\n## The fence — the cases\n')
-    rows = [[name, 'PASS' if c['pass'] else 'FAIL', c.get('checks'), len(c.get('failures') or []), c.get('seconds')] for name, c in cases.items()]
-    L.append(table(rows, ['case', 'result', 'checks', 'failures', 'seconds']))
+    rows = [[name, 'PASS' if c['pass'] else 'FAIL', c.get('checks'), len(c.get('failures') or []), len(c.get('expected') or []), c.get('seconds')] for name, c in cases.items()]
+    L.append(table(rows, ['case', 'result', 'checks', 'failures', 'expected', 'seconds']))
     fails = [(n, f) for n, c in cases.items() for f in (c.get('failures') or [])]
     if fails:
         L.append('\n### Failures\n')
@@ -81,6 +81,11 @@ def main():
     errs = [(n, c.get('error')) for n, c in cases.items() if c.get('error')]
     for n, e in errs:
         L.append(f"- **{n}** threw: `{e}`")
+    expected = [(n, x) for n, c in cases.items() for x in (c.get('expected') or [])]
+    if expected:
+        L.append('\n### Expected failures — marked checks waiting on a page issue; each mark comes off the day its check passes\n')
+        for n, x in expected:
+            L.append(f"- **{n}**: {x.get('what')} — waits on: {x.get('xfail')} — `{json.dumps(x.get('detail'), default=str)[:300]}`")
     L.append(f"\nPage exceptions during the run: {len(env.get('exceptions') or [])}; first settle {env.get('first_settle_s')} s; boot `{json.dumps(env.get('boot'), default=str)[:300]}`\n")
     # the figures
     w = (cases.get('wire') or {}).get('figures') or {}
@@ -113,8 +118,8 @@ def main():
     lay = (cases.get('layout') or {}).get('figures') or {}
     if lay.get('drift'):
         L.append('## Class 4 — layout\n')
-        rows = [[k, v.get('em_px_measured'), v.get('worst_px'), (v.get('containment') or {}).get('mounted'), (v.get('containment') or {}).get('intersecting_pairs'), (v.get('containment') or {}).get('articles_larger_than_their_place')] for k, v in lay['drift'].items()]
-        L.append(table(rows, ['level', 'em px measured', 'worst drift px', 'mounted', 'intersecting', 'larger than place']))
+        rows = [[k, v.get('em_px_measured'), v.get('worst_px'), (v.get('containment') or {}).get('mounted'), (v.get('containment') or {}).get('intersecting_pairs'), len((v.get('containment') or {}).get('blocks_cut') or []), len((v.get('containment') or {}).get('corners_clipped') or []), (v.get('containment') or {}).get('worst_overflow_px')] for k, v in lay['drift'].items()]
+        L.append(table(rows, ['level', 'em px measured', 'worst drift px', 'mounted', 'intersecting', 'blocks cut', 'corners clipped', 'worst overflow px']))
         L.append(f"\nContinuous zoom: `{json.dumps(lay.get('sweep'))}`; beams: `{json.dumps(lay.get('beams'))}`.\n")
     rd = (cases.get('rendered') or {}).get('figures') or {}
     if rd:
@@ -164,7 +169,8 @@ def main():
             L.append(f'- **{n}**: {x}')
     L.append('\n## Verdict\n')
     allpass = all(c['pass'] for c in cases.values()) and not (env.get('exceptions') or [])
-    L.append(f"{'GREEN' if allpass else 'RED'} — {sum(1 for c in cases.values() if c['pass'])} of {len(cases)} cases pass; page exceptions {len(env.get('exceptions') or [])}; log_position {'unchanged' if h0.get('log_position') == h1.get('log_position') else 'MOVED'}.\n")
+    n_expected = sum(len(c.get('expected') or []) for c in cases.values())
+    L.append(f"{'GREEN' if allpass else 'RED'} — {sum(1 for c in cases.values() if c['pass'])} of {len(cases)} cases pass; expected failures {n_expected} (marked checks waiting on a page issue, listed above); page exceptions {len(env.get('exceptions') or [])}; log_position {'unchanged' if h0.get('log_position') == h1.get('log_position') else 'MOVED'}.\n")
     text = '\n'.join(L)
     with open(os.path.join(RESULTS, 'report.md'), 'w') as fh:
         fh.write(text)

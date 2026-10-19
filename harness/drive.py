@@ -284,7 +284,8 @@ def main():
             res['seconds'] = round(time.time() - t0, 2)
             with open(os.path.join(a.results, f'{name}.json'), 'w') as f:
                 json.dump(res, f, indent=2, sort_keys=True, default=str)
-            print(f"{'PASS' if res.get('pass') else 'FAIL'} {name} ({res['seconds']} s)" + ('' if res.get('pass') else ': ' + str(res.get('error') or res.get('failures'))[:400]), flush=True)
+            expected = res.get('expected') or []
+            print(f"{'PASS' if res.get('pass') else 'FAIL'} {name} ({res['seconds']} s)" + (f" · {len(expected)} expected failure{'s' if len(expected) != 1 else ''} (marked, waiting on a page issue)" if expected else '') + ('' if res.get('pass') else ': ' + str(res.get('error') or res.get('failures'))[:400]), flush=True)
             if not res.get('pass'):
                 failed.append(name)
         drv.pump_events(0.5)

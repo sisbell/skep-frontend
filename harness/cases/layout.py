@@ -1,15 +1,27 @@
 """LAYOUT — class 4 (the structure record §6.3; T3 (4); M2, M6): registration
 drift 0 px at the four zoom levels S1 used (em 9, 12, 18, 30 — the article's
 box against the camera-projected origin), containment (no two mounted
-articles intersect, none larger than its place), and every beam endpoint
-inside its anchor rect. The measuring code is the page's (`driftSample`,
-`overlapCheck`, `beamAnchors`); the thresholds are here."""
+articles intersect; every block and the corner of each lie inside the clip
+the page draws — the article's own rect is its box by construction and
+proves nothing), and every beam leaving the text at its span's own line (its
+endpoint on one of its marked words' line rects, between the words' end and
+the article's edge — foundations §2.1; S1 Q1). The measuring code is the
+page's (`driftSample`, `overlapCheck`, `beamAnchors`); the thresholds are
+here. The containment and anchor checks are marked with the page issues they
+wait on and count as expected while those stand."""
 import json
 
-from . import DOC, WINDOW, Result
+from . import DOC, WINDOW, XFAIL_ANCHOR, XFAIL_CLIP, Result
 
 LEVELS_EM = [9, 12, 18, 30]
 DRIFT_TOL_PX = 0.5
+ANCHOR_TOL_PX = 0.5
+
+
+def on_own_line(a):
+    """does the beam's endpoint lie on one of its words' line rects, between the words' end and the article's edge?"""
+    edge = a['edge'] if a['edge'] is not None else 0
+    return any(w['y'] - ANCHOR_TOL_PX <= a['y'] <= w['y'] + w['h'] + ANCHOR_TOL_PX and w['x'] + w['w'] - ANCHOR_TOL_PX <= a['x'] <= edge + ANCHOR_TOL_PX for w in a['words'])
 
 
 def run(ctx):
@@ -24,7 +36,9 @@ def run(ctx):
         worst = max((max(abs(s['dx']), abs(s['dy']), s.get('span_dx', 0), s.get('span_dy', 0)) for s in sample), default=None)
         r.check(worst is not None and worst <= DRIFT_TOL_PX, f'em {em}: registration drift {DRIFT_TOL_PX} px or less for every mounted article — its box against the projected origin, and every span\'s line against its laid-out place', sample)
         ov = ctx.js('window.__skep.overlapCheck()')
-        r.check(ov['intersecting_pairs'] == 0 and ov['articles_larger_than_their_place'] == 0, f'em {em}: containment — no intersecting articles, none larger than its place', ov)
+        r.check(ov['intersecting_pairs'] == 0, f'em {em}: containment — no two mounted articles intersect', ov['intersecting_pairs'])
+        r.check(not ov['blocks_cut'], f'em {em}: containment — every block of every mounted article lies inside its clip; none is cut at the box\'s edge', {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']}, xfail=XFAIL_CLIP)
+        r.check(not ov['corners_clipped'], f'em {em}: containment — the corner of every mounted article is unclipped', ov['corners_clipped'], xfail=XFAIL_CLIP)
         drift['em%d' % em] = {'samples': sample, 'worst_px': worst, 'containment': ov, 'em_px_measured': mine[0]['em_px'] if mine else None}
     r.figures['drift'] = drift
     # a continuous zoom: drift sampled across a sweep
@@ -45,9 +59,10 @@ def run(ctx):
     ctx.frames(3)
     anchors = ctx.js('window.__skep.beamAnchors()')
     r.check(len(anchors) >= 1, 'beams are built at stage 3', len(anchors))
-    outside = [a for a in anchors if not (a['rect']['x'] - 0.5 <= a['x'] <= a['rect']['x'] + a['rect']['w'] + 0.5 and a['rect']['y'] - 0.5 <= a['y'] <= a['rect']['y'] + a['rect']['h'] + 0.5)]
-    r.check(not outside, 'every beam endpoint lies inside its anchor rect', outside[:5])
-    r.figures['beams'] = {'count': len(anchors), 'stubs': sum(1 for a in anchors if a['stub']), 'far': sorted({a['far'] for a in anchors})[:8]}
+    r.check(all(a['words'] for a in anchors), 'every drawn beam\'s link is marked at its words in the mounted article (the oracle\'s rects exist)', [a['link'] for a in anchors if not a['words']])
+    off = [{'link': a['link'], 'pos': a['pos'], 'x': a['x'], 'y': a['y'], 'edge': a['edge'], 'words': a['words']} for a in anchors if not on_own_line(a)]
+    r.check(not off, f'every beam leaves the text at its span\'s own line: its endpoint\'s y within one of its words\' line rects and its x between the words\' end and the article\'s edge, {ANCHOR_TOL_PX} px either way', off[:4], xfail=XFAIL_ANCHOR)
+    r.figures['beams'] = {'count': len(anchors), 'stubs': sum(1 for a in anchors if a['stub']), 'far': sorted({a['far'] for a in anchors})[:8], 'on_own_line': len(anchors) - len(off), 'off_own_line': len(off)}
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
     ctx.frames(2)
     r.check(ctx.js('window.__skep.beams()') == 0, 'hidden again: no beams')

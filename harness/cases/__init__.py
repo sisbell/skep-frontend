@@ -5,9 +5,13 @@ lives here, one module per class — rendered, keys, text, layout, wire,
 frames, a11y — plus `static` (FP-15's grep and the no-write grep), `shapes`
 (the declarations' drift), `walks` (W-01 and W-05 as camera scripts with
 shots) and `shots` (the threshold set). Each module's `run(ctx)` returns a
-dict with `pass`, `checks`, `failures` and its figures; `drive.py` writes it
-to `results/<name>.json`. The harness is not the product (FP-5): nothing in
-`web/` imports any of this."""
+dict with `pass`, `checks`, `failures`, `expected` and its figures;
+`drive.py` writes it to `results/<name>.json`. A check that holds the page
+to what a named page issue still breaks is marked with that issue: it is
+counted under `expected` while it fails, and it FAILS the case the day it
+passes, so the mark comes off with the fix and never outlives it. The
+harness is not the product (FP-5): nothing in `web/` imports any of
+this."""
 import importlib
 import json
 import os
@@ -32,27 +36,45 @@ SECOND_ACCOUNT = '1.0.2'     # the seed's keyless second account
 # wire's cold-open figures before the other classes move the camera
 ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys', 'frames', 'walks', 'shots']
 
+# the page issues the marked checks wait on (issue #2's boundary note); each mark comes off the day its check passes
+XFAIL_CLIP = ("page: the article's height is pinned to its box and its overflow hidden, so the document's end is cut at the box's edge "
+              "and the corner, transformed outside the clipping article, renders nowhere (web/text/layer.js `mount`, web/style.css `.dtext`, `.corner`)")
+XFAIL_ANCHOR = ("page: a beam leaves the block holding its span, at the block's mid-height, not the span's own line "
+                "(web/beams/beams.js `anchorRects` takes the block's rects for the span's)")
+
 
 class Result:
-    """one case's outcome: every check counted, every failure named"""
+    """one case's outcome: every check counted, every failure named, every
+    marked check that still fails counted as expected"""
 
     def __init__(self):
         self.checks = 0
         self.failures = []
+        self.expected = []
         self.figures = {}
         self.notes = []
 
-    def check(self, cond, what, detail=None):
+    def check(self, cond, what, detail=None, xfail=None):
+        """count a check; `xfail` names the page issue a failing check waits on —
+        then a failure is expected, and a pass is a failure that says the mark
+        must come off"""
         self.checks += 1
-        if not cond:
-            self.failures.append({'what': what, 'detail': detail} if detail is not None else {'what': what})
+        entry = {'what': what, 'detail': detail} if detail is not None else {'what': what}
+        if xfail is not None:
+            entry['xfail'] = xfail
+            if cond:
+                self.failures.append({'what': what + ' — PASSES: its expected-failure mark must come off', 'xfail': xfail})
+            else:
+                self.expected.append(entry)
+        elif not cond:
+            self.failures.append(entry)
         return bool(cond)
 
     def note(self, text):
         self.notes.append(text)
 
     def out(self, **more):
-        d = {'pass': not self.failures, 'checks': self.checks, 'failures': self.failures, 'figures': self.figures, 'notes': self.notes}
+        d = {'pass': not self.failures, 'checks': self.checks, 'failures': self.failures, 'expected': self.expected, 'figures': self.figures, 'notes': self.notes}
         d.update(more)
         return d
 

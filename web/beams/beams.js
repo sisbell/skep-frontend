@@ -27,6 +27,7 @@ import { doc, blockAt, place } from '../model/records.js';
 /**
  * @typedef {Object} Beam
  * @property {Shown} s
+ * @property {string} near the mounted document whose span is the near anchor
  * @property {{x:number,y:number,w:number,h:number}} a the near anchor rect
  * @property {{x:number,y:number,w:number,h:number} | null} b the far anchor rect, where mounted
  * @property {{x:number,y:number} | null} target the far document's centre where not
@@ -89,12 +90,12 @@ export function build() {
       if (farRects && farRects.length) {
         const a = pickRect(near, farRects[0].x, farRects[0].y);
         const b = pickRect(farRects, a.x, a.y);
-        out.push({ s, a, b, target: null, stub: false, far });
+        out.push({ s, near: addr, a, b, target: null, stub: false, far });
       } else if (far) {
         const c = docCentre(far);
         const a = pickRect(near, c.x, c.y);
         const off = c.x < 0 || c.x > VW || c.y < 0 || c.y > VH || !LAYER.isMounted(far);
-        out.push({ s, a, b: null, target: c, stub: off, far });
+        out.push({ s, near: addr, a, b: null, target: c, stub: off, far });
       }
     }
   }
@@ -149,9 +150,9 @@ export function draw() {
   ctx.globalAlpha = 1;
 }
 
-/** the beam endpoints and their anchor rects (the gate's layout case: every endpoint inside its anchor) */
+/** the beam endpoints, each with its anchor rect, its near document and its span's position (the gate's layout case holds each endpoint to its span's own line) */
 export function anchors() {
-  return built.map((bm) => ({ link: bm.s.link.addr, x: bm.a.x + bm.a.w, y: bm.a.y + bm.a.h / 2, rect: bm.a, stub: bm.stub, far: bm.far }));
+  return built.map((bm) => ({ link: bm.s.link.addr, near: bm.near, pos: bm.s.pos, x: bm.a.x + bm.a.w, y: bm.a.y + bm.a.h / 2, rect: bm.a, stub: bm.stub, far: bm.far }));
 }
 /** the built set's size */
 export const count = () => built.length;

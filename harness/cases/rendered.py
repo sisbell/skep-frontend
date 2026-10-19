@@ -9,11 +9,15 @@ names: `doc_metadata` over each account's document numbers — its oracle for
 `places`); the window run the guest meets WITHHELD shows the oracle its box
 and width (240), never its text, and shows the entitled reader (the signed
 session) C-33's mark over the same positions; the claimant's drafts are drawn
-at mid with their corner; a ghost address answers its face."""
+at mid with their corner; a ghost address answers its face. "Shown" is
+measured, not read off the DOM: the page's `visible` oracle says whether a
+block, a mark or a corner lies inside the clip the page draws — text the DOM
+holds past a clip is shown to no one — and those checks are marked with the
+page issue they wait on."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, GHOST, SECOND_ACCOUNT, WINDOW, Result
+from . import AGENT_SPACE, DOC, GHOST, SECOND_ACCOUNT, WINDOW, XFAIL_CLIP, Result
 
 WS = re.compile(r'\s+')
 
@@ -109,6 +113,13 @@ def run(ctx):
     r.check(squash(c33) in mtext, 'C-33\'s mark stands on the window run in the article', c33)
     window_block = next((b for b in doc['blocks'] if b['pos'] <= WINDOW[0] < b['pos'] + b['width']), None)
     r.check(window_block is not None, 'a block holds the window\'s first position')
+    # what the DOM holds against what the page shows: every block inside the article's clip, and C-33's mark with them
+    blocks_vis = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"]' % DOC))
+    hidden = [{'pos': v['pos'], 'rect': v['rect'], 'clip': v['clip']} for v in blocks_vis if not v['inClip']]
+    r.check(bool(blocks_vis) and not hidden, '(ii) every block of the mounted article lies inside its clip — glyphs the DOM holds past the clip are shown to no one', {'blocks': len(blocks_vis), 'hidden': hidden[:6]}, xfail=XFAIL_CLIP)
+    marks_vis = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
+    r.check(bool(marks_vis) and all(m['inClip'] for m in marks_vis), 'C-33\'s mark on the window run lies inside the article\'s clip (shown, not merely held)', [m for m in marks_vis if not m['inClip']], xfail=XFAIL_CLIP)
+    r.figures['shown'] = {'blocks': len(blocks_vis), 'blocks_past_clip': len(hidden), 'c33_marks': len(marks_vis), 'c33_marks_past_clip': sum(1 for m in marks_vis if not m['inClip'])}
     # (iii) the mirror
     size = ctx.js('window.__skep.mirror.size()')
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
@@ -191,7 +202,9 @@ def run(ctx):
         r.check(md is not None, 'a draft of the claimant\'s mounts at reading scale', draft)
         full = ctx.js('(() => { const m = window.__skep.mountedAddrs(); const el = document.querySelector(`[data-corner="${%s}"]`); return el ? el.textContent : null; })()' % json.dumps(draft))
         r.check(full is not None and (squash(chip_on) in squash(full) or squash(chip) in squash(full)), 'the draft\'s corner carries C-28\'s chip (the flag-on form on this claimed local-trust board)', full)
-        r.figures['draft_shown'] = {'addr': draft, 'corner': full, 'depth': ctx.js('window.__skep.depthOf(%s)' % json.dumps(draft))}
+        corner_vis = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer [data-corner="%s"]' % draft))
+        r.check(bool(corner_vis) and all(c['inClip'] for c in corner_vis), 'the draft\'s corner lies inside its clip (the chip is shown, not merely held)', corner_vis, xfail=XFAIL_CLIP)
+        r.figures['draft_shown'] = {'addr': draft, 'corner': full, 'corner_in_clip': bool(corner_vis) and all(c['inClip'] for c in corner_vis), 'depth': ctx.js('window.__skep.depthOf(%s)' % json.dumps(draft))}
         dbox = ctx.js('window.__skep.boxOf(%s)' % json.dumps(draft))
         ctx.set_view(dbox['x'] + dbox['w'] / 2, dbox['y'] + dbox['h'] / 2, ctx.js('window.__skep.scaleFor(%s, "doc", 160)' % json.dumps(DOC)))
         r.check(ctx.js('window.__skep.view.lod()')['name'] in ('mid', 'mid~near'), 'the region at mid scale (a depth-1 document 160 px wide)', ctx.js('window.__skep.view.lod()'))

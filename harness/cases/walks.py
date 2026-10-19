@@ -2,17 +2,47 @@
 as camera scripts, one PNG per step into `shots/W-01/` and `shots/W-05/`,
 the design's note beside each in `report.md` (`ux/walks.md` at the design
 repo's HEAD). W-02, W-03 and W-04 are OUT (their screens are later lanes').
-Produced for the seats, asserted only as "the step ran and the shot exists";
-what each step could not have on this lane is said in its note."""
+Produced for the seats, asserted as "the step ran and the shot exists" — and
+where a step's note claims an element, that the element is in view (inside
+its clip and the viewport, by the page's `visible` oracle), so the seats are
+never shown a note the shot contradicts. The card's controls are pressed as
+a person presses them (the switch's rect read, the click dispatched at
+engine level), and the card's state is read back before the shot. What each
+step could not have on this lane is said in its note."""
 import json
 
-from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, WINDOW, Result
+from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, WINDOW, XFAIL_CLIP, Result
+
+C33_MARK = '#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC
+ORIGIN_HAIRLINE = '#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"]' % (DOC, WINDOW[2])
+SCENE_OFFER = '#domlayer .offer[data-scene="%s|%s"]' % (DOC, WINDOW[2])
 
 
-def step(ctx, r, walk, n, name, note, shot_name):
+def step(ctx, r, walk, n, name, note, shot_name, claims=()):
+    """shoot a step; each claim (selector, what, xfail) the note makes is asserted in view — inside its clip and the viewport"""
     rel = ctx.shot(f'{walk}/{n:02d}-{shot_name}.png')
     r.figures.setdefault('steps', []).append({'walk': walk, 'step': n, 'name': name, 'note': note, 'shot': rel})
     r.check(True, f'{walk} step {n} shot')
+    for selector, what, xfail in claims:
+        vis = ctx.js('window.__skep.visible(%s)' % json.dumps(selector))
+        r.check(bool(vis) and all(v['inClip'] and v['inView'] for v in vis), f'{walk} step {n}: {what} is in view, as the note claims (inside its clip and the viewport)', [{'rect': v['rect'], 'clip': v['clip'], 'inClip': v['inClip'], 'inView': v['inView']} for v in vis][:3], xfail=xfail)
+
+
+def press(ctx, r, run, what):
+    """a person's press on the links card's control named by its `data-run`: the control's rect read, the click dispatched at engine level, two frames"""
+    centre = ctx.js('(() => { const b = document.querySelector(%s); if (!b) return null; const q = b.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()' % json.dumps('#overlay [data-run="%s"]' % run))
+    r.check(centre is not None, f'the links card offers `{run}` ({what})', run)
+    if centre is not None:
+        ctx.drv.mouse(centre['x'], centre['y'])
+        ctx.frames(2)
+    return centre is not None
+
+
+def card_state(ctx):
+    """the links card's controls as rendered, beside LK's state at the first edition"""
+    return ctx.js('''(() => { const o = document.getElementById('overlay'); const sw = o.querySelector('[data-run="others"]');
+      return {offers_symbols: !!o.querySelector('[data-run="stage2"]'), offers_content: !!o.querySelector('[data-run="stage3"]'),
+              switch_checked: sw ? sw.getAttribute('aria-checked') : null, stage: window.__skep.reveal(%s).stage, others: window.__skep.reveal(%s).others, beams: window.__skep.beams()}; })()''' % (json.dumps(DOC), json.dumps(DOC)))
 
 
 def run(ctx):
@@ -42,7 +72,8 @@ def run(ctx):
     frac = 0.12 + 0.8 * ((WINDOW[0] - 1) / doc['extent'])
     scale = ctx.camera()['scale']
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, scale)
-    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width" — the guest\'s box is proven in the pure test (the daemon withholds the run from the harness\'s token-free read, width 240); THIS reader is the entitled owner and sees the run with C-33\'s mark, "visible to you; withheld for others", the sameness hairline naming its origin 1.0.1.0.1003.', 'window-run-c33')
+    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width" — the guest\'s box is proven in the pure test (the daemon withholds the run from the harness\'s token-free read, width 240); THIS reader is the entitled owner and sees the run with C-33\'s mark, "visible to you; withheld for others", the sameness hairline naming its origin 1.0.1.0.1003.', 'window-run-c33',
+         claims=[(C33_MARK, 'C-33\'s mark', XFAIL_CLIP), (ORIGIN_HAIRLINE, 'the hairline naming the origin', XFAIL_CLIP)])
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     if shown:
         ctx.js('window.__skep.go.follow(%s, %s)' % (json.dumps(DOC), json.dumps(shown[0]['link'])))
@@ -58,18 +89,28 @@ def run(ctx):
     ctx.leap(DOC, 541)
     step(ctx, r, 'W-05', 1, 'zoom for structure: reading', 'W-05 step 1: "reading = full text with span-anchored beams" — the LEAP to a named document lands at reading scale (law 6; R92 rider (a)).', 'reading')
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, ctx.camera()['scale'])
-    step(ctx, r, 'W-05', 2, 'read: the same material', 'W-05 step 2: "transcluded content visibly THE SAME material, one gesture to the source (R2) — delivered per ORIGIN, position by position." The window run\'s hairline names 1.0.1.0.1003; the mark is C-33\'s; the scene offer stands beneath.', 'same-material')
+    step(ctx, r, 'W-05', 2, 'read: the same material', 'W-05 step 2: "transcluded content visibly THE SAME material, one gesture to the source (R2) — delivered per ORIGIN, position by position." The window run\'s hairline names 1.0.1.0.1003; the mark is C-33\'s; the scene offer stands beneath.', 'same-material',
+         claims=[(C33_MARK, 'C-33\'s mark', XFAIL_CLIP), (ORIGIN_HAIRLINE, 'the hairline naming the origin', XFAIL_CLIP), (SCENE_OFFER, 'the scene offer', XFAIL_CLIP)])
     ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
     ctx.frames(2)
+    s = card_state(ctx)
+    r.check(s['stage'] == 2 and s['offers_content'] and s['switch_checked'] == 'false', 'the card opened at stage 2: it offers the content and its switch reads off', s)
     step(ctx, r, 'W-05', 3, 'ask to see the links: symbols', 'W-05 step 3: "the reveal chain hidden → symbol → content"; the card lists the owner\'s links, the lenses by owner, type and endorsement (R9), the others\' toggle OFF by default (R60). Stage 2: the symbols at their spans.', 'links-card-symbols')
-    ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(DOC))
-    ctx.frames(3)
-    step(ctx, r, 'W-05', 3, 'ask to see the links: content', 'W-05 step 3, stage 3: the beams from each citation\'s span toward its far document — here edge STUBS with the far address, since every far document is off screen or a ghost (S1 Q3).', 'links-beams')
-    ctx.js('window.__skep.links.setOthers(%s, true)' % json.dumps(DOC))
+    # the person presses "— content": the chain moves to stage 3 and the card redraws itself from LK's state before the shot
+    press(ctx, r, 'stage3', 'the chain\'s next stage, content')
     ctx.frames(2)
+    s = card_state(ctx)
+    r.check(s['stage'] == 3 and s['offers_symbols'] and not s['offers_content'] and s['beams'] >= 1, 'the press moved the chain to stage 3 and the card redrew: it now offers the symbols; the beams are built', s)
+    step(ctx, r, 'W-05', 3, 'ask to see the links: content', 'W-05 step 3, stage 3: the beams from each citation\'s span toward its far document — here edge STUBS with the far address, since every far document is off screen or a ghost (S1 Q3).', 'links-beams')
+    # the person presses the others' switch: LK's toggle and the switch's own state agree before the shot
+    press(ctx, r, 'others', 'the others\' overlay toggle')
+    s = card_state(ctx)
+    r.check(s['others'] is True and s['switch_checked'] == 'true' and s['offers_symbols'], 'the press turned others\' links on and the card redrew: the switch reads aria-checked="true", LK agrees, the stage button still offers the symbols', s)
     others = ctx.js('window.__skep.links.othersTouching(%s)' % json.dumps(DOC))
     step(ctx, r, 'W-05', 3, 'others\' links on', 'W-05 step 3: "Others\' links are overlays, OFF by default, attributed in the linker\'s color when shown (R60)." The toggle on: on this board no other party\'s link touches the first edition (%d), so the article does not change — the second account\'s draft and its links are hidden with it (PUB-1.13).' % len(others), 'others-on')
-    ctx.js('window.__skep.links.setOthers(%s, false)' % json.dumps(DOC))
+    press(ctx, r, 'others', 'the others\' overlay toggle, off again')
+    s = card_state(ctx)
+    r.check(s['others'] is False and s['switch_checked'] == 'false', 'the second press turned others\' links off again; the switch agrees', s)
     ctx.esc()
     if shown:
         ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(shown[0]['link'])))

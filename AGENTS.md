@@ -29,8 +29,10 @@ screen that needed it. Invent no wording.
 `harness/run.sh` — the checker, `node --test 'web/**/*.test.js'`, and
 the harness cases in headless Chrome against a real board. Every claim
 is a test that fails without its fix (FP-17); every figure is this
-machine's (FP-18). What the gate writes (`results/`, `shots/`) is read
-locally and never committed. The board on 8642 and the provider on
+machine's (FP-18). A check marked with the page issue it waits on
+counts as expected while it fails and fails the gate the day it passes,
+so the mark comes off with the fix. What the gate writes (`results/`,
+`shots/`) is read locally and never committed. The board on 8642 and the provider on
 8742 are the owner's: never start, stop, claim, seed or write to them,
 and read `/health.log_position` before and after a run — it must not
 move.

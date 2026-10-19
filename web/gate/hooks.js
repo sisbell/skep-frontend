@@ -2,12 +2,20 @@
 // §6.3; S-22 (a): loaded by `import()` under `?gate=` alone). ENGINE-BOUND.
 // `window.__skep`: the model's held records, the mounted articles' text, the
 // mirror's items, the camera and the focus, S1's `driftSample` and
-// `overlapCheck` (the measuring code moved into the page), the beams'
-// anchors, S3's camera paths (`runPath`) and the frame buffer, the bridge
-// client's own call log, the settle signal, the trail, the line's and the
-// overlay's text, the strings. The app installs it with its loop's frame
-// buffer. Nothing here is shipped chrome; nothing posts anywhere.
-// Carries: S1's `driftSample`, `overlapCheck`, `canvasSpanRect`/
+// `overlapCheck` (the measuring code moved into the page), the visibility
+// oracle `visible`, the beams' anchors beside their spans' own rects, S3's
+// camera paths (`runPath`) and the frame buffer, the bridge client's own call
+// log, the settle signal, the trail, the line's and the overlay's text, the
+// strings. The app installs it with its loop's frame buffer. Nothing here is
+// shipped chrome; nothing posts anywhere.
+// THE ORACLES MEASURE WHAT A PERSON MEETS, never what the page set: the
+// containment check holds an article's content to the clip the page draws,
+// `visible` says whether an element the DOM holds is shown (inside its clip
+// and the viewport), and a beam's endpoint is held to the client rects of its
+// link's marked words, read from the article apart from the beams' own set.
+// The doors that move the reveal chain redraw the links card where it stands
+// open, as the card's own acts do, so a shot after a door shows the state it
+// set. Carries: S1's `driftSample`, `overlapCheck`, `canvasSpanRect`/
 // `domSpanRects`; S3's §17 `runPath`/`summarize`/`settle` and its
 // `THRESHOLDS`; the wireframe's §15 diagnostics.
 
@@ -48,6 +56,28 @@ import { pct, r2 } from '../util.js';
  * @property {string} [phase]
  */
 
+/** @typedef {{x: number, y: number, w: number, h: number}} Rect a screen rect */
+
+/** an element's client rect */
+function rectOf(/** @type {Element} */ e) { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }
+/** is `a` inside `b`, half a pixel either way? */
+function inside(/** @type {Rect} */ a, /** @type {Rect} */ b) { return a.x >= b.x - 0.5 && a.y >= b.y - 0.5 && a.x + a.w <= b.x + b.w + 0.5 && a.y + a.h <= b.y + b.h + 0.5; }
+/** how far `r` reaches past `c`, in px (0 where it lies inside) */
+function overflowOf(/** @type {Rect} */ r, /** @type {Rect} */ c) { return Math.max(0, c.x - r.x, c.y - r.y, r.x + r.w - (c.x + c.w), r.y + r.h - (c.y + c.h)); }
+/**
+ * The nearest ancestor below the text layer that clips its overflow, or null
+ * where nothing below the layer clips. The layer itself is the viewport's
+ * clip and no part of containment.
+ */
+function clipOf(/** @type {Element} */ e) {
+  const layerEl = document.getElementById('domlayer');
+  for (let p = e.parentElement; p && p !== layerEl; p = p.parentElement) {
+    const cs = getComputedStyle(p);
+    if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') return p;
+  }
+  return null;
+}
+
 /** S3's threshold set: a shot at each LOD threshold (the seats' material) */
 export const THRESHOLDS = [
   ['far-clusters', 5, 'doc'], ['far-mid-lower', LOD_FAR_LO, 'doc'], ['far-mid-upper', LOD_FAR_HI, 'doc'], ['mid-extents', 90, 'doc'], ['mid-outline', 260, 'doc'],
@@ -87,15 +117,74 @@ export function install(deps) {
     }
     return out;
   }
-  /** containment: do mounted articles intersect or overflow their places? */
+  /**
+   * Containment: does what a mounted article holds fit the place that clips
+   * it? The article's own rect is its box by construction (the mount sets
+   * it from the box); its content is not — every block's rect and the
+   * corner's are measured against the nearest clip, and a block or a corner
+   * reaching past it is named with its overflow in px. No two mounted
+   * articles may intersect. The viewport is no part of containment: an
+   * article at em 30 is taller than the window by design.
+   */
   function overlapCheck() {
     const recs = [...LAYER.mountedSet().values()];
-    const boxes = recs.map((r) => { const b = docBox(r.d.addr); return { addr: r.d.addr, el: r.el.getBoundingClientRect(), place: { x: CAM.sx(b.x), y: CAM.sy(b.y), w: b.w * CAM.cam.scale, h: b.h * CAM.cam.scale } }; });
+    const arts = recs.map((r) => rectOf(r.el));
     let pairs = 0;
-    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) { const a = boxes[i].el, b = boxes[j].el; if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) pairs++; }
-    const over = boxes.filter((b) => b.el.height > b.place.h + 1 || b.el.width > b.place.w + 1);
-    return { mounted: recs.length, intersecting_pairs: pairs, articles_larger_than_their_place: over.length, worst_overflow_px: over.length ? r2(Math.max(...over.map((b) => b.el.height - b.place.h))) : 0 };
+    for (let i = 0; i < arts.length; i++) for (let j = i + 1; j < arts.length; j++) { const a = arts[i], b = arts[j]; if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) pairs++; }
+    /** @type {Array<{addr: string, pos: number, overflow_px: number}>} */
+    const cut = [];
+    /** @type {Array<{addr: string, overflow_px: number}>} */
+    const corners = [];
+    for (const rec of recs) {
+      for (const sp of /** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll('.sp, .withheld'))) {
+        const clip = clipOf(sp); if (!clip) continue;
+        const over = overflowOf(rectOf(sp), rectOf(clip));
+        if (over > 0.5) cut.push({ addr: rec.d.addr, pos: Number(sp.dataset.pos), overflow_px: r2(over) });
+      }
+      const corner = rec.el.querySelector('.corner');
+      if (corner) { const clip = clipOf(corner); const over = clip ? overflowOf(rectOf(corner), rectOf(clip)) : 0; if (over > 0.5) corners.push({ addr: rec.d.addr, overflow_px: r2(over) }); }
+    }
+    return { mounted: recs.length, intersecting_pairs: pairs, blocks_cut: cut, corners_clipped: corners, worst_overflow_px: r2(Math.max(0, ...cut.map((c) => c.overflow_px), ...corners.map((c) => c.overflow_px))) };
   }
+  /**
+   * The visibility oracle: every element a selector matches, with its rect,
+   * the rect of its nearest clipping ancestor below the text layer (null
+   * where nothing below the layer clips), and whether it is shown — inside
+   * that clip, and inside the viewport. Text the DOM holds past a clip is
+   * shown to no one, whatever `textContent` says.
+   * @param {string} selector
+   */
+  function visible(selector) {
+    const { VW, VH } = CAM.viewport();
+    const view = { x: 0, y: 0, w: VW, h: VH };
+    return [...document.querySelectorAll(selector)].map((e) => {
+      const el = /** @type {HTMLElement} */ (e);
+      const rect = rectOf(el);
+      const c = clipOf(el);
+      const clip = c ? rectOf(c) : null;
+      const holder = /** @type {HTMLElement | null} */ (el.closest('[data-addr], [data-corner]'));
+      const sized = rect.w > 0 && rect.h > 0;
+      return { addr: holder ? holder.dataset.addr || holder.dataset.corner || null : null, pos: el.dataset.pos != null ? Number(el.dataset.pos) : null, rect, clip, inClip: sized && (!clip || inside(rect, clip)), inView: sized && inside(rect, view), text: (el.textContent || '').slice(0, 80) };
+    });
+  }
+  /**
+   * The beam endpoints, each beside an oracle read apart from the beams' own
+   * set: the client rects of its link's marked words in the near document's
+   * mounted article (every line they occupy) and the article's right edge.
+   * A beam leaves the text at its span's own line (foundations §2.1; S1 Q1):
+   * the layout case holds each endpoint's y to one of those line rects and
+   * its x to the stretch between the words' end and the edge.
+   */
+  function beamAnchors() {
+    return BM.anchors().map((a) => {
+      const rec = LAYER.mountedSet().get(a.near);
+      const words = rec ? [...rec.el.querySelectorAll(`.lip[data-links~="${a.link}"]`)].flatMap((w) => [...w.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height }))) : [];
+      const art = rec ? rectOf(rec.el) : null;
+      return { ...a, words, edge: art ? art.x + art.w : null };
+    });
+  }
+  /** redraw the links card where it stands open at a document, as its own acts do after a change */
+  function redrawCard(/** @type {string} */ addr) { if (LINKS.isOpen(addr)) LINKS.render(); }
   /** S3's camera path: fn(u) moves the camera each frame for ms; the frames of the phase summarized */
   async function runPath(/** @type {string} */ name, /** @type {number} */ ms, /** @type {{kind: 'orbit', scale: number, ax?: number, by?: number, centre?: {x:number,y:number}} | {kind: 'sweep', from: number, to: number, centre?: {x:number,y:number}}} */ spec) {
     const centre = spec.centre || { x: CAM.cam.x, y: CAM.cam.y };
@@ -143,8 +232,8 @@ export function install(deps) {
     spanRects: (/** @type {string} */ addr, /** @type {number} */ pos) => LAYER.spanRects(addr, pos),
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
     view: { camera: () => CAM.view(), focus: () => WALK.current(), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
-    driftSample, overlapCheck,
-    beamAnchors: () => BM.anchors(),
+    driftSample, overlapCheck, visible,
+    beamAnchors,
     runPath, settle,
     frames: () => deps.frames.slice(),
     bridge: { calls: () => PORT.callLog(), adapter: () => PORT.adapterName(), stream: () => PORT.streamState() },
@@ -160,9 +249,9 @@ export function install(deps) {
       shown: (/** @type {string} */ addr) => LK.shown(addr).map((s) => ({ link: s.link.addr, end: s.end, pos: s.pos, width: s.width, far: s.far, linker: s.linker, value: s.mark.value, hue: s.mark.hue })),
       countDoc: (/** @type {string} */ a) => LK.countDoc(a), countAccount: (/** @type {string} */ a) => LK.countAccount(a), visited: (/** @type {string} */ l) => LK.visited(l),
       classify: (/** @type {string} */ l) => { const x = REC.link(l); return x ? LK.classify(x) : null; },
-      reveal: (/** @type {string} */ addr, /** @type {1 | 2 | 3} */ stage) => { LK.reveal(addr, stage); LAYER.bump(); CAM.markDirty(); },
-      setOthers: (/** @type {string} */ addr, /** @type {boolean} */ on) => { LK.setOthers(addr, on); LAYER.bump(); CAM.markDirty(); },
-      hide: (/** @type {string} */ addr) => { LK.hide(addr); LAYER.bump(); CAM.markDirty(); },
+      reveal: (/** @type {string} */ addr, /** @type {1 | 2 | 3} */ stage) => { LK.reveal(addr, stage); LAYER.bump(); CAM.markDirty(); redrawCard(addr); },
+      setOthers: (/** @type {string} */ addr, /** @type {boolean} */ on) => { LK.setOthers(addr, on); LAYER.bump(); CAM.markDirty(); redrawCard(addr); },
+      hide: (/** @type {string} */ addr) => { LK.hide(addr); LAYER.bump(); CAM.markDirty(); redrawCard(addr); },
       wholeLinks: (/** @type {string} */ a) => LK.wholeLinks(a).map((l) => l.addr),
       othersTouching: (/** @type {string} */ a) => LK.othersTouching(a).map((l) => l.addr),
     },
