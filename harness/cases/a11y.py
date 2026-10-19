@@ -3,10 +3,13 @@ one accessible rendering at span grain — its names and set sizes
 (`aria-level`, `aria-posinset`, `aria-setsize`, `aria-selected`), the live
 region announcing the focus on a keyboard act; the AX tree
 (`Accessibility.getFullAXTree`) compared where CDP answers it, else reported
-as not answered. Never a screen reader's voice — the seat's."""
+as not answered; the platform's focus carried by the mirror's rebuild to the
+current item — under the walk keys and under a LEAP's landing — with the
+panel scrolled so the focused item is a row the panel shows (D5 §4 rules 2,
+4 and 8). Never a screen reader's voice — the seat's."""
 import json
 
-from . import DOC, WINDOW, Result
+from . import DOC, FAR_LEAP, WINDOW, Result
 
 
 def run(ctx):
@@ -66,4 +69,73 @@ def run(ctx):
         # the visual text layer is hidden from the tree
         layer_texts = [n for n in nodes if not n.get('ignored') and (n.get('role') or {}).get('value') == 'StaticText' and 'skep-ux-design' in ((n.get('name') or {}).get('value') or '')]
         r.figures['ax_tree']['static_text_from_articles'] = len(layer_texts)
+    # ---- the platform's focus rides the mirror's rebuild (D5 §4 rules 2, 4, 8) ----------------------------------
+    # Every walk move rebuilds the tree. From where Tab lands — the current item, the roving stop — each arrow must
+    # leave the platform's focus on the NEW current item; the container survives a rebuild and would hide the loss.
+    def focused():
+        return ctx.js('({active: document.activeElement ? document.activeElement.id : null, sel: document.activeElement ? document.activeElement.getAttribute("aria-selected") : null, idx: window.__skep.mirror.index()})')
+
+    def shown_item(i):
+        return ctx.js('window.__skep.visible(%s)' % json.dumps('#walk-%d' % i))
+
+    def press(key, mods=()):
+        ctx.drv.key(key, mods=mods)
+        ctx.settle()
+        ctx.frames(2)
+
+    def in_window(i):
+        """the item is a row the panel shows: inside the panel's clip and the viewport, by the visibility oracle"""
+        v = shown_item(i)
+        return len(v) == 1 and v[0]['inClip'] and v[0]['inView'], v
+
+    start = ctx.js('window.__skep.mirror.index()')
+    ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
+    ctx.frames(1)
+    f = focused()
+    r.check(f['active'] == 'walk-%d' % start, 'the current item takes the platform\'s focus (the roving stop)', f)
+    # the walk's keys are the tree's own: the platform's default for an arrow — a scroll of the scroller the focus
+    # stands in, the mirror — must be prevented before the listeners return, or it runs under the page's own scroll.
+    # A listener added after the page's own sees the event as the platform does, once the page's listener has returned.
+    ctx.js('(() => { window.__gateKeydown = null; window.addEventListener("keydown", (e) => { window.__gateKeydown = {key: e.key, prevented: e.defaultPrevented}; }, {once: true}); })()')
+    for key, want in (('ArrowDown', min(size - 1, start + 1)), ('ArrowDown', min(size - 1, start + 2)), ('ArrowUp', max(0, min(size - 1, start + 2) - 1))):
+        press(key)
+        f = focused()
+        ok, v = in_window(want)
+        r.check(f['idx'] == want and f['active'] == 'walk-%d' % want and f['sel'] == 'true', '%s from the focused item: the focus stands on the new current item after the rebuild' % key, {'want': want, 'got': f})
+        r.check(ok, '%s: the focused item is a row the panel shows — inside its clip and the viewport' % key, v)
+    seen = ctx.js('window.__gateKeydown')
+    r.check(bool(seen) and seen['key'] == 'ArrowDown' and seen['prevented'] is True, 'the walk key\'s default is prevented before the listeners return (the platform never scrolls the mirror under the page)', seen)
+    # the fold: the panel scrolls within a capped height; End puts the current item at the set's end, and the panel
+    # must scroll so the item the focus outlines is a row the panel shows
+    press('End')
+    f = focused()
+    ok, v = in_window(size - 1)
+    r.check(f['idx'] == size - 1 and f['active'] == 'walk-%d' % (size - 1), 'End: the focus stands on the last item', f)
+    r.check(ok, 'End: the focused last item is a row the panel shows — the panel scrolled to it', v)
+    outline = ctx.js('(() => { const e = document.activeElement; const cs = getComputedStyle(e); return {id: e.id, outline: cs.outlineStyle, width: cs.outlineWidth}; })()')
+    r.check(outline['outline'] == 'solid', 'the focused item carries the solid outline the stylesheet draws on the mirror\'s focused item', outline)
+    r.figures['mirror_panel'] = ctx.js('(() => { const m = document.getElementById("mirror"); const li = m.querySelector("li"); const h = li ? li.getBoundingClientRect().height : null; return {client_h: m.clientHeight, scroll_h: m.scrollHeight, scroll_top_at_end: m.scrollTop, first_row_h: h, items_rendered: m.querySelectorAll("li").length}; })()')
+    press('Home')
+    f = focused()
+    ok, v = in_window(0)
+    r.check(f['idx'] == 0 and f['active'] == 'walk-0' and ok, 'Home: the focus on the first item, a row the panel shows again', {'focus': f, 'shown': v})
+    # a LEAP from the item: the box returns the focus to the item it opened from (rule 4), and the landing's rebuild
+    # carries it to the landing's item (rule 8) — never the body; the landing sits mid-set in a window of ±24 rows,
+    # well past the fold, so the panel must scroll to it
+    press('l', mods=('Meta',))
+    r.check(ctx.js('window.__skep.leap.isOpen() && document.activeElement.id === "leapq"'), 'Mod+L from the item opens the box, which takes the focus')
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(FAR_LEAP)
+    ctx.frames(2)
+    press('Enter')
+    f = focused()
+    landed = ctx.js('window.__skep.view.focus()')
+    r.check(bool(landed) and landed['addr'] == FAR_LEAP and f['active'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Enter LEAPs; the focus stands on the landing\'s item in the rebuilt tree', {'landed': landed, 'got': f})
+    ok, v = in_window(f['idx'])
+    r.check(ok, 'the landing\'s item is a row the panel shows — the panel scrolled to it on the landing', v)
+    r.figures['mirror_panel']['landing'] = {'index': f['idx'], 'size': ctx.js('window.__skep.mirror.size()'), 'scroll_top': ctx.js('document.getElementById("mirror").scrollTop')}
+    # leave the page as the case found it: the landing, the focus on no element
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
     return r.out()

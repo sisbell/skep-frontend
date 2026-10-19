@@ -12,7 +12,13 @@
 // at the scale's grain). The ARIA mirror (`role=tree`, virtualised ±24,
 // `aria-level`/`aria-posinset`/`aria-setsize`) is THE ONE ACCESSIBLE
 // RENDERING at span grain (S1 Q7; R94 at span grain — RULED); the live region
-// announces the focus on a keyboard act.
+// announces the focus on a keyboard act. The mirror is rebuilt whole on every
+// focus move; while the platform's focus stands in it, the rebuild carries
+// that focus to the current item and scrolls the panel to show it (D5 §4
+// rule 2: the tree item is the focus's accessible form; rule 4: the focus is
+// never lost, never to the top; rule 8: a landing moves the focus to its
+// element) — so the walk keys, a landing and a camera retake alike leave the
+// focus on the item a person is at.
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state).
@@ -103,9 +109,17 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
 
 const levelOf = (/** @type {Node} */ n) => (n.kind === 'board' ? 1 : n.kind === 'account' ? 2 : n.kind === 'document' ? 3 : 4);
 
-/** rebuild the mirror from state (FP-13) */
+/**
+ * Rebuild the mirror from state (FP-13). Replacing the items removes the
+ * one the platform's focus may stand on, and the platform then drops the
+ * focus to the body; so while the focus stands anywhere in the mirror — on
+ * the container or on an item — the rebuild carries it to the current item
+ * and brings that item inside the panel's window (D5 §4 rules 2, 4 and 8).
+ * With no item to carry it to, the container keeps it.
+ */
 export function render() {
   if (!mirrorEl) return;
+  const held = mirrorEl.contains(document.activeElement);
   const total = siblings.length, W = 24;
   const lo = Math.max(0, idx - W), hi = Math.min(total, idx + W);
   const lvl = total ? levelOf(siblings[0]) : 1;
@@ -116,6 +130,26 @@ export function render() {
   }
   html += '</ul>';
   mirrorEl.innerHTML = html;
+  if (!held) return;
+  const item = /** @type {HTMLElement | null} */ (mirrorEl.querySelector(`#walk-${idx}`));
+  if (!item) { mirrorEl.focus({ preventScroll: true }); return; }
+  item.focus({ preventScroll: true });
+  showInPanel(item);
+}
+
+/**
+ * Bring an item inside the panel's scroll window by the panel's own scroll
+ * alone. The item's place is measured against the panel's padding box, so
+ * the panel's position on the page and the viewport both stay where they
+ * are; an item above the window lands at its top, one below at its bottom.
+ * @param {HTMLElement} item
+ */
+function showInPanel(item) {
+  if (!mirrorEl) return;
+  const panel = mirrorEl.getBoundingClientRect(), r = item.getBoundingClientRect();
+  const top = r.top - (panel.top + mirrorEl.clientTop), bottom = top + r.height;
+  if (top < 0) mirrorEl.scrollTop += top;
+  else if (bottom > mirrorEl.clientHeight) mirrorEl.scrollTop += bottom - mirrorEl.clientHeight;
 }
 
 /** the mirror's item i's name (the gate reads it) */
@@ -127,7 +161,7 @@ export const mirrorIndex = () => idx;
 
 function announce() { if (liveEl && focus) liveEl.textContent = nameOf(focus, idx, siblings.length); }
 function moved(/** @type {boolean} */ byKey) {
-  if (byKey) { ringVisible = true; announce(); const el = mirrorEl && mirrorEl.querySelector(`#walk-${idx}`); if (el && document.activeElement === mirrorEl || (el && mirrorEl && mirrorEl.contains(document.activeElement))) /** @type {HTMLElement} */ (el).focus({ preventScroll: true }); }
+  if (byKey) { ringVisible = true; announce(); }
   for (const w of watchers) w(focus);
   CAM.markDirty();
 }

@@ -110,7 +110,10 @@ export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('
 
 /**
  * Dispatch a key: true where the page took it (the caller then prevents the
- * default). Nothing is dispatched during an IME composition.
+ * default). A branch that waits before it answers prevents the default
+ * itself, before the wait — the platform runs the default as soon as the
+ * listeners return, not when the answer arrives. Nothing is dispatched
+ * during an IME composition.
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @returns {Promise<boolean>}
@@ -158,13 +161,14 @@ export async function dispatch(e, ctx) {
   if (chord === 'Mod+Shift+P') { LINE.stripAct(); return true; }
   if (chord === 'Mod+R' || e.key === 'F5') { return true; } // K-94: the plane is live; nothing reloads
   if (ctx.where === 'overlay' || ctx.where === 'line') return false; // the overlay's or the line's own keys
-  // the walk (K-1 … K-8)
-  if (chord === '↓') { await WALK.key('down'); return true; }
-  if (chord === '↑') { await WALK.key('up'); return true; }
-  if (chord === '→') { await WALK.key('in'); return true; }
-  if (chord === '←') { if (SCENE.isOpen()) { SCENE.close(); CAM.markDirty(); return true; } await WALK.key('out'); return true; }
-  if (chord === 'Home') { await WALK.key('first'); return true; }
-  if (chord === 'End') { await WALK.key('last'); return true; }
+  // the walk (K-1 … K-8): each key waits on the camera's flight, and the platform runs a key's default — a scroll of
+  // the scroller the focus stands in, the mirror — as soon as the listeners return; so the default is prevented first
+  if (chord === '↓') { e.preventDefault(); await WALK.key('down'); return true; }
+  if (chord === '↑') { e.preventDefault(); await WALK.key('up'); return true; }
+  if (chord === '→') { e.preventDefault(); await WALK.key('in'); return true; }
+  if (chord === '←') { e.preventDefault(); if (SCENE.isOpen()) { SCENE.close(); CAM.markDirty(); return true; } await WALK.key('out'); return true; }
+  if (chord === 'Home') { e.preventDefault(); await WALK.key('first'); return true; }
+  if (chord === 'End') { e.preventDefault(); await WALK.key('last'); return true; }
   if (chord === 'PageDown' || chord === 'PageUp') { const { VH } = CAM.viewport(); CAM.panBy(0, chord === 'PageDown' ? -VH * 0.9 : VH * 0.9); CAM.markDirty(); WALK.retakeFromView(); return true; }
   if (chord === 'Enter') { await activateFocus(); return true; }
   // a printable key on the plane: swallowed, the K-9 line at the focus

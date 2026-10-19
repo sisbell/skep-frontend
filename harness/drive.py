@@ -54,6 +54,9 @@ class Driver:
             raise SystemExit('Chrome did not answer on its debugging port')
         self.call('Page.enable'); self.call('Runtime.enable'); self.call('Network.enable'); self.call('Log.enable')
         self.call('Emulation.setDeviceMetricsOverride', {'width': self.width, 'height': self.height, 'deviceScaleFactor': 1, 'mobile': False})
+        # the page is driven as the front window: the platform matches `:focus` (and so draws a focus ring) only in a
+        # focused, active frame, and a headless page is neither until told so — what a person's window always is
+        self.call('Emulation.setFocusEmulationEnabled', {'enabled': True})
         self.version = json.load(urllib.request.urlopen(f'http://127.0.0.1:{self.cdp_port}/json/version', timeout=5))
 
     def call(self, method, params=None, timeout=120):
