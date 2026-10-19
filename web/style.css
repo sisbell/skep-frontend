@@ -45,7 +45,6 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .hit { padding:3px 6px; border-radius:3px; cursor:pointer; display:flex; gap:8px; }
 .hit .a { color:var(--dim); }
 .hit.sel, .hit:hover { background:#1e2530; }
-.hit.none { color:var(--dim); cursor:default; }
 
 /* the ARIA mirror (S3 Q6; law 7) — the one accessible rendering, off the visible plane */
 #mirror { position:fixed; left:-10000px; top:0; width:520px; max-height:40vh; overflow:auto; z-index:15; }

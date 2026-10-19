@@ -6,10 +6,18 @@ region announcing the focus on a keyboard act; the AX tree
 as not answered; the platform's focus carried by the mirror's rebuild to the
 current item — under the walk keys and under a LEAP's landing — with the
 panel scrolled so the focused item is a row the panel shows (D5 §4 rules 2,
-4 and 8). Never a screen reader's voice — the seat's."""
+4 and 8); the LEAP box a combobox over its rows' listbox (R94; WAI-ARIA's
+list autocomplete with automatic selection) — the focus kept in the input,
+its active descendant the selected row once ↓ or ↑ carries the choice into
+the rows and never on the box as opened or as typed, collapsed where typed
+text matches nothing, the answer said once in the box's own status region,
+in the DOM and in the AX tree. Never a screen reader's voice — the seat's."""
 import json
+import re
 
 from . import DOC, FAR_LEAP, WINDOW, Result
+
+NO_MATCH = 'qzx no label holds this'  # text no address, share form, URL, label or address prefix answers
 
 
 def run(ctx):
@@ -57,7 +65,6 @@ def run(ctx):
     else:
         nodes = ax.get('nodes', [])
         treeitems = [n for n in nodes if (n.get('role') or {}).get('value') == 'treeitem']
-        import re
         fold = lambda s: re.sub(r'\s+', ' ', s or '').strip()  # an accessible name folds whitespace
         ax_names = [fold((n.get('name') or {}).get('value', '')) for n in treeitems]
         dom_names = [fold(i['text']) for i in items]
@@ -134,6 +141,112 @@ def run(ctx):
     ok, v = in_window(f['idx'])
     r.check(ok, 'the landing\'s item is a row the panel shows — the panel scrolled to it on the landing', v)
     r.figures['mirror_panel']['landing'] = {'index': f['idx'], 'size': ctx.js('window.__skep.mirror.size()'), 'scroll_top': ctx.js('document.getElementById("mirror").scrollTop')}
+    # ---- the LEAP box: a combobox over its rows' listbox (R94; WAI-ARIA's list autocomplete with automatic selection) ----
+    # The platform's focus stays in the input. Its active descendant names the selected row once ↓ or ↑ carries the
+    # choice into the rows — never on the box as opened, where the box itself (the current address) is what a reader
+    # meets, and never as typed. The answer and the index's state are the box's status region, written only when its
+    # words change: a live region speaks whatever is rewritten.
+    def box():
+        """the box as the platform exposes it: the input's combobox state, the rows the listbox holds (each by its index),
+        the row the active descendant names where it names one of them, the status region's words"""
+        return ctx.js('''(() => { const q = document.getElementById('leapq'), hits = document.getElementById('leaphits'), note = document.getElementById('leapnote');
+          const opts = [...hits.children], active = q.getAttribute('aria-activedescendant'), named = active ? document.getElementById(active) : null;
+          return {role: q.getAttribute('role'), autocomplete: q.getAttribute('aria-autocomplete'), controls: q.getAttribute('aria-controls'), expanded: q.getAttribute('aria-expanded'),
+                  active, active_row: named && opts.includes(named) ? Number(named.dataset.i) : null, focused: document.activeElement === q, container: document.getElementById('leap').getAttribute('role'),
+                  list: hits.getAttribute('role'), status: note.getAttribute('role'), options: opts.length, roles: [...new Set(opts.map((o) => o.getAttribute('role')))],
+                  selected: opts.filter((o) => o.getAttribute('aria-selected') === 'true').map((o) => Number(o.dataset.i)), note: note.textContent}; })()''')
+
+    def backend(selector):
+        """the backend DOM node id of the element a selector names — the AX tree's key for it"""
+        obj = ctx.drv.call('Runtime.evaluate', {'expression': 'document.querySelector(%s)' % json.dumps(selector)})['result']
+        if not obj.get('objectId'):
+            return None
+        try:
+            return ctx.drv.call('DOM.describeNode', {'objectId': obj['objectId']})['node']['backendNodeId']
+        finally:
+            ctx.drv.call('Runtime.releaseObject', {'objectId': obj['objectId']})
+
+    press('l', mods=('Meta',))
+    b = box()
+    n_levels = len(ctx.js('window.__skep.leap.rows()'))
+    r.check(b['role'] == 'combobox' and b['autocomplete'] == 'list' and b['controls'] == 'leaphits' and b['list'] == 'listbox' and b['container'] is None and b['status'] == 'status',
+            'the box\'s input is a list-autocomplete combobox controlling the rows\' listbox; the box around them holds no role; its note is a status region', b)
+    r.check(b['focused'] and b['expanded'] == 'true' and b['active'] is None, 'opened: the input holds the focus, expanded over the levels, with no active row — the box itself is what a reader meets', b)
+    r.check(n_levels > 1 and b['options'] == n_levels and b['roles'] == ['option'], 'the listbox holds one option per row', {'rows': n_levels, 'options': b['options'], 'roles': b['roles']})
+    # ↓ chooses the row after the selected one, or the first where none is selected
+    want = min(n_levels - 1, (b['selected'][0] if b['selected'] else -1) + 1)
+    press('ArrowDown')
+    b = box()
+    r.check(b['active_row'] == want and b['selected'] == [want] and b['focused'], '↓ carries the choice into the rows: the active descendant is the row chosen, the one row selected, the focus still in the input', {'want': want, 'got': b})
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime('1.0.1.0.')
+    ctx.frames(2)
+    rows = ctx.js('window.__skep.leap.rows()')
+    b = box()
+    r.check(len(rows) >= 3 and b['options'] == len(rows) and b['expanded'] == 'true', 'typed text lists its matches as options (an address prefix: three rows or more)', {'rows': len(rows), 'options': b['options'], 'expanded': b['expanded']})
+    r.check(b['active'] is None and b['selected'] == [0], 'as typed: the first match selected and no row active (automatic selection)', b)
+    press('ArrowDown')
+    press('ArrowDown')
+    b = box()
+    r.check(b['active_row'] == 2 and b['selected'] == [2] and b['focused'], '↓ ↓ after typing: the third row active and selected, the focus in the input', b)
+    ax = ctx.drv.ax_tree()
+    if 'error' in ax:
+        r.figures['leap_ax'] = {'answered': False, 'error': ax['error']}
+        r.note('the LEAP box: Accessibility.getFullAXTree did not answer: ' + ax['error'])
+    else:
+        nodes = ax.get('nodes', [])
+        by_dom = {n['backendDOMNodeId']: n for n in nodes if 'backendDOMNodeId' in n}
+        by_ax = {n['nodeId']: n for n in nodes}
+        role = lambda n: ((n or {}).get('role') or {}).get('value')
+        name = lambda n: ((n or {}).get('name') or {}).get('value')
+        props = lambda n: {p['name']: p['value'] for p in (n or {}).get('properties', [])}
+        related = lambda v: [x.get('backendDOMNodeId') for x in (v or {}).get('relatedNodes', [])]
+        squash = lambda s: re.sub(r'\s+', '', s or '')  # an option's name spaces its flex items; its text does not
+        third = '#leaphits > [data-i="2"]'
+        q_id, list_id, row_id = backend('#leapq'), backend('#leaphits'), backend(third)
+        cb, lb, opt = by_dom.get(q_id), by_dom.get(list_id), by_dom.get(row_id)
+        cp = props(cb)
+        label = ctx.js('document.getElementById("leapq").getAttribute("aria-label")')
+        options = [by_ax[c] for c in (lb or {}).get('childIds', []) if c in by_ax and role(by_ax[c]) == 'option']
+        row_text = ctx.js('document.querySelector(%s).textContent' % json.dumps(third))
+        r.check(role(cb) == 'combobox' and name(cb) == label, 'the AX tree: the input is a combobox named by its label', {'role': role(cb), 'name': name(cb)})
+        r.check((cp.get('expanded') or {}).get('value') is True and (cp.get('autocomplete') or {}).get('value') == 'list' and list_id in related(cp.get('controls')),
+                'the AX tree: the combobox is expanded, autocompletes a list and controls the listbox', {k: cp.get(k) for k in ('expanded', 'autocomplete', 'controls')})
+        r.check(role(lb) == 'listbox' and len(options) == len(rows), 'the AX tree: the listbox holds one option per row', {'role': role(lb), 'options': len(options), 'rows': len(rows)})
+        r.check(related(cp.get('activedescendant')) == [row_id] and role(opt) == 'option' and (props(opt).get('selected') or {}).get('value') is True and squash(name(opt)) == squash(row_text),
+                'the AX tree: the combobox\'s active descendant is the selected third option, named by its row\'s text', {'active': cp.get('activedescendant'), 'role': role(opt), 'selected': props(opt).get('selected'), 'name': name(opt), 'text': row_text})
+        r.figures['leap_ax'] = {'answered': True, 'combobox': {'role': role(cb), 'name': name(cb)}, 'listbox_options': len(options), 'active_option': name(opt)}
+    target = rows[2]['addr'] if len(rows) > 2 else None
+    press('Enter')
+    landed = ctx.js('window.__skep.view.focus()')
+    b = box()
+    r.check(not ctx.js('window.__skep.leap.isOpen()') and bool(landed) and landed['addr'] == target, 'Enter goes to the active row', {'target': target, 'landed': landed})
+    r.check(b['expanded'] == 'false' and b['active'] is None, 'closed: the combobox is collapsed and names no active row', b)
+    # the answer: text that matches nothing empties the listbox, collapses the combobox, and is said once, in the
+    # status region that stood before the text was typed
+    press('l', mods=('Meta',))
+    ctx.js('(() => { window.__gateNote = document.getElementById("leapnote"); document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(NO_MATCH)
+    ctx.frames(2)
+    answer = ctx.js('(async () => (await import("./strings.js")).t("F.leap.none"))()')
+    unmatched = ctx.js('window.__skep.leap.rows()')
+    b = box()
+    same = ctx.js('document.getElementById("leapnote") === window.__gateNote')
+    r.check(unmatched == [], 'the typed text matches nothing (what the answer\'s checks stand on)', unmatched[:2])
+    r.check(b['options'] == 0 and b['expanded'] == 'false', 'matching nothing: the listbox holds no option and the combobox is collapsed', b)
+    r.check(same and answer in (b['note'] or ''), 'the answer stands in the status region that stood before the text was typed', {'same_element': same, 'note': b['note'], 'answer': answer})
+    ctx.js('(() => { window.__gateNoteWrites = 0; window.__gateNoteObs = new MutationObserver((ms) => { window.__gateNoteWrites += ms.length; }); window.__gateNoteObs.observe(document.getElementById("leapnote"), {childList: true, subtree: true, characterData: true, attributes: true}); })()')
+    press('ArrowDown')
+    b = box()
+    r.check(b['active'] is None, '↓ over no rows names no active descendant', b)
+    press('ArrowUp')
+    ctx.drv.ime('q')
+    ctx.frames(2)
+    still = ctx.js('window.__skep.leap.rows()')
+    writes = ctx.js('(() => { window.__gateNoteObs.disconnect(); return window.__gateNoteWrites; })()')
+    r.check(still == [] and writes == 0, 'the answer is said once: ↓, ↑ and a further keystroke that still matches nothing leave the status region unwritten', {'writes': writes, 'rows': len(still)})
+    press('Escape')
+    r.check(not ctx.js('window.__skep.leap.isOpen()'), 'Esc closes the box')
     # leave the page as the case found it: the landing, the focus on no element
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')

@@ -20,10 +20,10 @@
 
 <div id="line" role="toolbar" aria-label="the one line"></div>
 
-<div id="leap" class="panel" role="listbox" aria-label="LEAP">
-  <input id="leapq" autocomplete="off" spellcheck="false" aria-label="LEAP — an address, or a document's first line">
-  <div id="leapnote"></div>
-  <div id="leaphits"></div>
+<div id="leap" class="panel">
+  <input id="leapq" role="combobox" aria-autocomplete="list" aria-controls="leaphits" aria-expanded="false" autocomplete="off" spellcheck="false" aria-label="LEAP — an address, or a document's first line">
+  <div id="leapnote" role="status"></div>
+  <div id="leaphits" role="listbox" aria-label="LEAP"></div>
 </div>
 
 <div id="overlay" role="dialog" aria-live="polite"></div>

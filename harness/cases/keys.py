@@ -1,7 +1,8 @@
 """KEYS — class 2 (the structure record §6.3; T3 (2); M7): every D5 chord the
 lane built, dispatched at engine level (`Input.dispatchKeyEvent`, Meta as Mod
 on this Mac), then the camera, the focus and the one line read back; the IME
-guard; a bare key does NOTHING but show the K-9 line; K-8's select and
+guard, on the plane and in the LEAP box; a bare key does NOTHING but show the
+K-9 line; K-8's select and
 extend by span; the selection's one continuous gesture (R11) — a pointer drag
 over a phrase of a shown paragraph selects that phrase's byte span, never its
 block: the acts ask the wire over those bytes, the copy names them, and the
@@ -53,6 +54,28 @@ def run(ctx):
     ctx.frames(2)
     s = state(ctx)
     r.check(same_view(base, s) and s['overlay'] is None and not s['leap'], 'an IME commit on the plane changes nothing')
+    # ---- the IME guard in the LEAP box: Enter, Esc and the arrows are the IME's until it commits (D5 §0) ---------
+    chord(ctx, 'l', mods=('Meta',))
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime('1.0.1.0.')
+    ctx.frames(2)
+
+    def box():
+        return ctx.js('({open: window.__skep.leap.isOpen(), value: document.getElementById("leapq").value, selected: window.__skep.leap.rows().length ? [...document.querySelectorAll("#leaphits [aria-selected=true]")].map((o) => o.dataset.i) : null, trail: window.__skep.trail().cursor})')
+    before = box()
+    # what the page's listeners are handed, read ahead of them all: each composition key must arrive as one (keyCode 229)
+    ctx.js('(() => { window.__gateKeys = []; window.__gateKeyRec = (e) => window.__gateKeys.push({key: e.key, keyCode: e.keyCode}); window.addEventListener("keydown", window.__gateKeyRec, true); })()')
+    for key in ('ArrowDown', 'Enter', 'Escape'):
+        ctx.drv.call('Input.dispatchKeyEvent', {'type': 'rawKeyDown', 'key': key, 'code': key, 'windowsVirtualKeyCode': 229})
+        ctx.drv.call('Input.dispatchKeyEvent', {'type': 'keyUp', 'key': key, 'code': key, 'windowsVirtualKeyCode': 229})
+        ctx.settle()
+        ctx.frames(2)
+    seen = ctx.js('(() => { window.removeEventListener("keydown", window.__gateKeyRec, true); return window.__gateKeys; })()')
+    after = box()
+    r.check(seen == [{'key': k, 'keyCode': 229} for k in ('ArrowDown', 'Enter', 'Escape')], 'the box was handed ↓, Enter and Esc as composition keys (keyCode 229)', seen)
+    r.check(before['open'] and before['selected'] and after == before, 'a composition\'s ↓, Enter and Esc in the LEAP box act on nothing: the box open, its text and selected row kept, no LEAP', {'before': before, 'after': after})
+    chord(ctx, 'Escape')
+    r.check(not state(ctx)['leap'], 'Esc outside a composition closes the box')
     # ---- the LEAP box: Mod+L opens, Esc closes; Mod+K opens; typed address + Enter goes ----------
     chord(ctx, 'l', mods=('Meta',))
     r.check(state(ctx)['leap'], 'Mod+L opens the LEAP box')
@@ -258,6 +281,6 @@ def run(ctx):
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', 'Mod+L', 'Esc', 'Mod+K', 'Enter', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+C']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+K', 'Enter', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+C']
     ctx.leap(DOC, WINDOW[0])
     return r.out()
