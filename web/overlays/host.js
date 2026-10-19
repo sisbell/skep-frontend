@@ -19,7 +19,7 @@ import { docBox } from '../plane/projection.js';
  * @property {{x: number, y: number}} [world] a world point (follows the camera)
  * @property {HTMLElement} [el] an element (follows it while connected)
  * @property {{x: number, y: number}} [screen] a screen point
- * @property {{addr: string, pos: number}} [span] a block of a mounted article (its first line's rect)
+ * @property {{addr: string, pos: number, width?: number}} [span] a span of a mounted article — a block by its first position, or the bytes named by a width (its first line's rect)
  */
 
 /**
@@ -28,7 +28,7 @@ import { docBox } from '../plane/projection.js';
  * @property {Anchor | null} anchor
  * @property {string} html
  * @property {Record<string, (el: HTMLElement) => void>} [acts] handlers by `data-run` name
- * @property {() => void} [onDismiss]
+ * @property {(replaced: boolean) => void} [onDismiss] its end: `replaced` where the next act's overlay took its place, so what stands behind it (the selection) stands on; false where it was dismissed
  * @property {boolean} [takeFocus] opened by a keyboard act: focus its first control
  * @property {string} [id] a name the gate reads
  */
@@ -75,7 +75,7 @@ export { currentState as current };
  */
 export function show(o) {
   if (!el) return;
-  if (current && current !== o && current.id !== o.id) { /* a replacement: the previous overlay's end runs */ const prev = current; current = null; if (prev.onDismiss) prev.onDismiss(); }
+  if (current && current !== o && current.id !== o.id) { /* a replacement: the previous overlay's end runs, told so */ const prev = current; current = null; if (prev.onDismiss) prev.onDismiss(true); }
   current = o;
   el.className = 'on ' + o.kind;
   el.setAttribute('data-id', o.id || o.kind);
@@ -97,7 +97,7 @@ export function place() {
   let x = 20, y = 60;
   if (a) {
     if (a.span) {
-      const rs = LAYER.spanRects(a.span.addr, a.span.pos);
+      const rs = LAYER.spanRects(a.span.addr, a.span.pos, a.span.width ?? null);
       if (rs) { x = rs[0].x; y = rs[0].y + rs[0].h + 4; }
       else { const b = docBox(a.span.addr); x = sx(b.x + b.w); y = sy(b.y); }
     } else if (a.world) { x = sx(a.world.x); y = sy(a.world.y); }
@@ -115,7 +115,7 @@ export function dismiss() {
   const o = current;
   current = null;
   el.className = ''; el.innerHTML = ''; el.removeAttribute('data-id');
-  if (o.onDismiss) o.onDismiss();
+  if (o.onDismiss) o.onDismiss(false);
   if (o.takeFocus && returnTo && /** @type {HTMLElement} */ (returnTo).focus) { /** @type {HTMLElement} */ (returnTo).focus({ preventScroll: true }); }
   returnTo = null;
   markDirty();

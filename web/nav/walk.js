@@ -151,8 +151,8 @@ async function flyToFocus() {
 }
 
 /**
- * A walk key: ↓ ↑ siblings, → in, ← out, Home/End first/last, Enter acts,
- * Shift+↓ selects by span (the selection's owner is told).
+ * A walk key: ↓ ↑ siblings, → in, ← out, Home/End first/last, Enter acts;
+ * Shift+↓ / Shift+↑ select by span (K-8, the selection's owner's).
  * @param {'down' | 'up' | 'in' | 'out' | 'first' | 'last'} k
  * @returns {Promise<boolean>}
  */

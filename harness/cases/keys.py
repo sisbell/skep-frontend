@@ -1,8 +1,12 @@
 """KEYS — class 2 (the structure record §6.3; T3 (2); M7): every D5 chord the
 lane built, dispatched at engine level (`Input.dispatchKeyEvent`, Meta as Mod
 on this Mac), then the camera, the focus and the one line read back; the IME
-guard; a bare key does NOTHING but show the K-9 line. Each step leaves the
-page as it found it."""
+guard; a bare key does NOTHING but show the K-9 line; K-8's select and
+extend by span; the selection's one continuous gesture (R11) — a pointer drag
+over a phrase of a shown paragraph selects that phrase's byte span, never its
+block: the acts ask the wire over those bytes, the copy names them, and the
+platform's highlight survives the remount the links card causes. Each step
+leaves the page as it found it."""
 import json
 
 from . import DOC, WINDOW, Result
@@ -116,9 +120,23 @@ def run(ctx):
     r.check(ctx.js('window.__skep.mirror.index()') == size - 1, 'End goes to the last sibling')
     chord(ctx, 'Home')
     r.check(ctx.js('window.__skep.mirror.index()') == 0, 'Home goes to the first')
+    # K-8: the first press selects the focused span whole, each further one extends by a span in the direction pressed
+    blocks = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))
+    chord(ctx, 'ArrowDown'); chord(ctx, 'ArrowDown')
+    s = state(ctx)
+    focused = next((b for b in blocks if s['focus'] and b['pos'] == s['focus']['pos']), None)
     chord(ctx, 'ArrowDown', mods=('Shift',))
     s = state(ctx)
     r.check(s['sel'] and s['sel']['addr'] == DOC and s['overlay'] == 'card', 'Shift+↓ selects the focused span; its acts appear', {'sel': s['sel'], 'overlay': s['overlay']})
+    r.check(focused and s['sel'] and s['sel']['pos'] == focused['pos'] and s['sel']['width'] == focused['width'], 'the first press selects the focused block whole (K-8)', {'sel': s['sel'], 'focused': focused})
+    i = blocks.index(focused) if focused in blocks else -1
+    above, below = (blocks[i - 1] if i > 0 else None), (blocks[i + 1] if 0 <= i < len(blocks) - 1 else None)
+    chord(ctx, 'ArrowUp', mods=('Shift',))
+    s2 = state(ctx)['sel']
+    r.check(above and focused and s2 and s2['pos'] == above['pos'] and s2['pos'] + s2['width'] == focused['pos'] + focused['width'], 'Shift+↑ extends the selection by the span above (K-8)', {'sel': s2, 'above': above})
+    chord(ctx, 'ArrowDown', mods=('Shift',))
+    s3 = state(ctx)['sel']
+    r.check(above and below and s3 and s3['pos'] == above['pos'] and s3['pos'] + s3['width'] == below['pos'] + below['width'], 'Shift+↓ extends it by the span below (K-8)', {'sel': s3, 'below': below})
     # the selection's read acts (K-47 … K-52)
     chord(ctx, 'L', mods=('Meta', 'Shift'))
     s = state(ctx)
@@ -154,6 +172,62 @@ def run(ctx):
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
     r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc clears the overlay, then the selection (one order)')
+    # ---- the drag: the selection IS the text it crosses (R11; foundations §2.4) ----------------------------
+    # a phrase of a paragraph the page SHOWS — inside the article's clip and the viewport, and below the one line,
+    # which stands over the plane's top (the document's tail past the clip is shown to no one and takes no pointer) —
+    # thirty characters in from the paragraph's tenth
+    ctx.leap(DOC, WINDOW[0])
+    shown_blocks = {v['pos']: v for v in ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"]' % DOC)) if v['inClip'] and v['inView']}
+    vp = ctx.js('window.__skep.view.viewport()')
+    line_bottom = ctx.js('document.getElementById("line").getBoundingClientRect().bottom')
+    target, p0, p1, rects = None, 0, 0, None
+    for b in blocks:
+        if b['kind'] != 'para' or b['pos'] not in shown_blocks or len(b['text']) < 60 or b['text'].startswith('#'):
+            continue
+        q0 = b['pos'] + len(b['text'][:10].encode('utf8'))
+        q1 = b['pos'] + len(b['text'][:40].encode('utf8'))
+        qs = ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(DOC), q0, q1 - q0))
+        if qs and all(line_bottom + 2 <= q['y'] and q['y'] + q['h'] <= vp['VH'] and 0 <= q['x'] and q['x'] + q['w'] <= vp['VW'] for q in qs):
+            target, p0, p1, rects = b, q0, q1, qs
+            break
+    r.check(target is not None, 'a paragraph of the first edition is shown at the landing with a phrase clear of the one line (inside its clip and the viewport)', {'shown': sorted(shown_blocks), 'line_bottom': line_bottom})
+    sel = None
+    if rects:
+        first, last = rects[0], rects[-1]
+        ctx.drv.drag(first['x'] + 0.5, first['y'] + first['h'] / 2, last['x'] + last['w'] - 0.5, last['y'] + last['h'] / 2)
+        ctx.frames(3)
+        s = state(ctx)
+        sel = s['sel']
+        inside = bool(sel) and sel['addr'] == DOC and abs(sel['pos'] - p0) <= 3 and abs(sel['pos'] + sel['width'] - p1) <= 3
+        r.check(inside and sel['width'] < target['width'], 'a drag over a phrase selects that phrase\'s byte span — never the whole block', {'sel': sel, 'phrase': (p0, p1), 'block': (target['pos'], target['width'])})
+        r.check(s['overlay'] == 'card' and ctx.js('window.__skep.overlay().id') == 'selection', 'the selection\'s acts appear at the dragged span', ctx.js('window.__skep.overlay().id'))
+        plat = ctx.js('window.__skep.platformSelection()')
+        r.check(not plat['collapsed'] and plat['span'] == sel, 'the platform\'s selection and the page\'s name the same bytes', plat)
+        # the copy: the passage's board and address beside the plain text, never in it (§2.4)
+        copied = ctx.js('window.__skep.copy()')
+        flavor = json.loads((copied.get('data') or {}).get('application/x-skep-passage') or 'null')
+        origin = ctx.js('window.__skep.model.board().origin')
+        r.check(bool(flavor) and bool(sel) and flavor['board'] == origin and flavor['addr'] == DOC and flavor['pos'] == sel['pos'] and flavor['width'] == sel['width'], 'the copy\'s skep flavor names the board, the document and the dragged span, width and all', flavor)
+        own = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), sel['pos'], sel['pos'] + sel['width'])) if sel else None
+        plain = (copied.get('data') or {}).get('text/plain')
+        r.check(plain is not None and plain == own and '≡' not in plain and '⟡' not in plain, 'the copy\'s plain text is the document\'s own bytes over the span — no label or symbol of the page among them', {'plain': (plain or '')[:80], 'own': (own or '')[:80]})
+        # who wrote this? asks over the dragged bytes: the `show_origin` frame on the wire carries the phrase's span, not its block's
+        n_calls = len(ctx.js('window.__skep.bridge.calls()'))
+        chord(ctx, 'O', mods=('Meta', 'Shift'))
+        answer = ctx.js('window.__skep.overlay().text') or ''
+        asked = [json.loads(c['frame']) for c in ctx.js('window.__skep.bridge.calls()')[n_calls:] if c.get('op') == 'show_origin']
+        spans = [(int(f['span']['start'].split('.')[-1]), int(f['span']['width'].split('.')[-1])) for f in asked]
+        r.check(state(ctx)['overlay'] == 'card' and 'written by' in answer and bool(sel) and spans == [(sel['pos'], sel['width'])], 'Mod+Shift+O asks show_origin over the dragged span exactly — the phrase\'s bytes, not its block\'s', {'asked': spans, 'sel': sel, 'answer': answer[:120]})
+        chord(ctx, 'Escape')
+        r.check(state(ctx)['sel'] == sel and state(ctx)['overlay'] is None, 'Esc dismisses the answer; the selection it was asked over stands', state(ctx)['sel'])
+        # the selection survives a remount: the links card bumps every mounted article
+        chord(ctx, 'L', mods=('Meta', 'Shift'))
+        plat = ctx.js('window.__skep.platformSelection()')
+        r.check(ctx.js('window.__skep.overlay().id') == 'links:' + DOC and not plat['collapsed'] and plat['span'] == sel, 'the links card opened (the article remounted) and the platform\'s highlight still stands over the span', plat)
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+        r.check(state(ctx)['sel'] is None and ctx.js('window.__skep.platformSelection()')['collapsed'], 'Esc clears the card, then the selection — the platform\'s highlight with it')
+    r.figures['drag'] = {'phrase': (p0, p1), 'selected': sel, 'block': target and {'pos': target['pos'], 'width': target['width']}}
     # ---- zoom (K-11) and paging (K-6) ----------------------------------------------------------------------
     c0 = state(ctx)['cam']
     chord(ctx, '=', mods=('Meta',))
@@ -184,6 +258,6 @@ def run(ctx):
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', 'Mod+L', 'Esc', 'Mod+K', 'Enter', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Mod+Shift+L', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+C']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', 'Mod+L', 'Esc', 'Mod+K', 'Enter', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+C']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

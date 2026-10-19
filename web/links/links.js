@@ -214,9 +214,9 @@ export function shown(addr) {
   return out;
 }
 
-/** the links drawn at a block (what a click there lists; the selection's slots count these alone) */
-export function shownAt(/** @type {string} */ addr, /** @type {Block} */ block) {
-  return shown(addr).filter((s) => s.pos < block.pos + block.width && block.pos < s.pos + s.width);
+/** the links drawn at a span — a block's, or the selection's bytes (what a click there lists; the selection's slots count these alone) */
+export function shownAt(/** @type {string} */ addr, /** @type {{pos: number, width: number}} */ span) {
+  return shown(addr).filter((s) => s.pos < span.pos + span.width && span.pos < s.pos + s.width);
 }
 
 /** the symbols: stage 2 and above — the shown set at its spans */

@@ -181,6 +181,14 @@ class Driver:
             self.call('Input.dispatchMouseEvent', {'type': 'mousePressed', 'x': x, 'y': y, 'button': 'left', 'clickCount': 1})
             self.call('Input.dispatchMouseEvent', {'type': 'mouseReleased', 'x': x, 'y': y, 'button': 'left', 'clickCount': 1})
 
+    def drag(self, x0, y0, x1, y1, steps=8):
+        """a pointer drag with the left button held: pressed at the start, moved in steps, released at the end — over the text layer the platform selects what it crosses"""
+        self.call('Input.dispatchMouseEvent', {'type': 'mouseMoved', 'x': x0, 'y': y0})
+        self.call('Input.dispatchMouseEvent', {'type': 'mousePressed', 'x': x0, 'y': y0, 'button': 'left', 'buttons': 1, 'clickCount': 1})
+        for i in range(1, steps + 1):
+            self.call('Input.dispatchMouseEvent', {'type': 'mouseMoved', 'x': x0 + (x1 - x0) * i / steps, 'y': y0 + (y1 - y0) * i / steps, 'button': 'left', 'buttons': 1})
+        self.call('Input.dispatchMouseEvent', {'type': 'mouseReleased', 'x': x1, 'y': y1, 'button': 'left', 'buttons': 0, 'clickCount': 1})
+
     def wheel(self, x, y, dx=0, dy=0, mods=()):
         self.call('Input.dispatchMouseEvent', {'type': 'mouseWheel', 'x': x, 'y': y, 'deltaX': dx, 'deltaY': dy, 'modifiers': sum(self.MODS[m] for m in mods)})
 

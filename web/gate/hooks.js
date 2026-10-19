@@ -6,8 +6,10 @@
 // oracle `visible`, the beams' anchors beside their spans' own rects, S3's
 // camera paths (`runPath`) and the frame buffer, the bridge client's own call
 // log, the settle signal, the trail, the line's and the overlay's text, the
-// strings. The app installs it with its loop's frame buffer. Nothing here is
-// shipped chrome; nothing posts anywhere.
+// selection's span beside the platform's own, the copy door (the copy event
+// run against a stub clipboard, its flavors read back), the strings. The app
+// installs it with its loop's frame buffer. Nothing here is shipped chrome;
+// nothing posts anywhere.
 // THE ORACLES MEASURE WHAT A PERSON MEETS, never what the page set: the
 // containment check holds an article's content to the clip the page draws,
 // `visible` says whether an element the DOM holds is shown (inside its clip
@@ -229,7 +231,7 @@ export function install(deps) {
     },
     mounted: (/** @type {string} */ addr) => { const rec = LAYER.mountedSet().get(addr); if (!rec) return null; const r = rec.el.getBoundingClientRect(); return { text: LAYER.mountedText(addr), rect: { x: r.left, y: r.top, w: r.width, h: r.height }, fs: rec.fs, lay: rec.lay }; },
     mountedAddrs: () => LAYER.mountedAddrs(),
-    spanRects: (/** @type {string} */ addr, /** @type {number} */ pos) => LAYER.spanRects(addr, pos),
+    spanRects: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => LAYER.spanRects(addr, pos, width),
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
     view: { camera: () => CAM.view(), focus: () => WALK.current(), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
     driftSample, overlapCheck, visible,
@@ -244,6 +246,16 @@ export function install(deps) {
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay() }),
     overlay: () => ({ id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text() }),
     selection: () => SEL.selected(),
+    /** the platform's own selection: whether it is collapsed, and the span it covers in a mounted article (null outside one) */
+    platformSelection: () => { const s = window.getSelection(); return { collapsed: !s || s.rangeCount === 0 || s.isCollapsed, span: LAYER.spanOfSelection() }; },
+    /** the copy door: the copy event run against a stub clipboard; the flavors set, by name */
+    copy: () => {
+      /** @type {Record<string, string>} */
+      const data = {};
+      const b = REC.board();
+      const span = LAYER.onCopy({ clipboardData: { setData: (/** @type {string} */ k, /** @type {string} */ v) => { data[k] = v; } }, preventDefault() {} }, b ? b.origin : '');
+      return { span, data };
+    },
     reveal: (/** @type {string} */ addr) => { const r = LK.state(addr); const o = r.lens.owners, ty = r.lens.types; return { stage: r.stage, others: r.others, lens: { owners: o ? [...o] : null, types: ty ? [...ty] : null, endorsed: r.lens.endorsed } }; },
     links: {
       shown: (/** @type {string} */ addr) => LK.shown(addr).map((s) => ({ link: s.link.addr, end: s.end, pos: s.pos, width: s.width, far: s.far, linker: s.linker, value: s.mark.value, hue: s.mark.hue })),
@@ -271,7 +283,7 @@ export function install(deps) {
       trailList: () => { TRAILLIST.open(false); return true; },
     },
     scene: { open: (/** @type {string} */ a, /** @type {string} */ b) => SCENE.open(a, b), close: () => SCENE.close(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair() },
-    select: (/** @type {string} */ addr, /** @type {number} */ pos) => SEL.select(addr, pos),
+    select: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => SEL.select(addr, pos, width),
     strings: { pinned: () => pinned(), lacking: () => lacking() },
     thresholds: THRESHOLDS,
     /** the scale at which a document's em is `em` px, or its box `docPx` px */

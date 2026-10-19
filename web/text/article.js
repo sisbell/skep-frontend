@@ -3,7 +3,9 @@
 // function of values (FP-8); no DOM, no state.
 // The head (the address, the state line, the byline — never a name alone,
 // R44 — the presence indicator with its ⟡); the blocks with their marks —
-// the selection, the focus, the owner's and the person's links in place (the
+// the selection (a byte span: every block it touches is marked, the
+// platform's highlight showing the bytes themselves), the focus (a block),
+// the owner's and the person's links in place (the
 // marks LK decided, hue the linker's), the transcluded runs' sameness
 // boundary with the origin's label (the hairline, whole at the first run of
 // that origin, compact after), the entitled reader's mark C-33 on a
@@ -25,15 +27,17 @@
 import { esc, fingerprintCue, sliceBytes, byteLength } from '../util.js';
 import { t } from '../strings.js';
 import { memberOf, documentOf } from '../model/address.js';
+import { touches } from './span.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
 /** @typedef {import('../links/links.js').Shown} Shown */
+/** @typedef {import('./span.js').Span} Span */
 
 /**
  * @typedef {Object} ArticleView — the view state the article renders, handed in as values
- * @property {{addr: string, pos: number} | null} selected
- * @property {{addr: string, pos: number} | null} focus
+ * @property {Span | null} selected the selected span (O-SELECTION's): the blocks it touches are marked
+ * @property {{addr: string, pos: number} | null} focus the focused block (N-WALK's), by its first position
  * @property {Shown[]} marks the links to mark in place (LK.shown)
  * @property {Shown[]} symbols the symbols at their spans (LK.symbols)
  * @property {(block: Block) => {n: number, social: boolean}} countAt the others' count per block (LK.countAt)
@@ -174,8 +178,8 @@ function blockTextHTML(b, d, v, labelled) {
 }
 
 /**
- * The article: the head, the blocks (each a span the walk, the mirror and
- * the selection key by its first position), the corner.
+ * The article: the head, the blocks (each a span the walk and the mirror
+ * key by its first position, and a click selects whole), the corner.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -201,7 +205,7 @@ export function articleHTML(d, v, ownerAccount) {
   const labelled = new Set();
   let run = '';
   for (const b of d.blocks) {
-    const sel = v.selected && v.selected.addr === d.addr && v.selected.pos === b.pos;
+    const sel = v.selected && v.selected.addr === d.addr && touches(b, v.selected);
     const foc = v.focus && v.focus.addr === d.addr && v.focus.pos === b.pos;
     const cls = ['sp', 'blk-' + b.kind];
     if (sel) cls.push('sel');

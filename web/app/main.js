@@ -136,7 +136,7 @@ async function boot() {
   window.addEventListener('keydown', async (e) => {
     const where = whereIs(e.target);
     if (where === 'scene' && SCENE.isOpen() && SCENE.key(KEYS.chordOf(e))) { e.preventDefault(); return; }
-    if (where === 'overlay' && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { const items = /** @type {HTMLElement[]} */ ([...el('overlay').querySelectorAll('button, [tabindex="0"]')]); const i = items.indexOf(/** @type {HTMLElement} */ (document.activeElement)); const n = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) n.focus(); e.preventDefault(); return; }
+    if (where === 'overlay' && !e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { const items = /** @type {HTMLElement[]} */ ([...el('overlay').querySelectorAll('button, [tabindex="0"]')]); const i = items.indexOf(/** @type {HTMLElement} */ (document.activeElement)); const n = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) n.focus(); e.preventDefault(); return; }
     if (e.key !== 'Tab' && e.key !== 'Shift') LINE.act();
     const took = await KEYS.dispatch(e, { where });
     if (took) e.preventDefault();

@@ -54,6 +54,7 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-6', chord: 'PageUp', act: 'camera.pageUp', surface: 'plane' },
   { id: 'K-7', chord: 'Enter', act: 'walk.act', surface: 'plane' },
   { id: 'K-8', chord: 'Shift+↓', act: 'select.span', surface: 'plane' },
+  { id: 'K-8', chord: 'Shift+↑', act: 'select.span', surface: 'plane' },
   { id: 'K-11', chord: 'Mod+=', act: 'camera.zoomIn', surface: 'plane' },
   { id: 'K-11', chord: 'Mod+-', act: 'camera.zoomOut', surface: 'plane' },
   { id: 'K-13', chord: 'Mod+0', act: 'go.wholeBoard', surface: 'plane' },
@@ -146,12 +147,14 @@ export async function dispatch(e, ctx) {
   // zoom (K-11)
   if (chord === 'Mod+=') { zoomAboutFocus(1.25); return true; }
   if (chord === 'Mod+-') { zoomAboutFocus(1 / 1.25); return true; }
-  // the selection's slot chords (K-47 … K-52)
+  // the selection's slot chords (K-47 … K-52) and K-8's select-by-span — live from the plane and from a standing overlay alike (the acts' card takes focus on a key-made selection, and the next press extends it)
   if (chord === 'Mod+Shift+O') { SEL.act('wrote'); return true; }
   if (chord === 'Mod+Shift+R') { SEL.act('uses'); return true; }
   if (chord === 'Mod+Shift+L') { SEL.act('links'); return true; }
   if (chord === 'Mod+Enter') { SEL.act('follow'); return true; }
   if (chord === 'Mod+Shift+Enter') { SEL.act('scene'); return true; }
+  if (chord === 'Shift+↓') { SEL.selectFocused('down'); return true; }
+  if (chord === 'Shift+↑') { SEL.selectFocused('up'); return true; }
   if (chord === 'Mod+Shift+P') { LINE.stripAct(); return true; }
   if (chord === 'Mod+R' || e.key === 'F5') { return true; } // K-94: the plane is live; nothing reloads
   if (ctx.where === 'overlay' || ctx.where === 'line') return false; // the overlay's or the line's own keys
@@ -163,7 +166,6 @@ export async function dispatch(e, ctx) {
   if (chord === 'Home') { await WALK.key('first'); return true; }
   if (chord === 'End') { await WALK.key('last'); return true; }
   if (chord === 'PageDown' || chord === 'PageUp') { const { VH } = CAM.viewport(); CAM.panBy(0, chord === 'PageDown' ? -VH * 0.9 : VH * 0.9); CAM.markDirty(); WALK.retakeFromView(); return true; }
-  if (chord === 'Shift+↓') { SEL.selectFocused(); return true; }
   if (chord === 'Enter') { await activateFocus(); return true; }
   // a printable key on the plane: swallowed, the K-9 line at the focus
   if (printable(e)) {

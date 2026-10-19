@@ -49,7 +49,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /**
- * @typedef {Object} Block — a paragraph of delivered text, the span grain the walk, the mirror and the selection use
+ * @typedef {Object} Block — a paragraph of delivered text, the span grain the walk and the mirror use (the selection is a byte span, which a click takes as the whole block)
  * @property {number} pos the first V-position (1-based) — the block's stable key
  * @property {number} width positions (bytes), the separator after it included
  * @property {'para' | 'withheld' | 'atom' | 'ref' | 'hex'} kind

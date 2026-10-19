@@ -71,7 +71,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext h2.sp, .dtext h3.sp, .dtext h4.sp, .dtext h5.sp, .dtext h6.sp, .dtext h7.sp { font-size:1em; font-weight:600; color:#cfd6df; }
 .dtext h2.sp { font-size:1.25em; } .dtext h3.sp { font-size:1.1em; }
 .dtext .sp:hover { background:rgba(127,178,255,.08); }
-.dtext .sp.sel { background:rgba(232,230,225,.18); box-shadow:0 0 0 1px rgba(232,230,225,.5); }
+/* the selection's bytes are the platform's own highlight; a block it touches carries the outline as its cue */
+.dtext .sp.sel { box-shadow:0 0 0 1px rgba(232,230,225,.5); }
 .dtext .sp.lit { box-shadow:0 0 0 1px var(--ok); }
 .dtext .sp.empty { color:#4b5563; font-style:italic; }
 /* the owner's and the person's links in place: a mark by depth, hue the linker's, value lighter once followed */
@@ -89,6 +90,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .withheld { display:block; margin:0 0 .55em; padding:.4em .6em; border:1px solid #8b8f96; color:#cfd6df;
   background: repeating-linear-gradient(45deg, #1b1f25, #1b1f25 6px, #22272f 6px, #22272f 12px); }
 .dtext .withheld .arm, .dtext .withheld .clause { display:block; font-size:.8em; color:#b9c1cb; margin-top:.3em; }
+/* the chrome inside a block and the withheld run's face are never the document's bytes: a drag crosses them unselected, the copy never carries them */
+.dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .others, .dtext .withheld { user-select:none; -webkit-user-select:none; }
 .dtext .rec { display:block; color:#cfd6df; }
 .dtext .rec .derived { display:block; color:#8b8f96; font-size:.85em; }
 .dtext .rec.not-rendered { color:#4b5563; font-style:italic; }

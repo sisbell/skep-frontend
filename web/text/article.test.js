@@ -1,8 +1,8 @@
 // T-ARTICLE's test: the article from a record — the withheld block occupies
 // its run with its width and never its text; the owner's link marked at its
-// span; the transcluded run's hairline and C-33's mark; the corner's
-// version statement and a draft's chip (C-28); the record rule; headings as
-// formatting.
+// span; the selected span marks every block it touches and no other; the
+// transcluded run's hairline and C-33's mark; the corner's version statement
+// and a draft's chip (C-28); the record rule; headings as formatting.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { articleHTML, withheldBlockHTML, cornerHTML, headingLevel } from './article.js';
@@ -36,6 +36,18 @@ test('the owner\'s link is marked in place at its span and nowhere else', () => 
   const html = articleHTML(d, view({ marks: [mark] }), '1.0.1');
   assert.ok(/<span class="seg lip depth1"[^>]*>efgh<\/span>/.test(html), html);
   assert.ok(html.includes('1 link touches this document'));
+});
+
+test('the selected span marks every block it touches and no other', () => {
+  const blocks = [{ pos: 1, width: 10, kind: /** @type {const} */ ('para'), text: 'aaaaaaaa', origin: null }, { pos: 11, width: 10, kind: /** @type {const} */ ('para'), text: 'bbbbbbbb', origin: null }, { pos: 21, width: 10, kind: /** @type {const} */ ('para'), text: 'cccccccc', origin: null }];
+  const d = doc({ blocks });
+  const inside = articleHTML(d, view({ selected: { addr: d.addr, pos: 14, width: 3 } }), '1.0.1');
+  assert.ok(inside.includes('class="sp blk-para sel" data-addr="1.0.1.0.3" data-pos="11"'), 'the block holding the span is marked');
+  assert.ok(!inside.includes('sel" data-addr="1.0.1.0.3" data-pos="1"') && !inside.includes('sel" data-addr="1.0.1.0.3" data-pos="21"'), 'no other block is');
+  const across = articleHTML(d, view({ selected: { addr: d.addr, pos: 8, width: 6 } }), '1.0.1');
+  assert.ok(across.includes('sel" data-addr="1.0.1.0.3" data-pos="1"') && across.includes('sel" data-addr="1.0.1.0.3" data-pos="11"') && !across.includes('sel" data-addr="1.0.1.0.3" data-pos="21"'), 'a span across two blocks marks both');
+  const elsewhere = articleHTML(d, view({ selected: { addr: '1.0.1.0.4', pos: 14, width: 3 } }), '1.0.1');
+  assert.ok(!elsewhere.includes(' sel"'), 'a span in another document marks nothing here');
 });
 
 test('a transcluded run from a draft carries the hairline and C-33\'s mark in a published document', () => {
