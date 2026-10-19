@@ -1,0 +1,72 @@
+// P-REG — the visual variables' VALUES (the structure record §3.2 "P-REG";
+// foundations §2.1's register: each datum one variable, held client-wide,
+// no variable carrying two data — ux-T1 (a)). Layer 2, pure constants the
+// renderers and the CSS share (`main.js` sets them as custom properties).
+// The LINKER takes HUE from a small palette — you, the document's owner,
+// everyone else as one; the anchor's GRADE a line on the highlight's edge;
+// SAMENESS boundaries and a ground TEXTURE, never a tint; the VISITED-LINK
+// MARK takes VALUE (lighter, the hue kept — D-3); a connection's KIND its
+// line's form; a box's PUBLICATION STATE its edge's weight. LK reads this
+// module to put a value on each link's mark; no drawing module reads it for
+// a link (the seam's rule). The values are the UI phase's.
+// Carries: the wireframe's §10 `COL`; S1 Q5's `same`/`provenance` classes
+// (the treatment OPEN).
+// Rules: FP-1, FP-2, FP-10 (no state).
+
+/** the linker's hue — R60's palette */
+export const HUE = Object.freeze({
+  /** the person's own links */
+  you: '#7fb2ff',
+  /** the document owner's links (where the owner is not the person) */
+  owner: '#a3d977',
+  /** everyone else, as one */
+  others: '#9aa5b4',
+});
+
+/** the grade's line (the anchor's edge), never hue */
+export const GRADE = Object.freeze({ exact: 'solid', drifted: 'dashed', orphaned: 'dotted' });
+
+/** sameness: boundaries and a ground texture; S1 Q5's two treatments, the verdict OPEN */
+export const SAMENESS = Object.freeze({ treatment: 'provenance', boundary: '#7ddc9a', texture: 'rgba(125,220,154,0.07)' });
+
+/** the visited-link value: the symbol drawn lighter, the hue kept (D-3) */
+export const VISITED_ALPHA = 0.45;
+
+/** a mid connection's kind takes its line's form */
+export const KIND_FORM = Object.freeze({ link: [], 'draft-to-edition': [2, 4], supersedes: [6, 4], fork: [6, 3, 1, 3], identity: 'band' });
+
+/** a box's publication state takes its edge's weight */
+export const EDGE = Object.freeze({ edition: 1.4, draft: 0.8, withheld: 0.8, landmark: 1.8 });
+
+/** the stacking order, ground up */
+export const STACK = Object.freeze(['sameness', 'own', 'grade', 'refused', 'arrival', 'selection']);
+
+/** the canvas palette (the wireframe's COL) */
+export const COL = Object.freeze({
+  bg: '#0e1013', doc: '#161b22', docEdge: '#39424e', draftEdge: '#5a4a2a', title: '#cfd6df', text: '#b9c1cb',
+  greek: '#4b5563', cluster: '#1b2430', clusterEdge: '#3a4a5e', land: '#ffb454', focus: '#7ddc9a',
+  boardEdge: '#2a3340', withheld: '#2a2520', trail: 'rgba(255,180,84,.85)', trailPath: 'rgba(255,180,84,.55)',
+  residue: '#2b3140', hollow: 'rgba(127,178,255,0.15)',
+});
+
+/**
+ * @typedef {Object} Mark — how one link is drawn, decided by LK, applied by the drawers
+ * @property {string} hue
+ * @property {'you' | 'owner' | 'others'} linker
+ * @property {number[] | 'band'} form the kind's dash form
+ * @property {number} value 1 = full; VISITED_ALPHA once followed
+ * @property {boolean} own true where the mark stands with no act (the owner's or the person's)
+ */
+
+/**
+ * The CSS custom properties the stylesheet reads, one per value.
+ * @returns {Record<string, string>}
+ */
+export function cssVariables() {
+  return {
+    '--hue-you': HUE.you, '--hue-owner': HUE.owner, '--hue-others': HUE.others,
+    '--same-boundary': SAMENESS.boundary, '--same-texture': SAMENESS.texture,
+    '--visited-alpha': String(VISITED_ALPHA),
+    '--col-bg': COL.bg, '--col-text': COL.text, '--col-title': COL.title, '--col-dim': COL.greek, '--col-land': COL.land, '--col-focus': COL.focus,
+  };
+}

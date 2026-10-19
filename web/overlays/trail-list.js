@@ -1,0 +1,27 @@
+// O-TRAIL-LIST — the trail's list (the structure record §3.2 "O-TRAIL-LIST";
+// foundations §2.2; B1-S12). Layer 2. ENGINE-BOUND. State: none. A transient
+// overlay conjured beside Back and Forward and gone with its end like every
+// other — never a toggle (the wireframe's `t` toggle re-cut, K-41 Mod+Y);
+// every entry numbered newest-first, the same numbers as the pips and the
+// chords Mod+1 … Mod+9; Enter or a click jumps (a cursor move, never a push).
+// Carries: the wireframe's §11 `renderTrail`. Rules: FP-1, FP-2, FP-13.
+
+import * as HOST from './host.js';
+import * as TRAIL from '../nav/trail.js';
+import * as GO from '../nav/go.js';
+import { t } from '../strings.js';
+import { esc } from '../util.js';
+
+/** open the list (by a key, it takes focus on its newest row) */
+export function open(byKey = true) {
+  const rows = TRAIL.numbered();
+  const html = `<span class="label">${esc(t('F.trail-list'))}</span>` +
+    (rows.length
+      ? `<ul class="rows">${rows.map((r) => `<li><button data-run="j${r.n}" aria-current="${r.current}"><span class="k">${r.n <= 9 ? r.n : '·'}</span> ${esc(r.entry.addr)}${r.entry.pos != null ? ` · ${esc(t('F.position', { p: r.entry.pos }))}` : ''} <span class="dim">${esc(r.entry.label || '')}</span></button></li>`).join('')}</ul>`
+      : `<div class="dim">—</div>`);
+  /** @type {Record<string, (el: HTMLElement) => void>} */
+  const acts = {};
+  for (const r of rows) acts['j' + r.n] = () => { GO.toTrailEntry(r.n); };
+  const anchorEl = document.getElementById('line-back');
+  HOST.show({ kind: 'list', id: 'trail-list', anchor: anchorEl ? { el: anchorEl } : null, html, acts, takeFocus: byKey });
+}

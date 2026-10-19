@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>skep — the plane</title>
+<!--
+  THE ONE PAGE (the structure record §2): the plane is the window. One module
+  script, app/main.js, wires everything (FP-4, FP-11); nothing is built or
+  bundled (FP-1, FP-2); nothing outside web/ is loaded (FP-5). The gate's
+  hooks load only under ?gate= (S-22 (a)); the bridge client only under
+  ?provider=<secret> (S-14 (b), S-36 (a)).
+-->
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="plane"></canvas>
+<div id="domlayer" aria-hidden="true"></div>
+<canvas id="beams"></canvas>
+
+<div id="line" role="toolbar" aria-label="the one line"></div>
+
+<div id="leap" class="panel" role="listbox" aria-label="LEAP">
+  <input id="leapq" autocomplete="off" spellcheck="false" aria-label="LEAP — an address, or a document's first line">
+  <div id="leapnote"></div>
+  <div id="leaphits"></div>
+</div>
+
+<div id="overlay" role="dialog" aria-live="polite"></div>
+
+<div id="scene" role="dialog" aria-label="the reading scene: two places side by side">
+  <div id="scenebar"></div>
+  <div class="pane" id="sceneA"></div>
+  <div class="pane" id="sceneB"></div>
+  <canvas id="scenebeams"></canvas>
+</div>
+
+<div id="mirror" class="panel" role="tree" aria-label="the board in record order" tabindex="0"></div>
+<div id="live" aria-live="polite" aria-atomic="true"></div>
+<pre id="fail"></pre>
+
+<noscript><div class="panel on" style="top:40px;left:10px">This page needs JavaScript: the plane is drawn by app/main.js.</div></noscript>
+<script type="module" src="app/main.js"></script>
+</body>
+</html>

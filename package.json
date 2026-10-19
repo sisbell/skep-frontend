@@ -1,0 +1,14 @@
+{
+  "name": "skep-frontend",
+  "private": true,
+  "type": "module",
+  "description": "The skep frontend: the page, its pure tests under Node, and TypeScript's checker over JSDoc types. Nothing here is compiled or bundled.",
+  "scripts": {
+    "check": "tsc -p jsconfig.json",
+    "test": "node --test 'web/**/*.test.js'",
+    "gate": "harness/run.sh"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  }
+}

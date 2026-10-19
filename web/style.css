@@ -1,0 +1,141 @@
+/* THE REGISTER's VALUES and the chrome's CSS (the structure record §2:
+   `style.css`). The custom properties are set from plane/register.js at
+   boot — one source for the values the canvas and the DOM share (F2.1-l).
+   Carries the wireframe's plane.html styles, re-cut: the one line, the LEAP
+   box, the overlay, the scene, the mirror, the text layer. */
+:root { --bg:#0e1013; --ink:#e8e6e1; --dim:#8b8f96; --line:#2a2f36; --box:#1b1f25; --accent:#7fb2ff; --warn:#ffb454; --ok:#7ddc9a; --bad:#ff6b6b;
+        --hue-you:#7fb2ff; --hue-owner:#a3d977; --hue-others:#9aa5b4; --same-boundary:#7ddc9a; --same-texture:rgba(125,220,154,0.07); --visited-alpha:0.45; }
+* { box-sizing: border-box; }
+html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; overflow:hidden; }
+#plane { position:fixed; inset:0; width:100vw; height:100vh; display:block; touch-action:none; cursor:default; }
+#plane.dragging { cursor:grabbing; }
+button, .aff { font:inherit; font-size:11px; color:var(--ink); background:#14181d; border:1px solid #4a5260; border-radius:3px; padding:1px 6px; cursor:pointer; margin:1px 2px 1px 0; white-space:nowrap; }
+button:hover { background:#1e2530; }
+button:focus-visible, [tabindex]:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+button.inert { cursor:default; border-style:dashed; color:var(--dim); }
+button[disabled] { opacity:.45; cursor:default; }
+kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
+.panel { position:fixed; background:rgba(14,16,19,.92); border:1px solid var(--line); border-radius:4px; padding:8px 10px; }
+.pinned { border-left:3px solid #cfd6df; padding-left:6px; }
+.draft { border-bottom:1px dotted #6b7382; }
+.dim { color:var(--dim); }
+.code { color:#cfd6df; }
+.warn { color:var(--warn); }
+
+/* THE ONE LINE — standing chrome, the only piece (foundations §3.1); never wraps */
+#line { position:fixed; top:0; left:0; right:0; z-index:20; padding:3px 10px; font-size:11px; line-height:1.6; background:rgba(14,16,19,.94); border-bottom:1px solid var(--line); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#line .seg { display:inline; }
+#line .sep { color:#4a5260; padding:0 6px; }
+#line b { color:var(--accent); font-weight:600; }
+#line .address { cursor:pointer; }
+#line .strip { display:inline-block; width:64px; height:8px; margin:0 6px -1px; border:1px solid #4a5260; border-radius:2px; position:relative; vertical-align:middle; }
+#line .strip-mark { position:absolute; top:0; bottom:0; width:3px; background:var(--accent); }
+#line .marker { color:var(--dim); }
+#line .marker.lit { color:var(--accent); }
+#line .transient { color:var(--warn); }
+#line button { padding:0 5px; }
+
+/* LEAP — the address segment opened (K-30) */
+#leap { top:34px; left:50%; transform:translateX(-50%); width:620px; display:none; z-index:25; }
+#leap.on { display:block; }
+#leapq { width:100%; background:#14181d; border:1px solid var(--line); color:var(--ink); padding:6px 8px; font:inherit; border-radius:4px; outline:none; }
+#leapq:focus { border-color:var(--accent); }
+#leapnote { margin-top:6px; color:var(--dim); font-size:11px; }
+#leaphits { max-height:340px; overflow:auto; margin-top:6px; }
+.hit { padding:3px 6px; border-radius:3px; cursor:pointer; display:flex; gap:8px; }
+.hit .a { color:var(--dim); }
+.hit.sel, .hit:hover { background:#1e2530; }
+.hit.none { color:var(--dim); cursor:default; }
+
+/* the ARIA mirror (S3 Q6; law 7) — the one accessible rendering, off the visible plane */
+#mirror { position:fixed; left:-10000px; top:0; width:520px; max-height:40vh; overflow:auto; z-index:15; }
+#mirror:focus-within, #mirror.shown { left:8px; top:auto; bottom:8px; }
+#mirror ul { list-style:none; margin:0; padding:0 0 0 10px; }
+#mirror li { padding:1px 4px; border-radius:3px; }
+#mirror li:focus { outline:2px solid var(--accent); background:#1c2430; }
+#mirror li[aria-selected="true"] { background:#22303f; }
+#live { position:fixed; left:-10000px; width:1px; height:1px; overflow:hidden; }
+#fail { position:fixed; left:8px; bottom:8px; z-index:40; color:var(--bad); white-space:pre-wrap; display:none; max-width:60vw; background:rgba(14,16,19,.9); padding:6px; }
+#fail.on { display:block; }
+
+/* THE TEXT LAYER (S1 Q7): laid out once at 16 px, moved by transform; the box IS the page */
+#domlayer { position:fixed; inset:0; overflow:hidden; pointer-events:none; contain:strict; z-index:3; }
+.dtext { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; pointer-events:auto; overflow:hidden; box-sizing:content-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color:#b9c1cb; -webkit-font-smoothing:antialiased; cursor:text; user-select:text; }
+.dtext .hd { color:#cfd6df; }
+.dtext .hd .addr { font-weight:600; }
+.dtext .hd .st, .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:.8em; display:block; }
+.dtext .hd .pres { color:#b9c1cb; }
+.dtext .run { display:block; }
+.dtext .sp { display:block; margin:0 0 .55em; cursor:pointer; border-radius:2px; font-weight:400; }
+.dtext h2.sp, .dtext h3.sp, .dtext h4.sp, .dtext h5.sp, .dtext h6.sp, .dtext h7.sp { font-size:1em; font-weight:600; color:#cfd6df; }
+.dtext h2.sp { font-size:1.25em; } .dtext h3.sp { font-size:1.1em; }
+.dtext .sp:hover { background:rgba(127,178,255,.08); }
+.dtext .sp.sel { background:rgba(232,230,225,.18); box-shadow:0 0 0 1px rgba(232,230,225,.5); }
+.dtext .sp.lit { box-shadow:0 0 0 1px var(--ok); }
+.dtext .sp.empty { color:#4b5563; font-style:italic; }
+/* the owner's and the person's links in place: a mark by depth, hue the linker's, value lighter once followed */
+.dtext .lip { text-decoration:underline; text-decoration-thickness:1px; text-decoration-color:var(--mark-hue, var(--hue-you)); opacity:var(--mark-value, 1); }
+.dtext .lip.depth2 { text-decoration-style:double; }
+.dtext .lip.depth3 { text-decoration-thickness:2px; }
+/* sameness: boundaries and a ground texture, never a tint; the hairline label the one gesture to the source */
+.dtext .same { background:var(--same-texture); border-left:2px solid var(--same-boundary); padding-left:.25em; }
+.dtext .hairline { color:var(--same-boundary); font-size:.7em; cursor:pointer; margin-right:.3em; vertical-align:baseline; }
+.dtext .hairline.compact { opacity:.7; }
+.dtext .pubmark { display:inline-block; font-size:.72em; color:#cfd6df; border:1px solid #4a5260; padding:0 .3em; margin-right:.3em; }
+.dtext .sym { display:inline-block; border:1px solid var(--mark-hue, #8b8f96); color:var(--mark-hue, #e8e6e1); padding:0 .3em; font-size:.75em; margin-left:.3em; cursor:pointer; vertical-align:baseline; opacity:var(--mark-value, 1); }
+.dtext .sym.other { border-style:dashed; }
+.dtext .others { float:right; color:var(--dim); font-size:.72em; margin-left:.5em; }
+.dtext .withheld { display:block; margin:0 0 .55em; padding:.4em .6em; border:1px solid #8b8f96; color:#cfd6df;
+  background: repeating-linear-gradient(45deg, #1b1f25, #1b1f25 6px, #22272f 6px, #22272f 12px); }
+.dtext .withheld .arm, .dtext .withheld .clause { display:block; font-size:.8em; color:#b9c1cb; margin-top:.3em; }
+.dtext .rec { display:block; color:#cfd6df; }
+.dtext .rec .derived { display:block; color:#8b8f96; font-size:.85em; }
+.dtext .rec.not-rendered { color:#4b5563; font-style:italic; }
+.dtext .offer { display:block; margin:.6em 0; color:#8b8f96; font-size:.8em; cursor:pointer; text-decoration:underline dotted; }
+/* THE CORNER — on the document's one side, outside the measure (ux-T2) */
+.dtext .corner { position:absolute; right:-.6em; top:0; transform:translateX(100%); width:11em; font-size:.72em; color:#8b8f96; display:block; }
+.dtext .corner .st { display:block; }
+.dtext .corner .version { display:block; color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
+.dtext .corner .chip { display:inline-block; border:1px solid #4a5260; border-radius:3px; padding:0 .4em; color:#e8e6e1; margin-top:.3em; }
+.dtext .corner .whole-links { display:block; margin-top:.3em; }
+#beams { position:fixed; inset:0; pointer-events:none; z-index:4; }
+
+/* THE OVERLAYS — one at a time, conjured by an act, dismissed by its end */
+#overlay { position:fixed; left:0; top:0; z-index:30; display:none; max-width:min(560px, 92vw); background:#1b1f25;
+  border:1px solid #6b7382; border-radius:4px; padding:8px 10px; box-shadow:0 2px 12px rgba(0,0,0,.5); font-size:11.5px; }
+#overlay.on { display:block; }
+#overlay.face { border-color:var(--warn); }
+#overlay.moment { border-style:double; border-width:3px; }
+#overlay .label { display:block; font-size:9.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--dim); margin:0 0 4px; }
+#overlay .x { float:right; color:var(--dim); cursor:pointer; margin-left:8px; }
+#overlay .face-text { color:#ffe2b8; margin:4px 0; }
+#overlay .quoted { color:#cfd6df; border-left:2px solid #6b7382; padding-left:.5em; margin:3px 0; max-height:6em; overflow:hidden; }
+#overlay .kv b { color:#cfd6df; font-weight:600; display:inline-block; min-width:8em; }
+#overlay .ends { display:flex; gap:10px; margin-bottom:6px; }
+#overlay .end { flex:1; min-width:0; }
+#overlay .end .k { color:var(--dim); font-size:.9em; }
+#overlay .rows { list-style:none; margin:4px 0; padding:0; max-height:300px; overflow:auto; }
+#overlay .rows li { padding:1px 0; }
+#overlay .rows button { width:100%; text-align:left; }
+#overlay .sym-mark { color:var(--mark-hue, var(--accent)); opacity:var(--mark-value, 1); }
+#overlay .lenses { margin:6px 0; }
+#overlay .lens-label { color:var(--dim); margin:0 6px 0 2px; }
+#overlay button[aria-pressed="true"] { background:#22303f; border-color:var(--accent); }
+#overlay .slots button { margin:2px 2px 2px 0; }
+#overlay .clause, #overlay .note { color:var(--dim); font-size:10.5px; margin-top:6px; }
+#overlay .k { color:var(--warn); }
+#overlay [aria-current="true"] { border-color:var(--accent); }
+#overlay .strip { color:var(--dim); font-size:.9em; }
+#overlay input[type=text] { width:100%; font:inherit; background:#14181d; color:var(--ink); border:1px solid #4a5260; border-radius:3px; padding:4px 6px; margin:4px 0; }
+
+/* THE READING SCENE (law 12): chrome over the plane; places unmoved */
+#scene { position:fixed; inset:46px 20px 20px 20px; z-index:26; display:none; background:rgba(14,16,19,.95); border:1px solid #6b7382; border-radius:4px; }
+#scene.on { display:block; }
+#scenebar { position:absolute; left:0; right:0; top:0; height:26px; padding:4px 10px; border-bottom:1px solid var(--line); color:var(--dim); font-size:11px; white-space:nowrap; overflow:hidden; }
+#scenebar b { color:var(--accent); }
+#scenebar .x { float:right; cursor:pointer; color:var(--ink); }
+.pane { position:absolute; top:26px; bottom:0; width:calc(50% - 70px); overflow:auto; padding:14px 18px; }
+#sceneA { left:0; } #sceneB { right:0; }
+.pane .dtext { position:static; transform:none; font-size:14px; line-height:1.5; width:100%; height:auto; cursor:text; }
+#scenebeams { position:absolute; inset:26px 0 0 0; width:100%; height:calc(100% - 26px); pointer-events:none; }
