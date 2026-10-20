@@ -17,12 +17,16 @@
 // `aria-level`/`aria-posinset`/`aria-setsize`) is THE ONE ACCESSIBLE
 // RENDERING at span grain (S1 Q7; R94 at span grain — RULED); the live region
 // announces the focus on a keyboard act. The mirror is rebuilt whole on every
-// focus move; while the platform's focus stands in it, the rebuild carries
-// that focus to the current item and scrolls the panel to show it (D5 §4
-// rule 2: the tree item is the focus's accessible form; rule 4: the focus is
-// never lost, never to the top; rule 8: a landing moves the focus to its
-// element) — so the walk keys, a landing and a camera retake alike leave the
-// focus on the item a person is at.
+// focus move, and its Tab stop with it: the plane is ONE stop between the one
+// line and the focused document's corner (D5 §4 rule 5) — the current item,
+// while the tree's container stands out of the order; the container is the
+// stop only where the mirror holds no item. While the platform's focus
+// stands in the mirror, the rebuild carries that focus to the current item
+// and scrolls the panel to show it (D5 §4 rule 2: the tree item is the
+// focus's accessible form; rule 4: the focus is never lost, never to the top;
+// rule 8: a landing moves the focus to its element) — so the walk keys, a
+// landing and a camera retake alike leave the focus on the item a person is
+// at.
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state).
@@ -134,12 +138,16 @@ function setFocus(sibs, i, at = null, node = sibs[i] ?? null) {
 }
 
 /**
- * Rebuild the mirror from state (FP-13). Replacing the items removes the
- * one the platform's focus may stand on, and the platform then drops the
- * focus to the body; so while the focus stands anywhere in the mirror — on
- * the container or on an item — the rebuild carries it to the current item
- * and brings that item inside the panel's window (D5 §4 rules 2, 4 and 8).
- * With no item to carry it to, the container keeps it.
+ * Rebuild the mirror from state (FP-13), the plane's one Tab stop with it
+ * (D5 §4 rule 5): the current item, the only item at tabindex 0, while the
+ * tree's container stands out of the order — focusable still, by script and
+ * by a click — and the container itself where the walk's level holds no item
+ * (a landing where the index lists nothing at its level). Replacing the
+ * items removes the one the platform's focus may stand on, and the platform
+ * then drops the focus to the body; so while the focus stands anywhere in
+ * the mirror — on the container or on an item — the rebuild carries it to
+ * the current item and brings that item inside the panel's window (D5 §4
+ * rules 2, 4 and 8). With no item to carry it to, the container keeps it.
  */
 export function render() {
   if (!mirrorEl) return;
@@ -154,16 +162,17 @@ export function render() {
   }
   html += '</ul>';
   mirrorEl.innerHTML = html;
+  mirrorEl.tabIndex = idx >= lo && idx < hi ? -1 : 0;
   if (held) focusItem();
 }
 
 /**
- * Put the platform's focus on the mirror's current item — the plane's Tab
- * stop — and bring it inside the panel's window; the mirror itself where it
- * holds no item. The rebuild calls it while the focus stands in the mirror,
- * and the app where a control that held the focus has gone (a corner leaving
- * the plane): the focus returns to the walk's element, never lost, never to
- * the top (D5 §4 rule 4).
+ * Put the platform's focus on the plane's Tab stop (`render`'s): the
+ * mirror's current item, brought inside the panel's window, or the mirror
+ * itself where it holds no item. The rebuild calls it while the focus stands
+ * in the mirror, and the app where a control that held the focus has gone (a
+ * corner leaving the plane): the focus returns to the walk's element, never
+ * lost, never to the top (D5 §4 rule 4).
  */
 export function focusItem() {
   if (!mirrorEl) return;

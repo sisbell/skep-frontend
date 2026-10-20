@@ -1,7 +1,10 @@
 """A11Y — class 7 (the structure record §6.3; T3 (7)): the ARIA mirror is the
 one accessible rendering at span grain — its names and set sizes
 (`aria-level`, `aria-posinset`, `aria-setsize`, `aria-selected`), the live
-region announcing the focus on a keyboard act; the AX tree
+region announcing the focus on a keyboard act; the plane ONE Tab stop
+between the one line and the corner (D5 §4 rule 5) — of the tree and its
+items the current item alone in the order, reached by Tab from the line's
+last stop and left by Shift+Tab back to it; the AX tree
 (`Accessibility.getFullAXTree`) compared where CDP answers it, else reported
 as not answered; the platform's focus carried by the mirror's rebuild to the
 current item — under the walk keys and under a LEAP's landing — with the
@@ -42,7 +45,8 @@ def run(ctx):
     r.check(all(int(i['size']) == size for i in items), 'every item\'s aria-setsize is the set\'s size', {i['pos']: i['size'] for i in items if int(i['size']) != size})
     r.check(all(i['level'] == '4' for i in items), 'the items at span grain are level 4 (board › account › document › span)', sorted({i['level'] for i in items}))
     r.check(sum(1 for i in items if i['sel'] == 'true') == 1, 'exactly one item is selected', sum(1 for i in items if i['sel'] == 'true'))
-    r.check(sum(1 for i in items if i['tab'] == '0') == 1, 'exactly one item is in the tab order (roving tabindex)', sum(1 for i in items if i['tab'] == '0'))
+    stops = ctx.js('''[document.getElementById('mirror'), ...document.querySelectorAll('#mirror [tabindex]')].filter((e) => e.getAttribute('tabindex') === '0').map((e) => e.id)''')
+    r.check(stops == ['walk-%d' % idx], 'the plane is one Tab stop: of the tree and its items, the current item alone is in the tab order (D5 §4 rule 5; roving tabindex)', {'stops': stops, 'index': idx})
     bad = []
     for i in items:
         want = ctx.js('window.__skep.mirror.item(%d)' % (int(i['pos']) - 1))
@@ -269,6 +273,19 @@ def run(ctx):
                   sel: e ? e.getAttribute('aria-selected') : null, overlay: window.__skep.overlay().id, in_overlay: o.contains(e) && e !== o}; })()''')
 
     ctx.leap(DOC, WINDOW[0])
+    # the line's last stop and the plane's are neighbours in the page's order (D5 §4 rule 5): Tab from the line's last stop
+    # lands on the mirror's current item, and Shift+Tab from that item returns to the line's — no stop of the tree's own between
+    line_stop = ctx.js('''(() => { const s = [...document.querySelectorAll('#line button:not([disabled]), #line [tabindex="0"]')].pop();
+      if (s) s.focus({preventScroll: true}); return s && document.activeElement === s ? s.dataset.act || null : null; })()''')
+    ctx.frames(1)
+    press('Tab')
+    f = at()
+    r.check(line_stop is not None and f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Tab from the one line\'s last stop lands on the plane\'s one stop, the mirror\'s current item', {'from': line_stop, 'got': f})
+    ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
+    ctx.frames(1)
+    press('Tab', mods=('Shift',))
+    back = ctx.js('(() => { const e = document.activeElement; return e && e.closest("#line") ? e.dataset.act || null : null; })()')
+    r.check(line_stop is not None and back == line_stop, 'Shift+Tab from the mirror\'s current item goes back to the one line\'s last stop', {'line_stop': line_stop, 'got': back, 'at': at()})
     ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
     ctx.frames(1)
     press('Tab')

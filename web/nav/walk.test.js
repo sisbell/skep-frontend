@@ -1,7 +1,11 @@
 // N-WALK's test against the FAKE PORT: a landing keeps the position it named
 // inside the span it focuses — the one line's position — while a walk key's
 // move names none, so stepping back onto the landing's span reads the span's
-// own first position; a position no span holds is never kept.
+// own first position; a position no span holds is never kept. The mirror's
+// rebuild leaves the plane one Tab stop (D5 §4 rule 5): the current item while
+// it stands, the tree out of the order — a mutant that leaves the tree in it
+// turns red — and the tree itself where the walk's level holds no item — a
+// mutant that always takes it out turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -70,4 +74,27 @@ test('a landing on the document itself names no position', async () => {
   await WALK.focusTo(D, null);
   assert.equal(WALK.current()?.kind, 'document');
   assert.equal(WALK.landedAt(), null);
+});
+
+/** the ids of the mirror's items at tabindex 0, read from the markup the rebuild wrote */
+const itemStops = (/** @type {string} */ html) => [...html.matchAll(/<li\b[^>]*>/g)].filter((m) => / tabindex="0"/.test(m[0])).map((m) => (/ id="([^"]*)"/.exec(m[0]) || [])[1]);
+
+// placed last: it attaches a mirror, which every test above runs without
+test('the plane is one Tab stop: the current item while it stands, the tree itself where the walk\'s level holds no item', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null }); // the platform's focus on none of the mirror
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false };
+  WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ ({ textContent: '' }));
+  try {
+    await WALK.focusTo(D, 15);
+    assert.deepEqual(itemStops(mirror.innerHTML), ['walk-' + WALK.mirrorIndex()], 'the current item alone of the items is in the order');
+    assert.equal(mirror.tabIndex, -1, 'the tree is out of the order while its current item stands');
+    // a document in an account the index lists nothing for: the landing's level holds no sibling, so no item
+    await WALK.focusTo('1.0.9.0.1', null);
+    assert.equal(WALK.mirrorSize(), 0);
+    assert.deepEqual(itemStops(mirror.innerHTML), []);
+    assert.equal(mirror.tabIndex, 0, 'the tree itself is the stop');
+  } finally {
+    globalThis.document = platform;
+  }
 });
