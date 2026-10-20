@@ -6,9 +6,10 @@
 // everyone else as one; the anchor's GRADE a line on the highlight's edge;
 // SAMENESS boundaries and a ground TEXTURE, never a tint; the VISITED-LINK
 // MARK takes VALUE (lighter, the hue kept — D-3); a connection's KIND its
-// line's form; a box's PUBLICATION STATE its edge's weight. LK reads this
-// module to put a value on each link's mark; no drawing module reads it for
-// a link (the seam's rule). The values are the UI phase's.
+// line's form; a box's PUBLICATION STATE its edge's weight; a LABEL's size
+// its floor, below which no label on the plane is set (P-LABEL). LK reads
+// this module to put a value on each link's mark; no drawing module reads it
+// for a link (the seam's rule). The values are the UI phase's.
 // Carries: the wireframe's §10 `COL`; S1 Q5's `same`/`provenance` classes
 // (the treatment OPEN).
 // Rules: FP-1, FP-2, FP-10 (no state).
@@ -40,6 +41,13 @@ export const EDGE = Object.freeze({ edition: 1.4, draft: 0.8, withheld: 0.8, lan
 
 /** the stacking order, ground up */
 export const STACK = Object.freeze(['sameness', 'own', 'grade', 'refused', 'arrival', 'selection']);
+
+/**
+ * The smallest size a label on the plane is set at, in px — the far labels'
+ * size, above P-LOD's readable em (foundations §2.1: legibility, not frame
+ * cost, is what the scales buy); its value the UI phase's (S3 Q4).
+ */
+export const LABEL_MIN_PX = 9;
 
 /** the canvas palette (the wireframe's COL) */
 export const COL = Object.freeze({

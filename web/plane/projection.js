@@ -252,6 +252,15 @@ export const accountCell = (account) => cellOfKey(account);
 export const boardCell = (board) => cellOfKey(board);
 
 /**
+ * The cell a board's own label stands in: the first cell of its user grid,
+ * the user field's separator slot, which no account takes (an account's
+ * user field starts at 1), so the board's label meets no account's place.
+ * @param {string} board
+ * @returns {Cell}
+ */
+export const boardLabelCell = (board) => cellOf([...pathOf(board), 0]);
+
+/**
  * The address of the account whose cell holds a world point, or null off
  * every account cell of the board (the separator slots hold no account).
  * @param {number} wx

@@ -253,8 +253,9 @@ def run(ctx):
         newest = max(members, key=num)
         r.check(mark['newest'] == newest, 'the mark\'s representative is its newest member, the highest-numbered', {'newest': mark['newest'], 'expected': newest})
         text = ' '.join(mark['lines'])
-        short = newest[len('1.0.1') + 1:]
-        r.check(str(mark['n']) in text and short in text and ('≥' in text) != mark['exact'], 'the mark draws its count — "≥" while the index runs from its floor — and its newest member\'s label',
+        # the label a box draws: the fields past the region's prefix, led by their separator (".0.1012", never "0.1012")
+        short = newest[len('1.0.1'):]
+        r.check(str(mark['n']) in text and short in text.split() and ('≥' in text) != mark['exact'], 'the mark draws its count — "≥" while the index runs from its floor — and its newest member\'s label, a word of its own led by the separator',
                 {'lines': mark['lines'], 'n': mark['n'], 'exact': mark['exact'], 'newest': short})
         r.check(in_view(ctx, mark['rect']), 'the mark stands inside the viewport at HOME', mark['rect'])
         conns = ctx.js('window.__skep.connections()')

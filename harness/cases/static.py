@@ -25,7 +25,7 @@ WRITE_OPS = ['create_new_document', 'delegate', 'register_node', 'fork', 'insert
              'rearrange', 'version', 'publish', 'make_link', 'emit', 'nullify', 'assert_sup', 'edit_link']
 LAYER = [
     (0, ['bridge/']),
-    (1, ['model/', 'util.js', 'strings.js', 'plane/projection.js', 'plane/camera.js', 'plane/lod.js', 'plane/layout.js', 'plane/register.js']),
+    (1, ['model/', 'util.js', 'strings.js', 'plane/projection.js', 'plane/camera.js', 'plane/lod.js', 'plane/layout.js', 'plane/register.js', 'plane/labels.js']),
     (2, ['links/', 'text/', 'beams/', 'nav/', 'line/', 'overlays/', 'scene/', 'plane/render.js']),
     (3, ['app/']),
     (9, ['gate/', 'test/']),

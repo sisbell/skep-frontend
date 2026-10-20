@@ -20,8 +20,22 @@ face and the blocks after it are left out, its height at reading scale the
 design's open question (F2.1-i: the bars take its true width). THE FRAME
 ORDER (law 13): the frames each step across the mount threshold draws show
 no document both as bars under its own mounted text and none yielded to
-text that is not mounted. The measuring code is the page's (`driftSample`,
-`overlapCheck`, `beamAnchors`, `visible`, `barsOf`, the frame buffer); the
+text that is not mounted. THE LABELS (F-9 and foundations §2.1: each label
+drawn only where its extent holds it; legibility, not frame cost, is what
+the scales buy): at each of S3's thresholds over the first edition, at HOME
+and at WHOLE BOARD, (i) every label the canvas set, the trail's pip numbers
+among them, is MIN_LABEL_PX or larger; (ii) every other label lies inside
+its place as the projection gives it — the board's label cell, an
+account's cell, a continuation's mark, a document's box — and inside the
+viewport; (iii) no two meet; (iv) none meets another place: the box of a
+document in view that no mark drawn the stronger holds, a continuation's
+mark, an account's cell that does not hold its place; (v) at mid scale and
+at HOME a document's label is its address past its region's prefix led by
+the separator, or its whole address; and the places with room carry their
+labels — at HOME every document standing whole in view and the
+continuation's mark, at WHOLE BOARD the board and the acting account's
+cluster. The measuring code is the page's (`driftSample`, `overlapCheck`,
+`beamAnchors`, `visible`, `barsOf`, `labels`, the frame buffer); the
 thresholds are here. The block containment and anchor checks are marked
 with the page issues they wait on and count as expected while those
 stand."""
@@ -34,6 +48,9 @@ DRIFT_TOL_PX = 0.5
 ANCHOR_TOL_PX = 0.5
 HANDOFF_TOL_PX = 1.0
 CORNER = '#corners [data-corner="%s"]' % DOC
+# the case's own floor for a label, held apart from the page's constant so that lowering the page's cannot pass here
+MIN_LABEL_PX = 9
+LABEL_TOL_PX = 0.5
 
 
 def corner_of(ctx):
@@ -71,6 +88,88 @@ def handoff(ctx):
             if b is None or b['top'] is None or abs(b['top'] - t['top']) > HANDOFF_TOL_PX or b['lines'] != t['lines']:
                 off.append({'addr': addr, 'pos': t['pos'], 'text_top': t['top'], 'bars_top': b and b['top'], 'text_lines': t['lines'], 'bars_lines': b and b['lines'], 'line_px': h['line_px']})
     return {'compared': compared, 'off': off, 'left_out': left_out}
+
+
+def label_view(ctx):
+    """the labels the last frame set and left out, beside the places the projection gives, on screen: the boxes of the
+    documents in view that no mark drawn the stronger holds (none where the frame draws the clusters the stronger), the
+    marks drawn the stronger, the accounts' cells, the board's label cell — the first of its user grid, three cells
+    across (P-PROJ's G) — and the box of each document labelled"""
+    return ctx.js('''(() => {
+      const S = window.__skep, c = S.view.camera(), p = S.view.viewport(), lod = S.view.lod();
+      const scr = (b) => ({x: (b.x - c.x) * c.scale + p.VW / 2, y: (b.y - c.y) * c.scale + p.VH / 2, w: b.w * c.scale, h: b.h * c.scale});
+      const view = {x: 0, y: 0, w: p.VW, h: p.VH};
+      const crosses = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+      const labels = S.labels();
+      const marks = S.residues().filter((m) => m.alpha >= 0.5);
+      const held = new Set(marks.flatMap((m) => m.members));
+      const boxesDrawn = lod.name !== 'far' && (lod.name !== 'far~mid' || lod.fade >= 0.5);
+      const places = S.model.places().filter((q) => !q.system);
+      const boxes = boxesDrawn ? places.filter((q) => !held.has(q.doc)).map((q) => ({place: q.doc, rect: scr(S.boxOf(q.doc))})).filter((b) => crosses(b.rect, view)) : [];
+      const accounts = S.model.counts().filter((a) => !a.system).map((a) => ({place: a.account, rect: scr(S.accountCell(a.account))}));
+      const b = S.boardCell('1');
+      const docs = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => [l.place, scr(S.boxOf(l.place))]));
+      return {lod: lod.name, view, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})),
+              boxes, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, mounted: S.mountedAddrs()};
+    })()''')
+
+
+def inside(a, b):
+    """is `a` inside `b`, LABEL_TOL_PX either way?"""
+    return a['x'] >= b['x'] - LABEL_TOL_PX and a['y'] >= b['y'] - LABEL_TOL_PX and a['x'] + a['w'] <= b['x'] + b['w'] + LABEL_TOL_PX and a['y'] + a['h'] <= b['y'] + b['h'] + LABEL_TOL_PX
+
+
+def meets(a, b):
+    """do two rects overlap by more than LABEL_TOL_PX each way?"""
+    return min(a['x'] + a['w'], b['x'] + b['w']) - max(a['x'], b['x']) > LABEL_TOL_PX and min(a['y'] + a['h'], b['y'] + b['h']) - max(a['y'], b['y']) > LABEL_TOL_PX
+
+
+def place_of(v, label):
+    """a label's place on screen, as the projection gives it; None where the frame drew no such place"""
+    kind, place = label['kind'], label['place']
+    if kind == 'board':
+        return v['board']
+    if kind in ('cluster', 'frame'):
+        return next((a['rect'] for a in v['accounts'] if a['place'] == place), None)
+    if kind == 'mark':
+        return next((m['rect'] for m in v['marks'] if m['place'] == place), None)
+    if kind == 'doc':
+        return v['docs'].get(place)
+    return None
+
+
+def labels_hold(r, name, v):
+    """THE LABELS' checks at one view; its figures: the labels set by kind, the parts left out by rule"""
+    labels = v['labels']
+    small = [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'px': x['px']} for l in labels for x in l['lines'] if x['px'] < MIN_LABEL_PX]
+    r.check(not small, f'{name}: (i) every label the canvas set, the trail\'s pip numbers among them, is {MIN_LABEL_PX} px or larger', small[:6])
+    placed = [(l, place_of(v, l), x) for l in labels if l['kind'] != 'pip' for x in l['lines']]
+    outside = [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'rect': x['rect'], 'place_rect': p} for l, p, x in placed if p is None or not inside(x['rect'], p) or not inside(x['rect'], v['view'])]
+    r.check(not outside, f'{name}: (ii) every label lies inside its place, as the projection gives it, and inside the viewport, {LABEL_TOL_PX} px either way', outside[:6])
+    crossing = [{'a': [a[0]['kind'], a[0]['place'], a[2]['text']], 'b': [b[0]['kind'], b[0]['place'], b[2]['text']]} for i, a in enumerate(placed) for b in placed[i + 1:] if meets(a[2]['rect'], b[2]['rect'])]
+    r.check(not crossing, f'{name}: (iii) no two labels meet', crossing[:6])
+    met = []
+    for l, p, x in placed:
+        others = [('box', o) for o in v['boxes'] if o['place'] != l['place']] + [('mark', o) for o in v['marks'] if o['place'] != l['place']] + [('account', o) for o in v['accounts'] if p is None or not inside(p, o['rect'])]
+        met += [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'meets': [what, o['place']]} for what, o in others if meets(x['rect'], o['rect'])]
+    r.check(not met, f'{name}: (iv) no label meets another place: the box of a document in view that no mark drawn the stronger holds, a continuation\'s mark, an account\'s cell that does not hold its place', met[:6])
+    if name in ('mid-extents', 'home'):
+        bare = [{'place': l['place'], 'label': l['lines'][0]['text']} for l in labels if l['kind'] == 'doc' and not (l['lines'][0]['text'] == l['place'] or (l['lines'][0]['text'].startswith('.') and l['place'].endswith(l['lines'][0]['text'])))]
+        r.check(not bare, f'{name}: (v) a document\'s label is its address past its region\'s prefix led by the separator (".0.3"), or its whole address — never a bare field that reads as a number', bare[:6])
+    if name == 'home':
+        labelled = {l['place'] for l in labels if l['kind'] == 'doc'}
+        whole = [o['place'] for o in v['boxes'] if inside(o['rect'], v['view']) and o['place'] not in v['mounted']]
+        r.check(bool(whole) and set(whole) <= labelled, 'home: every document standing whole in view carries its label', {'in_view': len(whole), 'unlabelled': sorted(set(whole) - labelled)[:8]})
+        r.check(any(m['lines'] for m in v['marks']), 'home: the continuation drawn as one mark carries its label', [m['lines'] for m in v['marks']])
+    if name == 'whole-board':
+        named = {(l['kind'], l['place']) for l in labels}
+        r.check(('board', '1') in named and ('cluster', '1.0.1') in named, 'whole-board: the board and the acting account\'s cluster carry their labels', sorted(named))
+    by_kind, by_rule = {}, {}
+    for l in labels:
+        by_kind[l['kind']] = by_kind.get(l['kind'], 0) + 1
+    for o in v['out']:
+        by_rule[o['reason']] = by_rule.get(o['reason'], 0) + 1
+    return {'lod': v['lod'], 'set': by_kind, 'left_out': by_rule, 'left_out_parts': [[o['kind'], o['place'], o['text'][:48], o['reason']] for o in v['out'] if o['reason'] != 'after'][:12]}
 
 
 def step(ctx, em):
@@ -194,5 +293,17 @@ def run(ctx):
     r.check(all(row[k]['x'] > row[k - 1]['x'] for k in range(1, 7)), 'documents 1–7 advance along the row', [round(b['x']) for b in row[:7]])
     r.check(abs(row[7]['x'] - row[0]['x']) < eps and row[7]['y'] > row[0]['y'], 'document 8 starts the second row under document 1', {'d1': (round(row[0]['x']), round(row[0]['y'])), 'd8': (round(row[7]['x']), round(row[7]['y']))})
     r.check(row[0]['x'] < cell['x'] + cell['w'] / 7 and row[0]['y'] < cell['y'] + cell['h'] / 7, 'document 1 lies in the first cell of the grid', {'d1': (round(row[0]['x']), round(row[0]['y'])), 'cell': (round(cell['x']), round(cell['y']))})
+    # THE LABELS: at each of S3's thresholds over the first edition, then at HOME and at WHOLE BOARD
+    box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
+    seen = {}
+    for name, value, kind in ctx.js('window.__skep.thresholds'):
+        ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * (0.3 if kind == 'em' else 0.5), ctx.js('window.__skep.scaleFor(%s, %s, %s)' % (json.dumps(DOC), json.dumps(kind), value)))
+        seen[name] = labels_hold(r, name, label_view(ctx))
+    for name, door in (('home', 'home'), ('whole-board', 'wholeBoard')):
+        ctx.js('window.__skep.go.%s()' % door)
+        ctx.settle()
+        ctx.frames(2)
+        seen[name] = labels_hold(r, name, label_view(ctx))
+    r.figures['labels'] = seen
     ctx.leap(DOC, WINDOW[0])
     return r.out()

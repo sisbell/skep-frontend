@@ -4,7 +4,7 @@
 // past the sound depth. M2 (the cell arithmetic off by one) turns it red.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, clearLeftOf, continuationCell, withinContinuation, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
+import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, boardLabelCell, clearLeftOf, continuationCell, withinContinuation, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
 
 test('the padded path: a board 3 digits, an account 5, a document 6', () => {
   assert.deepEqual(pathOf('1'), [1, 0, 0]);
@@ -96,4 +96,15 @@ test('the account under a world point is read back from the grid', () => {
   assert.equal(accountAt(c.x + c.w / 2, c.y + c.h / 2, '1'), '1.0.2');
   const sep = cellOfKey('1');
   assert.equal(accountAt(sep.x + 1, sep.y + 1, '1'), null, 'the separator slot holds no account');
+});
+
+test('the board\'s label stands in the first cell of its user grid, which no account\'s cell meets', () => {
+  const room = boardLabelCell('1'), b = cellOfKey('1');
+  assert.deepEqual([room.x, room.y, room.w, room.h], [b.x, b.y, b.w / G[3], b.h / G[3]]);
+  for (const a of ['1.0.1', '1.0.2', '1.0.7', '1.0.8', '1.0.9', '1.0.1.1', '1.0.9.3']) {
+    const c = cellOfKey(a);
+    const meet = c.x < room.x + room.w && room.x < c.x + c.w && c.y < room.y + room.h && room.y < c.y + c.h;
+    assert.ok(!meet, `${a}'s cell meets the board's label cell`);
+  }
+  assert.equal(accountAt(room.x + room.w / 2, room.y + room.h / 2, '1'), null);
 });

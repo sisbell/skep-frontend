@@ -6,9 +6,13 @@
 // oracle `visible`, the beams' anchors beside their spans' own rects, the
 // handoff (`barsOf`: the canvas's own bars for a document beside its mounted
 // article's blocks), the continuations' marks the canvas drew (`residues`:
-// each one's count, newest member, members, the text it drew and its screen
-// rect) and the mid connections it drew between places (`connections`), S3's
-// camera paths (`runPath`) and the frame buffer —
+// each one's count, newest member, members, the lines set on it and its
+// screen rect), the mid connections it drew between places (`connections`),
+// the labels it set (`labels`: each one's kind, place, lines — their text,
+// size and screen rect — and the room its place gave it, the trail's pip
+// numbers among them) and the parts of labels it left out with the rule that
+// left each out (`labelsLeftOut`), S3's camera paths (`runPath`) and the
+// frame buffer —
 // each frame's count of documents both drawn and mounted, and of documents
 // yielded and not mounted — the bridge client's own call
 // log, the settle signal, the trail, the line's and the overlay's text, the
@@ -298,6 +302,10 @@ export function install(deps) {
     residues: () => RENDER.stats.residueMarks.slice(),
     /** the mid connections the last frame drew, each between two places: a document, or a mark's `key` */
     connections: () => RENDER.stats.connections.slice(),
+    /** the labels the last frame set, in the order they were set, the trail's pip numbers last */
+    labels: () => RENDER.stats.labels.slice(),
+    /** the parts of labels the last frame left out, each with the rule that left it out */
+    labelsLeftOut: () => RENDER.stats.labelsLeftOut.slice(),
     runPath, settle,
     frames: () => deps.frames.slice(),
     bridge: { calls: () => PORT.callLog(), adapter: () => PORT.adapterName(), stream: () => PORT.streamState() },

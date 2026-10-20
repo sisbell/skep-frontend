@@ -3,8 +3,9 @@ each LOD threshold of `web/plane/lod.js` (the page names them in
 `window.__skep.thresholds`) and at each B1 screen this lane built — produced
 for the typography and a11y seats, not asserted beyond "written", save that
 a screen whose caption claims an element asserts it in view (inside its clip
-and the viewport, by the page's `visible` oracle). Chrome composites the DOM
-text layer into the shot (C5 (b))."""
+and the viewport, by the page's `visible` oracle), and one whose caption
+claims the canvas's labels asserts the canvas set them (the page's
+`labels`). Chrome composites the DOM text layer into the shot (C5 (b))."""
 import json
 
 from . import DOC, GHOST, WINDOW, XFAIL_CLIP, Result
@@ -37,7 +38,9 @@ def run(ctx):
     ctx.view_doc_px(DOC, 160)
     screen('B1-S2', 'the region at mid: the extents, each edged as a draft or an edition', 'B1-S2-region-mid')
     ctx.js('window.__skep.go.wholeBoard()'); ctx.settle(); ctx.frames(2)
-    screen('B1-S3', 'the far counts: the whole board at the clamp', 'B1-S3-far-counts')
+    screen('B1-S3', 'the far counts: the whole board at the clamp — the board\'s label and residue statement in the cell of its user grid no account takes; each cluster\'s address above its density mark and beneath it the counts its mark holds at the label floor, those it cannot hold left out', 'B1-S3-far-counts')
+    named = {(l['kind'], l['place']) for l in ctx.js('window.__skep.labels()')}
+    r.check(('board', '1') in named and ('cluster', '1.0.1') in named, 'B1-S3: the board\'s label and the clusters\' labels are set, as the caption says', sorted(named))
     ctx.leap(DOC, WINDOW[0])
     ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC)); ctx.frames(2)
     screen('B1-S4', 'the links card: the chain\'s stage, the others\' toggle, the lenses, the rows', 'B1-S4-links-card')

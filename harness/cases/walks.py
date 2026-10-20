@@ -4,8 +4,9 @@ the design's note beside each in `report.md` (`ux/walks.md` at the design
 repo's HEAD). W-02, W-03 and W-04 are OUT (their screens are later lanes').
 Produced for the seats, asserted as "the step ran and the shot exists" — and
 where a step's note claims an element, that the element is in view (inside
-its clip and the viewport, by the page's `visible` oracle), so the seats are
-never shown a note the shot contradicts. The card's controls are pressed as
+its clip and the viewport, by the page's `visible` oracle), and where it
+claims the canvas's labels, that the canvas set them (the page's `labels`),
+so the seats are never shown a note the shot contradicts. The card's controls are pressed as
 a person presses them (the switch's rect read, the click dispatched at
 engine level), and the card's state is read back before the shot. What each
 step could not have on this lane is said in its note."""
@@ -83,7 +84,9 @@ def run(ctx):
     ctx.esc()
     # ---- W-05 — Read & navigate the board -----------------------------------------------
     ctx.view_doc_px(DOC, 5)
-    step(ctx, r, 'W-05', 1, 'zoom for structure: far', 'W-05 step 1: "far = counts and density" (law 5\'s LOD tiers). The account\'s clusters with their counts; the system account held and not drawn.', 'far')
+    step(ctx, r, 'W-05', 1, 'zoom for structure: far', 'W-05 step 1: "far = counts and density" (law 5\'s LOD tiers). The accounts\' clusters, each with its density mark and its address; at this scale a cluster\'s mark has no room for its counts at the label floor, so they are left out — the counts a larger mark holds stand at WHOLE BOARD (B1-S3), and the far counts\' room is the design\'s open question; the system account held and not drawn.', 'far')
+    far = [l for l in ctx.js('window.__skep.labels()') if l['kind'] == 'cluster']
+    r.check(bool(far) and all(len(l['lines']) == 1 and l['lines'][0]['text'] == l['place'] for l in far), 'W-05 step 1: each cluster carries its address and no count, as the note says', [[l['place'], [x['text'] for x in l['lines']]] for l in far])
     ctx.view_doc_px(DOC, 120)
     step(ctx, r, 'W-05', 1, 'zoom for structure: mid', 'W-05 step 1: "mid = extents" — the documents as boxes with their greeked extents, each edged as a draft or an edition, the badges counting the links each holds.', 'mid')
     ctx.leap(DOC, 541)
