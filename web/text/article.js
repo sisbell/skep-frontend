@@ -6,11 +6,16 @@
 // the selection (a byte span: every block it touches is marked, the
 // platform's highlight showing the bytes themselves), the focus (a block),
 // the owner's and the person's links in place (the
-// marks LK decided, hue the linker's), the transcluded runs' sameness
+// marks LK decided, hue the linker's), each transcluded run's sameness
 // boundary with the origin's label (the hairline, whole at the first run of
-// that origin, compact after), the entitled reader's mark C-33 on a
-// draft-origin run in a published document, the "+⟨n⟩ others" count at the
-// block's edge, the symbols the reveal asked for; the withheld block
+// that origin, compact after) and the entitled reader's mark C-33 on a
+// draft-origin run in a published document — set ONCE per run in a block,
+// at its first stretch, however marks and symbols cut it (foundations §2.1:
+// "each change of origin between adjacent runs is marked by a hairline") —
+// the "+⟨n⟩ others" count at the block's edge, and the symbols the reveal
+// asked for, each AT ITS SPAN (foundations §2.1; B1-S4: "No margin column:
+// the symbols are at the place"): right after the last word its span
+// touches, in the last paragraph it touches (`standOf`); the withheld block
 // OCCUPYING its positions with R56's arm by PUB-5.121's order and C-67's
 // clause beneath; a record atom rendered as the record it is (the genesis
 // record's words); an unknown item kind "not rendered" with its width; the
@@ -40,8 +45,8 @@
 import { esc, fingerprintCue, sliceBytes, byteLength } from '../util.js';
 import { t } from '../strings.js';
 import { memberOf, documentOf } from '../model/address.js';
-import { touches } from './span.js';
-import { MEASURE, BORDER, borderEm, headingSize } from '../plane/layout.js';
+import { touches, posOfChar, charOfPos } from './span.js';
+import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '../plane/layout.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -78,13 +83,29 @@ import { MEASURE, BORDER, borderEm, headingSize } from '../plane/layout.js';
  */
 
 /**
- * @typedef {Object} Seg — a stretch of one block's text between two cuts, with what marks it
+ * @typedef {Object} Opening — what a run's first stretch in a block carries for the run: its boundary and its hairline, and C-33's mark where the run has one
+ * @property {boolean} whole the hairline labelled whole: the first run of its origin in the article
+ * @property {boolean} c33 C-33's mark: a draft's run in a published document
+ */
+
+/**
+ * @typedef {Object} Seg — a stretch of one block's text between two cuts, with what marks it and the symbols standing at it
  * @property {string} text the document's characters over it
  * @property {Shown[]} marks the links marked over it
  * @property {Origin | null} origin the transcluded run it lies in
- * @property {boolean} whole the first stretch of its origin in the article: its hairline labelled whole
- * @property {boolean} c33 it carries C-33's mark: a draft's run in a published document
+ * @property {Opening | null} opens the run's chrome, where it is the run's first stretch in the block; null at every other stretch
+ * @property {Shown[]} chromeSyms the symbols standing after its run's chrome, before its text: their spans' last word runs into the hairline with no break between them (`standOf`)
+ * @property {Shown[]} syms the symbols standing right after its text (`standOf`)
  */
+
+/**
+ * @typedef {Object} Chrome — a run's chrome at its first stretch in a block, as P-LAY sets it in the line
+ * @property {string} label the hairline's label
+ * @property {boolean} box C-33's mark follows it, an inline-block
+ */
+
+/** a run's hairline label: its origin's address where the label is whole, the bare ≡ after */
+const labelOf = (/** @type {Origin} */ o, /** @type {Opening} */ at) => (at.whole ? '≡ ' + o.doc : '≡');
 
 /**
  * @typedef {Object} Rec — a record atom as it renders (the record rule)
@@ -100,8 +121,7 @@ import { MEASURE, BORDER, borderEm, headingSize } from '../plane/layout.js';
  * @property {Block} b
  * @property {'withheld' | 'record' | 'ref' | 'hex' | 'para'} kind
  * @property {number} level a paragraph's heading level, 0 for a paragraph
- * @property {Seg[]} segs a paragraph's stretches
- * @property {Shown[]} syms the symbols at a paragraph
+ * @property {Seg[]} segs a paragraph's stretches, the symbols standing in it among them
  * @property {{n: number, social: boolean}} count the others' count at a paragraph
  * @property {Rec | null} rec a record atom's record
  */
@@ -218,37 +238,119 @@ export function cornerHTML(d, v) {
   return parts.join('');
 }
 
+/** is a UTF-16 code unit the second half of a surrogate pair? */
+const isLow = (/** @type {number} */ u) => u >= 0xdc00 && u <= 0xdfff;
+
+/**
+ * Where a link's symbol stands in a paragraph's text: right after the last
+ * word its span touches — the first point at or after the span's last
+ * character that is not a space where P-LAY may break the paragraph's line
+ * with no symbol in it: before a space, between a pair `breakBetween` allows,
+ * beside an inline-block, at the text's end. Set there, a symbol adds room
+ * to a line and no place to break it, so the article without its symbols is
+ * never longer than with them, and the face T-LAYER fits to LK's `utmost`
+ * holds it at every stage; set inside a word it would let the word's halves
+ * part. A run's chrome stands in the line as P-LAY sets it, its hairline's
+ * label joined to the word before it where no break falls between them: a
+ * word that runs into a hairline so takes its symbol after the run's chrome,
+ * never inside it. A span of spaces alone takes its symbol where it ends.
+ * @param {string} text the paragraph's text
+ * @param {number} c0 the span's first character in it
+ * @param {number} c1 one past the span's last character in it
+ * @param {(i: number) => (Chrome | null)} chromeAt the chrome of the run whose first stretch in the paragraph starts at character `i`
+ * @returns {{at: number, after: boolean}} the character the symbol stands before (the text's length at its end), and whether it stands after the chrome there
+ */
+export function standOf(text, c0, c1, chromeAt) {
+  const cp = (/** @type {number} */ i) => /** @type {number} */ (text.codePointAt(i));
+  const startOf = (/** @type {number} */ i) => (i > 0 && isLow(text.charCodeAt(i)) ? i - 1 : i);
+  const step = (/** @type {number} */ i) => i + (cp(i) > 0xffff ? 2 : 1);
+  let j = startOf(c1 - 1);
+  while (j >= c0 && isSpace(cp(j))) j = startOf(j - 1);
+  if (j < c0) return { at: c1, after: false };
+  // the line as P-LAY sets it (`wrap`'s `prev` and `before`): the last item set and the one before it — a character,
+  // 32 a space, -1 the row's start, -2 an inline-block
+  let prev = -1, before = -1;
+  const set = (/** @type {number} */ c) => { if (isSpace(c)) prev = before = 32; else { before = prev; prev = c; } };
+  const setChrome = (/** @type {Chrome} */ ch) => { for (const c of ch.label) set(/** @type {number} */ (c.codePointAt(0))); if (ch.box) prev = before = -2; };
+  /** may the line break before `c`, after what is set? */
+  const breaks = (/** @type {number} */ c) => prev === -2 || isSpace(c) || breakBetween(prev, c, before < 0 || before === 32);
+  // what stands before the span's last character: the chrome of a run whose first stretch starts there, else the character before it
+  const here = chromeAt(j);
+  if (here) setChrome(here); else if (j > 0) set(cp(startOf(j - 1)));
+  set(cp(j));
+  for (let k = step(j); k < text.length; k = step(k)) {
+    const c = cp(k), ch = chromeAt(k);
+    if (ch) {
+      if (breaks(/** @type {number} */ (ch.label.codePointAt(0)))) return { at: k, after: false };
+      setChrome(ch);
+      if (breaks(c)) return { at: k, after: true };
+    } else if (breaks(c)) return { at: k, after: false };
+    set(c);
+  }
+  return { at: text.length, after: false };
+}
+
 /**
  * The stretches of one block's text: cut at the edges of the owner's and the
- * person's links (LK's set) and of the transcluded runs, each with what marks
- * it; the first stretch of each origin in the article labelled whole.
+ * person's links (LK's set), at the edges of the transcluded runs, and where
+ * the symbols standing in the block stand (`standOf`), each with what marks
+ * it and the symbols at it; each run's chrome — its boundary, its hairline,
+ * C-33's mark — at its first stretch in the block alone, however the run is
+ * cut, the hairline labelled whole at the first run of its origin in the
+ * article.
  * @param {Block} b
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {Set<string>} labelled the origins already labelled whole in this article
+ * @param {Shown[]} standing the symbols standing in this block: the ones whose span's last paragraph it is
  * @returns {Seg[]}
  */
-function segmentsOf(b, d, v, labelled) {
-  // cut points in positions: the block's edges, every mark's edges, every origin's edges
-  const cuts = new Set([b.pos, b.pos + b.width]);
+function segmentsOf(b, d, v, labelled, standing) {
   const marks = v.marks.filter((m) => m.pos < b.pos + b.width && b.pos < m.pos + m.width);
-  for (const m of marks) { cuts.add(Math.max(b.pos, m.pos)); cuts.add(Math.min(b.pos + b.width, m.pos + m.width)); }
   const origins = d.origins.filter((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);
+  const published = d.meta ? d.meta.published : d.kind === 'edition';
+  // each run's first stretch in the block, by the character it starts at, with what it carries
+  /** @type {Map<number, {o: Origin, opens: Opening}>} */
+  const opening = new Map();
+  for (const o of [...origins].sort((x, y) => x.pos - y.pos)) {
+    const at = charOfPos(b, Math.max(b.pos, o.pos));
+    if (at >= b.text.length) continue;
+    opening.set(at, { o, opens: { whole: !labelled.has(o.doc), c33: (v.originKinds.get(o.doc) || 'unknown') === 'draft' && published } });
+    labelled.add(o.doc);
+  }
+  /** the chrome standing before a character, as the line sets it */
+  const chromeAt = (/** @type {number} */ i) => { const r = opening.get(i); return r ? { label: labelOf(r.o, r.opens), box: r.opens.c33 } : null; };
+  const stands = standing.map((s) => {
+    const st = standOf(b.text, charOfPos(b, Math.max(b.pos, s.pos)), charOfPos(b, Math.min(b.pos + b.width, s.pos + s.width)), chromeAt);
+    return { s, after: st.after, pos: posOfChar(b, st.at) };
+  });
+  // cut points in positions: the block's edges, every mark's edges, every origin's edges, every symbol's place
+  const cuts = new Set([b.pos, b.pos + b.width]);
+  for (const m of marks) { cuts.add(Math.max(b.pos, m.pos)); cuts.add(Math.min(b.pos + b.width, m.pos + m.width)); }
   for (const o of origins) { cuts.add(Math.max(b.pos, o.pos)); cuts.add(Math.min(b.pos + b.width, o.pos + o.width)); }
+  for (const st of stands) cuts.add(st.pos);
   const points = [...cuts].sort((a, c) => a - c);
   const total = byteLength(b.text);
-  const published = d.meta ? d.meta.published : d.kind === 'edition';
   /** @type {Seg[]} */
   const out = [];
+  /** @type {number[]} each stretch's first position */
+  const starts = [];
   for (let i = 0; i + 1 < points.length; i++) {
     const p0 = points[i], p1 = points[i + 1];
     const text = sliceBytes(b.text, p0 - b.pos, Math.min(total, p1 - b.pos));
     if (!text) continue;
     const origin = origins.find((o) => o.pos < p1 && p0 < o.pos + o.width) || null;
-    const whole = !!origin && !labelled.has(origin.doc);
-    if (origin && whole) labelled.add(origin.doc);
-    const c33 = !!origin && (v.originKinds.get(origin.doc) || 'unknown') === 'draft' && published;
-    out.push({ text, marks: marks.filter((m) => m.pos < p1 && p0 < m.pos + m.width), origin, whole, c33 });
+    const open = origin ? opening.get(charOfPos(b, p0)) : undefined;
+    out.push({ text, marks: marks.filter((m) => m.pos < p1 && p0 < m.pos + m.width), origin, opens: open && open.o === origin ? open.opens : null, chromeSyms: [], syms: [] });
+    starts.push(p0);
+  }
+  // each symbol at its stretch: after the chrome of the run it stands in, else after the text of the stretch ending where it stands
+  for (const st of stands) {
+    const opened = st.after ? starts.indexOf(st.pos) : -1;
+    if (opened >= 0) { out[opened].chromeSyms.push(st.s); continue; }
+    let i = starts.length - 1;
+    while (i > 0 && starts[i] >= st.pos) i--;
+    if (out[i]) out[i].syms.push(st.s);
   }
   return out;
 }
@@ -276,9 +378,10 @@ function headOf(d, v, owner) {
 /**
  * The one walk of a document both renderings are made from: the head, then
  * each block decided once — withheld, a record, a reference, an item not
- * rendered, or a paragraph with its heading level, its stretches, its
- * symbols and its others' count — then the empty document's line and the
- * scene-offers.
+ * rendered, or a paragraph with its heading level, its stretches with the
+ * symbols standing at them, and its others' count — then the empty
+ * document's line and the scene-offers. A symbol stands in the last
+ * paragraph its span touches, once however many it crosses.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -290,18 +393,25 @@ function walk(d, v, ownerAccount) {
   if (d.refused) return { owner, head, parts: null, empty: false, offers: [] };
   /** @type {Set<string>} */
   const labelled = new Set();
+  // the symbols standing in each paragraph, by its first position: the last paragraph each one's span touches
+  /** @type {Map<number, Shown[]>} */
+  const standing = new Map();
+  for (const s of v.symbols) {
+    let last = null;
+    for (const b of d.blocks) if (b.kind === 'para' && touches(b, s)) last = b;
+    if (last) standing.set(last.pos, [...(standing.get(last.pos) || []), s]);
+  }
   const none = { n: 0, social: false };
   /** @type {Part[]} */
   const parts = d.blocks.map((b) => {
     /** @type {Part} */
-    const p = { b, kind: 'para', level: 0, segs: [], syms: [], count: none, rec: null };
+    const p = { b, kind: 'para', level: 0, segs: [], count: none, rec: null };
     if (b.kind === 'withheld') p.kind = 'withheld';
     else if (b.kind === 'atom') { p.kind = 'record'; p.rec = recordOf(b, d, v); }
     else if (b.kind === 'ref' || b.kind === 'hex') p.kind = b.kind;
     else {
       p.level = headingLevel(b.text);
-      p.segs = segmentsOf(b, d, v, labelled);
-      p.syms = v.symbols.filter((s) => s.pos < b.pos + b.width && b.pos < s.pos + s.width);
+      p.segs = segmentsOf(b, d, v, labelled, standing.get(b.pos) || []);
       p.count = v.countAt(b);
     }
     return p;
@@ -311,7 +421,14 @@ function walk(d, v, ownerAccount) {
   return { owner, head, parts, empty: !d.blocks.length && d.extent === 0, offers };
 }
 
-/** a stretch of a paragraph's text as HTML: its marks and its sameness boundary, the text's own characters untouched */
+/** a link's symbol at its span: hue the linker's, dashed for another's, lighter once followed */
+const symHTML = (/** @type {Shown} */ s) => `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}" role="button" tabindex="-1" title="${esc(s.link.type || '')}">⟡</span>`;
+
+/**
+ * A stretch of a paragraph's text as HTML: its marks, its run's ground and,
+ * where it opens its run, the run's boundary, hairline and C-33's mark; then
+ * the symbols standing at it — the text's own characters untouched.
+ */
 function segHTML(/** @type {Seg} */ s) {
   const cls = ['seg'];
   const attrs = [];
@@ -320,14 +437,17 @@ function segHTML(/** @type {Seg} */ s) {
     attrs.push(`style="--mark-hue:${s.marks[0].mark.hue};--mark-value:${s.marks[0].mark.value}"`, `data-links="${s.marks.map((m) => m.link.addr).join(' ')}"`);
     if (s.marks.every((m) => m.mark.value < 1)) cls.push('visited');
   }
+  const syms = s.syms.map(symHTML).join('');
   if (s.origin) {
-    const o = s.origin.doc;
+    const o = s.origin.doc, at = s.opens;
     cls.push('same');
+    if (at) cls.push('opens');
     attrs.push(`data-origin="${esc(o)}"`);
-    const mark = s.c33 ? `<span class="pubmark" data-mark="C-33">${esc(t('C-33'))}</span>` : '';
-    return `<span class="${cls.join(' ')}" ${attrs.join(' ')}><span class="hairline ${s.whole ? 'whole' : 'compact'}" data-src="${esc(o)}" title="${esc(o)}">${s.whole ? '≡ ' + esc(o) : '≡'}</span>${mark}${esc(s.text)}</span>`;
+    const chrome = !at ? '' : `<span class="hairline ${at.whole ? 'whole' : 'compact'}" data-src="${esc(o)}" title="${esc(o)}">${esc(labelOf(s.origin, at))}</span>` +
+      (at.c33 ? `<span class="pubmark" data-mark="C-33">${esc(t('C-33'))}</span>` : '');
+    return `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${chrome}${s.chromeSyms.map(symHTML).join('')}${esc(s.text)}</span>${syms}`;
   }
-  return cls.length > 1 ? `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${esc(s.text)}</span>` : esc(s.text);
+  return (cls.length > 1 ? `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${esc(s.text)}</span>` : esc(s.text)) + syms;
 }
 
 /**
@@ -360,9 +480,8 @@ export function articleHTML(d, v, ownerAccount) {
     if (p.kind === 'ref') { run += `<span class="${cls.join(' ')} ref" ${at}>⟡</span>`; continue; }
     if (p.kind === 'hex') { run += `<span class="${cls.join(' ')}" ${at}>${esc(t('F.not-rendered', { width: b.width }))}</span>`; continue; }
     const tag = p.level ? 'h' + Math.min(6, p.level + 1) : 'p';
-    const syms = p.syms.map((s) => `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}" role="button" tabindex="-1" title="${esc(s.link.type || '')}">⟡</span>`).join('');
     const count = p.count.n > 0 ? `<span class="others" data-count="${p.count.n}">${esc(t('F.others-count', { n: p.count.n }))}</span>` : p.count.social ? `<span class="others social" data-count="0">◦</span>` : '';
-    run += `<${tag} class="${cls.join(' ')}" ${at}>${p.segs.map(segHTML).join('')}${syms}${count}</${tag}>`;
+    run += `<${tag} class="${cls.join(' ')}" ${at}>${p.segs.map(segHTML).join('')}${count}</${tag}>`;
   }
   if (w.empty) run += `<p class="sp empty" data-addr="${esc(d.addr)}" data-pos="1" data-width="0">${esc(t('B1.empty_subspace'))}</p>`;
   for (const o of w.offers) run += `<span class="offer" data-scene="${esc(d.addr)}|${esc(o)}" role="button" tabindex="-1">${esc(t('B1.scene-offer', { D: o }))}</span>`;
@@ -399,9 +518,10 @@ const symbol = (k) => {
 const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, float: o.float ?? null, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0 });
 
 /**
- * A paragraph's inline pieces at its size: each stretch of its text, a
- * transcluded stretch led by its sameness boundary, its hairline's label and
- * C-33's mark where it carries one; then its symbols.
+ * A paragraph's inline pieces at its size, as `segHTML` sets them: each
+ * stretch of its text — the one that opens a run led by the run's sameness
+ * boundary, its hairline's label and C-33's mark where it carries one, and
+ * the symbols standing after them — then the symbols standing after it.
  * @param {Part} p
  * @param {number} k the paragraph's size, in the body's em
  * @returns {Piece[]}
@@ -410,14 +530,13 @@ function paraPieces(p, k) {
   /** @type {Piece[]} */
   const out = [];
   for (const s of p.segs) {
-    if (s.origin) {
+    if (s.origin && s.opens) {
       const l = MEASURE.label * k, m = MEASURE.mark * k, edge = borderEm(BORDER.box) + MEASURE.markPad * m;
-      out.push(piece(s.whole ? '≡ ' + s.origin.doc : '≡', l, borderEm(BORDER.same) + MEASURE.samePad * k, MEASURE.labelGap * l));
-      if (s.c33) out.push({ text: t('C-33'), size: m, lead: edge, trail: edge + MEASURE.markGap * m, box: true });
+      out.push(piece(labelOf(s.origin, s.opens), l, borderEm(BORDER.same) + MEASURE.samePad * k, MEASURE.labelGap * l));
+      if (s.opens.c33) out.push({ text: t('C-33'), size: m, lead: edge, trail: edge + MEASURE.markGap * m, box: true });
     }
-    out.push(piece(s.text, k));
+    out.push(...s.chromeSyms.map(() => symbol(k)), piece(s.text, k), ...s.syms.map(() => symbol(k)));
   }
-  out.push(...p.syms.map(() => symbol(k)));
   return out;
 }
 

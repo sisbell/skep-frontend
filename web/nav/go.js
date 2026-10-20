@@ -5,15 +5,18 @@
 // focus to the landing (N-WALK), re-project the passage carried; `follow`
 // reports the link followed to LK's visited set (S-32 (a)) and lands at the
 // span the slot projects to NOW (A-53 — the document consulted before the
-// link); HOME (the acting account's region), WHOLE BOARD (the board at the
-// clamp) and an account's region push too (D5-F3; foundations §2.2: LEAP,
-// the keyboard's Enter and a click on a place are teleports, whatever they
-// reach); the launch frame is HOME, set without a flight and pushed as the
-// trail's first entry (W-01), so Back after the first teleport returns to
-// it; Back, Forward and a trail jump move the cursor and re-take the
-// departed view. Each act makes ONE trail move, its own push or cursor move:
-// the scene standing over the plane is ended first, "a teleport dismissing
-// the scene first" (§2.5), and its end moves no entry (SC).
+// link), the arrival mark on that span — its first position and its
+// positions, carried on the landing's trail entry, so Back lights it again
+// (foundations §3.2: "the span the link names marked"); HOME (the acting
+// account's region), WHOLE BOARD (the board at the clamp) and an account's
+// region push too (D5-F3; foundations §2.2: LEAP, the keyboard's Enter and a
+// click on a place are teleports, whatever they reach); the launch frame is
+// HOME, set without a flight and pushed as the trail's first entry (W-01), so
+// Back after the first teleport returns to it; Back, Forward and a trail jump
+// move the cursor and re-take the departed view. Each act makes ONE trail
+// move, its own push or cursor move: the scene standing over the plane is
+// ended first, "a teleport dismissing the scene first" (§2.5), and its end
+// moves no entry (SC).
 // Carries: the wireframe's §11 (`leapTo`, `goHome`), §18 `followLink`.
 // Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10.
 
@@ -32,8 +35,15 @@ import { docBox, accountCell, boardCell } from '../plane/projection.js';
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').Link} Link */
 
-/** the arrival mark: the span the follow landed on, lit until the next act */
-/** @type {{addr: string, pos: number, link: string | null} | null} */
+/**
+ * @typedef {Object} Arrival — the arrival mark: the span a follow landed on, lit until the next act
+ * @property {string} addr the document landed in
+ * @property {number} pos the span's first position
+ * @property {number | null} width its positions; null where the link names the far document whole, the mark then on the block holding `pos` — the far article's first, where the beams and the scene anchor such an end
+ * @property {string} link the link followed
+ */
+
+/** @type {Arrival | null} */
 let arrival = null;
 export const arrivalMark = () => arrival;
 export function clearArrival() { arrival = null; }
@@ -55,9 +65,10 @@ export function viewFor(addr, pos) {
 
 /**
  * LEAP to a place: the next act — the overlays close, the camera flies, the
- * trail gains the entry, the focus moves to the landing.
+ * trail gains the entry, the focus moves to the landing; a landing that names
+ * the link it followed lights the arrival mark on the span it landed on.
  * @param {string} addr a document address
- * @param {{pos?: number | null, how?: string, link?: string | null, push?: boolean, ms?: number}} [opts]
+ * @param {{pos?: number | null, width?: number | null, how?: string, link?: string | null, push?: boolean, ms?: number}} [opts] `width` the positions landed on from `pos`, where the landing names a span
  * @returns {Promise<import('../model/records.js').Doc | null>}
  */
 export async function leapTo(addr, opts = {}) {
@@ -68,13 +79,14 @@ export async function leapTo(addr, opts = {}) {
   if (d.extent == null || d.from < 0) { const loaded = await PUMP.loadWhole(addr); if (!loaded) d = REC.doc(addr); }
   if (d.refused === 'unregistered') { FACES.unregistered(addr); CAM.markDirty(); return null; }
   const pos = opts.pos ?? null;
+  const width = pos != null ? opts.width ?? null : null;
   const v = viewFor(addr, pos);
   if (opts.push !== false) {
     const p = REC.place(addr);
-    TRAIL.push({ addr, pos, view: v, link: opts.link ?? null, label: p ? p.label : d.label }, departed);
+    TRAIL.push({ addr, pos, width, view: v, link: opts.link ?? null, label: p ? p.label : d.label }, departed);
   }
   WALK.focusTo(addr, pos);
-  if (opts.link) arrival = { addr, pos: pos ?? 1, link: opts.link };
+  if (opts.link) arrival = { addr, pos: pos ?? 1, width, link: opts.link };
   CAM.markDirty();
   await CAM.fly(v, opts.ms ?? (opts.how === 'click' ? 420 : 620));
   CAM.markDirty();
@@ -84,7 +96,9 @@ export async function leapTo(addr, opts = {}) {
 /**
  * FOLLOW: the far end of a drawn link — reported to LK's visited set; the
  * far document consulted, the slot projected into it NOW; the landing at
- * that span, the arrival marked; a dead reference faced at the symbol.
+ * that span, the arrival marked on it — on its positions where the link names
+ * a passage, at its first position where it names the document whole; a dead
+ * reference faced at the symbol.
  * @param {Shown} s the link as drawn at its near document
  * @param {{x: number, y: number} | HTMLElement | null} [anchor] where a face stands
  */
@@ -105,7 +119,7 @@ export async function follow(s, anchor = null) {
     return;
   }
   if (!proj) { FACES.floating(l, far, anchor); CAM.markDirty(); return; }
-  await leapTo(far, { pos: proj.ordinal, how: 'follow', link: l.addr });
+  await leapTo(far, { pos: proj.ordinal, width: s.farWhole ? null : proj.positions, how: 'follow', link: l.addr });
 }
 
 /** HOME's place and view: the acting account's region at mid scale; a guest's the board's extent (R92 rider (c)) */
@@ -121,7 +135,7 @@ export async function home() {
   const departed = CAM.view();
   dismissChrome();
   const h = homeFrame();
-  TRAIL.push({ addr: h.addr, pos: null, view: h.view, link: null, label: 'HOME' }, departed);
+  TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, link: null, label: 'HOME' }, departed);
   WALK.focusTo(h.addr, null);
   CAM.markDirty();
   await CAM.fly(h.view, 700);
@@ -136,7 +150,7 @@ export async function home() {
 export async function launch() {
   const h = homeFrame();
   CAM.set(h.view);
-  TRAIL.push({ addr: h.addr, pos: null, view: h.view, link: null, label: 'HOME' }, null);
+  TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, link: null, label: 'HOME' }, null);
   await WALK.focusTo(h.addr, null);
   CAM.markDirty();
 }
@@ -147,7 +161,7 @@ export async function wholeBoard() {
   dismissChrome();
   const node = boardNode();
   const target = CAM.viewForCell(boardCell(node), 0.92);
-  TRAIL.push({ addr: node, pos: null, view: target, link: null, label: 'WHOLE BOARD' }, departed);
+  TRAIL.push({ addr: node, pos: null, width: null, view: target, link: null, label: 'WHOLE BOARD' }, departed);
   WALK.focusTo(node, null);
   CAM.markDirty();
   await CAM.fly(target, 700);
@@ -164,7 +178,7 @@ export async function toAccount(acct) {
   const departed = CAM.view();
   dismissChrome();
   const target = CAM.viewForCell(accountCell(acct), 0.85);
-  TRAIL.push({ addr: acct, pos: null, view: target, link: null, label: null }, departed);
+  TRAIL.push({ addr: acct, pos: null, width: null, view: target, link: null, label: null }, departed);
   WALK.focusTo(acct, null);
   CAM.markDirty();
   await CAM.fly(target, 400);
@@ -181,7 +195,7 @@ export async function back() {
   if (!e) return false;
   dismissChrome();
   WALK.focusTo(e.addr, e.pos);
-  arrival = e.link ? { addr: e.addr, pos: e.pos ?? 1, link: e.link } : null;
+  arrival = e.link ? { addr: e.addr, pos: e.pos ?? 1, width: e.width, link: e.link } : null;
   CAM.markDirty();
   await CAM.fly(e.view, 500);
   CAM.markDirty();

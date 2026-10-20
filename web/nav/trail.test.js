@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import * as T from './trail.js';
 
 const v = (/** @type {number} */ n) => ({ x: n, y: n, scale: 1 });
-const e = (/** @type {string} */ addr, /** @type {number} */ n) => ({ addr, pos: null, view: v(n), link: null, label: null });
+const e = (/** @type {string} */ addr, /** @type {number} */ n) => ({ addr, pos: null, width: null, view: v(n), link: null, label: null });
 
 beforeEach(() => T._reset());
 

@@ -33,7 +33,8 @@
 // the label floor, and no path between them (foundations §2.2 renders the
 // entries as pips: at reading scale a pip stands in the text column, where a
 // path would run between the glyphs of the article mounted over the canvas);
-// the focus ring; the arrival mark; text yielded where T-LAYER mounted it;
+// the focus ring; the arrival mark, the span a follow landed on outlined line
+// by line over the mounted article; text yielded where T-LAYER mounted it;
 // for the unmounted, the bars — P-LAY's layout of the article's own lines
 // (T-ARTICLE's plan, made through T-LAYER from the view it mounts with) at the
 // face T-LAYER fits the article to (`metricsOf`), each bar where its line's
@@ -42,13 +43,13 @@
 // T-LAYER's frame BEFORE this draw, so what is mounted is settled when a
 // document's label and bars are drawn or yielded; `stats` names both sets,
 // and the loop holds them against the mounted set at the frame's end; it
-// names the marks, the connections and the labels drawn too, and the labels'
-// parts left out with the rule that left each out, for the gate. The hit
-// tests read the draw's own rule: a click meets a document's box only where
-// the box stands whole, and a continuation's mark wherever the mark holds its
-// documents. The system account's rows are never drawn (the record §1.8;
-// this lane's cut). The chip is at the document's corner (T-ARTICLE), never
-// here.
+// names the marks, the connections and the labels drawn too, the labels'
+// parts left out with the rule that left each out, and the arrival mark's
+// rects, for the gate. The hit tests read the draw's own rule: a click meets
+// a document's box only where the box stands whole, and a continuation's mark
+// wherever the mark holds its documents. The system account's rows are never
+// drawn (the record §1.8; this lane's cut). The chip is at the document's
+// corner (T-ARTICLE), never here.
 // Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
 // Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports).
 
@@ -102,8 +103,9 @@ let DPR = 1;
  * set or whose bars the frame drew, `yielded` the ones it left to T-LAYER's
  * mount, `residueMarks` the continuations drawn as marks, `connections` the
  * mid connections drawn, each between two places, `labels` the labels set —
- * the trail's pip numbers among them — and `labelsLeftOut` the parts the
- * pass left out, each with the rule that left it out.
+ * the trail's pip numbers among them — `labelsLeftOut` the parts the pass
+ * left out, each with the rule that left it out, and `arrival` the rects the
+ * arrival mark outlined.
  */
 export const stats = {
   linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0,
@@ -112,6 +114,7 @@ export const stats = {
   drawn: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]),
   labels: /** @type {import('./labels.js').SetLabel[]} */ ([]),
   labelsLeftOut: /** @type {import('./labels.js').LeftOut[]} */ ([]),
+  arrival: /** @type {Rect[]} */ ([]),
 };
 
 /**
@@ -523,15 +526,23 @@ function drawFocus() {
   ctx.strokeStyle = COL.focus; ctx.lineWidth = 2.5; rrect(ctx, X - 3, Y - 3, W + 6, H + 6, Math.min(8, W * 0.06)); ctx.stroke();
 }
 
-/** the arrival mark: the landing's span outlined, the followed link heavier (foundations §3.2) */
+/**
+ * The arrival mark (foundations §2.1: "an outline around its span"; §3.2):
+ * the span the landing named outlined line by line, each line-rect of its own
+ * bytes in the mounted article; where the link names the document whole, the
+ * block holding the landing's position. The followed link drawn heavier is
+ * not built.
+ */
 function drawArrival() {
   if (!ctx) return;
   const a = GO.arrivalMark(); if (!a) return;
-  const b = REC.blockAt(a.addr, a.pos);
-  const rs = b ? LAYER.spanRects(a.addr, b.pos) : null;
-  if (!rs) return;
+  let rs = null;
+  if (a.width != null) rs = LAYER.spanRects(a.addr, a.pos, a.width);
+  else { const b = REC.blockAt(a.addr, a.pos); rs = b ? LAYER.spanRects(a.addr, b.pos) : null; }
+  const lines = (rs || []).filter((r) => r.w > 0 && r.h > 0);
   ctx.strokeStyle = HUE.you; ctx.lineWidth = 2; ctx.setLineDash([]);
-  for (const r of rs) ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
+  for (const r of lines) ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
+  stats.arrival = lines;
 }
 
 /**
@@ -546,7 +557,7 @@ export function draw() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, VW, VH);
   ctx.textBaseline = 'alphabetic';
-  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.drawn = []; stats.yielded = []; stats.labels = []; stats.labelsLeftOut = [];
+  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.drawn = []; stats.yielded = []; stats.labels = []; stats.labelsLeftOut = []; stats.arrival = [];
   /** @type {Pass} */
   const pass = { labels: [], shapes: [] };
   drawBoard(pass);

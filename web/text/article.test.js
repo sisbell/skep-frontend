@@ -2,10 +2,17 @@
 // its run with its width and never its text, its entitlement arm the one
 // rule's for the reader (C-39's face reads it too); the owner's link marked at its
 // span; the selected span marks every block it touches and no other; the
-// transcluded run's hairline and C-33's mark; the corner's version statement
-// and a draft's chip (C-28), items of one stop that the article never holds
-// (they stand beside it, outside the box that clips it); the record rule;
-// headings as formatting. The plan the canvas's bars are laid out from: the
+// transcluded run's hairline and C-33's mark, once per run however marks and
+// symbols cut it (a mutant that sets them at every stretch turns red); the
+// corner's version statement and a draft's chip (C-28), items of one stop
+// that the article never holds (they stand beside it, outside the box that
+// clips it); the record rule; headings as formatting. Each symbol AT ITS
+// SPAN, in the HTML and the plan alike: right after the last word its span
+// touches — never at the paragraph's end past the words after it (a mutant
+// that sets them there turns red), never inside a word, after a hyphen where
+// the line may break there — once, in the last paragraph a span crossing two
+// touches; after a run's chrome where the word runs into its hairline with no
+// break between them. The plan the canvas's bars are laid out from: the
 // head's three lines, a fourth where links touch the document; a block's
 // pieces with its hairline's label, C-33's mark and its symbols at its size;
 // a heading's margins standing it nearer the block it heads; the same blocks,
@@ -121,7 +128,7 @@ test('the plan\'s head is the article\'s: three lines, a fourth where links touc
 });
 
 test('a block\'s plan carries its hairline\'s label, C-33\'s mark and its symbols, at its own size', () => {
-  const d = doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: '# abcdefghij', origin: null }], origins: [{ pos: 5, width: 4, doc: '1.0.1.0.1003' }] });
+  const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: '# abcdefgh ij', origin: null }], origins: [{ pos: 5, width: 4, doc: '1.0.1.0.1003' }] });
   const v = view({ originKinds: new Map([['1.0.1.0.1003', 'draft']]), marks: [shown(9, 2)], symbols: [shown(9, 2)], countAt: () => ({ n: 3, social: false }) });
   const r = /** @type {import('../plane/layout.js').Row} */ (articlePlan(d, v, '1.0.1').find((x) => x.pos === 1));
   const k = MEASURE.h2;
@@ -130,9 +137,71 @@ test('a block\'s plan carries its hairline\'s label, C-33\'s mark and its symbol
   assert.ok(label && label.size === MEASURE.label * k && label.lead > 0, 'the hairline\'s label whole, at its size, led by the sameness boundary');
   const mark = r.pieces.find((p) => p.text === t('C-33'));
   assert.ok(mark && mark.box && mark.size === MEASURE.mark * k, 'C-33\'s mark: an inline-block');
-  assert.equal(r.pieces.filter((p) => p.text === '⟡' && p.box).length, 1, 'the symbol at its span');
-  assert.equal(r.pieces.filter((p) => !p.box && p.text !== '≡ 1.0.1.0.1003').map((p) => p.text).join(''), '# abcdefghij', 'the document\'s own characters, every one');
+  const sym = r.pieces.findIndex((p) => p.text === '⟡' && p.box);
+  assert.equal(r.pieces.filter((p) => p.text === '⟡' && p.box).length, 1, 'one symbol');
+  assert.deepEqual([r.pieces[sym - 1].text, r.pieces[sym + 1].text], ['gh', ' ij'], 'the symbol at its span: after its last word, before the word after it');
+  assert.equal(r.pieces.filter((p) => !p.box && p.text !== '≡ 1.0.1.0.1003').map((p) => p.text).join(''), '# abcdefgh ij', 'the document\'s own characters, every one');
   assert.equal(r.float && r.float.text, t('F.others-count', { n: 3 }), 'the others\' count floats at its end');
+});
+
+/** a paragraph's pieces in the plan, a symbol as ⟡ and C-33's mark as its id, every other piece its text */
+const piecesOf = (/** @type {import('../model/records.js').Doc} */ d, /** @type {import('./article.js').ArticleView} */ v, /** @type {number} */ pos) =>
+  /** @type {import('../plane/layout.js').Row} */ (articlePlan(d, v, '1.0.1').find((x) => x.pos === pos)).pieces.map((p) => (p.box && p.text === t('C-33') ? 'C-33' : p.text));
+/** the links' symbols in the HTML, in order (the head's presence ⟡ is no link's) */
+const symsIn = (/** @type {string} */ html) => html.match(/<span class="sym [^"]*" data-link="[^"]*"/g) || [];
+
+test('a symbol stands right after the last word its span touches, never at the paragraph\'s end past the words after it', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: 'one two three', origin: null }] });
+  const v = view({ marks: [shown(5, 3)], symbols: [shown(5, 3)] });
+  assert.deepEqual(piecesOf(d, v, 1), ['one ', 'two', '⟡', ' three']);
+  const html = articleHTML(d, v, '1.0.1');
+  assert.equal(symsIn(html).length, 1);
+  assert.ok(/>two<\/span><span class="sym [^"]*"[^>]*>⟡<\/span> three<\/p>/.test(html), html);
+});
+
+test('a span ending inside a word takes its symbol at the word\'s end — after a hyphen where the line may break there — never inside the word', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: 'one two three', origin: null }] });
+  const v = view({ marks: [shown(5, 2)], symbols: [shown(5, 2)] });
+  assert.deepEqual(piecesOf(d, v, 1), ['one ', 'tw', 'o', '⟡', ' three'], 'the word "two" kept whole');
+  assert.ok(/>tw<\/span>o<span class="sym [^"]*"[^>]*>⟡<\/span> three/.test(articleHTML(d, v, '1.0.1')));
+  const path = doc({ blocks: [{ pos: 1, width: 26, kind: 'para', text: 'see frontend-annotation.md', origin: null }] });
+  assert.deepEqual(piecesOf(path, view({ symbols: [shown(5, 5)] }), 1), ['see frontend-', '⟡', 'annotation.md'], '"front": the word runs to the hyphen, where P-LAY breaks the line');
+});
+
+test('a span across two paragraphs takes one symbol, in the last paragraph it touches', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: 'alpha beta', origin: null }, { pos: 13, width: 11, kind: 'para', text: 'gamma delta', origin: null }] });
+  const v = view({ symbols: [shown(7, 8)] });
+  assert.deepEqual([piecesOf(d, v, 1), piecesOf(d, v, 13)], [['alpha beta'], ['gamma', '⟡', ' delta']]);
+  const html = articleHTML(d, v, '1.0.1');
+  assert.equal(symsIn(html).length, 1);
+  assert.ok(/data-pos="13"[^>]*>gamma<span class="sym/.test(html), html);
+});
+
+test('where its span\'s last word runs into a run\'s hairline, the symbol stands after the run\'s chrome; where the line may break before the hairline, before it', () => {
+  const X = '1.0.1.0.1003';
+  // the run opens at the space after "two": the label's ≡ joins "two" in the line, so the symbol stands after the chrome, before the space
+  const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: 'one two three', origin: null }], origins: [{ pos: 8, width: 6, doc: X }] });
+  const draft = view({ originKinds: new Map([[X, 'draft']]), symbols: [shown(5, 3)] });
+  assert.deepEqual(piecesOf(d, draft, 1), ['one two', '≡ ' + X, 'C-33', '⟡', ' three']);
+  assert.ok(/<span class="pubmark" data-mark="C-33">[^<]*<\/span><span class="sym [^"]*"[^>]*>⟡<\/span> three<\/span>/.test(articleHTML(d, draft, '1.0.1')), 'inside the run\'s stretch, after its chrome');
+  assert.deepEqual(piecesOf(d, view({ originKinds: new Map([[X, 'edition']]), symbols: [shown(5, 3)] }), 1), ['one two', '≡ ' + X, '⟡', ' three']);
+  // after an em dash the line may break before the hairline: the symbol stands before the run's chrome
+  const dash = doc({ blocks: [{ pos: 1, width: 15, kind: 'para', text: 'one—two three', origin: null }], origins: [{ pos: 7, width: 3, doc: X }] });
+  assert.deepEqual(piecesOf(dash, view({ symbols: [shown(1, 6)] }), 1), ['one—', '⟡', '≡ ' + X, 'two', ' three']);
+});
+
+test('a run cut by a mark and a symbol carries its boundary, its hairline and C-33\'s mark once, at its first stretch', () => {
+  const X = '1.0.1.0.1003';
+  const d = doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: 'abcdefghijkl', origin: null }], origins: [{ pos: 5, width: 4, doc: X }] });
+  const v = view({ originKinds: new Map([[X, 'draft']]), marks: [shown(6, 2)] });
+  const html = articleHTML(d, v, '1.0.1');
+  assert.equal((html.match(/class="hairline /g) || []).length, 1, html);
+  assert.equal((html.match(/data-mark="C-33"/g) || []).length, 1);
+  assert.equal((html.match(/class="seg[^"]*same opens"/g) || []).length, 1, 'the boundary at its first stretch alone');
+  assert.equal((html.match(/class="seg[^"]*same[^"]*"/g) || []).length, 3, 'its ground under each of its three stretches');
+  assert.deepEqual(piecesOf(d, v, 1), ['abcd', '≡ ' + X, 'C-33', 'e', 'fg', 'h', 'ijkl']);
+  const words = doc({ blocks: [{ pos: 1, width: 11, kind: 'para', text: 'ab cd ef gh', origin: null }], origins: [{ pos: 4, width: 5, doc: X }] });
+  assert.deepEqual(piecesOf(words, view({ symbols: [shown(4, 2)] }), 1), ['ab ', '≡ ' + X, 'cd', '⟡', ' ef', ' gh'], 'a symbol standing inside the run cuts it and repeats none of its chrome');
 });
 
 test('a heading\'s plan stands it nearer the block it heads: its room above at its own size, the smaller room below; a paragraph\'s gap after it alone', () => {

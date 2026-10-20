@@ -204,8 +204,8 @@ export function metricsFor(positions, box) {
   return { fs, cpl, lineH: fs * LINE_H, tw, x0: (box.w - tw) / 2, y0: box.h * (0.05 / 0.86), y1: box.h };
 }
 
-/** collapsible white space (CSS Text §4.1): the space, the tab, a segment break */
-const isSpace = (/** @type {number} */ c) => c === 32 || c === 9 || c === 10 || c === 13;
+/** collapsible white space (CSS Text §4.1): the space, the tab, a segment break — a line breaks at it */
+export const isSpace = (/** @type {number} */ c) => c === 32 || c === 9 || c === 10 || c === 13;
 const codes = (/** @type {string} */ s) => new Set([...s].map((c) => /** @type {number} */ (c.codePointAt(0))));
 const HY = 0x2d, EN = 0x2013, EM = 0x2014, ELLIPSIS = 0x2026, QUESTION = 0x3f;
 /** the characters a line may not start with after a hyphen-minus, an en dash or ellipsis, an em dash, a question mark */

@@ -17,6 +17,16 @@ beam leaving the text at its span's own line, from the article's edge (its
 endpoint level with one of its marked words' line rects, at the article's
 edge — foundations §2.1; S1 Q1), every stub in view carrying its far
 document's label (S1 Q3), and no two of the beams' labels in view meeting.
+THE SYMBOLS (foundations §2.1: "the SYMBOL AT ITS SPAN"; B1-S4: "No margin
+column: the symbols are at the place"): at stage 2, each link of the first
+edition drawn at one span has one symbol, in the paragraph holding the end
+of its marked words, and nothing but the rest of their last word stands
+between those words and it — among them links whose paragraph holds another
+word after their span, which a symbol set at the paragraph's end would
+leave behind it. THE ARRIVAL (foundations §2.1: "the arrival an outline
+around its span"; §3.2): a landing as a follow lands, on a drawn link's span
+half its paragraph or narrower, outlines that span's own lines — each line
+rect of its marked words, and nothing else — never the paragraph's box.
 THE HANDOFF (law 8;
 foundations §2.4: the bars become text and no line moves; S1 Q7): at each
 level, and at the mount threshold reached from below (em 6 → 6.6) and from
@@ -64,12 +74,14 @@ and clear of every entry's pip, the plane's canvas under the mounted article
 holds the box's ground alone — no path runs between the pips, which at
 reading scale would cross the text, showing between the article's glyphs.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
-`beamAnchors`, `visible`, `barsOf`, `labels`, `scene.at`, `scene.ties`, the
-frame buffer, `beamLabels`) save the trail's, which reads the canvas's pixels
+`beamAnchors`, `arrivalAnchors`, `visible`, `barsOf`, `labels`, `scene.at`,
+`scene.ties`, the frame buffer, `beamLabels`) save the trail's, which reads
+the canvas's pixels here, and the symbols', which reads the article's order
 here; the thresholds are here. The beam-label and shared-box checks are
 marked with the page issues they wait on and count as expected while those
 stand."""
 import json
+import re
 
 from . import DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, XFAIL_MEMBER, Result
 
@@ -104,6 +116,35 @@ def on_own_line(a):
     """does the beam's endpoint lie level with one of its words' line rects, at the article's edge?"""
     at_edge = a['edge'] is not None and abs(a['x'] - a['edge']) <= ANCHOR_TOL_PX
     return at_edge and any(w['y'] - ANCHOR_TOL_PX <= a['y'] <= w['y'] + w['h'] + ANCHOR_TOL_PX for w in a['words'])
+
+
+def symbols_view(ctx):
+    """each link of the first edition drawn at one span, as the mounted article sets it: its marked words and its
+    symbols counted; where it has both, whether the symbol stands in the paragraph holding the end of its words and
+    after them, and the article's own text between the words' end and the symbol and after the symbol to the
+    paragraph's end, the chrome inside a paragraph (a hairline, C-33's mark, a symbol, the count) set aside"""
+    return ctx.js('''(() => {
+      const S = window.__skep, art = document.querySelector(%s);
+      if (!art) return null;
+      const shown = S.links.shown(%s), once = shown.filter((s) => shown.filter((x) => x.link === s.link).length === 1);
+      const text = (r) => { const f = r.cloneContents(); f.querySelectorAll('.hairline, .pubmark, .sym, .others').forEach((x) => x.remove()); return f.textContent; };
+      return once.map((s) => {
+        const words = [...art.querySelectorAll(`.lip[data-links~="${s.link}"]`)], syms = [...art.querySelectorAll(`.sym[data-link="${s.link}"]`)];
+        const out = {link: s.link, pos: s.pos, width: s.width, words: words.length, syms: syms.length};
+        if (!words.length || syms.length !== 1) return out;
+        const last = words[words.length - 1], sym = syms[0], block = last.closest('.sp');
+        const after_words = !!(last.compareDocumentPosition(sym) & Node.DOCUMENT_POSITION_FOLLOWING) && !last.contains(sym);
+        const between = document.createRange(), rest = document.createRange();
+        if (after_words) { between.setStartAfter(last); between.setEndBefore(sym); }
+        rest.setStartAfter(sym); rest.setEnd(block, block.childNodes.length);
+        return Object.assign(out, {same_block: block === sym.closest('.sp'), after_words, between: after_words ? text(between) : null, after: text(rest)});
+      });
+    })()''' % (json.dumps('#domlayer article.dtext[data-addr="%s"]' % DOC), json.dumps(DOC)))
+
+
+def rect_like(a, b):
+    """do two rects stand at one place and size, ANCHOR_TOL_PX either way?"""
+    return all(abs(a[k] - b[k]) <= ANCHOR_TOL_PX for k in ('x', 'y', 'w', 'h'))
 
 
 def handoff(ctx):
@@ -480,9 +521,21 @@ def run(ctx):
     worst_sweep = max((max(abs(s['dx']), abs(s['dy']), s.get('span_dx', 0), s.get('span_dy', 0)) for s in sweep), default=0)
     r.check(worst_sweep <= DRIFT_TOL_PX, 'continuous zoom: drift within tolerance across the sweep', {'samples': len(sweep), 'worst_px': worst_sweep})
     r.figures['sweep'] = {'samples': len(sweep), 'worst_px': worst_sweep}
-    # the beams: stage 3 at the first edition, every endpoint inside its anchor rect
+    # the symbols: stage 2 at the first edition, each at its span — after the last word its marked words touch, in the
+    # paragraph holding them, and never past a word after them
     ctx.view_doc_em(DOC, 12.5)
     hidden_face = ctx.js('window.__skep.mounted(%s).fs' % json.dumps(DOC))
+    ctx.js('window.__skep.links.reveal(%s, 2)' % json.dumps(DOC))
+    ctx.settle()
+    ctx.frames(3)
+    drawn = [s for s in (symbols_view(ctx) or []) if s['words']]
+    misplaced = [s for s in drawn if s['syms'] != 1 or not s.get('same_block') or not s.get('after_words') or re.search(r'\s', s.get('between') or '')]
+    followed = [s for s in drawn if s not in misplaced and (s.get('after') or '').strip()]
+    r.check(bool(drawn) and not misplaced, 'stage 2: each link of the first edition drawn at one span has one symbol, in the paragraph holding the end of its marked words, with nothing but the rest of their last word between them and it',
+            [{k: s.get(k) for k in ('link', 'pos', 'width', 'syms', 'same_block', 'after_words', 'between')} for s in misplaced[:6]])
+    r.check(bool(followed), 'stage 2: among them, symbols with another word of their paragraph after them — a symbol at the paragraph\'s end would stand past it', {'drawn': len(drawn), 'followed': len(followed)})
+    r.figures['symbols'] = {'drawn': len(drawn), 'misplaced': len(misplaced), 'followed_by_a_word': len(followed)}
+    # the beams: stage 3 at the first edition, every endpoint inside its anchor rect
     ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(DOC))
     ctx.settle()
     ctx.frames(3)
@@ -521,6 +574,25 @@ def run(ctx):
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
     ctx.frames(2)
     r.check(ctx.js('window.__skep.beams()') == 0, 'hidden again: no beams')
+    # the arrival: a landing as a follow lands — the door naming its span and its link — on a drawn link's span half its
+    # paragraph or narrower outlines that span's own lines, never the paragraph's box
+    shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
+    paras = [b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if b['kind'] == 'para']
+    once = [s for s in shown if sum(1 for x in shown if x['link'] == s['link']) == 1]
+    target = next((s for s in once for b in paras if b['pos'] <= s['pos'] and s['pos'] + s['width'] <= b['pos'] + b['width'] and 2 * s['width'] <= b['width']), None)
+    r.check(target is not None, 'the arrival: a drawn link of the first edition at one span, half its paragraph or narrower', [[s['pos'], s['width']] for s in once[:8]])
+    if target is not None:
+        ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), target['pos'], json.dumps({'width': target['width'], 'link': target['link']})))
+        ctx.settle()
+        ctx.frames(3)
+        a = ctx.js('window.__skep.arrivalAnchors()') or {}
+        outline, words, block = a.get('outline') or [], a.get('words') or [], a.get('block')
+        r.check(bool(outline) and bool(words) and all(any(rect_like(o, w) for w in words) for o in outline) and all(any(rect_like(w, o) for o in outline) for w in words),
+                f'the arrival: the outline stands on its span\'s own lines — each rect it outlines one of the line rects of the link\'s marked words, and each of those outlined, {ANCHOR_TOL_PX} px either way',
+                {'link': target['link'], 'pos': target['pos'], 'width': target['width'], 'outline': outline[:6], 'words': words[:6]})
+        r.check(block is not None and not any(rect_like(o, block) for o in outline), 'the arrival: no rect it outlines is the paragraph\'s box', {'block': block, 'outline': outline[:6]})
+        r.figures['arrival'] = {'link': target['link'], 'pos': target['pos'], 'width': target['width'], 'outlined_lines': len(outline), 'word_lines': len(words)}
+        ctx.leap(DOC, WINDOW[0])
     # the mount thresholds: mounted at em 6.5 and above, unmounted below 5.5; at each step the frames it drew drew no
     # document both as bars and as text, nor left one yielded and unmounted; where the article stands just mounted, it
     # stands on its bars

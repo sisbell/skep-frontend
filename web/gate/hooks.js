@@ -4,7 +4,9 @@
 // mirror's items, the camera and the focus, S1's `driftSample` and
 // `overlapCheck` (the measuring code moved into the page), the visibility
 // oracle `visible`, the beams' anchors beside their spans' own rects and the
-// labels the beams set at their bundles' ends (`beamLabels`), the handoff
+// labels the beams set at their bundles' ends (`beamLabels`), the arrival
+// mark's outline beside its link's marked words (`arrivalAnchors`; the
+// `go.leapTo` door lands as a follow does where it names a link), the handoff
 // (`barsOf`: the canvas's own bars for a document beside its mounted
 // article's blocks), the reading scene's runs and the ends it set level
 // (`scene.pairs`), a passage's line in one of its panes (`scene.at`) and its
@@ -28,8 +30,9 @@
 // containment check holds an article's content to the clip the page draws and
 // to its document's box, and each corner to the room beside it, `visible`
 // says whether an element the DOM holds is shown (inside its clip and the
-// viewport), and a beam's endpoint is held to the client rects of its link's
-// marked words, read from the article apart from the beams' own set.
+// viewport), and a beam's endpoint and the arrival mark's outline are held to
+// the client rects of their link's marked words, read from the article apart
+// from the beams' and the canvas's own sets.
 // The doors that move the reveal chain redraw the links card where it stands
 // open, as the card's own acts do, so a shot after a door shows the state it
 // set. Carries: S1's `driftSample`, `overlapCheck`, `canvasSpanRect`/
@@ -230,6 +233,24 @@ export function install(deps) {
     });
   }
   /**
+   * The arrival mark's outline as the last frame drew it (`outline`, the
+   * rects it stroked around), beside an oracle read apart from the canvas's
+   * own set: the client rects of the followed link's marked words in the
+   * landing's mounted article (every line they occupy) and the box of the
+   * block holding the landing's position. The arrival is an outline around
+   * its span (foundations §2.1): the layout case holds the outline to the
+   * words, never to the block. Null where no arrival is lit.
+   */
+  function arrivalAnchors() {
+    const a = GO.arrivalMark();
+    if (!a) return null;
+    const rec = LAYER.mountedSet().get(a.addr);
+    const words = rec ? [...rec.el.querySelectorAll(`.lip[data-links~="${a.link}"]`)].flatMap((w) => [...w.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height }))) : [];
+    const b = REC.blockAt(a.addr, a.pos);
+    const block = rec && b ? rec.el.querySelector(`.sp[data-pos="${b.pos}"]`) : null;
+    return { ...a, outline: RENDER.stats.arrival.slice(), words, block: block ? rectOf(block) : null };
+  }
+  /**
    * The handoff (foundations §2.4: the bars become text and no line moves;
    * S1 Q7): the canvas's own bars for a document — the layout P-RENDER draws
    * below the mount, at the camera as it stands — each block's first line's
@@ -348,7 +369,7 @@ export function install(deps) {
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
     view: { camera: () => CAM.view(), focus: () => WALK.current(), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
     driftSample, overlapCheck, visible,
-    beamAnchors, barsOf,
+    beamAnchors, arrivalAnchors, barsOf,
     /** the labels the beams' last frame set, one per bundle: the document it leaves, its far document, its text, whether it ends in a stub, and its rect on screen */
     beamLabels: () => BM.labels(),
     /** the continuations the last frame drew as marks */
@@ -395,7 +416,8 @@ export function install(deps) {
     esc: () => KEYS.esc(),
     mounts: () => LAYER.mounts(),
     beams: () => BM.count(),
-    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos) => GO.leapTo(a, { pos: pos ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s, null).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), arrival: () => GO.arrivalMark() },
+    /** the teleports; `leapTo`'s third argument names the span landed on and the link followed to it, the landing then marked as a follow's is */
+    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{width?: number | null, link?: string | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, width: o.width ?? null, link: o.link ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s, null).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), arrival: () => GO.arrivalMark() },
     leap: { open: () => LEAP.open(), close: () => LEAP.close(), rows: () => LEAP.currentRows(), isOpen: () => LEAP.isOpen() },
     cards: {
       links: (/** @type {string} */ a) => LINKS.show(a),

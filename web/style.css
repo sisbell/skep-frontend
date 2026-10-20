@@ -88,8 +88,11 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .lip { text-decoration:underline; text-decoration-thickness:1px; text-decoration-color:var(--mark-hue, var(--hue-you)); opacity:var(--mark-value, 1); }
 .dtext .lip.depth2 { text-decoration-style:double; }
 .dtext .lip.depth3 { text-decoration-thickness:2px; }
-/* sameness: boundaries and a ground texture, never a tint; the hairline label the one gesture to the source */
-.dtext .same { background:var(--same-texture); border-left:var(--border-same) solid var(--same-boundary); padding-left:var(--same-pad); }
+/* sameness: boundaries and a ground texture, never a tint; the hairline label the one gesture to the source. A run's
+   ground under each of its stretches, its boundary at the stretch that opens it alone — a mark's or a symbol's cut is
+   no change of origin */
+.dtext .same { background:var(--same-texture); }
+.dtext .same.opens { border-left:var(--border-same) solid var(--same-boundary); padding-left:var(--same-pad); }
 .dtext .hairline { color:var(--same-boundary); font-size:var(--label); line-height:1; cursor:pointer; margin-right:var(--label-gap); vertical-align:baseline; }
 .dtext .hairline.compact { opacity:.7; }
 .dtext .pubmark { display:inline-block; font-size:var(--mark); line-height:1; color:#cfd6df; border:var(--border-box) solid #4a5260; padding:0 var(--mark-pad); margin-right:var(--mark-gap); }
