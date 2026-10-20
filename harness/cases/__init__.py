@@ -35,6 +35,7 @@ AGENT_SPACE = '1.0.1.1'      # the claimant's delegated agent space
 SECOND_ACCOUNT = '1.0.2'     # the seed's keyless second account
 WITHHELD = '1.0.2.0.2'       # its draft: withheld from every reader of this board, a box of its own (continuation depth 0)
 VERSIONED = '1.0.1.0.43'     # an edition with two members, the latest holding all of it, far from every place the later cases read
+NO_MATCH = 'qzx no label holds this'  # LEAP text no address, share form, URL, label or address prefix answers
 
 # the order the gate runs them in: the two that need no page first, then the
 # wire's cold-open figures before the other classes move the camera; the wire

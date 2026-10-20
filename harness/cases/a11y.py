@@ -33,9 +33,7 @@ name nor its description. Never a screen reader's voice — the seat's."""
 import json
 import re
 
-from . import DOC, FAR_LEAP, WINDOW, Result
-
-NO_MATCH = 'qzx no label holds this'  # text no address, share form, URL, label or address prefix answers
+from . import DOC, FAR_LEAP, NO_MATCH, WINDOW, Result
 
 
 def run(ctx):

@@ -16,7 +16,9 @@
 // on a row draws none); an address this client has no record of is asked
 // of the board and faced where nothing answers (C-42's content, B1-S8); where
 // typed text matches nothing the box says so, the index's state beside the
-// answer while the index is not complete. While an input method's
+// answer while the index is not complete, and Enter goes nowhere: the box
+// stands open over the text and its answer, the focus in its input, until the
+// text is corrected or Esc closes it (K-31). While an input method's
 // composition is open, Enter, Esc and the arrows are the IME's and act on
 // nothing here (D5 §0). The box's close hands the focus back through
 // N-WALK, the focus's owner (D5 §4 rule 4; K-34): to the element it was
@@ -151,11 +153,16 @@ export function render() {
 /**
  * Enter: the row chosen goes (K-31), each a teleport and a trail entry; with
  * no row chosen — the box as opened — the current address, in place: the box
- * closes, nothing moves and nothing is pushed (foundations §2.3).
+ * closes, nothing moves and nothing is pushed; with no row listed — typed
+ * text that matches nothing, since nothing typed lists the levels, the whole
+ * board first — nowhere: the box stays open over the text and the answer
+ * `render` wrote, the focus in its input, nothing moved and nothing pushed
+ * (foundations §2.3).
  * @param {number} i the row chosen
  * @param {boolean} [byKey] Enter made the act, not a click on the row
  */
 export async function go(i, byKey = false) {
+  if (!rows.length) return;
   const r = rows[i]; if (!r) { close(); return; }
   close();
   if (r.kind === 'board') { await GO.wholeBoard(byKey); return; }

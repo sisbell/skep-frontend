@@ -3,9 +3,11 @@ lane built, dispatched at engine level (`Input.dispatchKeyEvent`, Meta as Mod
 on this Mac), then the camera, the focus, the trail and the one line read
 back; the IME guard, on the plane and in the LEAP box; a bare key does
 NOTHING but show the K-9 line; Enter on the LEAP box as opened lands in
-place, ↓ choosing the first level, and a typed account address a teleport
-with its trail entry (foundations §2.2, §2.3); the focus ring drawn at the
-focus every teleport a key made lands — the box's Enter, Mod+[ and Mod+],
+place, ↓ choosing the first level, Enter on typed text that matches nothing
+goes nowhere — the box standing open over the text and its answer, the
+focus in its input, until Esc — and a typed account address a teleport
+with its trail entry (foundations §2.2, §2.3; K-31); the focus ring drawn
+at the focus every teleport a key made lands — the box's Enter, Mod+[ and Mod+],
 Mod+0, Mod+Shift+H, Enter on the line's ‹ back (K-22), Mod+3, Enter on a
 trail list row (K-41), Enter on a document (K-7) — and at the focus
 PageDown re-takes, and no ring after a click on ‹ back (D5 §4 rule 2: drawn
@@ -34,7 +36,7 @@ under a press, mounts only once it ends. Each step leaves the page as it
 found it."""
 import json
 
-from . import DOC, SECOND_ACCOUNT, WINDOW, Result
+from . import DOC, NO_MATCH, SECOND_ACCOUNT, WINDOW, Result
 
 CODES = {'[': 'BracketLeft', ']': 'BracketRight', '=': 'Equal', '-': 'Minus', '0': 'Digit0', '1': 'Digit1', '2': 'Digit2', '/': 'Slash', '+': 'Equal'}
 
@@ -427,6 +429,27 @@ def run(ctx):
     r.check(not s['leap'] and same_view(before, s) and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']),
             'Mod+L then Enter lands in place: the box closes, and the camera, the trail\'s cursor and its length are unchanged',
             {'leap': s['leap'], 'cam_same': same_view(before, s), 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])]})
+    # Enter on typed text that matches nothing goes nowhere and the box says so (foundations §2.3; K-31): the box stands open
+    # over the text and its answer, the focus in its input, so the text can be corrected, until Esc closes it
+    chord(ctx, 'l', mods=('Meta',))
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(NO_MATCH)
+    ctx.frames(2)
+    unmatched = ctx.js('window.__skep.leap.rows()')
+    r.check(unmatched == [], 'the typed text matches nothing (what the next check stands on)', unmatched[:2])
+    answer = ctx.js('(async () => (await import("./strings.js")).t("F.leap.none"))()')
+    before, t0 = state(ctx), trail(ctx)
+    chord(ctx, 'Enter')
+    s, t1 = state(ctx), trail(ctx)
+    held = ctx.js('(() => { const q = document.getElementById("leapq"); return {shown: getComputedStyle(document.getElementById("leap")).display !== "none", '
+                  'focused: document.activeElement === q, value: q.value, note: document.getElementById("leapnote").textContent}; })()')
+    r.check(s['leap'] and held['shown'] and held['focused'] and held['value'] == NO_MATCH and answer in held['note']
+            and same_view(before, s) and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']),
+            'Enter on typed text that matches nothing goes nowhere: the box stands open, the focus in its input, over the text and its answer; '
+            'the camera, the trail\'s cursor and its length are unchanged',
+            dict(held, leap=s['leap'], answer=answer, cam_same=same_view(before, s), cursor=[t0['cursor'], t1['cursor']], entries=[len(t0['entries']), len(t1['entries'])]))
+    chord(ctx, 'Escape')
+    r.check(not state(ctx)['leap'], 'Esc closes the box the unmatched text stands in')
     chord(ctx, 'l', mods=('Meta',))
     chord(ctx, 'ArrowDown')
     chord(ctx, 'Enter')
