@@ -20,7 +20,13 @@ its own words in the AX tree while every other corner is hidden from it,
 kept under the focus through the layer's remount, Enter its act (the
 versions list) with Esc returning the focus to it, Shift+Tab back to the
 plane's stop, and its leaving the plane handing the focus to the walk's
-current item; the links card's overlay toggle a switch in the AX tree (R60;
+current item; the focus's return as an overlay closes (D5 §4 rule 4) — the
+trail list and the LEAP box, opened by a key at the mirror's current item
+and closed by Esc once the wheel under them has rebuilt the mirror, leave
+the focus on the walk's current item; the selection's card, rebuilt by K-8's
+next press or replaced by "who wrote this?"'s answer, returns it to the item
+K-8 was pressed at; a focus moved from the card to the corner stays on the
+corner; the links card's overlay toggle a switch in the AX tree (R60;
 WAI-ARIA's switch) — named by B1-S4's words before its state and described
 by the count after it, a press changing its checked state and neither its
 name nor its description. Never a screen reader's voice — the seat's."""
@@ -341,6 +347,102 @@ def run(ctx):
     f = at()
     gone = ctx.js('!document.querySelector(%s)' % json.dumps(corner))
     r.check(gone and f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Mod+- until the document is below reading scale: its corner leaves and the focus it held stands on the walk\'s current item — never lost, never to the top', {'zooms': zooms, 'em': ctx.camera()['scale'] / unit, 'corner_gone': gone, 'focus': f})
+    # ---- the focus's return as an overlay closes (D5 §4 rule 4) ------------------------------------------------------
+    # An overlay a key opened returns the focus to the element it was opened from or, where that is gone, to the walk's
+    # element — never to the top. The wheel under a standing overlay pans the camera (a pan is never "the next act"), and the
+    # walk's re-take at the view's centre rebuilds the mirror, so the item the overlay was opened from leaves the page. A chain
+    # of overlays — the selection's card rebuilt by K-8's next press, or replaced by an act's answer, which drops the focus the
+    # card held — returns the focus as one overlay does; and a focus the person moved out of the overlay stays where they put it.
+    def from_item():
+        """the landing, the platform's focus on the mirror's current item, the page keeping it as the opener"""
+        ctx.leap(DOC, WINDOW[0])
+        ok = ctx.js('(() => { const i = document.getElementById("walk-" + window.__skep.mirror.index()); if (i) i.focus({preventScroll: true}); window.__gateFrom = i; return !!i && document.activeElement === i; })()')
+        ctx.frames(1)
+        return ok
+
+    def returned():
+        """where the focus stands: its element, whether that is the walk's current item and selected, whether it is the
+        opener itself, whether it stands on nothing; the overlay and the box"""
+        return ctx.js('''(() => { const e = document.activeElement, i = window.__skep.mirror.index();
+          return {id: e ? e.id || e.tagName.toLowerCase() : null, item: !!e && e.id === 'walk-' + i && e.getAttribute('aria-selected') === 'true',
+                  opener: !!e && e === window.__gateFrom, body: !e || e === document.body, overlay: window.__skep.overlay().id, leap: window.__skep.leap.isOpen()}; })()''')
+
+    def clear_point():
+        """a point over the plane clear of the one line, the box, the overlay, the scene and the mirror: the wheel's target
+        there pans the camera"""
+        return ctx.js('''(() => { const p = window.__skep.view.viewport();
+          for (const [fx, fy] of [[0.75, 0.6], [0.85, 0.75], [0.6, 0.85], [0.9, 0.4], [0.4, 0.6]]) {
+            const x = Math.round(p.VW * fx), y = Math.round(p.VH * fy), e = document.elementFromPoint(x, y);
+            if (e && !e.closest('#line, #leap, #overlay, #scene, #mirror')) return {x, y};
+          }
+          return null; })()''')
+
+    def wheel_away(what, standing):
+        """the wheel turned over the plane until the walk's re-take has rebuilt the mirror and the opener is off the page, with
+        what stands (`standing`, an expression) still holding the focus — its own check, so a wheel that moved no focus fails
+        loudly rather than leaving the return below it nothing to prove"""
+        at, turns, gone = clear_point(), 0, False
+        while at is not None and not gone and turns < 8:
+            ctx.drv.wheel(at['x'], at['y'], dy=300)
+            ctx.js('new Promise((res) => setTimeout(res, 400))')  # the re-take waits 220 ms on the wheel's rest
+            ctx.settle()
+            ctx.frames(2)
+            turns += 1
+            gone = ctx.js('!!window.__gateFrom && !window.__gateFrom.isConnected')
+        held = ctx.js(standing)
+        r.check(at is not None and gone and held, '%s, then the wheel over the plane: the walk\'s re-take rebuilds the mirror, the item the focus came from leaves the page, and the focus stays in %s' % (what, what),
+                {'point': at, 'turns': turns, 'opener_gone': gone, 'held': held, 'focus': returned()})
+
+    in_list = 'window.__skep.overlay().id === "trail-list" && document.getElementById("overlay").contains(document.activeElement)'
+    opened = from_item()
+    press('y', mods=('Meta',))
+    r.check(opened and ctx.js(in_list), 'Mod+Y from the mirror\'s current item opens the trail list, which takes the focus', {'opened': opened, 'focus': returned()})
+    wheel_away('the trail list', in_list)
+    press('Escape')
+    f = returned()
+    r.check(f['overlay'] is None and f['item'], 'Esc closes the trail list, and the focus, whose opener the rebuild removed, stands on the walk\'s current item — never lost, never to the top', f)
+    in_box = 'window.__skep.leap.isOpen() && document.activeElement === document.getElementById("leapq")'
+    opened = from_item()
+    press('l', mods=('Meta',))
+    r.check(opened and ctx.js(in_box), 'Mod+L from the mirror\'s current item opens the box, which takes the focus', {'opened': opened, 'focus': returned()})
+    wheel_away('the box', in_box)
+    press('Escape')
+    f = returned()
+    r.check(not f['leap'] and f['item'], 'Esc closes the box, and the focus, whose opener the rebuild removed, stands on the walk\'s current item — never lost, never to the top', f)
+    # K-8 twice: the second press is taken in the card, which it rebuilds over the control holding the focus
+    opened = from_item()
+    press('ArrowDown', mods=('Shift',))
+    press('ArrowDown', mods=('Shift',))
+    card = ctx.js('({id: window.__skep.overlay().id, sel: window.__skep.selection(), held: document.getElementById("overlay").contains(document.activeElement), opener: !!window.__gateFrom && window.__gateFrom.isConnected})')
+    r.check(opened and card['id'] == 'selection' and bool(card['sel']) and card['held'] and card['opener'], 'K-8 twice from the mirror\'s current item: the selection\'s card, rebuilt by the second press, holds the focus, and the item K-8 was pressed at stands on the page', card)
+    press('Escape')
+    f = returned()
+    r.check(f['overlay'] is None and f['opener'] and f['item'], 'Esc closes the card the second press rebuilt, and the focus stands on the item K-8 was pressed at', f)
+    press('Escape')  # the selection, which Esc clears next
+    # K-8, then Mod+Shift+O from the card: the answer takes the card's place
+    opened = from_item()
+    press('ArrowDown', mods=('Shift',))
+    press('O', mods=('Meta', 'Shift'))
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => { const id = window.__skep.overlay().id || ""; return id === "provenance:wrote" || id.startsWith("face:") || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50); }; tick(); })')
+    ctx.frames(2)
+    asked = returned()
+    r.check(opened and (asked['overlay'] == 'provenance:wrote' or (asked['overlay'] or '').startswith('face:')), 'K-8 then Mod+Shift+O from the card: the answer, or its refusal\'s face, takes the card\'s place', asked)
+    press('Escape')
+    f = returned()
+    r.check(f['overlay'] is None and f['opener'] and f['item'], 'Esc closes the answer that replaced the card, and the focus stands on the item K-8 was pressed at', dict(f, answer=asked))
+    press('Escape')
+    # K-8, then the focus moved from the card to the corner (as Tab may move it): Esc closes the card and moves nothing
+    opened = from_item()
+    press('ArrowDown', mods=('Shift',))
+    carded = ctx.js('window.__skep.overlay().id === "selection" && document.getElementById("overlay").contains(document.activeElement)')
+    moved = ctx.js('(() => { const c = document.querySelector(%s); if (c) c.focus({preventScroll: true}); return !!c && document.activeElement === c; })()' % json.dumps(corner))
+    ctx.frames(1)
+    press('Escape')
+    f = at()
+    r.check(opened and carded and moved and f['overlay'] is None and f['corner'] == DOC, 'K-8 from the item, then the focus moved from the card to the corner: Esc closes the card and leaves the focus on the corner, where the person put it', dict(f, card=carded, moved=moved))
+    press('Escape')
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
     # ---- the links card's overlay toggle: one switch (R60; B1-S4; WAI-ARIA's switch) --------------------------------
     # B1-S4's words, "others' links: ⟨state⟩ · ⟨n⟩ touch this document", are the switch's own. The words before the state
     # name it and the count after it describes it, so a press changes its checked state and nothing of its name or its

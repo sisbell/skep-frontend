@@ -3,9 +3,17 @@
 // dismisses — an HTML layer positioned over the plane at the act's site,
 // following its place as the camera moves, gone with Esc, the next act or
 // its own completion; never a fixed region). Layer 2. ENGINE-BOUND.
-// State: VIEW — the current overlay (the one owner). The focus hand-off: an
-// overlay a KEY opened takes focus on its first control and returns it when
-// it closes (D5 §4 rule 4); one the system raises (a face) never takes it.
+// State: VIEW — the current overlay (the one owner). The focus hand-off (D5
+// §4 rule 4): an overlay a KEY opened takes focus on its first control; one
+// the system raises (a face) never takes it. The return is the element the
+// focus stood on as the last overlay that took it opened, read before
+// anything here moves it — a control of the overlay it replaced or rebuilt,
+// where the act was taken there, which the rewrite removes. A replacement or
+// rebuild that takes no focus keeps it, for its rewrite drops the focus the
+// markup it overwrites held; and the dismissal, whichever overlay it closes,
+// hands a focus left on nothing back through N-WALK, the focus's owner: to
+// that element, or to the walk's element where that no longer takes the
+// focus.
 // Each act is told whether a key ran it, so an act that teleports draws the
 // ring at its landing (D5 §4 rule 2): Enter on its control, taken here before
 // the platform's click, or the click the platform makes from a key (Space on
@@ -16,6 +24,7 @@
 
 import { sx, sy, viewport, markDirty } from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
+import * as WALK from '../nav/walk.js';
 import { docBox } from '../plane/projection.js';
 
 /**
@@ -43,7 +52,7 @@ import { docBox } from '../plane/projection.js';
 let el = null;
 /** @type {Overlay | null} */
 let current = null;
-/** @type {Element | null} the element focus returns to */
+/** @type {Element | null} the element the focus returns to as the overlays end: where it stood as the last overlay that took it opened */
 let returnTo = null;
 
 /** @param {HTMLElement} e */
@@ -81,6 +90,7 @@ export { currentState as current };
  */
 export function show(o) {
   if (!el) return;
+  const from = document.activeElement; // where the act found the focus — read first, for the markup written below removes a control of this host that held it
   if (current && current !== o && current.id !== o.id) { /* a replacement: the previous overlay's end runs, told so */ const prev = current; current = null; if (prev.onDismiss) prev.onDismiss(true); }
   current = o;
   el.className = 'on ' + o.kind;
@@ -88,7 +98,7 @@ export function show(o) {
   el.innerHTML = `<span class="x" data-x="1" title="dismiss (Esc)" role="button" tabindex="0">×</span>` + o.html;
   place();
   if (o.takeFocus) {
-    returnTo = document.activeElement;
+    returnTo = from;
     const first = /** @type {HTMLElement | null} */ (el.querySelector('[data-run], button, input, [tabindex="0"]'));
     if (first) first.focus({ preventScroll: true });
   }
@@ -115,15 +125,16 @@ export function place() {
   el.style.left = x + 'px'; el.style.top = y + 'px';
 }
 
-/** dismiss the current overlay; its end runs; the focus returns */
+/** dismiss the current overlay; its end runs; the focus returns, where an overlay of the chain took it */
 export function dismiss() {
   if (!el || !current) return;
   const o = current;
   current = null;
   el.className = ''; el.innerHTML = ''; el.removeAttribute('data-id');
   if (o.onDismiss) o.onDismiss(false);
-  if (o.takeFocus && returnTo && /** @type {HTMLElement} */ (returnTo).focus) { /** @type {HTMLElement} */ (returnTo).focus({ preventScroll: true }); }
+  const to = returnTo;
   returnTo = null;
+  WALK.returnFocus(to);
   markDirty();
 }
 

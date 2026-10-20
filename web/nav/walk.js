@@ -30,7 +30,11 @@
 // focus's accessible form; rule 4: the focus is never lost, never to the top;
 // rule 8: a landing moves the focus to its element) — so the walk keys, a
 // landing and a camera retake alike leave the focus on the item a person is
-// at.
+// at. While the focus stands in an overlay, the rebuild leaves it there, and
+// the overlay's close hands it back through `returnFocus`: to the element the
+// overlay was opened from, or to the current item where that no longer takes
+// it — as an item the overlay was opened from no longer does once a rebuild
+// has replaced it (rule 4).
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state).
@@ -174,9 +178,10 @@ export function render() {
  * Put the platform's focus on the plane's Tab stop (`render`'s): the
  * mirror's current item, brought inside the panel's window, or the mirror
  * itself where it holds no item. The rebuild calls it while the focus stands
- * in the mirror, and the app where a control that held the focus has gone (a
- * corner leaving the plane): the focus returns to the walk's element, never
- * lost, never to the top (D5 §4 rule 4).
+ * in the mirror, the app where a control that held the focus has gone (a
+ * corner leaving the plane), and `returnFocus` where the element an overlay
+ * was opened from no longer takes the focus: the focus returns to the walk's
+ * element, never lost, never to the top (D5 §4 rule 4).
  */
 export function focusItem() {
   if (!mirrorEl) return;
@@ -184,6 +189,27 @@ export function focusItem() {
   if (!item) { mirrorEl.focus({ preventScroll: true }); return; }
   item.focus({ preventScroll: true });
   showInPanel(item);
+}
+
+/**
+ * The focus's return as an overlay closes (D5 §4 rule 4): to the element the
+ * overlay was opened from, where that still takes the focus, else to the
+ * walk's element (`focusItem`). An opener can stop taking the focus while the
+ * overlay holds it — the mirror's rebuild replaces the item it was opened
+ * from, the layer takes a corner the walk has left out of the order and keeps
+ * it on the page — so what is tested is where the focus landed, never where
+ * the opener stands. The return runs only where the focus stands on nothing,
+ * as it does once the closing overlay has taken down the control that held
+ * it: one the person has moved to an element outside the overlay stays there.
+ * An overlay opened with the focus on nothing — by the pointer — returns it
+ * to nothing, the body taking no focus.
+ * @param {Element | null} to the element the closing overlay was opened from
+ */
+export function returnFocus(to) {
+  const at = document.activeElement;
+  if (!to || (at && at !== document.body)) return;
+  /** @type {HTMLElement} */ (to).focus({ preventScroll: true });
+  if (document.activeElement !== to) focusItem();
 }
 
 /**

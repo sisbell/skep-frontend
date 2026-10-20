@@ -8,7 +8,14 @@
 // rebuild leaves the plane one Tab stop (D5 §4 rule 5): the current item while
 // it stands, the tree out of the order — a mutant that leaves the tree in it
 // turns red — and the tree itself where the walk's level holds no item — a
-// mutant that always takes it out turns red.
+// mutant that always takes it out turns red. An overlay's close returns the
+// focus (D5 §4 rule 4) to the element it was opened from where that takes it,
+// and to the walk's element where it does not — one still on the page among
+// them, so a mutant that asks whether the opener is on the page turns red, as
+// does one with no fallback; an overlay opened with the focus on nothing
+// returns it to nothing — a mutant that falls back wherever the focus lands
+// on nothing turns red — and a focus the person moved out of the overlay
+// stays where they put it — a mutant that returns it regardless turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -115,6 +122,52 @@ test('the plane is one Tab stop: the current item while it stands, the tree itse
     assert.equal(WALK.mirrorSize(), 0);
     assert.deepEqual(itemStops(mirror.innerHTML), []);
     assert.equal(mirror.tabIndex, 0, 'the tree itself is the stop');
+  } finally {
+    globalThis.document = platform;
+  }
+});
+
+/**
+ * A page for the focus's return: the platform's focus — the body where it stands on nothing, as the platform leaves it
+ * once the element holding it is gone — elements whose `focus()` lands it, or lands nothing as the platform's does on an
+ * element that no longer takes the focus, and a mirror whose current item takes it.
+ */
+function page() {
+  const body = { id: 'body', focus() {} }; // the body takes no focus: the platform's focus() on it moves nothing
+  const doc = { body, activeElement: /** @type {{id: string}} */ (body) };
+  /** an element on the page: `takes` whether the platform's focus lands on it */
+  const element = (/** @type {string} */ id, takes = true) => ({ id, isConnected: true, focus() { if (takes) doc.activeElement = this; }, getBoundingClientRect: () => ({ top: 0, height: 10 }) });
+  const item = element('the current item');
+  const mirror = {
+    innerHTML: '', tabIndex: -1, clientTop: 0, clientHeight: 100, scrollTop: 0,
+    contains: (/** @type {unknown} */ e) => e === item,
+    querySelector: (/** @type {string} */ s) => (s === '#walk-' + WALK.mirrorIndex() ? item : null),
+    getBoundingClientRect: () => ({ top: 0, height: 100 }),
+    focus() { doc.activeElement = { id: 'the tree' }; },
+  };
+  return { doc, body, element, mirror };
+}
+
+// placed last with the test above: it attaches a mirror of its own
+test('an overlay\'s close returns the focus to its opener where that takes it, else to the walk\'s element; never to the top, never from where the person moved it', async () => {
+  const platform = globalThis.document;
+  const p = page();
+  globalThis.document = /** @type {any} */ (p.doc);
+  WALK.attach(/** @type {any} */ (p.mirror), /** @type {any} */ ({ textContent: '' }));
+  const at = () => p.doc.activeElement.id;
+  /** the overlay closed: its markup gone, the focus it held on nothing, then the return to its opener */
+  const closed = (/** @type {object} */ opener) => { p.doc.activeElement = p.body; WALK.returnFocus(/** @type {any} */ (opener)); return at(); };
+  try {
+    await WALK.focusTo(D, 15);
+    assert.equal(closed(p.element('the opener')), 'the opener', 'an opener that takes the focus has it back');
+    assert.equal(closed(p.element('a corner the walk has left', false)), 'the current item', 'an opener still on the page that no longer takes the focus gives it to the walk\'s element');
+    assert.equal(closed({ ...p.element('an item a rebuild replaced', false), isConnected: false }), 'the current item', 'an opener a rebuild removed gives it to the walk\'s element');
+    assert.equal(closed(p.body), 'body', 'an overlay opened with the focus on nothing returns it to nothing');
+    assert.equal(closed(null), 'body', 'an overlay that kept no opener moves nothing');
+    // the person moved the focus out of the overlay before it closed, to an element of the page's
+    p.element('the corner').focus();
+    WALK.returnFocus(/** @type {any} */ (p.element('the opener')));
+    assert.equal(at(), 'the corner', 'a focus the person moved to an element outside the overlay stays there');
   } finally {
     globalThis.document = platform;
   }

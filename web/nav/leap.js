@@ -18,8 +18,12 @@
 // typed text matches nothing the box says so, the index's state beside the
 // answer while the index is not complete. While an input method's
 // composition is open, Enter, Esc and the arrows are the IME's and act on
-// nothing here (D5 §0). The intake's URL arm and search (K-35) are the code
-// lane's.
+// nothing here (D5 §0). The box's close hands the focus back through
+// N-WALK, the focus's owner (D5 §4 rule 4; K-34): to the element it was
+// opened from, or to the walk's element where that no longer takes the focus
+// — as the mirror's item it was opened from no longer does once a camera move
+// under the box has re-taken the walk's focus and rebuilt the mirror. The
+// intake's URL arm and search (K-35) are the code lane's.
 // ITS ACCESSIBLE FORM (R94; the WAI-ARIA combobox, list autocomplete with
 // automatic selection): the input is the combobox, expanded while it lists
 // rows, controlling the rows' listbox, the selected row `aria-selected`. The
@@ -35,6 +39,7 @@
 import * as REC from '../model/records.js';
 import * as TRAIL from './trail.js';
 import * as GO from './go.js';
+import * as WALK from './walk.js';
 import { matches } from './match.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -56,7 +61,7 @@ let inRows = false;
 let noteHTML = '';
 /** @type {() => string | null} the current address's reader (the line's) */
 let currentAddress = () => null;
-/** @type {Element | null} */
+/** @type {Element | null} the element the box was opened from, where its close returns the focus */
 let returnTo = null;
 
 /** the id of row i — the input's active descendant names it */
@@ -123,7 +128,7 @@ export function close() {
   if (!els || !openState) return;
   openState = false; inRows = false; els.box.classList.remove('on'); els.input.blur();
   comboState();
-  if (returnTo && /** @type {HTMLElement} */ (returnTo).focus) /** @type {HTMLElement} */ (returnTo).focus({ preventScroll: true });
+  WALK.returnFocus(returnTo);
   markDirty();
 }
 
