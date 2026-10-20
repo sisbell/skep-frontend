@@ -26,17 +26,20 @@
 // the plane is ONE stop between the one line and the focused document's
 // corner (D5 §4 rule 5) — the current item, while the tree's container
 // stands out of the order; the container is the stop only where the mirror
-// holds no item. While the platform's focus stands in the mirror, the
-// rebuild carries that focus to the current item and scrolls the panel to
-// show it (D5 §4 rule 2: the tree item is the focus's accessible form; rule
-// 4: the focus is never lost, never to the top; rule 8: a landing moves the
-// focus to its element) — so the walk keys, a landing and a camera retake
-// alike leave the focus on the item a person is at. While the focus stands
-// in an overlay, the rebuild leaves it there, and the overlay's close hands
-// it back through `returnFocus`: to the element the overlay was opened from,
-// or to the current item where that no longer takes it — as an item the
-// overlay was opened from no longer does once a rebuild has replaced it
-// (rule 4).
+// holds no item. While the reading scene stands over the plane the tree is
+// inert (`cover`), out of the order and of the accessibility tree, the
+// scene's stops in its place ("In the scene: pane, pane, the scene's
+// acts"), until the scene's end puts it back. While the platform's focus
+// stands in the mirror, the rebuild carries that focus to the current item
+// and scrolls the panel to show it (D5 §4 rule 2: the tree item is the
+// focus's accessible form; rule 4: the focus is never lost, never to the
+// top; rule 8: a landing moves the focus to its element) — so the walk keys,
+// a landing and a camera retake alike leave the focus on the item a person
+// is at. While the focus stands in an overlay or the scene, the rebuild
+// leaves it there, and the overlay's close or the scene's end hands it back
+// through `returnFocus`: to the element the overlay or the scene was opened
+// from, or to the current item where that no longer takes it — as an item
+// it was opened from no longer does once a rebuild has replaced it (rule 4).
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state).
@@ -83,6 +86,14 @@ const watchers = [];
 
 /** @param {HTMLElement} mirror @param {HTMLElement} live */
 export function attach(mirror, live) { mirrorEl = mirror; liveEl = live; mirror.setAttribute('aria-label', t('L.mirror-label')); }
+/**
+ * The plane covered and uncovered (D5 §4 rule 5): while chrome stands over
+ * the plane — the reading scene — the tree is `inert`, so neither Tab nor
+ * assistive technology reaches the walk's element under it. The mark stands
+ * on the tree, never on an item, so the rebuild keeps it.
+ * @param {boolean} on chrome covers the plane (true) or has left it (false)
+ */
+export function cover(on) { if (mirrorEl) mirrorEl.inert = on; }
 export function onFocus(/** @type {(n: Node | null) => void} */ fn) { watchers.push(fn); }
 /** the focus, read-only */
 export const current = () => focus;
@@ -194,18 +205,19 @@ export function focusItem() {
 }
 
 /**
- * The focus's return as an overlay closes (D5 §4 rule 4): to the element the
- * overlay was opened from, where that still takes the focus, else to the
- * walk's element (`focusItem`). An opener can stop taking the focus while the
- * overlay holds it — the mirror's rebuild replaces the item it was opened
- * from, the layer takes a corner the walk has left out of the order and keeps
- * it on the page — so what is tested is where the focus landed, never where
- * the opener stands. The return runs only where the focus stands on nothing,
- * as it does once the closing overlay has taken down the control that held
- * it: one the person has moved to an element outside the overlay stays there.
- * An overlay opened with the focus on nothing — by the pointer — returns it
- * to nothing, the body taking no focus.
- * @param {Element | null} to the element the closing overlay was opened from
+ * The focus's return as an overlay closes (D5 §4 rule 4), or the reading
+ * scene ends (rule 8; K-63): to the element the overlay or the scene was
+ * opened from, where that still takes the focus, else to the walk's element
+ * (`focusItem`). An opener can stop taking the focus while the overlay holds
+ * it — the mirror's rebuild replaces the item it was opened from, the layer
+ * takes a corner the walk has left out of the order and keeps it on the page
+ * — so what is tested is where the focus landed, never where the opener
+ * stands. The return runs only where the focus stands on nothing, as it does
+ * once the closing overlay has taken down the control that held it: one the
+ * person has moved to an element outside the overlay stays there. An overlay
+ * opened with the focus on nothing — by the pointer — returns it to nothing,
+ * the body taking no focus.
+ * @param {Element | null} to the element the closing overlay or the ending scene was opened from
  */
 export function returnFocus(to) {
   const at = document.activeElement;

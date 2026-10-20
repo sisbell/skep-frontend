@@ -13,7 +13,10 @@
   role and no words: its accessible name is its owner's, read from
   strings.js as the owner attaches (FP-13) — the one line's (L-LINE), the
   LEAP box's input and rows (N-LEAP), the scene's (SC), the mirror's
-  (N-WALK).
+  (N-WALK). Their order here is the Tab ring's (D5 §4 rule 5): the one
+  line (the LEAP box after it, while open), the plane's stop, the focused
+  document's corner, the standing overlay, and the line again; the scene,
+  while it stands, in the place of the plane's stop and its corner.
 -->
 <link rel="stylesheet" href="style.css">
 </head>
@@ -30,12 +33,11 @@
   <div id="leaphits" role="listbox"></div>
 </div>
 
-<div id="overlay" role="dialog" aria-live="polite"></div>
-
+<!-- the scene (SC's): while it stands, its stops take the plane's place in the page's order — pane, pane, then the bar's acts (D5 §4 rule 5; K-61) — so the bar follows the panes here; its style draws it at the scene's top -->
 <div id="scene" role="dialog">
-  <div id="scenebar"></div>
   <div class="pane" id="sceneA"></div>
   <div class="pane" id="sceneB"></div>
+  <div id="scenebar"></div>
   <canvas id="scenebeams"></canvas>
 </div>
 
@@ -43,6 +45,8 @@
 <div id="mirror" class="panel" role="tree" tabindex="0"></div>
 <!-- the corners (T-LAYER's): after the mirror, so Tab from the plane's stop lands on the focused document's corner (D5 §4 rule 5, K-57) -->
 <div id="corners"></div>
+<!-- the overlay (O-HOST's): after the corners, so a standing overlay is the ring's stop after the plane and its corner, and the one line's after it (D5 §4 rule 5); its stacking draws it over them all -->
+<div id="overlay" role="dialog" aria-live="polite"></div>
 <div id="live" aria-live="polite" aria-atomic="true"></div>
 <pre id="fail"></pre>
 

@@ -10,15 +10,16 @@
 // key is dispatched while an input method's composition is open (the IME
 // guard); Esc closes the innermost thing in one order (§4 rule 7). Tab is
 // the platform's, over the page's order: the line → the plane (the mirror's
-// current item) → the focused document's corner (§4 rule 5), where Enter
-// takes the corner's act and the walk's keys and the swallow do not run
-// (K-57). The ring's overlay stop is not built: a standing overlay comes
-// before the plane in the page's order. Shift with ← and → is never
-// dispatched: it is the platform's own (D5 K-71, its text keys "Shift
-// extending"), which extends a selection the platform holds where that
-// selection holds the focus — after a drag, not from the mirror's item or an
-// overlay (the gate's figures, Chrome on its machine) — and APP-INPUT reads
-// what it does back into the page's selection (R11).
+// current item) → the focused document's corner, where Enter takes the
+// corner's act and the walk's keys and the swallow do not run (K-57) → a
+// standing overlay → the line (§4 rule 5); while the scene stands, its
+// panes and its acts take the place of the plane's stop and the corner
+// (SC). Shift with ← and → is never dispatched: it is the platform's own
+// (D5 K-71, its text keys "Shift extending"), which extends a selection the
+// platform holds where that selection holds the focus — after a drag, not
+// from the mirror's item or an overlay (the gate's figures, Chrome on its
+// machine) — and APP-INPUT reads what it does back into the page's
+// selection (R11).
 // The wireframe's bare keys (`/`, `t`, `k`, `0`–`9`, `+`, `-`, `h`, `?`, `w`,
 // `n`, `p`) are a sketch and are RE-CUT here to D5's rows (the record §3.4
 // (ix)): `/` → K-30 Mod+L / Mod+K; `0`/`g`/Home → K-13 Mod+0, K-14

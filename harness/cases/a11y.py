@@ -29,10 +29,17 @@ and closed by Esc once the wheel under them has rebuilt the mirror, leave
 the focus on the walk's current item; the selection's card, rebuilt by K-8's
 next press or replaced by "who wrote this?"'s answer, returns it to the item
 K-8 was pressed at; a focus moved from the card to the corner stays on the
-corner; the links card's overlay toggle a switch in the AX tree (R60;
-WAI-ARIA's switch) — named by B1-S4's words before its state and described
-by the count after it, a press changing its checked state and neither its
-name nor its description. Never a screen reader's voice — the seat's."""
+corner; the ring's later stops (D5 §4 rule 5) — a card standing without the
+focus reached after the plane's stop and the corner, Shift+Tab from it back
+to the corner; the reading scene's stops in the place of the plane's and the
+corner's, pane, pane, the scene's acts (K-61), with nothing the scene covers
+in the ring and Shift+Tab walking it back to the line, Esc ending it with the
+focus on the item it was opened from (K-63) and Mod+[ from a pane with the
+focus on the landing's item (rule 8); the links card's overlay toggle a
+switch in the AX tree (R60; WAI-ARIA's switch) — named by B1-S4's words
+before its state and described by the count after it, a press changing its
+checked state and neither its name nor its description. Never a screen
+reader's voice — the seat's."""
 import json
 import re
 
@@ -452,6 +459,90 @@ def run(ctx):
     f = at()
     r.check(opened and carded and moved and f['overlay'] is None and f['corner'] == DOC, 'K-8 from the item, then the focus moved from the card to the corner: Esc closes the card and leaves the focus on the corner, where the person put it', dict(f, card=carded, moved=moved))
     press('Escape')
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    # ---- the ring's later stops (D5 §4 rule 5): a standing overlay after the plane and its corner; the scene in their place --
+    # The ring runs the one line → the plane's stop → the focused document's corner → the standing overlays → the line.
+    # While the reading scene stands, its stops take the place of the plane's and the corner's — pane, pane, the scene's
+    # acts (K-61) — and nothing it covers is in the ring. Its end returns the focus to the element it was opened from
+    # (K-63); a navigation act from it moves the focus to the landing's element (rule 8).
+    def stop():
+        """the stop the platform's focus stands on, named by its region: the walk's current item or another of the mirror's,
+        a corner, the overlay's dismiss or another of its controls, the one line, a scene's pane or its bar's acts, the body"""
+        return ctx.js('''(() => { const e = document.activeElement;
+          if (!e || e === document.body) return 'the body';
+          if (e.closest('#mirror')) return e.id === 'walk-' + window.__skep.mirror.index() ? 'the item' : 'the mirror: ' + (e.id || e.tagName.toLowerCase());
+          if (e.closest('#corners')) return 'the corner: ' + (e.dataset.corner || '');
+          if (e.closest('#overlay')) return 'the overlay: ' + (e.dataset.x ? 'x' : e.dataset.run || e.tagName.toLowerCase());
+          if (e.closest('#line')) return 'the line';
+          if (e.id === 'sceneA' || e.id === 'sceneB') return 'pane ' + e.id.slice(-1);
+          if (e.closest('#scenebar')) return 'the scene: ' + (e.dataset.relevel ? 're-level' : e.dataset.x ? 'x' : e.tagName.toLowerCase());
+          if (e.closest('#scene')) return 'the scene: ' + (e.className || e.tagName.toLowerCase());
+          return e.id || e.tagName.toLowerCase(); })()''')
+
+    # a card shown without taking the focus — the gate's door, as a pointer shows it — at the landing, its corner standing
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
+    ctx.frames(2)
+    line_stop = ctx.js('''(() => { const s = [...document.querySelectorAll('#line button:not([disabled]), #line [tabindex="0"]')].pop();
+      if (s) s.focus({preventScroll: true}); return s && document.activeElement === s ? s.dataset.act || null : null; })()''')
+    ctx.frames(1)
+    ring = []
+    for _ in range(3):
+        press('Tab')
+        ring.append(stop())
+    r.check(line_stop is not None and ring == ['the item', 'the corner: ' + DOC, 'the overlay: x'],
+            'a standing card comes after the plane and its corner: Tab from the one line\'s last stop reaches the mirror\'s current item, the corner, then the card\'s first stop', {'from': line_stop, 'ring': ring})
+    press('Tab', mods=('Shift',))
+    back = stop()
+    r.check(back == 'the corner: ' + DOC, 'Shift+Tab from the card\'s first stop goes back to the corner', {'got': back})
+    r.figures['ring'] = {'card_standing': [line_stop] + ring + [back]}
+    ctx.esc()
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    # the scene opened from the mirror's current item: Tab once round the ring from the far end's pane
+    opened = from_item()
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
+    ctx.settle()
+    ctx.frames(2)
+    first = stop()
+    r.check(opened and ctx.js('window.__skep.scene.isOpen()') and first == 'pane B', 'the scene opened from the mirror\'s current item puts the focus in the far end\'s pane', {'opened': opened, 'at': first})
+    ring = []
+    for _ in range(24):
+        press('Tab')
+        ring.append(stop())
+        if ring[-1] == 'pane B':
+            break
+    under = [s for s in ring if s.startswith(('the item', 'the mirror', 'the corner'))]
+    own = [s for s in ring if s.startswith(('pane ', 'the scene'))]
+    r.check(ring[-1:] == ['pane B'] and not under, 'Tab from the far end\'s pane goes once round the ring and back to it, reaching nothing the scene covers — neither the mirror\'s item nor the corner', {'ring': ring})
+    r.check(own == ['the scene: re-level', 'the scene: x', 'pane A', 'pane B'] and ring[:2] == own[:2],
+            'the scene\'s own stops in D5\'s order — pane, pane, the scene\'s acts (K-61): from the far end\'s pane Tab reaches the acts next, and no stop lies inside a pane', {'scene_stops': own, 'ring': ring})
+    r.figures['ring']['scene_from_pane_b'] = ring
+    press('Tab', mods=('Shift',))
+    ring = [stop()]
+    press('Tab', mods=('Shift',))
+    ring.append(stop())
+    r.check(ring == ['pane A', 'the line'], 'Shift+Tab walks the ring back: from the far end\'s pane to the other, and from there to the one line', {'ring': ring})
+    r.figures['ring']['scene_back_from_pane_b'] = ring
+    ctx.js('document.getElementById("sceneB").focus({preventScroll: true})')
+    ctx.frames(1)
+    press('Escape')
+    f = returned()
+    r.check(not ctx.js('window.__skep.scene.isOpen()') and f['opener'] and f['item'], 'Esc ends the scene, and the focus stands on the mirror\'s item the scene was opened from (K-63) — never lost, never to the top', f)
+    # a navigation act from the scene: Back from a pane lands at the entry behind, and the focus stands on the landing's item
+    ctx.leap(DOC, 1)
+    opened = from_item()
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
+    ctx.settle()
+    ctx.frames(2)
+    in_pane = stop() == 'pane B'
+    ctx.drv.key('[', code='BracketLeft', mods=('Meta',))
+    ctx.settle()
+    ctx.frames(2)
+    f, landed = returned(), ctx.js('window.__skep.view.focus()')
+    r.check(opened and in_pane and not ctx.js('window.__skep.scene.isOpen()') and bool(landed) and (landed['addr'], landed['pos']) == (DOC, 1) and f['item'],
+            'Mod+[ from the scene\'s pane ends it and goes back, and the focus stands on the landing\'s item in the rebuilt tree (rule 8)', dict(f, landed=landed, in_pane=in_pane))
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
     # ---- the links card's overlay toggle: one switch (R60; B1-S4; WAI-ARIA's switch) --------------------------------

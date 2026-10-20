@@ -10,7 +10,9 @@
 // turns red — and the tree itself where the walk's level holds no item — a
 // mutant that always takes it out turns red. The tree is named from ST as the
 // walk attaches it, and each level's group by its own level — a mutant that
-// drops the tree's name, or names every group by one level, turns red. An
+// drops the tree's name, or names every group by one level, turns red. While
+// chrome covers the plane the tree stays inert through the rebuild — a mutant
+// whose rebuild lifts the mark turns red — until the plane is uncovered. An
 // overlay's close returns the focus (D5 §4 rule 4) to the element it was
 // opened from where that takes it, and to the walk's element where it does
 // not — one still on the page among them, so a mutant that asks whether the
@@ -147,6 +149,24 @@ test('the tree is named from ST as the walk attaches it, and each level\'s group
     assert.equal(group(), t('L.mirror-level', { n: 4 }), 'a span\'s group: board › account › document › span');
     await WALK.focusTo(D, null);
     assert.equal(group(), t('L.mirror-level', { n: 3 }), 'a document\'s group');
+  } finally {
+    globalThis.document = platform;
+  }
+});
+
+// placed last with the tests around it: it attaches a mirror of its own
+test('while chrome covers the plane the tree is inert, through the rebuild, until the plane is uncovered', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  const mirror = { innerHTML: '', tabIndex: 0, inert: false, contains: () => false, setAttribute() {} };
+  try {
+    WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ ({ textContent: '' }));
+    WALK.cover(true);
+    await WALK.focusTo(D, 15);
+    assert.ok(mirror.innerHTML.includes('role="treeitem"'), 'the landing rebuilt the tree');
+    assert.equal(mirror.inert, true, 'the rebuild keeps the tree out of the order while the plane is covered');
+    WALK.cover(false);
+    assert.equal(mirror.inert, false, 'uncovered: the tree back in the order');
   } finally {
     globalThis.document = platform;
   }

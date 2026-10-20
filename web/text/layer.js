@@ -48,8 +48,10 @@
 // outlives its article's remounts and its items are rewritten only where they
 // change, so a focus on it survives them; the focused document's corner is
 // the plane's next Tab stop, named by its own words, and every other is out
-// of the order and hidden from assistive technology; a corner that leaves
-// while it holds the focus hands it to the walk (D5 §4 rule 4). The press
+// of the order and hidden from assistive technology; while the reading scene
+// stands over the plane the corner layer is inert (`cover`), the scene's
+// panes carrying their own (D5 §4 rule 5); a corner that leaves while it
+// holds the focus hands it to the walk (D5 §4 rule 4). The press
 // rule's text half (§2.4): the layer takes pointer events at reading scale; a
 // drag selects text and never pans, and this module holds whether a press
 // stands (APP-INPUT reports its start and its end). THE SELECTION IS A BYTE
@@ -166,6 +168,14 @@ let read = { selection: () => null, focus: () => null, top: () => 0, handOff: ()
 
 /** @param {HTMLElement} el the text layer's element @param {HTMLElement} cornersEl the corner layer's */
 export function attach(el, cornersEl) { layer = el; cornerLayer = cornersEl; }
+/**
+ * The plane covered and uncovered (D5 §4 rule 5): while chrome stands over
+ * the plane — the reading scene, whose panes carry their own corners — the
+ * corner layer is `inert`, so neither Tab nor assistive technology reaches
+ * the focused document's corner under it.
+ * @param {boolean} on chrome covers the plane (true) or has left it (false)
+ */
+export function cover(on) { if (cornerLayer) cornerLayer.inert = on; }
 /** the owners hand their readers in once */
 export function readers(/** @type {Readers} */ r) { read = r; }
 /** bump the view revision: every mounted article is rebuilt on the next frame */

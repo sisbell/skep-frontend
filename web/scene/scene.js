@@ -1,7 +1,7 @@
 // SC — THE READING SCENE (the structure record §3.2 "SC"; B1-S9; foundations
 // §2.5; law 12: chrome). Layer 2. ENGINE-BOUND. State: VIEW — the pair, the
 // two ends it sets level, the bands' and lines' ends as measured in the panes,
-// and the panes' scrolls (the one owner).
+// the panes' scrolls, and the element it was opened from (the one owner).
 // Two documents at reading scale side by side over the plane, each pane
 // scrolling on its own (R3); the places unmoved, nothing written; the dialog
 // named as it attaches by ST's `L.scene-label`. It sets the two ends LEVEL,
@@ -29,16 +29,28 @@
 // push with the scene recorded as the departure — its pair and both panes'
 // positions — so Back restores it; N-TRAIL's entry holds an address and a
 // view and no scene, and whether Back restores a scene is the design's open
-// question. The panes BORROW the one reconciler's mount (FP-12:
-// `T-LAYER.sceneArticle` makes the HTML, `T-LAYER.rangeIn` finds a passage in
-// it; the scene keeps no DOM text of its own). Each pane carries its own
-// document's corner (ux-T2: "each pane its own"; `T-LAYER.sceneCorner` makes
-// its items) on its OUTER side — pane A's left, pane B's right — held to the
-// top of the pane's scroll, so the bands and lines leave the inner edges
-// clear of it (foundations §3.1); it is shown, not acted on, as nothing in a
-// pane takes a pointer. Companionate scrolling over the bands is UNTESTED
-// (S27) and not built. Carries: the wireframe's §19 whole (its beams over
-// `compare`'s pairs instead of the hand data's windows).
+// question. THE FOCUS (D5 §4 rules 5 and 8; K-61, K-63): opened, the scene
+// puts the focus in the far end's pane and takes the plane it stands over
+// out of the page's order and the accessibility tree, each region by its
+// owner (N-WALK's tree, T-LAYER's corners: `cover`), so Tab runs pane, pane,
+// the bar's acts in the place of the plane's stop and its corner and reaches
+// nothing the scene covers. Whatever ends it puts the plane back first, takes
+// the focus off the scene where it stood there, and hands a focus standing on
+// nothing back through N-WALK, the focus's owner: to the element the scene
+// was opened from — read as it opens, once the overlay it dismisses has
+// returned the focus that overlay held — or to the walk's element where that
+// no longer takes it; a navigation act's landing then carries it on (rule 8),
+// and a focus the person moved out of the scene stays where it is. The panes
+// BORROW the one reconciler's mount (FP-12: `T-LAYER.sceneArticle` makes the
+// HTML, `T-LAYER.rangeIn` finds a passage in it; the scene keeps no DOM text
+// of its own). Each pane carries its own document's corner (ux-T2: "each pane
+// its own"; `T-LAYER.sceneCorner` makes its items) on its OUTER side — pane
+// A's left, pane B's right — held to the top of the pane's scroll, so the
+// bands and lines leave the inner edges clear of it (foundations §3.1); it is
+// shown, not acted on, as nothing in a pane takes a pointer. Companionate
+// scrolling over the bands is UNTESTED (S27) and not built. Carries: the
+// wireframe's §19 whole (its beams over `compare`'s pairs instead of the hand
+// data's windows).
 // Rules: FP-1, FP-2, FP-10, FP-12, FP-13.
 
 import * as PUMP from '../model/pump.js';
@@ -47,6 +59,7 @@ import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
 import * as HOST from '../overlays/host.js';
+import * as WALK from '../nav/walk.js';
 import { SAMENESS } from '../plane/register.js';
 import { markDirty } from '../plane/camera.js';
 import { t } from '../strings.js';
@@ -101,6 +114,11 @@ let scene = null;
 let els = null;
 /** @type {Drawn[]} what the last draw drew */
 let drawnTies = [];
+/** @type {Element | null} the element the focus stood on as the scene opened, where its end returns the focus (K-63) */
+let opener = null;
+
+/** the plane the scene stands over out of the page's order while it stands (true), and back as it ends (false) — each region by its owner (D5 §4 rule 5) */
+function coverPlane(/** @type {boolean} */ on) { WALK.cover(on); LAYER.cover(on); }
 
 /** @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement}} e */
 export function attach(e) {
@@ -159,7 +177,8 @@ export function levels(runs, held = {}) {
 
 /**
  * Open the scene on two documents, the passage held set level with its
- * counterpart (`levels`).
+ * counterpart (`levels`); the focus in the far end's pane, the plane under
+ * the scene out of the page's order (see the head).
  * @param {string} a
  * @param {string} b
  * @param {Held} [held]
@@ -167,6 +186,9 @@ export function levels(runs, held = {}) {
 export async function open(a, b, held = {}) {
   if (!els) return;
   HOST.dismiss();
+  // where the act found the focus — read after the dismissal, which hands back a focus the overlay held, and before the
+  // reads, in which the person may move it; a scene opened over one standing keeps that one's
+  const from = scene ? opener : document.activeElement;
   const [da, db] = await Promise.all([PUMP.loadWhole(a), PUMP.loadWhole(b)]);
   if (!da || !db) return;
   const cmp = await PUMP.read(F.compare([{ doc: a, spans: [{ ordinal: 1, positions: Math.max(1, da.extent || 1) }] }], [{ doc: b, spans: [{ ordinal: 1, positions: Math.max(1, db.extent || 1) }] }]));
@@ -175,6 +197,8 @@ export async function open(a, b, held = {}) {
   if ('refused' in cmp) { const r = cmp.refused; els.bar.dataset.face = r.name; }
   else runs = merged(F.decodeCompare(cmp.answer));
   scene = { a, b, pairs: runs, level: levels(runs, held), ties: [], size: '' };
+  opener = from;
+  coverPlane(true);
   els.root.classList.add('on');
   els.bar.innerHTML = `<b>${esc(a)}</b> │ <b>${esc(b)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
     (els.bar.dataset.face ? ` <span class="face-text">${esc(t(els.bar.dataset.face === 'too_many_pairs' ? 'B1.too_many_pairs' : els.bar.dataset.face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: els.bar.dataset.face }))}</span>` : '') +
@@ -184,7 +208,6 @@ export async function open(a, b, held = {}) {
   els.paneB.innerHTML = `<article class="dtext scene" data-addr="${esc(b)}">${LAYER.sceneArticle(db)}</article>` + corner(b, db);
   els.paneA.setAttribute('tabindex', '0'); els.paneB.setAttribute('tabindex', '0');
   relevel();
-  const first = els.paneB.querySelector('.sp'); if (first) /** @type {HTMLElement} */ (first).setAttribute('tabindex', '0');
   els.paneB.focus({ preventScroll: true });
   markDirty();
 }
@@ -314,13 +337,23 @@ function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */
  * End the scene, whatever ends it — Esc, zoom-out, ←, the bar's ×, or a
  * navigation act, which ends it first (§2.5): the plane as it was, and the
  * trail untouched, a navigation act's own push or cursor move the one trail
- * move it makes (see the head).
+ * move it makes (see the head). The plane is put back in the page's order
+ * before the focus returns, for the element the scene was opened from — the
+ * walk's item, a corner — takes no focus while the scene covers it; a focus
+ * the scene held is taken off it first, as N-WALK returns only a focus that
+ * stands on nothing.
  */
 export function close() {
   if (!scene || !els) return;
+  const held = els.root.contains(document.activeElement);
   scene = null;
   drawnTies = [];
+  coverPlane(false);
+  if (held) /** @type {HTMLElement} */ (document.activeElement).blur();
   els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; delete els.bar.dataset.face;
+  const to = opener;
+  opener = null;
+  WALK.returnFocus(to);
   markDirty();
 }
 
