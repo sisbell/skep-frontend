@@ -114,6 +114,10 @@ class Context:
         self.js('window.__skep.esc()')
         self.frames(1)
 
+    def overlay_shown(self):
+        """the overlay as a person meets it: its kind, its text, and the acts it offers"""
+        return self.js('({kind: window.__skep.overlay().kind, text: window.__skep.overlay().text || "", acts: document.querySelectorAll("#overlay [data-run]").length})')
+
     def shot(self, rel):
         self.frames(2)
         self.drv.shot(os.path.join(self.shots, rel))

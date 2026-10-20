@@ -4,25 +4,28 @@
 // A face is keyed on the refusal's ONE `name` — the board's token (the
 // `detail` of a `credential_refused`, else the `code`) or the shell's own —
 // and its `kind` (the halt's, the block's, `unreachable`), never on prose;
-// the disposition shapes the offered act. The read path's faces:
-// `doc_not_registered` → THE FIFTH CELL (B1-S8: where this client holds no
-// record of its own that the board answered for the document, the
-// UNREGISTERED-OR-UNREACHABLE face — C-42's content, DRAFT — and the floor
-// face MUST NOT render), `not_a_link`, C-39 at a link address inside a
-// withheld document, `range_not_present`, the `invalid` follow,
-// `scan_busy`, `endsets_too_large`, `too_many_blocks`, `too_many_pairs`,
-// `too_much_coverage`, `withheld`, the session's `no_key` (C-136 with this
-// version's limit), the death arms (C-137), `unreachable`; a PUBLIC
-// `moment` rendered as a face with `answer`/`cancel` (no ceremony panel is
-// built here — a seam). Carries: the wireframe's §18 `face`,
-// `deadReferenceFace`, `c39Face`. Rules: FP-1, FP-2, FP-13.
+// the disposition shapes the offered act. The name keys the face and names
+// the overlay (`face:⟨name⟩`, the gate's reading); a person meets the words
+// alone, never the token, which reads as a claim the words may refuse to
+// make. The read path's faces: `doc_not_registered` → THE FIFTH CELL
+// (B1-S8: where this client holds no record of its own that the board
+// answered for the document, the UNREGISTERED-OR-UNREACHABLE face — C-42's
+// content, DRAFT — and the floor face MUST NOT render; it offers no act,
+// for B1-S8's one act, "try again", is the unreachable node's, and the
+// board's answer here is byte-identical to never-held), `not_a_link`, C-39
+// at a link address inside a withheld document, `range_not_present`, the
+// `invalid` follow, `scan_busy`, `endsets_too_large`, `too_many_blocks`,
+// `too_many_pairs`, `too_much_coverage`, `withheld`, the session's `no_key`
+// (C-136 with this version's limit), the death arms (C-137),
+// `unreachable`; a PUBLIC `moment` rendered as a face with `answer`/`cancel`
+// (no ceremony panel is built here — a seam). Carries: the wireframe's §18
+// `face` (its words and acts; its reviewer's label stays in the wireframe),
+// `deadReferenceFace`'s fifth cell, `c39Face`. Rules: FP-1, FP-2, FP-13.
 
 import * as HOST from './host.js';
 import * as PORT from '../bridge/port.js';
 import { t, isPinned } from '../strings.js';
 import { esc } from '../util.js';
-import { boardOf } from '../model/address.js';
-import { markDirty } from '../plane/camera.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 /** @typedef {import('../bridge/shapes').MomentEvent} MomentEvent */
@@ -67,10 +70,9 @@ export function wordsFor(r, ctx = {}) {
   }
 }
 
-/** the face's HTML */
-function faceHTML(/** @type {Face} */ face, /** @type {string} */ code, extra = '') {
-  return `<span class="label"><span class="code">${esc(code)}</span></span>` +
-    `<div class="face-text ${face.pinned ? 'pinned' : 'draft'}" data-string="${esc(face.id)}">${esc(face.text)}</div>` + (extra || '') +
+/** the face's HTML: its words, what stands beneath them, its acts — and no token */
+function faceHTML(/** @type {Face} */ face, extra = '') {
+  return `<div class="face-text ${face.pinned ? 'pinned' : 'draft'}" data-string="${esc(face.id)}">${esc(face.text)}</div>` + (extra || '') +
     (face.acts.length ? `<div class="acts">${face.acts.map((a, i) => `<button data-run="a${i}" class="${a.inert ? 'inert' : ''}">${esc(a.label)}</button>`).join('')}</div>` : '');
 }
 
@@ -87,7 +89,7 @@ export function showRefusal(anchor, r, addr = '', acts = []) {
   /** @type {Record<string, (el: HTMLElement) => void>} */
   const handlers = {};
   face.acts.forEach((a, i) => { handlers['a' + i] = () => { if (a.run) a.run(); }; });
-  HOST.show({ kind: 'face', id: 'face:' + r.name, anchor: toAnchor(anchor), html: faceHTML(face, r.name), acts: handlers });
+  HOST.show({ kind: 'face', id: 'face:' + r.name, anchor: toAnchor(anchor), html: faceHTML(face), acts: handlers });
 }
 
 /** @param {Anchor | HTMLElement | {x: number, y: number} | null} a */
@@ -99,27 +101,22 @@ function toAnchor(a) {
 }
 
 /**
- * THE DEAD REFERENCE at a link's symbol (B1-S8): the fifth cell — the board
- * answered `doc_not_registered` and this client holds no record that it
- * ever answered for the document — C-42's content; "try again" re-asks.
- * @param {Link} l
- * @param {string} far
- * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor
+ * THE FIFTH CELL (B1-S8): an address this board will say nothing about — the
+ * board answered `doc_not_registered` and this client holds no record that
+ * it ever answered for the document — met by a typed address (B1-S11 → S8)
+ * or by a followed link's far end (THE DEAD REFERENCE, at its site). C-42's
+ * content and nothing more, and no act: the answer is byte-identical to
+ * never-held, and the model keeps it as a fact.
+ * @param {string} addr
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] the reference's site; null where an address was typed
  */
-export function deadReference(l, far, anchor) {
-  showRefusal(anchor, /** @type {Refusal} */ ({ kind: 'refused', name: 'doc_not_registered', status: 200, code: 'doc_not_registered', detail: null, op: 'project', body: null }), far,
-    [{ label: t('B1.try-again'), run: () => { import('../model/pump.js').then((P) => { P.forget(far); markDirty(); }); } }]);
-  void boardOf; void l;
-}
-
-/** a typed address this board will say nothing about (B1-S11 → S8) */
-export function unregistered(/** @type {string} */ addr) {
-  showRefusal(null, /** @type {Refusal} */ ({ kind: 'refused', name: 'doc_not_registered', status: 200, code: 'doc_not_registered', detail: null, op: 'doc_metadata', body: null }), addr);
+export function unregistered(addr, anchor = null) {
+  showRefusal(anchor, /** @type {Refusal} */ ({ kind: 'refused', name: 'doc_not_registered', status: 200, code: 'doc_not_registered', detail: null, op: 'doc_metadata', body: null }), addr);
 }
 
 /** the `invalid` follow: no such link or slot */
 export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: number} | null} */ anchor) {
-  HOST.show({ kind: 'face', id: 'face:invalid', anchor: toAnchor(anchor), html: faceHTML({ id: 'B1.invalid', text: t('B1.invalid'), pinned: false, acts: [] }, 'invalid') });
+  HOST.show({ kind: 'face', id: 'face:invalid', anchor: toAnchor(anchor), html: faceHTML({ id: 'B1.invalid', text: t('B1.invalid'), pinned: false, acts: [] }) });
 }
 
 /**
@@ -132,14 +129,14 @@ export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: n
  */
 export function floating(l, far, anchor) {
   HOST.show({ kind: 'face', id: 'face:floating', anchor: toAnchor(anchor), acts: { a0: () => import('./versions.js').then((V) => V.open(far, null, null)) },
-    html: faceHTML({ id: 'F.floating', text: t('F.floating', { D: far }), pinned: false, acts: [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] }, 'floating end') });
+    html: faceHTML({ id: 'F.floating', text: t('F.floating', { D: far }), pinned: false, acts: [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] }) });
   void l;
 }
 
 /** C-39: a link address inside a withheld document, R56's arm beneath and not the clause */
 export function c39(/** @type {string} */ owner, /** @type {Anchor | HTMLElement | null} */ anchor) {
   const face = { id: 'C-39', text: t('C-39', { owner }), pinned: true, acts: [] };
-  HOST.show({ kind: 'face', id: 'face:C-39', anchor: toAnchor(anchor), html: faceHTML(face, 'withheld', `<div class="arm pinned" data-string="C-36.owner-grant.arm">${esc(t('C-36.owner-grant.arm'))}</div>`) });
+  HOST.show({ kind: 'face', id: 'face:C-39', anchor: toAnchor(anchor), html: faceHTML(face, `<div class="arm pinned" data-string="C-36.owner-grant.arm">${esc(t('C-36.owner-grant.arm'))}</div>`) });
 }
 
 /**
@@ -151,7 +148,7 @@ export function c39(/** @type {string} */ owner, /** @type {Anchor | HTMLElement
 export function sessionFace(r, anchor) {
   const face = wordsFor(r);
   const extra = r.name === 'no_key' ? `<div class="note draft" data-string="F.keyless-limit">${esc(t('F.keyless-limit'))}</div>` : '';
-  HOST.show({ kind: 'face', id: 'face:session:' + r.name, anchor: toAnchor(anchor), html: faceHTML(face, r.name, extra) });
+  HOST.show({ kind: 'face', id: 'face:session:' + r.name, anchor: toAnchor(anchor), html: faceHTML(face, extra) });
 }
 
 /**

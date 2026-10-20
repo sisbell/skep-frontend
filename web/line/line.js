@@ -3,10 +3,15 @@
 // rebuilt from state (FP-13). State: VIEW — the transient segment and its
 // expiry (the next act).
 // Its acts at the left edge — Back, Forward, the trail's list — then THE
-// ADDRESS DISPLAY (R6): board › account › document › position with the
-// position strip and the version marker ○ (unlit at the bare address, lit at
-// a pinned member; no sentence), itself LEAP's box (a click or Mod+L opens
-// it); then the ACTING-AS segment — STATE 2 through the signed session
+// ADDRESS DISPLAY (R6): board › account › document › position, each segment
+// read from the document's own address — its node field, its account field
+// whole at any depth (`1.0.1.1` for the agent space's documents, B1-S6's
+// `1.5 › 1.5.0.1.1 › …`) — and the position the one a landing named inside
+// the focused span (N-WALK's `landedAt`; W-01 step 3, "position honored"),
+// else the span's own first; with the position strip and the version marker
+// ○ (unlit at the bare address, lit at a pinned member; no sentence), itself
+// LEAP's box (a click or Mod+L opens it); then the ACTING-AS segment — STATE
+// 2 through the signed session
 // ("acting as 1.0.1 (principal ⟨N⟩) · ⟨device label⟩ · key present on this
 // device · http://127.0.0.1:⟨P⟩ · LOCAL notebook"), STATE 1 where no session
 // stands ("reading as a guest" with its one act, sign in — the session's
@@ -28,7 +33,7 @@ import * as PORT from '../bridge/port.js';
 import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
 import { boardCell, accountAt } from '../plane/projection.js';
-import { memberOf, documentOf } from '../model/address.js';
+import { memberOf, documentOf, boardOf, accountOf } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -80,8 +85,8 @@ export function addressDisplay() {
   const acct = accountAt(cam.x, cam.y, '1');
   if (f && (f.kind === 'block' || f.kind === 'document' || f.kind === 'link') && (lod.name === 'near' || lod.name === 'mid~near' || lod.name === 'mid')) {
     const doc = documentOf(f.addr) || f.addr;
-    const pos = f.pos != null ? f.pos : 1;
-    return { text: `1 › ${f.addr.split('.').slice(0, 3).join('.')} › ${doc} › ${t('F.position', { p: pos })}`, doc: f.addr, pos, member: memberOf(f.addr), whole: false };
+    const pos = WALK.landedAt() ?? f.pos ?? 1;
+    return { text: `${boardOf(doc)} › ${accountOf(doc)} › ${doc} › ${t('F.position', { p: pos })}`, doc: f.addr, pos, member: memberOf(f.addr), whole: false };
   }
   return { text: acct ? `1 › ${acct}` : '1', doc: null, pos: null, member: null, whole: false };
 }

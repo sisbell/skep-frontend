@@ -4,9 +4,12 @@ the design's note beside each in `report.md` (`ux/walks.md` at the design
 repo's HEAD). W-02, W-03 and W-04 are OUT (their screens are later lanes').
 Produced for the seats, asserted as "the step ran and the shot exists" — and
 where a step's note claims an element, that the element is in view (inside
-its clip and the viewport, by the page's `visible` oracle), and where it
-claims the canvas's labels, that the canvas set them (the page's `labels`),
-so the seats are never shown a note the shot contradicts. The card's controls are pressed as
+its clip and the viewport, by the page's `visible` oracle), where it claims
+the canvas's labels, that the canvas set them (the page's `labels`), and
+where it claims a face says something and nothing more, that the face holds
+those words with no wire token and no act (W-01 step 7, the follow to the
+ghost — run here, after `keys` has read LK's visited set), so the seats are
+never shown a note the shot contradicts. The card's controls are pressed as
 a person presses them (the switch's rect read, the click dispatched at
 engine level), and the card's state is read back before the shot — the
 switch's own words among it, the toggle's B1-S4 words in the state LK
@@ -84,11 +87,16 @@ def run(ctx):
     step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width" — the guest\'s box is proven in the pure test (the daemon withholds the run from the harness\'s token-free read, width 240); THIS reader is the entitled owner and sees the run with C-33\'s mark, "visible to you; withheld for others", the sameness hairline naming its origin 1.0.1.0.1003.', 'window-run-c33',
          claims=[(C33_MARK, 'C-33\'s mark', XFAIL_CLIP), (ORIGIN_HAIRLINE, 'the hairline naming the origin', XFAIL_CLIP)])
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
-    if shown:
-        ctx.js('window.__skep.go.follow(%s, %s)' % (json.dumps(DOC), json.dumps(shown[0]['link'])))
+    ghost = next((s for s in shown if s['far'] == GHOST), None)
+    r.check(ghost is not None, 'W-01 step 7: the first edition draws its citation of the ghost', [s['far'] for s in shown][:8])
+    if ghost:
+        ctx.js('window.__skep.go.follow(%s, %s)' % (json.dumps(DOC), json.dumps(ghost['link'])))
         ctx.settle()
         ctx.frames(2)
-    step(ctx, r, 'W-01', 7, 'a reference into nothing', 'W-01 step 7 and the failure arms: "a reference from a public document into a draft is public and renders the placeholder"; R59\'s classes never conflated. Following the first citation reaches a GHOST (cited, never minted): the dead-reference face says what the board will not say about that address, and nothing more.', 'ghost-face')
+    step(ctx, r, 'W-01', 7, 'a reference into nothing', 'W-01 step 7 and the failure arms: "a reference from a public document into a draft is public and renders the placeholder"; R59\'s classes never conflated. Following the citation of a GHOST (cited, never minted): the dead-reference face says what the board will not say about that address, and nothing more.', 'ghost-face')
+    face = ctx.overlay_shown()
+    r.check(face['kind'] == 'face' and 'nothing this board will say about this address' in face['text'] and GHOST in face['text'] and 'doc_not_registered' not in face['text'].lower() and face['acts'] == 0,
+            'W-01 step 7: the followed ghost is faced as the note says — B1-S8\'s words with the address and nothing more: no wire token, no act', face)
     ctx.esc()
     # ---- W-05 — Read & navigate the board -----------------------------------------------
     ctx.view_doc_px(DOC, 5)
@@ -129,7 +137,7 @@ def run(ctx):
         ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(shown[0]['link'])))
         ctx.settle()
         ctx.frames(2)
-    step(ctx, r, 'W-05', 4, 'the anatomy card', 'W-05 step 4: "Inspect a link\'s full anatomy: type (registry documentation one gesture away), all endsets, owner, age (R5)." The type reads R5\'s form — "undocumented here": no commons registry document is seeded; the far end\'s words first; age and supersession are not this lane\'s reads (—).', 'anatomy-card')
+    step(ctx, r, 'W-05', 4, 'the anatomy card', 'W-05 step 4: "Inspect a link\'s full anatomy: type (registry documentation one gesture away), all endsets, owner, age (R5)." The type reads R5\'s form — "undocumented here": no commons registry document is seeded; the far end\'s words first; no age or supersession row: the page holds no age for a link older than its feed and does not read the claims, and an empty row would read as B1-S5\'s "none".', 'anatomy-card')
     ctx.esc()
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
     ctx.settle()

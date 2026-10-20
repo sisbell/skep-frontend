@@ -180,6 +180,8 @@ def run(ctx):
     r.check(f1 != f0 and f1['addr'] == DOC, '↓ moves the focus to the next span', {'from': f0, 'to': f1})
     chord(ctx, 'ArrowUp')
     r.check(state(ctx)['focus'] == f0, '↑ moves it back')
+    back = ctx.js('({line: window.__skep.line().address.pos, focus: window.__skep.view.focus().pos})')
+    r.check(back['line'] == back['focus'], 'after a walk key the line\'s position is the focused span\'s own: the landing\'s position does not outlive the move', back)
     chord(ctx, 'ArrowLeft')
     f2 = state(ctx)['focus']
     r.check(f2 and f2['kind'] == 'document' and f2['addr'] == DOC, '← leaves the span for its document', f2)

@@ -1,17 +1,25 @@
 """TEXT — class 3 (the structure record §6.3; T3 (3); M8): the one line's
-segments in STATE 2 (acting as the claimant through the signed session), a
-face's words, and every PINNED string of `strings.js` equal to its source at
-the design repository's HEAD — `ux/copy.md` by `C-n`, `requirements.md` for
-R56, R59 and R5 — compared fragment by fragment around the ⟨tokens⟩ with
-whitespace folded (the design files wrap at 72 columns). DRAFT strings that
-name a design file are located there too and reported, never failed (a
-design document drafts in prose). The strings the lane LACKED are listed."""
+segments in STATE 2 (acting as the claimant through the signed session); its
+address at a landing — the position the one the landing named, the trail's
+entry's (W-01 step 3, "position honored"), and the account the document's
+own account field, read whole (the agent space's `1.0.1.1`); a face's words
+alone — the fifth cell's at a typed ghost address, with no wire token above
+them and no act beneath (B1-S8; C-42); the anatomy card's rows, each a value
+the page holds (a bare dash reads as B1-S5's "none"); and every PINNED string
+of `strings.js` equal to its source at the design repository's HEAD —
+`ux/copy.md` by `C-n`, `requirements.md` for R56, R59 and R5 — compared
+fragment by fragment around the ⟨tokens⟩ with whitespace folded (the design
+files wrap at 72 columns). DRAFT strings that name a design file are located
+there too and reported, never failed (a design document drafts in prose).
+The strings the lane LACKED are listed. The fifth cell met by a follow is
+W-01 step 7's (`walks`), which runs after `keys` reads LK's visited set."""
 import json
 import re
 
-from . import DOC, GHOST, WINDOW, Result
+from . import AGENT_SPACE, DOC, GHOST, WINDOW, Result
 
 TOKEN = re.compile(r'⟨[^⟩]*⟩')
+BLANK = re.compile(r'[\s\-–—·.…]*')  # a value that is no value: dashes, dots and spaces, or nothing
 
 
 def norm(s):
@@ -43,23 +51,43 @@ def run(ctx):
     r.check(norm(expect) in norm(line['text']), 'the acting-as segment reads foundations §3.3\'s STATE 2 with the session\'s values', {'expect': expect, 'line': line['text']})
     r.check(line['address']['doc'] == DOC and line['address']['pos'] is not None, 'the address segment names the document and the position', line['address'])
     r.check('1 › 1.0.1 › 1.0.1.0.3 › position' in line['text'], 'the where-am-I reads board › account › document › position', line['text'][:160])
+    trail = ctx.js('window.__skep.trail()')
+    entry = trail['entries'][trail['cursor']]
+    r.check(line['address']['pos'] == WINDOW[0] == entry['pos'], 'the address segment\'s position is the one the landing named, as the trail\'s entry holds it — not the first position of the span holding it', {'line': line['address']['pos'], 'trail': entry['pos'], 'named': WINDOW[0]})
     r.figures['line'] = line
-    # ---- a face's words -------------------------------------------------------------
+    # ---- the account segment: the document's own account field, read whole ---------------
+    ctx.leap(AGENT_SPACE + '.0.1')
+    agent = ctx.js('window.__skep.line()')['address']
+    r.check(agent['text'].split(' › ')[1:3] == [AGENT_SPACE, AGENT_SPACE + '.0.1'], 'the agent space\'s home document reads 1 › 1.0.1.1 › 1.0.1.1.0.1: the account segment is its own account field, read whole', {'address': agent, 'lod': ctx.js('window.__skep.view.lod()')['name']})
+    r.figures['agent_line'] = agent
+    # ---- a face's words, and nothing more -----------------------------------------------
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(GHOST))
     ctx.settle()
-    ov = ctx.js('window.__skep.overlay()')
-    tmpl = ctx.js('(() => { const s = window.__skep.strings; return null; })()')
-    face_text = ov.get('text') or ''
-    r.check(ov['kind'] == 'face' and 'nothing this board will say about this address' in face_text and GHOST in face_text, 'the dead-reference face carries B1\'s doc_not_registered words with the address', face_text[:200])
+    face = ctx.overlay_shown()
+    r.check(face['kind'] == 'face' and 'nothing this board will say about this address' in face['text'] and GHOST in face['text'], 'the dead-reference face carries B1\'s doc_not_registered words with the address', face['text'][:200])
+    r.check('doc_not_registered' not in face['text'].lower() and face['acts'] == 0, 'the fifth cell\'s face is its words alone: no wire token above them, no act beneath (B1-S8; C-42)', face)
     ctx.esc()
     r.check(ctx.js('window.__skep.overlay()')['kind'] is None, 'Esc dismisses the face')
-    r.figures['face'] = face_text[:300]
+    r.figures['face'] = face['text'][:300]
     # ---- the swallow line (K-9) ---------------------------------------------------------
     ctx.leap(DOC, WINDOW[0])
     ctx.drv.key('t')
     ctx.frames(2)
     swallow = ctx.js('window.__skep.line()')['text']
     r.check('typing goes nowhere here' in swallow and '⌘L' in swallow, 'a printable key shows the K-9 line with the LEAP chord drawn for the platform', swallow[-160:])
+    # ---- the anatomy card's rows: each a value the page holds -------------------------------
+    shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
+    r.check(bool(shown), 'the first edition draws a link to open the anatomy card of', len(shown))
+    if shown:
+        ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(shown[0]['link'])))
+        ctx.settle()
+        ctx.frames(2)
+        rows = ctx.js('''[...document.querySelectorAll('#overlay .kv')].map((k) => { const v = k.cloneNode(true); v.querySelectorAll('b').forEach((b) => b.remove());
+          return {labels: [...k.querySelectorAll('b')].map((b) => b.textContent), value: v.textContent}; })''')
+        blank = [x for x in rows if BLANK.fullmatch(x['value'])]
+        r.check(ctx.js('window.__skep.overlay().id') == 'anatomy:' + shown[0]['link'] and bool(rows) and not blank, 'every row of the anatomy card carries a value: none stands as a bare dash, which B1-S5 draws as "none"', {'blank': blank, 'rows': [x['labels'] for x in rows]})
+        r.figures['anatomy_rows'] = rows
+        ctx.esc()
     # ---- every PINNED string against its source ------------------------------------------
     pinned = ctx.js('window.__skep.strings.pinned()')
     sources = {}

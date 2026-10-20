@@ -97,12 +97,11 @@ export async function follow(s, anchor = null) {
   const slot = s.end === 'from' ? 2 : 1;
   const fd = REC.doc(far);
   if (fd.refused !== 'unregistered' && fd.extent == null) await PUMP.loadWhole(far);
-  if (REC.doc(far).refused === 'unregistered') { FACES.deadReference(l, far, anchor); CAM.markDirty(); return; }
+  if (REC.doc(far).refused === 'unregistered') { FACES.unregistered(far, anchor); CAM.markDirty(); return; }
   const proj = await PUMP.projectEnd(l.addr, /** @type {1 | 2} */ (slot), far);
   if (proj === 'refused') {
     const r = PUMP.refusalsMet().slice(-1)[0];
-    if (r && r.refusal.name === 'doc_not_registered') FACES.deadReference(l, far, anchor);
-    else FACES.showRefusal(anchor, r ? r.refusal : { kind: 'shell', name: 'unknown' }, far);
+    FACES.showRefusal(anchor, r ? r.refusal : { kind: 'shell', name: 'unknown' }, far);
     CAM.markDirty();
     return;
   }

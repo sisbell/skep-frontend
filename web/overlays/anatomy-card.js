@@ -8,12 +8,15 @@
 // (R5's form where the commons documents none: on this notebook no registry
 // document is seeded, so every type reads "undocumented here"), from, to,
 // home (published → the link is public; a draft → hidden with its home),
-// owner (never a name alone), age (the commit's position and time from the
-// feed — this page's feed starts at the head, so a seeded link's age is not
-// held: shown as —), supersession (`in_claims`/`out_claims` are not this
-// lane's reads: —); its acts follow either end and open the scene. The
-// link's mark comes from LK's `markOf`, so the card and the symbol agree.
-// Later: B3-d's retract and edit (the editor's lane), link sets' SET line.
+// owner (never a name alone); its acts follow either end and open the scene.
+// B1-S5's age and supersession rows are not drawn: the age (the commit's
+// position and time, from the feed) is not held for a link older than this
+// page's feed, which starts at the head, and `in_claims`/`out_claims` are
+// not among the page's reads — and a row standing with no value would read
+// as B1-S5's "none". The link's mark comes from LK's `markOf`, so the card
+// and the symbol agree.
+// Later: the age and supersession rows with the reads that answer them;
+// B3-d's retract and edit (the editor's lane); link sets' SET line.
 // Carries: the wireframe's §18 `anatomyCard`. Rules: FP-1, FP-2, FP-13.
 
 import * as HOST from './host.js';
@@ -72,8 +75,6 @@ export async function open(s, anchorEl) {
     `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code">${esc(toDoc)}</span></div>` +
     `<div class="kv"><b>${esc(t('F.card.home'))}</b> <span class="code">${esc(l.home)}</span> — ${esc(homePublished ? t('F.card.public') : t('F.card.hidden'))}</div>` +
     `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${esc(l.owner || '—')}</div>` +
-    `<div class="kv"><b>${esc(t('F.card.age'))}</b> —</div>` +
-    `<div class="kv"><b>${esc(t('F.card.superseded-by'))}</b> — · <b>${esc(t('F.card.supersedes'))}</b> —</div>` +
     `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${esc(far || '')}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
   HOST.show({
     kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: near, pos: nearPos, width: nearWidth } }, html,

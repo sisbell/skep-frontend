@@ -1,8 +1,12 @@
 // N-WALK — the linearization, THE FOCUS and the ARIA mirror (the structure
 // record §3.2 "N-WALK"; S-27 (a) the mirror inside it; D5 §4 the focus
 // model; foundations §2.7). Layer 2. Mixed: the tree arithmetic pure, the
-// mirror ENGINE-BOUND. State: VIEW — the focus and the walk's position —
-// THE ONE OWNER of the focus (FP-10).
+// mirror ENGINE-BOUND. State: VIEW — the focus, the walk's position, and the
+// position a landing named inside the focused span (the one line's position,
+// W-01 step 3's "position honored", until the focus moves) — THE ONE OWNER
+// of the focus (FP-10). Every focus move goes through one setter, so a
+// landing's position never outlives the span it was named in: a walk key
+// names none, and the line reads the span's own first position.
 // The plane linearizes board › account › document › block | link in record
 // order (S3 Q6); at reading scale the walk holds THE LINKS THE READING
 // SCALE DRAWS (D5 §4 rule 2: the owner's and the person's own; others' only
@@ -52,6 +56,8 @@ let siblings = [];
 let idx = 0;
 /** @type {Array<{siblings: Node[], idx: number}>} the levels above */
 let stack = [];
+/** @type {number | null} the position a landing named inside the focused span; null where the focus moved by a walk key */
+let landed = null;
 let ringVisible = false;
 /** @type {HTMLElement | null} */
 let mirrorEl = null;
@@ -65,6 +71,8 @@ export function attach(mirror, live) { mirrorEl = mirror; liveEl = live; }
 export function onFocus(/** @type {(n: Node | null) => void} */ fn) { watchers.push(fn); }
 /** the focus, read-only */
 export const current = () => focus;
+/** the position a landing named inside the focused span, read-only — the one line's position (null: the span's own first) */
+export const landedAt = () => landed;
 /** the focused span, for the article's `lit` mark */
 export function focusedSpan() { return focus && focus.kind === 'block' && focus.pos != null ? { addr: focus.addr, pos: focus.pos } : null; }
 /** is the ring drawn (a key has moved the focus — the platform's focus-visible rule) */
@@ -108,6 +116,21 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
 }
 
 const levelOf = (/** @type {Node} */ n) => (n.kind === 'board' ? 1 : n.kind === 'account' ? 2 : n.kind === 'document' ? 3 : 4);
+
+/**
+ * Move the focus to item `i` of `sibs` — the one way it moves. A landing
+ * passes the position it named, kept only where the focused span holds it;
+ * a walk key passes none.
+ * @param {Node[]} sibs
+ * @param {number} i
+ * @param {number | null} [at] the position a landing named
+ * @param {Node | null} [node] the focus, where `sibs` holds no item `i`
+ */
+function setFocus(sibs, i, at = null, node = sibs[i] ?? null) {
+  siblings = sibs; idx = i; focus = node;
+  const held = at != null && node && node.kind === 'block' ? REC.blockAt(node.addr, at) : null;
+  landed = held && node && held.pos === node.pos ? at : null;
+}
 
 /**
  * Rebuild the mirror from state (FP-13). Replacing the items removes the
@@ -206,17 +229,17 @@ export async function key(k) {
   if (!focus) { await enter(); return true; }
   if (k === 'down' || k === 'up' || k === 'first' || k === 'last') {
     const ni = k === 'down' ? Math.min(siblings.length - 1, idx + 1) : k === 'up' ? Math.max(0, idx - 1) : k === 'first' ? 0 : siblings.length - 1;
-    if (ni !== idx) { idx = ni; focus = siblings[idx]; render(); moved(true); await flyToFocus(); }
+    if (ni !== idx) { setFocus(siblings, ni); render(); moved(true); await flyToFocus(); }
     return true;
   }
   if (k === 'in') {
     const kids = await childrenOf(focus);
-    if (kids.length) { stack.push({ siblings, idx }); siblings = kids; idx = 0; focus = kids[0]; render(); moved(true); await flyToFocus(); }
+    if (kids.length) { stack.push({ siblings, idx }); setFocus(kids, 0); render(); moved(true); await flyToFocus(); }
     return true;
   }
   if (k === 'out') {
     const up = stack.pop();
-    if (up && up.siblings.length) { siblings = up.siblings; idx = up.idx; focus = siblings[idx]; render(); moved(true); await flyToFocus(); }
+    if (up && up.siblings.length) { setFocus(up.siblings, up.idx); render(); moved(true); await flyToFocus(); }
     return true;
   }
   return false;
@@ -225,12 +248,13 @@ export async function key(k) {
 /** the plane takes focus with nothing focused yet: the board */
 export async function enter() {
   const kids = await childrenOf(null);
-  stack = []; siblings = kids; idx = 0; focus = kids[0] || null; render(); moved(true);
+  stack = []; setFocus(kids, 0); render(); moved(true);
 }
 
 /**
  * The focus moves to a landing (a teleport, D5 §4 rule 8): the document, or
- * the span at a position.
+ * the span holding a position — the position kept as the one the landing
+ * named (`landedAt`).
  * @param {string} addr a document, an account or a board
  * @param {number | null} pos
  */
@@ -250,18 +274,18 @@ export async function focusTo(addr, pos) {
       const kids = await childrenOf({ kind: 'document', addr: doc, pos: null, link: null });
       const i = Math.max(0, kids.findIndex((n) => n.kind === 'block' && n.pos === b.pos));
       stack = [{ siblings: [boardNode], idx: 0 }, { siblings: accounts, idx: acctIdx }, { siblings: documents, idx: docIdx }];
-      siblings = kids; idx = i; focus = kids[i] || null;
+      setFocus(kids, i, pos);
     } else {
       stack = [{ siblings: [boardNode], idx: 0 }, { siblings: accounts, idx: acctIdx }];
-      siblings = documents; idx = docIdx; focus = documents[docIdx] || { kind: 'document', addr: doc, pos: null, link: null };
+      setFocus(documents, docIdx, null, documents[docIdx] || { kind: 'document', addr: doc, pos: null, link: null });
     }
   } else if (acct) {
     const sibs = await childrenOf({ kind: 'board', addr: '1', pos: null, link: null });
     const i = Math.max(0, sibs.findIndex((n) => n.addr === acct));
     stack = [{ siblings: [{ kind: 'board', addr: '1', pos: null, link: null }], idx: 0 }];
-    siblings = sibs; idx = i; focus = sibs[i] || { kind: 'account', addr: acct, pos: null, link: null };
+    setFocus(sibs, i, null, sibs[i] || { kind: 'account', addr: acct, pos: null, link: null });
   } else {
-    stack = []; siblings = [{ kind: 'board', addr: '1', pos: null, link: null }]; idx = 0; focus = siblings[0];
+    stack = []; setFocus([{ kind: 'board', addr: '1', pos: null, link: null }], 0);
   }
   ringVisible = false;
   render(); moved(false);
