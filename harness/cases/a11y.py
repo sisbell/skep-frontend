@@ -33,13 +33,14 @@ corner; the ring's later stops (D5 §4 rule 5) — a card standing without the
 focus reached after the plane's stop and the corner, Shift+Tab from it back
 to the corner; the reading scene's stops in the place of the plane's and the
 corner's, pane, pane, the scene's acts (K-61), with nothing the scene covers
-in the ring and Shift+Tab walking it back to the line, Esc ending it with the
-focus on the item it was opened from (K-63) and Mod+[ from a pane with the
-focus on the landing's item (rule 8); the links card's overlay toggle a
-switch in the AX tree (R60; WAI-ARIA's switch) — named by B1-S4's words
-before its state and described by the count after it, a press changing its
-checked state and neither its name nor its description. Never a screen
-reader's voice — the seat's."""
+in the ring, nothing inside a pane a control or a stop in the AX tree (SC:
+the panes are read, never pressed), and Shift+Tab walking it back to the
+line, Esc ending it with the focus on the item it was opened from (K-63) and
+Mod+[ from a pane with the focus on the landing's item (rule 8); the links
+card's overlay toggle a switch in the AX tree (R60; WAI-ARIA's switch) —
+named by B1-S4's words before its state and described by the count after
+it, a press changing its checked state and neither its name nor its
+description. Never a screen reader's voice — the seat's."""
 import json
 import re
 
@@ -507,6 +508,33 @@ def run(ctx):
     ctx.frames(2)
     first = stop()
     r.check(opened and ctx.js('window.__skep.scene.isOpen()') and first == 'pane B', 'the scene opened from the mirror\'s current item puts the focus in the far end\'s pane', {'opened': opened, 'at': first})
+    # nothing inside a pane is a control (SC; B1-S9: "read both…; scroll each"): a pane's article is what assistive
+    # technology reads — never hidden from it as the plane's is — so a mark a press acts on nothing in must be no button
+    # there; the first edition's pane carries the presence ⟡, links touching it
+    ax = ctx.drv.ax_tree()
+    if 'error' in ax:
+        r.figures['scene_ax'] = {'answered': False, 'error': ax['error']}
+        r.note('the scene\'s panes: Accessibility.getFullAXTree did not answer: ' + ax['error'])
+    else:
+        nodes = ax.get('nodes', [])
+        by_ax = {n['nodeId']: n for n in nodes}
+        by_dom = {n['backendDOMNodeId']: n for n in nodes if 'backendDOMNodeId' in n}
+        widgets = {'button', 'link', 'switch', 'checkbox', 'menuitem', 'tab', 'option', 'textbox', 'combobox'}
+        inside, controls = 0, []
+        for pane in ('#sceneA', '#sceneB'):
+            todo = list((by_dom.get(backend(pane)) or {}).get('childIds', []))
+            while todo:
+                n = by_ax.get(todo.pop())
+                if n is None:
+                    continue
+                inside += 1
+                todo.extend(n.get('childIds', []))
+                role = (n.get('role') or {}).get('value')
+                focusable = any(p['name'] == 'focusable' and (p.get('value') or {}).get('value') for p in n.get('properties', []))
+                if not n.get('ignored') and (role in widgets or focusable):
+                    controls.append({'pane': pane, 'role': role, 'focusable': focusable, 'name': ((n.get('name') or {}).get('value') or '')[:40]})
+        r.check(inside > 0 and not controls, 'the AX tree: nothing inside a scene\'s pane is a control or a stop — its marks are read, never pressed (SC)', {'nodes_inside': inside, 'controls': controls[:6]})
+        r.figures['scene_ax'] = {'answered': True, 'nodes_inside': inside, 'controls': len(controls)}
     ring = []
     for _ in range(24):
         press('Tab')

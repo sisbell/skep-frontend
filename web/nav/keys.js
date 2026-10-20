@@ -14,12 +14,14 @@
 // corner's act and the walk's keys and the swallow do not run (K-57) → a
 // standing overlay → the line (§4 rule 5); while the scene stands, its
 // panes and its acts take the place of the plane's stop and the corner
-// (SC). Shift with ← and → is never dispatched: it is the platform's own
-// (D5 K-71, its text keys "Shift extending"), which extends a selection the
-// platform holds where that selection holds the focus — after a drag, not
-// from the mirror's item or an overlay (the gate's figures, Chrome on its
-// machine) — and APP-INPUT reads what it does back into the page's
-// selection (R11).
+// (SC), and no key reaches what it covers — the walk, the selection, the
+// corner — wherever the focus is (`sceneKey`; D5 M-4: "the walk within the
+// focused pane"). Shift with ← and → is never dispatched: it is the
+// platform's own (D5 K-71, its text keys "Shift extending"), which extends a
+// selection the platform holds where that selection holds the focus — after
+// a drag, not from the mirror's item or an overlay (the gate's figures,
+// Chrome on its machine) — and APP-INPUT reads what it does back into the
+// page's selection (R11).
 // The wireframe's bare keys (`/`, `t`, `k`, `0`–`9`, `+`, `-`, `h`, `?`, `w`,
 // `n`, `p`) are a sketch and are RE-CUT here to D5's rows (the record §3.4
 // (ix)): `/` → K-30 Mod+L / Mod+K; `0`/`g`/Home → K-13 Mod+0, K-14
@@ -95,6 +97,9 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-94', chord: 'Mod+R', act: 'nothing', surface: 'platform' },
 ]));
 
+/** the selection's slot chords (K-47 … K-52): the TABLE's selection rows */
+const SLOT_CHORDS = new Set(TABLE.filter((r) => r.surface === 'selection').map((r) => r.chord));
+
 /** the chord a KeyboardEvent spells, in D5's notation — `Mod+Shift+L`, `↓`, `Enter`, or the printable key itself */
 export function chordOf(/** @type {KeyboardEvent} */ e) {
   const mod = MAC ? e.metaKey : e.ctrlKey;
@@ -119,7 +124,7 @@ export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('
 
 /**
  * @typedef {Object} Ctx — where the focus is
- * @property {'plane' | 'line' | 'box' | 'overlay' | 'corner' | 'scene' | 'field'} where
+ * @property {'plane' | 'line' | 'box' | 'overlay' | 'corner' | 'scene' | 'scene-acts' | 'field'} where `scene` a reading scene's pane, `scene-acts` its bar's buttons
  */
 
 /**
@@ -155,12 +160,8 @@ export async function dispatch(e, ctx) {
   // WHOLE BOARD / HOME (K-13, K-14)
   if (chord === 'Mod+0') { GO.wholeBoard(true); return true; }
   if (chord === 'Mod+Shift+H') { GO.home(true); return true; }
-  // the scene's keys (K-62, K-64)
-  if (SCENE.isOpen()) {
-    if (chord === 'Mod+R') { SCENE.relevel(); return true; }
-    if (chord === 'Mod+=' ) { return true; } // swallowed: nothing is nearer than the scene's reading scale
-    if (chord === 'Mod+-') { SCENE.close(); CAM.markDirty(); return true; }
-  }
+  // the scene covers the plane: its keys alone, nothing under it takes one
+  if (SCENE.isOpen()) return sceneKey(e, chord, ctx);
   // zoom (K-11)
   if (chord === 'Mod+=') { zoomAboutFocus(1.25); return true; }
   if (chord === 'Mod+-') { zoomAboutFocus(1 / 1.25); return true; }
@@ -185,17 +186,52 @@ export async function dispatch(e, ctx) {
   if (chord === '↓') { e.preventDefault(); await WALK.key('down'); return true; }
   if (chord === '↑') { e.preventDefault(); await WALK.key('up'); return true; }
   if (chord === '→') { e.preventDefault(); await WALK.key('in'); return true; }
-  if (chord === '←') { e.preventDefault(); if (SCENE.isOpen()) { SCENE.close(); CAM.markDirty(); return true; } await WALK.key('out'); return true; }
+  if (chord === '←') { e.preventDefault(); await WALK.key('out'); return true; }
   if (chord === 'Home') { e.preventDefault(); await WALK.key('first'); return true; }
   if (chord === 'End') { e.preventDefault(); await WALK.key('last'); return true; }
   if (chord === 'PageDown' || chord === 'PageUp') { const { VH } = CAM.viewport(); CAM.panBy(0, chord === 'PageDown' ? -VH * 0.9 : VH * 0.9); CAM.markDirty(); WALK.retakeFromView(true); return true; }
   if (chord === 'Enter') { await activateFocus(); return true; }
   // a printable key on the plane: swallowed, the K-9 line at the focus
-  if (printable(e)) {
-    LINE.transient(e.key === ' ' ? t('F.swallow.space', { 'paging key': 'PageDown' }) : t('F.swallow', { 'LEAP chord': drawChord('Mod+L') }));
-    return true;
-  }
+  if (printable(e)) { swallow(e); return true; }
   return false;
+}
+
+/**
+ * A key while the reading scene stands (D5 M-4; K-60 … K-64). The scene
+ * covers the plane, and nothing it covers takes a key: the walk, the
+ * selection and the corner stand under it as they were. Wherever the focus
+ * is, Mod+R re-levels (K-62), Mod+= is swallowed (K-64), Mod+- ends the
+ * scene (K-63) and Mod+Shift+P shows the one line's strip (K-23); the
+ * selection's slot chords, which have nothing to act on in the scene, are
+ * taken and do nothing, so the browser's own meanings never run (Mod+Shift+R
+ * would reload), as F5 is (K-94). On the one line or a standing overlay every
+ * other key is that control's own. Elsewhere ← ends the scene (K-63: "←
+ * out of a pane's document"); a pane's own keys moved that pane before the
+ * dispatch (SC's `key`, K-60), and → and Enter in a pane, and Shift with the
+ * arrows, are the platform's; on the scene's acts every other key is the
+ * button's own — Enter and Space press it; a printable key anywhere else is
+ * swallowed, the K-9 line shown.
+ * @param {KeyboardEvent} e
+ * @param {string} chord
+ * @param {Ctx} ctx
+ * @returns {boolean} the page took the key
+ */
+function sceneKey(e, chord, ctx) {
+  if (chord === 'Mod+R') { SCENE.relevel(); return true; }
+  if (chord === 'Mod+=') return true; // swallowed: nothing is nearer than the scene's reading scale
+  if (chord === 'Mod+-') { SCENE.close(); CAM.markDirty(); return true; }
+  if (SLOT_CHORDS.has(chord) || e.key === 'F5') return true;
+  if (chord === 'Mod+Shift+P') { LINE.stripAct(); return true; }
+  if (ctx.where === 'overlay' || ctx.where === 'line') return false; // the overlay's or the line's own keys
+  if (chord === '←') { SCENE.close(); CAM.markDirty(); return true; }
+  if (ctx.where === 'scene-acts') return false; // the button's own keys
+  if (printable(e)) { swallow(e); return true; }
+  return false;
+}
+
+/** a printable key no field takes: swallowed, the K-9 line at the focus until the next act (foundations §2.7) */
+function swallow(/** @type {KeyboardEvent} */ e) {
+  LINE.transient(e.key === ' ' ? t('F.swallow.space', { 'paging key': 'PageDown' }) : t('F.swallow', { 'LEAP chord': drawChord('Mod+L') }));
 }
 
 /** Esc's one order (§4 rule 7): the most recent overlay; the selection; the scene; on the bare plane nothing */

@@ -17,7 +17,10 @@
 // head's three lines, a fourth where links touch the document; a block's
 // pieces with its hairline's label, C-33's mark and its symbols at its size;
 // a heading's margins standing it nearer the block it heads; the same blocks,
-// in the same order, as the HTML.
+// in the same order, as the HTML. The scene-mode variant, a reading scene's
+// pane's article: no scene-offer and no row for one in the plan, and no mark
+// a control — the plane's offer, symbols and presence ⟡ are (a mutant that
+// offers the scene in a pane, or keeps a symbol's button there, turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, cornerHTML, headingLevel, blockMarks } from './article.js';
@@ -251,4 +254,16 @@ test('the plan and the HTML decide the same blocks, in the same order', () => {
   assert.equal((plan.find((r) => r.kind === 'withheld') || { width: 0 }).width, 240, 'a withheld run carries its width');
   assert.equal(plan.filter((r) => r.kind === 'chrome').length, 1, 'the scene-offer: the page\'s chrome after the blocks');
   assert.equal(articlePlan(doc({ refused: 'withheld' }), view(), '1.0.1').length, 3, 'a refused document is its head alone');
+});
+
+test('the scene-mode variant, a pane\'s article: no scene-offer and no row for one, and no mark a control — on the plane the offer, the symbols and the presence ⟡ are', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: 'abcdefghijkl', origin: null }], origins: [{ pos: 5, width: 4, doc: '1.0.1.0.1003' }] });
+  const links = { marks: [shown(9, 2)], symbols: [shown(9, 2)] };
+  const plane = view(links), pane = view({ ...links, scene: true });
+  const onPlane = articleHTML(d, plane, '1.0.1'), inPane = articleHTML(d, pane, '1.0.1');
+  assert.ok(onPlane.includes('class="offer"') && articlePlan(d, plane, '1.0.1').some((r) => r.kind === 'chrome'), 'on the plane: the offer at the windowing document, and its row in the plan');
+  assert.ok(!inPane.includes('class="offer"') && !articlePlan(d, pane, '1.0.1').some((r) => r.kind === 'chrome'), 'in a pane: no offer, and no row for one');
+  assert.ok(/<span class="sym [^"]*" data-link="L9"[^>]* role="button" tabindex="-1"/.test(onPlane) && /data-reveal="[^"]*" role="button" tabindex="-1"/.test(onPlane), 'on the plane: the link\'s symbol and the presence ⟡ are buttons a click acts on');
+  assert.ok(symsIn(inPane).length === 1 && inPane.includes('data-reveal="1.0.1.0.3"'), 'in a pane: the link\'s symbol and the presence ⟡ stand');
+  assert.ok(!/ role=| tabindex=/.test(inPane), 'and nothing in the pane\'s article is a control or a stop');
 });

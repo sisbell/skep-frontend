@@ -62,7 +62,12 @@ edition and the draft it windows, and from the versions list of an edition
 with two members, a paragraph past its first held, the two ends' matched
 lines stand at one height inside both panes and hold the same material;
 every band and line leaves its pane at its passage's own first line, or at
-the pane's edge where that line has left the pane; back on the plane, the
+the pane's edge where that line has left the pane; a click on the re-level
+act's chord mark sets the two ends level again (K-62); the panes are read,
+never clicked (SC; B1-S9) — no block, hairline or symbol in a pane, nor its
+corner's version statement, takes the click cues the plane's keep, no block
+there takes the hover ground, and a click on any of them leaves the scene
+standing over the page as it found it; back on the plane, the
 box an edition shares with its members holds one article. THE CHROME: the
 LEAP box's rows share their columns, a place's longest label among them, no
 cell's text running past its column and the title's keeping a quarter of the
@@ -76,8 +81,9 @@ reading scale would cross the text, showing between the article's glyphs.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `arrivalAnchors`, `visible`, `barsOf`, `labels`, `scene.at`,
 `scene.ties`, the frame buffer, `beamLabels`) save the trail's, which reads
-the canvas's pixels here, and the symbols', which reads the article's order
-here; the thresholds are here. The beam-label and shared-box checks are
+the canvas's pixels here, the symbols', which reads the article's order
+here, and the click cues', which read the computed style here; the
+thresholds are here. The beam-label and shared-box checks are
 marked with the page issues they wait on and count as expected while those
 stand."""
 import json
@@ -344,6 +350,98 @@ def ties_hold(r, name, ties, in_view):
     return {'ties': len(ties), 'ends_in_view': ends, 'off': len(off)}
 
 
+def untouched(ctx):
+    """what a click on a scene's pane could move: whether the scene stands, the overlay, the camera, the trail, the selection"""
+    return ctx.js('({scene: window.__skep.scene.isOpen(), overlay: window.__skep.overlay().id, cam: window.__skep.view.camera(), trail: window.__skep.trail(), sel: window.__skep.selection()})')
+
+
+def pane_mark(ctx, selector):
+    """a mark in a scene's pane as a pointer meets it: the first element the selector names (kept as `window.__gateMark`),
+    its pane scrolled to stand it a third of the way down — a corner's held at the pane's top needs none — and the point at
+    the middle of a block's first character of its own text, the chrome and the link marks inside it skipped, or of any
+    other mark's box; whether the mark is what lies under that point. None where no element answers"""
+    return ctx.js('''((sel) => { const e = document.querySelector(sel); window.__gateMark = e; if (!e) return null;
+      const pane = e.closest('.pane');
+      if (pane && !e.closest('.corner')) { const p = pane.getBoundingClientRect(); pane.scrollTop += e.getBoundingClientRect().top - p.top - pane.clientHeight / 3; }
+      let q = e.getBoundingClientRect();
+      if (e.matches('.sp')) {
+        const w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT);
+        for (let n = w.nextNode(); n; n = w.nextNode()) {
+          const i = n.textContent.search(/\\S/);
+          if (i < 0 || n.parentElement.closest('.hairline, .pubmark, .sym, .others, .lip')) continue;
+          const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1); q = r.getBoundingClientRect(); break;
+        }
+      }
+      const x = q.left + q.width / 2, y = q.top + q.height / 2, hit = document.elementFromPoint(x, y);
+      return {x, y, hits: !!hit && (hit === e || e.contains(hit))}; })(%s)''' % json.dumps(selector))
+
+
+def pane_click_holds(ctx, r, what, selector):
+    """a person's click on a mark in a scene's pane (SC: the panes are read, never clicked): the mark under the pointer,
+    and after the click the scene standing over the page as the click found it"""
+    before = untouched(ctx)
+    at = pane_mark(ctx, selector)
+    if at:
+        ctx.drv.mouse(at['x'], at['y'])
+        ctx.settle()
+        ctx.frames(2)
+    after = untouched(ctx)
+    r.check(bool(at) and at['hits'] and after['scene'] and after == before, f'a click on {what} in a scene\'s pane acts on nothing: the scene stands, and the overlay, the camera, the trail and the selection are as the click found them',
+            {'at': at, 'moved': [k for k in before if before[k] != after[k]], 'overlay': after['overlay'], 'sel': after['sel']})
+
+
+def scene_marks_hold(ctx, r):
+    """THE SCENE'S PANES ARE READ, NOT ACTED ON (SC; B1-S9): the scene on the first edition and the draft it windows, the
+    first edition's links revealed to their symbols — pane A scrolled away, a click on the re-level act's chord mark sets
+    the two ends level again (K-62); no block, hairline or symbol in a pane takes the plane's click cues, which the plane's
+    keep, and a block under the pointer keeps a clear ground; a click on a block, the hairline, the presence ⟡ or a link's
+    symbol changes nothing; its figures"""
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.links.reveal(%s, 2)' % json.dumps(DOC))
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
+    ctx.settle()
+    ctx.frames(3)
+    # the re-level act's chord mark: the act is its button's wherever on the button a click lands
+    ctx.js('document.getElementById("sceneA").scrollTop += 400')
+    ctx.frames(2)
+    away = scene_level(ctx) or {}
+    a, b = away.get('a'), away.get('b')
+    r.check(bool(a and b and a['line'] and b['line']) and abs(a['line']['y'] - b['line']['y']) > LEVEL_TOL_PX, 'pane A scrolled away: its matched line stands off pane B\'s, what the re-level act restores',
+            {'a': a and a['line'], 'b': b and b['line']})
+    mark = ctx.js('''(() => { const k = document.querySelector('#scenebar [data-relevel] kbd'); if (!k) return null;
+      const q = k.getBoundingClientRect(), x = q.left + q.width / 2, y = q.top + q.height / 2; return {x, y, hits: document.elementFromPoint(x, y) === k}; })()''')
+    if mark:
+        ctx.drv.mouse(mark['x'], mark['y'])
+        ctx.frames(2)
+    r.check(bool(mark) and mark['hits'], 'the re-level act\'s chord mark is what lies under the pointer', mark)
+    level_holds(r, 'a click on the re-level act\'s chord mark (K-62)', scene_level(ctx))
+    # the click cues are the plane's: none in a pane, every one kept on the plane's text layer
+    cues = ctx.js('''(() => { const cur = (sel) => [...document.querySelectorAll(sel)].map((e) => getComputedStyle(e).cursor);
+      const at = (root) => ({blocks: cur(root + ' .run > .sp'), hairlines: cur(root + ' .hairline'), presence: cur(root + ' .sym.reveal'), symbols: cur(root + ' .sym[data-link]')});
+      return {pane: at('.pane'), plane: at('#domlayer')}; })()''')
+    kinds = ('blocks', 'hairlines', 'presence', 'symbols')
+    pointer = {k: sum(1 for c in cues['pane'][k] if c == 'pointer') for k in kinds}
+    r.check(all(cues['pane'][k] for k in kinds) and not any(pointer.values()), 'no click cue in a scene\'s pane: no block, hairline, presence ⟡ or link\'s symbol takes the pointer cursor',
+            {'pane': {k: len(cues['pane'][k]) for k in kinds}, 'pointer': pointer})
+    r.check(all(cues['plane'][k] and all(c == 'pointer' for c in cues['plane'][k]) for k in kinds), 'the plane\'s text layer keeps its click cues: every block, hairline, presence ⟡ and link\'s symbol of a mounted article takes the pointer cursor',
+            {k: sorted(set(cues['plane'][k])) for k in kinds})
+    at = pane_mark(ctx, '#sceneA .run > p.sp')
+    if at:
+        ctx.drv.mouse(at['x'], at['y'], kind='move')
+        ctx.frames(2)
+    ground = ctx.js('(() => { const e = window.__gateMark; return e ? {hovered: e.matches(":hover"), ground: getComputedStyle(e).backgroundColor} : null; })()')
+    r.check(bool(at) and at['hits'] and bool(ground) and ground['hovered'] and ground['ground'] in ('rgba(0, 0, 0, 0)', 'transparent'), 'a block in a scene\'s pane under the pointer keeps a clear ground: no hover cue',
+            {'at': at, 'ground': ground})
+    for what, selector in (('a block', '#sceneA .run > p.sp'), ('the hairline', '#sceneA .hairline'), ('the presence ⟡', '#sceneA .sym.reveal'), ('a link\'s symbol', '#sceneA .sym[data-link]')):
+        pane_click_holds(ctx, r, what, selector)
+    ctx.js('window.__skep.scene.close()')
+    ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
+    vp = ctx.js('window.__skep.view.viewport()')
+    ctx.drv.mouse(vp['VW'] - 2, vp['VH'] - 2, kind='move')
+    ctx.frames(2)
+    return {'cues': {side: {k: len(cues[side][k]) for k in kinds} for side in ('pane', 'plane')}, 'hover': ground}
+
+
 def scene_holds(ctx, r):
     """THE READING SCENE's checks: opened on the first edition and the draft it windows, nothing held; then from the
     versions list of an edition with two members, its last paragraph held, read side by side with its latest member;
@@ -360,6 +458,7 @@ def scene_holds(ctx, r):
     seen['origin'] = {'level': v and v['level'], 'ties': ties_hold(r, 'the scene on the window and its origin', ctx.js('window.__skep.scene.ties()'), 2)}
     ctx.js('window.__skep.scene.close()')
     ctx.frames(2)
+    seen['marks'] = scene_marks_hold(ctx, r)
     # the versions list, a paragraph past the document's first held: "read side by side" with the latest member sets that paragraph level
     # with what the member holds of it. An edition no later case reads: the member's text, once loaded, stands over its document's box
     ctx.leap(VERSIONED, None)
@@ -384,6 +483,13 @@ def scene_holds(ctx, r):
     level_holds(r, 'the versions list\'s read side by side', v)
     # a member that holds all of its edition shares it as one run, its first line above both panes: its band clipped at their edges
     seen['versions'] = {'level': v and v['level'], 'ties': ties_hold(r, 'the versions list\'s read side by side', ctx.js('window.__skep.scene.ties()'), 0)}
+    # the version statement's click cue is the plane's corner's, whose act it is (K-57): a pane's corner is shown, not acted on
+    corner = ctx.js('''(() => { const cue = (sel) => [...document.querySelectorAll(sel)].map((e) => { const s = getComputedStyle(e); return {cursor: s.cursor, line: s.textDecorationLine}; });
+      return {pane: cue('.pane .corner .version'), plane: cue('#corners .corner .version')}; })()''')
+    r.check(bool(corner['pane']) and all(c['cursor'] != 'pointer' and 'underline' not in c['line'] for c in corner['pane']), 'no click cue at a pane\'s corner: its version statement takes neither the pointer cursor nor the underline', corner['pane'])
+    r.check(bool(corner['plane']) and all(c['cursor'] == 'pointer' and 'underline' in c['line'] for c in corner['plane']), 'the plane\'s corner keeps its version statement\'s click cue: the pointer cursor and the dotted underline', corner['plane'])
+    pane_click_holds(ctx, r, 'the corner\'s version statement', '#sceneA .corner .version')
+    seen['versions']['corner'] = corner
     ctx.js('window.__skep.scene.close()')
     ctx.frames(2)
     # back on the plane at the edition, its member's text loaded: the box both share holds one article

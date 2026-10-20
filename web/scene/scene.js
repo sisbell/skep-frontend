@@ -46,11 +46,19 @@
 // of its own). Each pane carries its own document's corner (ux-T2: "each pane
 // its own"; `T-LAYER.sceneCorner` makes its items) on its OUTER side — pane
 // A's left, pane B's right — held to the top of the pane's scroll, so the
-// bands and lines leave the inner edges clear of it (foundations §3.1); it is
-// shown, not acted on, as nothing in a pane takes a pointer. Companionate
-// scrolling over the bands is UNTESTED (S27) and not built. Carries: the
-// wireframe's §19 whole (its beams over `compare`'s pairs instead of the hand
-// data's windows).
+// bands and lines leave the inner edges clear of it (foundations §3.1). THE
+// PANES ARE READ, NOT ACTED ON (B1-S9: "read both…; scroll each"): nothing in
+// a pane takes a pointer — its blocks, hairlines, symbols and presence ⟡ and
+// its corner's version statement carry none of the plane's click cues and are
+// no controls (T-ARTICLE's scene-mode variant) — and the keys a pane takes
+// move that pane alone (`key`, K-60), N-KEYS handing none to what the scene
+// covers. The scene's ACTS are its bar's buttons — re-level (K-62) and the
+// dismissal — each pressed by a click anywhere on it, by Enter or by Space.
+// What a click or a key in a pane would act on — a beam followed into the
+// other pane (B1-S9), each pane's own selection (§2.5, PROPOSED) — is the
+// design's open question. Companionate scrolling over the bands is UNTESTED
+// (S27) and not built. Carries: the wireframe's §19 whole (its beams over
+// `compare`'s pairs instead of the hand data's windows).
 // Rules: FP-1, FP-2, FP-10, FP-12, FP-13.
 
 import * as PUMP from '../model/pump.js';
@@ -125,7 +133,8 @@ export function attach(e) {
   els = e;
   e.root.setAttribute('aria-label', t('L.scene-label'));
   for (const p of [e.paneA, e.paneB]) p.addEventListener('scroll', () => draw());
-  e.bar.addEventListener('click', (ev) => { const tg = /** @type {HTMLElement} */ (ev.target); if (tg.dataset.x) close(); else if (tg.dataset.relevel) relevel(); });
+  // a click on an act is its button's wherever on the button it lands — the re-level's chord mark among them
+  e.bar.addEventListener('click', (ev) => { const tg = /** @type {HTMLElement} */ (ev.target); if (tg.closest('[data-x]')) close(); else if (tg.closest('[data-relevel]')) relevel(); });
 }
 export const isOpen = () => scene !== null;
 export const pair = () => (scene ? { a: scene.a, b: scene.b } : null);
@@ -202,7 +211,7 @@ export async function open(a, b, held = {}) {
   els.root.classList.add('on');
   els.bar.innerHTML = `<b>${esc(a)}</b> │ <b>${esc(b)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
     (els.bar.dataset.face ? ` <span class="face-text">${esc(t(els.bar.dataset.face === 'too_many_pairs' ? 'B1.too_many_pairs' : els.bar.dataset.face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: els.bar.dataset.face }))}</span>` : '') +
-    ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>⌘R</kbd></button><span class="x" data-x="1" role="button" tabindex="0">× ${esc(t('F.scene.dismiss'))}</span>`;
+    ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>⌘R</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
   const corner = (/** @type {string} */ addr, /** @type {import('../model/records.js').Doc} */ d) => `<div class="corner" data-corner="${esc(addr)}">${LAYER.sceneCorner(d)}</div>`;
   els.paneA.innerHTML = corner(a, da) + `<article class="dtext scene" data-addr="${esc(a)}">${LAYER.sceneArticle(da)}</article>`;
   els.paneB.innerHTML = `<article class="dtext scene" data-addr="${esc(b)}">${LAYER.sceneArticle(db)}</article>` + corner(b, db);

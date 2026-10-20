@@ -130,6 +130,7 @@ function whereIs(/** @type {EventTarget | null} */ target) {
   if (t.matches && t.matches('input, textarea')) return /** @type {const} */ ('field');
   if (t.closest('#overlay')) return /** @type {const} */ ('overlay');
   if (t.closest('#line')) return /** @type {const} */ ('line');
+  if (t.closest('#scenebar')) return /** @type {const} */ ('scene-acts');
   if (t.closest('#scene')) return /** @type {const} */ ('scene');
   if (t.closest('#corners')) return /** @type {const} */ ('corner');
   return /** @type {const} */ ('plane');

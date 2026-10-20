@@ -14,9 +14,16 @@ PageDown re-takes, and no ring after a click on ‹ back (D5 §4 rule 2: drawn
 once a key has moved the focus); the scene's own end — Esc,
 zoom-out — making no trail move, so Back after it moves the camera and the
 entries ahead of the cursor stand; a navigation act from the scene — Back,
-Forward, a teleport — making one trail move, its own (§2.5); K-8's select
-and extend by span; a links card row's anatomy card taking the
-card's place with the symbols standing, at the link's own bytes; the
+Forward, a teleport — making one trail move, its own (§2.5); no key reaching
+what the scene covers (D5 M-4) — → and Enter in a pane, the walk on the
+document under it, moving neither the camera nor the walk's focus nor the
+trail; Enter, Shift+↓ and Mod+Shift+O there, the walk on a block, making no
+selection and no card; ↓ with the focus on nothing walking nothing — and
+Enter on the scene's acts pressing them: the re-level setting the two ends
+level again, the × ending the scene with the focus back on the item it was
+opened from (K-62, K-63); K-8's select and extend by span; a links card
+row's anatomy card taking the card's place with the symbols standing, at
+the link's own bytes; the
 selection's one continuous gesture (R11) — a pointer drag over a phrase of a
 shown paragraph selects that phrase's byte span, never its block: the acts
 ask the wire over those bytes, the copy names them, and the platform's
@@ -37,6 +44,7 @@ found it."""
 import json
 
 from . import DOC, NO_MATCH, SECOND_ACCOUNT, WINDOW, Result
+from .layout import level_holds, scene_level
 
 CODES = {'[': 'BracketLeft', ']': 'BracketRight', '=': 'Equal', '-': 'Minus', '0': 'Digit0', '1': 'Digit1', '2': 'Digit2', '/': 'Slash', '+': 'Equal'}
 
@@ -58,6 +66,19 @@ def open_scene(ctx):
 
 def same_view(a, b, tol=1e-6):
     return abs(a['cam']['x'] - b['cam']['x']) < tol and abs(a['cam']['y'] - b['cam']['y']) < tol and abs(a['cam']['scale'] - b['cam']['scale']) < tol
+
+
+def covered(ctx):
+    """what a key could move under a standing scene — the camera, the walk's focus, the trail, the selection, the overlay —
+    whether the scene stands, and the element the platform's focus is on"""
+    return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), e = document.activeElement;
+      return {cam: S.view.camera(), focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, trail: S.trail(), sel: S.selection(), overlay: S.overlay().id,
+              scene: S.scene.isOpen(), at: !e || e === document.body ? 'the body' : e.id || e.tagName.toLowerCase()}; })()''')
+
+
+def still(before, after):
+    """the scene stands over the page as the key found it: nothing under it moved"""
+    return after['scene'] and same_view(before, after) and all(after[k] == before[k] for k in ('focus', 'trail', 'sel', 'overlay'))
 
 
 def chord(ctx, key, mods=(), code=None, text=None):
@@ -803,11 +824,70 @@ def run(ctx):
     second = state(ctx)
     r.check(not same_view(at_board, first) and not same_view(first, second), 'two Mod+[ from there each move the camera: no entry holds the view the scene stood over a second time',
             {'board': at_board['cam'], 'first': first['cam'], 'second': second['cam']})
+    # ---- the scene covers the plane (D5 M-4; K-60 … K-63): no key reaches the walk, the selection or the corner under it ----
+    # In a pane the walk's keys move that pane (K-60), ← ends the scene (K-63), → and Enter are the platform's, and the
+    # selection's chords act on nothing; with the focus on nothing the walk's keys walk nothing; on the scene's acts Enter
+    # presses the act. Each from a landing of its own, the scene opened over it — the focus in the far end's pane — and
+    # ended after it, so each step leaves the page as it found it
+    def over(pos, focus_item=False):
+        """a landing on the first edition (`pos` None: the document), the walk's current item focused where asked, and the
+        scene opened over it: what stood before any key"""
+        ctx.leap(DOC, pos)
+        if focus_item:
+            ctx.js('(() => { const i = document.getElementById("walk-" + window.__skep.mirror.index()); window.__gateFrom = i; if (i) i.focus({preventScroll: true}); })()')
+            ctx.frames(1)
+        open_scene(ctx)
+        return covered(ctx)
+
+    def ended():
+        ctx.js('window.__skep.scene.close()')
+        ctx.esc()
+        ctx.esc()
+
+    for pos, keys, what in ((None, (('ArrowRight', ()),), '→ in a pane, the walk on the document under the scene: nothing moves — not the camera, not the walk\'s focus, not the trail'),
+                            (None, (('Enter', ()),), 'Enter in a pane, the walk on the document under the scene: no teleport — the scene stands, the trail and the camera as they were'),
+                            (WINDOW[0], (('Enter', ()),), 'Enter in a pane, the walk on a block under the scene: no selection and no card'),
+                            (WINDOW[0], (('ArrowDown', ('Shift',)),), 'Shift+↓ in a pane, the walk on a block under the scene: K-8 selects nothing and opens no card'),
+                            (WINDOW[0], (('O', ('Meta', 'Shift')),), 'Mod+Shift+O in a pane, the walk on a block under the scene: taken and acting on nothing — no selection, no answer\'s card')):
+        before = over(pos)
+        for key, mods in keys:
+            chord(ctx, key, mods=mods)
+        after = covered(ctx)
+        r.check(before['scene'] and before['at'] == 'sceneB' and still(before, after), what,
+                {'at': before['at'], 'moved': [k for k in ('cam', 'focus', 'trail', 'sel', 'overlay') if after[k] != before[k]], 'scene': after['scene'], 'focus': [before['focus'], after['focus']], 'overlay': after['overlay']})
+        ended()
+    before = over(WINDOW[0])
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    chord(ctx, 'ArrowDown')
+    after = covered(ctx)
+    r.check(before['scene'] and after['at'] == 'the body' and still(before, after), '↓ with the focus on nothing while the scene stands walks nothing under it: the walk\'s focus and the camera as they were',
+            {'moved': [k for k in ('cam', 'focus', 'trail', 'sel', 'overlay') if after[k] != before[k]], 'focus': [before['focus'], after['focus']], 'scene': after['scene']})
+    ended()
+    # Enter on the scene's acts presses them (K-62, K-63): the re-level, pane A scrolled away, sets the two ends level again
+    over(WINDOW[0])
+    ctx.js('document.getElementById("sceneA").scrollTop += 400')
+    ctx.frames(2)
+    on = ctx.js('(() => { const b = document.querySelector("#scenebar [data-relevel]"); if (b) b.focus({preventScroll: true}); return !!b && document.activeElement === b; })()')
+    chord(ctx, 'Enter')
+    r.check(on, 'the scene\'s re-level act takes the focus')
+    level_holds(r, 'Enter on the scene\'s re-level act, pane A scrolled away (K-62)', scene_level(ctx))
+    ended()
+    # the ×, the scene opened from the walk's current item: the scene ends and the focus is back on that item (K-63)
+    before = over(WINDOW[0], focus_item=True)
+    on = ctx.js('(() => { const x = document.querySelector("#scenebar [data-x]"); if (x) x.focus({preventScroll: true}); return !!x && document.activeElement === x; })()')
+    chord(ctx, 'Enter')
+    after = covered(ctx)
+    back = ctx.js('!!window.__gateFrom && document.activeElement === window.__gateFrom')
+    r.check(on and not after['scene'] and back and after['trail'] == before['trail'] and after['sel'] is None,
+            'Enter on the scene\'s × ends it: the trail as it stood, no selection, and the focus back on the walk\'s item the scene was opened from (K-63)',
+            {'focused_x': on, 'scene': after['scene'], 'focus_back': back, 'at': after['at'], 'sel': after['sel'], 'trail_moved': after['trail'] != before['trail']})
+    ended()
     # ---- the platform's own are never taken (K-92): Mod+C leaves everything -----------------------------
     s0 = state(ctx)
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', 'Mod+C']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Mod+C']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

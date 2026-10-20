@@ -76,10 +76,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .hd .st, .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:var(--head); display:block; }
 .dtext .hd .pres { color:#b9c1cb; }
 .dtext .run { display:block; }
-.dtext .sp { display:flow-root; margin:0 0 var(--gap); cursor:pointer; border-radius:2px; font-weight:400; }
+.dtext .sp { display:flow-root; margin:0 0 var(--gap); border-radius:2px; font-weight:400; }
 .dtext h2.sp, .dtext h3.sp, .dtext h4.sp, .dtext h5.sp, .dtext h6.sp, .dtext h7.sp { font-size:1em; font-weight:600; color:#cfd6df; margin:var(--heading-before) 0 var(--heading-after); }
 .dtext h2.sp { font-size:var(--h2); } .dtext h3.sp { font-size:var(--h3); }
-.dtext .sp:hover { background:rgba(127,178,255,.08); }
 /* the selection's bytes are the platform's own highlight; a block it touches carries the outline as its cue */
 .dtext .sp.sel { box-shadow:0 0 0 1px rgba(232,230,225,.5); }
 .dtext .sp.lit { box-shadow:0 0 0 1px var(--ok); }
@@ -93,10 +92,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    no change of origin */
 .dtext .same { background:var(--same-texture); }
 .dtext .same.opens { border-left:var(--border-same) solid var(--same-boundary); padding-left:var(--same-pad); }
-.dtext .hairline { color:var(--same-boundary); font-size:var(--label); line-height:1; cursor:pointer; margin-right:var(--label-gap); vertical-align:baseline; }
+.dtext .hairline { color:var(--same-boundary); font-size:var(--label); line-height:1; margin-right:var(--label-gap); vertical-align:baseline; }
 .dtext .hairline.compact { opacity:.7; }
 .dtext .pubmark { display:inline-block; font-size:var(--mark); line-height:1; color:#cfd6df; border:var(--border-box) solid #4a5260; padding:0 var(--mark-pad); margin-right:var(--mark-gap); }
-.dtext .sym { display:inline-block; border:var(--border-box) solid var(--mark-hue, #8b8f96); color:var(--mark-hue, #e8e6e1); padding:0 var(--sym-pad); font-size:var(--sym); line-height:1; margin-left:var(--sym-gap); cursor:pointer; vertical-align:baseline; opacity:var(--mark-value, 1);
+.dtext .sym { display:inline-block; border:var(--border-box) solid var(--mark-hue, #8b8f96); color:var(--mark-hue, #e8e6e1); padding:0 var(--sym-pad); font-size:var(--sym); line-height:1; margin-left:var(--sym-gap); vertical-align:baseline; opacity:var(--mark-value, 1);
   width:calc(1ch + 2 * var(--sym-pad) + 2 * var(--border-box)); text-align:center; }
 .dtext .sym.other { border-style:dashed; }
 .dtext .others { float:right; color:var(--dim); font-size:var(--count); margin-left:var(--count-gap); }
@@ -109,6 +108,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .rec .derived { display:block; color:#8b8f96; font-size:var(--derived); }
 .dtext .rec.not-rendered { color:#4b5563; font-style:italic; }
 .dtext .offer { display:block; margin:var(--offer-gap) 0; color:#8b8f96; font-size:var(--offer); cursor:pointer; text-decoration:underline dotted; }
+/* the click cues stand where a click acts: APP-INPUT takes the clicks on the plane's text layer and its corners, and on
+   nothing a reading scene's pane holds — a pane's blocks, hairlines and symbols are read, never clicked (SC) */
+#domlayer .dtext .sp, #domlayer .dtext .hairline, #domlayer .dtext .sym { cursor:pointer; }
+#domlayer .dtext .sp:hover { background:rgba(127,178,255,.08); }
 #beams { position:fixed; inset:0; pointer-events:none; z-index:4; }
 
 /* THE CORNER — on the document's one side, outside the measure, at the interface's size (foundations §3.1; ux-T2):
@@ -119,7 +122,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner { font-size:11px; line-height:1.4; color:#8b8f96; user-select:none; -webkit-user-select:none; }
 #corners .corner { position:absolute; top:0; left:0; width:11em; padding:4px 6px; pointer-events:auto; background:var(--bg); border-radius:3px; will-change:transform; }
 .corner .st { display:block; }
-.corner .version { display:block; color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
+.corner .version { display:block; color:#cfd6df; }
+/* the version statement's click cue on the plane's corner alone, whose act it is (K-57); a pane's corner is shown, not acted on */
+#corners .corner .version { cursor:pointer; text-decoration:underline dotted; }
 .corner .chip { display:inline-block; border:1px solid #4a5260; border-radius:3px; padding:0 .4em; color:#e8e6e1; margin-top:.3em; }
 .corner .whole-links { display:block; margin-top:.3em; }
 
@@ -156,12 +161,13 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #overlay .strip { color:var(--dim); font-size:.9em; }
 #overlay input[type=text] { width:100%; font:inherit; background:#14181d; color:var(--ink); border:1px solid #4a5260; border-radius:3px; padding:4px 6px; margin:4px 0; }
 
-/* THE READING SCENE (law 12): chrome over the plane; places unmoved */
+/* THE READING SCENE (law 12): chrome over the plane; places unmoved. Its panes are read and scrolled, never clicked, so
+   they carry none of the plane's click cues; its acts are its bar's buttons, the dismissal drawn as a bare × */
 #scene { position:fixed; inset:46px 20px 20px 20px; z-index:26; display:none; background:var(--bg); border:1px solid #6b7382; border-radius:4px; }
 #scene.on { display:block; }
 #scenebar { position:absolute; left:0; right:0; top:0; height:26px; padding:4px 10px; border-bottom:1px solid var(--line); color:var(--dim); font-size:11px; white-space:nowrap; overflow:hidden; }
 #scenebar b { color:var(--accent); }
-#scenebar .x { float:right; cursor:pointer; color:var(--ink); }
+#scenebar .x { float:right; color:var(--ink); background:none; border:0; padding:0; margin:0; }
 .pane { position:absolute; top:26px; bottom:0; width:calc(50% - 70px); overflow:auto; padding:14px 18px; display:flex; align-items:flex-start; gap:14px; }
 #sceneA { left:0; } #sceneB { right:0; }
 .pane .dtext { position:static; transform:none; font-size:14px; line-height:1.5; flex:1 1 auto; min-width:0; height:auto; cursor:text; }

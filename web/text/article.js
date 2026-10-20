@@ -20,13 +20,16 @@
 // OCCUPYING its positions with R56's arm by PUB-5.121's order and C-67's
 // clause beneath; a record atom rendered as the record it is (the genesis
 // record's words); an unknown item kind "not rendered" with its width; the
-// scene-mode variant. THE CORNER's items — an edition's state with "version
-// ⟨k⟩ of ⟨n⟩" and R20's teaching, a draft's kept state and its chip (C-28, at
-// the document's corner and never the HUD — ux-T2; the record §3.4 (viii)),
-// the whole-document link count — are made here too, and stand OUTSIDE the
-// article: the article's box clips whatever stands past its measure, so the
-// corner's element is its holder's, T-LAYER's beside the article on the
-// plane and each pane's own in the scene (foundations §3.1).
+// scene-mode variant, a reading scene's pane's article, which nothing in the
+// pane acts on (SC): no scene-offer, and its symbols and presence ⟡ marks
+// alone, never the controls the plane's are (`control`). THE CORNER's items
+// — an edition's state with "version ⟨k⟩ of ⟨n⟩" and R20's teaching, a
+// draft's kept state and its chip (C-28, at the document's corner and never
+// the HUD — ux-T2; the record §3.4 (viii)), the whole-document link count —
+// are made here too, and stand OUTSIDE the article: the article's box clips
+// whatever stands past its measure, so the corner's element is its holder's,
+// T-LAYER's beside the article on the plane and each pane's own in the scene
+// (foundations §3.1).
 // THE PLAN (`articlePlan`): the same article as P-LAY's rows — the head's
 // lines, each block's text at its size with the inline pieces it carries
 // (the hairline's label, C-33's mark, the symbols, the others' count), a
@@ -68,7 +71,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {string | null} sessionAccount the acting account, or null (a guest)
  * @property {boolean} localTrust the board's flag (the chip's form)
  * @property {boolean} notebook the venue
- * @property {boolean} scene the scene-mode variant
+ * @property {boolean} scene the scene-mode variant: a reading scene's pane's article — no scene-offer, and no mark a control
  * @property {Map<string, 'edition' | 'draft' | 'unknown'>} originKinds the kind of each origin document (for C-33)
  * @property {string | null} deviceLabel the owner's device label where known
  * @property {string | null} ownerFingerprint the owner's device key fingerprint where known
@@ -437,15 +440,26 @@ function walk(d, v, ownerAccount) {
   return { owner, head, parts, empty: !d.blocks.length && d.extent === 0, offers };
 }
 
+/**
+ * The attributes of a mark a click acts on — a button, reached by the pointer
+ * and the page's script, never by Tab — on the plane alone, whose clicks
+ * APP-INPUT takes: in a reading scene's pane nothing acts on a mark, so it is
+ * no control (SC).
+ * @param {boolean} scene the scene-mode variant
+ */
+const control = (scene) => (scene ? '' : ' role="button" tabindex="-1"');
+
 /** a link's symbol at its span: hue the linker's, dashed for another's, lighter once followed */
-const symHTML = (/** @type {Shown} */ s) => `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}" role="button" tabindex="-1" title="${esc(s.link.type || '')}">⟡</span>`;
+const symHTML = (/** @type {Shown} */ s, /** @type {boolean} */ scene) => `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"${control(scene)} title="${esc(s.link.type || '')}">⟡</span>`;
 
 /**
  * A stretch of a paragraph's text as HTML: its marks, its run's ground and,
  * where it opens its run, the run's boundary, hairline and C-33's mark; then
  * the symbols standing at it — the text's own characters untouched.
+ * @param {Seg} s
+ * @param {boolean} scene the scene-mode variant: its symbols no controls
  */
-function segHTML(/** @type {Seg} */ s) {
+function segHTML(s, scene) {
   const cls = ['seg'];
   const attrs = [];
   if (s.marks.length) {
@@ -453,7 +467,7 @@ function segHTML(/** @type {Seg} */ s) {
     attrs.push(`style="--mark-hue:${s.marks[0].mark.hue};--mark-value:${s.marks[0].mark.value}"`, `data-links="${s.marks.map((m) => m.link.addr).join(' ')}"`);
     if (s.marks.every((m) => m.mark.value < 1)) cls.push('visited');
   }
-  const syms = s.syms.map(symHTML).join('');
+  const syms = s.syms.map((x) => symHTML(x, scene)).join('');
   if (s.origin) {
     const o = s.origin.doc, at = s.opens;
     cls.push('same');
@@ -461,15 +475,15 @@ function segHTML(/** @type {Seg} */ s) {
     attrs.push(`data-origin="${esc(o)}"`);
     const chrome = !at ? '' : `<span class="hairline ${at.whole ? 'whole' : 'compact'}" data-src="${esc(o)}" title="${esc(o)}">${esc(labelOf(s.origin, at))}</span>` +
       (at.c33 ? `<span class="pubmark" data-mark="C-33">${esc(t('C-33'))}</span>` : '');
-    return `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${chrome}${s.chromeSyms.map(symHTML).join('')}${esc(s.text)}</span>${syms}`;
+    return `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${chrome}${s.chromeSyms.map((x) => symHTML(x, scene)).join('')}${esc(s.text)}</span>${syms}`;
   }
   return (cls.length > 1 ? `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${esc(s.text)}</span>` : esc(s.text)) + syms;
 }
 
 /**
  * The article: the head and the blocks (each a span the walk and the mirror
- * key by its first position, and a click selects whole); its corner stands
- * beside it (`cornerHTML`).
+ * key by its first position, and a click on the plane selects whole); its
+ * corner stands beside it (`cornerHTML`).
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -479,7 +493,7 @@ export function articleHTML(d, v, ownerAccount) {
   const w = walk(d, v, ownerAccount);
   const hd = w.head;
   let h = `<div class="hd"><span class="addr">${esc(hd.addr)}</span><span class="st">${esc(hd.state)}</span><span class="by">${esc(hd.by)}</span>`;
-  if (hd.presence) h += `<span class="pres"><span class="sym reveal" data-reveal="${esc(d.addr)}" role="button" tabindex="-1">⟡</span> ${esc(hd.presence)}</span>`;
+  if (hd.presence) h += `<span class="pres"><span class="sym reveal" data-reveal="${esc(d.addr)}"${control(v.scene)}>⟡</span> ${esc(hd.presence)}</span>`;
   h += `</div>`;
   if (!w.parts) return h;
   let run = '';
@@ -496,7 +510,7 @@ export function articleHTML(d, v, ownerAccount) {
     if (p.kind === 'hex') { run += `<span class="${cls.join(' ')}" ${at}>${esc(t('F.not-rendered', { width: b.width }))}</span>`; continue; }
     const tag = p.level ? 'h' + Math.min(6, p.level + 1) : 'p';
     const count = p.count.n > 0 ? `<span class="others" data-count="${p.count.n}">${esc(t('F.others-count', { n: p.count.n }))}</span>` : p.count.social ? `<span class="others social" data-count="0">◦</span>` : '';
-    run += `<${tag} class="${cls.join(' ')}" ${at}>${p.segs.map(segHTML).join('')}${count}</${tag}>`;
+    run += `<${tag} class="${cls.join(' ')}" ${at}>${p.segs.map((s) => segHTML(s, v.scene)).join('')}${count}</${tag}>`;
   }
   if (w.empty) run += `<p class="sp empty" data-addr="${esc(d.addr)}" data-pos="1" data-width="0">${esc(t('B1.empty_subspace'))}</p>`;
   for (const o of w.offers) run += `<span class="offer" data-scene="${esc(d.addr)}|${esc(o)}" role="button" tabindex="-1">${esc(t('B1.scene-offer', { D: o }))}</span>`;
