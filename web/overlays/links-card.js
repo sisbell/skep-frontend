@@ -5,8 +5,11 @@
 // LK which links to list and draws nothing of its own choosing. The rows:
 // the chain's stage (symbol → content), the overlay toggle — one switch
 // whose words are B1-S4's, "others' links: ⟨state⟩ · n touch this
-// document", its words and its `aria-checked` both the state LK holds (R60 —
-// the content of others' links; their existence the count's), the lenses by
+// document", split at ⟨state⟩: the words before it name the switch and the
+// count after it describes it, the same in both states, and the state is the
+// word set between them and the switch's `aria-checked`, both the state LK
+// holds (R60 — the content of others' links; their existence the count's;
+// WAI-ARIA's switch: its label does not change with its state), the lenses by
 // owner, type and endorsement (R9; D-2 per document for the session), the
 // links, each row opening its link's anatomy card at the link's own bytes,
 // "show more" (the windowed list, the end marked, no page ever expires —
@@ -49,6 +52,25 @@ export function show(addr, byKey = false) {
   render(byKey);
 }
 
+/**
+ * The overlay toggle as the card sets it (B1-S4; R60): the toggle's words
+ * split at ⟨state⟩. The words before the state name the switch and the count
+ * after it describes it, so a press changes neither and assistive technology
+ * hears the state once, from `aria-checked`; the state word stands between
+ * them, so the switch reads as B1-S4 writes it. The separators belong to
+ * neither.
+ * @param {boolean} on whether others' links are shown at the document
+ * @param {number} n the others' links that touch it
+ * @returns {string}
+ */
+export function othersSwitch(on, n) {
+  const id = n === 1 ? 'B1.others-toggle.1' : 'B1.others-toggle';
+  const [before, after] = t(id, { n }).split('⟨state⟩');
+  const name = before.replace(/[^\p{L}\p{N}]+$/u, ''), count = after.replace(/^[^\p{L}\p{N}]+/u, '');
+  return `<button data-run="others" role="switch" aria-checked="${on}" aria-labelledby="links-others-name" aria-describedby="links-others-count" data-string="${id}">` +
+    `<span id="links-others-name">${esc(name)}</span>${esc(before.slice(name.length))}${on ? 'on' : 'off'}${esc(after.slice(0, after.length - count.length))}<span id="links-others-count">${esc(count)}</span></button>`;
+}
+
 /** rebuild the card from LK's state (FP-13) */
 export function render(byKey = false) {
   if (!open) return;
@@ -60,12 +82,10 @@ export function render(byKey = false) {
   const box = docBox(addr);
   const listed = shown.slice(0, open.page * PAGE);
   const more = shown.length > listed.length;
-  const toggleId = others.length === 1 ? 'B1.others-toggle.1' : 'B1.others-toggle';
-  const toggle = t(toggleId, { state: r.others ? 'on' : 'off', n: others.length });
   const html =
     `<span class="label">${esc(t('B1.see-links'))} · ${esc(addr)}</span>` +
     `<div class="stage">${r.stage >= 3 ? `<button data-run="stage2">◦ symbols</button>` : `<button data-run="stage3">— content</button>`}</div>` +
-    `<div class="toggle"><button data-run="others" role="switch" aria-checked="${r.others}" data-string="${toggleId}">${esc(toggle)}</button></div>` +
+    `<div class="toggle">${othersSwitch(r.others, others.length)}</div>` +
     `<div class="lenses">` +
       `<span class="lens-label">${esc(t('F.lens.owner'))}</span>${rows.owners.map((o) => `<button data-run="owner:${esc(o)}" aria-pressed="${r.lens.owners ? r.lens.owners.has(o) : false}">${esc(o)}</button>`).join('') || '—'}` +
       `<span class="lens-label">${esc(t('F.lens.type'))}</span>${rows.types.map((ty) => `<button data-run="type:${esc(ty)}" aria-pressed="${r.lens.types ? r.lens.types.has(ty) : false}">${esc(typeName(ty))}</button>`).join('') || '—'}` +

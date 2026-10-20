@@ -17,7 +17,10 @@ its own words in the AX tree while every other corner is hidden from it,
 kept under the focus through the layer's remount, Enter its act (the
 versions list) with Esc returning the focus to it, Shift+Tab back to the
 plane's stop, and its leaving the plane handing the focus to the walk's
-current item. Never a screen reader's voice — the seat's."""
+current item; the links card's overlay toggle a switch in the AX tree (R60;
+WAI-ARIA's switch) — named by B1-S4's words before its state and described
+by the count after it, a press changing its checked state and neither its
+name nor its description. Never a screen reader's voice — the seat's."""
 import json
 import re
 
@@ -321,6 +324,52 @@ def run(ctx):
     f = at()
     gone = ctx.js('!document.querySelector(%s)' % json.dumps(corner))
     r.check(gone and f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Mod+- until the document is below reading scale: its corner leaves and the focus it held stands on the walk\'s current item — never lost, never to the top', {'zooms': zooms, 'em': ctx.camera()['scale'] / unit, 'corner_gone': gone, 'focus': f})
+    # ---- the links card's overlay toggle: one switch (R60; B1-S4; WAI-ARIA's switch) --------------------------------
+    # B1-S4's words, "others' links: ⟨state⟩ · ⟨n⟩ touch this document", are the switch's own. The words before the state
+    # name it and the count after it describes it, so a press changes its checked state and nothing of its name or its
+    # description: a name that carries the state says it twice, and changes under the press.
+    toggle = '#overlay [data-run="others"]'
+    words = lambda s: re.sub(r'^\W+|\W+$', '', re.sub(r'\s+', ' ', s or ''))  # whitespace folded, the separators at its ends dropped
+
+    def switch():
+        """the switch as the AX tree holds it — its role, name, description and checked state — or None where CDP does not answer"""
+        ax = ctx.drv.ax_tree()
+        if 'error' in ax:
+            r.note('the others\' switch: Accessibility.getFullAXTree did not answer: ' + ax['error'])
+            return None
+        node = {n['backendDOMNodeId']: n for n in ax.get('nodes', []) if 'backendDOMNodeId' in n}.get(backend(toggle)) or {}
+        props = {p['name']: p['value'] for p in node.get('properties', [])}
+        return {'role': (node.get('role') or {}).get('value'), 'name': (node.get('name') or {}).get('value'),
+                'description': (node.get('description') or {}).get('value'), 'checked': (props.get('checked') or {}).get('value')}
+
+    def click(selector):
+        """a person's press on the overlay's control: its rect read, the click dispatched at engine level, two frames"""
+        centre = ctx.js('(() => { const b = document.querySelector(%s); if (!b) return null; const q = b.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()' % json.dumps(selector))
+        if centre is not None:
+            ctx.drv.mouse(centre['x'], centre['y'])
+            ctx.frames(2)
+        return centre is not None
+
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
+    ctx.frames(2)
+    told = ctx.js('''(async () => { const n = window.__skep.links.othersTouching(%s).length; const {t} = await import("./strings.js");
+      const [before, after] = t(n === 1 ? "B1.others-toggle.1" : "B1.others-toggle", {n}).split("⟨state⟩"); return {before, after}; })()''' % json.dumps(DOC))
+    want = {'name': words(told['before']), 'description': words(told['after'])}
+    off = switch()
+    pressed = click(toggle)
+    on = switch()
+    # others' links off again before the card goes: its dismissal returns the chain to hidden and leaves the toggle as it stands
+    click(toggle)
+    ctx.esc()
+    if off is None or on is None:
+        r.figures['switch_ax'] = {'answered': False}
+    else:
+        r.check(off['role'] == 'switch' and off['checked'] == 'false' and off['name'] == want['name'] and off['description'] == want['description'],
+                'the AX tree: the others\' switch, off, is named by B1-S4\'s words before its state and described by the count after it', {'want': want, 'got': off})
+        r.check(pressed and on['checked'] == 'true' and [on[k] for k in ('role', 'name', 'description')] == [off[k] for k in ('role', 'name', 'description')],
+                'the AX tree: a press turns the switch on and changes its checked state alone — its role, name and description stand', {'pressed': pressed, 'off': off, 'on': on})
+        r.figures['switch_ax'] = {'answered': True, 'off': off, 'on': on}
     # leave the page as the case found it: the landing, the focus on no element
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
