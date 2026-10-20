@@ -1,9 +1,10 @@
 // T-LAYER — THE ONE RECONCILER (the structure record §3.2 "T-LAYER"; FP-12:
 // one reconciler, two targets — the plane's text layer and the reading
 // scene's panes; the scene BORROWS this mount). Layer 2. ENGINE-BOUND. State:
-// VIEW — the mounted set with each record's layout scale, revision and
-// blocks, the corners beside it, and whether a press stands on the layer —
-// THE ONE OWNER (FP-10). Mount an article when a document crosses S1's mount
+// VIEW — the mounted set with each record's layout scale, revision, blocks
+// and marks, the corners beside it, whether a press stands on the layer, and
+// the platform's selection as it stood over an article taken down — THE ONE
+// OWNER (FP-10). Mount an article when a document crosses S1's mount
 // threshold (em 6.5, BELOW the canvas's readable 8, so bars become text and
 // no character positions disagree — S1 Q7), unmount when it leaves or falls
 // below 5.5 or its run, its revision or its face changed, the cap 8 — but
@@ -29,7 +30,12 @@
 // P-RENDER draws, so the canvas draws or yields each document by this frame's
 // mounted set. The marks and symbols are placed from LK's `shown` and
 // `symbols`; the selection from O-SELECTION and the focus from N-WALK are
-// handed to T-ARTICLE as values.
+// handed to T-ARTICLE as values at mount, and each frame marks a standing
+// article's blocks for them in place by T-ARTICLE's one rule (`blockMarks`):
+// a change of the selection or the focus rebuilds no article, so the
+// platform's selection stands as the person left it (foundations §2.1: "the
+// SELECTION is the platform's own, transient"; D5 §2) and the focus ring
+// follows the walk.
 // THE CORNER (foundations §3.1; ux-T2; D5 K-57): each mounted document at
 // reading scale (em 8, P-LOD's readable threshold, and above) carries its own
 // BESIDE its article, never inside it — the article's box clips whatever
@@ -53,10 +59,16 @@
 // character boundary carried to its byte position by T-SPAN through the
 // blocks the article was made from, never the model's newest, which a
 // delivery under a press may have replaced — and the span back to a range,
-// which it places over the mounted article when the selection is made
-// and again after a remount, since a remount rebuilds the element and the
-// platform's range dies with the old one; the reading scene's panes borrow
-// that mapping (`rangeIn`) to find where a passage stands. The copy event
+// which it places over the mounted article when the page makes the
+// selection, its anchor at the span's start, and again after a remount (the
+// reveal, a lens, a delivery), since a remount rebuilds the element and the
+// platform's range dies with the old one: read as the old article is taken
+// down, the selection goes back with its anchor at the end it stood at, so
+// the platform's own keys (D5 K-71) go on extending it from there. What no
+// interface carries is macOS's "no direction yet" of a selection a pointer
+// made: put back, it extends from its anchor, as one a key extended does.
+// The reading scene's panes borrow that mapping (`rangeIn`) to find where a
+// passage stands. The copy event
 // carries the passage's board and address beside the plain text and never in
 // it (§2.4), in a flavor only a skep client reads; the plain text is the
 // document's own bytes over the span, no label of the page among them.
@@ -71,7 +83,7 @@ import { cam, sx, sy, markDirty } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MAX_MOUNTED, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { metricsFor, fitted, LAY_FS, LINE_H } from '../plane/layout.js';
-import { articleHTML, articlePlan, cornerHTML } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, blockMarks } from './article.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { fingerprintCue } from '../util.js';
 
@@ -96,6 +108,8 @@ import { fingerprintCue } from '../util.js';
  * @property {string} corner the corner's items at mount (T-ARTICLE's `cornerHTML`); empty where it has none
  * @property {'plane' | 'scene'} target
  * @property {Array<{pos: number, top: number, left: number}>} [blockTops] each block's offset in the one 16 px layout (the gate's span registration)
+ * @property {Array<{el: HTMLElement, b: Block}>} marked each block's element with the block it shows: the elements the selection's and the focus's marks stand on
+ * @property {string} markedFor the selection and the focus its blocks are marked for (`marksKey`)
  */
 
 /**
@@ -141,10 +155,12 @@ export const mounts = () => mountLog.slice();
 let layer = null;
 /** @type {HTMLElement | null} */
 let cornerLayer = null;
-/** the view revision: the selection, the reveal, the focus, the lenses — a bump remounts */
+/** the view revision: the reveal and the lenses, which change the links an article draws — a bump remounts; the selection and the walk's focus never bump it, their blocks marked in place (`markBlocks`) */
 let grev = 0;
 /** does a press stand on the layer: the button went down on an article and the press has not ended */
 let pressed = false;
+/** @type {{span: Span, backward: boolean} | null} the platform's selection as it stood over an article as the article was taken down — its bytes, and whether it ran backward — until the frame puts it back (`placeAgain`) */
+let kept = null;
 /** @type {Readers} */
 let read = { selection: () => null, focus: () => null, top: () => 0, handOff: () => {} };
 
@@ -251,10 +267,13 @@ function mount(d) {
   el.innerHTML = articleHTML(d, v, ownerAccount(d));
   layer.appendChild(el);
   const art = el.getBoundingClientRect(); // force layout: the cost must be real (S1); the article stands untransformed until placed
+  const sps = /** @type {HTMLElement[]} */ ([...el.querySelectorAll('.sp')]);
   // each block's place in the one layout (16 px), fractional (offsetTop rounds): the gate holds every later frame to it, scaled — a reflow would move a line
-  const blockTops = [.../** @type {NodeListOf<HTMLElement>} */ (el.querySelectorAll('.sp'))].map((e) => { const r = e.getBoundingClientRect(); return { pos: Number(e.dataset.pos), top: r.top - art.top, left: r.left - art.left }; });
+  const blockTops = sps.map((e) => { const r = e.getBoundingClientRect(); return { pos: Number(e.dataset.pos), top: r.top - art.top, left: r.left - art.left }; });
+  const byPos = new Map(d.blocks.map((b) => [b.pos, b]));
+  const marked = sps.flatMap((e) => { const b = byPos.get(Number(e.dataset.pos)); return b ? [{ el: e, b }] : []; });
   /** @type {Mounted} */
-  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, blocks: d.blocks, grev, fs: m.fs, x0: m.x0, y0: m.y0, corner: cornerHTML(d, v), target: 'plane', blockTops };
+  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, blocks: d.blocks, grev, fs: m.fs, x0: m.x0, y0: m.y0, corner: cornerHTML(d, v), target: 'plane', blockTops, marked, markedFor: marksKey(d.addr, v.selected, v.focus) };
   mounted.set(d.addr, rec);
   place(rec);
   mountLog.push({ addr: d.addr, ms: performance.now() - t0, blocks: d.blocks.length, emPx: m.fs * cam.scale });
@@ -268,10 +287,54 @@ export function ownerAccount(/** @type {Doc} */ d) {
   return (row && row.prefix) || (d.meta && d.meta.owner) || d.account || '';
 }
 
-/** @param {string} addr */
-function unmount(addr) {
+/** take a mounted article down; where the platform's selection stands in it, it is kept (`kept`) for the frame that puts it back */
+function unmount(/** @type {string} */ addr) {
   const rec = mounted.get(addr); if (!rec) return;
+  const held = heldIn(rec);
+  if (held) kept = held;
   rec.el.remove(); mounted.delete(addr);
+}
+
+/**
+ * The platform's selection where it stands in a mounted article: the span it
+ * covers and whether it runs backward, its focus point before its anchor;
+ * null where none stands in the article.
+ * @param {Mounted} rec
+ * @returns {{span: Span, backward: boolean} | null}
+ */
+function heldIn(rec) {
+  const s = window.getSelection();
+  if (!s || s.rangeCount === 0 || s.isCollapsed || !s.anchorNode || !s.focusNode) return null;
+  const range = s.getRangeAt(0);
+  if (!rec.el.contains(range.commonAncestorContainer)) return null;
+  const span = spanOfRange(range);
+  if (!span) return null;
+  const anchor = document.createRange(); anchor.setStart(s.anchorNode, s.anchorOffset);
+  return { span, backward: anchor.comparePoint(s.focusNode, s.focusOffset) < 0 };
+}
+
+/** what a mounted article's blocks are marked for: the selection and the walk's focus where they stand in its document */
+const marksKey = (/** @type {string} */ addr, /** @type {Span | null} */ s, /** @type {{addr: string, pos: number} | null} */ f) =>
+  `${s && s.addr === addr ? `${s.pos}+${s.width}` : ''}|${f && f.addr === addr ? f.pos : ''}`;
+
+/**
+ * Mark a standing article's blocks for the selection and the walk's focus by
+ * T-ARTICLE's rule (`blockMarks`) where either changed in its document since
+ * they were last marked: a class set or taken off where it differs, nothing
+ * rebuilt, so the platform's selection in the article stands.
+ * @param {Mounted} rec
+ * @param {Span | null} selected
+ * @param {{addr: string, pos: number} | null} focus
+ */
+function markBlocks(rec, selected, focus) {
+  const key = marksKey(rec.d.addr, selected, focus);
+  if (key === rec.markedFor) return;
+  rec.markedFor = key;
+  for (const { el, b } of rec.marked) {
+    const m = blockMarks(rec.d.addr, b, selected, focus);
+    el.classList.toggle('sel', m.sel);
+    el.classList.toggle('lit', m.lit);
+  }
 }
 
 /** position a mounted article over its box — transform only, never reflow */
@@ -285,14 +348,16 @@ function place(/** @type {Mounted} */ rec) {
  * The per-frame policy, run before the canvas draws (so P-RENDER yields to
  * exactly the articles mounted this frame, and draws the bars of exactly the
  * documents unmounted): unmount what left or fell below the threshold or went
- * stale, mount what crossed it (the cap), place everything and the corners
- * beside it; where the article holding the selection was mounted this frame,
- * place the platform's range over the span again. While a press stands
- * (`press`) only what left or fell below the threshold is unmounted: no
- * article is rebuilt and none mounted, so the drag keeps the nodes it is
- * anchored in and no range is placed over it; the first frame after the
- * press rebuilds what went stale, mounts what crossed, and places the range
- * the release took over the rebuilt article.
+ * stale, mount what crossed it (the cap), place everything, mark each
+ * standing article's blocks for the selection and the walk's focus in place
+ * (`markBlocks`), and place each article's corner beside it; where the
+ * article holding the selection was mounted this frame, put the platform's
+ * range back over the span, its anchor at the end it stood at (`placeAgain`).
+ * While a press stands (`press`) only what left or fell below the threshold
+ * is unmounted: no article is rebuilt and none mounted, so the drag keeps the
+ * nodes it is anchored in and no range is placed over it; the first frame
+ * after the press rebuilds what went stale, mounts what crossed, and places
+ * the range the release took over the rebuilt article.
  * @param {(addr: string) => boolean} [focused] whether a document is the walk's focused one: the one residue document of its cell that mounts, and the one whose corner is a Tab stop (D5 K-57)
  */
 export function frame(focused = () => false) {
@@ -325,9 +390,10 @@ export function frame(focused = () => false) {
   const fresh = [];
   if (!pressed) for (const w of want.slice(0, MAX_MOUNTED)) if (!mounted.has(w.d.addr) && mount(w.d)) fresh.push(w.d.addr);
   for (const rec of mounted.values()) if (keep.has(rec.d.addr) || true) place(rec);
+  const selected = read.selection(), focus = read.focus();
+  for (const rec of mounted.values()) markBlocks(rec, selected, focus);
   placeCorners(focused);
-  const sel = read.selection();
-  if (sel && fresh.includes(sel.addr)) placeSelection(sel);
+  if (selected && fresh.includes(selected.addr)) placeAgain(selected);
 }
 
 /**
@@ -568,14 +634,17 @@ export function rangeIn(el, made, span) {
 let placed = null;
 
 /**
- * Place the platform's selection over a span — the one range this layer
- * sets: when the selection is made, and after a remount of the article
- * that holds it. A platform selection that already covers the span is left
- * as it stands; one outside the layer is never touched; null clears a
- * selection that lies in the layer.
+ * Place the platform's selection over a span as the page selects it — a
+ * click, Enter, K-8, an act's own. A platform selection that already covers
+ * the span is left as it stands, as the person made it; any other is replaced
+ * by the span, its anchor at its start; one outside the layer is never
+ * touched; null clears a selection that lies in the layer. Either way the
+ * selection kept from an article taken down (`kept`) is dropped: the page's
+ * selection is this one now.
  * @param {Span | null} span
  */
 export function placeSelection(span) {
+  kept = null;
   const s = window.getSelection(); if (!s) return;
   const standing = s.rangeCount ? s.getRangeAt(0) : null;
   if (!span) { placed = null; if (standing && layer && layer.contains(standing.commonAncestorContainer)) s.removeAllRanges(); return; }
@@ -584,6 +653,24 @@ export function placeSelection(span) {
   const r = rangeOf(span); if (!r) return;
   s.removeAllRanges(); s.addRange(r);
   placed = spanOfRange(r);
+}
+
+/**
+ * Put the platform's selection back over a span after the article holding
+ * it was rebuilt, as the person left it: its anchor at the end it stood at
+ * as the old article was taken down (`kept`), where that selection covered
+ * this span; else at the span's start. A range added whole would set its
+ * anchor at its start; `setBaseAndExtent` sets it at either end.
+ * @param {Span} span
+ */
+function placeAgain(span) {
+  const backward = !!kept && kept.backward && sameSpan(kept.span, span);
+  kept = null;
+  const s = window.getSelection(), r = rangeOf(span);
+  if (!s || !r) return;
+  if (backward) s.setBaseAndExtent(r.endContainer, r.endOffset, r.startContainer, r.startOffset);
+  else s.setBaseAndExtent(r.startContainer, r.startOffset, r.endContainer, r.endOffset);
+  placed = s.rangeCount ? spanOfRange(s.getRangeAt(0)) : null;
 }
 
 /**

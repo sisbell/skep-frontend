@@ -22,7 +22,8 @@
 // each frame's count of documents both drawn and mounted, and of documents
 // yielded and not mounted — the bridge client's own call
 // log, the settle signal, the trail, the line's and the overlay's text, the
-// selection's span beside the platform's own, the copy door (the copy event
+// selection's span beside the platform's own and the way the platform's runs,
+// the copy door (the copy event
 // run against a stub clipboard, its flavors read back), the invalidation door
 // (`model.invalidate`: what a feed row naming a document does to what the
 // page holds of it — its delivered state dropped, its reads asked again,
@@ -395,8 +396,14 @@ export function install(deps) {
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay() }),
     overlay: () => ({ id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text() }),
     selection: () => SEL.selected(),
-    /** the platform's own selection: whether it is collapsed, and the span it covers in a mounted article (null outside one) */
-    platformSelection: () => { const s = window.getSelection(); return { collapsed: !s || s.rangeCount === 0 || s.isCollapsed, span: LAYER.spanOfSelection() }; },
+    /** the platform's own selection: whether it is collapsed, whether it runs backward (its focus point before its anchor, read from the platform, never from the page), and the span it covers in a mounted article (null outside one) */
+    platformSelection: () => {
+      const s = window.getSelection();
+      const collapsed = !s || s.rangeCount === 0 || s.isCollapsed;
+      let backward = false;
+      if (s && !collapsed && s.anchorNode && s.focusNode) { const at = document.createRange(); at.setStart(s.anchorNode, s.anchorOffset); backward = at.comparePoint(s.focusNode, s.focusOffset) < 0; }
+      return { collapsed, backward, span: LAYER.spanOfSelection() };
+    },
     /** the copy door: the copy event run against a stub clipboard; the flavors set, by name */
     copy: () => {
       /** @type {Record<string, string>} */

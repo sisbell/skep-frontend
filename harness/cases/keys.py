@@ -13,7 +13,13 @@ card's place with the symbols standing, at the link's own bytes; the
 selection's one continuous gesture (R11) — a pointer drag over a phrase of a
 shown paragraph selects that phrase's byte span, never its block: the acts
 ask the wire over those bytes, the copy names them, and the platform's
-highlight survives the remount the links card causes; and the press holds
+highlight survives the remount the links card causes; the platform's
+selection standing as the person left it — a drag from a phrase's end to its
+start marked in place, the article standing and the selection running
+backward, and put back backward after the links card's two remounts; Shift+→
+twice then Shift+← (K-71, the platform's own keys) taking back the second
+step, the start unmoved; the focus ring following the walk to the block Enter
+selects — with figures for where Chrome moves a selection with Shift+→; and the press holds
 what the drag is anchored in — a feed row naming the document with the
 button down (the gate's `model.invalidate` door, reads alone) leaves the
 half-dragged bytes reading back and the drag's article standing while the
@@ -88,6 +94,120 @@ def phrase_at(ctx, addr):
 def article(addr):
     """the expression for a document's article on the plane's text layer"""
     return 'document.querySelector(%s)' % json.dumps('#domlayer article.dtext[data-addr="%s"]' % addr)
+
+
+NOW = '({sel: window.__skep.selection(), platform: window.__skep.platformSelection()})'
+
+
+def marks(ctx, cls):
+    """the first positions of the first edition's blocks that carry a mark — `sel`, `lit` — in its article on the plane;
+    None where the article is not mounted"""
+    return ctx.js('(() => { const a = %s; return a ? [...a.querySelectorAll(".sp.%s")].map((e) => Number(e.dataset.pos)) : null; })()' % (article(DOC), cls))
+
+
+def focus_at(ctx):
+    """where the platform's focus stands, by the region of the page that holds it"""
+    return ctx.js('(() => { const e = document.activeElement; if (!e || e === document.body) return "the body"; '
+                  'const at = e.closest("#overlay") ? "the overlay" : e.closest("#mirror") ? "the mirror" : e.closest("#line") ? "the line" : "the page"; '
+                  'return at + ": " + e.tagName.toLowerCase() + (e.id ? "#" + e.id : ""); })()')
+
+
+def shifted(ctx, r, made):
+    """Shift+→ at a selection the page made, and where the focus stood: whether the platform moved its selection, and the
+    check that nothing drifts — the page's span the platform's where it moved, the page's own unchanged where it did not"""
+    before, focus = ctx.js(NOW), focus_at(ctx)
+    chord(ctx, 'ArrowRight', mods=('Shift',))
+    after = ctx.js(NOW)
+    moved = after['platform']['span'] != before['platform']['span']
+    r.check(bool(before['sel']) and (after['sel'] == after['platform']['span'] if moved else after['sel'] == before['sel']),
+            'Shift+→ at a selection %s made: nothing drifts — the page\'s span is the platform\'s where the platform moved it, its own where it did not' % made,
+            {'before': before, 'after': after, 'moved': moved, 'focus': focus})
+    return {'focus': focus, 'moved': moved, 'before': before['sel'], 'after': after['sel']}
+
+
+def anchor_stands(ctx, r):
+    """the platform's selection stands as the person left it (foundations §2.1: "the SELECTION is the platform's own,
+    transient"; D5 §2: "Constant: the selection is the platform's own"). A drag from a phrase's end to its start is marked in
+    place — the article the drag was made in stands, the block the span touches carries the mark, and the platform's
+    selection runs backward, its anchor at the phrase's end — and the two remounts of the links card's opening and its
+    dismissal put it back so. After a drag from a phrase's start to its end, Shift+→ twice and Shift+← (D5 K-71, the
+    platform's own keys) end where the first Shift+→ put the end, the start never moved, the page's span the platform's at
+    every press. ↓ moves the walk's focus ring to the next block, and Enter there selects it: the ring and the selection's
+    mark on that one block. The figures say whether Chrome on this machine moves a selection with Shift+→ where a drag made
+    it, where Enter made it (the focus on the mirror's item) and where K-8 made it (the focus in the selection's card); at
+    the last two the check holds only that nothing drifts. The Safari pass repeats these steps by hand (FP-19): the gate
+    runs Chrome alone."""
+    figures = {'machine': {'chrome': ctx.env.get('chrome'), 'platform': ctx.js('navigator.platform')}}
+    art = article(DOC)
+    ctx.leap(DOC, WINDOW[0])
+    ph, seen = phrase_at(ctx, DOC)
+    r.check(ph is not None, 'a phrase of the first edition is shown at the landing, for a drag from its end to its start', seen)
+    if ph:
+        ctx.js('window.__gateArt = %s' % art)
+        ctx.drv.drag(*ph['end'], *ph['start'])
+        ctx.frames(3)
+        got = dict(ctx.js('({same: %s === window.__gateArt, sel: window.__skep.selection(), platform: window.__skep.platformSelection()})' % art), marked=marks(ctx, 'sel'))
+        sel = got['sel']
+        r.check(bool(sel) and sel['addr'] == DOC and abs(sel['pos'] - ph['p0']) <= 3 and abs(sel['pos'] + sel['width'] - ph['p1']) <= 3 and got['platform']['span'] == sel,
+                'a drag from a phrase\'s end to its start selects the phrase, the page\'s span the platform\'s', dict(got, phrase=(ph['p0'], ph['p1'])))
+        r.check(got['same'] and got['marked'] == [ph['block']['pos']],
+                'the selection is marked in place: the article the drag was made in stands, and the block the span touches carries the mark, no other', dict(got, block=ph['block']['pos']))
+        r.check(got['platform']['backward'], 'the platform\'s selection runs backward, as the drag made it: its anchor at the phrase\'s end', got['platform'])
+        figures['backward_drag'] = got
+        if sel:
+            # two remounts: the links card's opening (the reveal moves to its symbols) and its dismissal (the reveal hidden again)
+            chord(ctx, 'L', mods=('Meta', 'Shift'))
+            opened = ctx.js('({id: window.__skep.overlay().id, rebuilt: %s !== window.__gateArt, sel: window.__skep.selection(), platform: window.__skep.platformSelection()})' % art)
+            ctx.js('window.__gateArt = %s' % art)
+            chord(ctx, 'Escape')
+            closed = ctx.js('({id: window.__skep.overlay().id, rebuilt: %s !== window.__gateArt, sel: window.__skep.selection(), platform: window.__skep.platformSelection()})' % art)
+            r.check(opened['id'] == 'links:' + DOC and opened['rebuilt'] and opened['sel'] == sel and opened['platform']['span'] == sel and opened['platform']['backward'],
+                    'the links card rebuilds the article and the selection is put back as it stood: the same bytes, its anchor at the phrase\'s end', opened)
+            r.check(closed['id'] is None and closed['rebuilt'] and closed['sel'] == sel and closed['platform']['span'] == sel and closed['platform']['backward'],
+                    'its dismissal rebuilds the article again and the selection is put back so: the same bytes, still backward', closed)
+            figures['remounts'] = {'opened': opened, 'closed': closed}
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+    # Shift with → and ← are the platform's own (K-71): from the anchor a drag set, each press moves the selection's other end
+    ph, seen = phrase_at(ctx, DOC)
+    r.check(ph is not None, 'a phrase of the first edition is shown at the landing, for the platform\'s keys', seen)
+    if ph:
+        ctx.drv.drag(*ph['start'], *ph['end'])
+        ctx.frames(3)
+        steps = [dict(ctx.js(NOW), focus=focus_at(ctx))]
+        for key in ('ArrowRight', 'ArrowRight', 'ArrowLeft'):
+            chord(ctx, key, mods=('Shift',))
+            steps.append(ctx.js(NOW))
+        spans = [s['sel'] for s in steps]
+        r.check(all(s['sel'] and s['sel'] == s['platform']['span'] for s in steps), 'after the drag and after each of Shift+→, Shift+→, Shift+← the page\'s span is the platform\'s', steps)
+        ends = [s['pos'] + s['width'] if s else None for s in spans]
+        r.check(all(spans) and all(s['pos'] == spans[0]['pos'] for s in spans) and ends[0] < ends[1] < ends[2] and ends[3] == ends[1],
+                'Shift+→ twice then Shift+← ends where the first Shift+→ put the end, the start never moved: the platform extends the selection from the anchor the drag set',
+                {'spans': spans, 'ends': ends, 'phrase': (ph['p0'], ph['p1'])})
+        figures['shift_arrows'] = {'drag': {'focus': steps[0]['focus'], 'moved': spans[1] != spans[0], 'spans': spans}}
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+    # the focus ring follows the walk, and Enter's selection stands on the block it holds; then Shift+→ there, the focus
+    # on the mirror's item, and at K-8's selection, the focus in the selection's card
+    ctx.leap(DOC, WINDOW[0])
+    item = ctx.js('(() => { const i = document.querySelector("#mirror [role=treeitem][aria-selected=true]"); if (i) i.focus(); return !!i && document.activeElement === i; })()')
+    chord(ctx, 'ArrowDown')
+    f, lit = state(ctx)['focus'], marks(ctx, 'lit')
+    r.check(item and bool(f) and f['kind'] == 'block' and f['addr'] == DOC and lit == [f['pos']], '↓ moves the focus ring to the next block: the article marks the focused block, no other', {'focus': f, 'lit': lit})
+    chord(ctx, 'Enter')
+    s = state(ctx)
+    got = {'focus': s['focus'], 'sel': s['sel'], 'lit': marks(ctx, 'lit'), 'marked': marks(ctx, 'sel')}
+    r.check(bool(f) and bool(s['sel']) and s['sel']['pos'] == f['pos'] and got['lit'] == [f['pos']] and got['marked'] == [f['pos']],
+            'Enter selects the focused block: the focus ring and the selection\'s mark stand on that one block', got)
+    arrows = figures.setdefault('shift_arrows', {})
+    arrows['enter'] = shifted(ctx, r, 'Enter')
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    chord(ctx, 'ArrowDown', mods=('Shift',))
+    arrows['k8'] = shifted(ctx, r, 'K-8')
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    r.figures['anchor'] = figures
 
 
 def whole_again(ctx):
@@ -494,6 +614,7 @@ def run(ctx):
         chord(ctx, 'Escape')
         r.check(state(ctx)['sel'] is None and ctx.js('window.__skep.platformSelection()')['collapsed'], 'Esc clears the card, then the selection — the platform\'s highlight with it')
     r.figures['drag'] = {'phrase': (p0, p1), 'selected': sel, 'block': target and {'pos': target['pos'], 'width': target['width']}}
+    anchor_stands(ctx, r)
     press_holds(ctx, r)
     # ---- zoom (K-11) and paging (K-6) ----------------------------------------------------------------------
     c0 = state(ctx)['cam']
@@ -586,6 +707,6 @@ def run(ctx):
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', 'Mod+C']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', 'Mod+C']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

@@ -9,12 +9,17 @@
 // ends and as it changes — or by a key: a click on a block and Enter at the
 // focused span select the block whole; K-8's Shift+↓ / Shift+↑ select the
 // focused span and then extend it by a span each press. The platform's
-// highlight is the selection's one mark (§2.1): T-LAYER places it over the
-// span and keeps it through a remount. The acts take the span exactly: "who
-// wrote this?" and "who uses this?" ask over its bytes; "follow" and "read
-// side by side" count only the links DRAWN at the span (`LK.shownAt`), inert
-// where none, asking which only at two or more and naming the far document
-// at one. The slots, in this order and never moved: annotate · quote · who
+// highlight is the selection's one mark (§2.1), and the selection the
+// platform's own (foundations §2.1; D5 §2): a change of it rebuilds no
+// article — T-LAYER marks the blocks it touches in place — so a selection
+// the person made stands as they left it, its anchor where they set it, for
+// the platform's own keys to extend (D5 K-71); T-LAYER places it over a span
+// the page selects and puts it back, its anchor at the same end, after a
+// remount. The acts take the span exactly: "who wrote this?" and "who uses
+// this?" ask over its bytes; "follow" and "read side by side" count only the
+// links DRAWN at the span (`LK.shownAt`), inert where none, asking which only
+// at two or more and naming the far document at one. The slots, in this
+// order and never moved: annotate · quote · who
 // wrote this? · who uses this? · see the links · follow · read side by side ·
 // link to… — each showing its chord (D5-F8); annotate, quote and "link to…"
 // are INERT in this lane with their reason (B8's and the editor's lanes —
@@ -57,8 +62,9 @@ function wholeBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
 /**
  * Select a span: the bytes named, or, with no width, the whole of the block
  * holding `pos` (a click, Enter at the focused span, the gate's door). The
- * platform's highlight is placed over it, the article re-marks the blocks
- * it touches, its acts appear at it.
+ * platform's highlight is placed over it — where the platform's selection
+ * already covers it, that one stands — the next frame marks the blocks it
+ * touches in place, rebuilding no article, and its acts appear at it.
  * @param {string} addr
  * @param {number} pos the span's first position
  * @param {number | null} [width] positions; null selects the block at `pos` whole
@@ -66,10 +72,8 @@ function wholeBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
  */
 export function select(addr, pos, width = null, byKey = false) {
   const span = width != null && width > 0 ? { addr, pos, width } : wholeBlock(addr, pos);
-  const same = sameSpan(span, sel);
   sel = span;
   LAYER.placeSelection(span);
-  if (!same) LAYER.bump();
   markDirty();
   render(byKey);
 }
@@ -94,7 +98,7 @@ export function clear() {
   sel = null;
   LAYER.placeSelection(null);
   if (HOST.currentIs('selection')) HOST.dismiss();
-  LAYER.bump(); markDirty();
+  markDirty();
 }
 
 const SLOTS = /** @type {const} */ ([
@@ -132,7 +136,7 @@ export function render(byKey = false) {
       linkto: (el) => { el.setAttribute('data-inert', '1'); },
       wrote: () => act('wrote'), uses: () => act('uses'), links: () => act('links'), follow: () => act('follow'), scene: () => act('scene'),
     },
-    onDismiss: (replaced) => { if (!replaced && sameSpan(sel, span)) { sel = null; LAYER.placeSelection(null); LAYER.bump(); markDirty(); } },
+    onDismiss: (replaced) => { if (!replaced && sameSpan(sel, span)) { sel = null; LAYER.placeSelection(null); markDirty(); } },
   });
 }
 
@@ -144,7 +148,7 @@ export function render(byKey = false) {
 export function act(which) {
   if (!sel) {
     const f = WALK.current();
-    if (f && f.kind === 'block' && f.pos != null) { sel = wholeBlock(f.addr, f.pos); LAYER.placeSelection(sel); LAYER.bump(); markDirty(); }
+    if (f && f.kind === 'block' && f.pos != null) { sel = wholeBlock(f.addr, f.pos); LAYER.placeSelection(sel); markDirty(); }
     else { if (f && which === 'links') LINKS.show(f.addr, true); return; }
   }
   const span = sel;

@@ -4,7 +4,8 @@
 // The head (the address, the state line, the byline — never a name alone,
 // R44 — the presence indicator with its ⟡); the blocks with their marks —
 // the selection (a byte span: every block it touches is marked, the
-// platform's highlight showing the bytes themselves), the focus (a block),
+// platform's highlight showing the bytes themselves) and the focus (a
+// block), each by `blockMarks`, the rule T-LAYER marks a standing article by,
 // the owner's and the person's links in place (the
 // marks LK decided, hue the linker's), each transcluded run's sameness
 // boundary with the origin's label (the hairline, whole at the first run of
@@ -106,6 +107,21 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
 
 /** a run's hairline label: its origin's address where the label is whole, the bare ≡ after */
 const labelOf = (/** @type {Origin} */ o, /** @type {Opening} */ at) => (at.whole ? '≡ ' + o.doc : '≡');
+
+/**
+ * The marks a block carries in its article: `sel` where the selection
+ * touches it, `lit` where it is the walk's focused block. The one rule the
+ * article is made with and T-LAYER marks a standing article's blocks by, so
+ * a change of either is marked in place and rebuilds no article.
+ * @param {string} addr the article's document
+ * @param {{pos: number, width: number}} b the block
+ * @param {Span | null} selected the selected span
+ * @param {{addr: string, pos: number} | null} focus the focused block, by its first position
+ * @returns {{sel: boolean, lit: boolean}}
+ */
+export function blockMarks(addr, b, selected, focus) {
+  return { sel: !!selected && selected.addr === addr && touches(b, selected), lit: !!focus && focus.addr === addr && focus.pos === b.pos };
+}
 
 /**
  * @typedef {Object} Rec — a record atom as it renders (the record rule)
@@ -470,11 +486,10 @@ export function articleHTML(d, v, ownerAccount) {
   for (const p of w.parts) {
     const b = p.b;
     if (p.kind === 'withheld') { run += withheldBlockHTML(b, d, v, w.owner); continue; }
-    const sel = v.selected && v.selected.addr === d.addr && touches(b, v.selected);
-    const foc = v.focus && v.focus.addr === d.addr && v.focus.pos === b.pos;
+    const mark = blockMarks(d.addr, b, v.selected, v.focus);
     const cls = ['sp', 'blk-' + b.kind];
-    if (sel) cls.push('sel');
-    if (foc) cls.push('lit');
+    if (mark.sel) cls.push('sel');
+    if (mark.lit) cls.push('lit');
     const at = `data-addr="${esc(d.addr)}" data-pos="${b.pos}" data-width="${b.width}"`;
     if (p.kind === 'record') { run += `<span class="${cls.join(' ')}" ${at}>${recordHTML(b, d, v)}</span>`; continue; }
     if (p.kind === 'ref') { run += `<span class="${cls.join(' ')} ref" ${at}>⟡</span>`; continue; }

@@ -1,7 +1,8 @@
 // T-ARTICLE's test: the article from a record — the withheld block occupies
 // its run with its width and never its text, its entitlement arm the one
 // rule's for the reader (C-39's face reads it too); the owner's link marked at its
-// span; the selected span marks every block it touches and no other; the
+// span; the selected span marks every block it touches and no other, and the
+// focus its own block, by the one rule T-LAYER marks a standing article by; the
 // transcluded run's hairline and C-33's mark, once per run however marks and
 // symbols cut it (a mutant that sets them at every stretch turns red); the
 // corner's version statement and a draft's chip (C-28), items of one stop
@@ -19,7 +20,7 @@
 // in the same order, as the HTML.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, cornerHTML, headingLevel } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, cornerHTML, headingLevel, blockMarks } from './article.js';
 import { MEASURE } from '../plane/layout.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -74,6 +75,18 @@ test('the selected span marks every block it touches and no other', () => {
   assert.ok(across.includes('sel" data-addr="1.0.1.0.3" data-pos="1"') && across.includes('sel" data-addr="1.0.1.0.3" data-pos="11"') && !across.includes('sel" data-addr="1.0.1.0.3" data-pos="21"'), 'a span across two blocks marks both');
   const elsewhere = articleHTML(d, view({ selected: { addr: '1.0.1.0.4', pos: 14, width: 3 } }), '1.0.1');
   assert.ok(!elsewhere.includes(' sel"'), 'a span in another document marks nothing here');
+});
+
+test('a block\'s marks are one rule, the article\'s and a standing article\'s alike: the selection where it touches, the focus at its block', () => {
+  const blocks = [{ pos: 1, width: 10, kind: /** @type {const} */ ('para'), text: 'aaaaaaaa', origin: null }, { pos: 11, width: 10, kind: /** @type {const} */ ('para'), text: 'bbbbbbbb', origin: null }, { pos: 21, width: 10, kind: /** @type {const} */ ('para'), text: 'cccccccc', origin: null }];
+  const d = doc({ blocks });
+  const across = { addr: d.addr, pos: 8, width: 6 }, at = { addr: d.addr, pos: 21 };
+  assert.deepEqual(blocks.map((b) => blockMarks(d.addr, b, across, at)), [{ sel: true, lit: false }, { sel: true, lit: false }, { sel: false, lit: true }], 'the span across two blocks marks both; the focus its own block alone');
+  assert.deepEqual(blocks.map((b) => blockMarks(d.addr, b, { addr: '1.0.1.0.4', pos: 8, width: 6 }, { addr: '1.0.1.0.4', pos: 21 })), blocks.map(() => ({ sel: false, lit: false })), 'a selection and a focus in another document mark nothing here');
+  assert.deepEqual(blocks.map((b) => blockMarks(d.addr, b, null, null)), blocks.map(() => ({ sel: false, lit: false })));
+  const html = articleHTML(d, view({ selected: across, focus: at }), '1.0.1');
+  const classes = blocks.map((b) => ((html.match(new RegExp(`class="([^"]*)" data-addr="${d.addr.replace(/\./g, '\\.')}" data-pos="${b.pos}"`)) || [])[1] || '').split(' '));
+  assert.deepEqual(classes.map((c) => ({ sel: c.includes('sel'), lit: c.includes('lit') })), blocks.map((b) => blockMarks(d.addr, b, across, at)), 'the article is made with the marks the rule names, block by block');
 });
 
 test('a transcluded run from a draft carries the hairline and C-33\'s mark in a published document', () => {
