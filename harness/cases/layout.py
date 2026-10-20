@@ -51,9 +51,15 @@ LEAP box's rows share their columns, a place's longest label among them, no
 cell's text running past its column and the title's keeping a quarter of the
 row; the versions list sets each member on one line; the chrome over the
 plane — the LEAP box, the scene, the one line, the mirror, a corner — is
-opaque. The measuring code is the page's (`driftSample`, `overlapCheck`,
+opaque. THE TRAIL (foundations §2.2: the entries render as pips): along the
+segment between two consecutive entries in the first edition, inside its box
+and clear of every entry's pip, the plane's canvas under the mounted article
+holds the box's ground alone — no path runs between the pips, which at
+reading scale would cross the text, showing between the article's glyphs.
+The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `visible`, `barsOf`, `labels`, `scene.at`, `scene.ties`, the
-frame buffer); the thresholds are here. The block containment, anchor and
+frame buffer) save the trail's, which reads the canvas's pixels here; the
+thresholds are here. The block containment, anchor and
 shared-box checks are marked with the page issues they wait on and count as
 expected while those stand."""
 import json
@@ -75,6 +81,9 @@ CORNER = '#corners [data-corner="%s"]' % DOC
 # the case's own floor for a label, held apart from the page's constant so that lowering the page's cannot pass here
 MIN_LABEL_PX = 9
 LABEL_TOL_PX = 0.5
+# the trail's strip: its half-width about the segment between two entries, how far it keeps inside the document's box,
+# and the disc left out about each entry's point — a pip's radius, its ring and the ring's stroke being under 11 px
+TRAIL_STRIP_PX, TRAIL_INSET_PX, PIP_CLEAR_PX = 1.5, 4, 14
 
 
 def corner_of(ctx):
@@ -366,6 +375,46 @@ def chrome_holds(ctx, r):
     return {'leap_rows': len(cells), 'leap_columns': [round(c['w'], 1) for c in cells[0]] if cells else None, 'alpha': alpha}
 
 
+def trail_view(ctx):
+    """the plane's canvas along the segment between the trail's two newest entries, as far as the segment runs on screen
+    inside the first edition's box, TRAIL_INSET_PX inside its edges, the disc about every entry's point left out: the
+    pixels read, and those that are not the box's ground as P-REG gives it"""
+    return ctx.js('''(async () => {
+      const R = await import('./plane/register.js');
+      const S = window.__skep, c = S.view.camera(), p = S.view.viewport(), t = S.trail(), n = t.entries.length;
+      if (n < 2) return null;
+      const scr = (v) => ({x: (v.x - c.x) * c.scale + p.VW / 2, y: (v.y - c.y) * c.scale + p.VH / 2});
+      const a = scr(t.entries[n - 2].view), b = scr(t.entries[n - 1].view), pips = t.entries.map((e) => scr(e.view));
+      const q = S.boxOf(%s), box = {x: (q.x - c.x) * c.scale + p.VW / 2, y: (q.y - c.y) * c.scale + p.VH / 2, w: q.w * c.scale, h: q.h * c.scale};
+      const x0 = Math.max(0, box.x + %s), x1 = Math.min(p.VW, box.x + box.w - %s), y0 = Math.max(0, box.y + %s), y1 = Math.min(p.VH, box.y + box.h - %s);
+      const cv = document.getElementById('plane'), k = cv.width / p.VW, img = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      const ground = [1, 3, 5].map((i) => parseInt(R.COL.doc.slice(i, i + 2), 16));
+      const len = Math.hypot(b.x - a.x, b.y - a.y), ux = (b.x - a.x) / len, uy = (b.y - a.y) / len;
+      let read = 0, other = 0; const off = [];
+      for (let s = 0; s <= len; s += 0.5) for (let o = -%s; o <= %s; o += 0.5) {
+        const x = a.x + ux * s - uy * o, y = a.y + uy * s + ux * o;
+        if (x < x0 || x >= x1 || y < y0 || y >= y1 || pips.some((e) => Math.hypot(x - e.x, y - e.y) < %s)) continue;
+        const i = (Math.floor(y * k) * cv.width + Math.floor(x * k)) * 4;
+        read++;
+        if (img[i] !== ground[0] || img[i + 1] !== ground[1] || img[i + 2] !== ground[2]) { other++; if (off.length < 8) off.push({x: Math.round(x), y: Math.round(y), rgb: [img[i], img[i + 1], img[i + 2]]}); }
+      }
+      return {a, b, box, ground, read, other, off};
+    })()''' % (json.dumps(DOC), TRAIL_INSET_PX, TRAIL_INSET_PX, TRAIL_INSET_PX, TRAIL_INSET_PX, TRAIL_STRIP_PX, TRAIL_STRIP_PX, PIP_CLEAR_PX))
+
+
+def trail_holds(ctx, r):
+    """THE TRAIL's check: two consecutive entries in the first edition at two views, the camera at the newer, the
+    article mounted over the box; its figures"""
+    ctx.leap(DOC, 1)
+    ctx.leap(DOC, WINDOW[0])
+    v = trail_view(ctx)
+    mounted = DOC in ctx.js('window.__skep.mountedAddrs()')
+    r.check(bool(v) and mounted and v['read'] >= 100 and not v['other'],
+            f'the trail: no path runs between its pips — along the segment between two consecutive entries in the first edition, a {2 * TRAIL_STRIP_PX:g} px strip inside its box and {PIP_CLEAR_PX} px clear of every entry\'s point, the canvas under the mounted article holds the box\'s ground alone',
+            {'mounted': mounted, 'read': v and v['read'], 'other': v and v['other'], 'off': v and v['off'], 'segment': v and [v['a'], v['b']], 'box': v and v['box']})
+    return {'read': v and v['read'], 'other': v and v['other']}
+
+
 def step(ctx, em):
     """the camera over the first edition at an em, and what the frames that step drew show: the most documents any of
     them drew as bars under their own mounted text (`both`), and yielded to text that was not mounted (`neither`)"""
@@ -499,9 +548,10 @@ def run(ctx):
         ctx.frames(2)
         seen[name] = labels_hold(r, name, label_view(ctx))
     r.figures['labels'] = seen
-    # THE TYPE, THE READING SCENE, THE CHROME
+    # THE TYPE, THE READING SCENE, THE CHROME, THE TRAIL
     r.figures['type'] = type_holds(ctx, r)
     r.figures['scene'] = scene_holds(ctx, r)
     r.figures['chrome'] = chrome_holds(ctx, r)
+    r.figures['trail'] = trail_holds(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

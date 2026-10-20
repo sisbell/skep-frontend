@@ -24,7 +24,7 @@
 
 import * as HOST from './host.js';
 import * as PORT from '../bridge/port.js';
-import { t, isPinned } from '../strings.js';
+import { t } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -36,7 +36,6 @@ import { esc } from '../util.js';
  * @typedef {Object} Face
  * @property {string} id the string's id
  * @property {string} text
- * @property {boolean} pinned
  * @property {Array<{label: string, run?: () => void, inert?: boolean}>} acts
  */
 
@@ -49,7 +48,7 @@ import { esc } from '../util.js';
 export function wordsFor(r, ctx = {}) {
   const name = r.name;
   const addr = ctx.addr || '';
-  const f = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ v = {}) => ({ id, text: t(id, v), pinned: isPinned(id), acts: /** @type {Face['acts']} */ ([]) });
+  const f = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ v = {}) => ({ id, text: t(id, v), acts: /** @type {Face['acts']} */ ([]) });
   switch (name) {
     case 'doc_not_registered': return f('B1.doc_not_registered', { address: addr });
     case 'not_a_link': return f('B1.not_a_link');
@@ -72,7 +71,7 @@ export function wordsFor(r, ctx = {}) {
 
 /** the face's HTML: its words, what stands beneath them, its acts — and no token */
 function faceHTML(/** @type {Face} */ face, extra = '') {
-  return `<div class="face-text ${face.pinned ? 'pinned' : 'draft'}" data-string="${esc(face.id)}">${esc(face.text)}</div>` + (extra || '') +
+  return `<div class="face-text" data-string="${esc(face.id)}">${esc(face.text)}</div>` + (extra || '') +
     (face.acts.length ? `<div class="acts">${face.acts.map((a, i) => `<button data-run="a${i}" class="${a.inert ? 'inert' : ''}">${esc(a.label)}</button>`).join('')}</div>` : '');
 }
 
@@ -116,7 +115,7 @@ export function unregistered(addr, anchor = null) {
 
 /** the `invalid` follow: no such link or slot */
 export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: number} | null} */ anchor) {
-  HOST.show({ kind: 'face', id: 'face:invalid', anchor: toAnchor(anchor), html: faceHTML({ id: 'B1.invalid', text: t('B1.invalid'), pinned: false, acts: [] }) });
+  HOST.show({ kind: 'face', id: 'face:invalid', anchor: toAnchor(anchor), html: faceHTML({ id: 'B1.invalid', text: t('B1.invalid'), acts: [] }) });
 }
 
 /**
@@ -129,14 +128,14 @@ export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: n
  */
 export function floating(l, far, anchor) {
   HOST.show({ kind: 'face', id: 'face:floating', anchor: toAnchor(anchor), acts: { a0: () => import('./versions.js').then((V) => V.open(far, null, null)) },
-    html: faceHTML({ id: 'F.floating', text: t('F.floating', { D: far }), pinned: false, acts: [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] }) });
+    html: faceHTML({ id: 'F.floating', text: t('F.floating', { D: far }), acts: [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] }) });
   void l;
 }
 
 /** C-39: a link address inside a withheld document, R56's arm beneath and not the clause */
 export function c39(/** @type {string} */ owner, /** @type {Anchor | HTMLElement | null} */ anchor) {
-  const face = { id: 'C-39', text: t('C-39', { owner }), pinned: true, acts: [] };
-  HOST.show({ kind: 'face', id: 'face:C-39', anchor: toAnchor(anchor), html: faceHTML(face, `<div class="arm pinned" data-string="C-36.owner-grant.arm">${esc(t('C-36.owner-grant.arm'))}</div>`) });
+  const face = { id: 'C-39', text: t('C-39', { owner }), acts: [] };
+  HOST.show({ kind: 'face', id: 'face:C-39', anchor: toAnchor(anchor), html: faceHTML(face, `<div class="arm" data-string="C-36.owner-grant.arm">${esc(t('C-36.owner-grant.arm'))}</div>`) });
 }
 
 /**
@@ -147,7 +146,7 @@ export function c39(/** @type {string} */ owner, /** @type {Anchor | HTMLElement
  */
 export function sessionFace(r, anchor) {
   const face = wordsFor(r);
-  const extra = r.name === 'no_key' ? `<div class="note draft" data-string="F.keyless-limit">${esc(t('F.keyless-limit'))}</div>` : '';
+  const extra = r.name === 'no_key' ? `<div class="note" data-string="F.keyless-limit">${esc(t('F.keyless-limit'))}</div>` : '';
   HOST.show({ kind: 'face', id: 'face:session:' + r.name, anchor: toAnchor(anchor), html: faceHTML(face, extra) });
 }
 
@@ -161,7 +160,7 @@ export function moment(m) {
   const input = m.kind === 'label' || m.kind === 'ask' ? `<input type="text" data-answer="1" aria-label="${esc(t('L.answer'))}">` : '';
   HOST.show({
     kind: 'moment', id: 'moment:' + m.id, anchor: null, takeFocus: true,
-    html: `<span class="label"><span class="code">${esc(m.walk)}</span> · ${esc(t('L.moment', { kind: m.kind }))}</span><div class="face-text draft">${esc(data)}</div>${input}` +
+    html: `<span class="label"><span class="code">${esc(m.walk)}</span> · ${esc(t('L.moment', { kind: m.kind }))}</span><div class="face-text">${esc(data)}</div>${input}` +
       `<div class="acts"><button data-run="answer">${esc(t('L.answer'))}</button>${m.answerable ? `<button data-run="cancel">${esc(t('L.cancel'))}</button>` : ''}</div>`,
     acts: {
       answer: () => {

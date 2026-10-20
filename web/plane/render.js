@@ -27,22 +27,25 @@
 // at no less than P-REG's LABEL_MIN_PX, each only where its place holds it
 // whole, meeting no other place's shape and no label set before it (F-9;
 // foundations §2.1), a document's on a plate of its box's ground over the
-// bars beneath; then the trail's pips numbered newest-first with their path,
-// each number at the label floor; the focus ring; the arrival mark; text
-// yielded where T-LAYER mounted it; for the unmounted, the bars — P-LAY's
-// layout of the article's own lines (T-ARTICLE's plan, made through T-LAYER
-// from the view it mounts with), each bar where its line's glyphs will stand
-// and none past the article's clip, so the handoff swaps bars for text in
-// place (law 8; S1 Q7). The loop runs T-LAYER's frame BEFORE this draw, so
-// what is mounted is settled when a document's label and bars are drawn or
-// yielded; `stats` names both sets, and the loop holds them against the
-// mounted set at the frame's end; it names the marks, the connections and
-// the labels drawn too, and the labels' parts left out with the rule that
-// left each out, for the gate. The hit tests read the draw's own rule: a
-// click meets a document's box only where the box stands whole, and a
-// continuation's mark wherever the mark holds its documents. The system
-// account's rows are never drawn (the record §1.8; this lane's cut). The chip
-// is at the document's corner (T-ARTICLE), never here.
+// bars beneath; then the trail's pips numbered newest-first, each number at
+// the label floor, and no path between them (foundations §2.2 renders the
+// entries as pips: at reading scale a pip stands in the text column, where a
+// path would run between the glyphs of the article mounted over the canvas);
+// the focus ring; the arrival mark; text yielded where T-LAYER mounted it;
+// for the unmounted, the bars — P-LAY's layout of the article's own lines
+// (T-ARTICLE's plan, made through T-LAYER from the view it mounts with), each
+// bar where its line's glyphs will stand and none past the article's clip, so
+// the handoff swaps bars for text in place (law 8; S1 Q7). The loop runs
+// T-LAYER's frame BEFORE this draw, so what is mounted is settled when a
+// document's label and bars are drawn or yielded; `stats` names both sets,
+// and the loop holds them against the mounted set at the frame's end; it
+// names the marks, the connections and the labels drawn too, and the labels'
+// parts left out with the rule that left each out, for the gate. The hit
+// tests read the draw's own rule: a click meets a document's box only where
+// the box stands whole, and a continuation's mark wherever the mark holds its
+// documents. The system account's rows are never drawn (the record §1.8;
+// this lane's cut). The chip is at the document's corner (T-ARTICLE), never
+// here.
 // Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
 // Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports).
 
@@ -478,15 +481,12 @@ function drawLabels(pass) {
   for (const l of set) if (l.kind === 'doc' && !drawn.has(l.place)) stats.drawn.push(l.place);
 }
 
-/** the trail's pips, numbered newest-first at the label floor, joined by the path */
+/** the trail's pips, numbered newest-first at the label floor, no path joining them (see the head) */
 function drawTrail() {
   const c = ctx; if (!c) return;
   const rows = TRAIL.numbered();
   if (!rows.length) return;
-  const pts = TRAIL.all().map((e) => ({ x: sx(e.view.x), y: sy(e.view.y) }));
-  c.save(); c.setLineDash([4, 5]); c.strokeStyle = COL.trailPath; c.lineWidth = 1.2;
-  if (pts.length > 1) { c.beginPath(); pts.forEach((p, i) => (i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y))); c.stroke(); }
-  c.setLineDash([]);
+  c.save();
   // a pip holds its number at the floor: its radius three quarters of the number's size
   const px = sizeOf(8), r9 = Math.ceil(px * 0.75), lh = px * LINE_BOX;
   c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = face(px);

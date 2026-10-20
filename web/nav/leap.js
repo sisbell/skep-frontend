@@ -134,8 +134,8 @@ export function render() {
   const typed = els.input.value.trim();
   els.rows.innerHTML = rows.map((r, i) => `<div class="hit ${i === sel ? 'sel' : ''}" id="${rowId(i)}" data-i="${i}" role="option" aria-selected="${i === sel}"><span class="a">${esc(r.addr)}</span><span>${esc(r.title)}</span><span class="a">${esc(r.sub)}${r.kind === 'landmark' ? ' ' + esc(t('F.landmark')) : ''}</span></div>`).join('');
   comboState();
-  const answer = !rows.length && typed ? `<span class="draft" data-string="F.leap.none">${esc(t('F.leap.none'))}</span>` : '';
-  const stateLine = st && st.arm !== 'complete' ? `<span class="draft" data-string="F.index.state">${esc(t('F.index.state', { arm: st.arm }))}</span>${floor != null ? ` · <span class="draft" data-string="F.leap.floor">${esc(t('F.leap.floor', { floor }))}</span>` : ''}${st.arm === 'building' || st.arm === 'widening' ? ` · <span class="draft" data-string="F.leap.arriving">${esc(t('F.leap.arriving'))}</span>` : ''}` : '';
+  const answer = !rows.length && typed ? `<span data-string="F.leap.none">${esc(t('F.leap.none'))}</span>` : '';
+  const stateLine = st && st.arm !== 'complete' ? `<span data-string="F.index.state">${esc(t('F.index.state', { arm: st.arm }))}</span>${floor != null ? ` · <span data-string="F.leap.floor">${esc(t('F.leap.floor', { floor }))}</span>` : ''}${st.arm === 'building' || st.arm === 'widening' ? ` · <span data-string="F.leap.arriving">${esc(t('F.leap.arriving'))}</span>` : ''}` : '';
   const note = [answer, stateLine].filter(Boolean).join(' · ');
   if (note === noteHTML) return;
   noteHTML = note;

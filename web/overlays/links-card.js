@@ -65,7 +65,7 @@ export function render(byKey = false) {
   const html =
     `<span class="label">${esc(t('B1.see-links'))} · ${esc(addr)}</span>` +
     `<div class="stage">${r.stage >= 3 ? `<button data-run="stage2">◦ symbols</button>` : `<button data-run="stage3">— content</button>`}</div>` +
-    `<div class="toggle"><button data-run="others" role="switch" aria-checked="${r.others}" class="draft" data-string="${toggleId}">${esc(toggle)}</button></div>` +
+    `<div class="toggle"><button data-run="others" role="switch" aria-checked="${r.others}" data-string="${toggleId}">${esc(toggle)}</button></div>` +
     `<div class="lenses">` +
       `<span class="lens-label">${esc(t('F.lens.owner'))}</span>${rows.owners.map((o) => `<button data-run="owner:${esc(o)}" aria-pressed="${r.lens.owners ? r.lens.owners.has(o) : false}">${esc(o)}</button>`).join('') || '—'}` +
       `<span class="lens-label">${esc(t('F.lens.type'))}</span>${rows.types.map((ty) => `<button data-run="type:${esc(ty)}" aria-pressed="${r.lens.types ? r.lens.types.has(ty) : false}">${esc(typeName(ty))}</button>`).join('') || '—'}` +
@@ -74,7 +74,7 @@ export function render(byKey = false) {
     `</div>` +
     `<ul class="rows">${listed.map((s, i) => `<li><button data-run="row:${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→ ' + (s.far || '—') : '← ' + (s.far || '—'))}${REC.doc(s.far).refused === 'unregistered' ? ' · ?' : ''}</button></li>`).join('')}</ul>` +
     (more ? `<button data-run="more">${esc(t('B1.show-more'))}</button>` : shown.length ? `<span class="end">·</span>` : '') +
-    `<div class="clause draft" data-string="F.card-clause">${esc(t('F.card-clause'))}</div>`;
+    `<div class="clause" data-string="F.card-clause">${esc(t('F.card-clause'))}</div>`;
   /** @type {Record<string, (el: HTMLElement) => void>} */
   const acts = {
     stage3: () => { LK.reveal(addr, 3); LAYER.bump(); markDirty(); render(); },

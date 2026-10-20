@@ -20,8 +20,6 @@ button[disabled] { opacity:.45; cursor:default; }
 kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* the chrome that stands over the plane is opaque: no text the plane holds shows through it */
 .panel { position:fixed; background:var(--bg); border:1px solid var(--line); border-radius:4px; padding:8px 10px; }
-.pinned { border-left:3px solid #cfd6df; padding-left:6px; }
-.draft { border-bottom:1px dotted #6b7382; }
 .dim { color:var(--dim); }
 .code { color:#cfd6df; }
 .warn { color:var(--warn); }

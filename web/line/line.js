@@ -95,28 +95,28 @@ export function addressDisplay() {
 export function actingSegment() {
   const s = REC.session(), b = REC.board(), dev = REC.device(), dead = REC.deathReason(), refused = REC.sessionRefused();
   const origin = b ? b.origin : 'http://127.0.0.1:8642';
-  if (!PORT.hasAdapter()) return { html: `<span class="draft" data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`, state: 0 };
+  if (!PORT.hasAdapter()) return { html: `<span data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`, state: 0 };
   if (s) {
     const words = t('F.acting-as', { account: s.account || '', N: s.principal, 'device label': dev && dev.label ? dev.label : '⟨device label⟩', origin });
-    return { html: `<span class="draft" data-string="F.acting-as">${esc(words)}</span>`, state: 2 };
+    return { html: `<span data-string="F.acting-as">${esc(words)}</span>`, state: 2 };
   }
   if (dead) {
     const arm = dead.arm;
     const words = arm === 'mode' ? t('C-137.mode') : arm === 'retired' ? t('C-137.self') : t('C-137.signed-out');
     const id = arm === 'mode' ? 'C-137.mode' : arm === 'retired' ? 'C-137.self' : 'C-137.signed-out';
-    return { html: `<span class="pinned" data-string="${id}">${esc(words)}</span> <button data-act="signin">${esc(t('F.sign-in'))}</button>`, state: 5 };
+    return { html: `<span data-string="${id}">${esc(words)}</span> <button data-act="signin">${esc(t('F.sign-in'))}</button>`, state: 5 };
   }
-  const guest = `<span class="draft" data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span> · ${esc(origin)} · <span class="draft" data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span> <button data-act="signin">${esc(t('F.sign-in'))}</button>`;
-  return { html: guest + (refused ? ` <span class="draft dim" data-string="L.session-refused">${esc(t('L.session-refused', { name: refused.name }))}</span>` : ''), state: refused && refused.name === 'no_key' ? 3 : 1 };
+  const guest = `<span data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span> · ${esc(origin)} · <span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span> <button data-act="signin">${esc(t('F.sign-in'))}</button>`;
+  return { html: guest + (refused ? ` <span class="dim" data-string="L.session-refused">${esc(t('L.session-refused', { name: refused.name }))}</span>` : ''), state: refused && refused.name === 'no_key' ? 3 : 1 };
 }
 
 /** the daemon's segment: silent while the board runs */
 function daemonSegment() {
   const d = REC.daemon(), h = REC.health();
   const halted = !!(h && h.writes && h.writes.halted);
-  if (halted) return `<span class="draft warn" data-string="F.daemon.notebook.halted">${esc(t('F.daemon.notebook.halted'))}</span>`;
-  if (d === 'stopped') return `<span class="draft warn" data-string="F.daemon.notebook.stopped">${esc(t('F.daemon.notebook.stopped'))}</span>`;
-  if (d === 'unreachable') return `<span class="draft warn" data-string="F.daemon.unreachable">${esc(t('F.daemon.unreachable'))}</span>`;
+  if (halted) return `<span class="warn" data-string="F.daemon.notebook.halted">${esc(t('F.daemon.notebook.halted'))}</span>`;
+  if (d === 'stopped') return `<span class="warn" data-string="F.daemon.notebook.stopped">${esc(t('F.daemon.notebook.stopped'))}</span>`;
+  if (d === 'unreachable') return `<span class="warn" data-string="F.daemon.unreachable">${esc(t('F.daemon.unreachable'))}</span>`;
   return '';
 }
 

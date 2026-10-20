@@ -5,7 +5,11 @@ entry's (W-01 step 3, "position honored"), and the account the document's
 own account field, read whole (the agent space's `1.0.1.1`); a face's words
 alone — the fifth cell's at a typed ghost address, with no wire token above
 them and no act beneath (B1-S8; C-42); the anatomy card's rows, each a value
-the page holds (a bare dash reads as B1-S5's "none"); and every PINNED string
+the page holds (a bare dash reads as B1-S5's "none"); no string in the one
+line, the face or the anatomy card set apart by its class in the inventory —
+no dotted underline under a DRAFT, no bar beside a PINNED: the class is the
+copy's record (`strings.js`), never a mark a person reads, and a dotted
+underline is the page's mark of words with an act; and every PINNED string
 of `strings.js` equal to its source at the design repository's HEAD —
 `ux/copy.md` by `C-n`, `requirements.md` for R56, R59 and R5 — compared
 fragment by fragment around the ⟨tokens⟩ with whitespace folded (the design
@@ -25,6 +29,14 @@ BLANK = re.compile(r'[\s\-–—·.…]*')  # a value that is no value: dashes, 
 def norm(s):
     s = (s or '').replace('’', "'").replace('‘', "'").replace('“', '"').replace('”', '"')
     return re.sub(r'\s+', ' ', s).strip()
+
+
+def wording_marks(ctx, scope):
+    """the strings of `strings.js` shown in `scope`, each element naming its id in `data-string`, and those a mark sets
+    apart by their class in the inventory: a dotted underline, or a bar of 3 px or more at the left"""
+    return ctx.js('''(() => { const shown = [...document.querySelectorAll(%s)].map((e) => { const s = getComputedStyle(e);
+      return {id: e.dataset.string, bottom: s.borderBottomStyle, left: parseFloat(s.borderLeftWidth) || 0}; });
+      return {shown: shown.map((x) => x.id), marked: shown.filter((x) => x.bottom === 'dotted' || x.left >= 3)}; })()''' % json.dumps(scope + ' [data-string]'))
 
 
 def located(text, source):
@@ -51,6 +63,8 @@ def run(ctx):
     r.check(norm(expect) in norm(line['text']), 'the acting-as segment reads foundations §3.3\'s STATE 2 with the session\'s values', {'expect': expect, 'line': line['text']})
     r.check(line['address']['doc'] == DOC and line['address']['pos'] is not None, 'the address segment names the document and the position', line['address'])
     r.check('1 › 1.0.1 › 1.0.1.0.3 › position' in line['text'], 'the where-am-I reads board › account › document › position', line['text'][:160])
+    marks = wording_marks(ctx, '#line')
+    r.check('F.acting-as' in marks['shown'] and not marks['marked'], 'the one line\'s strings are words alone: none is set apart by its class in the inventory — no dotted underline, no bar at its left', marks)
     trail = ctx.js('window.__skep.trail()')
     entry = trail['entries'][trail['cursor']]
     r.check(line['address']['pos'] == WINDOW[0] == entry['pos'], 'the address segment\'s position is the one the landing named, as the trail\'s entry holds it — not the first position of the span holding it', {'line': line['address']['pos'], 'trail': entry['pos'], 'named': WINDOW[0]})
@@ -66,6 +80,8 @@ def run(ctx):
     face = ctx.overlay_shown()
     r.check(face['kind'] == 'face' and 'nothing this board will say about this address' in face['text'] and GHOST in face['text'], 'the dead-reference face carries B1\'s doc_not_registered words with the address', face['text'][:200])
     r.check('doc_not_registered' not in face['text'].lower() and face['acts'] == 0, 'the fifth cell\'s face is its words alone: no wire token above them, no act beneath (B1-S8; C-42)', face)
+    marks = wording_marks(ctx, '#overlay')
+    r.check('B1.doc_not_registered' in marks['shown'] and not marks['marked'], 'the face\'s words are set apart by no class of theirs in the inventory — no dotted underline, no bar at their left', marks)
     ctx.esc()
     r.check(ctx.js('window.__skep.overlay()')['kind'] is None, 'Esc dismisses the face')
     r.figures['face'] = face['text'][:300]
@@ -86,6 +102,8 @@ def run(ctx):
           return {labels: [...k.querySelectorAll('b')].map((b) => b.textContent), value: v.textContent}; })''')
         blank = [x for x in rows if BLANK.fullmatch(x['value'])]
         r.check(ctx.js('window.__skep.overlay().id') == 'anatomy:' + shown[0]['link'] and bool(rows) and not blank, 'every row of the anatomy card carries a value: none stands as a bare dash, which B1-S5 draws as "none"', {'blank': blank, 'rows': [x['labels'] for x in rows]})
+        marks = wording_marks(ctx, '#overlay')
+        r.check('R5.undocumented' in marks['shown'] and not marks['marked'], 'the anatomy card\'s strings — R5\'s type among them — are set apart by no class of theirs in the inventory', marks)
         r.figures['anatomy_rows'] = rows
         ctx.esc()
     # ---- every PINNED string against its source ------------------------------------------

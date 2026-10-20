@@ -55,7 +55,7 @@ export async function wrote(addr, pos, width = null) {
     return { o, same, text };
   });
   const html = `<span class="label">${esc(t('B1.who-wrote'))} · ${esc(addr)} · ${esc(t('F.position', { p: sp.ordinal }))}</span>` +
-    rows.map((r, i) => `<div class="answer draft" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${esc(r.text)}${r.same ? ` <button data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
+    rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${esc(r.text)}${r.same ? ` <button data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
   /** @type {Record<string, (el: HTMLElement) => void>} */
   const acts = {};
   rows.forEach((r, i) => { acts['src' + i] = () => GO.leapTo(r.o, { how: 'leap' }); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
@@ -76,9 +76,9 @@ export async function uses(addr, pos, width = null) {
   const users = F.decodeAddrs(out.answer).filter((u) => u !== addr);
   const answer = users.length ? t('B1.uses', { documents: users.join(', ') }) : t('B1.uses.none');
   const html = `<span class="label">${esc(t('B1.who-uses'))} · ${esc(addr)} · ${esc(t('F.position', { p: sp.ordinal }))}</span>` +
-    `<div class="answer draft" data-string="${users.length ? 'B1.uses' : 'B1.uses.none'}">${esc(answer)}</div>` +
+    `<div class="answer" data-string="${users.length ? 'B1.uses' : 'B1.uses.none'}">${esc(answer)}</div>` +
     (users.length ? `<div class="acts">${users.map((u, i) => `<button data-run="u${i}">${esc(u)}</button>`).join('')}</div>` : '') +
-    `<div class="clause draft" data-string="B1.C-72">${esc(t('B1.C-72'))}</div>`;
+    `<div class="clause" data-string="B1.C-72">${esc(t('B1.C-72'))}</div>`;
   /** @type {Record<string, (el: HTMLElement) => void>} */
   const acts = {};
   users.forEach((u, i) => { acts['u' + i] = () => GO.leapTo(u, { how: 'leap' }); });

@@ -6,11 +6,11 @@
 // entry a follow departed holds the link followed. The launch frame is the
 // first entry (W-01); after it an entry is pushed by a fresh TELEPORT —
 // LEAP, follow, a click on a place, Enter, HOME, WHOLE BOARD, an account's
-// region — and by a reading scene's own end (the plane as it was), one push
-// per act, never by panning or zooming. Back, Forward and a jump move the
-// cursor and discard nothing, and a jump never pushes. A fresh teleport made
-// with the cursor behind the newest entry drops the entries ahead of it
-// before it pushes (a browser's history rule, stated).
+// region — one push per act, never by panning or zooming, and never by a
+// reading scene's end, which leaves the camera where it found it (SC). Back,
+// Forward and a jump move the cursor and discard nothing, and a jump never
+// pushes. A fresh teleport made with the cursor behind the newest entry drops
+// the entries ahead of it before it pushes (a browser's history rule, stated).
 // Carries: the wireframe's §11 `pushTrail` (its de-duplication by address
 // and its cap of twelve DROPPED: the stack is the record of teleports).
 // Rules: FP-1, FP-2, FP-7, FP-10.

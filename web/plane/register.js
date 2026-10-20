@@ -53,7 +53,7 @@ export const LABEL_MIN_PX = 9;
 export const COL = Object.freeze({
   bg: '#0e1013', doc: '#161b22', docEdge: '#39424e', draftEdge: '#5a4a2a', title: '#cfd6df', text: '#b9c1cb',
   greek: '#4b5563', cluster: '#1b2430', clusterEdge: '#3a4a5e', land: '#ffb454', focus: '#7ddc9a',
-  boardEdge: '#2a3340', withheld: '#2a2520', trail: 'rgba(255,180,84,.85)', trailPath: 'rgba(255,180,84,.55)',
+  boardEdge: '#2a3340', withheld: '#2a2520', trail: 'rgba(255,180,84,.85)',
   residue: '#2b3140', hollow: 'rgba(127,178,255,0.15)',
 });
 

@@ -18,22 +18,26 @@
 // first line — measured, through T-LAYER's byte-span mapping over the pane's
 // article, when the scene is set level or its panes change size, and moved
 // with each pane's scroll — and one whose end has left its pane is clipped at
-// the pane's edge with the stub's triangle. Its own end — zoom-out, Esc, ←,
-// the bar's × — pushes the plane as it was onto the trail (§2.5; the entry it
-// departs holds the camera's view, not the pair and the panes' positions
-// §2.5 asks it to hold, which is the design's open question); a navigation
-// act — a teleport, Back, Forward, a trail jump — dismisses it first and
-// pushes nothing, the act's own trail move the one it makes (`dismiss`). The
-// panes BORROW the one reconciler's mount (FP-12: `T-LAYER.sceneArticle`
-// makes the HTML, `T-LAYER.rangeIn` finds a passage in it; the scene keeps no
-// DOM text of its own). Each pane carries its own document's corner (ux-T2:
-// "each pane its own"; `T-LAYER.sceneCorner` makes its items) on its OUTER
-// side — pane A's left, pane B's right — held to the top of the pane's
-// scroll, so the bands and lines leave the inner edges clear of it
-// (foundations §3.1); it is shown, not acted on, as nothing in a pane takes a
-// pointer. Companionate scrolling over the bands is UNTESTED (S27) and not
-// built. Carries: the wireframe's §19 whole (its beams over `compare`'s pairs
-// instead of the hand data's windows).
+// the pane's edge with the stub's triangle. Whatever ends it — zoom-out, Esc,
+// ←, the bar's ×, or a navigation act (a teleport, Back, Forward, a trail
+// jump), which ends it first, "a teleport dismissing the scene first" (§2.5)
+// — leaves the plane as it was and the trail as it found it (`close`): the
+// scene never moves the camera, so an entry pushed for the plane as it was
+// would hold the view of the entry it departs, a Back from it moving nothing,
+// and its push would drop the entries ahead of the cursor. §2.5 pairs that
+// push with the scene recorded as the departure — its pair and both panes'
+// positions — so Back restores it; N-TRAIL's entry holds an address and a
+// view and no scene, and whether Back restores a scene is the design's open
+// question. The panes BORROW the one reconciler's mount (FP-12:
+// `T-LAYER.sceneArticle` makes the HTML, `T-LAYER.rangeIn` finds a passage in
+// it; the scene keeps no DOM text of its own). Each pane carries its own
+// document's corner (ux-T2: "each pane its own"; `T-LAYER.sceneCorner` makes
+// its items) on its OUTER side — pane A's left, pane B's right — held to the
+// top of the pane's scroll, so the bands and lines leave the inner edges
+// clear of it (foundations §3.1); it is shown, not acted on, as nothing in a
+// pane takes a pointer. Companionate scrolling over the bands is UNTESTED
+// (S27) and not built. Carries: the wireframe's §19 whole (its beams over
+// `compare`'s pairs instead of the hand data's windows).
 // Rules: FP-1, FP-2, FP-10, FP-12, FP-13.
 
 import * as PUMP from '../model/pump.js';
@@ -42,9 +46,8 @@ import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
 import * as HOST from '../overlays/host.js';
-import * as TRAIL from '../nav/trail.js';
 import { SAMENESS } from '../plane/register.js';
-import { markDirty, view as camView } from '../plane/camera.js';
+import { markDirty } from '../plane/camera.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -172,7 +175,7 @@ export async function open(a, b, held = {}) {
   scene = { a, b, pairs: runs, level: levels(runs, held), ties: [], size: '' };
   els.root.classList.add('on');
   els.bar.innerHTML = `<b>${esc(a)}</b> │ <b>${esc(b)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
-    (els.bar.dataset.face ? ` <span class="face-text draft">${esc(t(els.bar.dataset.face === 'too_many_pairs' ? 'B1.too_many_pairs' : els.bar.dataset.face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: els.bar.dataset.face }))}</span>` : '') +
+    (els.bar.dataset.face ? ` <span class="face-text">${esc(t(els.bar.dataset.face === 'too_many_pairs' ? 'B1.too_many_pairs' : els.bar.dataset.face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: els.bar.dataset.face }))}</span>` : '') +
     ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>⌘R</kbd></button><span class="x" data-x="1" role="button" tabindex="0">× ${esc(t('F.scene.dismiss'))}</span>`;
   const corner = (/** @type {string} */ addr, /** @type {import('../model/records.js').Doc} */ d) => `<div class="corner" data-corner="${esc(addr)}">${LAYER.sceneCorner(d)}</div>`;
   els.paneA.innerHTML = corner(a, da) + `<article class="dtext scene" data-addr="${esc(a)}">${LAYER.sceneArticle(da)}</article>`;
@@ -305,29 +308,18 @@ function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */
   ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, -4); ctx.lineTo(-8, 4); ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill(); ctx.restore();
 }
 
-/** the scene's own end — Esc, zoom-out, ←, the bar's ×: the plane as it was, pushed onto the trail after it (§2.5) */
-export function close() {
-  const s = end();
-  if (s) TRAIL.push({ addr: s.a, pos: s.level.a, view: camView(), link: null, label: `${s.a} │ ${s.b}` }, camView());
-}
-
 /**
- * A navigation act ends the scene — a teleport, Back, Forward or a trail
- * jump, "a teleport dismissing the scene first" (§2.5): the plane as it was,
- * and nothing pushed, the act's own push or cursor move the one trail move it
- * makes, which re-takes the view it leaves (N-TRAIL).
+ * End the scene, whatever ends it — Esc, zoom-out, ←, the bar's ×, or a
+ * navigation act, which ends it first (§2.5): the plane as it was, and the
+ * trail untouched, a navigation act's own push or cursor move the one trail
+ * move it makes (see the head).
  */
-export function dismiss() { end(); }
-
-/** take the scene down, the plane as it was: the pair that stood, or null where none did */
-function end() {
-  if (!scene || !els) return null;
-  const s = scene;
+export function close() {
+  if (!scene || !els) return;
   scene = null;
   drawnTies = [];
   els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; delete els.bar.dataset.face;
   markDirty();
-  return s;
 }
 
 /** the scene's own keys (K-60): ↓/↑ by block within the focused pane */

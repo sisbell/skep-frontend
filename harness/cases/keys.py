@@ -4,9 +4,11 @@ on this Mac), then the camera, the focus, the trail and the one line read
 back; the IME guard, on the plane and in the LEAP box; a bare key does
 NOTHING but show the K-9 line; Enter on the LEAP box as opened lands in
 place, ↓ choosing the first level, and a typed account address a teleport
-with its trail entry (foundations §2.2, §2.3); a navigation act from the
-scene — Back, Forward, a teleport — making one trail move, its own (§2.5);
-K-8's select and extend by span; a links card row's anatomy card taking the
+with its trail entry (foundations §2.2, §2.3); the scene's own end — Esc,
+zoom-out — making no trail move, so Back after it moves the camera and the
+entries ahead of the cursor stand; a navigation act from the scene — Back,
+Forward, a teleport — making one trail move, its own (§2.5); K-8's select
+and extend by span; a links card row's anatomy card taking the
 card's place with the symbols standing, at the link's own bytes; the
 selection's one continuous gesture (R11) — a pointer drag over a phrase of a
 shown paragraph selects that phrase's byte span, never its block: the acts
@@ -357,6 +359,38 @@ def run(ctx):
     r.check(ctx.js('window.__skep.scene.isOpen()'), 'Mod+R re-levels the panes and reloads nothing')
     chord(ctx, 'Escape')
     r.check(not ctx.js('window.__skep.scene.isOpen()'), 'Esc dismisses the scene')
+    # the scene's own end moves no trail entry (SC: the scene never moves the camera): Esc leaves the trail as it stood,
+    # so Back from there moves the camera to the entry behind; and a scene ended with the cursor behind the newest entry
+    # keeps the entries ahead of it, so Forward still reaches them. Each on two entries of the first edition at two views
+    ctx.leap(DOC, 1)
+    ctx.leap(DOC, WINDOW[0])
+    t0, before = trail(ctx), state(ctx)
+    open_scene(ctx)
+    chord(ctx, 'Escape')
+    t1, s = trail(ctx), state(ctx)
+    r.check(not s['scene'] and t1['entries'] == t0['entries'] and t1['cursor'] == t0['cursor'] and same_view(before, s),
+            'Esc ends the scene and leaves the trail as it stood: its entries and its cursor unchanged, the camera where it was',
+            {'scene': s['scene'], 'entries': [len(t0['entries']), len(t1['entries'])], 'cursor': [t0['cursor'], t1['cursor']], 'newest': t1['entries'][-1]['label']})
+    behind = t0['entries'][t0['cursor'] - 1]['view']
+    chord(ctx, '[', mods=('Meta',))
+    s = state(ctx)
+    r.check(not same_view(before, s) and same_view({'cam': behind}, s), 'Mod+[ after the scene\'s end moves the camera, to the view of the entry behind',
+            {'cam': s['cam'], 'before': before['cam'], 'behind': behind})
+    ctx.leap(DOC, 1)
+    ctx.leap(DOC, WINDOW[0])
+    chord(ctx, '[', mods=('Meta',))
+    t2, at_behind = trail(ctx), state(ctx)
+    open_scene(ctx)
+    chord(ctx, '-', mods=('Meta',))
+    t3, s = trail(ctx), state(ctx)
+    r.check(not s['scene'] and t2['cursor'] == len(t2['entries']) - 2 and t3['entries'] == t2['entries'] and t3['cursor'] == t2['cursor'],
+            'Mod+- ends a scene opened with the cursor behind the newest entry, and the entry ahead of the cursor stands: the trail unchanged',
+            {'scene': s['scene'], 'entries': [len(t2['entries']), len(t3['entries'])], 'cursor': [t2['cursor'], t3['cursor']]})
+    ahead = t2['entries'][-1]['view']
+    chord(ctx, ']', mods=('Meta',))
+    t4, s = trail(ctx), state(ctx)
+    r.check(t4['cursor'] == t2['cursor'] + 1 and not same_view(at_behind, s) and same_view({'cam': ahead}, s), 'Mod+] from there moves the camera to the entry ahead, at its view',
+            {'cursor': [t2['cursor'], t4['cursor']], 'cam': s['cam'], 'ahead': ahead})
     # a navigation act from the scene dismisses it and makes its own trail move alone (foundations §2.2, §2.5): Back goes
     # one entry back, nothing pushed or dropped, and Forward returns to the entry it left — each entry a view of its own
     ctx.leap(DOC, WINDOW[0])
@@ -393,6 +427,6 @@ def run(ctx):
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', 'Mod+C']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', 'Mod+C']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

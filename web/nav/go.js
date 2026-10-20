@@ -12,8 +12,8 @@
 // trail's first entry (W-01), so Back after the first teleport returns to
 // it; Back, Forward and a trail jump move the cursor and re-take the
 // departed view. Each act makes ONE trail move, its own push or cursor move:
-// the scene standing over the plane is dismissed, "a teleport dismissing the
-// scene first" (§2.5), and pushes nothing of its own.
+// the scene standing over the plane is ended first, "a teleport dismissing
+// the scene first" (§2.5), and its end moves no entry (SC).
 // Carries: the wireframe's §11 (`leapTo`, `goHome`), §18 `followLink`.
 // Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10.
 
@@ -38,8 +38,8 @@ let arrival = null;
 export const arrivalMark = () => arrival;
 export function clearArrival() { arrival = null; }
 
-/** the chrome a navigation act clears first: the standing overlay, and the scene — dismissed, so the act's own trail move is its one */
-function dismissChrome() { HOST.dismiss(); SCENE.dismiss(); }
+/** the chrome a navigation act clears first: the standing overlay, and the scene, whose end moves no trail entry — so the act's own trail move is its one */
+function dismissChrome() { HOST.dismiss(); SCENE.close(); }
 
 /**
  * The view that reads a document at a position.
