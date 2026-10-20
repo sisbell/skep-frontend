@@ -121,7 +121,7 @@ def main():
         rows = [[k, v.get('em_px_measured'), v.get('worst_px'), (v.get('containment') or {}).get('mounted'), (v.get('containment') or {}).get('intersecting_pairs'), len((v.get('containment') or {}).get('blocks_cut') or []), len((v.get('containment') or {}).get('corners_missing') or []), len((v.get('containment') or {}).get('corners_clipped') or []), len((v.get('containment') or {}).get('corners_into') or []), (v.get('containment') or {}).get('worst_overflow_px')] for k, v in lay['drift'].items()]
         L.append(table(rows, ['level', 'em px measured', 'worst drift px', 'mounted', 'intersecting', 'blocks cut', 'corners missing', 'corners clipped', 'corners into a box', 'worst overflow px']))
         L.append(f"\nContinuous zoom: `{json.dumps(lay.get('sweep'))}`; beams: `{json.dumps(lay.get('beams'))}`; the corner held: `{json.dumps(lay.get('corner_held'))}`.\n")
-        L.append(f"The handoff (blocks on their bars) per level: `{json.dumps({k: v.get('handoff') for k, v in lay['drift'].items()})}`; the mount steps: `{json.dumps(lay.get('mount_steps'))}`.\n")
+        L.append(f"The handoff (blocks on their bars) per level: `{json.dumps({k: v.get('handoff') for k, v in lay['drift'].items()})}`; the mount steps: `{json.dumps(lay.get('mount_steps'))}`; over the stand-in article (px at the layout size): `{json.dumps(lay.get('handoff_stand_in'))}`.\n")
     rd = (cases.get('rendered') or {}).get('figures') or {}
     if rd:
         L.append('## Class 1 — rendered\n')

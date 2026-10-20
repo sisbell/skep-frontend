@@ -33,7 +33,11 @@ first lines, the owner's places. Then, on the guest's page:
     and no C-33 mark, none of the owner's bytes anywhere in the page, the
     mirror's item naming the run; the placeholder shown, and every row of
     the article inside its box — marked, waiting on the placeholder set in the
-    article's flow taller than the run it occupies;
+    article's flow taller than the run it occupies; the content after the run
+    opening with a separator alone, a block that sets no line, the margins
+    about it collapsing into one as P-LAY collapses an empty row's — the
+    block after it as far below the placeholder as its bars stand below the
+    run's, never the empty block's gap further;
 (f) the guest's own acts: every link at the first edition drawn as its
     owner's, never "you"; C-39's face at the run with the placeholder's own
     arm beneath; "who wrote this?" answering over a block.
@@ -52,6 +56,22 @@ STRETCH = 24
 NAMES = 12
 GUEST_CALLS = ['boards', 'fingerprint', 'health', 'probe', 'places']
 PLACEHOLDER = '#domlayer article[data-addr="%s"] .withheld[data-pos="%d"]' % (DOC, WINDOW[0])
+# how far the space between two blocks may stand from the margin P-LAY lays there, in px at the layout size
+GAP_TOL_PX = 0.5
+# the first edition's mounted article after the run as the person meets it, beside the canvas's own bars for it
+# (`barsOf`), in px at the layout size: the block after the placeholder — its position, its text, its height, the lines
+# P-LAY sets it — the block after that, and the space between the placeholder's bottom and that block's top, in the
+# article and between their bars
+EMPTY_AFTER_RUN = '''(() => {
+  const S = window.__skep, m = S.mounted(%s), h = S.barsOf(%s), face = document.querySelector(%s);
+  const empty = face && face.nextElementSibling, next = empty && empty.nextElementSibling;
+  if (!m || !h || !empty || !next) return null;
+  const s = S.view.camera().scale / m.lay, q = (e) => e.getBoundingClientRect();
+  const bar = (e) => h.bars.find((b) => b.pos === Number(e.dataset.pos)) || null, run = bar(face), after = bar(next), none = bar(empty);
+  return {space: (q(next).top - q(face).bottom) / s, bars_space: run && after && after.top != null ? (after.top - (run.top + run.height)) / s : null,
+          empty: {pos: Number(empty.dataset.pos), text: empty.textContent, height: q(empty).height / s, bar_lines: none ? none.lines : null},
+          next: {pos: Number(next.dataset.pos), tag: next.tagName.toLowerCase()}};
+})()''' % (json.dumps(DOC), json.dumps(DOC), json.dumps(PLACEHOLDER))
 
 
 def squash(s):
@@ -192,9 +212,17 @@ def run(ctx):
     ov = ctx.js('window.__skep.overlapCheck()')
     r.check(not ov['blocks_cut'], '(e) containment at guest class: every row of the first edition — the placeholder and the text after it among them — lies inside its clip and its box',
             {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']}, xfail=XFAIL_FACE)
+    # the content after the run opens with a separator alone: the margins about that empty block collapse into one, as
+    # P-LAY collapses an empty row's, so the block after it stands as far below the placeholder as its bars stand below
+    # the run's — the larger of their margins apart, never the empty block's gap more
+    gap = ctx.js(EMPTY_AFTER_RUN)
+    empty = bool(gap) and gap['empty']['pos'] == WINDOW[0] + WINDOW[1] and gap['empty']['text'] == '' and gap['empty']['height'] <= GAP_TOL_PX and gap['empty']['bar_lines'] == 0
+    r.check(empty, '(e) after the run the content opens with a separator alone: a block of no text that sets no line, in the article and in P-LAY\'s bars', gap)
+    r.check(empty and gap['bars_space'] is not None and abs(gap['space'] - gap['bars_space']) <= GAP_TOL_PX,
+            f'(e) the margins about that empty block collapse into one: the block after it stands below the placeholder as its bars stand below the run\'s, at the layout size, {GAP_TOL_PX} px either way', gap)
     r.figures['shots'].append(ctx.shot('guest/window-run.png'))
     r.figures['run'] = {'placeholder': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': sum(1 for s in stretches if s in legit), 'mirror_item': item[:160], 'shown': vis,
-                        'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px']}
+                        'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px'], 'after_run': gap}
 
     # (c) the LEAP box at the first edition: no HOME level
     ctx.leap(DOC, WINDOW[0])

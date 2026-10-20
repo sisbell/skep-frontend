@@ -34,7 +34,13 @@ above (em 7 → 6), every block of every mounted article whose top lies
 inside its clip stands on the canvas's own bars for it — its top and its
 height within HANDOFF_TOL_PX of its bars', and as many lines; a withheld run's
 face and the blocks after it are left out, its height at reading scale the
-design's open question (F2.1-i: the bars take its true width). THE FRAME
+design's open question (F2.1-i: the bars take its true width). And over a
+stand-in article no document on the board shows the gate — a paragraph whose
+others' count drops below its last line, a separator alone, a paragraph after
+them — set on the text layer as T-LAYER mounts an article and taken down in
+the one evaluation that measures it: every block stands on P-LAY's lines for
+it, the empty one's margins collapsing into one, and the count stands inside
+its block. THE FRAME
 ORDER (law 13): the frames each step across the mount threshold draws show
 no document both as bars under its own mounted text and none yielded to
 text that is not mounted. THE LABELS (F-9 and foundations §2.1: each label
@@ -82,7 +88,8 @@ The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `arrivalAnchors`, `visible`, `barsOf`, `labels`, `scene.at`,
 `scene.ties`, the frame buffer, `beamLabels`) save the trail's, which reads
 the canvas's pixels here, the symbols', which reads the article's order
-here, and the click cues', which read the computed style here; the
+here, the click cues', which read the computed style here, and the
+stand-in's, which sets its article and reads its blocks here; the
 thresholds are here. The beam-label and shared-box checks are
 marked with the page issues they wait on and count as expected while those
 stand."""
@@ -95,6 +102,8 @@ LEVELS_EM = [9, 12, 18, 30]
 DRIFT_TOL_PX = 0.5
 ANCHOR_TOL_PX = 0.5
 HANDOFF_TOL_PX = 1.0
+# the stand-in article's column, in characters of its face: P-LAY's floor for a line
+STAND_IN_CPL = 52
 # the article's one line height, a ratio of each element's own size, and how far a measured one may stand from it
 LINE_RATIO, LINE_RATIO_TOL = 1.35, 0.01
 # a line box measured against P-LAY's for its size, in px at the layout size: a quarter of the engine's 1/64 px grid
@@ -177,6 +186,63 @@ def handoff(ctx):
                 off.append({'addr': addr, 'pos': t['pos'], 'text_top': t['top'], 'bars_top': b and b['top'], 'text_height': t['height'], 'bars_height': b and b['height'],
                             'text_lines': t['lines'], 'bars_lines': b and b['lines'], 'line_px': h['line_px']})
     return {'compared': compared, 'off': off, 'left_out': left_out}
+
+
+def stand_in_view(ctx):
+    """THE HANDOFF over a stand-in article, what no document on the board shows the gate — no other party's link touches
+    a document the gate mounts, so no count stands in one: T-ARTICLE's article of three paragraphs, the first two full
+    lines of its column with its others' count after them, the second a separator alone, the third three lines, set on
+    the text layer as T-LAYER mounts an article — at LAY_FS, its column STAND_IN_CPL characters of its face — measured
+    and taken down in the one evaluation, so no frame draws it; beside P-LAY's layout of the same article's plan. Each
+    block's top below the article's first line, its height and its count of lines, in px at the layout size, on either
+    side; whether P-LAY sets the first block's count on a line of its own; the count's rect beside its block's"""
+    return ctx.js('''(async () => {
+      const A = await import('./text/article.js'), L = await import('./plane/layout.js');
+      const cpl = %d, account = '1.0.1', addr = '1.0.1.0.999999', word = 'aaaaaaaaa', enc = new TextEncoder();
+      let pos = 1;
+      const blocks = [10, 0, 12].map((n) => { const text = Array(n).fill(word).join(' '), b = {pos, width: enc.encode(text).length + 2, kind: 'para', text, origin: null}; pos += b.width; return b; });
+      const d = {addr, account, kind: 'edition', label: '', standing: 'public', system: false, extent: pos - 1, linkPositions: 0, meta: null, runs: [], from: 1, to: pos,
+                 blocks, origins: [], originsFor: null, links: new Set(), linksRead: true, members: 1, whole: pos - 1, rev: 0, refused: null};
+      const v = {selected: null, focus: null, marks: [], symbols: [], countAt: (b) => ({n: b.pos === blocks[0].pos ? 3 : 0, social: false}), wholeLinks: 0,
+                 sessionAccount: account, localTrust: true, notebook: true, scene: false, originKinds: new Map(), deviceLabel: 'dev-notebook', ownerFingerprint: 'e4272902a11439e5', keyPresent: true};
+      const lay = L.layoutOf(A.articlePlan(d, v, account), {fs: 1, cpl, lineH: L.LINE_H, tw: cpl * L.CHAR_W, x0: 0, y0: 0, y1: Infinity});
+      const plan = blocks.map((b) => { const x = lay.blocks.get(b.pos), first = lay.lines[x.first], last = lay.lines[x.first + x.n - 1];
+        return {pos: b.pos, lines: x.n, top: x.n ? first.top * L.LAY_FS : null, height: x.n ? (last.top + last.h - first.top) * L.LAY_FS : 0, float_line: x.n > 0 && last.w === 0}; });
+      const art = document.createElement('article');
+      art.className = 'dtext';
+      Object.assign(art.style, {width: cpl + 'ch', fontSize: L.LAY_FS + 'px', lineHeight: String(L.LINE_H)});
+      art.innerHTML = A.articleHTML(d, v, account);
+      document.getElementById('domlayer').appendChild(art);
+      try {
+        const top = art.getBoundingClientRect().top, q = (e) => { const r = e.getBoundingClientRect(); return {x: r.left, y: r.top - top, w: r.width, h: r.height}; };
+        const text = blocks.map((b) => { const e = art.querySelector(`.run > .sp[data-pos="${b.pos}"]`); if (!e) return {pos: b.pos, top: null, height: null, lines: null};
+          const r = q(e); return {pos: b.pos, top: r.y, height: r.h, lines: Math.round(r.h / parseFloat(getComputedStyle(e).lineHeight))}; });
+        const c = art.querySelector('.others'), host = c && c.closest('.sp');
+        return {plan, text, count: c ? {pos: host ? Number(host.dataset.pos) : null, rect: q(c), block: host ? q(host) : null} : null};
+      } finally { art.remove(); }
+    })()''' % STAND_IN_CPL)
+
+
+def on_lines(t, p):
+    """does a block as the DOM sets it stand on P-LAY's lines for it: as many lines, its height and — where P-LAY sets it a
+    line — its top within HANDOFF_TOL_PX?"""
+    if p is None or t['lines'] is None:
+        return False
+    return t['lines'] == p['lines'] and abs(t['height'] - p['height']) <= HANDOFF_TOL_PX and (p['top'] is None or abs(t['top'] - p['top']) <= HANDOFF_TOL_PX)
+
+
+def stand_in_holds(ctx, r):
+    """THE HANDOFF's checks over the stand-in article; its figures"""
+    v = stand_in_view(ctx)
+    a, b, c = v['plan']
+    staged = a['float_line'] and a['lines'] == 3 and b['lines'] == 0 and c['lines'] >= 2
+    r.check(staged, 'the stand-in: P-LAY sets its first block\'s others\' count on a line of its own below its two lines, its second block — a separator alone — on no line, its third on two lines or more', v['plan'])
+    plan = {p['pos']: p for p in v['plan']}
+    off = [dict(t, plan=plan.get(t['pos'])) for t in v['text'] if not on_lines(t, plan.get(t['pos']))]
+    r.check(staged and not off, f'the stand-in: each block — the count\'s, the empty one, the one after them — stands on P-LAY\'s lines for it: its top and its height within {HANDOFF_TOL_PX} px, and as many lines', off)
+    n = v['count']
+    r.check(bool(n) and n['pos'] == a['pos'] and n['block'] is not None and inside(n['rect'], n['block']), 'the stand-in: the others\' count stands inside its block, over none of the blocks after it', n)
+    return {'blocks': v['text'], 'plan': v['plan'], 'count': n}
 
 
 def label_view(ctx):
@@ -724,6 +790,7 @@ def run(ctx):
     crossed(12.5, 'from below')
     r.check(DOC in ctx.js('window.__skep.mountedAddrs()'), 'em 12.5: mounted')
     r.figures['mount_steps'] = steps
+    r.figures['handoff_stand_in'] = stand_in_holds(ctx, r)
     cap = ctx.js('window.__skep.constants')
     r.figures['constants'] = cap
     # the projection's places: no two indexed documents of the account share a box (reading order seeded by the prefix — M2's site)

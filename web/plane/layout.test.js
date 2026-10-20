@@ -2,17 +2,18 @@
 // block's own size's, on the 1/64 px grid as the engine lays it out (the
 // figures measured on the gate's machine); the head's lines before the first
 // block; a heading's margins nearer the block below it, the gap after every
-// other block at its own size; a line holding exactly `cpl` characters, the
-// space after its last word hanging; a heading wrapped at its own size; a
-// break after a hyphen inside a word and none after a slash; an inline-block
-// set whole; a float beside the last line or on a line of its own, as tall as
-// its own line box; a withheld run as bars of its width; the bars at their
-// lines and none past the article's clip; the measurements the CSS reads, one
-// source. THE FACE: an article its estimate cannot hold fitted at the
-// narrowest column that holds it — its lines inside the room, the column
-// filling its width, one character narrower overflowing, no bar cut — and one
-// its estimate holds keeping the estimate; the positions a plan does not hold
-// yet narrowing the face.
+// other block at its own size; a block that sets no line (a separator alone)
+// taking no room, its margins collapsing with its neighbours'; a line holding
+// exactly `cpl` characters, the space after its last word hanging; a heading
+// wrapped at its own size; a break after a hyphen inside a word and none after
+// a slash; an inline-block set whole; a float beside the last line or on a
+// line of its own, as tall as its own line box; a withheld run as bars of its
+// width; the bars at their lines and none past the article's clip; the
+// measurements the CSS reads, one source. THE FACE: an article its estimate
+// cannot hold fitted at the narrowest column that holds it — its lines inside
+// the room, the column filling its width, one character narrower overflowing,
+// no bar cut — and one its estimate holds keeping the estimate; the positions
+// a plan does not hold yet narrowing the face.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { metricsFor, layoutOf, heightOf, fitted, wrap, bars, breakBetween, cssMeasures, lineBox, MEASURE, LINE_H, LAY_FS, CHAR_W } from './layout.js';
@@ -88,6 +89,16 @@ test('a heading stands nearer the block it heads than the block above it; the ga
   const two = layoutOf([heading(10, '# Title'), heading(20, '## Part', MEASURE.h3)], metrics(52));
   const t2 = (/** @type {number} */ pos) => two.lines[/** @type {{first: number}} */ (two.blocks.get(pos)).first].top;
   assert.ok(close(t2(20) - t2(10) - lineBox(MEASURE.h2), MEASURE.headingBefore * MEASURE.h3), 'a heading under a heading: the larger room, the lower one\'s above it');
+});
+
+test('a block that sets no line takes no room: its margins collapse with its neighbours\', the block after it the larger of their margins below the block before', () => {
+  const top = (/** @type {import('./layout.js').Layout} */ L, /** @type {number} */ pos) => L.lines[/** @type {{first: number}} */ (L.blocks.get(pos)).first].top;
+  const bare = layoutOf([para(1, 'aaaa'), para(10, 'bbbb')], metrics(52));
+  const sep = layoutOf([para(1, 'aaaa'), para(6, ''), para(10, 'bbbb')], metrics(52));
+  assert.deepEqual(sep.blocks.get(6), { first: 1, n: 0 }, 'a separator alone sets no line');
+  assert.ok(close(top(sep, 10), top(bare, 10)) && close(top(sep, 10) - LINE_H, MEASURE.gap), 'the paragraph after it one gap below the paragraph before, as with no block between them');
+  const head = layoutOf([para(1, 'aaaa'), para(6, ''), heading(10, '## Part', MEASURE.h3)], metrics(52));
+  assert.ok(close(top(head, 10) - LINE_H, MEASURE.headingBefore * MEASURE.h3), 'a heading after it: its own room above it, the larger, alone');
 });
 
 test('a heading\'s lines are its own size\'s line boxes', () => {

@@ -66,10 +66,13 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    is the article's one unitless line height (P-LAY's LINE_H, set on the article by T-LAYER) of its own size — the
    chrome inside a line (the hairline's label, C-33's mark, a symbol) is set at a line height of 1, so it never
    deepens its line; a symbol's box is one character wide whatever face sets its ⟡ — a heading stands nearer the
-   block it heads than the block above it, and a block contains its float (the others' count): the lines P-LAY lays
-   the bars out on (foundations §2.4: the handoff moves no line). An article on the plane takes the pointer at reading
-   scale alone, the `legible` class T-LAYER sets at the readable em 8 and above; below it the layer's `none` holds, and
-   a press on its text falls to the canvas as one on its bars does (foundations §2.4: "bars or mounted text alike"). */
+   block it heads than the block above it; the block holding the others' count, a float, is a formatting context of
+   its own, so the count stands inside it and the block after it keeps its lines; every other block is a plain block,
+   so the margins about one that sets no line (a separator alone) collapse into one, as P-LAY collapses an empty
+   row's: the lines P-LAY lays the bars out on (foundations §2.4: the handoff moves no line). An article on the plane
+   takes the pointer at reading scale alone, the `legible` class T-LAYER sets at the readable em 8 and above; below it
+   the layer's `none` holds, and a press on its text falls to the canvas as one on its bars does (foundations §2.4:
+   "bars or mounted text alike"). */
 #domlayer { position:fixed; inset:0; overflow:hidden; pointer-events:none; contain:strict; z-index:3; }
 .dtext { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; overflow:hidden; box-sizing:content-box;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color:#b9c1cb; -webkit-font-smoothing:antialiased; cursor:text; user-select:text; }
@@ -79,7 +82,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .hd .st, .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:var(--head); display:block; }
 .dtext .hd .pres { color:#b9c1cb; }
 .dtext .run { display:block; }
-.dtext .sp { display:flow-root; margin:0 0 var(--gap); border-radius:2px; font-weight:400; }
+.dtext .sp { display:block; margin:0 0 var(--gap); border-radius:2px; font-weight:400; }
+.dtext .sp:has(> .others) { display:flow-root; }
 .dtext h2.sp, .dtext h3.sp, .dtext h4.sp, .dtext h5.sp, .dtext h6.sp, .dtext h7.sp { font-size:1em; font-weight:600; color:#cfd6df; margin:var(--heading-before) 0 var(--heading-after); }
 .dtext h2.sp { font-size:var(--h2); } .dtext h3.sp { font-size:var(--h3); }
 /* the selection's bytes are the platform's own highlight; a block it touches carries the outline as its cue */
