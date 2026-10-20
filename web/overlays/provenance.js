@@ -56,9 +56,9 @@ export async function wrote(addr, pos, width = null) {
   });
   const html = `<span class="label">${esc(t('B1.who-wrote'))} · ${esc(addr)} · ${esc(t('F.position', { p: sp.ordinal }))}</span>` +
     rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${esc(r.text)}${r.same ? ` <button data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
-  /** @type {Record<string, (el: HTMLElement) => void>} */
+  /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  rows.forEach((r, i) => { acts['src' + i] = () => GO.leapTo(r.o, { how: 'leap' }); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
+  rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => GO.leapTo(r.o, { how: 'leap', byKey }); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
   HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts });
 }
 
@@ -79,8 +79,8 @@ export async function uses(addr, pos, width = null) {
     `<div class="answer" data-string="${users.length ? 'B1.uses' : 'B1.uses.none'}">${esc(answer)}</div>` +
     (users.length ? `<div class="acts">${users.map((u, i) => `<button data-run="u${i}">${esc(u)}</button>`).join('')}</div>` : '') +
     `<div class="clause" data-string="B1.C-72">${esc(t('B1.C-72'))}</div>`;
-  /** @type {Record<string, (el: HTMLElement) => void>} */
+  /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  users.forEach((u, i) => { acts['u' + i] = () => GO.leapTo(u, { how: 'leap' }); });
+  users.forEach((u, i) => { acts['u' + i] = (_el, byKey) => GO.leapTo(u, { how: 'leap', byKey }); });
   HOST.show({ kind: 'card', id: 'provenance:uses', anchor, html, acts });
 }

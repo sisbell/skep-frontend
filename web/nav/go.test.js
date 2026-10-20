@@ -5,6 +5,9 @@
 // the follow's entry lights it again on the same span (a mutant that
 // re-lights it from the entry's position alone turns red); a link naming the
 // far document whole lights it at the document's first position, no width.
+// Every teleport a key made draws the focus ring at its landing, and one the
+// pointer made puts it out (a mutant that drops any one teleport's word of
+// the key turns red; one that draws the ring at every landing turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -15,6 +18,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as LK from '../links/links.js';
 import * as TRAIL from './trail.js';
+import * as WALK from './walk.js';
 import * as GO from './go.js';
 
 const D = '1.0.1.0.3', FAR = '1.0.1.0.127', CITE = '1.1.0.1.0.1.0.3.13';
@@ -88,5 +92,21 @@ test('a LEAP puts the arrival out; Back to the follow\'s entry lights it again o
 test('a link naming the far document whole lights the arrival at the document\'s first position, no width', async () => {
   await run(GO.follow(drawn(WHOLE)));
   assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 1, width: null, link: WHOLE });
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a teleport a key made draws the focus ring at its landing; one the pointer made puts it out', async () => {
+  /** the teleport run to its end, and whether the ring stands at its landing */
+  const ring = async (/** @type {Promise<unknown>} */ act) => { await run(act); return WALK.ringShown(); };
+  assert.equal(await ring(GO.leapTo(D, { how: 'key', byKey: true })), true, 'Enter on a document');
+  assert.equal(await ring(GO.leapTo(FAR, { how: 'click' })), false, 'a click on a place');
+  assert.equal(await ring(GO.back(true)), true, 'Mod+[');
+  assert.equal(await ring(GO.forward()), false, 'a click on › forward');
+  assert.equal(await ring(GO.follow(drawn(PASSAGE), null, true)), true, 'Mod+Enter');
+  assert.equal(await ring(GO.wholeBoard(true)), true, 'Mod+0');
+  assert.equal(await ring(GO.home(true)), true, 'Mod+Shift+H');
+  assert.equal(await ring(GO.toAccount('1.0.1', true)), true, 'Enter on an account');
+  assert.equal(await ring(GO.toTrailEntry(2, true)), true, 'Mod+2');
+  assert.equal(TRAIL.current()?.label, 'HOME', 'Mod+2 moved the cursor to HOME\'s entry');
   assert.deepEqual(fake.unanswered, []);
 });

@@ -79,7 +79,7 @@ export async function open(s, anchorEl) {
   HOST.show({
     kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: near, pos: nearPos, width: nearWidth } }, html,
     acts: {
-      follow: (el) => GO.follow(s, el),
+      follow: (el, byKey) => GO.follow(s, el, byKey),
       beside: () => { if (far && !dead) SCENE.open(near, far, { posA: nearPos, widthA: nearWidth, posB: farEnd && !farEnd.whole ? farEnd.ordinal : null }); },
     },
   });

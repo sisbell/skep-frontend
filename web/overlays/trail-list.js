@@ -3,7 +3,8 @@
 // overlay conjured beside Back and Forward and gone with its end like every
 // other — never a toggle (the wireframe's `t` toggle re-cut, K-41 Mod+Y);
 // every entry numbered newest-first, the same numbers as the pips and the
-// chords Mod+1 … Mod+9; Enter or a click jumps (a cursor move, never a push).
+// chords Mod+1 … Mod+9; Enter or a click jumps (a cursor move, never a push),
+// the ring drawn at the landing where a key made the jump.
 // Carries: the wireframe's §11 `renderTrail`. Rules: FP-1, FP-2, FP-13.
 
 import * as HOST from './host.js';
@@ -19,9 +20,9 @@ export function open(byKey = true) {
     (rows.length
       ? `<ul class="rows">${rows.map((r) => `<li><button data-run="j${r.n}" aria-current="${r.current}"><span class="k">${r.n <= 9 ? r.n : '·'}</span> ${esc(r.entry.addr)}${r.entry.pos != null ? ` · ${esc(t('F.position', { p: r.entry.pos }))}` : ''} <span class="dim">${esc(r.entry.label || '')}</span></button></li>`).join('')}</ul>`
       : `<div class="dim">—</div>`);
-  /** @type {Record<string, (el: HTMLElement) => void>} */
+  /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  for (const r of rows) acts['j' + r.n] = () => { GO.toTrailEntry(r.n); };
+  for (const r of rows) acts['j' + r.n] = (_el, byKey) => { GO.toTrailEntry(r.n, byKey); };
   const anchorEl = document.getElementById('line-back');
   HOST.show({ kind: 'list', id: 'trail-list', anchor: anchorEl ? { el: anchorEl } : null, html, acts, takeFocus: byKey });
 }

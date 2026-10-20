@@ -4,7 +4,12 @@ on this Mac), then the camera, the focus, the trail and the one line read
 back; the IME guard, on the plane and in the LEAP box; a bare key does
 NOTHING but show the K-9 line; Enter on the LEAP box as opened lands in
 place, ↓ choosing the first level, and a typed account address a teleport
-with its trail entry (foundations §2.2, §2.3); the scene's own end — Esc,
+with its trail entry (foundations §2.2, §2.3); the focus ring drawn at the
+focus every teleport a key made lands — the box's Enter, Mod+[ and Mod+],
+Mod+0, Mod+Shift+H, Enter on the line's ‹ back (K-22), Mod+3, Enter on a
+trail list row (K-41), Enter on a document (K-7) — and at the focus
+PageDown re-takes, and no ring after a click on ‹ back (D5 §4 rule 2: drawn
+once a key has moved the focus); the scene's own end — Esc,
 zoom-out — making no trail move, so Back after it moves the camera and the
 entries ahead of the cursor stand; a navigation act from the scene — Back,
 Forward, a teleport — making one trail move, its own (§2.5); K-8's select
@@ -57,6 +62,25 @@ def chord(ctx, key, mods=(), code=None, text=None):
     ctx.drv.key(key, code=code or CODES.get(key), mods=mods, text=text)
     ctx.settle()
     ctx.frames(2)
+
+
+def ring(ctx):
+    """the focus ring as the last frame drew it — the box on screen it outlined, None where it drew none — beside the
+    focus and the focused element's box on screen, read from the projection and the camera: the document's box for a
+    document, a span or a link, the account's cell, the board's"""
+    return ctx.js('''(() => { const s = window.__skep, f = s.view.focus(), c = s.view.camera(), p = s.view.viewport();
+      const b = !f ? null : f.kind === 'account' ? s.accountCell(f.addr) : f.kind === 'board' ? s.boardCell(f.addr) : s.boxOf(f.addr);
+      return {ring: s.view.ring(), focus: f && {kind: f.kind, addr: f.addr, pos: f.pos},
+              box: b && {x: (b.x - c.x) * c.scale + p.VW / 2, y: (b.y - c.y) * c.scale + p.VH / 2, w: b.w * c.scale, h: b.h * c.scale}}; })()''')
+
+
+def ring_drawn(ctx, r, made):
+    """the check that the ring stands at the focus a key moved, around the focused element's box (D5 §4 rule 2: drawn
+    once a key has moved the focus, the platform's focus-visible rule)"""
+    g = ring(ctx)
+    a, b = g['ring'], g['box']
+    r.check(bool(a) and bool(b) and all(abs(a[k] - b[k]) <= 0.5 for k in ('x', 'y', 'w', 'h')), 'the ring is drawn at the focus %s moved, around its box' % made, g)
+    return g
 
 
 def phrase_at(ctx, addr):
@@ -409,6 +433,7 @@ def run(ctx):
     s = state(ctx)
     lod = ctx.js('window.__skep.view.lod()')['name']
     r.check(not s['leap'] and s['focus'] and s['focus']['kind'] == 'board' and lod in ('far', 'far~mid'), 'Mod+L, ↓, Enter goes to the first level the box lists: the whole board', {'focus': s['focus'], 'lod': lod})
+    ring_drawn(ctx, r, 'Mod+L, ↓, Enter')
     chord(ctx, 'k', mods=('Meta',))
     r.check(state(ctx)['leap'], 'Mod+K opens the LEAP box too')
     ctx.js('(() => { const i = document.getElementById("leapq"); i.value = ""; })()')
@@ -423,6 +448,7 @@ def run(ctx):
     r.check('1.0.1.0.19' in s['line'], 'the one line\'s address names the landing', s['line'][:120])
     r.check(s['trail'] == trail_before + 1, 'the LEAP pushed a trail entry', {'before': trail_before, 'after': s['trail']})
     r.check(ctx.js('window.__skep.view.lod()')['name'] == 'near', 'the landing is at reading scale')
+    ring_drawn(ctx, r, 'Enter on a typed address')
     # a typed account's address is a teleport too (foundations §2.2): the account's region, an entry on the trail, and Back
     # returns to the view the LEAP left
     left, t0 = state(ctx), trail(ctx)
@@ -437,36 +463,71 @@ def run(ctx):
             and bool(newest) and newest['addr'] == SECOND_ACCOUNT and same_view({'cam': newest['view']}, s),
             'a typed account address LEAPs to its region and pushes its entry: the focus, the trail\'s newest entry and the camera are the account\'s',
             {'focus': s['focus'], 'cursor': [t0['cursor'], t1['cursor']], 'newest': newest and newest['addr']})
+    ring_drawn(ctx, r, 'Enter on a typed account address')
     chord(ctx, '[', mods=('Meta',))
     s = state(ctx)
     r.check(trail(ctx)['cursor'] == t0['cursor'] and same_view(left, s), 'Mod+[ from the account returns to the entry the LEAP left, at the view it left', {'cursor': s['trail'], 'cam': s['cam'], 'left': left['cam']})
+    ring_drawn(ctx, r, 'Mod+[ from the account')
     # ---- WHOLE BOARD and HOME (K-13, K-14) --------------------------------------------------------
     chord(ctx, '0', mods=('Meta',))
     s = state(ctx)
     r.check(ctx.js('window.__skep.view.lod()')['name'] in ('far', 'far~mid') and s['focus'] and s['focus']['kind'] == 'board', 'Mod+0 shows the whole board at the clamp (the far band on this viewport); the focus is the board', {'lod': ctx.js('window.__skep.view.lod()')['name'], 'focus': s['focus']})
+    ring_drawn(ctx, r, 'Mod+0')
     chord(ctx, 'H', mods=('Meta', 'Shift'))
     s = state(ctx)
     r.check(s['focus'] and s['focus']['kind'] == 'account' and s['focus']['addr'] == '1.0.1', 'Mod+Shift+H goes HOME: the acting account\'s region', s['focus'])
     r.check(ctx.js('window.__skep.view.lod()')['name'] in ('mid', 'far~mid'), 'HOME is the region at mid scale', ctx.js('window.__skep.view.lod()'))
+    ring_drawn(ctx, r, 'Mod+Shift+H')
     # ---- Back / Forward (K-20, K-21) ----------------------------------------------------------------------
     cur = state(ctx)['trail']
     chord(ctx, '[', mods=('Meta',))
     s = state(ctx)
     r.check(s['trail'] == cur - 1 and s['focus']['kind'] == 'board', 'Mod+[ goes back one trail entry (to WHOLE BOARD)', {'cursor': s['trail'], 'focus': s['focus']})
+    ring_drawn(ctx, r, 'Mod+[')
     chord(ctx, ']', mods=('Meta',))
     s = state(ctx)
     r.check(s['trail'] == cur and s['focus']['kind'] == 'account', 'Mod+] goes forward again', {'cursor': s['trail'], 'focus': s['focus']})
+    ring_drawn(ctx, r, 'Mod+]')
+    # the line's ‹ back (K-22): Enter on it, focused by script, is a key's Back, the ring drawn at its landing; a click on it
+    # is the pointer's, and the ring is out. Mod+] after each returns the cursor to HOME's entry
+    ctx.js('window.__skep.lineAct()')
+    ctx.frames(2)
+    focused = ctx.js('(() => { const b = document.getElementById("line-back"); if (b) b.focus(); return !!b && !b.disabled && document.activeElement === b; })()')
+    chord(ctx, 'Enter')
+    s = state(ctx)
+    r.check(focused and s['trail'] == cur - 1 and s['focus']['kind'] == 'board', 'Enter on the line\'s ‹ back goes back one trail entry (to WHOLE BOARD)', {'focused': focused, 'cursor': s['trail'], 'focus': s['focus']})
+    ring_drawn(ctx, r, 'Enter on ‹ back')
+    chord(ctx, ']', mods=('Meta',))
+    button = ctx.js('(() => { const q = document.getElementById("line-back").getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()')
+    ctx.drv.mouse(button['x'], button['y'])
+    ctx.settle()
+    ctx.frames(2)
+    s, g = state(ctx), ring(ctx)
+    r.check(s['trail'] == cur - 1 and s['focus']['kind'] == 'board', 'a click on ‹ back goes back one trail entry (to WHOLE BOARD)', {'cursor': s['trail'], 'focus': s['focus']})
+    r.check(g['ring'] is None, 'a click on ‹ back draws no ring at its landing: the pointer moved the focus', g)
+    chord(ctx, ']', mods=('Meta',))
     # ---- the trail: Mod+1…9 and Mod+Y (K-40, K-41) ------------------------------------------------------
     numbered = ctx.js('window.__skep.trail().numbered')
     chord(ctx, '3', mods=('Meta',), code='Digit3')
     s = state(ctx)
     target = next((n for n in numbered if n['n'] == 3), None)
     r.check(target and s['focus'] and s['focus']['addr'] == target['addr'], 'Mod+3 moves the cursor to the trail\'s third entry (newest first)', {'target': target, 'focus': s['focus']})
+    ring_drawn(ctx, r, 'Mod+3')
     chord(ctx, 'y', mods=('Meta',))
     s = state(ctx)
     r.check(s['overlay'] == 'list', 'Mod+Y opens the trail list', s['overlay'])
     chord(ctx, 'Escape')
     r.check(state(ctx)['overlay'] is None, 'Esc closes the list')
+    # Enter on a row of the list jumps to its entry (K-41), a cursor move: the row is focused by script, as the list opens
+    # with the focus on its first stop
+    t0 = trail(ctx)
+    chord(ctx, 'y', mods=('Meta',))
+    focused = ctx.js('(() => { const b = document.querySelector("#overlay [data-run=j2]"); if (b) b.focus(); return !!b && document.activeElement === b; })()')
+    chord(ctx, 'Enter')
+    s, t1 = state(ctx), trail(ctx)
+    r.check(focused and s['overlay'] is None and t1['cursor'] == len(t0['entries']) - 2 and len(t1['entries']) == len(t0['entries']),
+            'Enter on the trail list\'s second row jumps to the second-newest entry: the list closes, nothing pushed', {'focused': focused, 'overlay': s['overlay'], 'cursor': [t0['cursor'], t1['cursor']], 'entries': len(t1['entries'])})
+    ring_drawn(ctx, r, 'Enter on a trail list row')
     # ---- the walk (K-1 … K-8) -------------------------------------------------------------------------
     ctx.leap(DOC, WINDOW[0])
     f0 = state(ctx)['focus']
@@ -480,6 +541,13 @@ def run(ctx):
     chord(ctx, 'ArrowLeft')
     f2 = state(ctx)['focus']
     r.check(f2 and f2['kind'] == 'document' and f2['addr'] == DOC, '← leaves the span for its document', f2)
+    # Enter on the document the walk holds goes to it (K-7): a teleport, its entry pushed
+    t0 = trail(ctx)
+    chord(ctx, 'Enter')
+    s, t1 = state(ctx), trail(ctx)
+    r.check(s['focus'] and s['focus']['kind'] == 'document' and s['focus']['addr'] == DOC and t1['cursor'] == t0['cursor'] + 1 and t1['entries'][-1]['addr'] == DOC,
+            'Enter on the document the walk holds teleports to it (K-7): its entry pushed, the focus on the document', {'focus': s['focus'], 'cursor': [t0['cursor'], t1['cursor']]})
+    ring_drawn(ctx, r, 'Enter on a document')
     chord(ctx, 'ArrowRight')
     f3 = state(ctx)['focus']
     r.check(f3 and f3['kind'] == 'block' and f3['addr'] == DOC, '→ enters the document at its first span', f3)
@@ -629,6 +697,16 @@ def run(ctx):
     vh = ctx.js('window.__skep.view.viewport().VH')
     r.check(abs((c3['y'] - c2['y']) * c2['scale'] - 0.9 * vh) < 2, 'PageDown pages the view by 0.9 of its height', {'dy_px': (c3['y'] - c2['y']) * c2['scale'], 'vh': vh})
     chord(ctx, 'PageUp')
+    # a camera move a key made re-takes the focus with the ring drawn at it (D5 §4 rules 2, 3): PageDown from a landing the
+    # gate's door made, which draws none, moves the focus to the span then under the view's centre
+    ctx.leap(DOC, WINDOW[0])
+    f0, g0 = state(ctx)['focus'], ring(ctx)
+    chord(ctx, 'PageDown')
+    f1 = state(ctx)['focus']
+    r.check(g0['ring'] is None and bool(f0) and bool(f1) and (f1['kind'], f1['addr'], f1['pos']) != (f0['kind'], f0['addr'], f0['pos']),
+            'PageDown from a landing that drew no ring re-takes the focus at the span now under the view\'s centre', {'from': f0, 'to': f1, 'ring_before': g0['ring']})
+    ring_drawn(ctx, r, 'PageDown')
+    chord(ctx, 'PageUp')
     # ---- the scene (K-62, K-63, K-64) ----------------------------------------------------------------
     open_scene(ctx)
     r.check(ctx.js('window.__skep.scene.isOpen()'), 'the scene opens between the window and its origin')
@@ -707,6 +785,6 @@ def run(ctx):
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', 'Mod+C']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', 'Mod+C']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

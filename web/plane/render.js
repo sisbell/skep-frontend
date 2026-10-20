@@ -44,12 +44,12 @@
 // document's label and bars are drawn or yielded; `stats` names both sets,
 // and the loop holds them against the mounted set at the frame's end; it
 // names the marks, the connections and the labels drawn too, the labels'
-// parts left out with the rule that left each out, and the arrival mark's
-// rects, for the gate. The hit tests read the draw's own rule: a click meets
-// a document's box only where the box stands whole, and a continuation's mark
-// wherever the mark holds its documents. The system account's rows are never
-// drawn (the record §1.8; this lane's cut). The chip is at the document's
-// corner (T-ARTICLE), never here.
+// parts left out with the rule that left each out, the box the focus ring
+// outlined and the arrival mark's rects, for the gate. The hit tests read the
+// draw's own rule: a click meets a document's box only where the box stands
+// whole, and a continuation's mark wherever the mark holds its documents.
+// The system account's rows are never drawn (the record §1.8; this lane's
+// cut). The chip is at the document's corner (T-ARTICLE), never here.
 // Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
 // Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports).
 
@@ -104,8 +104,9 @@ let DPR = 1;
  * mount, `residueMarks` the continuations drawn as marks, `connections` the
  * mid connections drawn, each between two places, `labels` the labels set —
  * the trail's pip numbers among them — `labelsLeftOut` the parts the pass
- * left out, each with the rule that left it out, and `arrival` the rects the
- * arrival mark outlined.
+ * left out, each with the rule that left it out, `ring` the focused element's
+ * box on screen the focus ring outlined, null where it drew none, and
+ * `arrival` the rects the arrival mark outlined.
  */
 export const stats = {
   linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0,
@@ -114,6 +115,7 @@ export const stats = {
   drawn: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]),
   labels: /** @type {import('./labels.js').SetLabel[]} */ ([]),
   labelsLeftOut: /** @type {import('./labels.js').LeftOut[]} */ ([]),
+  ring: /** @type {Rect | null} */ (null),
   arrival: /** @type {Rect[]} */ ([]),
 };
 
@@ -513,7 +515,7 @@ function drawTrail() {
   c.globalAlpha = 1; c.restore();
 }
 
-/** the focus ring at the walk's element once a key has moved it */
+/** the focus ring at the walk's element once a key has moved it — its document's box for a span or a link — `stats.ring` the box it outlined */
 function drawFocus() {
   if (!ctx || !WALK.ringShown()) return;
   const f = WALK.current(); if (!f) return;
@@ -524,6 +526,7 @@ function drawFocus() {
   if (!b) return;
   const X = sx(b.x), Y = sy(b.y), W = b.w * cam.scale, H = b.h * cam.scale;
   ctx.strokeStyle = COL.focus; ctx.lineWidth = 2.5; rrect(ctx, X - 3, Y - 3, W + 6, H + 6, Math.min(8, W * 0.06)); ctx.stroke();
+  stats.ring = { x: X, y: Y, w: W, h: H };
 }
 
 /**
@@ -557,7 +560,7 @@ export function draw() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, VW, VH);
   ctx.textBaseline = 'alphabetic';
-  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.drawn = []; stats.yielded = []; stats.labels = []; stats.labelsLeftOut = []; stats.arrival = [];
+  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.drawn = []; stats.yielded = []; stats.labels = []; stats.labelsLeftOut = []; stats.ring = null; stats.arrival = [];
   /** @type {Pass} */
   const pass = { labels: [], shapes: [] };
   drawBoard(pass);

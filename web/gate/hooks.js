@@ -1,12 +1,14 @@
 // G-HOOKS — the gate's read-only hooks (the structure record §3.2 "G-HOOKS",
 // §6.3; S-22 (a): loaded by `import()` under `?gate=` alone). ENGINE-BOUND.
 // `window.__skep`: the model's held records, the mounted articles' text, the
-// mirror's items, the camera and the focus, S1's `driftSample` and
-// `overlapCheck` (the measuring code moved into the page), the visibility
-// oracle `visible`, the beams' anchors beside their spans' own rects and the
-// labels the beams set at their bundles' ends (`beamLabels`), the arrival
-// mark's outline beside its link's marked words (`arrivalAnchors`; the
-// `go.leapTo` door lands as a follow does where it names a link), the handoff
+// mirror's items, the camera and the focus, the focus ring the canvas drew
+// (`view.ring`: the box on screen it outlined, null where it drew none),
+// S1's `driftSample` and `overlapCheck` (the measuring code moved into the
+// page), the visibility oracle `visible`, the beams' anchors beside their
+// spans' own rects and the labels the beams set at their bundles' ends
+// (`beamLabels`), the arrival mark's outline beside its link's marked words
+// (`arrivalAnchors`; the `go.leapTo` door lands as a follow does where it
+// names a link), the handoff
 // (`barsOf`: the canvas's own bars for a document beside its mounted
 // article's blocks), the reading scene's runs and the ends it set level
 // (`scene.pairs`), a passage's line in one of its panes (`scene.at`) and its
@@ -325,12 +327,18 @@ export function install(deps) {
   }
   /** redraw the links card where it stands open at a document, as its own acts do after a change */
   function redrawCard(/** @type {string} */ addr) { if (LINKS.isOpen(addr)) LINKS.render(); }
-  /** S3's camera path: fn(u) moves the camera each frame for ms; the frames of the phase summarized */
+  /**
+   * S3's camera path: fn(u) moves the camera each frame for ms; the frames of
+   * the phase summarized, its first two left out. The phase's frames are the
+   * newest run the buffer holds under its name — every frame of a phase is
+   * drawn and carries its name, and no frame either side of the run carries
+   * it — found by name, never by index: the buffer drops its oldest frames at
+   * its cap.
+   */
   async function runPath(/** @type {string} */ name, /** @type {number} */ ms, /** @type {{kind: 'orbit', scale: number, ax?: number, by?: number, centre?: {x:number,y:number}} | {kind: 'sweep', from: number, to: number, centre?: {x:number,y:number}}} */ spec) {
     const centre = spec.centre || { x: CAM.cam.x, y: CAM.cam.y };
     const t0 = performance.now();
     deps.phase.name = name;
-    const start = deps.frames.length;
     const { VW, VH } = CAM.viewport();
     if (spec.kind === 'orbit') CAM.set({ x: centre.x, y: centre.y, scale: spec.scale });
     await new Promise((res) => {
@@ -344,8 +352,11 @@ export function install(deps) {
       requestAnimationFrame(step);
     });
     deps.phase.name = '';
-    const rows = deps.frames.slice(start + 2).filter((f) => f.phase === name);
-    return summarize(rows);
+    let end = deps.frames.length;
+    while (end > 0 && deps.frames[end - 1].phase !== name) end--;
+    let begin = end;
+    while (begin > 0 && deps.frames[begin - 1].phase === name) begin--;
+    return summarize(deps.frames.slice(begin + 2, end));
   }
   /** wait until the view's needs are met */
   async function settle(maxMs = 8000) {
@@ -373,7 +384,7 @@ export function install(deps) {
     mountedAddrs: () => LAYER.mountedAddrs(),
     spanRects: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => LAYER.spanRects(addr, pos, width),
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
-    view: { camera: () => CAM.view(), focus: () => WALK.current(), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
+    view: { camera: () => CAM.view(), focus: () => WALK.current(), ring: () => (RENDER.stats.ring ? { ...RENDER.stats.ring } : null), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
     driftSample, overlapCheck, visible,
     beamAnchors, arrivalAnchors, barsOf,
     /** the labels the beams' last frame set, one per bundle: the document it leaves, its far document, its text, whether it ends in a stub, and its rect on screen */

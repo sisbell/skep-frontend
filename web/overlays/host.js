@@ -6,6 +6,10 @@
 // State: VIEW — the current overlay (the one owner). The focus hand-off: an
 // overlay a KEY opened takes focus on its first control and returns it when
 // it closes (D5 §4 rule 4); one the system raises (a face) never takes it.
+// Each act is told whether a key ran it, so an act that teleports draws the
+// ring at its landing (D5 §4 rule 2): Enter on its control, taken here before
+// the platform's click, or the click the platform makes from a key (Space on
+// a button), which carries no click count — a pointer's carries its count.
 // A pan or a zoom is never "the next act": the overlay follows its anchor.
 // Carries: the wireframe's §18 `overlay` object, `anchorOfSpan`.
 // Rules: FP-1, FP-2, FP-9, FP-10 (its own DOM alone), FP-13.
@@ -22,12 +26,14 @@ import { docBox } from '../plane/projection.js';
  * @property {{addr: string, pos: number, width?: number}} [span] a span of a mounted article — a block by its first position, or the bytes named by a width (its first line's rect)
  */
 
+/** @typedef {(el: HTMLElement, byKey: boolean) => void} Act an overlay's act, run on the element that bears its `data-run`; `byKey` a key ran it */
+
 /**
  * @typedef {Object} Overlay
  * @property {'card' | 'face' | 'list' | 'moment'} kind
  * @property {Anchor | null} anchor
  * @property {string} html
- * @property {Record<string, (el: HTMLElement) => void>} [acts] handlers by `data-run` name
+ * @property {Record<string, Act>} [acts] handlers by `data-run` name
  * @property {(replaced: boolean) => void} [onDismiss] its end: `replaced` where the next act's overlay took its place, so what stands behind it (the selection) stands on; false where it was dismissed
  * @property {boolean} [takeFocus] opened by a keyboard act: focus its first control
  * @property {string} [id] a name the gate reads
@@ -47,13 +53,13 @@ export function attach(e) {
     const target = /** @type {HTMLElement} */ (ev.target);
     if (target.dataset.x) { dismiss(); ev.stopPropagation(); return; }
     const b = target.closest('[data-run]');
-    if (b && current && current.acts) { ev.stopPropagation(); const f = current.acts[/** @type {HTMLElement} */ (b).dataset.run || '']; if (f) f(/** @type {HTMLElement} */ (b)); return; }
+    if (b && current && current.acts) { ev.stopPropagation(); const f = current.acts[/** @type {HTMLElement} */ (b).dataset.run || '']; if (f) f(/** @type {HTMLElement} */ (b), ev.detail === 0); return; }
     ev.stopPropagation();
   });
   el.addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter' && current && current.acts) {
       const b = /** @type {HTMLElement} */ (ev.target).closest('[data-run]');
-      if (b) { ev.preventDefault(); ev.stopPropagation(); const f = current.acts[/** @type {HTMLElement} */ (b).dataset.run || '']; if (f) f(/** @type {HTMLElement} */ (b)); }
+      if (b) { ev.preventDefault(); ev.stopPropagation(); const f = current.acts[/** @type {HTMLElement} */ (b).dataset.run || '']; if (f) f(/** @type {HTMLElement} */ (b), true); }
     }
   });
 }

@@ -6,7 +6,11 @@
 // W-01 step 3's "position honored", until the focus moves) — THE ONE OWNER
 // of the focus (FP-10). Every focus move goes through one setter, so a
 // landing's position never outlives the span it was named in: a walk key
-// names none, and the line reads the span's own first position.
+// names none, and the line reads the span's own first position. The ring
+// is drawn at the focus once a key has moved it (D5 §4 rule 2, the
+// platform's focus-visible rule): a walk key, a teleport a key made, a
+// camera move a key made that re-takes the focus — each caller says whether
+// a key made it — and any other move puts it out.
 // The plane linearizes board › account › document › block | link in record
 // order (S3 Q6); at reading scale the walk holds THE LINKS THE READING
 // SCALE DRAWS (D5 §4 rule 2: the owner's and the person's own; others' only
@@ -263,11 +267,13 @@ export async function enter() {
 /**
  * The focus moves to a landing (a teleport, D5 §4 rule 8): the document, or
  * the span holding a position — the position kept as the one the landing
- * named (`landedAt`).
+ * named (`landedAt`). The ring is drawn at the landing where a key made the
+ * teleport, and put out where anything else did (D5 §4 rule 2).
  * @param {string} addr a document, an account or a board
  * @param {number | null} pos
+ * @param {boolean} [byKey] a key made the teleport
  */
-export async function focusTo(addr, pos) {
+export async function focusTo(addr, pos, byKey = false) {
   const doc = documentOf(addr), acct = accountOf(addr);
   /** @type {Node} */
   const boardNode = { kind: 'board', addr: '1', pos: null, link: null };
@@ -296,22 +302,24 @@ export async function focusTo(addr, pos) {
   } else {
     stack = []; setFocus([{ kind: 'board', addr: '1', pos: null, link: null }], 0);
   }
-  ringVisible = false;
+  ringVisible = byKey;
   render(); moved(false);
 }
 
 /**
- * The focus follows the camera (rule 3): after a pointer or wheel move,
- * re-take it at the element under the view's centre at the scale's grain —
- * far an account, mid a document, reading a span. The announcement waits
- * for the next keyboard act.
+ * The focus follows the camera (rule 3): after a camera move — the wheel,
+ * the camera key's drag, a zoom chord, PageDown — re-take it at the element
+ * under the view's centre at the scale's grain — far an account, mid a
+ * document, reading a span — the ring drawn at it where a key made the move.
+ * The announcement waits for the next keyboard act.
+ * @param {boolean} [byKey] a key made the camera move
  */
-export async function retakeFromView() {
+export async function retakeFromView(byKey = false) {
   const lod = lodOf(CAM.cam.scale);
   const board = '1';
   if (lod.name === 'far' || lod.name === 'far~mid') {
     const acct = accountAt(CAM.cam.x, CAM.cam.y, board);
-    if (acct && (!focus || focus.addr !== acct)) { await focusTo(acct, null); }
+    if (acct && (!focus || focus.addr !== acct)) { await focusTo(acct, null, byKey); }
     return;
   }
   // the document under the centre
@@ -328,11 +336,11 @@ export async function retakeFromView() {
       const frac = Math.max(0, Math.min(1, ((CAM.cam.y - docBox(best).y) / docBox(best).h - 0.12) / 0.8));
       const pos = 1 + Math.floor(frac * (d.extent || 1));
       const b = d.blocks.find((x) => pos >= x.pos && pos < x.pos + x.width) || d.blocks[0];
-      if (!focus || focus.addr !== best || focus.pos !== b.pos) await focusTo(best, b.pos);
+      if (!focus || focus.addr !== best || focus.pos !== b.pos) await focusTo(best, b.pos, byKey);
       return;
     }
   }
-  if (!focus || focus.addr !== best || focus.kind !== 'document') await focusTo(best, null);
+  if (!focus || focus.addr !== best || focus.kind !== 'document') await focusTo(best, null, byKey);
 }
 
 /** @returns {Node[]} the siblings in order (the gate's a11y case) */

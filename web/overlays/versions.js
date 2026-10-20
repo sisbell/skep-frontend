@@ -57,10 +57,10 @@ export async function open(addr, pos, anchor, width = null) {
   const cur = memberOf(addr);
   const html = `<span class="label">${esc(trunk)} · ${esc(t('F.version-of', { k: cur || n, n }))}</span>` +
     `<ul class="rows versions">${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}</button> <span class="strip" data-holds="${r.holds || ''}">${esc(r.holds === 'whole' ? t('F.versions.whole') : r.holds === 'part' ? t('F.versions.part') : r.holds === 'none' ? t('F.versions.none') : '')}</span> <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>`;
-  /** @type {Record<string, (el: HTMLElement) => void>} */
+  /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   for (const r of rows) {
-    acts['read' + r.k] = () => GO.leapTo(versionAddress(trunk, r.k), { pos: held ? held.pos : null, how: 'leap' });
+    acts['read' + r.k] = (_el, byKey) => GO.leapTo(versionAddress(trunk, r.k), { pos: held ? held.pos : null, how: 'leap', byKey });
     acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
   }
   HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor: anchor ? { el: anchor } : null, html, acts, takeFocus: true });

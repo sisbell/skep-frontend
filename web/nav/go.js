@@ -2,7 +2,9 @@
 // ENGINE-BOUND only through O-HOST; its arithmetic pure. State: none — it
 // orchestrates the owners: dismiss the overlay and the scene, fly the camera
 // (P-CAM), push the trail (N-TRAIL) with the departed view re-taken, move the
-// focus to the landing (N-WALK), re-project the passage carried; `follow`
+// focus to the landing (N-WALK) — the ring drawn at it where a key made the
+// act, which only the act's caller knows, so each teleport takes `byKey` from
+// it (D5 §4 rules 2 and 8) — re-project the passage carried; `follow`
 // reports the link followed to LK's visited set (S-32 (a)) and lands at the
 // span the slot projects to NOW (A-53 — the document consulted before the
 // link), the arrival mark on that span — its first position and its
@@ -65,10 +67,11 @@ export function viewFor(addr, pos) {
 
 /**
  * LEAP to a place: the next act — the overlays close, the camera flies, the
- * trail gains the entry, the focus moves to the landing; a landing that names
- * the link it followed lights the arrival mark on the span it landed on.
+ * trail gains the entry, the focus moves to the landing, the ring drawn at it
+ * where a key made the act; a landing that names the link it followed lights
+ * the arrival mark on the span it landed on.
  * @param {string} addr a document address
- * @param {{pos?: number | null, width?: number | null, how?: string, link?: string | null, push?: boolean, ms?: number}} [opts] `width` the positions landed on from `pos`, where the landing names a span
+ * @param {{pos?: number | null, width?: number | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, push?: boolean, ms?: number, byKey?: boolean}} [opts] `width` the positions landed on from `pos`, where the landing names a span; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act
  * @returns {Promise<import('../model/records.js').Doc | null>}
  */
 export async function leapTo(addr, opts = {}) {
@@ -85,7 +88,7 @@ export async function leapTo(addr, opts = {}) {
     const p = REC.place(addr);
     TRAIL.push({ addr, pos, width, view: v, link: opts.link ?? null, label: p ? p.label : d.label }, departed);
   }
-  WALK.focusTo(addr, pos);
+  WALK.focusTo(addr, pos, opts.byKey);
   if (opts.link) arrival = { addr, pos: pos ?? 1, width, link: opts.link };
   CAM.markDirty();
   await CAM.fly(v, opts.ms ?? (opts.how === 'click' ? 420 : 620));
@@ -101,8 +104,9 @@ export async function leapTo(addr, opts = {}) {
  * reference faced at the symbol.
  * @param {Shown} s the link as drawn at its near document
  * @param {{x: number, y: number} | HTMLElement | null} [anchor] where a face stands
+ * @param {boolean} [byKey] a key made the follow
  */
-export async function follow(s, anchor = null) {
+export async function follow(s, anchor = null, byKey = false) {
   const l = s.link;
   const far = s.far;
   if (!far) { FACES.invalidFollow(anchor); return; }
@@ -119,7 +123,7 @@ export async function follow(s, anchor = null) {
     return;
   }
   if (!proj) { FACES.floating(l, far, anchor); CAM.markDirty(); return; }
-  await leapTo(far, { pos: proj.ordinal, width: s.farWhole ? null : proj.positions, how: 'follow', link: l.addr });
+  await leapTo(far, { pos: proj.ordinal, width: s.farWhole ? null : proj.positions, how: 'follow', link: l.addr, byKey });
 }
 
 /** HOME's place and view: the acting account's region at mid scale; a guest's the board's extent (R92 rider (c)) */
@@ -130,13 +134,16 @@ function homeFrame() {
   return { addr: node, view: CAM.viewForCell(boardCell(node), 0.92) };
 }
 
-/** HOME — the acting account's region at mid scale; a guest's the board's extent (R92 rider (c)) */
-export async function home() {
+/**
+ * HOME — the acting account's region at mid scale; a guest's the board's extent (R92 rider (c))
+ * @param {boolean} [byKey] a key made the act
+ */
+export async function home(byKey = false) {
   const departed = CAM.view();
   dismissChrome();
   const h = homeFrame();
   TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, link: null, label: 'HOME' }, departed);
-  WALK.focusTo(h.addr, null);
+  WALK.focusTo(h.addr, null, byKey);
   CAM.markDirty();
   await CAM.fly(h.view, 700);
   CAM.markDirty();
@@ -155,14 +162,17 @@ export async function launch() {
   CAM.markDirty();
 }
 
-/** WHOLE BOARD — the board the camera is over, at the clamp (law 13) */
-export async function wholeBoard() {
+/**
+ * WHOLE BOARD — the board the camera is over, at the clamp (law 13)
+ * @param {boolean} [byKey] a key made the act
+ */
+export async function wholeBoard(byKey = false) {
   const departed = CAM.view();
   dismissChrome();
   const node = boardNode();
   const target = CAM.viewForCell(boardCell(node), 0.92);
   TRAIL.push({ addr: node, pos: null, width: null, view: target, link: null, label: 'WHOLE BOARD' }, departed);
-  WALK.focusTo(node, null);
+  WALK.focusTo(node, null, byKey);
   CAM.markDirty();
   await CAM.fly(target, 700);
   CAM.markDirty();
@@ -173,13 +183,14 @@ export async function wholeBoard() {
  * to the account's address or its level, Enter on it, a click on it at far
  * (foundations §2.2).
  * @param {string} acct
+ * @param {boolean} [byKey] a key made the act
  */
-export async function toAccount(acct) {
+export async function toAccount(acct, byKey = false) {
   const departed = CAM.view();
   dismissChrome();
   const target = CAM.viewForCell(accountCell(acct), 0.85);
   TRAIL.push({ addr: acct, pos: null, width: null, view: target, link: null, label: null }, departed);
-  WALK.focusTo(acct, null);
+  WALK.focusTo(acct, null, byKey);
   CAM.markDirty();
   await CAM.fly(target, 400);
   CAM.markDirty();
@@ -189,35 +200,45 @@ export async function toAccount(acct) {
 export function boardNode() { return '1'; }
 function nodeOf(/** @type {string} */ _origin) { return '1'; }
 
-/** Back: the cursor one entry back, landing on the view left */
-export async function back() {
+/**
+ * Back: the cursor one entry back, landing on the view left
+ * @param {boolean} [byKey] a key made the act
+ */
+export async function back(byKey = false) {
   const e = TRAIL.back(CAM.view());
   if (!e) return false;
   dismissChrome();
-  WALK.focusTo(e.addr, e.pos);
+  WALK.focusTo(e.addr, e.pos, byKey);
   arrival = e.link ? { addr: e.addr, pos: e.pos ?? 1, width: e.width, link: e.link } : null;
   CAM.markDirty();
   await CAM.fly(e.view, 500);
   CAM.markDirty();
   return true;
 }
-/** Forward */
-export async function forward() {
+/**
+ * Forward
+ * @param {boolean} [byKey] a key made the act
+ */
+export async function forward(byKey = false) {
   const e = TRAIL.forward(CAM.view());
   if (!e) return false;
   dismissChrome();
-  WALK.focusTo(e.addr, e.pos);
+  WALK.focusTo(e.addr, e.pos, byKey);
   CAM.markDirty();
   await CAM.fly(e.view, 500);
   CAM.markDirty();
   return true;
 }
-/** a trail jump to entry n (newest-first) — a cursor move */
-export async function toTrailEntry(/** @type {number} */ n) {
+/**
+ * A trail jump to entry n (newest-first) — a cursor move
+ * @param {number} n
+ * @param {boolean} [byKey] a key made the act
+ */
+export async function toTrailEntry(n, byKey = false) {
   const e = TRAIL.jump(n, CAM.view());
   if (!e) return false;
   dismissChrome();
-  WALK.focusTo(e.addr, e.pos);
+  WALK.focusTo(e.addr, e.pos, byKey);
   CAM.markDirty();
   await CAM.fly(e.view, 500);
   CAM.markDirty();

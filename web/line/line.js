@@ -2,7 +2,10 @@
 // §3.1, §3.3; S-9 (a) its own module). Layer 2. ENGINE-BOUND. A control
 // rebuilt from state (FP-13). State: VIEW — the transient segment and its
 // expiry (the next act).
-// Its acts at the left edge — Back, Forward, the trail's list — then THE
+// Its acts at the left edge — Back, Forward, the trail's list; Back and
+// Forward told whether a key made them, so the ring is drawn at the landing a
+// key made (D5 §4 rule 2): the platform's click from Enter or Space on the
+// button carries no click count, a pointer's carries its count — then THE
 // ADDRESS DISPLAY (R6): board › account › document › position, each segment
 // read from the document's own address — its node field, its account field
 // whole at any depth (`1.0.1.1` for the agent space's documents, B1-S6's
@@ -44,7 +47,7 @@ let transientSeg = null;
 let lastHTML = '';
 let lastMode = /** @type {string | null} */ (null);
 let lastTrust = /** @type {boolean | null} */ (null);
-/** @type {{open: () => void, back: () => void, forward: () => void, trailList: () => void, signIn: (el: HTMLElement) => void} | null} */
+/** @type {{open: () => void, back: (byKey: boolean) => void, forward: (byKey: boolean) => void, trailList: () => void, signIn: (el: HTMLElement) => void} | null} */
 let acts = null;
 
 /** @param {HTMLElement} e @param {NonNullable<typeof acts>} a */
@@ -53,7 +56,8 @@ export function attach(e, a) {
   el.addEventListener('click', (ev) => {
     const b = /** @type {HTMLElement} */ (ev.target).closest('[data-act]'); if (!b || !acts) return;
     const which = /** @type {HTMLElement} */ (b).dataset.act;
-    if (which === 'back') acts.back(); else if (which === 'forward') acts.forward(); else if (which === 'address') acts.open(); else if (which === 'trail') acts.trailList(); else if (which === 'signin') acts.signIn(/** @type {HTMLElement} */ (b));
+    const byKey = ev.detail === 0;
+    if (which === 'back') acts.back(byKey); else if (which === 'forward') acts.forward(byKey); else if (which === 'address') acts.open(); else if (which === 'trail') acts.trailList(); else if (which === 'signin') acts.signIn(/** @type {HTMLElement} */ (b));
     ev.stopPropagation();
   });
 }

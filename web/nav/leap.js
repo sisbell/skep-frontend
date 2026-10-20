@@ -12,7 +12,8 @@
 // §2.3); typed text matches by N-MATCH over the model's index, its first
 // match selected; Enter goes to the selected row (the first match unless ↓/↑
 // chose another), a teleport and a trail entry whether it names a document,
-// an account or the board; an address this client has no record of is asked
+// an account or the board, the ring drawn at its landing as a key's (a click
+// on a row draws none); an address this client has no record of is asked
 // of the board and faced where nothing answers (C-42's content, B1-S8); where
 // typed text matches nothing the box says so, the index's state beside the
 // answer while the index is not complete. While an input method's
@@ -70,7 +71,7 @@ export function attach(e, cur) {
     if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) return; // the IME's until it commits (D5 §0)
     if (ev.key === 'ArrowDown') { choose(1); ev.preventDefault(); }
     else if (ev.key === 'ArrowUp') { choose(-1); ev.preventDefault(); }
-    else if (ev.key === 'Enter') { go(sel); ev.preventDefault(); }
+    else if (ev.key === 'Enter') { go(sel, true); ev.preventDefault(); }
     else if (ev.key === 'Escape') { close(); ev.preventDefault(); }
   });
   e.rows.addEventListener('click', (ev) => { const r = /** @type {HTMLElement} */ (ev.target).closest('[data-i]'); if (r) go(Number(/** @type {HTMLElement} */ (r).dataset.i)); });
@@ -146,22 +147,24 @@ export function render() {
  * Enter: the row chosen goes (K-31), each a teleport and a trail entry; with
  * no row chosen — the box as opened — the current address, in place: the box
  * closes, nothing moves and nothing is pushed (foundations §2.3).
+ * @param {number} i the row chosen
+ * @param {boolean} [byKey] Enter made the act, not a click on the row
  */
-export async function go(/** @type {number} */ i) {
+export async function go(i, byKey = false) {
   const r = rows[i]; if (!r) { close(); return; }
   close();
-  if (r.kind === 'board') { await GO.wholeBoard(); return; }
-  if (r.kind === 'home') { await GO.home(); return; }
+  if (r.kind === 'board') { await GO.wholeBoard(byKey); return; }
+  if (r.kind === 'home') { await GO.home(byKey); return; }
   if (r.kind === 'share' || r.kind === 'url') return; // the share form's decoding and the intake are not this lane's
-  if (r.kind === 'account') { await GO.toAccount(r.addr); return; }
+  if (r.kind === 'account') { await GO.toAccount(r.addr, byKey); return; }
   if (r.kind === 'address') {
     const doc = documentOf(r.addr);
-    if (doc) { await GO.leapTo(r.addr, { how: 'leap' }); return; }
+    if (doc) { await GO.leapTo(r.addr, { how: 'leap', byKey }); return; }
     const acct = accountOf(r.addr);
-    if (acct) { await GO.toAccount(acct); return; }
-    await GO.wholeBoard(); return;
+    if (acct) { await GO.toAccount(acct, byKey); return; }
+    await GO.wholeBoard(byKey); return;
   }
-  await GO.leapTo(r.addr, { how: 'leap' });
+  await GO.leapTo(r.addr, { how: 'leap', byKey });
 }
 
 /** the rows (the gate reads them) */

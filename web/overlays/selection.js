@@ -134,7 +134,7 @@ export function render(byKey = false) {
       annotate: (el) => { el.setAttribute('data-inert', '1'); },
       quote: (el) => { el.setAttribute('data-inert', '1'); },
       linkto: (el) => { el.setAttribute('data-inert', '1'); },
-      wrote: () => act('wrote'), uses: () => act('uses'), links: () => act('links'), follow: () => act('follow'), scene: () => act('scene'),
+      wrote: () => act('wrote'), uses: () => act('uses'), links: () => act('links'), follow: (_el, byKey) => act('follow', byKey), scene: () => act('scene'),
     },
     onDismiss: (replaced) => { if (!replaced && sameSpan(sel, span)) { sel = null; LAYER.placeSelection(null); markDirty(); } },
   });
@@ -144,8 +144,9 @@ export function render(byKey = false) {
  * A slot's act (by chord or by its button); where no selection stands, the
  * walk's focused span is selected first, whole (D5 §1.6).
  * @param {'wrote' | 'uses' | 'links' | 'follow' | 'scene'} which
+ * @param {boolean} [byKey] a key made the act: a follow's landing draws the ring
  */
-export function act(which) {
+export function act(which, byKey = false) {
   if (!sel) {
     const f = WALK.current();
     if (f && f.kind === 'block' && f.pos != null) { sel = wholeBlock(f.addr, f.pos); LAYER.placeSelection(sel); markDirty(); }
@@ -157,15 +158,15 @@ export function act(which) {
   if (which === 'uses') { PROV.uses(addr, pos, width); return; }
   if (which === 'links') { LINKS.show(addr, true); return; }
   const drawn = LK.shownAt(addr, span);
-  if (which === 'follow') { if (drawn.length === 1) GO.follow(drawn[0], null); else if (drawn.length > 1) which_(drawn, 'follow'); return; }
+  if (which === 'follow') { if (drawn.length === 1) GO.follow(drawn[0], null, byKey); else if (drawn.length > 1) which_(drawn, 'follow'); return; }
   if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) SCENE.open(addr, drawn[0].far, { posA: pos, widthA: width, posB: drawn[0].farEnd && !drawn[0].farEnd.whole ? drawn[0].farEnd.ordinal : null }); else if (drawn.length > 1) which_(drawn, 'scene'); }
 }
 
 /** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3) */
 function which_(/** @type {import('../links/links.js').Shown[]} */ drawn, /** @type {'follow' | 'scene'} */ what) {
   const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.link.owner || '')} · ${esc(s.far)}</button></li>`).join('')}</ul>`;
-  /** @type {Record<string, (el: HTMLElement) => void>} */
+  /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  drawn.forEach((s, i) => { acts['w' + i] = (el) => { if (what === 'follow') GO.follow(s, el); else if (s.far && sel) SCENE.open(sel.addr, s.far, { posA: sel.pos, widthA: sel.width, posB: s.farEnd && !s.farEnd.whole ? s.farEnd.ordinal : null }); }; });
+  drawn.forEach((s, i) => { acts['w' + i] = (el, byKey) => { if (what === 'follow') GO.follow(s, el, byKey); else if (s.far && sel) SCENE.open(sel.addr, s.far, { posA: sel.pos, widthA: sel.width, posB: s.farEnd && !s.farEnd.whole ? s.farEnd.ordinal : null }); }; });
   HOST.show({ kind: 'list', id: 'which', anchor: sel ? { span: sel } : null, html, acts, takeFocus: true });
 }

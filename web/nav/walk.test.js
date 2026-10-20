@@ -1,7 +1,10 @@
 // N-WALK's test against the FAKE PORT: a landing keeps the position it named
 // inside the span it focuses — the one line's position — while a walk key's
 // move names none, so stepping back onto the landing's span reads the span's
-// own first position; a position no span holds is never kept. The mirror's
+// own first position; a position no span holds is never kept. The ring is
+// drawn at a landing a key made and put out by any other, and a camera move
+// re-takes the focus with the ring drawn where a key made the move — a mutant
+// that drops the re-take's word of the key turns red. The mirror's
 // rebuild leaves the plane one Tab stop (D5 §4 rule 5): the current item while
 // it stands, the tree out of the order — a mutant that leaves the tree in it
 // turns red — and the tree itself where the walk's level holds no item — a
@@ -14,6 +17,8 @@ import * as PUMP from '../model/pump.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
+import { accountCell, boardCell } from '../plane/projection.js';
+import { lodOf } from '../plane/lod.js';
 import * as WALK from './walk.js';
 
 const D = '1.0.1.0.3';
@@ -74,6 +79,22 @@ test('a landing on the document itself names no position', async () => {
   await WALK.focusTo(D, null);
   assert.equal(WALK.current()?.kind, 'document');
   assert.equal(WALK.landedAt(), null);
+});
+
+test('the ring is drawn at a landing a key made and put out by any other; a camera move re-takes the focus with it drawn where a key made the move', async () => {
+  await WALK.focusTo(D, 15, true);
+  assert.equal(WALK.ringShown(), true, 'a landing a key made draws the ring');
+  await WALK.focusTo(D, 15);
+  assert.equal(WALK.ringShown(), false, 'a landing made otherwise puts it out');
+  // the camera over the account's region at the whole board's scale, the focus on the document: the re-take moves it to the account
+  const cell = accountCell('1.0.1');
+  CAM.set({ x: cell.x + cell.w / 2, y: cell.y + cell.h / 2, scale: CAM.viewForCell(boardCell('1'), 0.92).scale });
+  assert.equal(lodOf(CAM.cam.scale).name, 'far~mid', 'the scale\'s grain is the account');
+  await WALK.retakeFromView(true);
+  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr, WALK.ringShown()], ['account', '1.0.1', true], 'a key\'s camera move re-takes the focus, the ring drawn');
+  await WALK.focusTo(D, null, true);
+  await WALK.retakeFromView();
+  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr, WALK.ringShown()], ['account', '1.0.1', false], 'a pointer\'s re-takes it and puts the ring out');
 });
 
 /** the ids of the mirror's items at tabindex 0, read from the markup the rebuild wrote */
