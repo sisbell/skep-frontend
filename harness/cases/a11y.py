@@ -1,7 +1,10 @@
 """A11Y — class 7 (the structure record §6.3; T3 (7)): the ARIA mirror is the
 one accessible rendering at span grain — its names and set sizes
 (`aria-level`, `aria-posinset`, `aria-setsize`, `aria-selected`), the live
-region announcing the focus on a keyboard act; the plane ONE Tab stop
+region announcing the focus on a keyboard act; every region named by its
+entry in `strings.js`, which its owner sets as it attaches — the one line,
+the LEAP box's input and rows, the scene, the mirror and its level's group,
+the mirror's name in the AX tree as well; the plane ONE Tab stop
 between the one line and the corner (D5 §4 rule 5) — of the tree and its
 items the current item alone in the order, reached by Tab from the line's
 last stop and left by Shift+Tab back to it; the AX tree
@@ -59,6 +62,13 @@ def run(ctx):
     r.check(not bad, 'each DOM item\'s name equals the model\'s item name (one accessible rendering)', bad)
     roles = ctx.js('({mirror: document.getElementById("mirror").getAttribute("role"), label: document.getElementById("mirror").getAttribute("aria-label"), live: document.getElementById("live").getAttribute("aria-live"), hidden_layer: document.getElementById("domlayer").getAttribute("aria-hidden")})')
     r.check(roles['mirror'] == 'tree' and roles['live'] == 'polite' and roles['hidden_layer'] == 'true', 'the mirror is a tree, the live region polite, the visual text layer hidden from AT', roles)
+    # the regions' names: the markup carries none; each owner sets its region's from strings.js as it attaches
+    named = ctx.js('''(async () => { const {t} = await import("./strings.js");
+      const want = [["#line", t("L.the-line")], ["#leapq", t("L.leap-label")], ["#leaphits", t("L.leap-rows-label")], ["#scene", t("L.scene-label")],
+                    ["#mirror", t("L.mirror-label")], ["#mirror ul[role=group]", t("L.mirror-level", {n: 4})]];
+      return want.map(([sel, name]) => { const e = document.querySelector(sel); return {sel, want: name, got: e ? e.getAttribute("aria-label") : null}; }); })()''')
+    r.check(bool(named) and all(n['got'] == n['want'] for n in named), 'every region is named by its entry in strings.js — the one line, the LEAP box\'s input and rows, the scene, the mirror and its group at span grain (level 4)', [n for n in named if n['got'] != n['want']])
+    r.figures['names'] = {n['sel']: n['got'] for n in named}
     # a keyboard act announces the focus
     ctx.drv.key('ArrowDown')
     ctx.settle()
@@ -90,6 +100,9 @@ def run(ctx):
         r.check(len(treeitems) == len(items), 'the AX tree holds one treeitem per rendered mirror item', {'ax': len(treeitems), 'dom': len(items)})
         r.check(sorted(ax_names) == sorted(dom_names), 'the AX treeitems\' names are the mirror\'s names', {'ax_sample': ax_names[:2], 'dom_sample': dom_names[:2]})
         r.check(len(trees) >= 1, 'the AX tree exposes the mirror as a tree')
+        tree_names = [fold((n.get('name') or {}).get('value', '')) for n in trees]
+        mirror_name = next((n['want'] for n in named if n['sel'] == '#mirror'), None)
+        r.check(mirror_name is not None and mirror_name in tree_names, 'the AX tree names the mirror\'s tree by its entry in strings.js', {'names': tree_names, 'want': mirror_name})
         # the visual text layer is hidden from the tree
         layer_texts = [n for n in nodes if not n.get('ignored') and (n.get('role') or {}).get('value') == 'StaticText' and 'skep-ux-design' in ((n.get('name') or {}).get('value') or '')]
         r.figures['ax_tree']['static_text_from_articles'] = len(layer_texts)

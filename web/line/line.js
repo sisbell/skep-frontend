@@ -2,6 +2,7 @@
 // §3.1, §3.3; S-9 (a) its own module). Layer 2. ENGINE-BOUND. A control
 // rebuilt from state (FP-13). State: VIEW — the transient segment and its
 // expiry (the next act).
+// The line is the page's toolbar, named as it attaches by ST's `L.the-line`.
 // Its acts at the left edge — Back, Forward, the trail's list; Back and
 // Forward told whether a key made them, so the ring is drawn at the landing a
 // key made (D5 §4 rule 2): the platform's click from Enter or Space on the
@@ -53,6 +54,7 @@ let acts = null;
 /** @param {HTMLElement} e @param {NonNullable<typeof acts>} a */
 export function attach(e, a) {
   el = e; acts = a;
+  el.setAttribute('aria-label', t('L.the-line'));
   el.addEventListener('click', (ev) => {
     const b = /** @type {HTMLElement} */ (ev.target).closest('[data-act]'); if (!b || !acts) return;
     const which = /** @type {HTMLElement} */ (b).dataset.act;

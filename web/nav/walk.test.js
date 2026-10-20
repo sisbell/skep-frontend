@@ -8,14 +8,17 @@
 // rebuild leaves the plane one Tab stop (D5 §4 rule 5): the current item while
 // it stands, the tree out of the order — a mutant that leaves the tree in it
 // turns red — and the tree itself where the walk's level holds no item — a
-// mutant that always takes it out turns red. An overlay's close returns the
-// focus (D5 §4 rule 4) to the element it was opened from where that takes it,
-// and to the walk's element where it does not — one still on the page among
-// them, so a mutant that asks whether the opener is on the page turns red, as
-// does one with no fallback; an overlay opened with the focus on nothing
-// returns it to nothing — a mutant that falls back wherever the focus lands
-// on nothing turns red — and a focus the person moved out of the overlay
-// stays where they put it — a mutant that returns it regardless turns red.
+// mutant that always takes it out turns red. The tree is named from ST as the
+// walk attaches it, and each level's group by its own level — a mutant that
+// drops the tree's name, or names every group by one level, turns red. An
+// overlay's close returns the focus (D5 §4 rule 4) to the element it was
+// opened from where that takes it, and to the walk's element where it does
+// not — one still on the page among them, so a mutant that asks whether the
+// opener is on the page turns red, as does one with no fallback; an overlay
+// opened with the focus on nothing returns it to nothing — a mutant that
+// falls back wherever the focus lands on nothing turns red — and a focus the
+// person moved out of the overlay stays where they put it — a mutant that
+// returns it regardless turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -26,6 +29,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell, boardCell } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
+import { t } from '../strings.js';
 import * as WALK from './walk.js';
 
 const D = '1.0.1.0.3';
@@ -111,7 +115,7 @@ const itemStops = (/** @type {string} */ html) => [...html.matchAll(/<li\b[^>]*>
 test('the plane is one Tab stop: the current item while it stands, the tree itself where the walk\'s level holds no item', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null }); // the platform's focus on none of the mirror
-  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false };
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {} };
   WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ ({ textContent: '' }));
   try {
     await WALK.focusTo(D, 15);
@@ -122,6 +126,27 @@ test('the plane is one Tab stop: the current item while it stands, the tree itse
     assert.equal(WALK.mirrorSize(), 0);
     assert.deepEqual(itemStops(mirror.innerHTML), []);
     assert.equal(mirror.tabIndex, 0, 'the tree itself is the stop');
+  } finally {
+    globalThis.document = platform;
+  }
+});
+
+// placed last with the tests around it: it attaches a mirror of its own
+test('the tree is named from ST as the walk attaches it, and each level\'s group by its own level', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @type {Record<string, string>} the attributes the walk set on the tree */
+  const attrs = {};
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute: (/** @type {string} */ k, /** @type {string} */ v) => { attrs[k] = v; } };
+  /** the group's name, read from the markup the rebuild wrote */
+  const group = () => (/<ul role="group" aria-label="([^"]*)">/.exec(mirror.innerHTML) || [])[1];
+  try {
+    WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ ({ textContent: '' }));
+    assert.equal(attrs['aria-label'], t('L.mirror-label'), 'the tree, named as it is attached');
+    await WALK.focusTo(D, 15);
+    assert.equal(group(), t('L.mirror-level', { n: 4 }), 'a span\'s group: board › account › document › span');
+    await WALK.focusTo(D, null);
+    assert.equal(group(), t('L.mirror-level', { n: 3 }), 'a document\'s group');
   } finally {
     globalThis.document = platform;
   }
@@ -144,6 +169,7 @@ function page() {
     querySelector: (/** @type {string} */ s) => (s === '#walk-' + WALK.mirrorIndex() ? item : null),
     getBoundingClientRect: () => ({ top: 0, height: 100 }),
     focus() { doc.activeElement = { id: 'the tree' }; },
+    setAttribute() {},
   };
   return { doc, body, element, mirror };
 }

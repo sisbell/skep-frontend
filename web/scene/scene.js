@@ -3,9 +3,10 @@
 // two ends it sets level, the bands' and lines' ends as measured in the panes,
 // and the panes' scrolls (the one owner).
 // Two documents at reading scale side by side over the plane, each pane
-// scrolling on its own (R3); the places unmoved, nothing written. It sets the
-// two ends LEVEL, "so position carries the match and the beam confirms it"
-// (§2.5): the passage the opener holds — a link's span, a selection, the
+// scrolling on its own (R3); the places unmoved, nothing written; the dialog
+// named as it attaches by ST's `L.scene-label`. It sets the two ends LEVEL,
+// "so position carries the match and the beam confirms it" (§2.5): the
+// passage the opener holds — a link's span, a selection, the
 // versions list's held passage, provenance's span — at its first stretch of
 // shared identity, and its counterpart in the other document, or the far end
 // a link names (`levels`); each pane's matched line brought to one height, and
@@ -104,6 +105,7 @@ let drawnTies = [];
 /** @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement}} e */
 export function attach(e) {
   els = e;
+  e.root.setAttribute('aria-label', t('L.scene-label'));
   for (const p of [e.paneA, e.paneB]) p.addEventListener('scroll', () => draw());
   e.bar.addEventListener('click', (ev) => { const tg = /** @type {HTMLElement} */ (ev.target); if (tg.dataset.x) close(); else if (tg.dataset.relevel) relevel(); });
 }

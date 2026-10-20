@@ -19,22 +19,24 @@
 // camera (any other move re-takes it at the element under the view's centre
 // at the scale's grain). The ARIA mirror (`role=tree`, virtualised ±24,
 // `aria-level`/`aria-posinset`/`aria-setsize`) is THE ONE ACCESSIBLE
-// RENDERING at span grain (S1 Q7; R94 at span grain — RULED); the live region
-// announces the focus on a keyboard act. The mirror is rebuilt whole on every
-// focus move, and its Tab stop with it: the plane is ONE stop between the one
-// line and the focused document's corner (D5 §4 rule 5) — the current item,
-// while the tree's container stands out of the order; the container is the
-// stop only where the mirror holds no item. While the platform's focus
-// stands in the mirror, the rebuild carries that focus to the current item
-// and scrolls the panel to show it (D5 §4 rule 2: the tree item is the
-// focus's accessible form; rule 4: the focus is never lost, never to the top;
-// rule 8: a landing moves the focus to its element) — so the walk keys, a
-// landing and a camera retake alike leave the focus on the item a person is
-// at. While the focus stands in an overlay, the rebuild leaves it there, and
-// the overlay's close hands it back through `returnFocus`: to the element the
-// overlay was opened from, or to the current item where that no longer takes
-// it — as an item the overlay was opened from no longer does once a rebuild
-// has replaced it (rule 4).
+// RENDERING at span grain (S1 Q7; R94 at span grain — RULED), the tree named
+// as it attaches by ST's `L.mirror-label` and each level's group by
+// `L.mirror-level`; the live region announces the focus on a keyboard act.
+// The mirror is rebuilt whole on every focus move, and its Tab stop with it:
+// the plane is ONE stop between the one line and the focused document's
+// corner (D5 §4 rule 5) — the current item, while the tree's container
+// stands out of the order; the container is the stop only where the mirror
+// holds no item. While the platform's focus stands in the mirror, the
+// rebuild carries that focus to the current item and scrolls the panel to
+// show it (D5 §4 rule 2: the tree item is the focus's accessible form; rule
+// 4: the focus is never lost, never to the top; rule 8: a landing moves the
+// focus to its element) — so the walk keys, a landing and a camera retake
+// alike leave the focus on the item a person is at. While the focus stands
+// in an overlay, the rebuild leaves it there, and the overlay's close hands
+// it back through `returnFocus`: to the element the overlay was opened from,
+// or to the current item where that no longer takes it — as an item the
+// overlay was opened from no longer does once a rebuild has replaced it
+// (rule 4).
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state).
@@ -80,7 +82,7 @@ let liveEl = null;
 const watchers = [];
 
 /** @param {HTMLElement} mirror @param {HTMLElement} live */
-export function attach(mirror, live) { mirrorEl = mirror; liveEl = live; }
+export function attach(mirror, live) { mirrorEl = mirror; liveEl = live; mirror.setAttribute('aria-label', t('L.mirror-label')); }
 export function onFocus(/** @type {(n: Node | null) => void} */ fn) { watchers.push(fn); }
 /** the focus, read-only */
 export const current = () => focus;
@@ -163,7 +165,7 @@ export function render() {
   const total = siblings.length, W = 24;
   const lo = Math.max(0, idx - W), hi = Math.min(total, idx + W);
   const lvl = total ? levelOf(siblings[0]) : 1;
-  let html = `<ul role="group" aria-label="level ${lvl}">`;
+  let html = `<ul role="group" aria-label="${esc(t('L.mirror-level', { n: lvl }))}">`;
   for (let i = lo; i < hi; i++) {
     const n = siblings[i];
     html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}" data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${esc(nameOf(n, i, total))}</li>`;

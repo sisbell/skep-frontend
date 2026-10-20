@@ -9,7 +9,11 @@
   script, app/main.js, wires everything (FP-4, FP-11); nothing is built or
   bundled (FP-1, FP-2); nothing outside web/ is loaded (FP-5). The gate's
   hooks load only under ?gate= (S-22 (a)); the bridge client only under
-  ?provider=<secret> (S-14 (b), S-36 (a)).
+  ?provider=<secret> (S-14 (b), S-36 (a)). Each region below carries its
+  role and no words: its accessible name is its owner's, read from
+  strings.js as the owner attaches (FP-13) — the one line's (L-LINE), the
+  LEAP box's input and rows (N-LEAP), the scene's (SC), the mirror's
+  (N-WALK).
 -->
 <link rel="stylesheet" href="style.css">
 </head>
@@ -18,17 +22,17 @@
 <div id="domlayer" aria-hidden="true"></div>
 <canvas id="beams"></canvas>
 
-<div id="line" role="toolbar" aria-label="the one line"></div>
+<div id="line" role="toolbar"></div>
 
 <div id="leap" class="panel">
-  <input id="leapq" role="combobox" aria-autocomplete="list" aria-controls="leaphits" aria-expanded="false" autocomplete="off" spellcheck="false" aria-label="LEAP — an address, or a document's first line">
+  <input id="leapq" role="combobox" aria-autocomplete="list" aria-controls="leaphits" aria-expanded="false" autocomplete="off" spellcheck="false">
   <div id="leapnote" role="status"></div>
-  <div id="leaphits" role="listbox" aria-label="LEAP"></div>
+  <div id="leaphits" role="listbox"></div>
 </div>
 
 <div id="overlay" role="dialog" aria-live="polite"></div>
 
-<div id="scene" role="dialog" aria-label="the reading scene: two places side by side">
+<div id="scene" role="dialog">
   <div id="scenebar"></div>
   <div class="pane" id="sceneA"></div>
   <div class="pane" id="sceneB"></div>
@@ -36,7 +40,7 @@
 </div>
 
 <!-- the mirror (N-WALK's): the plane's one Tab stop is its current item (D5 §4 rule 5); the walk's render takes the tree out of the order while that item stands, so the tree is the stop only where it holds no item, as here before the first render -->
-<div id="mirror" class="panel" role="tree" aria-label="the board in record order" tabindex="0"></div>
+<div id="mirror" class="panel" role="tree" tabindex="0"></div>
 <!-- the corners (T-LAYER's): after the mirror, so Tab from the plane's stop lands on the focused document's corner (D5 §4 rule 5, K-57) -->
 <div id="corners"></div>
 <div id="live" aria-live="polite" aria-atomic="true"></div>

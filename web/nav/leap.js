@@ -28,14 +28,16 @@
 // intake's URL arm and search (K-35) are the code lane's.
 // ITS ACCESSIBLE FORM (R94; the WAI-ARIA combobox, list autocomplete with
 // automatic selection): the input is the combobox, expanded while it lists
-// rows, controlling the rows' listbox, the selected row `aria-selected`. The
-// platform's focus stays in the input; its active descendant names the
-// selected row once ↓ or ↑ has carried the choice into the rows, and never
-// on the box as opened or as typed, so what a reader meets first is the box
-// itself — the current address that Mod+C copies and typing replaces (D5
-// K-30; §4 rule 4). The answer and the index's state are the box's own
-// status region, written only when its words change: a live region speaks
-// whatever is rewritten, so an arrow or a further keystroke repeats nothing.
+// rows, controlling the rows' listbox, the selected row `aria-selected`; the
+// box names the two as it attaches, the input by ST's `L.leap-label` and the
+// listbox by `L.leap-rows-label`. The platform's focus stays in the input;
+// its active descendant names the selected row once ↓ or ↑ has carried the
+// choice into the rows, and never on the box as opened or as typed, so what
+// a reader meets first is the box itself — the current address that Mod+C
+// copies and typing replaces (D5 K-30; §4 rule 4). The answer and the
+// index's state are the box's own status region, written only when its words
+// change: a live region speaks whatever is rewritten, so an arrow or a
+// further keystroke repeats nothing.
 // Carries: the wireframe's §12. Rules: FP-1, FP-2, FP-9, FP-10, FP-13.
 
 import * as REC from '../model/records.js';
@@ -72,6 +74,8 @@ const rowId = (/** @type {number} */ i) => `leap-row-${i}`;
 /** @param {{box: HTMLElement, input: HTMLInputElement, rows: HTMLElement, note: HTMLElement}} e @param {() => string | null} cur */
 export function attach(e, cur) {
   els = e; currentAddress = cur;
+  e.input.setAttribute('aria-label', t('L.leap-label'));
+  e.rows.setAttribute('aria-label', t('L.leap-rows-label'));
   e.input.addEventListener('input', () => { compute(e.input.value); render(); });
   e.input.addEventListener('keydown', (ev) => {
     ev.stopPropagation(); // the box's keys are its own: the plane's dispatch never sees them
