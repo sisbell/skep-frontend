@@ -5,13 +5,30 @@
 // face fitted to the article as the hidden reveal sets it lets the symbols run
 // its lines past the clip, which is why the bound is fitted; and another's
 // links arriving fit it again.
+// Then THE CAP (`frame`), on a page of stand-ins over a field of an account's
+// 48 documents a line each, every face the same: never more than eight
+// articles stand, and eight while more of the field is in view, through a pan
+// across it and back — each pan taking down only what left the view and every
+// other article standing on its own element (a mutant that caps the mounts
+// alone turns red at nine; one that chooses the eight by the model's order
+// trades equals and turns red); an article standing keeps its place down to
+// 5.5 (one that asks 6.5 of it turns red); a larger face takes the place of
+// the smallest standing; the walk's focused document stands first among equal
+// faces, its leaving trading nothing back (one that ranks it with the rest
+// turns red); a stale article is rebuilt in its
+// place — after a trade, and in the hysteresis band — never dropped (one that
+// chooses after the rebuild turns red); and while a press stands nothing is
+// mounted or taken down for the cap, what leaves the view apart (one that
+// chooses under the press turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as LAYER from './layer.js';
+import * as CAM from '../plane/camera.js';
 import { metricsFor, layoutOf, heightOf, fitted } from '../plane/layout.js';
-import { docBox } from '../plane/projection.js';
+import { docBox, intersects, DOC_CELL_W } from '../plane/projection.js';
+import { MAX_MOUNTED, MOUNT_EM } from '../plane/lod.js';
 
 /** @typedef {import('../plane/layout.js').Metrics} Metrics */
 
@@ -95,3 +112,166 @@ test('another\'s links arriving fit the face again: the article holds with their
   LK.reveal(D, 2); LK.setOthers(D, true); moveModel();
   assert.ok(LAYER.metricsOf(REC.doc(D)) === m && holds(m), 'their symbols with others\' links on: held, at the same face');
 });
+
+// ---- the cap -----------------------------------------------------------------------------------------------------------
+
+/** the field: an account's first grid of documents, 1 … 48 (its 49th cell holds the continuation) */
+const FIELD = '1.0.4';
+const ALL = Array.from({ length: 48 }, (_, i) => i + 1);
+/** the field's document `k` */
+const nth = (/** @type {number} */ k) => `${FIELD}.0.${k}`;
+/** a document's text delivered whole, its extent with it */
+function give(/** @type {number} */ k, /** @type {string} */ text) {
+  const n = new TextEncoder().encode(text).length;
+  REC.takeSpanSet(nth(k), [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(nth(k), [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+}
+/** the field's documents given a line each: every one set at P-LAY's floor of 52 characters, one face */
+const note = (/** @type {number[]} */ ks) => ks.forEach((k) => give(k, `Note ${k}.`));
+/** a document's face, in world units */
+const faceOf = (/** @type {number} */ k) => LAYER.metricsOf(REC.doc(nth(k))).fs;
+/** the camera over the field's middle — document 25's place, `dx` columns across — a line's face at `em` px */
+function view(/** @type {number} */ em, dx = 0) {
+  const b = docBox(nth(25));
+  CAM.set({ x: b.x + b.w / 2 + dx * DOC_CELL_W, y: b.y + b.h / 2, scale: em / faceOf(16) });
+}
+/** the field's documents whose boxes meet the world the layer mounts in: the viewport, 40 px about it */
+const inView = () => { const v = CAM.viewportWorld(40); return ALL.filter((k) => intersects(docBox(nth(k)), v)); };
+/** a frame, the walk's focus on document `focus`: the documents whose articles stand after it */
+function frame(/** @type {number | null} */ focus = null) {
+  LAYER.frame((addr) => focus != null && addr === nth(focus));
+  return LAYER.mountedAddrs().map((a) => Number(a.split('.').pop())).sort((x, y) => x - y);
+}
+/** the element each standing article stands on, by document */
+const elements = () => new Map([...LAYER.mountedSet()].map(([a, rec]) => [a, rec.el]));
+/** of the articles that stood, the ones standing still on the element they stood on */
+const unmoved = (/** @type {Map<string, unknown>} */ before) => [...before].filter(([a, el]) => LAYER.mountedSet().get(a)?.el === el).map(([a]) => a);
+
+/**
+ * The test run on the text layer over a page of stand-ins — its element 1440 × 900 px, which holds what the layer
+ * mounts (`held`), and the platform's selection on nothing — then every article taken down and the platform's
+ * `document` and `window` put back.
+ */
+function onLayer(/** @type {(held: Set<unknown>) => void} */ body) {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  /** @type {Set<unknown>} */
+  const held = new Set();
+  const element = () => {
+    const e = {
+      className: '', innerHTML: '', dataset: {}, style: {}, classList: { toggle() {} }, setAttribute() {},
+      querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }),
+      remove() { held.delete(e); },
+    };
+    return e;
+  };
+  globalThis.document = /** @type {any} */ ({ createElement: element });
+  globalThis.window = /** @type {any} */ ({ getSelection: () => null });
+  CAM.setViewport(1440, 900);
+  LAYER.attach(/** @type {any} */ ({ clientWidth: 1440, clientHeight: 900, appendChild: (/** @type {unknown} */ e) => { held.add(e); } }), /** @type {any} */ (null));
+  try { body(held); } finally { LAYER.press(false); LAYER.clear(); globalThis.document = platform.document; globalThis.window = platform.window; }
+}
+
+test('never more than eight articles stand, and eight while more qualify, through a pan across the field and back: each pan takes down only what left the view, every other article standing on its own element', () => onLayer((held) => {
+  note(ALL);
+  assert.ok(ALL.every((k) => faceOf(k) === faceOf(16)), 'the field is one face: every document ties');
+  view(7);
+  assert.equal(inView().length, 15, 'at em 7, fifteen of the field in view');
+  assert.deepEqual(frame(), [16, 17, 18, 19, 20, 23, 24, 25], 'the first eight in view, in the model\'s order');
+  for (const dx of [1, 0, -1, 0, 2, 1, 0]) {
+    const before = elements();
+    view(7, dx);
+    const now = frame(), seen = inView();
+    const left = [...before.keys()].filter((a) => !seen.includes(Number(a.split('.').pop())));
+    assert.ok(seen.length > MAX_MOUNTED, `${dx} across: more of the field in view than the cap`);
+    assert.equal(now.length, MAX_MOUNTED, `${dx} across: eight articles stand, never more`);
+    assert.equal(held.size, MAX_MOUNTED, `${dx} across: the layer holds their eight elements and no other`);
+    assert.ok(now.every((k) => seen.includes(k)), `${dx} across: each in view`);
+    assert.deepEqual(unmoved(before), [...before.keys()].filter((a) => !left.includes(a)), `${dx} across: none taken down or rebuilt but what left the view`);
+  }
+}));
+
+test('an article standing keeps its place down to 5.5; a document holding none takes a place from 6.5', () => onLayer(() => {
+  note(ALL);
+  view(7);
+  const eight = frame();
+  view(6);
+  assert.ok(inView().length > 15, 'em 6: more of the field in view than at em 7');
+  assert.deepEqual(frame(), eight, 'em 6 from above: the eight stand');
+  view(5);
+  assert.deepEqual(frame(), [], 'em 5: below 5.5, none stands');
+  view(6);
+  assert.deepEqual(frame(), [], 'em 6 from below: none takes a place below 6.5');
+  view(6.6);
+  assert.equal(frame().length, MAX_MOUNTED, 'em 6.6 from below: eight take their places');
+}));
+
+test('a larger face takes the place of the smallest article standing', () => onLayer((held) => {
+  note([16, 17, 18, 19, 20, 23, 24]);
+  give(25, Array.from({ length: 40 }, (_, i) => `Line ${i} of a longer document, which its box sets smaller.`).join(' '));
+  assert.ok(faceOf(25) < faceOf(16), 'the longer document is set at a smaller face than a line');
+  view((6.8 * faceOf(16)) / faceOf(25));
+  assert.ok(faceOf(25) * CAM.cam.scale >= MOUNT_EM, 'the longer document at em 6.8: it takes a place');
+  const eight = frame();
+  assert.deepEqual(eight, [16, 17, 18, 19, 20, 23, 24, 25], 'the eight delivered in view stand');
+  const before = elements();
+  note([26]);
+  assert.deepEqual(frame(), [16, 17, 18, 19, 20, 23, 24, 26], 'a line arriving in view takes the longer document\'s place');
+  assert.equal(held.size, MAX_MOUNTED);
+  assert.deepEqual(unmoved(before), [16, 17, 18, 19, 20, 23, 24].map(nth), 'the other seven stand as they stood');
+}));
+
+test('among equal faces the walk\'s focused document takes a place first, and its leaving trades nothing back', () => onLayer(() => {
+  note(ALL);
+  view(7);
+  const eight = frame();
+  assert.ok(!eight.includes(27) && inView().includes(27), 'document 27 in view, past the cap');
+  const before = elements();
+  const focused = frame(27);
+  assert.ok(focused.includes(27), 'focused, it stands: its corner the plane\'s next Tab stop (K-57)');
+  assert.equal(focused.length, MAX_MOUNTED, 'eight stand');
+  assert.equal(unmoved(before).length, MAX_MOUNTED - 1, 'one article gave up its place, the other seven stand as they stood');
+  const after = elements();
+  assert.deepEqual(frame(), focused, 'the focus gone: the eight stand as they are');
+  assert.equal(unmoved(after).length, MAX_MOUNTED, 'none rebuilt');
+}));
+
+test('a stale article is rebuilt in its place — after a trade the model\'s order would undo, and in the hysteresis band — never dropped', () => onLayer(() => {
+  note(ALL);
+  view(7); frame();
+  view(7, 1); frame();
+  view(7);
+  const traded = frame();
+  assert.notDeepEqual(traded, inView().slice(0, MAX_MOUNTED), 'the eight standing are not the first eight in view by the model\'s order');
+  let before = elements();
+  LAYER.bump();
+  assert.deepEqual(frame(), traded, 'a reveal\'s bump: the same eight stand');
+  assert.deepEqual(unmoved(before), [], 'each rebuilt, on an element of its own');
+  view(6);
+  assert.deepEqual(frame(), traded, 'em 6: the eight stand');
+  before = elements();
+  LAYER.bump();
+  assert.deepEqual(frame(), traded, 'em 6, a reveal\'s bump: the eight are rebuilt where they stand');
+  assert.deepEqual(unmoved(before), [], 'each on an element of its own');
+  before = elements();
+  give(16, 'Note 16, delivered again.');
+  assert.deepEqual(frame(), traded, 'em 6, a delivery to one of them: the eight stand');
+  assert.deepEqual(unmoved(before), [...before.keys()].filter((a) => a !== nth(16)), 'that one rebuilt, the others as they stood');
+}));
+
+test('while a press stands nothing is mounted or taken down for the cap, what leaves the view apart; the first frame after it does what was held', () => onLayer((held) => {
+  note(ALL);
+  view(7);
+  const eight = frame();
+  const before = elements();
+  LAYER.press(true);
+  assert.deepEqual(frame(27), eight, 'the focus on document 27 under the press: the eight stand');
+  assert.equal(unmoved(before).length, MAX_MOUNTED, 'none rebuilt');
+  view(7, 1);
+  const during = frame(27);
+  assert.deepEqual(during, eight.filter((k) => inView().includes(k)), 'a pan under the press: what left the view is taken down, nothing mounted');
+  assert.equal(held.size, during.length);
+  LAYER.press(false);
+  const after = frame(27);
+  assert.equal(after.length, MAX_MOUNTED, 'the press ended: eight stand');
+  assert.ok(after.includes(27), 'the focused document among them');
+}));

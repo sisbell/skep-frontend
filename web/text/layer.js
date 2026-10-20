@@ -6,14 +6,20 @@
 // press stands on the layer, and the platform's selection as it stood over an
 // article taken down — THE ONE OWNER (FP-10). Mount an article when a
 // document crosses S1's mount threshold (em 6.5, BELOW the canvas's readable
-// 8, so bars become text and no character positions disagree — S1 Q7),
-// unmount when it leaves or falls below 5.5 or its run, its revision or its
-// face changed, the cap 8 — but
-// WHILE A PRESS STANDS on the layer (`press`) nothing is rebuilt and nothing
-// mounted: the platform's drag-selection is anchored in the article's own
-// nodes, which a rebuild would take away, and a fresh mount of the document
-// holding the selection would place its range over the drag; the first frame
-// after the press does what was held. Laid out ONCE at P-LAY's LAY_FS (16 px)
+// 8, so bars become text and no character positions disagree — S1 Q7), take
+// it down when it leaves or falls below 5.5, and rebuild it where its run,
+// its revision or its face changed. THE CAP (S1's MAX_MOUNTED, 8): at most 8
+// articles stand, the largest em first; among equal faces the walk's focused
+// document first, whose corner is the plane's next Tab stop (D5 K-57), then
+// the articles standing, so no pan, reveal or delivery trades a standing
+// article for its equal. An article standing, stale or not, keeps its claim
+// down to 5.5, as it does against the threshold (`chosen`); a document past
+// the cap keeps its bars. But WHILE A PRESS STANDS on the layer (`press`)
+// nothing is rebuilt, nothing mounted and so nothing taken down for the cap:
+// the platform's drag-selection is anchored in the article's own nodes,
+// which a rebuild would take away, and a fresh mount of the document holding
+// the selection would place its range over the drag; the first frame after
+// the press does what was held. Laid out ONCE at P-LAY's LAY_FS (16 px)
 // and its unitless LINE_H, so each element's line box is that element's own
 // size's (P-LAY's `lineBox`), in a column of exactly P-LAY's `cpl` characters
 // of its own face (`ch`), from its box's top padding to its box's bottom, and
@@ -382,23 +388,63 @@ function place(/** @type {Mounted} */ rec) {
 }
 
 /**
+ * Has a mounted article gone stale: its document's run, its revision, the
+ * view revision or its face moved since it was mounted?
+ * @param {Mounted} rec
+ */
+const wentStale = (rec) => rec.d.from !== rec.runFrom || rec.d.to !== rec.runTo || rec.rev !== rec.d.rev || rec.grev !== grev || rec.fs !== metricsOf(rec.d).fs;
+
+/**
+ * The documents whose articles stand this frame — THE CAP (S1's
+ * MAX_MOUNTED), the largest em first. Of the documents in view whose text has
+ * arrived, the system's apart and a residue document only where it is the
+ * walk's focused one: a document holding an article now, stale or not, at em
+ * 5.5 and above, any other at 6.5 and above (S1's hysteresis). Among equal
+ * faces the walk's focused document ranks first, its corner the plane's next
+ * Tab stop (D5 K-57), then the articles standing, then the model's order, so
+ * a pan, a reveal or a delivery trades no standing article for its equal.
+ * @param {{x0: number, y0: number, x1: number, y1: number}} v the world the frame mounts in: the view, padded
+ * @param {(addr: string) => boolean} focused whether a document is the walk's focused one
+ * @returns {Doc[]} at most MAX_MOUNTED, in the order they rank
+ */
+function chosen(v, focused) {
+  /** @type {Array<{d: Doc, em: number, rank: number}>} rank 0 the focused document, 1 a document holding an article, 2 any other */
+  const want = [];
+  for (const d of REC.docs()) {
+    if (d.from < 0 || d.system) continue;
+    const box = docBox(d.addr);
+    if (!intersects(box, v)) continue;
+    const mine = focused(d.addr);
+    if (box.residue && !mine) continue;
+    const standing = mounted.has(d.addr);
+    const em = metricsOf(d).fs * cam.scale;
+    if (em >= (standing ? UNMOUNT_EM : MOUNT_EM)) want.push({ d, em, rank: mine ? 0 : standing ? 1 : 2 });
+  }
+  // the sort is stable: equal in face and rank, the model's order stands
+  want.sort((a, b) => b.em - a.em || a.rank - b.rank);
+  return want.slice(0, MAX_MOUNTED).map((w) => w.d);
+}
+
+/**
  * The per-frame policy, run before the canvas draws (so P-RENDER yields to
  * exactly the articles mounted this frame, and draws the bars of exactly the
- * documents unmounted): unmount what left or fell below the threshold or went
- * stale, mount what crossed it (the cap), place everything, mark each
- * standing article's blocks for the selection and the walk's focus in place
- * (`markBlocks`), give each the pointer at reading scale alone
- * (`markLegible`), and place each article's corner beside it; where the
- * article holding the selection was mounted this frame, put the platform's
- * range back over the span, its anchor at the end it stood at (`placeAgain`).
- * While a press stands (`press`) only what left or fell below the threshold
- * is unmounted: no article is rebuilt, none mounted and none given or denied
- * the pointer, so the drag keeps the nodes it is anchored in, through a zoom
+ * documents unmounted): take down what left or fell below the threshold;
+ * choose the articles that stand (`chosen`: the cap), take down every other,
+ * rebuild each chosen one that went stale and mount the rest; place
+ * everything, mark each standing article's blocks for the selection and the
+ * walk's focus in place (`markBlocks`), give each the pointer at reading
+ * scale alone (`markLegible`), and place each article's corner beside it;
+ * where the article holding the selection was mounted this frame, put the
+ * platform's range back over the span, its anchor at the end it stood at
+ * (`placeAgain`). While a press stands (`press`) only what left or fell
+ * below the threshold is taken down: none is chosen, so no article is taken
+ * down for the cap, rebuilt or mounted, and none given or denied the
+ * pointer, so the drag keeps the nodes it is anchored in, through a zoom
  * past the readable threshold too, and no range is placed over it; the first
- * frame after the press rebuilds what went stale, mounts what crossed, gives
- * or takes the pointer where the scale now asks, and places the range the
- * release took over the rebuilt article.
- * @param {(addr: string) => boolean} [focused] whether a document is the walk's focused one: the one residue document of its cell that mounts, and the one whose corner is a Tab stop (D5 K-57)
+ * frame after the press chooses, rebuilds what went stale, mounts what
+ * crossed, gives or takes the pointer where the scale now asks, and places
+ * the range the release took over the rebuilt article.
+ * @param {(addr: string) => boolean} [focused] whether a document is the walk's focused one: the one residue document of its cell that mounts, the first among equal faces under the cap, and the one whose corner is a Tab stop (D5 K-57)
  */
 export function frame(focused = () => false) {
   if (!layer) return;
@@ -407,29 +453,19 @@ export function frame(focused = () => false) {
   const VW = layer.clientWidth || window.innerWidth, VH = layer.clientHeight || window.innerHeight;
   v.x0 = (-pad - VW / 2) / cam.scale + cam.x; v.x1 = (VW + pad - VW / 2) / cam.scale + cam.x;
   v.y0 = (-pad - VH / 2) / cam.scale + cam.y; v.y1 = (VH + pad - VH / 2) / cam.scale + cam.y;
-  /** @type {Array<{d: Doc, em: number}>} */
-  const want = [];
-  for (const d of REC.docs()) {
-    if (d.from < 0 || d.system) continue;
-    const box = docBox(d.addr);
-    if (!intersects(box, v)) continue;
-    if (box.residue && !focused(d.addr)) continue;
-    const em = metricsOf(d).fs * cam.scale;
-    if (em >= MOUNT_EM) want.push({ d, em });
-  }
-  want.sort((a, b) => b.em - a.em);
-  const keep = new Set(want.slice(0, MAX_MOUNTED).map((w) => w.d.addr));
   for (const [addr, rec] of [...mounted]) {
     const box = docBox(addr);
-    const em = rec.fs * cam.scale;
-    if (!intersects(box, v) || em < UNMOUNT_EM || (box.residue && !focused(addr))) { unmount(addr); continue; }
-    if (pressed) continue;
-    if (rec.d.from !== rec.runFrom || rec.d.to !== rec.runTo || rec.rev !== rec.d.rev || rec.grev !== grev || rec.fs !== metricsOf(rec.d).fs) unmount(addr);
+    if (!intersects(box, v) || rec.fs * cam.scale < UNMOUNT_EM || (box.residue && !focused(addr))) unmount(addr);
   }
   /** @type {string[]} the articles mounted this frame */
   const fresh = [];
-  if (!pressed) for (const w of want.slice(0, MAX_MOUNTED)) if (!mounted.has(w.d.addr) && mount(w.d)) fresh.push(w.d.addr);
-  for (const rec of mounted.values()) if (keep.has(rec.d.addr) || true) place(rec);
+  if (!pressed) {
+    const stand = chosen(v, focused);
+    const keep = new Set(stand.map((d) => d.addr));
+    for (const [addr, rec] of [...mounted]) if (!keep.has(addr) || wentStale(rec)) unmount(addr);
+    for (const d of stand) if (!mounted.has(d.addr) && mount(d)) fresh.push(d.addr);
+  }
+  for (const rec of mounted.values()) place(rec);
   const selected = read.selection(), focus = read.focus();
   for (const rec of mounted.values()) { markBlocks(rec, selected, focus); if (!pressed) markLegible(rec); }
   placeCorners(focused);
