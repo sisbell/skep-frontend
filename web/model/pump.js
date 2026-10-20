@@ -152,7 +152,9 @@ export function visibleDocs(pad = 80) {
 
 /**
  * The span window a document's visible band needs: the positions whose
- * estimated place lies in the viewport, rounded to SPAN_BLOCK.
+ * estimated place lies in the viewport — the positions spread evenly down
+ * the article, from its first line's top to its clip (P-LAY's) — rounded to
+ * SPAN_BLOCK.
  * @param {Doc} d
  * @returns {[number, number] | null} [first position, one past the last]
  */
@@ -160,7 +162,7 @@ export function spanWindow(d) {
   const extent = d.extent || 0; if (!extent) return null;
   const box = docBox(d.addr);
   const m = metricsFor(extent, box);
-  const y0 = box.y + m.y0, textH = m.textH;
+  const y0 = box.y + m.y0, textH = m.y1 - m.y0;
   const v = viewportWorld(0);
   const f0 = Math.max(0, (v.y0 - y0) / textH), f1 = Math.min(1, (v.y1 - y0) / textH);
   if (f1 <= 0 || f0 >= 1) return null;

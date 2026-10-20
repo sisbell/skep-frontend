@@ -1,6 +1,9 @@
 /* THE REGISTER's VALUES and the chrome's CSS (the structure record §2:
    `style.css`). The custom properties are set from plane/register.js at
-   boot — one source for the values the canvas and the DOM share (F2.1-l).
+   boot — one source for the values the canvas and the DOM share (F2.1-l) —
+   and the article's sizes and gaps from plane/layout.js's MEASURE and
+   BORDER, which P-LAY lays the canvas's bars out with: the text layer reads
+   them here and sets no size of its own.
    Carries the wireframe's plane.html styles, re-cut: the one line, the LEAP
    box, the overlay, the scene, the mirror, the text layer, the corners. */
 :root { --bg:#0e1013; --ink:#e8e6e1; --dim:#8b8f96; --line:#2a2f36; --box:#1b1f25; --accent:#7fb2ff; --warn:#ffb454; --ok:#7ddc9a; --bad:#ff6b6b;
@@ -57,18 +60,22 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #fail { position:fixed; left:8px; bottom:8px; z-index:40; color:var(--bad); white-space:pre-wrap; display:none; max-width:60vw; background:rgba(14,16,19,.9); padding:6px; }
 #fail.on { display:block; }
 
-/* THE TEXT LAYER (S1 Q7): laid out once at 16 px, moved by transform; the box IS the page */
+/* THE TEXT LAYER (S1 Q7): laid out once at 16 px, moved by transform; the box IS the page. Every line box is
+   one line height — the chrome inside a line (the hairline's label, C-33's mark, a symbol) is set at a line height
+   of its own size, so it never deepens its line; a symbol's box is one character wide whatever face sets its ⟡ —
+   and a block contains its float (the others' count): the lines P-LAY lays the bars out on (foundations §2.4: the
+   handoff moves no line). */
 #domlayer { position:fixed; inset:0; overflow:hidden; pointer-events:none; contain:strict; z-index:3; }
 .dtext { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; pointer-events:auto; overflow:hidden; box-sizing:content-box;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color:#b9c1cb; -webkit-font-smoothing:antialiased; cursor:text; user-select:text; }
 .dtext .hd { color:#cfd6df; }
 .dtext .hd .addr { font-weight:600; }
-.dtext .hd .st, .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:.8em; display:block; }
+.dtext .hd .st, .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:var(--head); display:block; }
 .dtext .hd .pres { color:#b9c1cb; }
 .dtext .run { display:block; }
-.dtext .sp { display:block; margin:0 0 .55em; cursor:pointer; border-radius:2px; font-weight:400; }
+.dtext .sp { display:flow-root; margin:0 0 var(--gap); cursor:pointer; border-radius:2px; font-weight:400; }
 .dtext h2.sp, .dtext h3.sp, .dtext h4.sp, .dtext h5.sp, .dtext h6.sp, .dtext h7.sp { font-size:1em; font-weight:600; color:#cfd6df; }
-.dtext h2.sp { font-size:1.25em; } .dtext h3.sp { font-size:1.1em; }
+.dtext h2.sp { font-size:var(--h2); } .dtext h3.sp { font-size:var(--h3); }
 .dtext .sp:hover { background:rgba(127,178,255,.08); }
 /* the selection's bytes are the platform's own highlight; a block it touches carries the outline as its cue */
 .dtext .sp.sel { box-shadow:0 0 0 1px rgba(232,230,225,.5); }
@@ -79,22 +86,23 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .lip.depth2 { text-decoration-style:double; }
 .dtext .lip.depth3 { text-decoration-thickness:2px; }
 /* sameness: boundaries and a ground texture, never a tint; the hairline label the one gesture to the source */
-.dtext .same { background:var(--same-texture); border-left:2px solid var(--same-boundary); padding-left:.25em; }
-.dtext .hairline { color:var(--same-boundary); font-size:.7em; cursor:pointer; margin-right:.3em; vertical-align:baseline; }
+.dtext .same { background:var(--same-texture); border-left:var(--border-same) solid var(--same-boundary); padding-left:var(--same-pad); }
+.dtext .hairline { color:var(--same-boundary); font-size:var(--label); line-height:1; cursor:pointer; margin-right:var(--label-gap); vertical-align:baseline; }
 .dtext .hairline.compact { opacity:.7; }
-.dtext .pubmark { display:inline-block; font-size:.72em; color:#cfd6df; border:1px solid #4a5260; padding:0 .3em; margin-right:.3em; }
-.dtext .sym { display:inline-block; border:1px solid var(--mark-hue, #8b8f96); color:var(--mark-hue, #e8e6e1); padding:0 .3em; font-size:.75em; margin-left:.3em; cursor:pointer; vertical-align:baseline; opacity:var(--mark-value, 1); }
+.dtext .pubmark { display:inline-block; font-size:var(--mark); line-height:1; color:#cfd6df; border:var(--border-box) solid #4a5260; padding:0 var(--mark-pad); margin-right:var(--mark-gap); }
+.dtext .sym { display:inline-block; border:var(--border-box) solid var(--mark-hue, #8b8f96); color:var(--mark-hue, #e8e6e1); padding:0 var(--sym-pad); font-size:var(--sym); line-height:1; margin-left:var(--sym-gap); cursor:pointer; vertical-align:baseline; opacity:var(--mark-value, 1);
+  width:calc(1ch + 2 * var(--sym-pad) + 2 * var(--border-box)); text-align:center; }
 .dtext .sym.other { border-style:dashed; }
-.dtext .others { float:right; color:var(--dim); font-size:.72em; margin-left:.5em; }
-.dtext .withheld { display:block; margin:0 0 .55em; padding:.4em .6em; border:1px solid #8b8f96; color:#cfd6df;
+.dtext .others { float:right; color:var(--dim); font-size:var(--count); margin-left:var(--count-gap); }
+.dtext .withheld { display:block; margin:0 0 var(--gap); padding:.4em .6em; border:1px solid #8b8f96; color:#cfd6df;
   background: repeating-linear-gradient(45deg, #1b1f25, #1b1f25 6px, #22272f 6px, #22272f 12px); }
 .dtext .withheld .arm, .dtext .withheld .clause { display:block; font-size:.8em; color:#b9c1cb; margin-top:.3em; }
 /* the chrome inside a block and the withheld run's face are never the document's bytes: a drag crosses them unselected, the copy never carries them */
 .dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .others, .dtext .withheld { user-select:none; -webkit-user-select:none; }
 .dtext .rec { display:block; color:#cfd6df; }
-.dtext .rec .derived { display:block; color:#8b8f96; font-size:.85em; }
+.dtext .rec .derived { display:block; color:#8b8f96; font-size:var(--derived); }
 .dtext .rec.not-rendered { color:#4b5563; font-style:italic; }
-.dtext .offer { display:block; margin:.6em 0; color:#8b8f96; font-size:.8em; cursor:pointer; text-decoration:underline dotted; }
+.dtext .offer { display:block; margin:var(--offer-gap) 0; color:#8b8f96; font-size:var(--offer); cursor:pointer; text-decoration:underline dotted; }
 #beams { position:fixed; inset:0; pointer-events:none; z-index:4; }
 
 /* THE CORNER — on the document's one side, outside the measure, at the interface's size (foundations §3.1; ux-T2):

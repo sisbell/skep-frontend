@@ -10,8 +10,18 @@ below the one line at each level, held there while the document's top has
 risen past the line, and never below the document's box as its bottom
 rises), and every beam leaving the text at its span's own line (its
 endpoint on one of its marked words' line rects, between the words' end and
-the article's edge — foundations §2.1; S1 Q1). The measuring code is the
-page's (`driftSample`, `overlapCheck`, `beamAnchors`, `visible`); the
+the article's edge — foundations §2.1; S1 Q1). THE HANDOFF (law 8;
+foundations §2.4: the bars become text and no line moves; S1 Q7): at each
+level, and at the mount threshold reached from below (em 6 → 6.6) and from
+above (em 7 → 6), every block of every mounted article whose top lies
+inside its clip stands on the canvas's own bars for it — its top within
+HANDOFF_TOL_PX of its bars' first line, and as many lines; a withheld run's
+face and the blocks after it are left out, its height at reading scale the
+design's open question (F2.1-i: the bars take its true width). THE FRAME
+ORDER (law 13): the frames each step across the mount threshold draws show
+no document both as bars under its own mounted text and none yielded to
+text that is not mounted. The measuring code is the page's (`driftSample`,
+`overlapCheck`, `beamAnchors`, `visible`, `barsOf`, the frame buffer); the
 thresholds are here. The block containment and anchor checks are marked
 with the page issues they wait on and count as expected while those
 stand."""
@@ -22,6 +32,7 @@ from . import DOC, WINDOW, XFAIL_ANCHOR, XFAIL_CLIP, Result
 LEVELS_EM = [9, 12, 18, 30]
 DRIFT_TOL_PX = 0.5
 ANCHOR_TOL_PX = 0.5
+HANDOFF_TOL_PX = 1.0
 CORNER = '#corners [data-corner="%s"]' % DOC
 
 
@@ -36,6 +47,39 @@ def on_own_line(a):
     """does the beam's endpoint lie on one of its words' line rects, between the words' end and the article's edge?"""
     edge = a['edge'] if a['edge'] is not None else 0
     return any(w['y'] - ANCHOR_TOL_PX <= a['y'] <= w['y'] + w['h'] + ANCHOR_TOL_PX and w['x'] + w['w'] - ANCHOR_TOL_PX <= a['x'] <= edge + ANCHOR_TOL_PX for w in a['words'])
+
+
+def handoff(ctx):
+    """every mounted article's blocks against the canvas's own bars for them (`barsOf`): the blocks whose top lies
+    inside the article's clip, a withheld run's face and the blocks after it left out; the ones off their bars named"""
+    compared, off, left_out = 0, [], 0
+    for addr in ctx.js('window.__skep.mountedAddrs()'):
+        h = ctx.js('window.__skep.barsOf(%s)' % json.dumps(addr))
+        if not h or h['text'] is None:
+            continue
+        bars = {b['pos']: b for b in h['bars']}
+        past = False
+        for t in h['text']:
+            past = past or t['withheld']
+            if past:
+                left_out += 1
+                continue
+            if t['top'] >= h['clip'] or t['lines'] == 0:
+                continue
+            compared += 1
+            b = bars.get(t['pos'])
+            if b is None or b['top'] is None or abs(b['top'] - t['top']) > HANDOFF_TOL_PX or b['lines'] != t['lines']:
+                off.append({'addr': addr, 'pos': t['pos'], 'text_top': t['top'], 'bars_top': b and b['top'], 'text_lines': t['lines'], 'bars_lines': b and b['lines'], 'line_px': h['line_px']})
+    return {'compared': compared, 'off': off, 'left_out': left_out}
+
+
+def step(ctx, em):
+    """the camera over the first edition at an em, and what the frames that step drew show: the most documents any of
+    them drew as bars under their own mounted text (`both`), and yielded to text that was not mounted (`neither`)"""
+    t0 = ctx.js('performance.now()')
+    ctx.view_doc_em(DOC, em)
+    f = ctx.js('window.__skep.frames().filter(f => f.t >= %s).map(f => [f.both, f.neither])' % t0)
+    return {'em': em, 'frames': len(f), 'both': max((x[0] for x in f), default=0), 'neither': max((x[1] for x in f), default=0)}
 
 
 def run(ctx):
@@ -58,7 +102,9 @@ def run(ctx):
         c = corner_of(ctx)
         shown = c['corner'] is not None and c['corner']['inClip'] and c['corner']['inView'] and c['corner']['rect']['y'] >= c['line'] - 0.5
         r.check(shown, f'em {em}: the first edition\'s corner is in view, below the one line', c)
-        drift['em%d' % em] = {'samples': sample, 'worst_px': worst, 'containment': ov, 'em_px_measured': mine[0]['em_px'] if mine else None, 'corner': c['corner'] and c['corner']['rect']}
+        ho = handoff(ctx)
+        r.check(ho['compared'] > 0 and not ho['off'], f'em {em}: the handoff — every block of every mounted article stands on the canvas\'s bars for it: its top within {HANDOFF_TOL_PX} px of its bars\' first line, and as many lines', {'compared': ho['compared'], 'off': ho['off'][:6]})
+        drift['em%d' % em] = {'samples': sample, 'worst_px': worst, 'containment': ov, 'em_px_measured': mine[0]['em_px'] if mine else None, 'corner': c['corner'] and c['corner']['rect'], 'handoff': {'compared': ho['compared'], 'off': len(ho['off']), 'left_out': ho['left_out']}}
     r.figures['drift'] = drift
     # the corner holds to the top of the document's visible part (foundations §3.1): the box's top risen past the one
     # line, the corner stands just below the line; the box's bottom risen near it, the corner rises with the bottom
@@ -99,15 +145,31 @@ def run(ctx):
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
     ctx.frames(2)
     r.check(ctx.js('window.__skep.beams()') == 0, 'hidden again: no beams')
-    # the mount thresholds: mounted at em 6.5 and above, unmounted below 5.5
-    ctx.view_doc_em(DOC, 7)
+    # the mount thresholds: mounted at em 6.5 and above, unmounted below 5.5; at each step the frames it drew drew no
+    # document both as bars and as text, nor left one yielded and unmounted; where the article stands just mounted, it
+    # stands on its bars
+    steps = []
+    def crossed(em, how):
+        s = step(ctx, em)
+        steps.append(dict(s, how=how))
+        r.check(s['frames'] > 0 and s['both'] == 0 and s['neither'] == 0, f'em {em} ({how}): no frame of the step drew a document\'s bars under its own mounted text, or left a document yielded to text that is not mounted', s)
+    crossed(7, 'from above')
     r.check(DOC in ctx.js('window.__skep.mountedAddrs()'), 'em 7: the article is mounted (above the 6.5 threshold)')
-    ctx.view_doc_em(DOC, 5)
+    crossed(6, 'from above')
+    r.check(DOC in ctx.js('window.__skep.mountedAddrs()'), 'em 6 from above: still mounted (hysteresis)')
+    ho = handoff(ctx)
+    r.check(ho['compared'] > 0 and not ho['off'], 'em 6 from above: the handoff — every block of every mounted article stands on its bars', {'compared': ho['compared'], 'off': ho['off'][:6]})
+    crossed(5, 'from above')
     r.check(DOC not in ctx.js('window.__skep.mountedAddrs()'), 'em 5: the article is unmounted (below the 5.5 hysteresis)')
-    ctx.view_doc_em(DOC, 6)
+    crossed(6, 'from below')
     r.check(DOC not in ctx.js('window.__skep.mountedAddrs()'), 'em 6 from below: not yet mounted (hysteresis)')
-    ctx.view_doc_em(DOC, 12.5)
+    crossed(6.6, 'from below')
+    r.check(DOC in ctx.js('window.__skep.mountedAddrs()'), 'em 6.6 from below: mounted (above the 6.5 threshold)')
+    ho = handoff(ctx)
+    r.check(ho['compared'] > 0 and not ho['off'], 'em 6.6 from below: the handoff — every block of every mounted article stands on its bars', {'compared': ho['compared'], 'off': ho['off'][:6]})
+    crossed(12.5, 'from below')
     r.check(DOC in ctx.js('window.__skep.mountedAddrs()'), 'em 12.5: mounted')
+    r.figures['mount_steps'] = steps
     cap = ctx.js('window.__skep.constants')
     r.figures['constants'] = cap
     # the projection's places: no two indexed documents of the account share a box (reading order seeded by the prefix — M2's site)

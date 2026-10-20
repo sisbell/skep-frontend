@@ -112,8 +112,8 @@ def main():
     f = (cases.get('frames') or {}).get('figures') or {}
     if f.get('phases'):
         L.append('## Class 6 — frames\n')
-        rows = [[n, p['frames'], p['fps_median'], p['frame_p50'], p['frame_p95'], p['frame_p99'], p['draw_p50'], p['draw_p99'], p['frames_over_33ms'], p['worst_frame_ms'], p['max_docs_drawn']] for n, p in f['phases'].items()]
-        L.append(table(rows, ['phase', 'frames', 'fps p50', 'frame p50', 'p95', 'p99', 'draw p50', 'draw p99', 'over 33 ms', 'worst ms', 'docs drawn']))
+        rows = [[n, p['frames'], p['fps_median'], p['frame_p50'], p['frame_p95'], p['frame_p99'], p['draw_p50'], p['draw_p99'], p['frames_over_33ms'], p['worst_frame_ms'], p['max_docs_drawn'], p.get('max_both'), p.get('max_neither')] for n, p in f['phases'].items()]
+        L.append(table(rows, ['phase', 'frames', 'fps p50', 'frame p50', 'p95', 'p99', 'draw p50', 'draw p99', 'over 33 ms', 'worst ms', 'docs drawn', 'bars under text', 'empty yielded']))
         L.append(f"\nGuard: at most {f.get('guard_max_over_33')} frames over 33 ms per phase on this machine. Mount costs (a forced layout inside the measure): `{json.dumps(f.get('mounts'))}`. Refresh measured: {f.get('refresh_hz_measured')} Hz.\n")
     lay = (cases.get('layout') or {}).get('figures') or {}
     if lay.get('drift'):
@@ -121,6 +121,7 @@ def main():
         rows = [[k, v.get('em_px_measured'), v.get('worst_px'), (v.get('containment') or {}).get('mounted'), (v.get('containment') or {}).get('intersecting_pairs'), len((v.get('containment') or {}).get('blocks_cut') or []), len((v.get('containment') or {}).get('corners_missing') or []), len((v.get('containment') or {}).get('corners_clipped') or []), len((v.get('containment') or {}).get('corners_into') or []), (v.get('containment') or {}).get('worst_overflow_px')] for k, v in lay['drift'].items()]
         L.append(table(rows, ['level', 'em px measured', 'worst drift px', 'mounted', 'intersecting', 'blocks cut', 'corners missing', 'corners clipped', 'corners into a box', 'worst overflow px']))
         L.append(f"\nContinuous zoom: `{json.dumps(lay.get('sweep'))}`; beams: `{json.dumps(lay.get('beams'))}`; the corner held: `{json.dumps(lay.get('corner_held'))}`.\n")
+        L.append(f"The handoff (blocks on their bars) per level: `{json.dumps({k: v.get('handoff') for k, v in lay['drift'].items()})}`; the mount steps: `{json.dumps(lay.get('mount_steps'))}`.\n")
     rd = (cases.get('rendered') or {}).get('figures') or {}
     if rd:
         L.append('## Class 1 — rendered\n')

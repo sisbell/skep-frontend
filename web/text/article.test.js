@@ -4,10 +4,14 @@
 // transcluded run's hairline and C-33's mark; the corner's version statement
 // and a draft's chip (C-28), items of one stop that the article never holds
 // (they stand beside it, outside the box that clips it); the record rule;
-// headings as formatting.
+// headings as formatting. The plan the canvas's bars are laid out from: the
+// head's three lines, a fourth where links touch the document; a block's
+// pieces with its hairline's label, C-33's mark and its symbols at its size;
+// the same blocks, in the same order, as the HTML.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { articleHTML, withheldBlockHTML, cornerHTML, headingLevel } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, cornerHTML, headingLevel } from './article.js';
+import { MEASURE } from '../plane/layout.js';
 import { t } from '../strings.js';
 
 /** @returns {import('./article.js').ArticleView} */
@@ -87,4 +91,57 @@ test('a record atom renders as the record it is; a heading as formatting', () =>
   assert.equal(headingLevel('## The artifact chain'), 2);
   const h = articleHTML(doc({ blocks: [{ pos: 1, width: 10, kind: 'para', text: '## Title', origin: null }] }), view(), '1.0.1');
   assert.ok(h.includes('<h3 class="sp blk-para"'));
+});
+
+/** a link marked at a span of the first edition, as LK hands it in */
+const shown = (/** @type {number} */ pos, /** @type {number} */ width) => /** @type {any} */ ({ link: { addr: 'L' + pos, type: null }, end: 'from', pos, width, mark: { hue: '#7fb2ff', linker: 'you', form: [], value: 1, own: true }, linker: 'you', far: '1.0.1.0.4', farEnd: null, farWhole: true });
+
+test('the plan\'s head is the article\'s: three lines, a fourth where links touch the document', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 20, kind: 'para', text: 'abcdefghijklmnopqrst', origin: null }] });
+  const bare = articlePlan(d, view(), '1.0.1').filter((r) => r.kind === 'head');
+  assert.deepEqual(bare.map((r) => r.pieces.map((p) => p.text).join('')), ['1.0.1.0.3', t('B1.state-line'), '1.0.1 · dev-notebook · e427 2902 a114 39e5']);
+  assert.deepEqual(bare.map((r) => r.pieces[0].size), [1, MEASURE.head, MEASURE.head], 'the address at the body\'s size, the state line and the byline at the head\'s');
+  const marked = articlePlan(d, view({ marks: [shown(5, 4)] }), '1.0.1').filter((r) => r.kind === 'head');
+  assert.equal(marked.length, 4);
+  assert.equal(marked[3].pieces[0].box, true, 'the presence line opens with its ⟡, an inline-block');
+  assert.ok(marked[3].pieces.map((p) => p.text).join('').endsWith(t('B1.presence.1')));
+});
+
+test('a block\'s plan carries its hairline\'s label, C-33\'s mark and its symbols, at its own size', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: '# abcdefghij', origin: null }], origins: [{ pos: 5, width: 4, doc: '1.0.1.0.1003' }] });
+  const v = view({ originKinds: new Map([['1.0.1.0.1003', 'draft']]), marks: [shown(9, 2)], symbols: [shown(9, 2)], countAt: () => ({ n: 3, social: false }) });
+  const r = /** @type {import('../plane/layout.js').Row} */ (articlePlan(d, v, '1.0.1').find((x) => x.pos === 1));
+  const k = MEASURE.h2;
+  assert.equal(r.after, MEASURE.gap * k, 'the gap after a heading at its own size');
+  const label = r.pieces.find((p) => p.text === '≡ 1.0.1.0.1003');
+  assert.ok(label && label.size === MEASURE.label * k && label.lead > 0, 'the hairline\'s label whole, at its size, led by the sameness boundary');
+  const mark = r.pieces.find((p) => p.text === t('C-33'));
+  assert.ok(mark && mark.box && mark.size === MEASURE.mark * k, 'C-33\'s mark: an inline-block');
+  assert.equal(r.pieces.filter((p) => p.text === '⟡' && p.box).length, 1, 'the symbol at its span');
+  assert.equal(r.pieces.filter((p) => !p.box && p.text !== '≡ 1.0.1.0.1003').map((p) => p.text).join(''), '# abcdefghij', 'the document\'s own characters, every one');
+  assert.equal(r.float && r.float.text, t('F.others-count', { n: 3 }), 'the others\' count floats at its end');
+});
+
+test('the plan and the HTML decide the same blocks, in the same order', () => {
+  const d = doc({
+    blocks: [
+      { pos: 1, width: 1, kind: 'atom', text: JSON.stringify({ type: 'skep-enroll', keys: [{ label: 'dev-notebook', anchor: false }] }), origin: null },
+      { pos: 2, width: 10, kind: 'para', text: '## Title', origin: null },
+      { pos: 12, width: 240, kind: 'withheld', text: '', origin: '1.0.1.0.1003' },
+      { pos: 252, width: 1, kind: 'ref', text: '', origin: null },
+      { pos: 253, width: 4, kind: 'hex', text: 'abcd', origin: null },
+      { pos: 257, width: 10, kind: 'para', text: 'aaaa bbbb', origin: null },
+    ],
+    origins: [{ pos: 257, width: 4, doc: '1.0.1.0.1003' }],
+  });
+  const html = articleHTML(d, view(), '1.0.1');
+  const inHTML = [...html.matchAll(/<(?:p|h\d|span) class="(?:sp[^"]*|withheld)"[^>]*?data-pos="(\d+)"/g)].map((m) => Number(m[1]));
+  const plan = articlePlan(d, view(), '1.0.1');
+  assert.deepEqual(plan.filter((r) => r.pos != null).map((r) => r.pos), inHTML);
+  assert.deepEqual(inHTML, [1, 2, 12, 252, 253, 257]);
+  const at = plan.findIndex((r) => r.pos === 1);
+  assert.deepEqual(plan.slice(at, at + 2).map((r) => [r.pos, r.pieces[0].text]), [[1, t('F.home-record.yours')], [null, 'dev-notebook · device']], 'a record\'s words, then its keys on a row of their own');
+  assert.equal((plan.find((r) => r.kind === 'withheld') || { width: 0 }).width, 240, 'a withheld run carries its width');
+  assert.equal(plan.filter((r) => r.kind === 'chrome').length, 1, 'the scene-offer: the page\'s chrome after the blocks');
+  assert.equal(articlePlan(doc({ refused: 'withheld' }), view(), '1.0.1').length, 3, 'a refused document is its head alone');
 });

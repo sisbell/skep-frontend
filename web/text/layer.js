@@ -6,36 +6,42 @@
 // document crosses S1's mount threshold (em 6.5, BELOW the canvas's readable
 // 8, so bars become text and no character positions disagree — S1 Q7),
 // unmount when it leaves or falls below 5.5 or its run or revision changed,
-// the cap 8; laid out ONCE at 16 px and placed by transform from the same
-// camera arithmetic (registration 0 px — S1). The marks and symbols are
-// placed from LK's `shown` and `symbols`; the selection from O-SELECTION and
-// the focus from N-WALK are handed to T-ARTICLE as values. THE CORNER
-// (foundations §3.1; ux-T2; D5 K-57): each mounted document at reading scale
-// (em 8, P-LOD's readable threshold, and above) carries its own BESIDE its
-// article, never inside it — the article's box clips whatever stands past its
-// measure — as an element of the corner layer this module keeps: on the
-// document's one side, the left (the beams and the blocks' counts take the
-// right), in the strip P-PROJ's `clearLeftOf` keeps free of every other
-// document's box, at the interface's size, held to the top of the document's
-// visible part below the one line and never past the box's bottom, placed by
-// translate alone from the same camera arithmetic. The element outlives its
-// article's remounts and its items are rewritten only where they change, so a
-// focus on it survives them; the focused document's corner is the plane's
-// next Tab stop, named by its own words, and every other is out of the order
-// and hidden from assistive technology; a corner that leaves while it holds
-// the focus hands it to the walk (D5 §4 rule 4). The press rule's text half
-// (§2.4): the layer takes pointer events at reading scale; a drag selects
-// text and never pans. THE SELECTION IS A BYTE SPAN (R11; foundations §3.1)
-// and the platform's selection is its one mark (§2.1): this module carries
-// the platform's range to the span it covers — each block's own text nodes
-// walked, the chrome inside a block skipped, a character boundary carried to
-// its byte position by T-SPAN — and the span back to a range, which it
-// places over the mounted article when the selection is made and again
-// after a remount, since a remount rebuilds the element and the platform's
-// range dies with the old one. The copy event carries the passage's board
-// and address beside the plain text and never in it (§2.4), in a flavor
-// only a skep client reads; the plain text is the document's own bytes over
-// the span, no label of the page among them.
+// the cap 8; laid out ONCE at P-LAY's LAY_FS (16 px) in a column of exactly
+// P-LAY's `cpl` characters of its own face (`ch`), from its box's top
+// padding to its box's bottom, and placed by transform from the same camera
+// arithmetic (registration 0 px — S1). The canvas's bars below the mount are
+// P-LAY's layout of the same article's plan (`planOf`, from the view the
+// article is mounted with), so the bars a mount replaces stand on the lines
+// its text takes. The loop runs `frame` before P-RENDER draws, so the canvas
+// draws or yields each document by this frame's mounted set. The marks and
+// symbols are placed from LK's `shown` and `symbols`; the selection from
+// O-SELECTION and the focus from N-WALK are handed to T-ARTICLE as values.
+// THE CORNER (foundations §3.1; ux-T2; D5 K-57): each mounted document at
+// reading scale (em 8, P-LOD's readable threshold, and above) carries its own
+// BESIDE its article, never inside it — the article's box clips whatever
+// stands past its measure — as an element of the corner layer this module
+// keeps: on the document's one side, the left (the beams and the blocks'
+// counts take the right), in the strip P-PROJ's `clearLeftOf` keeps free of
+// every other document's box, at the interface's size, held to the top of the
+// document's visible part below the one line and never past the box's bottom,
+// placed by translate alone from the same camera arithmetic. The element
+// outlives its article's remounts and its items are rewritten only where they
+// change, so a focus on it survives them; the focused document's corner is
+// the plane's next Tab stop, named by its own words, and every other is out
+// of the order and hidden from assistive technology; a corner that leaves
+// while it holds the focus hands it to the walk (D5 §4 rule 4). The press
+// rule's text half (§2.4): the layer takes pointer events at reading scale; a
+// drag selects text and never pans. THE SELECTION IS A BYTE SPAN (R11;
+// foundations §3.1) and the platform's selection is its one mark (§2.1): this
+// module carries the platform's range to the span it covers — each block's
+// own text nodes walked, the chrome inside a block skipped, a character
+// boundary carried to its byte position by T-SPAN — and the span back to a
+// range, which it places over the mounted article when the selection is made
+// and again after a remount, since a remount rebuilds the element and the
+// platform's range dies with the old one. The copy event carries the
+// passage's board and address beside the plain text and never in it (§2.4),
+// in a flavor only a skep client reads; the plain text is the document's own
+// bytes over the span, no label of the page among them.
 // Carries: the wireframe's §16 `mount`/`unmount`/`place`/`S1.frame`; S1's
 // `mount`, `place`, `S1.frame`; `driftSample` and `overlapCheck` become
 // gate hooks (`web/gate/hooks.js` reads `mounted`).
@@ -46,8 +52,8 @@ import * as LK from '../links/links.js';
 import { cam, sx, sy } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MAX_MOUNTED, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
-import { metricsFor } from '../plane/layout.js';
-import { articleHTML, cornerHTML } from './article.js';
+import { metricsFor, LAY_FS, LINE_H } from '../plane/layout.js';
+import { articleHTML, articlePlan, cornerHTML } from './article.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { fingerprintCue } from '../util.js';
 
@@ -67,6 +73,7 @@ import { fingerprintCue } from '../util.js';
  * @property {number} grev the view revision at mount
  * @property {number} fs the document's em in world units
  * @property {number} x0 the text column's left edge in the box (world units)
+ * @property {number} y0 the article's first line's top in the box (world units)
  * @property {string} corner the corner's items at mount (T-ARTICLE's `cornerHTML`); empty where it has none
  * @property {'plane' | 'scene'} target
  * @property {Array<{pos: number, top: number, left: number}>} [blockTops] each block's offset in the one 16 px layout (the gate's span registration)
@@ -91,10 +98,6 @@ import { fingerprintCue } from '../util.js';
  * @property {() => void} handOff the focus's next home where a corner that held it leaves: the walk's current item (D5 §4 rule 4)
  */
 
-/** the fixed layout size (S1) */
-export const LAY_FS = 16;
-/** the article's top padding as a fraction of its box's height (P-LAY's `padY`): its first line's place */
-const PAD_TOP = 0.05 / 0.86;
 /** the corner's distance from the text column, and from the edge of the strip it stands in (px) */
 const CORNER_GAP = 8;
 
@@ -155,7 +158,8 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
 }
 
 /**
- * Mount a document's article over its box — laid out once at LAY_FS.
+ * Mount a document's article over its box — laid out once at LAY_FS, its
+ * column `cpl` characters of its own face: the column P-LAY wraps the bars in.
  * @param {Doc} d
  * @returns {Mounted | null}
  */
@@ -168,12 +172,12 @@ function mount(d) {
   const el = document.createElement('article');
   el.className = 'dtext';
   el.dataset.addr = d.addr;
-  el.style.width = m.tw * lay + 'px';
+  el.style.width = m.cpl + 'ch';
   el.style.paddingLeft = m.x0 * lay + 'px';
-  el.style.paddingTop = (box.h * PAD_TOP) * lay + 'px';
-  el.style.height = (box.h - box.h * PAD_TOP) * lay + 'px';
+  el.style.paddingTop = m.y0 * lay + 'px';
+  el.style.height = (m.y1 - m.y0) * lay + 'px';
   el.style.fontSize = LAY_FS + 'px';
-  el.style.lineHeight = m.lineH * lay + 'px';
+  el.style.lineHeight = LINE_H * LAY_FS + 'px';
   el.setAttribute('aria-hidden', 'true'); // the ARIA mirror is the one accessible rendering (S1 Q7)
   const v = viewFor(d);
   el.innerHTML = articleHTML(d, v, ownerAccount(d));
@@ -182,7 +186,7 @@ function mount(d) {
   // each block's place in the one layout (16 px), fractional (offsetTop rounds): the gate holds every later frame to it, scaled — a reflow would move a line
   const blockTops = [.../** @type {NodeListOf<HTMLElement>} */ (el.querySelectorAll('.sp'))].map((e) => { const r = e.getBoundingClientRect(); return { pos: Number(e.dataset.pos), top: r.top - art.top, left: r.left - art.left }; });
   /** @type {Mounted} */
-  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, grev, fs: m.fs, x0: m.x0, corner: cornerHTML(d, v), target: 'plane', blockTops };
+  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, grev, fs: m.fs, x0: m.x0, y0: m.y0, corner: cornerHTML(d, v), target: 'plane', blockTops };
   mounted.set(d.addr, rec);
   place(rec);
   mountLog.push({ addr: d.addr, ms: performance.now() - t0, blocks: d.blocks.length, emPx: m.fs * cam.scale });
@@ -210,11 +214,12 @@ function place(/** @type {Mounted} */ rec) {
 }
 
 /**
- * The per-frame policy, run at the end of each draw: unmount what left or
- * fell below the threshold or went stale, mount what crossed it (the cap),
- * place everything and the corners beside it; where the article holding the
- * selection was mounted this frame, place the platform's range over the span
- * again.
+ * The per-frame policy, run before the canvas draws (so P-RENDER yields to
+ * exactly the articles mounted this frame, and draws the bars of exactly the
+ * documents unmounted): unmount what left or fell below the threshold or went
+ * stale, mount what crossed it (the cap), place everything and the corners
+ * beside it; where the article holding the selection was mounted this frame,
+ * place the platform's range over the span again.
  * @param {(addr: string) => boolean} [focused] whether a document is the walk's focused one: the one residue document of its cell that mounts, and the one whose corner is a Tab stop (D5 K-57)
  */
 export function frame(focused = () => false) {
@@ -284,7 +289,7 @@ function placeCorners(focused) {
     const top = read.top() + CORNER_GAP;
     for (const { c, rec } of shown) {
       const box = docBox(rec.d.addr);
-      const first = sy(box.y + box.h * PAD_TOP);
+      const first = sy(box.y + rec.y0);
       const y = Math.max(first, Math.min(Math.max(first, top), sy(box.y + box.h) - c.h));
       const x = sx(box.x + rec.x0) - CORNER_GAP - c.w;
       c.el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
@@ -514,6 +519,14 @@ export function symbolRect(/** @type {string} */ addr, /** @type {string} */ lin
  * @returns {string}
  */
 export function sceneArticle(d) { return articleHTML(d, viewFor(d, true), ownerAccount(d)); }
+
+/**
+ * A document's article as P-LAY's plan — the rows the canvas's bars are laid
+ * out from below the mount — from the same view its article is mounted with.
+ * @param {Doc} d
+ * @returns {import('../plane/layout.js').Row[]}
+ */
+export function planOf(d) { return articlePlan(d, viewFor(d), ownerAccount(d)); }
 
 /**
  * A pane's corner items (ux-T2: each pane its own), from the same view the

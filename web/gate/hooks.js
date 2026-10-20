@@ -3,8 +3,11 @@
 // `window.__skep`: the model's held records, the mounted articles' text, the
 // mirror's items, the camera and the focus, S1's `driftSample` and
 // `overlapCheck` (the measuring code moved into the page), the visibility
-// oracle `visible`, the beams' anchors beside their spans' own rects, S3's
-// camera paths (`runPath`) and the frame buffer, the bridge client's own call
+// oracle `visible`, the beams' anchors beside their spans' own rects, the
+// handoff (`barsOf`: the canvas's own bars for a document beside its mounted
+// article's blocks), S3's camera paths (`runPath`) and the frame buffer —
+// each frame's count of documents both drawn and mounted, and of documents
+// yielded and not mounted — the bridge client's own call
 // log, the settle signal, the trail, the line's and the overlay's text, the
 // selection's span beside the platform's own, the copy door (the copy event
 // run against a stub clipboard, its flavors read back), the strings. The app
@@ -26,6 +29,7 @@ import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
 import * as WALK from '../nav/walk.js';
 import * as CAM from '../plane/camera.js';
+import * as RENDER from '../plane/render.js';
 import * as PORT from '../bridge/port.js';
 import * as PUMP from '../model/pump.js';
 import * as TRAIL from '../nav/trail.js';
@@ -56,6 +60,8 @@ import { pct, r2 } from '../util.js';
  * @property {number} drawMs
  * @property {string} lod
  * @property {number} docs
+ * @property {number} both the documents whose label or bars the canvas drew that stand mounted at the frame's end: text over its own bars
+ * @property {number} neither the documents the canvas yielded to their text that stand unmounted at the frame's end: an empty box
  * @property {string} [phase]
  */
 
@@ -92,7 +98,7 @@ export function summarize(/** @type {Frame[]} */ rows) {
   const iv = rows.map((f) => f.interval), dr = rows.map((f) => f.drawMs);
   let over = 0, run = 0, worstRun = 0;
   for (const f of rows) { if (f.interval > 33.34) { over++; run++; worstRun = Math.max(worstRun, run); } else run = 0; }
-  return { frames: rows.length, fps_median: r2(1000 / Math.max(0.001, pct(iv, 50))), frame_p50: r2(pct(iv, 50)), frame_p95: r2(pct(iv, 95)), frame_p99: r2(pct(iv, 99)), draw_p50: r2(pct(dr, 50)), draw_p99: r2(pct(dr, 99)), frames_over_33ms: over, longest_sub30_run_frames: worstRun, worst_frame_ms: r2(Math.max(0, ...iv)), max_docs_drawn: Math.max(0, ...rows.map((f) => f.docs)) };
+  return { frames: rows.length, fps_median: r2(1000 / Math.max(0.001, pct(iv, 50))), frame_p50: r2(pct(iv, 50)), frame_p95: r2(pct(iv, 95)), frame_p99: r2(pct(iv, 99)), draw_p50: r2(pct(dr, 50)), draw_p99: r2(pct(dr, 99)), frames_over_33ms: over, longest_sub30_run_frames: worstRun, worst_frame_ms: r2(Math.max(0, ...iv)), max_docs_drawn: Math.max(0, ...rows.map((f) => f.docs)), max_both: Math.max(0, ...rows.map((f) => f.both)), max_neither: Math.max(0, ...rows.map((f) => f.neither)) };
 }
 
 /**
@@ -209,6 +215,31 @@ export function install(deps) {
       return { ...a, words, edge: art ? art.x + art.w : null };
     });
   }
+  /**
+   * The handoff (foundations §2.4: the bars become text and no line moves;
+   * S1 Q7): the canvas's own bars for a document — the layout P-RENDER draws
+   * below the mount, at the camera as it stands — each block's first line's
+   * top on screen and its count of lines, beside the mounted article's blocks
+   * as the person meets them: each one's top on screen and its height in line
+   * boxes. A block the article draws as a withheld run's face is named so.
+   * Null where the document's text has not arrived.
+   * @param {string} addr
+   */
+  function barsOf(addr) {
+    const laid = RENDER.layoutFor(addr);
+    if (!laid) return null;
+    const { m, layout } = laid;
+    const box = docBox(addr);
+    const linePx = m.lineH * CAM.cam.scale;
+    const y = (/** @type {number} */ em) => CAM.sy(box.y + m.y0 + em * m.fs);
+    const bars = [...layout.blocks].map(([pos, b]) => ({ pos, top: b.n ? r2(y(layout.lines[b.first].top)) : null, lines: b.n }));
+    const rec = LAYER.mountedSet().get(addr);
+    const text = rec ? [.../** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll('.run > .sp, .run > .withheld'))].map((e) => {
+      const r = e.getBoundingClientRect();
+      return { pos: Number(e.dataset.pos), top: r2(r.top), lines: Math.round(r.height / linePx), withheld: e.classList.contains('withheld') };
+    }) : null;
+    return { addr, line_px: r2(linePx), clip: r2(CAM.sy(box.y + m.y1)), head_lines: layout.lines.filter((l) => l.kind === 'head').length, bars, text };
+  }
   /** redraw the links card where it stands open at a document, as its own acts do after a change */
   function redrawCard(/** @type {string} */ addr) { if (LINKS.isOpen(addr)) LINKS.render(); }
   /** S3's camera path: fn(u) moves the camera each frame for ms; the frames of the phase summarized */
@@ -259,7 +290,7 @@ export function install(deps) {
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
     view: { camera: () => CAM.view(), focus: () => WALK.current(), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
     driftSample, overlapCheck, visible,
-    beamAnchors,
+    beamAnchors, barsOf,
     runPath, settle,
     frames: () => deps.frames.slice(),
     bridge: { calls: () => PORT.callLog(), adapter: () => PORT.adapterName(), stream: () => PORT.streamState() },

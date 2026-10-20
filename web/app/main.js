@@ -14,8 +14,14 @@
 // (skep #463), the launch frame HOME — the acting account's region at mid
 // scale (foundations §2.2). THE LOOP (`requestAnimationFrame`): step the
 // camera's flight, pump on its cadence, draw when dirty or animating or an
-// overlay stands — P-RENDER, then T-LAYER's frame, then BM, then O-HOST's
-// place, the line — and the frame buffer the gate reads. The global key
+// overlay stands — T-LAYER's frame, then P-RENDER, then BM, then O-HOST's
+// place, the line — and the frame buffer the gate reads. T-LAYER decides
+// what is mounted BEFORE the canvas draws, so a document crossing the mount
+// threshold is drawn as bars or yielded to its text by the same frame's
+// mounted set — never both, never neither (law 13) — and the arrival mark
+// reads the article where this frame placed it; each frame's record counts
+// the documents the canvas drew that stand mounted (`both`) and the ones it
+// yielded that do not (`neither`). The global key
 // listener → N-KEYS; the pointer → APP-INPUT; the events `moment` → a face,
 // `held` → logged, not acted on (the editor's lane's); the failure reporter
 // (a line in the page, posted nowhere). NO WRITE is composed or sent
@@ -45,6 +51,7 @@ import * as GO from '../nav/go.js';
 import * as SCENE from '../scene/scene.js';
 import * as INPUT from './input.js';
 import { cssVariables } from '../plane/register.js';
+import { cssMeasures } from '../plane/layout.js';
 import { accountCell, boardCell, depthOfDoc } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
 
@@ -91,13 +98,15 @@ function loop(/** @type {number} */ now) {
   const dirty = CAM.takeDirty() || camMoved || rev !== lastRev || lrev !== lastLayerRev || anim || HOST.hasCurrent() || phase.name;
   if (dirty) {
     const t0 = performance.now();
-    const lod = RENDER.draw();
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
+    const lod = RENDER.draw();
     BM.draw();
     HOST.place();
     if (SCENE.isOpen()) SCENE.draw();
     const drawMs = performance.now() - t0;
-    frames.push({ t: now, interval: now - lastT, drawMs, lod: lod.name, docs: RENDER.stats.docsDrawn, phase: phase.name || undefined });
+    const both = RENDER.stats.drawn.filter((a) => LAYER.isMounted(a)).length;
+    const neither = RENDER.stats.yielded.filter((a) => !LAYER.isMounted(a)).length;
+    frames.push({ t: now, interval: now - lastT, drawMs, lod: lod.name, docs: RENDER.stats.docsDrawn, both, neither, phase: phase.name || undefined });
     if (frames.length > FRAME_CAP) frames.splice(0, frames.length - FRAME_CAP);
     lastRev = rev; lastLayerRev = lrev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
   }
@@ -122,7 +131,7 @@ async function boot() {
   /** @type {typeof import('../gate/ledger.js') | null} */
   let ledger = null;
   if (GATE) ledger = await import('../gate/ledger.js'); // FIRST: every surface counted before the first call
-  for (const [k, v] of Object.entries(cssVariables())) document.documentElement.style.setProperty(k, v);
+  for (const [k, v] of Object.entries({ ...cssVariables(), ...cssMeasures() })) document.documentElement.style.setProperty(k, v);
   const plane = /** @type {HTMLCanvasElement} */ (el('plane'));
   RENDER.attach(plane); LAYER.attach(el('domlayer'), el('corners')); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
   HOST.attach(el('overlay'));

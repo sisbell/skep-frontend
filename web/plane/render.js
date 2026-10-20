@@ -13,10 +13,17 @@
 // strip), THE RESIDUE for documents past the sound depth (one cell: the
 // count, the newest's label), the mid connections from LK's `connections`;
 // the trail's pips numbered newest-first with their path; the focus ring;
-// the arrival mark; text yielded where T-LAYER mounted it; the greek for
-// the unmounted. The system account's rows are never drawn (the record §1.8;
-// this lane's cut). The chip is at the document's corner (T-ARTICLE), never
-// here. Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
+// the arrival mark; text yielded where T-LAYER mounted it; for the unmounted,
+// the bars — P-LAY's layout of the article's own lines (T-ARTICLE's plan, made
+// through T-LAYER from the view it mounts with), each bar where its line's
+// glyphs will stand and none past the article's clip, so the handoff swaps
+// bars for text in place (law 8; S1 Q7). The loop runs T-LAYER's frame BEFORE
+// this draw, so what is mounted is settled when a document's label and bars
+// are drawn or yielded; `stats` names both sets, and the loop holds them
+// against the mounted set at the frame's end. The system account's rows are
+// never drawn (the record §1.8; this lane's cut). The chip is at the
+// document's corner (T-ARTICLE), never here. Carries: the wireframe's §10
+// whole and §21's `drawAccountFrames`.
 // Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports).
 
 import * as REC from '../model/records.js';
@@ -28,7 +35,7 @@ import * as GO from '../nav/go.js';
 import { cam, sx, sy, wx, wy, viewport, viewportWorld } from './camera.js';
 import { lodOf, LOD_TXT_LO } from './lod.js';
 import { docBox, accountCell, boardCell, intersects, residueCell, accountAt, DEPTH_SOUND } from './projection.js';
-import { metricsFor, layoutOf, CHAR_W } from './layout.js';
+import { metricsFor, layoutOf, bars, CHAR_W } from './layout.js';
 import { COL, EDGE, HUE } from './register.js';
 import { t } from '../strings.js';
 
@@ -39,8 +46,17 @@ let cv = null;
 /** @type {CanvasRenderingContext2D | null} */
 let ctx = null;
 let DPR = 1;
-export const stats = { linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0, residues: 0 };
-/** @type {Map<string, {lines: import('./layout.js').GreekGlyph[][], rev: number, extent: number}>} */
+/** the last frame's figures; `drawn` the documents whose label or bars it drew, `yielded` the ones it left to T-LAYER's mount */
+export const stats = { linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0, residues: 0, drawn: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]) };
+
+/**
+ * @typedef {Object} LaidOut — a document's bars as the canvas lays them out
+ * @property {string} key what it was made from: the document's revision and run, the model's revision, T-LAYER's
+ * @property {import('./layout.js').Metrics} m
+ * @property {import('./layout.js').Layout} layout
+ * @property {import('./layout.js').Bar[]} bars
+ */
+/** @type {Map<string, LaidOut>} */
 const layouts = new Map();
 
 /** @param {HTMLCanvasElement} c */
@@ -142,13 +158,34 @@ function drawAccountFrames() {
 /** the account cell under the view's centre (the empty agent space is drawn by this) */
 export function accountUnderView() { return accountAt(cam.x, cam.y, '1'); }
 
-/** the greek lines of a document, cached by revision */
-function greek(/** @type {Doc} */ d, /** @type {import('./layout.js').Metrics} */ m) {
+/**
+ * A document's bars: P-LAY's layout of its article's own lines, from the
+ * plan T-LAYER makes with the view it mounts the article with — made again
+ * when the document's record or run moves, when the model does (a link's
+ * value arriving, an origin's kind), or when the article's view state does
+ * (T-LAYER's revision).
+ * @param {Doc} d
+ * @returns {LaidOut}
+ */
+function laidOut(d) {
+  const key = `${d.rev}:${d.from}:${d.to}:${REC.rev()}:${LAYER.revision()}`;
   const c = layouts.get(d.addr);
-  if (c && c.rev === d.rev && c.extent === d.extent) return c.lines;
-  const lines = layoutOf(d.blocks, m).lines;
-  layouts.set(d.addr, { lines, rev: d.rev, extent: d.extent || 0 });
-  return lines;
+  if (c && c.key === key) return c;
+  const m = metricsFor(d.extent || 1, docBox(d.addr));
+  const layout = layoutOf(LAYER.planOf(d), m);
+  const out = { key, m, layout, bars: bars(layout, m) };
+  layouts.set(d.addr, out);
+  return out;
+}
+
+/** a document's bars as the canvas lays them out now, or null where its text has not arrived (the gate's handoff check reads them) */
+export function layoutFor(/** @type {string} */ addr) { const d = REC.doc(addr); return d.from < 0 ? null : laidOut(d); }
+
+/** the first of a document's bars whose bottom lies below a world height in its box (its bars run top to bottom) */
+function firstBar(/** @type {import('./layout.js').Bar[]} */ B, /** @type {number} */ y) {
+  let lo = 0, hi = B.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (B[mid].y + B[mid].h < y) lo = mid + 1; else hi = mid; }
+  return lo;
 }
 
 /** the documents as extents; the residue cells; the mid connections */
@@ -191,8 +228,10 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     if (isDraft) ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
     if (W < 26) continue;
     const m = metricsFor(d.extent || 1, box);
-    const fsPx = m.fs * cam.scale, lhPx = m.lineH * cam.scale;
+    const fsPx = m.fs * cam.scale;
     const mountedHere = LAYER.isMounted(d.addr);
+    if (mountedHere) stats.yielded.push(d.addr);
+    else if (W > 40 || (fsPx >= 3 && d.from >= 0 && d.refused !== 'withheld')) stats.drawn.push(d.addr);
     if (W > 40 && !mountedHere) {
       // the label: the ADDRESS past its region's prefix; the first line a DRAFT convention (F-9); the badge from LK
       ctx.fillStyle = COL.title;
@@ -214,20 +253,16 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     if (d.refused === 'withheld') { if (W > 60) { ctx.strokeStyle = COL.greek; ctx.setLineDash([2, 4]); ctx.strokeRect(X + W * 0.1, Y + H * 0.3, W * 0.8, H * 0.5); ctx.setLineDash([]); } continue; }
     if (landmark && W > 26) { ctx.fillStyle = COL.land; const s = Math.max(4, Math.min(11, W * 0.03)); ctx.beginPath(); ctx.moveTo(X + W / 2, Y - s * 1.6); ctx.lineTo(X + W / 2 + s, Y - s * 0.3); ctx.lineTo(X + W / 2, Y + s); ctx.lineTo(X + W / 2 - s, Y - s * 0.3); ctx.closePath(); ctx.fill(); }
     if (fsPx < 3 || mountedHere || d.from < 0) continue;
-    // the greek: outline bars (the canvas never draws readable glyphs — the layer mounts below the glyph band)
-    const lines = greek(d, m);
-    const lx = sx(box.x + m.x0), ly0 = sy(box.y + m.y0);
-    const n = lines.length;
-    const firstVis = Math.max(0, Math.floor(-ly0 / lhPx) - 1), lastVis = Math.min(n, Math.ceil((VH - ly0) / lhPx) + 1);
-    for (let i = firstVis; i < lastVis; i++) {
-      const line = lines[i]; if (!line) continue;
-      const yy = ly0 + i * lhPx;
-      let len = 0; for (const g of line) len += g.t.length;
-      ctx.fillStyle = COL.greek; ctx.globalAlpha = alpha * (line[0].withheld ? 0.25 : fsPx >= LOD_TXT_LO ? 0.7 : 0.55);
-      ctx.fillRect(lx, yy - fsPx * 0.72, len * fsPx * CHAR_W, Math.max(1, fsPx * 0.5));
-      ctx.globalAlpha = alpha;
+    // the bars: the article's own lines, each where its glyphs will stand (the canvas never draws readable glyphs — the layer mounts below the glyph band)
+    const B = laidOut(d).bars;
+    const below = wy(VH + fsPx) - box.y;
+    for (let i = firstBar(B, wy(-fsPx) - box.y); i < B.length && B[i].y < below; i++) {
+      const b = B[i];
+      ctx.fillStyle = COL.greek; ctx.globalAlpha = alpha * (b.withheld ? 0.25 : fsPx >= LOD_TXT_LO ? 0.7 : 0.55);
+      ctx.fillRect(sx(box.x + b.x), sy(box.y + b.y), b.w * cam.scale, Math.max(1, b.h * cam.scale));
+      stats.linesDrawn++;
     }
-    stats.linesDrawn += Math.max(0, lastVis - firstVis);
+    ctx.globalAlpha = alpha;
   }
   // the residues: one cell per account past the sound depth — the count and the newest's label, a teleport
   stats.residues = 0;
@@ -305,7 +340,7 @@ export function draw() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, VW, VH);
   ctx.textBaseline = 'alphabetic';
-  stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0;
+  stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.drawn = []; stats.yielded = [];
   drawBoard();
   if (lod.name === 'far') stats.clusters = drawClusters(1);
   else if (lod.name === 'far~mid') { stats.clusters = drawClusters(1 - lod.fade); drawAccountFrames(); stats.docsDrawn = drawDocs(lod, lod.fade); }

@@ -49,10 +49,12 @@ fix; nothing here depends on their names.
   or sent over the bridge. The spike proved the camera writes nothing;
   the gate keeps proving it.
 - **FP-8 Render is a function of model and view state.** On a dirty
-  frame the canvas is repainted whole, the text layer is placed, the
-  beams are redrawn. Nothing drawn on the canvas is updated in place.
-  The screen cannot drift from the state because it is rebuilt from
-  the state.
+  frame the text layer is placed first, so what is mounted is decided
+  before anything is drawn; then the canvas is repainted whole,
+  drawing a document's bars or yielding it to its text by that
+  frame's mounted set; then the beams are redrawn. Nothing drawn on
+  the canvas is updated in place. The screen cannot drift from the
+  state because it is rebuilt from the state.
 - **FP-9 Input never draws.** A handler changes view state, or asks
   the model to fetch, and marks the frame dirty. That is all it does.
 - **FP-10 One owner per piece of state.** Each concern's state lives
@@ -160,6 +162,14 @@ found.
     the ruling S-16 (a) settled it by generating the page's
     declarations from the shell's core, whose types follow the wire,
     and serving them from the dev provider.
+- 2026-10-19, from issue #6 (zooming in showed a document's bars
+  under its newly mounted text, and zooming out left an empty box):
+  FP-8 now names the dirty frame's order. The canvas used to draw
+  against the mounted set of the frame before. On the frame that
+  crossed the mount threshold it drew bars the text then covered, or
+  yielded to text that was then taken down, and it kept that picture
+  while the camera rested. With the text layer placed first, the
+  canvas reads the same frame's set.
 
 ## What these rule out
 
