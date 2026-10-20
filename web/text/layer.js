@@ -5,13 +5,19 @@
 // the corners beside it — THE ONE OWNER (FP-10). Mount an article when a
 // document crosses S1's mount threshold (em 6.5, BELOW the canvas's readable
 // 8, so bars become text and no character positions disagree — S1 Q7),
-// unmount when it leaves or falls below 5.5 or its run or revision changed,
-// the cap 8; laid out ONCE at P-LAY's LAY_FS (16 px) and its unitless
-// LINE_H, so each element's line box is that element's own size's (P-LAY's
-// `lineBox`), in a column of exactly P-LAY's `cpl` characters of its own face
-// (`ch`), from its box's top padding to its box's bottom, and placed by
-// transform from the same camera arithmetic (registration 0 px — S1). The
-// canvas's bars below the mount are P-LAY's layout of the same article's plan
+// unmount when it leaves or falls below 5.5 or its run, its revision or its
+// face changed, the cap 8; laid out ONCE at P-LAY's LAY_FS (16 px) and its
+// unitless LINE_H, so each element's line box is that element's own size's
+// (P-LAY's `lineBox`), in a column of exactly P-LAY's `cpl` characters of its
+// own face (`ch`), from its box's top padding to its box's bottom, and placed
+// by transform from the same camera arithmetic (registration 0 px — S1).
+// THE FACE (`metricsOf`) is P-LAY's `fitted` over the article's plan carrying
+// the most link chrome any reveal can set in it (LK's `utmost`): the article
+// ends inside its box at every stage, toggle and lens, so the clip at the
+// box's edge cuts no line of it and moving the reveal re-sets none. Every
+// reader of a document's em above the model reads it here; the model's pump,
+// which may not, reads P-LAY's estimate, never the smaller. The canvas's bars
+// below the mount are P-LAY's layout of the same article's plan at that face
 // (`planOf`, from the view the article is mounted with), so the bars a mount
 // replaces stand on the lines its text takes. The loop runs `frame` before
 // P-RENDER draws, so the canvas draws or yields each document by this frame's
@@ -55,7 +61,7 @@ import * as LK from '../links/links.js';
 import { cam, sx, sy } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MAX_MOUNTED, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
-import { metricsFor, LAY_FS, LINE_H } from '../plane/layout.js';
+import { metricsFor, fitted, LAY_FS, LINE_H } from '../plane/layout.js';
 import { articleHTML, articlePlan, cornerHTML } from './article.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { fingerprintCue } from '../util.js';
@@ -94,6 +100,13 @@ import { fingerprintCue } from '../util.js';
  */
 
 /**
+ * @typedef {Object} Face — a document's face as `metricsOf` last fitted it
+ * @property {string} key the revisions it was read at: the document's, its run's, the model's
+ * @property {string} plan what it was fitted to: the extent, the positions not held, the plan as JSON
+ * @property {import('../plane/layout.js').Metrics} m
+ */
+
+/**
  * @typedef {Object} Readers — what the layer reads of other owners' state, handed in once by the app (FP-10: through the owners' exports)
  * @property {() => (Span | null)} selection the selection (O-SELECTION's span)
  * @property {() => ({addr: string, pos: number} | null)} focus the focused block (N-WALK's)
@@ -108,6 +121,8 @@ const CORNER_GAP = 8;
 const mounted = new Map();
 /** @type {Map<string, Corner>} the corners on the plane, by document */
 const corners = new Map();
+/** @type {Map<string, Face>} each document's face, by document — a cache of `metricsOf`, a function of the model */
+const faces = new Map();
 /** @type {Array<{addr: string, ms: number, blocks: number, emPx: number}>} the mount costs (a forced layout inside the measurement — S1) */
 const mountLog = [];
 /** the mount log, for the gate's figures */
@@ -161,16 +176,42 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
 }
 
 /**
+ * The face a document is set at on the plane: P-LAY's `fitted` over the plan
+ * of its article carrying the most link chrome any reveal can set in it (LK's
+ * `utmost`), the positions it does not hold yet counted as P-LAY counts them —
+ * so the article ends inside its box at every stage, toggle and lens, and
+ * moving the reveal re-sets no line; P-LAY's estimate where its text has not
+ * arrived. Fitted again only where the plan, the extent or the positions held
+ * changed, however often the model moves.
+ * @param {Doc} d
+ * @returns {import('../plane/layout.js').Metrics}
+ */
+export function metricsOf(d) {
+  const est = metricsFor(d.extent || 1, docBox(d.addr));
+  if (d.from < 0) return est;
+  const key = `${d.rev}:${d.from}:${d.to}:${REC.rev()}`;
+  const f = faces.get(d.addr);
+  if (f && f.key === key) return f.m;
+  const u = LK.utmost(d.addr);
+  const rows = articlePlan(d, { ...viewFor(d), marks: u.shown, symbols: u.shown, countAt: u.countAt }, ownerAccount(d));
+  const unheld = Math.max(0, (d.extent || 0) - (d.to - d.from));
+  const plan = `${d.extent}|${unheld}|${JSON.stringify(rows)}`;
+  const m = f && f.plan === plan ? f.m : fitted(rows, est, unheld);
+  faces.set(d.addr, { key, plan, m });
+  return m;
+}
+
+/**
  * Mount a document's article over its box — laid out once at LAY_FS, its
- * column `cpl` characters of its own face: the column P-LAY wraps the bars in.
+ * column `cpl` characters of its face (`metricsOf`): the column P-LAY wraps
+ * the bars in.
  * @param {Doc} d
  * @returns {Mounted | null}
  */
 function mount(d) {
   if (!layer || mounted.has(d.addr) || d.from < 0) return null;
   const t0 = performance.now();
-  const box = docBox(d.addr);
-  const m = metricsFor(d.extent || 1, box);
+  const m = metricsOf(d);
   const lay = LAY_FS / m.fs;
   const el = document.createElement('article');
   el.className = 'dtext';
@@ -239,7 +280,7 @@ export function frame(focused = () => false) {
     const box = docBox(d.addr);
     if (!intersects(box, v)) continue;
     if (box.residue && !focused(d.addr)) continue;
-    const em = metricsFor(d.extent || 1, box).fs * cam.scale;
+    const em = metricsOf(d).fs * cam.scale;
     if (em >= MOUNT_EM) want.push({ d, em });
   }
   want.sort((a, b) => b.em - a.em);
@@ -248,7 +289,7 @@ export function frame(focused = () => false) {
     const box = docBox(addr);
     const em = rec.fs * cam.scale;
     if (!intersects(box, v) || em < UNMOUNT_EM || (box.residue && !focused(addr))) { unmount(addr); continue; }
-    if (rec.d.from !== rec.runFrom || rec.d.to !== rec.runTo || rec.rev !== rec.d.rev || rec.grev !== grev) unmount(addr);
+    if (rec.d.from !== rec.runFrom || rec.d.to !== rec.runTo || rec.rev !== rec.d.rev || rec.grev !== grev || rec.fs !== metricsOf(rec.d).fs) unmount(addr);
   }
   /** @type {string[]} the articles mounted this frame */
   const fresh = [];

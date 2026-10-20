@@ -26,8 +26,8 @@ import * as HOST from '../overlays/host.js';
 import * as LK from '../links/links.js';
 import * as SCENE from '../scene/scene.js';
 import * as FACES from '../overlays/faces.js';
+import * as LAYER from '../text/layer.js';
 import { docBox, accountCell, boardCell } from '../plane/projection.js';
-import { metricsFor } from '../plane/layout.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').Link} Link */
@@ -42,16 +42,15 @@ export function clearArrival() { arrival = null; }
 function dismissChrome() { HOST.dismiss(); SCENE.close(); }
 
 /**
- * The view that reads a document at a position.
+ * The view that reads a document at a position: its face (T-LAYER's) at
+ * reading size.
  * @param {string} addr
  * @param {number | null} pos
  */
 export function viewFor(addr, pos) {
   const d = REC.doc(addr);
-  const box = docBox(addr);
-  const m = metricsFor(d.extent || 1, box);
   const frac = pos != null && d.extent ? 0.12 + 0.8 * ((pos - 1) / d.extent) : null;
-  return CAM.viewForDoc(box, m.fs, 12.5, frac);
+  return CAM.viewForDoc(docBox(addr), LAYER.metricsOf(d).fs, 12.5, frac);
 }
 
 /**

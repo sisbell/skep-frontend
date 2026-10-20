@@ -42,8 +42,7 @@ import * as VERSIONS from '../overlays/versions.js';
 import * as LAYER from '../text/layer.js';
 import { sameSpan } from '../text/span.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
-import { accountAt, docBox } from '../plane/projection.js';
-import { metricsFor } from '../plane/layout.js';
+import { accountAt } from '../plane/projection.js';
 import { MAC } from '../nav/keys.js';
 
 /**
@@ -145,8 +144,7 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   if (residue) { GO.leapTo(residue.newest, { how: 'click' }); return; }
   const doc = RENDER.docAtScreen(px, py);
   if (doc) {
-    const box = docBox(doc);
-    const em = metricsFor(REC.doc(doc).extent || 1, box).fs * CAM.cam.scale;
+    const em = LAYER.metricsOf(REC.doc(doc)).fs * CAM.cam.scale;
     if (em < LOD_TXT_LO) { GO.leapTo(doc, { how: 'click' }); return; }
     return; // at reading scale the layer's elements take the click
   }

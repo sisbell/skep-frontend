@@ -25,11 +25,11 @@
 // installs it with its loop's frame buffer. Nothing here is shipped chrome;
 // nothing posts anywhere.
 // THE ORACLES MEASURE WHAT A PERSON MEETS, never what the page set: the
-// containment check holds an article's content to the clip the page draws
-// and each corner to the room beside it, `visible` says whether an element
-// the DOM holds is shown (inside its clip and the viewport), and a beam's
-// endpoint is held to the client rects of its link's marked words, read from
-// the article apart from the beams' own set.
+// containment check holds an article's content to the clip the page draws and
+// to its document's box, and each corner to the room beside it, `visible`
+// says whether an element the DOM holds is shown (inside its clip and the
+// viewport), and a beam's endpoint is held to the client rects of its link's
+// marked words, read from the article apart from the beams' own set.
 // The doors that move the reveal chain redraw the links card where it stands
 // open, as the card's own acts do, so a shot after a door shows the state it
 // set. Carries: S1's `driftSample`, `overlapCheck`, `canvasSpanRect`/
@@ -60,7 +60,6 @@ import * as KEYS from '../nav/keys.js';
 import * as SCENE from '../scene/scene.js';
 import { docBox, accountCell, boardCell, DOC_W, REP_FS, depthOfDoc } from '../plane/projection.js';
 import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM } from '../plane/lod.js';
-import { metricsFor } from '../plane/layout.js';
 import { pinned, lacking } from '../strings.js';
 import { pct, r2 } from '../util.js';
 
@@ -138,11 +137,15 @@ export function install(deps) {
     return out;
   }
   /**
-   * Containment: does what a mounted article holds fit the place that clips
-   * it? The article's own rect is its box by construction (the mount sets
-   * it from the box); its content is not — every block's rect is measured
-   * against the nearest clip, and a block reaching past it is named with its
-   * overflow in px. No two mounted articles may intersect. The corner stands
+   * Containment: does what a mounted article holds fit its place? The
+   * article's own rect is its box by construction (the mount sets it from the
+   * box); its content is not — every row it lays out (its head, each block,
+   * the chrome after them: the scene-offer) is measured against the nearest
+   * clip and against its document's box on screen, the room the plane gives
+   * it, which no clip's absence widens, and a row reaching past either is
+   * named — by its block's first position, null for the head and the chrome
+   * — with its overflow in px. No two mounted articles may intersect. The
+   * corner stands
    * beside its article, read from the text layer apart from the article: a
    * mounted document at reading scale whose corner has items and carries
    * none is named; a corner clipped by any box of the page is named with its
@@ -156,7 +159,7 @@ export function install(deps) {
     const arts = recs.map((r) => rectOf(r.el));
     let pairs = 0;
     for (let i = 0; i < arts.length; i++) for (let j = i + 1; j < arts.length; j++) { const a = arts[i], b = arts[j]; if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) pairs++; }
-    /** @type {Array<{addr: string, pos: number, overflow_px: number}>} */
+    /** @type {Array<{addr: string, pos: number | null, row: string, overflow_px: number}>} */
     const cut = [];
     /** @type {string[]} */
     const missing = [];
@@ -167,10 +170,11 @@ export function install(deps) {
     const screenBox = (/** @type {string} */ a) => { const b = docBox(a); return { x: CAM.sx(b.x), y: CAM.sy(b.y), w: b.w * CAM.cam.scale, h: b.h * CAM.cam.scale }; };
     const drawn = REC.places().filter((p) => !p.system).map((p) => p.doc);
     for (const rec of recs) {
-      for (const sp of /** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll('.sp, .withheld'))) {
-        const clip = clipOf(sp); if (!clip) continue;
-        const over = overflowOf(rectOf(sp), rectOf(clip));
-        if (over > 0.5) cut.push({ addr: rec.d.addr, pos: Number(sp.dataset.pos), overflow_px: r2(over) });
+      const own = screenBox(rec.d.addr);
+      for (const row of /** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll('.hd, .run > *'))) {
+        const r = rectOf(row), clip = clipOf(row);
+        const over = Math.max(overflowOf(r, own), clip ? overflowOf(r, rectOf(clip)) : 0);
+        if (over > 0.5) cut.push({ addr: rec.d.addr, pos: row.dataset.pos != null ? Number(row.dataset.pos) : null, row: row.classList[0] || row.tagName.toLowerCase(), overflow_px: r2(over) });
       }
       const corner = LAYER.cornerOf(rec.d.addr);
       if (!corner) { if (rec.corner && rec.fs * CAM.cam.scale >= LOD_TXT_LO) missing.push(rec.d.addr); continue; }
@@ -178,7 +182,6 @@ export function install(deps) {
       const clip = clipOf(corner);
       const over = clip ? overflowOf(cr, rectOf(clip)) : 0;
       if (over > 0.5) clipped.push({ addr: rec.d.addr, overflow_px: r2(over) });
-      const own = screenBox(rec.d.addr);
       for (const other of new Set([...drawn, ...recs.map((r) => r.d.addr)])) {
         if (other === rec.d.addr) continue;
         const b = screenBox(other);
@@ -411,8 +414,8 @@ export function install(deps) {
     select: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => SEL.select(addr, pos, width),
     strings: { pinned: () => pinned(), lacking: () => lacking() },
     thresholds: THRESHOLDS,
-    /** the scale at which a document's em is `em` px, or its box `docPx` px */
-    scaleFor: (/** @type {string} */ addr, /** @type {'em' | 'doc'} */ kind, /** @type {number} */ v) => { const box = docBox(addr); if (kind === 'doc') return v / box.w; const d = REC.doc(addr); return v / metricsFor(d.extent || 1, box).fs; },
+    /** the scale at which a document's em — the face the page sets it at (T-LAYER's) — is `em` px, or its box `docPx` px */
+    scaleFor: (/** @type {string} */ addr, /** @type {'em' | 'doc'} */ kind, /** @type {number} */ v) => (kind === 'doc' ? v / docBox(addr).w : v / LAYER.metricsOf(REC.doc(addr)).fs),
     boxOf: (/** @type {string} */ addr) => docBox(addr), accountCell: (/** @type {string} */ a) => accountCell(a), boardCell: (/** @type {string} */ b) => boardCell(b), depthOf: (/** @type {string} */ a) => depthOfDoc(a),
     constants: { DOC_W, REP_FS, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM },
     refresh: async () => { const ts = /** @type {number[]} */ ([]); await new Promise((res) => { const step = (/** @type {number} */ t) => { ts.push(t); if (ts.length < 60) requestAnimationFrame(step); else res(undefined); }; requestAnimationFrame(step); }); const iv = []; for (let i = 1; i < ts.length; i++) iv.push(ts[i] - ts[i - 1]); return r2(1000 / Math.max(0.1, pct(iv, 50))); },

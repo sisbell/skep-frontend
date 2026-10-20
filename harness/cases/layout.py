@@ -1,18 +1,23 @@
 """LAYOUT — class 4 (the structure record §6.3; T3 (4); M2, M6): registration
 drift 0 px at the four zoom levels S1 used (em 9, 12, 18, 30 — the article's
 box against the camera-projected origin), containment (no two mounted
-articles intersect; every block lies inside the clip the page draws — the
-article's own rect is its box by construction and proves nothing), the
-corner (foundations §3.1: every mounted document at reading scale carries
-one beside its article, clipped by no box of the page and reaching into no
-other document's box, mounted or only drawn; the first edition's in view
-below the one line at each level, held there while the document's top has
-risen past the line, and never below the document's box as its bottom
-rises), every beam leaving the text at its span's own line, from the
-article's edge (its endpoint level with one of its marked words' line rects,
-at the article's edge — foundations §2.1; S1 Q1), every stub in view
-carrying its far document's label (S1 Q3), and no two of the beams' labels
-in view meeting. THE HANDOFF (law 8;
+articles intersect; every row of their content — the head, the blocks, the
+scene-offer — lies inside the clip the page draws and inside its document's
+box, the article's own rect being its box by construction and proving
+nothing; foundations §2.1: "the box becomes text of its own length at the
+readable threshold"), and again at em 12.5 with the reveal at stage 3 and
+others' links on, the first edition at the face it was mounted at hidden,
+the model moved by a read between them, so no reveal re-sets its lines; the
+corner (foundations §3.1: every mounted document at reading scale carries one
+beside its article, clipped by no box of the page and reaching into no other
+document's box, mounted or only drawn; the first edition's in view below the
+one line at each level, held there while the document's top has risen past
+the line, and never below the document's box as its bottom rises), every
+beam leaving the text at its span's own line, from the article's edge (its
+endpoint level with one of its marked words' line rects, at the article's
+edge — foundations §2.1; S1 Q1), every stub in view carrying its far
+document's label (S1 Q3), and no two of the beams' labels in view meeting.
+THE HANDOFF (law 8;
 foundations §2.4: the bars become text and no line moves; S1 Q7): at each
 level, and at the mount threshold reached from below (em 6 → 6.6) and from
 above (em 7 → 6), every block of every mounted article whose top lies
@@ -61,12 +66,12 @@ reading scale would cross the text, showing between the article's glyphs.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `visible`, `barsOf`, `labels`, `scene.at`, `scene.ties`, the
 frame buffer, `beamLabels`) save the trail's, which reads the canvas's pixels
-here; the thresholds are here. The block containment, beam-label and
-shared-box checks are marked with the page issues they wait on and count as
-expected while those stand."""
+here; the thresholds are here. The beam-label and shared-box checks are
+marked with the page issues they wait on and count as expected while those
+stand."""
 import json
 
-from . import DOC, FAR_LEAP, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, XFAIL_CLIP, XFAIL_MEMBER, Result
+from . import DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, XFAIL_MEMBER, Result
 
 LEVELS_EM = [9, 12, 18, 30]
 DRIFT_TOL_PX = 0.5
@@ -439,7 +444,7 @@ def run(ctx):
         r.check(worst is not None and worst <= DRIFT_TOL_PX, f'em {em}: registration drift {DRIFT_TOL_PX} px or less for every mounted article — its box against the projected origin, and every span\'s line against its laid-out place', sample)
         ov = ctx.js('window.__skep.overlapCheck()')
         r.check(ov['intersecting_pairs'] == 0, f'em {em}: containment — no two mounted articles intersect', ov['intersecting_pairs'])
-        r.check(not ov['blocks_cut'], f'em {em}: containment — every block of every mounted article lies inside its clip; none is cut at the box\'s edge', {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']}, xfail=XFAIL_CLIP)
+        r.check(not ov['blocks_cut'], f'em {em}: containment — every row of every mounted article, its head, its blocks and the scene-offer, lies inside its clip and its box; none is cut at the box\'s edge', {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']})
         r.check(not ov['corners_missing'], f'em {em}: every mounted article at reading scale carries its corner beside it', ov['corners_missing'])
         r.check(not ov['corners_clipped'], f'em {em}: no corner is clipped by a box of the page — it stands beside its article, outside the box that clips the text', ov['corners_clipped'])
         r.check(not ov['corners_into'], f'em {em}: no corner reaches into another document\'s box, mounted or only drawn', ov['corners_into'][:6])
@@ -477,6 +482,7 @@ def run(ctx):
     r.figures['sweep'] = {'samples': len(sweep), 'worst_px': worst_sweep}
     # the beams: stage 3 at the first edition, every endpoint inside its anchor rect
     ctx.view_doc_em(DOC, 12.5)
+    hidden_face = ctx.js('window.__skep.mounted(%s).fs' % json.dumps(DOC))
     ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(DOC))
     ctx.settle()
     ctx.frames(3)
@@ -499,6 +505,19 @@ def run(ctx):
     r.check(not met, f'no two beam labels in view meet, {LABEL_TOL_PX} px either way', met[:6], xfail=XFAIL_BEAM_LABELS)
     r.figures['beams'] = {'count': len(anchors), 'stubs': sum(1 for a in anchors if a['stub']), 'far': sorted({a['far'] for a in anchors})[:8], 'on_own_line': len(anchors) - len(off), 'off_own_line': len(off),
                           'stubs_in_view': len(stubbed), 'labels': len(labels), 'labels_in_view': len(in_view), 'labels_meeting_pairs': len(met)}
+    # THE FACE under the reveal: others' links on too, and the model moved by a read (the ghost's, refused) so the face is
+    # read from the model as it stands — the article holds in its box, at the face it was mounted at hidden
+    ctx.js('window.__skep.links.setOthers(%s, true)' % json.dumps(DOC))
+    ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(GHOST))
+    ctx.settle()
+    ctx.frames(3)
+    ov = ctx.js('window.__skep.overlapCheck()')
+    revealed = ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC))
+    r.check(not ov['blocks_cut'], 'em 12.5, the reveal at stage 3 with others\' links on: containment — every row of every mounted article, its head, its blocks and the scene-offer, lies inside its clip and its box', {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']})
+    r.check(revealed is not None and revealed['fs'] == hidden_face, 'em 12.5: the reveal at stage 3 with others\' links on leaves the first edition at the face it was mounted at hidden, the model moved between them — no reveal re-sets its lines',
+            {'hidden': hidden_face, 'revealed': revealed and revealed['fs']})
+    r.figures['face_under_reveal'] = {'hidden': hidden_face, 'revealed': revealed and revealed['fs'], 'worst_overflow_px': ov['worst_overflow_px']}
+    ctx.js('window.__skep.links.setOthers(%s, false)' % json.dumps(DOC))
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
     ctx.frames(2)
     r.check(ctx.js('window.__skep.beams()') == 0, 'hidden again: no beams')

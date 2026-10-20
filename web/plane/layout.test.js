@@ -8,10 +8,14 @@
 // set whole; a float beside the last line or on a line of its own, as tall as
 // its own line box; a withheld run as bars of its width; the bars at their
 // lines and none past the article's clip; the measurements the CSS reads, one
-// source.
+// source. THE FACE: an article its estimate cannot hold fitted at the
+// narrowest column that holds it — its lines inside the room, the column
+// filling its width, one character narrower overflowing, no bar cut — and one
+// its estimate holds keeping the estimate; the positions a plan does not hold
+// yet narrowing the face.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { metricsFor, layoutOf, wrap, bars, breakBetween, cssMeasures, lineBox, MEASURE, LINE_H, LAY_FS } from './layout.js';
+import { metricsFor, layoutOf, heightOf, fitted, wrap, bars, breakBetween, cssMeasures, lineBox, MEASURE, LINE_H, LAY_FS, CHAR_W } from './layout.js';
 import { DOC_W, DOC_H } from './projection.js';
 
 /** @typedef {import('./layout.js').Row} Row */
@@ -145,6 +149,56 @@ test('the bars stand inside their lines and stop at the article\'s clip, the las
   for (const b of B) assert.ok(b.y + b.h <= clip + 1e-9, 'no bar runs past the clip');
   assert.ok(close(B[4].y + B[4].h, clip) && close(B[4].h, 0.25), 'the last bar is cut at the clip');
   B.forEach((b, i) => assert.ok(b.y > (i + 1) * LINE_H && b.y + 0.5 < (i + 2) * LINE_H, `bar ${i} inside its line box`));
+});
+
+/** an article's plan: the head's three lines and a paragraph per text, each its text's positions and a separator apart */
+function article(/** @type {string[]} */ texts) {
+  let pos = 1;
+  const head = [row('head', null, [piece('1.0.1.0.3')]), row('head', null, [piece('published', MEASURE.head)], { size: MEASURE.head }), row('head', null, [piece('1.0.1 · dev', MEASURE.head)], { size: MEASURE.head })];
+  const rows = [...head, ...texts.map((s) => { const r = para(pos, s); pos += s.length + 2; return r; })];
+  return { rows, positions: pos - 1 };
+}
+/** a paragraph of `n` words of two to nine characters, varied by `seed` */
+const words = (/** @type {number} */ n, /** @type {number} */ seed) => Array.from({ length: n }, (_, i) => 'abcdefghij'.slice(0, 2 + ((i * 7 + seed) % 8))).join(' ');
+const BOX = { w: DOC_W, h: DOC_H };
+/** the room an article's lines may take at a face, in its em: from its first line's top to its clip */
+const room = (/** @type {import('./layout.js').Metrics} */ m) => (m.y1 - m.y0) / m.fs;
+/** the metrics at a column that fills the estimate's width */
+const atColumn = (/** @type {import('./layout.js').Metrics} */ est, /** @type {number} */ cpl) => ({ ...est, cpl, fs: est.tw / (CHAR_W * cpl), lineH: (est.tw / (CHAR_W * cpl)) * LINE_H });
+
+test('an article its estimate cannot hold is fitted: its lines end inside the room at the narrowest column that holds them, no bar cut', () => {
+  for (const texts of [Array.from({ length: 24 }, (_, i) => words(14, i)), Array.from({ length: 60 }, (_, i) => words(30, i)), Array.from({ length: 300 }, () => 'a')]) {
+    const { rows, positions } = article(texts);
+    const est = metricsFor(positions, BOX);
+    assert.ok(heightOf(layoutOf(rows, est)) > room(est), `the estimate for ${texts.length} paragraphs, every line full, does not hold their head, gaps and breaks`);
+    const m = fitted(rows, est);
+    const L = layoutOf(rows, m);
+    assert.ok(heightOf(L) <= room(m), `${texts.length} paragraphs: ${heightOf(L)} em of lines in ${room(m)} em of room`);
+    assert.ok(m.cpl > est.cpl && m.fs < est.fs, 'the column widens and the face narrows; never the other way');
+    assert.ok(close(m.cpl * CHAR_W * m.fs, m.tw) && close(m.lineH, m.fs * LINE_H), 'the column fills the width the estimate fits it to');
+    assert.deepEqual([m.x0, m.y0, m.y1, m.tw], [est.x0, est.y0, est.y1, est.tw], 'the box\'s room is the estimate\'s');
+    const narrower = atColumn(est, m.cpl - 1);
+    assert.ok(heightOf(layoutOf(rows, narrower)) > room(narrower), `one character narrower (${m.cpl - 1}) the lines run past the clip`);
+    const B = bars(L, m), lines = L.lines.filter((l) => l.kind === 'text' && l.w > 0);
+    assert.equal(B.length, lines.length, 'every line of the blocks is a bar');
+    for (const b of B) assert.ok(close(b.h, 0.5 * m.fs) && b.y + b.h <= m.y1, 'no bar is cut at the clip');
+  }
+});
+
+test('an article its estimate holds keeps the estimate: a short one, set at the floor of 52 characters', () => {
+  const { rows, positions } = article([words(30, 1), words(12, 2)]);
+  const est = metricsFor(positions, BOX);
+  assert.ok(est.cpl === 52 && heightOf(layoutOf(rows, est)) <= room(est));
+  assert.equal(fitted(rows, est), est);
+});
+
+test('the positions a plan does not hold yet are counted as body lines and narrow the face', () => {
+  const { rows, positions } = article([words(30, 1), words(12, 2)]);
+  const est = metricsFor(positions + 6000, BOX);
+  const held = fitted(rows, est), whole = fitted(rows, est, 6000);
+  assert.equal(held, est, 'the delivered part alone fits the estimate');
+  assert.ok(whole.fs < held.fs, 'counting the 6000 positions not held narrows it');
+  assert.ok(heightOf(layoutOf(rows, whole)) + Math.ceil(6000 / whole.cpl) * LINE_H <= room(whole), 'the lines held and a body line per column of the rest end inside the room');
 });
 
 test('the measurements the CSS reads are P-LAY\'s, one source', () => {

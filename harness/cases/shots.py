@@ -8,7 +8,7 @@ claims the canvas's labels asserts the canvas set them (the page's
 `labels`). Chrome composites the DOM text layer into the shot (C5 (b))."""
 import json
 
-from . import DOC, GHOST, WINDOW, XFAIL_CLIP, Result
+from . import DOC, GHOST, WINDOW, Result
 
 
 def run(ctx):
@@ -58,7 +58,7 @@ def run(ctx):
     ctx.view_doc_em(DOC, 14)
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, ctx.camera()['scale'])
     screen('B1-S7', 'the window run: C-33\'s mark for the entitled reader (a guest\'s placeholder at the run is the guest case\'s, shots/guest/), the corner held at the top of the document\'s visible part', 'B1-S7-window-run',
-           claims=[('#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC, 'C-33\'s mark', XFAIL_CLIP), (corner, 'the first edition\'s corner', None)])
+           claims=[('#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC, 'C-33\'s mark', None), (corner, 'the first edition\'s corner', None)])
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(GHOST)); ctx.settle(); ctx.frames(2)
     screen('B1-S8', 'a dead reference: the ghost address faced', 'B1-S8-ghost')
     ctx.esc()

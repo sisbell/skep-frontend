@@ -31,7 +31,9 @@ first lines, the owner's places. Then, on the guest's page:
 (e) the window run at 1467 withheld: the model's block — its width, its
     origin, no text — B1-S7's placeholder with its head, R56's key-absent arm
     and no C-33 mark, none of the owner's bytes anywhere in the page, the
-    mirror's item naming the run;
+    mirror's item naming the run; the placeholder shown, and every row of
+    the article inside its box — marked, waiting on the placeholder set in the
+    article's flow taller than the run it occupies;
 (f) the guest's own acts: every link at the first edition drawn as its
     owner's, never "you"; C-39's face at the run with the placeholder's own
     arm beneath; "who wrote this?" answering over a block.
@@ -41,7 +43,7 @@ import json
 import re
 from collections import Counter
 
-from . import DOC, SECOND_ACCOUNT, WINDOW, WITHHELD, XFAIL_CLIP, XFAIL_FOCUS, Result
+from . import DOC, SECOND_ACCOUNT, WINDOW, WITHHELD, XFAIL_FACE, XFAIL_FOCUS, Result
 
 OWNER = '1.0.1'
 # a stretch of the owner's bytes over the run, in characters with white space folded, that the guest's page must never hold
@@ -186,9 +188,13 @@ def run(ctx):
     ctx.view_doc_em(DOC, 14)
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * (0.12 + 0.8 * (WINDOW[0] - 1) / doc['extent']), ctx.camera()['scale'])
     vis = ctx.js('window.__skep.visible(%s)' % json.dumps(PLACEHOLDER))
-    r.check(len(vis) == 1 and vis[0]['inClip'] and vis[0]['inView'], '(e) the placeholder is shown: inside the article\'s clip and the viewport', [{k: v[k] for k in ('rect', 'clip', 'inClip', 'inView')} for v in vis], xfail=XFAIL_CLIP)
+    r.check(len(vis) == 1 and vis[0]['inClip'] and vis[0]['inView'], '(e) the placeholder is shown: inside the article\'s clip and the viewport', [{k: v[k] for k in ('rect', 'clip', 'inClip', 'inView')} for v in vis])
+    ov = ctx.js('window.__skep.overlapCheck()')
+    r.check(not ov['blocks_cut'], '(e) containment at guest class: every row of the first edition — the placeholder and the text after it among them — lies inside its clip and its box',
+            {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']}, xfail=XFAIL_FACE)
     r.figures['shots'].append(ctx.shot('guest/window-run.png'))
-    r.figures['run'] = {'placeholder': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': sum(1 for s in stretches if s in legit), 'mirror_item': item[:160], 'shown': vis}
+    r.figures['run'] = {'placeholder': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': sum(1 for s in stretches if s in legit), 'mirror_item': item[:160], 'shown': vis,
+                        'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px']}
 
     # (c) the LEAP box at the first edition: no HOME level
     ctx.leap(DOC, WINDOW[0])

@@ -35,9 +35,10 @@
 // path would run between the glyphs of the article mounted over the canvas);
 // the focus ring; the arrival mark; text yielded where T-LAYER mounted it;
 // for the unmounted, the bars — P-LAY's layout of the article's own lines
-// (T-ARTICLE's plan, made through T-LAYER from the view it mounts with), each
-// bar where its line's glyphs will stand and none past the article's clip, so
-// the handoff swaps bars for text in place (law 8; S1 Q7). The loop runs
+// (T-ARTICLE's plan, made through T-LAYER from the view it mounts with) at the
+// face T-LAYER fits the article to (`metricsOf`), each bar where its line's
+// glyphs will stand and every one inside the box, so the handoff swaps bars
+// for text in place (law 8; S1 Q7). The loop runs
 // T-LAYER's frame BEFORE this draw, so what is mounted is settled when a
 // document's label and bars are drawn or yielded; `stats` names both sets,
 // and the loop holds them against the mounted set at the frame's end; it
@@ -60,7 +61,7 @@ import * as GO from '../nav/go.js';
 import { cam, sx, sy, wx, wy, viewport, viewportWorld } from './camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
 import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt } from './projection.js';
-import { metricsFor, layoutOf, bars } from './layout.js';
+import { layoutOf, bars } from './layout.js';
 import { setLabels, sizeOf, lineHeight, LINE_BOX } from './labels.js';
 import { COL, EDGE, HUE } from './register.js';
 import { documentOf, cmpAddr } from '../model/address.js';
@@ -255,10 +256,10 @@ export function accountUnderView() { return accountAt(cam.x, cam.y, '1'); }
 
 /**
  * A document's bars: P-LAY's layout of its article's own lines, from the
- * plan T-LAYER makes with the view it mounts the article with — made again
- * when the document's record or run moves, when the model does (a link's
- * value arriving, an origin's kind), or when the article's view state does
- * (T-LAYER's revision).
+ * plan T-LAYER makes with the view it mounts the article with, at the face
+ * T-LAYER fits it to — made again when the document's record or run moves,
+ * when the model does (a link's value arriving, an origin's kind), or when
+ * the article's view state does (T-LAYER's revision).
  * @param {Doc} d
  * @returns {LaidOut}
  */
@@ -266,7 +267,7 @@ function laidOut(d) {
   const key = `${d.rev}:${d.from}:${d.to}:${REC.rev()}:${LAYER.revision()}`;
   const c = layouts.get(d.addr);
   if (c && c.key === key) return c;
-  const m = metricsFor(d.extent || 1, docBox(d.addr));
+  const m = LAYER.metricsOf(d);
   const layout = layoutOf(LAYER.planOf(d), m);
   const out = { key, m, layout, bars: bars(layout, m) };
   layouts.set(d.addr, out);
@@ -421,8 +422,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     if (draft) ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
     pass.shapes.push({ place: d.addr, rect: { x: X, y: Y, w: W, h: H }, alpha: a });
     if (W < 26) continue;
-    const m = metricsFor(d.extent || 1, box);
-    const fsPx = m.fs * cam.scale;
+    const fsPx = LAYER.metricsOf(d).fs * cam.scale;
     const mountedHere = LAYER.isMounted(d.addr);
     if (mountedHere) stats.yielded.push(d.addr);
     if (W > 40 && !mountedHere) {

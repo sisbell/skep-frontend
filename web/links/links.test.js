@@ -3,7 +3,8 @@
 // lenses filtering, each drawn link naming the document it is drawn at, a
 // visited link lighter, the records and account-named ends never counted,
 // the badge arriving until read, the mid connections one per pair of places
-// drawn.
+// drawn; the most a reveal can set in a document's text, which no stage,
+// toggle or lens moves or exceeds.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -93,6 +94,31 @@ test('the reveal chain: symbols at stage 2, beams at stage 3, hidden again on di
   LK.reveal(D, 2); assert.equal(LK.symbols(D).length, 1); assert.equal(LK.beams(D).length, 0);
   LK.reveal(D, 3); assert.equal(LK.beams(D).length, 1);
   LK.hide(D); assert.equal(LK.symbols(D).length, 0);
+});
+
+test('the most a reveal can set in a document\'s text: every passage end at it and each block\'s count as the hidden reveal counts it — the same at every stage, toggle and lens, and holding what each of them sets', () => {
+  const blocks = REC.doc(D).blocks;
+  const bound = () => { const u = LK.utmost(D); return { ends: u.shown.map((s) => [s.link.addr, s.end, s.pos, s.width]), counts: blocks.map((b) => u.countAt(b)) }; };
+  const first = bound();
+  assert.deepEqual(first.ends, [[D + '.0.2.1', 'from', 50, 10], [OTHER_HOME + '.0.2.1', 'to', 3, 10]], 'the owner\'s end and the other\'s; the social link, the whole-work end and the records left out');
+  assert.deepEqual(first.counts, [{ n: 1, social: true }, { n: 0, social: true }], 'the other\'s link counted at its block, as the hidden reveal counts it');
+  /** @type {Array<[string, () => void]>} */
+  const states = [
+    ['hidden', () => {}],
+    ['symbols', () => LK.reveal(D, 2)],
+    ['content with others\' links on', () => { LK.reveal(D, 3); LK.setOthers(D, true); }],
+    ['a lens by the other\'s owner', () => { LK.setOthers(D, false); LK.lens(D, { owners: new Set(['1.0.2']) }); }],
+    ['a lens by type', () => { LK.clearLens(D); LK.lens(D, { types: new Set([CITE]) }); }],
+    ['dismissed', () => { LK.clearLens(D); LK.hide(D); }],
+  ];
+  for (const [name, move] of states) {
+    move();
+    const now = bound();
+    assert.deepEqual(now, first, `${name}: the bound stands as it was`);
+    const ends = now.ends.map((e) => e[0]);
+    assert.ok(LK.symbols(D).every((s) => ends.includes(s.link.addr)), `${name}: every symbol the reveal sets is among its ends`);
+    blocks.forEach((b, i) => assert.ok(LK.countAt(D, b).n <= first.counts[i].n, `${name}: no block's count above the bound's`));
+  }
 });
 
 test('a followed link is drawn lighter, its hue kept (D-3)', () => {

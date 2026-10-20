@@ -42,9 +42,7 @@ VERSIONED = '1.0.1.0.43'     # an edition with two members, the latest holding a
 # that opens another page (`walks`, `guest`) runs after it
 ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys', 'frames', 'walks', 'shots', 'guest']
 
-# the page issues the marked checks wait on (issue #2's boundary note); each mark comes off the day its check passes
-XFAIL_CLIP = ("page: the article's height is pinned to its box and its overflow hidden, so the document's end is cut at the box's edge "
-              "(web/text/layer.js `mount`, web/style.css `.dtext`)")
+# the page issues the marked checks wait on; each mark comes off the day its check passes
 # issue #14's guest case found it
 XFAIL_FOCUS = ("page: a landing on a document its account's index rows do not hold — a withheld one, or one unchanged since the index's "
                "floor — puts the walk's focus on the account's first listed document, and the one line names that one (web/nav/walk.js `focusTo`)")
@@ -52,6 +50,10 @@ XFAIL_FOCUS = ("page: a landing on a document its account's index rows do not ho
 XFAIL_MEMBER = ("page: a version member shares its document's box, and once the member's text is loaded (read side by side, "
                 "or a LEAP to the member) its article is mounted over the document's — which of them the box shows is the "
                 "design's to rule (web/text/layer.js `frame`; web/plane/projection.js `docBox`)")
+# issue #24's boundary note
+XFAIL_FACE = ("page: the withheld run's face, B1-S7's placeholder, is set in the article's flow taller than the run's positions, "
+              "which the face is fitted to as P-LAY's bars, so the text after it is pushed past the box's edge "
+              "(web/text/article.js `withheldBlockHTML`, web/style.css `.dtext .withheld`)")
 # issue #9's boundary note
 XFAIL_BEAM_LABELS = ("page: each bundle's label is set at its first beam's end, so stubs bound for different documents that land near "
                      "each other on the view's border, below the saturation the merge per direction waits for, set their labels over "

@@ -31,6 +31,7 @@ import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as PUMP from '../model/pump.js';
 import * as CAM from '../plane/camera.js';
+import * as LAYER from '../text/layer.js';
 import { docBox, accountCell, boardCell, accountAt } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
@@ -213,8 +214,7 @@ async function flyToFocus() {
     const d = REC.doc(focus.addr);
     const box = docBox(focus.addr);
     const frac = d.extent && focus.pos != null ? 0.12 + 0.8 * ((focus.pos - 1) / d.extent) : null;
-    const { metricsFor } = await import('../plane/layout.js');
-    await CAM.fly(CAM.viewForDoc(box, metricsFor(d.extent || 1, box).fs, 12.5, frac), 260);
+    await CAM.fly(CAM.viewForDoc(box, LAYER.metricsOf(d).fs, 12.5, frac), 260);
   }
   CAM.markDirty();
 }

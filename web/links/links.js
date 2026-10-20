@@ -28,6 +28,10 @@
 //   - a link shows as a SYMBOL at its span where the reveal has reached stage
 //     2 and as a BEAM where it has reached stage 3; the lenses by owner, type
 //     and endorsement filter the set per document for the session;
+//   - the most any reveal can set in a document's text — a symbol at every
+//     passage end, each block's count as the hidden reveal counts it — is
+//     what the plane's face is fitted to (`utmost`), so moving the chain, the
+//     toggle or a lens re-sets no line;
 //   - a link the person has FOLLOWED this session is drawn lighter (D-3:
 //     VALUE, the hue kept), the set client-side, never written;
 //   - the mid connections: one per pair of places the plane draws the
@@ -42,7 +46,8 @@
 // DIFFERENT RULE FOR WHICH LINKS SHOW, THE SAME MARKS AND THE SAME DRAWING:
 // when it lands, THIS FILE's rule and its state change; NO DRAWING MODULE
 // CHANGES (BM, T-LAYER, P-RENDER, SC, the cards draw what `shown`, `shownAt`,
-// `symbols`, `beams`, `countAt`, `connections`, `markOf` give them).
+// `symbols`, `beams`, `countAt`, `connections`, `markOf` give them, and
+// T-LAYER fits the face to what `utmost` gives).
 // Carries: the wireframe's §16 `.sym`/`.lip` selection and the owner-link
 // marking in `articleHTML`, §17's wanted set, §18 `revealLinks`'s lens
 // filters, §10's by-linker colouring and mid lines, S1's `buildBeams`.
@@ -103,10 +108,13 @@ const reveals = new Map();
 /** @type {Set<string>} the followed links, the session's (D-3) */
 const visitedSet = new Set();
 
+/** the reveal a document stands at until a card moves it: hidden, others' links off, no lens */
+const hidden = () => /** @type {Reveal} */ ({ stage: 1, others: false, lens: { owners: null, types: null, endorsed: false } });
+
 /** the reveal's state at a document (hidden by default) */
 export function state(/** @type {string} */ addr) {
   let r = reveals.get(addr);
-  if (!r) { r = { stage: 1, others: false, lens: { owners: null, types: null, endorsed: false } }; reveals.set(addr, r); }
+  if (!r) { r = hidden(); reveals.set(addr, r); }
   return r;
 }
 /** set the chain's stage at a document (the card's setter) */
@@ -115,7 +123,7 @@ export function reveal(/** @type {string} */ addr, /** @type {1 | 2 | 3} */ stag
 export function setOthers(/** @type {string} */ addr, /** @type {boolean} */ on) { const r = state(addr); r.others = on; if (on && r.stage < 2) r.stage = 2; }
 /** set a lens at a document — stands for the session, client-side (D-2) */
 export function lens(/** @type {string} */ addr, /** @type {Partial<Lens>} */ l) { Object.assign(state(addr).lens, l); }
-export function clearLens(/** @type {string} */ addr) { state(addr).lens = { owners: null, types: null, endorsed: false }; }
+export function clearLens(/** @type {string} */ addr) { state(addr).lens = hidden().lens; }
 /** dismissing the card returns the chain to hidden; a standing lens keeps the links it admits marked */
 export function hide(/** @type {string} */ addr) { const r = state(addr); r.stage = 1; }
 
@@ -193,6 +201,20 @@ function endsIn(/** @type {Link} */ l, /** @type {string} */ addr) {
 }
 
 /**
+ * A link's end drawn at a document: its span, its mark, its far end.
+ * @param {Link} l
+ * @param {string} addr the document the end lies in
+ * @param {'you' | 'owner' | 'others'} linker
+ * @param {'from' | 'to'} end
+ * @param {EndRef} e
+ * @returns {Shown}
+ */
+function drawnEnd(l, addr, linker, end, e) {
+  const far = (end === 'from' ? l.to : l.from)[0] || null;
+  return { link: l, near: addr, end, pos: /** @type {number} */ (e.ordinal), width: e.positions || 1, mark: markOf(l, addr), linker, far: far ? far.doc || far.account || '' : '', farEnd: far, farWhole: !!(far && far.whole) };
+}
+
+/**
  * The links to mark in a document's article, each with its mark: the owner's
  * and the person's own at their spans; others' only where the toggle or a
  * lens admits them.
@@ -209,11 +231,7 @@ export function shown(addr) {
     const linker = linkerOf(l, addr);
     if (linker === 'others' && !othersLet(r, l)) continue;
     if (!admitted(r, l)) continue;
-    for (const { end, e } of endsIn(l, addr)) {
-      const farList = end === 'from' ? l.to : l.from;
-      const far = farList[0] || null;
-      out.push({ link: l, near: addr, end, pos: /** @type {number} */ (e.ordinal), width: e.positions || 1, mark: markOf(l, addr), linker, far: far ? far.doc || far.account || '' : '', farEnd: far, farWhole: !!(far && far.whole) });
-    }
+    for (const { end, e } of endsIn(l, addr)) out.push(drawnEnd(l, addr, linker, end, e));
   }
   return out;
 }
@@ -234,8 +252,40 @@ export function beams(/** @type {string} */ addr) { return state(addr).stage >= 
  * @param {string} addr
  * @param {Block} block
  */
-export function countAt(addr, block) {
-  const r = state(addr);
+export function countAt(addr, block) { return countUnder(state(addr), addr, block); }
+
+/**
+ * The most link chrome any reveal can set in a document's text: every
+ * passage end at the document, as `shown` gives the reveal that shows them
+ * all — stage 2 and on, others' links on, no lens — and at each block the
+ * "+⟨n⟩ others" count as the hidden reveal counts it, which shows none of
+ * them. An article set with all of it is at least as long as at any stage,
+ * toggle and lens, so the face T-LAYER fits to it holds the article at each,
+ * and moving the reveal re-sets no line — what A-254 places the count by: "so
+ * a link's arrival breaks no line".
+ * @param {string} addr
+ * @returns {{shown: Shown[], countAt: (block: Block) => {n: number, social: boolean}}}
+ */
+export function utmost(addr) {
+  /** @type {Shown[]} */
+  const all = [];
+  for (const l of REC.linksTouching(addr)) {
+    if (classify(l) !== 'passage') continue;
+    const linker = linkerOf(l, addr);
+    for (const { end, e } of endsIn(l, addr)) all.push(drawnEnd(l, addr, linker, end, e));
+  }
+  const none = hidden();
+  return { shown: all, countAt: (block) => countUnder(none, addr, block) };
+}
+
+/**
+ * The others' passage links touching a block that a reveal does not show,
+ * and whether a social link touches the document.
+ * @param {Reveal} r
+ * @param {string} addr
+ * @param {Block} block
+ */
+function countUnder(r, addr, block) {
   let n = 0, social = false;
   for (const l of REC.linksTouching(addr)) {
     const kind = classify(l);

@@ -18,6 +18,12 @@
 // heading's nearer the block below it than the block above, adjoining margins
 // collapsing to the larger; a float at a block's end beside its last line
 // where it fits, else on a line of its own, as tall as its own line box.
+// THE FACE: a document's own extent holds its own text (S3; foundations §2.1:
+// "the box becomes text of its own length at the readable threshold").
+// `metricsFor` estimates the face from the extent alone, every line full;
+// `fitted` narrows it, a column at a time, until the article's lines as laid
+// out here end inside the box, so the clip at the box's edge cuts none of them
+// and no bar stands past it.
 // The measurements the article and this layout share are declared once here —
 // `MEASURE` and `BORDER` set as custom properties at boot (`cssMeasures`),
 // `LAY_FS` and `LINE_H` set on the article by T-LAYER — so neither side can
@@ -180,10 +186,12 @@ export function cssMeasures() {
 }
 
 /**
- * The document's own extent holds its own text (S3): the em from the
- * positions it holds, with a floor on characters per line so a short
- * document is not set in a giant face. The article starts at its box's top
- * padding and is clipped at its box's bottom.
+ * S3's estimate of the face that sets a document's own text in its own
+ * extent: the em from the positions it holds, every line full, with a floor
+ * on characters per line so a short document is not set in a giant face. It
+ * is the largest face the document is set at: `fitted` narrows it until the
+ * article's own lines hold. The article starts at its box's top padding and
+ * is clipped at its box's bottom.
  * @param {number} positions the content extent (bytes ≈ characters)
  * @param {{w:number, h:number}} box
  * @returns {Metrics}
@@ -327,6 +335,40 @@ export function layoutOf(rows, m) {
     margin = r.after;
   }
   return { lines, blocks };
+}
+
+/** a layout's height below its first line's top, in the body's em: its last line's bottom, 0 where it has no line */
+export function heightOf(/** @type {Layout} */ L) { const l = L.lines[L.lines.length - 1]; return l ? l.top + l.h : 0; }
+
+/**
+ * The face that holds an article in its box: `est` where the article's lines
+ * end inside its room — from its first line's top to its clip — a body line
+ * counted for each `cpl` of the positions the plan does not hold yet, as a
+ * withheld run's bars are counted; else the narrowest column wider than
+ * `est`'s at which they do, the face set so the column fills the width the
+ * estimate fits it to. The column only widens, so the face is never larger
+ * than the estimate's and the 52 characters `metricsFor` floors a line at
+ * hold. The room grows with the column and the lines never take more of it —
+ * a wider column breaks each line no earlier than a narrower one — so the
+ * narrowest column that holds is found by bisection.
+ * @param {Row[]} rows the article's plan (T-ARTICLE's `articlePlan`)
+ * @param {Metrics} est `metricsFor`'s estimate for the document
+ * @param {number} [unheld] the document's positions the plan does not hold
+ * @returns {Metrics}
+ */
+export function fitted(rows, est, unheld = 0) {
+  const room = (/** @type {Metrics} */ m) => (m.y1 - m.y0) / m.fs;
+  const need = (/** @type {Metrics} */ m) => heightOf(layoutOf(rows, m)) + Math.ceil(unheld / m.cpl) * LINE_H;
+  const over = need(est) / room(est);
+  if (over <= 1) return est;
+  /** @returns {Metrics} */
+  const at = (/** @type {number} */ cpl) => { const fs = est.tw / (CHAR_W * cpl); return { ...est, fs, cpl, lineH: fs * LINE_H }; };
+  const holds = (/** @type {number} */ cpl) => { const m = at(cpl); return need(m) <= room(m); };
+  // the first guess: the column at which the estimate's lines, taken as an area, would fill the room
+  let lo = est.cpl, hi = Math.max(lo + 1, Math.ceil(lo * Math.sqrt(over)));
+  while (!holds(hi)) { lo = hi; hi *= 2; }
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (holds(mid)) hi = mid; else lo = mid; }
+  return at(hi);
 }
 
 /**

@@ -18,12 +18,11 @@ of its members, and a click on it teleports to that newest member; a ghost
 address answers its face. "Shown" is
 measured, not read off the DOM: the page's `visible` oracle says whether a
 block, a mark or a corner lies inside the clip the page draws and the
-viewport — text the DOM holds past a clip is shown to no one — and the
-checks a page issue still breaks are marked with it."""
+viewport — text the DOM holds past a clip is shown to no one."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, GHOST, SECOND_ACCOUNT, WINDOW, XFAIL_CLIP, Result
+from . import AGENT_SPACE, DOC, GHOST, SECOND_ACCOUNT, WINDOW, Result
 
 WS = re.compile(r'\s+')
 
@@ -133,9 +132,9 @@ def run(ctx):
     # what the DOM holds against what the page shows: every block inside the article's clip, and C-33's mark with them
     blocks_vis = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"]' % DOC))
     hidden = [{'pos': v['pos'], 'rect': v['rect'], 'clip': v['clip']} for v in blocks_vis if not v['inClip']]
-    r.check(bool(blocks_vis) and not hidden, '(ii) every block of the mounted article lies inside its clip — glyphs the DOM holds past the clip are shown to no one', {'blocks': len(blocks_vis), 'hidden': hidden[:6]}, xfail=XFAIL_CLIP)
+    r.check(bool(blocks_vis) and not hidden, '(ii) every block of the mounted article lies inside its clip — glyphs the DOM holds past the clip are shown to no one', {'blocks': len(blocks_vis), 'hidden': hidden[:6]})
     marks_vis = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
-    r.check(bool(marks_vis) and all(m['inClip'] for m in marks_vis), 'C-33\'s mark on the window run lies inside the article\'s clip (shown, not merely held)', [m for m in marks_vis if not m['inClip']], xfail=XFAIL_CLIP)
+    r.check(bool(marks_vis) and all(m['inClip'] for m in marks_vis), 'C-33\'s mark on the window run lies inside the article\'s clip (shown, not merely held)', [m for m in marks_vis if not m['inClip']])
     r.figures['shown'] = {'blocks': len(blocks_vis), 'blocks_past_clip': len(hidden), 'c33_marks': len(marks_vis), 'c33_marks_past_clip': sum(1 for m in marks_vis if not m['inClip'])}
     # (iii) the mirror
     size = ctx.js('window.__skep.mirror.size()')

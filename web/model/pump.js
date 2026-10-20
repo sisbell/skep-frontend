@@ -41,7 +41,7 @@ const MAX_SCANS = 2;
 const SPAN_BLOCK = 2048;
 /** the most positions a whole read fetches at once (the staging draft holds six million; the rest comes by the viewport's windows) */
 export const WHOLE_CAP = 262144;
-/** the em (px) at which a document's text is fetched — below S1's mount em, so the text is there when the layer mounts */
+/** the em (px), by P-LAY's estimate, at which a document's text is fetched — below S1's mount em, and the estimate's face never smaller than the one T-LAYER fits the article to and mounts at, so the text is there when the layer mounts */
 const FETCH_EM = 5;
 /** at most this many members probed (`D.2`, `D.3`, …) */
 const MEMBER_PROBE_CAP = 8;

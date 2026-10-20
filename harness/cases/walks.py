@@ -18,7 +18,7 @@ switch's own words among it, the toggle's B1-S4 words in the state LK
 holds. What each step could not have on this lane is said in its note."""
 import json
 
-from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, WINDOW, XFAIL_CLIP, Result
+from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, WINDOW, Result
 
 C33_MARK = '#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC
 ORIGIN_HAIRLINE = '#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"]' % (DOC, WINDOW[2])
@@ -90,7 +90,7 @@ def run(ctx):
     scale = ctx.camera()['scale']
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, scale)
     step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s placeholder occupies the run — "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", never its bytes — R56\'s key-absent arm beneath it, then C-67\'s clause; the act at it, C-39\'s face, is the guest case\'s.', 'window-run-withheld',
-         claims=[(PLACEHOLDER, 'the withheld run\'s placeholder', XFAIL_CLIP)])
+         claims=[(PLACEHOLDER, 'the withheld run\'s placeholder', None)])
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     ghost = next((s for s in shown if s['far'] == GHOST), None)
     r.check(ghost is not None, 'W-01 step 7: the first edition draws its citation of the ghost', [s['far'] for s in shown][:8])
@@ -121,7 +121,7 @@ def run(ctx):
     step(ctx, r, 'W-05', 1, 'zoom for structure: reading', 'W-05 step 1: "reading = full text with span-anchored beams" — the LEAP to a named document lands at reading scale (law 6; R92 rider (a)).', 'reading')
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, ctx.camera()['scale'])
     step(ctx, r, 'W-05', 2, 'read: the same material', 'W-05 step 2: "transcluded content visibly THE SAME material, one gesture to the source (R2) — delivered per ORIGIN, position by position." The window run\'s hairline names 1.0.1.0.1003; the mark is C-33\'s; the scene offer stands beneath.', 'same-material',
-         claims=[(C33_MARK, 'C-33\'s mark', XFAIL_CLIP), (ORIGIN_HAIRLINE, 'the hairline naming the origin', XFAIL_CLIP), (SCENE_OFFER, 'the scene offer', XFAIL_CLIP)])
+         claims=[(C33_MARK, 'C-33\'s mark', None), (ORIGIN_HAIRLINE, 'the hairline naming the origin', None), (SCENE_OFFER, 'the scene offer', None)])
     ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
     ctx.frames(2)
     s = card_state(ctx)
