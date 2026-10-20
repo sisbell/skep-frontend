@@ -1,14 +1,17 @@
-// P-LAY's test: the article's lines as its CSS sets them — the head's lines
-// before the first block; the gap after each block at its own size; a line
-// holding exactly `cpl` characters, the space after its last word hanging; a
-// heading wrapped at its own size; a break after a hyphen inside a word and
-// none after a slash; an inline-block set whole; a float beside the last
-// line or on a line of its own; a withheld run as bars of its width; the bars
-// at their lines and none past the article's clip; the measurements the CSS
-// reads, one source.
+// P-LAY's test: the article's lines as its CSS sets them — each line box its
+// block's own size's, on the 1/64 px grid as the engine lays it out (the
+// figures measured on the gate's machine); the head's lines before the first
+// block; a heading's margins nearer the block below it, the gap after every
+// other block at its own size; a line holding exactly `cpl` characters, the
+// space after its last word hanging; a heading wrapped at its own size; a
+// break after a hyphen inside a word and none after a slash; an inline-block
+// set whole; a float beside the last line or on a line of its own, as tall as
+// its own line box; a withheld run as bars of its width; the bars at their
+// lines and none past the article's clip; the measurements the CSS reads, one
+// source.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { metricsFor, layoutOf, wrap, bars, breakBetween, cssMeasures, MEASURE, LINE_H, LAY_FS } from './layout.js';
+import { metricsFor, layoutOf, wrap, bars, breakBetween, cssMeasures, lineBox, MEASURE, LINE_H, LAY_FS } from './layout.js';
 import { DOC_W, DOC_H } from './projection.js';
 
 /** @typedef {import('./layout.js').Row} Row */
@@ -17,8 +20,10 @@ import { DOC_W, DOC_H } from './projection.js';
 /** @returns {Piece} */
 const piece = (/** @type {string} */ text, size = 1, o = {}) => ({ text, size, lead: 0, trail: 0, box: false, ...o });
 /** @returns {Row} */
-const row = (/** @type {Row['kind']} */ kind, /** @type {number | null} */ pos, /** @type {Piece[]} */ pieces, o = {}) => ({ kind, pos, pieces, float: null, before: 0, after: 0, width: 0, ...o });
-const para = (/** @type {number} */ pos, /** @type {string} */ text, size = 1) => row('text', pos, [piece(text, size)], { after: MEASURE.gap * size });
+const row = (/** @type {Row['kind']} */ kind, /** @type {number | null} */ pos, /** @type {Piece[]} */ pieces, o = {}) => ({ kind, pos, size: 1, pieces, float: null, before: 0, after: 0, width: 0, ...o });
+const para = (/** @type {number} */ pos, /** @type {string} */ text, size = 1) => row('text', pos, [piece(text, size)], { size, after: MEASURE.gap * size });
+/** a heading's row as T-ARTICLE plans it: its margins at its own size */
+const heading = (/** @type {number} */ pos, /** @type {string} */ text, size = MEASURE.h2) => row('text', pos, [piece(text, size)], { size, before: MEASURE.headingBefore * size, after: MEASURE.headingAfter * size });
 const metrics = (cpl = 10, y1 = 1000) => ({ fs: 1, cpl, lineH: LINE_H, tw: cpl * 0.6, x0: 0, y0: 0, y1 });
 const close = (/** @type {number} */ a, /** @type {number} */ b) => Math.abs(a - b) < 1e-9;
 /** the widths of a row's lines at a column */
@@ -46,24 +51,47 @@ test('the layout wraps words at the column and keys lines by block position; a w
   for (const line of L.lines) assert.ok(line.w <= m.cpl, `${line.w} past the column`);
 });
 
-test('the head\'s lines stand before the first block: its first line is the article\'s fourth line box', () => {
-  const head = [row('head', null, [piece('1.0.1.0.3')]), row('head', null, [piece('published', MEASURE.head)]), row('head', null, [piece('1.0.1 · dev', MEASURE.head)])];
+test('a line box is its own size\'s: the engine\'s font size on the 1/64 px grid, rounded, and the line height on it, floored', () => {
+  assert.equal(lineBox(1), LINE_H, 'the body\'s line box is LINE_H');
+  // Chrome 155 on the gate's machine, a single line of each size at LAY_FS with the article's unitless line height
+  const measured = [[MEASURE.head, 17.265625], [MEASURE.derived, 18.34375], [MEASURE.count, 15.53125], [MEASURE.h2, 26.984375], [MEASURE.h3, 23.734375], [MEASURE.label, 15.109375], [MEASURE.sym, 16.1875]];
+  for (const [size, px] of measured) assert.equal(lineBox(size) * LAY_FS, px, `${size} em: a line box of ${px} px`);
+  for (const [size] of measured) assert.ok(Number.isInteger(lineBox(size) * LAY_FS * 64), `${size} em: on the 1/64 px grid`);
+  assert.ok(Math.abs(lineBox(MEASURE.head) / MEASURE.head - LINE_H) < 0.01 && Math.abs(lineBox(MEASURE.h2) / MEASURE.h2 - LINE_H) < 0.01, 'each its own size\'s LINE_H, within the grid');
+});
+
+test('the head\'s lines stand before the first block, each its own size\'s line box', () => {
+  const head = [row('head', null, [piece('1.0.1.0.3')]), row('head', null, [piece('published', MEASURE.head)], { size: MEASURE.head }), row('head', null, [piece('1.0.1 · dev', MEASURE.head)], { size: MEASURE.head })];
   const L = layoutOf([...head, para(1, 'text')], metrics(52));
   const b = /** @type {{first: number, n: number}} */ (L.blocks.get(1));
   assert.equal(b.first, 3);
-  assert.ok(close(L.lines[b.first].top, 3 * LINE_H), `the first block at ${L.lines[b.first].top} em, three line boxes down`);
+  assert.ok(close(L.lines[b.first].top, LINE_H + 2 * lineBox(MEASURE.head)), `the first block at ${L.lines[b.first].top} em: the address's line box and two of the head's`);
   assert.deepEqual(L.lines.slice(0, 3).map((l) => l.kind), ['head', 'head', 'head']);
+  assert.deepEqual(L.lines.slice(0, 3).map((l) => l.h), [LINE_H, lineBox(MEASURE.head), lineBox(MEASURE.head)]);
 });
 
-test('the gap after each block is the block\'s own: a heading\'s at its size, adjoining margins collapsing to the larger', () => {
-  const offer = row('chrome', null, [piece('this document windows 1.0.1.0.1003', MEASURE.offer)], { before: MEASURE.offerGap * MEASURE.offer, after: MEASURE.offerGap * MEASURE.offer });
-  const L = layoutOf([para(1, 'aaaa'), para(10, '# Title', MEASURE.h2), para(20, 'bbbb'), offer], metrics(52));
+test('a heading stands nearer the block it heads than the block above it; the gap after every other block is its own; adjoining margins collapse to the larger', () => {
+  const offer = row('chrome', null, [piece('this document windows 1.0.1.0.1003', MEASURE.offer)], { size: MEASURE.offer, before: MEASURE.offerGap * MEASURE.offer, after: MEASURE.offerGap * MEASURE.offer });
+  const L = layoutOf([para(1, 'aaaa'), heading(10, '# Title'), para(20, 'bbbb'), offer], metrics(52));
   const top = (/** @type {number} */ pos) => L.lines[/** @type {{first: number}} */ (L.blocks.get(pos)).first].top;
-  assert.ok(close(top(10), LINE_H + MEASURE.gap), 'a paragraph\'s gap: .55 of its em');
-  assert.ok(close(top(20), top(10) + LINE_H + MEASURE.gap * MEASURE.h2), 'a heading\'s gap: .55 of its own, larger em');
+  const above = top(10) - LINE_H, below = top(20) - (top(10) + lineBox(MEASURE.h2));
+  assert.ok(close(above, Math.max(MEASURE.gap, MEASURE.headingBefore * MEASURE.h2)), 'above the heading: its room, collapsed with the paragraph\'s gap');
+  assert.ok(close(below, MEASURE.headingAfter * MEASURE.h2), 'below it: its own smaller room');
+  assert.ok(below < above, `nearer the block it heads (${below} em) than the block above it (${above} em)`);
   const last = L.lines[L.lines.length - 1];
   assert.ok(close(last.top, top(20) + LINE_H + Math.max(MEASURE.gap, MEASURE.offerGap * MEASURE.offer)), 'the offer\'s margin collapses with the block\'s');
   assert.equal(last.pos, null, 'the offer is chrome, no block\'s line');
+  const two = layoutOf([heading(10, '# Title'), heading(20, '## Part', MEASURE.h3)], metrics(52));
+  const t2 = (/** @type {number} */ pos) => two.lines[/** @type {{first: number}} */ (two.blocks.get(pos)).first].top;
+  assert.ok(close(t2(20) - t2(10) - lineBox(MEASURE.h2), MEASURE.headingBefore * MEASURE.h3), 'a heading under a heading: the larger room, the lower one\'s above it');
+});
+
+test('a heading\'s lines are its own size\'s line boxes', () => {
+  const L = layoutOf([heading(1, 'aaaaaaa bbbbbbbbb'), para(30, 'cc')], metrics(20));
+  const b = /** @type {{first: number, n: number}} */ (L.blocks.get(1));
+  assert.equal(b.n, 2, 'seventeen characters at 1.25 wrap in twenty');
+  assert.ok(close(L.lines[b.first + 1].top - L.lines[b.first].top, lineBox(MEASURE.h2)), 'the second line one heading line box below the first');
+  assert.ok(close(L.lines[/** @type {{first: number}} */ (L.blocks.get(30)).first].top - L.lines[b.first].top, 2 * lineBox(MEASURE.h2) + MEASURE.headingAfter * MEASURE.h2), 'two heading line boxes, then its room below');
 });
 
 test('a line holds exactly its column\'s characters: the space after its last word hangs', () => {
@@ -102,6 +130,9 @@ test('a float stands beside the last line where it fits, else on a line of its o
   assert.equal(wrap(row('text', 1, [piece('aaaaaaaaaaaaaa')], { float: count }), 20).length, 2);
   assert.equal(wrap(row('text', 1, [], { float: count }), 20).length, 1, 'a row with nothing but its float is the float\'s line');
   assert.equal(wrap(row('text', 1, []), 20).length, 0, 'an empty row takes no line');
+  const small = piece('+3 others', MEASURE.count);
+  assert.deepEqual(wrap(row('text', 1, [piece('aaaaaaaaaaaaaaaaaa')], { float: small }), 20).map((l) => l.h), [LINE_H, lineBox(MEASURE.count)], 'a float on a line of its own is as tall as its own line box');
+  assert.deepEqual(wrap(row('text', 1, [piece('aaaa')], { float: small }), 20).map((l) => l.h), [LINE_H], 'beside the last line it adds none');
 });
 
 test('the bars stand inside their lines and stop at the article\'s clip, the last one cut there', () => {

@@ -7,7 +7,8 @@
 // headings as formatting. The plan the canvas's bars are laid out from: the
 // head's three lines, a fourth where links touch the document; a block's
 // pieces with its hairline's label, C-33's mark and its symbols at its size;
-// the same blocks, in the same order, as the HTML.
+// a heading's margins standing it nearer the block it heads; the same blocks,
+// in the same order, as the HTML.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { articleHTML, articlePlan, withheldBlockHTML, cornerHTML, headingLevel } from './article.js';
@@ -112,7 +113,7 @@ test('a block\'s plan carries its hairline\'s label, C-33\'s mark and its symbol
   const v = view({ originKinds: new Map([['1.0.1.0.1003', 'draft']]), marks: [shown(9, 2)], symbols: [shown(9, 2)], countAt: () => ({ n: 3, social: false }) });
   const r = /** @type {import('../plane/layout.js').Row} */ (articlePlan(d, v, '1.0.1').find((x) => x.pos === 1));
   const k = MEASURE.h2;
-  assert.equal(r.after, MEASURE.gap * k, 'the gap after a heading at its own size');
+  assert.equal(r.size, k, 'the heading\'s box at its own size: its lines its size\'s line boxes');
   const label = r.pieces.find((p) => p.text === '≡ 1.0.1.0.1003');
   assert.ok(label && label.size === MEASURE.label * k && label.lead > 0, 'the hairline\'s label whole, at its size, led by the sameness boundary');
   const mark = r.pieces.find((p) => p.text === t('C-33'));
@@ -120,6 +121,18 @@ test('a block\'s plan carries its hairline\'s label, C-33\'s mark and its symbol
   assert.equal(r.pieces.filter((p) => p.text === '⟡' && p.box).length, 1, 'the symbol at its span');
   assert.equal(r.pieces.filter((p) => !p.box && p.text !== '≡ 1.0.1.0.1003').map((p) => p.text).join(''), '# abcdefghij', 'the document\'s own characters, every one');
   assert.equal(r.float && r.float.text, t('F.others-count', { n: 3 }), 'the others\' count floats at its end');
+});
+
+test('a heading\'s plan stands it nearer the block it heads: its room above at its own size, the smaller room below; a paragraph\'s gap after it alone', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 10, kind: 'para', text: 'aaaaaaaa', origin: null }, { pos: 11, width: 10, kind: 'para', text: '## Part', origin: null }, { pos: 21, width: 10, kind: 'para', text: 'bbbbbbbb', origin: null }] });
+  const plan = articlePlan(d, view(), '1.0.1');
+  const at = (/** @type {number} */ pos) => /** @type {import('../plane/layout.js').Row} */ (plan.find((x) => x.pos === pos));
+  const k = MEASURE.h3;
+  assert.deepEqual([at(11).size, at(11).before, at(11).after], [k, MEASURE.headingBefore * k, MEASURE.headingAfter * k], 'the heading: its size, its room above, its room below');
+  assert.ok(at(11).before > at(11).after && at(11).before > MEASURE.gap, 'more room above it than below it, and more than a paragraph\'s gap');
+  assert.deepEqual([at(1).size, at(1).before, at(1).after], [1, 0, MEASURE.gap], 'a paragraph: the body\'s size, its gap after it alone');
+  const head = plan.filter((r) => r.kind === 'head').map((r) => r.size);
+  assert.deepEqual(head, [1, MEASURE.head, MEASURE.head], 'the head\'s address at the body\'s size, its state line and byline at the head\'s');
 });
 
 test('the plan and the HTML decide the same blocks, in the same order', () => {

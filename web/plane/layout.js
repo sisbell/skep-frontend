@@ -11,15 +11,19 @@
 // characters fit, the space after it hanging past the column; a line broken
 // at a space, after a hyphen, a dash, an ellipsis or a question mark inside a
 // word (never before closing or infix punctuation), and on either side of an
-// inline-block, which is set whole; every line box one line height (the
-// article's chrome is held inside it); the gap after each block at the
-// block's own size, adjoining gaps collapsing to the larger; a float at a
-// block's end beside its last line where it fits, else on a line of its own.
-// The measurements the article's CSS and this layout share are declared once
-// here (`MEASURE`, `BORDER`, `LAY_FS`) and set as custom properties at boot
-// (`cssMeasures`), so neither side can drift from the other. A withheld run
-// is bars of its true width (F2.1-i); its face at reading scale stands
-// taller, and which of the two its place keeps is the design's open question.
+// inline-block, which is set whole; every line box its block's line height at
+// the block's own size (`lineBox`: the article's one unitless line height,
+// `LINE_H`, which each element applies to its own em — the article's chrome is
+// held inside it); the margins around each block at the block's own size, a
+// heading's nearer the block below it than the block above, adjoining margins
+// collapsing to the larger; a float at a block's end beside its last line
+// where it fits, else on a line of its own, as tall as its own line box.
+// The measurements the article and this layout share are declared once here —
+// `MEASURE` and `BORDER` set as custom properties at boot (`cssMeasures`),
+// `LAY_FS` and `LINE_H` set on the article by T-LAYER — so neither side can
+// drift from the other. A withheld run is bars of its true width (F2.1-i);
+// its face at reading scale stands taller, and which of the two its place
+// keeps is the design's open question.
 // Characters outside the monospace face (an ideograph, a fallback symbol)
 // are counted as one character each; the face sets them wider.
 // Carries: the wireframe's §9 (`metricsFor`, `layoutOf`, the monospace
@@ -32,7 +36,7 @@ import { DOC_W, DOC_H } from './projection.js';
  * @typedef {Object} Metrics
  * @property {number} fs the body's em in world units
  * @property {number} cpl the article's column, in characters of its face
- * @property {number} lineH a line box's height in world units
+ * @property {number} lineH the body's line box in world units
  * @property {number} tw the width the column is fitted to (world units)
  * @property {number} x0 the column's left edge, relative to the box
  * @property {number} y0 the article's first line's top, relative to the box
@@ -52,6 +56,7 @@ import { DOC_W, DOC_H } from './projection.js';
  * @typedef {Object} Row — a block box of the article, holding lines of inline content
  * @property {'head' | 'text' | 'withheld' | 'chrome'} kind the head's lines; a block of the document (its text, a record's words, a reference, an item not rendered); a withheld run; the page's chrome after the blocks
  * @property {number | null} pos the first position of the block the row opens; null on a row that opens none
+ * @property {number} size the size its box is set at, in the body's em: each of its lines is that size's line box (`lineBox`)
  * @property {Piece[]} pieces
  * @property {Piece | null} float a float at the row's end, on its right (the others' count)
  * @property {number} before the margin above it, in the body's em
@@ -62,6 +67,7 @@ import { DOC_W, DOC_H } from './projection.js';
 /**
  * @typedef {Object} Line — one line box of the article
  * @property {number} top its top, in the body's em below the article's first line's top
+ * @property {number} h its height, in the body's em: its row's line box, or a float's own where the float stands on a line of its own
  * @property {number} w the width its content takes, in characters of the body's face
  * @property {number} size the largest font size on it, in the body's em
  * @property {Row['kind']} kind the kind of the row it belongs to
@@ -88,12 +94,34 @@ export const CHAR_W = 0.6;
 /** the size the article is laid out at, in px (S1): T-LAYER's layout, where a border's px stands against the em */
 export const LAY_FS = 16;
 /**
- * A line box's height, in the body's em: 1.35, on the 1/64 px grid the
- * engines lay out on at LAY_FS — so the article's lines, which T-LAYER sets
- * at exactly this height, and the bars' lines keep one pitch however many
- * lines down a block stands.
+ * The article's line height, a ratio of each element's own size: 1.35, cut
+ * so that the body's line box at LAY_FS stands on the 1/64 px grid the
+ * engines lay out on. T-LAYER sets it unitless on the article, so every
+ * element spaces its lines in proportion to its own size (`lineBox`), and
+ * the body's lines and the bars' keep one pitch however many lines down a
+ * block stands.
  */
 export const LINE_H = Math.round(1.35 * LAY_FS * 64) / 64 / LAY_FS;
+
+/** the layout unit the engines place boxes on, in px: 1/64 */
+const GRID = 64;
+
+/**
+ * The height of a line box whose strut is set at `size`, in the body's em:
+ * `LINE_H` of that size, as the engine lays it out at LAY_FS — the font size
+ * taken onto the 1/64 px grid, rounded, then the line height on it, floored.
+ * The rule is Chrome's, measured on the gate's machine (Chrome 155: 0.8 em a
+ * line box of 17.265625 px, 0.72 em 15.53125, 1.25 em 26.984375, 1.1 em
+ * 23.734375); the layout case holds it to the line boxes the mounted article
+ * stands on, and the shipping engine's are the owner's to look at (FP-19).
+ * `lineBox(1)` is `LINE_H`.
+ * @param {number} size
+ * @returns {number}
+ */
+export function lineBox(size) {
+  const font = Math.round(size * LAY_FS * GRID) / GRID;
+  return Math.floor(font * LINE_H * GRID + 1e-7) / GRID / LAY_FS;
+}
 
 /**
  * The article's sizes and the room its chrome takes, each in the em of the
@@ -102,6 +130,8 @@ export const LINE_H = Math.round(1.35 * LAY_FS * 64) / 64 / LAY_FS;
 export const MEASURE = Object.freeze({
   /** the gap after each block */
   gap: 0.55,
+  /** a heading's margins: the room above it and the room below it, so it stands nearer the block it heads */
+  headingBefore: 1, headingAfter: 0.25,
   /** the head's state line, byline and presence line */
   head: 0.8,
   /** a heading: `#` is set as h2, `##` as h3; deeper ones at the body's size */
@@ -139,7 +169,8 @@ export function cssMeasures() {
   const em = (/** @type {number} */ v) => v + 'em', px = (/** @type {number} */ v) => v + 'px';
   const M = MEASURE;
   return {
-    '--gap': em(M.gap), '--head': em(M.head), '--h2': em(M.h2), '--h3': em(M.h3), '--derived': em(M.derived),
+    '--gap': em(M.gap), '--heading-before': em(M.headingBefore), '--heading-after': em(M.headingAfter),
+    '--head': em(M.head), '--h2': em(M.h2), '--h3': em(M.h3), '--derived': em(M.derived),
     '--offer': em(M.offer), '--offer-gap': em(M.offerGap), '--label': em(M.label), '--label-gap': em(M.labelGap),
     '--mark': em(M.mark), '--mark-pad': em(M.markPad), '--mark-gap': em(M.markGap),
     '--sym': em(M.sym), '--sym-pad': em(M.symPad), '--sym-gap': em(M.symGap),
@@ -209,14 +240,16 @@ export function breakBetween(a, b, initial) {
 
 /**
  * A row's lines: its pieces wrapped in a column of `cpl` characters, every
- * width in characters of the body's face.
+ * width in characters of the body's face; each line as tall as the row's line
+ * box, a float on a line of its own as tall as its own.
  * @param {Row} row
  * @param {number} cpl
- * @returns {Array<{w: number, size: number}>}
+ * @returns {Array<{w: number, size: number, h: number}>}
  */
 export function wrap(row, cpl) {
   const cap = cpl + 1e-6;
-  /** @type {Array<{w: number, size: number}>} */
+  const lh = lineBox(row.size);
+  /** @type {Array<{w: number, size: number, h: number}>} */
   const out = [];
   // the line being filled: the width of its content, its largest size, whether it holds a unit
   let used = 0, size = 0, has = false;
@@ -226,7 +259,7 @@ export function wrap(row, cpl) {
   let prev = -1, before = -1;
   const place = () => {
     if (!unit) return;
-    if (has && used + hang + unitW > cap) { out.push({ w: used, size }); used = unitW; size = unitSize; }
+    if (has && used + hang + unitW > cap) { out.push({ w: used, size, h: lh }); used = unitW; size = unitSize; }
     else { used += hang + unitW; size = Math.max(size, unitSize); has = true; }
     unitW = 0; unitSize = 0; unit = false; hang = 0;
   };
@@ -253,18 +286,19 @@ export function wrap(row, cpl) {
     if (p.trail) { unitW += p.trail / CHAR_W; unit = true; }
   }
   place();
-  if (has) out.push({ w: used, size });
+  if (has) out.push({ w: used, size, h: lh });
   if (row.float) {
     const fw = (row.float.lead + row.float.trail) / CHAR_W + [...row.float.text].length * row.float.size;
-    if (!has || used + hang + fw > cap) out.push({ w: 0, size: row.float.size });
+    if (!has || used + hang + fw > cap) out.push({ w: 0, size: row.float.size, h: lineBox(row.float.size) });
   }
   return out;
 }
 
 /**
  * The article's lines: its rows wrapped and stacked from its first line's
- * top, each line box one line height, the margins between rows collapsing to
- * the larger; a withheld run's rows its bars, one line per `cpl` positions.
+ * top, each line box as tall as `wrap` gives it, the margins between rows
+ * collapsing to the larger; a withheld run's rows its bars, one line per
+ * `cpl` positions.
  * @param {Row[]} rows the article's plan (T-ARTICLE's `articlePlan`)
  * @param {Metrics} m
  * @returns {Layout}
@@ -282,12 +316,12 @@ export function layoutOf(rows, m) {
     if (r.pos != null) { pos = r.pos; blocks.set(pos, { first: lines.length, n: 0 }); }
     else if (r.kind === 'head' || r.kind === 'chrome') pos = null;
     const set = r.kind === 'withheld'
-      ? Array.from({ length: Math.max(1, Math.ceil(r.width / m.cpl)) }, (_, i) => ({ w: Math.max(1, Math.min(m.cpl, r.width - i * m.cpl)), size: 1 }))
+      ? Array.from({ length: Math.max(1, Math.ceil(r.width / m.cpl)) }, (_, i) => ({ w: Math.max(1, Math.min(m.cpl, r.width - i * m.cpl)), size: r.size, h: lineBox(r.size) }))
       : wrap(r, m.cpl);
     margin = Math.max(margin, r.before);
     if (!set.length) { margin = Math.max(margin, r.after); continue; }
     y += margin;
-    for (const l of set) { lines.push({ top: y, w: l.w, size: l.size, kind: r.kind, pos }); y += LINE_H; }
+    for (const l of set) { lines.push({ top: y, h: l.h, w: l.w, size: l.size, kind: r.kind, pos }); y += l.h; }
     const b = pos != null ? blocks.get(pos) : undefined;
     if (b) b.n += set.length;
     margin = r.after;
@@ -309,7 +343,7 @@ export function bars(L, m) {
   const out = [];
   for (const l of L.lines) {
     if (l.kind === 'head' || l.kind === 'chrome' || l.w <= 0) continue;
-    const y = m.y0 + (l.top + LINE_H / 2 - 0.2 * l.size) * m.fs;
+    const y = m.y0 + (l.top + l.h / 2 - 0.2 * l.size) * m.fs;
     if (y >= m.y1) break;
     const h = Math.min(0.5 * l.size * m.fs, m.y1 - y);
     out.push({ x: m.x0, y, w: l.w * CHAR_W * m.fs, h, withheld: l.kind === 'withheld' });

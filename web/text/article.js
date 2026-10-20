@@ -380,11 +380,12 @@ const symbol = (k) => {
  * A row of the plan.
  * @param {Row['kind']} kind
  * @param {number | null} pos the block it opens
+ * @param {number} size the size its box is set at, in the body's em
  * @param {Piece[]} pieces
  * @param {{after?: number, before?: number, float?: Piece | null, width?: number}} [o] its margins in the body's em, its float, a withheld run's width
  * @returns {Row}
  */
-const row = (kind, pos, pieces, o = {}) => ({ kind, pos, pieces, float: o.float ?? null, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0 });
+const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, float: o.float ?? null, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0 });
 
 /**
  * A paragraph's inline pieces at its size: each stretch of its text, a
@@ -411,8 +412,9 @@ function paraPieces(p, k) {
 
 /**
  * The article as P-LAY's plan: the head's lines, each block's rows at its
- * size with the gap after it, the empty document's line, the scene-offers —
- * from the same walk the HTML is made from.
+ * size with its margins — a heading's room above it and the smaller room
+ * below, every other block's gap after it — the empty document's line, the
+ * scene-offers — from the same walk the HTML is made from.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -422,25 +424,26 @@ export function articlePlan(d, v, ownerAccount) {
   const w = walk(d, v, ownerAccount);
   const H = MEASURE.head, gap = MEASURE.gap;
   /** @type {Row[]} */
-  const rows = [row('head', null, [piece(w.head.addr, 1)]), row('head', null, [piece(w.head.state, H)]), row('head', null, [piece(w.head.by, H)])];
-  if (w.head.presence) rows.push(row('head', null, [symbol(H), piece(' ' + w.head.presence, H)]));
+  const rows = [row('head', null, 1, [piece(w.head.addr, 1)]), row('head', null, H, [piece(w.head.state, H)]), row('head', null, H, [piece(w.head.by, H)])];
+  if (w.head.presence) rows.push(row('head', null, H, [symbol(H), piece(' ' + w.head.presence, H)]));
   if (!w.parts) return rows;
   for (const p of w.parts) {
     const b = p.b;
-    if (p.kind === 'withheld') rows.push(row('withheld', b.pos, [], { after: gap, width: b.width }));
+    if (p.kind === 'withheld') rows.push(row('withheld', b.pos, 1, [], { after: gap, width: b.width }));
     else if (p.kind === 'record' && p.rec) {
-      if (p.rec.keys) rows.push(row('text', b.pos, [piece(p.rec.words, 1)]), row('text', null, [piece(p.rec.keys, MEASURE.derived)], { after: gap }));
-      else rows.push(row('text', b.pos, [piece(p.rec.words, 1)], { after: gap }));
-    } else if (p.kind === 'ref') rows.push(row('text', b.pos, [piece('⟡', 1)], { after: gap }));
-    else if (p.kind === 'hex') rows.push(row('text', b.pos, [piece(t('F.not-rendered', { width: b.width }), 1)], { after: gap }));
+      if (p.rec.keys) rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)]), row('text', null, MEASURE.derived, [piece(p.rec.keys, MEASURE.derived)], { after: gap }));
+      else rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)], { after: gap }));
+    } else if (p.kind === 'ref') rows.push(row('text', b.pos, 1, [piece('⟡', 1)], { after: gap }));
+    else if (p.kind === 'hex') rows.push(row('text', b.pos, 1, [piece(t('F.not-rendered', { width: b.width }), 1)], { after: gap }));
     else {
       const k = headingSize(p.level), c = MEASURE.count * k;
       const float = p.count.n > 0 ? piece(t('F.others-count', { n: p.count.n }), c, MEASURE.countGap * c) : p.count.social ? piece('◦', c, MEASURE.countGap * c) : null;
-      rows.push(row('text', b.pos, paraPieces(p, k), { after: gap * k, float }));
+      const margins = p.level ? { before: MEASURE.headingBefore * k, after: MEASURE.headingAfter * k } : { after: gap * k };
+      rows.push(row('text', b.pos, k, paraPieces(p, k), { ...margins, float }));
     }
   }
-  if (w.empty) rows.push(row('text', 1, [piece(t('B1.empty_subspace'), 1)], { after: gap }));
+  if (w.empty) rows.push(row('text', 1, 1, [piece(t('B1.empty_subspace'), 1)], { after: gap }));
   const O = MEASURE.offer;
-  for (const o of w.offers) rows.push(row('chrome', null, [piece(t('B1.scene-offer', { D: o }), O)], { before: MEASURE.offerGap * O, after: MEASURE.offerGap * O }));
+  for (const o of w.offers) rows.push(row('chrome', null, O, [piece(t('B1.scene-offer', { D: o }), O)], { before: MEASURE.offerGap * O, after: MEASURE.offerGap * O }));
   return rows;
 }

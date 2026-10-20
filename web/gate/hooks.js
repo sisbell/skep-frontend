@@ -5,7 +5,10 @@
 // `overlapCheck` (the measuring code moved into the page), the visibility
 // oracle `visible`, the beams' anchors beside their spans' own rects, the
 // handoff (`barsOf`: the canvas's own bars for a document beside its mounted
-// article's blocks), the continuations' marks the canvas drew (`residues`:
+// article's blocks), the reading scene's runs and the ends it set level
+// (`scene.pairs`), a passage's line in one of its panes (`scene.at`) and its
+// bands and lines beside their passages' lines (`scene.ties`), the
+// continuations' marks the canvas drew (`residues`:
 // each one's count, newest member, members, the lines set on it and its
 // screen rect), the mid connections it drew between places (`connections`),
 // the labels it set (`labels`: each one's kind, place, lines — their text,
@@ -226,10 +229,12 @@ export function install(deps) {
    * The handoff (foundations §2.4: the bars become text and no line moves;
    * S1 Q7): the canvas's own bars for a document — the layout P-RENDER draws
    * below the mount, at the camera as it stands — each block's first line's
-   * top on screen and its count of lines, beside the mounted article's blocks
-   * as the person meets them: each one's top on screen and its height in line
-   * boxes. A block the article draws as a withheld run's face is named so.
-   * Null where the document's text has not arrived.
+   * top on screen, its height and its count of lines, beside the mounted
+   * article's blocks as the person meets them: each one's top on screen, its
+   * height, and its height in its own line boxes (its computed line height at
+   * the article's scale — a heading's lines are a heading's, not the body's).
+   * A block the article draws as a withheld run's face is named so. Null
+   * where the document's text has not arrived.
    * @param {string} addr
    */
   function barsOf(addr) {
@@ -239,13 +244,55 @@ export function install(deps) {
     const box = docBox(addr);
     const linePx = m.lineH * CAM.cam.scale;
     const y = (/** @type {number} */ em) => CAM.sy(box.y + m.y0 + em * m.fs);
-    const bars = [...layout.blocks].map(([pos, b]) => ({ pos, top: b.n ? r2(y(layout.lines[b.first].top)) : null, lines: b.n }));
+    const bars = [...layout.blocks].map(([pos, b]) => {
+      const first = layout.lines[b.first], last = layout.lines[b.first + b.n - 1];
+      return { pos, top: b.n ? r2(y(first.top)) : null, height: b.n ? r2((last.top + last.h - first.top) * m.fs * CAM.cam.scale) : 0, lines: b.n };
+    });
     const rec = LAYER.mountedSet().get(addr);
+    const s = rec ? CAM.cam.scale / rec.lay : 1;
     const text = rec ? [.../** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll('.run > .sp, .run > .withheld'))].map((e) => {
       const r = e.getBoundingClientRect();
-      return { pos: Number(e.dataset.pos), top: r2(r.top), lines: Math.round(r.height / linePx), withheld: e.classList.contains('withheld') };
+      const own = parseFloat(getComputedStyle(e).lineHeight) * s;
+      return { pos: Number(e.dataset.pos), top: r2(r.top), height: r2(r.height), lines: Math.round(r.height / own), withheld: e.classList.contains('withheld') };
     }) : null;
     return { addr, line_px: r2(linePx), clip: r2(CAM.sy(box.y + m.y1)), head_lines: layout.lines.filter((l) => l.kind === 'head').length, bars, text };
+  }
+  /** a reading scene's pane, by its side */
+  const paneOf = (/** @type {'a' | 'b'} */ side) => document.getElementById(side === 'a' ? 'sceneA' : 'sceneB');
+  /** a pane's visible content on screen: inside its border, its scroll's window */
+  function paneRect(/** @type {HTMLElement} */ pane) { const r = pane.getBoundingClientRect(); return { x: r.left + pane.clientLeft, y: r.top + pane.clientTop, w: pane.clientWidth, h: pane.clientHeight }; }
+  /**
+   * A passage in a reading scene's pane as the person meets it, read now
+   * through T-LAYER's byte-span mapping over the pane's article: the first
+   * line it stands on (the first client rect of its range) and its first
+   * characters, white space collapsed; with no width, the passage runs to
+   * the end of the block holding `pos`. Null where the scene is not open.
+   * @param {'a' | 'b'} side
+   * @param {number} pos
+   * @param {number | null} [width]
+   */
+  function sceneAt(side, pos, width = null) {
+    const p = SCENE.pair(), pane = paneOf(side);
+    if (!p || !pane) return null;
+    const addr = side === 'a' ? p.a : p.b;
+    const b = REC.blockAt(addr, pos);
+    const w = width ?? (b ? b.pos + b.width - pos : 1);
+    const art = /** @type {HTMLElement | null} */ (pane.querySelector('article.dtext'));
+    const range = art ? LAYER.rangeIn(art, REC.doc(addr), { addr, pos, width: Math.max(1, w) }) : null;
+    const r = range ? [...range.getClientRects()].find((q) => q.width > 0 && q.height > 0) : null;
+    return { addr, pos, line: r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null, text: range ? range.toString().replace(/\s+/g, ' ').trim().slice(0, 60) : null, pane: paneRect(pane) };
+  }
+  /**
+   * The reading scene's bands and lines as its last draw drew them, each end
+   * beside its passage's first line read now (`sceneAt`), apart from the
+   * scene's own measure, and beside its pane's visible rect: the scene sets
+   * each end at its passage's line and moves it with its pane's scroll, and
+   * clips one whose line has left the pane at that pane's edge (foundations
+   * §2.5); the layout case holds every end to that.
+   */
+  function sceneTies() {
+    const a = paneOf('a'), b = paneOf('b');
+    return SCENE.ties().map((d) => ({ ...d, lineA: (sceneAt('a', d.a.pos, d.a.width) || { line: null }).line, lineB: (sceneAt('b', d.b.pos, d.b.width) || { line: null }).line, paneA: a ? paneRect(a) : null, paneB: b ? paneRect(b) : null }));
   }
   /** redraw the links card where it stands open at a document, as its own acts do after a change */
   function redrawCard(/** @type {string} */ addr) { if (LINKS.isOpen(addr)) LINKS.render(); }
@@ -352,7 +399,12 @@ export function install(deps) {
       versions: (/** @type {string} */ addr, /** @type {number | null} */ pos) => VERSIONS.open(addr, pos, null).then(() => true),
       trailList: () => { TRAILLIST.open(false); return true; },
     },
-    scene: { open: (/** @type {string} */ a, /** @type {string} */ b) => SCENE.open(a, b), close: () => SCENE.close(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair() },
+    scene: {
+      open: (/** @type {string} */ a, /** @type {string} */ b) => SCENE.open(a, b), close: () => SCENE.close(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair(),
+      /** its runs of shared identity, contiguous pairs merged, and the two ends it set level */
+      pairs: () => SCENE.pairs(),
+      at: sceneAt, ties: sceneTies,
+    },
     select: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => SEL.select(addr, pos, width),
     strings: { pinned: () => pinned(), lacking: () => lacking() },
     thresholds: THRESHOLDS,

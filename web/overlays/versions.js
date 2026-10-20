@@ -6,7 +6,10 @@
 // held passage (the selection's span; by a position alone the block holding
 // it, whole; else the document's first block) `compare`d into each member and
 // marked whole / in part / not at all — and each offering "read side by
-// side". New — no draft in the wireframe. Rules: FP-1, FP-2, FP-13.
+// side", the scene opened on the held passage, which SC sets level with what
+// the member holds of it. Each member is one row: its acts and its mark in
+// columns the rows share. New — no draft in the wireframe. Rules: FP-1, FP-2,
+// FP-13.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -53,12 +56,12 @@ export async function open(addr, pos, anchor, width = null) {
   }
   const cur = memberOf(addr);
   const html = `<span class="label">${esc(trunk)} · ${esc(t('F.version-of', { k: cur || n, n }))}</span>` +
-    `<ul class="rows">${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}</button> <span class="strip" data-holds="${r.holds || ''}">${esc(r.holds === 'whole' ? t('F.versions.whole') : r.holds === 'part' ? t('F.versions.part') : r.holds === 'none' ? t('F.versions.none') : '')}</span> <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>`;
+    `<ul class="rows versions">${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}</button> <span class="strip" data-holds="${r.holds || ''}">${esc(r.holds === 'whole' ? t('F.versions.whole') : r.holds === 'part' ? t('F.versions.part') : r.holds === 'none' ? t('F.versions.none') : '')}</span> <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, (el: HTMLElement) => void>} */
   const acts = {};
   for (const r of rows) {
     acts['read' + r.k] = () => GO.leapTo(versionAddress(trunk, r.k), { pos: held ? held.pos : null, how: 'leap' });
-    acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, posB: null });
+    acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
   }
   HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor: anchor ? { el: anchor } : null, html, acts, takeFocus: true });
 }

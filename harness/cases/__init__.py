@@ -31,6 +31,7 @@ GHOST = '1.0.1.0.1049578'    # cited by the first edition, never minted: `doc_no
 FAR_LEAP = '1.0.1.0.127'     # the one citation whose target is a real edition
 AGENT_SPACE = '1.0.1.1'      # the claimant's delegated agent space
 SECOND_ACCOUNT = '1.0.2'     # the seed's keyless second account
+VERSIONED = '1.0.1.0.43'     # an edition with two members, the latest holding all of it, far from every place the later cases read
 
 # the order the gate runs them in: the two that need no page first, then the
 # wire's cold-open figures before the other classes move the camera
@@ -41,6 +42,10 @@ XFAIL_CLIP = ("page: the article's height is pinned to its box and its overflow 
               "(web/text/layer.js `mount`, web/style.css `.dtext`)")
 XFAIL_ANCHOR = ("page: a beam leaves the block holding its span, at the block's mid-height, not the span's own line "
                 "(web/beams/beams.js `anchorRects` takes the block's rects for the span's)")
+# issue #12's boundary note
+XFAIL_MEMBER = ("page: a version member shares its document's box, and once the member's text is loaded (read side by side, "
+                "or a LEAP to the member) its article is mounted over the document's — which of them the box shows is the "
+                "design's to rule (web/text/layer.js `frame`; web/plane/projection.js `docBox`)")
 
 
 class Result:

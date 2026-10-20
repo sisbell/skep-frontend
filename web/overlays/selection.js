@@ -154,7 +154,7 @@ export function act(which) {
   if (which === 'links') { LINKS.show(addr, true); return; }
   const drawn = LK.shownAt(addr, span);
   if (which === 'follow') { if (drawn.length === 1) GO.follow(drawn[0], null); else if (drawn.length > 1) which_(drawn, 'follow'); return; }
-  if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) SCENE.open(addr, drawn[0].far, { posA: pos, posB: drawn[0].farEnd && !drawn[0].farEnd.whole ? drawn[0].farEnd.ordinal : null }); else if (drawn.length > 1) which_(drawn, 'scene'); }
+  if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) SCENE.open(addr, drawn[0].far, { posA: pos, widthA: width, posB: drawn[0].farEnd && !drawn[0].farEnd.whole ? drawn[0].farEnd.ordinal : null }); else if (drawn.length > 1) which_(drawn, 'scene'); }
 }
 
 /** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3) */
@@ -162,6 +162,6 @@ function which_(/** @type {import('../links/links.js').Shown[]} */ drawn, /** @t
   const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.link.owner || '')} · ${esc(s.far)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, (el: HTMLElement) => void>} */
   const acts = {};
-  drawn.forEach((s, i) => { acts['w' + i] = (el) => { if (what === 'follow') GO.follow(s, el); else if (s.far && sel) SCENE.open(sel.addr, s.far, { posA: sel.pos, posB: s.farEnd && !s.farEnd.whole ? s.farEnd.ordinal : null }); }; });
+  drawn.forEach((s, i) => { acts['w' + i] = (el) => { if (what === 'follow') GO.follow(s, el); else if (s.far && sel) SCENE.open(sel.addr, s.far, { posA: sel.pos, widthA: sel.width, posB: s.farEnd && !s.farEnd.whole ? s.farEnd.ordinal : null }); }; });
   HOST.show({ kind: 'list', id: 'which', anchor: sel ? { span: sel } : null, html, acts, takeFocus: true });
 }

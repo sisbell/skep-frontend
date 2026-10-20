@@ -6,16 +6,18 @@
 // document crosses S1's mount threshold (em 6.5, BELOW the canvas's readable
 // 8, so bars become text and no character positions disagree — S1 Q7),
 // unmount when it leaves or falls below 5.5 or its run or revision changed,
-// the cap 8; laid out ONCE at P-LAY's LAY_FS (16 px) in a column of exactly
-// P-LAY's `cpl` characters of its own face (`ch`), from its box's top
-// padding to its box's bottom, and placed by transform from the same camera
-// arithmetic (registration 0 px — S1). The canvas's bars below the mount are
-// P-LAY's layout of the same article's plan (`planOf`, from the view the
-// article is mounted with), so the bars a mount replaces stand on the lines
-// its text takes. The loop runs `frame` before P-RENDER draws, so the canvas
-// draws or yields each document by this frame's mounted set. The marks and
-// symbols are placed from LK's `shown` and `symbols`; the selection from
-// O-SELECTION and the focus from N-WALK are handed to T-ARTICLE as values.
+// the cap 8; laid out ONCE at P-LAY's LAY_FS (16 px) and its unitless
+// LINE_H, so each element's line box is that element's own size's (P-LAY's
+// `lineBox`), in a column of exactly P-LAY's `cpl` characters of its own face
+// (`ch`), from its box's top padding to its box's bottom, and placed by
+// transform from the same camera arithmetic (registration 0 px — S1). The
+// canvas's bars below the mount are P-LAY's layout of the same article's plan
+// (`planOf`, from the view the article is mounted with), so the bars a mount
+// replaces stand on the lines its text takes. The loop runs `frame` before
+// P-RENDER draws, so the canvas draws or yields each document by this frame's
+// mounted set. The marks and symbols are placed from LK's `shown` and
+// `symbols`; the selection from O-SELECTION and the focus from N-WALK are
+// handed to T-ARTICLE as values.
 // THE CORNER (foundations §3.1; ux-T2; D5 K-57): each mounted document at
 // reading scale (em 8, P-LOD's readable threshold, and above) carries its own
 // BESIDE its article, never inside it — the article's box clips whatever
@@ -38,10 +40,11 @@
 // boundary carried to its byte position by T-SPAN — and the span back to a
 // range, which it places over the mounted article when the selection is made
 // and again after a remount, since a remount rebuilds the element and the
-// platform's range dies with the old one. The copy event carries the
-// passage's board and address beside the plain text and never in it (§2.4),
-// in a flavor only a skep client reads; the plain text is the document's own
-// bytes over the span, no label of the page among them.
+// platform's range dies with the old one; the reading scene's panes borrow
+// that mapping (`rangeIn`) to find where a passage stands. The copy event
+// carries the passage's board and address beside the plain text and never in
+// it (§2.4), in a flavor only a skep client reads; the plain text is the
+// document's own bytes over the span, no label of the page among them.
 // Carries: the wireframe's §16 `mount`/`unmount`/`place`/`S1.frame`; S1's
 // `mount`, `place`, `S1.frame`; `driftSample` and `overlapCheck` become
 // gate hooks (`web/gate/hooks.js` reads `mounted`).
@@ -177,7 +180,7 @@ function mount(d) {
   el.style.paddingTop = m.y0 * lay + 'px';
   el.style.height = (m.y1 - m.y0) * lay + 'px';
   el.style.fontSize = LAY_FS + 'px';
-  el.style.lineHeight = LINE_H * LAY_FS + 'px';
+  el.style.lineHeight = String(LINE_H);
   el.setAttribute('aria-hidden', 'true'); // the ARIA mirror is the one accessible rendering (S1 Q7)
   const v = viewFor(d);
   el.innerHTML = articleHTML(d, v, ownerAccount(d));
@@ -360,7 +363,7 @@ export function spanRects(addr, pos, width = null) {
 // ---- the platform's selection ↔ a span ------------------------------------------
 
 /** the elements of an article's blocks in position order, a withheld run's face among them */
-function blockEls(/** @type {Mounted} */ rec) { return /** @type {HTMLElement[]} */ ([...rec.el.querySelectorAll('.run > .sp, .run > .withheld')]); }
+function blockEls(/** @type {HTMLElement} */ el) { return /** @type {HTMLElement[]} */ ([...el.querySelectorAll('.run > .sp, .run > .withheld')]); }
 
 /** the text nodes that carry a block's own characters, in order — the chrome inside it skipped */
 function textNodes(/** @type {HTMLElement} */ el) {
@@ -414,7 +417,7 @@ export function spanOfRange(range) {
   const addr = art ? art.dataset.addr || '' : '';
   const rec = addr ? mounted.get(addr) : undefined;
   if (!art || !rec || rec.el !== art) return null;
-  const hit = blockEls(rec)
+  const hit = blockEls(rec.el)
     .map((el) => ({ el, b: rec.d.blocks.find((x) => x.pos === Number(el.dataset.pos)) || null }))
     .filter((x) => x.b && range.intersectsNode(x.el));
   if (!hit.length) return null;
@@ -457,11 +460,26 @@ function pointOfPos(b, el, pos, side) {
  * @returns {Range | null}
  */
 export function rangeOf(span) {
-  const rec = mounted.get(span.addr); if (!rec) return null;
-  const els = blockEls(rec);
+  const rec = mounted.get(span.addr);
+  return rec ? rangeIn(rec.el, rec.d, span) : null;
+}
+
+/**
+ * The platform range over a span in an element holding a document's article
+ * as T-ARTICLE made it — a mounted article, or a reading scene's pane, which
+ * borrows this mapping as it borrows the article — its ends carried from byte
+ * positions to character boundaries of the blocks' own text, the chrome
+ * skipped; null where the span lies in none of its delivered blocks.
+ * @param {HTMLElement} el the article's element
+ * @param {Doc} d the document it is made from
+ * @param {Span} span
+ * @returns {Range | null}
+ */
+export function rangeIn(el, d, span) {
+  const els = blockEls(el);
   const elOf = (/** @type {Block} */ b) => els.find((e) => Number(e.dataset.pos) === b.pos) || null;
   const end = span.pos + span.width;
-  const blocks = rec.d.blocks;
+  const blocks = d.blocks;
   const b0 = blocks.find((b) => span.pos >= b.pos && span.pos < b.pos + b.width) || blocks.find((b) => b.pos >= span.pos) || null;
   const b1 = [...blocks].reverse().find((b) => end > b.pos && end <= b.pos + b.width) || [...blocks].reverse().find((b) => b.pos + b.width <= end) || null;
   const e0 = b0 ? elOf(b0) : null, e1 = b1 ? elOf(b1) : null;

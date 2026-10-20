@@ -1,28 +1,39 @@
 // SC — THE READING SCENE (the structure record §3.2 "SC"; B1-S9; foundations
-// §2.5; law 12: chrome). Layer 2. ENGINE-BOUND. State: VIEW — the pair and
-// the panes' scrolls (the one owner).
+// §2.5; law 12: chrome). Layer 2. ENGINE-BOUND. State: VIEW — the pair, the
+// two ends it sets level, the bands' and lines' ends as measured in the panes,
+// and the panes' scrolls (the one owner).
 // Two documents at reading scale side by side over the plane, each pane
-// scrolling on its own (R3); the places unmoved, nothing written; opened
-// from a link or a correspondence it sets the two ends LEVEL, a re-level
-// act (K-62) restoring that; between the panes LINKS are drawn as LINES from
-// the set LK gives (the seam at the link-beam source — hue the linker's,
-// dashed for another's) and SHARED IDENTITY as BANDS from `compare`'s pairs
-// (no link), a line or band whose end has left its pane clipped at the
-// pane's edge with the stub's triangle. Its own end — zoom-out, Esc, ←, the
-// bar's × — pushes the plane as it was onto the trail (§2.5; the entry it
+// scrolling on its own (R3); the places unmoved, nothing written. It sets the
+// two ends LEVEL, "so position carries the match and the beam confirms it"
+// (§2.5): the passage the opener holds — a link's span, a selection, the
+// versions list's held passage, provenance's span — at its first stretch of
+// shared identity, and its counterpart in the other document, or the far end
+// a link names (`levels`); each pane's matched line brought to one height, and
+// each article given a pane's height of room below its end so a passage near
+// the end can be brought there too; a re-level act (K-62) restores that.
+// Between the panes LINKS are drawn as LINES from the set LK gives (the seam
+// at the link-beam source — hue the linker's, dashed for another's) and
+// SHARED IDENTITY as BANDS from `compare`'s pairs, each run of contiguous
+// pairs one band (`merged`; no link); each leaves its pane at its passage's
+// first line — measured, through T-LAYER's byte-span mapping over the pane's
+// article, when the scene is set level or its panes change size, and moved
+// with each pane's scroll — and one whose end has left its pane is clipped at
+// the pane's edge with the stub's triangle. Its own end — zoom-out, Esc, ←,
+// the bar's × — pushes the plane as it was onto the trail (§2.5; the entry it
 // departs holds the camera's view, not the pair and the panes' positions
 // §2.5 asks it to hold, which is the design's open question); a navigation
 // act — a teleport, Back, Forward, a trail jump — dismisses it first and
 // pushes nothing, the act's own trail move the one it makes (`dismiss`). The
 // panes BORROW the one reconciler's mount (FP-12: `T-LAYER.sceneArticle`
-// makes the HTML; the scene keeps no DOM text of its own). Each pane carries
-// its own document's corner (ux-T2: "each pane its own"; `T-LAYER.sceneCorner`
-// makes its items) on its OUTER side — pane A's left, pane B's right — held
-// to the top of the pane's scroll, so the bands and lines leave the inner
-// edges clear of it (foundations §3.1); it is shown, not acted on, as nothing
-// in a pane takes a pointer. Companionate scrolling over the bands is
-// UNTESTED (S27) and not built. Carries: the wireframe's §19 whole (its
-// beams over `compare`'s pairs instead of the hand data's windows).
+// makes the HTML, `T-LAYER.rangeIn` finds a passage in it; the scene keeps no
+// DOM text of its own). Each pane carries its own document's corner (ux-T2:
+// "each pane its own"; `T-LAYER.sceneCorner` makes its items) on its OUTER
+// side — pane A's left, pane B's right — held to the top of the pane's
+// scroll, so the bands and lines leave the inner edges clear of it
+// (foundations §3.1); it is shown, not acted on, as nothing in a pane takes a
+// pointer. Companionate scrolling over the bands is UNTESTED (S27) and not
+// built. Carries: the wireframe's §19 whole (its beams over `compare`'s pairs
+// instead of the hand data's windows).
 // Rules: FP-1, FP-2, FP-10, FP-12, FP-13.
 
 import * as PUMP from '../model/pump.js';
@@ -39,10 +50,53 @@ import { esc } from '../util.js';
 
 /** @typedef {import('../model/frames.js').ComparePair} ComparePair */
 
-/** @type {{a: string, b: string, pairs: ComparePair[], levelA: number | null, levelB: number | null} | null} */
+/**
+ * @typedef {Object} Level — the two ends the scene sets level, a position in each pane's document; null where that pane stands at its top
+ * @property {number | null} a
+ * @property {number | null} b
+ */
+
+/**
+ * @typedef {Object} Held — what an opener holds as it opens the scene
+ * @property {number | null} [posA] the first position of the passage held in the first document
+ * @property {number | null} [widthA] its positions; absent or null, the position alone
+ * @property {number | null} [posB] the position in the second document the opener names — a link's far end — where it names one
+ */
+
+/**
+ * @typedef {Object} End — one end of a band or a line: its passage, and where the passage's first line stands in its pane's scrolled content
+ * @property {number} pos the passage's first position
+ * @property {number} width its positions
+ * @property {number} y the first line's middle, px below the pane's content top
+ */
+
+/**
+ * @typedef {Object} Tie — a band or a line between the panes, its ends measured
+ * @property {'band' | 'link'} kind a run of shared identity, or a link drawn at one pane's document whose far end lies in the other's
+ * @property {string | null} link the link's address, for a line
+ * @property {End} a its end in pane A
+ * @property {End} b its end in pane B
+ */
+
+/**
+ * @typedef {Object} Drawn — a tie as the last draw drew it, its ends on screen
+ * @property {'band' | 'link'} kind
+ * @property {string | null} link
+ * @property {{pos: number, width: number, x: number, y: number, clipped: boolean}} a
+ * @property {{pos: number, width: number, x: number, y: number, clipped: boolean}} b
+ */
+
+/** how far below the panes' tops the two ends are set level (px), where both can stand there */
+const LEVEL_AT = 40;
+/** the bands drawn at most */
+const MAX_BANDS = 400;
+
+/** @type {{a: string, b: string, pairs: ComparePair[], level: Level, ties: Array<Tie & {hue: string, value: number, dashed: boolean}>, size: string} | null} */
 let scene = null;
 /** @type {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement} | null} */
 let els = null;
+/** @type {Drawn[]} what the last draw drew */
+let drawnTies = [];
 
 /** @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement}} e */
 export function attach(e) {
@@ -52,25 +106,70 @@ export function attach(e) {
 }
 export const isOpen = () => scene !== null;
 export const pair = () => (scene ? { a: scene.a, b: scene.b } : null);
+/** the scene's runs of shared identity and the two ends it sets level, read-only (the gate reads them) */
+export const pairs = () => (scene ? { pairs: scene.pairs.map((p) => ({ ...p })), level: { ...scene.level } } : null);
+/** the bands and lines the last draw drew, their ends on screen (the gate holds each to its passage's line) */
+export const ties = () => drawnTies.map((d) => ({ ...d, a: { ...d.a }, b: { ...d.b } }));
 
 /**
- * Open the scene on two documents, the two ends level where positions are
- * given.
+ * `compare`'s pairs with each run of contiguous pairs — adjoining in both
+ * documents — one pair, in the first document's order (§2.5: one band per
+ * shared run).
+ * @param {ComparePair[]} raw
+ * @returns {ComparePair[]}
+ */
+export function merged(raw) {
+  /** @type {ComparePair[]} */
+  const out = [];
+  for (const p of [...raw].sort((x, y) => x.u1 - y.u1 || x.u2 - y.u2)) {
+    const last = out[out.length - 1];
+    if (last && last.d1 === p.d1 && last.d2 === p.d2 && last.u1 + last.width === p.u1 && last.u2 + last.width === p.u2) last.width += p.width;
+    else out.push({ ...p });
+  }
+  return out;
+}
+
+/**
+ * The two ends the scene sets level (§2.5: "position carries the match"):
+ * where the opener names a position in the second document — a link's far
+ * end — the held position and that one; else the first stretch of shared
+ * identity inside the passage held, its first position in the first document
+ * and its counterpart in the second, the second at its top where the held
+ * passage shares none; with nothing held, the first pair's two ends.
+ * @param {ComparePair[]} runs `compare`'s pairs, `u1` in the first document
+ * @param {Held} [held]
+ * @returns {Level}
+ */
+export function levels(runs, held = {}) {
+  const posA = held.posA ?? null;
+  if (held.posB != null) return { a: posA, b: held.posB };
+  const sorted = [...runs].sort((x, y) => x.u1 - y.u1);
+  if (posA == null) return sorted.length ? { a: sorted[0].u1, b: sorted[0].u2 } : { a: null, b: null };
+  const end = posA + Math.max(1, held.widthA ?? 1);
+  const p = sorted.find((q) => q.u1 < end && posA < q.u1 + q.width);
+  if (!p) return { a: posA, b: null };
+  const a = Math.max(posA, p.u1);
+  return { a, b: p.u2 + (a - p.u1) };
+}
+
+/**
+ * Open the scene on two documents, the passage held set level with its
+ * counterpart (`levels`).
  * @param {string} a
  * @param {string} b
- * @param {{posA?: number | null, posB?: number | null}} [opts]
+ * @param {Held} [held]
  */
-export async function open(a, b, opts = {}) {
+export async function open(a, b, held = {}) {
   if (!els) return;
   HOST.dismiss();
   const [da, db] = await Promise.all([PUMP.loadWhole(a), PUMP.loadWhole(b)]);
   if (!da || !db) return;
   const cmp = await PUMP.read(F.compare([{ doc: a, spans: [{ ordinal: 1, positions: Math.max(1, da.extent || 1) }] }], [{ doc: b, spans: [{ ordinal: 1, positions: Math.max(1, db.extent || 1) }] }]));
   /** @type {ComparePair[]} */
-  let pairs = [];
+  let runs = [];
   if ('refused' in cmp) { const r = cmp.refused; els.bar.dataset.face = r.name; }
-  else pairs = F.decodeCompare(cmp.answer);
-  scene = { a, b, pairs, levelA: opts.posA ?? (pairs[0] ? pairs[0].u1 : null), levelB: opts.posB ?? (pairs[0] ? pairs[0].u2 : null) };
+  else runs = merged(F.decodeCompare(cmp.answer));
+  scene = { a, b, pairs: runs, level: levels(runs, held), ties: [], size: '' };
   els.root.classList.add('on');
   els.bar.innerHTML = `<b>${esc(a)}</b> │ <b>${esc(b)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
     (els.bar.dataset.face ? ` <span class="face-text draft">${esc(t(els.bar.dataset.face === 'too_many_pairs' ? 'B1.too_many_pairs' : els.bar.dataset.face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: els.bar.dataset.face }))}</span>` : '') +
@@ -85,67 +184,120 @@ export async function open(a, b, opts = {}) {
   markDirty();
 }
 
-/** the element of the block holding a position in a pane */
-function blockEl(/** @type {HTMLElement} */ pane, /** @type {string} */ addr, /** @type {number} */ pos) {
-  const d = REC.doc(addr);
-  const b = d.blocks.find((x) => pos >= x.pos && pos < x.pos + x.width);
-  return b ? /** @type {HTMLElement | null} */ (pane.querySelector(`.sp[data-pos="${b.pos}"]`)) : null;
+/** the article a pane holds */
+const articleIn = (/** @type {HTMLElement} */ pane) => /** @type {HTMLElement | null} */ (pane.querySelector('article.dtext'));
+
+/**
+ * Where a passage's first line stands in a pane, in px below the pane's
+ * content top: the first client rect of the platform range over the passage
+ * (T-LAYER's mapping, the article's chrome skipped); null where the passage
+ * lies in none of the pane's delivered blocks.
+ * @param {HTMLElement} pane
+ * @param {string} addr the pane's document
+ * @param {number} pos
+ * @param {number} width
+ * @returns {{top: number, y: number} | null} the line's top, and its middle
+ */
+function lineIn(pane, addr, pos, width) {
+  const art = articleIn(pane);
+  const range = art ? LAYER.rangeIn(art, REC.doc(addr), { addr, pos, width: Math.max(1, width) }) : null;
+  const r = range ? [...range.getClientRects()].find((q) => q.width > 0 && q.height > 0) : null;
+  if (!r) return null;
+  const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop;
+  return { top: r.top - origin, y: r.top + r.height / 2 - origin };
 }
 
-/** set the two ends level: the matched passages at one height */
+/** the positions of the block holding a position in a document, from that position to the block's end; one where no block holds it */
+function restOfBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
+  const b = REC.blockAt(addr, pos);
+  return b ? b.pos + b.width - pos : 1;
+}
+
+/** each pane's article given a pane's height of room below its end, so any of its lines can be scrolled to the pane's top */
+function roomBelow(/** @type {NonNullable<typeof els>} */ E) {
+  for (const pane of [E.paneA, E.paneB]) { const art = articleIn(pane); if (art) art.style.paddingBottom = pane.clientHeight + 'px'; }
+}
+
+/** the panes' sizes, the measure the ties' ends were taken at */
+const sizeOf = (/** @type {NonNullable<typeof els>} */ E) => `${E.paneA.clientWidth}x${E.paneA.clientHeight}|${E.paneB.clientWidth}x${E.paneB.clientHeight}`;
+
+/**
+ * Measure the ties: each run of shared identity and each link between the
+ * two documents, its ends at their passages' first lines in the panes'
+ * content; a tie an end of which lies in no delivered block is left out.
+ */
+function measure() {
+  const S = scene, E = els;
+  if (!S || !E) return;
+  /** @type {NonNullable<typeof scene>['ties']} */
+  const out = [];
+  for (const p of S.pairs.slice(0, MAX_BANDS)) {
+    const la = lineIn(E.paneA, S.a, p.u1, p.width), lb = lineIn(E.paneB, S.b, p.u2, p.width);
+    if (la && lb) out.push({ kind: 'band', link: null, a: { pos: p.u1, width: p.width, y: la.y }, b: { pos: p.u2, width: p.width, y: lb.y }, hue: SAMENESS.boundary, value: 0.7, dashed: false });
+  }
+  // the link lines between the panes — the set LK gives (the seam)
+  for (const [nearAddr, farAddr, nearPane, farPane] of /** @type {const} */ ([[S.a, S.b, E.paneA, E.paneB], [S.b, S.a, E.paneB, E.paneA]])) {
+    for (const s of LK.shown(nearAddr).filter((x) => x.far === farAddr)) {
+      const farPos = s.farEnd && !s.farEnd.whole && s.farEnd.ordinal != null ? s.farEnd.ordinal : (REC.doc(farAddr).blocks[0] || { pos: 1 }).pos;
+      const farWidth = s.farEnd && !s.farEnd.whole && s.farEnd.positions ? s.farEnd.positions : restOfBlock(farAddr, farPos);
+      const ln = lineIn(nearPane, nearAddr, s.pos, s.width), lf = lineIn(farPane, farAddr, farPos, farWidth);
+      if (!ln || !lf) continue;
+      const near = { pos: s.pos, width: s.width, y: ln.y }, far = { pos: farPos, width: farWidth, y: lf.y };
+      out.push({ kind: 'link', link: s.link.addr, a: nearPane === E.paneA ? near : far, b: nearPane === E.paneA ? far : near, hue: s.mark.hue, value: s.mark.value, dashed: s.linker === 'others' });
+    }
+  }
+  S.ties = out;
+  S.size = sizeOf(E);
+}
+
+/** set the two ends level: each pane's matched line at one height; the bands' and lines' ends measured anew */
 export function relevel() {
-  if (!scene || !els) return;
-  const ea = scene.levelA != null ? blockEl(els.paneA, scene.a, scene.levelA) : null;
-  const eb = scene.levelB != null ? blockEl(els.paneB, scene.b, scene.levelB) : null;
-  if (ea) els.paneA.scrollTop = ea.offsetTop - 40;
-  if (eb) els.paneB.scrollTop = eb.offsetTop - 40; else if (ea) els.paneB.scrollTop = 0;
+  const S = scene, E = els;
+  if (!S || !E) return;
+  roomBelow(E);
+  const la = S.level.a != null ? lineIn(E.paneA, S.a, S.level.a, restOfBlock(S.a, S.level.a)) : null;
+  const lb = S.level.b != null ? lineIn(E.paneB, S.b, S.level.b, restOfBlock(S.b, S.level.b)) : null;
+  // a pane scrolls a line up its pane, never below where it stands unscrolled: the two meet at LEVEL_AT, or higher where one stands above it
+  const at = Math.min(LEVEL_AT, la ? la.top : Infinity, lb ? lb.top : Infinity);
+  E.paneA.scrollTop = la ? la.top - at : 0;
+  E.paneB.scrollTop = lb ? lb.top - at : 0;
+  measure();
   draw();
 }
 
-/** draw the bands and the lines on the scene's canvas */
+/** draw the bands and the lines on the scene's canvas, each end where its passage's line stands at the panes' scrolls now */
 export function draw() {
   const S = scene, E = els;
   if (!S || !E) return;
+  if (sizeOf(E) !== S.size) { roomBelow(E); measure(); }
   const cv = E.canvas, ctx = cv.getContext('2d'); if (!ctx) return;
   const c = cv.getBoundingClientRect();
   const DPR = Math.min(2, window.devicePixelRatio || 1);
   cv.width = Math.round(c.width * DPR); cv.height = Math.round(c.height * DPR);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, c.width, c.height);
-  const rectOf = (/** @type {HTMLElement} */ pane, /** @type {string} */ addr, /** @type {number} */ pos) => {
-    const el = blockEl(pane, addr, pos); if (!el) return null;
-    const r = el.getBoundingClientRect(), pr = pane.getBoundingClientRect();
-    const clipped = r.bottom < pr.top || r.top > pr.bottom;
-    const y = Math.max(pr.top, Math.min(pr.bottom, r.top + r.height / 2)) - c.top;
-    return { x0: pr.left - c.left, x1: pr.right - c.left, y, clipped, above: r.bottom < pr.top };
+  /** a pane on the canvas: its inner edges, its visible content's top and bottom, its content's top */
+  const frame = (/** @type {HTMLElement} */ pane) => {
+    const r = pane.getBoundingClientRect(), top = r.top + pane.clientTop - c.top;
+    return { x0: r.left - c.left, x1: r.right - c.left, top, bottom: top + pane.clientHeight, origin: top - pane.scrollTop };
   };
-  /** @type {string[]} */
-  const bandsDrawn = [];
-  // the identity bands (compare's pairs), contiguous pairs merged
-  for (const p of S.pairs.slice(0, 400)) {
-    const ra = rectOf(E.paneA, S.a, p.u1), rb = rectOf(E.paneB, S.b, p.u2);
-    if (!ra || !rb) continue;
-    const key = ra.y + ':' + rb.y; if (bandsDrawn.includes(key)) continue; bandsDrawn.push(key);
-    const x0 = ra.x1, x1 = rb.x0, mx = (x0 + x1) / 2;
-    ctx.strokeStyle = SAMENESS.boundary; ctx.globalAlpha = 0.7; ctx.lineWidth = 6;
-    ctx.beginPath(); ctx.moveTo(x0, ra.y); ctx.bezierCurveTo(mx, ra.y, mx, rb.y, x1, rb.y); ctx.stroke();
-    if (ra.clipped) stub(ctx, x0 + 6, ra.y, ra.above ? -1 : 1); if (rb.clipped) stub(ctx, x1 - 6, rb.y, rb.above ? -1 : 1);
+  /** an end on the canvas: at its line, or at the pane's edge where its line has left the pane */
+  const at = (/** @type {ReturnType<typeof frame>} */ f, /** @type {End} */ e) => {
+    const y = f.origin + e.y;
+    return { y: Math.max(f.top, Math.min(f.bottom, y)), clipped: y < f.top || y > f.bottom, above: y < f.top };
+  };
+  const fa = frame(E.paneA), fb = frame(E.paneB);
+  /** @type {Drawn[]} */
+  const out = [];
+  for (const tie of S.ties) {
+    const ea = at(fa, tie.a), eb = at(fb, tie.b);
+    const x0 = fa.x1, x1 = fb.x0, mx = (x0 + x1) / 2;
+    ctx.strokeStyle = tie.hue; ctx.globalAlpha = tie.value; ctx.lineWidth = tie.kind === 'band' ? 6 : 1.6; ctx.setLineDash(tie.dashed ? [5, 4] : []);
+    ctx.beginPath(); ctx.moveTo(x0, ea.y); ctx.bezierCurveTo(mx, ea.y, mx, eb.y, x1, eb.y); ctx.stroke(); ctx.setLineDash([]);
+    if (ea.clipped) stub(ctx, x0 + 6, ea.y, ea.above ? -1 : 1); if (eb.clipped) stub(ctx, x1 - 6, eb.y, eb.above ? -1 : 1);
+    out.push({ kind: tie.kind, link: tie.link, a: { pos: tie.a.pos, width: tie.a.width, x: x0 + c.left, y: ea.y + c.top, clipped: ea.clipped }, b: { pos: tie.b.pos, width: tie.b.width, x: x1 + c.left, y: eb.y + c.top, clipped: eb.clipped } });
   }
   ctx.globalAlpha = 1;
-  // the link lines between the panes — the set LK gives (the seam)
-  const lines = [...LK.shown(S.a).filter((s) => s.far === S.b).map((s) => ({ s, nearPane: E.paneA, nearAddr: S.a, farPane: E.paneB, farAddr: S.b })),
-    ...LK.shown(S.b).filter((s) => s.far === S.a).map((s) => ({ s, nearPane: E.paneB, nearAddr: S.b, farPane: E.paneA, farAddr: S.a }))];
-  for (const { s, nearPane, nearAddr, farPane, farAddr } of lines) {
-    const rn = rectOf(nearPane, nearAddr, s.pos);
-    const farPos = s.farEnd && !s.farEnd.whole && s.farEnd.ordinal != null ? s.farEnd.ordinal : (REC.doc(farAddr).blocks[0] || { pos: 1 }).pos;
-    const rf = rectOf(farPane, farAddr, farPos);
-    if (!rn || !rf) continue;
-    const left = nearPane === E.paneA ? rn : rf, right = nearPane === E.paneA ? rf : rn;
-    const x0 = left.x1, x1 = right.x0, mx = (x0 + x1) / 2;
-    ctx.strokeStyle = s.mark.hue; ctx.globalAlpha = s.mark.value; ctx.lineWidth = 1.6; ctx.setLineDash(s.linker === 'others' ? [5, 4] : []);
-    ctx.beginPath(); ctx.moveTo(x0, left.y); ctx.bezierCurveTo(mx, left.y, mx, right.y, x1, right.y); ctx.stroke(); ctx.setLineDash([]);
-    if (left.clipped) stub(ctx, x0 + 6, left.y, left.above ? -1 : 1); if (right.clipped) stub(ctx, x1 - 6, right.y, right.above ? -1 : 1);
-  }
-  ctx.globalAlpha = 1;
+  drawnTies = out;
 }
 
 function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ dir) {
@@ -156,7 +308,7 @@ function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */
 /** the scene's own end — Esc, zoom-out, ←, the bar's ×: the plane as it was, pushed onto the trail after it (§2.5) */
 export function close() {
   const s = end();
-  if (s) TRAIL.push({ addr: s.a, pos: s.levelA, view: camView(), link: null, label: `${s.a} │ ${s.b}` }, camView());
+  if (s) TRAIL.push({ addr: s.a, pos: s.level.a, view: camView(), link: null, label: `${s.a} │ ${s.b}` }, camView());
 }
 
 /**
@@ -172,6 +324,7 @@ function end() {
   if (!scene || !els) return null;
   const s = scene;
   scene = null;
+  drawnTies = [];
   els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; delete els.bar.dataset.face;
   markDirty();
   return s;

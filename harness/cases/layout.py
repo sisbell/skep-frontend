@@ -14,8 +14,8 @@ the article's edge — foundations §2.1; S1 Q1). THE HANDOFF (law 8;
 foundations §2.4: the bars become text and no line moves; S1 Q7): at each
 level, and at the mount threshold reached from below (em 6 → 6.6) and from
 above (em 7 → 6), every block of every mounted article whose top lies
-inside its clip stands on the canvas's own bars for it — its top within
-HANDOFF_TOL_PX of its bars' first line, and as many lines; a withheld run's
+inside its clip stands on the canvas's own bars for it — its top and its
+height within HANDOFF_TOL_PX of its bars', and as many lines; a withheld run's
 face and the blocks after it are left out, its height at reading scale the
 design's open question (F2.1-i: the bars take its true width). THE FRAME
 ORDER (law 13): the frames each step across the mount threshold draws show
@@ -34,19 +34,43 @@ at HOME a document's label is its address past its region's prefix led by
 the separator, or its whole address; and the places with room carry their
 labels — at HOME every document standing whole in view and the
 continuation's mark, at WHOLE BOARD the board and the acting account's
-cluster. The measuring code is the page's (`driftSample`, `overlapCheck`,
-`beamAnchors`, `visible`, `barsOf`, `labels`, the frame buffer); the
-thresholds are here. The block containment and anchor checks are marked
-with the page issues they wait on and count as expected while those
-stand."""
+cluster. THE TYPE (the typography review's findings 10 and 17): every
+element of the first edition that sets text spaces its lines at 1.35 of its
+own size; the head's lines and the headings stand on P-LAY's line box for
+their size, as the engine lays it out (the rounding `lineBox` models, held
+here to the engine); each heading stands nearer the block it heads than the
+block above it. THE READING SCENE (foundations §2.5: "the two ends level, so
+position carries the match and the beam confirms it"): opened on the first
+edition and the draft it windows, and from the versions list of an edition
+with two members, a paragraph past its first held, the two ends' matched
+lines stand at one height inside both panes and hold the same material;
+every band and line leaves its pane at its passage's own first line, or at
+the pane's edge where that line has left the pane; back on the plane, the
+box an edition shares with its members holds one article. THE CHROME: the
+LEAP box's rows share their columns, a place's longest label among them, no
+cell's text running past its column and the title's keeping a quarter of the
+row; the versions list sets each member on one line; the chrome over the
+plane — the LEAP box, the scene, the one line, the mirror, a corner — is
+opaque. The measuring code is the page's (`driftSample`, `overlapCheck`,
+`beamAnchors`, `visible`, `barsOf`, `labels`, `scene.at`, `scene.ties`, the
+frame buffer); the thresholds are here. The block containment, anchor and
+shared-box checks are marked with the page issues they wait on and count as
+expected while those stand."""
 import json
 
-from . import DOC, WINDOW, XFAIL_ANCHOR, XFAIL_CLIP, Result
+from . import DOC, FAR_LEAP, VERSIONED, WINDOW, XFAIL_ANCHOR, XFAIL_CLIP, XFAIL_MEMBER, Result
 
 LEVELS_EM = [9, 12, 18, 30]
 DRIFT_TOL_PX = 0.5
 ANCHOR_TOL_PX = 0.5
 HANDOFF_TOL_PX = 1.0
+# the article's one line height, a ratio of each element's own size, and how far a measured one may stand from it
+LINE_RATIO, LINE_RATIO_TOL = 1.35, 0.01
+# a line box measured against P-LAY's for its size, in px at the layout size: a quarter of the engine's 1/64 px grid
+LINE_BOX_TOL_PX = 1 / 256
+# the scene's two matched lines, and a band's or a line's end against its passage's line
+LEVEL_TOL_PX = 1.0
+TIE_TOL_PX = 0.5
 CORNER = '#corners [data-corner="%s"]' % DOC
 # the case's own floor for a label, held apart from the page's constant so that lowering the page's cannot pass here
 MIN_LABEL_PX = 9
@@ -68,7 +92,8 @@ def on_own_line(a):
 
 def handoff(ctx):
     """every mounted article's blocks against the canvas's own bars for them (`barsOf`): the blocks whose top lies
-    inside the article's clip, a withheld run's face and the blocks after it left out; the ones off their bars named"""
+    inside the article's clip, a withheld run's face and the blocks after it left out; the ones off their bars — at
+    another top, of another height, or of another count of lines — named"""
     compared, off, left_out = 0, [], 0
     for addr in ctx.js('window.__skep.mountedAddrs()'):
         h = ctx.js('window.__skep.barsOf(%s)' % json.dumps(addr))
@@ -85,8 +110,9 @@ def handoff(ctx):
                 continue
             compared += 1
             b = bars.get(t['pos'])
-            if b is None or b['top'] is None or abs(b['top'] - t['top']) > HANDOFF_TOL_PX or b['lines'] != t['lines']:
-                off.append({'addr': addr, 'pos': t['pos'], 'text_top': t['top'], 'bars_top': b and b['top'], 'text_lines': t['lines'], 'bars_lines': b and b['lines'], 'line_px': h['line_px']})
+            if b is None or b['top'] is None or abs(b['top'] - t['top']) > HANDOFF_TOL_PX or abs(b['height'] - t['height']) > HANDOFF_TOL_PX or b['lines'] != t['lines']:
+                off.append({'addr': addr, 'pos': t['pos'], 'text_top': t['top'], 'bars_top': b and b['top'], 'text_height': t['height'], 'bars_height': b and b['height'],
+                            'text_lines': t['lines'], 'bars_lines': b and b['lines'], 'line_px': h['line_px']})
     return {'compared': compared, 'off': off, 'left_out': left_out}
 
 
@@ -172,6 +198,174 @@ def labels_hold(r, name, v):
     return {'lod': v['lod'], 'set': by_kind, 'left_out': by_rule, 'left_out_parts': [[o['kind'], o['place'], o['text'][:48], o['reason']] for o in v['out'] if o['reason'] != 'after'][:12]}
 
 
+def type_view(ctx):
+    """the first edition's mounted article as the person meets it, in px at the layout size: each element that sets
+    text, with its font size and its line height; the head's lines and the headings, each with its height beside
+    P-LAY's line box for its size; each heading's room above it and below it, between it and the blocks beside it"""
+    art = json.dumps('#domlayer article.dtext[data-addr="%s"]' % DOC)
+    return ctx.js('''(async () => {
+      const L = await import('./plane/layout.js');
+      const S = window.__skep, m = S.mounted(%s), art = document.querySelector(%s);
+      if (!m || !art) return null;
+      const s = S.view.camera().scale / m.lay;
+      const name = (e) => e.tagName.toLowerCase() + (e.className ? '.' + String(e.className).split(' ').join('.') : '');
+      const sized = [...art.querySelectorAll('.hd > *, .run > *, .rec .derived, .others, .withheld .arm, .withheld .clause')].map((e) => {
+        const cs = getComputedStyle(e); return {el: name(e), pos: e.dataset.pos || null, font: parseFloat(cs.fontSize), line: parseFloat(cs.lineHeight)}; });
+      const heads = '.run > h2.sp, .run > h3.sp, .run > h4.sp, .run > h5.sp, .run > h6.sp';
+      const boxes = [...art.querySelectorAll('.hd .st, .hd .by, .hd .pres, ' + heads)].map((e) => {
+        const font = parseFloat(getComputedStyle(e).fontSize); return {el: name(e), pos: e.dataset.pos || null, height: e.getBoundingClientRect().height / s, line_box: L.lineBox(font / L.LAY_FS) * L.LAY_FS}; });
+      const block = (e) => (e && e.matches('.sp, .withheld') ? e : null);
+      const headings = [...art.querySelectorAll(heads)].map((h) => {
+        const prev = block(h.previousElementSibling), next = block(h.nextElementSibling), r = h.getBoundingClientRect();
+        return {pos: Number(h.dataset.pos), el: name(h), above: prev ? (r.top - prev.getBoundingClientRect().bottom) / s : null, below: next ? (next.getBoundingClientRect().top - r.bottom) / s : null}; });
+      return {sized, boxes, headings};
+    })()''' % (json.dumps(DOC), art))
+
+
+def type_holds(ctx, r):
+    """THE TYPE's checks over the first edition at reading scale; its figures"""
+    ctx.view_doc_em(DOC, 12)
+    v = type_view(ctx)
+    r.check(v is not None, 'the type: the first edition is mounted at em 12')
+    if v is None:
+        return None
+    off = [x for x in v['sized'] if not x['font'] or abs(x['line'] / x['font'] - LINE_RATIO) > LINE_RATIO_TOL]
+    r.check(bool(v['sized']) and not off, f'the type: every element of the first edition that sets text spaces its lines at {LINE_RATIO} of its own size, {LINE_RATIO_TOL} either way — the head\'s lines, the headings, the blocks, a record\'s keys, the others\' count, the offer',
+            [dict(x, ratio=round(x['line'] / x['font'], 3) if x['font'] else None) for x in off[:8]])
+    unlike = []
+    for b in v['boxes']:
+        n = round(b['height'] / b['line_box'])
+        if n < 1 or abs(b['height'] - n * b['line_box']) > LINE_BOX_TOL_PX:
+            unlike.append(b)
+    r.check(bool(v['boxes']) and not unlike, f'the type: the head\'s lines and the headings stand on P-LAY\'s line box for their size, as the engine lays it out ({LINE_BOX_TOL_PX:.4f} px at the layout size)', unlike[:6])
+    compared = [h for h in v['headings'] if h['above'] is not None and h['below'] is not None]
+    far = [h for h in compared if not h['below'] < h['above']]
+    r.check(bool(compared) and not far, 'the type: each heading with a block above and below it stands nearer the block it heads than the block above it', {'compared': compared, 'far': far})
+    return {'elements': len(v['sized']), 'boxes': [[b['el'], round(b['height'], 4), b['line_box']] for b in v['boxes']], 'headings': compared}
+
+
+def scene_level(ctx):
+    """the scene as it stands: its runs, the two ends it set level, and each end's passage in its pane — its first line
+    on screen, its first characters, the pane's visible rect"""
+    return ctx.js('''(() => { const S = window.__skep.scene, p = S.pairs(); if (!p) return null;
+      return {pairs: p.pairs, level: p.level, a: p.level.a != null ? S.at('a', p.level.a) : null, b: p.level.b != null ? S.at('b', p.level.b) : null}; })()''')
+
+
+def level_holds(r, name, v):
+    """the two ends set level: their first lines at one height, inside both panes, holding the same material"""
+    a, b = (v or {}).get('a'), (v or {}).get('b')
+    la, lb = a and a['line'], b and b['line']
+    level = bool(la and lb) and abs(la['y'] - lb['y']) <= LEVEL_TOL_PX and abs(la['y'] + la['h'] - (lb['y'] + lb['h'])) <= LEVEL_TOL_PX and inside(la, a['pane']) and inside(lb, b['pane'])
+    r.check(level, f'{name}: the two ends stand level — the matched passage\'s first line at one height in both panes, its top and its bottom within {LEVEL_TOL_PX} px, inside both panes',
+            {'level': v and v['level'], 'a': la, 'b': lb, 'pane_a': a and a['pane'], 'pane_b': b and b['pane']})
+    same = bool(a and b and a['text'] and b['text']) and a['text'][:24] == b['text'][:24]
+    r.check(same, f'{name}: the lines set level hold the same material — the passage\'s first characters alike in both panes', {'a': a and a['text'], 'b': b and b['text']})
+
+
+def ties_hold(r, name, ties, in_view):
+    """every band and line drawn between the panes leaves each pane at its passage's own first line, or, where that
+    line has left the pane, at the pane's edge on the side it left by; `in_view` the ends that must stand in view"""
+    r.check(any(t['kind'] == 'band' for t in ties), f'{name}: the shared identity is drawn as a band', [t['kind'] for t in ties])
+    off, ends = [], 0
+    for t in ties:
+        for side, line, pane in (('a', t['lineA'], t['paneA']), ('b', t['lineB'], t['paneB'])):
+            end = t[side]
+            if line is None or pane is None:
+                off.append({'kind': t['kind'], 'link': t['link'], 'side': side, 'pos': end['pos'], 'line': line})
+                continue
+            mid, top, bottom = line['y'] + line['h'] / 2, pane['y'], pane['y'] + pane['h']
+            if end['clipped']:
+                edge = top if mid < top else bottom if mid > bottom else None
+                if edge is None or abs(end['y'] - edge) > TIE_TOL_PX:
+                    off.append({'kind': t['kind'], 'link': t['link'], 'side': side, 'pos': end['pos'], 'y': end['y'], 'clipped': True, 'line': line, 'pane': pane})
+                continue
+            ends += 1
+            if not (line['y'] - TIE_TOL_PX <= end['y'] <= line['y'] + line['h'] + TIE_TOL_PX):
+                off.append({'kind': t['kind'], 'link': t['link'], 'side': side, 'pos': end['pos'], 'y': end['y'], 'line': line})
+    r.check(ends >= in_view and not off, f'{name}: every band and line leaves its pane at its passage\'s own first line, {TIE_TOL_PX} px either way, or at the pane\'s edge where that line has left the pane — {in_view} end(s) or more in view',
+            {'ends_in_view': ends, 'off': off[:6]})
+    return {'ties': len(ties), 'ends_in_view': ends, 'off': len(off)}
+
+
+def scene_holds(ctx, r):
+    """THE READING SCENE's checks: opened on the first edition and the draft it windows, nothing held; then from the
+    versions list of an edition with two members, its last paragraph held, read side by side with its latest member;
+    its figures"""
+    seen = {}
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
+    ctx.settle()
+    ctx.frames(3)
+    v = scene_level(ctx)
+    r.check(bool(v) and v['level']['a'] == WINDOW[0] and v['level']['b'] is not None, 'the scene on the window and its origin, nothing held: the ends set level are the window run\'s first position and its counterpart in the origin', v and v['level'])
+    level_holds(r, 'the scene on the window and its origin', v)
+    # the window run's band: both its ends are the lines set level, in view
+    seen['origin'] = {'level': v and v['level'], 'ties': ties_hold(r, 'the scene on the window and its origin', ctx.js('window.__skep.scene.ties()'), 2)}
+    ctx.js('window.__skep.scene.close()')
+    ctx.frames(2)
+    # the versions list, a paragraph past the document's first held: "read side by side" with the latest member sets that paragraph level
+    # with what the member holds of it. An edition no later case reads: the member's text, once loaded, stands over its document's box
+    ctx.leap(VERSIONED, None)
+    doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(VERSIONED))
+    para = [b for b in doc['blocks'] if b['kind'] == 'para' and b['pos'] > 1 and not b['text'].startswith('#')][-1]
+    ctx.js('window.__skep.cards.versions(%s, %d)' % (json.dumps(VERSIONED), para['pos']))
+    ctx.settle()
+    ctx.frames(2)
+    rows = ctx.js('''[...document.querySelectorAll('#overlay .rows li')].map((li) => [...li.children].map((e) => { const q = e.getBoundingClientRect(); return {item: e.dataset.run || e.className, y: q.top, h: q.height}; }))''')
+    split = [row for row in rows if len(row) < 3 or max(c['y'] for c in row) >= min(c['y'] + c['h'] for c in row)]
+    r.check(len(rows) == doc['members'] and not split, 'the versions list: each member one row — its read act, what it holds of the passage and its side-by-side act share one line', {'rows': rows, 'members': doc['members']})
+    seen['versions_rows'] = [[round(c['y'], 1) for c in row] for row in rows]
+    ctx.js('document.querySelector(%s).click()' % json.dumps('#overlay [data-run="beside%d"]' % doc['members']))
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.scene.isOpen() || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    ctx.settle()
+    ctx.frames(3)
+    v = scene_level(ctx)
+    # the counterpart, from the runs the scene reports: the first run that holds part of the paragraph, at the paragraph's first position it holds
+    run = v and next((p for p in sorted(v['pairs'], key=lambda p: p['u1']) if p['u1'] < para['pos'] + para['width'] and para['pos'] < p['u1'] + p['width']), None)
+    want = run and {'a': max(para['pos'], run['u1']), 'b': run['u2'] + max(para['pos'], run['u1']) - run['u1']}
+    r.check(bool(v) and run is not None and want['a'] == para['pos'] and v['level'] == want, 'from the versions list, the paragraph held: the first pane\'s end is the held paragraph\'s first position, and the latest member\'s is its counterpart in the run that holds it, never the first pair\'s', {'level': v and v['level'], 'want': want})
+    level_holds(r, 'the versions list\'s read side by side', v)
+    # a member that holds all of its edition shares it as one run, its first line above both panes: its band clipped at their edges
+    seen['versions'] = {'level': v and v['level'], 'ties': ties_hold(r, 'the versions list\'s read side by side', ctx.js('window.__skep.scene.ties()'), 0)}
+    ctx.js('window.__skep.scene.close()')
+    ctx.frames(2)
+    # back on the plane at the edition, its member's text loaded: the box both share holds one article
+    ctx.leap(VERSIONED, None)
+    member = '%s.%d' % (VERSIONED, doc['members'])
+    mounted = ctx.js('window.__skep.mountedAddrs()')
+    r.check(sum(1 for a in (VERSIONED, member) if a in mounted) == 1, 'back on the plane after reading its latest member beside it, the edition\'s box holds one article, never the member\'s over the edition\'s',
+            {'mounted': mounted, 'box_shared': ctx.js('JSON.stringify(window.__skep.boxOf(%s)) === JSON.stringify(window.__skep.boxOf(%s))' % (json.dumps(VERSIONED), json.dumps(member)))}, xfail=XFAIL_MEMBER)
+    return seen
+
+
+def chrome_holds(ctx, r):
+    """THE CHROME's checks: the LEAP box's columns, among its rows a trail entry carrying the longest label a place has
+    (a document's first line, up to 200 characters); the opaque chrome over the plane; its figures"""
+    ctx.leap(FAR_LEAP)
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.leap.open()')
+    ctx.frames(2)
+    cells = ctx.js('''[...document.querySelectorAll('#leaphits .hit')].map((h) => [...h.children].map((c) => { const q = c.getBoundingClientRect();
+      return {x: q.left, w: q.width, row: h.getBoundingClientRect().width, over: c.scrollWidth - c.clientWidth, chars: c.textContent.length}; }))''')
+    whole = len(cells) >= 3 and all(len(row) == 3 for row in cells)
+    ragged = {i: [round(row[i]['x'], 2) for row in cells] for i in range(3) if whole and max(row[i]['x'] for row in cells) - min(row[i]['x'] for row in cells) > LABEL_TOL_PX}
+    r.check(whole and not ragged, f'the LEAP box: its rows share their columns — each column\'s cells start at one x, {LABEL_TOL_PX} px either way', {'rows': len(cells), 'cells': [len(row) for row in cells], 'ragged': ragged})
+    longest = max((c['chars'] for row in cells for c in row), default=0)
+    over = [[i, j, c['over']] for i, row in enumerate(cells) for j, c in enumerate(row) if c['over'] > 1]
+    narrow = [[i, round(row[1]['w'], 1), round(row[1]['row'], 1)] for i, row in enumerate(cells) if whole and row[1]['w'] < row[1]['row'] / 4]
+    r.check(whole and longest >= 100 and not over and not narrow, 'the LEAP box: no cell\'s text runs past its column, and the title\'s column keeps a quarter of the row or more — a label of a hundred characters or more among the rows',
+            {'longest_cell_chars': longest, 'overflowing': over[:6], 'narrow_titles': narrow[:6]})
+    ctx.js('window.__skep.leap.close()')
+    ctx.frames(1)
+    alpha = ctx.js(r'''(() => { const a = (sel) => { const e = document.querySelector(sel); if (!e) return null;
+        const m = getComputedStyle(e).backgroundColor.match(/rgba?\(([^)]+)\)/), p = m ? m[1].split(',').map(Number) : [];
+        return p.length === 4 ? p[3] : p.length === 3 ? 1 : 0; };
+      return {leap: a('#leap'), scene: a('#scene'), line: a('#line'), mirror: a('#mirror'), corner: a('#corners .corner')}; })()''')
+    thin = {k: x for k, x in alpha.items() if x != 1}
+    r.check(not thin, 'the chrome over the plane is opaque — the LEAP box, the scene, the one line, the mirror and a corner: no text the plane holds shows through', alpha)
+    return {'leap_rows': len(cells), 'leap_columns': [round(c['w'], 1) for c in cells[0]] if cells else None, 'alpha': alpha}
+
+
 def step(ctx, em):
     """the camera over the first edition at an em, and what the frames that step drew show: the most documents any of
     them drew as bars under their own mounted text (`both`), and yielded to text that was not mounted (`neither`)"""
@@ -202,7 +396,7 @@ def run(ctx):
         shown = c['corner'] is not None and c['corner']['inClip'] and c['corner']['inView'] and c['corner']['rect']['y'] >= c['line'] - 0.5
         r.check(shown, f'em {em}: the first edition\'s corner is in view, below the one line', c)
         ho = handoff(ctx)
-        r.check(ho['compared'] > 0 and not ho['off'], f'em {em}: the handoff — every block of every mounted article stands on the canvas\'s bars for it: its top within {HANDOFF_TOL_PX} px of its bars\' first line, and as many lines', {'compared': ho['compared'], 'off': ho['off'][:6]})
+        r.check(ho['compared'] > 0 and not ho['off'], f'em {em}: the handoff — every block of every mounted article stands on the canvas\'s bars for it: its top and its height within {HANDOFF_TOL_PX} px of its bars\', and as many lines', {'compared': ho['compared'], 'off': ho['off'][:6]})
         drift['em%d' % em] = {'samples': sample, 'worst_px': worst, 'containment': ov, 'em_px_measured': mine[0]['em_px'] if mine else None, 'corner': c['corner'] and c['corner']['rect'], 'handoff': {'compared': ho['compared'], 'off': len(ho['off']), 'left_out': ho['left_out']}}
     r.figures['drift'] = drift
     # the corner holds to the top of the document's visible part (foundations §3.1): the box's top risen past the one
@@ -305,5 +499,9 @@ def run(ctx):
         ctx.frames(2)
         seen[name] = labels_hold(r, name, label_view(ctx))
     r.figures['labels'] = seen
+    # THE TYPE, THE READING SCENE, THE CHROME
+    r.figures['type'] = type_holds(ctx, r)
+    r.figures['scene'] = scene_holds(ctx, r)
+    r.figures['chrome'] = chrome_holds(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

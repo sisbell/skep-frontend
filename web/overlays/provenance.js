@@ -58,7 +58,7 @@ export async function wrote(addr, pos, width = null) {
     rows.map((r, i) => `<div class="answer draft" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${esc(r.text)}${r.same ? ` <button data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
   /** @type {Record<string, (el: HTMLElement) => void>} */
   const acts = {};
-  rows.forEach((r, i) => { acts['src' + i] = () => GO.leapTo(r.o, { how: 'leap' }); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, posB: null }); });
+  rows.forEach((r, i) => { acts['src' + i] = () => GO.leapTo(r.o, { how: 'leap' }); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
   HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts });
 }
 
