@@ -3,12 +3,14 @@
 // (FP-10): client-side, never written (law 1).
 // An entry is an address and a view (S3 Q7's tuple), its view RE-TAKEN
 // whenever the entry is departed, so Back lands on the passage left; an
-// entry a follow departed holds the link followed. Pushed by a fresh
-// TELEPORT alone (LEAP, follow, a click on a place, Enter, HOME, WHOLE
-// BOARD, a trail jump's landing is a cursor move) — never by panning or
-// zooming; a fresh teleport made with the cursor behind the newest entry
-// drops the entries ahead of it before it pushes (a browser's history rule,
-// stated). Back, Forward and a jump move the cursor and discard nothing.
+// entry a follow departed holds the link followed. The launch frame is the
+// first entry (W-01); after it an entry is pushed by a fresh TELEPORT —
+// LEAP, follow, a click on a place, Enter, HOME, WHOLE BOARD, an account's
+// region — and by a reading scene's own end (the plane as it was), one push
+// per act, never by panning or zooming. Back, Forward and a jump move the
+// cursor and discard nothing, and a jump never pushes. A fresh teleport made
+// with the cursor behind the newest entry drops the entries ahead of it
+// before it pushes (a browser's history rule, stated).
 // Carries: the wireframe's §11 `pushTrail` (its de-duplication by address
 // and its cap of twelve DROPPED: the stack is the record of teleports).
 // Rules: FP-1, FP-2, FP-7, FP-10.

@@ -1,13 +1,19 @@
 // N-GO — a TELEPORT (the structure record §3.2 "N-GO"; S-7 (a)). Layer 2.
 // ENGINE-BOUND only through O-HOST; its arithmetic pure. State: none — it
-// orchestrates the owners: close the overlays and the scene, fly the camera
+// orchestrates the owners: dismiss the overlay and the scene, fly the camera
 // (P-CAM), push the trail (N-TRAIL) with the departed view re-taken, move the
 // focus to the landing (N-WALK), re-project the passage carried; `follow`
 // reports the link followed to LK's visited set (S-32 (a)) and lands at the
 // span the slot projects to NOW (A-53 — the document consulted before the
-// link); HOME (the acting account's region) and WHOLE BOARD (the board at the
-// clamp) push too (D5-F3); Back, Forward and a trail jump move the cursor
-// and re-take the departed view.
+// link); HOME (the acting account's region), WHOLE BOARD (the board at the
+// clamp) and an account's region push too (D5-F3; foundations §2.2: LEAP,
+// the keyboard's Enter and a click on a place are teleports, whatever they
+// reach); the launch frame is HOME, set without a flight and pushed as the
+// trail's first entry (W-01), so Back after the first teleport returns to
+// it; Back, Forward and a trail jump move the cursor and re-take the
+// departed view. Each act makes ONE trail move, its own push or cursor move:
+// the scene standing over the plane is dismissed, "a teleport dismissing the
+// scene first" (§2.5), and pushes nothing of its own.
 // Carries: the wireframe's §11 (`leapTo`, `goHome`), §18 `followLink`.
 // Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10.
 
@@ -32,6 +38,9 @@ let arrival = null;
 export const arrivalMark = () => arrival;
 export function clearArrival() { arrival = null; }
 
+/** the chrome a navigation act clears first: the standing overlay, and the scene — dismissed, so the act's own trail move is its one */
+function dismissChrome() { HOST.dismiss(); SCENE.dismiss(); }
+
 /**
  * The view that reads a document at a position.
  * @param {string} addr
@@ -54,8 +63,7 @@ export function viewFor(addr, pos) {
  */
 export async function leapTo(addr, opts = {}) {
   const departed = CAM.view();
-  HOST.dismiss();
-  if (SCENE.isOpen()) SCENE.close();
+  dismissChrome();
   arrival = null;
   let d = REC.doc(addr);
   if (d.extent == null || d.from < 0) { const loaded = await PUMP.loadWhole(addr); if (!loaded) d = REC.doc(addr); }
@@ -102,30 +110,66 @@ export async function follow(s, anchor = null) {
   await leapTo(far, { pos: proj.ordinal, how: 'follow', link: l.addr });
 }
 
+/** HOME's place and view: the acting account's region at mid scale; a guest's the board's extent (R92 rider (c)) */
+function homeFrame() {
+  const s = REC.session(), b = REC.board();
+  if (s && s.account) return { addr: s.account, view: CAM.viewForCell(accountCell(s.account), 0.85) };
+  const node = b ? nodeOf(b.origin) : '1';
+  return { addr: node, view: CAM.viewForCell(boardCell(node), 0.92) };
+}
+
 /** HOME — the acting account's region at mid scale; a guest's the board's extent (R92 rider (c)) */
 export async function home() {
-  const s = REC.session(), b = REC.board();
   const departed = CAM.view();
-  HOST.dismiss(); if (SCENE.isOpen()) SCENE.close();
-  const node = b ? nodeOf(b.origin) : '1';
-  const target = s && s.account ? CAM.viewForCell(accountCell(s.account), 0.85) : CAM.viewForCell(boardCell(node), 0.92);
-  TRAIL.push({ addr: s && s.account ? s.account : node, pos: null, view: target, link: null, label: 'HOME' }, departed);
-  WALK.focusTo(s && s.account ? s.account : node, null);
+  dismissChrome();
+  const h = homeFrame();
+  TRAIL.push({ addr: h.addr, pos: null, view: h.view, link: null, label: 'HOME' }, departed);
+  WALK.focusTo(h.addr, null);
   CAM.markDirty();
-  await CAM.fly(target, 700);
+  await CAM.fly(h.view, 700);
+  CAM.markDirty();
+}
+
+/**
+ * The launch frame — HOME, foundations §2.2's last arm and the one this page
+ * builds — set without a flight, and the trail's first entry (W-01), so the
+ * first teleport re-takes its view as it departs and Back returns to it.
+ */
+export async function launch() {
+  const h = homeFrame();
+  CAM.set(h.view);
+  TRAIL.push({ addr: h.addr, pos: null, view: h.view, link: null, label: 'HOME' }, null);
+  await WALK.focusTo(h.addr, null);
   CAM.markDirty();
 }
 
 /** WHOLE BOARD — the board the camera is over, at the clamp (law 13) */
 export async function wholeBoard() {
   const departed = CAM.view();
-  HOST.dismiss(); if (SCENE.isOpen()) SCENE.close();
+  dismissChrome();
   const node = boardNode();
   const target = CAM.viewForCell(boardCell(node), 0.92);
   TRAIL.push({ addr: node, pos: null, view: target, link: null, label: 'WHOLE BOARD' }, departed);
   WALK.focusTo(node, null);
   CAM.markDirty();
   await CAM.fly(target, 700);
+  CAM.markDirty();
+}
+
+/**
+ * An account's region at mid scale — a teleport whatever reaches it: a LEAP
+ * to the account's address or its level, Enter on it, a click on it at far
+ * (foundations §2.2).
+ * @param {string} acct
+ */
+export async function toAccount(acct) {
+  const departed = CAM.view();
+  dismissChrome();
+  const target = CAM.viewForCell(accountCell(acct), 0.85);
+  TRAIL.push({ addr: acct, pos: null, view: target, link: null, label: null }, departed);
+  WALK.focusTo(acct, null);
+  CAM.markDirty();
+  await CAM.fly(target, 400);
   CAM.markDirty();
 }
 
@@ -137,7 +181,7 @@ function nodeOf(/** @type {string} */ _origin) { return '1'; }
 export async function back() {
   const e = TRAIL.back(CAM.view());
   if (!e) return false;
-  HOST.dismiss(); if (SCENE.isOpen()) SCENE.close();
+  dismissChrome();
   WALK.focusTo(e.addr, e.pos);
   arrival = e.link ? { addr: e.addr, pos: e.pos ?? 1, link: e.link } : null;
   CAM.markDirty();
@@ -149,7 +193,7 @@ export async function back() {
 export async function forward() {
   const e = TRAIL.forward(CAM.view());
   if (!e) return false;
-  HOST.dismiss(); if (SCENE.isOpen()) SCENE.close();
+  dismissChrome();
   WALK.focusTo(e.addr, e.pos);
   CAM.markDirty();
   await CAM.fly(e.view, 500);
@@ -160,17 +204,10 @@ export async function forward() {
 export async function toTrailEntry(/** @type {number} */ n) {
   const e = TRAIL.jump(n, CAM.view());
   if (!e) return false;
-  HOST.dismiss(); if (SCENE.isOpen()) SCENE.close();
+  dismissChrome();
   WALK.focusTo(e.addr, e.pos);
   CAM.markDirty();
   await CAM.fly(e.view, 500);
   CAM.markDirty();
   return true;
-}
-
-/** a flight to a cell (an account's region, by the walk) — a camera act, no push */
-export async function flyToCell(/** @type {{x:number,y:number,w:number,h:number}} */ c, fit = 0.85, ms = 400) {
-  CAM.markDirty();
-  await CAM.fly(CAM.viewForCell(c, fit), ms);
-  CAM.markDirty();
 }

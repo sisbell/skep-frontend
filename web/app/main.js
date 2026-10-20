@@ -12,10 +12,11 @@
 // keepalive fetch), `fingerprint()` (the device label and "key present"),
 // `health(board)`, `probe()`, `places(session, board)` for the model's index
 // (skep #463), the launch frame HOME — the acting account's region at mid
-// scale (foundations §2.2). THE LOOP (`requestAnimationFrame`): step the
-// camera's flight, pump on its cadence, draw when dirty or animating or an
-// overlay stands — T-LAYER's frame, then P-RENDER, then BM, then O-HOST's
-// place, the line — and the frame buffer the gate reads. T-LAYER decides
+// scale, the trail's first entry (foundations §2.2; W-01; N-GO's `launch`).
+// THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
+// cadence, draw when dirty or animating or an overlay stands — T-LAYER's
+// frame, then P-RENDER, then BM, then O-HOST's place, the line — and the
+// frame buffer the gate reads. T-LAYER decides
 // what is mounted BEFORE the canvas draws, so a document crossing the mount
 // threshold is drawn as bars or yielded to its text by the same frame's
 // mounted set — never both, never neither (law 13) — and the arrival mark
@@ -52,7 +53,7 @@ import * as SCENE from '../scene/scene.js';
 import * as INPUT from './input.js';
 import { cssVariables } from '../plane/register.js';
 import { cssMeasures } from '../plane/layout.js';
-import { accountCell, boardCell, depthOfDoc } from '../plane/projection.js';
+import { depthOfDoc } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
 
 /** @typedef {import('../gate/hooks.js').Frame} Frame */
@@ -189,10 +190,8 @@ async function boot() {
   bootInfo.coldOpenMs = Math.round(performance.now() - t0);
   bootInfo.coldOpenCalls = PORT.callLog().map((c) => c.name);
   bootInfo.coldOpenBytes = PORT.callLog().reduce((a, c) => a + c.bytesIn + c.bytesOut, 0);
-  // the launch frame: HOME — the acting account's region at mid scale; a guest's the board's extent
-  const s = REC.session();
-  CAM.set(s && s.account ? CAM.viewForCell(accountCell(s.account), 0.85) : CAM.viewForCell(boardCell('1'), 0.92));
-  await WALK.focusTo(s && s.account ? s.account : '1', null);
+  // the launch frame: HOME — the acting account's region at mid scale; a guest's the board's extent — the trail's first entry
+  await GO.launch();
   LINE.render(true);
   if (GATE) {
     const hooks = await import('../gate/hooks.js');

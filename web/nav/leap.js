@@ -6,10 +6,14 @@
 // CURRENT ADDRESS, selected (the address bar's habit), and listing beneath
 // it the address's levels — the whole board first, HOME where it differs,
 // the account's region, the whole document — then the landmarks and the
-// trail's entries, until a key is typed; typed text matches by N-MATCH over
-// the model's index; Enter goes to the selected row (the first match unless
-// ↓/↑ chose another); an address this client has no record of is asked of
-// the board and faced where nothing answers (C-42's content, B1-S8); where
+// trail's entries, until a key is typed, no row chosen: Enter on the box as
+// opened lands in place — the current address — and pushes nothing, and a
+// listed level is gone to once ↓, ↑ or the pointer has chosen it (foundations
+// §2.3); typed text matches by N-MATCH over the model's index, its first
+// match selected; Enter goes to the selected row (the first match unless ↓/↑
+// chose another), a teleport and a trail entry whether it names a document,
+// an account or the board; an address this client has no record of is asked
+// of the board and faced where nothing answers (C-42's content, B1-S8); where
 // typed text matches nothing the box says so, the index's state beside the
 // answer while the index is not complete. While an input method's
 // composition is open, Enter, Esc and the arrows are the IME's and act on
@@ -30,7 +34,6 @@
 import * as REC from '../model/records.js';
 import * as TRAIL from './trail.js';
 import * as GO from './go.js';
-import * as WALK from './walk.js';
 import { matches } from './match.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -44,7 +47,8 @@ let els = null;
 let openState = false;
 /** @type {Row[]} */
 let rows = [];
-let sel = 0;
+/** the selected row, or −1 where none is chosen — the box as opened, before ↓, ↑ or a keystroke */
+let sel = -1;
 /** ↓ or ↑ has carried the choice into the rows — set only where a row stands, so `sel` names one */
 let inRows = false;
 /** the status region's markup as last written */
@@ -83,7 +87,8 @@ function ctx() {
     levelWords: { board: t('F.level.board'), home: t('F.level.home'), account: t('F.level.account'), document: t('F.level.document') },
   };
 }
-function compute(/** @type {string} */ text) { rows = matches(text, ctx()); sel = 0; inRows = false; }
+/** the rows for the text; typed text selects its first match, and nothing typed chooses no row (foundations §2.3) */
+function compute(/** @type {string} */ text) { rows = matches(text, ctx()); sel = text.trim() ? 0 : -1; inRows = false; }
 
 /** ↓ / ↑ (K-32): the choice moves one row and into the rows; nothing goes */
 function choose(/** @type {1 | -1} */ step) {
@@ -137,19 +142,23 @@ export function render() {
   els.note.innerHTML = note;
 }
 
-/** Enter: the row chosen goes (K-31); nothing typed and no row chosen → the current address in place */
+/**
+ * Enter: the row chosen goes (K-31), each a teleport and a trail entry; with
+ * no row chosen — the box as opened — the current address, in place: the box
+ * closes, nothing moves and nothing is pushed (foundations §2.3).
+ */
 export async function go(/** @type {number} */ i) {
   const r = rows[i]; if (!r) { close(); return; }
   close();
   if (r.kind === 'board') { await GO.wholeBoard(); return; }
   if (r.kind === 'home') { await GO.home(); return; }
   if (r.kind === 'share' || r.kind === 'url') return; // the share form's decoding and the intake are not this lane's
-  if (r.kind === 'account') { await GO.flyToCell((await import('../plane/projection.js')).accountCell(r.addr)); await WALK.focusTo(r.addr, null); return; }
+  if (r.kind === 'account') { await GO.toAccount(r.addr); return; }
   if (r.kind === 'address') {
     const doc = documentOf(r.addr);
     if (doc) { await GO.leapTo(r.addr, { how: 'leap' }); return; }
     const acct = accountOf(r.addr);
-    if (acct) { await GO.flyToCell((await import('../plane/projection.js')).accountCell(acct)); await WALK.focusTo(acct, null); return; }
+    if (acct) { await GO.toAccount(acct); return; }
     await GO.wholeBoard(); return;
   }
   await GO.leapTo(r.addr, { how: 'leap' });

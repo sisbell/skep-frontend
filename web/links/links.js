@@ -72,6 +72,7 @@ import { commonsType } from '../model/address.js';
 /**
  * @typedef {Object} Shown — one link drawn at a document
  * @property {Link} link
+ * @property {string} near the document it is drawn at — the one `end` lies in, whichever end that is and wherever the link is homed
  * @property {'from' | 'to'} end which end lies in this document
  * @property {number} pos the end's first position
  * @property {number} width the end's positions
@@ -211,7 +212,7 @@ export function shown(addr) {
     for (const { end, e } of endsIn(l, addr)) {
       const farList = end === 'from' ? l.to : l.from;
       const far = farList[0] || null;
-      out.push({ link: l, end, pos: /** @type {number} */ (e.ordinal), width: e.positions || 1, mark: markOf(l, addr), linker, far: far ? far.doc || far.account || '' : '', farEnd: far, farWhole: !!(far && far.whole) });
+      out.push({ link: l, near: addr, end, pos: /** @type {number} */ (e.ordinal), width: e.positions || 1, mark: markOf(l, addr), linker, far: far ? far.doc || far.account || '' : '', farEnd: far, farWhole: !!(far && far.whole) });
     }
   }
   return out;

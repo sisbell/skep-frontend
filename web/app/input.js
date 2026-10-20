@@ -19,8 +19,9 @@
 // label goes to its source; the scene-offer opens the scene; the version
 // statement at a document's corner opens its members (the corner's act, the
 // one Enter takes there — K-57); at the readable threshold and above a click
-// on a block selects it whole (R11); a click on an account at far flies to
-// it; an empty click dismisses the overlay.
+// on a block selects it whole (R11); a click on an account at far is a
+// teleport to its region (a trail push); an empty click dismisses the
+// overlay.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
 // Rules: FP-1, FP-2, FP-9.
@@ -41,7 +42,7 @@ import * as VERSIONS from '../overlays/versions.js';
 import * as LAYER from '../text/layer.js';
 import { sameSpan } from '../text/span.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
-import { accountAt, accountCell, docBox } from '../plane/projection.js';
+import { accountAt, docBox } from '../plane/projection.js';
 import { metricsFor } from '../plane/layout.js';
 import { MAC } from '../nav/keys.js';
 
@@ -136,7 +137,7 @@ function takeSelection() {
   SEL.select(span.addr, span.pos, span.width);
 }
 
-/** a click on the plane: a continuation's mark goes to its newest member; a place goes; an account at far flies; else the overlay dismisses */
+/** a click on the plane: a continuation's mark goes to its newest member; a place goes; an account at far goes to its region; else the overlay dismisses */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   LINE.act();
   const lod = lodOf(CAM.cam.scale);
@@ -151,7 +152,7 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   }
   if (lod.name === 'far' || lod.name === 'far~mid') {
     const acct = accountAt(CAM.wx(px), CAM.wy(py), '1');
-    if (acct) { GO.flyToCell(accountCell(acct)).then(() => WALK.focusTo(acct, null)); return; }
+    if (acct) { GO.toAccount(acct); return; }
   }
   if (HOST.hasCurrent()) HOST.dismiss();
   else if (SEL.selected()) SEL.clear();

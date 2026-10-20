@@ -198,11 +198,11 @@ export function esc() {
   if (SCENE.isOpen()) { SCENE.close(); CAM.markDirty(); return; }
 }
 
-/** Enter activates the focus (K-7): a place goes, a link's symbol opens its card */
+/** Enter activates the focus (K-7): a place goes — the board, an account or a document, each a teleport pushed on the trail — a span is selected, a link's symbol opens its card */
 async function activateFocus() {
   const f = WALK.current();
   if (!f) { await WALK.enter(); return; }
-  if (f.kind === 'account') { await GO.flyToCell((await import('../plane/projection.js')).accountCell(f.addr)); return; }
+  if (f.kind === 'account') { await GO.toAccount(f.addr); return; }
   if (f.kind === 'board') { await GO.wholeBoard(); return; }
   if (f.kind === 'document') { await GO.leapTo(f.addr, { how: 'key' }); return; }
   if (f.kind === 'block' && f.pos != null) { SEL.select(f.addr, f.pos); return; }

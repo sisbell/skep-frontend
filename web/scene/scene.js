@@ -8,17 +8,22 @@
 // the set LK gives (the seam at the link-beam source — hue the linker's,
 // dashed for another's) and SHARED IDENTITY as BANDS from `compare`'s pairs
 // (no link), a line or band whose end has left its pane clipped at the
-// pane's edge with the stub's triangle; zoom-out, Esc or any teleport ends
-// it, the departure recorded. The panes BORROW the one reconciler's mount
-// (FP-12: `T-LAYER.sceneArticle` makes the HTML; the scene keeps no DOM text
-// of its own). Each pane carries its own document's corner (ux-T2: "each pane
-// its own"; `T-LAYER.sceneCorner` makes its items) on its OUTER side — pane
-// A's left, pane B's right — held to the top of the pane's scroll, so the
-// bands and lines leave the inner edges clear of it (foundations §3.1); it is
-// shown, not acted on, as nothing in a pane takes a pointer. Companionate
-// scrolling over the bands is UNTESTED (S27) and not built. Carries: the
-// wireframe's §19 whole (its beams over `compare`'s pairs instead of the hand
-// data's windows). Rules: FP-1, FP-2, FP-10, FP-12, FP-13.
+// pane's edge with the stub's triangle. Its own end — zoom-out, Esc, ←, the
+// bar's × — pushes the plane as it was onto the trail (§2.5; the entry it
+// departs holds the camera's view, not the pair and the panes' positions
+// §2.5 asks it to hold, which is the design's open question); a navigation
+// act — a teleport, Back, Forward, a trail jump — dismisses it first and
+// pushes nothing, the act's own trail move the one it makes (`dismiss`). The
+// panes BORROW the one reconciler's mount (FP-12: `T-LAYER.sceneArticle`
+// makes the HTML; the scene keeps no DOM text of its own). Each pane carries
+// its own document's corner (ux-T2: "each pane its own"; `T-LAYER.sceneCorner`
+// makes its items) on its OUTER side — pane A's left, pane B's right — held
+// to the top of the pane's scroll, so the bands and lines leave the inner
+// edges clear of it (foundations §3.1); it is shown, not acted on, as nothing
+// in a pane takes a pointer. Companionate scrolling over the bands is
+// UNTESTED (S27) and not built. Carries: the wireframe's §19 whole (its
+// beams over `compare`'s pairs instead of the hand data's windows).
+// Rules: FP-1, FP-2, FP-10, FP-12, FP-13.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -148,14 +153,28 @@ function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */
   ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, -4); ctx.lineTo(-8, 4); ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill(); ctx.restore();
 }
 
-/** close the scene: the plane as it was; the departure recorded on the trail */
+/** the scene's own end — Esc, zoom-out, ←, the bar's ×: the plane as it was, pushed onto the trail after it (§2.5) */
 export function close() {
-  if (!scene || !els) return;
+  const s = end();
+  if (s) TRAIL.push({ addr: s.a, pos: s.levelA, view: camView(), link: null, label: `${s.a} │ ${s.b}` }, camView());
+}
+
+/**
+ * A navigation act ends the scene — a teleport, Back, Forward or a trail
+ * jump, "a teleport dismissing the scene first" (§2.5): the plane as it was,
+ * and nothing pushed, the act's own push or cursor move the one trail move it
+ * makes, which re-takes the view it leaves (N-TRAIL).
+ */
+export function dismiss() { end(); }
+
+/** take the scene down, the plane as it was: the pair that stood, or null where none did */
+function end() {
+  if (!scene || !els) return null;
   const s = scene;
   scene = null;
   els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; delete els.bar.dataset.face;
-  TRAIL.push({ addr: s.a, pos: s.levelA, view: camView(), link: null, label: `${s.a} │ ${s.b}` }, camView());
   markDirty();
+  return s;
 }
 
 /** the scene's own keys (K-60): ↓/↑ by block within the focused pane */

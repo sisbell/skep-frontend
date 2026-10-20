@@ -1,22 +1,38 @@
 """KEYS — class 2 (the structure record §6.3; T3 (2); M7): every D5 chord the
 lane built, dispatched at engine level (`Input.dispatchKeyEvent`, Meta as Mod
-on this Mac), then the camera, the focus and the one line read back; the IME
-guard, on the plane and in the LEAP box; a bare key does NOTHING but show the
-K-9 line; K-8's select and
-extend by span; the selection's one continuous gesture (R11) — a pointer drag
-over a phrase of a shown paragraph selects that phrase's byte span, never its
-block: the acts ask the wire over those bytes, the copy names them, and the
-platform's highlight survives the remount the links card causes. Each step
-leaves the page as it found it."""
+on this Mac), then the camera, the focus, the trail and the one line read
+back; the IME guard, on the plane and in the LEAP box; a bare key does
+NOTHING but show the K-9 line; Enter on the LEAP box as opened lands in
+place, ↓ choosing the first level, and a typed account address a teleport
+with its trail entry (foundations §2.2, §2.3); a navigation act from the
+scene — Back, Forward, a teleport — making one trail move, its own (§2.5);
+K-8's select and extend by span; a links card row's anatomy card taking the
+card's place with the symbols standing, at the link's own bytes; the
+selection's one continuous gesture (R11) — a pointer drag over a phrase of a
+shown paragraph selects that phrase's byte span, never its block: the acts
+ask the wire over those bytes, the copy names them, and the platform's
+highlight survives the remount the links card causes. Each step leaves the
+page as it found it."""
 import json
 
-from . import DOC, WINDOW, Result
+from . import DOC, SECOND_ACCOUNT, WINDOW, Result
 
 CODES = {'[': 'BracketLeft', ']': 'BracketRight', '=': 'Equal', '-': 'Minus', '0': 'Digit0', '1': 'Digit1', '2': 'Digit2', '/': 'Slash', '+': 'Equal'}
 
 
 def state(ctx):
     return ctx.js('({cam: window.__skep.view.camera(), focus: window.__skep.view.focus(), line: window.__skep.line().text, overlay: window.__skep.overlay().kind, leap: window.__skep.leap.isOpen(), trail: window.__skep.trail().cursor, scene: window.__skep.scene.isOpen(), sel: window.__skep.selection()})')
+
+
+def trail(ctx):
+    """the trail as N-TRAIL holds it: every entry with its view, oldest first, and the cursor"""
+    return ctx.js('window.__skep.trail()')
+
+
+def open_scene(ctx):
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
+    ctx.settle()
+    ctx.frames(2)
 
 
 def same_view(a, b, tol=1e-6):
@@ -83,6 +99,21 @@ def run(ctx):
     r.check(held.startswith(DOC), 'the box holds the current address', held)
     chord(ctx, 'Escape')
     r.check(not state(ctx)['leap'], 'Esc closes the LEAP box')
+    # Enter on the box as opened, no row chosen, goes where its input names — the current address, a landing in place that
+    # pushes no trail entry — and to a listed level only once ↓ has chosen it (foundations §2.3)
+    before, t0 = state(ctx), trail(ctx)
+    chord(ctx, 'l', mods=('Meta',))
+    chord(ctx, 'Enter')
+    s, t1 = state(ctx), trail(ctx)
+    r.check(not s['leap'] and same_view(before, s) and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']),
+            'Mod+L then Enter lands in place: the box closes, and the camera, the trail\'s cursor and its length are unchanged',
+            {'leap': s['leap'], 'cam_same': same_view(before, s), 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])]})
+    chord(ctx, 'l', mods=('Meta',))
+    chord(ctx, 'ArrowDown')
+    chord(ctx, 'Enter')
+    s = state(ctx)
+    lod = ctx.js('window.__skep.view.lod()')['name']
+    r.check(not s['leap'] and s['focus'] and s['focus']['kind'] == 'board' and lod in ('far', 'far~mid'), 'Mod+L, ↓, Enter goes to the first level the box lists: the whole board', {'focus': s['focus'], 'lod': lod})
     chord(ctx, 'k', mods=('Meta',))
     r.check(state(ctx)['leap'], 'Mod+K opens the LEAP box too')
     ctx.js('(() => { const i = document.getElementById("leapq"); i.value = ""; })()')
@@ -97,6 +128,23 @@ def run(ctx):
     r.check('1.0.1.0.19' in s['line'], 'the one line\'s address names the landing', s['line'][:120])
     r.check(s['trail'] == trail_before + 1, 'the LEAP pushed a trail entry', {'before': trail_before, 'after': s['trail']})
     r.check(ctx.js('window.__skep.view.lod()')['name'] == 'near', 'the landing is at reading scale')
+    # a typed account's address is a teleport too (foundations §2.2): the account's region, an entry on the trail, and Back
+    # returns to the view the LEAP left
+    left, t0 = state(ctx), trail(ctx)
+    chord(ctx, 'l', mods=('Meta',))
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(SECOND_ACCOUNT)
+    ctx.frames(2)
+    chord(ctx, 'Enter')
+    s, t1 = state(ctx), trail(ctx)
+    newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+    r.check(not s['leap'] and s['focus'] and s['focus']['kind'] == 'account' and s['focus']['addr'] == SECOND_ACCOUNT and t1['cursor'] == t0['cursor'] + 1
+            and bool(newest) and newest['addr'] == SECOND_ACCOUNT and same_view({'cam': newest['view']}, s),
+            'a typed account address LEAPs to its region and pushes its entry: the focus, the trail\'s newest entry and the camera are the account\'s',
+            {'focus': s['focus'], 'cursor': [t0['cursor'], t1['cursor']], 'newest': newest and newest['addr']})
+    chord(ctx, '[', mods=('Meta',))
+    s = state(ctx)
+    r.check(trail(ctx)['cursor'] == t0['cursor'] and same_view(left, s), 'Mod+[ from the account returns to the entry the LEAP left, at the view it left', {'cursor': s['trail'], 'cam': s['cam'], 'left': left['cam']})
     # ---- WHOLE BOARD and HOME (K-13, K-14) --------------------------------------------------------
     chord(ctx, '0', mods=('Meta',))
     s = state(ctx)
@@ -167,6 +215,39 @@ def run(ctx):
     r.check(ctx.js('window.__skep.reveal(%s)' % json.dumps(DOC))['stage'] >= 2, 'the chain moved to stage 2 (symbols)')
     chord(ctx, 'Escape')
     r.check(ctx.js('window.__skep.reveal(%s)' % json.dumps(DOC))['stage'] == 1, 'Esc dismisses the card; the chain is hidden again')
+    # a row of the card opens its link's anatomy card in the card's place — a replacement, never a dismissal (O-HOST): the
+    # chain's stage stands, the symbols at their spans, and the anatomy card stands at the link's own bytes. The link is one
+    # whose marked words the landing at its position shows, below the one line
+    shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
+    line_bottom = ctx.js('document.getElementById("line").getBoundingClientRect().bottom')
+    row, link = None, None
+    for i, s in enumerate(shown[:12]):
+        ctx.leap(DOC, s['pos'])
+        words = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer [data-addr="%s"] .lip[data-links~="%s"]' % (DOC, s['link'])))
+        if words and all(w['inClip'] and w['inView'] and w['rect']['y'] >= line_bottom for w in words):
+            row, link = i, s
+            break
+    r.check(link is not None, 'a drawn link of the first edition has its marked words shown at the landing on its position', [s['pos'] for s in shown[:12]])
+    if link is not None:
+        ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
+        ctx.frames(2)
+        button = ctx.js('(() => { const b = document.querySelector(%s); if (!b) return null; const q = b.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()' % json.dumps('#overlay [data-run="row:%d"]' % row))
+        r.check(button is not None, 'the links card lists the link as its row %d' % row)
+        if button is not None:
+            ctx.drv.mouse(button['x'], button['y'])
+            ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__skep.overlay().id || "").startsWith("anatomy:") || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+            ctx.frames(2)
+            placed = ctx.js('''(() => { const o = document.getElementById('overlay'), q = o.getBoundingClientRect(), p = window.__skep.view.viewport();
+              const rs = window.__skep.spanRects(%s, %d, %d);
+              return {at: {x: parseFloat(o.style.left), y: parseFloat(o.style.top)}, first: rs ? rs[0] : null,
+                      want: rs ? {x: Math.max(6, Math.min(p.VW - q.width - 6, rs[0].x)), y: Math.max(34, Math.min(p.VH - q.height - 6, rs[0].y + rs[0].h + 4))} : null}; })()''' % (json.dumps(DOC), link['pos'], link['width']))
+            r.check(ctx.js('window.__skep.overlay().id') == 'anatomy:' + link['link'], 'the row\'s press opens the link\'s anatomy card', ctx.js('window.__skep.overlay().id'))
+            r.check(ctx.js('window.__skep.reveal(%s)' % json.dumps(DOC))['stage'] == 2, 'the anatomy card took the links card\'s place and the chain stands at stage 2: the symbols stay at their spans', ctx.js('window.__skep.reveal(%s)' % json.dumps(DOC)))
+            want = placed['want']
+            r.check(bool(want) and abs(placed['at']['x'] - want['x']) <= 0.5 and abs(placed['at']['y'] - want['y']) <= 0.5, 'the anatomy card stands at the link\'s own bytes, beneath their first line, as the host places a span\'s overlay', placed)
+        chord(ctx, 'Escape')
+        ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
+        ctx.frames(2)
     # select the block that holds a drawn link, then follow (Mod+Enter) to its ghost → the dead-reference face
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     blocks = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))
@@ -265,9 +346,7 @@ def run(ctx):
     r.check(abs((c3['y'] - c2['y']) * c2['scale'] - 0.9 * vh) < 2, 'PageDown pages the view by 0.9 of its height', {'dy_px': (c3['y'] - c2['y']) * c2['scale'], 'vh': vh})
     chord(ctx, 'PageUp')
     # ---- the scene (K-62, K-63, K-64) ----------------------------------------------------------------
-    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
-    ctx.settle()
-    ctx.frames(2)
+    open_scene(ctx)
     r.check(ctx.js('window.__skep.scene.isOpen()'), 'the scene opens between the window and its origin')
     c4 = state(ctx)['cam']
     chord(ctx, '=', mods=('Meta',))
@@ -276,11 +355,42 @@ def run(ctx):
     r.check(ctx.js('window.__skep.scene.isOpen()'), 'Mod+R re-levels the panes and reloads nothing')
     chord(ctx, 'Escape')
     r.check(not ctx.js('window.__skep.scene.isOpen()'), 'Esc dismisses the scene')
+    # a navigation act from the scene dismisses it and makes its own trail move alone (foundations §2.2, §2.5): Back goes
+    # one entry back, nothing pushed or dropped, and Forward returns to the entry it left — each entry a view of its own
+    ctx.leap(DOC, WINDOW[0])
+    chord(ctx, '0', mods=('Meta',))
+    t0, left = trail(ctx), state(ctx)
+    open_scene(ctx)
+    chord(ctx, '[', mods=('Meta',))
+    t1, s = trail(ctx), state(ctx)
+    behind = t0['entries'][t0['cursor'] - 1]['view']
+    r.check(not s['scene'] and t1['cursor'] == t0['cursor'] - 1 and len(t1['entries']) == len(t0['entries']) and same_view({'cam': behind}, s),
+            'Mod+[ in the scene dismisses it and goes back one entry: the cursor one back, nothing pushed or dropped, the camera at that entry\'s view',
+            {'scene': s['scene'], 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])], 'cam': s['cam'], 'behind': behind})
+    chord(ctx, ']', mods=('Meta',))
+    t2, s = trail(ctx), state(ctx)
+    r.check(t2['cursor'] == t1['cursor'] + 1 == t0['cursor'] and len(t2['entries']) == len(t0['entries']) and same_view(left, s),
+            'Mod+] moves the cursor forward again, to the entry Back left, at the view the scene stood over', {'cursor': [t0['cursor'], t1['cursor'], t2['cursor']], 'cam': s['cam'], 'left': left['cam']})
+    # a teleport from the scene pushes its own entry alone: the trail gains one, and each Back from there moves the camera
+    ctx.leap(DOC, WINDOW[0])
+    t0 = trail(ctx)
+    open_scene(ctx)
+    chord(ctx, '0', mods=('Meta',))
+    t1, at_board = trail(ctx), state(ctx)
+    r.check(not at_board['scene'] and len(t1['entries']) == len(t0['entries']) + 1 and t1['cursor'] == t0['cursor'] + 1,
+            'Mod+0 in the scene dismisses it and pushes WHOLE BOARD alone: the trail gains exactly one entry',
+            {'scene': at_board['scene'], 'entries': [len(t0['entries']), len(t1['entries'])], 'cursor': [t0['cursor'], t1['cursor']]})
+    chord(ctx, '[', mods=('Meta',))
+    first = state(ctx)
+    chord(ctx, '[', mods=('Meta',))
+    second = state(ctx)
+    r.check(not same_view(at_board, first) and not same_view(first, second), 'two Mod+[ from there each move the camera: no entry holds the view the scene stood over a second time',
+            {'board': at_board['cam'], 'first': first['cam'], 'second': second['cam']})
     # ---- the platform's own are never taken (K-92): Mod+C leaves everything -----------------------------
     s0 = state(ctx)
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+K', 'Enter', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+C']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Mod+3', 'Mod+Y', '↓', '↑', '←', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', 'Mod+C']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

@@ -1,8 +1,10 @@
 // O-ANATOMY — THE ANATOMY CARD (the structure record §3.2 "O-ANATOMY";
 // B1-S5; foundations §3.1). Layer 2. ENGINE-BOUND. State: none.
-// Conjured at a link's symbol (or its marked span), following it as the
-// camera moves: led by each end's passage in words, the far end's first (so
-// a click answers with what the link leads to), then its anatomy — type
+// Conjured at a link's symbol (or at its marked span, the link's own bytes),
+// following it as the camera moves: led by each end's passage in words, the
+// far end's first (so a click answers with what the link leads to) — the
+// near end the document the link is drawn at (LK's `near`), whichever of its
+// ends lies there, and the far end the other — then its anatomy — type
 // (R5's form where the commons documents none: on this notebook no registry
 // document is seeded, so every type reads "undocumented here"), from, to,
 // home (published → the link is public; a draft → hidden with its home),
@@ -39,19 +41,20 @@ async function fragment(/** @type {string} */ addr, /** @type {number | null} */
 }
 
 /**
- * Open the card for a drawn link.
+ * Open the card for a drawn link: its near end the document it is drawn at
+ * (`s.near`), its far end the other.
  * @param {Shown} s
- * @param {HTMLElement | null} anchorEl
+ * @param {HTMLElement | null} anchorEl the element it stands at; null stands it at the link's own bytes in the near document
  */
 export async function open(s, anchorEl) {
   const l = s.link;
-  const nearPos = s.pos, nearWidth = s.width;
+  const near = s.near, nearPos = s.pos, nearWidth = s.width;
   const far = s.far, farEnd = s.farEnd;
   const [nearText, farText] = await Promise.all([
-    fragment(l.home === s.link.home && s.end === 'from' ? l.home : (s.end === 'from' ? l.home : far), nearPos, nearWidth),
+    fragment(near, nearPos, nearWidth),
     far ? fragment(far, farEnd && !farEnd.whole ? farEnd.ordinal : null, farEnd && farEnd.positions ? farEnd.positions : 80) : Promise.resolve(null),
   ]);
-  const mark = LK.markOf(l, s.end === 'from' ? l.home : far);
+  const mark = LK.markOf(l, near);
   const homePlace = REC.place(l.home);
   const homeDoc = REC.doc(l.home);
   const homePublished = homeDoc.meta ? homeDoc.meta.published : homePlace ? homePlace.kind === 'edition' : true;
@@ -63,7 +66,7 @@ export async function open(s, anchorEl) {
   const html =
     `<span class="label" style="--mark-hue:${mark.hue}"><span class="sym-mark">⟡</span> ${esc(l.addr)}</span>` +
     `<div class="ends"><div class="end far"><span class="k">${esc(s.end === 'from' ? t('F.card.to') : t('F.card.from'))}</span> <span class="code">${esc(far || '—')}</span><div class="quoted ${dead ? 'draft' : ''}">${esc(farWords)}</div></div>` +
-    `<div class="end near"><span class="k">${esc(s.end === 'from' ? t('F.card.from') : t('F.card.to'))}</span> <span class="code">${esc(s.end === 'from' ? l.home : far)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${esc(nearWords)}</div></div></div>` +
+    `<div class="end near"><span class="k">${esc(s.end === 'from' ? t('F.card.from') : t('F.card.to'))}</span> <span class="code">${esc(near)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${esc(nearWords)}</div></div></div>` +
     `<div class="kv"><b>${esc(t('F.card.type'))}</b> <span class="pinned" data-string="R5.undocumented">${esc(typeName(l.type))}</span></div>` +
     `<div class="kv"><b>${esc(t('F.card.from'))}</b> <span class="code">${esc(fromDoc)}</span></div>` +
     `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code">${esc(toDoc)}</span></div>` +
@@ -73,10 +76,10 @@ export async function open(s, anchorEl) {
     `<div class="kv"><b>${esc(t('F.card.superseded-by'))}</b> — · <b>${esc(t('F.card.supersedes'))}</b> —</div>` +
     `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${esc(far || '')}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
   HOST.show({
-    kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: s.end === 'from' ? l.home : far, pos: nearPos } }, html,
+    kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: near, pos: nearPos, width: nearWidth } }, html,
     acts: {
       follow: (el) => GO.follow(s, el),
-      beside: () => { if (far && !dead) SCENE.open(s.end === 'from' ? l.home : far, far, { posA: nearPos, posB: farEnd && !farEnd.whole ? farEnd.ordinal : null }); },
+      beside: () => { if (far && !dead) SCENE.open(near, far, { posA: nearPos, posB: farEnd && !farEnd.whole ? farEnd.ordinal : null }); },
     },
   });
 }

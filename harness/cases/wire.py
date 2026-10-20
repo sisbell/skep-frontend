@@ -6,7 +6,9 @@ writes".
     window: every surface 0 but `fetch` (== the bridge client's call log
     length) and `eventsource` (1); the `kind == "call"` entries of the
     provider's `GET /bridge/log` between the window's first and last seq are
-    exactly the page's calls of the window;
+    exactly the page's calls of the window; the window's two flights, WHOLE
+    BOARD and Back, flown both — the launch frame the trail's first entry,
+    so Back after the run's first teleport lands at the view it left;
 (ii) no dial of the whole run names a write route, every `op` frame the page
     sent names a read of READ_OPS, and the daemon's `/health.log_position`
     is unchanged from the run's start (the daemon-side oracle);
@@ -91,11 +93,18 @@ def run(ctx):
     box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
     summary = ctx.js('window.__skep.runPath("wire-window", 2500, %s)' % json.dumps({'kind': 'orbit', 'scale': scale_mid, 'ax': 0.35, 'by': 0.35, 'centre': {'x': box['x'], 'y': box['y']}}))
     ctx.settle()
-    # two FLIGHTS in the window too (WHOLE BOARD and back): the camera's flight is the site a serialized camera would write from (M4)
+    # two FLIGHTS in the window too (WHOLE BOARD and back): the camera's flight is the site a serialized camera would write from (M4).
+    # WHOLE BOARD is the run's first teleport, and the launch frame is the trail's first entry (foundations §2.2, W-01): Back
+    # has an entry to go to, and lands on it at the view WHOLE BOARD left
+    left = ctx.camera()
     ctx.js('window.__skep.go.wholeBoard()')
     ctx.settle()
-    ctx.js('window.__skep.go.back()')
+    went_back = ctx.js('window.__skep.go.back()')
     ctx.settle()
+    landed = ctx.camera()
+    r.check(went_back is True and all(abs(landed[k] - left[k]) <= 1e-6 * max(1.0, abs(left[k])) for k in ('x', 'y', 'scale')),
+            'Back after the run\'s first teleport goes to the launch frame\'s entry, at the view WHOLE BOARD left (the launch is the trail\'s first entry)',
+            {'went_back': went_back, 'left': left, 'landed': landed, 'trail': ctx.js('window.__skep.trail().numbered')})
     time.sleep(0.3)
     led1 = ledger(ctx)
     cl1 = calls(ctx)

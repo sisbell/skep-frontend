@@ -1,8 +1,9 @@
 // LK's test — the rule over a hand-built model: the owner's links marked,
 // the person's own in their hue, the others' counted and not shown, the
-// lenses filtering, a visited link lighter, the records and account-named
-// ends never counted, the badge arriving until read, the mid connections one
-// per pair of places drawn.
+// lenses filtering, each drawn link naming the document it is drawn at, a
+// visited link lighter, the records and account-named ends never counted,
+// the badge arriving until read, the mid connections one per pair of places
+// drawn.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -59,6 +60,15 @@ test('the toggle shows others\' links attributed; a lens by owner admits them to
   assert.deepEqual(LK.shown(D).map((s) => s.link.owner), ['1.0.2'], 'the lens by owner shows the other and hides the person\'s own');
   LK.clearLens(D); LK.lens(D, { types: new Set([CITE]) });
   assert.equal(LK.shown(D).length, 1);
+});
+
+test('a drawn link names the document it is drawn at, whichever of its ends lies there', () => {
+  LK.setOthers(D, true);
+  const own = LK.shown(D).find((s) => s.link.addr === D + '.0.2.1');
+  const other = LK.shown(D).find((s) => s.link.addr === OTHER_HOME + '.0.2.1');
+  assert.equal(own?.end, 'from'); assert.equal(own?.near, D);
+  assert.equal(other?.end, 'to'); assert.equal(other?.near, D, 'drawn at its to end, the link homed elsewhere: near is D');
+  assert.equal(other?.far, OTHER_HOME, 'and the far end is the other document');
 });
 
 test('records, the claim, an account-named end and the social types never count or mark', () => {

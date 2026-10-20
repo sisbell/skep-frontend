@@ -8,8 +8,9 @@ its clip and the viewport, by the page's `visible` oracle), and where it
 claims the canvas's labels, that the canvas set them (the page's `labels`),
 so the seats are never shown a note the shot contradicts. The card's controls are pressed as
 a person presses them (the switch's rect read, the click dispatched at
-engine level), and the card's state is read back before the shot. What each
-step could not have on this lane is said in its note."""
+engine level), and the card's state is read back before the shot — the
+switch's own words among it, the toggle's B1-S4 words in the state LK
+holds. What each step could not have on this lane is said in its note."""
 import json
 
 from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, WINDOW, XFAIL_CLIP, Result
@@ -43,7 +44,14 @@ def card_state(ctx):
     """the links card's controls as rendered, beside LK's state at the first edition"""
     return ctx.js('''(() => { const o = document.getElementById('overlay'); const sw = o.querySelector('[data-run="others"]');
       return {offers_symbols: !!o.querySelector('[data-run="stage2"]'), offers_content: !!o.querySelector('[data-run="stage3"]'),
-              switch_checked: sw ? sw.getAttribute('aria-checked') : null, stage: window.__skep.reveal(%s).stage, others: window.__skep.reveal(%s).others, beams: window.__skep.beams()}; })()''' % (json.dumps(DOC), json.dumps(DOC)))
+              switch_checked: sw ? sw.getAttribute('aria-checked') : null, switch_text: sw ? sw.textContent : null,
+              stage: window.__skep.reveal(%s).stage, others: window.__skep.reveal(%s).others, beams: window.__skep.beams()}; })()''' % (json.dumps(DOC), json.dumps(DOC)))
+
+
+def toggle_words(ctx, state):
+    """the words B1-S4 has the card's toggle read in a state — "others' links: ⟨state⟩ · ⟨n⟩ touch this document" — from the page's own strings"""
+    return ctx.js('''(async () => { const n = window.__skep.links.othersTouching(%s).length; const {t} = await import("./strings.js");
+      return t(n === 1 ? "B1.others-toggle.1" : "B1.others-toggle", {state: %s, n}); })()''' % (json.dumps(DOC), json.dumps(state)))
 
 
 def run(ctx):
@@ -98,6 +106,7 @@ def run(ctx):
     ctx.frames(2)
     s = card_state(ctx)
     r.check(s['stage'] == 2 and s['offers_content'] and s['switch_checked'] == 'false', 'the card opened at stage 2: it offers the content and its switch reads off', s)
+    r.check(s['switch_text'] == toggle_words(ctx, 'off'), 'the switch\'s own words are the toggle\'s in its state, off (B1-S4)', {'switch': s['switch_text'], 'want': toggle_words(ctx, 'off')})
     step(ctx, r, 'W-05', 3, 'ask to see the links: symbols', 'W-05 step 3: "the reveal chain hidden → symbol → content"; the card lists the owner\'s links, the lenses by owner, type and endorsement (R9), the others\' toggle OFF by default (R60). Stage 2: the symbols at their spans.', 'links-card-symbols')
     # the person presses "— content": the chain moves to stage 3 and the card redraws itself from LK's state before the shot
     press(ctx, r, 'stage3', 'the chain\'s next stage, content')
@@ -109,11 +118,12 @@ def run(ctx):
     press(ctx, r, 'others', 'the others\' overlay toggle')
     s = card_state(ctx)
     r.check(s['others'] is True and s['switch_checked'] == 'true' and s['offers_symbols'], 'the press turned others\' links on and the card redrew: the switch reads aria-checked="true", LK agrees, the stage button still offers the symbols', s)
+    r.check(s['switch_text'] == toggle_words(ctx, 'on'), 'the switch\'s own words follow its state: on (B1-S4)', {'switch': s['switch_text'], 'want': toggle_words(ctx, 'on')})
     others = ctx.js('window.__skep.links.othersTouching(%s)' % json.dumps(DOC))
     step(ctx, r, 'W-05', 3, 'others\' links on', 'W-05 step 3: "Others\' links are overlays, OFF by default, attributed in the linker\'s color when shown (R60)." The toggle on: on this board no other party\'s link touches the first edition (%d), so the article does not change — the second account\'s draft and its links are hidden with it (PUB-1.13).' % len(others), 'others-on')
     press(ctx, r, 'others', 'the others\' overlay toggle, off again')
     s = card_state(ctx)
-    r.check(s['others'] is False and s['switch_checked'] == 'false', 'the second press turned others\' links off again; the switch agrees', s)
+    r.check(s['others'] is False and s['switch_checked'] == 'false' and s['switch_text'] == toggle_words(ctx, 'off'), 'the second press turned others\' links off again; the switch agrees, in its state and in its words', s)
     ctx.esc()
     if shown:
         ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(shown[0]['link'])))
