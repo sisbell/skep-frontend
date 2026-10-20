@@ -1,13 +1,14 @@
 // T-LAYER — THE ONE RECONCILER (the structure record §3.2 "T-LAYER"; FP-12:
 // one reconciler, two targets — the plane's text layer and the reading
 // scene's panes; the scene BORROWS this mount). Layer 2. ENGINE-BOUND. State:
-// VIEW — the mounted set with each record's layout scale, revision, blocks
-// and marks, the corners beside it, whether a press stands on the layer, and
-// the platform's selection as it stood over an article taken down — THE ONE
-// OWNER (FP-10). Mount an article when a document crosses S1's mount
-// threshold (em 6.5, BELOW the canvas's readable 8, so bars become text and
-// no character positions disagree — S1 Q7), unmount when it leaves or falls
-// below 5.5 or its run, its revision or its face changed, the cap 8 — but
+// VIEW — the mounted set with each record's layout scale, revision, blocks,
+// marks and whether it takes the pointer, the corners beside it, whether a
+// press stands on the layer, and the platform's selection as it stood over an
+// article taken down — THE ONE OWNER (FP-10). Mount an article when a
+// document crosses S1's mount threshold (em 6.5, BELOW the canvas's readable
+// 8, so bars become text and no character positions disagree — S1 Q7),
+// unmount when it leaves or falls below 5.5 or its run, its revision or its
+// face changed, the cap 8 — but
 // WHILE A PRESS STANDS on the layer (`press`) nothing is rebuilt and nothing
 // mounted: the platform's drag-selection is anchored in the article's own
 // nodes, which a rebuild would take away, and a fresh mount of the document
@@ -52,9 +53,16 @@
 // stands over the plane the corner layer is inert (`cover`), the scene's
 // panes carrying their own (D5 §4 rule 5); a corner that leaves while it
 // holds the focus hands it to the walk (D5 §4 rule 4). The press
-// rule's text half (§2.4): the layer takes pointer events at reading scale; a
-// drag selects text and never pans, and this module holds whether a press
-// stands (APP-INPUT reports its start and its end). THE SELECTION IS A BYTE
+// rule's text half (§2.4): an article takes the pointer at reading scale
+// alone — its em at P-LOD's readable threshold (8) and above, the `legible`
+// class the style gives the pointer (`markLegible`) — so below it a press on
+// mounted text falls to the canvas as one on its bars does, the document a
+// place "bars or mounted text alike" and the press keyed "on legibility and
+// never on whether text is mounted"; the class moves only while no press
+// stands, so a drag begun on legible text keeps the article it is anchored in
+// through a zoom below the threshold. A drag selects text and never pans, and
+// this module holds whether a press stands (APP-INPUT reports its start and
+// its end). THE SELECTION IS A BYTE
 // SPAN (R11; foundations §3.1) and the platform's selection is its one mark
 // (§2.1): this module carries the platform's range to the span it covers —
 // each block's own text nodes walked, the chrome inside a block skipped, a
@@ -112,6 +120,7 @@ import { fingerprintCue } from '../util.js';
  * @property {Array<{pos: number, top: number, left: number}>} [blockTops] each block's offset in the one 16 px layout (the gate's span registration)
  * @property {Array<{el: HTMLElement, b: Block}>} marked each block's element with the block it shows: the elements the selection's and the focus's marks stand on
  * @property {string} markedFor the selection and the focus its blocks are marked for (`marksKey`)
+ * @property {boolean} legible it takes the pointer: its em stood at P-LOD's readable threshold or above at the last frame no press stood through (`markLegible`)
  */
 
 /**
@@ -184,10 +193,12 @@ export const revision = () => grev;
 /**
  * The press rule's text half (§2.4): a press on an article stands from its
  * button going down to its end — the button's release, the platform's
- * cancel, a context menu — and while it stands `frame` rebuilds and mounts
- * nothing, so the drag keeps the nodes it is anchored in (R11's one
- * continuous gesture). APP-INPUT reports both. A press's end marks the frame
- * dirty, so the next frame does what was held; ending none changes nothing.
+ * cancel, a context menu — and while it stands `frame` rebuilds nothing,
+ * mounts nothing and leaves each article taking the pointer or not as it
+ * stood (`markLegible`), so the drag keeps the nodes it is anchored in (R11's
+ * one continuous gesture). APP-INPUT reports both. A press's end marks the
+ * frame dirty, so the next frame does what was held; ending none changes
+ * nothing.
  * @param {boolean} on the press starts (true) or ends (false)
  */
 export function press(on) { if (pressed && !on) markDirty(); pressed = on; }
@@ -283,7 +294,7 @@ function mount(d) {
   const byPos = new Map(d.blocks.map((b) => [b.pos, b]));
   const marked = sps.flatMap((e) => { const b = byPos.get(Number(e.dataset.pos)); return b ? [{ el: e, b }] : []; });
   /** @type {Mounted} */
-  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, blocks: d.blocks, grev, fs: m.fs, x0: m.x0, y0: m.y0, corner: cornerHTML(d, v), target: 'plane', blockTops, marked, markedFor: marksKey(d.addr, v.selected, v.focus) };
+  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, blocks: d.blocks, grev, fs: m.fs, x0: m.x0, y0: m.y0, corner: cornerHTML(d, v), target: 'plane', blockTops, marked, markedFor: marksKey(d.addr, v.selected, v.focus), legible: false };
   mounted.set(d.addr, rec);
   place(rec);
   mountLog.push({ addr: d.addr, ms: performance.now() - t0, blocks: d.blocks.length, emPx: m.fs * cam.scale });
@@ -347,6 +358,22 @@ function markBlocks(rec, selected, focus) {
   }
 }
 
+/**
+ * Give a standing article the pointer at reading scale alone (foundations
+ * §2.4): the `legible` class, which the style alone reads, set where its em
+ * stands at P-LOD's readable threshold or above and taken off below it,
+ * touched only where that changes. An article without it lets a press
+ * through to the canvas, which takes it as it takes one on the bars the
+ * article replaced: a click is the place's, a drag selects nothing.
+ * @param {Mounted} rec
+ */
+function markLegible(rec) {
+  const on = rec.fs * cam.scale >= LOD_TXT_LO;
+  if (on === rec.legible) return;
+  rec.legible = on;
+  rec.el.classList.toggle('legible', on);
+}
+
 /** position a mounted article over its box — transform only, never reflow */
 function place(/** @type {Mounted} */ rec) {
   const box = docBox(rec.d.addr);
@@ -360,14 +387,17 @@ function place(/** @type {Mounted} */ rec) {
  * documents unmounted): unmount what left or fell below the threshold or went
  * stale, mount what crossed it (the cap), place everything, mark each
  * standing article's blocks for the selection and the walk's focus in place
- * (`markBlocks`), and place each article's corner beside it; where the
+ * (`markBlocks`), give each the pointer at reading scale alone
+ * (`markLegible`), and place each article's corner beside it; where the
  * article holding the selection was mounted this frame, put the platform's
  * range back over the span, its anchor at the end it stood at (`placeAgain`).
  * While a press stands (`press`) only what left or fell below the threshold
- * is unmounted: no article is rebuilt and none mounted, so the drag keeps the
- * nodes it is anchored in and no range is placed over it; the first frame
- * after the press rebuilds what went stale, mounts what crossed, and places
- * the range the release took over the rebuilt article.
+ * is unmounted: no article is rebuilt, none mounted and none given or denied
+ * the pointer, so the drag keeps the nodes it is anchored in, through a zoom
+ * past the readable threshold too, and no range is placed over it; the first
+ * frame after the press rebuilds what went stale, mounts what crossed, gives
+ * or takes the pointer where the scale now asks, and places the range the
+ * release took over the rebuilt article.
  * @param {(addr: string) => boolean} [focused] whether a document is the walk's focused one: the one residue document of its cell that mounts, and the one whose corner is a Tab stop (D5 K-57)
  */
 export function frame(focused = () => false) {
@@ -401,7 +431,7 @@ export function frame(focused = () => false) {
   if (!pressed) for (const w of want.slice(0, MAX_MOUNTED)) if (!mounted.has(w.d.addr) && mount(w.d)) fresh.push(w.d.addr);
   for (const rec of mounted.values()) if (keep.has(rec.d.addr) || true) place(rec);
   const selected = read.selection(), focus = read.focus();
-  for (const rec of mounted.values()) markBlocks(rec, selected, focus);
+  for (const rec of mounted.values()) { markBlocks(rec, selected, focus); if (!pressed) markLegible(rec); }
   placeCorners(focused);
   if (selected && fresh.includes(selected.addr)) placeAgain(selected);
 }

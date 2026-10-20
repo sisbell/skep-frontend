@@ -12,20 +12,24 @@
 // from the button going down on an article to the button's release, the
 // platform's cancel, or a context menu (which takes the release on some
 // platforms); this module reports its start and its end, and T-LAYER holds
-// the drag's article through it. The camera pans by the WHEEL and
+// the drag's article through it. Below the readable threshold every press is
+// the canvas's, over bars or mounted text alike — T-LAYER gives an article
+// the pointer at reading scale alone — so a drag there is a drag off text and
+// selects nothing, and a click is the place's: keyed on legibility, never on
+// whether text is mounted. The camera pans by the WHEEL and
 // two-finger scroll, by the keys, and by the held camera key's drag (K-10:
 // hold Mod); it zooms by the PINCH (Ctrl+wheel as a trackpad sends it) and
 // by Mod+wheel (K-12). A CLICK acts on what is under the pointer, keyed on
 // legibility: a continuation's mark is a teleport to its newest member
 // (foundations §2.1); below the readable threshold a document is a place
-// wherever the pointer falls — a teleport (a trail push); a symbol opens its
-// card; the presence indicator's ⟡ asks to see the links; a run's hairline
-// label goes to its source; the scene-offer opens the scene; the version
-// statement at a document's corner opens its members (the corner's act, the
-// one Enter takes there — K-57); at the readable threshold and above a click
-// on a block selects it whole (R11); a click on an account at far is a
-// teleport to its region (a trail push); an empty click dismisses the
-// overlay.
+// wherever the pointer falls, bars or mounted text alike — a teleport (a
+// trail push); at the readable threshold and above its text takes the click:
+// a symbol opens its card; the presence indicator's ⟡ asks to see the links;
+// a run's hairline label goes to its source; the scene-offer opens the scene;
+// the version statement at a document's corner opens its members (the
+// corner's act, the one Enter takes there — K-57); a click on a block selects
+// it whole (R11); a click on an account at far is a teleport to its region (a
+// trail push); an empty click dismisses the overlay.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
 // Rules: FP-1, FP-2, FP-9.

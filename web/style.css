@@ -67,10 +67,13 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    chrome inside a line (the hairline's label, C-33's mark, a symbol) is set at a line height of 1, so it never
    deepens its line; a symbol's box is one character wide whatever face sets its ⟡ — a heading stands nearer the
    block it heads than the block above it, and a block contains its float (the others' count): the lines P-LAY lays
-   the bars out on (foundations §2.4: the handoff moves no line). */
+   the bars out on (foundations §2.4: the handoff moves no line). An article on the plane takes the pointer at reading
+   scale alone, the `legible` class T-LAYER sets at the readable em 8 and above; below it the layer's `none` holds, and
+   a press on its text falls to the canvas as one on its bars does (foundations §2.4: "bars or mounted text alike"). */
 #domlayer { position:fixed; inset:0; overflow:hidden; pointer-events:none; contain:strict; z-index:3; }
-.dtext { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; pointer-events:auto; overflow:hidden; box-sizing:content-box;
+.dtext { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; overflow:hidden; box-sizing:content-box;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color:#b9c1cb; -webkit-font-smoothing:antialiased; cursor:text; user-select:text; }
+#domlayer .dtext.legible { pointer-events:auto; }
 .dtext .hd { color:#cfd6df; }
 .dtext .hd .addr { font-weight:600; }
 .dtext .hd .st, .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:var(--head); display:block; }
@@ -108,8 +111,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .rec .derived { display:block; color:#8b8f96; font-size:var(--derived); }
 .dtext .rec.not-rendered { color:#4b5563; font-style:italic; }
 .dtext .offer { display:block; margin:var(--offer-gap) 0; color:#8b8f96; font-size:var(--offer); cursor:pointer; text-decoration:underline dotted; }
-/* the click cues stand where a click acts: APP-INPUT takes the clicks on the plane's text layer and its corners, and on
-   nothing a reading scene's pane holds — a pane's blocks, hairlines and symbols are read, never clicked (SC) */
+/* the click cues stand where a click acts: APP-INPUT takes the clicks on the plane's text layer — a legible article's,
+   the only one the pointer reaches — and its corners, and on nothing a reading scene's pane holds — a pane's blocks,
+   hairlines and symbols are read, never clicked (SC) */
 #domlayer .dtext .sp, #domlayer .dtext .hairline, #domlayer .dtext .sym { cursor:pointer; }
 #domlayer .dtext .sp:hover { background:rgba(127,178,255,.08); }
 #beams { position:fixed; inset:0; pointer-events:none; z-index:4; }
