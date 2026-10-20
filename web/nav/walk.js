@@ -130,7 +130,19 @@ export function render() {
   }
   html += '</ul>';
   mirrorEl.innerHTML = html;
-  if (!held) return;
+  if (held) focusItem();
+}
+
+/**
+ * Put the platform's focus on the mirror's current item — the plane's Tab
+ * stop — and bring it inside the panel's window; the mirror itself where it
+ * holds no item. The rebuild calls it while the focus stands in the mirror,
+ * and the app where a control that held the focus has gone (a corner leaving
+ * the plane): the focus returns to the walk's element, never lost, never to
+ * the top (D5 §4 rule 4).
+ */
+export function focusItem() {
+  if (!mirrorEl) return;
   const item = /** @type {HTMLElement | null} */ (mirrorEl.querySelector(`#walk-${idx}`));
   if (!item) { mirrorEl.focus({ preventScroll: true }); return; }
   item.focus({ preventScroll: true });

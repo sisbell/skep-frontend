@@ -20,7 +20,7 @@ test('every row of the TABLE is read (a row the pattern misses would escape the 
 });
 
 test('the table holds D5\'s routed rows', () => {
-  for (const id of ['K-1', 'K-7', 'K-11', 'K-13', 'K-14', 'K-20', 'K-21', 'K-30', 'K-40', 'K-41', 'K-47', 'K-48', 'K-49', 'K-51', 'K-52', 'K-62']) assert.ok(rows.some((r) => r.id === id), id);
+  for (const id of ['K-1', 'K-7', 'K-11', 'K-13', 'K-14', 'K-20', 'K-21', 'K-30', 'K-40', 'K-41', 'K-47', 'K-48', 'K-49', 'K-51', 'K-52', 'K-57', 'K-62']) assert.ok(rows.some((r) => r.id === id), id);
 });
 
 test('no plane command rides a printable key: every chord is Mod+… or Shift+a navigation key or a navigation key', () => {

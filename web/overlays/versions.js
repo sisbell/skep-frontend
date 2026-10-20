@@ -1,11 +1,12 @@
 // O-VERSIONS — the members' list (the structure record §3.2 "O-VERSIONS";
 // foundations §2.1's version row; F2.1-e). Layer 2. ENGINE-BOUND. State:
-// none. On the corner's act: the chain's members `D.1 … D.n` (the pump probed
-// n), each a LEAP that carries the passage held — the held passage (the
-// selection's span; by a position alone the block holding it, whole; else
-// the document's first block) `compare`d into each member and marked whole /
-// in part / not at all — and each offering "read side by side". New — no
-// draft in the wireframe. Rules: FP-1, FP-2, FP-13.
+// none. On the corner's act — a click on its version statement, or Enter at
+// the corner (D5 K-57), both through `fromCorner`: the chain's members `D.1 …
+// D.n` (the pump probed n), each a LEAP that carries the passage held — the
+// held passage (the selection's span; by a position alone the block holding
+// it, whole; else the document's first block) `compare`d into each member and
+// marked whole / in part / not at all — and each offering "read side by
+// side". New — no draft in the wireframe. Rules: FP-1, FP-2, FP-13.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -60,4 +61,23 @@ export async function open(addr, pos, anchor, width = null) {
     acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, posB: null });
   }
   HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor: anchor ? { el: anchor } : null, html, acts, takeFocus: true });
+}
+
+/**
+ * The corner's act (D5 K-57), the one a click on the version statement and
+ * Enter at the corner both take: the list for the corner's document, anchored
+ * at the statement, holding the selection where it stands in that document. A
+ * corner with no version statement — a draft's, whose chip's list is a later
+ * lane's — has no act.
+ * @param {HTMLElement} corner the corner's element (`data-corner` names its document)
+ * @param {{addr: string, pos: number, width: number} | null} selection the selection, wherever it stands
+ * @returns {boolean} whether the corner had the act
+ */
+export function fromCorner(corner, selection) {
+  const addr = corner.dataset.corner || '';
+  const statement = /** @type {HTMLElement | null} */ (corner.querySelector('.version'));
+  if (!addr || !statement) return false;
+  const held = selection && selection.addr === addr ? selection : null;
+  void open(addr, held ? held.pos : null, statement, held ? held.width : null);
+  return true;
 }

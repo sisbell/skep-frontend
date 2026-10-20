@@ -114,6 +114,7 @@ function whereIs(/** @type {EventTarget | null} */ target) {
   if (t.closest('#overlay')) return /** @type {const} */ ('overlay');
   if (t.closest('#line')) return /** @type {const} */ ('line');
   if (t.closest('#scene')) return /** @type {const} */ ('scene');
+  if (t.closest('#corners')) return /** @type {const} */ ('corner');
   return /** @type {const} */ ('plane');
 }
 
@@ -123,14 +124,14 @@ async function boot() {
   if (GATE) ledger = await import('../gate/ledger.js'); // FIRST: every surface counted before the first call
   for (const [k, v] of Object.entries(cssVariables())) document.documentElement.style.setProperty(k, v);
   const plane = /** @type {HTMLCanvasElement} */ (el('plane'));
-  RENDER.attach(plane); LAYER.attach(el('domlayer')); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
+  RENDER.attach(plane); LAYER.attach(el('domlayer'), el('corners')); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
   HOST.attach(el('overlay'));
   WALK.attach(el('mirror'), el('live'));
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
   LINE.attach(el('line'), { open: () => LEAP.open(), back: () => GO.back(), forward: () => GO.forward(), trailList: () => TRAILLIST.open(false), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); } });
-  LAYER.readers(() => SEL.selected(), () => WALK.focusedSpan());
-  INPUT.attach({ plane, layer: el('domlayer') });
+  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem() });
+  INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', resize); resize();
   document.addEventListener('copy', (e) => { const b = REC.board(); LAYER.onCopy(e, b ? b.origin : ''); });
   window.addEventListener('keydown', async (e) => {

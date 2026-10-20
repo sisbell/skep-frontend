@@ -3,7 +3,7 @@
 // past the sound depth. M2 (the cell arithmetic off by one) turns it red.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
+import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, clearLeftOf, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
 
 test('the padded path: a board 3 digits, an account 5, a document 6', () => {
   assert.deepEqual(pathOf('1'), [1, 0, 0]);
@@ -55,6 +55,20 @@ test('a document past the sound depth shares the residue cell, marked so', () =>
   const deeper = docBox('1.0.1.0.' + (48 * (DEPTH_SOUND + 5)));
   assert.deepEqual([deeper.x, deeper.y], [deep.x, deep.y], 'every residue member shares the one cell');
   assert.equal(docBox('1.0.1.0.3').residue, false);
+});
+
+test('the strip left of a box is clear of every other box: to the sibling\'s box beside it, or its own cell\'s edge at its grid\'s first column', () => {
+  for (const [d, left] of [['1.0.1.0.3', '1.0.1.0.2'], ['1.0.1.0.4', '1.0.1.0.3'], ['1.0.1.0.50', '1.0.1.0.49']]) {
+    const b = docBox(d), n = docBox(left);
+    assert.ok(Math.abs(b.x - clearLeftOf(d) - (n.x + n.w)) < 1e-6, `${d}: its strip ends at ${left}'s box`);
+  }
+  for (const d of ['1.0.1.0.1', '1.0.1.0.8', '1.0.1.0.49']) {
+    assert.ok(Math.abs(docBox(d).x - clearLeftOf(d) - cellOfKey(d).x) < 1e-6, `${d}: at its grid's first column, its own cell's margin alone`);
+  }
+  const deep = '1.0.1.0.' + (48 * (DEPTH_SOUND + 1) + 1); // past the sound depth, its own digit the first of its grid
+  assert.equal(slotOf(48 * (DEPTH_SOUND + 1) + 1, G[5], true).col, 0);
+  const ratio = clearLeftOf(deep) / (docBox(deep).x - cellOfKey(deep).x); // a cell 7^11 smaller: compared as a ratio
+  assert.ok(Math.abs(ratio - 2) < 0.01, `the residue cell stands in its grid's last column: a sibling's margin with its own (${ratio})`);
 });
 
 test('the account under a world point is read back from the grid', () => {

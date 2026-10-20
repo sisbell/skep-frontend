@@ -38,7 +38,7 @@ ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys',
 
 # the page issues the marked checks wait on (issue #2's boundary note); each mark comes off the day its check passes
 XFAIL_CLIP = ("page: the article's height is pinned to its box and its overflow hidden, so the document's end is cut at the box's edge "
-              "and the corner, transformed outside the clipping article, renders nowhere (web/text/layer.js `mount`, web/style.css `.dtext`, `.corner`)")
+              "(web/text/layer.js `mount`, web/style.css `.dtext`)")
 XFAIL_ANCHOR = ("page: a beam leaves the block holding its span, at the block's mid-height, not the span's own line "
                 "(web/beams/beams.js `anchorRects` takes the block's rects for the span's)")
 

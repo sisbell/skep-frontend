@@ -161,5 +161,7 @@ export function stripAct() {
 
 /** the line's text (the gate's text case) */
 export const text = () => (el ? el.textContent || '' : '');
+/** the line's bottom edge on screen: the plane's corners hold below it (T-LAYER reads it through the reader the app hands in) */
+export const bottom = () => (el ? el.getBoundingClientRect().bottom : 0);
 export const state = () => actingSegment().state;
 export const modeSeen = () => lastMode;

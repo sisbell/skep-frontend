@@ -8,12 +8,14 @@ harness's own fold of the daemon's documents (the census probe PUB-6.52
 names: `doc_metadata` over each account's document numbers — its oracle for
 `places`); the window run the guest meets WITHHELD shows the oracle its box
 and width (240), never its text, and shows the entitled reader (the signed
-session) C-33's mark over the same positions; the claimant's drafts are drawn
-at mid with their corner; a ghost address answers its face. "Shown" is
+session) C-33's mark over the same positions; a draft of the claimant's,
+read, shows C-28's chip at its corner, and the region at mid holds it (a box
+of its own, or past the sound depth its account's residue cell); a ghost
+address answers its face. "Shown" is
 measured, not read off the DOM: the page's `visible` oracle says whether a
-block, a mark or a corner lies inside the clip the page draws — text the DOM
-holds past a clip is shown to no one — and those checks are marked with the
-page issue they wait on."""
+block, a mark or a corner lies inside the clip the page draws and the
+viewport — text the DOM holds past a clip is shown to no one — and the
+checks a page issue still breaks are marked with it."""
 import json
 import re
 
@@ -190,7 +192,7 @@ def run(ctx):
     overl = [(keys[i], keys[j]) for i in range(len(keys)) for j in range(i + 1, len(keys)) if boxes[keys[i]]['x'] < boxes[keys[j]]['x'] + boxes[keys[j]]['w'] and boxes[keys[j]]['x'] < boxes[keys[i]]['x'] + boxes[keys[i]]['w'] and boxes[keys[i]]['y'] < boxes[keys[j]]['y'] + boxes[keys[j]]['h'] and boxes[keys[j]]['y'] < boxes[keys[i]]['y'] + boxes[keys[i]]['h']]
     r.check(not overl, 'no two sampled documents share a box (reading order, no collision)', overl)
     r.figures['residue_depth'] = {'1.0.1.0.3': ctx.js('window.__skep.depthOf("1.0.1.0.3")'), '1.0.1.0.1003': ctx.js('window.__skep.depthOf("1.0.1.0.1003")'), 'residue_boxes': [a for a in boxes if boxes[a].get('residue')]}
-    # ---- S2: the claimant's drafts at mid with their corner ---------------------
+    # ---- S2: the claimant's drafts — one read with its corner, then the region at mid ----
     drafts = [p['doc'] for p in places if p['kind'] == 'draft' and p['account'] == '1.0.1']
     r.check(len(drafts) >= 1, 'the session\'s index lists the claimant\'s drafts', len(drafts))
     if drafts:
@@ -202,9 +204,10 @@ def run(ctx):
         r.check(md is not None, 'a draft of the claimant\'s mounts at reading scale', draft)
         full = ctx.js('(() => { const m = window.__skep.mountedAddrs(); const el = document.querySelector(`[data-corner="${%s}"]`); return el ? el.textContent : null; })()' % json.dumps(draft))
         r.check(full is not None and (squash(chip_on) in squash(full) or squash(chip) in squash(full)), 'the draft\'s corner carries C-28\'s chip (the flag-on form on this claimed local-trust board)', full)
-        corner_vis = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer [data-corner="%s"]' % draft))
-        r.check(bool(corner_vis) and all(c['inClip'] for c in corner_vis), 'the draft\'s corner lies inside its clip (the chip is shown, not merely held)', corner_vis, xfail=XFAIL_CLIP)
-        r.figures['draft_shown'] = {'addr': draft, 'corner': full, 'corner_in_clip': bool(corner_vis) and all(c['inClip'] for c in corner_vis), 'depth': ctx.js('window.__skep.depthOf(%s)' % json.dumps(draft))}
+        corner_vis = ctx.js('window.__skep.visible(%s)' % json.dumps('#corners [data-corner="%s"]' % draft))
+        corner_shown = len(corner_vis) == 1 and corner_vis[0]['inClip'] and corner_vis[0]['inView']
+        r.check(corner_shown, 'the draft\'s corner stands beside its article, inside its clip and the viewport (the chip is shown, not merely held)', corner_vis)
+        r.figures['draft_shown'] = {'addr': draft, 'corner': full, 'corner_shown': corner_shown, 'depth': ctx.js('window.__skep.depthOf(%s)' % json.dumps(draft))}
         dbox = ctx.js('window.__skep.boxOf(%s)' % json.dumps(draft))
         ctx.set_view(dbox['x'] + dbox['w'] / 2, dbox['y'] + dbox['h'] / 2, ctx.js('window.__skep.scaleFor(%s, "doc", 160)' % json.dumps(DOC)))
         r.check(ctx.js('window.__skep.view.lod()')['name'] in ('mid', 'mid~near'), 'the region at mid scale (a depth-1 document 160 px wide)', ctx.js('window.__skep.view.lod()'))

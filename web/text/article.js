@@ -13,11 +13,14 @@
 // block's edge, the symbols the reveal asked for; the withheld block
 // OCCUPYING its positions with R56's arm by PUB-5.121's order and C-67's
 // clause beneath; a record atom rendered as the record it is (the genesis
-// record's words); an unknown item kind "not rendered" with its width; THE
-// CORNER at the document's own side — an edition's state with "version ⟨k⟩ of
-// ⟨n⟩" and R20's teaching, a draft's kept state and its chip (C-28, at the
-// document's corner and never the HUD — ux-T2; the record §3.4 (viii)), the
-// whole-document link count; the scene-mode variant.
+// record's words); an unknown item kind "not rendered" with its width; the
+// scene-mode variant. THE CORNER's items — an edition's state with "version
+// ⟨k⟩ of ⟨n⟩" and R20's teaching, a draft's kept state and its chip (C-28, at
+// the document's corner and never the HUD — ux-T2; the record §3.4 (viii)),
+// the whole-document link count — are made here too, and stand OUTSIDE the
+// article: the article's box clips whatever stands past its measure, so the
+// corner's element is its holder's, T-LAYER's beside the article on the
+// plane and each pane's own in the scene (foundations §3.1).
 // The structural family (headings, emphasis) is the owner's formatting:
 // rendered as formatting, never marked (rule (iii)) — here the corpus's own
 // markdown headings are set as headings.
@@ -101,9 +104,11 @@ export function withheldBlockHTML(b, d, v, owner) {
 }
 
 /**
- * The corner: an edition's state with "version ⟨k⟩ of ⟨n⟩" and R20's
- * teaching, keyed by venue; a draft's chip (C-28); the whole-document link
- * count (rule (i)).
+ * The corner's items in foundations' one order (§3.1): an edition's state
+ * with "version ⟨k⟩ of ⟨n⟩" and R20's teaching, keyed by venue; a draft's
+ * chip (C-28); the whole-document link count (rule (i)). The holder makes
+ * the element they stand in (`data-corner` naming the document), which is
+ * the corner's one stop: no item takes a focus of its own (D5 K-57).
  * @param {Doc} d
  * @param {ArticleView} v
  */
@@ -124,7 +129,7 @@ export function cornerHTML(d, v) {
     parts.push(`<span class="chip" data-chip="1">${esc(chip)}</span>`);
   }
   if (v.wholeLinks > 0) parts.push(`<span class="whole-links">${esc(v.wholeLinks === 1 ? t('F.whole-links.1') : t('F.whole-links', { n: v.wholeLinks }))}</span>`);
-  return `<span class="corner" data-corner="${esc(d.addr)}" tabindex="-1">${parts.join('')}</span>`;
+  return parts.join('');
 }
 
 /**
@@ -178,8 +183,9 @@ function blockTextHTML(b, d, v, labelled) {
 }
 
 /**
- * The article: the head, the blocks (each a span the walk and the mirror
- * key by its first position, and a click selects whole), the corner.
+ * The article: the head and the blocks (each a span the walk and the mirror
+ * key by its first position, and a click selects whole); its corner stands
+ * beside it (`cornerHTML`).
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -199,7 +205,6 @@ export function articleHTML(d, v, ownerAccount) {
   const presence = touching ? (touching === 1 ? t('B1.presence.1') : t('B1.presence', { n: touching })) : '';
   if (presence) h += `<span class="pres"><span class="sym reveal" data-reveal="${esc(d.addr)}" role="button" tabindex="-1">⟡</span> ${esc(presence)}</span>`;
   h += `</div>`;
-  if (!v.scene) h += cornerHTML(d, v);
   if (d.refused) return h;
   /** @type {Set<string>} */
   const labelled = new Set();

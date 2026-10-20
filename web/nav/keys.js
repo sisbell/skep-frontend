@@ -8,8 +8,12 @@
 // the platform's meaning; a printable key on the plane is SWALLOWED, never
 // dispatched, the swallow line K-9 shown at the focus until the next act; no
 // key is dispatched while an input method's composition is open (the IME
-// guard); Esc closes the innermost thing in one order (§4 rule 7); the Tab
-// ring runs line → plane → corner → the standing overlay (§4 rule 5).
+// guard); Esc closes the innermost thing in one order (§4 rule 7). Tab is
+// the platform's, over the page's order: the line → the plane (the mirror's
+// current item) → the focused document's corner (§4 rule 5), where Enter
+// takes the corner's act and the walk's keys and the swallow do not run
+// (K-57). The ring's overlay stop is not built: a standing overlay comes
+// before the plane in the page's order.
 // The wireframe's bare keys (`/`, `t`, `k`, `0`–`9`, `+`, `-`, `h`, `?`, `w`,
 // `n`, `p`) are a sketch and are RE-CUT here to D5's rows (the record §3.4
 // (ix)): `/` → K-30 Mod+L / Mod+K; `0`/`g`/Home → K-13 Mod+0, K-14
@@ -28,6 +32,7 @@ import * as SEL from '../overlays/selection.js';
 import * as SCENE from '../scene/scene.js';
 import * as LINE from '../line/line.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
+import * as VERSIONS from '../overlays/versions.js';
 import * as CAM from '../plane/camera.js';
 import { t } from '../strings.js';
 
@@ -39,7 +44,7 @@ export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(na
  * @property {string} id K-n
  * @property {string} chord the key as D5 writes it (`Mod+L`, `↓`, `Enter`)
  * @property {string} act the act's name
- * @property {'plane' | 'line' | 'box' | 'trail' | 'selection' | 'cards' | 'scene' | 'platform'} surface
+ * @property {'plane' | 'line' | 'box' | 'trail' | 'selection' | 'cards' | 'corner' | 'scene' | 'platform'} surface
  */
 
 /** THE TABLE — every chord this lane binds, by D5's row (K-9's swallow, K-10's quasimode and K-12's pinch are the input module's) */
@@ -73,6 +78,7 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-51', chord: 'Mod+Enter', act: 'selection.follow', surface: 'selection' },
   { id: 'K-52', chord: 'Mod+Shift+Enter', act: 'selection.scene', surface: 'selection' },
   { id: 'K-55', chord: 'Enter', act: 'cards.open', surface: 'cards' },
+  { id: 'K-57', chord: 'Enter', act: 'corner.act', surface: 'corner' },
   { id: 'K-62', chord: 'Mod+R', act: 'scene.relevel', surface: 'scene' },
   { id: 'K-63', chord: 'Esc', act: 'esc', surface: 'scene' },
   { id: 'K-64', chord: 'Mod+=', act: 'scene.swallowZoomIn', surface: 'scene' },
@@ -105,7 +111,7 @@ export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('
 
 /**
  * @typedef {Object} Ctx — where the focus is
- * @property {'plane' | 'line' | 'box' | 'overlay' | 'scene' | 'field'} where
+ * @property {'plane' | 'line' | 'box' | 'overlay' | 'corner' | 'scene' | 'field'} where
  */
 
 /**
@@ -160,6 +166,11 @@ export async function dispatch(e, ctx) {
   if (chord === 'Shift+↑') { SEL.selectFocused('up'); return true; }
   if (chord === 'Mod+Shift+P') { LINE.stripAct(); return true; }
   if (chord === 'Mod+R' || e.key === 'F5') { return true; } // K-94: the plane is live; nothing reloads
+  // the corner (K-57): Enter takes its act; its other keys are the platform's
+  if (ctx.where === 'corner') {
+    const corner = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-corner]'));
+    return chord === 'Enter' && !!corner && VERSIONS.fromCorner(corner, SEL.selected());
+  }
   if (ctx.where === 'overlay' || ctx.where === 'line') return false; // the overlay's or the line's own keys
   // the walk (K-1 … K-8): each key waits on the camera's flight, and the platform runs a key's default — a scroll of
   // the scroller the focus stands in, the mirror — as soon as the listeners return; so the default is prevented first

@@ -11,10 +11,14 @@
 // pane's edge with the stub's triangle; zoom-out, Esc or any teleport ends
 // it, the departure recorded. The panes BORROW the one reconciler's mount
 // (FP-12: `T-LAYER.sceneArticle` makes the HTML; the scene keeps no DOM text
-// of its own). Companionate scrolling over the bands is UNTESTED (S27) and
-// not built. Carries: the wireframe's §19 whole (its beams over `compare`'s
-// pairs instead of the hand data's windows). Rules: FP-1, FP-2, FP-10,
-// FP-12, FP-13.
+// of its own). Each pane carries its own document's corner (ux-T2: "each pane
+// its own"; `T-LAYER.sceneCorner` makes its items) on its OUTER side — pane
+// A's left, pane B's right — held to the top of the pane's scroll, so the
+// bands and lines leave the inner edges clear of it (foundations §3.1); it is
+// shown, not acted on, as nothing in a pane takes a pointer. Companionate
+// scrolling over the bands is UNTESTED (S27) and not built. Carries: the
+// wireframe's §19 whole (its beams over `compare`'s pairs instead of the hand
+// data's windows). Rules: FP-1, FP-2, FP-10, FP-12, FP-13.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -66,8 +70,9 @@ export async function open(a, b, opts = {}) {
   els.bar.innerHTML = `<b>${esc(a)}</b> │ <b>${esc(b)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
     (els.bar.dataset.face ? ` <span class="face-text draft">${esc(t(els.bar.dataset.face === 'too_many_pairs' ? 'B1.too_many_pairs' : els.bar.dataset.face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: els.bar.dataset.face }))}</span>` : '') +
     ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>⌘R</kbd></button><span class="x" data-x="1" role="button" tabindex="0">× ${esc(t('F.scene.dismiss'))}</span>`;
-  els.paneA.innerHTML = `<article class="dtext scene" data-addr="${esc(a)}">${LAYER.sceneArticle(da)}</article>`;
-  els.paneB.innerHTML = `<article class="dtext scene" data-addr="${esc(b)}">${LAYER.sceneArticle(db)}</article>`;
+  const corner = (/** @type {string} */ addr, /** @type {import('../model/records.js').Doc} */ d) => `<div class="corner" data-corner="${esc(addr)}">${LAYER.sceneCorner(d)}</div>`;
+  els.paneA.innerHTML = corner(a, da) + `<article class="dtext scene" data-addr="${esc(a)}">${LAYER.sceneArticle(da)}</article>`;
+  els.paneB.innerHTML = `<article class="dtext scene" data-addr="${esc(b)}">${LAYER.sceneArticle(db)}</article>` + corner(b, db);
   els.paneA.setAttribute('tabindex', '0'); els.paneB.setAttribute('tabindex', '0');
   relevel();
   const first = els.paneB.querySelector('.sp'); if (first) /** @type {HTMLElement} */ (first).setAttribute('tabindex', '0');

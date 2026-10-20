@@ -11,7 +11,13 @@ list autocomplete with automatic selection) — the focus kept in the input,
 its active descendant the selected row once ↓ or ↑ carries the choice into
 the rows and never on the box as opened or as typed, collapsed where typed
 text matches nothing, the answer said once in the box's own status region,
-in the DOM and in the AX tree. Never a screen reader's voice — the seat's."""
+in the DOM and in the AX tree; the document's corner as K-57's Tab stop (D5
+§4 rules 4 and 5) — reached by Tab from the plane's stop, a group named by
+its own words in the AX tree while every other corner is hidden from it,
+kept under the focus through the layer's remount, Enter its act (the
+versions list) with Esc returning the focus to it, Shift+Tab back to the
+plane's stop, and its leaving the plane handing the focus to the walk's
+current item. Never a screen reader's voice — the seat's."""
 import json
 import re
 
@@ -247,6 +253,74 @@ def run(ctx):
     r.check(still == [] and writes == 0, 'the answer is said once: ↓, ↑ and a further keystroke that still matches nothing leave the status region unwritten', {'writes': writes, 'rows': len(still)})
     press('Escape')
     r.check(not ctx.js('window.__skep.leap.isOpen()'), 'Esc closes the box')
+    # ---- the corner: K-57's Tab stop (D5 §4 rules 4 and 5; foundations §3.1) ----------------------------------------
+    # The ring runs from the plane's stop — the mirror's current item — to the focused document's corner. The corner's
+    # element outlives the article's remounts, so the focus on it survives them; Enter takes its act and the list it
+    # opens returns the focus to it; a corner that leaves the plane while it holds the focus hands it to the walk.
+    corner = '#corners [data-corner="%s"]' % DOC
+
+    def at():
+        """where the platform's focus stands: the corner it is on, the element's id, the walk's index, the overlay"""
+        return ctx.js('''(() => { const e = document.activeElement, o = document.getElementById('overlay');
+          return {corner: e && e.dataset ? e.dataset.corner || null : null, id: e ? e.id || null : null, idx: window.__skep.mirror.index(),
+                  sel: e ? e.getAttribute('aria-selected') : null, overlay: window.__skep.overlay().id, in_overlay: o.contains(e) && e !== o}; })()''')
+
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
+    ctx.frames(1)
+    press('Tab')
+    f = at()
+    r.check(f['corner'] == DOC, 'Tab from the plane\'s stop (the mirror\'s current item) reaches the focused document\'s corner (K-57)', f)
+    others = ctx.js('[...document.querySelectorAll("#corners [data-corner]")].filter((e) => e.dataset.corner !== %s).map((e) => ({addr: e.dataset.corner, hidden: e.getAttribute("aria-hidden"), tab: e.getAttribute("tabindex")}))' % json.dumps(DOC))
+    r.check(all(o['hidden'] == 'true' and o['tab'] is None for o in others), 'every other corner on the plane is out of the Tab order and hidden from AT', others)
+    ax = ctx.drv.ax_tree()
+    if 'error' in ax:
+        r.figures['corner_ax'] = {'answered': False, 'error': ax['error']}
+        r.note('the corner: Accessibility.getFullAXTree did not answer: ' + ax['error'])
+    else:
+        by_dom = {n['backendDOMNodeId']: n for n in ax.get('nodes', []) if 'backendDOMNodeId' in n}
+        node = by_dom.get(backend(corner)) or {}
+        words = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.textContent : null; })()' % json.dumps(corner)) or ''
+        ax_role, ax_name = (node.get('role') or {}).get('value'), (node.get('name') or {}).get('value') or ''
+        r.check(bool(node) and not node.get('ignored') and ax_role == 'group' and re.sub(r'\s+', '', ax_name) == re.sub(r'\s+', '', words) and words.strip() != '',
+                'the AX tree: the focused corner is a group, not hidden, named by its own words', {'ignored': node.get('ignored'), 'role': ax_role, 'name': ax_name[:120], 'words': words[:120]})
+        r.figures['corner_ax'] = {'answered': True, 'role': ax_role, 'name': ax_name[:160]}
+    # the reveal bumps the layer: every mounted article is rebuilt, the corner's element is kept, and the focus with it
+    ctx.js('(() => { window.__gateCorner = document.activeElement; window.__gateArticle = document.querySelector(%s); })()' % json.dumps('#domlayer article[data-addr="%s"]' % DOC))
+    ctx.js('window.__skep.links.reveal(%s, 2)' % json.dumps(DOC))
+    ctx.settle()
+    ctx.frames(3)
+    kept = ctx.js('({rebuilt: !!window.__gateArticle && !window.__gateArticle.isConnected, same: document.activeElement === window.__gateCorner && window.__gateCorner.isConnected})')
+    r.check(kept['rebuilt'] and kept['same'], 'the layer\'s remount rebuilds the article and leaves the focus on the same corner', kept)
+    ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
+    ctx.frames(2)
+    # Enter: the corner's act, the versions list, which takes the focus; Esc returns it to the corner
+    press('Enter')
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.overlay().id || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    ctx.frames(2)
+    f = at()
+    r.check(f['overlay'] == 'versions:' + DOC and f['in_overlay'], 'Enter at the corner takes its act: the versions list stands with the focus inside it', f)
+    press('Escape')
+    f = at()
+    r.check(f['overlay'] is None and f['corner'] == DOC, 'Esc closes the list and the focus returns to the corner it was opened from', f)
+    press('Tab', mods=('Shift',))
+    f = at()
+    r.check(f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Shift+Tab from the corner goes back to the plane\'s stop, the mirror\'s current item', f)
+    # the document zoomed below reading scale: its corner leaves the plane, and the focus it held goes to the walk
+    press('Tab')
+    r.check(at()['corner'] == DOC, 'Tab reaches the corner again')
+    unit = ctx.js('window.__skep.scaleFor(%s, "em", 1)' % json.dumps(DOC))
+    readable = ctx.js('window.__skep.constants.LOD_TXT_LO')
+    zooms = 0
+    while zooms < 6 and ctx.camera()['scale'] / unit >= readable:
+        ctx.drv.key('-', code='Minus', mods=('Meta',))
+        ctx.settle()
+        ctx.frames(2)
+        zooms += 1
+    ctx.frames(2)
+    f = at()
+    gone = ctx.js('!document.querySelector(%s)' % json.dumps(corner))
+    r.check(gone and f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'Mod+- until the document is below reading scale: its corner leaves and the focus it held stands on the walk\'s current item — never lost, never to the top', {'zooms': zooms, 'em': ctx.camera()['scale'] / unit, 'corner_gone': gone, 'focus': f})
     # leave the page as the case found it: the landing, the focus on no element
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')

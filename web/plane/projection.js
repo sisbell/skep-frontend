@@ -189,6 +189,25 @@ export function docBox(key) {
   return b;
 }
 
+/**
+ * The world width left of a document's box that no other document's box
+ * reaches into: its own cell's margin, and where the cell to its left is a
+ * usable cell of the same grid — the same size, its box the same fraction of
+ * it — that cell's margin too. A document in its grid's first column meets
+ * the grid's edge, past which a cell may be of any size (a neighbouring
+ * grid's continuation holds smaller ones), so its own margin alone is clear.
+ * The document's corner stands in this strip (foundations §3.1).
+ * @param {string} key a document address
+ * @returns {number}
+ */
+export function clearLeftOf(key) {
+  const b = docBox(key);
+  const margin = b.x - cellOfKey(key).x;
+  const s = slotOf(pathOf(key)[LEAF], G[LEAF], true);
+  const col = s.k > DEPTH_SOUND ? G[LEAF] - 1 : s.col;
+  return col > 0 ? 2 * margin : margin;
+}
+
 /** the residue cell of an account at the sound depth — where the documents past it are drawn as one */
 export function residueCell(/** @type {string} */ account) {
   const p = pathOf(account + '.0.' + (48 * (DEPTH_SOUND + 1) + 1));

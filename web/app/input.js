@@ -15,9 +15,11 @@
 // legibility: below the readable threshold a document is a place wherever
 // the pointer falls — a teleport (a trail push); a symbol opens its card;
 // the presence indicator's ⟡ asks to see the links; a run's hairline label
-// goes to its source; the scene-offer opens the scene; at the readable
-// threshold and above a click on a block selects it whole (R11); a click on
-// an account at far flies to it; an empty click dismisses the overlay.
+// goes to its source; the scene-offer opens the scene; the version statement
+// at a document's corner opens its members (the corner's act, the one Enter
+// takes there — K-57); at the readable threshold and above a click on a
+// block selects it whole (R11); a click on an account at far flies to it; an
+// empty click dismisses the overlay.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
 // Rules: FP-1, FP-2, FP-9.
@@ -35,6 +37,7 @@ import * as LK from '../links/links.js';
 import * as SCENE from '../scene/scene.js';
 import * as REC from '../model/records.js';
 import * as FACES from '../overlays/faces.js';
+import * as VERSIONS from '../overlays/versions.js';
 import * as LAYER from '../text/layer.js';
 import { sameSpan } from '../text/span.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
@@ -44,7 +47,7 @@ import { MAC } from '../nav/keys.js';
 
 /**
  * Wire the pointer and the wheel.
- * @param {{plane: HTMLCanvasElement, layer: HTMLElement}} els
+ * @param {{plane: HTMLCanvasElement, layer: HTMLElement, corners: HTMLElement}} els
  */
 export function attach(els) {
   /** @type {{px: number, py: number, moved: number, cameraKey: boolean} | null} */
@@ -72,7 +75,7 @@ export function attach(els) {
   window.addEventListener('pointerup', () => { if (textDrag) { textDrag = false; takeSelection(); } });
   window.addEventListener('pointercancel', () => { textDrag = false; });
   document.addEventListener('selectionchange', () => { if (!textDrag) takeSelection(); });
-  // the layer: a click on a symbol, the ⟡, a hairline, the scene-offer, the corner, a withheld run; a selection the platform made (a double-click's word); a click on a marked span or a block
+  // the layer: a click on a symbol, the ⟡, a hairline, the scene-offer, a withheld run; a selection the platform made (a double-click's word); a click on a marked span or a block
   els.layer.addEventListener('click', (e) => {
     const target = /** @type {HTMLElement} */ (e.target);
     LINE.act();
@@ -89,8 +92,6 @@ export function attach(els) {
     if (hair) { e.stopPropagation(); const src = /** @type {HTMLElement} */ (hair).dataset.src; if (src) GO.leapTo(src, { how: 'leap' }); return; }
     const offer = target.closest('.offer');
     if (offer) { e.stopPropagation(); const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return; }
-    const version = target.closest('.version');
-    if (version) { e.stopPropagation(); const corner = version.closest('.corner'); const addr = corner ? /** @type {HTMLElement} */ (corner).dataset.corner || '' : ''; const cur = SEL.selected(); import('../overlays/versions.js').then((V) => V.open(addr, cur ? cur.pos : null, /** @type {HTMLElement} */ (version), cur ? cur.width : null)); return; }
     const wh = target.closest('[data-withheld]');
     if (wh) { e.stopPropagation(); const w = /** @type {HTMLElement} */ (wh); const origin = w.dataset.origin || ''; FACES.c39(REC.doc(origin).account || REC.doc(origin).meta?.owner || '⟨owner⟩', w); return; }
     // the platform selected text under the click (a double-click's word): the selection IS that span (R11)
@@ -104,6 +105,13 @@ export function attach(els) {
       const s = /** @type {HTMLElement} */ (sp);
       SEL.select(s.dataset.addr || '', Number(s.dataset.pos));
     }
+  });
+  // the corners: a click on the version statement takes the corner's act
+  els.corners.addEventListener('click', (e) => {
+    const target = /** @type {HTMLElement} */ (e.target);
+    LINE.act();
+    const corner = /** @type {HTMLElement | null} */ (target.closest('.version') ? target.closest('[data-corner]') : null);
+    if (corner) { e.stopPropagation(); VERSIONS.fromCorner(corner, SEL.selected()); }
   });
   window.addEventListener('wheel', (e) => {
     const t = /** @type {HTMLElement} */ (e.target);

@@ -1,14 +1,20 @@
 """LAYOUT — class 4 (the structure record §6.3; T3 (4); M2, M6): registration
 drift 0 px at the four zoom levels S1 used (em 9, 12, 18, 30 — the article's
 box against the camera-projected origin), containment (no two mounted
-articles intersect; every block and the corner of each lie inside the clip
-the page draws — the article's own rect is its box by construction and
-proves nothing), and every beam leaving the text at its span's own line (its
+articles intersect; every block lies inside the clip the page draws — the
+article's own rect is its box by construction and proves nothing), the
+corner (foundations §3.1: every mounted document at reading scale carries
+one beside its article, clipped by no box of the page and reaching into no
+other document's box, mounted or only drawn; the first edition's in view
+below the one line at each level, held there while the document's top has
+risen past the line, and never below the document's box as its bottom
+rises), and every beam leaving the text at its span's own line (its
 endpoint on one of its marked words' line rects, between the words' end and
 the article's edge — foundations §2.1; S1 Q1). The measuring code is the
-page's (`driftSample`, `overlapCheck`, `beamAnchors`); the thresholds are
-here. The containment and anchor checks are marked with the page issues they
-wait on and count as expected while those stand."""
+page's (`driftSample`, `overlapCheck`, `beamAnchors`, `visible`); the
+thresholds are here. The block containment and anchor checks are marked
+with the page issues they wait on and count as expected while those
+stand."""
 import json
 
 from . import DOC, WINDOW, XFAIL_ANCHOR, XFAIL_CLIP, Result
@@ -16,6 +22,14 @@ from . import DOC, WINDOW, XFAIL_ANCHOR, XFAIL_CLIP, Result
 LEVELS_EM = [9, 12, 18, 30]
 DRIFT_TOL_PX = 0.5
 ANCHOR_TOL_PX = 0.5
+CORNER = '#corners [data-corner="%s"]' % DOC
+
+
+def corner_of(ctx):
+    """the first edition's corner as the page shows it (the `visible` oracle), the one line's bottom, and the box's top and bottom on screen"""
+    return ctx.js('''(() => { const S = window.__skep, v = S.visible(%s), b = S.boxOf(%s), c = S.view.camera(), p = S.view.viewport();
+      return {corner: v.length === 1 ? v[0] : null, n: v.length, line: document.getElementById('line').getBoundingClientRect().bottom,
+              top: (b.y - c.y) * c.scale + p.VH / 2, bottom: (b.y + b.h - c.y) * c.scale + p.VH / 2}; })()''' % (json.dumps(CORNER), json.dumps(DOC)))
 
 
 def on_own_line(a):
@@ -38,9 +52,28 @@ def run(ctx):
         ov = ctx.js('window.__skep.overlapCheck()')
         r.check(ov['intersecting_pairs'] == 0, f'em {em}: containment — no two mounted articles intersect', ov['intersecting_pairs'])
         r.check(not ov['blocks_cut'], f'em {em}: containment — every block of every mounted article lies inside its clip; none is cut at the box\'s edge', {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']}, xfail=XFAIL_CLIP)
-        r.check(not ov['corners_clipped'], f'em {em}: containment — the corner of every mounted article is unclipped', ov['corners_clipped'], xfail=XFAIL_CLIP)
-        drift['em%d' % em] = {'samples': sample, 'worst_px': worst, 'containment': ov, 'em_px_measured': mine[0]['em_px'] if mine else None}
+        r.check(not ov['corners_missing'], f'em {em}: every mounted article at reading scale carries its corner beside it', ov['corners_missing'])
+        r.check(not ov['corners_clipped'], f'em {em}: no corner is clipped by a box of the page — it stands beside its article, outside the box that clips the text', ov['corners_clipped'])
+        r.check(not ov['corners_into'], f'em {em}: no corner reaches into another document\'s box, mounted or only drawn', ov['corners_into'][:6])
+        c = corner_of(ctx)
+        shown = c['corner'] is not None and c['corner']['inClip'] and c['corner']['inView'] and c['corner']['rect']['y'] >= c['line'] - 0.5
+        r.check(shown, f'em {em}: the first edition\'s corner is in view, below the one line', c)
+        drift['em%d' % em] = {'samples': sample, 'worst_px': worst, 'containment': ov, 'em_px_measured': mine[0]['em_px'] if mine else None, 'corner': c['corner'] and c['corner']['rect']}
     r.figures['drift'] = drift
+    # the corner holds to the top of the document's visible part (foundations §3.1): the box's top risen past the one
+    # line, the corner stands just below the line; the box's bottom risen near it, the corner rises with the bottom
+    box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
+    s14 = ctx.js('window.__skep.scaleFor(%s, "em", 14)' % json.dumps(DOC))
+    ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * 0.7, s14)
+    held = corner_of(ctx)
+    r.check(held['top'] < held['line'] and held['corner'] is not None and held['corner']['inView'] and held['line'] <= held['corner']['rect']['y'] <= held['line'] + 16,
+            'the box\'s top above the one line: the corner holds just below the line, in view', held)
+    vp = ctx.js('window.__skep.view.viewport()')
+    ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] - (150 - vp['VH'] / 2) / s14, s14)
+    rising = corner_of(ctx)
+    rc = rising['corner']
+    r.check(rc is not None and abs(rc['rect']['y'] + rc['rect']['h'] - rising['bottom']) <= 1, 'the box\'s bottom risen to 150 px: the corner rises with it, its bottom at the box\'s, never past it', rising)
+    r.figures['corner_held'] = {'held': held['corner'] and held['corner']['rect'], 'line': held['line'], 'rising': rc and rc['rect'], 'box_bottom': rising['bottom']}
     # a continuous zoom: drift sampled across a sweep
     box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
     s_lo = ctx.js('window.__skep.scaleFor(%s, "em", 7)' % json.dumps(DOC))

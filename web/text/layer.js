@@ -1,15 +1,29 @@
 // T-LAYER — THE ONE RECONCILER (the structure record §3.2 "T-LAYER"; FP-12:
 // one reconciler, two targets — the plane's text layer and the reading
-// scene's panes; the scene BORROWS this mount). Layer 2. ENGINE-BOUND.
-// State: VIEW — the mounted set with each record's layout scale and revision
-// — THE ONE OWNER (FP-10). Mount an article when a document crosses S1's
-// mount threshold (em 6.5, BELOW the canvas's readable 8, so bars become
-// text and no character positions disagree — S1 Q7), unmount when it
-// leaves or falls below 5.5 or its run or revision changed, the cap 8; laid
-// out ONCE at 16 px and placed by transform from the same camera arithmetic
-// (registration 0 px — S1). The marks and symbols are placed from LK's
-// `shown` and `symbols`; the selection from O-SELECTION and the focus from
-// N-WALK are handed to T-ARTICLE as values. The press rule's text half
+// scene's panes; the scene BORROWS this mount). Layer 2. ENGINE-BOUND. State:
+// VIEW — the mounted set with each record's layout scale and revision, and
+// the corners beside it — THE ONE OWNER (FP-10). Mount an article when a
+// document crosses S1's mount threshold (em 6.5, BELOW the canvas's readable
+// 8, so bars become text and no character positions disagree — S1 Q7),
+// unmount when it leaves or falls below 5.5 or its run or revision changed,
+// the cap 8; laid out ONCE at 16 px and placed by transform from the same
+// camera arithmetic (registration 0 px — S1). The marks and symbols are
+// placed from LK's `shown` and `symbols`; the selection from O-SELECTION and
+// the focus from N-WALK are handed to T-ARTICLE as values. THE CORNER
+// (foundations §3.1; ux-T2; D5 K-57): each mounted document at reading scale
+// (em 8, P-LOD's readable threshold, and above) carries its own BESIDE its
+// article, never inside it — the article's box clips whatever stands past its
+// measure — as an element of the corner layer this module keeps: on the
+// document's one side, the left (the beams and the blocks' counts take the
+// right), in the strip P-PROJ's `clearLeftOf` keeps free of every other
+// document's box, at the interface's size, held to the top of the document's
+// visible part below the one line and never past the box's bottom, placed by
+// translate alone from the same camera arithmetic. The element outlives its
+// article's remounts and its items are rewritten only where they change, so a
+// focus on it survives them; the focused document's corner is the plane's
+// next Tab stop, named by its own words, and every other is out of the order
+// and hidden from assistive technology; a corner that leaves while it holds
+// the focus hands it to the walk (D5 §4 rule 4). The press rule's text half
 // (§2.4): the layer takes pointer events at reading scale; a drag selects
 // text and never pans. THE SELECTION IS A BYTE SPAN (R11; foundations §3.1)
 // and the platform's selection is its one mark (§2.1): this module carries
@@ -30,10 +44,10 @@
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import { cam, sx, sy } from '../plane/camera.js';
-import { MOUNT_EM, UNMOUNT_EM, MAX_MOUNTED } from '../plane/lod.js';
-import { docBox, intersects } from '../plane/projection.js';
+import { MOUNT_EM, UNMOUNT_EM, MAX_MOUNTED, LOD_TXT_LO } from '../plane/lod.js';
+import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { metricsFor } from '../plane/layout.js';
-import { articleHTML } from './article.js';
+import { articleHTML, cornerHTML } from './article.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { fingerprintCue } from '../util.js';
 
@@ -52,33 +66,59 @@ import { fingerprintCue } from '../util.js';
  * @property {number} rev the document's revision at mount
  * @property {number} grev the view revision at mount
  * @property {number} fs the document's em in world units
+ * @property {number} x0 the text column's left edge in the box (world units)
+ * @property {string} corner the corner's items at mount (T-ARTICLE's `cornerHTML`); empty where it has none
  * @property {'plane' | 'scene'} target
  * @property {Array<{pos: number, top: number, left: number}>} [blockTops] each block's offset in the one 16 px layout (the gate's span registration)
  */
 
+/**
+ * @typedef {Object} Corner — a document's corner on the plane: its element beside the article, kept across the article's remounts
+ * @property {HTMLElement} el
+ * @property {string} html the items it shows
+ * @property {number} cap the widest it may stand (px): the strip beside the text column, gaps taken
+ * @property {number} w its width as laid out (px)
+ * @property {number} h its height as laid out (px)
+ * @property {boolean} stale its items or its cap changed since it was measured
+ * @property {boolean} mine it is the focused document's: the Tab stop
+ */
+
+/**
+ * @typedef {Object} Readers — what the layer reads of other owners' state, handed in once by the app (FP-10: through the owners' exports)
+ * @property {() => (Span | null)} selection the selection (O-SELECTION's span)
+ * @property {() => ({addr: string, pos: number} | null)} focus the focused block (N-WALK's)
+ * @property {() => number} top the one line's bottom edge on screen (L-LINE's): the corners hold below it
+ * @property {() => void} handOff the focus's next home where a corner that held it leaves: the walk's current item (D5 §4 rule 4)
+ */
+
 /** the fixed layout size (S1) */
 export const LAY_FS = 16;
+/** the article's top padding as a fraction of its box's height (P-LAY's `padY`): its first line's place */
+const PAD_TOP = 0.05 / 0.86;
+/** the corner's distance from the text column, and from the edge of the strip it stands in (px) */
+const CORNER_GAP = 8;
 
 /** @type {Map<string, Mounted>} */
 const mounted = new Map();
+/** @type {Map<string, Corner>} the corners on the plane, by document */
+const corners = new Map();
 /** @type {Array<{addr: string, ms: number, blocks: number, emPx: number}>} the mount costs (a forced layout inside the measurement — S1) */
 const mountLog = [];
 /** the mount log, for the gate's figures */
 export const mounts = () => mountLog.slice();
 /** @type {HTMLElement | null} */
 let layer = null;
+/** @type {HTMLElement | null} */
+let cornerLayer = null;
 /** the view revision: the selection, the reveal, the focus, the lenses — a bump remounts */
 let grev = 0;
-/** the readers of view state, set by the app (FP-10: read through the owners' exports) */
-/** @type {() => (Span | null)} */
-let readSelection = () => null;
-/** @type {() => ({addr: string, pos: number} | null)} */
-let readFocus = () => null;
+/** @type {Readers} */
+let read = { selection: () => null, focus: () => null, top: () => 0, handOff: () => {} };
 
-/** @param {HTMLElement} el the layer's element */
-export function attach(el) { layer = el; }
-/** the owners of the selection (a span) and the focus (a block) hand their readers in once */
-export function readers(/** @type {() => (Span | null)} */ sel, /** @type {() => ({addr: string, pos: number} | null)} */ foc) { readSelection = sel; readFocus = foc; }
+/** @param {HTMLElement} el the text layer's element @param {HTMLElement} cornersEl the corner layer's */
+export function attach(el, cornersEl) { layer = el; cornerLayer = cornersEl; }
+/** the owners hand their readers in once */
+export function readers(/** @type {Readers} */ r) { read = r; }
 /** bump the view revision: every mounted article is rebuilt on the next frame */
 export function bump() { grev++; }
 export const revision = () => grev;
@@ -99,7 +139,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
   for (const o of d.origins) { const od = REC.doc(o.doc); const p = REC.place(o.doc); originKinds.set(o.doc, p ? p.kind : od.meta ? (od.meta.published ? 'edition' : 'draft') : od.kind); }
   /** @type {ArticleView} */
   const v = {
-    selected: readSelection(), focus: readFocus(),
+    selected: read.selection(), focus: read.focus(),
     marks: LK.shown(d.addr), symbols: LK.symbols(d.addr), countAt: (b) => LK.countAt(d.addr, b),
     wholeLinks: LK.wholeLinks(d.addr).length,
     sessionAccount: s ? s.account : null,
@@ -130,18 +170,19 @@ function mount(d) {
   el.dataset.addr = d.addr;
   el.style.width = m.tw * lay + 'px';
   el.style.paddingLeft = m.x0 * lay + 'px';
-  el.style.paddingTop = (box.h * (0.05 / 0.86)) * lay + 'px';
-  el.style.height = (box.h - box.h * (0.05 / 0.86)) * lay + 'px';
+  el.style.paddingTop = (box.h * PAD_TOP) * lay + 'px';
+  el.style.height = (box.h - box.h * PAD_TOP) * lay + 'px';
   el.style.fontSize = LAY_FS + 'px';
   el.style.lineHeight = m.lineH * lay + 'px';
   el.setAttribute('aria-hidden', 'true'); // the ARIA mirror is the one accessible rendering (S1 Q7)
-  el.innerHTML = articleHTML(d, viewFor(d), ownerAccount(d));
+  const v = viewFor(d);
+  el.innerHTML = articleHTML(d, v, ownerAccount(d));
   layer.appendChild(el);
   const art = el.getBoundingClientRect(); // force layout: the cost must be real (S1); the article stands untransformed until placed
   // each block's place in the one layout (16 px), fractional (offsetTop rounds): the gate holds every later frame to it, scaled — a reflow would move a line
   const blockTops = [.../** @type {NodeListOf<HTMLElement>} */ (el.querySelectorAll('.sp'))].map((e) => { const r = e.getBoundingClientRect(); return { pos: Number(e.dataset.pos), top: r.top - art.top, left: r.left - art.left }; });
   /** @type {Mounted} */
-  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, grev, fs: m.fs, target: 'plane', blockTops };
+  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, grev, fs: m.fs, x0: m.x0, corner: cornerHTML(d, v), target: 'plane', blockTops };
   mounted.set(d.addr, rec);
   place(rec);
   mountLog.push({ addr: d.addr, ms: performance.now() - t0, blocks: d.blocks.length, emPx: m.fs * cam.scale });
@@ -171,11 +212,12 @@ function place(/** @type {Mounted} */ rec) {
 /**
  * The per-frame policy, run at the end of each draw: unmount what left or
  * fell below the threshold or went stale, mount what crossed it (the cap),
- * place everything; where the article holding the selection was mounted
- * this frame, place the platform's range over the span again.
- * @param {(addr: string) => boolean} [focusedResidue] whether a residue document is the focus (the one of its cell that mounts)
+ * place everything and the corners beside it; where the article holding the
+ * selection was mounted this frame, place the platform's range over the span
+ * again.
+ * @param {(addr: string) => boolean} [focused] whether a document is the walk's focused one: the one residue document of its cell that mounts, and the one whose corner is a Tab stop (D5 K-57)
  */
-export function frame(focusedResidue = () => false) {
+export function frame(focused = () => false) {
   if (!layer) return;
   const v = { x0: 0, y0: 0, x1: 0, y1: 0 };
   const pad = 40;
@@ -188,7 +230,7 @@ export function frame(focusedResidue = () => false) {
     if (d.from < 0 || d.system) continue;
     const box = docBox(d.addr);
     if (!intersects(box, v)) continue;
-    if (box.residue && !focusedResidue(d.addr)) continue;
+    if (box.residue && !focused(d.addr)) continue;
     const em = metricsFor(d.extent || 1, box).fs * cam.scale;
     if (em >= MOUNT_EM) want.push({ d, em });
   }
@@ -197,15 +239,95 @@ export function frame(focusedResidue = () => false) {
   for (const [addr, rec] of [...mounted]) {
     const box = docBox(addr);
     const em = rec.fs * cam.scale;
-    if (!intersects(box, v) || em < UNMOUNT_EM || (box.residue && !focusedResidue(addr))) { unmount(addr); continue; }
+    if (!intersects(box, v) || em < UNMOUNT_EM || (box.residue && !focused(addr))) { unmount(addr); continue; }
     if (rec.d.from !== rec.runFrom || rec.d.to !== rec.runTo || rec.rev !== rec.d.rev || rec.grev !== grev) unmount(addr);
   }
   /** @type {string[]} the articles mounted this frame */
   const fresh = [];
   for (const w of want.slice(0, MAX_MOUNTED)) if (!mounted.has(w.d.addr) && mount(w.d)) fresh.push(w.d.addr);
   for (const rec of mounted.values()) if (keep.has(rec.d.addr) || true) place(rec);
-  const sel = readSelection();
+  placeCorners(focused);
+  const sel = read.selection();
   if (sel && fresh.includes(sel.addr)) placeSelection(sel);
+}
+
+/**
+ * The corners' pass, after the articles are placed: each mounted document at
+ * reading scale whose corner has items carries it, the rest are removed. The
+ * writes come first (an element, items that changed, a cap that binds), the
+ * reads together after them (one layout for every corner that changed, none
+ * in a frame where none did), then the places: the corner's right edge a gap
+ * short of the text column, its width the narrower of its own measure and the
+ * strip, its top the article's first line or, where that has risen past the
+ * one line, just below the line — and never so low that the corner runs past
+ * the box's bottom, unless it is taller than the room below its first line.
+ * @param {(addr: string) => boolean} focused
+ */
+function placeCorners(focused) {
+  if (!cornerLayer) return;
+  /** @type {Array<{c: Corner, rec: Mounted}>} */
+  const shown = [];
+  for (const rec of mounted.values()) {
+    if (!rec.corner || rec.fs * cam.scale < LOD_TXT_LO) continue;
+    const c = corners.get(rec.d.addr) || makeCorner(cornerLayer, rec.d.addr);
+    if (c.html !== rec.corner) { c.el.innerHTML = rec.corner; c.html = rec.corner; c.stale = true; }
+    const cap = Math.max(0, Math.floor((clearLeftOf(rec.d.addr) + rec.x0) * cam.scale - 2 * CORNER_GAP));
+    // a cap the corner's own measure stands inside, before and after, changes nothing laid out
+    if (cap !== c.cap && !(c.w < c.cap && c.w <= cap)) { c.el.style.maxWidth = cap + 'px'; c.cap = cap; c.stale = true; }
+    shown.push({ c, rec });
+  }
+  const here = new Set(shown.map((s) => s.rec.d.addr));
+  let lost = false;
+  for (const addr of [...corners.keys()]) if (!here.has(addr)) lost = dropCorner(addr) || lost;
+  if (shown.length) {
+    for (const { c } of shown) if (c.stale) { c.w = c.el.offsetWidth; c.h = c.el.offsetHeight; c.stale = false; }
+    const top = read.top() + CORNER_GAP;
+    for (const { c, rec } of shown) {
+      const box = docBox(rec.d.addr);
+      const first = sy(box.y + box.h * PAD_TOP);
+      const y = Math.max(first, Math.min(Math.max(first, top), sy(box.y + box.h) - c.h));
+      const x = sx(box.x + rec.x0) - CORNER_GAP - c.w;
+      c.el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+      const mine = focused(rec.d.addr);
+      if (mine === c.mine) continue;
+      if (!mine) lost = c.el.contains(document.activeElement) || lost;
+      c.mine = mine;
+      if (mine) { c.el.tabIndex = 0; c.el.removeAttribute('aria-hidden'); }
+      else { c.el.removeAttribute('tabindex'); c.el.setAttribute('aria-hidden', 'true'); }
+    }
+  }
+  if (lost) read.handOff();
+}
+
+/**
+ * A document's corner element in the corner layer: a group named by its own
+ * words (no string of the page's: it labels itself), out of the Tab order
+ * and hidden from assistive technology until it is the focused document's.
+ * @param {HTMLElement} into the corner layer
+ * @param {string} addr
+ * @returns {Corner}
+ */
+function makeCorner(into, addr) {
+  const el = document.createElement('div');
+  el.className = 'corner';
+  el.dataset.corner = addr;
+  el.id = 'corner-' + addr;
+  el.setAttribute('role', 'group');
+  el.setAttribute('aria-labelledby', el.id);
+  el.setAttribute('aria-hidden', 'true');
+  into.appendChild(el);
+  /** @type {Corner} */
+  const c = { el, html: '', cap: -1, w: 0, h: 0, stale: true, mine: false };
+  corners.set(addr, c);
+  return c;
+}
+
+/** remove a document's corner; true where it held the focus */
+function dropCorner(/** @type {string} */ addr) {
+  const c = corners.get(addr); if (!c) return false;
+  const held = c.el.contains(document.activeElement);
+  c.el.remove(); corners.delete(addr);
+  return held;
 }
 
 /**
@@ -393,6 +515,18 @@ export function symbolRect(/** @type {string} */ addr, /** @type {string} */ lin
  */
 export function sceneArticle(d) { return articleHTML(d, viewFor(d, true), ownerAccount(d)); }
 
+/**
+ * A pane's corner items (ux-T2: each pane its own), from the same view the
+ * pane's article is made from; the scene holds their element, on the pane's
+ * outer side.
+ * @param {Doc} d
+ * @returns {string}
+ */
+export function sceneCorner(d) { return cornerHTML(d, viewFor(d, true)); }
+
+/** a document's corner on the plane, or null where it carries none now (the gate's containment check reads it) */
+export function cornerOf(/** @type {string} */ addr) { const c = corners.get(addr); return c ? c.el : null; }
+
 /** the text of a mounted article (the gate's rendered case) */
 export function mountedText(/** @type {string} */ addr) {
   const rec = mounted.get(addr); if (!rec) return null;
@@ -403,8 +537,13 @@ export function mountedText(/** @type {string} */ addr) {
 /** every mounted address */
 export const mountedAddrs = () => [...mounted.keys()];
 
-/** unmount everything (a board change) */
-export function clear() { for (const a of [...mounted.keys()]) unmount(a); }
+/** unmount everything and take the corners down (a board change); a corner that held the focus hands it to the walk */
+export function clear() {
+  for (const a of [...mounted.keys()]) unmount(a);
+  let lost = false;
+  for (const a of [...corners.keys()]) lost = dropCorner(a) || lost;
+  if (lost) read.handOff();
+}
 
 /**
  * The copy event's addition (§2.4): the passage's board and address beside

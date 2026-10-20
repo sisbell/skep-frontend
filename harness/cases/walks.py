@@ -85,7 +85,7 @@ def run(ctx):
     ctx.view_doc_px(DOC, 5)
     step(ctx, r, 'W-05', 1, 'zoom for structure: far', 'W-05 step 1: "far = counts and density" (law 5\'s LOD tiers). The account\'s clusters with their counts; the system account held and not drawn.', 'far')
     ctx.view_doc_px(DOC, 120)
-    step(ctx, r, 'W-05', 1, 'zoom for structure: mid', 'W-05 step 1: "mid = extents" — the documents as boxes with their greeked extents, the drafts with their corner, the badges counting the links each holds.', 'mid')
+    step(ctx, r, 'W-05', 1, 'zoom for structure: mid', 'W-05 step 1: "mid = extents" — the documents as boxes with their greeked extents, each edged as a draft or an edition, the badges counting the links each holds.', 'mid')
     ctx.leap(DOC, 541)
     step(ctx, r, 'W-05', 1, 'zoom for structure: reading', 'W-05 step 1: "reading = full text with span-anchored beams" — the LEAP to a named document lands at reading scale (law 6; R92 rider (a)).', 'reading')
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, ctx.camera()['scale'])

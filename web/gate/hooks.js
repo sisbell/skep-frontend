@@ -11,10 +11,11 @@
 // installs it with its loop's frame buffer. Nothing here is shipped chrome;
 // nothing posts anywhere.
 // THE ORACLES MEASURE WHAT A PERSON MEETS, never what the page set: the
-// containment check holds an article's content to the clip the page draws,
-// `visible` says whether an element the DOM holds is shown (inside its clip
-// and the viewport), and a beam's endpoint is held to the client rects of its
-// link's marked words, read from the article apart from the beams' own set.
+// containment check holds an article's content to the clip the page draws
+// and each corner to the room beside it, `visible` says whether an element
+// the DOM holds is shown (inside its clip and the viewport), and a beam's
+// endpoint is held to the client rects of its link's marked words, read from
+// the article apart from the beams' own set.
 // The doors that move the reveal chain redraw the links card where it stands
 // open, as the card's own acts do, so a shot after a door shows the state it
 // set. Carries: S1's `driftSample`, `overlapCheck`, `canvasSpanRect`/
@@ -67,13 +68,13 @@ function inside(/** @type {Rect} */ a, /** @type {Rect} */ b) { return a.x >= b.
 /** how far `r` reaches past `c`, in px (0 where it lies inside) */
 function overflowOf(/** @type {Rect} */ r, /** @type {Rect} */ c) { return Math.max(0, c.x - r.x, c.y - r.y, r.x + r.w - (c.x + c.w), r.y + r.h - (c.y + c.h)); }
 /**
- * The nearest ancestor below the text layer that clips its overflow, or null
- * where nothing below the layer clips. The layer itself is the viewport's
- * clip and no part of containment.
+ * The nearest ancestor below the text layer or the corner layer that clips
+ * its overflow, or null where nothing below them clips. The layers
+ * themselves are the viewport's clip and no part of containment.
  */
 function clipOf(/** @type {Element} */ e) {
-  const layerEl = document.getElementById('domlayer');
-  for (let p = e.parentElement; p && p !== layerEl; p = p.parentElement) {
+  const layers = [document.getElementById('domlayer'), document.getElementById('corners')];
+  for (let p = e.parentElement; p && !layers.includes(p); p = p.parentElement) {
     const cs = getComputedStyle(p);
     if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') return p;
   }
@@ -122,11 +123,16 @@ export function install(deps) {
   /**
    * Containment: does what a mounted article holds fit the place that clips
    * it? The article's own rect is its box by construction (the mount sets
-   * it from the box); its content is not — every block's rect and the
-   * corner's are measured against the nearest clip, and a block or a corner
-   * reaching past it is named with its overflow in px. No two mounted
-   * articles may intersect. The viewport is no part of containment: an
-   * article at em 30 is taller than the window by design.
+   * it from the box); its content is not — every block's rect is measured
+   * against the nearest clip, and a block reaching past it is named with its
+   * overflow in px. No two mounted articles may intersect. The corner stands
+   * beside its article, read from the text layer apart from the article: a
+   * mounted document at reading scale whose corner has items and carries
+   * none is named; a corner clipped by any box of the page is named with its
+   * overflow; a corner reaching into another document's box — mounted or
+   * only drawn on the canvas — is named with the box and the overlap in px.
+   * The viewport is no part of containment: an article at em 30 is taller
+   * than the window by design.
    */
   function overlapCheck() {
     const recs = [...LAYER.mountedSet().values()];
@@ -135,18 +141,36 @@ export function install(deps) {
     for (let i = 0; i < arts.length; i++) for (let j = i + 1; j < arts.length; j++) { const a = arts[i], b = arts[j]; if (a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h) pairs++; }
     /** @type {Array<{addr: string, pos: number, overflow_px: number}>} */
     const cut = [];
+    /** @type {string[]} */
+    const missing = [];
     /** @type {Array<{addr: string, overflow_px: number}>} */
-    const corners = [];
+    const clipped = [];
+    /** @type {Array<{addr: string, into: string, overlap_px: {w: number, h: number}}>} */
+    const into = [];
+    const screenBox = (/** @type {string} */ a) => { const b = docBox(a); return { x: CAM.sx(b.x), y: CAM.sy(b.y), w: b.w * CAM.cam.scale, h: b.h * CAM.cam.scale }; };
+    const drawn = REC.places().filter((p) => !p.system).map((p) => p.doc);
     for (const rec of recs) {
       for (const sp of /** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll('.sp, .withheld'))) {
         const clip = clipOf(sp); if (!clip) continue;
         const over = overflowOf(rectOf(sp), rectOf(clip));
         if (over > 0.5) cut.push({ addr: rec.d.addr, pos: Number(sp.dataset.pos), overflow_px: r2(over) });
       }
-      const corner = rec.el.querySelector('.corner');
-      if (corner) { const clip = clipOf(corner); const over = clip ? overflowOf(rectOf(corner), rectOf(clip)) : 0; if (over > 0.5) corners.push({ addr: rec.d.addr, overflow_px: r2(over) }); }
+      const corner = LAYER.cornerOf(rec.d.addr);
+      if (!corner) { if (rec.corner && rec.fs * CAM.cam.scale >= LOD_TXT_LO) missing.push(rec.d.addr); continue; }
+      const cr = rectOf(corner);
+      const clip = clipOf(corner);
+      const over = clip ? overflowOf(cr, rectOf(clip)) : 0;
+      if (over > 0.5) clipped.push({ addr: rec.d.addr, overflow_px: r2(over) });
+      const own = screenBox(rec.d.addr);
+      for (const other of new Set([...drawn, ...recs.map((r) => r.d.addr)])) {
+        if (other === rec.d.addr) continue;
+        const b = screenBox(other);
+        if (b.x === own.x && b.y === own.y && b.w === own.w) continue; // a box its own shares: the residue cell
+        const w = Math.min(cr.x + cr.w, b.x + b.w) - Math.max(cr.x, b.x), h = Math.min(cr.y + cr.h, b.y + b.h) - Math.max(cr.y, b.y);
+        if (w > 0.5 && h > 0.5) into.push({ addr: rec.d.addr, into: other, overlap_px: { w: r2(w), h: r2(h) } });
+      }
     }
-    return { mounted: recs.length, intersecting_pairs: pairs, blocks_cut: cut, corners_clipped: corners, worst_overflow_px: r2(Math.max(0, ...cut.map((c) => c.overflow_px), ...corners.map((c) => c.overflow_px))) };
+    return { mounted: recs.length, intersecting_pairs: pairs, blocks_cut: cut, corners_missing: missing, corners_clipped: clipped, corners_into: into, worst_overflow_px: r2(Math.max(0, ...cut.map((c) => c.overflow_px), ...clipped.map((c) => c.overflow_px))) };
   }
   /**
    * The visibility oracle: every element a selector matches, with its rect,

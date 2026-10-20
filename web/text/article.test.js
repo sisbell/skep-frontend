@@ -2,7 +2,9 @@
 // its run with its width and never its text; the owner's link marked at its
 // span; the selected span marks every block it touches and no other; the
 // transcluded run's hairline and C-33's mark; the corner's version statement
-// and a draft's chip (C-28); the record rule; headings as formatting.
+// and a draft's chip (C-28), items of one stop that the article never holds
+// (they stand beside it, outside the box that clips it); the record rule;
+// headings as formatting.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { articleHTML, withheldBlockHTML, cornerHTML, headingLevel } from './article.js';
@@ -67,6 +69,15 @@ test('the corner: version k of n with R20\'s teaching keyed by venue; a draft\'s
   assert.ok(draft.includes(t('C-28.flag-on')) && !draft.includes(t('C-28') + '<'), 'flag-on never renders "Readable by you alone"');
   const off = cornerHTML(doc({ kind: 'draft', meta: null }), view({ localTrust: false }));
   assert.ok(off.includes('Readable by you alone'));
+  assert.ok(![c, draft, off].some((h) => h.includes('tabindex')), 'no item takes a focus of its own: the corner is one stop (K-57)');
+});
+
+test('the article holds no corner: its items stand beside it, outside the box that clips the article', () => {
+  const html = articleHTML(doc({ blocks: [{ pos: 1, width: 10, kind: 'para', text: 'aaaaaaaa', origin: null }] }), view({ wholeLinks: 2 }), '1.0.1');
+  assert.ok(!html.includes('data-corner') && !html.includes('class="corner"'), html);
+  assert.ok(!html.includes(t('F.version-of', { k: 2, n: 2 })) && !html.includes(t('F.whole-links', { n: 2 })), 'nor any of its items');
+  const draft = articleHTML(doc({ kind: 'draft', meta: null, blocks: [{ pos: 1, width: 10, kind: 'para', text: 'aaaaaaaa', origin: null }] }), view(), '1.0.1');
+  assert.ok(!draft.includes(t('C-28.flag-on')) && !draft.includes(t('C-28')), 'a draft\'s chip is its corner\'s, never its article\'s');
 });
 
 test('a record atom renders as the record it is; a heading as formatting', () => {

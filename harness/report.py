@@ -118,9 +118,9 @@ def main():
     lay = (cases.get('layout') or {}).get('figures') or {}
     if lay.get('drift'):
         L.append('## Class 4 — layout\n')
-        rows = [[k, v.get('em_px_measured'), v.get('worst_px'), (v.get('containment') or {}).get('mounted'), (v.get('containment') or {}).get('intersecting_pairs'), len((v.get('containment') or {}).get('blocks_cut') or []), len((v.get('containment') or {}).get('corners_clipped') or []), (v.get('containment') or {}).get('worst_overflow_px')] for k, v in lay['drift'].items()]
-        L.append(table(rows, ['level', 'em px measured', 'worst drift px', 'mounted', 'intersecting', 'blocks cut', 'corners clipped', 'worst overflow px']))
-        L.append(f"\nContinuous zoom: `{json.dumps(lay.get('sweep'))}`; beams: `{json.dumps(lay.get('beams'))}`.\n")
+        rows = [[k, v.get('em_px_measured'), v.get('worst_px'), (v.get('containment') or {}).get('mounted'), (v.get('containment') or {}).get('intersecting_pairs'), len((v.get('containment') or {}).get('blocks_cut') or []), len((v.get('containment') or {}).get('corners_missing') or []), len((v.get('containment') or {}).get('corners_clipped') or []), len((v.get('containment') or {}).get('corners_into') or []), (v.get('containment') or {}).get('worst_overflow_px')] for k, v in lay['drift'].items()]
+        L.append(table(rows, ['level', 'em px measured', 'worst drift px', 'mounted', 'intersecting', 'blocks cut', 'corners missing', 'corners clipped', 'corners into a box', 'worst overflow px']))
+        L.append(f"\nContinuous zoom: `{json.dumps(lay.get('sweep'))}`; beams: `{json.dumps(lay.get('beams'))}`; the corner held: `{json.dumps(lay.get('corner_held'))}`.\n")
     rd = (cases.get('rendered') or {}).get('figures') or {}
     if rd:
         L.append('## Class 1 — rendered\n')
