@@ -12,14 +12,15 @@
 // two-finger scroll, by the keys, and by the held camera key's drag (K-10:
 // hold Mod); it zooms by the PINCH (Ctrl+wheel as a trackpad sends it) and
 // by Mod+wheel (K-12). A CLICK acts on what is under the pointer, keyed on
-// legibility: below the readable threshold a document is a place wherever
-// the pointer falls — a teleport (a trail push); a symbol opens its card;
-// the presence indicator's ⟡ asks to see the links; a run's hairline label
-// goes to its source; the scene-offer opens the scene; the version statement
-// at a document's corner opens its members (the corner's act, the one Enter
-// takes there — K-57); at the readable threshold and above a click on a
-// block selects it whole (R11); a click on an account at far flies to it; an
-// empty click dismisses the overlay.
+// legibility: a continuation's mark is a teleport to its newest member
+// (foundations §2.1); below the readable threshold a document is a place
+// wherever the pointer falls — a teleport (a trail push); a symbol opens its
+// card; the presence indicator's ⟡ asks to see the links; a run's hairline
+// label goes to its source; the scene-offer opens the scene; the version
+// statement at a document's corner opens its members (the corner's act, the
+// one Enter takes there — K-57); at the readable threshold and above a click
+// on a block selects it whole (R11); a click on an account at far flies to
+// it; an empty click dismisses the overlay.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
 // Rules: FP-1, FP-2, FP-9.
@@ -31,7 +32,6 @@ import * as WALK from '../nav/walk.js';
 import * as HOST from '../overlays/host.js';
 import * as SEL from '../overlays/selection.js';
 import * as LINKS from '../overlays/links-card.js';
-import * as LEAP from '../nav/leap.js';
 import * as LINE from '../line/line.js';
 import * as LK from '../links/links.js';
 import * as SCENE from '../scene/scene.js';
@@ -136,10 +136,12 @@ function takeSelection() {
   SEL.select(span.addr, span.pos, span.width);
 }
 
-/** a click on the plane: a place goes; an account at far flies; else the overlay dismisses */
+/** a click on the plane: a continuation's mark goes to its newest member; a place goes; an account at far flies; else the overlay dismisses */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   LINE.act();
   const lod = lodOf(CAM.cam.scale);
+  const residue = RENDER.residueAtScreen(px, py);
+  if (residue) { GO.leapTo(residue.newest, { how: 'click' }); return; }
   const doc = RENDER.docAtScreen(px, py);
   if (doc) {
     const box = docBox(doc);
@@ -147,8 +149,6 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
     if (em < LOD_TXT_LO) { GO.leapTo(doc, { how: 'click' }); return; }
     return; // at reading scale the layer's elements take the click
   }
-  const residue = RENDER.residueAtScreen(px, py);
-  if (residue) { LEAP.open(residue + '.0.'); return; }
   if (lod.name === 'far' || lod.name === 'far~mid') {
     const acct = accountAt(CAM.wx(px), CAM.wy(py), '1');
     if (acct) { GO.flyToCell(accountCell(acct)).then(() => WALK.focusTo(acct, null)); return; }

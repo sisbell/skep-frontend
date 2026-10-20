@@ -1,5 +1,6 @@
 // M-PUMP's test against the FAKE PORT (FP-15's proof, half one): the model
 // built from a scripted sequence of answers and events, no write composed;
+// the view's reads ask nothing for a document a continuation's mark holds;
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -11,6 +12,8 @@ import * as REC from './records.js';
 import * as PUMP from './pump.js';
 import * as F from './frames.js';
 import * as FAKE from '../test/fake-port.js';
+import * as CAM from '../plane/camera.js';
+import { accountCell } from '../plane/projection.js';
 
 const D = '1.0.1.0.3';
 const script = {
@@ -63,6 +66,24 @@ test('no call the pump makes is a write: every op frame names a read op', async 
   assert.ok(ops.length >= 5);
   for (const k of fake.unanswered) assert.ok(false, 'unexpected ' + k);
   for (const key of Object.keys(script)) if (key.startsWith('op:')) { const frame = JSON.parse(key.slice(3)); assert.ok(F.READ_OPS.includes(frame.op), frame.op + ' is a read'); }
+});
+
+test('at HOME the reads ask for the documents standing whole and nothing for the 49th, which the first continuation\'s mark holds', async () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const MEMBER = '1.0.1.0.49';
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: MEMBER, kind: 'edition', label: 'm', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+  PUMP.forget(D); PUMP.forget(MEMBER);
+  CAM.setViewport(1440, 900);
+  CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  assert.deepEqual(PUMP.visibleDocs().map((d) => d.addr), [D], 'the 49th is in view, inside the mark');
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(REC.doc(D).extent, 30, 'the document standing whole has its span set read');
+  assert.deepEqual(fake.unanswered.filter((k) => k.includes(MEMBER)), [], 'no read names the document the mark holds');
+  assert.equal(REC.doc(MEMBER).extent, null);
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

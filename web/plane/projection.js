@@ -24,15 +24,23 @@
 // and its §11 stop 18 still say "the permutation CARRIED as-is" — they
 // predate the design and are owed (reported).
 //
+// THE CONTINUATIONS: an account's continuation k is the last cell of its
+// document grid k − 1 (`continuationCell`), holding every document at
+// continuation depth k and deeper (`withinContinuation`). Where the camera
+// draws a continuation's documents too small to stand whole, the plane draws
+// the continuation as ONE MARK (foundations §2.1: "its mid frame shows its
+// oldest 48 whole and the other 152 as one residue, its newest's label on
+// it"; P44; P-LOD's `residueDepth`, P-RENDER).
+//
 // THE PRECISION FLOOR (this lane's finding, reported): world positions are
 // doubles; a document at continuation depth k has a cell 7^k smaller than
 // its account's position, so past DEPTH_SOUND grids the arithmetic the
 // camera runs (`(wx - cam.x) * scale`) loses the box. Documents deeper than
-// that are NOT DRAWN as boxes: they share the deepest grid's continuation
-// cell as THE RESIDUE (foundations §2.1: "its mid frame shows its oldest 48
-// whole and the other 152 as one residue, its newest's label on it"), and the
-// one of them the focus names mounts there. E18 (a) holds: the zoom bound
-// reaches every place the projection draws.
+// that have no box of their own: they share the cell of the continuation
+// past the sound depth, `continuationCell(account, DEPTH_SOUND + 1)`, marked
+// `residue` — a continuation always drawn as one mark — and the one of them
+// the focus names mounts there. E18 (a) holds: the zoom bound reaches every
+// place the projection draws.
 //
 // Rules: FP-1, FP-2, FP-7 (never serialized), FP-10 (no state), FP-11.
 
@@ -54,7 +62,7 @@ import { fieldsOf, accountOf, boardOf, kindOf } from '../model/address.js';
  * @property {number} w
  * @property {number} h
  * @property {number} depth
- * @property {boolean} residue true where the document lies past DEPTH_SOUND and shares the residue cell
+ * @property {boolean} residue true where the document lies past DEPTH_SOUND and shares the residue cell, `continuationCell(account, DEPTH_SOUND + 1)`
  * @property {number} fsRep the representative em size (world units) of text set in this box
  */
 
@@ -208,10 +216,34 @@ export function clearLeftOf(key) {
   return col > 0 ? 2 * margin : margin;
 }
 
-/** the residue cell of an account at the sound depth — where the documents past it are drawn as one */
-export function residueCell(/** @type {string} */ account) {
-  const p = pathOf(account + '.0.' + (48 * (DEPTH_SOUND + 1) + 1));
-  return cellOf(p);
+/**
+ * An account's continuation k (1 … DEPTH_SOUND + 1): the last cell of its
+ * document grid k − 1, which the account's grid k fills — the cell holding
+ * every document of the account at continuation depth k and deeper. The
+ * arithmetic is `cellOf`'s descent, step for step, so the continuation past
+ * the sound depth is exactly the cell its documents' boxes share.
+ * @param {string} account
+ * @param {number} k
+ * @returns {Cell}
+ */
+export function continuationCell(account, k) {
+  const a = cellOfKey(account);
+  const g = G[LEAF];
+  let x = a.x, y = a.y, cw = a.w / g, ch = a.h / g;
+  for (let i = 1; i < k; i++) { x += (g - 1) * cw; y += (g - 1) * ch; cw /= g; ch /= g; }
+  return { x: x + (g - 1) * cw, y: y + (g - 1) * ch, w: cw, h: ch, depth: k - 1 };
+}
+
+/**
+ * Does a document stand inside its account's continuation k — at
+ * continuation depth k or deeper? A document past the sound depth stands
+ * inside every continuation, its box the cell of the last.
+ * @param {string} key a document address (a version member answers its document's)
+ * @param {number} k 1 … DEPTH_SOUND + 1
+ */
+export function withinContinuation(key, k) {
+  const b = docBox(key);
+  return b.residue || b.depth >= k;
 }
 
 /** @param {string} account @returns {Cell} */

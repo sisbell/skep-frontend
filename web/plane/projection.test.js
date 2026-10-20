@@ -1,9 +1,10 @@
 // P-PROJ's test: reading order with the continuation (foundations §2.1), no
-// permutation; a mint moves no place; siblings never collide; the residue
+// permutation; a mint moves no place; siblings never collide; each
+// continuation's cell holds its documents and none shallower; the residue
 // past the sound depth. M2 (the cell arithmetic off by one) turns it red.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, clearLeftOf, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
+import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, clearLeftOf, continuationCell, withinContinuation, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
 
 test('the padded path: a board 3 digits, an account 5, a document 6', () => {
   assert.deepEqual(pathOf('1'), [1, 0, 0]);
@@ -46,6 +47,25 @@ test('siblings never collide and consecutive mints stand side by side', () => {
   }
   assert.ok(Math.abs(boxes[1].y - boxes[0].y) < 1e-6 && boxes[1].x > boxes[0].x, 'document 2 beside document 1');
   assert.ok(boxes[7].y > boxes[0].y && Math.abs(boxes[7].x - boxes[0].x) < 1e-6, 'document 8 starts the next row');
+});
+
+test('a continuation\'s cell holds the documents at its depth and deeper, and none shallower', () => {
+  for (const k of [1, 2, 3]) {
+    const c = continuationCell('1.0.1', k);
+    const inside = (/** @type {{x: number, y: number, w: number, h: number}} */ b) => b.x >= c.x && b.y >= c.y && b.x + b.w <= c.x + c.w && b.y + b.h <= c.y + c.h;
+    const first = '1.0.1.0.' + (48 * k + 1), next = '1.0.1.0.' + (48 * (k + 1) + 1), before = '1.0.1.0.' + 48 * k;
+    assert.ok(inside(docBox(first)) && withinContinuation(first, k), `document ${48 * k + 1}, the continuation's first, inside continuation ${k}`);
+    assert.ok(inside(docBox(next)) && withinContinuation(next, k), 'the next continuation\'s first inside it too');
+    assert.ok(!inside(docBox(before)) && !withinContinuation(before, k), `document ${48 * k}, the grid's last before it, outside`);
+  }
+  assert.equal(continuationCell('1.0.1', 1).w, cellOfKey('1.0.1').w / G[5], 'the first continuation is a cell of the account\'s first grid');
+});
+
+test('the continuation past the sound depth is exactly the cell its documents share', () => {
+  const deep = '1.0.1.0.' + (48 * (DEPTH_SOUND + 1) + 1), sound = '1.0.1.0.' + 48 * (DEPTH_SOUND + 1);
+  assert.deepEqual(continuationCell('1.0.1', DEPTH_SOUND + 1), cellOfKey(deep), 'cellOf\'s own descent, step for step');
+  assert.ok(docBox(deep).residue && withinContinuation(deep, DEPTH_SOUND + 1));
+  assert.ok(!withinContinuation(sound, DEPTH_SOUND + 1) && withinContinuation(sound, DEPTH_SOUND), 'the sound depth\'s last document stands whole, inside its own continuation');
 });
 
 test('a document past the sound depth shares the residue cell, marked so', () => {

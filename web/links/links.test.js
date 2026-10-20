@@ -1,7 +1,8 @@
 // LK's test — the rule over a hand-built model: the owner's links marked,
 // the person's own in their hue, the others' counted and not shown, the
 // lenses filtering, a visited link lighter, the records and account-named
-// ends never counted, the badge arriving until read.
+// ends never counted, the badge arriving until read, the mid connections one
+// per pair of places drawn.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -96,4 +97,12 @@ test('a followed link is drawn lighter, its hue kept (D-3)', () => {
 test('the mid connections: one per document pair', () => {
   const c = LK.connections([D, '1.0.1.0.127', OTHER_HOME]);
   assert.deepEqual(c.map((x) => [x.a, x.b, x.count]), [[D, '1.0.1.0.127', 1]]);
+});
+
+test('the mid connections run between the places drawn: links into one mark are one connection with their count, a link inside one place none (P44)', () => {
+  REC.takeLinks(D, [D + '.0.2.2']);
+  REC.takeLink({ addr: D + '.0.2.2', from: [span(D, 70, 5)], to: [whole('1.0.1.0.128')], type: CITE });
+  const mark = (/** @type {string} */ a) => (a === D ? D : '1.0.1:1');
+  assert.deepEqual(LK.connections([D, '1.0.1.0.127', '1.0.1.0.128'], mark).map((x) => [x.a, x.b, x.count]), [[D, '1.0.1:1', 2]]);
+  assert.deepEqual(LK.connections([D, '1.0.1.0.127'], () => '1.0.1:1'), [], 'both ends inside one mark: no line');
 });

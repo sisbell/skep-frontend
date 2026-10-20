@@ -9,8 +9,12 @@ names: `doc_metadata` over each account's document numbers — its oracle for
 `places`); the window run the guest meets WITHHELD shows the oracle its box
 and width (240), never its text, and shows the entitled reader (the signed
 session) C-33's mark over the same positions; a draft of the claimant's,
-read, shows C-28's chip at its corner, and the region at mid holds it (a box
-of its own, or past the sound depth its account's residue cell); a ghost
+read, shows C-28's chip at its corner, and the region at mid holds it — a
+box of its own, or, deep in its account's continuations, inside the
+continuation drawn as one mark; at HOME the account's first continuation is
+ONE mark (foundations §2.1; P44) carrying law 13's count of what it holds and
+its newest member's label, the mid connections into it end at it and at none
+of its members, and a click on it teleports to that newest member; a ghost
 address answers its face. "Shown" is
 measured, not read off the DOM: the page's `visible` oracle says whether a
 block, a mark or a corner lies inside the clip the page draws and the
@@ -26,6 +30,17 @@ WS = re.compile(r'\s+')
 
 def squash(s):
     return WS.sub('', s or '')
+
+
+def num(addr):
+    """an address's components, for address order"""
+    return [int(x) for x in addr.split('.')]
+
+
+def in_view(ctx, rect):
+    """a screen rect inside the viewport"""
+    vp = ctx.js('window.__skep.view.viewport()')
+    return rect['x'] >= 0 and rect['y'] >= 0 and rect['x'] + rect['w'] <= vp['VW'] and rect['y'] + rect['h'] <= vp['VH']
 
 
 def decode_delivery(answer, start):
@@ -210,14 +225,66 @@ def run(ctx):
         r.figures['draft_shown'] = {'addr': draft, 'corner': full, 'corner_shown': corner_shown, 'depth': ctx.js('window.__skep.depthOf(%s)' % json.dumps(draft))}
         dbox = ctx.js('window.__skep.boxOf(%s)' % json.dumps(draft))
         ctx.set_view(dbox['x'] + dbox['w'] / 2, dbox['y'] + dbox['h'] / 2, ctx.js('window.__skep.scaleFor(%s, "doc", 160)' % json.dumps(DOC)))
-        r.check(ctx.js('window.__skep.view.lod()')['name'] in ('mid', 'mid~near'), 'the region at mid scale (a depth-1 document 160 px wide)', ctx.js('window.__skep.view.lod()'))
+        r.check(ctx.js('window.__skep.view.lod()')['name'] in ('mid', 'mid~near'), 'the region at mid scale (a depth-0 document 160 px wide)', ctx.js('window.__skep.view.lod()'))
         depth = ctx.js('window.__skep.depthOf(%s)' % json.dumps(draft))
-        if dbox.get('residue'):
-            r.check(depth > 11, 'the draft lies past the continuation rule\'s precision floor (depth 11): it shares the account\'s RESIDUE cell at mid, drawn with its corner at its own scale', {'depth': depth})
-            r.note('the seed\'s drafts (documents 1000 and up) are the 20th-and-deeper continuation of their account: the plane holds them in the residue cell (the escalation `continuation-depth-camera`), the LEAP and the walk reach them; at the region\'s mid scale the residue mark counts them')
+        holding = [m for m in ctx.js('window.__skep.residues()') if m['account'] == '1.0.1' and draft in m['members']]
+        if depth >= 2:
+            r.check(len(holding) == 1 and holding[0]['k'] == 2 and in_view(ctx, holding[0]['rect']),
+                    'at the region\'s mid scale the draft stands inside its account\'s second continuation, drawn as ONE mark in view — the first continuation\'s documents stand whole',
+                    [{k: m[k] for k in ('k', 'n', 'rect')} for m in holding])
         else:
-            r.check(dbox['w'] * ctx.camera()['scale'] >= 2, 'the draft has a box at the region\'s mid scale', dbox['w'] * ctx.camera()['scale'])
+            r.check(not holding and dbox['w'] * ctx.camera()['scale'] >= 2, 'the draft has a box of its own at the region\'s mid scale', dbox['w'] * ctx.camera()['scale'])
+        if dbox.get('residue'):
+            r.check(depth > 11, 'the draft lies past the continuation rule\'s precision floor (depth 11): its box is the account\'s RESIDUE cell, drawn with its corner at its own scale', {'depth': depth})
         r.figures['draft_shown']['residue'] = bool(dbox.get('residue'))
+        r.figures['draft_shown']['mark_at_mid'] = {k: holding[0][k] for k in ('k', 'n', 'exact', 'newest', 'rect', 'lines')} if holding else None
+    # ---- S2: HOME — the account's first continuation as one mark, its act a teleport to its newest (foundations §2.1; P44) ----
+    ctx.js('window.__skep.go.home()')
+    ctx.settle()
+    ctx.frames(2)
+    marks = [m for m in ctx.js('window.__skep.residues()') if m['account'] == '1.0.1']
+    mark = marks[0] if len(marks) == 1 else None
+    r.check(mark is not None and mark['k'] == 1, 'at HOME the account\'s first continuation is drawn as ONE mark — its oldest 48 stand whole', [{k: m[k] for k in ('k', 'n', 'rect')} for m in marks])
+    if mark:
+        members = mark['members']
+        deep = ctx.js('window.__skep.model.places().filter(p => p.account === "1.0.1" && !p.system && window.__skep.depthOf(p.doc) >= 1).map(p => p.doc)')
+        r.check(set(deep) <= set(members) and mark['n'] == len(members), 'the mark counts what the continuation holds: every document past the oldest 48 the index lists (law 13)',
+                {'n': mark['n'], 'members': len(members), 'indexed': len(deep), 'missing': sorted(set(deep) - set(members), key=num)[:10]})
+        newest = max(members, key=num)
+        r.check(mark['newest'] == newest, 'the mark\'s representative is its newest member, the highest-numbered', {'newest': mark['newest'], 'expected': newest})
+        text = ' '.join(mark['lines'])
+        short = newest[len('1.0.1') + 1:]
+        r.check(str(mark['n']) in text and short in text and ('≥' in text) != mark['exact'], 'the mark draws its count — "≥" while the index runs from its floor — and its newest member\'s label',
+                {'lines': mark['lines'], 'n': mark['n'], 'exact': mark['exact'], 'newest': short})
+        r.check(in_view(ctx, mark['rect']), 'the mark stands inside the viewport at HOME', mark['rect'])
+        conns = ctx.js('window.__skep.connections()')
+        at_member = [c for c in conns if c['a'] in members or c['b'] in members]
+        r.check(not at_member, 'no mid connection ends at a document the mark holds: one line to the mark, never a stack of its members (P44)', at_member[:6])
+        # LK's own rule, read apart from the canvas: the links each document of the first grid (and each the canvas joined to the mark) draws to or from the mark's members
+        into = {(c['b'] if c['a'] == mark['key'] else c['a']): c['count'] for c in conns if mark['key'] in (c['a'], c['b'])}
+        linked = ctx.js('''(() => {
+          const S = window.__skep, mem = new Set(%s), back = new Map();
+          for (const m of mem) for (const s of S.links.shown(m)) { if (!back.has(s.far)) back.set(s.far, new Set()); back.get(s.far).add(s.link); }
+          const links = (a) => new Set([...S.links.shown(a).filter((s) => mem.has(s.far)).map((s) => s.link), ...(back.get(a) || [])]).size;
+          const first = S.model.places().filter((p) => p.account === "1.0.1" && !p.system && S.depthOf(p.doc) === 0).map((p) => p.doc);
+          return Object.fromEntries([...new Set([...first, ...%s])].map((a) => [a, links(a)]).filter(([, n]) => n > 0));
+        })()''' % (json.dumps(members), json.dumps(sorted(into))))
+        r.check(bool(linked) and set(into) == set(linked), 'each document standing whole that draws a link to a document the mark holds is joined to the MARK by one connection, and no other is',
+                {'drawn': into, 'links': linked})
+        r.figures['home_mark'] = dict({k: mark[k] for k in ('k', 'n', 'exact', 'newest', 'lines', 'rect')}, connections_to_mark={'drawn': into, 'links': linked})
+        # the mark's act, as a person presses it: a teleport to the newest member, landed at reading scale
+        rect = mark['rect']
+        ctx.drv.mouse(rect['x'] + rect['w'] / 2, rect['y'] + rect['h'] / 2)
+        ctx.js('new Promise(res => { const t0 = performance.now(); const step = () => { const f = window.__skep.view.focus(); if ((f && f.addr === %s) || performance.now() - t0 > 10000) res(true); else setTimeout(step, 30); }; step(); })' % json.dumps(newest))
+        ctx.settle()
+        ctx.frames(2)
+        focus = ctx.js('window.__skep.view.focus()')
+        trail = ctx.js('window.__skep.trail()')['numbered']
+        landed = {'focus': focus['addr'] if focus else None, 'mounted': ctx.js('window.__skep.mounted(%s)' % json.dumps(newest)) is not None,
+                  'lod': ctx.js('window.__skep.view.lod()')['name'], 'trail_newest': next((t['addr'] for t in trail if t['n'] == 1), None)}
+        r.check(landed['focus'] == newest and landed['mounted'] and landed['lod'] == 'near' and landed['trail_newest'] == newest,
+                'a click on the mark teleports to its newest member: the focus and the trail\'s newest entry are it, its text mounted at reading scale', landed)
+        r.figures['home_mark']['click'] = landed
     # ---- S8: a ghost address faces --------------------------------------------
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(GHOST))
     ctx.settle()

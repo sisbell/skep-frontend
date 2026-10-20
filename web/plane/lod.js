@@ -1,9 +1,13 @@
 // P-LOD — the level-of-detail bands (the structure record §3.2 "P-LOD").
 // Layer 2, pure. Carries the wireframe's §7 (S3's bands, unchanged) and S1's
 // mount thresholds (em 6.5 / 5.5, below the canvas's readable 8 — S1 Q7).
+// The continuations' band (foundations §2.1; P44): an account's continuation
+// whose documents the scale draws smaller than the far band's upper edge is
+// drawn as one mark, crossfading with its documents' boxes through the far
+// band as the clusters crossfade with the extents.
 // Rules: FP-1, FP-2, FP-7.
 
-import { DOC_W, REP_FS, CELL } from './projection.js';
+import { DOC_W, REP_FS, CELL, G, LEAF, DEPTH_SOUND } from './projection.js';
 
 /** document extent px: cluster ↔ extent crossfade band */
 export const LOD_FAR_LO = 10, LOD_FAR_HI = 18;
@@ -31,6 +35,29 @@ export function lodOf(scale) {
   if (fsPx < LOD_TXT_LO) return { name: 'mid', docPx, fsPx, fade: 0 };
   if (fsPx < LOD_TXT_HI) return { name: 'mid~near', docPx, fsPx, fade: (fsPx - LOD_TXT_LO) / (LOD_TXT_HI - LOD_TXT_LO) };
   return { name: 'near', docPx, fsPx, fade: 1 };
+}
+
+/**
+ * @typedef {Object} ResidueDepth — the continuations a scale draws as one mark each
+ * @property {number} k the shallowest continuation drawn as a mark: the first, from 1, whose documents' boxes are smaller than LOD_FAR_HI px; at most DEPTH_SOUND + 1, the continuation past the sound depth, which is always a mark
+ * @property {number} fade 0–1 as the depth-k boxes grow through LOD_FAR_LO … LOD_FAR_HI px: the mark of k fading out, the depth-k boxes and the mark of k + 1 fading in
+ * @property {number} held the continuation whose mark holds a document for the click and the connections: k, and k + 1 once the band draws the depth-k boxes the stronger
+ */
+
+/**
+ * The continuation a scale draws as each account's one mark: at HOME the
+ * first, its oldest 48 documents standing whole (foundations §2.1).
+ * @param {number} scale the camera's scale
+ * @returns {ResidueDepth}
+ */
+export function residueDepth(scale) {
+  for (let k = 1; k <= DEPTH_SOUND; k++) {
+    const px = (DOC_W * scale) / Math.pow(G[LEAF], k);
+    if (px >= LOD_FAR_HI) continue;
+    const fade = px < LOD_FAR_LO ? 0 : (px - LOD_FAR_LO) / (LOD_FAR_HI - LOD_FAR_LO);
+    return { k, fade, held: fade < 0.5 ? k : k + 1 };
+  }
+  return { k: DEPTH_SOUND + 1, fade: 0, held: DEPTH_SOUND + 1 };
 }
 
 /**

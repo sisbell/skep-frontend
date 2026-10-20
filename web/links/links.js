@@ -30,8 +30,11 @@
 //     and endorsement filter the set per document for the session;
 //   - a link the person has FOLLOWED this session is drawn lighter (D-3:
 //     VALUE, the hue kept), the set client-side, never written;
-//   - the mid connections: one per document pair in its kind's form, hue the
-//     linker's; the scene's pane-to-pane lines the same set.
+//   - the mid connections: one per pair of places the plane draws the
+//     documents at — a document's own box, or the mark of the continuation
+//     holding it (P44) — in its kind's form, hue the linker's; a link whose
+//     two ends stand at one place draws none; the scene's pane-to-pane lines
+//     the same set.
 // WHAT REPLACES THIS RULE LATER: link sets (`_designs/LINK-SETS/…` §4, in
 // review) — at a version `E.k` the default view is `E`'s OWN SET plus the sets
 // its author has `E.k` read with plus the reader's own links; everything else
@@ -79,9 +82,9 @@ import { commonsType } from '../model/address.js';
  * @property {boolean} farWhole
  */
 /**
- * @typedef {Object} Connection — a mid connection between two documents
- * @property {string} a
- * @property {string} b
+ * @typedef {Object} Connection — a mid connection between two places the plane draws documents at
+ * @property {string} a the place one end's document is drawn at: its own address, or the mark `placeOf` names
+ * @property {string} b the place the other end's is drawn at
  * @property {'link'} kind
  * @property {Mark} mark
  * @property {number} count the links the pair holds
@@ -279,23 +282,30 @@ export function countAccount(/** @type {string} */ account) {
 }
 
 /**
- * The mid connections among a set of documents: one per pair, its kind's
- * form, hue the linker's — the owner's and the person's own by default,
- * others' where a document's toggle is on.
- * @param {string[]} docsInView
+ * The mid connections among the documents the plane draws: one per pair of
+ * PLACES they are drawn at (P44: one per document pair, with its count) —
+ * `placeOf` names a document's place, its own box or the mark of the
+ * continuation that holds it — its kind's form, hue the linker's — the
+ * owner's and the person's own by default, others' where a document's toggle
+ * is on. A link whose two ends stand at one place draws none.
+ * @param {string[]} docsDrawn the documents drawn, whole or inside a mark
+ * @param {(addr: string) => string} [placeOf] the place a document is drawn at; by default its own box
  * @returns {Connection[]}
  */
-export function connections(docsInView) {
-  const set = new Set(docsInView);
+export function connections(docsDrawn, placeOf = (addr) => addr) {
+  const set = new Set(docsDrawn);
   /** @type {Map<string, Connection>} */
   const pairs = new Map();
-  for (const addr of docsInView) {
+  for (const addr of docsDrawn) {
+    const here = placeOf(addr);
     for (const s of shown(addr)) {
-      if (!s.far || !set.has(s.far) || s.far === addr) continue;
-      const key = [addr, s.far].sort().join('|');
+      if (!s.far || !set.has(s.far)) continue;
+      const there = placeOf(s.far);
+      if (there === here) continue;
+      const key = [here, there].sort().join('|');
       const c = pairs.get(key);
       if (c) c.count++;
-      else pairs.set(key, { a: addr, b: s.far, kind: 'link', mark: s.mark, count: 1 });
+      else pairs.set(key, { a: here, b: there, kind: 'link', mark: s.mark, count: 1 });
     }
   }
   return [...pairs.values()];

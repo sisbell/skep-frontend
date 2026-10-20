@@ -125,7 +125,7 @@ def main():
     rd = (cases.get('rendered') or {}).get('figures') or {}
     if rd:
         L.append('## Class 1 — rendered\n')
-        L.append('```\n' + json.dumps({k: rd.get(k) for k in ('first_edition', 'oracle_runs', 'census', 'draft_shown', 'agent_space', 'system_rows_held', 'residue_depth')}, indent=1, default=str) + '\n```\n')
+        L.append('```\n' + json.dumps({k: rd.get(k) for k in ('first_edition', 'oracle_runs', 'census', 'draft_shown', 'home_mark', 'agent_space', 'system_rows_held', 'residue_depth')}, indent=1, default=str) + '\n```\n')
     tx = (cases.get('text') or {}).get('figures') or {}
     if tx:
         L.append('## Class 3 — text\n')

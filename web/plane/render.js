@@ -10,20 +10,29 @@
 // yet" where empty — law 13), the documents as extents (the box, the
 // edition/draft edge, the address label and its first line — a DRAFT
 // convention — the badge from LK's `countDoc`, the members' marks on the
-// strip), THE RESIDUE for documents past the sound depth (one cell: the
-// count, the newest's label), the mid connections from LK's `connections`;
-// the trail's pips numbered newest-first with their path; the focus ring;
-// the arrival mark; text yielded where T-LAYER mounted it; for the unmounted,
-// the bars — P-LAY's layout of the article's own lines (T-ARTICLE's plan, made
-// through T-LAYER from the view it mounts with), each bar where its line's
-// glyphs will stand and none past the article's clip, so the handoff swaps
-// bars for text in place (law 8; S1 Q7). The loop runs T-LAYER's frame BEFORE
-// this draw, so what is mounted is settled when a document's label and bars
-// are drawn or yielded; `stats` names both sets, and the loop holds them
-// against the mounted set at the frame's end. The system account's rows are
-// never drawn (the record §1.8; this lane's cut). The chip is at the
-// document's corner (T-ARTICLE), never here. Carries: the wireframe's §10
-// whole and §21's `drawAccountFrames`.
+// strip), each account's CONTINUATION whose documents the scale draws too
+// small to stand whole as ONE MARK (foundations §2.1; P44; P-LOD's
+// `residueDepth`, crossfading with the boxes it holds through the far band):
+// law 13's count of what it holds — "≥ n" where the index runs from a floor —
+// and its newest member's label as a box draws it, its act a teleport to that
+// member, its members drawn as boxes only as the band fades them in; the mid
+// connections from LK's `connections`, each end at the box that draws a
+// document or the mark that holds it; the trail's pips numbered newest-first
+// with their path; the focus ring; the arrival mark; text yielded where
+// T-LAYER mounted it; for the unmounted, the bars — P-LAY's layout of the
+// article's own lines (T-ARTICLE's plan, made through T-LAYER from the view
+// it mounts with), each bar where its line's glyphs will stand and none past
+// the article's clip, so the handoff swaps bars for text in place (law 8; S1
+// Q7). The loop runs T-LAYER's frame BEFORE this draw, so what is mounted is
+// settled when a document's label and bars are drawn or yielded; `stats`
+// names both sets, and the loop holds them against the mounted set at the
+// frame's end; it names the marks and the connections drawn too, for the
+// gate. The hit tests read the draw's own rule: a click meets a document's
+// box only where the box stands whole, and a continuation's mark wherever
+// the mark holds its documents. The system account's rows are never drawn
+// (the record §1.8; this lane's cut). The chip is at the document's corner
+// (T-ARTICLE), never here.
+// Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
 // Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports).
 
 import * as REC from '../model/records.js';
@@ -33,21 +42,48 @@ import * as WALK from '../nav/walk.js';
 import * as LAYER from '../text/layer.js';
 import * as GO from '../nav/go.js';
 import { cam, sx, sy, wx, wy, viewport, viewportWorld } from './camera.js';
-import { lodOf, LOD_TXT_LO } from './lod.js';
-import { docBox, accountCell, boardCell, intersects, residueCell, accountAt, DEPTH_SOUND } from './projection.js';
+import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
+import { docBox, accountCell, boardCell, intersects, continuationCell, withinContinuation, accountAt } from './projection.js';
 import { metricsFor, layoutOf, bars, CHAR_W } from './layout.js';
 import { COL, EDGE, HUE } from './register.js';
+import { documentOf, cmpAddr } from '../model/address.js';
 import { t } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
+/** @typedef {import('./projection.js').Cell} Cell */
+/** @typedef {{x: number, y: number, w: number, h: number}} Rect a screen rect */
+
+/**
+ * @typedef {Object} ResidueMark — a continuation drawn as one mark (foundations §2.1; P44)
+ * @property {string} key the place it draws its documents at, for the connections: `account:k`
+ * @property {string} account
+ * @property {number} k the continuation: its cell holds the account's documents at continuation depth k and deeper
+ * @property {number} n law 13's count of what it holds
+ * @property {boolean} exact the count is exact, the index complete; else a lower bound, drawn so
+ * @property {string} newest its newest member, the highest-numbered — the teleport's landing
+ * @property {string[]} members the documents it holds, in address order
+ * @property {number} alpha the alpha it is drawn at: below 1 through the far bands
+ * @property {string[]} lines the text drawn on it, line by line
+ * @property {Rect} rect its screen rect
+ */
 
 /** @type {HTMLCanvasElement | null} */
 let cv = null;
 /** @type {CanvasRenderingContext2D | null} */
 let ctx = null;
 let DPR = 1;
-/** the last frame's figures; `drawn` the documents whose label or bars it drew, `yielded` the ones it left to T-LAYER's mount */
-export const stats = { linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0, residues: 0, drawn: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]) };
+/**
+ * The last frame's figures; `drawn` the documents whose label or bars it
+ * drew, `yielded` the ones it left to T-LAYER's mount, `residueMarks` the
+ * continuations drawn as marks, `connections` the mid connections drawn, each
+ * between two places.
+ */
+export const stats = {
+  linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0,
+  residueMarks: /** @type {ResidueMark[]} */ ([]),
+  connections: /** @type {Array<{a: string, b: string, count: number}>} */ ([]),
+  drawn: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]),
+};
 
 /**
  * @typedef {Object} LaidOut — a document's bars as the canvas lays them out
@@ -188,44 +224,158 @@ function firstBar(/** @type {import('./layout.js').Bar[]} */ B, /** @type {numbe
   return lo;
 }
 
-/** the documents as extents; the residue cells; the mid connections */
+/**
+ * Every document the plane may draw: the index's places, and the documents
+ * the model holds that the index does not list, their text or their
+ * metadata delivered; the system account's rows left out.
+ * @returns {Doc[]}
+ */
+function drawable() {
+  /** @type {Doc[]} */
+  const out = [];
+  const seen = new Set();
+  for (const p of REC.places()) { if (p.system) continue; out.push(REC.doc(p.doc)); seen.add(p.doc); }
+  for (const d of REC.docs()) if (!seen.has(d.addr) && !d.system && (d.from >= 0 || d.meta)) out.push(d);
+  return out;
+}
+
+/**
+ * Each account's continuation k: the documents it holds among `docs`, in
+ * address order — its newest last — a version member counted as its document.
+ * @param {Doc[]} docs
+ * @param {number} k
+ * @returns {Map<string, string[]>} by account
+ */
+function membersAt(docs, k) {
+  /** @type {Map<string, Set<string>>} */
+  const by = new Map();
+  for (const d of docs) {
+    if (!d.account || !withinContinuation(d.addr, k)) continue;
+    let s = by.get(d.account);
+    if (!s) by.set(d.account, (s = new Set()));
+    s.add(documentOf(d.addr) || d.addr);
+  }
+  return new Map([...by].map(([a, s]) => [a, [...s].sort(cmpAddr)]));
+}
+
+/** a box's label: the document's address past its region's prefix (F-9) */
+const shortAddr = (/** @type {Doc} */ d) => (d.account ? d.addr.slice(d.account.length + 1) : d.addr);
+/** a draft, by the index's kind or by its metadata where read */
+const isDraft = (/** @type {Doc} */ d) => d.kind === 'draft' || (d.meta ? !d.meta.published : false);
+/** a box's first line: the withheld statement, or the document's first line with its draft mark (a DRAFT convention, F-9) */
+const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? t('B1.withheld-box', { owner: d.account || '' }) : `${(d.label || '').replace(/^#+\s*/, '')}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
+
+/** text set at its spaces in lines of at most `cols` characters; a word longer than a line cut, an ellipsis ending it */
+function wrapAt(/** @type {string} */ text, /** @type {number} */ cols) {
+  /** @type {string[]} */
+  const out = [];
+  let line = '';
+  for (const w of text.split(/\s+/)) {
+    if (!w) continue;
+    const word = w.length > cols ? w.slice(0, Math.max(1, cols - 1)) + '…' : w;
+    if (line && line.length + 1 + word.length <= cols) line += ' ' + word;
+    else { if (line) out.push(line); line = word; }
+  }
+  if (line) out.push(line);
+  return out;
+}
+
+/**
+ * A continuation's mark: its cell, law 13's count of what it holds and its
+ * newest member's label as a box draws it — the address past the region's
+ * prefix, the first line beneath — set at the spaces inside the mark, as many
+ * lines as the mark has room for.
+ * @param {{key: string, account: string, k: number, members: string[], cell: Cell, alpha: number}} m
+ * @returns {ResidueMark}
+ */
+function drawMark(m) {
+  const c = /** @type {CanvasRenderingContext2D} */ (ctx);
+  const X = sx(m.cell.x), Y = sy(m.cell.y), W = m.cell.w * cam.scale, H = m.cell.h * cam.scale;
+  const n = m.members.length, exact = REC.countsExact();
+  const newest = REC.doc(m.members[n - 1]);
+  c.globalAlpha = m.alpha;
+  c.fillStyle = COL.residue; rrect(c, X, Y, W, H, Math.min(6, W * 0.05)); c.fill();
+  c.strokeStyle = COL.clusterEdge; c.lineWidth = 1; c.setLineDash([2, 3]); c.stroke(); c.setLineDash([]);
+  /** @type {string[]} */
+  const lines = [];
+  if (W > 60) {
+    const f = Math.max(8, Math.min(12, W * 0.07)), pad = 6;
+    const cols = Math.max(1, Math.floor((W - 2 * pad) / (f * CHAR_W)));
+    const count = t('F.residue.newest', { n: exact ? n : t('L.lower-bound', { n }), label: shortAddr(newest) });
+    const set = [...wrapAt(count, cols).map((s) => ({ s, fill: COL.title })), ...wrapAt(firstLine(newest), cols).map((s) => ({ s, fill: COL.greek }))];
+    c.font = mono(f);
+    let y = Y + pad + f;
+    for (const l of set) {
+      if (y > Y + H - pad) break;
+      c.fillStyle = l.fill; c.fillText(l.s, X + pad, y); lines.push(l.s);
+      y += f * 1.25;
+    }
+  }
+  return { key: m.key, account: m.account, k: m.k, n, exact, newest: newest.addr, members: m.members, alpha: m.alpha, lines, rect: { x: X, y: Y, w: W, h: H } };
+}
+
+/** the documents as extents; the continuations too small to stand whole as marks; the mid connections */
 function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} */ alpha) {
   if (!ctx) return 0;
   const { VW, VH } = viewport();
   const v = viewportWorld(80);
-  /** @type {Doc[]} */
+  const cont = residueDepth(cam.scale);
+  const all = drawable();
+  // the documents drawn whole: those shallower than the continuation k, and through the band the depth-k ones fading in
+  /** @type {Array<{d: Doc, alpha: number}>} */
   const vis = [];
-  /** @type {Map<string, {cell: import('./projection.js').Cell, docs: Doc[]}>} */
-  const residues = new Map();
-  const seen = new Set();
-  for (const p of REC.places()) { if (p.system) continue; const b = docBox(p.doc); if (!intersects(b, v)) continue; const d = REC.doc(p.doc); seen.add(p.doc); if (b.residue) { const key = p.account; const r = residues.get(key) || { cell: residueCell(p.account), docs: [] }; r.docs.push(d); residues.set(key, r); } else vis.push(d); }
-  for (const d of REC.docs()) { if (seen.has(d.addr) || d.system) continue; if ((d.from >= 0 || d.meta) && intersects(docBox(d.addr), v) && !docBox(d.addr).residue) { vis.push(d); seen.add(d.addr); } }
-  ctx.globalAlpha = alpha;
-  // the mid connections behind, from LK (the seam)
+  for (const d of all) {
+    if (!intersects(docBox(d.addr), v)) continue;
+    if (!withinContinuation(d.addr, cont.k)) vis.push({ d, alpha });
+    else if (cont.fade > 0 && !withinContinuation(d.addr, cont.k + 1)) vis.push({ d, alpha: alpha * cont.fade });
+  }
+  // the continuations drawn as marks: k's, and through the band k + 1's fading in as k's fades out
+  /** @type {Array<{key: string, account: string, k: number, members: string[], cell: Cell, alpha: number}>} */
+  const marks = [];
+  const drawnK = cont.fade > 0 ? [[cont.k, alpha * (1 - cont.fade)], [cont.k + 1, alpha * cont.fade]] : [[cont.k, alpha]];
+  for (const [k, a] of drawnK) {
+    for (const [account, members] of membersAt(all, k)) {
+      const cell = continuationCell(account, k);
+      if (intersects(cell, v)) marks.push({ key: account + ':' + k, account, k, members, cell, alpha: a });
+    }
+  }
+  // the mid connections behind, from LK (the seam): a document stands at its box, or at the mark that holds it
+  /** @type {Map<string, Cell>} the marks that hold their documents, by place */
+  const holding = new Map();
+  /** @type {Map<string, string>} the place of each document a mark holds */
+  const heldAt = new Map();
+  for (const m of marks) {
+    if (m.k !== cont.held) continue;
+    holding.set(m.key, m.cell);
+    for (const a of m.members) heldAt.set(a, m.key);
+  }
+  const placeOf = (/** @type {string} */ addr) => heldAt.get(documentOf(addr) || addr) || addr;
   let drawn = 0;
   if (lod.docPx > 6) {
     ctx.lineWidth = Math.min(1.6, 0.4 + lod.docPx / 300);
-    for (const c of LK.connections(vis.map((d) => d.addr))) {
-      const a = docBox(c.a), b = docBox(c.b);
+    for (const c of LK.connections([...new Set([...vis.map((x) => x.d.addr), ...heldAt.keys()])], placeOf)) {
+      const a = holding.get(c.a) || docBox(c.a), b = holding.get(c.b) || docBox(c.b);
       const ax = sx(a.x + a.w / 2), ay = sy(a.y + a.h / 2), bx = sx(b.x + b.w / 2), by = sy(b.y + b.h / 2);
       if ((ax < -400 && bx < -400) || (ax > VW + 400 && bx > VW + 400) || (ay < -400 && by < -400) || (ay > VH + 400 && by > VH + 400)) continue;
       ctx.globalAlpha = alpha * 0.3 * c.mark.value; ctx.strokeStyle = c.mark.hue;
       ctx.setLineDash(Array.isArray(c.mark.form) ? c.mark.form : []);
       ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]); drawn++;
+      stats.connections.push({ a: c.a, b: c.b, count: c.count });
     }
-    ctx.globalAlpha = alpha;
   }
   stats.linksDrawn = drawn;
-  const focus = WALK.current();
-  for (const d of vis) {
+  // the marks, then the boxes beside them: one mark per continuation, never a stack of its members (P44)
+  stats.residueMarks = marks.map(drawMark);
+  for (const { d, alpha: a } of vis) {
+    ctx.globalAlpha = a;
     const box = docBox(d.addr);
     const X = sx(box.x), Y = sy(box.y), W = box.w * cam.scale, H = box.h * cam.scale;
-    const isDraft = d.kind === 'draft' || (d.meta ? !d.meta.published : false);
+    const draft = isDraft(d);
     const landmark = /\.0\.1$/.test(d.addr);
     ctx.fillStyle = d.refused === 'withheld' ? COL.withheld : COL.doc; rrect(ctx, X, Y, W, H, Math.min(6, W * 0.05)); ctx.fill();
-    ctx.strokeStyle = landmark ? COL.land : isDraft ? COL.draftEdge : COL.docEdge;
-    ctx.lineWidth = landmark ? EDGE.landmark : isDraft ? EDGE.draft : EDGE.edition;
-    if (isDraft) ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeStyle = landmark ? COL.land : draft ? COL.draftEdge : COL.docEdge;
+    ctx.lineWidth = landmark ? EDGE.landmark : draft ? EDGE.draft : EDGE.edition;
+    if (draft) ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
     if (W < 26) continue;
     const m = metricsFor(d.extent || 1, box);
     const fsPx = m.fs * cam.scale;
@@ -237,12 +387,11 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
       ctx.fillStyle = COL.title;
       const tf = Math.max(7, Math.min(W * 0.085, fsPx * 1.25));
       ctx.font = `600 ${tf}px ui-monospace, Menlo, monospace`;
-      const shortAddr = d.account ? d.addr.slice(d.account.length + 1) : d.addr;
-      ctx.fillText(shortAddr, X + W * 0.06, Y + H * 0.05 + tf);
+      ctx.fillText(shortAddr(d), X + W * 0.06, Y + H * 0.05 + tf);
       if (W > 90) {
         ctx.fillStyle = COL.greek; ctx.font = mono(tf * 0.72);
         const maxc = Math.floor((W * 0.9) / (tf * 0.72 * CHAR_W));
-        const sub = d.refused === 'withheld' ? t('B1.withheld-box', { owner: d.account || '' }) : `${(d.label || '').replace(/^#+\s*/, '')}${isDraft ? ' · ' + t('F.label.draft') : ''}`;
+        const sub = firstLine(d);
         ctx.fillText(sub.length > maxc ? sub.slice(0, Math.max(0, maxc - 1)) + '…' : sub, X + W * 0.06, Y + H * 0.05 + tf * 2.1);
         const c = LK.countDoc(d.addr);
         if (W > 110 && (c.n || c.arriving)) ctx.fillText(c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : plural(c.n, 'F.label.links.1', 'F.label.links'), X + W * 0.06, Y + H * 0.05 + tf * 3.1);
@@ -258,30 +407,12 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     const below = wy(VH + fsPx) - box.y;
     for (let i = firstBar(B, wy(-fsPx) - box.y); i < B.length && B[i].y < below; i++) {
       const b = B[i];
-      ctx.fillStyle = COL.greek; ctx.globalAlpha = alpha * (b.withheld ? 0.25 : fsPx >= LOD_TXT_LO ? 0.7 : 0.55);
+      ctx.fillStyle = COL.greek; ctx.globalAlpha = a * (b.withheld ? 0.25 : fsPx >= LOD_TXT_LO ? 0.7 : 0.55);
       ctx.fillRect(sx(box.x + b.x), sy(box.y + b.y), b.w * cam.scale, Math.max(1, b.h * cam.scale));
       stats.linesDrawn++;
     }
-    ctx.globalAlpha = alpha;
-  }
-  // the residues: one cell per account past the sound depth — the count and the newest's label, a teleport
-  stats.residues = 0;
-  for (const [acct, r] of residues) {
-    const c = r.cell;
-    const X = sx(c.x), Y = sy(c.y), W = c.w * cam.scale, H = c.h * cam.scale;
-    if (W < 6) continue;
-    stats.residues++;
-    ctx.fillStyle = COL.residue; rrect(ctx, X, Y, W, H, Math.min(6, W * 0.05)); ctx.fill();
-    ctx.strokeStyle = COL.clusterEdge; ctx.setLineDash([2, 3]); ctx.stroke(); ctx.setLineDash([]);
-    if (W > 60) {
-      const newest = r.docs[r.docs.length - 1];
-      ctx.fillStyle = COL.title; ctx.font = mono(Math.max(8, Math.min(12, W * 0.07)));
-      ctx.fillText(t('F.residue.newest', { n: r.docs.length, label: (newest.label || newest.addr).slice(0, 24) }), X + 6, Y + 14);
-      ctx.fillStyle = COL.greek; ctx.font = mono(9); ctx.fillText(acct + ' · ' + t('L.arriving').replace(/.*/, `depth ${DEPTH_SOUND}+`), X + 6, Y + 26);
-    }
   }
   ctx.globalAlpha = 1;
-  void focus;
   return vis.length;
 }
 
@@ -340,7 +471,7 @@ export function draw() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, VW, VH);
   ctx.textBaseline = 'alphabetic';
-  stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.drawn = []; stats.yielded = [];
+  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.drawn = []; stats.yielded = [];
   drawBoard();
   if (lod.name === 'far') stats.clusters = drawClusters(1);
   else if (lod.name === 'far~mid') { stats.clusters = drawClusters(1 - lod.fade); drawAccountFrames(); stats.docsDrawn = drawDocs(lod, lod.fade); }
@@ -349,15 +480,30 @@ export function draw() {
   return lod;
 }
 
-/** the document under a screen point (a hit test; draws nothing) */
+/** the document under a screen point where its box stands whole — one a continuation's mark holds is the mark's (a hit test; draws nothing) */
 export function docAtScreen(/** @type {number} */ px, /** @type {number} */ py) {
+  const { held } = residueDepth(cam.scale);
   const wxp = wx(px), wyp = wy(py);
-  for (const p of REC.places()) { if (p.system) continue; const b = docBox(p.doc); if (b.residue) continue; if (wxp >= b.x && wxp <= b.x + b.w && wyp >= b.y && wyp <= b.y + b.h) return p.doc; }
+  for (const p of REC.places()) { if (p.system || withinContinuation(p.doc, held)) continue; const b = docBox(p.doc); if (wxp >= b.x && wxp <= b.x + b.w && wyp >= b.y && wyp <= b.y + b.h) return p.doc; }
   return null;
 }
-/** the residue cell under a screen point: its account */
-export function residueAtScreen(/** @type {number} */ px, /** @type {number} */ py) {
+
+/**
+ * The continuation mark under a screen point, wherever the documents are drawn
+ * (the far scale draws clusters): its account, its continuation and its
+ * newest member, the teleport's landing (foundations §2.1); null where no
+ * mark holds the point.
+ * @param {number} px
+ * @param {number} py
+ * @returns {{account: string, k: number, newest: string} | null}
+ */
+export function residueAtScreen(px, py) {
+  if (lodOf(cam.scale).name === 'far') return null;
+  const { held } = residueDepth(cam.scale);
   const wxp = wx(px), wyp = wy(py);
-  for (const a of REC.accounts()) { if (a.system) continue; const c = residueCell(a.account); if (wxp >= c.x && wxp <= c.x + c.w && wyp >= c.y && wyp <= c.y + c.h) return a.account; }
+  for (const [account, members] of membersAt(drawable(), held)) {
+    const c = continuationCell(account, held);
+    if (wxp >= c.x && wxp <= c.x + c.w && wyp >= c.y && wyp <= c.y + c.h) return { account, k: held, newest: members[members.length - 1] };
+  }
   return null;
 }

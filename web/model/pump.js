@@ -6,7 +6,8 @@
 // hands a write frame to `op` (S-35 (a); class 5 proves it).
 // The needs, from the viewport and the LOD (FP-11: the plane's pure camera
 // arithmetic beside the model): at mid scale and nearer, for the documents
-// in view — the extent (`retrieve_doc_v_span_set`), the metadata
+// in view that stand whole — a continuation drawn as one mark asks nothing
+// for its members — the extent (`retrieve_doc_v_span_set`), the metadata
 // (`doc_metadata`), the links touching them (`find_links_v`, then each new
 // link's type ONCE by `read_link` — E17 (a)), and, where legible, the span
 // window of text (`retrieve_v`) with its V→I image (`image`) for the
@@ -22,8 +23,8 @@ import * as PORT from '../bridge/port.js';
 import * as REC from './records.js';
 import * as F from './frames.js';
 import { cam, viewportWorld } from '../plane/camera.js';
-import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
-import { docBox, intersects } from '../plane/projection.js';
+import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
+import { docBox, intersects, withinContinuation } from '../plane/projection.js';
 import { metricsFor } from '../plane/layout.js';
 import { versionAddress } from './address.js';
 
@@ -129,22 +130,27 @@ function need(key, frame, take, addr, onRefused) {
 const nameOf = (/** @type {Refusal} */ r) => r.name;
 
 /**
- * The documents in view: every indexed, held or focused document whose box
- * meets the viewport (the system account's rows left out).
+ * The documents in view: every indexed or held document whose box meets the
+ * viewport (the system account's rows left out) and stands shallower than
+ * the continuation the scale draws as one mark (P-LOD's `residueDepth`). The
+ * mark draws its members' count and its newest's label from the index, which
+ * no read brings, and the band fades its depth-k boxes in below every size a
+ * read serves; a member is read whole when it is the focus (`loadWhole`).
  * @param {number} [pad]
  * @returns {Doc[]}
  */
 export function visibleDocs(pad = 80) {
   const v = viewportWorld(pad);
+  const { k } = residueDepth(cam.scale);
   /** @type {Doc[]} */
   const out = [];
   const seen = new Set();
   for (const p of REC.places()) {
-    if (p.system) continue;
+    if (p.system || withinContinuation(p.doc, k)) continue;
     if (intersects(docBox(p.doc), v)) { out.push(REC.doc(p.doc)); seen.add(p.doc); }
   }
   for (const d of REC.docs()) {
-    if (seen.has(d.addr) || d.system) continue;
+    if (seen.has(d.addr) || d.system || withinContinuation(d.addr, k)) continue;
     if ((d.from >= 0 || d.meta || d.extent != null) && intersects(docBox(d.addr), v)) out.push(d);
   }
   return out;
@@ -192,7 +198,6 @@ export function pump() {
   for (const d of budgetDocs) {
     if (d.refused) continue;
     const box = docBox(d.addr);
-    if (box.residue) continue; // the residue's members are read when one is the focus (loadWhole)
     const docPx = box.w * cam.scale;
     if (d.extent == null) {
       if (need('s:' + d.addr, F.retrieveDocVSpanSet(d.addr), (a) => REC.takeSpanSet(d.addr, F.decodeSpanSet(a)), d.addr, (r) => refuseDoc(d, r))) missing++;

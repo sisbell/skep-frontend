@@ -5,7 +5,10 @@
 // `overlapCheck` (the measuring code moved into the page), the visibility
 // oracle `visible`, the beams' anchors beside their spans' own rects, the
 // handoff (`barsOf`: the canvas's own bars for a document beside its mounted
-// article's blocks), S3's camera paths (`runPath`) and the frame buffer —
+// article's blocks), the continuations' marks the canvas drew (`residues`:
+// each one's count, newest member, members, the text it drew and its screen
+// rect) and the mid connections it drew between places (`connections`), S3's
+// camera paths (`runPath`) and the frame buffer —
 // each frame's count of documents both drawn and mounted, and of documents
 // yielded and not mounted — the bridge client's own call
 // log, the settle signal, the trail, the line's and the overlay's text, the
@@ -291,6 +294,10 @@ export function install(deps) {
     view: { camera: () => CAM.view(), focus: () => WALK.current(), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
     driftSample, overlapCheck, visible,
     beamAnchors, barsOf,
+    /** the continuations the last frame drew as marks */
+    residues: () => RENDER.stats.residueMarks.slice(),
+    /** the mid connections the last frame drew, each between two places: a document, or a mark's `key` */
+    connections: () => RENDER.stats.connections.slice(),
     runPath, settle,
     frames: () => deps.frames.slice(),
     bridge: { calls: () => PORT.callLog(), adapter: () => PORT.adapterName(), stream: () => PORT.streamState() },
