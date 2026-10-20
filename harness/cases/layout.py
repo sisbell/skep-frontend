@@ -8,9 +8,11 @@ one beside its article, clipped by no box of the page and reaching into no
 other document's box, mounted or only drawn; the first edition's in view
 below the one line at each level, held there while the document's top has
 risen past the line, and never below the document's box as its bottom
-rises), and every beam leaving the text at its span's own line (its
-endpoint on one of its marked words' line rects, between the words' end and
-the article's edge — foundations §2.1; S1 Q1). THE HANDOFF (law 8;
+rises), every beam leaving the text at its span's own line, from the
+article's edge (its endpoint level with one of its marked words' line rects,
+at the article's edge — foundations §2.1; S1 Q1), every stub in view
+carrying its far document's label (S1 Q3), and no two of the beams' labels
+in view meeting. THE HANDOFF (law 8;
 foundations §2.4: the bars become text and no line moves; S1 Q7): at each
 level, and at the mount threshold reached from below (em 6 → 6.6) and from
 above (em 7 → 6), every block of every mounted article whose top lies
@@ -58,13 +60,13 @@ holds the box's ground alone — no path runs between the pips, which at
 reading scale would cross the text, showing between the article's glyphs.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `visible`, `barsOf`, `labels`, `scene.at`, `scene.ties`, the
-frame buffer) save the trail's, which reads the canvas's pixels here; the
-thresholds are here. The block containment, anchor and
+frame buffer, `beamLabels`) save the trail's, which reads the canvas's pixels
+here; the thresholds are here. The block containment, beam-label and
 shared-box checks are marked with the page issues they wait on and count as
 expected while those stand."""
 import json
 
-from . import DOC, FAR_LEAP, VERSIONED, WINDOW, XFAIL_ANCHOR, XFAIL_CLIP, XFAIL_MEMBER, Result
+from . import DOC, FAR_LEAP, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, XFAIL_CLIP, XFAIL_MEMBER, Result
 
 LEVELS_EM = [9, 12, 18, 30]
 DRIFT_TOL_PX = 0.5
@@ -94,9 +96,9 @@ def corner_of(ctx):
 
 
 def on_own_line(a):
-    """does the beam's endpoint lie on one of its words' line rects, between the words' end and the article's edge?"""
-    edge = a['edge'] if a['edge'] is not None else 0
-    return any(w['y'] - ANCHOR_TOL_PX <= a['y'] <= w['y'] + w['h'] + ANCHOR_TOL_PX and w['x'] + w['w'] - ANCHOR_TOL_PX <= a['x'] <= edge + ANCHOR_TOL_PX for w in a['words'])
+    """does the beam's endpoint lie level with one of its words' line rects, at the article's edge?"""
+    at_edge = a['edge'] is not None and abs(a['x'] - a['edge']) <= ANCHOR_TOL_PX
+    return at_edge and any(w['y'] - ANCHOR_TOL_PX <= a['y'] <= w['y'] + w['h'] + ANCHOR_TOL_PX for w in a['words'])
 
 
 def handoff(ctx):
@@ -482,8 +484,21 @@ def run(ctx):
     r.check(len(anchors) >= 1, 'beams are built at stage 3', len(anchors))
     r.check(all(a['words'] for a in anchors), 'every drawn beam\'s link is marked at its words in the mounted article (the oracle\'s rects exist)', [a['link'] for a in anchors if not a['words']])
     off = [{'link': a['link'], 'pos': a['pos'], 'x': a['x'], 'y': a['y'], 'edge': a['edge'], 'words': a['words']} for a in anchors if not on_own_line(a)]
-    r.check(not off, f'every beam leaves the text at its span\'s own line: its endpoint\'s y within one of its words\' line rects and its x between the words\' end and the article\'s edge, {ANCHOR_TOL_PX} px either way', off[:4], xfail=XFAIL_ANCHOR)
-    r.figures['beams'] = {'count': len(anchors), 'stubs': sum(1 for a in anchors if a['stub']), 'far': sorted({a['far'] for a in anchors})[:8], 'on_own_line': len(anchors) - len(off), 'off_own_line': len(off)}
+    r.check(not off, f'every beam leaves the text at its span\'s own line, from the article\'s edge: its endpoint\'s y within one of its words\' line rects and its x at the article\'s edge, {ANCHOR_TOL_PX} px either way', off[:4])
+    # the stubs' labels (S1 Q3): every bundle with a beam that leaves the text in view and ends at the view's border sets the label naming its
+    # far document, in view; no two labels in view meet. A beam whose line lies past the viewport is shown to no one, its stub and label with it
+    labels = ctx.js('window.__skep.beamLabels()')
+    vp = ctx.js('window.__skep.view.viewport()')
+    view = {'x': 0, 'y': 0, 'w': vp['VW'], 'h': vp['VH']}
+    stubbed = sorted({(a['near'], a['far']) for a in anchors if a['stub'] and 0 <= a['x'] <= vp['VW'] and 0 <= a['y'] <= vp['VH']})
+    named = {(l['near'], l['far']) for l in labels if l['stub'] and l['text'].startswith(l['far']) and inside(l['rect'], view)}
+    r.check(bool(stubbed) and set(stubbed) <= named, f'every stub in view carries its far document\'s label: each bundle with a beam that leaves the text in view and ends at the view\'s border sets a label naming its far document, inside the viewport {LABEL_TOL_PX} px either way',
+            {'stubbed': stubbed, 'labels': [[l['far'], l['text'], l['rect']] for l in labels]})
+    in_view = [l for l in labels if meets(l['rect'], view)]
+    met = [[a['far'], b['far'], a['rect'], b['rect']] for i, a in enumerate(in_view) for b in in_view[i + 1:] if meets(a['rect'], b['rect'])]
+    r.check(not met, f'no two beam labels in view meet, {LABEL_TOL_PX} px either way', met[:6], xfail=XFAIL_BEAM_LABELS)
+    r.figures['beams'] = {'count': len(anchors), 'stubs': sum(1 for a in anchors if a['stub']), 'far': sorted({a['far'] for a in anchors})[:8], 'on_own_line': len(anchors) - len(off), 'off_own_line': len(off),
+                          'stubs_in_view': len(stubbed), 'labels': len(labels), 'labels_in_view': len(in_view), 'labels_meeting_pairs': len(met)}
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
     ctx.frames(2)
     r.check(ctx.js('window.__skep.beams()') == 0, 'hidden again: no beams')

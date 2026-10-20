@@ -3,8 +3,9 @@
 // `window.__skep`: the model's held records, the mounted articles' text, the
 // mirror's items, the camera and the focus, S1's `driftSample` and
 // `overlapCheck` (the measuring code moved into the page), the visibility
-// oracle `visible`, the beams' anchors beside their spans' own rects, the
-// handoff (`barsOf`: the canvas's own bars for a document beside its mounted
+// oracle `visible`, the beams' anchors beside their spans' own rects and the
+// labels the beams set at their bundles' ends (`beamLabels`), the handoff
+// (`barsOf`: the canvas's own bars for a document beside its mounted
 // article's blocks), the reading scene's runs and the ends it set level
 // (`scene.pairs`), a passage's line in one of its panes (`scene.at`) and its
 // bands and lines beside their passages' lines (`scene.ties`), the
@@ -213,9 +214,9 @@ export function install(deps) {
    * The beam endpoints, each beside an oracle read apart from the beams' own
    * set: the client rects of its link's marked words in the near document's
    * mounted article (every line they occupy) and the article's right edge.
-   * A beam leaves the text at its span's own line (foundations §2.1; S1 Q1):
-   * the layout case holds each endpoint's y to one of those line rects and
-   * its x to the stretch between the words' end and the edge.
+   * A beam leaves the text at its span's own line, from the place's edge
+   * (foundations §2.1; S1 Q1): the layout case holds each endpoint's y to one
+   * of those line rects and its x to the edge.
    */
   function beamAnchors() {
     return BM.anchors().map((a) => {
@@ -345,6 +346,8 @@ export function install(deps) {
     view: { camera: () => CAM.view(), focus: () => WALK.current(), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
     driftSample, overlapCheck, visible,
     beamAnchors, barsOf,
+    /** the labels the beams' last frame set, one per bundle: the document it leaves, its far document, its text, whether it ends in a stub, and its rect on screen */
+    beamLabels: () => BM.labels(),
     /** the continuations the last frame drew as marks */
     residues: () => RENDER.stats.residueMarks.slice(),
     /** the mid connections the last frame drew, each between two places: a document, or a mark's `key` */

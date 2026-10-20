@@ -339,9 +339,10 @@ function dropCorner(/** @type {string} */ addr) {
 }
 
 /**
- * The client rects of a span in a mounted article — per-line rects (S1 Q1):
- * without a width, the block keyed by its first position (the beams'
- * anchors); with one, the bytes named (an overlay at the selection).
+ * The client rects of a span in a mounted article: without a width, those
+ * of the block keyed by its first position — its box (the edge a beam leaves
+ * from, the arrival mark); with one, those of the bytes named, line by line
+ * (S1 Q1: the line a beam leaves at, an overlay at the selection).
  * @param {string} addr
  * @param {number} pos the block's first position, or the span's
  * @param {number | null} [width] the span's positions
