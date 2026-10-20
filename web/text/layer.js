@@ -1,16 +1,22 @@
 // T-LAYER — THE ONE RECONCILER (the structure record §3.2 "T-LAYER"; FP-12:
 // one reconciler, two targets — the plane's text layer and the reading
 // scene's panes; the scene BORROWS this mount). Layer 2. ENGINE-BOUND. State:
-// VIEW — the mounted set with each record's layout scale and revision, and
-// the corners beside it — THE ONE OWNER (FP-10). Mount an article when a
-// document crosses S1's mount threshold (em 6.5, BELOW the canvas's readable
-// 8, so bars become text and no character positions disagree — S1 Q7),
-// unmount when it leaves or falls below 5.5 or its run, its revision or its
-// face changed, the cap 8; laid out ONCE at P-LAY's LAY_FS (16 px) and its
-// unitless LINE_H, so each element's line box is that element's own size's
-// (P-LAY's `lineBox`), in a column of exactly P-LAY's `cpl` characters of its
-// own face (`ch`), from its box's top padding to its box's bottom, and placed
-// by transform from the same camera arithmetic (registration 0 px — S1).
+// VIEW — the mounted set with each record's layout scale, revision and
+// blocks, the corners beside it, and whether a press stands on the layer —
+// THE ONE OWNER (FP-10). Mount an article when a document crosses S1's mount
+// threshold (em 6.5, BELOW the canvas's readable 8, so bars become text and
+// no character positions disagree — S1 Q7), unmount when it leaves or falls
+// below 5.5 or its run, its revision or its face changed, the cap 8 — but
+// WHILE A PRESS STANDS on the layer (`press`) nothing is rebuilt and nothing
+// mounted: the platform's drag-selection is anchored in the article's own
+// nodes, which a rebuild would take away, and a fresh mount of the document
+// holding the selection would place its range over the drag; the first frame
+// after the press does what was held. Laid out ONCE at P-LAY's LAY_FS (16 px)
+// and its unitless LINE_H, so each element's line box is that element's own
+// size's (P-LAY's `lineBox`), in a column of exactly P-LAY's `cpl` characters
+// of its own face (`ch`), from its box's top padding to its box's bottom, and
+// placed by transform from the same camera arithmetic (registration 0 px —
+// S1).
 // THE FACE (`metricsOf`) is P-LAY's `fitted` over the article's plan carrying
 // the most link chrome any reveal can set in it (LK's `utmost`): the article
 // ends inside its box at every stage, toggle and lens, so the clip at the
@@ -39,12 +45,15 @@
 // of the order and hidden from assistive technology; a corner that leaves
 // while it holds the focus hands it to the walk (D5 §4 rule 4). The press
 // rule's text half (§2.4): the layer takes pointer events at reading scale; a
-// drag selects text and never pans. THE SELECTION IS A BYTE SPAN (R11;
-// foundations §3.1) and the platform's selection is its one mark (§2.1): this
-// module carries the platform's range to the span it covers — each block's
-// own text nodes walked, the chrome inside a block skipped, a character
-// boundary carried to its byte position by T-SPAN — and the span back to a
-// range, which it places over the mounted article when the selection is made
+// drag selects text and never pans, and this module holds whether a press
+// stands (APP-INPUT reports its start and its end). THE SELECTION IS A BYTE
+// SPAN (R11; foundations §3.1) and the platform's selection is its one mark
+// (§2.1): this module carries the platform's range to the span it covers —
+// each block's own text nodes walked, the chrome inside a block skipped, a
+// character boundary carried to its byte position by T-SPAN through the
+// blocks the article was made from, never the model's newest, which a
+// delivery under a press may have replaced — and the span back to a range,
+// which it places over the mounted article when the selection is made
 // and again after a remount, since a remount rebuilds the element and the
 // platform's range dies with the old one; the reading scene's panes borrow
 // that mapping (`rangeIn`) to find where a passage stands. The copy event
@@ -58,7 +67,7 @@
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { cam, sx, sy } from '../plane/camera.js';
+import { cam, sx, sy, markDirty } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MAX_MOUNTED, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { metricsFor, fitted, LAY_FS, LINE_H } from '../plane/layout.js';
@@ -79,6 +88,7 @@ import { fingerprintCue } from '../util.js';
  * @property {number} runFrom
  * @property {number} runTo
  * @property {number} rev the document's revision at mount
+ * @property {Block[]} blocks the blocks the article was made from: the model replaces a document's blocks whole and never edits them in place, so these stay the article's own while it stands, whatever the model has delivered since
  * @property {number} grev the view revision at mount
  * @property {number} fs the document's em in world units
  * @property {number} x0 the text column's left edge in the box (world units)
@@ -133,6 +143,8 @@ let layer = null;
 let cornerLayer = null;
 /** the view revision: the selection, the reveal, the focus, the lenses — a bump remounts */
 let grev = 0;
+/** does a press stand on the layer: the button went down on an article and the press has not ended */
+let pressed = false;
 /** @type {Readers} */
 let read = { selection: () => null, focus: () => null, top: () => 0, handOff: () => {} };
 
@@ -143,6 +155,18 @@ export function readers(/** @type {Readers} */ r) { read = r; }
 /** bump the view revision: every mounted article is rebuilt on the next frame */
 export function bump() { grev++; }
 export const revision = () => grev;
+/**
+ * The press rule's text half (§2.4): a press on an article stands from its
+ * button going down to its end — the button's release, the platform's
+ * cancel, a context menu — and while it stands `frame` rebuilds and mounts
+ * nothing, so the drag keeps the nodes it is anchored in (R11's one
+ * continuous gesture). APP-INPUT reports both. A press's end marks the frame
+ * dirty, so the next frame does what was held; ending none changes nothing.
+ * @param {boolean} on the press starts (true) or ends (false)
+ */
+export function press(on) { if (pressed && !on) markDirty(); pressed = on; }
+/** does a press stand on the layer? */
+export const pressing = () => pressed;
 /** the mounted set, read-only */
 export const mountedSet = () => mounted;
 /** @param {string} addr */
@@ -230,7 +254,7 @@ function mount(d) {
   // each block's place in the one layout (16 px), fractional (offsetTop rounds): the gate holds every later frame to it, scaled — a reflow would move a line
   const blockTops = [.../** @type {NodeListOf<HTMLElement>} */ (el.querySelectorAll('.sp'))].map((e) => { const r = e.getBoundingClientRect(); return { pos: Number(e.dataset.pos), top: r.top - art.top, left: r.left - art.left }; });
   /** @type {Mounted} */
-  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, grev, fs: m.fs, x0: m.x0, y0: m.y0, corner: cornerHTML(d, v), target: 'plane', blockTops };
+  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, blocks: d.blocks, grev, fs: m.fs, x0: m.x0, y0: m.y0, corner: cornerHTML(d, v), target: 'plane', blockTops };
   mounted.set(d.addr, rec);
   place(rec);
   mountLog.push({ addr: d.addr, ms: performance.now() - t0, blocks: d.blocks.length, emPx: m.fs * cam.scale });
@@ -263,7 +287,12 @@ function place(/** @type {Mounted} */ rec) {
  * documents unmounted): unmount what left or fell below the threshold or went
  * stale, mount what crossed it (the cap), place everything and the corners
  * beside it; where the article holding the selection was mounted this frame,
- * place the platform's range over the span again.
+ * place the platform's range over the span again. While a press stands
+ * (`press`) only what left or fell below the threshold is unmounted: no
+ * article is rebuilt and none mounted, so the drag keeps the nodes it is
+ * anchored in and no range is placed over it; the first frame after the
+ * press rebuilds what went stale, mounts what crossed, and places the range
+ * the release took over the rebuilt article.
  * @param {(addr: string) => boolean} [focused] whether a document is the walk's focused one: the one residue document of its cell that mounts, and the one whose corner is a Tab stop (D5 K-57)
  */
 export function frame(focused = () => false) {
@@ -289,11 +318,12 @@ export function frame(focused = () => false) {
     const box = docBox(addr);
     const em = rec.fs * cam.scale;
     if (!intersects(box, v) || em < UNMOUNT_EM || (box.residue && !focused(addr))) { unmount(addr); continue; }
+    if (pressed) continue;
     if (rec.d.from !== rec.runFrom || rec.d.to !== rec.runTo || rec.rev !== rec.d.rev || rec.grev !== grev || rec.fs !== metricsOf(rec.d).fs) unmount(addr);
   }
   /** @type {string[]} the articles mounted this frame */
   const fresh = [];
-  for (const w of want.slice(0, MAX_MOUNTED)) if (!mounted.has(w.d.addr) && mount(w.d)) fresh.push(w.d.addr);
+  if (!pressed) for (const w of want.slice(0, MAX_MOUNTED)) if (!mounted.has(w.d.addr) && mount(w.d)) fresh.push(w.d.addr);
   for (const rec of mounted.values()) if (keep.has(rec.d.addr) || true) place(rec);
   placeCorners(focused);
   const sel = read.selection();
@@ -448,8 +478,9 @@ function posOfPoint(b, el, node, offset, side) {
 /**
  * The span a platform range covers in a mounted article: the article the
  * range starts in (else ends in), the first and last of its blocks the range
- * touches, each end carried to its byte position; null where the range is
- * collapsed, lies outside the plane's mounted articles, or touches no block.
+ * touches — the blocks the article was made from — each end carried to its
+ * byte position; null where the range is collapsed, lies outside the plane's
+ * mounted articles, or touches no block.
  * @param {Range} range
  * @returns {Span | null}
  */
@@ -461,7 +492,7 @@ export function spanOfRange(range) {
   const rec = addr ? mounted.get(addr) : undefined;
   if (!art || !rec || rec.el !== art) return null;
   const hit = blockEls(rec.el)
-    .map((el) => ({ el, b: rec.d.blocks.find((x) => x.pos === Number(el.dataset.pos)) || null }))
+    .map((el) => ({ el, b: rec.blocks.find((x) => x.pos === Number(el.dataset.pos)) || null }))
     .filter((x) => x.b && range.intersectsNode(x.el));
   if (!hit.length) return null;
   const first = hit[0], last = hit[hit.length - 1];
@@ -498,13 +529,14 @@ function pointOfPos(b, el, pos, side) {
 
 /**
  * The platform range over a span of a mounted article, or null where the
- * article is not mounted or the span lies in none of its delivered blocks.
+ * article is not mounted or the span lies in none of the blocks it was made
+ * from.
  * @param {Span} span
  * @returns {Range | null}
  */
 export function rangeOf(span) {
   const rec = mounted.get(span.addr);
-  return rec ? rangeIn(rec.el, rec.d, span) : null;
+  return rec ? rangeIn(rec.el, rec, span) : null;
 }
 
 /**
@@ -512,17 +544,17 @@ export function rangeOf(span) {
  * as T-ARTICLE made it — a mounted article, or a reading scene's pane, which
  * borrows this mapping as it borrows the article — its ends carried from byte
  * positions to character boundaries of the blocks' own text, the chrome
- * skipped; null where the span lies in none of its delivered blocks.
+ * skipped; null where the span lies in none of the blocks.
  * @param {HTMLElement} el the article's element
- * @param {Doc} d the document it is made from
+ * @param {{blocks: Block[]}} made what the article was made from: a document, or a mounted article's record, whose blocks are the article's own
  * @param {Span} span
  * @returns {Range | null}
  */
-export function rangeIn(el, d, span) {
+export function rangeIn(el, made, span) {
   const els = blockEls(el);
   const elOf = (/** @type {Block} */ b) => els.find((e) => Number(e.dataset.pos) === b.pos) || null;
   const end = span.pos + span.width;
-  const blocks = d.blocks;
+  const blocks = made.blocks;
   const b0 = blocks.find((b) => span.pos >= b.pos && span.pos < b.pos + b.width) || blocks.find((b) => b.pos >= span.pos) || null;
   const b1 = [...blocks].reverse().find((b) => end > b.pos && end <= b.pos + b.width) || [...blocks].reverse().find((b) => b.pos + b.width <= end) || null;
   const e0 = b0 ? elOf(b0) : null, e1 = b1 ? elOf(b1) : null;

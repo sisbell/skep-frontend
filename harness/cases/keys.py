@@ -13,8 +13,14 @@ card's place with the symbols standing, at the link's own bytes; the
 selection's one continuous gesture (R11) — a pointer drag over a phrase of a
 shown paragraph selects that phrase's byte span, never its block: the acts
 ask the wire over those bytes, the copy names them, and the platform's
-highlight survives the remount the links card causes. Each step leaves the
-page as it found it."""
+highlight survives the remount the links card causes; and the press holds
+what the drag is anchored in — a feed row naming the document with the
+button down (the gate's `model.invalidate` door, reads alone) leaves the
+half-dragged bytes reading back and the drag's article standing while the
+text arrives again, the release takes the whole phrase, a context menu ends
+the press, and the document holding the selection, brought back into view
+under a press, mounts only once it ends. Each step leaves the page as it
+found it."""
 import json
 
 from . import DOC, SECOND_ACCOUNT, WINDOW, Result
@@ -45,6 +51,173 @@ def chord(ctx, key, mods=(), code=None, text=None):
     ctx.drv.key(key, code=code or CODES.get(key), mods=mods, text=text)
     ctx.settle()
     ctx.frames(2)
+
+
+def phrase_at(ctx, addr):
+    """a phrase of a paragraph the page SHOWS at the view as it stands — inside the article's clip and the viewport, and
+    below the one line, which stands over the plane's top (the document's tail past the clip is shown to no one and takes
+    no pointer) — thirty characters in from the paragraph's tenth, the article itself under the pointer at each point a
+    drag over it passes: the press at its first character, the half at the end of its fifteenth, the end at the end of its
+    last. Its block, its first, half and last positions, its rects and those points, with what the search saw; None where
+    the view shows no such phrase"""
+    shown = {v['pos'] for v in ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"]' % addr)) if v['inClip'] and v['inView']}
+    vp = ctx.js('window.__skep.view.viewport()')
+    line_bottom = ctx.js('document.getElementById("line").getBoundingClientRect().bottom')
+    seen = {'shown': sorted(shown), 'line_bottom': line_bottom}
+    for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(addr)):
+        if b['kind'] != 'para' or b['pos'] not in shown or len(b['text']) < 60 or b['text'].startswith('#'):
+            continue
+        p0, ph, p1 = (b['pos'] + len(b['text'][:n].encode('utf8')) for n in (10, 25, 40))
+        rects = ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(addr), p0, p1 - p0))
+        if not rects or not all(line_bottom + 2 <= q['y'] and q['y'] + q['h'] <= vp['VH'] and 0 <= q['x'] and q['x'] + q['w'] <= vp['VW'] for q in rects):
+            continue
+        lines = [q for q in rects if q['w'] > 0 and q['h'] > 0]
+        halves = [q for q in ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(addr), p0, ph - p0)) or [] if q['w'] > 0 and q['h'] > 0]
+        if not lines or not halves:
+            continue
+        first, mid, last = lines[0], halves[-1], lines[-1]
+        points = {'start': (first['x'] + 0.5, first['y'] + first['h'] / 2), 'half': (mid['x'] + mid['w'] - 0.5, mid['y'] + mid['h'] / 2),
+                  'end': (last['x'] + last['w'] - 0.5, last['y'] + last['h'] / 2)}
+        under = ctx.js('[%s].map(([x, y]) => { const e = document.elementFromPoint(x, y); const a = e && e.closest("#domlayer article.dtext"); return a ? a.dataset.addr : null; })'
+                       % ', '.join('[%r, %r]' % p for p in points.values()))
+        if all(u == addr for u in under):
+            return dict(points, block=b, p0=p0, ph=ph, p1=p1, rects=rects), seen
+    return None, seen
+
+
+def article(addr):
+    """the expression for a document's article on the plane's text layer"""
+    return 'document.querySelector(%s)' % json.dumps('#domlayer article.dtext[data-addr="%s"]' % addr)
+
+
+def whole_again(ctx):
+    """the first edition read whole again and the selection cleared, as the drag's checks found the page"""
+    ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(DOC))
+    ctx.settle()
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+
+
+def press_holds(ctx, r):
+    """the press holds what the drag is anchored in (R11; foundations §2.4). The gate's door `model.invalidate` does to the
+    first edition what a feed row naming it does — what the page held of it dropped, its reads asked again, reads alone —
+    here with the button down halfway along a phrase: the half-dragged bytes still read back, through the blocks the
+    article was made from; the article the drag started in stands while the text arrives again; and the release takes the
+    whole phrase, its highlight over the article rebuilt after the press. A context menu, which takes the button's release
+    on some platforms, ends the press, and the frame after the end rebuilds what the press held. And a fresh mount waits
+    for the press's end too: the document holding the selection, brought back into view under a press in another, mounts
+    after it, so no range is placed over the drag"""
+    figures = {}
+    art = article(DOC)
+    ctx.leap(DOC, WINDOW[0])
+    ph, seen = phrase_at(ctx, DOC)
+    r.check(ph is not None, 'a phrase of the first edition is shown at the landing, for the press', seen)
+    if ph:
+        ctx.drv.press(*ph['start'])
+        ctx.drv.move(*ph['start'], *ph['half'])
+        ctx.frames(2)
+        # the door and both reads in one evaluation: no frame and no answer comes between them
+        torn = ctx.js('(() => { window.__gateArt = %s; const before = window.__skep.platformSelection().span; window.__skep.model.invalidate(%s); '
+                      'return {before, after: window.__skep.platformSelection().span}; })()' % (art, json.dumps(DOC)))
+        half = torn['after']
+        r.check(bool(half) and half == torn['before'] and half['addr'] == DOC and abs(half['pos'] - ph['p0']) <= 3 and abs(half['pos'] + half['width'] - ph['ph']) <= 3,
+                'a feed row naming the document under a press: the half-dragged bytes still read back, through the blocks the article was made from',
+                dict(torn, phrase=(ph['p0'], ph['ph'], ph['p1'])))
+        ctx.settle()
+        ctx.frames(2)
+        held = ctx.js('({same: %s === window.__gateArt, from: window.__skep.model.doc(%s).from})' % (art, json.dumps(DOC)))
+        r.check(held['same'] and held['from'] >= 0, 'its text arrived again with the button down, and the article the drag is anchored in stands: nothing is rebuilt under a press', held)
+        ctx.drv.move(*ph['half'], *ph['end'])
+        ctx.drv.release(*ph['end'])
+        ctx.frames(3)
+        sel = state(ctx)['sel']
+        plat = ctx.js('window.__skep.platformSelection()')
+        rebuilt = ctx.js('!!%s && %s !== window.__gateArt' % (art, art))
+        r.check(bool(sel) and sel['addr'] == DOC and abs(sel['pos'] - ph['p0']) <= 3 and abs(sel['pos'] + sel['width'] - ph['p1']) <= 3
+                and not plat['collapsed'] and plat['span'] == sel and rebuilt,
+                'the release takes the whole phrase the drag crossed, and the platform\'s highlight stands over it in the article rebuilt after the press',
+                {'sel': sel, 'phrase': (ph['p0'], ph['p1']), 'platform': plat, 'rebuilt': rebuilt})
+        figures['delivery'] = {'phrase': (ph['p0'], ph['ph'], ph['p1']), 'half': half, 'held': held, 'selected': sel}
+        whole_again(ctx)
+    # a context menu ends the press: a press that has not moved holds the article through the text arriving again, as a drag
+    # does; then, the button still down and nothing else asking for a frame, the context menu's end of the press has the
+    # next frame rebuild what was held
+    ph, seen = phrase_at(ctx, DOC)
+    r.check(ph is not None, 'a phrase of the first edition is shown at the landing, for the context menu', seen)
+    if ph:
+        ctx.drv.press(*ph['start'])
+        ctx.js('(() => { window.__gateArt = %s; window.__skep.model.invalidate(%s); })()' % (art, json.dumps(DOC)))
+        ctx.settle()
+        ctx.frames(2)
+        held = ctx.js('({same: %s === window.__gateArt, from: window.__skep.model.doc(%s).from})' % (art, json.dumps(DOC)))
+        r.check(held['same'] and held['from'] >= 0, 'a press that has not moved holds the article too, while the text arrives again', held)
+        # at what stands under the pointer, as the platform sends it
+        ctx.js('(document.elementFromPoint(%r, %r) || document.body).dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true}))' % ph['start'])
+        ctx.frames(2)
+        after = ctx.js('({rebuilt: !!%s && %s !== window.__gateArt, from: window.__skep.model.doc(%s).from})' % (art, art, json.dumps(DOC)))
+        r.check(after['rebuilt'], 'a context menu ends the press: with the button still down, the next frame rebuilds the article the press held', dict(after, held=held))
+        ctx.drv.release(*ph['start'])
+        ctx.frames(2)
+        whole_again(ctx)
+    # a fresh mount waits for the press's end: the selection stands in another document mounted beside the first edition —
+    # the one in view at the landing with the largest face, the view zoomed about its centre until that face is past the
+    # mount threshold; the least pan takes it out of the layer's view (the viewport and 40 px about it, 10 px clear), a
+    # press in the first edition, then a pan of 25 px back brings it into the layer's view with the button down
+    ctx.leap(DOC, WINDOW[0])
+    cam0 = ctx.camera()
+    near = ctx.js('''(() => { const c = window.__skep.view.camera(), p = window.__skep.view.viewport();
+      return window.__skep.model.places().filter((q) => { if (q.system || q.doc === %s) return false; const b = window.__skep.boxOf(q.doc);
+          const x = (b.x - c.x) * c.scale + p.VW / 2, y = (b.y - c.y) * c.scale + p.VH / 2;
+          return x < p.VW && x + b.w * c.scale > 0 && y < p.VH && y + b.h * c.scale > 0; })
+        .map((q) => ({doc: q.doc, from: window.__skep.model.doc(q.doc).from, em: c.scale / window.__skep.scaleFor(q.doc, 'em', 1)}))
+        .filter((q) => q.from >= 0).sort((a, b) => b.em - a.em); })()''' % json.dumps(DOC))
+    beside = None
+    if near:
+        ctx.set_view(cam0['x'], cam0['y'], cam0['scale'] * max(1.0, (ctx.js('window.__skep.constants.MOUNT_EM') + 0.2) / near[0]['em']))
+        if near[0]['doc'] in ctx.js('window.__skep.mountedAddrs()'):
+            para = next((b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(near[0]['doc'])) if b['kind'] == 'para' and len(b['text']) >= 20), None)
+            if para:
+                beside = (near[0]['doc'], para['pos'], len(para['text'][:20].encode('utf8')))
+    r.check(beside is not None, 'another document in view beside the first edition at the landing mounts once its face is past the mount threshold, with a paragraph to select',
+            {'near': near[:4], 'mounted': ctx.js('window.__skep.mountedAddrs()')})
+    if beside:
+        other = beside[0]
+        cam1, vp, box = ctx.camera(), ctx.js('window.__skep.view.viewport()'), ctx.js('window.__skep.boxOf(%s)' % json.dumps(other))
+        s = cam1['scale']
+        x0, y0 = (box['x'] - cam1['x']) * s + vp['VW'] / 2, (box['y'] - cam1['y']) * s + vp['VH'] / 2
+        x1, y1 = x0 + box['w'] * s, y0 + box['h'] * s
+        dx, dy = min([(vp['VW'] + 50 - x0, 0), (-(x1 + 50), 0), (0, vp['VH'] + 50 - y0), (0, -(y1 + 50))], key=lambda d: abs(d[0]) + abs(d[1]))
+        ux, uy = dx / (abs(dx) + abs(dy)), dy / (abs(dx) + abs(dy))
+        out = {'x': cam1['x'] - dx / s, 'y': cam1['y'] - dy / s}
+        back = {'x': out['x'] + ux * 25 / s, 'y': out['y'] + uy * 25 / s, 'scale': s}
+        ctx.js('window.__skep.select(%s, %d, %d)' % (json.dumps(other), beside[1], beside[2]))
+        ctx.frames(2)
+        ctx.set_view(out['x'], out['y'], s)
+        mounted = ctx.js('window.__skep.mountedAddrs()')
+        ph, seen = phrase_at(ctx, DOC)
+        r.check(other not in mounted and DOC in mounted and ph is not None,
+                'the least pan takes the document holding the selection out of the view: it is unmounted, and the first edition shows a phrase', dict(seen, mounted=mounted, other=other, pan_px=(dx, dy)))
+        if other not in mounted and ph:
+            ctx.drv.press(*ph['start'])
+            ctx.drv.move(*ph['start'], *ph['half'])
+            ctx.frames(2)
+            before = ctx.js('window.__skep.platformSelection()')
+            ctx.js('window.__skep.view.set(%s)' % json.dumps(back))
+            ctx.frames(2)
+            during = ctx.js('({mounted: window.__skep.mountedAddrs(), platform: window.__skep.platformSelection(), selection: window.__skep.selection()})')
+            span = during['platform']['span']
+            r.check(other not in during['mounted'] and not during['platform']['collapsed'] and bool(span) and span['addr'] == DOC and abs(span['pos'] - ph['p0']) <= 3,
+                    'the document holding the selection, back in the layer\'s view with the button down, is not mounted: the platform\'s selection is still the drag\'s',
+                    dict(during, before=before, other=other))
+            ctx.drv.release(*ph['half'])
+            ctx.frames(2)
+            after = ctx.js('window.__skep.mountedAddrs()')
+            r.check(other in after, 'it mounts once the press has ended', {'mounted': after, 'other': other})
+            figures['fresh_mount'] = {'other': other, 'pan_px': (dx, dy), 'before': before, 'during': during, 'after': after}
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+    ctx.set_view(cam0['x'], cam0['y'], cam0['scale'])
+    r.figures['press'] = figures
 
 
 def run(ctx):
@@ -281,28 +454,13 @@ def run(ctx):
     chord(ctx, 'Escape')
     r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc clears the overlay, then the selection (one order)')
     # ---- the drag: the selection IS the text it crosses (R11; foundations §2.4) ----------------------------
-    # a phrase of a paragraph the page SHOWS — inside the article's clip and the viewport, and below the one line,
-    # which stands over the plane's top (the document's tail past the clip is shown to no one and takes no pointer) —
-    # thirty characters in from the paragraph's tenth
     ctx.leap(DOC, WINDOW[0])
-    shown_blocks = {v['pos']: v for v in ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"]' % DOC)) if v['inClip'] and v['inView']}
-    vp = ctx.js('window.__skep.view.viewport()')
-    line_bottom = ctx.js('document.getElementById("line").getBoundingClientRect().bottom')
-    target, p0, p1, rects = None, 0, 0, None
-    for b in blocks:
-        if b['kind'] != 'para' or b['pos'] not in shown_blocks or len(b['text']) < 60 or b['text'].startswith('#'):
-            continue
-        q0 = b['pos'] + len(b['text'][:10].encode('utf8'))
-        q1 = b['pos'] + len(b['text'][:40].encode('utf8'))
-        qs = ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(DOC), q0, q1 - q0))
-        if qs and all(line_bottom + 2 <= q['y'] and q['y'] + q['h'] <= vp['VH'] and 0 <= q['x'] and q['x'] + q['w'] <= vp['VW'] for q in qs):
-            target, p0, p1, rects = b, q0, q1, qs
-            break
-    r.check(target is not None, 'a paragraph of the first edition is shown at the landing with a phrase clear of the one line (inside its clip and the viewport)', {'shown': sorted(shown_blocks), 'line_bottom': line_bottom})
+    ph, seen = phrase_at(ctx, DOC)
+    r.check(ph is not None, 'a paragraph of the first edition is shown at the landing with a phrase clear of the one line (inside its clip and the viewport)', seen)
+    target, p0, p1 = (ph['block'], ph['p0'], ph['p1']) if ph else (None, 0, 0)
     sel = None
-    if rects:
-        first, last = rects[0], rects[-1]
-        ctx.drv.drag(first['x'] + 0.5, first['y'] + first['h'] / 2, last['x'] + last['w'] - 0.5, last['y'] + last['h'] / 2)
+    if ph:
+        ctx.drv.drag(*ph['start'], *ph['end'])
         ctx.frames(3)
         s = state(ctx)
         sel = s['sel']
@@ -336,6 +494,7 @@ def run(ctx):
         chord(ctx, 'Escape')
         r.check(state(ctx)['sel'] is None and ctx.js('window.__skep.platformSelection()')['collapsed'], 'Esc clears the card, then the selection — the platform\'s highlight with it')
     r.figures['drag'] = {'phrase': (p0, p1), 'selected': sel, 'block': target and {'pos': target['pos'], 'width': target['width']}}
+    press_holds(ctx, r)
     # ---- zoom (K-11) and paging (K-6) ----------------------------------------------------------------------
     c0 = state(ctx)['cam']
     chord(ctx, '=', mods=('Meta',))

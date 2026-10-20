@@ -8,7 +8,11 @@
 // SELECTION IS THE PAGE'S (R11's one continuous gesture): as the drag ends,
 // and whenever the platform's selection changes outside a drag, the span it
 // covers is read through T-LAYER's mapping and handed to O-SELECTION — a
-// change of view state, never a draw; the camera pans by the WHEEL and
+// change of view state, never a draw. The drag is T-LAYER's press: it stands
+// from the button going down on an article to the button's release, the
+// platform's cancel, or a context menu (which takes the release on some
+// platforms); this module reports its start and its end, and T-LAYER holds
+// the drag's article through it. The camera pans by the WHEEL and
 // two-finger scroll, by the keys, and by the held camera key's drag (K-10:
 // hold Mod); it zooms by the PINCH (Ctrl+wheel as a trackpad sends it) and
 // by Mod+wheel (K-12). A CLICK acts on what is under the pointer, keyed on
@@ -68,13 +72,16 @@ export function attach(els) {
     if (d.cameraKey && d.moved > 4) { WALK.retakeFromView(); return; }
     if (d.moved <= 4) clickPlane(e.clientX, e.clientY);
   });
-  // the text layer's drag: the platform selects while the button is held; its selection becomes the page's as the drag ends (and, outside a drag, whenever the platform's changes)
+  // the text layer's drag, T-LAYER's press: the platform selects while it stands; its selection becomes the page's as the
+  // button is released — the press ended first, then the span read, with no frame between them, from the article the drag
+  // was made in — and, while no press stands, whenever the platform's changes. A cancel or a context menu ends the press
+  // and takes nothing
   let lastDown = { x: 0, y: 0 };
-  let textDrag = false;
-  els.layer.addEventListener('pointerdown', (e) => { lastDown = { x: e.clientX, y: e.clientY }; textDrag = true; });
-  window.addEventListener('pointerup', () => { if (textDrag) { textDrag = false; takeSelection(); } });
-  window.addEventListener('pointercancel', () => { textDrag = false; });
-  document.addEventListener('selectionchange', () => { if (!textDrag) takeSelection(); });
+  els.layer.addEventListener('pointerdown', (e) => { lastDown = { x: e.clientX, y: e.clientY }; LAYER.press(true); });
+  window.addEventListener('pointerup', () => { if (!LAYER.pressing()) return; LAYER.press(false); takeSelection(); });
+  window.addEventListener('pointercancel', () => LAYER.press(false));
+  window.addEventListener('contextmenu', () => LAYER.press(false));
+  document.addEventListener('selectionchange', () => { if (!LAYER.pressing()) takeSelection(); });
   // the layer: a click on a symbol, the ⟡, a hairline, the scene-offer, a withheld run; a selection the platform made (a double-click's word); a click on a marked span or a block
   els.layer.addEventListener('click', (e) => {
     const target = /** @type {HTMLElement} */ (e.target);

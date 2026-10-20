@@ -23,7 +23,10 @@
 // yielded and not mounted — the bridge client's own call
 // log, the settle signal, the trail, the line's and the overlay's text, the
 // selection's span beside the platform's own, the copy door (the copy event
-// run against a stub clipboard, its flavors read back), the strings. The app
+// run against a stub clipboard, its flavors read back), the invalidation door
+// (`model.invalidate`: what a feed row naming a document does to what the
+// page holds of it — its delivered state dropped, its reads asked again,
+// reads alone), the strings. The app
 // installs it with its loop's frame buffer. Nothing here is shipped chrome;
 // nothing posts anywhere.
 // THE ORACLES MEASURE WHAT A PERSON MEETS, never what the page set: the
@@ -362,6 +365,8 @@ export function install(deps) {
       session: () => REC.session(), board: () => REC.board(), health: () => REC.health(), mode: () => REC.mode(), daemon: () => REC.daemon(), device: () => REC.device(),
       snapshot: () => REC.snapshot(), feed: () => REC.feedRows(), rev: () => REC.rev(),
       loadWhole: (/** @type {string} */ addr) => PUMP.loadWhole(addr).then((d) => !!d),
+      /** what a feed row naming a document does to what the page holds of it: its delivered state dropped and its reads asked again — reads alone, nothing written */
+      invalidate: (/** @type {string} */ addr) => { REC.invalidate(addr); PUMP.forget(addr); CAM.markDirty(); },
     },
     mounted: (/** @type {string} */ addr) => { const rec = LAYER.mountedSet().get(addr); if (!rec) return null; const r = rec.el.getBoundingClientRect(); return { text: LAYER.mountedText(addr), rect: { x: r.left, y: r.top, w: r.width, h: r.height }, fs: rec.fs, lay: rec.lay }; },
     mountedAddrs: () => LAYER.mountedAddrs(),

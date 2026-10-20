@@ -1,4 +1,6 @@
-// M-REC's test: the index from `places`, blocks tiling their bytes, the feed
+// M-REC's test: the index from `places`, blocks tiling their bytes, a
+// document's blocks replaced whole and never edited in place (T-LAYER maps a
+// mounted article's selection through the blocks it was made from), the feed
 // keeping the index and invalidating, the system account held and marked.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -48,6 +50,19 @@ test('a delivery becomes blocks that tile the run in bytes; adjacent runs merge'
   assert.equal(REC.textBetween('1.0.1.0.3', 1, 8), 'Tumbler');
   assert.equal(REC.textBetween('1.0.1.0.3', 11, 13), 'é', 'a two-byte character cut at byte positions');
   assert.equal(d.from, 1); assert.equal(d.to, 21);
+});
+
+test('a document\'s blocks are replaced whole, never edited in place: the blocks a reader took stand as they were', () => {
+  REC.takeDelivery('1.0.1.0.3', [{ pos: 1, width: 12, kind: 'content', text: 'alpha\n\nbeta ', ref: null, origin: null }]);
+  const taken = REC.doc('1.0.1.0.3').blocks;
+  const was = JSON.stringify(taken);
+  REC.takeDelivery('1.0.1.0.3', [{ pos: 13, width: 5, kind: 'content', text: 'gamma', ref: null, origin: null }]);
+  assert.notEqual(REC.doc('1.0.1.0.3').blocks, taken, 'a delivery makes the document new blocks');
+  assert.deepEqual(REC.doc('1.0.1.0.3').blocks.map((b) => b.text), ['alpha', 'beta gamma']);
+  REC.invalidate('1.0.1.0.3');
+  REC.takeDelivery('1.0.1.0.3', [{ pos: 5, width: 4, kind: 'content', text: 'a\n\nb', ref: null, origin: null }]);
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12323, at: 12323, op: 'publish', docs: ['1.0.1.0.3.3'], class: 'published' }));
+  assert.equal(JSON.stringify(taken), was, 'the blocks taken before the delivery, the invalidation, the second delivery and the feed row are as they were');
 });
 
 test('the origins from an image mark the transcluded runs', () => {
