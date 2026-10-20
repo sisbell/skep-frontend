@@ -1,5 +1,6 @@
 // T-ARTICLE's test: the article from a record — the withheld block occupies
-// its run with its width and never its text; the owner's link marked at its
+// its run with its width and never its text, its entitlement arm the one
+// rule's for the reader (C-39's face reads it too); the owner's link marked at its
 // span; the selected span marks every block it touches and no other; the
 // transcluded run's hairline and C-33's mark; the corner's version statement
 // and a draft's chip (C-28), items of one stop that the article never holds
@@ -11,9 +12,10 @@
 // in the same order, as the HTML.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { articleHTML, articlePlan, withheldBlockHTML, cornerHTML, headingLevel } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, cornerHTML, headingLevel } from './article.js';
 import { MEASURE } from '../plane/layout.js';
 import { t } from '../strings.js';
+import { esc } from '../util.js';
 
 /** @returns {import('./article.js').ArticleView} */
 const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {}) => ({
@@ -35,6 +37,16 @@ test('a withheld block occupies its positions and shows its width, never its tex
   assert.ok(html.includes(t('C-36.owner-grant.arm')), 'the acting person with no grant meets the owner-grant arm');
   const guest = withheldBlockHTML({ pos: 1, width: 3, kind: 'withheld', text: '', origin: '1.0.1.0.2' }, doc(), view({ sessionAccount: null }), '1.0.1');
   assert.ok(guest.includes('no key on this device'), 'a guest meets R56\'s key-absent arm');
+});
+
+test('the entitlement arm is one rule, by the reader, and the placeholder carries what it answers', () => {
+  assert.deepEqual(entitlementArm('1.0.1', '1.0.2'), { id: 'C-36.owner-grant.arm', text: t('C-36.owner-grant.arm') }, 'the acting person with no grant: the owner-grant default');
+  assert.deepEqual(entitlementArm(null, '1.0.2'), { id: 'R56.key-absent', text: t('R56.key-absent', { owner: '1.0.2' }) }, 'a guest with no key: R56\'s key-absent default, naming the owner');
+  const run = /** @type {import('../model/records.js').Block} */ ({ pos: 1, width: 3, kind: 'withheld', text: '', origin: '1.0.1.0.2' });
+  for (const reader of ['1.0.1', null]) {
+    const html = withheldBlockHTML(run, doc(), view({ sessionAccount: reader }), '1.0.1');
+    assert.ok(html.includes(`<span class="arm">${esc(entitlementArm(reader, '1.0.1').text)}</span>`), `the placeholder's arm is the rule's for ${reader ?? 'a guest'}`);
+  }
 });
 
 test('the owner\'s link is marked in place at its span and nowhere else', () => {

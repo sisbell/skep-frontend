@@ -4,7 +4,8 @@ page's gate hooks (`web/gate/hooks.js`, `window.__skep`); the ASSERTING code
 lives here, one module per class — rendered, keys, text, layout, wire,
 frames, a11y — plus `static` (FP-15's grep and the no-write grep), `shapes`
 (the declarations' drift), `walks` (W-01 and W-05 as camera scripts with
-shots) and `shots` (the threshold set). Each module's `run(ctx)` returns a
+shots), `shots` (the threshold set) and `guest` (the page at guest class,
+opened under `?gate=guest`). Each module's `run(ctx)` returns a
 dict with `pass`, `checks`, `failures`, `expected` and its figures;
 `drive.py` writes it to `results/<name>.json`. A check that holds the page
 to what a named page issue still breaks is marked with that issue: it is
@@ -18,6 +19,7 @@ import os
 import subprocess
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -31,17 +33,23 @@ GHOST = '1.0.1.0.1049578'    # cited by the first edition, never minted: `doc_no
 FAR_LEAP = '1.0.1.0.127'     # the one citation whose target is a real edition
 AGENT_SPACE = '1.0.1.1'      # the claimant's delegated agent space
 SECOND_ACCOUNT = '1.0.2'     # the seed's keyless second account
+WITHHELD = '1.0.2.0.2'       # its draft: withheld from every reader of this board, a box of its own (continuation depth 0)
 VERSIONED = '1.0.1.0.43'     # an edition with two members, the latest holding all of it, far from every place the later cases read
 
 # the order the gate runs them in: the two that need no page first, then the
-# wire's cold-open figures before the other classes move the camera
-ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys', 'frames', 'walks', 'shots']
+# wire's cold-open figures before the other classes move the camera; the wire
+# holds the run's provider log to the first page's own calls, so every case
+# that opens another page (`walks`, `guest`) runs after it
+ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys', 'frames', 'walks', 'shots', 'guest']
 
 # the page issues the marked checks wait on (issue #2's boundary note); each mark comes off the day its check passes
 XFAIL_CLIP = ("page: the article's height is pinned to its box and its overflow hidden, so the document's end is cut at the box's edge "
               "(web/text/layer.js `mount`, web/style.css `.dtext`)")
 XFAIL_ANCHOR = ("page: a beam leaves the block holding its span, at the block's mid-height, not the span's own line "
                 "(web/beams/beams.js `anchorRects` takes the block's rects for the span's)")
+# issue #14's guest case found it
+XFAIL_FOCUS = ("page: a landing on a document its account's index rows do not hold — a withheld one, or one unchanged since the index's "
+               "floor — puts the walk's focus on the account's first listed document, and the one line names that one (web/nav/walk.js `focusTo`)")
 # issue #12's boundary note
 XFAIL_MEMBER = ("page: a version member shares its document's box, and once the member's text is loaded (read side by side, "
                 "or a LEAP to the member) its article is mounted over the document's — which of them the box shows is the "
@@ -85,11 +93,11 @@ class Result:
 
 
 class Context:
-    """what every case gets: the driver, the provider and the board, the folders, and a few verbs"""
+    """what every case gets: the driver, the page's URL, the provider and the board, the folders, and a few verbs"""
 
-    def __init__(self, drv, provider, board, secret, results, shots, env):
+    def __init__(self, drv, provider, board, secret, results, shots, env, page):
         self.drv, self.provider, self.board, self.secret = drv, provider, board, secret
-        self.results, self.shots, self.env = results, shots, env
+        self.results, self.shots, self.env, self.page = results, shots, env, page
         self.shared = {}
         self._design_cache = {}
         try:
@@ -100,6 +108,17 @@ class Context:
             env['provider_log_error'] = str(e)
 
     # ---- the page -----------------------------------------------------------
+    def open_page(self, gate):
+        """the page opened afresh at the run's URL with `gate` its `?gate=` value — `all` the owner's signed page,
+        `guest` the page at guest class, which asks no session — settled on its own signal; the page it replaces
+        closes its session at `pagehide`. What the new page booted with is returned"""
+        url = urllib.parse.urlsplit(self.page)
+        query = [(k, v) for k, v in urllib.parse.parse_qsl(url.query, keep_blank_values=True) if k != 'gate'] + [('gate', gate)]
+        self.drv.navigate(urllib.parse.urlunsplit(url._replace(query=urllib.parse.urlencode(query))))
+        self.drv.settle(40)
+        self.drv.pump_events(0.5)
+        return self.js('window.__skep.boot')
+
     def js(self, expr, timeout=120):
         return self.drv.eval(expr, timeout=timeout)
 

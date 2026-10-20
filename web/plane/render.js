@@ -14,7 +14,9 @@
 // address label — its fields past its account's prefix, led by their
 // separator as the address display spells them (foundations §3.1) — and its
 // first line — a DRAFT convention — the badge from LK's `countDoc`, the
-// members' marks on the strip), each account's CONTINUATION whose documents
+// members' marks on the strip; a document a read answered `withheld`,
+// whether the index lists it or not, as the withheld box — its owner and the
+// word, no badge, B1-S2), each account's CONTINUATION whose documents
 // the scale draws too small to stand whole as ONE MARK (foundations §2.1;
 // P44; P-LOD's `residueDepth`, crossfading with the boxes it holds through
 // the far band): law 13's count of what it holds — "≥ n" where the index
@@ -283,8 +285,12 @@ function firstBar(/** @type {import('./layout.js').Bar[]} */ B, /** @type {numbe
 
 /**
  * Every document the plane may draw: the index's places, and the documents
- * the model holds that the index does not list, their text or their
- * metadata delivered; the system account's rows left out.
+ * the model holds that the index does not list — their text or their
+ * metadata delivered, or a read of them answered `withheld`: existence and
+ * owner, never bytes (B1-S2), drawn as the withheld box where it stands
+ * whole and counted in its continuation's mark where one holds it (the
+ * index at guest class lists no draft; a LEAP to one learns it exists) —
+ * the system account's rows left out.
  * @returns {Doc[]}
  */
 function drawable() {
@@ -292,7 +298,7 @@ function drawable() {
   const out = [];
   const seen = new Set();
   for (const p of REC.places()) { if (p.system) continue; out.push(REC.doc(p.doc)); seen.add(p.doc); }
-  for (const d of REC.docs()) if (!seen.has(d.addr) && !d.system && (d.from >= 0 || d.meta)) out.push(d);
+  for (const d of REC.docs()) if (!seen.has(d.addr) && !d.system && (d.from >= 0 || d.meta || d.refused === 'withheld')) out.push(d);
   return out;
 }
 
@@ -420,14 +426,14 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     const mountedHere = LAYER.isMounted(d.addr);
     if (mountedHere) stats.yielded.push(d.addr);
     if (W > 40 && !mountedHere) {
-      // the label: the ADDRESS past its region's prefix; the first line a DRAFT convention (F-9); the badge from LK — set by the label pass on the box's ground
+      // the label: the ADDRESS past its region's prefix; the first line a DRAFT convention (F-9); the badge from LK, none at a withheld box, whose links no read brings — set by the label pass on the box's ground
       const tf = Math.min(W * 0.085, fsPx * 1.25), sub = tf * 0.72;
       /** @type {Part[]} */
       const parts = [{ text: shortAddr(d), px: tf, ink: COL.title, weight: '600', fit: 'one' }];
       if (W > 90) {
         parts.push({ text: firstLine(d), px: sub, ink: COL.greek, fit: 'cut' });
         const c = LK.countDoc(d.addr);
-        if (W > 110 && (c.n || c.arriving)) parts.push({ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : plural(c.n, 'F.label.links.1', 'F.label.links'), px: sub, ink: COL.greek, fit: 'wrap' });
+        if (W > 110 && d.refused !== 'withheld' && (c.n || c.arriving)) parts.push({ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : plural(c.n, 'F.label.links.1', 'F.label.links'), px: sub, ink: COL.greek, fit: 'wrap' });
       }
       pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X + W * 0.06, y: Y + H * 0.05, w: W * 0.88, h: H * 0.9 }, x: X + W * 0.06, y: Y + H * 0.05, align: 'left', alpha: a, plate: ground, parts });
       // the history strip along the top edge: the members as marks

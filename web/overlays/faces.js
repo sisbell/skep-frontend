@@ -13,7 +13,9 @@
 // content, DRAFT — and the floor face MUST NOT render; it offers no act,
 // for B1-S8's one act, "try again", is the unreachable node's, and the
 // board's answer here is byte-identical to never-held), `not_a_link`, C-39
-// at a link address inside a withheld document, `range_not_present`, the
+// at a link address inside a withheld document with the entitlement arm the
+// run's placeholder carries beneath it (T-ARTICLE's one rule, by the
+// reader), `range_not_present`, the
 // `invalid` follow, `scan_busy`, `endsets_too_large`, `too_many_blocks`,
 // `too_many_pairs`, `too_much_coverage`, `withheld`, the session's `no_key`
 // (C-136 with this version's limit), the death arms (C-137),
@@ -24,6 +26,7 @@
 
 import * as HOST from './host.js';
 import * as PORT from '../bridge/port.js';
+import { entitlementArm } from '../text/article.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -132,10 +135,18 @@ export function floating(l, far, anchor) {
   void l;
 }
 
-/** C-39: a link address inside a withheld document, R56's arm beneath and not the clause */
-export function c39(/** @type {string} */ owner, /** @type {Anchor | HTMLElement | null} */ anchor) {
+/**
+ * C-39: a link address inside a withheld document — R56's entitlement arm
+ * beneath, by the rule the run's placeholder reads, and not the clause
+ * (B1-S5).
+ * @param {string} owner the withheld document's owner account
+ * @param {string | null} reader the acting account, or null (a guest)
+ * @param {Anchor | HTMLElement | null} anchor
+ */
+export function c39(owner, reader, anchor) {
   const face = { id: 'C-39', text: t('C-39', { owner }), acts: [] };
-  HOST.show({ kind: 'face', id: 'face:C-39', anchor: toAnchor(anchor), html: faceHTML(face, `<div class="arm" data-string="C-36.owner-grant.arm">${esc(t('C-36.owner-grant.arm'))}</div>`) });
+  const arm = entitlementArm(reader, owner);
+  HOST.show({ kind: 'face', id: 'face:C-39', anchor: toAnchor(anchor), html: faceHTML(face, `<div class="arm" data-string="${esc(arm.id)}">${esc(arm.text)}</div>`) });
 }
 
 /**

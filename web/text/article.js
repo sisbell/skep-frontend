@@ -162,10 +162,21 @@ export function recordHTML(b, d, v) {
 }
 
 /**
+ * The entitlement arm at a withheld run, by PUB-5.121's order: for the
+ * acting person with a key present and no grant, the owner-grant default;
+ * for a guest with no key, R56's key-absent default. The one rule the run's
+ * placeholder and C-39's face at the run both read (B1-S5, B1-S7).
+ * @param {string | null} reader the acting account, or null (a guest)
+ * @param {string} owner the origin's owner account
+ * @returns {{id: string, text: string}} the arm's string id and its words
+ */
+export function entitlementArm(reader, owner) {
+  return reader ? { id: 'C-36.owner-grant.arm', text: t('C-36.owner-grant.arm') } : { id: 'R56.key-absent', text: t('R56.key-absent', { owner }) };
+}
+
+/**
  * The R56 placeholder occupying a withheld run: existence and owner, never
- * bytes; the entitlement arm by PUB-5.121's order — for the acting person
- * with a key present and no grant, the owner-grant default; for a guest
- * with no key, the key-absent default — then C-67's clause.
+ * bytes; the entitlement arm (`entitlementArm`), then C-67's clause.
  * @param {Block} b
  * @param {Doc} d
  * @param {ArticleView} v
@@ -173,9 +184,9 @@ export function recordHTML(b, d, v) {
  */
 export function withheldBlockHTML(b, d, v, owner) {
   const head = t('B1.withheld-run', { owner, account: owner, width: b.width, origin: b.origin || '' });
-  const arm = v.sessionAccount ? t('C-36.owner-grant.arm') : t('R56.key-absent', { owner });
+  const arm = entitlementArm(v.sessionAccount, owner);
   return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}">` +
-    `<span class="wh-head">${esc(head)}</span><span class="arm">${esc(arm)}</span><span class="clause">${esc(t('C-67.pointer'))}</span></span>`;
+    `<span class="wh-head">${esc(head)}</span><span class="arm">${esc(arm.text)}</span><span class="clause">${esc(t('C-67.pointer'))}</span></span>`;
 }
 
 /**

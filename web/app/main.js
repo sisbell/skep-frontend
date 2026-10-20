@@ -6,13 +6,18 @@
 // default; the secret handed to B-DEV alone), `?gate=` loads `web/gate/` by
 // `import()` (S-22 (a)) — the ledger FIRST, before any call; absent the flag
 // the page boots against the port with NO adapter and the one line says so
-// (the shell's global is the shell's lane's). Then `boards()` (the reference
-// kept), `session(board)` ONCE AT BOOT (S-37 (a) — the reference kept for
-// the page's life, never a token; `close(session)` at `pagehide` on a
-// keepalive fetch), `fingerprint()` (the device label and "key present"),
-// `health(board)`, `probe()`, `places(session, board)` for the model's index
-// (skep #463), the launch frame HOME — the acting account's region at mid
-// scale, the trail's first entry (foundations §2.2; W-01; N-GO's `launch`).
+// (the shell's global is the shell's lane's). `?gate=guest` is the gate's
+// GUEST: the boot as shipped with `session(board)` never asked, so every
+// read takes the guest form and every screen its guest arm — a visitor's
+// page before any sign-in is asked (the harness's guest case; the installed
+// app loads with no query and never reaches it). Then `boards()` (the
+// reference kept), `session(board)` ONCE AT BOOT (S-37 (a) — the reference
+// kept for the page's life, never a token; `close(session)` at `pagehide`
+// on a keepalive fetch), `fingerprint()` (the device label and "key
+// present"), `health(board)`, `probe()`, `places(session, board)` for the
+// model's index (skep #463), the launch frame HOME — the acting account's
+// region at mid scale, a guest's the board's extent — the trail's first
+// entry (foundations §2.2; W-01; N-GO's `launch`).
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
 // frame, then P-RENDER, then BM, then O-HOST's place, the line — and the
@@ -61,6 +66,8 @@ import { lodOf } from '../plane/lod.js';
 const P = new URLSearchParams(location.search);
 const SECRET = P.get('provider');
 const GATE = P.get('gate');
+/** the gate's guest: the page boots at guest class, asking no session */
+const GUEST = GATE === 'guest';
 
 /** the frame buffer the gate reads */
 /** @type {Frame[]} */
@@ -169,9 +176,11 @@ async function boot() {
     else bootInfo.boardsRefused = 'refused' in b ? b.refused : 'none';
     const board = REC.board();
     if (board) {
-      const s = await PORT.session({ board: board.board });
-      if ('result' in s) REC.setSession({ session: s.result.session, principal: s.result.principal, account: s.result.account });
-      else REC.setSessionRefused({ kind: s.refused.kind, name: s.refused.name });
+      if (!GUEST) {
+        const s = await PORT.session({ board: board.board });
+        if ('result' in s) REC.setSession({ session: s.result.session, principal: s.result.principal, account: s.result.account });
+        else REC.setSessionRefused({ kind: s.refused.kind, name: s.refused.name });
+      }
       const fp = await PORT.fingerprint({});
       if ('result' in fp) { const sess = REC.session(); const row = fp.result.find((r) => r.bindings.some((bd) => bd.includes(board.origin) && (!sess || bd.includes('principal ' + sess.principal)))) || fp.result[0]; if (row) REC.setDevice({ label: row.label, fingerprint: row.fingerprint }); }
       const h = await PORT.health({ board: board.board });

@@ -1,7 +1,9 @@
 """WALKS — S-23 (b): W-01 (arrive from outside) and W-05 (read and navigate)
 as camera scripts, one PNG per step into `shots/W-01/` and `shots/W-05/`,
 the design's note beside each in `report.md` (`ux/walks.md` at the design
-repo's HEAD). W-02, W-03 and W-04 are OUT (their screens are later lanes').
+repo's HEAD). W-01 is the guest's walk and runs on the page opened as a
+guest (`?gate=guest`, no session asked); W-05 on the owner's page, opened
+again after it. W-02, W-03 and W-04 are OUT (their screens are later lanes').
 Produced for the seats, asserted as "the step ran and the shot exists" — and
 where a step's note claims an element, that the element is in view (inside
 its clip and the viewport, by the page's `visible` oracle), where it claims
@@ -21,6 +23,7 @@ from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, WINDOW, XFAIL_CLIP, Result
 C33_MARK = '#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC
 ORIGIN_HAIRLINE = '#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"]' % (DOC, WINDOW[2])
 SCENE_OFFER = '#domlayer .offer[data-scene="%s|%s"]' % (DOC, WINDOW[2])
+PLACEHOLDER = '#domlayer article[data-addr="%s"] .withheld[data-pos="%d"]' % (DOC, WINDOW[0])
 
 
 def step(ctx, r, walk, n, name, note, shot_name, claims=()):
@@ -59,19 +62,21 @@ def toggle_words(ctx, state):
 
 def run(ctx):
     r = Result()
-    # ---- W-01 — Arrive from outside ---------------------------------------------------
+    # ---- W-01 — Arrive from outside, as a guest ----------------------------------------
+    ctx.open_page('guest')
+    r.check(ctx.js('window.__skep.model.session()') is None and ctx.js('window.__skep.line().state') == 1, 'W-01 runs on the guest\'s page: no session, the one line in state 1')
     ctx.js('window.__skep.go.home()')
     ctx.settle()
-    step(ctx, r, 'W-01', 1, 'the share link', 'W-01 step 1: "The person opens https://skep.network/l/⟨token⟩ … the resolver … 302s to the serving node." NOT this lane\'s: no resolver and no share form (the intake is X-5\'s); the page opens on its board at HOME, the acting account\'s region. The landing before arrival.', 'before-arrival')
+    step(ctx, r, 'W-01', 1, 'the share link', 'W-01 step 1: "The person opens https://skep.network/l/⟨token⟩ … the resolver … 302s to the serving node." NOT this lane\'s: no resolver and no share form (the intake is X-5\'s); the page opens on its board as a GUEST, asking no session, at HOME — a guest\'s HOME is the board\'s extent at the clamp (R92 rider (c)). The landing before arrival.', 'before-arrival')
     ctx.js('window.__skep.leap.open()')
     ctx.js('(() => { const i = document.getElementById("leapq"); i.value = ""; })()')
     ctx.drv.ime(DOC)
     ctx.frames(2)
-    step(ctx, r, 'W-01', 2, 'the guest reader is the landing', 'W-01 step 2: "The serving board answers with its GUEST READER … The web viewer IS the landing." Here the address is handed in by LEAP (the box holds the typed address; Enter goes). This run reads through the owner\'s SIGNED session, not as a guest — the guest\'s class is the pure test\'s.', 'leap-address')
+    step(ctx, r, 'W-01', 2, 'the guest reader is the landing', 'W-01 step 2: "The serving board answers with its GUEST READER … The web viewer IS the landing." The page reads at guest class — every read in the guest form, the one line "reading as a guest" with its one act, sign in. Here the address is handed in by LEAP (the box holds the typed address; Enter goes).', 'leap-address')
     ctx.drv.key('Enter')
     ctx.settle()
     ctx.leap(DOC, WINDOW[0])
-    step(ctx, r, 'W-01', 3, 'the document renders at the position', 'W-01 step 3: "The document renders as formatted text, links-in-place, atoms legible (R1) … Where the token carried a span or at, the viewer lands there (position honored)." The first edition at position 1467, the owner\'s citations in place in the person\'s hue.', 'landing-at-position')
+    step(ctx, r, 'W-01', 3, 'the document renders at the position', 'W-01 step 3: "The document renders as formatted text, links-in-place, atoms legible (R1) … Where the token carried a span or at, the viewer lands there (position honored)." The first edition at position 1467, its owner\'s citations in place in the owner\'s hue — none is the guest\'s.', 'landing-at-position')
     ctx.js('window.__skep.go.wholeBoard()')
     ctx.settle()
     step(ctx, r, 'W-01', 4, 'orientation: the landing is a place', 'W-01 step 4: "the landing is a PLACE on the plane (R92); the hierarchy reads account › document › position (R6); zooming out converges to the board extent (law 13\'s clamp)." Mod+0: the whole board at the clamp, the one line reading the board.', 'whole-board-clamp')
@@ -84,8 +89,8 @@ def run(ctx):
     frac = 0.12 + 0.8 * ((WINDOW[0] - 1) / doc['extent'])
     scale = ctx.camera()['scale']
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, scale)
-    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width" — the guest\'s box is proven in the pure test (the daemon withholds the run from the harness\'s token-free read, width 240); THIS reader is the entitled owner and sees the run with C-33\'s mark, "visible to you; withheld for others", the sameness hairline naming its origin 1.0.1.0.1003.', 'window-run-c33',
-         claims=[(C33_MARK, 'C-33\'s mark', XFAIL_CLIP), (ORIGIN_HAIRLINE, 'the hairline naming the origin', XFAIL_CLIP)])
+    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s placeholder occupies the run — "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", never its bytes — R56\'s key-absent arm beneath it, then C-67\'s clause; the act at it, C-39\'s face, is the guest case\'s.', 'window-run-withheld',
+         claims=[(PLACEHOLDER, 'the withheld run\'s placeholder', XFAIL_CLIP)])
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     ghost = next((s for s in shown if s['far'] == GHOST), None)
     r.check(ghost is not None, 'W-01 step 7: the first edition draws its citation of the ghost', [s['far'] for s in shown][:8])
@@ -98,7 +103,14 @@ def run(ctx):
     r.check(face['kind'] == 'face' and 'nothing this board will say about this address' in face['text'] and GHOST in face['text'] and 'doc_not_registered' not in face['text'].lower() and face['acts'] == 0,
             'W-01 step 7: the followed ghost is faced as the note says — B1-S8\'s words with the address and nothing more: no wire token, no act', face)
     ctx.esc()
-    # ---- W-05 — Read & navigate the board -----------------------------------------------
+    # ---- W-05 — Read & navigate the board, on the owner's page opened again --------------
+    ctx.open_page('all')
+    r.check(ctx.js('window.__skep.model.session()') is not None, 'W-05 runs on the owner\'s page, opened again: a session stands')
+    ctx.leap(DOC, WINDOW[0])
+    box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
+    doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))
+    frac = 0.12 + 0.8 * ((WINDOW[0] - 1) / doc['extent'])
+    shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     ctx.view_doc_px(DOC, 5)
     step(ctx, r, 'W-05', 1, 'zoom for structure: far', 'W-05 step 1: "far = counts and density" (law 5\'s LOD tiers). The accounts\' clusters, each with its density mark and its address; at this scale a cluster\'s mark has no room for its counts at the label floor, so they are left out — the counts a larger mark holds stand at WHOLE BOARD (B1-S3), and the far counts\' room is the design\'s open question; the system account held and not drawn.', 'far')
     far = [l for l in ctx.js('window.__skep.labels()') if l['kind'] == 'cluster']

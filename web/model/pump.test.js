@@ -1,6 +1,7 @@
 // M-PUMP's test against the FAKE PORT (FP-15's proof, half one): the model
 // built from a scripted sequence of answers and events, no write composed;
 // the view's reads ask nothing for a document a continuation's mark holds;
+// a session's end is taken by the page whose session it is and by no other;
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -54,6 +55,22 @@ test('the model after a scripted cold open and a whole read, over the fake port'
   assert.equal(REC.session(), null);
   const snap = REC.snapshot();
   assert.equal(snap.index.length, 2);
+});
+
+test('a session-died ends the page\'s own session alone: a guest, or a page signed in under another session, takes no death', () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  fake.fire('session-died', { session: 's-2', reason: { arm: 'closed' } });
+  assert.equal(REC.deathReason(), null, 'a guest was never signed in: another page\'s close is not its death');
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  fake.fire('session-died', { session: 's-2', reason: { arm: 'closed' } });
+  assert.equal(REC.session()?.session, 's-1', 'a page signed in under another session keeps its own');
+  assert.equal(REC.deathReason(), null);
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  assert.equal(REC.session(), null, 'its own session\'s end is its death');
+  assert.deepEqual(REC.deathReason(), { arm: 'closed' });
 });
 
 test('no call the pump makes is a write: every op frame names a read op', async () => {

@@ -272,7 +272,7 @@ def main():
     health0 = daemon_health(a.board)
     env = {'page': a.page.replace(secret, '<secret>'), 'provider': a.provider, 'board': a.board, 'health_start': health0,
            'started': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}
-    ctx = cases.Context(drv, a.provider, a.board, secret, a.results, a.shots, env)
+    ctx = cases.Context(drv, a.provider, a.board, secret, a.results, a.shots, env, a.page)
     failed = []
     try:
         drv.launch()
@@ -302,7 +302,8 @@ def main():
         drv.pump_events(0.5)
         env['console'] = drv.console[-50:]
         env['exceptions'] = drv.exceptions
-        # the close at unload (S-37 (a); the record §10 item 20): leave the page, then look for the `close` call in the provider's log
+        # the close at unload (S-37 (a); the record §10 item 20): leave the page, then count the `close` calls in the provider's log —
+        # one for each owner's page the run left, the cases that open another page (`walks`, `guest`) among them; a guest's closes none
         try:
             drv.navigate('about:blank')
             time.sleep(1.0)

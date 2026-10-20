@@ -139,6 +139,10 @@ def main():
     if a:
         L.append('## Class 7 — a11y\n')
         L.append('```\n' + json.dumps(a, indent=1, default=str) + '\n```\n')
+    g = (cases.get('guest') or {}).get('figures') or {}
+    if g:
+        L.append('## The guest — the page at guest class (`?gate=guest`, no session asked)\n')
+        L.append('```\n' + json.dumps(g, indent=1, default=str, ensure_ascii=False) + '\n```\n')
     k = (cases.get('keys') or {}).get('figures') or {}
     if k:
         L.append('## Class 2 — keys\n')

@@ -57,7 +57,7 @@ def run(ctx):
     frac = 0.12 + 0.8 * ((WINDOW[0] - 1) / doc['extent'])
     ctx.view_doc_em(DOC, 14)
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, ctx.camera()['scale'])
-    screen('B1-S7', 'the window run: C-33\'s mark for the entitled reader (the guest\'s withheld box is the pure test\'s), the corner held at the top of the document\'s visible part', 'B1-S7-window-run',
+    screen('B1-S7', 'the window run: C-33\'s mark for the entitled reader (a guest\'s placeholder at the run is the guest case\'s, shots/guest/), the corner held at the top of the document\'s visible part', 'B1-S7-window-run',
            claims=[('#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC, 'C-33\'s mark', XFAIL_CLIP), (corner, 'the first edition\'s corner', None)])
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(GHOST)); ctx.settle(); ctx.frames(2)
     screen('B1-S8', 'a dead reference: the ghost address faced', 'B1-S8-ghost')

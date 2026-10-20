@@ -15,8 +15,11 @@
 // The reads go through `op(session, frame)` — the claimant's class — or the
 // guest form where no session stands; a followed far board's reads would
 // take the guest form over its origin (no such board is seeded).
-// The feed's rows → M-REC's index and invalidation; `index`, `mode`,
-// `daemon` and `session-died` → M-REC's state.
+// The feed's rows → M-REC's index and invalidation; `index`, `mode` and
+// `daemon` → M-REC's state; `session-died` → M-REC's death where it names
+// the page's own session: the shell's bus carries every session's end to
+// every page, and a page that holds no session (a guest) or holds another
+// was never signed in under the one that ended.
 // Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11.
 
 import * as PORT from '../bridge/port.js';
@@ -70,7 +73,7 @@ export function start(opts) {
   PORT.on('index', (d) => { const ev = /** @type {import('../bridge/shapes').IndexEvent} */ (d); if (ev && ev.state) REC.setIndexState(ev.state); dirty(); });
   PORT.on('mode', (d) => { const ev = /** @type {import('../bridge/shapes').ModeEvent} */ (d); if (ev) REC.setMode(ev); dirty(); });
   PORT.on('daemon', (d) => { const ev = /** @type {import('../bridge/shapes').DaemonEvent} */ (d); if (ev) REC.setDaemon(ev.state); dirty(); });
-  PORT.on('session-died', (d) => { const ev = /** @type {import('../bridge/shapes').SessionDiedEvent} */ (d); const s = REC.session(); if (ev && (!s || s.session === ev.session)) REC.sessionDied(ev.reason); dirty(); });
+  PORT.on('session-died', (d) => { const ev = /** @type {import('../bridge/shapes').SessionDiedEvent} */ (d); const s = REC.session(); if (ev && s && s.session === ev.session) REC.sessionDied(ev.reason); dirty(); });
 }
 
 /** the refusals the reads met */
