@@ -244,6 +244,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     localTrust: !!(h && h.auth && h.auth.local_trust),
     notebook: true,
     scene, originKinds,
+    originOwner: (a) => ownerAccount(REC.doc(a)),
     deviceLabel: isOwnerYou && device ? device.label : null,
     ownerFingerprint: isOwnerYou && device ? device.fingerprint : null,
     keyPresent: isOwnerYou && !!device,
@@ -318,7 +319,12 @@ function mount(d) {
   return rec;
 }
 
-/** the owner account of a document: by `effective_owner` where read, else its account */
+/**
+ * The owner account of a document: by `effective_owner` where read, else by
+ * its metadata where read, else its account. The one rule an owner is named
+ * by in an article — its byline's, and each withheld run's origin's
+ * (T-ARTICLE's `originOwner`) — so the two never part.
+ */
 export function ownerAccount(/** @type {Doc} */ d) {
   const row = d.account ? REC.ownerOf(d.account) : undefined;
   return (row && row.prefix) || (d.meta && d.meta.owner) || d.account || '';

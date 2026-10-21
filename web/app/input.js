@@ -30,10 +30,12 @@
 // trail push); at the readable threshold and above its text takes the click:
 // a symbol opens its card; the presence indicator's ⟡ asks to see the links;
 // a run's hairline label goes to its source; the scene-offer opens the scene;
-// the version statement at a document's corner opens its members (the
-// corner's act, the one Enter takes there — K-57); a click on a block selects
-// it whole (R11); a click on an account at far is a teleport to its region (a
-// trail push); an empty click dismisses the overlay.
+// a withheld run's placeholder conjures C-39's face, naming the owner the
+// placeholder names (B1-S5, B1-S7); the version statement at a document's
+// corner opens its members (the corner's act, the one Enter takes there —
+// K-57); a click on a block selects it whole (R11); a click on an account at
+// far is a teleport to its region (a trail push); an empty click dismisses
+// the overlay.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
 // Rules: FP-1, FP-2, FP-9.
@@ -117,7 +119,7 @@ export function attach(els) {
     const offer = target.closest('.offer');
     if (offer) { e.stopPropagation(); const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return; }
     const wh = target.closest('[data-withheld]');
-    if (wh) { e.stopPropagation(); const w = /** @type {HTMLElement} */ (wh); const origin = w.dataset.origin || ''; const s = REC.session(); FACES.c39(REC.doc(origin).account || REC.doc(origin).meta?.owner || '⟨owner⟩', s ? s.account : null, w); return; }
+    if (wh) { e.stopPropagation(); const w = /** @type {HTMLElement} */ (wh); const s = REC.session(); FACES.c39(w.dataset.owner || '', s ? s.account : null, w); return; }
     // the platform selected text under the click (a double-click's word): the selection IS that span (R11)
     const span = LAYER.spanOfSelection();
     if (span && !sameSpan(span, LAYER.placedSpan())) { e.stopPropagation(); SEL.select(span.addr, span.pos, span.width); return; }

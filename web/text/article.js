@@ -18,7 +18,9 @@
 // asked for, each AT ITS SPAN (foundations §2.1; B1-S4: "No margin column:
 // the symbols are at the place"): right after the last word its span
 // touches, in the last paragraph it touches (`standOf`); the withheld block
-// OCCUPYING its positions with R56's arm by PUB-5.121's order and C-67's
+// OCCUPYING its positions and naming the owner of its run's origin, whoever
+// owns the document windowing it (R56: the copy derives per origin; B1-S7),
+// with R56's arm for that owner by PUB-5.121's order and C-67's
 // clause beneath; a record atom rendered as the record it is (the genesis
 // record's words); an unknown item kind "not rendered" with its width; the
 // scene-mode variant, a reading scene's pane's article, which nothing in the
@@ -76,6 +78,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {boolean} notebook the venue
  * @property {boolean} scene the scene-mode variant: a reading scene's pane's article — no scene-offer, and no mark a control
  * @property {Map<string, 'edition' | 'draft' | 'unknown'>} originKinds the kind of each origin document (for C-33)
+ * @property {(doc: string) => string} originOwner the owner account of an origin document, by the one rule the byline's owner is found by (T-LAYER's `ownerAccount`): the owner a withheld run's placeholder names (R56)
  * @property {string | null} deviceLabel the owner's device label where known
  * @property {string | null} ownerFingerprint the owner's device key fingerprint where known
  * @property {boolean} keyPresent is the owner's key on this device (the owner is the person)
@@ -151,7 +154,6 @@ export function blockMarks(addr, b, selected, focus) {
 
 /**
  * @typedef {Object} Walk — the article as one walk of the document decided it: both renderings are made from this
- * @property {string} owner
  * @property {Head} head
  * @property {Part[] | null} parts the blocks; null where a read refused the document (the head alone stands)
  * @property {boolean} empty the document holds no position
@@ -219,16 +221,21 @@ export function entitlementArm(reader, owner) {
 
 /**
  * The R56 placeholder occupying a withheld run: existence and owner, never
- * bytes; the entitlement arm (`entitlementArm`), then C-67's clause.
- * @param {Block} b
+ * bytes — the owner its origin's (`originOwner`), whoever owns the document
+ * windowing the run, since R56's copy derives per origin and B1-S7's
+ * ⟨owner⟩ is always derivable (A-289). The head names that owner, the
+ * entitlement arm (`entitlementArm`) is the one for it, and the placeholder
+ * carries it (`data-owner`) for C-39's face at the run, which names the
+ * same; then C-67's clause.
+ * @param {Block} b the withheld run
  * @param {Doc} d
  * @param {ArticleView} v
- * @param {string} owner the origin's owner account
  */
-export function withheldBlockHTML(b, d, v, owner) {
+export function withheldBlockHTML(b, d, v) {
+  const owner = b.origin ? v.originOwner(b.origin) : '';
   const head = t('B1.withheld-run', { owner, account: owner, width: b.width, origin: b.origin || '' });
   const arm = entitlementArm(v.sessionAccount, owner);
-  return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}">` +
+  return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(owner)}">` +
     `<span class="wh-head">${esc(head)}</span><span class="arm">${esc(arm.text)}</span><span class="clause">${esc(t('C-67.pointer'))}</span></span>`;
 }
 
@@ -416,7 +423,7 @@ function headOf(d, v, owner) {
 function walk(d, v, ownerAccount) {
   const owner = ownerAccount || d.account || '';
   const head = headOf(d, v, owner);
-  if (d.refused) return { owner, head, parts: null, empty: false, offers: [] };
+  if (d.refused) return { head, parts: null, empty: false, offers: [] };
   /** @type {Set<string>} */
   const labelled = new Set();
   // the symbols standing in each paragraph, by its first position: the last paragraph each one's span touches
@@ -444,7 +451,7 @@ function walk(d, v, ownerAccount) {
   });
   // the scene-offer at a document that windows another (UXQ-14)
   const offers = v.scene ? [] : [...new Set(d.origins.map((o) => documentOf(o.doc) || o.doc))].filter((w) => w !== documentOf(d.addr));
-  return { owner, head, parts, empty: !d.blocks.length && d.extent === 0, offers };
+  return { head, parts, empty: !d.blocks.length && d.extent === 0, offers };
 }
 
 /**
@@ -508,7 +515,7 @@ export function articleHTML(d, v, ownerAccount) {
   let run = '';
   for (const p of w.parts) {
     const b = p.b;
-    if (p.kind === 'withheld') { run += withheldBlockHTML(b, d, v, w.owner); continue; }
+    if (p.kind === 'withheld') { run += withheldBlockHTML(b, d, v); continue; }
     const mark = blockMarks(d.addr, b, v.selected, v.focus);
     const cls = ['sp', 'blk-' + b.kind];
     if (mark.sel) cls.push('sel');

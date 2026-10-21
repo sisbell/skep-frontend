@@ -20,6 +20,10 @@
 // chooses after the rebuild turns red); and while a press stands nothing is
 // mounted or taken down for the cap, what leaves the view apart (one that
 // chooses under the press turns red).
+// And the owner a withheld run names, on the plane's mounted article and in
+// a reading scene's pane alike: its origin's, by the one rule the byline's
+// owner is found by, whoever owns the document windowing it (a view that
+// hands the article's owner back turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -29,6 +33,8 @@ import * as CAM from '../plane/camera.js';
 import { metricsFor, layoutOf, heightOf, fitted } from '../plane/layout.js';
 import { docBox, intersects, DOC_CELL_W } from '../plane/projection.js';
 import { MAX_MOUNTED, MOUNT_EM } from '../plane/lod.js';
+import { t } from '../strings.js';
+import { esc } from '../util.js';
 
 /** @typedef {import('../plane/layout.js').Metrics} Metrics */
 
@@ -274,4 +280,27 @@ test('while a press stands nothing is mounted or taken down for the cap, what le
   const after = frame(27);
   assert.equal(after.length, MAX_MOUNTED, 'the press ended: eight stand');
   assert.ok(after.includes(27), 'the focused document among them');
+}));
+
+// ---- the owner a withheld run names ------------------------------------------------------------------------------------
+
+test('a guest meets a withheld run named for its origin\'s owner, whoever owns the document windowing it: on the plane\'s mounted article and in a reading scene\'s pane alike', () => onLayer(() => {
+  const O = '1.0.2.0.2', text = 'Tumbler.\n\n', width = 240, n = new TextEncoder().encode(text).length;
+  REC.setSession(null);
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + width }]);
+  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width, kind: 'withheld', text: '', ref: null, origin: O }]);
+  const d = REC.doc(D), box = docBox(D);
+  assert.equal(LAYER.ownerAccount(d), '1.0.1', 'the first edition is 1.0.1\'s');
+  CAM.set({ x: box.x + box.w / 2, y: box.y + box.h / 2, scale: 12 / LAYER.metricsOf(d).fs });
+  LAYER.frame();
+  const rec = LAYER.mountedSet().get(D);
+  assert.ok(rec, 'at em 12 its article stands on the plane');
+  const head = esc(t('B1.withheld-run', { owner: '1.0.2', account: '1.0.2', width, origin: O }));
+  const arm = (/** @type {string} */ owner) => esc(t('R56.key-absent', { owner }));
+  /** @type {Array<[string, string]>} */
+  const met = [['on the plane', String(rec.el.innerHTML)], ['in a pane', LAYER.sceneArticle(d)]];
+  for (const [where, html] of met) {
+    assert.ok(html.includes(`<span class="wh-head">${head}</span><span class="arm">${arm('1.0.2')}</span>`), `${where}: the head and R56's key-absent arm name 1.0.2, the owner of the run's origin`);
+    assert.ok(!html.includes(arm('1.0.1')), `${where}: no arm names 1.0.1, the owner of the document windowing the run`);
+  }
 }));
