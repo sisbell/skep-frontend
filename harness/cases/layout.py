@@ -15,9 +15,10 @@ one line at each level, held there while the document's top has risen past
 the line, and never below the document's box as its bottom rises), every
 beam leaving the text at its span's own line, from the article's edge (its
 endpoint level with one of its marked words' line rects, at the article's
-edge — foundations §2.1; S1 Q1), every stub in view carrying its far
-document's label inside the visible view — the viewport below the one line
-(S1 Q3) — and no two of the beams' labels in view meeting. THE STUB at mid
+edge — foundations §2.1; S1 Q1), every stub whose beam leaves the text in
+the visible view — the viewport below the one line — carrying its far
+document's label inside that view (S1 Q3), and no two of the beams' labels
+in view meeting. THE STUB at mid
 scale (foundations §2.1: a mid connection "whose far end is out of view
 ending at the view's edge as §2.5's stub does"): the camera over the first
 edition at S3's mid-extents, every document standing whole in view that a
@@ -70,13 +71,16 @@ ORDER (law 13): the frames each step across the mount threshold draws show
 no document both as bars under its own mounted text and none yielded to
 text that is not mounted. THE LABELS (F-9 and foundations §2.1: each label
 drawn only where its extent holds it; legibility, not frame cost, is what
-the scales buy): at each of S3's thresholds over the first edition, at HOME
+the scales buy): at each of S3's thresholds over the first edition, at S3's
+mid-extents with the first edition's box risen under the one line — its
+address wholly under the line, then across the line's bottom edge — at HOME
 and at WHOLE BOARD, (i) every label the canvas set, the trail's pip numbers
 among them, is MIN_LABEL_PX or larger; (ii) every other label lies inside
 its place as the projection gives it — the board's label cell, an
 account's cell, a continuation's mark, a document's box — and inside the
-viewport, a connection's count centred on its stroke, the segment between
-its two places' centres, inside the visible view below the one line; (iii)
+visible view below the one line, which stands opaque over the strip above
+it, a connection's count centred on its stroke, the segment between its
+two places' centres; (iii)
 no two meet; (iv) none meets another place: the box of a document in view
 that no mark drawn the stronger holds, a continuation's mark, an account's
 cell that does not hold its place — a connection's count, no one account's,
@@ -87,8 +91,12 @@ count, the numeral of its links, or the pass names the rule that left it
 out, and none holding one carries a count; (vii) at S3's mid-extents and
 at HOME none is left out (P44: no merged mark hides its count); and the
 places with room carry their labels — at HOME every document standing
-whole in view and the continuation's mark, at WHOLE BOARD the board and the
-acting account's cluster. THE TYPE (the typography review's findings 10 and
+whole in the visible view and the continuation's mark, at WHOLE BOARD the
+board and the acting account's cluster — while a box risen under the one
+line carries none: the first edition's label is left out whole, by the
+rule that leaves out a label past the visible view, never set where the
+line hides it nor cut through at its edge, and the labels of the documents
+below the line are set. THE TYPE (the typography review's findings 10 and
 17): every element of the first edition that sets text spaces its lines at
 1.35 of its own size; the head's lines and the headings stand on P-LAY's
 line box for their size, as the engine lays it out (the rounding `lineBox`
@@ -163,6 +171,9 @@ CORNER = '#corners [data-corner="%s"]' % DOC
 # the case's own floor for a label, held apart from the page's constant so that lowering the page's cannot pass here
 MIN_LABEL_PX = 9
 LABEL_TOL_PX = 0.5
+# how far above the one line's bottom the first edition's box's top stands at S3's mid-extents: its address's line, set at
+# the floor a twentieth of the box's height below the top, wholly under the line, then across the line's bottom edge
+UNDER_LINE_PX = (20, 12)
 # the trail's strip: its half-width about the segment between two entries, how far it keeps inside the document's box,
 # and the disc left out about each entry's point — a pip's radius, its ring and the ring's stroke being under 11 px
 TRAIL_STRIP_PX, TRAIL_INSET_PX, PIP_CLEAR_PX = 1.5, 4, 14
@@ -395,8 +406,9 @@ def labels_hold(r, name, v):
     r.check(not small, f'{name}: (i) every label the canvas set, the trail\'s pip numbers among them, is {MIN_LABEL_PX} px or larger', small[:6])
     placed = [(l, place_of(v, l), x) for l in labels if l['kind'] != 'pip' for x in l['lines']]
     outside = [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'rect': x['rect'], 'place_rect': p} for l, p, x in placed
-               if (not on_stroke(v, l, x) if l['kind'] == 'connection' else p is None or not inside(x['rect'], p) or not inside(x['rect'], v['view']))]
-    r.check(not outside, f'{name}: (ii) every label lies inside its place, as the projection gives it, and inside the viewport — a connection\'s count centred on its stroke, the segment between its two places\' centres, and inside the visible view below the one line — {LABEL_TOL_PX} px either way', outside[:6])
+               if (not on_stroke(v, l, x) if l['kind'] == 'connection' else p is None or not inside(x['rect'], p) or not inside(x['rect'], v['seen']))]
+    r.check(not outside, f'{name}: (ii) every label lies inside its place, as the projection gives it, and inside the visible view below the one line, which stands opaque over the strip above it — a connection\'s count centred on its stroke, the segment between its two places\' centres — {LABEL_TOL_PX} px either way',
+            {'outside': outside[:6], 'seen': v['seen']})
     crossing = [{'a': [a[0]['kind'], a[0]['place'], a[2]['text']], 'b': [b[0]['kind'], b[0]['place'], b[2]['text']]} for i, a in enumerate(placed) for b in placed[i + 1:] if meets(a[2]['rect'], b[2]['rect'])]
     r.check(not crossing, f'{name}: (iii) no two labels meet', crossing[:6])
     met = []
@@ -426,8 +438,8 @@ def labels_hold(r, name, v):
                 {'hidden': hidden, 'connections': [[c['place'], c['count'], c['label']] for c in conns][:12]})
     if name == 'home':
         labelled = {l['place'] for l in labels if l['kind'] == 'doc'}
-        whole = [o['place'] for o in v['boxes'] if inside(o['rect'], v['view']) and o['place'] not in v['mounted']]
-        r.check(bool(whole) and set(whole) <= labelled, 'home: every document standing whole in view carries its label', {'in_view': len(whole), 'unlabelled': sorted(set(whole) - labelled)[:8]})
+        whole = [o['place'] for o in v['boxes'] if inside(o['rect'], v['seen']) and o['place'] not in v['mounted']]
+        r.check(bool(whole) and set(whole) <= labelled, 'home: every document standing whole in the visible view carries its label', {'in_view': len(whole), 'unlabelled': sorted(set(whole) - labelled)[:8]})
         r.check(any(m['lines'] for m in v['marks']), 'home: the continuation drawn as one mark carries its label', [m['lines'] for m in v['marks']])
     if name == 'whole-board':
         named = {(l['kind'], l['place']) for l in labels}
@@ -1072,16 +1084,17 @@ def run(ctx):
     r.check(all(a['words'] for a in anchors), 'every drawn beam\'s link is marked at its words in the mounted article (the oracle\'s rects exist)', [a['link'] for a in anchors if not a['words']])
     off = [{'link': a['link'], 'pos': a['pos'], 'x': a['x'], 'y': a['y'], 'edge': a['edge'], 'words': a['words']} for a in anchors if not on_own_line(a)]
     r.check(not off, f'every beam leaves the text at its span\'s own line, from the article\'s edge: its endpoint\'s y within one of its words\' line rects and its x at the article\'s edge, {ANCHOR_TOL_PX} px either way', off[:4])
-    # the stubs' labels (S1 Q3): every bundle with a beam that leaves the text in view and ends at the view's border sets the label naming its
-    # far document, in the visible view — below the one line, which stands over the beams; no two labels in view meet. A beam whose line lies
-    # past the viewport is shown to no one, its stub and label with it
+    # the stubs' labels (S1 Q3): every bundle with a beam that leaves the text in the visible view and ends at the view's border sets the label
+    # naming its far document, in the visible view — below the one line, which stands over the beams; no two labels in view meet. A beam whose
+    # line lies past the visible view — under the one line, or past the viewport — is cut at its start where it is bound away from the view,
+    # and sets no label there, where none would stand whole in the view (beams.test.js holds that rule)
     labels = ctx.js('window.__skep.beamLabels()')
     vp = ctx.js('window.__skep.view.viewport()')
     top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
     view = {'x': 0, 'y': top, 'w': vp['VW'], 'h': vp['VH'] - top}
-    stubbed = sorted({(a['near'], a['far']) for a in anchors if a['stub'] and 0 <= a['x'] <= vp['VW'] and 0 <= a['y'] <= vp['VH']})
+    stubbed = sorted({(a['near'], a['far']) for a in anchors if a['stub'] and 0 <= a['x'] <= vp['VW'] and top <= a['y'] <= vp['VH']})
     named = {(l['near'], l['far']) for l in labels if l['stub'] and l['text'].startswith(l['far']) and inside(l['rect'], view)}
-    r.check(bool(stubbed) and set(stubbed) <= named, f'every stub in view carries its far document\'s label: each bundle with a beam that leaves the text in view and ends at the view\'s border sets a label naming its far document, inside the visible view below the one line, {LABEL_TOL_PX} px either way',
+    r.check(bool(stubbed) and set(stubbed) <= named, f'every stub in view carries its far document\'s label: each bundle with a beam that leaves the text in the visible view and ends at the view\'s border sets a label naming its far document, inside the visible view below the one line, {LABEL_TOL_PX} px either way',
             {'stubbed': stubbed, 'labels': [[l['far'], l['text'], l['rect']] for l in labels], 'view': view})
     in_view = [l for l in labels if meets(l['rect'], view)]
     met = [[a['far'], b['far'], a['rect'], b['rect']] for i, a in enumerate(in_view) for b in in_view[i + 1:] if meets(a['rect'], b['rect'])]
@@ -1220,12 +1233,30 @@ def run(ctx):
     r.check(all(row[k]['x'] > row[k - 1]['x'] for k in range(1, 7)), 'documents 1–7 advance along the row', [round(b['x']) for b in row[:7]])
     r.check(abs(row[7]['x'] - row[0]['x']) < eps and row[7]['y'] > row[0]['y'], 'document 8 starts the second row under document 1', {'d1': (round(row[0]['x']), round(row[0]['y'])), 'd8': (round(row[7]['x']), round(row[7]['y']))})
     r.check(row[0]['x'] < cell['x'] + cell['w'] / 7 and row[0]['y'] < cell['y'] + cell['h'] / 7, 'document 1 lies in the first cell of the grid', {'d1': (round(row[0]['x']), round(row[0]['y'])), 'cell': (round(cell['x']), round(cell['y']))})
-    # THE LABELS: at each of S3's thresholds over the first edition, then at HOME and at WHOLE BOARD
+    # THE LABELS: at each of S3's thresholds over the first edition, then with its box risen under the one line, then at HOME and at WHOLE BOARD
     box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
     seen = {}
     for name, value, kind in ctx.js('window.__skep.thresholds'):
         ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * (0.3 if kind == 'em' else 0.5), ctx.js('window.__skep.scaleFor(%s, %s, %s)' % (json.dumps(DOC), json.dumps(kind), value)))
         seen[name] = labels_hold(r, name, label_view(ctx))
+    # a box risen under the one line: S3's mid-extents, the first edition's box's top UNDER_LINE_PX above the line's bottom
+    vp = ctx.js('window.__skep.view.viewport()')
+    s90 = ctx.js('window.__skep.scaleFor(%s, "doc", 90)' % json.dumps(DOC))
+    for under in UNDER_LINE_PX:
+        name = 'under-the-line-%d' % under
+        top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
+        ctx.set_view(box['x'] + box['w'] / 2, box['y'] + (vp['VH'] / 2 - (top - under)) / s90, s90)
+        v = label_view(ctx)
+        seen[name] = labels_hold(r, name, v)
+        cam = ctx.camera()
+        box_top = (box['y'] - cam['y']) * cam['scale'] + vp['VH'] / 2
+        mine = [[x['text'], x['rect']] for l in v['labels'] if l['kind'] == 'doc' and l['place'] == DOC for x in l['lines']]
+        why = [o['reason'] for o in v['out'] if o['kind'] == 'doc' and o['place'] == DOC]
+        below = sorted(l['place'] for l in v['labels'] if l['kind'] == 'doc' and l['place'] != DOC and all(x['rect']['y'] >= v['seen']['y'] - LABEL_TOL_PX for x in l['lines']))
+        r.check(abs(v['seen']['y'] - box_top - under) <= LABEL_TOL_PX and not mine and why[:1] == ['view'] and bool(below),
+                f'{name}: the first edition\'s box\'s top {under} px above the one line\'s bottom, its address reaching under the line: its label is left out whole, by the rule that leaves out a label past the visible view — never set where the line hides it, nor cut through at the line\'s edge — and the labels of the documents below the line are set',
+                {'line': v['seen']['y'], 'box_top': box_top, 'set': mine, 'left_out': why, 'set_below': below[:8]})
+        seen[name].update(box_top=round(box_top, 2), line=v['seen']['y'])
     for name, door in (('home', 'home'), ('whole-board', 'wholeBoard')):
         ctx.js('window.__skep.go.%s()' % door)
         ctx.settle()

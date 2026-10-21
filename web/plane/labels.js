@@ -13,9 +13,11 @@
 // the board, the clusters, the account frames, the continuations' marks, the
 // documents — then each mid connection's count, and the pass sets each one
 // only where, wrapped at its spaces to its place's width by the canvas's
-// measure, it lies whole inside its place and inside the viewport, and meets
-// no other place's shape (a cluster's mark, a box, a continuation's mark) and
-// no label set before it. Through a crossfade a place drawn the weaker — an
+// measure, it lies whole inside its place and inside the visible view — the
+// viewport below the one line, which stands opaque over the plane, so a
+// label under it would be hidden, or cut through at its edge — and meets no
+// other place's shape (a cluster's mark, a box, a continuation's mark) and no
+// label set before it. Through a crossfade a place drawn the weaker — an
 // alpha below a half — sets no label and blocks none, as the click takes the
 // stronger (P-LOD's `residueDepth`).
 // A CONNECTION'S COUNT (foundations §2.1's register: "one connection drawn
@@ -106,7 +108,7 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
 
 /**
  * @typedef {'faint' | 'width' | 'height' | 'view' | 'meets' | 'after'} Reason why a part was left out:
- * its place drawn the weaker through a crossfade; a word, or a line never cut, wider than its place; its lines past its place's bottom; reaching past the viewport; meeting another place's shape or a label set before it; a part before it left out
+ * its place drawn the weaker through a crossfade; a word, or a line never cut, wider than its place; its lines past its place's bottom; reaching past the visible view — under the one line, or past the viewport; meeting another place's shape or a label set before it; a part before it left out
  */
 
 /**
@@ -190,7 +192,7 @@ function linesOf(p, rows, fits) {
  * the parts it could not set left out with the rule that left each out.
  * @param {Label[]} labels in the order their places were drawn
  * @param {Shape[]} shapes every place's shape the frame drew
- * @param {Rect} view the viewport
+ * @param {Rect} view the visible view (P-CAM's `visibleView`): the viewport below the one line
  * @param {Measure} measure
  * @returns {{set: SetLabel[], out: LeftOut[]}}
  */

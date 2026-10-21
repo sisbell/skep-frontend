@@ -400,7 +400,7 @@ export function install(deps) {
     focus: () => ({ ring: FOCUS.ringShown(), plane: FOCUS.planeHolds(), standing: FOCUS.standing() }),
     driftSample, overlapCheck, visible,
     beamAnchors, arrivalAnchors, barsOf,
-    /** the labels the beams' last frame set, one per bundle: the document it leaves, its far document, its text, whether it ends in a stub, and its rect on screen */
+    /** the labels the beams' last frame set, one per bundle whose label stands whole in the visible view: the document it leaves, its far document, its text, whether it ends in a stub, and its rect on screen */
     beamLabels: () => BM.labels(),
     /** the continuations the last frame drew as marks */
     residues: () => RENDER.stats.residueMarks.slice(),

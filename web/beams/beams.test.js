@@ -11,20 +11,27 @@
 // in their hue, one met at one end alone as that end marks it. Then a beam's
 // ends over a laid-out geometry: it leaves the near block's right edge level
 // with the span's own line nearest the far end, never the block's middle; a
-// mounted far end takes the far span's own line nearest the start, at the far
-// block's left edge; a whole-work end, the far article's first block; an
-// unmounted one is aimed at its document's box, a stub, and so is one whose
-// box's centre stands under the one line, outside the visible view. A
-// bundle's label stands above
-// its end, or below it where above would reach past the visible view's top —
-// a stub on the top border sets its label under the line, shown to no one,
-// without the rule.
+// mounted far end in view takes the far span's own line nearest the start, at
+// the far block's left edge; a whole-work end, the far article's first block;
+// a mounted far end outside the visible view — its line under the one line,
+// or past the view's border — is off screen: the beam is aimed at it and cut
+// at the border, a stub, its label set in the view (a mutant that ends a
+// mounted end's beam at the end wherever it stands turns red); an unmounted
+// one is aimed at its document's box, a stub, and so is one whose box's
+// centre stands under the one line, outside the visible view. A bundle's
+// label stands above its end, or below it where above would reach past the
+// visible view's top — a stub on the top border sets its label under the
+// line, shown to no one, without the rule — and nowhere it would not stand
+// whole in that view: a beam cut at its start just under the line, bound
+// upward, sets none there, where it would straddle the line's edge (a mutant
+// that sets it wherever it falls turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import { bundlesOf, beamOf, labelPlace } from './beams.js';
-import { HUE, NEUTRAL_HUE } from '../plane/register.js';
+import { edgeStub } from '../plane/camera.js';
+import { HUE, NEUTRAL_HUE, STUB } from '../plane/register.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13';
 // the person's edition, another account's, a third account's
@@ -99,17 +106,20 @@ test('a link whose endset holds two spans in D keeps a beam from each', () => {
   assert.deepEqual(members(bundlesOf(met([D]))), [[TWO, 70], [TWO, 90]]);
 });
 
-// a laid-out geometry: D mounted, its span at 50 wrapping onto two lines in a block 400 px wide from x 100; H's box centred at `centre`
+/** @typedef {{x: number, y: number, w: number, h: number}} Rect */
+// a laid-out geometry: D mounted, its span at 50 wrapping onto two lines in a block 400 px wide from x 100; H, where mounted, its span at 1
+// wrapping onto two lines in a block from x 600 (or the block and lines handed in); H's box centred at `centre`
 const NEAR = [{ x: 300, y: 100, w: 200, h: 15 }, { x: 100, y: 118, w: 80, h: 15 }];
 const NEAR_BLOCK = { x: 100, y: 90, w: 400, h: 60 };
-const FAR = [{ x: 1200, y: 400, w: 50, h: 15 }, { x: 1100, y: 418, w: 30, h: 15 }];
-const FAR_BLOCK = { x: 1100, y: 390, w: 400, h: 50 };
+const FAR = [{ x: 700, y: 400, w: 50, h: 15 }, { x: 600, y: 418, w: 30, h: 15 }];
+const FAR_BLOCK = { x: 600, y: 390, w: 300, h: 50 };
 /** @returns {import('./beams.js').Geometry} */
-function geometry(/** @type {{farMounted: boolean, centre: {x: number, y: number}}} */ o) {
+function geometry(/** @type {{farMounted: boolean, centre: {x: number, y: number}, far?: Rect[], farBlock?: Rect}} */ o) {
+  const far = o.far || FAR, farBlock = o.farBlock || FAR_BLOCK;
   return {
-    lines: (addr, pos, width) => (addr === D && pos === 50 && width === 10 ? NEAR : addr === H && o.farMounted && pos === 1 && width === 5 ? FAR : []),
-    block: (addr, pos) => (addr === D && pos >= 50 && pos < 60 ? NEAR_BLOCK : addr === H && o.farMounted && pos >= 1 && pos < 6 ? FAR_BLOCK : null),
-    first: (addr) => (addr === H && o.farMounted ? FAR_BLOCK : null),
+    lines: (addr, pos, width) => (addr === D && pos === 50 && width === 10 ? NEAR : addr === H && o.farMounted && pos === 1 && width === 5 ? far : []),
+    block: (addr, pos) => (addr === D && pos >= 50 && pos < 60 ? NEAR_BLOCK : addr === H && o.farMounted && pos >= 1 && pos < 6 ? farBlock : null),
+    first: (addr) => (addr === H && o.farMounted ? farBlock : null),
     mounted: (addr) => addr === D || (addr === H && o.farMounted),
     centre: () => o.centre,
     view: SEEN,
@@ -129,17 +139,36 @@ test('a beam leaves the near block\'s right edge level with the middle of its sp
   assert.equal(beamOf(own(), { ...geometry({ farMounted: false, centre: { x: 0, y: 0 } }), lines: () => [] }), null, 'no line laid out: no beam');
 });
 
-test('a mounted far end: the beam ends at the far block\'s left edge, level with the far span\'s own line nearest the start', () => {
-  const b = beamOf(own(), geometry({ farMounted: true, centre: { x: 1300, y: 415 } }));
+test('a mounted far end in view: the beam ends at the far block\'s left edge, level with the far span\'s own line nearest the start', () => {
+  const b = beamOf(own(), geometry({ farMounted: true, centre: { x: 750, y: 415 } }));
   assert.ok(b);
-  assert.deepEqual([b.to, b.aimed, b.stub], [{ x: 1100, y: 425.5 }, false, false]);
+  assert.deepEqual([b.to, b.aimed, b.stub], [{ x: 600, y: 425.5 }, false, false]);
   assert.deepEqual(b.line, NEAR[0], 'the near line nearest the far span');
 });
 
-test('a mounted whole-work far end: the beam ends at the far article\'s first block', () => {
+test('a mounted whole-work far end in view: the beam ends at the far article\'s first block', () => {
   const s = { ...own(), farEnd: whole(H), farWhole: true };
-  const b = beamOf(s, geometry({ farMounted: true, centre: { x: 1300, y: 415 } }));
-  assert.deepEqual(b && b.to, { x: 1100, y: 415 });
+  const b = beamOf(s, geometry({ farMounted: true, centre: { x: 750, y: 415 } }));
+  assert.deepEqual(b && [b.to, b.aimed, b.stub], [{ x: 600, y: 415 }, false, false]);
+});
+
+test('a mounted far end outside the visible view is off screen: the beam is aimed at it and cut at the view\'s border, a stub, its label in view', () => {
+  const m = { w: 120, ascent: 9, descent: 3 };
+  // H mounted, its span's line laid out at y 5, under the one line, in a block from x 600 at the viewport's top
+  const under = geometry({ farMounted: true, centre: { x: 750, y: 20 }, far: [{ x: 700, y: 5, w: 50, h: 15 }], farBlock: { x: 600, y: 0, w: 300, h: 40 } });
+  const b = beamOf(own(), under);
+  assert.ok(b);
+  assert.deepEqual([b.to, b.aimed, b.stub], [{ x: 600, y: 12.5 }, true, true], 'its end, the far block\'s left edge level with its line, under the line: aimed at it, a stub');
+  const cut = edgeStub(b.from, b.to, SEEN);
+  const at = labelPlace(cut, m, SEEN);
+  assert.ok(cut.y > SEEN.y && at && inside(at.rect, SEEN), `cut below the line on the bearing to the end, its label in view (${JSON.stringify(at && at.rect)})`);
+  // H mounted, its span's lines past the viewport's right border, its whole-work end too
+  const past = geometry({ farMounted: true, centre: { x: 1300, y: 415 }, far: [{ x: 1200, y: 400, w: 50, h: 15 }, { x: 1100, y: 418, w: 30, h: 15 }], farBlock: { x: 1100, y: 390, w: 400, h: 50 } });
+  const r = beamOf(own(), past), w = beamOf({ ...own(), farEnd: whole(H), farWhole: true }, past);
+  assert.deepEqual(r && [r.to, r.aimed, r.stub], [{ x: 1100, y: 425.5 }, true, true], 'past the right border: a stub');
+  assert.deepEqual(w && [w.to, w.aimed, w.stub], [{ x: 1100, y: 415 }, true, true], 'a whole-work end past it: a stub');
+  const rc = r && edgeStub(r.from, r.to, SEEN), ra = rc && labelPlace(rc, m, SEEN);
+  assert.ok(rc && Math.abs(rc.x - (SEEN.x + SEEN.w - STUB.inset)) < 1e-9 && ra && inside(ra.rect, SEEN), `cut STUB.inset px inside the right border, its label in view (${JSON.stringify(rc)})`);
 });
 
 test('a far end not laid out whose box\'s centre stands under the one line is off screen: a stub', () => {
@@ -161,4 +190,19 @@ test('a bundle\'s label stands above its end, toward the view\'s middle, and bel
   const near = labelPlace({ x: 990, y: SEEN.y + 12 }, m, SEEN);
   assert.ok(inside(near.rect, SEEN) && near.rect.y > SEEN.y + 12, 'an end on the right border near the top: below it too');
   assert.ok(inside(labelPlace({ x: 300, y: SEEN.y + 8 + 6 + 9 }, m, SEEN).rect, SEEN), 'an end with room above it: above, inside the view');
+});
+
+test('a bundle\'s label stands nowhere it would not stand whole in the visible view: a beam cut at its start just under the one line, bound upward, sets none', () => {
+  const m = { w: 120, ascent: 9, descent: 3 };
+  assert.equal(labelPlace({ x: 300, y: SEEN.y - 10 }, m, SEEN), null, 'an end 10 px under the line\'s bottom: below it, the label would straddle the line\'s edge');
+  assert.equal(labelPlace({ x: 300, y: SEEN.y + SEEN.h + 20 }, m, SEEN), null, 'an end past the viewport\'s bottom: shown to no one');
+  // D's span on a line under the one line, at the viewport's top; H unmounted, its box above the viewport: the stroke bound upward leaves
+  // the visible view at once, so its cut stands at its start, under the line
+  const top = [{ x: 300, y: 5, w: 200, h: 15 }];
+  const g = { ...geometry({ farMounted: false, centre: { x: 900, y: -300 } }), lines: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => (addr === D && pos === 50 && width === 10 ? top : []), block: (/** @type {string} */ addr) => (addr === D ? { x: 100, y: 0, w: 400, h: 40 } : null) };
+  const b = beamOf(own(), g);
+  assert.ok(b && b.aimed && b.stub);
+  const cut = edgeStub(b.from, b.to, SEEN);
+  assert.deepEqual(cut, b.from, 'cut at its start, under the line');
+  assert.equal(labelPlace(cut, m, SEEN), null, 'no label at it');
 });

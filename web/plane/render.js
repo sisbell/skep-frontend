@@ -41,7 +41,9 @@
 // every string the canvas sets but the trail's pip numbers — handed to
 // P-LABEL's one pass once every place's shapes are drawn, and set over them
 // at no less than P-REG's LABEL_MIN_PX, each only where its place holds it
-// whole, meeting no other place's shape and no label set before it (F-9;
+// whole inside the visible view — the one line stands opaque over the strip
+// above it, where a label would be hidden, or cut through at the line's edge
+// — meeting no other place's shape and no label set before it (F-9;
 // foundations §2.1), a document's on a plate of its box's ground over the
 // bars beneath; then the stubs' triangles, over the places and their labels
 // as the pips are, for the stubs' strokes run behind the boxes, which at mid
@@ -406,8 +408,8 @@ function drawMark(m, pass) {
   return { key: m.key, account: m.account, k: m.k, n, exact, newest: newest.addr, members: m.members, alpha: m.alpha, lines: [], rect };
 }
 
-/** the documents as extents; the continuations too small to stand whole as marks; the mid connections */
-function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} */ alpha, /** @type {Pass} */ pass) {
+/** the documents as extents; the continuations too small to stand whole as marks; the mid connections, against the visible view `seen` */
+function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} */ alpha, /** @type {Pass} */ pass, /** @type {Rect} */ seen) {
   if (!ctx) return 0;
   const { VW, VH } = viewport();
   const v = viewportWorld(80);
@@ -448,7 +450,6 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   };
   /** the places this frame draws: the boxes standing whole, the marks holding their documents */
   const drawnAt = new Set([...vis.map((x) => placeOf(x.d.addr)), ...heldAt.values()]);
-  const seen = visibleView(LINE.bottom());
   const centreOf = (/** @type {string} */ key) => { const c = /** @type {Cell} */ (cells.get(key)); return { x: sx(c.x + c.w / 2), y: sy(c.y + c.h / 2) }; };
   const inView = (/** @type {Point} */ p) => p.x >= seen.x && p.x <= seen.x + seen.w && p.y >= seen.y && p.y <= seen.y + seen.h;
   /** @type {Array<{place: string, count: number, p: Point, q: Point}>} each connection holding more than one link, and the stroke its count stands on: to the far place's centre, or to the stub's triangle's base */
@@ -539,16 +540,19 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
 
 /**
  * The labels' one pass (P-LABEL): every label the places handed over, set
- * over their shapes, each line on the plate its place asks for, laid across
- * the label's room; `stats` takes the labels set and the parts left out,
- * each mark the lines set on it, each connection the count set on it, and
- * `drawn` each document whose label was set.
+ * over their shapes inside the visible view, each line on the plate its
+ * place asks for, laid across the label's room; `stats` takes the labels set
+ * and the parts left out — a part reaching under the one line or past the
+ * viewport left out by the pass's 'view' with every part after it, so a
+ * label whose head reaches there is left out whole — each mark the lines set
+ * on it, each connection the count set on it, and `drawn` each document
+ * whose label was set.
  * @param {Pass} pass
+ * @param {Rect} seen the visible view (P-CAM's `visibleView`): the viewport below the one line
  */
-function drawLabels(pass) {
+function drawLabels(pass, seen) {
   const c = ctx; if (!c) return;
-  const { VW, VH } = viewport();
-  const { set, out } = setLabels(pass.labels, pass.shapes, { x: 0, y: 0, w: VW, h: VH }, measure);
+  const { set, out } = setLabels(pass.labels, pass.shapes, seen, measure);
   c.textAlign = 'left'; c.textBaseline = 'middle';
   for (const l of set) {
     c.globalAlpha = l.alpha;
@@ -650,13 +654,15 @@ function drawArrival() {
 /**
  * Draw the frame: a function of model and view state (FP-8) — the places,
  * then their labels, then the stubs' triangles, the trail, the focus ring and
- * the arrival mark.
+ * the arrival mark; the connections and the labels against one visible view,
+ * read once for the frame.
  * @returns {import('./lod.js').Lod}
  */
 export function draw() {
   const lod = lodOf(cam.scale);
   if (!ctx || !cv) return lod;
   const { VW, VH } = viewport();
+  const seen = visibleView(LINE.bottom());
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, VW, VH);
   ctx.textBaseline = 'alphabetic';
@@ -665,9 +671,9 @@ export function draw() {
   const pass = { labels: [], shapes: [] };
   drawBoard(pass);
   if (lod.name === 'far') stats.clusters = drawClusters(1, pass);
-  else if (lod.name === 'far~mid') { stats.clusters = drawClusters(1 - lod.fade, pass); drawAccountFrames(lod.fade, pass); stats.docsDrawn = drawDocs(lod, lod.fade, pass); }
-  else { drawAccountFrames(1, pass); stats.docsDrawn = drawDocs(lod, 1, pass); }
-  drawLabels(pass);
+  else if (lod.name === 'far~mid') { stats.clusters = drawClusters(1 - lod.fade, pass); drawAccountFrames(lod.fade, pass); stats.docsDrawn = drawDocs(lod, lod.fade, pass, seen); }
+  else { drawAccountFrames(1, pass); stats.docsDrawn = drawDocs(lod, 1, pass, seen); }
+  drawLabels(pass, seen);
   drawStubs(); drawTrail(); drawFocus(); drawArrival();
   return lod;
 }

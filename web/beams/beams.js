@@ -13,20 +13,26 @@
 // block holding its span, level with
 // the middle of the line-rect of the span's own bytes nearest the far end
 // (`spanRects` with the span's width — its rects line by line, so at a wrap
-// the line nearest the far end). The far end mounted, the beam ends at the far
-// block's left edge, level with the far span's own line nearest the start — a
-// whole-work end at the far article's first block; unmounted or off screen →
-// THE EDGE STUB: the beam clipped at the visible view's border — the viewport
-// below the one line, the cut P-CAM's `edgeStub` that P-RENDER's mid
-// connections share — with a triangle on the true bearing and the far
-// document's label at the stub (S1 Q3, load-bearing); off screen is outside
-// that view. A link met from both its ends, or twice inside one document, is
-// one beam, marked with what its meetings' marks share whichever document
+// the line nearest the far end). The far end mounted and laid out, the beam
+// ends at the far block's left edge, level with the far span's own line
+// nearest the start — a whole-work end at the far article's first block;
+// unmounted or off screen → THE EDGE STUB: the beam clipped at the visible
+// view's border — the viewport below the one line, the cut P-CAM's
+// `edgeStub` that P-RENDER's mid connections share — with a triangle on the
+// true bearing and the far document's label at the stub (S1 Q3,
+// load-bearing). Off screen is outside that view, the end laid out or not: a
+// mounted article's line stands wherever its box reaches, under the one line
+// or past the viewport (T-LAYER mounts every article whose box meets the
+// viewport, padded), and a far end not laid out stands at its document's
+// box's centre. A link met from both its ends, or twice inside one document,
+// is one beam, marked with what its meetings' marks share whichever document
 // mounted first (`bundlesOf`; P44: "never a stack, never accumulated tint").
 // The beams are bundled by the document they leave and
 // their far document — one bundle per destination, its far document's label
 // and its count at its end (§2.1), above the end, or below it where above
-// would reach past the visible view's top (`labelPlace`) — each member stroked
+// would reach past the visible view's top, and none where it would not stand
+// whole inside that view (`labelPlace`: a beam cut at its start, under the
+// one line or past the viewport, sets no label there) — each member stroked
 // from its own line, the alpha thinned as the beams drawn grow (S1 Q4:
 // opacity alone fails near ten co-located beams). Not built, the design's to
 // settle (issue #9): the bundle's one stroke and where it leaves the edge, the
@@ -58,9 +64,9 @@ import { doc, blockAt, place } from '../model/records.js';
  * @property {Shown} s the link as LK shows it at the document the beam leaves (`s.near`)
  * @property {Rect} line the near span's line the beam leaves at
  * @property {Point} from where it leaves: the near block's right edge, level with that line's middle
- * @property {Point} to where it ends — the far block's left edge, level with the far span's line nearest `from` — or, where `aimed`, the far document's centre
- * @property {boolean} aimed the far end is not laid out: the stroke runs toward `to` and is cut at the visible view's border
- * @property {boolean} stub the far end is unmounted, or its centre stands outside the visible view: the cut carries the triangle on the true bearing
+ * @property {Point} to its far end: the far block's left edge, level with the far span's line nearest `from`; where that is not laid out, the far document's centre
+ * @property {boolean} aimed the stroke runs toward `to` and is cut at the visible view's border: the far end is not laid out, or it stands outside the visible view
+ * @property {boolean} stub the far end is off screen — unmounted, or `to` outside the visible view: the cut carries the triangle on the true bearing
  */
 
 /**
@@ -116,20 +122,28 @@ function pickRect(/** @type {Rect[]} */ rects, /** @type {number} */ tx, /** @ty
   for (const r of rects) { const dd = (r.x + r.w / 2 - tx) ** 2 + (r.y + r.h / 2 - ty) ** 2; if (dd < bd) { bd = dd; best = r; } }
   return best;
 }
+/** does a rect hold a point, its edges included? */
+const holds = (/** @type {Rect} */ r, /** @type {Point} */ p) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+/** does a rect hold another whole? */
+const holdsWhole = (/** @type {Rect} */ r, /** @type {Rect} */ q) => q.x >= r.x && q.y >= r.y && q.x + q.w <= r.x + r.w && q.y + q.h <= r.y + r.h;
 /**
  * Where a bundle's label is set beside its end: toward the view's middle,
  * its baseline 6 px above the end — or, where that would reach past the
  * visible view's top (a stub on the top border, the one line over it), its
- * top 6 px below the end.
+ * top 6 px below the end. Null where even so it would not stand whole inside
+ * the visible view — an end cut at its beam's start, under the one line or
+ * past the viewport — where the line would hide the label, or cut it through
+ * at the line's edge, or no one would see it.
  * @param {Point} end
  * @param {{w: number, ascent: number, descent: number}} m the label's measure
  * @param {Rect} seen the visible view
- * @returns {{x: number, y: number, align: 'left' | 'right', rect: Rect}} its baseline's start and the room it takes
+ * @returns {{x: number, y: number, align: 'left' | 'right', rect: Rect} | null} its baseline's start and the room it takes
  */
 export function labelPlace(end, m, seen) {
   const right = end.x > seen.x + seen.w / 2, x = end.x + (right ? -14 : 14);
   const y = end.y - 6 - m.ascent < seen.y ? end.y + 6 + m.ascent : end.y - 6;
-  return { x, y, align: right ? 'right' : 'left', rect: { x: right ? x - m.w : x, y: y - m.ascent, w: m.w, h: m.ascent + m.descent } };
+  const rect = { x: right ? x - m.w : x, y: y - m.ascent, w: m.w, h: m.ascent + m.descent };
+  return holdsWhole(seen, rect) ? { x, y, align: right ? 'right' : 'left', rect } : null;
 }
 /** the box holding every rect of a block (a block is laid out as one box, so one rect) */
 function boundsOf(/** @type {Rect[]} */ rs) {
@@ -159,13 +173,13 @@ export function beamOf(s, g) {
     if (farBlock && farLines.length) {
       const { line, from } = leave(mid(farLines[0]));
       const there = pickRect(farLines, from.x, from.y);
-      return { s, line, from, to: { x: farBlock.x, y: there.y + there.h / 2 }, aimed: false, stub: false };
+      const to = { x: farBlock.x, y: there.y + there.h / 2 }, off = !holds(g.view, to);
+      return { s, line, from, to, aimed: off, stub: off };
     }
   }
   const c = g.centre(s.far);
   const { line, from } = leave(c);
-  const v = g.view;
-  return { s, line, from, to: c, aimed: true, stub: c.x < v.x || c.x > v.x + v.w || c.y < v.y || c.y > v.y + v.h || !g.mounted(s.far) };
+  return { s, line, from, to: c, aimed: true, stub: !holds(g.view, c) || !g.mounted(s.far) };
 }
 
 /** a beam's identity: its link and its two ends, unordered — the same beam whichever end it is drawn from */
@@ -238,7 +252,7 @@ export function build(seen = seenNow()) {
   return built;
 }
 
-/** draw the bundles, and each one's label at its first member's end — redrawn whole every frame (FP-8) */
+/** draw the bundles, and each one's label at its first member's end where it stands whole in the visible view — redrawn whole every frame (FP-8) */
 export function draw() {
   labelsSet = [];
   if (!ctx || !canvas) return;
@@ -272,6 +286,7 @@ export function draw() {
     ctx.globalAlpha = 1; ctx.fillStyle = COL.text; ctx.font = LABEL_FACE;
     const m = ctx.measureText(text);
     const at = labelPlace(endOf(first), { w: m.width, ascent: m.fontBoundingBoxAscent, descent: m.fontBoundingBoxDescent }, seen);
+    if (!at) continue;
     ctx.textAlign = at.align;
     ctx.fillText(text, at.x, at.y);
     labelsSet.push({ near: b.near, far: b.far, text, stub: first.stub, rect: at.rect });
@@ -284,7 +299,7 @@ export function draw() {
 export function anchors() {
   return built.flatMap((b) => b.members).map((bm) => ({ link: bm.s.link.addr, near: bm.s.near, pos: bm.s.pos, x: bm.from.x, y: bm.from.y, rect: bm.line, stub: bm.stub, far: bm.s.far }));
 }
-/** the labels the last frame set, one per bundle (the gate's layout case holds the stubs to theirs) */
+/** the labels the last frame set, one per bundle whose label stands whole in the visible view (the gate's layout case holds the stubs to theirs) */
 export const labels = () => labelsSet.slice();
 /** the built set's size: the beams its bundles hold */
 export const count = () => built.reduce((n, b) => n + b.members.length, 0);
