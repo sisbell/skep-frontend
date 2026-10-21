@@ -7,20 +7,33 @@
 // whichever of the two answers first (a mutant whose opening does not count
 // itself turns red). An opening that gives up, or whose reads throw, is
 // pending no more (a mutant that clears it only where it shows turns red).
+// AN OVERLAY SHOWN is an act on the chrome, whatever conjures it — the trail
+// list, a walk's moment, a follow's face, a rebuild of the standing overlay
+// by its own act: the opening still reading ends as it is shown, its answer
+// never covers what was shown, and one Esc closes what was shown, made before
+// the answer or after it (a mutant whose show does not count itself turns
+// every row red). THE LEAP BOX opened while an opening reads ends it, the
+// overlay standing under it staying: its answer shows nothing and the box
+// stands (a mutant whose box leaves the opening reading, or dismisses what
+// stands, turns red).
 // ESC'S ONE ORDER (N-KEYS): a card still reading is the innermost thing —
 // Esc ends it alone and the card standing under it stands (a mutant that
 // dismisses the standing card with it, or leaves the opening to the
-// dismissal, turns red); the next Esc dismisses that card.
+// dismissal, turns red); the next Esc dismisses that card; the LEAP box,
+// opened after the card, closes before it.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as HOST from './host.js';
+import * as FACES from './faces.js';
+import * as TRAILLIST from './trail-list.js';
 import * as KEYS from '../nav/keys.js';
+import * as LEAP from '../nav/leap.js';
 
 /** the host's stand-in element: what the host writes into it is what a person meets */
 const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
 
 before(() => {
-  globalThis.document = /** @type {any} */ ({ activeElement: null, body: null });
+  globalThis.document = /** @type {any} */ ({ activeElement: null, body: null, getElementById: () => null });
   HOST.attach(/** @type {any} */ (hostEl));
 });
 
@@ -81,6 +94,40 @@ test('an opening that gives up shows nothing and is pending no more; nor is one 
   assert.deepEqual([standing(), HOST.pending()], [null, false], 'thrown: no opening is left pending to swallow the next Esc');
 });
 
+test('an overlay shown while an opening reads ends it, whatever conjures it: its answer never covers what was shown, and one Esc closes what was shown, before the answer or after it', async () => {
+  /** the links card at a document, the others' switch in a state: shown again by the switch's own act, it is rebuilt */
+  const links = (/** @type {boolean} */ on) => HOST.show({ kind: 'card', id: 'links:1.0.1.0.3', anchor: null, html: `<span class="label">links</span><button data-run="others" role="switch" aria-checked="${on}">others' links</button>`, acts: {} });
+  /** @type {import('../bridge/shapes').MomentEvent} a walk's moment, as the shell raises it */
+  const moment = { id: 'm-1', kind: 'statement', data: 'the walk says', walk: 'w-1', board: null, answerable: true };
+  /** @type {Array<{what: string, id: string, before?: () => void, show: () => void}>} each overlay shown while the opening reads, the id it stands as, and what stood before the opening began */
+  const rows = [
+    { what: 'the trail list', id: 'trail-list', show: () => TRAILLIST.open() },
+    { what: 'a walk\'s moment', id: 'moment:m-1', show: () => FACES.moment(moment) },
+    { what: 'a follow\'s face', id: 'face:invalid', show: () => FACES.invalidFollow(null) },
+    { what: 'a rebuild of the standing overlay by its own act', id: 'links:1.0.1.0.3', before: () => links(false), show: () => links(true) },
+  ];
+  for (const { what, id, before, show } of rows) {
+    for (const escFirst of [false, true]) {
+      if (before) before();
+      const r = slow();
+      const o = HOST.opening(() => r.read, card('provenance:wrote'));
+      show();
+      assert.deepEqual([HOST.pending(), standing()], [false, id], `${what}: the opening ended as it was shown`);
+      if (escFirst) {
+        KEYS.esc();
+        assert.equal(standing(), null, `${what}: Esc made while the read is out closes what was shown, never the opening hidden behind it`);
+      }
+      r.answer('its origin');
+      await o;
+      assert.equal(standing(), escFirst ? null : id, `${what}: the opening's answer shows nothing`);
+      if (!escFirst) {
+        KEYS.esc();
+        assert.equal(standing(), null, `${what}: one Esc closes what was shown`);
+      }
+    }
+  }
+});
+
 test('Esc\'s one order: a card still reading is the innermost thing — Esc ends it alone, the card standing under it stands; the next Esc dismisses that card', async () => {
   HOST.show({ kind: 'card', id: 'selection', anchor: null, html: '<span class="label">1.0.1.0.3 · position 11</span>', acts: {} });
   const r = slow();
@@ -92,4 +139,29 @@ test('Esc\'s one order: a card still reading is the innermost thing — Esc ends
   assert.equal(standing(), 'selection', 'its answer shows nothing');
   KEYS.esc();
   assert.equal(standing(), null, 'the next Esc dismisses the card that stood');
+});
+
+/** the LEAP box's stand-ins: its box, input, rows and status region, and whether the box is shown */
+function leapBox() {
+  const classes = new Set();
+  const part = () => ({ innerHTML: '', value: '', setAttribute() {}, removeAttribute() {}, addEventListener() {}, focus() {}, select() {}, contains: () => false });
+  const box = { ...part(), classList: { add: (/** @type {string} */ c) => { classes.add(c); }, remove: (/** @type {string} */ c) => { classes.delete(c); } } };
+  return { box, input: part(), rows: part(), note: part(), shown: () => classes.has('on') };
+}
+
+test('the LEAP box opened while an opening reads ends it, the card standing under it staying: its answer shows nothing over the box; Esc closes the box, then the card', async () => {
+  const b = leapBox();
+  LEAP.attach(/** @type {any} */ (b), () => null);
+  HOST.show({ kind: 'card', id: 'selection', anchor: null, html: '<span class="label">1.0.1.0.3 · position 11</span>', acts: {} });
+  const r = slow();
+  const o = HOST.opening(() => r.read, card('provenance:wrote'));
+  LEAP.open();
+  assert.deepEqual([HOST.pending(), standing(), LEAP.isOpen()], [false, 'selection', true], 'the box open, the opening ended, the selection\'s card standing');
+  r.answer('its origin');
+  await o;
+  assert.deepEqual([standing(), LEAP.isOpen(), b.shown()], ['selection', true, true], 'its answer shows nothing: the box stands, the card under it');
+  KEYS.esc();
+  assert.deepEqual([LEAP.isOpen(), standing()], [false, 'selection'], 'Esc closes the box, the innermost thing');
+  KEYS.esc();
+  assert.equal(standing(), null, 'the next Esc dismisses the card');
 });

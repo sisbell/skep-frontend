@@ -73,7 +73,17 @@
 // once their reads answer (a mutant that opens any one of them without the
 // host's opening turns its row red), the versions list asking nothing after
 // its end (a mutant that drops any of its checks turns red); asked again
-// with no act after it, each shows. The overlay host stands on a
+// with no act after it, each shows. A FOLLOW MADE WHILE A CARD READS ends
+// the card's opening as it is made, the follow's landing still to come: once
+// the card's read answers nothing shows over the place the follow leaves,
+// and the follow lands (a mutant whose act leaves the opening reading turns
+// red). A FACE A NAVIGATION ACT SHOWS stands over a card asked at the place
+// it leaves: asked while the act read — a follow of a dead reference, a LEAP
+// the board answers for with nothing — the card's answer shows nothing over
+// the face (a mutant whose show does not count itself turns red); asked
+// before the act — a follow faced at once, one faced once its read answers —
+// likewise, held by the act's end of the opening and by the face's show alike
+// (a mutant that drops both turns red). The overlay host stands on a
 // stand-in element, the platform's document a stand-in beside it, so a face
 // a landing shows is read back from what the host wrote.
 import { test, before } from 'node:test';
@@ -655,5 +665,49 @@ test('a Back made while a card reads: once its reads answer nothing shows over t
     HOST.dismiss();
   }
   assert.equal(REC.doc(FAR).members, 2, 'the members counted once, by the list that showed');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow made while a card reads ends its opening as it is made: once the card\'s read answers nothing shows over the place the follow leaves, and the follow lands', async () => {
+  await run(GO.leapTo(D));
+  const card = fake.hold('op', { frame: F.showOrigin(D, 11, 5) });
+  const projection = fake.hold('op', { frame: F.project(PASSAGE, 2, FAR) });
+  const asked = PROV.wrote(D, 11, 5);
+  const following = GO.follow(drawn(PASSAGE));
+  card();
+  await asked;
+  assert.equal(HOST.currentState(), null, 'the card asked before the follow shows nothing, its projection still reading');
+  projection();
+  await run(following);
+  assert.deepEqual(marks(), [{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }, PASSAGE], 'the follow landed, its arrival lit');
+  assert.equal(HOST.currentState(), null, 'nothing over the landing');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a face a navigation act shows stands over a card asked at the place it leaves, whether the card was asked while the act read or before it', async () => {
+  takeDead();
+  /** @type {Array<{what: string, act: () => Promise<unknown>, face: string, held: object | null, during: boolean}>} each act that faces, the face it shows, the read it faces on, and whether the card is asked while that read is out */
+  const rows = [
+    { what: 'a follow of a dead reference, the card asked while it read', act: () => GO.follow(drawn(DEAD)), face: 'face:doc_not_registered', held: F.retrieveDocVSpanSet(GONE), during: true },
+    { what: 'a LEAP the board answers for with nothing, the card asked while it read', act: () => GO.leapTo(GONE), face: 'face:doc_not_registered', held: F.retrieveDocVSpanSet(GONE), during: true },
+    { what: 'a follow of a link naming no far document, faced at once, the card asked before it', act: () => GO.follow({ ...drawn(PASSAGE), far: '' }), face: 'face:invalid', held: null, during: false },
+    { what: 'a follow of a dead reference, faced once its read answers, the card asked before it', act: () => GO.follow(drawn(DEAD)), face: 'face:doc_not_registered', held: F.retrieveDocVSpanSet(GONE), during: false },
+  ];
+  for (const { what, act, face, held, during } of rows) {
+    await run(GO.leapTo(D));
+    REC.invalidate(GONE); // the board asked anew whether it answers for the far document
+    const card = fake.hold('op', { frame: F.showOrigin(D, 11, 5) });
+    const read = held ? fake.hold('op', { frame: held }) : () => {};
+    let asked = during ? null : PROV.wrote(D, 11, 5);
+    const acting = act();
+    if (during) asked = PROV.wrote(D, 11, 5);
+    read();
+    await run(acting);
+    assert.equal(HOST.currentState()?.id, face, `${what}: its face`);
+    card();
+    await asked;
+    assert.equal(HOST.currentState()?.id, face, `${what}: the card's answer shows nothing over the face`);
+    HOST.dismiss();
+  }
   assert.deepEqual(fake.unanswered, []);
 });

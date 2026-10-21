@@ -14,11 +14,11 @@
 // its first act where a key made the act that asked — the slot's chord, Enter
 // on its button — and never otherwise (D5 §4 rule 4; the focus record's
 // rule 16). Each opens on its read (O-HOST's `opening`): where an act was
-// made on the chrome while it read — Back, Esc, the next card asked —
-// nothing shows, a refusal's face included. The two marks' variants (C-33,
-// C-34) are the article's where they fire. Faces: `too_much_coverage`.
-// Carries: the wireframe's §18 `provenanceCard`. Rules: FP-1, FP-2, FP-13,
-// FP-20.
+// made on the chrome while it read — Back, Esc, the LEAP box opened, the
+// next card asked or shown — nothing shows, a refusal's face included. The
+// two marks' variants (C-33, C-34) are the article's where they fire. Faces:
+// `too_much_coverage`. Carries: the wireframe's §18 `provenanceCard`. Rules:
+// FP-1, FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';

@@ -173,7 +173,7 @@ function runOf(hair) {
   return addr && pos > 0 && width > 0 ? { addr, pos, width } : null;
 }
 
-/** the platform's selection, where it stands in a mounted article, becomes the page's (R11): view state alone changes; one the page already holds, or placed itself, is left as it is */
+/** the platform's selection, where it stands in a mounted article, becomes the page's (R11): view state alone changes; one the page already holds, or placed itself, is left as it is — so a slot's chord that selects the walk's block before it asks shows no card of the selection while its answer reads, which would end that answer's opening (O-HOST's) */
 function takeSelection() {
   const span = LAYER.spanOfSelection();
   if (!span || sameSpan(span, SEL.selected()) || sameSpan(span, LAYER.placedSpan())) return;

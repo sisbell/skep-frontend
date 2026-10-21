@@ -49,13 +49,14 @@
 // B's before it, so each corner stands on its pane's outer side (a mutant
 // that makes a pane's article itself, or sets both after their corners,
 // turns red).
-// And THE OPENING (O-HOST's): the dismissal a navigation act makes first, or
-// Esc, made while the scene reads ends its opening — made while it reads its
-// documents, no `compare` is asked after it (a mutant that asks it turns
-// red); made while it reads their `compare`, nothing opens once it answers:
-// the plane in the page's order, the focus where it stood, no region holding
-// it (a mutant that opens the scene without the host's opening, or whose Esc
-// leaves an opening reading, turns red).
+// And THE OPENING (O-HOST's): the dismissal a navigation act makes first,
+// Esc, or an overlay shown — a follow's face — made while the scene reads
+// ends its opening — made while it reads its documents, no `compare` is
+// asked after it (a mutant that asks it turns red); made while it reads their
+// `compare`, nothing opens once it answers: the plane in the page's order,
+// the focus where it stood, no region holding it but the overlay shown (a
+// mutant that opens the scene without the host's opening, whose Esc leaves
+// an opening reading, or whose show does not count itself, turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -66,6 +67,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as WALK from '../nav/walk.js';
 import * as LAYER from '../text/layer.js';
 import * as HOST from '../overlays/host.js';
+import * as FACES from '../overlays/faces.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
@@ -239,9 +241,9 @@ before(() => {
 
 /**
  * A page of stand-ins: the platform's focus — the body where it stands on nothing — and the elements the scene, the
- * walk and the layer hold, attached to their owners. Each takes the focus only where the platform's would: a pane or
- * the bar while the scene is shown, the walk's item and a corner while their region is not inert, the one line's act
- * always. The platform's own `focus()` on an element that takes none moves nothing.
+ * walk, the layer and the overlay host hold, attached to their owners. Each takes the focus only where the platform's
+ * would: a pane or the bar while the scene is shown, the walk's item and a corner while their region is not inert, the
+ * one line's act always. The platform's own `focus()` on an element that takes none moves nothing.
  */
 function page() {
   const body = { id: 'the body', focus() {} };
@@ -276,10 +278,12 @@ function page() {
   const corners = element('the corner layer');
   const corner = element('the corner', () => !corners.inert);
   const line = element('the one line\'s ‹ back');
+  const overlay = Object.assign(element('the overlay'), { querySelectorAll: () => [] });
   globalThis.document = /** @type {any} */ (doc);
   WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ (element('the live region')));
   LAYER.attach(/** @type {any} */ (element('the text layer')), /** @type {any} */ (corners));
   SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas: element('the scene\'s canvas') }));
+  HOST.attach(/** @type {any} */ (overlay));
   /** where the platform's focus stands */
   const at = () => doc.activeElement.id;
   /** the plane's two regions: is each inert? */
@@ -352,15 +356,20 @@ test('each pane holds T-LAYER\'s article of its document, made from the text the
 
 // ---- the opening: O-HOST's ---------------------------------------------------------------------------------------------
 
-test('the dismissal a navigation act makes first, or Esc, made while the scene reads ends its opening: no compare asked after it, and once its reads answer nothing opens', () => onPage(async (p) => {
+test('the dismissal a navigation act makes first, Esc, or an overlay shown, made while the scene reads ends its opening: no compare asked after it, and once its reads answer nothing opens', () => onPage(async (p) => {
   const both = F.compare([{ doc: A, spans: [{ ordinal: 1, positions: A_TEXT.length }] }], [{ doc: B, spans: [{ ordinal: 1, positions: B_TEXT.length }] }]);
   const cmp = FAKE.keyOf('op', { frame: both });
   /** where the scene left the page: whether it stands, the plane's two regions inert, the focus, the regions holding it */
   const left = () => ({ open: SCENE.isOpen(), covered: p.covered(), at: p.at(), standing: FOCUS.standing() });
-  const untouched = { open: false, covered: [false, false], at: 'the walk\'s current item', standing: [] };
-  /** @type {Array<[string, () => void]>} */
-  const ends = [['the dismissal a navigation act makes first', () => { HOST.dismiss(); SCENE.close(); }], ['Esc', () => KEYS.esc()]];
-  for (const [what, end] of ends) {
+  /** @type {Array<[string, () => void, string[]]>} each act, and the regions it leaves standing: the overlay a show conjured, which takes no focus */
+  const ends = [
+    ['the dismissal a navigation act makes first', () => { HOST.dismiss(); SCENE.close(); }, []],
+    ['Esc', () => KEYS.esc(), []],
+    ['an overlay shown — a follow\'s face', () => FACES.invalidFollow(null), ['overlay']],
+  ];
+  for (const [what, end, standing] of ends) {
+    /** the page as the act leaves it: no scene, the plane in the page's order, the focus where it stood */
+    const unopened = { open: false, covered: [false, false], at: 'the walk\'s current item', standing };
     p.item.focus();
     // while it reads its documents: the first edition read anew, its extent held
     REC.invalidate(A);
@@ -370,7 +379,7 @@ test('the dismissal a navigation act makes first, or Esc, made while the scene r
     end();
     release();
     await opening;
-    assert.deepEqual(left(), untouched, `${what}, made while it reads its documents: nothing opens`);
+    assert.deepEqual(left(), unopened, `${what}, made while it reads its documents: nothing opens`);
     assert.ok(!fake.asked.slice(from).includes(cmp), `${what}, made while it reads its documents: no compare asked after it`);
     // while it reads their compare
     release = fake.hold('op', { frame: both });
@@ -380,7 +389,8 @@ test('the dismissal a navigation act makes first, or Esc, made while the scene r
     end();
     release();
     await opening;
-    assert.deepEqual(left(), untouched, `${what}, made while it reads their compare: nothing opens`);
+    assert.deepEqual(left(), unopened, `${what}, made while it reads their compare: nothing opens`);
+    HOST.dismiss();
   }
   assert.deepEqual(fake.unanswered, []);
 }));

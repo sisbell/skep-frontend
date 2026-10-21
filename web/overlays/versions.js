@@ -17,9 +17,10 @@
 // a key made the act — Enter at the corner — on its CURRENT member's read
 // act, and never where a click on the statement did (D5 §4 rule 4; the focus
 // record's rules 13 and 16). It opens on its reads (O-HOST's `opening`):
-// where an act was made on the chrome while they read — Back, Esc, the next
-// card asked — nothing shows, and no member is asked about after it. New —
-// no draft in the wireframe. Rules: FP-1, FP-2, FP-13, FP-20.
+// where an act was made on the chrome while they read — Back, Esc, the LEAP
+// box opened, the next card asked or shown — nothing shows, and no member is
+// asked about after it. New — no draft in the wireframe. Rules: FP-1, FP-2,
+// FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';

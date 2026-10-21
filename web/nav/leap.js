@@ -33,8 +33,11 @@
 // caret's — stay the input's; a focus that leaves the box — Tab out of it
 // (D2), a click elsewhere — closes it, and the focus stands where it went.
 // Its layer stands above the reading scene's (#118), so Mod+L in the scene
-// shows the box over it. The intake's URL arm and search (K-35) are the code
-// lane's.
+// shows the box over it. Opened, the box is an act on the chrome: a card or
+// scene still reading ends, what stands staying (O-HOST's opening), so no
+// answer arriving while the box stands opens over it or takes its focus, and
+// the box is Esc's innermost thing (N-KEYS'). The intake's URL arm and search
+// (K-35) are the code lane's.
 // ITS ACCESSIBLE FORM (R94; the WAI-ARIA combobox, list autocomplete with
 // automatic selection): the input is the combobox, expanded while it lists
 // rows, controlling the rows' listbox, the selected row `aria-selected`; the
@@ -53,6 +56,7 @@ import * as REC from '../model/records.js';
 import * as TRAIL from './trail.js';
 import * as GO from './go.js';
 import * as FOCUS from './focus.js';
+import * as HOST from '../overlays/host.js';
 import { MAC } from './keys.js';
 import { matches } from './match.js';
 import { t } from '../strings.js';
@@ -141,9 +145,10 @@ function comboState() {
   else els.input.removeAttribute('aria-activedescendant');
 }
 
-/** open the box holding the current address, selected (K-30); its input takes the focus, the opener remembered by the focus's owner */
+/** open the box holding the current address, selected (K-30) — a card or scene still reading ended first, what stands staying (O-HOST's opening); its input takes the focus, the opener remembered by the focus's owner */
 export function open(prefill = currentAddress() || '') {
   if (!els) return;
+  HOST.endOpening();
   const from = document.activeElement;
   openState = true;
   els.box.classList.add('on');

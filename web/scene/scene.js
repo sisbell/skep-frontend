@@ -33,22 +33,22 @@
 // open question). It opens on its reads, both documents whole and their
 // `compare` (O-HOST's `opening`, the rule the cards share): an act made on
 // the chrome while they read — a navigation act, Esc, an empty click, the
-// next card asked — ends the opening, and their answer opens nothing, the
-// plane left in the page's order and the focus where it stands, and no
-// `compare` asked after it. Whatever ends it — zoom-out, Esc,
-// ←, the bar's ×, or a navigation act (a teleport, Back, Forward, a trail
-// jump), which ends it first, "a teleport dismissing the scene first" (§2.5)
-// — leaves the plane as it was and the trail as it found it (`close`): the
-// scene never moves the camera, so an entry pushed for the plane as it was
-// would hold the view of the entry it departs, a Back from it moving nothing,
-// and its push would drop the entries ahead of the cursor. §2.5 pairs that
-// push with the scene recorded as the departure — its pair and both panes'
-// positions — so Back restores it; N-TRAIL's entry holds an address and a
-// view and no scene, and whether Back restores a scene is the design's open
-// question. THE FOCUS (D5 §4 rules 5 and 8; K-61, K-63; the focus record's
-// rule 17; FP-20): opened, the scene puts the focus in the far end's pane and
-// takes the plane it stands over out of the page's order and the
-// accessibility tree, each region by its owner (N-WALK's tree, T-LAYER's
+// LEAP box opened, the next card asked or shown — ends the opening, and
+// their answer opens nothing, the plane left in the page's order and the
+// focus where it stands, and no `compare` asked after it. Whatever ends it —
+// zoom-out, Esc, ←, the bar's ×, or a navigation act (a teleport, Back,
+// Forward, a trail jump), which ends it first, "a teleport dismissing the
+// scene first" (§2.5) — leaves the plane as it was and the trail as it found
+// it (`close`): the scene never moves the camera, so an entry pushed for the
+// plane as it was would hold the view of the entry it departs, a Back from it
+// moving nothing, and its push would drop the entries ahead of the cursor.
+// §2.5 pairs that push with the scene recorded as the departure — its pair
+// and both panes' positions — so Back restores it; N-TRAIL's entry holds an
+// address and a view and no scene, and whether Back restores a scene is the
+// design's open question. THE FOCUS (D5 §4 rules 5 and 8; K-61, K-63; the
+// focus record's rule 17; FP-20): opened, the scene puts the focus in the far
+// end's pane and takes the plane it stands over out of the page's order and
+// the accessibility tree, each region by its owner (N-WALK's tree, T-LAYER's
 // corners: `cover`), so the one ring runs the line → pane, pane, the bar's
 // acts → the standing overlay → the line, in the place of the plane's stop
 // and its corner, and reaches nothing the scene covers; the one line is

@@ -1,10 +1,11 @@
 // N-GO — a TELEPORT (the structure record §3.2 "N-GO"; S-7 (a)). Layer 2.
 // ENGINE-BOUND only through O-HOST; its arithmetic pure. State: VIEW — the
 // arrival's two marks and the count of the navigation acts made — THE ONE
-// OWNER of them (FP-10). It orchestrates the owners: dismiss the overlay and
-// the scene — a card or scene still reading among them, which then opens
-// nothing (O-HOST's opening) — fly the camera (P-CAM), push the trail
-// (N-TRAIL) with the
+// OWNER of them (FP-10). It orchestrates the owners: end a card or scene
+// still reading as the act is made, which then opens nothing (O-HOST's
+// opening), and dismiss the overlay and the scene — a follow at its landing,
+// for a follow that lands nowhere is faced at its site, every other act as
+// it is made — fly the camera (P-CAM), push the trail (N-TRAIL) with the
 // departed view re-taken, move the focus to the landing (N-WALK) — the ring
 // drawn at it where a key made the act, which only the act's caller knows, so
 // each teleport takes `byKey` from it (D5 §4 rules 2 and 8) — re-project the
@@ -115,15 +116,17 @@ let made = 0;
 
 /**
  * The next act, made: the arrival's two marks put out — the span outlined
- * and the link lit (foundations §3.2: "both gone at the next act") — and the
- * act counted. Every navigation act begins with it, so none counts itself
- * and leaves the last act's marks standing; a camera move calls nothing here
- * (§3.2: "a pan or a zoom none").
+ * and the link lit (foundations §3.2: "both gone at the next act") — a card
+ * or scene still reading ended, what stands staying for the act to dismiss
+ * (O-HOST's opening), and the act counted. Every navigation act begins with
+ * it, so none counts itself and leaves the last act's marks standing, and no
+ * chrome asked at the place an act leaves opens while the act reads; a
+ * camera move calls nothing here (§3.2: "a pan or a zoom none").
  * @returns {number} the act's count
  */
-function nextAct() { arrival = null; lit = null; return ++made; }
+function nextAct() { arrival = null; lit = null; HOST.endOpening(); return ++made; }
 
-/** the chrome a navigation act clears first: the standing overlay, a card or scene still reading — which then opens nothing (O-HOST's opening) — and the scene, whose end moves no trail entry — so the act's own trail move is its one */
+/** the chrome a navigation act clears — every act as it is made, a follow as it lands: the standing overlay, a card or scene still reading (one asked while the follow read), which then opens nothing (O-HOST's opening), and the scene, whose end moves no trail entry — so the act's own trail move is its one */
 function dismissChrome() { HOST.dismiss(); SCENE.close(); }
 
 /**
@@ -232,8 +235,10 @@ export async function leapTo(addr, opts = {}) {
 
 /**
  * FOLLOW: the far end of a drawn link — an act made as it is pressed, the
- * last act's arrival put out even where the link names no far document and
- * it faces at once; reported to LK's visited set, its entry a claim on the
+ * last act's arrival put out and a card or scene still reading ended even
+ * where the link names no far document and it faces at once, the overlay it
+ * was pressed from standing until its landing or its face takes that
+ * overlay's place; reported to LK's visited set, its entry a claim on the
  * trail as it is made; the far document consulted, the slot projected into
  * it NOW, its text read where the page holds none; the claim settled at that
  * span and the landing made there — at its first run in the text, where the

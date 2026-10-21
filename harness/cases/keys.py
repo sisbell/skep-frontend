@@ -23,7 +23,10 @@ Enter on the scene's acts pressing them: the re-level setting the two ends
 level again, the × ending the scene with the focus back on the item it was
 opened from (K-62, K-63); K-8's select and extend by span; a links card
 row's anatomy card taking the card's place with the symbols standing, at
-the link's own bytes; the
+the link's own bytes; Mod+Shift+O with no selection standing selecting the
+walk's block whole and answering over it — the page's own placement of the
+platform's selection never read back as the person's, whose card, shown
+while the answer reads, would end its opening (O-HOST's); the
 selection's one continuous gesture (R11) — a pointer drag over a phrase of a
 shown paragraph selects that phrase's byte span, never its block: the acts
 ask the wire over those bytes, the copy names them, and the platform's
@@ -1259,6 +1262,23 @@ def run(ctx):
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
     r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc clears the overlay, then the selection (one order)')
+    # a slot's chord with no selection standing selects the walk's block whole and asks over it (D5 §1.6). The platform's
+    # selection the page places reads back without the block's separator, and is never taken as a new one (APP-INPUT's
+    # `takeSelection`): its card, shown while the answer reads, would be an act on the chrome ending the answer's opening
+    # (O-HOST's), and the chord would answer nothing. The answer's read is no need of the pump's, so it is waited on itself
+    ctx.leap(DOC, linked['pos'])
+    chord(ctx, 'O', mods=('Meta', 'Shift'))
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.overlay().id === "provenance:wrote" || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    s = state(ctx)
+    answer = ctx.js('window.__skep.overlay().text') or ''
+    plat = ctx.js('window.__skep.platformSelection()')
+    r.check(not plat['collapsed'] and bool(plat['span']) and plat['span']['pos'] == linked['pos'] and plat['span']['width'] < linked['width'],
+            'the platform\'s selection the chord placed reads back as the block\'s text, its separator not among it: a span other than the page\'s, which only the page\'s record of its own placement tells from a new one', {'platform': plat, 'block': (linked['pos'], linked['width'])})
+    r.check(ctx.js('window.__skep.overlay().id') == 'provenance:wrote' and 'written by' in answer and bool(s['sel']) and s['sel']['addr'] == DOC and s['sel']['pos'] == linked['pos'] and s['sel']['width'] == linked['width'],
+            'Mod+Shift+O with no selection standing selects the walk\'s block whole and answers "who wrote this?" over it: the page\'s own selection, read back, ends no card it asked', {'overlay': ctx.js('window.__skep.overlay().id'), 'sel': s['sel'], 'block': (linked['pos'], linked['width']), 'answer': answer[:120]})
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc dismisses the answer, then clears the selection the chord made')
     # ---- the drag: the selection IS the text it crosses (R11; foundations §2.4) ----------------------------
     ctx.leap(DOC, WINDOW[0])
     ph, seen = phrase_at(ctx, DOC)

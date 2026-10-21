@@ -8,13 +8,17 @@
 // that opens on its reads — the reading scene, the versions list, the
 // provenance cards, the anatomy card — opens through `opening`, one rule for
 // all of them: as its reads begin it is the chrome's next act, and its answer
-// shows only where no act was made on the chrome while it read — a dismissal
-// (`dismiss`, a navigation act's among them, N-GO's), the next opening, or
-// the end of the opening alone (`endOpening`: Esc's innermost thing, N-KEYS',
-// and an empty click's, APP-INPUT's, what stands staying) — so chrome asked
-// for at a place the person has left never opens over the next one. Until it
-// shows or ends it is `pending`; its reads may ask whether it `stands`, so
-// one that has ended asks no more. THE FOCUS is N-FOCUS's
+// shows only where no act was made on the chrome while it read — an overlay
+// shown (`show`, whatever conjures it: an act's card or its rebuild by its own
+// act, a face, a walk's moment), a dismissal (`dismiss`), the next opening, or
+// the end of the opening alone, what stands staying (`endOpening`: Esc's
+// innermost thing, N-KEYS'; an empty click's, APP-INPUT's; the LEAP box
+// opened, N-LEAP's; a navigation act as it is made, N-GO's, before its
+// landing dismisses what stands) — so chrome asked for at a place the person
+// has left never opens over the next one, nor over chrome made after it was
+// asked, and Esc closes what the person sees, never an opening they cannot.
+// Until it shows or ends it is `pending`; its reads may ask whether it
+// `stands`, so one that has ended asks no more. THE FOCUS is N-FOCUS's
 // (FP-20; D5 §4 rule 4): an overlay takes the focus only where a KEY made
 // the act that opened it — `takeFocus` is that act's `byKey` and nothing
 // else decides it — and takes it on its FIRST ACT, never the dismiss (rule
@@ -78,7 +82,7 @@ import { esc } from '../util.js';
 let el = null;
 /** @type {Overlay | null} */
 let current = null;
-/** the acts made on the chrome, each counted as it is made: an opening begun, a dismissal, an opening ended alone */
+/** the acts made on the chrome, each counted as it is made: an overlay shown, an opening begun, a dismissal, an opening ended alone */
 let made = 0;
 /** the act of the opening whose reads are out, nothing yet shown for it; 0 where none reads */
 let reading = 0;
@@ -140,11 +144,14 @@ export function firstControl(/** @type {HTMLElement} */ host, /** @type {string 
 const faceWords = (/** @type {HTMLElement} */ host) => [...host.querySelectorAll('.face-text, .arm, .note')].map((e) => e.textContent || '').join(' ');
 
 /**
- * Show an overlay — a replacement is not a dismissal of what stands behind
- * it (the reveal, the selection); the same id is a rebuild.
+ * Show an overlay — the chrome's next act, so an opening still reading ends
+ * and its answer never covers this overlay (an opening's own answer reaches
+ * here only where it stands); a replacement is not a dismissal of what stands
+ * behind it (the reveal, the selection); the same id is a rebuild.
  * @param {Overlay} o
  */
 export function show(o) {
+  made++; reading = 0;
   if (!el) return;
   const host = el;
   const from = document.activeElement; // where the act found the focus — read first, for the markup written below removes a control of this host that held it
@@ -231,7 +238,7 @@ export async function opening(reads, show) {
 /** is an opening still reading — chrome asked for, nothing yet shown for it? */
 export const pending = () => reading !== 0;
 
-/** the opening still reading ends, what stands staying (Esc's and an empty click's innermost thing): its answer shows nothing */
+/** the opening still reading ends, what stands staying — Esc's and an empty click's innermost thing, the LEAP box opened, a navigation act as it is made: its answer shows nothing */
 export function endOpening() {
   if (!reading) return;
   made++; reading = 0;
