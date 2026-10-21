@@ -94,6 +94,11 @@
 // the platform's own keys (D5 K-71) go on extending it from there. What no
 // interface carries is macOS's "no direction yet" of a selection a pointer
 // made: put back, it extends from its anchor, as one a key extended does.
+// The platform holds one selection, and no remount takes it from the person:
+// a selection standing outside the layer — a drag in a reading scene's pane,
+// over an overlay's text — is theirs, whenever they made it, and the page's
+// goes back only where the platform's is collapsed, absent or in the layer,
+// so the copy is of what the person chose (`placeAgain`).
 // THE READING SCENE'S PANES BORROW THE MOUNT (`sceneArticle`; the structure
 // record §3.4 (vii)): each pane's article is made here, T-ARTICLE's
 // scene-mode variant laid out by the pane's own style, and what it was made
@@ -208,7 +213,7 @@ let cornerLayer = null;
 let grev = 0;
 /** does a press stand on the layer: the button went down on an article and the press has not ended */
 let pressed = false;
-/** @type {{span: Span, backward: boolean} | null} the platform's selection as it stood over an article as the article was taken down — its bytes, and whether it ran backward — until the frame puts it back (`placeAgain`) */
+/** @type {{span: Span, backward: boolean} | null} the platform's selection as it stood over an article as the article was taken down — its bytes, and whether it ran backward — until the frame puts the page's selection back (`placeAgain`): the end its anchor goes back at, where it covered the same bytes, and never whether it goes back */
 let kept = null;
 /** @type {Readers} */
 let read = { selection: () => null, focus: () => null, top: () => 0, handOff: () => {} };
@@ -516,8 +521,9 @@ function chosen(v, focused) {
  * walk's focus in place (`markBlocks`), give each the pointer at reading
  * scale alone (`markLegible`), and place each article's corner beside it;
  * where the article holding the selection was mounted this frame, put the
- * platform's range back over the span, its anchor at the end it stood at
- * (`placeAgain`). While a press stands (`press`) only what left or fell
+ * platform's range back over the span, its anchor at the end it stood at,
+ * unless the person holds a selection outside the layer (`placeAgain`).
+ * While a press stands (`press`) only what left or fell
  * below the threshold is taken down: none is chosen, so no article is taken
  * down for the cap, rebuilt or mounted, and none given or denied the
  * pointer, so the drag keeps the nodes it is anchored in, through a zoom
@@ -820,21 +826,27 @@ export function rangeIn(el, span) {
 /** @type {Span | null} the span the platform's selection was last placed over, as its range reads back */
 let placed = null;
 
+/** does a platform range lie in the plane's text layer, where the page's selection is drawn? */
+const inLayer = (/** @type {Range} */ r) => !!layer && layer.contains(r.commonAncestorContainer);
+
 /**
  * Place the platform's selection over a span as the page selects it — a
- * click, Enter, K-8, an act's own. A platform selection that already covers
- * the span is left as it stands, as the person made it; any other is replaced
- * by the span, its anchor at its start; one outside the layer is never
- * touched; null clears a selection that lies in the layer. Either way the
- * selection kept from an article taken down (`kept`) is dropped: the page's
- * selection is this one now.
+ * click, Enter, K-8, an act's own. Selecting is the person's act, so it
+ * takes the platform's one selection wherever that stood: one that already
+ * covers the span is left as it stands, as the person made it; any other —
+ * in the layer, in a reading scene's pane, over an overlay's text — is
+ * replaced by the span, its anchor at its start, where the span's article
+ * stands. Null clears a selection that lies in the layer and never touches
+ * one outside it, as the remount's put-back never does (`placeAgain`).
+ * Either way the selection kept from an article taken down (`kept`) is
+ * dropped: the page's selection is this one now.
  * @param {Span | null} span
  */
 export function placeSelection(span) {
   kept = null;
   const s = window.getSelection(); if (!s) return;
   const standing = s.rangeCount ? s.getRangeAt(0) : null;
-  if (!span) { placed = null; if (standing && layer && layer.contains(standing.commonAncestorContainer)) s.removeAllRanges(); return; }
+  if (!span) { placed = null; if (standing && inLayer(standing)) s.removeAllRanges(); return; }
   const have = standing && !standing.collapsed ? spanOfRange(standing) : null;
   if (have && sameSpan(have, span)) { placed = have; return; }
   const r = rangeOf(span); if (!r) return;
@@ -847,14 +859,22 @@ export function placeSelection(span) {
  * it was rebuilt, as the person left it: its anchor at the end it stood at
  * as the old article was taken down (`kept`), where that selection covered
  * this span; else at the span's start. A range added whole would set its
- * anchor at its start; `setBaseAndExtent` sets it at either end.
+ * anchor at its start; `setBaseAndExtent` sets it at either end. It goes
+ * back only where the platform's selection is collapsed, absent or in the
+ * layer: one standing outside the layer — a drag in a reading scene's pane,
+ * over an overlay's text, made before the take-down or after it — is the
+ * person's, and stands as they made it, so the copy is of it (`onCopy`). A
+ * caret, wherever it stands, holds nothing they chose. `kept` decides the
+ * anchor's end alone: taking an article down leaves a selection that stood
+ * in it collapsed in the layer, where the put-back takes it.
  * @param {Span} span
  */
 function placeAgain(span) {
   const backward = !!kept && kept.backward && sameSpan(kept.span, span);
   kept = null;
-  const s = window.getSelection(), r = rangeOf(span);
-  if (!s || !r) return;
+  const s = window.getSelection();
+  if (!s || (s.rangeCount && !s.isCollapsed && !inLayer(s.getRangeAt(0)))) return;
+  const r = rangeOf(span); if (!r) return;
   if (backward) s.setBaseAndExtent(r.endContainer, r.endOffset, r.startContainer, r.startOffset);
   else s.setBaseAndExtent(r.startContainer, r.startOffset, r.endContainer, r.endOffset);
   placed = s.rangeCount ? spanOfRange(s.getRangeAt(0)) : null;

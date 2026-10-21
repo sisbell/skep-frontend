@@ -15,7 +15,9 @@
 // the person made stands as they left it, its anchor where they set it, for
 // the platform's own keys to extend (D5 K-71); T-LAYER places it over a span
 // the page selects and puts it back, its anchor at the same end, after a
-// remount. The acts take the span exactly: "who wrote this?" and "who uses
+// remount — never over a selection the person holds outside the plane's
+// text, in a reading scene's pane or an overlay's text, which stands as they
+// made it. The acts take the span exactly: "who wrote this?" and "who uses
 // this?" ask over its bytes; "follow" and "read side by side" count only the
 // links DRAWN at the span (`LK.shownAt`), inert where none, asking which only
 // at two or more and naming the far document at one. The slots, in this
