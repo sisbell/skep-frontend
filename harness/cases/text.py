@@ -2,7 +2,10 @@
 segments in STATE 2 (acting as the claimant through the signed session); its
 address at a landing — the position the one the landing named, the trail's
 entry's (W-01 step 3, "position honored"), and the account the document's
-own account field, read whole (the agent space's `1.0.1.1`); a face's words
+own account field, read whole (the agent space's `1.0.1.1`) — and at mid,
+zoomed out from the landing, the account under the camera alone, never the
+document the walk stands on or a position, the LEAP box opening on it
+(foundations §2.2; B1-S2; K-30); a face's words
 alone — the fifth cell's at a typed ghost address, with no wire token above
 them and no act beneath (B1-S8; C-42); the anatomy card's rows, each a value
 the page holds (a bare dash reads as B1-S5's "none"); no string in the one
@@ -69,6 +72,29 @@ def run(ctx):
     entry = trail['entries'][trail['cursor']]
     r.check(line['address']['pos'] == WINDOW[0] == entry['pos'], 'the address segment\'s position is the one the landing named, as the trail\'s entry holds it — not the first position of the span holding it', {'line': line['address']['pos'], 'trail': entry['pos'], 'named': WINDOW[0]})
     r.figures['line'] = line
+    # ---- the address at mid: the account under the camera (foundations §2.2; B1-S2) ----------------
+    # Mod+- from the landing until the scale is mid: the re-take at mid's grain stands the walk on the document under the
+    # view's centre, and the line names the account the camera is over — no document, no position — and the LEAP box opens
+    # holding what the line shows (K-30)
+    zooms = 0
+    while zooms < 12 and ctx.js('window.__skep.view.lod()')['name'] != 'mid':
+        ctx.drv.key('-', code='Minus', mods=('Meta',))
+        ctx.settle()
+        ctx.frames(2)
+        zooms += 1
+    ctx.frames(3)
+    mid = ctx.js('({lod: window.__skep.view.lod().name, focus: window.__skep.view.focus(), line: window.__skep.line()})')
+    focus = mid['focus'] or {}
+    r.check(mid['lod'] == 'mid' and focus.get('kind') == 'document' and focus.get('addr') == DOC, 'Mod+- from the landing to mid: the re-take stands the walk on the first edition itself', {'zooms': zooms, 'lod': mid['lod'], 'focus': focus})
+    at_mid = mid['line']['address']
+    r.check(at_mid['text'] == '1 › 1.0.1' and at_mid['doc'] is None and at_mid['pos'] is None and DOC not in mid['line']['text'],
+            'at mid the one line names the account under the camera, 1 › 1.0.1: never the document the walk stands on, never a position', {'address': at_mid, 'line': mid['line']['text'][:160]})
+    ctx.js('window.__skep.leap.open()')
+    ctx.frames(2)
+    held = ctx.js('document.getElementById("leapq").value')
+    ctx.esc()
+    r.check(held == '1.0.1', 'at mid the LEAP box opens holding the address the line shows: the account', held)
+    r.figures['mid_line'] = {'zooms': zooms, 'address': at_mid, 'leap': held}
     # ---- the account segment: the document's own account field, read whole ---------------
     ctx.leap(AGENT_SPACE + '.0.1')
     agent = ctx.js('window.__skep.line()')['address']

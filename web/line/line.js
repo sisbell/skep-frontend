@@ -10,15 +10,21 @@
 // list; each told whether a key made it by the focus owner's one reading
 // (FP-20), so the ring is drawn at the landing a key made (D5 §4 rule 2) and
 // the trail's list takes the focus by a key alone — then THE ADDRESS DISPLAY
-// (R6): board › account › document › position, each segment read from the
-// document's own address — its node field, its account field whole at any
-// depth (`1.0.1.1` for the agent space's documents, B1-S6's `1.5 › 1.5.0.1.1
-// › …`) — and the position the one a landing named inside the focused span
-// (N-WALK's `landedAt`; W-01 step 3, "position honored"), else the span's own
-// first; with the position strip and the version marker ○ (unlit at the bare
-// address, lit at a pinned member; no sentence), itself LEAP's box (a click,
+// (R6), naming the level the camera's scale reads (foundations §2.2): the
+// board at far scale ("the whole board is in view" at WHOLE BOARD), the
+// account under the camera at mid (B1-S2's `1.5 › 1.5.0.1`) whatever the
+// walk stands on, and at reading scale board › account › document ›
+// position — the document the walk stands in, each segment read from its own
+// address: its node field, its account field whole at any depth (`1.0.1.1`
+// for the agent space's documents, B1-S6's `1.5 › 1.5.0.1.1 › …`), and the
+// position the one a landing named inside the focused span (N-WALK's
+// `landedAt`; W-01 step 3, "position honored"), else the span's own first,
+// with the position strip; the version marker ○ beside it (unlit at the bare
+// address, lit at a pinned member; no sentence); itself LEAP's box (a click,
 // Enter or Mod+L opens it; the chord drawn for the platform in its title,
-// rule 19); then the ACTING-AS segment — STATE 2 through the signed session
+// rule 19), which opens holding the address the display names (K-30), so the
+// box never opens on a place the line does not show; then the ACTING-AS
+// segment — STATE 2 through the signed session
 // ("acting as 1.0.1 (principal ⟨N⟩) · ⟨device label⟩ · key present on this
 // device · http://127.0.0.1:⟨P⟩ · LOCAL notebook"), STATE 1 where no session
 // stands ("reading as a guest" with its one act, sign in — the session's
@@ -35,7 +41,8 @@
 // through the one status region. The chip is NOT a segment (ux-T2: the
 // document's corner). Carries: the wireframe's §15 (`whereAmI`,
 // `actingLine`, `updateHUD`, `setTransient`; the chip and the walk step
-// removed; the diagnostics behind `h` are the gate's hooks).
+// removed; `whereAmI` RE-CUT to foundations §2.2, its document form at
+// reading scale alone; the diagnostics behind `h` are the gate's hooks).
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20.
 
 import * as REC from '../model/records.js';
@@ -117,32 +124,40 @@ export function transient(/** @type {string} */ text, id = 'transient') { transi
 /** the next act clears the transient segment */
 export function act() { if (transientSeg) { transientSeg = null; render(true); } }
 
-/** the current address under the camera (the address segment's; the LEAP box's prefill) */
-export function currentAddress() {
-  const lod = lodOf(cam.scale);
-  const f = WALK.current();
-  if (f && (f.kind === 'block' || f.kind === 'document' || f.kind === 'link') && lod.name !== 'far') return documentOf(f.addr) ? f.addr : null;
-  if (lod.name === 'far') return '1';
-  const acct = accountAt(cam.x, cam.y, '1');
-  return acct || '1';
-}
+/**
+ * @typedef {Object} AddressDisplay — what the address segment names at the camera's scale (foundations §2.2)
+ * @property {string} text the segment's words
+ * @property {string} addr the address named — the board, the account under the camera, or the document the walk stands in (its member where one is pinned): the LEAP box's prefill
+ * @property {string | null} doc the document named, at reading scale alone
+ * @property {number | null} pos the position named inside it
+ * @property {number | null} member the version member pinned
+ * @property {boolean} whole the whole board is in view, at WHOLE BOARD's clamp
+ */
 
-/** the address display's parts */
+/** the address the display names: the LEAP box's prefill, so the box opens holding what the line shows (K-30) */
+export function currentAddress() { return addressDisplay().addr; }
+
+/**
+ * The address display: the level the camera's scale reads (foundations
+ * §2.2) — at far scale the board; at mid the account under the camera
+ * (B1-S2), whatever the walk stands on; at reading scale the document the
+ * walk stands in and the position.
+ * @returns {AddressDisplay}
+ */
 export function addressDisplay() {
   const lod = lodOf(cam.scale);
-  const f = WALK.current();
-  const home = viewForCell(boardCell('1'), 0.92);
   if (lod.name === 'far' || lod.name === 'far~mid') {
-    const whole = cam.scale <= home.scale * 1.02;
-    return { text: '1' + (whole ? ' · ' + t('B1.clamp') : ''), doc: null, pos: null, member: null, whole };
+    const whole = cam.scale <= viewForCell(boardCell('1'), 0.92).scale * 1.02;
+    return { text: '1' + (whole ? ' · ' + t('B1.clamp') : ''), addr: '1', doc: null, pos: null, member: null, whole };
   }
-  const acct = accountAt(cam.x, cam.y, '1');
-  if (f && (f.kind === 'block' || f.kind === 'document' || f.kind === 'link') && (lod.name === 'near' || lod.name === 'mid~near' || lod.name === 'mid')) {
+  const f = WALK.current();
+  if (f && (f.kind === 'block' || f.kind === 'document' || f.kind === 'link') && (lod.name === 'near' || lod.name === 'mid~near')) {
     const doc = documentOf(f.addr) || f.addr;
     const pos = WALK.landedAt() ?? f.pos ?? 1;
-    return { text: `${boardOf(doc)} › ${accountOf(doc)} › ${doc} › ${t('F.position', { p: pos })}`, doc: f.addr, pos, member: memberOf(f.addr), whole: false };
+    return { text: `${boardOf(doc)} › ${accountOf(doc)} › ${doc} › ${t('F.position', { p: pos })}`, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false };
   }
-  return { text: acct ? `1 › ${acct}` : '1', doc: null, pos: null, member: null, whole: false };
+  const acct = accountAt(cam.x, cam.y, '1');
+  return { text: acct ? `1 › ${acct}` : '1', addr: acct || '1', doc: null, pos: null, member: null, whole: false };
 }
 
 /** the acting-as segment's words */
