@@ -55,6 +55,16 @@ no run takes it until the label comes off. When several issues of one
 kind appear across surfaces, the rule they lack is found once and
 built everywhere, not fixed one surface at a time.
 
+Sometimes, while fixing a page bug, you find the real cause is in the
+shell or the board: the shell has no read for what the page needs, the
+wire gives back too little, or the board behaves a certain way. When
+that happens, open an issue in `sisbell/skep`. Name the crate
+(`skep-shell`, `skepd`, …), and say which frontend issue you were
+fixing ("Found while fixing sisbell/skep-frontend#N"). Give it a
+milestone. Then finish the frontend issue with what the page can do on
+its own, note what still depends on skep, and close it. Don't leave it
+open waiting for the skep side.
+
 ## Where the design lives
 
 The design repository (`skep-ux-design`, a sibling of this one) holds
