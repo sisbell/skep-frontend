@@ -29,6 +29,7 @@
 // FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
+import * as VERSIONS from './versions.js';
 import * as PORT from '../bridge/port.js';
 import { entitlementArm } from '../text/article.js';
 import { memberOf } from '../model/address.js';
@@ -142,7 +143,7 @@ export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: n
 export function floating(far, anchor, offer = true) {
   const k = memberOf(far);
   const words = k != null ? { id: 'F.floating.member', text: t('F.floating.member', { k }) } : { id: 'F.floating', text: t('F.floating', { D: far }) };
-  HOST.show({ kind: 'face', id: 'face:floating', anchor: toAnchor(anchor), acts: offer ? { a0: (_el, byKey) => import('./versions.js').then((V) => V.open(far, null, null, null, byKey)) } : {},
+  HOST.show({ kind: 'face', id: 'face:floating', anchor: toAnchor(anchor), acts: offer ? { a0: (_el, byKey) => VERSIONS.open(far, null, null, null, byKey) } : {},
     html: faceHTML({ ...words, acts: offer ? [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] : [] }) });
 }
 

@@ -22,9 +22,11 @@
 // takes the focus on its first act — follow — where a key opened it (Enter
 // at the link's element, K-55; a links-card row's Enter) and never where a
 // click did (D5 §4 rule 4; the focus record's rule 16). It opens on its
-// reads, the ends' words and the lineage (O-HOST's `opening`): where an act
-// was made on the chrome while they read — Back, Esc, the LEAP box opened,
-// the next card asked or shown — nothing shows.
+// reads, the ends' words and the lineage (O-HOST's `opening`), the opening
+// begun in the act that asks for the card — each caller imports this module
+// as the page loads, so no load stands between the act and the opening:
+// where an act was made on the chrome while they read — Back, Esc, the LEAP
+// box opened, the next card asked or shown — nothing shows.
 // Later: the age row with the read that answers it; walking the lineage's
 // links (A-56, A-57's act); B3-d's retract and edit (the editor's lane);
 // link sets' SET line.

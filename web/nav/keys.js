@@ -50,6 +50,7 @@ import * as SCENE from '../scene/scene.js';
 import * as LINE from '../line/line.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
 import * as VERSIONS from '../overlays/versions.js';
+import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as CAM from '../plane/camera.js';
 import { t } from '../strings.js';
 
@@ -278,7 +279,7 @@ async function activateFocus(byKey) {
   if (f.kind === 'board') { await GO.wholeBoard(byKey); return; }
   if (f.kind === 'document') { await GO.leapTo(f.addr, { how: 'key', byKey }); return; }
   if (f.kind === 'block' && f.pos != null) { SEL.select(f.addr, f.pos); return; }
-  if (f.kind === 'link' && f.link) { const { open } = await import('../overlays/anatomy-card.js'); open(f.link, null, byKey); }
+  if (f.kind === 'link' && f.link) ANATOMY.open(f.link, null, byKey);
 }
 
 /** a zoom chord (K-11): the camera stepped about the view's centre, the focus re-taken at the new grain with the ring drawn (rule 10: a key's re-take takes the platform's focus wherever the key was pressed) */

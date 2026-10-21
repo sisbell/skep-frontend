@@ -26,6 +26,7 @@
 // FP-13 (rebuilt from LK's state on every change), FP-20.
 
 import * as HOST from './host.js';
+import * as ANATOMY from './anatomy-card.js';
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
 import * as REC from '../model/records.js';
@@ -110,7 +111,7 @@ export function render(byKey = false) {
   };
   for (const o of rows.owners) acts['owner:' + o] = () => { const cur = LK.state(addr).lens.owners; const set = new Set(cur || []); if (set.has(o)) set.delete(o); else set.add(o); LK.lens(addr, { owners: set.size ? set : null }); LAYER.bump(); markDirty(); render(); };
   for (const ty of rows.types) acts['type:' + ty] = () => { const cur = LK.state(addr).lens.types; const set = new Set(cur || []); if (set.has(ty)) set.delete(ty); else set.add(ty); LK.lens(addr, { types: set.size ? set : null }); LAYER.bump(); markDirty(); render(); };
-  listed.forEach((s, i) => { acts['row:' + i] = (_el, byKey) => import('./anatomy-card.js').then((A) => A.open(s, null, byKey)); });
+  listed.forEach((s, i) => { acts['row:' + i] = (_el, byKey) => ANATOMY.open(s, null, byKey); });
   HOST.show({
     kind: 'card', id: 'links:' + addr, anchor: { world: { x: box.x + box.w, y: box.y } }, html, acts, takeFocus: byKey,
     onDismiss: (replaced) => {

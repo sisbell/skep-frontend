@@ -73,7 +73,15 @@
 // once their reads answer (a mutant that opens any one of them without the
 // host's opening turns its row red), the versions list asking nothing after
 // its end (a mutant that drops any of its checks turns red); asked again
-// with no act after it, each shows. A FOLLOW MADE WHILE A CARD READS ends
+// with no act after it, each shows. THE ANATOMY CARD OPENS IN THE ACT THAT
+// ASKS FOR IT — a links-card row, Enter at the link's element, a click on
+// its symbol, a click on its marked span: a Back made at once ends it, and
+// nothing shows over the place Back landed once its reads answer (a mutant
+// that puts any one caller behind an `import()`, the opening begun only once
+// the load answers, turns its row red); asked with no act after it, each
+// shows; Esc made at once after a row ends the card still reading alone, the
+// links card standing until the next Esc (the same mutant at the row turns
+// it red). A FOLLOW MADE WHILE A CARD READS ends
 // the card's opening as it is made, the follow's landing still to come: once
 // the card's read answers nothing shows over the place the follow leaves,
 // and the follow lands (a mutant whose act leaves the opening reading turns
@@ -100,11 +108,14 @@ import * as HOST from '../overlays/host.js';
 import * as PROV from '../overlays/provenance.js';
 import * as VERSIONS from '../overlays/versions.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
+import * as LINKS from '../overlays/links-card.js';
+import * as INPUT from '../app/input.js';
 import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
+import * as KEYS from './keys.js';
 import * as GO from './go.js';
 
 const D = '1.0.1.0.3', FAR = '1.0.1.0.127', CITE = '1.1.0.1.0.1.0.3.13';
@@ -665,6 +676,85 @@ test('a Back made while a card reads: once its reads answer nothing shows over t
     HOST.dismiss();
   }
   assert.equal(REC.doc(FAR).members, 2, 'the members counted once, by the list that showed');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the anatomy card opens in the act that asks for it — a links-card row, Enter at the link\'s element, a click on its symbol, a click on its marked span: a Back made at once ends it; asked with no act after it, it shows; Esc made at once after a row ends it alone, the links card standing', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
+  const layer = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
+    const click = /** @type {(e: unknown) => void} */ (layer.get('click'));
+    /** the citation's element of the first edition's article a click lands on, by its class, bearing its data */
+    const article = { dataset: { addr: D } };
+    const at = (/** @type {string} */ cls, /** @type {Record<string, string>} */ dataset) => {
+      const el = Object.assign(new globalThis.HTMLElement(), { dataset, isConnected: false });
+      return Object.assign(el, { closest: (/** @type {string} */ sel) => (sel === cls ? el : sel === 'article' ? article : null) });
+    };
+    /** the links card at the first edition, and its row for the citation pressed as a click presses it */
+    const row = () => {
+      LINKS.show(D);
+      const o = HOST.currentState(), i = LK.shown(D).findIndex((s) => s.link.addr === PASSAGE);
+      const act = o && o.acts ? o.acts['row:' + i] : null;
+      assert.ok(o && o.id === 'links:' + D && act, 'the links card lists the citation');
+      return act(/** @type {any} */ (hostEl), false);
+    };
+    /** Enter as the platform delivers it at the plane */
+    const enter = /** @type {any} */ ({ key: 'Enter', keyCode: 13, isComposing: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {} });
+    /** @type {Array<[string, () => unknown]>} each act that asks for the card at the first edition, the walk on the citation's element */
+    const asks = [
+      ['a links-card row', row],
+      ['Enter at the link\'s element', () => KEYS.dispatch(enter, { where: 'plane', byKey: true })],
+      ['a click on its symbol', () => click({ target: at('.sym', { link: PASSAGE }), clientX: 0, clientY: 0, stopPropagation() {} })],
+      ['a click on its marked span', () => click({ target: at('.lip', { links: PASSAGE }), clientX: 0, clientY: 0, stopPropagation() {} })],
+    ];
+    const lineage = FAKE.keyOf('op', { frame: F.outClaims(PASSAGE, 'audit') });
+    /** the card's reads answered: its lineage's last read asked since `from`, no opening reading, and a turn for that answer to land */
+    const answered = async (/** @type {number} */ from) => {
+      const asked = () => fake.asked.slice(from).includes(lineage);
+      for (let i = 0; i < 200 && !(asked() && !HOST.pending()); i++) await new Promise((r) => setTimeout(r, 0));
+      assert.ok(asked(), 'the card was asked: its lineage read');
+      await new Promise((r) => setTimeout(r, 0));
+    };
+    for (const [what, ask] of asks) {
+      for (const backAtOnce of [true, false]) {
+        await run(GO.leapTo(FAR));
+        await run(GO.leapTo(D));
+        await run(WALK.key('in'));
+        for (let i = 0; i < 12 && WALK.current()?.link?.link.addr !== PASSAGE; i++) await run(WALK.key('down'));
+        assert.equal(WALK.current()?.link?.link.addr, PASSAGE, 'the walk on the citation\'s element');
+        const from = fake.asked.length;
+        const asking = ask();
+        // made at once: no turn passes between the act and the Back, so an act that awaits anything before its opening begins finds it begun after Back
+        if (backAtOnce) await run(GO.back());
+        await answered(from);
+        await asking;
+        if (backAtOnce) {
+          assert.equal(TRAIL.current()?.addr, FAR, `${what}: Back landed at the entry behind`);
+          assert.equal(HOST.currentState(), null, `${what}: nothing shows over the place Back landed`);
+        } else {
+          assert.equal(HOST.currentState()?.id, 'anatomy:' + PASSAGE, `${what}: asked with no act after it, it shows`);
+          HOST.dismiss();
+        }
+      }
+    }
+    await run(GO.leapTo(FAR));
+    await run(GO.leapTo(D));
+    const from = fake.asked.length;
+    const asking = row();
+    KEYS.esc();
+    await answered(from);
+    await asking;
+    assert.equal(HOST.currentState()?.id, 'links:' + D, 'Esc made at once ended the card still reading, alone: the links card stands');
+    KEYS.esc();
+    assert.equal(HOST.currentState(), null, 'the next Esc dismisses the links card');
+  } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window;
+  }
   assert.deepEqual(fake.unanswered, []);
 });
 

@@ -51,6 +51,7 @@ import * as WALK from '../nav/walk.js';
 import * as HOST from '../overlays/host.js';
 import * as SEL from '../overlays/selection.js';
 import * as LINKS from '../overlays/links-card.js';
+import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as LINE from '../line/line.js';
 import * as LK from '../links/links.js';
 import * as SCENE from '../scene/scene.js';
@@ -116,7 +117,7 @@ export function attach(els) {
       e.stopPropagation();
       const se = /** @type {HTMLElement} */ (sym);
       if (se.dataset.reveal) { LINKS.show(se.dataset.reveal); return; }
-      if (se.dataset.link) { const art = se.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const s = LK.shown(addr).find((x) => x.link.addr === se.dataset.link); if (s) import('../overlays/anatomy-card.js').then((A) => A.open(s, se, false)); return; }
+      if (se.dataset.link) { const art = se.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const s = LK.shown(addr).find((x) => x.link.addr === se.dataset.link); if (s) ANATOMY.open(s, se, false); return; }
     }
     const hair = target.closest('.hairline');
     if (hair) { e.stopPropagation(); const h = /** @type {HTMLElement} */ (hair); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: runOf(h) }); return; }
@@ -128,7 +129,7 @@ export function attach(els) {
     const span = LAYER.spanOfSelection();
     if (span && !sameSpan(span, LAYER.placedSpan())) { e.stopPropagation(); SEL.select(span.addr, span.pos, span.width); return; }
     const marked = target.closest('.lip');
-    if (marked) { e.stopPropagation(); const art = marked.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const first = (/** @type {HTMLElement} */ (marked).dataset.links || '').split(' ')[0]; const s = LK.shown(addr).find((x) => x.link.addr === first); if (s) { import('../overlays/anatomy-card.js').then((A) => A.open(s, /** @type {HTMLElement} */ (marked), false)); return; } }
+    if (marked) { e.stopPropagation(); const art = marked.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const first = (/** @type {HTMLElement} */ (marked).dataset.links || '').split(' ')[0]; const s = LK.shown(addr).find((x) => x.link.addr === first); if (s) { ANATOMY.open(s, /** @type {HTMLElement} */ (marked), false); return; } }
     const sp = target.closest('.sp');
     if (sp) {
       e.stopPropagation();

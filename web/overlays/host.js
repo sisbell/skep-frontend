@@ -18,7 +18,11 @@
 // has left never opens over the next one, nor over chrome made after it was
 // asked, and Esc closes what the person sees, never an opening they cannot.
 // Until it shows or ends it is `pending`; its reads may ask whether it
-// `stands`, so one that has ended asks no more. THE FOCUS is N-FOCUS's
+// `stands`, so one that has ended asks no more. An opening begins in the act
+// that asks for it, nothing awaited first: the page imports every module it
+// acts through as it loads, the app alone loading its gate's by `import()`
+// (S-22 (a)), for an act made while a module loaded would end no opening, and
+// the chrome would open over the place that act reached. THE FOCUS is N-FOCUS's
 // (FP-20; D5 §4 rule 4): an overlay takes the focus only where a KEY made
 // the act that opened it — `takeFocus` is that act's `byKey` and nothing
 // else decides it — and takes it on its FIRST ACT, never the dismiss (rule

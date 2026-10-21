@@ -21,8 +21,14 @@
 // dismisses the standing card with it, or leaves the opening to the
 // dismissal, turns red); the next Esc dismisses that card; the LEAP box,
 // opened after the card, closes before it.
+// AN OPENING BEGINS IN THE ACT THAT ASKS FOR IT: no module of the page loads
+// another by `import()` — the app alone loads its gate's so (S-22 (a)) — so
+// no load stands between an act and the opening it begins (a mutant that
+// puts a card or a list behind an `import()` turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync, readdirSync } from 'node:fs';
+import { sep } from 'node:path';
 import * as HOST from './host.js';
 import * as FACES from './faces.js';
 import * as TRAILLIST from './trail-list.js';
@@ -164,4 +170,18 @@ test('the LEAP box opened while an opening reads ends it, the card standing unde
   assert.deepEqual([LEAP.isOpen(), standing()], [false, 'selection'], 'Esc closes the box, the innermost thing');
   KEYS.esc();
   assert.equal(standing(), null, 'the next Esc dismisses the card');
+});
+
+test('an opening begins in the act that asks for it: no module of the page loads another by `import()`, the app alone loading its gate\'s so (S-22 (a))', () => {
+  const WEB = new URL('../', import.meta.url);
+  const modules = readdirSync(WEB, { recursive: true }).map((f) => String(f).split(sep).join('/')).filter((f) => f.endsWith('.js') && !f.endsWith('.test.js') && !f.startsWith('test/') && !f.startsWith('gate/'));
+  assert.ok(['app/main.js', 'app/input.js', 'nav/keys.js', 'overlays/links-card.js', 'overlays/faces.js'].every((f) => modules.includes(f)), 'the page\'s modules are read');
+  /** @type {string[]} */
+  const stray = [];
+  for (const f of modules) {
+    // comments dropped, a block before a line: a JSDoc type's `import('…')` names a type, and a head comment may name `import()`
+    const src = readFileSync(new URL(f, WEB), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    for (const m of src.matchAll(/\bimport\s*\(([^)]*)\)/g)) if (!(f === 'app/main.js' && /^\s*['"]\.\.\/gate\//.test(m[1]))) stray.push(`${f}: import(${m[1]})`);
+  }
+  assert.deepEqual(stray, []);
 });
