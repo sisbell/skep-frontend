@@ -12,6 +12,12 @@
 // link's type ONCE by `read_link` — E17 (a)), and, where legible, the span
 // window of text (`retrieve_v`) with its V→I image (`image`) for the
 // transcluded runs; the chain's members probed where a document is read.
+// Asked by an act rather than the view: a whole document (`loadWhole`),
+// where a link's end projects now (`projectEnd`), and a link's supersession
+// lineage (`lineage`: `in_claims` and `out_claims`, A-56, A-57). A class
+// scan read whole — `loadWhole`'s `find_links_v`, the lineage's two — is
+// reissued on `scan_busy` (`readScan`): the daemon bounds each by the same
+// two permits the view's scans take.
 // The reads go through `op(session, frame)` — the claimant's class — or the
 // guest form where no session stands; a followed far board's reads would
 // take the guest form over its origin (no such board is seeded).
@@ -32,10 +38,20 @@ import { metricsFor } from '../plane/layout.js';
 import { versionAddress } from './address.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
+/** @typedef {import('./frames.js').Claim} Claim */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 
+/**
+ * @typedef {Object} Lineage — a link's supersession lineage as read (B1-S5;
+ * A-56, A-57, A-82): each side the claims the board answered, in its order,
+ * or null where no `claims` answer came back — the read refused — so nothing
+ * was learned of that side, which is never B1-S5's "none"
+ * @property {Claim[] | null} supersededBy the claims whose `old` is the link: each one's `new` supersedes it
+ * @property {Claim[] | null} supersedes the claims whose `new` is the link: each one's `old` it supersedes
+ */
+
 const MAX_INFLIGHT = 6;
-/** the daemon's class-scan pool is two permits (wire.md §Link discovery reads); `find_links_v` meets it at this pin (a finding, reported): at most two in flight */
+/** the daemon's class-scan pool is two permits (wire.md §Link discovery reads); `find_links_v`, `in_claims` and `out_claims` meet it at this pin (a finding, reported): at most two of the view's in flight */
 const MAX_SCANS = 2;
 /** positions per fetched block — the span window rounds to it */
 const SPAN_BLOCK = 2048;
@@ -47,6 +63,8 @@ const FETCH_EM = 5;
 const MEMBER_PROBE_CAP = 8;
 /** a retry-class refusal (`scan_busy`) is reissued after this pause — "reissued at once", paced */
 const RETRY_MS = 120;
+/** a class scan read whole is asked at most this many times while the board answers `scan_busy` */
+const SCAN_ATTEMPTS = 6;
 
 /** @type {Set<string>} */
 const inflight = new Set();
@@ -92,6 +110,25 @@ export async function read(frame) {
   const out = await PORT.op(args);
   if ('refused' in out) return { refused: out.refused };
   return { answer: out.result };
+}
+
+/**
+ * A class scan read whole, for an act: a `scan_busy` — the board's two
+ * permits taken — is reissued after a pause, up to SCAN_ATTEMPTS asks;
+ * every refusal met is recorded.
+ * @param {{op: string}} frame
+ * @param {string} addr the document or link the read is about
+ * @returns {Promise<{answer: unknown} | {refused: Refusal}>}
+ */
+async function readScan(frame, addr) {
+  let out = await read(frame);
+  for (let asks = 1; 'refused' in out; asks++) {
+    refusals.push({ frame: frame.op, refusal: out.refused, addr });
+    if (out.refused.name !== 'scan_busy' || asks >= SCAN_ATTEMPTS) break;
+    await new Promise((r) => setTimeout(r, RETRY_MS));
+    out = await read(frame);
+  }
+  return out;
 }
 
 /**
@@ -289,14 +326,8 @@ export async function loadWhole(addr) {
     if (!('refused' in im)) REC.takeOrigins(addr, 1, F.decodeRuns(im.answer));
   }
   if (!d.linksRead && extent > 0) {
-    // the class-scan pool: reissue a `scan_busy` (a retry-class refusal) a few times
-    for (let attempt = 0; attempt < 6; attempt++) {
-      const out = await read(F.findLinksV(addr, 1, extent));
-      if (!('refused' in out)) { REC.takeLinks(addr, F.decodeAddrs(out.answer)); break; }
-      refusals.push({ frame: 'find_links_v', refusal: out.refused, addr });
-      if (out.refused.name !== 'scan_busy') break;
-      await new Promise((r) => setTimeout(r, RETRY_MS));
-    }
+    const out = await readScan(F.findLinksV(addr, 1, extent), addr);
+    if (!('refused' in out)) REC.takeLinks(addr, F.decodeAddrs(out.answer));
   }
   for (const la of REC.unreadLinks(addr)) {
     const out = await read(F.readLink(la));
@@ -319,6 +350,25 @@ export async function projectEnd(linkAddr, slot, doc) {
   if ('refused' in out) { refusals.push({ frame: 'project', refusal: out.refused, addr: doc }); return 'refused'; }
   const set = F.decodeSpanSet(out.answer).filter((s) => s.subspace === 1);
   return set.length ? { ordinal: set[0].ordinal, positions: set[0].positions } : null;
+}
+
+/**
+ * A link's supersession lineage (B1-S5; A-56, A-57): `in_claims` — what
+ * supersedes it — then `out_claims` — what it supersedes — under the AUDIT
+ * view, so a retracted claim arrives marked `active: false` where the
+ * active view would leave it out. The two are asked one after the other,
+ * holding at most one of the board's two scan permits.
+ * @param {string} linkAddr
+ * @returns {Promise<Lineage>}
+ */
+export async function lineage(linkAddr) {
+  const side = async (/** @type {{op: string}} */ frame) => {
+    const out = await readScan(frame, linkAddr);
+    return 'refused' in out ? null : F.decodeClaims(out.answer);
+  };
+  const supersededBy = await side(F.inClaims(linkAddr, 'audit'));
+  const supersedes = await side(F.outClaims(linkAddr, 'audit'));
+  return { supersededBy, supersedes };
 }
 
 /** the number of reads in flight (the gate's settle signal) */

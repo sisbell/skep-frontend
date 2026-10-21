@@ -8,18 +8,23 @@
 // (R5's form where the commons documents none: on this notebook no registry
 // document is seeded, so every type reads "undocumented here"), from, to,
 // home (published → the link is public; a draft → hidden with its home),
-// owner (never a name alone); its acts follow either end and open the scene.
-// B1-S5's age and supersession rows are not drawn: the age (the commit's
-// position and time, from the feed) is not held for a link older than this
-// page's feed, which starts at the head, and `in_claims`/`out_claims` are
-// not among the page's reads — and a row standing with no value would read
-// as B1-S5's "none". The link's mark comes from LK's `markOf`, so the card
-// and the symbol agree. The card takes the focus on its first act — follow
-// — where a key opened it (Enter at the link's element, K-55; a links-card
-// row's Enter) and never where a click did (D5 §4 rule 4; the focus
-// record's rule 16).
-// Later: the age and supersession rows with the reads that answer them;
-// B3-d's retract and edit (the editor's lane); link sets' SET line.
+// owner (never a name alone), then its lineage (A-56, A-57, A-82):
+// "superseded by" the `new` of each claim whose `old` is this link,
+// "supersedes" the `old` of each claim whose `new` is it — read under the
+// audit view (M-PUMP's `lineage`), so a retracted claim stands, marked
+// "retracted"; a side that answered no claim reads B1-S5's "none", and a
+// side whose read was refused draws no row, for nothing was learned of it.
+// Its acts follow either end and open the scene. B1-S5's age row is not
+// drawn: the age (the commit's position and time, from the feed) is not
+// held for a link older than this page's feed, which starts at the head —
+// and a row standing with no value would read as B1-S5's "none". The link's
+// mark comes from LK's `markOf`, so the card and the symbol agree. The card
+// takes the focus on its first act — follow — where a key opened it (Enter
+// at the link's element, K-55; a links-card row's Enter) and never where a
+// click did (D5 §4 rule 4; the focus record's rule 16).
+// Later: the age row with the read that answers it; walking the lineage's
+// links (A-56, A-57's act); B3-d's retract and edit (the editor's lane);
+// link sets' SET line.
 // Carries: the wireframe's §18 `anatomyCard`. Rules: FP-1, FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
@@ -33,6 +38,8 @@ import { t, typeName } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
+/** @typedef {import('../model/pump.js').Lineage} Lineage */
+/** @typedef {import('../model/frames.js').Claim} Claim */
 
 /** the first words of a passage: from the model where delivered, else one read */
 async function fragment(/** @type {string} */ addr, /** @type {number | null} */ pos, /** @type {number} */ width) {
@@ -47,6 +54,32 @@ async function fragment(/** @type {string} */ addr, /** @type {number | null} */
 }
 
 /**
+ * The lineage's rows (B1-S5): "superseded by" names the `new` of each claim
+ * whose `old` is the link, "supersedes" the `old` of each claim whose `new`
+ * is it, in the answer's order, a retracted claim's address followed by
+ * "retracted"; a side that answered no claim reads "none"; a side whose read
+ * was refused draws no row. Neither row holds a control.
+ * @param {Lineage} lineage
+ * @returns {string}
+ */
+export function supersessionRows(lineage) {
+  return lineageRow('F.card.superseded-by', lineage.supersededBy, (c) => c.new) + lineageRow('F.card.supersedes', lineage.supersedes, (c) => c.old);
+}
+
+/**
+ * @param {string} label the row's string
+ * @param {Claim[] | null} claims
+ * @param {(c: Claim) => string} named the address a claim names on this side
+ */
+function lineageRow(label, claims, named) {
+  if (!claims) return '';
+  const value = claims.length
+    ? claims.map((c) => `<span class="code">${esc(named(c))}</span>${c.active ? '' : ` · <span data-string="F.card.retracted">${esc(t('F.card.retracted'))}</span>`}`).join(', ')
+    : `<span data-string="F.card.none">${esc(t('F.card.none'))}</span>`;
+  return `<div class="kv lineage"><b>${esc(t(label))}</b> ${value}</div>`;
+}
+
+/**
  * Open the card for a drawn link: its near end the document it is drawn at
  * (`s.near`), its far end the other.
  * @param {Shown} s
@@ -57,9 +90,10 @@ export async function open(s, anchorEl, byKey = false) {
   const l = s.link;
   const near = s.near, nearPos = s.pos, nearWidth = s.width;
   const far = s.far, farEnd = s.farEnd;
-  const [nearText, farText] = await Promise.all([
+  const [nearText, farText, lineage] = await Promise.all([
     fragment(near, nearPos, nearWidth),
     far ? fragment(far, farEnd && !farEnd.whole ? farEnd.ordinal : null, farEnd && farEnd.positions ? farEnd.positions : 80) : Promise.resolve(null),
+    PUMP.lineage(l.addr),
   ]);
   const mark = LK.markOf(l, near);
   const homePlace = REC.place(l.home);
@@ -79,6 +113,7 @@ export async function open(s, anchorEl, byKey = false) {
     `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code">${esc(toDoc)}</span></div>` +
     `<div class="kv"><b>${esc(t('F.card.home'))}</b> <span class="code">${esc(l.home)}</span> — ${esc(homePublished ? t('F.card.public') : t('F.card.hidden'))}</div>` +
     `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${esc(l.owner || '—')}</div>` +
+    supersessionRows(lineage) +
     `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${esc(far || '')}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
   HOST.show({
     kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: near, pos: nearPos, width: nearWidth } }, html, takeFocus: byKey,

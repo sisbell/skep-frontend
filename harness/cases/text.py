@@ -8,8 +8,13 @@ document the walk stands on or a position, the LEAP box opening on it
 (foundations §2.2; B1-S2; K-30); a face's words
 alone — the fifth cell's at a typed ghost address, with no wire token above
 them and no act beneath (B1-S8; C-42); the anatomy card's rows, each a value
-the page holds (a bare dash reads as B1-S5's "none"); no string in the one
-line, the face or the anatomy card set apart by its class in the inventory —
+the page holds (a bare dash reads as B1-S5's "none"), its two lineage rows
+among them — `in_claims` and `out_claims` asked for its link under the audit
+view, and "superseded by" and "supersedes" each reading what its read
+answered: the addresses its claims name on that side, a retracted claim's
+marked, B1-S5's "none" where it named none, no row where it was refused
+(A-56, A-57, A-82); no string in the one line, the face or the anatomy card
+set apart by its class in the inventory —
 no dotted underline under a DRAFT, no bar beside a PINNED: the class is the
 copy's record (`strings.js`), never a mark a person reads, and a dotted
 underline is the page's mark of words with an act; and every PINNED string
@@ -121,16 +126,41 @@ def run(ctx):
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     r.check(bool(shown), 'the first edition draws a link to open the anatomy card of', len(shown))
     if shown:
-        ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(shown[0]['link'])))
+        link = shown[0]['link']
+        n_calls = len(ctx.js('window.__skep.bridge.calls()'))
+        ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(link)))
         ctx.settle()
         ctx.frames(2)
         rows = ctx.js('''[...document.querySelectorAll('#overlay .kv')].map((k) => { const v = k.cloneNode(true); v.querySelectorAll('b').forEach((b) => b.remove());
           return {labels: [...k.querySelectorAll('b')].map((b) => b.textContent), value: v.textContent}; })''')
         blank = [x for x in rows if BLANK.fullmatch(x['value'])]
-        r.check(ctx.js('window.__skep.overlay().id') == 'anatomy:' + shown[0]['link'] and bool(rows) and not blank, 'every row of the anatomy card carries a value: none stands as a bare dash, which B1-S5 draws as "none"', {'blank': blank, 'rows': [x['labels'] for x in rows]})
+        r.check(ctx.js('window.__skep.overlay().id') == 'anatomy:' + link and bool(rows) and not blank, 'every row of the anatomy card carries a value: none stands as a bare dash, which B1-S5 draws as "none"', {'blank': blank, 'rows': [x['labels'] for x in rows]})
         marks = wording_marks(ctx, '#overlay')
         r.check('R5.undocumented' in marks['shown'] and not marks['marked'], 'the anatomy card\'s strings — R5\'s type among them — are set apart by no class of theirs in the inventory', marks)
         r.figures['anatomy_rows'] = rows
+        # the lineage (B1-S5; A-56, A-57, A-82): each side read for the card's link under the audit view, its row what the
+        # last read of it answered — the page's own words for the labels and marks
+        words = ctx.js('''(async () => { const {t} = await import("./strings.js");
+          return {by: t("F.card.superseded-by"), sup: t("F.card.supersedes"), none: t("F.card.none"), retracted: t("F.card.retracted")}; })()''')
+        asked = [c for c in ctx.js('window.__skep.bridge.calls()')[n_calls:] if c.get('op') in ('in_claims', 'out_claims')]
+        lineage = {}
+        for op, key, named, label in (('in_claims', 'y', 'new', words['by']), ('out_claims', 'x', 'old', words['sup'])):
+            reads = [c for c in asked if c['op'] == op]
+            frames = [json.loads(c['frame']) for c in reads]
+            r.check(bool(frames) and all(f == {'op': op, 'view': 'audit', key: link} for f in frames), 'the card asks %s for its link under the audit view, the one that answers a retracted claim' % op, frames)
+            if not reads:
+                continue
+            outcome = json.loads(reads[-1]['answer']) if reads[-1].get('answer') else {}
+            answer = outcome.get('result') if isinstance(outcome, dict) else None
+            row = [x['value'] for x in rows if x['labels'] == [label]]
+            if isinstance(answer, dict) and answer.get('resp') == 'claims':
+                claims = answer.get('claims') or []
+                want = ', '.join(c[named] + ('' if c['active'] else ' · ' + words['retracted']) for c in claims) if claims else words['none']
+                r.check(len(row) == 1 and norm(row[0]) == norm(want), 'the card\'s "%s" row reads what %s answered: the %s link of each claim, a retracted one marked, "none" where it named none' % (label, op, named), {'want': want, 'row': row, 'claims': claims})
+            else:
+                r.check(not row, 'a lineage read that answered no claims document draws no "%s" row: nothing was learned of it' % label, {'outcome': outcome, 'row': row})
+            lineage[op] = {'asks': len(reads), 'answer': answer, 'row': row}
+        r.figures['anatomy_lineage'] = lineage
         ctx.esc()
     # ---- every PINNED string against its source ------------------------------------------
     pinned = ctx.js('window.__skep.strings.pinned()')

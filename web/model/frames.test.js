@@ -23,6 +23,8 @@ const EXAMPLES = {
   effective_owner: '{"addr":"1.0.1.1","op":"effective_owner"}',
   principal_prefix: '{"op":"principal_prefix","principal":2}',
   key_set: '{"account":"1.0.1","op":"key_set"}',
+  in_claims: '{"op":"in_claims","view":"active","y":"1.0.1.0.1.0.2.1"}',
+  out_claims: '{"op":"out_claims","view":"audit","x":"1.0.1.0.1.0.2.2"}',
   op_at: '{"at":9,"frame":{"op":"retrieve_v","specs":[{"doc":"1.0.1.0.1","span":{"start":"1.1","width":"0.5"}}]}}',
 };
 
@@ -41,6 +43,8 @@ test('the read composers spell the wire examples exactly', () => {
   assert.equal(canon(F.effectiveOwner('1.0.1.1')), EXAMPLES.effective_owner);
   assert.equal(canon(F.principalPrefix(2)), EXAMPLES.principal_prefix);
   assert.equal(canon(F.keySet('1.0.1')), EXAMPLES.key_set);
+  assert.equal(canon(F.inClaims('1.0.1.0.1.0.2.1', 'active')), EXAMPLES.in_claims);
+  assert.equal(canon(F.outClaims('1.0.1.0.1.0.2.2', 'audit')), EXAMPLES.out_claims);
   assert.equal(JSON.stringify(F.opAt(9, F.retrieveV('1.0.1.0.1', 1, 5))), EXAMPLES.op_at);
 });
 
@@ -77,4 +81,13 @@ test('the answers decode as the wire gives them', () => {
   const rej = F.rejected({ code: 'unauthenticated', disposition: 'permanent', op: 'insert', resp: 'rejected' });
   assert.ok(rej); assert.equal(rej.code, 'unauthenticated');
   assert.equal(F.rejected({ resp: 'delivery' }), null);
+});
+
+test('the lineage\'s claims decode as the wire gives them; any other answer is null, never no claim', () => {
+  assert.deepEqual(F.decodeClaims({ as_of: 9, claims: [{ active: true, claim: '1.0.1.0.1.0.2.3', home: '1.0.1.0.1', new: '1.0.1.0.1.0.2.2', old: '1.0.1.0.1.0.2.1' }], resp: 'claims' }),
+    [{ claim: '1.0.1.0.1.0.2.3', home: '1.0.1.0.1', old: '1.0.1.0.1.0.2.1', new: '1.0.1.0.1.0.2.2', active: true }]);
+  assert.equal(F.decodeClaims({ as_of: 9, claims: [{ active: false, claim: '1.0.1.0.1.0.2.3', home: '1.0.1.0.1', new: '1.0.1.0.1.0.2.2', old: '1.0.1.0.1.0.2.1' }], resp: 'claims' })?.[0].active, false, 'the audit view\'s retracted claim');
+  assert.deepEqual(F.decodeClaims({ as_of: 9, claims: [], resp: 'claims' }), []);
+  assert.equal(F.decodeClaims({ addrs: [], as_of: 9, resp: 'addrs' }), null);
+  assert.equal(F.decodeClaims(null), null);
 });

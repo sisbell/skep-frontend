@@ -181,6 +181,7 @@ export const STRINGS = {
   'F.card.superseded-by': { text: 'superseded by', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.supersedes': { text: 'supersedes', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.none': { text: 'none', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
+  'F.card.retracted': { text: 'retracted', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.public': { text: 'published — so the link is public', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.hidden': { text: 'a draft — the link is hidden with its home', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.versions.read': { text: 'read version ⟨k⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the versions list' },

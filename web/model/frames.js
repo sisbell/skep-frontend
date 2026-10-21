@@ -5,7 +5,8 @@
 // `retrieve_doc_v_span_set`, `doc_metadata`, `find_links_v`,
 // `find_links_ftt`, `read_link`, `follow_link`, `image`, `project`,
 // `compare`, `show_origin`, `find_docs_containing`, `effective_owner`,
-// `principal_prefix`, `key_set`, and the `/op-at` form `{at, frame}` around
+// `principal_prefix`, `key_set`, the supersession lineage `in_claims` and
+// `out_claims` (A-56, A-57), and the `/op-at` form `{at, frame}` around
 // any read — each spelled as `docs/wire.md` spells it at the pin
 // (`db24cc1b`). `count_v` is NOT composed (E17 (a): every count is LK's fold
 // of `find_links_v`'s answer). The wireframe's simulated names
@@ -14,7 +15,8 @@
 // The answers decoded: the delivery's items (`content`, `hex`, `atom`,
 // `atom_hex`, `ref`, `withheld`), a span set, an `addrs` list, a link value,
 // a follow, the V→I runs, a compare report, `doc_metadata`,
-// `effective_owner`'s pair, `maybe_addr`, `key_set`, a `rejected` document.
+// `effective_owner`'s pair, `maybe_addr`, `key_set`, the lineage's `claims`
+// (A-82), a `rejected` document.
 // Carries: the wireframe's §4 `_serve` cases (re-cut to the wire's names),
 // §8's `ask`. Rules: FP-1, FP-2, FP-6, FP-16 (the frames' shapes are the wire
 // document's; pinned by this module's test against its examples).
@@ -28,7 +30,7 @@ import { byteLength } from '../util.js';
 export const READ_OPS = Object.freeze([
   'retrieve_v', 'retrieve_doc_v_span_set', 'doc_metadata', 'find_links_v', 'find_links_ftt', 'read_link',
   'follow_link', 'image', 'project', 'compare', 'show_origin', 'find_docs_containing', 'effective_owner',
-  'principal_prefix', 'key_set',
+  'principal_prefix', 'key_set', 'in_claims', 'out_claims',
 ]);
 
 /**
@@ -76,6 +78,22 @@ export const READ_OPS = Object.freeze([
  * @property {number} u1 ordinal in d1 (subspace 1)
  * @property {number} u2
  * @property {number} width
+ */
+
+/**
+ * @typedef {'audit' | 'active' | 'default'} View — a lineage read's view
+ * (wire.md §Views): `audit` everything ever created, a retracted claim
+ * among it; `active` what is not retracted; `default` as `active`
+ */
+
+/**
+ * @typedef {Object} Claim — one supersession lineage record (A-82): the
+ * link `claim` homed in `home` asserts that `new` supersedes `old`
+ * @property {string} claim the claim's own address — a link
+ * @property {string} home the document the claim resides in
+ * @property {string} old the superseded link's address, as recorded
+ * @property {string} new the superseding link's address, as recorded
+ * @property {boolean} active false where the claim was retracted (the audit view's alone)
  */
 
 /**
@@ -128,6 +146,10 @@ export const effectiveOwner = (addr) => ({ op: 'effective_owner', addr });
 export const principalPrefix = (principal) => ({ op: 'principal_prefix', principal });
 /** @param {string} account */
 export const keySet = (account) => ({ op: 'key_set', account });
+/** the claims whose `old` is the link `y` — what supersedes it @param {string} y @param {View} view */
+export const inClaims = (y, view) => ({ op: 'in_claims', view, y });
+/** the claims whose `new` is the link `x` — what it supersedes @param {string} x @param {View} view */
+export const outClaims = (x, view) => ({ op: 'out_claims', view, x });
 /**
  * The history read: `/op-at`'s form, `{at, frame}` around any read (wire.md
  * §Reading history); the port's `op` carries it as the frame.
@@ -269,6 +291,19 @@ export function decodeMaybeAddr(/** @type {unknown} */ answer) {
   const a = /** @type {{resp?: string, addr?: string | null}} */ (answer || {});
   if (a.resp !== 'maybe_addr') return undefined;
   return a.addr ?? null;
+}
+
+/**
+ * `claims` → the lineage records in the order the answer gives them; null
+ * where the answer is no `claims` document, so a read that answered nothing
+ * is never taken for one that answered no claim.
+ * @param {unknown} answer
+ * @returns {Claim[] | null}
+ */
+export function decodeClaims(answer) {
+  const a = /** @type {{resp?: string, claims?: Array<Record<string, unknown>>}} */ (answer || {});
+  if (a.resp !== 'claims' || !Array.isArray(a.claims)) return null;
+  return a.claims.map((c) => ({ claim: String(c.claim), home: String(c.home), old: String(c.old), new: String(c.new), active: !!c.active }));
 }
 
 /** `key_set` → the enrolled and retired entries */

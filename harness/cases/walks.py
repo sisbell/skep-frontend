@@ -149,7 +149,8 @@ def run(ctx):
         ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(shown[0]['link'])))
         ctx.settle()
         ctx.frames(2)
-    step(ctx, r, 'W-05', 4, 'the anatomy card', 'W-05 step 4: "Inspect a link\'s full anatomy: type (registry documentation one gesture away), all endsets, owner, age (R5)." The type reads R5\'s form — "undocumented here": no commons registry document is seeded; the far end\'s words first; no age or supersession row: the page holds no age for a link older than its feed and does not read the claims, and an empty row would read as B1-S5\'s "none".', 'anatomy-card')
+    step(ctx, r, 'W-05', 4, 'the anatomy card', 'W-05 step 4: "Inspect a link\'s full anatomy: type (registry documentation one gesture away), all endsets, owner, age (R5)." The type reads R5\'s form — "undocumented here": no commons registry document is seeded; the far end\'s words first; superseded by and supersedes read the link\'s lineage under the audit view, B1-S5\'s "none" where no claim names it; no age row: the page holds no age for a link older than its feed, and an empty row would read as B1-S5\'s "none".', 'anatomy-card',
+         claims=[('#overlay .kv.lineage', 'the supersession rows', None)])
     ctx.esc()
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
     ctx.settle()

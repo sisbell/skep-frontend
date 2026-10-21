@@ -2,6 +2,9 @@
 // built from a scripted sequence of answers and events, no write composed;
 // the view's reads ask nothing for a document a continuation's mark holds;
 // a session's end is taken by the page whose session it is and by no other;
+// a link's lineage read under the audit view, a class scan the board answers
+// `scan_busy` asked again, and a lineage side whose read is refused learned
+// as nothing, never as no claim;
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -101,6 +104,58 @@ test('at HOME the reads ask for the documents standing whole and nothing for the
   assert.equal(REC.doc(D).extent, 30, 'the document standing whole has its span set read');
   assert.deepEqual(fake.unanswered.filter((k) => k.includes(MEMBER)), [], 'no read names the document the mark holds');
   assert.equal(REC.doc(MEMBER).extent, null);
+});
+
+/**
+ * A frame the board answers `scan_busy` the first time it is asked — its two
+ * class-scan permits taken — and `then` after; `asks()` counts the asks.
+ * @param {Record<string, unknown>} s the script
+ * @param {{op: string}} frame
+ * @param {unknown} then
+ */
+function busyOnce(s, frame, then) {
+  const busy = { refused: { kind: 'refused', name: 'scan_busy', status: 503, code: 'scan_busy', detail: null, op: frame.op, body: null } };
+  let n = 0;
+  Object.defineProperty(s, FAKE.keyOf('op', { frame }), { enumerable: true, configurable: true, get: () => (++n === 1 ? busy : then) });
+  return { asks: () => n };
+}
+
+test('a whole read asks find_links_v again where the board answers scan_busy, and takes the links answered after it', async () => {
+  const s = { ...script };
+  const frame = F.findLinksV(D, 1, 30);
+  const scan = busyOnce(s, frame, script[FAKE.keyOf('op', { frame })]);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  await PUMP.loadWhole(D);
+  assert.equal(scan.asks(), 2, 'asked once more after scan_busy');
+  assert.deepEqual([...REC.doc(D).links], [D + '.0.2.1']);
+  assert.ok(REC.doc(D).linksRead);
+});
+
+test('a link\'s lineage is read under the audit view: what supersedes it, what it supersedes, a retracted claim answered with them', async () => {
+  const L = D + '.0.2.1';
+  const fake = FAKE.create({
+    [FAKE.keyOf('op', { frame: F.inClaims(L, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [{ active: false, claim: D + '.0.2.9', home: D, new: D + '.0.2.5', old: L }, { active: true, claim: '1.0.1.0.4.0.2.2', home: '1.0.1.0.4', new: '1.0.1.0.4.0.2.1', old: L }] } },
+    [FAKE.keyOf('op', { frame: F.outClaims(L, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [{ active: true, claim: D + '.0.2.8', home: D, new: L, old: '1.0.1.0.2.0.2.7' }] } },
+  });
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const lin = await PUMP.lineage(L);
+  assert.deepEqual(fake.unanswered, [], 'both sides asked under the audit view, the one that answers a retracted claim');
+  assert.deepEqual(lin.supersededBy?.map((c) => [c.new, c.active]), [[D + '.0.2.5', false], ['1.0.1.0.4.0.2.1', true]], 'the claims whose old is the link, in the answer\'s order');
+  assert.deepEqual(lin.supersedes?.map((c) => [c.old, c.active]), [['1.0.1.0.2.0.2.7', true]], 'the claims whose new is the link');
+  assert.deepEqual(fake.calls().map((c) => c.name), ['op', 'op'], 'the two reads one after the other, nothing else');
+});
+
+test('a lineage read the board answers scan_busy is asked again; a side whose read is refused is null, never no claim', async () => {
+  const L = D + '.0.2.1';
+  const s = { [FAKE.keyOf('op', { frame: F.outClaims(L, 'audit') })]: { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } } };
+  const scan = busyOnce(s, F.inClaims(L, 'audit'), { result: { as_of: 1, resp: 'claims', claims: [] } });
+  PORT.boot(FAKE.create(s));
+  const lin = await PUMP.lineage(L);
+  assert.equal(scan.asks(), 2, 'in_claims asked once more after scan_busy');
+  assert.deepEqual(lin, { supersededBy: [], supersedes: null }, 'the side answered no claim; the refused side learned nothing');
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {
