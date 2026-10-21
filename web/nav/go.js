@@ -2,7 +2,9 @@
 // ENGINE-BOUND only through O-HOST; its arithmetic pure. State: VIEW — the
 // arrival's two marks and the count of the navigation acts made — THE ONE
 // OWNER of them (FP-10). It orchestrates the owners: dismiss the overlay and
-// the scene, fly the camera (P-CAM), push the trail (N-TRAIL) with the
+// the scene — a card or scene still reading among them, which then opens
+// nothing (O-HOST's opening) — fly the camera (P-CAM), push the trail
+// (N-TRAIL) with the
 // departed view re-taken, move the focus to the landing (N-WALK) — the ring
 // drawn at it where a key made the act, which only the act's caller knows, so
 // each teleport takes `byKey` from it (D5 §4 rules 2 and 8) — re-project the
@@ -114,7 +116,7 @@ let made = 0;
  */
 function nextAct() { arrival = null; lit = null; return ++made; }
 
-/** the chrome a navigation act clears first: the standing overlay, and the scene, whose end moves no trail entry — so the act's own trail move is its one */
+/** the chrome a navigation act clears first: the standing overlay, a card or scene still reading — which then opens nothing (O-HOST's opening) — and the scene, whose end moves no trail entry — so the act's own trail move is its one */
 function dismissChrome() { HOST.dismiss(); SCENE.close(); }
 
 /**

@@ -55,7 +55,14 @@
 // dead end's words — at a member in the member's — and offering no act (a
 // mutant that lands where a plain LEAP does, or faces nothing, turns red); a
 // Back made while the compare reads leaves the LEAP's entry ahead at the
-// counterpart the read placed, the arrival out. The overlay host stands on a
+// counterpart the read placed, the arrival out. A BACK MADE WHILE A CARD
+// READS (O-HOST's opening): who wrote this?, who uses this?, the versions
+// list — ended while it counts the members and while it reads a member's
+// row — and the anatomy card each show nothing over the place Back landed
+// once their reads answer (a mutant that opens any one of them without the
+// host's opening turns its row red), the versions list asking nothing after
+// its end (a mutant that drops any of its checks turns red); asked again
+// with no act after it, each shows. The overlay host stands on a
 // stand-in element, the platform's document a stand-in beside it, so a face
 // a landing shows is read back from what the host wrote.
 import { test, before } from 'node:test';
@@ -69,6 +76,9 @@ import * as CAM from '../plane/camera.js';
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
 import * as HOST from '../overlays/host.js';
+import * as PROV from '../overlays/provenance.js';
+import * as VERSIONS from '../overlays/versions.js';
+import * as ANATOMY from '../overlays/anatomy-card.js';
 import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -105,6 +115,15 @@ const FAR2 = FAR + '.2';
 const SHARED = { addr: D, pos: 11, width: 5 }, UNSHARED = { addr: D, pos: 1, width: 8 }, MOVED = { addr: D, pos: 1, width: 10 };
 /** the `compare` a carried passage is re-projected by: the passage against the text landed in, whole */
 const carried = (/** @type {{addr: string, pos: number, width: number}} */ c, /** @type {string} */ into, /** @type {number} */ extent) => F.compare([{ doc: c.addr, spans: [{ ordinal: c.pos, positions: c.width }] }], [{ doc: into, spans: [{ ordinal: 1, positions: extent }] }]);
+// FAR's first member, a copy of its text like the second; the passage the versions list holds at FAR: its second paragraph, whole
+const FAR1 = FAR + '.1';
+const FAR_HELD = { pos: FAR_TEXT.indexOf('Its') + 1, width: 'Its cited passage stands here.'.length };
+/** the `compare` the versions list marks a member's row by: the passage held against the member's own text, whole */
+const heldIn = (/** @type {string} */ member) => F.compare([{ doc: FAR, spans: [{ ordinal: FAR_HELD.pos, positions: FAR_HELD.width }] }], [{ doc: member, spans: [{ ordinal: 1, positions: FAR_EXTENT }] }]);
+/** a member holding the passage held where FAR does */
+const holdsHeld = (/** @type {string} */ member) => ({ result: { as_of: 1, resp: 'compare', pairs: [{ d1: FAR, d2: member, u1: { ordinal: String(FAR_HELD.pos), subspace: '1' }, u2: { ordinal: String(FAR_HELD.pos), subspace: '1' }, width: String(FAR_HELD.width) }] } });
+/** who uses the first edition's cited passage: the read the card asks */
+const usesCited = F.findDocsContaining([{ doc: D, spans: [{ ordinal: 11, positions: 5 }] }]);
 
 /** the reads of a document read whole: its extent, its metadata, its text, its image, its links */
 const reads = (/** @type {string} */ doc, /** @type {string} */ text, /** @type {string[]} */ links) => ({
@@ -133,6 +152,16 @@ const script = {
   [FAKE.keyOf('op', { frame: carried(MOVED, FAR, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [{ d1: D, d2: FAR, u1: { ordinal: '1', subspace: '1' }, u2: { ordinal: '25', subspace: '1' }, width: '5' }, { d1: D, d2: FAR, u1: { ordinal: '6', subspace: '1' }, u2: { ordinal: '2', subspace: '1' }, width: '5' }] } },
   [FAKE.keyOf('op', { frame: carried(UNSHARED, FAR, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [] } },
   [FAKE.keyOf('op', { frame: carried(UNSHARED, FAR2, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [] } },
+  // the cards' reads: who wrote the first edition's cited passage (FAR) and who uses it (FAR too), the citation's lineage (no
+  // claims either way), and the versions list's: FAR's members counted — two, its third never registered — and each one's row
+  [FAKE.keyOf('op', { frame: F.showOrigin(D, 11, 5) })]: { result: { as_of: 1, resp: 'addrs', addrs: [FAR] } },
+  [FAKE.keyOf('op', { frame: usesCited })]: { result: { as_of: 1, resp: 'addrs', addrs: [D, FAR] } },
+  [FAKE.keyOf('op', { frame: F.inClaims(PASSAGE, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+  [FAKE.keyOf('op', { frame: F.outClaims(PASSAGE, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+  [FAKE.keyOf('op', { frame: F.docMetadata(FAR + '.3') })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(FAR1) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + FAR_EXTENT }] } },
+  [FAKE.keyOf('op', { frame: heldIn(FAR1) })]: holdsHeld(FAR1),
+  [FAKE.keyOf('op', { frame: heldIn(FAR2) })]: holdsHeld(FAR2),
 };
 
 /** @type {ReturnType<typeof FAKE.create>} */
@@ -527,5 +556,35 @@ test('a LEAP to a residue member its paragraphs set far smaller than its place\'
   const box = docBox(RES), fs = LAYER.metricsOf(REC.doc(RES)).fs;
   assert.ok(box.residue && fs < box.fsRep / 5, `set at ${fs / box.fsRep} of its place's em`);
   assert.ok(Math.abs(emNow(RES) - 12.5) < 1e-6, `it reads at 12.5 px an em: ${emNow(RES)}`);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a Back made while a card reads: once its reads answer nothing shows over the place Back landed — who wrote this?, who uses this?, the versions list, the anatomy card; asked with no act after it, each shows', async () => {
+  REC.invalidate(FAR); // read anew by the first LEAP to it, its members uncounted until the versions list counts them
+  /** @type {Array<{what: string, id: string, at: string, held: object, asks?: object[], open: () => Promise<void>}>} each card: the id it shows as, the place it is asked at, the read held while Back is made, the reads it asks in all where it asks no more once ended */
+  const cards = [
+    { what: 'who wrote this?', id: 'provenance:wrote', at: D, held: F.showOrigin(D, 11, 5), open: () => PROV.wrote(D, 11, 5) },
+    { what: 'who uses this?', id: 'provenance:uses', at: D, held: usesCited, open: () => PROV.uses(D, 11, 5) },
+    { what: 'the versions list, while it counts the members', id: 'versions:' + FAR, at: FAR, held: F.docMetadata(FAR2), asks: [F.docMetadata(FAR2)], open: () => VERSIONS.open(FAR, FAR_HELD.pos, null) },
+    { what: 'the versions list, while it reads a member\'s row', id: 'versions:' + FAR, at: FAR, held: F.retrieveDocVSpanSet(FAR1), asks: [F.retrieveDocVSpanSet(FAR1)], open: () => VERSIONS.open(FAR, FAR_HELD.pos, null) },
+    { what: 'the anatomy card', id: 'anatomy:' + PASSAGE, at: D, held: F.inClaims(PASSAGE, 'audit'), open: () => ANATOMY.open(drawn(PASSAGE), null) },
+  ];
+  for (const { what, id, at, held, asks, open } of cards) {
+    await run(GO.leapTo(at === D ? FAR : D));
+    await run(GO.leapTo(at));
+    const from = fake.asked.length;
+    const release = fake.hold('op', { frame: held });
+    const opening = open();
+    await run(GO.back());
+    assert.notEqual(TRAIL.current()?.addr, at, `${what}: Back left ${at}`);
+    release();
+    await opening;
+    assert.equal(HOST.currentState(), null, `${what}: nothing shows over the place Back landed`);
+    if (asks) assert.deepEqual(fake.asked.slice(from), asks.map((frame) => FAKE.keyOf('op', { frame })), `${what}: nothing asked after its end`);
+    await open();
+    assert.equal(HOST.currentState()?.id, id, `${what}: asked with no act after it, it shows`);
+    HOST.dismiss();
+  }
+  assert.equal(REC.doc(FAR).members, 2, 'the members counted once, by the list that showed');
   assert.deepEqual(fake.unanswered, []);
 });

@@ -13,9 +13,12 @@
 // (N-GO; foundations §2.3's carry rule; P43). Each card takes the focus on
 // its first act where a key made the act that asked — the slot's chord, Enter
 // on its button — and never otherwise (D5 §4 rule 4; the focus record's
-// rule 16). The two marks' variants (C-33, C-34) are the article's where
-// they fire. Faces: `too_much_coverage`. Carries: the wireframe's §18
-// `provenanceCard`. Rules: FP-1, FP-2, FP-13, FP-20.
+// rule 16). Each opens on its read (O-HOST's `opening`): where an act was
+// made on the chrome while it read — Back, Esc, the next card asked —
+// nothing shows, a refusal's face included. The two marks' variants (C-33,
+// C-34) are the article's where they fire. Faces: `too_much_coverage`.
+// Carries: the wireframe's §18 `provenanceCard`. Rules: FP-1, FP-2, FP-13,
+// FP-20.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -57,25 +60,27 @@ const carried = (to, addr, sp, byKey) => GO.leapTo(to, { how: 'leap', byKey, car
  * @param {number} pos the span's first position
  * @param {number | null} [width] the span's positions; null asks over the block holding `pos`
  * @param {boolean} [byKey] a key made the act: the card takes the focus on its first act
+ * @returns {Promise<void>} settled once the card or its face shows, or nothing will
  */
-export async function wrote(addr, pos, width = null, byKey = false) {
+export function wrote(addr, pos, width = null, byKey = false) {
   const sp = spanOf(addr, pos, width);
   const anchor = { span: { addr, pos: sp.ordinal, width: sp.positions } };
-  const out = await PUMP.read(F.showOrigin(addr, sp.ordinal, sp.positions));
-  if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr); return; }
-  const origins = F.decodeAddrs(out.answer);
-  const rows = origins.map((o) => {
-    const owner = REC.doc(o).meta ? REC.doc(o).meta?.owner : accountOf(o);
-    const same = o !== addr;
-    const text = same ? t('B1.wrote', { owner: owner || '', account: owner || '', origin: o }) : t('B1.wrote.here', { owner: owner || '', account: owner || '', origin: o });
-    return { o, same, text };
+  return HOST.opening(() => PUMP.read(F.showOrigin(addr, sp.ordinal, sp.positions)), (out) => {
+    if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr); return; }
+    const origins = F.decodeAddrs(out.answer);
+    const rows = origins.map((o) => {
+      const owner = REC.doc(o).meta ? REC.doc(o).meta?.owner : accountOf(o);
+      const same = o !== addr;
+      const text = same ? t('B1.wrote', { owner: owner || '', account: owner || '', origin: o }) : t('B1.wrote.here', { owner: owner || '', account: owner || '', origin: o });
+      return { o, same, text };
+    });
+    const html = `<span class="label">${esc(t('B1.who-wrote'))} · ${esc(addr)} · ${esc(t('F.position', { p: sp.ordinal }))}</span>` +
+      rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${esc(r.text)}${r.same ? ` <button data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
+    /** @type {Record<string, import('./host.js').Act>} */
+    const acts = {};
+    rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => carried(r.o, addr, sp, byKey); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
+    HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts, takeFocus: byKey });
   });
-  const html = `<span class="label">${esc(t('B1.who-wrote'))} · ${esc(addr)} · ${esc(t('F.position', { p: sp.ordinal }))}</span>` +
-    rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${esc(r.text)}${r.same ? ` <button data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
-  /** @type {Record<string, import('./host.js').Act>} */
-  const acts = {};
-  rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => carried(r.o, addr, sp, byKey); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
-  HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts, takeFocus: byKey });
 }
 
 /**
@@ -84,20 +89,22 @@ export async function wrote(addr, pos, width = null, byKey = false) {
  * @param {number} pos the span's first position
  * @param {number | null} [width] the span's positions; null asks over the block holding `pos`
  * @param {boolean} [byKey] a key made the act: the card takes the focus on its first act
+ * @returns {Promise<void>} settled once the card or its face shows, or nothing will
  */
-export async function uses(addr, pos, width = null, byKey = false) {
+export function uses(addr, pos, width = null, byKey = false) {
   const sp = spanOf(addr, pos, width);
   const anchor = { span: { addr, pos: sp.ordinal, width: sp.positions } };
-  const out = await PUMP.read(F.findDocsContaining([{ doc: addr, spans: [sp] }]));
-  if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr); return; }
-  const users = F.decodeAddrs(out.answer).filter((u) => u !== addr);
-  const answer = users.length ? t('B1.uses', { documents: users.join(', ') }) : t('B1.uses.none');
-  const html = `<span class="label">${esc(t('B1.who-uses'))} · ${esc(addr)} · ${esc(t('F.position', { p: sp.ordinal }))}</span>` +
-    `<div class="answer" data-string="${users.length ? 'B1.uses' : 'B1.uses.none'}">${esc(answer)}</div>` +
-    (users.length ? `<div class="acts">${users.map((u, i) => `<button data-run="u${i}">${esc(u)}</button>`).join('')}</div>` : '') +
-    `<div class="clause" data-string="B1.C-72">${esc(t('B1.C-72'))}</div>`;
-  /** @type {Record<string, import('./host.js').Act>} */
-  const acts = {};
-  users.forEach((u, i) => { acts['u' + i] = (_el, byKey) => carried(u, addr, sp, byKey); });
-  HOST.show({ kind: 'card', id: 'provenance:uses', anchor, html, acts, takeFocus: byKey });
+  return HOST.opening(() => PUMP.read(F.findDocsContaining([{ doc: addr, spans: [sp] }])), (out) => {
+    if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr); return; }
+    const users = F.decodeAddrs(out.answer).filter((u) => u !== addr);
+    const answer = users.length ? t('B1.uses', { documents: users.join(', ') }) : t('B1.uses.none');
+    const html = `<span class="label">${esc(t('B1.who-uses'))} · ${esc(addr)} · ${esc(t('F.position', { p: sp.ordinal }))}</span>` +
+      `<div class="answer" data-string="${users.length ? 'B1.uses' : 'B1.uses.none'}">${esc(answer)}</div>` +
+      (users.length ? `<div class="acts">${users.map((u, i) => `<button data-run="u${i}">${esc(u)}</button>`).join('')}</div>` : '') +
+      `<div class="clause" data-string="B1.C-72">${esc(t('B1.C-72'))}</div>`;
+    /** @type {Record<string, import('./host.js').Act>} */
+    const acts = {};
+    users.forEach((u, i) => { acts['u' + i] = (_el, byKey) => carried(u, addr, sp, byKey); });
+    HOST.show({ kind: 'card', id: 'provenance:uses', anchor, html, acts, takeFocus: byKey });
+  });
 }

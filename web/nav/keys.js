@@ -8,9 +8,10 @@
 // the platform's meaning; a printable key on the plane is SWALLOWED, never
 // dispatched, the swallow line K-9 shown at the focus until the next act; no
 // key is dispatched while an input method's composition is open (the IME
-// guard); Esc closes the most recently opened of the box, the overlay, the
-// scene and the selection (§4 rule 7's "innermost thing"; D7: a scene stands
-// over a selection, so it closes first). Tab is the platform's, over the
+// guard); Esc closes the most recently opened of the box, a card or scene
+// still reading, the overlay, the scene and the selection (§4 rule 7's
+// "innermost thing"; D7: a scene stands over a selection, so it closes
+// first). Tab is the platform's, over the
 // page's order: the line (ONE stop, ← and → among its acts — K-22) → the
 // plane (the mirror's current item) → the focused document's corner, where
 // Enter takes the corner's act and the walk's keys and the swallow do not
@@ -250,11 +251,14 @@ function swallow(/** @type {KeyboardEvent} */ e) {
 
 /**
  * Esc's one order (§4 rule 7; D7): the most recently opened thing closes —
- * the box, the overlay, the scene, then the selection, which a scene stands
- * over and which outlives it; on the bare plane nothing.
+ * the box, the card or scene still reading (O-HOST's opening, ended alone:
+ * the overlay standing under it stands), the overlay, the scene, then the
+ * selection, which a scene stands over and which outlives it; on the bare
+ * plane nothing.
  */
 export function esc() {
   if (LEAP.isOpen()) { LEAP.close(); return; }
+  if (HOST.pending()) { HOST.endOpening(); return; }
   if (HOST.current()) { HOST.dismiss(); return; }
   if (SCENE.isOpen()) { SCENE.close(); CAM.markDirty(); return; }
   if (SEL.selected()) { SEL.clear(); return; }

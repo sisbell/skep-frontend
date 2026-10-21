@@ -36,8 +36,10 @@
 // placeholder names (B1-S5, B1-S7); the version statement at a document's
 // corner opens its members (the corner's act, the one Enter takes there —
 // K-57); a click on a block selects it whole (R11); a click on an account at
-// far is a teleport to its region (a trail push); an empty click dismisses
-// the overlay.
+// far is a teleport to its region (a trail push); an empty click ends a card
+// or scene still reading (O-HOST's opening, ended alone: the overlay
+// standing under it stands), else dismisses the overlay, else clears the
+// selection.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
 // Rules: FP-1, FP-2, FP-9.
@@ -178,7 +180,7 @@ function takeSelection() {
   SEL.select(span.addr, span.pos, span.width);
 }
 
-/** a click on the plane: a continuation's mark goes to its newest member; a place goes; an account at far goes to its region; else the overlay dismisses */
+/** a click on the plane: a continuation's mark goes to its newest member; a place goes; an account at far goes to its region; else a card or scene still reading ends, the overlay standing under it standing, or else the overlay dismisses */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   LINE.act();
   const lod = lodOf(CAM.cam.scale);
@@ -194,6 +196,7 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
     const acct = accountAt(CAM.wx(px), CAM.wy(py), '1');
     if (acct) { GO.toAccount(acct); return; }
   }
-  if (HOST.hasCurrent()) HOST.dismiss();
+  if (HOST.pending()) HOST.endOpening();
+  else if (HOST.hasCurrent()) HOST.dismiss();
   else if (SEL.selected()) SEL.clear();
 }

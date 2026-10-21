@@ -30,7 +30,12 @@
 // it — the levelled ends', each band's and line's — is mapped through that
 // text, whatever the model has delivered since (whether a pane follows a feed
 // row naming its document, re-read and rebuilt in its place, is the design's
-// open question). Whatever ends it — zoom-out, Esc,
+// open question). It opens on its reads, both documents whole and their
+// `compare` (O-HOST's `opening`, the rule the cards share): an act made on
+// the chrome while they read — a navigation act, Esc, an empty click, the
+// next card asked — ends the opening, and their answer opens nothing, the
+// plane left in the page's order and the focus where it stands, and no
+// `compare` asked after it. Whatever ends it — zoom-out, Esc,
 // ←, the bar's ×, or a navigation act (a teleport, Back, Forward, a trail
 // jump), which ends it first, "a teleport dismissing the scene first" (§2.5)
 // — leaves the plane as it was and the trail as it found it (`close`): the
@@ -331,12 +336,14 @@ export function linesBetween(A, B) {
 }
 
 /**
- * Open the scene on two documents, the passage held set level with its
- * counterpart (`levels`); the focus in the far end's pane, the plane under
- * the scene out of the page's order (see the head).
+ * Open the scene on two documents, once its reads answer where no act was
+ * made on the chrome meanwhile (O-HOST's opening), the passage held set level
+ * with its counterpart (`levels`); the focus in the far end's pane, the plane
+ * under the scene out of the page's order (see the head).
  * @param {string} a
  * @param {string} b
  * @param {Held} [held]
+ * @returns {Promise<void>} settled once the scene opens, or nothing will
  */
 export async function open(a, b, held = {}) {
   if (!els) return;
@@ -344,28 +351,34 @@ export async function open(a, b, held = {}) {
   // where the act found the focus — read after the dismissal, which hands back a focus the overlay held, and before the
   // reads, in which the person may move it; a scene opened over one standing keeps that one's (the controller's one memory)
   const from = document.activeElement;
-  const [da, db] = await Promise.all([PUMP.loadWhole(a), PUMP.loadWhole(b)]);
-  if (!da || !db) return;
-  const cmp = await PUMP.read(F.compare([{ doc: a, spans: [{ ordinal: 1, positions: Math.max(1, da.extent || 1) }] }], [{ doc: b, spans: [{ ordinal: 1, positions: Math.max(1, db.extent || 1) }] }]));
-  /** @type {ComparePair[]} */
-  let runs = [];
-  if ('refused' in cmp) { const r = cmp.refused; els.bar.dataset.face = r.name; }
-  else runs = merged(F.decodeCompare(cmp.answer));
-  scene = { a, b, pairs: runs, level: levels(runs, held), ties: [], size: '' };
-  coverPlane(true);
-  els.root.classList.add('on');
-  els.bar.innerHTML = `<b>${esc(a)}</b> │ <b>${esc(b)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
-    (els.bar.dataset.face ? ` <span class="face-text">${esc(t(els.bar.dataset.face === 'too_many_pairs' ? 'B1.too_many_pairs' : els.bar.dataset.face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: els.bar.dataset.face }))}</span>` : '') +
-    ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
-  const corner = (/** @type {string} */ addr, /** @type {import('../model/records.js').Doc} */ d) => `<div class="corner" data-corner="${esc(addr)}">${LAYER.sceneCorner(d)}</div>`;
-  // each pane's article T-LAYER's mount, its corner on the pane's outer side: pane A's before the article, pane B's after
-  els.paneA.innerHTML = corner(a, da); els.paneA.append(LAYER.sceneArticle(da));
-  els.paneB.innerHTML = corner(b, db); els.paneB.prepend(LAYER.sceneArticle(db));
-  namePane(els.paneA, 'sceneA-name'); namePane(els.paneB, 'sceneB-name');
-  els.paneA.setAttribute('tabindex', '0'); els.paneB.setAttribute('tabindex', '0');
-  relevel();
-  FOCUS.open('scene', { el: els.root, from, byKey: true, first: els.paneB });
-  markDirty();
+  await HOST.opening(async (stands) => {
+    const [da, db] = await Promise.all([PUMP.loadWhole(a), PUMP.loadWhole(b)]);
+    if (!da || !db || !stands()) return null;
+    const cmp = await PUMP.read(F.compare([{ doc: a, spans: [{ ordinal: 1, positions: Math.max(1, da.extent || 1) }] }], [{ doc: b, spans: [{ ordinal: 1, positions: Math.max(1, db.extent || 1) }] }]));
+    return { da, db, cmp };
+  }, ({ da, db, cmp }) => {
+    const E = els;
+    if (!E) return;
+    /** @type {ComparePair[]} */
+    let runs = [];
+    if ('refused' in cmp) { const r = cmp.refused; E.bar.dataset.face = r.name; }
+    else runs = merged(F.decodeCompare(cmp.answer));
+    scene = { a, b, pairs: runs, level: levels(runs, held), ties: [], size: '' };
+    coverPlane(true);
+    E.root.classList.add('on');
+    E.bar.innerHTML = `<b>${esc(a)}</b> │ <b>${esc(b)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
+      (E.bar.dataset.face ? ` <span class="face-text">${esc(t(E.bar.dataset.face === 'too_many_pairs' ? 'B1.too_many_pairs' : E.bar.dataset.face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: E.bar.dataset.face }))}</span>` : '') +
+      ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
+    const corner = (/** @type {string} */ addr, /** @type {import('../model/records.js').Doc} */ d) => `<div class="corner" data-corner="${esc(addr)}">${LAYER.sceneCorner(d)}</div>`;
+    // each pane's article T-LAYER's mount, its corner on the pane's outer side: pane A's before the article, pane B's after
+    E.paneA.innerHTML = corner(a, da); E.paneA.append(LAYER.sceneArticle(da));
+    E.paneB.innerHTML = corner(b, db); E.paneB.prepend(LAYER.sceneArticle(db));
+    namePane(E.paneA, 'sceneA-name'); namePane(E.paneB, 'sceneB-name');
+    E.paneA.setAttribute('tabindex', '0'); E.paneB.setAttribute('tabindex', '0');
+    relevel();
+    FOCUS.open('scene', { el: E.root, from, byKey: true, first: E.paneB });
+    markDirty();
+  });
 }
 
 /**

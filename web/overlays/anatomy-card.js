@@ -21,7 +21,10 @@
 // mark comes from LK's `markOf`, so the card and the symbol agree. The card
 // takes the focus on its first act — follow — where a key opened it (Enter
 // at the link's element, K-55; a links-card row's Enter) and never where a
-// click did (D5 §4 rule 4; the focus record's rule 16).
+// click did (D5 §4 rule 4; the focus record's rule 16). It opens on its
+// reads, the ends' words and the lineage (O-HOST's `opening`): where an act
+// was made on the chrome while they read — Back, Esc, the next card asked —
+// nothing shows.
 // Later: the age row with the read that answers it; walking the lineage's
 // links (A-56, A-57's act); B3-d's retract and edit (the editor's lane);
 // link sets' SET line.
@@ -85,41 +88,43 @@ function lineageRow(label, claims, named) {
  * @param {Shown} s
  * @param {HTMLElement | null} anchorEl the element it stands at; null stands it at the link's own bytes in the near document
  * @param {boolean} [byKey] a key opened it: the card takes the focus on its first act
+ * @returns {Promise<void>} settled once the card shows, or nothing will
  */
-export async function open(s, anchorEl, byKey = false) {
+export function open(s, anchorEl, byKey = false) {
   const l = s.link;
   const near = s.near, nearPos = s.pos, nearWidth = s.width;
   const far = s.far, farEnd = s.farEnd;
-  const [nearText, farText, lineage] = await Promise.all([
+  return HOST.opening(() => Promise.all([
     fragment(near, nearPos, nearWidth),
     far ? fragment(far, farEnd && !farEnd.whole ? farEnd.ordinal : null, farEnd && farEnd.positions ? farEnd.positions : 80) : Promise.resolve(null),
     PUMP.lineage(l.addr),
-  ]);
-  const mark = LK.markOf(l, near);
-  const homePlace = REC.place(l.home);
-  const homeDoc = REC.doc(l.home);
-  const homePublished = homeDoc.meta ? homeDoc.meta.published : homePlace ? homePlace.kind === 'edition' : true;
-  const dead = far && REC.doc(far).refused === 'unregistered';
-  const farWords = far ? (dead ? t('B1.doc_not_registered', { address: far }) : farText ?? '…') : t('B1.invalid');
-  const nearWords = nearText ?? '…';
-  const fromDoc = l.from[0] ? l.from[0].doc || l.from[0].account || '' : '';
-  const toDoc = l.to[0] ? l.to[0].doc || l.to[0].account || '' : '';
-  const html =
-    `<span class="label" style="--mark-hue:${mark.hue}"><span class="sym-mark">⟡</span> ${esc(l.addr)}</span>` +
-    `<div class="ends"><div class="end far"><span class="k">${esc(s.end === 'from' ? t('F.card.to') : t('F.card.from'))}</span> <span class="code">${esc(far || '—')}</span><div class="quoted">${esc(farWords)}</div></div>` +
-    `<div class="end near"><span class="k">${esc(s.end === 'from' ? t('F.card.from') : t('F.card.to'))}</span> <span class="code">${esc(near)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${esc(nearWords)}</div></div></div>` +
-    `<div class="kv"><b>${esc(t('F.card.type'))}</b> <span data-string="R5.undocumented">${esc(typeName(l.type))}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.from'))}</b> <span class="code">${esc(fromDoc)}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code">${esc(toDoc)}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.home'))}</b> <span class="code">${esc(l.home)}</span> — ${esc(homePublished ? t('F.card.public') : t('F.card.hidden'))}</div>` +
-    `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${esc(l.owner || '—')}</div>` +
-    supersessionRows(lineage) +
-    `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${esc(far || '')}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
-  HOST.show({
-    kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: near, pos: nearPos, width: nearWidth } }, html, takeFocus: byKey,
-    acts: {
-      follow: (el, byKey) => GO.follow(s, el, byKey),
-      beside: () => { if (far && !dead) SCENE.open(near, far, { posA: nearPos, widthA: nearWidth, posB: farEnd && !farEnd.whole ? farEnd.ordinal : null }); },
-    },
+  ]), ([nearText, farText, lineage]) => {
+    const mark = LK.markOf(l, near);
+    const homePlace = REC.place(l.home);
+    const homeDoc = REC.doc(l.home);
+    const homePublished = homeDoc.meta ? homeDoc.meta.published : homePlace ? homePlace.kind === 'edition' : true;
+    const dead = far && REC.doc(far).refused === 'unregistered';
+    const farWords = far ? (dead ? t('B1.doc_not_registered', { address: far }) : farText ?? '…') : t('B1.invalid');
+    const nearWords = nearText ?? '…';
+    const fromDoc = l.from[0] ? l.from[0].doc || l.from[0].account || '' : '';
+    const toDoc = l.to[0] ? l.to[0].doc || l.to[0].account || '' : '';
+    const html =
+      `<span class="label" style="--mark-hue:${mark.hue}"><span class="sym-mark">⟡</span> ${esc(l.addr)}</span>` +
+      `<div class="ends"><div class="end far"><span class="k">${esc(s.end === 'from' ? t('F.card.to') : t('F.card.from'))}</span> <span class="code">${esc(far || '—')}</span><div class="quoted">${esc(farWords)}</div></div>` +
+      `<div class="end near"><span class="k">${esc(s.end === 'from' ? t('F.card.from') : t('F.card.to'))}</span> <span class="code">${esc(near)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${esc(nearWords)}</div></div></div>` +
+      `<div class="kv"><b>${esc(t('F.card.type'))}</b> <span data-string="R5.undocumented">${esc(typeName(l.type))}</span></div>` +
+      `<div class="kv"><b>${esc(t('F.card.from'))}</b> <span class="code">${esc(fromDoc)}</span></div>` +
+      `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code">${esc(toDoc)}</span></div>` +
+      `<div class="kv"><b>${esc(t('F.card.home'))}</b> <span class="code">${esc(l.home)}</span> — ${esc(homePublished ? t('F.card.public') : t('F.card.hidden'))}</div>` +
+      `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${esc(l.owner || '—')}</div>` +
+      supersessionRows(lineage) +
+      `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${esc(far || '')}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
+    HOST.show({
+      kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: near, pos: nearPos, width: nearWidth } }, html, takeFocus: byKey,
+      acts: {
+        follow: (el, byKey) => GO.follow(s, el, byKey),
+        beside: () => { if (far && !dead) SCENE.open(near, far, { posA: nearPos, widthA: nearWidth, posB: farEnd && !farEnd.whole ? farEnd.ordinal : null }); },
+      },
+    });
   });
 }

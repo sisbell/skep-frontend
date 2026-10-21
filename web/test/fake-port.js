@@ -9,7 +9,9 @@
 // to the Outcome the provider would answer; it fires events on demand; and
 // it HOLDS a call on demand (`hold`): every call of that key waits for its
 // answer until the test releases it, so a test can make acts while a read is
-// in flight and answer it when it chooses — a slow board's order of answers.
+// in flight and answer it when it chooses — a slow board's order of answers;
+// and it keeps the key of every call as it is made (`asked`), so a test can
+// hold a page to what it asks and what it no longer asks.
 
 /** @typedef {import('../bridge/port.js').Adapter} Adapter */
 /** @typedef {import('../bridge/shapes').EventName} EventName */
@@ -30,7 +32,7 @@ export function keyOf(/** @type {string} */ name, /** @type {unknown} */ args) {
 
 /**
  * @param {Record<string, unknown>} script keyed by `keyOf`
- * @returns {Adapter & {fire: (name: EventName, data: unknown) => void, hold: (name: string, args: unknown) => () => void, unanswered: string[]}}
+ * @returns {Adapter & {fire: (name: EventName, data: unknown) => void, hold: (name: string, args: unknown) => () => void, unanswered: string[], asked: string[]}}
  */
 export function create(script) {
   /** @type {Array<(name: EventName, data: unknown) => void>} */
@@ -39,12 +41,15 @@ export function create(script) {
   const log = [];
   /** @type {string[]} */
   const unanswered = [];
+  /** @type {string[]} every call's key, as it is made — a held one before its release */
+  const asked = [];
   /** @type {Map<string, Promise<void>>} the keys held, each until its release */
   const holds = new Map();
   return {
     name: 'dev',
     async call(name, args) {
       const k = keyOf(name, args);
+      asked.push(k);
       const held = holds.get(k);
       if (held) await held;
       const body = JSON.stringify(args ?? {});
@@ -67,5 +72,6 @@ export function create(script) {
       return release;
     },
     unanswered,
+    asked,
   };
 }

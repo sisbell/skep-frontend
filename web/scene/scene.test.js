@@ -49,6 +49,13 @@
 // B's before it, so each corner stands on its pane's outer side (a mutant
 // that makes a pane's article itself, or sets both after their corners,
 // turns red).
+// And THE OPENING (O-HOST's): the dismissal a navigation act makes first, or
+// Esc, made while the scene reads ends its opening — made while it reads its
+// documents, no `compare` is asked after it (a mutant that asks it turns
+// red); made while it reads their `compare`, nothing opens once it answers:
+// the plane in the page's order, the focus where it stood, no region holding
+// it (a mutant that opens the scene without the host's opening, or whose Esc
+// leaves an opening reading, turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -58,6 +65,9 @@ import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as WALK from '../nav/walk.js';
 import * as LAYER from '../text/layer.js';
+import * as HOST from '../overlays/host.js';
+import * as FOCUS from '../nav/focus.js';
+import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
 import { levels, merged, counterpart, counterparts, linesBetween } from './scene.js';
 import * as LK from '../links/links.js';
@@ -336,6 +346,41 @@ test('each pane holds T-LAYER\'s article of its document, made from the text the
   for (const [addr, placed] of /** @type {const} */ ([[A, a[0]], [B, b[0]]])) {
     const d = REC.doc(addr);
     assert.deepEqual(LAYER.madeOf(/** @type {any} */ (placed.el)), { addr, blocks: d.blocks, runs: d.runs }, `${addr}: the pane's article is T-LAYER's, made from the blocks and runs the scene read`);
+  }
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+// ---- the opening: O-HOST's ---------------------------------------------------------------------------------------------
+
+test('the dismissal a navigation act makes first, or Esc, made while the scene reads ends its opening: no compare asked after it, and once its reads answer nothing opens', () => onPage(async (p) => {
+  const both = F.compare([{ doc: A, spans: [{ ordinal: 1, positions: A_TEXT.length }] }], [{ doc: B, spans: [{ ordinal: 1, positions: B_TEXT.length }] }]);
+  const cmp = FAKE.keyOf('op', { frame: both });
+  /** where the scene left the page: whether it stands, the plane's two regions inert, the focus, the regions holding it */
+  const left = () => ({ open: SCENE.isOpen(), covered: p.covered(), at: p.at(), standing: FOCUS.standing() });
+  const untouched = { open: false, covered: [false, false], at: 'the walk\'s current item', standing: [] };
+  /** @type {Array<[string, () => void]>} */
+  const ends = [['the dismissal a navigation act makes first', () => { HOST.dismiss(); SCENE.close(); }], ['Esc', () => KEYS.esc()]];
+  for (const [what, end] of ends) {
+    p.item.focus();
+    // while it reads its documents: the first edition read anew, its extent held
+    REC.invalidate(A);
+    const from = fake.asked.length;
+    let release = fake.hold('op', { frame: F.retrieveDocVSpanSet(A) });
+    let opening = SCENE.open(A, B);
+    end();
+    release();
+    await opening;
+    assert.deepEqual(left(), untouched, `${what}, made while it reads its documents: nothing opens`);
+    assert.ok(!fake.asked.slice(from).includes(cmp), `${what}, made while it reads its documents: no compare asked after it`);
+    // while it reads their compare
+    release = fake.hold('op', { frame: both });
+    opening = SCENE.open(A, B);
+    for (let i = 0; i < 200 && !fake.asked.slice(from).includes(cmp); i++) await new Promise((r) => setTimeout(r, 0));
+    assert.ok(fake.asked.slice(from).includes(cmp), `${what}: the compare asked`);
+    end();
+    release();
+    await opening;
+    assert.deepEqual(left(), untouched, `${what}, made while it reads their compare: nothing opens`);
   }
   assert.deepEqual(fake.unanswered, []);
 }));

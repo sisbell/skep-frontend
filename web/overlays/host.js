@@ -3,7 +3,18 @@
 // dismisses — an HTML layer positioned over the plane at the act's site,
 // following its place as the camera moves, gone with Esc, the next act or
 // its own completion; never a fixed region). Layer 2. ENGINE-BOUND.
-// State: VIEW — the current overlay (the one owner). THE FOCUS is N-FOCUS's
+// State: VIEW — the current overlay, and the opening still reading with the
+// count of the acts made on the chrome (the one owner). THE OPENING: chrome
+// that opens on its reads — the reading scene, the versions list, the
+// provenance cards, the anatomy card — opens through `opening`, one rule for
+// all of them: as its reads begin it is the chrome's next act, and its answer
+// shows only where no act was made on the chrome while it read — a dismissal
+// (`dismiss`, a navigation act's among them, N-GO's), the next opening, or
+// the end of the opening alone (`endOpening`: Esc's innermost thing, N-KEYS',
+// and an empty click's, APP-INPUT's, what stands staying) — so chrome asked
+// for at a place the person has left never opens over the next one. Until it
+// shows or ends it is `pending`; its reads may ask whether it `stands`, so
+// one that has ended asks no more. THE FOCUS is N-FOCUS's
 // (FP-20; D5 §4 rule 4): an overlay takes the focus only where a KEY made
 // the act that opened it — `takeFocus` is that act's `byKey` and nothing
 // else decides it — and takes it on its FIRST ACT, never the dismiss (rule
@@ -67,6 +78,10 @@ import { esc } from '../util.js';
 let el = null;
 /** @type {Overlay | null} */
 let current = null;
+/** the acts made on the chrome, each counted as it is made: an opening begun, a dismissal, an opening ended alone */
+let made = 0;
+/** the act of the opening whose reads are out, nothing yet shown for it; 0 where none reads */
+let reading = 0;
 
 /** the key a control of the overlay bears: its `data-run`, or `x` for the dismiss */
 const keyOf = (/** @type {Element} */ e) => /** @type {HTMLElement} */ (e).dataset.run || (/** @type {HTMLElement} */ (e).dataset.x ? 'x' : null);
@@ -177,8 +192,9 @@ export function place() {
   el.style.left = x + 'px'; el.style.top = y + 'px';
 }
 
-/** dismiss the current overlay; its end runs; the focus returns through the controller, to the chain's opener or the walk's element */
+/** dismiss the current overlay — the chrome's next act, so an opening still reading ends with it; its end runs; the focus returns through the controller, to the chain's opener or the walk's element */
 export function dismiss() {
+  made++; reading = 0;
   if (!el || !current) return;
   const o = current;
   current = null;
@@ -186,6 +202,39 @@ export function dismiss() {
   if (o.onDismiss) o.onDismiss(false);
   FOCUS.close('overlay');
   markDirty();
+}
+
+/**
+ * Chrome that opens on its reads (see the head): the opening is the chrome's
+ * next act, so one still reading ends; `reads` runs with `stands`, which
+ * reads false once another act is made on the chrome, so reads that consult
+ * it between them ask no more; its answer — null where it gives up — is
+ * handed to `show` where the opening still stands, and nothing shows where
+ * it does not. Pending from its first read to its show or its end.
+ * @template T
+ * @param {(stands: () => boolean) => Promise<T | null>} reads
+ * @param {(answer: T) => void} show
+ * @returns {Promise<void>} settled once the answer is shown, or nothing will be
+ */
+export async function opening(reads, show) {
+  const act = ++made;
+  reading = act;
+  const stands = () => act === made;
+  try {
+    const answer = await reads(stands);
+    if (answer != null && stands()) show(answer);
+  } finally {
+    if (reading === act) reading = 0;
+  }
+}
+
+/** is an opening still reading — chrome asked for, nothing yet shown for it? */
+export const pending = () => reading !== 0;
+
+/** the opening still reading ends, what stands staying (Esc's and an empty click's innermost thing): its answer shows nothing */
+export function endOpening() {
+  if (!reading) return;
+  made++; reading = 0;
 }
 
 /** the overlay's text (the gate's text case) */

@@ -16,8 +16,10 @@
 // acts and its mark in columns the rows share. The list takes the focus where
 // a key made the act — Enter at the corner — on its CURRENT member's read
 // act, and never where a click on the statement did (D5 §4 rule 4; the focus
-// record's rules 13 and 16). New — no draft in the wireframe. Rules: FP-1,
-// FP-2, FP-13, FP-20.
+// record's rules 13 and 16). It opens on its reads (O-HOST's `opening`):
+// where an act was made on the chrome while they read — Back, Esc, the next
+// card asked — nothing shows, and no member is asked about after it. New —
+// no draft in the wireframe. Rules: FP-1, FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -54,46 +56,57 @@ async function extentOf(member) {
  * @param {HTMLElement | null} anchor
  * @param {number | null} [width] the held passage's positions; null holds the block at `pos` whole
  * @param {boolean} [byKey] a key made the act: the list takes the focus on its current member
+ * @returns {Promise<void>} settled once the list shows, or nothing will
  */
-export async function open(addr, pos, anchor, width = null, byKey = false) {
+export function open(addr, pos, anchor, width = null, byKey = false) {
   const trunk = documentOf(addr) || addr;
-  const d = REC.doc(trunk);
-  if (d.extent == null) await PUMP.loadWhole(trunk);
-  let n = d.members;
-  if (n == null) {
-    // probe here where the pump has not: D.1 is the birth; D.k until refused
-    n = d.meta && d.meta.birth ? 1 : 0;
-    for (let k = 2; k <= 8 && n >= 1; k++) { const out = await PUMP.read(F.docMetadata(versionAddress(trunk, k))); if ('refused' in out) break; n = k; }
-    REC.takeMembers(trunk, n);
-  }
-  /** the passage held: the span named; the block holding `pos`, whole; else the first block */
-  const holding = pos != null ? d.blocks.find((b) => pos >= b.pos && pos < b.pos + b.width) : d.blocks[0];
-  /** @type {{pos: number, width: number} | null} */
-  const held = pos != null && width != null && width > 0 ? { pos, width } : holding ? { pos: holding.pos, width: Math.max(1, holding.width) } : null;
-  /** @type {Array<{k: number, holds: 'whole' | 'part' | 'none' | null}>} */
-  const rows = [];
-  for (let k = 1; k <= n; k++) {
-    /** @type {'whole' | 'part' | 'none' | null} */
-    let holds = null;
-    const member = versionAddress(trunk, k);
-    const extent = held ? await extentOf(member) : null;
-    if (held && extent === 0) holds = 'none';
-    else if (held && extent != null) {
-      const out = await PUMP.read(F.compare([{ doc: trunk, spans: [{ ordinal: held.pos, positions: held.width }] }], [{ doc: member, spans: [{ ordinal: 1, positions: extent }] }]));
-      if (!('refused' in out)) { const pairs = F.decodeCompare(out.answer); const covered = pairs.reduce((a, p) => a + p.width, 0); holds = covered >= held.width ? 'whole' : covered > 0 ? 'part' : 'none'; }
+  return HOST.opening(async (stands) => {
+    const d = REC.doc(trunk);
+    if (d.extent == null) await PUMP.loadWhole(trunk);
+    let n = d.members;
+    if (n == null) {
+      // probe here where the pump has not: D.1 is the birth; D.k until refused
+      n = d.meta && d.meta.birth ? 1 : 0;
+      for (let k = 2; k <= 8 && n >= 1; k++) {
+        if (!stands()) return null;
+        const out = await PUMP.read(F.docMetadata(versionAddress(trunk, k)));
+        if ('refused' in out) break;
+        n = k;
+      }
+      REC.takeMembers(trunk, n);
     }
-    rows.push({ k, holds });
-  }
-  const cur = memberOf(addr);
-  const html = `<span class="label">${esc(trunk)} · ${esc(t('F.version-of', { k: cur || n, n }))}</span>` +
-    `<ul class="rows versions">${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}</button> <span class="strip" data-holds="${r.holds || ''}">${esc(r.holds === 'whole' ? t('F.versions.whole') : r.holds === 'part' ? t('F.versions.part') : r.holds === 'none' ? t('F.versions.none') : '')}</span> <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>`;
-  /** @type {Record<string, import('./host.js').Act>} */
-  const acts = {};
-  for (const r of rows) {
-    acts['read' + r.k] = (_el, byKey) => GO.leapTo(versionAddress(trunk, r.k), { carry: held ? { addr: trunk, pos: held.pos, width: held.width } : null, how: 'leap', byKey });
-    acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
-  }
-  HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor: anchor ? { el: anchor } : null, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });
+    /** the passage held: the span named; the block holding `pos`, whole; else the first block */
+    const holding = pos != null ? d.blocks.find((b) => pos >= b.pos && pos < b.pos + b.width) : d.blocks[0];
+    /** @type {{pos: number, width: number} | null} */
+    const held = pos != null && width != null && width > 0 ? { pos, width } : holding ? { pos: holding.pos, width: Math.max(1, holding.width) } : null;
+    /** @type {Array<{k: number, holds: 'whole' | 'part' | 'none' | null}>} */
+    const rows = [];
+    for (let k = 1; k <= n; k++) {
+      if (!stands()) return null;
+      /** @type {'whole' | 'part' | 'none' | null} */
+      let holds = null;
+      const member = versionAddress(trunk, k);
+      const extent = held ? await extentOf(member) : null;
+      if (held && extent === 0) holds = 'none';
+      else if (held && extent != null && stands()) {
+        const out = await PUMP.read(F.compare([{ doc: trunk, spans: [{ ordinal: held.pos, positions: held.width }] }], [{ doc: member, spans: [{ ordinal: 1, positions: extent }] }]));
+        if (!('refused' in out)) { const pairs = F.decodeCompare(out.answer); const covered = pairs.reduce((a, p) => a + p.width, 0); holds = covered >= held.width ? 'whole' : covered > 0 ? 'part' : 'none'; }
+      }
+      rows.push({ k, holds });
+    }
+    return { n, held, rows };
+  }, ({ n, held, rows }) => {
+    const cur = memberOf(addr);
+    const html = `<span class="label">${esc(trunk)} · ${esc(t('F.version-of', { k: cur || n, n }))}</span>` +
+      `<ul class="rows versions">${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}</button> <span class="strip" data-holds="${r.holds || ''}">${esc(r.holds === 'whole' ? t('F.versions.whole') : r.holds === 'part' ? t('F.versions.part') : r.holds === 'none' ? t('F.versions.none') : '')}</span> <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>`;
+    /** @type {Record<string, import('./host.js').Act>} */
+    const acts = {};
+    for (const r of rows) {
+      acts['read' + r.k] = (_el, byKey) => GO.leapTo(versionAddress(trunk, r.k), { carry: held ? { addr: trunk, pos: held.pos, width: held.width } : null, how: 'leap', byKey });
+      acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
+    }
+    HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor: anchor ? { el: anchor } : null, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });
+  });
 }
 
 /**

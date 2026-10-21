@@ -8,6 +8,10 @@
 // LEAPs to its source carrying the run, which the source's text holds
 // elsewhere: the landing is marked at the run's counterpart there (a mutant
 // that LEAPs without the run, or carries the block it stands in, turns red).
+// An empty click made while a card reads ends its opening alone (O-HOST's):
+// its answer shows nothing and the card standing under it stands (a mutant
+// that dismisses the standing card with it, or leaves the opening to the
+// overlay's dismissal, turns red); the next empty click dismisses that card.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -18,6 +22,9 @@ import * as PORT from '../bridge/port.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as GO from '../nav/go.js';
+import * as CAM from '../plane/camera.js';
+import * as RENDER from '../plane/render.js';
+import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm } from '../text/article.js';
 import { t } from '../strings.js';
 import { esc, byteLength } from '../util.js';
@@ -111,6 +118,43 @@ test('a click on a run\'s hairline LEAPs to its source carrying the run, the lan
     for (let i = 0; i < 200 && !GO.arrivalMark(); i++) await new Promise((r) => setTimeout(r, 0));
     assert.deepEqual(GO.arrivalMark(), { addr: O, pos: 12, runs: [{ pos: 12, width: 15 }], link: null }, 'the run marked where the source holds it');
     assert.deepEqual(fake.unanswered, [], 'the run carried, and no other passage');
+  } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('an empty click made while a card reads ends its opening alone: its answer shows nothing, the card standing under it stands, and the next empty click dismisses that card', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the plane's listeners, by event */
+  const plane = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), classList: { add() {}, remove() {} } }, layer: listens(null), corners: listens(null) }));
+    // the camera beyond the board's edge, at a scale where a click that falls on no place is no teleport
+    CAM.setViewport(1440, 900);
+    CAM.set({ x: -1e9, y: -1e9, scale: 1 });
+    const at = { clientX: 720, clientY: 450 };
+    assert.ok(RENDER.docAtScreen(at.clientX, at.clientY) === null && RENDER.residueAtScreen(at.clientX, at.clientY) === null && !['far', 'far~mid'].includes(lodOf(CAM.cam.scale).name), 'the click falls on nothing');
+    /** an empty click: the button pressed and released on the plane where it was pressed */
+    const click = () => { plane.get('pointerdown')?.({ ...at, ctrlKey: false, metaKey: false, pointerId: 1 }); plane.get('pointerup')?.({ ...at }); };
+    HOST.show({ kind: 'card', id: 'selection', anchor: null, html: '<span class="label">1.0.1.0.3 · position 11</span>', acts: {} });
+    /** @type {(origin: string) => void} */
+    let answer = () => {};
+    const opening = HOST.opening(() => new Promise((r) => { answer = r; }), (/** @type {string} */ origin) => HOST.show({ kind: 'card', id: 'provenance:wrote', anchor: null, html: `<span class="label">${origin}</span>`, acts: {} }));
+    click();
+    assert.deepEqual([HOST.pending(), HOST.currentState()?.id], [false, 'selection'], 'the opening ended, the selection\'s card standing');
+    answer('1.0.1.0.3');
+    await opening;
+    assert.equal(HOST.currentState()?.id, 'selection', 'its answer shows nothing');
+    click();
+    assert.equal(HOST.currentState(), null, 'the next empty click dismisses the card that stood');
   } finally {
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
