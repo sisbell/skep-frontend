@@ -2,12 +2,15 @@
 // §3.2 "BM"; S-6 (a) a module beside the text layer). Layer 2. ENGINE-BOUND
 // (its own canvas). State: VIEW — the last frame's bundles and the labels it
 // set at their ends.
-// It decides nothing of which links: it draws `LK.beams(addr)` for every
-// mounted document at stage 3 with each link's `markOf` — its hue, its value,
-// and its weight, the link lit at an arrival stroked heavier (foundations
-// §2.1's register: "the followed link drawn heavier"). Each beam leaves the
-// text at its span's own line, from the place's edge (foundations §2.1; S1
-// Q1): it starts at the right edge of the block holding its span, level with
+// It decides nothing of which links, nor how each is marked: it draws
+// `LK.beams(addr)` for every mounted document at stage 3, each beam with the
+// mark LK gives it — the link's `markOf` at the document met, or, for a link
+// met from both its ends, the one `mergedMark` makes of the two — its hue,
+// its value, and its weight, the link lit at an arrival stroked heavier
+// (foundations §2.1's register: "the followed link drawn heavier"), dashed
+// for another's. Each beam leaves the text at its span's own line, from the
+// place's edge (foundations §2.1; S1 Q1): it starts at the right edge of the
+// block holding its span, level with
 // the middle of the line-rect of the span's own bytes nearest the far end
 // (`spanRects` with the span's width — its rects line by line, so at a wrap
 // the line nearest the far end). The far end mounted, the beam ends at the far
@@ -18,7 +21,9 @@
 // connections share — with a triangle on the true bearing and the far
 // document's label at the stub (S1 Q3, load-bearing); off screen is outside
 // that view. A link met from both its ends, or twice inside one document, is
-// one beam (`bundlesOf`). The beams are bundled by the document they leave and
+// one beam, marked with what its meetings' marks share whichever document
+// mounted first (`bundlesOf`; P44: "never a stack, never accumulated tint").
+// The beams are bundled by the document they leave and
 // their far document — one bundle per destination, its far document's label
 // and its count at its end (§2.1), above the end, or below it where above
 // would reach past the visible view's top (`labelPlace`) — each member stroked
@@ -44,6 +49,7 @@ import { COL } from '../plane/register.js';
 import { doc, blockAt, place } from '../model/records.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
+/** @typedef {import('../plane/register.js').Mark} Mark */
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect a screen rect */
 /** @typedef {{x: number, y: number}} Point a screen point */
 
@@ -59,7 +65,7 @@ import { doc, blockAt, place } from '../model/records.js';
 
 /**
  * @template B
- * @typedef {{near: string, far: string, members: B[]}} Bundle the beams one document sends to one far document (§2.1: one bundle per destination), in the order met
+ * @typedef {{near: string, far: string, members: Array<B & {mark: Mark}>}} Bundle the beams one document sends to one far document (§2.1: one bundle per destination), in the order met, each with the mark it is drawn in: what its meetings' marks share (`bundlesOf`)
  */
 
 /**
@@ -174,25 +180,31 @@ function endsOf(/** @type {Shown} */ s) {
  * beams leave and far document they reach (§2.1: one bundle per
  * destination), and each beam once — a link met from both its ends, or from
  * both inside one document, is one beam between the same two ends, the
- * first met; a link whose endset holds two spans in one document keeps a
- * beam from each.
+ * first met, marked with what every meeting's mark shares (LK's
+ * `mergedMark`; P44): a link LK marks alike at both its documents keeps that
+ * mark, and one that is the owner's at one and another's at the other is
+ * drawn in the neutral hue, undashed, whichever is met first; a link whose
+ * endset holds two spans in one document keeps a beam from each.
  * @template {{s: Shown}} B
  * @param {B[]} beams
  * @returns {Bundle<B>[]}
  */
 export function bundlesOf(beams) {
-  /** @type {Set<string>} */
-  const seen = new Set();
+  /** @type {Map<string, {first: B, marks: [Mark, ...Mark[]]}>} each beam's first meeting and every meeting's mark, by its identity */
+  const once = new Map();
+  for (const bm of beams) {
+    const ends = endsOf(bm.s), m = once.get(ends);
+    if (m) m.marks.push(bm.s.mark);
+    else once.set(ends, { first: bm, marks: [bm.s.mark] });
+  }
   /** @type {Map<string, Bundle<B>>} */
   const out = new Map();
-  for (const bm of beams) {
-    const once = endsOf(bm.s);
-    if (seen.has(once)) continue;
-    seen.add(once);
-    const key = bm.s.near + '>' + bm.s.far;
+  for (const { first, marks } of once.values()) {
+    const member = { ...first, mark: LK.mergedMark(marks) };
+    const key = first.s.near + '>' + first.s.far;
     const b = out.get(key);
-    if (b) b.members.push(bm);
-    else out.set(key, { near: bm.s.near, far: bm.s.far, members: [bm] });
+    if (b) b.members.push(member);
+    else out.set(key, { near: first.s.near, far: first.s.far, members: [member] });
   }
   return [...out.values()];
 }
@@ -242,9 +254,9 @@ export function draw() {
   const endOf = (/** @type {Beam} */ bm) => (bm.aimed ? edgeStub(bm.from, bm.to, seen) : bm.to);
   for (const b of set) {
     for (const bm of b.members.slice(0, 20)) {
-      const hue = bm.s.mark.hue;
-      ctx.strokeStyle = hue; ctx.globalAlpha = alpha * bm.s.mark.value; ctx.lineWidth = 1.6 * bm.s.mark.weight;
-      ctx.setLineDash(bm.s.linker === 'others' ? [5, 4] : []);
+      const { hue, value, weight, linker } = bm.mark;
+      ctx.strokeStyle = hue; ctx.globalAlpha = alpha * value; ctx.lineWidth = 1.6 * weight;
+      ctx.setLineDash(linker === 'others' ? [5, 4] : []);
       const { x: x0, y: y0 } = bm.from, end = endOf(bm), { x: x1, y: y1 } = end;
       const mx = (x0 + x1) / 2;
       ctx.beginPath(); ctx.moveTo(x0, y0); ctx.bezierCurveTo(mx, y0, mx, y1, x1, y1); ctx.stroke(); ctx.setLineDash([]);

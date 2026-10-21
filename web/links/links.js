@@ -41,12 +41,13 @@
 //     next act (foundations §2.1's register: "the arrival an outline around
 //     its span with the followed link drawn heavier": WEIGHT);
 //   - links drawn at ONE SITE — a stretch of text several mark, a mid
-//     connection — are ONE MARK carrying what they share (P44; its Use at
-//     §2.1's register: "neutral in any variable its members do not share —
-//     hue where their linkers differ"): the linker's hue where every one's
-//     linker is one, else the neutral hue; lighter only where every one was
-//     followed; heavier only where every one is lit; the form the link
-//     kind's, which every mark here carries (`mergedMark`);
+//     connection, a beam or a scene's line met from both its ends — are ONE
+//     MARK carrying what they share (P44; its Use at §2.1's register:
+//     "neutral in any variable its members do not share — hue where their
+//     linkers differ"): the linker's hue where every one's linker is one,
+//     else the neutral hue; lighter only where every one was followed;
+//     heavier only where every one is lit; the form the link kind's, which
+//     every mark here carries (`mergedMark`);
 //   - the mid connections: one per pair of places the plane draws the
 //     documents at — a document's own box, or the mark of the continuation
 //     holding it (P44) — counting each link once, however many of its ends
@@ -57,7 +58,8 @@
 //     view's edge (foundations §2.1: "one whose far end is out of view ending
 //     at the view's edge as §2.5's stub does"), and to no place where the
 //     plane draws that document nowhere; the scene's pane-to-pane lines are
-//     drawn from the same shown set.
+//     drawn from the same shown set at both panes' documents, each link once
+//     per pair of its ends.
 // WHAT REPLACES THIS RULE LATER: link sets (`_designs/LINK-SETS/…` §4, in
 // review) — at a version `E.k` the default view is `E`'s OWN SET plus the sets
 // its author has `E.k` read with plus the reader's own links; everything else
@@ -205,15 +207,16 @@ export function markOf(l, atDoc) {
 
 /**
  * The one mark links drawn at one site merge into — a stretch of text
- * several mark, a mid connection — carrying what they share and nothing they
- * do not (P44; its Use at §2.1's register: "neutral in any variable its
- * members do not share — hue where their linkers differ"): the linker and
- * its hue where every member's is one, else none and NEUTRAL_HUE; lighter
- * only where every member was followed (D-3), else full — value carries the
- * followed mark alone, so a site followed in part has no value of its own;
- * heavier only where every member is the link lit, else the drawer's own
- * weight; standing with no act only where every member does; the form the
- * link kind's, which every mark `markOf` makes carries.
+ * several mark, a mid connection, a beam or a scene's line met from both its
+ * ends — carrying what they share and nothing they do not (P44; its Use at
+ * §2.1's register: "neutral in any variable its members do not share — hue
+ * where their linkers differ"): the linker and its hue where every member's
+ * is one, else none and NEUTRAL_HUE; lighter only where every member was
+ * followed (D-3), else full — value carries the followed mark alone, so a
+ * site followed in part has no value of its own; heavier only where every
+ * member is the link lit, else the drawer's own weight; standing with no act
+ * only where every member does; the form the link kind's, which every mark
+ * `markOf` makes carries.
  * @param {[Mark, ...Mark[]]} marks the members' marks
  * @returns {Mark}
  */

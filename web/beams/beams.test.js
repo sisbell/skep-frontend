@@ -4,13 +4,18 @@
 // each beam once, a link met from both its ends or from both inside one
 // document drawn once (a mutant without the once-rule turns red), and a link
 // whose endset holds two spans keeping a beam from each (a mutant keying the
-// rule by the link alone turns red). Then a beam's ends over a laid-out
-// geometry: it leaves the near block's right edge level with the span's own
-// line nearest the far end, never the block's middle; a mounted far end
-// takes the far span's own line nearest the start, at the far block's left
-// edge; a whole-work end, the far article's first block; an unmounted one is
-// aimed at its document's box, a stub, and so is one whose box's centre stands
-// under the one line, outside the visible view. A bundle's label stands above
+// rule by the link alone turns red); a beam met from both its ends marked
+// with what its meetings' marks share — neutral where the link is another's
+// at one end and the owner's at the other, whichever document is met first
+// (a mutant that keeps the first meeting's mark turns red), the person's own
+// in their hue, one met at one end alone as that end marks it. Then a beam's
+// ends over a laid-out geometry: it leaves the near block's right edge level
+// with the span's own line nearest the far end, never the block's middle; a
+// mounted far end takes the far span's own line nearest the start, at the far
+// block's left edge; a whole-work end, the far article's first block; an
+// unmounted one is aimed at its document's box, a stub, and so is one whose
+// box's centre stands under the one line, outside the visible view. A
+// bundle's label stands above
 // its end, or below it where above would reach past the visible view's top —
 // a stub on the top border sets its label under the line, shown to no one,
 // without the rule.
@@ -19,6 +24,7 @@ import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import { bundlesOf, beamOf, labelPlace } from './beams.js';
+import { HUE, NEUTRAL_HUE } from '../plane/register.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13';
 // the person's edition, another account's, a third account's
@@ -73,6 +79,19 @@ test('each beam once: a link met from both its ends, and a link with both ends i
   assert.equal(drawn.filter(([l]) => l === OWN).length, 1, 'the person\'s citation, met at D and at H, once');
   assert.equal(drawn.filter(([l]) => l === INSIDE).length, 1, 'the link inside D, met at both its ends, once');
   assert.deepEqual(bundlesOf(all).map((b) => [b.near, b.far]), [[D, H], [D, D]], 'the first met keeps it: no bundle from H back to D');
+});
+
+test('a beam met from both its ends is marked with what its meetings share: neutral where it is another\'s at one end and the owner\'s at the other, whichever document is met first (P44)', () => {
+  LK.reveal(H, 3);
+  /** each beam's link and the hue and linker it is drawn in */
+  const marks = (/** @type {string[]} */ docs) => bundlesOf(met(docs)).flatMap((b) => b.members).map((m) => [m.s.link.addr, m.mark.hue, m.mark.linker]);
+  assert.deepEqual(LK.beams(H).filter((s) => s.link.addr === INTO).map((s) => s.linker), ['owner'], 'another\'s link into D, H\'s owner\'s at H');
+  for (const order of [[D, H], [H, D]]) {
+    const drawn = marks(order);
+    assert.deepEqual(drawn.filter(([l]) => l === INTO), [[INTO, NEUTRAL_HUE, null]], `another's at D, its toggle on, and the owner's at H: neutral, undashed (${order.join(' then ')})`);
+    assert.deepEqual(drawn.filter(([l]) => l === OWN), [[OWN, HUE.you, 'you']], `the person's at both its ends: their hue (${order.join(' then ')})`);
+    assert.deepEqual(drawn.filter(([l]) => l === THIRD), [[THIRD, HUE.others, 'others']], `a third party's, met at D alone: as D marks it, dashed (${order.join(' then ')})`);
+  }
 });
 
 test('a link whose endset holds two spans in D keeps a beam from each', () => {

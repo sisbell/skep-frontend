@@ -12,14 +12,19 @@
 // a link names (`levels`); each pane's matched line brought to one height, and
 // each article given a pane's height of room below its end so a passage near
 // the end can be brought there too; a re-level act (K-62) restores that.
-// Between the panes LINKS are drawn as LINES from the set LK gives (the seam
-// at the link-beam source — hue the linker's, dashed for another's) and
-// SHARED IDENTITY as BANDS from `compare`'s pairs, each run of contiguous
-// pairs one band (`merged`; no link); each leaves its pane at its passage's
-// first line — measured, through T-LAYER's byte-span mapping over the pane's
-// article and the blocks it was made from, when the scene is set level or its
-// panes change size, and moved with each pane's scroll — and one whose end
-// has left its pane is clipped at the pane's edge with the stub's triangle.
+// Between the panes LINKS are drawn as LINES from the set LK gives at either
+// pane's document (the seam at the link-beam source; §2.5: "a link's line
+// drawn where either pane's default composition draws that link"), each link
+// once per pair of its ends, marked with what its meetings' marks share
+// (`linesBetween`; P44: "never a stack, never accumulated tint") — the
+// linker's hue, neutral where the panes' linkers differ, dashed only for
+// another's — and SHARED IDENTITY as BANDS from `compare`'s pairs, each run
+// of contiguous pairs one band (`merged`; no link); each leaves its pane at
+// its passage's first line — measured, through T-LAYER's byte-span mapping
+// over the pane's article and the blocks it was made from, when the scene is
+// set level or its panes change size, and moved with each pane's scroll — and
+// one whose end has left its pane is clipped at the pane's edge with the
+// stub's triangle.
 // Each pane shows its document as the scene opened it, and every position in
 // it — the levelled ends', each band's and line's — is mapped through that
 // text, whatever the model has delivered since (whether a pane follows a feed
@@ -94,6 +99,10 @@ import { t } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../model/frames.js').ComparePair} ComparePair */
+/** @typedef {import('../model/records.js').Block} Block */
+/** @typedef {import('../model/address.js').EndRef} EndRef */
+/** @typedef {import('../links/links.js').Shown} Shown */
+/** @typedef {import('../plane/register.js').Mark} Mark */
 
 /**
  * @typedef {Object} Level — the two ends the scene sets level, a position in each pane's document; null where that pane stands at its top
@@ -129,6 +138,23 @@ import { esc } from '../util.js';
  * @property {string | null} link
  * @property {{pos: number, width: number, x: number, y: number, clipped: boolean}} a
  * @property {{pos: number, width: number, x: number, y: number, clipped: boolean}} b
+ */
+
+/**
+ * @typedef {Object} PaneLinks — what a pane gives the lines between the panes
+ * @property {string} addr its document
+ * @property {Shown[]} shown the links LK shows at that document (`LK.shown`)
+ * @property {Block[]} blocks the blocks its article was made from (T-LAYER's `madeOf`), where a far end naming the document whole stands
+ */
+
+/**
+ * @typedef {Object} Line — a link's line between the panes, its ends as passages, before they are measured
+ * @property {string} link the link's address
+ * @property {{pos: number, width: number}} a its end in pane A's document
+ * @property {{pos: number, width: number}} b its end in pane B's document
+ * @property {string} hue
+ * @property {number} value
+ * @property {boolean} dashed another's link
  */
 
 /** how far below the panes' tops the two ends are set level (px), where both can stand there */
@@ -244,6 +270,66 @@ export function levels(runs, held = {}) {
   return c ? { a: c.a, b: c.b } : { a: posA, b: null };
 }
 
+/** the positions from a position to the end of the block holding it, of the blocks named; one where none holds it */
+function restIn(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
+  const b = REC.blockIn(blocks, pos);
+  return b ? b.pos + b.width - pos : 1;
+}
+
+/**
+ * A link's far end in the pane its document stands in, and the key it is
+ * told apart by: the passage it names, keyed by its position and
+ * `positions || 1` — the width LK gives the same end met as the near one;
+ * where it names the document whole, the pane's first block to the block's
+ * end, keyed whole.
+ * @param {EndRef | null} fe
+ * @param {Block[]} blocks the blocks the pane's article was made from
+ * @returns {{key: string, pos: number, width: number}}
+ */
+function farEndIn(fe, blocks) {
+  if (fe && !fe.whole && fe.ordinal != null) return { key: `${fe.ordinal}+${fe.positions || 1}`, pos: fe.ordinal, width: fe.positions || restIn(blocks, fe.ordinal) };
+  const pos = (blocks[0] || { pos: 1 }).pos;
+  return { key: 'whole', pos, width: restIn(blocks, pos) };
+}
+
+/**
+ * The links drawn as lines between the panes (§2.5: "a link's line drawn
+ * where either pane's default composition draws that link"): every end LK
+ * shows at either pane's document whose far end lies in the other's, each
+ * resolved to its end in pane A and its end in pane B (`farEndIn`), and each
+ * link ONCE per pair of ends, in the order met, pane A's ends first. A link
+ * both panes show is met from each; a document in both panes meets a link
+ * inside it from each end in each pane, and draws it once for each way its
+ * two ends stand across the panes. Ends are told apart by their pane and
+ * their passage, never by their document alone, which would fold those two
+ * ways into one line and leave the pair the scene sets level without the
+ * line that confirms it. A line is marked with what its meetings' marks share
+ * (LK's `mergedMark`; P44: "never a stack, never accumulated tint"): the
+ * linker's hue and value where both panes mark it alike, the neutral hue
+ * where their linkers differ, dashed only for another's.
+ * @param {PaneLinks} A pane A's
+ * @param {PaneLinks} B pane B's
+ * @returns {Line[]}
+ */
+export function linesBetween(A, B) {
+  /** @type {Map<string, {line: Omit<Line, 'hue' | 'value' | 'dashed'>, marks: [Mark, ...Mark[]]}>} each line's first meeting and every meeting's mark, by its link and its two ends */
+  const met = new Map();
+  for (const [near, far, nearIsA] of /** @type {Array<[PaneLinks, PaneLinks, boolean]>} */ ([[A, B, true], [B, A, false]])) {
+    for (const s of near.shown) {
+      if (s.far !== far.addr) continue;
+      const here = { key: `${s.pos}+${s.width}`, pos: s.pos, width: s.width }, there = farEndIn(s.farEnd, far.blocks);
+      const [a, b] = nearIsA ? [here, there] : [there, here];
+      const key = `${s.link.addr} ${a.key} ${b.key}`, m = met.get(key);
+      if (m) m.marks.push(s.mark);
+      else met.set(key, { line: { link: s.link.addr, a: { pos: a.pos, width: a.width }, b: { pos: b.pos, width: b.width } }, marks: [s.mark] });
+    }
+  }
+  return [...met.values()].map(({ line, marks }) => {
+    const mark = LK.mergedMark(marks);
+    return { ...line, hue: mark.hue, value: mark.value, dashed: mark.linker === 'others' };
+  });
+}
+
 /**
  * Open the scene on two documents, the passage held set level with its
  * counterpart (`levels`); the focus in the far end's pane, the plane under
@@ -316,11 +402,11 @@ function lineIn(pane, addr, pos, width) {
   return { top: r.top - origin, y: r.top + r.height / 2 - origin };
 }
 
+/** the blocks a pane's article was made from (T-LAYER's `madeOf`), every position in the pane mapped through them; none where the pane holds no article */
+const blocksIn = (/** @type {HTMLElement} */ pane) => articleIn(pane)?.made.blocks || [];
+
 /** the positions of the block holding a position in a pane's article — of the blocks it was made from — from that position to the block's end; one where no block holds it */
-function restOfBlock(/** @type {HTMLElement} */ pane, /** @type {number} */ pos) {
-  const art = articleIn(pane), b = art ? REC.blockIn(art.made.blocks, pos) : null;
-  return b ? b.pos + b.width - pos : 1;
-}
+const restOfBlock = (/** @type {HTMLElement} */ pane, /** @type {number} */ pos) => restIn(blocksIn(pane), pos);
 
 /** each pane's article given a pane's height of room below its end, so any of its lines can be scrolled to the pane's top */
 function roomBelow(/** @type {NonNullable<typeof els>} */ E) {
@@ -331,11 +417,10 @@ function roomBelow(/** @type {NonNullable<typeof els>} */ E) {
 const sizeOf = (/** @type {NonNullable<typeof els>} */ E) => `${E.paneA.clientWidth}x${E.paneA.clientHeight}|${E.paneB.clientWidth}x${E.paneB.clientHeight}`;
 
 /**
- * Measure the ties: each run of shared identity and each link between the
- * two documents, its ends at their passages' first lines in the panes'
- * content; a tie an end of which lies in none of its pane's blocks is left
- * out. A link that names the far document whole stands at the far pane's
- * first block.
+ * Measure the ties: each run of shared identity, and each link between the
+ * two documents once per pair of its ends (`linesBetween`), its ends at
+ * their passages' first lines in the panes' content; a tie an end of which
+ * lies in none of its pane's blocks is left out.
  */
 function measure() {
   const S = scene, E = els;
@@ -346,16 +431,11 @@ function measure() {
     const la = lineIn(E.paneA, S.a, p.u1, p.width), lb = lineIn(E.paneB, S.b, p.u2, p.width);
     if (la && lb) out.push({ kind: 'band', link: null, a: { pos: p.u1, width: p.width, y: la.y }, b: { pos: p.u2, width: p.width, y: lb.y }, hue: SAMENESS.boundary, value: 0.7, dashed: false });
   }
-  // the link lines between the panes — the set LK gives (the seam)
-  for (const [nearAddr, farAddr, nearPane, farPane] of /** @type {const} */ ([[S.a, S.b, E.paneA, E.paneB], [S.b, S.a, E.paneB, E.paneA]])) {
-    for (const s of LK.shown(nearAddr).filter((x) => x.far === farAddr)) {
-      const farPos = s.farEnd && !s.farEnd.whole && s.farEnd.ordinal != null ? s.farEnd.ordinal : (articleIn(farPane)?.made.blocks[0] || { pos: 1 }).pos;
-      const farWidth = s.farEnd && !s.farEnd.whole && s.farEnd.positions ? s.farEnd.positions : restOfBlock(farPane, farPos);
-      const ln = lineIn(nearPane, nearAddr, s.pos, s.width), lf = lineIn(farPane, farAddr, farPos, farWidth);
-      if (!ln || !lf) continue;
-      const near = { pos: s.pos, width: s.width, y: ln.y }, far = { pos: farPos, width: farWidth, y: lf.y };
-      out.push({ kind: 'link', link: s.link.addr, a: nearPane === E.paneA ? near : far, b: nearPane === E.paneA ? far : near, hue: s.mark.hue, value: s.mark.value, dashed: s.linker === 'others' });
-    }
+  // the link lines between the panes — the set LK gives at each pane's document (the seam)
+  const links = (/** @type {string} */ addr, /** @type {HTMLElement} */ pane) => ({ addr, shown: LK.shown(addr), blocks: blocksIn(pane) });
+  for (const l of linesBetween(links(S.a, E.paneA), links(S.b, E.paneB))) {
+    const la = lineIn(E.paneA, S.a, l.a.pos, l.a.width), lb = lineIn(E.paneB, S.b, l.b.pos, l.b.width);
+    if (la && lb) out.push({ kind: 'link', link: l.link, a: { ...l.a, y: la.y }, b: { ...l.b, y: lb.y }, hue: l.hue, value: l.value, dashed: l.dashed });
   }
   S.ties = out;
   S.size = sizeOf(E);

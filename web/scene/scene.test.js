@@ -14,6 +14,19 @@
 // clipped so, in the first document's order whatever order `compare` names
 // them in (a mutant that keeps the first alone, or the pairs' order, turns
 // red), the first of them its counterpart.
+// The lines between the panes (§2.5: "a link's line drawn where either
+// pane's default composition draws that link"; P44): a link both panes show
+// is one line, whichever pane meets it — a followed one at its own lighter
+// value, two links between the same ends a line each (a mutant that draws a
+// line per meeting turns red); marked with what its meetings share, neutral
+// and undashed where it is the owner's at one pane and another's at the
+// other, whichever pane is which (a mutant that keeps the first meeting's
+// mark, or dashes every mark not standing with no act, turns red), and as
+// its one pane marks it where one alone shows it; a far end naming a
+// document whole at that pane's first block; one document in both panes
+// drawing a link inside it once for each way its ends stand across them (a
+// mutant that tells ends apart by their document alone, folding the two
+// into one, turns red); no line to a document neither pane holds.
 // Then the scene's focus, against the FAKE PORT and a page of stand-ins whose
 // focus lands only where the platform's does (D5 §4 rules 5 and 8; K-63;
 // the focus's owner N-FOCUS, whose own cases are `nav/focus.test.js` — these
@@ -44,7 +57,8 @@ import * as FAKE from '../test/fake-port.js';
 import * as WALK from '../nav/walk.js';
 import * as LAYER from '../text/layer.js';
 import * as SCENE from './scene.js';
-import { levels, merged, counterpart, counterparts } from './scene.js';
+import { levels, merged, counterpart, counterparts, linesBetween } from './scene.js';
+import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 
 /** @returns {import('../model/frames.js').ComparePair} */
 const pair = (/** @type {number} */ u1, /** @type {number} */ u2, /** @type {number} */ width) => ({ d1: '1.0.1.0.3', d2: '1.0.1.0.3.2', u1, u2, width });
@@ -98,6 +112,69 @@ test('contiguous pairs — adjoining in both documents — are one run; a gap in
   const raw = [pair(1, 1, 10), pair(11, 11, 5)];
   merged(raw);
   assert.deepEqual(raw, [pair(1, 1, 10), pair(11, 11, 5)], 'the pairs handed in are left as they are');
+});
+
+// ---- the lines between the panes -------------------------------------------------------------------------------------
+
+// the document in pane A, the one in pane B, and a third in neither
+const DOC_A = '1.0.1.0.3', DOC_B = '1.0.2.0.5', DOC_C = '1.0.3.0.7';
+/** a passage of a document, as a link's end names one */
+const passage = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: doc.split('.').slice(0, 3).join('.'), whole: false, subspace: 1, ordinal: ord, positions: w });
+/** a document named whole, as a link's end names one */
+const wholeOf = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: doc.split('.').slice(0, 3).join('.'), whole: true, subspace: null, ordinal: null, positions: /** @type {number | null} */ (null) });
+/** a mark as LK's `markOf` makes one for a linker; its value VISITED_ALPHA once followed */
+const markAs = (/** @type {'you' | 'owner' | 'others'} */ linker, value = 1) => ({ hue: HUE[linker], linker, form: [], value, weight: 1, own: linker !== 'others' });
+/** a link's end as LK shows it at a document: its passage there, the far end it names, the mark it carries there */
+const endShown = (/** @type {string} */ link, /** @type {ReturnType<typeof passage>} */ here, /** @type {ReturnType<typeof passage> | ReturnType<typeof wholeOf>} */ there, /** @type {ReturnType<typeof markAs>} */ mark) =>
+  ({ link: { addr: link }, near: here.doc, end: 'from', pos: here.ordinal, width: here.positions || 1, mark, linker: mark.linker, far: there.doc, farEnd: there, farWhole: there.whole });
+/** a pane's links: its document, the ends LK shows there, the blocks its article was made from — by default two, the first at 1 */
+const paneLinks = (/** @type {string} */ addr, /** @type {Array<ReturnType<typeof endShown>>} */ shown, blocks = [{ pos: 1, width: 40 }, { pos: 41, width: 60 }]) => /** @type {any} */ ({ addr, shown, blocks });
+/** each line: its link, its end in pane A, its end in pane B, its hue, its value, dashed */
+const drawn = (/** @type {import('./scene.js').Line[]} */ lines) => lines.map((l) => [l.link, [l.a.pos, l.a.width], [l.b.pos, l.b.width], l.hue, l.value, l.dashed]);
+
+test('a link both panes show is one line between its two ends, its end in pane A first, whichever pane meets it — never one per pane', () => {
+  const L = DOC_A + '.0.2.1';
+  const atA = endShown(L, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5), markAs('you')), atB = endShown(L, passage(DOC_B, 1, 5), passage(DOC_A, 50, 10), markAs('you'));
+  const one = [[L, [50, 10], [1, 5], HUE.you, 1, false]];
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA]), paneLinks(DOC_B, [atB]))), one, 'met from both panes: one line');
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, []), paneLinks(DOC_B, [atB]))), one, 'met from pane B alone: the same line');
+  const followed = (/** @type {typeof atA} */ s) => ({ ...s, mark: markAs('you', VISITED_ALPHA) });
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [followed(atA)]), paneLinks(DOC_B, [followed(atB)]))).map((l) => l[4]), [VISITED_ALPHA], 'a followed link drawn once, lighter — never stacked back toward full');
+  const L2 = DOC_A + '.0.2.2';
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA, { ...atA, link: { addr: L2 } }]), paneLinks(DOC_B, [atB]))).map((l) => l[0]), [L, L2], 'two links between the same two ends: a line each');
+});
+
+test('a link the owner\'s at one pane and another\'s at the other is drawn in the neutral hue, undashed, whichever pane is the owner\'s (P44)', () => {
+  const L = DOC_A + '.0.2.1';
+  for (const [ma, mb] of [[markAs('owner'), markAs('others')], [markAs('others'), markAs('owner')]]) {
+    const lines = linesBetween(paneLinks(DOC_A, [endShown(L, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5), ma)]), paneLinks(DOC_B, [endShown(L, passage(DOC_B, 1, 5), passage(DOC_A, 50, 10), mb)]));
+    assert.deepEqual(lines.map((l) => [l.hue, l.value, l.dashed]), [[NEUTRAL_HUE, 1, false]], `the ${ma.linker}'s at pane A, the ${mb.linker}'s at pane B`);
+  }
+});
+
+test('a link one pane alone shows is marked as that pane marks it: another\'s dashed in their hue, the owner\'s solid in theirs', () => {
+  const L = DOC_A + '.0.2.1';
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [endShown(L, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5), markAs('others'))]), paneLinks(DOC_B, []))), [[L, [50, 10], [1, 5], HUE.others, 1, true]]);
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, []), paneLinks(DOC_B, [endShown(L, passage(DOC_B, 1, 5), passage(DOC_A, 50, 10), markAs('owner'))]))), [[L, [50, 10], [1, 5], HUE.owner, 1, false]]);
+});
+
+test('a far end naming the other pane\'s document whole stands at that pane\'s first block, to the block\'s end', () => {
+  const blocks = [{ pos: 3, width: 20 }, { pos: 23, width: 60 }];
+  const toB = endShown(DOC_A + '.0.2.1', passage(DOC_A, 50, 10), wholeOf(DOC_B), markAs('you'));
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [toB]), paneLinks(DOC_B, [], blocks))).map((l) => l[2]), [[3, 20]], 'pane B\'s first block');
+  const toA = endShown(DOC_B + '.0.2.1', passage(DOC_B, 7, 4), wholeOf(DOC_A), markAs('owner'));
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [], blocks), paneLinks(DOC_B, [toA]))).map((l) => l[1]), [[3, 20]], 'pane A\'s first block');
+});
+
+test('one document in both panes: a link inside it is drawn once for each way its two ends stand across the panes — never twice, never folded into one', () => {
+  const I = DOC_A + '.0.2.2', p = passage(DOC_A, 60, 5), q = passage(DOC_A, 80, 5);
+  const both = [endShown(I, p, q, markAs('you')), endShown(I, q, p, markAs('you'))];
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, both), paneLinks(DOC_A, both))).map((l) => [l[1], l[2]]), [[[60, 5], [80, 5]], [[80, 5], [60, 5]]], 'p in A to q in B, and q in A to p in B: the pair a scene opened from either end sets level has its line');
+});
+
+test('a link whose far end lies outside the other pane\'s document draws no line between the panes', () => {
+  const L = DOC_A + '.0.2.1';
+  assert.deepEqual(linesBetween(paneLinks(DOC_A, [endShown(L, passage(DOC_A, 50, 10), passage(DOC_C, 1, 5), markAs('you'))]), paneLinks(DOC_B, [])), []);
 });
 
 // ---- the scene's focus -----------------------------------------------------------------------------------------------
