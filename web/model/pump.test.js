@@ -5,6 +5,13 @@
 // red);
 // the view's reads ask nothing for a document a continuation's mark holds;
 // a session's end is taken by the page whose session it is and by no other;
+// a restart the shell re-opened is no death — the page goes on under the
+// re-opened session, reading and taking drafts rows under it — and a restart
+// that re-opened none is one; a read that meets the restart before the event
+// takes its `session_died`, or awaits the end its `session_ended` comes
+// before, and is asked once more under the re-opened session; another end a
+// read meets is the death, its refusal handed up; a `session_ended` no end
+// follows is waited for a bounded time, once per session, and is no death;
 // a board's events by its own page alone, and none before the page knows
 // its board; a drafts row by a page holding a session, never by a guest or
 // a page whose session ended; the index state of the face the page reads —
@@ -175,6 +182,153 @@ test('a page signed in takes a session\'s index state and drafts rows, never the
   assert.equal(REC.indexState()?.arm, 'complete', 'its face is the guest\'s, the published index alone');
 });
 
+/** the shell's own restart, the session re-opened under a key the shell holds: the reason names the re-opened reference (skep-shell's `Sessions::end`) */
+const REOPENED = { arm: 'restart', reopened: true, session: 's-9' };
+
+/**
+ * A frame the board answers `first` the first time it is asked and `then`
+ * after — keyed on the frame alone, so an ask under another session is the
+ * same call; `asks()` counts the asks.
+ * @param {Record<string, unknown>} s the script
+ * @param {{op: string}} frame
+ * @param {unknown} first
+ * @param {unknown} then
+ */
+function firstThen(s, frame, first, then) {
+  let n = 0;
+  Object.defineProperty(s, FAKE.keyOf('op', { frame }), { enumerable: true, configurable: true, get: () => (++n === 1 ? first : then) });
+  return { asks: () => n };
+}
+
+/**
+ * The session each `op` call went out under, in order, as the fake port
+ * received it ('guest' for the guest form).
+ * @param {ReturnType<typeof FAKE.create>} fake
+ * @returns {string[]}
+ */
+function sessionsSent(fake) {
+  /** @type {string[]} */
+  const sent = [];
+  const call = fake.call;
+  fake.call = (name, args) => { if (name === 'op') sent.push(/** @type {{session?: string}} */ (args).session ?? 'guest'); return call(name, args); };
+  return sent;
+}
+
+test('a restart the shell re-opened is no death: the page goes on under the re-opened session, its reads and drafts rows with it; a restart that re-opened none is a death', async () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const sent = sessionsSent(fake);
+  fake.fire('session-died', { session: 's-1', reason: REOPENED });
+  assert.deepEqual(REC.session(), { session: 's-9', principal: 1, account: '1.0.1' }, 'the re-opened reference, the principal and the account the same');
+  assert.equal(REC.deathReason(), null, 'no death, so no death chrome (client.md §4b.2)');
+  await PUMP.read(F.docMetadata(D));
+  assert.deepEqual(sent, ['s-9'], 'the next read goes out under the re-opened session');
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
+  assert.equal(REC.place('1.0.1.0.1013')?.kind, 'draft', 'its drafts rows still taken');
+  const refused = { arm: 'restart', reopened: false, refused: 'no_key' };
+  fake.fire('session-died', { session: 's-9', reason: refused });
+  assert.equal(REC.session(), null, 'a restart the shell could not re-open names no session: a death');
+  assert.deepEqual(REC.deathReason(), refused);
+});
+
+test('a read that meets the re-opened restart before the event takes its end and is asked once more under the re-opened session; the event after it changes nothing', async () => {
+  const frame = F.docMetadata(D);
+  const s = { ...script };
+  firstThen(s, frame, { refused: { kind: 'shell', name: 'session_died', session: 's-1', reason: REOPENED } }, script[FAKE.keyOf('op', { frame })]);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const sent = sessionsSent(fake);
+  const out = await PUMP.read(frame);
+  assert.ok('answer' in out, 'the answer, never the restart\'s refusal');
+  assert.deepEqual(sent, ['s-1', 's-9'], 'asked once more, under the re-opened session');
+  assert.deepEqual(REC.session(), { session: 's-9', principal: 1, account: '1.0.1' });
+  assert.equal(REC.deathReason(), null);
+  fake.fire('session-died', { session: 's-1', reason: REOPENED });
+  assert.deepEqual([REC.session()?.session, REC.deathReason()], ['s-9', null], 'the event after it changes nothing');
+});
+
+test('a read that meets another end records the death and hands its refusal up, asked once', async () => {
+  const frame = F.docMetadata(D);
+  const retired = { arm: 'retired', fingerprint: 'fp-1', own: true, hand: 'fp-1', position: 9, label: null };
+  const fake = FAKE.create({ [FAKE.keyOf('op', { frame })]: { refused: { kind: 'shell', name: 'session_died', session: 's-1', reason: retired } } });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const sent = sessionsSent(fake);
+  const out = await PUMP.read(frame);
+  assert.equal('refused' in out && out.refused.name, 'session_died', 'the refusal handed up');
+  assert.deepEqual(sent, ['s-1'], 'no session stands to ask again under');
+  assert.equal(REC.session(), null, 'the death taken as the read met it');
+  assert.deepEqual(REC.deathReason(), retired);
+});
+
+test('a read refused session_ended — the shell\'s answer while it derives the end — awaits the end the event brings and is asked once more under the re-opened session', async () => {
+  const frame = F.docMetadata(D);
+  const s = { ...script };
+  firstThen(s, frame, { refused: { kind: 'shell', name: 'session_ended', session: 's-1' } }, script[FAKE.keyOf('op', { frame })]);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const sent = sessionsSent(fake);
+  let done = false;
+  const pending = PUMP.read(frame).then((o) => { done = true; return o; });
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([sent, done], [['s-1'], false], 'refused, the read awaits the end');
+  fake.fire('session-died', { session: 's-1', reason: REOPENED });
+  const out = await pending;
+  assert.ok('answer' in out, 'the answer, never the refusal');
+  assert.deepEqual(sent, ['s-1', 's-9']);
+  assert.equal(REC.deathReason(), null);
+});
+
+test('a read refused session_ended after the event brought the re-opened session is asked once more under it at once', async () => {
+  const frame = F.docMetadata(D);
+  const s = { ...script };
+  firstThen(s, frame, { refused: { kind: 'shell', name: 'session_ended', session: 's-1' } }, script[FAKE.keyOf('op', { frame })]);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const sent = sessionsSent(fake);
+  const release = fake.hold('op', { frame });
+  const pending = PUMP.read(frame);
+  await new Promise((r) => setTimeout(r, 0));
+  fake.fire('session-died', { session: 's-1', reason: REOPENED });
+  release();
+  const out = await pending;
+  assert.ok('answer' in out, 'the answer, never the refusal');
+  assert.deepEqual(sent, ['s-1', 's-9']);
+});
+
+test('a read refused session_ended that no end follows waits a bounded time, hands the refusal up and invents no death; a read under that session after it waits no more', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise((r) => setImmediate(r));
+  const frame = F.docMetadata(D);
+  const fake = FAKE.create({ [FAKE.keyOf('op', { frame })]: { refused: { kind: 'shell', name: 'session_ended', session: 's-7' } } });
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-7', principal: 1, account: '1.0.1' });
+  const done = [false, false];
+  const first = PUMP.read(frame).then((o) => { done[0] = true; return o; });
+  await flush();
+  assert.equal(done[0], false, 'the read awaits the end');
+  t.mock.timers.tick(60000);
+  await flush();
+  assert.equal(done[0], true, 'the wait is bounded');
+  const out = await first;
+  assert.equal('refused' in out && out.refused.name, 'session_ended', 'the refusal handed up');
+  assert.deepEqual([REC.session()?.session, REC.deathReason()], ['s-7', null], 'no death invented: the page holds what it held');
+  const second = PUMP.read(frame).then((o) => { done[1] = true; return o; });
+  await flush();
+  assert.equal(done[1], true, 'a read under that session after it waits no more');
+  await second;
+});
+
 test('no call the pump makes is a write: every op frame names a read op', async () => {
   const fake = FAKE.create(script);
   PORT.boot(fake);
@@ -213,10 +367,7 @@ test('at HOME the reads ask for the documents standing whole and nothing for the
  * @param {unknown} then
  */
 function busyOnce(s, frame, then) {
-  const busy = { refused: { kind: 'refused', name: 'scan_busy', status: 503, code: 'scan_busy', detail: null, op: frame.op, body: null } };
-  let n = 0;
-  Object.defineProperty(s, FAKE.keyOf('op', { frame }), { enumerable: true, configurable: true, get: () => (++n === 1 ? busy : then) });
-  return { asks: () => n };
+  return firstThen(s, frame, { refused: { kind: 'refused', name: 'scan_busy', status: 503, code: 'scan_busy', detail: null, op: frame.op, body: null } }, then);
 }
 
 test('a whole read asks find_links_v again where the board answers scan_busy, and takes the links answered after it', async () => {

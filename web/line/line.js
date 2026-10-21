@@ -29,7 +29,9 @@
 // device · http://127.0.0.1:⟨P⟩ · LOCAL notebook"), STATE 1 where no session
 // stands ("reading as a guest" with its one act, sign in — the session's
 // refusal faced there), the death arm where the session died (C-137's
-// words), states 3–7 only as the provider's events bring them; the DAEMON's
+// words) — never at a restart the shell re-opened, whose session M-PUMP
+// takes in the ended one's place (client.md §4b.2) — states 3–7 only as
+// the provider's events bring them; the DAEMON's
 // segment (silent while the board runs; the notebook's forms where it does
 // not, "writes stopped on your notebook …" where `/health.writes.halted`);
 // the TRANSIENT segments (the swallow line K-9; the mode line C-31 where the

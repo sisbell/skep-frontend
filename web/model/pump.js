@@ -41,7 +41,14 @@
 // tell its principal's other sessions from another principal's). `mode`
 // and `daemon` → M-REC's state; `session-died` → M-REC's death where it
 // names the page's own session: a page that holds no session (a guest) or
-// holds another was never signed in under the one that ended.
+// holds another was never signed in under the one that ended. The shell's
+// own restart, where the shell re-opened the session under a key it holds,
+// is no death: the page goes on under the re-opened reference the reason
+// names, with no face (client.md §4b.2; ps3-13 (b), cs6-6 reading (i)). A
+// read can meet the end before the event does — `session_died`, carrying
+// the event's reason, or `session_ended`, the shell's answer while it
+// derives the end — and takes or awaits it, then is asked once more under
+// the re-opened session.
 // Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11.
 
 import * as PORT from '../bridge/port.js';
@@ -62,6 +69,7 @@ import { versionAddress } from './address.js';
 /** @typedef {import('../bridge/shapes').ModeEvent} ModeEvent */
 /** @typedef {import('../bridge/shapes').DaemonEvent} DaemonEvent */
 /** @typedef {import('../bridge/shapes').SessionDiedEvent} SessionDiedEvent */
+/** @typedef {import('../bridge/shapes').DeathReason} DeathReason */
 /** @typedef {{feed: FeedEvent, index: IndexEvent, mode: ModeEvent, daemon: DaemonEvent}} BoardEvents — the events that name their board, by name */
 
 /**
@@ -88,6 +96,8 @@ const MEMBER_PROBE_CAP = 8;
 const RETRY_MS = 120;
 /** a class scan read whole is asked at most this many times while the board answers `scan_busy` */
 const SCAN_ATTEMPTS = 6;
+/** a read refused `session_ended` awaits its session's end at most this long — a bound on the shell's derive and re-open, which take board reads (unmeasured) */
+const END_WAIT_MS = 5000;
 
 /** @type {Set<string>} */
 const inflight = new Set();
@@ -100,6 +110,10 @@ let scansInFlight = 0;
 const refusals = [];
 /** @type {Array<(r: {frame: string, refusal: Refusal, addr: string}) => void>} */
 const refusalWatchers = [];
+/** @type {Set<() => void>} the reads awaiting the page's session's end, each woken as it is taken */
+const awaitingEnd = new Set();
+/** the page's session a read found ended with no end taken within END_WAIT_MS — its `session-died` never reached the page — so no read under it waits again */
+let unended = /** @type {string | null} */ (null);
 let dirty = () => {};
 let started = false;
 
@@ -115,7 +129,7 @@ export function start(opts) {
   onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); dirty(); } });
   onBoard('mode', (ev) => { REC.setMode(ev); dirty(); });
   onBoard('daemon', (ev) => { REC.setDaemon(ev.state); dirty(); });
-  PORT.on('session-died', (d) => { const ev = /** @type {SessionDiedEvent} */ (d); const s = REC.session(); if (ev && s && s.session === ev.session) REC.sessionDied(ev.reason); dirty(); });
+  PORT.on('session-died', (d) => { const ev = /** @type {SessionDiedEvent | null} */ (d); if (ev) takeEnd(ev.session, ev.reason); dirty(); });
 }
 
 /**
@@ -145,22 +159,94 @@ function ofFace(ev) {
   return s && s.account != null ? ev.session != null : ev.session == null;
 }
 
+/**
+ * A session's end, met by `session-died` or by a read's `session_died`,
+ * which carries the event's reason; taken where it names the page's own
+ * session. The shell's own restart, where the shell re-opened the session
+ * under a key it holds, is no death: the page goes on under the reference
+ * the reason names, the principal and the account the same, with no face
+ * (client.md §4b.2: "the page re-acquires a reference with no face";
+ * ps3-13 (b), cs6-6 reading (i)). Every other end, a restart that re-opened
+ * none among them, is M-REC's death. The reads awaiting the end are woken.
+ * @param {string} ended the session the end names
+ * @param {DeathReason} reason
+ */
+function takeEnd(ended, reason) {
+  const s = REC.session();
+  if (!s || s.session !== ended) return;
+  const reopened = reason.arm === 'restart' && reason.reopened === true ? reason.session : null;
+  if (typeof reopened === 'string') REC.setSession({ ...s, session: reopened });
+  else REC.sessionDied(reason);
+  for (const wake of [...awaitingEnd]) wake();
+}
+
+/**
+ * The page's session's end, awaited: woken as `takeEnd` takes it, or after
+ * END_WAIT_MS, the session marked `unended` where it still stands.
+ * @param {string} sent
+ * @returns {Promise<void>}
+ */
+function endTaken(sent) {
+  return new Promise((resolve) => {
+    const wake = () => { clearTimeout(timer); awaitingEnd.delete(wake); resolve(); };
+    const timer = setTimeout(() => { if (REC.session()?.session === sent) unended = sent; wake(); }, END_WAIT_MS);
+    awaitingEnd.add(wake);
+  });
+}
+
 /** the refusals the reads met */
 export const refusalsMet = () => refusals.slice();
 export function onRefusal(/** @type {(r: {frame: string, refusal: Refusal, addr: string}) => void} */ fn) { refusalWatchers.push(fn); }
 
 /**
  * One read through the port: the session form where a session stands, the
- * guest form where none does.
+ * guest form where none does. A read refused because the session it went
+ * out under ended is asked once more where the end left the page another
+ * session — the one the shell re-opened in its place; where it left none
+ * the refusal is handed up.
  * @param {object} frame
  * @returns {Promise<{answer: unknown} | {refused: Refusal}>}
  */
 export async function read(frame) {
-  const s = REC.session(), b = REC.board();
-  const args = s ? { session: s.session, frame } : { guest: /** @type {const} */ (true), board: b ? b.board : undefined, frame };
-  const out = await PORT.op(args);
-  if ('refused' in out) return { refused: out.refused };
-  return { answer: out.result };
+  const s = REC.session();
+  const out = await ask(s, frame);
+  if (!s || !('refused' in out) || !(await metEnd(s.session, out.refused))) return out;
+  const now = REC.session();
+  return now && now.session !== s.session ? ask(now, frame) : out;
+}
+
+/**
+ * One `op` under a session, or in the guest form where none is given.
+ * @param {{session: string} | null} s
+ * @param {object} frame
+ * @returns {Promise<{answer: unknown} | {refused: Refusal}>}
+ */
+async function ask(s, frame) {
+  const b = REC.board();
+  const out = await PORT.op(s ? { session: s.session, frame } : { guest: /** @type {const} */ (true), board: b ? b.board : undefined, frame });
+  return 'refused' in out ? { refused: out.refused } : { answer: out.result };
+}
+
+/**
+ * Is a read's refusal the end of the session it went out under? The
+ * shell's `session_died` carries the end's reason, taken at once;
+ * `session_ended` carries none — the shell answers it from its table while
+ * it derives the end, the event following — so the end is awaited, unless a
+ * read under that session already waited for it in vain.
+ * @param {string} sent the session the read went out under
+ * @param {Refusal} r
+ * @returns {Promise<boolean>}
+ */
+async function metEnd(sent, r) {
+  if (r.kind !== 'shell') return false;
+  if (r.name === 'session_died') {
+    const reason = /** @type {{arm?: unknown} | null | undefined} */ (r.reason);
+    if (reason && typeof reason.arm === 'string') takeEnd(sent, /** @type {DeathReason} */ (reason));
+    return true;
+  }
+  if (r.name !== 'session_ended') return false;
+  if (REC.session()?.session === sent && sent !== unended) await endTaken(sent);
+  return true;
 }
 
 /**

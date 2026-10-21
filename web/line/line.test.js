@@ -11,7 +11,9 @@
 // address"; the box is the line's stop, opened), so the box never opens on an
 // address the line does not show — a mutant whose prefill keeps a rule of its
 // own (the walk's document at mid, the account the arithmetic finds at the
-// whole board's centre) turns red.
+// whole board's centre) turns red. A restart the shell re-opened leaves the
+// acting-as segment as it stood (client.md §4b.2: "no death chrome") — a
+// mutant that takes the restart for a death turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -102,4 +104,12 @@ test('at far scale the line names the board, the whole board in view at its clam
   CAM.set({ ...whole, scale: whole.scale / 4 });
   assert.equal(lodOf(CAM.cam.scale).name, 'far');
   assert.equal(LINE.currentAddress(), '1');
+});
+
+test('a restart the shell re-opened leaves the acting-as segment as it stood: no signed-out words, no sign-in (client.md §4b.2)', () => {
+  const was = LINE.actingSegment();
+  assert.equal(was.state, 2, 'acting as, through the signed session');
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'restart', reopened: true, session: 's-9' } });
+  assert.deepEqual(LINE.actingSegment(), was, 'the same words and state under the re-opened session');
+  assert.ok(!LINE.actingSegment().html.includes('data-act="signin"'), 'no sign-in offered');
 });
