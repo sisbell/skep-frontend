@@ -129,13 +129,14 @@ export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: n
  * A floating end: the passage a document's text no longer arranges
  * (foundations §2.3) — "its passage is not in ⟨D⟩'s current text", and at a
  * pinned member in its own words, "its passage is not in version ⟨k⟩" — met
- * by a followed link's end, or by a carried passage at its landing (the
- * carry rule's empty case, P43). Where `offer` stands, the act opens the
- * versions list to read the last member that holds it; a carried passage's
- * landing offers none, for the list holds a passage of its own document and
- * the carried one is another's.
+ * at the landing N-GO makes at the document's head, whether a followed
+ * link's end or a carried passage brought the reader there (the carry rule's
+ * empty case, P43). Where `offer` stands, the act opens the versions list to
+ * read the last member that holds it; a carried passage's landing offers
+ * none, for the list holds a passage of its own document and the carried one
+ * is another's.
  * @param {string} far the document whose text holds none of the passage
- * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the head landed on
  * @param {boolean} [offer] the face offers the versions list
  */
 export function floating(far, anchor, offer = true) {

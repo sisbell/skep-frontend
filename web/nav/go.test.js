@@ -7,7 +7,15 @@
 // set names them in, the landing at the first in the text (a mutant that
 // keeps the projection's first member alone, or the set's order, turns red);
 // a link naming the far document whole outlines the document's first
-// position, no width. Every act
+// position, no width. A follow of a floating end, one the far document's
+// text holds none of, lands at that document's head — its entry settled
+// there holding the link, the camera and the walk there — the link lit and
+// nothing outlined, the dead end's face standing at the head with its act,
+// and Back returns to it (a mutant that faces in place, outlines the head,
+// lands at the end's stored position or stands the face at the act's site
+// turns red); a Back made while its projection reads leaves its entry ahead
+// at the head and shows no face (a mutant that faces after a later act
+// turns red). Every act
 // puts both marks out as it is made — a LEAP, HOME, WHOLE BOARD, an
 // account's region, a jump, Forward, a LEAP that faces, and a follow that
 // faces, at once or once its read answers (a mutant that drops the step from
@@ -112,6 +120,13 @@ const takeDead = () => { REC.takeLinks(D, [DEAD]); REC.takeLink({ addr: DEAD, fr
 const SPLIT = D + '.0.2.4';
 /** the cut citation taken into the model, drawn at the first edition */
 const takeSplit = () => { REC.takeLinks(D, [SPLIT]); REC.takeLink({ addr: SPLIT, from: [span(D, 1, 3)], to: [span(FAR, 3, 22)], type: CITE }); };
+// a citation from the first edition of a passage FAR's current text no longer holds — a floating end: its far end, stored at FAR's 8,
+// projects to nothing there
+const FLOAT = D + '.0.2.5';
+/** the floating citation taken into the model, drawn at the first edition */
+const takeFloat = () => { REC.takeLinks(D, [FLOAT]); REC.takeLink({ addr: FLOAT, from: [span(D, 4, 3)], to: [span(FAR, 8, 4)], type: CITE }); };
+/** FAR's head, where a dead end lands: its first paragraph's first position */
+const FAR_HEAD = 1;
 // FAR's second version member, a copy of its text; the passages LEAPs carry: one FAR holds at 20, five positions, one neither FAR nor
 // its member holds, and one FAR holds in two stretches, its first half at FAR's 25 and its second at FAR's 2
 const FAR2 = FAR + '.2';
@@ -148,6 +163,8 @@ const script = {
   [FAKE.keyOf('op', { frame: F.project(WHOLE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + FAR_EXTENT }] } },
   // the cut citation's far end in two runs, the set naming the later first: the wire names no order for a span set
   [FAKE.keyOf('op', { frame: F.project(SPLIT, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }, { start: '1.3', width: '0.4' }] } },
+  // the floating citation's far end in FAR's current text: no run
+  [FAKE.keyOf('op', { frame: F.project(FLOAT, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [] } },
   ...reads(FAR2, FAR_TEXT, []),
   // where the carried passages stand in FAR and its member: the shared one at FAR's 20, five positions; the other nowhere; the moved
   // one's first five positions at FAR's 25 and its last five at FAR's 2
@@ -250,6 +267,31 @@ test('Back lights the link a follow took to reach the entry it leaves, at the fo
 test('a link naming the far document whole outlines the document\'s first position, no width, and lights the link', async () => {
   await run(GO.follow(drawn(WHOLE)));
   assert.deepEqual(marks(), [{ addr: FAR, pos: 1, runs: null, link: WHOLE }, WHOLE]);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow of a far end the far document\'s text no longer holds lands at that document\'s head, faced there, the link lit and nothing outlined; Back returns to it', async () => {
+  takeFloat();
+  await run(GO.leapTo(D));
+  const n = TRAIL.length();
+  await run(GO.follow(drawn(FLOAT)));
+  assert.equal(REC.doc(FAR).blocks[0].pos, FAR_HEAD, 'FAR\'s head: its first paragraph');
+  assert.deepEqual(marks(), [null, FLOAT], 'the link followed lit; no span outlined, for the text holds none of it');
+  assert.equal(TRAIL.length(), n + 1, 'the follow\'s entry settled, never withdrawn');
+  const e = TRAIL.current();
+  assert.deepEqual(e && [e.addr, e.pos, e.width, e.link], [FAR, FAR_HEAD, null, FLOAT], 'the landing\'s entry at the head, never the end\'s stored position, holding the link');
+  assert.ok(same(CAM.view(), GO.viewFor(FAR, FAR_HEAD)), 'the camera at the head\'s view');
+  assert.deepEqual(walkAt(), ['block', FAR, FAR_HEAD], 'the walk on the head');
+  const f = faceShown();
+  assert.ok(f && f.id === 'face:floating' && f.html.includes('data-string="F.floating"') && f.html.includes(esc(t('F.floating', { D: FAR }))), `the dead end's words: ${f && f.html}`);
+  assert.equal(f && f.acts, true, 'offering its act');
+  assert.deepEqual(HOST.currentState()?.anchor, { span: { addr: FAR, pos: FAR_HEAD } }, 'standing at the head landed on, never at the act\'s site');
+  await run(GO.leapTo(D));
+  assert.equal(faceShown(), null, 'the next act dismisses it');
+  await run(GO.back());
+  assert.deepEqual([walkAt(), marks()], [['block', FAR, FAR_HEAD], [null, null]], 'Back lands at the head, lighting nothing: no link reached the entry it left');
+  await run(GO.back());
+  assert.deepEqual(marks(), [null, FLOAT], 'Back to the follow\'s departure lights the link there');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -410,6 +452,27 @@ test('a Back made while a follow reads goes back from the follow\'s entry, which
   assert.deepEqual(far && [far.pos, far.width, far.link], [20, 5, PASSAGE], 'at the span its far end projects to');
   assert.ok(far && same(far.view, GO.viewFor(FAR, 20)), 'at that span\'s view');
   assert.deepEqual(marks(), [null, null], 'the arrival out, and the follow\'s link lit nowhere: the follow landed nowhere, so the reader never stood at its entry');
+  assert.ok(same(CAM.view(), at), 'the camera at D');
+  assert.deepEqual(walkAt(), ['document', D, null]);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a Back made while a floating end\'s projection reads goes back from the follow\'s entry, which stands ahead at the far document\'s head; no face shows', async () => {
+  takeFloat();
+  await run(GO.leapTo(D));
+  const at = CAM.view(), n = TRAIL.length();
+  const release = fake.hold('op', { frame: F.project(FLOAT, 2, FAR) });
+  const following = GO.follow(drawn(FLOAT));
+  await run(GO.back());
+  release();
+  await run(following);
+  const far = TRAIL.all()[n];
+  assert.deepEqual(addrs().slice(n - 1), [D, FAR], 'the follow\'s entry after D\'s');
+  assert.equal(TRAIL.cursorIndex(), n - 1, 'the cursor on D\'s');
+  assert.deepEqual(far && [far.pos, far.width, far.link], [FAR_HEAD, null, FLOAT], 'at the head');
+  assert.ok(far && same(far.view, GO.viewFor(FAR, FAR_HEAD)), 'at the head\'s view');
+  assert.equal(faceShown(), null, 'no face over the place Back landed: the follow landed nowhere');
+  assert.deepEqual(marks(), [null, null], 'nothing outlined and nothing lit');
   assert.ok(same(CAM.view(), at), 'the camera at D');
   assert.deepEqual(walkAt(), ['document', D, null]);
   assert.deepEqual(fake.unanswered, []);
