@@ -608,8 +608,8 @@ function drawFocus() {
  * The arrival mark (foundations §2.1: "an outline around its span"; §3.2):
  * the span the landing named outlined line by line, each line-rect of its own
  * bytes in the mounted article; where the link names the document whole, the
- * block holding the landing's position. The followed link drawn heavier is
- * not built.
+ * block holding the landing's position. The arrival's other mark, the link
+ * followed drawn heavier, is BM's, by the weight LK's `markOf` gives it.
  */
 function drawArrival() {
   if (!ctx) return;

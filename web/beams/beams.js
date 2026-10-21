@@ -3,7 +3,9 @@
 // (its own canvas). State: VIEW — the last frame's bundles and the labels it
 // set at their ends.
 // It decides nothing of which links: it draws `LK.beams(addr)` for every
-// mounted document at stage 3 with each link's `markOf`. Each beam leaves the
+// mounted document at stage 3 with each link's `markOf` — its hue, its value,
+// and its weight, the link lit at an arrival stroked heavier (foundations
+// §2.1's register: "the followed link drawn heavier"). Each beam leaves the
 // text at its span's own line, from the place's edge (foundations §2.1; S1
 // Q1): it starts at the right edge of the block holding its span, level with
 // the middle of the line-rect of the span's own bytes nearest the far end
@@ -241,7 +243,7 @@ export function draw() {
   for (const b of set) {
     for (const bm of b.members.slice(0, 20)) {
       const hue = bm.s.mark.hue;
-      ctx.strokeStyle = hue; ctx.globalAlpha = alpha * bm.s.mark.value; ctx.lineWidth = 1.6;
+      ctx.strokeStyle = hue; ctx.globalAlpha = alpha * bm.s.mark.value; ctx.lineWidth = 1.6 * bm.s.mark.weight;
       ctx.setLineDash(bm.s.linker === 'others' ? [5, 4] : []);
       const { x: x0, y: y0 } = bm.from, end = endOf(bm), { x: x1, y: y1 } = end;
       const mx = (x0 + x1) / 2;

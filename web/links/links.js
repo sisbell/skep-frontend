@@ -4,7 +4,9 @@
 // lenses PER DOCUMENT for the session (S-29 (b); D-2 RULED PER DOCUMENT) and
 // THE VISITED-LINK SET (S-32 (a); D-3) — THE ONE OWNER of both (FP-10).
 // Imports: M-REC (the raw links, each link's type, the index) and P-REG
-// (the values) alone; M-ADDR's arithmetic beneath.
+// (the values) alone; M-ADDR's arithmetic beneath. N-GO's link lit at an
+// arrival is read through the reader the app hands in (`readers`), never
+// imported — N-GO imports LK — and never kept here.
 //
 // WHICH LINKS SHOW at a document and at a span, and HOW each is marked —
 // ITS RULE TODAY IS THE RULED DESIGNS' AND NOTHING MORE (foundations §2.1's
@@ -34,13 +36,17 @@
 //     toggle or a lens re-sets no line;
 //   - a link the person has FOLLOWED this session is drawn lighter (D-3:
 //     VALUE, the hue kept), the set client-side, never written;
+//   - the link LIT AT AN ARRIVAL — the one a landing followed, or the one
+//     Back came back along (N-GO's `litLink`) — is drawn heavier until the
+//     next act (foundations §2.1's register: "the arrival an outline around
+//     its span with the followed link drawn heavier": WEIGHT);
 //   - links drawn at ONE SITE — a stretch of text several mark, a mid
 //     connection — are ONE MARK carrying what they share (P44; its Use at
 //     §2.1's register: "neutral in any variable its members do not share —
 //     hue where their linkers differ"): the linker's hue where every one's
 //     linker is one, else the neutral hue; lighter only where every one was
-//     followed; the form the link kind's, which every mark here carries
-//     (`mergedMark`);
+//     followed; heavier only where every one is lit; the form the link
+//     kind's, which every mark here carries (`mergedMark`);
 //   - the mid connections: one per pair of places the plane draws the
 //     documents at — a document's own box, or the mark of the continuation
 //     holding it (P44) — counting each link once, however many of its ends
@@ -67,7 +73,7 @@
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-11.
 
 import * as REC from '../model/records.js';
-import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA } from '../plane/register.js';
+import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
 import { commonsType, documentOf } from '../model/address.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
@@ -101,6 +107,10 @@ import { commonsType, documentOf } from '../model/address.js';
  * @property {boolean} farWhole
  */
 /**
+ * @typedef {Object} Readers — what LK reads from an owner above it, handed in once by the app
+ * @property {() => string | null} lit the link lit at an arrival (N-GO's `litLink`); null where none is
+ */
+/**
  * @typedef {Object} Connection — a mid connection between two places the plane draws documents at
  * @property {string} a the place of the drawn document the first of its links was met at: the document's own address, or the mark `placeOf` names
  * @property {string} b the place that link's far end stands at, drawn this frame or out of view
@@ -120,6 +130,13 @@ const STRUCTURAL_ORDINALS = new Set([22, 23, 24, 25, 26, 27, 28, 29]);
 const reveals = new Map();
 /** @type {Set<string>} the followed links, the session's (D-3) */
 const visitedSet = new Set();
+/** the readers until the app hands N-GO's in: no link lit */
+const noReaders = () => /** @type {Readers} */ ({ lit: () => null });
+/** @type {Readers} */
+let read = noReaders();
+
+/** the owners above hand their readers in once (the app) */
+export function readers(/** @type {Readers} */ r) { read = r; }
 
 /** the reveal a document stands at until a card moves it: hidden, others' links off, no lens */
 const hidden = () => /** @type {Reveal} */ ({ stage: 1, others: false, lens: { owners: null, types: null, endorsed: false } });
@@ -175,14 +192,15 @@ export function linkerOf(/** @type {Link} */ l, /** @type {string} */ atDoc) {
 
 /**
  * How one link is marked: hue the linker's, form its kind's, value lighter
- * once followed (D-3).
+ * once followed (D-3), weight heavier while it is the link lit at an arrival
+ * (foundations §2.1's register).
  * @param {Link} l
  * @param {string} atDoc
  * @returns {Mark}
  */
 export function markOf(l, atDoc) {
   const linker = linkerOf(l, atDoc);
-  return { hue: HUE[linker], linker, form: KIND_FORM.link, value: visitedSet.has(l.addr) ? VISITED_ALPHA : 1, own: linker !== 'others' };
+  return { hue: HUE[linker], linker, form: KIND_FORM.link, value: visitedSet.has(l.addr) ? VISITED_ALPHA : 1, weight: read.lit() === l.addr ? ARRIVAL_WEIGHT : 1, own: linker !== 'others' };
 }
 
 /**
@@ -193,8 +211,9 @@ export function markOf(l, atDoc) {
  * its hue where every member's is one, else none and NEUTRAL_HUE; lighter
  * only where every member was followed (D-3), else full — value carries the
  * followed mark alone, so a site followed in part has no value of its own;
- * standing with no act only where every member does; the form the link
- * kind's, which every mark `markOf` makes carries.
+ * heavier only where every member is the link lit, else the drawer's own
+ * weight; standing with no act only where every member does; the form the
+ * link kind's, which every mark `markOf` makes carries.
  * @param {[Mark, ...Mark[]]} marks the members' marks
  * @returns {Mark}
  */
@@ -205,6 +224,7 @@ export function mergedMark(marks) {
     linker: marks.every((x) => x.linker === m.linker) ? m.linker : null,
     form: KIND_FORM.link,
     value: marks.every((x) => x.value === m.value) ? m.value : 1,
+    weight: marks.every((x) => x.weight === m.weight) ? m.weight : 1,
     own: marks.every((x) => x.own),
   };
 }
@@ -421,4 +441,4 @@ export function othersTouching(/** @type {string} */ addr) {
 }
 
 /** reset (tests) */
-export function _reset() { reveals.clear(); visitedSet.clear(); }
+export function _reset() { reveals.clear(); visitedSet.clear(); read = noReaders(); }

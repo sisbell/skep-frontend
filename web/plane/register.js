@@ -7,13 +7,15 @@
 // NEUTRAL hue, which names no linker (P44's Use at §2.1's register); the
 // anchor's GRADE a line on the highlight's edge;
 // SAMENESS boundaries and a ground TEXTURE, never a tint; the VISITED-LINK
-// MARK takes VALUE (lighter, the hue kept — D-3); a connection's KIND its
-// line's form; a box's PUBLICATION STATE its edge's weight; a LABEL's size
-// its floor, below which no label on the plane is set (P-LABEL); THE EDGE
-// STUB its inset from the view's border and its triangle's size, the one stub
-// BM's beams and P-RENDER's mid connections draw (P-CAM's `edgeStub`). LK reads
-// this module to put a value on each link's mark; no drawing module reads it
-// for a link (the seam's rule). The values are the UI phase's.
+// MARK takes VALUE (lighter, the hue kept — D-3); the link lit at an ARRIVAL
+// its stroke's WEIGHT (foundations §2.1: "the followed link drawn heavier");
+// a connection's KIND its line's form; a box's PUBLICATION STATE its edge's
+// weight; a LABEL's size its floor, below which no label on the plane is set
+// (P-LABEL); THE EDGE STUB its inset from the view's border and its
+// triangle's size, the one stub BM's beams and P-RENDER's mid connections
+// draw (P-CAM's `edgeStub`). LK reads this module to put a value on each
+// link's mark; no drawing module reads it for a link (the seam's rule). The
+// values are the UI phase's.
 // Carries: the wireframe's §10 `COL`; S1 Q5's `same`/`provenance` classes
 // (the treatment OPEN).
 // Rules: FP-1, FP-2, FP-10 (no state).
@@ -44,6 +46,14 @@ export const SAMENESS = Object.freeze({ treatment: 'provenance', boundary: '#7dd
 
 /** the visited-link value: the symbol drawn lighter, the hue kept (D-3) */
 export const VISITED_ALPHA = 0.45;
+
+/**
+ * the arrival's weight: the link lit at an arrival — the one a landing
+ * followed, or the one Back came back along (N-GO's `litLink`) — stroked at
+ * this many times the drawer's own width (foundations §2.1's register: "the
+ * arrival an outline around its span with the followed link drawn heavier")
+ */
+export const ARRIVAL_WEIGHT = 2;
 
 /** a mid connection's kind takes its line's form */
 export const KIND_FORM = Object.freeze({ link: [], 'draft-to-edition': [2, 4], supersedes: [6, 4], fork: [6, 3, 1, 3], identity: 'band' });
@@ -83,6 +93,7 @@ export const COL = Object.freeze({
  * @property {'you' | 'owner' | 'others' | null} linker null where the merged links' linkers differ
  * @property {number[] | 'band'} form the kind's dash form
  * @property {number} value 1 = full; VISITED_ALPHA once followed — every merged link followed
+ * @property {number} weight 1 = the drawer's own stroke; ARRIVAL_WEIGHT for the link lit at an arrival — every merged link lit
  * @property {boolean} own true where the mark stands with no act (the owner's or the person's) — every merged link's
  */
 

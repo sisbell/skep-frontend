@@ -1,12 +1,15 @@
 // LK's test — the rule over a hand-built model: the owner's links marked,
 // the person's own in their hue, the others' counted and not shown, the
 // lenses filtering, each drawn link naming the document it is drawn at, a
-// visited link lighter, the records and account-named ends never counted,
-// the badge arriving until read, the mid connections one per pair of places
-// drawn, each link counted once however many of its ends are drawn, and
-// marked with what their links share — neutral in the hue where their
-// linkers differ, lighter only where every one was followed — whichever
-// document comes first (a mutant that keeps the first end's mark, or counts
+// visited link lighter, the link lit at an arrival heavier and every other at
+// the drawer's own weight, as the reader the app hands in names it (a mutant
+// that weights by anything but the reader turns red), the records and
+// account-named ends never counted, the badge arriving until read, the mid
+// connections one per pair of places drawn, each link counted once however
+// many of its ends are drawn, and marked with what their links share —
+// neutral in the hue where their linkers differ, lighter only where every one
+// was followed, heavier only where every one is lit — whichever document
+// comes first (a mutant that keeps the first end's mark, or counts
 // ends, turns red); a link's far end a connection's end whether the plane
 // draws it or not — out of view, at the place it would stand at, carrying the
 // count and the mark it carries in view — and no end where the plane draws
@@ -17,7 +20,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from './links.js';
-import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
+import { HUE, NEUTRAL_HUE, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13', ENROLL = '1.1.0.1.0.1.0.3.1', CLAIM = '1.1.0.1.0.1.0.3.3', ENDORSE = '1.1.0.1.0.1.0.3.42';
 const D = '1.0.1.0.3', OTHER_HOME = '1.0.2.0.5';
@@ -141,12 +144,26 @@ test('a followed link is drawn lighter, its hue kept (D-3)', () => {
 });
 
 test('links merged at one site carry what they share and are neutral in what they do not, whatever their order (P44)', () => {
-  const yours = { hue: HUE.you, linker: 'you', form: [], value: VISITED_ALPHA, own: true };
-  const others = { hue: HUE.others, linker: 'others', form: [], value: 1, own: false };
+  const yours = { hue: HUE.you, linker: 'you', form: [], value: VISITED_ALPHA, weight: ARRIVAL_WEIGHT, own: true };
+  const others = { hue: HUE.others, linker: 'others', form: [], value: 1, weight: 1, own: false };
   assert.deepEqual(LK.mergedMark([yours, { ...yours }]), yours, 'what every member shares stands');
   for (const marks of [[yours, others], [others, yours]]) {
-    assert.deepEqual(LK.mergedMark(/** @type {any} */ (marks)), { hue: NEUTRAL_HUE, linker: null, form: [], value: 1, own: false }, `${marks[0].linker}'s first`);
+    assert.deepEqual(LK.mergedMark(/** @type {any} */ (marks)), { hue: NEUTRAL_HUE, linker: null, form: [], value: 1, weight: 1, own: false }, `${marks[0].linker}'s first`);
   }
+});
+
+test('the link lit at an arrival is drawn heavier, every other at the drawer\'s own weight — read through the reader handed in, none lit until it is', () => {
+  const own = /** @type {any} */ (REC.link(D + '.0.2.1')), other = /** @type {any} */ (REC.link(OTHER_HOME + '.0.2.1'));
+  const weights = () => [LK.markOf(own, D).weight, LK.markOf(other, D).weight];
+  assert.deepEqual(weights(), [1, 1], 'no reader handed in: none lit');
+  LK.readers({ lit: () => D + '.0.2.1' });
+  assert.deepEqual(weights(), [ARRIVAL_WEIGHT, 1], 'the link the reader names heavier, the other at its own');
+  assert.equal(LK.shown(D)[0].mark.weight, ARRIVAL_WEIGHT, 'as drawn at its span');
+  assert.equal(LK.markOf(own, D).hue, HUE.you, 'its hue kept');
+  LK.readers({ lit: () => OTHER_HOME + '.0.2.1' });
+  assert.deepEqual(weights(), [1, ARRIVAL_WEIGHT], 'the reader naming another: that one heavier');
+  LK.readers({ lit: () => null });
+  assert.deepEqual(weights(), [1, 1], 'the reader naming none: none lit');
 });
 
 test('the mid connections: one per document pair', () => {

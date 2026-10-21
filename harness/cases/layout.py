@@ -39,7 +39,13 @@ word after their span, which a symbol set at the paragraph's end would
 leave behind it. THE ARRIVAL (foundations §2.1: "the arrival an outline
 around its span"; §3.2): a landing as a follow lands, on a drawn link's span
 half its paragraph or narrower, outlines that span's own lines — each line
-rect of its marked words, and nothing else — never the paragraph's box.
+rect of its marked words, and nothing else — never the paragraph's box; it
+is gone at the next act — HOME made from the landing, the camera set back on
+the landing's view (a camera move, no act) finds nothing outlined (§3.2:
+"both gone at the next act — a pan or a zoom none"); and, the reveal at stage
+3, the link the landing names is drawn heavier (§2.1: "with the followed
+link drawn heavier"): its beam lays HEAVIER_INK times the ink or more about
+its start that it lays after a landing on the same span naming no link.
 THE HANDOFF (law 8;
 foundations §2.4: the bars become text and no line moves; S1 Q7): at each
 level, and at the mount threshold reached from below (em 6 → 6.6) and from
@@ -113,7 +119,8 @@ reading scale would cross the text, showing between the article's glyphs.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `arrivalAnchors`, `visible`, `barsOf`, `labels`, `scene.at`,
 `scene.ties`, the frame buffer, `beamLabels`, `connections`) save the
-trail's and the stub's triangle's, which read the canvas's pixels here, the
+trail's, the stub's triangle's and the followed link's beam's, which read the
+canvases' pixels here, the
 stub's places, which the projection gives here, the symbols', which reads
 the article's order here, the click cues', which read the computed style
 here, the stand-in's, which sets its article and reads its blocks here, and
@@ -151,6 +158,10 @@ TRAIL_STRIP_PX, TRAIL_INSET_PX, PIP_CLEAR_PX = 1.5, 4, 14
 # how far either way it may stand from there, and from the true bearing; how far a channel of its triangle's pixel may
 # stand from its hue drawn at full alpha
 STUB_INSET_PX, STUB_TOL_PX, STUB_BEARING_DEG, STUB_INK_TOL = 8, 1.0, 0.5, 2
+# the link followed drawn heavier: the square about its beam's start, in px either way, whose ink the case reads on the beams'
+# canvas, and how many times the ink the beam lays there unlit it lays lit — the case's own floor for "heavier", held apart
+# from the page's ARRIVAL_WEIGHT
+BEAM_WINDOW_PX, HEAVIER_INK = 6, 1.5
 
 
 def corner_of(ctx):
@@ -193,6 +204,24 @@ def symbols_view(ctx):
 def rect_like(a, b):
     """do two rects stand at one place and size, ANCHOR_TOL_PX either way?"""
     return all(abs(a[k] - b[k]) <= ANCHOR_TOL_PX for k in ('x', 'y', 'w', 'h'))
+
+
+def beam_ink(ctx, link, pos):
+    """the ink the beams' canvas holds about the start of the beam that leaves the first edition at `pos` for `link`: the
+    alpha of every pixel in the square BEAM_WINDOW_PX either way of the point it leaves the text at, summed, in px² — read
+    from the canvas's pixels, apart from the beams' own set; None where no such beam is built"""
+    return ctx.js('''((doc, link, pos, half) => {
+      const S = window.__skep, a = S.beamAnchors().find((b) => b.link === link && b.near === doc && b.pos === pos);
+      if (!a) return null;
+      const cv = document.getElementById('beams'), k = cv.width / S.view.viewport().VW;
+      const x0 = Math.max(0, Math.floor((a.x - half) * k)), y0 = Math.max(0, Math.floor((a.y - half) * k));
+      const x1 = Math.min(cv.width, Math.ceil((a.x + half) * k)), y1 = Math.min(cv.height, Math.ceil((a.y + half) * k));
+      if (x1 <= x0 || y1 <= y0) return {at: {x: a.x, y: a.y}, ink: 0};
+      const img = cv.getContext('2d').getImageData(x0, y0, x1 - x0, y1 - y0).data;
+      let ink = 0;
+      for (let i = 3; i < img.length; i += 4) ink += img[i] / 255;
+      return {at: {x: a.x, y: a.y}, ink: ink / (k * k)};
+    })(%s, %s, %d, %s)''' % (json.dumps(DOC), json.dumps(link), pos, BEAM_WINDOW_PX))
 
 
 def handoff(ctx):
@@ -1028,6 +1057,32 @@ def run(ctx):
                 {'link': target['link'], 'pos': target['pos'], 'width': target['width'], 'outline': outline[:6], 'words': words[:6]})
         r.check(block is not None and not any(rect_like(o, block) for o in outline), 'the arrival: no rect it outlines is the paragraph\'s box', {'block': block, 'outline': outline[:6]})
         r.figures['arrival'] = {'link': target['link'], 'pos': target['pos'], 'width': target['width'], 'outlined_lines': len(outline), 'word_lines': len(words)}
+        # gone at the next act (foundations §3.2: "both gone at the next act — a pan or a zoom none"): HOME made from the
+        # landing, then the camera set back on the landing's view — a camera move, no act — with the article mounted there again
+        landing = ctx.camera()
+        ctx.js('window.__skep.go.home()')
+        ctx.settle()
+        ctx.set_view(landing['x'], landing['y'], landing['scale'])
+        again = ctx.js('window.__skep.arrivalAnchors()')
+        mounted = DOC in ctx.js('window.__skep.mountedAddrs()')
+        r.check(mounted and again is None, 'the arrival: gone at the next act — HOME made from the landing, the camera set back on the landing\'s view finds the article mounted and nothing outlined in it',
+                {'mounted': mounted, 'arrival': again and {k: again[k] for k in ('addr', 'pos', 'width', 'link')}, 'outline': again and again['outline'][:4]})
+        # the link followed drawn heavier (foundations §2.1's register: "the arrival an outline around its span with the
+        # followed link drawn heavier"): the reveal at stage 3, the landing that names the link lays more ink about its beam's
+        # start than a landing on the same span that names none
+        ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(DOC))
+        ink = {}
+        for named in (True, False):
+            ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), target['pos'], json.dumps({'width': target['width'], 'link': target['link'] if named else None})))
+            ctx.settle()
+            ctx.frames(3)
+            ink[named] = beam_ink(ctx, target['link'], target['pos'])
+        ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
+        lit, unlit = ink[True], ink[False]
+        r.check(bool(lit) and bool(unlit) and unlit['ink'] > 0 and lit['ink'] >= HEAVIER_INK * unlit['ink'],
+                f'the arrival: the link followed drawn heavier — the reveal at stage 3, the landing that names it lays {HEAVIER_INK:g} times the ink or more within {BEAM_WINDOW_PX} px of its beam\'s start that a landing on the same span naming none lays',
+                {'link': target['link'], 'lit': lit, 'unlit': unlit})
+        r.figures['arrival'].update(gone_at_next_act=again is None, beam_ink={'lit': lit and round(lit['ink'], 2), 'unlit': unlit and round(unlit['ink'], 2)})
         ctx.leap(DOC, WINDOW[0])
     # the mount thresholds: mounted at em 6.5 and above, unmounted below 5.5; at each step the frames it drew drew no
     # document both as bars and as text, nor left one yielded and unmounted; where the article stands just mounted, it

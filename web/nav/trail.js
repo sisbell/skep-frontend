@@ -4,7 +4,10 @@
 // client-side, never written (law 1).
 // An entry is an address and a view (S3 Q7's tuple), its view RE-TAKEN
 // whenever the entry is departed, so Back lands on the passage left; an
-// entry a follow departed holds the link followed. The launch frame is the
+// entry a follow reached holds the link followed, which Back from it lights
+// at the entry before it, the follow's departure (foundations §2.2; N-GO's
+// `back`). Each step's link is held once, on the entry the step reached, so
+// a withdrawal takes it out with its claim. The launch frame is the
 // first entry (W-01); after it an entry is pushed by a fresh TELEPORT —
 // LEAP, follow, a click on a place, Enter, HOME, WHOLE BOARD, an account's
 // region — one push per act, made as the act is made, never by panning or
@@ -34,9 +37,9 @@
  * @typedef {Object} Entry
  * @property {string} addr the place teleported to
  * @property {number | null} pos the position landed on, where one was
- * @property {number | null} width the positions landed on from `pos`, where the landing named a span: a follow's projected far end, or a carried passage's counterpart — the span the arrival mark outlines
+ * @property {number | null} width the positions landed on from `pos`, where the landing named a span: a follow's projected far end, or a carried passage's counterpart — the span its landing outlined
  * @property {View} view the view at the entry — the landing's, re-taken at departure
- * @property {string | null} link the link followed to reach it, where one was
+ * @property {string | null} link the link followed to reach it, where one was — the one Back from it lights at the entry before it
  * @property {string | null} label the place's label at the push
  */
 
