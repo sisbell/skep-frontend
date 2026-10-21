@@ -1,8 +1,13 @@
 // N-GO's test against the FAKE PORT: a follow lands on the span its link's
 // far end projects to NOW, outlines that span — its first position and its
 // positions, never the position alone (a mutant that drops the projection's
-// width turns red) — and lights the link followed; a link naming the far
-// document whole outlines the document's first position, no width. Every act
+// width turns red) — and lights the link followed; a far end the far
+// document's text holds in two runs apart, a passage a later edit cut in
+// two, is outlined in both, in the text's order whatever order the board's
+// set names them in, the landing at the first in the text (a mutant that
+// keeps the projection's first member alone, or the set's order, turns red);
+// a link naming the far document whole outlines the document's first
+// position, no width. Every act
 // puts both marks out as it is made — a LEAP, HOME, WHOLE BOARD, an
 // account's region, a jump, Forward, a LEAP that faces, and a follow that
 // faces, at once or once its read answers (a mutant that drops the step from
@@ -41,7 +46,11 @@
 // against the text landed in once that text is read, lands at its
 // counterpart there and lights the arrival on that span, no link named (a
 // mutant that ignores the carry, or lights the carried position unprojected,
-// turns red); Back to it lands on that span and lights nothing; where the
+// turns red); a passage the text holds in two stretches, its second half
+// standing first, is marked in both, in the text's order, the landing at the
+// passage's start (a mutant that marks the first stretch alone, keeps the
+// passage's order, or lands at the first in the text turns red); Back to it
+// lands on that span and lights nothing; where the
 // text holds none of it, it lands at the first block, unmarked, faced in the
 // dead end's words — at a member in the member's — and offering no act (a
 // mutant that lands where a plain LEAP does, or faces nothing, turns red); a
@@ -85,9 +94,15 @@ const PASSAGE = D + '.0.2.1', WHOLE = D + '.0.2.2';
 const DEAD = D + '.0.2.3';
 /** the dead reference taken into the model, drawn at the first edition */
 const takeDead = () => { REC.takeLinks(D, [DEAD]); REC.takeLink({ addr: DEAD, from: [span(D, 23, 3)], to: [span(GONE, 1, 3)], type: CITE }); };
-// FAR's second version member, a copy of its text; the passages LEAPs carry: one FAR holds at 20, five positions, and one neither FAR nor its member holds
+// a citation from the first edition of a passage of FAR that a later edit to FAR cut in two: its far end projects to FAR's 3, four
+// positions, and FAR's 20, five
+const SPLIT = D + '.0.2.4';
+/** the cut citation taken into the model, drawn at the first edition */
+const takeSplit = () => { REC.takeLinks(D, [SPLIT]); REC.takeLink({ addr: SPLIT, from: [span(D, 1, 3)], to: [span(FAR, 3, 22)], type: CITE }); };
+// FAR's second version member, a copy of its text; the passages LEAPs carry: one FAR holds at 20, five positions, one neither FAR nor
+// its member holds, and one FAR holds in two stretches, its first half at FAR's 25 and its second at FAR's 2
 const FAR2 = FAR + '.2';
-const SHARED = { addr: D, pos: 11, width: 5 }, UNSHARED = { addr: D, pos: 1, width: 8 };
+const SHARED = { addr: D, pos: 11, width: 5 }, UNSHARED = { addr: D, pos: 1, width: 8 }, MOVED = { addr: D, pos: 1, width: 10 };
 /** the `compare` a carried passage is re-projected by: the passage against the text landed in, whole */
 const carried = (/** @type {{addr: string, pos: number, width: number}} */ c, /** @type {string} */ into, /** @type {number} */ extent) => F.compare([{ doc: c.addr, spans: [{ ordinal: c.pos, positions: c.width }] }], [{ doc: into, spans: [{ ordinal: 1, positions: extent }] }]);
 
@@ -109,9 +124,13 @@ const script = {
   // where each citation's far end projects into FAR now: the passage at 20, five positions; FAR whole, all of it
   [FAKE.keyOf('op', { frame: F.project(PASSAGE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }] } },
   [FAKE.keyOf('op', { frame: F.project(WHOLE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + FAR_EXTENT }] } },
+  // the cut citation's far end in two runs, the set naming the later first: the wire names no order for a span set
+  [FAKE.keyOf('op', { frame: F.project(SPLIT, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }, { start: '1.3', width: '0.4' }] } },
   ...reads(FAR2, FAR_TEXT, []),
-  // where the carried passages stand in FAR and its member: the shared one at FAR's 20, five positions; the other nowhere
+  // where the carried passages stand in FAR and its member: the shared one at FAR's 20, five positions; the other nowhere; the moved
+  // one's first five positions at FAR's 25 and its last five at FAR's 2
   [FAKE.keyOf('op', { frame: carried(SHARED, FAR, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [{ d1: D, d2: FAR, u1: { ordinal: '11', subspace: '1' }, u2: { ordinal: '20', subspace: '1' }, width: '5' }] } },
+  [FAKE.keyOf('op', { frame: carried(MOVED, FAR, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [{ d1: D, d2: FAR, u1: { ordinal: '1', subspace: '1' }, u2: { ordinal: '25', subspace: '1' }, width: '5' }, { d1: D, d2: FAR, u1: { ordinal: '6', subspace: '1' }, u2: { ordinal: '2', subspace: '1' }, width: '5' }] } },
   [FAKE.keyOf('op', { frame: carried(UNSHARED, FAR, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [] } },
   [FAKE.keyOf('op', { frame: carried(UNSHARED, FAR2, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [] } },
 };
@@ -165,9 +184,20 @@ const marks = () => [GO.arrivalMark(), GO.litLink()];
 
 test('a follow outlines the span its link\'s far end projects to — its first position and its positions — and lights the link followed', async () => {
   await run(GO.follow(drawn(PASSAGE)));
-  assert.deepEqual(marks(), [{ addr: FAR, pos: 20, width: 5, link: PASSAGE }, PASSAGE]);
+  assert.deepEqual(marks(), [{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }, PASSAGE]);
   const e = TRAIL.current();
   assert.deepEqual(e && [e.addr, e.pos, e.width, e.link], [FAR, 20, 5, PASSAGE], 'the landing\'s entry carries the span and the link');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow of a far end the far document\'s text holds in two runs apart outlines both, in the text\'s order, and lands at the first in the text', async () => {
+  takeSplit();
+  await run(GO.follow(drawn(SPLIT)));
+  assert.deepEqual(marks(), [{ addr: FAR, pos: 3, runs: [{ pos: 3, width: 4 }, { pos: 20, width: 5 }], link: SPLIT }, SPLIT], 'every run the projection names, the gap between them not marked');
+  assert.ok(same(CAM.view(), GO.viewFor(FAR, 3)), 'the camera at the first run\'s view');
+  assert.deepEqual([walkAt(), WALK.landedAt()], [['block', FAR, 1], 3], 'the walk on the paragraph holding the first run, at its position');
+  const e = TRAIL.current();
+  assert.deepEqual(e && [e.addr, e.pos, e.width, e.link], [FAR, 3, 4, SPLIT], 'the landing\'s entry at the run landed on');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -187,7 +217,7 @@ test('Back lights the link a follow took to reach the entry it leaves, at the fo
 
 test('a link naming the far document whole outlines the document\'s first position, no width, and lights the link', async () => {
   await run(GO.follow(drawn(WHOLE)));
-  assert.deepEqual(marks(), [{ addr: FAR, pos: 1, width: null, link: WHOLE }, WHOLE]);
+  assert.deepEqual(marks(), [{ addr: FAR, pos: 1, runs: null, link: WHOLE }, WHOLE]);
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -197,7 +227,7 @@ test('every act puts the arrival\'s two marks out as it is made: HOME, WHOLE BOA
   const landed = async () => {
     await run(GO.leapTo(D));
     await run(GO.follow(drawn(PASSAGE)));
-    assert.deepEqual(marks(), [{ addr: FAR, pos: 20, width: 5, link: PASSAGE }, PASSAGE], 'the follow lit both');
+    assert.deepEqual(marks(), [{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }, PASSAGE], 'the follow lit both');
   };
   /** @type {Array<[string, () => Promise<unknown>]>} */
   const acts = [
@@ -221,7 +251,7 @@ test('every act puts the arrival\'s two marks out as it is made: HOME, WHOLE BOA
   assert.deepEqual(marks(), [null, null], 'Forward');
   await run(GO.back());
   await run(GO.leapTo(FAR, { how: 'leap', carry: SHARED, push: false }));
-  assert.deepEqual(marks(), [{ addr: FAR, pos: 20, width: 5, link: null }, null], 'a carried LEAP that pushes nothing outlines its counterpart, the entry ahead of the cursor standing');
+  assert.deepEqual(marks(), [{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: null }, null], 'a carried LEAP that pushes nothing outlines its counterpart, the entry ahead of the cursor standing');
   await run(GO.forward());
   assert.deepEqual(marks(), [null, null], 'Forward from behind it');
   assert.deepEqual(fake.unanswered, []);
@@ -230,7 +260,7 @@ test('every act puts the arrival\'s two marks out as it is made: HOME, WHOLE BOA
 test('a LEAP carrying a passage lands at its counterpart in the text landed in and lights the arrival on it; Back to it lands there and lights nothing', async () => {
   await run(GO.leapTo(D));
   await run(GO.leapTo(FAR, { how: 'leap', carry: SHARED }));
-  assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 20, width: 5, link: null }, 'the counterpart\'s first position and its positions — never the carried 11');
+  assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: null }, 'the counterpart\'s first position and its positions — never the carried 11');
   const e = TRAIL.current();
   assert.deepEqual(e && [e.addr, e.pos, e.width, e.link], [FAR, 20, 5, null], 'the landing\'s entry at the counterpart');
   assert.ok(same(CAM.view(), GO.viewFor(FAR, 20)), 'the camera at the counterpart\'s view');
@@ -240,6 +270,17 @@ test('a LEAP carrying a passage lands at its counterpart in the text landed in a
   await run(GO.back());
   assert.equal(GO.arrivalMark(), null, 'Back lights nothing: no link was followed');
   assert.deepEqual([walkAt(), WALK.landedAt()], [['block', FAR, 19], 20], 'Back lands on the counterpart');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP carrying a passage the text landed in holds in two stretches marks both, in the text\'s order, and lands where the passage begins', async () => {
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR, { how: 'leap', carry: MOVED }));
+  assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 25, runs: [{ pos: 2, width: 5 }, { pos: 25, width: 5 }], link: null }, 'every stretch of it the text holds, the landing at the counterpart of its first five positions');
+  const e = TRAIL.current();
+  assert.deepEqual(e && [e.addr, e.pos, e.width, e.link], [FAR, 25, 5, null], 'the landing\'s entry at the stretch landed on');
+  assert.ok(same(CAM.view(), GO.viewFor(FAR, 25)), 'the camera at that stretch\'s view');
+  assert.deepEqual([walkAt(), WALK.landedAt()], [['block', FAR, 19], 25], 'the walk on the paragraph holding it, at its position');
   assert.deepEqual(fake.unanswered, []);
 });
 

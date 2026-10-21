@@ -183,23 +183,38 @@ export function merged(raw) {
 }
 
 /**
- * A passage of the first document's counterpart in the second: the first
+ * A passage of the first document's counterparts in the second: every
  * stretch of shared identity inside it — a run of contiguous pairs one
- * stretch (`merged`) — clipped to the passage, its first position in each
- * document and its positions; null where the passage shares none. The one
- * rule the scene sets the two ends level by (`levels`) and a carried
- * passage is re-projected at a landing by (N-GO; foundations §2.3; P43).
+ * stretch (`merged`) — clipped to the passage, in the first document's
+ * order, each its first position in each document and its positions; none
+ * where the passage shares nothing. What a carried passage is re-projected
+ * at a landing as, every one marked there (N-GO; foundations §2.3: "what of
+ * it the landing's text holds marked there"; P43).
+ * @param {ComparePair[]} pairs `compare`'s pairs, `u1` in the first document
+ * @param {number} pos the passage's first position
+ * @param {number} width its positions
+ * @returns {Array<{a: number, b: number, width: number}>}
+ */
+export function counterparts(pairs, pos, width) {
+  const end = pos + Math.max(1, width);
+  return merged(pairs).filter((q) => q.u1 < end && pos < q.u1 + q.width).map((p) => {
+    const a = Math.max(pos, p.u1);
+    return { a, b: p.u2 + (a - p.u1), width: Math.min(end, p.u1 + p.width) - a };
+  });
+}
+
+/**
+ * A passage of the first document's counterpart in the second: the first of
+ * its `counterparts`, the passage's first stretch of shared identity; null
+ * where the passage shares none. The one rule the scene sets the two ends
+ * level by (`levels`) and a carried passage's landing stands at (N-GO).
  * @param {ComparePair[]} pairs `compare`'s pairs, `u1` in the first document
  * @param {number} pos the passage's first position
  * @param {number} width its positions
  * @returns {{a: number, b: number, width: number} | null}
  */
 export function counterpart(pairs, pos, width) {
-  const end = pos + Math.max(1, width);
-  const p = merged(pairs).find((q) => q.u1 < end && pos < q.u1 + q.width);
-  if (!p) return null;
-  const a = Math.max(pos, p.u1);
-  return { a, b: p.u2 + (a - p.u1), width: Math.min(end, p.u1 + p.width) - a };
+  return counterparts(pairs, pos, width)[0] || null;
 }
 
 /**

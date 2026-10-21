@@ -109,7 +109,7 @@ test('a click on a run\'s hairline LEAPs to its source carrying the run, the lan
     assert.ok(click, 'the text layer takes a click');
     click({ target: hair, clientX: 0, clientY: 0, stopPropagation() {} });
     for (let i = 0; i < 200 && !GO.arrivalMark(); i++) await new Promise((r) => setTimeout(r, 0));
-    assert.deepEqual(GO.arrivalMark(), { addr: O, pos: 12, width: 15, link: null }, 'the run marked where the source holds it');
+    assert.deepEqual(GO.arrivalMark(), { addr: O, pos: 12, runs: [{ pos: 12, width: 15 }], link: null }, 'the run marked where the source holds it');
     assert.deepEqual(fake.unanswered, [], 'the run carried, and no other passage');
   } finally {
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;

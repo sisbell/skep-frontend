@@ -389,18 +389,22 @@ export async function loadWhole(addr) {
 }
 
 /**
- * Where a link's slot projects NOW into a document (A-53): the V-span, or
- * null where the end has left the text; `invalid` where no such slot.
+ * Where a link's slot projects NOW into a document (A-53: "the spans"): every
+ * V-span of the text's content the board answers, in the order it names them
+ * — an end the document's text holds in several runs, a passage a later edit
+ * cut in two among them, answered as several; null where the end has left
+ * the text; `refused` where the board declines the read (`not_a_link` where
+ * no such slot).
  * @param {string} linkAddr
  * @param {1 | 2} slot
  * @param {string} doc
- * @returns {Promise<{ordinal: number, positions: number} | null | 'refused'>}
+ * @returns {Promise<Array<{ordinal: number, positions: number}> | null | 'refused'>}
  */
 export async function projectEnd(linkAddr, slot, doc) {
   const out = await read(F.project(linkAddr, slot, doc));
   if ('refused' in out) { refusals.push({ frame: 'project', refusal: out.refused, addr: doc }); return 'refused'; }
-  const set = F.decodeSpanSet(out.answer).filter((s) => s.subspace === 1);
-  return set.length ? { ordinal: set[0].ordinal, positions: set[0].positions } : null;
+  const set = F.decodeSpanSet(out.answer).filter((s) => s.subspace === 1).map((s) => ({ ordinal: s.ordinal, positions: s.positions }));
+  return set.length ? set : null;
 }
 
 /**

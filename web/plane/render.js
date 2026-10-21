@@ -44,9 +44,9 @@
 // the label floor, and no path between them (foundations §2.2 renders the
 // entries as pips: at reading scale a pip stands in the text column, where a
 // path would run between the glyphs of the article mounted over the canvas);
-// the focus ring; the arrival mark, the span a follow, or a LEAP carrying a
-// passage, landed on outlined line by line over the mounted article; text
-// yielded where T-LAYER mounted it;
+// the focus ring; the arrival mark, every run of the span a follow, or a
+// LEAP carrying a passage, landed on outlined line by line over the mounted
+// article; text yielded where T-LAYER mounted it;
 // for the unmounted, the bars — P-LAY's layout of the article's own lines
 // (T-ARTICLE's plan, made through T-LAYER from the view it mounts with) at the
 // face T-LAYER fits the article to (`metricsOf`), each bar where its line's
@@ -607,16 +607,16 @@ function drawFocus() {
 /**
  * The arrival mark (foundations §2.1: "an outline around its span"; §3.2):
  * the span the landing named outlined line by line, each line-rect of its own
- * bytes in the mounted article; where the link names the document whole, the
+ * bytes in the mounted article, in every run the landing's text holds it in
+ * and nothing between them; where the link names the document whole, the
  * block holding the landing's position. The arrival's other mark, the link
  * followed drawn heavier, is BM's, by the weight LK's `markOf` gives it.
  */
 function drawArrival() {
   if (!ctx) return;
   const a = GO.arrivalMark(); if (!a) return;
-  let rs = null;
-  if (a.width != null) rs = LAYER.spanRects(a.addr, a.pos, a.width);
-  else { const b = REC.blockAt(a.addr, a.pos); rs = b ? LAYER.spanRects(a.addr, b.pos) : null; }
+  const b = a.runs ? null : REC.blockAt(a.addr, a.pos);
+  const rs = a.runs ? a.runs.flatMap((r) => LAYER.spanRects(a.addr, r.pos, r.width) || []) : b ? LAYER.spanRects(a.addr, b.pos) : null;
   const lines = (rs || []).filter((r) => r.w > 0 && r.h > 0);
   ctx.strokeStyle = HUE.you; ctx.lineWidth = 2; ctx.setLineDash([]);
   for (const r of lines) ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);

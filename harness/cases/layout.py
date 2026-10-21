@@ -39,9 +39,11 @@ word after their span, which a symbol set at the paragraph's end would
 leave behind it. THE ARRIVAL (foundations §2.1: "the arrival an outline
 around its span"; §3.2): a landing as a follow lands, on a drawn link's span
 half its paragraph or narrower, outlines that span's own lines — each line
-rect of its marked words, and nothing else — never the paragraph's box; it
-is gone at the next act — HOME made from the landing, the camera set back on
-the landing's view (a camera move, no act) finds nothing outlined (§3.2:
+rect of its marked words, and nothing else — never the paragraph's box; that
+span cut into two runs apart — as a far end projects where a later edit cut
+its passage in two — it outlines each run's own lines and nothing between
+them; it is gone at the next act — HOME made from the landing, the camera
+set back on the landing's view (a camera move, no act) finds nothing outlined (§3.2:
 "both gone at the next act — a pan or a zoom none"); and, the reveal at stage
 3, the link the landing names is drawn heavier (§2.1: "with the followed
 link drawn heavier"): its beam lays HEAVIER_INK times the ink or more about
@@ -117,8 +119,8 @@ and clear of every entry's pip, the plane's canvas under the mounted article
 holds the box's ground alone — no path runs between the pips, which at
 reading scale would cross the text, showing between the article's glyphs.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
-`beamAnchors`, `arrivalAnchors`, `visible`, `barsOf`, `labels`, `scene.at`,
-`scene.ties`, the frame buffer, `beamLabels`, `connections`) save the
+`beamAnchors`, `arrivalAnchors`, `spanRects`, `visible`, `barsOf`, `labels`,
+`scene.at`, `scene.ties`, the frame buffer, `beamLabels`, `connections`) save the
 trail's, the stub's triangle's and the followed link's beam's, which read the
 canvases' pixels here, the
 stub's places, which the projection gives here, the symbols', which reads
@@ -656,22 +658,26 @@ def lit_at(addr):
 
 def arrival_holds(ctx, r, name, carried):
     """the arrival a carried passage's landing lit (foundations §2.3's carry rule: "what of it the landing's text holds
-    marked there"): no link named, its span holding the text of the stretch of the passage it re-projects — `carried`,
-    the document and the positions [lo, hi) of that stretch, from the fixtures; outlined, every rect it outlines inside
-    the landing's article, its first line inside the visible view below the one line; its figures"""
+    marked there"): no link named, the run it stands at holding the text of the stretch of the passage it re-projects —
+    `carried`, the document and the positions [lo, hi) of that stretch, from the fixtures; outlined, every rect it
+    outlines inside the landing's article, the first line of the run it stands at — its line rect read from the
+    article's own text — among them and inside the visible view below the one line; its figures"""
     a = ctx.js('window.__skep.arrivalAnchors()')
     doc, lo, hi = carried
     want = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(doc), lo, hi))
-    got = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(a['addr']), a['pos'], a['pos'] + a['width'])) if a and a['width'] else None
-    r.check(bool(a) and a['link'] is None and bool(want) and got == want, f'{name}: the landing marks the carried passage where the text landed in holds it — the arrival\'s span holds the passage\'s own words, no link named',
-            {'arrival': a and {k: a[k] for k in ('addr', 'pos', 'width', 'link')}, 'want': want and want[:80], 'got': got and got[:80]})
+    at = next((x for x in (a or {}).get('runs') or [] if x['pos'] == a['pos']), None)
+    got = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(a['addr']), at['pos'], at['pos'] + at['width'])) if at else None
+    r.check(bool(a) and a['link'] is None and bool(want) and got == want, f'{name}: the landing marks the carried passage where the text landed in holds it — the run the arrival stands at holds the passage\'s own words, no link named',
+            {'arrival': a and {k: a[k] for k in ('addr', 'pos', 'runs', 'link')}, 'want': want and want[:80], 'got': got and got[:80]})
     top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
     vp = ctx.js('window.__skep.view.viewport()')
     view = {'x': 0, 'y': top, 'w': vp['VW'], 'h': vp['VH'] - top}
     outline, art = (a or {}).get('outline') or [], (a or {}).get('article')
-    r.check(bool(outline) and art is not None and all(inside(o, art) for o in outline) and inside(outline[0], view), f'{name}: the arrival is outlined on its span\'s lines, every one inside the landing\'s article, the first inside the visible view',
-            {'lines': len(outline), 'first': outline[:1], 'article': art, 'view': view})
-    return {'arrival': a and {k: a[k] for k in ('addr', 'pos', 'width')}, 'lines': len(outline)}
+    first = next((q for q in ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(a['addr']), at['pos'], at['width'])) or [] if q['w'] > 0 and q['h'] > 0), None) if at else None
+    r.check(bool(outline) and art is not None and all(inside(o, art) for o in outline) and first is not None and any(rect_like(first, o) for o in outline) and inside(first, view),
+            f'{name}: the arrival is outlined on its span\'s lines, every one inside the landing\'s article, the first line of the run it stands at among them and inside the visible view',
+            {'lines': len(outline), 'first': first, 'article': art, 'view': view})
+    return {'arrival': a and {k: a[k] for k in ('addr', 'pos', 'runs')}, 'lines': len(outline)}
 
 
 def first_in_view(ctx, addr):
@@ -1047,7 +1053,7 @@ def run(ctx):
     target = next((s for s in once for b in paras if b['pos'] <= s['pos'] and s['pos'] + s['width'] <= b['pos'] + b['width'] and 2 * s['width'] <= b['width']), None)
     r.check(target is not None, 'the arrival: a drawn link of the first edition at one span, half its paragraph or narrower', [[s['pos'], s['width']] for s in once[:8]])
     if target is not None:
-        ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), target['pos'], json.dumps({'width': target['width'], 'link': target['link']})))
+        ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), target['pos'], json.dumps({'runs': [{'pos': target['pos'], 'width': target['width']}], 'link': target['link']})))
         ctx.settle()
         ctx.frames(3)
         a = ctx.js('window.__skep.arrivalAnchors()') or {}
@@ -1057,6 +1063,23 @@ def run(ctx):
                 {'link': target['link'], 'pos': target['pos'], 'width': target['width'], 'outline': outline[:6], 'words': words[:6]})
         r.check(block is not None and not any(rect_like(o, block) for o in outline), 'the arrival: no rect it outlines is the paragraph\'s box', {'block': block, 'outline': outline[:6]})
         r.figures['arrival'] = {'link': target['link'], 'pos': target['pos'], 'width': target['width'], 'outlined_lines': len(outline), 'word_lines': len(words)}
+        # a far end the far document's text holds in two runs apart — a passage a later edit cut in two — outlined in both:
+        # the door naming the drawn link's span cut in three, its first and last thirds the runs, the outline stands on each
+        # run's own lines — read from the article's own text — and on nothing between them
+        third = target['width'] // 3
+        runs = [{'pos': target['pos'], 'width': third}, {'pos': target['pos'] + target['width'] - third, 'width': third}]
+        lines, outlined = [], []
+        if third >= 1:
+            ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), target['pos'], json.dumps({'runs': runs, 'link': target['link']})))
+            ctx.settle()
+            ctx.frames(3)
+            outlined = (ctx.js('window.__skep.arrivalAnchors()') or {}).get('outline') or []
+            lines = [[q for q in ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(DOC), x['pos'], x['width'])) or [] if q['w'] > 0 and q['h'] > 0] for x in runs]
+        each = [q for ls in lines for q in ls]
+        r.check(third >= 1 and all(lines) and len(outlined) == len(each) and all(any(rect_like(o, q) for q in each) for o in outlined) and all(any(rect_like(q, o) for o in outlined) for q in each),
+                f'the arrival in two runs: the outline stands on each run\'s own lines and on nothing between them — each rect it outlines one of the runs\' line rects, and each of those outlined, {ANCHOR_TOL_PX} px either way',
+                {'link': target['link'], 'runs': runs, 'outline': outlined[:6], 'lines': [ls[:4] for ls in lines]})
+        r.figures['arrival']['runs'] = {'runs': runs, 'outlined_lines': len(outlined), 'run_lines': [len(ls) for ls in lines]}
         # gone at the next act (foundations §3.2: "both gone at the next act — a pan or a zoom none"): HOME made from the
         # landing, then the camera set back on the landing's view — a camera move, no act — with the article mounted there again
         landing = ctx.camera()
@@ -1066,14 +1089,14 @@ def run(ctx):
         again = ctx.js('window.__skep.arrivalAnchors()')
         mounted = DOC in ctx.js('window.__skep.mountedAddrs()')
         r.check(mounted and again is None, 'the arrival: gone at the next act — HOME made from the landing, the camera set back on the landing\'s view finds the article mounted and nothing outlined in it',
-                {'mounted': mounted, 'arrival': again and {k: again[k] for k in ('addr', 'pos', 'width', 'link')}, 'outline': again and again['outline'][:4]})
+                {'mounted': mounted, 'arrival': again and {k: again[k] for k in ('addr', 'pos', 'runs', 'link')}, 'outline': again and again['outline'][:4]})
         # the link followed drawn heavier (foundations §2.1's register: "the arrival an outline around its span with the
         # followed link drawn heavier"): the reveal at stage 3, the landing that names the link lays more ink about its beam's
         # start than a landing on the same span that names none
         ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(DOC))
         ink = {}
         for named in (True, False):
-            ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), target['pos'], json.dumps({'width': target['width'], 'link': target['link'] if named else None})))
+            ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), target['pos'], json.dumps({'runs': [{'pos': target['pos'], 'width': target['width']}], 'link': target['link'] if named else None})))
             ctx.settle()
             ctx.frames(3)
             ink[named] = beam_ink(ctx, target['link'], target['pos'])

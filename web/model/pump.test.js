@@ -1,5 +1,8 @@
 // M-PUMP's test against the FAKE PORT (FP-15's proof, half one): the model
 // built from a scripted sequence of answers and events, no write composed;
+// a link's end projected NOW as every run the board answers, an end the
+// text holds in two runs as both (a mutant that keeps the first alone turns
+// red);
 // the view's reads ask nothing for a document a continuation's mark holds;
 // a session's end is taken by the page whose session it is and by no other;
 // a board's events by its own page alone, and none before the page knows
@@ -37,6 +40,8 @@ const script = {
   [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [D + '.0.2.1'] } },
   [FAKE.keyOf('op', { frame: F.readLink(D + '.0.2.1') })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' }], [{ start: '1.0.1.0.127', width: '0.0.0.0.1' }], [{ start: '1.1.0.1.0.1.0.3.13', width: '0.0.0.0.0.0.0.0.1' }]] } } },
   [FAKE.keyOf('op', { frame: F.project(D + '.0.2.1', 2, '1.0.1.0.127') })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.100' }] } },
+  // a second link's far end, which the far document's text now holds in two runs
+  [FAKE.keyOf('op', { frame: F.project(D + '.0.2.2', 2, '1.0.1.0.127') })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.3', width: '0.4' }, { start: '1.20', width: '0.5' }] } },
 };
 
 beforeEach(() => { REC._reset(); });
@@ -54,7 +59,8 @@ test('the model after a scripted cold open and a whole read, over the fake port'
   assert.deepEqual(d.blocks.map((x) => [x.pos, x.kind]), [[1, 'para'], [11, 'para'], [27, 'withheld']]);
   assert.deepEqual(d.origins, [{ pos: 27, width: 4, doc: '1.0.1.0.1003' }]);
   assert.equal(REC.link(D + '.0.2.1')?.type, '1.1.0.1.0.1.0.3.13');
-  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.1', 2, '1.0.1.0.127'), { ordinal: 1, positions: 100 });
+  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.1', 2, '1.0.1.0.127'), [{ ordinal: 1, positions: 100 }]);
+  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.2', 2, '1.0.1.0.127'), [{ ordinal: 3, positions: 4 }, { ordinal: 20, positions: 5 }], 'an end the text holds in two runs: both, never the first alone');
   assert.deepEqual(fake.unanswered, [], 'every call the pump made was a read the script expected');
   assert.ok(fake.calls().every((c) => c.name !== 'op' || true));
   // the feed keeps the index and invalidates

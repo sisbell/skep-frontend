@@ -242,16 +242,17 @@ export function install(deps) {
     });
   }
   /**
-   * The arrival mark's outline as the last frame drew it (`outline`, the
-   * rects it stroked around), beside an oracle read apart from the canvas's
-   * own set: the client rects of the followed link's marked words in the
-   * landing's mounted article (every line they occupy; none where the
-   * landing re-projected a carried passage, which no link marks), the box of
-   * the block holding the landing's position, and the landing's mounted
-   * article's box. The arrival is an outline around its span (foundations
-   * §2.1): the layout case holds the outline to the words, never to the
-   * block, and a carried passage's inside its article. Null where no arrival
-   * is lit.
+   * The arrival mark — its runs — and its outline as the last frame drew it
+   * (`outline`, the rects it stroked around, run by run), beside an oracle
+   * read apart from the canvas's own set: the client rects of the followed
+   * link's marked words in the landing's mounted article (every line they
+   * occupy; none where the landing re-projected a carried passage, which no
+   * link marks), the box of the block holding the landing's position, and
+   * the landing's mounted article's box. The arrival is an outline around
+   * its span (foundations §2.1): the layout case holds the outline to the
+   * words, never to the block, to each run's own lines where the span stands
+   * in several, and a carried passage's inside its article. Null where no
+   * arrival is lit.
    */
   function arrivalAnchors() {
     const a = GO.arrivalMark();
@@ -447,8 +448,8 @@ export function install(deps) {
     esc: () => KEYS.esc(),
     mounts: () => LAYER.mounts(),
     beams: () => BM.count(),
-    /** the teleports; `leapTo`'s third argument names the span landed on and the link followed to it, the landing then marked as a follow's is, or the passage the LEAP carries, re-projected and marked at the landing */
-    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{width?: number | null, link?: string | null, carry?: import('../text/span.js').Span | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, width: o.width ?? null, link: o.link ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s, null).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), arrival: () => GO.arrivalMark() },
+    /** the teleports; `leapTo`'s third argument names the runs of the span landed on — every run a far end projects to, `pos` at one of them — and the link followed to it, the landing then marked as a follow's is, or the passage the LEAP carries, re-projected and marked at the landing */
+    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{runs?: import('../nav/go.js').Run[] | null, link?: string | null, carry?: import('../text/span.js').Span | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, runs: o.runs ?? null, link: o.link ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s, null).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), arrival: () => GO.arrivalMark() },
     leap: { open: () => LEAP.open(), close: () => LEAP.close(), rows: () => LEAP.currentRows(), isOpen: () => LEAP.isOpen() },
     cards: {
       links: (/** @type {string} */ a) => LINKS.show(a),

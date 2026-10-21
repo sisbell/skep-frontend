@@ -81,6 +81,6 @@ test('a member\'s read act LEAPs carrying the passage held: the landing marked a
   assert.ok(read, 'the second member\'s row offers its read act');
   read(/** @type {any} */ (hostEl), false);
   for (let i = 0; i < 200 && (!GO.arrivalMark() || CAM.flying()); i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
-  assert.deepEqual(GO.arrivalMark(), { addr: T2, pos: HELD.pos + PROLOGUE.length, width: HELD.width, link: null });
+  assert.deepEqual(GO.arrivalMark(), { addr: T2, pos: HELD.pos + PROLOGUE.length, runs: [{ pos: HELD.pos + PROLOGUE.length, width: HELD.width }], link: null });
   assert.deepEqual(fake.unanswered, []);
 });
