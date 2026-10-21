@@ -23,7 +23,11 @@ Enter on the scene's acts pressing them: the re-level setting the two ends
 level again, the × ending the scene with the focus back on the item it was
 opened from (K-62, K-63); K-8's select and extend by span; a links card
 row's anatomy card taking the card's place with the symbols standing, at
-the link's own bytes; Mod+Shift+O with no selection standing selecting the
+the link's own bytes; a follow that lands nowhere — from the selection, by
+Mod+Enter or a row of its "which" list pressed, and the anatomy card's
+follow pressed — faced at the followed link's own bytes, the face taking
+the place of the list or card it was pressed on (foundations §3.1, F-G3);
+Mod+Shift+O with no selection standing selecting the
 walk's block whole and answering over it — the page's own placement of the
 platform's selection never read back as the person's, whose card, shown
 while the answer reads, would end its opening (O-HOST's); the
@@ -107,6 +111,28 @@ def chord(ctx, key, mods=(), code=None, text=None):
     ctx.drv.key(key, code=code or CODES.get(key), mods=mods, text=text)
     ctx.settle()
     ctx.frames(2)
+
+
+def overlay_up(ctx, prefix):
+    """the overlay an act asked for, waited on by its id's prefix for at most ten seconds — an act's own reads escape
+    `settle` — then two frames, so the host has placed it"""
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__skep.overlay().id || "").startsWith(%s) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })' % json.dumps(prefix))
+    ctx.frames(2)
+
+
+def placed_at(ctx, addr, pos, width):
+    """where the overlay stands, beside where the host places an overlay at a span's bytes (O-HOST's `place`): beneath their
+    first line, clamped into the viewport by the overlay's own size"""
+    return ctx.js('''(() => { const o = document.getElementById('overlay'), q = o.getBoundingClientRect(), p = window.__skep.view.viewport();
+      const rs = window.__skep.spanRects(%s, %d, %d);
+      return {at: {x: parseFloat(o.style.left), y: parseFloat(o.style.top)}, first: rs ? rs[0] : null,
+              want: rs ? {x: Math.max(6, Math.min(p.VW - q.width - 6, rs[0].x)), y: Math.max(34, Math.min(p.VH - q.height - 6, rs[0].y + rs[0].h + 4))} : null}; })()''' % (json.dumps(addr), pos, width))
+
+
+def stands_at(placed):
+    """the overlay stands where the host places one at the span, within half a pixel"""
+    want = placed['want']
+    return bool(want) and abs(placed['at']['x'] - want['x']) <= 0.5 and abs(placed['at']['y'] - want['y']) <= 0.5
 
 
 def ring(ctx):
@@ -1221,16 +1247,11 @@ def run(ctx):
         r.check(button is not None, 'the links card lists the link as its row %d' % row)
         if button is not None:
             ctx.drv.mouse(button['x'], button['y'])
-            ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__skep.overlay().id || "").startsWith("anatomy:") || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
-            ctx.frames(2)
-            placed = ctx.js('''(() => { const o = document.getElementById('overlay'), q = o.getBoundingClientRect(), p = window.__skep.view.viewport();
-              const rs = window.__skep.spanRects(%s, %d, %d);
-              return {at: {x: parseFloat(o.style.left), y: parseFloat(o.style.top)}, first: rs ? rs[0] : null,
-                      want: rs ? {x: Math.max(6, Math.min(p.VW - q.width - 6, rs[0].x)), y: Math.max(34, Math.min(p.VH - q.height - 6, rs[0].y + rs[0].h + 4))} : null}; })()''' % (json.dumps(DOC), link['pos'], link['width']))
+            overlay_up(ctx, 'anatomy:')
+            placed = placed_at(ctx, DOC, link['pos'], link['width'])
             r.check(ctx.js('window.__skep.overlay().id') == 'anatomy:' + link['link'], 'the row\'s press opens the link\'s anatomy card', ctx.js('window.__skep.overlay().id'))
             r.check(ctx.js('window.__skep.reveal(%s)' % json.dumps(DOC))['stage'] == 2, 'the anatomy card took the links card\'s place and the chain stands at stage 2: the symbols stay at their spans', ctx.js('window.__skep.reveal(%s)' % json.dumps(DOC)))
-            want = placed['want']
-            r.check(bool(want) and abs(placed['at']['x'] - want['x']) <= 0.5 and abs(placed['at']['y'] - want['y']) <= 0.5, 'the anatomy card stands at the link\'s own bytes, beneath their first line, as the host places a span\'s overlay', placed)
+            r.check(stands_at(placed), 'the anatomy card stands at the link\'s own bytes, beneath their first line, as the host places a span\'s overlay', placed)
         chord(ctx, 'Escape')
         ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
         ctx.frames(2)
@@ -1254,14 +1275,45 @@ def run(ctx):
     ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
     chord(ctx, 'Enter', mods=('Meta',))
     s = state(ctx)
+    # the links drawn at the selected block, in the order the "which" list rows them (LK's `shownAt`)
+    drawn_here = [x for x in shown if x['pos'] < linked['pos'] + linked['width'] and linked['pos'] < x['pos'] + x['width']]
     if n_here == 1:
         r.check(s['overlay'] == 'face' and 'nothing this board will say' in ctx.js('window.__skep.overlay().text'), 'Mod+Enter follows the one drawn link: its ghost target answers the dead-reference face', ctx.js('window.__skep.overlay().text')[:160])
         r.check(ctx.js('window.__skep.links.visited(%s)' % json.dumps(shown[0]['link'])) or any(ctx.js('window.__skep.links.visited(%s)' % json.dumps(x['link'])) for x in shown), 'the followed link joins LK\'s visited set (D-3)')
     else:
         r.check(s['overlay'] == 'list', 'Mod+Enter at a span with several links asks which', {'n': n_here, 'overlay': s['overlay']})
+        # its first row pressed with the pointer follows that row's link, the row gone with the list the face takes the place of
+        first = ctx.js('(() => { const b = document.querySelector(\'#overlay [data-run="w0"]\'); if (!b) return null; const q = b.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()')
+        r.check(first is not None, 'the list rows the links drawn at the span', ctx.js('window.__skep.overlay().id'))
+        if first is not None:
+            ctx.drv.mouse(first['x'], first['y'])
+    # either way the follow's ghost target answers the dead-reference face, which stands at the act's site — the followed link's
+    # own bytes, beneath their first line (foundations §3.1, F-G3) — never at the viewport's corner
+    overlay_up(ctx, 'face:')
+    placed = placed_at(ctx, DOC, drawn_here[0]['pos'], drawn_here[0]['width']) if drawn_here else None
+    r.check(ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and bool(placed) and stands_at(placed),
+            'the dead-reference face a follow from the selection met stands at the followed link\'s own bytes, beneath their first line', {'id': ctx.js('window.__skep.overlay().id'), 'placed': placed, 'link': drawn_here[:1]})
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
     r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc clears the overlay, then the selection (one order)')
+    # the anatomy card's follow pressed with the pointer, at a link whose far end is a ghost: the control pressed stands in the
+    # card the dead-reference face takes the place of, so the face stands at the act's site — the link's own bytes, beneath their
+    # first line, where the card stood (foundations §3.1, F-G3) — never at the viewport's corner. After the visited set's check
+    # above, which this follow would otherwise answer
+    if link is not None:
+        ctx.leap(DOC, link['pos'])
+        ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(link['link'])))
+        ctx.frames(2)
+        button = ctx.js('(() => { const b = document.querySelector(\'#overlay [data-run="follow"]\'); if (!b) return null; const q = b.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()')
+        r.check(button is not None and ctx.js('window.__skep.overlay().id') == 'anatomy:' + link['link'], 'the link\'s anatomy card offers its follow', ctx.js('window.__skep.overlay().id'))
+        if button is not None:
+            ctx.drv.mouse(button['x'], button['y'])
+            overlay_up(ctx, 'face:')
+            placed = placed_at(ctx, DOC, link['pos'], link['width'])
+            r.check(ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and stands_at(placed),
+                    'the anatomy card\'s follow, pressed, answers the dead-reference face at the link\'s own bytes, beneath their first line, in the card\'s place', {'id': ctx.js('window.__skep.overlay().id'), 'placed': placed})
+        chord(ctx, 'Escape')
+        r.check(state(ctx)['overlay'] is None, 'Esc dismisses the face')
     # a slot's chord with no selection standing selects the walk's block whole and asks over it (D5 §1.6). The platform's
     # selection the page places reads back without the block's separator, and is never taken as a new one (APP-INPUT's
     # `takeSelection`): its card, shown while the answer reads, would be an act on the chrome ending the answer's opening

@@ -46,6 +46,13 @@
 // B1-S2's words naming its owner by the one owner rule, the arm beneath —
 // asks no projection of it, and leaves the trail as it found it (a mutant
 // that asks the projection the board refuses with the document turns red).
+// A FOLLOW THAT LANDS NOWHERE IS FACED AT ITS SITE, the link's own bytes in
+// the first edition, whichever read faced it — a link naming no far
+// document, a dead reference or a far document withheld, met at its consult
+// or once the projection answered and its text was read, a projection the
+// board declines — and pressed on the anatomy card's follow, whose card the
+// face takes the place of (a mutant that drops the site from any one face,
+// or stands it at the control pressed, turns that row red).
 // A departure made
 // during a flight re-takes the flight's destination, so Forward lands there —
 // after a LEAP's flight and after a Back's (a mutant that re-takes the camera
@@ -160,6 +167,25 @@ const takeLocked = () => {
   REC.takeOwner('1.0.2.1', { prefix: PRIVATE_OWNER, principal: 901 });
   REC.takeLinks(D, [LOCKED]); REC.takeLink({ addr: LOCKED, from: [span(D, 7, 2)], to: [{ ...span(PRIVATE, 1, 5), account: '1.0.2.1' }], type: CITE });
 };
+// a citation from the first edition of a passage of FAR whose projection the board declines: `not_a_link`, no such slot (A-53)
+const DECLINED = D + '.0.2.7';
+/** the declined citation taken into the model, drawn at the first edition */
+const takeDeclined = () => { REC.takeLinks(D, [DECLINED]); REC.takeLink({ addr: DECLINED, from: [span(D, 13, 2)], to: [span(FAR, 3, 4)], type: CITE }); };
+// two citations from the first edition met late — each far document's extent held as a viewport's read leaves it, so the follow
+// consults nothing before the projection, which answers — whose far document's text the board, once the follow reads it, answers for
+// with nothing (GONE_LATE) or withholds from the reader (HIDDEN_LATE)
+const GONE_LATE = '1.0.1.0.13', DEAD_LATE = D + '.0.2.8', HIDDEN_LATE = '1.0.2.0.7', LOCKED_LATE = D + '.0.2.9', LATE_EXTENT = 20;
+/** a citation met late taken into the model, drawn at the first edition from `pos`, two positions, its far document's extent held and its text not */
+const takeLate = (/** @type {string} */ link, /** @type {string} */ far, /** @type {number} */ pos) => {
+  REC.invalidate(far); REC.takeSpanSet(far, [{ subspace: 1, ordinal: 1, positions: LATE_EXTENT }]);
+  REC.takeLinks(D, [link]); REC.takeLink({ addr: link, from: [span(D, pos, 2)], to: [span(far, 3, 4)], type: CITE });
+};
+/** the reads of a citation met late: its projection answers; its far document's metadata and text refused by `name` */
+const late = (/** @type {string} */ link, /** @type {string} */ far, /** @type {string} */ name) => ({
+  [FAKE.keyOf('op', { frame: F.project(link, 2, far) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.3', width: '0.4' }] } },
+  [FAKE.keyOf('op', { frame: F.docMetadata(far) })]: { refused: { kind: 'refused', name, code: name } },
+  [FAKE.keyOf('op', { frame: F.retrieveV(far, 1, LATE_EXTENT) })]: { refused: { kind: 'refused', name, code: name } },
+});
 /** FAR's head, where a dead end lands: its first paragraph's first position */
 const FAR_HEAD = 1;
 // FAR's second version member, a copy of its text; the passages LEAPs carry: one FAR holds at 20, five positions, one neither FAR nor
@@ -203,6 +229,13 @@ const script = {
   // the withheld citation's far document: its span set and the projection into it refused `withheld`, the document consulted first
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(PRIVATE) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
   [FAKE.keyOf('op', { frame: F.project(LOCKED, 2, PRIVATE) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+  // the declined citation's projection into FAR: no such slot
+  [FAKE.keyOf('op', { frame: F.project(DECLINED, 2, FAR) })]: { refused: { kind: 'refused', name: 'not_a_link', code: 'not_a_link' } },
+  ...late(DEAD_LATE, GONE_LATE, 'doc_not_registered'),
+  ...late(LOCKED_LATE, HIDDEN_LATE, 'withheld'),
+  // the dead reference's lineage, which its anatomy card reads: no claims either way
+  [FAKE.keyOf('op', { frame: F.inClaims(DEAD, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+  [FAKE.keyOf('op', { frame: F.outClaims(DEAD, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   ...reads(FAR2, FAR_TEXT, []),
   // where the carried passages stand in FAR and its member: the shared one at FAR's 20, five positions; the other nowhere; the moved
   // one's first five positions at FAR's 25 and its last five at FAR's 2
@@ -440,7 +473,7 @@ test('a teleport a key made draws the focus ring at its landing; one the pointer
   assert.equal(await ring(GO.leapTo(FAR, { how: 'click' })), false, 'a click on a place');
   assert.equal(await ring(GO.back(true)), true, 'Mod+[');
   assert.equal(await ring(GO.forward()), false, 'a click on › forward');
-  assert.equal(await ring(GO.follow(drawn(PASSAGE), null, true)), true, 'Mod+Enter');
+  assert.equal(await ring(GO.follow(drawn(PASSAGE), true)), true, 'Mod+Enter');
   assert.equal(await ring(GO.wholeBoard(true)), true, 'Mod+0');
   assert.equal(await ring(GO.home(true)), true, 'Mod+Shift+H');
   assert.equal(await ring(GO.toAccount('1.0.1', true)), true, 'Enter on an account');
@@ -629,6 +662,42 @@ test('a follow whose far document the board withholds from the reader faces it w
   assert.ok(!fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.project(LOCKED, 2, PRIVATE) })), 'no projection asked of a document the board withholds: it refuses one with the document');
   assert.deepEqual(addrs(), before, 'FAR\'s entry ahead of the cursor stands: the follow\'s withdrawn');
   assert.equal(TRAIL.cursorIndex(), cursor);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow that lands nowhere is faced at its site, the link\'s own bytes in the first edition, whichever read faced it — and pressed on the anatomy card\'s follow, the face takes the card\'s place there', async () => {
+  takeDead(); takeLocked(); takeDeclined(); takeLate(DEAD_LATE, GONE_LATE, 19); takeLate(LOCKED_LATE, HIDDEN_LATE, 25);
+  /** the link's own bytes in the first edition: where its face stands */
+  const at = (/** @type {number} */ pos, /** @type {number} */ width) => ({ span: { addr: D, pos, width } });
+  /** the card's follow as the host hands it to the act: a control of the card, which the face's markup removes */
+  const pressed = Object.assign(new globalThis.HTMLElement(), { isConnected: false });
+  /** @type {Array<{what: string, follow: () => Promise<unknown>, face: string, site: object}>} each follow that lands nowhere, the face it shows and where that face stands */
+  const rows = [
+    { what: 'a link naming no far document, faced at once', follow: () => GO.follow({ ...drawn(PASSAGE), far: '' }), face: 'face:invalid', site: at(11, 5) },
+    { what: 'a dead reference, faced at the far document\'s consult', follow: () => GO.follow(drawn(DEAD)), face: 'face:doc_not_registered', site: at(23, 3) },
+    { what: 'a far document withheld, faced at its consult', follow: () => GO.follow(drawn(LOCKED)), face: 'face:withheld', site: at(7, 2) },
+    { what: 'a projection the board declines', follow: () => GO.follow(drawn(DECLINED)), face: 'face:not_a_link', site: at(13, 2) },
+    { what: 'a dead reference met once the projection answered and the text was read', follow: () => GO.follow(drawn(DEAD_LATE)), face: 'face:doc_not_registered', site: at(19, 2) },
+    { what: 'a far document withheld, met once the projection answered and the text was read', follow: () => GO.follow(drawn(LOCKED_LATE)), face: 'face:withheld', site: at(25, 2) },
+    {
+      what: 'the anatomy card\'s follow, pressed',
+      follow: async () => {
+        await ANATOMY.open(drawn(DEAD), null);
+        const o = HOST.currentState(), act = o && o.acts ? o.acts.follow : null;
+        assert.ok(o && o.id === 'anatomy:' + DEAD && act, 'the dead reference\'s anatomy card offers its follow');
+        await run(Promise.resolve(act(/** @type {any} */ (pressed), false)));
+      },
+      face: 'face:doc_not_registered', site: at(23, 3),
+    },
+  ];
+  for (const { what, follow, face, site } of rows) {
+    await run(GO.leapTo(D));
+    await run(follow());
+    const o = HOST.currentState();
+    assert.equal(o?.id, face, `${what}: its face`);
+    assert.deepEqual(o?.anchor, site, `${what}: standing at the link's own bytes — never at the viewport's corner, nor at a control the face removed`);
+    HOST.dismiss();
+  }
   assert.deepEqual(fake.unanswered, []);
 });
 

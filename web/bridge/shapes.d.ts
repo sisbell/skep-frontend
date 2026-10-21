@@ -20,11 +20,12 @@ export interface BoardRow {
   origin: string;
 }
 
-/** `session(board, principal)` — the session's opaque reference in the token's place */
+/** `session(board, principal)` — the session's opaque reference in the token's place; `writes` whether a write may go out under it: the signed mode's session writes, the bare mode's keyless one reads alone and has every write refused `write_in_bare_session` */
 export interface SessionOpened {
   session: string;
   principal: number;
   account: string | null;
+  writes: boolean;
 }
 
 /** `keygen({label?})` — the device key's fingerprint, its enrollment record, and the outstanding act */
@@ -191,6 +192,13 @@ export interface AccountCount {
   documents: number;
 }
 
+/** `changes(session, since, limit?)` — what changed since the position `since` at the session's class: the entries in the `feed` update's shape, oldest first, each `published` or `drafts` by the read that answered it (two reads, the published feed as a guest and the session's drafts supplement under its token, merged by position); `next` the position to ask from next time, past every entry answered and never past one withheld; `head` the board's latest position, read before the page */
+export interface ChangesAnswer {
+  entries: FeedUpdate[];
+  next: number;
+  head: number;
+}
+
 /** a refusal: the board's own verdict, verbatim */
 export interface RefusedByBoard {
   kind: 'refused';
@@ -266,7 +274,7 @@ export interface FeedEvent {
   update: FeedUpdate;
 }
 
-/** the `/changes` row verbatim, with `position` and `class` — THIS CRATE's definition of the update's shape */
+/** the `/changes` row verbatim, with `position` and `class` — THIS CRATE's definition of the update's shape, a `feed` event's `update` and a `changes` entry alike */
 export interface FeedUpdate {
   position: number;
   at: number;
@@ -355,7 +363,7 @@ export interface Resolve {
   act: 'drop' | 'send';
 }
 
-/** The calls (client.md §4b.1, and the document index's listing `places`): `POST /bridge/<name>` with the argument object; `{result}` or `{refused}` back. */
+/** The calls (client.md §4b.1, the document index's listing `places`, and the change feed's page `changes`): `POST /bridge/<name>` with the argument object; `{result}` or `{refused}` back. */
 export interface Bridge {
   boards(args: {}): Promise<Outcome<BoardRow[]>>;
   session(args: { board: string; principal?: number }): Promise<Outcome<SessionOpened>>;
@@ -380,6 +388,7 @@ export interface Bridge {
   places(args: { session: string; board?: string; opts?: PlacesOpts } | { guest: true; board?: string; origin?: string; opts?: PlacesOpts }): Promise<Outcome<PlacesAnswer>>;
   held(args: { session: string }): Promise<Outcome<HeldRow[]>>;
   resolve(args: { session: string; held: number; act: 'drop' | 'send' }): Promise<Outcome<Empty>>;
+  changes(args: { session: string; since: number; limit?: number }): Promise<Outcome<ChangesAnswer>>;
   answer(args: Answer): Promise<Outcome<Empty>>;
   cancel(args: Cancel): Promise<Outcome<Empty>>;
 }

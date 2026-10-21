@@ -93,6 +93,7 @@ import { docBox, accountCell, boardCell } from '../plane/projection.js';
 /** @typedef {import('./trail.js').Entry} Entry */
 /** @typedef {import('./trail.js').View} View */
 /** @typedef {import('../text/span.js').Span} Span */
+/** @typedef {import('../overlays/host.js').Anchor} Anchor */
 
 /** @typedef {{pos: number, width: number}} Run one run of a marked span in the text landed in: its first position and its positions */
 
@@ -251,17 +252,25 @@ export async function leapTo(addr, opts = {}) {
  * the dead end's face standing at the head landed on (foundations §2.3). A
  * dead reference, a far document the board withholds from the reader — no
  * slot projected into it, a read the board refuses with the document — or a
- * refusal is faced in the landing's place, the claim withdrawn (B1-S8). Where
+ * refusal is faced in the landing's place, the claim withdrawn (B1-S8); a
+ * link naming no far document is faced at once. Each such face stands at the
+ * act's site (foundations §3.1, F-G3): the link's own bytes in its near
+ * document — the link the anatomy card offering the follow is conjured at,
+ * inside the selection the follow slot acts on — and follows them as the
+ * camera moves. The control the follow was pressed on, the anatomy card's
+ * follow or a "which" list's row, is never its site: it stands in the
+ * overlay the face takes the place of, and is gone as the face shows. Where
  * an act was made while it read, it lands nowhere and faces nothing.
  * @param {Shown} s the link as drawn at its near document
- * @param {{x: number, y: number} | HTMLElement | null} [anchor] where a follow that lands nowhere is faced — a dead reference, a far document withheld, a refusal, a link naming no far document
  * @param {boolean} [byKey] a key made the follow
  */
-export async function follow(s, anchor = null, byKey = false) {
+export async function follow(s, byKey = false) {
   const act = nextAct();
   const l = s.link;
   const far = s.far;
-  if (!far) { FACES.invalidFollow(anchor); return; }
+  /** @type {Anchor} where a follow that lands nowhere is faced: the link's own bytes */
+  const site = { span: { addr: s.near, pos: s.pos, width: s.width } };
+  if (!far) { FACES.invalidFollow(site); return; }
   LK.follow(l);
   const entry = TRAIL.push({ addr: far, pos: null, width: null, view: viewFor(far, null), link: l.addr, label: labelOf(far) }, CAM.destination(), true);
   /** the follow ended in a face in the landing's place: its claim withdrawn, the face shown where no act was made after it */
@@ -269,18 +278,18 @@ export async function follow(s, anchor = null, byKey = false) {
   const slot = s.end === 'from' ? 2 : 1;
   const fd = REC.doc(far);
   if (fd.refused !== 'unregistered' && fd.extent == null) await PUMP.loadWhole(far);
-  if (REC.doc(far).refused === 'unregistered') { faced(() => FACES.unregistered(far, anchor)); return; }
-  if (REC.doc(far).refused === 'withheld') { faced(() => FACES.withheld(far, anchor)); return; }
+  if (REC.doc(far).refused === 'unregistered') { faced(() => FACES.unregistered(far, site)); return; }
+  if (REC.doc(far).refused === 'withheld') { faced(() => FACES.withheld(far, site)); return; }
   const proj = await PUMP.projectEnd(l.addr, /** @type {1 | 2} */ (slot), far);
   if (proj === 'refused') {
     const r = PUMP.refusalsMet().slice(-1)[0];
-    faced(() => FACES.showRefusal(anchor, r ? r.refusal : { kind: 'shell', name: 'unknown' }, far));
+    faced(() => FACES.showRefusal(site, r ? r.refusal : { kind: 'shell', name: 'unknown' }, far));
     return;
   }
   const d = REC.doc(far);
   if (d.extent == null || d.from < 0) await PUMP.loadWhole(far);
-  if (REC.doc(far).refused === 'unregistered') { faced(() => FACES.unregistered(far)); return; }
-  if (REC.doc(far).refused === 'withheld') { faced(() => FACES.withheld(far, anchor)); return; }
+  if (REC.doc(far).refused === 'unregistered') { faced(() => FACES.unregistered(far, site)); return; }
+  if (REC.doc(far).refused === 'withheld') { faced(() => FACES.withheld(far, site)); return; }
   const runs = proj ? inTextOrder(proj.map((p) => ({ pos: p.ordinal, width: p.positions }))) : null;
   const pos = runs ? runs[0].pos : headOf(REC.doc(far)), marked = runs && !s.farWhole ? runs : null;
   const v = viewFor(far, pos);
