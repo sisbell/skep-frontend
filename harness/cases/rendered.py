@@ -261,18 +261,33 @@ def run(ctx):
         conns = ctx.js('window.__skep.connections()')
         at_member = [c for c in conns if c['a'] in members or c['b'] in members]
         r.check(not at_member, 'no mid connection ends at a document the mark holds: one line to the mark, never a stack of its members (P44)', at_member[:6])
-        # LK's own rule, read apart from the canvas: the links each document of the first grid (and each the canvas joined to the mark) draws to or from the mark's members,
-        # a far end standing at its document — a version member named whole at the box it shares with its document
+        # LK's own rule, read apart from the canvas: the links joining each document of the first grid (and each the canvas joined to the mark)
+        # to a document the mark holds — a far end standing at its document, a version member named whole at the box it shares with its
+        # document — met in the links of either and drawn at either of the two (LK's `draws`: a link stands at a mark joining two documents
+        # where either document's composition draws it), each once
         into = {(c['b'] if c['a'] == mark['key'] else c['a']): c['count'] for c in conns if mark['key'] in (c['a'], c['b'])}
         linked = ctx.js('''(async () => {
           const A = await import('./model/address.js');
-          const S = window.__skep, mem = new Set(%s), back = new Map(), far = (s) => A.documentOf(s.far) || s.far;
-          for (const m of mem) for (const s of S.links.shown(m)) { if (!back.has(far(s))) back.set(far(s), new Set()); back.get(far(s)).add(s.link); }
-          const links = (a) => new Set([...S.links.shown(a).filter((s) => mem.has(far(s))).map((s) => s.link), ...(back.get(a) || [])]).size;
+          const S = window.__skep, mem = new Set(%s), docOf = (e) => (e.doc ? A.documentOf(e.doc) || e.doc : null);
+          const joins = (l) => [[l.from, l.to], [l.to, l.from]].flatMap(([ends, others]) => ends.filter((e) => !e.whole && e.ordinal != null && e.doc)
+            .flatMap((e) => others.map(docOf).filter((y) => y && y !== e.doc).map((y) => [e.doc, y])));
           const first = S.model.places().filter((p) => p.account === "1.0.1" && !p.system && S.depthOf(p.doc) === 0).map((p) => p.doc);
-          return Object.fromEntries([...new Set([...first, ...%s])].map((a) => [a, links(a)]).filter(([, n]) => n > 0));
+          const docs = new Set([...first, ...%s]), links = new Map([...docs].map((a) => [a, new Set()]));
+          for (const d of new Set([...docs, ...mem])) {
+            if (!A.isAddress(d)) continue;
+            for (const la of S.model.doc(d).links) {
+              const l = S.model.link(la);
+              if (!l || S.links.classify(la) !== 'passage') continue;
+              for (const [x, y] of joins(l)) {
+                if (x !== d && y !== d) continue;
+                const [a, m] = mem.has(y) ? [x, y] : [y, x];
+                if (mem.has(m) && !mem.has(a) && links.has(a) && (S.links.draws(la, x) || S.links.draws(la, y))) links.get(a).add(la);
+              }
+            }
+          }
+          return Object.fromEntries([...links].map(([a, s]) => [a, s.size]).filter(([, n]) => n > 0));
         })()''' % (json.dumps(members), json.dumps(sorted(into))))
-        r.check(bool(linked) and into == linked, 'each document standing whole that draws a link to a document the mark holds is joined to the MARK by one connection counting those links, each once, and no other is',
+        r.check(bool(linked) and into == linked, 'each document standing whole that a link joins to a document the mark holds — drawn at either of the two — is joined to the MARK by one connection counting those links, each once, and no other is',
                 {'drawn': into, 'links': linked})
         # the count on the stroke (foundations §2.1's register: "one connection drawn per document pair with its count"; P44 forbids a merged
         # mark that hides it): the numeral of LK's links, read apart from the canvas, where the connection holds two or more; none where one

@@ -5,15 +5,23 @@
 // the drawer's own weight, as the reader the app hands in names it (a mutant
 // that weights by anything but the reader turns red), the records and
 // account-named ends never counted, the badge arriving until read, the mid
-// connections one per pair of places drawn, each link counted once however
-// many of its ends are drawn, and marked with what their links share —
-// neutral in the hue where their linkers differ, lighter only where every one
-// was followed, heavier only where every one is lit — whichever document
-// comes first (a mutant that keeps the first end's mark, or counts
-// ends, turns red); a link's far end a connection's end whether the plane
-// draws it or not — out of view, at the place it would stand at, carrying the
-// count and the mark it carries in view — and no end where the plane draws
-// its document nowhere; a far end naming a version member whole at its
+// connections one per pair of places drawn, each holding once every link
+// that joins their documents and that either document draws — the other
+// document's owner's links into a drawn document among them, the passage
+// link and the one naming it whole, whether that document is out of view,
+// inside a mark nobody read or drawn with its links read (a mutant that
+// decides a link at the drawn document alone, or keeps to the ends drawn
+// there, turns red) — each link marked once from itself and its two
+// documents, the owner of either document's link in the owner's hue
+// whichever document comes first and whatever either's toggle (a mutant that
+// merges the marks of a link's two ends turns red), and each connection
+// marked with what its links share — neutral in the hue where their linkers
+// differ, lighter only where every one was followed, heavier only where every
+// one is lit (a mutant that keeps the first link's mark, or counts ends,
+// turns red); a link's far end a connection's end whether the plane draws it
+// or not — out of view, at the place it would stand at, carrying the count
+// and the mark it carries in view — and no end where the plane draws its
+// document nowhere; a far end naming a version member whole at its
 // document's place; the most a reveal can set in a document's text, which no
 // stage, toggle or lens moves or exceeds.
 import { test, beforeEach } from 'node:test';
@@ -166,16 +174,17 @@ test('the link lit at an arrival is drawn heavier, every other at the drawer\'s 
   assert.deepEqual(weights(), [1, 1], 'the reader naming none: none lit');
 });
 
-test('the mid connections: one per document pair', () => {
+test('the mid connections: one per document pair, each holding the links that join the two', () => {
   const c = LK.connections([D, '1.0.1.0.127', OTHER_HOME]);
-  assert.deepEqual(c.map((x) => [x.a, x.b, x.count]), [[D, '1.0.1.0.127', 1]]);
+  assert.deepEqual(c.map((x) => [x.a, x.b, x.count]), [[D, '1.0.1.0.127', 1], [D, OTHER_HOME, 2]], 'D\'s citation of 1.0.1.0.127; the other document\'s owner\'s two links into D, met in D\'s links');
 });
 
 test('the mid connections run between the places drawn: links into one mark are one connection with their count, a link inside one place none (P44)', () => {
   REC.takeLinks(D, [D + '.0.2.2']);
   REC.takeLink({ addr: D + '.0.2.2', from: [span(D, 70, 5)], to: [whole('1.0.1.0.128')], type: CITE });
-  const mark = (/** @type {string} */ a) => (a === D ? D : '1.0.1:1');
-  assert.deepEqual(LK.connections([D, '1.0.1.0.127', '1.0.1.0.128'], mark).map((x) => [x.a, x.b, x.count]), [[D, '1.0.1:1', 2]]);
+  /** D at its box, the account's other documents inside its first continuation's mark, the other account's at their boxes */
+  const mark = (/** @type {string} */ a) => (a !== D && a.startsWith('1.0.1.0.') ? '1.0.1:1' : a);
+  assert.deepEqual(LK.connections([D, '1.0.1.0.127', '1.0.1.0.128'], mark).map((x) => [x.a, x.b, x.count]), [[D, '1.0.1:1', 2], [D, OTHER_HOME, 2]]);
   assert.deepEqual(LK.connections([D, '1.0.1.0.127'], () => '1.0.1:1'), [], 'both ends inside one mark: no line');
 });
 
@@ -193,41 +202,61 @@ test('a mid connection counts each link once: one shown at both its documents, o
 });
 
 test('a mid connection is marked with what its links share: the linker\'s hue where they share one, neutral where theirs differ, lighter only where every one was followed (P44)', () => {
-  REC.takeLinks(D, [D + '.0.2.9']);
-  REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(OTHER_HOME, 30, 5)], type: CITE });
-  const at = () => between(LK.connections([D, OTHER_HOME]), D, OTHER_HOME).map((c) => ({ count: c.count, hue: c.mark.hue, linker: c.mark.linker, value: c.mark.value, own: c.mark.own }));
-  assert.deepEqual(at(), [{ count: 1, hue: HUE.you, linker: 'you', value: 1, own: true }], 'the person\'s link alone: their hue');
+  const F = '1.0.3.0.8', G = '1.0.4.0.2';
+  REC.takeLinks(D, [D + '.0.2.9', G + '.0.2.1']);
+  REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(F, 30, 5)], type: CITE });
+  // a third party's link joining the two: neither document's owner's, nor the person's
+  REC.takeLink({ addr: G + '.0.2.1', from: [span(D, 60, 5)], to: [span(F, 40, 5)], type: CITE });
+  const at = () => between(LK.connections([D, F]), D, F).map((c) => ({ count: c.count, hue: c.mark.hue, linker: c.mark.linker, value: c.mark.value, own: c.mark.own }));
+  assert.deepEqual(at(), [{ count: 1, hue: HUE.you, linker: 'you', value: 1, own: true }], 'the person\'s link alone: their hue, the third party\'s an overlay off at both documents');
   LK.setOthers(D, true);
-  assert.deepEqual(at(), [{ count: 2, hue: NEUTRAL_HUE, linker: null, value: 1, own: false }], 'the other\'s link beside it: neutral, never the first link\'s hue');
-  LK.follow(OTHER_HOME + '.0.2.1');
-  assert.equal(at()[0].value, 1, 'the first of the two followed: drawn full, never the first link\'s value');
+  assert.deepEqual(at(), [{ count: 2, hue: NEUTRAL_HUE, linker: null, value: 1, own: false }], 'the third party\'s link beside it: neutral, never the first link\'s hue');
   LK.follow(D + '.0.2.9');
+  assert.equal(at()[0].value, 1, 'the first of the two followed: drawn full, never the first link\'s value');
+  LK.follow(G + '.0.2.1');
   assert.deepEqual([at()[0].value, at()[0].hue], [VISITED_ALPHA, NEUTRAL_HUE], 'both followed: drawn lighter, the hue still neutral');
 });
 
-test('a link whose linker differs at its two documents draws its connection neutral and counts once, whichever document comes first', () => {
+test('a link the owner of either document made draws its connection in the owner\'s hue, counted once, whichever document comes first and whatever the other\'s toggle (foundations §2.1: "the owner of either")', () => {
   build({ session: '1.0.9' });
-  REC.takeLinks(D, [D + '.0.2.9']); REC.takeLinks(OTHER_HOME, [D + '.0.2.9']);
-  REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(OTHER_HOME, 30, 5)], type: CITE });
-  LK.setOthers(OTHER_HOME, true);
-  assert.deepEqual([LK.shown(D).find((s) => s.link.addr === D + '.0.2.9')?.linker, LK.shown(OTHER_HOME).map((s) => s.linker)], ['owner', ['others']], 'D\'s owner\'s link at D, another\'s at the other document');
-  for (const order of [[D, OTHER_HOME], [OTHER_HOME, D]]) {
-    assert.deepEqual(between(LK.connections(order), D, OTHER_HOME).map((c) => [c.count, c.mark.hue, c.mark.linker]), [[1, NEUTRAL_HUE, null]], order.join(' then '));
+  const X = '1.0.5.0.2';
+  REC.takeLinks(D, [D + '.0.2.9']); REC.takeLinks(X, [D + '.0.2.9']);
+  REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(X, 30, 5)], type: CITE });
+  for (const on of [false, true]) {
+    LK.setOthers(X, on);
+    for (const order of [[D, X], [X, D]]) {
+      assert.deepEqual(between(LK.connections(order), D, X).map((c) => [c.count, c.mark.hue, c.mark.linker]), [[1, HUE.owner, 'owner']], `${order.join(' then ')}, the other document's toggle ${on ? 'on' : 'off'}`);
+    }
   }
+  assert.deepEqual([LK.shown(D).find((s) => s.link.addr === D + '.0.2.9')?.linker, LK.shown(X).map((s) => s.linker)], ['owner', ['others']], 'at its spans each document marks it as its own composition does: D\'s owner\'s at D, another\'s at the other');
+});
+
+test('the other document\'s owner\'s links into D are one connection, its count theirs and its hue the owner\'s, wherever that document stands: out of view, inside a mark nobody read, or drawn with its links read (foundations §2.1: "the owner of either")', () => {
+  const at = (/** @type {import('./links.js').Connection[]} */ cs, /** @type {string} */ there) => between(cs, D, there).map((c) => [c.count, c.mark.hue, c.mark.linker]);
+  const theirs = [[2, HUE.owner, 'owner']];
+  assert.deepEqual(at(LK.connections([D]), OTHER_HOME), theirs, 'its document out of view: to its box — the passage link another\'s at D, and the one naming D whole drawn at its passage there');
+  assert.deepEqual(at(LK.connections([D], (a) => (a === OTHER_HOME ? '1.0.2:1' : a)), '1.0.2:1'), theirs, 'its document inside a mark whose members\' links no read brings');
+  REC.takeLinks(OTHER_HOME, [OTHER_HOME + '.0.2.1', OTHER_HOME + '.0.2.2', OTHER_HOME + '.0.2.3']);
+  assert.deepEqual(at(LK.connections([D, OTHER_HOME]), OTHER_HOME), theirs, 'its document drawn, its links read');
+  assert.deepEqual(at(LK.connections([OTHER_HOME]), OTHER_HOME), theirs, 'D out of view, the links met at the other document alone');
+  LK.setOthers(D, true);
+  assert.deepEqual(at(LK.connections([D]), OTHER_HOME), theirs, 'D\'s toggle on, letting the passage link in at D too: still the owner\'s, never neutral');
 });
 
 test('a link whose far end the plane does not draw is still a connection, to the place its far end stands at; none where the plane draws that document nowhere (foundations §2.1)', () => {
   const ends = (/** @type {import('./links.js').Connection[]} */ cs) => cs.map((x) => [x.a, x.b, x.count]);
-  assert.deepEqual(ends(LK.connections([D])), [[D, '1.0.1.0.127', 1]], 'the citation of 1.0.1.0.127, drawn at D alone: a connection to its box');
-  assert.deepEqual(ends(LK.connections([D], (a) => (a === '1.0.1.0.127' ? '1.0.1:1' : a))), [[D, '1.0.1:1', 1]], 'to the mark that would hold it');
-  assert.deepEqual(LK.connections([D], (a) => (a === D ? D : null)), [], 'its document drawn nowhere: no connection');
+  assert.deepEqual(ends(LK.connections([D])), [[D, '1.0.1.0.127', 1], [D, OTHER_HOME, 2]], 'drawn at D alone: the citation of 1.0.1.0.127 to its box, and the other document\'s owner\'s two links to its');
+  assert.deepEqual(ends(LK.connections([D], (a) => (a === '1.0.1.0.127' ? '1.0.1:1' : a))), [[D, '1.0.1:1', 1], [D, OTHER_HOME, 2]], 'to the mark that would hold it');
+  assert.deepEqual(LK.connections([D], (a) => (a === D ? D : null)), [], 'their documents drawn nowhere: no connection');
   assert.deepEqual(LK.connections([D], (a) => (a === D ? null : a)), [], 'the near document drawn nowhere: none from it');
 });
 
 test('a connection to a far end out of view carries what one in view does: its count and its mark', () => {
-  const pair = (/** @type {string[]} */ drawn) => between(LK.connections(drawn), D, '1.0.1.0.127').map((c) => ({ count: c.count, mark: c.mark }));
-  assert.deepEqual(pair([D]), pair([D, '1.0.1.0.127']));
-  assert.equal(pair([D]).length, 1);
+  for (const far of ['1.0.1.0.127', OTHER_HOME]) {
+    const pair = (/** @type {string[]} */ drawn) => between(LK.connections(drawn), D, far).map((c) => ({ count: c.count, mark: c.mark }));
+    assert.deepEqual(pair([D]), pair([D, far]), far);
+    assert.equal(pair([D]).length, 1, far);
+  }
 });
 
 test('a far end naming a version member whole stands at its document\'s place, the box the two share', () => {

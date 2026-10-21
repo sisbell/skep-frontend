@@ -20,14 +20,15 @@ document's label inside the visible view — the viewport below the one line
 (S1 Q3) — and no two of the beams' labels in view meeting. THE STUB at mid
 scale (foundations §2.1: a mid connection "whose far end is out of view
 ending at the view's edge as §2.5's stub does"): the camera over the first
-edition at S3's mid-extents, every document standing whole in view that
-cites FAR_LEAP — the place holding it, its box or the mark of the
-continuation holding it, out of view — is joined to that place by a
-connection ending in a stub bound for it, counting the links LK shows at
-that document whose far end that place holds and carrying that count on its
-stroke where it holds two or more, none where it holds one (foundations
-§2.1's register: "one connection drawn per document pair with its count";
-P44); every stub's cut stands
+edition at S3's mid-extents, every document standing whole in view that a
+link joins to FAR_LEAP — drawn at either of the two (LK's `draws`) — the
+place holding FAR_LEAP, its box or the mark of the continuation holding it,
+out of view, is joined to that place by a connection ending in a stub bound
+for it, counting the links joining that document to a document the place
+holds, each drawn at either of its two documents, and carrying that count
+on its stroke where it holds two or more, none where it holds one
+(foundations §2.1's register: "one connection drawn per document pair with
+its count"; P44); every stub's cut stands
 STUB_INSET_PX inside the visible view's border, on the true bearing from the
 centre of the place in view to the centre of the place it is bound for, its
 triangle drawn over the boxes at the border in its hue; and every connection
@@ -896,8 +897,9 @@ def stub_view(ctx):
     set: the visible view below the one line; the place holding FAR_LEAP at the camera's scale — its box, or the mark of
     the continuation holding it (P-LOD's `residueDepth`, P-PROJ's `withinContinuation`) — whether its centre stands in
     that view and whether its cell meets the view the frame draws (the viewport padded by 80 px); each document standing
-    whole, its box's centre in view, at which LK shows a link to FAR_LEAP, with the links LK shows there whose far end's
-    document the plane draws and that place holds; each connection's places' centres and whether each stands in view;
+    whole, its box's centre in view, that a link joins to FAR_LEAP — drawn at either of the two, LK's `draws` — with the
+    links its own links name that join it to a document the plane draws and that place holds, each drawn at either of its
+    two documents; each connection's places' centres and whether each stands in view;
     the box's ground and the plane's own, and the plane canvas's pixel at each stub's triangle's centroid beside the hue
     and alpha of the last stub drawn whose triangle holds it"""
     return ctx.js('''(async () => {
@@ -912,10 +914,15 @@ def stub_view(ctx):
       const seen = (q) => q.x >= view.x && q.x <= view.x + view.w && q.y >= view.y && q.y <= view.y + view.h;
       const indexed = new Set(S.model.places().filter((q) => !q.system).map((q) => q.doc));
       const drawable = (doc) => { if (indexed.has(doc)) return true; const d = S.model.doc(doc); return d.from >= 0 || !!d.meta || d.refused === 'withheld'; };
-      const farDoc = (s) => s.far && (A.documentOf(s.far) || s.far);
+      const docOf = (e) => (e.doc ? A.documentOf(e.doc) || e.doc : null);
+      const joins = (l) => [[l.from, l.to], [l.to, l.from]].flatMap(([ends, others]) => ends.filter((e) => !e.whole && e.ordinal != null && e.doc)
+        .flatMap((e) => others.map(docOf).filter((y) => y && y !== e.doc).map((y) => [e.doc, y])));
+      /** the passage links a document's links name that join it to a document `to` admits, each drawn at either of its two documents (LK's `draws`) */
+      const joining = (doc, to) => S.model.doc(doc).links.filter((la) => { const l = S.model.link(la); return !!l && S.links.classify(la) === 'passage'
+        && joins(l).some(([x, y]) => (x === doc || y === doc) && to(x === doc ? y : x) && (S.links.draws(la, x) || S.links.draws(la, y))); });
       const far = placeOf(%s);
-      const citers = [...indexed].filter((doc) => placeOf(doc) === doc && seen(centre(doc)) && S.links.shown(doc).some((s) => farDoc(s) === %s))
-        .map((doc) => ({doc, links: [...new Set(S.links.shown(doc).filter((s) => { const f = farDoc(s); return !!f && drawable(f) && placeOf(f) === far; }).map((s) => s.link))]}));
+      const citers = [...indexed].filter((doc) => placeOf(doc) === doc && seen(centre(doc)) && joining(doc, (f) => f === %s).length)
+        .map((doc) => ({doc, links: joining(doc, (f) => drawable(f) && placeOf(f) === far)}));
       const cv = document.getElementById('plane'), k = cv.width / p.VW, img = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
       const px = (q) => { const i = (Math.floor(q.y * k) * cv.width + Math.floor(q.x * k)) * 4; return [img[i], img[i + 1], img[i + 2]]; };
       const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
@@ -944,7 +951,7 @@ def stub_holds(ctx, r):
     pair = {cit['doc']: next((c for c in conns if {c['a'], c['b']} == {cit['doc'], far}), None) for cit in citers}
     unbound = [doc for doc, c in pair.items() if not (c and c['stub'] and c['stub']['toward'] == far)]
     r.check(bool(citers) and not v['far_in_view'] and not v['far_drawn'] and not unbound,
-            f'mid scale: every document standing whole in view that cites {FAR_LEAP} — the place holding it ({far}) out of view, and out of the view the frame draws — is joined to that place by a connection ending in a stub bound for it',
+            f'mid scale: every document standing whole in view that a link joins to {FAR_LEAP} — drawn at either of the two — the place holding {FAR_LEAP} ({far}) out of view, and out of the view the frame draws, is joined to that place by a connection ending in a stub bound for it',
             {'far': far, 'far_centre': v['far_centre'], 'far_drawn': v['far_drawn'], 'citers': [cit['doc'] for cit in citers], 'unbound': unbound,
              'connections': [[c['a'], c['b'], c['count'], bool(c['stub'])] for c in conns][:12]})
     stubs = [c for c in conns if c['stub']]
@@ -964,10 +971,10 @@ def stub_holds(ctx, r):
     askew = {'%s|%s' % k: a for k, a in angles.items() if a > STUB_BEARING_DEG}
     r.check(bool(stubs) and not askew, f'every stub stands on the true bearing: its cut on the ray from the centre of the place in view to the centre of the place it is bound for, as the projection gives them, within {STUB_BEARING_DEG}°', askew)
     miscount = [{'doc': cit['doc'], 'count': pair[cit['doc']] and pair[cit['doc']]['count'], 'links': cit['links']} for cit in citers if not (pair[cit['doc']] and cit['links'] and pair[cit['doc']]['count'] == len(cit['links']))]
-    r.check(bool(citers) and not miscount, 'each citing document\'s connection to that place counts the links LK shows there whose far end\'s document the plane draws and the place holds, each once', miscount)
+    r.check(bool(citers) and not miscount, 'each such document\'s connection to that place counts the links joining it to a document the plane draws and the place holds, each drawn at either of its two documents (LK\'s `draws`), each once', miscount)
     uncarried = [{'doc': cit['doc'], 'links': len(cit['links']), 'carries': pair[cit['doc']] and pair[cit['doc']]['label']} for cit in citers
                  if (pair[cit['doc']] and pair[cit['doc']]['label']) != (str(len(cit['links'])) if len(cit['links']) >= 2 else None)]
-    r.check(any(len(cit['links']) >= 2 for cit in citers) and not uncarried, 'each citing document\'s stub carries that count on its stroke where it holds two links or more — the numeral of those links — and none where it holds one',
+    r.check(any(len(cit['links']) >= 2 for cit in citers) and not uncarried, 'each such document\'s stub carries that count on its stroke where it holds two links or more — the numeral of those links — and none where it holds one',
             {'uncarried': uncarried, 'citers': {cit['doc']: len(cit['links']) for cit in citers}})
     wrong = [{'a': c['a'], 'b': c['b'], 'in_a': c['in_a'], 'in_b': c['in_b'], 'stub': c['stub'] and c['stub']['toward']} for c in conns
              if (c['in_a'] != c['in_b']) != bool(c['stub']) or (c['stub'] and c['stub']['toward'] != (c['b'] if c['in_a'] else c['a']))]

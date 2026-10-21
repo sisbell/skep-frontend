@@ -15,10 +15,11 @@
 // Between the panes LINKS are drawn as LINES from the set LK gives at either
 // pane's document (the seam at the link-beam source; §2.5: "a link's line
 // drawn where either pane's default composition draws that link"), each link
-// once per pair of its ends, marked with what its meetings' marks share
-// (`linesBetween`; P44: "never a stack, never accumulated tint") — the
-// linker's hue, neutral where the panes' linkers differ, dashed only for
-// another's — and SHARED IDENTITY as BANDS from `compare`'s pairs, each run
+// once per pair of its ends (`linesBetween`; P44: "never a stack, never
+// accumulated tint"), in the one mark LK gives it at a mark joining the two
+// panes' documents — its linker's hue, the owner of either document's the
+// owner's (foundations §2.1's register), dashed only for another's — and
+// SHARED IDENTITY as BANDS from `compare`'s pairs, each run
 // of contiguous pairs one band (`merged`; no link); each leaves its pane at
 // its passage's first line — measured, through T-LAYER's byte-span mapping
 // over the pane's article and the blocks it was made from, when the scene is
@@ -102,7 +103,6 @@ import { esc } from '../util.js';
 /** @typedef {import('../model/records.js').Block} Block */
 /** @typedef {import('../model/address.js').EndRef} EndRef */
 /** @typedef {import('../links/links.js').Shown} Shown */
-/** @typedef {import('../plane/register.js').Mark} Mark */
 
 /**
  * @typedef {Object} Level — the two ends the scene sets level, a position in each pane's document; null where that pane stands at its top
@@ -303,31 +303,31 @@ function farEndIn(fe, blocks) {
  * two ends stand across the panes. Ends are told apart by their pane and
  * their passage, never by their document alone, which would fold those two
  * ways into one line and leave the pair the scene sets level without the
- * line that confirms it. A line is marked with what its meetings' marks share
- * (LK's `mergedMark`; P44: "never a stack, never accumulated tint"): the
- * linker's hue and value where both panes mark it alike, the neutral hue
- * where their linkers differ, dashed only for another's.
+ * line that confirms it. A line is drawn in the one mark LK gives its link at
+ * a mark joining the two panes' documents (`LK.markOf` given both;
+ * foundations §2.1's register: "the document's owner the owner of either"),
+ * whichever pane meets it and however each pane marks it at its own span: its
+ * linker's hue and its value, dashed only for another's (P44: "never a stack,
+ * never accumulated tint").
  * @param {PaneLinks} A pane A's
  * @param {PaneLinks} B pane B's
  * @returns {Line[]}
  */
 export function linesBetween(A, B) {
-  /** @type {Map<string, {line: Omit<Line, 'hue' | 'value' | 'dashed'>, marks: [Mark, ...Mark[]]}>} each line's first meeting and every meeting's mark, by its link and its two ends */
+  /** @type {Map<string, Line>} each line as first met, by its link and its two ends */
   const met = new Map();
   for (const [near, far, nearIsA] of /** @type {Array<[PaneLinks, PaneLinks, boolean]>} */ ([[A, B, true], [B, A, false]])) {
     for (const s of near.shown) {
       if (s.far !== far.addr) continue;
       const here = { key: `${s.pos}+${s.width}`, pos: s.pos, width: s.width }, there = farEndIn(s.farEnd, far.blocks);
       const [a, b] = nearIsA ? [here, there] : [there, here];
-      const key = `${s.link.addr} ${a.key} ${b.key}`, m = met.get(key);
-      if (m) m.marks.push(s.mark);
-      else met.set(key, { line: { link: s.link.addr, a: { pos: a.pos, width: a.width }, b: { pos: b.pos, width: b.width } }, marks: [s.mark] });
+      const key = `${s.link.addr} ${a.key} ${b.key}`;
+      if (met.has(key)) continue;
+      const mark = LK.markOf(s.link, A.addr, B.addr);
+      met.set(key, { link: s.link.addr, a: { pos: a.pos, width: a.width }, b: { pos: b.pos, width: b.width }, hue: mark.hue, value: mark.value, dashed: mark.linker === 'others' });
     }
   }
-  return [...met.values()].map(({ line, marks }) => {
-    const mark = LK.mergedMark(marks);
-    return { ...line, hue: mark.hue, value: mark.value, dashed: mark.linker === 'others' };
-  });
+  return [...met.values()];
 }
 
 /**

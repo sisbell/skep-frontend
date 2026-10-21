@@ -441,6 +441,8 @@ export function install(deps) {
       shown: (/** @type {string} */ addr) => LK.shown(addr).map((s) => ({ link: s.link.addr, end: s.end, pos: s.pos, width: s.width, far: s.far, linker: s.linker, value: s.mark.value, hue: s.mark.hue })),
       countDoc: (/** @type {string} */ a) => LK.countDoc(a), countAccount: (/** @type {string} */ a) => LK.countAccount(a), visited: (/** @type {string} */ l) => LK.visited(l),
       classify: (/** @type {string} */ l) => { const x = REC.link(l); return x ? LK.classify(x) : null; },
+      /** does a document's composition draw the link — LK's `draws`, the one rule which links show, a link standing at a mark joining two documents where either draws it; false where the model holds no such link */
+      draws: (/** @type {string} */ l, /** @type {string} */ addr) => { const x = REC.link(l); return !!x && LK.draws(x, addr); },
       reveal: (/** @type {string} */ addr, /** @type {1 | 2 | 3} */ stage) => { LK.reveal(addr, stage); LAYER.bump(); CAM.markDirty(); redrawCard(addr); },
       setOthers: (/** @type {string} */ addr, /** @type {boolean} */ on) => { LK.setOthers(addr, on); LAYER.bump(); CAM.markDirty(); redrawCard(addr); },
       hide: (/** @type {string} */ addr) => { LK.hide(addr); LAYER.bump(); CAM.markDirty(); redrawCard(addr); },

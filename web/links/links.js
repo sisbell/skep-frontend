@@ -40,8 +40,16 @@
 //     Back came back along (N-GO's `litLink`) — is drawn heavier until the
 //     next act (foundations §2.1's register: "the arrival an outline around
 //     its span with the followed link drawn heavier": WEIGHT);
+//   - a link at a mark JOINING TWO DOCUMENTS — a mid connection, a scene's
+//     line — is decided ONCE, from the link and the two documents, never at
+//     each end apart: its linker you, else the document's owner where its
+//     owner owns EITHER of the two (foundations §2.1's register: "the
+//     document's owner the owner of either"), else everyone else (`markOf`
+//     given both); it stands there where EITHER document's composition
+//     draws it (`draws`; §2.5: "drawn where either pane's default
+//     composition draws that link");
 //   - links drawn at ONE SITE — a stretch of text several mark, a mid
-//     connection, a beam or a scene's line met from both its ends — are ONE
+//     connection holding several, a beam met from both its ends — are ONE
 //     MARK carrying what they share (P44; its Use at §2.1's register:
 //     "neutral in any variable its members do not share — hue where their
 //     linkers differ"): the linker's hue where every one's linker is one,
@@ -50,16 +58,18 @@
 //     every mark here carries (`mergedMark`);
 //   - the mid connections: one per pair of places the plane draws the
 //     documents at — a document's own box, or the mark of the continuation
-//     holding it (P44) — counting each link once, however many of its ends
-//     are drawn, and marked with the one mark the ends drawn there merge
-//     into; a link whose two ends stand at one place draws none; a link drawn
-//     at a document runs to the place its far end's document stands at,
-//     drawn there this frame or out of view, where the plane ends it at the
-//     view's edge (foundations §2.1: "one whose far end is out of view ending
-//     at the view's edge as §2.5's stub does"), and to no place where the
-//     plane draws that document nowhere; the scene's pane-to-pane lines are
-//     drawn from the same shown set at both panes' documents, each link once
-//     per pair of its ends.
+//     holding it (P44) — holding once each link that joins a document at one
+//     to a document at the other, however many of its ends lie there, so its
+//     count and its mark are the same whether the other document is drawn,
+//     held by a mark or out of view; a link whose two documents stand at one
+//     place draws none; a drawn document's links run to the place of each
+//     document they join it to, drawn there this frame or out of view, where
+//     the plane ends them at the view's edge (foundations §2.1: "one whose far
+//     end is out of view ending at the view's edge as §2.5's stub does"), and
+//     to no place where the plane draws that document nowhere; the scene's
+//     pane-to-pane lines are drawn from the shown set at both panes'
+//     documents, each link once per pair of its ends, in its one mark joining
+//     the two.
 // WHAT REPLACES THIS RULE LATER: link sets (`_designs/LINK-SETS/…` §4, in
 // review) — at a version `E.k` the default view is `E`'s OWN SET plus the sets
 // its author has `E.k` read with plus the reader's own links; everything else
@@ -76,7 +86,7 @@
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
-import { commonsType, documentOf } from '../model/address.js';
+import { commonsType, documentOf, accountOf } from '../model/address.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -115,9 +125,9 @@ import { commonsType, documentOf } from '../model/address.js';
 /**
  * @typedef {Object} Connection — a mid connection between two places the plane draws documents at
  * @property {string} a the place of the drawn document the first of its links was met at: the document's own address, or the mark `placeOf` names
- * @property {string} b the place that link's far end stands at, drawn this frame or out of view
+ * @property {string} b the place of the document that link joins it to, drawn this frame or out of view
  * @property {'link'} kind
- * @property {Mark} mark the one mark its links' drawn ends merge into (`mergedMark`)
+ * @property {Mark} mark the one mark its links merge into (`mergedMark`), each marked as a mark joining its two documents marks it (`markOf`)
  * @property {number} count the links the pair holds, each once
  */
 
@@ -142,6 +152,10 @@ export function readers(/** @type {Readers} */ r) { read = r; }
 
 /** the reveal a document stands at until a card moves it: hidden, others' links off, no lens */
 const hidden = () => /** @type {Reveal} */ ({ stage: 1, others: false, lens: { owners: null, types: null, endorsed: false } });
+/** the hidden reveal, read at a document no card has moved — never handed out to be set */
+const HIDDEN = Object.freeze({ ...hidden(), lens: Object.freeze(hidden().lens) });
+/** the reveal standing at a document, read without making one: a far document a connection asks about stands at the hidden one */
+const revealAt = (/** @type {string} */ addr) => reveals.get(addr) || HIDDEN;
 
 /** the reveal's state at a document (hidden by default) */
 export function state(/** @type {string} */ addr) {
@@ -183,31 +197,42 @@ export function classify(l) {
   return 'passage';
 }
 
-/** the linker of a link at a document: you, the document's owner, or everyone else as one */
-export function linkerOf(/** @type {Link} */ l, /** @type {string} */ atDoc) {
+/**
+ * The linker of a link at a mark: you, where the person made it; else the
+ * document's owner, where its owner owns the document the mark stands at —
+ * at a mark joining two documents, a mid connection or a scene's line,
+ * either of them (foundations §2.1's register: "the document's owner the
+ * owner of either"); else everyone else as one.
+ * @param {Link} l
+ * @param {string} at the document the mark stands at, or one of the two it joins
+ * @param {string} [other] the other document a mark joining two joins
+ * @returns {'you' | 'owner' | 'others'}
+ */
+export function linkerOf(l, at, other = at) {
   const s = REC.session();
-  if (s && s.account && l.owner === s.account) return /** @type {const} */ ('you');
-  const d = REC.doc(atDoc);
-  if (l.owner && l.owner === d.account) return /** @type {const} */ ('owner');
-  return /** @type {const} */ ('others');
+  if (s && s.account && l.owner === s.account) return 'you';
+  if (l.owner && (l.owner === accountOf(at) || l.owner === accountOf(other))) return 'owner';
+  return 'others';
 }
 
 /**
- * How one link is marked: hue the linker's, form its kind's, value lighter
- * once followed (D-3), weight heavier while it is the link lit at an arrival
+ * How one link is marked at a mark standing at a document, or joining two:
+ * hue its linker's there (`linkerOf`), form its kind's, value lighter once
+ * followed (D-3), weight heavier while it is the link lit at an arrival
  * (foundations §2.1's register).
  * @param {Link} l
- * @param {string} atDoc
+ * @param {string} at the document the mark stands at, or one of the two it joins
+ * @param {string} [other] the other document a mark joining two joins
  * @returns {Mark}
  */
-export function markOf(l, atDoc) {
-  const linker = linkerOf(l, atDoc);
+export function markOf(l, at, other = at) {
+  const linker = linkerOf(l, at, other);
   return { hue: HUE[linker], linker, form: KIND_FORM.link, value: visitedSet.has(l.addr) ? VISITED_ALPHA : 1, weight: read.lit() === l.addr ? ARRIVAL_WEIGHT : 1, own: linker !== 'others' };
 }
 
 /**
  * The one mark links drawn at one site merge into — a stretch of text
- * several mark, a mid connection, a beam or a scene's line met from both its
+ * several mark, a mid connection holding several, a beam met from both its
  * ends — carrying what they share and nothing they do not (P44; its Use at
  * §2.1's register: "neutral in any variable its members do not share — hue
  * where their linkers differ"): the linker and its hue where every member's
@@ -261,6 +286,35 @@ function endsIn(/** @type {Link} */ l, /** @type {string} */ addr) {
 }
 
 /**
+ * Does a reveal let a link in, given the linker its document gives it: the
+ * owner's and the person's own always, another's by the toggle or a lens
+ * naming its owner (`othersLet`); every one through the lenses standing
+ * (`admitted`).
+ * @param {Reveal} r
+ * @param {Link} l
+ * @param {'you' | 'owner' | 'others'} linker
+ * @returns {boolean}
+ */
+function lets(r, l, linker) {
+  return (linker !== 'others' || othersLet(r, l)) && admitted(r, l);
+}
+
+/**
+ * Does a document's composition draw the link — R60's default composition,
+ * moved by the reveal standing there: the link joins passages, the document
+ * holds a passage end of it, and its reveal lets it in (`lets`). The one
+ * rule which links show: `shown` marks what a document draws at its spans,
+ * and a mark joining two documents holds a link where either of them draws
+ * it.
+ * @param {Link} l
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export function draws(l, addr) {
+  return classify(l) === 'passage' && endsIn(l, addr).length > 0 && lets(revealAt(addr), l, linkerOf(l, addr));
+}
+
+/**
  * A link's end drawn at a document: its span, its mark, its far end.
  * @param {Link} l
  * @param {string} addr the document the end lies in
@@ -275,22 +329,18 @@ function drawnEnd(l, addr, linker, end, e) {
 }
 
 /**
- * The links to mark in a document's article, each with its mark: the owner's
- * and the person's own at their spans; others' only where the toggle or a
- * lens admits them.
+ * The links to mark in a document's article, each with its mark: what the
+ * document draws (`draws`) — the owner's and the person's own at their
+ * spans; others' only where the toggle or a lens admits them.
  * @param {string} addr
  * @returns {Shown[]}
  */
 export function shown(addr) {
-  const r = state(addr);
   /** @type {Shown[]} */
   const out = [];
   for (const l of REC.linksTouching(addr)) {
-    const kind = classify(l);
-    if (kind !== 'passage') continue;
+    if (!draws(l, addr)) continue;
     const linker = linkerOf(l, addr);
-    if (linker === 'others' && !othersLet(r, l)) continue;
-    if (!admitted(r, l)) continue;
     for (const { end, e } of endsIn(l, addr)) out.push(drawnEnd(l, addr, linker, end, e));
   }
   return out;
@@ -351,8 +401,7 @@ function countUnder(r, addr, block) {
     const kind = classify(l);
     if (kind === 'social') { social = true; continue; }
     if (kind !== 'passage') continue;
-    if (linkerOf(l, addr) !== 'others') continue;
-    if (othersLet(r, l) && admitted(r, l)) continue;
+    if (linkerOf(l, addr) !== 'others' || lets(r, l, 'others')) continue;
     if (endsIn(l, addr).some(({ e }) => /** @type {number} */ (e.ordinal) < block.pos + block.width && block.pos < /** @type {number} */ (e.ordinal) + (e.positions || 1))) n++;
   }
   return { n, social };
@@ -393,42 +442,78 @@ export function countAccount(/** @type {string} */ account) {
 }
 
 /**
+ * The documents a link joins, each pair once, in the order its ends name
+ * them: each document holding a passage end of it against each document its
+ * other slot names — a version member named whole as its document, the box
+ * the two share — and none where the two are one.
+ * @param {Link} l
+ * @returns {Array<[string, string]>}
+ */
+function joined(l) {
+  /** @type {Map<string, [string, string]>} */
+  const out = new Map();
+  for (const [ends, others] of [[l.from, l.to], [l.to, l.from]]) {
+    for (const e of ends) {
+      if (e.whole || e.ordinal == null || !e.doc) continue;
+      for (const f of others) {
+        const y = f.doc ? documentOf(f.doc) || f.doc : null;
+        if (!y || y === e.doc) continue;
+        const key = [e.doc, y].sort().join('|');
+        if (!out.has(key)) out.set(key, [e.doc, y]);
+      }
+    }
+  }
+  return [...out.values()];
+}
+
+/**
  * The mid connections from the documents the plane draws: one per pair of
  * PLACES (P44: one per document pair, with its count) — `placeOf` names the
  * place a document stands at, its own box or the mark of the continuation
- * that holds it — of the links `shown` gives at a drawn document: the
- * owner's and the person's own by default, others' where a document's toggle
- * is on. A link's far end stands at its document's place — a version member
- * named whole at its document's, the box the two share — whether the frame
- * draws that place or not: a far end out of view is still a connection's end,
- * which the plane draws to the view's edge (foundations §2.1); where
- * `placeOf` names no place, the plane drawing the document nowhere, the link
- * draws none. Its count is its links, each once, however many of a link's
- * ends are drawn — at both its documents, or at two passages in one; its mark
- * the one all the ends drawn there merge into (`mergedMark`), so a link whose
- * linker differs at its two documents draws it neutral, and no order of the
- * documents changes it. A link whose two ends stand at one place draws none.
+ * that holds it. Every passage link among a drawn document's links
+ * (`find_links_v`'s answer) pairs it with each document the link joins it to
+ * — a passage end in one, its other slot naming the other (`joined`); a link
+ * stands at such a pair where EITHER of its two documents draws it
+ * (`draws`) — the owner's and the person's own by default, another's where
+ * a document's toggle or a lens naming its owner lets it in — decided from
+ * the link and the two documents alone, so it stands there whether the other
+ * document is drawn, held by a mark nobody read or out of view. The other
+ * document stands at its place — a version member named whole at its
+ * document's, the box the two share — whether the frame draws that place or
+ * not: a far end out of view is still a connection's end, which the plane
+ * draws to the view's edge (foundations §2.1); where `placeOf` names no
+ * place, the plane drawing the document nowhere, the link draws none. Its
+ * count is its links, each once, however many of a link's ends lie at its
+ * places and from however many of its documents it is met; its mark the one
+ * its links' marks merge into (`mergedMark`), each link marked as a mark
+ * joining its two documents marks it (`markOf`: the owner of either
+ * document's link the owner's), so no order of the documents, and no toggle
+ * at either, recolours a link. A link whose two documents stand at one place
+ * draws none.
  * @param {string[]} docsDrawn the documents drawn, whole or inside a mark
  * @param {(addr: string) => string | null} [placeOf] the place a document stands at, drawn this frame or not; null where the plane draws it nowhere. By default its own box
  * @returns {Connection[]}
  */
 export function connections(docsDrawn, placeOf = (addr) => addr) {
-  /** @type {Map<string, {a: string, b: string, links: Set<string>, marks: [Mark, ...Mark[]]}>} the pairs met, each with its links and the marks of its ends drawn */
+  /** @type {Map<string, {a: string, b: string, links: Map<string, Mark>}>} the pairs met, each with its links, each once, and the mark each link takes there */
   const pairs = new Map();
   for (const addr of docsDrawn) {
     const here = placeOf(addr);
     if (here == null) continue;
-    for (const s of shown(addr)) {
-      if (!s.far) continue;
-      const there = placeOf(documentOf(s.far) || s.far);
-      if (there == null || there === here) continue;
-      const key = [here, there].sort().join('|');
-      const p = pairs.get(key);
-      if (p) { p.links.add(s.link.addr); p.marks.push(s.mark); }
-      else pairs.set(key, { a: here, b: there, links: new Set([s.link.addr]), marks: [s.mark] });
+    for (const l of REC.linksTouching(addr)) {
+      if (classify(l) !== 'passage') continue;
+      for (const [x, y] of joined(l)) {
+        if (x !== addr && y !== addr) continue;
+        const there = placeOf(x === addr ? y : x);
+        if (there == null || there === here || !(draws(l, x) || draws(l, y))) continue;
+        const key = [here, there].sort().join('|');
+        const p = pairs.get(key);
+        if (!p) pairs.set(key, { a: here, b: there, links: new Map([[l.addr, markOf(l, x, y)]]) });
+        else if (!p.links.has(l.addr)) p.links.set(l.addr, markOf(l, x, y));
+      }
     }
   }
-  return [...pairs.values()].map((p) => ({ a: p.a, b: p.b, kind: /** @type {const} */ ('link'), mark: mergedMark(p.marks), count: p.links.size }));
+  return [...pairs.values()].map((p) => ({ a: p.a, b: p.b, kind: /** @type {const} */ ('link'), mark: mergedMark(/** @type {[Mark, ...Mark[]]} */ ([...p.links.values()])), count: p.links.size }));
 }
 
 /** the owners and types present among a document's links (the card's lens rows) */
