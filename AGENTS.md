@@ -37,6 +37,24 @@ so the mark comes off with the fix. What the gate writes (`results/`,
 and read `/health.log_position` before and after a run — it must not
 move.
 
+## Issues
+
+Every issue carries one of four milestones, set when it is filed, and
+fixes run tier by tier, each tier including the ones before it:
+
+- **Now** — a reader is misled or blocked: wrong information shown, text
+  they cannot reach or read, copy and navigation that lose the place.
+- **Next** — on the path being built: reading side by side, finding,
+  links and beams, what an agent's work looks like.
+- **Before release** — accessibility, contrast, collisions, notices and
+  strings that must be right before someone else uses it.
+- **Later** — the editor's, and what comes after the first release.
+
+A `needs-design` label marks an issue that waits on a design decision;
+no run takes it until the label comes off. When several issues of one
+kind appear across surfaces, the rule they lack is found once and
+built everywhere, not fixed one surface at a time.
+
 ## Where the design lives
 
 The design repository (`skep-ux-design`, a sibling of this one) holds
