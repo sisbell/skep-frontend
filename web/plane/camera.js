@@ -1,17 +1,26 @@
 // P-CAM — the camera (the structure record §3.2 "P-CAM"). Layer 2, pure
 // view arithmetic beside the model (FP-11). PURE: the viewport size is an
 // input set by the app on resize; `step(now)` takes the clock.
-// State: VIEW — x, y, scale and the flight in progress. THE ONE OWNER
-// (FP-10). Never serialized, never sent (FP-7: "the camera writes nothing";
-// the gate's ledger proves it). Where the camera is bound is the flight's
-// destination while one runs (`destination`): what a departure re-takes, so
-// input made during a flight lands at its destination, never at a point the
-// flight was passing (foundations §2.3).
+// State: VIEW — x, y, scale, the flight in progress and the zoom-in bound.
+// THE ONE OWNER (FP-10). Never serialized, never sent (FP-7: "the camera
+// writes nothing"; the gate's ledger proves it). Where the camera is bound is
+// the flight's destination while one runs (`destination`): what a departure
+// re-takes, so input made during a flight lands at its destination, never at
+// a point the flight was passing (foundations §2.3).
+// THE ZOOM-IN BOUND (E18 (a)): it never stops short of the reading scale of a
+// place the projection draws — the deepest place's representative em at boot
+// (`setDeepest`), and every face T-LAYER sets a document at (`reach`), smaller
+// than its place's em wherever the document's lines need more room than that
+// em leaves them — so a landing, a zoom and the mount read every document at
+// reading scale at any depth. One bound for the plane, which only rises: a
+// bound per document would snap the zoom as the view left one, and a bound
+// that fell — a document's text dropped by a feed row, its face its place's
+// again until the text is read anew — would take the scale from under its
+// reader on the next pan or flight step.
 // Carries: the wireframe's §6 (`cam`, `sx`/`sy`/`wx`/`wy`, `homeView`,
 // `viewForCell`, `setCam`, `clampCam`) and §11's `flyTo`/`stepAnim`/
-// `viewForDoc`; S3's bounds (`minS` from the world, `maxS` 40) with the
-// zoom-in bound widened per E18 (a): it never stops short of the reading
-// scale of a place the projection draws (`setDeepest`); and §17's
+// `viewForDoc`; S3's bounds (`minS` from the world, `maxS` 40), the zoom-in
+// bound widened from S3's per E18 (a); and §17's
 // `edgeStub`, THE EDGE STUB's screen arithmetic that BM's beams and
 // P-RENDER's mid connections share (foundations §2.1, §2.5; S1 Q3): the
 // visible view below the chrome across the viewport's top (`visibleView`),
@@ -48,8 +57,10 @@ export const cam = { x: WORLD_W / 2, y: WORLD_H / 2, scale: 1, anim: null };
 
 /** the viewport, set on resize */
 let VW = 1, VH = 1;
-/** S3's constant bound; raised per E18 (a) by `setDeepest` */
-let maxS = 40;
+/** S3's constant zoom-in bound, the bound's floor */
+const S3_MAX = 40;
+/** the zoom-in bound: S3's, raised per E18 (a) by `reach`, never lowered */
+let maxS = S3_MAX;
 
 /** @param {number} vw @param {number} vh */
 export function setViewport(vw, vh) { VW = Math.max(1, vw); VH = Math.max(1, vh); }
@@ -65,16 +76,22 @@ export const wx = (px) => (px - VW / 2) / cam.scale + cam.x;
 export const wy = (py) => (py - VH / 2) / cam.scale + cam.y;
 
 /**
- * E18 (a): the zoom-in bound reaches the reading scale of the deepest place
- * the projection draws — a document at continuation depth `depth` has an em
- * of REP_FS / 7^depth world units; reading scale is ~14 px per em.
+ * E18 (a): the zoom-in bound rises to read an em of `fs` world units at 36
+ * px (reading scale is ~14 px per em), and never falls — a larger em than
+ * one reached lowers nothing (see the head).
+ * @param {number} fs an em a document is set at, in world units
+ */
+export function reach(fs) { if (fs > 0) maxS = Math.max(maxS, (30 / fs) * 1.2); }
+
+/**
+ * The bound at boot (E18 (a)): the reading scale of the deepest place the
+ * index lists, at its representative em — REP_FS / 7^depth world units at
+ * continuation depth `depth` (P-PROJ's `fsRep`; past the sound depth, the
+ * residue's) — before any document there is set at a face of its own, which
+ * `reach` takes as T-LAYER sets it.
  * @param {number} depth
  */
-export function setDeepest(depth) {
-  const d = Math.min(depth, DEPTH_SOUND);
-  const fs = REP_FS / Math.pow(G[LEAF], d);
-  maxS = Math.max(40, (30 / fs) * 1.2);
-}
+export function setDeepest(depth) { reach(REP_FS / Math.pow(G[LEAF], Math.min(depth, DEPTH_SOUND))); }
 export function bounds() {
   return { minS: Math.min(VW / WORLD_W, VH / WORLD_H) * 0.5, maxS };
 }
@@ -240,3 +257,9 @@ export function stubTriangle(tip, to) {
 let dirtyFlag = true;
 export function markDirty() { dirtyFlag = true; }
 export function takeDirty() { const d = dirtyFlag; dirtyFlag = false; return d; }
+
+/** reset everything (tests): the view, the viewport, the zoom-in bound at S3's, the dirty mark */
+export function _reset() {
+  cam.x = WORLD_W / 2; cam.y = WORLD_H / 2; cam.scale = 1; cam.anim = null;
+  VW = 1; VH = 1; maxS = S3_MAX; dirtyFlag = true;
+}

@@ -31,7 +31,10 @@
 // ends inside its box at every stage, toggle and lens, so the clip at the
 // box's edge cuts no line of it and moving the reveal re-sets none. Every
 // reader of a document's em above the model reads it here; the model's pump,
-// which may not, reads P-LAY's estimate, never the smaller. The canvas's bars
+// which may not, reads P-LAY's estimate, never the smaller. Every face read
+// here raises P-CAM's zoom-in bound to read it (`reach`, E18 (a)), so the
+// camera never stops short of the reading scale of the text this module
+// sets, however small its lines make its face. The canvas's bars
 // below the mount are P-LAY's layout of the same article's plan at that face
 // (`planOf`, from the view the article is mounted with), so the bars a mount
 // replaces stand on the lines its text takes. The loop runs `frame` before
@@ -103,7 +106,7 @@
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
-import { cam, sx, sy, markDirty } from '../plane/camera.js';
+import { cam, sx, sy, markDirty, reach } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MAX_MOUNTED, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { metricsFor, fitted, LAY_FS, LINE_H } from '../plane/layout.js';
@@ -260,11 +263,26 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
  * so the article ends inside its box at every stage, toggle and lens, and
  * moving the reveal re-sets no line; P-LAY's estimate where its text has not
  * arrived. Fitted again only where the plan, the extent or the positions held
- * changed, however often the model moves.
+ * changed, however often the model moves. Every face it answers is one the
+ * camera's zoom-in bound reaches (P-CAM's `reach`, E18 (a)) before any reader
+ * places a view on it — a landing, the mount, the pointer's legibility — so
+ * no document is set smaller than the camera can read it. The rise draws
+ * nothing: the camera's clamp alone reads the bound.
  * @param {Doc} d
  * @returns {import('../plane/layout.js').Metrics}
  */
 export function metricsOf(d) {
+  const m = fittedFace(d);
+  reach(m.fs);
+  return m;
+}
+
+/**
+ * The face `metricsOf` answers (see there).
+ * @param {Doc} d
+ * @returns {import('../plane/layout.js').Metrics}
+ */
+function fittedFace(d) {
   const est = metricsFor(d.extent || 1, docBox(d.addr));
   if (d.from < 0) return est;
   const key = `${d.rev}:${d.from}:${d.to}:${REC.rev()}`;

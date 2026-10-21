@@ -24,6 +24,12 @@
 // a reading scene's pane alike: its origin's, by the one rule the byline's
 // owner is found by, whoever owns the document windowing it (a view that
 // hands the article's owner back turns red).
+// And the camera's zoom-in bound, which every face read here reaches: a
+// residue member of two hundred one-line paragraphs, set at under a fifth of
+// its place's em, is read at reading scale (a face that leaves the bound at
+// its place's turns red), and a feed row dropping its text, its face its place's
+// again, takes no scale from under its reader (a bound set from the latest
+// face turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -31,7 +37,7 @@ import * as LK from '../links/links.js';
 import * as LAYER from './layer.js';
 import * as CAM from '../plane/camera.js';
 import { metricsFor, layoutOf, heightOf, fitted } from '../plane/layout.js';
-import { docBox, intersects, DOC_CELL_W } from '../plane/projection.js';
+import { docBox, intersects, depthOfDoc, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MAX_MOUNTED, MOUNT_EM } from '../plane/lod.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -304,3 +310,25 @@ test('a guest meets a withheld run named for its origin\'s owner, whoever owns t
     assert.ok(!html.includes(arm('1.0.1')), `${where}: no arm names 1.0.1, the owner of the document windowing the run`);
   }
 }));
+
+// ---- the zoom-in bound -------------------------------------------------------------------------------------------------
+
+test('a face set smaller than its place\'s em raises the zoom-in bound to read it, and no face read after lowers it: a feed row dropping the document\'s text takes no scale from under its reader', () => {
+  const RES = `1.0.1.0.${48 * (DEPTH_SOUND + 1) + 1}`, box = docBox(RES);
+  CAM._reset(); CAM.setViewport(1440, 900);
+  CAM.setDeepest(depthOfDoc(RES)); // the bound the app sets at boot over an index listing it
+  const text = Array.from({ length: 200 }, (_, i) => `Item ${i + 1}.`).join('\n\n'), n = new TextEncoder().encode(text).length;
+  REC.takeSpanSet(RES, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(RES, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+  const fs = LAYER.metricsOf(REC.doc(RES)).fs;
+  assert.ok(box.residue && fs < box.fsRep / 5, `a residue member of two hundred one-line paragraphs, set at ${fs / box.fsRep} of its place's em`);
+  assert.ok(CAM.bounds().maxS * fs >= 36, `the bound reads its face at 36 px an em, as it reads its place's: ${CAM.bounds().maxS * fs}`);
+  const reading = CAM.viewForDoc(box, fs, 12.5);
+  CAM.set(reading);
+  assert.equal(CAM.view().scale, reading.scale, 'its reader at 12.5 px an em');
+  REC.invalidate(RES);
+  assert.ok(LAYER.metricsOf(REC.doc(RES)).fs > 5 * fs, 'a feed row drops its text: its face is its place\'s again until the text is read anew');
+  CAM.panBy(1, 0);
+  assert.equal(CAM.view().scale, reading.scale, 'the next pan keeps its reader\'s scale');
+  CAM._reset();
+});

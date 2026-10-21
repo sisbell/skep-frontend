@@ -1,6 +1,10 @@
 // P-CAM's test: the projection to the screen and back, the clamp, a flight
 // that lands, where the camera is bound while a flight runs (a mutant that
-// answers the view mid-flight turns red), the zoom bound widened per E18 (a);
+// answers the view mid-flight turns red), the zoom bound widened per E18 (a)
+// — the deepest place's representative em at boot, and every face a document
+// is set at: a flight to read a face smaller than its place's em lands at its
+// reading scale (a bound held at the places' ems turns red), and no face
+// reached after lowers the bound (one set from the latest face turns red);
 // the edge stub's cut on its
 // true bearing, STUB.inset px inside the visible view's border on every side
 // — below the chrome across the viewport's top, never under it — and the
@@ -8,7 +12,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as CAM from './camera.js';
-import { WORLD_W, WORLD_H } from './projection.js';
+import { WORLD_W, WORLD_H, REP_FS, DEPTH_SOUND, docBox } from './projection.js';
 import { STUB } from './register.js';
 
 test('screen and world project both ways about the viewport centre', () => {
@@ -28,14 +32,40 @@ test('the clamp keeps the camera in the world\'s margin and the scale in its bou
   assert.equal(CAM.cam.scale, CAM.bounds().minS);
 });
 
-test('the zoom-in bound reaches the reading scale of the deepest drawn place (E18 (a))', () => {
-  CAM.setViewport(1000, 500);
+test('the zoom-in bound reaches the reading scale of the deepest drawn place, at its representative em (E18 (a))', () => {
+  CAM._reset(); CAM.setViewport(1000, 500);
   CAM.setDeepest(0); const b0 = CAM.bounds().maxS;
   assert.equal(b0, 40, "S3's constant bound where every document sits in the first grid");
   CAM.setDeepest(3); const b3 = CAM.bounds().maxS;
   assert.ok(b3 > b0 * 5, 'three grids deeper needs a far larger scale');
   CAM.setDeepest(5); assert.ok(CAM.bounds().maxS > b3 * 40, 'two more grids: 49× the em');
-  CAM.setDeepest(0);
+  for (const d of [0, 2, 3, 7, DEPTH_SOUND, DEPTH_SOUND + 1, DEPTH_SOUND + 4]) {
+    CAM._reset(); CAM.setDeepest(d);
+    assert.equal(CAM.bounds().maxS, Math.max(40, (30 / (REP_FS / 7 ** Math.min(d, DEPTH_SOUND))) * 1.2), `depth ${d}: 36 px an em of its place's representative em, the residue's past the sound depth`);
+  }
+  CAM._reset();
+});
+
+test('the bound reaches every face a document is set at, and only rises: a flight to read a face smaller than its place\'s em lands at its reading scale, and a larger face, a shallower place or no face lowers nothing (E18 (a))', async () => {
+  CAM._reset(); CAM.setViewport(1440, 900);
+  CAM.setDeepest(3);
+  const box = docBox('1.0.1.0.145'), fs = box.fsRep / 10;
+  assert.equal(box.depth, 3, 'an account\'s 145th document stands in its third continuation');
+  const to = CAM.viewForDoc(box, fs, 12.5);
+  assert.ok(to.scale > CAM.bounds().maxS, 'a tenth of its place\'s em is read past the bound its place sets');
+  CAM.reach(fs);
+  CAM.set(CAM.viewForCell(box));
+  const landing = CAM.fly(to, 100, 0);
+  CAM.step(100);
+  await landing;
+  const landed = CAM.view().scale;
+  assert.ok(Math.abs(landed * fs - 12.5) < 1e-9, `the flight lands at 12.5 px an em, unclamped: ${landed * fs}`);
+  const raised = CAM.bounds().maxS;
+  CAM.reach(box.fsRep); CAM.setDeepest(0); CAM.reach(0); CAM.reach(-1);
+  assert.equal(CAM.bounds().maxS, raised, 'its place\'s em, the first grid, no face: the bound stands');
+  CAM.panBy(1, 0);
+  assert.equal(CAM.view().scale, landed, 'the next pan keeps the reading scale');
+  CAM._reset();
 });
 
 test('a flight interpolates and lands exactly, resolving its promise', async () => {

@@ -25,6 +25,11 @@
 // during a flight re-takes the flight's destination, so Forward lands there —
 // after a LEAP's flight and after a Back's (a mutant that re-takes the camera
 // mid-flight turns red).
+// A LEAP lands at reading scale at any depth (E18 (a)): to a document minted
+// a grid deeper than any the page booted with, and to a residue member whose
+// many paragraphs set it at under a fifth of its place's em (a camera whose
+// bound stops at the places' ems lands both below the mount's em and turns
+// red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -34,6 +39,8 @@ import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as LK from '../links/links.js';
+import * as LAYER from '../text/layer.js';
+import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
 import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
 import * as GO from './go.js';
@@ -43,6 +50,10 @@ const NEAR_TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'The far edition.\n
 // C: a document whose text the page does not hold until a LEAP reads it whole; GONE: an address the board answers for with nothing
 const C = '1.0.1.0.5', GONE = '1.0.1.0.9';
 const C_TEXT = 'A third edition, longer than the first two.\n\nIts text is read whole on the LEAP\'s ask, and its face fitted to it.\n\nA last paragraph.';
+// DEEP: the account's 145th document, in its third continuation, a grid deeper than FAR, the deepest the index lists; RES: a member of
+// the residue past the sound depth, its two hundred one-line paragraphs setting it far smaller than its place's em
+const DEEP = '1.0.1.0.145', RES = `1.0.1.0.${48 * (DEPTH_SOUND + 1) + 1}`;
+const DEEP_TEXT = 'A note minted after the page booted.', RES_TEXT = Array.from({ length: 200 }, (_, i) => `Item ${i + 1}.`).join('\n\n');
 const NEAR_EXTENT = NEAR_TEXT.length, FAR_EXTENT = FAR_TEXT.length;
 const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
 const whole = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null });
@@ -61,6 +72,8 @@ const script = {
   ...reads(D, NEAR_TEXT, [PASSAGE, WHOLE]),
   ...reads(FAR, FAR_TEXT, []),
   ...reads(C, C_TEXT, []),
+  ...reads(DEEP, DEEP_TEXT, []),
+  ...reads(RES, RES_TEXT, []),
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GONE) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
   // where each citation's far end projects into FAR now: the passage at 20, five positions; FAR whole, all of it
   [FAKE.keyOf('op', { frame: F.project(PASSAGE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }] } },
@@ -96,6 +109,7 @@ before(async () => {
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: FAR, kind: 'edition', label: 'far', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
   CAM.setViewport(1440, 900);
+  CAM.setDeepest(Math.max(...REC.places().map((p) => depthOfDoc(p.doc)))); // the bound the app's boot sets over the index
   REC.takeLink({ addr: PASSAGE, from: [span(D, 11, 5)], to: [span(FAR, 20, 5)], type: CITE });
   REC.takeLink({ addr: WHOLE, from: [span(D, 17, 5)], to: [whole(FAR)], type: CITE });
   await PUMP.loadWhole(D);
@@ -314,4 +328,24 @@ test('a second Back made during the first one\'s flight leaves the first one\'s 
   assert.ok(same(TRAIL.all()[TRAIL.cursorIndex() + 1].view, own), 'FAR\'s entry keeps its own view');
   await run(GO.forward());
   assert.ok(same(CAM.view(), own), 'Forward lands at it');
+});
+
+/** the em, in px, at which the camera reads a document now: its face (T-LAYER's) at the camera's scale */
+const emNow = (/** @type {string} */ addr) => CAM.view().scale * LAYER.metricsOf(REC.doc(addr)).fs;
+
+test('a LEAP to a document minted a grid deeper than any the page booted with lands at its reading scale (E18 (a))', async () => {
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 9001, at: 9001, op: 'create_new_document', docs: [DEEP], class: 'published' }));
+  assert.equal(depthOfDoc(DEEP), depthOfDoc(FAR) + 1, 'a grid deeper than FAR, the deepest place the index listed at boot');
+  await run(GO.leapTo(DEEP));
+  assert.ok(Math.abs(emNow(DEEP) - 12.5) < 1e-6, `it reads at 12.5 px an em: ${emNow(DEEP)}`);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP to a residue member its paragraphs set far smaller than its place\'s em lands at its reading scale (E18 (a))', async () => {
+  CAM.setDeepest(depthOfDoc(RES)); // the bound the app's boot sets over an index listing it
+  await run(GO.leapTo(RES));
+  const box = docBox(RES), fs = LAYER.metricsOf(REC.doc(RES)).fs;
+  assert.ok(box.residue && fs < box.fsRep / 5, `set at ${fs / box.fsRep} of its place's em`);
+  assert.ok(Math.abs(emNow(RES) - 12.5) < 1e-6, `it reads at 12.5 px an em: ${emNow(RES)}`);
+  assert.deepEqual(fake.unanswered, []);
 });

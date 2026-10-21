@@ -39,8 +39,9 @@
 // that have no box of their own: they share the cell of the continuation
 // past the sound depth, `continuationCell(account, DEPTH_SOUND + 1)`, marked
 // `residue` — a continuation always drawn as one mark — and the one of them
-// the focus names mounts there. E18 (a) holds: the zoom bound reaches every
-// place the projection draws.
+// the focus names mounts there. E18 (a) holds: the zoom bound reaches the
+// reading scale of every place the projection draws, and of every face a
+// document there is set at (P-CAM's `setDeepest` and `reach`).
 //
 // Rules: FP-1, FP-2, FP-7 (never serialized), FP-10 (no state), FP-11.
 
