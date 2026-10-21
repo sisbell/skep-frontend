@@ -2,6 +2,12 @@
 // built from a scripted sequence of answers and events, no write composed;
 // the view's reads ask nothing for a document a continuation's mark holds;
 // a session's end is taken by the page whose session it is and by no other;
+// a board's events by its own page alone, and none before the page knows
+// its board; a drafts row by a page holding a session, never by a guest or
+// a page whose session ended; the index state of the face the page reads —
+// the guest face's for a guest and for a session of no account, a
+// session's for every other page, under another session's name too (a
+// second tab of the same person);
 // a link's lineage read under the audit view, a class scan the board answers
 // `scan_busy` asked again, and a lineage side whose read is refused learned
 // as nothing, never as no claim;
@@ -74,6 +80,93 @@ test('a session-died ends the page\'s own session alone: a guest, or a page sign
   fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
   assert.equal(REC.session(), null, 'its own session\'s end is its death');
   assert.deepEqual(REC.deathReason(), { arm: 'closed' });
+});
+
+/** the index a page reads at boot: one edition of 1.0.1's, its count, the index's state `arm` */
+const indexAt = (/** @type {string} */ arm) => /** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm, floor: 8265 } });
+/** a feed row of class `cls` minting the document `doc` */
+const minting = (/** @type {string} */ doc, /** @type {'published' | 'drafts'} */ cls) => (cls === 'drafts'
+  ? { position: 3, at: 3, op: 'create_new_document', docs: [doc], class: 'drafts', session: 's-2' }
+  : { position: 3, at: 3, op: 'publish', docs: [doc + '.1'], class: 'published' });
+
+test('a page takes the events of its own board alone, and none before it knows its board', () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.takeIndex(indexAt('at_the_floor'));
+  REC.setDaemon('running');
+  const all = (/** @type {string} */ board) => {
+    fake.fire('feed', { board, update: minting('1.0.1.0.77', 'published') });
+    fake.fire('index', { board, session: null, state: { arm: 'complete' } });
+    fake.fire('mode', { board, mode: 'ENFORCING', claimant: '1.0.1', local_trust: false });
+    fake.fire('daemon', { board, state: 'unreachable' });
+  };
+  const untouched = (/** @type {string} */ why) => {
+    assert.equal(REC.place('1.0.1.0.77'), undefined, why + ': no place minted');
+    assert.equal(REC.countOf('1.0.1').documents, 1, why + ': no count raised');
+    assert.equal(REC.indexState()?.arm, 'at_the_floor', why + ': the index\'s state kept');
+    assert.equal(REC.countsExact(), false, why + ': the counts still lower bounds');
+    assert.equal(REC.mode(), null, why + ': no mode taken');
+    assert.equal(REC.daemon(), 'running', why + ': the daemon\'s state kept');
+  };
+  all('b-1');
+  untouched('before the page knows its board');
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  all('b-2');
+  untouched('another board\'s events');
+  all('b-1');
+  assert.equal(REC.place('1.0.1.0.77')?.kind, 'edition', 'its own board\'s row mints the place');
+  assert.equal(REC.countOf('1.0.1').documents, 2);
+  assert.equal(REC.countsExact(), true, 'its own board\'s index state taken');
+  assert.equal(REC.mode(), 'ENFORCING');
+  assert.equal(REC.daemon(), 'unreachable');
+});
+
+test('a guest, or a page whose session ended, takes no drafts row and no session\'s index state; a published row and the guest face\'s state it takes', () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('at_the_floor'));
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
+  assert.equal(REC.place('1.0.1.0.1013'), undefined, 'another session\'s draft is not in the guest\'s index (search.md §4 (iii))');
+  assert.equal(REC.countOf('1.0.1').documents, 1, 'nor in its count');
+  fake.fire('index', { board: 'b-1', session: 's-2', state: { arm: 'complete' } });
+  assert.equal(REC.indexState()?.arm, 'at_the_floor', 'a session\'s face is not the guest\'s');
+  assert.equal(REC.countsExact(), false);
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1014', 'published') });
+  assert.equal(REC.place('1.0.1.0.1014')?.kind, 'edition', 'a published row reaches the guest');
+  fake.fire('index', { board: 'b-1', session: null, state: { arm: 'complete' } });
+  assert.equal(REC.countsExact(), true, 'the guest face\'s state is the guest\'s');
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.sessionDied({ arm: 'closed' });
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1015', 'drafts') });
+  assert.equal(REC.place('1.0.1.0.1015'), undefined, 'a page whose session ended reads as a guest: no drafts row');
+});
+
+test('a page signed in takes a session\'s index state and drafts rows, never the guest face\'s state — under another session\'s name too; a session of no account reads the guest face', () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeIndex(indexAt('building'));
+  fake.fire('index', { board: 'b-1', session: null, state: { arm: 'complete' } });
+  assert.equal(REC.indexState()?.arm, 'building', 'the guest face\'s complete is not the state of the drafts index the page reads');
+  assert.equal(REC.countsExact(), false, 'nor are its counts marked exact by it');
+  // the person's second tab: the shell names the principal's face by its last-opened session and reads its drafts under
+  // whichever of its sessions it reaches first, so this page's state and rows can come named under s-2
+  fake.fire('index', { board: 'b-1', session: 's-2', state: { arm: 'complete' } });
+  assert.equal(REC.countsExact(), true, 'the face\'s state named under the principal\'s other session');
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
+  assert.equal(REC.place('1.0.1.0.1013')?.kind, 'draft', 'the principal\'s drafts row read under its other session');
+  assert.equal(REC.countOf('1.0.1').documents, 2);
+  REC.setSession({ session: 's-3', principal: 2, account: null });
+  REC.setIndexState({ arm: 'building' });
+  fake.fire('index', { board: 'b-1', session: 's-1', state: { arm: 'complete' } });
+  assert.equal(REC.indexState()?.arm, 'building', 'a session of no account has no drafts index: a session\'s face is not its');
+  fake.fire('index', { board: 'b-1', session: null, state: { arm: 'complete' } });
+  assert.equal(REC.indexState()?.arm, 'complete', 'its face is the guest\'s, the published index alone');
 });
 
 test('no call the pump makes is a write: every op frame names a read op', async () => {

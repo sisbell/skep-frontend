@@ -21,11 +21,27 @@
 // The reads go through `op(session, frame)` — the claimant's class — or the
 // guest form where no session stands; a followed far board's reads would
 // take the guest form over its origin (no such board is seeded).
-// The feed's rows → M-REC's index and invalidation; `index`, `mode` and
-// `daemon` → M-REC's state; `session-died` → M-REC's death where it names
-// the page's own session: the shell's bus carries every session's end to
-// every page, and a page that holds no session (a guest) or holds another
-// was never signed in under the one that ended.
+// The shell's bus carries every board's events and every session's to every
+// page (client.md §4b.2); the page takes its own. A board event — `feed`,
+// `index`, `mode`, `daemon` — is taken where it names the page's board, and
+// none before the board is known: the boot's `health`, `probe` and `places`
+// answer all it would set. The feed's rows → M-REC's index and
+// invalidation; a `drafts` row only while the page holds a session — a
+// guest's index lists no draft (search.md §4 (iii)), nor does the index of
+// a page whose session was refused or ended. `index` → M-REC's state where
+// it is the face the page reads ("a face receives the state of the pair it
+// searches"): the guest face's, which names no session, for a page with no
+// session or with a session of no account, for which no drafts index
+// stands; a session's for every other page, never the guest face's. A
+// signed-in page takes a drafts row or a face's state named under another
+// session too: the shell reads a principal's drafts once, under whichever
+// of its sessions it reaches first, and names the principal's face by its
+// last-opened session, so a person's second tab would otherwise take
+// neither (reported to skep: until every session is named, the page cannot
+// tell its principal's other sessions from another principal's). `mode`
+// and `daemon` → M-REC's state; `session-died` → M-REC's death where it
+// names the page's own session: a page that holds no session (a guest) or
+// holds another was never signed in under the one that ended.
 // Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11.
 
 import * as PORT from '../bridge/port.js';
@@ -40,6 +56,13 @@ import { versionAddress } from './address.js';
 /** @typedef {import('./records.js').Doc} Doc */
 /** @typedef {import('./frames.js').Claim} Claim */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+/** @typedef {import('../bridge/shapes').FeedEvent} FeedEvent */
+/** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
+/** @typedef {import('../bridge/shapes').IndexEvent} IndexEvent */
+/** @typedef {import('../bridge/shapes').ModeEvent} ModeEvent */
+/** @typedef {import('../bridge/shapes').DaemonEvent} DaemonEvent */
+/** @typedef {import('../bridge/shapes').SessionDiedEvent} SessionDiedEvent */
+/** @typedef {{feed: FeedEvent, index: IndexEvent, mode: ModeEvent, daemon: DaemonEvent}} BoardEvents — the events that name their board, by name */
 
 /**
  * @typedef {Object} Lineage — a link's supersession lineage as read (B1-S5;
@@ -81,17 +104,45 @@ let dirty = () => {};
 let started = false;
 
 /**
- * Start the pump: subscribe the model to the port's events.
+ * Start the pump: subscribe the model to the port's events, every board
+ * event through `onBoard`.
  * @param {{onDirty: () => void}} opts
  */
 export function start(opts) {
   dirty = opts.onDirty;
   started = true;
-  PORT.on('feed', (d) => { const ev = /** @type {import('../bridge/shapes').FeedEvent} */ (d); if (ev && ev.update) { REC.applyFeedUpdate(ev.update); for (const named of ev.update.docs || []) asked.forEach((k) => { if (k.includes(named)) asked.delete(k); }); dirty(); } });
-  PORT.on('index', (d) => { const ev = /** @type {import('../bridge/shapes').IndexEvent} */ (d); if (ev && ev.state) REC.setIndexState(ev.state); dirty(); });
-  PORT.on('mode', (d) => { const ev = /** @type {import('../bridge/shapes').ModeEvent} */ (d); if (ev) REC.setMode(ev); dirty(); });
-  PORT.on('daemon', (d) => { const ev = /** @type {import('../bridge/shapes').DaemonEvent} */ (d); if (ev) REC.setDaemon(ev.state); dirty(); });
-  PORT.on('session-died', (d) => { const ev = /** @type {import('../bridge/shapes').SessionDiedEvent} */ (d); const s = REC.session(); if (ev && s && s.session === ev.session) REC.sessionDied(ev.reason); dirty(); });
+  onBoard('feed', (ev) => { if (ev.update && takesRow(ev.update)) { REC.applyFeedUpdate(ev.update); for (const named of ev.update.docs || []) asked.forEach((k) => { if (k.includes(named)) asked.delete(k); }); dirty(); } });
+  onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); dirty(); } });
+  onBoard('mode', (ev) => { REC.setMode(ev); dirty(); });
+  onBoard('daemon', (ev) => { REC.setDaemon(ev.state); dirty(); });
+  PORT.on('session-died', (d) => { const ev = /** @type {SessionDiedEvent} */ (d); const s = REC.session(); if (ev && s && s.session === ev.session) REC.sessionDied(ev.reason); dirty(); });
+}
+
+/**
+ * Subscribe to a board event, handed on where it names the page's board
+ * alone; none before the board is known.
+ * @template {keyof BoardEvents} K
+ * @param {K} name
+ * @param {(ev: BoardEvents[K]) => void} take
+ */
+function onBoard(name, take) {
+  PORT.on(name, (d) => { const ev = /** @type {BoardEvents[K] | null} */ (d); const b = REC.board(); if (ev && b && ev.board === b.board) take(ev); });
+}
+
+/** does the page take a feed row: a published row always, a `drafts` row while it holds a session — under any session's name */
+const takesRow = (/** @type {FeedUpdate} */ u) => u.class !== 'drafts' || REC.session() !== null;
+
+/**
+ * Is an `index` event the state of the face the page reads? The guest
+ * face's names no session: a page reads it with no session, or with a
+ * session of no account; every other page reads a session's face, under
+ * any session's name.
+ * @param {IndexEvent} ev
+ * @returns {boolean}
+ */
+function ofFace(ev) {
+  const s = REC.session();
+  return s && s.account != null ? ev.session != null : ev.session == null;
 }
 
 /** the refusals the reads met */
