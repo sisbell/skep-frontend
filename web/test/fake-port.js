@@ -6,7 +6,10 @@
 // beneath it.
 // It answers each call from a SCRIPT: a map from a call key (`name` + the
 // argument object's canonical JSON, or `op:` + the frame's canonical JSON)
-// to the Outcome the provider would answer; it fires events on demand.
+// to the Outcome the provider would answer; it fires events on demand; and
+// it HOLDS a call on demand (`hold`): every call of that key waits for its
+// answer until the test releases it, so a test can make acts while a read is
+// in flight and answer it when it chooses — a slow board's order of answers.
 
 /** @typedef {import('../bridge/port.js').Adapter} Adapter */
 /** @typedef {import('../bridge/shapes').EventName} EventName */
@@ -27,7 +30,7 @@ export function keyOf(/** @type {string} */ name, /** @type {unknown} */ args) {
 
 /**
  * @param {Record<string, unknown>} script keyed by `keyOf`
- * @returns {Adapter & {fire: (name: EventName, data: unknown) => void, unanswered: string[]}}
+ * @returns {Adapter & {fire: (name: EventName, data: unknown) => void, hold: (name: string, args: unknown) => () => void, unanswered: string[]}}
  */
 export function create(script) {
   /** @type {Array<(name: EventName, data: unknown) => void>} */
@@ -36,10 +39,14 @@ export function create(script) {
   const log = [];
   /** @type {string[]} */
   const unanswered = [];
+  /** @type {Map<string, Promise<void>>} the keys held, each until its release */
+  const holds = new Map();
   return {
     name: 'dev',
     async call(name, args) {
       const k = keyOf(name, args);
+      const held = holds.get(k);
+      if (held) await held;
       const body = JSON.stringify(args ?? {});
       const out = /** @type {import('../bridge/shapes').Outcome<unknown> | undefined} */ (script[k]);
       if (!out) { unanswered.push(k); log.push({ name, bytesIn: body.length, bytesOut: 0, ms: 0, outcome: 'refused', at: 0 }); return { refused: { kind: 'shell', name: 'unknown_call' } }; }
@@ -51,6 +58,14 @@ export function create(script) {
     closeAtUnload() {},
     streamState: () => 'open',
     fire(name, data) { for (const fn of subs) fn(name, data); },
+    /** hold every call of a key until the release this returns, which answers them in the order they were made */
+    hold(name, args) {
+      const k = keyOf(name, args);
+      /** @type {() => void} */
+      let release = () => {};
+      holds.set(k, new Promise((r) => { release = () => { holds.delete(k); r(); }; }));
+      return release;
+    },
     unanswered,
   };
 }

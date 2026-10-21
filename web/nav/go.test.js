@@ -8,6 +8,23 @@
 // Every teleport a key made draws the focus ring at its landing, and one the
 // pointer made puts it out (a mutant that drops any one teleport's word of
 // the key turns red; one that draws the ring at every landing turns red).
+// THE ORDER OF ACTS, each with an answer held while acts are made: a Back or
+// a jump made while a LEAP reads acts from the LEAP's entry, which stands
+// ahead of the cursor at its landing, and the LEAP lands nowhere (a mutant
+// that pushes after the read, or lands an act a later one overtook, turns
+// red); a Back made while a follow reads leaves the follow's entry ahead at
+// its span, the arrival out; every act made while a LEAP reads — a LEAP, a
+// follow, HOME, WHOLE BOARD, an account's region — stands after the LEAP's
+// entry and lands (a mutant that leaves any one uncounted turns red); a LEAP
+// that faces leaves the entries ahead of the cursor standing (a mutant whose
+// withdrawal forgets them turns red); Forward to a LEAP's entry while it
+// reads lands at the landing the read placed (a mutant that lands without
+// waiting turns red); a Back waiting on a claim puts the arrival out as it is
+// made and lands nowhere once Forward has been made (the ring as Forward left
+// it); a follow that faces leaves the trail as it found it. A departure made
+// during a flight re-takes the flight's destination, so Forward lands there —
+// after a LEAP's flight and after a Back's (a mutant that re-takes the camera
+// mid-flight turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -23,6 +40,9 @@ import * as GO from './go.js';
 
 const D = '1.0.1.0.3', FAR = '1.0.1.0.127', CITE = '1.1.0.1.0.1.0.3.13';
 const NEAR_TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'The far edition.\n\nIts cited passage stands here.';
+// C: a document whose text the page does not hold until a LEAP reads it whole; GONE: an address the board answers for with nothing
+const C = '1.0.1.0.5', GONE = '1.0.1.0.9';
+const C_TEXT = 'A third edition, longer than the first two.\n\nIts text is read whole on the LEAP\'s ask, and its face fitted to it.\n\nA last paragraph.';
 const NEAR_EXTENT = NEAR_TEXT.length, FAR_EXTENT = FAR_TEXT.length;
 const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
 const whole = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null });
@@ -40,6 +60,8 @@ const reads = (/** @type {string} */ doc, /** @type {string} */ text, /** @type 
 const script = {
   ...reads(D, NEAR_TEXT, [PASSAGE, WHOLE]),
   ...reads(FAR, FAR_TEXT, []),
+  ...reads(C, C_TEXT, []),
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GONE) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
   // where each citation's far end projects into FAR now: the passage at 20, five positions; FAR whole, all of it
   [FAKE.keyOf('op', { frame: F.project(PASSAGE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }] } },
   [FAKE.keyOf('op', { frame: F.project(WHOLE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + FAR_EXTENT }] } },
@@ -57,6 +79,14 @@ async function run(/** @type {Promise<unknown>} */ act) {
 }
 /** a citation as LK draws it at the first edition */
 const drawn = (/** @type {string} */ link) => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === link));
+/** two views the same, within a flight's last step's rounding */
+const same = (/** @type {{x: number, y: number, scale: number}} */ a, /** @type {{x: number, y: number, scale: number}} */ b) => [a.x - b.x, a.y - b.y, a.scale - b.scale].every((d, i) => Math.abs(d) <= 1e-9 * Math.max(1, Math.abs([b.x, b.y, b.scale][i])));
+/** the walk's element: its kind, its place, its position */
+const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.pos]; };
+/** the trail's places, oldest first */
+const addrs = () => TRAIL.all().map((e) => e.addr);
+/** C as the page holds it before a LEAP reads it: no text */
+const unread = () => REC.invalidate(C);
 
 before(async () => {
   REC._reset(); LK._reset(); TRAIL._reset();
@@ -109,4 +139,179 @@ test('a teleport a key made draws the focus ring at its landing; one the pointer
   assert.equal(await ring(GO.toTrailEntry(2, true)), true, 'Mod+2');
   assert.equal(TRAIL.current()?.label, 'HOME', 'Mod+2 moved the cursor to HOME\'s entry');
   assert.deepEqual(fake.unanswered, []);
+});
+
+test('a Back or a jump made while a LEAP reads acts from the LEAP\'s entry: the entries before it keep their views, the LEAP\'s stands ahead at its landing, and the LEAP lands nowhere', async () => {
+  for (const [what, act] of /** @type {Array<[string, () => Promise<boolean>]>} */ ([['Back', () => GO.back()], ['a jump to the entry behind', () => GO.toTrailEntry(2)]])) {
+    unread();
+    await run(GO.leapTo(D));
+    const at = CAM.view(), before = TRAIL.all().map((e) => ({ addr: e.addr, view: { ...e.view } }));
+    const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+    const leap = GO.leapTo(C);
+    const claimed = TRAIL.current()?.addr;
+    await run(act());
+    release();
+    await run(leap);
+    const after = TRAIL.all();
+    assert.equal(claimed, C, `${what}: the LEAP's entry stands as the LEAP is made`);
+    assert.deepEqual(after.map((e) => e.addr), [...before.map((e) => e.addr), C], `${what}: the LEAP's entry after D's, nothing dropped`);
+    assert.equal(TRAIL.cursorIndex(), before.length - 1, `${what}: the cursor on D's`);
+    assert.ok(before.slice(0, -1).every((b, i) => same(after[i].view, b.view)), `${what}: the entries before D's keep their views`);
+    assert.ok(same(after[before.length - 1].view, at), `${what}: D's at the view the LEAP departed`);
+    assert.ok(same(after[before.length].view, GO.viewFor(C, null)), `${what}: the LEAP's at its landing`);
+    assert.ok(same(CAM.view(), at), `${what}: the camera at D, where the act landed`);
+    assert.deepEqual(walkAt(), ['document', D, null], `${what}: the walk on D`);
+  }
+  await run(GO.forward());
+  assert.ok(same(CAM.view(), GO.viewFor(C, null)), 'Forward lands at the LEAP\'s landing');
+  assert.deepEqual(walkAt(), ['document', C, null]);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a Back made while a follow reads goes back from the follow\'s entry, which stands ahead at the span its far end projects to, the arrival out', async () => {
+  await run(GO.leapTo(D));
+  const at = CAM.view(), n = TRAIL.length();
+  const release = fake.hold('op', { frame: F.project(PASSAGE, 2, FAR) });
+  const following = GO.follow(drawn(PASSAGE));
+  await run(GO.back());
+  release();
+  await run(following);
+  const far = TRAIL.all()[n];
+  assert.deepEqual(addrs().slice(n - 1), [D, FAR], 'the follow\'s entry after D\'s');
+  assert.equal(TRAIL.cursorIndex(), n - 1, 'the cursor on D\'s');
+  assert.deepEqual(far && [far.pos, far.width, far.link], [20, 5, PASSAGE], 'at the span its far end projects to');
+  assert.ok(far && same(far.view, GO.viewFor(FAR, 20)), 'at that span\'s view');
+  assert.equal(GO.arrivalMark(), null, 'the arrival out: the follow landed nowhere');
+  assert.ok(same(CAM.view(), at), 'the camera at D');
+  assert.deepEqual(walkAt(), ['document', D, null]);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('an act made while a LEAP reads stands after the LEAP\'s entry and lands; the LEAP whose read answers after it lands nowhere', async () => {
+  /** @type {Array<[string, () => Promise<unknown>, string]>} each act, and the place its entry names */
+  const acts = [
+    ['a LEAP', () => GO.leapTo(FAR), FAR],
+    ['a follow', () => GO.follow(drawn(PASSAGE)), FAR],
+    ['HOME', () => GO.home(), '1.0.1'],
+    ['WHOLE BOARD', () => GO.wholeBoard(), '1'],
+    ['an account\'s region', () => GO.toAccount('1.0.1'), '1.0.1'],
+  ];
+  for (const [what, act, addr] of acts) {
+    unread();
+    await run(GO.leapTo(D));
+    const n = TRAIL.length();
+    const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+    const leap = GO.leapTo(C);
+    await run(act());
+    const landed = CAM.view(), walked = walkAt();
+    release();
+    await run(leap);
+    assert.deepEqual(addrs().slice(n - 1), [D, C, addr], `${what}: the trail holds the moves in the order they were made`);
+    assert.equal(TRAIL.cursorIndex(), n + 1, `${what}: the cursor on its entry`);
+    assert.ok(walked && walked[1] === addr && same(CAM.view(), landed), `${what}: the camera and the walk where it landed`);
+    assert.deepEqual(walkAt(), walked, `${what}: the walk where it landed`);
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP that faces leaves the trail as it found it: made with the cursor behind the newest entry, the entry ahead stands', async () => {
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR));
+  await run(GO.back());
+  const before = addrs(), cursor = TRAIL.cursorIndex();
+  await run(GO.leapTo(GONE));
+  assert.equal(REC.doc(GONE).refused, 'unregistered', 'the board answered for it with nothing');
+  assert.deepEqual(addrs(), before, 'FAR\'s entry ahead of the cursor stands');
+  assert.equal(TRAIL.cursorIndex(), cursor);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Forward to a LEAP\'s entry while it reads lands once the read answers, at the landing the read placed', async () => {
+  unread();
+  await run(GO.leapTo(D));
+  // a position in C's last paragraph: the unread record places it at the document's middle, the read far down it
+  const last = C_TEXT.lastIndexOf('A last') + 1;
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+  const leap = GO.leapTo(C, { pos: last });
+  const placed = GO.viewFor(C, last);
+  await run(GO.back());
+  const forward = GO.forward();
+  release();
+  await run(leap);
+  await run(forward);
+  const landing = GO.viewFor(C, last);
+  assert.ok(!same(placed, landing), 'the read moves the landing: the record unread places it elsewhere');
+  assert.ok(same(CAM.view(), landing), 'Forward lands where the read placed it');
+  assert.equal(TRAIL.current()?.addr, C);
+  assert.deepEqual(walkAt(), ['block', C, last], 'the walk on the paragraph the LEAP named');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a Back waiting on a LEAP\'s entry while it reads puts the arrival out as it is made, and lands nowhere once Forward has been made: the ring as Forward left it', async () => {
+  unread();
+  await run(GO.leapTo(D));
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+  const leap = GO.leapTo(C);
+  await run(GO.follow(drawn(PASSAGE)));
+  const landed = CAM.view(), walked = walkAt(), lit = GO.arrivalMark();
+  const back = GO.back(true);
+  assert.equal(TRAIL.current()?.addr, C, 'Back reached the LEAP\'s entry, still reading');
+  const out = GO.arrivalMark();
+  await run(GO.forward());
+  release();
+  await run(leap);
+  await run(back);
+  assert.ok(lit && lit.link === PASSAGE, 'the follow lit the arrival');
+  assert.equal(out, null, 'Back put it out as it was made: the reader has left the span');
+  assert.deepEqual(addrs().slice(-3), [D, C, FAR]);
+  assert.equal(TRAIL.current()?.addr, FAR);
+  assert.ok(same(CAM.view(), landed), 'the camera at the follow\'s landing');
+  assert.deepEqual(walkAt(), walked, 'the walk on the follow\'s span');
+  assert.equal(WALK.ringShown(), false, 'Forward, a pointer\'s, put the ring out; the Back a key made drew none after it');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow that faces leaves the trail as it found it: its entry, standing while it read, withdrawn', async () => {
+  const DEAD = D + '.0.2.3';
+  REC.takeLinks(D, [DEAD]);
+  REC.takeLink({ addr: DEAD, from: [span(D, 23, 3)], to: [span(GONE, 1, 3)], type: CITE });
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR));
+  await run(GO.back());
+  const before = addrs(), cursor = TRAIL.cursorIndex();
+  await run(GO.follow(drawn(DEAD)));
+  assert.equal(REC.doc(GONE).refused, 'unregistered', 'a dead reference');
+  assert.deepEqual(addrs(), before, 'FAR\'s entry ahead of the cursor stands');
+  assert.equal(TRAIL.cursorIndex(), cursor);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a Back made during a LEAP\'s flight re-takes the view the flight was bound for, and Forward lands there', async () => {
+  await run(GO.leapTo(D));
+  GO.leapTo(FAR); // its flight is replaced by Back's: never awaited
+  const flight = CAM.cam.anim;
+  assert.ok(flight, 'the LEAP flies');
+  const bound = { ...flight.to };
+  CAM.step(flight.t0 + flight.ms / 2);
+  assert.ok(!same(CAM.view(), bound), 'the camera mid-flight');
+  await run(GO.back());
+  const entry = TRAIL.all()[TRAIL.cursorIndex() + 1];
+  assert.ok(entry && entry.addr === FAR && same(entry.view, bound), 'the LEAP\'s entry holds the view its flight was bound for, not the camera mid-flight');
+  await run(GO.forward());
+  assert.ok(same(CAM.view(), bound), 'Forward lands there');
+});
+
+test('a second Back made during the first one\'s flight leaves the first one\'s entry at its own view, and Forward lands there', async () => {
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR));
+  await run(GO.leapTo(D, { pos: 11 }));
+  const own = { ...TRAIL.all()[TRAIL.cursorIndex() - 1].view };
+  GO.back(); // its flight is replaced by the second Back's: never awaited
+  const flight = CAM.cam.anim;
+  assert.ok(flight && same(flight.to, own), 'the first Back flies to FAR\'s entry');
+  CAM.step(flight.t0 + flight.ms / 2);
+  await run(GO.back());
+  assert.ok(same(TRAIL.all()[TRAIL.cursorIndex() + 1].view, own), 'FAR\'s entry keeps its own view');
+  await run(GO.forward());
+  assert.ok(same(CAM.view(), own), 'Forward lands at it');
 });

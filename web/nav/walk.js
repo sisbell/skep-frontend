@@ -4,22 +4,26 @@
 // the mirror ENGINE-BOUND. State: VIEW — the walk's position (the element the
 // walk stands on, its siblings and the levels above) and the position a
 // landing named inside the focused span (the one line's position, W-01 step
-// 3's "position honored", until the walk moves) — THE ONE OWNER of the
-// walk's position (FP-10). THE FOCUS IS N-FOCUS's (FP-20): the page has one
-// focus, the platform's, and every move of it this module asks for goes
-// through the controller's `land` — a walk key, a landing, a key-made
-// re-take each put the platform's focus on the walk's element wherever the
-// key was pressed (rules 10, 12), the ring drawn where a key made the move
-// and put out by a pointer's landing or a camera-made re-take (D5 §4 rule 2,
-// the platform's focus-visible rule); a camera-made re-take carries the
-// focus to the new element only where the mirror held it, and leaves a focus
-// standing in the one line, a card or the scene where it is. Every move
-// names a position or none, so a landing's position never outlives the span
-// it was named in: a walk key names none, and the line reads the span's own
-// first position. At launch the platform's focus rests on the walk's element
-// with the ring out (rule 21). Enter at a focused span selects the block
-// whole, as a click on plain text does, until the editor's caret exists (D8;
-// K-7's "text takes the caret" waits on D6).
+// 3's "position honored", until the walk moves) and the count of its moves —
+// THE ONE OWNER of the walk's position (FP-10). THE ORDER OF MOVES: every
+// move — a walk key, a landing, a re-take — counts itself as it starts, and
+// one whose reads a later move overtook sets nothing when they answer and
+// flies the camera nowhere, so the walk stands where the latest move put it
+// whatever order the reads answer in. THE FOCUS IS N-FOCUS's (FP-20): the
+// page has one focus, the platform's, and every move of it this module asks
+// for goes through the controller's `land` — a walk key, a landing, a
+// key-made re-take each put the platform's focus on the walk's element
+// wherever the key was pressed (rules 10, 12), the ring drawn where a key
+// made the move and put out by a pointer's landing or a camera-made re-take
+// (D5 §4 rule 2, the platform's focus-visible rule); a camera-made re-take
+// carries the focus to the new element only where the mirror held it, and
+// leaves a focus standing in the one line, a card or the scene where it is.
+// Every move names a position or none, so a landing's position never
+// outlives the span it was named in: a walk key names none, and the line
+// reads the span's own first position. At launch the platform's focus rests
+// on the walk's element with the ring out (rule 21). Enter at a focused span
+// selects the block whole, as a click on plain text does, until the editor's
+// caret exists (D8; K-7's "text takes the caret" waits on D6).
 // The plane linearizes board › account › document › block | link in record
 // order (S3 Q6); at reading scale the walk holds THE LINKS THE READING SCALE
 // DRAWS (D5 §4 rule 2: the owner's and the person's own; others' only where a
@@ -86,6 +90,8 @@ let idx = 0;
 let stack = [];
 /** @type {number | null} the position a landing named inside the focused span; null where the focus moved by a walk key */
 let landed = null;
+/** the walk's moves, each counted as it starts: a move a later one has overtaken sets nothing */
+let moves = 0;
 /** @type {HTMLElement | null} */
 let mirrorEl = null;
 /** @type {Array<(n: Node | null) => void>} */
@@ -286,13 +292,19 @@ function moved() {
   CAM.markDirty();
 }
 
-/** the camera follows the focus: fly to the element at its level's scale */
-async function flyToFocus() {
+/**
+ * The camera follows the focus: fly to the element at its level's scale —
+ * nowhere where the document's extent is read first and a later move
+ * overtook this one meanwhile.
+ * @param {number} move the move's count
+ */
+async function flyToFocus(move) {
   if (!focus) return;
   if (focus.kind === 'board') await CAM.fly(CAM.viewForCell(boardCell(focus.addr), 0.92), 300);
   else if (focus.kind === 'account') await CAM.fly(CAM.viewForCell(accountCell(focus.addr), 0.85), 300);
   else if (focus.kind === 'document') {
     const d = REC.doc(focus.addr); if (d.extent == null) await PUMP.loadWhole(focus.addr);
+    if (move !== moves) return;
     const box = docBox(focus.addr); await CAM.fly(CAM.viewForCell(box, 0.9), 300);
   } else {
     const d = REC.doc(focus.addr);
@@ -309,7 +321,8 @@ function stepped() { render(); focusItem({ byKey: true }); moved(); }
 /**
  * A walk key: ↓ ↑ siblings, → in, ← out, Home/End first/last, Enter acts;
  * Shift+↓ / Shift+↑ select by span (K-8, the selection's owner's, which
- * leaves the focus here — rule 15).
+ * leaves the focus here — rule 15). → reads the children first, and enters
+ * nothing where a later move overtook it meanwhile.
  * @param {'down' | 'up' | 'in' | 'out' | 'first' | 'last'} k
  * @returns {Promise<boolean>}
  */
@@ -317,17 +330,19 @@ export async function key(k) {
   if (!focus) { await enter(); return true; }
   if (k === 'down' || k === 'up' || k === 'first' || k === 'last') {
     const ni = k === 'down' ? Math.min(siblings.length - 1, idx + 1) : k === 'up' ? Math.max(0, idx - 1) : k === 'first' ? 0 : siblings.length - 1;
-    if (ni !== idx) { setFocus(siblings, ni); stepped(); await flyToFocus(); }
+    if (ni !== idx) { const move = ++moves; setFocus(siblings, ni); stepped(); await flyToFocus(move); }
     return true;
   }
   if (k === 'in') {
+    const move = ++moves;
     const kids = await childrenOf(focus);
-    if (kids.length) { stack.push({ siblings, idx }); setFocus(kids, 0); stepped(); await flyToFocus(); }
+    if (move !== moves) return true;
+    if (kids.length) { stack.push({ siblings, idx }); setFocus(kids, 0); stepped(); await flyToFocus(move); }
     return true;
   }
   if (k === 'out') {
     const up = stack.pop();
-    if (up && up.siblings.length) { setFocus(up.siblings, up.idx); stepped(); await flyToFocus(); }
+    if (up && up.siblings.length) { const move = ++moves; setFocus(up.siblings, up.idx); stepped(); await flyToFocus(move); }
     return true;
   }
   return false;
@@ -335,7 +350,9 @@ export async function key(k) {
 
 /** the plane takes focus with nothing focused yet: the board */
 export async function enter() {
+  const move = ++moves;
   const kids = await childrenOf(null);
+  if (move !== moves) return;
   stack = []; setFocus(kids, 0); stepped();
 }
 
@@ -347,13 +364,16 @@ export async function enter() {
  * item wherever the act was made, the ring drawn where a key made it and put
  * out where anything else did (D5 §4 rule 2); a camera-made re-take (`take`
  * false) carries the focus to the new item only where the mirror held it,
- * the ring out, and leaves a focus standing elsewhere where it is.
+ * the ring out, and leaves a focus standing elsewhere where it is. The
+ * landing's levels are read first — a span's, its document's whole text — and
+ * where a later move overtook it meanwhile it sets nothing.
  * @param {string} addr a document, an account or a board
  * @param {number | null} pos
  * @param {boolean} [byKey] a key made the act
  * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood (an act); false carries it only where the mirror held it (a camera's re-take)
  */
 export async function focusTo(addr, pos, byKey = false, take = true) {
+  const move = ++moves;
   const held = mirrorHolds();
   const doc = documentOf(addr), acct = accountOf(addr);
   if (doc) {
@@ -362,6 +382,7 @@ export async function focusTo(addr, pos, byKey = false, take = true) {
     const A = among(await childrenOf(BOARD), { kind: 'account', addr: acct || '', pos: null, link: null });
     const D = among(await childrenOf({ kind: 'account', addr: acct || '', pos: null, link: null }), { kind: 'document', addr: doc, pos: null, link: null });
     const kids = pos != null && d.blocks.length ? await childrenOf({ kind: 'document', addr: doc, pos: null, link: null }) : [];
+    if (move !== moves) return;
     if (pos != null && kids.length) {
       const b = REC.blockAt(doc, pos);
       let i = b ? kids.findIndex((n) => n.kind === 'block' && n.pos === b.pos) : -1;
@@ -375,6 +396,7 @@ export async function focusTo(addr, pos, byKey = false, take = true) {
     }
   } else if (acct) {
     const A = among(await childrenOf(BOARD), { kind: 'account', addr: acct, pos: null, link: null });
+    if (move !== moves) return;
     stack = [{ siblings: [BOARD], idx: 0 }];
     setFocus(A.sibs, A.i);
   } else {

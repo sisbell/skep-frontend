@@ -1,5 +1,7 @@
 // P-CAM's test: the projection to the screen and back, the clamp, a flight
-// that lands, the zoom bound widened per E18 (a); the edge stub's cut on its
+// that lands, where the camera is bound while a flight runs (a mutant that
+// answers the view mid-flight turns red), the zoom bound widened per E18 (a);
+// the edge stub's cut on its
 // true bearing, STUB.inset px inside the visible view's border on every side
 // — below the chrome across the viewport's top, never under it — and the
 // triangle behind its tip on that bearing.
@@ -46,6 +48,21 @@ test('a flight interpolates and lands exactly, resolving its promise', async () 
   await p;
   assert.ok(!CAM.flying());
   assert.deepEqual(CAM.view(), { x: 100, y: 50, scale: 2 });
+});
+
+test('where the camera is bound: the flight\'s destination while it runs, never the point it is passing; the view itself once it lands', () => {
+  CAM.setViewport(1000, 500);
+  CAM.set({ x: 0, y: 0, scale: 1 });
+  assert.deepEqual(CAM.destination(), CAM.view(), 'no flight: the view');
+  const to = { x: 100, y: 50, scale: 2 };
+  CAM.fly(to, 100, 0);
+  CAM.step(50);
+  assert.ok(CAM.cam.x > 0 && CAM.cam.x < 100, 'mid-flight');
+  assert.deepEqual(CAM.destination(), to);
+  const bound = CAM.destination(); bound.x = -1;
+  assert.deepEqual(CAM.destination(), to, 'a copy: the flight is not moved through it');
+  CAM.step(100);
+  assert.deepEqual(CAM.destination(), CAM.view());
 });
 
 test('pan and zoom are view arithmetic: zooming about a point keeps it still', () => {

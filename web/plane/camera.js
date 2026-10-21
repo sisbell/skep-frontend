@@ -3,7 +3,10 @@
 // input set by the app on resize; `step(now)` takes the clock.
 // State: VIEW — x, y, scale and the flight in progress. THE ONE OWNER
 // (FP-10). Never serialized, never sent (FP-7: "the camera writes nothing";
-// the gate's ledger proves it).
+// the gate's ledger proves it). Where the camera is bound is the flight's
+// destination while one runs (`destination`): what a departure re-takes, so
+// input made during a flight lands at its destination, never at a point the
+// flight was passing (foundations §2.3).
 // Carries: the wireframe's §6 (`cam`, `sx`/`sy`/`wx`/`wy`, `homeView`,
 // `viewForCell`, `setCam`, `clampCam`) and §11's `flyTo`/`stepAnim`/
 // `viewForDoc`; S3's bounds (`minS` from the world, `maxS` 40) with the
@@ -90,6 +93,9 @@ export function set(v) { cam.anim = null; cam.x = v.x; cam.y = v.y; cam.scale = 
 
 /** the current view, copied */
 export function view() { return { x: cam.x, y: cam.y, scale: cam.scale }; }
+
+/** the view the camera is bound for, copied: the flight's destination while one runs, else the current view */
+export function destination() { return cam.anim ? { ...cam.anim.to } : view(); }
 
 /**
  * The view that frames a cell (a board's or an account's) at the clamp —

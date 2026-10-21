@@ -18,7 +18,13 @@
 // While chrome covers the plane the tree stays inert through the rebuild —
 // a mutant whose rebuild lifts the mark turns red — until the plane is
 // uncovered. The focus's return as an overlay closes is the controller's
-// (`focus.test.js`).
+// (`focus.test.js`). THE ORDER OF MOVES, a read held while a later move is
+// made: a landing in a document held in part, overtaken by a landing in
+// another, sets nothing when its read answers — a mutant that sets the walk
+// after the read turns red — and → on such a document, overtaken by ↑, enters
+// nothing, the levels above standing as ↑ left them; ↓ onto a document whose
+// extent is read before the camera follows, overtaken by a landing, flies the
+// camera nowhere (a mutant that flies after the read turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -44,11 +50,27 @@ const reads = (/** @type {string} */ doc, /** @type {Array<Record<string, unknow
   [FAKE.keyOf('op', { frame: F.image(doc, 1, extent) })]: { result: { as_of: 1, resp: 'runs', runs } },
   [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, extent) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
 });
+/** a third document, held in part as the viewport's read leaves it — its extent and its first paragraph — the rest of its text read on the walk's ask */
+const G = '1.0.1.0.7';
+const G_TEXT = 'First.\n\nSecond.\n\nThird.';
 // D: three spans: 1 "Tumbler.\n\n" (10), 11 "The first field." (16), 27 a withheld run (4)
 const script = {
   ...reads(D, [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }], 30, [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }]),
   ...reads(E, [{ content: E_TEXT }], E_TEXT.length, [{ i_start: E + '.0.1.1', width: String(E_TEXT.length) }]),
+  ...reads(G, [{ content: G_TEXT }], G_TEXT.length, [{ i_start: G + '.0.1.1', width: String(G_TEXT.length) }]),
 };
+
+/** @type {ReturnType<typeof FAKE.create>} */
+let fake;
+
+/** G as the viewport's read leaves it: its extent and its first paragraph, the rest unread */
+function partly() {
+  REC.invalidate(G);
+  REC.takeSpanSet(G, F.decodeSpanSet({ resp: 'span_set', set: [{ start: '1.1', width: '0.' + G_TEXT.length }] }));
+  REC.takeDelivery(G, F.decodeDelivery({ resp: 'delivery', items: [{ content: 'First.\n\n' }] }, 1));
+}
+/** the walk's element: its kind, its place, its position */
+const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.pos]; };
 
 /** a walk move run to its end: the flight it starts stepped to its last frame */
 async function run(/** @type {Promise<unknown>} */ move) {
@@ -60,7 +82,7 @@ async function run(/** @type {Promise<unknown>} */ move) {
 
 before(async () => {
   REC._reset();
-  const fake = FAKE.create(script);
+  fake = FAKE.create(script);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
@@ -141,6 +163,52 @@ test('the ring is drawn at a landing a key made and put out by any other; a came
   await WALK.focusTo(D, null, true);
   await WALK.retakeFromView();
   assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr, WALK.ringShown()], ['account', '1.0.1', false], 'a pointer\'s re-takes it and puts the ring out');
+});
+
+test('a landing whose read a later move overtook sets nothing when the read answers: the walk stands where the later move put it', async () => {
+  partly();
+  const release = fake.hold('op', { frame: F.retrieveV(G, 1, G_TEXT.length) });
+  const first = WALK.focusTo(G, 10);
+  await WALK.focusTo(D, 15);
+  release();
+  await first;
+  assert.equal(REC.doc(G).to, G_TEXT.length + 1, 'G\'s text was read whole');
+  assert.deepEqual(walkAt(), ['block', D, 11], 'the walk on the span the later landing named');
+  assert.equal(WALK.landedAt(), 15, 'and its position');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('→ whose read a later walk key overtook enters nothing when the read answers', async () => {
+  partly();
+  await WALK.focusTo(G, null);
+  assert.deepEqual(WALK.siblingsNow().map((n) => n.addr), [D, E, G]);
+  const release = fake.hold('op', { frame: F.retrieveV(G, 1, G_TEXT.length) });
+  const entering = WALK.key('in');
+  await run(WALK.key('up'));
+  release();
+  await run(entering);
+  assert.deepEqual(walkAt(), ['document', E, null], 'the walk where ↑ put it, not inside G');
+  assert.deepEqual(WALK.siblingsNow().map((n) => n.addr), [D, E, G]);
+  await run(WALK.key('out'));
+  assert.deepEqual(walkAt(), ['account', '1.0.1', null], '← walks out to the account: the levels above stand as ↑ left them');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a walk key whose flight waits on a read flies the camera nowhere once a later move overtook it', async () => {
+  partly();
+  await WALK.focusTo(G, null);
+  await run(WALK.key('up'));
+  REC.invalidate(G);
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(G) });
+  const stepping = WALK.key('down');
+  assert.deepEqual(walkAt(), ['document', G, null], '↓ moved the walk onto G, its extent read before the camera follows');
+  await WALK.focusTo(D, 15);
+  const at = CAM.view();
+  release();
+  await run(stepping);
+  assert.deepEqual(walkAt(), ['block', D, 11]);
+  assert.deepEqual(CAM.view(), at, 'the camera where the later landing left it');
+  assert.deepEqual(fake.unanswered, []);
 });
 
 /** the ids of the mirror's items at tabindex 0, read from the markup the rebuild wrote */
