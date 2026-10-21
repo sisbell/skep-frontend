@@ -15,11 +15,24 @@
 // Asked by an act rather than the view: the client index (`readIndex`:
 // `places`, at boot and again at the page's own session's death — the view
 // asking nothing while it is out), a whole document (`loadWhole`), where a
-// link's end projects now (`projectEnd`), and a link's supersession
-// lineage (`lineage`: `in_claims` and `out_claims`, A-56, A-57). A class
-// scan read whole — `loadWhole`'s `find_links_v`, the lineage's two — is
-// reissued on `scan_busy` (`readScan`): the daemon bounds each by the same
-// two permits the view's scans take.
+// link's end projects now (`projectEnd`), a link's supersession lineage
+// (`lineage`: `in_claims` and `out_claims`, A-56, A-57), and the chain's
+// members (`probeChain`, the view's probe and the versions list's alike). A
+// class scan read whole — `loadWhole`'s `find_links_v`, the lineage's two —
+// is reissued on `scan_busy` (`readScan`): the daemon bounds each by the
+// same two permits the view's scans take.
+// A READ THE BOARD DID NOT ANSWER (`unreachable`: the shell's dial, or the
+// dev provider's fetch, failed) teaches nothing, and is never taken as an
+// answer: a view's read so refused is HELD (`unreached`) — not missing, for
+// nothing can arrive for it while the board is out, and its refusal recorded
+// once for the outage — and asked again at once where the shell announces
+// the daemon `running`, else after UNREACHED_MS. The pause stands beside the
+// event, for the shell announces no outage its event stream rides out — a
+// board back within its reconnect wait (`skep-client`'s `RECONNECT_WAIT`),
+// a read's own dial failing while the stream stands — and no `running`
+// follows an outage it never announced. A probe of the chain that meets a
+// member the board did not answer records no count, so it is probed again
+// as a held read is asked again, never left at a chain cut short.
 // The reads go through `op(session, frame)` — the claimant's class — or the
 // guest form where no session stands; a followed far board's reads would
 // take the guest form over its origin (no such board is seeded). EVERY READ
@@ -108,6 +121,8 @@ const FETCH_EM = 5;
 const MEMBER_PROBE_CAP = 8;
 /** a retry-class refusal (`scan_busy`) is reissued after this pause — "reissued at once", paced */
 const RETRY_MS = 120;
+/** a view's read the board did not answer is held this long, then asked again where no `running` came first — `skep-shell`'s own `PROBE_CADENCE`, the interval at which the shell asks a board's `/health` again while it holds a burst there (unmeasured here) */
+export const UNREACHED_MS = 2000;
 /** a class scan read whole is asked at most this many times while the board answers `scan_busy` */
 const SCAN_ATTEMPTS = 6;
 /** a read refused `session_ended` awaits its session's end at most this long — a bound on the shell's derive and re-open, which take board reads (unmeasured) */
@@ -119,6 +134,8 @@ const inflight = new Set();
 const asked = new Set();
 /** @type {Map<string, number>} keys refused retry-class, with the time they may be asked again */
 const retryAt = new Map();
+/** @type {Map<string, number>} keys the board did not answer, HELD, with the time they may be asked again — at once where the daemon is announced `running` */
+const unreached = new Map();
 let scansInFlight = 0;
 /** @type {Array<{frame: string, refusal: Refusal, addr: string}>} the refusals met, for the faces and the gate */
 const refusals = [];
@@ -144,7 +161,7 @@ export function start(opts) {
   onBoard('feed', (ev) => { if (ev.update && takesRow(ev.update)) { REC.applyFeedUpdate(ev.update); for (const named of ev.update.docs || []) asked.forEach((k) => { if (k.includes(named)) asked.delete(k); }); dirty(); } });
   onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); dirty(); } });
   onBoard('mode', (ev) => { REC.setMode(ev); dirty(); });
-  onBoard('daemon', (ev) => { REC.setDaemon(ev.state); dirty(); });
+  onBoard('daemon', (ev) => { REC.setDaemon(ev.state); if (ev.state === 'running') unreached.clear(); dirty(); });
   PORT.on('session-died', (d) => { const ev = /** @type {SessionDiedEvent | null} */ (d); if (ev) takeEnd(ev.session, ev.reason); dirty(); });
 }
 
@@ -184,9 +201,9 @@ function ofFace(ev) {
  * (client.md §4b.2: "the page re-acquires a reference with no face";
  * ps3-13 (b), cs6-6 reading (i)). Every other end, a restart that re-opened
  * none among them, is M-REC's death: what the model read at the session's
- * class dropped, every need answered under it asked again, and the index read
- * again in the guest form (`readIndex`). The reads awaiting the end are
- * woken.
+ * class dropped, every need answered or held under it asked again, and the
+ * index read again in the guest form (`readIndex`). The reads awaiting the
+ * end are woken.
  * @param {string} ended the session the end names
  * @param {DeathReason} reason
  */
@@ -195,7 +212,7 @@ function takeEnd(ended, reason) {
   if (!s || s.session !== ended) return;
   const reopened = reason.arm === 'restart' && reason.reopened === true ? reason.session : null;
   if (typeof reopened === 'string') REC.setSession({ ...s, session: reopened });
-  else { REC.sessionDied(reason); asked.clear(); retryAt.clear(); readIndex(); }
+  else { REC.sessionDied(reason); asked.clear(); retryAt.clear(); unreached.clear(); readIndex(); }
   for (const wake of [...awaitingEnd]) wake();
 }
 
@@ -325,12 +342,33 @@ async function readScan(frame, addr) {
   return out;
 }
 
+/** did the board not answer — the shell's dial, or the dev provider's fetch, failed? Nothing was learned of what was asked */
+const unanswered = (/** @type {Refusal} */ r) => r.kind === 'unreachable';
+
+/** is a key held — the board did not answer it, and its pause stands? */
+const held = (/** @type {string} */ key) => { const at = unreached.get(key); return at != null && performance.now() < at; };
+
+/**
+ * Hold a key the board did not answer for UNREACHED_MS, in place of any
+ * retry it waited on.
+ * @param {string} key
+ * @returns {boolean} whether it was held for the first time this outage — its refusal the one recorded
+ */
+function hold(key) {
+  const first = !unreached.has(key);
+  unreached.set(key, performance.now() + UNREACHED_MS); retryAt.delete(key);
+  return first;
+}
+
 /**
  * A need: a read keyed for the in-flight set, issued within the budget;
  * answered once; a retry-class refusal (`scan_busy`) reissued after a pause;
- * any other refusal recorded and not asked again until invalidated. Returns
- * whether the need is still MISSING — pending or not yet issued; a refused
- * need is not missing (nothing more will arrive for it).
+ * a read the board did not answer held (`hold`) and asked again past its
+ * pause or at the daemon's `running`, its refusal recorded once for the
+ * outage; any other refusal recorded and not asked again until invalidated.
+ * Returns whether the need is still MISSING — pending or not yet issued; a
+ * refused need is not missing, nor is a held one (nothing will arrive for
+ * either).
  * @param {string} key
  * @param {object} frame
  * @param {(answer: unknown) => void} take
@@ -341,6 +379,7 @@ async function readScan(frame, addr) {
 function need(key, frame, take, addr, onRefused) {
   if (asked.has(key)) return false;
   if (inflight.has(key)) return true;
+  if (held(key)) return false;
   const at = retryAt.get(key);
   if (at != null && performance.now() < at) return true;
   if (inflight.size >= MAX_INFLIGHT) return true;
@@ -350,11 +389,15 @@ function need(key, frame, take, addr, onRefused) {
   read(frame).then((out) => {
     inflight.delete(key); if (isScan) scansInFlight--;
     if ('refused' in out) {
-      const r = { frame: /** @type {{op?: string}} */ (frame).op || 'op', refusal: out.refused, addr };
-      refusals.push(r); for (const w of refusalWatchers) w(r);
-      if (out.refused.name === 'scan_busy' || out.refused.name === 'history_busy') { retryAt.set(key, performance.now() + RETRY_MS); }
-      else { asked.add(key); if (onRefused) onRefused(out.refused); }
-    } else { asked.add(key); retryAt.delete(key); take(out.answer); }
+      const refusal = out.refused;
+      const record = () => { const r = { frame: /** @type {{op?: string}} */ (frame).op || 'op', refusal, addr }; refusals.push(r); for (const w of refusalWatchers) w(r); };
+      if (unanswered(refusal)) { if (hold(key)) record(); }
+      else {
+        unreached.delete(key); record();
+        if (refusal.name === 'scan_busy' || refusal.name === 'history_busy') { retryAt.set(key, performance.now() + RETRY_MS); }
+        else { asked.add(key); if (onRefused) onRefused(refusal); }
+      }
+    } else { asked.add(key); retryAt.delete(key); unreached.delete(key); take(out.answer); }
     dirty();
   });
   return true;
@@ -473,26 +516,51 @@ function refuseDoc(/** @type {Doc} */ d, /** @type {Refusal} */ r) {
 }
 
 /**
- * The chain's members: `D.1` is the birth; `D.k` answers until the first
- * `doc_not_registered` (capped). One probe at a time.
+ * The view's probe of a document's chain (`probeChain`), one at a time: a
+ * count recorded is not probed again until invalidated; a probe that met a
+ * member the board did not answer is held as a view's read is (`hold`), and
+ * probed again past its pause or at the daemon's `running`.
  * @param {Doc} d
+ * @returns {boolean} missing
  */
 function probeMembers(d) {
   const key = 'v:' + d.addr;
   if (asked.has(key)) return false;
   if (inflight.has(key)) return true;
+  if (held(key)) return false;
   inflight.add(key);
-  (async () => {
-    let n = d.meta && d.meta.birth ? 1 : 0;
-    for (let k = 2; k <= MEMBER_PROBE_CAP && n >= 1; k++) {
-      const out = await read(F.docMetadata(versionAddress(d.addr, k)));
-      if ('refused' in out) break;
-      n = k;
-    }
-    REC.takeMembers(d.addr, n);
-    inflight.delete(key); asked.add(key); dirty();
-  })();
+  probeChain(d.addr).then((p) => {
+    inflight.delete(key);
+    if (p && p.known) { unreached.delete(key); asked.add(key); } else hold(key);
+    dirty();
+  });
   return true;
+}
+
+/**
+ * The chain's members: `D.1` is the birth; `D.k` answers until the first
+ * refusal (`doc_not_registered` past the chain's end), at most
+ * MEMBER_PROBE_CAP; the count `known` and recorded (M-REC's `takeMembers`).
+ * A member the board did not answer ends the probe with the members met,
+ * nothing recorded and the count not `known`: the chain's end was not met, and
+ * a count cut short there would stand until invalidated. Null, nothing
+ * recorded, where `stands` reads false before a member is asked — an opening
+ * that has ended asks no more.
+ * @param {string} trunk
+ * @param {() => boolean} [stands]
+ * @returns {Promise<{n: number, known: boolean} | null>}
+ */
+export async function probeChain(trunk, stands = () => true) {
+  const d = REC.doc(trunk);
+  let n = d.meta && d.meta.birth ? 1 : 0;
+  for (let k = 2; k <= MEMBER_PROBE_CAP && n >= 1; k++) {
+    if (!stands()) return null;
+    const out = await read(F.docMetadata(versionAddress(trunk, k)));
+    if ('refused' in out) { if (unanswered(out.refused)) return { n, known: false }; break; }
+    n = k;
+  }
+  REC.takeMembers(trunk, n);
+  return { n, known: true };
 }
 
 /**
@@ -575,7 +643,10 @@ export async function lineage(linkAddr) {
 export const inflightCount = () => inflight.size;
 /** settled: nothing missing and nothing in flight */
 export const settled = () => inflight.size === 0 && pump() === 0;
-/** drop the asked set for a document (tests, invalidation) */
-export function forget(/** @type {string} */ addr) { for (const k of [...asked]) if (k.includes(addr)) asked.delete(k); for (const k of [...retryAt.keys()]) if (k.includes(addr)) retryAt.delete(k); }
-/** the needs pending a retry (the gate reads it) */
-export const retriesPending = () => retryAt.size;
+/** drop the asked set for a document, and what waits to be asked again (tests, invalidation) */
+export function forget(/** @type {string} */ addr) {
+  for (const k of [...asked]) if (k.includes(addr)) asked.delete(k);
+  for (const waiting of [retryAt, unreached]) for (const k of [...waiting.keys()]) if (k.includes(addr)) waiting.delete(k);
+}
+/** the needs waiting to be asked again: refused retry-class, or held while the board did not answer (the gate reads it) */
+export const retriesPending = () => retryAt.size + unreached.size;

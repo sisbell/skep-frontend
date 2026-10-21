@@ -4,6 +4,16 @@
 // text holds in two runs as both (a mutant that keeps the first alone turns
 // red);
 // the view's reads ask nothing for a document a continuation's mark holds;
+// a view's read the board did not answer is held, never taken as answered —
+// not missing while held, its refusal recorded once for the outage — and
+// asked again at once where the daemon is announced `running`, else past
+// UNREACHED_MS, for the shell announces no outage its stream rides out (a
+// mutant that records it as answered, or holds it until `running` alone,
+// turns red), and at once where its document is forgotten or the page's own
+// session dies, as a guest; the view's probe of a chain that meets a member
+// the board did not answer records no count, and probes again as the daemon
+// is back (a mutant that ends the chain there records a count cut short and
+// turns red);
 // a session's end is taken by the page whose session it is and by no other;
 // a restart the shell re-opened is no death — the page goes on under the
 // re-opened session, reading and taking drafts rows under it, holding what
@@ -42,7 +52,8 @@ import * as PUMP from './pump.js';
 import * as F from './frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
-import { accountCell } from '../plane/projection.js';
+import { accountCell, docBox } from '../plane/projection.js';
+import { metricsFor } from '../plane/layout.js';
 
 const D = '1.0.1.0.3';
 const script = {
@@ -196,19 +207,28 @@ test('a page signed in takes a session\'s index state and drafts rows, never the
 const REOPENED = { arm: 'restart', reopened: true, session: 's-9' };
 
 /**
+ * A frame the board answers with each of `outcomes` in turn, the last again
+ * at every ask after — keyed on the frame alone, so an ask under another
+ * session is the same call; `asks()` counts the asks.
+ * @param {Record<string, unknown>} s the script
+ * @param {{op: string}} frame
+ * @param {...unknown} outcomes
+ */
+function inTurn(s, frame, ...outcomes) {
+  let n = 0;
+  Object.defineProperty(s, FAKE.keyOf('op', { frame }), { enumerable: true, configurable: true, get: () => outcomes[Math.min(n++, outcomes.length - 1)] });
+  return { asks: () => n };
+}
+
+/**
  * A frame the board answers `first` the first time it is asked and `then`
- * after — keyed on the frame alone, so an ask under another session is the
- * same call; `asks()` counts the asks.
+ * after (`inTurn`).
  * @param {Record<string, unknown>} s the script
  * @param {{op: string}} frame
  * @param {unknown} first
  * @param {unknown} then
  */
-function firstThen(s, frame, first, then) {
-  let n = 0;
-  Object.defineProperty(s, FAKE.keyOf('op', { frame }), { enumerable: true, configurable: true, get: () => (++n === 1 ? first : then) });
-  return { asks: () => n };
-}
+function firstThen(s, frame, first, then) { return inTurn(s, frame, first, then); }
 
 /**
  * The session each call of one name — `op` unless named — went out under,
@@ -489,6 +509,120 @@ test('a lineage read the board answers scan_busy is asked again; a side whose re
   const lin = await PUMP.lineage(L);
   assert.equal(scan.asks(), 2, 'in_claims asked once more after scan_busy');
   assert.deepEqual(lin, { supersededBy: [], supersedes: null }, 'the side answered no claim; the refused side learned nothing');
+});
+
+/** the board not answering a read: the shell's dial, or the dev provider's fetch, failed */
+const UNREACHABLE = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
+
+/**
+ * A guest's page at HOME, the board's one edition D in view and nothing of it
+ * read, over a board that lists D alone and whose span-set read of D answers
+ * `outcomes` in turn.
+ * @param {...unknown} outcomes
+ */
+function homeAsking(...outcomes) {
+  const s = { [FAKE.keyOf('places', { board: 'b-1' })]: { result: indexAt('complete') } };
+  const span = inTurn(s, F.retrieveDocVSpanSet(D), ...outcomes);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  CAM.setViewport(1440, 900);
+  CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  return { fake, span };
+}
+
+test('a view\'s read the board did not answer is held, never taken as answered, and asked again at once where the daemon is announced running', async (t) => {
+  t.mock.method(performance, 'now', () => 1000);
+  const { fake, span } = homeAsking(UNREACHABLE, script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]);
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([span.asks(), REC.doc(D).extent], [1, null], 'asked; the board did not answer');
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(span.asks(), 1, 'held while the board is out');
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([span.asks(), REC.doc(D).extent], [2, 30], 'asked again at once as the daemon is announced back, and answered');
+});
+
+test('a view\'s read the board did not answer is asked again past UNREACHED_MS where no running comes — the shell announces no outage its stream rides out — its refusal recorded once, and not missing while held', async (t) => {
+  let clock = 1000;
+  t.mock.method(performance, 'now', () => clock);
+  const { span } = homeAsking(UNREACHABLE, UNREACHABLE, script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]);
+  const met = PUMP.refusalsMet().length;
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([span.asks(), PUMP.refusalsMet().length - met], [1, 1], 'asked; the board did not answer, and the refusal is recorded');
+  clock += PUMP.UNREACHED_MS - 1;
+  assert.equal(PUMP.pump(), 0, 'held, the read is not missing: nothing can arrive for it while the board is out');
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(span.asks(), 1, 'nothing asked inside the pause');
+  clock += 1;
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([span.asks(), REC.doc(D).extent, PUMP.refusalsMet().length - met], [2, null, 1], 'asked again past the pause; the board still out, the outage\'s refusal not recorded twice');
+  clock += PUMP.UNREACHED_MS;
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([span.asks(), REC.doc(D).extent], [3, 30], 'asked again past the next pause, and answered');
+});
+
+test('a view\'s read held while the board is out is asked again at once where its document is forgotten, and in the guest form at the page\'s own death', async (t) => {
+  t.mock.method(performance, 'now', () => 1000);
+  const { fake, span } = homeAsking(UNREACHABLE, UNREACHABLE, script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]);
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const sent = sessionsSent(fake);
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(span.asks(), 1, 'held');
+  PUMP.forget(D);
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(span.asks(), 2, 'forgotten, its document\'s held read is asked again at once');
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  await new Promise((r) => setTimeout(r, 0));
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([sent, REC.doc(D).extent], [['s-1', 's-1', 'guest'], 30], 'at the death, the read held under the session asked again at once as a guest, and answered');
+});
+
+test('the view\'s probe of a chain records no count where the board did not answer a member, and probes again as the daemon is back, recording the chain to its end', async (t) => {
+  t.mock.method(performance, 'now', () => 1000);
+  // "a version member answers its DOCUMENT's state" (wire.md §Namespace, `doc_metadata`)
+  const member = script[FAKE.keyOf('op', { frame: F.docMetadata(D) })];
+  const s = {
+    ...script,
+    [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: member,
+    [FAKE.keyOf('op', { frame: F.docMetadata(D + '.4') })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
+  };
+  const third = inTurn(s, F.docMetadata(D + '.3'), UNREACHABLE, member);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  await PUMP.loadWhole(D);
+  // D read at its reading em, where the view probes its chain
+  const box = docBox(D), fs = metricsFor(30, box).fs;
+  CAM.setViewport(1440, 900); CAM.reach(fs); CAM.set(CAM.viewForDoc(box, fs));
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([third.asks(), REC.doc(D).members], [1, null], 'D.2 answered and D.3 not: no count recorded, never a chain cut short at two');
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(third.asks(), 1, 'held while the board is out');
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([third.asks(), REC.doc(D).members], [2, 3], 'probed again as the daemon is back: the chain to its end, D.4 not registered');
+  assert.deepEqual(fake.unanswered, []);
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

@@ -2,7 +2,9 @@
 // foundations §2.1's version row; F2.1-e). Layer 2. ENGINE-BOUND. State:
 // none. On the corner's act — a click on its version statement, or Enter at
 // the corner (D5 K-57), both through `fromCorner`: the chain's members `D.1 …
-// D.n` (the pump probed n), each a LEAP that carries the passage held,
+// D.n` (M-PUMP's probe of the chain, `probeChain`, gave n — where the board
+// did not answer it, the members met, no count recorded, so the list opened
+// again probes again), each a LEAP that carries the passage held,
 // re-projected into the member and marked at the landing (N-GO's carry;
 // foundations §2.3; P43) — the held passage: the selection where it stands
 // in the corner's document, else the first span in view, the first block
@@ -66,15 +68,9 @@ export function open(addr, pos, anchor, width = null, byKey = false) {
     if (d.extent == null) await PUMP.loadWhole(trunk);
     let n = d.members;
     if (n == null) {
-      // probe here where the pump has not: D.1 is the birth; D.k until refused
-      n = d.meta && d.meta.birth ? 1 : 0;
-      for (let k = 2; k <= 8 && n >= 1; k++) {
-        if (!stands()) return null;
-        const out = await PUMP.read(F.docMetadata(versionAddress(trunk, k)));
-        if ('refused' in out) break;
-        n = k;
-      }
-      REC.takeMembers(trunk, n);
+      const probed = await PUMP.probeChain(trunk, stands);
+      if (!probed) return null;
+      n = probed.n;
     }
     /** the passage held: the span named; the block holding `pos`, whole; else the first block */
     const holding = pos != null ? d.blocks.find((b) => pos >= b.pos && pos < b.pos + b.width) : d.blocks[0];
