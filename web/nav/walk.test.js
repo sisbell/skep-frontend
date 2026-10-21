@@ -15,6 +15,14 @@
 // a mutant that leaves the tree in it turns red. The tree is named from ST as
 // the walk attaches it, and each level's group by its own level — a mutant
 // that drops the tree's name, or names every group by one level, turns red.
+// The mirror's item at a withheld run is the run's placeholder — the owner of
+// its origin, R56's arm for the reader, C-67's clause — as the plane's
+// placeholder shows them, for a signed-in reader and a guest: a mutant that
+// names the owner of the document windowing the run, or the origin's account,
+// or gives both readers one arm, or drops the clause, turns red. A document a
+// read answered `withheld` is named by its withheld box's words, its owner
+// the seat above a sub-account by the one owner rule: a mutant that calls it
+// published, or names the sub-account, turns red.
 // While chrome covers the plane the tree stays inert through the rebuild —
 // a mutant whose rebuild lifts the mark turns red — until the plane is
 // uncovered. The focus's return as an overlay closes is the controller's
@@ -35,9 +43,12 @@ import * as PUMP from '../model/pump.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
+import * as LAYER from '../text/layer.js';
+import { withheldBlockHTML, entitlementArm } from '../text/article.js';
 import { accountCell, boardCell } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
-import { t } from '../strings.js';
+import { STRINGS, t } from '../strings.js';
+import { esc, byteLength } from '../util.js';
 import * as WALK from './walk.js';
 
 const D = '1.0.1.0.3';
@@ -223,6 +234,46 @@ test('a walk key whose flight a later walk key cut short ends: the walk on the s
   await run(second);
   await run(first);
   assert.deepEqual(walkAt(), ['block', D, 27]);
+});
+
+test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin\'s owner, R56\'s arm for the reader and C-67\'s clause, as the plane\'s placeholder shows them (R56; R94)', () => {
+  // a document of 1.0.2's windowing a run of 1.0.1.1's: an unallocated sub-account, whose owner is the seat above it
+  const W = '1.0.2.0.5', O = '1.0.1.1.0.2', owner = '1.0.1';
+  REC.takeOwner('1.0.1.1', { prefix: owner, principal: 900 });
+  const text = 'Tumbler.\n\n', n = byteLength(text);
+  REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: n + 240 }]);
+  REC.takeDelivery(W, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 240, kind: 'withheld', text: '', ref: null, origin: O }]);
+  const d = REC.doc(W), run = d.blocks[1];
+  assert.deepEqual([run.kind, run.origin], ['withheld', O]);
+  const words = STRINGS['L.mirror.withheld'].text;
+  assert.ok(['⟨owner⟩', '⟨origin⟩', '⟨arm⟩', '⟨clause⟩'].every((k) => words.includes(k)), `the item's words carry the owner, the origin, the arm and the clause: ${words}`);
+  const signedIn = REC.session();
+  try {
+    for (const reader of [signedIn, null]) {
+      REC.setSession(reader);
+      const who = reader ? reader.account : null, arm = entitlementArm(who, owner).text, clause = t('C-67.pointer');
+      const item = WALK.nameOf({ kind: 'block', addr: W, pos: run.pos, link: null }, 1, 2);
+      assert.equal(item, t('L.mirror.withheld', { document: W, width: 240, owner, origin: O, arm, clause }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
+        `${who ?? 'a guest'}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause`);
+      const html = withheldBlockHTML(run, d, LAYER.viewFor(d));
+      assert.ok(html.includes(` data-owner="${owner}"`) && html.includes(`<span class="arm">${esc(arm)}</span>`) && html.includes(`<span class="clause">${esc(clause)}</span>`),
+        `${who ?? 'a guest'}: the plane's placeholder shows the same owner, arm and clause`);
+    }
+  } finally {
+    REC.setSession(signedIn);
+  }
+});
+
+test('the mirror names a document a read answered `withheld` by its withheld box\'s words — its owner by the one owner rule — and never "published" (B1-S2)', () => {
+  // a draft in 1.0.2's sub-account 1.0.2.1, withheld from the reader: its owner the seat above the sub-account
+  const X = '1.0.2.1.0.2', owner = '1.0.2';
+  REC.takeOwner('1.0.2.1', { prefix: owner, principal: 901 });
+  REC.takeRefused(X, 'withheld');
+  const box = t('B1.withheld-box', { owner });
+  assert.equal(LAYER.withheldBox(REC.doc(X)), box, 'the box names the seat that owns the document, never its sub-account');
+  const item = WALK.nameOf({ kind: 'document', addr: X, pos: null, link: null }, 0, 1);
+  assert.ok(item.includes(box), `the item says what the box says: ${item}`);
+  assert.ok(!item.includes(t('F.published')), `and never that the document is published: ${item}`);
 });
 
 /** the ids of the mirror's items at tabindex 0, read from the markup the rebuild wrote */

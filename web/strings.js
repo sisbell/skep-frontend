@@ -231,7 +231,7 @@ export const STRINGS = {
   'L.mirror.span': { text: 'span at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩: "⟨text⟩".', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.span.bare': { text: 'span at position ⟨p⟩ in ⟨document⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.same': { text: ' (the same material as ⟨origin⟩)', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.withheld': { text: 'withheld run in ⟨document⟩: ⟨width⟩ positions, origin ⟨origin⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.withheld': { text: 'withheld run in ⟨document⟩: ⟨width⟩ positions, owner ⟨owner⟩, origin ⟨origin⟩. ⟨arm⟩. ⟨clause⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨unregistered⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.unregistered': { text: ' — nothing this board will say about that address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },

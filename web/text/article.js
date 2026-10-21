@@ -21,7 +21,10 @@
 // OCCUPYING its positions and naming the owner of its run's origin, whoever
 // owns the document windowing it (R56: the copy derives per origin; B1-S7),
 // with R56's arm for that owner by PUB-5.121's order and C-67's
-// clause beneath; a record atom rendered as the record it is (the genesis
+// clause beneath — the placeholder's one record (`placeholderOf`), which the
+// ARIA mirror's item at the run reads too, so the run a sighted reader sees
+// and the one a screen reader hears never part (R94); a record atom rendered
+// as the record it is (the genesis
 // record's words); an unknown item kind "not rendered" with its width; the
 // scene-mode variant, a reading scene's pane's article, which nothing in the
 // pane acts on (SC): no scene-offer, and its symbols and presence ⟡ marks
@@ -220,23 +223,50 @@ export function entitlementArm(reader, owner) {
 }
 
 /**
- * The R56 placeholder occupying a withheld run: existence and owner, never
- * bytes — the owner its origin's (`originOwner`), whoever owns the document
- * windowing the run, since R56's copy derives per origin and B1-S7's
- * ⟨owner⟩ is always derivable (A-289). The head names that owner, the
- * entitlement arm (`entitlementArm`) is the one for it, and the placeholder
- * carries it (`data-owner`) for C-39's face at the run, which names the
- * same; then C-67's clause.
+ * @typedef {Object} Placeholder — what R56's placeholder at a withheld run shows a reader: existence and owner, never bytes (B1-S7)
+ * @property {string} owner the owner of the run's origin, whoever owns the document windowing the run
+ * @property {string} head B1-S7's head: that owner, the run's width and its origin
+ * @property {{id: string, text: string}} arm the entitlement arm for that owner and this reader (`entitlementArm`)
+ * @property {string} clause C-67's clause beneath the arm
+ */
+
+/**
+ * The R56 placeholder at a withheld run, as one record: existence and owner,
+ * never bytes — the owner its origin's (`originOwner`), whoever owns the
+ * document windowing the run, since R56's copy derives per origin and
+ * B1-S7's ⟨owner⟩ is always derivable (A-289); the head naming that owner,
+ * the entitlement arm (`entitlementArm`) the one for it, then C-67's clause
+ * (R56: the face is ARM × CLAUSE). The plane's and a pane's placeholder
+ * (`withheldBlockHTML`) and the ARIA mirror's item at the run (N-WALK) are
+ * both made from it: R94's one record, never a second rendering that can
+ * drift.
+ * @param {Block} b the withheld run
+ * @param {string | null} reader the acting account, or null (a guest)
+ * @param {(doc: string) => string} originOwner the owner account of an origin document, by the one owner rule (T-LAYER's `originOwner`)
+ * @returns {Placeholder}
+ */
+export function placeholderOf(b, reader, originOwner) {
+  const owner = b.origin ? originOwner(b.origin) : '';
+  return {
+    owner,
+    head: t('B1.withheld-run', { owner, account: owner, width: b.width, origin: b.origin || '' }),
+    arm: entitlementArm(reader, owner),
+    clause: t('C-67.pointer'),
+  };
+}
+
+/**
+ * The placeholder occupying a withheld run (`placeholderOf`): its head, its
+ * arm and its clause, and the owner it names carried (`data-owner`) for
+ * C-39's face at the run, which names the same.
  * @param {Block} b the withheld run
  * @param {Doc} d
  * @param {ArticleView} v
  */
 export function withheldBlockHTML(b, d, v) {
-  const owner = b.origin ? v.originOwner(b.origin) : '';
-  const head = t('B1.withheld-run', { owner, account: owner, width: b.width, origin: b.origin || '' });
-  const arm = entitlementArm(v.sessionAccount, owner);
-  return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(owner)}">` +
-    `<span class="wh-head">${esc(head)}</span><span class="arm">${esc(arm.text)}</span><span class="clause">${esc(t('C-67.pointer'))}</span></span>`;
+  const p = placeholderOf(b, v.sessionAccount, v.originOwner);
+  return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}">` +
+    `<span class="wh-head">${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span><span class="clause">${esc(p.clause)}</span></span>`;
 }
 
 /**

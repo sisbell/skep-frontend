@@ -124,6 +124,7 @@ import { metricsFor, fitted, LAY_FS, LINE_H } from '../plane/layout.js';
 import { articleHTML, articlePlan, cornerHTML, blockMarks } from './article.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { fingerprintCue } from '../util.js';
+import { t } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -267,7 +268,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     localTrust: !!(h && h.auth && h.auth.local_trust),
     notebook: true,
     scene, originKinds,
-    originOwner: (a) => ownerAccount(REC.doc(a)),
+    originOwner,
     deviceLabel: isOwnerYou && device ? device.label : null,
     ownerFingerprint: isOwnerYou && device ? device.fingerprint : null,
     keyPresent: isOwnerYou && !!device,
@@ -364,13 +365,32 @@ function mount(d) {
 /**
  * The owner account of a document: by `effective_owner` where read, else by
  * its metadata where read, else its account. The one rule an owner is named
- * by in an article — its byline's, and each withheld run's origin's
- * (T-ARTICLE's `originOwner`) — so the two never part.
+ * by — an article's byline, each withheld run's origin's (`originOwner`), a
+ * withheld document's box (`withheldBox`) — so none of them part.
  */
 export function ownerAccount(/** @type {Doc} */ d) {
   const row = d.account ? REC.ownerOf(d.account) : undefined;
   return (row && row.prefix) || (d.meta && d.meta.owner) || d.account || '';
 }
+
+/**
+ * The owner account of an origin document, by the one owner rule
+ * (`ownerAccount`): the owner a withheld run's placeholder names
+ * (T-ARTICLE's `placeholderOf`) — on the plane, in a pane, and in the ARIA
+ * mirror's item at the run.
+ * @param {string} addr the origin document
+ */
+export function originOwner(addr) { return ownerAccount(REC.doc(addr)); }
+
+/**
+ * A document a read answered `withheld`, as the plane names it — B1-S2's
+ * withheld box: existence and owner, never bytes — its owner by the one
+ * owner rule (`ownerAccount`). The box's first line (P-RENDER) and the ARIA
+ * mirror's item at the document (N-WALK) both read it, so what a sighted
+ * reader sees and what a screen reader hears never part (R94).
+ * @param {Doc} d
+ */
+export function withheldBox(d) { return t('B1.withheld-box', { owner: ownerAccount(d) }); }
 
 /** take a mounted article down; where the platform's selection stands in it, it is kept (`kept`) for the frame that puts it back */
 function unmount(/** @type {string} */ addr) {

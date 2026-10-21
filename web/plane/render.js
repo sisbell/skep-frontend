@@ -16,7 +16,8 @@
 // first line — a DRAFT convention — the badge from LK's `countDoc`, the
 // members' marks on the strip; a document a read answered `withheld`,
 // whether the index lists it or not, as the withheld box — its owner and the
-// word, no badge, B1-S2), each account's CONTINUATION whose documents
+// word (T-LAYER's `withheldBox`, the ARIA mirror's words for it too), no
+// badge, B1-S2), each account's CONTINUATION whose documents
 // the scale draws too small to stand whole as ONE MARK (foundations §2.1;
 // P44; P-LOD's `residueDepth`, crossfading with the boxes it holds through
 // the far band): law 13's count of what it holds — "≥ n" where the index
@@ -377,8 +378,8 @@ function membersAt(docs, k) {
 const shortAddr = (/** @type {Doc} */ d) => (d.account ? d.addr.slice(d.account.length) : d.addr);
 /** a draft, by the index's kind or by its metadata where read */
 const isDraft = (/** @type {Doc} */ d) => d.kind === 'draft' || (d.meta ? !d.meta.published : false);
-/** a box's first line: the withheld statement, or the document's first line with its draft mark (a DRAFT convention, F-9) */
-const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? t('B1.withheld-box', { owner: d.account || '' }) : `${(d.label || '').replace(/^#+\s*/, '')}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
+/** a box's first line: the withheld statement (T-LAYER's `withheldBox`, which the ARIA mirror reads too), or the document's first line with its draft mark (a DRAFT convention, F-9) */
+const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? LAYER.withheldBox(d) : `${(d.label || '').replace(/^#+\s*/, '')}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
 
 /**
  * A continuation's mark: its cell, and its label — law 13's count of what it

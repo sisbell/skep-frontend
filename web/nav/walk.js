@@ -43,7 +43,13 @@
 // tree named as it attaches by ST's `L.mirror-label`, each level's group by
 // `L.mirror-level`, and each item by ST's `L.mirror.*` entries — what a screen
 // reader hears is the focus moving onto the item (rule 12); no live region
-// repeats it (D4). The mirror is rebuilt whole on every move, and its Tab
+// repeats it (D4). A withheld run's item is made from the record the plane's
+// placeholder is (T-ARTICLE's `placeholderOf`: the owner of its origin, R56's
+// arm for this reader, C-67's clause — R56, B1-S7), and a document a read
+// answered `withheld` is named by its withheld box's words (T-LAYER's
+// `withheldBox`: existence and owner — B1-S2), so at either a screen reader
+// hears what the plane shows (R94). The mirror is rebuilt whole on every
+// move, and its Tab
 // stop with it: the plane is ONE stop between the one line and the focused
 // document's corner (D5 §4 rule 5) — the current item, while the tree's
 // container stands out of the order; the container is the stop only where
@@ -63,6 +69,7 @@ import * as PUMP from '../model/pump.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from './focus.js';
+import { placeholderOf } from '../text/article.js';
 import { docBox, accountCell, boardCell, accountAt } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
@@ -174,12 +181,16 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
   }
   if (n.kind === 'document') {
     const d = REC.doc(n.addr); const p = REC.place(n.addr);
-    return t('L.mirror.document', { document: n.addr, label: p && p.label ? '"' + p.label + '"' : '', state: d.kind === 'draft' ? t('L.mirror.draft') : t('F.published'), extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' }) + pos;
+    const state = d.refused === 'withheld' ? LAYER.withheldBox(d) : d.kind === 'draft' ? t('L.mirror.draft') : t('F.published');
+    return t('L.mirror.document', { document: n.addr, label: p && p.label ? '"' + p.label + '"' : '', state, extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' }) + pos;
   }
   if (n.kind === 'block') {
     const d = REC.doc(n.addr); const b = d.blocks.find((x) => x.pos === n.pos);
     if (!b) return t('L.mirror.span.bare', { p: n.pos ?? '', document: n.addr }) + pos;
-    if (b.kind === 'withheld') return t('L.mirror.withheld', { document: n.addr, width: b.width, origin: b.origin || '' }) + pos;
+    if (b.kind === 'withheld') {
+      const s = REC.session(), w = placeholderOf(b, s ? s.account : null, LAYER.originOwner);
+      return t('L.mirror.withheld', { document: n.addr, width: b.width, owner: w.owner, origin: b.origin || '', arm: w.arm.text, clause: w.clause }) + pos;
+    }
     const org = d.origins.find((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);
     return t('L.mirror.span', { p: b.pos, extent: d.extent ?? '?', document: n.addr, same: org ? t('L.mirror.same', { origin: org.doc }) : '', text: b.text }) + pos;
   }

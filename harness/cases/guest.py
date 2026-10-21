@@ -27,11 +27,13 @@ first lines, the owner's places. Then, on the guest's page:
     second account's draft) drawing its withheld box, its label the address
     and B1-S2's words alone (existence and owner, never bytes) — the one
     line naming that landing is marked, waiting on the walk's focus at a
-    document the index does not list;
+    document the index does not list; at both landings the mirror's current
+    item naming the document in its withheld box's words, never published;
 (e) the window run at 1467 withheld: the model's block — its width, its
     origin, no text — B1-S7's placeholder with its head, R56's key-absent arm
     and no C-33 mark, none of the owner's bytes anywhere in the page, the
-    mirror's item naming the run; the placeholder shown, and every row of
+    mirror's item the run's placeholder — its owner, its origin, the arm and
+    the clause the placeholder shows (R94); the placeholder shown, and every row of
     the article inside its box — marked, waiting on the placeholder set in the
     article's flow taller than the run it occupies; the content after the run
     opening with a separator alone, a block that sets no line, the margins
@@ -232,8 +234,9 @@ def run(ctx):
     # (e) the window run at 1467, withheld
     ctx.leap(DOC, WINDOW[0])
     doc = run_withheld('(e) the model holds the window run as a withheld block — at 1467, 240 positions, its origin 1.0.1.0.1003 — and none of its text')
-    ph = ctx.js('''[...document.querySelectorAll(%s)].map((e) => ({pos: Number(e.dataset.pos), width: Number(e.dataset.width), origin: e.dataset.origin,
-      head: (e.querySelector('.wh-head') || {}).textContent || null, arm: (e.querySelector('.arm') || {}).textContent || null}))''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
+    ph = ctx.js('''[...document.querySelectorAll(%s)].map((e) => ({pos: Number(e.dataset.pos), width: Number(e.dataset.width), origin: e.dataset.origin, owner: e.dataset.owner,
+      head: (e.querySelector('.wh-head') || {}).textContent || null, arm: (e.querySelector('.arm') || {}).textContent || null,
+      clause: (e.querySelector('.clause') || {}).textContent || null}))''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
     head = t(ctx, 'B1.withheld-run', {'owner': OWNER, 'account': OWNER, 'width': WINDOW[1], 'origin': WINDOW[2]})
     arm = t(ctx, 'R56.key-absent', {'owner': OWNER})
     c33 = ctx.js('document.querySelectorAll(%s).length' % json.dumps('#domlayer article[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
@@ -241,8 +244,15 @@ def run(ctx):
             '(e) the mounted article holds B1-S7\'s placeholder at the run — its position, width and origin, its head, R56\'s key-absent arm — and no C-33 mark', {'placeholders': ph, 'c33_marks': c33})
     leaked, legit_held = leaks(places)
     r.check(len(own) >= STRETCH and not leaked, f'(e) none of the owner\'s bytes over the run stands anywhere in the page: no stretch of {STRETCH} of its characters, white space folded, that the guest\'s own delivered text and labels do not hold', leaked[:4])
+    # the mirror's item at the run says what the placeholder shows: its words filled from the placeholder's own owner, arm
+    # and clause, and the arm and the clause standing in it whole
     item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
-    r.check(item.startswith('withheld run in %s: %d positions, origin %s.' % (DOC, WINDOW[1], WINDOW[2])), '(e) the mirror\'s current item at the landing names the withheld run, its width and its origin', item[:120])
+    said = ph[0] if len(ph) == 1 else {}
+    shown = bool(said.get('owner') and said.get('arm') and said.get('clause'))
+    words = t(ctx, 'L.mirror.withheld', {'document': DOC, 'width': WINDOW[1], 'owner': said['owner'], 'origin': WINDOW[2], 'arm': said['arm'], 'clause': said['clause']}) if shown else None
+    r.check(shown and item.startswith(words) and said['arm'] in item and said['clause'] in item,
+            '(e) the mirror\'s current item at the landing is the run\'s placeholder: the run, its width, its owner, its origin, the arm and the clause the placeholder shows (R56; R94)',
+            {'item': item, 'placeholder': {k: said.get(k) for k in ('owner', 'arm', 'clause')}})
     box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
     ctx.view_doc_em(DOC, 14)
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * (0.12 + 0.8 * (WINDOW[0] - 1) / doc['extent']), ctx.camera()['scale'])
@@ -260,7 +270,7 @@ def run(ctx):
     r.check(empty and gap['bars_space'] is not None and abs(gap['space'] - gap['bars_space']) <= GAP_TOL_PX,
             f'(e) the margins about that empty block collapse into one: the block after it stands below the placeholder as its bars stand below the run\'s, at the layout size, {GAP_TOL_PX} px either way', gap)
     r.figures['shots'].append(ctx.shot('guest/window-run.png'))
-    r.figures['run'] = {'placeholder': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': legit_held, 'mirror_item': item[:160], 'shown': vis,
+    r.figures['run'] = {'placeholder': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': legit_held, 'mirror_item': item, 'shown': vis,
                         'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px'], 'after_run': gap}
 
     # (c) the LEAP box at the first edition: no HOME level
@@ -308,6 +318,11 @@ def run(ctx):
     shown_at = ctx.js('({mounted: window.__skep.mountedAddrs(), chip: !!document.querySelector("[data-chip]"), corner: !!document.querySelector(%s), residue: !!window.__skep.boxOf(%s).residue})' % (json.dumps('[data-corner="%s"]' % draft), json.dumps(draft)))
     r.check(d['refused'] == 'withheld' and d['from'] == -1 and not d['blocks'] and draft not in shown_at['mounted'] and not shown_at['chip'] and not shown_at['corner'],
             '(d) a LEAP to a draft of the claimant\'s: its read refused `withheld`, no text delivered, nothing mounted, no corner and no chip', {'draft': draft, 'refused': d['refused'], 'from': d['from'], 'blocks': len(d['blocks']), **shown_at})
+    published = t(ctx, 'F.published')
+    named_withheld = t(ctx, 'B1.withheld-box', {'owner': OWNER})
+    draft_item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
+    r.check(draft_item.startswith('document %s,' % draft) and named_withheld in draft_item and published not in draft_item,
+            '(d) at that landing the mirror\'s current item names the draft as its withheld box does — "%s" — and never published (B1-S2)' % named_withheld, draft_item)
     labels = ctx.js('window.__skep.labels()')
     named = naming_a_draft(labels)
     r.check(not named, '(d) at that landing no label names a draft\'s first line or the draft mark', named[:4])
@@ -324,8 +339,11 @@ def run(ctx):
             {'refused': w['refused'], 'labels_at_the_box': at_box, 'want': want})
     named_at = ctx.js('window.__skep.line().address')
     r.check(named_at['text'].split(' › ')[1:3] == [SECOND_ACCOUNT, WITHHELD], '(d) the one line names the landing: board › its account › the withheld document — a landing the index does not list stands on its own node (rule 12, #97)', named_at)
+    withheld_item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
+    r.check(withheld_item.startswith('document %s,' % WITHHELD) and want[1] in withheld_item and published not in withheld_item,
+            '(d) the mirror\'s current item names the withheld document as its box does — "%s" — and never published (B1-S2)' % want[1], withheld_item)
     r.figures['shots'].append(ctx.shot('guest/withheld-box.png'))
-    r.figures['withheld_box'] = {'addr': WITHHELD, 'labels': at_box}
+    r.figures['withheld_box'] = {'addr': WITHHELD, 'labels': at_box, 'mirror_item': withheld_item, 'draft_mirror_item': draft_item}
 
     # (a) the whole guest run: the page's own log, and the provider's from the navigation on
     mine = calls(ctx)
