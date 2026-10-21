@@ -15,7 +15,8 @@
 // bands and lines beside their passages' lines (`scene.ties`), the
 // continuations' marks the canvas drew (`residues`:
 // each one's count, newest member, members, the lines set on it and its
-// screen rect), the mid connections it drew between places (`connections`),
+// screen rect), the mid connections it drew between places, each one bound
+// for a place out of view with its stub at the view's border (`connections`),
 // the labels it set (`labels`: each one's kind, place, lines — their text,
 // size and screen rect — and the room its place gave it, the trail's pip
 // numbers among them) and the parts of labels it left out with the rule that
@@ -394,7 +395,7 @@ export function install(deps) {
     beamLabels: () => BM.labels(),
     /** the continuations the last frame drew as marks */
     residues: () => RENDER.stats.residueMarks.slice(),
-    /** the mid connections the last frame drew, each between two places: a document, or a mark's `key` */
+    /** the mid connections the last frame drew, each between two places — a document, or a mark's `key` — with its count, and where one place stands out of the visible view its stub: the place it is bound for, the centre it leaves, its cut, its triangle, its hue and alpha */
     connections: () => RENDER.stats.connections.slice(),
     /** the labels the last frame set, in the order they were set, the trail's pip numbers last */
     labels: () => RENDER.stats.labels.slice(),

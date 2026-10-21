@@ -7,7 +7,11 @@
 // marked with what their links share — neutral in the hue where their
 // linkers differ, lighter only where every one was followed — whichever
 // document comes first (a mutant that keeps the first end's mark, or counts
-// ends, turns red); the most a reveal can set in a document's text, which no
+// ends, turns red); a link's far end a connection's end whether the plane
+// draws it or not — out of view, at the place it would stand at, carrying the
+// count and the mark it carries in view — and no end where the plane draws
+// its document nowhere; a far end naming a version member whole at its
+// document's place; the most a reveal can set in a document's text, which no
 // stage, toggle or lens moves or exceeds.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -20,6 +24,8 @@ const D = '1.0.1.0.3', OTHER_HOME = '1.0.2.0.5';
 const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: doc.split('.').slice(0, 3).join('.'), whole: false, subspace: 1, ordinal: ord, positions: w });
 const whole = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: doc.split('.').slice(0, 3).join('.'), whole: true, subspace: null, ordinal: null, positions: null });
 const acct = (/** @type {string} */ a) => ({ start: a, width: '0.0.1', doc: null, account: a, whole: true, subspace: null, ordinal: null, positions: null });
+/** the connections between two places, whichever of them is `a` */
+const between = (/** @type {import('./links.js').Connection[]} */ cs, /** @type {string} */ x, /** @type {string} */ y) => cs.filter((c) => (c.a === x && c.b === y) || (c.a === y && c.b === x));
 
 function build(/** @type {{session?: string | null}} */ opts = {}) {
   REC._reset(); LK._reset();
@@ -161,18 +167,18 @@ test('a mid connection counts each link once: one shown at both its documents, o
   REC.takeLinks(D, [D + '.0.2.9']); REC.takeLinks(E, [D + '.0.2.9']);
   REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(E, 1, 5)], type: CITE });
   assert.ok(LK.shown(E).some((s) => s.link.addr === D + '.0.2.9'), 'the person\'s link is shown at both its documents');
-  assert.deepEqual(LK.connections([D, E]).map((x) => [x.a, x.b, x.count]), [[D, E, 1]]);
+  assert.deepEqual(between(LK.connections([D, E]), D, E).map((x) => [x.a, x.b, x.count]), [[D, E, 1]]);
   build();
   REC.takeLinks(D, [D + '.0.2.9']);
   REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 30, 2), span(D, 40, 2)], to: [span(E, 8, 2)], type: CITE });
   assert.equal(LK.shown(D).filter((s) => s.link.addr === D + '.0.2.9').length, 2, 'two passages in D: two ends drawn there');
-  assert.deepEqual(LK.connections([D, E]).map((x) => [x.a, x.b, x.count]), [[D, E, 1]], 'read at D alone: one link');
+  assert.deepEqual(between(LK.connections([D, E]), D, E).map((x) => [x.a, x.b, x.count]), [[D, E, 1]], 'read at D alone: one link');
 });
 
 test('a mid connection is marked with what its links share: the linker\'s hue where they share one, neutral where theirs differ, lighter only where every one was followed (P44)', () => {
   REC.takeLinks(D, [D + '.0.2.9']);
   REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(OTHER_HOME, 30, 5)], type: CITE });
-  const at = () => LK.connections([D, OTHER_HOME]).map((c) => ({ count: c.count, hue: c.mark.hue, linker: c.mark.linker, value: c.mark.value, own: c.mark.own }));
+  const at = () => between(LK.connections([D, OTHER_HOME]), D, OTHER_HOME).map((c) => ({ count: c.count, hue: c.mark.hue, linker: c.mark.linker, value: c.mark.value, own: c.mark.own }));
   assert.deepEqual(at(), [{ count: 1, hue: HUE.you, linker: 'you', value: 1, own: true }], 'the person\'s link alone: their hue');
   LK.setOthers(D, true);
   assert.deepEqual(at(), [{ count: 2, hue: NEUTRAL_HUE, linker: null, value: 1, own: false }], 'the other\'s link beside it: neutral, never the first link\'s hue');
@@ -189,6 +195,32 @@ test('a link whose linker differs at its two documents draws its connection neut
   LK.setOthers(OTHER_HOME, true);
   assert.deepEqual([LK.shown(D).find((s) => s.link.addr === D + '.0.2.9')?.linker, LK.shown(OTHER_HOME).map((s) => s.linker)], ['owner', ['others']], 'D\'s owner\'s link at D, another\'s at the other document');
   for (const order of [[D, OTHER_HOME], [OTHER_HOME, D]]) {
-    assert.deepEqual(LK.connections(order).map((c) => [c.count, c.mark.hue, c.mark.linker]), [[1, NEUTRAL_HUE, null]], order.join(' then '));
+    assert.deepEqual(between(LK.connections(order), D, OTHER_HOME).map((c) => [c.count, c.mark.hue, c.mark.linker]), [[1, NEUTRAL_HUE, null]], order.join(' then '));
   }
+});
+
+test('a link whose far end the plane does not draw is still a connection, to the place its far end stands at; none where the plane draws that document nowhere (foundations §2.1)', () => {
+  const ends = (/** @type {import('./links.js').Connection[]} */ cs) => cs.map((x) => [x.a, x.b, x.count]);
+  assert.deepEqual(ends(LK.connections([D])), [[D, '1.0.1.0.127', 1]], 'the citation of 1.0.1.0.127, drawn at D alone: a connection to its box');
+  assert.deepEqual(ends(LK.connections([D], (a) => (a === '1.0.1.0.127' ? '1.0.1:1' : a))), [[D, '1.0.1:1', 1]], 'to the mark that would hold it');
+  assert.deepEqual(LK.connections([D], (a) => (a === D ? D : null)), [], 'its document drawn nowhere: no connection');
+  assert.deepEqual(LK.connections([D], (a) => (a === D ? null : a)), [], 'the near document drawn nowhere: none from it');
+});
+
+test('a connection to a far end out of view carries what one in view does: its count and its mark', () => {
+  const pair = (/** @type {string[]} */ drawn) => between(LK.connections(drawn), D, '1.0.1.0.127').map((c) => ({ count: c.count, mark: c.mark }));
+  assert.deepEqual(pair([D]), pair([D, '1.0.1.0.127']));
+  assert.equal(pair([D]).length, 1);
+});
+
+test('a far end naming a version member whole stands at its document\'s place, the box the two share', () => {
+  const E = '1.0.1.0.4', E2 = E + '.2';
+  REC.takeLinks(D, [D + '.0.2.7']);
+  REC.takeLink({ addr: D + '.0.2.7', from: [span(D, 80, 5)], to: [whole(E2)], type: CITE });
+  assert.equal(LK.shown(D).find((s) => s.link.addr === D + '.0.2.7')?.far, E2, 'the end names the member');
+  /** @type {string[]} */
+  const asked = [];
+  const cs = LK.connections([D, E], (a) => { asked.push(a); return a; });
+  assert.deepEqual(between(cs, D, E).map((x) => [x.a, x.b, x.count]), [[D, E, 1]]);
+  assert.ok(!asked.includes(E2) && !cs.some((c) => c.a === E2 || c.b === E2), 'no place asked for, or drawn at, the member\'s own address');
 });

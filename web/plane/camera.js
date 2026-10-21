@@ -8,10 +8,16 @@
 // `viewForCell`, `setCam`, `clampCam`) and §11's `flyTo`/`stepAnim`/
 // `viewForDoc`; S3's bounds (`minS` from the world, `maxS` 40) with the
 // zoom-in bound widened per E18 (a): it never stops short of the reading
-// scale of a place the projection draws (`setDeepest`).
+// scale of a place the projection draws (`setDeepest`); and §17's
+// `edgeStub`, THE EDGE STUB's screen arithmetic that BM's beams and
+// P-RENDER's mid connections share (foundations §2.1, §2.5; S1 Q3): the
+// visible view below the chrome across the viewport's top (`visibleView`),
+// the cut on the true bearing inside it (`edgeStub`) and the triangle at the
+// cut (`stubTriangle`), sized by P-REG's STUB.
 // Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11.
 
 import { WORLD_W, WORLD_H, DOC_W, REP_FS, DEPTH_SOUND, G, LEAF } from './projection.js';
+import { STUB } from './register.js';
 
 /**
  * @typedef {Object} View
@@ -30,6 +36,9 @@ import { WORLD_W, WORLD_H, DOC_W, REP_FS, DEPTH_SOUND, G, LEAF } from './project
  * @property {number} outScale
  * @property {(() => void) | null} done
  */
+
+/** @typedef {{x: number, y: number}} Point a screen point */
+/** @typedef {{x: number, y: number, w: number, h: number}} Rect a screen rect */
 
 /** @type {View & {anim: Flight | null}} */
 export const cam = { x: WORLD_W / 2, y: WORLD_H / 2, scale: 1, anim: null };
@@ -175,6 +184,47 @@ export function zoomAt(/** @type {number} */ factor, /** @type {number} */ px, /
 
 /** the world box the viewport sees, padded in screen px */
 export function viewportWorld(pad = 0) { return { x0: wx(-pad), y0: wy(-pad), x1: wx(VW + pad), y1: wy(VH + pad) }; }
+
+/**
+ * The visible view on screen: the viewport below the chrome standing across
+ * its top — the one line, whose bottom edge is `top` — the part of the
+ * viewport the plane is seen through.
+ * @param {number} top
+ * @returns {Rect}
+ */
+export function visibleView(top) { const y = Math.max(0, Math.min(VH, top)); return { x: 0, y, w: VW, h: VH - y }; }
+
+/**
+ * THE EDGE STUB's cut: where the ray from `from` toward `to` leaves the
+ * visible view, STUB.inset px inside its border — the stub's tip, on the
+ * true bearing; past `to` where `to` stands inside the view. A ray that
+ * leaves at its start, or has no bearing, is cut at its start.
+ * @param {Point} from
+ * @param {Point} to
+ * @param {Rect} seen the visible view (`visibleView`)
+ * @returns {Point}
+ */
+export function edgeStub(from, to, seen) {
+  const i = STUB.inset, dx = to.x - from.x, dy = to.y - from.y;
+  let t = Infinity;
+  if (dx > 0) t = Math.min(t, (seen.x + seen.w - i - from.x) / dx); else if (dx < 0) t = Math.min(t, (seen.x + i - from.x) / dx);
+  if (dy > 0) t = Math.min(t, (seen.y + seen.h - i - from.y) / dy); else if (dy < 0) t = Math.min(t, (seen.y + i - from.y) / dy);
+  if (!isFinite(t) || t < 0) t = 0;
+  return { x: from.x + dx * t, y: from.y + dy * t };
+}
+
+/**
+ * The stub's triangle: its tip at the cut, pointing along the bearing toward
+ * `to`, STUB.length long and STUB.width across its base.
+ * @param {Point} tip the cut (`edgeStub`)
+ * @param {Point} to the end the bearing points at
+ * @returns {[Point, Point, Point]} the tip, then its base's two corners
+ */
+export function stubTriangle(tip, to) {
+  const a = Math.atan2(to.y - tip.y, to.x - tip.x), ux = Math.cos(a), uy = Math.sin(a);
+  const bx = tip.x - ux * STUB.length, by = tip.y - uy * STUB.length, hw = STUB.width / 2;
+  return [{ x: tip.x, y: tip.y }, { x: bx - uy * hw, y: by + ux * hw }, { x: bx + uy * hw, y: by - ux * hw }];
+}
 
 /**
  * THE DIRTY MARK — view plumbing the loop reads (FP-9: a handler changes

@@ -23,13 +23,24 @@
 // runs from a floor — and its newest member's label as a box draws it, its
 // act a teleport to that member, its members drawn as boxes only as the band
 // fades them in; the mid connections from LK's `connections`, each end at
-// the box that draws a document or the mark that holds it; THE LABELS —
+// the box that draws a document or the mark that holds it — a far end the
+// frame does not draw at the box or the mark that would, and none where the
+// plane draws its document nowhere — a line between two places standing in
+// the visible view (the viewport below the one line, a place's centre inside
+// it), and from the place standing there toward one out of it THE EDGE STUB:
+// its stroke cut at the view's border on the true bearing, the cut P-CAM's
+// `edgeStub` that BM's beams share (foundations §2.1: "one whose far end is
+// out of view ending at the view's edge as §2.5's stub does"); two places
+// both out of view joined only where the frame draws both; THE LABELS —
 // every string the canvas sets but the trail's pip numbers — handed to
 // P-LABEL's one pass once every place's shapes are drawn, and set over them
 // at no less than P-REG's LABEL_MIN_PX, each only where its place holds it
 // whole, meeting no other place's shape and no label set before it (F-9;
 // foundations §2.1), a document's on a plate of its box's ground over the
-// bars beneath; then the trail's pips numbered newest-first, each number at
+// bars beneath; then the stubs' triangles, over the places and their labels
+// as the pips are, for the stubs' strokes run behind the boxes, which at mid
+// scale stand along most of the view's border and would hide a triangle drawn
+// with its stroke; then the trail's pips numbered newest-first, each number at
 // the label floor, and no path between them (foundations §2.2 renders the
 // entries as pips: at reading scale a pip stands in the text column, where a
 // path would run between the glyphs of the article mounted over the canvas);
@@ -43,7 +54,8 @@
 // T-LAYER's frame BEFORE this draw, so what is mounted is settled when a
 // document's label and bars are drawn or yielded; `stats` names both sets,
 // and the loop holds them against the mounted set at the frame's end; it
-// names the marks, the connections and the labels drawn too, the labels'
+// names the marks, the connections — each stub with the place it is bound
+// for, its cut and its triangle — and the labels drawn too, the labels'
 // parts left out with the rule that left each out, the box the focus ring
 // outlined and the arrival mark's rects, for the gate. The hit tests read the
 // draw's own rule: a click meets a document's box only where the box stands
@@ -59,19 +71,21 @@ import * as TRAIL from '../nav/trail.js';
 import * as WALK from '../nav/walk.js';
 import * as LAYER from '../text/layer.js';
 import * as GO from '../nav/go.js';
-import { cam, sx, sy, wx, wy, viewport, viewportWorld } from './camera.js';
+import * as LINE from '../line/line.js';
+import { cam, sx, sy, wx, wy, viewport, viewportWorld, visibleView, edgeStub, stubTriangle } from './camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
 import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt } from './projection.js';
 import { layoutOf, bars } from './layout.js';
 import { setLabels, sizeOf, lineHeight, LINE_BOX } from './labels.js';
 import { COL, EDGE, HUE } from './register.js';
-import { documentOf, cmpAddr } from '../model/address.js';
+import { documentOf, accountOf, cmpAddr } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
 import { t } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('./projection.js').Cell} Cell */
 /** @typedef {import('./labels.js').Part} Part */
+/** @typedef {import('./camera.js').Point} Point a screen point */
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect a screen rect */
 
 /**
@@ -94,6 +108,24 @@ import { t } from '../strings.js';
  * @property {import('./labels.js').Shape[]} shapes every place's shape the frame drew
  */
 
+/**
+ * @typedef {Object} Stub — a mid connection's end at the visible view's border, bound for the place out of it (foundations §2.1, §2.5)
+ * @property {string} toward the place out of view it is bound for
+ * @property {Point} from the centre of the place in view its stroke leaves
+ * @property {Point} cut where its stroke ends, P-REG's STUB.inset px inside the border on the bearing: its triangle's tip
+ * @property {[Point, Point, Point]} triangle the tip, then its base's two corners
+ * @property {string} hue
+ * @property {number} alpha the alpha its triangle is drawn at: the documents' band's, by its links' value
+ */
+
+/**
+ * @typedef {Object} DrawnConnection — a mid connection the frame drew
+ * @property {string} a the place one end stands at: a document, or a mark's `key`
+ * @property {string} b the place the other end stands at
+ * @property {number} count the links it holds, each once
+ * @property {Stub | null} stub where one place stands in the visible view and the other out of it; null for a line
+ */
+
 /** @type {HTMLCanvasElement | null} */
 let cv = null;
 /** @type {CanvasRenderingContext2D | null} */
@@ -103,7 +135,8 @@ let DPR = 1;
  * The last frame's figures; `drawn` the documents whose label the label pass
  * set or whose bars the frame drew, `yielded` the ones it left to T-LAYER's
  * mount, `residueMarks` the continuations drawn as marks, `connections` the
- * mid connections drawn, each between two places, `labels` the labels set —
+ * mid connections drawn, each between two places, a stub where one of them
+ * stands out of view, `labels` the labels set —
  * the trail's pip numbers among them — `labelsLeftOut` the parts the pass
  * left out, each with the rule that left it out, `ring` the focused element's
  * box on screen the focus ring outlined, null where it drew none, and
@@ -112,7 +145,7 @@ let DPR = 1;
 export const stats = {
   linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0,
   residueMarks: /** @type {ResidueMark[]} */ ([]),
-  connections: /** @type {Array<{a: string, b: string, count: number}>} */ ([]),
+  connections: /** @type {DrawnConnection[]} */ ([]),
   drawn: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]),
   labels: /** @type {import('./labels.js').SetLabel[]} */ ([]),
   labelsLeftOut: /** @type {import('./labels.js').LeftOut[]} */ ([]),
@@ -388,28 +421,45 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
       if (intersects(cell, v)) marks.push({ key: account + ':' + k, account, k, members, cell, alpha: a });
     }
   }
-  // the mid connections behind, from LK (the seam): a document stands at its box, or at the mark that holds it
-  /** @type {Map<string, Cell>} the marks that hold their documents, by place */
-  const holding = new Map();
-  /** @type {Map<string, string>} the place of each document a mark holds */
+  // the mid connections behind, from LK (the seam): a document stands at its box, or at the mark of the continuation that holds it — the
+  // mark drawn here, or out of view the one that would hold it; a document the plane draws nowhere stands at no place
+  /** @type {Map<string, string>} the place of each document a mark drawn here holds */
   const heldAt = new Map();
-  for (const m of marks) {
-    if (m.k !== cont.held) continue;
-    holding.set(m.key, m.cell);
-    for (const a of m.members) heldAt.set(a, m.key);
-  }
-  const placeOf = (/** @type {string} */ addr) => heldAt.get(documentOf(addr) || addr) || addr;
+  for (const m of marks) if (m.k === cont.held) for (const a of m.members) heldAt.set(a, m.key);
+  const placeable = new Set(all.map((d) => documentOf(d.addr) || d.addr));
+  /** @type {Map<string, Cell>} each place met, by its key: a document's box, a mark's cell */
+  const cells = new Map();
+  const placeOf = (/** @type {string} */ addr) => {
+    const doc = documentOf(addr) || addr, account = accountOf(doc);
+    if (!placeable.has(doc)) return null;
+    const key = account && withinContinuation(doc, cont.held) ? account + ':' + cont.held : doc;
+    if (!cells.has(key)) cells.set(key, key === doc ? docBox(doc) : continuationCell(/** @type {string} */ (account), cont.held));
+    return key;
+  };
+  /** the places this frame draws: the boxes standing whole, the marks holding their documents */
+  const drawnAt = new Set([...vis.map((x) => placeOf(x.d.addr)), ...heldAt.values()]);
+  const seen = visibleView(LINE.bottom());
+  const centreOf = (/** @type {string} */ key) => { const c = /** @type {Cell} */ (cells.get(key)); return { x: sx(c.x + c.w / 2), y: sy(c.y + c.h / 2) }; };
+  const inView = (/** @type {Point} */ p) => p.x >= seen.x && p.x <= seen.x + seen.w && p.y >= seen.y && p.y <= seen.y + seen.h;
   let drawn = 0;
   if (lod.docPx > 6) {
     ctx.lineWidth = Math.min(1.6, 0.4 + lod.docPx / 300);
     for (const c of LK.connections([...new Set([...vis.map((x) => x.d.addr), ...heldAt.keys()])], placeOf)) {
-      const a = holding.get(c.a) || docBox(c.a), b = holding.get(c.b) || docBox(c.b);
-      const ax = sx(a.x + a.w / 2), ay = sy(a.y + a.h / 2), bx = sx(b.x + b.w / 2), by = sy(b.y + b.h / 2);
-      if ((ax < -400 && bx < -400) || (ax > VW + 400 && bx > VW + 400) || (ay < -400 && by < -400) || (ay > VH + 400 && by > VH + 400)) continue;
+      const A = centreOf(c.a), B = centreOf(c.b), inA = inView(A), inB = inView(B);
+      // both out of view: a line only between two places the frame draws, unless both lie far past one side
+      if (!inA && !inB && (!drawnAt.has(c.a) || !drawnAt.has(c.b) || (A.x < -400 && B.x < -400) || (A.x > VW + 400 && B.x > VW + 400) || (A.y < -400 && B.y < -400) || (A.y > VH + 400 && B.y > VH + 400))) continue;
+      /** @type {Stub | null} */
+      let stub = null;
+      if (inA !== inB) {
+        const [from, to, toward] = inA ? [A, B, c.b] : [B, A, c.a];
+        const cut = edgeStub(from, to, seen);
+        stub = { toward, from, cut, triangle: stubTriangle(cut, to), hue: c.mark.hue, alpha: alpha * c.mark.value };
+      }
+      const [p, q] = stub ? [stub.from, stub.cut] : [A, B];
       ctx.globalAlpha = alpha * 0.3 * c.mark.value; ctx.strokeStyle = c.mark.hue;
       ctx.setLineDash(Array.isArray(c.mark.form) ? c.mark.form : []);
-      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke(); ctx.setLineDash([]); drawn++;
-      stats.connections.push({ a: c.a, b: c.b, count: c.count });
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); ctx.setLineDash([]); drawn++;
+      stats.connections.push({ a: c.a, b: c.b, count: c.count, stub });
     }
   }
   stats.linksDrawn = drawn;
@@ -493,6 +543,22 @@ function drawLabels(pass) {
   for (const l of set) if (l.kind === 'doc' && !drawn.has(l.place)) stats.drawn.push(l.place);
 }
 
+/**
+ * The mid connections' stubs' triangles, each at its cut in its
+ * connection's hue and value, over the places and their labels (see the
+ * head).
+ */
+function drawStubs() {
+  const c = ctx; if (!c) return;
+  for (const { stub } of stats.connections) {
+    if (!stub) continue;
+    const [p, q, r] = stub.triangle;
+    c.globalAlpha = stub.alpha; c.fillStyle = stub.hue;
+    c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(q.x, q.y); c.lineTo(r.x, r.y); c.closePath(); c.fill();
+  }
+  c.globalAlpha = 1;
+}
+
 /** the trail's pips, numbered newest-first at the label floor, no path joining them (see the head) */
 function drawTrail() {
   const c = ctx; if (!c) return;
@@ -558,7 +624,8 @@ function drawArrival() {
 
 /**
  * Draw the frame: a function of model and view state (FP-8) — the places,
- * then their labels, then the trail, the focus ring and the arrival mark.
+ * then their labels, then the stubs' triangles, the trail, the focus ring and
+ * the arrival mark.
  * @returns {import('./lod.js').Lod}
  */
 export function draw() {
@@ -576,7 +643,7 @@ export function draw() {
   else if (lod.name === 'far~mid') { stats.clusters = drawClusters(1 - lod.fade, pass); drawAccountFrames(lod.fade, pass); stats.docsDrawn = drawDocs(lod, lod.fade, pass); }
   else { drawAccountFrames(1, pass); stats.docsDrawn = drawDocs(lod, 1, pass); }
   drawLabels(pass);
-  drawTrail(); drawFocus(); drawArrival();
+  drawStubs(); drawTrail(); drawFocus(); drawArrival();
   return lod;
 }
 

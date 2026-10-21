@@ -9,7 +9,9 @@
 // SAMENESS boundaries and a ground TEXTURE, never a tint; the VISITED-LINK
 // MARK takes VALUE (lighter, the hue kept — D-3); a connection's KIND its
 // line's form; a box's PUBLICATION STATE its edge's weight; a LABEL's size
-// its floor, below which no label on the plane is set (P-LABEL). LK reads
+// its floor, below which no label on the plane is set (P-LABEL); THE EDGE
+// STUB its inset from the view's border and its triangle's size, the one stub
+// BM's beams and P-RENDER's mid connections draw (P-CAM's `edgeStub`). LK reads
 // this module to put a value on each link's mark; no drawing module reads it
 // for a link (the seam's rule). The values are the UI phase's.
 // Carries: the wireframe's §10 `COL`; S1 Q5's `same`/`provenance` classes
@@ -51,6 +53,14 @@ export const EDGE = Object.freeze({ edition: 1.4, draft: 0.8, withheld: 0.8, lan
 
 /** the stacking order, ground up */
 export const STACK = Object.freeze(['sameness', 'own', 'grade', 'refused', 'arrival', 'selection']);
+
+/**
+ * THE EDGE STUB (foundations §2.5; S1 Q3): a stroke cut at the visible
+ * view's border with a triangle on the true bearing, its tip `inset` px
+ * inside the border, `length` px along the bearing and `width` px across its
+ * base — the one stub BM's beams and P-RENDER's mid connections draw
+ */
+export const STUB = Object.freeze({ inset: 8, length: 10, width: 10 });
 
 /**
  * The smallest size a label on the plane is set at, in px — the far labels'

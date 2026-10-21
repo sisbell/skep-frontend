@@ -260,12 +260,14 @@ def run(ctx):
         conns = ctx.js('window.__skep.connections()')
         at_member = [c for c in conns if c['a'] in members or c['b'] in members]
         r.check(not at_member, 'no mid connection ends at a document the mark holds: one line to the mark, never a stack of its members (P44)', at_member[:6])
-        # LK's own rule, read apart from the canvas: the links each document of the first grid (and each the canvas joined to the mark) draws to or from the mark's members
+        # LK's own rule, read apart from the canvas: the links each document of the first grid (and each the canvas joined to the mark) draws to or from the mark's members,
+        # a far end standing at its document — a version member named whole at the box it shares with its document
         into = {(c['b'] if c['a'] == mark['key'] else c['a']): c['count'] for c in conns if mark['key'] in (c['a'], c['b'])}
-        linked = ctx.js('''(() => {
-          const S = window.__skep, mem = new Set(%s), back = new Map();
-          for (const m of mem) for (const s of S.links.shown(m)) { if (!back.has(s.far)) back.set(s.far, new Set()); back.get(s.far).add(s.link); }
-          const links = (a) => new Set([...S.links.shown(a).filter((s) => mem.has(s.far)).map((s) => s.link), ...(back.get(a) || [])]).size;
+        linked = ctx.js('''(async () => {
+          const A = await import('./model/address.js');
+          const S = window.__skep, mem = new Set(%s), back = new Map(), far = (s) => A.documentOf(s.far) || s.far;
+          for (const m of mem) for (const s of S.links.shown(m)) { if (!back.has(far(s))) back.set(far(s), new Set()); back.get(far(s)).add(s.link); }
+          const links = (a) => new Set([...S.links.shown(a).filter((s) => mem.has(far(s))).map((s) => s.link), ...(back.get(a) || [])]).size;
           const first = S.model.places().filter((p) => p.account === "1.0.1" && !p.system && S.depthOf(p.doc) === 0).map((p) => p.doc);
           return Object.fromEntries([...new Set([...first, ...%s])].map((a) => [a, links(a)]).filter(([, n]) => n > 0));
         })()''' % (json.dumps(members), json.dumps(sorted(into))))

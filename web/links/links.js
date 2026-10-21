@@ -45,8 +45,13 @@
 //     documents at — a document's own box, or the mark of the continuation
 //     holding it (P44) — counting each link once, however many of its ends
 //     are drawn, and marked with the one mark the ends drawn there merge
-//     into; a link whose two ends stand at one place draws none; the scene's
-//     pane-to-pane lines are drawn from the same shown set.
+//     into; a link whose two ends stand at one place draws none; a link drawn
+//     at a document runs to the place its far end's document stands at,
+//     drawn there this frame or out of view, where the plane ends it at the
+//     view's edge (foundations §2.1: "one whose far end is out of view ending
+//     at the view's edge as §2.5's stub does"), and to no place where the
+//     plane draws that document nowhere; the scene's pane-to-pane lines are
+//     drawn from the same shown set.
 // WHAT REPLACES THIS RULE LATER: link sets (`_designs/LINK-SETS/…` §4, in
 // review) — at a version `E.k` the default view is `E`'s OWN SET plus the sets
 // its author has `E.k` read with plus the reader's own links; everything else
@@ -63,7 +68,7 @@
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA } from '../plane/register.js';
-import { commonsType } from '../model/address.js';
+import { commonsType, documentOf } from '../model/address.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -97,8 +102,8 @@ import { commonsType } from '../model/address.js';
  */
 /**
  * @typedef {Object} Connection — a mid connection between two places the plane draws documents at
- * @property {string} a the place one end's document is drawn at: its own address, or the mark `placeOf` names
- * @property {string} b the place the other end's is drawn at
+ * @property {string} a the place of the drawn document the first of its links was met at: the document's own address, or the mark `placeOf` names
+ * @property {string} b the place that link's far end stands at, drawn this frame or out of view
  * @property {'link'} kind
  * @property {Mark} mark the one mark its links' drawn ends merge into (`mergedMark`)
  * @property {number} count the links the pair holds, each once
@@ -365,31 +370,35 @@ export function countAccount(/** @type {string} */ account) {
 }
 
 /**
- * The mid connections among the documents the plane draws: one per pair of
- * PLACES they are drawn at (P44: one per document pair, with its count) —
- * `placeOf` names a document's place, its own box or the mark of the
- * continuation that holds it — of the links `shown` gives at either
- * document: the owner's and the person's own by default, others' where a
- * document's toggle is on. Its count is its links, each once, however many
- * of a link's ends are drawn — at both its documents, or at two passages in
- * one; its mark the one all the ends drawn there merge into (`mergedMark`),
- * so a link whose linker differs at its two documents draws it neutral, and
- * no order of the documents changes it. A link whose two ends stand at one
- * place draws none.
+ * The mid connections from the documents the plane draws: one per pair of
+ * PLACES (P44: one per document pair, with its count) — `placeOf` names the
+ * place a document stands at, its own box or the mark of the continuation
+ * that holds it — of the links `shown` gives at a drawn document: the
+ * owner's and the person's own by default, others' where a document's toggle
+ * is on. A link's far end stands at its document's place — a version member
+ * named whole at its document's, the box the two share — whether the frame
+ * draws that place or not: a far end out of view is still a connection's end,
+ * which the plane draws to the view's edge (foundations §2.1); where
+ * `placeOf` names no place, the plane drawing the document nowhere, the link
+ * draws none. Its count is its links, each once, however many of a link's
+ * ends are drawn — at both its documents, or at two passages in one; its mark
+ * the one all the ends drawn there merge into (`mergedMark`), so a link whose
+ * linker differs at its two documents draws it neutral, and no order of the
+ * documents changes it. A link whose two ends stand at one place draws none.
  * @param {string[]} docsDrawn the documents drawn, whole or inside a mark
- * @param {(addr: string) => string} [placeOf] the place a document is drawn at; by default its own box
+ * @param {(addr: string) => string | null} [placeOf] the place a document stands at, drawn this frame or not; null where the plane draws it nowhere. By default its own box
  * @returns {Connection[]}
  */
 export function connections(docsDrawn, placeOf = (addr) => addr) {
-  const set = new Set(docsDrawn);
   /** @type {Map<string, {a: string, b: string, links: Set<string>, marks: [Mark, ...Mark[]]}>} the pairs met, each with its links and the marks of its ends drawn */
   const pairs = new Map();
   for (const addr of docsDrawn) {
     const here = placeOf(addr);
+    if (here == null) continue;
     for (const s of shown(addr)) {
-      if (!s.far || !set.has(s.far)) continue;
-      const there = placeOf(s.far);
-      if (there === here) continue;
+      if (!s.far) continue;
+      const there = placeOf(documentOf(s.far) || s.far);
+      if (there == null || there === here) continue;
       const key = [here, there].sort().join('|');
       const p = pairs.get(key);
       if (p) { p.links.add(s.link.addr); p.marks.push(s.mark); }

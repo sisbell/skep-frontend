@@ -16,7 +16,20 @@ the line, and never below the document's box as its bottom rises), every
 beam leaving the text at its span's own line, from the article's edge (its
 endpoint level with one of its marked words' line rects, at the article's
 edge — foundations §2.1; S1 Q1), every stub in view carrying its far
-document's label (S1 Q3), and no two of the beams' labels in view meeting.
+document's label inside the visible view — the viewport below the one line
+(S1 Q3) — and no two of the beams' labels in view meeting. THE STUB at mid
+scale (foundations §2.1: a mid connection "whose far end is out of view
+ending at the view's edge as §2.5's stub does"): the camera over the first
+edition at S3's mid-extents, every document standing whole in view that
+cites FAR_LEAP — the place holding it, its box or the mark of the
+continuation holding it, out of view — is joined to that place by a
+connection ending in a stub bound for it, its count the links LK shows at
+that document whose far end that place holds; every stub's cut stands
+STUB_INSET_PX inside the visible view's border, on the true bearing from the
+centre of the place in view to the centre of the place it is bound for, its
+triangle drawn over the boxes at the border in its hue; and every connection
+with one place in the visible view and the other out of it, and no other,
+ends in a stub, bound for the place out of view.
 THE SYMBOLS (foundations §2.1: "the SYMBOL AT ITS SPAN"; B1-S4: "No margin
 column: the symbols are at the place"): at stage 2, each link of the first
 edition drawn at one span has one symbol, in the paragraph holding the end
@@ -86,14 +99,16 @@ holds the box's ground alone — no path runs between the pips, which at
 reading scale would cross the text, showing between the article's glyphs.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `arrivalAnchors`, `visible`, `barsOf`, `labels`, `scene.at`,
-`scene.ties`, the frame buffer, `beamLabels`) save the trail's, which reads
-the canvas's pixels here, the symbols', which reads the article's order
-here, the click cues', which read the computed style here, and the
-stand-in's, which sets its article and reads its blocks here; the
-thresholds are here. The beam-label and shared-box checks are
+`scene.ties`, the frame buffer, `beamLabels`, `connections`) save the
+trail's and the stub's triangle's, which read the canvas's pixels here, the
+stub's places, which the projection gives here, the symbols', which reads
+the article's order here, the click cues', which read the computed style
+here, and the stand-in's, which sets its article and reads its blocks here;
+the thresholds are here. The beam-label and shared-box checks are
 marked with the page issues they wait on and count as expected while those
 stand."""
 import json
+import math
 import re
 
 from . import DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, XFAIL_MEMBER, Result
@@ -118,6 +133,10 @@ LABEL_TOL_PX = 0.5
 # the trail's strip: its half-width about the segment between two entries, how far it keeps inside the document's box,
 # and the disc left out about each entry's point — a pip's radius, its ring and the ring's stroke being under 11 px
 TRAIL_STRIP_PX, TRAIL_INSET_PX, PIP_CLEAR_PX = 1.5, 4, 14
+# the stub: how far inside the visible view's border its cut stands — the case's own, held apart from the page's STUB —
+# how far either way it may stand from there, and from the true bearing; how far a channel of its triangle's pixel may
+# stand from its hue drawn at full alpha
+STUB_INSET_PX, STUB_TOL_PX, STUB_BEARING_DEG, STUB_INK_TOL = 8, 1.0, 0.5, 2
 
 
 def corner_of(ctx):
@@ -635,6 +654,95 @@ def trail_holds(ctx, r):
     return {'read': v and v['read'], 'other': v and v['other']}
 
 
+def stub_view(ctx):
+    """the mid connections the last frame drew beside the projection's places, read in the page apart from the canvas's
+    set: the visible view below the one line; the place holding FAR_LEAP at the camera's scale — its box, or the mark of
+    the continuation holding it (P-LOD's `residueDepth`, P-PROJ's `withinContinuation`) — whether its centre stands in
+    that view and whether its cell meets the view the frame draws (the viewport padded by 80 px); each document standing
+    whole, its box's centre in view, at which LK shows a link to FAR_LEAP, with the links LK shows there whose far end's
+    document the plane draws and that place holds; each connection's places' centres and whether each stands in view;
+    the box's ground and the plane's own, and the plane canvas's pixel at each stub's triangle's centroid beside the hue
+    and alpha of the last stub drawn whose triangle holds it"""
+    return ctx.js('''(async () => {
+      const P = await import('./plane/projection.js'), D = await import('./plane/lod.js'), A = await import('./model/address.js'), R = await import('./plane/register.js');
+      const S = window.__skep, c = S.view.camera(), p = S.view.viewport(), top = document.getElementById('line').getBoundingClientRect().bottom;
+      const view = {x: 0, y: top, w: p.VW, h: p.VH - top};
+      const pad = {x0: (-80 - p.VW / 2) / c.scale + c.x, y0: (-80 - p.VH / 2) / c.scale + c.y, x1: (p.VW / 2 + 80) / c.scale + c.x, y1: (p.VH / 2 + 80) / c.scale + c.y};
+      const held = D.residueDepth(c.scale).held;
+      const placeOf = (doc) => (P.withinContinuation(doc, held) ? A.accountOf(doc) + ':' + held : doc);
+      const cell = (place) => { const i = place.indexOf(':'); return i < 0 ? P.docBox(place) : P.continuationCell(place.slice(0, i), Number(place.slice(i + 1))); };
+      const centre = (place) => { const b = cell(place); return {x: (b.x + b.w / 2 - c.x) * c.scale + p.VW / 2, y: (b.y + b.h / 2 - c.y) * c.scale + p.VH / 2}; };
+      const seen = (q) => q.x >= view.x && q.x <= view.x + view.w && q.y >= view.y && q.y <= view.y + view.h;
+      const indexed = new Set(S.model.places().filter((q) => !q.system).map((q) => q.doc));
+      const drawable = (doc) => { if (indexed.has(doc)) return true; const d = S.model.doc(doc); return d.from >= 0 || !!d.meta || d.refused === 'withheld'; };
+      const farDoc = (s) => s.far && (A.documentOf(s.far) || s.far);
+      const far = placeOf(%s);
+      const citers = [...indexed].filter((doc) => placeOf(doc) === doc && seen(centre(doc)) && S.links.shown(doc).some((s) => farDoc(s) === %s))
+        .map((doc) => ({doc, links: [...new Set(S.links.shown(doc).filter((s) => { const f = farDoc(s); return !!f && drawable(f) && placeOf(f) === far; }).map((s) => s.link))]}));
+      const cv = document.getElementById('plane'), k = cv.width / p.VW, img = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+      const px = (q) => { const i = (Math.floor(q.y * k) * cv.width + Math.floor(q.x * k)) * 4; return [img[i], img[i + 1], img[i + 2]]; };
+      const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+      const holds = (q, t) => { const s = (a, b) => (b.x - a.x) * (q.y - a.y) - (b.y - a.y) * (q.x - a.x); const d = [s(t[0], t[1]), s(t[1], t[2]), s(t[2], t[0])]; return d.every((x) => x >= 0) || d.every((x) => x <= 0); };
+      const drawn = S.connections(), tris = drawn.filter((x) => x.stub).map((x) => x.stub);
+      const conns = drawn.map((x) => {
+        const ca = centre(x.a), cb = centre(x.b), t = x.stub && x.stub.triangle;
+        const at = t ? {x: (t[0].x + t[1].x + t[2].x) / 3, y: (t[0].y + t[1].y + t[2].y) / 3} : null;
+        const over = at ? tris.filter((u) => holds(at, u.triangle)).pop() : null;
+        return {a: x.a, b: x.b, count: x.count, stub: x.stub, in_a: seen(ca), in_b: seen(cb), centre_a: ca, centre_b: cb, centroid: at, pixel: at ? px(at) : null,
+                ink: over ? rgb(over.hue) : null, ink_alpha: over ? over.alpha : null};
+      });
+      const there = centre(far);
+      return {view, held, far, far_centre: there, far_in_view: seen(there), far_drawn: P.intersects(cell(far), pad), citers, conns, grounds: [rgb(R.COL.doc), rgb(R.COL.bg)]};
+    })()''' % (json.dumps(FAR_LEAP), json.dumps(FAR_LEAP)))
+
+
+def stub_holds(ctx, r):
+    """THE STUB's checks at mid scale, the camera over the first edition at S3's mid-extents (its box 90 px): the
+    citations of FAR_LEAP, an edition the index lists, from the documents standing whole in view — the place holding it
+    out of view, so nothing the frame draws stands there; its figures, among them the stubs met on the visible view's top
+    border — none where nothing at this view is bound above it, camera.test.js then holding that rule alone"""
+    ctx.view_doc_px(DOC, 90)
+    v = stub_view(ctx)
+    view, far, conns, citers = v['view'], v['far'], v['conns'], v['citers']
+    pair = {cit['doc']: next((c for c in conns if {c['a'], c['b']} == {cit['doc'], far}), None) for cit in citers}
+    unbound = [doc for doc, c in pair.items() if not (c and c['stub'] and c['stub']['toward'] == far)]
+    r.check(bool(citers) and not v['far_in_view'] and not v['far_drawn'] and not unbound,
+            f'mid scale: every document standing whole in view that cites {FAR_LEAP} — the place holding it ({far}) out of view, and out of the view the frame draws — is joined to that place by a connection ending in a stub bound for it',
+            {'far': far, 'far_centre': v['far_centre'], 'far_drawn': v['far_drawn'], 'citers': [cit['doc'] for cit in citers], 'unbound': unbound,
+             'connections': [[c['a'], c['b'], c['count'], bool(c['stub'])] for c in conns][:12]})
+    stubs = [c for c in conns if c['stub']]
+    x0, y0 = view['x'] + STUB_INSET_PX, view['y'] + STUB_INSET_PX
+    x1, y1 = view['x'] + view['w'] - STUB_INSET_PX, view['y'] + view['h'] - STUB_INSET_PX
+    def on_border(q):
+        return x0 - STUB_TOL_PX <= q['x'] <= x1 + STUB_TOL_PX and y0 - STUB_TOL_PX <= q['y'] <= y1 + STUB_TOL_PX and min(abs(q['x'] - x0), abs(q['x'] - x1), abs(q['y'] - y0), abs(q['y'] - y1)) <= STUB_TOL_PX
+    off_border = [[c['a'], c['b'], c['stub']['cut']] for c in stubs if not on_border(c['stub']['cut'])]
+    r.check(bool(stubs) and not off_border, f'every stub\'s cut lies {STUB_INSET_PX} px inside the visible view\'s border — the viewport below the one line — {STUB_TOL_PX} px either way', {'off': off_border[:6], 'view': view})
+    def bearing(c):
+        """the angle, in degrees, between the stub's cut and the true bearing from the place in view's centre to the other's"""
+        d, f = (c['centre_a'], c['centre_b']) if c['in_a'] else (c['centre_b'], c['centre_a'])
+        q = c['stub']['cut']
+        a1, a2 = math.atan2(q['y'] - d['y'], q['x'] - d['x']), math.atan2(f['y'] - d['y'], f['x'] - d['x'])
+        return abs(math.degrees(math.atan2(math.sin(a1 - a2), math.cos(a1 - a2))))
+    angles = {(c['a'], c['b']): bearing(c) for c in stubs}
+    askew = {'%s|%s' % k: a for k, a in angles.items() if a > STUB_BEARING_DEG}
+    r.check(bool(stubs) and not askew, f'every stub stands on the true bearing: its cut on the ray from the centre of the place in view to the centre of the place it is bound for, as the projection gives them, within {STUB_BEARING_DEG}°', askew)
+    miscount = [{'doc': cit['doc'], 'count': pair[cit['doc']] and pair[cit['doc']]['count'], 'links': cit['links']} for cit in citers if not (pair[cit['doc']] and cit['links'] and pair[cit['doc']]['count'] == len(cit['links']))]
+    r.check(bool(citers) and not miscount, 'each citing document\'s stub carries its connection\'s count: the links LK shows there whose far end\'s document the plane draws and the place holds, each once', miscount)
+    wrong = [{'a': c['a'], 'b': c['b'], 'in_a': c['in_a'], 'in_b': c['in_b'], 'stub': c['stub'] and c['stub']['toward']} for c in conns
+             if (c['in_a'] != c['in_b']) != bool(c['stub']) or (c['stub'] and c['stub']['toward'] != (c['b'] if c['in_a'] else c['a']))]
+    r.check(bool(stubs) and not wrong, 'every connection with one place in the visible view and the other out of it, and no other, ends in a stub bound for the place out of view: none is bound for a place in view', wrong[:6])
+    def inked(c):
+        """is the plane's pixel at the stub's centroid the triangle drawn last over it: its hue at full alpha, else neither ground"""
+        pix, ink = c['pixel'], c['ink']
+        return bool(pix and ink) and (all(abs(pix[i] - ink[i]) <= STUB_INK_TOL for i in range(3)) if c['ink_alpha'] == 1 else pix not in v['grounds'])
+    unseen = [{'a': c['a'], 'b': c['b'], 'centroid': c['centroid'], 'pixel': c['pixel'], 'hue': c['ink'], 'alpha': c['ink_alpha']} for c in stubs if not inked(c)]
+    r.check(bool(stubs) and not unseen, 'every stub\'s triangle is drawn over the boxes at the view\'s border: the plane\'s pixel at its centroid is the hue of the last triangle drawn there, at full alpha, and neither the box\'s ground nor the plane\'s at less', {'unseen': unseen[:6], 'grounds': v['grounds']})
+    top = [[c['a'], c['b'], c['stub']['cut']] for c in stubs if abs(c['stub']['cut']['y'] - y0) <= STUB_TOL_PX]
+    return {'connections': len(conns), 'stubs': [[c['a'], c['b'], c['count'], c['stub']['cut'], round(angles[(c['a'], c['b'])], 4), c['pixel']] for c in stubs],
+            'far': far, 'held': v['held'], 'citers': {cit['doc']: len(cit['links']) for cit in citers},
+            'top_border': top or 'unmeasured: no stub at this view is bound above the visible view\'s top'}
+
+
 def step(ctx, em):
     """the camera over the first edition at an em, and what the frames that step drew show: the most documents any of
     them drew as bars under their own mounted text (`both`), and yielded to text that was not mounted (`neither`)"""
@@ -717,19 +825,25 @@ def run(ctx):
     off = [{'link': a['link'], 'pos': a['pos'], 'x': a['x'], 'y': a['y'], 'edge': a['edge'], 'words': a['words']} for a in anchors if not on_own_line(a)]
     r.check(not off, f'every beam leaves the text at its span\'s own line, from the article\'s edge: its endpoint\'s y within one of its words\' line rects and its x at the article\'s edge, {ANCHOR_TOL_PX} px either way', off[:4])
     # the stubs' labels (S1 Q3): every bundle with a beam that leaves the text in view and ends at the view's border sets the label naming its
-    # far document, in view; no two labels in view meet. A beam whose line lies past the viewport is shown to no one, its stub and label with it
+    # far document, in the visible view — below the one line, which stands over the beams; no two labels in view meet. A beam whose line lies
+    # past the viewport is shown to no one, its stub and label with it
     labels = ctx.js('window.__skep.beamLabels()')
     vp = ctx.js('window.__skep.view.viewport()')
-    view = {'x': 0, 'y': 0, 'w': vp['VW'], 'h': vp['VH']}
+    top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
+    view = {'x': 0, 'y': top, 'w': vp['VW'], 'h': vp['VH'] - top}
     stubbed = sorted({(a['near'], a['far']) for a in anchors if a['stub'] and 0 <= a['x'] <= vp['VW'] and 0 <= a['y'] <= vp['VH']})
     named = {(l['near'], l['far']) for l in labels if l['stub'] and l['text'].startswith(l['far']) and inside(l['rect'], view)}
-    r.check(bool(stubbed) and set(stubbed) <= named, f'every stub in view carries its far document\'s label: each bundle with a beam that leaves the text in view and ends at the view\'s border sets a label naming its far document, inside the viewport {LABEL_TOL_PX} px either way',
-            {'stubbed': stubbed, 'labels': [[l['far'], l['text'], l['rect']] for l in labels]})
+    r.check(bool(stubbed) and set(stubbed) <= named, f'every stub in view carries its far document\'s label: each bundle with a beam that leaves the text in view and ends at the view\'s border sets a label naming its far document, inside the visible view below the one line, {LABEL_TOL_PX} px either way',
+            {'stubbed': stubbed, 'labels': [[l['far'], l['text'], l['rect']] for l in labels], 'view': view})
     in_view = [l for l in labels if meets(l['rect'], view)]
     met = [[a['far'], b['far'], a['rect'], b['rect']] for i, a in enumerate(in_view) for b in in_view[i + 1:] if meets(a['rect'], b['rect'])]
     r.check(not met, f'no two beam labels in view meet, {LABEL_TOL_PX} px either way', met[:6], xfail=XFAIL_BEAM_LABELS)
+    # whether a beam stub at this view is bound above the visible view's top, whose label is set below its cut; none, and beams.test.js alone holds that rule
+    above = ctx.js('''((fars, top) => { const S = window.__skep, c = S.view.camera(), p = S.view.viewport();
+      return fars.filter((f) => { const b = S.boxOf(f); return (b.y + b.h / 2 - c.y) * c.scale + p.VH / 2 < top; }); })(%s, %s)''' % (json.dumps(sorted({a['far'] for a in anchors if a['stub']})), json.dumps(top)))
     r.figures['beams'] = {'count': len(anchors), 'stubs': sum(1 for a in anchors if a['stub']), 'far': sorted({a['far'] for a in anchors})[:8], 'on_own_line': len(anchors) - len(off), 'off_own_line': len(off),
-                          'stubs_in_view': len(stubbed), 'labels': len(labels), 'labels_in_view': len(in_view), 'labels_meeting_pairs': len(met)}
+                          'stubs_in_view': len(stubbed), 'labels': len(labels), 'labels_in_view': len(in_view), 'labels_meeting_pairs': len(met),
+                          'stubs_bound_above': above or 'unmeasured: no beam stub at em 12.5 is bound above the visible view\'s top'}
     # THE FACE under the reveal: others' links on too, and the model moved by a read (the ghost's, refused) so the face is
     # read from the model as it stands — the article holds in its box, at the face it was mounted at hidden
     ctx.js('window.__skep.links.setOthers(%s, true)' % json.dumps(DOC))
@@ -832,5 +946,6 @@ def run(ctx):
     r.figures['scene'] = scene_holds(ctx, r)
     r.figures['chrome'] = chrome_holds(ctx, r)
     r.figures['trail'] = trail_holds(ctx, r)
+    r.figures['stub'] = stub_holds(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()
