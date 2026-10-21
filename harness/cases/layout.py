@@ -23,8 +23,11 @@ ending at the view's edge as §2.5's stub does"): the camera over the first
 edition at S3's mid-extents, every document standing whole in view that
 cites FAR_LEAP — the place holding it, its box or the mark of the
 continuation holding it, out of view — is joined to that place by a
-connection ending in a stub bound for it, its count the links LK shows at
-that document whose far end that place holds; every stub's cut stands
+connection ending in a stub bound for it, counting the links LK shows at
+that document whose far end that place holds and carrying that count on its
+stroke where it holds two or more, none where it holds one (foundations
+§2.1's register: "one connection drawn per document pair with its count";
+P44); every stub's cut stands
 STUB_INSET_PX inside the visible view's border, on the true bearing from the
 centre of the place in view to the centre of the place it is bound for, its
 triangle drawn over the boxes at the border in its hue; and every connection
@@ -71,19 +74,25 @@ and at WHOLE BOARD, (i) every label the canvas set, the trail's pip numbers
 among them, is MIN_LABEL_PX or larger; (ii) every other label lies inside
 its place as the projection gives it — the board's label cell, an
 account's cell, a continuation's mark, a document's box — and inside the
-viewport; (iii) no two meet; (iv) none meets another place: the box of a
-document in view that no mark drawn the stronger holds, a continuation's
-mark, an account's cell that does not hold its place; (v) at mid scale and
-at HOME a document's label is its address past its region's prefix led by
-the separator, or its whole address; and the places with room carry their
-labels — at HOME every document standing whole in view and the
-continuation's mark, at WHOLE BOARD the board and the acting account's
-cluster. THE TYPE (the typography review's findings 10 and 17): every
-element of the first edition that sets text spaces its lines at 1.35 of its
-own size; the head's lines and the headings stand on P-LAY's line box for
-their size, as the engine lays it out (the rounding `lineBox` models, held
-here to the engine); each heading stands nearer the block it heads than the
-block above it. THE READING SCENE (foundations §2.5: "the two ends level, so
+viewport, a connection's count centred on its stroke, the segment between
+its two places' centres, inside the visible view below the one line; (iii)
+no two meet; (iv) none meets another place: the box of a document in view
+that no mark drawn the stronger holds, a continuation's mark, an account's
+cell that does not hold its place — a connection's count, no one account's,
+meeting no box and no mark; (v) at mid scale and at HOME a document's label
+is its address past its region's prefix led by the separator, or its whole
+address; (vi) every mid connection holding two links or more carries its
+count, the numeral of its links, or the pass names the rule that left it
+out, and none holding one carries a count; (vii) at S3's mid-extents and
+at HOME none is left out (P44: no merged mark hides its count); and the
+places with room carry their labels — at HOME every document standing
+whole in view and the continuation's mark, at WHOLE BOARD the board and the
+acting account's cluster. THE TYPE (the typography review's findings 10 and
+17): every element of the first edition that sets text spaces its lines at
+1.35 of its own size; the head's lines and the headings stand on P-LAY's
+line box for their size, as the engine lays it out (the rounding `lineBox`
+models, held here to the engine); each heading stands nearer the block it
+heads than the block above it. THE READING SCENE (foundations §2.5: "the two ends level, so
 position carries the match and the beam confirms it"): opened on the first
 edition and the draft it windows, and from the versions list of an edition
 with two members, a paragraph past its first held, the two ends' matched
@@ -313,11 +322,17 @@ def label_view(ctx):
     """the labels the last frame set and left out, beside the places the projection gives, on screen: the boxes of the
     documents in view that no mark drawn the stronger holds (none where the frame draws the clusters the stronger), the
     marks drawn the stronger, the accounts' cells, the board's label cell — the first of its user grid, three cells
-    across (P-PROJ's G) — and the box of each document labelled"""
-    return ctx.js('''(() => {
+    across (P-PROJ's G) — the box of each document labelled, the visible view below the one line, and each mid
+    connection drawn — its two places, named as a pair in sorted order, its count, the count set on it, and its places'
+    centres, a mark's the centre of its continuation's cell"""
+    return ctx.js('''(async () => {
+      const P = await import('./plane/projection.js');
       const S = window.__skep, c = S.view.camera(), p = S.view.viewport(), lod = S.view.lod();
       const scr = (b) => ({x: (b.x - c.x) * c.scale + p.VW / 2, y: (b.y - c.y) * c.scale + p.VH / 2, w: b.w * c.scale, h: b.h * c.scale});
-      const view = {x: 0, y: 0, w: p.VW, h: p.VH};
+      const view = {x: 0, y: 0, w: p.VW, h: p.VH}, top = document.getElementById('line').getBoundingClientRect().bottom;
+      const cell = (place) => { const i = place.indexOf(':'); return scr(i < 0 ? P.docBox(place) : P.continuationCell(place.slice(0, i), Number(place.slice(i + 1)))); };
+      const centre = (place) => { const b = cell(place); return {x: b.x + b.w / 2, y: b.y + b.h / 2}; };
+      const connections = S.connections().map((x) => ({place: [x.a, x.b].sort().join('|'), count: x.count, label: x.label ?? null, ends: [centre(x.a), centre(x.b)]}));
       const crosses = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
       const labels = S.labels();
       const marks = S.residues().filter((m) => m.alpha >= 0.5);
@@ -328,8 +343,8 @@ def label_view(ctx):
       const accounts = S.model.counts().filter((a) => !a.system).map((a) => ({place: a.account, rect: scr(S.accountCell(a.account))}));
       const b = S.boardCell('1');
       const docs = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => [l.place, scr(S.boxOf(l.place))]));
-      return {lod: lod.name, view, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})),
-              boxes, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, mounted: S.mountedAddrs()};
+      return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})),
+              boxes, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, connections, mounted: S.mountedAddrs()};
     })()''')
 
 
@@ -344,7 +359,8 @@ def meets(a, b):
 
 
 def place_of(v, label):
-    """a label's place on screen, as the projection gives it; None where the frame drew no such place"""
+    """a label's place on screen, as the projection gives it; None where the frame drew no such place — and for a
+    connection's count, whose place is its stroke (`on_stroke`)"""
     kind, place = label['kind'], label['place']
     if kind == 'board':
         return v['board']
@@ -357,24 +373,56 @@ def place_of(v, label):
     return None
 
 
+def on_stroke(v, label, line):
+    """does a connection's count stand on its stroke: its line's centre on the segment between its connection's two
+    places' centres, as the projection gives them, LABEL_TOL_PX either way, and the line inside the visible view?"""
+    c = next((c for c in v['connections'] if c['place'] == label['place']), None)
+    if c is None:
+        return False
+    a, b, q = c['ends'][0], c['ends'][1], line['rect']
+    px, py = q['x'] + q['w'] / 2, q['y'] + q['h'] / 2
+    dx, dy = b['x'] - a['x'], b['y'] - a['y']
+    t = max(0, min(1, ((px - a['x']) * dx + (py - a['y']) * dy) / ((dx * dx + dy * dy) or 1)))
+    return math.hypot(a['x'] + dx * t - px, a['y'] + dy * t - py) <= LABEL_TOL_PX and inside(q, v['seen'])
+
+
 def labels_hold(r, name, v):
-    """THE LABELS' checks at one view; its figures: the labels set by kind, the parts left out by rule"""
+    """THE LABELS' checks at one view; its figures: the labels set by kind, the parts left out by rule, the
+    connections' counts set and left out"""
     labels = v['labels']
     small = [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'px': x['px']} for l in labels for x in l['lines'] if x['px'] < MIN_LABEL_PX]
     r.check(not small, f'{name}: (i) every label the canvas set, the trail\'s pip numbers among them, is {MIN_LABEL_PX} px or larger', small[:6])
     placed = [(l, place_of(v, l), x) for l in labels if l['kind'] != 'pip' for x in l['lines']]
-    outside = [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'rect': x['rect'], 'place_rect': p} for l, p, x in placed if p is None or not inside(x['rect'], p) or not inside(x['rect'], v['view'])]
-    r.check(not outside, f'{name}: (ii) every label lies inside its place, as the projection gives it, and inside the viewport, {LABEL_TOL_PX} px either way', outside[:6])
+    outside = [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'rect': x['rect'], 'place_rect': p} for l, p, x in placed
+               if (not on_stroke(v, l, x) if l['kind'] == 'connection' else p is None or not inside(x['rect'], p) or not inside(x['rect'], v['view']))]
+    r.check(not outside, f'{name}: (ii) every label lies inside its place, as the projection gives it, and inside the viewport — a connection\'s count centred on its stroke, the segment between its two places\' centres, and inside the visible view below the one line — {LABEL_TOL_PX} px either way', outside[:6])
     crossing = [{'a': [a[0]['kind'], a[0]['place'], a[2]['text']], 'b': [b[0]['kind'], b[0]['place'], b[2]['text']]} for i, a in enumerate(placed) for b in placed[i + 1:] if meets(a[2]['rect'], b[2]['rect'])]
     r.check(not crossing, f'{name}: (iii) no two labels meet', crossing[:6])
     met = []
     for l, p, x in placed:
-        others = [('box', o) for o in v['boxes'] if o['place'] != l['place']] + [('mark', o) for o in v['marks'] if o['place'] != l['place']] + [('account', o) for o in v['accounts'] if p is None or not inside(p, o['rect'])]
+        others = [('box', o) for o in v['boxes'] if o['place'] != l['place']] + [('mark', o) for o in v['marks'] if o['place'] != l['place']]
+        if l['kind'] != 'connection':
+            others += [('account', o) for o in v['accounts'] if p is None or not inside(p, o['rect'])]
         met += [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'meets': [what, o['place']]} for what, o in others if meets(x['rect'], o['rect'])]
-    r.check(not met, f'{name}: (iv) no label meets another place: the box of a document in view that no mark drawn the stronger holds, a continuation\'s mark, an account\'s cell that does not hold its place', met[:6])
+    r.check(not met, f'{name}: (iv) no label meets another place: the box of a document in view that no mark drawn the stronger holds, a continuation\'s mark, an account\'s cell that does not hold its place — a connection\'s count, no one account\'s, meeting no box and no mark', met[:6])
     if name in ('mid-extents', 'home'):
         bare = [{'place': l['place'], 'label': l['lines'][0]['text']} for l in labels if l['kind'] == 'doc' and not (l['lines'][0]['text'] == l['place'] or (l['lines'][0]['text'].startswith('.') and l['place'].endswith(l['lines'][0]['text'])))]
         r.check(not bare, f'{name}: (v) a document\'s label is its address past its region\'s prefix led by the separator (".0.3"), or its whole address — never a bare field that reads as a number', bare[:6])
+    # the connections' counts (foundations §2.1's register: "one connection drawn per document pair with its count"; P44 forbids a merged mark
+    # that hides it): the numeral of its links on each holding two or more, else the rule that left it out named; none on one holding one
+    conns = v['connections']
+    counts = {l['place']: l['lines'][0]['text'] for l in labels if l['kind'] == 'connection'}
+    left = {o['place']: o['reason'] for o in v['out'] if o['kind'] == 'connection'}
+    wrong = [{'place': c['place'], 'count': c['count'], 'carries': c['label'], 'set': counts.get(c['place']), 'left_out': left.get(c['place'])} for c in conns
+             if (c['count'] >= 2 and not (counts.get(c['place']) == c['label'] == str(c['count']) or (c['label'] is None and c['place'] in left)))
+             or (c['count'] < 2 and (c['label'] is not None or c['place'] in counts or c['place'] in left))]
+    stray = sorted((set(counts) | set(left)) - {c['place'] for c in conns})
+    r.check(not wrong and not stray, f'{name}: (vi) every mid connection holding two links or more carries its count on its stroke — the numeral of its links — or the pass names the rule that left it out; none holding one carries a count, and no count stands for a connection the frame did not draw',
+            {'wrong': wrong[:6], 'stray': stray[:6]})
+    if name in ('mid-extents', 'home'):
+        hidden = [[c['place'], c['count'], left.get(c['place'])] for c in conns if c['count'] >= 2 and c['label'] != str(c['count'])]
+        r.check(any(c['count'] >= 2 for c in conns) and not hidden, f'{name}: (vii) no count is hidden — every mid connection holding two links or more carries it',
+                {'hidden': hidden, 'connections': [[c['place'], c['count'], c['label']] for c in conns][:12]})
     if name == 'home':
         labelled = {l['place'] for l in labels if l['kind'] == 'doc'}
         whole = [o['place'] for o in v['boxes'] if inside(o['rect'], v['view']) and o['place'] not in v['mounted']]
@@ -388,7 +436,11 @@ def labels_hold(r, name, v):
         by_kind[l['kind']] = by_kind.get(l['kind'], 0) + 1
     for o in v['out']:
         by_rule[o['reason']] = by_rule.get(o['reason'], 0) + 1
-    return {'lod': v['lod'], 'set': by_kind, 'left_out': by_rule, 'left_out_parts': [[o['kind'], o['place'], o['text'][:48], o['reason']] for o in v['out'] if o['reason'] != 'after'][:12]}
+    counts_out = {}
+    for reason in left.values():
+        counts_out[reason] = counts_out.get(reason, 0) + 1
+    return {'lod': v['lod'], 'set': by_kind, 'left_out': by_rule, 'left_out_parts': [[o['kind'], o['place'], o['text'][:48], o['reason']] for o in v['out'] if o['reason'] != 'after'][:12],
+            'counts': {'connections': len(conns), 'holding_two_or_more': sum(1 for c in conns if c['count'] >= 2), 'set': len(counts), 'left_out': counts_out}}
 
 
 def type_view(ctx):
@@ -873,7 +925,7 @@ def stub_view(ctx):
         const ca = centre(x.a), cb = centre(x.b), t = x.stub && x.stub.triangle;
         const at = t ? {x: (t[0].x + t[1].x + t[2].x) / 3, y: (t[0].y + t[1].y + t[2].y) / 3} : null;
         const over = at ? tris.filter((u) => holds(at, u.triangle)).pop() : null;
-        return {a: x.a, b: x.b, count: x.count, stub: x.stub, in_a: seen(ca), in_b: seen(cb), centre_a: ca, centre_b: cb, centroid: at, pixel: at ? px(at) : null,
+        return {a: x.a, b: x.b, count: x.count, label: x.label ?? null, stub: x.stub, in_a: seen(ca), in_b: seen(cb), centre_a: ca, centre_b: cb, centroid: at, pixel: at ? px(at) : null,
                 ink: over ? rgb(over.hue) : null, ink_alpha: over ? over.alpha : null};
       });
       const there = centre(far);
@@ -912,7 +964,11 @@ def stub_holds(ctx, r):
     askew = {'%s|%s' % k: a for k, a in angles.items() if a > STUB_BEARING_DEG}
     r.check(bool(stubs) and not askew, f'every stub stands on the true bearing: its cut on the ray from the centre of the place in view to the centre of the place it is bound for, as the projection gives them, within {STUB_BEARING_DEG}°', askew)
     miscount = [{'doc': cit['doc'], 'count': pair[cit['doc']] and pair[cit['doc']]['count'], 'links': cit['links']} for cit in citers if not (pair[cit['doc']] and cit['links'] and pair[cit['doc']]['count'] == len(cit['links']))]
-    r.check(bool(citers) and not miscount, 'each citing document\'s stub carries its connection\'s count: the links LK shows there whose far end\'s document the plane draws and the place holds, each once', miscount)
+    r.check(bool(citers) and not miscount, 'each citing document\'s connection to that place counts the links LK shows there whose far end\'s document the plane draws and the place holds, each once', miscount)
+    uncarried = [{'doc': cit['doc'], 'links': len(cit['links']), 'carries': pair[cit['doc']] and pair[cit['doc']]['label']} for cit in citers
+                 if (pair[cit['doc']] and pair[cit['doc']]['label']) != (str(len(cit['links'])) if len(cit['links']) >= 2 else None)]
+    r.check(any(len(cit['links']) >= 2 for cit in citers) and not uncarried, 'each citing document\'s stub carries that count on its stroke where it holds two links or more — the numeral of those links — and none where it holds one',
+            {'uncarried': uncarried, 'citers': {cit['doc']: len(cit['links']) for cit in citers}})
     wrong = [{'a': c['a'], 'b': c['b'], 'in_a': c['in_a'], 'in_b': c['in_b'], 'stub': c['stub'] and c['stub']['toward']} for c in conns
              if (c['in_a'] != c['in_b']) != bool(c['stub']) or (c['stub'] and c['stub']['toward'] != (c['b'] if c['in_a'] else c['a']))]
     r.check(bool(stubs) and not wrong, 'every connection with one place in the visible view and the other out of it, and no other, ends in a stub bound for the place out of view: none is bound for a place in view', wrong[:6])
@@ -923,7 +979,7 @@ def stub_holds(ctx, r):
     unseen = [{'a': c['a'], 'b': c['b'], 'centroid': c['centroid'], 'pixel': c['pixel'], 'hue': c['ink'], 'alpha': c['ink_alpha']} for c in stubs if not inked(c)]
     r.check(bool(stubs) and not unseen, 'every stub\'s triangle is drawn over the boxes at the view\'s border: the plane\'s pixel at its centroid is the hue of the last triangle drawn there, at full alpha, and neither the box\'s ground nor the plane\'s at less', {'unseen': unseen[:6], 'grounds': v['grounds']})
     top = [[c['a'], c['b'], c['stub']['cut']] for c in stubs if abs(c['stub']['cut']['y'] - y0) <= STUB_TOL_PX]
-    return {'connections': len(conns), 'stubs': [[c['a'], c['b'], c['count'], c['stub']['cut'], round(angles[(c['a'], c['b'])], 4), c['pixel']] for c in stubs],
+    return {'connections': len(conns), 'stubs': [[c['a'], c['b'], c['count'], c['label'], c['stub']['cut'], round(angles[(c['a'], c['b'])], 4), c['pixel']] for c in stubs],
             'far': far, 'held': v['held'], 'citers': {cit['doc']: len(cit['links']) for cit in citers},
             'top_border': top or 'unmeasured: no stub at this view is bound above the visible view\'s top'}
 

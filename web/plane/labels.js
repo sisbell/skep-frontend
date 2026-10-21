@@ -11,18 +11,25 @@
 // ellipsis (F-9: "cut to the extent"). P-RENDER hands the pass every label
 // once every place's shapes are drawn, in the order the places were drawn —
 // the board, the clusters, the account frames, the continuations' marks, the
-// documents — and the pass sets each one only where, wrapped at its spaces
-// to its place's width by the canvas's measure, it lies whole inside its
-// place and inside the viewport, and meets no other place's shape (a
-// cluster's mark, a box, a continuation's mark) and no label set before it.
-// Through a crossfade a place drawn the weaker — an alpha below a half —
-// sets no label and blocks none, as the click takes the stronger (P-LOD's
-// `residueDepth`).
+// documents — then each mid connection's count, and the pass sets each one
+// only where, wrapped at its spaces to its place's width by the canvas's
+// measure, it lies whole inside its place and inside the viewport, and meets
+// no other place's shape (a cluster's mark, a box, a continuation's mark) and
+// no label set before it. Through a crossfade a place drawn the weaker — an
+// alpha below a half — sets no label and blocks none, as the click takes the
+// stronger (P-LOD's `residueDepth`).
+// A CONNECTION'S COUNT (foundations §2.1's register: "one connection drawn
+// per document pair with its count"; P44, which forbids a merged mark that
+// hides its count) names a pair of places and no shape, so every place's
+// shape blocks it; it stands on its stroke where its room meets none of them
+// (`onStroke`): the clear stretch nearest the stroke's middle, between its two
+// ends and inside the visible view.
 // Rules: FP-1, FP-2, FP-8, FP-10 (no state).
 
 import { LABEL_MIN_PX } from './register.js';
 
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect a screen rect */
+/** @typedef {{x: number, y: number}} Point a screen point */
 
 /** a label's line box, in its size's em */
 export const LINE_BOX = 1.2;
@@ -56,12 +63,12 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
  * @property {string} [weight] its face's weight; the regular where absent
  */
 
-/** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'doc' | 'pip'} LabelKind the place a label names; 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
+/** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'doc' | 'connection' | 'pip'} LabelKind the place a label names; 'connection' a mid connection's count; 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
 
 /**
  * @typedef {Object} Label — a label a drawing function hands the pass
  * @property {LabelKind} kind
- * @property {string} place the place it names: a board, an account, a continuation's `account:k`, a document
+ * @property {string} place the place it names: a board, an account, a continuation's `account:k`, a document; a connection's two places, `a|b` in sorted order (`pairOf`)
  * @property {Rect} within the room its place gives it, on screen
  * @property {number} x its lines' left edge; their centre where `align` is 'center'
  * @property {number} y its first line's top
@@ -232,4 +239,56 @@ export function setLabels(labels, shapes, view, measure) {
     parts.slice(i).forEach((p, j) => out.push({ kind: l.kind, place: l.place, text: p.text, reason: j || !why ? 'after' : why }));
   }
   return { set, out };
+}
+
+/**
+ * A connection's two places as one name, whichever end it was met from: the
+ * `place` its count is set under, the pair in sorted order as LK keys it.
+ * @param {string} a
+ * @param {string} b
+ */
+export const pairOf = (a, b) => [a, b].sort().join('|');
+
+/**
+ * Where a connection's count stands on its stroke (see the head): the middle
+ * of the stretch nearest the stroke's own middle along which a room of
+ * `room`, centred on the stroke, lies wholly between the lines square to the
+ * stroke through its two ends, inside the visible view, and meets no shape
+ * drawn the stronger — so the pass sets it there; where no stretch is clear,
+ * the stroke's middle, where the pass judges it by its rules as every label.
+ * @param {Point} p the stroke's start: the centre of the place it leaves
+ * @param {Point} q its end: the centre of the place it reaches, or a stub's triangle's base
+ * @param {{w: number, h: number}} room the count's room, its plate
+ * @param {Shape[]} shapes every place's shape the frame drew
+ * @param {Rect} seen the visible view
+ * @returns {Point} the room's centre
+ */
+export function onStroke(p, q, room, shapes, seen) {
+  const dx = q.x - p.x, dy = q.y - p.y, len2 = dx * dx + dy * dy;
+  const hw = room.w / 2, hh = room.h / 2;
+  const at = (/** @type {number} */ t) => ({ x: p.x + dx * t, y: p.y + dy * t });
+  if (!len2) return at(0);
+  /** the stretch of the stroke, [t0, t1] of 0–1, along which the room's centre lies inside `r`; null where none */
+  const across = (/** @type {Rect} */ r) => {
+    let t0 = 0, t1 = 1;
+    for (const [d, lo, hi] of [[dx, r.x - p.x, r.x + r.w - p.x], [dy, r.y - p.y, r.y + r.h - p.y]]) {
+      if (!d) { if (lo > 0 || hi < 0) return null; continue; }
+      t0 = Math.max(t0, Math.min(lo / d, hi / d)); t1 = Math.min(t1, Math.max(lo / d, hi / d));
+    }
+    return t0 <= t1 ? [t0, t1] : null;
+  };
+  const open = (/** @type {Array<[number, number]>} */ xs) => xs.filter(([a, b]) => b > a);
+  // how far the room reaches along the stroke from its centre, in the stroke's lengths
+  const reach = (Math.abs(dx) * hw + Math.abs(dy) * hh) / len2;
+  const view = across({ x: seen.x + hw, y: seen.y + hh, w: seen.w - 2 * hw, h: seen.h - 2 * hh });
+  /** @type {Array<[number, number]>} */
+  let clear = view ? open([[Math.max(view[0], reach), Math.min(view[1], 1 - reach)]]) : [];
+  for (const s of shapes) {
+    if (s.alpha < STRONGER) continue;
+    const c = across({ x: s.rect.x - hw, y: s.rect.y - hh, w: s.rect.w + 2 * hw, h: s.rect.h + 2 * hh });
+    if (c) clear = open(clear.flatMap(([a, b]) => /** @type {Array<[number, number]>} */ ([[a, Math.min(b, c[0])], [Math.max(a, c[1]), b]])));
+  }
+  const off = (/** @type {[number, number]} */ [a, b]) => (a > 0.5 ? a - 0.5 : b < 0.5 ? 0.5 - b : 0);
+  const best = clear.reduce((m, x) => (off(x) < off(m) ? x : m), clear[0]);
+  return best ? at((best[0] + best[1]) / 2) : at(0.5);
 }

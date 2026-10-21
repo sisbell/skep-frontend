@@ -16,13 +16,14 @@
 // bands and lines beside their passages' lines (`scene.ties`), the
 // continuations' marks the canvas drew (`residues`:
 // each one's count, newest member, members, the lines set on it and its
-// screen rect), the mid connections it drew between places, each one bound
-// for a place out of view with its stub at the view's border (`connections`),
-// the labels it set (`labels`: each one's kind, place, lines — their text,
-// size and screen rect — and the room its place gave it, the trail's pip
-// numbers among them) and the parts of labels it left out with the rule that
-// left each out (`labelsLeftOut`), S3's camera paths (`runPath`) and the
-// frame buffer —
+// screen rect), the mid connections it drew between places, each with its
+// count and the count set on its stroke, each one bound for a place out of
+// view with its stub at the view's border (`connections`), the labels it set
+// (`labels`: each one's kind, place, lines — their text, size and screen
+// rect — and the room its place gave it, the connections' counts and the
+// trail's pip numbers among them) and the parts of labels it left out with
+// the rule that left each out (`labelsLeftOut`), S3's camera paths
+// (`runPath`) and the frame buffer —
 // each frame's count of documents both drawn and mounted, and of documents
 // yielded and not mounted — the bridge client's own call
 // log, the settle signal, the trail, the line's and the overlay's text, the
@@ -403,9 +404,9 @@ export function install(deps) {
     beamLabels: () => BM.labels(),
     /** the continuations the last frame drew as marks */
     residues: () => RENDER.stats.residueMarks.slice(),
-    /** the mid connections the last frame drew, each between two places — a document, or a mark's `key` — with its count, and where one place stands out of the visible view its stub: the place it is bound for, the centre it leaves, its cut, its triangle, its hue and alpha */
+    /** the mid connections the last frame drew, each between two places — a document, or a mark's `key` — with its count and the count the label pass set on its stroke (`label`, null where it set none), and where one place stands out of the visible view its stub: the place it is bound for, the centre it leaves, its cut, its triangle, its hue and alpha */
     connections: () => RENDER.stats.connections.slice(),
-    /** the labels the last frame set, in the order they were set, the trail's pip numbers last */
+    /** the labels the last frame set, in the order they were set — a connection's count under its two places, `a|b` sorted — the trail's pip numbers last */
     labels: () => RENDER.stats.labels.slice(),
     /** the parts of labels the last frame left out, each with the rule that left it out */
     labelsLeftOut: () => RENDER.stats.labelsLeftOut.slice(),

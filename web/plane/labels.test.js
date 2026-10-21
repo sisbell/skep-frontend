@@ -5,10 +5,16 @@
 // place's bottom left out with every part after it; no label meeting another
 // place's shape or a label set before it; through a crossfade the weaker
 // side setting nothing and blocking nothing; and, over many random frames,
-// every line set inside its place and the viewport, no two lines meeting.
+// every line set inside its place and the viewport, no two lines meeting. A
+// CONNECTION'S COUNT: its pair named alike from either end; on its stroke at
+// the middle where nothing meets it there, else in the clear stretch nearest
+// the middle, never past the stroke's ends nor out of the visible view, a
+// place drawn the weaker blocking nothing, the middle where nothing is clear
+// and the pass then leaving it out; and, over many random strokes, wherever
+// a stroke has room clear of every place, the pass sets the count there.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { setLabels, sizeOf, lineHeight, LINE_BOX } from './labels.js';
+import { setLabels, sizeOf, lineHeight, onStroke, pairOf, LINE_BOX } from './labels.js';
 import { LABEL_MIN_PX } from './register.js';
 
 /** @typedef {import('./labels.js').Label} Label */
@@ -142,4 +148,111 @@ test('over many random frames every line is set at the floor or above, inside it
     for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++) assert.ok(!meets(lines[i].rect, lines[j].rect), `${lines[i].text} meets ${lines[j].text}`);
   }
   assert.ok(setLines > 100, `the frames set lines (${setLines}): the invariants are held over labels set, not over none`);
+});
+
+test('a connection\'s two places are one name, whichever end it was met from', () => {
+  assert.equal(pairOf('1.0.1:1', '1.0.1.0.14'), '1.0.1.0.14|1.0.1:1');
+  assert.equal(pairOf('1.0.1.0.14', '1.0.1:1'), pairOf('1.0.1:1', '1.0.1.0.14'));
+});
+
+/** a count's room as P-RENDER sets one: its numeral's own line at the floor, its plate */
+const roomOf = (/** @type {string} */ text) => ({ w: measure(text, LABEL_MIN_PX), h: LH });
+/** a count as P-RENDER hands it to the pass: its numeral centred on `at`, its room clipped to the visible view */
+function countLabel(/** @type {{x: number, y: number}} */ at, /** @type {string} */ text, /** @type {Rect} */ seen) {
+  const room = roomOf(text);
+  const x0 = Math.max(at.x - room.w / 2, seen.x), y0 = Math.max(at.y - room.h / 2, seen.y);
+  const within = { x: x0, y: y0, w: Math.max(0, Math.min(at.x + room.w / 2, seen.x + seen.w) - x0), h: Math.max(0, Math.min(at.y + room.h / 2, seen.y + seen.h) - y0) };
+  return label([part(text)], { kind: 'connection', place: pairOf('A', 'B'), within, x: at.x, y: at.y - room.h / 2, align: 'center', plate: '#000' });
+}
+const near = (/** @type {number} */ a, /** @type {number} */ b) => Math.abs(a - b) < 1e-9;
+
+test('a count stands at its stroke\'s middle where nothing meets it there', () => {
+  const at = onStroke({ x: 100, y: 100 }, { x: 300, y: 200 }, roomOf('2'), [], VIEW);
+  assert.ok(near(at.x, 200) && near(at.y, 150), JSON.stringify(at));
+  assert.equal(run([countLabel(at, '2', VIEW)]).set.length, 1);
+});
+
+test('a place over the stroke\'s middle moves the count to the clear stretch nearest the middle, where the pass sets it; at the middle it would meet the place', () => {
+  const p = { x: 100, y: 100 }, q = { x: 300, y: 100 }, room = roomOf('2');
+  /** @type {Array<[Rect, 'left' | 'right']>} a place over the middle, reaching nearer the stroke's start, then nearer its end */
+  const cases = [[{ x: 180, y: 80, w: 60, h: 40 }, 'left'], [{ x: 160, y: 80, w: 60, h: 40 }, 'right']];
+  for (const [box, side] of cases) {
+    const shapes = [{ place: 'X', rect: box, alpha: 1 }];
+    const at = onStroke(p, q, room, shapes, VIEW);
+    assert.ok(near(at.y, 100), 'on the stroke');
+    assert.ok(side === 'left' ? at.x + room.w / 2 <= box.x : at.x - room.w / 2 >= box.x + box.w, `on the place's ${side}, its room clear of it: ${at.x}`);
+    assert.equal(run([countLabel(at, '2', VIEW)], shapes).set.length, 1, 'the pass sets it there');
+    assert.equal(run([countLabel({ x: 200, y: 100 }, '2', VIEW)], shapes).out[0].reason, 'meets', 'at the stroke\'s middle it would meet the place');
+  }
+});
+
+test('a gap between two places narrower than the count\'s room holds no count, however near the middle: the count stands in the clear stretch beyond', () => {
+  // the stroke's middle at x 250 in a 3 px gap between two places; the count's room is 5.4 px wide
+  const p = { x: 100, y: 100 }, q = { x: 400, y: 100 }, room = roomOf('2');
+  const shapes = [{ place: 'X', rect: { x: 150, y: 80, w: 96.5, h: 40 }, alpha: 1 }, { place: 'Y', rect: { x: 249.5, y: 80, w: 80.5, h: 40 }, alpha: 1 }];
+  const at = onStroke(p, q, room, shapes, VIEW);
+  assert.ok(near(at.y, 100) && at.x - room.w / 2 >= 330, `past the second place, its room clear of it: ${at.x}`);
+  assert.equal(run([countLabel(at, '2', VIEW)], shapes).set.length, 1, 'the pass sets it there');
+  assert.equal(run([countLabel({ x: 248, y: 100 }, '2', VIEW)], shapes).out[0].reason, 'meets', 'in the gap it would meet a place');
+});
+
+test('the count\'s room stands wholly between the stroke\'s ends: past the place it leaves, short of a stub\'s triangle\'s base', () => {
+  // a stroke down from a place's centre to a stub's triangle's base, 12 px of it past the place's box: room for a line box, and no more
+  const p = { x: 100, y: 100 }, q = { x: 100, y: 160 }, room = roomOf('2');
+  const at = onStroke(p, q, room, [{ place: 'X', rect: { x: 80, y: 60, w: 40, h: 88 }, alpha: 1 }], VIEW);
+  assert.ok(near(at.x, 100) && at.y - room.h / 2 >= 148 - 1e-9 && at.y + room.h / 2 <= q.y + 1e-9, `between the box's bottom at 148 and the base at 160: ${at.y - room.h / 2}–${at.y + room.h / 2}`);
+});
+
+test('the count stands inside the visible view: a stroke whose middle lies under the one line sets its count below the line', () => {
+  const seen = { x: 0, y: 30, w: 1000, h: 770 }, room = roomOf('3');
+  const at = onStroke({ x: 500, y: -60 }, { x: 500, y: 100 }, room, [], seen);
+  assert.ok(near(at.x, 500) && at.y - room.h / 2 >= seen.y - 1e-9, `below the line's bottom at ${seen.y}: ${at.y - room.h / 2}`);
+  assert.equal(run([countLabel(at, '3', seen)]).set.length, 1);
+  assert.equal(run([countLabel({ x: 500, y: 20 }, '3', seen)]).set.length, 0, 'at the stroke\'s middle its room would stand under the line');
+});
+
+test('a place drawn the weaker blocks no count', () => {
+  const at = onStroke({ x: 100, y: 100 }, { x: 300, y: 100 }, roomOf('2'), [{ place: 'X', rect: { x: 180, y: 80, w: 60, h: 40 }, alpha: 0.4 }], VIEW);
+  assert.ok(near(at.x, 200) && near(at.y, 100));
+});
+
+test('where no stretch of the stroke is clear the count stands at its middle, and the pass leaves it out', () => {
+  const shapes = [{ place: 'X', rect: { x: 0, y: 0, w: 400, h: 400 }, alpha: 1 }];
+  const at = onStroke({ x: 100, y: 100 }, { x: 300, y: 200 }, roomOf('2'), shapes, VIEW);
+  assert.deepEqual(at, { x: 200, y: 150 });
+  assert.deepEqual(run([countLabel(at, '2', VIEW)], shapes).out.map((o) => o.reason), ['meets']);
+});
+
+test('over many random strokes a count stands on its stroke, and wherever the stroke has room clear of every place drawn the stronger, the pass sets it there: inside the visible view, between the ends, meeting no such place', () => {
+  let seed = 11;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  /** any overlap at all: the oracle's own, stricter than the pass's half px */
+  const overlaps = (/** @type {Rect} */ a, /** @type {Rect} */ b) => Math.min(a.x + a.w, b.x + b.w) > Math.max(a.x, b.x) && Math.min(a.y + a.h, b.y + b.h) > Math.max(a.y, b.y);
+  let clear = 0, moved = 0;
+  for (let frame = 0; frame < 400; frame++) {
+    const top = rnd() * 40, seen = { x: 0, y: top, w: 1000, h: 800 - top };
+    /** @type {Shape[]} */
+    const shapes = Array.from({ length: Math.floor(rnd() * 24) }, (_, i) => ({ place: 'p' + i, rect: { x: rnd() * 1000 - 60, y: rnd() * 800 - 60, w: 15 + rnd() * 160, h: 15 + rnd() * 200 }, alpha: rnd() }));
+    const p = { x: rnd() * 1000, y: rnd() * 800 }, q = { x: rnd() * 1000, y: rnd() * 800 };
+    const dx = q.x - p.x, dy = q.y - p.y, len = Math.hypot(dx, dy);
+    if (len < 1) continue;
+    const text = String(2 + Math.floor(rnd() * 40)), room = roomOf(text);
+    const at = onStroke(p, q, room, shapes, seen);
+    const t = ((at.x - p.x) * dx + (at.y - p.y) * dy) / (len * len);
+    assert.ok(Math.abs((at.x - p.x) * dy - (at.y - p.y) * dx) <= 1e-6 * len && t >= -1e-9 && t <= 1 + 1e-9, `on the stroke: ${JSON.stringify({ p, q, at })}`);
+    // the oracle: a spot on the stroke whose room lies inside the visible view, between the ends, and apart from every place drawn the stronger
+    const reach = (Math.abs(dx) * room.w / 2 + Math.abs(dy) * room.h / 2) / len;
+    const roomAt = (/** @type {number} */ s) => ({ x: p.x + dx * s - room.w / 2, y: p.y + dy * s - room.h / 2, ...room });
+    const fits = (/** @type {number} */ s) => { const r = roomAt(s); return r.x >= seen.x && r.y >= seen.y && r.x + r.w <= seen.x + seen.w && r.y + r.h <= seen.y + seen.h && s * len >= reach && (1 - s) * len >= reach && shapes.every((sh) => sh.alpha < 0.5 || !overlaps(r, sh.rect)); };
+    if (!Array.from({ length: 1001 }, (_, i) => i / 1000).some(fits)) continue;
+    clear++;
+    if (!fits(0.5)) moved++;
+    const r = run([countLabel(at, text, seen)], shapes);
+    assert.equal(r.set.length, 1, `the stroke has room clear of every place, and the pass sets the count there: ${JSON.stringify({ p, q, at, out: r.out })}`);
+    const line = r.set[0].lines[0].rect;
+    assert.ok(inside(line, seen), 'inside the visible view');
+    assert.ok(t * len >= reach - 1e-6 && (1 - t) * len >= reach - 1e-6, 'its room between the stroke\'s ends');
+    for (const sh of shapes) if (sh.alpha >= 0.5) assert.ok(!meets(line, sh.rect), `${text} meets ${sh.place}`);
+  }
+  assert.ok(clear > 200 && moved > 30, `strokes with room (${clear}), of them ones whose middle a place takes (${moved}): the rule is held over counts moved off the middle, not over none`);
 });

@@ -31,7 +31,13 @@
 // its stroke cut at the view's border on the true bearing, the cut P-CAM's
 // `edgeStub` that BM's beams share (foundations §2.1: "one whose far end is
 // out of view ending at the view's edge as §2.5's stub does"); two places
-// both out of view joined only where the frame draws both; THE LABELS —
+// both out of view joined only where the frame draws both; a connection
+// holding more than one link carrying its COUNT, the bare numeral, on its
+// stroke where the stroke runs clear of every place — before a stub's
+// triangle — over a plate of the plane's ground, so the line passes behind
+// its number (foundations §2.1's register: "one connection drawn per
+// document pair with its count"; P44 forbids a merged mark that hides it;
+// P-LABEL's `onStroke`); THE LABELS —
 // every string the canvas sets but the trail's pip numbers — handed to
 // P-LABEL's one pass once every place's shapes are drawn, and set over them
 // at no less than P-REG's LABEL_MIN_PX, each only where its place holds it
@@ -55,10 +61,11 @@
 // T-LAYER's frame BEFORE this draw, so what is mounted is settled when a
 // document's label and bars are drawn or yielded; `stats` names both sets,
 // and the loop holds them against the mounted set at the frame's end; it
-// names the marks, the connections — each stub with the place it is bound
-// for, its cut and its triangle — and the labels drawn too, the labels'
-// parts left out with the rule that left each out, the box the focus ring
-// outlined and the arrival mark's rects, for the gate. The hit tests read the
+// names the marks, the connections — each with its count and the numeral the
+// pass set on it, each stub with the place it is bound for, its cut and its
+// triangle — and the labels drawn too, the labels' parts left out with the
+// rule that left each out, the box the focus ring outlined and the arrival
+// mark's rects, for the gate. The hit tests read the
 // draw's own rule: a click meets a document's box only where the box stands
 // whole, and a continuation's mark wherever the mark holds its documents.
 // The system account's rows are never drawn (the record §1.8; this lane's
@@ -77,8 +84,8 @@ import { cam, sx, sy, wx, wy, viewport, viewportWorld, visibleView, edgeStub, st
 import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
 import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt } from './projection.js';
 import { layoutOf, bars } from './layout.js';
-import { setLabels, sizeOf, lineHeight, LINE_BOX } from './labels.js';
-import { COL, EDGE, HUE } from './register.js';
+import { setLabels, sizeOf, lineHeight, onStroke, pairOf, LINE_BOX } from './labels.js';
+import { COL, EDGE, HUE, LABEL_MIN_PX } from './register.js';
 import { documentOf, accountOf, cmpAddr } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
 import { t } from '../strings.js';
@@ -125,6 +132,7 @@ import { t } from '../strings.js';
  * @property {string} b the place the other end stands at
  * @property {number} count the links it holds, each once
  * @property {Stub | null} stub where one place stands in the visible view and the other out of it; null for a line
+ * @property {string | null} label the count the label pass set on its stroke; null where it set none — a connection holding one link, or one whose count the pass left out (`stats.labelsLeftOut` names why)
  */
 
 /** @type {HTMLCanvasElement | null} */
@@ -137,11 +145,12 @@ let DPR = 1;
  * set or whose bars the frame drew, `yielded` the ones it left to T-LAYER's
  * mount, `residueMarks` the continuations drawn as marks, `connections` the
  * mid connections drawn, each between two places, a stub where one of them
- * stands out of view, `labels` the labels set —
- * the trail's pip numbers among them — `labelsLeftOut` the parts the pass
- * left out, each with the rule that left it out, `ring` the focused element's
- * box on screen the focus ring outlined, null where it drew none, and
- * `arrival` the rects the arrival mark outlined.
+ * stands out of view, the count set on its stroke where the pass set one,
+ * `labels` the labels set — the connections' counts and the trail's pip
+ * numbers among them — `labelsLeftOut` the parts the pass left out, each with
+ * the rule that left it out, `ring` the focused element's box on screen the
+ * focus ring outlined, null where it drew none, and `arrival` the rects the
+ * arrival mark outlined.
  */
 export const stats = {
   linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0,
@@ -442,6 +451,8 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   const seen = visibleView(LINE.bottom());
   const centreOf = (/** @type {string} */ key) => { const c = /** @type {Cell} */ (cells.get(key)); return { x: sx(c.x + c.w / 2), y: sy(c.y + c.h / 2) }; };
   const inView = (/** @type {Point} */ p) => p.x >= seen.x && p.x <= seen.x + seen.w && p.y >= seen.y && p.y <= seen.y + seen.h;
+  /** @type {Array<{place: string, count: number, p: Point, q: Point}>} each connection holding more than one link, and the stroke its count stands on: to the far place's centre, or to the stub's triangle's base */
+  const counted = [];
   let drawn = 0;
   if (lod.docPx > 6) {
     ctx.lineWidth = Math.min(1.6, 0.4 + lod.docPx / 300);
@@ -460,7 +471,8 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
       ctx.globalAlpha = alpha * 0.3 * c.mark.value; ctx.strokeStyle = c.mark.hue;
       ctx.setLineDash(Array.isArray(c.mark.form) ? c.mark.form : []);
       ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke(); ctx.setLineDash([]); drawn++;
-      stats.connections.push({ a: c.a, b: c.b, count: c.count, stub });
+      stats.connections.push({ a: c.a, b: c.b, count: c.count, stub, label: null });
+      if (c.count > 1) counted.push({ place: pairOf(c.a, c.b), count: c.count, p, q: stub ? { x: (stub.triangle[1].x + stub.triangle[2].x) / 2, y: (stub.triangle[1].y + stub.triangle[2].y) / 2 } : q });
     }
   }
   stats.linksDrawn = drawn;
@@ -511,6 +523,16 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     }
     if (set) stats.drawn.push(d.addr);
   }
+  // each connection's count, once every place's shape is drawn: on its stroke where its room meets none of them (P-LABEL's `onStroke`), the
+  // room the numeral's own line, which the pass holds clear, and its plate, the plane's ground the line passes behind
+  const cpx = sizeOf(LABEL_MIN_PX), lh = lineHeight(LABEL_MIN_PX);
+  for (const k of counted) {
+    const text = String(k.count), w = measure(text, cpx, 'normal');
+    const at = onStroke(k.p, k.q, { w, h: lh }, pass.shapes, seen);
+    const x0 = Math.max(at.x - w / 2, seen.x), y0 = Math.max(at.y - lh / 2, seen.y);
+    const within = { x: x0, y: y0, w: Math.max(0, Math.min(at.x + w / 2, seen.x + seen.w) - x0), h: Math.max(0, Math.min(at.y + lh / 2, seen.y + seen.h) - y0) };
+    pass.labels.push({ kind: 'connection', place: k.place, within, x: at.x, y: at.y - lh / 2, align: 'center', alpha, plate: COL.bg, parts: [{ text, px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }] });
+  }
   ctx.globalAlpha = 1;
   return vis.length;
 }
@@ -519,8 +541,8 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
  * The labels' one pass (P-LABEL): every label the places handed over, set
  * over their shapes, each line on the plate its place asks for, laid across
  * the label's room; `stats` takes the labels set and the parts left out,
- * each mark the lines set on it, and `drawn` each document whose label was
- * set.
+ * each mark the lines set on it, each connection the count set on it, and
+ * `drawn` each document whose label was set.
  * @param {Pass} pass
  */
 function drawLabels(pass) {
@@ -540,6 +562,8 @@ function drawLabels(pass) {
   c.globalAlpha = 1; c.textBaseline = 'alphabetic';
   stats.labels = set; stats.labelsLeftOut = out;
   for (const mk of stats.residueMarks) { const l = set.find((x) => x.kind === 'mark' && x.place === mk.key); mk.lines = l ? l.lines.map((x) => x.text) : []; }
+  const counts = new Map(set.filter((l) => l.kind === 'connection').map((l) => [l.place, l.lines[0].text]));
+  for (const cn of stats.connections) cn.label = counts.get(pairOf(cn.a, cn.b)) ?? null;
   const drawn = new Set(stats.drawn);
   for (const l of set) if (l.kind === 'doc' && !drawn.has(l.place)) stats.drawn.push(l.place);
 }

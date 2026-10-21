@@ -14,8 +14,9 @@ box of its own, or, deep in its account's continuations, inside the
 continuation drawn as one mark; at HOME the account's first continuation is
 ONE mark (foundations §2.1; P44) carrying law 13's count of what it holds and
 its newest member's label, the mid connections into it end at it and at none
-of its members, each counting its links once, and a click on it teleports to
-that newest member; a ghost address answers its face. "Shown" is
+of its members, each counting its links once and carrying that count on its
+stroke where it holds two or more, and a click on it teleports to that
+newest member; a ghost address answers its face. "Shown" is
 measured, not read off the DOM: the page's `visible` oracle says whether a
 block, a mark or a corner lies inside the clip the page draws and the
 viewport — text the DOM holds past a clip is shown to no one."""
@@ -273,7 +274,13 @@ def run(ctx):
         })()''' % (json.dumps(members), json.dumps(sorted(into))))
         r.check(bool(linked) and into == linked, 'each document standing whole that draws a link to a document the mark holds is joined to the MARK by one connection counting those links, each once, and no other is',
                 {'drawn': into, 'links': linked})
-        r.figures['home_mark'] = dict({k: mark[k] for k in ('k', 'n', 'exact', 'newest', 'lines', 'rect')}, connections_to_mark={'drawn': into, 'links': linked})
+        # the count on the stroke (foundations §2.1's register: "one connection drawn per document pair with its count"; P44 forbids a merged
+        # mark that hides it): the numeral of LK's links, read apart from the canvas, where the connection holds two or more; none where one
+        carried = {(c['b'] if c['a'] == mark['key'] else c['a']): c.get('label') for c in conns if mark['key'] in (c['a'], c['b'])}
+        miscarried = {d: {'links': linked.get(d), 'carries': n} for d, n in carried.items() if n != (str(linked[d]) if linked.get(d, 0) >= 2 else None)}
+        r.check(any(n >= 2 for n in linked.values()) and not miscarried, 'each connection into the mark carries its count on its stroke where it holds two links or more — the numeral of those links — and none where it holds one',
+                {'miscarried': miscarried, 'carried': carried})
+        r.figures['home_mark'] = dict({k: mark[k] for k in ('k', 'n', 'exact', 'newest', 'lines', 'rect')}, connections_to_mark={'drawn': into, 'links': linked, 'carried': carried})
         # the mark's act, as a person presses it: a teleport to the newest member, landed at reading scale
         rect = mark['rect']
         ctx.drv.mouse(rect['x'] + rect['w'] / 2, rect['y'] + rect['h'] / 2)
