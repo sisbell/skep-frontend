@@ -1,8 +1,9 @@
 // T-LAYER — THE ONE RECONCILER (the structure record §3.2 "T-LAYER"; FP-12:
 // one reconciler, two targets — the plane's text layer and the reading
 // scene's panes; the scene BORROWS this mount). Layer 2. ENGINE-BOUND. State:
-// VIEW — the mounted set with each record's layout scale, revision, blocks,
-// marks and whether it takes the pointer, the corners beside it, whether a
+// VIEW — the mounted set with each record's layout scale, revision, what it
+// was made from, marks and whether it takes the pointer, the corners beside
+// it, what each reading scene's pane's article was made from, whether a
 // press stands on the layer, and the platform's selection as it stood over an
 // article taken down — THE ONE OWNER (FP-10). Mount an article when a
 // document crosses S1's mount threshold (em 6.5, BELOW the canvas's readable
@@ -93,11 +94,21 @@
 // the platform's own keys (D5 K-71) go on extending it from there. What no
 // interface carries is macOS's "no direction yet" of a selection a pointer
 // made: put back, it extends from its anchor, as one a key extended does.
-// The reading scene's panes borrow that mapping (`rangeIn`) to find where a
-// passage stands. The copy event
-// carries the passage's board and address beside the plain text and never in
-// it (§2.4), in a flavor only a skep client reads; the plain text is the
-// document's own bytes over the span, no label of the page among them.
+// THE READING SCENE'S PANES BORROW THE MOUNT (`sceneArticle`; the structure
+// record §3.4 (vii)): each pane's article is made here, T-ARTICLE's
+// scene-mode variant laid out by the pane's own style, and what it was made
+// from is kept beside it as a mounted article's is (`madeOf`) — its
+// document's blocks and runs as the model held them, which the model
+// replaces whole and never edits in place, so they stay the article's own
+// while it stands, whatever the model has delivered since. Every position in
+// an article is mapped through them (`rangeIn`): the scene finds a passage
+// in a pane so. The copy of any selection in an article — a mounted one, or
+// a pane's, where a drag selects as it does on the plane (§2.5) — carries
+// the passage's board and address beside the plain text and never in it
+// (§2.4), in a flavor only a skep client reads; the plain text is the
+// document's own bytes over the span, as the article was made from them, no
+// label of the page among them: a range that starts in an article's head
+// starts at its first block.
 // Carries: the wireframe's §16 `mount`/`unmount`/`place`/`S1.frame`; S1's
 // `mount`, `place`, `S1.frame`; `driftSample` and `overlapCheck` become
 // gate hooks (`web/gate/hooks.js` reads `mounted`).
@@ -116,8 +127,16 @@ import { fingerprintCue } from '../util.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
+/** @typedef {import('../model/frames.js').Run} Run */
 /** @typedef {import('./article.js').ArticleView} ArticleView */
 /** @typedef {import('./span.js').Span} Span */
+
+/**
+ * @typedef {Object} Made — what an article was made from: its document, and the blocks and runs the model held of it as the article was made. The model replaces a document's blocks and runs whole and never edits them in place, so these stay the article's own while it stands, whatever the model has delivered since: every position in the article is mapped through them (`rangeIn`), and a copy takes its bytes from them (`onCopy`)
+ * @property {string} addr the document
+ * @property {Block[]} blocks
+ * @property {Run[]} runs
+ */
 
 /**
  * @typedef {Object} Mounted
@@ -127,13 +146,12 @@ import { fingerprintCue } from '../util.js';
  * @property {number} runFrom
  * @property {number} runTo
  * @property {number} rev the document's revision at mount
- * @property {Block[]} blocks the blocks the article was made from: the model replaces a document's blocks whole and never edits them in place, so these stay the article's own while it stands, whatever the model has delivered since
+ * @property {Made} made what the article was made from
  * @property {number} grev the view revision at mount
  * @property {number} fs the document's em in world units
  * @property {number} x0 the text column's left edge in the box (world units)
  * @property {number} y0 the article's first line's top in the box (world units)
  * @property {string} corner the corner's items at mount (T-ARTICLE's `cornerHTML`); empty where it has none
- * @property {'plane' | 'scene'} target
  * @property {Array<{pos: number, top: number, left: number}>} [blockTops] each block's offset in the one 16 px layout (the gate's span registration)
  * @property {Array<{el: HTMLElement, b: Block}>} marked each block's element with the block it shows: the elements the selection's and the focus's marks stand on
  * @property {string} markedFor the selection and the focus its blocks are marked for (`marksKey`)
@@ -171,6 +189,8 @@ const CORNER_GAP = 8;
 
 /** @type {Map<string, Mounted>} */
 const mounted = new Map();
+/** @type {WeakMap<HTMLElement, Made>} what each reading scene's pane's article was made from, by its element (`sceneArticle`), for as long as the element lives */
+const panes = new WeakMap();
 /** @type {Map<string, Corner>} the corners on the plane, by document */
 const corners = new Map();
 /** @type {Map<string, Face>} each document's face, by document — a cache of `metricsOf`, a function of the model */
@@ -297,6 +317,9 @@ function fittedFace(d) {
   return m;
 }
 
+/** what an article made from a document now is made from: the document's blocks and runs as the model holds them */
+const madeFrom = (/** @type {Doc} */ d) => ({ addr: d.addr, blocks: d.blocks, runs: d.runs });
+
 /**
  * Mount a document's article over its box — laid out once at LAY_FS, its
  * column `cpl` characters of its face (`metricsOf`): the column P-LAY wraps
@@ -307,6 +330,7 @@ function fittedFace(d) {
 function mount(d) {
   if (!layer || mounted.has(d.addr) || d.from < 0) return null;
   const t0 = performance.now();
+  const made = madeFrom(d);
   const m = metricsOf(d);
   const lay = LAY_FS / m.fs;
   const el = document.createElement('article');
@@ -326,13 +350,13 @@ function mount(d) {
   const sps = /** @type {HTMLElement[]} */ ([...el.querySelectorAll('.sp')]);
   // each block's place in the one layout (16 px), fractional (offsetTop rounds): the gate holds every later frame to it, scaled — a reflow would move a line
   const blockTops = sps.map((e) => { const r = e.getBoundingClientRect(); return { pos: Number(e.dataset.pos), top: r.top - art.top, left: r.left - art.left }; });
-  const byPos = new Map(d.blocks.map((b) => [b.pos, b]));
+  const byPos = new Map(made.blocks.map((b) => [b.pos, b]));
   const marked = sps.flatMap((e) => { const b = byPos.get(Number(e.dataset.pos)); return b ? [{ el: e, b }] : []; });
   /** @type {Mounted} */
-  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, blocks: d.blocks, grev, fs: m.fs, x0: m.x0, y0: m.y0, corner: cornerHTML(d, v), target: 'plane', blockTops, marked, markedFor: marksKey(d.addr, v.selected, v.focus), legible: false };
+  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fs: m.fs, x0: m.x0, y0: m.y0, corner: cornerHTML(d, v), blockTops, marked, markedFor: marksKey(d.addr, v.selected, v.focus), legible: false };
   mounted.set(d.addr, rec);
   place(rec);
-  mountLog.push({ addr: d.addr, ms: performance.now() - t0, blocks: d.blocks.length, emPx: m.fs * cam.scale });
+  mountLog.push({ addr: d.addr, ms: performance.now() - t0, blocks: made.blocks.length, emPx: m.fs * cam.scale });
   if (mountLog.length > 500) mountLog.shift();
   return rec;
 }
@@ -655,29 +679,57 @@ function posOfPoint(b, el, node, offset, side) {
 }
 
 /**
- * The span a platform range covers in a mounted article: the article the
- * range starts in (else ends in), the first and last of its blocks the range
- * touches — the blocks the article was made from — each end carried to its
- * byte position; null where the range is collapsed, lies outside the plane's
- * mounted articles, or touches no block.
+ * What an article was made from (`Made`): a mounted article's, or a reading
+ * scene's pane's (`sceneArticle`); null where the element is neither.
+ * @param {HTMLElement} el the article's element
+ * @returns {Made | null}
+ */
+export function madeOf(el) {
+  const rec = mounted.get(el.dataset.addr || '');
+  return rec && rec.el === el ? rec.made : panes.get(el) || null;
+}
+
+/** the article a range starts in, else the one it ends in; null where it lies in none */
+function articleOfRange(/** @type {Range} */ range) {
+  const at = (/** @type {Node} */ n) => { const e = elementOf(n); return e ? /** @type {HTMLElement | null} */ (e.closest('article.dtext')) : null; };
+  return at(range.startContainer) || at(range.endContainer);
+}
+
+/**
+ * The span a platform range covers in an article: the first and last of the
+ * blocks the article was made from that the range touches, each end carried
+ * to its byte position — an end outside its block names that block's edge,
+ * so a range that starts in the article's head starts at its first block;
+ * null where the range is collapsed or touches no block.
+ * @param {HTMLElement} el the article's element
+ * @param {Made} made what the article was made from
  * @param {Range} range
  * @returns {Span | null}
  */
-export function spanOfRange(range) {
+function spanIn(el, made, range) {
   if (range.collapsed) return null;
-  const at = (/** @type {Node} */ n) => { const e = elementOf(n); return e ? /** @type {HTMLElement | null} */ (e.closest('article.dtext')) : null; };
-  const art = at(range.startContainer) || at(range.endContainer);
-  const addr = art ? art.dataset.addr || '' : '';
-  const rec = addr ? mounted.get(addr) : undefined;
-  if (!art || !rec || rec.el !== art) return null;
-  const hit = blockEls(rec.el)
-    .map((el) => ({ el, b: rec.blocks.find((x) => x.pos === Number(el.dataset.pos)) || null }))
+  const hit = blockEls(el)
+    .map((e) => ({ el: e, b: made.blocks.find((x) => x.pos === Number(e.dataset.pos)) || null }))
     .filter((x) => x.b && range.intersectsNode(x.el));
   if (!hit.length) return null;
   const first = hit[0], last = hit[hit.length - 1];
   const p0 = posOfPoint(/** @type {Block} */ (first.b), first.el, range.startContainer, range.startOffset, 'start');
   const p1 = posOfPoint(/** @type {Block} */ (last.b), last.el, range.endContainer, range.endOffset, 'end');
-  return p1 > p0 ? { addr, pos: p0, width: p1 - p0 } : null;
+  return p1 > p0 ? { addr: made.addr, pos: p0, width: p1 - p0 } : null;
+}
+
+/**
+ * The span a platform range covers in a mounted article (`spanIn`): the
+ * article the range starts in, else ends in; null where that is no mounted
+ * article — a reading scene's pane's among them, whose selection is never the
+ * page's — or the range covers no span of it.
+ * @param {Range} range
+ * @returns {Span | null}
+ */
+export function spanOfRange(range) {
+  const art = articleOfRange(range);
+  const rec = art ? mounted.get(art.dataset.addr || '') : undefined;
+  return art && rec && rec.el === art ? spanIn(art, rec.made, range) : null;
 }
 
 /** the platform's selection as a span of a mounted article, or null where none stands there */
@@ -715,21 +767,23 @@ function pointOfPos(b, el, pos, side) {
  */
 export function rangeOf(span) {
   const rec = mounted.get(span.addr);
-  return rec ? rangeIn(rec.el, rec, span) : null;
+  return rec ? rangeIn(rec.el, span) : null;
 }
 
 /**
- * The platform range over a span in an element holding a document's article
- * as T-ARTICLE made it — a mounted article, or a reading scene's pane, which
- * borrows this mapping as it borrows the article — its ends carried from byte
- * positions to character boundaries of the blocks' own text, the chrome
- * skipped; null where the span lies in none of the blocks.
+ * The platform range over a span in an article — a mounted one, or a
+ * reading scene's pane's, which borrows this mapping as it borrows the
+ * article — its ends carried from byte positions to character boundaries of
+ * the blocks the article was made from (`madeOf`), never the model's newest,
+ * the chrome skipped; null where the element is no such article, the span is
+ * another document's, or it lies in none of those blocks.
  * @param {HTMLElement} el the article's element
- * @param {{blocks: Block[]}} made what the article was made from: a document, or a mounted article's record, whose blocks are the article's own
  * @param {Span} span
  * @returns {Range | null}
  */
-export function rangeIn(el, made, span) {
+export function rangeIn(el, span) {
+  const made = madeOf(el);
+  if (!made || made.addr !== span.addr) return null;
   const els = blockEls(el);
   const elOf = (/** @type {Block} */ b) => els.find((e) => Number(e.dataset.pos) === b.pos) || null;
   const end = span.pos + span.width;
@@ -805,13 +859,24 @@ export function symbolRect(/** @type {string} */ addr, /** @type {string} */ lin
 }
 
 /**
- * The scene borrows the mount (FP-12's second target): an article's HTML for
- * a pane, laid out by the pane's own CSS, never transformed. The scene owns
- * the pane's element; this is the one place the HTML is made.
+ * A document's article for a reading scene's pane — the scene borrows the
+ * mount (FP-12's second target; the structure record §3.4 (vii)): T-ARTICLE's
+ * scene-mode variant, laid out by the pane's own style and never
+ * transformed, and never hidden from assistive technology as the plane's
+ * articles are, a pane's text being what it reads there; what it was made
+ * from is kept beside it (`madeOf`) for as long as the element lives. The
+ * scene places the element in its pane; this is the one place it is made.
  * @param {Doc} d
- * @returns {string}
+ * @returns {HTMLElement}
  */
-export function sceneArticle(d) { return articleHTML(d, viewFor(d, true), ownerAccount(d)); }
+export function sceneArticle(d) {
+  const el = document.createElement('article');
+  el.className = 'dtext scene';
+  el.dataset.addr = d.addr;
+  el.innerHTML = articleHTML(d, viewFor(d, true), ownerAccount(d));
+  panes.set(el, madeFrom(d));
+  return el;
+}
 
 /**
  * A document's article as P-LAY's plan — the rows the canvas's bars are laid
@@ -852,21 +917,29 @@ export function clear() {
 }
 
 /**
- * The copy event's addition (§2.4): the passage's board and address beside
- * the plain text and never in it, in a flavor only a skep client reads —
- * the span the platform's selection covers, as `{board, addr, pos, width}`.
- * The plain text is the document's own bytes over that span, so a paste
- * anywhere else carries the passage alone and no label of the page (a
- * hairline's, a mark's, a symbol's, a count's). A selection outside the
- * layer leaves the event to the platform.
+ * The copy event's addition (§2.4): the copy of any selection in an article —
+ * a mounted one, or a reading scene's pane's, where a drag selects as it does
+ * on the plane (§2.5) — carries the passage's board and address beside the
+ * plain text and never in it, in a flavor only a skep client reads, as
+ * `{board, addr, pos, width}`: the span the platform's selection covers in
+ * the article it starts in, else ends in (`spanIn`), through the blocks that
+ * article was made from. The plain text is the document's own bytes over
+ * that span as the article was made from them — the bytes the person
+ * selected, whatever the model has delivered since — so a paste anywhere else
+ * carries the passage alone and no label of the page (the head's, a
+ * hairline's, a mark's, a symbol's, a count's). A selection in no article
+ * leaves the event to the platform.
  * @param {{clipboardData: {setData(format: string, data: string): void} | null, preventDefault(): void}} e the clipboard event (the gate's door hands a stub)
  * @param {string} board the board's origin
  * @returns {Span | null} the span copied
  */
 export function onCopy(e, board) {
-  const span = spanOfSelection();
-  if (!span || !e.clipboardData) return null;
-  e.clipboardData.setData('text/plain', REC.textBetween(span.addr, span.pos, span.pos + span.width));
+  const s = window.getSelection();
+  if (!s || s.rangeCount === 0 || s.isCollapsed || !e.clipboardData) return null;
+  const range = s.getRangeAt(0), art = articleOfRange(range), made = art ? madeOf(art) : null;
+  const span = art && made ? spanIn(art, made, range) : null;
+  if (!span || !made) return null;
+  e.clipboardData.setData('text/plain', REC.textOf(made.runs, span.pos, span.pos + span.width));
   e.clipboardData.setData('application/x-skep-passage', JSON.stringify({ board, addr: span.addr, pos: span.pos, width: span.width }));
   e.preventDefault();
   return span;

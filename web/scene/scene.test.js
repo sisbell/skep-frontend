@@ -29,6 +29,11 @@
 // reads the opener again turns red; one opened with the focus on nothing
 // returns it to the walk's element, never to the top — a mutant that leaves
 // it on nothing turns red.
+// And each pane's article, T-LAYER's mount (FP-12): made from the blocks and
+// runs the scene read and kept beside it, pane A's after its corner and pane
+// B's before it, so each corner stands on its pane's outer side (a mutant
+// that makes a pane's article itself, or sets both after their corners,
+// turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -132,14 +137,17 @@ before(() => {
  */
 function page() {
   const body = { id: 'the body', focus() {} };
-  const doc = { body, activeElement: /** @type {{id: string}} */ (body) };
-  /** an element; `takes` whether the platform's focus lands on it now */
+  const doc = { body, activeElement: /** @type {{id: string}} */ (body), createElement: (/** @type {string} */ tag) => element('a new ' + tag) };
+  /** an element; `takes` whether the platform's focus lands on it now; `placed` the elements put in it, each with how */
   const element = (/** @type {string} */ id, takes = () => true) => {
+    /** @type {Array<{how: 'append' | 'prepend', el: unknown}>} */
+    const placed = [];
     const e = {
       id, isConnected: true, innerHTML: '', dataset: /** @type {Record<string, string>} */ ({}), style: {}, inert: false, tabIndex: -1,
-      scrollTop: 0, scrollHeight: 0, clientTop: 0, clientWidth: 600, clientHeight: 400,
+      scrollTop: 0, scrollHeight: 0, clientTop: 0, clientWidth: 600, clientHeight: 400, placed,
       focus() { if (takes()) doc.activeElement = e; },
       blur() { if (doc.activeElement === e) doc.activeElement = body; },
+      append(/** @type {unknown} */ el) { placed.push({ how: 'append', el }); }, prepend(/** @type {unknown} */ el) { placed.unshift({ how: 'prepend', el }); },
       setAttribute() {}, removeAttribute() {}, addEventListener() {}, getContext: () => null,
       getBoundingClientRect: () => ({ top: 0, left: 0, right: 600, bottom: 400, width: 600, height: 400 }),
       /** @type {(s: string) => unknown} */ querySelector: () => null,
@@ -168,7 +176,7 @@ function page() {
   const at = () => doc.activeElement.id;
   /** the plane's two regions: is each inert? */
   const covered = () => [mirror.inert, corners.inert];
-  return { doc, item, corner, line, at, covered };
+  return { doc, item, corner, line, paneA, paneB, at, covered };
 }
 
 /** the test run on a page of stand-ins, the platform's `document` put back after it */
@@ -218,4 +226,18 @@ test('a focus the person moved out of the scene stays where they put it; one ope
   assert.equal(p.at(), 'pane B');
   SCENE.close();
   assert.equal(p.at(), 'the walk\'s current item', 'a scene opened with the focus on nothing — the scene-offer\'s click — returns it to the walk\'s element: never lost, never to the top');
+}));
+
+// ---- the panes' articles: T-LAYER's mount ------------------------------------------------------------------------------
+
+test('each pane holds T-LAYER\'s article of its document, made from the text the scene read, on the inner side of its corner', () => onPage(async (p) => {
+  await SCENE.open(A, B);
+  const [a, b] = [p.paneA.placed, p.paneB.placed];
+  assert.deepEqual([a.map((x) => x.how), b.map((x) => x.how)], [['append'], ['prepend']], 'pane A\'s article after its corner, pane B\'s before it: each corner on its pane\'s outer side');
+  assert.ok(p.paneA.innerHTML.includes(`data-corner="${A}"`) && p.paneB.innerHTML.includes(`data-corner="${B}"`), 'each pane\'s corner its own document\'s');
+  for (const [addr, placed] of /** @type {const} */ ([[A, a[0]], [B, b[0]]])) {
+    const d = REC.doc(addr);
+    assert.deepEqual(LAYER.madeOf(/** @type {any} */ (placed.el)), { addr, blocks: d.blocks, runs: d.runs }, `${addr}: the pane's article is T-LAYER's, made from the blocks and runs the scene read`);
+  }
+  assert.deepEqual(fake.unanswered, []);
 }));

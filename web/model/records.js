@@ -289,7 +289,9 @@ export function takeRefused(/** @type {string} */ addr, /** @type {'unregistered
 
 /**
  * A delivery merged into the document's runs: adjacent content runs join,
- * the blocks are re-derived, the window [from, to) widened.
+ * the blocks are re-derived, the window [from, to) widened. The document is
+ * given new runs and new blocks, and the ones it held are left as they were,
+ * as `invalidate` leaves them: an article made from them keeps them.
  * @param {string} addr
  * @param {Run[]} runs
  */
@@ -345,21 +347,37 @@ export function deriveBlocks(runs) {
   return out;
 }
 
+/**
+ * The block of a set of blocks holding a position: a document's as the model
+ * holds them (`blockAt`), or the ones an article was made from.
+ * @param {Block[]} blocks
+ * @param {number} pos
+ * @returns {Block | null}
+ */
+export const blockIn = (blocks, pos) => blocks.find((b) => pos >= b.pos && pos < b.pos + b.width) || null;
 /** the block holding a position, where delivered */
 export function blockAt(/** @type {string} */ addr, /** @type {number} */ pos) {
-  const d = state.docs.get(addr); if (!d) return null;
-  return d.blocks.find((b) => pos >= b.pos && pos < b.pos + b.width) || null;
+  const d = state.docs.get(addr);
+  return d ? blockIn(d.blocks, pos) : null;
 }
 /** the block keyed by its first position */
 export function blockByPos(/** @type {string} */ addr, /** @type {number} */ pos) {
   const d = state.docs.get(addr); if (!d) return null;
   return d.blocks.find((b) => b.pos === pos) || null;
 }
-/** the text of a document's delivered content between two positions (bytes), for a passage's first words */
-export function textBetween(/** @type {string} */ addr, /** @type {number} */ p0, /** @type {number} */ p1) {
-  const d = state.docs.get(addr); if (!d) return '';
+/**
+ * The text of a set of delivered runs between two positions (bytes): the
+ * characters whose first byte lies in [p0, p1), a run that is not content (a
+ * withheld run, an atom, a reference, hex) adding none. A document's runs as
+ * the model holds them (`textBetween`), or the ones an article was made from.
+ * @param {Run[]} runs
+ * @param {number} p0
+ * @param {number} p1
+ * @returns {string}
+ */
+export function textOf(runs, p0, p1) {
   let out = '';
-  for (const r of d.runs) {
+  for (const r of runs) {
     if (r.kind !== 'content' || r.pos >= p1 || r.pos + r.width <= p0) continue;
     const offs = byteOffsets(r.text);
     let i0 = 0; while (i0 < r.text.length && r.pos + offs[i0] < p0) i0++;
@@ -367,6 +385,11 @@ export function textBetween(/** @type {string} */ addr, /** @type {number} */ p0
     out += r.text.slice(i0, i1);
   }
   return out;
+}
+/** the text of a document's delivered content between two positions (bytes), for a passage's first words */
+export function textBetween(/** @type {string} */ addr, /** @type {number} */ p0, /** @type {number} */ p1) {
+  const d = state.docs.get(addr);
+  return d ? textOf(d.runs, p0, p1) : '';
 }
 
 /**

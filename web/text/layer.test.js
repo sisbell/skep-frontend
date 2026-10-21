@@ -24,6 +24,12 @@
 // a reading scene's pane alike: its origin's, by the one rule the byline's
 // owner is found by, whoever owns the document windowing it (a view that
 // hands the article's owner back turns red).
+// And what an article was made from, on the plane and in a reading scene's
+// pane alike: its document's blocks and runs as the model held them, kept
+// through a feed row naming the document and a delivery of other text, so its
+// positions are mapped and its bytes copied through the text it shows (a pane
+// whose article keeps nothing, or a record that answers the model's newest,
+// turns red).
 // And the camera's zoom-in bound, which every face read here reaches: a
 // residue member of two hundred one-line paragraphs, set at under a fifth of
 // its place's em, is read at reading scale (a face that leaves the bound at
@@ -304,11 +310,42 @@ test('a guest meets a withheld run named for its origin\'s owner, whoever owns t
   const head = esc(t('B1.withheld-run', { owner: '1.0.2', account: '1.0.2', width, origin: O }));
   const arm = (/** @type {string} */ owner) => esc(t('R56.key-absent', { owner }));
   /** @type {Array<[string, string]>} */
-  const met = [['on the plane', String(rec.el.innerHTML)], ['in a pane', LAYER.sceneArticle(d)]];
+  const met = [['on the plane', String(rec.el.innerHTML)], ['in a pane', String(LAYER.sceneArticle(d).innerHTML)]];
   for (const [where, html] of met) {
     assert.ok(html.includes(`<span class="wh-head">${head}</span><span class="arm">${arm('1.0.2')}</span>`), `${where}: the head and R56's key-absent arm name 1.0.2, the owner of the run's origin`);
     assert.ok(!html.includes(arm('1.0.1')), `${where}: no arm names 1.0.1, the owner of the document windowing the run`);
   }
+}));
+
+// ---- what an article was made from -------------------------------------------------------------------------------------
+
+test('an article keeps what it was made from — its document\'s blocks and runs as the model held them — through a feed row and a new delivery: a reading scene\'s pane\'s as a mounted one\'s', () => onLayer(() => {
+  const text = 'Tumbler.\n\nThe passage a reader selected.', n = new TextEncoder().encode(text).length;
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+  const d = REC.doc(D), box = docBox(D);
+  CAM.set({ x: box.x + box.w / 2, y: box.y + box.h / 2, scale: 12 / LAYER.metricsOf(d).fs });
+  LAYER.frame();
+  const rec = LAYER.mountedSet().get(D);
+  assert.ok(rec, 'at em 12 its article stands on the plane');
+  const pane = LAYER.sceneArticle(d);
+  assert.deepEqual([pane.className, pane.dataset.addr], ['dtext scene', D], 'the pane\'s article: T-ARTICLE\'s scene-mode variant, keyed by its document');
+  const blocks = d.blocks, runs = d.runs;
+  /** @type {Array<[string, HTMLElement]>} */
+  const made = [['on the plane', rec.el], ['in a pane', pane]];
+  for (const [where, el] of made) assert.deepEqual(LAYER.madeOf(el), { addr: D, blocks, runs }, `${where}: made from the document's blocks and runs as the model held them`);
+  // a feed row naming the document drops what the model held of it; its reads deliver other text
+  REC.invalidate(D);
+  const edited = 'Tumbler.\n\nAnother passage now.', m = new TextEncoder().encode(edited).length;
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: m }]);
+  REC.takeDelivery(D, [{ pos: 1, width: m, kind: 'content', text: edited, ref: null, origin: null }]);
+  assert.equal(REC.textBetween(D, 11, 22), 'Another pas', 'the model holds the new text');
+  for (const [where, el] of made) {
+    const kept = LAYER.madeOf(el);
+    assert.ok(kept && kept.blocks === blocks && kept.runs === runs, `${where}: the article's own blocks and runs, never the model's newest`);
+    assert.equal(kept && REC.textOf(kept.runs, 11, 22), 'The passage', `${where}: its bytes are the text it shows`);
+  }
+  assert.equal(LAYER.madeOf(/** @type {any} */ ({ dataset: { addr: D } })), null, 'an element that is neither a mounted article nor a pane\'s was made from nothing');
 }));
 
 // ---- the zoom-in bound -------------------------------------------------------------------------------------------------

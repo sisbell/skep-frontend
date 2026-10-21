@@ -301,10 +301,12 @@ export function install(deps) {
   function paneRect(/** @type {HTMLElement} */ pane) { const r = pane.getBoundingClientRect(); return { x: r.left + pane.clientLeft, y: r.top + pane.clientTop, w: pane.clientWidth, h: pane.clientHeight }; }
   /**
    * A passage in a reading scene's pane as the person meets it, read now
-   * through T-LAYER's byte-span mapping over the pane's article: the first
-   * line it stands on (the first client rect of its range) and its first
-   * characters, white space collapsed; with no width, the passage runs to
-   * the end of the block holding `pos`. Null where the scene is not open.
+   * through T-LAYER's byte-span mapping over the pane's article and the
+   * blocks it was made from (`madeOf`) — the text the pane shows, whatever
+   * the model has delivered since: the first line it stands on (the first
+   * client rect of its range) and its first characters, white space
+   * collapsed; with no width, the passage runs to the end of the block holding
+   * `pos`. Null where the scene is not open.
    * @param {'a' | 'b'} side
    * @param {number} pos
    * @param {number | null} [width]
@@ -313,10 +315,11 @@ export function install(deps) {
     const p = SCENE.pair(), pane = paneOf(side);
     if (!p || !pane) return null;
     const addr = side === 'a' ? p.a : p.b;
-    const b = REC.blockAt(addr, pos);
-    const w = width ?? (b ? b.pos + b.width - pos : 1);
     const art = /** @type {HTMLElement | null} */ (pane.querySelector('article.dtext'));
-    const range = art ? LAYER.rangeIn(art, REC.doc(addr), { addr, pos, width: Math.max(1, w) }) : null;
+    const made = art ? LAYER.madeOf(art) : null;
+    const b = made ? REC.blockIn(made.blocks, pos) : null;
+    const w = width ?? (b ? b.pos + b.width - pos : 1);
+    const range = art ? LAYER.rangeIn(art, { addr, pos, width: Math.max(1, w) }) : null;
     const r = range ? [...range.getClientRects()].find((q) => q.width > 0 && q.height > 0) : null;
     return { addr, pos, line: r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null, text: range ? range.toString().replace(/\s+/g, ' ').trim().slice(0, 60) : null, pane: paneRect(pane) };
   }

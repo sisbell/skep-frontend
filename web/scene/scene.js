@@ -17,9 +17,14 @@
 // SHARED IDENTITY as BANDS from `compare`'s pairs, each run of contiguous
 // pairs one band (`merged`; no link); each leaves its pane at its passage's
 // first line — measured, through T-LAYER's byte-span mapping over the pane's
-// article, when the scene is set level or its panes change size, and moved
-// with each pane's scroll — and one whose end has left its pane is clipped at
-// the pane's edge with the stub's triangle. Whatever ends it — zoom-out, Esc,
+// article and the blocks it was made from, when the scene is set level or its
+// panes change size, and moved with each pane's scroll — and one whose end
+// has left its pane is clipped at the pane's edge with the stub's triangle.
+// Each pane shows its document as the scene opened it, and every position in
+// it — the levelled ends', each band's and line's — is mapped through that
+// text, whatever the model has delivered since (whether a pane follows a feed
+// row naming its document, re-read and rebuilt in its place, is the design's
+// open question). Whatever ends it — zoom-out, Esc,
 // ←, the bar's ×, or a navigation act (a teleport, Back, Forward, a trail
 // jump), which ends it first, "a teleport dismissing the scene first" (§2.5)
 // — leaves the plane as it was and the trail as it found it (`close`): the
@@ -49,8 +54,12 @@
 // it holds, and ↓ and ↑ in it move by BLOCK — the next block's top brought to
 // the pane's top (K-60; D1's first stage) — PageDown and PageUp by most of a
 // pane, Home and End to its ends. The panes BORROW the one reconciler's mount
-// (FP-12: `T-LAYER.sceneArticle` makes the HTML, `T-LAYER.rangeIn` finds a
-// passage in it; the scene keeps no DOM text of its own). Each pane carries
+// (FP-12; the structure record §3.4 (vii): `T-LAYER.sceneArticle` makes each
+// pane's article and keeps what it was made from, `T-LAYER.rangeIn` finds a
+// passage in it through those blocks, and a drag in it selects as it does on
+// the plane, its copy carrying the passage's board and address beside the
+// plain text, as T-LAYER's copy event does for any article — §2.4, §2.5; the
+// scene keeps no DOM text of its own). Each pane carries
 // its own document's corner (ux-T2: "each pane its own"; `T-LAYER.sceneCorner`
 // makes its items) on its OUTER side — pane A's left, pane B's right — held
 // to the top of the pane's scroll, so the bands and lines leave the inner
@@ -263,8 +272,9 @@ export async function open(a, b, held = {}) {
     (els.bar.dataset.face ? ` <span class="face-text">${esc(t(els.bar.dataset.face === 'too_many_pairs' ? 'B1.too_many_pairs' : els.bar.dataset.face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: els.bar.dataset.face }))}</span>` : '') +
     ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
   const corner = (/** @type {string} */ addr, /** @type {import('../model/records.js').Doc} */ d) => `<div class="corner" data-corner="${esc(addr)}">${LAYER.sceneCorner(d)}</div>`;
-  els.paneA.innerHTML = corner(a, da) + `<article class="dtext scene" data-addr="${esc(a)}">${LAYER.sceneArticle(da)}</article>`;
-  els.paneB.innerHTML = `<article class="dtext scene" data-addr="${esc(b)}">${LAYER.sceneArticle(db)}</article>` + corner(b, db);
+  // each pane's article T-LAYER's mount, its corner on the pane's outer side: pane A's before the article, pane B's after
+  els.paneA.innerHTML = corner(a, da); els.paneA.append(LAYER.sceneArticle(da));
+  els.paneB.innerHTML = corner(b, db); els.paneB.prepend(LAYER.sceneArticle(db));
   namePane(els.paneA, 'sceneA-name'); namePane(els.paneB, 'sceneB-name');
   els.paneA.setAttribute('tabindex', '0'); els.paneB.setAttribute('tabindex', '0');
   relevel();
@@ -272,14 +282,25 @@ export async function open(a, b, held = {}) {
   markDirty();
 }
 
-/** the article a pane holds */
-const articleIn = (/** @type {HTMLElement} */ pane) => /** @type {HTMLElement | null} */ (pane.querySelector('article.dtext'));
+/**
+ * The article a pane holds, with what it was made from (T-LAYER's `madeOf`):
+ * the blocks every position in the pane is mapped through, the article's
+ * own, whatever the model has delivered since; null where the pane holds
+ * none.
+ * @param {HTMLElement} pane
+ * @returns {{el: HTMLElement, made: import('../text/layer.js').Made} | null}
+ */
+function articleIn(pane) {
+  const el = /** @type {HTMLElement | null} */ (pane.querySelector('article.dtext'));
+  const made = el ? LAYER.madeOf(el) : null;
+  return el && made ? { el, made } : null;
+}
 
 /**
  * Where a passage's first line stands in a pane, in px below the pane's
  * content top: the first client rect of the platform range over the passage
- * (T-LAYER's mapping, the article's chrome skipped); null where the passage
- * lies in none of the pane's delivered blocks.
+ * (T-LAYER's mapping, through the blocks the pane's article was made from,
+ * the article's chrome skipped); null where the passage lies in none of them.
  * @param {HTMLElement} pane
  * @param {string} addr the pane's document
  * @param {number} pos
@@ -288,22 +309,22 @@ const articleIn = (/** @type {HTMLElement} */ pane) => /** @type {HTMLElement | 
  */
 function lineIn(pane, addr, pos, width) {
   const art = articleIn(pane);
-  const range = art ? LAYER.rangeIn(art, REC.doc(addr), { addr, pos, width: Math.max(1, width) }) : null;
+  const range = art ? LAYER.rangeIn(art.el, { addr, pos, width: Math.max(1, width) }) : null;
   const r = range ? [...range.getClientRects()].find((q) => q.width > 0 && q.height > 0) : null;
   if (!r) return null;
   const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop;
   return { top: r.top - origin, y: r.top + r.height / 2 - origin };
 }
 
-/** the positions of the block holding a position in a document, from that position to the block's end; one where no block holds it */
-function restOfBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
-  const b = REC.blockAt(addr, pos);
+/** the positions of the block holding a position in a pane's article — of the blocks it was made from — from that position to the block's end; one where no block holds it */
+function restOfBlock(/** @type {HTMLElement} */ pane, /** @type {number} */ pos) {
+  const art = articleIn(pane), b = art ? REC.blockIn(art.made.blocks, pos) : null;
   return b ? b.pos + b.width - pos : 1;
 }
 
 /** each pane's article given a pane's height of room below its end, so any of its lines can be scrolled to the pane's top */
 function roomBelow(/** @type {NonNullable<typeof els>} */ E) {
-  for (const pane of [E.paneA, E.paneB]) { const art = articleIn(pane); if (art) art.style.paddingBottom = pane.clientHeight + 'px'; }
+  for (const pane of [E.paneA, E.paneB]) { const art = articleIn(pane); if (art) art.el.style.paddingBottom = pane.clientHeight + 'px'; }
 }
 
 /** the panes' sizes, the measure the ties' ends were taken at */
@@ -312,7 +333,9 @@ const sizeOf = (/** @type {NonNullable<typeof els>} */ E) => `${E.paneA.clientWi
 /**
  * Measure the ties: each run of shared identity and each link between the
  * two documents, its ends at their passages' first lines in the panes'
- * content; a tie an end of which lies in no delivered block is left out.
+ * content; a tie an end of which lies in none of its pane's blocks is left
+ * out. A link that names the far document whole stands at the far pane's
+ * first block.
  */
 function measure() {
   const S = scene, E = els;
@@ -326,8 +349,8 @@ function measure() {
   // the link lines between the panes — the set LK gives (the seam)
   for (const [nearAddr, farAddr, nearPane, farPane] of /** @type {const} */ ([[S.a, S.b, E.paneA, E.paneB], [S.b, S.a, E.paneB, E.paneA]])) {
     for (const s of LK.shown(nearAddr).filter((x) => x.far === farAddr)) {
-      const farPos = s.farEnd && !s.farEnd.whole && s.farEnd.ordinal != null ? s.farEnd.ordinal : (REC.doc(farAddr).blocks[0] || { pos: 1 }).pos;
-      const farWidth = s.farEnd && !s.farEnd.whole && s.farEnd.positions ? s.farEnd.positions : restOfBlock(farAddr, farPos);
+      const farPos = s.farEnd && !s.farEnd.whole && s.farEnd.ordinal != null ? s.farEnd.ordinal : (articleIn(farPane)?.made.blocks[0] || { pos: 1 }).pos;
+      const farWidth = s.farEnd && !s.farEnd.whole && s.farEnd.positions ? s.farEnd.positions : restOfBlock(farPane, farPos);
       const ln = lineIn(nearPane, nearAddr, s.pos, s.width), lf = lineIn(farPane, farAddr, farPos, farWidth);
       if (!ln || !lf) continue;
       const near = { pos: s.pos, width: s.width, y: ln.y }, far = { pos: farPos, width: farWidth, y: lf.y };
@@ -343,8 +366,8 @@ export function relevel() {
   const S = scene, E = els;
   if (!S || !E) return;
   roomBelow(E);
-  const la = S.level.a != null ? lineIn(E.paneA, S.a, S.level.a, restOfBlock(S.a, S.level.a)) : null;
-  const lb = S.level.b != null ? lineIn(E.paneB, S.b, S.level.b, restOfBlock(S.b, S.level.b)) : null;
+  const la = S.level.a != null ? lineIn(E.paneA, S.a, S.level.a, restOfBlock(E.paneA, S.level.a)) : null;
+  const lb = S.level.b != null ? lineIn(E.paneB, S.b, S.level.b, restOfBlock(E.paneB, S.level.b)) : null;
   // a pane scrolls a line up its pane, never below where it stands unscrolled: the two meet at LEVEL_AT, or higher where one stands above it
   const at = Math.min(LEVEL_AT, la ? la.top : Infinity, lb ? lb.top : Infinity);
   E.paneA.scrollTop = la ? la.top - at : 0;
@@ -424,7 +447,7 @@ export function close() {
 function blockTop(pane, dir) {
   const art = articleIn(pane); if (!art) return null;
   const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop;
-  const tops = [...art.querySelectorAll('.run > .sp, .run > .withheld')].map((e) => e.getBoundingClientRect().top - origin);
+  const tops = [...art.el.querySelectorAll('.run > .sp, .run > .withheld')].map((e) => e.getBoundingClientRect().top - origin);
   const at = pane.scrollTop;
   const next = dir > 0 ? tops.find((y) => y > at + 1) : tops.slice().reverse().find((y) => y < at - 1);
   if (next == null) return dir > 0 ? pane.scrollHeight : 0;
