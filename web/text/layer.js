@@ -37,7 +37,8 @@
 // replaces stand on the lines its text takes. The loop runs `frame` before
 // P-RENDER draws, so the canvas draws or yields each document by this frame's
 // mounted set. The marks and symbols are placed from LK's `shown` and
-// `symbols`; the selection from O-SELECTION and the focus from N-WALK are
+// `symbols`, a stretch several links mark in the one mark LK's `mergedMark`
+// gives; the selection from O-SELECTION and the focus from N-WALK are
 // handed to T-ARTICLE as values at mount, and each frame marks a standing
 // article's blocks for them in place by T-ARTICLE's one rule (`blockMarks`):
 // a change of the selection or the focus rebuilds no article, so the
@@ -237,7 +238,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
   /** @type {ArticleView} */
   const v = {
     selected: read.selection(), focus: litFocus(scene),
-    marks: LK.shown(d.addr), symbols: LK.symbols(d.addr), countAt: (b) => LK.countAt(d.addr, b),
+    marks: LK.shown(d.addr), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr), countAt: (b) => LK.countAt(d.addr, b),
     wholeLinks: LK.wholeLinks(d.addr).length,
     sessionAccount: s ? s.account : null,
     localTrust: !!(h && h.auth && h.auth.local_trust),

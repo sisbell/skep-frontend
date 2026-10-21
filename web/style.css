@@ -93,7 +93,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .sp.sel { box-shadow:0 0 0 1px rgba(232,230,225,.5); }
 .dtext .sp.lit { box-shadow:0 0 0 1px var(--ok); }
 .dtext .sp.empty { color:#4b5563; font-style:italic; }
-/* the owner's and the person's links in place: a mark by depth, hue the linker's, value lighter once followed */
+/* the owner's and the person's links in place: a mark by depth, in the one mark a stretch's links merge into (LK's
+   `mergedMark`) — hue the linker's, neutral where theirs differ; value lighter once every one is followed */
 .dtext .lip { text-decoration:underline; text-decoration-thickness:1px; text-decoration-color:var(--mark-hue, var(--hue-you)); opacity:var(--mark-value, 1); }
 .dtext .lip.depth2 { text-decoration-style:double; }
 .dtext .lip.depth3 { text-decoration-thickness:2px; }

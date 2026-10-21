@@ -3,13 +3,17 @@
 // lenses filtering, each drawn link naming the document it is drawn at, a
 // visited link lighter, the records and account-named ends never counted,
 // the badge arriving until read, the mid connections one per pair of places
-// drawn; the most a reveal can set in a document's text, which no stage,
-// toggle or lens moves or exceeds.
+// drawn, each link counted once however many of its ends are drawn, and
+// marked with what their links share — neutral in the hue where their
+// linkers differ, lighter only where every one was followed — whichever
+// document comes first (a mutant that keeps the first end's mark, or counts
+// ends, turns red); the most a reveal can set in a document's text, which no
+// stage, toggle or lens moves or exceeds.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from './links.js';
-import { HUE, VISITED_ALPHA } from '../plane/register.js';
+import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13', ENROLL = '1.1.0.1.0.1.0.3.1', CLAIM = '1.1.0.1.0.1.0.3.3', ENDORSE = '1.1.0.1.0.1.0.3.42';
 const D = '1.0.1.0.3', OTHER_HOME = '1.0.2.0.5';
@@ -130,6 +134,15 @@ test('a followed link is drawn lighter, its hue kept (D-3)', () => {
   assert.equal(LK.markOf(l, D).hue, HUE.you);
 });
 
+test('links merged at one site carry what they share and are neutral in what they do not, whatever their order (P44)', () => {
+  const yours = { hue: HUE.you, linker: 'you', form: [], value: VISITED_ALPHA, own: true };
+  const others = { hue: HUE.others, linker: 'others', form: [], value: 1, own: false };
+  assert.deepEqual(LK.mergedMark([yours, { ...yours }]), yours, 'what every member shares stands');
+  for (const marks of [[yours, others], [others, yours]]) {
+    assert.deepEqual(LK.mergedMark(/** @type {any} */ (marks)), { hue: NEUTRAL_HUE, linker: null, form: [], value: 1, own: false }, `${marks[0].linker}'s first`);
+  }
+});
+
 test('the mid connections: one per document pair', () => {
   const c = LK.connections([D, '1.0.1.0.127', OTHER_HOME]);
   assert.deepEqual(c.map((x) => [x.a, x.b, x.count]), [[D, '1.0.1.0.127', 1]]);
@@ -141,4 +154,41 @@ test('the mid connections run between the places drawn: links into one mark are 
   const mark = (/** @type {string} */ a) => (a === D ? D : '1.0.1:1');
   assert.deepEqual(LK.connections([D, '1.0.1.0.127', '1.0.1.0.128'], mark).map((x) => [x.a, x.b, x.count]), [[D, '1.0.1:1', 2]]);
   assert.deepEqual(LK.connections([D, '1.0.1.0.127'], () => '1.0.1:1'), [], 'both ends inside one mark: no line');
+});
+
+test('a mid connection counts each link once: one shown at both its documents, or with two passages in one', () => {
+  const E = '1.0.1.0.4';
+  REC.takeLinks(D, [D + '.0.2.9']); REC.takeLinks(E, [D + '.0.2.9']);
+  REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(E, 1, 5)], type: CITE });
+  assert.ok(LK.shown(E).some((s) => s.link.addr === D + '.0.2.9'), 'the person\'s link is shown at both its documents');
+  assert.deepEqual(LK.connections([D, E]).map((x) => [x.a, x.b, x.count]), [[D, E, 1]]);
+  build();
+  REC.takeLinks(D, [D + '.0.2.9']);
+  REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 30, 2), span(D, 40, 2)], to: [span(E, 8, 2)], type: CITE });
+  assert.equal(LK.shown(D).filter((s) => s.link.addr === D + '.0.2.9').length, 2, 'two passages in D: two ends drawn there');
+  assert.deepEqual(LK.connections([D, E]).map((x) => [x.a, x.b, x.count]), [[D, E, 1]], 'read at D alone: one link');
+});
+
+test('a mid connection is marked with what its links share: the linker\'s hue where they share one, neutral where theirs differ, lighter only where every one was followed (P44)', () => {
+  REC.takeLinks(D, [D + '.0.2.9']);
+  REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(OTHER_HOME, 30, 5)], type: CITE });
+  const at = () => LK.connections([D, OTHER_HOME]).map((c) => ({ count: c.count, hue: c.mark.hue, linker: c.mark.linker, value: c.mark.value, own: c.mark.own }));
+  assert.deepEqual(at(), [{ count: 1, hue: HUE.you, linker: 'you', value: 1, own: true }], 'the person\'s link alone: their hue');
+  LK.setOthers(D, true);
+  assert.deepEqual(at(), [{ count: 2, hue: NEUTRAL_HUE, linker: null, value: 1, own: false }], 'the other\'s link beside it: neutral, never the first link\'s hue');
+  LK.follow(OTHER_HOME + '.0.2.1');
+  assert.equal(at()[0].value, 1, 'the first of the two followed: drawn full, never the first link\'s value');
+  LK.follow(D + '.0.2.9');
+  assert.deepEqual([at()[0].value, at()[0].hue], [VISITED_ALPHA, NEUTRAL_HUE], 'both followed: drawn lighter, the hue still neutral');
+});
+
+test('a link whose linker differs at its two documents draws its connection neutral and counts once, whichever document comes first', () => {
+  build({ session: '1.0.9' });
+  REC.takeLinks(D, [D + '.0.2.9']); REC.takeLinks(OTHER_HOME, [D + '.0.2.9']);
+  REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(OTHER_HOME, 30, 5)], type: CITE });
+  LK.setOthers(OTHER_HOME, true);
+  assert.deepEqual([LK.shown(D).find((s) => s.link.addr === D + '.0.2.9')?.linker, LK.shown(OTHER_HOME).map((s) => s.linker)], ['owner', ['others']], 'D\'s owner\'s link at D, another\'s at the other document');
+  for (const order of [[D, OTHER_HOME], [OTHER_HOME, D]]) {
+    assert.deepEqual(LK.connections(order).map((c) => [c.count, c.mark.hue, c.mark.linker]), [[1, NEUTRAL_HUE, null]], order.join(' then '));
+  }
 });

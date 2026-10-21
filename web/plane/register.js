@@ -3,7 +3,9 @@
 // no variable carrying two data — ux-T1 (a)). Layer 2, pure constants the
 // renderers and the CSS share (`main.js` sets them as custom properties).
 // The LINKER takes HUE from a small palette — you, the document's owner,
-// everyone else as one; the anchor's GRADE a line on the highlight's edge;
+// everyone else as one — and a mark merging links whose linkers differ the
+// NEUTRAL hue, which names no linker (P44's Use at §2.1's register); the
+// anchor's GRADE a line on the highlight's edge;
 // SAMENESS boundaries and a ground TEXTURE, never a tint; the VISITED-LINK
 // MARK takes VALUE (lighter, the hue kept — D-3); a connection's KIND its
 // line's form; a box's PUBLICATION STATE its edge's weight; a LABEL's size
@@ -23,6 +25,14 @@ export const HUE = Object.freeze({
   /** everyone else, as one */
   others: '#9aa5b4',
 });
+
+/**
+ * the hue of a mark merging links whose linkers differ (P44; foundations
+ * §2.1: "neutral in any variable its members do not share — hue where their
+ * linkers differ"): a near-white carrying no linker's hue, lighter than
+ * `HUE.others`' blue-grey so the two never read alike
+ */
+export const NEUTRAL_HUE = '#e8e6e1';
 
 /** the grade's line (the anchor's edge), never hue */
 export const GRADE = Object.freeze({ exact: 'solid', drifted: 'dashed', orphaned: 'dotted' });
@@ -58,12 +68,12 @@ export const COL = Object.freeze({
 });
 
 /**
- * @typedef {Object} Mark — how one link is drawn, decided by LK, applied by the drawers
- * @property {string} hue
- * @property {'you' | 'owner' | 'others'} linker
+ * @typedef {Object} Mark — how one link, or the links merged at one site (LK's `mergedMark`), are drawn, decided by LK, applied by the drawers
+ * @property {string} hue the linker's; NEUTRAL_HUE where the merged links' linkers differ
+ * @property {'you' | 'owner' | 'others' | null} linker null where the merged links' linkers differ
  * @property {number[] | 'band'} form the kind's dash form
- * @property {number} value 1 = full; VISITED_ALPHA once followed
- * @property {boolean} own true where the mark stands with no act (the owner's or the person's)
+ * @property {number} value 1 = full; VISITED_ALPHA once followed — every merged link followed
+ * @property {boolean} own true where the mark stands with no act (the owner's or the person's) — every merged link's
  */
 
 /**

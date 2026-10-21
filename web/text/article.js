@@ -6,8 +6,9 @@
 // the selection (a byte span: every block it touches is marked, the
 // platform's highlight showing the bytes themselves) and the focus (a
 // block), each by `blockMarks`, the rule T-LAYER marks a standing article by,
-// the owner's and the person's links in place (the
-// marks LK decided, hue the linker's), each transcluded run's sameness
+// the owner's and the person's links in place (each stretch in the one mark
+// its links merge into, LK's `mergedMark`: hue the linker's, neutral where
+// theirs differ), each transcluded run's sameness
 // boundary with the origin's label (the hairline, whole at the first run of
 // that origin, compact after) and the entitled reader's mark C-33 on a
 // draft-origin run in a published document — set ONCE per run in a block,
@@ -56,6 +57,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
 /** @typedef {import('../model/records.js').Block} Block */
 /** @typedef {import('../model/records.js').Origin} Origin */
 /** @typedef {import('../links/links.js').Shown} Shown */
+/** @typedef {import('../plane/register.js').Mark} Mark */
 /** @typedef {import('./span.js').Span} Span */
 /** @typedef {import('../plane/layout.js').Row} Row */
 /** @typedef {import('../plane/layout.js').Piece} Piece */
@@ -65,6 +67,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {Span | null} selected the selected span (O-SELECTION's): the blocks it touches are marked
  * @property {{addr: string, pos: number} | null} focus the focused block (N-WALK's), by its first position
  * @property {Shown[]} marks the links to mark in place (LK.shown)
+ * @property {(marks: [Mark, ...Mark[]]) => Mark} mergedMark the one mark the links over one stretch merge into (LK.mergedMark)
  * @property {Shown[]} symbols the symbols at their spans (LK.symbols)
  * @property {(block: Block) => {n: number, social: boolean}} countAt the others' count per block (LK.countAt)
  * @property {number} wholeLinks the links to this document as a whole
@@ -96,6 +99,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @typedef {Object} Seg — a stretch of one block's text between two cuts, with what marks it and the symbols standing at it
  * @property {string} text the document's characters over it
  * @property {Shown[]} marks the links marked over it
+ * @property {Mark | null} mark the one mark they merge into (the view's `mergedMark`); null where no link marks it
  * @property {Origin | null} origin the transcluded run it lies in
  * @property {Opening | null} opens the run's chrome, where it is the run's first stretch in the block; null at every other stretch
  * @property {Shown[]} chromeSyms the symbols standing after its run's chrome, before its text: their spans' last word runs into the hairline with no break between them (`standOf`)
@@ -312,8 +316,9 @@ export function standOf(text, c0, c1, chromeAt) {
 /**
  * The stretches of one block's text: cut at the edges of the owner's and the
  * person's links (LK's set), at the edges of the transcluded runs, and where
- * the symbols standing in the block stand (`standOf`), each with what marks
- * it and the symbols at it; each run's chrome — its boundary, its hairline,
+ * the symbols standing in the block stand (`standOf`), each with the links
+ * marking it and the one mark they merge into, and the symbols at it; each
+ * run's chrome — its boundary, its hairline,
  * C-33's mark — at its first stretch in the block alone, however the run is
  * cut, the hairline labelled whole at the first run of its origin in the
  * article.
@@ -360,7 +365,9 @@ function segmentsOf(b, d, v, labelled, standing) {
     if (!text) continue;
     const origin = origins.find((o) => o.pos < p1 && p0 < o.pos + o.width) || null;
     const open = origin ? opening.get(charOfPos(b, p0)) : undefined;
-    out.push({ text, marks: marks.filter((m) => m.pos < p1 && p0 < m.pos + m.width), origin, opens: open && open.o === origin ? open.opens : null, chromeSyms: [], syms: [] });
+    const over = marks.filter((m) => m.pos < p1 && p0 < m.pos + m.width);
+    const [first, ...rest] = over;
+    out.push({ text, marks: over, mark: first ? v.mergedMark([first.mark, ...rest.map((m) => m.mark)]) : null, origin, opens: open && open.o === origin ? open.opens : null, chromeSyms: [], syms: [] });
     starts.push(p0);
   }
   // each symbol at its stretch: after the chrome of the run it stands in, else after the text of the stretch ending where it stands
@@ -453,19 +460,21 @@ const control = (scene) => (scene ? '' : ' role="button" tabindex="-1"');
 const symHTML = (/** @type {Shown} */ s, /** @type {boolean} */ scene) => `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"${control(scene)} title="${esc(s.link.type || '')}">⟡</span>`;
 
 /**
- * A stretch of a paragraph's text as HTML: its marks, its run's ground and,
- * where it opens its run, the run's boundary, hairline and C-33's mark; then
- * the symbols standing at it — the text's own characters untouched.
+ * A stretch of a paragraph's text as HTML: its links marked by their depth
+ * in the one mark they merge into — its hue, its value, `visited` where it is
+ * drawn lighter — its run's ground and, where it opens its run, the run's
+ * boundary, hairline and C-33's mark; then the symbols standing at it — the
+ * text's own characters untouched.
  * @param {Seg} s
  * @param {boolean} scene the scene-mode variant: its symbols no controls
  */
 function segHTML(s, scene) {
   const cls = ['seg'];
   const attrs = [];
-  if (s.marks.length) {
+  if (s.mark) {
     cls.push('lip', 'depth' + Math.min(3, s.marks.length));
-    attrs.push(`style="--mark-hue:${s.marks[0].mark.hue};--mark-value:${s.marks[0].mark.value}"`, `data-links="${s.marks.map((m) => m.link.addr).join(' ')}"`);
-    if (s.marks.every((m) => m.mark.value < 1)) cls.push('visited');
+    attrs.push(`style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"`, `data-links="${s.marks.map((m) => m.link.addr).join(' ')}"`);
+    if (s.mark.value < 1) cls.push('visited');
   }
   const syms = s.syms.map((x) => symHTML(x, scene)).join('');
   if (s.origin) {

@@ -14,8 +14,8 @@ box of its own, or, deep in its account's continuations, inside the
 continuation drawn as one mark; at HOME the account's first continuation is
 ONE mark (foundations §2.1; P44) carrying law 13's count of what it holds and
 its newest member's label, the mid connections into it end at it and at none
-of its members, and a click on it teleports to that newest member; a ghost
-address answers its face. "Shown" is
+of its members, each counting its links once, and a click on it teleports to
+that newest member; a ghost address answers its face. "Shown" is
 measured, not read off the DOM: the page's `visible` oracle says whether a
 block, a mark or a corner lies inside the clip the page draws and the
 viewport — text the DOM holds past a clip is shown to no one."""
@@ -269,7 +269,7 @@ def run(ctx):
           const first = S.model.places().filter((p) => p.account === "1.0.1" && !p.system && S.depthOf(p.doc) === 0).map((p) => p.doc);
           return Object.fromEntries([...new Set([...first, ...%s])].map((a) => [a, links(a)]).filter(([, n]) => n > 0));
         })()''' % (json.dumps(members), json.dumps(sorted(into))))
-        r.check(bool(linked) and set(into) == set(linked), 'each document standing whole that draws a link to a document the mark holds is joined to the MARK by one connection, and no other is',
+        r.check(bool(linked) and into == linked, 'each document standing whole that draws a link to a document the mark holds is joined to the MARK by one connection counting those links, each once, and no other is',
                 {'drawn': into, 'links': linked})
         r.figures['home_mark'] = dict({k: mark[k] for k in ('k', 'n', 'exact', 'newest', 'lines', 'rect')}, connections_to_mark={'drawn': into, 'links': linked})
         # the mark's act, as a person presses it: a teleport to the newest member, landed at reading scale

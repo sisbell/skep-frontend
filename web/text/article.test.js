@@ -1,7 +1,10 @@
 // T-ARTICLE's test: the article from a record — the withheld block occupies
 // its run with its width and never its text, its entitlement arm the one
 // rule's for the reader (C-39's face reads it too); the owner's link marked at its
-// span; the selected span marks every block it touches and no other, and the
+// span, and a stretch several links mark in the one mark they merge into —
+// neutral in the hue where their linkers differ, lighter only where every one
+// was followed (a mutant that takes the first link's mark turns red); the
+// selected span marks every block it touches and no other, and the
 // focus its own block, by the one rule T-LAYER marks a standing article by; the
 // transcluded run's hairline and C-33's mark, once per run however marks and
 // symbols cut it (a mutant that sets them at every stretch turns red); the
@@ -25,12 +28,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, cornerHTML, headingLevel, blockMarks } from './article.js';
 import { MEASURE } from '../plane/layout.js';
+import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
+import { mergedMark } from '../links/links.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @returns {import('./article.js').ArticleView} */
 const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {}) => ({
-  selected: null, focus: null, marks: [], symbols: [], countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
+  selected: null, focus: null, marks: [], mergedMark, symbols: [], countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
   sessionAccount: '1.0.1', localTrust: true, notebook: true, scene: false, originKinds: new Map(), deviceLabel: 'dev-notebook', ownerFingerprint: 'e4272902a11439e5', keyPresent: true, ...o,
 });
 /** @returns {import('../model/records.js').Doc} */
@@ -66,6 +71,18 @@ test('the owner\'s link is marked in place at its span and nowhere else', () => 
   const html = articleHTML(d, view({ marks: [mark] }), '1.0.1');
   assert.ok(/<span class="seg lip depth1"[^>]*>efgh<\/span>/.test(html), html);
   assert.ok(html.includes('1 link touches this document'));
+});
+
+test('a stretch several links mark takes the one mark they merge into: neutral in the hue where their linkers differ, lighter only where every one was followed', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 20, kind: 'para', text: 'abcdefghijklmnopqrst', origin: null }] });
+  const at = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {import('../plane/register.js').Mark} */ mark) => /** @type {any} */ ({ link: { addr: 'L' + pos }, end: 'from', pos, width, mark, linker: mark.linker, far: '1.0.1.0.4', farEnd: null, farWhole: true });
+  const yours = at(5, 6, { hue: HUE.you, linker: 'you', form: [], value: VISITED_ALPHA, own: true });
+  const owners = at(8, 6, { hue: HUE.owner, linker: 'owner', form: [], value: 1, own: true });
+  const html = articleHTML(d, view({ marks: [yours, owners] }), '1.0.1');
+  const lip = (/** @type {string} */ text) => (html.match(new RegExp(`<span class="(seg lip[^"]*)" style="([^"]*)"[^>]*>${text}</span>`)) || []).slice(1);
+  assert.deepEqual(lip('efg'), ['seg lip depth1 visited', `--mark-hue:${HUE.you};--mark-value:${VISITED_ALPHA}`], 'the person\'s followed link alone: their hue, lighter');
+  assert.deepEqual(lip('hij'), ['seg lip depth2', `--mark-hue:${NEUTRAL_HUE};--mark-value:1`], 'both: neutral, and full where one is not followed — never the first link\'s mark');
+  assert.deepEqual(lip('klm'), ['seg lip depth1', `--mark-hue:${HUE.owner};--mark-value:1`], 'the owner\'s link alone: the owner\'s hue');
 });
 
 test('the selected span marks every block it touches and no other', () => {

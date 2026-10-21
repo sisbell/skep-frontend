@@ -34,11 +34,19 @@
 //     toggle or a lens re-sets no line;
 //   - a link the person has FOLLOWED this session is drawn lighter (D-3:
 //     VALUE, the hue kept), the set client-side, never written;
+//   - links drawn at ONE SITE — a stretch of text several mark, a mid
+//     connection — are ONE MARK carrying what they share (P44; its Use at
+//     §2.1's register: "neutral in any variable its members do not share —
+//     hue where their linkers differ"): the linker's hue where every one's
+//     linker is one, else the neutral hue; lighter only where every one was
+//     followed; the form the link kind's, which every mark here carries
+//     (`mergedMark`);
 //   - the mid connections: one per pair of places the plane draws the
 //     documents at — a document's own box, or the mark of the continuation
-//     holding it (P44) — in its kind's form, hue the linker's; a link whose
-//     two ends stand at one place draws none; the scene's pane-to-pane lines
-//     the same set.
+//     holding it (P44) — counting each link once, however many of its ends
+//     are drawn, and marked with the one mark the ends drawn there merge
+//     into; a link whose two ends stand at one place draws none; the scene's
+//     pane-to-pane lines are drawn from the same shown set.
 // WHAT REPLACES THIS RULE LATER: link sets (`_designs/LINK-SETS/…` §4, in
 // review) — at a version `E.k` the default view is `E`'s OWN SET plus the sets
 // its author has `E.k` read with plus the reader's own links; everything else
@@ -46,15 +54,15 @@
 // DIFFERENT RULE FOR WHICH LINKS SHOW, THE SAME MARKS AND THE SAME DRAWING:
 // when it lands, THIS FILE's rule and its state change; NO DRAWING MODULE
 // CHANGES (BM, T-LAYER, P-RENDER, SC, the cards draw what `shown`, `shownAt`,
-// `symbols`, `beams`, `countAt`, `connections`, `markOf` give them, and
-// T-LAYER fits the face to what `utmost` gives).
+// `symbols`, `beams`, `countAt`, `connections`, `markOf`, `mergedMark` give
+// them, and T-LAYER fits the face to what `utmost` gives).
 // Carries: the wireframe's §16 `.sym`/`.lip` selection and the owner-link
 // marking in `articleHTML`, §17's wanted set, §18 `revealLinks`'s lens
 // filters, §10's by-linker colouring and mid lines, S1's `buildBeams`.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-11.
 
 import * as REC from '../model/records.js';
-import { HUE, KIND_FORM, VISITED_ALPHA } from '../plane/register.js';
+import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA } from '../plane/register.js';
 import { commonsType } from '../model/address.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
@@ -92,8 +100,8 @@ import { commonsType } from '../model/address.js';
  * @property {string} a the place one end's document is drawn at: its own address, or the mark `placeOf` names
  * @property {string} b the place the other end's is drawn at
  * @property {'link'} kind
- * @property {Mark} mark
- * @property {number} count the links the pair holds
+ * @property {Mark} mark the one mark its links' drawn ends merge into (`mergedMark`)
+ * @property {number} count the links the pair holds, each once
  */
 
 /** the commons rows: the credential classes, `replaces`, the edition claim, the registry's five, succession — RECORDS (rule (i)'s test) */
@@ -170,6 +178,30 @@ export function linkerOf(/** @type {Link} */ l, /** @type {string} */ atDoc) {
 export function markOf(l, atDoc) {
   const linker = linkerOf(l, atDoc);
   return { hue: HUE[linker], linker, form: KIND_FORM.link, value: visitedSet.has(l.addr) ? VISITED_ALPHA : 1, own: linker !== 'others' };
+}
+
+/**
+ * The one mark links drawn at one site merge into — a stretch of text
+ * several mark, a mid connection — carrying what they share and nothing they
+ * do not (P44; its Use at §2.1's register: "neutral in any variable its
+ * members do not share — hue where their linkers differ"): the linker and
+ * its hue where every member's is one, else none and NEUTRAL_HUE; lighter
+ * only where every member was followed (D-3), else full — value carries the
+ * followed mark alone, so a site followed in part has no value of its own;
+ * standing with no act only where every member does; the form the link
+ * kind's, which every mark `markOf` makes carries.
+ * @param {[Mark, ...Mark[]]} marks the members' marks
+ * @returns {Mark}
+ */
+export function mergedMark(marks) {
+  const [m] = marks;
+  return {
+    hue: marks.every((x) => x.hue === m.hue) ? m.hue : NEUTRAL_HUE,
+    linker: marks.every((x) => x.linker === m.linker) ? m.linker : null,
+    form: KIND_FORM.link,
+    value: marks.every((x) => x.value === m.value) ? m.value : 1,
+    own: marks.every((x) => x.own),
+  };
 }
 
 /** does the lens at a document admit the link? */
@@ -336,16 +368,21 @@ export function countAccount(/** @type {string} */ account) {
  * The mid connections among the documents the plane draws: one per pair of
  * PLACES they are drawn at (P44: one per document pair, with its count) —
  * `placeOf` names a document's place, its own box or the mark of the
- * continuation that holds it — its kind's form, hue the linker's — the
- * owner's and the person's own by default, others' where a document's toggle
- * is on. A link whose two ends stand at one place draws none.
+ * continuation that holds it — of the links `shown` gives at either
+ * document: the owner's and the person's own by default, others' where a
+ * document's toggle is on. Its count is its links, each once, however many
+ * of a link's ends are drawn — at both its documents, or at two passages in
+ * one; its mark the one all the ends drawn there merge into (`mergedMark`),
+ * so a link whose linker differs at its two documents draws it neutral, and
+ * no order of the documents changes it. A link whose two ends stand at one
+ * place draws none.
  * @param {string[]} docsDrawn the documents drawn, whole or inside a mark
  * @param {(addr: string) => string} [placeOf] the place a document is drawn at; by default its own box
  * @returns {Connection[]}
  */
 export function connections(docsDrawn, placeOf = (addr) => addr) {
   const set = new Set(docsDrawn);
-  /** @type {Map<string, Connection>} */
+  /** @type {Map<string, {a: string, b: string, links: Set<string>, marks: [Mark, ...Mark[]]}>} the pairs met, each with its links and the marks of its ends drawn */
   const pairs = new Map();
   for (const addr of docsDrawn) {
     const here = placeOf(addr);
@@ -354,12 +391,12 @@ export function connections(docsDrawn, placeOf = (addr) => addr) {
       const there = placeOf(s.far);
       if (there === here) continue;
       const key = [here, there].sort().join('|');
-      const c = pairs.get(key);
-      if (c) c.count++;
-      else pairs.set(key, { a: here, b: there, kind: 'link', mark: s.mark, count: 1 });
+      const p = pairs.get(key);
+      if (p) { p.links.add(s.link.addr); p.marks.push(s.mark); }
+      else pairs.set(key, { a: here, b: there, links: new Set([s.link.addr]), marks: [s.mark] });
     }
   }
-  return [...pairs.values()];
+  return [...pairs.values()].map((p) => ({ a: p.a, b: p.b, kind: /** @type {const} */ ('link'), mark: mergedMark(p.marks), count: p.links.size }));
 }
 
 /** the owners and types present among a document's links (the card's lens rows) */
