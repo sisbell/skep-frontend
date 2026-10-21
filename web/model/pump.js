@@ -12,15 +12,21 @@
 // link's type ONCE by `read_link` — E17 (a)), and, where legible, the span
 // window of text (`retrieve_v`) with its V→I image (`image`) for the
 // transcluded runs; the chain's members probed where a document is read.
-// Asked by an act rather than the view: a whole document (`loadWhole`),
-// where a link's end projects now (`projectEnd`), and a link's supersession
+// Asked by an act rather than the view: the client index (`readIndex`:
+// `places`, at boot and again at the page's own session's death — the view
+// asking nothing while it is out), a whole document (`loadWhole`), where a
+// link's end projects now (`projectEnd`), and a link's supersession
 // lineage (`lineage`: `in_claims` and `out_claims`, A-56, A-57). A class
 // scan read whole — `loadWhole`'s `find_links_v`, the lineage's two — is
 // reissued on `scan_busy` (`readScan`): the daemon bounds each by the same
 // two permits the view's scans take.
 // The reads go through `op(session, frame)` — the claimant's class — or the
 // guest form where no session stands; a followed far board's reads would
-// take the guest form over its origin (no such board is seeded).
+// take the guest form over its origin (no such board is seeded). EVERY READ
+// AT THE PAGE'S CLASS (`atClass`): a read the page's class — its principal,
+// or guest — changed under while it was out, its session's death taken
+// meanwhile, is asked once more in the form the page takes now, so no answer
+// to the dead session's class reaches the model after the death.
 // The shell's bus carries every board's events and every session's to every
 // page (client.md §4b.2); the page takes its own. A board event — `feed`,
 // `index`, `mode`, `daemon` — is taken where it names the page's board, and
@@ -41,14 +47,21 @@
 // tell its principal's other sessions from another principal's). `mode`
 // and `daemon` → M-REC's state; `session-died` → M-REC's death where it
 // names the page's own session: a page that holds no session (a guest) or
-// holds another was never signed in under the one that ended. The shell's
+// holds another was never signed in under the one that ended. The death
+// drops every read the model held at the session's class (M-REC's
+// `sessionDied`); the needs answered under it are asked again, and the index
+// is read again in the guest form, as the shell narrows its own at the death
+// (client.md §4e.3: "at `session-died` in every arm but the shell's OWN
+// RESTART"), so the page's index, its counts and what it draws are a
+// guest's (foundations §2.1: "masked at the reader's class"). The shell's
 // own restart, where the shell re-opened the session under a key it holds,
 // is no death: the page goes on under the re-opened reference the reason
-// names, with no face (client.md §4b.2; ps3-13 (b), cs6-6 reading (i)). A
-// read can meet the end before the event does — `session_died`, carrying
-// the event's reason, or `session_ended`, the shell's answer while it
-// derives the end — and takes or awaits it, then is asked once more under
-// the re-opened session.
+// names, with no face, holding what it read (client.md §4b.2; ps3-13 (b),
+// cs6-6 reading (i)). A read can meet the end before the event does —
+// `session_died`, carrying the event's reason, or `session_ended`, the
+// shell's answer while it derives the end — and takes or awaits it, then is
+// asked once more in the form the end left the page: under the re-opened
+// session, or as a guest after a death.
 // Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11.
 
 import * as PORT from '../bridge/port.js';
@@ -63,6 +76,7 @@ import { versionAddress } from './address.js';
 /** @typedef {import('./records.js').Doc} Doc */
 /** @typedef {import('./frames.js').Claim} Claim */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+/** @typedef {import('../bridge/shapes').PlacesAnswer} PlacesAnswer */
 /** @typedef {import('../bridge/shapes').FeedEvent} FeedEvent */
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 /** @typedef {import('../bridge/shapes').IndexEvent} IndexEvent */
@@ -114,6 +128,8 @@ const refusalWatchers = [];
 const awaitingEnd = new Set();
 /** the page's session a read found ended with no end taken within END_WAIT_MS — its `session-died` never reached the page — so no read under it waits again */
 let unended = /** @type {string | null} */ (null);
+/** the client index's reads out (`readIndex`): while one is, the view asks nothing and `pump` counts it missing */
+let indexing = 0;
 let dirty = () => {};
 let started = false;
 
@@ -167,7 +183,10 @@ function ofFace(ev) {
  * the reason names, the principal and the account the same, with no face
  * (client.md §4b.2: "the page re-acquires a reference with no face";
  * ps3-13 (b), cs6-6 reading (i)). Every other end, a restart that re-opened
- * none among them, is M-REC's death. The reads awaiting the end are woken.
+ * none among them, is M-REC's death: what the model read at the session's
+ * class dropped, every need answered under it asked again, and the index read
+ * again in the guest form (`readIndex`). The reads awaiting the end are
+ * woken.
  * @param {string} ended the session the end names
  * @param {DeathReason} reason
  */
@@ -176,7 +195,7 @@ function takeEnd(ended, reason) {
   if (!s || s.session !== ended) return;
   const reopened = reason.arm === 'restart' && reason.reopened === true ? reason.session : null;
   if (typeof reopened === 'string') REC.setSession({ ...s, session: reopened });
-  else REC.sessionDied(reason);
+  else { REC.sessionDied(reason); asked.clear(); retryAt.clear(); readIndex(); }
   for (const wake of [...awaitingEnd]) wake();
 }
 
@@ -199,20 +218,58 @@ export const refusalsMet = () => refusals.slice();
 export function onRefusal(/** @type {(r: {frame: string, refusal: Refusal, addr: string}) => void} */ fn) { refusalWatchers.push(fn); }
 
 /**
- * One read through the port: the session form where a session stands, the
- * guest form where none does. A read refused because the session it went
- * out under ended is asked once more where the end left the page another
- * session — the one the shell re-opened in its place; where it left none
- * the refusal is handed up.
+ * One read through the port at the page's class (`atClass`): the session
+ * form where a session stands, the guest form where none does.
  * @param {object} frame
  * @returns {Promise<{answer: unknown} | {refused: Refusal}>}
  */
-export async function read(frame) {
+export function read(frame) { return atClass((s) => ask(s, frame)); }
+
+/**
+ * One call at the page's class: made under the page's session, or in the
+ * guest form where none stands (`call` composes the form from the session it
+ * is handed). It is made once more, in the form the page takes then, where
+ * the page's class — its principal, or guest — changed while it was out, so
+ * no answer to a class the page has left is handed up: a death taken
+ * meanwhile asks it again as a guest. It is made once more too where it met
+ * the end of the session it went out under and the end left the page
+ * another, the one the shell re-opened in its place — the class the same;
+ * where the end left the page that same session (a `session_ended` no end
+ * followed) the refusal is handed up. Once more at most.
+ * @template {object} T
+ * @param {(s: {session: string} | null) => Promise<T | {refused: Refusal}>} call
+ * @returns {Promise<T | {refused: Refusal}>}
+ */
+async function atClass(call) {
   const s = REC.session();
-  const out = await ask(s, frame);
-  if (!s || !('refused' in out) || !(await metEnd(s.session, out.refused))) return out;
+  const out = await call(s);
+  const r = 'refused' in out ? /** @type {{refused: Refusal}} */ (out).refused : null;
+  const ended = !!s && !!r && (await metEnd(s.session, r));
   const now = REC.session();
-  return now && now.session !== s.session ? ask(now, frame) : out;
+  return classOf(now) !== classOf(s) || (ended && !!now && now.session !== s?.session) ? call(now) : out;
+}
+
+/** the class a page reads at: its session's principal; a guest's none */
+const classOf = (/** @type {{principal: number} | null} */ s) => (s ? s.principal : null);
+
+/**
+ * The client index read at the page's class (skep #463): `places` under the
+ * page's session, or in the guest form where none stands (`atClass`), the
+ * answer M-REC's index whole (`takeIndex`); a refusal leaves the index as it
+ * stands — empty at boot and at a death. While the read is out the view asks
+ * nothing and `pump` counts it missing, so no document is asked for against
+ * an index the answer is about to replace, and the gate's settle waits for
+ * it.
+ * @returns {Promise<{result: PlacesAnswer} | {refused: Refusal}>}
+ */
+export async function readIndex() {
+  const b = REC.board(), board = b ? b.board : undefined;
+  indexing++;
+  try {
+    const out = await atClass((s) => PORT.places(s ? { session: s.session, board } : { guest: true, board }));
+    if ('result' in out) REC.takeIndex(out.result);
+    return out;
+  } finally { indexing--; dirty(); }
 }
 
 /**
@@ -358,12 +415,14 @@ export function spanWindow(d) {
 }
 
 /**
- * The reads the view needs now, issued within the budget. Returns the count
- * of needs still missing — the gate's settle signal with `inflight()`.
+ * The reads the view needs now, issued within the budget — none while the
+ * index is read (`readIndex`), which counts as a need missing. Returns the
+ * count of needs still missing — the gate's settle signal with `inflight()`.
  * @returns {number}
  */
 export function pump() {
   if (!started) return 0;
+  if (indexing) return 1;
   const lod = lodOf(cam.scale);
   let missing = 0;
   if (lod.name === 'far') return 0;

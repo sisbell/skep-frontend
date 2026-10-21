@@ -40,11 +40,23 @@ first lines, the owner's places. Then, on the guest's page:
     run's, never the empty block's gap further;
 (f) the guest's own acts: every link at the first edition drawn as its
     owner's, never "you"; C-39's face at the run with the placeholder's own
-    arm beneath; "who wrote this?" answering over a block.
+    arm beneath; "who wrote this?" answering over a block;
+(g) the owner's page whose own session ends falls to guest class: opened
+    again, it reads one of the claimant's drafts and the window run's bytes,
+    then its session is closed by the page's own `close(session)` — the call
+    it makes at every `pagehide`, which writes nothing to the board — and the
+    fallen page, in the line's signed-out state, is held to the guest's (d)
+    and (e): its index read again in the guest form, every read after the
+    close a guest's or refused; no draft listed, none of the claimant's; each
+    count the places listed; the draft it read holding no text, nothing
+    mounted for it; no label or mark drawing a draft at HOME; the window run
+    a withheld block with none of its text; none of the owner's bytes
+    anywhere in the page.
 Shots into `shots/guest/`. The owner's page is opened again at the end and
 the first edition read, as the cases after this one expect."""
 import json
 import re
+import time
 from collections import Counter
 
 from . import DOC, SECOND_ACCOUNT, WINDOW, WITHHELD, XFAIL_FACE, Result
@@ -93,8 +105,18 @@ def t(ctx, sid, values=None):
 
 
 def calls(ctx):
-    """the page's own call log: each call's name and the argument object it posted"""
-    return [{'name': c['name'], 'args': json.loads(c['args']) if c.get('args') else None} for c in ctx.js('window.__skep.bridge.calls()')]
+    """the page's own call log: each call's name, the argument object it posted and its outcome"""
+    return [{'name': c['name'], 'args': json.loads(c['args']) if c.get('args') else None, 'outcome': c.get('outcome')} for c in ctx.js('window.__skep.bridge.calls()')]
+
+
+def wait_for(ctx, expr, max_s=10):
+    """poll the page until `expr` holds, at most `max_s` seconds; whether it held"""
+    t0 = time.time()
+    while time.time() - t0 < max_s:
+        if ctx.js(expr):
+            return True
+        time.sleep(0.1)
+    return False
 
 
 def run(ctx):
@@ -110,6 +132,37 @@ def run(ctx):
             'the owner\'s page reads the window run\'s 240 bytes and lists the claimant\'s drafts — what the guest must never meet',
             {'run_bytes': len(secret.encode('utf8')), 'drafts': len(drafts)})
     draft_word = t(ctx, 'F.label.draft')
+    owner_docs = {p['doc'] for p in owner_places}
+    own = squash(secret)
+    stretches = {own[i:i + STRETCH] for i in range(max(0, len(own) - STRETCH + 1))}
+
+    def guest_index(whose, places):
+        """(d)'s index at guest class: no draft listed, the claimant's none; every place one the owner's lists; each
+        account's count the places listed"""
+        docs = {p['doc'] for p in places}
+        r.check(not [p['doc'] for p in places if p['kind'] == 'draft'] and not docs & set(drafts),
+                f'(d) {whose} index lists no draft, the claimant\'s none of them', {'drafts_listed': [p['doc'] for p in places if p['kind'] == 'draft'][:6], 'claimant_drafts_listed': sorted(docs & set(drafts), key=num)[:6]})
+        r.check(bool(docs) and docs <= owner_docs, f'(d) every place {whose} index lists, the owner\'s lists too', sorted(docs - owner_docs, key=num)[:10])
+        listed = Counter(p['account'] for p in places)
+        off = [{'account': c['account'], 'count': c['documents'], 'listed': listed.get(c['account'], 0)} for c in ctx.js('window.__skep.model.counts()') if not c['system'] and c['documents'] != listed.get(c['account'], 0)]
+        r.check(not off, f'(d) each account\'s count is the places {whose} index lists for it', off)
+
+    def run_withheld(what):
+        """(e)'s model at the window run: one withheld block at 1467, 240 positions, its origin 1.0.1.0.1003, and none of
+        its text; the first edition's record"""
+        doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))
+        run_blocks = [b for b in doc['blocks'] if b['kind'] == 'withheld' and b['pos'] <= WINDOW[0] < b['pos'] + b['width']]
+        held_text = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1]))
+        r.check(len(run_blocks) == 1 and run_blocks[0]['pos'] == WINDOW[0] and run_blocks[0]['width'] == WINDOW[1] and run_blocks[0]['origin'] == WINDOW[2] and held_text == '',
+                what, {'blocks': run_blocks, 'held_text': held_text[:40]})
+        return doc
+
+    def leaks(places):
+        """the stretches of the owner's bytes over the run the page holds anywhere that its own delivered text and labels
+        do not, and how many stretches its own text and labels hold"""
+        legit = squash(''.join(ctx.js('window.__skep.model.text(%s, 1, 1e9)' % json.dumps(a)) for a in sorted(set(ctx.js('window.__skep.mountedAddrs()')) | {DOC})) + ''.join(p['label'] or '' for p in places))
+        body = squash(ctx.js('document.body.textContent'))
+        return sorted(s for s in stretches if s in body and s not in legit), sum(1 for s in stretches if s in legit)
 
     # ---- the guest's page ----------------------------------------------------------------------------------
     log = ctx.provider_log()
@@ -141,14 +194,7 @@ def run(ctx):
     r.figures['shots'] = [ctx.shot('guest/launch.png')]
     # (d) the drafts: the index, then the labels and marks at the far, home and mid views
     places = ctx.js('window.__skep.model.places()')
-    docs = {p['doc'] for p in places}
-    owner_docs = {p['doc'] for p in owner_places}
-    r.check(not [p['doc'] for p in places if p['kind'] == 'draft'] and not docs & set(drafts),
-            '(d) the guest\'s index lists no draft, the claimant\'s none of them', {'drafts_listed': [p['doc'] for p in places if p['kind'] == 'draft'][:6], 'claimant_drafts_listed': sorted(docs & set(drafts), key=num)[:6]})
-    r.check(bool(docs) and docs <= owner_docs, '(d) every place the guest\'s index lists, the owner\'s lists too', sorted(docs - owner_docs, key=num)[:10])
-    listed = Counter(p['account'] for p in places)
-    off = [{'account': c['account'], 'count': c['documents'], 'listed': listed.get(c['account'], 0)} for c in ctx.js('window.__skep.model.counts()') if not c['system'] and c['documents'] != listed.get(c['account'], 0)]
-    r.check(not off, '(d) each account\'s count is the places the guest\'s index lists for it', off)
+    guest_index('the guest\'s', places)
 
     def naming_a_draft(labels):
         """the label lines that name a draft: the draft mark, or a stretch of a draft's first line no edition's holds"""
@@ -185,11 +231,7 @@ def run(ctx):
 
     # (e) the window run at 1467, withheld
     ctx.leap(DOC, WINDOW[0])
-    doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))
-    run_blocks = [b for b in doc['blocks'] if b['kind'] == 'withheld' and b['pos'] <= WINDOW[0] < b['pos'] + b['width']]
-    held_text = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1]))
-    r.check(len(run_blocks) == 1 and run_blocks[0]['pos'] == WINDOW[0] and run_blocks[0]['width'] == WINDOW[1] and run_blocks[0]['origin'] == WINDOW[2] and held_text == '',
-            '(e) the model holds the window run as a withheld block — at 1467, 240 positions, its origin 1.0.1.0.1003 — and none of its text', {'blocks': run_blocks, 'held_text': held_text[:40]})
+    doc = run_withheld('(e) the model holds the window run as a withheld block — at 1467, 240 positions, its origin 1.0.1.0.1003 — and none of its text')
     ph = ctx.js('''[...document.querySelectorAll(%s)].map((e) => ({pos: Number(e.dataset.pos), width: Number(e.dataset.width), origin: e.dataset.origin,
       head: (e.querySelector('.wh-head') || {}).textContent || null, arm: (e.querySelector('.arm') || {}).textContent || null}))''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
     head = t(ctx, 'B1.withheld-run', {'owner': OWNER, 'account': OWNER, 'width': WINDOW[1], 'origin': WINDOW[2]})
@@ -197,11 +239,8 @@ def run(ctx):
     c33 = ctx.js('document.querySelectorAll(%s).length' % json.dumps('#domlayer article[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
     r.check(len(ph) == 1 and ph[0]['pos'] == WINDOW[0] and ph[0]['width'] == WINDOW[1] and ph[0]['origin'] == WINDOW[2] and ph[0]['head'] == head and ph[0]['arm'] == arm and c33 == 0,
             '(e) the mounted article holds B1-S7\'s placeholder at the run — its position, width and origin, its head, R56\'s key-absent arm — and no C-33 mark', {'placeholders': ph, 'c33_marks': c33})
-    legit = squash(''.join(ctx.js('window.__skep.model.text(%s, 1, 1e9)' % json.dumps(a)) for a in sorted(set(ctx.js('window.__skep.mountedAddrs()')) | {DOC})) + ''.join(p['label'] or '' for p in places))
-    body, own = squash(ctx.js('document.body.textContent')), squash(secret)
-    stretches = {own[i:i + STRETCH] for i in range(max(0, len(own) - STRETCH + 1))}
-    leaks = sorted(s for s in stretches if s in body and s not in legit)
-    r.check(len(own) >= STRETCH and not leaks, f'(e) none of the owner\'s bytes over the run stands anywhere in the page: no stretch of {STRETCH} of its characters, white space folded, that the guest\'s own delivered text and labels do not hold', leaks[:4])
+    leaked, legit_held = leaks(places)
+    r.check(len(own) >= STRETCH and not leaked, f'(e) none of the owner\'s bytes over the run stands anywhere in the page: no stretch of {STRETCH} of its characters, white space folded, that the guest\'s own delivered text and labels do not hold', leaked[:4])
     item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
     r.check(item.startswith('withheld run in %s: %d positions, origin %s.' % (DOC, WINDOW[1], WINDOW[2])), '(e) the mirror\'s current item at the landing names the withheld run, its width and its origin', item[:120])
     box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
@@ -221,7 +260,7 @@ def run(ctx):
     r.check(empty and gap['bars_space'] is not None and abs(gap['space'] - gap['bars_space']) <= GAP_TOL_PX,
             f'(e) the margins about that empty block collapse into one: the block after it stands below the placeholder as its bars stand below the run\'s, at the layout size, {GAP_TOL_PX} px either way', gap)
     r.figures['shots'].append(ctx.shot('guest/window-run.png'))
-    r.figures['run'] = {'placeholder': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': sum(1 for s in stretches if s in legit), 'mirror_item': item[:160], 'shown': vis,
+    r.figures['run'] = {'placeholder': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': legit_held, 'mirror_item': item[:160], 'shown': vis,
                         'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px'], 'after_run': gap}
 
     # (c) the LEAP box at the first edition: no HOME level
@@ -299,7 +338,45 @@ def run(ctx):
     r.figures['guest_calls'] = {'page': dict(Counter(c['name'] for c in mine)), 'provider': dict(asked), 'cold_open': boot.get('coldOpenCalls')}
     r.figures['index'] = {'guest_places': len(places), 'owner_places': len(owner_places), 'claimant_drafts': len(drafts)}
 
-    # the owner's page again, the first edition read, as the cases after this one expect
+    # (g) the owner's page again, whose own session ends: it falls to guest class
+    ctx.open_page('all')
+    r.check(ctx.js('window.__skep.model.session()') is not None, 'the owner\'s page opened again: a session stands')
+    ctx.leap(WINDOW[2])
+    draft_read = ctx.js('window.__skep.model.doc(%s)' % json.dumps(WINDOW[2]))
+    ctx.leap(DOC, WINDOW[0])
+    again = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1]))
+    r.check(WINDOW[2] in drafts and draft_read['from'] >= 0 and bool(draft_read['blocks']) and again == secret,
+            '(g) before its end the owner\'s page reads the claimant\'s draft %s and the window run\'s bytes' % WINDOW[2],
+            {'draft_listed': WINDOW[2] in drafts, 'draft_from': draft_read['from'], 'draft_blocks': len(draft_read['blocks']), 'run_bytes': len(again.encode('utf8'))})
+    n0 = len(calls(ctx))
+    closed = ctx.js('(async () => { const P = await import("./bridge/port.js"); return "result" in await P.close({session: window.__skep.model.session().session}); })()')
+    fell = wait_for(ctx, 'window.__skep.model.session() === null && window.__skep.line().state === 5')
+    ctx.settle(); ctx.frames(2)
+    ids = ctx.js('[...document.querySelectorAll("#line [data-string]")].map((e) => e.dataset.string)')
+    r.check(closed and fell and 'C-137.signed-out' in ids, '(g) the page\'s own `close(session)` ends its session: the page takes the end, the line in its signed-out state',
+            {'closed': closed, 'fell': fell, 'strings': ids})
+    after = calls(ctx)[n0:]
+    at = next((i for i, c in enumerate(after) if c['name'] == 'close'), len(after))
+    reads = [c for c in after[at + 1:] if c['name'] in ('op', 'places')]
+    unguest = [c['args'] for c in reads if c['outcome'] != 'refused' and (not c['args'] or c['args'].get('guest') is not True or 'session' in c['args'])]
+    r.check(any(c['name'] == 'places' and c['args'] and c['args'].get('guest') is True for c in reads) and not unguest,
+            '(g) after the close the page reads its index again in the guest form, and every read it sent after the close that was answered is a guest\'s',
+            {'calls': dict(Counter(c['name'] for c in after[at + 1:])), 'not_guest': unguest[:3]})
+    fallen = ctx.js('window.__skep.model.places()')
+    guest_index('the fallen page\'s', fallen)
+    gone = ctx.js('window.__skep.model.doc(%s)' % json.dumps(WINDOW[2]))
+    r.check(gone['from'] == -1 and not gone['blocks'] and WINDOW[2] not in ctx.js('window.__skep.mountedAddrs()'),
+            '(g) the draft the page read under its session holds no text, and nothing is mounted for it', {'from': gone['from'], 'blocks': len(gone['blocks'])})
+    ctx.js('window.__skep.go.home()'); ctx.settle(); ctx.frames(2)
+    fallen_home = draws_no_draft('the fallen page\'s HOME')
+    ctx.leap(DOC, WINDOW[0])
+    run_withheld('(g) the fallen page holds the window run as the guest\'s does: a withheld block at 1467, 240 positions, its origin 1.0.1.0.1003, and none of its text')
+    fallen_leaks, _ = leaks(fallen)
+    r.check(not fallen_leaks, '(g) none of the owner\'s bytes over the run stands anywhere in the fallen page', fallen_leaks[:4])
+    r.figures['shots'].append(ctx.shot('guest/fallen.png'))
+    r.figures['fallen'] = {'places': len(fallen), 'home': fallen_home, 'reads_after_close': dict(Counter(c['name'] for c in reads))}
+
+    # the owner's page once more, the first edition read, as the cases after this one expect
     ctx.open_page('all')
     r.check(ctx.js('window.__skep.model.session()') is not None, 'the owner\'s page opened again: a session stands')
     ctx.leap(DOC, WINDOW[0])

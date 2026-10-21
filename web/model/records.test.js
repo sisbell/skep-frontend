@@ -1,8 +1,9 @@
-// M-REC's test: the index from `places`, blocks tiling their bytes, a
-// document's blocks and runs replaced whole and never edited in place
-// (T-LAYER maps an article's positions, and copies its bytes, through the
-// blocks and runs it was made from), the feed keeping the index and
-// invalidating, the system account held and marked.
+// M-REC's test: the index from `places`, each answer replacing the one
+// before it whole, blocks tiling their bytes, a document's blocks and runs
+// replaced whole and never edited in place (T-LAYER maps an article's
+// positions, and copies its bytes, through the blocks and runs it was made
+// from), the feed keeping the index and invalidating, the system account
+// held and marked, the death dropping every read held at the session's class.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -28,6 +29,47 @@ test('the index is built from places: rows, counts, the state and its floor', ()
   assert.equal(REC.floor(), 8265);
   assert.deepEqual(REC.landmarks().map((p) => p.doc), ['1.0.2.0.1']);
   assert.equal(REC.doc('1.0.1.0.2').kind, 'draft');
+});
+
+/** a record's copy of its index row */
+const rowOf = (/** @type {string} */ addr) => { const d = REC.doc(addr); return [d.kind, d.label, d.standing]; };
+
+test('an index replaces the one before it whole: a record the new one does not list keeps none of its row, its kind its metadata\'s where read', () => {
+  REC.takeIndex(/** @type {any} */ (PLACES));
+  REC.takeMetadata('1.0.1.0.4', { doc: '1.0.1.0.4', published: true, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeIndex(/** @type {any} */ ({ docs: PLACES.docs.filter((p) => p.doc !== '1.0.1.0.2' && p.doc !== '1.0.1.0.4'), counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  assert.equal(REC.place('1.0.1.0.2'), undefined);
+  assert.deepEqual(rowOf('1.0.1.0.2'), ['unknown', null, null], 'the draft the new index does not list: no kind, label or standing of the old row');
+  assert.deepEqual(rowOf('1.0.1.0.4'), ['edition', null, null], 'its kind its metadata\'s where read');
+  assert.deepEqual(rowOf('1.0.1.0.3'), ['edition', '# skep-ux-design', 'public'], 'a record the new index lists, its row');
+});
+
+test('the death drops every read held at the session\'s class — the index, each document\'s delivered state and row, the links, the owners and key sets, the drafts rows — and the runs a reader took stand as they were', () => {
+  REC.takeIndex(/** @type {any} */ (PLACES));
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeSpanSet('1.0.1.0.2', [{ subspace: 1, ordinal: 1, positions: 12 }, { subspace: 2, ordinal: 1, positions: 1 }]);
+  REC.takeDelivery('1.0.1.0.2', [{ pos: 1, width: 12, kind: 'content', text: 'draft words.', ref: null, origin: null }]);
+  REC.takeMetadata('1.0.1.0.2', { doc: '1.0.1.0.2', published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeOrigins('1.0.1.0.3', 1, [{ iStart: '1.0.1.0.2.0.1.1', width: 4 }]);
+  REC.takeMembers('1.0.1.0.3', 2);
+  REC.takeRefused('1.0.2.0.1', 'withheld');
+  REC.takeLinks('1.0.1.0.3', ['1.0.1.0.2.0.2.1']);
+  REC.takeLink({ addr: '1.0.1.0.2.0.2.1', from: [], to: [], type: null });
+  REC.takeOwner('1.0.1.1', { prefix: '1.0.1', principal: 1 });
+  REC.takeKeySet('1.0.1', { enrolled: [], retired: [] });
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12324, at: 12324, op: 'create_new_document', docs: ['1.0.1.0.1013'], class: 'drafts', session: 's-1' }));
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12325, at: 12325, op: 'publish', docs: ['1.0.1.0.4.2'], class: 'published' }));
+  const taken = REC.doc('1.0.1.0.2').runs;
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual([REC.session(), REC.deathReason()], [null, { arm: 'closed' }]);
+  assert.deepEqual([REC.places(), REC.accounts(), REC.indexState(), REC.countOf('1.0.1').documents], [[], [], null, 0], 'the index, its counts and its state');
+  for (const d of REC.docs()) {
+    assert.deepEqual([d.from, d.runs, d.blocks, d.extent, d.whole, d.linkPositions, d.meta, d.origins, d.originsFor, [...d.links], d.linksRead, d.members, d.refused], [-1, [], [], null, null, null, null, [], null, [], false, null, null], d.addr + '\'s delivered state');
+    assert.deepEqual(rowOf(d.addr), ['unknown', null, null], d.addr + '\'s row');
+  }
+  assert.deepEqual([REC.links(), REC.ownerOf('1.0.1.1'), REC.keySetOf('1.0.1')], [[], undefined, undefined], 'the links, the owners and the key sets');
+  assert.deepEqual(REC.feedRows().map((r) => r.cls), ['published'], 'the published row held, the drafts row dropped');
+  assert.equal(REC.textOf(taken, 1, 13), 'draft words.', 'the runs a reader took before the death read as they stood');
 });
 
 test('the system account\'s rows are held and marked, never a landmark', () => {

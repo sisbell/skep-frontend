@@ -14,10 +14,11 @@
 // reference kept), `session(board)` ONCE AT BOOT (S-37 (a) — the reference
 // kept for the page's life, never a token; `close(session)` at `pagehide`
 // on a keepalive fetch), `fingerprint()` (the device label and "key
-// present"), `health(board)`, `probe()`, `places(session, board)` for the
-// model's index (skep #463), the launch frame HOME — the acting account's
-// region at mid scale, a guest's the board's extent — the trail's first
-// entry (foundations §2.2; W-01; N-GO's `launch`).
+// present"), `health(board)`, `probe()`, the model's index by M-PUMP's
+// `readIndex` (`places` at the page's class, skep #463), the launch frame
+// HOME — the acting account's region at mid scale, a guest's the board's
+// extent — the trail's first entry (foundations §2.2; W-01; N-GO's
+// `launch`).
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
 // frame, then P-RENDER, then BM, then O-HOST's place, the line — and the
@@ -198,9 +199,8 @@ async function boot() {
       if ('result' in h) REC.setHealth(h.result.health, h.result.mode);
       const pr = await PORT.probe({});
       if ('result' in pr) REC.setDaemon(pr.result.daemon);
-      const sess = REC.session();
-      const pl = await PORT.places(sess ? { session: sess.session, board: board.board } : { guest: true, board: board.board });
-      if ('result' in pl) { REC.takeIndex(pl.result); bootInfo.placesBytes = JSON.stringify(pl.result).length; bootInfo.placesDocs = pl.result.docs.length; }
+      const pl = await PUMP.readIndex();
+      if ('result' in pl) { bootInfo.placesBytes = JSON.stringify(pl.result).length; bootInfo.placesDocs = pl.result.docs.length; }
       else bootInfo.placesRefused = pl.refused;
       let deepest = 0; for (const p of REC.places()) if (!p.system) deepest = Math.max(deepest, depthOfDoc(p.doc));
       CAM.setDeepest(deepest); bootInfo.deepestDepth = deepest;

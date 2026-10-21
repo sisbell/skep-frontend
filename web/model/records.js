@@ -6,12 +6,19 @@
 // origins, the raw set of links touching them), links as delivered with the
 // type learned once (E17 (a)), the board, the session REFERENCE (a name,
 // never a token), health and the derived mode, the daemon's state, the key
-// store's label; THE CLIENT INDEX built from `places` at boot (skep #463 —
-// the documents per account, their labels, kinds and standing; the counts per
-// account; the index's state and floor) and kept by the feed's rows — never
-// from `/changes`, never by enumerating documents. It knows nothing of
-// pixels, zoom, selection or lenses: "the links touching an address" is the
-// RAW set as delivered — which of them show, and how, is LK's (the seam).
+// store's label; THE CLIENT INDEX built from `places` (skep #463 — the
+// documents per account, their labels, kinds and standing; the counts per
+// account; the index's state and floor), each answer replacing the index
+// whole, and kept by the feed's rows — never from `/changes`, never by
+// enumerating documents. THE CLASS: every record read here was read at the
+// page's class, and the page's own session's death (`sessionDied`) drops
+// every one — the index, each document's delivered state and its row, the
+// links, the owners and key sets, the drafts rows held — so what stands after
+// it is what a guest's page holds before it reads (foundations §2.1: the
+// index "masked at the reader's class"; client.md §4e.3); M-PUMP reads it
+// all again at guest class. It knows nothing of pixels, zoom, selection or
+// lenses: "the links touching an address" is the RAW set as delivered —
+// which of them show, and how, is LK's (the seam).
 // THE `H` DOCUMENT (the record §1.8, OPEN): the system account's rows are
 // HELD here and marked `system`; the plane does not draw them (this lane's
 // cut, reported).
@@ -163,8 +170,24 @@ export const session = () => state.session;
 /** @param {{kind: string, name: string} | null} r */
 export function setSessionRefused(r) { state.sessionRefused = r; bump(); }
 export const sessionRefused = () => state.sessionRefused;
-/** the death signal: the line drops "acting as" at once */
-export function sessionDied(/** @type {DeathReason} */ reason) { state.sessionDied = reason; state.session = null; bump(); }
+/**
+ * The death signal: the line drops "acting as" at once, and every read held
+ * at the session's class goes with the session — the index (its rows, counts
+ * and state), each document's delivered state and the index's row on it, the
+ * links, the owners and key sets, and the feed's drafts rows — so no frame
+ * after it draws, lists or counts what the session could read and a guest
+ * cannot. M-PUMP reads the index again in the guest form, and the view asks
+ * the rest.
+ * @param {DeathReason} reason
+ */
+export function sessionDied(reason) {
+  state.sessionDied = reason; state.session = null;
+  state.index.clear(); state.counts.clear(); state.indexState = null;
+  for (const d of state.docs.values()) { drop(d); unlist(d); }
+  state.links.clear(); state.owners.clear(); state.keySets.clear();
+  state.feed = state.feed.filter((r) => r.cls !== 'drafts');
+  bump();
+}
 export const deathReason = () => state.sessionDied;
 /** @param {unknown} h @param {Mode | null} mode */
 export function setHealth(h, mode) { state.health = h; state.mode = mode; bump(); }
@@ -187,17 +210,26 @@ export const device = () => state.device;
 // ---- the index -----------------------------------------------------------------
 
 /**
- * Build the index from `places` (at boot, skep #463): every document of the
- * board's document index at the call's class, in address order; the counts
- * per account; the index's state.
+ * Build the index from `places` (skep #463): every document of the board's
+ * document index at the call's class, in address order; the counts per
+ * account; the index's state. The answer replaces the index whole: a record
+ * the index listed before and this answer does not keeps none of its row.
  * @param {PlacesAnswer} answer
  */
 export function takeIndex(answer) {
+  const listed = [...state.index.keys()];
   state.index.clear(); state.counts.clear();
   for (const p of answer.docs) putPlace(p);
+  for (const addr of listed) { const d = state.docs.get(addr); if (d && !state.index.has(addr)) unlist(d); }
   for (const c of answer.counts) state.counts.set(c.account, c.documents);
   state.indexState = answer.state;
   bump();
+}
+
+/** a record no index row stands on: none of a row's kind, label or standing — its kind its metadata's, where read (as `takeMetadata` sets it) */
+function unlist(/** @type {Doc} */ d) {
+  d.kind = d.meta && !memberOf(d.addr) ? (d.meta.published ? 'edition' : 'draft') : 'unknown';
+  d.label = null; d.standing = null; d.rev++;
 }
 
 /** @param {ShapePlace} p */
@@ -421,9 +453,14 @@ export function takeMembers(/** @type {string} */ addr, /** @type {number} */ n)
 /** drop a document's delivered state (a feed row named it; the viewport asks again) */
 export function invalidate(/** @type {string} */ addr) {
   const d = state.docs.get(addr); if (!d) return;
-  d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.extent = null; d.meta = null; d.origins = []; d.originsFor = null;
-  d.links.clear(); d.linksRead = false; d.members = null; d.refused = null; d.rev++;
+  drop(d);
   bump();
+}
+
+/** a document's delivered state dropped — everything its reads brought; the record stands, its runs and blocks given new empty ones as a delivery gives new ones */
+function drop(/** @type {Doc} */ d) {
+  d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.extent = null; d.whole = null; d.linkPositions = null; d.meta = null; d.origins = []; d.originsFor = null;
+  d.links.clear(); d.linksRead = false; d.members = null; d.refused = null; d.rev++;
 }
 
 // ---- links ---------------------------------------------------------------------
