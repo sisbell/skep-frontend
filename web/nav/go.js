@@ -145,12 +145,14 @@ const widthAt = (/** @type {Run[] | null} */ runs, /** @type {number | null} */ 
  * @param {{addr: string, pos: number | null, view: View}} at
  * @param {boolean | undefined} byKey
  * @param {number} ms
+ * @returns {Promise<boolean>} the flight landed; false where a later act's flight, a pan or a zoom cut it short (P-CAM's `fly`)
  */
 async function land(at, byKey, ms) {
   WALK.focusTo(at.addr, at.pos, byKey);
   CAM.markDirty();
-  await CAM.fly(at.view, ms);
+  const landed = await CAM.fly(at.view, ms);
   CAM.markDirty();
+  return landed;
 }
 
 /**
@@ -190,7 +192,7 @@ async function reproject(c, d) {
  * nowhere and faces nothing.
  * @param {string} addr a document address
  * @param {{pos?: number | null, runs?: Run[] | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, carry?: Span | null, push?: boolean, ms?: number, byKey?: boolean}} [opts] `runs` every run of the span landed on, `pos` the first position of one of them, where the landing names a span; `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act
- * @returns {Promise<import('../model/records.js').Doc | null>} the document landed in; null where it faced in the place of a landing, or an act made while it read took its place
+ * @returns {Promise<import('../model/records.js').Doc | null>} the document landed in; null where it faced in the place of a landing, an act made while it read took its place, or its flight was cut short before it landed
  */
 export async function leapTo(addr, opts = {}) {
   const act = nextAct();
@@ -216,8 +218,7 @@ export async function leapTo(addr, opts = {}) {
   lit = link;
   const flight = land({ addr, pos, view: v }, opts.byKey, opts.ms ?? (opts.how === 'click' ? 420 : 620));
   if (held === 'none') { FACES.floating(addr, { span: { addr, pos: pos ?? 1 } }, false); CAM.markDirty(); }
-  await flight;
-  return d;
+  return (await flight) ? d : null;
 }
 
 /**

@@ -6,7 +6,10 @@
 // writes nothing"; the gate's ledger proves it). Where the camera is bound is
 // the flight's destination while one runs (`destination`): what a departure
 // re-takes, so input made during a flight lands at its destination, never at
-// a point the flight was passing (foundations §2.3).
+// a point the flight was passing (foundations §2.3). Every flight `fly`
+// starts settles its promise once: true as it lands, false where a newer
+// flight, `set`, a pan or a zoom cuts it short (`cut`), so the act awaiting
+// it ends whatever ends its flight.
 // THE ZOOM-IN BOUND (E18 (a)): it never stops short of the reading scale of a
 // place the projection draws — the deepest place's representative em at boot
 // (`setDeepest`), and every face T-LAYER sets a document at (`reach`), smaller
@@ -46,7 +49,7 @@ import { STUB } from './register.js';
  * @property {View} to
  * @property {boolean} arc
  * @property {number} outScale
- * @property {(() => void) | null} done
+ * @property {(landed: boolean) => void} done settles the promise `fly` answered: true as it lands, false where it is cut short
  */
 
 /** @typedef {{x: number, y: number}} Point a screen point */
@@ -105,8 +108,16 @@ export function clamp() {
   cam.y = Math.max(-m, Math.min(WORLD_H + m, cam.y));
 }
 
+/**
+ * End the flight in progress short of its landing, its promise settled false
+ * — never rejected: a cut is no failure, and a rejection would reach the
+ * app's failure reporter through every act nobody awaits (a click's LEAP, an
+ * overlay's act).
+ */
+function cut() { const a = cam.anim; cam.anim = null; if (a) a.done(false); }
+
 /** @param {View} v set the view at once, ending any flight */
-export function set(v) { cam.anim = null; cam.x = v.x; cam.y = v.y; cam.scale = v.scale; clamp(); }
+export function set(v) { cut(); cam.x = v.x; cam.y = v.y; cam.scale = v.scale; clamp(); }
 
 /** the current view, copied */
 export function view() { return { x: cam.x, y: cam.y, scale: cam.scale }; }
@@ -156,11 +167,13 @@ const easeInOut = (/** @type {number} */ u) => (u < 0.5 ? 4 * u * u * u : 1 - Ma
 
 /**
  * A flight to a view: a transform of the view (law 6), dipping out for far
- * targets (the wireframe's arc). Resolves when it lands.
+ * targets (the wireframe's arc), from where the camera stands — the flight in
+ * progress cut short there. It settles once: true where it lands, false where
+ * a newer flight, `set`, a pan or a zoom cuts it short.
  * @param {View} t
  * @param {number} [ms]
  * @param {number} [now]
- * @returns {Promise<void>}
+ * @returns {Promise<boolean>} the flight landed
  */
 export function fly(t, ms = 620, now = performance.now()) {
   const from = view();
@@ -168,11 +181,13 @@ export function fly(t, ms = 620, now = performance.now()) {
   const minScale = Math.min(from.scale, t.scale);
   const outScale = minScale * Math.min(1, (VW * 0.7) / Math.max(1, dist * minScale));
   const arc = dist * minScale > VW * 1.5;
+  cut();
   return new Promise((res) => { cam.anim = { t0: now, ms, from, to: t, arc, outScale, done: res }; });
 }
 
 /**
- * Advance the flight. True while one is running.
+ * Advance the flight; at its last frame it lands, its promise settled true.
+ * True while one is running.
  * @param {number} now
  * @returns {boolean}
  */
@@ -185,7 +200,7 @@ export function step(now) {
   if (a.arc) { const dip = Math.sin(Math.PI * e); cam.scale = Math.exp(Math.log(base) * (1 - dip) + Math.log(a.outScale) * dip); }
   else cam.scale = base;
   clamp();
-  if (u >= 1) { const done = a.done; cam.anim = null; if (done) done(); }
+  if (u >= 1) { cam.anim = null; a.done(true); }
   return true;
 }
 
@@ -193,11 +208,11 @@ export function step(now) {
 export const flying = () => cam.anim !== null;
 
 /** pan by screen px (input never draws — FP-9; it moves view state) */
-export function panBy(/** @type {number} */ dx, /** @type {number} */ dy) { cam.anim = null; cam.x -= dx / cam.scale; cam.y -= dy / cam.scale; clamp(); }
+export function panBy(/** @type {number} */ dx, /** @type {number} */ dy) { cut(); cam.x -= dx / cam.scale; cam.y -= dy / cam.scale; clamp(); }
 
 /** zoom by a factor about a screen point */
 export function zoomAt(/** @type {number} */ factor, /** @type {number} */ px, /** @type {number} */ py) {
-  cam.anim = null;
+  cut();
   const wxp = wx(px), wyp = wy(py);
   cam.scale *= factor; clamp();
   cam.x = wxp - (px - VW / 2) / cam.scale;
@@ -258,8 +273,8 @@ let dirtyFlag = true;
 export function markDirty() { dirtyFlag = true; }
 export function takeDirty() { const d = dirtyFlag; dirtyFlag = false; return d; }
 
-/** reset everything (tests): the view, the viewport, the zoom-in bound at S3's, the dirty mark */
+/** reset everything (tests): the view, any flight cut short, the viewport, the zoom-in bound at S3's, the dirty mark */
 export function _reset() {
-  cam.x = WORLD_W / 2; cam.y = WORLD_H / 2; cam.scale = 1; cam.anim = null;
+  cut(); cam.x = WORLD_W / 2; cam.y = WORLD_H / 2; cam.scale = 1;
   VW = 1; VH = 1; maxS = S3_MAX; dirtyFlag = true;
 }

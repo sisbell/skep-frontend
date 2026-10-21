@@ -1,6 +1,10 @@
 // P-CAM's test: the projection to the screen and back, the clamp, a flight
 // that lands, where the camera is bound while a flight runs (a mutant that
-// answers the view mid-flight turns red), the zoom bound widened per E18 (a)
+// answers the view mid-flight turns red), every flight settled once — true
+// as it lands, false where a newer flight, `set`, a pan, a zoom or a reset
+// cuts it short, the camera then where the cut put it (a mutant that drops
+// the settling from any one of them, settles a cut flight true or lands with
+// no answer turns red), the zoom bound widened per E18 (a)
 // — the deepest place's representative em at boot, and every face a document
 // is set at: a flight to read a face smaller than its place's em lands at its
 // reading scale (a bound held at the places' ems turns red), and no face
@@ -75,9 +79,39 @@ test('a flight interpolates and lands exactly, resolving its promise', async () 
   assert.ok(CAM.flying());
   CAM.step(50); assert.ok(CAM.cam.x > 0 && CAM.cam.x < 100);
   CAM.step(100);
-  await p;
+  assert.equal(await p, true, 'it settles true as it lands');
   assert.ok(!CAM.flying());
   assert.deepEqual(CAM.view(), { x: 100, y: 50, scale: 2 });
+});
+
+test('a flight cut short settles false: by a newer flight, which runs on and settles true as it lands, by set, a pan, a zoom or a reset — the camera where the cut put it', async () => {
+  /** @type {Array<[string, () => Promise<boolean> | void]>} each cut, made mid-flight; a newer flight answers its own promise */
+  const cuts = [
+    ['a newer flight', () => CAM.fly({ x: -100, y: -50, scale: 0.5 }, 100, 50)],
+    ['set', () => CAM.set({ x: 7, y: 8, scale: 1.5 })],
+    ['a pan', () => CAM.panBy(10, 0)],
+    ['a zoom', () => CAM.zoomAt(2, 200, 100)],
+    ['a reset', () => CAM._reset()],
+  ];
+  for (const [what, cut] of cuts) {
+    CAM.setViewport(1000, 500);
+    CAM.set({ x: 0, y: 0, scale: 1 });
+    /** @type {boolean | undefined} */
+    let settled;
+    CAM.fly({ x: 100, y: 50, scale: 2 }, 100, 0).then((landed) => { settled = landed; });
+    CAM.step(50);
+    const mid = CAM.view();
+    const newer = cut();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal(settled, false, `${what}: the flight it cut short settles false`);
+    if (newer) {
+      assert.ok(CAM.flying(), `${what}: runs on`);
+      CAM.step(Infinity);
+      assert.equal(await newer, true, `${what}: settles true as it lands`);
+    } else assert.ok(!CAM.flying(), `${what}: no flight runs`);
+    if (what === 'a pan') assert.deepEqual(CAM.view(), { x: mid.x - 10 / mid.scale, y: mid.y, scale: mid.scale }, 'the pan moves the camera from where the flight was, by the pan alone');
+  }
+  CAM._reset();
 });
 
 test('where the camera is bound: the flight\'s destination while it runs, never the point it is passing; the view itself once it lands', () => {

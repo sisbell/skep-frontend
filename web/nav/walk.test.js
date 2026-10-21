@@ -24,7 +24,9 @@
 // after the read turns red — and → on such a document, overtaken by ↑, enters
 // nothing, the levels above standing as ↑ left them; ↓ onto a document whose
 // extent is read before the camera follows, overtaken by a landing, flies the
-// camera nowhere (a mutant that flies after the read turns red).
+// camera nowhere (a mutant that flies after the read turns red); ↓ whose
+// flight a second ↓ cut short ends, the walk on the span the second reached
+// (a mutant that leaves a cut flight unsettled turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -209,6 +211,18 @@ test('a walk key whose flight waits on a read flies the camera nowhere once a la
   assert.deepEqual(walkAt(), ['block', D, 11]);
   assert.deepEqual(CAM.view(), at, 'the camera where the later landing left it');
   assert.deepEqual(fake.unanswered, []);
+});
+
+test('a walk key whose flight a later walk key cut short ends: the walk on the span the later key reached', async () => {
+  await WALK.focusTo(D, 1);
+  const first = WALK.key('down');
+  const cut = CAM.cam.anim;
+  assert.ok(cut, '↓ flies the camera to the span below');
+  const second = WALK.key('down');
+  assert.ok(CAM.cam.anim && CAM.cam.anim !== cut, 'a second ↓ flies on, cutting the first one\'s flight short');
+  await run(second);
+  await run(first);
+  assert.deepEqual(walkAt(), ['block', D, 27]);
 });
 
 /** the ids of the mirror's items at tabindex 0, read from the markup the rebuild wrote */

@@ -36,7 +36,10 @@
 // leaves the trail as it found it. A departure made
 // during a flight re-takes the flight's destination, so Forward lands there —
 // after a LEAP's flight and after a Back's (a mutant that re-takes the camera
-// mid-flight turns red).
+// mid-flight turns red) — and the act whose flight it cut short ends, the
+// LEAP answering no document landed in (a mutant that leaves a cut flight
+// unsettled, or answers the LEAP's document whatever its flight answered,
+// turns red).
 // A LEAP lands at reading scale at any depth (E18 (a)): to a document minted
 // a grid deeper than any the page booted with, and to a residue member whose
 // many paragraphs set it at under a fifth of its place's em (a camera whose
@@ -509,31 +512,34 @@ test('a follow that faces leaves the trail as it found it: its entry, standing w
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a Back made during a LEAP\'s flight re-takes the view the flight was bound for, and Forward lands there', async () => {
+test('a Back made during a LEAP\'s flight re-takes the view the flight was bound for, and Forward lands there; the LEAP, its flight cut short, ends with no document landed in', async () => {
   await run(GO.leapTo(D));
-  GO.leapTo(FAR); // its flight is replaced by Back's: never awaited
+  const leap = GO.leapTo(FAR);
   const flight = CAM.cam.anim;
   assert.ok(flight, 'the LEAP flies');
   const bound = { ...flight.to };
   CAM.step(flight.t0 + flight.ms / 2);
   assert.ok(!same(CAM.view(), bound), 'the camera mid-flight');
   await run(GO.back());
+  await run(leap);
+  assert.equal(await leap, null, 'the LEAP whose flight Back cut short landed in no document');
   const entry = TRAIL.all()[TRAIL.cursorIndex() + 1];
   assert.ok(entry && entry.addr === FAR && same(entry.view, bound), 'the LEAP\'s entry holds the view its flight was bound for, not the camera mid-flight');
   await run(GO.forward());
   assert.ok(same(CAM.view(), bound), 'Forward lands there');
 });
 
-test('a second Back made during the first one\'s flight leaves the first one\'s entry at its own view, and Forward lands there', async () => {
+test('a second Back made during the first one\'s flight leaves the first one\'s entry at its own view, and Forward lands there; the first Back, its flight cut short, ends', async () => {
   await run(GO.leapTo(D));
   await run(GO.leapTo(FAR));
   await run(GO.leapTo(D, { pos: 11 }));
   const own = { ...TRAIL.all()[TRAIL.cursorIndex() - 1].view };
-  GO.back(); // its flight is replaced by the second Back's: never awaited
+  const first = GO.back();
   const flight = CAM.cam.anim;
   assert.ok(flight && same(flight.to, own), 'the first Back flies to FAR\'s entry');
   CAM.step(flight.t0 + flight.ms / 2);
   await run(GO.back());
+  await run(first);
   assert.ok(same(TRAIL.all()[TRAIL.cursorIndex() + 1].view, own), 'FAR\'s entry keeps its own view');
   await run(GO.forward());
   assert.ok(same(CAM.view(), own), 'Forward lands at it');
