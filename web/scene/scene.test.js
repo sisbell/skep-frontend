@@ -6,16 +6,20 @@
 // pair; with nothing shared, the second pane at its top — and the runs the
 // bands are drawn from, contiguous pairs one run.
 // Then the scene's focus, against the FAKE PORT and a page of stand-ins whose
-// focus lands only where the platform's does (D5 §4 rules 5 and 8; K-63):
-// while the scene stands the plane under it is out of the page's order — the
-// walk's tree and the corner layer inert — and its end puts the plane back
-// before it returns the focus to the element the scene was opened from. A
-// corner the focus is returned to while the plane is still covered takes
-// none, so a mutant that returns first turns red; one that leaves a focus the
-// scene held on its hidden pane turns red, as does one that takes back a
-// focus the person moved out of the scene; a scene opened over a standing one
-// returns it to the first one's opener — a mutant that reads the opener again
-// turns red.
+// focus lands only where the platform's does (D5 §4 rules 5 and 8; K-63;
+// the focus's owner N-FOCUS, whose own cases are `nav/focus.test.js` — these
+// stay beside it, for they hold the scene's order of cover, uncover and
+// return): while the scene stands the plane under it is out of the page's
+// order — the walk's tree and the corner layer inert — and its end puts the
+// plane back before it returns the focus to the element the scene was
+// opened from. A corner the focus is returned to while the plane is still
+// covered takes none, so a mutant that returns first turns red; one that
+// leaves a focus the scene held on its hidden pane turns red, as does one
+// that takes back a focus the person moved out of the scene; a scene opened
+// over a standing one returns it to the first one's opener — a mutant that
+// reads the opener again turns red; one opened with the focus on nothing
+// returns it to the walk's element, never to the top — a mutant that leaves
+// it on nothing turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -104,20 +108,21 @@ function page() {
   /** an element; `takes` whether the platform's focus lands on it now */
   const element = (/** @type {string} */ id, takes = () => true) => {
     const e = {
-      id, innerHTML: '', dataset: /** @type {Record<string, string>} */ ({}), style: {}, inert: false, tabIndex: -1,
+      id, isConnected: true, innerHTML: '', dataset: /** @type {Record<string, string>} */ ({}), style: {}, inert: false, tabIndex: -1,
       scrollTop: 0, scrollHeight: 0, clientTop: 0, clientWidth: 600, clientHeight: 400,
       focus() { if (takes()) doc.activeElement = e; },
       blur() { if (doc.activeElement === e) doc.activeElement = body; },
-      setAttribute() {}, addEventListener() {}, getContext: () => null,
+      setAttribute() {}, removeAttribute() {}, addEventListener() {}, getContext: () => null,
       getBoundingClientRect: () => ({ top: 0, left: 0, right: 600, bottom: 400, width: 600, height: 400 }),
       /** @type {(s: string) => unknown} */ querySelector: () => null,
       /** @type {(x: unknown) => boolean} */ contains: (x) => x === e,
+      classList: { toggle() {} },
     };
     return e;
   };
   const classes = new Set();
   const shown = () => classes.has('on');
-  const root = Object.assign(element('the scene'), { classList: { add: (/** @type {string} */ c) => { classes.add(c); }, remove: (/** @type {string} */ c) => { classes.delete(c); } } });
+  const root = Object.assign(element('the scene'), { classList: { add: (/** @type {string} */ c) => { classes.add(c); }, remove: (/** @type {string} */ c) => { classes.delete(c); }, toggle() {} } });
   const bar = element('the scene\'s bar', shown), paneA = element('pane A', shown), paneB = element('pane B', shown);
   root.contains = (x) => [root, bar, paneA, paneB].includes(/** @type {any} */ (x));
   const mirror = element('the tree', () => !mirror.inert);
@@ -174,7 +179,7 @@ test('a scene opened over a standing one returns the focus to the first one\'s o
   assert.deepEqual(fake.unanswered, []);
 }));
 
-test('a focus the person moved out of the scene stays where they put it; one opened with the focus on nothing returns it to nothing', () => onPage(async (p) => {
+test('a focus the person moved out of the scene stays where they put it; one opened with the focus on nothing returns it to the walk\'s element', () => onPage(async (p) => {
   p.item.focus();
   await SCENE.open(A, B);
   p.line.focus();
@@ -182,6 +187,7 @@ test('a focus the person moved out of the scene stays where they put it; one ope
   assert.equal(p.at(), 'the one line\'s ‹ back', 'the scene\'s end takes no focus from the one line');
   p.doc.activeElement = p.doc.body;
   await SCENE.open(A, B);
+  assert.equal(p.at(), 'pane B');
   SCENE.close();
-  assert.equal(p.at(), 'the body', 'a scene a pointer opened, the focus on nothing, returns it to nothing');
+  assert.equal(p.at(), 'the walk\'s current item', 'a scene opened with the focus on nothing — the scene-offer\'s click — returns it to the walk\'s element: never lost, never to the top');
 }));

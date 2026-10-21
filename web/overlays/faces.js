@@ -20,9 +20,13 @@
 // `too_many_pairs`, `too_much_coverage`, `withheld`, the session's `no_key`
 // (C-136 with this version's limit), the death arms (C-137),
 // `unreachable`; a PUBLIC `moment` rendered as a face with `answer`/`cancel`
-// (no ceremony panel is built here — a seam). Carries: the wireframe's §18
-// `face` (its words and acts; its reviewer's label stays in the wireframe),
-// `deadReferenceFace`'s fifth cell, `c39Face`. Rules: FP-1, FP-2, FP-13.
+// (no ceremony panel is built here — a seam). A face never takes the focus
+// (D5 §4 rule 4; K-58): it is heard through the one status region (D4,
+// O-HOST's), and a face offered by a key's act takes none either; the
+// moment's face alone takes it, on its first control (K-80). Carries: the
+// wireframe's §18 `face` (its words and acts; its reviewer's label stays in
+// the wireframe), `deadReferenceFace`'s fifth cell, `c39Face`. Rules: FP-1,
+// FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as PORT from '../bridge/port.js';
@@ -88,7 +92,7 @@ function faceHTML(/** @type {Face} */ face, extra = '') {
 export function showRefusal(anchor, r, addr = '', acts = []) {
   const face = wordsFor(r, { addr });
   face.acts.push(...acts);
-  /** @type {Record<string, (el: HTMLElement) => void>} */
+  /** @type {Record<string, import('./host.js').Act>} */
   const handlers = {};
   face.acts.forEach((a, i) => { handlers['a' + i] = () => { if (a.run) a.run(); }; });
   HOST.show({ kind: 'face', id: 'face:' + r.name, anchor: toAnchor(anchor), html: faceHTML(face), acts: handlers });
@@ -130,7 +134,7 @@ export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: n
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor
  */
 export function floating(l, far, anchor) {
-  HOST.show({ kind: 'face', id: 'face:floating', anchor: toAnchor(anchor), acts: { a0: () => import('./versions.js').then((V) => V.open(far, null, null)) },
+  HOST.show({ kind: 'face', id: 'face:floating', anchor: toAnchor(anchor), acts: { a0: (_el, byKey) => import('./versions.js').then((V) => V.open(far, null, null, null, byKey)) },
     html: faceHTML({ id: 'F.floating', text: t('F.floating', { D: far }), acts: [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] }) });
   void l;
 }

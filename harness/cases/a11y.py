@@ -49,12 +49,21 @@ from . import DOC, FAR_LEAP, NO_MATCH, WINDOW, Result
 
 def run(ctx):
     r = Result()
+    # rule 21: at launch the platform's focus rests on the walk's element, the ring out — observed on a fresh page (reads alone)
+    ctx.open_page('all')
+    launch = ctx.js('''(() => { const e = document.activeElement, i = window.__skep.mirror.index();
+      return {id: e ? e.id : null, item: !!e && e.id === 'walk-' + i, sel: e ? e.getAttribute('aria-selected') : null, ring: window.__skep.focus().ring, size: window.__skep.mirror.size()}; })()''')
+    r.check(launch['size'] > 0 and launch['item'] and launch['sel'] == 'true' and launch['ring'] is False,
+            'rule 21: at launch the platform\'s focus rests on the walk\'s element, the ring out', launch)
     ctx.leap(DOC, WINDOW[0])
     size = ctx.js('window.__skep.mirror.size()')
     idx = ctx.js('window.__skep.mirror.index()')
     doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
-    r.check(size == len(doc['blocks']) + len(shown), 'the mirror\'s set is the document\'s blocks and drawn links', {'size': size, 'blocks': len(doc['blocks']), 'links': len(shown)})
+    # rule 20: a block of white space alone is no element of the walk; the mirror lists the elements (every block but those) and the drawn links
+    elements = [b for b in doc['blocks'] if b['kind'] != 'para' or (b['text'] or '').strip() != '']
+    blank = [b for b in doc['blocks'] if b['kind'] == 'para' and (b['text'] or '').strip() == '']
+    r.check(size == len(elements) + len(shown), 'the mirror\'s set is the document\'s elements (no blank block) and its drawn links (rule 20)', {'size': size, 'elements': len(elements), 'blank_blocks': len(blank), 'links': len(shown)})
     items = ctx.js('''[...document.querySelectorAll('#mirror [role=treeitem]')].map(li => ({id: li.id, level: li.getAttribute('aria-level'), pos: li.getAttribute('aria-posinset'), size: li.getAttribute('aria-setsize'), sel: li.getAttribute('aria-selected'), tab: li.getAttribute('tabindex'), text: li.textContent}))''')
     r.check(len(items) >= 1, 'the mirror renders treeitems', len(items))
     r.check(all(int(i['size']) == size for i in items), 'every item\'s aria-setsize is the set\'s size', {i['pos']: i['size'] for i in items if int(i['size']) != size})
@@ -68,8 +77,11 @@ def run(ctx):
         if i['text'] != want:
             bad.append({'pos': i['pos'], 'dom': i['text'][:80], 'model': (want or '')[:80]})
     r.check(not bad, 'each DOM item\'s name equals the model\'s item name (one accessible rendering)', bad)
-    roles = ctx.js('({mirror: document.getElementById("mirror").getAttribute("role"), label: document.getElementById("mirror").getAttribute("aria-label"), live: document.getElementById("live").getAttribute("aria-live"), hidden_layer: document.getElementById("domlayer").getAttribute("aria-hidden")})')
+    roles = ctx.js('({mirror: document.getElementById("mirror").getAttribute("role"), label: document.getElementById("mirror").getAttribute("aria-label"), live: document.getElementById("live").getAttribute("aria-live"), live_role: document.getElementById("live").getAttribute("role"), overlay_live: document.getElementById("overlay").getAttribute("aria-live"), hidden_layer: document.getElementById("domlayer").getAttribute("aria-hidden"), plane: document.getElementById("plane").getAttribute("aria-hidden"), beams: document.getElementById("beams").getAttribute("aria-hidden")})')
     r.check(roles['mirror'] == 'tree' and roles['live'] == 'polite' and roles['hidden_layer'] == 'true', 'the mirror is a tree, the live region polite, the visual text layer hidden from AT', roles)
+    # D4: ONE standing status region (#live as role=status) the controller alone writes; the overlay carries no live region of its own (the a11y seat's subtraction, #13's condition met); every canvas is hidden from AT
+    r.check(roles['live_role'] == 'status' and roles['overlay_live'] is None and roles['plane'] == 'true' and roles['beams'] == 'true',
+            'D4: #live is the one status region (role=status); the overlay has no aria-live of its own; the canvases are hidden from AT', roles)
     # the regions' names: the markup carries none; each owner sets its region's from strings.js as it attaches
     named = ctx.js('''(async () => { const {t} = await import("./strings.js");
       const want = [["#line", t("L.the-line")], ["#leapq", t("L.leap-label")], ["#leaphits", t("L.leap-rows-label")], ["#scene", t("L.scene-label")],
@@ -84,8 +96,10 @@ def run(ctx):
     idx2 = ctx.js('window.__skep.mirror.index()')
     live = ctx.js('document.getElementById("live").textContent')
     want = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())')
+    item_name = ctx.js('(() => { const e = document.activeElement; return e && e.id === "walk-" + window.__skep.mirror.index() ? e.textContent : null; })()')
     r.check(idx2 == min(size - 1, idx + 1), 'ArrowDown moves the focus to the next sibling', {'before': idx, 'after': idx2})
-    r.check(live == want, 'the live region announces the focused item\'s name', {'live': (live or '')[:100], 'item': (want or '')[:100]})
+    # D4 / rule 12: a walk key moves the focus onto the item, whose name IS its announcement; no live region repeats it
+    r.check(item_name == want and (live or '') == '', 'a walk key moves the focus onto the item, whose name is its announcement; the status region is not written (D4, rule 12)', {'item': (item_name or '')[:90], 'want': (want or '')[:90], 'live': (live or '')[:90]})
     ctx.drv.key('ArrowUp')
     ctx.settle()
     # the names: a span's name carries its position, its document and its text; a link's its type and far end
@@ -344,7 +358,9 @@ def run(ctx):
     ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.overlay().id || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
     ctx.frames(2)
     f = at()
-    r.check(f['overlay'] == 'versions:' + DOC and f['in_overlay'], 'Enter at the corner takes its act: the versions list stands with the focus inside it', f)
+    first = ctx.js('(() => { const e = document.activeElement; return {run: e ? e.dataset.run : null, x: !!(e && e.dataset.x), current: e ? e.getAttribute("aria-current") : null}; })()')
+    r.check(f['overlay'] == 'versions:' + DOC and f['in_overlay'] and not first['x'] and (first['run'] or '').startswith('read'),
+            'Enter at the corner (a key) opens the versions list with the focus on its current member\'s read act, never the × (rule 13)', dict(f, first=first))
     press('Escape')
     f = at()
     r.check(f['overlay'] is None and f['corner'] == DOC, 'Esc closes the list and the focus returns to the corner it was opened from', f)
@@ -415,7 +431,8 @@ def run(ctx):
     in_list = 'window.__skep.overlay().id === "trail-list" && document.getElementById("overlay").contains(document.activeElement)'
     opened = from_item()
     press('y', mods=('Meta',))
-    r.check(opened and ctx.js(in_list), 'Mod+Y from the mirror\'s current item opens the trail list, which takes the focus', {'opened': opened, 'focus': returned()})
+    first = ctx.js('(() => { const e = document.activeElement; return {run: e ? e.dataset.run : null, x: !!(e && e.dataset.x)}; })()')
+    r.check(opened and ctx.js(in_list) and not first['x'] and (first['run'] or '').startswith('j'), 'Mod+Y from the mirror\'s current item opens the trail list with the focus on its newest row, never the × (rule 13)', {'opened': opened, 'first': first, 'focus': returned()})
     wheel_away('the trail list', in_list)
     press('Escape')
     f = returned()
@@ -428,37 +445,43 @@ def run(ctx):
     press('Escape')
     f = returned()
     r.check(not f['leap'] and f['item'], 'Esc closes the box, and the focus, whose opener the rebuild removed, stands on the walk\'s current item — never lost, never to the top', f)
-    # K-8 twice: the second press is taken in the card, which it rebuilds over the control holding the focus
+    # K-8 (rule 15): the selection's card takes NO focus — after Shift+↓ the focus stays on the mirror's item, and a plain ↓ walks on
     opened = from_item()
     press('ArrowDown', mods=('Shift',))
-    press('ArrowDown', mods=('Shift',))
-    card = ctx.js('({id: window.__skep.overlay().id, sel: window.__skep.selection(), held: document.getElementById("overlay").contains(document.activeElement), opener: !!window.__gateFrom && window.__gateFrom.isConnected})')
-    r.check(opened and card['id'] == 'selection' and bool(card['sel']) and card['held'] and card['opener'], 'K-8 twice from the mirror\'s current item: the selection\'s card, rebuilt by the second press, holds the focus, and the item K-8 was pressed at stands on the page', card)
-    press('Escape')
-    f = returned()
-    r.check(f['overlay'] is None and f['opener'] and f['item'], 'Esc closes the card the second press rebuilt, and the focus stands on the item K-8 was pressed at', f)
-    press('Escape')  # the selection, which Esc clears next
-    # K-8, then Mod+Shift+O from the card: the answer takes the card's place
+    one = ctx.js('({id: window.__skep.overlay().id, sel: window.__skep.selection(), held: document.getElementById("overlay").contains(document.activeElement), item: (() => { const e = document.activeElement; return !!e && e.id === "walk-" + window.__skep.mirror.index() && e.getAttribute("aria-selected") === "true"; })()})')
+    r.check(opened and one['id'] == 'selection' and bool(one['sel']) and not one['held'] and one['item'],
+            'Shift+↓ selects and its card takes NO focus: the focus stays on the mirror\'s current item (rule 15)', one)
+    idx_before = ctx.js('window.__skep.mirror.index()')
+    press('ArrowDown')
+    after = ctx.js('({idx: window.__skep.mirror.index(), item: (() => { const e = document.activeElement; return !!e && e.id === "walk-" + window.__skep.mirror.index() && e.getAttribute("aria-selected") === "true"; })()})')
+    r.check(after['idx'] == idx_before + 1 and after['item'], 'a plain ↓ after Shift+↓ walks on from the item the selection was made at', {'before': idx_before, 'after': after})
+    ctx.esc()  # the selection the card stands on
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    # K-8, then Mod+Shift+O: the card held no focus, so the key-made act's answer takes the focus on its first act (rules 15, 16)
     opened = from_item()
     press('ArrowDown', mods=('Shift',))
+    held_item = ctx.js('(() => { const e = document.activeElement; return !!e && e.id === "walk-" + window.__skep.mirror.index(); })()')
     press('O', mods=('Meta', 'Shift'))
     ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => { const id = window.__skep.overlay().id || ""; return id === "provenance:wrote" || id.startsWith("face:") || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50); }; tick(); })')
     ctx.frames(2)
     asked = returned()
-    r.check(opened and (asked['overlay'] == 'provenance:wrote' or (asked['overlay'] or '').startswith('face:')), 'K-8 then Mod+Shift+O from the card: the answer, or its refusal\'s face, takes the card\'s place', asked)
+    answer_in = ctx.js('document.getElementById("overlay").contains(document.activeElement)')
+    r.check(opened and held_item and (asked['overlay'] == 'provenance:wrote' or (asked['overlay'] or '').startswith('face:')) and answer_in,
+            'K-8 leaves the focus on the item; Mod+Shift+O then opens the answer, which takes the focus on its first act (rules 15, 16)', dict(asked, answer_in=answer_in))
     press('Escape')
     f = returned()
-    r.check(f['overlay'] is None and f['opener'] and f['item'], 'Esc closes the answer that replaced the card, and the focus stands on the item K-8 was pressed at', dict(f, answer=asked))
+    r.check(f['overlay'] is None and f['opener'] and f['item'], 'Esc closes the answer, and the focus returns to the item the selection was made at', dict(f, answer=asked))
     press('Escape')
-    # K-8, then the focus moved from the card to the corner (as Tab may move it): Esc closes the card and moves nothing
+    # K-8, then the person moves the focus to the corner (as Tab may): Esc closes the selection's card and leaves the focus where they put it (#33's clause)
     opened = from_item()
     press('ArrowDown', mods=('Shift',))
-    carded = ctx.js('window.__skep.overlay().id === "selection" && document.getElementById("overlay").contains(document.activeElement)')
+    carded = ctx.js('window.__skep.overlay().id === "selection"')
     moved = ctx.js('(() => { const c = document.querySelector(%s); if (c) c.focus({preventScroll: true}); return !!c && document.activeElement === c; })()' % json.dumps(corner))
     ctx.frames(1)
     press('Escape')
     f = at()
-    r.check(opened and carded and moved and f['overlay'] is None and f['corner'] == DOC, 'K-8 from the item, then the focus moved from the card to the corner: Esc closes the card and leaves the focus on the corner, where the person put it', dict(f, card=carded, moved=moved))
+    r.check(opened and carded and moved and f['overlay'] is None and f['corner'] == DOC, 'K-8 from the item, then the person moves the focus to the corner: Esc closes the selection\'s card and leaves the focus on the corner, where the person put it (#33\'s clause)', dict(f, card=carded, moved=moved))
     press('Escape')
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
@@ -492,8 +515,8 @@ def run(ctx):
     for _ in range(3):
         press('Tab')
         ring.append(stop())
-    r.check(line_stop is not None and ring == ['the item', 'the corner: ' + DOC, 'the overlay: x'],
-            'a standing card comes after the plane and its corner: Tab from the one line\'s last stop reaches the mirror\'s current item, the corner, then the card\'s first stop', {'from': line_stop, 'ring': ring})
+    r.check(line_stop is not None and ring[:2] == ['the item', 'the corner: ' + DOC] and ring[2].startswith('the overlay: ') and ring[2] != 'the overlay: x',
+            'a standing card comes after the plane and its corner, and its FIRST stop is its first act, never the dismiss (rule 13): Tab reaches the item, the corner, then the card\'s first act', {'from': line_stop, 'ring': ring})
     press('Tab', mods=('Shift',))
     back = stop()
     r.check(back == 'the corner: ' + DOC, 'Shift+Tab from the card\'s first stop goes back to the corner', {'got': back})
@@ -619,6 +642,114 @@ def run(ctx):
         r.check(pressed and on['checked'] == 'true' and [on[k] for k in ('role', 'name', 'description')] == [off[k] for k in ('role', 'name', 'description')],
                 'the AX tree: a press turns the switch on and changes its checked state alone — its role, name and description stand', {'pressed': pressed, 'off': off, 'on': on})
         r.figures['switch_ax'] = {'answered': True, 'off': off, 'on': on}
+    # ---- rule 10/12: a landing takes the platform's focus, the move its announcement (#105) ----------------------------
+    ctx.leap(DOC, 1)
+    ctx.leap(DOC, WINDOW[0])  # a back entry stands
+    back_btn = ctx.js('(() => { const b = document.getElementById("line-back"); if (b && !b.disabled) { b.focus({preventScroll: true}); return document.activeElement === b; } return false; })()')
+    press('Enter')
+    f = at()
+    landed = ctx.js('window.__skep.view.focus()')
+    r.check(back_btn and f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true' and bool(landed), 'rule 10/12: Enter on the line\'s ‹ back lands the platform\'s focus on the landing\'s item, never the body (#105)', dict(f, landed=landed))
+    # a trail-list row opened by the POINTER: the row's click lands the focus on the item too (the ring out)
+    ctx.js('window.__skep.cards.trailList()')  # the gate's door opens it as a pointer does: no focus taken
+    ctx.frames(2)
+    took = ctx.js('!document.getElementById("overlay").contains(document.activeElement)')
+    row = ctx.js('(() => { const b = document.querySelector("#overlay [data-run^=\\"j\\"]"); if (!b) return null; const q = b.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2, run: b.dataset.run}; })()')
+    if row:
+        ctx.drv.mouse(row['x'], row['y'])
+        ctx.settle()
+        ctx.frames(2)
+    f = at()
+    r.check(bool(row) and took and f['overlay'] is None and f['id'] == 'walk-%d' % f['idx'] and f['sel'] == 'true', 'rule 16/10: a trail-list row opened by the pointer takes no focus, and the row\'s click lands the platform\'s focus on the item (#105, #106)', dict(f, row=row, pointer_opened_took_none=took))
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    # ---- rule 11: a control redrawn from state keeps the focus (#53, #100) --------------------------------------------
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
+    ctx.frames(2)
+    lens = ctx.js('(() => { const b = document.querySelector("#overlay [data-run=endorsed]"); if (!b) return null; b.focus({preventScroll: true}); const q = b.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()')
+    if lens:
+        ctx.drv.mouse(lens['x'], lens['y'])
+        ctx.frames(2)
+    kept = ctx.js('(() => { const e = document.activeElement; return {run: e ? e.dataset.run : null, in_overlay: document.getElementById("overlay").contains(e)}; })()')
+    r.check(bool(lens) and kept['in_overlay'] and kept['run'] == 'endorsed', 'rule 11: a lens press rebuilds the links card and leaves the focus on the same control, never the body (#53)', kept)
+    # restore the lens: press endorsed again, so the card's dismissal leaves no lens filtering the document's shown links for the cases after
+    if ctx.js('!!document.querySelector("#overlay [data-run=endorsed][aria-pressed=true]")'):
+        b = ctx.js('(() => { const b = document.querySelector("#overlay [data-run=endorsed]"); if (!b) return null; const q = b.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()')
+        if b:
+            ctx.drv.mouse(b['x'], b['y'])
+            ctx.frames(2)
+    ctx.esc()
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    # the one line rebuilt while a control of it holds the focus (every frame of a flight, as the address changes): the focus is kept on its act's data-act, never dropped to the body (#100)
+    ctx.leap(DOC, WINDOW[0])
+    on_back = ctx.js('(() => { const b = document.getElementById("line-back"); if (b && !b.disabled) { b.focus({preventScroll: true}); window.__gateLineHTML = document.getElementById("line").innerHTML; return document.activeElement === b; } return false; })()')
+    ctx.js('(() => { const c = window.__skep.view.camera(); window.__skep.view.set({x: c.x, y: c.y, scale: c.scale * 0.02}); })()')  # far: the address display changes, so the line's html does
+    ctx.settle()
+    ctx.frames(3)
+    after = ctx.js('(() => { const e = document.activeElement, l = document.getElementById("line"); return {id: e ? e.id : null, act: e ? e.dataset.act : null, rebuilt: l.innerHTML !== window.__gateLineHTML}; })()')
+    r.check(on_back and after['rebuilt'] and after['id'] == 'line-back' and after['act'] == 'back', 'rule 11: the one line rebuilt while ‹ back holds the focus keeps it there by its data-act, never to the body (#100)', after)
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    # ---- rule 16: a pointer act opens an overlay without the focus; a key-opened card lands on its first act (#106) ----
+    # a click on the version statement opens the versions list but moves no focus into it
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    stmt = ctx.js('(() => { const c = document.querySelector(%s); if (!c) return null; const q = c.getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()' % json.dumps('#corners [data-corner="%s"] .version' % DOC))
+    if stmt:
+        ctx.drv.mouse(stmt['x'], stmt['y'])
+        ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__skep.overlay().id || "").startsWith("versions:") || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+        ctx.frames(2)
+        moved = ctx.js('document.getElementById("overlay").contains(document.activeElement)')
+        r.check((ctx.js('window.__skep.overlay().id') or '').startswith('versions:') and not moved, 'rule 16: a click on the version statement opens the versions list but moves no focus into it (#106)', {'overlay': ctx.js('window.__skep.overlay().id'), 'in_overlay': moved})
+        ctx.esc()
+    # Enter at a links-card row opens the anatomy card with the focus on its first act (a key-opened card, rule 13/16)
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
+    ctx.frames(2)
+    rowsel = '#overlay [data-run^="row:"]'
+    if ctx.js('!!document.querySelector(%s)' % json.dumps(rowsel)):
+        ctx.js('document.querySelector(%s).focus({preventScroll: true})' % json.dumps(rowsel))
+        press('Enter')
+        ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => ((window.__skep.overlay().id || "").startsWith("anatomy:") || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+        ctx.frames(2)
+        la = ctx.js('''(() => { const o = document.getElementById('overlay'), e = document.activeElement;
+          return {id: window.__skep.overlay().id, first: o.contains(e) ? (e.dataset.run || (e.dataset.x ? 'x' : e.tagName.toLowerCase())) : null}; })()''')
+        r.check((la['id'] or '').startswith('anatomy:') and bool(la['first']) and la['first'] != 'x', 'rule 16/13: Enter at a links-card row opens the anatomy card with the focus on its first act, never the × (#106)', la)
+    ctx.esc()
+    ctx.esc()
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    # ---- rule 13 and D5: Mod+Shift+L lands on the card's first act, and the dialog is named by its own caption ---------
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
+    ctx.frames(1)
+    press('L', mods=('Meta', 'Shift'))
+    ctx.frames(2)
+    links = ctx.js('''(() => { const o = document.getElementById('overlay'), e = document.activeElement;
+      const by = o.getAttribute('aria-labelledby'), named = by ? document.getElementById(by) : null;
+      return {id: window.__skep.overlay().id, first_run: o.contains(e) ? (e.dataset.run || (e.dataset.x ? 'x' : e.tagName.toLowerCase())) : null,
+              labelledby: by, name: named ? (named.textContent || '').trim() : null, label: o.getAttribute('aria-label')}; })()''')
+    r.check((links['id'] or '').startswith('links:') and links['first_run'] and links['first_run'] != 'x', 'rule 13: Mod+Shift+L opens the links card with the focus on its first act, never the × (#99)', links)
+    r.check(bool(links['labelledby']) and bool(links['name']), 'D5: the overlay dialog is named by its own caption (aria-labelledby a non-empty element), #87, #112', links)
+    ctx.esc()  # the links card
+    ctx.esc()  # the selection Mod+Shift+L made first (the slot selects the focused block where none stands)
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    # ---- rule 18 / D2: the open LEAP box is the line's stop; Tab out of it closes it ----------------------------------
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
+    ctx.frames(1)
+    press('l', mods=('Meta',))
+    box_open = ctx.js('window.__skep.leap.isOpen() && document.activeElement.id === "leapq"')
+    z = ctx.js('(() => { const leap = parseInt(getComputedStyle(document.getElementById("leap")).zIndex) || 0, ov = parseInt(getComputedStyle(document.getElementById("overlay")).zIndex) || 0; return {leap, overlay: ov}; })()')
+    press('Tab')
+    f = at()
+    r.check(box_open and not ctx.js('window.__skep.leap.isOpen()'), 'rule 18 / D2: Tab out of the open LEAP box closes it (#116)', {'box_open': box_open, 'still_open': ctx.js('window.__skep.leap.isOpen()'), 'landed': f})
+    r.figures['leap_z'] = z
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
     # leave the page as the case found it: the landing, the focus on no element
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')

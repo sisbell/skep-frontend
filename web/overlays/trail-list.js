@@ -4,8 +4,11 @@
 // other — never a toggle (the wireframe's `t` toggle re-cut, K-41 Mod+Y);
 // every entry numbered newest-first, the same numbers as the pips and the
 // chords Mod+1 … Mod+9; Enter or a click jumps (a cursor move, never a push),
-// the ring drawn at the landing where a key made the jump.
-// Carries: the wireframe's §11 `renderTrail`. Rules: FP-1, FP-2, FP-13.
+// the ring drawn at the landing where a key made the jump. Opened by a key —
+// Mod+Y, Enter on the line's act — it takes the focus on its newest row, the
+// first (K-41; the focus record's rule 13); opened by a click on the line's
+// act it takes none (rule 16).
+// Carries: the wireframe's §11 `renderTrail`. Rules: FP-1, FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as TRAIL from '../nav/trail.js';
@@ -13,8 +16,11 @@ import * as GO from '../nav/go.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
-/** open the list (by a key, it takes focus on its newest row) */
-export function open(byKey = true) {
+/**
+ * Open the list; by a key, it takes the focus on its newest row.
+ * @param {boolean} [byKey] a key made the act that opened it
+ */
+export function open(byKey = false) {
   const rows = TRAIL.numbered();
   const html = `<span class="label">${esc(t('F.trail-list'))}</span>` +
     (rows.length

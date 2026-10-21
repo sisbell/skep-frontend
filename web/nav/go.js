@@ -152,7 +152,10 @@ export async function home(byKey = false) {
 /**
  * The launch frame — HOME, foundations §2.2's last arm and the one this page
  * builds — set without a flight, and the trail's first entry (W-01), so the
- * first teleport re-takes its view as it departs and Back returns to it.
+ * first teleport re-takes its view as it departs and Back returns to it. The
+ * landing puts the platform's focus on the walk's element with the ring out
+ * (the focus record's rule 21), so the first Tab moves on from it and a
+ * screen reader lands on the place the launch names.
  */
 export async function launch() {
   const h = homeFrame();

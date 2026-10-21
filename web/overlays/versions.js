@@ -8,8 +8,10 @@
 // marked whole / in part / not at all — and each offering "read side by
 // side", the scene opened on the held passage, which SC sets level with what
 // the member holds of it. Each member is one row: its acts and its mark in
-// columns the rows share. New — no draft in the wireframe. Rules: FP-1, FP-2,
-// FP-13.
+// columns the rows share. The list takes the focus where a key made the act
+// — Enter at the corner — on its CURRENT member's read act, and never where
+// a click on the statement did (D5 §4 rule 4; the focus record's rules 13
+// and 16). New — no draft in the wireframe. Rules: FP-1, FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -27,8 +29,9 @@ import { esc } from '../util.js';
  * @param {number | null} pos the held passage's first position, or null for the document's first block
  * @param {HTMLElement | null} anchor
  * @param {number | null} [width] the held passage's positions; null holds the block at `pos` whole
+ * @param {boolean} [byKey] a key made the act: the list takes the focus on its current member
  */
-export async function open(addr, pos, anchor, width = null) {
+export async function open(addr, pos, anchor, width = null, byKey = false) {
   const trunk = documentOf(addr) || addr;
   const d = REC.doc(trunk);
   if (d.extent == null) await PUMP.loadWhole(trunk);
@@ -63,7 +66,7 @@ export async function open(addr, pos, anchor, width = null) {
     acts['read' + r.k] = (_el, byKey) => GO.leapTo(versionAddress(trunk, r.k), { pos: held ? held.pos : null, how: 'leap', byKey });
     acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
   }
-  HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor: anchor ? { el: anchor } : null, html, acts, takeFocus: true });
+  HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor: anchor ? { el: anchor } : null, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });
 }
 
 /**
@@ -74,13 +77,14 @@ export async function open(addr, pos, anchor, width = null) {
  * lane's — has no act.
  * @param {HTMLElement} corner the corner's element (`data-corner` names its document)
  * @param {{addr: string, pos: number, width: number} | null} selection the selection, wherever it stands
+ * @param {boolean} [byKey] a key made the act (Enter at the corner): the list takes the focus
  * @returns {boolean} whether the corner had the act
  */
-export function fromCorner(corner, selection) {
+export function fromCorner(corner, selection, byKey = false) {
   const addr = corner.dataset.corner || '';
   const statement = /** @type {HTMLElement | null} */ (corner.querySelector('.version'));
   if (!addr || !statement) return false;
   const held = selection && selection.addr === addr ? selection : null;
-  void open(addr, held ? held.pos : null, statement, held ? held.width : null);
+  void open(addr, held ? held.pos : null, statement, held ? held.width : null, byKey);
   return true;
 }

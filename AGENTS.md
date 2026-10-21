@@ -1,6 +1,6 @@
 # Agent instructions for this repository
 
-Read `PATTERNS.md` first. Its nineteen rules (FP-1 … FP-19) bind every
+Read `PATTERNS.md` first. Its twenty rules (FP-1 … FP-20) bind every
 file under `web/`; a module's head comment cites the ones that bind it.
 
 ## The page

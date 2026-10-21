@@ -29,37 +29,46 @@
 // push with the scene recorded as the departure — its pair and both panes'
 // positions — so Back restores it; N-TRAIL's entry holds an address and a
 // view and no scene, and whether Back restores a scene is the design's open
-// question. THE FOCUS (D5 §4 rules 5 and 8; K-61, K-63): opened, the scene
-// puts the focus in the far end's pane and takes the plane it stands over
-// out of the page's order and the accessibility tree, each region by its
-// owner (N-WALK's tree, T-LAYER's corners: `cover`), so Tab runs pane, pane,
-// the bar's acts in the place of the plane's stop and its corner and reaches
-// nothing the scene covers. Whatever ends it puts the plane back first, takes
-// the focus off the scene where it stood there, and hands a focus standing on
-// nothing back through N-WALK, the focus's owner: to the element the scene
-// was opened from — read as it opens, once the overlay it dismisses has
-// returned the focus that overlay held — or to the walk's element where that
-// no longer takes it; a navigation act's landing then carries it on (rule 8),
-// and a focus the person moved out of the scene stays where it is. The panes
-// BORROW the one reconciler's mount (FP-12: `T-LAYER.sceneArticle` makes the
-// HTML, `T-LAYER.rangeIn` finds a passage in it; the scene keeps no DOM text
-// of its own). Each pane carries its own document's corner (ux-T2: "each pane
-// its own"; `T-LAYER.sceneCorner` makes its items) on its OUTER side — pane
-// A's left, pane B's right — held to the top of the pane's scroll, so the
-// bands and lines leave the inner edges clear of it (foundations §3.1). THE
-// PANES ARE READ, NOT ACTED ON (B1-S9: "read both…; scroll each"): nothing in
-// a pane takes a pointer — its blocks, hairlines, symbols and presence ⟡ and
-// its corner's version statement carry none of the plane's click cues and are
-// no controls (T-ARTICLE's scene-mode variant) — and the keys a pane takes
-// move that pane alone (`key`, K-60), N-KEYS handing none to what the scene
-// covers. The scene's ACTS are its bar's buttons — re-level (K-62) and the
-// dismissal — each pressed by a click anywhere on it, by Enter or by Space.
-// What a click or a key in a pane would act on — a beam followed into the
-// other pane (B1-S9), each pane's own selection (§2.5, PROPOSED) — is the
-// design's open question. Companionate scrolling over the bands is UNTESTED
-// (S27) and not built. Carries: the wireframe's §19 whole (its beams over
-// `compare`'s pairs instead of the hand data's windows).
-// Rules: FP-1, FP-2, FP-10, FP-12, FP-13.
+// question. THE FOCUS (D5 §4 rules 5 and 8; K-61, K-63; the focus record's
+// rule 17; FP-20): opened, the scene puts the focus in the far end's pane and
+// takes the plane it stands over out of the page's order and the
+// accessibility tree, each region by its owner (N-WALK's tree, T-LAYER's
+// corners: `cover`), so the one ring runs the line → pane, pane, the bar's
+// acts → the standing overlay → the line, in the place of the plane's stop
+// and its corner, and reaches nothing the scene covers; the one line is
+// never covered, and the LEAP box stands over the scene. Whatever ends it
+// puts the plane back first and hands the focus back through N-FOCUS, the
+// focus's owner, which takes a focus the scene held off it and returns one
+// standing on nothing to the element the scene was opened from — read as it
+// opens, once the overlay it dismisses has returned the focus that overlay
+// held, and kept by the controller's one memory where a scene opens over a
+// standing one — or to the walk's element where that no longer takes it; a
+// navigation act's landing then carries it on (rule 8), and a focus the
+// person moved out of the scene stays where it is. EACH PANE IS A NAMED
+// REGION (SC9): named by its own document's address, the head of the article
+// it holds, and ↓ and ↑ in it move by BLOCK — the next block's top brought to
+// the pane's top (K-60; D1's first stage) — PageDown and PageUp by most of a
+// pane, Home and End to its ends. The panes BORROW the one reconciler's mount
+// (FP-12: `T-LAYER.sceneArticle` makes the HTML, `T-LAYER.rangeIn` finds a
+// passage in it; the scene keeps no DOM text of its own). Each pane carries
+// its own document's corner (ux-T2: "each pane its own"; `T-LAYER.sceneCorner`
+// makes its items) on its OUTER side — pane A's left, pane B's right — held
+// to the top of the pane's scroll, so the bands and lines leave the inner
+// edges clear of it (foundations §3.1). THE PANES ARE READ, NOT ACTED ON
+// (B1-S9: "read both…; scroll each"): nothing in a pane takes a pointer — its
+// blocks, hairlines, symbols and presence ⟡ and its corner's version
+// statement carry none of the plane's click cues and are no controls
+// (T-ARTICLE's scene-mode variant) — and the keys a pane takes move that
+// pane alone (`key`), N-KEYS handing none to what the scene covers. The
+// scene's ACTS are its bar's buttons — re-level (K-62, its chord drawn for
+// the platform, rule 19) and the dismissal — each pressed by a click anywhere
+// on it, by Enter or by Space. A roving stop inside a pane and what a click
+// or a key at a mark would act on — a beam followed into the other pane
+// (B1-S9), each pane's own selection (§2.5, PROPOSED; #94) — are D1's second
+// stage, after each pane has its selection. Companionate scrolling over the
+// bands is UNTESTED (S27) and not built. Carries: the wireframe's §19 whole
+// (its beams over `compare`'s pairs instead of the hand data's windows).
+// Rules: FP-1, FP-2, FP-10, FP-12, FP-13, FP-20.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -68,6 +77,8 @@ import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
 import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
+import * as FOCUS from '../nav/focus.js';
+import { drawChord } from '../nav/keys.js';
 import { SAMENESS } from '../plane/register.js';
 import { markDirty } from '../plane/camera.js';
 import { t } from '../strings.js';
@@ -122,11 +133,21 @@ let scene = null;
 let els = null;
 /** @type {Drawn[]} what the last draw drew */
 let drawnTies = [];
-/** @type {Element | null} the element the focus stood on as the scene opened, where its end returns the focus (K-63) */
-let opener = null;
 
 /** the plane the scene stands over out of the page's order while it stands (true), and back as it ends (false) — each region by its owner (D5 §4 rule 5) */
 function coverPlane(/** @type {boolean} */ on) { WALK.cover(on); LAYER.cover(on); }
+
+/**
+ * A pane named as a region by its own document's address — the head of the
+ * article it holds (SC9; the focus record's D5: a caption of its own).
+ * @param {HTMLElement} pane
+ * @param {string} id the id the head's address takes, for the reference
+ */
+function namePane(pane, id) {
+  pane.setAttribute('role', 'region');
+  const addr = /** @type {HTMLElement | null} */ (pane.querySelector('.hd .addr'));
+  if (addr) { addr.id = id; pane.setAttribute('aria-labelledby', id); }
+}
 
 /** @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement}} e */
 export function attach(e) {
@@ -196,8 +217,8 @@ export async function open(a, b, held = {}) {
   if (!els) return;
   HOST.dismiss();
   // where the act found the focus — read after the dismissal, which hands back a focus the overlay held, and before the
-  // reads, in which the person may move it; a scene opened over one standing keeps that one's
-  const from = scene ? opener : document.activeElement;
+  // reads, in which the person may move it; a scene opened over one standing keeps that one's (the controller's one memory)
+  const from = document.activeElement;
   const [da, db] = await Promise.all([PUMP.loadWhole(a), PUMP.loadWhole(b)]);
   if (!da || !db) return;
   const cmp = await PUMP.read(F.compare([{ doc: a, spans: [{ ordinal: 1, positions: Math.max(1, da.extent || 1) }] }], [{ doc: b, spans: [{ ordinal: 1, positions: Math.max(1, db.extent || 1) }] }]));
@@ -206,18 +227,18 @@ export async function open(a, b, held = {}) {
   if ('refused' in cmp) { const r = cmp.refused; els.bar.dataset.face = r.name; }
   else runs = merged(F.decodeCompare(cmp.answer));
   scene = { a, b, pairs: runs, level: levels(runs, held), ties: [], size: '' };
-  opener = from;
   coverPlane(true);
   els.root.classList.add('on');
   els.bar.innerHTML = `<b>${esc(a)}</b> │ <b>${esc(b)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
     (els.bar.dataset.face ? ` <span class="face-text">${esc(t(els.bar.dataset.face === 'too_many_pairs' ? 'B1.too_many_pairs' : els.bar.dataset.face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: els.bar.dataset.face }))}</span>` : '') +
-    ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>⌘R</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
+    ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
   const corner = (/** @type {string} */ addr, /** @type {import('../model/records.js').Doc} */ d) => `<div class="corner" data-corner="${esc(addr)}">${LAYER.sceneCorner(d)}</div>`;
   els.paneA.innerHTML = corner(a, da) + `<article class="dtext scene" data-addr="${esc(a)}">${LAYER.sceneArticle(da)}</article>`;
   els.paneB.innerHTML = `<article class="dtext scene" data-addr="${esc(b)}">${LAYER.sceneArticle(db)}</article>` + corner(b, db);
+  namePane(els.paneA, 'sceneA-name'); namePane(els.paneB, 'sceneB-name');
   els.paneA.setAttribute('tabindex', '0'); els.paneB.setAttribute('tabindex', '0');
   relevel();
-  els.paneB.focus({ preventScroll: true });
+  FOCUS.open('scene', { el: els.root, from, byKey: true, first: els.paneB });
   markDirty();
 }
 
@@ -348,31 +369,45 @@ function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */
  * trail untouched, a navigation act's own push or cursor move the one trail
  * move it makes (see the head). The plane is put back in the page's order
  * before the focus returns, for the element the scene was opened from — the
- * walk's item, a corner — takes no focus while the scene covers it; a focus
- * the scene held is taken off it first, as N-WALK returns only a focus that
- * stands on nothing.
+ * walk's item, a corner — takes no focus while the scene covers it; the
+ * focus's owner takes a focus the scene held off it and returns it.
  */
 export function close() {
   if (!scene || !els) return;
-  const held = els.root.contains(document.activeElement);
   scene = null;
   drawnTies = [];
   coverPlane(false);
-  if (held) /** @type {HTMLElement} */ (document.activeElement).blur();
   els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; delete els.bar.dataset.face;
-  const to = opener;
-  opener = null;
-  WALK.returnFocus(to);
+  FOCUS.close('scene');
   markDirty();
 }
 
-/** the scene's own keys (K-60): ↓/↑ by block within the focused pane */
+/**
+ * The top of the block next below (dir 1) or above (dir −1) a pane's scroll,
+ * in px of the pane's content — the first block whose top lies past the
+ * scroll by more than a pixel; the pane's end past the last block, its top
+ * before the first. Null where the pane holds no article.
+ * @param {HTMLElement} pane
+ * @param {1 | -1} dir
+ * @returns {number | null}
+ */
+function blockTop(pane, dir) {
+  const art = articleIn(pane); if (!art) return null;
+  const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop;
+  const tops = [...art.querySelectorAll('.run > .sp, .run > .withheld')].map((e) => e.getBoundingClientRect().top - origin);
+  const at = pane.scrollTop;
+  const next = dir > 0 ? tops.find((y) => y > at + 1) : tops.slice().reverse().find((y) => y < at - 1);
+  if (next == null) return dir > 0 ? pane.scrollHeight : 0;
+  return Math.max(0, Math.round(next));
+}
+
+/** the scene's own keys (K-60): ↓/↑ by block within the focused pane — the next block's top brought to the pane's top — PageDown/PageUp by most of the pane, Home/End to its ends */
 export function key(/** @type {string} */ k) {
   if (!scene || !els) return false;
   const pane = document.activeElement && els.paneB.contains(document.activeElement) ? els.paneB : els.paneA;
   const step = pane.clientHeight * 0.8;
   if (k === 'PageDown') pane.scrollTop += step; else if (k === 'PageUp') pane.scrollTop -= step;
-  else if (k === '↓') pane.scrollTop += 48; else if (k === '↑') pane.scrollTop -= 48;
+  else if (k === '↓' || k === '↑') { const top = blockTop(pane, k === '↓' ? 1 : -1); if (top == null) return false; pane.scrollTop = top; }
   else if (k === 'Home') pane.scrollTop = 0; else if (k === 'End') pane.scrollTop = pane.scrollHeight;
   else return false;
   draw(); return true;

@@ -125,6 +125,26 @@ fix; nothing here depends on their names.
   Before a lane closes, the owner opens the page in Safari and looks.
   The gate does not pretend to have done that.
 
+## The focus
+
+- **FP-20 The focus has one owner.** The page has one focus, the
+  platform's, and one module owns every move of it: the controller
+  (`web/nav/focus.js`), with five entries every control calls and none
+  bypasses — `land` (an act moved the focus to an element: a landing's
+  item, a walk key's, an arrow's next control), `open` and `close` (a
+  region took the focus and gave it back), `keep` (a control redrawn
+  from state while it holds the focus), `cover` (a region chrome
+  stands over is inert) — and one reading of whether a key made an
+  act (`byKey`). No `.focus()` call stands outside it. A rebuild keeps
+  the focus: a control redrawn from state puts the focus back on the
+  element bearing the same key, never on the body. A control that
+  closes returns the focus to the element that opened it where that
+  still takes it, else to the walk's element; never lost, never to
+  the top. A replacement is not a dismissal: an overlay that takes
+  another's place keeps the chain's one opener, takes the focus on its
+  first act where the replaced one held it, and a face never takes it.
+  The ring and the one status region are the owner's to write.
+
 ## Changes
 
 Each rule changed here, with its reason and where the reason was
@@ -170,6 +190,22 @@ found.
   yielded to text that was then taken down, and it kept that picture
   while the camera rested. With the text layer placed first, the
   canvas reads the same frame's set.
+- 2026-10-20, from the focus and keyboard record
+  (`_designs/CLIENT/2026-10-20-focus-and-keyboard.md` §2, §5) and the
+  owner's rulings on it: FP-20 added. The page kept two ideas of where
+  the focus was — the walk's position, drawn as a ring on the canvas
+  and read by every chord, and the platform's focus, the element the
+  keyboard and a screen reader actually hold — and five modules each
+  moved the platform's focus on their own, differently: the mirror
+  carried it across its rebuild while the one line and the overlay
+  host dropped it to the body; the host remembered an opener only when
+  it took the focus, the LEAP box and the scene always; "a key made
+  it" was read four ways; the first control an overlay focused was its
+  dismiss. Each fix repaired one module against one issue, and the
+  next review found the same question unanswered in the next module.
+  FP-10 already forbade a piece of state with five writers; FP-20 says
+  so of the focus and names the owner, so the stream of one-module
+  focus fixes ends.
 
 ## What these rule out
 

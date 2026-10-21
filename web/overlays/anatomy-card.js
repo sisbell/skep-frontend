@@ -14,10 +14,13 @@
 // page's feed, which starts at the head, and `in_claims`/`out_claims` are
 // not among the page's reads — and a row standing with no value would read
 // as B1-S5's "none". The link's mark comes from LK's `markOf`, so the card
-// and the symbol agree.
+// and the symbol agree. The card takes the focus on its first act — follow
+// — where a key opened it (Enter at the link's element, K-55; a links-card
+// row's Enter) and never where a click did (D5 §4 rule 4; the focus
+// record's rule 16).
 // Later: the age and supersession rows with the reads that answer them;
 // B3-d's retract and edit (the editor's lane); link sets' SET line.
-// Carries: the wireframe's §18 `anatomyCard`. Rules: FP-1, FP-2, FP-13.
+// Carries: the wireframe's §18 `anatomyCard`. Rules: FP-1, FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -48,8 +51,9 @@ async function fragment(/** @type {string} */ addr, /** @type {number | null} */
  * (`s.near`), its far end the other.
  * @param {Shown} s
  * @param {HTMLElement | null} anchorEl the element it stands at; null stands it at the link's own bytes in the near document
+ * @param {boolean} [byKey] a key opened it: the card takes the focus on its first act
  */
-export async function open(s, anchorEl) {
+export async function open(s, anchorEl, byKey = false) {
   const l = s.link;
   const near = s.near, nearPos = s.pos, nearWidth = s.width;
   const far = s.far, farEnd = s.farEnd;
@@ -77,7 +81,7 @@ export async function open(s, anchorEl) {
     `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${esc(l.owner || '—')}</div>` +
     `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${esc(far || '')}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
   HOST.show({
-    kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: near, pos: nearPos, width: nearWidth } }, html,
+    kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: near, pos: nearPos, width: nearWidth } }, html, takeFocus: byKey,
     acts: {
       follow: (el, byKey) => GO.follow(s, el, byKey),
       beside: () => { if (far && !dead) SCENE.open(near, far, { posA: nearPos, widthA: nearWidth, posB: farEnd && !farEnd.whole ? farEnd.ordinal : null }); },

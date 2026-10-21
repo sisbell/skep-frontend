@@ -66,6 +66,7 @@ import * as PROV from '../overlays/provenance.js';
 import * as VERSIONS from '../overlays/versions.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
 import * as KEYS from '../nav/keys.js';
+import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
 import { docBox, accountCell, boardCell, DOC_W, REP_FS, depthOfDoc } from '../plane/projection.js';
 import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM } from '../plane/lod.js';
@@ -385,6 +386,8 @@ export function install(deps) {
     spanRects: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => LAYER.spanRects(addr, pos, width),
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
     view: { camera: () => CAM.view(), focus: () => WALK.current(), ring: () => (RENDER.stats.ring ? { ...RENDER.stats.ring } : null), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
+    /** the focus's owner as it stands: the ring's rule, whether the plane holds the focus, the regions holding it oldest first */
+    focus: () => ({ ring: FOCUS.ringShown(), plane: FOCUS.planeHolds(), standing: FOCUS.standing() }),
     driftSample, overlapCheck, visible,
     beamAnchors, arrivalAnchors, barsOf,
     /** the labels the beams' last frame set, one per bundle: the document it leaves, its far document, its text, whether it ends in a stub, and its rect on screen */

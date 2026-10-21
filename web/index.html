@@ -12,25 +12,29 @@
   ?provider=<secret> (S-14 (b), S-36 (a)). Each region below carries its
   role and no words: its accessible name is its owner's, read from
   strings.js as the owner attaches (FP-13) — the one line's (L-LINE), the
-  LEAP box's input and rows (N-LEAP), the scene's (SC), the mirror's
-  (N-WALK). Their order here is the Tab ring's (D5 §4 rule 5): the one
-  line (the LEAP box after it, while open), the plane's stop, the focused
-  document's corner, the standing overlay, and the line again; the scene,
-  while it stands, in the place of the plane's stop and its corner.
+  LEAP box's input and rows (N-LEAP), the scene's and its panes' (SC), the
+  mirror's (N-WALK), the overlay's its own caption as each opens (O-HOST).
+  Their order here is the Tab ring's (D5 §4 rule 5): the one line (one
+  stop; the LEAP box after it, while open — the line's stop, opened), the
+  plane's stop, the focused document's corner, the standing overlay, and the
+  line again; the scene, while it stands, in the place of the plane's stop
+  and its corner. The focus has one owner (FP-20, N-FOCUS), and one status
+  region (#live) it alone writes; the canvases are hidden from assistive
+  technology, the mirror being the one accessible rendering.
 -->
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<canvas id="plane"></canvas>
+<canvas id="plane" aria-hidden="true"></canvas>
 <div id="domlayer" aria-hidden="true"></div>
-<canvas id="beams"></canvas>
+<canvas id="beams" aria-hidden="true"></canvas>
 
 <div id="line" role="toolbar"></div>
 
 <div id="leap" class="panel">
   <input id="leapq" role="combobox" aria-autocomplete="list" aria-controls="leaphits" aria-expanded="false" autocomplete="off" spellcheck="false">
   <div id="leapnote" role="status"></div>
-  <div id="leaphits" role="listbox"></div>
+  <div id="leaphits" role="listbox" tabindex="-1"></div>
 </div>
 
 <!-- the scene (SC's): while it stands, its stops take the plane's place in the page's order — pane, pane, then the bar's acts (D5 §4 rule 5; K-61) — so the bar follows the panes here; its style draws it at the scene's top -->
@@ -38,16 +42,17 @@
   <div class="pane" id="sceneA"></div>
   <div class="pane" id="sceneB"></div>
   <div id="scenebar"></div>
-  <canvas id="scenebeams"></canvas>
+  <canvas id="scenebeams" aria-hidden="true"></canvas>
 </div>
 
 <!-- the mirror (N-WALK's): the plane's one Tab stop is its current item (D5 §4 rule 5); the walk's render takes the tree out of the order while that item stands, so the tree is the stop only where it holds no item, as here before the first render -->
 <div id="mirror" class="panel" role="tree" tabindex="0"></div>
 <!-- the corners (T-LAYER's): after the mirror, so Tab from the plane's stop lands on the focused document's corner (D5 §4 rule 5, K-57) -->
 <div id="corners"></div>
-<!-- the overlay (O-HOST's): after the corners, so a standing overlay is the ring's stop after the plane and its corner, and the one line's after it (D5 §4 rule 5); its stacking draws it over them all -->
-<div id="overlay" role="dialog" aria-live="polite"></div>
-<div id="live" aria-live="polite" aria-atomic="true"></div>
+<!-- the overlay (O-HOST's): after the corners, so a standing overlay is the ring's stop after the plane and its corner, and the one line's after it (D5 §4 rule 5); its stacking draws it over them all; named by its own caption as each opens; no live region of its own — a face is said through #live -->
+<div id="overlay" role="dialog"></div>
+<!-- the one status region (D4; N-FOCUS's): polite for the selection, a face and the line's transients, assertive for the session's death and halted writes -->
+<div id="live" role="status" aria-live="polite" aria-atomic="true"></div>
 <pre id="fail"></pre>
 
 <noscript><div class="panel on" style="top:40px;left:10px">This page needs JavaScript: the plane is drawn by app/main.js.</div></noscript>

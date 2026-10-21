@@ -105,11 +105,19 @@ def ring(ctx):
 
 
 def ring_drawn(ctx, r, made):
-    """the check that the ring stands at the focus a key moved, around the focused element's box (D5 §4 rule 2: drawn
-    once a key has moved the focus, the platform's focus-visible rule)"""
+    """the check that the ring stands at the focus a key moved (D5 §4 rule 2: drawn once a key has moved the focus, the
+    platform's focus-visible rule). At reading scale a span's ring is its lit block, the ring's reading-scale form (D3),
+    and the canvas circles no mounted document; elsewhere it is the canvas box around the focused element."""
+    f = ctx.js('window.__skep.view.focus()')
+    rule = ctx.js('window.__skep.focus().ring')
+    if f and f.get('kind') == 'block' and ctx.js('window.__skep.mountedAddrs().includes(%s)' % json.dumps(f['addr'])):
+        g = ring(ctx)
+        lit = ctx.js('(() => { const a = document.querySelector(%s); return a ? [...a.querySelectorAll(".sp.lit")].map((e) => Number(e.dataset.pos)) : null; })()' % json.dumps('#domlayer article.dtext[data-addr="%s"]' % f['addr']))
+        r.check(rule is True and g['ring'] is None and lit == [f['pos']], 'the ring is drawn at the focus %s moved — at reading scale its lit block, the canvas circling no mounted document (D3)' % made, {'rule': rule, 'canvas_ring': g['ring'], 'lit': lit, 'pos': f['pos']})
+        return g
     g = ring(ctx)
     a, b = g['ring'], g['box']
-    r.check(bool(a) and bool(b) and all(abs(a[k] - b[k]) <= 0.5 for k in ('x', 'y', 'w', 'h')), 'the ring is drawn at the focus %s moved, around its box' % made, g)
+    r.check(rule is True and bool(a) and bool(b) and all(abs(a[k] - b[k]) <= 0.5 for k in ('x', 'y', 'w', 'h')), 'the ring is drawn at the focus %s moved, around its box' % made, g)
     return g
 
 
@@ -549,6 +557,119 @@ def below_reading(ctx, r):
         chord(ctx, 'Escape')
     ctx.leap(DOC, WINDOW[0])
     r.figures['below_reading'] = figures
+
+
+def focus_rules(ctx, r):
+    """the focus and keyboard rules the one-owner lane added (FP-20). Enter and Space act on the × and the address
+    segment, both native buttons (#119, #102, rule 14); the line is one Tab stop its ← and → move among (#96, K-22); ↓
+    in a pane brings the next block's top to the pane's top, not a fixed 48 px (#121, K-60); Mod+L in the scene opens
+    the box over it (#118) and Mod+[ inside the box closes it and goes back (rule 18, M-1); a camera-key drag over an
+    article pans and selects nothing (#88, K-10); the focused block is lit only while a key drew the ring and goes dark
+    after a click (D3); one Esc closes a scene standing over a selection, the selection outliving it (D7)."""
+    # #102 / #119: the address segment and the overlay's × are native buttons — Enter and Space act
+    ctx.leap(DOC, WINDOW[0])
+    seg = ctx.js('(() => { const b = document.querySelector("#line [data-act=address]"); return b ? b.tagName.toLowerCase() : null; })()')
+    r.check(seg == 'button', 'the address segment is a native button (#102; rule 14)', seg)
+    for key, name in (('Enter', 'Enter'), (' ', 'Space')):
+        ctx.js('(() => { const b = document.querySelector("#line [data-act=address]"); if (b) b.focus(); })()')
+        ctx.frames(1)
+        chord(ctx, key, code='Space' if key == ' ' else None)
+        r.check(state(ctx)['leap'], '%s on the address segment opens the LEAP box (#102)' % name)
+        chord(ctx, 'Escape')
+    for key, name in (('Enter', 'Enter'), (' ', 'Space')):
+        ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC)); ctx.frames(2)
+        onx = ctx.js('(() => { const x = document.querySelector("#overlay [data-x]"); if (!x) return null; x.focus(); return {tag: x.tagName.toLowerCase(), on: document.activeElement === x}; })()')
+        chord(ctx, key, code='Space' if key == ' ' else None)
+        gone = ctx.js('window.__skep.overlay().id === null')
+        r.check(bool(onx) and onx['tag'] == 'button' and onx['on'] and gone, '%s on the overlay\'s × (a native button) dismisses it (#119; rule 14)' % name, {'x': onx, 'gone': gone})
+    # K-22 (#96): the line is ONE Tab stop; ← and → move among its acts
+    ctx.leap(DOC, WINDOW[0])
+    live = ctx.js('[...document.querySelectorAll("#line button[data-act]")].filter((b) => !b.disabled).map((b) => ({act: b.dataset.act, tab: b.tabIndex}))')
+    stops = [b for b in live if b['tab'] == 0]
+    r.check(len(live) > 1 and len(stops) == 1, 'the line is ONE Tab stop: of its acts, exactly one is in the tab order (K-22, #96)', {'acts': live, 'stops': stops})
+    ctx.js('(() => { const b = [...document.querySelectorAll("#line button[data-act]")].filter((x) => !x.disabled)[0]; if (b) b.focus(); })()')
+    first = ctx.js('(() => { const e = document.activeElement; return e.closest("#line") ? e.dataset.act : null; })()')
+    chord(ctx, 'ArrowRight')
+    second = ctx.js('(() => { const e = document.activeElement; return e.closest("#line") ? e.dataset.act : null; })()')
+    r.check(bool(first) and bool(second) and first != second, '→ moves the stop among the line\'s acts (K-22)', {'first': first, 'second': second})
+    chord(ctx, 'ArrowLeft')
+    r.check(ctx.js('(() => { const e = document.activeElement; return e.closest("#line") ? e.dataset.act : null; })()') == first, '← moves it back (K-22)', {'first': first})
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    # D3: the lit block follows the ring's rule — drawn after a walk key, gone after a click (a pointer act), as every control loses its ring
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('(() => { const i = document.getElementById("walk-" + window.__skep.mirror.index()); if (i) i.focus(); })()')
+    chord(ctx, 'ArrowDown')
+    after_key = {'ring': ctx.js('window.__skep.focus().ring'), 'lit': marks(ctx, 'lit')}
+    ph, seen = phrase_at(ctx, DOC)
+    if ph:
+        ctx.drv.mouse(*ph['start'])  # a click selects a block and puts the ring out
+        ctx.settle(); ctx.frames(2)
+        after_click = {'ring': ctx.js('window.__skep.focus().ring'), 'lit': marks(ctx, 'lit')}
+        r.check(after_key['ring'] is True and after_click['ring'] is False and after_click['lit'] == [],
+                'D3: the lit block follows the ring\'s rule — drawn after a walk key, gone after a click (a pointer act), the canvas circling no mounted document', {'after_key': after_key, 'after_click': after_click})
+        chord(ctx, 'Escape')
+    # #88: a camera-key drag (hold Mod) over an article pans and selects nothing (K-10, M-8)
+    ctx.leap(DOC, WINDOW[0])
+    ph, seen = phrase_at(ctx, DOC)
+    r.check(ph is not None, 'a phrase of the first edition is shown, for the camera-key drag (#88)', seen)
+    if ph:
+        cam0 = ctx.camera()
+        sx, sy = ph['start']
+        ex, ey = ph['end']
+        ctx.drv.call('Input.dispatchMouseEvent', {'type': 'mouseMoved', 'x': sx, 'y': sy, 'modifiers': 4})
+        ctx.drv.call('Input.dispatchMouseEvent', {'type': 'mousePressed', 'x': sx, 'y': sy, 'button': 'left', 'buttons': 1, 'clickCount': 1, 'modifiers': 4})
+        for i in range(1, 7):
+            ctx.drv.call('Input.dispatchMouseEvent', {'type': 'mouseMoved', 'x': sx + (ex - sx) * i / 6, 'y': sy + (ey - sy) * i / 6, 'button': 'left', 'buttons': 1, 'modifiers': 4})
+        ctx.drv.call('Input.dispatchMouseEvent', {'type': 'mouseReleased', 'x': ex, 'y': ey, 'button': 'left', 'buttons': 0, 'clickCount': 1, 'modifiers': 4})
+        ctx.settle(); ctx.frames(2)
+        cam1 = ctx.camera()
+        plat = ctx.js('window.__skep.platformSelection()')
+        r.check(not same_view({'cam': cam0}, {'cam': cam1}) and state(ctx)['sel'] is None and plat['collapsed'], '#88: a camera-key drag over an article pans the camera and selects nothing — no selection of the page\'s, none of the platform\'s', {'cam': [cam0, cam1], 'sel': state(ctx)['sel'], 'platform': plat})
+        chord(ctx, 'Escape')
+    # K-60 (#121): ↓ in a pane brings the next block's top to the pane's top
+    open_scene(ctx)
+    want = ctx.js('''(() => { const pane = document.getElementById('sceneB'), art = pane.querySelector('article.dtext');
+      if (!art) return null; const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop;
+      const tops = [...art.querySelectorAll('.run > .sp, .run > .withheld')].map((e) => e.getBoundingClientRect().top - origin);
+      const at = pane.scrollTop, next = tops.find((y) => y > at + 1); return next == null ? null : Math.max(0, Math.round(next)); })()''')
+    before = ctx.js('document.getElementById("sceneB").scrollTop')
+    ctx.js('document.getElementById("sceneB").focus()'); ctx.frames(1)
+    chord(ctx, 'ArrowDown')
+    after = ctx.js('document.getElementById("sceneB").scrollTop')
+    r.check(want is not None and after != before and abs(after - want) <= 1, 'K-60 (#121): ↓ in a pane brings the next block\'s top to the pane\'s top, not a fixed 48 px', {'before': before, 'after': after, 'want': want})
+    # #118: Mod+L in the scene opens the box over it; the box's Esc leaves the scene standing
+    chord(ctx, 'l', mods=('Meta',))
+    box = ctx.js('''(() => { const leap = document.getElementById('leap'), scene = document.getElementById('scene');
+      return {open: window.__skep.leap.isOpen(), shown: getComputedStyle(leap).display !== 'none', focused: document.activeElement.id === 'leapq',
+              leap_z: parseInt(getComputedStyle(leap).zIndex) || 0, scene_z: parseInt(getComputedStyle(scene).zIndex) || 0}; })()''')
+    r.check(box['open'] and box['shown'] and box['focused'] and box['leap_z'] > box['scene_z'], 'Mod+L in the scene opens the box over it (#118): its z-index above the scene\'s, its input focused', box)
+    chord(ctx, 'Escape')
+    r.check(ctx.js('window.__skep.scene.isOpen()') and not ctx.js('window.__skep.leap.isOpen()'), 'the box\'s Esc closes the box and leaves the scene standing')
+    chord(ctx, 'Escape')
+    r.check(not ctx.js('window.__skep.scene.isOpen()'), 'a second Esc closes the scene')
+    # rule 18 (M-1): Mod+[ inside the open box closes it and goes back
+    ctx.leap(DOC, 1); ctx.leap(DOC, WINDOW[0])  # a back entry stands
+    chord(ctx, 'l', mods=('Meta',))
+    box_open, t0 = state(ctx)['leap'], trail(ctx)
+    chord(ctx, '[', mods=('Meta',))
+    s, t1 = state(ctx), trail(ctx)
+    r.check(box_open and not s['leap'] and t1['cursor'] == t0['cursor'] - 1, 'rule 18: Mod+[ inside the open box acts as anywhere, the box closed first — it goes back one entry (M-1)', {'box_open': box_open, 'still_open': s['leap'], 'cursor': [t0['cursor'], t1['cursor']]})
+    # D7: one Esc closes a scene standing over a selection (recency), the selection outliving it
+    ctx.leap(DOC, WINDOW[0])
+    blocks = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))
+    para = next((b for b in blocks if b['kind'] == 'para' and (b['text'] or '').strip()), blocks[0])
+    ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), para['pos'])); ctx.frames(2)
+    ctx.js('window.__skep.cards.wrote(%s, %d)' % (json.dumps(DOC), para['pos']))  # replaces the selection's card; the selection stands under it
+    ctx.settle(); ctx.frames(2)
+    open_scene(ctx)  # dismisses the provenance card (the selection stands), the scene over the selection
+    mid = state(ctx)
+    r.check(bool(mid['sel']) and mid['scene'], 'D7 setup: a scene stands over a standing selection (opened through a card that replaced the selection\'s)', {'sel': mid['sel'], 'scene': mid['scene']})
+    chord(ctx, 'Escape')
+    s = state(ctx)
+    r.check(not s['scene'] and bool(s['sel']), 'D7: one Esc closes the scene standing over the selection, and the selection outlives it (recency, not the list order)', {'scene': s['scene'], 'sel': s['sel']})
+    chord(ctx, 'Escape')
+    r.check(state(ctx)['sel'] is None, 'a second Esc clears the selection the scene stood over')
+    ctx.leap(DOC, WINDOW[0])
 
 
 def run(ctx):
@@ -1048,6 +1169,8 @@ def run(ctx):
             'Enter on the scene\'s × ends it: the trail as it stood, no selection, and the focus back on the walk\'s item the scene was opened from (K-63)',
             {'focused_x': on, 'scene': after['scene'], 'focus_back': back, 'at': after['at'], 'sel': after['sel'], 'trail_moved': after['trail'] != before['trail']})
     ended()
+    # ---- the focus and keyboard rules the one-owner lane added (FP-20) --------------------------------------------
+    focus_rules(ctx, r)
     # ---- the platform's own are never taken (K-92): Mod+C leaves everything -----------------------------
     s0 = state(ctx)
     chord(ctx, 'c', mods=('Meta',))

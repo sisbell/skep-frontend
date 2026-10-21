@@ -16,10 +16,14 @@
 // A-287), the blind-spot clause (R4's cross-board disclosure, E3 (a)). The
 // card's dismissal returns the chain to hidden; an act's card taking its
 // place is a replacement (O-HOST), so the chain stands — the symbols stay at
-// their spans, each opening its own card. Later: the SET axis (link sets —
-// the rows change, the drawing does not).
+// their spans, each opening its own card. The card takes the focus on its
+// first act where a key asked for it and never otherwise (the focus
+// record's rule 16); rebuilt by its own act, it keeps the focus on the
+// control pressed (rule 11, O-HOST's); a row's card takes the focus as the
+// row's act was made (rule 11). Later: the SET axis (link sets — the rows
+// change, the drawing does not).
 // Carries: the wireframe's §18 `revealLinks`. Rules: FP-1, FP-2, FP-10,
-// FP-13 (rebuilt from LK's state on every change).
+// FP-13 (rebuilt from LK's state on every change), FP-20.
 
 import * as HOST from './host.js';
 import * as LK from '../links/links.js';
@@ -95,7 +99,7 @@ export function render(byKey = false) {
     `<ul class="rows">${listed.map((s, i) => `<li><button data-run="row:${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→ ' + (s.far || '—') : '← ' + (s.far || '—'))}${REC.doc(s.far).refused === 'unregistered' ? ' · ?' : ''}</button></li>`).join('')}</ul>` +
     (more ? `<button data-run="more">${esc(t('B1.show-more'))}</button>` : shown.length ? `<span class="end">·</span>` : '') +
     `<div class="clause" data-string="F.card-clause">${esc(t('F.card-clause'))}</div>`;
-  /** @type {Record<string, (el: HTMLElement) => void>} */
+  /** @type {Record<string, import('./host.js').Act>} */
   const acts = {
     stage3: () => { LK.reveal(addr, 3); LAYER.bump(); markDirty(); render(); },
     stage2: () => { LK.reveal(addr, 2); LAYER.bump(); markDirty(); render(); },
@@ -106,7 +110,7 @@ export function render(byKey = false) {
   };
   for (const o of rows.owners) acts['owner:' + o] = () => { const cur = LK.state(addr).lens.owners; const set = new Set(cur || []); if (set.has(o)) set.delete(o); else set.add(o); LK.lens(addr, { owners: set.size ? set : null }); LAYER.bump(); markDirty(); render(); };
   for (const ty of rows.types) acts['type:' + ty] = () => { const cur = LK.state(addr).lens.types; const set = new Set(cur || []); if (set.has(ty)) set.delete(ty); else set.add(ty); LK.lens(addr, { types: set.size ? set : null }); LAYER.bump(); markDirty(); render(); };
-  listed.forEach((s, i) => { acts['row:' + i] = () => import('./anatomy-card.js').then((A) => A.open(s, null)); });
+  listed.forEach((s, i) => { acts['row:' + i] = (_el, byKey) => import('./anatomy-card.js').then((A) => A.open(s, null, byKey)); });
   HOST.show({
     kind: 'card', id: 'links:' + addr, anchor: { world: { x: box.x + box.w, y: box.y } }, html, acts, takeFocus: byKey,
     onDismiss: (replaced) => {

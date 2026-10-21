@@ -20,12 +20,21 @@
 // stands open over the text and its answer, the focus in its input, until the
 // text is corrected or Esc closes it (K-31). While an input method's
 // composition is open, Enter, Esc and the arrows are the IME's and act on
-// nothing here (D5 §0). The box's close hands the focus back through
-// N-WALK, the focus's owner (D5 §4 rule 4; K-34): to the element it was
-// opened from, or to the walk's element where that no longer takes the focus
-// — as the mirror's item it was opened from no longer does once a camera move
-// under the box has re-taken the walk's focus and rebuilt the mirror. The
-// intake's URL arm and search (K-35) are the code lane's.
+// nothing here (D5 §0). THE BOX IS THE ONE LINE'S STOP, OPENED (the focus
+// record's rule 18; D5 §4 rule 4): its input takes the focus however it was
+// opened, as a field a click lands in does, and its close hands the focus
+// back through N-FOCUS, the focus's owner (K-34; FP-20): to the element it
+// was opened from, or to the walk's element where that no longer takes the
+// focus — as the mirror's item it was opened from no longer does once a
+// camera move under the box has re-taken the walk's focus and rebuilt the
+// mirror. The box is gone with the next act (M-1): a chord inside it acts as
+// anywhere, the box closed first and the chord read at the focus the close
+// returned; the field's own chords — select all, copy, paste, cut, undo, the
+// caret's — stay the input's; a focus that leaves the box — Tab out of it
+// (D2), a click elsewhere — closes it, and the focus stands where it went.
+// Its layer stands above the reading scene's (#118), so Mod+L in the scene
+// shows the box over it. The intake's URL arm and search (K-35) are the code
+// lane's.
 // ITS ACCESSIBLE FORM (R94; the WAI-ARIA combobox, list autocomplete with
 // automatic selection): the input is the combobox, expanded while it lists
 // rows, controlling the rows' listbox, the selected row `aria-selected`; the
@@ -35,15 +44,16 @@
 // choice into the rows, and never on the box as opened or as typed, so what
 // a reader meets first is the box itself — the current address that Mod+C
 // copies and typing replaces (D5 K-30; §4 rule 4). The answer and the
-// index's state are the box's own status region, written only when its words
-// change: a live region speaks whatever is rewritten, so an arrow or a
-// further keystroke repeats nothing.
-// Carries: the wireframe's §12. Rules: FP-1, FP-2, FP-9, FP-10, FP-13.
+// index's state are the box's own status region (D4: the combobox's, beside
+// the page's one), written only when its words change: a live region speaks
+// whatever is rewritten, so an arrow or a further keystroke repeats nothing.
+// Carries: the wireframe's §12. Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from './trail.js';
 import * as GO from './go.js';
-import * as WALK from './walk.js';
+import * as FOCUS from './focus.js';
+import { MAC } from './keys.js';
 import { matches } from './match.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -65,8 +75,9 @@ let inRows = false;
 let noteHTML = '';
 /** @type {() => string | null} the current address's reader (the line's) */
 let currentAddress = () => null;
-/** @type {Element | null} the element the box was opened from, where its close returns the focus */
-let returnTo = null;
+
+/** the field's own chords with the command modifier held: select all, copy, paste, cut, undo, the caret's moves — never the plane's */
+const FIELD_CHORDS = new Set(['a', 'c', 'v', 'x', 'z', 'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End']);
 
 /** the id of row i — the input's active descendant names it */
 const rowId = (/** @type {number} */ i) => `leap-row-${i}`;
@@ -78,14 +89,26 @@ export function attach(e, cur) {
   e.rows.setAttribute('aria-label', t('L.leap-rows-label'));
   e.input.addEventListener('input', () => { compute(e.input.value); render(); });
   e.input.addEventListener('keydown', (ev) => {
+    if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) { ev.stopPropagation(); return; } // the IME's until it commits (D5 §0)
+    const mod = MAC ? ev.metaKey : ev.ctrlKey;
+    // a chord acts as anywhere, the box closed first (M-1): it goes on to the plane's dispatch, which reads the focus the close returned
+    if (mod && !FIELD_CHORDS.has(ev.key.length === 1 ? ev.key.toLowerCase() : ev.key)) { close(); return; }
     ev.stopPropagation(); // the box's keys are its own: the plane's dispatch never sees them
-    if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) return; // the IME's until it commits (D5 §0)
     if (ev.key === 'ArrowDown') { choose(1); ev.preventDefault(); }
     else if (ev.key === 'ArrowUp') { choose(-1); ev.preventDefault(); }
     else if (ev.key === 'Enter') { go(sel, true); ev.preventDefault(); }
     else if (ev.key === 'Escape') { close(); ev.preventDefault(); }
   });
-  e.rows.addEventListener('click', (ev) => { const r = /** @type {HTMLElement} */ (ev.target).closest('[data-i]'); if (r) go(Number(/** @type {HTMLElement} */ (r).dataset.i)); });
+  // a press on the rows chooses without moving the focus off the input (the combobox's form); a click on a row goes
+  e.box.addEventListener('mousedown', (ev) => { if (ev.target !== e.input) ev.preventDefault(); });
+  e.rows.addEventListener('click', (ev) => { const r = /** @type {HTMLElement} */ (ev.target).closest('[data-i]'); if (r) go(Number(/** @type {HTMLElement} */ (r).dataset.i), FOCUS.byKey(ev)); });
+  // the focus leaving the box — Tab out of it (D2), a click elsewhere (M-1) — closes it once the focus has settled where it went
+  e.box.addEventListener('focusout', (ev) => {
+    if (!openState) return;
+    const to = /** @type {Element | null} */ (ev.relatedTarget);
+    if (to && e.box.contains(to)) return;
+    setTimeout(() => { if (openState && !e.box.contains(document.activeElement)) close(); }, 0);
+  });
 }
 export const isOpen = () => openState;
 
@@ -118,23 +141,25 @@ function comboState() {
   else els.input.removeAttribute('aria-activedescendant');
 }
 
-/** open the box holding the current address, selected (K-30) */
+/** open the box holding the current address, selected (K-30); its input takes the focus, the opener remembered by the focus's owner */
 export function open(prefill = currentAddress() || '') {
   if (!els) return;
-  returnTo = document.activeElement;
+  const from = document.activeElement;
   openState = true;
   els.box.classList.add('on');
   els.input.value = prefill;
   compute('');
   render();
-  els.input.focus(); els.input.select();
+  FOCUS.open('box', { el: els.box, from, byKey: true, first: els.input });
+  els.input.select();
   markDirty();
 }
+/** close the box: the focus back through the focus's owner — to the opener, else the walk's element; one that left the box already stays where it went */
 export function close() {
   if (!els || !openState) return;
-  openState = false; inRows = false; els.box.classList.remove('on'); els.input.blur();
+  openState = false; inRows = false; els.box.classList.remove('on');
   comboState();
-  WALK.returnFocus(returnTo);
+  FOCUS.close('box');
   markDirty();
 }
 

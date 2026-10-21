@@ -4,23 +4,21 @@
 // own first position; a position no span holds is never kept. The ring is
 // drawn at a landing a key made and put out by any other, and a camera move
 // re-takes the focus with the ring drawn where a key made the move — a mutant
-// that drops the re-take's word of the key turns red. The mirror's
-// rebuild leaves the plane one Tab stop (D5 §4 rule 5): the current item while
-// it stands, the tree out of the order — a mutant that leaves the tree in it
-// turns red — and the tree itself where the walk's level holds no item — a
-// mutant that always takes it out turns red. The tree is named from ST as the
-// walk attaches it, and each level's group by its own level — a mutant that
-// drops the tree's name, or names every group by one level, turns red. While
-// chrome covers the plane the tree stays inert through the rebuild — a mutant
-// whose rebuild lifts the mark turns red — until the plane is uncovered. An
-// overlay's close returns the focus (D5 §4 rule 4) to the element it was
-// opened from where that takes it, and to the walk's element where it does
-// not — one still on the page among them, so a mutant that asks whether the
-// opener is on the page turns red, as does one with no fallback; an overlay
-// opened with the focus on nothing returns it to nothing — a mutant that
-// falls back wherever the focus lands on nothing turns red — and a focus the
-// person moved out of the overlay stays where they put it — a mutant that
-// returns it regardless turns red.
+// that drops the re-take's word of the key turns red. A block of white space
+// alone is no element of the walk (rule 20): the mirror lists none, and a
+// landing inside one stands on the element before it — a mutant that lists
+// every block turns red. A landing the index does not list stands on its
+// own node, placed among the listed siblings in address order, so the mirror
+// and the line name it (rule 12) — a mutant that lands on the first listed
+// sibling turns red. The mirror's rebuild leaves the plane one Tab stop (D5
+// §4 rule 5): the current item while it stands, the tree out of the order —
+// a mutant that leaves the tree in it turns red. The tree is named from ST as
+// the walk attaches it, and each level's group by its own level — a mutant
+// that drops the tree's name, or names every group by one level, turns red.
+// While chrome covers the plane the tree stays inert through the rebuild —
+// a mutant whose rebuild lifts the mark turns red — until the plane is
+// uncovered. The focus's return as an overlay closes is the controller's
+// (`focus.test.js`).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -35,13 +33,21 @@ import { t } from '../strings.js';
 import * as WALK from './walk.js';
 
 const D = '1.0.1.0.3';
-// three spans: 1 "Tumbler.\n\n" (10), 11 "The first field." (16), 27 a withheld run (4)
+/** a second document: a separator alone, then a span, a block of one space, a span — two elements of the walk among four blocks */
+const E = '1.0.1.0.5';
+const E_TEXT = '\n\nSecond.\n\n \n\nThird.';
+/** the reads of a document read whole: its extent, its metadata, its text, its image, its links (none) */
+const reads = (/** @type {string} */ doc, /** @type {Array<Record<string, unknown>>} */ items, /** @type {number} */ extent, /** @type {Array<Record<string, string>>} */ runs) => ({
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + extent }] } },
+  [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: doc + '.1', birth_extent: String(extent), placed: null, base_extent: null, source: null } },
+  [FAKE.keyOf('op', { frame: F.retrieveV(doc, 1, extent) })]: { result: { as_of: 1, resp: 'delivery', items } },
+  [FAKE.keyOf('op', { frame: F.image(doc, 1, extent) })]: { result: { as_of: 1, resp: 'runs', runs } },
+  [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, extent) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+});
+// D: three spans: 1 "Tumbler.\n\n" (10), 11 "The first field." (16), 27 a withheld run (4)
 const script = {
-  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.30' }] } },
-  [FAKE.keyOf('op', { frame: F.docMetadata(D) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: D, published: true, owner: '1.0.1', birth: D + '.1', birth_extent: '30', placed: null, base_extent: null, source: null } },
-  [FAKE.keyOf('op', { frame: F.retrieveV(D, 1, 30) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }] } },
-  [FAKE.keyOf('op', { frame: F.image(D, 1, 30) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }] } },
-  [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  ...reads(D, [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }], 30, [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }]),
+  ...reads(E, [{ content: E_TEXT }], E_TEXT.length, [{ i_start: E + '.0.1.1', width: String(E_TEXT.length) }]),
 };
 
 /** a walk move run to its end: the flight it starts stepped to its last frame */
@@ -58,10 +64,12 @@ before(async () => {
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
-  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: E, kind: 'edition', label: 'e', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
   CAM.setViewport(1440, 900);
   await PUMP.loadWhole(D);
+  await PUMP.loadWhole(E);
   assert.deepEqual(REC.doc(D).blocks.map((b) => b.pos), [1, 11, 27]);
+  assert.deepEqual(REC.doc(E).blocks.map((b) => [b.pos, b.text]), [[1, ''], [3, 'Second.'], [12, ' '], [15, 'Third.']], 'E holds two blocks of white space among its spans');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -94,6 +102,31 @@ test('a landing on the document itself names no position', async () => {
   assert.equal(WALK.landedAt(), null);
 });
 
+test('a block of white space alone is no element of the walk; a landing inside one stands on the element before it (rule 20)', async () => {
+  await WALK.focusTo(E, 4);
+  assert.deepEqual(WALK.siblingsNow().map((n) => n.pos), [3, 15], 'the walk holds the two spans; the separator and the space are no elements');
+  assert.equal(WALK.current()?.pos, 3);
+  await WALK.focusTo(E, 13);
+  assert.equal(WALK.current()?.pos, 3, 'a landing in the block of one space stands on the span before it');
+  assert.equal(WALK.landedAt(), null, 'and keeps no position: the span does not hold it');
+  await WALK.focusTo(E, 1);
+  assert.equal(WALK.current()?.pos, 3, 'a landing in the leading separator, with no element before it, stands on the first span');
+  await run(WALK.key('down'));
+  assert.equal(WALK.current()?.pos, 15, '↓ steps over the space to the next span');
+});
+
+test('a landing the index does not list stands on its own node among the listed siblings, in address order (rule 12)', async () => {
+  await WALK.focusTo('1.0.1.0.4', null);
+  assert.deepEqual(WALK.siblingsNow().map((n) => n.addr), [D, '1.0.1.0.4', E], 'the document placed between the two the index lists');
+  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr], ['document', '1.0.1.0.4'], 'the focus on its own node, never a listed sibling');
+  await WALK.focusTo('1.0.9.0.1', null);
+  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr], ['document', '1.0.9.0.1']);
+  assert.deepEqual(WALK.siblingsNow().map((n) => n.addr), ['1.0.9.0.1'], 'an account the index lists nothing for: the document its own level\'s one node');
+  await run(WALK.key('out'));
+  assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr], ['account', '1.0.9'], '← walks out to the account, itself placed among the listed accounts');
+  assert.deepEqual(WALK.siblingsNow().map((n) => n.addr), ['1.0.1', '1.0.9']);
+});
+
 test('the ring is drawn at a landing a key made and put out by any other; a camera move re-takes the focus with it drawn where a key made the move', async () => {
   await WALK.focusTo(D, 15, true);
   assert.equal(WALK.ringShown(), true, 'a landing a key made draws the ring');
@@ -114,20 +147,21 @@ test('the ring is drawn at a landing a key made and put out by any other; a came
 const itemStops = (/** @type {string} */ html) => [...html.matchAll(/<li\b[^>]*>/g)].filter((m) => / tabindex="0"/.test(m[0])).map((m) => (/ id="([^"]*)"/.exec(m[0]) || [])[1]);
 
 // placed last: it attaches a mirror, which every test above runs without
-test('the plane is one Tab stop: the current item while it stands, the tree itself where the walk\'s level holds no item', async () => {
+test('the plane is one Tab stop: the current item while it stands, the tree out of the order — a landing the index does not list included', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null }); // the platform's focus on none of the mirror
-  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {} };
-  WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ ({ textContent: '' }));
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
+  WALK.attach(/** @type {any} */ (mirror));
   try {
     await WALK.focusTo(D, 15);
     assert.deepEqual(itemStops(mirror.innerHTML), ['walk-' + WALK.mirrorIndex()], 'the current item alone of the items is in the order');
     assert.equal(mirror.tabIndex, -1, 'the tree is out of the order while its current item stands');
-    // a document in an account the index lists nothing for: the landing's level holds no sibling, so no item
+    // a document in an account the index lists nothing for: its own node is the level's one item, and the stop
     await WALK.focusTo('1.0.9.0.1', null);
-    assert.equal(WALK.mirrorSize(), 0);
-    assert.deepEqual(itemStops(mirror.innerHTML), []);
-    assert.equal(mirror.tabIndex, 0, 'the tree itself is the stop');
+    assert.equal(WALK.mirrorSize(), 1);
+    assert.deepEqual(itemStops(mirror.innerHTML), ['walk-0']);
+    assert.equal(mirror.tabIndex, -1, 'the item is the stop, the tree out of the order');
+    assert.ok(mirror.innerHTML.includes('1.0.9.0.1'), 'the mirror names the place landed on');
   } finally {
     globalThis.document = platform;
   }
@@ -139,14 +173,15 @@ test('the tree is named from ST as the walk attaches it, and each level\'s group
   globalThis.document = /** @type {any} */ ({ activeElement: null });
   /** @type {Record<string, string>} the attributes the walk set on the tree */
   const attrs = {};
-  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute: (/** @type {string} */ k, /** @type {string} */ v) => { attrs[k] = v; } };
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute: (/** @type {string} */ k, /** @type {string} */ v) => { attrs[k] = v; }, classList: { toggle() {} } };
   /** the group's name, read from the markup the rebuild wrote */
   const group = () => (/<ul role="group" aria-label="([^"]*)">/.exec(mirror.innerHTML) || [])[1];
   try {
-    WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ ({ textContent: '' }));
+    WALK.attach(/** @type {any} */ (mirror));
     assert.equal(attrs['aria-label'], t('L.mirror-label'), 'the tree, named as it is attached');
     await WALK.focusTo(D, 15);
     assert.equal(group(), t('L.mirror-level', { n: 4 }), 'a span\'s group: board › account › document › span');
+    assert.ok(mirror.innerHTML.includes(t('L.mirror.item', { i: 2, n: 3 })), 'each item named from ST: its place in the set');
     await WALK.focusTo(D, null);
     assert.equal(group(), t('L.mirror-level', { n: 3 }), 'a document\'s group');
   } finally {
@@ -158,62 +193,15 @@ test('the tree is named from ST as the walk attaches it, and each level\'s group
 test('while chrome covers the plane the tree is inert, through the rebuild, until the plane is uncovered', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });
-  const mirror = { innerHTML: '', tabIndex: 0, inert: false, contains: () => false, setAttribute() {} };
+  const mirror = { innerHTML: '', tabIndex: 0, inert: false, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
   try {
-    WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ ({ textContent: '' }));
+    WALK.attach(/** @type {any} */ (mirror));
     WALK.cover(true);
     await WALK.focusTo(D, 15);
     assert.ok(mirror.innerHTML.includes('role="treeitem"'), 'the landing rebuilt the tree');
     assert.equal(mirror.inert, true, 'the rebuild keeps the tree out of the order while the plane is covered');
     WALK.cover(false);
     assert.equal(mirror.inert, false, 'uncovered: the tree back in the order');
-  } finally {
-    globalThis.document = platform;
-  }
-});
-
-/**
- * A page for the focus's return: the platform's focus — the body where it stands on nothing, as the platform leaves it
- * once the element holding it is gone — elements whose `focus()` lands it, or lands nothing as the platform's does on an
- * element that no longer takes the focus, and a mirror whose current item takes it.
- */
-function page() {
-  const body = { id: 'body', focus() {} }; // the body takes no focus: the platform's focus() on it moves nothing
-  const doc = { body, activeElement: /** @type {{id: string}} */ (body) };
-  /** an element on the page: `takes` whether the platform's focus lands on it */
-  const element = (/** @type {string} */ id, takes = true) => ({ id, isConnected: true, focus() { if (takes) doc.activeElement = this; }, getBoundingClientRect: () => ({ top: 0, height: 10 }) });
-  const item = element('the current item');
-  const mirror = {
-    innerHTML: '', tabIndex: -1, clientTop: 0, clientHeight: 100, scrollTop: 0,
-    contains: (/** @type {unknown} */ e) => e === item,
-    querySelector: (/** @type {string} */ s) => (s === '#walk-' + WALK.mirrorIndex() ? item : null),
-    getBoundingClientRect: () => ({ top: 0, height: 100 }),
-    focus() { doc.activeElement = { id: 'the tree' }; },
-    setAttribute() {},
-  };
-  return { doc, body, element, mirror };
-}
-
-// placed last with the test above: it attaches a mirror of its own
-test('an overlay\'s close returns the focus to its opener where that takes it, else to the walk\'s element; never to the top, never from where the person moved it', async () => {
-  const platform = globalThis.document;
-  const p = page();
-  globalThis.document = /** @type {any} */ (p.doc);
-  WALK.attach(/** @type {any} */ (p.mirror), /** @type {any} */ ({ textContent: '' }));
-  const at = () => p.doc.activeElement.id;
-  /** the overlay closed: its markup gone, the focus it held on nothing, then the return to its opener */
-  const closed = (/** @type {object} */ opener) => { p.doc.activeElement = p.body; WALK.returnFocus(/** @type {any} */ (opener)); return at(); };
-  try {
-    await WALK.focusTo(D, 15);
-    assert.equal(closed(p.element('the opener')), 'the opener', 'an opener that takes the focus has it back');
-    assert.equal(closed(p.element('a corner the walk has left', false)), 'the current item', 'an opener still on the page that no longer takes the focus gives it to the walk\'s element');
-    assert.equal(closed({ ...p.element('an item a rebuild replaced', false), isConnected: false }), 'the current item', 'an opener a rebuild removed gives it to the walk\'s element');
-    assert.equal(closed(p.body), 'body', 'an overlay opened with the focus on nothing returns it to nothing');
-    assert.equal(closed(null), 'body', 'an overlay that kept no opener moves nothing');
-    // the person moved the focus out of the overlay before it closed, to an element of the page's
-    p.element('the corner').focus();
-    WALK.returnFocus(/** @type {any} */ (p.element('the opener')));
-    assert.equal(at(), 'the corner', 'a focus the person moved to an element outside the overlay stays there');
   } finally {
     globalThis.document = platform;
   }

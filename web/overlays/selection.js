@@ -23,12 +23,19 @@
 // wrote this? · who uses this? · see the links · follow · read side by side ·
 // link to… — each showing its chord (D5-F8); annotate, quote and "link to…"
 // are INERT in this lane with their reason (B8's and the editor's lanes —
-// seams). Dismissed with the selection; an act's card taking the acts'
-// place is a replacement, not a dismissal, and the selection stands under
-// it. The focus and the mirror stay at block grain (D5-F11, RULED: the
-// assistive path is met at span grain).
+// seams): an inert slot keeps its place and gives its reason when activated,
+// at the slot and through the one status region (P47; the focus record's
+// rule 14). THE SELECTION'S ACTS NEVER TAKE THE FOCUS, however the selection
+// was made (D5 §4 rule 4; rule 15): K-8 selects and extends from the walk's
+// element and leaves the focus there; the card is reached by its chords or
+// by Tab, and each act's card takes the focus as the act was made — a chord
+// or Enter on the slot, never a click (rule 16). A selection made is said
+// through the status region (D4). Dismissed with the selection; an act's
+// card taking the acts' place is a replacement, not a dismissal, and the
+// selection stands under it. The focus and the mirror stay at block grain
+// (D5-F11, RULED: the assistive path is met at span grain).
 // Carries: the wireframe's §16 `selectSpan`, §18 `selectionActs`.
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as REC from '../model/records.js';
@@ -39,6 +46,7 @@ import * as SCENE from '../scene/scene.js';
 import * as PROV from './provenance.js';
 import * as LINKS from './links-card.js';
 import * as WALK from '../nav/walk.js';
+import * as FOCUS from '../nav/focus.js';
 import { extended, sameSpan, spanOfBlock } from '../text/span.js';
 import { t, typeName } from '../strings.js';
 import { esc } from '../util.js';
@@ -68,28 +76,28 @@ function wholeBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
  * @param {string} addr
  * @param {number} pos the span's first position
  * @param {number | null} [width] positions; null selects the block at `pos` whole
- * @param {boolean} [byKey]
  */
-export function select(addr, pos, width = null, byKey = false) {
+export function select(addr, pos, width = null) {
   const span = width != null && width > 0 ? { addr, pos, width } : wholeBlock(addr, pos);
   sel = span;
   LAYER.placeSelection(span);
   markDirty();
-  render(byKey);
+  render();
+  FOCUS.say(`${span.addr} · ${t('F.position', { p: span.pos })}`);
 }
 
 /**
  * K-8 (Shift+↓ / Shift+↑): the first press selects the walk's focused span
  * whole; each further press extends the selection by a span in the
- * direction pressed.
+ * direction pressed. The focus stays on the walk's element (rule 15).
  * @param {'down' | 'up'} [dir]
  */
 export function selectFocused(dir = 'down') {
   const f = WALK.current();
   if (!f || f.kind !== 'block' || f.pos == null) return;
-  if (!sel || sel.addr !== f.addr) { select(f.addr, f.pos, null, true); return; }
+  if (!sel || sel.addr !== f.addr) { select(f.addr, f.pos, null); return; }
   const e = extended(REC.doc(sel.addr).blocks, sel, dir);
-  select(e.addr, e.pos, e.width, true);
+  select(e.addr, e.pos, e.width);
 }
 
 /** clear the selection: the platform's highlight, its acts and its marks with it */
@@ -112,29 +120,46 @@ const SLOTS = /** @type {const} */ ([
   ['linkto', 'D5.link-to', ''],
 ]);
 
-/** rebuild the acts card at the selected span (FP-13) */
-export function render(byKey = false) {
+/** the inert slots' reasons (the seams), by slot */
+const INERT_REASON = /** @type {Record<string, string>} */ ({ annotate: 'L.seam.annotate', quote: 'L.seam.quote', linkto: 'L.seam.link-to' });
+
+/**
+ * An inert slot activated (P47; rule 14): it keeps its place, marked inert,
+ * and gives its reason — at the slot, in the card's reason line, and through
+ * the status region.
+ * @param {HTMLElement} el the slot's button
+ * @param {string} id the reason's string
+ */
+function inertAct(el, id) {
+  el.setAttribute('data-inert', '1');
+  const card = el.closest('.selection-card');
+  const line = card ? /** @type {HTMLElement | null} */ (card.querySelector('.reason')) : null;
+  if (line) { line.textContent = t(id); line.dataset.string = id; line.hidden = false; }
+  FOCUS.say(t(id));
+}
+
+/** rebuild the acts card at the selected span (FP-13); the card takes no focus (rule 15) */
+export function render() {
   if (!sel) return;
   const span = sel;
   const { addr, pos } = span;
   const drawn = LK.shownAt(addr, span);
   const n = drawn.length;
   const farLabel = n === 1 ? ` ${drawn[0].far}` : n > 1 ? ` ${n}` : '';
-  const inertReason = { annotate: 'L.seam.annotate', quote: 'L.seam.quote', linkto: 'L.seam.link-to' };
   const buttons = SLOTS.map(([id, strId, chord]) => {
     const inert = id === 'annotate' || id === 'quote' || id === 'linkto' || ((id === 'follow' || id === 'scene') && n === 0);
     const label = t(strId) + ((id === 'follow' || id === 'scene') ? farLabel : '');
-    const reason = inert && id in inertReason ? t(inertReason[/** @type {keyof typeof inertReason} */ (id)]) : '';
+    const reason = inert && id in INERT_REASON ? t(INERT_REASON[id]) : '';
     return `<button data-run="${id}" class="${inert ? 'inert' : ''}" ${reason ? `title="${esc(reason)}"` : ''}>${esc(label)}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
   }).join('');
-  const html = `<span class="label">${esc(addr)} · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div>`;
+  const html = `<div class="selection-card"><span class="label">${esc(addr)} · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div><div class="note reason" hidden></div></div>`;
   HOST.show({
-    kind: 'card', id: 'selection', anchor: { span }, html, takeFocus: byKey,
+    kind: 'card', id: 'selection', anchor: { span }, html, takeFocus: false,
     acts: {
-      annotate: (el) => { el.setAttribute('data-inert', '1'); },
-      quote: (el) => { el.setAttribute('data-inert', '1'); },
-      linkto: (el) => { el.setAttribute('data-inert', '1'); },
-      wrote: () => act('wrote'), uses: () => act('uses'), links: () => act('links'), follow: (_el, byKey) => act('follow', byKey), scene: () => act('scene'),
+      annotate: (el) => inertAct(el, INERT_REASON.annotate),
+      quote: (el) => inertAct(el, INERT_REASON.quote),
+      linkto: (el) => inertAct(el, INERT_REASON.linkto),
+      wrote: (_el, byKey) => act('wrote', byKey), uses: (_el, byKey) => act('uses', byKey), links: (_el, byKey) => act('links', byKey), follow: (_el, byKey) => act('follow', byKey), scene: (_el, byKey) => act('scene', byKey),
     },
     onDismiss: (replaced) => { if (!replaced && sameSpan(sel, span)) { sel = null; LAYER.placeSelection(null); markDirty(); } },
   });
@@ -142,31 +167,32 @@ export function render(byKey = false) {
 
 /**
  * A slot's act (by chord or by its button); where no selection stands, the
- * walk's focused span is selected first, whole (D5 §1.6).
+ * walk's focused span is selected first, whole (D5 §1.6). The act's card
+ * takes the focus where a key made the act (rule 16).
  * @param {'wrote' | 'uses' | 'links' | 'follow' | 'scene'} which
- * @param {boolean} [byKey] a key made the act: a follow's landing draws the ring
+ * @param {boolean} [byKey] a key made the act: the card takes the focus; a follow's landing draws the ring
  */
 export function act(which, byKey = false) {
   if (!sel) {
     const f = WALK.current();
     if (f && f.kind === 'block' && f.pos != null) { sel = wholeBlock(f.addr, f.pos); LAYER.placeSelection(sel); markDirty(); }
-    else { if (f && which === 'links') LINKS.show(f.addr, true); return; }
+    else { if (f && which === 'links') LINKS.show(f.addr, byKey); return; }
   }
   const span = sel;
   const { addr, pos, width } = span;
-  if (which === 'wrote') { PROV.wrote(addr, pos, width); return; }
-  if (which === 'uses') { PROV.uses(addr, pos, width); return; }
-  if (which === 'links') { LINKS.show(addr, true); return; }
+  if (which === 'wrote') { PROV.wrote(addr, pos, width, byKey); return; }
+  if (which === 'uses') { PROV.uses(addr, pos, width, byKey); return; }
+  if (which === 'links') { LINKS.show(addr, byKey); return; }
   const drawn = LK.shownAt(addr, span);
-  if (which === 'follow') { if (drawn.length === 1) GO.follow(drawn[0], null, byKey); else if (drawn.length > 1) which_(drawn, 'follow'); return; }
-  if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) SCENE.open(addr, drawn[0].far, { posA: pos, widthA: width, posB: drawn[0].farEnd && !drawn[0].farEnd.whole ? drawn[0].farEnd.ordinal : null }); else if (drawn.length > 1) which_(drawn, 'scene'); }
+  if (which === 'follow') { if (drawn.length === 1) GO.follow(drawn[0], null, byKey); else if (drawn.length > 1) which_(drawn, 'follow', byKey); return; }
+  if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) SCENE.open(addr, drawn[0].far, { posA: pos, widthA: width, posB: drawn[0].farEnd && !drawn[0].farEnd.whole ? drawn[0].farEnd.ordinal : null }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
 }
 
-/** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3) */
-function which_(/** @type {import('../links/links.js').Shown[]} */ drawn, /** @type {'follow' | 'scene'} */ what) {
+/** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3); it takes the focus on its first row where a key asked */
+function which_(/** @type {import('../links/links.js').Shown[]} */ drawn, /** @type {'follow' | 'scene'} */ what, /** @type {boolean} */ byKey) {
   const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.link.owner || '')} · ${esc(s.far)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   drawn.forEach((s, i) => { acts['w' + i] = (el, byKey) => { if (what === 'follow') GO.follow(s, el, byKey); else if (s.far && sel) SCENE.open(sel.addr, s.far, { posA: sel.pos, widthA: sel.width, posB: s.farEnd && !s.farEnd.whole ? s.farEnd.ordinal : null }); }; });
-  HOST.show({ kind: 'list', id: 'which', anchor: sel ? { span: sel } : null, html, acts, takeFocus: true });
+  HOST.show({ kind: 'list', id: 'which', anchor: sel ? { span: sel } : null, html, acts, takeFocus: byKey });
 }

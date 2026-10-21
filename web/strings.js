@@ -218,6 +218,30 @@ export const STRINGS = {
   'L.scene-label': { text: 'the reading scene: two places side by side', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S9' },
   'L.mirror-label': { text: 'the board in record order', cls: 'DRAFT', source: 'designs/plane.html', screen: 'the ARIA mirror' },
   'L.mirror-level': { text: 'level ⟨n⟩', cls: 'DRAFT', source: 'designs/plane.js', screen: 'the ARIA mirror' },
+  // the mirror's item names (N-WALK's `nameOf`): what a screen reader hears at each element of the walk
+  'L.mirror.item': { text: 'Item ⟨i⟩ of ⟨n⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.board': { text: 'board ⟨node⟩, ⟨origin⟩: ⟨n⟩ accounts.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.board.bare': { text: 'board ⟨node⟩: ⟨n⟩ accounts.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.account': { text: 'account ⟨account⟩: ⟨documents⟩ documents, ⟨links⟩ links⟨empty⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.at-least': { text: 'at least ⟨n⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.document': { text: 'document ⟨document⟩, ⟨label⟩, ⟨state⟩⟨extent⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.draft': { text: 'a draft', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.positions': { text: ', ⟨n⟩ positions', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.span': { text: 'span at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩: "⟨text⟩".', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.span.bare': { text: 'span at position ⟨p⟩ in ⟨document⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.same': { text: ' (the same material as ⟨origin⟩)', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.withheld': { text: 'withheld run in ⟨document⟩: ⟨width⟩ positions, origin ⟨origin⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨unregistered⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.unregistered': { text: ' — nothing this board will say about that address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's title, the version marker's
+  'L.dismiss': { text: 'dismiss (⟨chord⟩)', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
+  'L.version': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  // the overlay dialog's name where no caption stands in it (the focus record's D5): one per kind
+  'L.dialog.card': { text: 'a card', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
+  'L.dialog.list': { text: 'a list', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
+  'L.dialog.face': { text: 'a face', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
+  'L.dialog.moment': { text: 'a moment', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
 };
 
 /**

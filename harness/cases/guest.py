@@ -47,7 +47,7 @@ import json
 import re
 from collections import Counter
 
-from . import DOC, SECOND_ACCOUNT, WINDOW, WITHHELD, XFAIL_FACE, XFAIL_FOCUS, Result
+from . import DOC, SECOND_ACCOUNT, WINDOW, WITHHELD, XFAIL_FACE, Result
 
 OWNER = '1.0.1'
 # a stretch of the owner's bytes over the run, in characters with white space folded, that the guest's page must never hold
@@ -284,7 +284,7 @@ def run(ctx):
             '(d) a LEAP to a withheld document with a box of its own draws its withheld box, its label the address and "%s" alone: existence and owner, never bytes (B1-S2)' % want[1],
             {'refused': w['refused'], 'labels_at_the_box': at_box, 'want': want})
     named_at = ctx.js('window.__skep.line().address')
-    r.check(named_at['text'].split(' › ')[1:3] == [SECOND_ACCOUNT, WITHHELD], '(d) the one line names the landing: board › its account › the withheld document', named_at, xfail=XFAIL_FOCUS)
+    r.check(named_at['text'].split(' › ')[1:3] == [SECOND_ACCOUNT, WITHHELD], '(d) the one line names the landing: board › its account › the withheld document — a landing the index does not list stands on its own node (rule 12, #97)', named_at)
     r.figures['shots'].append(ctx.shot('guest/withheld-box.png'))
     r.figures['withheld_box'] = {'addr': WITHHELD, 'labels': at_box}
 

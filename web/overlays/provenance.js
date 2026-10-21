@@ -7,10 +7,12 @@
 // arrangement holds the passage, short by a stated copy and by any document
 // the reader may not read, which the blind-spot line says (C-72, DRAFT).
 // Each act takes the span exactly as selected (R11); asked by a position
-// alone, it takes the block holding it, whole. The two marks' variants
-// (C-33, C-34) are the article's where they fire. Faces:
-// `too_much_coverage`. Carries: the wireframe's §18 `provenanceCard`.
-// Rules: FP-1, FP-2, FP-13.
+// alone, it takes the block holding it, whole. Each card takes the focus on
+// its first act where a key made the act that asked — the slot's chord, Enter
+// on its button — and never otherwise (D5 §4 rule 4; the focus record's
+// rule 16). The two marks' variants (C-33, C-34) are the article's where
+// they fire. Faces: `too_much_coverage`. Carries: the wireframe's §18
+// `provenanceCard`. Rules: FP-1, FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -41,8 +43,9 @@ function spanOf(addr, pos, width) {
  * @param {string} addr
  * @param {number} pos the span's first position
  * @param {number | null} [width] the span's positions; null asks over the block holding `pos`
+ * @param {boolean} [byKey] a key made the act: the card takes the focus on its first act
  */
-export async function wrote(addr, pos, width = null) {
+export async function wrote(addr, pos, width = null, byKey = false) {
   const sp = spanOf(addr, pos, width);
   const anchor = { span: { addr, pos: sp.ordinal, width: sp.positions } };
   const out = await PUMP.read(F.showOrigin(addr, sp.ordinal, sp.positions));
@@ -59,7 +62,7 @@ export async function wrote(addr, pos, width = null) {
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => GO.leapTo(r.o, { how: 'leap', byKey }); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
-  HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts });
+  HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts, takeFocus: byKey });
 }
 
 /**
@@ -67,8 +70,9 @@ export async function wrote(addr, pos, width = null) {
  * @param {string} addr
  * @param {number} pos the span's first position
  * @param {number | null} [width] the span's positions; null asks over the block holding `pos`
+ * @param {boolean} [byKey] a key made the act: the card takes the focus on its first act
  */
-export async function uses(addr, pos, width = null) {
+export async function uses(addr, pos, width = null, byKey = false) {
   const sp = spanOf(addr, pos, width);
   const anchor = { span: { addr, pos: sp.ordinal, width: sp.positions } };
   const out = await PUMP.read(F.findDocsContaining([{ doc: addr, spans: [sp] }]));
@@ -82,5 +86,5 @@ export async function uses(addr, pos, width = null) {
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   users.forEach((u, i) => { acts['u' + i] = (_el, byKey) => GO.leapTo(u, { how: 'leap', byKey }); });
-  HOST.show({ kind: 'card', id: 'provenance:uses', anchor, html, acts });
+  HOST.show({ kind: 'card', id: 'provenance:uses', anchor, html, acts, takeFocus: byKey });
 }

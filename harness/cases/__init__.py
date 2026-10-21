@@ -44,9 +44,6 @@ NO_MATCH = 'qzx no label holds this'  # LEAP text no address, share form, URL, l
 ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys', 'frames', 'walks', 'shots', 'guest']
 
 # the page issues the marked checks wait on; each mark comes off the day its check passes
-# issue #14's guest case found it
-XFAIL_FOCUS = ("page: a landing on a document its account's index rows do not hold — a withheld one, or one unchanged since the index's "
-               "floor — puts the walk's focus on the account's first listed document, and the one line names that one (web/nav/walk.js `focusTo`)")
 # issue #12's boundary note
 XFAIL_MEMBER = ("page: a version member shares its document's box, and once the member's text is loaded (read side by side, "
                 "or a LEAP to the member) its article is mounted over the document's — which of them the box shows is the "

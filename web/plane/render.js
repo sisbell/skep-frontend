@@ -66,6 +66,7 @@ import { layoutOf, bars } from './layout.js';
 import { setLabels, sizeOf, lineHeight, LINE_BOX } from './labels.js';
 import { COL, EDGE, HUE } from './register.js';
 import { documentOf, cmpAddr } from '../model/address.js';
+import * as FOCUS from '../nav/focus.js';
 import { t } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
@@ -515,10 +516,17 @@ function drawTrail() {
   c.globalAlpha = 1; c.restore();
 }
 
-/** the focus ring at the walk's element once a key has moved it — its document's box for a span or a link — `stats.ring` the box it outlined */
+/**
+ * The focus ring at the walk's element while the plane holds the focus and
+ * a key moved it (N-FOCUS's rule; D5 §4 rule 2) — its document's box for a
+ * document or a link; a span whose article stands is marked by its lit block
+ * instead, the ring's reading-scale form (D3), so the canvas circles no
+ * document whose text is laid out. `stats.ring` is the box it outlined.
+ */
 function drawFocus() {
-  if (!ctx || !WALK.ringShown()) return;
+  if (!ctx || !FOCUS.ringShown()) return;
   const f = WALK.current(); if (!f) return;
+  if (f.kind === 'block' && LAYER.isMounted(f.addr)) return;
   let b = null;
   if (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') b = docBox(f.addr);
   else if (f.kind === 'account') b = accountCell(f.addr);

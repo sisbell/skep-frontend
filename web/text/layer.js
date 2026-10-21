@@ -9,10 +9,11 @@
 // 8, so bars become text and no character positions disagree — S1 Q7), take
 // it down when it leaves or falls below 5.5, and rebuild it where its run,
 // its revision or its face changed. THE CAP (S1's MAX_MOUNTED, 8): at most 8
-// articles stand, the largest em first; among equal faces the walk's focused
-// document first, whose corner is the plane's next Tab stop (D5 K-57), then
-// the articles standing, so no pan, reveal or delivery trades a standing
-// article for its equal. An article standing, stale or not, keeps its claim
+// articles stand — the walk's focused document first, whatever its face (the
+// focus record's D6: the place one stands on is readable, its corner the
+// plane's next Tab stop, D5 K-57), then the rest by face, the largest first,
+// and among equal faces the articles standing, so no pan, reveal or delivery
+// trades a standing article for its equal. An article standing, stale or not, keeps its claim
 // down to 5.5, as it does against the threshold (`chosen`); a document past
 // the cap keeps its bars. But WHILE A PRESS STANDS on the layer (`press`)
 // nothing is rebuilt, nothing mounted and so nothing taken down for the cap:
@@ -41,8 +42,12 @@
 // article's blocks for them in place by T-ARTICLE's one rule (`blockMarks`):
 // a change of the selection or the focus rebuilds no article, so the
 // platform's selection stands as the person left it (foundations §2.1: "the
-// SELECTION is the platform's own, transient"; D5 §2) and the focus ring
-// follows the walk.
+// SELECTION is the platform's own, transient"; D5 §2). THE LIT BLOCK IS THE
+// FOCUS RING'S READING-SCALE FORM (the focus record's D3; D5 §4 rule 2): one
+// mark, under the ring's one rule — lit while the plane holds the focus and
+// a key moved it (N-FOCUS's `ringShown`), out after a pointer's landing as
+// every control's ring is — the canvas circling no document whose text
+// stands.
 // THE CORNER (foundations §3.1; ux-T2; D5 K-57): each mounted document at
 // reading scale (em 8, P-LOD's readable threshold, and above) carries its own
 // BESIDE its article, never inside it — the article's box clips whatever
@@ -56,9 +61,10 @@
 // change, so a focus on it survives them; the focused document's corner is
 // the plane's next Tab stop, named by its own words, and every other is out
 // of the order and hidden from assistive technology; while the reading scene
-// stands over the plane the corner layer is inert (`cover`), the scene's
-// panes carrying their own (D5 §4 rule 5); a corner that leaves while it
-// holds the focus hands it to the walk (D5 §4 rule 4). The press
+// stands over the plane the corner layer is inert (`cover`, through N-FOCUS,
+// the focus's owner — FP-20), the scene's panes carrying their own (D5 §4
+// rule 5); a corner that leaves while it holds the focus hands it to the
+// walk (D5 §4 rule 4). The press
 // rule's text half (§2.4): an article takes the pointer at reading scale
 // alone — its em at P-LOD's readable threshold (8) and above, the `legible`
 // class the style gives the pointer (`markLegible`) — so below it a press on
@@ -91,10 +97,11 @@
 // Carries: the wireframe's §16 `mount`/`unmount`/`place`/`S1.frame`; S1's
 // `mount`, `place`, `S1.frame`; `driftSample` and `overlapCheck` become
 // gate hooks (`web/gate/hooks.js` reads `mounted`).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
+import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, markDirty } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MAX_MOUNTED, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
@@ -190,9 +197,11 @@ export function attach(el, cornersEl) { layer = el; cornerLayer = cornersEl; }
  * the focused document's corner under it.
  * @param {boolean} on chrome covers the plane (true) or has left it (false)
  */
-export function cover(on) { if (cornerLayer) cornerLayer.inert = on; }
+export function cover(on) { if (cornerLayer) FOCUS.cover(cornerLayer, on); }
 /** the owners hand their readers in once */
 export function readers(/** @type {Readers} */ r) { read = r; }
+/** the block the `lit` mark stands on (D3): the walk's focused block while the ring is drawn — the plane holds the focus and a key moved it — else none; never in a scene's pane */
+const litFocus = (scene = false) => (!scene && FOCUS.ringShown() ? read.focus() : null);
 /** bump the view revision: every mounted article is rebuilt on the next frame */
 export function bump() { grev++; }
 export const revision = () => grev;
@@ -227,7 +236,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
   for (const o of d.origins) { const od = REC.doc(o.doc); const p = REC.place(o.doc); originKinds.set(o.doc, p ? p.kind : od.meta ? (od.meta.published ? 'edition' : 'draft') : od.kind); }
   /** @type {ArticleView} */
   const v = {
-    selected: read.selection(), focus: read.focus(),
+    selected: read.selection(), focus: litFocus(scene),
     marks: LK.shown(d.addr), symbols: LK.symbols(d.addr), countAt: (b) => LK.countAt(d.addr, b),
     wholeLinks: LK.wholeLinks(d.addr).length,
     sessionAccount: s ? s.account : null,
@@ -396,13 +405,16 @@ const wentStale = (rec) => rec.d.from !== rec.runFrom || rec.d.to !== rec.runTo 
 
 /**
  * The documents whose articles stand this frame — THE CAP (S1's
- * MAX_MOUNTED), the largest em first. Of the documents in view whose text has
- * arrived, the system's apart and a residue document only where it is the
- * walk's focused one: a document holding an article now, stale or not, at em
- * 5.5 and above, any other at 6.5 and above (S1's hysteresis). Among equal
- * faces the walk's focused document ranks first, its corner the plane's next
- * Tab stop (D5 K-57), then the articles standing, then the model's order, so
- * a pan, a reveal or a delivery trades no standing article for its equal.
+ * MAX_MOUNTED): the walk's focused document first, then the largest em
+ * first. Of the documents in view whose text has arrived, the system's apart
+ * and a residue document only where it is the walk's focused one: a document
+ * holding an article now, stale or not, at em 5.5 and above, any other at
+ * 6.5 and above (S1's hysteresis). The focused document always holds one of
+ * the places, whatever its face (D6: the ring "at the place" presumes a
+ * place one can read; its corner is the plane's next Tab stop, D5 K-57), so
+ * the eighth-largest may drop to bars as the focus moves; among equal faces
+ * the articles standing rank first, then the model's order, so a pan, a
+ * reveal or a delivery trades no standing article for its equal.
  * @param {{x0: number, y0: number, x1: number, y1: number}} v the world the frame mounts in: the view, padded
  * @param {(addr: string) => boolean} focused whether a document is the walk's focused one
  * @returns {Doc[]} at most MAX_MOUNTED, in the order they rank
@@ -420,8 +432,8 @@ function chosen(v, focused) {
     const em = metricsOf(d).fs * cam.scale;
     if (em >= (standing ? UNMOUNT_EM : MOUNT_EM)) want.push({ d, em, rank: mine ? 0 : standing ? 1 : 2 });
   }
-  // the sort is stable: equal in face and rank, the model's order stands
-  want.sort((a, b) => b.em - a.em || a.rank - b.rank);
+  // the sort is stable: the focused document first, then by face, then the standing articles; equal in all, the model's order stands
+  want.sort((a, b) => Number(b.rank === 0) - Number(a.rank === 0) || b.em - a.em || a.rank - b.rank);
   return want.slice(0, MAX_MOUNTED).map((w) => w.d);
 }
 
@@ -466,7 +478,7 @@ export function frame(focused = () => false) {
     for (const d of stand) if (!mounted.has(d.addr) && mount(d)) fresh.push(d.addr);
   }
   for (const rec of mounted.values()) place(rec);
-  const selected = read.selection(), focus = read.focus();
+  const selected = read.selection(), focus = litFocus();
   for (const rec of mounted.values()) { markBlocks(rec, selected, focus); if (!pressed) markLegible(rec); }
   placeCorners(focused);
   if (selected && fresh.includes(selected.addr)) placeAgain(selected);

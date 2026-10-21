@@ -3,29 +3,43 @@
 // dismisses — an HTML layer positioned over the plane at the act's site,
 // following its place as the camera moves, gone with Esc, the next act or
 // its own completion; never a fixed region). Layer 2. ENGINE-BOUND.
-// State: VIEW — the current overlay (the one owner). The focus hand-off (D5
-// §4 rule 4): an overlay a KEY opened takes focus on its first control; one
-// the system raises (a face) never takes it. The return is the element the
-// focus stood on as the last overlay that took it opened, read before
-// anything here moves it — a control of the overlay it replaced or rebuilt,
-// where the act was taken there, which the rewrite removes. A replacement or
-// rebuild that takes no focus keeps it, for its rewrite drops the focus the
-// markup it overwrites held; and the dismissal, whichever overlay it closes,
-// hands a focus left on nothing back through N-WALK, the focus's owner: to
-// that element, or to the walk's element where that no longer takes the
-// focus.
-// Each act is told whether a key ran it, so an act that teleports draws the
-// ring at its landing (D5 §4 rule 2): Enter on its control, taken here before
-// the platform's click, or the click the platform makes from a key (Space on
-// a button), which carries no click count — a pointer's carries its count.
+// State: VIEW — the current overlay (the one owner). THE FOCUS is N-FOCUS's
+// (FP-20; D5 §4 rule 4): an overlay takes the focus only where a KEY made
+// the act that opened it — `takeFocus` is that act's `byKey` and nothing
+// else decides it — and takes it on its FIRST ACT, never the dismiss (rule
+// 13): a card's first act, a list's current row where one is current (the
+// versions list's member; `first` names it), else its first row, a moment's
+// first control. The dismiss is a native button placed after the content,
+// reached by Tab and pressed by Enter or Space (rule 14), its title drawn
+// for the platform (rule 19). An overlay REBUILT by its own act (`show` with
+// the same id — a lens, the switch, show more) keeps the focus on the control
+// bearing the same `data-run` (rule 11); one REPLACING another whose control
+// held the focus takes it on its first act, and a FACE replacing it never
+// takes it — the focus returns to the replaced overlay's opener with the face
+// standing (rule 11). The opener is the controller's one memory: the element
+// the focus stood on as the first overlay of a chain opened, read before the
+// markup written here removes a control of this host that held it; the
+// dismissal hands the focus back through the controller — to that element,
+// or to the walk's element where it no longer takes the focus (rule 16).
+// THE DIALOG'S NAME (D5): each overlay's own caption — its `.label`, a face's
+// own words — by `aria-labelledby`; a string per kind from ST where no
+// caption stands. A face a key or the system raised is heard through the one
+// status region without the focus moving (D4; K-58).
+// Each act is told whether a key ran it by the controller's one reading:
+// Enter on its control, taken here before the platform's click, or the click
+// the platform makes from a key (Space on a button), which carries no click
+// count — a pointer's carries its count.
 // A pan or a zoom is never "the next act": the overlay follows its anchor.
 // Carries: the wireframe's §18 `overlay` object, `anchorOfSpan`.
-// Rules: FP-1, FP-2, FP-9, FP-10 (its own DOM alone), FP-13.
+// Rules: FP-1, FP-2, FP-9, FP-10 (its own DOM alone), FP-13, FP-20.
 
 import { sx, sy, viewport, markDirty } from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
-import * as WALK from '../nav/walk.js';
+import * as FOCUS from '../nav/focus.js';
+import { drawChord } from '../nav/keys.js';
 import { docBox } from '../plane/projection.js';
+import { t } from '../strings.js';
+import { esc } from '../util.js';
 
 /**
  * @typedef {Object} Anchor — where an overlay stands
@@ -44,7 +58,8 @@ import { docBox } from '../plane/projection.js';
  * @property {string} html
  * @property {Record<string, Act>} [acts] handlers by `data-run` name
  * @property {(replaced: boolean) => void} [onDismiss] its end: `replaced` where the next act's overlay took its place, so what stands behind it (the selection) stands on; false where it was dismissed
- * @property {boolean} [takeFocus] opened by a keyboard act: focus its first control
+ * @property {boolean} [takeFocus] a key made the act that opened it (the act's `byKey`): the focus goes to its first act
+ * @property {string} [first] a selector for the control the focus goes to first where it is not the first in order — a list's current row
  * @property {string} [id] a name the gate reads
  */
 
@@ -52,23 +67,26 @@ import { docBox } from '../plane/projection.js';
 let el = null;
 /** @type {Overlay | null} */
 let current = null;
-/** @type {Element | null} the element the focus returns to as the overlays end: where it stood as the last overlay that took it opened */
-let returnTo = null;
+
+/** the key a control of the overlay bears: its `data-run`, or `x` for the dismiss */
+const keyOf = (/** @type {Element} */ e) => /** @type {HTMLElement} */ (e).dataset.run || (/** @type {HTMLElement} */ (e).dataset.x ? 'x' : null);
+/** the controls the focus may go to first: the acts, the native controls, never the dismiss */
+const FIRST = '[data-run], button:not([data-x]), input, [tabindex="0"]';
 
 /** @param {HTMLElement} e */
 export function attach(e) {
   el = e;
   el.addEventListener('click', (ev) => {
     const target = /** @type {HTMLElement} */ (ev.target);
-    if (target.dataset.x) { dismiss(); ev.stopPropagation(); return; }
+    if (target.closest('[data-x]')) { dismiss(); ev.stopPropagation(); return; }
     const b = target.closest('[data-run]');
-    if (b && current && current.acts) { ev.stopPropagation(); const f = current.acts[/** @type {HTMLElement} */ (b).dataset.run || '']; if (f) f(/** @type {HTMLElement} */ (b), ev.detail === 0); return; }
+    if (b && current && current.acts) { ev.stopPropagation(); const f = current.acts[/** @type {HTMLElement} */ (b).dataset.run || '']; if (f) f(/** @type {HTMLElement} */ (b), FOCUS.byKey(ev)); return; }
     ev.stopPropagation();
   });
   el.addEventListener('keydown', (ev) => {
     if (ev.key === 'Enter' && current && current.acts) {
       const b = /** @type {HTMLElement} */ (ev.target).closest('[data-run]');
-      if (b) { ev.preventDefault(); ev.stopPropagation(); const f = current.acts[/** @type {HTMLElement} */ (b).dataset.run || '']; if (f) f(/** @type {HTMLElement} */ (b), true); }
+      if (b) { ev.preventDefault(); ev.stopPropagation(); const f = current.acts[/** @type {HTMLElement} */ (b).dataset.run || '']; if (f) f(/** @type {HTMLElement} */ (b), FOCUS.byKey(ev)); }
     }
   });
 }
@@ -83,25 +101,59 @@ export const hasCurrent = () => current !== null;
 export function currentState() { return current; }
 export { currentState as current };
 
+/** the dismiss: a native button after the content, its chord drawn for the platform (rules 13, 14, 19) */
+const dismissButton = () => `<button class="x" data-x="1" title="${esc(t('L.dismiss', { chord: drawChord('Esc') }))}">×</button>`;
+
+/**
+ * The dialog's name (D5): its own caption where one stands — the `.label`,
+ * a face's words — else ST's string for its kind.
+ * @param {HTMLElement} host
+ * @param {Overlay} o
+ */
+function name(host, o) {
+  const caption = /** @type {HTMLElement | null} */ (host.querySelector('.label')) || (o.kind === 'face' ? /** @type {HTMLElement | null} */ (host.querySelector('.face-text')) : null);
+  if (caption) { caption.id = 'overlay-name'; host.setAttribute('aria-labelledby', 'overlay-name'); host.removeAttribute('aria-label'); }
+  else { host.removeAttribute('aria-labelledby'); host.setAttribute('aria-label', t('L.dialog.' + o.kind)); }
+}
+
+/** the control an overlay's focus goes to first: the one it names, else its first act in order — never the dismiss */
+export function firstControl(/** @type {HTMLElement} */ host, /** @type {string | undefined} */ first) {
+  return /** @type {HTMLElement | null} */ ((first && host.querySelector(first)) || host.querySelector(FIRST));
+}
+
+/** a face's words, for the status region: its text, its arm, its note */
+const faceWords = (/** @type {HTMLElement} */ host) => [...host.querySelectorAll('.face-text, .arm, .note')].map((e) => e.textContent || '').join(' ');
+
 /**
  * Show an overlay — a replacement is not a dismissal of what stands behind
- * it (the reveal, the selection).
+ * it (the reveal, the selection); the same id is a rebuild.
  * @param {Overlay} o
  */
 export function show(o) {
   if (!el) return;
+  const host = el;
   const from = document.activeElement; // where the act found the focus — read first, for the markup written below removes a control of this host that held it
-  if (current && current !== o && current.id !== o.id) { /* a replacement: the previous overlay's end runs, told so */ const prev = current; current = null; if (prev.onDismiss) prev.onDismiss(true); }
+  const held = !!from && from !== document.body && host.contains(from);
+  const rebuild = !!current && current.id === o.id;
+  const replacing = !!current && !rebuild;
+  if (replacing) { /* the previous overlay's end runs, told so */ const prev = /** @type {Overlay} */ (current); current = null; if (prev.onDismiss) prev.onDismiss(true); }
   current = o;
-  el.className = 'on ' + o.kind;
-  el.setAttribute('data-id', o.id || o.kind);
-  el.innerHTML = `<span class="x" data-x="1" title="dismiss (Esc)" role="button" tabindex="0">×</span>` + o.html;
-  place();
-  if (o.takeFocus) {
-    returnTo = from;
-    const first = /** @type {HTMLElement | null} */ (el.querySelector('[data-run], button, input, [tabindex="0"]'));
-    if (first) first.focus({ preventScroll: true });
+  const write = () => {
+    host.className = 'on ' + o.kind;
+    host.setAttribute('data-id', o.id || o.kind);
+    host.innerHTML = o.html + dismissButton();
+    name(host, o);
+  };
+  if (rebuild) {
+    const kept = FOCUS.keep(host, keyOf, write);
+    if (!kept && o.takeFocus) FOCUS.open('overlay', { el: host, from, byKey: true, first: firstControl(host, o.first) });
+  } else {
+    write();
+    if (replacing && held && o.kind === 'face') { FOCUS.close('overlay'); FOCUS.open('overlay', { el: host, byKey: false }); }
+    else FOCUS.open('overlay', { el: host, from, byKey: !!o.takeFocus || (replacing && held), first: firstControl(host, o.first) });
   }
+  place();
+  if (o.kind === 'face' && !o.takeFocus) FOCUS.say(faceWords(host));
   markDirty();
 }
 
@@ -125,16 +177,14 @@ export function place() {
   el.style.left = x + 'px'; el.style.top = y + 'px';
 }
 
-/** dismiss the current overlay; its end runs; the focus returns, where an overlay of the chain took it */
+/** dismiss the current overlay; its end runs; the focus returns through the controller, to the chain's opener or the walk's element */
 export function dismiss() {
   if (!el || !current) return;
   const o = current;
   current = null;
-  el.className = ''; el.innerHTML = ''; el.removeAttribute('data-id');
+  el.className = ''; el.innerHTML = ''; el.removeAttribute('data-id'); el.removeAttribute('aria-labelledby'); el.removeAttribute('aria-label');
   if (o.onDismiss) o.onDismiss(false);
-  const to = returnTo;
-  returnTo = null;
-  WALK.returnFocus(to);
+  FOCUS.close('overlay');
   markDirty();
 }
 

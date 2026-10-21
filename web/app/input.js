@@ -18,8 +18,12 @@
 // selects nothing, and a click is the place's: keyed on legibility, never on
 // whether text is mounted. The camera pans by the WHEEL and
 // two-finger scroll, by the keys, and by the held camera key's drag (K-10:
-// hold Mod); it zooms by the PINCH (Ctrl+wheel as a trackpad sends it) and
-// by Mod+wheel (K-12). A CLICK acts on what is under the pointer, keyed on
+// hold Mod — wherever the pointer is, M-8: a drag begun on an article with
+// the key held is the camera's, the pointer captured by the plane, and
+// selects nothing); it zooms by the PINCH (Ctrl+wheel as a trackpad sends it)
+// and by Mod+wheel (K-12). Whether a key made an act is never read here: a
+// pointer's act opens a card without the focus (D5 §4 rule 4; the focus
+// record's rule 16). A CLICK acts on what is under the pointer, keyed on
 // legibility: a continuation's mark is a teleport to its newest member
 // (foundations §2.1); below the readable threshold a document is a place
 // wherever the pointer falls, bars or mounted text alike — a teleport (a
@@ -60,9 +64,14 @@ import { MAC } from '../nav/keys.js';
 export function attach(els) {
   /** @type {{px: number, py: number, moved: number, cameraKey: boolean} | null} */
   let drag = null;
+  /** the camera key's drag (K-10): the plane takes the pointer wherever the press began */
+  const cameraDrag = (/** @type {PointerEvent} */ e) => {
+    drag = { px: e.clientX, py: e.clientY, moved: 0, cameraKey: true };
+    els.plane.setPointerCapture(e.pointerId); els.plane.classList.add('dragging');
+  };
   els.plane.addEventListener('pointerdown', (e) => {
-    drag = { px: e.clientX, py: e.clientY, moved: 0, cameraKey: MAC ? e.metaKey : e.ctrlKey };
-    if (drag.cameraKey) { els.plane.setPointerCapture(e.pointerId); els.plane.classList.add('dragging'); }
+    if (MAC ? e.metaKey : e.ctrlKey) { cameraDrag(e); return; }
+    drag = { px: e.clientX, py: e.clientY, moved: 0, cameraKey: false };
   });
   els.plane.addEventListener('pointermove', (e) => {
     if (!drag) return;
@@ -81,7 +90,11 @@ export function attach(els) {
   // was made in — and, while no press stands, whenever the platform's changes. A cancel or a context menu ends the press
   // and takes nothing
   let lastDown = { x: 0, y: 0 };
-  els.layer.addEventListener('pointerdown', (e) => { lastDown = { x: e.clientX, y: e.clientY }; LAYER.press(true); });
+  els.layer.addEventListener('pointerdown', (e) => {
+    // the camera key held: the drag is the camera's wherever the pointer is (K-10, M-8) — no press on the text, no selection, no focus moved
+    if (MAC ? e.metaKey : e.ctrlKey) { e.preventDefault(); cameraDrag(e); return; }
+    lastDown = { x: e.clientX, y: e.clientY }; LAYER.press(true);
+  });
   window.addEventListener('pointerup', () => { if (!LAYER.pressing()) return; LAYER.press(false); takeSelection(); });
   window.addEventListener('pointercancel', () => LAYER.press(false));
   window.addEventListener('contextmenu', () => LAYER.press(false));
@@ -97,7 +110,7 @@ export function attach(els) {
       e.stopPropagation();
       const se = /** @type {HTMLElement} */ (sym);
       if (se.dataset.reveal) { LINKS.show(se.dataset.reveal); return; }
-      if (se.dataset.link) { const art = se.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const s = LK.shown(addr).find((x) => x.link.addr === se.dataset.link); if (s) import('../overlays/anatomy-card.js').then((A) => A.open(s, se)); return; }
+      if (se.dataset.link) { const art = se.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const s = LK.shown(addr).find((x) => x.link.addr === se.dataset.link); if (s) import('../overlays/anatomy-card.js').then((A) => A.open(s, se, false)); return; }
     }
     const hair = target.closest('.hairline');
     if (hair) { e.stopPropagation(); const src = /** @type {HTMLElement} */ (hair).dataset.src; if (src) GO.leapTo(src, { how: 'leap' }); return; }
@@ -109,7 +122,7 @@ export function attach(els) {
     const span = LAYER.spanOfSelection();
     if (span && !sameSpan(span, LAYER.placedSpan())) { e.stopPropagation(); SEL.select(span.addr, span.pos, span.width); return; }
     const marked = target.closest('.lip');
-    if (marked) { e.stopPropagation(); const art = marked.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const first = (/** @type {HTMLElement} */ (marked).dataset.links || '').split(' ')[0]; const s = LK.shown(addr).find((x) => x.link.addr === first); if (s) { import('../overlays/anatomy-card.js').then((A) => A.open(s, /** @type {HTMLElement} */ (marked))); return; } }
+    if (marked) { e.stopPropagation(); const art = marked.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const first = (/** @type {HTMLElement} */ (marked).dataset.links || '').split(' ')[0]; const s = LK.shown(addr).find((x) => x.link.addr === first); if (s) { import('../overlays/anatomy-card.js').then((A) => A.open(s, /** @type {HTMLElement} */ (marked), false)); return; } }
     const sp = target.closest('.sp');
     if (sp) {
       e.stopPropagation();
@@ -122,7 +135,7 @@ export function attach(els) {
     const target = /** @type {HTMLElement} */ (e.target);
     LINE.act();
     const corner = /** @type {HTMLElement | null} */ (target.closest('.version') ? target.closest('[data-corner]') : null);
-    if (corner) { e.stopPropagation(); VERSIONS.fromCorner(corner, SEL.selected()); }
+    if (corner) { e.stopPropagation(); VERSIONS.fromCorner(corner, SEL.selected(), false); }
   });
   window.addEventListener('wheel', (e) => {
     const t = /** @type {HTMLElement} */ (e.target);

@@ -28,10 +28,13 @@
 // reads the article where this frame placed it; each frame's record counts
 // the documents the canvas drew that stand mounted (`both`) and the ones it
 // yielded that do not (`neither`). The global key
-// listener → N-KEYS; the pointer → APP-INPUT; the events `moment` → a face,
-// `held` → logged, not acted on (the editor's lane's); the failure reporter
-// (a line in the page, posted nowhere). NO WRITE is composed or sent
-// anywhere in this page (S-35 (a)).
+// listener → N-KEYS, each key handed where the focus is and whether a key
+// made it by N-FOCUS's one reading (FP-20) — a chord the LEAP box closed on
+// is read at the focus the close returned; ↓ and ↑ in an overlay move among
+// its controls through the controller; the pointer → APP-INPUT; the events
+// `moment` → a face, `held` → logged, not acted on (the editor's lane's);
+// the failure reporter (a line in the page, posted nowhere). NO WRITE is
+// composed or sent anywhere in this page (S-35 (a)).
 // Carries: the wireframe's §23 (`loop`, the listener, `reportFailure`,
 // `boot`; the bare keys RE-CUT to D5's chords; `startWalk` and the hand
 // board DROPPED), §0's params. Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9,
@@ -52,6 +55,7 @@ import * as TRAILLIST from '../overlays/trail-list.js';
 import * as LINE from '../line/line.js';
 import * as LEAP from '../nav/leap.js';
 import * as WALK from '../nav/walk.js';
+import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as GO from '../nav/go.js';
 import * as SCENE from '../scene/scene.js';
@@ -144,20 +148,24 @@ async function boot() {
   const plane = /** @type {HTMLCanvasElement} */ (el('plane'));
   RENDER.attach(plane); LAYER.attach(el('domlayer'), el('corners')); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
   HOST.attach(el('overlay'));
-  WALK.attach(el('mirror'), el('live'));
+  FOCUS.attach({ live: el('live') });
+  WALK.attach(el('mirror'));
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
-  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: () => TRAILLIST.open(false), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); } });
+  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); } });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem() });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', resize); resize();
   document.addEventListener('copy', (e) => { const b = REC.board(); LAYER.onCopy(e, b ? b.origin : ''); });
   window.addEventListener('keydown', async (e) => {
-    const where = whereIs(e.target);
+    // a chord the LEAP box closed on acts as anywhere (M-1): read at the focus the close returned, not at the box
+    const target = /** @type {HTMLElement | null} */ (e.target);
+    const where = whereIs(target && target.closest && target.closest('#leap') && !LEAP.isOpen() ? document.activeElement : e.target);
+    const byKey = FOCUS.byKey(e);
     if (where === 'scene' && SCENE.isOpen() && SCENE.key(KEYS.chordOf(e))) { e.preventDefault(); return; }
-    if (where === 'overlay' && !e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { const items = /** @type {HTMLElement[]} */ ([...el('overlay').querySelectorAll('button, [tabindex="0"]')]); const i = items.indexOf(/** @type {HTMLElement} */ (document.activeElement)); const n = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) n.focus(); e.preventDefault(); return; }
+    if (where === 'overlay' && !e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { const items = /** @type {HTMLElement[]} */ ([...el('overlay').querySelectorAll('button:not([disabled]), input, [tabindex="0"]')]); const i = items.indexOf(/** @type {HTMLElement} */ (document.activeElement)); const n = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) FOCUS.land(n, { byKey }); e.preventDefault(); return; }
     if (e.key !== 'Tab' && e.key !== 'Shift') LINE.act();
-    const took = await KEYS.dispatch(e, { where });
+    const took = await KEYS.dispatch(e, { where, byKey });
     if (took) e.preventDefault();
   });
 
@@ -200,7 +208,8 @@ async function boot() {
   bootInfo.coldOpenMs = Math.round(performance.now() - t0);
   bootInfo.coldOpenCalls = PORT.callLog().map((c) => c.name);
   bootInfo.coldOpenBytes = PORT.callLog().reduce((a, c) => a + c.bytesIn + c.bytesOut, 0);
-  // the launch frame: HOME — the acting account's region at mid scale; a guest's the board's extent — the trail's first entry
+  // the launch frame: HOME — the acting account's region at mid scale; a guest's the board's extent — the trail's first entry,
+  // the platform's focus on the walk's element with the ring out (rule 21)
   await GO.launch();
   LINE.render(true);
   if (GATE) {
