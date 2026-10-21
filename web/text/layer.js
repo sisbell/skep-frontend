@@ -390,9 +390,10 @@ export function originOwner(addr) { return ownerAccount(REC.doc(addr)); }
 /**
  * A document a read answered `withheld`, as the plane names it — B1-S2's
  * withheld box: existence and owner, never bytes — its owner by the one
- * owner rule (`ownerAccount`). The box's first line (P-RENDER) and the ARIA
- * mirror's item at the document (N-WALK) both read it, so what a sighted
- * reader sees and what a screen reader hears never part (R94).
+ * owner rule (`ownerAccount`). The box's first line (P-RENDER), the ARIA
+ * mirror's item at the document (N-WALK) and the face a refused read of it
+ * conjures (O-FACES's `withheld`) all read it, so what a sighted reader sees
+ * and what a screen reader hears never part (R94).
  * @param {Doc} d
  */
 export function withheldBox(d) { return t('B1.withheld-box', { owner: ownerAccount(d) }); }

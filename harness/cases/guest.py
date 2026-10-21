@@ -1,5 +1,6 @@
 """GUEST — the page at guest class (foundations §3.3's state 1; B1-S1's guest
-line, B1-S2's withheld box, B1-S7's placeholder, B1-S5's C-39 face; W-01,
+line, B1-S2's withheld box and the face a read refused `withheld` shows,
+B1-S7's placeholder, B1-S5's C-39 face; W-01,
 the arrival from outside): the page opened afresh under `?gate=guest`, which
 boots it as shipped but never asks `session(board)`, so every read takes the
 guest form. What a guest must never meet is read first on the owner's signed
@@ -29,6 +30,9 @@ first lines, the owner's places. Then, on the guest's page:
     line naming that landing is marked, waiting on the walk's focus at a
     document the index does not list; at both landings the mirror's current
     item naming the document in its withheld box's words, never published;
+    "who wrote this?" asked of that withheld document faced as its box names
+    it — B1-S2's words, R56's key-absent arm beneath (A-170) — with no token
+    unfilled and no act;
 (e) the window run at 1467 withheld: the model's block — its width, its
     origin, no text — B1-S7's placeholder with its head, R56's key-absent arm
     and no C-33 mark, none of the owner's bytes anywhere in the page, the
@@ -344,6 +348,20 @@ def run(ctx):
             '(d) the mirror\'s current item names the withheld document as its box does — "%s" — and never published (B1-S2)' % want[1], withheld_item)
     r.figures['shots'].append(ctx.shot('guest/withheld-box.png'))
     r.figures['withheld_box'] = {'addr': WITHHELD, 'labels': at_box, 'mirror_item': withheld_item, 'draft_mirror_item': draft_item}
+    # "who wrote this?" asked of the withheld document: the board refuses the read's document consult `withheld`, and the
+    # face names the document by existence and owner as its box does, the entitlement arm beneath (A-170; R56)
+    ctx.js('window.__skep.cards.wrote(%s, 1)' % json.dumps(WITHHELD)); ctx.settle(); ctx.frames(2)
+    face = ctx.js('''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm');
+      return {id: window.__skep.overlay().id, words: w ? w.textContent : null, words_id: w ? w.dataset.string : null, arm: a ? a.textContent : null,
+              arm_id: a ? a.dataset.string : null, text: o.textContent, acts: o.querySelectorAll('[data-run]').length}; })()''')
+    key_absent = t(ctx, 'R56.key-absent', {'owner': SECOND_ACCOUNT})
+    r.check(face['id'] == 'face:withheld' and face['words_id'] == 'B1.withheld-box' and face['words'] == want[1] and face['arm_id'] == 'R56.key-absent' and face['arm'] == key_absent
+            and '⟨' not in face['text'] and face['acts'] == 0,
+            '(d) "who wrote this?" asked of the withheld document faces it as its box names it — "%s" — R56\'s key-absent arm naming %s beneath, no token unfilled and no act (A-170)' % (want[1], SECOND_ACCOUNT),
+            {'face': face, 'key_absent': key_absent[:80]})
+    r.figures['shots'].append(ctx.shot('guest/withheld-face.png'))
+    r.figures['withheld_face'] = face
+    ctx.esc()
 
     # (a) the whole guest run: the page's own log, and the provider's from the navigation on
     mine = calls(ctx)

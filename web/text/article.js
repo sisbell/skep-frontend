@@ -210,12 +210,14 @@ export function recordHTML(b, d, v) {
 }
 
 /**
- * The entitlement arm at a withheld run, by PUB-5.121's order: for the
+ * The entitlement arm beneath what a document withheld from the reader shows —
+ * a run of it, or the document itself — by PUB-5.121's order: for the
  * acting person with a key present and no grant, the owner-grant default;
  * for a guest with no key, R56's key-absent default. The one rule the run's
- * placeholder and C-39's face at the run both read (B1-S5, B1-S7).
+ * placeholder, C-39's face at the run and the document-level withheld face
+ * (O-FACES's `withheld`) read (B1-S5, B1-S7; A-170).
  * @param {string | null} reader the acting account, or null (a guest)
- * @param {string} owner the origin's owner account
+ * @param {string} owner the owner account of the document withheld — a run's origin's
  * @returns {{id: string, text: string}} the arm's string id and its words
  */
 export function entitlementArm(reader, owner) {

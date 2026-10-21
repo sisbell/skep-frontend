@@ -65,12 +65,13 @@
 // does not hold; a follow its far document, its end's projection and its
 // text — and settle it with that landing, at once where nothing is read, or
 // withdraw it where the reads ended in a face in the landing's place — a
-// document the board answers for with nothing, a refusal; a dead end's face
-// stands at its landing — the face shown only where no act was made after
-// it; Back, Forward or a jump reaching a claim lands once it is answered —
-// on the entry before it where it was withdrawn. A carried
-// passage's `compare` is one more read its LEAP's claim waits on, the claim
-// settled at the landing that read placed.
+// document the board answers for with nothing, a follow's far document it
+// withholds from the reader, a refusal; a dead end's face stands at its
+// landing — the face shown only where no act was made after it; Back,
+// Forward or a jump reaching a claim lands once it is answered — on the
+// entry before it where it was withdrawn. A carried passage's `compare` is
+// one more read its LEAP's claim waits on, the claim settled at the landing
+// that read placed.
 // Carries: the wireframe's §11 (`leapTo`, `goHome`), §18 `followLink`.
 // Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10.
 
@@ -248,11 +249,12 @@ export async function leapTo(addr, opts = {}) {
  * projects to nothing in the far document's text, settles the claim at that
  * document's head and lands there, the link lit and nothing outlined, with
  * the dead end's face standing at the head landed on (foundations §2.3). A
- * dead reference or a refusal is faced in the landing's place, the claim
- * withdrawn. Where an act was made while it read, it lands nowhere and faces
- * nothing.
+ * dead reference, a far document the board withholds from the reader — no
+ * slot projected into it, a read the board refuses with the document — or a
+ * refusal is faced in the landing's place, the claim withdrawn (B1-S8). Where
+ * an act was made while it read, it lands nowhere and faces nothing.
  * @param {Shown} s the link as drawn at its near document
- * @param {{x: number, y: number} | HTMLElement | null} [anchor] where a follow that lands nowhere is faced — a dead reference, a refusal, a link naming no far document
+ * @param {{x: number, y: number} | HTMLElement | null} [anchor] where a follow that lands nowhere is faced — a dead reference, a far document withheld, a refusal, a link naming no far document
  * @param {boolean} [byKey] a key made the follow
  */
 export async function follow(s, anchor = null, byKey = false) {
@@ -268,6 +270,7 @@ export async function follow(s, anchor = null, byKey = false) {
   const fd = REC.doc(far);
   if (fd.refused !== 'unregistered' && fd.extent == null) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced(() => FACES.unregistered(far, anchor)); return; }
+  if (REC.doc(far).refused === 'withheld') { faced(() => FACES.withheld(far, anchor)); return; }
   const proj = await PUMP.projectEnd(l.addr, /** @type {1 | 2} */ (slot), far);
   if (proj === 'refused') {
     const r = PUMP.refusalsMet().slice(-1)[0];
@@ -277,6 +280,7 @@ export async function follow(s, anchor = null, byKey = false) {
   const d = REC.doc(far);
   if (d.extent == null || d.from < 0) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced(() => FACES.unregistered(far)); return; }
+  if (REC.doc(far).refused === 'withheld') { faced(() => FACES.withheld(far, anchor)); return; }
   const runs = proj ? inTextOrder(proj.map((p) => ({ pos: p.ordinal, width: p.positions }))) : null;
   const pos = runs ? runs[0].pos : headOf(REC.doc(far)), marked = runs && !s.farWhole ? runs : null;
   const v = viewFor(far, pos);

@@ -12,25 +12,34 @@
 // answered for the document, the UNREGISTERED-OR-UNREACHABLE face — C-42's
 // content, DRAFT — and the floor face MUST NOT render; it offers no act,
 // for B1-S8's one act, "try again", is the unreachable node's, and the
-// board's answer here is byte-identical to never-held), `not_a_link`, C-39
-// at a link address inside a withheld document with the entitlement arm the
-// run's placeholder carries beneath it (T-ARTICLE's one rule, by the
-// reader), `range_not_present`, the
-// `invalid` follow, `scan_busy`, `endsets_too_large`, `too_many_blocks`,
-// `too_many_pairs`, `too_much_coverage`, `withheld`, the session's `no_key`
-// (C-136 with this version's limit), the death arms (C-137),
-// `unreachable`; a PUBLIC `moment` rendered as a face with `answer`/`cancel`
-// (no ceremony panel is built here — a seam). A face never takes the focus
-// (D5 §4 rule 4; K-58): it is heard through the one status region (D4,
-// O-HOST's), and a face offered by a key's act takes none either; the
-// moment's face alone takes it, on its first control (K-80). Carries: the
-// wireframe's §18 `face` (its words and acts; its reviewer's label stays in
-// the wireframe), `deadReferenceFace`'s fifth cell, `c39Face`. Rules: FP-1,
-// FP-2, FP-13, FP-20.
+// board's answer here is byte-identical to never-held), `withheld` on a
+// read's document consult → THE DOCUMENT-LEVEL WITHHELD FACE (B1 §1's
+// A-170; B1-S8's WITHHELD state; R56: existence and owner, never bytes —
+// "who wrote this?", "who uses this?" or a follow's far end asking of a
+// document the reader may not read): the document named in B1-S2's withheld
+// box's words, the words the plane's box and the ARIA mirror's item say
+// (T-LAYER's `withheldBox`), its owner by the one owner rule, the entitlement
+// arm for that owner and this reader beneath them (T-ARTICLE's one rule),
+// and no act — never C-39, whose words are a link address's alone;
+// `not_a_link`, C-39 at a link address inside a withheld document with the
+// entitlement arm the run's placeholder carries beneath it (T-ARTICLE's one
+// rule, by the reader), `range_not_present`, the `invalid` follow,
+// `scan_busy`, `endsets_too_large`, `too_many_blocks`, `too_many_pairs`,
+// `too_much_coverage`, the session's `no_key` (C-136 with this version's
+// limit), the death arms (C-137), `unreachable`; a PUBLIC `moment` rendered
+// as a face with `answer`/`cancel` (no ceremony panel is built here — a
+// seam). A face never takes the focus (D5 §4 rule 4; K-58): it is heard
+// through the one status region (D4, O-HOST's), and a face offered by a key's
+// act takes none either; the moment's face alone takes it, on its first
+// control (K-80). Carries: the wireframe's §18 `face` (its words and acts;
+// its reviewer's label stays in the wireframe), `deadReferenceFace`'s fifth
+// cell, `c39Face`. Rules: FP-1, FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as VERSIONS from './versions.js';
 import * as PORT from '../bridge/port.js';
+import * as REC from '../model/records.js';
+import * as LAYER from '../text/layer.js';
 import { entitlementArm } from '../text/article.js';
 import { memberOf } from '../model/address.js';
 import { t } from '../strings.js';
@@ -48,9 +57,10 @@ import { esc } from '../util.js';
  */
 
 /**
- * The words for a refusal, by its name.
+ * The words for a refusal, by its name. A `withheld` refusal is not among
+ * them: its face names the document it withholds (`withheld`).
  * @param {Refusal} r
- * @param {{addr?: string, owner?: string}} [ctx]
+ * @param {{addr?: string}} [ctx]
  * @returns {Face}
  */
 export function wordsFor(r, ctx = {}) {
@@ -60,7 +70,6 @@ export function wordsFor(r, ctx = {}) {
   switch (name) {
     case 'doc_not_registered': return f('B1.doc_not_registered', { address: addr });
     case 'not_a_link': return f('B1.not_a_link');
-    case 'withheld': return f('C-39', { owner: ctx.owner || '⟨owner⟩' });
     case 'range_not_present': return f('B1.range_not_present');
     case 'scan_busy': return f('B1.scan_busy');
     case 'endsets_too_large': return f('B1.endsets_too_large');
@@ -83,14 +92,20 @@ function faceHTML(/** @type {Face} */ face, extra = '') {
     (face.acts.length ? `<div class="acts">${face.acts.map((a, i) => `<button data-run="a${i}" class="${a.inert ? 'inert' : ''}">${esc(a.label)}</button>`).join('')}</div>` : '');
 }
 
+/** the entitlement arm beneath a face's words (T-ARTICLE's `entitlementArm`), named by its string */
+const armHTML = (/** @type {{id: string, text: string}} */ arm) => `<div class="arm" data-string="${esc(arm.id)}">${esc(arm.text)}</div>`;
+
 /**
- * Show a refusal's face at an anchor.
+ * Show a refusal's face at an anchor: a `withheld` refusal as the
+ * document-level withheld face (`withheld`), naming the document the read
+ * asked of; every other by its name (`wordsFor`), with the acts given.
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor
  * @param {Refusal} r
- * @param {string} [addr]
+ * @param {string} addr the document the refused read asked of
  * @param {Array<{label: string, run?: () => void, inert?: boolean}>} [acts]
  */
-export function showRefusal(anchor, r, addr = '', acts = []) {
+export function showRefusal(anchor, r, addr, acts = []) {
+  if (r.name === 'withheld') { withheld(addr, anchor); return; }
   const face = wordsFor(r, { addr });
   face.acts.push(...acts);
   /** @type {Record<string, import('./host.js').Act>} */
@@ -119,6 +134,24 @@ function toAnchor(a) {
  */
 export function unregistered(addr, anchor = null) {
   showRefusal(anchor, /** @type {Refusal} */ ({ kind: 'refused', name: 'doc_not_registered', status: 200, code: 'doc_not_registered', detail: null, op: 'doc_metadata', body: null }), addr);
+}
+
+/**
+ * THE DOCUMENT-LEVEL WITHHELD FACE (B1 §1's A-170; B1-S8's WITHHELD state):
+ * a document a read's consult refused `withheld` — met by "who wrote this?"
+ * or "who uses this?" over its bytes, or by a followed link's far end — named
+ * by existence and owner, never bytes (R56): B1-S2's withheld box's words,
+ * which the plane's box and the ARIA mirror's item say too (T-LAYER's
+ * `withheldBox`), its owner by the one owner rule, then the entitlement arm
+ * for that owner and this reader (T-ARTICLE's `entitlementArm`, the rule the
+ * run's placeholder reads). It offers no act.
+ * @param {string} addr the document withheld
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] the act's site
+ */
+export function withheld(addr, anchor = null) {
+  const d = REC.doc(addr), s = REC.session();
+  const arm = entitlementArm(s ? s.account : null, LAYER.ownerAccount(d));
+  HOST.show({ kind: 'face', id: 'face:withheld', anchor: toAnchor(anchor), html: faceHTML({ id: 'B1.withheld-box', text: LAYER.withheldBox(d), acts: [] }, armHTML(arm)) });
 }
 
 /** the `invalid` follow: no such link or slot */
@@ -157,8 +190,7 @@ export function floating(far, anchor, offer = true) {
  */
 export function c39(owner, reader, anchor) {
   const face = { id: 'C-39', text: t('C-39', { owner }), acts: [] };
-  const arm = entitlementArm(reader, owner);
-  HOST.show({ kind: 'face', id: 'face:C-39', anchor: toAnchor(anchor), html: faceHTML(face, `<div class="arm" data-string="${esc(arm.id)}">${esc(arm.text)}</div>`) });
+  HOST.show({ kind: 'face', id: 'face:C-39', anchor: toAnchor(anchor), html: faceHTML(face, armHTML(entitlementArm(reader, owner))) });
 }
 
 /**

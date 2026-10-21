@@ -41,7 +41,12 @@
 // mutant that lands without waiting turns red); a Back waiting on a claim
 // puts both of the arrival's marks out as it is made and lands nowhere once
 // Forward has been made (the ring as Forward left it); a follow that faces
-// leaves the trail as it found it. A departure made
+// leaves the trail as it found it. A follow whose far document the board
+// withholds from the reader faces it with the document-level withheld face —
+// B1-S2's words naming its owner by the one owner rule, the arm beneath —
+// asks no projection of it, and leaves the trail as it found it (a mutant
+// that asks the projection the board refuses with the document turns red).
+// A departure made
 // during a flight re-takes the flight's destination, so Forward lands there —
 // after a LEAP's flight and after a Back's (a mutant that re-takes the camera
 // mid-flight turns red) — and the act whose flight it cut short ends, the
@@ -111,6 +116,7 @@ import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as LINKS from '../overlays/links-card.js';
 import * as INPUT from '../app/input.js';
 import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
+import { entitlementArm } from '../text/article.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 import * as TRAIL from './trail.js';
@@ -146,6 +152,14 @@ const takeSplit = () => { REC.takeLinks(D, [SPLIT]); REC.takeLink({ addr: SPLIT,
 const FLOAT = D + '.0.2.5';
 /** the floating citation taken into the model, drawn at the first edition */
 const takeFloat = () => { REC.takeLinks(D, [FLOAT]); REC.takeLink({ addr: FLOAT, from: [span(D, 4, 3)], to: [span(FAR, 8, 4)], type: CITE }); };
+// a citation from the first edition of a passage of PRIVATE, a draft in 1.0.2's sub-account 1.0.2.1 the board withholds from the reader:
+// every read naming PRIVATE refused `withheld`, its span set and the citation's projection into it among them
+const PRIVATE = '1.0.2.1.0.2', PRIVATE_OWNER = '1.0.2', LOCKED = D + '.0.2.6';
+/** the withheld citation taken into the model, drawn at the first edition; the sub-account's owner the seat above it */
+const takeLocked = () => {
+  REC.takeOwner('1.0.2.1', { prefix: PRIVATE_OWNER, principal: 901 });
+  REC.takeLinks(D, [LOCKED]); REC.takeLink({ addr: LOCKED, from: [span(D, 7, 2)], to: [{ ...span(PRIVATE, 1, 5), account: '1.0.2.1' }], type: CITE });
+};
 /** FAR's head, where a dead end lands: its first paragraph's first position */
 const FAR_HEAD = 1;
 // FAR's second version member, a copy of its text; the passages LEAPs carry: one FAR holds at 20, five positions, one neither FAR nor
@@ -186,6 +200,9 @@ const script = {
   [FAKE.keyOf('op', { frame: F.project(SPLIT, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }, { start: '1.3', width: '0.4' }] } },
   // the floating citation's far end in FAR's current text: no run
   [FAKE.keyOf('op', { frame: F.project(FLOAT, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [] } },
+  // the withheld citation's far document: its span set and the projection into it refused `withheld`, the document consulted first
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(PRIVATE) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+  [FAKE.keyOf('op', { frame: F.project(LOCKED, 2, PRIVATE) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
   ...reads(FAR2, FAR_TEXT, []),
   // where the carried passages stand in FAR and its member: the shared one at FAR's 20, five positions; the other nowhere; the moved
   // one's first five positions at FAR's 25 and its last five at FAR's 2
@@ -592,6 +609,25 @@ test('a follow that faces leaves the trail as it found it: its entry, standing w
   await run(GO.follow(drawn(DEAD)));
   assert.equal(REC.doc(GONE).refused, 'unregistered', 'a dead reference');
   assert.deepEqual(addrs(), before, 'FAR\'s entry ahead of the cursor stands');
+  assert.equal(TRAIL.cursorIndex(), cursor);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow whose far document the board withholds from the reader faces it withheld — B1-S2\'s words naming its owner, the arm beneath — asks no projection of it, and leaves the trail as it found it', async () => {
+  takeLocked();
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR));
+  await run(GO.back());
+  const before = addrs(), cursor = TRAIL.cursorIndex(), from = fake.asked.length;
+  await run(GO.follow(drawn(LOCKED)));
+  assert.equal(REC.doc(PRIVATE).refused, 'withheld', 'the board withholds the far document');
+  const f = faceShown(), arm = entitlementArm('1.0.1', PRIVATE_OWNER);
+  assert.equal(f && f.id, 'face:withheld', 'the document-level withheld face (A-170; B1-S8)');
+  assert.ok(f && f.html.includes(`<div class="face-text" data-string="B1.withheld-box">${esc(t('B1.withheld-box', { owner: PRIVATE_OWNER }))}</div>`), `B1-S2's words naming ${PRIVATE_OWNER}, the seat above the far document's sub-account: ${f && f.html}`);
+  assert.ok(f && f.html.includes(`<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>`), 'the entitlement arm for that owner and this reader beneath them');
+  assert.ok(f && !f.html.includes('⟨') && !f.acts, 'no token left unfilled, and no act');
+  assert.ok(!fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.project(LOCKED, 2, PRIVATE) })), 'no projection asked of a document the board withholds: it refuses one with the document');
+  assert.deepEqual(addrs(), before, 'FAR\'s entry ahead of the cursor stands: the follow\'s withdrawn');
   assert.equal(TRAIL.cursorIndex(), cursor);
   assert.deepEqual(fake.unanswered, []);
 });
