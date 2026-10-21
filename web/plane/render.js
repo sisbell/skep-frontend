@@ -44,8 +44,9 @@
 // the label floor, and no path between them (foundations §2.2 renders the
 // entries as pips: at reading scale a pip stands in the text column, where a
 // path would run between the glyphs of the article mounted over the canvas);
-// the focus ring; the arrival mark, the span a follow landed on outlined line
-// by line over the mounted article; text yielded where T-LAYER mounted it;
+// the focus ring; the arrival mark, the span a follow, or a LEAP carrying a
+// passage, landed on outlined line by line over the mounted article; text
+// yielded where T-LAYER mounted it;
 // for the unmounted, the bars — P-LAY's layout of the article's own lines
 // (T-ARTICLE's plan, made through T-LAYER from the view it mounts with) at the
 // face T-LAYER fits the article to (`metricsOf`), each bar where its line's

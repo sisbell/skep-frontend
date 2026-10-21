@@ -34,7 +34,7 @@
  * @typedef {Object} Entry
  * @property {string} addr the place teleported to
  * @property {number | null} pos the position landed on, where one was
- * @property {number | null} width the positions landed on from `pos`, where the landing named a span: a follow's projected far end, the span the arrival mark outlines
+ * @property {number | null} width the positions landed on from `pos`, where the landing named a span: a follow's projected far end, or a carried passage's counterpart — the span the arrival mark outlines
  * @property {View} view the view at the entry — the landing's, re-taken at departure
  * @property {string | null} link the link followed to reach it, where one was
  * @property {string | null} label the place's label at the push

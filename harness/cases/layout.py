@@ -87,7 +87,20 @@ never clicked (SC; B1-S9) — no block, hairline or symbol in a pane, nor its
 corner's version statement, takes the click cues the plane's keep, no block
 there takes the hover ground, and a click on any of them leaves the scene
 standing over the page as it found it; back on the plane, the
-box an edition shares with its members holds one article. THE CHROME: the
+box an edition shares with its members holds one article. THE CARRY
+(foundations §2.3: every move from a passage to another arrangement of the
+same material carries it, re-projected at the landing and marked there;
+P43): the source act on the window paragraph's "who wrote this?" card, a
+click on the window run's hairline, the latest member's read act in the
+versions list holding a paragraph, and the same act in the list the corner's
+act (K-57, Enter at the corner) opens with nothing selected and the
+edition's first blocks risen past the one line, which holds the first span
+in view — each pressed as a person presses it — light the arrival in the
+text landed in, no link named, on a span holding the carried stretch's own
+words, outlined inside the landing's article, its first line in the visible
+view; the first edition's own paragraph carried into the draft it windows
+lands at the draft's first block, unmarked, faced in the dead end's words
+with no act. THE CHROME: the
 LEAP box's rows share their columns, a place's longest label among them, no
 cell's text running past its column and the title's keeping a quarter of the
 row; the versions list sets each member on one line; the chrome over the
@@ -103,8 +116,9 @@ The measuring code is the page's (`driftSample`, `overlapCheck`,
 trail's and the stub's triangle's, which read the canvas's pixels here, the
 stub's places, which the projection gives here, the symbols', which reads
 the article's order here, the click cues', which read the computed style
-here, and the stand-in's, which sets its article and reads its blocks here;
-the thresholds are here. The beam-label and shared-box checks are
+here, the stand-in's, which sets its article and reads its blocks here, and
+the first span in view, which reads the article's blocks here; the
+thresholds are here. The beam-label and shared-box checks are
 marked with the page issues they wait on and count as expected while those
 stand."""
 import json
@@ -586,6 +600,142 @@ def scene_holds(ctx, r):
     return seen
 
 
+def wait_for(ctx, cond, s=10):
+    """wait until a condition the page answers holds, `s` seconds at most — an act a click made is no promise the driver
+    can await — then until the page settles"""
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => ((%s) || performance.now() - t0 > %d ? res(true) : setTimeout(tick, 50)); tick(); })' % (cond, s * 1000))
+    ctx.settle()
+    ctx.frames(3)
+
+
+def click_on(ctx, selector, text=None):
+    """a person's click on the first element the selector names — the one whose text is `text`, where given — at its
+    middle, dispatched at engine level; whether the element is what lies under the pointer there. None where no element
+    answers"""
+    at = ctx.js('''((sel, text) => { const e = [...document.querySelectorAll(sel)].find((x) => text == null || x.textContent === text); if (!e) return null;
+      const q = e.getBoundingClientRect(), x = q.left + q.width / 2, y = q.top + q.height / 2, hit = document.elementFromPoint(x, y);
+      return {x, y, hits: !!hit && (hit === e || e.contains(hit))}; })(%s, %s)''' % (json.dumps(selector), json.dumps(text)))
+    if at:
+        ctx.drv.mouse(at['x'], at['y'])
+    return at
+
+
+def lit_at(addr):
+    """the page's condition: the arrival mark lit in `addr`"""
+    return '(() => { const a = window.__skep.go.arrival(); return !!a && a.addr === %s; })()' % json.dumps(addr)
+
+
+def arrival_holds(ctx, r, name, carried):
+    """the arrival a carried passage's landing lit (foundations §2.3's carry rule: "what of it the landing's text holds
+    marked there"): no link named, its span holding the text of the stretch of the passage it re-projects — `carried`,
+    the document and the positions [lo, hi) of that stretch, from the fixtures; outlined, every rect it outlines inside
+    the landing's article, its first line inside the visible view below the one line; its figures"""
+    a = ctx.js('window.__skep.arrivalAnchors()')
+    doc, lo, hi = carried
+    want = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(doc), lo, hi))
+    got = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(a['addr']), a['pos'], a['pos'] + a['width'])) if a and a['width'] else None
+    r.check(bool(a) and a['link'] is None and bool(want) and got == want, f'{name}: the landing marks the carried passage where the text landed in holds it — the arrival\'s span holds the passage\'s own words, no link named',
+            {'arrival': a and {k: a[k] for k in ('addr', 'pos', 'width', 'link')}, 'want': want and want[:80], 'got': got and got[:80]})
+    top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
+    vp = ctx.js('window.__skep.view.viewport()')
+    view = {'x': 0, 'y': top, 'w': vp['VW'], 'h': vp['VH'] - top}
+    outline, art = (a or {}).get('outline') or [], (a or {}).get('article')
+    r.check(bool(outline) and art is not None and all(inside(o, art) for o in outline) and inside(outline[0], view), f'{name}: the arrival is outlined on its span\'s lines, every one inside the landing\'s article, the first inside the visible view',
+            {'lines': len(outline), 'first': outline[:1], 'article': art, 'view': view})
+    return {'arrival': a and {k: a[k] for k in ('addr', 'pos', 'width')}, 'lines': len(outline)}
+
+
+def first_in_view(ctx, addr):
+    """the first block of a mounted article, in its order, whose box meets the visible view below the one line — read
+    here from the article's own elements, apart from the page's rule; None where none does"""
+    return ctx.js('''((sel) => { const top = document.getElementById('line').getBoundingClientRect().bottom, p = window.__skep.view.viewport();
+      const e = [...document.querySelectorAll(sel)].find((x) => { const q = x.getBoundingClientRect(); return q.width > 0 && q.height > 0 && q.bottom > top && q.top < p.VH && q.right > 0 && q.left < p.VW; });
+      return e ? Number(e.dataset.pos) : null; })(%s)''' % json.dumps('#domlayer article[data-addr="%s"] .run > .sp' % addr))
+
+
+def carried_holds(ctx, r):
+    """THE CARRY's checks (foundations §2.3: every move from a passage to another arrangement of the same material
+    carries it, re-projected at the landing and marked there; P43): the source act on the window paragraph's "who wrote
+    this?" card, a click on the window run's hairline, the latest member's read act in the versions list holding a
+    paragraph, and in the list the corner's act opens with nothing selected, which holds the first span in view; the
+    carry into a text that holds none of the passage faced at the landing; its figures"""
+    seen = {}
+    ctx.esc()
+    ctx.leap(DOC, WINDOW[0])
+    block = next(b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if b['pos'] <= WINDOW[0] < b['pos'] + b['width'])
+    run = (max(block['pos'], WINDOW[0]), min(block['pos'] + block['width'], WINDOW[0] + WINDOW[1]))
+    # the source act on the card: the paragraph holding the window run's start asked over whole, its stretch of the run marked in the source
+    ctx.js('window.__skep.cards.wrote(%s, %d)' % (json.dumps(DOC), WINDOW[0]))
+    ctx.settle()
+    ctx.frames(2)
+    at = click_on(ctx, '#overlay [data-run^="src"]', WINDOW[2])
+    r.check(bool(at) and at['hits'], 'the "who wrote this?" card offers the window run\'s source, and it is what lies under the pointer', at)
+    wait_for(ctx, lit_at(WINDOW[2]))
+    seen['source_act'] = arrival_holds(ctx, r, 'the source act on "who wrote this?"', (DOC, run[0], run[1]))
+    # a click on the window run's hairline: the whole run, marked in the source
+    ctx.leap(DOC, WINDOW[0])
+    hairline = '#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"]' % (DOC, WINDOW[2])
+    at = click_on(ctx, hairline)
+    r.check(bool(at) and at['hits'], 'the window run\'s hairline is what lies under the pointer', at)
+    wait_for(ctx, lit_at(WINDOW[2]))
+    seen['hairline'] = arrival_holds(ctx, r, 'a click on the window run\'s hairline', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
+    # the versions list holding a paragraph: the latest member's read act marks it in the member
+    ctx.leap(VERSIONED, None)
+    doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(VERSIONED))
+    member = '%s.%d' % (VERSIONED, doc['members'])
+    para = next(b for b in doc['blocks'] if b['kind'] == 'para' and b['pos'] > 1 and not b['text'].startswith('#'))
+    ctx.js('window.__skep.cards.versions(%s, %d)' % (json.dumps(VERSIONED), para['pos']))
+    ctx.settle()
+    ctx.frames(2)
+    at = click_on(ctx, '#overlay [data-run="read%d"]' % doc['members'])
+    r.check(bool(at) and at['hits'], 'the versions list offers its latest member\'s read act, and it is what lies under the pointer', at)
+    wait_for(ctx, lit_at(member))
+    seen['versions_list'] = arrival_holds(ctx, r, 'the versions list\'s read act, a paragraph held', (VERSIONED, para['pos'], para['pos'] + para['width']))
+    # the corner's act with nothing selected, the edition's first blocks risen past the one line: the list holds the first
+    # span in view (§2.3: "the selection, else the first span in view"), never the document's first block. The act is
+    # taken by Enter at the corner (K-57), the one a click on the version statement takes: the member's text read, its
+    # article and its corner stand over the edition's (issue #12's boundary note), so a pointer there meets the member's
+    ctx.leap(VERSIONED, None)
+    rects = ctx.js('''[...document.querySelectorAll(%s)].map((e) => ({pos: Number(e.dataset.pos), bottom: e.getBoundingClientRect().bottom}))''' % json.dumps('#domlayer article[data-addr="%s"] .run > .sp' % VERSIONED))
+    line = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
+    last = rects[-1]['pos'] if rects else None
+    above = [x for x in rects if x['pos'] < (last or 0)]
+    cam = ctx.camera()
+    if above:
+        ctx.set_view(cam['x'], cam['y'] + (above[-1]['bottom'] - line + 12) / cam['scale'], cam['scale'])
+    held = first_in_view(ctx, VERSIONED)
+    sel = ctx.js('window.__skep.selection()')
+    r.check(held is not None and held != doc['blocks'][0]['pos'] and not (sel and sel['addr'] in (VERSIONED, member)), 'the edition viewed with its first blocks risen past the one line, nothing selected in it: the first span in view is a later paragraph', {'first_in_view': held, 'selection': sel})
+    ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})')
+    ctx.frames(1)
+    ctx.drv.key('Tab')
+    ctx.frames(2)
+    on = ctx.js('(() => { const e = document.activeElement; return e && e.dataset ? e.dataset.corner || null : null; })()')
+    r.check(on == VERSIONED, 'Tab from the plane\'s stop reaches the edition\'s corner (K-57)', on)
+    ctx.drv.key('Enter')
+    wait_for(ctx, 'document.querySelector(%s) !== null' % json.dumps('#overlay [data-run="read%d"]' % doc['members']))
+    at = click_on(ctx, '#overlay [data-run="read%d"]' % doc['members'])
+    r.check(bool(at) and at['hits'], 'the list the corner\'s act opens offers the latest member\'s read act, and it is what lies under the pointer', at)
+    wait_for(ctx, lit_at(member))
+    b = next((x for x in doc['blocks'] if x['pos'] == held), None)
+    seen['corner'] = dict(arrival_holds(ctx, r, 'the corner\'s list, nothing selected', (VERSIONED, b['pos'], b['pos'] + b['width']) if b else (VERSIONED, 0, 0)), first_in_view=held)
+    # the carry into a text that holds none of the passage: the first edition's opening paragraph carried into the draft
+    # it windows — the landing at the draft's first block, unmarked, faced in the dead end's words with no act
+    own = next(x for x in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if x['kind'] == 'para' and x['pos'] + x['width'] <= WINDOW[0])
+    ctx.js('window.__skep.go.leapTo(%s, null, %s)' % (json.dumps(WINDOW[2]), json.dumps({'carry': {'addr': DOC, 'pos': own['pos'], 'width': own['width']}})))
+    ctx.settle()
+    ctx.frames(2)
+    words = ctx.js('import("./strings.js").then(({t}) => t("F.floating", {D: %s}))' % json.dumps(WINDOW[2]))
+    face, entry = ctx.overlay_shown(), ctx.js('(() => { const t = window.__skep.trail(); return t.entries[t.cursor]; })()')
+    first = ctx.js('window.__skep.model.doc(%s).blocks[0].pos' % json.dumps(WINDOW[2]))
+    r.check(ctx.js('window.__skep.go.arrival()') is None and entry['addr'] == WINDOW[2] and entry['pos'] == first and ctx.js('window.__skep.overlay().id') == 'face:floating' and words in face['text'] and face['acts'] == 0,
+            'a carried passage the text landed in holds none of: the landing at its first block, unmarked, faced "its passage is not in ⟨D⟩\'s current text" with no act',
+            {'arrival': ctx.js('window.__skep.go.arrival()'), 'entry': {k: entry[k] for k in ('addr', 'pos', 'width')}, 'first_block': first, 'face': face, 'want': words})
+    seen['empty'] = {'carried': [own['pos'], own['width']], 'landing': entry['pos'], 'face': face['text'][:80]}
+    ctx.esc()
+    return seen
+
+
 def chrome_holds(ctx, r):
     """THE CHROME's checks: the LEAP box's columns, among its rows a trail entry carrying the longest label a place has
     (a document's first line, up to 200 characters); the opaque chrome over the plane; its figures"""
@@ -941,9 +1091,10 @@ def run(ctx):
         ctx.frames(2)
         seen[name] = labels_hold(r, name, label_view(ctx))
     r.figures['labels'] = seen
-    # THE TYPE, THE READING SCENE, THE CHROME, THE TRAIL
+    # THE TYPE, THE READING SCENE, THE CARRY, THE CHROME, THE TRAIL
     r.figures['type'] = type_holds(ctx, r)
     r.figures['scene'] = scene_holds(ctx, r)
+    r.figures['carried'] = carried_holds(ctx, r)
     r.figures['chrome'] = chrome_holds(ctx, r)
     r.figures['trail'] = trail_holds(ctx, r)
     r.figures['stub'] = stub_holds(ctx, r)

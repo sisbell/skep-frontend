@@ -29,7 +29,9 @@
 // wherever the pointer falls, bars or mounted text alike — a teleport (a
 // trail push); at the readable threshold and above its text takes the click:
 // a symbol opens its card; the presence indicator's ⟡ asks to see the links;
-// a run's hairline label goes to its source; the scene-offer opens the scene;
+// a run's hairline label goes to its source carrying the run, marked where
+// the source's current text holds it (foundations §2.3's carry rule; P43);
+// the scene-offer opens the scene;
 // a withheld run's placeholder conjures C-39's face, naming the owner the
 // placeholder names (B1-S5, B1-S7); the version statement at a document's
 // corner opens its members (the corner's act, the one Enter takes there —
@@ -115,7 +117,7 @@ export function attach(els) {
       if (se.dataset.link) { const art = se.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const s = LK.shown(addr).find((x) => x.link.addr === se.dataset.link); if (s) import('../overlays/anatomy-card.js').then((A) => A.open(s, se, false)); return; }
     }
     const hair = target.closest('.hairline');
-    if (hair) { e.stopPropagation(); const src = /** @type {HTMLElement} */ (hair).dataset.src; if (src) GO.leapTo(src, { how: 'leap' }); return; }
+    if (hair) { e.stopPropagation(); const h = /** @type {HTMLElement} */ (hair); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: runOf(h) }); return; }
     const offer = target.closest('.offer');
     if (offer) { e.stopPropagation(); const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return; }
     const wh = target.closest('[data-withheld]');
@@ -154,6 +156,20 @@ export function attach(els) {
 
 let retakeT = 0;
 function scheduleRetake() { clearTimeout(retakeT); retakeT = window.setTimeout(() => WALK.retakeFromView(), 220); }
+
+/**
+ * The transcluded run a hairline opens, as its gesture to the source carries
+ * it (foundations §2.1; §2.3's carry rule): its own positions in the article
+ * that holds it, as T-ARTICLE set them on the hairline; null where the
+ * hairline stands in no article or names no run.
+ * @param {HTMLElement} hair
+ * @returns {import('../text/span.js').Span | null}
+ */
+function runOf(hair) {
+  const art = /** @type {HTMLElement | null} */ (hair.closest('article'));
+  const addr = art ? art.dataset.addr || '' : '', pos = Number(hair.dataset.pos), width = Number(hair.dataset.width);
+  return addr && pos > 0 && width > 0 ? { addr, pos, width } : null;
+}
 
 /** the platform's selection, where it stands in a mounted article, becomes the page's (R11): view state alone changes; one the page already holds, or placed itself, is left as it is */
 function takeSelection() {

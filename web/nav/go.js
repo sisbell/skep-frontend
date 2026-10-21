@@ -6,7 +6,18 @@
 // view re-taken, move the focus to the landing (N-WALK) — the ring drawn at
 // it where a key made the act, which only the act's caller knows, so each
 // teleport takes `byKey` from it (D5 §4 rules 2 and 8) — re-project the
-// passage carried; `follow` reports the link followed to LK's visited set
+// passage carried: a LEAP that moves from a passage to another arrangement of
+// the same material — a transcluded run's source, a document holding it, a
+// member from the versions list — carries it (foundations §2.3's carry rule;
+// P43), and once the landing's text is read, and never before, `compare`s it
+// against that text whole, lands at its `counterpart` there (SC's rule, the
+// scene's own) and marks that span as an arrival by follow marks its span;
+// where the text holds none of it, it lands at the document's first block
+// with the dead end's face, "its passage is not in ⟨D⟩'s current text" —
+// at a member "… not in version ⟨k⟩" — and where the board declines the
+// read it lands as a LEAP lands, unmarked. Back to a carried landing lands
+// on its span and lights nothing: §2.2 has Back light the link a follow
+// followed. `follow` reports the link followed to LK's visited set
 // (S-32 (a)) and lands at the span the slot projects to NOW (A-53 — the
 // document consulted before the link), the arrival mark on that span — its
 // first position and its positions, carried on the landing's trail entry, so
@@ -34,7 +45,9 @@
 // that landing, at once where nothing is read, or withdraw it where the
 // reads ended in a face, the face shown only where no act was made after
 // it; Back, Forward or a jump reaching a claim lands once it is answered —
-// on the entry before it where it was withdrawn.
+// on the entry before it where it was withdrawn. A carried passage's
+// `compare` is one more read its LEAP's claim waits on, the claim settled at
+// the landing that read placed.
 // Carries: the wireframe's §11 (`leapTo`, `goHome`), §18 `followLink`.
 // Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10.
 
@@ -43,6 +56,7 @@ import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
+import * as F from '../model/frames.js';
 import * as HOST from '../overlays/host.js';
 import * as LK from '../links/links.js';
 import * as SCENE from '../scene/scene.js';
@@ -54,13 +68,14 @@ import { docBox, accountCell, boardCell } from '../plane/projection.js';
 /** @typedef {import('../model/records.js').Link} Link */
 /** @typedef {import('./trail.js').Entry} Entry */
 /** @typedef {import('./trail.js').View} View */
+/** @typedef {import('../text/span.js').Span} Span */
 
 /**
- * @typedef {Object} Arrival — the arrival mark: the span a follow landed on, lit until the next act
+ * @typedef {Object} Arrival — the arrival mark: the span a follow, or a LEAP carrying a passage, landed on, lit until the next act
  * @property {string} addr the document landed in
  * @property {number} pos the span's first position
  * @property {number | null} width its positions; null where the link names the far document whole, the mark then on the block holding `pos` — the far article's first, where the beams and the scene anchor such an end
- * @property {string} link the link followed
+ * @property {string | null} link the link followed; null where the landing re-projected a carried passage
  */
 
 /** @type {Arrival | null} */
@@ -104,25 +119,47 @@ async function land(at, byKey, ms) {
 }
 
 /**
+ * Where a carried passage stands in the text a LEAP landed in, read at the
+ * landing and never before it (P43): `compare`d against that text whole, its
+ * `counterpart` there, in the text's own positions; `none` where the text
+ * holds none of it; null where nothing was learned — the board declined the
+ * read, or the page holds no extent of the text.
+ * @param {Span} c the passage carried
+ * @param {import('../model/records.js').Doc} d the document landed in, read whole
+ * @returns {Promise<{pos: number, width: number} | 'none' | null>}
+ */
+async function reproject(c, d) {
+  if (d.extent == null) return null;
+  if (d.extent === 0) return 'none';
+  const out = await PUMP.read(F.compare([{ doc: c.addr, spans: [{ ordinal: c.pos, positions: Math.max(1, c.width) }] }], [{ doc: d.addr, spans: [{ ordinal: 1, positions: d.extent }] }]));
+  if ('refused' in out) return null;
+  const held = SCENE.counterpart(F.decodeCompare(out.answer), c.pos, c.width);
+  return held ? { pos: held.b, width: held.width } : 'none';
+}
+
+/**
  * LEAP to a place: the next act — the overlays close and the trail gains the
  * entry as it is made; the focus moves to the landing, the ring drawn at it
  * where a key made the act, and the camera flies; a landing that names the
  * link it followed lights the arrival mark on the span it landed on. A
  * document whose text the page does not hold is read whole first, its entry
  * a claim while it reads; one the board answers for with nothing faces the
- * fifth cell and leaves the trail as it found it. Where an act was made
- * while it read, it lands nowhere and faces nothing.
+ * fifth cell and leaves the trail as it found it. A carried passage is
+ * re-projected into the text read (`reproject`, the claim waiting on it too):
+ * the landing is its counterpart there, marked; where the text holds none of
+ * it, the document's first block, faced as a floating end is; where nothing
+ * was learned, the place as asked. Where an act was made while it read, it
+ * lands nowhere and faces nothing.
  * @param {string} addr a document address
- * @param {{pos?: number | null, width?: number | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, push?: boolean, ms?: number, byKey?: boolean}} [opts] `width` the positions landed on from `pos`, where the landing names a span; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act
- * @returns {Promise<import('../model/records.js').Doc | null>} the document landed in; null where it faced, or an act made while it read took its place
+ * @param {{pos?: number | null, width?: number | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, carry?: Span | null, push?: boolean, ms?: number, byKey?: boolean}} [opts] `width` the positions landed on from `pos`, where the landing names a span; `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act
+ * @returns {Promise<import('../model/records.js').Doc | null>} the document landed in; null where it faced in the place of a landing, or an act made while it read took its place
  */
 export async function leapTo(addr, opts = {}) {
   const act = ++made;
   const departed = CAM.destination();
   dismissChrome();
   arrival = null;
-  const pos = opts.pos ?? null;
-  const width = pos != null ? opts.width ?? null : null;
+  let pos = opts.pos ?? null, width = pos != null ? opts.width ?? null : null;
   const link = opts.link ?? null;
   const entry = opts.push === false ? null : TRAIL.push({ addr, pos, width, view: viewFor(addr, pos), link, label: labelOf(addr) }, departed, true);
   let d = REC.doc(addr);
@@ -132,11 +169,16 @@ export async function leapTo(addr, opts = {}) {
     if (act === made) { FACES.unregistered(addr); CAM.markDirty(); }
     return null;
   }
+  const held = opts.carry ? await reproject(opts.carry, d) : null;
+  if (held === 'none') { pos = (d.blocks[0] || { pos: 1 }).pos; width = null; }
+  else if (held) { pos = held.pos; width = held.width; }
   const v = viewFor(addr, pos);
-  if (entry) TRAIL.settle(entry, { view: v });
+  if (entry) TRAIL.settle(entry, { view: v, pos, width });
   if (act !== made) return null;
-  if (link) arrival = { addr, pos: pos ?? 1, width, link };
-  await land({ addr, pos, view: v }, opts.byKey, opts.ms ?? (opts.how === 'click' ? 420 : 620));
+  if (link || (held && held !== 'none')) arrival = { addr, pos: pos ?? 1, width, link };
+  const flight = land({ addr, pos, view: v }, opts.byKey, opts.ms ?? (opts.how === 'click' ? 420 : 620));
+  if (held === 'none') { FACES.floating(addr, { span: { addr, pos: pos ?? 1 } }, false); CAM.markDirty(); }
+  await flight;
   return d;
 }
 
@@ -172,7 +214,7 @@ export async function follow(s, anchor = null, byKey = false) {
     faced(() => FACES.showRefusal(anchor, r ? r.refusal : { kind: 'shell', name: 'unknown' }, far));
     return;
   }
-  if (!proj) { faced(() => FACES.floating(l, far, anchor)); return; }
+  if (!proj) { faced(() => FACES.floating(far, anchor)); return; }
   const d = REC.doc(far);
   if (d.extent == null || d.from < 0) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced(() => FACES.unregistered(far)); return; }

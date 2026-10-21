@@ -30,6 +30,18 @@
 // many paragraphs set it at under a fifth of its place's em (a camera whose
 // bound stops at the places' ems lands both below the mount's em and turns
 // red).
+// THE CARRY (foundations §2.3; P43): a LEAP carrying a passage `compare`s it
+// against the text landed in once that text is read, lands at its
+// counterpart there and lights the arrival on that span, no link named (a
+// mutant that ignores the carry, or lights the carried position unprojected,
+// turns red); Back to it lands on that span and lights nothing; where the
+// text holds none of it, it lands at the first block, unmarked, faced in the
+// dead end's words — at a member in the member's — and offering no act (a
+// mutant that lands where a plain LEAP does, or faces nothing, turns red); a
+// Back made while the compare reads leaves the LEAP's entry ahead at the
+// counterpart the read placed, the arrival out. The overlay host stands on a
+// stand-in element, the platform's document a stand-in beside it, so a face
+// a landing shows is read back from what the host wrote.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -40,7 +52,10 @@ import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
+import * as HOST from '../overlays/host.js';
 import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
+import { t } from '../strings.js';
+import { esc } from '../util.js';
 import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
 import * as GO from './go.js';
@@ -59,6 +74,11 @@ const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {n
 const whole = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null });
 // the person's citations from the first edition: one of a passage of FAR, one of FAR whole
 const PASSAGE = D + '.0.2.1', WHOLE = D + '.0.2.2';
+// FAR's second version member, a copy of its text; the passages LEAPs carry: one FAR holds at 20, five positions, and one neither FAR nor its member holds
+const FAR2 = FAR + '.2';
+const SHARED = { addr: D, pos: 11, width: 5 }, UNSHARED = { addr: D, pos: 1, width: 8 };
+/** the `compare` a carried passage is re-projected by: the passage against the text landed in, whole */
+const carried = (/** @type {{addr: string, pos: number, width: number}} */ c, /** @type {string} */ into, /** @type {number} */ extent) => F.compare([{ doc: c.addr, spans: [{ ordinal: c.pos, positions: c.width }] }], [{ doc: into, spans: [{ ordinal: 1, positions: extent }] }]);
 
 /** the reads of a document read whole: its extent, its metadata, its text, its image, its links */
 const reads = (/** @type {string} */ doc, /** @type {string} */ text, /** @type {string[]} */ links) => ({
@@ -78,6 +98,11 @@ const script = {
   // where each citation's far end projects into FAR now: the passage at 20, five positions; FAR whole, all of it
   [FAKE.keyOf('op', { frame: F.project(PASSAGE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }] } },
   [FAKE.keyOf('op', { frame: F.project(WHOLE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + FAR_EXTENT }] } },
+  ...reads(FAR2, FAR_TEXT, []),
+  // where the carried passages stand in FAR and its member: the shared one at FAR's 20, five positions; the other nowhere
+  [FAKE.keyOf('op', { frame: carried(SHARED, FAR, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [{ d1: D, d2: FAR, u1: { ordinal: '11', subspace: '1' }, u2: { ordinal: '20', subspace: '1' }, width: '5' }] } },
+  [FAKE.keyOf('op', { frame: carried(UNSHARED, FAR, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [] } },
+  [FAKE.keyOf('op', { frame: carried(UNSHARED, FAR2, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [] } },
 };
 
 /** @type {ReturnType<typeof FAKE.create>} */
@@ -100,9 +125,16 @@ const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.
 const addrs = () => TRAIL.all().map((e) => e.addr);
 /** C as the page holds it before a LEAP reads it: no text */
 const unread = () => REC.invalidate(C);
+/** the overlay host's stand-in element: what the host writes into it is what a person meets */
+const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
+/** the face the host shows: its name and its words, and whether it offers an act; null where no face stands */
+const faceShown = () => { const o = HOST.currentState(); return o && o.kind === 'face' ? { id: o.id, html: hostEl.innerHTML, acts: hostEl.innerHTML.includes('data-run') } : null; };
 
 before(async () => {
   REC._reset(); LK._reset(); TRAIL._reset();
+  globalThis.document = /** @type {any} */ ({ activeElement: null, body: null });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  HOST.attach(/** @type {any} */ (hostEl));
   fake = FAKE.create(script);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
@@ -136,6 +168,59 @@ test('a LEAP puts the arrival out; Back to the follow\'s entry lights it again o
 test('a link naming the far document whole lights the arrival at the document\'s first position, no width', async () => {
   await run(GO.follow(drawn(WHOLE)));
   assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 1, width: null, link: WHOLE });
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP carrying a passage lands at its counterpart in the text landed in and lights the arrival on it; Back to it lands there and lights nothing', async () => {
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR, { how: 'leap', carry: SHARED }));
+  assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 20, width: 5, link: null }, 'the counterpart\'s first position and its positions — never the carried 11');
+  const e = TRAIL.current();
+  assert.deepEqual(e && [e.addr, e.pos, e.width, e.link], [FAR, 20, 5, null], 'the landing\'s entry at the counterpart');
+  assert.ok(same(CAM.view(), GO.viewFor(FAR, 20)), 'the camera at the counterpart\'s view');
+  assert.deepEqual([walkAt(), WALK.landedAt()], [['block', FAR, 19], 20], 'the walk on the paragraph holding it, at its position');
+  assert.equal(faceShown(), null, 'no face');
+  await run(GO.leapTo(D));
+  await run(GO.back());
+  assert.equal(GO.arrivalMark(), null, 'Back lights nothing: no link was followed');
+  assert.deepEqual([walkAt(), WALK.landedAt()], [['block', FAR, 19], 20], 'Back lands on the counterpart');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP carrying a passage the text landed in holds none of lands at its first block, unmarked, faced as a floating end with no act', async () => {
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR, { how: 'leap', carry: UNSHARED }));
+  assert.equal(GO.arrivalMark(), null, 'nothing marked');
+  const e = TRAIL.current();
+  assert.deepEqual(e && [e.addr, e.pos, e.width, e.link], [FAR, 1, null, null], 'the landing\'s entry at the first block');
+  assert.ok(same(CAM.view(), GO.viewFor(FAR, 1)), 'the camera at the document\'s head');
+  assert.deepEqual(walkAt(), ['block', FAR, 1]);
+  const f = faceShown();
+  assert.ok(f && f.id === 'face:floating' && f.html.includes('data-string="F.floating"') && f.html.includes(esc(t('F.floating', { D: FAR }))), `the dead end's words: ${f && f.html}`);
+  assert.equal(f && f.acts, false, 'no act: the versions list holds no passage of another document');
+  await run(GO.leapTo(D));
+  assert.equal(faceShown(), null, 'the next act dismisses it');
+  await run(GO.leapTo(FAR2, { how: 'leap', carry: UNSHARED }));
+  const m = faceShown();
+  assert.ok(m && m.html.includes('data-string="F.floating.member"') && m.html.includes(esc(t('F.floating.member', { k: 2 }))), `at a member, in the member's own words: ${m && m.html}`);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a Back made while a carried passage\'s compare reads goes back from the LEAP\'s entry, which stands ahead at the counterpart the read placed, the arrival out', async () => {
+  await run(GO.leapTo(D));
+  const at = CAM.view(), n = TRAIL.length();
+  const release = fake.hold('op', { frame: carried(SHARED, FAR, FAR_EXTENT) });
+  const leap = GO.leapTo(FAR, { how: 'leap', carry: SHARED });
+  await run(GO.back());
+  release();
+  await run(leap);
+  const far = TRAIL.all()[n];
+  assert.deepEqual(addrs().slice(n - 1), [D, FAR], 'the LEAP\'s entry after D\'s');
+  assert.equal(TRAIL.cursorIndex(), n - 1, 'the cursor on D\'s');
+  assert.deepEqual(far && [far.pos, far.width, far.link], [20, 5, null], 'at the counterpart the read placed');
+  assert.ok(far && same(far.view, GO.viewFor(FAR, 20)), 'at that span\'s view');
+  assert.equal(GO.arrivalMark(), null, 'the arrival out: the LEAP landed nowhere');
+  assert.ok(same(CAM.view(), at), 'the camera at D');
   assert.deepEqual(fake.unanswered, []);
 });
 

@@ -31,12 +31,12 @@
 import * as HOST from './host.js';
 import * as PORT from '../bridge/port.js';
 import { entitlementArm } from '../text/article.js';
+import { memberOf } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 /** @typedef {import('../bridge/shapes').MomentEvent} MomentEvent */
-/** @typedef {import('../model/records.js').Link} Link */
 /** @typedef {import('./host.js').Anchor} Anchor */
 
 /**
@@ -126,17 +126,23 @@ export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: n
 }
 
 /**
- * A floating end: the passage the head no longer arranges (foundations
- * §2.3) — "its passage is not in ⟨D⟩'s current text"; the act opens the
- * versions list to read the last member that holds it.
- * @param {Link} l
- * @param {string} far
+ * A floating end: the passage a document's text no longer arranges
+ * (foundations §2.3) — "its passage is not in ⟨D⟩'s current text", and at a
+ * pinned member in its own words, "its passage is not in version ⟨k⟩" — met
+ * by a followed link's end, or by a carried passage at its landing (the
+ * carry rule's empty case, P43). Where `offer` stands, the act opens the
+ * versions list to read the last member that holds it; a carried passage's
+ * landing offers none, for the list holds a passage of its own document and
+ * the carried one is another's.
+ * @param {string} far the document whose text holds none of the passage
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor
+ * @param {boolean} [offer] the face offers the versions list
  */
-export function floating(l, far, anchor) {
-  HOST.show({ kind: 'face', id: 'face:floating', anchor: toAnchor(anchor), acts: { a0: (_el, byKey) => import('./versions.js').then((V) => V.open(far, null, null, null, byKey)) },
-    html: faceHTML({ id: 'F.floating', text: t('F.floating', { D: far }), acts: [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] }) });
-  void l;
+export function floating(far, anchor, offer = true) {
+  const k = memberOf(far);
+  const words = k != null ? { id: 'F.floating.member', text: t('F.floating.member', { k }) } : { id: 'F.floating', text: t('F.floating', { D: far }) };
+  HOST.show({ kind: 'face', id: 'face:floating', anchor: toAnchor(anchor), acts: offer ? { a0: (_el, byKey) => import('./versions.js').then((V) => V.open(far, null, null, null, byKey)) } : {},
+    html: faceHTML({ ...words, acts: offer ? [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] : [] }) });
 }
 
 /**

@@ -7,7 +7,9 @@
 // selected span marks every block it touches and no other, and the
 // focus its own block, by the one rule T-LAYER marks a standing article by; the
 // transcluded run's hairline and C-33's mark, once per run however marks and
-// symbols cut it (a mutant that sets them at every stretch turns red); the
+// symbols cut it (a mutant that sets them at every stretch turns red), each
+// hairline carrying the whole run's positions, in every block the run
+// crosses (a mutant that carries the block's part alone turns red); the
 // corner's version statement and a draft's chip (C-28), items of one stop
 // that the article never holds (they stand beside it, outside the box that
 // clips it); the record rule; headings as formatting. Each symbol AT ITS
@@ -121,6 +123,13 @@ test('a transcluded run from a draft carries the hairline and C-33\'s mark in a 
   assert.ok(html.includes('class="hairline whole"') && html.includes('≡ 1.0.1.0.1003'));
   assert.ok(html.includes(t('C-33')));
   assert.ok(html.includes('this document windows 1.0.1.0.1003'), 'the scene-offer at a windowing document');
+});
+
+test('each hairline of a run carries the run\'s own positions in the document windowing it, the passage its gesture to the source carries', () => {
+  const blocks = [{ pos: 1, width: 12, kind: /** @type {const} */ ('para'), text: 'abcdefghijkl', origin: null }, { pos: 13, width: 12, kind: /** @type {const} */ ('para'), text: 'mnopqrstuvwx', origin: null }];
+  const html = articleHTML(doc({ blocks, origins: [{ pos: 9, width: 10, doc: '1.0.1.0.1003' }] }), view(), '1.0.1');
+  const hairlines = [...html.matchAll(/<span class="hairline (\w+)" data-src="([^"]*)" data-pos="(\d+)" data-width="(\d+)"/g)].map((m) => [m[1], m[2], Number(m[3]), Number(m[4])]);
+  assert.deepEqual(hairlines, [['whole', '1.0.1.0.1003', 9, 10], ['compact', '1.0.1.0.1003', 9, 10]], `the run, in each block it crosses: ${html}`);
 });
 
 test('the corner: version k of n with R20\'s teaching keyed by venue; a draft\'s chip C-28', () => {

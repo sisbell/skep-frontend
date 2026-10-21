@@ -470,8 +470,10 @@ const symHTML = (/** @type {Shown} */ s, /** @type {boolean} */ scene) => `<span
  * A stretch of a paragraph's text as HTML: its links marked by their depth
  * in the one mark they merge into — its hue, its value, `visited` where it is
  * drawn lighter — its run's ground and, where it opens its run, the run's
- * boundary, hairline and C-33's mark; then the symbols standing at it — the
- * text's own characters untouched.
+ * boundary, hairline and C-33's mark — the hairline naming the run's origin
+ * and carrying the run's own positions in this document, the passage its
+ * gesture to the source carries (foundations §2.1; §2.3's carry rule) — then
+ * the symbols standing at it — the text's own characters untouched.
  * @param {Seg} s
  * @param {boolean} scene the scene-mode variant: its symbols no controls
  */
@@ -489,7 +491,7 @@ function segHTML(s, scene) {
     cls.push('same');
     if (at) cls.push('opens');
     attrs.push(`data-origin="${esc(o)}"`);
-    const chrome = !at ? '' : `<span class="hairline ${at.whole ? 'whole' : 'compact'}" data-src="${esc(o)}" title="${esc(o)}">${esc(labelOf(s.origin, at))}</span>` +
+    const chrome = !at ? '' : `<span class="hairline ${at.whole ? 'whole' : 'compact'}" data-src="${esc(o)}" data-pos="${s.origin.pos}" data-width="${s.origin.width}" title="${esc(o)}">${esc(labelOf(s.origin, at))}</span>` +
       (at.c33 ? `<span class="pubmark" data-mark="C-33">${esc(t('C-33'))}</span>` : '');
     return `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${chrome}${s.chromeSyms.map((x) => symHTML(x, scene)).join('')}${esc(s.text)}</span>${syms}`;
   }

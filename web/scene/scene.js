@@ -183,12 +183,31 @@ export function merged(raw) {
 }
 
 /**
+ * A passage of the first document's counterpart in the second: the first
+ * stretch of shared identity inside it — a run of contiguous pairs one
+ * stretch (`merged`) — clipped to the passage, its first position in each
+ * document and its positions; null where the passage shares none. The one
+ * rule the scene sets the two ends level by (`levels`) and a carried
+ * passage is re-projected at a landing by (N-GO; foundations §2.3; P43).
+ * @param {ComparePair[]} pairs `compare`'s pairs, `u1` in the first document
+ * @param {number} pos the passage's first position
+ * @param {number} width its positions
+ * @returns {{a: number, b: number, width: number} | null}
+ */
+export function counterpart(pairs, pos, width) {
+  const end = pos + Math.max(1, width);
+  const p = merged(pairs).find((q) => q.u1 < end && pos < q.u1 + q.width);
+  if (!p) return null;
+  const a = Math.max(pos, p.u1);
+  return { a, b: p.u2 + (a - p.u1), width: Math.min(end, p.u1 + p.width) - a };
+}
+
+/**
  * The two ends the scene sets level (§2.5: "position carries the match"):
  * where the opener names a position in the second document — a link's far
- * end — the held position and that one; else the first stretch of shared
- * identity inside the passage held, its first position in the first document
- * and its counterpart in the second, the second at its top where the held
- * passage shares none; with nothing held, the first pair's two ends.
+ * end — the held position and that one; else the passage held set level with
+ * its `counterpart`, the second at its top where the held passage shares
+ * none; with nothing held, the first pair's two ends.
  * @param {ComparePair[]} runs `compare`'s pairs, `u1` in the first document
  * @param {Held} [held]
  * @returns {Level}
@@ -196,13 +215,9 @@ export function merged(raw) {
 export function levels(runs, held = {}) {
   const posA = held.posA ?? null;
   if (held.posB != null) return { a: posA, b: held.posB };
-  const sorted = [...runs].sort((x, y) => x.u1 - y.u1);
-  if (posA == null) return sorted.length ? { a: sorted[0].u1, b: sorted[0].u2 } : { a: null, b: null };
-  const end = posA + Math.max(1, held.widthA ?? 1);
-  const p = sorted.find((q) => q.u1 < end && posA < q.u1 + q.width);
-  if (!p) return { a: posA, b: null };
-  const a = Math.max(posA, p.u1);
-  return { a, b: p.u2 + (a - p.u1) };
+  if (posA == null) { const first = [...runs].sort((x, y) => x.u1 - y.u1)[0]; return first ? { a: first.u1, b: first.u2 } : { a: null, b: null }; }
+  const c = counterpart(runs, posA, held.widthA ?? 1);
+  return c ? { a: c.a, b: c.b } : { a: posA, b: null };
 }
 
 /**

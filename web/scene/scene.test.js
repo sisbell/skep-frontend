@@ -4,7 +4,12 @@
 // it (a mutant that levels the second pane at `compare`'s first pair turns
 // red); a far end the opener names, as given; with nothing held, the first
 // pair; with nothing shared, the second pane at its top — and the runs the
-// bands are drawn from, contiguous pairs one run.
+// bands are drawn from, contiguous pairs one run. A passage's counterpart,
+// the rule a carried passage is re-projected by at a landing (N-GO; P43):
+// its first shared stretch clipped to the passage at both ends, in the
+// second document's positions (a mutant that keeps the stretch's own width,
+// or its own start, turns red), contiguous pairs one stretch (a mutant that
+// takes the first raw pair alone turns red), none where nothing is shared.
 // Then the scene's focus, against the FAKE PORT and a page of stand-ins whose
 // focus lands only where the platform's does (D5 §4 rules 5 and 8; K-63;
 // the focus's owner N-FOCUS, whose own cases are `nav/focus.test.js` — these
@@ -30,7 +35,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as WALK from '../nav/walk.js';
 import * as LAYER from '../text/layer.js';
 import * as SCENE from './scene.js';
-import { levels, merged } from './scene.js';
+import { levels, merged, counterpart } from './scene.js';
 
 /** @returns {import('../model/frames.js').ComparePair} */
 const pair = (/** @type {number} */ u1, /** @type {number} */ u2, /** @type {number} */ width) => ({ d1: '1.0.1.0.3', d2: '1.0.1.0.3.2', u1, u2, width });
@@ -57,6 +62,16 @@ test('with nothing held, the first pair\'s two ends; with nothing shared, the se
   assert.deepEqual(levels([]), { a: null, b: null });
   assert.deepEqual(levels([pair(1467, 1, 240)], { posA: 20, widthA: 30 }), { a: 20, b: null }, 'a held passage that shares nothing: the second pane at its top');
   assert.deepEqual(levels(runs, { posA: 1466, widthA: null }), { a: 1466, b: 1466 }, 'a position alone');
+});
+
+test('a passage\'s counterpart: its first shared stretch, clipped to the passage at both ends, in the second document\'s positions', () => {
+  const moved = [pair(1, 101, 1466), pair(1467, 9, 240)];
+  assert.deepEqual(counterpart(moved, 1480, 10), { a: 1480, b: 22, width: 10 }, 'inside a run: the passage itself, where the second document arranges it');
+  assert.deepEqual(counterpart(moved, 1400, 100), { a: 1400, b: 1500, width: 67 }, 'across two runs: the first, cut at its end');
+  assert.deepEqual(counterpart([pair(1467, 1, 240)], 1400, 100), { a: 1467, b: 1, width: 33 }, 'a stretch starting inside the passage: cut at the stretch\'s start');
+  assert.deepEqual(counterpart([pair(11, 20, 3), pair(14, 23, 2)].reverse(), 9, 8), { a: 11, b: 20, width: 5 }, 'contiguous pairs, in any order: one stretch');
+  assert.equal(counterpart([pair(1467, 1, 240)], 20, 30), null, 'nothing shared: none');
+  assert.equal(counterpart([], 20, 30), null);
 });
 
 test('contiguous pairs — adjoining in both documents — are one run; a gap in either keeps them apart', () => {

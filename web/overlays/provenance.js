@@ -7,7 +7,10 @@
 // arrangement holds the passage, short by a stated copy and by any document
 // the reader may not read, which the blind-spot line says (C-72, DRAFT).
 // Each act takes the span exactly as selected (R11); asked by a position
-// alone, it takes the block holding it, whole. Each card takes the focus on
+// alone, it takes the block holding it, whole. An origin and a container
+// are each another arrangement of the passage's material, so each is a LEAP
+// that carries the span asked over, re-projected and marked at the landing
+// (N-GO; foundations §2.3's carry rule; P43). Each card takes the focus on
 // its first act where a key made the act that asked — the slot's chord, Enter
 // on its button — and never otherwise (D5 §4 rule 4; the focus record's
 // rule 16). The two marks' variants (C-33, C-34) are the article's where
@@ -39,6 +42,16 @@ function spanOf(addr, pos, width) {
 }
 
 /**
+ * A LEAP to another arrangement of the span's material — an origin, a
+ * container — carrying the span (N-GO's carry).
+ * @param {string} to
+ * @param {string} addr the span's document
+ * @param {{ordinal: number, positions: number}} sp
+ * @param {boolean} byKey a key made the act
+ */
+const carried = (to, addr, sp, byKey) => GO.leapTo(to, { how: 'leap', byKey, carry: { addr, pos: sp.ordinal, width: sp.positions } });
+
+/**
  * who wrote this? (A-41, R29)
  * @param {string} addr
  * @param {number} pos the span's first position
@@ -61,7 +74,7 @@ export async function wrote(addr, pos, width = null, byKey = false) {
     rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${esc(r.text)}${r.same ? ` <button data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => GO.leapTo(r.o, { how: 'leap', byKey }); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
+  rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => carried(r.o, addr, sp, byKey); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
   HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts, takeFocus: byKey });
 }
 
@@ -85,6 +98,6 @@ export async function uses(addr, pos, width = null, byKey = false) {
     `<div class="clause" data-string="B1.C-72">${esc(t('B1.C-72'))}</div>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  users.forEach((u, i) => { acts['u' + i] = (_el, byKey) => GO.leapTo(u, { how: 'leap', byKey }); });
+  users.forEach((u, i) => { acts['u' + i] = (_el, byKey) => carried(u, addr, sp, byKey); });
   HOST.show({ kind: 'card', id: 'provenance:uses', anchor, html, acts, takeFocus: byKey });
 }
