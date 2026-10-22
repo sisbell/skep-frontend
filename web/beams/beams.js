@@ -216,11 +216,10 @@ export function beamOf(s, g) {
   return { s, line, from, to: c, aimed: true, stub: !holds(g.view, c) || !g.mounted(s.far) };
 }
 
-/** a beam's identity: its link and its two ends, unordered, each the document it stands at — the near end the one drawing it, the far end the one its slot names — with the span the link stores for it: the same beam whichever end it is drawn from, wherever either end stands now, and a beam from each document one stored end is drawn at */
+/** a beam's identity: its link and its two ends, unordered, each the document it stands at — the near end the one drawing it, the far end the one its slot names — with the key of the span the link stores for it (LK's `endKey`): the same beam whichever end it is drawn from, wherever either end stands now, and a beam from each document one stored end is drawn at */
 function endsOf(/** @type {Shown} */ s) {
-  const fe = s.farEnd;
-  const there = fe ? `${s.far} ${fe.whole ? `${fe.start}@whole` : `${fe.start}+${fe.width}`}` : '';
-  return s.link.addr + ' ' + [`${s.near} ${s.nearEnd.start}+${s.nearEnd.width}`, there].sort().join(' | ');
+  const there = s.farEnd ? `${s.far} ${LK.endKey(s.farEnd)}` : '';
+  return s.link.addr + ' ' + [`${s.near} ${LK.endKey(s.nearEnd)}`, there].sort().join(' | ');
 }
 
 /**

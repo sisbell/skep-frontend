@@ -112,7 +112,6 @@ import { esc } from '../util.js';
 
 /** @typedef {import('../model/frames.js').ComparePair} ComparePair */
 /** @typedef {import('../model/records.js').Block} Block */
-/** @typedef {import('../model/address.js').EndRef} EndRef */
 /** @typedef {import('../links/links.js').Shown} Shown */
 
 /**
@@ -287,23 +286,20 @@ function restIn(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
   return b ? b.pos + b.width - pos : 1;
 }
 
-/** a link's end as the link stores it — the key an end is told apart by, the same met as the near end at one pane and as the far end from the other, wherever it stands now */
-const keyOf = (/** @type {EndRef} */ e) => (e.whole ? `${e.start}@whole` : `${e.start}+${e.width}`);
-
 /**
  * A link's far end in the pane its document stands in, and the key it is
- * told apart by (`keyOf`): the first stretch `project` places its passage in
- * (LK's `farRuns`); where it names the document whole, or floats — the
- * pane's text holding none of it, where its follow lands at the head — the
- * pane's first block to the block's end; null where nothing places it, its
- * projection not read or refused.
+ * told apart by (LK's `endKey`): the first stretch `project` places its
+ * passage in (LK's `farRuns`); where it names the document whole, or floats
+ * — the pane's text holding none of it, where its follow lands at the head —
+ * the pane's first block to the block's end; null where nothing places it,
+ * its projection not read or refused.
  * @param {Shown} s the link as LK shows it at the other pane's document
  * @param {Block[]} blocks the blocks the pane's article was made from
  * @returns {{key: string, pos: number, width: number} | null}
  */
 function farEndIn(s, blocks) {
   if (!s.farEnd) return null;
-  const key = keyOf(s.farEnd);
+  const key = LK.endKey(s.farEnd);
   if (s.farWhole || LK.floats(s)) { const pos = (blocks[0] || { pos: 1 }).pos; return { key, pos, width: restIn(blocks, pos) }; }
   const r = s.farRuns && s.farRuns[0];
   return r ? { key, pos: r.pos, width: r.width } : null;
@@ -319,10 +315,11 @@ function farEndIn(s, blocks) {
  * pane A's ends first. A link both panes show is met from each; a document
  * in both panes meets a link inside it from each end in each pane, and draws
  * it once for each way its two ends stand across the panes. Ends are told
- * apart by their pane and the span the link stores for them (`keyOf`), never
- * by their document alone, which would fold those two ways into one line and
- * leave the pair the scene sets level without the line that confirms it, and
- * never by where they stand now, which the two panes read from two answers.
+ * apart by their pane and the span the link stores for them (LK's
+ * `endKey`), never by their document alone, which would fold those two ways
+ * into one line and leave the pair the scene sets level without the line
+ * that confirms it, and never by where they stand now, which the two panes
+ * read from two answers.
  * A line is drawn in the one mark LK gives its link at
  * a mark joining the two panes' documents (`LK.markOf` given both;
  * foundations §2.1's register: "the document's owner the owner of either"),
@@ -339,7 +336,7 @@ export function linesBetween(A, B) {
   for (const [near, far, nearIsA] of /** @type {Array<[PaneLinks, PaneLinks, boolean]>} */ ([[A, B, true], [B, A, false]])) {
     for (const s of near.shown) {
       if (s.far !== far.addr) continue;
-      const here = { key: keyOf(s.nearEnd), pos: s.pos, width: s.width }, there = farEndIn(s, far.blocks);
+      const here = { key: LK.endKey(s.nearEnd), pos: s.pos, width: s.width }, there = farEndIn(s, far.blocks);
       if (!there) continue;
       const [a, b] = nearIsA ? [here, there] : [there, here];
       const key = `${s.link.addr} ${a.key} ${b.key}`;

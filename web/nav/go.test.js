@@ -877,8 +877,8 @@ test('the anatomy card opens in the act that asks for it — a links-card row, E
     const asks = [
       ['a links-card row', row],
       ['Enter at the link\'s element', () => KEYS.dispatch(enter, { where: 'plane', byKey: true })],
-      ['a click on its symbol', () => click({ target: at('.sym', { link: PASSAGE }), clientX: 0, clientY: 0, stopPropagation() {} })],
-      ['a click on its marked span', () => click({ target: at('.lip', { links: PASSAGE }), clientX: 0, clientY: 0, stopPropagation() {} })],
+      ['a click on its symbol', () => click({ target: at('.sym', { link: PASSAGE, end: drawn(PASSAGE).key }), clientX: 0, clientY: 0, stopPropagation() {} })],
+      ['a click on its marked span', () => click({ target: at('.lip', { links: PASSAGE, ends: drawn(PASSAGE).key }), clientX: 0, clientY: 0, stopPropagation() {} })],
     ];
     const lineage = FAKE.keyOf('op', { frame: F.outClaims(PASSAGE, 'audit') });
     /** the card's reads answered: its lineage's last read asked since `from`, no opening reading, and a turn for that answer to land */

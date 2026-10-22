@@ -13,7 +13,14 @@
 // hairline, against the FAKE PORT, LEAPs to its source carrying the run,
 // which the source's text holds elsewhere: the landing is marked at the run's
 // counterpart there (a mutant that LEAPs without the run, or carries the
-// block it stands in, turns red).
+// block it stands in, turns red). A click on a link's symbol, and one on a
+// stretch it marks, against the FAKE PORT, opens the anatomy card of the end
+// clicked: of a citation from a document's own bytes to a passage of another
+// that the document transcludes, both its ends in one article, each mark's
+// card stands at its own end's bytes and reads that end near and the other
+// far (a mutant that finds the end by its link alone, the link's first end
+// in the article answering every mark, turns red; so does an article whose
+// marks carry no end's key).
 // An empty click made while a card reads ends its opening alone (O-HOST's):
 // its answer shows nothing and the card standing under it stands (a mutant
 // that dismisses the standing card with it, or leaves the opening to the
@@ -24,6 +31,7 @@ import * as INPUT from './input.js';
 import * as HOST from '../overlays/host.js';
 import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
+import * as LK from '../links/links.js';
 import * as PORT from '../bridge/port.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
@@ -136,6 +144,76 @@ test('a click on a run\'s hairline LEAPs to its source carrying the run, the lan
     for (let i = 0; i < 200 && !GO.arrivalMark(); i++) await new Promise((r) => setTimeout(r, 0));
     assert.deepEqual(GO.arrivalMark(), { addr: O, pos: 12, runs: [{ pos: 12, width: 15 }], link: null }, 'the run marked where the source holds it');
     assert.deepEqual(fake.unanswered, [], 'the run carried, and no other passage');
+  } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a click on a link\'s symbol, or on a stretch it marks, opens the card of the end clicked: of a link whose two ends stand in one article, each its own', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
+  const layer = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    // a citation homed in D from D's own "Tumbler", at 1, to O's "quoted", at O's 16 — a run of O that D's second paragraph ends
+    // in, standing at D's 27: both its ends stand in D's article
+    const D = '1.0.1.0.21', O = '1.0.1.0.22', L = D + '.0.2.1', CITE = '1.1.0.1.0.1.0.3.13';
+    const text = 'Tumbler.\n\nThe window says quoted';
+    const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
+    const fake = FAKE.create({
+      // where each end's far end stands now — the to end in O at 16, the from end in D at 1 — and the to end's words in O
+      [FAKE.keyOf('op', { frame: F.project(L, 2, O) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.16', width: '0.6' }] } },
+      [FAKE.keyOf('op', { frame: F.project(L, 1, D) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.7' }] } },
+      [FAKE.keyOf('op', { frame: F.retrieveV(O, 16, 6) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: 'quoted' }] } },
+      // its lineage: no claims either way
+      [FAKE.keyOf('op', { frame: F.inClaims(L, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+      [FAKE.keyOf('op', { frame: F.outClaims(L, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+    });
+    PORT.boot(fake);
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
+    REC.takeDelivery(D, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 26 }, { iStart: O + '.0.1.16', width: 6 }]);
+    REC.takeLinks(D, [L]);
+    REC.takeLink({ addr: L, from: [span(D, 1, 7)], to: [span(O, 16, 6)], type: CITE });
+    LK.reveal(D, 2);
+    const d = REC.doc(D);
+    assert.deepEqual(LK.shown(D).map((s) => [s.link.addr, s.end, s.pos, s.width]), [[L, 'from', 1, 7], [L, 'to', 27, 6]], 'both its ends drawn in D');
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
+    const click = layer.get('click');
+    assert.ok(click, 'the text layer takes a click');
+    // the citation's symbols and the stretches it marks as the plane's article holds them, each in the text's order: its from end's, then its to end's
+    const article = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d));
+    /** @type {Array<[string, string[]]>} */
+    const marks = [['.sym', article.match(/<span class="sym [^"]*" data-link="[^"]*"[^>]*>/g) || []], ['.lip', article.match(/<span class="seg lip[^"]*"[^>]*>/g) || []]];
+    const holder = { dataset: { addr: D } };
+    /** each end: its own bytes in D, and the card's two ends as it reads them — far first: which end, its document, its words */
+    const ends = [
+      { bytes: { addr: D, pos: 1, width: 7 }, lines: [['far', t('F.card.to'), O, 'quoted'], ['near', t('F.card.from'), D, 'Tumbler']] },
+      { bytes: { addr: D, pos: 27, width: 6 }, lines: [['far', t('F.card.from'), D, 'Tumbler'], ['near', t('F.card.to'), D, 'quoted']] },
+    ];
+    for (const [cls, tags] of marks) {
+      assert.equal(tags.length, ends.length, `${cls}: one for each end`);
+      for (const [i, tag] of tags.entries()) {
+        const el = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag), isConnected: false });
+        Object.assign(el, { closest: (/** @type {string} */ sel) => (sel === cls ? el : sel === 'article' ? holder : null) });
+        click({ target: el, clientX: 0, clientY: 0, stopPropagation() {} });
+        for (let n = 0; n < 200 && !HOST.currentOverlay(); n++) await new Promise((r) => setTimeout(r, 0));
+        const card = HOST.currentOverlay(), { bytes, lines } = ends[i];
+        assert.equal(card && card.id, 'anatomy:' + L, `${cls} at ${bytes.pos}: the citation's anatomy card`);
+        assert.deepEqual(card && card.anchor, { el, span: bytes }, `${cls} at ${bytes.pos}: the card stands at the mark clicked, its own end's bytes beside it`);
+        const read = [...(card ? card.html : '').matchAll(/<div class="end (far|near)"><span class="k">([^<]*)<\/span> <span class="code">([^<]*)<\/span>.*?<div class="quoted">([^<]*)<\/div>/g)].map((m) => m.slice(1));
+        assert.deepEqual(read, lines.map(([at, k, addr, words]) => [at, esc(k), addr, words]), `${cls} at ${bytes.pos}: the near end the one clicked, the far end the other`);
+        HOST.dismiss();
+      }
+    }
+    assert.deepEqual(fake.unanswered, []);
   } finally {
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }

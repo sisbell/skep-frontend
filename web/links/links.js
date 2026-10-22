@@ -40,8 +40,10 @@
 //     stands in, a passage an edit cut in two at both, its marks, symbol and
 //     counts there and never at the stored ordinal — and an end the held
 //     text places nowhere (its image not read, or the text holding none of
-//     it) is not drawn; the end is told apart by its stored span (`nearEnd`)
-//     wherever it stands;
+//     it) is not drawn; the end is told apart by its stored span (`nearEnd`;
+//     its key, `endKey`) wherever it stands, and every mark and symbol drawn
+//     for it carries that key, so a click opens the card of the end clicked,
+//     never another of the link's ends in the same text (B1-S5);
 //   - its FAR end stands where `project` answers it sits in the far
 //     document's current text now (A-53: "the beam lands at the passage's
 //     current place (version-proof)"; M-REC's projection, `farRuns`); a far
@@ -103,8 +105,8 @@
 // when it lands, THIS FILE's rule and its state change; NO DRAWING MODULE
 // CHANGES (BM, T-LAYER, P-RENDER, SC, the cards draw what `shown`, `shownAt`,
 // `symbols`, `beams`, `countAt`, `connections`, `markOf`, `mergedMark`,
-// `floats` and `farPos` give them, and T-LAYER fits the face to what
-// `utmost` gives).
+// `floats`, `farPos` and `endKey` give them, and T-LAYER fits the face to
+// what `utmost` gives).
 // Carries: the wireframe's §16 `.sym`/`.lip` selection and the owner-link
 // marking in `articleHTML`, §17's wanted set, §18 `revealLinks`'s lens
 // filters, §10's by-linker colouring and mid lines, S1's `buildBeams`.
@@ -139,6 +141,7 @@ import { commonsType, documentOf, accountOf, isUnder } from '../model/address.js
  * @property {string} near the document it is drawn at — one whose text holds `end` (M-REC's `holdsEnd`), whichever end that is, whichever document minted its bytes and wherever the link is homed
  * @property {'from' | 'to'} end which end this document holds
  * @property {EndRef} nearEnd the span of the slot this end draws, as stored: the bytes' identity, by which an end met from both its documents is told apart wherever it stands
+ * @property {string} key `nearEnd`'s key (`endKey`): what every mark and symbol drawn for this end carries, so a click on one finds this end and no other of the link's
  * @property {Stretch[]} runs every stretch of the near document's held text `nearEnd` stands in now (M-REC's `placed`), in the text's order — never empty: an end the held text places nowhere is not drawn
  * @property {number} pos the first stretch's first position
  * @property {number} width the first stretch's positions
@@ -308,6 +311,20 @@ function othersLet(/** @type {Reveal} */ r, /** @type {Link} */ l) {
   return r.others || !!(r.lens.owners && l.owner && r.lens.owners.has(l.owner));
 }
 
+/**
+ * An end's key: the span the link's slot stores for it — its first address
+ * and its width, or the address it names whole — the bytes' identity, by
+ * which an end is told apart from the link's other ends: the same whichever
+ * document draws it and whether it is met as the near end there or as the
+ * far end from the other, wherever its bytes stand now. What every mark and
+ * symbol drawn for an end carries (`Shown.key`), so a click opens the card
+ * of the end clicked; a beam and a scene's line are told apart by the keys
+ * of their two ends.
+ * @param {EndRef} e
+ * @returns {string}
+ */
+export const endKey = (e) => (e.whole ? `${e.start}@whole` : `${e.start}+${e.width}`);
+
 /** the ends of a link a document holds as passages (M-REC's `holdsEnd`): those whose span names it as their trunk, its text read or not, and those its held text places — a passage it transcludes, a version member's bytes */
 function endsIn(/** @type {Link} */ l, /** @type {string} */ addr) {
   /** @type {Array<{end: 'from' | 'to', e: EndRef}>} */
@@ -348,10 +365,10 @@ export function draws(l, addr) {
 }
 
 /**
- * A link's end drawn at a document: its stored span, where that span stands
- * in the document's held text now, its mark, and its far end with where that
- * stands in its own document's current text; null where the held text places
- * the end nowhere.
+ * A link's end drawn at a document: its stored span and that span's key
+ * (`endKey`), where the span stands in the document's held text now, its
+ * mark, and its far end with where that stands in its own document's current
+ * text; null where the held text places the end nowhere.
  * @param {Link} l
  * @param {string} addr the document holding the end (`endsIn`), whichever document minted its bytes
  * @param {'you' | 'owner' | 'others'} linker
@@ -366,7 +383,7 @@ function drawnEnd(l, addr, linker, end, e) {
   const far = (end === 'from' ? l.to : l.from)[0] || null;
   const held = far && !far.whole && far.ordinal != null && far.doc ? REC.projection(l.addr, farSlot, far.doc) : undefined;
   return {
-    link: l, near: addr, end, nearEnd: e, runs, pos: runs[0].pos, width: runs[0].width, mark: markOf(l, addr), linker,
+    link: l, near: addr, end, nearEnd: e, key: endKey(e), runs, pos: runs[0].pos, width: runs[0].width, mark: markOf(l, addr), linker,
     far: far ? far.doc || far.account || '' : '', farEnd: far, farSlot, farWhole: !!(far && far.whole), farRuns: Array.isArray(held) ? held : null,
   };
 }

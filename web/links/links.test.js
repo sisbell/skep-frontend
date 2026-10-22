@@ -29,9 +29,12 @@
 // stand now, through the held image, never at the position its slot stores
 // — marks, symbols, the others' count and the face's bound moved with an
 // edit (a mutant that draws at the stored ordinal, or counts by it, turns
-// red); an end the text holds in two stretches one drawn end standing in
-// both, met at a span by either (a mutant that keeps the first stretch alone
-// turns red); none drawn where no image is held, the badge and the toggle's
+// red), each carrying its key, the span its slot stores, so a link's two
+// ends at one document are told apart and keep their keys through an edit
+// (a mutant keying an end by where it stands turns red); an end the text
+// holds in two stretches one drawn end standing in both, met at a span by
+// either (a mutant that keeps the first stretch alone turns red); none
+// drawn where no image is held, the badge and the toggle's
 // count reading no position; and each far end where `project` answers it
 // sits now — elsewhere than stored, floating where the text holds none of
 // it, placed nowhere where no answer is held or it was refused, never for a
@@ -321,6 +324,17 @@ test('an end stands where its bytes stand now, never at the position its slot st
   assert.deepEqual(LK.symbols(D).map((s) => s.pos), [70], 'its symbol there');
   assert.deepEqual(LK.shownAt(D, { pos: 50, width: 10 }), [], 'nothing drawn at the stored position');
   assert.deepEqual(LK.utmost(D).shown.map((s) => [s.link.addr, s.pos]), [[D + '.0.2.1', 70], [OTHER_HOME + '.0.2.1', 23]], 'the face fitted to where they stand');
+});
+
+test('each end drawn carries its key, the span its slot stores (`endKey`): a link\'s two ends at one document told apart, each keeping its key wherever an edit moves it', () => {
+  REC.takeLinks(D, [D + '.0.2.9']);
+  REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 30, 2)], to: [span(D, 60, 2)], type: CITE });
+  const from = LK.endKey(span(D, 30, 2)), to = LK.endKey(span(D, 60, 2));
+  assert.deepEqual([from, to, LK.endKey(whole('1.0.1.0.127'))], [D + '.0.1.30+0.0.0.0.0.0.0.2', D + '.0.1.60+0.0.0.0.0.0.0.2', '1.0.1.0.127@whole'], 'a passage keyed by its first address and its width, a document named whole by its address');
+  const ends = () => LK.shown(D).filter((s) => s.link.addr === D + '.0.2.9').map((s) => [s.end, s.pos, s.key]);
+  assert.deepEqual(ends(), [['from', 30, from], ['to', 60, to]], 'its two ends in D, two keys');
+  movedOn();
+  assert.deepEqual(ends(), [['from', 50, from], ['to', 80, to]], 'moved by an edit: each standing elsewhere, its key its own still');
 });
 
 test('an end the text holds in two stretches is one drawn end standing in both, met at a span by either; one the held text places nowhere is not drawn', () => {

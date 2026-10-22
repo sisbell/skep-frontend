@@ -19,7 +19,9 @@
 // the symbols are at the place"): right after the last word its span
 // touches, in the last paragraph it touches (`standOf`) — every link marked,
 // and its symbol set, at the stretches LK says its end stands in now, never
-// at the position its slot stores — a symbol whose far end floats titled
+// at the position its slot stores, each mark and symbol carrying the ends it
+// draws by their links and their keys (LK's `endKey`), so a click opens the
+// card of the end clicked (APP-INPUT) — a symbol whose far end floats titled
 // "its passage is not in ⟨D⟩'s current text" (foundations §2.3); the
 // withheld block OCCUPYING its positions and naming the owner of its run's
 // origin, whoever owns the document windowing it (R56: the copy derives per
@@ -606,19 +608,22 @@ const control = (scene) => (scene ? '' : ' role="button" tabindex="-1"');
  * A link's symbol at its span: hue the linker's, dashed for another's,
  * lighter once followed; titled with its type, and, where its far end floats,
  * "its passage is not in ⟨D⟩'s current text" — said before anyone follows it
- * (foundations §2.3).
+ * (foundations §2.3); carrying its link and its end's key (LK's `endKey`):
+ * the end whose card a click on it opens (APP-INPUT).
  * @param {Shown} s
  * @param {ArticleView} v
  */
 function symHTML(s, v) {
   const title = (s.link.type || '') + (v.floats(s) ? ' · ' + t('F.floating', { D: s.far }) : '');
-  return `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"${control(v.scene)} title="${esc(title)}">⟡</span>`;
+  return `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" data-end="${esc(s.key)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"${control(v.scene)} title="${esc(title)}">⟡</span>`;
 }
 
 /**
  * A stretch of a paragraph's text as HTML: its links marked by their depth
  * in the one mark they merge into — its hue, its value, `visited` where it is
- * drawn lighter — its run's ground and, where it opens its run, the run's
+ * drawn lighter — carrying the ends marking it, their links and their keys
+ * (LK's `endKey`) in one order, the first the end whose card a click on it
+ * opens (APP-INPUT); its run's ground and, where it opens its run, the run's
  * boundary, hairline and C-33's mark — the hairline naming the run's origin
  * and carrying the run's own positions in this document, the passage its
  * gesture to the source carries (foundations §2.1; §2.3's carry rule) — then
@@ -631,7 +636,7 @@ function segHTML(s, v) {
   const attrs = [];
   if (s.mark) {
     cls.push('lip', 'depth' + Math.min(3, s.marks.length));
-    attrs.push(`style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"`, `data-links="${s.marks.map((m) => m.link.addr).join(' ')}"`);
+    attrs.push(`style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"`, `data-links="${s.marks.map((m) => m.link.addr).join(' ')}"`, `data-ends="${s.marks.map((m) => esc(m.key)).join(' ')}"`);
     if (s.mark.value < 1) cls.push('visited');
   }
   const syms = s.syms.map((x) => symHTML(x, v)).join('');

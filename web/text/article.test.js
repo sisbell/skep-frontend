@@ -35,7 +35,11 @@
 // touches; after a run's chrome where the word runs into its hairline with no
 // break between them; an end standing in two stretches marked in both, the
 // text between them not, its one symbol after its last stretch (a mutant
-// that marks or stands it by the first stretch alone turns red); a symbol
+// that marks or stands it by the first stretch alone turns red); each mark
+// carrying the ends it draws — a symbol its link and its end's key, a
+// stretch the links and the keys of the ends marking it, in one order — so a
+// link's two ends in one paragraph are two marks a click tells apart (a
+// mutant that writes the link alone turns red); a symbol
 // whose far end floats titled with "its passage is not in ⟨D⟩'s current
 // text" (a mutant that leaves the title its type alone turns red). The plan
 // the canvas's bars are laid out from: the head's three lines, a fourth where
@@ -271,8 +275,8 @@ test('a record atom renders as the record it is; a heading as formatting', () =>
   assert.ok(h.includes('<h3 class="sp blk-para"'));
 });
 
-/** a link marked at a span of the first edition, as LK hands it in */
-const shown = (/** @type {number} */ pos, /** @type {number} */ width) => /** @type {any} */ ({ link: { addr: 'L' + pos, type: null }, end: 'from', pos, width, runs: [{ pos, width }], mark: { hue: '#7fb2ff', linker: 'you', form: [], value: 1, own: true }, linker: 'you', far: '1.0.1.0.4', farEnd: null, farWhole: true });
+/** a link marked at a span of the first edition, as LK hands it in, its end's key the span's */
+const shown = (/** @type {number} */ pos, /** @type {number} */ width) => /** @type {any} */ ({ link: { addr: 'L' + pos, type: null }, end: 'from', key: `${pos}+${width}`, pos, width, runs: [{ pos, width }], mark: { hue: '#7fb2ff', linker: 'you', form: [], value: 1, own: true }, linker: 'you', far: '1.0.1.0.4', farEnd: null, farWhole: true });
 
 test('the plan\'s head is the article\'s: three lines, a fourth where links touch the document', () => {
   const d = doc({ blocks: [{ pos: 1, width: 20, kind: 'para', text: 'abcdefghijklmnopqrst', origin: null }] });
@@ -370,6 +374,18 @@ test('an end standing in two stretches is marked in both, the text between them 
   const html = articleHTML(d, v, '1.0.1');
   assert.deepEqual(html.match(/<span class="seg lip[^"]*"[^>]*>[^<]*<\/span>/g)?.map((x) => x.replace(/<[^>]*>/g, '')), ['two', 'four'], 'marked in both stretches alone');
   assert.equal(symsIn(html).length, 1);
+});
+
+test('each mark carries the ends it draws: a symbol its link and its end\'s key, a stretch the links and the keys of the ends marking it, in one order — a link\'s two ends in one paragraph two marks a click tells apart', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 18, kind: 'para', text: 'one two three four', origin: null }] });
+  // one link's two ends, at "two" and at "four", and another link's end over "three four"
+  const L = { addr: 'L', type: null };
+  const two = { ...shown(5, 3), link: L }, four = { ...shown(15, 4), link: L }, other = shown(9, 10);
+  const html = articleHTML(d, view({ marks: [two, four, other], symbols: [two, four] }), '1.0.1');
+  const syms = [...html.matchAll(/<span class="sym [^"]*" data-link="([^"]*)" data-end="([^"]*)"/g)].map((m) => m.slice(1));
+  assert.deepEqual(syms, [['L', two.key], ['L', four.key]], `each symbol its own end's: ${html}`);
+  const lips = [...html.matchAll(/<span class="seg lip[^"]*" style="[^"]*" data-links="([^"]*)" data-ends="([^"]*)">([^<]*)<\/span>/g)].map((m) => m.slice(1));
+  assert.deepEqual(lips, [['L', two.key, 'two'], ['L9', other.key, 'three '], ['L L9', `${four.key} ${other.key}`, 'four']], 'each stretch the ends marking it, their keys in the order it names their links');
 });
 
 test('a symbol whose far end floats is titled with its type and "its passage is not in ⟨D⟩\'s current text"; one whose far end stands somewhere, with its type alone', () => {

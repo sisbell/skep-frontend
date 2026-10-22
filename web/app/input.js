@@ -28,7 +28,11 @@
 // (foundations §2.1); below the readable threshold a document is a place
 // wherever the pointer falls, bars or mounted text alike — a teleport (a
 // trail push); at the readable threshold and above its text takes the click:
-// a symbol opens its card; the presence indicator's ⟡ asks to see the links;
+// a symbol opens the anatomy card of the link's end it stands for, and a
+// stretch links mark that of the first end marking it — each mark carries
+// its ends by their links and their keys (LK's `endKey`; `endAt`), so of a
+// link with two ends in one article the card is the clicked end's (B1-S5);
+// the presence indicator's ⟡ asks to see the links;
 // a run's hairline label goes to its source carrying the run, marked where
 // the source's current text holds it (foundations §2.3's carry rule; P43);
 // the scene-offer opens the scene;
@@ -119,7 +123,7 @@ export function attach(els) {
       e.stopPropagation();
       const se = /** @type {HTMLElement} */ (sym);
       if (se.dataset.reveal) { LINKS.show(se.dataset.reveal); return; }
-      if (se.dataset.link) { const art = se.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const s = LK.shown(addr).find((x) => x.link.addr === se.dataset.link); if (s) ANATOMY.open(s, se, false); return; }
+      if (se.dataset.link) { const s = endAt(se, se.dataset.link, se.dataset.end || ''); if (s) ANATOMY.open(s, se, false); return; }
     }
     const hair = target.closest('.hairline');
     if (hair) { e.stopPropagation(); const h = /** @type {HTMLElement} */ (hair); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: runOf(h) }); return; }
@@ -131,7 +135,7 @@ export function attach(els) {
     const span = LAYER.spanOfSelection();
     if (span && !sameSpan(span, LAYER.placedSpan())) { e.stopPropagation(); SEL.select(span.addr, span.pos, span.width); return; }
     const marked = target.closest('.lip');
-    if (marked) { e.stopPropagation(); const art = marked.closest('article'); const addr = art ? /** @type {HTMLElement} */ (art).dataset.addr || '' : ''; const first = (/** @type {HTMLElement} */ (marked).dataset.links || '').split(' ')[0]; const s = LK.shown(addr).find((x) => x.link.addr === first); if (s) { ANATOMY.open(s, /** @type {HTMLElement} */ (marked), false); return; } }
+    if (marked) { e.stopPropagation(); const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { ANATOMY.open(s, m, false); return; } }
     const sp = target.closest('.sp');
     if (sp) {
       e.stopPropagation();
@@ -177,6 +181,22 @@ function runOf(at) {
   const art = /** @type {HTMLElement | null} */ (at.closest('article'));
   const addr = art ? art.dataset.addr || '' : '', pos = Number(at.dataset.pos), width = Number(at.dataset.width);
   return addr && pos > 0 && width > 0 ? { addr, pos, width } : null;
+}
+
+/**
+ * The end of a link a mark in an article draws, as LK draws it at the
+ * article's document now (`shown`): the one whose link and key (LK's
+ * `endKey`) the mark carries, which T-ARTICLE sets on it — so a click opens
+ * the card of the end clicked, a link's other end in the same text being
+ * another mark. Undefined where the document draws no such end now.
+ * @param {HTMLElement} mark a link's symbol, or a stretch of text its link marks
+ * @param {string} link the link's address
+ * @param {string} key the end's key
+ * @returns {import('../links/links.js').Shown | undefined}
+ */
+function endAt(mark, link, key) {
+  const art = /** @type {HTMLElement | null} */ (mark.closest('article'));
+  return LK.shown(art ? art.dataset.addr || '' : '').find((s) => s.link.addr === link && s.key === key);
 }
 
 /** the platform's selection, where it stands in a mounted article, becomes the page's (R11): view state alone changes; one the page already holds, or placed itself, is left as it is — so a slot's chord that selects the walk's block before it asks shows no card of the selection while its answer reads, which would end that answer's opening (O-HOST's) */
