@@ -33,8 +33,10 @@
 // your LOCAL notebook · http://127.0.0.1:⟨P⟩"; foundations §3.1's line, §3.3
 // state 3, E16 (a′)) — the session's own `writes` deciding which, never a key
 // bound at this board, which speaks for no one session; STATE 1 where no
-// session stands ("reading as a guest" with its one act, sign in — the
-// session's refusal faced there), the death arm where the session died (C-137's
+// session stands ("reading as a guest", the board's origin where `boards()`
+// found a board and none where it found none, and the venue, §3.3 state 1's
+// "the board and venue shown"; its one act, sign in — the session's refusal
+// faced there), the death arm where the session died (C-137's
 // words) — never at a restart the shell re-opened, whose session M-PUMP
 // takes in the ended one's place (client.md §4b.2) — the other states only
 // as the provider's events bring them; the DAEMON's
@@ -176,7 +178,8 @@ const SIGN_IN = `<button id="line-signin" data-act="signin">${esc(t('F.sign-in')
 /** the acting-as segment's words, and its state among foundations §3.3's seven */
 export function actingSegment() {
   const s = REC.session(), b = REC.board(), dev = REC.device(), dead = REC.deathReason(), refused = REC.sessionRefused();
-  const origin = b ? b.origin : 'http://127.0.0.1:8642';
+  // the board's origin where `boards()` found one; the boot opens a session only on a board it found
+  const origin = b ? b.origin : '';
   if (!PORT.hasAdapter()) return { html: `<span data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`, state: 0, words: t('L.no-adapter') };
   if (s && !s.writes) {
     const words = t('F.keyless-session', { account: s.account || '', origin });
@@ -192,7 +195,7 @@ export function actingSegment() {
     const id = arm === 'mode' ? 'C-137.mode' : arm === 'retired' ? 'C-137.self' : 'C-137.signed-out';
     return { html: `<span data-string="${id}">${esc(words)}</span> ${SIGN_IN}`, state: 5, words };
   }
-  const guest = `<span data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span> · ${esc(origin)} · <span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span> ${SIGN_IN}`;
+  const guest = `<span data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span>${origin ? ` · ${esc(origin)}` : ''} · <span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span> ${SIGN_IN}`;
   return { html: guest + (refused ? ` <span class="dim" data-string="L.session-refused">${esc(t('L.session-refused', { name: refused.name }))}</span>` : ''), state: refused && refused.name === 'no_key' ? 3 : 1, words: t('B1.guest-line') };
 }
 

@@ -25,6 +25,11 @@
 // its id in the guest's line and in the death arm's, as Back does, so the
 // session's face standing at it finds it again as the line is rebuilt
 // (O-HOST's anchor) — a mutant that drops the id from either arm turns red.
+// The guest line names the board's origin where `boards()` found a board, and
+// no origin where it found none (foundations §3.3 state 1: "the board and
+// venue shown") — a mutant that names an origin the page never found, or
+// leaves the origin's slot empty between its separators, or drops the origin
+// where a board stands, turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -136,6 +141,23 @@ test('the sign-in act bears its id in the guest\'s line and in the death arm\'s,
   REC.setSession(was);
   assert.deepEqual([guest.state, dead.state], [1, 5], 'a guest\'s line, then the death arm');
   for (const s of [guest, dead]) assert.equal((s.html.match(/<button[^>]*data-act="signin"[^>]*>/g) || []).join(), '<button id="line-signin" data-act="signin">', `state ${s.state}: one sign-in act, bearing its id`);
+});
+
+test('the guest line names the board\'s origin where `boards()` found a board, and no origin where it found none (foundations §3.1; §3.3 state 1, "the board and venue shown")', () => {
+  const was = { board: REC.board(), session: REC.session() };
+  /** the segment's words as the line shows them, its tags taken out */
+  const shown = (/** @type {string} */ html) => html.replace(/<[^>]*>/g, '');
+  try {
+    REC.setSession(null);
+    REC.setBoard(null);
+    const none = LINE.actingSegment();
+    assert.deepEqual([none.state, shown(none.html)], [1, `${t('B1.guest-line')} · ${t('F.venue.notebook')} ${t('F.sign-in')}`], 'no board found: the guest line and the venue, no origin and no empty slot for one');
+    REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:9000' });
+    const found = LINE.actingSegment();
+    assert.deepEqual([found.state, shown(found.html)], [1, `${t('B1.guest-line')} · http://127.0.0.1:9000 · ${t('F.venue.notebook')} ${t('F.sign-in')}`], 'a board found: its origin between the guest line and the venue');
+  } finally {
+    REC.setBoard(was.board); REC.setSession(was.session);
+  }
 });
 
 test('the session\'s own `writes` decides the acting-as segment: the keyless session reads state 3\'s words over any key store, a session that writes reads state 2 with the label of the key it is opened with (foundations §3.1, §3.3; E16 (a′))', () => {
