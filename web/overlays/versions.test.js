@@ -10,10 +10,13 @@
 // whose probe of the chain meets a member the board did not answer records no
 // count, so the list opened again once the board answers probes the chain to
 // its end (a mutant that ends the chain at that member records a count cut
-// short and turns red). Opened at the corner's version statement, the list
-// stands at it, the document's box beside it — its top-left, the side the
-// corner stands on — where it stands once T-LAYER rewrites the corner or takes
-// it down (a mutant that anchors it at the statement alone turns red). The
+// short and turns red). The list stands at the act's site: opened by a
+// floating end's face, where the face stood, the head landed on — never at
+// the viewport's corner (a mutant whose face hands the list no place turns
+// red); opened by the corner's act at its version statement, at the
+// statement, the document's box beside it — its top-left, the side the corner
+// stands on — where it stands once T-LAYER rewrites the corner or takes it
+// down (a mutant that anchors it at the statement alone turns red). The
 // overlay host stands on a stand-in element, the platform's document a
 // stand-in beside it, so the rows are read from what the host wrote.
 import { test, before } from 'node:test';
@@ -27,6 +30,7 @@ import * as CAM from '../plane/camera.js';
 import * as GO from '../nav/go.js';
 import { docBox } from '../plane/projection.js';
 import * as HOST from './host.js';
+import * as FACES from './faces.js';
 import * as VERSIONS from './versions.js';
 
 const T = '1.0.1.0.43', T1 = T + '.1', T2 = T + '.2';
@@ -79,6 +83,7 @@ const rows = () => [...hostEl.innerHTML.matchAll(/data-run="read(\d+)"[^>]*>[^<]
 before(async () => {
   REC._reset();
   globalThis.document = /** @type {any} */ ({ activeElement: null, body: null });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
   HOST.attach(/** @type {any} */ (hostEl));
   fake = FAKE.create(script);
   PORT.boot(fake);
@@ -116,10 +121,34 @@ test('a list whose probe of the chain the board did not answer records no count,
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('opened at the corner\'s version statement, the list stands at it, the document\'s box beside it — its top-left, the side the corner stands on — where it stands once the corner is rewritten or taken down', async () => {
-  /** the statement in the corner's element, as the corner's act hands it to the list */
+/** an act's list read to its end: the host's opening pending no more */
+async function opened() {
+  for (let i = 0; i < 200 && HOST.pending(); i++) await new Promise((r) => setTimeout(r, 0));
+  assert.equal(HOST.pending(), false, 'the list\'s reads answered');
+}
+
+test('opened from a floating end\'s face, the list stands where the face stood — the head landed on — never at the viewport\'s corner', async () => {
+  /** the head a follow of a floating end landed on in U, as N-GO hands it to the face */
+  const head = { span: { addr: U, pos: 1 } };
+  FACES.floating(U, head);
+  const face = HOST.currentState();
+  assert.deepEqual([face?.id, face?.anchor], ['face:floating', head], 'the face at the head');
+  const act = face && face.acts ? face.acts['a0'] : null;
+  assert.ok(act, 'the face offers its act');
+  act(/** @type {any} */ (hostEl), false);
+  await opened();
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['versions:' + U, head], 'the list in the face\'s place, at the head');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('opened by the corner\'s act at its version statement, the list stands at it, the document\'s box beside it — its top-left, the side the corner stands on — where it stands once the corner is rewritten or taken down', async () => {
+  /** the statement in the corner's element, out of the page once the corner is rewritten */
   const statement = { isConnected: false };
-  await VERSIONS.open(T, HELD.pos, /** @type {any} */ (statement));
+  /** the corner's element: its document named, its version statement in it */
+  const corner = { dataset: { corner: T }, querySelector: (/** @type {string} */ s) => (s === '.version' ? statement : null) };
+  assert.equal(VERSIONS.fromCorner(/** @type {any} */ (corner), { addr: T, ...HELD }), true, 'the corner has the act');
+  await opened();
   const b = docBox(T);
   assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['versions:' + T, { el: statement, world: { x: b.x, y: b.y } }]);
   HOST.dismiss();

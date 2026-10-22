@@ -15,10 +15,13 @@
 // version row; A-39), and marked whole / in part / not at all — and each
 // offering "read side by side", the scene opened on the held passage, which
 // SC sets level with what the member holds of it. Each member is one row: its
-// acts and its mark in columns the rows share. Opened by the corner's act, it
-// stands beneath the version statement, and at the document's box, on the
-// left where the corner stands, once T-LAYER rewrites the corner or takes it
-// down (O-HOST's anchor). The list takes the focus where
+// acts and its mark in columns the rows share. It stands at the act's site,
+// which the act that opens it hands in (O-HOST's anchor; foundations §3.1):
+// opened by the corner's act, beneath the version statement, and at the
+// document's box, on the left where the corner stands, once T-LAYER rewrites
+// the corner or takes it down; opened by a floating end's face (O-FACES'
+// `floating`), where the face stood, at the head landed on, and following it
+// as the camera moves. The list takes the focus where
 // a key made the act — Enter at the corner — on its CURRENT member's read
 // act, and never where a click on the statement did (D5 §4 rule 4; the focus
 // record's rules 13 and 16). It opens on its reads (O-HOST's `opening`):
@@ -41,6 +44,8 @@ import { versionAddress, memberOf, documentOf } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
+/** @typedef {import('./host.js').Anchor} Anchor */
+
 /**
  * A member's own content extent, read for its row (§2.1's version row: one
  * span read per member, A-39) and kept nowhere: a member the model held would
@@ -60,7 +65,7 @@ async function extentOf(member) {
  * Open the list for a document (a member address answers its document's).
  * @param {string} addr
  * @param {number | null} pos the held passage's first position, or null for the document's first block
- * @param {HTMLElement | null} anchor the element the act was made at — the corner's version statement — beneath which the list stands while it stands in the page, and at the document's box, on the left where the corner stands, once T-LAYER rewrites the corner or takes it down (O-HOST's anchor); null where the act was made at none
+ * @param {Anchor | null} anchor where the list stands, the act's site (O-HOST's anchor): the corner's version statement, the document's box beside it (`fromCorner`); a floating end's face's place, the head landed on (O-FACES' `floating`); null where the act was made at no place
  * @param {number | null} [width] the held passage's positions; null holds the block at `pos` whole
  * @param {boolean} [byKey] a key made the act: the list takes the focus on its current member
  * @returns {Promise<void>} settled once the list shows, or nothing will
@@ -106,8 +111,7 @@ export function open(addr, pos, anchor, width = null, byKey = false) {
       acts['read' + r.k] = (_el, byKey) => GO.leapTo(versionAddress(trunk, r.k), { carry: held ? { addr: trunk, pos: held.pos, width: held.width } : null, how: 'leap', byKey });
       acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
     }
-    const box = docBox(trunk);
-    HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor: anchor ? { el: anchor, world: { x: box.x, y: box.y } } : null, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });
+    HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });
   });
 }
 
@@ -127,10 +131,12 @@ function firstInView(addr) {
 
 /**
  * The corner's act (D5 K-57), the one a click on the version statement and
- * Enter at the corner both take: the list for the corner's document, anchored
- * at the statement, holding the selection where it stands in that document,
- * else the first span in view, whole. A corner with no version statement — a
- * draft's, whose chip's list is a later lane's — has no act.
+ * Enter at the corner both take: the list for the corner's document, standing
+ * beneath the statement while it stands in the page, and at the document's
+ * box — its top-left, the side the corner stands on — once T-LAYER rewrites
+ * the corner or takes it down, holding the selection where it stands in that
+ * document, else the first span in view, whole. A corner with no version
+ * statement — a draft's, whose chip's list is a later lane's — has no act.
  * @param {HTMLElement} corner the corner's element (`data-corner` names its document)
  * @param {{addr: string, pos: number, width: number} | null} selection the selection, wherever it stands
  * @param {boolean} [byKey] a key made the act (Enter at the corner): the list takes the focus
@@ -142,6 +148,7 @@ export function fromCorner(corner, selection, byKey = false) {
   if (!addr || !statement) return false;
   const held = selection && selection.addr === addr ? selection : null;
   const inView = held ? null : firstInView(addr);
-  void open(addr, held ? held.pos : inView ? inView.pos : null, statement, held ? held.width : null, byKey);
+  const box = docBox(documentOf(addr) || addr);
+  void open(addr, held ? held.pos : inView ? inView.pos : null, { el: statement, world: { x: box.x, y: box.y } }, held ? held.width : null, byKey);
   return true;
 }

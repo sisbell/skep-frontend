@@ -167,17 +167,20 @@ export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: n
  * at the landing N-GO makes at the document's head, whether a followed
  * link's end or a carried passage brought the reader there (the carry rule's
  * empty case, P43). Where `offer` stands, the act opens the versions list to
- * read the last member that holds it; a carried passage's landing offers
+ * read the last member that holds it, the list taking the face's place where
+ * the face stood — the head landed on — and following it as the camera moves
+ * (foundations §3.1: at the act's site); a carried passage's landing offers
  * none, for the list holds a passage of its own document and the carried one
  * is another's.
  * @param {string} far the document whose text holds none of the passage
- * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the head landed on
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the head landed on: where the face stands, and the list its act opens
  * @param {boolean} [offer] the face offers the versions list
  */
 export function floating(far, anchor, offer = true) {
   const k = memberOf(far);
+  const at = toAnchor(anchor);
   const words = k != null ? { id: 'F.floating.member', text: t('F.floating.member', { k }) } : { id: 'F.floating', text: t('F.floating', { D: far }) };
-  HOST.show({ kind: 'face', id: 'face:floating', anchor: toAnchor(anchor), acts: offer ? { a0: (_el, byKey) => VERSIONS.open(far, null, null, null, byKey) } : {},
+  HOST.show({ kind: 'face', id: 'face:floating', anchor: at, acts: offer ? { a0: (_el, byKey) => VERSIONS.open(far, null, at, null, byKey) } : {},
     html: faceHTML({ ...words, acts: offer ? [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] : [] }) });
 }
 
