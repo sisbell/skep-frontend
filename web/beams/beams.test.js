@@ -14,7 +14,9 @@
 // that keeps the first meeting's mark turns red), the person's own in their
 // hue, one met at one end alone as that end marks it. Then a beam's ends
 // over a laid-out geometry: it leaves the near block's right edge level
-// with the span's own line nearest the far end, never the block's middle; a
+// with the span's own line nearest the far end, never the block's middle — a
+// block parted across two columns the right edge of the part holding that
+// line (a mutant taking the two parts' bounds turns red); a
 // mounted far end in view takes the far span's own line nearest the start, at
 // the far block's left edge, where its stroke ends; a whole-work end, the far
 // article's first block; a mounted far end outside the visible view — its
@@ -153,7 +155,7 @@ function geometry(/** @type {{farMounted: boolean, centre: {x: number, y: number
   const far = o.far || FAR, farBlock = o.farBlock || FAR_BLOCK;
   return {
     lines: (addr, pos, width) => (addr === D && pos === 50 && width === 10 ? NEAR : addr === H && o.farMounted && pos === 1 && width === 5 ? far : []),
-    block: (addr, pos) => (addr === D && pos >= 50 && pos < 60 ? NEAR_BLOCK : addr === H && o.farMounted && pos >= 1 && pos < 6 ? farBlock : null),
+    block: (addr, pos) => (addr === D && pos >= 50 && pos < 60 ? [NEAR_BLOCK] : addr === H && o.farMounted && pos >= 1 && pos < 6 ? [farBlock] : []),
     first: (addr) => (addr === H && o.farMounted ? farBlock : null),
     mounted: (addr) => addr === D || (addr === H && o.farMounted),
     centre: () => o.centre,
@@ -164,6 +166,17 @@ function geometry(/** @type {{farMounted: boolean, centre: {x: number, y: number
 const SEEN = { x: 0, y: 25, w: 1000, h: 775 };
 const inside = (/** @type {{x: number, y: number, w: number, h: number}} */ a, /** @type {typeof SEEN} */ b) => a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h;
 const own = () => /** @type {import('../links/links.js').Shown} */ (LK.beams(D).find((s) => s.link.addr === OWN));
+
+test('a block parted across two columns sends each line\'s beam from the right edge of the part that holds the line — never the edge of the two parts taken together (issue #15)', () => {
+  // the span's first line in the block's part in the first column, its second at the head of the next column's part
+  const parts = [{ x: 100, y: 90, w: 400, h: 30 }, { x: 560, y: 20, w: 400, h: 40 }];
+  const lines = [{ x: 300, y: 100, w: 200, h: 15 }, { x: 560, y: 25, w: 80, h: 15 }];
+  const g = { ...geometry({ farMounted: false, centre: { x: 50, y: 700 } }), lines: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => (addr === D && pos === 50 && width === 10 ? lines : []), block: (/** @type {string} */ addr) => (addr === D ? parts : []) };
+  const first = beamOf(own(), g);
+  assert.deepEqual(first && [first.from, first.line], [{ x: 500, y: 107.5 }, lines[0]], 'the far end below and to the left: the first column\'s line, from the first part\'s edge');
+  const second = beamOf(own(), { ...g, centre: () => ({ x: 1200, y: -200 }) });
+  assert.deepEqual(second && [second.from, second.line], [{ x: 960, y: 32.5 }, lines[1]], 'the far end above and to the right: the second column\'s line, from the second part\'s edge');
+});
 
 test('a beam leaves the near block\'s right edge level with the middle of its span\'s own line nearest the far end — never the block\'s middle', () => {
   const low = beamOf(own(), geometry({ farMounted: false, centre: { x: 50, y: 700 } }));
@@ -250,7 +263,7 @@ test('a bundle\'s label stands nowhere it would not stand whole in the visible v
   // D's span on a line under the one line, at the viewport's top; H unmounted, its box above the viewport: the stroke bound upward leaves
   // the visible view at once, so its cut stands at its start, under the line
   const top = [{ x: 300, y: 5, w: 200, h: 15 }];
-  const g = { ...geometry({ farMounted: false, centre: { x: 900, y: -300 } }), lines: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => (addr === D && pos === 50 && width === 10 ? top : []), block: (/** @type {string} */ addr) => (addr === D ? { x: 100, y: 0, w: 400, h: 40 } : null) };
+  const g = { ...geometry({ farMounted: false, centre: { x: 900, y: -300 } }), lines: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => (addr === D && pos === 50 && width === 10 ? top : []), block: (/** @type {string} */ addr) => (addr === D ? [{ x: 100, y: 0, w: 400, h: 40 }] : []) };
   const b = beamOf(own(), g);
   assert.ok(b && b.stub);
   const cut = b.end;
@@ -275,7 +288,7 @@ test('a far end stands where `project` places its passage now: the beam ends at 
   const MOVED = [{ x: 640, y: 440, w: 60, h: 15 }];
   const base = geometry({ farMounted: true, centre: { x: 750, y: 415 } });
   /** @type {import('./beams.js').Geometry} */
-  const g = { ...base, lines: (addr, pos, width) => (addr === H && pos === 9 && width === 3 ? MOVED : base.lines(addr, pos, width)), block: (addr, pos) => (addr === H && pos >= 9 && pos < 12 ? FAR_BLOCK : base.block(addr, pos)) };
+  const g = { ...base, lines: (addr, pos, width) => (addr === H && pos === 9 && width === 3 ? MOVED : base.lines(addr, pos, width)), block: (addr, pos) => (addr === H && pos >= 9 && pos < 12 ? [FAR_BLOCK] : base.block(addr, pos)) };
   REC.takeProjection(OWN, 2, H, [{ pos: 9, width: 3 }]);
   const moved = beamOf(own(), g);
   assert.deepEqual(moved && [moved.to, moved.stub, moved.end], [{ x: 600, y: 447.5 }, false, { x: 600, y: 447.5 }], 'at the moved passage\'s line, from the far block\'s left edge');

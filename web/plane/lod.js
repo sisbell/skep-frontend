@@ -1,13 +1,16 @@
 // P-LOD — the level-of-detail bands (the structure record §3.2 "P-LOD").
 // Layer 2, pure. Carries the wireframe's §7 (S3's bands, unchanged) and S1's
-// mount thresholds (em 6.5 / 5.5, below the canvas's readable 8 — S1 Q7).
+// mount thresholds (em 6.5 / 5.5, below the canvas's readable 8 — S1 Q7). The
+// text bands read the plane's standard type (P-LAY's STANDARD_FS), the size
+// every document is set at until its columns fill its room.
 // The continuations' band (foundations §2.1; P44): an account's continuation
 // whose documents the scale draws smaller than the far band's upper edge is
 // drawn as one mark, crossfading with its documents' boxes through the far
 // band as the clusters crossfade with the extents.
 // Rules: FP-1, FP-2, FP-7.
 
-import { DOC_W, REP_FS, CELL, G, LEAF, DEPTH_SOUND } from './projection.js';
+import { DOC_W, CELL, G, LEAF, DEPTH_SOUND } from './projection.js';
+import { STANDARD_FS } from './layout.js';
 
 /** document extent px: cluster ↔ extent crossfade band */
 export const LOD_FAR_LO = 10, LOD_FAR_HI = 18;
@@ -20,7 +23,7 @@ export const MOUNT_EM = 6.5, UNMOUNT_EM = 5.5, MAX_MOUNTED = 8;
  * @typedef {Object} Lod
  * @property {'far' | 'far~mid' | 'mid' | 'mid~near' | 'near'} name
  * @property {number} docPx a depth-0 document's extent in px
- * @property {number} fsPx the representative em in px
+ * @property {number} fsPx the standard type's em in px (P-LAY's STANDARD_FS)
  * @property {number} fade 0–1 through a crossfade band
  */
 
@@ -29,7 +32,7 @@ export const MOUNT_EM = 6.5, UNMOUNT_EM = 5.5, MAX_MOUNTED = 8;
  * @returns {Lod}
  */
 export function lodOf(scale) {
-  const docPx = DOC_W * scale, fsPx = REP_FS * scale;
+  const docPx = DOC_W * scale, fsPx = STANDARD_FS * scale;
   if (docPx < LOD_FAR_LO) return { name: 'far', docPx, fsPx, fade: 0 };
   if (docPx < LOD_FAR_HI) return { name: 'far~mid', docPx, fsPx, fade: (docPx - LOD_FAR_LO) / (LOD_FAR_HI - LOD_FAR_LO) };
   if (fsPx < LOD_TXT_LO) return { name: 'mid', docPx, fsPx, fade: 0 };

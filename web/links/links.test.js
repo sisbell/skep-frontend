@@ -27,7 +27,7 @@
 // document's place; the most a reveal can set in a document's text, which no
 // stage, toggle or lens moves or exceeds. Each end drawn where its bytes
 // stand now, through the held image, never at the position its slot stores
-// — marks, symbols, the others' count and the face's bound moved with an
+// — marks, symbols, the others' count and the size's bound moved with an
 // edit (a mutant that draws at the stored ordinal, or counts by it, turns
 // red), each carrying its key, the span its slot stores, so a link's two
 // ends at one document are told apart and keep their keys through an edit
@@ -41,7 +41,7 @@
 // document named whole. An end drawn at every document whose text holds its
 // bytes, whichever document minted them: a passage a document transcludes
 // marked there, counted at its paragraph, in the toggle's count and in the
-// face's bound, its box drawing no connection for it (a mutant joining a
+// size's bound, its box drawing no connection for it (a mutant joining a
 // document by the ends its text holds turns red), and the bytes a member
 // shares with its trunk drawn at the member where they stand in its text (a
 // mutant that draws an end at the document that minted its bytes alone
@@ -323,7 +323,7 @@ test('an end stands where its bytes stand now, never at the position its slot st
   LK.reveal(D, 2);
   assert.deepEqual(LK.symbols(D).map((s) => s.pos), [70], 'its symbol there');
   assert.deepEqual(LK.shownAt(D, { pos: 50, width: 10 }), [], 'nothing drawn at the stored position');
-  assert.deepEqual(LK.utmost(D).shown.map((s) => [s.link.addr, s.pos]), [[D + '.0.2.1', 70], [OTHER_HOME + '.0.2.1', 23]], 'the face fitted to where they stand');
+  assert.deepEqual(LK.utmost(D).shown.map((s) => [s.link.addr, s.pos]), [[D + '.0.2.1', 70], [OTHER_HOME + '.0.2.1', 23]], 'the size\'s bound where they stand');
 });
 
 test('each end drawn carries its key, the span its slot stores (`endKey`): a link\'s two ends at one document told apart, each keeping its key wherever an edit moves it', () => {
@@ -382,7 +382,7 @@ test('an end stands at every document whose text holds its bytes: a passage D tr
   const blocks = REC.doc(D).blocks;
   assert.deepEqual(blocks.map((b) => LK.countAt(D, b).n), [1, 0, 1], 'S\'s owner\'s link, another\'s at D, counted at the transcluded paragraph, as the other\'s link into D\'s own first one is');
   assert.deepEqual(LK.othersTouching(D).map((l) => l.addr).sort(), [OTHER_HOME + '.0.2.1', THEIRS].sort(), 'and in the toggle\'s count');
-  assert.deepEqual(LK.utmost(D).shown.filter((s) => s.link.addr === MINE || s.link.addr === THEIRS).map((s) => [s.link.addr, s.pos]), [[MINE, 103], [THEIRS, 110]], 'the face fitted to both');
+  assert.deepEqual(LK.utmost(D).shown.filter((s) => s.link.addr === MINE || s.link.addr === THEIRS).map((s) => [s.link.addr, s.pos]), [[MINE, 103], [THEIRS, 110]], 'the size\'s bound holding both');
   LK.setOthers(D, true);
   assert.deepEqual(at(), [[MINE, D, 'from', 103, 4, 'you'], [THEIRS, D, 'from', 110, 5, 'others']], 'the toggle on: S\'s owner\'s shown there too, attributed as another\'s');
   assert.equal(LK.countAt(D, blocks[2]).n, 0, 'and no longer counted');

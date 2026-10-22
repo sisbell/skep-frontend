@@ -103,7 +103,7 @@ import * as F from './frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell, docBox } from '../plane/projection.js';
-import { metricsFor } from '../plane/layout.js';
+import { estimate, estimatedSpan } from '../plane/layout.js';
 
 const D = '1.0.1.0.3';
 const script = {
@@ -170,6 +170,17 @@ test('a session-died ends the page\'s own session alone: a guest, or a page sign
 });
 
 /** the index a page reads at boot: one edition of 1.0.1's, its count, the index's state `arm` */
+/**
+ * The camera over a document's first column at its reading em, by P-LAY's
+ * estimate of its extent — the size the view's reads are made at, never
+ * smaller than the one its text is set at.
+ * @param {string} addr
+ * @param {number} extent
+ */
+function readAt(addr, extent) {
+  const box = docBox(addr), e = estimate(extent, box), c = e.columns[0];
+  CAM.setViewport(1440, 900); CAM.reach(e.fs); CAM.set(CAM.viewAt({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }, e.fs));
+}
 const indexAt = (/** @type {string} */ arm) => /** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm, floor: 8265 } });
 /** a feed row of class `cls` minting the document `doc` */
 const minting = (/** @type {string} */ doc, /** @type {'published' | 'drafts'} */ cls) => (cls === 'drafts'
@@ -725,8 +736,7 @@ test('the view\'s probe of a chain records no count where the board did not answ
   PUMP.forget(D);
   await PUMP.loadWhole(D);
   // D read at its reading em, where the view probes its chain
-  const box = docBox(D), fs = metricsFor(30, box).fs;
-  CAM.setViewport(1440, 900); CAM.reach(fs); CAM.set(CAM.viewForDoc(box, fs));
+  readAt(D, 30);
   PUMP.pump();
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual([third.asks(), REC.doc(D).members], [1, null], 'D.2 answered and D.3 not: no count recorded, never a chain cut short at two');
@@ -774,8 +784,7 @@ test('at reading scale the view asks where each far end its read links send from
   REC.takeProjection(HELD, 2, FAR, [{ pos: 12, width: 2 }]);
   const projections = () => fake.asked.filter((k) => k.includes('"op":"project"'));
   // D at its reading em
-  const box = docBox(D), fs = metricsFor(30, box).fs;
-  CAM.setViewport(1440, 900); CAM.reach(fs); CAM.set(CAM.viewForDoc(box, fs));
+  readAt(D, 30);
   PUMP.pump();
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(projections().sort(), [F.project(MOVED, 2, FAR), F.project(FLOATS, 2, FAR), F.project(TO_GHOST, 2, GHOST)].map((frame) => FAKE.keyOf('op', { frame })).sort(), 'one per far end: none for the citation of FAR whole, none into the document a read found unregistered, none whose place is held');
@@ -815,13 +824,55 @@ test('at reading scale the view asks where the far end of a link on bytes a docu
   await PUMP.loadWhole(D);
   assert.deepEqual(REC.doc(D).origins, [{ pos: 27, width: 4, doc: S }], 'the four bytes D transcludes from S');
   // D at its reading em
-  const box = docBox(D), fs = metricsFor(30, box).fs;
-  CAM.setViewport(1440, 900); CAM.reach(fs); CAM.set(CAM.viewForDoc(box, fs));
+  readAt(D, 30);
   PUMP.pump();
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(fake.asked.filter((k) => k.includes('"op":"project"')), [FAKE.keyOf('op', { frame: F.project(L, 2, FAR) })], 'its far end asked once: the link\'s near end lies in bytes S minted, which D\'s text holds');
   assert.deepEqual(REC.projection(L, 2, FAR), [{ pos: 40, width: 4 }], 'held: where it stands now');
   assert.deepEqual(fake.unanswered, [], 'every read the script expected');
+});
+
+test('a view over a document\'s later columns reads its text from position 1 through one estimated column past the last in view, every column\'s place read from every line before it (issue #15); a view past the whole read\'s cap reads its columns in view alone, never joined to the text held from 1', async () => {
+  const BIG = '1.0.1.0.5', HUGE = '1.0.1.0.6';
+  /** @type {Record<string, unknown>} */
+  const s = {};
+  for (const [doc, extent] of /** @type {Array<[string, number]>} */ ([[BIG, 40000], [HUGE, 2000000]])) {
+    s[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })] = { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + extent }] } };
+    s[FAKE.keyOf('op', { frame: F.docMetadata(doc) })] = { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } };
+    s[FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, extent) })] = { result: { as_of: 1, resp: 'addrs', addrs: [] } };
+  }
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(/** @type {any} */ ({ docs: [BIG, HUGE].map((doc) => ({ doc, kind: 'edition', label: 'd', standing: 'public' })), counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+  /** the camera over an estimated column of a document at its reading em */
+  const over = (/** @type {string} */ addr, /** @type {number} */ extent, /** @type {number} */ k) => {
+    const box = docBox(addr), e = estimate(extent, box), c = e.columns[k];
+    CAM.setViewport(1440, 900); CAM.reach(e.fs); CAM.set(CAM.viewAt({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }, e.fs));
+  };
+  /** the text windows asked of a document, each [first position, one past the last] */
+  const windows = (/** @type {string} */ addr) => fake.asked.filter((k) => k.startsWith('op:') && k.includes('"op":"retrieve_v"')).map((k) => JSON.parse(k.slice(3)).specs[0]).filter((x) => x.doc === addr).map((x) => {
+    const from = Number(x.span.start.split('.').pop());
+    return [from, from + Number(x.span.width.split('.').pop())];
+  });
+  // the extent read first, then the window
+  for (const [doc, extent, k] of /** @type {Array<[string, number, number]>} */ ([[BIG, 40000, 9], [HUGE, 2000000, 300]])) {
+    over(doc, extent, k);
+    for (let i = 0; i < 6; i++) { PUMP.pump(); await new Promise((r) => setTimeout(r, 0)); }
+  }
+  const [big] = windows(BIG);
+  assert.ok(big && big[0] === 1 && big[1] >= estimatedSpan(9)[1], `the window from position 1 through column 9's positions and on: ${JSON.stringify(big)}, column 9 holding ${estimatedSpan(9)}`);
+  // HUGE: its first block held, the view over its column 300 — past the whole read's cap
+  REC.takeSpanSet(HUGE, [{ subspace: 1, ordinal: 1, positions: 2000000 }]);
+  REC.takeDelivery(HUGE, [{ pos: 1, width: 4096, kind: 'content', text: 'x'.repeat(4096), ref: null, origin: null }]);
+  over(HUGE, 2000000, 300);
+  const from = fake.asked.length;
+  for (let i = 0; i < 6; i++) { PUMP.pump(); await new Promise((r) => setTimeout(r, 0)); }
+  const huge = windows(HUGE).filter((w, i, all) => i >= all.length - (fake.asked.length - from));
+  const w = huge[huge.length - 1];
+  assert.ok(w && w[0] > PUMP.WHOLE_CAP && w[0] <= estimatedSpan(300)[0] && w[1] >= estimatedSpan(300)[1], `past the cap: the columns in view alone — ${JSON.stringify(w)}, column 300 holding ${estimatedSpan(300)}`);
+  assert.ok(w[1] - w[0] < PUMP.WHOLE_CAP, 'never joined to the text held from position 1');
 });
 
 test('a projection the board declines answers the refusal it met, and the model holds it refused; one the board did not answer holds nothing', async () => {
@@ -868,8 +919,7 @@ function readingD(/** @type {Record<string, unknown>} */ s) {
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.takeIndex(indexAt('complete'));
   PUMP.forget(D);
-  const box = docBox(D), fs = metricsFor(30, box).fs;
-  CAM.setViewport(1440, 900); CAM.reach(fs); CAM.set(CAM.viewForDoc(box, fs));
+  readAt(D, 30);
   return fake;
 }
 

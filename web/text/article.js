@@ -57,9 +57,13 @@
 // lines, each block's text at its size with the inline pieces it carries
 // (the hairline's label, C-33's mark, the symbols, the others' count), a
 // record's words and keys, the line a reference, an item not rendered or an
-// empty document takes, a withheld run's width, the scene-offers — which
-// P-LAY lays out as the bars the canvas draws below reading scale, so the
-// handoff swaps bars for text and no line moves (law 8; S1 Q7). The HTML and
+// empty document takes, a withheld run's width, the scene-offers — each row
+// carrying where a column may break at it and each piece whether its
+// characters are the document's own, so P-LAY folds the lines into the
+// columns of the document's room and names the position each line starts at
+// (issue #15) — which P-LAY lays out as the bars the canvas draws below
+// reading scale, so the handoff swaps bars for text and no line moves (law 8;
+// S1 Q7). The HTML and
 // the plan are made from one walk of the document (`walk`), so the two can
 // never decide a block differently; every size and gap the plan carries is
 // P-LAY's shared measurement, which the CSS reads too.
@@ -84,6 +88,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
 /** @typedef {import('./span.js').Span} Span */
 /** @typedef {import('../plane/layout.js').Row} Row */
 /** @typedef {import('../plane/layout.js').Piece} Piece */
+/** @typedef {import('../plane/layout.js').Keep} Keep */
 
 /**
  * @typedef {Object} ArticleView — the view state the article renders, handed in as values
@@ -462,12 +467,13 @@ const isLow = (/** @type {number} */ u) => u >= 0xdc00 && u <= 0xdfff;
  * with no symbol in it: before a space, between a pair `breakBetween` allows,
  * beside an inline-block, at the text's end. Set there, a symbol adds room
  * to a line and no place to break it, so the article without its symbols is
- * never longer than with them, and the face T-LAYER fits to LK's `utmost`
- * holds it at every stage; set inside a word it would let the word's halves
- * part. A run's chrome stands in the line as P-LAY sets it, its hairline's
- * label joined to the word before it where no break falls between them: a
- * word that runs into a hairline so takes its symbol after the run's chrome,
- * never inside it. A span of spaces alone takes its symbol where it ends.
+ * never longer than with them, and the size T-LAYER folds it at for LK's
+ * `utmost` holds it in its room at every stage; set inside a word it would
+ * let the word's halves part. A run's chrome stands in the line as P-LAY
+ * sets it, its hairline's label joined to the word before it where no break
+ * falls between them: a word that runs into a hairline so takes its symbol
+ * after the run's chrome, never inside it. A span of spaces alone takes its
+ * symbol where it ends.
  * @param {string} text the paragraph's text
  * @param {number} c0 the span's first character in it
  * @param {number} c1 one past the span's last character in it
@@ -736,14 +742,23 @@ export function articleHTML(d, v, ownerAccount) {
 }
 
 /**
- * A stretch of text, sized in the body's em.
+ * A stretch of text, sized in the body's em: the page's own words, never the
+ * document's characters (`own`).
  * @param {string} chars
  * @param {number} size
  * @param {number} [lead] the room before it, in the body's em
  * @param {number} [trail] the room after it, in the body's em
  * @returns {Piece}
  */
-const piece = (chars, size, lead = 0, trail = 0) => ({ text: chars, size, lead, trail, box: false });
+const piece = (chars, size, lead = 0, trail = 0) => ({ text: chars, size, lead, trail, box: false, own: false });
+/**
+ * A stretch of the document's own characters, sized in the body's em: the
+ * positions P-LAY reads each line's start from.
+ * @param {string} chars
+ * @param {number} size
+ * @returns {Piece}
+ */
+const own = (chars, size) => ({ text: chars, size, lead: 0, trail: 0, box: false, own: true });
 /**
  * A link's symbol: an inline-block at its size, its border and padding either side, the room before it.
  * @param {number} k the size of the line it stands in, in the body's em
@@ -751,7 +766,7 @@ const piece = (chars, size, lead = 0, trail = 0) => ({ text: chars, size, lead, 
  */
 const symbol = (k) => {
   const s = MEASURE.sym * k, edge = borderEm(BORDER.box) + MEASURE.symPad * s;
-  return { text: '⟡', size: s, lead: MEASURE.symGap * s + edge, trail: edge, box: true };
+  return { text: '⟡', size: s, lead: MEASURE.symGap * s + edge, trail: edge, box: true, own: false };
 };
 /**
  * A row of the plan.
@@ -759,10 +774,10 @@ const symbol = (k) => {
  * @param {number | null} pos the block it opens
  * @param {number} size the size its box is set at, in the body's em
  * @param {Piece[]} pieces
- * @param {{after?: number, before?: number, float?: Piece | null, width?: number}} [o] its margins in the body's em, its float, a withheld run's width
+ * @param {{after?: number, before?: number, float?: Piece | null, width?: number, keep?: Keep}} [o] its margins in the body's em, its float, a withheld run's width, where a column may break at it (P-LAY's `Keep`; none inside it where none is said)
  * @returns {Row}
  */
-const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, float: o.float ?? null, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0 });
+const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, float: o.float ?? null, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0, keep: o.keep ?? 'whole' });
 
 /**
  * A paragraph's inline pieces at its size, as `segHTML` sets them: each
@@ -780,9 +795,9 @@ function paraPieces(p, k) {
     if (s.origin && s.opens) {
       const l = MEASURE.label * k, m = MEASURE.mark * k, edge = borderEm(BORDER.box) + MEASURE.markPad * m;
       out.push(piece(labelOf(s.origin, s.opens), l, borderEm(BORDER.same) + MEASURE.samePad * k, MEASURE.labelGap * l));
-      if (s.opens.c33) out.push({ text: t('C-33'), size: m, lead: edge, trail: edge + MEASURE.markGap * m, box: true });
+      if (s.opens.c33) out.push({ text: t('C-33'), size: m, lead: edge, trail: edge + MEASURE.markGap * m, box: true, own: false });
     }
-    out.push(...s.chromeSyms.map(() => symbol(k)), piece(s.text, k), ...s.syms.map(() => symbol(k)));
+    out.push(...s.chromeSyms.map(() => symbol(k)), own(s.text, k), ...s.syms.map(() => symbol(k)));
   }
   return out;
 }
@@ -791,7 +806,11 @@ function paraPieces(p, k) {
  * The article as P-LAY's plan: the head's lines, each block's rows at its
  * size with its margins — a heading's room above it and the smaller room
  * below, every other block's gap after it — the empty document's line, the
- * scene-offers — from the same walk the HTML is made from.
+ * scene-offers — from the same walk the HTML is made from; each row's keep,
+ * where a column may break at it (issue #15's keep rules): a paragraph
+ * between its lines, a heading kept with the first two lines after it, the
+ * head, a record, a withheld run, a reference, an item not rendered and the
+ * chrome whole.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -800,22 +819,23 @@ function paraPieces(p, k) {
 export function articlePlan(d, v, ownerAccount) {
   const w = walk(d, v, ownerAccount);
   const H = MEASURE.head, gap = MEASURE.gap;
+  const joined = /** @type {const} */ ({ keep: 'joined' });
   /** @type {Row[]} */
-  const rows = [row('head', null, 1, [piece(w.head.addr, 1)]), row('head', null, H, [piece(w.head.state, H)]), row('head', null, H, [piece(w.head.by, H)])];
-  if (w.head.presence) rows.push(row('head', null, H, [symbol(H), piece(' ' + w.head.presence, H)]));
+  const rows = [row('head', null, 1, [piece(w.head.addr, 1)]), row('head', null, H, [piece(w.head.state, H)], joined), row('head', null, H, [piece(w.head.by, H)], joined)];
+  if (w.head.presence) rows.push(row('head', null, H, [symbol(H), piece(' ' + w.head.presence, H)], joined));
   if (!w.parts) return rows;
   for (const p of w.parts) {
     const b = p.b;
     if (p.kind === 'withheld') rows.push(row('withheld', b.pos, 1, [], { after: gap, width: b.width }));
     else if (p.kind === 'record' && p.rec) {
-      if (p.rec.keys) rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)]), row('text', null, MEASURE.derived, [piece(p.rec.keys, MEASURE.derived)], { after: gap }));
+      if (p.rec.keys) rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)]), row('text', null, MEASURE.derived, [piece(p.rec.keys, MEASURE.derived)], { after: gap, ...joined }));
       else rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)], { after: gap }));
     } else if (p.kind === 'ref') rows.push(row('text', b.pos, 1, [piece('⟡', 1)], { after: gap }));
     else if (p.kind === 'hex') rows.push(row('text', b.pos, 1, [piece(t('F.not-rendered', { width: b.width }), 1)], { after: gap }));
     else {
       const k = headingSize(p.level), c = MEASURE.count * k;
       const float = p.count.n > 0 ? piece(t('F.others-count', { n: p.count.n }), c, MEASURE.countGap * c) : p.count.social ? piece('◦', c, MEASURE.countGap * c) : null;
-      const margins = p.level ? { before: MEASURE.headingBefore * k, after: MEASURE.headingAfter * k } : { after: gap * k };
+      const margins = p.level ? { before: MEASURE.headingBefore * k, after: MEASURE.headingAfter * k, keep: /** @type {const} */ ('heading') } : { after: gap * k, keep: /** @type {const} */ ('lines') };
       rows.push(row('text', b.pos, k, paraPieces(p, k), { ...margins, float }));
     }
   }

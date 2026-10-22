@@ -62,9 +62,12 @@
 // turns red).
 // A LEAP lands at reading scale at any depth (E18 (a)): to a document minted
 // a grid deeper than any the page booted with, and to a residue member whose
-// many paragraphs set it at under a fifth of its place's em (a camera whose
-// bound stops at the places' ems lands both below the mount's em and turns
-// red).
+// many paragraphs fill its room's columns at under two fifths of its place's
+// standard size (a camera whose bound stops at the places' standard sizes
+// lands both below the mount's em and turns red). A LEAP to a passage of an
+// edition folded into columns (issue #15) lands on the passage's line in its
+// own column at reading size (a mutant that places it by the position's
+// fraction of the extent down the room turns red).
 // THE CARRY (foundations §2.3; P43): a LEAP carrying a passage `compare`s it
 // against the text landed in once that text is read, lands at its
 // counterpart there and lights the arrival on that span, no link named (a
@@ -136,6 +139,7 @@ import * as LINKS from '../overlays/links-card.js';
 import * as SEL from '../overlays/selection.js';
 import * as INPUT from '../app/input.js';
 import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
+import { standardFs, placeOf } from '../plane/layout.js';
 import { entitlementArm } from '../text/article.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -150,9 +154,12 @@ const NEAR_TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'The far edition.\n
 const C = '1.0.1.0.5', GONE = '1.0.1.0.9';
 const C_TEXT = 'A third edition, longer than the first two.\n\nIts text is read whole on the LEAP\'s ask, and its face fitted to it.\n\nA last paragraph.';
 // DEEP: the account's 145th document, in its third continuation, a grid deeper than FAR, the deepest the index lists; RES: a member of
-// the residue past the sound depth, its two hundred one-line paragraphs setting it far smaller than its place's em
+// the residue past the sound depth, its two thousand one-line paragraphs filling its room's columns three steps past, setting it far
+// smaller than its place's standard
 const DEEP = '1.0.1.0.145', RES = `1.0.1.0.${48 * (DEPTH_SOUND + 1) + 1}`;
-const DEEP_TEXT = 'A note minted after the page booted.', RES_TEXT = Array.from({ length: 200 }, (_, i) => `Item ${i + 1}.`).join('\n\n');
+const DEEP_TEXT = 'A note minted after the page booted.', RES_TEXT = Array.from({ length: 2000 }, (_, i) => `Item ${i + 1}.`).join('\n\n');
+// LONG: an edition longer than a column — a hundred and twenty paragraphs of a line each, folded into its room's columns
+const LONG = '1.0.1.0.40', LONG_TEXT = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1} of an edition longer than one column.`).join('\n\n');
 const NEAR_EXTENT = NEAR_TEXT.length, FAR_EXTENT = FAR_TEXT.length;
 const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
 const whole = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null });
@@ -253,6 +260,7 @@ const script = {
   ...reads(C, C_TEXT, []),
   ...reads(DEEP, DEEP_TEXT, []),
   ...reads(RES, RES_TEXT, []),
+  ...reads(LONG, LONG_TEXT, []),
   ...reads(EDITION, EDITION_TEXT, [EDITION_CLAIM]),
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GONE) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
   // where each citation's far end projects into FAR now: the passage at 20, five positions; FAR whole, all of it
@@ -809,8 +817,8 @@ test('a second Back made during the first one\'s flight leaves the first one\'s 
   assert.ok(same(CAM.view(), own), 'Forward lands at it');
 });
 
-/** the em, in px, at which the camera reads a document now: its face (T-LAYER's) at the camera's scale */
-const emNow = (/** @type {string} */ addr) => CAM.view().scale * LAYER.metricsOf(REC.doc(addr)).fs;
+/** the em, in px, at which the camera reads a document now: its size (T-LAYER's fold) at the camera's scale */
+const emNow = (/** @type {string} */ addr) => CAM.view().scale * LAYER.foldOf(REC.doc(addr)).fs;
 
 test('a LEAP to a document minted a grid deeper than any the page booted with lands at its reading scale (E18 (a))', async () => {
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 9001, at: 9001, op: 'create_new_document', docs: [DEEP], class: 'published' }));
@@ -820,12 +828,25 @@ test('a LEAP to a document minted a grid deeper than any the page booted with la
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a LEAP to a residue member its paragraphs set far smaller than its place\'s em lands at its reading scale (E18 (a))', async () => {
+test('a LEAP to a residue member its paragraphs set far smaller than its place\'s standard lands at its reading scale (E18 (a))', async () => {
   CAM.setDeepest(depthOfDoc(RES)); // the bound the app's boot sets over an index listing it
   await run(GO.leapTo(RES));
-  const box = docBox(RES), fs = LAYER.metricsOf(REC.doc(RES)).fs;
-  assert.ok(box.residue && fs < box.fsRep / 5, `set at ${fs / box.fsRep} of its place's em`);
+  const box = docBox(RES), fs = LAYER.foldOf(REC.doc(RES)).fs;
+  assert.ok(box.residue && fs < standardFs(box) / 2.5, `set at ${fs / standardFs(box)} of its place's standard`);
   assert.ok(Math.abs(emNow(RES) - 12.5) < 1e-6, `it reads at 12.5 px an em: ${emNow(RES)}`);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP to a passage of an edition folded into columns lands on the passage\'s line in its own column, at reading size, the walk on the span holding it (issue #15)', async () => {
+  await PUMP.loadWhole(LONG);
+  const d = REC.doc(LONG), f = LAYER.foldOf(d), box = docBox(LONG);
+  // a passage inside the span heading the second row's first column, below the middle of the room's width
+  const at = /** @type {import('../model/records.js').Block} */ (d.blocks.find((b) => placeOf(f, b.pos).column === f.across)), c = f.columns[f.across];
+  assert.ok(at && f.across > 1 && c.x + c.w < box.w / 2, `the span heading column ${f.across} of ${f.columns.length}, ${f.across} across`);
+  const pos = at.pos + 4, line = placeOf(f, pos);
+  await run(GO.leapTo(LONG, { pos }));
+  assert.ok(same(CAM.view(), { x: box.x + c.x + c.w / 2, y: box.y + line.y + line.h / 2, scale: 12.5 / f.fs }), `the camera on the passage's line, centred across its column, at reading size: ${JSON.stringify(CAM.view())}`);
+  assert.deepEqual(walkAt(), ['block', LONG, at.pos]);
   assert.deepEqual(fake.unanswered, []);
 });
 

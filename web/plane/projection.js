@@ -64,7 +64,6 @@ import { fieldsOf, accountOf, boardOf, kindOf } from '../model/address.js';
  * @property {number} h
  * @property {number} depth
  * @property {boolean} residue true where the document lies past DEPTH_SOUND and shares the residue cell, `continuationCell(account, DEPTH_SOUND + 1)`
- * @property {number} fsRep the representative em size (world units) of text set in this box
  */
 
 export const WORLD_W = 1e6;
@@ -88,11 +87,9 @@ export const CELL = (() => {
 })();
 export const DOC_CELL_W = CELL[LEAF][0];
 export const DOC_CELL_H = CELL[LEAF][1];
-/** the document's box inside its cell (the wireframe's 0.80 / 0.86) */
+/** the document's box inside its cell (the wireframe's 0.80 / 0.86): its room, which P-LAY folds its columns into */
 export const DOC_W = DOC_CELL_W * 0.8;
 export const DOC_H = DOC_CELL_H * 0.86;
-/** the representative em at depth 0 — the wireframe's REP_FS, S3's */
-export const REP_FS = 44.8;
 
 /**
  * The padded digit path the projection walks: a board is 3 digits, an
@@ -178,7 +175,8 @@ export function depthOfDoc(key) {
 }
 
 /**
- * The document's box: its cell shrunk to the box fractions; a document past
+ * The document's box: its cell shrunk to the box fractions — its room, the
+ * columns P-LAY folds its text into standing inside it; a document past
  * DEPTH_SOUND shares the residue cell (`residue: true`).
  * @param {string} key a document address (a version member answers its document's box)
  * @returns {DocBox}
@@ -190,9 +188,7 @@ export function docBox(key) {
     const depth = slotOf(p[LEAF], G[LEAF], true).k;
     const residue = depth > DEPTH_SOUND;
     const c = cellOf(p);
-    const shrink = Math.pow(G[LEAF], c.depth);
-    const fsRep = REP_FS / shrink;
-    b = { x: c.x + (c.w - c.w * 0.8) / 2, y: c.y + (c.h - c.h * 0.86) / 2, w: c.w * 0.8, h: c.h * 0.86, depth: c.depth, residue, fsRep };
+    b = { x: c.x + (c.w - c.w * 0.8) / 2, y: c.y + (c.h - c.h * 0.86) / 2, w: c.w * 0.8, h: c.h * 0.86, depth: c.depth, residue };
     _boxCache.set(key, b);
   }
   return b;

@@ -50,11 +50,14 @@ fix; nothing here depends on their names.
   the gate keeps proving it.
 - **FP-8 Render is a function of model and view state.** On a dirty
   frame the text layer is placed first, so what is mounted is decided
-  before anything is drawn; then the canvas is repainted whole,
-  drawing a document's bars or yielding it to its text by that
-  frame's mounted set; then the beams are redrawn. Nothing drawn on
-  the canvas is updated in place. The screen cannot drift from the
-  state because it is rebuilt from the state.
+  before anything is drawn; where the document being read is set
+  again on that frame, its columns broken anew, the camera is
+  re-anchored on the passage being read before anything is placed,
+  so the passage keeps its place and size on screen; then the canvas
+  is repainted whole, drawing a document's bars or yielding it to its
+  text by that frame's mounted set; then the beams are redrawn.
+  Nothing drawn on the canvas is updated in place. The screen cannot
+  drift from the state because it is rebuilt from the state.
 - **FP-9 Input never draws.** A handler changes view state, or asks
   the model to fetch, and marks the frame dirty. That is all it does.
 - **FP-10 One owner per piece of state.** Each concern's state lives
@@ -76,10 +79,18 @@ fix; nothing here depends on their names.
 - **FP-12 The text layer has one reconciler.** Real text elements are
   mounted when a document crosses reading zoom and unmounted when it
   leaves, by a stated policy with a stated cap, laid out once and
-  moved by transform. This is the one reconciler the page keeps, in
-  one module, kept small. It has two targets, the plane's text layer
-  and the reading scene's panes. The scene borrows the mount; it
-  never keeps DOM text of its own.
+  moved by transform. An article is laid out once, in one column at
+  the measure, and its lines are read as the engine set them; that
+  column is then parted at those lines into the columns of the
+  document's fold, and nothing is laid out again until the document
+  is set again. The same reconciler lays a document's text out
+  hidden, once, before its first mount, so the fold breaks its
+  columns where the rendered lines break and the bars below the mount
+  stand where the text will. This is the one reconciler the page
+  keeps, in one module, kept small. It has two targets, the plane's
+  text layer and the reading scene's panes, each pane one column at
+  the plane's measure. The scene borrows the mount; it never keeps
+  DOM text of its own.
 - **FP-13 Each control redraws itself from state.** The LEAP box and
   its rows, the mirror, the trail, the one line, the status line, the
   live region and the cards are ordinary DOM. Each is a function that
@@ -206,6 +217,29 @@ found.
   FP-10 already forbade a piece of state with five writers; FP-20 says
   so of the focus and names the owner, so the stream of one-module
   focus fixes ends.
+- 2026-10-22, from issue #15 (what happens when a document is longer
+  than its cell) and the design decision on it — the document folded
+  inside its cell into equal columns of fixed depth at one line
+  length, broken at the lines as actually rendered, the passage being
+  read kept in place when it is set again:
+  - FP-12 now says how an article is laid out: once, in one column at
+    the measure, its lines read as the engine set them, then parted at
+    those lines into its fold's columns; and that the reconciler lays a
+    document's text out hidden before its first mount. The page used
+    to set the article's face from the document's length, its line
+    length with it, and to clip the article at its box wherever the
+    lines it planned and the lines the engine set parted. Columns of
+    a fixed depth hold their rows only where they break at the lines
+    the engine set, which only a layout can read, so the reconciler
+    that lays the text out is the one that reads them. The panes are
+    one column each at the plane's measure, which the rule now says.
+  - FP-8 now says that where the document being read is set again,
+    the camera is re-anchored on the passage being read before
+    anything is placed. Folded, a re-set that moves one line moves
+    every line after it, across the columns as well as down them, and
+    a step to a smaller size moves them all; the camera stood where it
+    was, so the passage being read could leave the screen, or change
+    size, between two frames, and nothing brought it back.
 
 ## What these rule out
 

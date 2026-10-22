@@ -86,7 +86,7 @@ import re
 import time
 from collections import Counter
 
-from . import DOC, SECOND_ACCOUNT, WINDOW, WITHHELD, XFAIL_FACE, Result
+from . import DOC, SECOND_ACCOUNT, WINDOW, WITHHELD, Result
 from .keys import placed_at, placed_at_box, placed_under, rebuilt_away, stands_at
 
 OWNER = '1.0.1'
@@ -109,7 +109,7 @@ EMPTY_AFTER_RUN = '''(() => {
   const s = S.view.camera().scale / m.lay, q = (e) => e.getBoundingClientRect();
   const bar = (e) => h.bars.find((b) => b.pos === Number(e.dataset.pos)) || null, run = bar(face), after = bar(next), none = bar(empty);
   return {space: (q(next).top - q(face).bottom) / s, bars_space: run && after && after.top != null ? (after.top - (run.top + run.height)) / s : null,
-          empty: {pos: Number(empty.dataset.pos), text: empty.textContent, height: q(empty).height / s, bar_lines: none ? none.lines : null},
+          empty: {pos: Number(empty.dataset.pos), text: empty.textContent, height: q(empty).height / s, bar_lines: none ? none.lines : 0},
           next: {pos: Number(next.dataset.pos), tag: next.tagName.toLowerCase()}};
 })()''' % (json.dumps(DOC), json.dumps(DOC), json.dumps(PLACEHOLDER))
 
@@ -303,9 +303,8 @@ def run(ctx):
     r.check(shown and item.startswith(words) and said['arm'] in item and (said.get('clause') or '') in item,
             '(e) the mirror\'s current item at the landing is the run\'s placeholder: the run, its width, its owner, its origin, the arm, and the clause where the placeholder shows one (R56; R94)',
             {'item': item, 'placeholder': {k: said.get(k) for k in ('owner', 'arm', 'clause')}})
-    box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
     ctx.view_doc_em(DOC, 14)
-    ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * (0.12 + 0.8 * (WINDOW[0] - 1) / doc['extent']), ctx.camera()['scale'])
+    ctx.view_at(DOC, WINDOW[0])
     vis = ctx.js('window.__skep.visible(%s)' % json.dumps(PLACEHOLDER))
     r.check(len(vis) == 1 and vis[0]['inClip'] and vis[0]['inView'], '(e) the placeholder is shown: inside the article\'s clip and the viewport', [{k: v[k] for k in ('rect', 'clip', 'inClip', 'inView')} for v in vis])
     # containment is held where the placeholder stands tallest: under R56's key-absent arm, the longest arm a guest meets.
@@ -318,8 +317,8 @@ def run(ctx):
     keyless = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.querySelector(".arm").textContent : null; })()' % json.dumps(PLACEHOLDER))
     ov = ctx.js('window.__skep.overlapCheck()')
     r.check(keyless == t(ctx, 'R56.key-absent', {'owner': OWNER}), '(e) for the measure the placeholder stands under R56\'s key-absent arm, the tallest a guest meets', keyless)
-    r.check(not ov['blocks_cut'], '(e) containment at guest class, the placeholder under R56\'s key-absent arm: every row of the first edition — the placeholder and the text after it among them — lies inside its clip and its box',
-            {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']}, xfail=XFAIL_FACE)
+    r.check(not ov['blocks_cut'], '(e) containment at guest class, the placeholder under R56\'s key-absent arm: every row of the first edition — the placeholder and the text after it among them — lies inside its column, its clip and its box, the column breaking at the lines the face sets (issue #15)',
+            {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']})
     if held:
         read_store_as(ctx, store['rows'])
     back = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.querySelector(".arm").textContent : null; })()' % json.dumps(PLACEHOLDER))

@@ -8,52 +8,87 @@
 // wrapped at its own size; a break after a hyphen inside a word and none after
 // a slash; an inline-block set whole; a float beside the last line or on a
 // line of its own, as tall as its own line box; a withheld run as bars of its
-// width; the bars at their lines and none past the article's clip; the
-// measurements the CSS reads, one source. THE FACE: an article its estimate
-// cannot hold fitted at the narrowest column that holds it — its lines inside
-// the room, the column filling its width, one character narrower overflowing,
-// no bar cut — and one its estimate holds keeping the estimate; the positions
-// a plan does not hold yet narrowing the face.
+// width; each line naming the position its first own character stands at;
+// the measurements the CSS reads, one source. THE FOLD (issue #15's design
+// decision): every document set at MEASURE_CPL characters a line, from a
+// hundred positions to six hundred thousand (a mutant that lets the length
+// widen the column turns red); every line of a long article standing in a
+// column inside its room, no bar past its column (a mutant that clips the
+// article at the room drops lines and turns red); columns COLUMN_LINES body
+// line boxes deep, the margin above a column's head dropped; a heading kept
+// with the first two lines after it, no paragraph line alone at a column's head
+// or foot, a short paragraph moved whole, a record, a withheld run and the head
+// never split, a kept unit deeper than a column broken at a line anyway (a
+// mutant without each rule turns red); columns left to right, then row by row,
+// a gutter apart, a short document one column of its own length; the standard
+// size until the columns fill the room, then steps each at least doubling the
+// room's capacity (a mutant that sets the size continuously, or steps by a
+// factor that does not double, turns red); the outline tracing the padded
+// columns, one edge; the estimate never more columns than the text sets, so
+// its size never smaller (a mutant that counts a line per fewer positions
+// turns red); positions placed and read back; unheld positions estimated in
+// columns of their own; the paging key's next column; a re-set's hold.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { metricsFor, layoutOf, heightOf, fitted, wrap, bars, breakBetween, cssMeasures, lineBox, MEASURE, LINE_H, LAY_FS, CHAR_W } from './layout.js';
+import {
+  layoutOf, heightOf, wrap, breakBetween, cssMeasures, lineBox, columnsOf, fold, estimate, estimatedSpan, slot, outline, outlineRects, boundsOf, firstRow, padded,
+  bars, placeOf, posAt, columnAt, pageTarget, holdOf, standardFs, stepAt, stepFor,
+  MEASURE, BORDER, LINE_H, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, STANDARD_GRID, STANDARD_FS,
+} from './layout.js';
 import { DOC_W, DOC_H } from './projection.js';
 
 /** @typedef {import('./layout.js').Row} Row */
 /** @typedef {import('./layout.js').Piece} Piece */
+/** @typedef {import('./layout.js').Line} Line */
 
 /** @returns {Piece} */
-const piece = (/** @type {string} */ text, size = 1, o = {}) => ({ text, size, lead: 0, trail: 0, box: false, ...o });
+const piece = (/** @type {string} */ text, size = 1, o = {}) => ({ text, size, lead: 0, trail: 0, box: false, own: true, ...o });
 /** @returns {Row} */
-const row = (/** @type {Row['kind']} */ kind, /** @type {number | null} */ pos, /** @type {Piece[]} */ pieces, o = {}) => ({ kind, pos, size: 1, pieces, float: null, before: 0, after: 0, width: 0, ...o });
+const row = (/** @type {Row['kind']} */ kind, /** @type {number | null} */ pos, /** @type {Piece[]} */ pieces, o = {}) => ({ kind, pos, size: 1, pieces, float: null, before: 0, after: 0, width: 0, keep: /** @type {const} */ ('lines'), ...o });
 const para = (/** @type {number} */ pos, /** @type {string} */ text, size = 1) => row('text', pos, [piece(text, size)], { size, after: MEASURE.gap * size });
 /** a heading's row as T-ARTICLE plans it: its margins at its own size */
-const heading = (/** @type {number} */ pos, /** @type {string} */ text, size = MEASURE.h2) => row('text', pos, [piece(text, size)], { size, before: MEASURE.headingBefore * size, after: MEASURE.headingAfter * size });
-const metrics = (cpl = 10, y1 = 1000) => ({ fs: 1, cpl, lineH: LINE_H, tw: cpl * 0.6, x0: 0, y0: 0, y1 });
+const heading = (/** @type {number} */ pos, /** @type {string} */ text, size = MEASURE.h2) => row('text', pos, [piece(text, size)], { size, before: MEASURE.headingBefore * size, after: MEASURE.headingAfter * size, keep: /** @type {const} */ ('heading') });
 const close = (/** @type {number} */ a, /** @type {number} */ b) => Math.abs(a - b) < 1e-9;
 /** the widths of a row's lines at a column */
 const widths = (/** @type {Row} */ r, /** @type {number} */ cpl) => wrap(r, cpl).map((l) => +l.w.toFixed(4));
-
-test('the metrics: a longer document sets a smaller face; a floor on characters per line', () => {
-  const box = { w: DOC_W, h: DOC_H };
-  const a = metricsFor(100, box), b = metricsFor(10000, box);
-  assert.ok(b.fs < a.fs);
-  // the face is capped so that a line holds at least 52 characters, however short the document (the cap on fs, not the dead floor of 8)
-  assert.ok(metricsFor(10, box).cpl >= 52);
-  assert.ok(a.cpl >= 52);
-  assert.ok(a.y0 > 0 && a.y1 === box.h, 'the article runs from its box\'s top padding to its box\'s bottom, its clip');
-});
+/** a depth-0 document's room */
+const ROOM = { w: DOC_W, h: DOC_H };
+/** the head's three rows, as T-ARTICLE plans them */
+const HEAD = [row('head', null, [piece('1.0.1.0.3', 1, { own: false })], { keep: 'whole' }), row('head', null, [piece('published', MEASURE.head, { own: false })], { size: MEASURE.head, keep: 'joined' }), row('head', null, [piece('1.0.1 · dev', MEASURE.head, { own: false })], { size: MEASURE.head, keep: 'joined' })];
+/** a paragraph of `n` words of two to nine characters, varied by `seed` */
+const words = (/** @type {number} */ n, /** @type {number} */ seed) => Array.from({ length: n }, (_, i) => 'abcdefghij'.slice(0, 2 + ((i * 7 + seed) % 8))).join(' ');
+/** an article's plan: the head's rows and a paragraph per text, each its text's positions and a separator apart */
+function article(/** @type {string[]} */ texts) {
+  let pos = 1;
+  const rows = [...HEAD, ...texts.map((s) => { const r = para(pos, s); pos += s.length + 2; return r; })];
+  return { rows, positions: pos - 1 };
+}
+/** the place of a line in its fold, in world units relative to the room */
+const lineBox_ = (/** @type {import('./layout.js').Fold} */ f, /** @type {number} */ i) => {
+  const c = f.columns.find((k) => i >= k.first && i < k.first + k.n);
+  if (!c) return null;
+  const l = f.lines[i];
+  return { x: c.x, y: c.y + (l.top - c.top) * f.fs, w: l.w * CHAR_W * f.fs, h: l.h * f.fs, c };
+};
 
 test('the layout wraps words at the column and keys lines by block position; a withheld run is bars of its width', () => {
-  const m = metrics(10);
-  const L = layoutOf([para(1, 'one two three four five'), row('withheld', 25, [], { width: 25, after: MEASURE.gap })], m);
+  const L = layoutOf([para(1, 'one two three four five'), row('withheld', 25, [], { width: 25, after: MEASURE.gap, keep: 'whole' })], 10);
   assert.ok(L.lines.length >= 3);
   assert.deepEqual(L.blocks.get(1), { first: 0, n: 3 }, '"one two" · "three four" · "five"');
   const wh = L.lines.filter((l) => l.kind === 'withheld');
   assert.equal(wh.length, 3, 'a withheld run of 25 positions at 10 per line is three bars');
   assert.deepEqual(wh.map((l) => l.w), [10, 10, 5]);
   assert.deepEqual(L.blocks.get(25), { first: L.lines.length - 3, n: 3 });
-  for (const line of L.lines) assert.ok(line.w <= m.cpl, `${line.w} past the column`);
+  for (const line of L.lines) assert.ok(line.w <= 10, `${line.w} past the column`);
+});
+
+test('every line names the position its first own character stands at: a paragraph\'s by its bytes, a withheld run\'s bars a column of positions on, the head none', () => {
+  const L = layoutOf([...HEAD, para(1, 'one two — three four'), row('withheld', 30, [], { width: 25, keep: 'whole' })], 10);
+  const text = L.lines.filter((l) => l.pos === 1);
+  // "one two —" · "three four": the em dash is three bytes
+  assert.deepEqual(text.map((l) => l.at), [1, 1 + 'one two — '.length + 2]);
+  assert.deepEqual(L.lines.filter((l) => l.kind === 'withheld').map((l) => l.at), [30, 40, 50]);
+  assert.ok(L.lines.filter((l) => l.kind === 'head').every((l) => l.at === null));
 });
 
 test('a line box is its own size\'s: the engine\'s font size on the 1/64 px grid, rounded, and the line height on it, floored', () => {
@@ -66,8 +101,7 @@ test('a line box is its own size\'s: the engine\'s font size on the 1/64 px grid
 });
 
 test('the head\'s lines stand before the first block, each its own size\'s line box', () => {
-  const head = [row('head', null, [piece('1.0.1.0.3')]), row('head', null, [piece('published', MEASURE.head)], { size: MEASURE.head }), row('head', null, [piece('1.0.1 · dev', MEASURE.head)], { size: MEASURE.head })];
-  const L = layoutOf([...head, para(1, 'text')], metrics(52));
+  const L = layoutOf([...HEAD, para(1, 'text')], 52);
   const b = /** @type {{first: number, n: number}} */ (L.blocks.get(1));
   assert.equal(b.first, 3);
   assert.ok(close(L.lines[b.first].top, LINE_H + 2 * lineBox(MEASURE.head)), `the first block at ${L.lines[b.first].top} em: the address's line box and two of the head's`);
@@ -76,8 +110,8 @@ test('the head\'s lines stand before the first block, each its own size\'s line 
 });
 
 test('a heading stands nearer the block it heads than the block above it; the gap after every other block is its own; adjoining margins collapse to the larger', () => {
-  const offer = row('chrome', null, [piece('this document windows 1.0.1.0.1003', MEASURE.offer)], { size: MEASURE.offer, before: MEASURE.offerGap * MEASURE.offer, after: MEASURE.offerGap * MEASURE.offer });
-  const L = layoutOf([para(1, 'aaaa'), heading(10, '# Title'), para(20, 'bbbb'), offer], metrics(52));
+  const offer = row('chrome', null, [piece('this document windows 1.0.1.0.1003', MEASURE.offer, { own: false })], { size: MEASURE.offer, before: MEASURE.offerGap * MEASURE.offer, after: MEASURE.offerGap * MEASURE.offer, keep: 'whole' });
+  const L = layoutOf([para(1, 'aaaa'), heading(10, '# Title'), para(20, 'bbbb'), offer], 52);
   const top = (/** @type {number} */ pos) => L.lines[/** @type {{first: number}} */ (L.blocks.get(pos)).first].top;
   const above = top(10) - LINE_H, below = top(20) - (top(10) + lineBox(MEASURE.h2));
   assert.ok(close(above, Math.max(MEASURE.gap, MEASURE.headingBefore * MEASURE.h2)), 'above the heading: its room, collapsed with the paragraph\'s gap');
@@ -86,23 +120,23 @@ test('a heading stands nearer the block it heads than the block above it; the ga
   const last = L.lines[L.lines.length - 1];
   assert.ok(close(last.top, top(20) + LINE_H + Math.max(MEASURE.gap, MEASURE.offerGap * MEASURE.offer)), 'the offer\'s margin collapses with the block\'s');
   assert.equal(last.pos, null, 'the offer is chrome, no block\'s line');
-  const two = layoutOf([heading(10, '# Title'), heading(20, '## Part', MEASURE.h3)], metrics(52));
+  const two = layoutOf([heading(10, '# Title'), heading(20, '## Part', MEASURE.h3)], 52);
   const t2 = (/** @type {number} */ pos) => two.lines[/** @type {{first: number}} */ (two.blocks.get(pos)).first].top;
   assert.ok(close(t2(20) - t2(10) - lineBox(MEASURE.h2), MEASURE.headingBefore * MEASURE.h3), 'a heading under a heading: the larger room, the lower one\'s above it');
 });
 
 test('a block that sets no line takes no room: its margins collapse with its neighbours\', the block after it the larger of their margins below the block before', () => {
   const top = (/** @type {import('./layout.js').Layout} */ L, /** @type {number} */ pos) => L.lines[/** @type {{first: number}} */ (L.blocks.get(pos)).first].top;
-  const bare = layoutOf([para(1, 'aaaa'), para(10, 'bbbb')], metrics(52));
-  const sep = layoutOf([para(1, 'aaaa'), para(6, ''), para(10, 'bbbb')], metrics(52));
+  const bare = layoutOf([para(1, 'aaaa'), para(10, 'bbbb')], 52);
+  const sep = layoutOf([para(1, 'aaaa'), para(6, ''), para(10, 'bbbb')], 52);
   assert.deepEqual(sep.blocks.get(6), { first: 1, n: 0 }, 'a separator alone sets no line');
   assert.ok(close(top(sep, 10), top(bare, 10)) && close(top(sep, 10) - LINE_H, MEASURE.gap), 'the paragraph after it one gap below the paragraph before, as with no block between them');
-  const head = layoutOf([para(1, 'aaaa'), para(6, ''), heading(10, '## Part', MEASURE.h3)], metrics(52));
+  const head = layoutOf([para(1, 'aaaa'), para(6, ''), heading(10, '## Part', MEASURE.h3)], 52);
   assert.ok(close(top(head, 10) - LINE_H, MEASURE.headingBefore * MEASURE.h3), 'a heading after it: its own room above it, the larger, alone');
 });
 
 test('a heading\'s lines are its own size\'s line boxes', () => {
-  const L = layoutOf([heading(1, 'aaaaaaa bbbbbbbbb'), para(30, 'cc')], metrics(20));
+  const L = layoutOf([heading(1, 'aaaaaaa bbbbbbbbb'), para(30, 'cc')], 20);
   const b = /** @type {{first: number, n: number}} */ (L.blocks.get(1));
   assert.equal(b.n, 2, 'seventeen characters at 1.25 wrap in twenty');
   assert.ok(close(L.lines[b.first + 1].top - L.lines[b.first].top, lineBox(MEASURE.h2)), 'the second line one heading line box below the first');
@@ -132,7 +166,7 @@ test('a line breaks after a hyphen inside a word, and never after a slash', () =
 });
 
 test('an inline-block is set whole, a line free to break on either side of it', () => {
-  const mark = piece('visible', 1, { box: true });
+  const mark = piece('visible', 1, { box: true, own: false });
   assert.deepEqual(widths(row('text', 1, [piece('aaaa'), mark, piece('bb')]), 12), [11, 2], 'the box joins its line where it fits, the text after it breaking away');
   assert.deepEqual(widths(row('text', 1, [piece('aaaaaaaa'), mark, piece('.')]), 12), [8, 8], 'it goes whole to the next line where it does not fit, the period after it beside it');
   const lead = row('text', 1, [piece('aaaa'), piece('bbbb', 1, { lead: 0.6, trail: 0.6 })]);
@@ -140,83 +174,225 @@ test('an inline-block is set whole, a line free to break on either side of it', 
 });
 
 test('a float stands beside the last line where it fits, else on a line of its own', () => {
-  const count = piece('+3 others', 1);
+  const count = piece('+3 others', 1, { own: false });
   assert.equal(wrap(row('text', 1, [piece('aaaa')], { float: count }), 20).length, 1);
   assert.equal(wrap(row('text', 1, [piece('aaaaaaaaaaaaaa')], { float: count }), 20).length, 2);
   assert.equal(wrap(row('text', 1, [], { float: count }), 20).length, 1, 'a row with nothing but its float is the float\'s line');
   assert.equal(wrap(row('text', 1, []), 20).length, 0, 'an empty row takes no line');
-  const small = piece('+3 others', MEASURE.count);
+  const small = piece('+3 others', MEASURE.count, { own: false });
   assert.deepEqual(wrap(row('text', 1, [piece('aaaaaaaaaaaaaaaaaa')], { float: small }), 20).map((l) => l.h), [LINE_H, lineBox(MEASURE.count)], 'a float on a line of its own is as tall as its own line box');
   assert.deepEqual(wrap(row('text', 1, [piece('aaaa')], { float: small }), 20).map((l) => l.h), [LINE_H], 'beside the last line it adds none');
 });
 
-test('the bars stand inside their lines and stop at the article\'s clip, the last one cut there', () => {
-  const head = row('head', null, [piece('1.0.1.0.3')]);
-  const long = para(1, Array.from({ length: 20 }, () => 'aaaaaaaa').join(' '));
-  const L = layoutOf([head, long], metrics(10));
-  const clip = 5 * LINE_H + LINE_H / 2 - 0.2 + 0.25; // a quarter of the way into the bar of the article's sixth line
-  const B = bars(L, metrics(10, clip));
-  assert.equal(B.length, 5, 'the head is no bar: the block\'s first five lines are, its sixth cut and the rest past the clip');
-  for (const b of B) assert.ok(b.y + b.h <= clip + 1e-9, 'no bar runs past the clip');
-  assert.ok(close(B[4].y + B[4].h, clip) && close(B[4].h, 0.25), 'the last bar is cut at the clip');
-  B.forEach((b, i) => assert.ok(b.y > (i + 1) * LINE_H && b.y + 0.5 < (i + 2) * LINE_H, `bar ${i} inside its line box`));
-});
+// ---- the fold ---------------------------------------------------------------------------------------------------
 
-/** an article's plan: the head's three lines and a paragraph per text, each its text's positions and a separator apart */
-function article(/** @type {string[]} */ texts) {
-  let pos = 1;
-  const head = [row('head', null, [piece('1.0.1.0.3')]), row('head', null, [piece('published', MEASURE.head)], { size: MEASURE.head }), row('head', null, [piece('1.0.1 · dev', MEASURE.head)], { size: MEASURE.head })];
-  const rows = [...head, ...texts.map((s) => { const r = para(pos, s); pos += s.length + 2; return r; })];
-  return { rows, positions: pos - 1 };
-}
-/** a paragraph of `n` words of two to nine characters, varied by `seed` */
-const words = (/** @type {number} */ n, /** @type {number} */ seed) => Array.from({ length: n }, (_, i) => 'abcdefghij'.slice(0, 2 + ((i * 7 + seed) % 8))).join(' ');
-const BOX = { w: DOC_W, h: DOC_H };
-/** the room an article's lines may take at a face, in its em: from its first line's top to its clip */
-const room = (/** @type {import('./layout.js').Metrics} */ m) => (m.y1 - m.y0) / m.fs;
-/** the metrics at a column that fills the estimate's width */
-const atColumn = (/** @type {import('./layout.js').Metrics} */ est, /** @type {number} */ cpl) => ({ ...est, cpl, fs: est.tw / (CHAR_W * cpl), lineH: (est.tw / (CHAR_W * cpl)) * LINE_H });
-
-test('an article its estimate cannot hold is fitted: its lines end inside the room at the narrowest column that holds them, no bar cut', () => {
-  for (const texts of [Array.from({ length: 24 }, (_, i) => words(14, i)), Array.from({ length: 60 }, (_, i) => words(30, i)), Array.from({ length: 300 }, () => 'a')]) {
-    const { rows, positions } = article(texts);
-    const est = metricsFor(positions, BOX);
-    assert.ok(heightOf(layoutOf(rows, est)) > room(est), `the estimate for ${texts.length} paragraphs, every line full, does not hold their head, gaps and breaks`);
-    const m = fitted(rows, est);
-    const L = layoutOf(rows, m);
-    assert.ok(heightOf(L) <= room(m), `${texts.length} paragraphs: ${heightOf(L)} em of lines in ${room(m)} em of room`);
-    assert.ok(m.cpl > est.cpl && m.fs < est.fs, 'the column widens and the face narrows; never the other way');
-    assert.ok(close(m.cpl * CHAR_W * m.fs, m.tw) && close(m.lineH, m.fs * LINE_H), 'the column fills the width the estimate fits it to');
-    assert.deepEqual([m.x0, m.y0, m.y1, m.tw], [est.x0, est.y0, est.y1, est.tw], 'the box\'s room is the estimate\'s');
-    const narrower = atColumn(est, m.cpl - 1);
-    assert.ok(heightOf(layoutOf(rows, narrower)) > room(narrower), `one character narrower (${m.cpl - 1}) the lines run past the clip`);
-    const B = bars(L, m), lines = L.lines.filter((l) => l.kind === 'text' && l.w > 0);
-    assert.equal(B.length, lines.length, 'every line of the blocks is a bar');
-    for (const b of B) assert.ok(close(b.h, 0.5 * m.fs) && b.y + b.h <= m.y1, 'no bar is cut at the clip');
+test('every document is set at MEASURE_CPL characters a line, from a hundred positions to six hundred thousand', () => {
+  for (const n of [1, 3, 20, 60, 400, 2000, 6000]) {
+    const { rows, positions } = article(Array.from({ length: n }, (_, i) => words(14, i)));
+    const f = fold(layoutOf(rows).lines, ROOM);
+    assert.ok(f.lines.every((l) => l.w <= MEASURE_CPL + 1e-9), `${positions} positions: no line past the measure`);
+    assert.ok(f.columns.every((c) => close(c.w, MEASURE_CPL * CHAR_W * f.fs)), `${positions} positions: every column ${MEASURE_CPL} characters of its face`);
+  }
+  for (const extent of [100, 5900, 27000, 600000]) {
+    const e = estimate(extent, ROOM);
+    assert.ok(e.columns.every((c) => close(c.w, COLUMN_W * e.fs)), `the estimate of ${extent} positions: the measure too`);
   }
 });
 
-test('an article its estimate holds keeps the estimate: a short one, set at the floor of 52 characters', () => {
-  const { rows, positions } = article([words(30, 1), words(12, 2)]);
-  const est = metricsFor(positions, BOX);
-  assert.ok(est.cpl === 52 && heightOf(layoutOf(rows, est)) <= room(est));
-  assert.equal(fitted(rows, est), est);
+test('every line of a long article stands in a column inside the room, none cut: the columns COLUMN_LINES line boxes deep, the margin above a column\'s head dropped', () => {
+  const { rows } = article(Array.from({ length: 300 }, (_, i) => words(20 + (i % 9) * 6, i)));
+  const L = layoutOf(rows), f = fold(L.lines, ROOM);
+  assert.ok(f.columns.length > STANDARD_GRID[0] * STANDARD_GRID[1], `${f.columns.length} columns: past the standard grid`);
+  assert.equal(f.columns.reduce((n, c) => n + c.n, 0), L.lines.length, 'every line in a column, once');
+  for (let i = 0; i < f.lines.length; i++) {
+    const b = /** @type {NonNullable<ReturnType<typeof lineBox_>>} */ (lineBox_(f, i));
+    assert.ok(b.y >= b.c.y - 1e-6 && b.y + b.h <= b.c.y + b.c.h + 1e-6, `line ${i} inside its column`);
+    assert.ok(b.c.x >= 0 && b.c.y >= 0 && b.c.x + b.c.w <= ROOM.w + 1e-6 && b.c.y + b.c.h <= ROOM.h + 1e-6, `line ${i}'s column inside the room`);
+  }
+  for (const c of f.columns.slice(0, -1)) assert.ok(close(c.h, COLUMN_H * f.fs), 'every column but the last its full depth');
+  for (const c of f.columns.slice(1)) assert.ok(close(f.lines[c.first].top, c.top), 'each column starts at its first line\'s top: the margin above it dropped');
+  for (const [ci, cb] of bars(f).entries()) for (const b of cb) assert.ok(b.y >= f.columns[ci].y - 1e-6 && b.y + b.h <= f.columns[ci].y + f.columns[ci].h + 1e-6, 'no bar past its column');
 });
 
-test('the positions a plan does not hold yet are counted as body lines and narrow the face', () => {
-  const { rows, positions } = article([words(30, 1), words(12, 2)]);
-  const est = metricsFor(positions + 6000, BOX);
-  const held = fitted(rows, est), whole = fitted(rows, est, 6000);
-  assert.equal(held, est, 'the delivered part alone fits the estimate');
-  assert.ok(whole.fs < held.fs, 'counting the 6000 positions not held narrows it');
-  assert.ok(heightOf(layoutOf(rows, whole)) + Math.ceil(6000 / whole.cpl) * LINE_H <= room(whole), 'the lines held and a body line per column of the rest end inside the room');
+test('the standard size holds until the columns fill the room; each step after it at least doubles the room\'s capacity', () => {
+  const s0 = stepAt(ROOM, 0);
+  assert.ok(close(s0.fs, standardFs(ROOM)) && close(STANDARD_FS, s0.fs), 'step 0 is the standard size');
+  assert.equal(s0.capacity, STANDARD_GRID[0] * STANDARD_GRID[1]);
+  assert.ok(s0.fs * STANDARD_GRID[0] * (COLUMN_W + GUTTER) <= ROOM.w + 1e-6 && s0.fs * STANDARD_GRID[1] * (COLUMN_H + GUTTER) <= ROOM.h + 1e-6, 'the standard grid fits the room');
+  for (let n = 1; n <= s0.capacity; n++) assert.equal(stepFor(ROOM, n).k, 0, `${n} columns: the standard size`);
+  let prev = s0;
+  for (let k = 1; k <= 9; k++) {
+    const s = stepAt(ROOM, k);
+    assert.ok(s.fs < prev.fs, `step ${k} smaller than step ${k - 1}`);
+    assert.ok(s.capacity >= STANDARD_GRID[0] * STANDARD_GRID[1] * 2 ** k && s.capacity >= 2 * (STANDARD_GRID[0] * STANDARD_GRID[1] * 2 ** (k - 1)), `step ${k} holds at least twice step ${k - 1}'s count: ${s.capacity}`);
+    assert.equal(stepFor(ROOM, prev.capacity + 1).k <= k, true, 'one column past a step\'s capacity takes no more than the next step');
+    prev = s;
+  }
+  // a growing draft re-sets only where it crosses a step's capacity: between steps the size stands
+  const sizes = new Set();
+  for (let n = 1; n <= 200; n++) sizes.add(stepFor(ROOM, n).fs);
+  assert.ok(sizes.size <= 1 + Math.ceil(Math.log2(200 / (STANDARD_GRID[0] * STANDARD_GRID[1]))), `two hundred columns set at ${sizes.size} sizes: one a doubling`);
+  assert.ok(close(standardFs({ w: ROOM.w / 7, h: ROOM.h / 7 }), STANDARD_FS / 7), 'a room 7 times smaller sets the standard 7 times smaller');
 });
 
-test('the measurements the CSS reads are P-LAY\'s, one source', () => {
+test('columns stand left to right, then row by row, a gutter apart; a document shorter than one column is one column of its own length', () => {
+  const short = fold(layoutOf(article([words(30, 1)]).rows).lines, ROOM);
+  assert.equal(short.columns.length, 1);
+  const L = short.lines[short.lines.length - 1];
+  assert.ok(close(short.columns[0].h, (L.top + L.h) * short.fs), 'its own length');
+  assert.ok(close(short.columns[0].x, (GUTTER / 2) * short.fs) && close(short.columns[0].y, (GUTTER / 2) * short.fs), 'half a gutter in from the room\'s corner');
+  const f = fold(layoutOf(article(Array.from({ length: 60 }, (_, i) => words(30, i))).rows).lines, ROOM);
+  assert.ok(f.columns.length > f.across, 'more columns than a row holds');
+  f.columns.forEach((c, i) => {
+    const col = i % f.across, rowN = Math.floor(i / f.across);
+    assert.ok(close(c.x, (col * (COLUMN_W + GUTTER) + GUTTER / 2) * f.fs), `column ${i} at its place across`);
+    assert.ok(close(c.y, (rowN * (COLUMN_H + GUTTER) + GUTTER / 2) * f.fs), `column ${i} at its row`);
+  });
+  for (let i = 1; i < f.columns.length; i++) {
+    const a = padded(f, f.columns[i - 1]), b = padded(f, f.columns[i]);
+    if (i % f.across) assert.ok(close(a.x + a.w, b.x), 'neighbouring padded columns meet: one edge');
+  }
+});
+
+test('a heading stays with the first two lines after it; no paragraph line stands alone at a column\'s head or foot; a short paragraph moves whole', () => {
+  // a filler that leaves `left` body lines in the first column, then what is kept
+  const filler = (/** @type {number} */ left) => Array.from({ length: COLUMN_LINES - left }, (_, i) => ({ ...para(1 + i * 20, 'x'.repeat(10)), after: 0 }));
+  const at = (/** @type {Row[]} */ rows, /** @type {number} */ pos) => { const f = fold(layoutOf(rows, MEASURE_CPL).lines, ROOM); return f.columns.findIndex((c) => f.lines.slice(c.first, c.first + c.n).some((l) => l.pos === pos)); };
+  // a paragraph of `n` full lines: six words of ten characters a line, the space after the sixth hanging
+  const long = (/** @type {number} */ pos, /** @type {number} */ n) => ({ ...para(pos, Array.from({ length: 6 * n }, () => 'y'.repeat(10)).join(' ')), after: 0 });
+  // two lines left: a heading and one line of the paragraph after it would fit; the heading goes to the next column with it
+  const h = { ...heading(5000, '## Part', 1), before: 0, after: 0 };
+  assert.equal(layoutOf([long(1, 5)], MEASURE_CPL).lines.length, 5, 'the paragraph sets five lines');
+  assert.equal(at([...filler(2), h, long(6000, 5)], 5000), 1, 'the heading moves to the next column with its text');
+  assert.equal(at([...filler(3), h, long(6000, 5)], 5000), 0, 'three lines left: the heading and its first two lines stand at the foot');
+  // two lines left before a five-line paragraph: two at the foot, three at the head
+  const two = fold(layoutOf([...filler(2), long(6000, 5)], MEASURE_CPL).lines, ROOM);
+  assert.deepEqual(two.columns.map((c) => two.lines.slice(c.first, c.first + c.n).filter((l) => l.pos === 6000).length), [2, 3], 'two lines at the foot, three at the head');
+  // one line left: no orphan at the foot — the paragraph moves whole
+  assert.equal(at([...filler(1), long(6000, 5)], 6000), 1);
+  const one = fold(layoutOf([...filler(1), long(6000, 5)], MEASURE_CPL).lines, ROOM);
+  assert.equal(one.lines.filter((l, i) => l.pos === 6000 && i < one.columns[0].first + one.columns[0].n).length, 0, 'no lone line at the foot');
+  // four lines left before a five-line paragraph: three at the foot leave a widow; the break moves one line up
+  const four = fold(layoutOf([...filler(4), long(6000, 5)], MEASURE_CPL).lines, ROOM);
+  assert.deepEqual(four.columns.map((c) => four.lines.slice(c.first, c.first + c.n).filter((l) => l.pos === 6000).length), [3, 2], 'never a lone line at the head');
+  // a three-line paragraph two lines from the foot moves whole
+  const t = fold(layoutOf([...filler(2), long(6000, 3)], MEASURE_CPL).lines, ROOM);
+  assert.deepEqual(t.columns.map((c) => t.lines.slice(c.first, c.first + c.n).filter((l) => l.pos === 6000).length), [0, 3], 'a paragraph of three lines or fewer moves whole');
+});
+
+test('the head, a record and a withheld run are never split; a kept unit deeper than a column is broken at a line anyway, so no text is dropped', () => {
+  const filler = Array.from({ length: COLUMN_LINES - 2 }, (_, i) => ({ ...para(1 + i * 20, 'x'.repeat(10)), after: 0 }));
+  const withheld = row('withheld', 9000, [], { width: MEASURE_CPL * 4, keep: 'whole' });
+  const f = fold(layoutOf([...filler, withheld], MEASURE_CPL).lines, ROOM);
+  assert.deepEqual(f.columns.map((c) => f.lines.slice(c.first, c.first + c.n).filter((l) => l.pos === 9000).length), [0, 4], 'the withheld run moves whole');
+  const record = [row('text', 9000, [piece('skep-enroll', 1, { own: false })], { keep: 'whole' }), row('text', null, [piece('dev · device', MEASURE.derived, { own: false })], { size: MEASURE.derived, keep: 'joined' })];
+  const fr = fold(layoutOf([...Array.from({ length: COLUMN_LINES - 1 }, (_, i) => ({ ...para(1 + i * 20, 'x'), after: 0 })), ...record], MEASURE_CPL).lines, ROOM);
+  assert.ok(fr.columns.length === 2 && fr.lines.slice(fr.columns[1].first).every((l) => l.pos === 9000), 'a record\'s words and keys stand together');
+  const deep = fold(layoutOf([row('withheld', 1, [], { width: MEASURE_CPL * COLUMN_LINES * 2, keep: 'whole' })], MEASURE_CPL).lines, ROOM);
+  assert.equal(deep.columns.length, 2, 'a withheld run two columns deep takes two columns');
+  assert.equal(deep.columns.reduce((n, c) => n + c.n, 0), COLUMN_LINES * 2, 'every one of its lines stands');
+});
+
+test('the outline traces the padded columns: one edge, each row\'s run of full columns and a short last column a step', () => {
+  const one = fold(layoutOf(article([words(30, 1)]).rows).lines, ROOM);
+  const p1 = padded(one, one.columns[0]);
+  assert.deepEqual(outline(one), [{ x: p1.x, y: p1.y }, { x: p1.x + p1.w, y: p1.y }, { x: p1.x + p1.w, y: p1.y + p1.h }, { x: p1.x, y: p1.y + p1.h }], 'one column: its padded slot');
+  const f = fold(layoutOf(article(Array.from({ length: 40 }, (_, i) => words(30, i))).rows).lines, ROOM);
+  const rects = outlineRects(f);
+  const area = rects.reduce((a, r) => a + r.w * r.h, 0), cols = f.columns.reduce((a, c) => { const p = padded(f, c); return a + p.w * p.h; }, 0);
+  assert.ok(Math.abs(area - cols) < 1e-6 * cols, 'the rects cover the padded columns, nothing more');
+  const pts = outline(f), b = boundsOf(f);
+  for (const p of pts) assert.ok(p.x >= b.x - 1e-9 && p.x <= b.x + b.w + 1e-9 && p.y >= b.y - 1e-9 && p.y <= b.y + b.h + 1e-9);
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], z = pts[(i + 1) % pts.length]; assert.ok(close(a.x, z.x) || close(a.y, z.y), 'its edges run across or down: a column\'s'); }
+  // the polygon's area by the shoelace equals the columns'
+  let sh = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], z = pts[(i + 1) % pts.length]; sh += a.x * z.y - z.x * a.y; }
+  assert.ok(Math.abs(Math.abs(sh) / 2 - cols) < 1e-6 * cols, 'its area the padded columns\'');
+  const r0 = firstRow(f);
+  assert.ok(close(r0.w, Math.min(f.across, f.columns.length) * (COLUMN_W + GUTTER) * f.fs) && close(r0.h, (COLUMN_H + GUTTER) * f.fs), 'the first row: its columns across, a column deep');
+});
+
+test('the estimate never sets more columns than the text, so its size is never smaller than the text\'s; an unread extent is the first column slot', () => {
+  for (const n of [1, 5, 30, 120, 600, 3000]) {
+    const { rows, positions } = article(Array.from({ length: n }, (_, i) => words(8 + (i % 30), i)));
+    const f = fold(layoutOf(rows).lines, ROOM), e = estimate(positions, ROOM);
+    assert.ok(e.columns.length <= f.columns.length, `${positions} positions: the estimate ${e.columns.length} columns, the text ${f.columns.length}`);
+    assert.ok(e.fs >= f.fs - 1e-12, 'its size never smaller');
+  }
+  const s = slot(ROOM);
+  assert.equal(s.columns.length, 1);
+  assert.ok(close(s.fs, STANDARD_FS) && close(s.columns[0].h, COLUMN_H * s.fs), 'a column deep, at the standard size');
+  for (const c of [0, 1, 7]) { const [a] = estimatedSpan(c), e = estimate(60 * MEASURE_CPL * COLUMN_LINES, ROOM); assert.equal(placeOf(e, a).column, c, `the estimate's column ${c} holds its span's first position`); }
+});
+
+test('positions are placed and read back: each line\'s position names its line, in its column', () => {
+  const { rows } = article(Array.from({ length: 50 }, (_, i) => words(24, i)));
+  const f = fold(layoutOf(rows).lines, ROOM);
+  let checked = 0;
+  for (let i = 0; i < f.lines.length; i++) {
+    const l = f.lines[i];
+    if (l.at == null || (i && f.lines[i - 1].at === l.at)) continue;
+    const p = placeOf(f, l.at), b = /** @type {NonNullable<ReturnType<typeof lineBox_>>} */ (lineBox_(f, i));
+    assert.ok(close(p.y, b.y) && close(p.x, b.c.x), `line ${i}'s position placed at its line`);
+    assert.equal(posAt(f, p.x + p.w / 2, p.y + p.h / 2), l.at, `and read back from its middle`);
+    checked++;
+  }
+  assert.ok(checked > 100, `${checked} lines`);
+  assert.equal(columnAt(f, -1e9, -1e9), 0, 'a point off every column reads its nearest');
+});
+
+test('positions the document does not hold are estimated: those after its lines from the last line\'s foot, those between its blocks in columns of their own', () => {
+  const { rows } = article([words(30, 1), words(12, 2)]);
+  const lines = layoutOf(rows).lines, held = lines[lines.length - 1];
+  const f = fold(lines, ROOM, { after: MEASURE_CPL * COLUMN_LINES * 3, heldTo: 1000 });
+  assert.ok(f.columns.length >= 4 && f.columns.slice(1).every((c) => c.estimated), 'the rest in estimated columns after the held one');
+  const first = placeOf(f, 1000);
+  assert.ok(first.column === 0 && close(first.y, f.columns[0].y + (held.top + held.h - f.columns[0].top) * f.fs), 'the first unheld position at the held lines\' foot');
+  assert.ok(placeOf(f, 1000 + MEASURE_CPL * COLUMN_LINES * 2).column >= 2, 'later ones in later columns');
+  // a block after a gap: a column breaks before it, the gap in columns of its own
+  const gap = layoutOf([...HEAD, para(1, words(20, 1)), para(100001, words(20, 2))]).lines.map((l) => (l.pos === 100001 && l.nth === 0 ? { ...l, gap: 100000 - 120 } : l));
+  const g = fold(gap, ROOM);
+  const after = g.columns.findIndex((c) => g.lines.slice(c.first, c.first + c.n).some((l) => l.pos === 100001));
+  assert.ok(after >= 2 && g.columns.slice(1, after).every((c) => c.estimated), `the block after the gap in column ${after}, estimated columns before it`);
+  assert.ok(g.columns[after].first === g.lines.findIndex((l) => l.pos === 100001), 'the block opens its column');
+  assert.equal(placeOf(g, 50000).column > 0 && placeOf(g, 50000).column < after, true, 'a position in the gap stands in its estimated columns');
+});
+
+test('the paging key continues at the next column\'s top where the view shows its column\'s foot, and pages within a column that runs past the view', () => {
+  const f = fold(layoutOf(article(Array.from({ length: 30 }, (_, i) => words(30, i))).rows).lines, ROOM);
+  const c0 = f.columns[0], c1 = f.columns[1], half = (GUTTER / 2) * f.fs;
+  const whole = { x0: c0.x - half, y0: c0.y - half, x1: c0.x + c0.w + half, y1: c0.y + c0.h + 10 * half };
+  assert.deepEqual(pageTarget(f, whole, 1), { column: 1, x: c1.x + c1.w / 2, top: c1.y - half }, 'the foot in view: the next column\'s top, half a gutter above its text');
+  const part = { ...whole, y1: c0.y + c0.h / 2 };
+  assert.equal(pageTarget(f, part, 1), null, 'the foot below the view: page within the column');
+  const second = { x0: c1.x - half, y0: c1.y - half, x1: c1.x + c1.w + half, y1: c1.y + c1.h };
+  assert.deepEqual(pageTarget(f, second, -1), { column: 0, x: c0.x + c0.w / 2, top: c0.y - half }, 'PageUp from a column\'s top: the previous column\'s top');
+  const last = f.columns[f.columns.length - 1];
+  assert.equal(pageTarget(f, { x0: last.x - half, y0: last.y - half, x1: last.x + last.w + half, y1: last.y + last.h + 4 * half }, 1), null, 'past the last column: nothing to continue at');
+});
+
+test('a passage read in one fold is held to its place in another: its position\'s line, the offset kept at the new size, and the scale\'s factor the sizes\' ratio', () => {
+  const { rows } = article(Array.from({ length: 40 }, (_, i) => words(30, i)));
+  const lines = layoutOf(rows).lines;
+  const a = fold(lines, ROOM), b = fold(lines, ROOM, { step: 2 });
+  assert.ok(b.fs < a.fs && b.across > a.across, 'set two steps smaller: more columns across');
+  const line = a.lines[Math.floor(a.lines.length * 0.6)];
+  const p = placeOf(a, /** @type {number} */ (line.at)), pt = { x: p.x + 7, y: p.y + p.h / 2 };
+  const h = /** @type {NonNullable<ReturnType<typeof holdOf>>} */ (holdOf(a, b, pt));
+  assert.equal(h.pos, line.at);
+  const q = placeOf(b, /** @type {number} */ (line.at));
+  assert.ok(close(h.to.x, q.x + 7 * (b.fs / a.fs)) && close(h.to.y, q.y + (p.h / 2) * (b.fs / a.fs)), 'the same offset from the same line, at the new size');
+  assert.ok(close(h.k, a.fs / b.fs), 'the camera\'s scale grows by the sizes\' ratio, so the text keeps its size on screen');
+});
+
+test('the measurements the CSS reads are P-LAY\'s, one source: the fold\'s measure as a count the style multiplies by 1ch', () => {
   const v = cssMeasures();
   assert.equal(v['--gap'], MEASURE.gap + 'em');
   assert.equal(v['--h2'], MEASURE.h2 + 'em');
   assert.equal(v['--head'], MEASURE.head + 'em');
-  assert.equal(Object.keys(v).filter((k) => !k.startsWith('--border')).length, Object.keys(MEASURE).length, 'every measure is a custom property');
+  assert.equal(v['--measure'], String(MEASURE_CPL));
+  assert.equal(v['--gutter'], GUTTER + 'em');
+  assert.equal(Object.keys(v).length, Object.keys(MEASURE).length + Object.keys(BORDER).length + 2, 'every measure, every border and the fold\'s two, each a custom property');
   assert.ok(Number.isInteger(LINE_H * LAY_FS * 64), 'a line box on the 1/64 px grid at the layout size');
+  assert.equal(heightOf({ lines: [], blocks: new Map() }), 0);
+  assert.equal(columnsOf([]).length, 0);
 });

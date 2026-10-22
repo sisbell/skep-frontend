@@ -9,20 +9,26 @@
 // a point the flight was passing (foundations §2.3). Every flight `fly`
 // starts settles its promise once: true as it lands, false where a newer
 // flight, `set`, a pan or a zoom cuts it short (`cut`), so the act awaiting
-// it ends whatever ends its flight.
+// it ends whatever ends its flight. A RE-ANCHOR (`reanchor`; issue #15: "the
+// passage in view keeps its place and size on screen") moves the view with
+// the text it reads where a document is set again: the point the passage
+// stood at to where it stands now, the scale by the ratio of its sizes — and
+// a flight bound for that document with it, never cut, still settling true as
+// it lands.
 // THE ZOOM-IN BOUND (E18 (a)): it never stops short of the reading scale of a
-// place the projection draws — the deepest place's representative em at boot
-// (`setDeepest`), and every face T-LAYER sets a document at (`reach`), smaller
-// than its place's em wherever the document's lines need more room than that
-// em leaves them — so a landing, a zoom and the mount read every document at
-// reading scale at any depth. One bound for the plane, which only rises: a
-// bound per document would snap the zoom as the view left one, and a bound
-// that fell — a document's text dropped by a feed row, its face its place's
-// again until the text is read anew — would take the scale from under its
-// reader on the next pan or flight step.
+// place the projection draws — the deepest place's standard type at boot
+// (`setDeepest`; P-LAY's STANDARD_FS), and every size T-LAYER sets a document
+// at (`reach`), smaller than its place's standard wherever the document's
+// columns fill its room — so a landing, a zoom and the mount read every
+// document at reading scale at any depth, however small it is set. One bound
+// for the plane, which only rises: a bound per document would snap the zoom
+// as the view left one, and a bound that fell — a document's text dropped by
+// a feed row, its size its estimate's again until the text is read anew —
+// would take the scale from under its reader on the next pan or flight step.
 // Carries: the wireframe's §6 (`cam`, `sx`/`sy`/`wx`/`wy`, `homeView`,
 // `viewForCell`, `setCam`, `clampCam`) and §11's `flyTo`/`stepAnim`/
-// `viewForDoc`; S3's bounds (`minS` from the world, `maxS` 40), the zoom-in
+// `viewForDoc` (here `viewAt`, a reading view centred on a place P-LAY's fold
+// names); S3's bounds (`minS` from the world, `maxS` 40), the zoom-in
 // bound widened from S3's per E18 (a); and §17's
 // `edgeStub`, THE EDGE STUB's screen arithmetic that BM's beams and
 // P-RENDER's mid connections share (foundations §2.1, §2.5; S1 Q3): the
@@ -31,7 +37,8 @@
 // cut (`stubTriangle`), sized by P-REG's STUB.
 // Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11.
 
-import { WORLD_W, WORLD_H, DOC_W, REP_FS, DEPTH_SOUND, G, LEAF } from './projection.js';
+import { WORLD_W, WORLD_H, DEPTH_SOUND, G, LEAF } from './projection.js';
+import { STANDARD_FS } from './layout.js';
 import { STUB } from './register.js';
 
 /**
@@ -88,13 +95,13 @@ export function reach(fs) { if (fs > 0) maxS = Math.max(maxS, (30 / fs) * 1.2); 
 
 /**
  * The bound at boot (E18 (a)): the reading scale of the deepest place the
- * index lists, at its representative em — REP_FS / 7^depth world units at
- * continuation depth `depth` (P-PROJ's `fsRep`; past the sound depth, the
- * residue's) — before any document there is set at a face of its own, which
- * `reach` takes as T-LAYER sets it.
+ * index lists, at its standard type — STANDARD_FS / 7^depth world units at
+ * continuation depth `depth` (its room 7^depth smaller; past the sound depth,
+ * the residue's) — before any document there is set at a size of its own,
+ * which `reach` takes as T-LAYER sets it.
  * @param {number} depth
  */
-export function setDeepest(depth) { reach(REP_FS / Math.pow(G[LEAF], Math.min(depth, DEPTH_SOUND))); }
+export function setDeepest(depth) { reach(STANDARD_FS / Math.pow(G[LEAF], Math.min(depth, DEPTH_SOUND))); }
 export function bounds() {
   return { minS: Math.min(VW / WORLD_W, VH / WORLD_H) * 0.5, maxS };
 }
@@ -137,18 +144,16 @@ export function viewForCell(c, fit = 0.92) {
 }
 
 /**
- * The view that reads a document: its em at `fsPx` screen px, centred on
- * the box, or on a fraction of its height (the span's place).
- * @param {{x:number,y:number,w:number,h:number}} box
+ * The view that reads a document at a place: its em at `fsPx` screen px,
+ * centred on the point — a line's place in its column, or a column's centre
+ * (P-LAY's `placeOf`, through T-LAYER's).
+ * @param {{x: number, y: number}} at the world point to centre
  * @param {number} fs the document's em in world units
  * @param {number} [fsPx]
- * @param {number | null} [frac] 0–1 down the box, else the centre
  * @returns {View}
  */
-export function viewForDoc(box, fs, fsPx = 12.5, frac = null) {
-  const scale = fs > 0 ? fsPx / fs : 620 / DOC_W;
-  const y = frac == null ? box.y + box.h / 2 : box.y + box.h * Math.max(0, Math.min(1, frac));
-  return { x: box.x + box.w / 2, y, scale };
+export function viewAt(at, fs, fsPx = 12.5) {
+  return { x: at.x, y: at.y, scale: fsPx / fs };
 }
 
 /**
@@ -206,6 +211,32 @@ export function step(now) {
 
 /** is a flight in progress? */
 export const flying = () => cam.anim !== null;
+
+/**
+ * The re-anchor (see the head): the world point `a` a passage stood at moved
+ * to `b`, where it stands now, its text set `k` times smaller — the view taken
+ * so `b` stands where `a` stood on screen, at `k` times the scale, so the
+ * passage keeps its place and its size; a flight bound inside `within` — the
+ * document's room — moved the same way, from where it set out to where it
+ * lands, never cut, so it lands where its passage stands now and settles true.
+ * A flight bound elsewhere carries the camera on, as it was.
+ * @param {{x: number, y: number}} a
+ * @param {{x: number, y: number}} b
+ * @param {number} k the passage's old em over its new
+ * @param {{x: number, y: number, w: number, h: number}} [within] the document's room, in world units
+ */
+export function reanchor(a, b, k, within) {
+  const move = (/** @type {View} */ v) => ({ x: b.x + (v.x - a.x) / k, y: b.y + (v.y - a.y) / k, scale: v.scale * k });
+  const f = cam.anim;
+  if (f) {
+    const inside = !!within && f.to.x >= within.x && f.to.x <= within.x + within.w && f.to.y >= within.y && f.to.y <= within.y + within.h;
+    if (!inside) return;
+    f.from = move(f.from); f.to = move(f.to); f.outScale *= k;
+  }
+  const m = move(view());
+  cam.x = m.x; cam.y = m.y; cam.scale = m.scale;
+  clamp();
+}
 
 /** pan by screen px (input never draws — FP-9; it moves view state) */
 export function panBy(/** @type {number} */ dx, /** @type {number} */ dy) { cut(); cam.x -= dx / cam.scale; cam.y -= dy / cam.scale; clamp(); }

@@ -10,7 +10,9 @@
 // for its members — the extent (`retrieve_doc_v_span_set`), the metadata
 // (`doc_metadata`), the links touching them (`find_links_v`, then each new
 // link's type ONCE by `read_link` — E17 (a)), and, where legible, the span
-// window of text (`retrieve_v`) with its V→I image (`image`) — the
+// window of text (`retrieve_v`: from position 1 through the columns in view,
+// every column's place reading every line before it — issue #15's fold) with
+// its V→I image (`image`) — the
 // transcluded runs, and the permanent addresses a link's stored span is read
 // back to the text through (M-REC's `placed`) — and where each far end its
 // read links send from it sits in its far document's current text now
@@ -131,7 +133,7 @@ import * as F from './frames.js';
 import { cam, viewportWorld } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation } from '../plane/projection.js';
-import { metricsFor } from '../plane/layout.js';
+import { estimate, estimatedSpan } from '../plane/layout.js';
 import { versionAddress, homeOf } from './address.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
@@ -176,7 +178,7 @@ const MAX_SCANS = 2;
 const SPAN_BLOCK = 2048;
 /** the most positions a whole read fetches at once (the staging draft holds six million; the rest comes by the viewport's windows) */
 export const WHOLE_CAP = 262144;
-/** the em (px), by P-LAY's estimate, at which a document's text is fetched — below S1's mount em, and the estimate's face never smaller than the one T-LAYER fits the article to and mounts at, so the text is there when the layer mounts */
+/** the em (px), by P-LAY's estimate, at which a document's text is fetched — below S1's mount em, and the estimate's size never smaller than the one T-LAYER folds the article at and mounts it at (its columns never more than the text's), so the text is there when the layer mounts */
 const FETCH_EM = 5;
 /** at most this many members probed (`D.2`, `D.3`, …) */
 const MEMBER_PROBE_CAP = 8;
@@ -584,27 +586,39 @@ export function visibleDocs(pad = 80) {
 }
 
 /**
- * The span window a document's visible band needs: the positions whose
- * estimated place lies in the viewport — the positions spread evenly down
- * the article, from its first line's top to its clip (P-LAY's) — rounded to
- * SPAN_BLOCK.
+ * The span window a document's columns in view need (issue #15): the place
+ * of every column is read from every line before it, so its text from
+ * position 1 through one estimated column past the last one in view (P-LAY's
+ * `estimate`, every line full: never more columns than its text sets, so its
+ * positions reach at least as far as the columns in view hold) — through its
+ * end where the view stands over its room past the estimate's columns —
+ * within WHOLE_CAP; past it, the estimated columns in view alone, which
+ * T-LAYER lays out from their estimated column; rounded to SPAN_BLOCK.
  * @param {Doc} d
  * @returns {[number, number] | null} [first position, one past the last]
  */
 export function spanWindow(d) {
   const extent = d.extent || 0; if (!extent) return null;
-  const box = docBox(d.addr);
-  const m = metricsFor(extent, box);
-  const y0 = box.y + m.y0, textH = m.y1 - m.y0;
+  const box = docBox(d.addr), f = estimate(extent, box);
   const v = viewportWorld(0);
-  const f0 = Math.max(0, (v.y0 - y0) / textH), f1 = Math.min(1, (v.y1 - y0) / textH);
-  if (f1 <= 0 || f0 >= 1) return null;
-  const margin = 0.12;
-  let from = Math.floor((f0 - margin) * extent), to = Math.ceil((f1 + margin) * extent);
-  from = Math.max(1, Math.floor(from / SPAN_BLOCK) * SPAN_BLOCK + 1);
-  to = Math.min(extent + 1, Math.ceil(to / SPAN_BLOCK) * SPAN_BLOCK + 1);
-  if (to <= from) to = Math.min(extent + 1, from + SPAN_BLOCK);
-  return [from, to];
+  if (!intersects(box, v)) return null;
+  let lo = Infinity, hi = -1;
+  f.columns.forEach((c, i) => {
+    const x = box.x + c.x, y = box.y + c.y;
+    if (x + c.w >= v.x0 && x <= v.x1 && y + c.h >= v.y0 && y <= v.y1) { lo = Math.min(lo, i); hi = Math.max(hi, i); }
+  });
+  const end = hi < 0 ? extent + 1 : Math.min(extent + 1, estimatedSpan(hi + 1)[1]);
+  const up = (/** @type {number} */ n) => Math.min(extent + 1, Math.ceil((n - 1) / SPAN_BLOCK) * SPAN_BLOCK + 1);
+  if (end <= WHOLE_CAP + 1 || hi < 0) return [1, Math.max(up(Math.min(end, WHOLE_CAP + 1)), Math.min(extent + 1, 1 + SPAN_BLOCK))];
+  const from = Math.max(1, Math.floor((estimatedSpan(lo)[0] - 1) / SPAN_BLOCK) * SPAN_BLOCK + 1);
+  return [from, up(end)];
+}
+
+/** do a document's delivered runs hold every position of [from, to)? */
+function holdsSpan(/** @type {Doc} */ d, /** @type {number} */ from, /** @type {number} */ to) {
+  let at = from;
+  for (const r of d.runs) { if (r.pos <= at && at < r.pos + r.width) at = r.pos + r.width; if (at >= to) return true; }
+  return at >= to;
 }
 
 /**
@@ -641,12 +655,14 @@ export function pump() {
     for (const la of REC.unreadLinks(d.addr).slice(0, 12)) {
       if (need('k:' + la, F.readLink(la), (a) => { const v = F.decodeLinkValue(la, a); if (v) REC.takeLink(v); }, d.addr)) missing++;
     }
-    const em = metricsFor(d.extent, box).fs * cam.scale;
+    const em = estimate(d.extent, box).fs * cam.scale;
     if (em >= FETCH_EM && d.extent > 0) {
       const w = spanWindow(d);
-      if (w && !(d.from >= 0 && d.from <= w[0] && d.to >= w[1])) {
-        const from = d.from < 0 ? w[0] : Math.min(d.from, w[0]);
-        const to = d.to < 0 ? w[1] : Math.max(d.to, w[1]);
+      if (w && !holdsSpan(d, w[0], w[1])) {
+        // joined to what is held where it meets it; a window past the whole read's cap read alone
+        const meets = d.from >= 0 && w[0] <= d.to && d.from <= w[1];
+        const from = meets ? Math.min(d.from, w[0]) : w[0];
+        const to = meets ? Math.max(d.to, w[1]) : w[1];
         if (need('r:' + d.addr + ':' + from + ':' + to, F.retrieveV(d.addr, from, to - from), (a) => REC.takeDelivery(d.addr, F.decodeDelivery(a, from)), d.addr, (r) => refuseDoc(d, r))) missing++;
       }
       if (d.from >= 0 && (!d.imageFor || d.imageFor[0] > d.from || d.imageFor[1] < d.to)) {

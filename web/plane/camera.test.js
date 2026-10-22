@@ -5,10 +5,14 @@
 // cuts it short, the camera then where the cut put it (a mutant that drops
 // the settling from any one of them, settles a cut flight true or lands with
 // no answer turns red), the zoom bound widened per E18 (a)
-// — the deepest place's representative em at boot, and every face a document
-// is set at: a flight to read a face smaller than its place's em lands at its
-// reading scale (a bound held at the places' ems turns red), and no face
-// reached after lowers the bound (one set from the latest face turns red);
+// — the deepest place's standard type at boot, and every size a document is
+// set at: a flight to read a document set smaller than its place's standard
+// lands at its reading scale (a bound held at the places' standard turns
+// red), and no size reached after lowers the bound (one set from the latest
+// size turns red); a re-anchor keeping a passage's place and size on screen as
+// its document is set again — a flight bound into the document moved with it,
+// never cut and settling true as it lands, one bound elsewhere carried on (a
+// mutant that cuts the flight, or moves the camera alone, turns red);
 // the edge stub's cut on its
 // true bearing, STUB.inset px inside the visible view's border on every side
 // — below the chrome across the viewport's top, never under it — and the
@@ -16,7 +20,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as CAM from './camera.js';
-import { WORLD_W, WORLD_H, REP_FS, DEPTH_SOUND, docBox } from './projection.js';
+import { WORLD_W, WORLD_H, DEPTH_SOUND, docBox } from './projection.js';
+import { STANDARD_FS, standardFs } from './layout.js';
 import { STUB } from './register.js';
 
 test('screen and world project both ways about the viewport centre', () => {
@@ -36,7 +41,7 @@ test('the clamp keeps the camera in the world\'s margin and the scale in its bou
   assert.equal(CAM.cam.scale, CAM.bounds().minS);
 });
 
-test('the zoom-in bound reaches the reading scale of the deepest drawn place, at its representative em (E18 (a))', () => {
+test('the zoom-in bound reaches the reading scale of the deepest drawn place, at its standard type (E18 (a))', () => {
   CAM._reset(); CAM.setViewport(1000, 500);
   CAM.setDeepest(0); const b0 = CAM.bounds().maxS;
   assert.equal(b0, 40, "S3's constant bound where every document sits in the first grid");
@@ -45,18 +50,18 @@ test('the zoom-in bound reaches the reading scale of the deepest drawn place, at
   CAM.setDeepest(5); assert.ok(CAM.bounds().maxS > b3 * 40, 'two more grids: 49× the em');
   for (const d of [0, 2, 3, 7, DEPTH_SOUND, DEPTH_SOUND + 1, DEPTH_SOUND + 4]) {
     CAM._reset(); CAM.setDeepest(d);
-    assert.equal(CAM.bounds().maxS, Math.max(40, (30 / (REP_FS / 7 ** Math.min(d, DEPTH_SOUND))) * 1.2), `depth ${d}: 36 px an em of its place's representative em, the residue's past the sound depth`);
+    assert.equal(CAM.bounds().maxS, Math.max(40, (30 / (STANDARD_FS / 7 ** Math.min(d, DEPTH_SOUND))) * 1.2), `depth ${d}: 36 px an em of its place's standard type, the residue's past the sound depth`);
   }
   CAM._reset();
 });
 
-test('the bound reaches every face a document is set at, and only rises: a flight to read a face smaller than its place\'s em lands at its reading scale, and a larger face, a shallower place or no face lowers nothing (E18 (a))', async () => {
+test('the bound reaches every size a document is set at, and only rises: a flight to read a document set smaller than its place\'s standard lands at its reading scale, and a larger size, a shallower place or no size lowers nothing (E18 (a))', async () => {
   CAM._reset(); CAM.setViewport(1440, 900);
   CAM.setDeepest(3);
-  const box = docBox('1.0.1.0.145'), fs = box.fsRep / 10;
+  const box = docBox('1.0.1.0.145'), fs = standardFs(box) / 10;
   assert.equal(box.depth, 3, 'an account\'s 145th document stands in its third continuation');
-  const to = CAM.viewForDoc(box, fs, 12.5);
-  assert.ok(to.scale > CAM.bounds().maxS, 'a tenth of its place\'s em is read past the bound its place sets');
+  const to = CAM.viewAt({ x: box.x + box.w / 2, y: box.y + box.h / 2 }, fs, 12.5);
+  assert.ok(to.scale > CAM.bounds().maxS, 'a tenth of its place\'s standard is read past the bound its place sets');
   CAM.reach(fs);
   CAM.set(CAM.viewForCell(box));
   const landing = CAM.fly(to, 100, 0);
@@ -65,8 +70,8 @@ test('the bound reaches every face a document is set at, and only rises: a fligh
   const landed = CAM.view().scale;
   assert.ok(Math.abs(landed * fs - 12.5) < 1e-9, `the flight lands at 12.5 px an em, unclamped: ${landed * fs}`);
   const raised = CAM.bounds().maxS;
-  CAM.reach(box.fsRep); CAM.setDeepest(0); CAM.reach(0); CAM.reach(-1);
-  assert.equal(CAM.bounds().maxS, raised, 'its place\'s em, the first grid, no face: the bound stands');
+  CAM.reach(standardFs(box)); CAM.setDeepest(0); CAM.reach(0); CAM.reach(-1);
+  assert.equal(CAM.bounds().maxS, raised, 'its place\'s standard, the first grid, no size: the bound stands');
   CAM.panBy(1, 0);
   assert.equal(CAM.view().scale, landed, 'the next pan keeps the reading scale');
   CAM._reset();
@@ -111,6 +116,43 @@ test('a flight cut short settles false: by a newer flight, which runs on and set
     } else assert.ok(!CAM.flying(), `${what}: no flight runs`);
     if (what === 'a pan') assert.deepEqual(CAM.view(), { x: mid.x - 10 / mid.scale, y: mid.y, scale: mid.scale }, 'the pan moves the camera from where the flight was, by the pan alone');
   }
+  CAM._reset();
+});
+
+test('a re-anchor keeps a passage\'s place and size on screen: the point it stood at moved to where it stands now, the scale by the ratio of its sizes; a flight bound into the document lands at its new place, never cut, settling true; one bound elsewhere carries on', async () => {
+  const near = (/** @type {number} */ x, /** @type {number} */ y) => Math.abs(x - y) < 1e-6;
+  CAM._reset(); CAM.setViewport(1000, 500);
+  CAM.set({ x: 100, y: 200, scale: 2 });
+  const a = { x: 130, y: 210 }, b = { x: 400, y: 900 }, k = 1.5, room = { x: 0, y: 0, w: 2000, h: 2000 };
+  const seen = { x: CAM.sx(a.x), y: CAM.sy(a.y) };
+  CAM.reanchor(a, b, k, room);
+  assert.ok(near(CAM.sx(b.x), seen.x) && near(CAM.sy(b.y), seen.y), 'the passage where it stood on screen');
+  assert.ok(near(CAM.view().scale, 2 * k), 'at k times the scale: its size kept');
+  // a flight bound into the document: moved with it, from where it set out to where it lands
+  CAM.set({ x: 0, y: 0, scale: 1 });
+  const to = { x: 150, y: 220, scale: 2 };
+  /** @type {boolean | undefined} */
+  let landed;
+  CAM.fly(to, 100, 0).then((v) => { landed = v; });
+  CAM.step(50);
+  CAM.reanchor(a, b, k, room);
+  assert.ok(CAM.flying(), 'never cut');
+  CAM.step(100);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(landed, true, 'it settles true as it lands');
+  const v = CAM.view();
+  assert.ok(near((b.x - v.x) * v.scale, (a.x - to.x) * to.scale) && near((b.y - v.y) * v.scale, (a.y - to.y) * to.scale) && near(v.scale, to.scale * k), 'it lands with the passage where the flight would have shown it, at its size');
+  // a flight bound elsewhere: the camera carried on by it, as it was
+  CAM.set({ x: 0, y: 0, scale: 1 });
+  const away = { x: 5000, y: 5000, scale: 1 };
+  CAM.fly(away, 100, 0);
+  CAM.step(50);
+  const mid = CAM.view();
+  CAM.reanchor(a, b, k, room);
+  assert.deepEqual(CAM.view(), mid, 'the camera as the flight put it');
+  CAM.step(100);
+  const end = CAM.view();
+  assert.ok(near(end.x, away.x) && near(end.y, away.y) && near(end.scale, away.scale), 'it lands where it was bound');
   CAM._reset();
 });
 

@@ -222,7 +222,7 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   if (residue) { GO.leapTo(residue.newest, { how: 'click' }); return; }
   const doc = RENDER.docAtScreen(px, py);
   if (doc) {
-    const em = LAYER.metricsOf(REC.doc(doc)).fs * CAM.cam.scale;
+    const em = LAYER.foldOf(REC.doc(doc)).fs * CAM.cam.scale;
     if (em < LOD_TXT_LO) { GO.leapTo(doc, { how: 'click' }); return; }
     return; // at reading scale the layer's elements take the click
   }

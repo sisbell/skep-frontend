@@ -16,9 +16,11 @@ def run(ctx):
     thresholds = ctx.js('window.__skep.thresholds')
     box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
     written = []
+    first = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(DOC))
     for name, value, kind in thresholds:
         scale = ctx.js('window.__skep.scaleFor(%s, %s, %s)' % (json.dumps(DOC), json.dumps(kind), value))
-        ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * (0.3 if kind == 'em' else 0.5), scale)
+        # an em threshold over the first edition's first column, where its text stands; a box threshold over its room
+        ctx.set_view(first['x'] if kind == 'em' else box['x'] + box['w'] / 2, first['y'] if kind == 'em' else box['y'] + box['h'] / 2, scale)
         lod = ctx.js('window.__skep.view.lod()')
         rel = ctx.shot(f'thresholds/{name}.png')
         written.append({'name': name, 'value': value, 'kind': kind, 'scale': scale, 'lod': lod['name'], 'mounted': ctx.js('window.__skep.mountedAddrs()'), 'shot': rel})
@@ -54,11 +56,10 @@ def run(ctx):
         screen('B1-S6', 'follow: the ghost target\'s dead-reference face', 'B1-S6-follow-face')
         ctx.esc()
     doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))
-    frac = 0.12 + 0.8 * ((WINDOW[0] - 1) / doc['extent'])
     ctx.view_doc_em(DOC, 14)
-    ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, ctx.camera()['scale'])
+    ctx.view_at(DOC, WINDOW[0])
     screen('B1-S7', 'the window run: C-33\'s mark for the entitled reader (a guest\'s placeholder at the run is the guest case\'s, shots/guest/), the corner held at the top of the document\'s visible part', 'B1-S7-window-run',
-           claims=[('#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC, 'C-33\'s mark', None), (corner, 'the first edition\'s corner', None)])
+           claims=[('#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"] + .pubmark[data-mark="C-33"]' % (DOC, WINDOW[2]), 'C-33\'s mark at the run\'s opening', None), (corner, 'the first edition\'s corner', None)])
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(GHOST)); ctx.settle(); ctx.frames(2)
     screen('B1-S8', 'a dead reference: the ghost address faced', 'B1-S8-ghost')
     ctx.esc()

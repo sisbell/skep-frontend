@@ -314,9 +314,10 @@ function moved() {
 }
 
 /**
- * The camera follows the focus: fly to the element at its level's scale —
- * nowhere where the document's extent is read first and a later move
- * overtook this one meanwhile.
+ * The camera follows the focus: fly to the element at its level's scale — a
+ * document's outline framed, no nearer than reading size; a span's line in
+ * its column at reading size (T-LAYER's fold) — nowhere where the document's
+ * extent is read first and a later move overtook this one meanwhile.
  * @param {number} move the move's count
  */
 async function flyToFocus(move) {
@@ -326,12 +327,12 @@ async function flyToFocus(move) {
   else if (focus.kind === 'document') {
     const d = REC.doc(focus.addr); if (d.extent == null) await PUMP.loadWhole(focus.addr);
     if (move !== moves) return;
-    const box = docBox(focus.addr); await CAM.fly(CAM.viewForCell(box, 0.9), 300);
+    // its outline framed, no nearer than reading size
+    const v = CAM.viewForCell(LAYER.shapeOf(focus.addr), 0.9);
+    await CAM.fly({ ...v, scale: Math.min(v.scale, 12.5 / LAYER.foldOf(REC.doc(focus.addr)).fs) }, 300);
   } else {
     const d = REC.doc(focus.addr);
-    const box = docBox(focus.addr);
-    const frac = d.extent && focus.pos != null ? 0.12 + 0.8 * ((focus.pos - 1) / d.extent) : null;
-    await CAM.fly(CAM.viewForDoc(box, LAYER.metricsOf(d).fs, 12.5, frac), 260);
+    await CAM.fly(CAM.viewAt(LAYER.centreOf(focus.addr, focus.pos), LAYER.foldOf(d).fs, 12.5), 260);
   }
   CAM.markDirty();
 }
@@ -432,10 +433,11 @@ export async function focusTo(addr, pos, byKey = false, take = true) {
  * The focus follows the camera (rule 3): after a camera move — the wheel,
  * the camera key's drag, a zoom chord, PageDown — re-take it at the element
  * under the view's centre at the scale's grain — far an account, mid a
- * document, reading a span. A key's move puts the platform's focus on the
- * element wherever the key was pressed, the ring drawn (rule 10); a
- * pointer's or the wheel's carries it only where the mirror held it, the
- * ring out, and says nothing until the next keyboard act (rule 12).
+ * document, reading the span in the column under it (T-LAYER's fold). A
+ * key's move puts the platform's focus on the element wherever the key was
+ * pressed, the ring drawn (rule 10); a pointer's or the wheel's carries it
+ * only where the mirror held it, the ring out, and says nothing until the
+ * next keyboard act (rule 12).
  * @param {boolean} [byKey] a key made the camera move
  */
 export async function retakeFromView(byKey = false) {
@@ -446,20 +448,23 @@ export async function retakeFromView(byKey = false) {
     if (acct && (!focus || focus.addr !== acct)) { await focusTo(acct, null, byKey, byKey); }
     return;
   }
-  // the document under the centre
+  // the document under the centre: the one whose room holds it, on its outline where one does
   let best = null, bd = Infinity;
+  const { x, y } = CAM.cam;
   for (const p of REC.places()) {
     if (p.system) continue;
     const b = docBox(p.doc);
-    if (CAM.cam.x >= b.x && CAM.cam.x <= b.x + b.w && CAM.cam.y >= b.y && CAM.cam.y <= b.y + b.h) { const dd = Math.hypot(b.x + b.w / 2 - CAM.cam.x, b.y + b.h / 2 - CAM.cam.y); if (dd < bd) { bd = dd; best = p.doc; } }
+    if (x < b.x || x > b.x + b.w || y < b.y || y > b.y + b.h) continue;
+    const s = LAYER.shapeOf(p.doc), dd = x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h ? 0 : Math.hypot(s.x + s.w / 2 - x, s.y + s.h / 2 - y);
+    if (dd < bd) { bd = dd; best = p.doc; }
   }
   if (!best) return;
   if (lod.name === 'near' || lod.name === 'mid~near') {
     const d = REC.doc(best);
     if (d.blocks.length) {
-      const frac = Math.max(0, Math.min(1, ((CAM.cam.y - docBox(best).y) / docBox(best).h - 0.12) / 0.8));
-      const pos = 1 + Math.floor(frac * (d.extent || 1));
-      const b = d.blocks.find((x) => pos >= x.pos && pos < x.pos + x.width) || d.blocks[0];
+      // the span in the column under the centre (T-LAYER's fold)
+      const pos = LAYER.posAt(best, x, y);
+      const b = (pos != null && d.blocks.find((q) => pos >= q.pos && pos < q.pos + q.width)) || d.blocks[0];
       if (!focus || focus.addr !== best || focus.pos !== b.pos) await focusTo(best, b.pos, byKey, byKey);
       return;
     }

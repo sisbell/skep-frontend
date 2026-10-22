@@ -120,7 +120,8 @@ def run(ctx):
     r.check(mounted is not None, 'the first edition is mounted at the landing')
     mtext = squash(mounted['text']) if mounted else ''
     # the glyphs of each block's element, its chrome (the sameness hairline, C-33's mark, the symbols, the "+n others" count) set aside
-    glyphs = ctx.js('''(() => { const out = {}; for (const el of document.querySelectorAll('.sp[data-addr=%s]')) { const c = el.cloneNode(true); c.querySelectorAll('.hairline,.pubmark,.others,.sym').forEach(x => x.remove()); out[el.dataset.pos] = c.textContent; } return out; })()''' % json.dumps(DOC))
+    # a block split across columns (issue #15's fold) is its parts' glyphs in order
+    glyphs = ctx.js('''(() => { const out = {}; for (const el of document.querySelectorAll('.sp[data-addr=%s]')) { const c = el.cloneNode(true); c.querySelectorAll('.hairline,.pubmark,.others,.sym').forEach(x => x.remove()); out[el.dataset.pos] = (out[el.dataset.pos] || '') + c.textContent; } return out; })()''' % json.dumps(DOC))
     missing_blocks = [{'pos': b['pos'], 'dom': (glyphs.get(str(b['pos'])) or '')[:60]} for b in doc['blocks'] if b['kind'] == 'para' and squash(glyphs.get(str(b['pos']))) != squash(b['text'])]
     r.check(not missing_blocks, '(ii) every block\'s glyphs in the mounted article are its text, character for character', missing_blocks)
     joined = squash(''.join(glyphs.get(str(b['pos'])) or '' for b in doc['blocks']))

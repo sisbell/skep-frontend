@@ -10,11 +10,16 @@
 // landmarks ◆ — the address above the density mark and each count on lines
 // of its own beneath it (foundations §2.1: each count at a fixed place on
 // its mark); at MID the account frames ("nothing here yet" where empty — law
-// 13), the documents as extents (the box, the edition/draft edge, the
-// address label — its fields past its account's prefix, led by their
-// separator as the address display spells them (foundations §3.1) — and its
-// first line — a DRAFT convention — the badge from LK's `countDoc`, the
-// members' marks on the strip; a document a read answered `withheld`,
+// 13), the documents as their columns (T-LAYER's fold, P-LAY's: issue #15 —
+// no frame or rule around a column, the document's one edge tracing the
+// outside of its columns, P-LAY's `outline`, the edition/draft edge its
+// weight, so length reads as a count of columns; a document whose text has
+// not arrived its estimated columns, one whose extent is unread its first
+// column slot), in the outline's first row the address label — its fields
+// past its account's prefix, led by their separator as the address display
+// spells them (foundations §3.1) — and its first line — a DRAFT convention —
+// the badge from LK's `countDoc`, the members' marks on the strip along its
+// top; a document a read answered `withheld`,
 // whether the index lists it or not, as the withheld box — its owner and the
 // word (T-LAYER's `withheldBox`, the ARIA mirror's words for it too), no
 // badge, B1-S2), each account's CONTINUATION whose documents
@@ -24,11 +29,11 @@
 // runs from a floor — and its newest member's label as a box draws it, its
 // act a teleport to that member, its members drawn as boxes only as the band
 // fades them in; the mid connections from LK's `connections`, each end at
-// the box that draws a document or the mark that holds it — a far end the
-// frame does not draw at the box or the mark that would, and none where the
-// plane draws its document nowhere — a line between two places standing in
-// the visible view (the viewport below the one line, a place's centre inside
-// it), and from the place standing there toward one out of it THE EDGE STUB:
+// the outline that draws a document or the mark that holds it — a far end the
+// frame does not draw at the outline or the mark that would, and none where
+// the plane draws its document nowhere — a line between two places standing
+// in the visible view (the viewport below the one line, a place's centre
+// inside it), and from the place standing there toward one out of it THE EDGE STUB:
 // its stroke cut at the view's border on the true bearing, the cut P-CAM's
 // `edgeStub` that BM's beams share (foundations §2.1: "one whose far end is
 // out of view ending at the view's edge as §2.5's stub does"); two places
@@ -45,8 +50,8 @@
 // whole inside the visible view — the one line stands opaque over the strip
 // above it, where a label would be hidden, or cut through at the line's edge
 // — meeting no other place's shape and no label set before it (F-9;
-// foundations §2.1), a document's on a plate of its box's ground over the
-// bars beneath; then the stubs' triangles, over the places and their labels
+// foundations §2.1), a document's on a plate of its ground over the bars
+// beneath; then the stubs' triangles, over the places and their labels
 // as the pips are, for the stubs' strokes run behind the boxes, which at mid
 // scale stand along most of the view's border and would hide a triangle drawn
 // with its stroke; then the trail's pips numbered newest-first, each number at
@@ -56,11 +61,11 @@
 // the focus ring; the arrival mark, every run of the span a follow, or a
 // LEAP carrying a passage, landed on outlined line by line over the mounted
 // article; text yielded where T-LAYER mounted it;
-// for the unmounted, the bars — P-LAY's layout of the article's own lines
-// (T-ARTICLE's plan, made through T-LAYER from the view it mounts with) at the
-// face T-LAYER fits the article to (`metricsOf`), each bar where its line's
-// glyphs will stand and every one inside the box, so the handoff swaps bars
-// for text in place (law 8; S1 Q7). The loop runs
+// for the unmounted, the bars — the lines of T-LAYER's fold (`foldOf`: the
+// article's own lines, as the platform set them where it has, in the columns
+// the mount sets them in), each bar where its line's glyphs will stand, in
+// its column, so the handoff swaps bars for text in place and mid scale
+// greeks the columns the mount sets (law 8; S1 Q7; issue #15). The loop runs
 // T-LAYER's frame BEFORE this draw, so what is mounted is settled when a
 // document's label and bars are drawn or yielded; `stats` names both sets,
 // and the loop holds them against the mounted set at the frame's end; it
@@ -69,8 +74,9 @@
 // triangle — and the labels drawn too, the labels' parts left out with the
 // rule that left each out, the box the focus ring outlined and the arrival
 // mark's rects, for the gate. The hit tests read the
-// draw's own rule: a click meets a document's box only where the box stands
-// whole, and a continuation's mark wherever the mark holds its documents.
+// draw's own rule: a click meets a document on its outline alone, where its
+// columns stand whole, and a continuation's mark wherever the mark holds its
+// documents.
 // The system account's rows are never drawn (the record §1.8; this lane's
 // cut). The chip is at the document's corner (T-ARTICLE), never here.
 // Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
@@ -86,7 +92,7 @@ import * as LINE from '../line/line.js';
 import { cam, sx, sy, wx, wy, viewport, viewportWorld, visibleView, edgeStub, stubTriangle } from './camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
 import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt } from './projection.js';
-import { layoutOf, bars } from './layout.js';
+import { bars, outline, outlineRects, firstRow, GUTTER } from './layout.js';
 import { setLabels, sizeOf, lineHeight, onStroke, pairOf, LINE_BOX } from './labels.js';
 import { COL, EDGE, HUE, LABEL_MIN_PX } from './register.js';
 import { documentOf, accountOf, cmpAddr } from '../model/address.js';
@@ -167,14 +173,12 @@ export const stats = {
 };
 
 /**
- * @typedef {Object} LaidOut — a document's bars as the canvas lays them out
- * @property {string} key what it was made from: the document's revision and run, the model's revision, T-LAYER's
- * @property {import('./layout.js').Metrics} m
- * @property {import('./layout.js').Layout} layout
- * @property {import('./layout.js').Bar[]} bars
+ * @typedef {Object} LaidOut — a document's fold and the bars the canvas draws for it, column by column
+ * @property {import('./layout.js').Fold} fold
+ * @property {import('./layout.js').Bar[][]} bars
  */
-/** @type {Map<string, LaidOut>} */
-const layouts = new Map();
+/** @type {WeakMap<import('./layout.js').Fold, import('./layout.js').Bar[][]>} each fold's bars: a cache of a pure function of the fold */
+const barsOf = new WeakMap();
 
 /** @param {HTMLCanvasElement} c */
 export function attach(c) { cv = c; ctx = c.getContext('2d', { alpha: false }); }
@@ -307,29 +311,23 @@ function drawAccountFrames(/** @type {number} */ alpha, /** @type {Pass} */ pass
 export function accountUnderView() { return accountAt(cam.x, cam.y, '1'); }
 
 /**
- * A document's bars: P-LAY's layout of its article's own lines, from the
- * plan T-LAYER makes with the view it mounts the article with, at the face
- * T-LAYER fits it to — made again when the document's record or run moves,
- * when the model does (a link's value arriving, an origin's kind), or when
- * the article's view state does (T-LAYER's revision).
+ * A document's fold and its bars (P-LAY's `bars`): T-LAYER's fold of the
+ * article's lines, made again as T-LAYER folds it again — the document's
+ * record or run moving, the model, the article's view state, its lines set.
  * @param {Doc} d
  * @returns {LaidOut}
  */
 function laidOut(d) {
-  const key = `${d.rev}:${d.from}:${d.to}:${REC.rev()}:${LAYER.revision()}`;
-  const c = layouts.get(d.addr);
-  if (c && c.key === key) return c;
-  const m = LAYER.metricsOf(d);
-  const layout = layoutOf(LAYER.planOf(d), m);
-  const out = { key, m, layout, bars: bars(layout, m) };
-  layouts.set(d.addr, out);
-  return out;
+  const fold = LAYER.foldOf(d);
+  let b = barsOf.get(fold);
+  if (!b) { b = bars(fold); barsOf.set(fold, b); }
+  return { fold, bars: b };
 }
 
-/** a document's bars as the canvas lays them out now, or null where its text has not arrived (the gate's handoff check reads them) */
+/** a document's fold and bars as the canvas lays them out now, or null where its text has not arrived (the gate's handoff check reads them) */
 export function layoutFor(/** @type {string} */ addr) { const d = REC.doc(addr); return d.from < 0 ? null : laidOut(d); }
 
-/** the first of a document's bars whose bottom lies below a world height in its box (its bars run top to bottom) */
+/** the first of a column's bars whose bottom lies below a world height in its room (a column's bars run top to bottom) */
 function firstBar(/** @type {import('./layout.js').Bar[]} */ B, /** @type {number} */ y) {
   let lo = 0, hi = B.length;
   while (lo < hi) { const mid = (lo + hi) >> 1; if (B[mid].y + B[mid].h < y) lo = mid + 1; else hi = mid; }
@@ -440,18 +438,18 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   const heldAt = new Map();
   for (const m of marks) if (m.k === cont.held) for (const a of m.members) heldAt.set(a, m.key);
   const placeable = new Set(all.map((d) => documentOf(d.addr) || d.addr));
-  /** @type {Map<string, Cell>} each place met, by its key: a document's box, a mark's cell */
+  /** @type {Map<string, {x: number, y: number, w: number, h: number}>} each place met, by its key: a document's outline's bounds, a mark's cell */
   const cells = new Map();
   const placeOf = (/** @type {string} */ addr) => {
     const doc = documentOf(addr) || addr, account = accountOf(doc);
     if (!placeable.has(doc)) return null;
     const key = account && withinContinuation(doc, cont.held) ? account + ':' + cont.held : doc;
-    if (!cells.has(key)) cells.set(key, key === doc ? docBox(doc) : continuationCell(/** @type {string} */ (account), cont.held));
+    if (!cells.has(key)) cells.set(key, key === doc ? LAYER.shapeOf(doc) : continuationCell(/** @type {string} */ (account), cont.held));
     return key;
   };
   /** the places this frame draws: the boxes standing whole, the marks holding their documents */
   const drawnAt = new Set([...vis.map((x) => placeOf(x.d.addr)), ...heldAt.values()]);
-  const centreOf = (/** @type {string} */ key) => { const c = /** @type {Cell} */ (cells.get(key)); return { x: sx(c.x + c.w / 2), y: sy(c.y + c.h / 2) }; };
+  const centreOf = (/** @type {string} */ key) => { const c = /** @type {{x: number, y: number, w: number, h: number}} */ (cells.get(key)); return { x: sx(c.x + c.w / 2), y: sy(c.y + c.h / 2) }; };
   const inView = (/** @type {Point} */ p) => p.x >= seen.x && p.x <= seen.x + seen.w && p.y >= seen.y && p.y <= seen.y + seen.h;
   /** @type {Array<{place: string, count: number, p: Point, q: Point}>} each connection holding more than one link, and the stroke its count stands on: to the far place's centre, or to the stub's triangle's base */
   const counted = [];
@@ -482,22 +480,28 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   stats.residueMarks = marks.map((m) => drawMark(m, pass));
   for (const { d, alpha: a } of vis) {
     ctx.globalAlpha = a;
-    const box = docBox(d.addr);
-    const X = sx(box.x), Y = sy(box.y), W = box.w * cam.scale, H = box.h * cam.scale;
+    const box = docBox(d.addr), f = LAYER.foldOf(d);
     const draft = isDraft(d);
     const landmark = /\.0\.1$/.test(d.addr);
     const ground = d.refused === 'withheld' ? COL.withheld : COL.doc;
-    ctx.fillStyle = ground; rrect(ctx, X, Y, W, H, Math.min(6, W * 0.05)); ctx.fill();
+    // the document's one edge, around its columns: no frame or rule around a column (issue #15)
+    const pts = outline(f);
+    ctx.beginPath();
+    for (let i = 0; i < pts.length; i++) { const p = pts[i]; if (i) ctx.lineTo(sx(box.x + p.x), sy(box.y + p.y)); else ctx.moveTo(sx(box.x + p.x), sy(box.y + p.y)); }
+    ctx.closePath();
+    ctx.fillStyle = ground; ctx.fill();
     ctx.strokeStyle = landmark ? COL.land : draft ? COL.draftEdge : COL.docEdge;
     ctx.lineWidth = landmark ? EDGE.landmark : draft ? EDGE.draft : EDGE.edition;
     if (draft) ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
-    pass.shapes.push({ place: d.addr, rect: { x: X, y: Y, w: W, h: H }, alpha: a });
-    if (W < 26) continue;
-    const fsPx = LAYER.metricsOf(d).fs * cam.scale;
+    for (const r of outlineRects(f)) pass.shapes.push({ place: d.addr, rect: { x: sx(box.x + r.x), y: sy(box.y + r.y), w: r.w * cam.scale, h: r.h * cam.scale }, alpha: a });
+    // the first row, where the label and the history strip stand: its columns' text, inside their half gutters
+    const row = firstRow(f), g = (GUTTER / 2) * f.fs;
+    const X = sx(box.x + row.x + g), Y = sy(box.y + row.y + g), W = (row.w - 2 * g) * cam.scale, H = (row.h - 2 * g) * cam.scale;
+    const fsPx = f.fs * cam.scale;
     const mountedHere = LAYER.isMounted(d.addr);
     if (mountedHere) stats.yielded.push(d.addr);
-    if (W > 40 && !mountedHere) {
-      // the label: the ADDRESS past its region's prefix; the first line a DRAFT convention (F-9); the badge from LK, none at a withheld box, whose links no read brings — set by the label pass on the box's ground
+    if (W >= 10 && !mountedHere) {
+      // the label: the ADDRESS past its region's prefix; the first line a DRAFT convention (F-9); the badge from LK, none at a withheld box, whose links no read brings — set by the label pass on the document's ground, where the row holds it
       const tf = Math.min(W * 0.085, fsPx * 1.25), sub = tf * 0.72;
       /** @type {Part[]} */
       const parts = [{ text: shortAddr(d), px: tf, ink: COL.title, weight: '600', fit: 'one' }];
@@ -506,22 +510,27 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
         const c = LK.countDoc(d.addr);
         if (W > 110 && d.refused !== 'withheld' && (c.n || c.arriving)) parts.push({ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : plural(c.n, 'F.label.links.1', 'F.label.links'), px: sub, ink: COL.greek, fit: 'wrap' });
       }
-      pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X + W * 0.06, y: Y + H * 0.05, w: W * 0.88, h: H * 0.9 }, x: X + W * 0.06, y: Y + H * 0.05, align: 'left', alpha: a, plate: ground, parts });
-      // the history strip along the top edge: the members as marks
-      if (d.members && d.members > 1 && W > 60) { ctx.fillStyle = COL.land; for (let k = 0; k < d.members; k++) ctx.fillRect(X + W * 0.06 + k * 6, Y + 2, 4, 2); }
+      pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X, y: Y, w: W, h: H }, x: X, y: Y, align: 'left', alpha: a, plate: ground, parts });
+      // the history strip along the first row's top: the members as marks
+      if (d.members && d.members > 1 && W > 60) { ctx.fillStyle = COL.land; for (let k = 0; k < d.members; k++) ctx.fillRect(X + k * 6, sy(box.y + row.y) + 2, 4, 2); }
     }
-    if (d.refused === 'withheld') { if (W > 60) { ctx.strokeStyle = COL.greek; ctx.setLineDash([2, 4]); ctx.strokeRect(X + W * 0.1, Y + H * 0.3, W * 0.8, H * 0.5); ctx.setLineDash([]); } continue; }
-    if (landmark && W > 26) { ctx.fillStyle = COL.land; const s = Math.max(4, Math.min(11, W * 0.03)); ctx.beginPath(); ctx.moveTo(X + W / 2, Y - s * 1.6); ctx.lineTo(X + W / 2 + s, Y - s * 0.3); ctx.lineTo(X + W / 2, Y + s); ctx.lineTo(X + W / 2 - s, Y - s * 0.3); ctx.closePath(); ctx.fill(); }
+    if (W < 26) continue;
+    if (d.refused === 'withheld') { if (W > 60) { ctx.strokeStyle = COL.greek; ctx.setLineDash([2, 4]); ctx.strokeRect(X + W * 0.04, Y + H * 0.3, W * 0.92, H * 0.5); ctx.setLineDash([]); } continue; }
+    if (landmark) { ctx.fillStyle = COL.land; const s = Math.max(4, Math.min(11, W * 0.03)), cx = sx(box.x + row.x + row.w / 2), ty = sy(box.y + row.y); ctx.beginPath(); ctx.moveTo(cx, ty - s * 1.6); ctx.lineTo(cx + s, ty - s * 0.3); ctx.lineTo(cx, ty + s); ctx.lineTo(cx - s, ty - s * 0.3); ctx.closePath(); ctx.fill(); }
     if (fsPx < 3 || mountedHere || d.from < 0) continue;
-    // the bars: the article's own lines, each where its glyphs will stand (the canvas never draws readable glyphs — the layer mounts below the glyph band)
+    // the bars, column by column: the article's own lines, each where its glyphs will stand (the canvas never draws readable glyphs — the layer mounts below the glyph band)
     const B = laidOut(d).bars;
-    const below = wy(VH + fsPx) - box.y;
     let set = 0;
-    for (let i = firstBar(B, wy(-fsPx) - box.y); i < B.length && B[i].y < below; i++) {
-      const b = B[i];
-      ctx.fillStyle = COL.greek; ctx.globalAlpha = a * (b.withheld ? 0.25 : fsPx >= LOD_TXT_LO ? 0.7 : 0.55);
-      ctx.fillRect(sx(box.x + b.x), sy(box.y + b.y), b.w * cam.scale, Math.max(1, b.h * cam.scale));
-      stats.linesDrawn++; set++;
+    const below = wy(VH + fsPx) - box.y;
+    for (let ci = 0; ci < f.columns.length; ci++) {
+      const c = f.columns[ci], cb = B[ci] || [];
+      if (!cb.length || sy(box.y + c.y) > VH || sy(box.y + c.y + c.h) < 0 || sx(box.x + c.x) > VW || sx(box.x + c.x + c.w) < 0) continue;
+      for (let i = firstBar(cb, wy(-fsPx) - box.y); i < cb.length && cb[i].y < below; i++) {
+        const b = cb[i];
+        ctx.fillStyle = COL.greek; ctx.globalAlpha = a * (b.withheld ? 0.25 : fsPx >= LOD_TXT_LO ? 0.7 : 0.55);
+        ctx.fillRect(sx(box.x + b.x), sy(box.y + b.y), b.w * cam.scale, Math.max(1, b.h * cam.scale));
+        stats.linesDrawn++; set++;
+      }
     }
     if (set) stats.drawn.push(d.addr);
   }
@@ -614,17 +623,18 @@ function drawTrail() {
 
 /**
  * The focus ring at the walk's element while the plane holds the focus and
- * a key moved it (N-FOCUS's rule; D5 §4 rule 2) — its document's box for a
- * document or a link; a span whose article stands is marked by its lit block
- * instead, the ring's reading-scale form (D3), so the canvas circles no
- * document whose text is laid out. `stats.ring` is the box it outlined.
+ * a key moved it (N-FOCUS's rule; D5 §4 rule 2) — its document's outline's
+ * bounds for a document or a link (T-LAYER's `shapeOf`); a span whose article
+ * stands is marked by its lit block instead, the ring's reading-scale form
+ * (D3), so the canvas circles no document whose text is laid out.
+ * `stats.ring` is the box it outlined.
  */
 function drawFocus() {
   if (!ctx || !FOCUS.ringShown()) return;
   const f = WALK.current(); if (!f) return;
   if (f.kind === 'block' && LAYER.isMounted(f.addr)) return;
   let b = null;
-  if (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') b = docBox(f.addr);
+  if (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') b = LAYER.shapeOf(f.addr);
   else if (f.kind === 'account') b = accountCell(f.addr);
   else if (f.kind === 'board') b = boardCell(f.addr);
   if (!b) return;
@@ -679,11 +689,16 @@ export function draw() {
   return lod;
 }
 
-/** the document under a screen point where its box stands whole — one a continuation's mark holds is the mark's (a hit test; draws nothing) */
+/** the document under a screen point where it stands whole, on its outline — one a continuation's mark holds is the mark's (a hit test; draws nothing) */
 export function docAtScreen(/** @type {number} */ px, /** @type {number} */ py) {
   const { held } = residueDepth(cam.scale);
   const wxp = wx(px), wyp = wy(py);
-  for (const p of REC.places()) { if (p.system || withinContinuation(p.doc, held)) continue; const b = docBox(p.doc); if (wxp >= b.x && wxp <= b.x + b.w && wyp >= b.y && wyp <= b.y + b.h) return p.doc; }
+  const inside = (/** @type {{x: number, y: number, w: number, h: number}} */ b, /** @type {number} */ x, /** @type {number} */ y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
+  for (const p of REC.places()) {
+    if (p.system || withinContinuation(p.doc, held)) continue;
+    const b = docBox(p.doc);
+    if (inside(b, wxp, wyp) && outlineRects(LAYER.foldOf(REC.doc(p.doc))).some((r) => inside(r, wxp - b.x, wyp - b.y))) return p.doc;
+  }
   return null;
 }
 

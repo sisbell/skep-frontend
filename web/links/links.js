@@ -56,8 +56,9 @@
 //     and endorsement filter the set per document for the session;
 //   - the most any reveal can set in a document's text — a symbol at every
 //     passage end, each block's count as the hidden reveal counts it — is
-//     what the plane's face is fitted to (`utmost`), so moving the chain, the
-//     toggle or a lens re-sets no line;
+//     what the plane's size is folded for (`utmost`; T-LAYER's fold, issue
+//     #15), so moving the chain, the toggle or a lens sets no document at
+//     another size and runs no column past its room;
 //   - a link the person has FOLLOWED this session is drawn lighter (D-3:
 //     VALUE, the hue kept), the set client-side, never written;
 //   - the link LIT AT AN ARRIVAL — the one a landing followed, or the one
@@ -105,8 +106,8 @@
 // when it lands, THIS FILE's rule and its state change; NO DRAWING MODULE
 // CHANGES (BM, T-LAYER, P-RENDER, SC, the cards draw what `shown`, `shownAt`,
 // `symbols`, `beams`, `countAt`, `connections`, `markOf`, `mergedMark`,
-// `floats`, `farPos` and `endKey` give them, and T-LAYER fits the face to
-// what `utmost` gives).
+// `floats`, `farPos` and `endKey` give them, and T-LAYER sets each document
+// at the size the fold of what `utmost` gives takes).
 // Carries: the wireframe's §16 `.sym`/`.lip` selection and the owner-link
 // marking in `articleHTML`, §17's wanted set, §18 `revealLinks`'s lens
 // filters, §10's by-linker colouring and mid lines, S1's `buildBeams`.
@@ -443,9 +444,10 @@ export function countAt(addr, block) { return countUnder(state(addr), addr, bloc
  * all — stage 2 and on, others' links on, no lens — and at each block the
  * "+⟨n⟩ others" count as the hidden reveal counts it, which shows none of
  * them. An article set with all of it is at least as long as at any stage,
- * toggle and lens, so the face T-LAYER fits to it holds the article at each,
- * and moving the reveal re-sets no line — what A-254 places the count by: "so
- * a link's arrival breaks no line".
+ * toggle and lens, so the size T-LAYER folds it at for this — the step its
+ * columns take (issue #15) — holds the article in its room at each, and
+ * moving the reveal sets it at no other size — what A-254 places the count
+ * by: "so a link's arrival breaks no line".
  * @param {string} addr
  * @returns {{shown: Shown[], countAt: (block: Block) => {n: number, social: boolean}}}
  */

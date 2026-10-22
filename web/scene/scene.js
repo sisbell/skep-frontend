@@ -80,12 +80,15 @@
 // its own document's corner (ux-T2: "each pane its own"; `T-LAYER.sceneCorner`
 // makes its items) on its OUTER side — pane A's left, pane B's right — held
 // to the top of the pane's scroll, so the bands and lines leave the inner
-// edges clear of it (foundations §3.1). Each pane's text is set at most at
-// the reading measure, in `ch` of its own face (the style's; the typography
-// review's findings 7 and 16), against the pane's inner edge with its corner
-// beside it: a window wider than the measure needs widens the outer margins,
-// never the line, and the text keeps its place beside the bands at every
-// width. THE PANES ARE READ, NOT ACTED ON
+// edges clear of it (foundations §3.1). Each pane's text is ONE COLUMN AT THE
+// PLANE'S MEASURE (issue #15: "side-by-side panes stay one column each, at
+// the same line length"): P-LAY's MEASURE_CPL characters of its own face (the
+// style's `--measure`), at the largest size up to PANE_FS at which that
+// column fits beside the pane's corner (`fitMeasure`, as the scene opens and
+// as its panes change size), so the panes break the lines the plane breaks;
+// against the pane's inner edge with its corner beside it: a window wider
+// than the measure needs widens the outer margins, never the line, and the
+// text keeps its place beside the bands at every width. THE PANES ARE READ, NOT ACTED ON
 // (B1-S9: "read both…; scroll each"): nothing in a pane takes a pointer — its
 // blocks, hairlines, symbols and presence ⟡ and its corner's version
 // statement carry none of the plane's click cues and are no controls
@@ -174,6 +177,8 @@ import { esc } from '../util.js';
 
 /** how far below the panes' tops the two ends are set level (px), where both can stand there */
 const LEVEL_AT = 40;
+/** the size a pane's text is set at where its pane holds the measure at it (px); a narrower pane sets it smaller */
+const PANE_FS = 14;
 /** the bands drawn at most */
 const MAX_BANDS = 400;
 
@@ -419,6 +424,7 @@ export async function open(a, b, held = {}) {
     E.paneB.innerHTML = corner(b, db); E.paneB.prepend(LAYER.sceneArticle(db));
     namePane(E.paneA, 'sceneA-name'); namePane(E.paneB, 'sceneB-name');
     E.paneA.setAttribute('tabindex', '0'); E.paneB.setAttribute('tabindex', '0');
+    fitMeasure(E);
     relevel();
     FOCUS.open('scene', { el: E.root, from, byKey: true, first: E.paneB });
     markDirty();
@@ -464,6 +470,24 @@ const blocksIn = (/** @type {HTMLElement} */ pane) => articleIn(pane)?.made.bloc
 
 /** the positions of the block holding a position in a pane's article — of the blocks it was made from — from that position to the block's end; one where no block holds it */
 const restOfBlock = (/** @type {HTMLElement} */ pane, /** @type {number} */ pos) => restIn(blocksIn(pane), pos);
+
+/**
+ * Each pane's text at the plane's measure (see the head): its article, the
+ * style's `--measure` characters of its face wide, set at PANE_FS, or where
+ * its pane's content beside the corner and the gap holds less, at the size
+ * whose column that room holds.
+ * @param {NonNullable<typeof els>} E
+ */
+function fitMeasure(E) {
+  for (const pane of [E.paneA, E.paneB]) {
+    const art = /** @type {HTMLElement | null} */ (pane.querySelector(':scope > article.dtext'));
+    if (!art) continue;
+    const corner = pane.querySelector(':scope > .corner'), cs = getComputedStyle(pane);
+    const room = pane.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (corner ? corner.getBoundingClientRect().width + (parseFloat(cs.columnGap) || 0) : 0);
+    art.style.fontSize = PANE_FS + 'px';
+    for (let i = 0, w = art.getBoundingClientRect().width; i < 3 && room > 0 && w > room; i++, w = art.getBoundingClientRect().width) art.style.fontSize = parseFloat(art.style.fontSize) * (room / w) + 'px';
+  }
+}
 
 /** each pane's article given a pane's height of room below its end, so any of its lines can be scrolled to the pane's top */
 function roomBelow(/** @type {NonNullable<typeof els>} */ E) {
@@ -517,7 +541,7 @@ export function relevel() {
 export function draw() {
   const S = scene, E = els;
   if (!S || !E) return;
-  if (sizeOf(E) !== S.size) { roomBelow(E); measure(); }
+  if (sizeOf(E) !== S.size) { fitMeasure(E); roomBelow(E); measure(); }
   const cv = E.canvas, ctx = cv.getContext('2d'); if (!ctx) return;
   const c = cv.getBoundingClientRect();
   const DPR = Math.min(2, window.devicePixelRatio || 1);

@@ -38,7 +38,8 @@ import * as PUMP from '../model/pump.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
-import { docBox, accountCell, boardCell, DOC_W, REP_FS } from '../plane/projection.js';
+import { docBox, accountCell, boardCell, DOC_W } from '../plane/projection.js';
+import { STANDARD_FS } from '../plane/layout.js';
 import { lodOf } from '../plane/lod.js';
 import { t } from '../strings.js';
 import * as WALK from '../nav/walk.js';
@@ -97,7 +98,7 @@ test('at mid the line names the account under the camera, never the walk\'s docu
 });
 
 test('at reading scale the line names the document and the position the landing named, and the box opens holding the document', async () => {
-  for (const [band, scale] of /** @type {Array<[string, number]>} */ ([['mid~near', 9.5 / REP_FS], ['near', 14 / REP_FS]])) {
+  for (const [band, scale] of /** @type {Array<[string, number]>} */ ([['mid~near', 9.5 / STANDARD_FS], ['near', 14 / STANDARD_FS]])) {
     over(D, scale);
     assert.equal(lodOf(CAM.cam.scale).name, band);
     await WALK.focusTo(D, 15);

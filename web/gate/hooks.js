@@ -18,7 +18,10 @@
 // each one's count, newest member, members, the lines set on it and its
 // screen rect), the mid connections it drew between places, each with its
 // count and the count set on its stroke, each one bound for a place out of
-// view with its stub at the view's border (`connections`), the labels it set
+// view with its stub at the view's border (`connections`), a document's fold
+// — its size, its step and its columns on the plane — where a position
+// stands in it and which position stands under a point of the plane (`fold`,
+// `centreOf`, `posAt`), the labels it set
 // (`labels`: each one's kind, place, lines — their text, size and screen
 // rect — and the room its place gave it, the connections' counts and the
 // trail's pip numbers among them) and the parts of labels it left out with
@@ -36,8 +39,9 @@
 // installs it with its loop's frame buffer. Nothing here is shipped chrome;
 // nothing posts anywhere.
 // THE ORACLES MEASURE WHAT A PERSON MEETS, never what the page set: the
-// containment check holds an article's content to the clip the page draws and
-// to its document's box, and each corner to the room beside it, `visible`
+// containment check holds an article's content to the column that holds it,
+// to the clip the page draws and to its document's box, and each corner to
+// the room beside it, `visible`
 // says whether an element the DOM holds is shown (inside its clip and the
 // viewport), and a beam's endpoint and the arrival mark's outline are held to
 // the client rects of their link's marked words, read from the article apart
@@ -71,7 +75,8 @@ import * as TRAILLIST from '../overlays/trail-list.js';
 import * as KEYS from '../nav/keys.js';
 import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
-import { docBox, accountCell, boardCell, DOC_W, REP_FS, depthOfDoc } from '../plane/projection.js';
+import { docBox, accountCell, boardCell, DOC_W, depthOfDoc } from '../plane/projection.js';
+import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, LINE_H, boundsOf, outlineRects, firstRow } from '../plane/layout.js';
 import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM } from '../plane/lod.js';
 import { pinned, lacking } from '../strings.js';
 import { pct, r2 } from '../util.js';
@@ -136,11 +141,11 @@ export function install(deps) {
       const box = docBox(addr);
       const want = { x: CAM.sx(box.x), y: CAM.sy(box.y) };
       const got = rec.el.getBoundingClientRect();
-      // every block's line against its place in the one 16 px layout, scaled — a reflow at zoom moves it; a transform never does
+      // every block part's line against its place in the one 16 px layout, scaled — a reflow at zoom moves it; a transform never does
       const s = CAM.cam.scale / rec.lay;
       let spanDx = 0, spanDy = 0, spans = 0;
       for (const b of rec.blockTops || []) {
-        const sp = /** @type {HTMLElement | null} */ (rec.el.querySelector(`.sp[data-pos="${b.pos}"]`));
+        const sp = /** @type {HTMLElement | undefined} */ ([.../** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll(`.sp[data-pos="${b.pos}"]`))].find((e) => Number(e.dataset.char || 0) === b.char));
         if (!sp) continue;
         const r = sp.getBoundingClientRect();
         spanDx = Math.max(spanDx, Math.abs((r.left - got.left) - b.left * s)); spanDy = Math.max(spanDy, Math.abs((r.top - got.top) - b.top * s)); spans++;
@@ -152,13 +157,14 @@ export function install(deps) {
   /**
    * Containment: does what a mounted article holds fit its place? The
    * article's own rect is its box by construction (the mount sets it from the
-   * box); its content is not — every row it lays out (its head, each block,
-   * the chrome after them: the scene-offer) is measured against the nearest
-   * clip and against its document's box on screen, the room the plane gives
-   * it, which no clip's absence widens, and a row reaching past either is
-   * named — by its block's first position, null for the head and the chrome
-   * — with its overflow in px. No two mounted articles may intersect. The
-   * corner stands
+   * box); its content is not — every row it lays out (its head, each block's
+   * part, the chrome after them: the scene-offer) is measured against the
+   * column that holds it (issue #15: the measure, its own length), against
+   * the nearest clip and against its document's box on screen, the room the
+   * plane gives it, which no clip's absence widens, and a row reaching past
+   * any is named — by its block's first position, null for the head and the
+   * chrome — with its overflow in px. No two mounted articles may intersect.
+   * The corner stands
    * beside its article, read from the text layer apart from the article: a
    * mounted document at reading scale whose corner has items and carries
    * none is named; a corner clipped by any box of the page is named with its
@@ -185,8 +191,8 @@ export function install(deps) {
     for (const rec of recs) {
       const own = screenBox(rec.d.addr);
       for (const row of /** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll('.hd, .run > *'))) {
-        const r = rectOf(row), clip = clipOf(row);
-        const over = Math.max(overflowOf(r, own), clip ? overflowOf(r, rectOf(clip)) : 0);
+        const r = rectOf(row), clip = clipOf(row), col = row.closest('.col');
+        const over = Math.max(overflowOf(r, own), clip ? overflowOf(r, rectOf(clip)) : 0, col ? overflowOf(r, columnRect(rec, col)) : 0);
         if (over > 0.5) cut.push({ addr: rec.d.addr, pos: row.dataset.pos != null ? Number(row.dataset.pos) : null, row: row.classList[0] || row.tagName.toLowerCase(), overflow_px: r2(over) });
       }
       const corner = LAYER.cornerOf(rec.d.addr);
@@ -227,19 +233,34 @@ export function install(deps) {
     });
   }
   /**
+   * A column of a mounted article as a person meets it: its element's box as
+   * the engine lays it out — the measure wide, in the `ch` of the face the
+   * platform sets it in — as deep as the fold sets it: its flow, never
+   * clipped, held to the depth its lines were broken at.
+   * @param {import('../text/layer.js').Mounted} rec
+   * @param {Element} col
+   */
+  function columnRect(rec, col) {
+    const r = rectOf(col), i = [...rec.el.querySelectorAll('.col')].indexOf(col), c = rec.fold.columns[i];
+    return c ? { x: r.x, y: r.y, w: r.w, h: c.h * CAM.cam.scale } : r;
+  }
+  /**
    * The beam endpoints, each beside an oracle read apart from the beams' own
    * set: the client rects of its link's marked words in the near document's
-   * mounted article (every line they occupy) and the article's right edge.
-   * A beam leaves the text at its span's own line, from the place's edge
-   * (foundations §2.1; S1 Q1): the layout case holds each endpoint's y to one
-   * of those line rects and its x to the edge.
+   * mounted article (every line they occupy) and the right edge of the part
+   * of its block that holds the line it leaves at — the column's, where the
+   * block is split across columns (issue #15). A beam leaves the text at its
+   * span's own line, from the place's edge (foundations §2.1; S1 Q1): the
+   * layout case holds each endpoint's y to one of those line rects and its x
+   * to the edge.
    */
   function beamAnchors() {
     return BM.anchors().map((a) => {
       const rec = LAYER.mountedSet().get(a.near);
       const words = rec ? [...rec.el.querySelectorAll(`.lip[data-links~="${a.link}"]`)].flatMap((w) => [...w.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height }))) : [];
-      const art = rec ? rectOf(rec.el) : null;
-      return { ...a, words, edge: art ? art.x + art.w : null };
+      const mid = a.rect.y + a.rect.h / 2;
+      const part = rec ? [...rec.el.querySelectorAll('.run > .sp')].map(rectOf).find((q) => q.y - 0.5 <= mid && mid <= q.y + q.h + 0.5 && q.x <= a.rect.x + a.rect.w && a.rect.x <= q.x + q.w) : null;
+      return { ...a, words, edge: part ? part.x + part.w : null };
     });
   }
   /**
@@ -266,35 +287,65 @@ export function install(deps) {
   }
   /**
    * The handoff (foundations §2.4: the bars become text and no line moves;
-   * S1 Q7): the canvas's own bars for a document — the layout P-RENDER draws
-   * below the mount, at the camera as it stands — each block's first line's
-   * top on screen, its height and its count of lines, beside the mounted
-   * article's blocks as the person meets them: each one's top on screen, its
+   * S1 Q7; issue #15: mid scale greeks the columns the mount sets): the
+   * canvas's own bars for a document — the fold P-RENDER draws below the
+   * mount, at the camera as it stands — block part by block part, each its
+   * column, its first line's top on screen, its height and its count of
+   * lines, beside the mounted article's block parts as the person meets them:
+   * each one's column, the character it starts at, its top on screen, its
    * height, and its height in its own line boxes (its computed line height at
    * the article's scale — a heading's lines are a heading's, not the body's).
-   * A block the article draws as a withheld run's face is named so. Null
+   * A part the article draws as a withheld run's face is named so. Null
    * where the document's text has not arrived.
    * @param {string} addr
    */
   function barsOf(addr) {
     const laid = RENDER.layoutFor(addr);
     if (!laid) return null;
-    const { m, layout } = laid;
-    const box = docBox(addr);
-    const linePx = m.lineH * CAM.cam.scale;
-    const y = (/** @type {number} */ em) => CAM.sy(box.y + m.y0 + em * m.fs);
-    const bars = [...layout.blocks].map(([pos, b]) => {
-      const first = layout.lines[b.first], last = layout.lines[b.first + b.n - 1];
-      return { pos, top: b.n ? r2(y(first.top)) : null, height: b.n ? r2((last.top + last.h - first.top) * m.fs * CAM.cam.scale) : 0, lines: b.n };
+    const f = laid.fold;
+    const box = docBox(addr), s = CAM.cam.scale;
+    /** @type {Array<{pos: number, column: number, top: number, height: number, lines: number}>} */
+    const bars = [];
+    f.columns.forEach((c, ci) => {
+      /** @type {Map<number, {first: number, last: number, n: number}>} */
+      const parts = new Map();
+      for (let i = c.first; i < c.first + c.n; i++) {
+        const l = f.lines[i];
+        if (l.pos == null || l.kind === 'head' || l.kind === 'chrome') continue;
+        const p = parts.get(l.pos);
+        if (p) { p.last = i; p.n++; } else parts.set(l.pos, { first: i, last: i, n: 1 });
+      }
+      for (const [pos, p] of parts) {
+        const a = f.lines[p.first], z = f.lines[p.last];
+        bars.push({ pos, column: ci, top: r2(CAM.sy(box.y + c.y + (a.top - c.top) * f.fs)), height: r2((z.top + z.h - a.top) * f.fs * s), lines: p.n });
+      }
     });
     const rec = LAYER.mountedSet().get(addr);
-    const s = rec ? CAM.cam.scale / rec.lay : 1;
+    const k = rec ? s / rec.lay : 1;
+    const cols = rec ? [...rec.el.querySelectorAll('.col')] : [];
     const text = rec ? [.../** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll('.run > .sp, .run > .withheld'))].map((e) => {
       const r = e.getBoundingClientRect();
-      const own = parseFloat(getComputedStyle(e).lineHeight) * s;
-      return { pos: Number(e.dataset.pos), top: r2(r.top), height: r2(r.height), lines: Math.round(r.height / own), withheld: e.classList.contains('withheld') };
+      const own = parseFloat(getComputedStyle(e).lineHeight) * k;
+      return { pos: Number(e.dataset.pos), column: cols.indexOf(/** @type {Element} */ (e.closest('.col'))), char: Number(e.dataset.char || 0), top: r2(r.top), height: r2(r.height), lines: Math.round(r.height / own), withheld: e.classList.contains('withheld') };
     }) : null;
-    return { addr, line_px: r2(linePx), clip: r2(CAM.sy(box.y + m.y1)), head_lines: layout.lines.filter((l) => l.kind === 'head').length, bars, text };
+    return { addr, line_px: r2(f.fs * LINE_H * s), columns: f.columns.length, head_lines: f.lines.filter((l) => l.kind === 'head').length, bars, text };
+  }
+  /**
+   * A document's fold as the plane sets it (issue #15): its size, its step,
+   * its columns across, its room on the plane, its outline — its bounds, the
+   * disjoint rects that make it up and its first row, where its label stands —
+   * and each column — its text box in world units, its count of lines,
+   * whether it is estimated.
+   * @param {string} addr
+   */
+  function foldView(addr) {
+    const f = LAYER.foldOf(REC.doc(addr)), box = docBox(addr), b = boundsOf(f), r0 = firstRow(f);
+    const at = (/** @type {{x: number, y: number, w: number, h: number}} */ r) => ({ x: box.x + r.x, y: box.y + r.y, w: r.w, h: r.h });
+    return {
+      addr, fs: f.fs, step: f.step, across: f.across, lines: f.lines.length,
+      room: { x: box.x, y: box.y, w: box.w, h: box.h }, outline: at(b), rects: outlineRects(f).map(at), row: at(r0),
+      columns: f.columns.map((c) => ({ x: box.x + c.x, y: box.y + c.y, w: c.w, h: c.h, n: c.n, estimated: c.estimated })),
+    };
   }
   /** a reading scene's pane, by its side */
   const paneOf = (/** @type {'a' | 'b'} */ side) => document.getElementById(side === 'a' ? 'sceneA' : 'sceneB');
@@ -400,6 +451,12 @@ export function install(deps) {
     focus: () => ({ ring: FOCUS.ringShown(), plane: FOCUS.planeHolds(), standing: FOCUS.standing() }),
     driftSample, overlapCheck, visible,
     beamAnchors, arrivalAnchors, barsOf,
+    /** a document's fold as the plane sets it: its size, step, room, outline and columns */
+    fold: foldView,
+    /** where a reading view of a document at a position centres: the line holding it, across its column; the first column's centre for none (T-LAYER's `centreOf`) */
+    centreOf: (/** @type {string} */ addr, /** @type {number | null} */ pos = null) => LAYER.centreOf(addr, pos),
+    /** the position under a world point of a document's fold, null where its column holds no line naming one (T-LAYER's `posAt`) */
+    posAt: (/** @type {string} */ addr, /** @type {number} */ x, /** @type {number} */ y) => LAYER.posAt(addr, x, y),
     /** the labels the beams' last frame set, one per bundle whose label stands whole in the visible view: the document it leaves, its far document, its text, whether it ends in a stub, and its rect on screen */
     beamLabels: () => BM.labels(),
     /** the continuations the last frame drew as marks */
@@ -474,10 +531,10 @@ export function install(deps) {
     select: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => SEL.select(addr, pos, width),
     strings: { pinned: () => pinned(), lacking: () => lacking() },
     thresholds: THRESHOLDS,
-    /** the scale at which a document's em — the face the page sets it at (T-LAYER's) — is `em` px, or its box `docPx` px */
-    scaleFor: (/** @type {string} */ addr, /** @type {'em' | 'doc'} */ kind, /** @type {number} */ v) => (kind === 'doc' ? v / docBox(addr).w : v / LAYER.metricsOf(REC.doc(addr)).fs),
+    /** the scale at which a document's em — the size the page sets it at (T-LAYER's fold) — is `em` px, or its box `docPx` px */
+    scaleFor: (/** @type {string} */ addr, /** @type {'em' | 'doc'} */ kind, /** @type {number} */ v) => (kind === 'doc' ? v / docBox(addr).w : v / LAYER.foldOf(REC.doc(addr)).fs),
     boxOf: (/** @type {string} */ addr) => docBox(addr), accountCell: (/** @type {string} */ a) => accountCell(a), boardCell: (/** @type {string} */ b) => boardCell(b), depthOf: (/** @type {string} */ a) => depthOfDoc(a),
-    constants: { DOC_W, REP_FS, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM },
+    constants: { DOC_W, STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM },
     refresh: async () => { const ts = /** @type {number[]} */ ([]); await new Promise((res) => { const step = (/** @type {number} */ t) => { ts.push(t); if (ts.length < 60) requestAnimationFrame(step); else res(undefined); }; requestAnimationFrame(step); }); const iv = []; for (let i = 1; i < ts.length; i++) iv.push(ts[i] - ts[i - 1]); return r2(1000 / Math.max(0.1, pct(iv, 50))); },
   };
   /** @ts-ignore — the driver's door */

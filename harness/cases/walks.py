@@ -20,7 +20,9 @@ import json
 
 from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, WINDOW, Result
 
-C33_MARK = '#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC
+# C-33's mark at the window run's opening: the run's first stretch, where its hairline is labelled whole (the run crosses
+# a paragraph break, so a second block opens it again, compact, in a later column the view at its first line need not hold)
+C33_MARK = '#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"] + .pubmark[data-mark="C-33"]' % (DOC, WINDOW[2])
 ORIGIN_HAIRLINE = '#domlayer .sp[data-addr="%s"] .hairline.whole[data-src="%s"]' % (DOC, WINDOW[2])
 SCENE_OFFER = '#domlayer .offer[data-scene="%s|%s"]' % (DOC, WINDOW[2])
 PLACEHOLDER = '#domlayer article[data-addr="%s"] .withheld[data-pos="%d"]' % (DOC, WINDOW[0])
@@ -84,11 +86,7 @@ def run(ctx):
     ctx.settle()
     step(ctx, r, 'W-01', 5, 'the native client', 'W-01 step 5: "Where a native client is installed, the landing page tries skep:// and falls through" — NOT this lane\'s (the shell\'s lane). Back on the trail: the landing again, the where-am-I line reading board › account › document › position.', 'back-to-landing')
     ctx.view_doc_em(DOC, 14)
-    box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
-    doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))
-    frac = 0.12 + 0.8 * ((WINDOW[0] - 1) / doc['extent'])
-    scale = ctx.camera()['scale']
-    ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, scale)
+    ctx.view_at(DOC, WINDOW[0])
     # the guest's entitlement arm is picked by the device's key store (PUB-5.97), so the note names the one the shot shows
     store = ctx.key_store()
     arm = ('C-36\'s key-present arm, "sign in, then ask" — this device holds a key for the board' if store['key_here']
@@ -116,9 +114,6 @@ def run(ctx):
     ctx.open_page('all')
     r.check(ctx.js('window.__skep.model.session()') is not None, 'W-05 runs on the owner\'s page, opened again: a session stands')
     ctx.leap(DOC, WINDOW[0])
-    box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
-    doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))
-    frac = 0.12 + 0.8 * ((WINDOW[0] - 1) / doc['extent'])
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     ctx.view_doc_px(DOC, 5)
     step(ctx, r, 'W-05', 1, 'zoom for structure: far', 'W-05 step 1: "far = counts and density" (law 5\'s LOD tiers). The accounts\' clusters, each with its density mark and its address; at this scale a cluster\'s mark has no room for its counts at the label floor, so they are left out — the counts a larger mark holds stand at WHOLE BOARD (B1-S3), and the far counts\' room is the design\'s open question; the system account held and not drawn.', 'far')
@@ -128,9 +123,13 @@ def run(ctx):
     step(ctx, r, 'W-05', 1, 'zoom for structure: mid', 'W-05 step 1: "mid = extents" — the documents as boxes with their greeked extents, each edged as a draft or an edition, the badges counting the links each holds.', 'mid')
     ctx.leap(DOC, 541)
     step(ctx, r, 'W-05', 1, 'zoom for structure: reading', 'W-05 step 1: "reading = full text with span-anchored beams" — the LEAP to a named document lands at reading scale (law 6; R92 rider (a)).', 'reading')
-    ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, ctx.camera()['scale'])
-    step(ctx, r, 'W-05', 2, 'read: the same material', 'W-05 step 2: "transcluded content visibly THE SAME material, one gesture to the source (R2) — delivered per ORIGIN, position by position." The window run\'s hairline names 1.0.1.0.1003; the mark is C-33\'s; the scene offer stands beneath.', 'same-material',
-         claims=[(C33_MARK, 'C-33\'s mark', None), (ORIGIN_HAIRLINE, 'the hairline naming the origin', None), (SCENE_OFFER, 'the scene offer', None)])
+    ctx.view_at(DOC, WINDOW[0])
+    step(ctx, r, 'W-05', 2, 'read: the same material', 'W-05 step 2: "transcluded content visibly THE SAME material, one gesture to the source (R2) — delivered per ORIGIN, position by position." The window run\'s hairline names 1.0.1.0.1003; the mark is C-33\'s.', 'same-material',
+         claims=[(C33_MARK, 'C-33\'s mark', None), (ORIGIN_HAIRLINE, 'the hairline naming the origin', None)])
+    last = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))[-1]
+    ctx.view_at(DOC, last['pos'])
+    step(ctx, r, 'W-05', 2, 'read: the scene offer', 'W-05 step 2: the scene offer stands at the article\'s end, below its last block in its last column: "this document windows 1.0.1.0.1003".', 'scene-offer',
+         claims=[(SCENE_OFFER, 'the scene offer', None)])
     ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
     ctx.frames(2)
     s = card_state(ctx)

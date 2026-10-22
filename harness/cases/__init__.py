@@ -85,10 +85,6 @@ ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys',
 XFAIL_MEMBER = ("page: a version member shares its document's box, and once the member's text is loaded (read side by side, "
                 "or a LEAP to the member) its article is mounted over the document's — which of them the box shows is the "
                 "design's to rule (web/text/layer.js `frame`; web/plane/projection.js `docBox`)")
-# issue #24's boundary note
-XFAIL_FACE = ("page: the withheld run's face, B1-S7's placeholder, is set in the article's flow taller than the run's positions, "
-              "which the face is fitted to as P-LAY's bars, so the text after it is pushed past the box's edge "
-              "(web/text/article.js `withheldBlockHTML`, web/style.css `.dtext .withheld`)")
 # issue #9's boundary note
 XFAIL_BEAM_LABELS = ("page: each bundle's label is set at its first beam's end, so stubs bound for different documents that land near "
                      "each other on the view's border, below the saturation the merge per direction waits for, set their labels over "
@@ -204,17 +200,40 @@ class Context:
         self.frames(2)
 
     def view_doc_em(self, addr, em):
-        """the camera over a document's centre at an em of `em` px"""
-        box = self.js('window.__skep.boxOf(%s)' % json.dumps(addr))
+        """the camera over a document's first column's centre (issue #15's fold: its text stands in columns inside its
+        room) at an em of `em` px"""
+        at = self.js('window.__skep.centreOf(%s, null)' % json.dumps(addr))
         scale = self.js('window.__skep.scaleFor(%s, "em", %s)' % (json.dumps(addr), em))
-        self.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * 0.3, scale)
+        self.set_view(at['x'], at['y'], scale)
         return scale
+
+    def view_at(self, addr, pos, scale=None):
+        """the camera centred where a reading view of a document at a position centres — the line holding it, across its
+        column (the page's `centreOf`) — at `scale`, or the scale it stands at"""
+        at = self.js('window.__skep.centreOf(%s, %s)' % (json.dumps(addr), json.dumps(pos)))
+        self.set_view(at['x'], at['y'], scale if scale is not None else self.camera()['scale'])
 
     def view_doc_px(self, addr, px):
         box = self.js('window.__skep.boxOf(%s)' % json.dumps(addr))
         scale = self.js('window.__skep.scaleFor(%s, "doc", %s)' % (json.dumps(addr), px))
         self.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, scale)
         return scale
+
+    def longest_edition(self, account='1.0.1'):
+        """the longest edition an account's index lists on the open page — the board's own span set of each, read by the
+        harness's token-free reads, never the page's — and every edition's extent read; kept for the run, so the cases
+        after the first that asks read it once"""
+        key = 'longest:' + account
+        if key not in self.shared:
+            docs = [q['doc'] for q in self.js('window.__skep.model.places()') if not q['system'] and q['kind'] == 'edition' and account_of(q['doc']) == account]
+            extents = {}
+            for addr in docs:
+                ans = self.daemon_op({'op': 'retrieve_doc_v_span_set', 'doc': addr})
+                for x in (ans.get('set') or []) if isinstance(ans, dict) else []:
+                    if x['start'].startswith('1.'):
+                        extents[addr] = int(x['width'].split('.')[-1])
+            self.shared[key] = (max(extents, key=extents.get) if extents else None, extents, len(docs))
+        return self.shared[key]
 
     def key_store(self):
         """the device's key store as the provider answers `fingerprint` — read through the open page's port, a read of

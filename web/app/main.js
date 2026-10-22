@@ -153,7 +153,7 @@ async function boot() {
   if (GATE) ledger = await import('../gate/ledger.js'); // FIRST: every surface counted before the first call
   for (const [k, v] of Object.entries({ ...cssVariables(), ...cssMeasures() })) document.documentElement.style.setProperty(k, v);
   const plane = /** @type {HTMLCanvasElement} */ (el('plane'));
-  RENDER.attach(plane); LAYER.attach(el('domlayer'), el('corners')); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
+  RENDER.attach(plane); LAYER.attach(el('domlayer'), el('corners'), { measure: true }); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
   HOST.attach(el('overlay'));
   FOCUS.attach({ live: el('live') });
   WALK.attach(el('mirror'));

@@ -1,19 +1,22 @@
-// P-LOD's test: S3's bands and S1's mount thresholds below the glyph band;
+// P-LOD's test: S3's bands — the text bands at the plane's standard type —
+// and S1's mount thresholds below the glyph band;
 // the continuation a scale draws as one mark — at HOME the first (foundations
 // §2.1: the oldest 48 whole, the rest one residue), crossfading through the
 // far band, the one past the sound depth at any scale.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { lodOf, residueDepth, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, clusterGrain } from './lod.js';
-import { DOC_W, REP_FS, G, LEAF, DEPTH_SOUND, accountCell } from './projection.js';
+import { DOC_W, G, LEAF, DEPTH_SOUND, accountCell } from './projection.js';
+import { STANDARD_FS } from './layout.js';
 import * as CAM from './camera.js';
 
 test('the bands by document extent and em', () => {
   assert.equal(lodOf((LOD_FAR_LO - 1) / DOC_W).name, 'far');
   assert.equal(lodOf((LOD_FAR_LO + 1) / DOC_W).name, 'far~mid');
   assert.equal(lodOf((LOD_FAR_HI + 1) / DOC_W).name, 'mid');
-  assert.equal(lodOf((LOD_TXT_LO + 1) / REP_FS).name, 'mid~near');
-  assert.equal(lodOf((LOD_TXT_HI + 1) / REP_FS).name, 'near');
+  assert.equal(lodOf((LOD_TXT_LO + 1) / STANDARD_FS).name, 'mid~near');
+  assert.equal(lodOf((LOD_TXT_HI + 1) / STANDARD_FS).name, 'near');
+  assert.equal(lodOf(12.5 / STANDARD_FS).name, 'near', 'a standard document read at the landing\'s 12.5 px an em: near');
 });
 
 test('a crossfade reports its fade', () => {

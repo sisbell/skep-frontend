@@ -10,7 +10,11 @@ with its trail entry (foundations §2.2, §2.3; K-31); the focus ring drawn
 at the focus every teleport a key made lands — the box's Enter, Mod+[ and Mod+],
 Mod+0, Mod+Shift+H, Enter on the line's ‹ back (K-22), Mod+3, Enter on a
 trail list row (K-41), Enter on a document (K-7) — and at the focus
-PageDown re-takes, and no ring after a click on ‹ back (D5 §4 rule 2: drawn
+PageDown re-takes; the paging key (K-6) paging the view by 0.9 of its
+height below reading scale and, at reading scale, continuing at the next
+column's top — the view over a column whose foot it shows brought to the
+next column's text, half a gutter below the one line, and back by PageUp
+(issue #15); and no ring after a click on ‹ back (D5 §4 rule 2: drawn
 once a key has moved the focus); the scene's own end — Esc,
 zoom-out — making no trail move, so Back after it moves the camera and the
 entries ahead of the cursor stand; a navigation act from the scene — Back,
@@ -76,6 +80,11 @@ import json
 from . import DOC, NO_MATCH, SECOND_ACCOUNT, WINDOW, Result
 from .layout import inside, level_holds, scene_level
 
+# the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
+GUTTER_EM = 2
+# how far inside a scene pane's top and bottom a phrase dragged over stands: clear of the strip the platform scrolls a
+# scroller in while a selection is dragged at its edge
+PANE_EDGE_PX = 40
 CODES = {'[': 'BracketLeft', ']': 'BracketRight', '=': 'Equal', '-': 'Minus', '0': 'Digit0', '1': 'Digit1', '2': 'Digit2', '/': 'Slash', '+': 'Equal'}
 
 
@@ -165,10 +174,11 @@ def stands_at(placed):
 
 def ring(ctx):
     """the focus ring as the last frame drew it — the box on screen it outlined, None where it drew none — beside the
-    focus and the focused element's box on screen, read from the projection and the camera: the document's box for a
-    document, a span or a link, the account's cell, the board's"""
+    focus and the focused element's box on screen, read from the projection, the fold and the camera: the bounds of the
+    document's outline for a document, a span or a link (issue #15: the document's one edge traces its columns), the
+    account's cell, the board's"""
     return ctx.js('''(() => { const s = window.__skep, f = s.view.focus(), c = s.view.camera(), p = s.view.viewport();
-      const b = !f ? null : f.kind === 'account' ? s.accountCell(f.addr) : f.kind === 'board' ? s.boardCell(f.addr) : s.boxOf(f.addr);
+      const b = !f ? null : f.kind === 'account' ? s.accountCell(f.addr) : f.kind === 'board' ? s.boardCell(f.addr) : s.fold(f.addr).outline;
       return {ring: s.view.ring(), focus: f && {kind: f.kind, addr: f.addr, pos: f.pos},
               box: b && {x: (b.x - c.x) * c.scale + p.VW / 2, y: (b.y - c.y) * c.scale + p.VH / 2, w: b.w * c.scale, h: b.h * c.scale}}; })()''')
 
@@ -182,7 +192,8 @@ def ring_drawn(ctx, r, made):
     if f and f.get('kind') == 'block' and ctx.js('window.__skep.mountedAddrs().includes(%s)' % json.dumps(f['addr'])):
         g = ring(ctx)
         lit = ctx.js('(() => { const a = document.querySelector(%s); return a ? [...a.querySelectorAll(".sp.lit")].map((e) => Number(e.dataset.pos)) : null; })()' % json.dumps('#domlayer article.dtext[data-addr="%s"]' % f['addr']))
-        r.check(rule is True and g['ring'] is None and lit == [f['pos']], 'the ring is drawn at the focus %s moved — at reading scale its lit block, the canvas circling no mounted document (D3)' % made, {'rule': rule, 'canvas_ring': g['ring'], 'lit': lit, 'pos': f['pos']})
+        # a block split across columns (issue #15) is lit in each of its parts
+        r.check(rule is True and g['ring'] is None and bool(lit) and set(lit) == {f['pos']}, 'the ring is drawn at the focus %s moved — at reading scale its lit block, every part of it, the canvas circling no mounted document (D3)' % made, {'rule': rule, 'canvas_ring': g['ring'], 'lit': lit, 'pos': f['pos']})
         return g
     g = ring(ctx)
     a, b = g['ring'], g['box']
@@ -411,13 +422,16 @@ def press_holds(ctx, r):
         ctx.frames(2)
         whole_again(ctx)
     # a fresh mount waits for the press's end: the selection stands in another document mounted beside the first edition —
-    # the one in view at the landing with the largest face, the view zoomed about its centre until that face is past the
-    # mount threshold; the least pan takes it out of the layer's view (the viewport and 40 px about it, 10 px clear), a
-    # press in the first edition, then a pan of 25 px back brings it into the layer's view with the button down
+    # the view built at em 8.5, past the readable em where an article takes the pointer, between the first edition's
+    # outline and the room of the document after it in its row, the one in view with the largest face past the mount
+    # threshold; the least pan takes it out of the layer's view (the viewport and 40 px about it, 10 px clear), a press in
+    # the first edition, then a pan of 25 px back brings it into the layer's view with the button down
     ctx.leap(DOC, WINDOW[0])
+    f3, b4 = ctx.js('window.__skep.fold(%s)' % json.dumps(DOC)), ctx.js('window.__skep.boxOf("1.0.1.0.4")')
+    ctx.set_view((f3['outline']['x'] + f3['outline']['w'] + b4['x']) / 2, f3['columns'][0]['y'] + f3['columns'][0]['h'] / 2, ctx.js('window.__skep.scaleFor(%s, "em", 8.5)' % json.dumps(DOC)))
     cam0 = ctx.camera()
     near = ctx.js('''(() => { const c = window.__skep.view.camera(), p = window.__skep.view.viewport();
-      return window.__skep.model.places().filter((q) => { if (q.system || q.doc === %s) return false; const b = window.__skep.boxOf(q.doc);
+      return window.__skep.model.places().filter((q) => { if (q.system || q.doc === %s) return false; const b = window.__skep.fold(q.doc).outline;
           const x = (b.x - c.x) * c.scale + p.VW / 2, y = (b.y - c.y) * c.scale + p.VH / 2;
           return x < p.VW && x + b.w * c.scale > 0 && y < p.VH && y + b.h * c.scale > 0; })
         .map((q) => ({doc: q.doc, from: window.__skep.model.doc(q.doc).from, em: c.scale / window.__skep.scaleFor(q.doc, 'em', 1)}))
@@ -433,7 +447,7 @@ def press_holds(ctx, r):
             {'near': near[:4], 'mounted': ctx.js('window.__skep.mountedAddrs()')})
     if beside:
         other = beside[0]
-        cam1, vp, box = ctx.camera(), ctx.js('window.__skep.view.viewport()'), ctx.js('window.__skep.boxOf(%s)' % json.dumps(other))
+        cam1, vp, box = ctx.camera(), ctx.js('window.__skep.view.viewport()'), ctx.js('window.__skep.fold(%s).outline' % json.dumps(other))
         s = cam1['scale']
         x0, y0 = (box['x'] - cam1['x']) * s + vp['VW'] / 2, (box['y'] - cam1['y']) * s + vp['VH'] / 2
         x1, y1 = x0 + box['w'] * s, y0 + box['h'] * s
@@ -497,6 +511,41 @@ def plain_char(ctx, addr):
         return {pos: Number(sp.dataset.pos), at: [x, y], along: [line.right - 1, y], hit: window.__gateHit(x, y)};
       }
       return null; })()''' % json.dumps('#domlayer article.dtext[data-addr="%s"]' % addr))
+
+
+def paging_holds(ctx, r):
+    """THE PAGING KEY AT READING SCALE (issue #15's design decision: "at reading scale the paging keys continue at the
+    next column's top"; K-6): the longest edition the claimant's index lists LEAPt to, the view over its first column —
+    its foot in view — PageDown brings the second column's text top half a gutter below the one line, centred across it;
+    PageUp from there brings the first column's top back the same way; its figures"""
+    longest, _, _ = ctx.longest_edition()
+    if longest is None:
+        r.check(False, 'the paging key at reading scale: an edition with two columns or more to page across', None)
+        return None
+    ctx.leap(longest)
+    f = ctx.js('window.__skep.fold(%s)' % json.dumps(longest))
+    seen = lambda: ctx.js('''(() => { const S = window.__skep, c = S.view.camera(), p = S.view.viewport(); return {cam: c, VW: p.VW, VH: p.VH,
+      line: document.getElementById('line').getBoundingClientRect().bottom}; })()''')
+    def at(col):
+        """where a column's text top and centre stand on screen now, against the one line's bottom and the view's middle"""
+        v = seen()
+        c, cam = f['columns'][col], v['cam']
+        return {'top': (c['y'] - cam['y']) * cam['scale'] + v['VH'] / 2, 'centre': (c['x'] + c['w'] / 2 - cam['x']) * cam['scale'] + v['VW'] / 2, 'line': v['line'], 'mid': v['VW'] / 2,
+                'gap': GUTTER_EM / 2 * f['fs'] * cam['scale'], 'scale': cam['scale']}
+    start = at(0)
+    foot = (f['columns'][0]['y'] + f['columns'][0]['h'] - seen()['cam']['y']) * start['scale'] + seen()['VH'] / 2
+    chord(ctx, 'PageDown')
+    ctx.settle()
+    down = at(1) if len(f['columns']) > 1 else None
+    chord(ctx, 'PageUp')
+    ctx.settle()
+    up = at(0)
+    stands = lambda q: bool(q) and abs(q['top'] - (q['line'] + q['gap'])) <= 0.5 and abs(q['centre'] - q['mid']) <= 0.5 and abs(q['scale'] - start['scale']) <= 1e-9
+    r.check(len(f['columns']) > 1 and foot <= seen()['VH'] and stands(down),
+            'at reading scale, the view over a column whose foot it shows, PageDown brings the next column\'s top half a gutter below the one line, centred across it, at the scale it stood at',
+            {'doc': longest, 'columns': len(f['columns']), 'foot': foot, 'down': down})
+    r.check(stands(up), 'PageUp from the second column\'s top brings the first column\'s top back the same way', up)
+    return {'doc': longest, 'columns': len(f['columns']), 'down': down, 'up': up}
 
 
 def below_reading(ctx, r):
@@ -630,14 +679,15 @@ def below_reading(ctx, r):
 
 def pane_phrase(ctx, side):
     """a phrase of fifteen characters of a paragraph's own text — no heading's — that a reading scene's pane SHOWS:
-    printable ASCII on one line inside the pane's visible rect, the pane's article under the pointer half a pixel inside
-    its first character and its last, where a drag over it presses and releases. Read through the gate's `scene.at` over
-    the blocks the model holds as the scene stands opened: its document, its first and last positions, its text and those
-    points; None where the pane shows none"""
-    return ctx.js('''((side) => {
+    printable ASCII on one line inside the pane's visible rect and PANE_EDGE_PX clear of its top and its bottom, where a
+    drag does not scroll the pane (the platform scrolls a scroller a selection is dragged at the edge of), the pane's
+    article under the pointer half a pixel inside its first character and its last, where a drag over it presses and
+    releases. Read through the gate's `scene.at` over the blocks the model holds as the scene stands opened: its document,
+    its first and last positions, its text and those points; None where the pane shows none"""
+    return ctx.js('''((side, edge) => {
       const S = window.__skep, p = S.scene.pair(); if (!p) return null;
       const addr = side === 'a' ? p.a : p.b, pane = document.getElementById(side === 'a' ? 'sceneA' : 'sceneB'), enc = new TextEncoder();
-      const inside = (q, v) => q.x >= v.x && q.y >= v.y && q.x + q.w <= v.x + v.w && q.y + q.h <= v.y + v.h;
+      const inside = (q, v) => q.x >= v.x && q.y >= v.y + edge && q.x + q.w <= v.x + v.w && q.y + q.h <= v.y + v.h - edge;
       const under = ([x, y]) => { const e = document.elementFromPoint(x, y), a = e && e.closest('article.dtext'); return !!a && pane.contains(a); };
       for (const b of S.model.doc(addr).blocks) {
         if (b.kind !== 'para' || b.text.startsWith('#')) continue;
@@ -651,7 +701,7 @@ def pane_phrase(ctx, side):
           if (under(start) && under(end)) return {addr, p0, p1, text, start, end};
         }
       }
-      return null; })(%s)''' % json.dumps(side))
+      return null; })(%s, %s)''' % (json.dumps(side), PANE_EDGE_PX))
 
 
 def copied(ctx):
@@ -1437,14 +1487,19 @@ def run(ctx):
     chord(ctx, '-', mods=('Meta',))
     c2 = state(ctx)['cam']
     r.check(abs(c2['scale'] - c0['scale']) < 1e-9, 'Mod+- zooms back out', {'to': c2['scale']})
+    # below reading scale the paging key pages the view by 0.9 of its height
+    ctx.view_doc_em(DOC, 5)
+    c2 = state(ctx)['cam']
     chord(ctx, 'PageDown')
     c3 = state(ctx)['cam']
     vh = ctx.js('window.__skep.view.viewport().VH')
-    r.check(abs((c3['y'] - c2['y']) * c2['scale'] - 0.9 * vh) < 2, 'PageDown pages the view by 0.9 of its height', {'dy_px': (c3['y'] - c2['y']) * c2['scale'], 'vh': vh})
+    r.check(abs((c3['y'] - c2['y']) * c2['scale'] - 0.9 * vh) < 2, 'below reading scale (em 5) PageDown pages the view by 0.9 of its height', {'dy_px': (c3['y'] - c2['y']) * c2['scale'], 'vh': vh})
     chord(ctx, 'PageUp')
+    r.figures['paging'] = paging_holds(ctx, r)
     # a camera move a key made re-takes the focus with the ring drawn at it (D5 §4 rules 2, 3): PageDown from a landing the
-    # gate's door made, which draws none, moves the focus to the span then under the view's centre
-    ctx.leap(DOC, WINDOW[0])
+    # gate's door made at the first edition's first block, which draws none, moves the focus to the span then under the
+    # view's centre
+    ctx.leap(DOC, 1)
     f0, g0 = state(ctx)['focus'], ring(ctx)
     chord(ctx, 'PageDown')
     f1 = state(ctx)['focus']

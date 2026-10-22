@@ -41,7 +41,13 @@
 // extent is read before the camera follows, overtaken by a landing, flies the
 // camera nowhere (a mutant that flies after the read turns red); ↓ whose
 // flight a second ↓ cut short ends, the walk on the span the second reached
-// (a mutant that leaves a cut flight unsettled turns red).
+// (a mutant that leaves a cut flight unsettled turns red). IN A DOCUMENT
+// FOLDED INTO COLUMNS (issue #15) the camera follows the walk to a span's line
+// in its own column at reading size, and to the document's outline framed, no
+// nearer than reading size; a re-take at reading scale takes the span in the
+// column under the view's centre — a mutant that places either by the
+// position's fraction of the extent down the room, frames the room, or frames
+// a short document's one column past reading size turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -52,8 +58,9 @@ import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { withheldBlockHTML, entitlementArm } from '../text/article.js';
-import { accountCell, boardCell } from '../plane/projection.js';
+import { accountCell, boardCell, docBox } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
+import { placeOf } from '../plane/layout.js';
 import { STRINGS, t } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
@@ -75,11 +82,15 @@ const reads = (/** @type {string} */ doc, /** @type {Array<Record<string, unknow
 /** a third document, held in part as the viewport's read leaves it — its extent and its first paragraph — the rest of its text read on the walk's ask */
 const G = '1.0.1.0.7';
 const G_TEXT = 'First.\n\nSecond.\n\nThird.';
+/** a document longer than a column: a hundred and twenty paragraphs of a line each, folded into its room's columns */
+const H = '1.0.1.0.40';
+const H_TEXT = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1} of an edition longer than one column.`).join('\n\n');
 // D: three spans: 1 "Tumbler.\n\n" (10), 11 "The first field." (16), 27 a withheld run (4)
 const script = {
   ...reads(D, [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }], 30, [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }]),
   ...reads(E, [{ content: E_TEXT }], E_TEXT.length, [{ i_start: E + '.0.1.1', width: String(E_TEXT.length) }]),
   ...reads(G, [{ content: G_TEXT }], G_TEXT.length, [{ i_start: G + '.0.1.1', width: String(G_TEXT.length) }]),
+  ...reads(H, [{ content: H_TEXT }], H_TEXT.length, [{ i_start: H + '.0.1.1', width: String(H_TEXT.length) }]),
   // the edition claims on D's withheld run's origin: none
   [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1003') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
 };
@@ -386,4 +397,44 @@ test('the mirror\'s item at a link whose far end floats says "its passage is not
   assert.ok(item().includes(floating), item());
   REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 4 }]);
   assert.ok(item() !== '' && !item().includes(t('F.floating', { D: FAR })), item());
+});
+
+// placed last: it lists a document no test above meets, and lists the index back as it found it
+test('in a document folded into columns the camera follows the walk to a span\'s line in its own column at reading size, and to the document\'s outline framed no nearer than reading size; a re-take at reading scale takes the span in the column under the view\'s centre (issue #15)', async () => {
+  const index = (/** @type {string[]} */ docs) => REC.takeIndex(/** @type {any} */ ({ docs: docs.map((doc) => ({ doc, kind: 'edition', label: doc, standing: 'public' })), counts: [{ account: '1.0.1', documents: docs.length }], state: { arm: 'complete' } }));
+  /** two views the same, within a flight's last step's rounding */
+  const near = (/** @type {{x: number, y: number, scale: number}} */ a, /** @type {{x: number, y: number, scale: number}} */ b, /** @type {string} */ what) =>
+    assert.ok([a.x - b.x, a.y - b.y, a.scale - b.scale].every((d, i) => Math.abs(d) <= 1e-9 * Math.max(1, Math.abs([b.x, b.y, b.scale][i]))), `${what}: ${JSON.stringify(a)}, not ${JSON.stringify(b)}`);
+  await PUMP.loadWhole(H);
+  index([D, E, H]);
+  try {
+    const d = REC.doc(H), f = LAYER.foldOf(d), box = docBox(H);
+    const columnOf = (/** @type {number} */ pos) => placeOf(f, pos).column;
+    assert.ok(f.across > 2 && f.columns.length > f.across + 1, `H folds into ${f.columns.length} columns, ${f.across} across: a second row, its second column off the room's left`);
+    // the span heading the second row's first column, below the middle of the room's width, and the span before it at the foot of the first row's last
+    const i = d.blocks.findIndex((b) => columnOf(b.pos) === f.across), at = d.blocks[i], c = f.columns[f.across];
+    assert.ok(i > 0 && columnOf(d.blocks[i - 1].pos) === f.across - 1 && c.x + c.w < box.w / 2);
+    await WALK.focusTo(H, d.blocks[i - 1].pos, true);
+    await run(WALK.key('down'));
+    assert.deepEqual(walkAt(), ['block', H, at.pos], '↓ steps onto the span heading the next column');
+    const line = placeOf(f, at.pos);
+    near(CAM.view(), { x: box.x + c.x + c.w / 2, y: box.y + line.y + line.h / 2, scale: 12.5 / f.fs }, 'the camera on its line, centred across its column, at reading size');
+    await run(WALK.key('out'));
+    assert.deepEqual(walkAt(), ['document', H, null]);
+    const s = LAYER.shapeOf(H), framed = CAM.viewForCell(s, 0.9);
+    assert.ok(s.h < box.h * 0.75 && framed.scale < 12.5 / f.fs, 'its outline two rows of its room\'s, framed below reading size');
+    near(CAM.view(), framed, '← to the document: its outline framed, never its room');
+    // a document of one short column, framed whole, would be read far past reading size
+    await WALK.focusTo(D, 11, true);
+    await run(WALK.key('out'));
+    near(CAM.view(), { ...CAM.viewForCell(LAYER.shapeOf(D), 0.9), scale: 12.5 / LAYER.foldOf(REC.doc(D)).fs }, '← to a document of one short column: its outline at reading size, no nearer');
+    // the camera over a span part way down the second row's second column, at reading scale
+    const c2 = f.columns[f.across + 1], later = d.blocks.find((b) => columnOf(b.pos) === f.across + 1 && placeOf(f, b.pos).y > c2.y + c2.h / 3);
+    assert.ok(later, 'a span a third of the way down the column');
+    CAM.set(CAM.viewAt(LAYER.centreOf(H, later.pos), f.fs, 12.5));
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['block', H, later.pos], 'the re-take: the span under the view\'s centre, in its column');
+  } finally {
+    index([D, E]);
+  }
 });

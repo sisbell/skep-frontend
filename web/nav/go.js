@@ -86,7 +86,7 @@ import * as LK from '../links/links.js';
 import * as SCENE from '../scene/scene.js';
 import * as FACES from '../overlays/faces.js';
 import * as LAYER from '../text/layer.js';
-import { docBox, accountCell, boardCell } from '../plane/projection.js';
+import { accountCell, boardCell } from '../plane/projection.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').Link} Link */
@@ -132,15 +132,14 @@ function nextAct() { arrival = null; lit = null; HOST.endOpening(); return ++mad
 function dismissChrome() { HOST.dismiss(); SCENE.close(); }
 
 /**
- * The view that reads a document at a position: its face (T-LAYER's) at
- * reading size.
+ * The view that reads a document at a position: its size (T-LAYER's fold) at
+ * reading size, centred on the line holding the position in its column — the
+ * first column's centre where none is named (T-LAYER's `centreOf`).
  * @param {string} addr
  * @param {number | null} pos
  */
 export function viewFor(addr, pos) {
-  const d = REC.doc(addr);
-  const frac = pos != null && d.extent ? 0.12 + 0.8 * ((pos - 1) / d.extent) : null;
-  return CAM.viewForDoc(docBox(addr), LAYER.metricsOf(d).fs, 12.5, frac);
+  return CAM.viewAt(LAYER.centreOf(addr, pos), LAYER.foldOf(REC.doc(addr)).fs, 12.5);
 }
 
 /** the label a place's entry carries: the index's, else the record's */

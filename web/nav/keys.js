@@ -22,7 +22,11 @@
 // the focused pane"). Whether a key made an act is the focus owner's one
 // reading, handed in by the app with each key (`Ctx.byKey`; FP-20), so a
 // teleport or a re-take a key made puts the platform's focus on its landing
-// wherever the key was pressed, the ring drawn (rules 10, 12). Mod+S is
+// wherever the key was pressed, the ring drawn (rules 10, 12). The paging key
+// (K-6) at reading scale continues at the next column's top, where the view
+// already shows the foot of the column it reads (issue #15's design decision;
+// T-LAYER's `pageTarget`), and pages the view by most of its height
+// everywhere else. Mod+S is
 // swallowed: no save exists (K-74). Shift with ← and → is never dispatched:
 // it is the platform's own (D5 K-71, its text keys "Shift extending"), which
 // extends a selection the platform holds where that selection holds the
@@ -54,6 +58,7 @@ import * as TRAILLIST from '../overlays/trail-list.js';
 import * as VERSIONS from '../overlays/versions.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as CAM from '../plane/camera.js';
+import * as LAYER from '../text/layer.js';
 import { t } from '../strings.js';
 
 /** the platform's primary command modifier: ⌘ on macOS, Ctrl elsewhere (D5 §0 RULED) */
@@ -207,7 +212,7 @@ export async function dispatch(e, ctx) {
   if (chord === '←') { e.preventDefault(); await WALK.key('out'); return true; }
   if (chord === 'Home') { e.preventDefault(); await WALK.key('first'); return true; }
   if (chord === 'End') { e.preventDefault(); await WALK.key('last'); return true; }
-  if (chord === 'PageDown' || chord === 'PageUp') { const { VH } = CAM.viewport(); CAM.panBy(0, chord === 'PageDown' ? -VH * 0.9 : VH * 0.9); CAM.markDirty(); WALK.retakeFromView(byKey); return true; }
+  if (chord === 'PageDown' || chord === 'PageUp') { page(chord === 'PageDown' ? 1 : -1); CAM.markDirty(); WALK.retakeFromView(byKey); return true; }
   if (chord === 'Enter') { await activateFocus(byKey); return true; }
   // a printable key on the plane: swallowed, the K-9 line at the focus
   if (printable(e)) { swallow(e); return true; }
@@ -289,6 +294,22 @@ async function activateFocus(byKey) {
     return;
   }
   if (f.kind === 'link' && f.link) ANATOMY.open(f.link, null, byKey);
+}
+
+/**
+ * A paging key (K-6): at reading scale, the view's centre over a column whose
+ * foot the view already shows (PageDown) or whose top it shows (PageUp), the
+ * next column's top — or the previous one's — brought to the top of the view,
+ * centred across it, at once (T-LAYER's `pageTarget`; issue #15: "the paging
+ * keys continue at the next column's top"); anywhere else the view paged by
+ * 0.9 of its height.
+ * @param {1 | -1} dir
+ */
+function page(dir) {
+  const to = LAYER.pageTarget(dir);
+  if (to) { CAM.set(to); return; }
+  const { VH } = CAM.viewport();
+  CAM.panBy(0, dir > 0 ? -VH * 0.9 : VH * 0.9);
 }
 
 /** a zoom chord (K-11): the camera stepped about the view's centre, the focus re-taken at the new grain with the ring drawn (rule 10: a key's re-take takes the platform's focus wherever the key was pressed) */

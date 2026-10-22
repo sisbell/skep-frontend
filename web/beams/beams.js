@@ -12,8 +12,10 @@
 // where its slot stores them (the slot names the bytes' permanent I-spans):
 // each beam leaves the text at its span's own line, from the place's edge
 // (foundations §2.1; S1 Q1): it starts at the right edge of the block
-// holding the stretch it leaves from, level with the middle of the line-rect
-// nearest the far end of every stretch LK says its end stands in (LK's
+// holding the stretch it leaves from — of the part of it that holds the line,
+// where the block is parted across columns (issue #15's fold) — level with
+// the middle of the line-rect nearest the far end of every stretch LK says
+// its end stands in (LK's
 // `runs`; `spanRects` with each stretch's width — its rects line by line, so
 // at a wrap the line nearest the far end). Its far end is where `project`
 // says the far passage sits in the far document's current text (LK's
@@ -109,7 +111,7 @@ import { t } from '../strings.js';
 /**
  * @typedef {Object} Geometry — what `beamOf` lays a beam out from, on screen: the mounted articles' rects (T-LAYER's) and the documents' boxes, read through their owners' exports and handed in, so the rule is tested apart from the page
  * @property {(addr: string, pos: number, width: number) => Rect[]} lines the line rects of a span's own bytes in a mounted article; none where they are not laid out
- * @property {(addr: string, pos: number) => (Rect | null)} block the box of the block holding a position in a mounted article
+ * @property {(addr: string, pos: number) => Rect[]} block the boxes of the block holding a position in a mounted article, one for each column that holds a part of it; none where it is not laid out
  * @property {(addr: string) => (Rect | null)} first the box of a mounted article's first block: the anchor of a whole-work end, and of one that floats
  * @property {(addr: string) => boolean} mounted
  * @property {(addr: string) => Point} centre the centre of a document's box
@@ -139,7 +141,7 @@ export function resize() {
   canvas.style.width = VW + 'px'; canvas.style.height = VH + 'px';
 }
 
-/** @typedef {{line: Rect, block: Rect}} Anchor a line of an end's stretch, with the box of the block holding that stretch */
+/** @typedef {{line: Rect, block: Rect}} Anchor a line of an end's stretch, with the box of the part of the block holding that stretch that holds the line */
 
 /** the anchor whose line is nearest a point */
 function pickLine(/** @type {Anchor[]} */ anchors, /** @type {Point} */ p) {
@@ -147,9 +149,14 @@ function pickLine(/** @type {Anchor[]} */ anchors, /** @type {Point} */ p) {
   for (const a of anchors) { const r = a.line, dd = (r.x + r.w / 2 - p.x) ** 2 + (r.y + r.h / 2 - p.y) ** 2; if (dd < bd) { bd = dd; best = a; } }
   return best;
 }
-/** the lines of the stretches of a document's text, each with the block holding its stretch; none where they are not laid out */
+/** the lines of the stretches of a document's text, each with the part of the block holding its stretch that holds the line (`partOf`); none where they are not laid out */
 function anchorsOf(/** @type {Geometry} */ g, /** @type {string} */ addr, /** @type {Array<{pos: number, width: number}>} */ runs) {
-  return runs.flatMap((r) => { const block = g.block(addr, r.pos); return block ? g.lines(addr, r.pos, r.width).map((line) => ({ line, block })) : []; });
+  return runs.flatMap((r) => { const parts = g.block(addr, r.pos); return parts.length ? g.lines(addr, r.pos, r.width).map((line) => ({ line, block: partOf(parts, line) })) : []; });
+}
+/** the part of a block holding a line: the box whose height holds the line's middle and whose width meets the line, half a px either way; the first where none does */
+function partOf(/** @type {Rect[]} */ parts, /** @type {Rect} */ line) {
+  const m = line.y + line.h / 2;
+  return parts.find((p) => p.y - 0.5 <= m && m <= p.y + p.h + 0.5 && p.x - 0.5 <= line.x + line.w && line.x <= p.x + p.w + 0.5) || parts[0];
 }
 /** does a rect hold a point, its edges included? */
 const holds = (/** @type {Rect} */ r, /** @type {Point} */ p) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
@@ -173,11 +180,6 @@ export function labelPlace(end, m, seen) {
   const y = end.y - 6 - m.ascent < seen.y ? end.y + 6 + m.ascent : end.y - 6;
   const rect = { x: right ? x - m.w : x, y: y - m.ascent, w: m.w, h: m.ascent + m.descent };
   return holdsWhole(seen, rect) ? { x, y, align: right ? 'right' : 'left', rect } : null;
-}
-/** the box holding every rect of a block (a block is laid out as one box, so one rect) */
-function boundsOf(/** @type {Rect[]} */ rs) {
-  const x0 = Math.min(...rs.map((r) => r.x)), y0 = Math.min(...rs.map((r) => r.y));
-  return { x: x0, y: y0, w: Math.max(...rs.map((r) => r.x + r.w)) - x0, h: Math.max(...rs.map((r) => r.y + r.h)) - y0 };
 }
 /** the middle of a rect */
 const mid = (/** @type {Rect} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
@@ -305,13 +307,13 @@ const seenNow = () => visibleView(LINE.bottom());
 
 /** the page's geometry: T-LAYER's rects of the mounted articles, the camera's projection of the boxes, the visible view */
 function pageGeometry(/** @type {Rect} */ seen) {
-  /** the box of the block keyed by its first position in a mounted article */
-  const box = (/** @type {string} */ addr, /** @type {number} */ pos) => { const rs = LAYER.spanRects(addr, pos); return rs ? boundsOf(rs) : null; };
+  /** the boxes of the block keyed by its first position in a mounted article: one for each of its parts, a column's each */
+  const parts = (/** @type {string} */ addr, /** @type {number} */ pos) => LAYER.spanRects(addr, pos) || [];
   /** @type {Geometry} */
   const g = {
     lines: (addr, pos, width) => (LAYER.spanRects(addr, pos, width) || []).filter((r) => r.w > 0 && r.h > 0),
-    block: (addr, pos) => { const b = blockAt(addr, pos); return b ? box(addr, b.pos) : null; },
-    first: (addr) => box(addr, (doc(addr).blocks[0] || { pos: 1 }).pos),
+    block: (addr, pos) => { const b = blockAt(addr, pos); return b ? parts(addr, b.pos) : []; },
+    first: (addr) => parts(addr, (doc(addr).blocks[0] || { pos: 1 }).pos)[0] || null,
     mounted: LAYER.isMounted,
     centre: (addr) => { const b = docBox(addr); return { x: sx(b.x + b.w / 2), y: sy(b.y + b.h / 2) }; },
     view: seen,
