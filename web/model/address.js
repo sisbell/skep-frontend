@@ -103,6 +103,23 @@ export const documentOf = (key) => {
 };
 
 /**
+ * A link's home, read from its address: the address through its whole
+ * document field, a version member's components kept — "1.0.1.0.2.2.0.2.1"
+ * → "1.0.1.0.2.2"; "1.0.1.0.3.0.2.1" → "1.0.1.0.3"; a document or a member
+ * answers itself; an account or node → null. A link takes its address in
+ * its home's link subspace (wire.md §Links (writes), `make_link`), and a
+ * member can be the home ("a write homed in `1.0.1.0.1.1`", §Arrangement,
+ * `version`), so the home is the member where `documentOf` names its trunk.
+ * @param {string} key
+ * @returns {string | null}
+ */
+export const homeOf = (key) => {
+  const f = fieldsOf(key);
+  if (f.length < 3 || !f[2].length) return null;
+  return f.slice(0, 3).map((x) => x.join('.')).join('.0.');
+};
+
+/**
  * The version member an address names: "1.0.1.0.3.2" → 2; the bare
  * document → null.
  * @param {string} key

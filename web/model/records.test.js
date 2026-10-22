@@ -4,6 +4,10 @@
 // positions, and copies its bytes, through the blocks and runs it was made
 // from), the feed keeping the index and invalidating, the system account
 // held and marked, the death dropping every read held at the session's class.
+// A link homed at a version member keeps the member as its home, its owner
+// the member's account, and a link made there drops what was held of the
+// member and of its trunk, whatever the row names (a mutant that reads the
+// home as the trunk turns red).
 // A link's stored span placed through the held V→I image, never at its
 // stored ordinal: moved by an edit, cut in two, held twice, minted under a
 // member's chain, no longer held, outside the window read (a mutant that
@@ -185,6 +189,17 @@ test('links: the raw set per document, each read once', () => {
   assert.equal(REC.linksTouching('1.0.1.0.3').length, 1);
   assert.equal(REC.link('1.0.1.0.3.0.2.1')?.home, '1.0.1.0.3');
   assert.equal(REC.link('1.0.1.0.3.0.2.1')?.owner, '1.0.1');
+});
+
+test('a link homed at a version member keeps the member as its home, never its trunk; a link made there drops what was held of the member and of its trunk', () => {
+  const D = '1.0.1.0.2', M = D + '.2';
+  REC.takeLink({ addr: M + '.0.2.1', from: [], to: [], type: null });
+  REC.takeLink({ addr: D + '.0.2.1', from: [], to: [], type: null });
+  assert.deepEqual([REC.link(M + '.0.2.1')?.home, REC.link(M + '.0.2.1')?.owner], [M, '1.0.1'], 'homed at the second member, its owner the member\'s account');
+  assert.equal(REC.link(D + '.0.2.1')?.home, D, 'homed at the document');
+  for (const addr of [D, M]) REC.takeDelivery(addr, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, op: 'make_link', docs: null, class: 'published', link: M + '.0.2.2' }));
+  assert.deepEqual([REC.doc(D).from, REC.doc(M).from], [-1, -1], 'the row naming neither: the member the new link is homed at and its trunk both dropped');
 });
 
 test('a feed row names a document: the place is kept, what was held is dropped; a system row is marked', () => {

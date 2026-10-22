@@ -2,7 +2,7 @@
 // Each claim fails when the module's rule is removed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fieldsOf, accountOf, documentOf, memberOf, elementOf, kindOf, cmpAddr, isAddress, parseAddress, resolveSpan, parseVSpan, vSpan, commonsType, isUnder } from './address.js';
+import { fieldsOf, accountOf, documentOf, homeOf, memberOf, elementOf, kindOf, cmpAddr, isAddress, parseAddress, resolveSpan, parseVSpan, vSpan, commonsType, isUnder } from './address.js';
 
 test('the tumbler splits at zeros into dottable fields', () => {
   assert.deepEqual(fieldsOf('1.5.0.1.1.0.1'), [[1, 5], [1, 1], [1]]);
@@ -18,6 +18,15 @@ test('account, document, member and element of an address', () => {
   assert.deepEqual(elementOf('1.0.1.0.3.0.2.1'), { doc: '1.0.1.0.3', subspace: 2, ordinal: 1 });
   assert.equal(kindOf('1.0.1.1'), 'account');
   assert.equal(kindOf('1.1.0.1.0.2'), 'document');
+});
+
+test('a link\'s home is its address through the whole document field: a version member\'s, never its trunk', () => {
+  assert.equal(homeOf('1.0.1.0.2.2.0.2.1'), '1.0.1.0.2.2', 'homed at the second member');
+  assert.equal(homeOf('1.0.1.0.3.0.2.1'), '1.0.1.0.3', 'homed at the document');
+  assert.equal(homeOf('1.0.1.0.2.1.1.0.2.3'), '1.0.1.0.2.1.1', 'a deeper document field, whole');
+  assert.equal(homeOf('1.0.1.0.3.2'), '1.0.1.0.3.2', 'a member answers itself');
+  assert.equal(homeOf('1.0.1.0.3'), '1.0.1.0.3', 'a document answers itself');
+  assert.equal(homeOf('1.0.1'), null, 'an account is no home');
 });
 
 test('address order is numeric by component, shorter first', () => {

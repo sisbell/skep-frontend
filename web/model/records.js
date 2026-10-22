@@ -38,7 +38,7 @@
 // `invalidateClient`), §8's `takeDelivery`/`mergeLinks`, §3's landmarks (now
 // the index's). Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14 (no token held).
 
-import { accountOf, documentOf, cmpAddr, elementOf, memberOf, isUnder } from './address.js';
+import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder } from './address.js';
 import { byteOffsets } from '../util.js';
 
 /** @typedef {import('./frames.js').Run} Run */
@@ -122,7 +122,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
 /**
  * @typedef {Object} Link — as delivered; raw (which show and how is LK's)
  * @property {string} addr
- * @property {string} home the document the link resides in
+ * @property {string} home the document the link resides in — the version member, where it is homed at one, never its trunk (M-ADDR's `homeOf`)
  * @property {string | null} owner the home's account
  * @property {string | null} type the type slot's address
  * @property {EndRef[]} from
@@ -572,9 +572,9 @@ export function takeLinks(/** @type {string} */ addr, /** @type {string[]} */ ad
   for (const a of addrs) d.links.add(a);
   d.linksRead = true; d.rev++; bump();
 }
-/** `read_link`'s answer: the link's slots, its type learned once */
+/** `read_link`'s answer: the link's slots, its type learned once, its home read from its address whole — the version member it is homed at, where it is one (`homeOf`) */
 export function takeLink(/** @type {LinkValue} */ v) {
-  const home = documentOf(v.addr) || v.addr;
+  const home = homeOf(v.addr) || v.addr;
   state.links.set(v.addr, { addr: v.addr, home, owner: accountOf(home), type: v.type, from: v.from, to: v.to });
   bump();
 }
@@ -649,8 +649,10 @@ export const keySetOf = (/** @type {string} */ account) => state.keySets.get(acc
 /**
  * A `feed` update as the shell crate defines it (S-24 (b)): the `/changes`
  * row verbatim plus `position` and `class`. The index is kept here: a mint
- * adds its place; a write to a document drops what the viewport held of it;
- * a `system` row is held and marked, never drawn.
+ * adds its place; a write to a document drops what the viewport held of it,
+ * of the trunk and of the member the row names; a link made, what it held of
+ * the link's home and the home's trunk; a `system` row is held and marked,
+ * never drawn.
  * @param {FeedUpdate} u
  */
 export function applyFeedUpdate(u) {
@@ -671,7 +673,7 @@ export function applyFeedUpdate(u) {
     invalidate(trunk);
     if (named !== trunk) invalidate(named);
   }
-  if (u.op === 'make_link' && u.link) { const home = documentOf(u.link); if (home) invalidate(home); }
+  if (u.op === 'make_link' && u.link) { const home = homeOf(u.link); if (home) { const trunk = documentOf(home) || home; invalidate(trunk); if (home !== trunk) invalidate(home); } }
   if (u.op === 'delegate' && u.new_prefix) { if (!state.counts.has(u.new_prefix)) state.counts.set(u.new_prefix, 0); }
   bump();
 }

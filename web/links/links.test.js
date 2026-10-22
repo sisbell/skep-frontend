@@ -4,15 +4,17 @@
 // visited link lighter, the link lit at an arrival heavier and every other at
 // the drawer's own weight, as the reader the app hands in names it (a mutant
 // that weights by anything but the reader turns red), the records and
-// account-named ends never counted, the badge arriving until read, the mid
-// connections one per pair of places drawn, each holding once every link
-// that joins their documents and that either document draws — the other
-// document's owner's links into a drawn document among them, the passage
-// link and the one naming it whole, whether that document is out of view,
-// inside a mark nobody read or drawn with its links read (a mutant that
-// decides a link at the drawn document alone, or keeps to the ends drawn
-// there, turns red) — each link marked once from itself and its two
-// documents, the owner of either document's link in the owner's hue
+// account-named ends never counted, the badge arriving until read and
+// counting what is homed in a document's version members with its own, a
+// member's own alone (a mutant that matches a home by equality, or by its
+// trunk, turns red), the mid connections one per pair of places drawn, each
+// holding once every link that joins their documents and that either
+// document draws — the other document's owner's links into a drawn document
+// among them, the passage link and the one naming it whole, whether that
+// document is out of view, inside a mark nobody read or drawn with its links
+// read (a mutant that decides a link at the drawn document alone, or keeps to
+// the ends drawn there, turns red) — each link marked once from itself and
+// its two documents, the owner of either document's link in the owner's hue
 // whichever document comes first and whatever either's toggle (a mutant that
 // merges the marks of a link's two ends turns red), and each connection
 // marked with what its links share — neutral in the hue where their linkers
@@ -120,6 +122,16 @@ test('the badge counts the links a document holds; arriving until its links are 
   assert.deepEqual(LK.countDoc('1.0.1.0.127'), { n: 0, social: false, arriving: true });
   assert.equal(LK.countAccount('1.0.1').arriving, false);
   assert.equal(LK.countAccount('1.0.1').n, 1);
+});
+
+test('the badge counts what is homed in a document\'s version members with its own, and at a member its own alone; the account counts each once', () => {
+  const M = D + '.2';
+  REC.takeLinks(D, [M + '.0.2.1']);
+  REC.takeLink({ addr: M + '.0.2.1', from: [span(D, 20, 5)], to: [whole('1.0.1.0.127')], type: CITE });
+  REC.takeLinks(M, [M + '.0.2.1', D + '.0.2.1']);
+  assert.deepEqual(LK.countDoc(D), { n: 2, social: false, arriving: false }, 'its own citation and the one homed in its second member');
+  assert.deepEqual(LK.countDoc(M), { n: 1, social: false, arriving: false }, 'the member: the citation homed in it, never its trunk\'s');
+  assert.equal(LK.countAccount('1.0.1').n, 2, 'the account: each once');
 });
 
 test('the reveal chain: symbols at stage 2, beams at stage 3, hidden again on dismiss', () => {

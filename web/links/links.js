@@ -103,7 +103,7 @@
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
-import { commonsType, documentOf, accountOf } from '../model/address.js';
+import { commonsType, documentOf, accountOf, isUnder } from '../model/address.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -459,14 +459,18 @@ export function wholeLinks(/** @type {string} */ addr) {
  * The badge: the links a document HOLDS (homed in it — foundations §2.1: "a
  * link counted where it is homed"), two-ended, records and the structural
  * family left out, the social types as one mark; `arriving` where the
- * document's links are not yet read (the count then a lower bound).
+ * document's links are not yet read (the count then a lower bound). A link
+ * is homed in a document where its home lies under the document's address —
+ * the board's residence test, coverage and never equality — so a trunk holds
+ * what is homed in its version members with its own, and a member its own
+ * alone.
  * @param {string} addr
  */
 export function countDoc(addr) {
   const d = REC.doc(addr);
   let n = 0, social = false;
   for (const l of REC.linksTouching(addr)) {
-    if (l.home !== addr) continue;
+    if (!isUnder(addr, l.home)) continue;
     const kind = classify(l);
     if (kind === 'social') { social = true; continue; }
     if (kind === 'passage' || kind === 'whole') n++;
