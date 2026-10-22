@@ -26,7 +26,14 @@
 // the reader the arms are decided for keeping it through a session's death.
 // Every drop of an address counted — by `invalidate`, its record held or not
 // and none made for it, and by a death, every address's — and no read taken
-// moving the count (a mutant that counts no death turns red).
+// moving the count (a mutant that counts no death turns red). The edition
+// claims on an origin held until a link written anywhere, a publish or the
+// death drops them all, each drop counted, and kept through any other row
+// (a mutant that drops them at no row, or at every row, turns red); each
+// document windowing the origin made again as the claims, a listed claim's
+// link or its home's metadata arrive and go, and no other document (a mutant
+// that bumps no revision leaves a placeholder's clause decided from claims no
+// longer held).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -200,6 +207,31 @@ test('where a link\'s slot projects is held in the text\'s order until the docum
   assert.ok(REC.doc(D).rev > rev, 'and the document holding the link is made again');
   REC.sessionDied({ arm: 'closed' });
   assert.equal(REC.projection(D + '.0.2.2', 2, '1.0.1.0.9'), undefined, 'the death drops the rest');
+});
+
+test('the edition claims on an origin are held until a feed row that may change them, or the death, drops them all, the drop counted; each document windowing the origin is made again as they, a listed claim\'s link or its home\'s metadata arrive and go, and no other', () => {
+  const W = '1.0.1.0.3', O = '1.0.1.0.1003', C = '1.0.1.0.9.0.2.1', H = '1.0.1.0.9', PLAIN = '1.0.1.0.5';
+  REC.takeDelivery(W, [{ pos: 1, width: 10, kind: 'content', text: 'Tumbler.\n\n', ref: null, origin: null }, { pos: 11, width: 4, kind: 'withheld', text: '', ref: null, origin: O }]);
+  REC.takeDelivery(PLAIN, [{ pos: 1, width: 5, kind: 'content', text: 'plain', ref: null, origin: null }]);
+  assert.deepEqual([REC.withheldOrigins(W), REC.withheldOrigins(PLAIN)], [[O], []]);
+  const made = (/** @type {() => void} */ act) => { const at = [REC.doc(W).rev, REC.doc(PLAIN).rev]; act(); return [REC.doc(W).rev - at[0], REC.doc(PLAIN).rev - at[1]]; };
+  assert.deepEqual(made(() => REC.takeEditionClaims(O, [C])), [1, 0], 'the lookup lands: the document windowing the origin made again, no other');
+  assert.deepEqual(REC.editionClaimsOf(O), [C]);
+  assert.deepEqual(made(() => REC.takeLink({ addr: C, from: [], to: [], type: '1.1.0.1.0.1.0.3.14' })), [1, 0], 'the listed claim\'s link lands');
+  assert.deepEqual(made(() => REC.takeLink({ addr: H + '.0.2.7', from: [], to: [], type: null })), [0, 0], 'a link no lookup lists: nothing made again');
+  assert.deepEqual(made(() => REC.takeMetadata(H, { doc: H, published: true, owner: '1.0.1', birth: H + '.1', birthExtent: 5, placed: null, baseExtent: null, source: null, asOf: 1 })), [1, 0], 'the claim\'s home\'s metadata lands');
+  assert.deepEqual(made(() => REC.invalidate(H)), [1, 0], 'the home dropped: the clause decided again from less');
+  assert.deepEqual(made(() => REC.takeRefused(H, 'withheld')), [1, 0], 'a read of the home refused');
+  const drops = REC.claimDrops();
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, op: 'insert', docs: [PLAIN], class: 'published' }));
+  assert.deepEqual([REC.editionClaimsOf(O), REC.claimDrops()], [[C], drops], 'a row that writes no link and publishes nothing leaves them held');
+  assert.deepEqual(made(() => REC.applyFeedUpdate(/** @type {any} */ ({ position: 12331, at: 12331, op: 'make_link', docs: ['1.0.2.0.5'], class: 'published', link: '1.0.2.0.5.0.2.1' }))), [1, 0], 'a link written anywhere: the windowing document made again');
+  assert.deepEqual([REC.editionClaimsOf(O), REC.claimDrops()], [undefined, drops + 1], 'every claim held dropped, the drop counted');
+  REC.takeEditionClaims(O, 'refused');
+  assert.equal(REC.editionClaimsOf(O), 'refused', 'a lookup refused is held refused');
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual([REC.editionClaimsOf(O), REC.claimDrops()], [undefined, drops + 2], 'the death drops them with every read at the session\'s class, and is counted');
 });
 
 test('every drop of an address is counted — by invalidate, its record held or not and none made for it, and by a death, every address\'s — and no read taken moves the count', () => {

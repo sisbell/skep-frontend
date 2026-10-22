@@ -65,6 +65,16 @@
 // chain its trunk is dropped under recording no count and probing again; an
 // image placed from the window it was asked for, never from one a text read
 // widened before it landed;
+// the edition claims on the origin of a withheld run asked by the view at
+// reading scale and by a whole read — the active view's `find_links_ftt`
+// lookup, never the audit view's `edition_claims` — then each listed claim's
+// link and its home's metadata, each once (a mutant that asks none, or asks
+// the audit view, turns red); dropped by every row that may change them — a
+// link written anywhere, a publish — and by the page's own death, and asked
+// again, any other row leaving them held (a mutant that drops them at no
+// row, or never asks again, turns red); a lookup that lands after such a row
+// taking nothing and asked again (a mutant that watches the origin's drops
+// alone takes the claims read before the row and turns red);
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -94,6 +104,8 @@ const script = {
   [FAKE.keyOf('op', { frame: F.project(D + '.0.2.1', 2, '1.0.1.0.127') })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.100' }] } },
   // a second link's far end, which the far document's text now holds in two runs
   [FAKE.keyOf('op', { frame: F.project(D + '.0.2.2', 2, '1.0.1.0.127') })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.3', width: '0.4' }, { start: '1.20', width: '0.5' }] } },
+  // the edition claims on the withheld run's origin: none
+  [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1003') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
 };
 
 beforeEach(() => { REC._reset(); });
@@ -933,6 +945,102 @@ test('an image asked for a window a text read widens before it lands is placed f
   release();
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(REC.doc(D).image.map((r) => [r.pos, r.width, r.ordinal]), [[11, 20, 11]], 'placed at 11, where it was asked');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- the edition claims on a withheld run's origin -------------------------------------------------------------------
+
+/** D's withheld run's origin, and two claims of the edition class on it: the owner's edition over its own bytes, a delegate's quoting the draft — each homed out of the view D is read at */
+const O = '1.0.1.0.1003', [EDITION, FORK] = ['1.0.1.0.30.0.2.1', '1.0.1.1.0.4.0.2.1'], [EDITION_HOME, FORK_HOME] = ['1.0.1.0.30', '1.0.1.1.0.4'];
+/** the lookup's answer: the claims it lists */
+const claimsOn = (/** @type {string[]} */ addrs) => ({ result: { as_of: 1, resp: 'addrs', addrs } });
+/** a claim's link as `read_link` answers it: FROM `from`, TO the origin whole, typed R20 */
+const claimLink = (/** @type {Array<{start: string, width: string}>} */ from) => ({ result: { as_of: 1, resp: 'link_value', link: { slots: [from, [{ start: O, width: '0.0.0.0.1' }], [{ start: F.EDITION_CLASS, width: '0.0.0.0.0.0.0.0.1' }]] } } });
+/** a published home's metadata */
+const homeMeta = (/** @type {string} */ home, /** @type {string} */ owner) => ({ result: { as_of: 1, resp: 'doc_metadata', doc: home, published: true, owner, birth: home + '.1', birth_extent: '20', placed: null, base_extent: null, source: null } });
+/** a board answering `s`, the two claims' links and their homes' metadata beside it, D's chain ending at its first member */
+const claimed = (/** @type {Record<string, unknown>} */ s) => Object.assign(s, {
+  [FAKE.keyOf('op', { frame: F.readLink(EDITION) })]: claimLink(passageOf(EDITION_HOME, 1, 20)),
+  [FAKE.keyOf('op', { frame: F.readLink(FORK) })]: claimLink(passageOf(O, 1, 4)),
+  [FAKE.keyOf('op', { frame: F.docMetadata(EDITION_HOME) })]: homeMeta(EDITION_HOME, '1.0.1'),
+  [FAKE.keyOf('op', { frame: F.docMetadata(FORK_HOME) })]: homeMeta(FORK_HOME, '1.0.1.1'),
+  [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: NOT_REGISTERED,
+});
+/** what the pump asked of the origin, the claims and their homes in tests before this one asked anew */
+const forgetClaims = () => { for (const a of [O, EDITION_HOME, FORK_HOME]) PUMP.forget(a); };
+
+test('at reading scale the view asks the edition claims on the origin of each withheld run its document holds — the active view\'s lookup, never the audit view\'s `edition_claims` — and each listed claim\'s link and its home\'s metadata, once; a row that may change the claims drops them and the view asks again, any other row leaves them held', async () => {
+  const s = claimed({ ...script });
+  const lookup = inTurn(s, F.editionClaimsAt(O), claimsOn([EDITION, FORK]));
+  const fake = readingD(s);
+  forgetClaims();
+  await settle();
+  const times = (/** @type {object} */ frame) => fake.asked.filter((k) => k === FAKE.keyOf('op', { frame })).length;
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [1, [EDITION, FORK]], 'the lookup asked once, its claims held');
+  assert.deepEqual([F.readLink(EDITION), F.readLink(FORK), F.docMetadata(EDITION_HOME), F.docMetadata(FORK_HOME)].map(times), [1, 1, 1, 1], 'each claim\'s link and each home\'s metadata read once');
+  assert.deepEqual([REC.link(FORK)?.from[0].doc, REC.doc(FORK_HOME).meta?.owner], [O, '1.0.1.1'], 'held where the clause reads them');
+  assert.ok(!fake.asked.some((k) => k.includes('"op":"edition_claims"')), 'never the audit view\'s edition_claims, which refuses withheld at an origin the reader may not read');
+  fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'insert', docs: ['1.0.2.0.5'], class: 'published' } });
+  await settle();
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [1, [EDITION, FORK]], 'a row that writes no link and publishes nothing: the claims held, nothing asked again');
+  /** @type {Array<Record<string, unknown>>} */
+  const rows = [
+    { op: 'make_link', docs: ['1.0.2.0.5'], link: '1.0.2.0.5.0.2.1' }, { op: 'emit', docs: ['1.0.2.0.5'] }, { op: 'edit_link', docs: ['1.0.2.0.5'] },
+    { op: 'nullify', docs: ['1.0.2.0.5'] }, { op: 'assert_sup', docs: ['1.0.2.0.5'] }, { op: 'publish', docs: ['1.0.2.0.6.1'] },
+  ];
+  for (const [i, row] of rows.entries()) {
+    fake.fire('feed', { board: 'b-1', update: { position: 5 + i, at: 5 + i, class: 'published', ...row } });
+    assert.equal(REC.editionClaimsOf(O), undefined, `a ${row.op} row drops the claims held`);
+    await settle();
+    assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [2 + i, [EDITION, FORK]], `and the view asks the lookup again after the ${row.op}`);
+  }
+  assert.deepEqual([F.readLink(EDITION), F.readLink(FORK), F.docMetadata(EDITION_HOME), F.docMetadata(FORK_HOME)].map(times), [1, 1, 1, 1], 'the links and the metadata held through the drops: read once in all');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a lookup of the edition claims that lands after a row dropped them takes nothing and is asked again: the claims answered after the row held, never the ones before it', async () => {
+  const s = claimed({ ...script });
+  const lookup = inTurn(s, F.editionClaimsAt(O), claimsOn([FORK]), claimsOn([EDITION, FORK]));
+  const fake = readingD(s);
+  forgetClaims();
+  const release = fake.hold('op', { frame: F.editionClaimsAt(O) });
+  await untilAsked(fake, F.editionClaimsAt(O), true);
+  fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'make_link', docs: [EDITION_HOME], link: EDITION, class: 'published' } });
+  release();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(REC.editionClaimsOf(O), undefined, 'the claims read before the row are not taken');
+  await settle();
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [2, [EDITION, FORK]], 'asked again: the claims answered after the row held');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the page\'s own death drops the edition claims held, and the view asks them again as a guest', async () => {
+  const s = claimed({ ...script });
+  const lookup = inTurn(s, F.editionClaimsAt(O), claimsOn([EDITION, FORK]), claimsOn([]));
+  const fake = readingD(s);
+  forgetClaims();
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  await settle();
+  assert.deepEqual(REC.editionClaimsOf(O), [EDITION, FORK], 'read under the session');
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  assert.equal(REC.editionClaimsOf(O), undefined, 'dropped at once with every read held at the session\'s class');
+  await settle();
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [2, []], 'asked again as a guest: the guest\'s answer held');
+});
+
+test('a whole read reads the edition claims on each origin its withheld runs name — the lookup, each claim\'s link and each home\'s metadata — so what is made from it holds them', async () => {
+  const s = claimed({ ...script });
+  const lookup = inTurn(s, F.editionClaimsAt(O), claimsOn([EDITION, FORK]));
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D); forgetClaims();
+  await PUMP.loadWhole(D);
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [1, [EDITION, FORK]], 'the lookup read with the document');
+  assert.deepEqual([REC.link(EDITION)?.type, REC.link(FORK)?.from[0].doc, REC.doc(EDITION_HOME).meta?.published, REC.doc(FORK_HOME).meta?.owner], [F.EDITION_CLASS, O, true, '1.0.1.1'], 'each claim\'s link and each home\'s metadata with it');
+  assert.ok(!fake.asked.some((k) => k.includes('"op":"edition_claims"')));
   assert.deepEqual(fake.unanswered, []);
 });
 

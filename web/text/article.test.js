@@ -5,7 +5,17 @@
 // holds a key for this board C-36's key-present default, never told that no
 // key on this device opens an account (a mutant that decides on the session
 // alone turns red); a guest with none R56's key-absent default, naming the
-// owner; the owner's link marked at its
+// owner. C-67's clause beneath the arm decided over the origin's whole
+// admitted-claim set (PUB-5.124, RES-164): nothing in its place where no
+// claim stands, or where the lookup, a claim's link or its home is not read
+// (a mutant that keeps the pointer unconditional turns red); the pointer
+// where any admitted claim's FROM holds bytes outside the origin — a
+// delegate's among them — even listed after one that quotes (a mutant that
+// decides by the first claim turns red); the QUOTING sibling where every
+// admitted claim's FROM holds the origin's bytes or none, naming the
+// lowest-addressed claimant; a claim homed in a draft or a doc 1, another
+// account's, or typed outside the edition class never counted (a mutant with
+// no admission test turns red); the owner's link marked at its
 // span, and a stretch several links mark in the one mark they merge into —
 // neutral in the hue where their linkers differ, lighter only where every one
 // was followed (a mutant that takes the first link's mark turns red); the
@@ -42,13 +52,13 @@
 // turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, cornerHTML, headingLevel, blockMarks } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, cornerHTML, headingLevel, blockMarks } from './article.js';
 import { MEASURE } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
-import { accountOf } from '../model/address.js';
+import { accountOf, homeOf, resolveSpan } from '../model/address.js';
 
 /** @typedef {import('../model/records.js').Reader} Reader */
 /** the readers the arm is decided for: signed in, with a key bound at this board and with none; a guest with a key here; a guest with none */
@@ -58,7 +68,7 @@ const KEYED = /** @type {Reader} */ ({ account: null, keyPresent: true }), KEYLE
 /** @returns {import('./article.js').ArticleView} */
 const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {}) => ({
   selected: null, focus: null, marks: [], mergedMark, symbols: [], floats: () => false, countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
-  reader: SIGNED, localTrust: true, notebook: true, scene: false, originKinds: new Map(), originOwner: (a) => accountOf(a) || '',
+  reader: SIGNED, localTrust: true, notebook: true, scene: false, originKinds: new Map(), originOwner: (a) => accountOf(a) || '', clauseOf: () => null,
   deviceLabel: 'dev-notebook', ownerFingerprint: 'e4272902a11439e5', ...o,
 });
 /** @returns {import('../model/records.js').Doc} */
@@ -72,7 +82,7 @@ test('a withheld block occupies its positions and shows its width, never its tex
   const html = withheldBlockHTML({ pos: 1467, width: 240, kind: 'withheld', text: '', origin: '1.0.1.0.1003' }, doc(), view());
   assert.ok(html.includes('data-withheld="1"') && html.includes('data-width="240"'));
   assert.ok(html.includes('240 positions') && html.includes('origin 1.0.1.0.1003'));
-  assert.ok(html.includes(t('C-67.pointer')));
+  assert.ok(!html.includes('class="clause"') && !html.includes(t('C-67.pointer')), 'no clause its origin\'s edition claims decide: nothing renders in its place');
   assert.ok(html.includes(t('C-36.owner-grant.arm')), 'the acting person with no grant meets the owner-grant arm');
   const run = /** @type {import('../model/records.js').Block} */ ({ pos: 1, width: 3, kind: 'withheld', text: '', origin: '1.0.1.0.2' });
   const keyless = withheldBlockHTML(run, doc(), view({ reader: KEYLESS }));
@@ -92,6 +102,85 @@ test('the entitlement arm is one rule, by the reader, and the placeholder carrie
     const html = withheldBlockHTML(run, doc(), view({ reader }));
     assert.ok(html.includes(`<span class="arm">${esc(entitlementArm(reader, '1.0.1').text)}</span>`), `the placeholder's arm is the rule's for ${JSON.stringify(reader)}`);
   }
+});
+
+// ---- C-67's clause, decided over the origin's admitted claims ---------------------------------------------------------
+
+const ORIGIN = '1.0.1.0.1003', OWNER = '1.0.1', R20 = '1.1.0.1.0.1.0.3.14';
+/** a span of a document's own bytes, as a link's slot reads it */
+const bytesOf = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => resolveSpan({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w });
+/**
+ * An edition claim at `addr` as the page holds its two reads: typed R20, homed where its address says, its home
+ * published and owned by the home's account, its FROM twenty of the home's own bytes — each unless `o` says otherwise.
+ * @param {string} addr
+ * @param {{type?: string | null, from?: import('../model/address.js').EndRef[], published?: boolean | null, claimant?: string, link?: null}} [o]
+ * @returns {import('./article.js').ClaimSeen}
+ */
+const claim = (addr, o = {}) => {
+  const home = homeOf(addr) || addr;
+  return {
+    claim: addr, home, link: o.link === null ? null : { type: o.type === undefined ? R20 : o.type, from: o.from ?? [bytesOf(home, 1, 20)] },
+    published: o.published === undefined ? true : o.published, claimant: o.claimant ?? (accountOf(home) || ''),
+  };
+};
+const POINTER = { id: 'C-67.pointer', text: t('C-67.pointer') };
+const quoting = (/** @type {string} */ claimant) => ({ id: 'C-67.quoting', text: t('C-67.quoting', { claimant }) });
+
+test('C-67\'s clause is the empty place where the origin carries no edition claim, or where its lookup is unread or refused (RES-85)', () => {
+  assert.equal(editionClause(ORIGIN, OWNER, []), null, 'no claim on the origin: nothing in the clause\'s place');
+  assert.equal(editionClause(ORIGIN, OWNER, null), null, 'the lookup unread or refused: nothing');
+});
+
+test('the pointer where an admitted claim\'s edition holds bytes the reader can reach; the QUOTING sibling where its FROM holds the origin\'s, or none (PUB-5.124)', () => {
+  const ed = '1.0.1.0.9.0.2.1';
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed)]), POINTER, 'the owner\'s edition over its own fresh bytes');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed, { type: R20 + '.2' })]), POINTER, 'a descriptive subtype of the edition class');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed, { from: [bytesOf(ORIGIN, 1, 240)] })]), quoting(OWNER), 'a window-composed edition quoting the draft: its FROM the origin\'s own bytes');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed, { from: [bytesOf('1.0.1.0.9', 1, 5), bytesOf(ORIGIN, 1, 240)] })]), quoting(OWNER), 'the mixed shape: one fresh run beside the windowed one, the cycle one run wide');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed, { from: [] })]), quoting(OWNER), 'a claim whose FROM is empty');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.1.1.0.4.0.2.1')]), POINTER, 'a delegate\'s published edition: admitted by address containment');
+});
+
+test('the three answers are decided over the whole admitted set, never per claim: the pointer where any passes, QUOTING naming the lowest-addressed claimant only where every one quotes (RES-152, RES-164)', () => {
+  const windowed = [bytesOf(ORIGIN, 1, 240)];
+  const delegates = claim('1.0.1.1.0.4.0.2.1', { from: windowed }), owners = claim('1.0.1.0.11.0.2.1', { from: windowed });
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [delegates, claim('1.0.1.0.9.0.2.1')]), POINTER, 'a delegate\'s quoting fork claim listed before the owner\'s edition: the pointer, never the first claim\'s QUOTING');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [delegates, owners]), quoting(OWNER), 'every one quoting: QUOTING naming 1.0.1, the lowest-addressed claimant, never the first listed');
+});
+
+test('a claim failing admission — its home a draft or its claimant\'s own doc 1, its owner neither the origin\'s nor a delegate of it, its type outside the edition class — displays nowhere (PUB-5.99, PUB-5.100)', () => {
+  /** @type {Array<[string, import('./article.js').ClaimSeen]>} */
+  const failing = [
+    ['its home a draft', claim('1.0.1.0.9.0.2.1', { published: false })],
+    ['its home the claimant\'s own doc 1', claim('1.0.1.0.1.0.2.5')],
+    ['its home a member of the claimant\'s doc 1', claim('1.0.1.0.1.2.0.2.1')],
+    ['its home another account\'s', claim('1.0.2.0.5.0.2.1')],
+    ['a citation, never an edition claim', claim('1.0.1.0.9.0.2.1', { type: '1.1.0.1.0.1.0.3.13' })],
+    ['an untyped link', claim('1.0.1.0.9.0.2.1', { type: null })],
+  ];
+  for (const [why, c] of failing) assert.equal(editionClause(ORIGIN, OWNER, [c]), null, `${why}: not admitted, the empty place`);
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [...failing.map(([, c]) => c), claim('1.0.1.0.11.0.2.1', { from: [] })]), quoting(OWNER), 'beside one admitted claim that quotes: QUOTING, the claims failing admission never counted');
+});
+
+test('a claim whose link or whose home the page has not read leaves the clause the empty place, unless an admitted claim known already passes', () => {
+  const unread = claim('1.0.1.0.9.0.2.1', { link: null }), homeless = claim('1.0.1.0.10.0.2.1', { published: null });
+  assert.equal(editionClause(ORIGIN, OWNER, [unread]), null, 'its link unread');
+  assert.equal(editionClause(ORIGIN, OWNER, [homeless]), null, 'its home unread');
+  assert.equal(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.11.0.2.1', { from: [] }), unread]), null, 'a quoting claim beside an unread one: never QUOTING on reads not made');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [unread, homeless, claim('1.0.1.0.12.0.2.1')]), POINTER, 'an admitted claim known to pass: the pointer, whatever the others turn out to be');
+});
+
+test('the placeholder\'s clause is the one its origin\'s claims decide; where they decide none, the arm\'s own copy stands alone', () => {
+  const run = /** @type {import('../model/records.js').Block} */ ({ pos: 1, width: 3, kind: 'withheld', text: '', origin: ORIGIN });
+  /** @type {Record<string, import('./article.js').ClaimSeen[]>} */
+  const held = { [ORIGIN]: [claim('1.0.1.0.11.0.2.1', { from: [] })] };
+  const clauseOf = (/** @type {string} */ o) => editionClause(o, OWNER, held[o] ?? null);
+  assert.deepEqual(placeholderOf(run, SIGNED, (a) => accountOf(a) || '', clauseOf).clause, quoting(OWNER));
+  const html = withheldBlockHTML(run, doc(), view({ clauseOf }));
+  assert.ok(html.includes(`<span class="arm">${esc(t('C-36.owner-grant.arm'))}</span><span class="clause">${esc(t('C-67.quoting', { claimant: OWNER }))}</span>`), html);
+  held[ORIGIN] = [];
+  const empty = withheldBlockHTML(run, doc(), view({ clauseOf }));
+  assert.ok(empty.includes(`<span class="arm">${esc(t('C-36.owner-grant.arm'))}</span></span>`) && !empty.includes('class="clause"'), `no claim: the arm's own copy alone, nothing in the clause's place: ${empty}`);
 });
 
 test('the owner\'s link is marked in place at its span and nowhere else', () => {

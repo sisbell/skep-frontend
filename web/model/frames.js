@@ -8,7 +8,10 @@
 // `principal_prefix`, `key_set`, the supersession lineage `in_claims` and
 // `out_claims` (A-56, A-57), and the `/op-at` form `{at, frame}` around
 // any read — each spelled as `docs/wire.md` spells it at the pin
-// (`db24cc1b`). `count_v` is NOT composed (E17 (a): every count is LK's fold
+// (`db24cc1b`). The edition claims on a withheld run's origin, which C-67's
+// clause is decided from (PUB-5.124), are `find_links_ftt`'s ACTIVE-view
+// lookup (`editionClaimsAt`); the audit view's `edition_claims` is not
+// composed (PUB-8.46). `count_v` is NOT composed (E17 (a): every count is LK's fold
 // of `find_links_v`'s answer). The wireframe's simulated names
 // (`list_docs`, `search_titles`, `list_landmarks`, `count_v`) have no wire
 // twin and are gone: the index comes from `places` and the feed.
@@ -21,7 +24,7 @@
 // §8's `ask`. Rules: FP-1, FP-2, FP-6, FP-16 (the frames' shapes are the wire
 // document's; pinned by this module's test against its examples).
 
-import { vSpan, parseVSpan, resolveSpan } from './address.js';
+import { vSpan, unitSpan, parseVSpan, resolveSpan } from './address.js';
 import { byteLength } from '../util.js';
 
 /** @typedef {import('./address.js').EndRef} EndRef */
@@ -119,6 +122,22 @@ export const docMetadata = (doc) => ({ op: 'doc_metadata', doc });
 export const findLinksV = (d, ordinal, positions) => ({ op: 'find_links_v', d, region: [vSpan(ordinal, positions)] });
 /** @param {{from: unknown, home: unknown, to: unknown, ty: unknown}} q */
 export const findLinksFtt = (q) => ({ op: 'find_links_ftt', q });
+/** the edition class (R20): the commons type every edition claim is typed under, its descriptive subtypes beneath it by prefix (wire.md §Link discovery reads, `edition_claims`) */
+export const EDITION_CLASS = '1.1.0.1.0.1.0.3.14';
+/**
+ * The edition claims on an origin under the ACTIVE view — the read PUB-5.124's
+ * pointer is decided from (PUB-8.46 keeps a read whose answer decides only
+ * what a surface shows on the active view, served by the ops part 06 gives):
+ * `find_links_ftt` constrained in two slots, the origin's unit span in `to`
+ * and the edition class's in `ty`, `from` and `home` `"any"`, as wire.md
+ * composes the lookup of a type's name — served from the coverage index, no
+ * class scan, and naming no document, so no argument of it is withheld. Never
+ * the audit view's `edition_claims`, whose `target` is a document argument:
+ * at the origin of a withheld run, which the reader may not read, it answers
+ * `withheld`.
+ * @param {string} origin
+ */
+export const editionClaimsAt = (origin) => findLinksFtt({ from: 'any', home: 'any', to: [unitSpan(origin)], ty: [unitSpan(EDITION_CLASS)] });
 /** @param {string} a */
 export const readLink = (a) => ({ op: 'read_link', a });
 /** @param {string} a @param {1 | 2 | 3} slot */

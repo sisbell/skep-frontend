@@ -2,7 +2,7 @@
 // Each claim fails when the module's rule is removed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fieldsOf, accountOf, documentOf, homeOf, memberOf, elementOf, kindOf, cmpAddr, isAddress, parseAddress, resolveSpan, parseVSpan, vSpan, commonsType, isUnder } from './address.js';
+import { fieldsOf, accountOf, documentOf, homeOf, memberOf, elementOf, kindOf, cmpAddr, isAddress, parseAddress, resolveSpan, parseVSpan, vSpan, unitSpan, commonsType, isUnder } from './address.js';
 
 test('the tumbler splits at zeros into dottable fields', () => {
   assert.deepEqual(fieldsOf('1.5.0.1.1.0.1'), [[1, 5], [1, 1], [1]]);
@@ -46,6 +46,14 @@ test('the exact parse admits a dotted address and nothing else', () => {
 test('a relative V-span round-trips the wire spelling', () => {
   assert.deepEqual(vSpan(951, 17), { start: '1.951', width: '0.17' });
   assert.deepEqual(parseVSpan({ start: '1.951', width: '0.17' }), { subspace: 1, ordinal: 951, positions: 17 });
+});
+
+test('a unit span is the address and a width of as many components, zeros then 1: the span that names it whole', () => {
+  assert.deepEqual(unitSpan('1.1.0.1.0.1.0.3.13'), { start: '1.1.0.1.0.1.0.3.13', width: '0.0.0.0.0.0.0.0.1' }, 'wire.md\'s own, for the citation class');
+  assert.deepEqual(unitSpan('1.0.1.0.1003'), { start: '1.0.1.0.1003', width: '0.0.0.0.1' });
+  assert.deepEqual(unitSpan('1.0.1'), { start: '1.0.1', width: '0.0.1' });
+  const doc = resolveSpan(unitSpan('1.0.1.0.1003'));
+  assert.deepEqual([doc.doc, doc.whole], ['1.0.1.0.1003', true], 'read back, it names the document whole');
 });
 
 test('an absolute span resolves to an element run or a whole address', () => {

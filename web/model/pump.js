@@ -18,10 +18,17 @@
 // bytes and the ones its text transcludes alike (M-REC's `holdsEnd`) — so a
 // beam, a symbol and the mirror place a moved passage where it stands and say
 // so of one that has left the text before anyone follows it (foundations
-// §2.3); the chain's members probed where a document is read.
+// §2.3); the chain's members probed where a document is read; and, for each
+// origin its delivered withheld runs name, the reads C-67's clause beneath
+// the run is decided from (PUB-5.124, PUB-5.99, PUB-7.50) — the active view's
+// lookup of the edition claims on the origin (M-FRAMES's `editionClaimsAt`),
+// then each listed claim's link (`read_link`) and its home's metadata
+// (`doc_metadata`), the page's own reads of both, memoized with them.
 // Asked by an act rather than the view: the client index (`readIndex`:
 // `places`, at boot and again at the page's own session's death — the view
-// asking nothing while it is out), a whole document (`loadWhole`), where a
+// asking nothing while it is out), a whole document (`loadWhole`, the claims
+// on its withheld runs' origins among it, so a pane the scene makes from it
+// and the walk's mirror item at a run hold the clause decided), where a
 // link's end projects now (`projectEnd`), a link's supersession lineage
 // (`lineage`: `in_claims` and `out_claims`, A-56, A-57), and the chain's
 // members (`probeChain`, the view's probe and the versions list's alike). A
@@ -46,7 +53,9 @@
 // M-REC takes for a document watches the address whose drop voids it
 // (`watchDrops`, M-REC's `dropsOf`, a death dropping every one) — the document
 // it is read for; a projection's, the document projected into, under which the
-// model holds it — and takes nothing it learned across a drop: a view's read is
+// model holds it; the edition-claim lookup's, the claims held, which a feed row
+// drops together (M-REC's `claimDrops`), its key counting the drops so it is
+// asked again after each — and takes nothing it learned across a drop: a view's read is
 // left unasked, its slot freed, and asked again as the view next needs it; the
 // view's probe of a chain records no count; an act's whole read (`loadWhole`)
 // is begun again, and its projection (`projectEnd`) asked again, at most
@@ -106,7 +115,7 @@ import { cam, viewportWorld } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation } from '../plane/projection.js';
 import { metricsFor } from '../plane/layout.js';
-import { versionAddress, documentOf } from './address.js';
+import { versionAddress, documentOf, homeOf } from './address.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
 /** @typedef {import('./records.js').Stretch} Stretch */
@@ -381,6 +390,14 @@ const unanswered = (/** @type {Refusal} */ r) => r.kind === 'unreachable';
  */
 function watchDrops(addr) { const at = REC.dropsOf(addr); return () => REC.dropsOf(addr) !== at; }
 
+/**
+ * Watch the edition claims held for a drop from now on, as a lookup of them
+ * goes out: a feed row that may have changed them drops them together, and a
+ * death with them (M-REC's `claimDrops`), whichever origin was asked.
+ * @returns {() => boolean} dropped since the watch began
+ */
+function watchClaims() { const at = REC.claimDrops(); return () => REC.claimDrops() !== at; }
+
 /** is a key held — the board did not answer it, and its pause stands? */
 const held = (/** @type {string} */ key) => { const at = unreached.get(key); return at != null && performance.now() < at; };
 
@@ -402,9 +419,10 @@ function hold(key) {
  * a read the board did not answer held (`hold`) and asked again past its
  * pause or at the daemon's `running`, its refusal recorded once for the
  * outage; any other refusal recorded and not asked again until invalidated.
- * A read that lands after its document was dropped (`watchDrops`) frees its
- * slot and takes nothing — no answer, no refusal recorded, no hold, no retry
- * — its key left unasked, to be asked again as the view next needs it.
+ * A read that lands after its document was dropped (`watchDrops`), or the
+ * edition claims for a lookup of them (`watchClaims`), frees its slot and
+ * takes nothing — no answer, no refusal recorded, no hold, no retry — its key
+ * left unasked, to be asked again as the view next needs it.
  * Returns whether the need is still MISSING — pending or not yet issued; a
  * refused need is not missing, nor is a held one (nothing will arrive for
  * either).
@@ -413,9 +431,10 @@ function hold(key) {
  * @param {(answer: unknown) => void} take
  * @param {string} addr the document the read is for — a projection's, the document projected into: its drop voids the read, and a refusal is recorded against it
  * @param {(r: Refusal) => void} [onRefused]
+ * @param {(addr: string) => () => boolean} [watch] the drop that voids the read, watched from the moment it goes out: `addr`'s (`watchDrops`), or the edition claims' (`watchClaims`)
  * @returns {boolean} missing
  */
-function need(key, frame, take, addr, onRefused) {
+function need(key, frame, take, addr, onRefused, watch = watchDrops) {
   if (asked.has(key)) return false;
   if (inflight.has(key)) return true;
   if (held(key)) return false;
@@ -425,7 +444,7 @@ function need(key, frame, take, addr, onRefused) {
   const isScan = /** @type {{op?: string}} */ (frame).op === 'find_links_v';
   if (isScan && scansInFlight >= MAX_SCANS) return true;
   inflight.add(key); if (isScan) scansInFlight++;
-  const dropped = watchDrops(addr);
+  const dropped = watch(addr);
   read(frame).then((out) => {
     inflight.delete(key); if (isScan) scansInFlight--;
     if (dropped()) return;
@@ -549,6 +568,7 @@ export function pump() {
         const hold = (/** @type {Stretch[] | 'refused'} */ runs) => REC.takeProjection(p.link, p.slot, p.far, runs);
         if (need('p:' + p.link + ':' + p.slot + ':' + p.far, F.project(p.link, p.slot, p.far), (a) => hold(stretchesOf(a)), p.far, (r) => { if (r.kind === 'refused') hold('refused'); })) missing++;
       }
+      for (const origin of REC.withheldOrigins(d.addr)) missing += needClaims(origin);
       if (em >= LOD_TXT_LO && d.members == null && d.meta && d.meta.published) { if (probeMembers(d)) missing++; }
     }
   }
@@ -580,6 +600,36 @@ function farEnds(addr) {
     }
   }
   return [...out.values()];
+}
+
+/**
+ * The view's reads of C-67's clause beneath the withheld runs of one origin
+ * (PUB-5.124, PUB-5.99, PUB-7.50): the active view's lookup of the edition
+ * claims on it (M-FRAMES's `editionClaimsAt`) where the model holds none, its
+ * key counting the drops of the claims held (M-REC's `claimDrops`), so it is
+ * asked again after each and a lookup out across one takes nothing
+ * (`watchClaims`); then, for each claim listed, its link (`read_link`) where
+ * the model holds none, and its home's publication state and owner
+ * (`doc_metadata`) where the model holds neither nor a refusal of it — the
+ * page's own reads of a link and a document, keyed as the view keys them, so
+ * each is read once for every reader of it. T-ARTICLE's `editionClause`
+ * decides the clause from what they hold.
+ * @param {string} origin
+ * @returns {number} the needs still missing
+ */
+function needClaims(origin) {
+  const claims = REC.editionClaimsOf(origin);
+  if (claims === undefined) {
+    const take = (/** @type {string[] | 'refused'} */ c) => REC.takeEditionClaims(origin, c);
+    return need('e:' + REC.claimDrops() + ':' + origin, F.editionClaimsAt(origin), (a) => take(F.decodeAddrs(a)), origin, () => take('refused'), watchClaims) ? 1 : 0;
+  }
+  let missing = 0;
+  for (const c of claims === 'refused' ? [] : claims) {
+    const home = homeOf(c) || c, h = REC.has(home) ? REC.doc(home) : null;
+    if (!REC.link(c) && need('k:' + c, F.readLink(c), (a) => { const v = F.decodeLinkValue(c, a); if (v) REC.takeLink(v); }, home)) missing++;
+    if (!(h && (h.meta || h.refused)) && need('m:' + home, F.docMetadata(home), (a) => { const m = F.decodeDocMetadata(a); if (m) REC.takeMetadata(home, m); }, home, (r) => refuseDoc(REC.doc(home), r))) missing++;
+  }
+  return missing;
 }
 
 /** `project`'s span set as stretches of the text's content: each V-span's first position and its positions */
@@ -651,7 +701,8 @@ export async function probeChain(trunk, stands = () => true) {
 
 /**
  * Read a whole document now — the scene, the walk and a landing ask for all
- * of it: the extent, every position, the image, the links and their types.
+ * of it: the extent, every position, the image, the links and their types,
+ * and the edition claims on each origin its withheld runs name (`readClaims`).
  * A pass the document was dropped under (`readWhole`) is begun again, and
  * reads again exactly what the drop took, at most DROP_ATTEMPTS passes; past
  * them, the record as it stands, holding nothing read before its last drop.
@@ -709,8 +760,46 @@ async function readWhole(addr, dropped) {
     if (dropped()) return 'dropped';
     if (!('refused' in out)) { const v = F.decodeLinkValue(la, out.answer); if (v) REC.takeLink(v); }
   }
+  for (const origin of REC.withheldOrigins(addr)) {
+    await readClaims(origin);
+    if (dropped()) return 'dropped';
+  }
   dirty();
   return d;
+}
+
+/**
+ * C-67's reads for one origin, for an act (`readWhole`), as the view asks
+ * them (`needClaims`): the lookup of the edition claims on it where the model
+ * holds none, taken where no drop of the claims held overtook it
+ * (`watchClaims`); then each listed claim's link and each listed claim's
+ * home's metadata the model lacks, the metadata taken where the home was not
+ * dropped under it (`watchDrops`) and a refusal of it held as the home's. A
+ * lookup or a link refused teaches the model nothing here: the view asks it
+ * again, and records the refusal.
+ * @param {string} origin
+ */
+async function readClaims(origin) {
+  if (REC.editionClaimsOf(origin) === undefined) {
+    const dropped = watchClaims();
+    const out = await read(F.editionClaimsAt(origin));
+    if (dropped() || 'refused' in out) return;
+    REC.takeEditionClaims(origin, F.decodeAddrs(out.answer));
+  }
+  const claims = REC.editionClaimsOf(origin);
+  for (const c of Array.isArray(claims) ? claims : []) {
+    if (!REC.link(c)) {
+      const out = await read(F.readLink(c));
+      if (!('refused' in out)) { const v = F.decodeLinkValue(c, out.answer); if (v) REC.takeLink(v); }
+    }
+    const home = homeOf(c) || c, h = REC.has(home) ? REC.doc(home) : null;
+    if (h && (h.meta || h.refused)) continue;
+    const dropped = watchDrops(home);
+    const out = await read(F.docMetadata(home));
+    if (dropped()) continue;
+    if ('refused' in out) refuseDoc(REC.doc(home), out.refused);
+    else { const m = F.decodeDocMetadata(out.answer); if (m) REC.takeMetadata(home, m); }
+  }
 }
 
 /**

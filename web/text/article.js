@@ -27,9 +27,14 @@
 // with the entitlement arm for that owner and this reader by PUB-5.121's
 // order — a signed-in reader's owner-grant default, a guest's split on
 // whether this device holds a key for the board (PUB-5.97) — and C-67's
-// clause beneath — the placeholder's one record (`placeholderOf`), which the
-// ARIA mirror's item at the run reads too, so the run a sighted reader sees
-// and the one a screen reader hears never part (R94); a record atom rendered
+// clause beneath, decided over the origin's whole admitted-claim set
+// (`editionClause`; PUB-5.124, RES-164): the pointer where an admitted claim's
+// edition holds bytes the reader can reach, the QUOTING sibling where every
+// admitted claim quotes the draft, and nothing — the arm's own copy alone —
+// where none is admitted or the claims are not yet read — the placeholder's
+// one record (`placeholderOf`), which the ARIA mirror's item at the run
+// reads too, so the run a sighted reader sees and the one a screen reader
+// hears never part (R94); a record atom rendered
 // as the record it is (the genesis
 // record's words); an unknown item kind "not rendered" with its width; the
 // scene-mode variant, a reading scene's pane's article, which nothing in the
@@ -60,7 +65,7 @@
 
 import { esc, fingerprintCue, sliceBytes, byteLength } from '../util.js';
 import { t } from '../strings.js';
-import { memberOf, documentOf } from '../model/address.js';
+import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
 import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '../plane/layout.js';
 
@@ -90,6 +95,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {boolean} scene the scene-mode variant: a reading scene's pane's article — no scene-offer, and no mark a control
  * @property {Map<string, 'edition' | 'draft' | 'unknown'>} originKinds the kind of each origin document (for C-33)
  * @property {(doc: string) => string} originOwner the owner account of an origin document, by the one rule the byline's owner is found by (T-LAYER's `ownerAccount`): the owner a withheld run's placeholder names (R56)
+ * @property {(doc: string) => (Clause | null)} clauseOf C-67's clause beneath a withheld run of an origin document, decided over what the page holds of the origin's edition claims (T-LAYER's `clauseOf`, by `editionClause`); null where nothing renders in its place
  * @property {string | null} deviceLabel the owner's device label where known
  * @property {string | null} ownerFingerprint the owner's device key fingerprint where known
  */
@@ -246,12 +252,86 @@ export function entitlementArm(reader, owner) {
   return { id: 'R56.key-absent', text: t('R56.key-absent', { owner }) };
 }
 
+/** @typedef {{id: string, text: string}} Clause — C-67's clause as it renders: its string id and its words */
+
+/**
+ * @typedef {Object} ClaimSeen — one edition claim the lookup on an origin listed, as the page holds its two reads of it (PUB-7.50)
+ * @property {string} claim the claim's address — a link
+ * @property {{type: string | null, from: EndRef[]} | null} link the link as `read_link` answered it — its type as the page reads every link's, the type slot's first address — or null where unread
+ * @property {string} home the document the claim resides in, from its address (M-ADDR's `homeOf`)
+ * @property {boolean | null} published whether the home is published (`doc_metadata`): false where a read of it was refused, null where none answered yet
+ * @property {string} claimant the home's owner, by the one owner rule (T-LAYER's `ownerAccount`): who claims
+ */
+
+/** @typedef {import('../model/address.js').EndRef} EndRef */
+
+/**
+ * Is an edition claim admitted (PUB-5.99, the edition-claim read's own
+ * admission)? Its type is of the edition class (R20: `…3.14`, or a subtype
+ * beneath it by prefix, as the board's lookup tests), its home is published,
+ * that home is not its claimant's own doc 1 (address arithmetic, the home's
+ * chain its trunk's), and the claimant — the home's owner — is the origin's
+ * owner or a delegate of it by address containment. False where a test
+ * fails, null where one waits on a read the page has not made — the
+ * claimant's two among them, until the home's metadata names its owner — and
+ * true where every one holds.
+ * @param {ClaimSeen} c
+ * @param {string} owner the origin's owner
+ * @returns {boolean | null}
+ */
+function admitted(c, owner) {
+  const ty = c.link ? commonsType(c.link.type) : null;
+  const known = c.published !== null;
+  const tests = [
+    c.link ? !!ty && ty.ordinal === 14 : null,
+    c.published,
+    known ? documentOf(c.home) !== c.claimant + '.0.1' : null,
+    known ? isUnder(owner, c.claimant) : null,
+  ];
+  return tests.includes(false) ? false : tests.includes(null) ? null : true;
+}
+
+/**
+ * C-67's clause beneath a withheld run of `origin` (PUB-5.124), its three
+ * answers decided over the origin's WHOLE admitted-claim set, never per claim
+ * (RES-164): the POINTER where any admitted claim passes the resolution test
+ * — its FROM holds a span, and none of its spans lies in the origin (the
+ * span's document, `homeOf`: the board's `document_of` arithmetic), so its
+ * edition holds bytes the reader can reach; the QUOTING sibling where every
+ * admitted claim quotes — a FROM holding a span of the origin, or none —
+ * naming the lowest-addressed claimant (RES-152); and the EMPTY place, null,
+ * where none is admitted (RES-85), the arm's own copy then standing alone.
+ * Undecided — the lookup unread or refused, or a listed claim's link or its
+ * home not read — the clause is the empty place too, unless an admitted claim
+ * already known passes: no reader is pointed at an edition, or told nothing
+ * published carries the bytes, on reads the page has not made.
+ * @param {string} origin the withheld run's origin document
+ * @param {string} owner the origin's owner (T-LAYER's `originOwner`)
+ * @param {ClaimSeen[] | null} claims the claims the lookup listed; null where it is unread or refused
+ * @returns {Clause | null}
+ */
+export function editionClause(origin, owner, claims) {
+  if (!claims) return null;
+  /** @type {string[]} the claimants of the admitted claims that quote */
+  const quoting = [];
+  let undecided = false;
+  for (const c of claims) {
+    const a = admitted(c, owner);
+    if (a === null) { undecided = true; continue; }
+    if (!a || !c.link) continue;
+    if (c.link.from.length && !c.link.from.some((e) => homeOf(e.start) === origin)) return { id: 'C-67.pointer', text: t('C-67.pointer') };
+    quoting.push(c.claimant);
+  }
+  if (undecided || !quoting.length) return null;
+  return { id: 'C-67.quoting', text: t('C-67.quoting', { claimant: quoting.sort(cmpAddr)[0] }) };
+}
+
 /**
  * @typedef {Object} Placeholder — what R56's placeholder at a withheld run shows a reader: existence and owner, never bytes (B1-S7)
  * @property {string} owner the owner of the run's origin, whoever owns the document windowing the run
  * @property {string} head B1-S7's head: that owner, the run's width and its origin
  * @property {{id: string, text: string}} arm the entitlement arm for that owner and this reader (`entitlementArm`)
- * @property {string} clause C-67's clause beneath the arm
+ * @property {Clause | null} clause C-67's clause beneath the arm (`editionClause`); null where nothing renders in its place
  */
 
 /**
@@ -260,37 +340,39 @@ export function entitlementArm(reader, owner) {
  * document windowing the run, since R56's copy derives per origin and
  * B1-S7's ⟨owner⟩ is always derivable (A-289); the head naming that owner,
  * the entitlement arm (`entitlementArm`) the one for it, then C-67's clause
- * (R56: the face is ARM × CLAUSE). The plane's and a pane's placeholder
+ * as the origin's edition claims decide it (`clauseOf`), or nothing in its
+ * place (R56: the face is ARM × CLAUSE). The plane's and a pane's placeholder
  * (`withheldBlockHTML`) and the ARIA mirror's item at the run (N-WALK) are
  * both made from it: R94's one record, never a second rendering that can
  * drift.
  * @param {Block} b the withheld run
  * @param {Reader} reader who reads (M-REC's `reader`)
  * @param {(doc: string) => string} originOwner the owner account of an origin document, by the one owner rule (T-LAYER's `originOwner`)
+ * @param {(doc: string) => (Clause | null)} clauseOf C-67's clause beneath a run of an origin document (T-LAYER's `clauseOf`)
  * @returns {Placeholder}
  */
-export function placeholderOf(b, reader, originOwner) {
+export function placeholderOf(b, reader, originOwner, clauseOf) {
   const owner = b.origin ? originOwner(b.origin) : '';
   return {
     owner,
     head: t('B1.withheld-run', { owner, account: owner, width: b.width, origin: b.origin || '' }),
     arm: entitlementArm(reader, owner),
-    clause: t('C-67.pointer'),
+    clause: b.origin ? clauseOf(b.origin) : null,
   };
 }
 
 /**
  * The placeholder occupying a withheld run (`placeholderOf`): its head, its
- * arm and its clause, and the owner it names carried (`data-owner`) for
- * C-39's face at the run, which names the same.
+ * arm and, where one renders, its clause, and the owner it names carried
+ * (`data-owner`) for C-39's face at the run, which names the same.
  * @param {Block} b the withheld run
  * @param {Doc} d
  * @param {ArticleView} v
  */
 export function withheldBlockHTML(b, d, v) {
-  const p = placeholderOf(b, v.reader, v.originOwner);
+  const p = placeholderOf(b, v.reader, v.originOwner, v.clauseOf);
   return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}">` +
-    `<span class="wh-head">${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span><span class="clause">${esc(p.clause)}</span></span>`;
+    `<span class="wh-head">${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span>${p.clause ? `<span class="clause">${esc(p.clause.text)}</span>` : ''}</span>`;
 }
 
 /**

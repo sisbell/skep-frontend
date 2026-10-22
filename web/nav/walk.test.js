@@ -16,11 +16,14 @@
 // the walk attaches it, and each level's group by its own level — a mutant
 // that drops the tree's name, or names every group by one level, turns red.
 // The mirror's item at a withheld run is the run's placeholder — the owner of
-// its origin, the arm for the reader, C-67's clause — as the plane's
-// placeholder shows them, for a signed-in reader, a guest whose device holds
-// a key for this board and a guest with none: a mutant that names the owner
-// of the document windowing the run, or the origin's account, or gives two
-// readers one arm, or drops the clause, turns red. A document a
+// its origin, the arm for the reader, C-67's clause as the origin's edition
+// claims decide it — as the plane's placeholder shows them, for a signed-in
+// reader, a guest whose device holds a key for this board and a guest with
+// none, at each state of the claims: none read, none standing, the owner's
+// edition standing, an edition quoting the draft alone: a mutant that names
+// the owner of the document windowing the run, or the origin's account, or
+// gives two readers one arm, or keeps the pointer where no claim stands, or
+// leaves an empty sentence where the clause's place is empty, turns red. A document a
 // read answered `withheld` is named by its withheld box's words, its owner
 // the seat above a sub-account by the one owner rule: a mutant that calls it
 // published, or names the sub-account, turns red. A link whose far end floats
@@ -52,6 +55,7 @@ import { accountCell, boardCell } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
 import { STRINGS, t } from '../strings.js';
 import { esc, byteLength } from '../util.js';
+import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
 import * as WALK from './walk.js';
 import * as LK from '../links/links.js';
 
@@ -75,6 +79,8 @@ const script = {
   ...reads(D, [{ content: 'Tumbler.\n\nThe first field.' }, { withheld: { origin: '1.0.1.0.1003', width: '4' } }], 30, [{ i_start: D + '.0.1.1', width: '26' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }]),
   ...reads(E, [{ content: E_TEXT }], E_TEXT.length, [{ i_start: E + '.0.1.1', width: String(E_TEXT.length) }]),
   ...reads(G, [{ content: G_TEXT }], G_TEXT.length, [{ i_start: G + '.0.1.1', width: String(G_TEXT.length) }]),
+  // the edition claims on D's withheld run's origin: none
+  [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1003') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
 };
 
 /** @type {ReturnType<typeof FAKE.create>} */
@@ -240,7 +246,7 @@ test('a walk key whose flight a later walk key cut short ends: the walk on the s
   assert.deepEqual(walkAt(), ['block', D, 27]);
 });
 
-test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin\'s owner, the entitlement arm for the reader and C-67\'s clause, as the plane\'s placeholder shows them (R56; R94)', () => {
+test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin\'s owner, the entitlement arm for the reader and C-67\'s clause where the origin\'s edition claims decide one, as the plane\'s placeholder shows them (R56; R94; PUB-5.124)', () => {
   // a document of 1.0.2's windowing a run of 1.0.1.1's: an unallocated sub-account, whose owner is the seat above it
   const W = '1.0.2.0.5', O = '1.0.1.1.0.2', owner = '1.0.1';
   REC.takeOwner('1.0.1.1', { prefix: owner, principal: 900 });
@@ -251,6 +257,20 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
   assert.deepEqual([run.kind, run.origin], ['withheld', O]);
   const words = STRINGS['L.mirror.withheld'].text;
   assert.ok(['⟨owner⟩', '⟨origin⟩', '⟨arm⟩', '⟨clause⟩'].every((k) => words.includes(k)), `the item's words carry the owner, the origin, the arm and the clause: ${words}`);
+  // two edition claims of the owner's, each homed in a published edition of theirs: one over its own fresh bytes, one quoting the draft
+  const R20 = '1.1.0.1.0.1.0.3.14', OWN = '1.0.1.0.9.0.2.1', QUOTES = '1.0.1.0.11.0.2.1';
+  for (const [c, from] of /** @type {Array<[string, string]>} */ ([[OWN, '1.0.1.0.9.0.1.1'], [QUOTES, O + '.0.1.1']])) {
+    REC.takeLink({ addr: c, from: [resolveSpan({ start: from, width: '0.0.0.0.0.0.0.20' })], to: [resolveSpan(unitSpan(O))], type: R20 });
+    const home = /** @type {string} */ (homeOf(c));
+    REC.takeMetadata(home, { doc: home, published: true, owner, birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
+  }
+  /** @type {Array<[string, () => void, string | null]>} each state of the origin's claims the page holds, and the words of the clause it decides */
+  const states = [
+    ['no claim read', () => REC.applyFeedUpdate({ position: 9, at: 9, op: 'nullify', docs: [], class: 'published' }), null],
+    ['no claim on the origin', () => REC.takeEditionClaims(O, []), null],
+    ['the owner\'s edition over its own bytes', () => REC.takeEditionClaims(O, [QUOTES, OWN]), t('C-67.pointer')],
+    ['an edition quoting the draft alone', () => REC.takeEditionClaims(O, [QUOTES]), t('C-67.quoting', { claimant: owner })],
+  ];
   const signedIn = REC.session();
   // the device's key store as `fingerprint` answers it: a key bound at this board, or none
   const ORIGIN = 'http://127.0.0.1:8642', BOUND = [{ bindings: [ORIGIN + ' principal 1 account 1.0.1'] }];
@@ -260,14 +280,18 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
     for (const [reader, keys, id] of readers) {
       REC.setSession(reader); REC.takeKeyStore(keys, ORIGIN);
       const who = reader ? reader.account : keys.length ? 'a guest with a key for this board' : 'a guest with no key';
-      const rule = entitlementArm({ account: reader ? reader.account : null, keyPresent: keys.length > 0 }, owner), arm = rule.text, clause = t('C-67.pointer');
+      const rule = entitlementArm({ account: reader ? reader.account : null, keyPresent: keys.length > 0 }, owner), arm = rule.text;
       assert.equal(rule.id, id, `${who}: the rule's arm is ${id}`);
-      const item = WALK.nameOf({ kind: 'block', addr: W, pos: run.pos, link: null }, 1, 2);
-      assert.equal(item, t('L.mirror.withheld', { document: W, width: 240, owner, origin: O, arm, clause }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
-        `${who}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause`);
-      const html = withheldBlockHTML(run, d, LAYER.viewFor(d));
-      assert.ok(html.includes(` data-owner="${owner}"`) && html.includes(`<span class="arm">${esc(arm)}</span>`) && html.includes(`<span class="clause">${esc(clause)}</span>`),
-        `${who}: the plane's placeholder shows the same owner, arm and clause`);
+      for (const [state, hold, clause] of states) {
+        hold();
+        const item = WALK.nameOf({ kind: 'block', addr: W, pos: run.pos, link: null }, 1, 2);
+        assert.equal(item, t('L.mirror.withheld', { document: W, width: 240, owner, origin: O, arm, clause: clause ? t('L.mirror.clause', { clause }) : '' }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
+          `${who}, ${state}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause the claims decide`);
+        assert.ok(clause ? item.includes(`${arm}. ${clause}. `) : item.includes(`${arm}. `) && !/\.\s+\./.test(item), `${who}, ${state}: the clause a sentence of its own after the arm, or nothing in its place: ${item}`);
+        const html = withheldBlockHTML(run, d, LAYER.viewFor(d));
+        assert.ok(html.includes(` data-owner="${owner}"`) && html.includes(`<span class="arm">${esc(arm)}</span>`) && (clause ? html.includes(`<span class="clause">${esc(clause)}</span>`) : !html.includes('class="clause"')),
+          `${who}, ${state}: the plane's placeholder shows the same owner, arm and clause`);
+      }
     }
   } finally {
     REC.setSession(signedIn); REC.takeKeyStore([], ORIGIN);

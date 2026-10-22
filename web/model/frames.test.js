@@ -1,10 +1,13 @@
 // M-FRAMES's test: every composer spells its frame as `docs/wire.md`'s
 // `<!-- wire: request … -->` examples at the pin spell it (FP-16's residue:
-// the frames are the wire document's); no write composer exists; every
+// the frames are the wire document's) — `find_links_ftt` with unit spans as
+// the lookup of a type's name, and the edition-claim lookup in that shape,
+// never the audit view's `edition_claims`; no write composer exists; every
 // decoder reads the wire's example answers.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as F from './frames.js';
+import { unitSpan } from './address.js';
 import { canon } from '../test/fake-port.js';
 
 // the wire's own examples, byte-exact as docs/wire.md carries them (keys sorted)
@@ -13,6 +16,8 @@ const EXAMPLES = {
   retrieve_doc_v_span_set: '{"doc":"1.0.1.0.1","op":"retrieve_doc_v_span_set"}',
   doc_metadata: '{"doc":"1.0.1.0.1","op":"doc_metadata"}',
   find_links_v: '{"d":"1.0.1.0.1","op":"find_links_v","region":[{"start":"1.1","width":"0.5"}]}',
+  // the lookup of a type's name (§Link discovery reads): two slots constrained by unit spans, the shape the edition-claim lookup takes
+  find_links_ftt: '{"op":"find_links_ftt","q":{"from":"any","home":"any","to":[{"start":"1.1.0.1.0.1.0.3.13","width":"0.0.0.0.0.0.0.0.1"}],"ty":[{"start":"1.1.0.1.0.1.0.3.50","width":"0.0.0.0.0.0.0.0.1"}]}}',
   read_link: '{"a":"1.0.1.0.1.0.2.1","op":"read_link"}',
   follow_link: '{"a":"1.0.1.0.1.0.2.1","op":"follow_link","slot":2}',
   image: '{"d":"1.0.1.0.1","op":"image","region":[{"start":"1.1","width":"0.5"}]}',
@@ -33,6 +38,7 @@ test('the read composers spell the wire examples exactly', () => {
   assert.equal(canon(F.retrieveDocVSpanSet('1.0.1.0.1')), EXAMPLES.retrieve_doc_v_span_set);
   assert.equal(canon(F.docMetadata('1.0.1.0.1')), EXAMPLES.doc_metadata);
   assert.equal(canon(F.findLinksV('1.0.1.0.1', 1, 5)), EXAMPLES.find_links_v);
+  assert.equal(canon(F.findLinksFtt({ from: 'any', home: 'any', to: [unitSpan('1.1.0.1.0.1.0.3.13')], ty: [unitSpan('1.1.0.1.0.1.0.3.50')] })), EXAMPLES.find_links_ftt);
   assert.equal(canon(F.readLink('1.0.1.0.1.0.2.1')), EXAMPLES.read_link);
   assert.equal(canon(F.followLink('1.0.1.0.1.0.2.1', 2)), EXAMPLES.follow_link);
   assert.equal(canon(F.image('1.0.1.0.1', 1, 5)), EXAMPLES.image);
@@ -46,6 +52,13 @@ test('the read composers spell the wire examples exactly', () => {
   assert.equal(canon(F.inClaims('1.0.1.0.1.0.2.1', 'active')), EXAMPLES.in_claims);
   assert.equal(canon(F.outClaims('1.0.1.0.1.0.2.2', 'audit')), EXAMPLES.out_claims);
   assert.equal(JSON.stringify(F.opAt(9, F.retrieveV('1.0.1.0.1', 1, 5))), EXAMPLES.op_at);
+});
+
+test('the edition claims on an origin are the active view\'s lookup in the wire\'s two-slot shape — the origin\'s unit span in `to`, the edition class\'s in `ty` — never the audit view\'s `edition_claims`, which refuses an origin the reader may not read', () => {
+  assert.equal(canon(F.editionClaimsAt('1.0.1.0.1003')),
+    '{"op":"find_links_ftt","q":{"from":"any","home":"any","to":[{"start":"1.0.1.0.1003","width":"0.0.0.0.1"}],"ty":[{"start":"1.1.0.1.0.1.0.3.14","width":"0.0.0.0.0.0.0.0.1"}]}}');
+  assert.equal(F.EDITION_CLASS, '1.1.0.1.0.1.0.3.14');
+  assert.ok(!F.READ_OPS.includes('edition_claims'), 'edition_claims is no read this module composes (the static gate holds every `op` literal to READ_OPS)');
 });
 
 test('no write composer exists (S-35 (a)): every op this module names is a read', () => {

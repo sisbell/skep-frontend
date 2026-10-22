@@ -40,9 +40,14 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     unfilled and no act;
 (e) the window run at 1467 withheld: the model's block — its width, its
     origin, no text — B1-S7's placeholder with its head, the guest's arm and
-    no C-33 mark, none of the owner's bytes anywhere in the page, the
-    mirror's item the run's placeholder — its owner, its origin, the arm and
-    the clause the placeholder shows (R94); the placeholder shown, and every row of
+    no C-33 mark, none of the owner's bytes anywhere in the page; C-67's
+    clause beneath the arm the one the origin's edition claims decide
+    (PUB-5.124), decided here from the page's own recorded reads of them —
+    the active view's lookup, its claims' links and their homes' metadata,
+    never the audit view's `edition_claims` — and nothing in its place where
+    they decide none; the mirror's item the run's placeholder — its owner,
+    its origin, the arm, and the clause where the placeholder shows one
+    (R94); the placeholder shown, and every row of
     the article inside its box, measured where the placeholder stands tallest,
     under R56's key-absent arm — where the page holds a key present it reads
     its store as holding none for the measure and as it held it after, page
@@ -273,14 +278,25 @@ def run(ctx):
             {'placeholders': ph, 'c33_marks': c33, 'key_here': store['key_here']})
     leaked, legit_held = leaks(places)
     r.check(len(own) >= STRETCH and not leaked, f'(e) none of the owner\'s bytes over the run stands anywhere in the page: no stretch of {STRETCH} of its characters, white space folded, that the guest\'s own delivered text and labels do not hold', leaked[:4])
+    # C-67's clause beneath the arm is the one the origin's edition claims decide, decided here from the page's own reads
+    # of them — the active view's lookup, never the audit view's `edition_claims`, which refuses an origin the guest may
+    # not read — and where they decide none, nothing stands in its place
+    clause_id, decided = ctx.edition_clause(WINDOW[2], OWNER)
+    clause = t(ctx, clause_id, {'claimant': decided.get('claimant', '')}) if clause_id else None
+    r.check(decided['lookups'] >= 1 and not decided['audit'] and len(ph) == 1 and ph[0]['clause'] == clause,
+            '(e) C-67\'s clause beneath the placeholder is the one the origin\'s edition claims decide — read with the active view\'s lookup, never the audit view\'s edition_claims — and nothing stands in its place where they decide none (PUB-5.124)',
+            {'decided': clause_id, 'shown': ph[0]['clause'] if len(ph) == 1 else None, 'reads': decided})
+    r.figures['edition_clause'] = {'origin': WINDOW[2], 'decided': clause_id, 'reads': decided}
     # the mirror's item at the run says what the placeholder shows: its words filled from the placeholder's own owner, arm
-    # and clause, and the arm and the clause standing in it whole
+    # and clause, the clause a sentence after the arm where one shows and nothing where none does, and the arm and the
+    # clause standing in it whole
     item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
     said = ph[0] if len(ph) == 1 else {}
-    shown = bool(said.get('owner') and said.get('arm') and said.get('clause'))
-    words = t(ctx, 'L.mirror.withheld', {'document': DOC, 'width': WINDOW[1], 'owner': said['owner'], 'origin': WINDOW[2], 'arm': said['arm'], 'clause': said['clause']}) if shown else None
-    r.check(shown and item.startswith(words) and said['arm'] in item and said['clause'] in item,
-            '(e) the mirror\'s current item at the landing is the run\'s placeholder: the run, its width, its owner, its origin, the arm and the clause the placeholder shows (R56; R94)',
+    shown = bool(said.get('owner') and said.get('arm'))
+    after = t(ctx, 'L.mirror.clause', {'clause': said['clause']}) if said.get('clause') else ''
+    words = t(ctx, 'L.mirror.withheld', {'document': DOC, 'width': WINDOW[1], 'owner': said['owner'], 'origin': WINDOW[2], 'arm': said['arm'], 'clause': after}) if shown else None
+    r.check(shown and item.startswith(words) and said['arm'] in item and (said.get('clause') or '') in item,
+            '(e) the mirror\'s current item at the landing is the run\'s placeholder: the run, its width, its owner, its origin, the arm, and the clause where the placeholder shows one (R56; R94)',
             {'item': item, 'placeholder': {k: said.get(k) for k in ('owner', 'arm', 'clause')}})
     box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
     ctx.view_doc_em(DOC, 14)

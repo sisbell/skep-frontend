@@ -93,7 +93,12 @@ def run(ctx):
     store = ctx.key_store()
     arm = ('C-36\'s key-present arm, "sign in, then ask" — this device holds a key for the board' if store['key_here']
            else 'R56\'s key-absent arm — this device holds no key for the board')
-    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s placeholder occupies the run — "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", never its bytes — the guest\'s entitlement arm beneath it, %s, then C-67\'s clause; the act at it, C-39\'s face, is the guest case\'s.' % arm, 'window-run-withheld',
+    # and C-67's clause by the origin's edition claims (PUB-5.124), as the page's own reads of them decide it
+    clause_id, decided = ctx.edition_clause(WINDOW[2])
+    clause = {'C-67.pointer': 'then C-67\'s pointer, "a published edition may exist — follow the edition claim"',
+              'C-67.quoting': 'then C-67\'s QUOTING sibling, naming %s' % decided.get('claimant')}.get(
+        clause_id, 'and nothing in the place of C-67\'s clause — the board admits no edition claim on %s' % WINDOW[2])
+    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s placeholder occupies the run — "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", never its bytes — the guest\'s entitlement arm beneath it, %s, %s; the act at it, C-39\'s face, is the guest case\'s.' % (arm, clause), 'window-run-withheld',
          claims=[(PLACEHOLDER, 'the withheld run\'s placeholder', None)])
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     ghost = next((s for s in shown if s['far'] == GHOST), None)

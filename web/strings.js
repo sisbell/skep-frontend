@@ -231,7 +231,9 @@ export const STRINGS = {
   'L.mirror.span': { text: 'span at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩: "⟨text⟩".', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.span.bare': { text: 'span at position ⟨p⟩ in ⟨document⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.same': { text: ' (the same material as ⟨origin⟩)', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.withheld': { text: 'withheld run in ⟨document⟩: ⟨width⟩ positions, owner ⟨owner⟩, origin ⟨origin⟩. ⟨arm⟩. ⟨clause⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.withheld': { text: 'withheld run in ⟨document⟩: ⟨width⟩ positions, owner ⟨owner⟩, origin ⟨origin⟩. ⟨arm⟩.⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // C-67's clause after a withheld run's arm, where the origin's edition claims decide one (PUB-5.124); the empty place says nothing
+  'L.mirror.clause': { text: ' ⟨clause⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨unregistered⟩⟨floating⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.unregistered': { text: ' — nothing this board will say about that address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },

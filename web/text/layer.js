@@ -42,7 +42,10 @@
 // P-RENDER draws, so the canvas draws or yields each document by this frame's
 // mounted set. The marks and symbols are placed from LK's `shown` and
 // `symbols`, a stretch several links mark in the one mark LK's `mergedMark`
-// gives; the selection from O-SELECTION and the focus from N-WALK are
+// gives; a withheld run's owner and C-67's clause beneath it from what the
+// model holds of its origin (`originOwner`, `clauseOf`), the article made
+// again as the origin's edition claims arrive and go (M-REC's revision);
+// the selection from O-SELECTION and the focus from N-WALK are
 // handed to T-ARTICLE as values at mount, and each frame marks a standing
 // article's blocks for them in place by T-ARTICLE's one rule (`blockMarks`):
 // a change of the selection or the focus rebuilds no article, so the
@@ -126,7 +129,8 @@ import { cam, sx, sy, markDirty, reach } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MAX_MOUNTED, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { metricsFor, fitted, LAY_FS, LINE_H } from '../plane/layout.js';
-import { articleHTML, articlePlan, cornerHTML, blockMarks } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, blockMarks, editionClause } from './article.js';
+import { homeOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { fingerprintCue } from '../util.js';
 import { t } from '../strings.js';
@@ -273,7 +277,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     localTrust: !!(h && h.auth && h.auth.local_trust),
     notebook: true,
     scene, originKinds,
-    originOwner,
+    originOwner, clauseOf,
     deviceLabel: isOwnerYou && device ? device.label : null,
     ownerFingerprint: isOwnerYou && device ? device.fingerprint : null,
   };
@@ -385,6 +389,27 @@ export function ownerAccount(/** @type {Doc} */ d) {
  * @param {string} addr the origin document
  */
 export function originOwner(addr) { return ownerAccount(REC.doc(addr)); }
+
+/**
+ * C-67's clause beneath a withheld run of an origin (PUB-5.124), by
+ * T-ARTICLE's one rule (`editionClause`) over what the model holds of the
+ * origin's edition claims: the active view's lookup (M-REC's
+ * `editionClaimsOf`), each listed claim's link as read, and its home's
+ * publication state and owner — the owner by the one owner rule
+ * (`ownerAccount`), as the origin's (`originOwner`). The plane's placeholder,
+ * a pane's and the ARIA mirror's item at the run all read it (T-ARTICLE's
+ * `placeholderOf`), so none of them part (R94).
+ * @param {string} origin
+ * @returns {import('./article.js').Clause | null}
+ */
+export function clauseOf(origin) {
+  const listed = REC.editionClaimsOf(origin);
+  const claims = Array.isArray(listed) ? listed.map((claim) => {
+    const home = homeOf(claim) || claim, h = REC.has(home) ? REC.doc(home) : null;
+    return { claim, link: REC.link(claim) || null, home, published: h && h.meta ? h.meta.published : h && h.refused ? false : null, claimant: h ? ownerAccount(h) : '' };
+  }) : null;
+  return editionClause(origin, originOwner(origin), claims);
+}
 
 /**
  * A document a read answered `withheld`, as the plane names it — B1-S2's

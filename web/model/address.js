@@ -189,6 +189,16 @@ export const isUnder = (prefix, addr) => addr === prefix || addr.startsWith(pref
 export const vSpan = (ordinal, positions, subspace = 1) => ({ start: `${subspace}.${ordinal}`, width: `0.${positions}` });
 
 /**
+ * An address's unit span — the address as `start` and a width of as many
+ * components, zeros then `1` (wire.md §Link discovery reads, the name of a
+ * type): the span a query slot names an address and everything under it by
+ * (L10: hierarchy is prefix) — "1.0.1.0.1003" → width "0.0.0.0.1".
+ * @param {string} addr
+ * @returns {{start: string, width: string}}
+ */
+export const unitSpan = (addr) => ({ start: addr, width: addr.split('.').map((_, i, all) => (i === all.length - 1 ? '1' : '0')).join('.') });
+
+/**
  * Parse a relative V-span answer (`span_set`'s members on the document's own
  * axis): `{start: "1.951", width: "0.17"}` → {subspace 1, ordinal 951, positions 17}.
  * @param {{start: string, width: string}} s

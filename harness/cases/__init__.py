@@ -36,6 +36,43 @@ SECOND_ACCOUNT = '1.0.2'     # the seed's keyless second account
 WITHHELD = '1.0.2.0.2'       # its draft: withheld from every reader of this board, a box of its own (continuation depth 0)
 VERSIONED = '1.0.1.0.43'     # an edition with two members, the latest holding all of it, far from every place the later cases read
 NO_MATCH = 'qzx no label holds this'  # LEAP text no address, share form, URL, label or address prefix answers
+EDITION_CLASS = '1.1.0.1.0.1.0.3.14'  # R20's edition claim: every edition claim's type, its descriptive subtypes beneath it by prefix
+
+
+def fields(addr):
+    """an address's fields, split at its zeros (the page's `fieldsOf`)"""
+    out = [[]]
+    for c in addr.split('.'):
+        if c == '0':
+            out.append([])
+        else:
+            out[-1].append(c)
+    return out
+
+
+def account_of(addr):
+    """the account an address lies under (the page's `accountOf`); None above an account"""
+    f = fields(addr)
+    return '.'.join(f[0]) + '.0.' + '.'.join(f[1]) if len(f) >= 2 and f[1] else None
+
+
+def home_of(addr):
+    """an address through its whole document field, a version member's components kept — the board's `document_of`
+    (the page's `homeOf`); None above a document"""
+    f = fields(addr)
+    return '.0.'.join('.'.join(x) for x in f[:3]) if len(f) >= 3 and f[2] else None
+
+
+def trunk_of(addr):
+    """the trunk document an address lies under (the page's `documentOf`); None above a document"""
+    f = fields(addr)
+    return '.0.'.join(['.'.join(f[0]), '.'.join(f[1]), f[2][0]]) if len(f) >= 3 and f[2] else None
+
+
+def unit_span(addr):
+    """an address's unit span: the address, and a width of as many components, zeros then 1 (wire.md)"""
+    n = len(addr.split('.'))
+    return {'start': addr, 'width': '.'.join(['0'] * (n - 1) + ['1'])}
 
 # the order the gate runs them in: the two that need no page first, then the
 # wire's cold-open figures before the other classes move the camera; the wire
@@ -182,6 +219,73 @@ class Context:
         bound = [b for row in rows for b in row.get('bindings') or [] if b.startswith(origin + ' principal ')]
         return {'origin': origin, 'rows': rows, 'bound': bound, 'key_here': bool(bound), 'refused': fp.get('refused'),
                 'guest_arm': 'C-36.guest.key' if bound else 'R56.key-absent'}
+
+    def recorded_ops(self):
+        """the open page's own `op` calls as its bridge client recorded them under the gate's door — each frame, and the
+        answer's envelope (`result` or `refused`) parsed"""
+        out = []
+        for c in self.js('window.__skep.bridge.calls().filter((c) => c.name === "op" && c.answer).map((c) => ({frame: c.frame, answer: c.answer}))') or []:
+            try:
+                out.append((json.loads(c['frame']), json.loads(c['answer'])))
+            except (TypeError, ValueError):
+                pass
+        return out
+
+    def edition_clause(self, origin, owner=None):
+        """C-67's clause beneath a withheld run of `origin` (PUB-5.124), decided here, apart from the page's code, from the
+        open page's own recorded reads by the rule's words: the active view's lookup of the edition claims on the
+        origin (`find_links_ftt`, the origin's unit span in `to` and the edition class's in `ty`), each listed claim's
+        `read_link` and its home's `doc_metadata`. A claim is admitted (PUB-5.99) where its type lies under the edition
+        class, its home is published, that home is not its claimant's doc 1, and the claimant — the home's owner — is
+        `owner` or under it (the origin's account where none is given: a withheld origin's metadata is read by no one
+        it is withheld from) — a home the board refused `withheld` or `doc_not_registered` admitted nowhere; it passes
+        where its FROM holds a span and none lies in the origin. Decided over the whole admitted set (RES-164): the
+        pointer where any passes; the QUOTING sibling, naming the lowest-addressed claimant, where every one quotes;
+        nothing — None — where none is admitted, where the lookup was not answered, or where a listed claim's read was
+        not, unless one passes. Answers the string id, or None, and what it was decided from"""
+        owner = owner or account_of(origin)
+        calls = self.recorded_ops()
+        lookup = {'op': 'find_links_ftt', 'q': {'from': 'any', 'home': 'any', 'to': [unit_span(origin)], 'ty': [unit_span(EDITION_CLASS)]}}
+
+        def last(frame):
+            got = [a for f, a in calls if f == frame]
+            return got[-1] if got else None
+
+        seen = {'lookups': sum(1 for f, _ in calls if f == lookup), 'audit': sum(1 for f, _ in calls if isinstance(f, dict) and f.get('op') == 'edition_claims'), 'claims': []}
+        listed = (last(lookup) or {}).get('result')
+        if not isinstance(listed, dict) or listed.get('resp') != 'addrs':
+            return None, seen
+        passes, quoting, undecided = False, [], False
+        for claim in listed.get('addrs') or []:
+            home = home_of(claim) or claim
+            link, meta = last({'op': 'read_link', 'a': claim}) or {}, last({'op': 'doc_metadata', 'doc': home}) or {}
+            slots = ((link.get('result') or {}).get('link') or {}).get('slots')
+            row = {'claim': claim, 'home': home}
+            seen['claims'].append(row)
+            if (meta.get('refused') or {}).get('name') in ('withheld', 'doc_not_registered'):
+                row['admitted'] = False  # a home the board will not describe is admitted nowhere
+                continue
+            if slots is None or not isinstance(meta.get('result'), dict):
+                row['admitted'] = None
+                undecided = True
+                continue
+            m, types = meta['result'], (slots[2] if len(slots) > 2 else [])
+            ty, claimant = (types[0]['start'] if types else None), m.get('owner') or ''
+            row['admitted'] = (ty is not None and (ty == EDITION_CLASS or ty.startswith(EDITION_CLASS + '.')) and m.get('published') is True
+                               and trunk_of(home) != claimant + '.0.1' and (claimant == owner or claimant.startswith(owner + '.')))
+            if not row['admitted']:
+                continue
+            frm = slots[0] if slots else []
+            if frm and not any(home_of(s['start']) == origin for s in frm):
+                passes = True
+            else:
+                quoting.append(claimant)
+        if passes:
+            return 'C-67.pointer', seen
+        if undecided or not quoting:
+            return None, seen
+        seen['claimant'] = sorted(quoting, key=lambda a: [int(x) for x in a.split('.')])[0]
+        return 'C-67.quoting', seen
 
     # ---- the provider and the board (the harness's own reads, never the page's) ----
     def provider_get(self, path):
