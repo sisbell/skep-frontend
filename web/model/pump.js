@@ -26,7 +26,8 @@
 // (`doc_metadata`), the page's own reads of both, memoized with them.
 // Asked by an act rather than the view: the client index (`readIndex`:
 // `places`, at boot and again at the page's own session's death — the view
-// asking nothing while it is out), a whole document (`loadWhole`, the claims
+// asking nothing while it is out), the board's health and its daemon at boot
+// (`readHealth`, `readProbe`), a whole document (`loadWhole`, the claims
 // on its withheld runs' origins among it, so a pane the scene makes from it
 // and the walk's mirror item at a run hold the clause decided), where a
 // link's end projects now (`projectEnd`), a link's supersession lineage
@@ -60,6 +61,20 @@
 // view's probe of a chain records no count; an act's whole read (`loadWhole`)
 // is begun again, and its projection (`projectEnd`) asked again, at most
 // DROP_ATTEMPTS times.
+// A READ OF THE BOARD'S STATE THE BOARD'S EVENTS OVERTOOK keeps what they
+// brought (`overtaken`): the shell answers the listing between its feed
+// thread's ticks, which can emit a feed row before the index the listing
+// comes from holds it, and the health and the probe on the caller's thread;
+// it emits each event once, as what it carries moves; and nothing orders an
+// answer against the events. So each such read keeps a record of the events
+// taken while it is out (`whileOut`) and lays its answer under them as it
+// lands: the listing under the feed rows, by M-REC's own rule for a row, and
+// under an `index` state (`takeIndex`); the health under the last `mode`; the
+// probe's daemon under a `daemon` event. The page's own death empties every
+// record of the rows and the state taken before it, which were the dead
+// session's class's. A row taken before a listing goes out is laid over
+// nothing: the listing names no feed position to tell whether it holds the
+// row (reported: skep #572).
 // The reads go through `op(session, frame)` — the claimant's class — or the
 // guest form where no session stands; a followed far board's reads would
 // take the guest form over its origin (no such board is seeded). EVERY READ
@@ -123,6 +138,8 @@ import { versionAddress, documentOf, homeOf } from './address.js';
 /** @typedef {import('./frames.js').Claim} Claim */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 /** @typedef {import('../bridge/shapes').PlacesAnswer} PlacesAnswer */
+/** @typedef {import('../bridge/shapes').Health} Health */
+/** @typedef {import('../bridge/shapes').Probe} Probe */
 /** @typedef {import('../bridge/shapes').FeedEvent} FeedEvent */
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 /** @typedef {import('../bridge/shapes').IndexEvent} IndexEvent */
@@ -131,6 +148,15 @@ import { versionAddress, documentOf, homeOf } from './address.js';
 /** @typedef {import('../bridge/shapes').SessionDiedEvent} SessionDiedEvent */
 /** @typedef {import('../bridge/shapes').DeathReason} DeathReason */
 /** @typedef {{feed: FeedEvent, index: IndexEvent, mode: ModeEvent, daemon: DaemonEvent}} BoardEvents — the events that name their board, by name */
+
+/**
+ * @typedef {Object} Meanwhile — what the board's events brought while one read
+ * of the board's state was out (`overtaken`), each kept as it was taken
+ * @property {FeedUpdate[]} rows the feed rows taken, in the order taken
+ * @property {boolean} state an `index` state taken
+ * @property {ModeEvent | null} mode the last `mode` event taken
+ * @property {boolean} daemon a `daemon` event taken
+ */
 
 /**
  * @typedef {Object} Lineage — a link's supersession lineage as read (B1-S5;
@@ -182,6 +208,8 @@ const awaitingEnd = new Set();
 let unended = /** @type {string | null} */ (null);
 /** the client index's reads out (`readIndex`): while one is, the view asks nothing and `pump` counts it missing */
 let indexing = 0;
+/** @type {Set<Meanwhile>} one record for each read of the board's state out — two listings at once where a death meets the boot's */
+const whileOut = new Set();
 let dirty = () => {};
 let started = false;
 
@@ -193,10 +221,16 @@ let started = false;
 export function start(opts) {
   dirty = opts.onDirty;
   started = true;
-  onBoard('feed', (ev) => { if (ev.update && takesRow(ev.update)) { REC.applyFeedUpdate(ev.update); for (const named of ev.update.docs || []) forget(documentOf(named) || named); dirty(); } });
-  onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); dirty(); } });
-  onBoard('mode', (ev) => { REC.setMode(ev); dirty(); });
-  onBoard('daemon', (ev) => { REC.setDaemon(ev.state); if (ev.state === 'running') unreached.clear(); dirty(); });
+  onBoard('feed', (ev) => {
+    if (!ev.update || !takesRow(ev.update)) return;
+    REC.applyFeedUpdate(ev.update);
+    for (const m of whileOut) m.rows.push(ev.update);
+    for (const named of ev.update.docs || []) forget(documentOf(named) || named);
+    dirty();
+  });
+  onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); for (const m of whileOut) m.state = true; dirty(); } });
+  onBoard('mode', (ev) => { REC.setMode(ev); for (const m of whileOut) m.mode = ev; dirty(); });
+  onBoard('daemon', (ev) => { REC.setDaemon(ev.state); for (const m of whileOut) m.daemon = true; if (ev.state === 'running') unreached.clear(); dirty(); });
   PORT.on('session-died', (d) => { const ev = /** @type {SessionDiedEvent | null} */ (d); if (ev) takeEnd(ev.session, ev.reason); dirty(); });
 }
 
@@ -236,9 +270,12 @@ function ofFace(ev) {
  * (client.md §4b.2: "the page re-acquires a reference with no face";
  * ps3-13 (b), cs6-6 reading (i)). Every other end, a restart that re-opened
  * none among them, is M-REC's death: what the model read at the session's
- * class dropped, every need answered or held under it asked again, and the
- * index read again in the guest form (`readIndex`). The reads awaiting the
- * end are woken.
+ * class dropped, every need answered or held under it asked again, every
+ * read of the board's state out left holding no feed row and no `index`
+ * state taken before the death — so a listing out across it, the boot's
+ * asked once more as a guest (`atClass`), lays none of the dead session's
+ * over a guest's — and the index read again in the guest form
+ * (`readIndex`). The reads awaiting the end are woken.
  * @param {string} ended the session the end names
  * @param {DeathReason} reason
  */
@@ -247,7 +284,11 @@ function takeEnd(ended, reason) {
   if (!s || s.session !== ended) return;
   const reopened = reason.arm === 'restart' && reason.reopened === true ? reason.session : null;
   if (typeof reopened === 'string') REC.setSession({ ...s, session: reopened });
-  else { REC.sessionDied(reason); asked.clear(); retryAt.clear(); unreached.clear(); readIndex(); }
+  else {
+    REC.sessionDied(reason); asked.clear(); retryAt.clear(); unreached.clear();
+    for (const m of whileOut) { m.rows = []; m.state = false; }
+    readIndex();
+  }
   for (const wake of [...awaitingEnd]) wake();
 }
 
@@ -305,23 +346,70 @@ async function atClass(call) {
 const classOf = (/** @type {{principal: number} | null} */ s) => (s ? s.principal : null);
 
 /**
+ * One read of the board's state, made with a record of what the board's
+ * events bring while it is out (`whileOut`), handed to `take` with the answer
+ * as it lands — so the answer is laid under the events that overtook it — and
+ * closed with the read.
+ * @template T
+ * @param {() => Promise<T>} ask
+ * @param {(out: T, meanwhile: Meanwhile) => void} take
+ * @returns {Promise<T>}
+ */
+async function overtaken(ask, take) {
+  /** @type {Meanwhile} */
+  const m = { rows: [], state: false, mode: null, daemon: false };
+  whileOut.add(m);
+  try {
+    const out = await ask();
+    take(out, m);
+    return out;
+  } finally { whileOut.delete(m); }
+}
+
+/**
  * The client index read at the page's class (skep #463): `places` under the
  * page's session, or in the guest form where none stands (`atClass`), the
- * answer M-REC's index whole (`takeIndex`); a refusal leaves the index as it
- * stands — empty at boot and at a death. While the read is out the view asks
- * nothing and `pump` counts it missing, so no document is asked for against
- * an index the answer is about to replace, and the gate's settle waits for
- * it.
+ * answer M-REC's index whole with the feed rows and any `index` state taken
+ * while it was out laid over it (`overtaken`, `takeIndex`); a refusal leaves
+ * the index as it stands — the rows taken since the board was known, or
+ * since the death. While the read is out the view asks nothing and `pump`
+ * counts it missing, so no document is asked for against an index the
+ * answer is about to replace, and the gate's settle waits for it.
  * @returns {Promise<{result: PlacesAnswer} | {refused: Refusal}>}
  */
 export async function readIndex() {
   const b = REC.board(), board = b ? b.board : undefined;
   indexing++;
   try {
-    const out = await atClass((s) => PORT.places(s ? { session: s.session, board } : { guest: true, board }));
-    if ('result' in out) REC.takeIndex(out.result);
-    return out;
+    return await overtaken(
+      () => atClass((s) => PORT.places(s ? { session: s.session, board } : { guest: true, board })),
+      (out, m) => { if ('result' in out) REC.takeIndex(out.result, m); },
+    );
   } finally { indexing--; dirty(); }
+}
+
+/**
+ * The board's health, read at boot (`health`): the `/health` document and the
+ * mode derived from it M-REC's (`setHealth`), the last `mode` event taken
+ * while the read was out laid over them (`setMode`).
+ * @param {string} board
+ * @returns {Promise<{result: Health} | {refused: Refusal}>}
+ */
+export function readHealth(board) {
+  return overtaken(() => PORT.health({ board }), (out, m) => {
+    if (!('result' in out)) return;
+    REC.setHealth(out.result.health, out.result.mode);
+    if (m.mode) REC.setMode(m.mode);
+  });
+}
+
+/**
+ * The board's daemon, read at boot (`probe`): the probe's state M-REC's
+ * (`setDaemon`) where no `daemon` event was taken while the read was out.
+ * @returns {Promise<{result: Probe} | {refused: Refusal}>}
+ */
+export function readProbe() {
+  return overtaken(() => PORT.probe({}), (out, m) => { if ('result' in out && !m.daemon) REC.setDaemon(out.result.daemon); });
 }
 
 /**

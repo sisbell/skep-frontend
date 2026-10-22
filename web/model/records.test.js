@@ -4,6 +4,13 @@
 // positions, and copies its bytes, through the blocks and runs it was made
 // from), the feed keeping the index and invalidating, the system account
 // held and marked, the death dropping every read held at the session's class.
+// A listing takes the feed rows taken while it was read laid over it by the
+// rules of a row taken after it — a mint listed and counted over the
+// listing's count, a publish of a listed draft counted once, a delegation's
+// account listed — and keeps an `index` state taken meanwhile; with nothing
+// taken meanwhile it is the listing exactly (a mutant that lays nothing over,
+// lays the rows before the listing's counts, or takes the listing's state
+// always turns red).
 // A link homed at a version member keeps the member as its home, its owner
 // the member's account, and a link made there drops what was held of the
 // member and of its trunk, whatever the row names (a mutant that reads the
@@ -71,6 +78,25 @@ test('the index is built from places: rows, counts, the state and its floor', ()
 
 /** a record's copy of its index row */
 const rowOf = (/** @type {string} */ addr) => { const d = REC.doc(addr); return [d.kind, d.label, d.standing]; };
+
+test('a listing takes the feed rows taken while it was read laid over it, by the rules of a row taken after it, and keeps an index state taken meanwhile; with nothing taken meanwhile it is the listing exactly', () => {
+  REC.setIndexState({ arm: 'complete' });
+  const rows = [
+    { position: 12324, at: 12324, op: 'create_new_document', docs: ['1.0.1.0.1013'], class: 'drafts', session: 's-1' },
+    { position: 12325, at: 12325, op: 'publish', docs: ['1.0.1.0.2.1'], class: 'published' },
+    { position: 12326, at: 12326, op: 'delegate', docs: null, class: 'published', new_prefix: '1.0.3' },
+  ];
+  REC.takeIndex(/** @type {any} */ (PLACES), /** @type {any} */ ({ rows, state: true }));
+  assert.deepEqual(REC.placesOf('1.0.1').map((p) => [p.doc, p.kind]), [['1.0.1.0.2', 'edition'], ['1.0.1.0.3', 'edition'], ['1.0.1.0.4', 'edition'], ['1.0.1.0.1013', 'draft']], 'the draft minted meanwhile listed; the listed draft published meanwhile an edition');
+  assert.equal(REC.countOf('1.0.1').documents, 4, 'the mint counted over the listing\'s three; the publish of a listed draft not counted again');
+  assert.deepEqual(REC.accounts().map((a) => a.account), ['1.0.1', '1.0.2', '1.0.3', '1.1.0.1'], 'the account delegated meanwhile listed, holding no document yet');
+  assert.equal(REC.indexState()?.arm, 'complete', 'the state taken meanwhile kept: the listing\'s may be older');
+  REC.takeIndex(/** @type {any} */ (PLACES));
+  assert.deepEqual(REC.places().map((p) => [p.doc, p.kind, p.label]), [
+    ['1.0.1.0.2', 'draft', 'staging'], ['1.0.1.0.3', 'edition', '# skep-ux-design'], ['1.0.1.0.4', 'edition', '## The artifact chain'], ['1.0.2.0.1', 'edition', null], ['1.1.0.1.0.2', 'edition', null],
+  ], 'nothing meanwhile: the listing\'s rows exactly');
+  assert.deepEqual([rowOf('1.0.1.0.1013'), REC.countOf('1.0.1').documents, REC.accounts().map((a) => a.account), REC.indexState()], [['unknown', null, null], 3, ['1.0.1', '1.0.2', '1.1.0.1'], PLACES.state], 'its counts, its accounts and its state; the draft no listing names keeps none of its row');
+});
 
 test('an index replaces the one before it whole: a record the new one does not list keeps none of its row, its kind its metadata\'s where read', () => {
   REC.takeIndex(/** @type {any} */ (PLACES));

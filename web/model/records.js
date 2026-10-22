@@ -15,7 +15,8 @@
 // present") and which of its keys is the session's (`device`); THE CLIENT INDEX
 // built from `places` (skep #463 — the documents per account, their labels,
 // kinds and standing; the counts per account; the index's state and floor),
-// each answer replacing the index whole, and kept by the feed's rows — never
+// each answer replacing the index whole with the feed's rows taken while it
+// was read laid over it (`takeIndex`), and kept by the feed's rows — never
 // from `/changes`, never by enumerating documents. THE CLASS: every record
 // read here was read at the page's class, and the page's own session's death
 // (`sessionDied`) drops every one — the index, each document's delivered state
@@ -317,17 +318,25 @@ export const reader = () => ({ account: state.session ? state.session.account : 
 /**
  * Build the index from `places` (skep #463): every document of the board's
  * document index at the call's class, in address order; the counts per
- * account; the index's state. The answer replaces the index whole: a record
- * the index listed before and this answer does not keeps none of its row.
+ * account; the index's state. The answer replaces the index whole, and the
+ * feed rows taken while it was read are laid over it in the order taken, by
+ * the rule a row taken after it follows (`listRow`): the listing names no
+ * feed position (skep #572), and the shell can emit a row before the index it
+ * lists from holds it, and emits each row once. A record that neither the
+ * answer nor those rows list keeps none of its row. The answer's state is
+ * taken where no `index` state was taken while it was read, for the shell
+ * emits a state once, as it moves, and the answer can be the older.
  * @param {PlacesAnswer} answer
+ * @param {{rows: FeedUpdate[], state: boolean}} [meanwhile] what the board's events brought while the answer was read: the feed rows taken, and whether an `index` state was
  */
-export function takeIndex(answer) {
+export function takeIndex(answer, meanwhile = { rows: [], state: false }) {
   const listed = [...state.index.keys()];
   state.index.clear(); state.counts.clear();
   for (const p of answer.docs) putPlace(p);
-  for (const addr of listed) { const d = state.docs.get(addr); if (d && !state.index.has(addr)) unlist(d); }
   for (const c of answer.counts) state.counts.set(c.account, c.documents);
-  state.indexState = answer.state;
+  for (const u of meanwhile.rows) listRow(u);
+  for (const addr of listed) { const d = state.docs.get(addr); if (d && !state.index.has(addr)) unlist(d); }
+  if (!meanwhile.state) state.indexState = answer.state;
   bump();
 }
 
@@ -797,19 +806,39 @@ export const keySetOf = (/** @type {string} */ account) => state.keySets.get(acc
 
 /**
  * A `feed` update as the shell crate defines it (S-24 (b)): the `/changes`
- * row verbatim plus `position` and `class`. The index is kept here: a mint
- * adds its place; a write to a document drops what the viewport held of it,
- * of the trunk and of the member the row names; a link made, what it held of
+ * row verbatim plus `position` and `class`. The index takes its part
+ * (`listRow`); a write to a document drops what the viewport held of it, of
+ * the trunk and of the member the row names; a link made, what it held of
  * the link's home and the home's trunk; a link written anywhere, or a
- * publish, every edition claim it held (`CLAIM_WRITES`); a `system` row is
- * held and marked, never drawn.
+ * publish, every edition claim it held (`CLAIM_WRITES`).
  * @param {FeedUpdate} u
  */
 export function applyFeedUpdate(u) {
   const docsNamed = Array.isArray(u.docs) ? u.docs : [];
   state.feed.push({ position: u.position, op: u.op, docs: docsNamed, cls: u.class });
   if (state.feed.length > 2000) state.feed.shift();
+  listRow(u);
   for (const named of docsNamed) {
+    const trunk = documentOf(named) || named;
+    invalidate(trunk);
+    if (named !== trunk) invalidate(named);
+  }
+  if (u.op === 'make_link' && u.link) { const home = homeOf(u.link); if (home) { const trunk = documentOf(home) || home; invalidate(trunk); if (home !== trunk) invalidate(home); } }
+  if (u.op && CLAIM_WRITES.has(u.op)) dropClaims();
+  bump();
+}
+
+/**
+ * A feed row's part in the index: a mint, a fork, a version or a publish —
+ * or any row naming a document the index does not hold — puts the place of
+ * the trunk it names, counted where the index held none; a `system` row marks
+ * it, held and never drawn; a delegation lists its new account, holding no
+ * document yet. Laid over a listing that already holds what the row did
+ * (`takeIndex`), it counts nothing twice.
+ * @param {FeedUpdate} u
+ */
+function listRow(u) {
+  for (const named of Array.isArray(u.docs) ? u.docs : []) {
     const trunk = documentOf(named) || named;
     const existing = state.index.get(trunk);
     if (u.op === 'create_new_document' || u.op === 'fork' || u.op === 'version' || u.op === 'publish' || !existing) {
@@ -820,13 +849,8 @@ export function applyFeedUpdate(u) {
       if (acct && !existing) state.counts.set(acct, (state.counts.get(acct) || 0) + 1);
     }
     if (u.key === 'system') { const p = state.index.get(trunk); if (p) p.system = true; const d = doc(trunk); d.system = true; }
-    invalidate(trunk);
-    if (named !== trunk) invalidate(named);
   }
-  if (u.op === 'make_link' && u.link) { const home = homeOf(u.link); if (home) { const trunk = documentOf(home) || home; invalidate(trunk); if (home !== trunk) invalidate(home); } }
   if (u.op === 'delegate' && u.new_prefix) { if (!state.counts.has(u.new_prefix)) state.counts.set(u.new_prefix, 0); }
-  if (u.op && CLAIM_WRITES.has(u.op)) dropClaims();
-  bump();
 }
 /** the feed rows held (the newest last) */
 export const feedRows = () => state.feed.slice();

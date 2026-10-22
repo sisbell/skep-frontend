@@ -31,6 +31,16 @@
 // read meets is the death, the read asked once more in the guest form; a
 // `session_ended` no end follows is waited for a bounded time, once per
 // session, and is no death;
+// a listing read while the feed brings a row and an `index` state lays them
+// over its answer — the document the row mints listed and counted over the
+// listing's count, the state the event's — and one out across the page's
+// own death lays over its answer the rows taken after the death alone (a
+// mutant that lays nothing over, lays the rows before the listing's counts,
+// takes the listing's state always, or keeps the dead session's rows turns
+// red); the board's health and its daemon each laid under a `mode` or a
+// `daemon` event taken while it was out, the answer standing where none was
+// (a mutant that lays the answer over the event, or drops the answer,
+// turns red);
 // a board's events by its own page alone, and none before the page knows
 // its board; a drafts row by a page holding a session, never by a guest or
 // a page whose session ended; the index state of the face the page reads —
@@ -406,6 +416,68 @@ test('the page\'s own death drops what it read at the session\'s class and reads
   PUMP.pump();
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual([ops, REC.doc(D).extent, listings], [['s-1', 's-1', 'guest'], 30, ['guest']], 'the edition\'s extent, answered under the session, asked again in the guest form; the index read once');
+});
+
+test('a listing read while the feed brings a row and an index state lays them over its answer: the document the row mints listed and counted, the state the event\'s — the shell emits each once, and its listing may not hold the row yet', async () => {
+  const fake = FAKE.create({ [FAKE.keyOf('places', { board: 'b-1' })]: { result: indexAt('building') } });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  const release = fake.hold('places', { board: 'b-1' });
+  const listing = PUMP.readIndex();
+  await new Promise((r) => setTimeout(r, 0));
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.77', 'published') });
+  fake.fire('index', { board: 'b-1', session: null, state: { arm: 'complete' } });
+  release();
+  await listing;
+  assert.deepEqual(REC.places().map((p) => [p.doc, p.kind]), [[D, 'edition'], ['1.0.1.0.77', 'edition']], 'the listing\'s edition, and the one the row minted while it was read');
+  assert.deepEqual([REC.countOf('1.0.1').documents, REC.indexState()?.arm, REC.countsExact()], [2, 'complete', true], 'counted over the listing\'s count; the state the event brought, never the listing\'s building');
+});
+
+test('a listing read out across the page\'s own death lays over its answer the rows taken after the death alone — never the dead session\'s drafts row', async () => {
+  const fake = FAKE.create({ [FAKE.keyOf('places', { board: 'b-1' })]: { result: indexAt('at_the_floor') } });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const listings = sessionsSent(fake, 'places');
+  const release = fake.hold('places', { board: 'b-1' });
+  const boot = PUMP.readIndex();
+  await new Promise((r) => setTimeout(r, 0));
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
+  fake.fire('index', { board: 'b-1', session: 's-1', state: { arm: 'complete' } });
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  fake.fire('feed', { board: 'b-1', update: { ...minting('1.0.1.0.78', 'published'), position: 4, at: 4 } });
+  release();
+  await boot;
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(listings, ['s-1', 'guest', 'guest'], 'the boot\'s listing out under the session, the death\'s as a guest, and the boot\'s asked once more as a guest, landing last');
+  assert.deepEqual(REC.places().map((p) => [p.doc, p.kind]), [[D, 'edition'], ['1.0.1.0.78', 'edition']], 'the guest\'s listing, and the edition minted after the death');
+  assert.deepEqual([REC.place('1.0.1.0.1013'), REC.countOf('1.0.1').documents, REC.indexState()?.arm], [undefined, 2, 'at_the_floor'], 'no draft the dead session read, nor its face\'s state');
+});
+
+test('the board\'s health and its daemon, each read while a mode or a daemon event arrives, are laid under the event — which may be newer and is never sent again; with no event meanwhile, the answer stands', async () => {
+  let reads = 0;
+  /** @type {Record<string, unknown>} */
+  const s = { [FAKE.keyOf('probe', {})]: { result: { daemon: 'running', dialed: null, signed: null } } };
+  // a fresh `/health` document at each read, its log position the read's count
+  Object.defineProperty(s, FAKE.keyOf('health', { board: 'b-1' }), { enumerable: true, get: () => ({ result: { health: { log_position: 8 + ++reads, auth: { claimant: null, local_trust: true }, writes: { halted: false } }, mode: 'UNCLAIMED' } }) });
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  await PUMP.readHealth('b-1');
+  await PUMP.readProbe();
+  assert.deepEqual([REC.mode(), REC.health()?.auth?.claimant, REC.health()?.log_position, REC.daemon()], ['UNCLAIMED', null, 9, 'running'], 'no event meanwhile: the answers');
+  const health = fake.hold('health', { board: 'b-1' }), probe = fake.hold('probe', {});
+  const pending = [PUMP.readHealth('b-1'), PUMP.readProbe()];
+  await new Promise((r) => setTimeout(r, 0));
+  fake.fire('mode', { board: 'b-1', mode: 'ENFORCING', claimant: '1.0.1', local_trust: false });
+  fake.fire('daemon', { board: 'b-1', state: 'unreachable' });
+  health(); probe();
+  await Promise.all(pending);
+  assert.deepEqual([REC.mode(), REC.health()?.auth?.claimant, REC.health()?.auth?.local_trust, REC.health()?.log_position], ['ENFORCING', '1.0.1', false, 10], 'the mode the event brought laid over the answer\'s health, whose log position stands');
+  assert.equal(REC.daemon(), 'unreachable', 'the outage the event announced, never the answer\'s running');
+  assert.deepEqual(fake.unanswered, []);
 });
 
 test('a read refused session_ended — the shell\'s answer while it derives the end — awaits the end the event brings and is asked once more under the re-opened session', async () => {
