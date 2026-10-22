@@ -24,13 +24,18 @@
 // which of them show, and how, is LK's (the seam).
 // A LINK'S SLOT NAMES BYTES, NEVER A PLACE: a V-spec slot is recorded as the
 // permanent I-spans of the bytes it named (wire.md §Links, `make_link`), so
-// where a drawn end's stored span stands in its document's text now is read
+// where a drawn end's stored span stands in a document's text now is read
 // through that document's V→I image as held (`placed`) — a passage an edit
 // moved stands where the image puts it, one cut in two stands in two runs,
-// one the text no longer holds stands nowhere — and where a link's far end
-// stands in its far document's current text is `project`'s answer
-// (`takeProjection`, A-53), held until that document's delivered state is
-// dropped.
+// one the text no longer holds stands nowhere — and a document holds an end
+// wherever its bytes stand, whichever document minted them (`holdsEnd`): the
+// trunk the span's address lies under (`EndRef.doc`) by that address alone,
+// any other — a passage it transcludes, a version member's bytes, shared with
+// its trunk or minted under its own chain — once its held text places them,
+// as `find_links_v` answers every link on every byte of a document's image.
+// Where a link's far end stands in its far document's current text is
+// `project`'s answer (`takeProjection`, A-53), held until that document's
+// delivered state is dropped.
 // THE `H` DOCUMENT (the record §1.8, OPEN): the system account's rows are
 // HELD here and marked `system`; the plane does not draw them (this lane's
 // cut, reported).
@@ -545,6 +550,25 @@ export function placed(addr, e) {
   const joined = [];
   for (const s of out) { const last = joined[joined.length - 1]; if (last && last.pos + last.width === s.pos) last.width += s.width; else joined.push(s); }
   return joined;
+}
+
+/**
+ * Does a document hold a link's end as a passage? Where it is the span's
+ * `doc` — the trunk the span's address lies under, its bytes minted in that
+ * trunk's I-space or a member's chain — decided from the span alone, its text
+ * read or not; else where its held text places the span (`placed`): a
+ * passage it transcludes from another document, a version member's bytes,
+ * shared with its trunk or minted under its own chain, once its image is
+ * read. A span naming a document or an account whole is no passage. The one
+ * test of which ends of the links touching it a document holds: LK's, which
+ * draws each where `placed` puts it, and M-PUMP's, which asks where the far
+ * end of each stands.
+ * @param {string} addr
+ * @param {EndRef} e
+ * @returns {boolean}
+ */
+export function holdsEnd(addr, e) {
+  return !e.whole && e.ordinal != null && (e.doc === addr || placed(addr, e).length > 0);
 }
 
 /** the members probed: the chain holds n members (`D.1 … D.n`) */

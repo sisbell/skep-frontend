@@ -27,15 +27,21 @@
 //   - every count is a fold of `find_links_v`'s answer, the type learned once
 //     (`count_v` no longer used — E17 (a)); a document whose links are not
 //     yet read shows its count ARRIVING (#465, needs-design: a lower bound);
-//   - an end stands WHERE ITS BYTES STAND NOW: a link's slot stores the
-//     permanent I-spans of the bytes it named, never a place (wire.md
-//     §Links, `make_link`), so each end drawn at a document is its stored
-//     span read back to the document's held text through the V→I image
-//     (M-REC's `placed`) — every stretch it stands in, a passage an edit cut
-//     in two at both, its marks, symbol and counts there and never at the
-//     stored ordinal — and an end the held text places nowhere (its image
-//     not read, or the text holding none of it) is not drawn; the end is
-//     told apart by its stored span (`nearEnd`) wherever it stands;
+//   - an end stands WHERE ITS BYTES STAND NOW, at every document whose text
+//     holds them: a link's slot stores the permanent I-spans of the bytes it
+//     named, never a place (wire.md §Links, `make_link`), and `find_links_v`
+//     answers every link on every byte of a document's image, so a document
+//     holds an end where it is the trunk the span's address lies under, or
+//     where its held text places the span — a passage it transcludes from
+//     another document, a version member's bytes (M-REC's `holdsEnd`;
+//     foundations §1.1: "THE SAME MATERIAL in both places"); each end drawn
+//     at a document is its stored span read back to the document's held
+//     text through the V→I image (M-REC's `placed`) — every stretch it
+//     stands in, a passage an edit cut in two at both, its marks, symbol and
+//     counts there and never at the stored ordinal — and an end the held
+//     text places nowhere (its image not read, or the text holding none of
+//     it) is not drawn; the end is told apart by its stored span (`nearEnd`)
+//     wherever it stands;
 //   - its FAR end stands where `project` answers it sits in the far
 //     document's current text now (A-53: "the beam lands at the passage's
 //     current place (version-proof)"; M-REC's projection, `farRuns`); a far
@@ -77,7 +83,10 @@
 //     holding it (P44) — holding once each link that joins a document at one
 //     to a document at the other, however many of its ends lie there, so its
 //     count and its mark are the same whether the other document is drawn,
-//     held by a mark or out of view; a link whose two documents stand at one
+//     held by a mark or out of view; a link joins the document a passage end
+//     of it was minted under to each document its other slot names, never
+//     one whose text holds that end by transcluding its bytes, whose box
+//     draws no connection for it; a link whose two documents stand at one
 //     place draws none; a drawn document's links run to the place of each
 //     document they join it to, drawn there this frame or out of view, where
 //     the plane ends them at the view's edge (foundations §2.1: "one whose far
@@ -127,8 +136,8 @@ import { commonsType, documentOf, accountOf, isUnder } from '../model/address.js
 /**
  * @typedef {Object} Shown — one end of a link drawn at a document: the span its slot stores there, where that span stands in the document's text now, and where its far end stands in the far document's
  * @property {Link} link
- * @property {string} near the document it is drawn at — the one `end` lies in, whichever end that is and wherever the link is homed
- * @property {'from' | 'to'} end which end lies in this document
+ * @property {string} near the document it is drawn at — one whose text holds `end` (M-REC's `holdsEnd`), whichever end that is, whichever document minted its bytes and wherever the link is homed
+ * @property {'from' | 'to'} end which end this document holds
  * @property {EndRef} nearEnd the span of the slot this end draws, as stored: the bytes' identity, by which an end met from both its documents is told apart wherever it stands
  * @property {Stretch[]} runs every stretch of the near document's held text `nearEnd` stands in now (M-REC's `placed`), in the text's order — never empty: an end the held text places nowhere is not drawn
  * @property {number} pos the first stretch's first position
@@ -299,12 +308,12 @@ function othersLet(/** @type {Reveal} */ r, /** @type {Link} */ l) {
   return r.others || !!(r.lens.owners && l.owner && r.lens.owners.has(l.owner));
 }
 
-/** the ends of a link that lie in a document as passages */
+/** the ends of a link a document holds as passages (M-REC's `holdsEnd`): those whose span names it as their trunk, its text read or not, and those its held text places — a passage it transcludes, a version member's bytes */
 function endsIn(/** @type {Link} */ l, /** @type {string} */ addr) {
   /** @type {Array<{end: 'from' | 'to', e: EndRef}>} */
   const out = [];
-  for (const e of l.from) if (e.doc === addr && !e.whole && e.ordinal != null) out.push({ end: 'from', e });
-  for (const e of l.to) if (e.doc === addr && !e.whole && e.ordinal != null) out.push({ end: 'to', e });
+  for (const e of l.from) if (REC.holdsEnd(addr, e)) out.push({ end: 'from', e });
+  for (const e of l.to) if (REC.holdsEnd(addr, e)) out.push({ end: 'to', e });
   return out;
 }
 
@@ -325,7 +334,8 @@ function lets(r, l, linker) {
 /**
  * Does a document's composition draw the link — R60's default composition,
  * moved by the reveal standing there: the link joins passages, the document
- * holds a passage end of it, and its reveal lets it in (`lets`). The one
+ * holds a passage end of it (`endsIn`: the document the span's trunk, or its
+ * held text placing the span), and its reveal lets it in (`lets`). The one
  * rule which links show: `shown` marks what a document draws at its spans,
  * and a mark joining two documents holds a link where either of them draws
  * it.
@@ -343,7 +353,7 @@ export function draws(l, addr) {
  * stands in its own document's current text; null where the held text places
  * the end nowhere.
  * @param {Link} l
- * @param {string} addr the document the end lies in
+ * @param {string} addr the document holding the end (`endsIn`), whichever document minted its bytes
  * @param {'you' | 'owner' | 'others'} linker
  * @param {'from' | 'to'} end
  * @param {EndRef} e
@@ -490,9 +500,10 @@ export function countAccount(/** @type {string} */ account) {
 
 /**
  * The documents a link joins, each pair once, in the order its ends name
- * them: each document holding a passage end of it against each document its
- * other slot names — a version member named whole as its document, the box
- * the two share — and none where the two are one.
+ * them: each document a passage end of it names — the trunk its bytes were
+ * minted under (`EndRef.doc`), never another whose text holds them — against
+ * each document its other slot names — a version member named whole as its
+ * document, the box the two share — and none where the two are one.
  * @param {Link} l
  * @returns {Array<[string, string]>}
  */
@@ -519,24 +530,27 @@ function joined(l) {
  * place a document stands at, its own box or the mark of the continuation
  * that holds it. Every passage link among a drawn document's links
  * (`find_links_v`'s answer) pairs it with each document the link joins it to
- * — a passage end in one, its other slot naming the other (`joined`); a link
- * stands at such a pair where EITHER of its two documents draws it
- * (`draws`) — the owner's and the person's own by default, another's where
- * a document's toggle or a lens naming its owner lets it in — decided from
- * the link and the two documents alone, so it stands there whether the other
- * document is drawn, held by a mark nobody read or out of view. The other
- * document stands at its place — a version member named whole at its
- * document's, the box the two share — whether the frame draws that place or
- * not: a far end out of view is still a connection's end, which the plane
- * draws to the view's edge (foundations §2.1); where `placeOf` names no
- * place, the plane drawing the document nowhere, the link draws none. Its
- * count is its links, each once, however many of a link's ends lie at its
- * places and from however many of its documents it is met; its mark the one
- * its links' marks merge into (`mergedMark`), each link marked as a mark
- * joining its two documents marks it (`markOf`: the owner of either
- * document's link the owner's), so no order of the documents, and no toggle
- * at either, recolours a link. A link whose two documents stand at one place
- * draws none.
+ * — a passage end minted under one, its other slot naming the other
+ * (`joined`): a document whose text holds an end only by transcluding its
+ * bytes, or a member's by sharing them, marks that end in its text and draws
+ * no connection for it. A link stands at such a pair where EITHER of its two
+ * documents draws it (`draws`) — the owner's and the person's own by
+ * default, another's where a document's toggle or a lens naming its owner
+ * lets it in — decided from the link and the two documents alone, each
+ * holding the ends minted under it by their spans, its text read or not
+ * (M-REC's `holdsEnd`), so it stands there whether the other document is
+ * drawn, held by a mark nobody read or out of view. The other document
+ * stands at its place — a version member named whole at its document's, the
+ * box the two share — whether the frame draws that place or not: a far end
+ * out of view is still a connection's end, which the plane draws to the
+ * view's edge (foundations §2.1); where `placeOf` names no place, the plane
+ * drawing the document nowhere, the link draws none. Its count is its links,
+ * each once, however many of a link's ends lie at its places and from
+ * however many of its documents it is met; its mark the one its links' marks
+ * merge into (`mergedMark`), each link marked as a mark joining its two
+ * documents marks it (`markOf`: the owner of either document's link the
+ * owner's), so no order of the documents, and no toggle at either, recolours
+ * a link. A link whose two documents stand at one place draws none.
  * @param {string[]} docsDrawn the documents drawn, whole or inside a mark
  * @param {(addr: string) => string | null} [placeOf] the place a document stands at, drawn this frame or not; null where the plane draws it nowhere. By default its own box
  * @returns {Connection[]}
@@ -570,7 +584,7 @@ export function lensRows(/** @type {string} */ addr) {
   return { owners: [...owners], types: [...types] };
 }
 
-/** the others' links touching a document at a passage (two-ended), for the card's toggle count */
+/** the others' links touching a document at a passage it holds (`endsIn`; two-ended), for the card's toggle count */
 export function othersTouching(/** @type {string} */ addr) {
   return REC.linksTouching(addr).filter((l) => classify(l) === 'passage' && linkerOf(l, addr) === 'others' && endsIn(l, addr).length > 0);
 }

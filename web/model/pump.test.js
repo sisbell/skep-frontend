@@ -46,10 +46,12 @@
 // held, its stretches, none or the refusal (a mutant that asks none, or asks
 // one held already, turns red), and asked again once a feed row names a new
 // member of the document projected into (a mutant that forgets the member's
-// address alone, never its trunk's, asks none again and turns red); a
-// projection asked by an act answering the refusal it met, held refused, and
-// nothing held where the board did not answer (a mutant that answers a bare
-// "refused" turns red);
+// address alone, never its trunk's, asks none again and turns red); a far
+// end sent from bytes the document transcludes asked as one sent from its
+// own bytes is (a mutant that sends far ends from the bytes a document
+// minted alone turns red); a projection asked by an act answering the
+// refusal it met, held refused, and nothing held where the board did not
+// answer (a mutant that answers a bare "refused" turns red);
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -686,6 +688,38 @@ test('at reading scale the view asks where each far end its read links send from
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(projections().slice(3).sort(), [F.project(MOVED, 2, FAR), F.project(FLOATS, 2, FAR), F.project(HELD, 2, FAR)].map((frame) => FAKE.keyOf('op', { frame })).sort(), 'each into FAR asked again, none into the ghost');
   assert.deepEqual(fake.unanswered.filter((k) => k !== FAKE.keyOf('op', { frame: F.project(HELD, 2, FAR) })), [], 'every other read the script expected');
+});
+
+test('at reading scale the view asks where the far end of a link on bytes a document transcludes sits now, as it asks of one on its own bytes, and the model holds it', async () => {
+  const FAR = '1.0.1.0.127', S = '1.0.1.0.1003', L = S + '.0.2.1';
+  /** @type {Record<string, unknown>} */
+  const s = {
+    ...script,
+    // D's own twenty-six bytes, then four of S's it transcludes, readable here, from 27
+    [FAKE.keyOf('op', { frame: F.retrieveV(D, 1, 30) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: 'Tumbler.\n\nThe first field.abcd' }] } },
+    [FAKE.keyOf('op', { frame: F.image(D, 1, 30) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '26' }, { i_start: S + '.0.1.1', width: '4' }] } },
+    [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [L] } },
+    // S's citation from two of the bytes D transcludes to a passage of FAR, which stands at FAR's 40 now
+    [FAKE.keyOf('op', { frame: F.readLink(L) })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [passageOf(S, 2, 2), passageOf(FAR, 3, 4), [{ start: '1.1.0.1.0.1.0.3.13', width: '0.0.0.0.0.0.0.0.1' }]] } } },
+    [FAKE.keyOf('op', { frame: F.project(L, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.40', width: '0.4' }] } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
+  };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D); PUMP.forget(S);
+  await PUMP.loadWhole(D);
+  assert.deepEqual(REC.doc(D).origins, [{ pos: 27, width: 4, doc: S }], 'the four bytes D transcludes from S');
+  // D at its reading em
+  const box = docBox(D), fs = metricsFor(30, box).fs;
+  CAM.setViewport(1440, 900); CAM.reach(fs); CAM.set(CAM.viewForDoc(box, fs));
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(fake.asked.filter((k) => k.includes('"op":"project"')), [FAKE.keyOf('op', { frame: F.project(L, 2, FAR) })], 'its far end asked once: the link\'s near end lies in bytes S minted, which D\'s text holds');
+  assert.deepEqual(REC.projection(L, 2, FAR), [{ pos: 40, width: 4 }], 'held: where it stands now');
+  assert.deepEqual(fake.unanswered, [], 'every read the script expected');
 });
 
 test('a projection the board declines answers the refusal it met, and the model holds it refused; one the board did not answer holds nothing', async () => {

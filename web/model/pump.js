@@ -14,10 +14,11 @@
 // transcluded runs, and the permanent addresses a link's stored span is read
 // back to the text through (M-REC's `placed`) — and where each far end its
 // read links send from it sits in its far document's current text now
-// (`project`, A-53), so a beam, a symbol and the mirror place a moved passage
-// where it stands and say so of one that has left the text before anyone
-// follows it (foundations §2.3); the chain's members probed where a document
-// is read.
+// (`project`, A-53) — from every passage end the document holds, its own
+// bytes and the ones its text transcludes alike (M-REC's `holdsEnd`) — so a
+// beam, a symbol and the mirror place a moved passage where it stands and say
+// so of one that has left the text before anyone follows it (foundations
+// §2.3); the chain's members probed where a document is read.
 // Asked by an act rather than the view: the client index (`readIndex`:
 // `places`, at boot and again at the page's own session's death — the view
 // asking nothing while it is out), a whole document (`loadWhole`), where a
@@ -527,10 +528,12 @@ export function pump() {
 /**
  * The far ends a document's read links send from it, whose place in their
  * far document's current text the view asks (`project`): for each link
- * touching the document with a passage end in it, the slot opposite —
- * whose first span names a passage of a document, what LK draws a beam to —
- * once per link and slot; none whose projection is held, or whose document a
- * read found unregistered or withheld, which refuses the projection with it.
+ * touching the document with a passage end it holds (M-REC's `holdsEnd`, the
+ * ends LK draws there: the document the span's trunk, or its held text
+ * placing the span), the slot opposite — whose first span names a passage of
+ * a document, what LK draws a beam to — once per link and slot; none whose
+ * projection is held, or whose document a read found unregistered or
+ * withheld, which refuses the projection with it.
  * @param {string} addr
  * @returns {Array<{link: string, slot: 1 | 2, far: string}>}
  */
@@ -541,7 +544,7 @@ function farEnds(addr) {
     for (const [near, other, slot] of /** @type {Array<[EndRef[], EndRef[], 1 | 2]>} */ ([[l.from, l.to, 2], [l.to, l.from, 1]])) {
       const f = other[0];
       if (!f || f.whole || f.ordinal == null || !f.doc) continue;
-      if (!near.some((e) => e.doc === addr && !e.whole && e.ordinal != null)) continue;
+      if (!near.some((e) => REC.holdsEnd(addr, e))) continue;
       if (REC.projection(l.addr, slot, f.doc) !== undefined || (REC.has(f.doc) && REC.doc(f.doc).refused)) continue;
       out.set(l.addr + ' ' + slot, { link: l.addr, slot, far: f.doc });
     }

@@ -12,15 +12,18 @@
 // stored ordinal: moved by an edit, cut in two, held twice, minted under a
 // member's chain, no longer held, outside the window read (a mutant that
 // places a span at its stored ordinal, compares the trunk alone, or keeps the
-// first stretch turns red); `project`'s answers held in the text's order
-// until the document projected into is dropped, and every document holding
-// the link made again as they arrive and go (a mutant that bumps no revision
-// leaves an article titled from a projection no longer held). The key store
-// read for this board: a key present only where a binding names its origin as
-// the binding's whole first field — never another origin whose text begins
-// with this one's (a mutant that finds the origin anywhere in the binding
-// turns red), never a key bound nowhere — and the reader the arms are decided
-// for keeping it through a session's death.
+// first stretch turns red); an end held by the trunk its span's address lies
+// under, read or not, and by any other document whose held text places it —
+// a passage transcluded, a member's bytes (a mutant that holds by the span's
+// address alone, or by the held text alone, turns red); `project`'s answers
+// held in the text's order until the document projected into is dropped, and
+// every document holding the link made again as they arrive and go (a mutant
+// that bumps no revision leaves an article titled from a projection no longer
+// held). The key store read for this board: a key present only where a
+// binding names its origin as the binding's whole first field — never
+// another origin whose text begins with this one's (a mutant that finds the
+// origin anywhere in the binding turns red), never a key bound nowhere — and
+// the reader the arms are decided for keeping it through a session's death.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -154,6 +157,20 @@ test('a link\'s stored span stands where the held image puts its bytes now — n
   assert.deepEqual(REC.placed(D, stored(OWN, 41, 4)), [], 'no longer in the text: nowhere');
   assert.deepEqual(REC.placed(D, resolveSpan({ start: D, width: '0.0.0.0.1' })), [], 'a document named whole: no position');
   assert.deepEqual(REC.placed('1.0.1.0.4', stored('1.0.1.0.4.0.1', 1, 2)), [], 'no image held: nowhere');
+});
+
+test('a document holds a link\'s end where it is the trunk the span\'s address lies under, its text read or not, or where its held text places it — a passage it transcludes, a member\'s bytes, shared with its trunk or minted under its chain; a span naming a document whole is no passage', () => {
+  const D = '1.0.1.0.3', M = D + '.2', S = '1.0.2.0.9';
+  const own = stored(D + '.0.1', 5, 3), theirs = stored(S + '.0.1', 2, 4);
+  assert.deepEqual([REC.holdsEnd(D, own), REC.holdsEnd(D, stored(M + '.0.1', 1, 2)), REC.holdsEnd(D, theirs)], [true, true, false], 'no image read: by their address alone, D\'s own bytes and the bytes minted under its member\'s chain, another document\'s not');
+  // D's own first ten bytes, then six of S's it transcludes
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 10 }, { iStart: S + '.0.1.1', width: 6 }]);
+  assert.deepEqual([REC.holdsEnd(D, own), REC.holdsEnd(D, theirs), REC.holdsEnd(D, stored(S + '.0.1', 8, 2))], [true, true, false], 'the image read: the passage it transcludes held, bytes of S its text does not hold not');
+  assert.equal(REC.holdsEnd(S, theirs), true, 'S holds its own, its text never read');
+  // the second member: four bytes minted under its chain, then its trunk's first ten
+  REC.takeImage(M, 1, [{ iStart: M + '.0.1.1', width: 4 }, { iStart: D + '.0.1.1', width: 10 }]);
+  assert.deepEqual([REC.holdsEnd(M, own), REC.holdsEnd(M, stored(M + '.0.1', 1, 2)), REC.holdsEnd(M, theirs)], [true, true, false], 'the member: the bytes it shares with its trunk and the ones minted under its chain, never what its text does not hold');
+  assert.equal(REC.holdsEnd(D, resolveSpan({ start: D, width: '0.0.0.0.1' })), false, 'a document named whole: no passage');
 });
 
 test('a stored span over image runs that adjoin in the text stands as one stretch; one outside the window the image was read for stands nowhere', () => {

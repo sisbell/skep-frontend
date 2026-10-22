@@ -34,15 +34,17 @@
 // or past the viewport (T-LAYER mounts every article whose box meets the
 // viewport, padded), and a far end not laid out stands at its document's
 // box's centre. A link met from both its ends, or twice inside one document,
-// is one beam — its two ends told apart by the spans the link stores,
-// wherever they stand now — marked with what its meetings' marks share
-// whichever document mounted first (`bundlesOf`; P44: "never a stack, never
-// accumulated tint"). The beams are bundled by the document they leave and
-// their far document — one bundle per destination, its far document's label
-// and its count at its end (§2.1), and, where every beam it holds floats,
-// "its passage is not in ⟨D⟩'s current text", the stub saying so before
-// anyone follows it (foundations §2.3; `labelText`) — above the end, or
-// below it where above
+// is one beam — its two ends told apart by the document each is drawn at and
+// the span the link stores for it, wherever they stand now — marked with what
+// its meetings' marks share whichever document mounted first (`bundlesOf`;
+// P44: "never a stack, never accumulated tint"); one stored end drawn at two
+// documents — the one that minted its bytes and one whose text transcludes
+// them, or a trunk and its member — stands at two sites, a beam from each.
+// The beams are bundled by the document they leave and their far document —
+// one bundle per destination, its far document's label and its count at its
+// end (§2.1), and, where every beam it holds floats, "its passage is not in
+// ⟨D⟩'s current text", the stub saying so before anyone follows it
+// (foundations §2.3; `labelText`) — above the end, or below it where above
 // would reach past the visible view's top, and none where it would not stand
 // whole inside that view (`labelPlace`: a beam cut at its start, under the
 // one line or past the viewport, sets no label there) — each member stroked
@@ -214,23 +216,25 @@ export function beamOf(s, g) {
   return { s, line, from, to: c, aimed: true, stub: !holds(g.view, c) || !g.mounted(s.far) };
 }
 
-/** a beam's identity: its link and its two ends as the link stores them, unordered — the same beam whichever end it is drawn from, wherever either end stands now */
+/** a beam's identity: its link and its two ends, unordered, each the document it stands at — the near end the one drawing it, the far end the one its slot names — with the span the link stores for it: the same beam whichever end it is drawn from, wherever either end stands now, and a beam from each document one stored end is drawn at */
 function endsOf(/** @type {Shown} */ s) {
   const fe = s.farEnd;
-  const there = fe ? (fe.whole ? `${fe.start}@whole` : `${fe.start}+${fe.width}`) : '';
-  return s.link.addr + ' ' + [`${s.nearEnd.start}+${s.nearEnd.width}`, there].sort().join(' ');
+  const there = fe ? `${s.far} ${fe.whole ? `${fe.start}@whole` : `${fe.start}+${fe.width}`}` : '';
+  return s.link.addr + ' ' + [`${s.near} ${s.nearEnd.start}+${s.nearEnd.width}`, there].sort().join(' | ');
 }
 
 /**
  * The beams in their bundles, in the order met: one bundle per document the
  * beams leave and far document they reach (§2.1: one bundle per
  * destination), and each beam once — a link met from both its ends, or from
- * both inside one document, is one beam between the same two ends, the
- * first met, marked with what every meeting's mark shares (LK's
- * `mergedMark`; P44): a link LK marks alike at both its documents keeps that
- * mark, and one that is the owner's at one and another's at the other is
- * drawn in the neutral hue, undashed, whichever is met first; a link whose
- * endset holds two spans in one document keeps a beam from each.
+ * both inside one document, is one beam between the same two ends (`endsOf`:
+ * each end's document and stored span), the first met, marked with what
+ * every meeting's mark shares (LK's `mergedMark`; P44): a link LK marks alike
+ * at both its documents keeps that mark, and one that is the owner's at one
+ * and another's at the other is drawn in the neutral hue, undashed, whichever
+ * is met first; a link whose endset holds two spans in one document keeps a
+ * beam from each, and so does one stored end drawn at two documents, the one
+ * that minted its bytes and one transcluding them, or a trunk and its member.
  * @template {{s: Shown}} B
  * @param {B[]} beams
  * @returns {Bundle<B>[]}

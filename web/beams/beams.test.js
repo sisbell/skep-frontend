@@ -4,12 +4,16 @@
 // each beam once, a link met from both its ends or from both inside one
 // document drawn once (a mutant without the once-rule turns red), and a link
 // whose endset holds two spans keeping a beam from each (a mutant keying the
-// rule by the link alone turns red); a beam met from both its ends marked
-// with what its meetings' marks share — neutral where the link is another's
-// at one end and the owner's at the other, whichever document is met first
-// (a mutant that keeps the first meeting's mark turns red), the person's own
-// in their hue, one met at one end alone as that end marks it. Then a beam's
-// ends over a laid-out geometry: it leaves the near block's right edge level
+// rule by the link alone turns red), as one stored end drawn at two
+// documents — the one that minted its bytes and one transcluding them — does,
+// each beam in its own document's mark (a mutant keying a beam by its stored
+// spans alone folds the two into one, neutral where the two documents mark
+// it apart, and turns red); a beam met from both its ends marked with what
+// its meetings' marks share — neutral where the link is another's at one end
+// and the owner's at the other, whichever document is met first (a mutant
+// that keeps the first meeting's mark turns red), the person's own in their
+// hue, one met at one end alone as that end marks it. Then a beam's ends
+// over a laid-out geometry: it leaves the near block's right edge level
 // with the span's own line nearest the far end, never the block's middle; a
 // mounted far end in view takes the far span's own line nearest the start, at
 // the far block's left edge; a whole-work end, the far article's first block;
@@ -26,12 +30,13 @@
 // upward, sets none there, where it would straddle the line's edge (a mutant
 // that sets it wherever it falls turns red). Both ends where the link's
 // bytes stand now: a beam met from both its ends one beam, its ends told
-// apart by the spans the link stores (a mutant keying them by the stretches
-// they stand in draws two and turns red); a far end at the stretch `project`
-// places it in (a mutant ending it at the stored position's line turns red),
-// at the far article's first block where it floats, aimed at its box where
-// no projection is held; a bundle whose every beam floats saying so at its
-// end, one whose beams part saying nothing of it.
+// apart by the documents they are drawn at and the spans the link stores (a
+// mutant keying them by the stretches they stand in draws two and turns
+// red); a far end at the stretch `project` places it in (a mutant ending it
+// at the stored position's line turns red), at the far article's first block
+// where it floats, aimed at its box where no projection is held; a bundle
+// whose every beam floats saying so at its end, one whose beams part saying
+// nothing of it.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -115,6 +120,21 @@ test('a beam met from both its ends is marked with what its meetings share: neut
 test('a link whose endset holds two spans in D keeps a beam from each', () => {
   build([TWO]);
   assert.deepEqual(members(bundlesOf(met([D]))), [[TWO, 70], [TWO, 90]]);
+});
+
+test('one stored end drawn at two documents — the one that minted its bytes and one that transcludes them — is a beam from each, in its own bundle, each marked as its document marks it', () => {
+  build([OWN]);
+  // T transcludes twenty of D's bytes from D's 45th: the citation's passage, stored at D's 50, stands at T's 6
+  REC.takeImage(T, 1, [{ iStart: D + '.0.1.45', width: 20 }]);
+  REC.takeLinks(T, [OWN]);
+  LK.reveal(T, 3);
+  const all = met([D, T]);
+  assert.deepEqual(all.map((b) => [b.s.near, b.s.pos]), [[D, 50], [T, 6]], 'drawn at both, each where its bytes stand');
+  assert.deepEqual(bundlesOf(all).map((b) => [b.near, b.far, b.members.length]), [[D, H, 1], [T, H, 1]], 'a beam from each, never one folded into the other');
+  // another reader: the citation D's owner's at D, and another's at T, its toggle on there
+  REC.setSession({ session: 's-2', principal: 2, account: '1.0.9' });
+  LK.setOthers(T, true);
+  assert.deepEqual(bundlesOf(met([D, T])).flatMap((b) => b.members).map((m) => [m.s.near, m.mark.hue, m.mark.linker]), [[D, HUE.owner, 'owner'], [T, HUE.others, 'others']], 'each beam in its own document\'s mark, never the neutral hue of the two folded');
 });
 
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */

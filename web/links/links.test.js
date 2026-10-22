@@ -35,7 +35,16 @@
 // count reading no position; and each far end where `project` answers it
 // sits now — elsewhere than stored, floating where the text holds none of
 // it, placed nowhere where no answer is held or it was refused, never for a
-// document named whole.
+// document named whole. An end drawn at every document whose text holds its
+// bytes, whichever document minted them: a passage a document transcludes
+// marked there, counted at its paragraph, in the toggle's count and in the
+// face's bound, its box drawing no connection for it (a mutant joining a
+// document by the ends its text holds turns red), and the bytes a member
+// shares with its trunk drawn at the member where they stand in its text (a
+// mutant that draws an end at the document that minted its bytes alone
+// turns red); the minting document holding its own before any image is read
+// (a mutant that holds an end by the held text alone turns the connections
+// and the toggle's count above red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -343,4 +352,35 @@ test('a far end stands where `project` answers it sits now: placed elsewhere tha
   const own = /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === D + '.0.2.1'));
   REC.takeProjection(D + '.0.2.1', 2, '1.0.1.0.127', []);
   assert.deepEqual([own.farSlot, LK.shown(D).find((s) => s.link.addr === D + '.0.2.1')?.farRuns, LK.floats(own)], [2, null, false], 'a far end naming its document whole stands at no passage and never floats');
+});
+
+test('an end stands at every document whose text holds its bytes: a passage D transcludes from another document is marked, counted and fitted there as D\'s own bytes are, and D\'s box draws no connection for it, its link joining the document that minted them', () => {
+  const S = '1.0.2.0.9', MINE = D + '.0.2.5', THEIRS = S + '.0.2.1';
+  // D's own hundred bytes, then twenty of S's it transcludes, a paragraph of their own from 101
+  REC.takeDelivery(D, [{ pos: 1, width: 120, kind: 'content', text: 'x'.repeat(40) + '\n\n' + 'y'.repeat(56) + '\n\n' + 'z'.repeat(20), ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 100 }, { iStart: S + '.0.1.1', width: 20 }]);
+  // the person's link homed at D from S's third to sixth bytes, and S's owner's from its tenth to fourteenth: both on the bytes D transcludes
+  REC.takeLinks(D, [MINE, THEIRS]);
+  REC.takeLink({ addr: MINE, from: [span(S, 3, 4)], to: [whole('1.0.1.0.127')], type: CITE });
+  REC.takeLink({ addr: THEIRS, from: [span(S, 10, 5)], to: [span(OTHER_HOME, 20, 3)], type: CITE });
+  const at = () => LK.shown(D).filter((s) => s.link.addr === MINE || s.link.addr === THEIRS).map((s) => [s.link.addr, s.near, s.end, s.pos, s.width, s.linker]);
+  assert.deepEqual(at(), [[MINE, D, 'from', 103, 4, 'you']], 'the person\'s link marked at the transcluded passage, where its bytes stand in D now');
+  const blocks = REC.doc(D).blocks;
+  assert.deepEqual(blocks.map((b) => LK.countAt(D, b).n), [1, 0, 1], 'S\'s owner\'s link, another\'s at D, counted at the transcluded paragraph, as the other\'s link into D\'s own first one is');
+  assert.deepEqual(LK.othersTouching(D).map((l) => l.addr).sort(), [OTHER_HOME + '.0.2.1', THEIRS].sort(), 'and in the toggle\'s count');
+  assert.deepEqual(LK.utmost(D).shown.filter((s) => s.link.addr === MINE || s.link.addr === THEIRS).map((s) => [s.link.addr, s.pos]), [[MINE, 103], [THEIRS, 110]], 'the face fitted to both');
+  LK.setOthers(D, true);
+  assert.deepEqual(at(), [[MINE, D, 'from', 103, 4, 'you'], [THEIRS, D, 'from', 110, 5, 'others']], 'the toggle on: S\'s owner\'s shown there too, attributed as another\'s');
+  assert.equal(LK.countAt(D, blocks[2]).n, 0, 'and no longer counted');
+  assert.deepEqual(LK.connections([D]).map((c) => [c.a, c.b, c.count]), [[D, '1.0.1.0.127', 1], [D, OTHER_HOME, 2]], 'D\'s box joined by its own citation and the other document\'s two links into its own bytes alone: the two on the bytes it transcludes join S');
+});
+
+test('a version member draws its trunk\'s links at the bytes it shares with it, where they stand in its text, and counts the others\' there', () => {
+  const M = D + '.2';
+  // the second member's text: twenty bytes minted under its chain, then its trunk's hundred from 21
+  REC.takeDelivery(M, [{ pos: 1, width: 120, kind: 'content', text: 'z'.repeat(18) + '\n\n' + 'x'.repeat(40) + '\n\n' + 'y'.repeat(58), ref: null, origin: null }]);
+  REC.takeImage(M, 1, [{ iStart: M + '.0.1.1', width: 20 }, { iStart: D + '.0.1.1', width: 100 }]);
+  REC.takeLinks(M, [D + '.0.2.1', OTHER_HOME + '.0.2.1']);
+  assert.deepEqual(LK.shown(M).map((s) => [s.link.addr, s.near, s.pos, s.width]), [[D + '.0.2.1', M, 70, 10]], 'the person\'s citation, stored at D\'s 50, drawn at the member where its bytes stand');
+  assert.deepEqual(REC.doc(M).blocks.map((b) => LK.countAt(M, b).n), [0, 1, 0], 'another\'s link into D\'s third byte counted at the member\'s paragraph that byte stands in');
 });

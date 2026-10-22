@@ -26,7 +26,7 @@
  * through the held V→I image, or the board's `project`
  * @property {string} start the span's start address as the wire spelled it
  * @property {string} width the width as the wire spelled it
- * @property {string | null} doc the document whose permanent addresses the span names — where its bytes were minted — or the document it names whole
+ * @property {string | null} doc the trunk document the span's permanent addresses lie under — where its bytes were minted, in its own I-space or a version member's chain (`1.0.1.0.3.2.0.1.5` names `1.0.1.0.3`) — or the document it names whole, a member named whole as itself: the one document the span names, never each document whose text holds its bytes, which M-REC's `holdsEnd` answers
  * @property {string | null} account the account the span names whole, where it names one and no document
  * @property {boolean} whole true where the span is a unit subtree span (an address-form end)
  * @property {number | null} subspace
