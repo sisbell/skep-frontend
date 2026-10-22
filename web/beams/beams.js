@@ -23,23 +23,27 @@
 // level with that stretch's own line nearest it — a whole-work end, and a
 // far end that FLOATS (LK's `floats`: that text holds none of it), at the far
 // article's first block, where its follow lands (foundations §2.3); a far
-// end nothing places — its projection not read, or refused — is aimed at its
-// document's box as an end not laid out is, never at the stored position;
-// unmounted or off screen → THE EDGE STUB: the beam clipped at the visible
-// view's border — the viewport below the one line, the cut P-CAM's
-// `edgeStub` that P-RENDER's mid connections share — with a triangle on the
-// true bearing and the far document's label at the stub (S1 Q3,
-// load-bearing). Off screen is outside that view, the end laid out or not: a
-// mounted article's line stands wherever its box reaches, under the one line
-// or past the viewport (T-LAYER mounts every article whose box meets the
-// viewport, padded), and a far end not laid out stands at its document's
-// box's centre. A link met from both its ends, or twice inside one document,
-// is one beam — its two ends told apart by the document each is drawn at and
-// the span the link stores for it, wherever they stand now — marked with what
-// its meetings' marks share whichever document mounted first (`bundlesOf`;
-// P44: "never a stack, never accumulated tint"); one stored end drawn at two
-// documents — the one that minted its bytes and one whose text transcludes
-// them, or a trunk and its member — stands at two sites, a beam from each.
+// end not laid out — its document unmounted, or nothing placing it, its
+// projection not read or refused — stands at its document's box's centre,
+// never at the stored position. Where the far end stands in the visible view
+// — the viewport below the one line — the beam ends there, mounted or not;
+// off screen, outside that view, and only there → THE EDGE STUB (foundations
+// §2.1: "the edge stub where the far end is off screen"): the beam clipped
+// at the view's border — the cut P-CAM's `edgeStub` that P-RENDER's mid
+// connections share — with a triangle on the true bearing and the far
+// document's label at the stub (S1 Q3, load-bearing). A mounted article's
+// line stands wherever its box reaches, under the one line or past the
+// viewport (T-LAYER mounts every article whose box meets the viewport,
+// padded), so an end laid out is off screen where it stands outside that
+// view, as a box's centre is; `beamTo` reads both the stub and where its
+// stroke ends from that one test. A link met from both its ends, or twice
+// inside one document, is one beam — its two ends told apart by the document
+// each is drawn at and the span the link stores for it, wherever they stand
+// now — marked with what its meetings' marks share whichever document
+// mounted first (`bundlesOf`; P44: "never a stack, never accumulated tint");
+// one stored end drawn at two documents — the one that minted its bytes and
+// one whose text transcludes them, or a trunk and its member — stands at two
+// sites, a beam from each.
 // The beams are bundled by the document they leave and their far document —
 // one bundle per destination, its far document's label and its count at its
 // end (§2.1), and, where every beam it holds floats, "its passage is not in
@@ -57,8 +61,10 @@
 // their labels meet.
 // Carries: the wireframe's §17 (`drawBeams`, `pickRect` — here `pickLine`,
 // over every stretch an end stands in; its `edgeStub` P-CAM's, the cut both
-// stubs share), S1's `buildBeams` canvas arm (the SVG arm DROPPED — S1's
-// verdict).
+// stubs share; its stub at every far end unmounted, and its cut of every
+// stroke not laid out at the view's edge, DROPPED — foundations §2.1 stubs
+// the far end off screen alone), S1's `buildBeams` canvas arm (the SVG arm
+// DROPPED — S1's verdict).
 // Rules: FP-1, FP-2, FP-8 (redrawn whole), FP-10 (reads LK, T-LAYER and
 // L-LINE through their exports).
 
@@ -81,9 +87,9 @@ import { t } from '../strings.js';
  * @property {Shown} s the link as LK shows it at the document the beam leaves (`s.near`)
  * @property {Rect} line the line of the near end's stretches the beam leaves at
  * @property {Point} from where it leaves: the right edge of the block holding that line's stretch, level with the line's middle
- * @property {Point} to its far end: the left edge of the block holding the far stretch, level with that stretch's line nearest `from` — the far article's first block for a whole-work end or one that floats; where nothing is laid out there, the far document's centre
- * @property {boolean} aimed the stroke runs toward `to` and is cut at the visible view's border: the far end is not laid out, or it stands outside the visible view
- * @property {boolean} stub the far end is off screen — unmounted, or `to` outside the visible view: the cut carries the triangle on the true bearing
+ * @property {Point} to its far end: the left edge of the block holding the far stretch, level with that stretch's line nearest `from` — the far article's first block for a whole-work end or one that floats; where nothing is laid out there, the far document's box's centre
+ * @property {boolean} stub the far end is off screen, `to` outside the visible view (foundations §2.1): the stroke is cut at the view's border, and the cut carries the triangle on the true bearing
+ * @property {Point} end where the stroke ends: at `to`, or, for a stub, at the cut on the bearing to `to` (P-CAM's `edgeStub`)
  */
 
 /**
@@ -181,8 +187,8 @@ const mid = (/** @type {Rect} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
  * every stretch `project` places the far passage in (LK's `farRuns`), each
  * with its block; the far article's first block for a whole-work end and for
  * one that floats, where its follow lands; null where nothing places it —
- * its projection not read, or refused — so it is aimed at the far
- * document's box, never at the position the link stores.
+ * its projection not read, or refused — so it stands at the far document's
+ * box's centre, never at the position the link stores.
  * @param {Shown} s
  * @param {Geometry} g
  * @returns {Anchor[] | null}
@@ -190,6 +196,26 @@ const mid = (/** @type {Rect} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
 function farAnchors(s, g) {
   if (s.farWhole || LK.floats(s)) { const b = g.first(s.far); return b ? [{ line: b, block: b }] : []; }
   return s.farRuns ? anchorsOf(g, s.far, s.farRuns) : null;
+}
+
+/**
+ * A beam from `from` to its far end `to`, by where `to` stands (foundations
+ * §2.1: "the edge stub where the far end is off screen"): inside the visible
+ * view, its stroke ends at `to`, mounted or not; outside it, the beam is a
+ * stub, its stroke cut at the view's border on the bearing to `to` (P-CAM's
+ * `edgeStub`). Every beam `beamOf` lays out is made here, so its stub and
+ * where its stroke ends — and its bundle's label with it — are read from the
+ * one test against the one view.
+ * @param {Shown} s
+ * @param {Rect} line
+ * @param {Point} from
+ * @param {Point} to
+ * @param {Rect} view the visible view
+ * @returns {Beam}
+ */
+function beamTo(s, line, from, to, view) {
+  const stub = !holds(view, to);
+  return { s, line, from, to, stub, end: stub ? edgeStub(from, to, view) : to };
 }
 
 /**
@@ -208,12 +234,11 @@ export function beamOf(s, g) {
   if (far && far.length) {
     const { line, from } = leave(mid(far[0].line));
     const there = pickLine(far, from);
-    const to = { x: there.block.x, y: there.line.y + there.line.h / 2 }, off = !holds(g.view, to);
-    return { s, line, from, to, aimed: off, stub: off };
+    return beamTo(s, line, from, { x: there.block.x, y: there.line.y + there.line.h / 2 }, g.view);
   }
   const c = g.centre(s.far);
   const { line, from } = leave(c);
-  return { s, line, from, to: c, aimed: true, stub: !holds(g.view, c) || !g.mounted(s.far) };
+  return beamTo(s, line, from, c, g.view);
 }
 
 /** a beam's identity: its link and its two ends, unordered, each the document it stands at — the near end the one drawing it, the far end the one its slot names — with the key of the span the link stores for it (LK's `endKey`): the same beam whichever end it is drawn from, wherever either end stands now, and a beam from each document one stored end is drawn at */
@@ -316,18 +341,16 @@ export function draw() {
   const n = count();
   if (!n) return;
   const alpha = Math.max(0.25, Math.min(0.85, 24 / n));
-  /** where a beam's stroke ends: at its far end, or cut at the visible view's border on the way to it */
-  const endOf = (/** @type {Beam} */ bm) => (bm.aimed ? edgeStub(bm.from, bm.to, seen) : bm.to);
   for (const b of set) {
     for (const bm of b.members.slice(0, 20)) {
       const { hue, value, weight, linker } = bm.mark;
       ctx.strokeStyle = hue; ctx.globalAlpha = alpha * value; ctx.lineWidth = 1.6 * weight;
       ctx.setLineDash(linker === 'others' ? [5, 4] : []);
-      const { x: x0, y: y0 } = bm.from, end = endOf(bm), { x: x1, y: y1 } = end;
+      const { x: x0, y: y0 } = bm.from, { x: x1, y: y1 } = bm.end;
       const mx = (x0 + x1) / 2;
       ctx.beginPath(); ctx.moveTo(x0, y0); ctx.bezierCurveTo(mx, y0, mx, y1, x1, y1); ctx.stroke(); ctx.setLineDash([]);
       if (bm.stub) {
-        const [p, q, r] = stubTriangle(end, bm.to);
+        const [p, q, r] = stubTriangle(bm.end, bm.to);
         ctx.fillStyle = hue; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.lineTo(r.x, r.y); ctx.closePath(); ctx.fill();
       }
     }
@@ -336,7 +359,7 @@ export function draw() {
     const text = labelText(b);
     ctx.globalAlpha = 1; ctx.fillStyle = COL.text; ctx.font = LABEL_FACE;
     const m = ctx.measureText(text);
-    const at = labelPlace(endOf(first), { w: m.width, ascent: m.fontBoundingBoxAscent, descent: m.fontBoundingBoxDescent }, seen);
+    const at = labelPlace(first.end, { w: m.width, ascent: m.fontBoundingBoxAscent, descent: m.fontBoundingBoxDescent }, seen);
     if (!at) continue;
     ctx.textAlign = at.align;
     ctx.fillText(text, at.x, at.y);
