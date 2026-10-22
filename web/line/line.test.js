@@ -13,7 +13,15 @@
 // own (the walk's document at mid, the account the arithmetic finds at the
 // whole board's centre) turns red. A restart the shell re-opened leaves the
 // acting-as segment as it stood (client.md §4b.2: "no death chrome") — a
-// mutant that takes the restart for a death turns red. The sign-in act bears
+// mutant that takes the restart for a death, or re-opens it as a session no
+// write may go out under, turns red. The session's own `writes` decides the
+// segment: the keyless session for reading alone reads foundations §3.3
+// state 3's words, over an empty key store and over one holding a key bound
+// here for its principal, with no key claimed and no sign-in; a session that
+// writes reads state 2, naming the label of the key it is opened with — the
+// key bound here for its principal, else the store's one key (M-REC's
+// `device`) — so a mutant that reads every session as state 2, or decides by
+// a key bound at this board, turns red. The sign-in act bears
 // its id in the guest's line and in the death arm's, as Back does, so the
 // session's face standing at it finds it again as the line is rebuilt
 // (O-HOST's anchor) — a mutant that drops the id from either arm turns red.
@@ -56,7 +64,7 @@ before(async () => {
   fake = FAKE.create(script);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
-  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
   CAM.setViewport(1440, 900);
   await PUMP.loadWhole(D);
@@ -128,4 +136,35 @@ test('the sign-in act bears its id in the guest\'s line and in the death arm\'s,
   REC.setSession(was);
   assert.deepEqual([guest.state, dead.state], [1, 5], 'a guest\'s line, then the death arm');
   for (const s of [guest, dead]) assert.equal((s.html.match(/<button[^>]*data-act="signin"[^>]*>/g) || []).join(), '<button id="line-signin" data-act="signin">', `state ${s.state}: one sign-in act, bearing its id`);
+});
+
+test('the session\'s own `writes` decides the acting-as segment: the keyless session reads state 3\'s words over any key store, a session that writes reads state 2 with the label of the key it is opened with (foundations §3.1, §3.3; E16 (a′))', () => {
+  const was = { board: REC.board(), session: REC.session() };
+  const O = 'http://127.0.0.1:8642';
+  /** a key of the store as `fingerprint` answers it */
+  const key = (/** @type {string} */ fingerprint, /** @type {string} */ label, /** @type {string[]} */ bindings) => ({ fingerprint, label, bindings, unbound: !bindings.length, payload: null });
+  const here = key('e4272902a11439e5', 'dev-notebook', [`${O} principal 1 account 1.0.1`]);
+  const elsewhere = key('9a0c33f1b2d4e6a8', 'other-board', ['http://127.0.0.1:9000 principal 1 account 1.0.1']);
+  try {
+    REC.setBoard({ board: 'b-1', name: '', origin: O });
+    /** @type {Array<[ReturnType<typeof key>[], string]>} each key store, and what it holds */
+    const stores = [[[], 'an empty store'], [[here], 'a store holding a key bound here for the session\'s principal']];
+    for (const [store, holds] of stores) {
+      REC.takeKeyStore(store, O);
+      REC.setSession({ session: 's-2', principal: 1, account: '1.0.1', writes: false });
+      const seg = LINE.actingSegment();
+      assert.deepEqual([seg.state, seg.words], [3, t('F.keyless-session', { account: '1.0.1', origin: O })], `the keyless session over ${holds}: state 3's words`);
+      assert.deepEqual([seg.html.includes('data-string="F.keyless-session"'), seg.html.includes('F.acting-as'), seg.html.includes('key present on this device'), seg.html.includes('data-act="signin"')], [true, false, false, false], `over ${holds}: no acting-as, no key claimed, no sign-in`);
+    }
+    /** @type {Array<[ReturnType<typeof key>[], string, string]>} each key store, the label of the key the session is opened with, and what the store holds */
+    const signed = [[[elsewhere, here], 'dev-notebook', 'the key bound here for its principal, after one bound at another board'], [[elsewhere], 'other-board', 'the store\'s one key, bound at another board alone']];
+    for (const [store, label, holds] of signed) {
+      REC.takeKeyStore(store, O);
+      REC.setSession({ session: 's-3', principal: 1, account: '1.0.1', writes: true });
+      const seg = LINE.actingSegment();
+      assert.deepEqual([seg.state, seg.words], [2, t('F.acting-as', { account: '1.0.1', N: 1, 'device label': label, origin: O })], `a session that writes over ${holds}: state 2, naming ${label}`);
+    }
+  } finally {
+    REC.takeKeyStore([], O); REC.setBoard(was.board); REC.setSession(was.session);
+  }
 });

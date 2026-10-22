@@ -7,10 +7,12 @@
 // links as delivered with the type learned once (E17 (a)), where a link's
 // slot sits in a document's current text as `project` answered it, the
 // edition claims the active view lists on each origin a withheld run names
-// (PUB-5.124; `takeEditionClaims`), the board, the session REFERENCE (a
-// name, never a token), health and the derived mode, the daemon's state,
-// the key store's label and whether it
-// holds a key bound at this board (R56's "key present"); THE CLIENT INDEX
+// (PUB-5.124; `takeEditionClaims`), the board, the session as `session`
+// opened it (its REFERENCE, a name, never a token; its principal and
+// account; whether a write may go out under it), health and the derived
+// mode, the daemon's state, the device's key store as `fingerprint`
+// answered it — whether it holds a key bound at this board (R56's "key
+// present") and which of its keys is the session's (`device`); THE CLIENT INDEX
 // built from `places` (skep #463 — the documents per account, their labels,
 // kinds and standing; the counts per account; the index's state and floor),
 // each answer replacing the index whole, and kept by the feed's rows — never
@@ -69,6 +71,8 @@ import { byteOffsets } from '../util.js';
 /** @typedef {import('../bridge/shapes').Mode} Mode */
 /** @typedef {import('../bridge/shapes').DeathReason} DeathReason */
 /** @typedef {import('../bridge/shapes').Standing} Standing */
+/** @typedef {import('../bridge/shapes').SessionOpened} SessionOpened */
+/** @typedef {import('../bridge/shapes').FingerprintRow} FingerprintRow */
 
 /** the system account whose head document `H` the daemon writes (wire.md §The other endpoints: `1.1.0.1.0.2`) */
 export const SYSTEM_ACCOUNT = '1.1.0.1';
@@ -160,7 +164,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
 const state = {
   /** @type {{board: string, name: string, origin: string} | null} */
   board: null,
-  /** @type {{session: string, principal: number, account: string | null} | null} */
+  /** @type {SessionOpened | null} the session as `session` opened it: `writes` the signed session's, never the bare one's, which reads alone */
   session: null,
   /** @type {DeathReason | null} */
   sessionDied: null,
@@ -170,10 +174,8 @@ const state = {
   health: null,
   /** @type {Mode | null} */
   mode: null,
-  /** @type {{label: string | null, fingerprint: string} | null} the key store's device key, from `fingerprint` */
-  device: null,
-  /** does the key store hold a key bound at this board's origin, from `fingerprint` (`takeKeyStore`) */
-  keyPresent: false,
+  /** @type {Array<{label: string | null, fingerprint: string, principals: number[]}>} the key store's keys as `fingerprint` answers them, each with the principals its bindings name at this board's origin (`takeKeyStore`) */
+  keys: [],
   /** @type {'running' | 'stopped' | 'unreachable' | null} */
   daemon: null,
   /** @type {boolean} */
@@ -221,7 +223,7 @@ export const rev = () => state.rev;
 /** @param {{board: string, name: string, origin: string} | null} b */
 export function setBoard(b) { state.board = b; bump(); }
 export const board = () => state.board;
-/** @param {{session: string, principal: number, account: string | null} | null} s */
+/** @param {SessionOpened | null} s */
 export function setSession(s) { state.session = s; state.sessionDied = null; bump(); }
 export const session = () => state.session;
 /** @param {{kind: string, name: string} | null} r */
@@ -262,31 +264,53 @@ export function setMode(ev) {
 /** @param {'running' | 'stopped' | 'unreachable'} s */
 export function setDaemon(s) { state.daemonChanged = state.daemon !== null && state.daemon !== s; state.daemon = s; bump(); }
 export const daemon = () => state.daemon;
-/** @param {{label: string | null, fingerprint: string} | null} d */
-export function setDevice(d) { state.device = d; bump(); }
-export const device = () => state.device;
 /**
- * The key store as `fingerprint` answers it, read for this board: whether
- * some key is bound at its origin — each binding reads `⟨origin⟩ principal
- * ⟨N⟩ account ⟨A⟩`, so the origin is the binding's whole first field and
- * never a prefix of it (`…:8642` is not `…:86420`'s). A session's death
- * leaves it standing: the store is the device's, not the session's.
- * @param {Array<{bindings: string[]}>} rows the store's keys, each with its bindings
+ * The key store as `fingerprint` answers it, read for this board: each key's
+ * label and fingerprint, and the principals its bindings name at this
+ * board's origin — each binding reads `⟨origin⟩ principal ⟨N⟩ account ⟨A⟩`,
+ * so the origin is the binding's whole first field and never a prefix of it
+ * (`…:8642` is not `…:86420`'s), and the principal its whole second (`1` is
+ * not `12`). A session's death leaves it standing: the store is the
+ * device's, not the session's.
+ * @param {FingerprintRow[]} rows the store's keys, each with its bindings
  * @param {string} origin this board's origin, as `boards` answers it
  */
 export function takeKeyStore(rows, origin) {
-  state.keyPresent = rows.some((r) => r.bindings.some((b) => b.startsWith(origin + ' principal ')));
+  const head = origin + ' principal ';
+  const principalOf = (/** @type {string} */ b) => { const n = b.startsWith(head) ? b.slice(head.length).split(' ')[0] : ''; return /^\d+$/.test(n) ? [Number(n)] : []; };
+  state.keys = rows.map((r) => ({ label: r.label, fingerprint: r.fingerprint, principals: r.bindings.flatMap(principalOf) }));
   bump();
 }
-/** does the device's key store hold a key bound at this board (R56's "key present")? */
-export const keyPresent = () => state.keyPresent;
+/** does the device's key store hold a key bound at this board, for any principal (R56's "key present")? */
+export const keyPresent = () => state.keys.some((k) => k.principals.length > 0);
+/**
+ * The device's key for the page's session at this board, as the shell picks
+ * the key a signed session is opened with (skep-client's `FileStore::select`):
+ * the one key of the store bound here for the session's principal; else,
+ * under a session that writes, the store's one key, which the shell signs
+ * with where no binding names one. None for a guest; none where several keys
+ * are bound for the principal, for the shell signs with the newest binding
+ * and `fingerprint` does not order bindings across keys, and `session` does
+ * not name the key it opened with (reported: skep #579); none for a bare
+ * session no key is bound for, whose open read no key — so no label or
+ * fingerprint shown is of a key other than the one this principal's signed
+ * session is opened with here.
+ * @returns {{label: string | null, fingerprint: string} | null}
+ */
+export function device() {
+  const s = state.session;
+  if (!s) return null;
+  const bound = state.keys.filter((k) => k.principals.includes(s.principal));
+  const key = bound.length ? (bound.length === 1 ? bound[0] : null) : s.writes && state.keys.length === 1 ? state.keys[0] : null;
+  return key ? { label: key.label, fingerprint: key.fingerprint } : null;
+}
 /**
  * Who reads now — the acting account, or a guest's null, and whether a key
  * for this board is present: the one value every entitlement arm is decided
  * from (T-ARTICLE's `entitlementArm`).
  * @returns {Reader}
  */
-export const reader = () => ({ account: state.session ? state.session.account : null, keyPresent: state.keyPresent });
+export const reader = () => ({ account: state.session ? state.session.account : null, keyPresent: keyPresent() });
 
 // ---- the index -----------------------------------------------------------------
 
@@ -810,7 +834,7 @@ export const feedRows = () => state.feed.slice();
 /** reset everything (tests) */
 export function _reset() {
   state.board = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.health = null; state.mode = null;
-  state.device = null; state.keyPresent = false; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
+  state.keys = []; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.deaths = 0; state.editionClaims.clear(); state.claimDrops = 0;
   state.owners.clear(); state.keySets.clear(); state.feed = []; state.rev = 0;
 }

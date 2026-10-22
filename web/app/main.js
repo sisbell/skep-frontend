@@ -11,15 +11,17 @@
 // read takes the guest form and every screen its guest arm — a visitor's
 // page before any sign-in is asked (the harness's guest case; the installed
 // app loads with no query and never reaches it). Then `boards()` (the
-// reference kept), `session(board)` ONCE AT BOOT (S-37 (a) — the reference
-// kept for the page's life, never a token; `close(session)` at `pagehide`
-// on a keepalive fetch), `fingerprint()` (the device label, and whether a
-// key is bound at this board — R56's "key present", which the entitlement
-// arms read), `health(board)`, `probe()`, the model's index by M-PUMP's
-// `readIndex` (`places` at the page's class, skep #463), the launch frame
-// HOME — the acting account's region at mid scale, a guest's the board's
-// extent — the trail's first entry (foundations §2.2; W-01; N-GO's
-// `launch`).
+// reference kept), `session(board)` ONCE AT BOOT (S-37 (a) — the session
+// kept as the shell opened it: its reference for the page's life, never a
+// token, and whether a write may go out under it; `close(session)` at
+// `pagehide` on a keepalive fetch), `fingerprint()` (the device's key
+// store, read for this board: whether a key is bound here — R56's "key
+// present", which the entitlement arms read — and which key is the
+// session's, M-REC's `device`), `health(board)`, `probe()`, the model's
+// index by M-PUMP's `readIndex` (`places` at the page's class, skep #463),
+// the launch frame HOME — the acting account's region at mid scale, a
+// guest's the board's extent — the trail's first entry (foundations §2.2;
+// W-01; N-GO's `launch`).
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
 // frame, then P-RENDER, then BM, then O-HOST's place, the line — and the
@@ -191,14 +193,11 @@ async function boot() {
     if (board) {
       if (!GUEST) {
         const s = await PORT.session({ board: board.board });
-        if ('result' in s) REC.setSession({ session: s.result.session, principal: s.result.principal, account: s.result.account });
+        if ('result' in s) REC.setSession(s.result);
         else REC.setSessionRefused({ kind: s.refused.kind, name: s.refused.name });
       }
       const fp = await PORT.fingerprint({});
-      if ('result' in fp) {
-        REC.takeKeyStore(fp.result, board.origin);
-        const sess = REC.session(); const row = fp.result.find((r) => r.bindings.some((bd) => bd.includes(board.origin) && (!sess || bd.includes('principal ' + sess.principal)))) || fp.result[0]; if (row) REC.setDevice({ label: row.label, fingerprint: row.fingerprint });
-      }
+      if ('result' in fp) REC.takeKeyStore(fp.result, board.origin);
       const h = await PORT.health({ board: board.board });
       if ('result' in h) REC.setHealth(h.result.health, h.result.mode);
       const pr = await PORT.probe({});

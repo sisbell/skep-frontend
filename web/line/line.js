@@ -24,14 +24,20 @@
 // Enter or Mod+L opens it; the chord drawn for the platform in its title,
 // rule 19), which opens holding the address the display names (K-30), so the
 // box never opens on a place the line does not show; then the ACTING-AS
-// segment — STATE 2 through the signed session
-// ("acting as 1.0.1 (principal ⟨N⟩) · ⟨device label⟩ · key present on this
-// device · http://127.0.0.1:⟨P⟩ · LOCAL notebook"), STATE 1 where no session
-// stands ("reading as a guest" with its one act, sign in — the session's
-// refusal faced there), the death arm where the session died (C-137's
+// segment — STATE 2 through the signed session, the one a write may go out
+// under ("acting as 1.0.1 (principal ⟨N⟩) · ⟨device label⟩ · key present on
+// this device · http://127.0.0.1:⟨P⟩ · LOCAL notebook", the device label the
+// one M-REC's `device` names); STATE 3 through the keyless session for
+// reading alone, the bare session whose every write the shell refuses
+// ("reading as 1.0.1 with no key — local trust; writing needs your key · on
+// your LOCAL notebook · http://127.0.0.1:⟨P⟩"; foundations §3.1's line, §3.3
+// state 3, E16 (a′)) — the session's own `writes` deciding which, never a key
+// bound at this board, which speaks for no one session; STATE 1 where no
+// session stands ("reading as a guest" with its one act, sign in — the
+// session's refusal faced there), the death arm where the session died (C-137's
 // words) — never at a restart the shell re-opened, whose session M-PUMP
-// takes in the ended one's place (client.md §4b.2) — states 3–7 only as
-// the provider's events bring them; the DAEMON's
+// takes in the ended one's place (client.md §4b.2) — the other states only
+// as the provider's events bring them; the DAEMON's
 // segment (silent while the board runs; the notebook's forms where it does
 // not, "writes stopped on your notebook …" where `/health.writes.halted`);
 // the TRANSIENT segments (the swallow line K-9; the mode line C-31 where the
@@ -167,11 +173,15 @@ export function addressDisplay() {
 /** the sign-in act, the guest's and the death arm's: its id names it across the line's rebuilds, as Back's does, so the session's face standing at it finds it again (O-HOST's anchor) */
 const SIGN_IN = `<button id="line-signin" data-act="signin">${esc(t('F.sign-in'))}</button>`;
 
-/** the acting-as segment's words */
+/** the acting-as segment's words, and its state among foundations §3.3's seven */
 export function actingSegment() {
   const s = REC.session(), b = REC.board(), dev = REC.device(), dead = REC.deathReason(), refused = REC.sessionRefused();
   const origin = b ? b.origin : 'http://127.0.0.1:8642';
   if (!PORT.hasAdapter()) return { html: `<span data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`, state: 0, words: t('L.no-adapter') };
+  if (s && !s.writes) {
+    const words = t('F.keyless-session', { account: s.account || '', origin });
+    return { html: `<span data-string="F.keyless-session">${esc(words)}</span>`, state: 3, words };
+  }
   if (s) {
     const words = t('F.acting-as', { account: s.account || '', N: s.principal, 'device label': dev && dev.label ? dev.label : '⟨device label⟩', origin });
     return { html: `<span data-string="F.acting-as">${esc(words)}</span>`, state: 2, words };

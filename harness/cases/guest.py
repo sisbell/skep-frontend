@@ -17,7 +17,8 @@ where none is — "the guest's arm" below. Then, on the guest's page:
 (b) the one line in state 1: the guest line, the board's origin and the
     venue, its one act sign in standing — never pressed: what it does for a
     guest who has not tried is the design's to rule — and no acting-as
-    words, no key-present claim, no device label;
+    words, no key-present claim, no label of any key the device's store
+    holds;
 (c) HOME the board's extent (R92 rider (c)): the launch's focus the board,
     the trail's first entry, the address the clamp's line; the LEAP box
     listing no HOME level; Mod+Shift+H from a document returning there;
@@ -211,13 +212,13 @@ def run(ctx):
     ids = ctx.js('[...document.querySelectorAll("#line [data-string]")].map((e) => e.dataset.string)')
     signin = ctx.js('(() => { const b = document.querySelector("#line [data-act=signin]"); return b ? b.textContent : null; })()')
     origin = ctx.js('window.__skep.model.board().origin')
-    device = ctx.js('window.__skep.model.device()')
+    labels = sorted({row['label'] for row in store['rows'] if row.get('label')})
     r.check(line['state'] == 1 and 'B1.guest-line' in ids and 'F.venue.notebook' in ids and 'F.acting-as' not in ids,
             '(b) the one line\'s acting-as segment is in state 1: the guest line and the venue', {'state': line['state'], 'strings': ids})
     r.check(t(ctx, 'B1.guest-line') in line['text'] and origin in line['text'] and t(ctx, 'F.venue.notebook') in line['text'],
             '(b) the line reads "reading as a guest", the board\'s origin and the venue', line['text'])
-    claims = ['acting as', 'key present on this device'] + ([device['label']] if device and device.get('label') else [])
-    r.check(not [w for w in claims if w in line['text']], '(b) the line claims no acting account, no key on this device and no device label', {'found': [w for w in claims if w in line['text']], 'line': line['text']})
+    claims = ['acting as', 'key present on this device'] + labels
+    r.check(not [w for w in claims if w in line['text']], '(b) the line claims no acting account, no key on this device and no label of a key the device\'s store holds', {'found': [w for w in claims if w in line['text']], 'labels': labels, 'line': line['text']})
     r.check(signin == t(ctx, 'F.sign-in'), '(b) its one act, sign in, stands', signin)
     r.figures['line'] = line['text']
     # (c) HOME is the board's extent

@@ -24,6 +24,13 @@
 // another origin whose text begins with this one's (a mutant that finds the
 // origin anywhere in the binding turns red), never a key bound nowhere — and
 // the reader the arms are decided for keeping it through a session's death.
+// The session's key on this device: the one key bound here for its
+// principal, the binding's origin and principal each read whole; else, under
+// a session that writes, the store's one key; none for a guest, for two keys
+// bound for the principal, or for the bare session no key is bound for (a
+// mutant that matches the origin or the principal as a prefix, names the
+// store's first key, or names a key for a guest or the bare session turns
+// red); the death leaves the session no key and the store standing.
 // Every drop of an address counted — by `invalidate`, its record held or not
 // and none made for it, and by a death, every address's — and no read taken
 // moving the count (a mutant that counts no death turns red). The edition
@@ -310,6 +317,32 @@ test('the key store is read for this board: a key is present only where a bindin
   assert.equal(REC.keyPresent(), false, 'no key at all');
   REC.takeKeyStore([key(['http://127.0.0.1:9000 principal 2 account 1.0.2', `${O} principal 3 account 1.0.3`])], O);
   assert.equal(REC.keyPresent(), true, 'a key bound here among its other bindings, whatever its principal');
+});
+
+test('the session\'s key on this device is the one bound here for its principal — else, under a session that writes, the store\'s one key — and none for a guest, for two keys bound, or for the bare session no key is bound for', () => {
+  const O = 'http://127.0.0.1:8642';
+  /** a key of the store as `fingerprint` answers it, bound where its bindings say */
+  const key = (/** @type {string} */ fingerprint, /** @type {string} */ label, /** @type {string[]} */ bindings) => ({ fingerprint, label, bindings, unbound: !bindings.length, payload: null });
+  const here = key('e4272902a11439e5', 'dev-notebook', [`${O} principal 1 account 1.0.1`]);
+  const elsewhere = key('9a0c33f1b2d4e6a8', 'other-board', ['http://127.0.0.1:9000 principal 1 account 1.0.1']);
+  const signed = { session: 's-1', principal: 1, account: '1.0.1', writes: true };
+  REC.takeKeyStore([here], O);
+  assert.equal(REC.device(), null, '(a) a guest: no key is the session\'s, though one is bound here');
+  REC.setSession(signed);
+  REC.takeKeyStore([key('7c41d0e2a9b83f56', 'longer-origin', ['http://127.0.0.1:86420 principal 1 account 1.0.1']), key('3e8f62b1c0d4a975', 'longer-principal', [`${O} principal 12 account 1.0.12`])], O);
+  assert.equal(REC.device(), null, '(b) bound at an origin whose text begins with this one\'s, and here for principal 12: neither is principal 1\'s here');
+  REC.takeKeyStore([elsewhere, here], O);
+  assert.deepEqual(REC.device(), { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' }, '(c) the key bound here for the principal, never the store\'s first');
+  REC.takeKeyStore([here, key('5b1d77e0c9f2a3b4', 'second-device', [`${O} principal 1 account 1.0.1`])], O);
+  assert.equal(REC.device(), null, '(d) two keys bound here for the principal: the shell signs with the newest binding, which the store\'s answer does not order across keys');
+  REC.takeKeyStore([elsewhere], O);
+  assert.deepEqual(REC.device(), { label: 'other-board', fingerprint: '9a0c33f1b2d4e6a8' }, '(e) no key bound here, a session that writes: the store\'s one key, which the shell signs with');
+  REC.setSession({ ...signed, writes: false });
+  assert.equal(REC.device(), null, '(e) the bare session over the same store: no key opened it, and none is bound here for its principal');
+  REC.takeKeyStore([here], O);
+  REC.setSession(signed);
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual([REC.device(), REC.keyPresent()], [null, true], 'the death: no session, so no key is its; the device\'s store stands');
 });
 
 test('a session is a reference, never a token; the death signal drops it', () => {

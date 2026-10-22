@@ -93,7 +93,7 @@ import { metricsFor } from '../plane/layout.js';
 const D = '1.0.1.0.3';
 const script = {
   [FAKE.keyOf('boards', {})]: { result: [{ board: 'b-1', name: 'http://127.0.0.1:8642', origin: 'http://127.0.0.1:8642' }] },
-  [FAKE.keyOf('session', { board: 'b-1' })]: { result: { session: 's-1', principal: 1, account: '1.0.1' } },
+  [FAKE.keyOf('session', { board: 'b-1' })]: { result: { session: 's-1', principal: 1, account: '1.0.1', writes: true } },
   [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [{ doc: D, kind: 'edition', label: '# skep-ux-design', standing: 'public' }, { doc: '1.0.1.0.127', kind: 'edition', label: 'far', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'at_the_floor', floor: 8265 } } },
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.30' }] } },
   [FAKE.keyOf('op', { frame: F.docMetadata(D) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: D, published: true, owner: '1.0.1', birth: D + '.1', birth_extent: '30', placed: null, base_extent: null, source: null } },
@@ -115,7 +115,7 @@ test('the model after a scripted cold open and a whole read, over the fake port'
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
   const b = await PORT.boards({}); assert.ok('result' in b); REC.setBoard({ board: b.result[0].board, name: b.result[0].name, origin: b.result[0].origin });
-  const s = await PORT.session({ board: 'b-1' }); assert.ok('result' in s); REC.setSession({ session: s.result.session, principal: s.result.principal, account: s.result.account });
+  const s = await PORT.session({ board: 'b-1' }); assert.ok('result' in s); REC.setSession(s.result);
   const pl = await PORT.places({ session: 's-1', board: 'b-1' }); assert.ok('result' in pl); REC.takeIndex(pl.result);
   const d = await PUMP.loadWhole(D);
   assert.ok(d);

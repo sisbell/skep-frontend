@@ -105,6 +105,7 @@ export const STRINGS = {
 
   // ---- DRAFT: designs/foundations.md ----------------------------------------
   'F.acting-as': { text: 'acting as ⟨account⟩ (principal ⟨N⟩) · ⟨device label⟩ · key present on this device · ⟨origin⟩ · LOCAL notebook', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 2' },
+  'F.keyless-session': { text: 'reading as ⟨account⟩ with no key — local trust; writing needs your key · on your LOCAL notebook · ⟨origin⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 3' },
   'F.venue.notebook': { text: 'LOCAL notebook', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
   'F.venue.org': { text: 'PUBLIC org board', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
   'F.daemon.running': { text: 'board running', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },

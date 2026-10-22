@@ -1,8 +1,10 @@
 """TEXT — class 3 (the structure record §6.3; T3 (3); M8): the one line's
-segments in STATE 2 (acting as the claimant through the signed session); its
-address at a landing — the position the one the landing named, the trail's
-entry's (W-01 step 3, "position honored"), and the account the document's
-own account field, read whole (the agent space's `1.0.1.1`) — and at mid,
+segments in STATE 2 (acting as the claimant through the signed session, the
+model keeping it as the provider opened it: one a write may go out under,
+`SessionOpened.writes`); its address at a landing — the position the one
+the landing named, the trail's entry's (W-01 step 3, "position honored"),
+and the account the document's own account field, read whole (the agent
+space's `1.0.1.1`) — and at mid,
 zoomed out from the landing, the account under the camera alone, never the
 document the walk stands on or a position, the LEAP box opening on it
 (foundations §2.2; B1-S2; K-30); a face's words
@@ -66,6 +68,7 @@ def run(ctx):
     sess = ctx.js('window.__skep.model.session()')
     dev = ctx.js('window.__skep.model.device()')
     board = ctx.js('window.__skep.model.board()')
+    r.check((sess or {}).get('writes') is True, 'the model keeps the session as the provider opened it: one a write may go out under, the signed session STATE 2 speaks for', {k: (sess or {}).get(k) for k in ('principal', 'account', 'writes')})
     r.check(line['state'] == 2, 'the acting-as segment is in STATE 2 (a signed session stands)', line['state'])
     expect = 'acting as %s (principal %s) · %s · key present on this device · %s · LOCAL notebook' % (sess['account'], sess['principal'], dev['label'] if dev else '⟨device label⟩', board['origin'])
     r.check(norm(expect) in norm(line['text']), 'the acting-as segment reads foundations §3.3\'s STATE 2 with the session\'s values', {'expect': expect, 'line': line['text']})
