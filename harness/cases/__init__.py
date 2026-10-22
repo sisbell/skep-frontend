@@ -168,6 +168,15 @@ class Context:
         """wait n animation frames"""
         return self.js('new Promise(r => { let k = 0; const step = () => (++k >= %d ? r(true) : requestAnimationFrame(step)); requestAnimationFrame(step); })' % n)
 
+    def resize(self, width, height):
+        """the page's window set to `width` × `height` CSS px — the device metrics the driver launched the page with, at
+        another size, a scale factor of 1 — and three frames let pass for the page's `resize` and its redraw; answers
+        the size the window had, read from the page, to put back"""
+        was = self.js('[window.innerWidth, window.innerHeight]')
+        self.drv.call('Emulation.setDeviceMetricsOverride', {'width': width, 'height': height, 'deviceScaleFactor': 1, 'mobile': False})
+        self.frames(3)
+        return was
+
     def leap(self, addr, pos=None):
         self.js('window.__skep.go.leapTo(%s, %s)' % (json.dumps(addr), json.dumps(pos)))
         self.settle()

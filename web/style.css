@@ -179,7 +179,13 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #overlay input[type=text] { width:100%; font:inherit; background:#14181d; color:var(--ink); border:1px solid #4a5260; border-radius:3px; padding:4px 6px; margin:4px 0; }
 
 /* THE READING SCENE (law 12): chrome over the plane; places unmoved. Its panes are read and scrolled, never clicked, so
-   they carry none of the plane's click cues; its acts are its bar's buttons, the dismissal drawn as a bare × */
+   they carry none of the plane's click cues; its acts are its bar's buttons, the dismissal drawn as a bare ×. Each
+   pane's text fills its pane up to the reading measure, 66 characters of its own face (the typography review's findings
+   7 and 16: 45–90 a line, clamped in `ch`), and no window sets it wider; it stands against the pane's inner edge, where
+   the bands and lines leave the pane (foundations §2.5), its corner beside it on the outer side, so the room a wide
+   window adds falls outside both — before pane A's corner, after pane B's — and the text keeps its place beside the
+   bands at every width. An auto margin takes that room: in a pane too narrow for its corner and its text it falls to
+   nothing, and what overflows does so at the pane's end, inside its scroll, never past its start */
 #scene { position:fixed; inset:46px 20px 20px 20px; z-index:26; display:none; background:var(--bg); border:1px solid #6b7382; border-radius:4px; }
 #scene.on { display:block; }
 #scenebar { position:absolute; left:0; right:0; top:0; height:26px; padding:4px 10px; border-bottom:1px solid var(--line); color:var(--dim); font-size:11px; white-space:nowrap; overflow:hidden; }
@@ -187,6 +193,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #scenebar .x { float:right; color:var(--ink); background:none; border:0; padding:0; margin:0; }
 .pane { position:absolute; top:26px; bottom:0; width:calc(50% - 70px); overflow:auto; padding:14px 18px; display:flex; align-items:flex-start; gap:14px; }
 #sceneA { left:0; } #sceneB { right:0; }
-.pane .dtext { position:static; transform:none; font-size:14px; line-height:1.5; flex:1 1 auto; min-width:0; height:auto; cursor:text; }
+.pane .dtext { position:static; transform:none; font-size:14px; line-height:1.5; flex:1 1 auto; min-width:0; max-width:66ch; height:auto; cursor:text; }
 .pane .corner { position:sticky; top:0; flex:0 0 11em; }
+#sceneA > .corner { margin-left:auto; }
 #scenebeams { position:absolute; inset:26px 0 0 0; width:100%; height:calc(100% - 26px); pointer-events:none; }

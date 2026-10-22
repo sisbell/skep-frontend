@@ -80,7 +80,12 @@
 // its own document's corner (ux-T2: "each pane its own"; `T-LAYER.sceneCorner`
 // makes its items) on its OUTER side — pane A's left, pane B's right — held
 // to the top of the pane's scroll, so the bands and lines leave the inner
-// edges clear of it (foundations §3.1). THE PANES ARE READ, NOT ACTED ON
+// edges clear of it (foundations §3.1). Each pane's text is set at most at
+// the reading measure, in `ch` of its own face (the style's; the typography
+// review's findings 7 and 16), against the pane's inner edge with its corner
+// beside it: a window wider than the measure needs widens the outer margins,
+// never the line, and the text keeps its place beside the bands at every
+// width. THE PANES ARE READ, NOT ACTED ON
 // (B1-S9: "read both…; scroll each"): nothing in a pane takes a pointer — its
 // blocks, hairlines, symbols and presence ⟡ and its corner's version
 // statement carry none of the plane's click cues and are no controls

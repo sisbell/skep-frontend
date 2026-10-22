@@ -112,8 +112,16 @@ act's chord mark sets the two ends level again (K-62); the panes are read,
 never clicked (SC; B1-S9) — no block, hairline or symbol in a pane, nor its
 corner's version statement, takes the click cues the plane's keep, no block
 there takes the hover ground, and a click on any of them leaves the scene
-standing over the page as it found it; back on the plane, the
-box an edition shares with its members holds one article. THE CARRY
+standing over the page as it found it; each pane's line holds the reading
+measure (the typography review's findings 7 and 16: 45–90 characters, a
+measure that follows the window carrying its clamp) — at the run's window
+the text fills its pane beside its corner, and at a window SCENE_WIDE_PX
+wide it sets 45–90 characters of its face, the two panes alike, against the
+pane's inner edge where the bands leave it, its corner one gap beside it on
+the outer side, the plane under the scene parked meanwhile at the far band,
+where the view reads nothing, so the later cases meet the page as the check
+found it; back on the plane, the box an edition shares with its members
+holds one article. THE CARRY
 (foundations §2.3: every move from a passage to another arrangement of the
 same material carries it, re-projected at the landing and marked there;
 P43): the source act on the window paragraph's "who wrote this?" card, a
@@ -143,8 +151,9 @@ trail's, the stub's triangle's and the followed link's beam's, which read the
 canvases' pixels here, the
 stub's places, which the projection gives here, the symbols', which reads
 the article's order here, the click cues', which read the computed style
-here, the stand-in's, which sets its article and reads its blocks here, and
-the first span in view, which reads the article's blocks here; the
+here, the stand-in's, which sets its article and reads its blocks here, the
+scene's columns, which read the panes' boxes and a character of their text
+here, and the first span in view, which reads the article's blocks here; the
 thresholds are here. The beam-label and shared-box checks are
 marked with the page issues they wait on and count as expected while those
 stand."""
@@ -167,6 +176,12 @@ LINE_BOX_TOL_PX = 1 / 256
 # the scene's two matched lines, and a band's or a line's end against its passage's line
 LEVEL_TOL_PX = 1.0
 TIE_TOL_PX = 0.5
+# the scene's measure: a pane's line in characters of its face — the case's own range, the typography review's 45–90, held
+# apart from the page's value — the window wider than the measure needs that it is held at, and how far a column's edge,
+# or its width, may stand from where it is held
+SCENE_MEASURE_CH = (45, 90)
+SCENE_WIDE_PX = 2560
+MEASURE_TOL_PX = 0.5
 CORNER = '#corners [data-corner="%s"]' % DOC
 # the case's own floor for a label, held apart from the page's constant so that lowering the page's cannot pass here
 MIN_LABEL_PX = 9
@@ -637,10 +652,107 @@ def scene_marks_hold(ctx, r):
     return {'cues': {side: {k: len(cues[side][k]) for k in kinds} for side in ('pane', 'plane')}, 'hover': ground}
 
 
+def pane_columns(ctx):
+    """each scene pane's text column as a person meets it, by side: the pane's content box, its article's box — the text
+    column, a pane's article setting no padding of its own — and its corner's, the flex gap between them, and the advance
+    of one character of the text's own at the body's size: the first letter or digit of a paragraph's own text, the chrome
+    skipped; the window's size beside them"""
+    return ctx.js('''(() => { const side = (id) => {
+        const pane = document.getElementById(id), art = pane && pane.querySelector(':scope > article.dtext'), corner = pane && pane.querySelector(':scope > .corner');
+        if (!art || !corner) return null;
+        const p = pane.getBoundingClientRect(), s = getComputedStyle(pane), x0 = p.left + pane.clientLeft, a = art.getBoundingClientRect(), c = corner.getBoundingClientRect();
+        let ch = null;
+        for (const para of art.querySelectorAll('.run > p.sp')) {
+          const w = document.createTreeWalker(para, NodeFilter.SHOW_TEXT);
+          for (let n = w.nextNode(); n && ch == null; n = w.nextNode()) {
+            const i = n.textContent.search(/[A-Za-z0-9]/);
+            if (i < 0 || n.parentElement.closest('.hairline, .pubmark, .sym, .others')) continue;
+            const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1); ch = r.getBoundingClientRect().width;
+          }
+          if (ch != null) break;
+        }
+        return {content: {left: x0 + parseFloat(s.paddingLeft), right: x0 + pane.clientWidth - parseFloat(s.paddingRight)},
+                text: {left: a.left, right: a.right, w: a.width}, corner: {left: c.left, right: c.right, w: c.width}, gap: parseFloat(s.columnGap), ch};
+      };
+      return {vw: window.innerWidth, vh: window.innerHeight, a: side('sceneA'), b: side('sceneB')}; })()''')
+
+
+def scene_measure_holds(ctx, r):
+    """THE SCENE'S MEASURE (the typography review's findings 7 and 16: a line of 45–90 characters, and a measure that
+    follows the window carrying its clamp): the scene on the first edition and the draft it windows. At the run's window
+    each pane's text fills its pane beside its corner, the two columns alike; at a window SCENE_WIDE_PX wide, where a
+    pane holds more room than the measure, each column sets SCENE_MEASURE_CH characters of its face, the two alike, room
+    left past it, the column against its pane's inner edge — where the bands and lines leave the pane (foundations §2.5)
+    — and its corner one gap beside it on the outer side. While the window is wide the plane under the scene stands at
+    the far band, where the view reads nothing (M-PUMP's `pump`), so the run's later cases meet the page as the scene's
+    check found it; the window, the camera and the scene are put back as they stood. Its figures"""
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
+    ctx.settle()
+    ctx.frames(3)
+    run = pane_columns(ctx)
+    landing, box = ctx.camera(), ctx.js('window.__skep.boxOf(%s)' % json.dumps(DOC))
+    # the plane parked at the far band: a document's box half the band's lower edge wide
+    ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, ctx.js('window.__skep.constants.LOD_FAR_LO / 2 / window.__skep.constants.DOC_W'))
+    asked = ctx.js('window.__skep.bridge.calls().length')
+    was = ctx.resize(SCENE_WIDE_PX, run['vh'])
+    try:
+        ctx.settle()
+        wide = pane_columns(ctx)
+        band = ctx.js('window.__skep.view.lod().name')
+        reads = ctx.js('window.__skep.bridge.calls().length') - asked
+    finally:
+        ctx.resize(*was)
+        ctx.set_view(landing['x'], landing['y'], landing['scale'])
+        ctx.js('window.__skep.scene.close()')
+        ctx.frames(2)
+    back = ctx.js('[window.innerWidth, window.innerHeight]')
+    sides = (('a', 'pane A'), ('b', 'pane B'))
+    both = lambda v: bool(v['a'] and v['b'])
+
+    def cpl(c):
+        """a column's line in characters of its face"""
+        return c['text']['w'] / c['ch'] if c and c['ch'] else None
+
+    def room(c):
+        """the width a pane's content box holds for its text: its own, less its corner and the gap"""
+        return c['content']['right'] - c['content']['left'] - c['corner']['w'] - c['gap']
+
+    def alike(v):
+        return both(v) and abs(v['a']['text']['w'] - v['b']['text']['w']) <= MEASURE_TOL_PX
+
+    fills = {name: run[s] and round(room(run[s]) - run[s]['text']['w'], 3) for s, name in sides}
+    r.check(both(run) and all(abs(f) <= MEASURE_TOL_PX for f in fills.values()) and alike(run),
+            f'the scene at the run\'s {run["vw"]} px window: each pane\'s text fills its pane beside its corner and one gap, {MEASURE_TOL_PX} px either way, the two columns alike',
+            {'room_less_column': fills, 'columns': [run[s] and run[s]['text']['w'] for s, _ in sides]})
+    r.check(wide['vw'] == SCENE_WIDE_PX and band == 'far' and reads == 0 and back == [run['vw'], run['vh']],
+            f'the window set {SCENE_WIDE_PX} px wide with the plane under the scene at the far band, the page asking the board nothing while it stood so, and the window put back at the run\'s size after it',
+            {'wide': [wide['vw'], wide['vh']], 'band': band, 'reads': reads, 'back': back})
+    lo, hi = SCENE_MEASURE_CH
+    widths = {name: cpl(wide[s]) for s, name in sides}
+    r.check(both(wide) and all(w is not None and lo <= w <= hi for w in widths.values()) and alike(wide),
+            f'the scene at a {SCENE_WIDE_PX} px window: each pane\'s line holds {lo}–{hi} characters of its face, never the window\'s width, the two columns alike',
+            {'characters': {k: v and round(v, 2) for k, v in widths.items()}, 'columns': [wide[s] and wide[s]['text']['w'] for s, _ in sides]})
+    r.check(both(wide) and all(room(wide[s]) > wide[s]['text']['w'] + MEASURE_TOL_PX for s, _ in sides),
+            f'at a {SCENE_WIDE_PX} px window each pane holds more room than its column takes: the measure, not the pane, sets the line',
+            {name: wide[s] and {'room': room(wide[s]), 'column': wide[s]['text']['w']} for s, name in sides})
+    a, b = wide['a'], wide['b']
+    r.check(both(wide) and abs(a['text']['right'] - a['content']['right']) <= MEASURE_TOL_PX and abs(b['text']['left'] - b['content']['left']) <= MEASURE_TOL_PX,
+            f'at a {SCENE_WIDE_PX} px window each column stands against its pane\'s inner edge, where the bands leave the pane: pane A\'s ends at its content\'s right edge, pane B\'s starts at its left edge, {MEASURE_TOL_PX} px either way',
+            {name: wide[s] and {'content': wide[s]['content'], 'text': wide[s]['text']} for s, name in sides})
+    r.check(both(wide) and abs(a['corner']['right'] + a['gap'] - a['text']['left']) <= MEASURE_TOL_PX and a['corner']['left'] >= a['content']['left'] - MEASURE_TOL_PX
+            and abs(b['text']['right'] + b['gap'] - b['corner']['left']) <= MEASURE_TOL_PX and b['corner']['right'] <= b['content']['right'] + MEASURE_TOL_PX,
+            f'at a {SCENE_WIDE_PX} px window each pane\'s corner stands on its outer side, one gap from its text, inside the pane\'s content box',
+            {name: wide[s] and {'content': wide[s]['content'], 'text': wide[s]['text'], 'corner': wide[s]['corner'], 'gap': wide[s]['gap']} for s, name in sides})
+    return {'window': {'run': [run['vw'], run['vh']], 'wide': [wide['vw'], wide['vh']]},
+            'characters': {'run': {name: cpl(run[s]) and round(cpl(run[s]), 2) for s, name in sides}, 'wide': {k: v and round(v, 2) for k, v in widths.items()}},
+            'character_px': run['a'] and run['a']['ch'], 'band_while_wide': band, 'reads_while_wide': reads}
+
+
 def scene_holds(ctx, r):
-    """THE READING SCENE's checks: opened on the first edition and the draft it windows, nothing held; then from the
-    versions list of an edition with two members, its last paragraph held, read side by side with its latest member;
-    its figures"""
+    """THE READING SCENE's checks: opened on the first edition and the draft it windows, nothing held, its measure at the
+    run's window and a wide one, its panes read and never clicked; then from the versions list of an edition with two
+    members, its last paragraph held, read side by side with its latest member; its figures"""
     seen = {}
     ctx.leap(DOC, WINDOW[0])
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
@@ -653,6 +765,7 @@ def scene_holds(ctx, r):
     seen['origin'] = {'level': v and v['level'], 'ties': ties_hold(r, 'the scene on the window and its origin', ctx.js('window.__skep.scene.ties()'), 2)}
     ctx.js('window.__skep.scene.close()')
     ctx.frames(2)
+    seen['measure'] = scene_measure_holds(ctx, r)
     seen['marks'] = scene_marks_hold(ctx, r)
     # the versions list, a paragraph past the document's first held: "read side by side" with the latest member sets that paragraph level
     # with what the member holds of it. An edition no later case reads: the member's text, once loaded, stands over its document's box
