@@ -89,7 +89,11 @@ def run(ctx):
     frac = 0.12 + 0.8 * ((WINDOW[0] - 1) / doc['extent'])
     scale = ctx.camera()['scale']
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * frac, scale)
-    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s placeholder occupies the run — "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", never its bytes — R56\'s key-absent arm beneath it, then C-67\'s clause; the act at it, C-39\'s face, is the guest case\'s.', 'window-run-withheld',
+    # the guest's entitlement arm is picked by the device's key store (PUB-5.97), so the note names the one the shot shows
+    store = ctx.key_store()
+    arm = ('C-36\'s key-present arm, "sign in, then ask" — this device holds a key for the board' if store['key_here']
+           else 'R56\'s key-absent arm — this device holds no key for the board')
+    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s placeholder occupies the run — "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", never its bytes — the guest\'s entitlement arm beneath it, %s, then C-67\'s clause; the act at it, C-39\'s face, is the guest case\'s.' % arm, 'window-run-withheld',
          claims=[(PLACEHOLDER, 'the withheld run\'s placeholder', None)])
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     ghost = next((s for s in shown if s['far'] == GHOST), None)

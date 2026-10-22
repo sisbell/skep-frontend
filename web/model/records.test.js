@@ -11,7 +11,12 @@
 // first stretch turns red); `project`'s answers held in the text's order
 // until the document projected into is dropped, and every document holding
 // the link made again as they arrive and go (a mutant that bumps no revision
-// leaves an article titled from a projection no longer held).
+// leaves an article titled from a projection no longer held). The key store
+// read for this board: a key present only where a binding names its origin as
+// the binding's whole first field — never another origin whose text begins
+// with this one's (a mutant that finds the origin anywhere in the binding
+// turns red), never a key bound nowhere — and the reader the arms are decided
+// for keeping it through a session's death.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -193,6 +198,27 @@ test('a feed row names a document: the place is kept, what was held is dropped; 
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 12325, at: 12325, op: 'publish', docs: ['1.1.0.1.0.2.9'], class: 'published', key: 'system' }));
   assert.ok(REC.place('1.1.0.1.0.2')?.system);
   assert.equal(REC.feedRows().length, 3);
+});
+
+test('the key store is read for this board: a key is present only where a binding names its origin whole, and the reader keeps it through a session\'s death', () => {
+  const O = 'http://127.0.0.1:8642';
+  /** a key of the store as `fingerprint` answers it, bound where its bindings say */
+  const key = (/** @type {string[]} */ bindings) => ({ fingerprint: 'e4272902a11439e5', label: 'dev-notebook', bindings, unbound: !bindings.length, payload: null });
+  assert.deepEqual(REC.reader(), { account: null, keyPresent: false }, 'nothing read: a guest with no key');
+  REC.takeKeyStore([key([]), key([`${O} principal 1 account 1.0.1`])], O);
+  assert.deepEqual(REC.reader(), { account: null, keyPresent: true }, 'a guest whose device holds a key bound at this board');
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  assert.deepEqual(REC.reader(), { account: '1.0.1', keyPresent: true }, 'signed in');
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual(REC.reader(), { account: null, keyPresent: true }, 'the death ends the session and leaves the device\'s store standing');
+  REC.takeKeyStore([key(['http://127.0.0.1:86420 principal 1 account 1.0.1'])], O);
+  assert.equal(REC.keyPresent(), false, 'a binding at another origin whose text begins with this one\'s');
+  REC.takeKeyStore([key(['http://127.0.0.1:9000 principal 1 account 1.0.1']), key([])], O);
+  assert.equal(REC.keyPresent(), false, 'keys bound at another board, or nowhere');
+  REC.takeKeyStore([], O);
+  assert.equal(REC.keyPresent(), false, 'no key at all');
+  REC.takeKeyStore([key(['http://127.0.0.1:9000 principal 2 account 1.0.2', `${O} principal 3 account 1.0.3`])], O);
+  assert.equal(REC.keyPresent(), true, 'a key bound here among its other bindings, whatever its principal');
 });
 
 test('a session is a reference, never a token; the death signal drops it', () => {

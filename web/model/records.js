@@ -7,7 +7,8 @@
 // links as delivered with the type learned once (E17 (a)), where a link's
 // slot sits in a document's current text as `project` answered it, the
 // board, the session REFERENCE (a name, never a token), health and the
-// derived mode, the daemon's state, the key store's label; THE CLIENT INDEX
+// derived mode, the daemon's state, the key store's label and whether it
+// holds a key bound at this board (R56's "key present"); THE CLIENT INDEX
 // built from `places` (skep #463 — the documents per account, their labels,
 // kinds and standing; the counts per account; the index's state and floor),
 // each answer replacing the index whole, and kept by the feed's rows — never
@@ -134,6 +135,12 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number | null} principal
  */
 
+/**
+ * @typedef {Object} Reader — who reads, as the entitlement arm at a withheld document or run is decided for them (PUB-5.97's key-split defaults, in PUB-5.121's order; R56)
+ * @property {string | null} account the acting account, or null (a guest)
+ * @property {boolean} keyPresent the device's key store holds a key bound at this board's origin: PUB-5.97's "an enrolled key for this board present"
+ */
+
 const state = {
   /** @type {{board: string, name: string, origin: string} | null} */
   board: null,
@@ -149,6 +156,8 @@ const state = {
   mode: null,
   /** @type {{label: string | null, fingerprint: string} | null} the key store's device key, from `fingerprint` */
   device: null,
+  /** does the key store hold a key bound at this board's origin, from `fingerprint` (`takeKeyStore`) */
+  keyPresent: false,
   /** @type {'running' | 'stopped' | 'unreachable' | null} */
   daemon: null,
   /** @type {boolean} */
@@ -230,6 +239,28 @@ export const daemon = () => state.daemon;
 /** @param {{label: string | null, fingerprint: string} | null} d */
 export function setDevice(d) { state.device = d; bump(); }
 export const device = () => state.device;
+/**
+ * The key store as `fingerprint` answers it, read for this board: whether
+ * some key is bound at its origin — each binding reads `⟨origin⟩ principal
+ * ⟨N⟩ account ⟨A⟩`, so the origin is the binding's whole first field and
+ * never a prefix of it (`…:8642` is not `…:86420`'s). A session's death
+ * leaves it standing: the store is the device's, not the session's.
+ * @param {Array<{bindings: string[]}>} rows the store's keys, each with its bindings
+ * @param {string} origin this board's origin, as `boards` answers it
+ */
+export function takeKeyStore(rows, origin) {
+  state.keyPresent = rows.some((r) => r.bindings.some((b) => b.startsWith(origin + ' principal ')));
+  bump();
+}
+/** does the device's key store hold a key bound at this board (R56's "key present")? */
+export const keyPresent = () => state.keyPresent;
+/**
+ * Who reads now — the acting account, or a guest's null, and whether a key
+ * for this board is present: the one value every entitlement arm is decided
+ * from (T-ARTICLE's `entitlementArm`).
+ * @returns {Reader}
+ */
+export const reader = () => ({ account: state.session ? state.session.account : null, keyPresent: state.keyPresent });
 
 // ---- the index -----------------------------------------------------------------
 
@@ -650,7 +681,7 @@ export const feedRows = () => state.feed.slice();
 /** reset everything (tests) */
 export function _reset() {
   state.board = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.health = null; state.mode = null;
-  state.device = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
+  state.device = null; state.keyPresent = false; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
   state.links.clear(); state.projections.clear(); state.owners.clear(); state.keySets.clear(); state.feed = []; state.rev = 0;
 }
 

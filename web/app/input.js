@@ -124,7 +124,7 @@ export function attach(els) {
     const offer = target.closest('.offer');
     if (offer) { e.stopPropagation(); const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return; }
     const wh = target.closest('[data-withheld]');
-    if (wh) { e.stopPropagation(); const w = /** @type {HTMLElement} */ (wh); const s = REC.session(); FACES.c39(w.dataset.owner || '', s ? s.account : null, w); return; }
+    if (wh) { e.stopPropagation(); const w = /** @type {HTMLElement} */ (wh); FACES.c39(w.dataset.owner || '', REC.reader(), w); return; }
     // the platform selected text under the click (a double-click's word): the selection IS that span (R11)
     const span = LAYER.spanOfSelection();
     if (span && !sameSpan(span, LAYER.placedSpan())) { e.stopPropagation(); SEL.select(span.addr, span.pos, span.width); return; }

@@ -698,7 +698,7 @@ test('a follow whose far document the board withholds from the reader faces it w
   const before = addrs(), cursor = TRAIL.cursorIndex(), from = fake.asked.length;
   await run(GO.follow(drawn(LOCKED)));
   assert.equal(REC.doc(PRIVATE).refused, 'withheld', 'the board withholds the far document');
-  const f = faceShown(), arm = entitlementArm('1.0.1', PRIVATE_OWNER);
+  const f = faceShown(), arm = entitlementArm({ account: '1.0.1', keyPresent: false }, PRIVATE_OWNER);
   assert.equal(f && f.id, 'face:withheld', 'the document-level withheld face (A-170; B1-S8)');
   assert.ok(f && f.html.includes(`<div class="face-text" data-string="B1.withheld-box">${esc(t('B1.withheld-box', { owner: PRIVATE_OWNER }))}</div>`), `B1-S2's words naming ${PRIVATE_OWNER}, the seat above the far document's sub-account: ${f && f.html}`);
   assert.ok(f && f.html.includes(`<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>`), 'the entitlement arm for that owner and this reader beneath them');

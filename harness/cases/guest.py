@@ -5,7 +5,12 @@ the arrival from outside): the page opened afresh under `?gate=guest`, which
 boots it as shipped but never asks `session(board)`, so every read takes the
 guest form. What a guest must never meet is read first on the owner's signed
 page and kept: the window run's 240 bytes, the claimant's drafts with their
-first lines, the owner's places. Then, on the guest's page:
+first lines, the owner's places. The device's key store is read there too,
+through the page's port, and decided here apart from the page's own reading:
+whether a key is bound at the board's origin, which picks the entitlement arm
+every withheld thing shows a guest (PUB-5.97's key-split defaults, in
+PUB-5.121's order) — C-36's key-present arm where one is, R56's key-absent arm
+where none is — "the guest's arm" below. Then, on the guest's page:
 (a) the reads at guest class: the cold open's five calls, no session in the
     model, no `session` call in the page's own log or in the provider's from
     the navigation on, every `op` and `places` call in the guest form;
@@ -31,14 +36,17 @@ first lines, the owner's places. Then, on the guest's page:
     document the index does not list; at both landings the mirror's current
     item naming the document in its withheld box's words, never published;
     "who wrote this?" asked of that withheld document faced as its box names
-    it — B1-S2's words, R56's key-absent arm beneath (A-170) — with no token
+    it — B1-S2's words, the guest's arm beneath (A-170) — with no token
     unfilled and no act;
 (e) the window run at 1467 withheld: the model's block — its width, its
-    origin, no text — B1-S7's placeholder with its head, R56's key-absent arm
-    and no C-33 mark, none of the owner's bytes anywhere in the page, the
+    origin, no text — B1-S7's placeholder with its head, the guest's arm and
+    no C-33 mark, none of the owner's bytes anywhere in the page, the
     mirror's item the run's placeholder — its owner, its origin, the arm and
     the clause the placeholder shows (R94); the placeholder shown, and every row of
-    the article inside its box — marked, waiting on the placeholder set in the
+    the article inside its box, measured where the placeholder stands tallest,
+    under R56's key-absent arm — where the page holds a key present it reads
+    its store as holding none for the measure and as it held it after, page
+    state alone — marked, waiting on the placeholder set in the
     article's flow taller than the run it occupies; the content after the run
     opening with a separator alone, a block that sets no line, the margins
     about it collapsing into one as P-LAY collapses an empty row's — the
@@ -110,6 +118,14 @@ def t(ctx, sid, values=None):
     return ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(values or {})))
 
 
+def read_store_as(ctx, rows):
+    """the page reads the device's key store as `rows` and sets every standing article again from it — the page's own
+    state alone: nothing is written to the board or the store"""
+    ctx.js('(async () => { const R = await import("./model/records.js"), L = await import("./text/layer.js"); R.takeKeyStore(%s, R.board().origin); L.bump(); })()' % json.dumps(rows))
+    ctx.settle()
+    ctx.frames(2)
+
+
 def calls(ctx):
     """the page's own call log: each call's name, the argument object it posted and its outcome"""
     return [{'name': c['name'], 'args': json.loads(c['args']) if c.get('args') else None, 'outcome': c.get('outcome')} for c in ctx.js('window.__skep.bridge.calls()')]
@@ -138,6 +154,10 @@ def run(ctx):
             'the owner\'s page reads the window run\'s 240 bytes and lists the claimant\'s drafts — what the guest must never meet',
             {'run_bytes': len(secret.encode('utf8')), 'drafts': len(drafts)})
     draft_word = t(ctx, 'F.label.draft')
+    # the device's key store, which picks the guest's arm: read through the page's port, decided here
+    store = ctx.key_store()
+    arm_id = store['guest_arm']
+    r.figures['key_store'] = {k: store[k] for k in ('origin', 'key_here', 'bound', 'guest_arm', 'refused')}
     owner_docs = {p['doc'] for p in owner_places}
     own = squash(secret)
     stretches = {own[i:i + STRETCH] for i in range(max(0, len(own) - STRETCH + 1))}
@@ -242,10 +262,11 @@ def run(ctx):
       head: (e.querySelector('.wh-head') || {}).textContent || null, arm: (e.querySelector('.arm') || {}).textContent || null,
       clause: (e.querySelector('.clause') || {}).textContent || null}))''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
     head = t(ctx, 'B1.withheld-run', {'owner': OWNER, 'account': OWNER, 'width': WINDOW[1], 'origin': WINDOW[2]})
-    arm = t(ctx, 'R56.key-absent', {'owner': OWNER})
+    arm = t(ctx, arm_id, {'owner': OWNER})
     c33 = ctx.js('document.querySelectorAll(%s).length' % json.dumps('#domlayer article[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
     r.check(len(ph) == 1 and ph[0]['pos'] == WINDOW[0] and ph[0]['width'] == WINDOW[1] and ph[0]['origin'] == WINDOW[2] and ph[0]['head'] == head and ph[0]['arm'] == arm and c33 == 0,
-            '(e) the mounted article holds B1-S7\'s placeholder at the run — its position, width and origin, its head, R56\'s key-absent arm — and no C-33 mark', {'placeholders': ph, 'c33_marks': c33})
+            '(e) the mounted article holds B1-S7\'s placeholder at the run — its position, width and origin, its head, the guest\'s arm for this device\'s key store (%s) — and no C-33 mark' % arm_id,
+            {'placeholders': ph, 'c33_marks': c33, 'key_here': store['key_here']})
     leaked, legit_held = leaks(places)
     r.check(len(own) >= STRETCH and not leaked, f'(e) none of the owner\'s bytes over the run stands anywhere in the page: no stretch of {STRETCH} of its characters, white space folded, that the guest\'s own delivered text and labels do not hold', leaked[:4])
     # the mirror's item at the run says what the placeholder shows: its words filled from the placeholder's own owner, arm
@@ -262,9 +283,22 @@ def run(ctx):
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] * (0.12 + 0.8 * (WINDOW[0] - 1) / doc['extent']), ctx.camera()['scale'])
     vis = ctx.js('window.__skep.visible(%s)' % json.dumps(PLACEHOLDER))
     r.check(len(vis) == 1 and vis[0]['inClip'] and vis[0]['inView'], '(e) the placeholder is shown: inside the article\'s clip and the viewport', [{k: v[k] for k in ('rect', 'clip', 'inClip', 'inView')} for v in vis])
+    # containment is held where the placeholder stands tallest: under R56's key-absent arm, the longest arm a guest meets.
+    # Where the page holds a key present, it reads its store as holding none for the measure, and as it held it after —
+    # the page's own state put back, never the harness's reading, so every check after this one meets what the page made
+    here = ctx.js('window.__skep.overlapCheck()')
+    held = ctx.js('(async () => (await import("./model/records.js")).keyPresent())()')
+    if held:
+        read_store_as(ctx, [])
+    keyless = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.querySelector(".arm").textContent : null; })()' % json.dumps(PLACEHOLDER))
     ov = ctx.js('window.__skep.overlapCheck()')
-    r.check(not ov['blocks_cut'], '(e) containment at guest class: every row of the first edition — the placeholder and the text after it among them — lies inside its clip and its box',
+    r.check(keyless == t(ctx, 'R56.key-absent', {'owner': OWNER}), '(e) for the measure the placeholder stands under R56\'s key-absent arm, the tallest a guest meets', keyless)
+    r.check(not ov['blocks_cut'], '(e) containment at guest class, the placeholder under R56\'s key-absent arm: every row of the first edition — the placeholder and the text after it among them — lies inside its clip and its box',
             {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']}, xfail=XFAIL_FACE)
+    if held:
+        read_store_as(ctx, store['rows'])
+    back = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.querySelector(".arm").textContent : null; })()' % json.dumps(PLACEHOLDER))
+    r.check(back == arm, '(e) after the measure the placeholder stands under the guest\'s arm for this device\'s key store again (%s)' % arm_id, back)
     # the content after the run opens with a separator alone: the margins about that empty block collapse into one, as
     # P-LAY collapses an empty row's, so the block after it stands as far below the placeholder as its bars stand below
     # the run's — the larger of their margins apart, never the empty block's gap more
@@ -275,7 +309,8 @@ def run(ctx):
             f'(e) the margins about that empty block collapse into one: the block after it stands below the placeholder as its bars stand below the run\'s, at the layout size, {GAP_TOL_PX} px either way', gap)
     r.figures['shots'].append(ctx.shot('guest/window-run.png'))
     r.figures['run'] = {'placeholder': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': legit_held, 'mirror_item': item, 'shown': vis,
-                        'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px'], 'after_run': gap}
+                        'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px'], 'after_run': gap,
+                        'under_the_guests_arm': {'arm': arm_id, 'blocks_cut': here['blocks_cut'][:8], 'worst_overflow_px': here['worst_overflow_px']}}
 
     # (c) the LEAP box at the first edition: no HOME level
     ctx.leap(DOC, WINDOW[0])
@@ -295,8 +330,9 @@ def run(ctx):
     ctx.frames(2)
     face = ctx.js('''(() => { const o = document.getElementById('overlay'), a = o.querySelector('.arm'), w = o.querySelector('.face-text');
       return {id: window.__skep.overlay().id, text: w ? w.textContent : null, arm: a ? a.textContent : null, arm_id: a ? a.dataset.string : null}; })()''')
-    r.check(face['id'] == 'face:C-39' and face['text'] == t(ctx, 'C-39', {'owner': OWNER}) and face['arm'] == arm and face['arm_id'] == 'R56.key-absent',
-            '(f) the act at the run conjures C-39\'s face, the entitlement arm beneath it the placeholder\'s own: R56\'s key-absent default for a guest (B1-S5)', {'face': face, 'placeholder_arm': arm[:80]})
+    r.check(face['id'] == 'face:C-39' and face['text'] == t(ctx, 'C-39', {'owner': OWNER}) and face['arm'] == arm and face['arm_id'] == arm_id,
+            '(f) the act at the run conjures C-39\'s face, the entitlement arm beneath it the placeholder\'s own: the guest\'s arm for this device\'s key store, %s (B1-S5; PUB-5.97)' % arm_id,
+            {'face': face, 'placeholder_arm': arm[:80], 'key_here': store['key_here']})
     r.figures['shots'].append(ctx.shot('guest/c39-face.png'))
     r.figures['c39'] = face
     ctx.esc()
@@ -354,11 +390,11 @@ def run(ctx):
     face = ctx.js('''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm');
       return {id: window.__skep.overlay().id, words: w ? w.textContent : null, words_id: w ? w.dataset.string : null, arm: a ? a.textContent : null,
               arm_id: a ? a.dataset.string : null, text: o.textContent, acts: o.querySelectorAll('[data-run]').length}; })()''')
-    key_absent = t(ctx, 'R56.key-absent', {'owner': SECOND_ACCOUNT})
-    r.check(face['id'] == 'face:withheld' and face['words_id'] == 'B1.withheld-box' and face['words'] == want[1] and face['arm_id'] == 'R56.key-absent' and face['arm'] == key_absent
+    guests_arm = t(ctx, arm_id, {'owner': SECOND_ACCOUNT})
+    r.check(face['id'] == 'face:withheld' and face['words_id'] == 'B1.withheld-box' and face['words'] == want[1] and face['arm_id'] == arm_id and face['arm'] == guests_arm
             and '⟨' not in face['text'] and face['acts'] == 0,
-            '(d) "who wrote this?" asked of the withheld document faces it as its box names it — "%s" — R56\'s key-absent arm naming %s beneath, no token unfilled and no act (A-170)' % (want[1], SECOND_ACCOUNT),
-            {'face': face, 'key_absent': key_absent[:80]})
+            '(d) "who wrote this?" asked of the withheld document faces it as its box names it — "%s" — the guest\'s arm for this device\'s key store beneath, %s for %s, no token unfilled and no act (A-170)' % (want[1], arm_id, SECOND_ACCOUNT),
+            {'face': face, 'guests_arm': guests_arm[:80], 'key_here': store['key_here']})
     r.figures['shots'].append(ctx.shot('guest/withheld-face.png'))
     r.figures['withheld_face'] = face
     ctx.esc()

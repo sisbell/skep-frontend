@@ -269,14 +269,13 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     selected: read.selection(), focus: litFocus(scene),
     marks: LK.shown(d.addr), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr), floats: LK.floats, countAt: (b) => LK.countAt(d.addr, b),
     wholeLinks: LK.wholeLinks(d.addr).length,
-    sessionAccount: s ? s.account : null,
+    reader: REC.reader(),
     localTrust: !!(h && h.auth && h.auth.local_trust),
     notebook: true,
     scene, originKinds,
     originOwner,
     deviceLabel: isOwnerYou && device ? device.label : null,
     ownerFingerprint: isOwnerYou && device ? device.fingerprint : null,
-    keyPresent: isOwnerYou && !!device,
   };
   void ownerRow; void fingerprintCue;
   return v;

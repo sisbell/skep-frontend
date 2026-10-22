@@ -170,6 +170,19 @@ class Context:
         self.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, scale)
         return scale
 
+    def key_store(self):
+        """the device's key store as the provider answers `fingerprint` — read through the open page's port, a read of
+        the store that writes nothing — and decided here, apart from the page's own reading: the board's origin, the
+        store's rows, the bindings at that origin (each reads `⟨origin⟩ principal ⟨N⟩ account ⟨A⟩`, the origin its
+        whole first field), whether any key is bound there, and the entitlement arm a guest meets for it by PUB-5.97's
+        key-split defaults: C-36's key-present arm where one is, R56's key-absent arm where none is"""
+        origin = self.js('window.__skep.model.board().origin')
+        fp = self.js('(async () => (await import("./bridge/port.js")).fingerprint({}))()') or {}
+        rows = fp.get('result') or []
+        bound = [b for row in rows for b in row.get('bindings') or [] if b.startswith(origin + ' principal ')]
+        return {'origin': origin, 'rows': rows, 'bound': bound, 'key_here': bool(bound), 'refused': fp.get('refused'),
+                'guest_arm': 'C-36.guest.key' if bound else 'R56.key-absent'}
+
     # ---- the provider and the board (the harness's own reads, never the page's) ----
     def provider_get(self, path):
         req = urllib.request.Request(self.provider + path, headers={'Origin': PAGE_ORIGIN, 'Skep-Provider': self.secret})

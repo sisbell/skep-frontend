@@ -16,10 +16,11 @@
 // the walk attaches it, and each level's group by its own level — a mutant
 // that drops the tree's name, or names every group by one level, turns red.
 // The mirror's item at a withheld run is the run's placeholder — the owner of
-// its origin, R56's arm for the reader, C-67's clause — as the plane's
-// placeholder shows them, for a signed-in reader and a guest: a mutant that
-// names the owner of the document windowing the run, or the origin's account,
-// or gives both readers one arm, or drops the clause, turns red. A document a
+// its origin, the arm for the reader, C-67's clause — as the plane's
+// placeholder shows them, for a signed-in reader, a guest whose device holds
+// a key for this board and a guest with none: a mutant that names the owner
+// of the document windowing the run, or the origin's account, or gives two
+// readers one arm, or drops the clause, turns red. A document a
 // read answered `withheld` is named by its withheld box's words, its owner
 // the seat above a sub-account by the one owner rule: a mutant that calls it
 // published, or names the sub-account, turns red. A link whose far end floats
@@ -239,7 +240,7 @@ test('a walk key whose flight a later walk key cut short ends: the walk on the s
   assert.deepEqual(walkAt(), ['block', D, 27]);
 });
 
-test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin\'s owner, R56\'s arm for the reader and C-67\'s clause, as the plane\'s placeholder shows them (R56; R94)', () => {
+test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin\'s owner, the entitlement arm for the reader and C-67\'s clause, as the plane\'s placeholder shows them (R56; R94)', () => {
   // a document of 1.0.2's windowing a run of 1.0.1.1's: an unallocated sub-account, whose owner is the seat above it
   const W = '1.0.2.0.5', O = '1.0.1.1.0.2', owner = '1.0.1';
   REC.takeOwner('1.0.1.1', { prefix: owner, principal: 900 });
@@ -251,19 +252,25 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
   const words = STRINGS['L.mirror.withheld'].text;
   assert.ok(['⟨owner⟩', '⟨origin⟩', '⟨arm⟩', '⟨clause⟩'].every((k) => words.includes(k)), `the item's words carry the owner, the origin, the arm and the clause: ${words}`);
   const signedIn = REC.session();
+  // the device's key store as `fingerprint` answers it: a key bound at this board, or none
+  const ORIGIN = 'http://127.0.0.1:8642', BOUND = [{ bindings: [ORIGIN + ' principal 1 account 1.0.1'] }];
+  /** @type {Array<[typeof signedIn, Array<{bindings: string[]}>, string]>} each reader, the device's keys, and the arm the rule gives them */
+  const readers = [[signedIn, BOUND, 'C-36.owner-grant.arm'], [null, BOUND, 'C-36.guest.key'], [null, [], 'R56.key-absent']];
   try {
-    for (const reader of [signedIn, null]) {
-      REC.setSession(reader);
-      const who = reader ? reader.account : null, arm = entitlementArm(who, owner).text, clause = t('C-67.pointer');
+    for (const [reader, keys, id] of readers) {
+      REC.setSession(reader); REC.takeKeyStore(keys, ORIGIN);
+      const who = reader ? reader.account : keys.length ? 'a guest with a key for this board' : 'a guest with no key';
+      const rule = entitlementArm({ account: reader ? reader.account : null, keyPresent: keys.length > 0 }, owner), arm = rule.text, clause = t('C-67.pointer');
+      assert.equal(rule.id, id, `${who}: the rule's arm is ${id}`);
       const item = WALK.nameOf({ kind: 'block', addr: W, pos: run.pos, link: null }, 1, 2);
       assert.equal(item, t('L.mirror.withheld', { document: W, width: 240, owner, origin: O, arm, clause }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
-        `${who ?? 'a guest'}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause`);
+        `${who}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause`);
       const html = withheldBlockHTML(run, d, LAYER.viewFor(d));
       assert.ok(html.includes(` data-owner="${owner}"`) && html.includes(`<span class="arm">${esc(arm)}</span>`) && html.includes(`<span class="clause">${esc(clause)}</span>`),
-        `${who ?? 'a guest'}: the plane's placeholder shows the same owner, arm and clause`);
+        `${who}: the plane's placeholder shows the same owner, arm and clause`);
     }
   } finally {
-    REC.setSession(signedIn);
+    REC.setSession(signedIn); REC.takeKeyStore([], ORIGIN);
   }
 });
 

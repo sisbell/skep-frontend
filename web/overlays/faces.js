@@ -48,6 +48,7 @@ import { esc } from '../util.js';
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 /** @typedef {import('../bridge/shapes').MomentEvent} MomentEvent */
 /** @typedef {import('./host.js').Anchor} Anchor */
+/** @typedef {import('../model/records.js').Reader} Reader */
 
 /**
  * @typedef {Object} Face
@@ -149,8 +150,8 @@ export function unregistered(addr, anchor = null) {
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] the act's site
  */
 export function withheld(addr, anchor = null) {
-  const d = REC.doc(addr), s = REC.session();
-  const arm = entitlementArm(s ? s.account : null, LAYER.ownerAccount(d));
+  const d = REC.doc(addr);
+  const arm = entitlementArm(REC.reader(), LAYER.ownerAccount(d));
   HOST.show({ kind: 'face', id: 'face:withheld', anchor: toAnchor(anchor), html: faceHTML({ id: 'B1.withheld-box', text: LAYER.withheldBox(d), acts: [] }, armHTML(arm)) });
 }
 
@@ -181,11 +182,11 @@ export function floating(far, anchor, offer = true) {
 }
 
 /**
- * C-39: a link address inside a withheld document — R56's entitlement arm
- * beneath, by the rule the run's placeholder reads, and not the clause
- * (B1-S5).
+ * C-39: a link address inside a withheld document — the entitlement arm for
+ * this reader beneath, by the rule the run's placeholder reads, and not the
+ * clause (B1-S5).
  * @param {string} owner the withheld document's owner account
- * @param {string | null} reader the acting account, or null (a guest)
+ * @param {Reader} reader who reads (M-REC's `reader`)
  * @param {Anchor | HTMLElement | null} anchor
  */
 export function c39(owner, reader, anchor) {

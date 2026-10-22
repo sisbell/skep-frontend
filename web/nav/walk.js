@@ -44,10 +44,10 @@
 // `L.mirror-level`, and each item by ST's `L.mirror.*` entries — what a screen
 // reader hears is the focus moving onto the item (rule 12); no live region
 // repeats it (D4). A withheld run's item is made from the record the plane's
-// placeholder is (T-ARTICLE's `placeholderOf`: the owner of its origin, R56's
-// arm for this reader, C-67's clause — R56, B1-S7), and a document a read
-// answered `withheld` is named by its withheld box's words (T-LAYER's
-// `withheldBox`: existence and owner — B1-S2), and a link whose far end floats
+// placeholder is (T-ARTICLE's `placeholderOf`: the owner of its origin, the
+// entitlement arm for this reader, C-67's clause — R56, B1-S7), and a
+// document a read answered `withheld` is named by its withheld box's words
+// (T-LAYER's `withheldBox`: existence and owner — B1-S2), and a link whose far end floats
 // says "its passage is not in ⟨D⟩'s current text" as its symbol's title and
 // its stub do (LK's `floats`; foundations §2.3), so at each a screen reader
 // hears what the plane shows (R94). The mirror is rebuilt whole on every
@@ -190,7 +190,7 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
     const d = REC.doc(n.addr); const b = d.blocks.find((x) => x.pos === n.pos);
     if (!b) return t('L.mirror.span.bare', { p: n.pos ?? '', document: n.addr }) + pos;
     if (b.kind === 'withheld') {
-      const s = REC.session(), w = placeholderOf(b, s ? s.account : null, LAYER.originOwner);
+      const w = placeholderOf(b, REC.reader(), LAYER.originOwner);
       return t('L.mirror.withheld', { document: n.addr, width: b.width, owner: w.owner, origin: b.origin || '', arm: w.arm.text, clause: w.clause }) + pos;
     }
     const org = d.origins.find((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);

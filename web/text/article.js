@@ -24,7 +24,9 @@
 // withheld block OCCUPYING its positions and naming the owner of its run's
 // origin, whoever owns the document windowing it (R56: the copy derives per
 // origin; B1-S7),
-// with R56's arm for that owner by PUB-5.121's order and C-67's
+// with the entitlement arm for that owner and this reader by PUB-5.121's
+// order — a signed-in reader's owner-grant default, a guest's split on
+// whether this device holds a key for the board (PUB-5.97) — and C-67's
 // clause beneath — the placeholder's one record (`placeholderOf`), which the
 // ARIA mirror's item at the run reads too, so the run a sighted reader sees
 // and the one a screen reader hears never part (R94); a record atom rendered
@@ -65,6 +67,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
 /** @typedef {import('../model/records.js').Origin} Origin */
+/** @typedef {import('../model/records.js').Reader} Reader */
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../plane/register.js').Mark} Mark */
 /** @typedef {import('./span.js').Span} Span */
@@ -81,7 +84,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {(s: Shown) => boolean} floats whether a drawn link's far end floats, its far document's current text holding none of its passage (LK.floats)
  * @property {(block: Block) => {n: number, social: boolean}} countAt the others' count per block (LK.countAt)
  * @property {number} wholeLinks the links to this document as a whole
- * @property {string | null} sessionAccount the acting account, or null (a guest)
+ * @property {Reader} reader who reads (M-REC's `reader`): the acting account, or a guest's null, and whether a key for this board is present
  * @property {boolean} localTrust the board's flag (the chip's form)
  * @property {boolean} notebook the venue
  * @property {boolean} scene the scene-mode variant: a reading scene's pane's article — no scene-offer, and no mark a control
@@ -89,7 +92,6 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {(doc: string) => string} originOwner the owner account of an origin document, by the one rule the byline's owner is found by (T-LAYER's `ownerAccount`): the owner a withheld run's placeholder names (R56)
  * @property {string | null} deviceLabel the owner's device label where known
  * @property {string | null} ownerFingerprint the owner's device key fingerprint where known
- * @property {boolean} keyPresent is the owner's key on this device (the owner is the person)
  */
 
 /**
@@ -194,7 +196,7 @@ function recordOf(b, d, v) {
   let rec = null;
   try { rec = JSON.parse(b.text); } catch { rec = null; }
   if (rec && rec.type === 'skep-enroll') {
-    const yours = v.sessionAccount && d.account === v.sessionAccount;
+    const yours = v.reader.account && d.account === v.reader.account;
     const words = yours ? t('F.home-record.yours') : t('F.home-record.other', { owner: d.account || '' });
     const keys = (rec.keys || []).map((k) => `${k.label || ''} · ${k.anchor ? 'ANCHOR' : 'device'}`).join(' · ');
     return { type: 'skep-enroll', words, keys, position: null, chain: '' };
@@ -221,17 +223,27 @@ export function recordHTML(b, d, v) {
 
 /**
  * The entitlement arm beneath what a document withheld from the reader shows —
- * a run of it, or the document itself — by PUB-5.121's order: for the
- * acting person with a key present and no grant, the owner-grant default;
- * for a guest with no key, R56's key-absent default. The one rule the run's
- * placeholder, C-39's face at the run and the document-level withheld face
- * (O-FACES's `withheld`) read (B1-S5, B1-S7; A-170).
- * @param {string | null} reader the acting account, or null (a guest)
+ * a run of it, or the document itself — by PUB-5.121's order over PUB-5.97's
+ * key-split defaults: for a signed-in principal, the owner-grant default,
+ * whatever key signed the session or none; for a guest whose device holds a
+ * key bound at this board, C-36's key-present default — sign in, then ask;
+ * for a guest with none, R56's key-absent default, naming the owner. The one
+ * rule the run's placeholder, C-39's face at the run and the document-level
+ * withheld face (O-FACES's `withheld`) read (B1-S5, B1-S7; A-170). The order's
+ * first arms are never picked here: the universal arm is a guest's at a
+ * universally granted origin, and the board answers a guest no universal
+ * grant (wire.md §Grants); the revoked arm's record reaches the page only in
+ * a raw link read, which no face may be made from (PUB-5.21) — the two wait
+ * on a read the board does not serve (skep #577); the no-grant arm is a
+ * build's without a grant primitive, which this board has.
+ * @param {Reader} reader who reads (M-REC's `reader`)
  * @param {string} owner the owner account of the document withheld — a run's origin's
  * @returns {{id: string, text: string}} the arm's string id and its words
  */
 export function entitlementArm(reader, owner) {
-  return reader ? { id: 'C-36.owner-grant.arm', text: t('C-36.owner-grant.arm') } : { id: 'R56.key-absent', text: t('R56.key-absent', { owner }) };
+  if (reader.account) return { id: 'C-36.owner-grant.arm', text: t('C-36.owner-grant.arm') };
+  if (reader.keyPresent) return { id: 'C-36.guest.key', text: t('C-36.guest.key') };
+  return { id: 'R56.key-absent', text: t('R56.key-absent', { owner }) };
 }
 
 /**
@@ -253,7 +265,7 @@ export function entitlementArm(reader, owner) {
  * both made from it: R94's one record, never a second rendering that can
  * drift.
  * @param {Block} b the withheld run
- * @param {string | null} reader the acting account, or null (a guest)
+ * @param {Reader} reader who reads (M-REC's `reader`)
  * @param {(doc: string) => string} originOwner the owner account of an origin document, by the one owner rule (T-LAYER's `originOwner`)
  * @returns {Placeholder}
  */
@@ -276,7 +288,7 @@ export function placeholderOf(b, reader, originOwner) {
  * @param {ArticleView} v
  */
 export function withheldBlockHTML(b, d, v) {
-  const p = placeholderOf(b, v.sessionAccount, v.originOwner);
+  const p = placeholderOf(b, v.reader, v.originOwner);
   return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}">` +
     `<span class="wh-head">${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span><span class="clause">${esc(p.clause)}</span></span>`;
 }

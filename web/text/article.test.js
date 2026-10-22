@@ -1,6 +1,11 @@
 // T-ARTICLE's test: the article from a record — the withheld block occupies
 // its run with its width and never its text, its entitlement arm the one
-// rule's for the reader (C-39's face reads it too); the owner's link marked at its
+// rule's for the reader (C-39's face reads it too): a signed-in principal's
+// owner-grant default, whatever key signed the session; a guest whose device
+// holds a key for this board C-36's key-present default, never told that no
+// key on this device opens an account (a mutant that decides on the session
+// alone turns red); a guest with none R56's key-absent default, naming the
+// owner; the owner's link marked at its
 // span, and a stretch several links mark in the one mark they merge into —
 // neutral in the hue where their linkers differ, lighter only where every one
 // was followed (a mutant that takes the first link's mark turns red); the
@@ -45,11 +50,16 @@ import { t } from '../strings.js';
 import { esc } from '../util.js';
 import { accountOf } from '../model/address.js';
 
+/** @typedef {import('../model/records.js').Reader} Reader */
+/** the readers the arm is decided for: signed in, with a key bound at this board and with none; a guest with a key here; a guest with none */
+const SIGNED = /** @type {Reader} */ ({ account: '1.0.1', keyPresent: true }), BARE = /** @type {Reader} */ ({ account: '1.0.1', keyPresent: false });
+const KEYED = /** @type {Reader} */ ({ account: null, keyPresent: true }), KEYLESS = /** @type {Reader} */ ({ account: null, keyPresent: false });
+
 /** @returns {import('./article.js').ArticleView} */
 const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {}) => ({
   selected: null, focus: null, marks: [], mergedMark, symbols: [], floats: () => false, countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
-  sessionAccount: '1.0.1', localTrust: true, notebook: true, scene: false, originKinds: new Map(), originOwner: (a) => accountOf(a) || '',
-  deviceLabel: 'dev-notebook', ownerFingerprint: 'e4272902a11439e5', keyPresent: true, ...o,
+  reader: SIGNED, localTrust: true, notebook: true, scene: false, originKinds: new Map(), originOwner: (a) => accountOf(a) || '',
+  deviceLabel: 'dev-notebook', ownerFingerprint: 'e4272902a11439e5', ...o,
 });
 /** @returns {import('../model/records.js').Doc} */
 const doc = (/** @type {Partial<import('../model/records.js').Doc>} */ o = {}) => ({
@@ -64,17 +74,23 @@ test('a withheld block occupies its positions and shows its width, never its tex
   assert.ok(html.includes('240 positions') && html.includes('origin 1.0.1.0.1003'));
   assert.ok(html.includes(t('C-67.pointer')));
   assert.ok(html.includes(t('C-36.owner-grant.arm')), 'the acting person with no grant meets the owner-grant arm');
-  const guest = withheldBlockHTML({ pos: 1, width: 3, kind: 'withheld', text: '', origin: '1.0.1.0.2' }, doc(), view({ sessionAccount: null }));
-  assert.ok(guest.includes('no key on this device'), 'a guest meets R56\'s key-absent arm');
+  const run = /** @type {import('../model/records.js').Block} */ ({ pos: 1, width: 3, kind: 'withheld', text: '', origin: '1.0.1.0.2' });
+  const keyless = withheldBlockHTML(run, doc(), view({ reader: KEYLESS }));
+  assert.ok(keyless.includes('no key on this device'), 'a guest with no key meets R56\'s key-absent arm');
+  const keyed = withheldBlockHTML(run, doc(), view({ reader: KEYED }));
+  assert.ok(keyed.includes(esc(t('C-36.guest.key'))) && !keyed.includes('no key on this device'), 'a guest whose device holds a key for this board meets C-36\'s key-present arm, and is never told it holds none');
 });
 
 test('the entitlement arm is one rule, by the reader, and the placeholder carries what it answers', () => {
-  assert.deepEqual(entitlementArm('1.0.1', '1.0.2'), { id: 'C-36.owner-grant.arm', text: t('C-36.owner-grant.arm') }, 'the acting person with no grant: the owner-grant default');
-  assert.deepEqual(entitlementArm(null, '1.0.2'), { id: 'R56.key-absent', text: t('R56.key-absent', { owner: '1.0.2' }) }, 'a guest with no key: R56\'s key-absent default, naming the owner');
+  const ownerGrant = { id: 'C-36.owner-grant.arm', text: t('C-36.owner-grant.arm') };
+  assert.deepEqual(entitlementArm(SIGNED, '1.0.2'), ownerGrant, 'a signed-in principal with no grant: the owner-grant default');
+  assert.deepEqual(entitlementArm(BARE, '1.0.2'), ownerGrant, 'whatever key signed the session, or none');
+  assert.deepEqual(entitlementArm(KEYED, '1.0.2'), { id: 'C-36.guest.key', text: t('C-36.guest.key') }, 'a guest whose device holds a key for this board: C-36\'s key-present default — sign in, then ask');
+  assert.deepEqual(entitlementArm(KEYLESS, '1.0.2'), { id: 'R56.key-absent', text: t('R56.key-absent', { owner: '1.0.2' }) }, 'a guest with no key: R56\'s key-absent default, naming the owner');
   const run = /** @type {import('../model/records.js').Block} */ ({ pos: 1, width: 3, kind: 'withheld', text: '', origin: '1.0.1.0.2' });
-  for (const reader of ['1.0.1', null]) {
-    const html = withheldBlockHTML(run, doc(), view({ sessionAccount: reader }));
-    assert.ok(html.includes(`<span class="arm">${esc(entitlementArm(reader, '1.0.1').text)}</span>`), `the placeholder's arm is the rule's for ${reader ?? 'a guest'}`);
+  for (const reader of [SIGNED, BARE, KEYED, KEYLESS]) {
+    const html = withheldBlockHTML(run, doc(), view({ reader }));
+    assert.ok(html.includes(`<span class="arm">${esc(entitlementArm(reader, '1.0.1').text)}</span>`), `the placeholder's arm is the rule's for ${JSON.stringify(reader)}`);
   }
 });
 
@@ -337,14 +353,14 @@ test('each withheld run names its own origin\'s owner — in its head, its arm a
     { pos: 261, width: 4, kind: 'withheld', text: '', origin: '1.0.1.0.1003' },
   ] });
   const runs = [{ pos: 11, width: 240, origin: '1.0.2.0.2', owner: '1.0.2' }, { pos: 261, width: 4, origin: '1.0.1.0.1003', owner: '1.0.1' }];
-  for (const reader of ['1.0.1', null]) {
-    const html = articleHTML(d, view({ sessionAccount: reader }), '1.0.1');
+  for (const reader of [SIGNED, KEYED, KEYLESS]) {
+    const html = articleHTML(d, view({ reader }), '1.0.1');
     for (const r of runs) {
       assert.deepEqual(placeholderAt(html, r.pos), {
         owner: r.owner,
         head: esc(t('B1.withheld-run', { owner: r.owner, account: r.owner, width: r.width, origin: r.origin })),
         arm: esc(entitlementArm(reader, r.owner).text),
-      }, `${reader ?? 'a guest'}: the run from ${r.origin} names ${r.owner}, in ${d.addr}, which 1.0.1 owns`);
+      }, `${JSON.stringify(reader)}: the run from ${r.origin} names ${r.owner}, in ${d.addr}, which 1.0.1 owns`);
     }
   }
 });
