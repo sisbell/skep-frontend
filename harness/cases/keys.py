@@ -53,15 +53,22 @@ what the drag is anchored in — a feed row naming the document with the
 button down (the gate's `model.invalidate` door, reads alone) leaves the
 half-dragged bytes reading back and the drag's article standing while the
 text arrives again, the release takes the whole phrase, a context menu ends
-the press, and the document holding the selection, brought back into view
-under a press, mounts only once it ends. Below the readable threshold of 8 a
+the press, and the document holding the selection keeps the lines holding it
+out of view, and, its text dropped and the view back on it under a press in
+another, mounts afresh with no range placed over the drag (issue #122).
+At em 5, below the mount, the lines holding the page's selection stand, its
+highlight on them. Below the readable threshold of 8 a
 press is keyed on legibility, never on whether text is mounted (§2.4): at em
 6 a click on the first edition's mounted text teleports to it as a click at
 the same point on its bars does, and a drag along that text selects nothing
 and pans nothing, while at em 9 a click on its text selects the block whole;
 and a drag begun on legible text keeps its article through a zoom below the
 threshold with the button down, the release taking the whole phrase and the
-frame after it taking the pointer from the article. In the reading scene a
+frame after it taking the pointer from the article. At em 9 a press that
+finds the text not standing under it — the view set and the press made in one
+evaluation, no frame between — is held for the text and acts on it once the
+frame sets it: a click selects the block, a drag the bytes it crosses, as on
+the standing text, and neither moves the camera or the trail (issue #122). In the reading scene a
 drag selects as it does on the plane (§2.5): a drag over a phrase of a pane,
 or from its head into its first block, is copied as the passage's board and
 address beside the document's own bytes over the bytes dragged, the head's
@@ -366,9 +373,11 @@ def press_holds(ctx, r):
     here with the button down halfway along a phrase: the half-dragged bytes still read back, through the blocks the
     article was made from; the article the drag started in stands while the text arrives again; and the release takes the
     whole phrase, its highlight over the article rebuilt after the press. A context menu, which takes the button's release
-    on some platforms, ends the press, and the frame after the end rebuilds what the press held. And a fresh mount waits
-    for the press's end too: the document holding the selection, brought back into view under a press in another, mounts
-    after it, so no range is placed over the drag"""
+    on some platforms, ends the press, and the frame after the end rebuilds what the press held. And under a press a
+    document still mounts as the view asks, but no range is placed over the drag (issue #122): the document holding the
+    selection, panned out of view, keeps the lines holding it; its text dropped by the same door, it is taken down, and
+    brought back into view under a press in another it mounts afresh with the platform's selection still the drag's,
+    which the release takes"""
     figures = {}
     art = article(DOC)
     ctx.leap(DOC, WINDOW[0])
@@ -421,11 +430,11 @@ def press_holds(ctx, r):
         ctx.drv.release(*ph['start'])
         ctx.frames(2)
         whole_again(ctx)
-    # a fresh mount waits for the press's end: the selection stands in another document mounted beside the first edition —
+    # a fresh mount under a press places no range over the drag: the selection stands in another document mounted beside the first edition —
     # the view built at em 8.5, past the readable em where an article takes the pointer, between the first edition's
     # outline and the room of the document after it in its row, the one in view with the largest face past the mount
-    # threshold; the least pan takes it out of the layer's view (the viewport and 40 px about it, 10 px clear), a press in
-    # the first edition, then a pan of 25 px back brings it into the layer's view with the button down
+    # threshold; the least pan takes it out of the layer's view (the viewport and 40 px about it, 10 px clear), a feed row
+    # drops its text, a press in the first edition, then the camera back brings it into view with the button down
     ctx.leap(DOC, WINDOW[0])
     f3, b4 = ctx.js('window.__skep.fold(%s)' % json.dumps(DOC)), ctx.js('window.__skep.boxOf("1.0.1.0.4")')
     ctx.set_view((f3['outline']['x'] + f3['outline']['w'] + b4['x']) / 2, f3['columns'][0]['y'] + f3['columns'][0]['h'] / 2, ctx.js('window.__skep.scaleFor(%s, "em", 8.5)' % json.dumps(DOC)))
@@ -452,33 +461,44 @@ def press_holds(ctx, r):
         x0, y0 = (box['x'] - cam1['x']) * s + vp['VW'] / 2, (box['y'] - cam1['y']) * s + vp['VH'] / 2
         x1, y1 = x0 + box['w'] * s, y0 + box['h'] * s
         dx, dy = min([(vp['VW'] + 50 - x0, 0), (-(x1 + 50), 0), (0, vp['VH'] + 50 - y0), (0, -(y1 + 50))], key=lambda d: abs(d[0]) + abs(d[1]))
-        ux, uy = dx / (abs(dx) + abs(dy)), dy / (abs(dx) + abs(dy))
         out = {'x': cam1['x'] - dx / s, 'y': cam1['y'] - dy / s}
-        back = {'x': out['x'] + ux * 25 / s, 'y': out['y'] + uy * 25 / s, 'scale': s}
         ctx.js('window.__skep.select(%s, %d, %d)' % (json.dumps(other), beside[1], beside[2]))
         ctx.frames(2)
         ctx.set_view(out['x'], out['y'], s)
         mounted = ctx.js('window.__skep.mountedAddrs()')
+        kept = ctx.js('window.__skep.mountedLines(%s)' % json.dumps(other))
         ph, seen = phrase_at(ctx, DOC)
-        r.check(other not in mounted and DOC in mounted and ph is not None,
-                'the least pan takes the document holding the selection out of the view: it is unmounted, and the first edition shows a phrase', dict(seen, mounted=mounted, other=other, pan_px=(dx, dy)))
-        if other not in mounted and ph:
+        r.check(other in mounted and bool(kept) and DOC in mounted and ph is not None,
+                'the least pan takes the document holding the selection out of the view: its article stands for the lines holding the selection (issue #122), and the first edition shows a phrase',
+                dict(seen, mounted=mounted, kept=kept, other=other, pan_px=(dx, dy)))
+        # a feed row naming it (the gate's door, reads alone) drops its text: its article is taken down, out of view
+        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(other))
+        ctx.settle()
+        ctx.frames(2)
+        gone = ctx.js('window.__skep.mounted(%s)' % json.dumps(other)) is None
+        r.check(gone, 'a feed row naming it takes its article down, out of view: no line of it stands', {'other': other})
+        if gone and ph:
             ctx.drv.press(*ph['start'])
             ctx.drv.move(*ph['start'], *ph['half'])
             ctx.frames(2)
             before = ctx.js('window.__skep.platformSelection()')
-            ctx.js('window.__skep.view.set(%s)' % json.dumps(back))
+            # the camera back where it stood, the document in view: its text read again and its article set afresh as the
+            # view asks, the button down all the while
+            ctx.js('window.__skep.view.set(%s)' % json.dumps({'x': cam1['x'], 'y': cam1['y'], 'scale': s}))
+            ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.mountedAddrs().includes(%s) || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })' % json.dumps(other))
             ctx.frames(2)
             during = ctx.js('({mounted: window.__skep.mountedAddrs(), platform: window.__skep.platformSelection(), selection: window.__skep.selection()})')
             span = during['platform']['span']
-            r.check(other not in during['mounted'] and not during['platform']['collapsed'] and bool(span) and span['addr'] == DOC and abs(span['pos'] - ph['p0']) <= 3,
-                    'the document holding the selection, back in the layer\'s view with the button down, is not mounted: the platform\'s selection is still the drag\'s',
+            r.check(other in during['mounted'] and not during['platform']['collapsed'] and bool(span) and span['addr'] == DOC and abs(span['pos'] - ph['p0']) <= 3,
+                    'the document holding the selection, back in the layer\'s view with the button down, mounts afresh — a document past the mount threshold stands as the view asks, a press standing or none — and no range is placed over the drag: the platform\'s selection is still the drag\'s',
                     dict(during, before=before, other=other))
             ctx.drv.release(*ph['half'])
             ctx.frames(2)
-            after = ctx.js('window.__skep.mountedAddrs()')
-            r.check(other in after, 'it mounts once the press has ended', {'mounted': after, 'other': other})
-            figures['fresh_mount'] = {'other': other, 'pan_px': (dx, dy), 'before': before, 'during': during, 'after': after}
+            after = ctx.js('({sel: window.__skep.selection(), platform: window.__skep.platformSelection()})')
+            sel = after['sel']
+            r.check(bool(sel) and sel['addr'] == DOC and abs(sel['pos'] - ph['p0']) <= 3 and after['platform']['span'] == sel,
+                    'the release takes the drag: the page\'s selection is the first edition\'s phrase, the platform\'s with it', dict(after, other=other))
+            figures['fresh_mount'] = {'other': other, 'pan_px': (dx, dy), 'kept': kept, 'before': before, 'during': during, 'after': after}
         chord(ctx, 'Escape')
         chord(ctx, 'Escape')
     ctx.set_view(cam0['x'], cam0['y'], cam0['scale'])
@@ -677,6 +697,74 @@ def below_reading(ctx, r):
     r.figures['below_reading'] = figures
 
 
+# a press dispatched at the page's plane, as the platform sends one: pointerdown, pointermoves, pointerup, each at a point
+PRESS = '''((view, points) => { const plane = document.getElementById('plane'), S = window.__skep;
+  S.view.set(view);
+  const hit = document.elementFromPoint(points[0][0], points[0][1]), at = (type, [x, y], buttons) => plane.dispatchEvent(new PointerEvent(type, {clientX: x, clientY: y, button: 0, buttons, pointerId: 1, isPrimary: true, bubbles: true, cancelable: true}));
+  at('pointerdown', points[0], 1);
+  for (const p of points.slice(1)) at('pointermove', p, 1);
+  at('pointerup', points[points.length - 1], 0);
+  return {hit: !hit ? null : hit.id === 'plane' ? 'the plane' : hit.closest('#domlayer article.dtext') ? 'the article' : hit.id || hit.tagName.toLowerCase(), cam: S.view.camera(), trail: S.trail()}; })(%s, %s)'''
+
+
+def held_press(ctx, r):
+    """AT READING SCALE A PRESS ACTS ON THE TEXT (issue #122's design decision: "never dropped and never a move to the
+    place; if a press finds its document unmounted, it mounts the document first"): at em 9 over the first edition, a
+    click on a paragraph's plain character and a drag along its line, each made first on its standing text as the
+    platform takes them, then again on the same view from em 4 — its article down — the view set and the press
+    dispatched at the plane in one evaluation, so the press finds no text standing under it and the frame after it sets
+    that text: the click selects the block whole and the drag the same bytes as on the standing text, the platform's
+    selection the page's, and neither moves the camera or the trail. A page that drops the press, or makes it the
+    place's, selects nothing and turns this red"""
+    figures = {}
+    ctx.js('''window.__gateHit = (x, y) => { const e = document.elementFromPoint(x, y), a = e && e.closest("#domlayer article.dtext");
+      return !e ? null : e.id === "plane" ? "the plane" : a ? "the article of " + a.dataset.addr : e.id || e.tagName.toLowerCase(); }''')
+    seen = lambda: ctx.js('({cam: window.__skep.view.camera(), trail: window.__skep.trail(), sel: window.__skep.selection(), platform: window.__skep.platformSelection()})')
+    ctx.leap(DOC, WINDOW[0])
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    ctx.view_doc_em(DOC, 9)
+    cam9 = ctx.camera()
+    ch = plain_char(ctx, DOC)
+    r.check(ch is not None and ch['hit'] == 'the article of ' + DOC, 'at em 9 a paragraph\'s plain character of the first edition stands under the pointer, for the held press', ch)
+    if not ch or ch['hit'] != 'the article of ' + DOC:
+        return figures
+    gestures = (('click', [ch['at']]), ('drag', [ch['at'], [(ch['at'][0] + ch['along'][0]) / 2, ch['at'][1]], ch['along']]))
+    for name, points in gestures:
+        # on the standing text, as the platform takes the press
+        ctx.set_view(cam9['x'], cam9['y'], cam9['scale'])
+        if name == 'click':
+            ctx.drv.mouse(*points[0])
+        else:
+            ctx.drv.drag(*points[0], *points[-1])
+        ctx.settle()
+        ctx.frames(2)
+        standing = seen()
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+        # the same view from em 4, its article down: the view set and the press made in one evaluation, no frame between
+        ctx.view_doc_em(DOC, 4)
+        down = ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC)) is None
+        before = ctx.js(PRESS % (json.dumps(cam9), json.dumps(points)))
+        ctx.settle()
+        ctx.frames(3)
+        after = seen()
+        want = standing['sel']
+        sel = after['sel']
+        alike = bool(sel) and bool(want) and sel['addr'] == want['addr'] and abs(sel['pos'] - want['pos']) <= 3 and abs(sel['pos'] + sel['width'] - want['pos'] - want['width']) <= 3
+        r.check(down and before['hit'] == 'the plane' and alike and (name == 'click' or (not after['platform']['collapsed'] and after['platform']['span'] == sel)),
+                f'a {name} at em 9 that finds the first edition\'s text not standing under it — no frame since the view came from em 4 — is held for the text: the frame after it sets the text, and the {name} selects what it selects on the standing text',
+                {'down': down, 'hit': before['hit'], 'standing': want, 'held': sel, 'platform': after['platform']})
+        r.check(same_view({'cam': before['cam']}, after) and after['trail']['cursor'] == before['trail']['cursor'] and len(after['trail']['entries']) == len(before['trail']['entries']),
+                f'the held {name} moves neither the camera nor the trail: never a move to the place',
+                {'cam': [before['cam'], after['cam']], 'cursor': [before['trail']['cursor'], after['trail']['cursor']]})
+        figures[name] = {'standing': want, 'held': sel, 'hit': before['hit']}
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+    ctx.leap(DOC, WINDOW[0])
+    return figures
+
+
 def pane_phrase(ctx, side):
     """a phrase of fifteen characters of a paragraph's own text — no heading's — that a reading scene's pane SHOWS:
     printable ASCII on one line inside the pane's visible rect and PANE_EDGE_PX clear of its top and its bottom, where a
@@ -839,9 +927,10 @@ def selection_held_elsewhere(ctx, r):
         selected, no highlight stands over the plane, and the page's selection is S;
     then S is selected again and the scene opened over it through the card that took the selection's card's place (D7's
     path), S's highlight standing on the plane under the scene:
-    (a) the camera at em 5 under the scene, so the article is taken down with S's highlight in it, a drag over a phrase of
-        pane B, then the camera back and the article mounted again: the copy names the draft and the phrase's own bytes,
-        no highlight stands over the plane, and the page's selection is S;
+    (a) the camera at em 5 under the scene, below the mount: the lines holding S stand, S's highlight on them, its article
+        outside the mount band (issue #122); a drag over a phrase of pane B, then the camera back, the article in the
+        band again: the copy names the draft and the phrase's own bytes, no highlight stands over the plane, and the
+        page's selection is S;
     (b) a click in pane B, a caret alone, then the door, the article rebuilt: S's highlight is put back on the plane;
     (c) S's highlight standing, a drag over the phrase of pane B, then the door, the article rebuilt: as after (a).
     The first edition is read whole again, and the scene and the selection ended after them. The Safari pass repeats a
@@ -909,17 +998,20 @@ def selection_held_elsewhere(ctx, r):
                 'the scene stands over S, opened through the card that took the selection\'s card\'s place (D7): S\'s highlight stands on the plane under it', dict(under, card=card))
         r.check(pb is not None, 'pane B shows a phrase of the draft\'s own text on one line, for a drag', ctx.js('window.__skep.scene.pairs()'))
         if under['span'] == span and pb:
-            # (a) the article taken down with S's highlight in it, a drag in pane B, then the article mounted again
+            # (a) the camera at em 5, below the mount: the lines holding S stand (issue #122), S's highlight on them; a drag in
+            # pane B; then the camera back, the article in the mount band again, set again for none of S's lines
             ctx.set_view(cam0['x'], cam0['y'], ctx.js('window.__skep.scaleFor(%s, "em", 5)' % json.dumps(DOC)))
-            down = dict(held(), mounted=DOC in ctx.js('window.__skep.mountedAddrs()'))
+            down = dict(held(), mounted=DOC in ctx.js('window.__skep.mountedAddrs()'), article=ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC)) is not None)
             ctx.drv.drag(*pb['start'], *pb['end'])
             ctx.frames(2)
             dragged = held()
             ctx.set_view(cam0['x'], cam0['y'], cam0['scale'])
             after = held()
-            r.check(not down['mounted'] and down['collapsed'] and not dragged['collapsed'] and dragged['anchor'] == dragged['focus'] == 'pane B',
-                    '(a) at em 5 the first edition\'s article is taken down with S\'s highlight in it, and a drag in pane B selects the phrase', {'down': down, 'dragged': dragged})
-            stood(pb, copied(ctx), after, DOC in ctx.js('window.__skep.mountedAddrs()'), '(a) the camera back, the article mounted again')
+            r.check(not down['mounted'] and down['article'] and not down['collapsed'] and down['anchor'] == 'the layer' and down['span'] == span
+                    and not dragged['collapsed'] and dragged['anchor'] == dragged['focus'] == 'pane B',
+                    '(a) at em 5, below the mount, the lines holding S stand, its article outside the mount band, S\'s highlight on them; and a drag in pane B selects the phrase',
+                    {'down': down, 'dragged': dragged})
+            stood(pb, copied(ctx), after, DOC in ctx.js('window.__skep.mountedAddrs()'), '(a) the camera back, the article in the mount band again')
             figures['a'] = {'down': down, 'after': after}
             # (b) a caret alone in pane B holds nothing the person chose: the rebuilt article takes S's highlight back. A
             # click there leaves this machine's Chrome no range at all; where it leaves none, a caret is placed by script
@@ -1351,10 +1443,14 @@ def run(ctx):
                     'the text layer rebuilding the article takes the symbol away, and the card stands at the link\'s own bytes, beneath their first line — never at the viewport\'s corner',
                     {'symbol': gone, 'placed': rebuilt})
             cam = ctx.camera()
+            # nothing holds a line of the article — the page's selection cleared, the card standing (its own end's
+            # bytes its anchor), the focus on nothing — so the camera below the mount takes the whole article down
+            # (issue #122: the lines holding the selection or the focus stay)
+            ctx.js('(async () => { (await import("./overlays/selection.js")).clear(); const e = document.activeElement; if (e && e.blur) e.blur(); })()')
             ctx.view_doc_em(DOC, 5)
-            down = placed_at_box(ctx, DOC)
-            r.check(DOC not in ctx.js('window.__skep.mountedAddrs()') and ctx.js('window.__skep.overlay().id') == 'anatomy:' + link['link'] and stands_at(down),
-                    'the text layer taking the article down — the camera at em 5, below the mount — leaves the card at the document\'s box, its top-right — never at the viewport\'s corner', down)
+            down = dict(placed_at_box(ctx, DOC), article=ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC)) is not None)
+            r.check(DOC not in ctx.js('window.__skep.mountedAddrs()') and not down['article'] and ctx.js('window.__skep.overlay().id') == 'anatomy:' + link['link'] and stands_at(down),
+                    'the text layer taking the article down — the camera at em 5, below the mount, no line of it holding the selection or the focus — leaves the card at the document\'s box, its top-right — never at the viewport\'s corner', down)
             ctx.set_view(cam['x'], cam['y'], cam['scale'])
             chord(ctx, 'Escape')
         ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
@@ -1479,6 +1575,7 @@ def run(ctx):
     anchor_stands(ctx, r)
     press_holds(ctx, r)
     below_reading(ctx, r)
+    r.figures['held_press'] = held_press(ctx, r)
     # ---- zoom (K-11) and paging (K-6) ----------------------------------------------------------------------
     c0 = state(ctx)['cam']
     chord(ctx, '=', mods=('Meta',))

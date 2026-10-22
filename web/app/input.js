@@ -16,7 +16,20 @@
 // the canvas's, over bars or mounted text alike — T-LAYER gives an article
 // the pointer at reading scale alone — so a drag there is a drag off text and
 // selects nothing, and a click is the place's: keyed on legibility, never on
-// whether text is mounted. The camera pans by the WHEEL and
+// whether text is mounted. AT THE READABLE THRESHOLD AND ABOVE A PRESS ACTS ON
+// THE TEXT (issue #122's design decision), never dropped and never a move to
+// the place: a press the canvas takes on a document's column there — the text
+// under it not yet standing, the view moved or the text arrived since the
+// last frame — is HELD, the frame marked dirty, until the frame after it has
+// set that text (T-LAYER stands every line in view of a readable document in
+// the frame it gets there), then acted on the text under it as a press on any
+// standing article is (`afterFrame`): released, the text layer's click at the
+// element under it; the button still down, the platform's drag from the
+// press's point (T-LAYER's `caretAt`), its other end carried as the pointer
+// moves (`extendTo`) and taken as the page's selection at the release. A
+// camera move, the person's next press, or the text standing and none of it
+// under the press drops it; a press in a gutter acts on nothing, as one beside
+// any article does. The camera pans by the WHEEL and
 // two-finger scroll, by the keys, and by the held camera key's drag (K-10:
 // hold Mod — wherever the pointer is, M-8: a drag begun on an article with
 // the key held is the camera's, the pointer captured by the plane, and
@@ -77,6 +90,22 @@ import { accountAt } from '../plane/projection.js';
 import { MAC } from '../nav/keys.js';
 
 /**
+ * @typedef {Object} Held — a press the canvas took at the readable em on a document's column, held until the text under it stands (see the head)
+ * @property {number} x where it was pressed, on screen
+ * @property {number} y
+ * @property {string} addr the document pressed on
+ * @property {{x: number, y: number}} at where the pointer stands now
+ * @property {number} moved how far the pointer has moved since, in px
+ * @property {boolean} released the button was released
+ * @property {{x: number, y: number, scale: number}} view the camera as it was pressed
+ */
+
+/** @type {Held | null} */
+let held = null;
+/** the drag a held press began goes on: the platform's selection carried to the pointer as it moves, until the release */
+let carrying = false;
+
+/**
  * Wire the pointer and the wheel.
  * @param {{plane: HTMLCanvasElement, layer: HTMLElement, corners: HTMLElement}} els
  */
@@ -89,7 +118,11 @@ export function attach(els) {
     els.plane.setPointerCapture(e.pointerId); els.plane.classList.add('dragging');
   };
   els.plane.addEventListener('pointerdown', (e) => {
+    held = null;
     if (MAC ? e.metaKey : e.ctrlKey) { cameraDrag(e); return; }
+    // at the readable em a press on a document's column is the text's: held until the frame has set the text under it
+    const addr = textAt(e.clientX, e.clientY);
+    if (addr) { held = { x: e.clientX, y: e.clientY, addr, at: { x: e.clientX, y: e.clientY }, moved: 0, released: false, view: CAM.view() }; drag = null; CAM.markDirty(); return; }
     drag = { px: e.clientX, py: e.clientY, moved: 0, cameraKey: false };
   });
   els.plane.addEventListener('pointermove', (e) => {
@@ -110,46 +143,31 @@ export function attach(els) {
   // and takes nothing
   let lastDown = { x: 0, y: 0 };
   els.layer.addEventListener('pointerdown', (e) => {
+    held = null;
     // the camera key held: the drag is the camera's wherever the pointer is (K-10, M-8) — no press on the text, no selection, no focus moved
     if (MAC ? e.metaKey : e.ctrlKey) { e.preventDefault(); cameraDrag(e); return; }
     lastDown = { x: e.clientX, y: e.clientY }; LAYER.press(true);
   });
-  window.addEventListener('pointerup', () => { if (!LAYER.pressing()) return; LAYER.press(false); takeSelection(); });
-  window.addEventListener('pointercancel', () => LAYER.press(false));
-  window.addEventListener('contextmenu', () => LAYER.press(false));
+  // a held press follows the pointer, and the drag it began carries the platform's selection's other end to it
+  window.addEventListener('pointermove', (e) => {
+    if (held) { held.moved += Math.abs(e.clientX - held.at.x) + Math.abs(e.clientY - held.at.y); held.at = { x: e.clientX, y: e.clientY }; }
+    if (carrying) LAYER.extendTo(e.clientX, e.clientY);
+  });
+  window.addEventListener('pointerup', (e) => {
+    if (held) { held.released = true; held.at = { x: e.clientX, y: e.clientY }; CAM.markDirty(); }
+    carrying = false;
+    if (!LAYER.pressing()) return;
+    LAYER.press(false); takeSelection();
+  });
+  window.addEventListener('pointercancel', () => { held = null; carrying = false; LAYER.press(false); });
+  window.addEventListener('contextmenu', () => { held = null; carrying = false; LAYER.press(false); });
   document.addEventListener('selectionchange', () => { if (!LAYER.pressing()) takeSelection(); });
   // the layer: a click on a symbol, the ⟡, a hairline, the scene-offer, a withheld run; a selection the platform made (a double-click's word); a click on a marked span or a block
   els.layer.addEventListener('click', (e) => {
-    const target = /** @type {HTMLElement} */ (e.target);
     LINE.act();
     // a drag's own click: the pointer moved, and the selection it made was taken as it ended
     if (Math.abs(e.clientX - lastDown.x) + Math.abs(e.clientY - lastDown.y) > 4) { e.stopPropagation(); return; }
-    const sym = target.closest('.sym');
-    if (sym) {
-      e.stopPropagation();
-      const se = /** @type {HTMLElement} */ (sym);
-      if (se.dataset.reveal) { LINKS.show(se.dataset.reveal); return; }
-      if (se.dataset.link) { const s = endAt(se, se.dataset.link, se.dataset.end || ''); if (s) ANATOMY.open(s, se, false); return; }
-    }
-    const hair = target.closest('.hairline');
-    if (hair) { e.stopPropagation(); const h = /** @type {HTMLElement} */ (hair); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: runOf(h) }); return; }
-    const offer = target.closest('.offer');
-    if (offer) { e.stopPropagation(); const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return; }
-    const pointer = target.closest('.clause[data-home]');
-    if (pointer) { e.stopPropagation(); const home = /** @type {HTMLElement} */ (pointer).dataset.home; if (home) GO.leapTo(home, { how: 'leap' }); return; }
-    const wh = target.closest('[data-withheld]');
-    if (wh) { e.stopPropagation(); const w = /** @type {HTMLElement} */ (wh), run = runOf(w); FACES.c39(w.dataset.owner || '', REC.reader(), run ? { el: w, span: run } : w); return; }
-    // the platform selected text under the click (a double-click's word): the selection IS that span (R11)
-    const span = LAYER.spanOfSelection();
-    if (span && !sameSpan(span, LAYER.placedSpan())) { e.stopPropagation(); SEL.select(span.addr, span.pos, span.width); return; }
-    const marked = target.closest('.lip');
-    if (marked) { e.stopPropagation(); const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { ANATOMY.open(s, m, false); return; } }
-    const sp = target.closest('.sp');
-    if (sp) {
-      e.stopPropagation();
-      const s = /** @type {HTMLElement} */ (sp);
-      SEL.select(s.dataset.addr || '', Number(s.dataset.pos));
-    }
+    if (clickText(/** @type {HTMLElement} */ (e.target))) e.stopPropagation();
   });
   // the corners: a click on the version statement takes the corner's act
   els.corners.addEventListener('click', (e) => {
@@ -207,6 +225,89 @@ function endAt(mark, link, key) {
   return LK.shown(art ? art.dataset.addr || '' : '').find((s) => s.link.addr === link && s.key === key);
 }
 
+/**
+ * A click on the text layer's text, at the element under it (see the head): a
+ * symbol, the ⟡, a hairline, the scene-offer, C-67's pointer, a withheld run;
+ * a selection the platform made (a double-click's word); a marked stretch; a
+ * block, selected whole. The text layer's own clicks and a held press's
+ * release both act through it.
+ * @param {HTMLElement} target
+ * @returns {boolean} whether the text took the click
+ */
+function clickText(target) {
+  let took = false;
+  const sym = target.closest('.sym');
+  if (sym) {
+    took = true;
+    const se = /** @type {HTMLElement} */ (sym);
+    if (se.dataset.reveal) { LINKS.show(se.dataset.reveal); return true; }
+    if (se.dataset.link) { const s = endAt(se, se.dataset.link, se.dataset.end || ''); if (s) ANATOMY.open(s, se, false); return true; }
+  }
+  const hair = target.closest('.hairline');
+  if (hair) { const h = /** @type {HTMLElement} */ (hair); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: runOf(h) }); return true; }
+  const offer = target.closest('.offer');
+  if (offer) { const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return true; }
+  const pointer = target.closest('.clause[data-home]');
+  if (pointer) { const home = /** @type {HTMLElement} */ (pointer).dataset.home; if (home) GO.leapTo(home, { how: 'leap' }); return true; }
+  const wh = target.closest('[data-withheld]');
+  if (wh) { const w = /** @type {HTMLElement} */ (wh), run = runOf(w); FACES.c39(w.dataset.owner || '', REC.reader(), run ? { el: w, span: run } : w); return true; }
+  // the platform selected text under the click (a double-click's word): the selection IS that span (R11)
+  const span = LAYER.spanOfSelection();
+  if (span && !sameSpan(span, LAYER.placedSpan())) { SEL.select(span.addr, span.pos, span.width); return true; }
+  const marked = target.closest('.lip');
+  if (marked) { took = true; const m = /** @type {HTMLElement} */ (marked); const s = endAt(m, (m.dataset.links || '').split(' ')[0], (m.dataset.ends || '').split(' ')[0]); if (s) { ANATOMY.open(s, m, false); return true; } }
+  const sp = target.closest('.sp');
+  if (sp) { const s = /** @type {HTMLElement} */ (sp); SEL.select(s.dataset.addr || '', Number(s.dataset.pos)); return true; }
+  return took;
+}
+
+/**
+ * The document whose text a press at a screen point is on, at the readable
+ * em and above: a document standing whole there — no continuation's mark
+ * holding it — at that em, the point in one of its columns, where its text
+ * stands or will; null anywhere else, a gutter among them.
+ * @param {number} px
+ * @param {number} py
+ * @returns {string | null}
+ */
+function textAt(px, py) {
+  if (RENDER.residueAtScreen(px, py)) return null;
+  const doc = RENDER.docAtScreen(px, py);
+  if (!doc || LAYER.foldOf(REC.doc(doc)).fs * CAM.cam.scale < LOD_TXT_LO) return null;
+  return LAYER.holdsText(doc, CAM.wx(px), CAM.wy(py)) ? doc : null;
+}
+
+/**
+ * The press held at the readable em (see the head), after a frame: where the
+ * text under it stands now — a standing article's, taking the pointer — it is
+ * acted on as a press on that text is: released without moving, the text
+ * layer's click at the element under it, the platform's selection collapsed
+ * there first as the press would have set it; else the platform's drag from
+ * the press's point to the pointer (`caretAt`, `extendTo`), taken as the
+ * page's selection at the release, or carried on as the pointer moves until
+ * it. A camera move drops it — the place it fell on has moved — and so does a
+ * frame that has set the document's text with none of it under the press, or
+ * one with chrome standing over it; where the document's text has not
+ * arrived, it waits.
+ */
+export function afterFrame() {
+  const h = held;
+  if (!h) return;
+  const v = CAM.view();
+  if (v.x !== h.view.x || v.y !== h.view.y || v.scale !== h.view.scale) { held = null; return; }
+  const el = /** @type {HTMLElement | null} */ (document.elementFromPoint(h.x, h.y));
+  const art = el ? el.closest('#domlayer article.dtext') : null;
+  if (!el || !art) { if (LAYER.isMounted(h.addr) || (el && el.id !== 'plane')) held = null; return; }
+  held = null;
+  LINE.act();
+  if (h.released && h.moved <= 4) { LAYER.caretAt(h.x, h.y); clickText(el); return; }
+  LAYER.press(true);
+  if (!LAYER.caretAt(h.x, h.y)) { LAYER.press(false); return; }
+  LAYER.extendTo(h.at.x, h.at.y);
+  if (h.released) { LAYER.press(false); takeSelection(); return; }
+  carrying = true;
+}
+
 /** the platform's selection, where it stands in a mounted article, becomes the page's (R11): view state alone changes; one the page already holds, or placed itself, is left as it is — so a slot's chord that selects the walk's block before it asks shows no card of the selection while its answer reads, which would end that answer's opening (O-HOST's) */
 function takeSelection() {
   const span = LAYER.spanOfSelection();
@@ -224,7 +325,7 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   if (doc) {
     const em = LAYER.foldOf(REC.doc(doc)).fs * CAM.cam.scale;
     if (em < LOD_TXT_LO) { GO.leapTo(doc, { how: 'click' }); return; }
-    return; // at reading scale the layer's elements take the click
+    return; // at reading scale a press on its text is held for the text (`afterFrame`); one in a gutter acts on nothing
   }
   if (lod.name === 'far' || lod.name === 'far~mid') {
     const acct = accountAt(CAM.wx(px), CAM.wy(py), '1');

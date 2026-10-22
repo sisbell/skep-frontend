@@ -60,16 +60,23 @@
 // path would run between the glyphs of the article mounted over the canvas);
 // the focus ring; the arrival mark, every run of the span a follow, or a
 // LEAP carrying a passage, landed on outlined line by line over the mounted
-// article; text yielded where T-LAYER mounted it;
-// for the unmounted, the bars — the lines of T-LAYER's fold (`foldOf`: the
+// article. BARS MEAN ONLY "TOO SMALL TO READ" (issue #122's design decision):
+// no document at reading size is ever drawn as bars — the canvas draws them
+// below P-LOD's readable threshold, and at or above it every document is real
+// text, T-LAYER standing every line of it in view in the frame its em gets
+// there. A document's bars are the lines of T-LAYER's fold (`foldOf`: the
 // article's own lines, as the platform set them where it has, in the columns
 // the mount sets them in), each bar where its line's glyphs will stand, in
 // its column, so the handoff swaps bars for text in place and mid scale
-// greeks the columns the mount sets (law 8; S1 Q7; issue #15). The loop runs
-// T-LAYER's frame BEFORE this draw, so what is mounted is settled when a
+// greeks the columns the mount sets (law 8; S1 Q7; issue #15); a line T-LAYER
+// stands as text yields its bar (`standing`), line by line, a document whose
+// article stands in the mount band its label, and one whose article stands in
+// another fold — a stale one a press holds — the whole of it. The loop runs
+// T-LAYER's frame BEFORE this draw, so what stands is settled when a
 // document's label and bars are drawn or yielded; `stats` names both sets,
-// and the loop holds them against the mounted set at the frame's end; it
-// names the marks, the connections — each with its count and the numeral the
+// line by line, and counts the bars drawn at the readable em (`barred`, 0 by
+// the rule), and the loop holds them against what stands at the frame's end;
+// it names the marks, the connections — each with its count and the numeral the
 // pass set on it, each stub with the place it is bound for, its cut and its
 // triangle — and the labels drawn too, the labels' parts left out with the
 // rule that left each out, the box the focus ring outlined and the arrival
@@ -151,8 +158,12 @@ let ctx = null;
 let DPR = 1;
 /**
  * The last frame's figures; `drawn` the documents whose label the label pass
- * set or whose bars the frame drew, `yielded` the ones it left to T-LAYER's
- * mount, `residueMarks` the continuations drawn as marks, `connections` the
+ * set or whose bars the frame drew, `labelled` those whose label it set,
+ * `yielded` the ones whose label or whole it left to T-LAYER's article,
+ * `bars` each line it drew a bar for and `yieldedLines` each line in view it
+ * left to its text, by document, `barred` the bars it drew for documents at
+ * the readable em or above — none, by the rule (see the head) —
+ * `residueMarks` the continuations drawn as marks, `connections` the
  * mid connections drawn, each between two places, a stub where one of them
  * stands out of view, the count set on its stroke where the pass set one,
  * `labels` the labels set — the connections' counts and the trail's pip
@@ -165,7 +176,8 @@ export const stats = {
   linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0,
   residueMarks: /** @type {ResidueMark[]} */ ([]),
   connections: /** @type {DrawnConnection[]} */ ([]),
-  drawn: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]),
+  drawn: /** @type {string[]} */ ([]), labelled: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]),
+  bars: /** @type {Array<[string, number]>} */ ([]), yieldedLines: /** @type {Array<[string, number]>} */ ([]), barred: 0,
   labels: /** @type {import('./labels.js').SetLabel[]} */ ([]),
   labelsLeftOut: /** @type {import('./labels.js').LeftOut[]} */ ([]),
   ring: /** @type {Rect | null} */ (null),
@@ -499,7 +511,9 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     const X = sx(box.x + row.x + g), Y = sy(box.y + row.y + g), W = (row.w - 2 * g) * cam.scale, H = (row.h - 2 * g) * cam.scale;
     const fsPx = f.fs * cam.scale;
     const mountedHere = LAYER.isMounted(d.addr);
-    if (mountedHere) stats.yielded.push(d.addr);
+    // what stands of it as text: a line standing yields its bar; an article standing in another fold — a stale one a press holds — the whole document
+    const stand = LAYER.standing(d.addr), whole = !!stand && stand.fold !== f;
+    if (mountedHere || whole) stats.yielded.push(d.addr);
     if (W >= 10 && !mountedHere) {
       // the label: the ADDRESS past its region's prefix; the first line a DRAFT convention (F-9); the badge from LK, none at a withheld box, whose links no read brings — set by the label pass on the document's ground, where the row holds it
       const tf = Math.min(W * 0.085, fsPx * 1.25), sub = tf * 0.72;
@@ -517,8 +531,9 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     if (W < 26) continue;
     if (d.refused === 'withheld') { if (W > 60) { ctx.strokeStyle = COL.greek; ctx.setLineDash([2, 4]); ctx.strokeRect(X + W * 0.04, Y + H * 0.3, W * 0.92, H * 0.5); ctx.setLineDash([]); } continue; }
     if (landmark) { ctx.fillStyle = COL.land; const s = Math.max(4, Math.min(11, W * 0.03)), cx = sx(box.x + row.x + row.w / 2), ty = sy(box.y + row.y); ctx.beginPath(); ctx.moveTo(cx, ty - s * 1.6); ctx.lineTo(cx + s, ty - s * 0.3); ctx.lineTo(cx, ty + s); ctx.lineTo(cx - s, ty - s * 0.3); ctx.closePath(); ctx.fill(); }
-    if (fsPx < 3 || mountedHere || d.from < 0) continue;
-    // the bars, column by column: the article's own lines, each where its glyphs will stand (the canvas never draws readable glyphs — the layer mounts below the glyph band)
+    if (fsPx < 3 || whole || d.from < 0) continue;
+    // the bars, column by column: the article's own lines, each where its glyphs will stand, a line standing as text yielding its bar — and
+    // at the readable em every line in view stands, for bars mean only "too small to read" (issue #122)
     const B = laidOut(d).bars;
     let set = 0;
     const below = wy(VH + fsPx) - box.y;
@@ -527,9 +542,12 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
       if (!cb.length || sy(box.y + c.y) > VH || sy(box.y + c.y + c.h) < 0 || sx(box.x + c.x) > VW || sx(box.x + c.x + c.w) < 0) continue;
       for (let i = firstBar(cb, wy(-fsPx) - box.y); i < cb.length && cb[i].y < below; i++) {
         const b = cb[i];
-        ctx.fillStyle = COL.greek; ctx.globalAlpha = a * (b.withheld ? 0.25 : fsPx >= LOD_TXT_LO ? 0.7 : 0.55);
+        if (stand && stand.lines.has(b.line)) { stats.yieldedLines.push([d.addr, b.line]); continue; }
+        ctx.fillStyle = COL.greek; ctx.globalAlpha = a * (b.withheld ? 0.25 : 0.55);
         ctx.fillRect(sx(box.x + b.x), sy(box.y + b.y), b.w * cam.scale, Math.max(1, b.h * cam.scale));
         stats.linesDrawn++; set++;
+        stats.bars.push([d.addr, b.line]);
+        if (fsPx >= LOD_TXT_LO) stats.barred++;
       }
     }
     if (set) stats.drawn.push(d.addr);
@@ -579,7 +597,7 @@ function drawLabels(pass, seen) {
   const counts = new Map(set.filter((l) => l.kind === 'connection').map((l) => [l.place, l.lines[0].text]));
   for (const cn of stats.connections) cn.label = counts.get(pairOf(cn.a, cn.b)) ?? null;
   const drawn = new Set(stats.drawn);
-  for (const l of set) if (l.kind === 'doc' && !drawn.has(l.place)) stats.drawn.push(l.place);
+  for (const l of set) if (l.kind === 'doc') { stats.labelled.push(l.place); if (!drawn.has(l.place)) stats.drawn.push(l.place); }
 }
 
 /**
@@ -677,7 +695,8 @@ export function draw() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, VW, VH);
   ctx.textBaseline = 'alphabetic';
-  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.drawn = []; stats.yielded = []; stats.labels = []; stats.labelsLeftOut = []; stats.ring = null; stats.arrival = [];
+  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.drawn = []; stats.labelled = []; stats.yielded = [];
+  stats.bars = []; stats.yieldedLines = []; stats.barred = 0; stats.labels = []; stats.labelsLeftOut = []; stats.ring = null; stats.arrival = [];
   /** @type {Pass} */
   const pass = { labels: [], shapes: [] };
   drawBoard(pass);

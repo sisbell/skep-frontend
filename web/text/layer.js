@@ -2,28 +2,54 @@
 // one reconciler, two targets — the plane's text layer and the reading
 // scene's panes; the scene BORROWS this mount). Layer 2. ENGINE-BOUND. State:
 // VIEW — the mounted set with each record's layout scale, revision, what it
-// was made from, the fold it was set in, its marks and whether it takes the
-// pointer, the corners beside it, each document's fold and its lines as the
-// platform set them, the passage being read while its document is set again,
-// what each reading scene's pane's article was made from, whether a press
-// stands on the layer, and the platform's selection as it stood over an
-// article taken down — THE ONE OWNER (FP-10). Mount an article when a
-// document crosses S1's mount threshold (em 6.5, BELOW the canvas's readable
-// 8, so bars become text and no character positions disagree — S1 Q7), take
-// it down when it leaves or falls below 5.5, and rebuild it where its run,
-// its revision or its fold changed. THE CAP (S1's MAX_MOUNTED, 8): at most 8
-// articles stand — the walk's focused document first, whatever its size (the
-// focus record's D6: the place one stands on is readable, its corner the
-// plane's next Tab stop, D5 K-57), then the rest by size, the largest first,
-// and among equal sizes the articles standing, so no pan, reveal or delivery
-// trades a standing article for its equal. An article standing, stale or not, keeps its claim
-// down to 5.5, as it does against the threshold (`chosen`); a document past
-// the cap keeps its bars. But WHILE A PRESS STANDS on the layer (`press`)
-// nothing is rebuilt, nothing mounted and so nothing taken down for the cap:
-// the platform's drag-selection is anchored in the article's own nodes,
-// which a rebuild would take away, and a fresh mount of the document holding
-// the selection would place its range over the drag; the first frame after
-// the press does what was held. Laid out ONCE at P-LAY's LAY_FS (16 px)
+// was made from, the fold it was set in, the parts of it standing, its marks
+// and whether it takes the pointer, the corners beside it, each document's
+// fold and its lines as the platform set them, the passage being read while
+// its document is set again, what each reading scene's pane's article was
+// made from, whether a press stands on the layer, the platform's selection as
+// it stood over an article taken down, and the page's selection while it is
+// owed its range — THE ONE OWNER (FP-10).
+// NO DOCUMENT AT READING SIZE IS EVER DRAWN AS BARS (issue #122's design
+// decision): bars mean only "too small to read". Every document in view whose
+// text has arrived stands as text in the frame its em reaches P-LOD's readable
+// threshold (8), whatever else that frame mounts. Below it a document mounts
+// from S1's mount threshold (em 6.5, so bars become text while they are still
+// too small to read and no character positions disagree — S1 Q7) and keeps
+// its claim down to 5.5 (S1's hysteresis), and THE LIMIT (P-LOD's
+// MOUNTS_PER_FRAME) is spent on those: at most that many documents newly
+// mounted in a frame, the frame's readable mounts counted first, then the
+// documents holding the selection or the walk's focus and the document just
+// navigated to — the walk's focused document first whatever its size, its
+// corner the plane's next Tab stop (the focus record's D6; D5 K-57) — then the
+// largest em first, equal ems in the model's order (`chosen`): never by
+// length, which would bar short notes first. The limit holds a mount back for
+// the frames after; it never takes one down, and nothing is taken down to make
+// room. A DOCUMENT STANDS BY LINE, never whole (`fill`): the lines of its fold
+// whose boxes meet the view, padded, column by column, stand as PARTS — each
+// a run of one column's lines cut from the article at the points its lines
+// open at as the platform set them (`cutOf`) — so what stands is bounded by
+// the screen however many documents are in view. A line entering the view
+// stands in a part of its own, and a part none of whose lines is in view
+// goes; no standing part is rebuilt to take a line. The head, a record, a
+// withheld face, a reference, an item not rendered and a scene-offer stand
+// whole, cut only where the fold's columns cut them; a paragraph or a heading
+// is cut at any line. THE LINES THAT HOLD THE SELECTION OR THE FOCUS STAY for
+// as long as they hold them, out of view and below 5.5 as well
+// (`heldParts`): those the platform's selection meets — a press's, even
+// collapsed, the drag being made — the one the platform's focus stands in,
+// and those of the page's span, its first and last lines standing wherever
+// the view is so its range can be placed (`placeAgain`); an article left with
+// such lines alone stands outside the mount band (`isMounted` false). What
+// assistive technology receives is the document itself, never what stands:
+// the ARIA mirror's items are made from the model (S1 Q7). An article goes
+// stale where its run, its revision or its fold changed, and is rebuilt in its
+// place; the walk's focused document is the one residue document of its cell
+// that mounts. WHILE A PRESS STANDS on the layer (`press`) no standing article
+// is rebuilt or loses the pointer and no range is placed over the drag: the
+// platform's drag-selection is anchored in the article's own nodes, which a
+// rebuild would take away. Documents and lines still mount as the view asks
+// — a document reaching reading size is text — and the first frame after the
+// press does what was held. Laid out ONCE at P-LAY's LAY_FS (16 px)
 // and its unitless LINE_H, so each element's line box is that element's own
 // size's (P-LAY's `lineBox`), each column exactly P-LAY's MEASURE_CPL
 // characters of its own face (`ch`, the style's `--measure`), and placed by
@@ -35,12 +61,13 @@
 // each row's element read for its top and its height — the lines P-LAY
 // predicts standing where the element stands, and set as the element sets
 // them where it sets them otherwise — and those lines broken into columns by
-// P-LAY's keep rules; the mounted article is that one column parted into its
-// fold's columns (`partInto`), a block a break falls in split at the point
-// its line opens with, chrome included, each part keeping its block's keys and
-// the tail naming the character it starts at (`data-char`), so every reader of
-// a block here — the selection's mapping, the marks, the rects — reads it
-// across its parts. Its size is the step P-LAY's fold takes for the plan
+// P-LAY's keep rules; a mounted article's parts are cut from that one column,
+// kept out of the page (its template), each placed at its first line's top in
+// its column, a block a cut falls in split at the point its line opens with,
+// chrome included, each part keeping its block's keys and the tail naming the
+// character it starts at (`data-char`), so every reader of a block here — the
+// selection's mapping, the marks, the rects — reads it across the parts of it
+// that stand. Its size is the step P-LAY's fold takes for the plan
 // carrying the most link chrome any reveal can set in it (LK's `utmost`) and
 // for the lines as set now, the larger: no reveal moves its type size and
 // nothing runs past its room. Every reader of a document's size above the
@@ -52,8 +79,8 @@
 // where the document's text has been set in view (a frame's budget, nearest
 // the view's centre first), so mid scale greeks the columns the mount sets
 // and no word moves at the hand-off; the loop runs `frame` before P-RENDER
-// draws, so the canvas draws or yields each document by this frame's mounted
-// set. WHEN A DOCUMENT IS SET AGAIN WHILE IT IS READ — its article rebuilt in
+// draws, so the canvas draws or yields each line by the lines standing this
+// frame (`standing`). WHEN A DOCUMENT IS SET AGAIN WHILE IT IS READ — its article rebuilt in
 // another fold, or taken down for a feed row and mounted again — the passage
 // at the visible view's centre keeps its place and its size on screen
 // (`hold`; P-LAY's `holdOf`, P-CAM's `reanchor`). The paging key continues at
@@ -97,23 +124,30 @@
 // press on mounted text falls to the canvas as one on its bars does, and a
 // press between its columns falls to the canvas at any scale, the document a
 // place "bars or mounted text alike" and the press keyed "on legibility and
-// never on whether text is mounted"; the class moves only while no press
-// stands, so a drag begun on legible text keeps the article it is anchored in
-// through a zoom below the threshold. A drag selects text and never pans, and
-// this module holds whether a press stands (APP-INPUT reports its start and
-// its end). THE SELECTION IS A BYTE
+// never on whether text is mounted"; the class moves on a standing article
+// only while no press stands, so a drag begun on legible text keeps the
+// article it is anchored in through a zoom below the threshold. A drag
+// selects text and never pans, and this module holds whether a press stands
+// (APP-INPUT reports its start and its end). A press the canvas took at
+// reading scale before the text under it stood is APP-INPUT's to hold: once
+// the frame has set that text, the platform's selection is collapsed at the
+// press (`caretAt`) and the drag's other end carried to the pointer
+// (`extendTo`), as the platform does on text it is pressed on. THE SELECTION IS A BYTE
 // SPAN (R11; foundations §3.1) and the platform's selection is its one mark
 // (§2.1): this module carries the platform's range to the span it covers —
 // each block's own text nodes walked, part by part, the chrome inside a block
 // skipped, a character boundary carried to its byte position by T-SPAN
 // through the blocks the article was made from, never the model's newest,
 // which a delivery under a press may have replaced — and the span back to a
-// range, which it places over the mounted article when the page makes the
-// selection, its anchor at the span's start, and again after a remount (the
-// reveal, a lens, a delivery), since a remount rebuilds the element and the
-// platform's range dies with the old one: read as the old article is taken
-// down, the selection goes back with its anchor at the end it stood at, so
-// the platform's own keys (D5 K-71) go on extending it from there. What no
+// range over the parts that stand, a position no standing part holds naming
+// no point (`pointOfPos`). That range is placed over the mounted article when
+// the page makes the selection, its anchor at the span's start — owed until
+// the frame stands the span's first and last lines, where no part held them
+// — and again after a remount (the reveal, a lens, a delivery), since a
+// remount rebuilds the element and the platform's range dies with the old
+// one: read as the old article is taken down, the selection goes back with its
+// anchor at the end it stood at, so the platform's own keys (D5 K-71) go on
+// extending it from there. What no
 // interface carries is macOS's "no direction yet" of a selection a pointer
 // made: put back, it extends from its anchor, as one a key extended does.
 // The platform holds one selection, and no remount takes it from the person:
@@ -146,9 +180,9 @@ import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor } from '../plane/camera.js';
-import { MOUNT_EM, UNMOUNT_EM, MAX_MOUNTED, LOD_TXT_LO } from '../plane/lod.js';
+import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
-import { layoutOf, fold, estimate, slot, boundsOf, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, holdOf, isSpace, MEASURE_CPL, LAY_FS, LINE_H } from '../plane/layout.js';
+import { layoutOf, fold, estimate, slot, boundsOf, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, holdOf, isSpace, columnOfLine, MEASURE_CPL, LAY_FS, LINE_H } from '../plane/layout.js';
 import { articleHTML, articlePlan, cornerHTML, blockMarks, editionClause } from './article.js';
 import { homeOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
@@ -173,9 +207,39 @@ import { t } from '../strings.js';
  */
 
 /**
- * @typedef {Object} Part — a block's element in a mounted article: the block whole, or the part of it one column holds
+ * @typedef {Object} BlockPart — a block's element in a part of a mounted article: the block whole, or the stretch of it the part holds
  * @property {HTMLElement} el
  * @property {Block} b
+ */
+
+/** @typedef {{pos: number, char: number, top: number, left: number}} BlockTop a block part's offset in the one 16 px layout, by its block and the character it starts at (the gate's span registration) */
+
+/**
+ * @typedef {Object} Part — a run of lines of one column of a mounted article's fold standing as text: its box (`.col`), placed at its first line's top
+ * @property {number} column its column, an index into the fold's columns
+ * @property {number} first its first line, an index into the fold's lines
+ * @property {number} end one past its last line
+ * @property {HTMLElement | null} el its box; null where the platform does not set the article (the node tests)
+ * @property {BlockPart[]} blocks the block parts it holds, each with the block it shows
+ * @property {BlockTop[]} tops each of them where it stood as the part was set
+ */
+
+/**
+ * @typedef {Object} Unit — a row element of an article and the lines it sets: the head, a block, a scene-offer
+ * @property {number} first its first line, an index into the fold's lines
+ * @property {number} end one past its last line
+ * @property {Line['kind']} kind its lines' kind
+ * @property {number | null} pos the block it is, by its first position; null for the head and a scene-offer
+ * @property {number} k a scene-offer's index among the article's scene-offers; 0 for any other unit
+ * @property {boolean} text a paragraph or a heading, which a part may cut at any of its lines; any other unit is cut where the fold's columns cut it alone
+ */
+
+/**
+ * @typedef {Object} Cut — the point a line opens at in its unit's element, as the platform set it (`lineStart`), carried to any copy of the article
+ * @property {number[]} path the child indexes from the unit's element down to the point's node
+ * @property {number} offset the point's offset in that node
+ * @property {boolean[]} before for each element between the unit's element and the point, outermost first, whether any text stands in it before the point: a part ending at the cut leaves out the first that holds none, and a part starting at the cut takes a run's opening where none does
+ * @property {number} char the unit's own characters before the point, its chrome apart: the character a part starting there starts at
  */
 
 /**
@@ -191,9 +255,16 @@ import { t } from '../strings.js';
  * @property {Fold} fold the fold it was set in: its size, its columns and the lines they hold
  * @property {number} fs the document's em in world units: its fold's
  * @property {string} corner the corner's items at mount (T-ARTICLE's `cornerHTML`); empty where it has none
- * @property {Array<{pos: number, char: number, top: number, left: number}>} [blockTops] each block's part's offset in the one 16 px layout, by its block and the character it starts at (the gate's span registration)
- * @property {Part[]} marked each block's parts with the block they show: the elements the selection's and the focus's marks stand on
- * @property {string} markedFor the selection and the focus its blocks are marked for (`marksKey`)
+ * @property {HTMLElement | null} template the article's one column, kept out of the page: what its parts are cut from; null where the platform does not set the article
+ * @property {Unit[]} units its fold's lines by the row elements that set them
+ * @property {Map<number, Cut | null>} cuts the points its lines open at, by line, as far as they were read; null where a line opens at no point found
+ * @property {Part[]} parts what stands of it, in its lines' order
+ * @property {Set<number>} lines the lines its parts hold
+ * @property {boolean} banded it stands in the mount band: its em stood at 6.5 and above as it mounted, and has stood at 5.5 and above since, where its place lets it mount — its lines in view stand; else it stands for the lines that hold the selection or the focus alone
+ * @property {number} scale the scale its transform was set at (`place`): 1 before it is placed
+ * @property {BlockTop[]} blockTops where each block part standing stood as its part was set (the gate's span registration)
+ * @property {BlockPart[]} marked each block part standing with the block it shows: the elements the selection's and the focus's marks stand on
+ * @property {string} markedFor the selection and the focus its blocks are marked for (`marksKey`); '' where a part set since awaits its marks
  * @property {boolean} legible it takes the pointer: its em stood at P-LOD's readable threshold or above at the last frame no press stood through (`markLegible`)
  */
 
@@ -218,17 +289,9 @@ import { t } from '../strings.js';
 
 /**
  * @typedef {Object} Measured — a document's lines as the platform set them (`measureLines`)
- * @property {string} key the plan they were set from, as JSON: a plan sets one layout, whatever selection or focus marks it
+ * @property {string} key the article they were set from (`articleOf`): one article sets one layout, whatever selection or focus marks it — its plan alone does not, for no row of it sizes a withheld run's face
  * @property {Line[]} lines
  * @property {number} n its serial: a fold made from other lines is made again
- */
-
-/**
- * @typedef {Object} Unit — a row element of an article laid out in one column, and the lines it holds
- * @property {HTMLElement} el
- * @property {number} first its first line, an index into the lines
- * @property {number} n its count of lines
- * @property {number} top its top below the column's, in px
  */
 
 /**
@@ -244,6 +307,7 @@ import { t } from '../strings.js';
  * @property {() => ({addr: string, pos: number} | null)} focus the focused block (N-WALK's)
  * @property {() => number} top the one line's bottom edge on screen (L-LINE's): the corners hold below it, and the visible view stands below it
  * @property {() => void} handOff the focus's next home where a corner that held it leaves: the walk's current item (D5 §4 rule 4)
+ * @property {() => (string | null)} navigated the place just navigated to: the trail's current entry's (N-TRAIL's), first in the limit's order where it is a document
  */
 
 /** the corner's distance from the text column, and from the edge of the strip it stands in (px) */
@@ -264,15 +328,19 @@ const folds = new Map();
 /** @type {Map<string, Measured>} each document's lines as the platform set them, by document */
 const measured = new Map();
 let serial = 0;
-/** @type {Array<{addr: string, ms: number, blocks: number, emPx: number, columns: number, measureMs: number, partMs: number}>} the mount costs (a forced layout inside the measurement — S1), the setting of its lines and the parting into columns among them */
+/** @type {Array<{addr: string, ms: number, blocks: number, emPx: number, columns: number, lines: number, measureMs: number, partMs: number}>} the mount costs (a forced layout inside the measurement — S1): the setting of its lines where they were not set, and the cutting of the parts it first stands in, among them */
 const mountLog = [];
 /** the mount log, for the gate's figures */
 export const mounts = () => mountLog.slice();
+/** the documents the last frame mounted afresh — a rebuild apart — the ones standing in the mount band, and the lines standing of every article */
+const last = { mounted: 0, standing: 0, lines: 0 };
+/** what the last frame stood, for the frame buffer the gate reads: its new mounts, the articles standing in the mount band, the lines standing */
+export const frameStats = () => ({ ...last });
 /** @type {HTMLElement | null} */
 let layer = null;
 /** @type {HTMLElement | null} */
 let cornerLayer = null;
-/** does the platform set the articles here — their lines measured and parted into columns; else (the node tests) the lines P-LAY predicts, in one column */
+/** does the platform set the articles here — their lines measured and their parts cut from them; else (the node tests) the lines P-LAY predicts, the article's HTML standing whole and its parts the runs of lines alone */
 let engine = false;
 /** the view revision: the reveal and the lenses, which change the links an article draws — a bump remounts; the selection and the walk's focus never bump it, their blocks marked in place (`markBlocks`) */
 let grev = 0;
@@ -280,15 +348,17 @@ let grev = 0;
 let pressed = false;
 /** @type {{span: Span, backward: boolean} | null} the platform's selection as it stood over an article as the article was taken down — its bytes, and whether it ran backward — until the frame puts the page's selection back (`placeAgain`): the end its anchor goes back at, where it covered the same bytes, and never whether it goes back */
 let kept = null;
+/** @type {Span | null} the page's selection while no range stands over it: its first or last line stood in no part as the page made it, and the frame stands them (`placeAgain`) */
+let owed = null;
 /** @type {Hold | null} */
 let hold = null;
 /** @type {Readers} */
-let read = { selection: () => null, focus: () => null, top: () => 0, handOff: () => {} };
+let read = { selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null };
 
 /**
  * @param {HTMLElement} el the text layer's element
  * @param {HTMLElement | null} cornersEl the corner layer's
- * @param {{measure?: boolean}} [opts] `measure` the platform sets the articles: their lines measured as rendered and parted into columns (the page; the node tests run without)
+ * @param {{measure?: boolean}} [opts] `measure` the platform sets the articles: their lines measured as rendered and their parts cut from them (the page; the node tests run without)
  */
 export function attach(el, cornersEl, opts = {}) { layer = el; cornerLayer = cornersEl; engine = !!opts.measure; }
 /**
@@ -309,21 +379,39 @@ export const revision = () => grev;
 /**
  * The press rule's text half (§2.4): a press on an article stands from its
  * button going down to its end — the button's release, the platform's
- * cancel, a context menu — and while it stands `frame` rebuilds nothing,
- * mounts nothing and leaves each article taking the pointer or not as it
- * stood (`markLegible`), so the drag keeps the nodes it is anchored in (R11's
- * one continuous gesture). APP-INPUT reports both. A press's end marks the
- * frame dirty, so the next frame does what was held; ending none changes
- * nothing.
+ * cancel, a context menu — and while it stands `frame` rebuilds no standing
+ * article, places no range and leaves each standing article taking the
+ * pointer or not as it stood (`markLegible`), the parts the drag meets held,
+ * so the drag keeps the nodes it is anchored in (R11's one continuous
+ * gesture). APP-INPUT reports both. A press's end marks the frame dirty, so
+ * the next frame does what was held; ending none changes nothing.
  * @param {boolean} on the press starts (true) or ends (false)
  */
 export function press(on) { if (pressed && !on) markDirty(); pressed = on; }
 /** does a press stand on the layer? */
 export const pressing = () => pressed;
-/** the mounted set, read-only */
+/** the articles standing — in the mount band, or for the lines that hold the selection or the focus alone — read-only */
 export const mountedSet = () => mounted;
-/** @param {string} addr */
-export const isMounted = (addr) => mounted.has(addr);
+/** does a document's article stand in the mount band (see the head): its lines in view standing as text */
+export const isMounted = (/** @type {string} */ addr) => { const rec = mounted.get(addr); return !!rec && rec.banded; };
+/**
+ * The lines of a document standing as text, and the fold they stand in —
+ * P-RENDER draws a bar for no line that stands, and yields the whole document
+ * where its article stands in another fold (a stale one a press holds); null
+ * where no article of it stands.
+ * @param {string} addr
+ * @returns {{fold: Fold, lines: Set<number>} | null}
+ */
+export function standing(addr) { const rec = mounted.get(addr); return rec ? { fold: rec.fold, lines: rec.lines } : null; }
+/** does a line of a document's fold stand as text (the frame buffer's count of bars drawn over text, and of lines yielded to none) */
+export const lineStands = (/** @type {string} */ addr, /** @type {number} */ i) => { const rec = mounted.get(addr); return !!rec && rec.lines.has(i); };
+/**
+ * What stands of a document's article: its parts, each a column and a run of
+ * its fold's lines, in their lines' order; null where none stands.
+ * @param {string} addr
+ * @returns {Array<{column: number, first: number, end: number}> | null}
+ */
+export function mountedLines(addr) { const rec = mounted.get(addr); return rec ? rec.parts.map((p) => ({ column: p.column, first: p.first, end: p.end })) : null; }
 
 /** the article's view state, from the owners' readers and LK */
 export function viewFor(/** @type {Doc} */ d, scene = false) {
@@ -397,12 +485,12 @@ function folded(d) {
   const f = folds.get(d.addr);
   if (f && f.key === key) return f.fold;
   const v = viewFor(d), owner = ownerAccount(d);
-  const now = articlePlan(d, v, owner), nowKey = JSON.stringify(now);
-  const m = measured.get(d.addr), set = m && m.key === nowKey ? m : null;
+  const now = articlePlan(d, v, owner);
+  const m = measured.get(d.addr), set = m && m.key === articleOf(d, v, owner) ? m : null;
   const u = LK.utmost(d.addr);
   const rows = articlePlan(d, { ...v, marks: u.shown, symbols: u.shown, countAt: u.countAt }, owner);
   const after = Math.max(0, (d.extent || 0) + 1 - d.to);
-  const plan = `${d.extent}|${d.from}|${d.to}|${JSON.stringify(rows)}|${nowKey}|${set ? set.n : 0}`;
+  const plan = `${d.extent}|${d.from}|${d.to}|${JSON.stringify(rows)}|${JSON.stringify(now)}|${set ? set.n : 0}`;
   if (f && f.plan === plan) { folds.set(d.addr, { key, plan, fold: f.fold, set: !!set }); return f.fold; }
   const opts = { after, heldTo: d.to };
   const most = fold(gapped(d, layoutOf(rows).lines), room, opts);
@@ -427,6 +515,18 @@ function gapped(d, lines) {
   if (!gaps.size) return lines;
   return lines.map((l) => (l.pos != null && l.nth === 0 && gaps.has(l.pos) ? { ...l, gap: gaps.get(l.pos) } : l));
 }
+
+/**
+ * A document's article as the plane sets its lines: T-ARTICLE's HTML with no
+ * block marked for the selection or the focus, which set no line — the key the
+ * lines the platform set are kept by (`Measured`), and the one column a mounted
+ * article's parts are cut from, each part's blocks marked in place after
+ * (`markBlocks`).
+ * @param {Doc} d
+ * @param {ArticleView} v
+ * @param {string} owner
+ */
+const articleOf = (d, v, owner) => articleHTML(d, { ...v, selected: null, focus: null }, owner);
 
 /** what an article made from a document now is made from: the document's blocks and runs as the model holds them */
 const madeFrom = (/** @type {Doc} */ d) => ({ addr: d.addr, blocks: d.blocks, runs: d.runs });
@@ -544,7 +644,7 @@ const TEXT_BLOCK = 'p.sp, h2.sp, h3.sp, h4.sp, h5.sp, h6.sp';
  * @param {HTMLElement} col the column, laid out
  * @param {Row[]} rows the plan its article was made from
  * @param {Block[]} blocks the blocks it was made from
- * @returns {{lines: Line[], units: Unit[]}}
+ * @returns {Line[]}
  */
 function measureLines(col, rows, blocks) {
   const P = layoutOf(rows).lines;
@@ -564,37 +664,33 @@ function measureLines(col, rows, blocks) {
   if (i < P.length && groups.length) groups[groups.length - 1].lines.push(...P.slice(i));
   /** @type {Line[]} */
   const out = [];
-  /** @type {Unit[]} */
-  const units = [];
   const half = 0.5 / LAY_FS;
   for (const g of groups) {
-    const r = g.el.getBoundingClientRect(), top = (r.top - top0) / LAY_FS, h = r.height / LAY_FS, first = out.length;
+    const r = g.el.getBoundingClientRect(), top = (r.top - top0) / LAY_FS, h = r.height / LAY_FS;
     const L = g.lines;
-    if (L.length) {
-      const p0 = L[0].top, last = L[L.length - 1], ph = last.top + last.h - p0;
-      const text = g.el.matches(TEXT_BLOCK);
-      if (!text || Math.abs(h - ph) <= half) {
-        // the plan's lines, standing at the element's top — those that fit it; a unit set taller keeps the room left as a line of no ink
-        for (const l of L) if (l === L[0] || l.top - p0 + l.h <= h + half) out.push({ ...l, top: top + (l.top - p0) });
-        const end = out[out.length - 1], deep = end.top + end.h - top;
-        if (h - deep > half) out.push({ ...end, top: top + deep, h: h - deep, w: 0, nth: end.nth + 1, brk: false });
-      } else {
-        // the lines the element sets: as many as its height holds at its own pitch, a float's own line below them
-        const pitch = parseFloat(getComputedStyle(g.el).lineHeight) / LAY_FS || L[0].h;
-        const m = Math.max(1, Math.floor(h / pitch + 1e-3)), extra = h - m * pitch;
-        const inner = g.el.matches(PARAGRAPH), b = blocks.find((x) => x.pos === L[0].pos);
-        const a0 = L[0].at, a1 = b ? b.pos + b.width : null;
-        for (let k = 0; k < m; k++) {
-          const at = m === L.length ? L[k].at : a0 != null && a1 != null ? a0 + Math.floor((k * (a1 - a0)) / m) : a0;
-          const brk = k === 0 ? L[0].brk : inner && k >= 2 && m - k >= 2 && (k >= L.length || L[k].brk || L.length < m);
-          out.push({ ...L[0], top: top + k * pitch, h: pitch, w: k < m - 1 ? MEASURE_CPL : last.w || MEASURE_CPL, nth: k, brk, at });
-        }
-        if (extra > half) out.push({ ...L[0], top: top + m * pitch, h: extra, w: 0, nth: m, brk: false, at: a0 });
+    if (!L.length) continue;
+    const p0 = L[0].top, last = L[L.length - 1], ph = last.top + last.h - p0;
+    const text = g.el.matches(TEXT_BLOCK);
+    if (!text || Math.abs(h - ph) <= half) {
+      // the plan's lines, standing at the element's top — those that fit it; a unit set taller keeps the room left as a line of no ink
+      for (const l of L) if (l === L[0] || l.top - p0 + l.h <= h + half) out.push({ ...l, top: top + (l.top - p0) });
+      const end = out[out.length - 1], deep = end.top + end.h - top;
+      if (h - deep > half) out.push({ ...end, top: top + deep, h: h - deep, w: 0, nth: end.nth + 1, brk: false });
+    } else {
+      // the lines the element sets: as many as its height holds at its own pitch, a float's own line below them
+      const pitch = parseFloat(getComputedStyle(g.el).lineHeight) / LAY_FS || L[0].h;
+      const m = Math.max(1, Math.floor(h / pitch + 1e-3)), extra = h - m * pitch;
+      const inner = g.el.matches(PARAGRAPH), b = blocks.find((x) => x.pos === L[0].pos);
+      const a0 = L[0].at, a1 = b ? b.pos + b.width : null;
+      for (let k = 0; k < m; k++) {
+        const at = m === L.length ? L[k].at : a0 != null && a1 != null ? a0 + Math.floor((k * (a1 - a0)) / m) : a0;
+        const brk = k === 0 ? L[0].brk : inner && k >= 2 && m - k >= 2 && (k >= L.length || L[k].brk || L.length < m);
+        out.push({ ...L[0], top: top + k * pitch, h: pitch, w: k < m - 1 ? MEASURE_CPL : last.w || MEASURE_CPL, nth: k, brk, at });
       }
+      if (extra > half) out.push({ ...L[0], top: top + m * pitch, h: extra, w: 0, nth: m, brk: false, at: a0 });
     }
-    units.push({ el: g.el, first, n: out.length - first, top: r.top - top0 });
   }
-  return { lines: out, units };
+  return out;
 }
 
 /** is a character a collapsible space (P-LAY's `isSpace`), which opens no line */
@@ -641,129 +737,461 @@ function pathTo(/** @type {Node} */ node, /** @type {HTMLElement} */ el) {
 /** the count of a block part's own characters: its text nodes', the chrome apart */
 const ownLength = (/** @type {HTMLElement} */ el) => textNodes(el).reduce((n, tn) => n + tn.length, 0);
 
+// ---- what stands: units, cuts, parts ----------------------------------------------------------------------------
+
 /**
- * Part an article's one column into its fold's columns (see the head): from
- * the last column back to the second, each column's flow taken out of the
- * first — from the element its first line opens, or from the point its first
- * line opens at inside a block it shares with the column before — into a
- * column of its own, placed after the first so the columns stand in reading
- * order; where a block is split, the element on either side of the point
- * left as it was but for what the split takes from it — an element left with
- * nothing in it removed, and a run's opening (its boundary, its hairline) kept
- * on the side that holds it — and the tail naming the character it starts at;
- * each column placed at its slot. A column whose first line opens at no
- * point found stays in the column before it.
- * @param {HTMLElement} col the article's one column, laid out
- * @param {Fold} f
- * @param {Unit[]} units
- * @param {number} lay layout px per world unit
+ * A fold's lines by the row elements that set them (`Unit`): the head's lines
+ * one unit, each block's another, each scene-offer one of its own; a
+ * paragraph or a heading a unit a part may cut at any of its lines.
+ * @param {Line[]} lines
+ * @param {Block[]} blocks the blocks the article was made from
+ * @returns {Unit[]}
  */
-function partInto(col, f, units, lay) {
+function unitsOf(lines, blocks) {
+  const kinds = new Map(blocks.map((b) => [b.pos, b.kind]));
+  /** @type {Unit[]} */
+  const out = [];
+  let offers = 0;
+  lines.forEach((l, i) => {
+    const prev = out[out.length - 1];
+    if (prev && prev.kind === l.kind && prev.pos === l.pos && !(l.kind === 'chrome' && l.nth === 0)) { prev.end = i + 1; return; }
+    out.push({ first: i, end: i + 1, kind: l.kind, pos: l.pos, k: l.kind === 'chrome' ? offers++ : 0, text: l.kind === 'text' && l.pos != null && kinds.get(l.pos) === 'para' });
+  });
+  return out;
+}
+
+/** the unit holding a line (the units in their lines' order, the line one of theirs) */
+function unitAt(/** @type {Unit[]} */ units, /** @type {number} */ i) {
+  let lo = 0, hi = units.length - 1;
+  while (lo < hi) { const m = (lo + hi + 1) >> 1; if (units[m].first <= i) lo = m; else hi = m - 1; }
+  return units[lo];
+}
+
+/** a unit's element in an article's one column: the head, a block by its first position, the k-th scene-offer; null where the column holds none */
+function unitEl(/** @type {HTMLElement} */ col, /** @type {Unit} */ u) {
+  if (u.kind === 'head') return /** @type {HTMLElement | null} */ (col.querySelector(':scope > .hd'));
   const run = col.querySelector(':scope > .run');
-  const top0 = col.getBoundingClientRect().top;
-  const unitOf = (/** @type {number} */ i) => units.find((u) => i >= u.first && i < u.first + u.n) || null;
-  const at = (/** @type {HTMLElement} */ box, /** @type {import('../plane/layout.js').Column} */ c) => { box.style.left = c.x * lay + 'px'; box.style.top = c.y * lay + 'px'; };
-  for (let ci = f.columns.length - 1; ci >= 1; ci--) {
-    const c = f.columns[ci];
-    if (c.estimated || !c.n || !run) continue;
-    const u = unitOf(c.first);
-    if (!u || !run.contains(u.el)) continue;
-    const range = document.createRange();
-    /** @type {HTMLElement[]} */
-    let path = [];
-    let split = false;
-    if (c.first === u.first) range.setStartBefore(u.el);
-    else {
-      const y = top0 + u.top + (f.lines[c.first].top - f.lines[u.first].top) * LAY_FS;
-      const p = lineStart(u.el, y);
-      if (!p) continue;
-      range.setStart(p.node, p.offset);
-      path = pathTo(p.node, u.el);
-      split = true;
-    }
-    range.setEnd(run, run.childNodes.length);
-    const frag = range.extractContents();
-    if (split && frag.firstChild && frag.firstChild.nodeType === Node.ELEMENT_NODE) {
-      const tail = /** @type {HTMLElement} */ (frag.firstChild);
-      /** @type {Node | null} */
-      let clone = tail;
-      for (const orig of path) {
-        clone = clone ? clone.firstChild : null;
-        if (!orig.textContent) orig.remove();
-        else if (clone && clone.nodeType === Node.ELEMENT_NODE && /** @type {HTMLElement} */ (clone).classList.contains('opens')) /** @type {HTMLElement} */ (clone).classList.remove('opens');
-      }
-      tail.dataset.char = String(Number(u.el.dataset.char || 0) + ownLength(u.el));
-    }
-    const box = document.createElement('div'); box.className = 'col';
-    const r = document.createElement('div'); r.className = 'run';
-    r.appendChild(frag); box.appendChild(r); at(box, c);
-    col.after(box);
-  }
-  at(col, f.columns[0]);
+  if (!run) return null;
+  if (u.kind === 'chrome') return /** @type {HTMLElement | null} */ (run.querySelectorAll(':scope > .offer')[u.k] || null);
+  return /** @type {HTMLElement | null} */ (run.querySelector(`:scope > [data-pos="${u.pos}"]`));
 }
 
 /**
- * Mount a document's article over its room — laid out once at LAY_FS in one
- * column, its lines set (`measureLines`), then parted into its fold's columns
- * (`partInto`), the article as large as the room so it stands on it.
+ * The point line `i` of a unit opens at (`Cut`): read from the unit's element
+ * laid out alone, out of sight, at the article's size and measure — a block
+ * breaks its lines as it does in the article, for nothing outside it moves
+ * them — at the first character, chrome included and spaces apart, below the
+ * line's top (`lineStart`); kept for the article's life. Null where the line
+ * opens at no point found.
+ * @param {Mounted} rec
+ * @param {Unit} u
+ * @param {number} i
+ * @returns {Cut | null}
+ */
+function cutOf(rec, u, i) {
+  if (rec.cuts.has(i)) return rec.cuts.get(i) ?? null;
+  /** @type {Cut | null} */
+  let cut = null;
+  const el = rec.template && layer ? unitEl(rec.template, u) : null;
+  if (el && layer) {
+    const { el: art, col } = articleEl(rec.d, '');
+    art.style.visibility = 'hidden';
+    const copy = /** @type {HTMLElement} */ (el.cloneNode(true));
+    if (u.kind === 'head') col.appendChild(copy);
+    else { const run = document.createElement('div'); run.className = 'run'; run.appendChild(copy); col.appendChild(run); }
+    layer.appendChild(art);
+    try {
+      const lines = rec.fold.lines;
+      const at = lineStart(copy, copy.getBoundingClientRect().top + (lines[i].top - lines[u.first].top) * LAY_FS);
+      if (at) cut = portable(copy, at);
+    } finally { art.remove(); }
+  }
+  rec.cuts.set(i, cut);
+  return cut;
+}
+
+/**
+ * A point in a unit's element carried to any copy of the article (`Cut`): its
+ * path, which text stands before it in each element it lies in, and the
+ * unit's own characters before it.
+ * @param {HTMLElement} unit
+ * @param {{node: Node, offset: number}} at
+ * @returns {Cut}
+ */
+function portable(unit, at) {
+  /** @type {number[]} */
+  const path = [];
+  for (let n = at.node; n !== unit && n.parentNode; n = n.parentNode) path.unshift([...n.parentNode.childNodes].indexOf(/** @type {ChildNode} */ (n)));
+  const before = pathTo(at.node, unit).map((e) => { const r = document.createRange(); r.setStart(e, 0); r.setEnd(at.node, at.offset); return r.toString() !== ''; });
+  let char = 0;
+  for (const tn of textNodes(unit)) {
+    const r = document.createRange(); r.selectNodeContents(tn);
+    const c = r.comparePoint(at.node, at.offset);
+    if (c < 0) break;
+    if (c === 0) { char += at.node === tn ? at.offset : 0; break; }
+    char += tn.length;
+  }
+  return { path, offset: at.offset, before, char };
+}
+
+/** a cut's point in a copy of its unit's element */
+function pointIn(/** @type {HTMLElement} */ el, /** @type {Cut} */ cut) {
+  /** @type {Node} */
+  let n = el;
+  for (const k of cut.path) n = n.childNodes[k];
+  return { node: n, offset: cut.offset };
+}
+
+/** can the article be cut where line `i` opens: past its last line, at a unit's first line, or at the point it opens at — always where the platform does not set the article */
+function cutsAt(/** @type {Mounted} */ rec, /** @type {number} */ i) {
+  if (!engine || i <= 0 || i >= rec.fold.lines.length) return true;
+  const u = unitAt(rec.units, i);
+  return u.first === i || !!cutOf(rec, u, i);
+}
+
+/**
+ * A run of a column's lines widened to whole units where it would cut a unit
+ * a part may not cut there — anything but a paragraph or a heading, where the
+ * fold's column does not cut it — within its column.
+ * @param {Mounted} rec
+ * @param {{column: number, first: number, end: number}} r
+ */
+function whole(rec, r) {
+  const c = rec.fold.columns[r.column], top = c.first, bottom = c.first + c.n;
+  let { first, end } = r;
+  const u = unitAt(rec.units, first), w = unitAt(rec.units, end - 1);
+  if (u && !u.text && first > Math.max(u.first, top)) first = Math.max(u.first, top);
+  if (w && !w.text && end < Math.min(w.end, bottom)) end = Math.min(w.end, bottom);
+  return { column: r.column, first, end };
+}
+
+/**
+ * The lines of an article in view (see the head): in each column, those whose
+ * boxes meet the world the frame mounts in, widened to whole units where a
+ * unit may not be cut; none where the article stands outside the mount band.
+ * @param {Mounted} rec
+ * @param {{x0: number, y0: number, x1: number, y1: number}} v
+ * @returns {Array<{column: number, first: number, end: number}>}
+ */
+function windowOf(rec, v) {
+  if (!rec.banded || !rec.units.length) return [];
+  const f = rec.fold, box = docBox(rec.d.addr);
+  /** @type {Array<{column: number, first: number, end: number}>} */
+  const out = [];
+  f.columns.forEach((c, ci) => {
+    if (c.estimated || !c.n || box.x + c.x > v.x1 || box.x + c.x + c.w < v.x0) return;
+    const top = (/** @type {number} */ i) => box.y + c.y + (f.lines[i].top - c.top) * f.fs;
+    const end = c.first + c.n;
+    // the first line reaching down to the world's top, then the first past it standing below the world's bottom
+    let lo = c.first, hi = end;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (top(m) + f.lines[m].h * f.fs < v.y0) lo = m + 1; else hi = m; }
+    const first = lo;
+    hi = end;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (top(m) <= v.y1) lo = m + 1; else hi = m; }
+    if (lo > first) out.push(whole(rec, { column: ci, first, end: lo }));
+  });
+  return out;
+}
+
+/** the lines of a fold holding a span's first and last positions; null where the span is another document's, or the fold holds no line for either */
+function spanLines(/** @type {Mounted} */ rec, /** @type {Span | null} */ span) {
+  if (!span || span.addr !== rec.d.addr) return null;
+  const a = placeIn(rec.fold, span.pos).line, b = placeIn(rec.fold, span.pos + Math.max(1, span.width) - 1).line;
+  return a == null || b == null ? null : [a, Math.max(a, b)];
+}
+
+/** the runs of lines that stand for the page's selection wherever the view is: its first line and its last, so its range can be placed */
+function endsOf(/** @type {Mounted} */ rec, /** @type {Span | null} */ span) {
+  const ls = spanLines(rec, span);
+  if (!ls || !rec.units.length) return [];
+  return [...new Set(ls)].flatMap((i) => { const ci = columnOfLine(rec.fold, i); return ci < 0 ? [] : [whole(rec, { column: ci, first: i, end: i + 1 })]; });
+}
+
+/**
+ * The parts of an article that hold the selection or the focus, which stay
+ * whatever the view (see the head): those the platform's selection meets — a
+ * press's even collapsed, the drag being made — the one the platform's focus
+ * stands in, and those holding a line of the page's span.
+ * @param {Mounted} rec
+ * @param {Span | null} span the page's selection
+ * @returns {Set<Part>}
+ */
+function heldParts(rec, span) {
+  /** @type {Set<Part>} */
+  const out = new Set();
+  if (!rec.parts.length) return out;
+  const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  if (s && s.rangeCount && (pressed || !s.isCollapsed)) { const r = s.getRangeAt(0); for (const p of rec.parts) if (p.el && r.intersectsNode(p.el)) out.add(p); }
+  const a = typeof document !== 'undefined' ? document.activeElement : null;
+  if (a) for (const p of rec.parts) if (p.el && p.el.contains(a)) out.add(p);
+  const ls = spanLines(rec, span);
+  if (ls) for (const p of rec.parts) if (p.first <= ls[1] && ls[0] < p.end) out.add(p);
+  return out;
+}
+
+/**
+ * The runs of a run of lines no part holds, each with edges the article can be
+ * cut at (`cutsAt`) — an edge whose line opens at no point found moved out to
+ * its unit's edge, no further than the parts beside it.
+ * @param {Mounted} rec
+ * @param {{column: number, first: number, end: number}} w
+ * @returns {Array<{column: number, first: number, end: number}>}
+ */
+function gapsIn(rec, w) {
+  const c = rec.fold.columns[w.column];
+  const mine = rec.parts.filter((p) => p.column === w.column);
+  /** @type {Array<{column: number, first: number, end: number}>} */
+  const out = [];
+  /** a gap between the parts beside it, its edges where the article can be cut */
+  const gap = (/** @type {number} */ first, /** @type {number} */ end) => {
+    const floor = mine.reduce((m, p) => (p.end <= first ? Math.max(m, p.end) : m), c.first);
+    const ceil = mine.reduce((m, p) => (p.first >= end ? Math.min(m, p.first) : m), c.first + c.n);
+    if (!cutsAt(rec, first)) first = Math.max(floor, unitAt(rec.units, first).first);
+    if (!cutsAt(rec, end)) end = Math.min(ceil, unitAt(rec.units, end - 1).end);
+    out.push({ column: w.column, first, end });
+  };
+  let at = w.first;
+  for (const p of mine) {
+    if (p.end <= at || p.first >= w.end) continue;
+    if (p.first > at) gap(at, p.first);
+    at = Math.max(at, p.end);
+  }
+  if (at < w.end) gap(at, w.end);
+  return out;
+}
+
+/**
+ * A part's box: an article's lines [first, end) of a column, cut from its
+ * template at the points they open at (`cutOf`) — a unit cut at its start
+ * naming the character it starts at (`data-char`) and giving up a run's
+ * opening where text stands before the cut in the run's stretch, a unit cut at
+ * its end leaving out the first element no text of which stands before the
+ * cut, so a run's opening stands with its chrome — placed at its first line's
+ * top in its column; null where the template holds no such unit or a cut
+ * fails.
+ * @param {Mounted} rec
+ * @param {{column: number, first: number, end: number}} g
+ * @returns {HTMLElement | null}
+ */
+function partEl(rec, g) {
+  const t = rec.template, f = rec.fold, c = f.columns[g.column];
+  if (!t) return null;
+  const u = unitAt(rec.units, g.first), w = unitAt(rec.units, g.end - 1);
+  const ue = unitEl(t, u), we = unitEl(t, w);
+  const head = g.first > u.first ? cutOf(rec, u, g.first) : null, tail = g.end < w.end ? cutOf(rec, w, g.end) : null;
+  if (!ue || !we || (g.first > u.first && !head) || (g.end < w.end && !tail)) return null;
+  const r = document.createRange();
+  if (head) { const at = pointIn(ue, head); r.setStart(at.node, at.offset); } else r.setStartBefore(ue);
+  if (tail) { const at = pointIn(we, tail); r.setEnd(at.node, at.offset); } else r.setEndAfter(we);
+  /** @type {DocumentFragment | HTMLElement} */
+  let frag = r.cloneContents();
+  // a run of lines inside one unit: the copy holds what lies inside the elements the range lies in, which wrap it again up to the run
+  const run0 = t.querySelector(':scope > .run');
+  for (let e = elementOf(r.commonAncestorContainer); e && e !== run0 && e !== t; e = e.parentElement) {
+    const wrap = /** @type {HTMLElement} */ (e.cloneNode(false));
+    wrap.appendChild(frag);
+    frag = wrap;
+  }
+  const box = document.createElement('div');
+  box.className = 'col';
+  box.dataset.column = String(g.column); box.dataset.first = String(g.first); box.dataset.end = String(g.end);
+  const lead = frag.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? /** @type {DocumentFragment} */ (frag).firstElementChild : /** @type {HTMLElement} */ (frag);
+  if (lead && lead.classList.contains('hd')) box.appendChild(frag);
+  else { const run = document.createElement('div'); run.className = 'run'; run.appendChild(frag); box.appendChild(run); }
+  const run = box.querySelector(':scope > .run');
+  if (head && run && run.firstElementChild) opened(/** @type {HTMLElement} */ (run.firstElementChild), head, u.text);
+  if (tail && run && run.lastElementChild) closed(/** @type {HTMLElement} */ (run.lastElementChild), tail);
+  box.style.left = c.x * rec.lay + 'px';
+  box.style.top = (c.y + (f.lines[g.first].top - c.top) * f.fs) * rec.lay + 'px';
+  return box;
+}
+
+/** a unit a part takes from a cut on: the character it starts at, and a run's opening given up in each element where text stands before the cut */
+function opened(/** @type {HTMLElement} */ el, /** @type {Cut} */ cut, /** @type {boolean} */ text) {
+  if (text) el.dataset.char = String(cut.char);
+  /** @type {Node | null} */
+  let n = el;
+  for (const had of cut.before) {
+    n = n ? n.firstChild : null;
+    if (!n || n.nodeType !== Node.ELEMENT_NODE) return;
+    if (had) /** @type {HTMLElement} */ (n).classList.remove('opens');
+  }
+}
+
+/** a unit a part takes up to a cut: the first element no text of which stands before the cut left out */
+function closed(/** @type {HTMLElement} */ el, /** @type {Cut} */ cut) {
+  /** @type {Node} */
+  let n = el;
+  for (const had of cut.before) {
+    const next = n.lastChild;
+    if (!next || next.nodeType !== Node.ELEMENT_NODE) return;
+    if (!had) { /** @type {HTMLElement} */ (next).remove(); return; }
+    n = next;
+  }
+}
+
+/**
+ * A run of lines stood as a part of an article: its box cut and placed in
+ * the article among the other parts in their lines' order, its block parts
+ * named. Where the platform does not set the article, the run alone. Null
+ * where its box could not be cut.
+ * @param {Mounted} rec
+ * @param {{column: number, first: number, end: number}} g
+ * @returns {Part | null}
+ */
+function addPart(rec, g) {
+  /** @type {Part} */
+  const p = { column: g.column, first: g.first, end: g.end, el: null, blocks: [], tops: [] };
+  if (engine) {
+    const el = partEl(rec, g);
+    if (!el) return null;
+    p.el = el;
+    const next = rec.parts.find((q) => q.first > p.first && q.el);
+    rec.el.insertBefore(el, next && next.el ? next.el : null);
+    const byPos = new Map(rec.made.blocks.map((b) => [b.pos, b]));
+    p.blocks = /** @type {HTMLElement[]} */ ([...el.querySelectorAll('.run > .sp')]).flatMap((e) => { const b = byPos.get(Number(e.dataset.pos)); return b ? [{ el: e, b }] : []; });
+  }
+  const at = rec.parts.findIndex((q) => q.first > p.first);
+  rec.parts.splice(at < 0 ? rec.parts.length : at, 0, p);
+  return p;
+}
+
+/** a part taken down */
+function dropPart(/** @type {Mounted} */ rec, /** @type {Part} */ p) {
+  if (p.el) p.el.remove();
+  rec.parts.splice(rec.parts.indexOf(p), 1);
+}
+
+/**
+ * Where each block part of the parts just set stands in the one 16 px layout,
+ * fractional (offsetTop rounds), read in one layout for them all: the gate
+ * holds every later frame to it, scaled — a reflow would move a line, a
+ * transform never does.
+ * @param {Mounted} rec
+ * @param {Part[]} parts
+ */
+function measureParts(rec, parts) {
+  if (!engine) return;
+  const art = rec.el.getBoundingClientRect();
+  for (const p of parts) p.tops = p.blocks.map(({ el }) => { const r = el.getBoundingClientRect(); return { pos: Number(el.dataset.pos), char: Number(el.dataset.char || 0), top: (r.top - art.top) / rec.scale, left: (r.left - art.left) / rec.scale }; });
+}
+
+/**
+ * Set what stands of an article this frame (see the head): each part none of
+ * whose lines is in view taken down, but those holding the selection or the
+ * focus (`heldParts`); then each run of the lines in view, and of the page's
+ * selection's first and last lines, that no part holds stood as parts of
+ * their own (`gapsIn`, `addPart`). The article's lines, block parts and their
+ * places are named again where anything changed, and its blocks marked again.
+ * @param {Mounted} rec
+ * @param {{x0: number, y0: number, x1: number, y1: number}} v the world the frame mounts in
+ * @param {Span | null} span the page's selection
+ * @returns {Part[]} the parts set
+ */
+function fill(rec, v, span) {
+  const win = windowOf(rec, v);
+  const held = heldParts(rec, span);
+  let changed = false;
+  for (const p of [...rec.parts]) {
+    if (held.has(p) || win.some((w) => w.column === p.column && w.first < p.end && p.first < w.end)) continue;
+    dropPart(rec, p);
+    changed = true;
+  }
+  /** @type {Part[]} */
+  const added = [];
+  for (const w of [...win, ...endsOf(rec, span)]) for (const g of gapsIn(rec, w)) { const p = addPart(rec, g); if (p) added.push(p); }
+  if (added.length) { measureParts(rec, added); changed = true; }
+  if (changed) {
+    rec.lines = new Set(rec.parts.flatMap((p) => Array.from({ length: p.end - p.first }, (_, k) => p.first + k)));
+    rec.marked = rec.parts.flatMap((p) => p.blocks);
+    rec.blockTops = rec.parts.flatMap((p) => p.tops);
+    rec.markedFor = '';
+  }
+  return added;
+}
+
+/**
+ * Mount a document's article over its room (see the head): its lines as the
+ * platform sets them — laid out once at LAY_FS in one column out of sight
+ * (`setLines`), unless they were set already for the plan it stands at — that
+ * one column kept out of the page as the template its parts are cut from, its
+ * box as large as the room so it stands on it, and the parts it first stands
+ * in (`fill`). Where the platform does not set the article, its HTML stands
+ * whole in one column.
  * @param {Doc} d
+ * @param {{x0: number, y0: number, x1: number, y1: number}} v the world the frame mounts in
+ * @param {Span | null} span the page's selection
+ * @param {boolean} banded it mounts in the mount band; else for the lines of the selection alone
  * @returns {Mounted | null}
  */
-function mount(d) {
+function mount(d, v, span, banded) {
   if (!layer || mounted.has(d.addr) || d.from < 0) return null;
   const t0 = performance.now();
   const made = madeFrom(d);
-  const v = viewFor(d), owner = ownerAccount(d);
-  const { el, col } = articleEl(d, articleHTML(d, v, owner));
-  layer.appendChild(el);
-  let measureMs = 0, partMs = 0;
-  /** @type {Unit[]} */
-  let units = [];
+  const view = viewFor(d), owner = ownerAccount(d), html = articleOf(d, view, owner);
+  let measureMs = 0;
+  /** @type {HTMLElement | null} */
+  let template = null;
   if (engine) {
-    const t1 = performance.now();
-    const rows = articlePlan(d, v, owner);
-    const set = measureLines(col, rows, made.blocks);
-    units = set.units;
-    measured.set(d.addr, { key: JSON.stringify(rows), lines: set.lines, n: ++serial });
-    folds.delete(d.addr);
-    measureMs = performance.now() - t1;
+    const m = measured.get(d.addr);
+    if (m && m.key === html) { template = document.createElement('div'); template.className = 'col'; template.innerHTML = html; }
+    else { const t1 = performance.now(); template = setLines(d, articlePlan(d, view, owner), html, made.blocks); measureMs = performance.now() - t1; }
   }
   const f = foldOf(d);
   const lay = LAY_FS / f.fs, box = docBox(d.addr);
+  const { el, col } = articleEl(d, engine ? '' : html);
+  if (engine) col.remove();
+  else { col.style.left = f.columns[0].x * lay + 'px'; col.style.top = f.columns[0].y * lay + 'px'; }
   el.style.width = box.w * lay + 'px';
   el.style.height = box.h * lay + 'px';
-  if (engine) { const t2 = performance.now(); partInto(col, f, units, lay); partMs = performance.now() - t2; }
-  else { col.style.left = f.columns[0].x * lay + 'px'; col.style.top = f.columns[0].y * lay + 'px'; }
-  const art = el.getBoundingClientRect(); // force layout: the cost must be real (S1); the article stands untransformed until placed
-  const sps = /** @type {HTMLElement[]} */ ([...el.querySelectorAll('.run > .sp')]);
-  // each block's part's place in the one layout (16 px), fractional (offsetTop rounds): the gate holds every later frame to it, scaled — a reflow would move a line
-  const blockTops = sps.map((e) => { const r = e.getBoundingClientRect(); return { pos: Number(e.dataset.pos), char: Number(e.dataset.char || 0), top: r.top - art.top, left: r.left - art.left }; });
-  const byPos = new Map(made.blocks.map((b) => [b.pos, b]));
-  const marked = sps.flatMap((e) => { const b = byPos.get(Number(e.dataset.pos)); return b ? [{ el: e, b }] : []; });
+  layer.appendChild(el);
   /** @type {Mounted} */
-  const rec = { el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fold: f, fs: f.fs, corner: cornerHTML(d, v), blockTops, marked, markedFor: marksKey(d.addr, v.selected, v.focus), legible: false };
+  const rec = {
+    el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fold: f, fs: f.fs, corner: cornerHTML(d, view),
+    template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', legible: false,
+  };
   mounted.set(d.addr, rec);
+  const t2 = performance.now();
+  fill(rec, v, span);
+  const partMs = performance.now() - t2;
   place(rec);
-  mountLog.push({ addr: d.addr, ms: performance.now() - t0, blocks: made.blocks.length, emPx: f.fs * cam.scale, columns: f.columns.length, measureMs, partMs });
+  mountLog.push({ addr: d.addr, ms: performance.now() - t0, blocks: made.blocks.length, emPx: f.fs * cam.scale, columns: f.columns.length, lines: rec.lines.size, measureMs, partMs });
   if (mountLog.length > 500) mountLog.shift();
   return rec;
 }
 
 /**
+ * Set a document's article as the platform sets it: laid out once in one
+ * column out of sight, its lines read (`measureLines`) and kept for the
+ * article they were set from (`articleOf`), then taken out of the page — its
+ * column answered, out of the page, the template a mounted article's parts
+ * are cut from.
+ * @param {Doc} d
+ * @param {Row[]} rows its plan
+ * @param {string} html the article, as `articleOf` makes it
+ * @param {Block[]} blocks the blocks it was made from
+ * @returns {HTMLElement}
+ */
+function setLines(d, rows, html, blocks) {
+  const { el, col } = articleEl(d, html);
+  el.style.visibility = 'hidden';
+  /** @type {HTMLElement} */ (layer).appendChild(el);
+  try { measured.set(d.addr, { key: html, lines: measureLines(col, rows, blocks), n: ++serial }); folds.delete(d.addr); }
+  finally { el.remove(); }
+  return col;
+}
+
+/**
  * Set a document's lines as the platform sets them, its article laid out once
- * in one column out of sight and taken down (`measureLines`), so its fold —
- * and the bars the canvas draws for it — are its lines as rendered before it
+ * in one column out of sight and taken down (`setLines`), so its fold — and
+ * the bars the canvas draws for it — are its lines as rendered before it
  * mounts.
  * @param {Doc} d
  */
 function measureAside(d) {
   if (!layer) return;
-  const v = viewFor(d), owner = ownerAccount(d), rows = articlePlan(d, v, owner);
-  const { el, col } = articleEl(d, articleHTML(d, v, owner));
-  el.style.visibility = 'hidden';
-  layer.appendChild(el);
-  try { measured.set(d.addr, { key: JSON.stringify(rows), lines: measureLines(col, rows, d.blocks).lines, n: ++serial }); folds.delete(d.addr); }
-  finally { el.remove(); }
+  const v = viewFor(d), owner = ownerAccount(d);
+  setLines(d, articlePlan(d, v, owner), articleOf(d, v, owner), d.blocks);
 }
 
 /**
@@ -893,6 +1321,7 @@ function place(/** @type {Mounted} */ rec) {
   const box = docBox(rec.d.addr);
   const s = cam.scale / rec.lay;
   rec.el.style.transform = `translate(${sx(box.x)}px, ${sy(box.y)}px) scale(${s})`;
+  rec.scale = s;
 }
 
 /**
@@ -903,37 +1332,63 @@ function place(/** @type {Mounted} */ rec) {
 const wentStale = (rec) => rec.d.from !== rec.runFrom || rec.d.to !== rec.runTo || rec.rev !== rec.d.rev || rec.grev !== grev || rec.fold !== foldOf(rec.d);
 
 /**
- * The documents whose articles stand this frame — THE CAP (S1's
- * MAX_MOUNTED): the walk's focused document first, then the largest em
- * first. Of the documents in view whose text has arrived, the system's apart
- * and a residue document only where it is the walk's focused one: a document
- * holding an article now, stale or not, at em 5.5 and above, any other at
- * 6.5 and above (S1's hysteresis). The focused document always holds one of
- * the places, whatever its size (D6: the ring "at the place" presumes a
- * place one can read; its corner is the plane's next Tab stop, D5 K-57), so
- * the eighth-largest may drop to bars as the focus moves; among equal sizes
- * the articles standing rank first, then the model's order, so a pan, a
- * reveal or a delivery trades no standing article for its equal.
+ * The documents that mount afresh this frame (see the head): of those in view
+ * whose text has arrived and that no article stands for — the system's apart,
+ * a residue document only where it is the walk's focused one — every one at
+ * P-LOD's readable em (8) and above, whatever the limit; then, of those at
+ * S1's mount threshold (6.5) and above, as many as MOUNTS_PER_FRAME leaves
+ * after the frame's mounts so far and these, in THE LIMIT'S ORDER: those
+ * holding the page's selection, the walk's focused document and the document
+ * just navigated to first, whatever their size (D6: the ring "at the place"
+ * presumes a place one can read; its corner is the plane's next Tab stop, D5
+ * K-57), then the largest em first, equal ems in the model's order — never by
+ * length (`limitOrder`).
  * @param {{x0: number, y0: number, x1: number, y1: number}} v the world the frame mounts in: the view, padded
  * @param {(addr: string) => boolean} focused whether a document is the walk's focused one
- * @returns {Doc[]} at most MAX_MOUNTED, in the order they rank
+ * @param {Span | null} span the page's selection
+ * @param {number} spent the documents the frame has mounted afresh already
+ * @returns {Doc[]} the readable ones, then the rest in the limit's order
  */
-function chosen(v, focused) {
-  /** @type {Array<{d: Doc, em: number, rank: number}>} rank 0 the focused document, 1 a document holding an article, 2 any other */
-  const want = [];
+function chosen(v, focused, span, spent) {
+  const now = read.navigated();
+  /** @type {Doc[]} */
+  const readable = [];
+  /** @type {Array<{d: Doc, em: number, first: boolean}>} */
+  const rest = [];
   for (const d of REC.docs()) {
-    if (d.from < 0 || d.system) continue;
+    if (d.from < 0 || d.system || mounted.has(d.addr)) continue;
     const box = docBox(d.addr);
     if (!intersects(box, v) || !intersects(shapeIn(d), v)) continue;
     const mine = focused(d.addr);
     if (box.residue && !mine) continue;
-    const standing = mounted.has(d.addr);
     const em = foldOf(d).fs * cam.scale;
-    if (em >= (standing ? UNMOUNT_EM : MOUNT_EM)) want.push({ d, em, rank: mine ? 0 : standing ? 1 : 2 });
+    if (em >= LOD_TXT_LO) readable.push(d);
+    else if (em >= MOUNT_EM) rest.push({ d, em, first: mine || (!!span && span.addr === d.addr) || d.addr === now });
   }
-  // the sort is stable: the focused document first, then by size, then the standing articles; equal in all, the model's order stands
-  want.sort((a, b) => Number(b.rank === 0) - Number(a.rank === 0) || b.em - a.em || a.rank - b.rank);
-  return want.slice(0, MAX_MOUNTED).map((w) => w.d);
+  return [...readable, ...limitOrder(rest).slice(0, Math.max(0, MOUNTS_PER_FRAME - spent - readable.length)).map((w) => w.d)];
+}
+
+/**
+ * THE LIMIT'S ORDER (see the head): the documents below the readable em that
+ * may mount, those holding the page's selection or the walk's focus and the
+ * document just navigated to first (`first`), then the largest em first,
+ * equal in both in the order given — the model's (the sort is stable). Never
+ * by length, which would bar short notes first.
+ * @template {{em: number, first: boolean}} C
+ * @param {C[]} cands in the model's order
+ * @returns {C[]}
+ */
+export function limitOrder(cands) { return [...cands].sort((a, b) => Number(b.first) - Number(a.first) || b.em - a.em); }
+
+/** does an article stand in the mount band this frame: its em at 6.5 and above, or at 5.5 and above where it stood in the band (S1's hysteresis), its place letting it mount — a residue document only where it is the walk's focused one */
+const inBand = (/** @type {Mounted} */ rec, /** @type {(addr: string) => boolean} */ focused) =>
+  rec.fs * cam.scale >= (rec.banded ? UNMOUNT_EM : MOUNT_EM) && !(docBox(rec.d.addr).residue && !focused(rec.d.addr));
+
+/** the world the frame mounts in: the view, 40 px about it */
+function viewNow() {
+  const pad = 40;
+  const VW = (layer && layer.clientWidth) || window.innerWidth, VH = (layer && layer.clientHeight) || window.innerHeight;
+  return { x0: (-pad - VW / 2) / cam.scale + cam.x, y0: (-pad - VH / 2) / cam.scale + cam.y, x1: (VW + pad - VW / 2) / cam.scale + cam.x, y1: (VH + pad - VH / 2) / cam.scale + cam.y };
 }
 
 /**
@@ -958,76 +1413,93 @@ function readingNow() {
  * `holdOf`, P-CAM's `reanchor`), a flight bound into the document with it.
  * @param {Hold} h
  * @param {Mounted} rec the article standing again
+ * @returns {boolean} whether the camera moved
  */
 function keepPlace(h, rec) {
   const at = holdOf(h.fold, rec.fold, h.p);
-  if (!at) return;
+  if (!at) return false;
   const box = docBox(rec.d.addr);
   const a = { x: box.x + h.p.x, y: box.y + h.p.y }, b = { x: box.x + at.to.x, y: box.y + at.to.y };
-  if (Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9 && Math.abs(at.k - 1) < 1e-12) return;
+  if (Math.abs(a.x - b.x) < 1e-9 && Math.abs(a.y - b.y) < 1e-9 && Math.abs(at.k - 1) < 1e-12) return false;
   reanchor(a, b, at.k, box);
   markDirty();
+  return true;
 }
 
 /**
- * The per-frame policy, run before the canvas draws (so P-RENDER yields to
- * exactly the articles mounted this frame, and draws the bars of exactly the
- * documents unmounted): take down what left or fell below the threshold;
- * choose the articles that stand (`chosen`: the cap), take down every other,
- * rebuild each chosen one that went stale and mount the rest — the passage
- * being read, where its article is taken down to be set again, held until it
- * stands again and the camera re-anchored on it then (`keepPlace`); place
- * everything, mark each standing article's blocks for the selection and the
- * walk's focus in place (`markBlocks`), give each the pointer at reading
- * scale alone (`markLegible`), and place each article's corner beside it;
- * where the article holding the selection was mounted this frame, put the
- * platform's range back over the span, its anchor at the end it stood at,
- * unless the person holds a selection outside the layer (`placeAgain`); then
- * set, within the frame's budget and nearest the view's centre first, the
- * lines of the documents in view whose bars the canvas draws and whose
- * article stands unmounted (`measureAside`). While a press stands
- * (`press`) only what left or fell
- * below the threshold is taken down: none is chosen, so no article is taken
- * down for the cap, rebuilt or mounted, and none given or denied the
- * pointer, so the drag keeps the nodes it is anchored in, through a zoom
- * past the readable threshold too, and no range is placed over it; the first
- * frame after the press chooses, rebuilds what went stale, mounts what
- * crossed, gives or takes the pointer where the scale now asks, and places
- * the range the release took over the rebuilt article.
- * @param {(addr: string) => boolean} [focused] whether a document is the walk's focused one: the one residue document of its cell that mounts, the first among equal sizes under the cap, and the one whose corner is a Tab stop (D5 K-57)
+ * The per-frame policy, run before the canvas draws, so P-RENDER yields to
+ * exactly the lines standing this frame and draws the bars of exactly the
+ * others (see the head). Each article's em is read against the mount band;
+ * one that went stale is taken down and set again in its place, where it
+ * still stands in view in the band or holds the page's selection — the
+ * passage being read, where its article is taken down to be set again, held
+ * until it stands again and the camera re-anchored on it then (`keepPlace`);
+ * the documents in view at the readable em mount, every one, and below it
+ * those the limit leaves room for, in its order (`chosen`), the documents in
+ * view chosen again where the camera was re-anchored. Then what stands of
+ * every article is set (`fill`): the lines in view stand and the rest go, but
+ * those holding the selection or the focus, and an article left with no line
+ * standing outside the band, or out of view, is taken down. Everything is
+ * placed, each standing article's blocks marked for the selection and the
+ * walk's focus in place (`markBlocks`), each given the pointer at reading
+ * scale alone (`markLegible`), and each article's corner placed beside it;
+ * where the article holding the selection was mounted this frame, or the
+ * selection is owed its range, the platform's range is put back over the
+ * span, its anchor at the end it stood at, unless the person holds a selection
+ * outside the layer (`placeAgain`); then the lines of the documents in view
+ * whose bars the canvas draws and whose article stands unmounted are set,
+ * within the frame's budget and nearest the view's centre first
+ * (`measureAside`). While a press stands (`press`) no standing article is set
+ * again or given or denied the pointer, so the drag keeps the nodes it is
+ * anchored in, through a zoom past the readable threshold too, and no range
+ * is placed over it; documents and lines mount as the view asks — an article
+ * mounted under it given the pointer as its scale asks — and the parts the
+ * drag meets stand. The first frame after the press sets again what went
+ * stale, gives or takes the pointer where the scale now asks, and places the
+ * range the release took over the article set again.
+ * @param {(addr: string) => boolean} [focused] whether a document is the walk's focused one: the one residue document of its cell that mounts, the first in the limit's order, and the one whose corner is a Tab stop (D5 K-57)
  */
 export function frame(focused = () => false) {
   if (!layer) return;
-  const v = { x0: 0, y0: 0, x1: 0, y1: 0 };
-  const pad = 40;
-  const VW = layer.clientWidth || window.innerWidth, VH = layer.clientHeight || window.innerHeight;
-  v.x0 = (-pad - VW / 2) / cam.scale + cam.x; v.x1 = (VW + pad - VW / 2) / cam.scale + cam.x;
-  v.y0 = (-pad - VH / 2) / cam.scale + cam.y; v.y1 = (VH + pad - VH / 2) / cam.scale + cam.y;
+  let v = viewNow();
   const reading = readingNow();
-  // an article left the view where the fold it stands in did: what the person sees, whatever the model holds of it now
-  for (const [addr, rec] of [...mounted]) {
-    const box = docBox(addr);
-    if (!intersects(shapeAt(addr, rec.fold), v) || rec.fs * cam.scale < UNMOUNT_EM || (box.residue && !focused(addr))) unmount(addr);
-  }
-  /** @type {string[]} the articles mounted this frame */
+  const span = read.selection();
+  for (const rec of mounted.values()) rec.banded = inBand(rec, focused);
+  /** @type {string[]} the articles mounted this frame, a rebuild among them */
   const fresh = [];
+  let spent = 0;
   if (!pressed) {
-    const stand = chosen(v, focused);
-    const keep = new Set(stand.map((d) => d.addr));
-    for (const [addr, rec] of [...mounted]) if (!keep.has(addr) || wentStale(rec)) { if (reading && reading.addr === addr) hold = reading; unmount(addr); }
-    for (const d of stand) if (!mounted.has(d.addr) && mount(d)) fresh.push(d.addr);
+    for (const [addr, rec] of [...mounted]) {
+      if (!wentStale(rec)) continue;
+      if (reading && reading.addr === addr) hold = reading;
+      const banded = rec.banded;
+      unmount(addr);
+      const d = REC.doc(addr);
+      if ((banded && intersects(shapeIn(d), v)) || (!!span && span.addr === addr)) { if (mount(d, v, span, banded)) fresh.push(addr); }
+    }
   }
+  for (const d of chosen(v, focused, span, spent)) if (mount(d, v, span, true)) { fresh.push(d.addr); spent++; }
   if (hold) {
     const rec = mounted.get(hold.addr);
-    if (rec && fresh.includes(hold.addr)) { const h = hold; hold = null; keepPlace(h, rec); }
-    else if (!intersects(docBox(hold.addr), v)) hold = null;
+    if (rec && fresh.includes(hold.addr)) {
+      const h = hold; hold = null;
+      if (keepPlace(h, rec)) { v = viewNow(); for (const d of chosen(v, focused, span, spent)) if (mount(d, v, span, true)) { fresh.push(d.addr); spent++; } }
+    } else if (!intersects(docBox(hold.addr), v)) hold = null;
+  }
+  for (const [addr, rec] of [...mounted]) {
+    fill(rec, v, span);
+    if (!rec.parts.length && !(rec.banded && intersects(shapeAt(addr, rec.fold), v))) unmount(addr);
   }
   for (const rec of mounted.values()) place(rec);
-  const selected = read.selection(), focus = litFocus();
-  for (const rec of mounted.values()) { markBlocks(rec, selected, focus); if (!pressed) markLegible(rec); }
+  const focus = litFocus();
+  for (const rec of mounted.values()) { markBlocks(rec, span, focus); if (!pressed || fresh.includes(rec.d.addr)) markLegible(rec); }
   placeCorners(focused);
-  if (selected && fresh.includes(selected.addr)) placeAgain(selected);
+  if (span && !pressed && (fresh.includes(span.addr) || (owed && sameSpan(owed, span)))) placeAgain(span);
+  if (owed && !sameSpan(owed, span)) owed = null;
   if (engine && !pressed) measureInView(v);
+  last.mounted = spent;
+  last.standing = 0; last.lines = 0;
+  for (const rec of mounted.values()) { if (rec.banded) last.standing++; last.lines += rec.lines.size; }
 }
 
 /**
@@ -1129,11 +1601,11 @@ function dropCorner(/** @type {string} */ addr) {
 
 /**
  * The client rects of a span in a mounted article: without a width, those
- * of the block keyed by its first position — its box, one for each column
- * that holds a part of it (the edge a beam leaves from, the arrival at a
- * document named whole); with one, those of the bytes named, line by line
- * (S1 Q1: the line a beam leaves at, the arrival mark's outline, an overlay
- * at the selection).
+ * of the block keyed by its first position — its box, one for each part of
+ * it standing (the edge a beam leaves from, the arrival at a document named
+ * whole); with one, those of the bytes named, line by line, where the parts
+ * holding its first and last positions stand (S1 Q1: the line a beam leaves
+ * at, the arrival mark's outline, an overlay at the selection).
  * @param {string} addr
  * @param {number} pos the block's first position, or the span's
  * @param {number | null} [width] the span's positions
@@ -1181,8 +1653,9 @@ function partsOf(/** @type {HTMLElement} */ art, /** @type {number} */ pos) {
  * counted from the character the part starts at, carried to its byte
  * position; a point outside the part names the part's edge on the side asked
  * — its first character's position, or past its last: the block's end where
- * it is the block's last part — and a block that is not text (a withheld run,
- * a record, a reference, hex) names the block's edge.
+ * the part holds the block's last character, whatever parts of it stand — and
+ * a block that is not text (a withheld run, a record, a reference, hex) names
+ * the block's edge.
  * @param {Block} b
  * @param {HTMLElement} el the part
  * @param {Node} node
@@ -1194,9 +1667,8 @@ function posOfPoint(b, el, node, offset, side) {
   if (b.kind !== 'para') return side === 'start' ? b.pos : b.pos + b.width;
   if (!el.contains(node)) {
     if (side === 'start') return base ? posOfChar(b, base) : b.pos;
-    const art = /** @type {HTMLElement | null} */ (el.closest('article.dtext'));
-    const parts = art ? partsOf(art, b.pos) : [el];
-    return parts[parts.length - 1] === el ? b.pos + b.width : posOfChar(b, base + ownLength(el));
+    const end = base + ownLength(el);
+    return end >= b.text.length ? b.pos + b.width : posOfChar(b, end);
   }
   let count = base;
   for (const tn of textNodes(el)) {
@@ -1275,18 +1747,20 @@ export function spanOfSelection() {
  * The boundary point of a block at a byte position, in the part that holds
  * it: the text node and offset of the character boundary there — at a
  * part's first character on the start side, past the part before's last on
- * the end side; a block that is not text answers its edges.
+ * the end side; a block that is not text answers its edges. Null where no
+ * part of the block standing holds the position: a line out of view.
  * @param {Block} b
- * @param {HTMLElement[]} parts the block's parts, in order
+ * @param {HTMLElement[]} parts the block's parts standing, in order
  * @param {number} pos
  * @param {'start' | 'end'} side
- * @returns {{node: Node, offset: number}}
+ * @returns {{node: Node, offset: number} | null}
  */
 function pointOfPos(b, parts, pos, side) {
   if (b.kind !== 'para') { const el = side === 'start' ? parts[0] : parts[parts.length - 1]; return side === 'start' ? { node: el, offset: 0 } : { node: el, offset: el.childNodes.length }; }
   const ci = charOfPos(b, pos);
   let el = parts[0];
   for (const p of parts) if (side === 'start' ? charBase(p) <= ci : charBase(p) < ci) el = p;
+  if (ci < charBase(el) || ci > charBase(el) + ownLength(el)) return null;
   let at = ci - charBase(el);
   const nodes = textNodes(el);
   for (const tn of nodes) { if (at < tn.length || (side === 'end' && at === tn.length)) return { node: tn, offset: at }; at -= tn.length; }
@@ -1312,8 +1786,9 @@ export function rangeOf(span) {
  * article — its ends carried from byte positions to character boundaries of
  * the blocks the article was made from (`madeOf`), never the model's newest,
  * in the part of each block that holds them, the chrome skipped; null where
- * the element is no such article, the span is another document's, or it lies
- * in none of those blocks.
+ * the element is no such article, the span is another document's, it lies in
+ * none of those blocks, or no part standing holds its first or its last
+ * position.
  * @param {HTMLElement} el the article's element
  * @param {Span} span
  * @returns {Range | null}
@@ -1328,6 +1803,7 @@ export function rangeIn(el, span) {
   const e0 = b0 ? partsOf(el, b0.pos) : [], e1 = b1 ? partsOf(el, b1.pos) : [];
   if (!b0 || !b1 || !e0.length || !e1.length || b1.pos < b0.pos) return null;
   const s = pointOfPos(b0, e0, span.pos, 'start'), t = pointOfPos(b1, e1, end, 'end');
+  if (!s || !t) return null;
   const r = document.createRange(); r.setStart(s.node, s.offset); r.setEnd(t.node, t.offset);
   return r.collapsed ? null : r;
 }
@@ -1345,20 +1821,24 @@ const inLayer = (/** @type {Range} */ r) => !!layer && layer.contains(r.commonAn
  * covers the span is left as it stands, as the person made it; any other —
  * in the layer, in a reading scene's pane, over an overlay's text — is
  * replaced by the span, its anchor at its start, where the span's article
- * stands. Null clears a selection that lies in the layer and never touches
- * one outside it, as the remount's put-back never does (`placeAgain`).
- * Either way the selection kept from an article taken down (`kept`) is
- * dropped: the page's selection is this one now.
+ * stands — where its first or last line stands in no part, the span is owed
+ * its range, which the frame places once it stands them (`placeAgain`). Null
+ * clears a selection that lies in the layer and never touches one outside
+ * it, as the remount's put-back never does. Either way the selection kept
+ * from an article taken down (`kept`) is dropped: the page's selection is
+ * this one now.
  * @param {Span | null} span
  */
 export function placeSelection(span) {
   kept = null;
+  owed = null;
   const s = window.getSelection(); if (!s) return;
   const standing = s.rangeCount ? s.getRangeAt(0) : null;
   if (!span) { placed = null; if (standing && inLayer(standing)) s.removeAllRanges(); return; }
   const have = standing && !standing.collapsed ? spanOfRange(standing) : null;
   if (have && sameSpan(have, span)) { placed = have; return; }
-  const r = rangeOf(span); if (!r) return;
+  const r = rangeOf(span);
+  if (!r) { if (mounted.has(span.addr)) owed = span; return; }
   s.removeAllRanges(); s.addRange(r);
   placed = spanOfRange(r);
 }
@@ -1375,15 +1855,20 @@ export function placeSelection(span) {
  * person's, and stands as they made it, so the copy is of it (`onCopy`). A
  * caret, wherever it stands, holds nothing they chose. `kept` decides the
  * anchor's end alone: taking an article down leaves a selection that stood
- * in it collapsed in the layer, where the put-back takes it.
+ * in it collapsed in the layer, where the put-back takes it. The span owed its
+ * range (`placeSelection`) goes on so; it stays owed while its first or last
+ * line stands in no part, and is owed no longer once the person holds a
+ * selection of their own outside the layer.
  * @param {Span} span
  */
 function placeAgain(span) {
   const backward = !!kept && kept.backward && sameSpan(kept.span, span);
   kept = null;
   const s = window.getSelection();
-  if (!s || (s.rangeCount && !s.isCollapsed && !inLayer(s.getRangeAt(0)))) return;
-  const r = rangeOf(span); if (!r) return;
+  if (!s || (s.rangeCount && !s.isCollapsed && !inLayer(s.getRangeAt(0)))) { owed = null; return; }
+  const r = rangeOf(span);
+  if (!r) { owed = mounted.has(span.addr) ? span : null; return; }
+  owed = null;
   if (backward) s.setBaseAndExtent(r.endContainer, r.endOffset, r.startContainer, r.startOffset);
   else s.setBaseAndExtent(r.startContainer, r.startOffset, r.endContainer, r.endOffset);
   placed = s.rangeCount ? spanOfRange(s.getRangeAt(0)) : null;
@@ -1448,20 +1933,95 @@ export function sceneCorner(d) { return cornerHTML(d, viewFor(d, true)); }
 /** a document's corner on the plane, or null where it carries none now (the gate's containment check reads it) */
 export function cornerOf(/** @type {string} */ addr) { const c = corners.get(addr); return c ? c.el : null; }
 
-/** the text of a mounted article (the gate's rendered case): its columns' blocks in order */
+/** the text of a mounted article (the gate's rendered case): its standing parts' blocks, in their lines' order */
 export function mountedText(/** @type {string} */ addr) {
   const rec = mounted.get(addr); if (!rec) return null;
   const runs = [...rec.el.querySelectorAll('.run')];
   return runs.length ? runs.map((r) => r.textContent).join('') : rec.el.textContent;
 }
 
-/** every mounted address */
-export const mountedAddrs = () => [...mounted.keys()];
+/** every document whose article stands in the mount band (`isMounted`) */
+export const mountedAddrs = () => [...mounted.values()].filter((rec) => rec.banded).map((rec) => rec.d.addr);
+
+/**
+ * Does a world point stand in one of a document's columns — where its text
+ * stands, or will once it arrives (APP-INPUT holds a press there at reading
+ * scale until the text under it stands)?
+ * @param {string} addr
+ * @param {number} x
+ * @param {number} y
+ */
+export function holdsText(addr, x, y) {
+  const f = foldOf(REC.doc(addr)), box = docBox(addr);
+  return f.columns.some((c) => x >= box.x + c.x && x <= box.x + c.x + c.w && y >= box.y + c.y && y <= box.y + c.y + c.h);
+}
+
+/**
+ * The screen boxes of the lines of a document's fold holding a span, each the
+ * width of its column — where the document's article stands in the mount
+ * band: BM's beams leave a line that stands in no part where its fold sets
+ * it; null where no such article stands.
+ * @param {string} addr
+ * @param {number} pos
+ * @param {number} width
+ * @returns {Rect[] | null}
+ */
+export function lineBoxes(addr, pos, width) {
+  const rec = mounted.get(addr); if (!rec || !rec.banded) return null;
+  const f = rec.fold, box = docBox(addr), end = pos + Math.max(1, width);
+  /** @type {Rect[]} */
+  const out = [];
+  f.columns.forEach((c) => {
+    for (let i = c.first; i < c.first + c.n; i++) {
+      const l = f.lines[i];
+      if (l.at == null) continue;
+      // the positions a line holds: from its first own character to the next line's of its block, else to its block's end
+      let next = Infinity;
+      for (let k = i + 1; k < f.lines.length && f.lines[k].pos === l.pos; k++) { const a = f.lines[k].at; if (a != null && a > l.at) { next = a; break; } }
+      const b = next === Infinity ? rec.made.blocks.find((x) => x.pos === l.pos) : null;
+      const to = next === Infinity ? (b ? b.pos + b.width : l.at + 1) : next;
+      if (l.at < end && pos < to) out.push({ x: sx(box.x + c.x), y: sy(box.y + c.y + (l.top - c.top) * f.fs), w: c.w * cam.scale, h: l.h * f.fs * cam.scale });
+    }
+  });
+  return out;
+}
+
+/** the boundary point of the text of the plane's layer under a screen point, as the platform finds it; null where none stands there */
+function caretPoint(/** @type {number} */ x, /** @type {number} */ y) {
+  const d = /** @type {any} */ (document);
+  /** @type {{node: Node, offset: number} | null} */
+  let p = null;
+  if (typeof d.caretPositionFromPoint === 'function') { const c = d.caretPositionFromPoint(x, y); if (c) p = { node: c.offsetNode, offset: c.offset }; }
+  else if (typeof d.caretRangeFromPoint === 'function') { const r = d.caretRangeFromPoint(x, y); if (r) p = { node: r.startContainer, offset: r.startOffset }; }
+  return p && layer && layer.contains(p.node) ? p : null;
+}
+
+/**
+ * A press the canvas took at reading scale, once the text under it stands
+ * (APP-INPUT; see the head): the platform's selection collapsed at the point
+ * under it, the drag's anchor, as a press on the text sets it; false where no
+ * text of the layer stands there.
+ * @param {number} x
+ * @param {number} y
+ */
+export function caretAt(x, y) {
+  const p = caretPoint(x, y), s = window.getSelection();
+  if (!p || !s) return false;
+  s.collapse(p.node, p.offset);
+  return true;
+}
+
+/** the drag's other end carried to the text under a screen point, from the anchor `caretAt` set; nothing where no text of the layer stands there */
+export function extendTo(/** @type {number} */ x, /** @type {number} */ y) {
+  const p = caretPoint(x, y), s = window.getSelection();
+  if (p && s && s.rangeCount) s.extend(p.node, p.offset);
+}
 
 /** unmount everything and take the corners down (a board change); a corner that held the focus hands it to the walk */
 export function clear() {
   for (const a of [...mounted.keys()]) unmount(a);
   hold = null;
+  owed = null;
   let lost = false;
   for (const a of [...corners.keys()]) lost = dropCorner(a) || lost;
   if (lost) read.handOff();

@@ -162,6 +162,7 @@ import { byteLength } from '../util.js';
  * @property {number} w
  * @property {number} h
  * @property {boolean} withheld
+ * @property {number} line the line it stands for, an index into the fold's lines: no bar is drawn for a line that stands as text
  */
 
 /** the characters per em of the monospace face the layout assumes */
@@ -709,8 +710,8 @@ export function firstRow(f) {
  * The bars the canvas draws for a fold, column by column: one per line of the
  * document's blocks (the head and the chrome are not the document's lines),
  * across the width its content takes, at the height its glyphs stand inside
- * its line box, in the column that holds the line; none in a column that
- * holds no line.
+ * its line box, in the column that holds the line, naming the line; none in a
+ * column that holds no line.
  * @param {Fold} f
  * @returns {Bar[][]} by column, each column's top to bottom
  */
@@ -721,7 +722,7 @@ export function bars(f) {
     for (let i = c.first; i < c.first + c.n; i++) {
       const l = f.lines[i];
       if (l.kind === 'head' || l.kind === 'chrome' || l.w <= 0) continue;
-      out.push({ x: c.x, y: c.y + (l.top - c.top + l.h / 2 - 0.2 * l.size) * f.fs, w: l.w * CHAR_W * f.fs, h: 0.5 * l.size * f.fs, withheld: l.kind === 'withheld' });
+      out.push({ x: c.x, y: c.y + (l.top - c.top + l.h / 2 - 0.2 * l.size) * f.fs, w: l.w * CHAR_W * f.fs, h: 0.5 * l.size * f.fs, withheld: l.kind === 'withheld', line: i });
     }
     return out;
   });

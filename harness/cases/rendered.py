@@ -2,8 +2,10 @@
 screen built, the text the page shows equals the record's. The oracle is the
 harness's own token-free `POST /op` to the daemon (Python `urllib`): a guest's
 `retrieve_v` over the first edition, compared to (i) the model's held spans,
-(ii) the mounted article's `textContent`, (iii) the mirror's items — S1's
-three renderings against the real daemon. The far scale's counts equal the
+(ii) the mounted article — every block part standing, the lines in view
+standing by line (issue #122), its own glyphs the delivery's bytes over the
+positions it holds — (iii) the mirror's items — S1's three renderings against
+the real daemon. The far scale's counts equal the
 harness's own fold of the daemon's documents (the census probe PUB-6.52
 names: `doc_metadata` over each account's document numbers — its oracle for
 `places`); the window run the guest meets WITHHELD shows the oracle its box
@@ -115,18 +117,30 @@ def run(ctx):
             'the entitled reader\'s model marks the run\'s origin (the same material as 1.0.1.0.1003)', origins[:6])
     held_window = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1]))
     r.check(len(held_window.encode('utf8')) == WINDOW[1], 'the signed session holds the run\'s 240 bytes (entitled)', len(held_window.encode('utf8')))
-    # (ii) the mounted article
+    # (ii) the mounted article: the lines in view stand, by line (issue #122) — each block part standing, a block the
+    # article cuts at a line (issue #15's fold, the view's edge) standing in parts, is its block's text over the
+    # characters it holds, and the guest's delivery's bytes over the positions it holds wherever that delivery holds
+    # them (it withholds the window run): its own glyphs, its chrome (the sameness hairline, C-33's mark, the symbols,
+    # the "+n others" count) set aside, from the character it starts at
     mounted = ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC))
     r.check(mounted is not None, 'the first edition is mounted at the landing')
     mtext = squash(mounted['text']) if mounted else ''
-    # the glyphs of each block's element, its chrome (the sameness hairline, C-33's mark, the symbols, the "+n others" count) set aside
-    # a block split across columns (issue #15's fold) is its parts' glyphs in order
-    glyphs = ctx.js('''(() => { const out = {}; for (const el of document.querySelectorAll('.sp[data-addr=%s]')) { const c = el.cloneNode(true); c.querySelectorAll('.hairline,.pubmark,.others,.sym').forEach(x => x.remove()); out[el.dataset.pos] = (out[el.dataset.pos] || '') + c.textContent; } return out; })()''' % json.dumps(DOC))
-    missing_blocks = [{'pos': b['pos'], 'dom': (glyphs.get(str(b['pos'])) or '')[:60]} for b in doc['blocks'] if b['kind'] == 'para' and squash(glyphs.get(str(b['pos']))) != squash(b['text'])]
-    r.check(not missing_blocks, '(ii) every block\'s glyphs in the mounted article are its text, character for character', missing_blocks)
-    joined = squash(''.join(glyphs.get(str(b['pos'])) or '' for b in doc['blocks']))
+    parts = ctx.js('''((a) => { const enc = new TextEncoder(), blocks = new Map(window.__skep.model.doc(a).blocks.map((b) => [b.pos, b]));
+      return [...document.querySelectorAll(`#domlayer .sp[data-addr="${a}"]`)].flatMap((el) => { const b = blocks.get(Number(el.dataset.pos)); if (!b || b.kind !== 'para') return [];
+        const c = el.cloneNode(true); c.querySelectorAll('.hairline,.pubmark,.others,.sym').forEach((x) => x.remove());
+        const own = c.textContent, char = Number(el.dataset.char || 0), p0 = b.pos + enc.encode(b.text.slice(0, char)).length;
+        return [{pos: b.pos, char, p0, p1: p0 + enc.encode(own).length, own, model: b.text.slice(char, char + own.length)}]; }); })(%s)''' % json.dumps(DOC))
+    held = {}
     for x in content_runs:
-        r.check(squash(x['text']) in joined, '(ii) the oracle\'s content run is in the mounted glyphs', {'pos': x['pos'], 'width': x['width']})
+        for i, byte in enumerate(x['text'].encode('utf8')):
+            held[x['pos'] + i] = byte
+    said = lambda p0, p1: bytes(held[p] for p in range(p0, p1)).decode('utf8', 'replace') if all(p in held for p in range(p0, p1)) else None
+    off = [{'pos': p['pos'], 'char': p['char'], 'dom': p['own'][:60], 'model': p['model'][:60]} for p in parts if squash(p['own']) != squash(p['model'])]
+    r.check(bool(parts) and not off, '(ii) every block part standing in the mounted article is its block\'s text over the characters it holds, character for character', {'parts': len(parts), 'off': off[:6]})
+    against = [p for p in parts if said(p['p0'], p['p1']) is not None]
+    unsaid = [{'pos': p['pos'], 'char': p['char'], 'dom': p['own'][:60], 'oracle': said(p['p0'], p['p1'])[:60]} for p in against if squash(p['own']) != squash(said(p['p0'], p['p1']))]
+    r.check(bool(against) and not unsaid, '(ii) every block part standing over positions the guest\'s delivery holds is that delivery\'s bytes over them, character for character', {'compared': len(against), 'off': unsaid[:6]})
+    r.figures['parts_standing'] = {'parts': len(parts), 'against_oracle': len(against), 'blocks': len({p['pos'] for p in parts}), 'of': sum(1 for b in doc['blocks'] if b['kind'] == 'para')}
     c33 = ctx.js('window.__skep.strings.pinned().find(s => s.id === "C-33").text')
     r.check(squash(c33) in mtext, 'C-33\'s mark stands on the window run in the article', c33)
     window_block = next((b for b in doc['blocks'] if b['pos'] <= WINDOW[0] < b['pos'] + b['width']), None)

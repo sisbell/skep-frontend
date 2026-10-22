@@ -27,8 +27,12 @@
 // trail's pip numbers among them) and the parts of labels it left out with
 // the rule that left each out (`labelsLeftOut`), S3's camera paths
 // (`runPath`) and the frame buffer —
-// each frame's count of documents both drawn and mounted, and of documents
-// yielded and not mounted — the bridge client's own call
+// each frame's count of documents drawn as bars or a label over their own
+// standing text, and yielded to text that does not stand, line by line, its
+// bars drawn at the readable em (`barred`), and what the text layer stood:
+// its new mounts, its articles in the mount band and their lines — what
+// stands of a document's article, part by part (`mountedLines`), the bridge
+// client's own call
 // log, the settle signal, the trail, the line's and the overlay's text, the
 // selection's span beside the platform's own and the way the platform's runs,
 // the copy door (the copy event
@@ -77,7 +81,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
 import { docBox, accountCell, boardCell, DOC_W, depthOfDoc } from '../plane/projection.js';
 import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, LINE_H, boundsOf, outlineRects, firstRow } from '../plane/layout.js';
-import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM } from '../plane/lod.js';
+import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME } from '../plane/lod.js';
 import { pinned, lacking } from '../strings.js';
 import { pct, r2 } from '../util.js';
 
@@ -88,8 +92,12 @@ import { pct, r2 } from '../util.js';
  * @property {number} drawMs
  * @property {string} lod
  * @property {number} docs
- * @property {number} both the documents whose label or bars the canvas drew that stand mounted at the frame's end: text over its own bars
- * @property {number} neither the documents the canvas yielded to their text that stand unmounted at the frame's end: an empty box
+ * @property {number} both the documents whose label the canvas set while their article stands in the mount band, or that it drew a bar for on a line standing as text at the frame's end: text over its own bars
+ * @property {number} neither the documents the canvas yielded a line, or the whole, of to text that does not stand at the frame's end: an empty place
+ * @property {number} barred the bars the canvas drew for documents at the readable em or above: none, by issue #122's rule
+ * @property {number} mounted the documents T-LAYER mounted afresh in the frame, a rebuild apart
+ * @property {number} standing the articles standing in the mount band after it
+ * @property {number} lines the lines standing as text after it, every article's
  * @property {string} [phase]
  */
 
@@ -126,7 +134,10 @@ export function summarize(/** @type {Frame[]} */ rows) {
   const iv = rows.map((f) => f.interval), dr = rows.map((f) => f.drawMs);
   let over = 0, run = 0, worstRun = 0;
   for (const f of rows) { if (f.interval > 33.34) { over++; run++; worstRun = Math.max(worstRun, run); } else run = 0; }
-  return { frames: rows.length, fps_median: r2(1000 / Math.max(0.001, pct(iv, 50))), frame_p50: r2(pct(iv, 50)), frame_p95: r2(pct(iv, 95)), frame_p99: r2(pct(iv, 99)), draw_p50: r2(pct(dr, 50)), draw_p99: r2(pct(dr, 99)), frames_over_33ms: over, longest_sub30_run_frames: worstRun, worst_frame_ms: r2(Math.max(0, ...iv)), max_docs_drawn: Math.max(0, ...rows.map((f) => f.docs)), max_both: Math.max(0, ...rows.map((f) => f.both)), max_neither: Math.max(0, ...rows.map((f) => f.neither)) };
+  const most = (/** @type {(f: Frame) => number} */ k) => Math.max(0, ...rows.map(k));
+  return { frames: rows.length, fps_median: r2(1000 / Math.max(0.001, pct(iv, 50))), frame_p50: r2(pct(iv, 50)), frame_p95: r2(pct(iv, 95)), frame_p99: r2(pct(iv, 99)), draw_p50: r2(pct(dr, 50)), draw_p99: r2(pct(dr, 99)), frames_over_33ms: over, longest_sub30_run_frames: worstRun, worst_frame_ms: r2(Math.max(0, ...iv)),
+    max_docs_drawn: most((f) => f.docs), max_both: most((f) => f.both), max_neither: most((f) => f.neither), max_barred: most((f) => f.barred),
+    max_standing: most((f) => f.standing), max_lines: most((f) => f.lines), max_mounted: most((f) => f.mounted), mounted: rows.reduce((n, f) => n + f.mounted, 0) };
 }
 
 /**
@@ -191,7 +202,7 @@ export function install(deps) {
     for (const rec of recs) {
       const own = screenBox(rec.d.addr);
       for (const row of /** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll('.hd, .run > *'))) {
-        const r = rectOf(row), clip = clipOf(row), col = row.closest('.col');
+        const r = rectOf(row), clip = clipOf(row), col = /** @type {HTMLElement | null} */ (row.closest('.col'));
         const over = Math.max(overflowOf(r, own), clip ? overflowOf(r, rectOf(clip)) : 0, col ? overflowOf(r, columnRect(rec, col)) : 0);
         if (over > 0.5) cut.push({ addr: rec.d.addr, pos: row.dataset.pos != null ? Number(row.dataset.pos) : null, row: row.classList[0] || row.tagName.toLowerCase(), overflow_px: r2(over) });
       }
@@ -233,16 +244,19 @@ export function install(deps) {
     });
   }
   /**
-   * A column of a mounted article as a person meets it: its element's box as
-   * the engine lays it out — the measure wide, in the `ch` of the face the
-   * platform sets it in — as deep as the fold sets it: its flow, never
-   * clipped, held to the depth its lines were broken at.
+   * The column of a mounted article a part stands in, as a person meets it:
+   * across, the part's box as the engine lays it out — the measure wide, in
+   * the `ch` of the face the platform sets it in — and down, the column's
+   * text from its top to the depth its lines were broken at, as the fold
+   * places it: its flow, never clipped.
    * @param {import('../text/layer.js').Mounted} rec
-   * @param {Element} col
+   * @param {HTMLElement} col a part's box
    */
   function columnRect(rec, col) {
-    const r = rectOf(col), i = [...rec.el.querySelectorAll('.col')].indexOf(col), c = rec.fold.columns[i];
-    return c ? { x: r.x, y: r.y, w: r.w, h: c.h * CAM.cam.scale } : r;
+    const r = rectOf(col), c = rec.fold.columns[Number(col.dataset.column)];
+    if (!c) return r;
+    const box = docBox(rec.d.addr);
+    return { x: r.x, y: CAM.sy(box.y + c.y), w: r.w, h: c.h * CAM.cam.scale };
   }
   /**
    * The beam endpoints, each beside an oracle read apart from the beams' own
@@ -289,14 +303,18 @@ export function install(deps) {
    * The handoff (foundations §2.4: the bars become text and no line moves;
    * S1 Q7; issue #15: mid scale greeks the columns the mount sets): the
    * canvas's own bars for a document — the fold P-RENDER draws below the
-   * mount, at the camera as it stands — block part by block part, each its
-   * column, its first line's top on screen, its height and its count of
-   * lines, beside the mounted article's block parts as the person meets them:
-   * each one's column, the character it starts at, its top on screen, its
-   * height, and its height in its own line boxes (its computed line height at
-   * the article's scale — a heading's lines are a heading's, not the body's).
-   * A part the article draws as a withheld run's face is named so. Null
-   * where the document's text has not arrived.
+   * mount, at the camera as it stands — block by block within each run of
+   * lines it groups them in: each part of its article standing, where its
+   * article stands in that fold (issue #122: a document stands by line), else
+   * each column — each group its column, the first line of its run (`part`),
+   * its first line's top on screen, its height and its count of lines; beside
+   * the mounted article's block parts as the person meets them: each one's
+   * column and the first line of the part it stands in, the character it
+   * starts at, its top on screen, its height, and its height in its own line
+   * boxes (its computed line height at the article's scale — a heading's
+   * lines are a heading's, not the body's). A part the article draws as a
+   * withheld run's face is named so. Null where the document's text has not
+   * arrived.
    * @param {string} addr
    */
   function barsOf(addr) {
@@ -304,12 +322,15 @@ export function install(deps) {
     if (!laid) return null;
     const f = laid.fold;
     const box = docBox(addr), s = CAM.cam.scale;
-    /** @type {Array<{pos: number, column: number, top: number, height: number, lines: number}>} */
+    const rec = LAYER.mountedSet().get(addr);
+    const runs = rec && rec.fold === f ? rec.parts.map((p) => ({ column: p.column, first: p.first, end: p.end })) : f.columns.map((c, ci) => ({ column: ci, first: c.first, end: c.first + c.n }));
+    /** @type {Array<{pos: number, column: number, part: number, top: number, height: number, lines: number}>} */
     const bars = [];
-    f.columns.forEach((c, ci) => {
+    for (const run of runs) {
+      const c = f.columns[run.column];
       /** @type {Map<number, {first: number, last: number, n: number}>} */
       const parts = new Map();
-      for (let i = c.first; i < c.first + c.n; i++) {
+      for (let i = run.first; i < run.end; i++) {
         const l = f.lines[i];
         if (l.pos == null || l.kind === 'head' || l.kind === 'chrome') continue;
         const p = parts.get(l.pos);
@@ -317,16 +338,14 @@ export function install(deps) {
       }
       for (const [pos, p] of parts) {
         const a = f.lines[p.first], z = f.lines[p.last];
-        bars.push({ pos, column: ci, top: r2(CAM.sy(box.y + c.y + (a.top - c.top) * f.fs)), height: r2((z.top + z.h - a.top) * f.fs * s), lines: p.n });
+        bars.push({ pos, column: run.column, part: run.first, top: r2(CAM.sy(box.y + c.y + (a.top - c.top) * f.fs)), height: r2((z.top + z.h - a.top) * f.fs * s), lines: p.n });
       }
-    });
-    const rec = LAYER.mountedSet().get(addr);
+    }
     const k = rec ? s / rec.lay : 1;
-    const cols = rec ? [...rec.el.querySelectorAll('.col')] : [];
     const text = rec ? [.../** @type {NodeListOf<HTMLElement>} */ (rec.el.querySelectorAll('.run > .sp, .run > .withheld'))].map((e) => {
-      const r = e.getBoundingClientRect();
+      const r = e.getBoundingClientRect(), col = /** @type {HTMLElement | null} */ (e.closest('.col'));
       const own = parseFloat(getComputedStyle(e).lineHeight) * k;
-      return { pos: Number(e.dataset.pos), column: cols.indexOf(/** @type {Element} */ (e.closest('.col'))), char: Number(e.dataset.char || 0), top: r2(r.top), height: r2(r.height), lines: Math.round(r.height / own), withheld: e.classList.contains('withheld') };
+      return { pos: Number(e.dataset.pos), column: col ? Number(col.dataset.column) : -1, part: col ? Number(col.dataset.first) : -1, char: Number(e.dataset.char || 0), top: r2(r.top), height: r2(r.height), lines: Math.round(r.height / own), withheld: e.classList.contains('withheld') };
     }) : null;
     return { addr, line_px: r2(f.fs * LINE_H * s), columns: f.columns.length, head_lines: f.lines.filter((l) => l.kind === 'head').length, bars, text };
   }
@@ -444,6 +463,8 @@ export function install(deps) {
     },
     mounted: (/** @type {string} */ addr) => { const rec = LAYER.mountedSet().get(addr); if (!rec) return null; const r = rec.el.getBoundingClientRect(); return { text: LAYER.mountedText(addr), rect: { x: r.left, y: r.top, w: r.width, h: r.height }, fs: rec.fs, lay: rec.lay }; },
     mountedAddrs: () => LAYER.mountedAddrs(),
+    /** what stands of a document's article (issue #122: a document stands by line): its parts, each a column and the run of its fold's lines [first, end) it holds, in their lines' order — the parts' boxes, by the same column and first line (`data-column`, `data-first`); null where no article of it stands */
+    mountedLines: (/** @type {string} */ addr) => LAYER.mountedLines(addr),
     spanRects: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => LAYER.spanRects(addr, pos, width),
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
     view: { camera: () => CAM.view(), focus: () => WALK.current(), ring: () => (RENDER.stats.ring ? { ...RENDER.stats.ring } : null), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
@@ -534,7 +555,7 @@ export function install(deps) {
     /** the scale at which a document's em — the size the page sets it at (T-LAYER's fold) — is `em` px, or its box `docPx` px */
     scaleFor: (/** @type {string} */ addr, /** @type {'em' | 'doc'} */ kind, /** @type {number} */ v) => (kind === 'doc' ? v / docBox(addr).w : v / LAYER.foldOf(REC.doc(addr)).fs),
     boxOf: (/** @type {string} */ addr) => docBox(addr), accountCell: (/** @type {string} */ a) => accountCell(a), boardCell: (/** @type {string} */ b) => boardCell(b), depthOf: (/** @type {string} */ a) => depthOfDoc(a),
-    constants: { DOC_W, STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM },
+    constants: { DOC_W, STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME },
     refresh: async () => { const ts = /** @type {number[]} */ ([]); await new Promise((res) => { const step = (/** @type {number} */ t) => { ts.push(t); if (ts.length < 60) requestAnimationFrame(step); else res(undefined); }; requestAnimationFrame(step); }); const iv = []; for (let i = 1; i < ts.length; i++) iv.push(ts[i] - ts[i - 1]); return r2(1000 / Math.max(0.1, pct(iv, 50))); },
   };
   /** @ts-ignore — the driver's door */

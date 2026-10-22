@@ -27,6 +27,13 @@
 // mutant that leaves the pointer to the placeholder's C-39, or carries the
 // run, turns red); a click on the rest of that placeholder still conjures
 // C-39's face.
+// A press at the readable em on a document whose text does not stand yet —
+// no frame run since the camera moved there — is held for the text, never
+// dropped and never a move to the place (issue #122's design decision): it
+// selects nothing while no text stands under it, and after the frame that
+// sets the text it is the text's click, selecting the block under it whole,
+// with no trail entry and no flight (a page that drops the press, or makes it
+// the place's, turns red).
 // An empty click made while a card reads ends its opening alone (O-HOST's):
 // its answer shows nothing and the card standing under it stands (a mutant
 // that dismisses the standing card with it, or leaves the opening to the
@@ -35,6 +42,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
 import * as HOST from '../overlays/host.js';
+import * as SEL from '../overlays/selection.js';
 import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
@@ -303,6 +311,66 @@ test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in
     assert.equal(HOST.currentState()?.id, 'face:C-39', 'the rest of the placeholder conjures C-39\'s face');
     HOST.dismiss();
   } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a press at the readable em on a document whose text does not stand yet is held for it, never dropped and never a move to the place: after the frame that sets the text, the click selects the block under it', () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the plane's listeners, and the window's, by event */
+  const plane = new Map(), win = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  /** @type {unknown} what the platform answers stands under the press: the plane until the frame sets the text there */
+  let under = { id: 'plane', closest: () => null };
+  /** @type {Set<unknown>} the articles the text layer holds */
+  const held = new Set();
+  const element = () => {
+    const e = { className: '', innerHTML: '', dataset: {}, style: {}, children: /** @type {unknown[]} */ ([]), classList: { toggle() {} }, setAttribute() {},
+      appendChild(/** @type {unknown} */ c) { e.children.push(c); }, querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }), remove() { held.delete(e); } };
+    return e;
+  };
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null, createElement: element, elementFromPoint: () => under });
+  globalThis.window = /** @type {any} */ ({ ...listens(win), getSelection: () => null });
+  try {
+    // the first edition indexed, its text arrived: two paragraphs
+    const D = '1.0.1.0.3', text = 'Tumbler addresses everything.\n\nThe second paragraph is read here.', n = byteLength(text);
+    REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+    const d = REC.doc(D), second = d.blocks[1];
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), classList: { add() {}, remove() {} } }, layer: listens(null), corners: listens(null) }));
+    LAYER.attach(/** @type {any} */ ({ clientWidth: 1440, clientHeight: 900, appendChild: (/** @type {unknown} */ e) => { held.add(e); } }), null);
+    TRAIL._reset();
+    // the camera at em 9 over the second paragraph's line, its text not yet standing: no frame has run since
+    CAM.setViewport(1440, 900);
+    const f = LAYER.foldOf(d), at = LAYER.centreOf(D, second.pos);
+    CAM.set({ x: at.x, y: at.y, scale: 9 / f.fs });
+    const press = { clientX: 720, clientY: 450, ctrlKey: false, metaKey: false, pointerId: 1 };
+    assert.equal(RENDER.docAtScreen(press.clientX, press.clientY), D, 'the press falls on the first edition, at em 9');
+    plane.get('pointerdown')?.(press);
+    plane.get('pointerup')?.(press);
+    win.get('pointerup')?.(press);
+    const entries = TRAIL.all().length;
+    INPUT.afterFrame();
+    assert.equal(SEL.selected(), null, 'held: no text stands under it yet, and nothing is selected');
+    // the frame sets the text: the paragraph stands under the press, and the click is the text's
+    LAYER.frame();
+    assert.ok(LAYER.isMounted(D), 'the frame stands the first edition\'s text');
+    const article = { dataset: { addr: D } }, sp = { dataset: { addr: D, pos: String(second.pos) } };
+    under = { id: '', closest: (/** @type {string} */ sel) => (sel === '#domlayer article.dtext' || sel === 'article' ? article : sel === '.sp' ? sp : null) };
+    INPUT.afterFrame();
+    assert.deepEqual(SEL.selected(), { addr: D, pos: second.pos, width: second.width }, 'the click selects the block under it whole');
+    assert.deepEqual([TRAIL.all().length, CAM.flying()], [entries, false], 'no trail entry and no flight: never a move to the place');
+    INPUT.afterFrame();
+    HOST.dismiss();
+    SEL.clear();
+  } finally {
+    LAYER.clear();
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });

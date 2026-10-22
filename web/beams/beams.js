@@ -35,10 +35,11 @@
 // connections share — with a triangle on the true bearing and the far
 // document's label at the stub (S1 Q3, load-bearing). A mounted article's
 // line stands wherever its box reaches, under the one line or past the
-// viewport (T-LAYER mounts every article whose box meets the viewport,
-// padded), so an end laid out is off screen where it stands outside that
-// view, as a box's centre is; `beamTo` reads both the stub and where its
-// stroke ends from that one test. A link met from both its ends, or twice
+// viewport — as text where T-LAYER stands it, the lines meeting the viewport,
+// padded, and else where its fold sets it (T-LAYER's `lineBoxes`: issue #122,
+// a document stands by line) — so an end laid out is off screen where it
+// stands outside that view, as a box's centre is; `beamTo` reads both the stub
+// and where its stroke ends from that one test. A link met from both its ends, or twice
 // inside one document, is one beam — its two ends told apart by the document
 // each is drawn at and the span the link stores for it, wherever they stand
 // now — marked with what its meetings' marks share whichever document
@@ -305,13 +306,29 @@ export function labelText(b) {
 /** the visible view now: the viewport below the one line */
 const seenNow = () => visibleView(LINE.bottom());
 
-/** the page's geometry: T-LAYER's rects of the mounted articles, the camera's projection of the boxes, the visible view */
+/** a block's boxes from the boxes of its lines: one for each column they stand in, their union */
+function byColumn(/** @type {Rect[]} */ lines) {
+  /** @type {Map<number, Rect>} */
+  const out = new Map();
+  for (const r of lines) {
+    const b = out.get(r.x);
+    out.set(r.x, b ? { x: b.x, y: Math.min(b.y, r.y), w: Math.max(b.w, r.w), h: Math.max(b.y + b.h, r.y + r.h) - Math.min(b.y, r.y) } : { ...r });
+  }
+  return [...out.values()];
+}
+
+/** the page's geometry: T-LAYER's rects of the mounted articles — a line standing in no part where its fold sets it — the camera's projection of the boxes, the visible view */
 function pageGeometry(/** @type {Rect} */ seen) {
-  /** the boxes of the block keyed by its first position in a mounted article: one for each of its parts, a column's each */
-  const parts = (/** @type {string} */ addr, /** @type {number} */ pos) => LAYER.spanRects(addr, pos) || [];
+  /** the boxes of the block keyed by its first position in a mounted article: one for each of its parts standing, a column's each; where none stands, one for each column its lines are set in */
+  const parts = (/** @type {string} */ addr, /** @type {number} */ pos) => {
+    const rs = LAYER.spanRects(addr, pos) || [];
+    if (rs.length) return rs;
+    const b = blockAt(addr, pos);
+    return b ? byColumn(LAYER.lineBoxes(addr, b.pos, b.width) || []) : [];
+  };
   /** @type {Geometry} */
   const g = {
-    lines: (addr, pos, width) => (LAYER.spanRects(addr, pos, width) || []).filter((r) => r.w > 0 && r.h > 0),
+    lines: (addr, pos, width) => { const rs = (LAYER.spanRects(addr, pos, width) || []).filter((r) => r.w > 0 && r.h > 0); return rs.length ? rs : LAYER.lineBoxes(addr, pos, width) || []; },
     block: (addr, pos) => { const b = blockAt(addr, pos); return b ? parts(addr, b.pos) : []; },
     first: (addr) => parts(addr, (doc(addr).blocks[0] || { pos: 1 }).pos)[0] || null,
     mounted: LAYER.isMounted,

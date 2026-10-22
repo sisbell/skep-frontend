@@ -2,7 +2,10 @@
 // Layer 2, pure. Carries the wireframe's §7 (S3's bands, unchanged) and S1's
 // mount thresholds (em 6.5 / 5.5, below the canvas's readable 8 — S1 Q7). The
 // text bands read the plane's standard type (P-LAY's STANDARD_FS), the size
-// every document is set at until its columns fill its room.
+// every document is set at until its columns fill its room. THE LIMIT (issue
+// #122's design decision): at most MOUNTS_PER_FRAME documents mount afresh in
+// a frame, those that reach the readable em counted first and never held
+// back — a limit on a frame's new mounts, never a ceiling on what stands.
 // The continuations' band (foundations §2.1; P44): an account's continuation
 // whose documents the scale draws smaller than the far band's upper edge is
 // drawn as one mark, crossfading with its documents' boxes through the far
@@ -16,8 +19,10 @@ import { STANDARD_FS } from './layout.js';
 export const LOD_FAR_LO = 10, LOD_FAR_HI = 18;
 /** em px: outline ↔ readable-text band */
 export const LOD_TXT_LO = 8, LOD_TXT_HI = 11;
-/** S1's mount hysteresis and cap */
-export const MOUNT_EM = 6.5, UNMOUNT_EM = 5.5, MAX_MOUNTED = 8;
+/** em px: S1's mount hysteresis — a document mounts at MOUNT_EM and stands down to UNMOUNT_EM */
+export const MOUNT_EM = 6.5, UNMOUNT_EM = 5.5;
+/** the documents that mount afresh in one frame, at most: below the readable em, where a mount may wait for the frames after (T-LAYER's `chosen`) */
+export const MOUNTS_PER_FRAME = 8;
 
 /**
  * @typedef {Object} Lod

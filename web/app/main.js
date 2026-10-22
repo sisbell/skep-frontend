@@ -26,14 +26,18 @@
 // `launch`).
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
-// frame, then P-RENDER, then BM, then O-HOST's place, the line — and the
-// frame buffer the gate reads. T-LAYER decides
-// what is mounted BEFORE the canvas draws, so a document crossing the mount
-// threshold is drawn as bars or yielded to its text by the same frame's
-// mounted set — never both, never neither (law 13) — and the arrival mark
-// reads the article where this frame placed it; each frame's record counts
-// the documents the canvas drew that stand mounted (`both`) and the ones it
-// yielded that do not (`neither`). The global key
+// frame, then P-RENDER, then BM, then O-HOST's place, the line, then the
+// press APP-INPUT holds at reading scale, acted on the text the frame set
+// (`afterFrame`) — and the frame buffer the gate reads. T-LAYER decides
+// what stands BEFORE the canvas draws, so a line crossing the mount threshold
+// or entering the view is drawn as a bar or yielded to its text by the same
+// frame's standing lines — never both, never neither (law 13) — and the
+// arrival mark reads the article where this frame placed it; each frame's
+// record counts the documents the canvas drew a label or a bar for that stands
+// as text (`both`), the ones it yielded a line or the whole of to text that
+// does not stand (`neither`), the bars it drew at the readable em (`barred`,
+// which issue #122's rule holds at none), and what T-LAYER stood: its new
+// mounts, its articles in the mount band and their lines. The global key
 // listener → N-KEYS, each key handed where the focus is and whether a key
 // made it by N-FOCUS's one reading (FP-20) — a chord the LEAP box closed on
 // is read at the focus the close returned; ↓ and ↑ in an overlay move among
@@ -65,6 +69,7 @@ import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as GO from '../nav/go.js';
+import * as TRAIL from '../nav/trail.js';
 import * as SCENE from '../scene/scene.js';
 import * as INPUT from './input.js';
 import { cssVariables } from '../plane/register.js';
@@ -122,10 +127,12 @@ function loop(/** @type {number} */ now) {
     BM.draw();
     HOST.place();
     if (SCENE.isOpen()) SCENE.draw();
+    INPUT.afterFrame();
     const drawMs = performance.now() - t0;
-    const both = RENDER.stats.drawn.filter((a) => LAYER.isMounted(a)).length;
-    const neither = RENDER.stats.yielded.filter((a) => !LAYER.isMounted(a)).length;
-    frames.push({ t: now, interval: now - lastT, drawMs, lod: lod.name, docs: RENDER.stats.docsDrawn, both, neither, phase: phase.name || undefined });
+    const S = RENDER.stats, stood = LAYER.frameStats();
+    const both = new Set([...S.labelled.filter((a) => LAYER.isMounted(a)), ...S.bars.filter(([a, i]) => LAYER.lineStands(a, i)).map(([a]) => a)]).size;
+    const neither = new Set([...S.yielded.filter((a) => !LAYER.standing(a)), ...S.yieldedLines.filter(([a, i]) => !LAYER.lineStands(a, i)).map(([a]) => a)]).size;
+    frames.push({ t: now, interval: now - lastT, drawMs, lod: lod.name, docs: S.docsDrawn, both, neither, barred: S.barred, mounted: stood.mounted, standing: stood.standing, lines: stood.lines, phase: phase.name || undefined });
     if (frames.length > FRAME_CAP) frames.splice(0, frames.length - FRAME_CAP);
     lastRev = rev; lastLayerRev = lrev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
   }
@@ -160,7 +167,7 @@ async function boot() {
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
   LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); } });
-  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem() });
+  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; } });
   LK.readers({ lit: () => GO.litLink() });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', resize); resize();

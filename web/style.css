@@ -66,9 +66,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #fail.on { display:block; }
 
 /* THE TEXT LAYER (S1 Q7): laid out once at 16 px, moved by transform; the article stands on its document's room, its
-   columns placed in it (issue #15's fold: each column the measure wide, `--measure` characters of its face; a column's
-   flow its own `.run`, the margin above a column's head dropped; nothing clipped, for nothing stands past the room). The
-   columns take the pointer, the room between them never, so a press in a gutter falls to the canvas. Every element's line box
+   parts placed in it (issue #15's fold; issue #122: a document stands by line, each part a `.col` holding a run of one
+   column's lines, the measure wide, `--measure` characters of its face, placed at its first line's top; a part's flow
+   its own `.run`, the margin above its first block dropped; nothing clipped, for nothing stands past the room). The
+   parts take the pointer, the room between them never, so a press in a gutter falls to the canvas. Every element's line box
    is the article's one unitless line height (P-LAY's LINE_H, set on the article by T-LAYER) of its own size — the
    chrome inside a line (the hairline's label, C-33's mark, a symbol) is set at a line height of 1, so it never
    deepens its line; a symbol's box is one character wide whatever face sets its ⟡ — a heading stands nearer the

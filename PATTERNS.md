@@ -54,8 +54,9 @@ fix; nothing here depends on their names.
   again on that frame, its columns broken anew, the camera is
   re-anchored on the passage being read before anything is placed,
   so the passage keeps its place and size on screen; then the canvas
-  is repainted whole, drawing a document's bars or yielding it to its
-  text by that frame's mounted set; then the beams are redrawn.
+  is repainted whole, drawing each line of a document as a bar or
+  yielding it to its text by that frame's standing lines; then the
+  beams are redrawn.
   Nothing drawn on the canvas is updated in place. The screen cannot
   drift from the state because it is rebuilt from the state.
 - **FP-9 Input never draws.** A handler changes view state, or asks
@@ -77,16 +78,22 @@ fix; nothing here depends on their names.
 ## The two places the page keeps DOM by hand
 
 - **FP-12 The text layer has one reconciler.** Real text elements are
-  mounted when a document crosses reading zoom and unmounted when it
-  leaves, by a stated policy with a stated cap, laid out once and
-  moved by transform. An article is laid out once, in one column at
-  the measure, and its lines are read as the engine set them; that
-  column is then parted at those lines into the columns of the
-  document's fold, and nothing is laid out again until the document
-  is set again. The same reconciler lays a document's text out
-  hidden, once, before its first mount, so the fold breaks its
-  columns where the rendered lines break and the bars below the mount
-  stand where the text will. This is the one reconciler the page
+  mounted by visible line, by a stated policy, laid out once and moved
+  by transform. No document at reading zoom is ever bars: every
+  document in view there stands as text in the frame it gets there,
+  however many there are. Below reading zoom a stated limit holds the
+  frame's new mounts, never what stands, and nothing is taken down to
+  make room. A line goes when it leaves the view or its document falls
+  below the unmount threshold, but a line holding the selection, a
+  caret or the focus stays for as long as it holds it. An article is laid
+  out once, in one column at the measure, and its lines are read as
+  the engine set them; its parts — each a run of one column's lines
+  in view — are cut from that column at those lines, a line entering
+  the view standing in a part of its own, and nothing is laid out
+  again until the document is set again. The same reconciler lays a
+  document's text out hidden, once, before its first mount, so the
+  fold breaks its columns where the rendered lines break and the bars
+  below the mount stand where the text will. This is the one reconciler the page
   keeps, in one module, kept small. It has two targets, the plane's
   text layer and the reading scene's panes, each pane one column at
   the plane's measure. The scene borrows the mount; it never keeps
@@ -240,6 +247,25 @@ found.
     a step to a smaller size moves them all; the camera stood where it
     was, so the passage being read could leave the screen, or change
     size, between two frames, and nothing brought it back.
+- 2026-10-22, from issue #122 (readable documents past the text cap
+  showed bars and ignored clicks) and the design decision on it — no
+  document at reading size is ever drawn as bars, every readable
+  document mounted, by visible line, the cap made a limit on a frame's
+  new mounts, the lines holding the caret, a selection or the focus
+  kept:
+  - FP-12 no longer names a cap. A ceiling of eight articles left
+    every readable document past the eighth as bars a click could not
+    reach, at the size the others were text. Every readable document in
+    view now stands, so the rule bounds the cost by the screen instead:
+    a document stands by visible line, cut from the one column its lines
+    were read in, and the limit holds only the new mounts below reading
+    zoom. The rule now says which lines stay, because a line holding
+    the selection or the focus that the view took down would take the
+    platform's selection or focus with it.
+  - FP-8 now says the canvas draws or yields by line. With a document
+    standing by line, the frame's mounted set no longer says which of
+    its lines are text; drawing by document would draw bars under text,
+    or leave lines empty, wherever only part of a document stands.
 
 ## What these rule out
 

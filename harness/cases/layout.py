@@ -62,9 +62,10 @@ THE HANDOFF (law 8;
 foundations §2.4: the bars become text and no line moves; S1 Q7; issue #15:
 mid scale greeks the columns the mount sets): at each level, and at the
 mount threshold reached from below (em 6 → 6.6) and from above (em 7 → 6),
-every part of every block of every mounted article — a block the columns
-part at a line standing in each — stands on the canvas's own bars for it in
-its column: its top and its height within HANDOFF_TOL_PX of its bars', and as
+every part of every block of every mounted article — a block the columns, or
+the view's edge, cut at a line standing in each part of the article that
+holds a run of its lines (issue #122) — stands on the canvas's own bars for
+its lines in that part: its top and its height within HANDOFF_TOL_PX of its bars', and as
 many lines; a withheld run's face is left out, its height at reading scale
 the design's open question (F2.1-i: the bars take its true width), and the
 blocks after it are compared where the face sets them, for the columns break
@@ -167,8 +168,11 @@ left unmeasured and says so, `layer.test.js` holding the rule over the page's
 own fold. THE LONGEST EDITION the claimant's index lists, found by the case's
 own reads of each edition's span set: LEAPt to, its article mounted at the
 measure, its columns inside its room and every row inside its column and its
-room; at its own em 4, below the mount, its article down and each block
-part's bars inside the column that holds it.
+room; standing BY LINE (issue #122's design decision: the cost bounded by the
+screen) — every part of it standing meets the view, fewer of its lines stand
+than it holds, each part's blocks are their text over the characters they
+hold, and each part stands on its bars; at its own em 4, below the mount, its
+article down and each block part's bars inside the column that holds it.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `arrivalAnchors`, `spanRects`, `visible`, `barsOf`, `labels`,
 `scene.at`, `scene.ties`, the frame buffer, `beamLabels`, `connections`,
@@ -190,6 +194,9 @@ import re
 from . import DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, XFAIL_MEMBER, Result, account_of
 
 LEVELS_EM = [9, 12, 18, 30]
+# the room about the viewport the text layer stands a document's lines in (issue #122: a document stands by line) — the
+# case's own, held apart from the page's 40 px
+STAND_PAD_PX = 41
 DRIFT_TOL_PX = 0.5
 ANCHOR_TOL_PX = 0.5
 HANDOFF_TOL_PX = 1.0
@@ -295,17 +302,18 @@ def beam_ink(ctx, link, pos):
 
 
 def handoff(ctx):
-    """every mounted article's block parts against the canvas's own bars for them (`barsOf`), column by column (issue
-    #15: mid scale greeks the columns the mount sets): a withheld run's face left out — its height at reading scale the
-    design's open question (F2.1-i: its bars take its true width) — and the blocks after it compared, standing where the
-    face sets them, for the columns break at the lines as rendered; the ones off their bars — in another column, at
-    another top, of another height, or of another count of lines — named"""
+    """every mounted article's block parts against the canvas's own bars for them (`barsOf`), part by part (issue #15:
+    mid scale greeks the columns the mount sets; issue #122: a document stands by line, each part a run of a column's
+    lines): a withheld run's face left out — its height at reading scale the design's open question (F2.1-i: its bars
+    take its true width) — and the blocks after it compared, standing where the face sets them, for the columns break at
+    the lines as rendered; the ones off their bars — in another column or part, at another top, of another height, or of
+    another count of lines — named"""
     compared, off, left_out = 0, [], 0
     for addr in ctx.js('window.__skep.mountedAddrs()'):
         h = ctx.js('window.__skep.barsOf(%s)' % json.dumps(addr))
         if not h or h['text'] is None:
             continue
-        bars = {(b['pos'], b['column']): b for b in h['bars']}
+        bars = {(b['pos'], b['column'], b['part']): b for b in h['bars']}
         for t in h['text']:
             if t['withheld']:
                 left_out += 1
@@ -313,9 +321,9 @@ def handoff(ctx):
             if t['lines'] == 0:
                 continue
             compared += 1
-            b = bars.get((t['pos'], t['column']))
+            b = bars.get((t['pos'], t['column'], t['part']))
             if b is None or b['top'] is None or abs(b['top'] - t['top']) > HANDOFF_TOL_PX or abs(b['height'] - t['height']) > HANDOFF_TOL_PX or b['lines'] != t['lines']:
-                off.append({'addr': addr, 'pos': t['pos'], 'column': t['column'], 'char': t['char'], 'text_top': t['top'], 'bars_top': b and b['top'], 'text_height': t['height'],
+                off.append({'addr': addr, 'pos': t['pos'], 'column': t['column'], 'part': t['part'], 'char': t['char'], 'text_top': t['top'], 'bars_top': b and b['top'], 'text_height': t['height'],
                             'bars_height': b and b['height'], 'text_lines': t['lines'], 'bars_lines': b and b['lines'], 'line_px': h['line_px']})
     return {'compared': compared, 'off': off, 'left_out': left_out}
 
@@ -655,6 +663,13 @@ def scene_marks_hold(ctx, r):
     symbol changes nothing; its figures"""
     ctx.leap(DOC, WINDOW[0])
     ctx.js('window.__skep.links.reveal(%s, 2)' % json.dumps(DOC))
+    # the plane's own cues, read before the scene stands over it, its first column in view — its head among the lines
+    # standing (issue #122: a document stands by line), where the presence ⟡ stands — then the camera back at the landing
+    landing = ctx.camera()
+    ctx.view_doc_em(DOC, 12.5)
+    plane_cues = ctx.js('''(() => { const cur = (sel) => [...document.querySelectorAll(sel)].map((e) => getComputedStyle(e).cursor);
+      return {blocks: cur('#domlayer .run > .sp'), hairlines: cur('#domlayer .hairline'), presence: cur('#domlayer .sym.reveal'), symbols: cur('#domlayer .sym[data-link]')}; })()''')
+    ctx.set_view(landing['x'], landing['y'], landing['scale'])
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
     ctx.settle()
     ctx.frames(3)
@@ -675,7 +690,8 @@ def scene_marks_hold(ctx, r):
     # the click cues are the plane's: none in a pane, every one kept on the plane's text layer
     cues = ctx.js('''(() => { const cur = (sel) => [...document.querySelectorAll(sel)].map((e) => getComputedStyle(e).cursor);
       const at = (root) => ({blocks: cur(root + ' .run > .sp'), hairlines: cur(root + ' .hairline'), presence: cur(root + ' .sym.reveal'), symbols: cur(root + ' .sym[data-link]')});
-      return {pane: at('.pane'), plane: at('#domlayer')}; })()''')
+      return {pane: at('.pane')}; })()''')
+    cues['plane'] = plane_cues
     kinds = ('blocks', 'hairlines', 'presence', 'symbols')
     pointer = {k: sum(1 for c in cues['pane'][k] if c == 'pointer') for k in kinds}
     r.check(all(cues['pane'][k] for k in kinds) and not any(pointer.values()), 'no click cue in a scene\'s pane: no block, hairline, presence ⟡ or link\'s symbol takes the pointer cursor',
@@ -1278,6 +1294,28 @@ def longest_holds(ctx, r):
     r.check(bool(mine) and inside_room and not cut, f'reading scale: the longest edition, {longest} ({extents[longest]} positions, {len(f["columns"])} columns at step {f["step"]}), stands mounted, its columns inside its room, every row inside its column and its room',
             {'mounted': bool(mine), 'columns': len(f['columns']), 'step': f['step'], 'cut': cut[:4]})
     measure_holds(r, f'reading scale: the longest edition, {longest}', mine)
+    # what stands of it (issue #122: a document stands by line, the cost bounded by the screen), set afresh at the landing
+    # — the reveal hidden again, which sets every standing article again (`bump`), so no part stands from the flight's
+    # wider views: every part standing — a run of one column's lines, its box as the engine sets it — meets the view
+    # and STAND_PAD_PX about it and reaches past that by no more than two of its tallest line boxes, fewer of its lines
+    # stand than it holds, each part's blocks are their text over the characters they hold, and each stands on its bars
+    ctx.js('window.__skep.links.hide(%s)' % json.dumps(longest))
+    ctx.frames(3)
+    reach = 2 * LINE_RATIO * 1.25 * f['fs'] * ctx.camera()['scale']
+    parts = ctx.js('''((a, pad, reach) => { const S = window.__skep, p = S.view.viewport(), blocks = new Map(S.model.doc(a).blocks.map((b) => [b.pos, b]));
+      return [...document.querySelectorAll(`#domlayer article.dtext[data-addr="${a}"] .col`)].map((c) => { const q = c.getBoundingClientRect();
+        const off = [...c.querySelectorAll('.run > .sp')].filter((e) => { const b = blocks.get(Number(e.dataset.pos)); if (!b || b.kind !== 'para') return false;
+          const k = e.cloneNode(true); k.querySelectorAll('.hairline,.pubmark,.others,.sym').forEach((x) => x.remove()); const char = Number(e.dataset.char || 0);
+          return k.textContent !== b.text.slice(char, char + k.textContent.length); }).map((e) => Number(e.dataset.pos));
+        return {column: c.dataset.column ?? null, first: c.dataset.first ?? null, end: c.dataset.end ?? null, top: q.top, bottom: q.bottom,
+                meets: q.right >= -pad && q.left <= p.VW + pad && q.bottom >= -pad && q.top <= p.VH + pad, within: q.top >= -pad - reach && q.bottom <= p.VH + pad + reach, off}; }); })(%s, %d, %s)''' % (json.dumps(longest), STAND_PAD_PX, reach))
+    standing = sum(int(p['end']) - int(p['first']) for p in parts if p['first'] is not None and p['end'] is not None)
+    r.check(bool(parts) and all(p['meets'] and p['within'] and p['first'] is not None for p in parts) and 0 < standing < f['lines'],
+            f'reading scale: the longest edition stands by line — every part of it standing meets the view, {STAND_PAD_PX} px about it, reaching past that by no more than two line boxes, and {standing} of its {f["lines"]} lines stand',
+            {'parts': [{k: p[k] for k in ('column', 'first', 'end', 'top', 'bottom', 'meets', 'within')} for p in parts], 'lines': f['lines'], 'reach_px': reach})
+    r.check(bool(parts) and not any(p['off'] for p in parts), 'reading scale: every block part of the longest edition standing is its block\'s text over the characters it holds', [p for p in parts if p['off']][:4])
+    ho = handoff(ctx)
+    r.check(ho['compared'] > 0 and not ho['off'], 'reading scale: every part of the longest edition standing, and of every other article, stands on its bars', {'compared': ho['compared'], 'off': ho['off'][:6]})
     # below the mount, where the canvas draws its bars: its own em 4 — it stands six grids deep, so its own em, not the
     # plane's bands, says where its text is greeked
     ctx.view_doc_em(longest, 4)
