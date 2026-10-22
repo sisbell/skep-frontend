@@ -27,6 +27,22 @@
 //   - every count is a fold of `find_links_v`'s answer, the type learned once
 //     (`count_v` no longer used — E17 (a)); a document whose links are not
 //     yet read shows its count ARRIVING (#465, needs-design: a lower bound);
+//   - an end stands WHERE ITS BYTES STAND NOW: a link's slot stores the
+//     permanent I-spans of the bytes it named, never a place (wire.md
+//     §Links, `make_link`), so each end drawn at a document is its stored
+//     span read back to the document's held text through the V→I image
+//     (M-REC's `placed`) — every stretch it stands in, a passage an edit cut
+//     in two at both, its marks, symbol and counts there and never at the
+//     stored ordinal — and an end the held text places nowhere (its image
+//     not read, or the text holding none of it) is not drawn; the end is
+//     told apart by its stored span (`nearEnd`) wherever it stands;
+//   - its FAR end stands where `project` answers it sits in the far
+//     document's current text now (A-53: "the beam lands at the passage's
+//     current place (version-proof)"; M-REC's projection, `farRuns`); a far
+//     end that text holds none of FLOATS (`floats`), and its symbol, its stub
+//     and its mirror item say "its passage is not in ⟨D⟩'s current text"
+//     before anyone follows it (foundations §2.3: "the projection the beam
+//     already makes says so before the departure");
 //   - a link shows as a SYMBOL at its span where the reveal has reached stage
 //     2 and as a BEAM where it has reached stage 3; the lenses by owner, type
 //     and endorsement filter the set per document for the session;
@@ -77,8 +93,9 @@
 // DIFFERENT RULE FOR WHICH LINKS SHOW, THE SAME MARKS AND THE SAME DRAWING:
 // when it lands, THIS FILE's rule and its state change; NO DRAWING MODULE
 // CHANGES (BM, T-LAYER, P-RENDER, SC, the cards draw what `shown`, `shownAt`,
-// `symbols`, `beams`, `countAt`, `connections`, `markOf`, `mergedMark` give
-// them, and T-LAYER fits the face to what `utmost` gives).
+// `symbols`, `beams`, `countAt`, `connections`, `markOf`, `mergedMark`,
+// `floats` and `farPos` give them, and T-LAYER fits the face to what
+// `utmost` gives).
 // Carries: the wireframe's §16 `.sym`/`.lip` selection and the owner-link
 // marking in `articleHTML`, §17's wanted set, §18 `revealLinks`'s lens
 // filters, §10's by-linker colouring and mid lines, S1's `buildBeams`.
@@ -105,18 +122,24 @@ import { commonsType, documentOf, accountOf } from '../model/address.js';
  * @property {Set<string> | null} types the type addresses admitted, or null for every type
  * @property {boolean} endorsed only links the owner endorsed (no endorsement exists on this board: the lens admits none when on)
  */
+/** @typedef {import('../model/records.js').Stretch} Stretch */
+
 /**
- * @typedef {Object} Shown — one link drawn at a document
+ * @typedef {Object} Shown — one end of a link drawn at a document: the span its slot stores there, where that span stands in the document's text now, and where its far end stands in the far document's
  * @property {Link} link
  * @property {string} near the document it is drawn at — the one `end` lies in, whichever end that is and wherever the link is homed
  * @property {'from' | 'to'} end which end lies in this document
- * @property {number} pos the end's first position
- * @property {number} width the end's positions
+ * @property {EndRef} nearEnd the span of the slot this end draws, as stored: the bytes' identity, by which an end met from both its documents is told apart wherever it stands
+ * @property {Stretch[]} runs every stretch of the near document's held text `nearEnd` stands in now (M-REC's `placed`), in the text's order — never empty: an end the held text places nowhere is not drawn
+ * @property {number} pos the first stretch's first position
+ * @property {number} width the first stretch's positions
  * @property {Mark} mark
  * @property {'you' | 'owner' | 'others'} linker
  * @property {string} far the document the other end names, or '' where it names none
- * @property {EndRef | null} farEnd
+ * @property {EndRef | null} farEnd the other slot's first span, as stored
+ * @property {1 | 2} farSlot the slot the far end lies in: 2 where this end is the link's from, 1 where it is its to
  * @property {boolean} farWhole
+ * @property {Stretch[] | null} farRuns where the far end's passage stands in the far document's current text now (`project`'s answer, M-REC's projection), in the text's order; none where it floats — that text holds none of it; null where nothing places it: its projection not read or refused, or the far end naming a document whole, an account or nothing
  */
 /**
  * @typedef {Object} Readers — what LK reads from an owner above it, handed in once by the app
@@ -315,41 +338,64 @@ export function draws(l, addr) {
 }
 
 /**
- * A link's end drawn at a document: its span, its mark, its far end.
+ * A link's end drawn at a document: its stored span, where that span stands
+ * in the document's held text now, its mark, and its far end with where that
+ * stands in its own document's current text; null where the held text places
+ * the end nowhere.
  * @param {Link} l
  * @param {string} addr the document the end lies in
  * @param {'you' | 'owner' | 'others'} linker
  * @param {'from' | 'to'} end
  * @param {EndRef} e
- * @returns {Shown}
+ * @returns {Shown | null}
  */
 function drawnEnd(l, addr, linker, end, e) {
+  const runs = REC.placed(addr, e);
+  if (!runs.length) return null;
+  const farSlot = end === 'from' ? 2 : 1;
   const far = (end === 'from' ? l.to : l.from)[0] || null;
-  return { link: l, near: addr, end, pos: /** @type {number} */ (e.ordinal), width: e.positions || 1, mark: markOf(l, addr), linker, far: far ? far.doc || far.account || '' : '', farEnd: far, farWhole: !!(far && far.whole) };
+  const held = far && !far.whole && far.ordinal != null && far.doc ? REC.projection(l.addr, farSlot, far.doc) : undefined;
+  return {
+    link: l, near: addr, end, nearEnd: e, runs, pos: runs[0].pos, width: runs[0].width, mark: markOf(l, addr), linker,
+    far: far ? far.doc || far.account || '' : '', farEnd: far, farSlot, farWhole: !!(far && far.whole), farRuns: Array.isArray(held) ? held : null,
+  };
+}
+
+/** every end of a link a document draws, as its held text places it (`drawnEnd`) */
+function endsDrawn(/** @type {Link} */ l, /** @type {string} */ addr, /** @type {'you' | 'owner' | 'others'} */ linker) {
+  /** @type {Shown[]} */
+  const out = [];
+  for (const { end, e } of endsIn(l, addr)) { const s = drawnEnd(l, addr, linker, end, e); if (s) out.push(s); }
+  return out;
 }
 
 /**
  * The links to mark in a document's article, each with its mark: what the
  * document draws (`draws`) — the owner's and the person's own at their
- * spans; others' only where the toggle or a lens admits them.
+ * spans; others' only where the toggle or a lens admits them — each end
+ * where its held text places it.
  * @param {string} addr
  * @returns {Shown[]}
  */
 export function shown(addr) {
   /** @type {Shown[]} */
   const out = [];
-  for (const l of REC.linksTouching(addr)) {
-    if (!draws(l, addr)) continue;
-    const linker = linkerOf(l, addr);
-    for (const { end, e } of endsIn(l, addr)) out.push(drawnEnd(l, addr, linker, end, e));
-  }
+  for (const l of REC.linksTouching(addr)) if (draws(l, addr)) out.push(...endsDrawn(l, addr, linkerOf(l, addr)));
   return out;
 }
 
-/** the links drawn at a span — a block's, or the selection's bytes (what a click there lists; the selection's slots count these alone) */
+/** does a stretch of the text meet a span? */
+const meets = (/** @type {Stretch} */ r, /** @type {{pos: number, width: number}} */ span) => r.pos < span.pos + span.width && span.pos < r.pos + r.width;
+
+/** the links drawn at a span — a block's, or the selection's bytes (what a click there lists; the selection's slots count these alone): each end standing in a stretch the span meets */
 export function shownAt(/** @type {string} */ addr, /** @type {{pos: number, width: number}} */ span) {
-  return shown(addr).filter((s) => s.pos < span.pos + span.width && span.pos < s.pos + s.width);
+  return shown(addr).filter((s) => s.runs.some((r) => meets(r, span)));
 }
+
+/** does a drawn link's far end float — its far document's current text holding none of its passage (foundations §2.3)? */
+export const floats = (/** @type {Shown} */ s) => !!s.farRuns && s.farRuns.length === 0;
+/** where a drawn link's far end stands first in its far document's current text — the position a scene sets level with its near end — or null where nothing places it there */
+export const farPos = (/** @type {Shown} */ s) => (s.farRuns && s.farRuns.length ? s.farRuns[0].pos : null);
 
 /** the symbols: stage 2 and above — the shown set at its spans */
 export function symbols(/** @type {string} */ addr) { return state(addr).stage >= 2 ? shown(addr) : []; }
@@ -379,18 +425,15 @@ export function countAt(addr, block) { return countUnder(state(addr), addr, bloc
 export function utmost(addr) {
   /** @type {Shown[]} */
   const all = [];
-  for (const l of REC.linksTouching(addr)) {
-    if (classify(l) !== 'passage') continue;
-    const linker = linkerOf(l, addr);
-    for (const { end, e } of endsIn(l, addr)) all.push(drawnEnd(l, addr, linker, end, e));
-  }
+  for (const l of REC.linksTouching(addr)) if (classify(l) === 'passage') all.push(...endsDrawn(l, addr, linkerOf(l, addr)));
   const none = hidden();
   return { shown: all, countAt: (block) => countUnder(none, addr, block) };
 }
 
 /**
- * The others' passage links touching a block that a reveal does not show,
- * and whether a social link touches the document.
+ * The others' passage links touching a block that a reveal does not show —
+ * an end standing in the block where its held text places it (M-REC's
+ * `placed`) — and whether a social link touches the document.
  * @param {Reveal} r
  * @param {string} addr
  * @param {Block} block
@@ -402,7 +445,7 @@ function countUnder(r, addr, block) {
     if (kind === 'social') { social = true; continue; }
     if (kind !== 'passage') continue;
     if (linkerOf(l, addr) !== 'others' || lets(r, l, 'others')) continue;
-    if (endsIn(l, addr).some(({ e }) => /** @type {number} */ (e.ordinal) < block.pos + block.width && block.pos < /** @type {number} */ (e.ordinal) + (e.positions || 1))) n++;
+    if (endsIn(l, addr).some(({ e }) => REC.placed(addr, e).some((p) => meets(p, block)))) n++;
   }
   return { n, social };
 }

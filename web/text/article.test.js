@@ -18,8 +18,13 @@
 // that sets them there turns red), never inside a word, after a hyphen where
 // the line may break there — once, in the last paragraph a span crossing two
 // touches; after a run's chrome where the word runs into its hairline with no
-// break between them. The plan the canvas's bars are laid out from: the
-// head's three lines, a fourth where links touch the document; a block's
+// break between them; an end standing in two stretches marked in both, the
+// text between them not, its one symbol after its last stretch (a mutant
+// that marks or stands it by the first stretch alone turns red); a symbol
+// whose far end floats titled with "its passage is not in ⟨D⟩'s current
+// text" (a mutant that leaves the title its type alone turns red). The plan
+// the canvas's bars are laid out from: the head's three lines, a fourth where
+// links touch the document; a block's
 // pieces with its hairline's label, C-33's mark and its symbols at its size;
 // a heading's margins standing it nearer the block it heads; the same blocks,
 // in the same order, as the HTML. The scene-mode variant, a reading scene's
@@ -42,7 +47,7 @@ import { accountOf } from '../model/address.js';
 
 /** @returns {import('./article.js').ArticleView} */
 const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {}) => ({
-  selected: null, focus: null, marks: [], mergedMark, symbols: [], countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
+  selected: null, focus: null, marks: [], mergedMark, symbols: [], floats: () => false, countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
   sessionAccount: '1.0.1', localTrust: true, notebook: true, scene: false, originKinds: new Map(), originOwner: (a) => accountOf(a) || '',
   deviceLabel: 'dev-notebook', ownerFingerprint: 'e4272902a11439e5', keyPresent: true, ...o,
 });
@@ -50,7 +55,7 @@ const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {})
 const doc = (/** @type {Partial<import('../model/records.js').Doc>} */ o = {}) => ({
   addr: '1.0.1.0.3', account: '1.0.1', kind: 'edition', label: 'x', standing: 'public', system: false, extent: 100, linkPositions: 0,
   meta: { doc: '1.0.1.0.3', published: true, owner: '1.0.1', birth: '1.0.1.0.3.1', birthExtent: 50, placed: null, baseExtent: null, source: null, asOf: 1 },
-  runs: [], from: 1, to: 101, blocks: [], origins: [], originsFor: null, links: new Set(), linksRead: true, members: 2, whole: 100, rev: 0, refused: null, ...o,
+  runs: [], from: 1, to: 101, blocks: [], image: [], origins: [], imageFor: null, links: new Set(), linksRead: true, members: 2, whole: 100, rev: 0, refused: null, ...o,
 });
 
 test('a withheld block occupies its positions and shows its width, never its text', () => {
@@ -75,7 +80,7 @@ test('the entitlement arm is one rule, by the reader, and the placeholder carrie
 
 test('the owner\'s link is marked in place at its span and nowhere else', () => {
   const d = doc({ blocks: [{ pos: 1, width: 20, kind: 'para', text: 'abcdefghijklmnopqrst', origin: null }] });
-  const mark = /** @type {any} */ ({ link: { addr: 'L' }, end: 'from', pos: 5, width: 4, mark: { hue: '#7fb2ff', linker: 'you', form: [], value: 1, own: true }, linker: 'you', far: '1.0.1.0.4', farEnd: null, farWhole: true });
+  const mark = /** @type {any} */ ({ link: { addr: 'L' }, end: 'from', pos: 5, width: 4, runs: [{ pos: 5, width: 4 }], mark: { hue: '#7fb2ff', linker: 'you', form: [], value: 1, own: true }, linker: 'you', far: '1.0.1.0.4', farEnd: null, farWhole: true });
   const html = articleHTML(d, view({ marks: [mark] }), '1.0.1');
   assert.ok(/<span class="seg lip depth1"[^>]*>efgh<\/span>/.test(html), html);
   assert.ok(html.includes('1 link touches this document'));
@@ -83,7 +88,7 @@ test('the owner\'s link is marked in place at its span and nowhere else', () => 
 
 test('a stretch several links mark takes the one mark they merge into: neutral in the hue where their linkers differ, lighter only where every one was followed', () => {
   const d = doc({ blocks: [{ pos: 1, width: 20, kind: 'para', text: 'abcdefghijklmnopqrst', origin: null }] });
-  const at = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {import('../plane/register.js').Mark} */ mark) => /** @type {any} */ ({ link: { addr: 'L' + pos }, end: 'from', pos, width, mark, linker: mark.linker, far: '1.0.1.0.4', farEnd: null, farWhole: true });
+  const at = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {import('../plane/register.js').Mark} */ mark) => /** @type {any} */ ({ link: { addr: 'L' + pos }, end: 'from', pos, width, runs: [{ pos, width }], mark, linker: mark.linker, far: '1.0.1.0.4', farEnd: null, farWhole: true });
   const yours = at(5, 6, { hue: HUE.you, linker: 'you', form: [], value: VISITED_ALPHA, own: true });
   const owners = at(8, 6, { hue: HUE.owner, linker: 'owner', form: [], value: 1, own: true });
   const html = articleHTML(d, view({ marks: [yours, owners] }), '1.0.1');
@@ -162,7 +167,7 @@ test('a record atom renders as the record it is; a heading as formatting', () =>
 });
 
 /** a link marked at a span of the first edition, as LK hands it in */
-const shown = (/** @type {number} */ pos, /** @type {number} */ width) => /** @type {any} */ ({ link: { addr: 'L' + pos, type: null }, end: 'from', pos, width, mark: { hue: '#7fb2ff', linker: 'you', form: [], value: 1, own: true }, linker: 'you', far: '1.0.1.0.4', farEnd: null, farWhole: true });
+const shown = (/** @type {number} */ pos, /** @type {number} */ width) => /** @type {any} */ ({ link: { addr: 'L' + pos, type: null }, end: 'from', pos, width, runs: [{ pos, width }], mark: { hue: '#7fb2ff', linker: 'you', form: [], value: 1, own: true }, linker: 'you', far: '1.0.1.0.4', farEnd: null, farWhole: true });
 
 test('the plan\'s head is the article\'s: three lines, a fourth where links touch the document', () => {
   const d = doc({ blocks: [{ pos: 1, width: 20, kind: 'para', text: 'abcdefghijklmnopqrst', origin: null }] });
@@ -250,6 +255,24 @@ test('a run cut by a mark and a symbol carries its boundary, its hairline and C-
   assert.deepEqual(piecesOf(d, v, 1), ['abcd', '≡ ' + X, 'C-33', 'e', 'fg', 'h', 'ijkl']);
   const words = doc({ blocks: [{ pos: 1, width: 11, kind: 'para', text: 'ab cd ef gh', origin: null }], origins: [{ pos: 4, width: 5, doc: X }] });
   assert.deepEqual(piecesOf(words, view({ symbols: [shown(4, 2)] }), 1), ['ab ', '≡ ' + X, 'cd', '⟡', ' ef', ' gh'], 'a symbol standing inside the run cuts it and repeats none of its chrome');
+});
+
+test('an end standing in two stretches is marked in both, the text between them not, and takes one symbol, after the last word of its last stretch', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 18, kind: 'para', text: 'one two three four', origin: null }] });
+  const cut = { ...shown(5, 3), runs: [{ pos: 5, width: 3 }, { pos: 15, width: 4 }] };
+  const v = view({ marks: [cut], symbols: [cut] });
+  assert.deepEqual(piecesOf(d, v, 1), ['one ', 'two', ' three ', 'four', '⟡'], 'its symbol after "four", never after "two"');
+  const html = articleHTML(d, v, '1.0.1');
+  assert.deepEqual(html.match(/<span class="seg lip[^"]*"[^>]*>[^<]*<\/span>/g)?.map((x) => x.replace(/<[^>]*>/g, '')), ['two', 'four'], 'marked in both stretches alone');
+  assert.equal(symsIn(html).length, 1);
+});
+
+test('a symbol whose far end floats is titled with its type and "its passage is not in ⟨D⟩\'s current text"; one whose far end stands somewhere, with its type alone', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: 'one two three', origin: null }] });
+  const s = { ...shown(5, 3), link: { addr: 'L5', type: '1.1.0.1.0.1.0.3.13' }, far: '1.0.1.0.127' };
+  const title = (/** @type {boolean} */ floats) => (articleHTML(d, view({ symbols: [s], floats: () => floats }), '1.0.1').match(/<span class="sym [^"]*" data-link="L5"[^>]* title="([^"]*)"/) || [])[1];
+  assert.equal(title(true), esc('1.1.0.1.0.1.0.3.13 · ' + t('F.floating', { D: '1.0.1.0.127' })), 'said at the symbol, before anyone follows it');
+  assert.equal(title(false), '1.1.0.1.0.1.0.3.13');
 });
 
 test('a heading\'s plan stands it nearer the block it heads: its room above at its own size, the smaller room below; a paragraph\'s gap after it alone', () => {

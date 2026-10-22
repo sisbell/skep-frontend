@@ -99,7 +99,7 @@ test('a click on a run\'s hairline LEAPs to its source carrying the run, the lan
     PORT.boot(fake);
     REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
     REC.takeDelivery(D, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
-    REC.takeOrigins(D, 1, [{ iStart: D + '.0.1.1', width: 22 }, { iStart: O + '.0.1.12', width: 15 }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 22 }, { iStart: O + '.0.1.12', width: 15 }]);
     const d = REC.doc(D);
     // the hairline as the plane's article holds it, in the article T-LAYER mounts from its view
     const tag = (/<span class="hairline[^>]*>/.exec(articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d))) || [''])[0];

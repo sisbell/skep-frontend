@@ -23,7 +23,17 @@
 // and the mark it carries in view — and no end where the plane draws its
 // document nowhere; a far end naming a version member whole at its
 // document's place; the most a reveal can set in a document's text, which no
-// stage, toggle or lens moves or exceeds.
+// stage, toggle or lens moves or exceeds. Each end drawn where its bytes
+// stand now, through the held image, never at the position its slot stores
+// — marks, symbols, the others' count and the face's bound moved with an
+// edit (a mutant that draws at the stored ordinal, or counts by it, turns
+// red); an end the text holds in two stretches one drawn end standing in
+// both, met at a span by either (a mutant that keeps the first stretch alone
+// turns red); none drawn where no image is held, the badge and the toggle's
+// count reading no position; and each far end where `project` answers it
+// sits now — elsewhere than stored, floating where the text holds none of
+// it, placed nowhere where no answer is held or it was refused, never for a
+// document named whole.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -43,6 +53,8 @@ function build(/** @type {{session?: string | null}} */ opts = {}) {
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: OTHER_HOME, kind: 'edition', label: 'o', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }, { account: '1.0.2', documents: 1 }], state: { arm: 'complete' } }));
   if (opts.session !== null) REC.setSession({ session: 's-1', principal: 1, account: opts.session ?? '1.0.1' });
   REC.takeDelivery(D, [{ pos: 1, width: 100, kind: 'content', text: 'x'.repeat(40) + '\n\n' + 'y'.repeat(58), ref: null, origin: null }]);
+  // its V→I image: its own bytes, where nothing has moved them
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 100 }]);
   // the owner's citation from D's second block to a far document; a record (enroll) with an account end; the claim; another's link onto D's first block; a social link; a whole-document end
   REC.takeLinks(D, [D + '.0.2.1', '1.0.1.0.1.0.2.1', '1.0.1.0.1.0.2.2', OTHER_HOME + '.0.2.1', OTHER_HOME + '.0.2.2', OTHER_HOME + '.0.2.3']);
   REC.takeLink({ addr: D + '.0.2.1', from: [span(D, 50, 10)], to: [whole('1.0.1.0.127')], type: CITE });
@@ -190,7 +202,7 @@ test('the mid connections run between the places drawn: links into one mark are 
 
 test('a mid connection counts each link once: one shown at both its documents, or with two passages in one', () => {
   const E = '1.0.1.0.4';
-  REC.takeLinks(D, [D + '.0.2.9']); REC.takeLinks(E, [D + '.0.2.9']);
+  REC.takeLinks(D, [D + '.0.2.9']); REC.takeLinks(E, [D + '.0.2.9']); REC.takeImage(E, 1, [{ iStart: E + '.0.1.1', width: 10 }]);
   REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(E, 1, 5)], type: CITE });
   assert.ok(LK.shown(E).some((s) => s.link.addr === D + '.0.2.9'), 'the person\'s link is shown at both its documents');
   assert.deepEqual(between(LK.connections([D, E]), D, E).map((x) => [x.a, x.b, x.count]), [[D, E, 1]]);
@@ -220,7 +232,7 @@ test('a mid connection is marked with what its links share: the linker\'s hue wh
 test('a link the owner of either document made draws its connection in the owner\'s hue, counted once, whichever document comes first and whatever the other\'s toggle (foundations §2.1: "the owner of either")', () => {
   build({ session: '1.0.9' });
   const X = '1.0.5.0.2';
-  REC.takeLinks(D, [D + '.0.2.9']); REC.takeLinks(X, [D + '.0.2.9']);
+  REC.takeLinks(D, [D + '.0.2.9']); REC.takeLinks(X, [D + '.0.2.9']); REC.takeImage(X, 1, [{ iStart: X + '.0.1.1', width: 40 }]);
   REC.takeLink({ addr: D + '.0.2.9', from: [span(D, 20, 5)], to: [span(X, 30, 5)], type: CITE });
   for (const on of [false, true]) {
     LK.setOthers(X, on);
@@ -269,4 +281,54 @@ test('a far end naming a version member whole stands at its document\'s place, t
   const cs = LK.connections([D, E], (a) => { asked.push(a); return a; });
   assert.deepEqual(between(cs, D, E).map((x) => [x.a, x.b, x.count]), [[D, E, 1]]);
   assert.ok(!asked.includes(E2) && !cs.some((c) => c.a === E2 || c.b === E2), 'no place asked for, or drawn at, the member\'s own address');
+});
+
+/** D as its second member arranges it: twenty bytes the member minted before D's own hundred, which stand from 21 */
+function movedOn() {
+  REC.takeDelivery(D, [{ pos: 1, width: 120, kind: 'content', text: 'z'.repeat(18) + '\n\n' + 'x'.repeat(40) + '\n\n' + 'y'.repeat(58), ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.2.0.1.1', width: 20 }, { iStart: D + '.0.1.1', width: 100 }]);
+}
+
+test('an end stands where its bytes stand now, never at the position its slot stores: marks, symbols and the others\' count move with an edit', () => {
+  movedOn();
+  const [first, second, third] = REC.doc(D).blocks;
+  assert.deepEqual([first.pos, second.pos, third.pos], [1, 21, 63]);
+  const own = LK.shown(D).find((s) => s.link.addr === D + '.0.2.1');
+  assert.deepEqual(own && [own.pos, own.width, own.runs, own.nearEnd.ordinal], [70, 10, [{ pos: 70, width: 10 }], 50], 'the citation stored at 50 stands at 70, its stored span kept as its identity');
+  assert.deepEqual([first, second, third].map((b) => LK.countAt(D, b).n), [0, 1, 0], 'another\'s link stored at 3 counted at the paragraph its bytes stand in now');
+  LK.reveal(D, 2);
+  assert.deepEqual(LK.symbols(D).map((s) => s.pos), [70], 'its symbol there');
+  assert.deepEqual(LK.shownAt(D, { pos: 50, width: 10 }), [], 'nothing drawn at the stored position');
+  assert.deepEqual(LK.utmost(D).shown.map((s) => [s.link.addr, s.pos]), [[D + '.0.2.1', 70], [OTHER_HOME + '.0.2.1', 23]], 'the face fitted to where they stand');
+});
+
+test('an end the text holds in two stretches is one drawn end standing in both, met at a span by either; one the held text places nowhere is not drawn', () => {
+  // D's own bytes 51 to 55 cut from 56 to 60 by a window of five bytes of another document
+  REC.takeDelivery(D, [{ pos: 1, width: 105, kind: 'content', text: 'x'.repeat(40) + '\n\n' + 'y'.repeat(63), ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 55 }, { iStart: '1.0.1.0.7.0.1.1', width: 5 }, { iStart: D + '.0.1.56', width: 45 }]);
+  const own = LK.shown(D).filter((s) => s.link.addr === D + '.0.2.1');
+  assert.deepEqual(own.map((s) => [s.pos, s.width, s.runs]), [[50, 6, [{ pos: 50, width: 6 }, { pos: 61, width: 4 }]]], 'one drawn end, its first stretch its position, both its stretches carried');
+  assert.equal(LK.shownAt(D, { pos: 62, width: 1 }).length, 1, 'a span meeting its second stretch alone meets it');
+  assert.equal(LK.shownAt(D, { pos: 56, width: 5 }).length, 0, 'the window between them is no part of it');
+  build();
+  REC.invalidate(D);
+  REC.takeDelivery(D, [{ pos: 1, width: 100, kind: 'content', text: 'x'.repeat(40) + '\n\n' + 'y'.repeat(58), ref: null, origin: null }]);
+  REC.takeLinks(D, [D + '.0.2.1', OTHER_HOME + '.0.2.1']);
+  assert.deepEqual([LK.shown(D), LK.countAt(D, REC.doc(D).blocks[0]).n], [[], 0], 'no image read: no end drawn, none counted at a passage');
+  assert.deepEqual([LK.countDoc(D).n, LK.othersTouching(D).length], [1, 1], 'the badge and the toggle\'s count read no position');
+});
+
+test('a far end stands where `project` answers it sits now: placed elsewhere than stored, floating where the text holds none of it, placed nowhere where no answer is held or the board refused it, and never for a document named whole', () => {
+  LK.setOthers(D, true);
+  const at = () => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === OTHER_HOME + '.0.2.1'));
+  assert.deepEqual([at().farSlot, at().farRuns, LK.floats(at()), LK.farPos(at())], [1, null, false, null], 'unread: placed nowhere, never at the stored position');
+  REC.takeProjection(OTHER_HOME + '.0.2.1', 1, OTHER_HOME, [{ pos: 9, width: 3 }, { pos: 2, width: 2 }]);
+  assert.deepEqual([at().farRuns, LK.floats(at()), LK.farPos(at())], [[{ pos: 2, width: 2 }, { pos: 9, width: 3 }], false, 2], 'where it stands now, in the text\'s order — its stored position 1');
+  REC.takeProjection(OTHER_HOME + '.0.2.1', 1, OTHER_HOME, []);
+  assert.deepEqual([at().farRuns, LK.floats(at()), LK.farPos(at())], [[], true, null], 'none: it floats');
+  REC.takeProjection(OTHER_HOME + '.0.2.1', 1, OTHER_HOME, 'refused');
+  assert.deepEqual([at().farRuns, LK.floats(at())], [null, false], 'refused: placed nowhere, and no word of floating');
+  const own = /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === D + '.0.2.1'));
+  REC.takeProjection(D + '.0.2.1', 2, '1.0.1.0.127', []);
+  assert.deepEqual([own.farSlot, LK.shown(D).find((s) => s.link.addr === D + '.0.2.1')?.farRuns, LK.floats(own)], [2, null, false], 'a far end naming its document whole stands at no passage and never floats');
 });

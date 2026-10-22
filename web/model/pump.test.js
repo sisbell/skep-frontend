@@ -40,6 +40,16 @@
 // a link's lineage read under the audit view, a class scan the board answers
 // `scan_busy` asked again, and a lineage side whose read is refused learned
 // as nothing, never as no claim;
+// at reading scale where each far end a document's read links send sits now
+// asked once per link and far slot — none for a document named whole, none
+// into one a read found unregistered, none whose place the model holds — and
+// held, its stretches, none or the refusal (a mutant that asks none, or asks
+// one held already, turns red), and asked again once a feed row names a new
+// member of the document projected into (a mutant that forgets the member's
+// address alone, never its trunk's, asks none again and turns red); a
+// projection asked by an act answering the refusal it met, held refused, and
+// nothing held where the board did not answer (a mutant that answers a bare
+// "refused" turns red);
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -86,8 +96,9 @@ test('the model after a scripted cold open and a whole read, over the fake port'
   assert.deepEqual(d.blocks.map((x) => [x.pos, x.kind]), [[1, 'para'], [11, 'para'], [27, 'withheld']]);
   assert.deepEqual(d.origins, [{ pos: 27, width: 4, doc: '1.0.1.0.1003' }]);
   assert.equal(REC.link(D + '.0.2.1')?.type, '1.1.0.1.0.1.0.3.13');
-  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.1', 2, '1.0.1.0.127'), [{ ordinal: 1, positions: 100 }]);
-  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.2', 2, '1.0.1.0.127'), [{ ordinal: 3, positions: 4 }, { ordinal: 20, positions: 5 }], 'an end the text holds in two runs: both, never the first alone');
+  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.1', 2, '1.0.1.0.127'), { runs: [{ pos: 1, width: 100 }] });
+  assert.deepEqual(await PUMP.projectEnd(D + '.0.2.2', 2, '1.0.1.0.127'), { runs: [{ pos: 3, width: 4 }, { pos: 20, width: 5 }] }, 'an end the text holds in two runs: both, never the first alone');
+  assert.deepEqual(REC.projection(D + '.0.2.2', 2, '1.0.1.0.127'), [{ pos: 3, width: 4 }, { pos: 20, width: 5 }], 'held in the model, the view reading it as its own');
   assert.deepEqual(fake.unanswered, [], 'every call the pump made was a read the script expected');
   assert.ok(fake.calls().every((c) => c.name !== 'op' || true));
   // the feed keeps the index and invalidates
@@ -622,6 +633,73 @@ test('the view\'s probe of a chain records no count where the board did not answ
   PUMP.pump();
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual([third.asks(), REC.doc(D).members], [2, 3], 'probed again as the daemon is back: the chain to its end, D.4 not registered');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+/** a link of D's as `read_link` answers it: from a passage of D's own bytes to `to`, a citation */
+const citation = (/** @type {number} */ ord, /** @type {Array<{start: string, width: string}>} */ to) => ({ result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: `${D}.0.1.${ord}`, width: '0.0.0.0.0.0.0.2' }], to, [{ start: '1.1.0.1.0.1.0.3.13', width: '0.0.0.0.0.0.0.0.1' }]] } } });
+const passageOf = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => [{ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w }];
+
+test('at reading scale the view asks where each far end its read links send from a document sits now — one `project` per link and far slot, none for a document named whole or one a read found unregistered, none whose place the model holds, none again once answered — and the model holds the stretches, none and the refusal alike', async () => {
+  const FAR = '1.0.1.0.127', GHOST = '1.0.1.0.1049578', DEAD = '1.0.1.0.9';
+  const [MOVED, FLOATS, TO_GHOST, TO_DEAD, HELD] = [3, 4, 5, 6, 8].map((k) => `${D}.0.2.${k}`);
+  /** @type {Record<string, unknown>} */
+  const s = {
+    ...script,
+    [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [D + '.0.2.1', MOVED, FLOATS, TO_GHOST, TO_DEAD, HELD] } },
+    [FAKE.keyOf('op', { frame: F.readLink(HELD) })]: citation(23, passageOf(FAR, 12, 2)),
+    [FAKE.keyOf('op', { frame: F.readLink(MOVED) })]: citation(11, passageOf(FAR, 3, 4)),
+    [FAKE.keyOf('op', { frame: F.readLink(FLOATS) })]: citation(14, passageOf(FAR, 8, 4)),
+    [FAKE.keyOf('op', { frame: F.readLink(TO_GHOST) })]: citation(17, passageOf(GHOST, 1, 3)),
+    [FAKE.keyOf('op', { frame: F.readLink(TO_DEAD) })]: citation(20, passageOf(DEAD, 1, 3)),
+    // where each far end sits now: the passage stored at FAR's 3 moved to 40; the one stored at 8 gone from FAR's text; the ghost's refused
+    [FAKE.keyOf('op', { frame: F.project(MOVED, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.40', width: '0.4' }] } },
+    [FAKE.keyOf('op', { frame: F.project(FLOATS, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [] } },
+    [FAKE.keyOf('op', { frame: F.project(TO_GHOST, 2, GHOST) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
+  };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  await PUMP.loadWhole(D);
+  REC.takeRefused(DEAD, 'unregistered');
+  // one far end's place already held, as an act's projection leaves it
+  REC.takeProjection(HELD, 2, FAR, [{ pos: 12, width: 2 }]);
+  const projections = () => fake.asked.filter((k) => k.includes('"op":"project"'));
+  // D at its reading em
+  const box = docBox(D), fs = metricsFor(30, box).fs;
+  CAM.setViewport(1440, 900); CAM.reach(fs); CAM.set(CAM.viewForDoc(box, fs));
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(projections().sort(), [F.project(MOVED, 2, FAR), F.project(FLOATS, 2, FAR), F.project(TO_GHOST, 2, GHOST)].map((frame) => FAKE.keyOf('op', { frame })).sort(), 'one per far end: none for the citation of FAR whole, none into the document a read found unregistered, none whose place is held');
+  assert.deepEqual([REC.projection(MOVED, 2, FAR), REC.projection(FLOATS, 2, FAR), REC.projection(TO_GHOST, 2, GHOST)], [[{ pos: 40, width: 4 }], [], 'refused'], 'held: where it stands now, none for the floating end, the refusal');
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(projections().length, 3, 'none asked again once answered');
+  // FAR re-versioned: the feed names its new member, and where links project into its trunk is asked again
+  fake.fire('feed', { board: 'b-1', update: { position: 3, at: 3, op: 'publish', docs: [FAR + '.2'], class: 'published' } });
+  assert.deepEqual([REC.projection(MOVED, 2, FAR), REC.projection(HELD, 2, FAR)], [undefined, undefined], 'dropped with the trunk the row names a member of');
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(projections().slice(3).sort(), [F.project(MOVED, 2, FAR), F.project(FLOATS, 2, FAR), F.project(HELD, 2, FAR)].map((frame) => FAKE.keyOf('op', { frame })).sort(), 'each into FAR asked again, none into the ghost');
+  assert.deepEqual(fake.unanswered.filter((k) => k !== FAKE.keyOf('op', { frame: F.project(HELD, 2, FAR) })), [], 'every other read the script expected');
+});
+
+test('a projection the board declines answers the refusal it met, and the model holds it refused; one the board did not answer holds nothing', async () => {
+  const L = D + '.0.2.7', FAR = '1.0.1.0.127';
+  const declined = { refused: { kind: 'refused', name: 'not_a_link', code: 'not_a_link' } };
+  const s = { ...script, [FAKE.keyOf('op', { frame: F.project(L, 2, FAR) })]: declined, [FAKE.keyOf('op', { frame: F.project(L, 1, D) })]: UNREACHABLE };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  assert.deepEqual(await PUMP.projectEnd(L, 2, FAR), declined, 'its own refusal');
+  assert.equal(REC.projection(L, 2, FAR), 'refused');
+  assert.deepEqual(await PUMP.projectEnd(L, 1, D), UNREACHABLE, 'the board out: the refusal handed up');
+  assert.equal(REC.projection(L, 1, D), undefined, 'and nothing learned of where it stands');
   assert.deepEqual(fake.unanswered, []);
 });
 

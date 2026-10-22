@@ -22,7 +22,9 @@
 // or gives both readers one arm, or drops the clause, turns red. A document a
 // read answered `withheld` is named by its withheld box's words, its owner
 // the seat above a sub-account by the one owner rule: a mutant that calls it
-// published, or names the sub-account, turns red.
+// published, or names the sub-account, turns red. A link whose far end floats
+// says so at its item, as its symbol and its stub do (R94): a mutant whose
+// item says nothing of it turns red.
 // While chrome covers the plane the tree stays inert through the rebuild —
 // a mutant whose rebuild lifts the mark turns red — until the plane is
 // uncovered. The focus's return as an overlay closes is the controller's
@@ -50,6 +52,7 @@ import { lodOf } from '../plane/lod.js';
 import { STRINGS, t } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import * as WALK from './walk.js';
+import * as LK from '../links/links.js';
 
 const D = '1.0.1.0.3';
 /** a second document: a separator alone, then a span, a block of one space, a span — two elements of the walk among four blocks */
@@ -338,4 +341,17 @@ test('while chrome covers the plane the tree is inert, through the rebuild, unti
   } finally {
     globalThis.document = platform;
   }
+});
+
+test('the mirror\'s item at a link whose far end floats says "its passage is not in ⟨D⟩\'s current text", as its symbol and its stub do; one whose far end stands somewhere says nothing of it', () => {
+  const L = D + '.0.2.1', FAR = '1.0.1.0.127';
+  const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 11, 3)], to: [span(FAR, 8, 4)], type: '1.1.0.1.0.1.0.3.13' });
+  const item = () => { const s = LK.shown(D).find((x) => x.link.addr === L); return s ? WALK.nameOf({ kind: 'link', addr: D, pos: s.pos, link: s }, 0, 1) : ''; };
+  const floating = t('L.mirror.floating', { sentence: t('F.floating', { D: FAR }) });
+  REC.takeProjection(L, 2, FAR, []);
+  assert.ok(item().includes(floating), item());
+  REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 4 }]);
+  assert.ok(item() !== '' && !item().includes(t('F.floating', { D: FAR })), item());
 });

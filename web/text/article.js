@@ -17,9 +17,13 @@
 // the "+⟨n⟩ others" count at the block's edge, and the symbols the reveal
 // asked for, each AT ITS SPAN (foundations §2.1; B1-S4: "No margin column:
 // the symbols are at the place"): right after the last word its span
-// touches, in the last paragraph it touches (`standOf`); the withheld block
-// OCCUPYING its positions and naming the owner of its run's origin, whoever
-// owns the document windowing it (R56: the copy derives per origin; B1-S7),
+// touches, in the last paragraph it touches (`standOf`) — every link marked,
+// and its symbol set, at the stretches LK says its end stands in now, never
+// at the position its slot stores — a symbol whose far end floats titled
+// "its passage is not in ⟨D⟩'s current text" (foundations §2.3); the
+// withheld block OCCUPYING its positions and naming the owner of its run's
+// origin, whoever owns the document windowing it (R56: the copy derives per
+// origin; B1-S7),
 // with R56's arm for that owner by PUB-5.121's order and C-67's
 // clause beneath — the placeholder's one record (`placeholderOf`), which the
 // ARIA mirror's item at the run reads too, so the run a sighted reader sees
@@ -71,9 +75,10 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @typedef {Object} ArticleView — the view state the article renders, handed in as values
  * @property {Span | null} selected the selected span (O-SELECTION's): the blocks it touches are marked
  * @property {{addr: string, pos: number} | null} focus the focused block (N-WALK's), by its first position
- * @property {Shown[]} marks the links to mark in place (LK.shown)
+ * @property {Shown[]} marks the links to mark in place (LK.shown), each over every stretch its end stands in
  * @property {(marks: [Mark, ...Mark[]]) => Mark} mergedMark the one mark the links over one stretch merge into (LK.mergedMark)
  * @property {Shown[]} symbols the symbols at their spans (LK.symbols)
+ * @property {(s: Shown) => boolean} floats whether a drawn link's far end floats, its far document's current text holding none of its passage (LK.floats)
  * @property {(block: Block) => {n: number, social: boolean}} countAt the others' count per block (LK.countAt)
  * @property {number} wholeLinks the links to this document as a whole
  * @property {string | null} sessionAccount the acting account, or null (a guest)
@@ -120,6 +125,11 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
 
 /** a run's hairline label: its origin's address where the label is whole, the bare ≡ after */
 const labelOf = (/** @type {Origin} */ o, /** @type {Opening} */ at) => (at.whole ? '≡ ' + o.doc : '≡');
+
+/** the stretches of a drawn link's end that meet a block */
+const runsIn = (/** @type {Shown} */ m, /** @type {{pos: number, width: number}} */ b) => m.runs.filter((r) => touches(b, r));
+/** the last stretch a drawn link's end stands in, in the text's order: its symbol stands after the last word its span touches there */
+const tail = (/** @type {Shown} */ s) => s.runs[s.runs.length - 1];
 
 /**
  * The marks a block carries in its article: `sel` where the selection
@@ -353,14 +363,14 @@ export function standOf(text, c0, c1, chromeAt) {
 }
 
 /**
- * The stretches of one block's text: cut at the edges of the owner's and the
- * person's links (LK's set), at the edges of the transcluded runs, and where
- * the symbols standing in the block stand (`standOf`), each with the links
- * marking it and the one mark they merge into, and the symbols at it; each
- * run's chrome — its boundary, its hairline,
- * C-33's mark — at its first stretch in the block alone, however the run is
- * cut, the hairline labelled whole at the first run of its origin in the
- * article.
+ * The stretches of one block's text: cut at the edges of every stretch the
+ * owner's and the person's links (LK's set) stand in, at the edges of the
+ * transcluded runs, and where the symbols standing in the block stand
+ * (`standOf`), each with the links marking it and the one mark they merge
+ * into, and the symbols at it; each run's chrome — its boundary, its
+ * hairline, C-33's mark — at its first stretch in the block alone, however
+ * the run is cut, the hairline labelled whole at the first run of its origin
+ * in the article.
  * @param {Block} b
  * @param {Doc} d
  * @param {ArticleView} v
@@ -369,7 +379,7 @@ export function standOf(text, c0, c1, chromeAt) {
  * @returns {Seg[]}
  */
 function segmentsOf(b, d, v, labelled, standing) {
-  const marks = v.marks.filter((m) => m.pos < b.pos + b.width && b.pos < m.pos + m.width);
+  const marks = v.marks.filter((m) => runsIn(m, b).length > 0);
   const origins = d.origins.filter((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);
   const published = d.meta ? d.meta.published : d.kind === 'edition';
   // each run's first stretch in the block, by the character it starts at, with what it carries
@@ -384,12 +394,13 @@ function segmentsOf(b, d, v, labelled, standing) {
   /** the chrome standing before a character, as the line sets it */
   const chromeAt = (/** @type {number} */ i) => { const r = opening.get(i); return r ? { label: labelOf(r.o, r.opens), box: r.opens.c33 } : null; };
   const stands = standing.map((s) => {
-    const st = standOf(b.text, charOfPos(b, Math.max(b.pos, s.pos)), charOfPos(b, Math.min(b.pos + b.width, s.pos + s.width)), chromeAt);
+    const r = tail(s);
+    const st = standOf(b.text, charOfPos(b, Math.max(b.pos, r.pos)), charOfPos(b, Math.min(b.pos + b.width, r.pos + r.width)), chromeAt);
     return { s, after: st.after, pos: posOfChar(b, st.at) };
   });
-  // cut points in positions: the block's edges, every mark's edges, every origin's edges, every symbol's place
+  // cut points in positions: the block's edges, the edges of every stretch a mark stands in, every origin's edges, every symbol's place
   const cuts = new Set([b.pos, b.pos + b.width]);
-  for (const m of marks) { cuts.add(Math.max(b.pos, m.pos)); cuts.add(Math.min(b.pos + b.width, m.pos + m.width)); }
+  for (const m of marks) for (const r of runsIn(m, b)) { cuts.add(Math.max(b.pos, r.pos)); cuts.add(Math.min(b.pos + b.width, r.pos + r.width)); }
   for (const o of origins) { cuts.add(Math.max(b.pos, o.pos)); cuts.add(Math.min(b.pos + b.width, o.pos + o.width)); }
   for (const st of stands) cuts.add(st.pos);
   const points = [...cuts].sort((a, c) => a - c);
@@ -404,7 +415,7 @@ function segmentsOf(b, d, v, labelled, standing) {
     if (!text) continue;
     const origin = origins.find((o) => o.pos < p1 && p0 < o.pos + o.width) || null;
     const open = origin ? opening.get(charOfPos(b, p0)) : undefined;
-    const over = marks.filter((m) => m.pos < p1 && p0 < m.pos + m.width);
+    const over = marks.filter((m) => m.runs.some((r) => r.pos < p1 && p0 < r.pos + r.width));
     const [first, ...rest] = over;
     out.push({ text, marks: over, mark: first ? v.mergedMark([first.mark, ...rest.map((m) => m.mark)]) : null, origin, opens: open && open.o === origin ? open.opens : null, chromeSyms: [], syms: [] });
     starts.push(p0);
@@ -446,7 +457,8 @@ function headOf(d, v, owner) {
  * rendered, or a paragraph with its heading level, its stretches with the
  * symbols standing at them, and its others' count — then the empty
  * document's line and the scene-offers. A symbol stands in the last
- * paragraph its span touches, once however many it crosses.
+ * paragraph its span touches — the paragraph its last stretch ends in —
+ * once however many it crosses.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -462,8 +474,9 @@ function walk(d, v, ownerAccount) {
   /** @type {Map<number, Shown[]>} */
   const standing = new Map();
   for (const s of v.symbols) {
+    const r = tail(s);
     let last = null;
-    for (const b of d.blocks) if (b.kind === 'para' && touches(b, s)) last = b;
+    for (const b of d.blocks) if (b.kind === 'para' && touches(b, r)) last = b;
     if (last) standing.set(last.pos, [...(standing.get(last.pos) || []), s]);
   }
   const none = { n: 0, social: false };
@@ -495,8 +508,18 @@ function walk(d, v, ownerAccount) {
  */
 const control = (scene) => (scene ? '' : ' role="button" tabindex="-1"');
 
-/** a link's symbol at its span: hue the linker's, dashed for another's, lighter once followed */
-const symHTML = (/** @type {Shown} */ s, /** @type {boolean} */ scene) => `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"${control(scene)} title="${esc(s.link.type || '')}">⟡</span>`;
+/**
+ * A link's symbol at its span: hue the linker's, dashed for another's,
+ * lighter once followed; titled with its type, and, where its far end floats,
+ * "its passage is not in ⟨D⟩'s current text" — said before anyone follows it
+ * (foundations §2.3).
+ * @param {Shown} s
+ * @param {ArticleView} v
+ */
+function symHTML(s, v) {
+  const title = (s.link.type || '') + (v.floats(s) ? ' · ' + t('F.floating', { D: s.far }) : '');
+  return `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"${control(v.scene)} title="${esc(title)}">⟡</span>`;
+}
 
 /**
  * A stretch of a paragraph's text as HTML: its links marked by their depth
@@ -507,9 +530,9 @@ const symHTML = (/** @type {Shown} */ s, /** @type {boolean} */ scene) => `<span
  * gesture to the source carries (foundations §2.1; §2.3's carry rule) — then
  * the symbols standing at it — the text's own characters untouched.
  * @param {Seg} s
- * @param {boolean} scene the scene-mode variant: its symbols no controls
+ * @param {ArticleView} v the view: in its scene-mode variant the symbols no controls
  */
-function segHTML(s, scene) {
+function segHTML(s, v) {
   const cls = ['seg'];
   const attrs = [];
   if (s.mark) {
@@ -517,7 +540,7 @@ function segHTML(s, scene) {
     attrs.push(`style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"`, `data-links="${s.marks.map((m) => m.link.addr).join(' ')}"`);
     if (s.mark.value < 1) cls.push('visited');
   }
-  const syms = s.syms.map((x) => symHTML(x, scene)).join('');
+  const syms = s.syms.map((x) => symHTML(x, v)).join('');
   if (s.origin) {
     const o = s.origin.doc, at = s.opens;
     cls.push('same');
@@ -525,7 +548,7 @@ function segHTML(s, scene) {
     attrs.push(`data-origin="${esc(o)}"`);
     const chrome = !at ? '' : `<span class="hairline ${at.whole ? 'whole' : 'compact'}" data-src="${esc(o)}" data-pos="${s.origin.pos}" data-width="${s.origin.width}" title="${esc(o)}">${esc(labelOf(s.origin, at))}</span>` +
       (at.c33 ? `<span class="pubmark" data-mark="C-33">${esc(t('C-33'))}</span>` : '');
-    return `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${chrome}${s.chromeSyms.map((x) => symHTML(x, scene)).join('')}${esc(s.text)}</span>${syms}`;
+    return `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${chrome}${s.chromeSyms.map((x) => symHTML(x, v)).join('')}${esc(s.text)}</span>${syms}`;
   }
   return (cls.length > 1 ? `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${esc(s.text)}</span>` : esc(s.text)) + syms;
 }
@@ -560,7 +583,7 @@ export function articleHTML(d, v, ownerAccount) {
     if (p.kind === 'hex') { run += `<span class="${cls.join(' ')}" ${at}>${esc(t('F.not-rendered', { width: b.width }))}</span>`; continue; }
     const tag = p.level ? 'h' + Math.min(6, p.level + 1) : 'p';
     const count = p.count.n > 0 ? `<span class="others" data-count="${p.count.n}">${esc(t('F.others-count', { n: p.count.n }))}</span>` : p.count.social ? `<span class="others social" data-count="0">◦</span>` : '';
-    run += `<${tag} class="${cls.join(' ')}" ${at}>${p.segs.map((s) => segHTML(s, v.scene)).join('')}${count}</${tag}>`;
+    run += `<${tag} class="${cls.join(' ')}" ${at}>${p.segs.map((s) => segHTML(s, v)).join('')}${count}</${tag}>`;
   }
   if (w.empty) run += `<p class="sp empty" data-addr="${esc(d.addr)}" data-pos="1" data-width="0">${esc(t('B1.empty_subspace'))}</p>`;
   for (const o of w.offers) run += `<span class="offer" data-scene="${esc(d.addr)}|${esc(o)}" role="button" tabindex="-1">${esc(t('B1.scene-offer', { D: o }))}</span>`;

@@ -125,7 +125,7 @@ export const STRINGS = {
   'F.whole-links': { text: '⟨n⟩ links to this document as a whole', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.whole-links.1': { text: '1 link to this document as a whole', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.arrival': { text: 'you are reading version ⟨k⟩ — a newer version has arrived — read version ⟨n⟩ · show what changed', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
-  'F.floating': { text: 'its passage is not in ⟨D⟩\'s current text', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6' },
+  'F.floating': { text: 'its passage is not in ⟨D⟩\'s current text', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6, B1-S4' },
   'F.floating.read': { text: 'read version ⟨k⟩, the last that holds it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6' },
   'F.floating.member': { text: 'its passage is not in version ⟨k⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6' },
   'F.swallow': { text: 'typing goes nowhere here — to go somewhere, the address line: ⟨LEAP chord⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the plane (K-9)' },
@@ -232,9 +232,11 @@ export const STRINGS = {
   'L.mirror.span.bare': { text: 'span at position ⟨p⟩ in ⟨document⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.same': { text: ' (the same material as ⟨origin⟩)', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.withheld': { text: 'withheld run in ⟨document⟩: ⟨width⟩ positions, owner ⟨owner⟩, origin ⟨origin⟩. ⟨arm⟩. ⟨clause⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨unregistered⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨unregistered⟩⟨floating⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.unregistered': { text: ' — nothing this board will say about that address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // a link whose far end floats: F.floating's words, as its symbol and its stub say them
+  'L.mirror.floating': { text: ' — ⟨sentence⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's title, the version marker's
   'L.dismiss': { text: 'dismiss (⟨chord⟩)', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   'L.version': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },

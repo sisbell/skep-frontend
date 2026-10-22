@@ -11,21 +11,26 @@
 
 /**
  * @typedef {Object} ElementRef
- * @property {string} doc the document the element lies in
+ * @property {string} doc the trunk document the element's address lies under
  * @property {number} subspace 1 content, 2 links
- * @property {number} ordinal 1-based V-ordinal
+ * @property {number} ordinal the 1-based ordinal the address names in that subspace — a permanent address's, where it is one (an image's `i_start`, a link's slot), never a place in any current text
  */
 
 /**
  * @typedef {Object} EndRef — one span of a link's slot, read from the wire's
- * absolute span (`{start, width}` as `link_value` and `follow` carry them)
+ * absolute span (`{start, width}` as `link_value` and `follow` carry them).
+ * A V-spec slot is recorded as the permanent I-spans of the bytes it named
+ * (wire.md §Links, `make_link`: "the recorded endset is the permanent
+ * I-spans"), so a passage end names the bytes' identity and never where they
+ * sit: where its bytes stand in a document's text now is M-REC's `placed`
+ * through the held V→I image, or the board's `project`
  * @property {string} start the span's start address as the wire spelled it
  * @property {string} width the width as the wire spelled it
- * @property {string | null} doc the document the span lies in, where it names one
+ * @property {string | null} doc the document whose permanent addresses the span names — where its bytes were minted — or the document it names whole
  * @property {string | null} account the account the span names whole, where it names one and no document
  * @property {boolean} whole true where the span is a unit subtree span (an address-form end)
  * @property {number | null} subspace
- * @property {number | null} ordinal the first V-ordinal, where the span is an element run
+ * @property {number | null} ordinal the ordinal of the span's first permanent address, where the span is an element run: the bytes' identity, never their position in any text
  * @property {number | null} positions the run's width in positions, where it is one
  */
 
@@ -179,10 +184,12 @@ export function parseVSpan(s) {
 }
 
 /**
- * Resolve an absolute span (a link slot's member, `follow`'s answer):
- * an element run "1.0.1.0.3.0.1.951" width "0.0.0.0.0.0.0.17" → the document,
- * subspace 1, ordinal 951, 17 positions; a unit subtree span naming a
- * document ("1.0.1.0.1049578" width "0.0.0.0.1") or an account ("1.0.1"
+ * Resolve an absolute span (a link slot's member, `follow`'s answer — both
+ * permanent I-spans): an element run "1.0.1.0.3.0.1.951" width
+ * "0.0.0.0.0.0.0.17" → the document whose I-space it lies in, subspace 1,
+ * the permanent ordinal 951, 17 positions — the bytes' identity, which
+ * names no place in the document's current text; a unit subtree span naming
+ * a document ("1.0.1.0.1049578" width "0.0.0.0.1") or an account ("1.0.1"
  * width "0.0.1") → `whole`.
  * @param {{start: string, width: string}} s
  * @returns {EndRef}

@@ -4,7 +4,12 @@
 // following it as the camera moves: led by each end's passage in words, the
 // far end's first (so a click answers with what the link leads to) — the
 // near end the document the link is drawn at (LK's `near`), whichever of its
-// ends lies there, and the far end the other — then its anatomy — type
+// ends lies there, read where LK places it in that text now, and the far end
+// the other, read where `project` answers its passage sits in its document's
+// current text now (LK's `farRuns`, asked in the card's own opening where no
+// projection is held), never at the position the link stores; a far end that
+// floats reads "its passage is not in ⟨D⟩'s current text" (foundations §2.3)
+// — then its anatomy — type
 // (R5's form where the commons documents none: on this notebook no registry
 // document is seeded, so every type reads "undocumented here"), from, to,
 // home (published → the link is public; a draft → hidden with its home),
@@ -85,8 +90,36 @@ function lineageRow(label, claims, named) {
 }
 
 /**
+ * Where a drawn link's far passage stands in its far document's current
+ * text: the projection LK carries (`farRuns`), or, where the model holds
+ * none — no answer, nor a refusal — and the far document is not known
+ * refused, `project` asked now; null where nothing places it.
+ * @param {Shown} s
+ * @returns {Promise<Array<{pos: number, width: number}> | null>}
+ */
+async function farPlace(s) {
+  if (!s.farEnd || s.farWhole || REC.projection(s.link.addr, s.farSlot, s.far) !== undefined || REC.doc(s.far).refused) return s.farRuns;
+  const p = await PUMP.projectEnd(s.link.addr, s.farSlot, s.far);
+  return 'runs' in p ? p.runs : null;
+}
+
+/**
+ * The far end's words: a passage's first words where it stands now, "its
+ * passage is not in ⟨D⟩'s current text" where it floats, the document's
+ * first words where the link names it whole; null where nothing places it.
+ * @param {Shown} s
+ * @param {Array<{pos: number, width: number}> | null} runs where its passage stands now (`farPlace`)
+ */
+async function farWords(s, runs) {
+  if (s.farWhole) return fragment(s.far, null, 80);
+  if (!runs) return null;
+  return runs.length ? fragment(s.far, runs[0].pos, runs[0].width) : t('F.floating', { D: s.far });
+}
+
+/**
  * Open the card for a drawn link: its near end the document it is drawn at
- * (`s.near`), its far end the other.
+ * (`s.near`), where LK places it there, its far end the other, where its
+ * passage stands now (`farPlace`).
  * @param {Shown} s
  * @param {HTMLElement | null} anchorEl the element it stands at; null stands it at the link's own bytes in the near document
  * @param {boolean} [byKey] a key opened it: the card takes the focus on its first act
@@ -95,25 +128,26 @@ function lineageRow(label, claims, named) {
 export function open(s, anchorEl, byKey = false) {
   const l = s.link;
   const near = s.near, nearPos = s.pos, nearWidth = s.width;
-  const far = s.far, farEnd = s.farEnd;
+  const far = s.far;
   return HOST.opening(() => Promise.all([
     fragment(near, nearPos, nearWidth),
-    far ? fragment(far, farEnd && !farEnd.whole ? farEnd.ordinal : null, farEnd && farEnd.positions ? farEnd.positions : 80) : Promise.resolve(null),
+    far ? farPlace(s).then(async (runs) => ({ runs, words: await farWords(s, runs) })) : Promise.resolve({ runs: null, words: null }),
     PUMP.lineage(l.addr),
-  ]), ([nearText, farText, lineage]) => {
+  ]), ([nearText, farEnd, lineage]) => {
+    const farText = farEnd.words, farRuns = farEnd.runs;
     const mark = LK.markOf(l, near);
     const homePlace = REC.place(l.home);
     const homeDoc = REC.doc(l.home);
     const homePublished = homeDoc.meta ? homeDoc.meta.published : homePlace ? homePlace.kind === 'edition' : true;
     const dead = far && REC.doc(far).refused === 'unregistered';
-    const farWords = far ? (dead ? t('B1.doc_not_registered', { address: far }) : farText ?? '…') : t('B1.invalid');
-    const nearWords = nearText ?? '…';
+    const farQuote = far ? (dead ? t('B1.doc_not_registered', { address: far }) : farText ?? '…') : t('B1.invalid');
+    const nearQuote = nearText ?? '…';
     const fromDoc = l.from[0] ? l.from[0].doc || l.from[0].account || '' : '';
     const toDoc = l.to[0] ? l.to[0].doc || l.to[0].account || '' : '';
     const html =
       `<span class="label" style="--mark-hue:${mark.hue}"><span class="sym-mark">⟡</span> ${esc(l.addr)}</span>` +
-      `<div class="ends"><div class="end far"><span class="k">${esc(s.end === 'from' ? t('F.card.to') : t('F.card.from'))}</span> <span class="code">${esc(far || '—')}</span><div class="quoted">${esc(farWords)}</div></div>` +
-      `<div class="end near"><span class="k">${esc(s.end === 'from' ? t('F.card.from') : t('F.card.to'))}</span> <span class="code">${esc(near)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${esc(nearWords)}</div></div></div>` +
+      `<div class="ends"><div class="end far"><span class="k">${esc(s.end === 'from' ? t('F.card.to') : t('F.card.from'))}</span> <span class="code">${esc(far || '—')}</span><div class="quoted">${esc(farQuote)}</div></div>` +
+      `<div class="end near"><span class="k">${esc(s.end === 'from' ? t('F.card.from') : t('F.card.to'))}</span> <span class="code">${esc(near)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${esc(nearQuote)}</div></div></div>` +
       `<div class="kv"><b>${esc(t('F.card.type'))}</b> <span data-string="R5.undocumented">${esc(typeName(l.type))}</span></div>` +
       `<div class="kv"><b>${esc(t('F.card.from'))}</b> <span class="code">${esc(fromDoc)}</span></div>` +
       `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code">${esc(toDoc)}</span></div>` +
@@ -125,7 +159,7 @@ export function open(s, anchorEl, byKey = false) {
       kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: near, pos: nearPos, width: nearWidth } }, html, takeFocus: byKey,
       acts: {
         follow: (_el, byKey) => GO.follow(s, byKey),
-        beside: () => { if (far && !dead) SCENE.open(near, far, { posA: nearPos, widthA: nearWidth, posB: farEnd && !farEnd.whole ? farEnd.ordinal : null }); },
+        beside: () => { if (far && !dead) SCENE.open(near, far, { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null }); },
       },
     });
   });

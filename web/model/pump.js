@@ -10,8 +10,14 @@
 // for its members — the extent (`retrieve_doc_v_span_set`), the metadata
 // (`doc_metadata`), the links touching them (`find_links_v`, then each new
 // link's type ONCE by `read_link` — E17 (a)), and, where legible, the span
-// window of text (`retrieve_v`) with its V→I image (`image`) for the
-// transcluded runs; the chain's members probed where a document is read.
+// window of text (`retrieve_v`) with its V→I image (`image`) — the
+// transcluded runs, and the permanent addresses a link's stored span is read
+// back to the text through (M-REC's `placed`) — and where each far end its
+// read links send from it sits in its far document's current text now
+// (`project`, A-53), so a beam, a symbol and the mirror place a moved passage
+// where it stands and say so of one that has left the text before anyone
+// follows it (foundations §2.3); the chain's members probed where a document
+// is read.
 // Asked by an act rather than the view: the client index (`readIndex`:
 // `places`, at boot and again at the page's own session's death — the view
 // asking nothing while it is out), a whole document (`loadWhole`), where a
@@ -45,8 +51,12 @@
 // `index`, `mode`, `daemon` — is taken where it names the page's board, and
 // none before the board is known: the boot's `health`, `probe` and `places`
 // answer all it would set. The feed's rows → M-REC's index and
-// invalidation; a `drafts` row only while the page holds a session — a
-// guest's index lists no draft (search.md §4 (iii)), nor does the index of
+// invalidation, and the view asks again what it read of each document a row
+// names — of its trunk, where the row names a member (a new version's
+// `publish` names the member, and the trunk's text, its chain and where
+// links project into it are what changed); a `drafts` row only while the
+// page holds a session — a guest's index lists no draft (search.md §4
+// (iii)), nor does the index of
 // a page whose session was refused or ended. `index` → M-REC's state where
 // it is the face the page reads ("a face receives the state of the pair it
 // searches"): the guest face's, which names no session, for a page with no
@@ -84,9 +94,11 @@ import { cam, viewportWorld } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation } from '../plane/projection.js';
 import { metricsFor } from '../plane/layout.js';
-import { versionAddress } from './address.js';
+import { versionAddress, documentOf } from './address.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
+/** @typedef {import('./records.js').Stretch} Stretch */
+/** @typedef {import('./address.js').EndRef} EndRef */
 /** @typedef {import('./frames.js').Claim} Claim */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 /** @typedef {import('../bridge/shapes').PlacesAnswer} PlacesAnswer */
@@ -158,7 +170,7 @@ let started = false;
 export function start(opts) {
   dirty = opts.onDirty;
   started = true;
-  onBoard('feed', (ev) => { if (ev.update && takesRow(ev.update)) { REC.applyFeedUpdate(ev.update); for (const named of ev.update.docs || []) asked.forEach((k) => { if (k.includes(named)) asked.delete(k); }); dirty(); } });
+  onBoard('feed', (ev) => { if (ev.update && takesRow(ev.update)) { REC.applyFeedUpdate(ev.update); for (const named of ev.update.docs || []) forget(documentOf(named) || named); dirty(); } });
   onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); dirty(); } });
   onBoard('mode', (ev) => { REC.setMode(ev); dirty(); });
   onBoard('daemon', (ev) => { REC.setDaemon(ev.state); if (ev.state === 'running') unreached.clear(); dirty(); });
@@ -499,14 +511,46 @@ export function pump() {
         const to = d.to < 0 ? w[1] : Math.max(d.to, w[1]);
         if (need('r:' + d.addr + ':' + from + ':' + to, F.retrieveV(d.addr, from, to - from), (a) => REC.takeDelivery(d.addr, F.decodeDelivery(a, from)), d.addr, (r) => refuseDoc(d, r))) missing++;
       }
-      if (d.from >= 0 && (!d.originsFor || d.originsFor[0] > d.from || d.originsFor[1] < d.to)) {
-        if (need('i:' + d.addr + ':' + d.from + ':' + d.to, F.image(d.addr, d.from, d.to - d.from), (a) => REC.takeOrigins(d.addr, d.from, F.decodeRuns(a)), d.addr)) missing++;
+      if (d.from >= 0 && (!d.imageFor || d.imageFor[0] > d.from || d.imageFor[1] < d.to)) {
+        if (need('i:' + d.addr + ':' + d.from + ':' + d.to, F.image(d.addr, d.from, d.to - d.from), (a) => REC.takeImage(d.addr, d.from, F.decodeRuns(a)), d.addr)) missing++;
+      }
+      for (const p of farEnds(d.addr).slice(0, 12)) {
+        const hold = (/** @type {Stretch[] | 'refused'} */ runs) => REC.takeProjection(p.link, p.slot, p.far, runs);
+        if (need('p:' + p.link + ':' + p.slot + ':' + p.far, F.project(p.link, p.slot, p.far), (a) => hold(stretchesOf(a)), d.addr, (r) => { if (r.kind === 'refused') hold('refused'); })) missing++;
       }
       if (em >= LOD_TXT_LO && d.members == null && d.meta && d.meta.published) { if (probeMembers(d)) missing++; }
     }
   }
   return missing;
 }
+
+/**
+ * The far ends a document's read links send from it, whose place in their
+ * far document's current text the view asks (`project`): for each link
+ * touching the document with a passage end in it, the slot opposite —
+ * whose first span names a passage of a document, what LK draws a beam to —
+ * once per link and slot; none whose projection is held, or whose document a
+ * read found unregistered or withheld, which refuses the projection with it.
+ * @param {string} addr
+ * @returns {Array<{link: string, slot: 1 | 2, far: string}>}
+ */
+function farEnds(addr) {
+  /** @type {Map<string, {link: string, slot: 1 | 2, far: string}>} */
+  const out = new Map();
+  for (const l of REC.linksTouching(addr)) {
+    for (const [near, other, slot] of /** @type {Array<[EndRef[], EndRef[], 1 | 2]>} */ ([[l.from, l.to, 2], [l.to, l.from, 1]])) {
+      const f = other[0];
+      if (!f || f.whole || f.ordinal == null || !f.doc) continue;
+      if (!near.some((e) => e.doc === addr && !e.whole && e.ordinal != null)) continue;
+      if (REC.projection(l.addr, slot, f.doc) !== undefined || (REC.has(f.doc) && REC.doc(f.doc).refused)) continue;
+      out.set(l.addr + ' ' + slot, { link: l.addr, slot, far: f.doc });
+    }
+  }
+  return [...out.values()];
+}
+
+/** `project`'s span set as stretches of the text's content: each V-span's first position and its positions */
+const stretchesOf = (/** @type {unknown} */ answer) => F.decodeSpanSet(answer).filter((s) => s.subspace === 1).map((s) => ({ pos: s.ordinal, width: s.positions }));
 
 /** a document's read refused: `doc_not_registered` or `withheld` — the model keeps the fact */
 function refuseDoc(/** @type {Doc} */ d, /** @type {Refusal} */ r) {
@@ -587,7 +631,7 @@ export async function loadWhole(addr) {
     if ('refused' in out) { refusals.push({ frame: 'retrieve_v', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return d; }
     REC.takeDelivery(addr, F.decodeDelivery(out.answer, 1));
     const im = await read(F.image(addr, 1, whole));
-    if (!('refused' in im)) REC.takeOrigins(addr, 1, F.decodeRuns(im.answer));
+    if (!('refused' in im)) REC.takeImage(addr, 1, F.decodeRuns(im.answer));
   }
   if (!d.linksRead && extent > 0) {
     const out = await readScan(F.findLinksV(addr, 1, extent), addr);
@@ -603,21 +647,30 @@ export async function loadWhole(addr) {
 
 /**
  * Where a link's slot projects NOW into a document (A-53: "the spans"): every
- * V-span of the text's content the board answers, in the order it names them
- * — an end the document's text holds in several runs, a passage a later edit
- * cut in two among them, answered as several; null where the end has left
- * the text; `refused` where the board declines the read (`not_a_link` where
- * no such slot).
+ * V-span of the text's content the board answers, as stretches in the text's
+ * order — the wire names no order for a span set — an end the document's
+ * text holds in several runs, a passage a later edit cut in two among them,
+ * answered as several; none where the end has left the text. Held in the
+ * model (M-REC's `takeProjection`), the view's beams, symbols and mirror
+ * reading it as they read the view's own `project`. Where the board declines
+ * the read (`not_a_link` where no such slot), the refusal it met — this
+ * read's own, whatever other read met one meanwhile — the model holding the
+ * projection refused.
  * @param {string} linkAddr
  * @param {1 | 2} slot
  * @param {string} doc
- * @returns {Promise<Array<{ordinal: number, positions: number}> | null | 'refused'>}
+ * @returns {Promise<{runs: Stretch[]} | {refused: Refusal}>}
  */
 export async function projectEnd(linkAddr, slot, doc) {
   const out = await read(F.project(linkAddr, slot, doc));
-  if ('refused' in out) { refusals.push({ frame: 'project', refusal: out.refused, addr: doc }); return 'refused'; }
-  const set = F.decodeSpanSet(out.answer).filter((s) => s.subspace === 1).map((s) => ({ ordinal: s.ordinal, positions: s.positions }));
-  return set.length ? set : null;
+  if ('refused' in out) {
+    refusals.push({ frame: 'project', refusal: out.refused, addr: doc });
+    if (out.refused.kind === 'refused') REC.takeProjection(linkAddr, slot, doc, 'refused');
+    return { refused: out.refused };
+  }
+  const runs = stretchesOf(out.answer).sort((a, b) => a.pos - b.pos);
+  REC.takeProjection(linkAddr, slot, doc, runs);
+  return { runs };
 }
 
 /**
@@ -643,7 +696,7 @@ export async function lineage(linkAddr) {
 export const inflightCount = () => inflight.size;
 /** settled: nothing missing and nothing in flight */
 export const settled = () => inflight.size === 0 && pump() === 0;
-/** drop the asked set for a document, and what waits to be asked again (tests, invalidation) */
+/** drop the asked set for a document — every key naming it, its members' and its links' among them — and what waits to be asked again (tests, invalidation) */
 export function forget(/** @type {string} */ addr) {
   for (const k of [...asked]) if (k.includes(addr)) asked.delete(k);
   for (const waiting of [retryAt, unreached]) for (const k of [...waiting.keys()]) if (k.includes(addr)) waiting.delete(k);

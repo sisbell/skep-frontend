@@ -83,9 +83,10 @@ beforeEach(() => {
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: EXTENT }]);
 });
 
-/** D's text delivered whole, the owner's PER_BLOCK links at each of its paragraphs */
+/** D's text delivered whole — its image its own bytes, where nothing has moved them — the owner's PER_BLOCK links at each of its paragraphs */
 function deliver() {
   REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
   REC.doc(D).blocks.forEach((b, i) => cite(D, b, PER_BLOCK, 1 + i * PER_BLOCK));
 }
 

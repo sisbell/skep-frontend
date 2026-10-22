@@ -287,7 +287,7 @@ def stand_in_view(ctx):
       let pos = 1;
       const blocks = [10, 0, 12].map((n) => { const text = Array(n).fill(word).join(' '), b = {pos, width: enc.encode(text).length + 2, kind: 'para', text, origin: null}; pos += b.width; return b; });
       const d = {addr, account, kind: 'edition', label: '', standing: 'public', system: false, extent: pos - 1, linkPositions: 0, meta: null, runs: [], from: 1, to: pos,
-                 blocks, origins: [], originsFor: null, links: new Set(), linksRead: true, members: 1, whole: pos - 1, rev: 0, refused: null};
+                 blocks, image: [], origins: [], imageFor: null, links: new Set(), linksRead: true, members: 1, whole: pos - 1, rev: 0, refused: null};
       const v = {selected: null, focus: null, marks: [], symbols: [], countAt: (b) => ({n: b.pos === blocks[0].pos ? 3 : 0, social: false}), wholeLinks: 0,
                  sessionAccount: account, localTrust: true, notebook: true, scene: false, originKinds: new Map(), deviceLabel: 'dev-notebook', ownerFingerprint: 'e4272902a11439e5', keyPresent: true};
       const lay = L.layoutOf(A.articlePlan(d, v, account), {fs: 1, cpl, lineH: L.LINE_H, tw: cpl * L.CHAR_W, x0: 0, y0: 0, y1: Infinity});

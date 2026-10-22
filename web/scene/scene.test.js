@@ -28,7 +28,13 @@
 // pane's first block; one document in both panes drawing a link inside it
 // once for each way its ends stand across them (a mutant that tells ends
 // apart by their document alone, folding the two into one, turns red); no
-// line to a document neither pane holds.
+// line to a document neither pane holds. Each end where the link's bytes
+// stand now: the far end where `project` places it (a mutant drawing to the
+// stored position turns red), at its pane's first block where it floats, no
+// line where nothing places it; a link met from both panes one line however
+// its ends moved, told apart by the spans the link stores (a mutant keying
+// the near end by where it stands draws two and turns red); and the opening
+// asking each crossing link's far end once, none it holds already.
 // Then the scene's focus, against the FAKE PORT and a page of stand-ins whose
 // focus lands only where the platform's does (D5 §4 rules 5 and 8; K-63;
 // the focus's owner N-FOCUS, whose own cases are `nav/focus.test.js` — these
@@ -141,10 +147,16 @@ const passage = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type
 const wholeOf = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: doc.split('.').slice(0, 3).join('.'), whole: true, subspace: null, ordinal: null, positions: /** @type {number | null} */ (null) });
 /** a link as the model holds it, by its address and the account that made it */
 const linkBy = (/** @type {string} */ addr, /** @type {string} */ owner) => /** @type {any} */ ({ addr, owner });
-/** a link's end as LK shows it at a document: its passage there, the far end it names, the mark the document gives it at its span (`LK.markOf`) */
-const endShown = (/** @type {{addr: string, owner: string}} */ link, /** @type {ReturnType<typeof passage>} */ here, /** @type {ReturnType<typeof passage> | ReturnType<typeof wholeOf>} */ there) => {
+/**
+ * A link's end as LK shows it at a document: its passage there — standing where its slot stores it, nothing moved — the far end it
+ * names, where `project` places that passage in the far document's text now (by default where it is stored; none where it floats;
+ * null where nothing places it), the mark the document gives it at its span (`LK.markOf`)
+ */
+const endShown = (/** @type {{addr: string, owner: string}} */ link, /** @type {ReturnType<typeof passage>} */ here, /** @type {ReturnType<typeof passage> | ReturnType<typeof wholeOf>} */ there,
+  /** @type {Array<{pos: number, width: number}> | null} */ farRuns = there.whole ? null : [{ pos: /** @type {number} */ (there.ordinal), width: there.positions || 1 }]) => {
   const mark = LK.markOf(/** @type {any} */ (link), here.doc);
-  return { link, near: here.doc, end: 'from', pos: here.ordinal, width: here.positions || 1, mark, linker: mark.linker, far: there.doc, farEnd: there, farWhole: there.whole };
+  const at = { pos: here.ordinal, width: here.positions || 1 };
+  return { link, near: here.doc, end: 'from', nearEnd: here, runs: [at], ...at, mark, linker: mark.linker, far: there.doc, farEnd: there, farSlot: 2, farWhole: there.whole, farRuns };
 };
 /** a pane's links: its document, the ends LK shows there, the blocks its article was made from — by default two, the first at 1 */
 const paneLinks = (/** @type {string} */ addr, /** @type {Array<ReturnType<typeof endShown>>} */ shown, blocks = [{ pos: 1, width: 40 }, { pos: 41, width: 60 }]) => /** @type {any} */ ({ addr, shown, blocks });
@@ -173,8 +185,10 @@ test('a link both panes show is one line between its two ends, its end in pane A
 
 test('a link the owner of either pane\'s document made is drawn in the owner\'s hue, solid, whichever pane is A and whatever the other pane shows at its span — never neutral (foundations §2.1: "the owner of either")', () => asReader('1.0.9', () => {
   const P = '1.0.1.0.31', Q = '1.0.2.0.51', L = P + '.0.2.1';
+  REC.takeImage(P, 1, [{ iStart: P + '.0.1.1', width: 60 }]); REC.takeImage(Q, 1, [{ iStart: Q + '.0.1.1', width: 10 }]);
   REC.takeLinks(P, [L]); REC.takeLinks(Q, [L]);
   REC.takeLink({ addr: L, from: [passage(P, 50, 10)], to: [passage(Q, 1, 5)], type: CITE });
+  REC.takeProjection(L, 2, Q, [{ pos: 1, width: 5 }]); REC.takeProjection(L, 1, P, [{ pos: 50, width: 10 }]);
   const pane = (/** @type {string} */ addr) => paneLinks(addr, /** @type {any} */ (LK.shown(addr)));
   for (const on of [false, true]) {
     LK.setOthers(Q, on);
@@ -208,6 +222,22 @@ test('one document in both panes: a link inside it is drawn once for each way it
 
 test('a link whose far end lies outside the other pane\'s document draws no line between the panes', () => asReader('1.0.1', () => {
   assert.deepEqual(linesBetween(paneLinks(DOC_A, [endShown(linkBy(DOC_A + '.0.2.1', '1.0.1'), passage(DOC_A, 50, 10), passage(DOC_C, 1, 5))]), paneLinks(DOC_B, [])), []);
+}));
+
+test('a line\'s far end stands where `project` places its passage now, never where the link stores it; one that floats at its pane\'s first block, where its follow lands; one nothing places draws no line', () => asReader('1.0.1', () => {
+  const L = linkBy(DOC_A + '.0.2.1', '1.0.1'), blocks = [{ pos: 3, width: 20 }, { pos: 23, width: 60 }];
+  const toB = (/** @type {Array<{pos: number, width: number}> | null} */ farRuns) => drawn(linesBetween(paneLinks(DOC_A, [endShown(L, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5), farRuns)]), paneLinks(DOC_B, [], blocks)));
+  assert.deepEqual(toB([{ pos: 30, width: 5 }]).map((l) => l[2]), [[30, 5]], 'stored at 1, standing at 30: at 30');
+  assert.deepEqual(toB([]).map((l) => l[2]), [[3, 20]], 'floating: pane B\'s first block, to its end');
+  assert.deepEqual(toB(null), [], 'placed nowhere: no line, never one to the stored position');
+}));
+
+test('a link met from both panes is one line wherever its ends stand now: its ends told apart by the spans the link stores, never by where they stand', () => asReader('1.0.1', () => {
+  const L = linkBy(DOC_A + '.0.2.1', '1.0.1');
+  // pane A's end, stored at 50, stands at 70 now: pane A places it there, and so does the projection pane B's end reads
+  const atA = { ...endShown(L, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5)), runs: [{ pos: 70, width: 10 }], pos: 70 };
+  const atB = endShown(L, passage(DOC_B, 1, 5), passage(DOC_A, 50, 10), [{ pos: 70, width: 10 }]);
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA]), paneLinks(DOC_B, [atB]))).map((l) => [l[1], l[2]]), [[[70, 10], [1, 5]]], 'one line, from where its end stands now');
 }));
 
 // ---- the scene's focus -----------------------------------------------------------------------------------------------
@@ -392,5 +422,30 @@ test('the dismissal a navigation act makes first, Esc, or an overlay shown, made
     assert.deepEqual(left(), unopened, `${what}, made while it reads their compare: nothing opens`);
     HOST.dismiss();
   }
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('the opening asks where the far end of each link crossing between the panes stands now — once per link and slot, beside the compare — and asks none it already holds', () => onPage(async (p) => {
+  const C = '1.0.1.0.8', E = '1.0.1.0.9', C_TEXT = 'Gamma.\n\nIts words.', E_TEXT = 'Epsilon.\n\nIts words.', X = C + '.0.2.1';
+  const end = (/** @type {string} */ doc, /** @type {number} */ ord) => [{ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.3' }];
+  // the person's citation from C's first word to E's second paragraph, drawn at both; where each of its ends stands now
+  Object.assign(script, reads(C, C_TEXT), reads(E, E_TEXT), compared(C, C_TEXT, E, E_TEXT), {
+    [FAKE.keyOf('op', { frame: F.findLinksV(C, 1, C_TEXT.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [X] } },
+    [FAKE.keyOf('op', { frame: F.findLinksV(E, 1, E_TEXT.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [X] } },
+    [FAKE.keyOf('op', { frame: F.readLink(X) })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [end(C, 1), end(E, 11), [{ start: CITE, width: '0.0.0.0.0.0.0.0.1' }]] } } },
+    [FAKE.keyOf('op', { frame: F.project(X, 2, E) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.11', width: '0.3' }] } },
+    [FAKE.keyOf('op', { frame: F.project(X, 1, C) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.3' }] } },
+  });
+  const projections = (/** @type {number} */ from) => fake.asked.slice(from).filter((k) => k.includes('"op":"project"'));
+  p.item.focus();
+  const from = fake.asked.length;
+  await SCENE.open(C, E);
+  assert.equal(SCENE.isOpen(), true);
+  assert.deepEqual(projections(from).sort(), [F.project(X, 1, C), F.project(X, 2, E)].map((frame) => FAKE.keyOf('op', { frame })).sort(), 'each end the other pane shows it at, once');
+  assert.deepEqual([REC.projection(X, 2, E), REC.projection(X, 1, C)], [[{ pos: 11, width: 3 }], [{ pos: 1, width: 3 }]], 'held, the lines read from them');
+  SCENE.close();
+  const again = fake.asked.length;
+  await SCENE.open(C, E);
+  assert.deepEqual(projections(again), [], 'held: none asked again');
   assert.deepEqual(fake.unanswered, []);
 }));

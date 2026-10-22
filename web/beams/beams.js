@@ -8,14 +8,23 @@
 // met from both its ends, the one `mergedMark` makes of the two — its hue,
 // its value, and its weight, the link lit at an arrival stroked heavier
 // (foundations §2.1's register: "the followed link drawn heavier"), dashed
-// for another's. Each beam leaves the text at its span's own line, from the
-// place's edge (foundations §2.1; S1 Q1): it starts at the right edge of the
-// block holding its span, level with
-// the middle of the line-rect of the span's own bytes nearest the far end
-// (`spanRects` with the span's width — its rects line by line, so at a wrap
-// the line nearest the far end). The far end mounted and laid out, the beam
-// ends at the far block's left edge, level with the far span's own line
-// nearest the start — a whole-work end at the far article's first block;
+// for another's. Both its ends stand where the link's bytes stand NOW, never
+// where its slot stores them (the slot names the bytes' permanent I-spans):
+// each beam leaves the text at its span's own line, from the place's edge
+// (foundations §2.1; S1 Q1): it starts at the right edge of the block
+// holding the stretch it leaves from, level with the middle of the line-rect
+// nearest the far end of every stretch LK says its end stands in (LK's
+// `runs`; `spanRects` with each stretch's width — its rects line by line, so
+// at a wrap the line nearest the far end). Its far end is where `project`
+// says the far passage sits in the far document's current text (LK's
+// `farRuns`; A-53: "the beam lands at the passage's current place
+// (version-proof)"): that document mounted and laid out, the beam ends at
+// the left edge of the block holding the far stretch nearest the start,
+// level with that stretch's own line nearest it — a whole-work end, and a
+// far end that FLOATS (LK's `floats`: that text holds none of it), at the far
+// article's first block, where its follow lands (foundations §2.3); a far
+// end nothing places — its projection not read, or refused — is aimed at its
+// document's box as an end not laid out is, never at the stored position;
 // unmounted or off screen → THE EDGE STUB: the beam clipped at the visible
 // view's border — the viewport below the one line, the cut P-CAM's
 // `edgeStub` that P-RENDER's mid connections share — with a triangle on the
@@ -25,11 +34,15 @@
 // or past the viewport (T-LAYER mounts every article whose box meets the
 // viewport, padded), and a far end not laid out stands at its document's
 // box's centre. A link met from both its ends, or twice inside one document,
-// is one beam, marked with what its meetings' marks share whichever document
-// mounted first (`bundlesOf`; P44: "never a stack, never accumulated tint").
-// The beams are bundled by the document they leave and
+// is one beam — its two ends told apart by the spans the link stores,
+// wherever they stand now — marked with what its meetings' marks share
+// whichever document mounted first (`bundlesOf`; P44: "never a stack, never
+// accumulated tint"). The beams are bundled by the document they leave and
 // their far document — one bundle per destination, its far document's label
-// and its count at its end (§2.1), above the end, or below it where above
+// and its count at its end (§2.1), and, where every beam it holds floats,
+// "its passage is not in ⟨D⟩'s current text", the stub saying so before
+// anyone follows it (foundations §2.3; `labelText`) — above the end, or
+// below it where above
 // would reach past the visible view's top, and none where it would not stand
 // whole inside that view (`labelPlace`: a beam cut at its start, under the
 // one line or past the viewport, sets no label there) — each member stroked
@@ -40,9 +53,10 @@
 // the bundles are counted and the card's list chooses the beams drawn, and
 // what stands where stubs bound for different documents land so near that
 // their labels meet.
-// Carries: the wireframe's §17 (`drawBeams`, `pickRect`; its `edgeStub`
-// P-CAM's, the cut both stubs share), S1's `buildBeams` canvas arm (the SVG
-// arm DROPPED — S1's verdict).
+// Carries: the wireframe's §17 (`drawBeams`, `pickRect` — here `pickLine`,
+// over every stretch an end stands in; its `edgeStub` P-CAM's, the cut both
+// stubs share), S1's `buildBeams` canvas arm (the SVG arm DROPPED — S1's
+// verdict).
 // Rules: FP-1, FP-2, FP-8 (redrawn whole), FP-10 (reads LK, T-LAYER and
 // L-LINE through their exports).
 
@@ -53,6 +67,7 @@ import { sx, sy, viewport, visibleView, edgeStub, stubTriangle } from '../plane/
 import { docBox } from '../plane/projection.js';
 import { COL } from '../plane/register.js';
 import { doc, blockAt, place } from '../model/records.js';
+import { t } from '../strings.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../plane/register.js').Mark} Mark */
@@ -60,11 +75,11 @@ import { doc, blockAt, place } from '../model/records.js';
 /** @typedef {{x: number, y: number}} Point a screen point */
 
 /**
- * @typedef {Object} Beam — one shown link, drawn from its span
+ * @typedef {Object} Beam — one shown link, drawn from where its end stands
  * @property {Shown} s the link as LK shows it at the document the beam leaves (`s.near`)
- * @property {Rect} line the near span's line the beam leaves at
- * @property {Point} from where it leaves: the near block's right edge, level with that line's middle
- * @property {Point} to its far end: the far block's left edge, level with the far span's line nearest `from`; where that is not laid out, the far document's centre
+ * @property {Rect} line the line of the near end's stretches the beam leaves at
+ * @property {Point} from where it leaves: the right edge of the block holding that line's stretch, level with the line's middle
+ * @property {Point} to its far end: the left edge of the block holding the far stretch, level with that stretch's line nearest `from` — the far article's first block for a whole-work end or one that floats; where nothing is laid out there, the far document's centre
  * @property {boolean} aimed the stroke runs toward `to` and is cut at the visible view's border: the far end is not laid out, or it stands outside the visible view
  * @property {boolean} stub the far end is off screen — unmounted, or `to` outside the visible view: the cut carries the triangle on the true bearing
  */
@@ -87,7 +102,7 @@ import { doc, blockAt, place } from '../model/records.js';
  * @typedef {Object} Geometry — what `beamOf` lays a beam out from, on screen: the mounted articles' rects (T-LAYER's) and the documents' boxes, read through their owners' exports and handed in, so the rule is tested apart from the page
  * @property {(addr: string, pos: number, width: number) => Rect[]} lines the line rects of a span's own bytes in a mounted article; none where they are not laid out
  * @property {(addr: string, pos: number) => (Rect | null)} block the box of the block holding a position in a mounted article
- * @property {(addr: string) => (Rect | null)} first the box of a mounted article's first block: a whole-work end's anchor
+ * @property {(addr: string) => (Rect | null)} first the box of a mounted article's first block: the anchor of a whole-work end, and of one that floats
  * @property {(addr: string) => boolean} mounted
  * @property {(addr: string) => Point} centre the centre of a document's box
  * @property {Rect} view the visible view (P-CAM's `visibleView`)
@@ -116,11 +131,17 @@ export function resize() {
   canvas.style.width = VW + 'px'; canvas.style.height = VH + 'px';
 }
 
-/** the line-rect nearest a point */
-function pickRect(/** @type {Rect[]} */ rects, /** @type {number} */ tx, /** @type {number} */ ty) {
-  let best = rects[0], bd = Infinity;
-  for (const r of rects) { const dd = (r.x + r.w / 2 - tx) ** 2 + (r.y + r.h / 2 - ty) ** 2; if (dd < bd) { bd = dd; best = r; } }
+/** @typedef {{line: Rect, block: Rect}} Anchor a line of an end's stretch, with the box of the block holding that stretch */
+
+/** the anchor whose line is nearest a point */
+function pickLine(/** @type {Anchor[]} */ anchors, /** @type {Point} */ p) {
+  let best = anchors[0], bd = Infinity;
+  for (const a of anchors) { const r = a.line, dd = (r.x + r.w / 2 - p.x) ** 2 + (r.y + r.h / 2 - p.y) ** 2; if (dd < bd) { bd = dd; best = a; } }
   return best;
+}
+/** the lines of the stretches of a document's text, each with the block holding its stretch; none where they are not laid out */
+function anchorsOf(/** @type {Geometry} */ g, /** @type {string} */ addr, /** @type {Array<{pos: number, width: number}>} */ runs) {
+  return runs.flatMap((r) => { const block = g.block(addr, r.pos); return block ? g.lines(addr, r.pos, r.width).map((line) => ({ line, block })) : []; });
 }
 /** does a rect hold a point, its edges included? */
 const holds = (/** @type {Rect} */ r, /** @type {Point} */ p) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
@@ -154,39 +175,50 @@ function boundsOf(/** @type {Rect[]} */ rs) {
 const mid = (/** @type {Rect} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
 
 /**
- * A shown link's beam, by the head's rule; null where its near span has no
- * line laid out in its mounted article.
+ * Where a beam's far end anchors in its mounted far article: the lines of
+ * every stretch `project` places the far passage in (LK's `farRuns`), each
+ * with its block; the far article's first block for a whole-work end and for
+ * one that floats, where its follow lands; null where nothing places it —
+ * its projection not read, or refused — so it is aimed at the far
+ * document's box, never at the position the link stores.
+ * @param {Shown} s
+ * @param {Geometry} g
+ * @returns {Anchor[] | null}
+ */
+function farAnchors(s, g) {
+  if (s.farWhole || LK.floats(s)) { const b = g.first(s.far); return b ? [{ line: b, block: b }] : []; }
+  return s.farRuns ? anchorsOf(g, s.far, s.farRuns) : null;
+}
+
+/**
+ * A shown link's beam, by the head's rule; null where none of the stretches
+ * its near end stands in has a line laid out in its mounted article.
  * @param {Shown} s
  * @param {Geometry} g
  * @returns {Beam | null}
  */
 export function beamOf(s, g) {
-  const lines = g.lines(s.near, s.pos, s.width), block = g.block(s.near, s.pos);
-  if (!lines.length || !block || !s.far) return null;
-  /** the near span's line nearest a point, and the edge's point level with it */
-  const leave = (/** @type {Point} */ toward) => { const line = pickRect(lines, toward.x, toward.y); return { line, from: { x: block.x + block.w, y: line.y + line.h / 2 } }; };
-  const fe = s.farEnd;
-  if (g.mounted(s.far)) {
-    const at = fe && !fe.whole && fe.ordinal != null ? fe.ordinal : null;
-    const farBlock = at != null ? g.block(s.far, at) : g.first(s.far);
-    const farLines = !farBlock ? [] : at != null ? g.lines(s.far, at, (fe && fe.positions) || 1) : [farBlock];
-    if (farBlock && farLines.length) {
-      const { line, from } = leave(mid(farLines[0]));
-      const there = pickRect(farLines, from.x, from.y);
-      const to = { x: farBlock.x, y: there.y + there.h / 2 }, off = !holds(g.view, to);
-      return { s, line, from, to, aimed: off, stub: off };
-    }
+  const near = anchorsOf(g, s.near, s.runs);
+  if (!near.length || !s.far) return null;
+  /** the near end's line nearest a point, and the edge's point level with it */
+  const leave = (/** @type {Point} */ toward) => { const a = pickLine(near, toward); return { line: a.line, from: { x: a.block.x + a.block.w, y: a.line.y + a.line.h / 2 } }; };
+  const far = g.mounted(s.far) ? farAnchors(s, g) : null;
+  if (far && far.length) {
+    const { line, from } = leave(mid(far[0].line));
+    const there = pickLine(far, from);
+    const to = { x: there.block.x, y: there.line.y + there.line.h / 2 }, off = !holds(g.view, to);
+    return { s, line, from, to, aimed: off, stub: off };
   }
   const c = g.centre(s.far);
   const { line, from } = leave(c);
   return { s, line, from, to: c, aimed: true, stub: !holds(g.view, c) || !g.mounted(s.far) };
 }
 
-/** a beam's identity: its link and its two ends, unordered — the same beam whichever end it is drawn from */
+/** a beam's identity: its link and its two ends as the link stores them, unordered — the same beam whichever end it is drawn from, wherever either end stands now */
 function endsOf(/** @type {Shown} */ s) {
   const fe = s.farEnd;
-  const there = fe && !fe.whole && fe.ordinal != null ? `${s.far}@${fe.ordinal}+${fe.positions || 1}` : `${s.far}@whole`;
-  return s.link.addr + ' ' + [`${s.near}@${s.pos}+${s.width}`, there].sort().join(' ');
+  const there = fe ? (fe.whole ? `${fe.start}@whole` : `${fe.start}+${fe.width}`) : '';
+  return s.link.addr + ' ' + [`${s.nearEnd.start}+${s.nearEnd.width}`, there].sort().join(' ');
 }
 
 /**
@@ -221,6 +253,23 @@ export function bundlesOf(beams) {
     else out.set(key, { near: first.s.near, far: first.s.far, members: [member] });
   }
   return [...out.values()];
+}
+
+/**
+ * A bundle's label (§2.1): its far document's address, its label from the
+ * index cut to 32 characters, its count where it holds two beams or more, "?"
+ * where the board will say nothing about that address — and, where every
+ * beam it holds ends at a passage the far document's current text no longer
+ * holds, "its passage is not in ⟨D⟩'s current text", the stub saying so
+ * before anyone follows it (foundations §2.3; P44: what its members share,
+ * so a bundle holding a beam that floats beside one that lands says neither).
+ * @param {Bundle<{s: Shown}>} b
+ * @returns {string}
+ */
+export function labelText(b) {
+  const p = place(b.far);
+  return b.far + (p && p.label ? ' · ' + p.label.slice(0, 32) : '') + (b.members.length > 1 ? ` · ${b.members.length}` : '') +
+    (doc(b.far).refused === 'unregistered' ? ' · ?' : '') + (b.members.every((m) => LK.floats(m.s)) ? ' · ' + t('F.floating', { D: b.far }) : '');
 }
 
 /** the visible view now: the viewport below the one line */
@@ -279,10 +328,9 @@ export function draw() {
         ctx.fillStyle = hue; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.lineTo(r.x, r.y); ctx.closePath(); ctx.fill();
       }
     }
-    // the bundle's label at its end: the far document's label (its address past the region's prefix) and its count
+    // the bundle's label at its end
     const first = b.members[0];
-    const p = place(b.far);
-    const text = b.far + (p && p.label ? ' · ' + p.label.slice(0, 32) : '') + (b.members.length > 1 ? ` · ${b.members.length}` : '') + (doc(b.far).refused === 'unregistered' ? ' · ?' : '');
+    const text = labelText(b);
     ctx.globalAlpha = 1; ctx.fillStyle = COL.text; ctx.font = LABEL_FACE;
     const m = ctx.measureText(text);
     const at = labelPlace(endOf(first), { w: m.width, ascent: m.fontBoundingBoxAscent, descent: m.fontBoundingBoxDescent }, seen);

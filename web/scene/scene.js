@@ -16,9 +16,15 @@
 // pane's document (the seam at the link-beam source; §2.5: "a link's line
 // drawn where either pane's default composition draws that link"), each link
 // once per pair of its ends (`linesBetween`; P44: "never a stack, never
-// accumulated tint"), in the one mark LK gives it at a mark joining the two
-// panes' documents — its linker's hue, the owner of either document's the
-// owner's (foundations §2.1's register), dashed only for another's — and
+// accumulated tint"), each end where the link's bytes stand in its pane's
+// text now — the near end at the stretch LK places it in, the far end where
+// `project` answers its passage sits (LK's `farRuns`, whose reads the
+// scene's opening asks for the links that cross between its panes), a far
+// end that floats at its pane's head, where its follow lands, and never at
+// the position the link stores — in the one mark LK gives it at a mark
+// joining the two panes' documents — its linker's hue, the owner of either
+// document's the owner's (foundations §2.1's register), dashed only for
+// another's — and
 // SHARED IDENTITY as BANDS from `compare`'s pairs, each run
 // of contiguous pairs one band (`merged`; no link); each leaves its pane at
 // its passage's first line — measured, through T-LAYER's byte-span mapping
@@ -119,7 +125,7 @@ import { esc } from '../util.js';
  * @typedef {Object} Held — what an opener holds as it opens the scene
  * @property {number | null} [posA] the first position of the passage held in the first document
  * @property {number | null} [widthA] its positions; absent or null, the position alone
- * @property {number | null} [posB] the position in the second document the opener names — a link's far end — where it names one
+ * @property {number | null} [posB] the position in the second document the opener names — where a link's far end stands in its text now (LK's `farPos`) — where it names one
  */
 
 /**
@@ -281,34 +287,43 @@ function restIn(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
   return b ? b.pos + b.width - pos : 1;
 }
 
+/** a link's end as the link stores it — the key an end is told apart by, the same met as the near end at one pane and as the far end from the other, wherever it stands now */
+const keyOf = (/** @type {EndRef} */ e) => (e.whole ? `${e.start}@whole` : `${e.start}+${e.width}`);
+
 /**
  * A link's far end in the pane its document stands in, and the key it is
- * told apart by: the passage it names, keyed by its position and
- * `positions || 1` — the width LK gives the same end met as the near one;
- * where it names the document whole, the pane's first block to the block's
- * end, keyed whole.
- * @param {EndRef | null} fe
+ * told apart by (`keyOf`): the first stretch `project` places its passage in
+ * (LK's `farRuns`); where it names the document whole, or floats — the
+ * pane's text holding none of it, where its follow lands at the head — the
+ * pane's first block to the block's end; null where nothing places it, its
+ * projection not read or refused.
+ * @param {Shown} s the link as LK shows it at the other pane's document
  * @param {Block[]} blocks the blocks the pane's article was made from
- * @returns {{key: string, pos: number, width: number}}
+ * @returns {{key: string, pos: number, width: number} | null}
  */
-function farEndIn(fe, blocks) {
-  if (fe && !fe.whole && fe.ordinal != null) return { key: `${fe.ordinal}+${fe.positions || 1}`, pos: fe.ordinal, width: fe.positions || restIn(blocks, fe.ordinal) };
-  const pos = (blocks[0] || { pos: 1 }).pos;
-  return { key: 'whole', pos, width: restIn(blocks, pos) };
+function farEndIn(s, blocks) {
+  if (!s.farEnd) return null;
+  const key = keyOf(s.farEnd);
+  if (s.farWhole || LK.floats(s)) { const pos = (blocks[0] || { pos: 1 }).pos; return { key, pos, width: restIn(blocks, pos) }; }
+  const r = s.farRuns && s.farRuns[0];
+  return r ? { key, pos: r.pos, width: r.width } : null;
 }
 
 /**
  * The links drawn as lines between the panes (§2.5: "a link's line drawn
  * where either pane's default composition draws that link"): every end LK
  * shows at either pane's document whose far end lies in the other's, each
- * resolved to its end in pane A and its end in pane B (`farEndIn`), and each
- * link ONCE per pair of ends, in the order met, pane A's ends first. A link
- * both panes show is met from each; a document in both panes meets a link
- * inside it from each end in each pane, and draws it once for each way its
- * two ends stand across the panes. Ends are told apart by their pane and
- * their passage, never by their document alone, which would fold those two
- * ways into one line and leave the pair the scene sets level without the
- * line that confirms it. A line is drawn in the one mark LK gives its link at
+ * resolved to its end in pane A and its end in pane B — the near end at the
+ * first stretch LK places it in, the far end where `farEndIn` places it, none
+ * where nothing does — and each link ONCE per pair of ends, in the order met,
+ * pane A's ends first. A link both panes show is met from each; a document
+ * in both panes meets a link inside it from each end in each pane, and draws
+ * it once for each way its two ends stand across the panes. Ends are told
+ * apart by their pane and the span the link stores for them (`keyOf`), never
+ * by their document alone, which would fold those two ways into one line and
+ * leave the pair the scene sets level without the line that confirms it, and
+ * never by where they stand now, which the two panes read from two answers.
+ * A line is drawn in the one mark LK gives its link at
  * a mark joining the two panes' documents (`LK.markOf` given both;
  * foundations §2.1's register: "the document's owner the owner of either"),
  * whichever pane meets it and however each pane marks it at its own span: its
@@ -324,7 +339,8 @@ export function linesBetween(A, B) {
   for (const [near, far, nearIsA] of /** @type {Array<[PaneLinks, PaneLinks, boolean]>} */ ([[A, B, true], [B, A, false]])) {
     for (const s of near.shown) {
       if (s.far !== far.addr) continue;
-      const here = { key: `${s.pos}+${s.width}`, pos: s.pos, width: s.width }, there = farEndIn(s.farEnd, far.blocks);
+      const here = { key: keyOf(s.nearEnd), pos: s.pos, width: s.width }, there = farEndIn(s, far.blocks);
+      if (!there) continue;
       const [a, b] = nearIsA ? [here, there] : [there, here];
       const key = `${s.link.addr} ${a.key} ${b.key}`;
       if (met.has(key)) continue;
@@ -336,10 +352,33 @@ export function linesBetween(A, B) {
 }
 
 /**
+ * The far ends a scene's lines need placed: each link LK shows at either of
+ * two documents whose far end is a passage of the other, once per link and
+ * slot, where no projection of it is held — the reads the scene's opening
+ * asks with its `compare`, so its lines stand where the passages stand now.
+ * @param {string} a
+ * @param {string} b
+ * @returns {Array<{link: string, slot: 1 | 2, far: string}>}
+ */
+function unplaced(a, b) {
+  /** @type {Map<string, {link: string, slot: 1 | 2, far: string}>} */
+  const out = new Map();
+  for (const [near, far] of [[a, b], [b, a]]) {
+    for (const s of LK.shown(near)) {
+      if (s.far !== far || !s.farEnd || s.farWhole || REC.projection(s.link.addr, s.farSlot, far) !== undefined) continue;
+      out.set(s.link.addr + ' ' + s.farSlot, { link: s.link.addr, slot: s.farSlot, far });
+    }
+  }
+  return [...out.values()];
+}
+
+/**
  * Open the scene on two documents, once its reads answer where no act was
- * made on the chrome meanwhile (O-HOST's opening), the passage held set level
- * with its counterpart (`levels`); the focus in the far end's pane, the plane
- * under the scene out of the page's order (see the head).
+ * made on the chrome meanwhile (O-HOST's opening) — both documents whole,
+ * their `compare`, and where the far end of each link crossing between them
+ * stands now (`unplaced`) — the passage held set level with its counterpart
+ * (`levels`); the focus in the far end's pane, the plane under the scene out
+ * of the page's order (see the head).
  * @param {string} a
  * @param {string} b
  * @param {Held} [held]
@@ -354,7 +393,10 @@ export async function open(a, b, held = {}) {
   await HOST.opening(async (stands) => {
     const [da, db] = await Promise.all([PUMP.loadWhole(a), PUMP.loadWhole(b)]);
     if (!da || !db || !stands()) return null;
-    const cmp = await PUMP.read(F.compare([{ doc: a, spans: [{ ordinal: 1, positions: Math.max(1, da.extent || 1) }] }], [{ doc: b, spans: [{ ordinal: 1, positions: Math.max(1, db.extent || 1) }] }]));
+    const [cmp] = await Promise.all([
+      PUMP.read(F.compare([{ doc: a, spans: [{ ordinal: 1, positions: Math.max(1, da.extent || 1) }] }], [{ doc: b, spans: [{ ordinal: 1, positions: Math.max(1, db.extent || 1) }] }])),
+      ...unplaced(a, b).map((p) => PUMP.projectEnd(p.link, p.slot, p.far)),
+    ]);
     return { da, db, cmp };
   }, ({ da, db, cmp }) => {
     const E = els;

@@ -267,7 +267,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
   /** @type {ArticleView} */
   const v = {
     selected: read.selection(), focus: litFocus(scene),
-    marks: LK.shown(d.addr), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr), countAt: (b) => LK.countAt(d.addr, b),
+    marks: LK.shown(d.addr), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr), floats: LK.floats, countAt: (b) => LK.countAt(d.addr, b),
     wholeLinks: LK.wholeLinks(d.addr).length,
     sessionAccount: s ? s.account : null,
     localTrust: !!(h && h.auth && h.auth.local_trust),

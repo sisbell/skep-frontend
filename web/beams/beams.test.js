@@ -24,14 +24,22 @@
 // line, shown to no one, without the rule — and nowhere it would not stand
 // whole in that view: a beam cut at its start just under the line, bound
 // upward, sets none there, where it would straddle the line's edge (a mutant
-// that sets it wherever it falls turns red).
+// that sets it wherever it falls turns red). Both ends where the link's
+// bytes stand now: a beam met from both its ends one beam, its ends told
+// apart by the spans the link stores (a mutant keying them by the stretches
+// they stand in draws two and turns red); a far end at the stretch `project`
+// places it in (a mutant ending it at the stored position's line turns red),
+// at the far article's first block where it floats, aimed at its box where
+// no projection is held; a bundle whose every beam floats saying so at its
+// end, one whose beams part saying nothing of it.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { bundlesOf, beamOf, labelPlace } from './beams.js';
+import { bundlesOf, beamOf, labelPlace, labelText } from './beams.js';
 import { edgeStub } from '../plane/camera.js';
 import { HUE, NEUTRAL_HUE, STUB } from '../plane/register.js';
+import { t } from '../strings.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13';
 // the person's edition, another account's, a third account's
@@ -50,13 +58,16 @@ const LINKS = {
   [TWO]: { from: [span(D, 70, 2), span(D, 90, 4)], to: [span(H, 12, 2)] },
 };
 
-/** the model holding some of the links, D and H read, the reveal at stage 3 at D with others' links on */
+/** the model holding some of the links, D and H read — their images their own bytes, where nothing has moved them — the person's citation's far end projected where its slot stores it, the reveal at stage 3 at D with others' links on */
 function build(/** @type {string[]} */ addrs) {
   REC._reset(); LK._reset();
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   for (const a of addrs) REC.takeLink({ addr: a, ...LINKS[/** @type {keyof typeof LINKS} */ (a)], type: CITE });
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 100 }]);
+  REC.takeImage(H, 1, [{ iStart: H + '.0.1.1', width: 20 }]);
   REC.takeLinks(D, addrs);
   REC.takeLinks(H, addrs.filter((a) => a !== INSIDE));
+  REC.takeProjection(OWN, 2, H, [{ pos: 1, width: 5 }]);
   LK.reveal(D, 3); LK.setOthers(D, true);
 }
 /** what `build` in BM feeds the bundles: every shown link of the documents named, as a beam */
@@ -205,4 +216,43 @@ test('a bundle\'s label stands nowhere it would not stand whole in the visible v
   const cut = edgeStub(b.from, b.to, SEEN);
   assert.deepEqual(cut, b.from, 'cut at its start, under the line');
   assert.equal(labelPlace(cut, m, SEEN), null, 'no label at it');
+});
+
+test('a beam met from both its ends is one beam wherever its ends stand now: told apart by the spans the link stores, never by the stretches they stand in', () => {
+  build([OWN]);
+  // D as a later member arranges it: twenty bytes it minted before D's own, so the citation stored at D's 50 stands at 70
+  REC.takeImage(D, 1, [{ iStart: D + '.2.0.1.1', width: 20 }, { iStart: D + '.0.1.1', width: 100 }]);
+  REC.takeProjection(OWN, 1, D, [{ pos: 70, width: 10 }]);
+  LK.reveal(H, 3);
+  const all = met([D, H]);
+  assert.deepEqual(all.filter((b) => b.s.link.addr === OWN).map((b) => [b.s.near, b.s.pos]), [[D, 70], [H, 1]], 'met at D where it stands now, and at H');
+  assert.equal(members(bundlesOf(all)).filter(([l]) => l === OWN).length, 1, 'one beam, never one from each end');
+});
+
+test('a far end stands where `project` places its passage now: the beam ends at the projected stretch\'s line, never at the line its stored position holds; one that floats ends at the far article\'s first block, where its follow lands; one nothing places is aimed at the far document\'s box', () => {
+  // H mounted: the text at the citation's stored position, 1, another passage now on FAR's lines; the cited passage moved to 9, three
+  // positions, on a line of its own lower in the block
+  const MOVED = [{ x: 640, y: 440, w: 60, h: 15 }];
+  const base = geometry({ farMounted: true, centre: { x: 750, y: 415 } });
+  /** @type {import('./beams.js').Geometry} */
+  const g = { ...base, lines: (addr, pos, width) => (addr === H && pos === 9 && width === 3 ? MOVED : base.lines(addr, pos, width)), block: (addr, pos) => (addr === H && pos >= 9 && pos < 12 ? FAR_BLOCK : base.block(addr, pos)) };
+  REC.takeProjection(OWN, 2, H, [{ pos: 9, width: 3 }]);
+  const moved = beamOf(own(), g);
+  assert.deepEqual(moved && [moved.to, moved.aimed, moved.stub], [{ x: 600, y: 447.5 }, false, false], 'at the moved passage\'s line, from the far block\'s left edge');
+  REC.takeProjection(OWN, 2, H, []);
+  const floating = beamOf(own(), g);
+  assert.deepEqual(floating && [floating.to, floating.aimed, floating.stub], [{ x: 600, y: 415 }, false, false], 'floating: at the far article\'s first block');
+  REC.invalidate(H);
+  const unread = beamOf(own(), g);
+  assert.deepEqual(unread && [unread.to, unread.aimed, unread.stub], [{ x: 750, y: 415 }, true, false], 'no projection held: aimed at H\'s box, as an end not laid out');
+});
+
+test('a bundle whose every beam floats says so at its end, "its passage is not in ⟨D⟩\'s current text"; one holding a beam that lands beside one that floats says neither (P44)', () => {
+  build([OWN, THIRD]);
+  REC.takeProjection(OWN, 2, H, []); REC.takeProjection(THIRD, 2, H, []);
+  const label = () => labelText(bundlesOf(met([D]))[0]);
+  const words = ' · ' + t('F.floating', { D: H });
+  assert.ok(label().startsWith(H + ' · 2') && label().endsWith(words), label());
+  REC.takeProjection(THIRD, 2, H, [{ pos: 9, width: 3 }]);
+  assert.equal(label(), H + ' · 2', 'one lands: no word of floating');
 });

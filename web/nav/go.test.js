@@ -167,6 +167,11 @@ const takeLocked = () => {
   REC.takeOwner('1.0.2.1', { prefix: PRIVATE_OWNER, principal: 901 });
   REC.takeLinks(D, [LOCKED]); REC.takeLink({ addr: LOCKED, from: [span(D, 7, 2)], to: [{ ...span(PRIVATE, 1, 5), account: '1.0.2.1' }], type: CITE });
 };
+// a citation from the first edition of a passage of FAR an edit moved: its far end, stored at FAR's 8, five positions, projects to
+// FAR's 20 now
+const SHIFTED = D + '.0.2.10';
+/** the moved citation taken into the model, drawn at the first edition */
+const takeShifted = () => { REC.takeLinks(D, [SHIFTED]); REC.takeLink({ addr: SHIFTED, from: [span(D, 21, 2)], to: [span(FAR, 8, 5)], type: CITE }); };
 // a citation from the first edition of a passage of FAR whose projection the board declines: `not_a_link`, no such slot (A-53)
 const DECLINED = D + '.0.2.7';
 /** the declined citation taken into the model, drawn at the first edition */
@@ -226,6 +231,9 @@ const script = {
   [FAKE.keyOf('op', { frame: F.project(SPLIT, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }, { start: '1.3', width: '0.4' }] } },
   // the floating citation's far end in FAR's current text: no run
   [FAKE.keyOf('op', { frame: F.project(FLOAT, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [] } },
+  // the moved citation's far end where FAR's text holds it now, and its lineage and the floating one's, which their anatomy cards read
+  [FAKE.keyOf('op', { frame: F.project(SHIFTED, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }] } },
+  ...Object.fromEntries([SHIFTED, FLOAT].flatMap((l) => [F.inClaims(l, 'audit'), F.outClaims(l, 'audit')]).map((frame) => [FAKE.keyOf('op', { frame }), { result: { as_of: 1, resp: 'claims', claims: [] } }])),
   // the withheld citation's far document: its span set and the projection into it refused `withheld`, the document consulted first
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(PRIVATE) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
   [FAKE.keyOf('op', { frame: F.project(LOCKED, 2, PRIVATE) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
@@ -363,6 +371,42 @@ test('a follow of a far end the far document\'s text no longer holds lands at th
   assert.deepEqual([walkAt(), marks()], [['block', FAR, FAR_HEAD], [null, null]], 'Back lands at the head, lighting nothing: no link reached the entry it left');
   await run(GO.back());
   assert.deepEqual(marks(), [null, FLOAT], 'Back to the follow\'s departure lights the link there');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow whose projection the board declines faces the refusal its own projection met — never another read\'s, met while it was out and answered right behind it', async () => {
+  takeDeclined();
+  await run(GO.leapTo(D));
+  const from = fake.asked.length;
+  const projection = fake.hold('op', { frame: F.project(DECLINED, 2, FAR) });
+  const other = fake.hold('op', { frame: F.retrieveDocVSpanSet(GONE) });
+  const following = GO.follow(drawn(DECLINED));
+  const reading = PUMP.loadWhole(GONE);
+  const asked = (/** @type {object} */ frame) => fake.asked.slice(from).includes(FAKE.keyOf('op', { frame }));
+  for (let i = 0; i < 50 && !(asked(F.project(DECLINED, 2, FAR)) && asked(F.retrieveDocVSpanSet(GONE))); i++) await new Promise((r) => setTimeout(r, 0));
+  // the projection answered first, the other read's refusal right behind it, before the follow reads its own
+  projection(); other();
+  await run(following); await reading;
+  assert.equal(PUMP.refusalsMet().slice(-1)[0]?.refusal.name, 'doc_not_registered', 'the other read\'s refusal is the last the pump met');
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['face:not_a_link', { span: { addr: D, pos: 13, width: 2 } }], 'the follow faces its projection\'s own, at the link\'s bytes');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the anatomy card reads the far end where its passage stands now — one an edit moved at its place, never the position the link stores; one that floats in the dead end\'s words — the projection asked in the card\'s own opening where none is held', async () => {
+  takeShifted(); takeFloat();
+  await run(GO.leapTo(D));
+  await PUMP.loadWhole(FAR);
+  const quoted = () => (hostEl.innerHTML.match(/<div class="end far">.*?<div class="quoted">(.*?)<\/div>/) || [])[1];
+  const from = fake.asked.length;
+  await ANATOMY.open(drawn(SHIFTED), null);
+  assert.ok(fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.project(SHIFTED, 2, FAR) })), 'no projection held: asked in the card\'s opening');
+  assert.deepEqual([quoted(), REC.projection(SHIFTED, 2, FAR)], [esc(REC.textBetween(FAR, 20, 25)), [{ pos: 20, width: 5 }]], 'FAR\'s text where the passage stands now, the projection held');
+  assert.notEqual(quoted(), esc(REC.textBetween(FAR, 8, 13)), 'never the text at its stored position');
+  HOST.dismiss();
+  await ANATOMY.open(drawn(FLOAT), null);
+  assert.equal(quoted(), esc(t('F.floating', { D: FAR })), 'floating: the dead end\'s words, said before anyone follows it');
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 

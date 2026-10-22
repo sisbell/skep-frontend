@@ -146,7 +146,7 @@ export function viewFor(addr, pos) {
 /** the label a place's entry carries: the index's, else the record's */
 function labelOf(/** @type {string} */ addr) { const p = REC.place(addr); return p ? p.label : REC.doc(addr).label; }
 
-/** runs in the text's order, by their first positions: the wire names no order for a span set, and `compare`'s stretches stand in the carried passage's order */
+/** runs in the text's order, by their first positions: `compare`'s stretches stand in the carried passage's order, and a caller's runs in the order it names them (a projection's come in the text's order from M-PUMP) */
 const inTextOrder = (/** @type {Run[]} */ runs) => [...runs].sort((x, y) => x.pos - y.pos);
 /** the positions of the run a landing stands at — the one its position begins — which its trail entry carries; null where it names no run there */
 const widthAt = (/** @type {Run[] | null} */ runs, /** @type {number | null} */ pos) => { const r = runs && runs.find((x) => x.pos === pos); return r ? r.width : null; };
@@ -251,9 +251,10 @@ export async function leapTo(addr, opts = {}) {
  * document's head and lands there, the link lit and nothing outlined, with
  * the dead end's face standing at the head landed on (foundations §2.3). A
  * dead reference, a far document the board withholds from the reader — no
- * slot projected into it, a read the board refuses with the document — or a
- * refusal is faced in the landing's place, the claim withdrawn (B1-S8); a
- * link naming no far document is faced at once. Each such face stands at the
+ * slot projected into it, a read the board refuses with the document — or the
+ * refusal the projection itself met, whatever other read met one meanwhile,
+ * is faced in the landing's place, the claim withdrawn (B1-S8); a link naming
+ * no far document is faced at once. Each such face stands at the
  * act's site (foundations §3.1, F-G3): the link's own bytes in its near
  * document — the link the anatomy card offering the follow is conjured at,
  * inside the selection the follow slot acts on — and follows them as the
@@ -275,22 +276,17 @@ export async function follow(s, byKey = false) {
   const entry = TRAIL.push({ addr: far, pos: null, width: null, view: viewFor(far, null), link: l.addr, label: labelOf(far) }, CAM.destination(), true);
   /** the follow ended in a face in the landing's place: its claim withdrawn, the face shown where no act was made after it */
   const faced = (/** @type {() => void} */ face) => { TRAIL.withdraw(entry); if (act === made) { face(); CAM.markDirty(); } };
-  const slot = s.end === 'from' ? 2 : 1;
   const fd = REC.doc(far);
   if (fd.refused !== 'unregistered' && fd.extent == null) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced(() => FACES.unregistered(far, site)); return; }
   if (REC.doc(far).refused === 'withheld') { faced(() => FACES.withheld(far, site)); return; }
-  const proj = await PUMP.projectEnd(l.addr, /** @type {1 | 2} */ (slot), far);
-  if (proj === 'refused') {
-    const r = PUMP.refusalsMet().slice(-1)[0];
-    faced(() => FACES.showRefusal(site, r ? r.refusal : { kind: 'shell', name: 'unknown' }, far));
-    return;
-  }
+  const proj = await PUMP.projectEnd(l.addr, s.farSlot, far);
+  if ('refused' in proj) { const r = proj.refused; faced(() => FACES.showRefusal(site, r, far)); return; }
   const d = REC.doc(far);
   if (d.extent == null || d.from < 0) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced(() => FACES.unregistered(far, site)); return; }
   if (REC.doc(far).refused === 'withheld') { faced(() => FACES.withheld(far, site)); return; }
-  const runs = proj ? inTextOrder(proj.map((p) => ({ pos: p.ordinal, width: p.positions }))) : null;
+  const runs = proj.runs.length ? proj.runs : null;
   const pos = runs ? runs[0].pos : headOf(REC.doc(far)), marked = runs && !s.farWhole ? runs : null;
   const v = viewFor(far, pos);
   TRAIL.settle(entry, { view: v, pos, width: widthAt(marked, pos) });

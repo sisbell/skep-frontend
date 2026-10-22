@@ -2,23 +2,34 @@
 // viewport asked for and nothing more). Layer 1. PURE: runnable under Node
 // against a fake port. State: MODEL — THE ONE OWNER (FP-10) of the held
 // records: documents (their index row, their extent, their delivered runs
-// and the blocks derived from them, their metadata, their transclusion
-// origins, the raw set of links touching them), links as delivered with the
-// type learned once (E17 (a)), the board, the session REFERENCE (a name,
-// never a token), health and the derived mode, the daemon's state, the key
-// store's label; THE CLIENT INDEX built from `places` (skep #463 — the
-// documents per account, their labels, kinds and standing; the counts per
-// account; the index's state and floor), each answer replacing the index
-// whole, and kept by the feed's rows — never from `/changes`, never by
-// enumerating documents. THE CLASS: every record read here was read at the
-// page's class, and the page's own session's death (`sessionDied`) drops
-// every one — the index, each document's delivered state and its row, the
-// links, the owners and key sets, the drafts rows held — so what stands after
+// and the blocks derived from them, their metadata, their V→I image as read
+// and the transclusion origins it shows, the raw set of links touching them),
+// links as delivered with the type learned once (E17 (a)), where a link's
+// slot sits in a document's current text as `project` answered it, the
+// board, the session REFERENCE (a name, never a token), health and the
+// derived mode, the daemon's state, the key store's label; THE CLIENT INDEX
+// built from `places` (skep #463 — the documents per account, their labels,
+// kinds and standing; the counts per account; the index's state and floor),
+// each answer replacing the index whole, and kept by the feed's rows — never
+// from `/changes`, never by enumerating documents. THE CLASS: every record
+// read here was read at the page's class, and the page's own session's death
+// (`sessionDied`) drops every one — the index, each document's delivered state
+// and its row, the links and where their slots project, the owners and key
+// sets, the drafts rows held — so what stands after
 // it is what a guest's page holds before it reads (foundations §2.1: the
 // index "masked at the reader's class"; client.md §4e.3); M-PUMP reads it
 // all again at guest class. It knows nothing of pixels, zoom, selection or
 // lenses: "the links touching an address" is the RAW set as delivered —
 // which of them show, and how, is LK's (the seam).
+// A LINK'S SLOT NAMES BYTES, NEVER A PLACE: a V-spec slot is recorded as the
+// permanent I-spans of the bytes it named (wire.md §Links, `make_link`), so
+// where a drawn end's stored span stands in its document's text now is read
+// through that document's V→I image as held (`placed`) — a passage an edit
+// moved stands where the image puts it, one cut in two stands in two runs,
+// one the text no longer holds stands nowhere — and where a link's far end
+// stands in its far document's current text is `project`'s answer
+// (`takeProjection`, A-53), held until that document's delivered state is
+// dropped.
 // THE `H` DOCUMENT (the record §1.8, OPEN): the system account's rows are
 // HELD here and marked `system`; the plane does not draw them (this lane's
 // cut, reported).
@@ -72,6 +83,16 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /**
+ * @typedef {Object} ImageRun — one run of a document's V→I image, placed at its positions: `width` consecutive permanent addresses from `ordinal` in the I-space `prefix` names (wire.md §Value encodings, `runs`), sitting at the positions [pos, pos + width) of the document's text
+ * @property {number} pos the run's first position in the document's text
+ * @property {number} width
+ * @property {string} prefix the run's first permanent address without its last field — the I-space it lies in: `1.0.1.0.3.0.1` for the document's own content, `1.0.1.0.3.2.0.1` for content minted under its second member's chain, another document's for a transcluded run
+ * @property {number} ordinal the last field of its first permanent address
+ */
+
+/** @typedef {{pos: number, width: number}} Stretch a stretch of a document's text a stored span stands in: its first position and its positions */
+
+/**
  * @typedef {Object} Doc
  * @property {string} addr
  * @property {string | null} account
@@ -86,8 +107,9 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {number} from the first delivered position, or -1
  * @property {number} to one past the last delivered position
  * @property {Block[]} blocks
- * @property {Origin[]} origins
- * @property {[number, number] | null} originsFor the window the origins were read for
+ * @property {ImageRun[]} image the V→I image as read, in position order: the permanent address of every position it covers
+ * @property {Origin[]} origins the image's runs whose origin is another document — the transcluded runs
+ * @property {[number, number] | null} imageFor the window the image was read for
  * @property {Set<string>} links the addresses of the links touching this document, as `find_links_v` delivered them
  * @property {boolean} linksRead
  * @property {number | null} members the chain's member count where probed, else null
@@ -141,6 +163,8 @@ const state = {
   docs: new Map(),
   /** @type {Map<string, Link>} */
   links: new Map(),
+  /** @type {Map<string, Map<string, Stretch[] | 'refused'>>} `project`'s answers, by the document projected into, then by `⟨link⟩ ⟨slot⟩` */
+  projections: new Map(),
   /** @type {Map<string, OwnerRow>} */
   owners: new Map(),
   /** @type {Map<string, {enrolled: Array<{fingerprint: string, anchor: boolean}>, retired: Array<{fingerprint: string}>}>} */
@@ -174,17 +198,17 @@ export const sessionRefused = () => state.sessionRefused;
  * The death signal: the line drops "acting as" at once, and every read held
  * at the session's class goes with the session — the index (its rows, counts
  * and state), each document's delivered state and the index's row on it, the
- * links, the owners and key sets, and the feed's drafts rows — so no frame
- * after it draws, lists or counts what the session could read and a guest
- * cannot. M-PUMP reads the index again in the guest form, and the view asks
- * the rest.
+ * links and where their slots project, the owners and key sets, and the
+ * feed's drafts rows — so no frame after it draws, lists or counts what the
+ * session could read and a guest cannot. M-PUMP reads the index again in the
+ * guest form, and the view asks the rest.
  * @param {DeathReason} reason
  */
 export function sessionDied(reason) {
   state.sessionDied = reason; state.session = null;
   state.index.clear(); state.counts.clear(); state.indexState = null;
   for (const d of state.docs.values()) { drop(d); unlist(d); }
-  state.links.clear(); state.owners.clear(); state.keySets.clear();
+  state.links.clear(); state.projections.clear(); state.owners.clear(); state.keySets.clear();
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
   bump();
 }
@@ -287,7 +311,7 @@ export function doc(addr) {
     d = {
       addr, account: accountOf(addr), kind: p ? p.kind : 'unknown', label: p ? p.label : null, standing: p ? p.standing : null,
       system: isUnder(SYSTEM_ACCOUNT, addr), extent: null, linkPositions: null, meta: null, runs: [], from: -1, to: -1, blocks: [],
-      origins: [], originsFor: null, links: new Set(), linksRead: false, members: null, whole: null, rev: 0, refused: null,
+      image: [], origins: [], imageFor: null, links: new Set(), linksRead: false, members: null, whole: null, rev: 0, refused: null,
     };
     state.docs.set(addr, d);
   }
@@ -424,42 +448,88 @@ export function textBetween(/** @type {string} */ addr, /** @type {number} */ p0
   return d ? textOf(d.runs, p0, p1) : '';
 }
 
+/** a permanent address cut at its last field: the I-space it lies in, and its ordinal there */
+function iPlace(/** @type {string} */ start) {
+  const cut = start.lastIndexOf('.');
+  return { prefix: start.slice(0, cut), ordinal: Number(start.slice(cut + 1)) };
+}
+
 /**
- * The V→I image's runs over a window: those whose origin is another
- * document are the transcluded runs.
+ * The V→I image's runs over a window, kept whole — each placed at its
+ * positions, the permanent addresses `placed` reads a link's stored span
+ * back to the text through — and the runs whose origin is another document,
+ * the transcluded runs, marked as origins.
  * @param {string} addr
  * @param {number} fromPos the window's first position
  * @param {Array<{iStart: string, width: number}>} runs
  */
-export function takeOrigins(addr, fromPos, runs) {
+export function takeImage(addr, fromPos, runs) {
   const d = doc(addr);
+  /** @type {ImageRun[]} */
+  const image = [];
   /** @type {Origin[]} */
   const out = [];
   let pos = fromPos;
   for (const r of runs) {
+    image.push({ pos, width: r.width, ...iPlace(r.iStart) });
     const el = elementOf(r.iStart);
     const origin = el ? el.doc : documentOf(r.iStart);
     if (origin && origin !== addr && documentOf(origin) !== documentOf(addr)) out.push({ pos, width: r.width, doc: origin });
     pos += r.width;
   }
-  d.origins = d.origins.filter((o) => o.pos + o.width <= fromPos || o.pos >= pos).concat(out).sort((a, b) => a.pos - b.pos);
-  d.originsFor = [fromPos, pos];
+  const outside = (/** @type {{pos: number, width: number}} */ o) => o.pos + o.width <= fromPos || o.pos >= pos;
+  d.image = d.image.filter(outside).concat(image).sort((a, b) => a.pos - b.pos);
+  d.origins = d.origins.filter(outside).concat(out).sort((a, b) => a.pos - b.pos);
+  d.imageFor = [fromPos, pos];
   d.rev++; bump();
+}
+
+/**
+ * Where a link's stored span stands in a document's held text now: the
+ * positions of the held V→I image whose permanent addresses the span names
+ * (the span's I-space, from its ordinal for its positions), in the text's
+ * order, stretches adjoining in the text joined — a passage an edit moved
+ * where the image puts it, one cut in two as two stretches, one transcluded
+ * twice at both places. None where the image held places none of it: no
+ * image read, the span outside the window it was read for, or the text no
+ * longer holding it. A span naming a document or an account whole stands at
+ * no position.
+ * @param {string} addr
+ * @param {EndRef} e
+ * @returns {Stretch[]}
+ */
+export function placed(addr, e) {
+  const d = state.docs.get(addr);
+  if (!d || e.whole || e.ordinal == null) return [];
+  const { prefix, ordinal } = iPlace(e.start), end = ordinal + (e.positions || 1);
+  /** @type {Stretch[]} */
+  const out = [];
+  for (const r of d.image) {
+    if (r.prefix !== prefix) continue;
+    const lo = Math.max(ordinal, r.ordinal), hi = Math.min(end, r.ordinal + r.width);
+    if (lo < hi) out.push({ pos: r.pos + (lo - r.ordinal), width: hi - lo });
+  }
+  out.sort((a, b) => a.pos - b.pos);
+  /** @type {Stretch[]} */
+  const joined = [];
+  for (const s of out) { const last = joined[joined.length - 1]; if (last && last.pos + last.width === s.pos) last.width += s.width; else joined.push(s); }
+  return joined;
 }
 
 /** the members probed: the chain holds n members (`D.1 … D.n`) */
 export function takeMembers(/** @type {string} */ addr, /** @type {number} */ n) { const d = doc(addr); d.members = n; d.rev++; bump(); }
 
-/** drop a document's delivered state (a feed row named it; the viewport asks again) */
+/** drop a document's delivered state (a feed row named it; the viewport asks again), and where every link's slot projects into it, whether or not the page holds its record */
 export function invalidate(/** @type {string} */ addr) {
-  const d = state.docs.get(addr); if (!d) return;
-  drop(d);
-  bump();
+  const d = state.docs.get(addr);
+  const projected = unproject(addr);
+  if (d) drop(d);
+  if (d || projected) bump();
 }
 
 /** a document's delivered state dropped — everything its reads brought; the record stands, its runs and blocks given new empty ones as a delivery gives new ones */
 function drop(/** @type {Doc} */ d) {
-  d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.extent = null; d.whole = null; d.linkPositions = null; d.meta = null; d.origins = []; d.originsFor = null;
+  d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.extent = null; d.whole = null; d.linkPositions = null; d.meta = null; d.image = []; d.origins = []; d.imageFor = null;
   d.links.clear(); d.linksRead = false; d.members = null; d.refused = null; d.rev++;
 }
 
@@ -494,6 +564,47 @@ export function unreadLinks(/** @type {string} */ addr) {
 }
 /** every link held */
 export const links = () => [...state.links.values()];
+
+/** every held document whose links include one of these gains a revision: what its article sets from where they project is made again */
+function relink(/** @type {Set<string>} */ named) {
+  for (const d of state.docs.values()) for (const a of d.links) if (named.has(a)) { d.rev++; break; }
+}
+
+/**
+ * `project`'s answer (A-53): where a link's slot sits in a document's current
+ * text now — every stretch, in the text's order; none where the end has left
+ * that text (a floating end); 'refused' where the board declined the read.
+ * Held until the document's delivered state is dropped (`invalidate`, the
+ * session's death).
+ * @param {string} link
+ * @param {1 | 2} slot
+ * @param {string} addr the document projected into
+ * @param {Stretch[] | 'refused'} runs
+ */
+export function takeProjection(link, slot, addr, runs) {
+  let m = state.projections.get(addr);
+  if (!m) { m = new Map(); state.projections.set(addr, m); }
+  m.set(link + ' ' + slot, runs === 'refused' ? runs : [...runs].sort((a, b) => a.pos - b.pos));
+  relink(new Set([link]));
+  bump();
+}
+/**
+ * The held projection of a link's slot into a document: its stretches in the
+ * text's order, none for a floating end, 'refused', or undefined where none
+ * is held.
+ * @param {string} link
+ * @param {1 | 2} slot
+ * @param {string} addr
+ * @returns {Stretch[] | 'refused' | undefined}
+ */
+export const projection = (link, slot, addr) => state.projections.get(addr)?.get(link + ' ' + slot);
+/** where every link's slot projects into a document dropped; whether any was held */
+function unproject(/** @type {string} */ addr) {
+  const m = state.projections.get(addr); if (!m) return false;
+  state.projections.delete(addr);
+  relink(new Set([...m.keys()].map((k) => k.split(' ')[0])));
+  return true;
+}
 
 // ---- owners, key sets ----------------------------------------------------------
 
@@ -540,7 +651,7 @@ export const feedRows = () => state.feed.slice();
 export function _reset() {
   state.board = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.health = null; state.mode = null;
   state.device = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
-  state.links.clear(); state.owners.clear(); state.keySets.clear(); state.feed = []; state.rev = 0;
+  state.links.clear(); state.projections.clear(); state.owners.clear(); state.keySets.clear(); state.feed = []; state.rev = 0;
 }
 
 /** a deep, serializable picture of the model for the gate and the fake-port test */
