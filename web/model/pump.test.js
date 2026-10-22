@@ -75,14 +75,19 @@
 // chain its trunk is dropped under recording no count and probing again; an
 // image placed from the window it was asked for, never from one a text read
 // widened before it landed;
+// a bare feed row — its docs null — naming the home of the link it deposited
+// by its link alone, whatever its op, named or null: the view asks again what
+// it read of the home, the new link read with it (a mutant that forgets the
+// row's docs alone, or drops a `make_link`'s home alone, turns red);
 // the edition claims on the origin of a withheld run asked by the view at
 // reading scale and by a whole read — the active view's `find_links_ftt`
 // lookup, never the audit view's `edition_claims` — then each listed claim's
 // link and its home's metadata, each once (a mutant that asks none, or asks
 // the audit view, turns red); dropped by every row that may change them — a
-// link written anywhere, a publish — and by the page's own death, and asked
-// again, any other row leaving them held (a mutant that drops them at no
-// row, or never asks again, turns red); a lookup that lands after such a row
+// link written anywhere, a publish, a bare row whose op is null — and by the
+// page's own death, and asked again, any other row leaving them held (a
+// mutant that drops them at no row, at a named op alone, or never asks
+// again, turns red); a lookup that lands after such a row
 // taking nothing and asked again (a mutant that watches the origin's drops
 // alone takes the claims read before the row and turns red);
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
@@ -1020,6 +1025,29 @@ test('an image asked for a window a text read widens before it lands is placed f
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('a bare feed row — its docs null — names the home of the link it deposited by its link alone: the view asks again what it read of the home, whatever the row\'s op, and reads the new link', async () => {
+  const [L1, L2, L3] = [1, 2, 3].map((k) => `${D}.0.2.${k}`);
+  const toFar = [{ start: '1.0.1.0.127', width: '0.0.0.0.1' }];
+  const s = { ...script, [FAKE.keyOf('op', { frame: F.readLink(L2) })]: citation(14, toFar), [FAKE.keyOf('op', { frame: F.readLink(L3) })]: citation(17, toFar), [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: NOT_REGISTERED };
+  const span = inTurn(s, F.retrieveDocVSpanSet(D), script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]);
+  const touching = (/** @type {string[]} */ addrs) => ({ result: { as_of: 1, resp: 'addrs', addrs } });
+  // D's links before each write and after it
+  inTurn(s, F.findLinksV(D, 1, 30), touching([L1]), touching([L1, L2]), touching([L1, L2, L3]));
+  const fake = readingD(s);
+  await settle();
+  assert.deepEqual([span.asks(), [...REC.doc(D).links]], [1, [L1]], 'D read at its reading em, its one link');
+  // a replacing make_link served bare: its op and its link, its docs lost (wire.md §The change feed)
+  fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'make_link', docs: null, key: null, time: null, link: L2, class: 'published' } });
+  assert.equal(REC.doc(D).extent, null, 'the link\'s home dropped');
+  await settle();
+  assert.deepEqual([span.asks(), REC.doc(D).extent, [...REC.doc(D).links]], [2, 30, [L1, L2]], 'asked again: its extent, and its links with the new one');
+  // a plain make_link, an emit or an assert_sup served bare: the link alone, the op unnamed
+  fake.fire('feed', { board: 'b-1', update: { position: 5, at: 5, op: null, docs: null, key: null, time: null, link: L3, class: 'published' } });
+  await settle();
+  assert.deepEqual([span.asks(), REC.doc(D).extent, [...REC.doc(D).links]], [3, 30, [L1, L2, L3]], 'a row naming no op drops the home as well, and the view asks again');
+  assert.deepEqual(fake.unanswered, []);
+});
+
 // ---- the edition claims on a withheld run's origin -------------------------------------------------------------------
 
 /** D's withheld run's origin, and two claims of the edition class on it: the owner's edition over its own bytes, a delegate's quoting the draft — each homed out of the view D is read at */
@@ -1059,12 +1087,16 @@ test('at reading scale the view asks the edition claims on the origin of each wi
   const rows = [
     { op: 'make_link', docs: ['1.0.2.0.5'], link: '1.0.2.0.5.0.2.1' }, { op: 'emit', docs: ['1.0.2.0.5'] }, { op: 'edit_link', docs: ['1.0.2.0.5'] },
     { op: 'nullify', docs: ['1.0.2.0.5'] }, { op: 'assert_sup', docs: ['1.0.2.0.5'] }, { op: 'publish', docs: ['1.0.2.0.6.1'] },
+    // bare rows (wire.md §The change feed): a link the journal names, its op unnamed — a make_link, an emit or an assert_sup —
+    // and a write it decides nothing of, every term null — an edit_link, or a publish under a node no walk reaches, among others
+    { op: null, docs: null, link: '1.0.2.0.5.0.2.2' }, { op: null, docs: null, link: null },
   ];
   for (const [i, row] of rows.entries()) {
+    const what = row.op ?? (row.link ? 'bare link' : 'bare');
     fake.fire('feed', { board: 'b-1', update: { position: 5 + i, at: 5 + i, class: 'published', ...row } });
-    assert.equal(REC.editionClaimsOf(O), undefined, `a ${row.op} row drops the claims held`);
+    assert.equal(REC.editionClaimsOf(O), undefined, `a ${what} row drops the claims held`);
     await settle();
-    assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [2 + i, [EDITION, FORK]], `and the view asks the lookup again after the ${row.op}`);
+    assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [2 + i, [EDITION, FORK]], `and the view asks the lookup again after the ${what}`);
   }
   assert.deepEqual([F.readLink(EDITION), F.readLink(FORK), F.docMetadata(EDITION_HOME), F.docMetadata(FORK_HOME)].map(times), [1, 1, 1, 1], 'the links and the metadata held through the drops: read once in all');
   assert.deepEqual(fake.unanswered, []);

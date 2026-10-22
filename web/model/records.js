@@ -734,7 +734,9 @@ function unproject(/** @type {string} */ addr) {
  * ones a reader may see, may be others: the five link writes — a claim
  * deposited, its successor, a retraction, a supersession (wire.md §Links
  * (writes)) — and a `publish`, which may publish a claim's home (PUB-5.99) and
- * make a claim homed in it one the reader may read.
+ * make a claim homed in it one the reader may read. A bare row whose op the
+ * journal could not name serves `op: null` (wire.md §The change feed) and may
+ * be any of the six, so `applyFeedUpdate` drops the claims at it too.
  */
 const CLAIM_WRITES = new Set(['make_link', 'emit', 'edit_link', 'nullify', 'assert_sup', 'publish']);
 
@@ -807,25 +809,34 @@ export const keySetOf = (/** @type {string} */ account) => state.keySets.get(acc
 /**
  * A `feed` update as the shell crate defines it (S-24 (b)): the `/changes`
  * row verbatim plus `position` and `class`. The index takes its part
- * (`listRow`); a write to a document drops what the viewport held of it, of
- * the trunk and of the member the row names; a link made, what it held of
- * the link's home and the home's trunk; a link written anywhere, or a
- * publish, every edition claim it held (`CLAIM_WRITES`).
+ * (`listRow`). A write drops what the viewport held of every document it
+ * touched, each once: each document the row names, with the trunk of a member
+ * among them, and the home of the link the row names, with the home's trunk.
+ * A bare row — lost testimony, its `docs` reading `null` (wire.md §The change
+ * feed) — names its home by its `link` alone, the one link the journal says
+ * the write deposited, whether its op is named or `null`; where the journal
+ * decides no link the row serves `link: null`, though the shell's shape
+ * declares `link` never null (reported: skep #581). A bare row naming neither
+ * — a `nullify` by its op alone, an `edit_link`, a `version` — drops no
+ * document: the journal works out what such a write touched and serves none
+ * of it (reported: skep #582). A row after which the edition claims may be
+ * others (`CLAIM_WRITES`, a `null` op among them) drops every one held.
  * @param {FeedUpdate} u
+ * @returns {string[]} the addresses dropped, each once: what the view asks again (M-PUMP)
  */
 export function applyFeedUpdate(u) {
   const docsNamed = Array.isArray(u.docs) ? u.docs : [];
   state.feed.push({ position: u.position, op: u.op, docs: docsNamed, cls: u.class });
   if (state.feed.length > 2000) state.feed.shift();
   listRow(u);
-  for (const named of docsNamed) {
-    const trunk = documentOf(named) || named;
-    invalidate(trunk);
-    if (named !== trunk) invalidate(named);
-  }
-  if (u.op === 'make_link' && u.link) { const home = homeOf(u.link); if (home) { const trunk = documentOf(home) || home; invalidate(trunk); if (home !== trunk) invalidate(home); } }
-  if (u.op && CLAIM_WRITES.has(u.op)) dropClaims();
+  const home = typeof u.link === 'string' ? homeOf(u.link) : null;
+  /** @type {Set<string>} */
+  const touched = new Set();
+  for (const named of home ? [...docsNamed, home] : docsNamed) { touched.add(documentOf(named) || named); touched.add(named); }
+  for (const addr of touched) invalidate(addr);
+  if (u.op == null || CLAIM_WRITES.has(u.op)) dropClaims();
   bump();
+  return [...touched];
 }
 
 /**

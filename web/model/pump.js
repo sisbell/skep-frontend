@@ -87,13 +87,15 @@
 // `index`, `mode`, `daemon` — is taken where it names the page's board, and
 // none before the board is known: the boot's `health`, `probe` and `places`
 // answer all it would set. The feed's rows → M-REC's index and
-// invalidation, and the view asks again what it read of each document a row
-// names — of its trunk, where the row names a member (a new version's
-// `publish` names the member, and the trunk's text, its chain and where
-// links project into it are what changed); a `drafts` row only while the
-// page holds a session — a guest's index lists no draft (search.md §4
-// (iii)), nor does the index of
-// a page whose session was refused or ended. `index` → M-REC's state where
+// invalidation, and the view asks again what it read of each address M-REC
+// dropped for the row (`applyFeedUpdate`) — each document the row names and
+// the trunk of a member among them (a new version's `publish` names the
+// member, and the trunk's text, its chain and where links project into it
+// are what changed), and the home of the link it names with the home's
+// trunk, which a bare row, its `docs` reading `null`, names by its `link`
+// alone; a `drafts` row only while the page holds a session — a guest's
+// index lists no draft (search.md §4 (iii)), nor does the index of a page
+// whose session was refused or ended. `index` → M-REC's state where
 // it is the face the page reads ("a face receives the state of the pair it
 // searches"): the guest face's, which names no session, for a page with no
 // session or with a session of no account, for which no drafts index
@@ -130,7 +132,7 @@ import { cam, viewportWorld } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation } from '../plane/projection.js';
 import { metricsFor } from '../plane/layout.js';
-import { versionAddress, documentOf, homeOf } from './address.js';
+import { versionAddress, homeOf } from './address.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
 /** @typedef {import('./records.js').Stretch} Stretch */
@@ -223,9 +225,9 @@ export function start(opts) {
   started = true;
   onBoard('feed', (ev) => {
     if (!ev.update || !takesRow(ev.update)) return;
-    REC.applyFeedUpdate(ev.update);
+    const dropped = REC.applyFeedUpdate(ev.update);
     for (const m of whileOut) m.rows.push(ev.update);
-    for (const named of ev.update.docs || []) forget(documentOf(named) || named);
+    for (const addr of dropped) forget(addr);
     dirty();
   });
   onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); for (const m of whileOut) m.state = true; dirty(); } });

@@ -14,7 +14,11 @@
 // A link homed at a version member keeps the member as its home, its owner
 // the member's account, and a link made there drops what was held of the
 // member and of its trunk, whatever the row names (a mutant that reads the
-// home as the trunk turns red).
+// home as the trunk turns red). A bare row — its `docs` null, lost testimony
+// — drops the home of the link it names and the home's trunk whatever its
+// op, named or `null`, and a row answers the addresses it dropped, each
+// once; a bare row naming no link drops no document (a mutant that drops a
+// `make_link`'s home alone turns red).
 // A link's stored span placed through the held V→I image, never at its
 // stored ordinal: moved by an edit, cut in two, held twice, minted under a
 // member's chain, no longer held, outside the window read (a mutant that
@@ -41,9 +45,10 @@
 // Every drop of an address counted — by `invalidate`, its record held or not
 // and none made for it, and by a death, every address's — and no read taken
 // moving the count (a mutant that counts no death turns red). The edition
-// claims on an origin held until a link written anywhere, a publish or the
-// death drops them all, each drop counted, and kept through any other row
-// (a mutant that drops them at no row, or at every row, turns red); each
+// claims on an origin held until a link written anywhere, a publish, a bare
+// row whose op is `null` — which may be either — or the death drops them
+// all, each drop counted, and kept through any other row (a mutant that
+// drops them at no row, at a named op alone, or at every row, turns red); each
 // document windowing the origin made again as the claims, a listed claim's
 // link or its home's metadata arrive and go, and no other document (a mutant
 // that bumps no revision leaves a placeholder's clause decided from claims no
@@ -309,6 +314,24 @@ test('a link homed at a version member keeps the member as its home, never its t
   for (const addr of [D, M]) REC.takeDelivery(addr, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, op: 'make_link', docs: null, class: 'published', link: M + '.0.2.2' }));
   assert.deepEqual([REC.doc(D).from, REC.doc(M).from], [-1, -1], 'the row naming neither: the member the new link is homed at and its trunk both dropped');
+});
+
+test('a bare row — its docs null, lost testimony — drops the home of the link it names and the home\'s trunk whatever its op, and answers what it dropped; one naming no link drops no document; a null op drops the edition claims', () => {
+  const D = '1.0.1.0.2', M = D + '.2', W = '1.0.1.0.3', O = '1.0.1.0.1003', C = '1.0.1.0.9.0.2.1';
+  for (const addr of [D, M, W]) REC.takeDelivery(addr, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
+  REC.takeEditionClaims(O, [C]);
+  // a plain make_link, an emit or an assert_sup, served bare: the one link the journal says it deposited, its op unnamed (wire.md §The change feed)
+  const dropped = REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, op: null, docs: null, key: null, time: null, link: M + '.0.2.3', class: 'published' }));
+  assert.deepEqual([REC.doc(D).from, REC.doc(M).from, REC.doc(W).from], [-1, -1, 1], 'the member the link is homed at and its trunk dropped, no other document');
+  assert.deepEqual(dropped, [D, M], 'answered, the trunk then the member: what the view asks again');
+  assert.equal(REC.editionClaimsOf(O), undefined, 'its op unnamed, it may be any link write: the edition claims dropped');
+  REC.takeEditionClaims(O, [C]);
+  // a write the journal decides nothing of: every term null
+  const undecided = REC.applyFeedUpdate(/** @type {any} */ ({ position: 12331, at: 12331, op: null, docs: null, key: null, time: null, link: null, new_prefix: null, new_id: null, placed: null, base_extent: null, class: 'published' }));
+  assert.deepEqual([undecided, REC.doc(W).from], [[], 1], 'naming no document and no link: nothing dropped, nothing answered');
+  assert.equal(REC.editionClaimsOf(O), undefined, 'its op unnamed, it may be a link write or a publish: the edition claims dropped');
+  const recorded = REC.applyFeedUpdate(/** @type {any} */ ({ position: 12332, at: 12332, op: 'make_link', docs: [W], class: 'published', link: W + '.0.2.4' }));
+  assert.deepEqual([recorded, REC.doc(W).from], [[W], -1], 'a recorded make_link names its home in its docs and by its link: dropped, and answered once');
 });
 
 test('a feed row names a document: the place is kept, what was held is dropped; a system row is marked', () => {
