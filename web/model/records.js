@@ -36,6 +36,13 @@
 // Where a link's far end stands in its far document's current text is
 // `project`'s answer (`takeProjection`, A-53), held until that document's
 // delivered state is dropped.
+// EVERY DROP COUNTED (`dropsOf`): how many times what the page held of an
+// address has been dropped — by `invalidate`, its record held or not, and by
+// every death, which drops every record. A read is answered by one channel
+// and the feed's rows come by another, and nothing orders the two, so a read
+// can land after the row of a write it was read before: M-PUMP reads the
+// count as a read goes out and again as it lands, and takes nothing learned
+// across a drop.
 // THE `H` DOCUMENT (the record §1.8, OPEN): the system account's rows are
 // HELD here and marked `system`; the plane does not draw them (this lane's
 // cut, reported).
@@ -179,6 +186,10 @@ const state = {
   links: new Map(),
   /** @type {Map<string, Map<string, Stretch[] | 'refused'>>} `project`'s answers, by the document projected into, then by `⟨link⟩ ⟨slot⟩` */
   projections: new Map(),
+  /** @type {Map<string, number>} how many times each address's delivered state has been dropped (`invalidate`), its record held or not */
+  drops: new Map(),
+  /** how many times the page's own session's death has dropped every record (`sessionDied`) */
+  deaths: 0,
   /** @type {Map<string, OwnerRow>} */
   owners: new Map(),
   /** @type {Map<string, {enrolled: Array<{fingerprint: string, anchor: boolean}>, retired: Array<{fingerprint: string}>}>} */
@@ -214,11 +225,13 @@ export const sessionRefused = () => state.sessionRefused;
  * and state), each document's delivered state and the index's row on it, the
  * links and where their slots project, the owners and key sets, and the
  * feed's drafts rows — so no frame after it draws, lists or counts what the
- * session could read and a guest cannot. M-PUMP reads the index again in the
- * guest form, and the view asks the rest.
+ * session could read and a guest cannot. Every address is counted dropped
+ * once more (`dropsOf`), so no read out across the death is taken. M-PUMP
+ * reads the index again in the guest form, and the view asks the rest.
  * @param {DeathReason} reason
  */
 export function sessionDied(reason) {
+  state.deaths++;
   state.sessionDied = reason; state.session = null;
   state.index.clear(); state.counts.clear(); state.indexState = null;
   for (const d of state.docs.values()) { drop(d); unlist(d); }
@@ -574,13 +587,24 @@ export function holdsEnd(addr, e) {
 /** the members probed: the chain holds n members (`D.1 … D.n`) */
 export function takeMembers(/** @type {string} */ addr, /** @type {number} */ n) { const d = doc(addr); d.members = n; d.rev++; bump(); }
 
-/** drop a document's delivered state (a feed row named it; the viewport asks again), and where every link's slot projects into it, whether or not the page holds its record */
+/** drop a document's delivered state (a feed row named it; the viewport asks again), and where every link's slot projects into it, whether or not the page holds its record — the drop counted first (`dropsOf`), no record made for it */
 export function invalidate(/** @type {string} */ addr) {
+  state.drops.set(addr, (state.drops.get(addr) ?? 0) + 1);
   const d = state.docs.get(addr);
   const projected = unproject(addr);
   if (d) drop(d);
   if (d || projected) bump();
 }
+
+/**
+ * How many times what the page held of an address has been dropped: by
+ * `invalidate`, its record held or not, and by every death, which drops every
+ * record. It never falls, so a read that finds it moved between going out
+ * and landing was learned of what the page no longer holds.
+ * @param {string} addr
+ * @returns {number}
+ */
+export const dropsOf = (addr) => (state.drops.get(addr) ?? 0) + state.deaths;
 
 /** a document's delivered state dropped — everything its reads brought; the record stands, its runs and blocks given new empty ones as a delivery gives new ones */
 function drop(/** @type {Doc} */ d) {
@@ -708,7 +732,7 @@ export const feedRows = () => state.feed.slice();
 export function _reset() {
   state.board = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.health = null; state.mode = null;
   state.device = null; state.keyPresent = false; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
-  state.links.clear(); state.projections.clear(); state.owners.clear(); state.keySets.clear(); state.feed = []; state.rev = 0;
+  state.links.clear(); state.projections.clear(); state.drops.clear(); state.deaths = 0; state.owners.clear(); state.keySets.clear(); state.feed = []; state.rev = 0;
 }
 
 /** a deep, serializable picture of the model for the gate and the fake-port test */

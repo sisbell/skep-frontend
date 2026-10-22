@@ -40,6 +40,17 @@
 // follows an outage it never announced. A probe of the chain that meets a
 // member the board did not answer records no count, so it is probed again
 // as a held read is asked again, never left at a chain cut short.
+// A READ A DROP OVERTOOK teaches nothing either: the board's answers come back
+// by one channel and the feed's rows by another, and nothing orders the two,
+// so a read can land after the row of a write it was read before. Every read
+// M-REC takes for a document watches the address whose drop voids it
+// (`watchDrops`, M-REC's `dropsOf`, a death dropping every one) — the document
+// it is read for; a projection's, the document projected into, under which the
+// model holds it — and takes nothing it learned across a drop: a view's read is
+// left unasked, its slot freed, and asked again as the view next needs it; the
+// view's probe of a chain records no count; an act's whole read (`loadWhole`)
+// is begun again, and its projection (`projectEnd`) asked again, at most
+// DROP_ATTEMPTS times.
 // The reads go through `op(session, frame)` — the claimant's class — or the
 // guest form where no session stands; a followed far board's reads would
 // take the guest form over its origin (no such board is seeded). EVERY READ
@@ -138,6 +149,8 @@ const RETRY_MS = 120;
 export const UNREACHED_MS = 2000;
 /** a class scan read whole is asked at most this many times while the board answers `scan_busy` */
 const SCAN_ATTEMPTS = 6;
+/** an act's read — a whole document (`loadWhole`), where a link's end projects (`projectEnd`) — is made at most this many times while what it reads is dropped under it (unmeasured) */
+export const DROP_ATTEMPTS = 4;
 /** a read refused `session_ended` awaits its session's end at most this long — a bound on the shell's derive and re-open, which take board reads (unmeasured) */
 const END_WAIT_MS = 5000;
 
@@ -358,6 +371,16 @@ async function readScan(frame, addr) {
 /** did the board not answer — the shell's dial, or the dev provider's fetch, failed? Nothing was learned of what was asked */
 const unanswered = (/** @type {Refusal} */ r) => r.kind === 'unreachable';
 
+/**
+ * Watch an address for a drop from now on, as a read of it goes out: the
+ * watch reads true once what the page held of it has been dropped (M-REC's
+ * `dropsOf`), and what the read learned is then of what the page no longer
+ * holds.
+ * @param {string} addr
+ * @returns {() => boolean} dropped since the watch began
+ */
+function watchDrops(addr) { const at = REC.dropsOf(addr); return () => REC.dropsOf(addr) !== at; }
+
 /** is a key held — the board did not answer it, and its pause stands? */
 const held = (/** @type {string} */ key) => { const at = unreached.get(key); return at != null && performance.now() < at; };
 
@@ -379,13 +402,16 @@ function hold(key) {
  * a read the board did not answer held (`hold`) and asked again past its
  * pause or at the daemon's `running`, its refusal recorded once for the
  * outage; any other refusal recorded and not asked again until invalidated.
+ * A read that lands after its document was dropped (`watchDrops`) frees its
+ * slot and takes nothing — no answer, no refusal recorded, no hold, no retry
+ * — its key left unasked, to be asked again as the view next needs it.
  * Returns whether the need is still MISSING — pending or not yet issued; a
  * refused need is not missing, nor is a held one (nothing will arrive for
  * either).
  * @param {string} key
  * @param {object} frame
  * @param {(answer: unknown) => void} take
- * @param {string} addr
+ * @param {string} addr the document the read is for — a projection's, the document projected into: its drop voids the read, and a refusal is recorded against it
  * @param {(r: Refusal) => void} [onRefused]
  * @returns {boolean} missing
  */
@@ -399,8 +425,10 @@ function need(key, frame, take, addr, onRefused) {
   const isScan = /** @type {{op?: string}} */ (frame).op === 'find_links_v';
   if (isScan && scansInFlight >= MAX_SCANS) return true;
   inflight.add(key); if (isScan) scansInFlight++;
+  const dropped = watchDrops(addr);
   read(frame).then((out) => {
     inflight.delete(key); if (isScan) scansInFlight--;
+    if (dropped()) return;
     if ('refused' in out) {
       const refusal = out.refused;
       const record = () => { const r = { frame: /** @type {{op?: string}} */ (frame).op || 'op', refusal, addr }; refusals.push(r); for (const w of refusalWatchers) w(r); };
@@ -513,11 +541,13 @@ export function pump() {
         if (need('r:' + d.addr + ':' + from + ':' + to, F.retrieveV(d.addr, from, to - from), (a) => REC.takeDelivery(d.addr, F.decodeDelivery(a, from)), d.addr, (r) => refuseDoc(d, r))) missing++;
       }
       if (d.from >= 0 && (!d.imageFor || d.imageFor[0] > d.from || d.imageFor[1] < d.to)) {
-        if (need('i:' + d.addr + ':' + d.from + ':' + d.to, F.image(d.addr, d.from, d.to - d.from), (a) => REC.takeImage(d.addr, d.from, F.decodeRuns(a)), d.addr)) missing++;
+        // placed from the window it was asked for: a text read widening the window can land first
+        const from = d.from, to = d.to;
+        if (need('i:' + d.addr + ':' + from + ':' + to, F.image(d.addr, from, to - from), (a) => REC.takeImage(d.addr, from, F.decodeRuns(a)), d.addr)) missing++;
       }
       for (const p of farEnds(d.addr).slice(0, 12)) {
         const hold = (/** @type {Stretch[] | 'refused'} */ runs) => REC.takeProjection(p.link, p.slot, p.far, runs);
-        if (need('p:' + p.link + ':' + p.slot + ':' + p.far, F.project(p.link, p.slot, p.far), (a) => hold(stretchesOf(a)), d.addr, (r) => { if (r.kind === 'refused') hold('refused'); })) missing++;
+        if (need('p:' + p.link + ':' + p.slot + ':' + p.far, F.project(p.link, p.slot, p.far), (a) => hold(stretchesOf(a)), p.far, (r) => { if (r.kind === 'refused') hold('refused'); })) missing++;
       }
       if (em >= LOD_TXT_LO && d.members == null && d.meta && d.meta.published) { if (probeMembers(d)) missing++; }
     }
@@ -566,7 +596,9 @@ function refuseDoc(/** @type {Doc} */ d, /** @type {Refusal} */ r) {
  * The view's probe of a document's chain (`probeChain`), one at a time: a
  * count recorded is not probed again until invalidated; a probe that met a
  * member the board did not answer is held as a view's read is (`hold`), and
- * probed again past its pause or at the daemon's `running`.
+ * probed again past its pause or at the daemon's `running`; one its trunk was
+ * dropped under is left unasked, as a view's read is (`need`), and probed
+ * again as the view next needs it.
  * @param {Doc} d
  * @returns {boolean} missing
  */
@@ -576,8 +608,10 @@ function probeMembers(d) {
   if (inflight.has(key)) return true;
   if (held(key)) return false;
   inflight.add(key);
+  const dropped = watchDrops(d.addr);
   probeChain(d.addr).then((p) => {
     inflight.delete(key);
+    if (dropped()) return;
     if (p && p.known) { unreached.delete(key); asked.add(key); } else hold(key);
     dirty();
   });
@@ -590,14 +624,18 @@ function probeMembers(d) {
  * MEMBER_PROBE_CAP; the count `known` and recorded (M-REC's `takeMembers`).
  * A member the board did not answer ends the probe with the members met,
  * nothing recorded and the count not `known`: the chain's end was not met, and
- * a count cut short there would stand until invalidated. Null, nothing
- * recorded, where `stands` reads false before a member is asked — an opening
- * that has ended asks no more.
+ * a count cut short there would stand until invalidated. A trunk dropped while
+ * the probe reads (`watchDrops`) — a new member's `publish` drops it — answers
+ * the members met, nothing recorded and the count not `known`: the end met may
+ * be the one before the new member. Null, nothing recorded, where `stands`
+ * reads false before a member is asked — an opening that has ended asks no
+ * more.
  * @param {string} trunk
  * @param {() => boolean} [stands]
  * @returns {Promise<{n: number, known: boolean} | null>}
  */
 export async function probeChain(trunk, stands = () => true) {
+  const dropped = watchDrops(trunk);
   const d = REC.doc(trunk);
   let n = d.meta && d.meta.birth ? 1 : 0;
   for (let k = 2; k <= MEMBER_PROBE_CAP && n >= 1; k++) {
@@ -606,6 +644,7 @@ export async function probeChain(trunk, stands = () => true) {
     if ('refused' in out) { if (unanswered(out.refused)) return { n, known: false }; break; }
     n = k;
   }
+  if (dropped()) return { n, known: false };
   REC.takeMembers(trunk, n);
   return { n, known: true };
 }
@@ -613,35 +652,61 @@ export async function probeChain(trunk, stands = () => true) {
 /**
  * Read a whole document now — the scene, the walk and a landing ask for all
  * of it: the extent, every position, the image, the links and their types.
+ * A pass the document was dropped under (`readWhole`) is begun again, and
+ * reads again exactly what the drop took, at most DROP_ATTEMPTS passes; past
+ * them, the record as it stands, holding nothing read before its last drop.
  * @param {string} addr
- * @returns {Promise<Doc | null>}
+ * @returns {Promise<Doc | null>} the record; null where the board refused its extent
  */
 export async function loadWhole(addr) {
+  for (let pass = 1; ; pass++) {
+    const out = await readWhole(addr, watchDrops(addr));
+    if (out !== 'dropped') return out;
+    if (pass >= DROP_ATTEMPTS) { dirty(); return REC.doc(addr); }
+  }
+}
+
+/**
+ * One pass of a whole read (`loadWhole`), each step asked where the record
+ * lacks what it brings. Where the document is dropped while a step reads, the
+ * pass ends there, taking nothing that step learned — an answer or a refusal
+ * alike.
+ * @param {string} addr
+ * @param {() => boolean} dropped the document dropped since the pass began
+ * @returns {Promise<Doc | null | 'dropped'>} the record; null where the board refused its extent; 'dropped' where the document was dropped under the pass
+ */
+async function readWhole(addr, dropped) {
   const d = REC.doc(addr);
   if (d.extent == null) {
     const out = await read(F.retrieveDocVSpanSet(addr));
+    if (dropped()) return 'dropped';
     if ('refused' in out) { refusals.push({ frame: 'retrieve_doc_v_span_set', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return null; }
     REC.takeSpanSet(addr, F.decodeSpanSet(out.answer));
   }
   if (!d.meta) {
     const out = await read(F.docMetadata(addr));
+    if (dropped()) return 'dropped';
     if (!('refused' in out)) { const m = F.decodeDocMetadata(out.answer); if (m) REC.takeMetadata(addr, m); }
   }
   const extent = d.extent || 0;
   const whole = Math.min(extent, WHOLE_CAP);
   if (whole > 0 && !(d.from === 1 && d.to >= whole + 1)) {
     const out = await read(F.retrieveV(addr, 1, whole));
+    if (dropped()) return 'dropped';
     if ('refused' in out) { refusals.push({ frame: 'retrieve_v', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return d; }
     REC.takeDelivery(addr, F.decodeDelivery(out.answer, 1));
     const im = await read(F.image(addr, 1, whole));
+    if (dropped()) return 'dropped';
     if (!('refused' in im)) REC.takeImage(addr, 1, F.decodeRuns(im.answer));
   }
   if (!d.linksRead && extent > 0) {
     const out = await readScan(F.findLinksV(addr, 1, extent), addr);
+    if (dropped()) return 'dropped';
     if (!('refused' in out)) REC.takeLinks(addr, F.decodeAddrs(out.answer));
   }
   for (const la of REC.unreadLinks(addr)) {
     const out = await read(F.readLink(la));
+    if (dropped()) return 'dropped';
     if (!('refused' in out)) { const v = F.decodeLinkValue(la, out.answer); if (v) REC.takeLink(v); }
   }
   dirty();
@@ -658,22 +723,29 @@ export async function loadWhole(addr) {
  * reading it as they read the view's own `project`. Where the board declines
  * the read (`not_a_link` where no such slot), the refusal it met — this
  * read's own, whatever other read met one meanwhile — the model holding the
- * projection refused.
+ * projection refused. A read the document was dropped under (`watchDrops`) is
+ * asked again, at most DROP_ATTEMPTS times; past them, its outcome answered
+ * and nothing held.
  * @param {string} linkAddr
  * @param {1 | 2} slot
  * @param {string} doc
  * @returns {Promise<{runs: Stretch[]} | {refused: Refusal}>}
  */
 export async function projectEnd(linkAddr, slot, doc) {
-  const out = await read(F.project(linkAddr, slot, doc));
-  if ('refused' in out) {
-    refusals.push({ frame: 'project', refusal: out.refused, addr: doc });
-    if (out.refused.kind === 'refused') REC.takeProjection(linkAddr, slot, doc, 'refused');
-    return { refused: out.refused };
+  for (let asks = 1; ; asks++) {
+    const dropped = watchDrops(doc);
+    const out = await read(F.project(linkAddr, slot, doc));
+    const holds = !dropped();
+    if (!holds && asks < DROP_ATTEMPTS) continue;
+    if ('refused' in out) {
+      refusals.push({ frame: 'project', refusal: out.refused, addr: doc });
+      if (holds && out.refused.kind === 'refused') REC.takeProjection(linkAddr, slot, doc, 'refused');
+      return { refused: out.refused };
+    }
+    const runs = stretchesOf(out.answer).sort((a, b) => a.pos - b.pos);
+    if (holds) REC.takeProjection(linkAddr, slot, doc, runs);
+    return { runs };
   }
-  const runs = stretchesOf(out.answer).sort((a, b) => a.pos - b.pos);
-  REC.takeProjection(linkAddr, slot, doc, runs);
-  return { runs };
 }
 
 /**

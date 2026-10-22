@@ -52,6 +52,19 @@
 // minted alone turns red); a projection asked by an act answering the
 // refusal it met, held refused, and nothing held where the board did not
 // answer (a mutant that answers a bare "refused" turns red);
+// a read that lands after its document was dropped — the board's answers and
+// the feed's rows come by two channels nothing orders — takes nothing: a
+// view's read, its refusal included, left unasked and asked again, the text
+// read before a new version's row never put back and the image read over the
+// text read after it, a projection's read watching the document projected
+// into (a mutant that takes a dropped read, takes its refusal, or watches the
+// document the link sends from turns red); an act's whole read begun again,
+// across the page's own death too, and its projection asked again, each at
+// most DROP_ATTEMPTS times (a mutant that discards without beginning again,
+// counts no death, or asks without a bound turns red); the view's probe of a
+// chain its trunk is dropped under recording no count and probing again; an
+// image placed from the window it was asked for, never from one a text read
+// widened before it landed;
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -734,6 +747,192 @@ test('a projection the board declines answers the refusal it met, and the model 
   assert.equal(REC.projection(L, 2, FAR), 'refused');
   assert.deepEqual(await PUMP.projectEnd(L, 1, D), UNREACHABLE, 'the board out: the refusal handed up');
   assert.equal(REC.projection(L, 1, D), undefined, 'and nothing learned of where it stands');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+/** past the chain's end, or no document there */
+const NOT_REGISTERED = { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
+/** a delivery of one content run */
+const delivery = (/** @type {string} */ text) => ({ result: { as_of: 1, resp: 'delivery', items: [{ content: text }] } });
+/** the feed's row of a new version's `publish`, naming the member */
+const published = (/** @type {string} */ member) => ({ board: 'b-1', update: { position: 3, at: 3, op: 'publish', docs: [member], class: 'published' } });
+/** D's text before its new version's row and after it, thirty bytes each */
+const [BEFORE, AFTER] = ['Tumbler.\n\nThe first field, old', 'Tumbler.\n\nThe first field, new'];
+
+/** the view's reads asked and answered — at most `rounds` times — until nothing is missing and nothing is in flight */
+async function settle(rounds = 50) {
+  for (let i = 0; i < rounds && !PUMP.settled(); i++) await new Promise((r) => setTimeout(r, 0));
+}
+
+/** wait — at most twenty ticks, the view's needs pumped at each where `pumping` — until the fake port has received a call of `frame` */
+async function untilAsked(/** @type {ReturnType<typeof FAKE.create>} */ fake, /** @type {object} */ frame, pumping = false) {
+  const key = FAKE.keyOf('op', { frame });
+  for (let i = 0; i < 20 && !fake.asked.includes(key); i++) { if (pumping) PUMP.pump(); await new Promise((r) => setTimeout(r, 0)); }
+  assert.ok(fake.asked.includes(key), 'asked: ' + key);
+}
+
+/** the page a guest reads D at its reading em, the board's one edition, over a board answering `s` */
+function readingD(/** @type {Record<string, unknown>} */ s) {
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  const box = docBox(D), fs = metricsFor(30, box).fs;
+  CAM.setViewport(1440, 900); CAM.reach(fs); CAM.set(CAM.viewForDoc(box, fs));
+  return fake;
+}
+
+test('a view\'s read that lands after its document was dropped takes nothing and is asked again: the text read before a new version\'s row is never put back, and the image is read over the text read after it', async () => {
+  const member = script[FAKE.keyOf('op', { frame: F.docMetadata(D) })];
+  // D.2 the new version the row names, the chain's end past it; D's text before the row and after it
+  const s = { ...script, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: member, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.3') })]: NOT_REGISTERED };
+  const text = inTurn(s, F.retrieveV(D, 1, 30), delivery(BEFORE), delivery(AFTER));
+  const fake = readingD(s);
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  await untilAsked(fake, F.retrieveV(D, 1, 30), true);
+  fake.fire('feed', published(D + '.2'));
+  release();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([REC.doc(D).from, REC.textBetween(D, 1, 31)], [-1, ''], 'the text read before the row is not put back');
+  await settle();
+  assert.deepEqual([text.asks(), REC.textBetween(D, 1, 31)], [2, AFTER], 'asked again: the text read after the row held');
+  assert.deepEqual(REC.doc(D).imageFor, [1, 31], 'and the image read over it');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a view\'s projection that lands after the document projected into was dropped takes nothing, its refusal included, and is asked again', async () => {
+  const FAR = '1.0.1.0.127', L = D + '.0.2.3';
+  const s = {
+    ...script,
+    [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [L] } },
+    [FAKE.keyOf('op', { frame: F.readLink(L) })]: citation(11, passageOf(FAR, 3, 4)),
+    [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: NOT_REGISTERED,
+  };
+  // FAR withheld from the reader before its new version, readable after it, the passage at its 40
+  const proj = inTurn(s, F.project(L, 2, FAR), { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } }, { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.40', width: '0.4' }] } });
+  const fake = readingD(s);
+  await PUMP.loadWhole(D);
+  const release = fake.hold('op', { frame: F.project(L, 2, FAR) });
+  PUMP.pump();
+  await untilAsked(fake, F.project(L, 2, FAR));
+  fake.fire('feed', published(FAR + '.2'));
+  release();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(REC.projection(L, 2, FAR), undefined, 'the refusal read before FAR\'s row is not held: D, the document the link sends from, was never dropped');
+  await settle();
+  assert.deepEqual([proj.asks(), REC.projection(L, 2, FAR)], [2, [{ pos: 40, width: 4 }]], 'asked again: where it stands after the row held');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a whole read its document is dropped under begins again: the text read before a new version\'s row is never taken, and the read answers the text read after it', async () => {
+  const s = { ...script };
+  const span = inTurn(s, F.retrieveDocVSpanSet(D), script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]);
+  const text = inTurn(s, F.retrieveV(D, 1, 30), delivery(BEFORE), delivery(AFTER));
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  const pending = PUMP.loadWhole(D);
+  await untilAsked(fake, F.retrieveV(D, 1, 30));
+  fake.fire('feed', published(D + '.2'));
+  release();
+  const d = await pending;
+  assert.deepEqual([d?.extent, REC.textBetween(D, 1, 31)], [30, AFTER], 'the record whole, holding the text read after the row');
+  assert.deepEqual([span.asks(), text.asks()], [2, 2], 'begun again: what the row dropped read again');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a whole read across the page\'s own death begins again as a guest: the record answered holds its extent and metadata', async () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const sent = sessionsSent(fake);
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  const pending = PUMP.loadWhole(D);
+  await untilAsked(fake, F.retrieveV(D, 1, 30));
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  release();
+  const d = await pending;
+  assert.deepEqual([d?.extent, d?.meta?.doc, REC.textBetween(D, 1, 27)], [30, D, 'Tumbler.\n\nThe first field.'], 'the extent and metadata the death dropped read again, with the text');
+  assert.deepEqual(sent.slice(0, 3), ['s-1', 's-1', 's-1'], 'the pass before the death under the session');
+  assert.ok(sent.slice(3).every((x) => x === 'guest'), 'every read after it in the guest form');
+});
+
+test('a whole read its document is dropped under at every pass ends after DROP_ATTEMPTS passes, holding nothing read before the last drop', async () => {
+  const s = { ...script }, key = FAKE.keyOf('op', { frame: F.retrieveV(D, 1, 30) }), answer = script[key];
+  let asks = 0;
+  // a write lands on D as each of the first twenty text reads is answered
+  Object.defineProperty(s, key, { enumerable: true, configurable: true, get: () => { if (++asks <= 20) REC.invalidate(D); return answer; } });
+  PORT.boot(FAKE.create(s));
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  const d = await PUMP.loadWhole(D);
+  assert.equal(asks, PUMP.DROP_ATTEMPTS, 'the text asked once a pass, DROP_ATTEMPTS passes');
+  assert.deepEqual([d?.from, d?.extent, d?.meta, REC.textBetween(D, 1, 31)], [-1, null, null, ''], 'the record as the last drop left it');
+});
+
+test('the view\'s probe of a chain its trunk is dropped under records no count and probes again: a new member\'s row never leaves the count one short', async () => {
+  const member = script[FAKE.keyOf('op', { frame: F.docMetadata(D) })];
+  const s = { ...script, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: member, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.4') })]: NOT_REGISTERED };
+  // D.3 past the chain's end before its row, a member after it
+  const third = inTurn(s, F.docMetadata(D + '.3'), NOT_REGISTERED, member);
+  const fake = readingD(s);
+  await PUMP.loadWhole(D);
+  const release = fake.hold('op', { frame: F.docMetadata(D + '.3') });
+  PUMP.pump();
+  await untilAsked(fake, F.docMetadata(D + '.3'));
+  fake.fire('feed', published(D + '.3'));
+  release();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.equal(REC.doc(D).members, null, 'the end met before the row is not recorded');
+  await settle();
+  assert.deepEqual([third.asks(), REC.doc(D).members], [2, 3], 'probed again: the chain to its new end');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('an act\'s projection the document projected into is dropped under is asked again and holds where the end stands after the row; dropped at every ask, it answers after DROP_ATTEMPTS asks and holds nothing', async () => {
+  const FAR = '1.0.1.0.127', L = D + '.0.2.3';
+  const at = (/** @type {number} */ pos) => ({ result: { as_of: 1, resp: 'span_set', set: [{ start: '1.' + pos, width: '0.4' }] } });
+  /** @type {Record<string, unknown>} */
+  const s = {};
+  // the passage at FAR's 3 before FAR's new version, at its 40 after it
+  const proj = inTurn(s, F.project(L, 2, FAR), at(3), at(40));
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  const release = fake.hold('op', { frame: F.project(L, 2, FAR) });
+  const pending = PUMP.projectEnd(L, 2, FAR);
+  await untilAsked(fake, F.project(L, 2, FAR));
+  fake.fire('feed', published(FAR + '.2'));
+  release();
+  assert.deepEqual(await pending, { runs: [{ pos: 40, width: 4 }] }, 'where it stands after the row');
+  assert.deepEqual([proj.asks(), REC.projection(L, 2, FAR)], [2, [{ pos: 40, width: 4 }]], 'asked again, and held');
+  let asks = 0;
+  // a write lands on D as each of the first twenty projections into it is answered
+  Object.defineProperty(s, FAKE.keyOf('op', { frame: F.project(L, 1, D) }), { enumerable: true, configurable: true, get: () => { if (++asks <= 20) REC.invalidate(D); return at(7); } });
+  assert.deepEqual(await PUMP.projectEnd(L, 1, D), { runs: [{ pos: 7, width: 4 }] }, 'its outcome answered to the act');
+  assert.deepEqual([asks, REC.projection(L, 1, D)], [PUMP.DROP_ATTEMPTS, undefined], 'after DROP_ATTEMPTS asks, nothing held');
+});
+
+test('an image asked for a window a text read widens before it lands is placed from the window it was asked for', async () => {
+  const s = { ...script, [FAKE.keyOf('op', { frame: F.image(D, 11, 20) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.11', width: '20' }] } } };
+  const fake = readingD(s);
+  // D's extent, metadata, links and chain held, and its text from 11 on
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 30 }]);
+  REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: 30, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(D, []); REC.takeMembers(D, 1);
+  REC.takeDelivery(D, [{ pos: 11, width: 20, kind: 'content', text: 'The first field.abcd', ref: null, origin: null }]);
+  const release = fake.hold('op', { frame: F.image(D, 11, 20) });
+  PUMP.pump();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([fake.asked.includes(FAKE.keyOf('op', { frame: F.image(D, 11, 20) })), REC.doc(D).from], [true, 1], 'the image asked for 11 on, and the text read from 1 landed before it');
+  release();
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(REC.doc(D).image.map((r) => [r.pos, r.width, r.ordinal]), [[11, 20, 11]], 'placed at 11, where it was asked');
   assert.deepEqual(fake.unanswered, []);
 });
 

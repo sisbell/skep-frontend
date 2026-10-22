@@ -24,6 +24,9 @@
 // another origin whose text begins with this one's (a mutant that finds the
 // origin anywhere in the binding turns red), never a key bound nowhere — and
 // the reader the arms are decided for keeping it through a session's death.
+// Every drop of an address counted — by `invalidate`, its record held or not
+// and none made for it, and by a death, every address's — and no read taken
+// moving the count (a mutant that counts no death turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -197,6 +200,30 @@ test('where a link\'s slot projects is held in the text\'s order until the docum
   assert.ok(REC.doc(D).rev > rev, 'and the document holding the link is made again');
   REC.sessionDied({ arm: 'closed' });
   assert.equal(REC.projection(D + '.0.2.2', 2, '1.0.1.0.9'), undefined, 'the death drops the rest');
+});
+
+test('every drop of an address is counted — by invalidate, its record held or not and none made for it, and by a death, every address\'s — and no read taken moves the count', () => {
+  const D = '1.0.1.0.3', FAR = '1.0.1.0.127', L = D + '.0.2.1';
+  REC.takeIndex(/** @type {any} */ (PLACES));
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 5 }]);
+  REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1', birth: D + '.1', birthExtent: 5, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeDelivery(D, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 5 }]);
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [], to: [], type: null });
+  REC.takeProjection(L, 2, FAR, [{ pos: 3, width: 4 }]);
+  REC.takeMembers(D, 2);
+  assert.deepEqual([REC.dropsOf(D), REC.dropsOf(FAR)], [0, 0], 'the index, a delivery, its image, its links and a projection taken: nothing dropped');
+  REC.invalidate(FAR);
+  assert.deepEqual([REC.dropsOf(FAR), REC.has(FAR), REC.dropsOf(D)], [1, false, 0], 'an address whose record is not held: counted, no record made, no other address\'s count moved');
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, op: 'publish', docs: [D + '.2'], class: 'published' }));
+  assert.deepEqual([REC.dropsOf(D), REC.dropsOf(D + '.2')], [1, 1], 'a feed row: the trunk and the member it names');
+  REC.takeDelivery(D, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
+  REC.takeProjection(L, 2, FAR, [{ pos: 3, width: 4 }]);
+  assert.deepEqual([REC.dropsOf(D), REC.dropsOf(FAR)], [1, 1], 'what is read again after a drop moves no count back');
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual([REC.dropsOf(D), REC.dropsOf(FAR), REC.dropsOf('1.0.2.0.9')], [2, 2, 1], 'a death: every address once more, one never read among them');
 });
 
 test('links: the raw set per document, each read once', () => {
