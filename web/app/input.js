@@ -33,7 +33,9 @@
 // the source's current text holds it (foundations §2.3's carry rule; P43);
 // the scene-offer opens the scene;
 // a withheld run's placeholder conjures C-39's face, naming the owner the
-// placeholder names (B1-S5, B1-S7); the version statement at a document's
+// placeholder names (B1-S5, B1-S7), at the placeholder and, once the text
+// layer rebuilds or takes it down, at the run's own positions (`runOf`;
+// O-HOST's anchor); the version statement at a document's
 // corner opens its members (the corner's act, the one Enter takes there —
 // K-57); a click on a block selects it whole (R11); a click on an account at
 // far is a teleport to its region (a trail push); an empty click ends a card
@@ -124,7 +126,7 @@ export function attach(els) {
     const offer = target.closest('.offer');
     if (offer) { e.stopPropagation(); const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return; }
     const wh = target.closest('[data-withheld]');
-    if (wh) { e.stopPropagation(); const w = /** @type {HTMLElement} */ (wh); FACES.c39(w.dataset.owner || '', REC.reader(), w); return; }
+    if (wh) { e.stopPropagation(); const w = /** @type {HTMLElement} */ (wh), run = runOf(w); FACES.c39(w.dataset.owner || '', REC.reader(), run ? { el: w, span: run } : w); return; }
     // the platform selected text under the click (a double-click's word): the selection IS that span (R11)
     const span = LAYER.spanOfSelection();
     if (span && !sameSpan(span, LAYER.placedSpan())) { e.stopPropagation(); SEL.select(span.addr, span.pos, span.width); return; }
@@ -161,16 +163,19 @@ let retakeT = 0;
 function scheduleRetake() { clearTimeout(retakeT); retakeT = window.setTimeout(() => WALK.retakeFromView(), 220); }
 
 /**
- * The transcluded run a hairline opens, as its gesture to the source carries
- * it (foundations §2.1; §2.3's carry rule): its own positions in the article
- * that holds it, as T-ARTICLE set them on the hairline; null where the
- * hairline stands in no article or names no run.
- * @param {HTMLElement} hair
+ * The run an element of an article names, as its own positions in the
+ * article that holds it, which T-ARTICLE sets on the element: a hairline's
+ * transcluded run, the passage its gesture to the source carries
+ * (foundations §2.1; §2.3's carry rule); a placeholder's withheld run, where
+ * C-39's face stands once the text layer rebuilds or takes down the
+ * placeholder (O-HOST's anchor). Null where the element stands in no article
+ * or names no run.
+ * @param {HTMLElement} at
  * @returns {import('../text/span.js').Span | null}
  */
-function runOf(hair) {
-  const art = /** @type {HTMLElement | null} */ (hair.closest('article'));
-  const addr = art ? art.dataset.addr || '' : '', pos = Number(hair.dataset.pos), width = Number(hair.dataset.width);
+function runOf(at) {
+  const art = /** @type {HTMLElement | null} */ (at.closest('article'));
+  const addr = art ? art.dataset.addr || '' : '', pos = Number(at.dataset.pos), width = Number(at.dataset.width);
   return addr && pos > 0 && width > 0 ? { addr, pos, width } : null;
 }
 

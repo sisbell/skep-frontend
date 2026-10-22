@@ -10,9 +10,12 @@
 // whose probe of the chain meets a member the board did not answer records no
 // count, so the list opened again once the board answers probes the chain to
 // its end (a mutant that ends the chain at that member records a count cut
-// short and turns red). The overlay host stands on a stand-in element, the
-// platform's document a stand-in beside it, so the rows are read from what the
-// host wrote.
+// short and turns red). Opened at the corner's version statement, the list
+// stands at it, the document's box beside it — its top-left, the side the
+// corner stands on — where it stands once T-LAYER rewrites the corner or takes
+// it down (a mutant that anchors it at the statement alone turns red). The
+// overlay host stands on a stand-in element, the platform's document a
+// stand-in beside it, so the rows are read from what the host wrote.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -22,6 +25,7 @@ import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as GO from '../nav/go.js';
+import { docBox } from '../plane/projection.js';
 import * as HOST from './host.js';
 import * as VERSIONS from './versions.js';
 
@@ -109,5 +113,15 @@ test('a list whose probe of the chain the board did not answer records no count,
   await VERSIONS.open(U, null, null);
   assert.equal(REC.doc(U).members, 2, 'probed again: U.2 answers, U.3 is not registered');
   assert.deepEqual(rows(), [[1, 'whole'], [2, 'whole']], hostEl.innerHTML);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('opened at the corner\'s version statement, the list stands at it, the document\'s box beside it — its top-left, the side the corner stands on — where it stands once the corner is rewritten or taken down', async () => {
+  /** the statement in the corner's element, as the corner's act hands it to the list */
+  const statement = { isConnected: false };
+  await VERSIONS.open(T, HELD.pos, /** @type {any} */ (statement));
+  const b = docBox(T);
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['versions:' + T, { el: statement, world: { x: b.x, y: b.y } }]);
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });

@@ -15,7 +15,10 @@
 // version row; A-39), and marked whole / in part / not at all — and each
 // offering "read side by side", the scene opened on the held passage, which
 // SC sets level with what the member holds of it. Each member is one row: its
-// acts and its mark in columns the rows share. The list takes the focus where
+// acts and its mark in columns the rows share. Opened by the corner's act, it
+// stands beneath the version statement, and at the document's box, on the
+// left where the corner stands, once T-LAYER rewrites the corner or takes it
+// down (O-HOST's anchor). The list takes the focus where
 // a key made the act — Enter at the corner — on its CURRENT member's read
 // act, and never where a click on the statement did (D5 §4 rule 4; the focus
 // record's rules 13 and 16). It opens on its reads (O-HOST's `opening`):
@@ -33,6 +36,7 @@ import * as SCENE from '../scene/scene.js';
 import * as LAYER from '../text/layer.js';
 import * as LINE from '../line/line.js';
 import { visibleView } from '../plane/camera.js';
+import { docBox } from '../plane/projection.js';
 import { versionAddress, memberOf, documentOf } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -56,7 +60,7 @@ async function extentOf(member) {
  * Open the list for a document (a member address answers its document's).
  * @param {string} addr
  * @param {number | null} pos the held passage's first position, or null for the document's first block
- * @param {HTMLElement | null} anchor
+ * @param {HTMLElement | null} anchor the element the act was made at — the corner's version statement — beneath which the list stands while it stands in the page, and at the document's box, on the left where the corner stands, once T-LAYER rewrites the corner or takes it down (O-HOST's anchor); null where the act was made at none
  * @param {number | null} [width] the held passage's positions; null holds the block at `pos` whole
  * @param {boolean} [byKey] a key made the act: the list takes the focus on its current member
  * @returns {Promise<void>} settled once the list shows, or nothing will
@@ -102,7 +106,8 @@ export function open(addr, pos, anchor, width = null, byKey = false) {
       acts['read' + r.k] = (_el, byKey) => GO.leapTo(versionAddress(trunk, r.k), { carry: held ? { addr: trunk, pos: held.pos, width: held.width } : null, how: 'leap', byKey });
       acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
     }
-    HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor: anchor ? { el: anchor } : null, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });
+    const box = docBox(trunk);
+    HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor: anchor ? { el: anchor, world: { x: box.x, y: box.y } } : null, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });
   });
 }
 

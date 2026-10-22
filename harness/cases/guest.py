@@ -54,7 +54,10 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     run's, never the empty block's gap further;
 (f) the guest's own acts: every link at the first edition drawn as its
     owner's, never "you"; C-39's face at the run with the placeholder's own
-    arm beneath; "who wrote this?" answering over a block;
+    arm beneath, standing beneath the placeholder, at the run's own positions
+    once the text layer rebuilds the article and takes the placeholder away,
+    and at the document's box once the layer takes the article down — never
+    at the viewport's corner; "who wrote this?" answering over a block;
 (g) the owner's page whose own session ends falls to guest class: opened
     again, it reads one of the claimant's drafts and the window run's bytes,
     then its session is closed by the page's own `close(session)` — the call
@@ -74,6 +77,7 @@ import time
 from collections import Counter
 
 from . import DOC, SECOND_ACCOUNT, WINDOW, WITHHELD, XFAIL_FACE, Result
+from .keys import placed_at, placed_at_box, placed_under, rebuilt_away, stands_at
 
 OWNER = '1.0.1'
 # a stretch of the owner's bytes over the run, in characters with white space folded, that the guest's page must never hold
@@ -335,6 +339,25 @@ def run(ctx):
             {'face': face, 'placeholder_arm': arm[:80], 'key_here': store['key_here']})
     r.figures['shots'].append(ctx.shot('guest/c39-face.png'))
     r.figures['c39'] = face
+    # the face stands beneath the placeholder it was conjured at; the text layer rebuilding the article takes the placeholder
+    # away, and the face stands at the run's own positions, beneath their first line; the layer taking the article down — the
+    # camera below the mount — leaves it at the document's box: never at the viewport's corner (foundations §3.1)
+    rect = ctx.js('(() => { const q = document.querySelector(%s).getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; })()' % json.dumps(PLACEHOLDER))
+    under = placed_under(ctx, rect)
+    r.check(face['id'] == 'face:C-39' and stands_at(under), '(f) C-39\'s face stands beneath the placeholder it was conjured at', under)
+    gone = rebuilt_away(ctx, PLACEHOLDER, 'window.__skep.links.hide(%s)' % json.dumps(DOC))
+    ctx.frames(2)
+    rebuilt = placed_at(ctx, DOC, WINDOW[0], WINDOW[1])
+    r.check(gone['found'] and not gone['connected'] and ctx.js('window.__skep.overlay().id') == 'face:C-39' and stands_at(rebuilt),
+            '(f) the text layer rebuilding the article takes the placeholder away, and the face stands at the run\'s own positions, beneath their first line — never at the viewport\'s corner',
+            {'placeholder': gone, 'placed': rebuilt})
+    cam = ctx.camera()
+    ctx.view_doc_em(DOC, 5)
+    down = placed_at_box(ctx, DOC)
+    r.check(DOC not in ctx.js('window.__skep.mountedAddrs()') and ctx.js('window.__skep.overlay().id') == 'face:C-39' and stands_at(down),
+            '(f) the text layer taking the article down — the camera at em 5, below the mount — leaves the face at the document\'s box, its top-right — never at the viewport\'s corner', down)
+    ctx.set_view(cam['x'], cam['y'], cam['scale'])
+    r.figures['c39_placed'] = {'beneath_the_placeholder': under, 'rebuilt': rebuilt, 'taken_down': down}
     ctx.esc()
     para = next((b for b in doc['blocks'] if b['kind'] == 'para'), None)
     if para:

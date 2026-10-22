@@ -48,7 +48,14 @@
 // Enter on its control, taken here before the platform's click, or the click
 // the platform makes from a key (Space on a button), which carries no click
 // count — a pointer's carries its count.
-// A pan or a zoom is never "the next act": the overlay follows its anchor.
+// A pan or a zoom is never "the next act": the overlay follows its anchor —
+// the element the act was made at while it stands in the page, or while an
+// element bearing its id does (the same control, redrawn from state by its
+// owner, FP-13); else the place named beside it, a span's bytes or a world
+// point, which still stands once T-LAYER has rebuilt or taken down the
+// article the element stood in, or rewritten its corner. An overlay stands
+// at the viewport's corner only where its anchor names nothing that stands
+// (`place`).
 // Carries: the wireframe's §18 `overlay` object, `anchorOfSpan`.
 // Rules: FP-1, FP-2, FP-9, FP-10 (its own DOM alone), FP-13, FP-20.
 
@@ -61,11 +68,11 @@ import { t } from '../strings.js';
 import { esc } from '../util.js';
 
 /**
- * @typedef {Object} Anchor — where an overlay stands
+ * @typedef {Object} Anchor — where an overlay stands: at its element while that stands (`standing`), else at its span, else at its world point, else at its screen point (`place`)
+ * @property {HTMLElement} [el] the element the act was made at: the overlay stands beneath it while it is in the page, or while an element bearing its id is
+ * @property {{addr: string, pos: number, width?: number}} [span] a span of a document — a block by its first position, or the bytes named by a width: beneath its first line in the mounted article, else at the document's box
  * @property {{x: number, y: number}} [world] a world point (follows the camera)
- * @property {HTMLElement} [el] an element (follows it while connected)
  * @property {{x: number, y: number}} [screen] a screen point
- * @property {{addr: string, pos: number, width?: number}} [span] a span of a mounted article — a block by its first position, or the bytes named by a width (its first line's rect)
  */
 
 /** @typedef {(el: HTMLElement, byKey: boolean) => void} Act an overlay's act, run on the element that bears its `data-run`; `byKey` a key ran it */
@@ -183,21 +190,41 @@ export function show(o) {
   markDirty();
 }
 
-/** place the overlay at its anchor — per frame, clamped into the viewport */
+/**
+ * The element an anchor names, as the page stands now: the element itself
+ * while it is in the page; else the one bearing its id — the same control,
+ * redrawn from state by its owner (FP-13); else none, the article or the
+ * corner it stood in rebuilt or taken down.
+ * @param {HTMLElement | undefined} e
+ * @returns {HTMLElement | null}
+ */
+function standing(e) {
+  if (!e) return null;
+  if (e.isConnected) return e;
+  return e.id ? document.getElementById(e.id) : null;
+}
+
+/**
+ * Place the overlay at its anchor — per frame, clamped into the viewport:
+ * beneath the element it was conjured at while that stands (`standing`);
+ * else beneath its span's first line in the mounted article, or at the
+ * document's box where none is mounted; else at its world point, else at its
+ * screen point; else, its anchor naming nothing that stands, at the
+ * viewport's corner.
+ */
 export function place() {
   if (!el || !current) return;
   const { VW, VH } = viewport();
   const a = current.anchor;
   let x = 20, y = 60;
-  if (a) {
-    if (a.span) {
-      const rs = LAYER.spanRects(a.span.addr, a.span.pos, a.span.width ?? null);
-      if (rs) { x = rs[0].x; y = rs[0].y + rs[0].h + 4; }
-      else { const b = docBox(a.span.addr); x = sx(b.x + b.w); y = sy(b.y); }
-    } else if (a.world) { x = sx(a.world.x); y = sy(a.world.y); }
-    else if (a.el && a.el.isConnected) { const r = a.el.getBoundingClientRect(); x = r.left; y = r.bottom + 4; }
-    else if (a.screen) { x = a.screen.x; y = a.screen.y; }
-  }
+  const at = a ? standing(a.el) : null;
+  if (at) { const r = at.getBoundingClientRect(); x = r.left; y = r.bottom + 4; }
+  else if (a && a.span) {
+    const rs = LAYER.spanRects(a.span.addr, a.span.pos, a.span.width ?? null);
+    if (rs) { x = rs[0].x; y = rs[0].y + rs[0].h + 4; }
+    else { const b = docBox(a.span.addr); x = sx(b.x + b.w); y = sy(b.y); }
+  } else if (a && a.world) { x = sx(a.world.x); y = sy(a.world.y); }
+  else if (a && a.screen) { x = a.screen.x; y = a.screen.y; }
   const r = el.getBoundingClientRect();
   x = Math.max(6, Math.min(VW - r.width - 6, x)); y = Math.max(34, Math.min(VH - r.height - 6, y));
   el.style.left = x + 'px'; el.style.top = y + 'px';

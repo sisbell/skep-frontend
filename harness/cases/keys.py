@@ -23,7 +23,11 @@ Enter on the scene's acts pressing them: the re-level setting the two ends
 level again, the × ending the scene with the focus back on the item it was
 opened from (K-62, K-63); K-8's select and extend by span; a links card
 row's anatomy card taking the card's place with the symbols standing, at
-the link's own bytes; a follow that lands nowhere — from the selection, by
+the link's own bytes; a click on a link's symbol conjuring its anatomy card
+beneath the symbol, the card standing at the link's own bytes once the text
+layer rebuilds the article and takes the symbol away, and at the document's
+box once the layer takes the article down — never at the viewport's corner
+(foundations §3.1); a follow that lands nowhere — from the selection, by
 Mod+Enter or a row of its "which" list pressed, and the anatomy card's
 follow pressed — faced at the followed link's own bytes, the face taking
 the place of the list or card it was pressed on (foundations §3.1, F-G3);
@@ -129,8 +133,32 @@ def placed_at(ctx, addr, pos, width):
               want: rs ? {x: Math.max(6, Math.min(p.VW - q.width - 6, rs[0].x)), y: Math.max(34, Math.min(p.VH - q.height - 6, rs[0].y + rs[0].h + 4))} : null}; })()''' % (json.dumps(addr), pos, width))
 
 
+def placed_under(ctx, rect):
+    """where the overlay stands, beside where the host places one at the element it was conjured at (O-HOST's `place`):
+    beneath the element's rect on screen, clamped into the viewport by the overlay's own size"""
+    return ctx.js('''((r) => { const o = document.getElementById('overlay'), q = o.getBoundingClientRect(), p = window.__skep.view.viewport();
+      return {at: {x: parseFloat(o.style.left), y: parseFloat(o.style.top)}, rect: r,
+              want: {x: Math.max(6, Math.min(p.VW - q.width - 6, r.x)), y: Math.max(34, Math.min(p.VH - q.height - 6, r.y + r.h + 4))}}; })(%s)''' % json.dumps(rect))
+
+
+def placed_at_box(ctx, addr):
+    """where the overlay stands, beside where the host places one at a span of a document no article of which is mounted
+    (O-HOST's `place`): at the document's box, its top-right on screen, clamped into the viewport by the overlay's own size"""
+    return ctx.js('''(() => { const o = document.getElementById('overlay'), q = o.getBoundingClientRect(), p = window.__skep.view.viewport();
+      const b = window.__skep.boxOf(%s), c = window.__skep.view.camera(), x = (b.x + b.w - c.x) * c.scale + p.VW / 2, y = (b.y - c.y) * c.scale + p.VH / 2;
+      return {at: {x: parseFloat(o.style.left), y: parseFloat(o.style.top)}, box: {x, y},
+              want: {x: Math.max(6, Math.min(p.VW - q.width - 6, x)), y: Math.max(34, Math.min(p.VH - q.height - 6, y))}}; })()''' % json.dumps(addr))
+
+
+def rebuilt_away(ctx, selector, act):
+    """the element a selector finds, then `act` run — an expression that makes the text layer rebuild what it stands in —
+    and two frames: whether the element was found, and whether it stands in the page after them"""
+    return ctx.js('''new Promise((res) => { const e = document.querySelector(%s); %s;
+      requestAnimationFrame(() => requestAnimationFrame(() => res({found: !!e, connected: !!e && e.isConnected}))); })''' % (json.dumps(selector), act))
+
+
 def stands_at(placed):
-    """the overlay stands where the host places one at the span, within half a pixel"""
+    """the overlay stands where the host places one at its anchor, within half a pixel"""
     want = placed['want']
     return bool(want) and abs(placed['at']['x'] - want['x']) <= 0.5 and abs(placed['at']['y'] - want['y']) <= 0.5
 
@@ -1253,6 +1281,32 @@ def run(ctx):
             r.check(ctx.js('window.__skep.reveal(%s)' % json.dumps(DOC))['stage'] == 2, 'the anatomy card took the links card\'s place and the chain stands at stage 2: the symbols stay at their spans', ctx.js('window.__skep.reveal(%s)' % json.dumps(DOC)))
             r.check(stands_at(placed), 'the anatomy card stands at the link\'s own bytes, beneath their first line, as the host places a span\'s overlay', placed)
         chord(ctx, 'Escape')
+        # a click on the link's symbol conjures its anatomy card beneath the symbol; the text layer rebuilding the article — a
+        # reveal moved — takes the symbol away, and the card stands at the link's own bytes, beneath their first line; the layer
+        # taking the article down — the camera below the mount — leaves it at the document's box: it follows its place and never
+        # falls to the viewport's corner (foundations §3.1). The symbols stand at stage 2, where the row's card left the chain
+        sym_at = '#domlayer article.dtext[data-addr="%s"] .sym[data-link="%s"]' % (DOC, link['link'])
+        sym = ctx.js('''(() => { const e = document.querySelector(%s); if (!e) return null; const q = e.getBoundingClientRect(), x = q.left + q.width / 2, y = q.top + q.height / 2;
+          const hit = document.elementFromPoint(x, y); return {x, y, rect: {x: q.left, y: q.top, w: q.width, h: q.height}, hit: !!hit && e.contains(hit)}; })()''' % json.dumps(sym_at))
+        r.check(bool(sym) and sym['hit'], 'at stage 2 the link\'s symbol stands at its span, under the pointer', sym)
+        if sym and sym['hit']:
+            ctx.drv.mouse(sym['x'], sym['y'])
+            overlay_up(ctx, 'anatomy:')
+            under = placed_under(ctx, sym['rect'])
+            r.check(ctx.js('window.__skep.overlay().id') == 'anatomy:' + link['link'] and stands_at(under), 'a click on the link\'s symbol conjures its anatomy card beneath the symbol', under)
+            gone = rebuilt_away(ctx, sym_at, 'window.__skep.links.reveal(%s, 2)' % json.dumps(DOC))
+            ctx.frames(2)
+            rebuilt = placed_at(ctx, DOC, link['pos'], link['width'])
+            r.check(gone['found'] and not gone['connected'] and ctx.js('window.__skep.overlay().id') == 'anatomy:' + link['link'] and stands_at(rebuilt),
+                    'the text layer rebuilding the article takes the symbol away, and the card stands at the link\'s own bytes, beneath their first line — never at the viewport\'s corner',
+                    {'symbol': gone, 'placed': rebuilt})
+            cam = ctx.camera()
+            ctx.view_doc_em(DOC, 5)
+            down = placed_at_box(ctx, DOC)
+            r.check(DOC not in ctx.js('window.__skep.mountedAddrs()') and ctx.js('window.__skep.overlay().id') == 'anatomy:' + link['link'] and stands_at(down),
+                    'the text layer taking the article down — the camera at em 5, below the mount — leaves the card at the document\'s box, its top-right — never at the viewport\'s corner', down)
+            ctx.set_view(cam['x'], cam['y'], cam['scale'])
+            chord(ctx, 'Escape')
         ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
         ctx.frames(2)
     # select the block that holds a drawn link, then follow (Mod+Enter) to its ghost → the dead-reference face

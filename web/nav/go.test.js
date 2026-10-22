@@ -85,7 +85,11 @@
 // once their reads answer (a mutant that opens any one of them without the
 // host's opening turns its row red), the versions list asking nothing after
 // its end (a mutant that drops any of its checks turns red); asked again
-// with no act after it, each shows. THE ANATOMY CARD OPENS IN THE ACT THAT
+// with no act after it, each shows. THE ANATOMY CARD STANDS AT ITS SITE:
+// opened at an element, at that element, the link's own bytes beside it,
+// where it stands once the text layer rebuilds or takes the element down;
+// opened at none, at those bytes (a mutant that anchors it at the element
+// alone turns red). THE ANATOMY CARD OPENS IN THE ACT THAT
 // ASKS FOR IT — a links-card row, Enter at the link's element, a click on
 // its symbol, a click on its marked span: a Back made at once ends it, and
 // nothing shows over the place Back landed once its reads answer (a mutant
@@ -825,6 +829,21 @@ test('a Back made while a card reads: once its reads answer nothing shows over t
     HOST.dismiss();
   }
   assert.equal(REC.doc(FAR).members, 2, 'the members counted once, by the list that showed');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the anatomy card opened at an element stands at it, the link\'s own bytes beside it, where it stands once the text layer rebuilds or takes the element down; opened at none, at those bytes', async () => {
+  await run(GO.leapTo(FAR));
+  await run(GO.leapTo(D));
+  /** the citation's symbol in the first edition's article, as a click hands it to the card */
+  const sym = Object.assign(new globalThis.HTMLElement(), { isConnected: false });
+  const bytes = { addr: D, pos: 11, width: 5 };
+  await ANATOMY.open(drawn(PASSAGE), /** @type {any} */ (sym));
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['anatomy:' + PASSAGE, { el: sym, span: bytes }], 'at the symbol, the link\'s own bytes beside it');
+  HOST.dismiss();
+  await ANATOMY.open(drawn(PASSAGE), null);
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['anatomy:' + PASSAGE, { span: bytes }], 'at the link\'s own bytes');
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 

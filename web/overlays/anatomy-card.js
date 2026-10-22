@@ -1,7 +1,9 @@
 // O-ANATOMY — THE ANATOMY CARD (the structure record §3.2 "O-ANATOMY";
 // B1-S5; foundations §3.1). Layer 2. ENGINE-BOUND. State: none.
 // Conjured at a link's symbol (or at its marked span, the link's own bytes),
-// following it as the camera moves: led by each end's passage in words, the
+// following it as the camera moves, and at the link's own bytes once the text
+// layer rebuilds or takes down the article the element it was conjured at
+// stood in (O-HOST's anchor): led by each end's passage in words, the
 // far end's first (so a click answers with what the link leads to) — the
 // near end the document the link is drawn at (LK's `near`), whichever of its
 // ends lies there, read where LK places it in that text now, and the far end
@@ -121,7 +123,7 @@ async function farWords(s, runs) {
  * (`s.near`), where LK places it there, its far end the other, where its
  * passage stands now (`farPlace`).
  * @param {Shown} s
- * @param {HTMLElement | null} anchorEl the element it stands at; null stands it at the link's own bytes in the near document
+ * @param {HTMLElement | null} anchorEl the element it stands at while that stands in the page, the link's own bytes in the near document beside it; null stands it at those bytes
  * @param {boolean} [byKey] a key opened it: the card takes the focus on its first act
  * @returns {Promise<void>} settled once the card shows, or nothing will
  */
@@ -129,6 +131,8 @@ export function open(s, anchorEl, byKey = false) {
   const l = s.link;
   const near = s.near, nearPos = s.pos, nearWidth = s.width;
   const far = s.far;
+  /** the link's own bytes in the near document: where the card stands without its element */
+  const bytes = { addr: near, pos: nearPos, width: nearWidth };
   return HOST.opening(() => Promise.all([
     fragment(near, nearPos, nearWidth),
     far ? farPlace(s).then(async (runs) => ({ runs, words: await farWords(s, runs) })) : Promise.resolve({ runs: null, words: null }),
@@ -156,7 +160,7 @@ export function open(s, anchorEl, byKey = false) {
       supersessionRows(lineage) +
       `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${esc(far || '')}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
     HOST.show({
-      kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl } : { span: { addr: near, pos: nearPos, width: nearWidth } }, html, takeFocus: byKey,
+      kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl, span: bytes } : { span: bytes }, html, takeFocus: byKey,
       acts: {
         follow: (_el, byKey) => GO.follow(s, byKey),
         beside: () => { if (far && !dead) SCENE.open(near, far, { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null }); },

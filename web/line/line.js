@@ -38,7 +38,9 @@
 // pair flipped) until the next act. THE REBUILD KEEPS THE FOCUS (rule 11):
 // the line is rebuilt whenever its words change — every frame of a flight —
 // and the act that held the focus has it back by its `data-act`, through the
-// focus's owner. What a screen reader is told (D4): a transient segment and
+// focus's owner; an overlay standing at Back (the trail's list) or at sign in
+// (the session's face) finds its act again by the act's id (O-HOST's
+// anchor). What a screen reader is told (D4): a transient segment and
 // the mode line politely, the session's death and halted writes assertively,
 // through the one status region. The chip is NOT a segment (ux-T2: the
 // document's corner). Carries: the wireframe's §15 (`whereAmI`,
@@ -162,6 +164,9 @@ export function addressDisplay() {
   return { text: acct ? `1 › ${acct}` : '1', addr: acct || '1', doc: null, pos: null, member: null, whole: false };
 }
 
+/** the sign-in act, the guest's and the death arm's: its id names it across the line's rebuilds, as Back's does, so the session's face standing at it finds it again (O-HOST's anchor) */
+const SIGN_IN = `<button id="line-signin" data-act="signin">${esc(t('F.sign-in'))}</button>`;
+
 /** the acting-as segment's words */
 export function actingSegment() {
   const s = REC.session(), b = REC.board(), dev = REC.device(), dead = REC.deathReason(), refused = REC.sessionRefused();
@@ -175,9 +180,9 @@ export function actingSegment() {
     const arm = dead.arm;
     const words = arm === 'mode' ? t('C-137.mode') : arm === 'retired' ? t('C-137.self') : t('C-137.signed-out');
     const id = arm === 'mode' ? 'C-137.mode' : arm === 'retired' ? 'C-137.self' : 'C-137.signed-out';
-    return { html: `<span data-string="${id}">${esc(words)}</span> <button data-act="signin">${esc(t('F.sign-in'))}</button>`, state: 5, words };
+    return { html: `<span data-string="${id}">${esc(words)}</span> ${SIGN_IN}`, state: 5, words };
   }
-  const guest = `<span data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span> · ${esc(origin)} · <span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span> <button data-act="signin">${esc(t('F.sign-in'))}</button>`;
+  const guest = `<span data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span> · ${esc(origin)} · <span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span> ${SIGN_IN}`;
   return { html: guest + (refused ? ` <span class="dim" data-string="L.session-refused">${esc(t('L.session-refused', { name: refused.name }))}</span>` : ''), state: refused && refused.name === 'no_key' ? 3 : 1, words: t('B1.guest-line') };
 }
 

@@ -13,7 +13,10 @@
 // own (the walk's document at mid, the account the arithmetic finds at the
 // whole board's centre) turns red. A restart the shell re-opened leaves the
 // acting-as segment as it stood (client.md §4b.2: "no death chrome") — a
-// mutant that takes the restart for a death turns red.
+// mutant that takes the restart for a death turns red. The sign-in act bears
+// its id in the guest's line and in the death arm's, as Back does, so the
+// session's face standing at it finds it again as the line is rebuilt
+// (O-HOST's anchor) — a mutant that drops the id from either arm turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -112,4 +115,15 @@ test('a restart the shell re-opened leaves the acting-as segment as it stood: no
   fake.fire('session-died', { session: 's-1', reason: { arm: 'restart', reopened: true, session: 's-9' } });
   assert.deepEqual(LINE.actingSegment(), was, 'the same words and state under the re-opened session');
   assert.ok(!LINE.actingSegment().html.includes('data-act="signin"'), 'no sign-in offered');
+});
+
+test('the sign-in act bears its id in the guest\'s line and in the death arm\'s, as Back does: the session\'s face standing at it finds it again as the line is rebuilt (O-HOST\'s anchor)', () => {
+  const was = REC.session();
+  REC.setSession(null);
+  const guest = LINE.actingSegment();
+  REC.sessionDied({ arm: 'closed' });
+  const dead = LINE.actingSegment();
+  REC.setSession(was);
+  assert.deepEqual([guest.state, dead.state], [1, 5], 'a guest\'s line, then the death arm');
+  for (const s of [guest, dead]) assert.equal((s.html.match(/<button[^>]*data-act="signin"[^>]*>/g) || []).join(), '<button id="line-signin" data-act="signin">', `state ${s.state}: one sign-in act, bearing its id`);
 });

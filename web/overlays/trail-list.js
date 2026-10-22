@@ -1,7 +1,9 @@
 // O-TRAIL-LIST — the trail's list (the structure record §3.2 "O-TRAIL-LIST";
 // foundations §2.2; B1-S12). Layer 2. ENGINE-BOUND. State: none. A transient
 // overlay conjured beside Back and Forward and gone with its end like every
-// other — never a toggle (the wireframe's `t` toggle re-cut, K-41 Mod+Y);
+// other — never a toggle (the wireframe's `t` toggle re-cut, K-41 Mod+Y); it
+// stands beneath Back, which the host finds again by its id as the one line
+// is rebuilt (O-HOST's anchor);
 // every entry numbered newest-first, the same numbers as the pips and the
 // chords Mod+1 … Mod+9; Enter or a click jumps (a cursor move, never a push),
 // the ring drawn at the landing where a key made the jump. Opened by a key —

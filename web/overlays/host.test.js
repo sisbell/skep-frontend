@@ -25,6 +25,16 @@
 // another by `import()` — the app alone loads its gate's so (S-22 (a)) — so
 // no load stands between an act and the opening it begins (a mutant that
 // puts a card or a list behind an `import()` turns red).
+// THE ANCHOR (foundations §3.1: at the act's site, never a fixed region): an
+// overlay conjured at an element stands beneath it while it stands in the
+// page, and at the span named beside it once the text layer takes the
+// element away — the document's box, where no article of it is mounted —
+// never at the viewport's corner (a mutant that reads the span before the
+// element moves the overlay off an element still standing, and one that
+// reads the element alone leaves it at the corner: each turns red); an
+// element its owner redrew from state is found again by its id, the overlay
+// beneath the one the page holds now (a mutant that reads the element alone
+// turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -34,6 +44,8 @@ import * as FACES from './faces.js';
 import * as TRAILLIST from './trail-list.js';
 import * as KEYS from '../nav/keys.js';
 import * as LEAP from '../nav/leap.js';
+import * as CAM from '../plane/camera.js';
+import { docBox } from '../plane/projection.js';
 
 /** the host's stand-in element: what the host writes into it is what a person meets */
 const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
@@ -184,4 +196,41 @@ test('an opening begins in the act that asks for it: no module of the page loads
     for (const m of src.matchAll(/\bimport\s*\(([^)]*)\)/g)) if (!(f === 'app/main.js' && /^\s*['"]\.\.\/gate\//.test(m[1]))) stray.push(`${f}: import(${m[1]})`);
   }
   assert.deepEqual(stray, []);
+});
+
+/** a stand-in of the element an act was made at, standing in the page at a rect on screen, bearing `id` where one is given */
+const conjuredAt = (/** @type {{x: number, y: number, w: number, h: number}} */ r, id = '') => ({ id, isConnected: true, getBoundingClientRect: () => ({ left: r.x, top: r.y, right: r.x + r.w, bottom: r.y + r.h, width: r.w, height: r.h }) });
+/** where the host placed the overlay standing, in px: its left and its top */
+const placed = () => ({ x: parseFloat(/** @type {any} */ (hostEl.style).left), y: parseFloat(/** @type {any} */ (hostEl.style).top) });
+
+test('an overlay conjured at an element stands beneath it while it stands in the page, and at the span named beside it once the text layer takes it away — never at the viewport\'s corner', () => {
+  const D = '1.0.1.0.3', b = docBox(D);
+  CAM.setViewport(1440, 900);
+  // the camera over the document's box, the whole box in view; no article of it is mounted here, so its span's place is the box
+  CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale: Math.min(600 / b.w, 600 / b.h) });
+  const sym = conjuredAt({ x: 300, y: 200, w: 12, h: 14 });
+  HOST.show({ kind: 'card', id: 'anatomy:L', anchor: { el: /** @type {any} */ (sym), span: { addr: D, pos: 11, width: 5 } }, html: '<span class="label">L</span>', acts: {} });
+  assert.deepEqual(placed(), { x: 300, y: 218 }, 'beneath the element while it stands, the span beside it never read');
+  sym.isConnected = false; // the text layer rebuilt the article the element stood in, or took it down
+  HOST.place();
+  const box = { x: CAM.sx(b.x + b.w), y: CAM.sy(b.y) };
+  assert.ok(box.x > 6 && box.x < 1434 && box.y > 34 && box.y < 894, `the box's top-right stands in the viewport: ${JSON.stringify(box)}`);
+  assert.deepEqual(placed(), box, 'the element gone: at the span named beside it — its document\'s box, no article of it mounted — never at the viewport\'s corner');
+  HOST.dismiss();
+});
+
+test('an element its owner redrew from state is found again by its id: the overlay stands beneath the one the page holds now', () => {
+  const back = conjuredAt({ x: 10, y: 8, w: 40, h: 24 }, 'line-back'), redrawn = conjuredAt({ x: 14, y: 8, w: 44, h: 24 }, 'line-back');
+  const find = globalThis.document.getElementById;
+  globalThis.document.getElementById = /** @type {any} */ ((/** @type {string} */ id) => (id === redrawn.id ? redrawn : null));
+  try {
+    HOST.show({ kind: 'list', id: 'trail-list', anchor: { el: /** @type {any} */ (back) }, html: '<span class="label">the trail</span>', acts: {} });
+    assert.deepEqual(placed(), { x: 10, y: 36 }, 'beneath Back');
+    back.isConnected = false; // the one line rebuilt: its Back is another element, bearing the same id
+    HOST.place();
+    assert.deepEqual(placed(), { x: 14, y: 36 }, 'beneath the Back the line holds now, found by its id');
+  } finally {
+    globalThis.document.getElementById = find;
+    HOST.dismiss();
+  }
 });

@@ -6,7 +6,10 @@
 // origin's account's owner as the seat above it (`effective_owner`), a mutant
 // that reads the owner off the origin's record by a rule of its own names the
 // account and turns red; one that decides the face's arm on the session alone
-// tells the keyed guest no key is here and turns red. A click on a run's
+// tells the keyed guest no key is here and turns red. The face stands at the
+// placeholder, the run's own positions in the article beside it, where it
+// stands once the text layer rebuilds or takes the placeholder down (a mutant
+// that anchors it at the placeholder alone turns red). A click on a run's
 // hairline, against the FAKE PORT, LEAPs to its source carrying the run,
 // which the source's text holds elsewhere: the landing is marked at the run's
 // counterpart there (a mutant that LEAPs without the run, or carries the
@@ -71,11 +74,13 @@ test('the act at a withheld run conjures C-39\'s face naming the owner its place
       const tag = (/<span class="withheld"[^>]*>/.exec(article) || [''])[0], arm = (/<span class="arm">([^<]*)<\/span>/.exec(article) || [])[1];
       assert.equal(arm, esc(entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text), `${who}: the placeholder's arm is the rule's`);
       const run = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag), isConnected: false });
-      Object.assign(run, { closest: (/** @type {string} */ sel) => (sel === '[data-withheld]' ? run : null) });
+      const holder = { dataset: { addr: D } };
+      Object.assign(run, { closest: (/** @type {string} */ sel) => (sel === '[data-withheld]' ? run : sel === 'article' ? holder : null) });
       assert.deepEqual([run.dataset.origin, run.dataset.owner], [O, owner], `${who}: the placeholder carries its origin and its origin's owner, the seat above the origin's account`);
       click({ target: run, clientX: 0, clientY: 0, stopPropagation() {} });
       const face = HOST.currentOverlay();
       assert.equal(face && face.id, 'face:C-39', `${who}: the act at the run conjures C-39's face`);
+      assert.deepEqual(face && face.anchor, { el: run, span: { addr: D, pos: n + 1, width: 240 } }, `${who}: the face stands at the placeholder, the run's own positions beside it, where it stands once the text layer rebuilds or takes the placeholder down`);
       const html = face ? face.html : '';
       assert.ok(html.includes(`>${esc(t('C-39', { owner }))}</div>`), `${who}: the face names ${owner}, the owner the placeholder names — never the origin's account, 1.0.1.1`);
       assert.ok(html.includes(`<div class="arm" data-string="${id}">${arm}</div>`), `${who}: the arm beneath it is the placeholder's own, ${id}: ${html}`);
