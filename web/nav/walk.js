@@ -23,7 +23,9 @@
 // reads the span's own first position. At launch the platform's focus rests
 // on the walk's element with the ring out (rule 21). Enter at a focused span
 // selects the block whole, as a click on plain text does, until the editor's
-// caret exists (D8; K-7's "text takes the caret" waits on D6).
+// caret exists (D8; K-7's "text takes the caret" waits on D6); at a withheld
+// run it shows the run's face whole, C-67's pointer its offered act (K-7,
+// N-KEYS'; O-FACES's `withheldRun`).
 // The plane linearizes board › account › document › block | link in record
 // order (S3 Q6); at reading scale the walk holds THE LINKS THE READING SCALE
 // DRAWS (D5 §4 rule 2: the owner's and the person's own; others' only where a

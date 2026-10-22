@@ -107,9 +107,17 @@
 // the face (a mutant whose show does not count itself turns red); asked
 // before the act — a follow faced at once, one faced once its read answers —
 // likewise, held by the act's end of the opening and by the face's show alike
-// (a mutant that drops both turns red). The overlay host stands on a
-// stand-in element, the platform's document a stand-in beside it, so a face
-// a landing shows is read back from what the host wrote.
+// (a mutant that drops both turns red). ENTER AT A WITHHELD RUN (D5 K-7)
+// shows the run's face whole, taking no focus: its head, the arm, then C-67's
+// pointer, a button following the origin owner's passing claim — the face's
+// act, which run by a key LEAPs to that claim's home, a trail entry with the
+// ring drawn that Back returns to the run from (a mutant that selects the run
+// as any other span, or beside its face, or leaves the pointer no act, turns
+// red); every claim
+// quoting, the QUOTING sibling a line and no act; no claim, the head and the
+// arm alone; Enter at any other span still selects it whole (D8). The overlay
+// host stands on a stand-in element, the platform's document a stand-in
+// beside it, so a face a landing shows is read back from what the host wrote.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -125,6 +133,7 @@ import * as PROV from '../overlays/provenance.js';
 import * as VERSIONS from '../overlays/versions.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as LINKS from '../overlays/links-card.js';
+import * as SEL from '../overlays/selection.js';
 import * as INPUT from '../app/input.js';
 import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
 import { entitlementArm } from '../text/article.js';
@@ -212,6 +221,23 @@ const heldIn = (/** @type {string} */ member) => F.compare([{ doc: FAR, spans: [
 const holdsHeld = (/** @type {string} */ member) => ({ result: { as_of: 1, resp: 'compare', pairs: [{ d1: FAR, d2: member, u1: { ordinal: String(FAR_HELD.pos), subspace: '1' }, u2: { ordinal: String(FAR_HELD.pos), subspace: '1' }, width: String(FAR_HELD.width) }] } });
 /** who uses the first edition's cited passage: the read the card asks */
 const usesCited = F.findDocsContaining([{ doc: D, spans: [{ ordinal: 11, positions: 5 }] }]);
+// WINDOWS: the account's edition windowing, after its first paragraph, a run of ORIGIN — 1.0.2's draft, withheld from the
+// reader — at RUN; EDITION: 1.0.2's published edition, whose claim on ORIGIN (EDITION_CLAIM) passes, its FROM EDITION's own
+// bytes; QUOTING_CLAIM: 1.0.2's other edition claim on ORIGIN, its FROM ORIGIN's bytes
+const WINDOWS = '1.0.1.0.30', ORIGIN = '1.0.2.0.2', EDITION = '1.0.2.0.9', EDITION_CLAIM = EDITION + '.0.2.1', QUOTING_CLAIM = '1.0.2.0.11.0.2.1';
+const WINDOWS_TEXT = 'Tumbler.\n\n', RUN = WINDOWS_TEXT.length + 1, EDITION_TEXT = 'The edition 1.0.2 published of the draft.';
+/** the windowing edition, its run, and ORIGIN's two edition claims with their homes taken into the model, read whole as a landing's read leaves them */
+function takeWindows() {
+  REC.takeSpanSet(WINDOWS, [{ subspace: 1, ordinal: 1, positions: RUN - 1 + 240 }]);
+  REC.takeDelivery(WINDOWS, [{ pos: 1, width: RUN - 1, kind: 'content', text: WINDOWS_TEXT, ref: null, origin: null }, { pos: RUN, width: 240, kind: 'withheld', text: '', ref: null, origin: ORIGIN }]);
+  REC.takeMetadata(WINDOWS, { doc: WINDOWS, published: true, owner: '1.0.1', birth: WINDOWS + '.1', birthExtent: RUN - 1 + 240, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(WINDOWS, []);
+  const R20 = '1.1.0.1.0.1.0.3.14', theirs = (/** @type {object} */ end) => ({ ...end, account: '1.0.2' });
+  REC.takeLink({ addr: EDITION_CLAIM, from: [theirs(span(EDITION, 1, EDITION_TEXT.length))], to: [theirs(whole(ORIGIN))], type: R20 });
+  REC.takeLink({ addr: QUOTING_CLAIM, from: [theirs(span(ORIGIN, 1, 240))], to: [theirs(whole(ORIGIN))], type: R20 });
+  for (const home of [EDITION, '1.0.2.0.11']) REC.takeMetadata(home, { doc: home, published: true, owner: '1.0.2', birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeEditionClaims(ORIGIN, [QUOTING_CLAIM, EDITION_CLAIM]);
+}
 
 /** the reads of a document read whole: its extent, its metadata, its text, its image, its links */
 const reads = (/** @type {string} */ doc, /** @type {string} */ text, /** @type {string[]} */ links) => ({
@@ -227,6 +253,7 @@ const script = {
   ...reads(C, C_TEXT, []),
   ...reads(DEEP, DEEP_TEXT, []),
   ...reads(RES, RES_TEXT, []),
+  ...reads(EDITION, EDITION_TEXT, [EDITION_CLAIM]),
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GONE) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
   // where each citation's far end projects into FAR now: the passage at 20, five positions; FAR whole, all of it
   [FAKE.keyOf('op', { frame: F.project(PASSAGE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }] } },
@@ -966,6 +993,57 @@ test('a face a navigation act shows stands over a card asked at the place it lea
     await asked;
     assert.equal(HOST.currentState()?.id, face, `${what}: the card's answer shows nothing over the face`);
     HOST.dismiss();
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Enter at a withheld run shows its face whole, C-67\'s pointer its act — run by a key, the LEAP to the edition its claim names, the ring drawn, Back returning to the run; the QUOTING sibling a line and no act; no claim, the head and the arm alone; Enter at any other span selects it', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  /** Enter as the platform delivers it at the plane */
+  const enter = /** @type {any} */ ({ key: 'Enter', keyCode: 13, isComposing: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {} });
+  const press = () => KEYS.dispatch(enter, { where: 'plane', byKey: true });
+  /** the face's words past its head, as the host wrote them: the arm, and the clause where one stands */
+  const below = () => { const o = HOST.currentState(); return o ? o.html.slice(o.html.indexOf('<div class="arm"')) : null; };
+  try {
+    takeWindows();
+    await run(GO.leapTo(WINDOWS, { pos: RUN }));
+    assert.deepEqual(walkAt(), ['block', WINDOWS, RUN], 'the walk on the run');
+    const arm = entitlementArm({ account: '1.0.1', keyPresent: false }, '1.0.2');
+    const head = `<div class="face-text" data-string="B1.withheld-run">${esc(t('B1.withheld-run', { owner: '1.0.2', account: '1.0.2', width: 240, origin: ORIGIN }))}</div>`;
+    await press();
+    let o = HOST.currentState();
+    assert.equal(o?.id, 'face:withheld-run', 'Enter at the run shows its face whole (K-7)');
+    assert.ok(o && o.html.startsWith(head), `its head: ${o && o.html}`);
+    assert.equal(below(), `<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div><div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${EDITION_CLAIM}" data-home="${EDITION}">${esc(t('C-67.pointer'))}</button></div>`,
+      'the arm, then the pointer: a button following 1.0.2\'s passing claim');
+    assert.deepEqual([o?.takeFocus, SEL.selected(), GO.arrivalMark()], [undefined, null, null], 'it takes no focus; nothing selected, nothing marked');
+    const act = o && o.acts ? o.acts.follow : null;
+    assert.ok(act, 'the pointer is the face\'s act');
+    const n = TRAIL.length();
+    await run(Promise.resolve(act(/** @type {any} */ ({}), true)));
+    const e = TRAIL.current();
+    assert.deepEqual([TRAIL.length(), e && [e.addr, e.pos, e.width, e.link]], [n + 1, [EDITION, null, null, null]], 'a trail entry at the edition, landed in whole');
+    assert.deepEqual([walkAt(), WALK.ringShown(), HOST.currentState(), marks()], [['document', EDITION, null], true, null, [null, null]], 'the walk on the edition, the ring drawn — a key made the act — the face gone, nothing lit');
+    await run(GO.back());
+    assert.deepEqual(walkAt(), ['block', WINDOWS, RUN], 'Back returns to the run');
+    REC.takeEditionClaims(ORIGIN, [QUOTING_CLAIM]);
+    await press();
+    o = HOST.currentState();
+    assert.deepEqual([o?.id, below(), Object.keys(o?.acts || {})], ['face:withheld-run', `<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div><div class="clause" data-string="C-67.quoting">${esc(t('C-67.quoting', { claimant: '1.0.2' }))}</div>`, []], 'every claim quoting the draft: the QUOTING sibling a line, and no act');
+    KEYS.esc();
+    REC.takeEditionClaims(ORIGIN, []);
+    await press();
+    o = HOST.currentState();
+    assert.deepEqual([o?.id, below(), Object.keys(o?.acts || {})], ['face:withheld-run', `<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>`, []], 'no claim: the head and the arm alone');
+    KEYS.esc();
+    assert.equal(HOST.currentState(), null, 'Esc dismisses the face');
+    await run(WALK.key('up'));
+    await press();
+    assert.deepEqual([walkAt(), SEL.selected()], [['block', WINDOWS, 1], { addr: WINDOWS, pos: 1, width: RUN - 1 }], 'Enter at the span before the run selects it whole (D8)');
+    SEL.clear();
+  } finally {
+    globalThis.window = platform.window;
   }
   assert.deepEqual(fake.unanswered, []);
 });

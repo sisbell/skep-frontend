@@ -30,13 +30,17 @@
 // order — a signed-in reader's owner-grant default, a guest's split on
 // whether this device holds a key for the board (PUB-5.97) — and C-67's
 // clause beneath, decided over the origin's whole admitted-claim set
-// (`editionClause`; PUB-5.124, RES-164): the pointer where an admitted claim's
-// edition holds bytes the reader can reach, the QUOTING sibling where every
-// admitted claim quotes the draft, and nothing — the arm's own copy alone —
-// where none is admitted or the claims are not yet read — the placeholder's
-// one record (`placeholderOf`), which the ARIA mirror's item at the run
-// reads too, so the run a sighted reader sees and the one a screen reader
-// hears never part (R94); a record atom rendered
+// (`editionClause`; PUB-5.124, RES-164): the POINTER where an admitted claim's
+// edition holds bytes the reader can reach, naming the one claim it follows
+// by PUB-3.107's origin-keyed order (RES-152) — a control on the plane, whose
+// act is a LEAP to that claim's home, the edition (B1-S7 → S6; APP-INPUT),
+// and in a reading scene's pane a line, as every mark there is (SC) — the
+// QUOTING sibling where every admitted claim quotes the draft, and nothing —
+// the arm's own copy alone — where none is admitted or the claims are not yet
+// read — the placeholder's one record (`placeholderOf`), which the ARIA
+// mirror's item at the run and the run's face whole (O-FACES's `withheldRun`,
+// D5 K-7) read too, so the run a sighted reader sees and the one a screen
+// reader hears never part (R94); a record atom rendered
 // as the record it is (the genesis
 // record's words); an unknown item kind "not rendered" with its width; the
 // scene-mode variant, a reading scene's pane's article, which nothing in the
@@ -254,7 +258,21 @@ export function entitlementArm(reader, owner) {
   return { id: 'R56.key-absent', text: t('R56.key-absent', { owner }) };
 }
 
-/** @typedef {{id: string, text: string}} Clause — C-67's clause as it renders: its string id and its words */
+/**
+ * @typedef {Object} Pointer — C-67's pointer: an admitted claim's edition holds bytes the reader can reach, and the pointer follows the one claim PUB-3.107's origin-keyed order picks (`editionClause`)
+ * @property {'C-67.pointer'} id its string
+ * @property {string} text its words
+ * @property {string} claim the claim it follows — a link
+ * @property {string} home the document that claim resides in: the edition its act LEAPs to (B1-S7 → S6)
+ */
+
+/**
+ * @typedef {Object} Quoting — C-67's QUOTING sibling: every admitted claim quotes the draft, so nothing published carries its bytes and nothing is followed
+ * @property {'C-67.quoting'} id its string
+ * @property {string} text its words, naming the lowest-addressed claimant
+ */
+
+/** @typedef {Pointer | Quoting} Clause — C-67's clause as it renders: its string id and its words, and, where it is the pointer, the claim it follows */
 
 /**
  * @typedef {Object} ClaimSeen — one edition claim the lookup on an origin listed, as the page holds its two reads of it (PUB-7.50)
@@ -299,14 +317,20 @@ function admitted(c, owner) {
  * (RES-164): the POINTER where any admitted claim passes the resolution test
  * — its FROM holds a span, and none of its spans lies in the origin (the
  * span's document, `homeOf`: the board's `document_of` arithmetic), so its
- * edition holds bytes the reader can reach; the QUOTING sibling where every
- * admitted claim quotes — a FROM holding a span of the origin, or none —
- * naming the lowest-addressed claimant (RES-152); and the EMPTY place, null,
- * where none is admitted (RES-85), the arm's own copy then standing alone.
- * Undecided — the lookup unread or refused, or a listed claim's link or its
- * home not read — the clause is the empty place too, unless an admitted claim
- * already known passes: no reader is pointed at an edition, or told nothing
- * published carries the bytes, on reads the page has not made.
+ * edition holds bytes the reader can reach — following the passing claim
+ * PUB-3.107's origin-keyed order picks (RES-152): a passing claim whose home
+ * the origin's owner owns first, the lowest-addressed among several (PUB-4.7's
+ * pattern), else the lowest-addressed passing claim, a delegate's edition
+ * being bytes this reader can reach as they stand; the QUOTING sibling where
+ * every admitted claim quotes — a FROM holding a span of the origin, or none —
+ * naming the lowest-addressed claimant; and the EMPTY place, null, where none
+ * is admitted (RES-85), the arm's own copy then standing alone. Undecided —
+ * the lookup unread or refused, or a listed claim's link or its home not read
+ * — the clause is the empty place too, unless an admitted claim already known
+ * passes, the pointer then following the pick among the claims known (the
+ * article is made again as the rest are read): no reader is pointed at an
+ * edition, or told nothing published carries the bytes, on reads the page has
+ * not made. Addresses are ordered as tumblers (`cmpAddr`), never as strings.
  * @param {string} origin the withheld run's origin document
  * @param {string} owner the origin's owner (T-LAYER's `originOwner`)
  * @param {ClaimSeen[] | null} claims the claims the lookup listed; null where it is unread or refused
@@ -314,6 +338,8 @@ function admitted(c, owner) {
  */
 export function editionClause(origin, owner, claims) {
   if (!claims) return null;
+  /** @type {ClaimSeen[]} the admitted claims whose edition holds bytes the reader can reach */
+  const passing = [];
   /** @type {string[]} the claimants of the admitted claims that quote */
   const quoting = [];
   let undecided = false;
@@ -321,9 +347,12 @@ export function editionClause(origin, owner, claims) {
     const a = admitted(c, owner);
     if (a === null) { undecided = true; continue; }
     if (!a || !c.link) continue;
-    if (c.link.from.length && !c.link.from.some((e) => homeOf(e.start) === origin)) return { id: 'C-67.pointer', text: t('C-67.pointer') };
-    quoting.push(c.claimant);
+    if (c.link.from.length && !c.link.from.some((e) => homeOf(e.start) === origin)) passing.push(c);
+    else quoting.push(c.claimant);
   }
+  const own = passing.filter((c) => c.claimant === owner);
+  const [pick] = (own.length ? own : passing).sort((x, y) => cmpAddr(x.claim, y.claim));
+  if (pick) return { id: 'C-67.pointer', text: t('C-67.pointer'), claim: pick.claim, home: pick.home };
   if (undecided || !quoting.length) return null;
   return { id: 'C-67.quoting', text: t('C-67.quoting', { claimant: quoting.sort(cmpAddr)[0] }) };
 }
@@ -333,7 +362,7 @@ export function editionClause(origin, owner, claims) {
  * @property {string} owner the owner of the run's origin, whoever owns the document windowing the run
  * @property {string} head B1-S7's head: that owner, the run's width and its origin
  * @property {{id: string, text: string}} arm the entitlement arm for that owner and this reader (`entitlementArm`)
- * @property {Clause | null} clause C-67's clause beneath the arm (`editionClause`); null where nothing renders in its place
+ * @property {Clause | null} clause C-67's clause beneath the arm (`editionClause`), the pointer naming the claim it follows; null where nothing renders in its place
  */
 
 /**
@@ -344,9 +373,9 @@ export function editionClause(origin, owner, claims) {
  * the entitlement arm (`entitlementArm`) the one for it, then C-67's clause
  * as the origin's edition claims decide it (`clauseOf`), or nothing in its
  * place (R56: the face is ARM × CLAUSE). The plane's and a pane's placeholder
- * (`withheldBlockHTML`) and the ARIA mirror's item at the run (N-WALK) are
- * both made from it: R94's one record, never a second rendering that can
- * drift.
+ * (`withheldBlockHTML`), the ARIA mirror's item at the run (N-WALK) and the
+ * run's face whole (O-FACES's `withheldRun`, D5 K-7) are all made from it:
+ * R94's one record, never a second rendering that can drift.
  * @param {Block} b the withheld run
  * @param {Reader} reader who reads (M-REC's `reader`)
  * @param {(doc: string) => string} originOwner the owner account of an origin document, by the one owner rule (T-LAYER's `originOwner`)
@@ -365,8 +394,9 @@ export function placeholderOf(b, reader, originOwner, clauseOf) {
 
 /**
  * The placeholder occupying a withheld run (`placeholderOf`): its head, its
- * arm and, where one renders, its clause, and the owner it names carried
- * (`data-owner`) for C-39's face at the run, which names the same.
+ * arm and, where one renders, its clause (`clauseHTML`), and the owner it
+ * names carried (`data-owner`) for C-39's face at the run, which names the
+ * same.
  * @param {Block} b the withheld run
  * @param {Doc} d
  * @param {ArticleView} v
@@ -374,7 +404,23 @@ export function placeholderOf(b, reader, originOwner, clauseOf) {
 export function withheldBlockHTML(b, d, v) {
   const p = placeholderOf(b, v.reader, v.originOwner, v.clauseOf);
   return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}">` +
-    `<span class="wh-head">${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span>${p.clause ? `<span class="clause">${esc(p.clause.text)}</span>` : ''}</span>`;
+    `<span class="wh-head">${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span>${clauseHTML(p.clause, v.scene)}</span>`;
+}
+
+/**
+ * C-67's clause beneath a withheld run's arm, where one renders. On the plane
+ * the pointer is a control (`control`) carrying the claim it follows and that
+ * claim's home (`data-claim`, `data-home`): its act is the LEAP to the home,
+ * the edition, that APP-INPUT makes (B1-S7 → S6). In a reading scene's pane,
+ * where nothing acts on a mark (SC), it is a line; the QUOTING sibling is a
+ * line everywhere, for it follows nothing.
+ * @param {Clause | null} c
+ * @param {boolean} scene the scene-mode variant
+ */
+function clauseHTML(c, scene) {
+  if (!c) return '';
+  const follows = c.id === 'C-67.pointer' && !scene ? ` data-claim="${esc(c.claim)}" data-home="${esc(c.home)}"${control(scene)}` : '';
+  return `<span class="clause"${follows}>${esc(c.text)}</span>`;
 }
 
 /**

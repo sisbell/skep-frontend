@@ -123,6 +123,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    the only one the pointer reaches — and its corners, and on nothing a reading scene's pane holds — a pane's blocks,
    hairlines and symbols are read, never clicked (SC) */
 #domlayer .dtext .sp, #domlayer .dtext .hairline, #domlayer .dtext .sym { cursor:pointer; }
+/* C-67's pointer beneath a withheld run's arm, its LEAP to the edition the plane's act alone (a pane's is read, SC) */
+#domlayer .dtext .withheld .clause[data-home] { cursor:pointer; text-decoration:underline dotted; }
 #domlayer .dtext .sp:hover { background:rgba(127,178,255,.08); }
 #beams { position:fixed; inset:0; pointer-events:none; z-index:4; }
 

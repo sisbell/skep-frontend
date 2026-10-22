@@ -396,9 +396,11 @@ export function originOwner(addr) { return ownerAccount(REC.doc(addr)); }
  * origin's edition claims: the active view's lookup (M-REC's
  * `editionClaimsOf`), each listed claim's link as read, and its home's
  * publication state and owner — the owner by the one owner rule
- * (`ownerAccount`), as the origin's (`originOwner`). The plane's placeholder,
- * a pane's and the ARIA mirror's item at the run all read it (T-ARTICLE's
- * `placeholderOf`), so none of them part (R94).
+ * (`ownerAccount`), as the origin's (`originOwner`), so the pointer follows
+ * the claim whose home the origin's owner owns first. The plane's
+ * placeholder, a pane's, the ARIA mirror's item at the run and the run's face
+ * whole all read it (T-ARTICLE's `placeholderOf`), so none of them part
+ * (R94).
  * @param {string} origin
  * @returns {import('./article.js').Clause | null}
  */

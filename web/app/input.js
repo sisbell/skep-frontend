@@ -36,10 +36,16 @@
 // a run's hairline label goes to its source carrying the run, marked where
 // the source's current text holds it (foundations §2.3's carry rule; P43);
 // the scene-offer opens the scene;
-// a withheld run's placeholder conjures C-39's face, naming the owner the
-// placeholder names (B1-S5, B1-S7), at the placeholder and, once the text
-// layer rebuilds or takes it down, at the run's own positions (`runOf`;
-// O-HOST's anchor); the version statement at a document's
+// C-67's pointer beneath a withheld run's arm is a LEAP to the edition its
+// claim names, the claim's home, landed in whole (B1-S7 → S6): it carries no
+// passage, for an edition's bytes are fresh identity and no span of it
+// resolves to the origin (PUB-3.2; RES-66), so a carried run would be found
+// nowhere there and faced as a dead end where the edition stands; and it
+// lights no link, the claim being a record LK never draws;
+// the rest of a withheld run's placeholder conjures C-39's face, naming
+// the owner the placeholder names (B1-S5, B1-S7), at the placeholder and,
+// once the text layer rebuilds or takes it down, at the run's own positions
+// (`runOf`; O-HOST's anchor); the version statement at a document's
 // corner opens its members (the corner's act, the one Enter takes there —
 // K-57); a click on a block selects it whole (R11); a click on an account at
 // far is a teleport to its region (a trail push); an empty click ends a card
@@ -129,6 +135,8 @@ export function attach(els) {
     if (hair) { e.stopPropagation(); const h = /** @type {HTMLElement} */ (hair); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: runOf(h) }); return; }
     const offer = target.closest('.offer');
     if (offer) { e.stopPropagation(); const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return; }
+    const pointer = target.closest('.clause[data-home]');
+    if (pointer) { e.stopPropagation(); const home = /** @type {HTMLElement} */ (pointer).dataset.home; if (home) GO.leapTo(home, { how: 'leap' }); return; }
     const wh = target.closest('[data-withheld]');
     if (wh) { e.stopPropagation(); const w = /** @type {HTMLElement} */ (wh), run = runOf(w); FACES.c39(w.dataset.owner || '', REC.reader(), run ? { el: w, span: run } : w); return; }
     // the platform selected text under the click (a double-click's word): the selection IS that span (R11)

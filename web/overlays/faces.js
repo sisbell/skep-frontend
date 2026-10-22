@@ -26,21 +26,24 @@
 // rule, by the reader), `range_not_present`, the `invalid` follow,
 // `scan_busy`, `endsets_too_large`, `too_many_blocks`, `too_many_pairs`,
 // `too_much_coverage`, the session's `no_key` (C-136 with this version's
-// limit), the death arms (C-137), `unreachable`; a PUBLIC `moment` rendered
-// as a face with `answer`/`cancel` (no ceremony panel is built here — a
-// seam). A face never takes the focus (D5 §4 rule 4; K-58): it is heard
-// through the one status region (D4, O-HOST's), and a face offered by a key's
-// act takes none either; the moment's face alone takes it, on its first
-// control (K-80). Carries: the wireframe's §18 `face` (its words and acts;
-// its reviewer's label stays in the wireframe), `deadReferenceFace`'s fifth
-// cell, `c39Face`. Rules: FP-1, FP-2, FP-13, FP-20.
+// limit), the death arms (C-137), `unreachable`; a withheld run's face whole,
+// Enter's act at the run (D5 K-7), made from the run's placeholder record
+// (T-ARTICLE's `placeholderOf`), C-67's pointer its offered act; a PUBLIC
+// `moment` rendered as a face with `answer`/`cancel` (no ceremony panel is
+// built here — a seam). A face never takes the focus (D5 §4 rule 4; K-58):
+// it is heard through the one status region (D4, O-HOST's), and a face
+// offered by a key's act takes none either; the moment's face alone takes it,
+// on its first control (K-80). Carries: the wireframe's §18 `face` (its words
+// and acts; its reviewer's label stays in the wireframe),
+// `deadReferenceFace`'s fifth cell, `c39Face`. Rules: FP-1, FP-2, FP-13,
+// FP-20.
 
 import * as HOST from './host.js';
 import * as VERSIONS from './versions.js';
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
-import { entitlementArm } from '../text/article.js';
+import { entitlementArm, placeholderOf } from '../text/article.js';
 import { memberOf } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -182,6 +185,36 @@ export function floating(far, anchor, offer = true) {
   const words = k != null ? { id: 'F.floating.member', text: t('F.floating.member', { k }) } : { id: 'F.floating', text: t('F.floating', { D: far }) };
   HOST.show({ kind: 'face', id: 'face:floating', anchor: at, acts: offer ? { a0: (_el, byKey) => VERSIONS.open(far, null, at, null, byKey) } : {},
     html: faceHTML({ ...words, acts: offer ? [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] : [] }) });
+}
+
+/**
+ * A withheld run's face whole, the act at the run by the keyboard (D5 K-7;
+ * foundations §1 row 8: the placeholder "with R56's arm, whole on the run's
+ * act"), made from the run's placeholder as one record (T-ARTICLE's
+ * `placeholderOf`; R94): its head, the entitlement arm for its origin's owner
+ * and this reader, then C-67's clause where the origin's edition claims
+ * decide one — the pointer the face's offered act, in its own words, which
+ * LEAPs to the edition its claim names (B1-S7 → S6); the QUOTING sibling a
+ * line that offers nothing — and nothing past the arm where they decide none.
+ * It stands at the run's own positions and takes no focus: it is heard
+ * through the status region, and its act is reached by Tab (K-58).
+ * @param {string} addr the document the run stands in
+ * @param {import('../model/records.js').Block} b the withheld run
+ * @param {(home: string, byKey: boolean) => void} follow the pointer's act, handed in by its caller: the LEAP to the edition, the claim's home
+ */
+export function withheldRun(addr, b, follow) {
+  const p = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf);
+  const c = p.clause;
+  /** @type {Record<string, import('./host.js').Act>} */
+  const acts = {};
+  let clause = '';
+  if (c && c.id === 'C-67.pointer') {
+    const home = c.home;
+    acts.follow = (_el, byKey) => follow(home, byKey);
+    clause = `<div class="clause" data-string="${esc(c.id)}"><button data-run="follow" data-claim="${esc(c.claim)}" data-home="${esc(home)}">${esc(c.text)}</button></div>`;
+  } else if (c) clause = `<div class="clause" data-string="${esc(c.id)}">${esc(c.text)}</div>`;
+  HOST.show({ kind: 'face', id: 'face:withheld-run', anchor: { span: { addr, pos: b.pos, width: b.width } }, acts,
+    html: faceHTML({ id: 'B1.withheld-run', text: p.head, acts: [] }, armHTML(p.arm) + clause) });
 }
 
 /**

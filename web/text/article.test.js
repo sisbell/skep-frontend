@@ -11,7 +11,14 @@
 // (a mutant that keeps the pointer unconditional turns red); the pointer
 // where any admitted claim's FROM holds bytes outside the origin — a
 // delegate's among them — even listed after one that quotes (a mutant that
-// decides by the first claim turns red); the QUOTING sibling where every
+// decides by the first claim turns red), following the passing claim
+// PUB-3.107's order picks — the origin owner's own first, though a delegate's
+// is addressed lower; the lowest-addressed of the owner's as tumblers; the
+// lowest-addressed passing claim where none of the owner's passes (a mutant
+// that takes the lowest address alone, the first listed, or orders addresses
+// as strings turns red) — on the plane a control carrying that claim and its
+// home, in a pane a line (a mutant that carries no claim, or makes the pane's
+// a control, turns red); the QUOTING sibling where every
 // admitted claim's FROM holds the origin's bytes or none, naming the
 // lowest-addressed claimant; a claim homed in a draft or a doc 1, another
 // account's, or typed outside the edition class never counted (a mutant with
@@ -127,7 +134,8 @@ const claim = (addr, o = {}) => {
     published: o.published === undefined ? true : o.published, claimant: o.claimant ?? (accountOf(home) || ''),
   };
 };
-const POINTER = { id: 'C-67.pointer', text: t('C-67.pointer') };
+/** C-67's pointer following a claim, the LEAP to that claim's home its act */
+const pointer = (/** @type {string} */ followed) => ({ id: 'C-67.pointer', text: t('C-67.pointer'), claim: followed, home: homeOf(followed) });
 const quoting = (/** @type {string} */ claimant) => ({ id: 'C-67.quoting', text: t('C-67.quoting', { claimant }) });
 
 test('C-67\'s clause is the empty place where the origin carries no edition claim, or where its lookup is unread or refused (RES-85)', () => {
@@ -137,18 +145,18 @@ test('C-67\'s clause is the empty place where the origin carries no edition clai
 
 test('the pointer where an admitted claim\'s edition holds bytes the reader can reach; the QUOTING sibling where its FROM holds the origin\'s, or none (PUB-5.124)', () => {
   const ed = '1.0.1.0.9.0.2.1';
-  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed)]), POINTER, 'the owner\'s edition over its own fresh bytes');
-  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed, { type: R20 + '.2' })]), POINTER, 'a descriptive subtype of the edition class');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed)]), pointer(ed), 'the owner\'s edition over its own fresh bytes');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed, { type: R20 + '.2' })]), pointer(ed), 'a descriptive subtype of the edition class');
   assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed, { from: [bytesOf(ORIGIN, 1, 240)] })]), quoting(OWNER), 'a window-composed edition quoting the draft: its FROM the origin\'s own bytes');
   assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed, { from: [bytesOf('1.0.1.0.9', 1, 5), bytesOf(ORIGIN, 1, 240)] })]), quoting(OWNER), 'the mixed shape: one fresh run beside the windowed one, the cycle one run wide');
   assert.deepEqual(editionClause(ORIGIN, OWNER, [claim(ed, { from: [] })]), quoting(OWNER), 'a claim whose FROM is empty');
-  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.1.1.0.4.0.2.1')]), POINTER, 'a delegate\'s published edition: admitted by address containment');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.1.1.0.4.0.2.1')]), pointer('1.0.1.1.0.4.0.2.1'), 'a delegate\'s published edition: admitted by address containment');
 });
 
 test('the three answers are decided over the whole admitted set, never per claim: the pointer where any passes, QUOTING naming the lowest-addressed claimant only where every one quotes (RES-152, RES-164)', () => {
   const windowed = [bytesOf(ORIGIN, 1, 240)];
   const delegates = claim('1.0.1.1.0.4.0.2.1', { from: windowed }), owners = claim('1.0.1.0.11.0.2.1', { from: windowed });
-  assert.deepEqual(editionClause(ORIGIN, OWNER, [delegates, claim('1.0.1.0.9.0.2.1')]), POINTER, 'a delegate\'s quoting fork claim listed before the owner\'s edition: the pointer, never the first claim\'s QUOTING');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [delegates, claim('1.0.1.0.9.0.2.1')]), pointer('1.0.1.0.9.0.2.1'), 'a delegate\'s quoting fork claim listed before the owner\'s edition: the pointer, never the first claim\'s QUOTING');
   assert.deepEqual(editionClause(ORIGIN, OWNER, [delegates, owners]), quoting(OWNER), 'every one quoting: QUOTING naming 1.0.1, the lowest-addressed claimant, never the first listed');
 });
 
@@ -171,7 +179,33 @@ test('a claim whose link or whose home the page has not read leaves the clause t
   assert.equal(editionClause(ORIGIN, OWNER, [unread]), null, 'its link unread');
   assert.equal(editionClause(ORIGIN, OWNER, [homeless]), null, 'its home unread');
   assert.equal(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.11.0.2.1', { from: [] }), unread]), null, 'a quoting claim beside an unread one: never QUOTING on reads not made');
-  assert.deepEqual(editionClause(ORIGIN, OWNER, [unread, homeless, claim('1.0.1.0.12.0.2.1')]), POINTER, 'an admitted claim known to pass: the pointer, whatever the others turn out to be');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [unread, homeless, claim('1.0.1.0.12.0.2.1')]), pointer('1.0.1.0.12.0.2.1'), 'an admitted claim known to pass: the pointer, whatever the others turn out to be');
+});
+
+test('the pointer follows the passing claim PUB-3.107\'s origin-keyed order picks: one whose home the origin\'s owner owns first, the lowest-addressed of several as tumblers, else the lowest-addressed passing claim (RES-152)', () => {
+  // the owner's edition in a sub-account the seat above owns, beside a delegate's edition addressed below it
+  const owners = claim('1.0.1.3.0.2.0.2.1', { claimant: OWNER }), delegates = claim('1.0.1.2.0.2.0.2.1');
+  assert.equal(delegates.claimant, '1.0.1.2', 'the delegate\'s claim: its home\'s owner the delegate');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [delegates, owners]), pointer(owners.claim), 'the owner\'s own claim first, though the delegate\'s is lower-addressed');
+  // two of the owner's (RES-12's race), the higher listed first: 9 below 11 as tumblers, though "11" sorts first as a string
+  const eleventh = claim('1.0.1.0.11.0.2.1'), ninth = claim('1.0.1.0.9.0.2.1');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [eleventh, ninth]), pointer(ninth.claim), 'the lowest-addressed of the owner\'s, never the first listed nor the first as a string');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.9.0.2.10'), claim('1.0.1.0.9.0.2.2')]), pointer('1.0.1.0.9.0.2.2'), 'two in one home: the lower ordinal');
+  // none of the owner's passes — theirs quotes — so the lowest-addressed passing claim, a delegate's
+  const quotes = claim('1.0.1.0.11.0.2.1', { from: [bytesOf(ORIGIN, 1, 240)] });
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [quotes, claim('1.0.1.1.0.5.0.2.1'), claim('1.0.1.1.0.4.0.2.1')]), pointer('1.0.1.1.0.4.0.2.1'), 'the lowest-addressed passing claim, the owner\'s quoting one followed nowhere');
+});
+
+test('on the plane the pointer is a control carrying the claim it follows and that claim\'s home; in a pane it is a line, and the QUOTING sibling is a line everywhere', () => {
+  const run = /** @type {import('../model/records.js').Block} */ ({ pos: 1, width: 3, kind: 'withheld', text: '', origin: ORIGIN });
+  const own = '1.0.1.0.9.0.2.1';
+  const passes = () => editionClause(ORIGIN, OWNER, [claim('1.0.1.1.0.4.0.2.1'), claim(own)]);
+  const quotes = () => editionClause(ORIGIN, OWNER, [claim(own, { from: [] })]);
+  /** the clause beneath the arm as the placeholder holds it: its attributes and its words */
+  const clauseIn = (/** @type {import('./article.js').ArticleView} */ v) => (/<span class="arm">[^<]*<\/span><span class="clause"([^>]*)>([^<]*)<\/span><\/span>$/.exec(withheldBlockHTML(run, doc(), v)) || []).slice(1);
+  assert.deepEqual(clauseIn(view({ clauseOf: passes })), [` data-claim="${own}" data-home="1.0.1.0.9" role="button" tabindex="-1"`, esc(t('C-67.pointer'))], 'on the plane: a button carrying the owner\'s claim and its home, the edition');
+  assert.deepEqual(clauseIn(view({ clauseOf: passes, scene: true })), ['', esc(t('C-67.pointer'))], 'in a pane: a line, nothing in a pane acting on a mark (SC)');
+  for (const scene of [false, true]) assert.deepEqual(clauseIn(view({ clauseOf: quotes, scene })), ['', esc(t('C-67.quoting', { claimant: OWNER }))], `${scene ? 'in a pane' : 'on the plane'}: the QUOTING sibling follows nothing`);
 });
 
 test('the placeholder\'s clause is the one its origin\'s claims decide; where they decide none, the arm\'s own copy stands alone', () => {

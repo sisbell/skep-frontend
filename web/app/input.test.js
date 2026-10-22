@@ -20,7 +20,13 @@
 // card stands at its own end's bytes and reads that end near and the other
 // far (a mutant that finds the end by its link alone, the link's first end
 // in the article answering every mark, turns red; so does an article whose
-// marks carry no end's key).
+// marks carry no end's key). A click on C-67's pointer beneath a withheld
+// run's arm, against the FAKE PORT, LEAPs to the edition its claim names —
+// the claim's home, landed in whole, its trail entry the one Back returns to
+// the run from — carrying no passage, lighting no link and showing no face (a
+// mutant that leaves the pointer to the placeholder's C-39, or carries the
+// run, turns red); a click on the rest of that placeholder still conjures
+// C-39's face.
 // An empty click made while a card reads ends its opening alone (O-HOST's):
 // its answer shows nothing and the card standing under it stands (a mutant
 // that dismisses the standing card with it, or leaves the opening to the
@@ -36,10 +42,13 @@ import * as PORT from '../bridge/port.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as GO from '../nav/go.js';
+import * as TRAIL from '../nav/trail.js';
+import * as WALK from '../nav/walk.js';
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
 import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm } from '../text/article.js';
+import { resolveSpan, unitSpan } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 
@@ -214,6 +223,85 @@ test('a click on a link\'s symbol, or on a stretch it marks, opens the card of t
       }
     }
     assert.deepEqual(fake.unanswered, []);
+  } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+/** an act run to its end: the flights it starts stepped to their last frames, until `done` holds */
+async function settled(/** @type {() => boolean} */ done) {
+  for (let i = 0; i < 200 && !(done() && !CAM.flying()); i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
+  assert.ok(done() && !CAM.flying(), 'the act ran to its end');
+}
+
+test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in whole — a trail entry Back returns from, no passage carried, no link lit, no face — and a click on the rest of the placeholder conjures C-39\'s face', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
+  const layer = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    // a guest at 1.0.2's document, which windows a run of 1.0.1's draft O; 1.0.1 published an edition, H, whose claim on O
+    // passes: its FROM H's own bytes, which no span of O holds
+    const D = '1.0.2.0.6', O = '1.0.1.0.1004', H = '1.0.1.0.40', CLAIM = H + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
+    const text = 'Tumbler.\n\n', n = byteLength(text), edition = 'The published edition.', m = byteLength(edition);
+    const fake = FAKE.create({
+      // H read whole on the LEAP: its extent, its text, its image, its links — the claim among them, read already
+      [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(H) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + m }] } },
+      [FAKE.keyOf('op', { frame: F.retrieveV(H, 1, m) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: edition }] } },
+      [FAKE.keyOf('op', { frame: F.image(H, 1, m) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: H + '.0.1.1', width: String(m) }] } },
+      [FAKE.keyOf('op', { frame: F.findLinksV(H, 1, m) })]: { result: { as_of: 1, resp: 'addrs', addrs: [CLAIM] } },
+    });
+    PORT.boot(fake);
+    REC.setSession(null);
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + 240 }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 240, kind: 'withheld', text: '', ref: null, origin: O }]);
+    REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.2', birth: D + '.1', birthExtent: n + 240, placed: null, baseExtent: null, source: null, asOf: 1 });
+    REC.takeLinks(D, []);
+    REC.takeEditionClaims(O, [CLAIM]);
+    REC.takeLink({ addr: CLAIM, from: [resolveSpan({ start: H + '.0.1.1', width: '0.0.0.0.0.0.0.' + m })], to: [resolveSpan(unitSpan(O))], type: R20 });
+    REC.takeMetadata(H, { doc: H, published: true, owner: '1.0.1', birth: H + '.1', birthExtent: m, placed: null, baseExtent: null, source: null, asOf: 1 });
+    const d = REC.doc(D);
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
+    const click = layer.get('click');
+    assert.ok(click, 'the text layer takes a click');
+    // the placeholder as the plane's article holds it, and its pointer and its head as a click finds them in it
+    const article = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d)), holder = { dataset: { addr: D } };
+    const run = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf((/<span class="withheld"[^>]*>/.exec(article) || [''])[0]) });
+    Object.assign(run, { closest: (/** @type {string} */ sel) => (sel === '[data-withheld]' ? run : sel === 'article' ? holder : null) });
+    const ptr = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf((/<span class="clause"[^>]*>/.exec(article) || [''])[0]) });
+    Object.assign(ptr, { closest: (/** @type {string} */ sel) => (sel === '.clause[data-home]' ? ptr : run.closest(sel)) });
+    const head = Object.assign(new globalThis.HTMLElement(), { closest: (/** @type {string} */ sel) => run.closest(sel) });
+    assert.deepEqual([ptr.dataset.claim, ptr.dataset.home], [CLAIM, H], 'the pointer carries the claim it follows and that claim\'s home');
+    // the reader stands at the run, a LEAP's landing
+    CAM.setViewport(1440, 900);
+    TRAIL._reset();
+    const departing = GO.leapTo(D, { pos: n + 1 });
+    await settled(() => WALK.current()?.pos === n + 1);
+    await departing;
+    const from = fake.asked.length;
+    click({ target: ptr, clientX: 0, clientY: 0, stopPropagation() {} });
+    await settled(() => WALK.current()?.addr === H);
+    const e = TRAIL.current();
+    assert.deepEqual(e && [e.addr, e.pos, e.width, e.link], [H, null, null, null], 'a trail entry at the edition, landed in whole');
+    assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr], ['document', H], 'the walk on the edition');
+    assert.deepEqual([HOST.currentState(), GO.arrivalMark(), GO.litLink()], [null, null, null], 'no face, nothing marked and no link lit: the claim is a record no link draws');
+    assert.ok(!fake.asked.slice(from).some((k) => k.includes('"compare"')), 'no passage carried: no compare asked of the edition');
+    assert.deepEqual(fake.unanswered, []);
+    await settled(() => true);
+    const back = GO.back();
+    await settled(() => TRAIL.current()?.addr === D && WALK.current()?.addr === D);
+    await back;
+    assert.deepEqual([WALK.current()?.kind, WALK.current()?.pos], ['block', n + 1], 'Back returns to the withheld run');
+    click({ target: head, clientX: 0, clientY: 0, stopPropagation() {} });
+    assert.equal(HOST.currentState()?.id, 'face:C-39', 'the rest of the placeholder conjures C-39\'s face');
+    HOST.dismiss();
   } finally {
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }

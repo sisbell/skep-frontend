@@ -44,7 +44,9 @@
 import * as GO from './go.js';
 import * as WALK from './walk.js';
 import * as LEAP from './leap.js';
+import * as REC from '../model/records.js';
 import * as HOST from '../overlays/host.js';
+import * as FACES from '../overlays/faces.js';
 import * as SEL from '../overlays/selection.js';
 import * as SCENE from '../scene/scene.js';
 import * as LINE from '../line/line.js';
@@ -267,9 +269,11 @@ export function esc() {
 
 /**
  * Enter activates the focus (K-7): a place goes — the board, an account or a
- * document, each a teleport pushed on the trail — a span is selected whole
- * (D8: until the editor's caret), a link's symbol opens its card, which takes
- * the focus as a key opened it (K-55).
+ * document, each a teleport pushed on the trail — a withheld run shows its
+ * face whole (§2.1), C-67's pointer its offered act, a LEAP to the edition its
+ * claim names, reached by Tab (K-58); any other span is selected whole (D8:
+ * until the editor's caret), a link's symbol opens its card, which takes the
+ * focus as a key opened it (K-55).
  * @param {boolean} byKey
  */
 async function activateFocus(byKey) {
@@ -278,7 +282,12 @@ async function activateFocus(byKey) {
   if (f.kind === 'account') { await GO.toAccount(f.addr, byKey); return; }
   if (f.kind === 'board') { await GO.wholeBoard(byKey); return; }
   if (f.kind === 'document') { await GO.leapTo(f.addr, { how: 'key', byKey }); return; }
-  if (f.kind === 'block' && f.pos != null) { SEL.select(f.addr, f.pos); return; }
+  if (f.kind === 'block' && f.pos != null) {
+    const b = REC.blockByPos(f.addr, f.pos);
+    if (b && b.kind === 'withheld') FACES.withheldRun(f.addr, b, (home, byKey) => GO.leapTo(home, { how: 'leap', byKey }));
+    else SEL.select(f.addr, f.pos);
+    return;
+  }
   if (f.kind === 'link' && f.link) ANATOMY.open(f.link, null, byKey);
 }
 

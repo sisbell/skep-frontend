@@ -17,7 +17,8 @@
 // that drops the tree's name, or names every group by one level, turns red.
 // The mirror's item at a withheld run is the run's placeholder — the owner of
 // its origin, the arm for the reader, C-67's clause as the origin's edition
-// claims decide it — as the plane's placeholder shows them, for a signed-in
+// claims decide it — as the plane's placeholder shows them, its pointer a
+// control following the owner's passing claim, for a signed-in
 // reader, a guest whose device holds a key for this board and a guest with
 // none, at each state of the claims: none read, none standing, the owner's
 // edition standing, an edition quoting the draft alone: a mutant that names
@@ -264,12 +265,12 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
     const home = /** @type {string} */ (homeOf(c));
     REC.takeMetadata(home, { doc: home, published: true, owner, birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
   }
-  /** @type {Array<[string, () => void, string | null]>} each state of the origin's claims the page holds, and the words of the clause it decides */
+  /** @type {Array<[string, () => void, string | null, string]>} each state of the origin's claims the page holds, the words of the clause it decides, and what the plane's clause carries besides them: the pointer the claim it follows and that claim's home, a control */
   const states = [
-    ['no claim read', () => REC.applyFeedUpdate({ position: 9, at: 9, op: 'nullify', docs: [], class: 'published' }), null],
-    ['no claim on the origin', () => REC.takeEditionClaims(O, []), null],
-    ['the owner\'s edition over its own bytes', () => REC.takeEditionClaims(O, [QUOTES, OWN]), t('C-67.pointer')],
-    ['an edition quoting the draft alone', () => REC.takeEditionClaims(O, [QUOTES]), t('C-67.quoting', { claimant: owner })],
+    ['no claim read', () => REC.applyFeedUpdate({ position: 9, at: 9, op: 'nullify', docs: [], class: 'published' }), null, ''],
+    ['no claim on the origin', () => REC.takeEditionClaims(O, []), null, ''],
+    ['the owner\'s edition over its own bytes', () => REC.takeEditionClaims(O, [QUOTES, OWN]), t('C-67.pointer'), ` data-claim="${OWN}" data-home="1.0.1.0.9" role="button" tabindex="-1"`],
+    ['an edition quoting the draft alone', () => REC.takeEditionClaims(O, [QUOTES]), t('C-67.quoting', { claimant: owner }), ''],
   ];
   const signedIn = REC.session();
   // the device's key store as `fingerprint` answers it: a key bound at this board, or none
@@ -282,15 +283,15 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
       const who = reader ? reader.account : keys.length ? 'a guest with a key for this board' : 'a guest with no key';
       const rule = entitlementArm({ account: reader ? reader.account : null, keyPresent: keys.length > 0 }, owner), arm = rule.text;
       assert.equal(rule.id, id, `${who}: the rule's arm is ${id}`);
-      for (const [state, hold, clause] of states) {
+      for (const [state, hold, clause, follows] of states) {
         hold();
         const item = WALK.nameOf({ kind: 'block', addr: W, pos: run.pos, link: null }, 1, 2);
         assert.equal(item, t('L.mirror.withheld', { document: W, width: 240, owner, origin: O, arm, clause: clause ? t('L.mirror.clause', { clause }) : '' }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
           `${who}, ${state}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause the claims decide`);
         assert.ok(clause ? item.includes(`${arm}. ${clause}. `) : item.includes(`${arm}. `) && !/\.\s+\./.test(item), `${who}, ${state}: the clause a sentence of its own after the arm, or nothing in its place: ${item}`);
         const html = withheldBlockHTML(run, d, LAYER.viewFor(d));
-        assert.ok(html.includes(` data-owner="${owner}"`) && html.includes(`<span class="arm">${esc(arm)}</span>`) && (clause ? html.includes(`<span class="clause">${esc(clause)}</span>`) : !html.includes('class="clause"')),
-          `${who}, ${state}: the plane's placeholder shows the same owner, arm and clause`);
+        assert.ok(html.includes(` data-owner="${owner}"`) && html.includes(`<span class="arm">${esc(arm)}</span>`) && (clause ? html.includes(`<span class="clause"${follows}>${esc(clause)}</span>`) : !html.includes('class="clause"')),
+          `${who}, ${state}: the plane's placeholder shows the same owner, arm and clause, the pointer a control following the owner's passing claim: ${html}`);
       }
     }
   } finally {

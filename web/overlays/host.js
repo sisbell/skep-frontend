@@ -151,8 +151,8 @@ export function firstControl(/** @type {HTMLElement} */ host, /** @type {string 
   return /** @type {HTMLElement | null} */ ((first && host.querySelector(first)) || host.querySelector(FIRST));
 }
 
-/** a face's words, for the status region: its text, its arm, its note */
-const faceWords = (/** @type {HTMLElement} */ host) => [...host.querySelectorAll('.face-text, .arm, .note')].map((e) => e.textContent || '').join(' ');
+/** a face's words, for the status region: its text, its arm, its clause, its note */
+const faceWords = (/** @type {HTMLElement} */ host) => [...host.querySelectorAll('.face-text, .arm, .clause, .note')].map((e) => e.textContent || '').join(' ');
 
 /**
  * Show an overlay — the chrome's next act, so an opening still reading ends

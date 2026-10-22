@@ -45,8 +45,9 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     clause beneath the arm the one the origin's edition claims decide
     (PUB-5.124), decided here from the page's own recorded reads of them —
     the active view's lookup, its claims' links and their homes' metadata,
-    never the audit view's `edition_claims` — and nothing in its place where
-    they decide none; the mirror's item the run's placeholder — its owner,
+    never the audit view's `edition_claims` — the pointer carrying the claim
+    PUB-3.107's order picks, and nothing in its place where they decide none;
+    the mirror's item the run's placeholder — its owner,
     its origin, the arm, and the clause where the placeholder shows one
     (R94); the placeholder shown, and every row of
     the article inside its box, measured where the placeholder stands tallest,
@@ -63,7 +64,10 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     arm beneath, standing beneath the placeholder, at the run's own positions
     once the text layer rebuilds the article and takes the placeholder away,
     and at the document's box once the layer takes the article down — never
-    at the viewport's corner; "who wrote this?" answering over a block;
+    at the viewport's corner; Enter at the run, the walk's element, showing
+    the run's face whole (D5 K-7) — the placeholder's head, the guest's arm
+    and the clause, the pointer its one act — the focus staying on the item
+    and nothing selected; "who wrote this?" answering over a block;
 (g) the owner's page whose own session ends falls to guest class: opened
     again, it reads one of the claimant's drafts and the window run's bytes,
     then its session is closed by the page's own `close(session)` — the call
@@ -270,7 +274,7 @@ def run(ctx):
     doc = run_withheld('(e) the model holds the window run as a withheld block — at 1467, 240 positions, its origin 1.0.1.0.1003 — and none of its text')
     ph = ctx.js('''[...document.querySelectorAll(%s)].map((e) => ({pos: Number(e.dataset.pos), width: Number(e.dataset.width), origin: e.dataset.origin, owner: e.dataset.owner,
       head: (e.querySelector('.wh-head') || {}).textContent || null, arm: (e.querySelector('.arm') || {}).textContent || null,
-      clause: (e.querySelector('.clause') || {}).textContent || null}))''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
+      clause: (e.querySelector('.clause') || {}).textContent || null, claim: (e.querySelector('.clause') || {dataset: {}}).dataset.claim || null}))''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
     head = t(ctx, 'B1.withheld-run', {'owner': OWNER, 'account': OWNER, 'width': WINDOW[1], 'origin': WINDOW[2]})
     arm = t(ctx, arm_id, {'owner': OWNER})
     c33 = ctx.js('document.querySelectorAll(%s).length' % json.dumps('#domlayer article[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
@@ -284,9 +288,9 @@ def run(ctx):
     # not read — and where they decide none, nothing stands in its place
     clause_id, decided = ctx.edition_clause(WINDOW[2], OWNER)
     clause = t(ctx, clause_id, {'claimant': decided.get('claimant', '')}) if clause_id else None
-    r.check(decided['lookups'] >= 1 and not decided['audit'] and len(ph) == 1 and ph[0]['clause'] == clause,
-            '(e) C-67\'s clause beneath the placeholder is the one the origin\'s edition claims decide — read with the active view\'s lookup, never the audit view\'s edition_claims — and nothing stands in its place where they decide none (PUB-5.124)',
-            {'decided': clause_id, 'shown': ph[0]['clause'] if len(ph) == 1 else None, 'reads': decided})
+    r.check(decided['lookups'] >= 1 and not decided['audit'] and len(ph) == 1 and ph[0]['clause'] == clause and ph[0]['claim'] == decided.get('claim'),
+            '(e) C-67\'s clause beneath the placeholder is the one the origin\'s edition claims decide — read with the active view\'s lookup, never the audit view\'s edition_claims — the pointer following the claim PUB-3.107\'s order picks, and nothing stands in its place where they decide none (PUB-5.124)',
+            {'decided': clause_id, 'shown': ph[0]['clause'] if len(ph) == 1 else None, 'claim': ph[0]['claim'] if len(ph) == 1 else None, 'reads': decided})
     r.figures['edition_clause'] = {'origin': WINDOW[2], 'decided': clause_id, 'reads': decided}
     # the mirror's item at the run says what the placeholder shows: its words filled from the placeholder's own owner, arm
     # and clause, the clause a sentence after the arm where one shows and nothing where none does, and the arm and the
@@ -375,6 +379,24 @@ def run(ctx):
             '(f) the text layer taking the article down — the camera at em 5, below the mount — leaves the face at the document\'s box, its top-right — never at the viewport\'s corner', down)
     ctx.set_view(cam['x'], cam['y'], cam['scale'])
     r.figures['c39_placed'] = {'beneath_the_placeholder': under, 'rebuilt': rebuilt, 'taken_down': down}
+    ctx.esc()
+    # the act at the run by the keyboard: Enter at the walk's element, the run a LEAP landed on (D5 K-7) — the run's face
+    # whole, made from the placeholder's record: its head, the guest's arm, and C-67's clause as the origin's edition claims
+    # decide it, the pointer the face's one act; it takes no focus (K-58) and selects nothing
+    ctx.leap(DOC, WINDOW[0])
+    at_run = ctx.js('(() => { const f = window.__skep.view.focus(), e = document.activeElement; return {focus: f && [f.kind, f.addr, f.pos], on_item: !!e && e.id === "walk-" + window.__skep.mirror.index()}; })()')
+    ctx.drv.key('Enter')
+    ctx.frames(2)
+    whole = ctx.js('''(() => { const o = document.getElementById('overlay'), q = (s) => o.querySelector(s), e = document.activeElement, w = q('.face-text'), a = q('.arm'), c = q('.clause'), b = q('.clause [data-run]');
+      return {id: window.__skep.overlay().id, words_id: w ? w.dataset.string : null, words: w ? w.textContent : null, arm_id: a ? a.dataset.string : null, arm: a ? a.textContent : null,
+              clause_id: c ? c.dataset.string : null, clause: c ? c.textContent : null, claim: b ? b.dataset.claim : null, acts: o.querySelectorAll('[data-run]').length,
+              on_item: !!e && e.id === 'walk-' + window.__skep.mirror.index(), selection: window.__skep.selection()}; })()''')
+    r.check(at_run['focus'] == ['block', DOC, WINDOW[0]] and at_run['on_item'] and whole['id'] == 'face:withheld-run' and whole['words_id'] == 'B1.withheld-run' and whole['words'] == head
+            and whole['arm_id'] == arm_id and whole['arm'] == arm and whole['clause_id'] == clause_id and whole['clause'] == clause and whole['claim'] == decided.get('claim')
+            and whole['acts'] == (1 if clause_id == 'C-67.pointer' else 0) and whole['on_item'] and whole['selection'] is None,
+            '(f) Enter at the run — the walk\'s element, the platform\'s focus on its item — shows the run\'s face whole: B1-S7\'s head, the guest\'s arm (%s), and C-67\'s clause as the origin\'s edition claims decide it, the pointer its one act; the focus stays on the item and nothing is selected (D5 K-7, K-58)' % arm_id,
+            {'at_run': at_run, 'face': whole, 'decided': clause_id})
+    r.figures['run_face'] = whole
     ctx.esc()
     para = next((b for b in doc['blocks'] if b['kind'] == 'para'), None)
     if para:

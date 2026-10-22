@@ -240,9 +240,12 @@ class Context:
         `owner` or under it (the origin's account where none is given: a withheld origin's metadata is read by no one
         it is withheld from) — a home the board refused `withheld` or `doc_not_registered` admitted nowhere; it passes
         where its FROM holds a span and none lies in the origin. Decided over the whole admitted set (RES-164): the
-        pointer where any passes; the QUOTING sibling, naming the lowest-addressed claimant, where every one quotes;
-        nothing — None — where none is admitted, where the lookup was not answered, or where a listed claim's read was
-        not, unless one passes. Answers the string id, or None, and what it was decided from"""
+        pointer where any passes, following the passing claim PUB-3.107's origin-keyed order picks (RES-152) — one
+        whose claimant is `owner` first, the lowest-addressed of several as tumblers, else the lowest-addressed passing
+        claim — named in what it was decided from (`claim`, its `home`); the QUOTING sibling, naming the
+        lowest-addressed claimant, where every one quotes; nothing — None — where none is admitted, where the lookup
+        was not answered, or where a listed claim's read was not, unless one passes. Answers the string id, or None,
+        and what it was decided from"""
         owner = owner or account_of(origin)
         calls = self.recorded_ops()
         lookup = {'op': 'find_links_ftt', 'q': {'from': 'any', 'home': 'any', 'to': [unit_span(origin)], 'ty': [unit_span(EDITION_CLASS)]}}
@@ -255,7 +258,7 @@ class Context:
         listed = (last(lookup) or {}).get('result')
         if not isinstance(listed, dict) or listed.get('resp') != 'addrs':
             return None, seen
-        passes, quoting, undecided = False, [], False
+        passing, quoting, undecided = [], [], False
         for claim in listed.get('addrs') or []:
             home = home_of(claim) or claim
             link, meta = last({'op': 'read_link', 'a': claim}) or {}, last({'op': 'doc_metadata', 'doc': home}) or {}
@@ -277,14 +280,18 @@ class Context:
                 continue
             frm = slots[0] if slots else []
             if frm and not any(home_of(s['start']) == origin for s in frm):
-                passes = True
+                passing.append((claim, claimant))
             else:
                 quoting.append(claimant)
-        if passes:
+        tumbler = lambda a: [int(x) for x in a.split('.')]
+        if passing:
+            own = [c for c, claimant in passing if claimant == owner]
+            seen['claim'] = min(own or [c for c, _ in passing], key=tumbler)
+            seen['home'] = home_of(seen['claim'])
             return 'C-67.pointer', seen
         if undecided or not quoting:
             return None, seen
-        seen['claimant'] = sorted(quoting, key=lambda a: [int(x) for x in a.split('.')])[0]
+        seen['claimant'] = sorted(quoting, key=tumbler)[0]
         return 'C-67.quoting', seen
 
     # ---- the provider and the board (the harness's own reads, never the page's) ----

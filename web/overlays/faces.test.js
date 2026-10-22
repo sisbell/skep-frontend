@@ -9,9 +9,17 @@
 // R56's key-absent default; no token left unfilled, none of C-39's words,
 // which are a link address's alone, and no act. A mutant that fills C-39 with
 // the owner, takes the owner from the document's address, drops the arm, or
-// decides it on the session alone turns red. Against the FAKE PORT, "who
-// wrote this?" and "who uses this?" asked of a document the reader may not
-// read show that face, naming the document they asked of.
+// decides it on the session alone turns red. A withheld run's face whole
+// (D5 K-7) is its placeholder's record: the head naming its origin's owner,
+// the arm for that owner and each reader, then C-67's clause as the origin's
+// edition claims decide it — nothing where none stands, the QUOTING sibling a
+// line, the pointer a button carrying the claim it follows, the face's one
+// act, the LEAP to that claim's home — none of C-39's words, at the run's own
+// positions, taking no focus, the status region saying it whole, the clause
+// with it (a mutant that drops the clause, offers an act beside the pointer,
+// takes the focus, or says no clause turns red). Against the FAKE PORT,
+// "who wrote this?" and "who uses this?" asked of a document the reader may
+// not read show the document-level face, naming the document they asked of.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -22,9 +30,11 @@ import * as REC from '../model/records.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as LAYER from '../text/layer.js';
+import * as FOCUS from '../nav/focus.js';
 import { entitlementArm } from '../text/article.js';
+import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
 import { STRINGS, t } from '../strings.js';
-import { esc } from '../util.js';
+import { esc, byteLength } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 
@@ -47,11 +57,24 @@ const READERS = [
 /** the page reading as one of the readers: its session, and the device's key store read for this board */
 const readAs = (/** @type {typeof READERS[number]} */ reader) => { REC.setSession(reader.session); REC.takeKeyStore(reader.keys, ORIGIN); };
 
-/** the overlay host's stand-in element: what the host writes into it is what a person meets */
-const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
-
 /** HTML text as a person reads it: the escapes `esc` writes undone */
 const text = (/** @type {string} */ s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+
+/**
+ * The overlay host's stand-in element: what the host writes into it is what a person meets. Asked for its lines by
+ * class (`.face-text, .arm` …), it answers each `div` of those classes it holds, in order, with its text — a control's
+ * inside it among it — as a person reads it
+ */
+const hostEl = {
+  className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null,
+  querySelectorAll: (/** @type {string} */ sel) => {
+    const classes = sel.split(',').map((s) => s.trim().replace(/^\./, ''));
+    return [...hostEl.innerHTML.matchAll(/<div class="([^"]*)"[^>]*>(.*?)<\/div>/g)].filter((m) => classes.includes(m[1])).map((m) => ({ textContent: text(m[2].replace(/<[^>]*>/g, '')) }));
+  },
+  getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false,
+};
+/** the one status region's stand-in: what the host says through it */
+const live = { textContent: '', setAttribute() {} };
 
 /** the face standing, as a person meets it: its name, its words and their string, the arm beneath them and its string, whether it offers an act, and what the host wrote */
 function faceShown() {
@@ -69,6 +92,7 @@ before(() => {
   globalThis.document = /** @type {any} */ ({ activeElement: null, body: null });
   globalThis.HTMLElement = /** @type {any} */ (class {});
   HOST.attach(/** @type {any} */ (hostEl));
+  FOCUS.attach({ live: /** @type {any} */ (live) });
   REC.takeOwner('1.0.2.1', { prefix: OWNER, principal: 901 });
   REC.takeRefused(X, 'withheld');
 });
@@ -101,6 +125,53 @@ test('a `withheld` refusal of a read\'s document consult shows the document-leve
     FACES.withheld(X);
     heldToTheFace(reader, 'the face asked by name');
     HOST.dismiss();
+  }
+});
+
+test('a withheld run\'s face whole is its placeholder\'s record: the head, the arm for its origin\'s owner and this reader, then C-67\'s clause — the pointer its act, the QUOTING sibling a line, nothing where no claim stands — at the run\'s own positions, taking no focus (D5 K-7, K-58)', () => {
+  // 1.0.1's edition W, windowing a run of X — 1.0.2's draft in its sub-account — that the reader may not read
+  const W = '1.0.1.0.5', text = 'Tumbler.\n\n', n = byteLength(text);
+  REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: n + 240 }]);
+  REC.takeDelivery(W, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 240, kind: 'withheld', text: '', ref: null, origin: X }]);
+  const run = REC.doc(W).blocks[1];
+  // two edition claims of 1.0.2's on X, each homed in a published edition of theirs: one over its own bytes, one quoting X
+  const R20 = '1.1.0.1.0.1.0.3.14', EDITION = '1.0.2.0.9', OWN = EDITION + '.0.2.1', QUOTES = '1.0.2.0.11.0.2.1';
+  for (const [c, from] of /** @type {Array<[string, string]>} */ ([[OWN, EDITION + '.0.1.1'], [QUOTES, X + '.0.1.1']])) {
+    REC.takeLink({ addr: c, from: [resolveSpan({ start: from, width: '0.0.0.0.0.0.0.20' })], to: [resolveSpan(unitSpan(X))], type: R20 });
+    const home = /** @type {string} */ (homeOf(c));
+    REC.takeMetadata(home, { doc: home, published: true, owner: OWNER, birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
+  }
+  /** @type {Array<[string, string[], string, string[]]>} each state of X's claims the page holds, the clause beneath the arm it decides, and the clause's words */
+  const states = [
+    ['no claim on the origin', [], '', []],
+    ['an edition quoting the draft alone', [QUOTES], `<div class="clause" data-string="C-67.quoting">${esc(t('C-67.quoting', { claimant: OWNER }))}</div>`, [t('C-67.quoting', { claimant: OWNER })]],
+    ['1.0.2\'s edition over its own bytes', [QUOTES, OWN], `<div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${OWN}" data-home="${EDITION}">${esc(t('C-67.pointer'))}</button></div>`, [t('C-67.pointer')]],
+  ];
+  try {
+    for (const reader of READERS) {
+      readAs(reader);
+      const arm = entitlementArm({ account: reader.session ? reader.session.account : null, keyPresent: reader.keys.length > 0 }, OWNER);
+      for (const [state, claims, clause, said] of states) {
+        const what = `${reader.who}, ${state}`;
+        REC.takeEditionClaims(X, claims);
+        /** @type {Array<[string, boolean]>} the LEAPs the face's act asked for: the home, and whether a key made it */
+        const leaps = [];
+        FACES.withheldRun(W, run, (home, byKey) => { leaps.push([home, byKey]); });
+        const f = faceShown(), o = HOST.currentState(), head = t('B1.withheld-run', { owner: OWNER, account: OWNER, width: 240, origin: X });
+        assert.equal(f?.id, 'face:withheld-run', `${what}: the run's face`);
+        assert.deepEqual(f.words, ['B1.withheld-run', head], `${what}: the placeholder's head, naming ${OWNER}, the owner of the run's origin`);
+        assert.equal(live.textContent, [head, arm.text, ...said].join(' '), `${what}: the status region says the face whole — its head, its arm and its clause`);
+        assert.ok(o?.html.endsWith(`<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>${clause}`), `${what}: the arm for ${OWNER} and this reader, then the clause the claims decide, and nothing after it: ${o?.html}`);
+        assert.ok(!f.html.includes('⟨') && !f.html.includes(C39), `${what}: no token left unfilled, and none of C-39's words`);
+        assert.deepEqual(o?.anchor, { span: { addr: W, pos: run.pos, width: 240 } }, `${what}: at the run's own positions`);
+        assert.ok(!o?.takeFocus, `${what}: it takes no focus (K-58)`);
+        assert.deepEqual(Object.keys(o?.acts || {}), clause.includes('data-run') ? ['follow'] : [], `${what}: the pointer its one act, and no act besides`);
+        if (o && o.acts && o.acts.follow) { o.acts.follow(/** @type {any} */ ({}), true); assert.deepEqual(leaps, [[EDITION, true]], `${what}: its act the LEAP to the edition the claim names`); }
+        HOST.dismiss();
+      }
+    }
+  } finally {
+    REC.takeEditionClaims(X, []);
   }
 });
 
