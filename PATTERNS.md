@@ -163,6 +163,39 @@ fix; nothing here depends on their names.
   first act where the replaced one held it, and a face never takes it.
   The ring and the one status region are the owner's to write.
 
+## Decisions in force
+
+Design decisions taken on issues and built, one line each, newest
+last. A decision binds the surfaces it names until a later decision
+says it changes it; a run that builds a `## Design decision` comment
+adds its line here, and a decision that answers a question across
+surfaces also becomes a numbered rule above, with a Changes entry.
+
+- **#15** (built `f068303`): a document folds inside its cell — 60–66
+  characters a line, equal columns of 36 lines laid left to right then
+  by row, one standard size until the columns fill the cell, then
+  stepped smaller; mid scale greeks the same columns.
+- **#122** (built `f95f05b`): no document at reading size is ever drawn
+  as bars; the text layer mounts by visible line, the cap is a limit on
+  new mounts per frame and never a ceiling, and a press at reading size
+  always acts on the text.
+- **#132** (built `b8ea0a8`): a link whose far end has no drawn document
+  stays in the set, named in words at its near end, and is drawn as a
+  short tail with no bearing triangle; tails from one passage merge with
+  a count.
+- **#136** (built `e6192db`): every jump takes its trail entry when it
+  is made; Back, Forward and the trail keys act at once on the trail as
+  it stands; a read that ends after the reader has left moves nothing;
+  a reading jump says so where it was made.
+- **#140** (built `6f5745e`): reading scale is each document's own em,
+  one shared test for the press rule, the line and the walk; a document
+  below it is one collapsed stop that Enter expands with a teleport;
+  the line names such a document alone, with no position.
+- **#141** (built `1316b01`): after a camera move the focus goes to the
+  document under the view's centre, else stays with the held focus while
+  any of it is in view, else goes to the innermost account or board
+  region holding the centre; the ring is clamped to the view.
+
 ## Changes
 
 Each rule changed here, with its reason and where the reason was
