@@ -195,6 +195,13 @@ surfaces also becomes a numbered rule above, with a Changes entry.
   document under the view's centre, else stays with the held focus while
   any of it is in view, else goes to the innermost account or board
   region holding the centre; the ring is clamped to the view.
+- **#143** (built with this line): a link's card draws as its lineage
+  only the claims made by the owner of the link each declares superseded
+  — the account of the claim's home is `old`'s account, on both sides —
+  a claimant the owner row does not name following its claim; every
+  other claim stands behind one line after the rows, with no number,
+  whose act lists them in its place as assertions naming their claimant
+  ("you" for the reader) and what it is to the links.
 
 ## Changes
 

@@ -12,11 +12,15 @@ alone — the fifth cell's at a typed ghost address, with no wire token above
 them and no act beneath (B1-S8; C-42); the anatomy card's rows, each a value
 the page holds (a bare dash reads as B1-S5's "none"), its two lineage rows
 among them — `in_claims` and `out_claims` asked for its link under the audit
-view, and "superseded by" and "supersedes" each reading what its read
-answered: the addresses its claims name on that side, a retracted claim's
-marked, B1-S5's "none" where it named none, no row where it was refused
-(A-56, A-57, A-82); no string in the one line, the face or the anatomy card
-set apart by its class in the inventory —
+view, and "superseded by" and "supersedes" each reading the claims with
+authority its read answered, the authority recomputed here from the tumblers
+(issue #143's design decision: the account of the claim's home owns `old`):
+the addresses its claims name on that side, a claimant the owner row does
+not name after its claim, a retracted claim's marked, B1-S5's "none" where
+it named none with authority, no row where it was refused (A-56, A-57,
+A-82), and one line after the rows, in its own words, where any claim
+answered lacks authority, and none where none does; no string in the one
+line, the face or the anatomy card set apart by its class in the inventory —
 no dotted underline under a DRAFT, no bar beside a PINNED: the class is the
 copy's record (`strings.js`), never a mark a person reads, and a dotted
 underline is the page's mark of words with an act; and every PINNED string
@@ -47,6 +51,13 @@ def wording_marks(ctx, scope):
     return ctx.js('''(() => { const shown = [...document.querySelectorAll(%s)].map((e) => { const s = getComputedStyle(e);
       return {id: e.dataset.string, bottom: s.borderBottomStyle, left: parseFloat(s.borderLeftWidth) || 0}; });
       return {shown: shown.map((x) => x.id), marked: shown.filter((x) => x.bottom === 'dotted' || x.left >= 3)}; })()''' % json.dumps(scope + ' [data-string]'))
+
+
+def account(a):
+    """the account an address lies under, its node and user fields read whole (`1.0.1.1.0.4` → `1.0.1.1`), the fields
+    parted at their zeros (M-ADDR's `accountOf`, recomputed here so the card's authority is held to the tumbler)"""
+    f = (a or '').split('.0.')
+    return '.0.'.join(f[:2]) if len(f) >= 2 and f[1] else None
 
 
 def located(text, source):
@@ -141,12 +152,17 @@ def run(ctx):
         marks = wording_marks(ctx, '#overlay')
         r.check('R5.undocumented' in marks['shown'] and not marks['marked'], 'the anatomy card\'s strings — R5\'s type among them — are set apart by no class of theirs in the inventory', marks)
         r.figures['anatomy_rows'] = rows
-        # the lineage (B1-S5; A-56, A-57, A-82): each side read for the card's link under the audit view, its row what the
-        # last read of it answered — the page's own words for the labels and marks
+        # the lineage (B1-S5; A-56, A-57, A-82; issue #143's design decision): each side read for the card's link under the
+        # audit view, its row the claims with authority the last read of it answered — each claim's claimant, the account
+        # of its home, owning the link it declares superseded, `old`'s account — a claimant the owner row does not name
+        # after its claim ("you" for the reader); one line after the rows where any claim answered lacks authority — the
+        # page's own words for the labels, the marks and the line
         words = ctx.js('''(async () => { const {t} = await import("./strings.js");
-          return {by: t("F.card.superseded-by"), sup: t("F.card.supersedes"), none: t("F.card.none"), retracted: t("F.card.retracted")}; })()''')
+          return {by: t("F.card.superseded-by"), sup: t("F.card.supersedes"), none: t("F.card.none"), retracted: t("F.card.retracted"),
+                  by_owner: t("L.card.by-owner"), you: t("L.card.you"), others: t("L.card.others")}; })()''')
         asked = [c for c in ctx.js('window.__skep.bridge.calls()')[n_calls:] if c.get('op') in ('in_claims', 'out_claims')]
-        lineage = {}
+        owner, reader = account(link), (sess or {}).get('account')
+        lineage, stray = {}, []
         for op, key, named, label in (('in_claims', 'y', 'new', words['by']), ('out_claims', 'x', 'old', words['sup'])):
             reads = [c for c in asked if c['op'] == op]
             frames = [json.loads(c['frame']) for c in reads]
@@ -158,11 +174,18 @@ def run(ctx):
             row = [x['value'] for x in rows if x['labels'] == [label]]
             if isinstance(answer, dict) and answer.get('resp') == 'claims':
                 claims = answer.get('claims') or []
-                want = ', '.join(c[named] + ('' if c['active'] else ' · ' + words['retracted']) for c in claims) if claims else words['none']
-                r.check(len(row) == 1 and norm(row[0]) == norm(want), 'the card\'s "%s" row reads what %s answered: the %s link of each claim, a retracted one marked, "none" where it named none' % (label, op, named), {'want': want, 'row': row, 'claims': claims})
+                held = [c for c in claims if account(c['home']) == account(c['old'])]
+                stray += [c for c in claims if c not in held]
+                named_by = [None if account(c['home']) == owner else (words['you'] if account(c['home']) == reader else account(c['home'])) for c in held]
+                items = [c[named] + ('' if by is None else ' ' + words['by_owner'].replace('⟨claimant⟩', by)) + ('' if c['active'] else ' · ' + words['retracted']) for c, by in zip(held, named_by)]
+                want = ('; ' if any(by is not None for by in named_by) else ', ').join(items) if held else words['none']
+                r.check(len(row) == 1 and norm(row[0]) == norm(want), 'the card\'s "%s" row reads the claims with authority %s answered: the %s link of each, its claimant after it where the owner row does not name it, a retracted one marked, "none" where it named none with authority' % (label, op, named), {'want': want, 'row': row, 'claims': claims})
             else:
                 r.check(not row, 'a lineage read that answered no claims document draws no "%s" row: nothing was learned of it' % label, {'outcome': outcome, 'row': row})
             lineage[op] = {'asks': len(reads), 'answer': answer, 'row': row}
+        shown_line = ctx.js('(() => { const b = document.querySelector(\'#overlay [data-run="claims"]\'); return b ? b.textContent : null; })()')
+        r.check((shown_line is not None) == bool(stray) and (shown_line is None or norm(shown_line) == norm(words['others'])), 'one line follows the rows, in its own words and no number in them, where a claim answered lacks authority, and none where every claim has it', {'line': shown_line, 'without_authority': stray})
+        lineage['line'] = shown_line
         r.figures['anatomy_lineage'] = lineage
         ctx.esc()
     # ---- every PINNED string against its source ------------------------------------------

@@ -214,6 +214,19 @@ export const STRINGS = {
   'L.answer': { text: 'answer', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
   'L.cancel': { text: 'cancel', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
   'L.at-position': { text: 'at position ⟨p⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  // the anatomy card's lineage by its claims' authority (issue #143's design decision): a claimant the owner row does not
+  // name, after its claim on a row; the line the claims without authority stand behind; each of them listed as an
+  // assertion — its `.you` form where the reader is the claimant, the verb agreeing — with what the claimant is to the links
+  'L.card.by-owner': { text: '— by its owner, ⟨claimant⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.card.you': { text: 'you', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.card.others': { text: 'other accounts\' claims — show them', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.card.claims.superseded-by': { text: '⟨claimant⟩ claims this is superseded by ⟨link⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.card.claims.superseded-by.you': { text: '⟨claimant⟩ claim this is superseded by ⟨link⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.card.claims.supersedes': { text: '⟨claimant⟩ claims this supersedes ⟨link⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.card.claims.supersedes.you': { text: '⟨claimant⟩ claim this supersedes ⟨link⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.card.this-owner': { text: 'this link\'s owner', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.card.above': { text: 'an account above the superseded link\'s owner', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.card.under': { text: 'an account under the superseded link\'s owner', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   'L.the-line': { text: 'the one line', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.leap-label': { text: 'LEAP — an address, or a document\'s first line', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S11' },
   'L.leap-rows-label': { text: 'LEAP', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
