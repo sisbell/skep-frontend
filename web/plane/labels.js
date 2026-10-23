@@ -25,7 +25,13 @@
 // hides its count) names a pair of places and no shape, so every place's
 // shape blocks it; it stands on its stroke where its room meets none of them
 // (`onStroke`): the clear stretch nearest the stroke's middle, between its two
-// ends and inside the visible view.
+// ends and inside the visible view. A TAIL'S LABEL (issue #132's design
+// decision: a link whose far document the plane draws nowhere leaves its near
+// end by a short tail "ending in that label") names its tail, and every
+// place's shape blocks it, its own document's among them, so it never stands
+// over a column; its room runs from the tail's end rightward to the first
+// shape its lines would meet, else to the visible view's edge (`roomRight`),
+// and the tail's stroke is held short of any other place's shape the same way.
 // Rules: FP-1, FP-2, FP-8, FP-10 (no state).
 
 import { LABEL_MIN_PX } from './register.js';
@@ -65,12 +71,12 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
  * @property {string} [weight] its face's weight; the regular where absent
  */
 
-/** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'doc' | 'connection' | 'pip'} LabelKind the place a label names; 'connection' a mid connection's count; 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
+/** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'doc' | 'connection' | 'tail' | 'pip'} LabelKind the place a label names; 'connection' a mid connection's count; 'tail' a tail's far end in words, or its count (issue #132); 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
 
 /**
  * @typedef {Object} Label — a label a drawing function hands the pass
  * @property {LabelKind} kind
- * @property {string} place the place it names: a board, an account, a continuation's `account:k`, a document; a connection's two places, `a|b` in sorted order (`pairOf`)
+ * @property {string} place the place it names: a board, an account, a continuation's `account:k`, a document; a connection's two places, `a|b` in sorted order (`pairOf`); a tail's site (P-RENDER's `DrawnTail.key`)
  * @property {Rect} within the room its place gives it, on screen
  * @property {number} x its lines' left edge; their centre where `align` is 'center'
  * @property {number} y its first line's top
@@ -241,6 +247,32 @@ export function setLabels(labels, shapes, view, measure) {
     parts.slice(i).forEach((p, j) => out.push({ kind: l.kind, place: l.place, text: p.text, reason: j || !why ? 'after' : why }));
   }
   return { set, out };
+}
+
+/**
+ * The room right of a point along a band `h` px tall — a tail's stroke, and
+ * its label past the stroke's end (see the head): from `at` to the left edge
+ * of the first shape drawn the stronger the band meets past it, more than
+ * half a px each way, as the pass judges a meeting; none where such a shape
+ * already holds `at`; else to the visible view's right edge. The shapes of
+ * the place `skip` names are left out: a tail's stroke leaves its own
+ * document's outline from inside it, at the edge of a column.
+ * @param {Point} at the band's left end, at its top
+ * @param {number} h
+ * @param {Shape[]} shapes every place's shape the frame drew
+ * @param {Rect} seen the visible view
+ * @param {string | null} [skip]
+ * @returns {number} its width in px, 0 where it has none
+ */
+export function roomRight(at, h, shapes, seen, skip = null) {
+  let right = seen.x + seen.w;
+  for (const s of shapes) {
+    if (s.alpha < STRONGER || s.place === skip) continue;
+    const r = s.rect;
+    if (Math.min(at.y + h, r.y + r.h) - Math.max(at.y, r.y) <= 0.5 || r.x + r.w - at.x <= 0.5) continue;
+    right = Math.min(right, Math.max(at.x, r.x));
+  }
+  return Math.max(0, right - at.x);
 }
 
 /**

@@ -17,13 +17,23 @@ one beside its article, clipped by no box of the page and reaching into no
 other document's box, mounted or only drawn; the first edition's in view
 below the one line at each level, held there while its first column's top
 has risen past the line, and never below its outline's bottom as that
-bottom rises), every beam leaving the text at its span's own line, from the
-edge of the part of its block that holds the line (its endpoint level with
-one of its marked words' line rects, at that part's edge — foundations §2.1;
-S1 Q1), every stub whose beam leaves the text in
+bottom rises). THE TAILS (issue #132's design decision: a link whose far
+document the plane draws nowhere leaves its near end by a short tail, never
+pointed at its address's place): at em 12.5 with the reveal at stage 3,
+every link of the first edition whose far document the plane draws nowhere
+— by the case's own reading of the index and the model — tailed and drawing
+no beam, each whose passage's last line stands in the visible view leaving
+it by a tail drawn at that line, from the edge of the part of its block that
+holds the line (level with one of its links' marked words' line rects, at
+that part's edge). THE BEAMS, at BEAMED — a citer of FAR_LEAP whose
+citations reach editions the plane draws, over the passage whose line the
+most beams leave in view — every beam leaving the text at its span's own
+line, from the edge of the part of its block that holds the line (its
+endpoint level with one of its marked words' line rects, at that part's edge
+— foundations §2.1; S1 Q1), every stub whose beam leaves the text in
 the visible view — the viewport below the one line — carrying its far
-document's label inside that view (S1 Q3), and no two of the beams' labels
-in view meeting. THE STUB at mid
+document's label inside that view (S1 Q3), and, where two labels or more
+stand in view, no two of them meeting. THE STUB at mid
 scale (foundations §2.1: a mid connection "whose far end is out of view
 ending at the view's edge as §2.5's stub does"): the camera over the first
 edition at S3's mid-extents, every document standing whole in view that a
@@ -54,10 +64,10 @@ span cut into two runs apart — as a far end projects where a later edit cut
 its passage in two — it outlines each run's own lines and nothing between
 them; it is gone at the next act — HOME made from the landing, the camera
 set back on the landing's view (a camera move, no act) finds nothing outlined (§3.2:
-"both gone at the next act — a pan or a zoom none"); and, the reveal at stage
-3, the link the landing names is drawn heavier (§2.1: "with the followed
-link drawn heavier"): its beam lays HEAVIER_INK times the ink or more about
-its start that it lays after a landing on the same span naming no link.
+"both gone at the next act — a pan or a zoom none"); and, at BEAMED with the
+reveal at stage 3, the link a landing names is drawn heavier (§2.1: "with the
+followed link drawn heavier"): its beam lays HEAVIER_INK times the ink or more
+about its start that it lays after a landing on the same span naming no link.
 THE HANDOFF (law 8;
 foundations §2.4: the bars become text and no line moves; S1 Q7; issue #15:
 mid scale greeks the columns the mount sets): at each level, and at the
@@ -90,16 +100,21 @@ its place as the projection and the fold give it — the board's label cell,
 an account's cell, a continuation's mark, the first row of a document's
 outline — and inside the visible view below the one line, which stands opaque over the strip above
 it, a connection's count centred on its stroke, the segment between its
-two places' centres; (iii)
+two places' centres, a tail's label at its stroke's end, its first line
+centred on the stroke; (iii)
 no two meet; (iv) none meets another place: the outline of a document in
 view that no mark drawn the stronger holds — the rects of its columns — a continuation's mark, an account's
-cell that does not hold its place — a connection's count, no one account's,
-meeting no box and no mark; (v) at mid scale and at HOME a document's label
+cell that does not hold its place — a connection's count and a tail's label,
+no one account's, meeting no box and no mark, a tail's own document's among
+them; (v) at mid scale and at HOME a document's label
 is its address past its region's prefix led by the separator, or its whole
 address; (vi) every mid connection holding two links or more carries its
 count, the numeral of its links, or the pass names the rule that left it
 out, and none holding one carries a count; (vii) at S3's mid-extents and
-at HOME none is left out (P44: no merged mark hides its count); and the
+at HOME none is left out (P44: no merged mark hides its count); (viii) every
+tail carries at its end the numeral of its links where it holds two or more
+and its far document's address where it holds one (issue #132), or the pass
+names the rule that left its label out; and the
 places with room carry their labels — at HOME every document standing
 whole in the visible view whose outline's first row holds its address at the
 label floor, every other named left out by the rule that left it out, and
@@ -174,8 +189,8 @@ than it holds, each part's blocks are their text over the characters they
 hold, and each part stands on its bars; at its own em 4, below the mount, its
 article down and each block part's bars inside the column that holds it.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
-`beamAnchors`, `arrivalAnchors`, `spanRects`, `visible`, `barsOf`, `labels`,
-`scene.at`, `scene.ties`, the frame buffer, `beamLabels`, `connections`,
+`beamAnchors`, `tailAnchors`, `arrivalAnchors`, `spanRects`, `visible`, `barsOf`, `labels`,
+`scene.at`, `scene.ties`, the frame buffer, `beamLabels`, `connections`, `tails`,
 `fold`, `centreOf`, `posAt`) save the trail's, the stub's triangle's and the
 followed link's beam's, which read the canvases' pixels here, the stub's
 places, which the projection gives here, the symbols', which reads the
@@ -191,7 +206,7 @@ import json
 import math
 import re
 
-from . import DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, XFAIL_MEMBER, Result, account_of
+from . import BEAMED, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, XFAIL_BEAM_LABELS, XFAIL_MEMBER, Result, account_of
 
 LEVELS_EM = [9, 12, 18, 30]
 # the room about the viewport the text layer stands a document's lines in (issue #122: a document stands by line) — the
@@ -233,6 +248,8 @@ TRAIL_STRIP_PX, TRAIL_INSET_PX, PIP_CLEAR_PX = 1.5, 4, 14
 # how far either way it may stand from there, and from the true bearing; how far a channel of its triangle's pixel may
 # stand from its hue drawn at full alpha
 STUB_INSET_PX, STUB_TOL_PX, STUB_BEARING_DEG, STUB_INK_TOL = 8, 1.0, 0.5, 2
+# the tail (issue #132): the gap between its stroke's end and its label — the case's own, held apart from the page's TAIL
+TAIL_GAP_PX = 3
 # the link followed drawn heavier: the square about its beam's start, in px either way, whose ink the case reads on the beams'
 # canvas, and how many times the ink the beam lays there unlit it lays lit — the case's own floor for "heavier", held apart
 # from the page's ARRIVAL_WEIGHT
@@ -283,10 +300,10 @@ def rect_like(a, b):
     return all(abs(a[k] - b[k]) <= ANCHOR_TOL_PX for k in ('x', 'y', 'w', 'h'))
 
 
-def beam_ink(ctx, link, pos):
-    """the ink the beams' canvas holds about the start of the beam that leaves the first edition at `pos` for `link`: the
-    alpha of every pixel in the square BEAM_WINDOW_PX either way of the point it leaves the text at, summed, in px² — read
-    from the canvas's pixels, apart from the beams' own set; None where no such beam is built"""
+def beam_ink(ctx, doc, link, pos):
+    """the ink the beams' canvas holds about the start of the beam that leaves `doc` at `pos` for `link`: the alpha of every
+    pixel in the square BEAM_WINDOW_PX either way of the point it leaves the text at, summed, in px² — read from the canvas's
+    pixels, apart from the beams' own set; None where no such beam is built"""
     return ctx.js('''((doc, link, pos, half) => {
       const S = window.__skep, a = S.beamAnchors().find((b) => b.link === link && b.near === doc && b.pos === pos);
       if (!a) return null;
@@ -298,7 +315,7 @@ def beam_ink(ctx, link, pos):
       let ink = 0;
       for (let i = 3; i < img.length; i += 4) ink += img[i] / 255;
       return {at: {x: a.x, y: a.y}, ink: ink / (k * k)};
-    })(%s, %s, %d, %s)''' % (json.dumps(DOC), json.dumps(link), pos, BEAM_WINDOW_PX))
+    })(%s, %s, %d, %s)''' % (json.dumps(doc), json.dumps(link), pos, BEAM_WINDOW_PX))
 
 
 def handoff(ctx):
@@ -393,7 +410,7 @@ def label_view(ctx):
     across (P-PROJ's G) — the first row of the outline of each document labelled, where its label stands, the visible
     view below the one line, and each mid connection drawn — its two places, named as a pair in sorted order, its count,
     the count set on it, and its places' centres, a document's its outline's, a mark's the centre of its continuation's
-    cell"""
+    cell — and each tail drawn: its site, its links and their far documents, where its stroke leaves and ends"""
     return ctx.js('''(async () => {
       const P = await import('./plane/projection.js');
       const S = window.__skep, c = S.view.camera(), p = S.view.viewport(), lod = S.view.lod();
@@ -416,7 +433,8 @@ def label_view(ctx):
       const inner = (f) => { const g = S.constants.GUTTER / 2 * f.fs; return scr({x: f.row.x + g, y: f.row.y + g, w: f.row.w - 2 * g, h: f.row.h - 2 * g}); };
       const rows = Object.fromEntries(boxesDrawn ? places.filter((q) => !held.has(q.doc) && crosses(scr(S.boxOf(q.doc)), view)).map((q) => [q.doc, inner(S.fold(q.doc))]) : []);
       return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})),
-              boxes, rows, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, connections, mounted: S.mountedAddrs()};
+              boxes, rows, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, connections, mounted: S.mountedAddrs(),
+              tails: S.tails().map((t) => ({key: t.key, links: t.links, far: t.far, from: t.from, to: t.to}))};
     })()''')
 
 
@@ -458,6 +476,17 @@ def on_stroke(v, label, line):
     return math.hypot(a['x'] + dx * t - px, a['y'] + dy * t - py) <= LABEL_TOL_PX and inside(q, v['seen'])
 
 
+def at_tail(v, label, line):
+    """does a tail's label stand at its tail's end: its lines' left edge TAIL_GAP_PX past the end of the tail's stroke, its first
+    line centred on the stroke's height and every later one below it, LABEL_TOL_PX either way, inside the visible view?"""
+    t = next((t for t in v['tails'] if t['key'] == label['place']), None)
+    if t is None:
+        return False
+    first, q = label['lines'][0]['rect'], line['rect']
+    return (abs(q['x'] - (t['to']['x'] + TAIL_GAP_PX)) <= LABEL_TOL_PX and abs(first['y'] + first['h'] / 2 - t['from']['y']) <= LABEL_TOL_PX
+            and q['y'] >= first['y'] - LABEL_TOL_PX and inside(q, v['seen']))
+
+
 def labels_hold(r, name, v):
     """THE LABELS' checks at one view; its figures: the labels set by kind, the parts left out by rule, the
     connections' counts set and left out"""
@@ -466,18 +495,18 @@ def labels_hold(r, name, v):
     r.check(not small, f'{name}: (i) every label the canvas set, the trail\'s pip numbers among them, is {MIN_LABEL_PX} px or larger', small[:6])
     placed = [(l, place_of(v, l), x) for l in labels if l['kind'] != 'pip' for x in l['lines']]
     outside = [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'rect': x['rect'], 'place_rect': p} for l, p, x in placed
-               if (not on_stroke(v, l, x) if l['kind'] == 'connection' else p is None or not inside(x['rect'], p) or not inside(x['rect'], v['seen']))]
-    r.check(not outside, f'{name}: (ii) every label lies inside its place, as the projection gives it, and inside the visible view below the one line, which stands opaque over the strip above it — a connection\'s count centred on its stroke, the segment between its two places\' centres — {LABEL_TOL_PX} px either way',
+               if (not on_stroke(v, l, x) if l['kind'] == 'connection' else not at_tail(v, l, x) if l['kind'] == 'tail' else p is None or not inside(x['rect'], p) or not inside(x['rect'], v['seen']))]
+    r.check(not outside, f'{name}: (ii) every label lies inside its place, as the projection gives it, and inside the visible view below the one line, which stands opaque over the strip above it — a connection\'s count centred on its stroke, the segment between its two places\' centres, a tail\'s label at its stroke\'s end — {LABEL_TOL_PX} px either way',
             {'outside': outside[:6], 'seen': v['seen']})
     crossing = [{'a': [a[0]['kind'], a[0]['place'], a[2]['text']], 'b': [b[0]['kind'], b[0]['place'], b[2]['text']]} for i, a in enumerate(placed) for b in placed[i + 1:] if meets(a[2]['rect'], b[2]['rect'])]
     r.check(not crossing, f'{name}: (iii) no two labels meet', crossing[:6])
     met = []
     for l, p, x in placed:
         others = [('box', o) for o in v['boxes'] if o['place'] != l['place']] + [('mark', o) for o in v['marks'] if o['place'] != l['place']]
-        if l['kind'] != 'connection':
+        if l['kind'] not in ('connection', 'tail'):
             others += [('account', o) for o in v['accounts'] if p is None or not inside(p, o['rect'])]
         met += [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'meets': [what, o['place']]} for what, o in others if meets(x['rect'], o['rect'])]
-    r.check(not met, f'{name}: (iv) no label meets another place: the box of a document in view that no mark drawn the stronger holds, a continuation\'s mark, an account\'s cell that does not hold its place — a connection\'s count, no one account\'s, meeting no box and no mark', met[:6])
+    r.check(not met, f'{name}: (iv) no label meets another place: the box of a document in view that no mark drawn the stronger holds, a continuation\'s mark, an account\'s cell that does not hold its place — a connection\'s count and a tail\'s label, no one account\'s, meeting no box and no mark, the tail\'s own document\'s among them', met[:6])
     if name in ('mid-extents', 'home'):
         bare = [{'place': l['place'], 'label': l['lines'][0]['text']} for l in labels if l['kind'] == 'doc' and not (l['lines'][0]['text'] == l['place'] or (l['lines'][0]['text'].startswith('.') and l['place'].endswith(l['lines'][0]['text'])))]
         r.check(not bare, f'{name}: (v) a document\'s label is its address past its region\'s prefix led by the separator (".0.3"), or its whole address — never a bare field that reads as a number', bare[:6])
@@ -492,6 +521,18 @@ def labels_hold(r, name, v):
     stray = sorted((set(counts) | set(left)) - {c['place'] for c in conns})
     r.check(not wrong and not stray, f'{name}: (vi) every mid connection holding two links or more carries its count on its stroke — the numeral of its links — or the pass names the rule that left it out; none holding one carries a count, and no count stands for a connection the frame did not draw',
             {'wrong': wrong[:6], 'stray': stray[:6]})
+    # the tails' labels (issue #132's design decision: a tail "ending in that label"; "tails ... merge into one tail showing their count"):
+    # the numeral of its links on each holding two or more, its far document's address leading the label of each holding one, else the
+    # rule that left it out named; none for a tail the frame did not draw
+    tails = v['tails']
+    tail_set = {l['place']: [x['text'] for x in l['lines']] for l in labels if l['kind'] == 'tail'}
+    tail_left = {o['place']: o['reason'] for o in v['out'] if o['kind'] == 'tail'}
+    want = lambda t: str(len(t['links'])) if len(t['links']) > 1 else t['far'][0]
+    untold = [{'key': t['key'], 'links': len(t['links']), 'set': tail_set.get(t['key']), 'left_out': tail_left.get(t['key'])} for t in tails
+              if not ((tail_set.get(t['key']) or [None])[0] == want(t) or (t['key'] not in tail_set and t['key'] in tail_left))]
+    stray_tails = sorted((set(tail_set) | set(tail_left)) - {t['key'] for t in tails})
+    r.check(not untold and not stray_tails, f'{name}: (viii) every tail carries at its end the count of its links where it holds two or more — the numeral — and its far document\'s address where it holds one, or the pass names the rule that left its label out; no tail\'s label stands for a tail the frame did not draw',
+            {'untold': untold[:6], 'stray': stray_tails[:6]})
     if name in ('mid-extents', 'home'):
         hidden = [[c['place'], c['count'], left.get(c['place'])] for c in conns if c['count'] >= 2 and c['label'] != str(c['count'])]
         r.check(any(c['count'] >= 2 for c in conns) and not hidden, f'{name}: (vii) no count is hidden — every mid connection holding two links or more carries it',
@@ -523,7 +564,104 @@ def labels_hold(r, name, v):
     for reason in left.values():
         counts_out[reason] = counts_out.get(reason, 0) + 1
     return {'lod': v['lod'], 'set': by_kind, 'left_out': by_rule, 'left_out_parts': [[o['kind'], o['place'], o['text'][:48], o['reason']] for o in v['out'] if o['reason'] != 'after'][:12],
-            'counts': {'connections': len(conns), 'holding_two_or_more': sum(1 for c in conns if c['count'] >= 2), 'set': len(counts), 'left_out': counts_out}}
+            'counts': {'connections': len(conns), 'holding_two_or_more': sum(1 for c in conns if c['count'] >= 2), 'set': len(counts), 'left_out': counts_out},
+            'tails': {'drawn': len(tails), 'labels_set': len(tail_set), 'left_out': len(tail_left)}}
+
+
+def tails_hold(ctx, r):
+    """THE TAILS' checks at the first edition, the reveal at stage 3 and the camera over its first column at em 12.5 (issue
+    #132's design decision: a link whose far document the plane draws nowhere leaves its near end by a short tail, "at reading
+    scale ... the document's edge at its passage's line", replacing the connection and the stub): the case's own reading of
+    which of its drawn links reach a document the plane draws nowhere — one `places` does not list and the model holds no text,
+    metadata or withheld box of — each tailed (LK's `tailed`) and drawing no beam; each whose passage's last line stands in the
+    visible view carried by a tail drawn there; each tail leaving at its passage's own line — level with one of its links' marked
+    words' line rects — from the edge of the part of its block holding the line (`tailAnchors`, read apart from the canvas as a
+    beam's are); its figures"""
+    v = ctx.js('''(async (doc) => {
+      const A = await import('./model/address.js');
+      const S = window.__skep, places = new Set(S.model.places().filter((p) => !p.system).map((p) => p.doc));
+      const nowhere = (far) => { const d = S.model.doc(far); return !places.has(A.documentOf(far) || far) && d.from < 0 && !d.meta && d.refused !== 'withheld'; };
+      const top = document.getElementById('line').getBoundingClientRect().bottom, vp = S.view.viewport();
+      const art = document.querySelector(`#domlayer article.dtext[data-addr="${doc}"]`);
+      const shown = S.links.shown(doc).map((x) => {
+        const words = art ? [...art.querySelectorAll(`.lip[data-links~="${x.link}"]`)].flatMap((w) => [...w.getClientRects()]).filter((q) => q.width > 0 && q.height > 0) : [];
+        const last = words[words.length - 1], mid = last ? last.top + last.height / 2 : null;
+        return {link: x.link, far: x.far, pos: x.pos, nowhere: !!x.far && nowhere(x.far), tailed: S.links.tailed(doc, x.link), seen: mid != null && mid >= top && mid <= vp.VH};
+      });
+      return {shown, beams: S.beamAnchors().filter((a) => a.near === doc).map((a) => a.link), tails: S.tails().filter((t) => t.at === doc && t.form === 'line'), anchors: S.tailAnchors().filter((a) => a.at === doc)};
+    })(%s)''' % json.dumps(DOC))
+    nowhere = sorted(x['link'] for x in v['shown'] if x['nowhere'])
+    tailed = sorted(x['link'] for x in v['shown'] if x['tailed'])
+    r.check(bool(nowhere) and tailed == nowhere, 'the tails: every link the first edition draws whose far document the plane draws nowhere — by the case\'s own reading — is tailed, and no other',
+            {'drawn_nowhere': nowhere, 'tailed': tailed})
+    beamed = sorted(set(v['beams']) & set(tailed))
+    r.check(not beamed, 'the tails: no tailed link draws a beam, which would point at its address\'s place on the plane', beamed)
+    carried = {l for t in v['tails'] for l in t['links']}
+    lost = [x['link'] for x in v['shown'] if x['tailed'] and x['seen'] and x['link'] not in carried]
+    r.check(any(x['tailed'] and x['seen'] for x in v['shown']) and not lost, 'the tails: every tailed link whose passage\'s last line stands in the visible view leaves it by a tail drawn there',
+            {'lost': lost, 'tails': [[t['key'], t['links']] for t in v['tails']]})
+    off = [{'links': a['links'], 'pos': a['pos'], 'x': a['x'], 'y': a['y'], 'edge': a['edge'], 'words': a['words'][:4]} for a in v['anchors'] if not on_own_line(a)]
+    r.check(bool(v['anchors']) and not off, f'the tails: every tail leaves the text at its passage\'s own line, from the article\'s edge — its point\'s y within one of its links\' marked words\' line rects and its x at the edge of the part of the block holding the line, {ANCHOR_TOL_PX} px either way',
+            off[:4])
+    return {'drawn_nowhere': len(nowhere), 'tailed': len(tailed), 'tails': [[t['links'], t['label']] for t in v['tails']], 'on_own_line': len(v['anchors']) - len(off), 'off_own_line': len(off)}
+
+
+def beams_hold(ctx, r):
+    """THE BEAMS' checks where citations reach documents the plane draws — at BEAMED, a citer of FAR_LEAP, at em 12.5 over the
+    passage whose line the most beams leave inside the visible view, the reveal at stage 3: every beam leaving the text at its
+    span's own line, from the edge of the part of its block that holds the line (its endpoint level with one of its marked
+    words' line rects, at that part's edge — foundations §2.1; S1 Q1); every stub whose beam leaves the text in the visible view
+    carrying its far document's label inside that view (S1 Q3); and, where two labels or more stand in view, no two of them
+    meeting — issue #9's, marked, and unmeasured where fewer stand; its figures"""
+    ctx.leap(BEAMED, None)
+    ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(BEAMED))
+    ctx.settle()
+    ctx.frames(3)
+    scale = ctx.js('window.__skep.scaleFor(%s, "em", 12.5)' % json.dumps(BEAMED))
+    vp = ctx.js('window.__skep.view.viewport()')
+    top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
+    view = {'x': 0, 'y': top, 'w': vp['VW'], 'h': vp['VH'] - top}
+    leaving = lambda anchors: [a for a in anchors if 0 <= a['x'] <= vp['VW'] and top <= a['y'] <= vp['VH']]
+    beamed = [x for x in ctx.js('window.__skep.links.shown(%s)' % json.dumps(BEAMED)) if ctx.js('window.__skep.links.tailed(%s, %s)' % (json.dumps(BEAMED), json.dumps(x['link']))) is False]
+    best = None
+    for pos in sorted({x['pos'] for x in beamed}):
+        ctx.view_at(BEAMED, pos, scale)
+        n = len(leaving(ctx.js('window.__skep.beamAnchors()')))
+        if best is None or n > best[1]:
+            best = (pos, n)
+    r.check(best is not None, f'{BEAMED} draws beams: its citations reach documents the plane draws', [x['link'] for x in beamed])
+    if best is None:
+        ctx.js('window.__skep.links.hide(%s)' % json.dumps(BEAMED))
+        return None
+    ctx.view_at(BEAMED, best[0], scale)
+    ctx.frames(3)
+    anchors = ctx.js('window.__skep.beamAnchors()')
+    r.check(len(anchors) >= 1, f'beams are built at stage 3 at {BEAMED}', len(anchors))
+    r.check(all(a['words'] for a in anchors), 'every drawn beam\'s link is marked at its words in the mounted article (the oracle\'s rects exist)', [a['link'] for a in anchors if not a['words']])
+    off = [{'link': a['link'], 'pos': a['pos'], 'x': a['x'], 'y': a['y'], 'edge': a['edge'], 'words': a['words']} for a in anchors if not on_own_line(a)]
+    r.check(not off, f'every beam leaves the text at its span\'s own line, from the article\'s edge: its endpoint\'s y within one of its words\' line rects and its x at the article\'s edge, {ANCHOR_TOL_PX} px either way', off[:4])
+    # the stubs' labels (S1 Q3): every bundle with a beam that leaves the text in the visible view and ends at the view's border sets the label
+    # naming its far document, in the visible view — below the one line, which stands over the beams. A beam whose line lies past the visible
+    # view — under the one line, or past the viewport — is cut at its start where it is bound away from the view, and sets no label there,
+    # where none would stand whole in the view (beams.test.js holds that rule)
+    labels = ctx.js('window.__skep.beamLabels()')
+    stubbed = sorted({(a['near'], a['far']) for a in leaving(anchors) if a['stub']})
+    named = {(l['near'], l['far']) for l in labels if l['stub'] and l['text'].startswith(l['far']) and inside(l['rect'], view)}
+    r.check(bool(stubbed) and set(stubbed) <= named, f'every stub in view carries its far document\'s label: each bundle with a beam that leaves the text in the visible view and ends at the view\'s border sets a label naming its far document, inside the visible view below the one line, {LABEL_TOL_PX} px either way',
+            {'stubbed': stubbed, 'labels': [[l['far'], l['text'], l['rect']] for l in labels], 'view': view})
+    in_view = [l for l in labels if meets(l['rect'], view)]
+    met = [[a['far'], b['far'], a['rect'], b['rect']] for i, a in enumerate(in_view) for b in in_view[i + 1:] if meets(a['rect'], b['rect'])]
+    if len(in_view) >= 2:
+        r.check(not met, f'no two beam labels in view meet, {LABEL_TOL_PX} px either way', met[:6], xfail=XFAIL_BEAM_LABELS)
+    else:
+        r.note(f'the beam labels\' meeting (issue #9) is unmeasured at {BEAMED}: fewer than two labels stand in view')
+    # whether a beam stub at this view is bound above the visible view's top, whose label is set below its cut; none, and beams.test.js alone holds that rule
+    above = ctx.js('''((fars, top) => { const S = window.__skep, c = S.view.camera(), p = S.view.viewport();
+      return fars.filter((f) => { const b = S.boxOf(f); return (b.y + b.h / 2 - c.y) * c.scale + p.VH / 2 < top; }); })(%s, %s)''' % (json.dumps(sorted({a['far'] for a in anchors if a['stub']})), json.dumps(top)))
+    ctx.js('window.__skep.links.hide(%s)' % json.dumps(BEAMED))
+    return {'doc': BEAMED, 'at': best[0], 'count': len(anchors), 'stubs': sum(1 for a in anchors if a['stub']), 'far': sorted({a['far'] for a in anchors})[:8], 'on_own_line': len(anchors) - len(off), 'off_own_line': len(off),
+            'stubs_in_view': len(stubbed), 'labels': len(labels), 'labels_in_view': len(in_view), 'labels_meeting_pairs': len(met) if len(in_view) >= 2 else 'unmeasured: fewer than two labels in view',
+            'stubs_bound_above': above or 'unmeasured: no beam stub at em 12.5 is bound above the visible view\'s top'}
 
 
 def type_view(ctx):
@@ -1418,36 +1556,12 @@ def run(ctx):
             [{k: s.get(k) for k in ('link', 'pos', 'width', 'syms', 'same_block', 'after_words', 'between')} for s in misplaced[:6]])
     r.check(bool(followed), 'stage 2: among them, symbols with another word of their paragraph after them — a symbol at the paragraph\'s end would stand past it', {'drawn': len(drawn), 'followed': len(followed)})
     r.figures['symbols'] = {'drawn': len(drawn), 'misplaced': len(misplaced), 'followed_by_a_word': len(followed)}
-    # the beams: stage 3 at the first edition, every endpoint inside its anchor rect
+    # THE TAILS (issue #132's design decision): stage 3 at the first edition, whose every citation reaches a ghost the plane draws
+    # nowhere — each draws no beam, and leaves the text by a tail at its passage's line, at the edge of the part of its block holding it
     ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(DOC))
     ctx.settle()
     ctx.frames(3)
-    anchors = ctx.js('window.__skep.beamAnchors()')
-    r.check(len(anchors) >= 1, 'beams are built at stage 3', len(anchors))
-    r.check(all(a['words'] for a in anchors), 'every drawn beam\'s link is marked at its words in the mounted article (the oracle\'s rects exist)', [a['link'] for a in anchors if not a['words']])
-    off = [{'link': a['link'], 'pos': a['pos'], 'x': a['x'], 'y': a['y'], 'edge': a['edge'], 'words': a['words']} for a in anchors if not on_own_line(a)]
-    r.check(not off, f'every beam leaves the text at its span\'s own line, from the article\'s edge: its endpoint\'s y within one of its words\' line rects and its x at the article\'s edge, {ANCHOR_TOL_PX} px either way', off[:4])
-    # the stubs' labels (S1 Q3): every bundle with a beam that leaves the text in the visible view and ends at the view's border sets the label
-    # naming its far document, in the visible view — below the one line, which stands over the beams; no two labels in view meet. A beam whose
-    # line lies past the visible view — under the one line, or past the viewport — is cut at its start where it is bound away from the view,
-    # and sets no label there, where none would stand whole in the view (beams.test.js holds that rule)
-    labels = ctx.js('window.__skep.beamLabels()')
-    vp = ctx.js('window.__skep.view.viewport()')
-    top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
-    view = {'x': 0, 'y': top, 'w': vp['VW'], 'h': vp['VH'] - top}
-    stubbed = sorted({(a['near'], a['far']) for a in anchors if a['stub'] and 0 <= a['x'] <= vp['VW'] and top <= a['y'] <= vp['VH']})
-    named = {(l['near'], l['far']) for l in labels if l['stub'] and l['text'].startswith(l['far']) and inside(l['rect'], view)}
-    r.check(bool(stubbed) and set(stubbed) <= named, f'every stub in view carries its far document\'s label: each bundle with a beam that leaves the text in the visible view and ends at the view\'s border sets a label naming its far document, inside the visible view below the one line, {LABEL_TOL_PX} px either way',
-            {'stubbed': stubbed, 'labels': [[l['far'], l['text'], l['rect']] for l in labels], 'view': view})
-    in_view = [l for l in labels if meets(l['rect'], view)]
-    met = [[a['far'], b['far'], a['rect'], b['rect']] for i, a in enumerate(in_view) for b in in_view[i + 1:] if meets(a['rect'], b['rect'])]
-    r.check(not met, f'no two beam labels in view meet, {LABEL_TOL_PX} px either way', met[:6], xfail=XFAIL_BEAM_LABELS)
-    # whether a beam stub at this view is bound above the visible view's top, whose label is set below its cut; none, and beams.test.js alone holds that rule
-    above = ctx.js('''((fars, top) => { const S = window.__skep, c = S.view.camera(), p = S.view.viewport();
-      return fars.filter((f) => { const b = S.boxOf(f); return (b.y + b.h / 2 - c.y) * c.scale + p.VH / 2 < top; }); })(%s, %s)''' % (json.dumps(sorted({a['far'] for a in anchors if a['stub']})), json.dumps(top)))
-    r.figures['beams'] = {'count': len(anchors), 'stubs': sum(1 for a in anchors if a['stub']), 'far': sorted({a['far'] for a in anchors})[:8], 'on_own_line': len(anchors) - len(off), 'off_own_line': len(off),
-                          'stubs_in_view': len(stubbed), 'labels': len(labels), 'labels_in_view': len(in_view), 'labels_meeting_pairs': len(met),
-                          'stubs_bound_above': above or 'unmeasured: no beam stub at em 12.5 is bound above the visible view\'s top'}
+    r.figures['tails'] = tails_hold(ctx, r)
     # THE SIZE under the reveal: others' links on too, and the model moved by a read (the ghost's, refused) so the fold is
     # read from the model as it stands — the article holds in its columns and its room, at the size it was mounted at hidden
     ctx.js('window.__skep.links.setOthers(%s, true)' % json.dumps(DOC))
@@ -1464,6 +1578,8 @@ def run(ctx):
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
     ctx.frames(2)
     r.check(ctx.js('window.__skep.beams()') == 0, 'hidden again: no beams')
+    # THE BEAMS, where citations reach documents the plane draws: at BEAMED, a citer of FAR_LEAP
+    r.figures['beams'] = beams_hold(ctx, r)
     # the arrival: a landing as a follow lands — the door naming its span and its link — on a drawn link's span half its
     # paragraph or narrower outlines that span's own lines, never the paragraph's box
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
@@ -1510,21 +1626,25 @@ def run(ctx):
         r.check(mounted and again is None, 'the arrival: gone at the next act — HOME made from the landing, the camera set back on the landing\'s view finds the article mounted and nothing outlined in it',
                 {'mounted': mounted, 'arrival': again and {k: again[k] for k in ('addr', 'pos', 'runs', 'link')}, 'outline': again and again['outline'][:4]})
         # the link followed drawn heavier (foundations §2.1's register: "the arrival an outline around its span with the
-        # followed link drawn heavier"): the reveal at stage 3, the landing that names the link lays more ink about its beam's
-        # start than a landing on the same span that names none
-        ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(DOC))
-        ink = {}
-        for named in (True, False):
-            ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), target['pos'], json.dumps({'runs': [{'pos': target['pos'], 'width': target['width']}], 'link': target['link'] if named else None})))
-            ctx.settle()
-            ctx.frames(3)
-            ink[named] = beam_ink(ctx, target['link'], target['pos'])
-        ctx.js('window.__skep.links.hide(%s)' % json.dumps(DOC))
+        # followed link drawn heavier"): at BEAMED, whose citations draw beams — the first edition's every citation a tail — the
+        # reveal at stage 3, the landing that names a beamed link lays more ink about its beam's start than a landing on the same
+        # span that names none
+        beamed = [x for x in ctx.js('window.__skep.links.shown(%s)' % json.dumps(BEAMED)) if ctx.js('window.__skep.links.tailed(%s, %s)' % (json.dumps(BEAMED), json.dumps(x['link']))) is False]
+        heavy = beamed[0] if beamed else None
+        ink = {True: None, False: None}
+        if heavy is not None:
+            ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(BEAMED))
+            for named in (True, False):
+                ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(BEAMED), heavy['pos'], json.dumps({'runs': [{'pos': heavy['pos'], 'width': heavy['width']}], 'link': heavy['link'] if named else None})))
+                ctx.settle()
+                ctx.frames(3)
+                ink[named] = beam_ink(ctx, BEAMED, heavy['link'], heavy['pos'])
+            ctx.js('window.__skep.links.hide(%s)' % json.dumps(BEAMED))
         lit, unlit = ink[True], ink[False]
         r.check(bool(lit) and bool(unlit) and unlit['ink'] > 0 and lit['ink'] >= HEAVIER_INK * unlit['ink'],
-                f'the arrival: the link followed drawn heavier — the reveal at stage 3, the landing that names it lays {HEAVIER_INK:g} times the ink or more within {BEAM_WINDOW_PX} px of its beam\'s start that a landing on the same span naming none lays',
-                {'link': target['link'], 'lit': lit, 'unlit': unlit})
-        r.figures['arrival'].update(gone_at_next_act=again is None, beam_ink={'lit': lit and round(lit['ink'], 2), 'unlit': unlit and round(unlit['ink'], 2)})
+                f'the arrival: the link followed drawn heavier — at {BEAMED}, the reveal at stage 3, the landing that names a link drawn as a beam lays {HEAVIER_INK:g} times the ink or more within {BEAM_WINDOW_PX} px of its beam\'s start that a landing on the same span naming none lays',
+                {'link': heavy and heavy['link'], 'lit': lit, 'unlit': unlit})
+        r.figures['arrival'].update(gone_at_next_act=again is None, beam_ink={'doc': BEAMED, 'link': heavy and heavy['link'], 'lit': lit and round(lit['ink'], 2), 'unlit': unlit and round(unlit['ink'], 2)})
         ctx.leap(DOC, WINDOW[0])
     # the mount thresholds: mounted at em 6.5 and above, unmounted below 5.5; at each step the frames it drew drew no
     # document both as bars and as text, nor left one yielded and unmounted; where the article stands just mounted, it

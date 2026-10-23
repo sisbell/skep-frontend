@@ -190,9 +190,9 @@ export function act(which, byKey = false) {
   if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) SCENE.open(addr, drawn[0].far, { posA: pos, widthA: width, posB: LK.farPos(drawn[0]) }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
 }
 
-/** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3); it takes the focus on its first row where a key asked */
+/** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3), named as its tail and its mirror item name it (LK's `farLabel`; issue #132); it takes the focus on its first row where a key asked */
 function which_(/** @type {import('../links/links.js').Shown[]} */ drawn, /** @type {'follow' | 'scene'} */ what, /** @type {boolean} */ byKey) {
-  const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.link.owner || '')} · ${esc(s.far)}</button></li>`).join('')}</ul>`;
+  const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.link.owner || '')} · ${esc(LK.farLabel(s))}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   drawn.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else if (s.far && sel) SCENE.open(sel.addr, s.far, { posA: sel.pos, widthA: sel.width, posB: LK.farPos(s) }); }; });

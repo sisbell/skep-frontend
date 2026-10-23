@@ -18,7 +18,11 @@
 // each one's count, newest member, members, the lines set on it and its
 // screen rect), the mid connections it drew between places, each with its
 // count and the count set on its stroke, each one bound for a place out of
-// view with its stub at the view's border (`connections`), a document's fold
+// view with its stub at the view's border (`connections`), the tails it drew
+// for links whose far document the plane draws nowhere (issue #132), each with
+// its links and the label set at its end (`tails`), each one leaving a
+// passage's line beside its links' marked words and the edge of the part of
+// its block holding the line (`tailAnchors`), a document's fold
 // — its size, its step and its columns on the plane — where a position
 // stands in it and which position stands under a point of the plane (`fold`,
 // `centreOf`, `posAt`), the labels it set
@@ -278,6 +282,23 @@ export function install(deps) {
     });
   }
   /**
+   * The tails leaving a passage's line (issue #132's design decision: "at
+   * reading scale it leaves the document's edge at its passage's line"), each
+   * beside an oracle read apart from the canvas's own set, as `beamAnchors`
+   * reads a beam's: the client rects of its links' marked words in its
+   * document's mounted article and the right edge of the part of its block
+   * that holds the line it leaves at.
+   */
+  function tailAnchors() {
+    return RENDER.stats.tails.filter((tl) => tl.form === 'line' && tl.line).map((tl) => {
+      const rec = LAYER.mountedSet().get(tl.at), line = /** @type {Rect} */ (tl.line);
+      const words = rec ? tl.links.flatMap((l) => [...rec.el.querySelectorAll(`.lip[data-links~="${l}"]`)].flatMap((w) => [...w.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height })))) : [];
+      const mid = line.y + line.h / 2;
+      const part = rec ? [...rec.el.querySelectorAll('.run > .sp')].map(rectOf).find((q) => q.y - 0.5 <= mid && mid <= q.y + q.h + 0.5 && q.x <= line.x + line.w && line.x <= q.x + q.w) : null;
+      return { key: tl.key, at: tl.at, links: tl.links, pos: tl.pos, x: tl.from.x, y: tl.from.y, rect: line, words, edge: part ? part.x + part.w : null };
+    });
+  }
+  /**
    * The arrival mark — its runs — and its outline as the last frame drew it
    * (`outline`, the rects it stroked around, run by run), beside an oracle
    * read apart from the canvas's own set: the client rects of the followed
@@ -471,7 +492,7 @@ export function install(deps) {
     /** the focus's owner as it stands: the ring's rule, whether the plane holds the focus, the regions holding it oldest first */
     focus: () => ({ ring: FOCUS.ringShown(), plane: FOCUS.planeHolds(), standing: FOCUS.standing() }),
     driftSample, overlapCheck, visible,
-    beamAnchors, arrivalAnchors, barsOf,
+    beamAnchors, arrivalAnchors, barsOf, tailAnchors,
     /** a document's fold as the plane sets it: its size, step, room, outline and columns */
     fold: foldView,
     /** where a reading view of a document at a position centres: the line holding it, across its column; the first column's centre for none (T-LAYER's `centreOf`) */
@@ -484,6 +505,8 @@ export function install(deps) {
     residues: () => RENDER.stats.residueMarks.slice(),
     /** the mid connections the last frame drew, each between two places — a document, or a mark's `key` — with its count and the count the label pass set on its stroke (`label`, null where it set none), and where one place stands out of the visible view its stub: the place it is bound for, the centre it leaves, its cut, its triangle, its hue and alpha */
     connections: () => RENDER.stats.connections.slice(),
+    /** the tails the last frame drew (issue #132): each one's site, its form — leaving a box or a mark, or a passage's line — the place and the documents it leaves, its links and their far documents, where its stroke leaves and ends, the line it leaves at, and the lines the label pass set at its end */
+    tails: () => RENDER.stats.tails.map((tl) => ({ ...tl })),
     /** the labels the last frame set, in the order they were set — a connection's count under its two places, `a|b` sorted — the trail's pip numbers last */
     labels: () => RENDER.stats.labels.slice(),
     /** the parts of labels the last frame left out, each with the rule that left it out */
@@ -521,6 +544,10 @@ export function install(deps) {
       classify: (/** @type {string} */ l) => { const x = REC.link(l); return x ? LK.classify(x) : null; },
       /** does a document's composition draw the link — LK's `draws`, the one rule which links show, a link standing at a mark joining two documents where either draws it; false where the model holds no such link */
       draws: (/** @type {string} */ l, /** @type {string} */ addr) => { const x = REC.link(l); return !!x && LK.draws(x, addr); },
+      /** is the link's end drawn at a document tailed — its far document one the plane draws nowhere (LK's `tailed`); null where the document draws no end of it */
+      tailed: (/** @type {string} */ addr, /** @type {string} */ l) => { const s = LK.shown(addr).find((x) => x.link.addr === l); return s ? LK.tailed(s) : null; },
+      /** the link's far end named as its tail, its card and its mirror item name it (LK's `farLabel`), from its end drawn at a document; null where the document draws no end of it */
+      farLabel: (/** @type {string} */ addr, /** @type {string} */ l) => { const s = LK.shown(addr).find((x) => x.link.addr === l); return s ? LK.farLabel(s) : null; },
       reveal: (/** @type {string} */ addr, /** @type {1 | 2 | 3} */ stage) => { LK.reveal(addr, stage); LAYER.bump(); CAM.markDirty(); redrawCard(addr); },
       setOthers: (/** @type {string} */ addr, /** @type {boolean} */ on) => { LK.setOthers(addr, on); LAYER.bump(); CAM.markDirty(); redrawCard(addr); },
       hide: (/** @type {string} */ addr) => { LK.hide(addr); LAYER.bump(); CAM.markDirty(); redrawCard(addr); },

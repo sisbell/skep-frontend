@@ -13,7 +13,9 @@
 // weight; a LABEL's size its floor, below which no label on the plane is set
 // (P-LABEL); THE EDGE STUB its inset from the view's border and its
 // triangle's size, the one stub BM's beams and P-RENDER's mid connections
-// draw (P-CAM's `edgeStub`). LK reads this module to put a value on each
+// draw (P-CAM's `edgeStub`); THE TAIL its length and the gap before its
+// label, the short stroke P-RENDER draws for a link whose far document the
+// plane draws nowhere (issue #132's design decision). LK reads this module to put a value on each
 // link's mark; no drawing module reads it for a link (the seam's rule). The
 // values are the UI phase's.
 // Carries: the wireframe's §10 `COL`; S1 Q5's `same`/`provenance` classes
@@ -71,6 +73,16 @@ export const STACK = Object.freeze(['sameness', 'own', 'grade', 'refused', 'arri
  * base — the one stub BM's beams and P-RENDER's mid connections draw
  */
 export const STUB = Object.freeze({ inset: 8, length: 10, width: 10 });
+
+/**
+ * THE TAIL (issue #132's design decision): the short stroke, with no bearing
+ * and no triangle, by which a link whose far document the plane draws
+ * nowhere leaves its near end — `length` px rightward, its label `gap` px past
+ * its end. Shorter than a gutter at the smallest em an article stands at
+ * (P-LAY's GUTTER at P-LOD's UNMOUNT_EM), so a tail leaving a column's line
+ * never reaches the next column's text (register.test.js holds it).
+ */
+export const TAIL = Object.freeze({ length: 10, gap: 3 });
 
 /**
  * The smallest size a label on the plane is set at, in px — the far labels'

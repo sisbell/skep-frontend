@@ -20,7 +20,14 @@
 // bytes and the ones its text transcludes alike (M-REC's `holdsEnd`) — so a
 // beam, a symbol and the mirror place a moved passage where it stands and say
 // so of one that has left the text before anyone follows it (foundations
-// §2.3); the chain's members probed where a document is read; and, for each
+// §2.3), and a far end's label names a document withheld from the reader or
+// one the board will say nothing of (LK's `farWords`; issue #132): a refusal
+// held by what it says of the far document (`declined`), a
+// `doc_not_registered` taken as the far document's own read's answer, for
+// every read of an unregistered address answers it, and a `withheld` never —
+// a document known withheld is drawn as its withheld box, and a far end
+// learned withheld by its projection alone is named so at its tail instead;
+// the chain's members probed where a document is read; and, for each
 // origin its delivered withheld runs name, the reads C-67's clause beneath
 // the run is decided from (PUB-5.124, PUB-5.99, PUB-7.50) — the active view's
 // lookup of the edition claims on the origin (M-FRAMES's `editionClaimsAt`),
@@ -671,8 +678,7 @@ export function pump() {
         if (need('i:' + d.addr + ':' + from + ':' + to, F.image(d.addr, from, to - from), (a) => REC.takeImage(d.addr, from, F.decodeRuns(a)), d.addr)) missing++;
       }
       for (const p of farEnds(d.addr).slice(0, 12)) {
-        const hold = (/** @type {Stretch[] | 'refused'} */ runs) => REC.takeProjection(p.link, p.slot, p.far, runs);
-        if (need('p:' + p.link + ':' + p.slot + ':' + p.far, F.project(p.link, p.slot, p.far), (a) => hold(stretchesOf(a)), p.far, (r) => { if (r.kind === 'refused') hold('refused'); })) missing++;
+        if (need('p:' + p.link + ':' + p.slot + ':' + p.far, F.project(p.link, p.slot, p.far), (a) => REC.takeProjection(p.link, p.slot, p.far, stretchesOf(a)), p.far, (r) => declined(p.link, p.slot, p.far, r))) missing++;
       }
       for (const origin of REC.withheldOrigins(d.addr)) missing += needClaims(origin);
       if (em >= LOD_TXT_LO && d.members == null && d.meta && d.meta.published) { if (probeMembers(d)) missing++; }
@@ -688,8 +694,9 @@ export function pump() {
  * ends LK draws there: the document the span's trunk, or its held text
  * placing the span), the slot opposite — whose first span names a passage of
  * a document, what LK draws a beam to — once per link and slot; none whose
- * projection is held, or whose document a read found unregistered or
- * withheld, which refuses the projection with it.
+ * projection is held, or whose document a read found unregistered — its own
+ * read, or another link's projection into it (`declined`) — or withheld,
+ * which refuses the projection with it.
  * @param {string} addr
  * @returns {Array<{link: string, slot: 1 | 2, far: string}>}
  */
@@ -740,6 +747,27 @@ function needClaims(origin) {
 
 /** `project`'s span set as stretches of the text's content: each V-span's first position and its positions */
 const stretchesOf = (/** @type {unknown} */ answer) => F.decodeSpanSet(answer).filter((s) => s.subspace === 1).map((s) => ({ pos: s.ordinal, width: s.positions }));
+
+/**
+ * A `project` the board refused, held by what its refusal says of the far
+ * document (M-REC's `Declined`): `withheld`, `unregistered`, else `refused`.
+ * A `doc_not_registered` is the far document's own answer too — every read of
+ * an unregistered address answers it — so the model keeps it of the document
+ * (`refuseDoc`), and no projection into it is asked again (`farEnds`); a
+ * `withheld` is held of the projection alone, for a document read and found
+ * withheld is drawn as its withheld box, which would draw the far end the
+ * projection says is withheld. A refusal of the shell's, or a board that did
+ * not answer, says nothing of the document and holds nothing.
+ * @param {string} link
+ * @param {1 | 2} slot
+ * @param {string} far the document projected into
+ * @param {Refusal} r
+ */
+function declined(link, slot, far, r) {
+  if (r.kind !== 'refused') return;
+  REC.takeProjection(link, slot, far, r.name === 'withheld' ? 'withheld' : r.name === 'doc_not_registered' ? 'unregistered' : 'refused');
+  if (r.name === 'doc_not_registered') refuseDoc(REC.doc(far), r);
+}
 
 /** a document's read refused: `doc_not_registered` or `withheld` — the model keeps the fact */
 function refuseDoc(/** @type {Doc} */ d, /** @type {Refusal} */ r) {
@@ -917,10 +945,10 @@ async function readClaims(origin) {
  * model (M-REC's `takeProjection`), the view's beams, symbols and mirror
  * reading it as they read the view's own `project`. Where the board declines
  * the read (`not_a_link` where no such slot), the refusal it met — this
- * read's own, whatever other read met one meanwhile — the model holding the
- * projection refused. A read the document was dropped under (`watchDrops`) is
- * asked again, at most DROP_ATTEMPTS times; past them, its outcome answered
- * and nothing held.
+ * read's own, whatever other read met one meanwhile — the model holding what
+ * it says of the document (`declined`). A read the document was dropped under
+ * (`watchDrops`) is asked again, at most DROP_ATTEMPTS times; past them, its
+ * outcome answered and nothing held.
  * @param {string} linkAddr
  * @param {1 | 2} slot
  * @param {string} doc
@@ -934,7 +962,7 @@ export async function projectEnd(linkAddr, slot, doc) {
     if (!holds && asks < DROP_ATTEMPTS) continue;
     if ('refused' in out) {
       refusals.push({ frame: 'project', refusal: out.refused, addr: doc });
-      if (holds && out.refused.kind === 'refused') REC.takeProjection(linkAddr, slot, doc, 'refused');
+      if (holds) declined(linkAddr, slot, doc, out.refused);
       return { refused: out.refused };
     }
     const runs = stretchesOf(out.answer).sort((a, b) => a.pos - b.pos);

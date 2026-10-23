@@ -6,8 +6,9 @@
 (ii) no write op name of wire.md's writing sections composed anywhere in
     `web/` — every `op: '…'` literal names a read of `frames.js`'s READ_OPS
     (S-35 (a): a signed provider would commit a sent write);
-(iii) the seam's import direction: LK imports M-REC and P-REG (and M-ADDR's
-    pure `commonsType`, reported) and nothing of layer 2; the drawing modules
+(iii) the seam's import direction: LK imports M-REC, P-REG and ST — the
+    words a far end is named in (issue #132) — (and M-ADDR's pure
+    `commonsType`, reported) and nothing of layer 2; the drawing modules
     read LK and never the links card; the reveal's setters are called by the
     card alone (`follow` by N-GO, S-32 (a); the gate's door excepted);
 (iv) the layers of the structure record §3.1: no module imports one above it;
@@ -95,8 +96,8 @@ def run(ctx):
     # (iii) the seam
     lk = sources.get('links/links.js', '')
     lk_imports = imports_of(lk)
-    allowed = {'../model/records.js', '../plane/register.js', '../model/address.js'}
-    r.check(set(lk_imports) <= allowed, 'LK imports M-REC, P-REG (and M-ADDR) alone', lk_imports)
+    allowed = {'../model/records.js', '../plane/register.js', '../model/address.js', '../strings.js'}
+    r.check(set(lk_imports) <= allowed, 'LK imports M-REC, P-REG, ST (and M-ADDR) alone', lk_imports)
     r.figures['lk_imports'] = lk_imports
     for d in DRAWERS:
         src = sources.get(d, '')

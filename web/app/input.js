@@ -37,7 +37,11 @@
 // and by Mod+wheel (K-12). Whether a key made an act is never read here: a
 // pointer's act opens a card without the focus (D5 §4 rule 4; the focus
 // record's rule 16). A CLICK acts on what is under the pointer, keyed on
-// legibility: a continuation's mark is a teleport to its newest member
+// legibility: a TAIL — a link whose far document the plane draws nowhere,
+// leaving its near end with its far end named (P-RENDER's; issue #132's
+// design decision) — lists its links, or opens the card of its one
+// (O-ANATOMY's `fromTail`), at any scale, before any place under it acts;
+// a continuation's mark is a teleport to its newest member
 // (foundations §2.1); below the readable threshold a document is a place
 // wherever the pointer falls, bars or mounted text alike — a teleport (a
 // trail push); at the readable threshold and above its text takes the click:
@@ -315,9 +319,11 @@ function takeSelection() {
   SEL.select(span.addr, span.pos, span.width);
 }
 
-/** a click on the plane: a continuation's mark goes to its newest member; a place goes; an account at far goes to its region; else a card or scene still reading ends, the overlay standing under it standing, or else the overlay dismisses */
+/** a click on the plane: a tail lists its links; a continuation's mark goes to its newest member; a place goes; an account at far goes to its region; else a card or scene still reading ends, the overlay standing under it standing, or else the overlay dismisses */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   LINE.act();
+  const tail = RENDER.tailAtScreen(px, py);
+  if (tail) { ANATOMY.fromTail(tail, false); return; }
   const lod = lodOf(CAM.cam.scale);
   const residue = RENDER.residueAtScreen(px, py);
   if (residue) { GO.leapTo(residue.newest, { how: 'click' }); return; }

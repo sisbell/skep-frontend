@@ -31,7 +31,8 @@
 // fades them in; the mid connections from LK's `connections`, each end at
 // the outline that draws a document or the mark that holds it — a far end the
 // frame does not draw at the outline or the mark that would, and none where
-// the plane draws its document nowhere — a line between two places standing
+// the plane draws its document nowhere (`drawsDoc`, the documents `drawable`
+// lists, the one test LK reads through the reader the app hands it) — a line between two places standing
 // in the visible view (the viewport below the one line, a place's centre
 // inside it), and from the place standing there toward one out of it THE EDGE STUB:
 // its stroke cut at the view's border on the true bearing, the cut P-CAM's
@@ -43,7 +44,23 @@
 // triangle — over a plate of the plane's ground, so the line passes behind
 // its number (foundations §2.1's register: "one connection drawn per
 // document pair with its count"; P44 forbids a merged mark that hides it;
-// P-LABEL's `onStroke`); THE LABELS —
+// P-LABEL's `onStroke`); THE TAILS (issue #132's design decision), from LK's
+// `tails`: a link joining a drawn document to one the plane draws nowhere is
+// no connection and no stub, never pointing at the address's place, which
+// can lie inside a mark naming another document, but a short horizontal
+// stroke with no bearing and no triangle leaving its near end, P-REG's
+// TAIL.length rightward — held short of any other place's shape (P-LABEL's
+// `roomRight`) — in the mark its links merge into: at mid scale from its
+// place's right edge, a document's outline's first row or a mark, at its
+// middle; where the document's article stands in the mount band, from each
+// passage's line where its symbol stands, at the edge of the part of its
+// block holding the line, the point a beam leaves it at (BM's `leaveAt`),
+// the passages leaving by one line one tail; each drawn only where it leaves
+// inside the visible view, and set ending in its LABEL, at its end, by the
+// pass: one link's far end named — its address whole, then LK's `farWords`
+// cut to the room — or the count of several, the bare numeral, its stroke a
+// shape no label meets; a press on it lists its links (APP-INPUT's,
+// `tailAtScreen`); THE LABELS —
 // every string the canvas sets but the trail's pip numbers — handed to
 // P-LABEL's one pass once every place's shapes are drawn, and set over them
 // at no less than P-REG's LABEL_MIN_PX, each only where its place holds it
@@ -54,7 +71,9 @@
 // beneath; then the stubs' triangles, over the places and their labels
 // as the pips are, for the stubs' strokes run behind the boxes, which at mid
 // scale stand along most of the view's border and would hide a triangle drawn
-// with its stroke; then the trail's pips numbered newest-first, each number at
+// with its stroke, and the tails' strokes with them, for a tail leaving a
+// passage's line starts inside its document's outline, whose ground would
+// cover it; then the trail's pips numbered newest-first, each number at
 // the label floor, and no path between them (foundations §2.2 renders the
 // entries as pips: at reading scale a pip stands in the text column, where a
 // path would run between the glyphs of the article mounted over the canvas);
@@ -78,12 +97,14 @@
 // the rule), and the loop holds them against what stands at the frame's end;
 // it names the marks, the connections — each with its count and the numeral the
 // pass set on it, each stub with the place it is bound for, its cut and its
-// triangle — and the labels drawn too, the labels' parts left out with the
+// triangle — the tails, each with its links, its stroke and the label set at
+// its end, and the labels drawn too, the labels' parts left out with the
 // rule that left each out, the box the focus ring outlined and the arrival
 // mark's rects, for the gate. The hit tests read the
 // draw's own rule: a click meets a document on its outline alone, where its
-// columns stand whole, and a continuation's mark wherever the mark holds its
-// documents.
+// columns stand whole, a continuation's mark wherever the mark holds its
+// documents, and a tail on its stroke or its label as the last frame drew
+// them.
 // The system account's rows are never drawn (the record §1.8; this lane's
 // cut). The chip is at the document's corner (T-ARTICLE), never here.
 // Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
@@ -91,6 +112,7 @@
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
+import * as BM from '../beams/beams.js';
 import * as TRAIL from '../nav/trail.js';
 import * as WALK from '../nav/walk.js';
 import * as LAYER from '../text/layer.js';
@@ -100,8 +122,8 @@ import { cam, sx, sy, wx, wy, viewport, viewportWorld, visibleView, edgeStub, st
 import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
 import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt } from './projection.js';
 import { bars, outline, outlineRects, firstRow, GUTTER } from './layout.js';
-import { setLabels, sizeOf, lineHeight, onStroke, pairOf, LINE_BOX } from './labels.js';
-import { COL, EDGE, HUE, LABEL_MIN_PX } from './register.js';
+import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, LINE_BOX } from './labels.js';
+import { COL, EDGE, HUE, LABEL_MIN_PX, TAIL } from './register.js';
 import { documentOf, accountOf, cmpAddr } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
 import { t } from '../strings.js';
@@ -151,6 +173,27 @@ import { t } from '../strings.js';
  * @property {string | null} label the count the label pass set on its stroke; null where it set none — a connection holding one link, or one whose count the pass left out (`stats.labelsLeftOut` names why)
  */
 
+/**
+ * @typedef {Object} DrawnTail — a tail the frame drew (see the head): the links a place sends to documents the plane draws nowhere, leaving it by a short stroke, their far end named at its end
+ * @property {string} key its site, the place its label is set under: `tail ⟨place⟩` where it leaves a box or a mark, `tail ⟨document⟩ ⟨x⟩,⟨y⟩` where it leaves a passage's line
+ * @property {'box' | 'line'} form it leaves its place's right edge — a document's outline's first row, or a mark — or a passage's line in its document's mounted text
+ * @property {string} at the place it leaves: a document, or a mark's `key`
+ * @property {string[]} docs the drawn documents it leaves
+ * @property {string[]} links its links, each once
+ * @property {string[]} far each link's far document, in the order of `links`
+ * @property {Point} from where it leaves
+ * @property {Point} to where its stroke ends: TAIL.length px on, or short of the nearer shape of another place
+ * @property {{x: number, y: number}} world `from` in world units, where the overlay its press shows stands
+ * @property {Rect | null} line the line it leaves at, its form `line`; null for `box`
+ * @property {number | null} pos the first position of the passage it leaves, its form `line`; null for `box`
+ * @property {string} hue its links' merged mark's (LK's `mergedMark`)
+ * @property {number} alpha the documents' band's, by its links' value
+ * @property {number} weight its links' weight: heavier where every one is lit
+ * @property {boolean} dashed every one of its links another's, dashed as a beam is
+ * @property {string[]} label the lines the label pass set at its end — its far end named, or its count; none where it left the label out (`stats.labelsLeftOut` names why)
+ * @property {Rect[]} rects those lines' rects
+ */
+
 /** @type {HTMLCanvasElement | null} */
 let cv = null;
 /** @type {CanvasRenderingContext2D | null} */
@@ -166,8 +209,9 @@ let DPR = 1;
  * `residueMarks` the continuations drawn as marks, `connections` the
  * mid connections drawn, each between two places, a stub where one of them
  * stands out of view, the count set on its stroke where the pass set one,
- * `labels` the labels set — the connections' counts and the trail's pip
- * numbers among them — `labelsLeftOut` the parts the pass left out, each with
+ * `tails` the tails drawn, each with its links and the label set at its end,
+ * `labels` the labels set — the connections' counts, the tails' labels and
+ * the trail's pip numbers among them — `labelsLeftOut` the parts the pass left out, each with
  * the rule that left it out, `ring` the focused element's box on screen the
  * focus ring outlined, null where it drew none, and `arrival` the rects the
  * arrival mark outlined.
@@ -176,6 +220,7 @@ export const stats = {
   linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0,
   residueMarks: /** @type {ResidueMark[]} */ ([]),
   connections: /** @type {DrawnConnection[]} */ ([]),
+  tails: /** @type {DrawnTail[]} */ ([]),
   drawn: /** @type {string[]} */ ([]), labelled: /** @type {string[]} */ ([]), yielded: /** @type {string[]} */ ([]),
   bars: /** @type {Array<[string, number]>} */ ([]), yieldedLines: /** @type {Array<[string, number]>} */ ([]), barred: 0,
   labels: /** @type {import('./labels.js').SetLabel[]} */ ([]),
@@ -365,6 +410,23 @@ function drawable() {
   return out;
 }
 
+/** @type {{rev: number, docs: Set<string>}} the documents `drawable` lists, each as its document, at a model revision: a cache of a pure function of the model */
+let drawnDocs = { rev: -1, docs: new Set() };
+/**
+ * Does the plane draw a document somewhere — at its box where it stands whole,
+ * or in the continuation's mark that holds it: a document `drawable` lists, a
+ * version member as its document, whose box the two share? The one test of
+ * where a link's far end can stand on the plane: the connections end only at
+ * such a document, and LK tails a link whose far document is none (the
+ * reader the app hands it; issue #132).
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export function drawsDoc(addr) {
+  if (drawnDocs.rev !== REC.rev()) drawnDocs = { rev: REC.rev(), docs: new Set(drawable().map((d) => documentOf(d.addr) || d.addr)) };
+  return drawnDocs.docs.has(documentOf(addr) || addr);
+}
+
 /**
  * Each account's continuation k: the documents it holds among `docs`, in
  * address order — its newest last — a version member counted as its document.
@@ -449,12 +511,11 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   /** @type {Map<string, string>} the place of each document a mark drawn here holds */
   const heldAt = new Map();
   for (const m of marks) if (m.k === cont.held) for (const a of m.members) heldAt.set(a, m.key);
-  const placeable = new Set(all.map((d) => documentOf(d.addr) || d.addr));
   /** @type {Map<string, {x: number, y: number, w: number, h: number}>} each place met, by its key: a document's outline's bounds, a mark's cell */
   const cells = new Map();
   const placeOf = (/** @type {string} */ addr) => {
     const doc = documentOf(addr) || addr, account = accountOf(doc);
-    if (!placeable.has(doc)) return null;
+    if (!drawsDoc(doc)) return null;
     const key = account && withinContinuation(doc, cont.held) ? account + ':' + cont.held : doc;
     if (!cells.has(key)) cells.set(key, key === doc ? LAYER.shapeOf(doc) : continuationCell(/** @type {string} */ (account), cont.held));
     return key;
@@ -466,9 +527,11 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   /** @type {Array<{place: string, count: number, p: Point, q: Point}>} each connection holding more than one link, and the stroke its count stands on: to the far place's centre, or to the stub's triangle's base */
   const counted = [];
   let drawn = 0;
+  /** the documents drawn: whole, or inside a mark drawn here */
+  const docsDrawn = [...new Set([...vis.map((x) => x.d.addr), ...heldAt.keys()])];
   if (lod.docPx > 6) {
     ctx.lineWidth = Math.min(1.6, 0.4 + lod.docPx / 300);
-    for (const c of LK.connections([...new Set([...vis.map((x) => x.d.addr), ...heldAt.keys()])], placeOf)) {
+    for (const c of LK.connections(docsDrawn, placeOf)) {
       const A = centreOf(c.a), B = centreOf(c.b), inA = inView(A), inB = inView(B);
       // both out of view: a line only between two places the frame draws, unless both lie far past one side
       if (!inA && !inB && (!drawnAt.has(c.a) || !drawnAt.has(c.b) || (A.x < -400 && B.x < -400) || (A.x > VW + 400 && B.x > VW + 400) || (A.y < -400 && B.y < -400) || (A.y > VH + 400 && B.y > VH + 400))) continue;
@@ -552,6 +615,8 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     }
     if (set) stats.drawn.push(d.addr);
   }
+  // the tails, once every place's shape is drawn: each stroke a shape of the pass, so no count stands on it, and its label handed to it
+  if (lod.docPx > 6) stats.tails = tailsOf(docsDrawn, placeOf, alpha, pass, seen);
   // each connection's count, once every place's shape is drawn: on its stroke where its room meets none of them (P-LABEL's `onStroke`), the
   // room the numeral's own line, which the pass holds clear, and its plate, the plane's ground the line passes behind
   const cpx = sizeOf(LABEL_MIN_PX), lh = lineHeight(LABEL_MIN_PX);
@@ -566,6 +631,95 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   return vis.length;
 }
 
+/** a screen coordinate to a hundredth of a px: one line's tails, left at one point, are one site */
+const hundredth = (/** @type {number} */ v) => Math.round(v * 100) / 100;
+
+/**
+ * @typedef {Object} Site — a tail laid out before it is drawn: where it leaves, and the far ends it holds, each link once with its mark
+ * @property {string} at
+ * @property {string[]} docs
+ * @property {Array<import('../links/links.js').FarEnd & {mark: import('./register.js').Mark}>} ends
+ * @property {Point} from
+ * @property {Rect | null} line
+ * @property {number | null} pos
+ */
+
+/**
+ * The tails (see the head), against the visible view `seen`, once every
+ * place's shape is in `pass`: where a document's article stands in the mount
+ * band, each line its tailed ends leave by (LK's `tailed`; BM's `leaveAt`,
+ * toward no far end: where its symbol stands), each link once; then each of
+ * LK's `tails` with the links no line of its documents carries, at its
+ * place's right edge — a document's outline's first row, or a mark — at its
+ * middle. Each drawn where it leaves inside the visible view and has room for
+ * a stroke, its stroke held short of any other place's shape (P-LABEL's
+ * `roomRight`) and made a shape of the pass; then each one's label handed to
+ * the pass at its stroke's end, its room run to the first shape its lines
+ * would meet, its own document's among them: one link's far end named — its
+ * address whole, then LK's `farWords` cut to the room — or the count of
+ * several, on a plate of the plane's ground.
+ * @param {string[]} docsDrawn
+ * @param {(addr: string) => string | null} placeOf
+ * @param {number} alpha the documents' band's
+ * @param {Pass} pass
+ * @param {Rect} seen
+ * @returns {DrawnTail[]}
+ */
+function tailsOf(docsDrawn, placeOf, alpha, pass, seen) {
+  const g = BM.pageGeometry(seen);
+  /** @type {Map<string, Site>} */
+  const sites = new Map();
+  /** @type {Set<string>} each link a line's tail carries, by `⟨document⟩ ⟨link⟩` */
+  const carried = new Set();
+  for (const d of docsDrawn) {
+    if (!LAYER.isMounted(d)) continue;
+    for (const s of LK.shown(d)) {
+      if (!LK.tailed(s)) continue;
+      const left = BM.leaveAt(g, d, s.runs);
+      if (!left) continue;
+      carried.add(d + ' ' + s.link.addr);
+      const key = `tail ${d} ${hundredth(left.from.x)},${hundredth(left.from.y)}`;
+      let site = sites.get(key);
+      if (!site) sites.set(key, (site = { at: d, docs: [d], ends: [], from: left.from, line: left.line, pos: s.pos }));
+      if (!site.ends.some((e) => e.link.addr === s.link.addr)) site.ends.push(s);
+    }
+  }
+  for (const tl of LK.tails(docsDrawn, placeOf)) {
+    const ends = tl.ends.filter((e) => !tl.docs.some((d) => carried.has(d + ' ' + e.link.addr)));
+    if (!ends.length) continue;
+    const i = tl.at.indexOf(':');
+    let from;
+    if (i < 0) { const box = docBox(tl.at), row = firstRow(LAYER.foldOf(REC.doc(tl.at))); from = { x: sx(box.x + row.x + row.w), y: sy(box.y + row.y + row.h / 2) }; }
+    else { const c = continuationCell(tl.at.slice(0, i), Number(tl.at.slice(i + 1))); from = { x: sx(c.x + c.w), y: sy(c.y + c.h / 2) }; }
+    sites.set('tail ' + tl.at, { at: tl.at, docs: tl.docs, ends, from, line: null, pos: null });
+  }
+  /** @type {Array<{key: string, site: Site, to: Point, mark: import('./register.js').Mark}>} */
+  const laid = [];
+  for (const [key, site] of sites) {
+    const { from } = site;
+    if (from.x < seen.x || from.x > seen.x + seen.w || from.y < seen.y || from.y > seen.y + seen.h) continue;
+    const len = Math.min(TAIL.length, roomRight({ x: from.x, y: from.y - 1 }, 2, pass.shapes, seen, site.at));
+    if (len < 2) continue;
+    const mark = LK.mergedMark(/** @type {[import('./register.js').Mark, ...import('./register.js').Mark[]]} */ (site.ends.map((e) => e.mark)));
+    laid.push({ key, site, to: { x: from.x + len, y: from.y }, mark });
+    pass.shapes.push({ place: key, rect: { x: from.x, y: from.y - 1, w: len, h: 2 }, alpha });
+  }
+  const lh = lineHeight(LABEL_MIN_PX);
+  return laid.map(({ key, site, to, mark }) => {
+    const one = site.ends.length === 1 ? site.ends[0] : null, words = one ? LK.farWords(one) : '';
+    /** @type {Part[]} */
+    const parts = one ? [{ text: one.far, px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }, { text: words, px: LABEL_MIN_PX, ink: COL.greek, fit: 'cut' }]
+      : [{ text: String(site.ends.length), px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }];
+    const x = to.x + TAIL.gap, y = site.from.y - lh / 2, h = (words ? 2 : 1) * lh;
+    pass.labels.push({ kind: 'tail', place: key, within: { x, y, w: roomRight({ x, y }, h, pass.shapes, seen, key), h }, x, y, align: 'left', alpha, plate: COL.bg, parts });
+    return {
+      key, form: site.line ? 'line' : 'box', at: site.at, docs: site.docs, links: site.ends.map((e) => e.link.addr), far: site.ends.map((e) => e.far),
+      from: site.from, to, world: { x: wx(site.from.x), y: wy(site.from.y) }, line: site.line, pos: site.pos,
+      hue: mark.hue, alpha: alpha * mark.value, weight: mark.weight, dashed: mark.linker === 'others', label: [], rects: [],
+    };
+  });
+}
+
 /**
  * The labels' one pass (P-LABEL): every label the places handed over, set
  * over their shapes inside the visible view, each line on the plate its
@@ -573,8 +727,8 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
  * and the parts left out — a part reaching under the one line or past the
  * viewport left out by the pass's 'view' with every part after it, so a
  * label whose head reaches there is left out whole — each mark the lines set
- * on it, each connection the count set on it, and `drawn` each document
- * whose label was set.
+ * on it, each connection the count set on it, each tail the lines set at its
+ * end, and `drawn` each document whose label was set.
  * @param {Pass} pass
  * @param {Rect} seen the visible view (P-CAM's `visibleView`): the viewport below the one line
  */
@@ -596,6 +750,7 @@ function drawLabels(pass, seen) {
   for (const mk of stats.residueMarks) { const l = set.find((x) => x.kind === 'mark' && x.place === mk.key); mk.lines = l ? l.lines.map((x) => x.text) : []; }
   const counts = new Map(set.filter((l) => l.kind === 'connection').map((l) => [l.place, l.lines[0].text]));
   for (const cn of stats.connections) cn.label = counts.get(pairOf(cn.a, cn.b)) ?? null;
+  for (const tl of stats.tails) { const l = set.find((x) => x.kind === 'tail' && x.place === tl.key); tl.label = l ? l.lines.map((x) => x.text) : []; tl.rects = l ? l.lines.map((x) => x.rect) : []; }
   const drawn = new Set(stats.drawn);
   for (const l of set) if (l.kind === 'doc') { stats.labelled.push(l.place); if (!drawn.has(l.place)) stats.drawn.push(l.place); }
 }
@@ -614,6 +769,21 @@ function drawStubs() {
     c.beginPath(); c.moveTo(p.x, p.y); c.lineTo(q.x, q.y); c.lineTo(r.x, r.y); c.closePath(); c.fill();
   }
   c.globalAlpha = 1;
+}
+
+/**
+ * The tails' strokes (see the head), each in its links' merged mark — its
+ * hue, its value, its weight, dashed where every link is another's as a beam
+ * is — over the places and their labels, with the stubs' triangles.
+ */
+function drawTails() {
+  const c = ctx; if (!c) return;
+  for (const tl of stats.tails) {
+    c.globalAlpha = tl.alpha; c.strokeStyle = tl.hue; c.lineWidth = 1.6 * tl.weight;
+    c.setLineDash(tl.dashed ? [3, 2] : []);
+    c.beginPath(); c.moveTo(tl.from.x, tl.from.y); c.lineTo(tl.to.x, tl.to.y); c.stroke();
+  }
+  c.setLineDash([]); c.globalAlpha = 1;
 }
 
 /** the trail's pips, numbered newest-first at the label floor, no path joining them (see the head) */
@@ -682,9 +852,9 @@ function drawArrival() {
 
 /**
  * Draw the frame: a function of model and view state (FP-8) — the places,
- * then their labels, then the stubs' triangles, the trail, the focus ring and
- * the arrival mark; the connections and the labels against one visible view,
- * read once for the frame.
+ * then their labels, then the stubs' triangles and the tails' strokes, the
+ * trail, the focus ring and the arrival mark; the connections, the tails and
+ * the labels against one visible view, read once for the frame.
  * @returns {import('./lod.js').Lod}
  */
 export function draw() {
@@ -695,7 +865,7 @@ export function draw() {
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, VW, VH);
   ctx.textBaseline = 'alphabetic';
-  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.drawn = []; stats.labelled = []; stats.yielded = [];
+  stats.linksDrawn = 0; stats.linesDrawn = 0; stats.clusters = 0; stats.docsDrawn = 0; stats.residueMarks = []; stats.connections = []; stats.tails = []; stats.drawn = []; stats.labelled = []; stats.yielded = [];
   stats.bars = []; stats.yieldedLines = []; stats.barred = 0; stats.labels = []; stats.labelsLeftOut = []; stats.ring = null; stats.arrival = [];
   /** @type {Pass} */
   const pass = { labels: [], shapes: [] };
@@ -704,8 +874,21 @@ export function draw() {
   else if (lod.name === 'far~mid') { stats.clusters = drawClusters(1 - lod.fade, pass); drawAccountFrames(lod.fade, pass); stats.docsDrawn = drawDocs(lod, lod.fade, pass, seen); }
   else { drawAccountFrames(1, pass); stats.docsDrawn = drawDocs(lod, 1, pass, seen); }
   drawLabels(pass, seen);
-  drawStubs(); drawTrail(); drawFocus(); drawArrival();
+  drawStubs(); drawTails(); drawTrail(); drawFocus(); drawArrival();
   return lod;
+}
+
+/**
+ * The tail under a screen point, as the last frame drew it: on its stroke, 5
+ * px either side, or on a line of its label; null where none is (a hit test;
+ * draws nothing).
+ * @param {number} px
+ * @param {number} py
+ * @returns {DrawnTail | null}
+ */
+export function tailAtScreen(px, py) {
+  const holds = (/** @type {Rect} */ r, /** @type {number} */ pad) => px >= r.x - pad && px <= r.x + r.w + pad && py >= r.y - pad && py <= r.y + r.h + pad;
+  return stats.tails.find((tl) => holds({ x: tl.from.x, y: tl.from.y, w: tl.to.x - tl.from.x, h: 0 }, 5) || tl.rects.some((r) => holds(r, 0))) || null;
 }
 
 /** the document under a screen point where it stands whole, on its outline — one a continuation's mark holds is the mark's (a hit test; draws nothing) */

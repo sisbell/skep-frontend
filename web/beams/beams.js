@@ -3,7 +3,9 @@
 // (its own canvas). State: VIEW — the last frame's bundles and the labels it
 // set at their ends.
 // It decides nothing of which links, nor how each is marked: it draws
-// `LK.beams(addr)` for every mounted document at stage 3, each beam with the
+// `LK.beams(addr)` for every mounted document at stage 3 — a link whose far
+// document the plane draws nowhere none: LK leaves it out, and P-RENDER's
+// tail stands for it (issue #132's design decision) — each beam with the
 // mark LK gives it — the link's `markOf` at the document met, or, for a link
 // met from both its ends, the one `mergedMark` makes of the two — its hue,
 // its value, and its weight, the link lit at an arrival stroked heavier
@@ -17,7 +19,9 @@
 // the middle of the line-rect nearest the far end of every stretch LK says
 // its end stands in (LK's
 // `runs`; `spanRects` with each stretch's width — its rects line by line, so
-// at a wrap the line nearest the far end). Its far end is where `project`
+// at a wrap the line nearest the far end; `leaveAt`, the rule P-RENDER's
+// tails leave a passage by too, so a tail and a beam leave it at one point).
+// Its far end is where `project`
 // says the far passage sits in the far document's current text (LK's
 // `farRuns`; A-53: "the beam lands at the passage's current place
 // (version-proof)"): that document mounted and laid out, the beam ends at
@@ -150,6 +154,25 @@ function pickLine(/** @type {Anchor[]} */ anchors, /** @type {Point} */ p) {
   for (const a of anchors) { const r = a.line, dd = (r.x + r.w / 2 - p.x) ** 2 + (r.y + r.h / 2 - p.y) ** 2; if (dd < bd) { bd = dd; best = a; } }
   return best;
 }
+/**
+ * Where a drawn end leaves its document's mounted text (see the head): the
+ * right edge of the part of the block holding the line it leaves at, level
+ * with the line's middle — toward a point, the line of its stretches nearest
+ * it (a beam's, toward its far end); toward none, the last line of its last
+ * stretch, where its symbol stands (a tail's, which has no far end on the
+ * plane — issue #132). Null where none of its stretches has a line laid out.
+ * @param {Geometry} g
+ * @param {string} addr the document it is drawn at
+ * @param {Array<{pos: number, width: number}>} runs the stretches it stands in (LK's `runs`)
+ * @param {Point | null} [toward]
+ * @returns {{line: Rect, from: Point} | null}
+ */
+export function leaveAt(g, addr, runs, toward = null) {
+  const near = anchorsOf(g, addr, runs);
+  if (!near.length) return null;
+  const a = toward ? pickLine(near, toward) : near[near.length - 1];
+  return { line: a.line, from: { x: a.block.x + a.block.w, y: a.line.y + a.line.h / 2 } };
+}
 /** the lines of the stretches of a document's text, each with the part of the block holding its stretch that holds the line (`partOf`); none where they are not laid out */
 function anchorsOf(/** @type {Geometry} */ g, /** @type {string} */ addr, /** @type {Array<{pos: number, width: number}>} */ runs) {
   return runs.flatMap((r) => { const parts = g.block(addr, r.pos); return parts.length ? g.lines(addr, r.pos, r.width).map((line) => ({ line, block: partOf(parts, line) })) : []; });
@@ -229,19 +252,17 @@ function beamTo(s, line, from, to, view) {
  * @returns {Beam | null}
  */
 export function beamOf(s, g) {
-  const near = anchorsOf(g, s.near, s.runs);
-  if (!near.length || !s.far) return null;
-  /** the near end's line nearest a point, and the edge's point level with it */
-  const leave = (/** @type {Point} */ toward) => { const a = pickLine(near, toward); return { line: a.line, from: { x: a.block.x + a.block.w, y: a.line.y + a.line.h / 2 } }; };
+  if (!s.far) return null;
   const far = g.mounted(s.far) ? farAnchors(s, g) : null;
   if (far && far.length) {
-    const { line, from } = leave(mid(far[0].line));
-    const there = pickLine(far, from);
-    return beamTo(s, line, from, { x: there.block.x, y: there.line.y + there.line.h / 2 }, g.view);
+    const left = leaveAt(g, s.near, s.runs, mid(far[0].line));
+    if (!left) return null;
+    const there = pickLine(far, left.from);
+    return beamTo(s, left.line, left.from, { x: there.block.x, y: there.line.y + there.line.h / 2 }, g.view);
   }
   const c = g.centre(s.far);
-  const { line, from } = leave(c);
-  return beamTo(s, line, from, c, g.view);
+  const left = leaveAt(g, s.near, s.runs, c);
+  return left && beamTo(s, left.line, left.from, c, g.view);
 }
 
 /** a beam's identity: its link and its two ends, unordered, each the document it stands at — the near end the one drawing it, the far end the one its slot names — with the key of the span the link stores for it (LK's `endKey`): the same beam whichever end it is drawn from, wherever either end stands now, and a beam from each document one stored end is drawn at */
@@ -288,19 +309,20 @@ export function bundlesOf(beams) {
 
 /**
  * A bundle's label (§2.1): its far document's address, its label from the
- * index cut to 32 characters, its count where it holds two beams or more, "?"
- * where the board will say nothing about that address — and, where every
- * beam it holds ends at a passage the far document's current text no longer
- * holds, "its passage is not in ⟨D⟩'s current text", the stub saying so
- * before anyone follows it (foundations §2.3; P44: what its members share,
- * so a bundle holding a beam that floats beside one that lands says neither).
+ * index cut to 32 characters, its count where it holds two beams or more —
+ * and, where every beam it holds ends at a passage the far document's current
+ * text no longer holds, "its passage is not in ⟨D⟩'s current text", the stub
+ * saying so before anyone follows it (foundations §2.3; P44: what its members
+ * share, so a bundle holding a beam that floats beside one that lands says
+ * neither). A far document the board will say nothing of is drawn nowhere, so
+ * no beam reaches it: its tail names it (issue #132).
  * @param {Bundle<{s: Shown}>} b
  * @returns {string}
  */
 export function labelText(b) {
   const p = place(b.far);
   return b.far + (p && p.label ? ' · ' + p.label.slice(0, 32) : '') + (b.members.length > 1 ? ` · ${b.members.length}` : '') +
-    (doc(b.far).refused === 'unregistered' ? ' · ?' : '') + (b.members.every((m) => LK.floats(m.s)) ? ' · ' + t('F.floating', { D: b.far }) : '');
+    (b.members.every((m) => LK.floats(m.s)) ? ' · ' + t('F.floating', { D: b.far }) : '');
 }
 
 /** the visible view now: the viewport below the one line */
@@ -317,8 +339,8 @@ function byColumn(/** @type {Rect[]} */ lines) {
   return [...out.values()];
 }
 
-/** the page's geometry: T-LAYER's rects of the mounted articles — a line standing in no part where its fold sets it — the camera's projection of the boxes, the visible view */
-function pageGeometry(/** @type {Rect} */ seen) {
+/** the page's geometry: T-LAYER's rects of the mounted articles — a line standing in no part where its fold sets it — the camera's projection of the boxes, the visible view; P-RENDER's tails leave the text through it too (`leaveAt`) */
+export function pageGeometry(/** @type {Rect} */ seen = seenNow()) {
   /** the boxes of the block keyed by its first position in a mounted article: one for each of its parts standing, a column's each; where none stands, one for each column its lines are set in */
   const parts = (/** @type {string} */ addr, /** @type {number} */ pos) => {
     const rs = LAYER.spanRects(addr, pos) || [];

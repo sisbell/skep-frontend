@@ -29,7 +29,10 @@
 // the seat above a sub-account by the one owner rule: a mutant that calls it
 // published, or names the sub-account, turns red. A link whose far end floats
 // says so at its item, as its symbol and its stub do (R94): a mutant whose
-// item says nothing of it turns red.
+// item says nothing of it turns red. A link's item names its far end as its
+// tail and its card do (issue #132): its address alone while nothing is
+// answered of its document, then the words the board's answer gives — a
+// mutant that names the address alone, or speaks before an answer, turns red.
 // While chrome covers the plane the tree stays inert through the rebuild —
 // a mutant whose rebuild lifts the mark turns red — until the plane is
 // uncovered. The focus's return as an overlay closes is the controller's
@@ -397,6 +400,21 @@ test('the mirror\'s item at a link whose far end floats says "its passage is not
   assert.ok(item().includes(floating), item());
   REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 4 }]);
   assert.ok(item() !== '' && !item().includes(t('F.floating', { D: FAR })), item());
+});
+
+test('the mirror\'s item at a link names its far end as its tail and its card do: its address alone while nothing is answered of its document, then the words the board\'s answer gives (issue #132)', () => {
+  const L = D + '.0.2.2', GHOST = '1.0.1.0.1049578', THEIRS = '1.0.2.0.99';
+  const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: doc.split('.').slice(0, 3).join('.'), whole: false, subspace: 1, ordinal: ord, positions: w });
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 12, 3)], to: [span(GHOST, 1, 4)], type: '1.1.0.1.0.1.0.3.13' });
+  const item = () => { const s = LK.shown(D).find((x) => x.link.addr === L); return s ? WALK.nameOf({ kind: 'link', addr: D, pos: s.pos, link: s }, 0, 1) : ''; };
+  assert.equal(item(), t('L.mirror.link', { link: L, type: '1.1.0.1.0.1.0.3.13', direction: t('F.card.to'), far: GHOST, floating: '' }) + ' ' + t('L.mirror.item', { i: 1, n: 1 }), 'nothing answered: the address alone');
+  REC.takeProjection(L, 2, GHOST, 'unregistered');
+  assert.ok(item().includes(`${t('F.card.to')} ${GHOST} · ${t('L.far.empty')}`), `the board saying nothing of an address of the reader's own account the complete index lists nothing at: ${item()}`);
+  REC.takeLink({ addr: L, from: [span(D, 12, 3)], to: [span(THEIRS, 1, 4)], type: '1.1.0.1.0.1.0.3.13' });
+  REC.takeProjection(L, 2, THEIRS, 'unregistered');
+  assert.ok(item().includes(`${t('F.card.to')} ${THEIRS} · ${t('L.far.unregistered')}`), `another account's: ${item()}`);
+  REC.invalidate(THEIRS); REC.invalidate(GHOST);
 });
 
 // placed last: it lists a document no test above meets, and lists the index back as it found it

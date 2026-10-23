@@ -51,7 +51,10 @@
 // claims decide one, and nothing in its place where they do not — R56,
 // B1-S7, PUB-5.124), and a
 // document a read answered `withheld` is named by its withheld box's words
-// (T-LAYER's `withheldBox`: existence and owner — B1-S2), and a link whose far end floats
+// (T-LAYER's `withheldBox`: existence and owner — B1-S2), a link's item
+// names its far end as its tail, its card and every list naming it do (LK's
+// `farLabel`: its address, then what the board answered of its document —
+// issue #132), and a link whose far end floats
 // says "its passage is not in ⟨D⟩'s current text" as its symbol's title and
 // its stub do (LK's `floats`; foundations §2.3), so at each a screen reader
 // hears what the plane shows (R94). The mirror is rebuilt whole on every
@@ -203,8 +206,7 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
   if (n.kind === 'link' && n.link) {
     const l = n.link;
     return t('L.mirror.link', {
-      link: l.link.addr, type: l.link.type || t('L.mirror.untyped'), direction: l.end === 'from' ? t('F.card.to') : t('F.card.from'), far: l.far,
-      unregistered: REC.doc(l.far).refused === 'unregistered' ? t('L.mirror.unregistered') : '',
+      link: l.link.addr, type: l.link.type || t('L.mirror.untyped'), direction: l.end === 'from' ? t('F.card.to') : t('F.card.from'), far: LK.farLabel(l),
       floating: LK.floats(l) ? t('L.mirror.floating', { sentence: t('F.floating', { D: l.far }) }) : '',
     }) + pos;
   }

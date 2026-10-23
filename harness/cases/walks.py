@@ -53,7 +53,7 @@ def card_state(ctx):
     return ctx.js('''(() => { const o = document.getElementById('overlay'); const sw = o.querySelector('[data-run="others"]');
       return {offers_symbols: !!o.querySelector('[data-run="stage2"]'), offers_content: !!o.querySelector('[data-run="stage3"]'),
               switch_checked: sw ? sw.getAttribute('aria-checked') : null, switch_text: sw ? sw.textContent : null,
-              stage: window.__skep.reveal(%s).stage, others: window.__skep.reveal(%s).others, beams: window.__skep.beams()}; })()''' % (json.dumps(DOC), json.dumps(DOC)))
+              stage: window.__skep.reveal(%s).stage, others: window.__skep.reveal(%s).others, beams: window.__skep.beams(), tails: window.__skep.tails().filter((t) => t.at === %s).length}; })()''' % (json.dumps(DOC), json.dumps(DOC), json.dumps(DOC)))
 
 
 def toggle_words(ctx, state):
@@ -140,8 +140,8 @@ def run(ctx):
     press(ctx, r, 'stage3', 'the chain\'s next stage, content')
     ctx.frames(2)
     s = card_state(ctx)
-    r.check(s['stage'] == 3 and s['offers_symbols'] and not s['offers_content'] and s['beams'] >= 1, 'the press moved the chain to stage 3 and the card redrew: it now offers the symbols; the beams are built', s)
-    step(ctx, r, 'W-05', 3, 'ask to see the links: content', 'W-05 step 3, stage 3: the beams from each citation\'s span toward its far document — here edge STUBS with the far address, since every far document is off screen or a ghost (S1 Q3).', 'links-beams')
+    r.check(s['stage'] == 3 and s['offers_symbols'] and not s['offers_content'] and s['beams'] + s['tails'] >= 1, 'the press moved the chain to stage 3 and the card redrew: it now offers the symbols; each citation in view leaves the text by a beam, or by a tail where its far document is drawn nowhere', s)
+    step(ctx, r, 'W-05', 3, 'ask to see the links: content', 'W-05 step 3, stage 3: the beams from each citation\'s span toward its far document — here TAILS, not stubs: every document the first edition cites is a ghost the plane draws nowhere, so each citation leaves its line by a short tail naming its far address, two from one line merged into their count (issue #132).', 'links-beams')
     # the person presses the others' switch: LK's toggle and the switch's own state agree before the shot
     press(ctx, r, 'others', 'the others\' overlay toggle')
     s = card_state(ctx)

@@ -118,7 +118,14 @@
 // as any other span, or beside its face, or leaves the pointer no act, turns
 // red); every claim
 // quoting, the QUOTING sibling a line and no act; no claim, the head and the
-// arm alone; Enter at any other span still selects it whole (D8). The overlay
+// arm alone; Enter at any other span still selects it whole (D8). A TAIL
+// PRESSED (issue #132) reads its documents whole first — a mutant that lists
+// before reading finds no end where the page holds no text, and turns red —
+// then shows its one link's card, its far end in the words its tail carries
+// ("no document here yet", a dead reference in the reader's own account: a
+// mutant that keeps the card's "…" turns red), or lists its several links,
+// each row naming its far end and opening that link's card; a Back made
+// while it reads shows nothing. The overlay
 // host stands on a stand-in element, the platform's document a stand-in
 // beside it, so a face a landing shows is read back from what the host wrote.
 import { test, before } from 'node:test';
@@ -1066,5 +1073,48 @@ test('Enter at a withheld run shows its face whole, C-67\'s pointer its act — 
   } finally {
     globalThis.window = platform.window;
   }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a tail pressed (issue #132) reads its documents whole first, then shows its one link\'s card — its far end in the words its tail carries — or lists its several links, each row naming its far end and opening that link\'s card; a Back made while it reads shows nothing', async () => {
+  takeDead();
+  await run(GO.leapTo(D));
+  await PUMP.loadWhole(GONE);
+  assert.equal(REC.doc(GONE).refused, 'unregistered', 'the board says nothing of the dead reference\'s address');
+  const quoted = () => (hostEl.innerHTML.match(/<div class="end far">.*?<div class="quoted">(.*?)<\/div>/) || [])[1];
+  // one link: its card, at its own bytes, its far end named as its tail and its mirror item name it
+  await ANATOMY.fromTail({ docs: [D], links: [DEAD], world: { x: 0, y: 0 } });
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['anatomy:' + DEAD, { span: { addr: D, pos: 23, width: 3 } }], 'its card, at the link\'s own bytes');
+  assert.equal(quoted(), esc(t('L.far.empty')), 'its far end: no document here yet — the reader\'s own account, the index complete and listing none there');
+  HOST.dismiss();
+  // several: listed at the tail, each row its far end named, opening its link's card
+  await ANATOMY.fromTail({ docs: [D], links: [DEAD, PASSAGE], world: { x: 5, y: 6 } });
+  const o = HOST.currentState();
+  assert.deepEqual([o?.id, o?.kind, o?.anchor], ['tail', 'list', { world: { x: 5, y: 6 } }], 'listed at the tail');
+  for (const l of [DEAD, PASSAGE]) assert.ok(hostEl.innerHTML.includes(esc(LK.farLabel(drawn(l)))), `${l}'s row names its far end: ${hostEl.innerHTML}`);
+  assert.ok(hostEl.innerHTML.includes(esc(`${GONE} · ${t('L.far.empty')}`)), 'the dead reference\'s row says what a follow will meet');
+  const first = o && o.acts ? o.acts.t0 : null;
+  assert.ok(first, 'a row for each link');
+  await first(/** @type {any} */ (hostEl), false);
+  assert.equal(HOST.currentState()?.id, 'anatomy:' + DEAD, 'the first row opens its link\'s card');
+  HOST.dismiss();
+  // the page holding none of D's text, as at mid scale: D read whole first, its links then listed
+  REC.invalidate(D);
+  const from = fake.asked.length;
+  await ANATOMY.fromTail({ docs: [D], links: [PASSAGE, WHOLE], world: { x: 0, y: 0 } });
+  assert.ok(fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.retrieveV(D, 1, NEAR_EXTENT) })), 'D read whole');
+  assert.equal(HOST.currentState()?.id, 'tail', 'its links listed');
+  HOST.dismiss();
+  // a Back made while it reads: nothing shows over the place Back landed
+  await run(GO.leapTo(FAR));
+  await run(GO.leapTo(D));
+  REC.invalidate(D);
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(D) });
+  const opening = ANATOMY.fromTail({ docs: [D], links: [PASSAGE, WHOLE], world: { x: 0, y: 0 } });
+  await run(GO.back());
+  release();
+  await opening;
+  assert.equal(HOST.currentState(), null, 'nothing shows over the place Back landed');
+  await PUMP.loadWhole(D);
   assert.deepEqual(fake.unanswered, []);
 });

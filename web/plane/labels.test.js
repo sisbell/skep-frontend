@@ -11,10 +11,16 @@
 // the middle, never past the stroke's ends nor out of the visible view, a
 // place drawn the weaker blocking nothing, the middle where nothing is clear
 // and the pass then leaving it out; and, over many random strokes, wherever
-// a stroke has room clear of every place, the pass sets the count there.
+// a stroke has room clear of every place, the pass sets the count there. A
+// TAIL'S ROOM (issue #132): from a point rightward to the first shape drawn
+// the stronger its band meets, none where one holds the point, else to the
+// visible view's edge, a place named left out, a shape drawn the weaker or
+// touching the band by half a px no bound (a mutant that stops at a shape
+// above the band, or never stops, turns red); a tail's label set in that
+// room meeting nothing, its address whole and its words cut to it.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { setLabels, sizeOf, lineHeight, onStroke, pairOf, LINE_BOX } from './labels.js';
+import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, LINE_BOX } from './labels.js';
 import { LABEL_MIN_PX } from './register.js';
 
 /** @typedef {import('./labels.js').Label} Label */
@@ -255,4 +261,33 @@ test('over many random strokes a count stands on its stroke, and wherever the st
     for (const sh of shapes) if (sh.alpha >= 0.5) assert.ok(!meets(line, sh.rect), `${text} meets ${sh.place}`);
   }
   assert.ok(clear > 200 && moved > 30, `strokes with room (${clear}), of them ones whose middle a place takes (${moved}): the rule is held over counts moved off the middle, not over none`);
+});
+
+test('a tail\'s room runs right from its point to the first shape drawn the stronger its band meets, none where one holds the point, else to the visible view\'s edge — a place named left out (issue #132)', () => {
+  const at = { x: 100, y: 100 }, h = 10;
+  assert.equal(roomRight(at, h, [], VIEW), 900, 'nothing in its way: to the view\'s right edge');
+  /** @type {Shape[]} */
+  const shapes = [
+    { place: 'A', rect: { x: 0, y: 90, w: 104, h: 40 }, alpha: 1 },
+    { place: 'B', rect: { x: 150, y: 105, w: 50, h: 50 }, alpha: 1 },
+    { place: 'C', rect: { x: 120, y: 60, w: 50, h: 40.4 }, alpha: 1 },
+    { place: 'D', rect: { x: 130, y: 100, w: 10, h: 10 }, alpha: 0.4 },
+  ];
+  assert.equal(roomRight(at, h, shapes, VIEW), 0, 'a shape holding its point: none');
+  assert.equal(roomRight(at, h, shapes, VIEW, 'A'), 50, 'its own place left out: to B, whose top its band meets; C ends above the band, D drawn the weaker');
+  assert.equal(roomRight({ x: 1100, y: 100 }, h, [], VIEW), 0, 'past the view: none');
+});
+
+test('a tail\'s label set in its room meets no shape: its address whole, its words cut to the room; where the address does not fit, the label is left out', () => {
+  /** @type {Shape[]} */
+  const shapes = [{ place: 'next', rect: { x: 200, y: 80, w: 100, h: 60 }, alpha: 1 }];
+  const tail = (/** @type {number} */ x) => {
+    const w = roomRight({ x, y: 100 }, 2 * LH, shapes, VIEW, 'tail');
+    return run([label([part('1.0.1.0.1049578'), part('nothing this board will say about this address', 'cut')], { kind: 'tail', place: 'tail', within: { x, y: 100, w, h: 2 * LH }, x, y: 100, plate: '#000' })], shapes);
+  };
+  const r = tail(40);
+  assert.deepEqual(texts(r).map((x) => x.endsWith('…') || x === '1.0.1.0.1049578'), [true, true], `the address whole, the words cut: ${texts(r)}`);
+  for (const l of r.set[0].lines) assert.ok(l.rect.x + l.rect.w <= 200 + 0.5, 'short of the next place');
+  const narrow = tail(150);
+  assert.deepEqual([narrow.set.length, narrow.out[0].reason], [0, 'width'], 'fifty px: the address does not fit — left out, never cut');
 });

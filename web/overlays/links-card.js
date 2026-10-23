@@ -11,7 +11,8 @@
 // holds (R60 — the content of others' links; their existence the count's;
 // WAI-ARIA's switch: its label does not change with its state), the lenses by
 // owner, type and endorsement (R9; D-2 per document for the session), the
-// links, each row opening its link's anatomy card at the link's own bytes,
+// links, each row naming its far end as its tail and its mirror item do (LK's
+// `farLabel`; issue #132) and opening its link's anatomy card at the link's own bytes,
 // "show more" (the windowed list, the end marked, no page ever expires —
 // A-287), the blind-spot clause (R4's cross-board disclosure, E3 (a)). The
 // card's dismissal returns the chain to hidden; an act's card taking its
@@ -29,7 +30,6 @@ import * as HOST from './host.js';
 import * as ANATOMY from './anatomy-card.js';
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
-import * as REC from '../model/records.js';
 import { t, typeName } from '../strings.js';
 import { esc } from '../util.js';
 import { docBox } from '../plane/projection.js';
@@ -97,7 +97,7 @@ export function render(byKey = false) {
       `<span class="lens-label">${esc(t('F.lens.endorsement'))}</span><button data-run="endorsed" aria-pressed="${r.lens.endorsed}">${esc(t('F.lens.endorsed'))}</button>` +
       `${r.lens.owners || r.lens.types || r.lens.endorsed ? `<button data-run="clear">×</button>` : ''}` +
     `</div>` +
-    `<ul class="rows">${listed.map((s, i) => `<li><button data-run="row:${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→ ' + (s.far || '—') : '← ' + (s.far || '—'))}${REC.doc(s.far).refused === 'unregistered' ? ' · ?' : ''}</button></li>`).join('')}</ul>` +
+    `<ul class="rows">${listed.map((s, i) => `<li><button data-run="row:${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${esc(LK.farLabel(s) || '—')}</button></li>`).join('')}</ul>` +
     (more ? `<button data-run="more">${esc(t('B1.show-more'))}</button>` : shown.length ? `<span class="end">·</span>` : '') +
     `<div class="clause" data-string="F.card-clause">${esc(t('F.card-clause'))}</div>`;
   /** @type {Record<string, import('./host.js').Act>} */

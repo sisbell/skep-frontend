@@ -18,7 +18,13 @@ ONE mark (foundations §2.1; P44) carrying law 13's count of what it holds and
 its newest member's label, the mid connections into it end at it and at none
 of its members, each counting its links once and carrying that count on its
 stroke where it holds two or more, and a click on it teleports to that
-newest member; a ghost address answers its face. "Shown" is
+newest member; at HOME the first edition's box carries ONE TAIL (issue #132's
+design decision: a link whose far document the plane draws nowhere keeps its
+link and names its far end at its near end) holding once each of its links
+the case's own reading joins it by to a document the plane draws nowhere —
+its citation of the ghost among them — its count at its end, and pressed as
+a person presses it, it lists them, each row naming its far document; a
+ghost address answers its face. "Shown" is
 measured, not read off the DOM: the page's `visible` oracle says whether a
 block, a mark or a corner lies inside the clip the page draws and the
 viewport — text the DOM holds past a clip is shown to no one."""
@@ -59,6 +65,54 @@ def decode_delivery(answer, start):
         elif 'withheld' in it:
             w = int(it['withheld'].get('width', 0)); runs.append({'pos': pos, 'width': w, 'kind': 'withheld', 'text': '', 'origin': it['withheld'].get('origin')}); pos += w
     return runs
+
+
+def tails_home(ctx, r):
+    """THE TAIL at HOME (issue #132's design decision): the case's own reading of the first edition's links — each passage link
+    joining it to a document `places` does not list and the model holds no text, metadata or withheld box of, drawn at either of
+    the two (LK's `draws`), each once — beside the tails the canvas drew at its box; then the tail pressed at its stroke as a
+    person presses it, and the overlay it shows; its figures"""
+    v = ctx.js('''(async (doc, ghost) => {
+      const A = await import('./model/address.js');
+      const S = window.__skep, places = new Set(S.model.places().filter((p) => !p.system).map((p) => p.doc));
+      const nowhere = (far) => { const d = S.model.doc(far); return !places.has(A.documentOf(far) || far) && d.from < 0 && !d.meta && d.refused !== 'withheld'; };
+      const docOf = (e) => (e.doc ? A.documentOf(e.doc) || e.doc : null);
+      const joins = (l) => [[l.from, l.to], [l.to, l.from]].flatMap(([ends, others]) => ends.filter((e) => !e.whole && e.ordinal != null && e.doc)
+        .flatMap((e) => others.map(docOf).filter((y) => y && y !== e.doc).map((y) => [e.doc, y])));
+      const want = new Set(), cites = new Set();
+      for (const la of S.model.doc(doc).links) {
+        const l = S.model.link(la);
+        if (!l || S.links.classify(la) !== 'passage') continue;
+        for (const [x, y] of joins(l)) {
+          if (x !== doc && y !== doc) continue;
+          const far = x === doc ? y : x;
+          if (!nowhere(far) || !(S.links.draws(la, x) || S.links.draws(la, y))) continue;
+          want.add(la); if (far === ghost) cites.add(la);
+        }
+      }
+      return {want: [...want].sort(), ghost: [...cites], tails: S.tails().filter((t) => t.at === doc && t.form === 'box'), lod: S.view.lod().name};
+    })(%s, %s)''' % (json.dumps(DOC), json.dumps(GHOST)))
+    mine = v['tails']
+    tail = mine[0] if len(mine) == 1 else None
+    r.check(v['lod'] == 'mid' and bool(v['ghost']) and tail is not None and sorted(tail['links']) == v['want'],
+            'at HOME the first edition\'s box carries one tail, holding once each link the case\'s own reading joins it by to a document the plane draws nowhere — its citation of the ghost among them — drawn at either of the two',
+            {'tails': [[t['links'], t['label']] for t in mine], 'links': v['want'], 'cites_ghost': v['ghost'], 'lod': v['lod']})
+    if tail is None:
+        return {'tails': len(mine)}
+    want = str(len(tail['links'])) if len(tail['links']) > 1 else tail['far'][0]
+    left = [o['reason'] for o in ctx.js('window.__skep.labelsLeftOut()') if o['kind'] == 'tail' and o['place'] == tail['key']]
+    r.check((tail['label'][:1] == [want]) != bool(left), 'the tail carries its count at its end — the numeral of its links — or the pass names the rule that left it out', {'label': tail['label'], 'want': want, 'left_out': left})
+    # pressed as a person presses it, at its stroke's middle: its links listed, a row for each naming its far document
+    ctx.drv.mouse((tail['from']['x'] + tail['to']['x']) / 2, tail['from']['y'])
+    ctx.js('new Promise(res => { const t0 = performance.now(); const step = () => { const o = window.__skep.overlay(); if ((o && o.id && (o.id === "tail" || o.id.startsWith("anatomy:"))) || performance.now() - t0 > 10000) res(true); else setTimeout(step, 30); }; step(); })')
+    ctx.frames(2)
+    ov = ctx.js('window.__skep.overlay()')
+    rows = ctx.js('[...document.querySelectorAll(\'#overlay [data-run^="t"]\')].map((b) => b.textContent)')
+    one = len(tail['links']) == 1
+    r.check((ov['id'] == 'anatomy:' + tail['links'][0]) if one else (ov['id'] == 'tail' and len(rows) == len(tail['links']) and all(any(f in row for row in rows) for f in tail['far'])),
+            'pressed as a person presses it, the tail lists its links — a row for each, naming its far document — or opens its one link\'s card', {'overlay': ov['id'], 'rows': rows[:8], 'far': tail['far']})
+    ctx.esc()
+    return {'links': len(tail['links']), 'label': tail['label'], 'left_out': left, 'pressed': ov['id'], 'rows': len(rows)}
 
 
 def census(ctx, account, cap, stop_after=200):
@@ -257,6 +311,7 @@ def run(ctx):
     ctx.js('window.__skep.go.home()')
     ctx.settle()
     ctx.frames(2)
+    r.figures['home_tail'] = tails_home(ctx, r)
     marks = [m for m in ctx.js('window.__skep.residues()') if m['account'] == '1.0.1']
     mark = marks[0] if len(marks) == 1 else None
     r.check(mark is not None and mark['k'] == 1, 'at HOME the account\'s first continuation is drawn as ONE mark — its oldest 48 stand whole', [{k: m[k] for k in ('k', 'n', 'rect')} for m in marks])

@@ -31,6 +31,8 @@ DOC = '1.0.1.0.3'            # the first edition: its window of the draft 1.0.1.
 WINDOW = (1467, 240, '1.0.1.0.1003')
 GHOST = '1.0.1.0.1049578'    # cited by the first edition, never minted: `doc_not_registered`
 FAR_LEAP = '1.0.1.0.127'     # the one citation whose target is a real edition
+BEAMED = '1.0.1.0.34'        # a citer of FAR_LEAP whose citations reach four editions the plane draws — .127, .946, .931, .999 — the
+                             # first edition's every citation reaching a ghost, which a tail names (issue #132): where the beams are read
 AGENT_SPACE = '1.0.1.1'      # the claimant's delegated agent space
 SECOND_ACCOUNT = '1.0.2'     # the seed's keyless second account
 WITHHELD = '1.0.2.0.2'       # its draft: withheld from every reader of this board, a box of its own (continuation depth 0)

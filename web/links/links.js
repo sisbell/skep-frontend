@@ -3,10 +3,12 @@
 // (S-31 (a)), `web/links/`. State: VIEW — the reveal chain's stage and
 // lenses PER DOCUMENT for the session (S-29 (b); D-2 RULED PER DOCUMENT) and
 // THE VISITED-LINK SET (S-32 (a); D-3) — THE ONE OWNER of both (FP-10).
-// Imports: M-REC (the raw links, each link's type, the index) and P-REG
-// (the values) alone; M-ADDR's arithmetic beneath. N-GO's link lit at an
-// arrival is read through the reader the app hands in (`readers`), never
-// imported — N-GO imports LK — and never kept here.
+// Imports: M-REC (the raw links, each link's type, the index), P-REG (the
+// values) and ST (the words a far end is named in) alone; M-ADDR's
+// arithmetic beneath. N-GO's link lit at an arrival, P-RENDER's test of
+// which documents the plane draws and T-LAYER's owner rule are read through
+// the readers the app hands in (`readers`), never imported — each of them
+// imports LK — and never kept here.
 //
 // WHICH LINKS SHOW at a document and at a span, and HOW each is marked —
 // ITS RULE TODAY IS THE RULED DESIGNS' AND NOTHING MORE (foundations §2.1's
@@ -51,6 +53,29 @@
 //     and its mirror item say "its passage is not in ⟨D⟩'s current text"
 //     before anyone follows it (foundations §2.3: "the projection the beam
 //     already makes says so before the departure");
+//   - a link whose FAR DOCUMENT THE PLANE DRAWS NOWHERE — no index row, no
+//     text or metadata read, no withheld box of its own (P-RENDER's
+//     `drawsDoc`, the reader `drawn`) — stays in the set, counted, marked and
+//     reached by the keyboard and the mirror as any link is, and is TAILED
+//     (issue #132's design decision; `tailed`): never a beam, a connection or
+//     a stub, which would point at the address's place on the plane — a place
+//     that can lie inside a continuation's mark naming another document — but
+//     a short tail leaving its near end (`tails`, which P-RENDER draws), its
+//     far end named in words at its end; once the far document is drawn, the
+//     link draws normally;
+//   - a far end is NAMED (`farLabel`) by its full address, then the words the
+//     answers the page holds of its document give (`farWords`) — the read the
+//     plane makes for it (`project`) and any read of the document itself,
+//     never a guess, never the index's silence alone: "nothing this board
+//     will say about this address" where the board answered
+//     `doc_not_registered` — "no document here yet" in the reader's own
+//     account, where the index, known complete, lists no document at the
+//     address — "withheld · ⟨owner⟩" where it is withheld from the reader,
+//     the owner by the one owner rule (T-LAYER's, the reader `owner`), its
+//     first line where it is readable and the page holds one, and nothing
+//     where nothing was answered; its tail, its card, its mirror item and
+//     every list that names it carry those words, so the reader knows what a
+//     follow will meet before making it;
 //   - a link shows as a SYMBOL at its span where the reveal has reached stage
 //     2 and as a BEAM where it has reached stage 3; the lenses by owner, type
 //     and endorsement filter the set per document for the session;
@@ -94,7 +119,12 @@
 //     document they join it to, drawn there this frame or out of view, where
 //     the plane ends them at the view's edge (foundations §2.1: "one whose far
 //     end is out of view ending at the view's edge as §2.5's stub does"), and
-//     to no place where the plane draws that document nowhere; the scene's
+//     to no place where the plane draws that document nowhere: such a link
+//     is a TAIL at the drawn document's place instead (`tails`), one per
+//     place, holding once each link a document at that place is joined by to
+//     a document the plane draws nowhere, its links merged in one mark as a
+//     connection's are, so a place's tail and its connections are joined by
+//     one rule and part every link between them; the scene's
 //     pane-to-pane lines are drawn from the shown set at both panes'
 //     documents, each link once per pair of its ends, in its one mark joining
 //     the two.
@@ -105,9 +135,10 @@
 // DIFFERENT RULE FOR WHICH LINKS SHOW, THE SAME MARKS AND THE SAME DRAWING:
 // when it lands, THIS FILE's rule and its state change; NO DRAWING MODULE
 // CHANGES (BM, T-LAYER, P-RENDER, SC, the cards draw what `shown`, `shownAt`,
-// `symbols`, `beams`, `countAt`, `connections`, `markOf`, `mergedMark`,
-// `floats`, `farPos` and `endKey` give them, and T-LAYER sets each document
-// at the size the fold of what `utmost` gives takes).
+// `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`, `markOf`,
+// `mergedMark`, `floats`, `farPos`, `farWords`, `farLabel` and `endKey` give
+// them, and T-LAYER sets each document at the size the fold of what `utmost`
+// gives takes).
 // Carries: the wireframe's §16 `.sym`/`.lip` selection and the owner-link
 // marking in `articleHTML`, §17's wanted set, §18 `revealLinks`'s lens
 // filters, §10's by-linker colouring and mid lines, S1's `buildBeams`.
@@ -116,6 +147,7 @@
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
 import { commonsType, documentOf, accountOf, isUnder } from '../model/address.js';
+import { t } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -155,8 +187,10 @@ import { commonsType, documentOf, accountOf, isUnder } from '../model/address.js
  * @property {Stretch[] | null} farRuns where the far end's passage stands in the far document's current text now (`project`'s answer, M-REC's projection), in the text's order; none where it floats — that text holds none of it; null where nothing places it: its projection not read or refused, or the far end naming a document whole, an account or nothing
  */
 /**
- * @typedef {Object} Readers — what LK reads from an owner above it, handed in once by the app
+ * @typedef {Object} Readers — what LK reads from owners that import it, handed in once by the app
  * @property {() => string | null} lit the link lit at an arrival (N-GO's `litLink`); null where none is
+ * @property {(addr: string) => boolean} drawn does the plane draw a document somewhere — at its box, or in the continuation's mark holding it, a version member at its document's (P-RENDER's `drawsDoc`)
+ * @property {(addr: string) => string} owner the owner account of a document, by the one owner rule (T-LAYER's `originOwner`)
  */
 /**
  * @typedef {Object} Connection — a mid connection between two places the plane draws documents at
@@ -165,6 +199,21 @@ import { commonsType, documentOf, accountOf, isUnder } from '../model/address.js
  * @property {'link'} kind
  * @property {Mark} mark the one mark its links merge into (`mergedMark`), each marked as a mark joining its two documents marks it (`markOf`)
  * @property {number} count the links the pair holds, each once
+ */
+/**
+ * @typedef {Object} FarEnd — a link's far end, as `farWords` names it; every `Shown` is one
+ * @property {Link} link
+ * @property {string} far the document it names, or '' where it names none
+ * @property {EndRef | null} farEnd its span, as stored
+ * @property {1 | 2} farSlot the slot it lies in
+ * @property {boolean} farWhole it names its document whole
+ */
+/**
+ * @typedef {Object} Tail — the links a place sends to documents the plane draws nowhere (issue #132's design decision): drawn as one short tail at the place, never pointed at their far ends
+ * @property {string} at the place they leave: the drawn document's own address, or the mark `placeOf` names
+ * @property {string[]} docs the drawn documents at that place they leave, each once, in the order met
+ * @property {Array<FarEnd & {mark: Mark}>} ends each link once, in the order met, with its far end the plane draws nowhere and its mark there, as a mark joining its two documents marks it (`markOf`)
+ * @property {Mark} mark the one mark they merge into (`mergedMark`)
  */
 
 /** the commons rows: the credential classes, `replaces`, the edition claim, the registry's five, succession — RECORDS (rule (i)'s test) */
@@ -178,13 +227,13 @@ const STRUCTURAL_ORDINALS = new Set([22, 23, 24, 25, 26, 27, 28, 29]);
 const reveals = new Map();
 /** @type {Set<string>} the followed links, the session's (D-3) */
 const visitedSet = new Set();
-/** the readers until the app hands N-GO's in: no link lit */
-const noReaders = () => /** @type {Readers} */ ({ lit: () => null });
+/** the readers until the app hands its owners' in: no link lit, every document drawn, a document's owner its account */
+const noReaders = () => /** @type {Readers} */ ({ lit: () => null, drawn: () => true, owner: (addr) => accountOf(addr) || '' });
 /** @type {Readers} */
 let read = noReaders();
 
-/** the owners above hand their readers in once (the app) */
-export function readers(/** @type {Readers} */ r) { read = r; }
+/** the owners that import LK hand their readers in once (the app); a reader not handed in stands as it does until one is */
+export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReaders(), ...r }; }
 
 /** the reveal a document stands at until a card moves it: hidden, others' links off, no lens */
 const hidden = () => /** @type {Reveal} */ ({ stage: 1, others: false, lens: { owners: null, types: null, endorsed: false } });
@@ -425,10 +474,63 @@ export const floats = (/** @type {Shown} */ s) => !!s.farRuns && s.farRuns.lengt
 /** where a drawn link's far end stands first in its far document's current text — the position a scene sets level with its near end — or null where nothing places it there */
 export const farPos = (/** @type {Shown} */ s) => (s.farRuns && s.farRuns.length ? s.farRuns[0].pos : null);
 
+/**
+ * Is a drawn end TAILED (see the head): its far end names a document the
+ * plane draws nowhere (the reader `drawn`), so it leaves its near end by a
+ * tail, its far end named in words (`farLabel`), and draws no beam?
+ * @param {Shown} s
+ * @returns {boolean}
+ */
+export const tailed = (s) => !!s.far && !read.drawn(s.far);
+
+/**
+ * A drawn end's far end in words (see the head), from the answers the page
+ * holds of its document, read as they stand now: where the board will say
+ * nothing of the address — its `project` refused `doc_not_registered`, or a
+ * read of the document itself — "no document here yet" in the reader's own
+ * account where the index, known complete, lists no document at the address,
+ * else "nothing this board will say about this address"; where it is withheld
+ * from the reader — the projection or a read of the document refused
+ * `withheld` — "withheld · ⟨owner⟩"; where it is readable — the projection
+ * answered, the document's span set, text or metadata read, or the index
+ * listing it — its first line, its heading's marks dropped as the plane's box
+ * drops them, where the page holds one; else nothing: nothing answered, or no
+ * first line held, and never a guess.
+ * @param {FarEnd} s a drawn end (`Shown`), or a tail's far end (`Tail.ends`)
+ * @returns {string} '' where it has none
+ */
+export function farWords(s) {
+  if (!s.far) return '';
+  const d = REC.has(s.far) ? REC.doc(s.far) : null;
+  const projected = s.farEnd && !s.farWhole && s.farEnd.ordinal != null ? REC.projection(s.link.addr, s.farSlot, s.far) : undefined;
+  const place = REC.place(s.far);
+  if ((d && d.refused === 'unregistered') || projected === 'unregistered') {
+    const me = REC.session();
+    return t(me && me.account && accountOf(s.far) === me.account && REC.countsExact() && !place ? 'L.far.empty' : 'L.far.unregistered');
+  }
+  if ((d && d.refused === 'withheld') || projected === 'withheld') return t('F.corner.withheld', { owner: read.owner(s.far) });
+  if (!(Array.isArray(projected) || place || (d && (d.from >= 0 || d.meta || d.extent != null)))) return '';
+  const first = place && place.label ? place.label : (d && d.blocks.find((b) => b.kind === 'para' && b.text.trim()))?.text.trim().split('\n')[0] || '';
+  return first.replace(/^#+\s*/, '').trim();
+}
+
+/**
+ * A drawn end's far end named (see the head): its full address, then its
+ * words (`farWords`) where it has any — what its tail, its card, its mirror
+ * item and every list naming it carry; '' where it names no document.
+ * @param {FarEnd} s
+ * @returns {string}
+ */
+export function farLabel(s) {
+  if (!s.far) return '';
+  const words = farWords(s);
+  return words ? `${s.far} · ${words}` : s.far;
+}
+
 /** the symbols: stage 2 and above — the shown set at its spans */
 export function symbols(/** @type {string} */ addr) { return state(addr).stage >= 2 ? shown(addr) : []; }
-/** the beams: stage 3 — the shown set with its far ends */
-export function beams(/** @type {string} */ addr) { return state(addr).stage >= 3 ? shown(addr) : []; }
+/** the beams: stage 3 — the shown set with its far ends, a tailed end apart (`tailed`), which its tail stands in for */
+export function beams(/** @type {string} */ addr) { return state(addr).stage >= 3 ? shown(addr).filter((s) => !tailed(s)) : []; }
 
 /**
  * The others' links touching a block that are NOT shown — the "+⟨n⟩ others"
@@ -569,7 +671,8 @@ function joined(l) {
  * merge into (`mergedMark`), each link marked as a mark joining its two
  * documents marks it (`markOf`: the owner of either document's link the
  * owner's), so no order of the documents, and no toggle at either, recolours
- * a link. A link whose two documents stand at one place draws none.
+ * a link. A link whose two documents stand at one place draws none, and one
+ * whose other document the plane draws nowhere is a tail (`tails`).
  * @param {string[]} docsDrawn the documents drawn, whole or inside a mark
  * @param {(addr: string) => string | null} [placeOf] the place a document stands at, drawn this frame or not; null where the plane draws it nowhere. By default its own box
  * @returns {Connection[]}
@@ -577,23 +680,86 @@ function joined(l) {
 export function connections(docsDrawn, placeOf = (addr) => addr) {
   /** @type {Map<string, {a: string, b: string, links: Map<string, Mark>}>} the pairs met, each with its links, each once, and the mark each link takes there */
   const pairs = new Map();
+  for (const { l, x, y, here, there } of joins(docsDrawn, placeOf)) {
+    if (there == null || there === here) continue;
+    const key = [here, there].sort().join('|');
+    const p = pairs.get(key);
+    if (!p) pairs.set(key, { a: here, b: there, links: new Map([[l.addr, markOf(l, x, y)]]) });
+    else if (!p.links.has(l.addr)) p.links.set(l.addr, markOf(l, x, y));
+  }
+  return [...pairs.values()].map((p) => ({ a: p.a, b: p.b, kind: /** @type {const} */ ('link'), mark: mergedMark(/** @type {[Mark, ...Mark[]]} */ ([...p.links.values()])), count: p.links.size }));
+}
+
+/**
+ * The tails from the documents the plane draws (see the head): one per place
+ * a drawn document stands at, holding once each link `connections` would
+ * join it by to a document `placeOf` names no place for — a link that joins
+ * one of its passages to a document the plane draws nowhere, drawn at either
+ * of the two (`draws`), met in the drawn document's links — so a link between
+ * a drawn document and another is a connection or a tail and never both, and
+ * never neither; each link with its far end there — the span of its slots
+ * naming that document, the `to` slot's first (`farOf`) — which its label
+ * names (`farWords`); its mark the one its links' marks merge into, each
+ * marked as a connection marks it (`markOf`). A place none of whose
+ * documents sends such a link has none.
+ * @param {string[]} docsDrawn the documents drawn, whole or inside a mark
+ * @param {(addr: string) => string | null} [placeOf] as `connections` takes it
+ * @returns {Tail[]}
+ */
+export function tails(docsDrawn, placeOf = (addr) => addr) {
+  /** @type {Map<string, {docs: Set<string>, ends: Map<string, {end: FarEnd, mark: Mark}>}>} the places met, each with the documents and the links it sends, each once */
+  const at = new Map();
+  for (const { l, x, y, addr, here, there } of joins(docsDrawn, placeOf)) {
+    if (there != null) continue;
+    let p = at.get(here);
+    if (!p) at.set(here, (p = { docs: new Set(), ends: new Map() }));
+    p.docs.add(addr);
+    if (!p.ends.has(l.addr)) p.ends.set(l.addr, { end: farOf(l, x === addr ? y : x), mark: markOf(l, x, y) });
+  }
+  return [...at].map(([place, p]) => {
+    const ends = [...p.ends.values()];
+    return { at: place, docs: [...p.docs], ends: ends.map((v) => ({ ...v.end, mark: v.mark })), mark: mergedMark(/** @type {[Mark, ...Mark[]]} */ (ends.map((v) => v.mark))) };
+  });
+}
+
+/**
+ * A link's far end at a document it joins (`joined`): the first span of its
+ * `to` slot naming the document — a version member at its document — else of
+ * its `from` slot.
+ * @param {Link} l
+ * @param {string} doc the far document, a trunk
+ * @returns {FarEnd}
+ */
+function farOf(l, doc) {
+  for (const [slot, ends] of /** @type {Array<[1 | 2, EndRef[]]>} */ ([[2, l.to], [1, l.from]])) {
+    const f = ends.find((e) => !!e.doc && (documentOf(e.doc) || e.doc) === doc);
+    if (f) return { link: l, far: f.doc || doc, farEnd: f, farSlot: slot, farWhole: f.whole };
+  }
+  return { link: l, far: doc, farEnd: null, farSlot: 2, farWhole: false };
+}
+
+/**
+ * Each pair of documents a drawn document's passage links join it into
+ * (`joined`) where either of the two draws the link (`draws`), with the place
+ * the drawn document stands at and the place `placeOf` names for the other —
+ * null where the plane draws it nowhere: the one walk `connections` and
+ * `tails` are both made from.
+ * @param {string[]} docsDrawn
+ * @param {(addr: string) => string | null} placeOf
+ * @returns {Generator<{l: Link, x: string, y: string, addr: string, here: string, there: string | null}>}
+ */
+function* joins(docsDrawn, placeOf) {
   for (const addr of docsDrawn) {
     const here = placeOf(addr);
     if (here == null) continue;
     for (const l of REC.linksTouching(addr)) {
       if (classify(l) !== 'passage') continue;
       for (const [x, y] of joined(l)) {
-        if (x !== addr && y !== addr) continue;
-        const there = placeOf(x === addr ? y : x);
-        if (there == null || there === here || !(draws(l, x) || draws(l, y))) continue;
-        const key = [here, there].sort().join('|');
-        const p = pairs.get(key);
-        if (!p) pairs.set(key, { a: here, b: there, links: new Map([[l.addr, markOf(l, x, y)]]) });
-        else if (!p.links.has(l.addr)) p.links.set(l.addr, markOf(l, x, y));
+        if ((x !== addr && y !== addr) || !(draws(l, x) || draws(l, y))) continue;
+        yield { l, x, y, addr, here, there: placeOf(x === addr ? y : x) };
       }
     }
   }
-  return [...pairs.values()].map((p) => ({ a: p.a, b: p.b, kind: /** @type {const} */ ('link'), mark: mergedMark(/** @type {[Mark, ...Mark[]]} */ ([...p.links.values()])), count: p.links.size }));
 }
 
 /** the owners and types present among a document's links (the card's lens rows) */

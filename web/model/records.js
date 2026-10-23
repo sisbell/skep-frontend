@@ -39,8 +39,9 @@
 // its trunk or minted under its own chain — once its held text places them,
 // as `find_links_v` answers every link on every byte of a document's image.
 // Where a link's far end stands in its far document's current text is
-// `project`'s answer (`takeProjection`, A-53), held until that document's
-// delivered state is dropped.
+// `project`'s answer (`takeProjection`, A-53) — or, where the board refused
+// it, what the refusal says of that document: withheld, not registered, or
+// nothing — held until that document's delivered state is dropped.
 // EVERY DROP COUNTED (`dropsOf`): how many times what the page held of an
 // address has been dropped — by `invalidate`, its record held or not, and by
 // every death, which drops every record. A read is answered by one channel
@@ -113,6 +114,12 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /** @typedef {{pos: number, width: number}} Stretch a stretch of a document's text a stored span stands in: its first position and its positions */
+
+/**
+ * @typedef {'withheld' | 'unregistered' | 'refused'} Declined — a `project` the board refused, by what its refusal says of the
+ * document projected into: `withheld` from the reader, `doc_not_registered` — nothing the board will say of the address — or
+ * another refusal (`not_a_link`), which says nothing of the document
+ */
 
 /**
  * @typedef {Object} Doc
@@ -191,7 +198,7 @@ const state = {
   docs: new Map(),
   /** @type {Map<string, Link>} */
   links: new Map(),
-  /** @type {Map<string, Map<string, Stretch[] | 'refused'>>} `project`'s answers, by the document projected into, then by `⟨link⟩ ⟨slot⟩` */
+  /** @type {Map<string, Map<string, Stretch[] | Declined>>} `project`'s answers, by the document projected into, then by `⟨link⟩ ⟨slot⟩` */
   projections: new Map(),
   /** @type {Map<string, string[] | 'refused'>} the edition-claim lookup's answer per origin (`takeEditionClaims`) */
   editionClaims: new Map(),
@@ -694,29 +701,29 @@ function relink(/** @type {Set<string>} */ named) {
 /**
  * `project`'s answer (A-53): where a link's slot sits in a document's current
  * text now — every stretch, in the text's order; none where the end has left
- * that text (a floating end); 'refused' where the board declined the read.
- * Held until the document's delivered state is dropped (`invalidate`, the
- * session's death).
+ * that text (a floating end); what the refusal says of the document where the
+ * board declined the read (`Declined`). Held until the document's delivered
+ * state is dropped (`invalidate`, the session's death).
  * @param {string} link
  * @param {1 | 2} slot
  * @param {string} addr the document projected into
- * @param {Stretch[] | 'refused'} runs
+ * @param {Stretch[] | Declined} runs
  */
 export function takeProjection(link, slot, addr, runs) {
   let m = state.projections.get(addr);
   if (!m) { m = new Map(); state.projections.set(addr, m); }
-  m.set(link + ' ' + slot, runs === 'refused' ? runs : [...runs].sort((a, b) => a.pos - b.pos));
+  m.set(link + ' ' + slot, Array.isArray(runs) ? [...runs].sort((a, b) => a.pos - b.pos) : runs);
   relink(new Set([link]));
   bump();
 }
 /**
  * The held projection of a link's slot into a document: its stretches in the
- * text's order, none for a floating end, 'refused', or undefined where none
- * is held.
+ * text's order, none for a floating end, the refusal it met (`Declined`), or
+ * undefined where none is held.
  * @param {string} link
  * @param {1 | 2} slot
  * @param {string} addr
- * @returns {Stretch[] | 'refused' | undefined}
+ * @returns {Stretch[] | Declined | undefined}
  */
 export const projection = (link, slot, addr) => state.projections.get(addr)?.get(link + ' ' + slot);
 /** where every link's slot projects into a document dropped; whether any was held */

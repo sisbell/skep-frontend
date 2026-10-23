@@ -47,12 +47,27 @@
 // mutant that draws an end at the document that minted its bytes alone
 // turns red); the minting document holding its own before any image is read
 // (a mutant that holds an end by the held text alone turns the connections
-// and the toggle's count above red).
+// and the toggle's count above red). A LINK WHOSE FAR DOCUMENT THE PLANE
+// DRAWS NOWHERE (issue #132) stays in the set — marked, its symbol set,
+// counted — and is tailed: no beam, until its far document is drawn (a
+// mutant that drops it from the set, or keeps its beam, turns red); the
+// tails one per place a drawn document stands at, each link joining it to a
+// document drawn nowhere once, with its far end, merged in one mark, a link
+// with a drawn far document a connection and never a tail (a mutant that
+// draws such a link nowhere, or as both, turns red); a far end named by its
+// address and what the page holds of its document — nothing answered, the
+// address alone, never a guess from the index's silence (a mutant that says
+// "no document here yet" from the index alone turns red); the board saying
+// nothing of it, "nothing this board will say about this address", or "no
+// document here yet" in the reader's own account under a complete index
+// listing none there; withheld, "withheld · ⟨owner⟩" by the owner rule
+// handed in; readable, its first line where the page holds one.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from './links.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
+import { t } from '../strings.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13', ENROLL = '1.1.0.1.0.1.0.3.1', CLAIM = '1.1.0.1.0.1.0.3.3', ENDORSE = '1.1.0.1.0.1.0.3.42';
 const D = '1.0.1.0.3', OTHER_HOME = '1.0.2.0.5';
@@ -397,4 +412,83 @@ test('a version member draws its trunk\'s links at the bytes it shares with it, 
   REC.takeLinks(M, [D + '.0.2.1', OTHER_HOME + '.0.2.1']);
   assert.deepEqual(LK.shown(M).map((s) => [s.link.addr, s.near, s.pos, s.width]), [[D + '.0.2.1', M, 70, 10]], 'the person\'s citation, stored at D\'s 50, drawn at the member where its bytes stand');
   assert.deepEqual(REC.doc(M).blocks.map((b) => LK.countAt(M, b).n), [0, 1, 0], 'another\'s link into D\'s third byte counted at the member\'s paragraph that byte stands in');
+});
+
+test('a link whose far document the plane draws nowhere stays in the set — marked at its span, its symbol set, counted, named — and is tailed: it draws no beam; once its far document is drawn, its beam stands again (issue #132)', () => {
+  const drawn = new Set([D, OTHER_HOME]);
+  LK.readers({ drawn: (a) => drawn.has(a) });
+  LK.reveal(D, 3);
+  const own = () => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === D + '.0.2.1'));
+  assert.ok(own() && LK.tailed(own()), 'its far document, 1.0.1.0.127, drawn nowhere: tailed');
+  assert.deepEqual([LK.symbols(D).map((s) => s.link.addr), LK.countDoc(D).n], [[D + '.0.2.1'], 1], 'its symbol set at its span, and counted');
+  assert.deepEqual(LK.beams(D), [], 'no beam, which would point at the address\'s place');
+  drawn.add('1.0.1.0.127');
+  assert.ok(!LK.tailed(own()), 'its far document drawn: no longer tailed');
+  assert.deepEqual(LK.beams(D).map((s) => s.link.addr), [D + '.0.2.1'], 'its beam again');
+  LK.readers({});
+  assert.ok(!LK.tailed(own()), 'no reader handed in: every document drawn, nothing tailed');
+});
+
+test('the tails: one per place a drawn document stands at, holding once each link joining it to a document the plane draws nowhere, drawn at either — with its far end there and its mark — the links merged in one mark; a link whose other document has a place is a connection, never a tail (issue #132)', () => {
+  // 1.0.1.0.127 drawn nowhere: D's citation of it whole a tail, the other document's owner's two links into D a connection
+  const nowhere127 = (/** @type {string} */ a) => (a === '1.0.1.0.127' ? null : a);
+  assert.deepEqual(LK.connections([D], nowhere127).map((c) => [c.a, c.b, c.count]), [[D, OTHER_HOME, 2]], 'the connection: the other document\'s two links');
+  const one = LK.tails([D], nowhere127);
+  assert.deepEqual(one.map((x) => [x.at, x.docs, x.ends.map((e) => [e.link.addr, e.far, e.farSlot, e.farWhole])]), [[D, [D], [[D + '.0.2.1', '1.0.1.0.127', 2, true]]]], 'the tail: D\'s citation, its far end the to slot\'s whole 1.0.1.0.127');
+  assert.deepEqual([one[0].mark.hue, one[0].ends[0].mark.hue], [HUE.you, HUE.you], 'the person\'s link in their hue');
+  // the other document drawn nowhere too: its two links into D join D's tail, each once, its passage end the from slot's; no connection
+  const onlyD = (/** @type {string} */ a) => (a === D ? D : null);
+  assert.deepEqual(LK.connections([D], onlyD), [], 'no connection');
+  const both = LK.tails([D], onlyD);
+  assert.deepEqual(both.map((x) => [x.at, x.ends.map((e) => [e.link.addr, e.far, e.farSlot])]), [[D, [[D + '.0.2.1', '1.0.1.0.127', 2], [OTHER_HOME + '.0.2.1', OTHER_HOME, 1], [OTHER_HOME + '.0.2.3', OTHER_HOME, 1]]]], 'each link once, in the order met');
+  assert.deepEqual([both[0].mark.hue, both[0].mark.linker], [NEUTRAL_HUE, null], 'the person\'s and the other owner\'s merged: neutral (P44)');
+  // every document drawn: no tail
+  assert.deepEqual(LK.tails([D, OTHER_HOME, '1.0.1.0.127']), [], 'every far document drawn: no tail');
+  // two drawn documents inside one mark: one tail at the mark, holding the links of both
+  const E = '1.0.1.0.60';
+  REC.takeLinks(E, [E + '.0.2.1']);
+  REC.takeLink({ addr: E + '.0.2.1', from: [span(E, 2, 3)], to: [whole('1.0.1.0.1049578')], type: CITE });
+  const mark = (/** @type {string} */ a) => (a === '1.0.1.0.127' || a === '1.0.1.0.1049578' ? null : a === D || a === E ? '1.0.1:1' : a);
+  assert.deepEqual(LK.tails([D, E], mark).map((x) => [x.at, x.docs, x.ends.map((e) => e.link.addr)]), [['1.0.1:1', [D, E], [D + '.0.2.1', E + '.0.2.1']]], 'one tail at the mark, its documents and their links');
+});
+
+test('a far end is named by its address, then what the page holds of its document: nothing answered, the address alone; readable, its first line; withheld, "withheld · ⟨owner⟩" by the owner rule handed in; the board saying nothing of it, "nothing this board will say about this address" — "no document here yet" in the reader\'s own account under a complete index listing none there — never from the index\'s silence alone (issue #132)', () => {
+  const GHOST = '1.0.1.0.1049578', HIDDEN = '1.0.2.0.7', THEIR_GHOST = '1.0.2.0.99';
+  const [TO_GHOST, TO_HIDDEN, TO_THEIRS] = [20, 21, 22].map((k) => `${D}.0.2.${k}`);
+  REC.takeLinks(D, [TO_GHOST, TO_HIDDEN, TO_THEIRS]);
+  REC.takeLink({ addr: TO_GHOST, from: [span(D, 60, 3)], to: [whole(GHOST)], type: CITE });
+  REC.takeLink({ addr: TO_HIDDEN, from: [span(D, 64, 3)], to: [span(HIDDEN, 2, 3)], type: CITE });
+  REC.takeLink({ addr: TO_THEIRS, from: [span(D, 68, 3)], to: [span(THEIR_GHOST, 1, 3)], type: CITE });
+  const end = (/** @type {string} */ l) => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === l));
+  const named = (/** @type {string} */ l) => LK.farLabel(end(l));
+  // nothing answered: the index complete, lists nothing at the ghost's address in the reader's own account, and still says nothing
+  assert.ok(REC.countsExact() && !REC.place(GHOST) && REC.session()?.account === '1.0.1');
+  assert.deepEqual([named(TO_GHOST), named(TO_HIDDEN), named(D + '.0.2.1')], [GHOST, HIDDEN, '1.0.1.0.127'], 'nothing answered: the address alone, never a guess from the index\'s silence');
+  // the board says nothing of the ghost's address: in the reader's own account, the index complete and listing none there
+  REC.takeRefused(GHOST, 'unregistered');
+  assert.equal(named(TO_GHOST), `${GHOST} · ${t('L.far.empty')}`);
+  REC.setIndexState({ arm: 'at_the_floor', floor: 9 });
+  assert.equal(named(TO_GHOST), `${GHOST} · ${t('L.far.unregistered')}`, 'the index from a floor: nothing this board will say');
+  REC.setIndexState({ arm: 'complete' });
+  REC.setSession({ session: 's-2', principal: 2, account: '1.0.9' });
+  assert.equal(named(TO_GHOST), `${GHOST} · ${t('L.far.unregistered')}`, 'another reader\'s account: nothing this board will say');
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  // the projection the plane makes says the same: the other account's ghost, the draft withheld
+  REC.takeProjection(TO_THEIRS, 2, THEIR_GHOST, 'unregistered');
+  REC.takeProjection(TO_HIDDEN, 2, HIDDEN, 'withheld');
+  assert.equal(named(TO_THEIRS), `${THEIR_GHOST} · ${t('L.far.unregistered')}`, 'another account\'s address, its projection refused doc_not_registered');
+  assert.equal(named(TO_HIDDEN), `${HIDDEN} · ${t('F.corner.withheld', { owner: '1.0.2' })}`, 'withheld: its owner by its account, where no owner rule is handed in');
+  LK.readers({ owner: (a) => (a === HIDDEN ? '1.0.4' : '') });
+  assert.equal(named(TO_HIDDEN), `${HIDDEN} · ${t('F.corner.withheld', { owner: '1.0.4' })}`, 'its owner by the owner rule handed in');
+  // a refusal that says nothing of the document: the address alone
+  REC.takeProjection(TO_HIDDEN, 2, HIDDEN, 'refused');
+  assert.equal(named(TO_HIDDEN), HIDDEN, 'refused for another reason: nothing said of the document');
+  // readable: answered, its first line where the page holds one
+  REC.takeProjection(TO_HIDDEN, 2, HIDDEN, [{ pos: 2, width: 3 }]);
+  assert.equal(named(TO_HIDDEN), HIDDEN, 'answered, no first line held: the address alone');
+  REC.takeDelivery(HIDDEN, [{ pos: 1, width: 30, kind: 'content', text: '## A heading line\nand more\n\nnext', ref: null, origin: null }]);
+  assert.equal(named(TO_HIDDEN), `${HIDDEN} · A heading line`, 'its text read: its first line, its heading\'s marks dropped');
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: '1.0.1.0.127', kind: 'edition', label: '# The far edition', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
+  assert.equal(named(D + '.0.2.1'), '1.0.1.0.127 · The far edition', 'the index listing it: the index\'s first line');
+  assert.equal(LK.farWords(end(D + '.0.2.1')), 'The far edition', 'the words alone, which a tail\'s label sets beneath its address');
 });

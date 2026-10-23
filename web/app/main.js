@@ -23,7 +23,11 @@
 // laid under the board's events taken while it was out — then the launch
 // frame HOME — the acting account's region at mid scale, a guest's the
 // board's extent — the trail's first entry (foundations §2.2; W-01; N-GO's
-// `launch`).
+// `launch`). What a module reads of an owner that imports it is handed in
+// once as the page boots (FP-10, FP-11): T-LAYER's readers, and LK's — N-GO's
+// link lit at an arrival, P-RENDER's test of where the plane draws a
+// document (`drawsDoc`, which tails a link whose far document is drawn
+// nowhere — issue #132) and T-LAYER's owner rule.
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
 // frame, then P-RENDER, then BM, then O-HOST's place, the line, then the
@@ -168,7 +172,7 @@ async function boot() {
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
   LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); } });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; } });
-  LK.readers({ lit: () => GO.litLink() });
+  LK.readers({ lit: () => GO.litLink(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', resize); resize();
   document.addEventListener('copy', (e) => { const b = REC.board(); LAYER.onCopy(e, b ? b.origin : ''); });

@@ -235,9 +235,13 @@ export const STRINGS = {
   'L.mirror.withheld': { text: 'withheld run in ⟨document⟩: ⟨width⟩ positions, owner ⟨owner⟩, origin ⟨origin⟩. ⟨arm⟩.⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // C-67's clause after a withheld run's arm, where the origin's edition claims decide one (PUB-5.124); the empty place says nothing
   'L.mirror.clause': { text: ' ⟨clause⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨unregistered⟩⟨floating⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // ⟨far⟩ the far end's label (LK's `farLabel`), the words its tail, its card and its list rows carry
+  'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨floating⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.unregistered': { text: ' — nothing this board will say about that address', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // a link's far end in words, after its address (LK's `farWords`; issue #132's design decision): a board's `doc_not_registered`, and the
+  // same in the reader's own account where the index, known complete, lists no document at the address
+  'L.far.unregistered': { text: 'nothing this board will say about this address', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, B1-S5, the ARIA mirror', lane: true },
+  'L.far.empty': { text: 'no document here yet', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, B1-S5, the ARIA mirror', lane: true },
   // a link whose far end floats: F.floating's words, as its symbol and its stub say them
   'L.mirror.floating': { text: ' — ⟨sentence⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's title, the version marker's
