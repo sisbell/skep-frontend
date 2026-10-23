@@ -102,8 +102,13 @@
 // frame (`standing`). WHEN A DOCUMENT IS SET AGAIN WHILE IT IS READ — its article rebuilt in
 // another fold, or taken down for a feed row and mounted again — the passage
 // at the visible view's centre keeps its place and its size on screen
-// (`hold`; P-LAY's `holdOf`, P-CAM's `reanchor`). The paging key continues at
-// the next column's top at reading scale (`pageTarget`). A document's REGION
+// (`hold`; P-LAY's `holdOf`, P-CAM's `reanchor`): the passage's own bytes,
+// carried by their identity through the image the article was made from into
+// the text set again, so an edit above the view moves no word the reader
+// reads (FP-23; issue #160), its position where that text's image places none
+// of them, and by position for now where the text comes before its image, the
+// bytes kept for the re-set the image's arrival makes (`still`). The paging
+// key continues at the next column's top at reading scale (`pageTarget`). A document's REGION
 // is its outline's bounds — its label, badge and blocks' counts inside them —
 // widened leftward by the strip its corner stands in (`regionOf`; issue #141's
 // design decision): N-WALK's re-take takes the document whose region holds the
@@ -185,13 +190,17 @@
 // THE READING SCENE'S PANES BORROW THE MOUNT (`sceneArticle`; the structure
 // record §3.4 (vii)): each pane's article is made here, T-ARTICLE's
 // scene-mode variant laid out by the pane's own style — one column at the
-// plane's measure — and what it was made from is kept beside it as a mounted
-// article's is (`madeOf`) — its
-// document's blocks and runs as the model held them, which the model
+// plane's measure — from a record and the view it draws (`sceneView`), which
+// the scene keeps so a pane is set again from them with no read, named as the
+// scene names it (SC; issue #160), and what it was made from is kept beside
+// it as a mounted article's is (`madeOf`) — its document's blocks, runs and
+// image as the model held them, which the model
 // replaces whole and never edits in place, so they stay the article's own
 // while it stands, whatever the model has delivered since. Every position in
 // an article is mapped through them (`rangeIn`): the scene finds a passage
-// in a pane so. The copy of any selection in an article — a mounted one, or
+// in a pane so, and the platform's selection there is read and put back over
+// the same bytes (`selectionIn`, `selectIn`). The copy of any selection in an
+// article — a mounted one, or
 // a pane's, where a drag selects as it does on the plane (§2.5) — carries
 // the passage's board and address beside the plain text and never in it
 // (§2.4), in a flavor only a skep client reads; the plain text is the
@@ -201,7 +210,7 @@
 // Carries: the wireframe's §16 `mount`/`unmount`/`place`/`S1.frame`; S1's
 // `mount`, `place`, `S1.frame`; `driftSample` and `overlapCheck` become
 // gate hooks (`web/gate/hooks.js` reads `mounted`).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-22.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-22, FP-23.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -228,10 +237,11 @@ import { t } from '../strings.js';
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
 
 /**
- * @typedef {Object} Made — what an article was made from: its document, and the blocks and runs the model held of it as the article was made. The model replaces a document's blocks and runs whole and never edits them in place, so these stay the article's own while it stands, whatever the model has delivered since: every position in the article is mapped through them (`rangeIn`), and a copy takes its bytes from them (`onCopy`)
- * @property {string} addr the document
+ * @typedef {Object} Made — what an article was made from: its document, and the blocks, runs and image the model held of it as the article was made. The model replaces a document's blocks, runs and image whole and never edits them in place, so these stay the article's own while it stands, whatever the model has delivered since: every position in the article is mapped through them (`rangeIn`), a copy takes its bytes from them (`onCopy`), and a reader's place in it is carried by its bytes' identity into the text it is set again as (`readingNow`; SC's pane set again — issue #160)
+ * @property {string} addr the document — for a reading scene's pane, the address its acts name (`sceneArticle`)
  * @property {Block[]} blocks
  * @property {Run[]} runs
+ * @property {import('../model/records.js').ImageRun[]} image its V→I image: the permanent address of every position it covers
  */
 
 /**
@@ -327,8 +337,12 @@ import { t } from '../strings.js';
  * @property {string} addr the document whose article, mounted fresh, takes it: the same document set again, or the version its box takes
  * @property {Fold} fold the fold it stood in
  * @property {{x: number, y: number}} p where it stood, in world units relative to the room
- * @property {{from: number, to: number} | null} pair the position of `fold` whose line it stood on and the position of `addr`'s that takes that line (a version move); null where the same position does (P-LAY's `holdOf`)
+ * @property {{from: number, to: number} | null} pair the position of `fold` whose line it stood on and the position of `addr`'s that takes that line (a version move); null where its bytes' identity names it (`ids`), else the same position (P-LAY's `holdOf`)
+ * @property {number | null} pos the position the line it stood on opens at (P-LAY's `posAt`): the one `ids` is read from
+ * @property {ISpan[]} ids the byte `pos` names, by identity, read through the image the article was made from (M-REC's `identityIn`): where the text set again holds it now is the line that takes the passage's (FP-8: the passage kept, never its position; issue #160) — none where that image did not cover it
+ * @property {{x: number, y: number, scale: number} | null} left the camera as a re-set whose text came before its image left it, by position: `ids` kept for the re-set the image's arrival makes, while the camera stands there (`still`); null where it is no such hold
  */
+/** @typedef {import('../model/records.js').ISpan} ISpan */
 
 /**
  * @typedef {Object} Readers — what the layer reads of other owners' state, handed in once by the app (FP-10: through the owners' exports)
@@ -580,8 +594,8 @@ function gapped(d, lines) {
  */
 const articleOf = (d, v, owner) => articleHTML(d, { ...v, selected: null, focus: null }, owner);
 
-/** what an article made from a document now is made from: the document's blocks and runs as the model holds them */
-const madeFrom = (/** @type {Doc} */ d) => ({ addr: d.addr, blocks: d.blocks, runs: d.runs });
+/** what an article made from a document now is made from: the document's blocks, runs and image as the model holds them */
+const madeFrom = (/** @type {Doc} */ d) => ({ addr: d.addr, blocks: d.blocks, runs: d.runs, image: d.image });
 
 /** a document's outline's bounds, in world units (where the plane draws it): its fold's padded columns' */
 export function shapeOf(/** @type {string} */ addr) {
@@ -1363,27 +1377,51 @@ export function withheldBox(d) { return t('B1.withheld-box', { owner: ownerAccou
 /** take a mounted article down; where the platform's selection stands in it, it is kept (`kept`) for the frame that puts it back */
 function unmount(/** @type {string} */ addr) {
   const rec = mounted.get(addr); if (!rec) return;
-  const held = heldIn(rec);
+  const held = selectionIn(rec.el);
   if (held) kept = held;
   rec.el.remove(); mounted.delete(addr);
 }
 
 /**
- * The platform's selection where it stands in a mounted article: the span it
- * covers and whether it runs backward, its focus point before its anchor;
- * null where none stands in the article.
- * @param {Mounted} rec
+ * The platform's selection where it stands in an article — a mounted one, or
+ * a reading scene's pane's: the span it covers, through the blocks the
+ * article was made from (`spanIn`), and whether it runs backward, its focus
+ * point before its anchor; null where none stands in the article, or it is
+ * collapsed. A mounted article taken down keeps it for the frame that puts
+ * it back (`kept`); a pane set again puts it back over the same bytes (SC;
+ * issue #160).
+ * @param {HTMLElement} el the article's element
  * @returns {{span: Span, backward: boolean} | null}
  */
-function heldIn(rec) {
-  const s = window.getSelection();
-  if (!s || s.rangeCount === 0 || s.isCollapsed || !s.anchorNode || !s.focusNode) return null;
+export function selectionIn(el) {
+  const s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null, made = madeOf(el);
+  if (!made || !s || s.rangeCount === 0 || s.isCollapsed || !s.anchorNode || !s.focusNode) return null;
   const range = s.getRangeAt(0);
-  if (!rec.el.contains(range.commonAncestorContainer)) return null;
-  const span = spanOfRange(range);
+  if (!el.contains(range.commonAncestorContainer)) return null;
+  const span = spanIn(el, made, range);
   if (!span) return null;
   const anchor = document.createRange(); anchor.setStart(s.anchorNode, s.anchorOffset);
   return { span, backward: anchor.comparePoint(s.focusNode, s.focusOffset) < 0 };
+}
+
+/**
+ * The platform's selection placed over a span of an article — a mounted one,
+ * or a reading scene's pane's (`rangeIn`) — its anchor at the span's end
+ * where it runs backward, else at its start: a range added whole would set
+ * its anchor at its start; `setBaseAndExtent` sets it at either end, so the
+ * platform's own keys (D5 K-71) go on extending it from there. False where no
+ * part of the article standing holds the span.
+ * @param {HTMLElement} el the article's element
+ * @param {Span} span
+ * @param {boolean} backward
+ * @returns {boolean}
+ */
+export function selectIn(el, span, backward) {
+  const r = rangeIn(el, span), s = typeof window !== 'undefined' && window.getSelection ? window.getSelection() : null;
+  if (!r || !s) return false;
+  if (backward) s.setBaseAndExtent(r.endContainer, r.endOffset, r.startContainer, r.startOffset);
+  else s.setBaseAndExtent(r.startContainer, r.startOffset, r.endContainer, r.endOffset);
+  return true;
 }
 
 /** what a mounted article's blocks are marked for: the selection and the walk's focus where they stand in its document */
@@ -1509,30 +1547,71 @@ function viewNow() {
 
 /**
  * The passage being read: the mounted article at its readable em or above
- * whose outline holds the visible view's centre, and where in its room that
- * centre stands; null where none does.
+ * whose outline holds the visible view's centre, where in its room that
+ * centre stands, the position the line there opens at and that position's
+ * byte by identity through the image the article was made from — what the
+ * text set again holds of it is where the passage stands then (`keepPlace`);
+ * null where none does.
  * @returns {Hold | null}
  */
 function readingNow() {
   const c = viewCentre();
   for (const rec of mounted.values()) {
     if (!readsAt(rec.fs) || !holds(shapeAt(rec.d.addr, rec.fold), c)) continue;
-    const box = docBox(rec.d.addr);
-    return { addr: rec.d.addr, fold: rec.fold, p: { x: c.x - box.x, y: c.y - box.y }, pair: null };
+    const box = docBox(rec.d.addr), p = { x: c.x - box.x, y: c.y - box.y }, pos = posIn(rec.fold, p.x, p.y);
+    return { addr: rec.d.addr, fold: rec.fold, p, pair: null, pos, ids: pos != null ? REC.identityIn(rec.made.image, pos, 1) : [], left: null };
   }
   return null;
+}
+
+/** the camera as it stands: where a re-set by position left it (`Hold.left`) */
+const camNow = () => ({ x: cam.x, y: cam.y, scale: cam.scale });
+/** does the camera stand where a re-set left it — no pan, no zoom, no flight since? */
+const leftThere = (/** @type {{x: number, y: number, scale: number} | null} */ at) => !!at && at.x === cam.x && at.y === cam.y && at.scale === cam.scale;
+
+/**
+ * The hold a re-set of a document takes (see the head): the passage being
+ * read now, carrying the bytes a re-set of the same document whose text came
+ * before its image kept (`Hold.left`), where the camera stands as that re-set
+ * left it — so the re-set the image's arrival makes stands those bytes' line
+ * where the passage's stood; else the passage being read now alone.
+ * @param {Hold | null} h the hold standing
+ * @param {Hold} reading
+ * @returns {Hold}
+ */
+function still(h, reading) {
+  return h && h.left && h.addr === reading.addr && h.ids.length && leftThere(h.left) ? { ...reading, ids: h.ids } : reading;
+}
+
+/**
+ * Where the text set again holds the byte a hold names by identity (`ids`):
+ * the position its line opened at in the fold it stood in, and the one where
+ * the image the article stands again from places that byte now; null where
+ * the hold names none, or that image places none of it — the image not read
+ * yet, or the text no longer holding the byte.
+ * @param {Hold} h
+ * @param {Mounted} rec the article standing again
+ * @returns {{from: number, to: number} | null}
+ */
+function carried(h, rec) {
+  if (h.pos == null || !h.ids.length) return null;
+  const now = REC.placedIn(rec.made.image, h.ids);
+  return now.length ? { from: h.pos, to: now[0].pos } : null;
 }
 
 /**
  * The passage held as its document's article was taken down, set again: the
  * camera re-anchored so it keeps its place and its size on screen (P-LAY's
- * `holdOf`, P-CAM's `reanchor`), a flight bound into the document with it.
+ * `holdOf`, P-CAM's `reanchor`), a flight bound into the document with it —
+ * the passage's own bytes, where the text set again places them (`carried`;
+ * FP-8: an edit above the view moves no word the reader reads), else its
+ * position.
  * @param {Hold} h
  * @param {Mounted} rec the article standing again
  * @returns {boolean} whether the camera moved
  */
 function keepPlace(h, rec) {
-  const at = holdOf(h.fold, rec.fold, h.p, h.pair);
+  const at = holdOf(h.fold, rec.fold, h.p, h.pair || carried(h, rec));
   if (!at) return false;
   const box = docBox(rec.d.addr);
   const a = { x: box.x + h.p.x, y: box.y + h.p.y }, b = { x: box.x + at.to.x, y: box.y + at.to.y };
@@ -1560,7 +1639,7 @@ export function holdAcross(from, to, at = null) {
   if (!rec) { if (hold && boxOf(hold.addr) === boxOf(from)) hold = null; return; }
   /** @type {Hold | null} */
   let h = null;
-  if (at) { const p = placeIn(rec.fold, at.from); h = { addr: to, fold: rec.fold, p: { x: p.x, y: p.y }, pair: at }; }
+  if (at) { const p = placeIn(rec.fold, at.from); h = { addr: to, fold: rec.fold, p: { x: p.x, y: p.y }, pair: at, pos: at.from, ids: [], left: null }; }
   else { const r = readingNow(); h = r && r.addr === from ? { ...r, addr: to } : null; }
   if (from !== to) { hold = h; return; }
   hold = null;
@@ -1616,7 +1695,7 @@ export function frame(focused = () => false) {
     for (const addr of [...mounted.keys()]) if (!isShown(addr)) unmount(addr);
     for (const [addr, rec] of [...mounted]) {
       if (!wentStale(rec)) continue;
-      if (reading && reading.addr === addr) hold = reading;
+      if (reading && reading.addr === addr) hold = still(hold, reading);
       const banded = rec.banded;
       unmount(addr);
       const d = REC.doc(addr);
@@ -1626,10 +1705,12 @@ export function frame(focused = () => false) {
   for (const d of chosen(v, focused, span, spent)) if (mount(d, v, span, true)) { fresh.push(d.addr); spent++; }
   if (hold) {
     const rec = mounted.get(hold.addr);
-    if (rec && fresh.includes(hold.addr)) {
+    if (rec && fresh.includes(hold.addr) && !hold.left) {
       const h = hold; hold = null;
       if (keepPlace(h, rec)) { v = viewNow(); for (const d of chosen(v, focused, span, spent)) if (mount(d, v, span, true)) { fresh.push(d.addr); spent++; } }
-    } else if (!intersects(docBox(hold.addr), v)) hold = null;
+      // its text came before its image: the passage placed by position for now, its bytes kept for the re-set the image's arrival makes (`still`)
+      if (!h.pair && h.ids.length && !rec.made.image.length) hold = { ...h, left: camNow() };
+    } else if (!intersects(docBox(hold.addr), v) || (hold.left && !leftThere(hold.left))) hold = null;
   }
   for (const [addr, rec] of [...mounted]) {
     fill(rec, v, span);
@@ -2034,8 +2115,7 @@ export function placeSelection(span) {
  * Put the platform's selection back over a span after the article holding
  * it was rebuilt, as the person left it: its anchor at the end it stood at
  * as the old article was taken down (`kept`), where that selection covered
- * this span; else at the span's start. A range added whole would set its
- * anchor at its start; `setBaseAndExtent` sets it at either end. It goes
+ * this span; else at the span's start (`selectIn`). It goes
  * back only where the platform's selection is collapsed, absent or in the
  * layer: one standing outside the layer — a drag in a reading scene's pane,
  * over an overlay's text, made before the take-down or after it — is the
@@ -2053,11 +2133,9 @@ function placeAgain(span) {
   kept = null;
   const s = window.getSelection();
   if (!s || (s.rangeCount && !s.isCollapsed && !inLayer(s.getRangeAt(0)))) { owed = null; return; }
-  const r = rangeOf(span);
-  if (!r) { owed = mounted.has(span.addr) ? span : null; return; }
+  const rec = mounted.get(span.addr);
+  if (!rec || !selectIn(rec.el, span, backward)) { owed = rec ? span : null; return; }
   owed = null;
-  if (backward) s.setBaseAndExtent(r.endContainer, r.endOffset, r.startContainer, r.startOffset);
-  else s.setBaseAndExtent(r.startContainer, r.startOffset, r.endContainer, r.endOffset);
   placed = s.rangeCount ? spanOfRange(s.getRangeAt(0)) : null;
 }
 
@@ -2080,6 +2158,17 @@ export function symbolRect(/** @type {string} */ addr, /** @type {string} */ lin
 }
 
 /**
+ * The view a reading scene's pane's article draws (T-ARTICLE's scene-mode
+ * variant): the links LK shows at its document now, their counts, its
+ * corner's state — what the scene keeps beside the pane as it sets it, so the
+ * pane's marks and lines stay the ones its text was set with, and it is set
+ * again from them with no read (SC; issue #160).
+ * @param {Doc} d
+ * @returns {ArticleView}
+ */
+export const sceneView = (d) => viewFor(d, true);
+
+/**
  * A document's article for a reading scene's pane — the scene borrows the
  * mount (FP-12's second target; the structure record §3.4 (vii)): T-ARTICLE's
  * scene-mode variant, laid out by the pane's own style in one column at the
@@ -2087,16 +2176,22 @@ export function symbolRect(/** @type {string} */ addr, /** @type {string} */ lin
  * technology as the plane's articles are, a pane's text being what it reads
  * there; what it was made from is kept beside it (`madeOf`) for as long as the
  * element lives. The scene places the element in its pane; this is the one
- * place it is made.
- * @param {Doc} d
+ * place it is made — from a record and the view it draws, the model's now or
+ * what the scene kept of them as it last set the pane, and named by the
+ * addresses the scene gives it: the one its acts name and its positions are
+ * mapped against — at an edition read at its bare address, the member its
+ * text is (SC; issue #160) — and the one its head shows.
+ * @param {Doc} d the record its text is made from
+ * @param {{view?: ArticleView, names?: string, shows?: string}} [as] `view` the view it draws — the record's now (`sceneView`) where none is given; `names` the address it is made as (`Made.addr`), which a copy from it names and its spans are measured against — the record's where none is given; `shows` the address its head names — `names` where none is given
  * @returns {HTMLElement}
  */
-export function sceneArticle(d) {
+export function sceneArticle(d, as = {}) {
+  const names = as.names ?? d.addr, shows = as.shows ?? names;
   const el = document.createElement('article');
   el.className = 'dtext scene';
-  el.dataset.addr = d.addr;
-  el.innerHTML = articleHTML(d, viewFor(d, true), ownerAccount(d));
-  panes.set(el, madeFrom(d));
+  el.dataset.addr = names;
+  el.innerHTML = articleHTML(shows === d.addr ? d : { ...d, addr: shows }, as.view ?? viewFor(d, true), ownerAccount(d));
+  panes.set(el, { ...madeFrom(d), addr: names });
   return el;
 }
 
@@ -2109,13 +2204,15 @@ export function sceneArticle(d) {
 export function planOf(d) { return articlePlan(d, viewFor(d), ownerAccount(d)); }
 
 /**
- * A pane's corner items (ux-T2: each pane its own), from the same view the
- * pane's article is made from; the scene holds their element, on the pane's
- * outer side.
+ * A pane's corner items (ux-T2: each pane its own), from the view the pane's
+ * article is made from — the record's now where none is given (`sceneView`);
+ * the scene holds their element, on the pane's outer side, and hands in the
+ * version it names, the chain's count and the corner's act (SC).
  * @param {Doc} d
+ * @param {ArticleView} [view]
  * @returns {string}
  */
-export function sceneCorner(d) { return cornerHTML(d, viewFor(d, true)); }
+export function sceneCorner(d, view = viewFor(d, true)) { return cornerHTML(d, view); }
 
 /** a document's corner on the plane, or null where it carries none now (the gate's containment check reads it) */
 export function cornerOf(/** @type {string} */ addr) { const c = corners.get(addr); return c ? c.el : null; }

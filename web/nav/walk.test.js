@@ -90,6 +90,12 @@
 // first line and state (a mutant that reads the version's own place, which
 // the index lists none of, turns red), a landing at the document stands on
 // its spans, and a re-take over the box stands there.
+// The page's own death (FP-23; issue #160) takes the mirror down at once: no
+// item quotes what the dead session read, and the account's level lists no
+// document only its index listed — a mutant that leaves the mirror as it
+// stood, or rebuilds it over the levels it held, turns red — and once the
+// walk's document is read at the guest's class the walk stands again on the
+// span holding the position it stood at.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -802,4 +808,35 @@ test('the walk takes each box as the version it shows (issue #154): an account\'
     assert.deepEqual(walkAt(), ['block', D2, 11], 'a re-take over the box stands on the version it shows');
   } finally { WALK.readers({}); }
   assert.deepEqual(fake.unanswered, []);
+});
+
+// placed last: the death empties the model every test above reads
+test('the page\'s own death takes the mirror down at once — no item quoting what the dead session read, no document only it could list — and takes the walk again on the span it stood on once its document is read at the guest\'s class (FP-23; issue #160)', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    await WALK.focusTo(D, 15);
+    assert.ok(mirror.innerHTML.includes('The first field.') && mirror.innerHTML.includes(`data-addr="${E}"`) === false, 'the mirror quotes the span the session read');
+    await WALK.focusTo(D, null);
+    assert.ok(mirror.innerHTML.includes(`data-addr="${E}"`), 'the account\'s level lists E, which the session\'s index lists');
+    await WALK.focusTo(D, 15);
+    // the guest's read of D held, so nothing it brings stands yet; the death empties the model, as M-PUMP's end does, then tells the walk
+    const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(D) });
+    REC.sessionDied({ arm: 'closed' });
+    const taken = WALK.dropped({ row: null, addrs: null });
+    for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
+    assert.ok(!mirror.innerHTML.includes('The first field.'), `at once: no item quotes what the dead session read: ${mirror.innerHTML}`);
+    assert.deepEqual(walkAt(), ['document', D, null], 'the walk on its document whole');
+    assert.ok(!mirror.innerHTML.includes(`data-addr="${E}"`), 'and the mirror lists no document the dead session\'s index listed');
+    release();
+    await taken;
+    assert.deepEqual(walkAt(), ['block', D, 11], 'its document read at the guest\'s class: the walk on the span holding the position it stood at');
+    assert.ok(mirror.innerHTML.includes('The first field.'), 'the mirror quotes what the guest reads there');
+    assert.deepEqual(fake.unanswered, []);
+  } finally {
+    globalThis.document = platform;
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  }
 });

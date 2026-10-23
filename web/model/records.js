@@ -618,10 +618,23 @@ export function takeImage(addr, fromPos, runs) {
  */
 export function placedIdentity(addr, spans) {
   const d = state.docs.get(addr);
-  if (!d) return [];
+  return d ? placedIn(d.image, spans) : [];
+}
+
+/**
+ * Where bytes named by identity stand in a text an image covers — a
+ * document's held image (`placedIdentity`), or the one an article was made
+ * from, which outlives the model's (T-LAYER's `Made`): the positions whose
+ * permanent addresses they name, in the text's order, stretches meeting in
+ * the text joined. None where the image places none of them.
+ * @param {ImageRun[]} image
+ * @param {ISpan[]} spans
+ * @returns {Stretch[]}
+ */
+export function placedIn(image, spans) {
   /** @type {Stretch[]} */
   const out = [];
-  for (const s of spans) for (const r of d.image) {
+  for (const s of spans) for (const r of image) {
     if (r.prefix !== s.prefix) continue;
     const lo = Math.max(s.ordinal, r.ordinal), hi = Math.min(s.ordinal + s.width, r.ordinal + r.width);
     if (lo < hi) out.push({ pos: r.pos + (lo - r.ordinal), width: hi - lo });
@@ -675,12 +688,27 @@ export function placed(addr, e) {
  */
 export function identityOf(addr, pos, width) {
   const d = state.docs.get(addr);
-  if (!d || width < 1) return [];
+  return d ? identityIn(d.image, pos, width) : [];
+}
+
+/**
+ * A stretch of a text by identity, read through an image that covers it — a
+ * document's held image (`identityOf`), or the one an article was made from
+ * (T-LAYER's `Made`), which a pane set again carries its reader's place
+ * through (SC; issue #160): each image run it crosses cut to it, in the
+ * text's order. None unless the image covers every position of it.
+ * @param {ImageRun[]} image
+ * @param {number} pos
+ * @param {number} width
+ * @returns {ISpan[]}
+ */
+export function identityIn(image, pos, width) {
+  if (width < 1) return [];
   const end = pos + width;
   /** @type {ISpan[]} */
   const out = [];
   let at = pos;
-  for (const r of d.image) {
+  for (const r of image) {
     if (r.pos + r.width <= at) continue;
     if (r.pos > at || at >= end) break;
     const hi = Math.min(end, r.pos + r.width);

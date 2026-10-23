@@ -207,8 +207,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #overlay .strip { color:var(--dim); font-size:.9em; }
 #overlay input[type=text] { width:100%; font:inherit; background:#14181d; color:var(--ink); border:1px solid #4a5260; border-radius:3px; padding:4px 6px; margin:4px 0; }
 
-/* THE READING SCENE (law 12): chrome over the plane; places unmoved. Its panes are read and scrolled, never clicked, so
-   they carry none of the plane's click cues; its acts are its bar's buttons, the dismissal drawn as a bare ×. Each
+/* THE READING SCENE (law 12): chrome over the plane; places unmoved. Its panes' articles are read and scrolled, never
+   clicked, so they carry none of the plane's click cues; its acts are its bar's buttons, the dismissal drawn as a bare ×,
+   and a pane's corner's act, which reads another version in the pane's place (issue #160). Each
    pane's text is one column at the plane's measure, `--measure` characters of its own face (issue #15: "side-by-side
    panes stay one column each, at the same line length"), at the largest size up to 14 px that fits beside its corner
    (SC sets it); it stands against the pane's inner edge, where the bands and lines leave the pane (foundations §2.5),
@@ -224,4 +225,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .pane .dtext { position:static; transform:none; font-size:14px; line-height:1.5; flex:none; width:calc(var(--measure) * 1ch); height:auto; cursor:text; }
 .pane .corner { position:sticky; top:0; flex:0 0 11em; }
 #sceneA > .corner { margin-left:auto; }
+/* a pane's corner's act — "read version ⟨n⟩" — the one click cue in a pane; the line saying the version it reads lacks
+   the passage the act carried beside it */
+.pane .corner .read { display:block; margin-top:.3em; color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
+.pane .corner .lacks { display:block; margin-top:.3em; color:var(--warn); }
 #scenebeams { position:absolute; inset:26px 0 0 0; width:100%; height:calc(100% - 26px); pointer-events:none; }

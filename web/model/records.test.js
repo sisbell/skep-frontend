@@ -37,7 +37,10 @@
 // back where those bytes stand now, in its own text after an edit moved them
 // and in another's, whatever part of them the text still holds, stretches
 // adjoining joined (a mutant that keeps the positions it was read at turns
-// red). The key store read for this board: a key present only where a
+// red); the same, read through an image held apart from the model — the one
+// an article was made from — and placed back through the model's now (issue
+// #160: a mutant that reads the model's image in place of the one handed in
+// turns red). The key store read for this board: a key present only where a
 // binding names its origin as the binding's whole first field — never
 // another origin whose text begins with this one's (a mutant that finds the
 // origin anywhere in the binding turns red), never a key bound nowhere — and
@@ -249,6 +252,21 @@ test('a stretch of a held text is named by identity — the permanent addresses 
   REC.takeImage(S, 1, [{ iStart: S + '.0.1.1', width: 20 }]);
   assert.deepEqual(REC.placedIdentity(S, passage), [{ pos: 3, width: 6 }], 'in S, its own bytes where S holds them');
   assert.deepEqual([REC.identityOfEnd(stored(OWN, 5, 3)), REC.identityOfEnd(resolveSpan({ start: D, width: '0.0.0.0.1' }))], [{ prefix: OWN, ordinal: 5, width: 3 }, null], 'a link\'s stored span is its bytes\' identity; a span naming a document whole names none');
+});
+
+test('a stretch is named by identity through an image held apart from the model — the one an article was made from — and placed back through another, the model\'s now or none: what a reader\'s place is carried by from the text a pane or an article shows into the text it is set again as (issue #160)', () => {
+  const D = '1.0.1.0.3', OWN = D + '.0.1';
+  REC.takeImage(D, 1, [{ iStart: OWN + '.1', width: 20 }]);
+  const kept = REC.doc(D).image;
+  // the model takes D again as an edit leaves it: five bytes minted after its old twenty set before them
+  REC.takeImage(D, 1, [{ iStart: OWN + '.21', width: 5 }, { iStart: OWN + '.1', width: 20 }]);
+  const now = REC.doc(D).image;
+  assert.notEqual(kept, now, 'the model replaced its image whole: the one kept is the article\'s own still');
+  const ids = REC.identityIn(kept, 8, 3);
+  assert.deepEqual(ids, [{ prefix: OWN, ordinal: 8, width: 3 }], 'positions 8 to 10 of the text as it was, by the image kept');
+  assert.deepEqual([REC.identityOf(D, 8, 3), REC.identityIn(now, 8, 3)], [[{ prefix: OWN, ordinal: 3, width: 3 }], [{ prefix: OWN, ordinal: 3, width: 3 }]], 'the model\'s now names other bytes there');
+  assert.deepEqual([REC.placedIn(now, ids), REC.placedIdentity(D, ids)], [[{ pos: 13, width: 3 }], [{ pos: 13, width: 3 }]], 'the same bytes, five positions on in the text set again');
+  assert.deepEqual([REC.placedIn([], ids), REC.identityIn([], 1, 3), REC.identityIn(kept, 19, 5)], [[], [], []], 'no image, or one short of the stretch: nothing named, nothing placed');
 });
 
 test('where a link\'s slot projects is held in the text\'s order until the document projected into is dropped — its record held or not, by a feed row or the death — and every document holding the link is made again as it arrives and as it goes', () => {

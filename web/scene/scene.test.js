@@ -72,6 +72,28 @@
 // the focus where it stood, no region holding it but the overlay shown (a
 // mutant that opens the scene without the host's opening, whose Esc leaves
 // an opening reading, or whose show does not count itself, turns red).
+// And A PANE KEPT FRESH BY ITS KIND (issue #160's design decision), against
+// the fake port: an edition read at its bare address made as the member its
+// text is (a mutant naming the bare address turns red); an edit row naming a
+// draft pane's document reads it again and sets it in its place, the other
+// pane untouched; a row naming a newer member pins an edition read at its bare
+// address at once — the member named in its head, the bar and its corner,
+// "version 2 of 3", the newest offered, the arrival said once (a mutant that
+// reads it again as a draft, or says nothing, turns red) — then sets it again
+// from that member; its corner's act reads the newer version in the pane's
+// place, the passage held kept at the nearest shared position and the
+// version said to lack it, the plane's box untouched, the version left one
+// act away; a pane
+// on a version counts the chain alone, reading nothing (a mutant that reads it
+// again turns red); a link row reaching a pane's text marks the link it reads
+// now; the re-level and a pane's key made while a pane reads wait for it, in
+// the order made (a mutant that acts at once turns red); the page's own death
+// takes every pane down at once, no tie standing, and reads each again as a
+// guest, a draft withheld standing as its head alone (a mutant that keeps the
+// dead session's text turns red). A passage the corner's act carries placed by
+// the one rule: its first shared stretch's counterpart, else the nearest
+// shared position's, else the version's head; a far end the lines read where
+// the pane was set, never the model's now.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -86,7 +108,10 @@ import * as FACES from '../overlays/faces.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
-import { levels, merged, counterpart, counterparts, nearest, linesBetween } from './scene.js';
+import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo } from './scene.js';
+import * as GO from '../nav/go.js';
+import { t } from '../strings.js';
+import { esc } from '../util.js';
 import * as LK from '../links/links.js';
 import { HUE, VISITED_ALPHA } from '../plane/register.js';
 
@@ -145,6 +170,14 @@ test('the position two versions share nearest a passage the second holds none of
   assert.deepEqual(nearest([pair(21, 31, 5), pair(1, 1, 10)].reverse(), 18), { a: 21, b: 31 }, 'in any order the pairs are named in');
   assert.deepEqual(nearest([pair(1, 1, 3), pair(4, 4, 7)], 30), { a: 10, b: 10 }, 'contiguous pairs one stretch: its last position');
   assert.equal(nearest([], 15), null, 'nothing shared: none');
+});
+
+test('a passage a pane\'s corner\'s act carries keeps its line at its first shared stretch\'s counterpart in the version read; where that version holds none of it, the counterpart of the nearest shared position takes the line, else the version\'s head, the version said to lack it (issue #160)', () => {
+  const shared = [pair(1, 1, 14), pair(40, 52, 10)];
+  assert.deepEqual(carriedTo(shared, { pos: 41, width: 5 }, 1), { from: 41, to: 53, none: false }, 'inside a shared stretch: its counterpart');
+  assert.deepEqual(carriedTo(shared, { pos: 30, width: 15 }, 1), { from: 40, to: 52, none: false }, 'a passage whose first bytes the version lacks: its first shared stretch\'s line, never its own first position\'s');
+  assert.deepEqual(carriedTo(shared, { pos: 20, width: 5 }, 1), { from: 20, to: 14, none: true }, 'none of it shared: the nearest shared position, the end of the stretch before, takes its line');
+  assert.deepEqual(carriedTo([], { pos: 20, width: 5 }, 3), { from: 20, to: 3, none: true }, 'nothing shared at all: the version\'s head');
 });
 
 test('contiguous pairs — adjoining in both documents — are one run; a gap in either keeps them apart', () => {
@@ -252,14 +285,16 @@ test('a line\'s far end stands where `project` places its passage now, never whe
   assert.deepEqual(toB(null), [], 'placed nowhere: no line, never one to the stored position');
 }));
 
-test('a pane holding another version of the box a far end names takes the line at the far end where `project` places it in that version\'s own text, whatever version LK placed it in for the plane (issue #154)', () => asReader('1.0.1', () => {
+test('a pane holding another version of the box a far end names takes the line at the far end where `project` placed it in that version\'s own text as the pane was set, whatever version LK placed it in for the plane (issue #154)', () => asReader('1.0.1', () => {
   const L = linkBy(DOC_A + '.0.2.1', '1.0.1'), B2 = DOC_B + '.2', blocks = [{ pos: 3, width: 20 }, { pos: 23, width: 60 }];
-  // LK placed the far end at DOC_B's 30, the plane's box showing DOC_B; the scene's pane holds DOC_B's second version, where it stands at 40
+  // LK placed the far end at DOC_B's 30, the plane's box showing DOC_B; the scene's pane holds DOC_B's second version, where `project` placed it at 40
   const atA = endShown(L, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5), [{ pos: 30, width: 5 }]);
-  REC.takeProjection(L.addr, 2, B2, [{ pos: 40, width: 5 }]);
+  const placed = new Map([[L.addr + ' 2', [{ pos: 40, width: 5 }]]]);
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA]), { ...paneLinks(B2, [], blocks), placed })).map((l) => l[2]), [[40, 5]], 'at 40 in the version the pane holds, never the 30 LK placed it at in DOC_B');
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA]), paneLinks(DOC_B, [], blocks))).map((l) => l[2]), [[30, 5]], 'the pane holding DOC_B: at 30, as LK placed it');
+  REC.takeProjection(L.addr, 2, B2, [{ pos: 60, width: 5 }]);
   try {
-    assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA]), paneLinks(B2, [], blocks))).map((l) => l[2]), [[40, 5]], 'at 40 in the version the pane holds, never the 30 LK placed it at in DOC_B');
-    assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA]), paneLinks(DOC_B, [], blocks))).map((l) => l[2]), [[30, 5]], 'the pane holding DOC_B: at 30, as LK placed it');
+    assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA]), { ...paneLinks(B2, [], blocks), placed })).map((l) => l[2]), [[40, 5]], 'the model holding another answer now: the line where the pane was set, never the model\'s now');
   } finally { REC.invalidate(B2); }
 }));
 
@@ -275,17 +310,37 @@ test('a link met from both panes is one line wherever its ends stand now: its en
 
 const A = '1.0.1.0.3', B = '1.0.1.0.4';
 const A_TEXT = 'The window.\n\nIts passage stands here.', B_TEXT = 'The origin.\n\nIts passage stands here.';
-/** the reads of a document read whole: its extent, its metadata, its text, its image, its links (none) */
-const reads = (/** @type {string} */ doc, /** @type {string} */ text) => ({
-  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } },
-  [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: doc + '.1', birth_extent: String(text.length), placed: null, base_extent: null, source: null } },
-  [FAKE.keyOf('op', { frame: F.retrieveV(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: text }] } },
-  [FAKE.keyOf('op', { frame: F.image(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: doc + '.0.1.1', width: String(text.length) }] } },
-  [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
-});
-/** `compare` over two documents whole: nothing shared (the bands are not these tests') */
-const compared = (/** @type {string} */ d1, /** @type {string} */ t1, /** @type {string} */ d2, /** @type {string} */ t2) => ({
-  [FAKE.keyOf('op', { frame: F.compare([{ doc: d1, spans: [{ ordinal: 1, positions: t1.length }] }], [{ doc: d2, spans: [{ ordinal: 1, positions: t2.length }] }]) })]: { result: { as_of: 1, resp: 'compare', pairs: [] } },
+/** the board's answer for an address it will say nothing of */
+const NOT_REGISTERED = { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
+/** a document's metadata as `doc_metadata` answers it: an edition born at its first member, else a draft */
+const metadata = (/** @type {string} */ doc, /** @type {boolean} */ published, /** @type {number} */ extent) => ({ result: { as_of: 1, resp: 'doc_metadata', doc, published, owner: '1.0.1', birth: published ? doc + '.1' : null, birth_extent: published ? String(extent) : null, placed: null, base_extent: null, source: null } });
+/**
+ * The reads of a document read whole: its extent, its metadata, its text, its image — its own bytes — and its links
+ * (none); where it is an edition at its bare address, its chain's members to `members`, the next one not registered, as a
+ * probe of the chain reads them
+ * @param {string} doc
+ * @param {string} text
+ * @param {{published?: boolean, members?: number, image?: Array<{i_start: string, width: string}>}} [o]
+ */
+const reads = (doc, text, o = {}) => {
+  const published = o.published ?? true, members = o.members ?? 1;
+  /** @type {Record<string, unknown>} */
+  const out = {
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: metadata(doc, published, text.length),
+    [FAKE.keyOf('op', { frame: F.retrieveV(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: text }] } },
+    [FAKE.keyOf('op', { frame: F.image(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'runs', runs: o.image ?? [{ i_start: doc + '.0.1.1', width: String(text.length) }] } },
+    [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  };
+  if (published) {
+    for (let k = 2; k <= members; k++) out[FAKE.keyOf('op', { frame: F.docMetadata(doc + '.' + k) })] = metadata(doc + '.' + k, true, text.length);
+    out[FAKE.keyOf('op', { frame: F.docMetadata(doc + '.' + (members + 1)) })] = NOT_REGISTERED;
+  }
+  return out;
+};
+/** `compare` over two documents whole: nothing shared (the bands are not these tests'), or the stretches named, `[u1, u2, width]` */
+const compared = (/** @type {string} */ d1, /** @type {string} */ t1, /** @type {string} */ d2, /** @type {string} */ t2, /** @type {Array<[number, number, number]>} */ shared = []) => ({
+  [FAKE.keyOf('op', { frame: F.compare([{ doc: d1, spans: [{ ordinal: 1, positions: t1.length }] }], [{ doc: d2, spans: [{ ordinal: 1, positions: t2.length }] }]) })]: { result: { as_of: 1, resp: 'compare', pairs: shared.map(([u1, u2, width]) => ({ d1, d2, u1: { ordinal: String(u1), subspace: '1' }, u2: { ordinal: String(u2), subspace: '1' }, width: String(width) })) } },
 });
 const script = { ...reads(A, A_TEXT), ...reads(B, B_TEXT), ...compared(A, A_TEXT, B, B_TEXT), ...compared(B, B_TEXT, A, A_TEXT) };
 
@@ -295,7 +350,7 @@ before(() => {
   REC._reset();
   fake = FAKE.create(script);
   PORT.boot(fake);
-  PUMP.start({ onDirty: () => {} });
+  PUMP.start({ onDirty: () => {}, onDrop: SCENE.dropped });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: A, kind: 'edition', label: 'a', standing: 'public' }, { doc: B, kind: 'edition', label: 'b', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
 });
@@ -304,7 +359,9 @@ before(() => {
  * A page of stand-ins: the platform's focus — the body where it stands on nothing — and the elements the scene, the
  * walk, the layer and the overlay host hold, attached to their owners. Each takes the focus only where the platform's
  * would: a pane or the bar while the scene is shown, the walk's item and a corner while their region is not inert, the
- * one line's act always. The platform's own `focus()` on an element that takes none moves nothing.
+ * one line's act always. The platform's own `focus()` on an element that takes none moves nothing. Each pane's corner
+ * and the bar's name for each pane stand as elements the scene writes again in place; the status region keeps what it
+ * was told, in order (`said`).
  */
 function page() {
   const body = { id: 'the body', focus() {} };
@@ -314,7 +371,7 @@ function page() {
     /** @type {Array<{how: 'append' | 'prepend', el: unknown}>} */
     const placed = [];
     const e = {
-      id, isConnected: true, innerHTML: '', dataset: /** @type {Record<string, string>} */ ({}), style: {}, inert: false, tabIndex: -1,
+      id, isConnected: true, innerHTML: '', textContent: '', dataset: /** @type {Record<string, string>} */ ({}), style: {}, inert: false, tabIndex: -1,
       scrollTop: 0, scrollHeight: 0, clientTop: 0, clientWidth: 600, clientHeight: 400, placed,
       focus() { if (takes()) doc.activeElement = e; },
       blur() { if (doc.activeElement === e) doc.activeElement = body; },
@@ -322,6 +379,7 @@ function page() {
       setAttribute() {}, removeAttribute() {}, addEventListener() {}, getContext: () => null,
       getBoundingClientRect: () => ({ top: 0, left: 0, right: 600, bottom: 400, width: 600, height: 400 }),
       /** @type {(s: string) => unknown} */ querySelector: () => null,
+      /** @type {(s: string) => unknown[]} */ querySelectorAll: () => [],
       /** @type {(x: unknown) => boolean} */ contains: (x) => x === e,
       classList: { toggle() {} },
     };
@@ -331,6 +389,16 @@ function page() {
   const shown = () => classes.has('on');
   const root = Object.assign(element('the scene'), { classList: { add: (/** @type {string} */ c) => { classes.add(c); }, remove: (/** @type {string} */ c) => { classes.delete(c); }, toggle() {} } });
   const bar = element('the scene\'s bar', shown), paneA = element('pane A', shown), paneB = element('pane B', shown);
+  const cornerA = element('pane A\'s corner', shown), cornerB = element('pane B\'s corner', shown);
+  paneA.querySelector = (s) => (s === ':scope > .corner' ? cornerA : null);
+  paneB.querySelector = (s) => (s === ':scope > .corner' ? cornerB : null);
+  const names = { a: element('the bar\'s name for pane A'), b: element('the bar\'s name for pane B') };
+  bar.querySelector = (s) => (s === '[data-name="a"]' ? names.a : s === '[data-name="b"]' ? names.b : null);
+  /** @type {string[]} what the status region was told, in order */
+  const said = [];
+  const live = element('the status region');
+  Object.defineProperty(live, 'textContent', { get: () => said[said.length - 1] ?? '', set: (/** @type {string} */ v) => { said.push(v); } });
+  FOCUS.attach({ live: /** @type {any} */ (live) });
   root.contains = (x) => [root, bar, paneA, paneB].includes(/** @type {any} */ (x));
   const mirror = element('the tree', () => !mirror.inert);
   const item = element('the walk\'s current item', () => !mirror.inert);
@@ -349,7 +417,7 @@ function page() {
   const at = () => doc.activeElement.id;
   /** the plane's two regions: is each inert? */
   const covered = () => [mirror.inert, corners.inert];
-  return { doc, item, corner, line, paneA, paneB, at, covered };
+  return { doc, item, corner, line, paneA, paneB, cornerA, cornerB, names, said, at, covered };
 }
 
 /** the test run on a page of stand-ins, the platform's `document` put back after it */
@@ -403,15 +471,16 @@ test('a focus the person moved out of the scene stays where they put it; one ope
 
 // ---- the panes' articles: T-LAYER's mount ------------------------------------------------------------------------------
 
-test('each pane holds T-LAYER\'s article of its document, made from the text the scene read, on the inner side of its corner', () => onPage(async (p) => {
+test('each pane holds T-LAYER\'s article of its document, made from the text the scene read, on the inner side of its corner — an edition read at its bare address made as the member its text is', () => onPage(async (p) => {
   await SCENE.open(A, B);
   const [a, b] = [p.paneA.placed, p.paneB.placed];
   assert.deepEqual([a.map((x) => x.how), b.map((x) => x.how)], [['append'], ['prepend']], 'pane A\'s article after its corner, pane B\'s before it: each corner on its pane\'s outer side');
-  assert.ok(p.paneA.innerHTML.includes(`data-corner="${A}"`) && p.paneB.innerHTML.includes(`data-corner="${B}"`), 'each pane\'s corner its own document\'s');
+  assert.ok(p.paneA.innerHTML.includes(`data-corner="${A}"`) && p.paneB.innerHTML.includes(`data-corner="${B}"`), 'each pane\'s corner its own document\'s, named by the address it shows');
   for (const [addr, placed] of /** @type {const} */ ([[A, a[0]], [B, b[0]]])) {
     const d = REC.doc(addr);
-    assert.deepEqual(LAYER.madeOf(/** @type {any} */ (placed.el)), { addr, blocks: d.blocks, runs: d.runs }, `${addr}: the pane's article is T-LAYER's, made from the blocks and runs the scene read`);
+    assert.deepEqual(LAYER.madeOf(/** @type {any} */ (placed.el)), { addr: addr + '.1', blocks: d.blocks, runs: d.runs, image: d.image }, `${addr}: the pane's article is T-LAYER's, made from the blocks, runs and image the scene read, as ${addr}.1 — the member its text is, which its acts name`);
   }
+  assert.deepEqual(SCENE.pair(), { a: A + '.1', b: B + '.1' }, 'the addresses the panes\' acts name and their positions are measured against');
   assert.deepEqual(fake.unanswered, []);
 }));
 
@@ -479,4 +548,153 @@ test('the opening asks where the far end of each link crossing between the panes
   await SCENE.open(C, E);
   assert.deepEqual(projections(again), [], 'held: none asked again');
   assert.deepEqual(fake.unanswered, []);
+}));
+
+// ---- a pane kept fresh by its kind (issue #160's design decision) -----------------------------------------------------
+
+// an edition of two members read at its bare address, its third member published later; a draft edited between two reads;
+// a version opened at its member's address
+const ED = '1.0.1.0.5', ED2 = ED + '.2', ED3 = ED + '.3', DR = '1.0.1.0.6', VE = '1.0.1.0.7', VE1 = VE + '.1', LDR = DR + '.0.2.1';
+const ED_TEXT = 'The edition.\n\nIts second version holds this.', ED3_TEXT = 'The edition.\n\nIts third version holds this.\n\nAnd a new end.';
+/** the edition's first paragraph and its separator, shared by its second and third members */
+const ED_HEAD = 'The edition.\n\n'.length;
+const DR_HEAD = 'A draft.\n\n', DR_OLD = 'Its first words.', DR_NEW = 'Words set before them.\n\n';
+const DR_V1 = DR_HEAD + DR_OLD, DR_V2 = DR_HEAD + DR_NEW + DR_OLD;
+/** the draft's second text by identity: its first paragraph and its old words their own bytes, the inserted words minted after them */
+const DR_V2_IMAGE = [
+  { i_start: DR + '.0.1.1', width: String(DR_HEAD.length) },
+  { i_start: `${DR}.0.1.${DR_V1.length + 1}`, width: String(DR_NEW.length) },
+  { i_start: `${DR}.0.1.${DR_HEAD.length + 1}`, width: String(DR_OLD.length) },
+];
+const VE_TEXT = 'A version.\n\nIts words.';
+const WITHHELD = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
+Object.assign(script, reads(ED, ED_TEXT, { members: 2 }), reads(DR, DR_V1, { published: false }), compared(ED, ED_TEXT, DR, DR_V1));
+
+/** a feed row of the board's, as the shell hands it */
+const row = (/** @type {number} */ position, /** @type {string | null} */ op, /** @type {string[] | null} */ docs, /** @type {'published' | 'drafts'} */ cls, /** @type {string} */ link = '') =>
+  ({ board: 'b-1', update: { position, at: position, op, docs, class: cls, ...(link ? { link } : {}) } });
+/** every pane setting the scene asked has landed */
+async function landed() {
+  for (let i = 0; i < 400 && SCENE.updating(); i++) await new Promise((r) => setTimeout(r, 0));
+  assert.equal(SCENE.updating(), false, 'every setting of a pane landed');
+}
+/** a pane as the scene holds it, by what these tests read of it */
+const paneState = (/** @type {'a' | 'b'} */ side) => { const P = SCENE.panes()?.[side]; return P && { kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks }; };
+/** the article a pane shows: pane A's placed last, pane B's first */
+const shownIn = (/** @type {{placed: Array<{el: unknown}>}} */ pane, /** @type {'a' | 'b'} */ side) => /** @type {any} */ ((side === 'a' ? pane.placed[pane.placed.length - 1] : pane.placed[0]).el);
+
+test('an edit row naming a draft pane\'s document reads it again whole and sets it in its place — the article made from the text read now, the other pane untouched (issue #160)', () => onPage(async (p) => {
+  await SCENE.open(ED, DR);
+  assert.deepEqual([paneState('a'), paneState('b')], [
+    { kind: 'bare', src: ED, names: ED2, shows: ED, k: 2, n: 2, read: null, lacks: null },
+    { kind: 'draft', src: DR, names: DR, shows: DR, k: null, n: null, read: null, lacks: null },
+  ], 'pane A an edition read at its bare address, naming the member its text is; pane B a draft');
+  const a = shownIn(p.paneA, 'a');
+  Object.assign(script, reads(DR, DR_V2, { published: false, image: DR_V2_IMAGE }), compared(ED, ED_TEXT, DR, DR_V2));
+  fake.fire('feed', row(10, 'insert', [DR], 'drafts'));
+  assert.equal(SCENE.updating(), true, 'pane B is read again');
+  await landed();
+  const d = REC.doc(DR);
+  assert.ok(d.blocks.some((x) => x.text === 'Words set before them.'), 'the model holds the edited text');
+  assert.deepEqual(LAYER.madeOf(shownIn(p.paneB, 'b')), { addr: DR, blocks: d.blocks, runs: d.runs, image: d.image }, 'pane B\'s article made from the draft\'s text now');
+  assert.deepEqual([p.paneA.placed.length, shownIn(p.paneA, 'a') === a], [1, true], 'pane A set nowhere again');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('a row naming a newer member pins an edition read at its bare address at once — its head, the bar and its corner naming the member its text is, "version 2 of 3", its corner offering version 3, the arrival said once — then sets it again from that member; the corner\'s act reads version 3 in the pane\'s place, the passage the version lacks said so, the plane\'s box untouched, and version 2 one act away (issue #160)', () => onPage(async (p) => {
+  await SCENE.open(ED, DR);
+  assert.deepEqual(paneState('a'), { kind: 'bare', src: ED, names: ED2, shows: ED, k: 2, n: 2, read: null, lacks: null });
+  const told = p.said.length, arrived = t('F.arrival.pane', { k: 2 });
+  Object.assign(script, reads(ED2, ED_TEXT), compared(ED2, ED_TEXT, DR, DR_V2));
+  fake.fire('feed', row(11, 'publish', [ED3], 'published'));
+  // at once, from the row, no read awaited
+  assert.deepEqual(paneState('a'), { kind: 'pinned', src: ED2, names: ED2, shows: ED2, k: 2, n: 3, read: 3, lacks: null }, 'pinned to the member its text is, offering the newest');
+  const corner = p.cornerA.innerHTML;
+  assert.ok(corner.includes(esc(t('F.corner.pinned', { published: t('F.published.notebook'), k: 2 }))) && corner.includes(esc(t('F.version-of', { k: 2, n: 3 }))), `its corner reads version 2 of 3, never the latest: ${corner}`);
+  assert.ok(!corner.includes(esc(t('F.corner.latest', { published: t('F.published.notebook') }))), 'never "the latest"');
+  assert.ok(corner.includes(`data-read="3"`) && corner.includes(esc(t('F.versions.read', { k: 3 }))), 'its corner\'s act: read version 3');
+  assert.ok(String(shownIn(p.paneA, 'a').innerHTML).includes(`<span class="addr">${ED2}</span>`) && p.names.a.textContent === ED2, 'its head and the bar name the member');
+  assert.deepEqual(p.said.slice(told), [arrived], 'the arrival said once, politely');
+  await landed();
+  const two = REC.doc(ED2);
+  assert.deepEqual(LAYER.madeOf(shownIn(p.paneA, 'a')), { addr: ED2, blocks: two.blocks, runs: two.runs, image: two.image }, 'set again from the member read whole: its marks and lines its own');
+  assert.deepEqual(p.said.slice(told), [arrived], 'said once, however it is set after');
+  // the corner's act: version 3 read in the pane's place, the passage held — the second version's second paragraph, which
+  // the third does not hold — kept at the nearest shared position and said to be missing
+  Object.assign(script, reads(ED3, ED3_TEXT), compared(ED2, ED_TEXT, ED3, ED3_TEXT, [[1, 1, ED_HEAD]]), compared(ED3, ED3_TEXT, DR, DR_V2));
+  SCENE.act('a', { pos: ED_HEAD + 1, width: 10 });
+  await landed();
+  assert.deepEqual(paneState('a'), { kind: 'pinned', src: ED3, names: ED3, shows: ED3, k: 3, n: 3, read: 2, lacks: 3 }, 'version 3 in the pane, version 2 one act away');
+  const three = REC.doc(ED3);
+  assert.deepEqual(LAYER.madeOf(shownIn(p.paneA, 'a')), { addr: ED3, blocks: three.blocks, runs: three.runs, image: three.image }, 'its text version 3\'s');
+  assert.ok(p.cornerA.innerHTML.includes(esc(t('F.floating.member', { k: 3 }))) && p.cornerA.innerHTML.includes(esc(t('F.versions.read', { k: 2 }))), `the corner says the passage is not in version 3, and offers version 2: ${p.cornerA.innerHTML}`);
+  assert.equal(GO.shownIn(ED), ED, 'the plane\'s box untouched: the pane\'s version is the scene\'s own');
+  // back to version 2, a passage both hold: nothing said missing
+  Object.assign(script, compared(ED3, ED3_TEXT, ED2, ED_TEXT, [[1, 1, ED_HEAD]]));
+  SCENE.act('a', { pos: 1, width: 5 });
+  await landed();
+  assert.deepEqual(paneState('a'), { kind: 'pinned', src: ED2, names: ED2, shows: ED2, k: 2, n: 3, read: 3, lacks: null }, 'version 2 again, one act');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('a row naming a newer member at a pane on a version counts its chain alone: "version 1 of 2", no act offered, its text read nowhere again (issue #160)', () => onPage(async (p) => {
+  Object.assign(script, reads(VE1, VE_TEXT), compared(VE1, VE_TEXT, DR, DR_V2));
+  await SCENE.open(VE1, DR);
+  assert.deepEqual(paneState('a'), { kind: 'pinned', src: VE1, names: VE1, shows: VE1, k: 1, n: null, read: null, lacks: null });
+  const from = fake.asked.length;
+  fake.fire('feed', row(12, 'publish', [VE + '.2'], 'published'));
+  assert.equal(SCENE.updating(), false, 'no pane read again');
+  assert.deepEqual(paneState('a'), { kind: 'pinned', src: VE1, names: VE1, shows: VE1, k: 1, n: 2, read: null, lacks: null });
+  assert.ok(p.cornerA.innerHTML.includes(esc(t('F.version-of', { k: 1, n: 2 }))) && !p.cornerA.innerHTML.includes('data-read'), `its "of n" alone: ${p.cornerA.innerHTML}`);
+  assert.deepEqual(fake.asked.slice(from), [], 'nothing read');
+}));
+
+test('a link row reaching a pane\'s text reads it again in its place: its marks drawn from the links it reads now (issue #160)', () => onPage(async (p) => {
+  await SCENE.open(VE1, DR);
+  assert.ok(!String(shownIn(p.paneB, 'b').innerHTML).includes(`data-links="${LDR}"`), 'no link marked before the row');
+  Object.assign(script, {
+    [FAKE.keyOf('op', { frame: F.findLinksV(DR, 1, DR_V2.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [LDR] } },
+    [FAKE.keyOf('op', { frame: F.readLink(LDR) })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: DR + '.0.1.1', width: '0.0.0.0.0.0.0.5' }], [{ start: VE, width: '0.0.0.0.1' }], [{ start: CITE, width: '0.0.0.0.0.0.0.0.1' }]] } } },
+  });
+  fake.fire('feed', row(13, 'make_link', [DR], 'drafts', LDR));
+  await landed();
+  const b = shownIn(p.paneB, 'b'), d = REC.doc(DR);
+  assert.ok(String(b.innerHTML).includes(`data-links="${LDR}"`), 'the new link marked at its span');
+  assert.deepEqual(LAYER.madeOf(b), { addr: DR, blocks: d.blocks, runs: d.runs, image: d.image }, 'made from the text read again');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('the re-level and a pane\'s key made while a pane is being set again wait for it, and act once it lands, in the order made (issue #160)', () => onPage(async (p) => {
+  await SCENE.open(VE1, DR);
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(DR) });
+  fake.fire('feed', row(14, 'insert', [DR], 'drafts'));
+  assert.equal(SCENE.updating(), true, 'pane B is being set again');
+  p.paneB.scrollTop = 123;
+  SCENE.relevel();
+  assert.equal(SCENE.key('PageDown'), true, 'the key is taken');
+  assert.equal(p.paneB.scrollTop, 123, 'neither has acted while the pane reads');
+  release();
+  await landed();
+  assert.equal(p.paneB.scrollTop, 0.8 * p.paneB.clientHeight, 'once it lands: the re-level, setting the pane at its top, then the key paging it');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('the page\'s own death takes every pane down at once — nothing of the dead session\'s text, no tie — and reads each again at the guest\'s class, a draft withheld from the guest standing as its head alone (issue #160)', () => onPage(async (p) => {
+  await SCENE.open(VE1, DR);
+  assert.ok(LAYER.madeOf(shownIn(p.paneB, 'b'))?.blocks.length, 'the draft\'s text stands in pane B');
+  Object.assign(script, {
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })]: WITHHELD,
+    [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [], counts: [], state: { arm: 'complete' } } },
+  });
+  try {
+    fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+    assert.deepEqual([shownIn(p.paneA, 'a'), shownIn(p.paneB, 'b')].map((el) => LAYER.madeOf(el)?.blocks), [[], []], 'at once: no pane holds any of its text');
+    assert.deepEqual(SCENE.ties(), [], 'and no tie stands');
+    await landed();
+    const b = shownIn(p.paneB, 'b'), a = shownIn(p.paneA, 'a');
+    assert.deepEqual(LAYER.madeOf(b)?.blocks, [], 'the draft, withheld from the guest, holds no text');
+    assert.ok(String(b.innerHTML).includes(esc(t('F.corner.withheld', { owner: '1.0.1' }))), `its head alone, withheld: ${b.innerHTML}`);
+    assert.deepEqual(LAYER.madeOf(a)?.blocks.map((x) => x.text), ['A version.', 'Its words.'], 'the version read again as the guest reads it');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' }); }
 }));

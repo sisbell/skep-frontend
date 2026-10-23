@@ -150,7 +150,13 @@ where the bands leave it, its corner one gap beside it on the outer side,
 the plane under the scene parked meanwhile at the far band,
 where the view reads nothing, so the later cases meet the page as the check
 found it; back on the plane, the box an edition shares with its members
-holds one article. THE CARRY
+holds one article; and on a citer of FAR_LEAP beside FAR_LEAP, the model
+dropping what it held of both while the scene stands told nothing (the
+gate's `model.invalidate` door), the re-level act sets the ends level at once
+and draws the citation's line it drew, each end on the passage it stood on —
+the far one FAR_LEAP's first block whole, which the model no longer holds —
+at that passage's line or at its pane's edge: every tie is measured on the
+text and the links its panes were set with (issue #160). THE CARRY
 (foundations §2.3: every move from a passage to another arrangement of the
 same material carries it, re-projected at the landing and marked there;
 P43): the source act on the window paragraph's "who wrote this?" card, a
@@ -759,10 +765,12 @@ def level_holds(r, name, v):
     r.check(same, f'{name}: the lines set level hold the same material — the passage\'s first characters alike in both panes', {'a': a and a['text'], 'b': b and b['text']})
 
 
-def ties_hold(r, name, ties, in_view):
+def ties_hold(r, name, ties, in_view, band=True):
     """every band and line drawn between the panes leaves each pane at its passage's own first line, or, where that
-    line has left the pane, at the pane's edge on the side it left by; `in_view` the ends that must stand in view"""
-    r.check(any(t['kind'] == 'band' for t in ties), f'{name}: the shared identity is drawn as a band', [t['kind'] for t in ties])
+    line has left the pane, at the pane's edge on the side it left by; `in_view` the ends that must stand in view;
+    `band` the shared identity is drawn as a band among them"""
+    if band:
+        r.check(any(t['kind'] == 'band' for t in ties), f'{name}: the shared identity is drawn as a band', [t['kind'] for t in ties])
     off, ends = [], 0
     for t in ties:
         for side, line, pane in (('a', t['lineA'], t['paneA']), ('b', t['lineB'], t['paneB'])):
@@ -1042,6 +1050,51 @@ def scene_holds(ctx, r):
     r.check([a for a in (VERSIONED, member) if a in mounted] == [VERSIONED], 'back on the plane at the edition\'s plain address after reading its latest member beside it, its box holds one article, the edition\'s, never the member\'s over it (issue #154)',
             {'mounted': mounted, 'shown': ctx.js('window.__skep.go.shownIn(%s)' % json.dumps(VERSIONED))})
     return seen
+
+
+# the documents of the claimant's first grid that cite FAR_LEAP, which the plane draws: a scene on one and FAR_LEAP draws its citation
+CITERS = ['1.0.1.0.4', '1.0.1.0.14', '1.0.1.0.20', BEAMED]
+
+
+def scene_kept_holds(ctx, r):
+    """A TIE IS MEASURED ON THE TEXT ITS PANES WERE SET WITH (issue #160's design decision: "no tie is ever drawn over text
+    it was not measured on"): the scene on a citer of FAR_LEAP and FAR_LEAP, the citation drawn as a line between the
+    panes, its far end — FAR_LEAP named whole — at FAR_LEAP's first block; then, in one evaluation, the gate's door
+    `model.invalidate` drops what the model held of both documents — their text and the citer's links, telling no
+    reader — and the re-level act is clicked: the scene, told nothing, sets the two ends level at once and draws every
+    line it drew, each end on the passage it stood on — the far one still the first block whole, which the model no
+    longer holds — at that passage's line in its pane or at the pane's edge where that line has left it. Both are read
+    whole again and the scene ended after; its figures"""
+    tried, lines, citer = [], [], None
+    for c in CITERS:
+        ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(c), json.dumps(FAR_LEAP)))
+        wait_for(ctx, 'window.__skep.scene.isOpen()')
+        lines = [t for t in ctx.js('window.__skep.scene.ties()') if t['kind'] == 'link']
+        tried.append([c, len(lines)])
+        if lines:
+            citer = c
+            break
+        ctx.js('window.__skep.scene.close()')
+        ctx.frames(2)
+    r.check(citer is not None, f'a scene on a citer of {FAR_LEAP} and {FAR_LEAP} draws its citation as a line between the panes', tried)
+    if citer is None:
+        return {'tried': tried}
+    torn = ctx.js('''((a, b) => { const S = window.__skep;
+      S.model.invalidate(a); S.model.invalidate(b);
+      document.querySelector('#scenebar [data-relevel]').click();
+      return {links: S.model.doc(a).links.length, blocks: S.model.doc(b).blocks.length, updating: S.scene.updating(), ties: S.scene.ties()}; })(%s, %s)''' % (json.dumps(citer), json.dumps(FAR_LEAP)))
+    after = [t for t in torn['ties'] if t['kind'] == 'link']
+    ends = lambda ts: sorted((t['link'], t['a']['pos'], t['a']['width'], t['b']['pos'], t['b']['width']) for t in ts)
+    r.check(torn['links'] == 0 and torn['blocks'] == 0 and not torn['updating'] and ends(after) == ends(lines),
+            f'the model dropping what it held of {citer} and {FAR_LEAP}, while the scene stands told nothing: the re-level, clicked, sets the ends level at once and draws every line it drew, each end on the passage it stood on — the ties measured on the text and the links the panes were set with, never the model\'s now (issue #160)',
+            {'links_now': torn['links'], 'far_blocks_now': torn['blocks'], 'updating': torn['updating'], 'before': ends(lines), 'after': ends(after)})
+    figures = {'citer': citer, 'tried': tried, 'lines': ends(after), 'ties': ties_hold(r, f'the scene on {citer} and {FAR_LEAP}, the model dropping both', after, 1, band=False)}
+    ctx.js('window.__skep.scene.close()')
+    ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(citer))
+    ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(FAR_LEAP))
+    ctx.settle()
+    ctx.frames(2)
+    return figures
 
 
 def wait_for(ctx, cond, s=10):
@@ -2068,6 +2121,7 @@ def run(ctx):
     # THE TYPE, THE READING SCENE, THE CARRY, THE VERSION MOVE, THE CHROME, THE TRAIL
     r.figures['type'] = type_holds(ctx, r)
     r.figures['scene'] = scene_holds(ctx, r)
+    r.figures['scene_kept'] = scene_kept_holds(ctx, r)
     r.figures['carried'] = carried_holds(ctx, r)
     r.figures['versions'] = version_holds(ctx, r)
     r.figures['chrome'] = chrome_holds(ctx, r)

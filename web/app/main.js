@@ -32,7 +32,10 @@
 // and what a landing says of its passage (N-GO's `described`; issue #153);
 // and to T-LAYER, LK, N-WALK and M-PUMP the version each document's box
 // shows (N-GO's `shownIn`; issue #154), M-PUMP handing N-GO each feed row
-// publishing a trunk's next member (`arrived`).
+// publishing a trunk's next member (`arrived`) and SC what each row and the
+// page's own death dropped, after the drop (`dropped`), so a reading scene's
+// panes are kept fresh by their kind, and N-WALK the same, so the death takes
+// the mirror down with them (FP-23; issue #160).
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
 // frame, the mirror's documents marked expanded or collapsed in place by the
@@ -61,7 +64,8 @@
 // Carries: the wireframe's §23 (`loop`, the listener, `reportFailure`,
 // `boot`; the bare keys RE-CUT to D5's chords; `startWalk` and the hand
 // board DROPPED), §0's params. Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9,
-// FP-11, FP-14, FP-15, FP-22 (N-GO's `shownIn` handed to every reader).
+// FP-11, FP-14, FP-15, FP-22 (N-GO's `shownIn` handed to every reader), FP-23
+// (SC's and N-WALK's `dropped` handed to M-PUMP).
 
 import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';
@@ -208,7 +212,7 @@ async function boot() {
   // the adapter: the bridge client where the flag stands; nothing otherwise
   const adapter = SECRET ? DEV.create({ provider: DEV.DEFAULT_PROVIDER, secret: SECRET, record: !!GATE }) : null;
   PORT.boot(adapter);
-  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived });
+  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: (x) => { SCENE.dropped(x); void WALK.dropped(x); } });
   PORT.on('moment', (d) => FACES.moment(/** @type {import('../bridge/shapes').MomentEvent} */ (d)));
   const heldSeen = /** @type {unknown[]} */ ([]);
   PORT.on('held', (d) => { heldSeen.push(d); console.log('held event (not acted on — the editor\'s lane\'s)', d); });

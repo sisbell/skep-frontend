@@ -120,7 +120,11 @@
 // `onPublish` before anything is dropped, so a box read at its plain address
 // keeps the version being read: N-GO's `arrived`), and the home of the link it names with the home's
 // trunk, which a bare row, its `docs` reading `null`, names by its `link`
-// alone; a `drafts` row only while the page holds a session — a guest's
+// alone — and what each row dropped told to the app's `onDrop` after the drop
+// (`takeRow`), with the row's `op`, so a reading scene's pane showing a
+// document the row reached is kept fresh by its kind, reading fresh (SC;
+// issue #160's design decision); a `drafts` row only while the page holds a
+// session — a guest's
 // index lists no draft (search.md §4 (iii)), nor does the index of a page
 // whose session was refused or ended. `index` → M-REC's state where
 // it is the face the page reads ("a face receives the state of the pair it
@@ -137,7 +141,8 @@
 // names the page's own session: a page that holds no session (a guest) or
 // holds another was never signed in under the one that ended. The death
 // drops every read the model held at the session's class (M-REC's
-// `sessionDied`); the needs answered under it are asked again, and the index
+// `sessionDied`); the needs answered under it are asked again, the drop of
+// every record is told to `onDrop`, and the index
 // is read again in the guest form, as the shell narrows its own at the death
 // (client.md §4e.3: "at `session-died` in every arm but the shell's OWN
 // RESTART"), so the page's index, its counts and what it draws are a
@@ -150,7 +155,7 @@
 // shell's answer while it derives the end — and takes or awaits it, then is
 // asked once more in the form the end left the page: under the re-opened
 // session, or as a guest after a death.
-// Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11, FP-22.
+// Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11, FP-22, FP-23.
 
 import * as PORT from '../bridge/port.js';
 import * as REC from './records.js';
@@ -249,25 +254,27 @@ const plain = (/** @type {string} */ addr) => documentOf(addr) || addr;
 let shown = plain;
 /** @type {(member: string) => void} told of a feed row publishing a trunk's next member, before the row drops anything (N-GO's `arrived`, handed in at `start`) */
 let onPublish = () => {};
+/** @type {(d: Dropped) => void} told of what each feed row the page takes, and its own session's death, dropped of what it held, after the drop (SC's `dropped`, handed in at `start`) */
+let onDrop = () => {};
+
+/**
+ * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, or every record at the page's own session's death
+ * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for the death
+ * @property {string[] | null} addrs the addresses the row dropped, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`); null for the death, which drops every record
+ */
 
 /**
  * Start the pump: subscribe the model to the port's events, every board
  * event through `onBoard`.
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void}} opts `shown` the version each box shows, which the view reads (see the head); `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void}} opts `shown` the version each box shows, which the view reads (see the head); `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and its own session's death, dropped, after the drop
  */
 export function start(opts) {
   dirty = opts.onDirty;
   shown = opts.shown || plain;
   onPublish = opts.onPublish || (() => {});
+  onDrop = opts.onDrop || (() => {});
   started = true;
-  onBoard('feed', (ev) => {
-    if (!ev.update || !takesRow(ev.update)) return;
-    if (ev.update.op === 'publish') for (const named of Array.isArray(ev.update.docs) ? ev.update.docs : []) if (isTrunkMember(named)) onPublish(named);
-    const dropped = REC.applyFeedUpdate(ev.update);
-    for (const m of whileOut) m.rows.push(ev.update);
-    for (const addr of dropped) forget(addr);
-    dirty();
-  });
+  onBoard('feed', (ev) => { if (ev.update) takeRow(ev.update); });
   onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); for (const m of whileOut) m.state = true; dirty(); } });
   onBoard('mode', (ev) => { REC.setMode(ev); for (const m of whileOut) m.mode = ev; dirty(); });
   onBoard('daemon', (ev) => { REC.setDaemon(ev.state); for (const m of whileOut) m.daemon = true; if (ev.state === 'running') unreached.clear(); dirty(); });
@@ -287,6 +294,26 @@ function onBoard(name, take) {
 
 /** does the page take a feed row: a published row always, a `drafts` row while it holds a session — under any session's name */
 const takesRow = (/** @type {FeedUpdate} */ u) => u.class !== 'drafts' || REC.session() !== null;
+
+/**
+ * A feed row the page takes (`takesRow`; see the head): the member a
+ * `publish` names handed to `onPublish` first, while the page still holds the
+ * trunk's text; then the row laid into M-REC's index and invalidation, every
+ * read out of the board's state given it, and the view's answers for each
+ * address it dropped forgotten, so the view asks them again; then what it
+ * dropped told to `onDrop`, after the drop, so a reader reading again reads
+ * fresh. The gate's door hands it a row as the feed would (`model.feed`).
+ * @param {FeedUpdate} u
+ */
+export function takeRow(u) {
+  if (!takesRow(u)) return;
+  if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) onPublish(named);
+  const dropped = REC.applyFeedUpdate(u);
+  for (const m of whileOut) m.rows.push(u);
+  for (const addr of dropped) forget(addr);
+  onDrop({ row: u, addrs: dropped });
+  dirty();
+}
 
 /**
  * Is an `index` event the state of the face the page reads? The guest
@@ -314,8 +341,10 @@ function ofFace(ev) {
  * read of the board's state out left holding no feed row and no `index`
  * state taken before the death — so a listing out across it, the boot's
  * asked once more as a guest (`atClass`), lays none of the dead session's
- * over a guest's — and the index read again in the guest form
- * (`readIndex`). The reads awaiting the end are woken.
+ * over a guest's — the index read again in the guest form (`readIndex`), and
+ * the drop of every record told to `onDrop`, so what a reader holds apart
+ * from the model — a reading scene's pane — is read again at the guest's
+ * class too. The reads awaiting the end are woken.
  * @param {string} ended the session the end names
  * @param {DeathReason} reason
  */
@@ -328,6 +357,7 @@ function takeEnd(ended, reason) {
     REC.sessionDied(reason); asked.clear(); retryAt.clear(); unreached.clear();
     for (const m of whileOut) { m.rows = []; m.state = false; }
     readIndex();
+    onDrop({ row: null, addrs: null });
   }
   for (const wake of [...awaitingEnd]) wake();
 }

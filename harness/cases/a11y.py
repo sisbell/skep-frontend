@@ -32,9 +32,11 @@ K-8 was pressed at; a focus moved from the card to the corner stays on the
 corner; the ring's later stops (D5 §4 rule 5) — a card standing without the
 focus reached after the plane's stop and the corner, Shift+Tab from it back
 to the corner; the reading scene's stops in the place of the plane's and the
-corner's, pane, pane, the scene's acts (K-61), with nothing the scene covers
-in the ring, nothing inside a pane a control or a stop in the AX tree (SC:
-the panes are read, never pressed), and Shift+Tab walking it back to the
+corner's, pane, its corner, pane, its corner, the scene's acts (K-61; issue
+#160), with nothing the scene covers in the ring, nothing inside a pane's
+article a control or a stop in the AX tree (SC: the panes are read, never
+pressed), each pane's corner a group there named by its own words, which say
+what the pane shows, and Shift+Tab walking it back to the
 line, Esc ending it with the focus on the item it was opened from (K-63) and
 Mod+[ from a pane with the focus on the landing's item (rule 8); Back's light
 exposed (issue #152's design decision) — Mod+[ from a carried passage's
@@ -502,8 +504,8 @@ def run(ctx):
     ctx.frames(1)
     # ---- the ring's later stops (D5 §4 rule 5): a standing overlay after the plane and its corner; the scene in their place --
     # The ring runs the one line → the plane's stop → the focused document's corner → the standing overlays → the line.
-    # While the reading scene stands, its stops take the place of the plane's and the corner's — pane, pane, the scene's
-    # acts (K-61) — and nothing it covers is in the ring. Its end returns the focus to the element it was opened from
+    # While the reading scene stands, its stops take the place of the plane's and the corner's — pane, its corner, pane,
+    # its corner, the scene's acts (K-61; issue #160) — and nothing it covers is in the ring. Its end returns the focus to the element it was opened from
     # (K-63); a navigation act from it moves the focus to the landing's element (rule 8).
     def stop():
         """the stop the platform's focus stands on, named by its region: the walk's current item or another of the mirror's,
@@ -515,6 +517,7 @@ def run(ctx):
           if (e.closest('#overlay')) return 'the overlay: ' + (e.dataset.x ? 'x' : e.dataset.run || e.tagName.toLowerCase());
           if (e.closest('#line')) return 'the line';
           if (e.id === 'sceneA' || e.id === 'sceneB') return 'pane ' + e.id.slice(-1);
+          if (e.classList.contains('corner') && e.closest('#sceneA, #sceneB')) return 'pane ' + e.closest('#sceneA, #sceneB').id.slice(-1) + "'s corner";
           if (e.closest('#scenebar')) return 'the scene: ' + (e.dataset.relevel ? 're-level' : e.dataset.x ? 'x' : e.tagName.toLowerCase());
           if (e.closest('#scene')) return 'the scene: ' + (e.className || e.tagName.toLowerCase());
           return e.id || e.tagName.toLowerCase(); })()''')
@@ -546,9 +549,10 @@ def run(ctx):
     ctx.frames(2)
     first = stop()
     r.check(opened and ctx.js('window.__skep.scene.isOpen()') and first == 'pane B', 'the scene opened from the mirror\'s current item puts the focus in the far end\'s pane', {'opened': opened, 'at': first})
-    # nothing inside a pane is a control (SC; B1-S9: "read both…; scroll each"): a pane's article is what assistive
-    # technology reads — never hidden from it as the plane's is — so a mark a press acts on nothing in must be no button
-    # there; the first edition's pane carries the presence ⟡, links touching it
+    # nothing inside a pane's article is a control (SC; B1-S9: "read both…; scroll each"): a pane's article is what
+    # assistive technology reads — never hidden from it as the plane's is — so a mark a press acts on nothing in must be
+    # no button there; the first edition's pane carries the presence ⟡, links touching it. Each pane's corner is its one
+    # stop beside it, a group named by its own words, which say what the pane shows (issue #160; D5 K-57)
     ax = ctx.drv.ax_tree()
     if 'error' in ax:
         r.figures['scene_ax'] = {'answered': False, 'error': ax['error']}
@@ -559,7 +563,7 @@ def run(ctx):
         by_dom = {n['backendDOMNodeId']: n for n in nodes if 'backendDOMNodeId' in n}
         widgets = {'button', 'link', 'switch', 'checkbox', 'menuitem', 'tab', 'option', 'textbox', 'combobox'}
         inside, controls = 0, []
-        for pane in ('#sceneA', '#sceneB'):
+        for pane in ('#sceneA article.dtext', '#sceneB article.dtext'):
             todo = list((by_dom.get(backend(pane)) or {}).get('childIds', []))
             while todo:
                 n = by_ax.get(todo.pop())
@@ -571,8 +575,18 @@ def run(ctx):
                 focusable = any(p['name'] == 'focusable' and (p.get('value') or {}).get('value') for p in n.get('properties', []))
                 if not n.get('ignored') and (role in widgets or focusable):
                     controls.append({'pane': pane, 'role': role, 'focusable': focusable, 'name': ((n.get('name') or {}).get('value') or '')[:40]})
-        r.check(inside > 0 and not controls, 'the AX tree: nothing inside a scene\'s pane is a control or a stop — its marks are read, never pressed (SC)', {'nodes_inside': inside, 'controls': controls[:6]})
-        r.figures['scene_ax'] = {'answered': True, 'nodes_inside': inside, 'controls': len(controls)}
+        r.check(inside > 0 and not controls, 'the AX tree: nothing inside a scene\'s pane\'s article is a control or a stop — its marks are read, never pressed (SC)', {'nodes_inside': inside, 'controls': controls[:6]})
+        corners = []
+        for side in ('A', 'B'):
+            sel = '#scene%s > .corner' % side
+            node = by_dom.get(backend(sel)) or {}
+            said = ctx.js('(() => { const e = document.querySelector(%s); return e ? {words: e.textContent, tab: e.getAttribute("tabindex")} : null; })()' % json.dumps(sel)) or {}
+            name = (node.get('name') or {}).get('value') or ''
+            corners.append({'pane': side, 'role': (node.get('role') or {}).get('value'), 'ignored': node.get('ignored'), 'name': name[:120], 'words': (said.get('words') or '')[:120], 'tab': said.get('tab'),
+                            'named': bool(said.get('words')) and re.sub(r'\s+', '', name) == re.sub(r'\s+', '', said.get('words') or '')})
+        r.check(all(c['role'] == 'group' and not c['ignored'] and c['named'] and c['tab'] == '0' for c in corners),
+                'the AX tree: each pane\'s corner is a stop of its own, a group named by its own words, which say what the pane shows (issue #160)', corners)
+        r.figures['scene_ax'] = {'answered': True, 'nodes_inside': inside, 'controls': len(controls), 'corners': corners}
     ring = []
     for _ in range(24):
         press('Tab')
@@ -581,15 +595,15 @@ def run(ctx):
             break
     under = [s for s in ring if s.startswith(('the item', 'the mirror', 'the corner'))]
     own = [s for s in ring if s.startswith(('pane ', 'the scene'))]
-    r.check(ring[-1:] == ['pane B'] and not under, 'Tab from the far end\'s pane goes once round the ring and back to it, reaching nothing the scene covers — neither the mirror\'s item nor the corner', {'ring': ring})
-    r.check(own == ['the scene: re-level', 'the scene: x', 'pane A', 'pane B'] and ring[:2] == own[:2],
-            'the scene\'s own stops in D5\'s order — pane, pane, the scene\'s acts (K-61): from the far end\'s pane Tab reaches the acts next, and no stop lies inside a pane', {'scene_stops': own, 'ring': ring})
+    r.check(ring[-1:] == ['pane B'] and not under, 'Tab from the far end\'s pane goes once round the ring and back to it, reaching nothing the scene covers — neither the mirror\'s item nor the plane\'s corner', {'ring': ring})
+    r.check(own == ['pane B\'s corner', 'the scene: re-level', 'the scene: x', 'pane A', 'pane A\'s corner', 'pane B'] and ring[:3] == own[:3],
+            'the scene\'s own stops in D5\'s order — pane, its corner, pane, its corner, the scene\'s acts (K-61; issue #160): from the far end\'s pane Tab reaches its corner, then the acts, and no stop lies inside a pane\'s article', {'scene_stops': own, 'ring': ring})
     r.figures['ring']['scene_from_pane_b'] = ring
-    press('Tab', mods=('Shift',))
-    ring = [stop()]
-    press('Tab', mods=('Shift',))
-    ring.append(stop())
-    r.check(ring == ['pane A', 'the line'], 'Shift+Tab walks the ring back: from the far end\'s pane to the other, and from there to the one line', {'ring': ring})
+    ring = []
+    for _ in range(3):
+        press('Tab', mods=('Shift',))
+        ring.append(stop())
+    r.check(ring == ['pane A\'s corner', 'pane A', 'the line'], 'Shift+Tab walks the ring back: from the far end\'s pane to the other\'s corner, the other pane, and from there to the one line', {'ring': ring})
     r.figures['ring']['scene_back_from_pane_b'] = ring
     ctx.js('document.getElementById("sceneB").focus({preventScroll: true})')
     ctx.frames(1)

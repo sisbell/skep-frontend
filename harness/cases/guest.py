@@ -78,7 +78,17 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     count the places listed; the draft it read holding no text, nothing
     mounted for it; no label or mark drawing a draft at HOME; the window run
     a withheld block with none of its text; none of the owner's bytes
-    anywhere in the page.
+    anywhere in the page;
+(h) the owner's page opened once more stands a reading scene on the first
+    edition and that draft, each pane showing the owner's bytes over the
+    run, and its session is closed the same way with the scene standing over
+    the end (issue #160): its panes read again at the guest's class — the
+    draft's pane its head alone, the first edition's window run a withheld
+    block — and none of the owner's bytes anywhere in the page, the panes
+    and the mirror among it, the region holding any named. A step of its
+    own, for the draft the pane reads again as a guest is a withheld record
+    the page then holds, as a LEAP to it leaves one, and (g)'s fallen page
+    reads none.
 Shots into `shots/guest/`. The owner's page is opened again at the end and
 the first edition read, as the cases after this one expect."""
 import json
@@ -87,7 +97,7 @@ import time
 from collections import Counter
 
 from . import DOC, SECOND_ACCOUNT, WINDOW, WITHHELD, Result
-from .keys import placed_at, placed_at_box, placed_under, rebuilt_away, stands_at
+from .keys import placed_at, placed_at_box, placed_under, rebuilt_away, scene_set, stands_at
 
 OWNER = '1.0.1'
 # a stretch of the owner's bytes over the run, in characters with white space folded, that the guest's page must never hold
@@ -203,6 +213,11 @@ def run(ctx):
         legit = squash(''.join(ctx.js('window.__skep.model.text(%s, 1, 1e9)' % json.dumps(a)) for a in sorted(set(ctx.js('window.__skep.mountedAddrs()')) | {DOC})) + ''.join(p['label'] or '' for p in places))
         body = squash(ctx.js('document.body.textContent'))
         return sorted(s for s in stretches if s in body and s not in legit), sum(1 for s in stretches if s in legit)
+
+    def close_session():
+        """the page's own `close(session)` — the call it makes at every `pagehide`, which writes nothing to the board —
+        over the session it holds; whether the provider answered it"""
+        return ctx.js('(async () => { const P = await import("./bridge/port.js"); return "result" in await P.close({session: window.__skep.model.session().session}); })()')
 
     # ---- the guest's page ----------------------------------------------------------------------------------
     log = ctx.provider_log()
@@ -482,7 +497,7 @@ def run(ctx):
             '(g) before its end the owner\'s page reads the claimant\'s draft %s and the window run\'s bytes' % WINDOW[2],
             {'draft_listed': WINDOW[2] in drafts, 'draft_from': draft_read['from'], 'draft_blocks': len(draft_read['blocks']), 'run_bytes': len(again.encode('utf8'))})
     n0 = len(calls(ctx))
-    closed = ctx.js('(async () => { const P = await import("./bridge/port.js"); return "result" in await P.close({session: window.__skep.model.session().session}); })()')
+    closed = close_session()
     fell = wait_for(ctx, 'window.__skep.model.session() === null && window.__skep.line().state === 5')
     ctx.settle(); ctx.frames(2)
     ids = ctx.js('[...document.querySelectorAll("#line [data-string]")].map((e) => e.dataset.string)')
@@ -508,6 +523,34 @@ def run(ctx):
     r.check(not fallen_leaks, '(g) none of the owner\'s bytes over the run stands anywhere in the fallen page', fallen_leaks[:4])
     r.figures['shots'].append(ctx.shot('guest/fallen.png'))
     r.figures['fallen'] = {'places': len(fallen), 'home': fallen_home, 'reads_after_close': dict(Counter(c['name'] for c in reads))}
+
+    # (h) the owner's page again, a reading scene standing over its own end (issue #160)
+    ctx.open_page('all')
+    r.check(ctx.js('window.__skep.model.session()') is not None, '(h) the owner\'s page opened again: a session stands')
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
+    ctx.settle(); ctx.frames(2)
+    shown = ctx.js('window.__skep.scene.panes()') or {}
+    pane_text = lambda side: squash(ctx.js('(() => { const a = document.querySelector(%s); return a ? a.textContent : ""; })()' % json.dumps('#scene%s article.dtext' % side)))
+    held = {side: sum(1 for s in stretches if s in pane_text(side)) for side in ('A', 'B')}
+    r.check(ctx.js('window.__skep.scene.isOpen()') and bool((shown.get('b') or {}).get('blocks')) and held['A'] > 0 and held['B'] > 0,
+            '(h) before its end the owner\'s page stands a reading scene on the first edition and the draft it windows, each pane showing the owner\'s bytes over the run', {'stretches_held': held})
+    closed = close_session()
+    fell = wait_for(ctx, 'window.__skep.model.session() === null && window.__skep.line().state === 5')
+    landed = scene_set(ctx)
+    panes = ctx.js('window.__skep.scene.panes()') or {}
+    pa, pb = panes.get('a') or {}, panes.get('b') or {}
+    run_face = [b for b in pa.get('blocks') or [] if b['kind'] == 'withheld' and b['pos'] == WINDOW[0]]
+    scene_leaks, _ = leaks(ctx.js('window.__skep.model.places()'))
+    # where each stretch stands, by the page's regions: what a red check names
+    regions = ctx.js('Object.fromEntries([...document.body.children, ...document.querySelectorAll("#scene > .pane")].filter((e) => e.id).map((e) => [e.id, e.textContent]))') or {}
+    where = {s: [k for k, v in regions.items() if v and s in squash(v)] for s in scene_leaks[:4]}
+    r.check(closed and fell and landed and ctx.js('window.__skep.scene.isOpen()') and pb.get('blocks') == [] and len(run_face) == 1 and not scene_leaks,
+            '(h) the page\'s own `close(session)` with the scene standing over it: the panes read again at the guest\'s class — the draft withheld, its pane its head alone, the first edition\'s window run a withheld block — and none of the owner\'s bytes over the run stands anywhere in the page, the panes and the mirror among it (issue #160)',
+            {'closed': closed, 'fell': fell, 'landed': landed, 'pane_b_blocks': len(pb.get('blocks') or []), 'run_face': run_face, 'leaks': scene_leaks[:4], 'where': where})
+    r.figures['shots'].append(ctx.shot('guest/fallen-scene.png'))
+    r.figures['fallen_scene'] = {'stretches_held_before': held, 'pane_b_blocks_after': len(pb.get('blocks') or []), 'leaks': len(scene_leaks)}
+    ctx.js('window.__skep.scene.close()'); ctx.frames(2)
 
     # the owner's page once more, the first edition read, as the cases after this one expect
     ctx.open_page('all')

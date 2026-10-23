@@ -91,10 +91,24 @@ frame sets it: a click selects the block, a drag the bytes it crosses, as on
 the standing text, and neither moves the camera or the trail (issue #122). In the reading scene a
 drag selects as it does on the plane (§2.5): a drag over a phrase of a pane,
 or from its head into its first block, is copied as the passage's board and
-address beside the document's own bytes over the bytes dragged, the head's
-words never among them, and makes no selection of the page's; and a feed row
-naming a pane's document (the same door) leaves the pane's copy its own
-bytes, its two ends level after the re-level act and its band standing. No
+the address the pane's acts name beside the document's own bytes over the
+bytes dragged, the head's words never among them — the first edition at its
+bare address naming the member its text is, by the harness's own reads of its
+chain (issue #160) — and makes no selection of the page's. A feed row naming
+the draft in a pane (the gate's feed door, reads alone) reaches the pane
+(issue #160): until its read lands the pane's copy is its own bytes though the
+model holds none of them; then the pane is set again in one step — its
+article rebuilt, the platform's selection on the same words, the first span
+in view where it stood, the bands on their lines — and a re-level clicked
+while a second row's read is out waits for it, then sets the two ends level.
+A pane on an edition at its bare address reads its version 1 in its place
+through the gate's `scene.read` door — the read its corner's act makes once a
+newer version has arrived, which no gate run publishes — and the corner's
+act, pressed as a person presses it, reads version 2 back: each time the
+pane's record, the address its acts name, its head and its corner are the
+version's, the selection on the same words and its line where it stood; and
+where version 1 lacks the paragraph first in view, the corner says so and
+the line of the position the two share nearest it takes the paragraph's. No
 remount takes a selection the person holds outside the plane's text: a drag
 over the provenance card's caption, and a drag over a phrase of a pane with
 the scene standing over the page's selection, each stand through the first
@@ -104,8 +118,8 @@ the plane, while a caret alone in a pane gives the page's selection its
 highlight back. Each step leaves the page as it found it."""
 import json
 
-from . import DOC, FAR_LEAP, GHOST, NO_MATCH, SECOND_ACCOUNT, WINDOW, Result
-from .layout import inside, level_holds, scene_level
+from . import DOC, FAR_LEAP, GHOST, NO_MATCH, SECOND_ACCOUNT, VERSIONED, WINDOW, Result
+from .layout import click_on, inside, lacking_of, level_holds, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
 GUTTER_EM = 2
@@ -796,14 +810,14 @@ def pane_phrase(ctx, side):
     printable ASCII on one line inside the pane's visible rect and PANE_EDGE_PX clear of its top and its bottom, where a
     drag does not scroll the pane (the platform scrolls a scroller a selection is dragged at the edge of), the pane's
     article under the pointer half a pixel inside its first character and its last, where a drag over it presses and
-    releases. Read through the gate's `scene.at` over the blocks the model holds as the scene stands opened: its document,
-    its first and last positions, its text and those points; None where the pane shows none"""
+    releases. Read through the gate's `scene.at` over the blocks the pane's article was made from (`scene.panes`): the
+    address the pane's acts name, its first and last positions, its text and those points; None where the pane shows none"""
     return ctx.js('''((side, edge) => {
-      const S = window.__skep, p = S.scene.pair(); if (!p) return null;
-      const addr = side === 'a' ? p.a : p.b, pane = document.getElementById(side === 'a' ? 'sceneA' : 'sceneB'), enc = new TextEncoder();
+      const S = window.__skep, P = (S.scene.panes() || {})[side]; if (!P) return null;
+      const addr = P.names, pane = document.getElementById(side === 'a' ? 'sceneA' : 'sceneB'), enc = new TextEncoder();
       const inside = (q, v) => q.x >= v.x && q.y >= v.y + edge && q.x + q.w <= v.x + v.w && q.y + q.h <= v.y + v.h - edge;
       const under = ([x, y]) => { const e = document.elementFromPoint(x, y), a = e && e.closest('article.dtext'); return !!a && pane.contains(a); };
-      for (const b of S.model.doc(addr).blocks) {
+      for (const b of P.blocks) {
         if (b.kind !== 'para' || b.text.startsWith('#')) continue;
         for (let k = 0; k + 15 <= b.text.length; k += 5) {
           const text = b.text.slice(k, k + 15);
@@ -826,9 +840,10 @@ def copied(ctx):
     return {'span': c.get('span'), 'flavor': json.loads(flavor) if flavor else None, 'plain': data.get('text/plain')}
 
 
-def own(ctx, span):
-    """the document's own bytes over a span, as the model holds them now"""
-    return ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(span['addr']), span['pos'], span['pos'] + span['width'])) if span else None
+def own(ctx, span, addr=None):
+    """the document's own bytes over a span, as the model holds them now — of `addr`, the record a pane's text is made
+    from, where the span names the member that text is, whose positions it shares"""
+    return ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(addr or span['addr']), span['pos'], span['pos'] + span['width'])) if span else None
 
 
 def names(ctx, c, addr, p0, p1):
@@ -843,21 +858,60 @@ def bare(c, mine):
     return c['plain'] is not None and c['plain'] == mine and not any(x in c['plain'] and x not in (mine or '') for x in '≡⟡')
 
 
+def member_of(ctx, addr):
+    """the member a published edition's bare address shows — its chain's newest — by the harness's own token-free reads of
+    the chain (`doc_metadata` of each member until the board knows none), apart from the page's probe; None where it has no
+    member"""
+    k = 0
+    for j in range(1, 9):
+        if ctx.daemon_op({'op': 'doc_metadata', 'doc': '%s.%d' % (addr, j)}).get('resp') != 'doc_metadata':
+            break
+        k = j
+    return '%s.%d' % (addr, k) if k else None
+
+
+def scene_set(ctx, s=10):
+    """every setting of a reading scene's pane the page asked has landed (`scene.updating`), `s` seconds at most — a pane's
+    reads are no need of the pump's, so the settle signal does not wait for them; whether they landed"""
+    ok = ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (!window.__skep.scene.updating() ? res(true) : performance.now() - t0 > %d ? res(false) : setTimeout(tick, 30)); tick(); })' % (s * 1000))
+    ctx.settle()
+    ctx.frames(2)
+    return ok
+
+
+# a reading scene's pane as the person meets it: its first span in view — the first block of its article whose box meets
+# the pane's visible content — with that block's top on screen, and the platform's selection where it stands in the pane,
+# its words and whether both its ends lie in the pane
+PANE_NOW = '''((side) => { const pane = document.getElementById(side === 'a' ? 'sceneA' : 'sceneB'), s = window.getSelection();
+  const art = pane.querySelector('article.dtext'), r = pane.getBoundingClientRect(), top = r.top + pane.clientTop, bottom = top + pane.clientHeight;
+  const first = art ? [...art.querySelectorAll('.run > .sp, .run > .withheld')].find((e) => { const q = e.getBoundingClientRect(); return q.height > 0 && q.bottom > top && q.top < bottom; }) : null;
+  const inPane = (n) => { const e = !n ? null : n.nodeType === 1 ? n : n.parentElement; return !!e && pane.contains(e); };
+  return {first: first ? {pos: Number(first.dataset.pos), top: first.getBoundingClientRect().top, text: first.textContent.slice(0, 40)} : null,
+          selection: s && s.rangeCount && !s.isCollapsed ? {text: String(s), held: inPane(s.anchorNode) && inPane(s.focusNode)} : null}; })(%s)'''
+
+
 def scene_copy(ctx, r):
     """THE COPY FROM A READING SCENE'S PANE (foundations §2.4: the copy of any selection carries the passage's board and
-    address beside the plain text and never in it; §2.5: in the scene "a drag selects as it does on the plane"), and the
-    pane's own text under a feed row (T-LAYER: the blocks and runs an article was made from stay its own while it
-    stands, whatever the model has delivered since). The scene on the first edition and the draft it windows, opened
-    over no selection of the page's:
-    (a) a drag over a phrase of pane A: the copy's flavor names the board, the first edition and the dragged bytes, three
-        positions either way; its plain text is the document's own bytes over them, no label of the page among them; and
-        the drag makes no selection of the page's, a pane's own selection being D1's second stage (#94);
+    address beside the plain text and never in it; §2.5: in the scene "a drag selects as it does on the plane"), and a
+    pane kept fresh by a feed row (issue #160's design decision: "A draft updates in place … The first span in view holds
+    still, and focus, caret and selection stay on the same words. An act taken mid-update waits for the update to
+    finish"; "Panes whose text changes rebuild with the scene's ties in one step"). The scene on the first edition and
+    the draft it windows, opened over no selection of the page's, pane A on the first edition at its bare address:
+    (o) pane A names the member its text is — the newest of the first edition's chain, by the harness's own reads of it —
+        and shows the bare address it was opened on;
+    (a) a drag over a phrase of pane A: the copy's flavor names the board, that member and the dragged bytes, three
+        positions either way, never the bare address; its plain text is the document's own bytes over them, no label of
+        the page among them; and the drag makes no selection of the page's, a pane's own selection being D1's second
+        stage (#94);
     (b) pane A at its top, a drag from the head's address into the first block: the copy starts at the first block, the
         head's words never in it;
-    (c) a drag over a phrase of pane B, then — in one evaluation, so no answer and no frame comes between them — the
-        gate's door `model.invalidate` does to the draft what a feed row naming it does, and the re-level act is
-        clicked: the copy still carries the phrase's bytes as the pane shows them, though the model holds none of them
-        now; the two ends stand level; and the band between the panes stands, each end at its passage's line.
+    (c) a drag over a phrase of pane B, then a feed row naming the draft through the gate's feed door (reads alone, as
+        the feed hands a row): in the same evaluation the pane is being set again and its copy still carries the
+        phrase's bytes as the pane shows them, though the model holds none of them now; once its read lands the pane's
+        article is rebuilt, the platform's selection on the same words in it, the first span in view at the top it
+        stood at on screen, the copy naming the same bytes, and the bands between the panes on their lines;
+    (d) pane A scrolled away, a second such row and, in the same evaluation, the re-level act clicked: it waits — pane A
+        unmoved while the read is out — and once the read lands the two ends stand level.
     The draft is read whole again and the scene ended after them"""
     B = WINDOW[2]
     figures = {}
@@ -866,6 +920,14 @@ def scene_copy(ctx, r):
     chord(ctx, 'Escape')
     open_scene(ctx)
     r.check(ctx.js('window.__skep.scene.isOpen()') and ctx.js('window.__skep.selection()') is None, 'the scene stands on the first edition and the draft it windows, over no selection of the page\'s')
+    # (o) pane A names the member its text is
+    A = member_of(ctx, DOC) or DOC
+    panes = ctx.js('window.__skep.scene.panes()') or {}
+    pa = panes.get('a') or {}
+    r.check(pa.get('names') == A and pa.get('shows') == DOC and pa.get('src') == DOC and pa.get('kind') == 'bare',
+            '(o) pane A, the first edition at its bare address, names %s — the member its text is, by the harness\'s own reads of its chain — and shows the bare address it was opened on (issue #160)' % A,
+            {k: pa.get(k) for k in ('doc', 'src', 'names', 'shows', 'kind', 'k', 'n')})
+    figures['o'] = {'member': A, 'pane': {k: pa.get(k) for k in ('names', 'shows', 'kind', 'k', 'n')}}
     # (a) a drag over a phrase of pane A
     ph = pane_phrase(ctx, 'a')
     r.check(ph is not None, '(a) pane A shows a phrase of the first edition\'s own text on one line, for a drag', ctx.js('window.__skep.scene.pairs()'))
@@ -873,17 +935,17 @@ def scene_copy(ctx, r):
         ctx.drv.drag(*ph['start'], *ph['end'])
         ctx.frames(2)
         c = copied(ctx)
-        mine = own(ctx, c['span'])
+        mine = own(ctx, c['span'], DOC)
         page = ctx.js('({sel: window.__skep.selection(), platform: window.__skep.platformSelection().span})')
-        r.check(names(ctx, c, DOC, ph['p0'], ph['p1']), '(a) a drag over a phrase in pane A: the copy\'s flavor names the board, the first edition and the dragged bytes, as a drag on the plane\'s does (§2.4; §2.5)',
-                dict(c, phrase=[ph['p0'], ph['p1'], ph['text']]))
+        r.check(names(ctx, c, A, ph['p0'], ph['p1']), '(a) a drag over a phrase in pane A: the copy\'s flavor names the board, the member the pane\'s text is and the dragged bytes, never the bare address (§2.4; §2.5; issue #160)',
+                dict(c, phrase=[ph['p0'], ph['p1'], ph['text']], member=A))
         r.check(bare(c, mine), '(a) its plain text is the document\'s own bytes over them, no label of the page among them', {'plain': c['plain'], 'own': mine})
         r.check(page['sel'] is None and page['platform'] is None, '(a) the drag in the pane makes no selection of the page\'s: a pane\'s own selection is D1\'s second stage (#94)', page)
         figures['a'] = {'phrase': [ph['p0'], ph['p1'], ph['text']], 'span': c['span'], 'plain': c['plain']}
     # (b) pane A at its top, a drag from the head's address into the first block
     ctx.js('document.getElementById("sceneA").scrollTop = 0')
     ctx.frames(2)
-    first = ctx.js('window.__skep.model.doc(%s).blocks[0]' % json.dumps(DOC))
+    first = (pa.get('blocks') or [None])[0]
     n = min(10, len(first['text'])) if first and first['kind'] == 'para' else 0
     head = ctx.js('''(() => { const a = document.querySelector('#sceneA .hd .addr'); if (!a) return null; const q = a.getBoundingClientRect();
       return {x: q.left + 0.5, y: q.top + q.height / 2, text: a.textContent}; })()''')
@@ -895,36 +957,58 @@ def scene_copy(ctx, r):
         ctx.drv.drag(head['x'], head['y'], last['line']['x'] + last['line']['w'] - 0.5, last['line']['y'] + last['line']['h'] / 2)
         ctx.frames(2)
         c = copied(ctx)
-        mine = own(ctx, c['span'])
-        r.check(bool(c['span']) and c['span']['pos'] == first['pos'] and names(ctx, c, DOC, first['pos'], end) and bare(c, mine),
+        mine = own(ctx, c['span'], DOC)
+        r.check(bool(c['span']) and c['span']['pos'] == first['pos'] and names(ctx, c, A, first['pos'], end) and bare(c, mine),
                 '(b) a drag from pane A\'s head into its first block: the copy starts at the first block, the head\'s words never in it — the flavor names those bytes, the plain text is the document\'s own',
                 dict(c, own=mine, first=[first['pos'], end], head=head['text']))
         figures['b'] = {'span': c['span'], 'plain': c['plain'], 'head': head['text']}
-    # (c) a drag over a phrase of pane B, then a feed row naming the draft and the re-level act, in one evaluation
+    # (c) a drag over a phrase of pane B, then a feed row naming the draft, through the gate's feed door
+    row = {'position': 0, 'at': 0, 'op': 'insert', 'docs': [B], 'class': 'drafts'}
     ph = pane_phrase(ctx, 'b')
     r.check(ph is not None, '(c) pane B shows a phrase of the draft\'s own text on one line, for a drag', ctx.js('window.__skep.scene.pairs()'))
     if ph:
         ctx.drv.drag(*ph['start'], *ph['end'])
         ctx.frames(2)
-        torn = ctx.js('''((b) => { const S = window.__skep, pre = S.copy();
-          const held = pre.span ? S.model.text(b, pre.span.pos, pre.span.pos + pre.span.width) : null, ties = S.scene.ties().length;
-          S.model.invalidate(b);
-          document.querySelector('#scenebar [data-relevel]').click();
-          const post = S.copy(), lv = S.scene.pairs().level;
-          return {pre: pre.span, held, ties, post, now: post.span ? S.model.text(b, post.span.pos, post.span.pos + post.span.width) : null,
-                  level: {level: lv, a: lv.a != null ? S.scene.at('a', lv.a) : null, b: lv.b != null ? S.scene.at('b', lv.b) : null},
-                  after: S.scene.ties().map((t) => ({kind: t.kind, lineA: t.lineA, lineB: t.lineB}))}; })(%s)''' % json.dumps(B))
+        pre = copied(ctx)
+        before = ctx.js(PANE_NOW % json.dumps('b'))
+        ties0 = len(ctx.js('window.__skep.scene.ties()'))
+        # the row and the reads of it in one evaluation: no answer and no frame comes between them
+        torn = ctx.js('''((row) => { const S = window.__skep, b = row.docs[0];
+          window.__gateOld = document.querySelector('#sceneB article.dtext');
+          S.model.feed(row);
+          const post = S.copy();
+          return {updating: S.scene.updating(), post, now: post.span ? S.model.text(b, post.span.pos, post.span.pos + post.span.width) : null}; })(%s)''' % json.dumps(row))
         data = torn['post'].get('data') or {}
         flavor = data.get('application/x-skep-passage')
-        c = {'span': torn['post'].get('span'), 'flavor': json.loads(flavor) if flavor else None, 'plain': data.get('text/plain')}
-        r.check(names(ctx, c, B, ph['p0'], ph['p1']) and c['span'] == torn['pre'] and bool(torn['held']) and bare(c, torn['held']) and torn['now'] == '',
-                '(c) a feed row naming the draft while pane B shows a selection in it: the copy still names the dragged bytes and carries them as the pane shows them, though the model holds none of them now',
-                dict(c, phrase=[ph['p0'], ph['p1'], ph['text']], pre=torn['pre'], held=torn['held'], now=torn['now']))
-        level_holds(r, '(c) the re-level act after a feed row naming the draft', torn['level'])
-        r.check(torn['ties'] >= 1 and len(torn['after']) == torn['ties'] and all(t['lineA'] and t['lineB'] for t in torn['after']),
-                '(c) after the feed row and the re-level, the bands and lines between the panes stand as they stood, each end at its passage\'s line in its pane',
-                {'before': torn['ties'], 'after': torn['after']})
-        figures['c'] = {'phrase': [ph['p0'], ph['p1'], ph['text']], 'span': c['span'], 'level': torn['level']['level'], 'ties': [torn['ties'], len(torn['after'])]}
+        mid = {'span': torn['post'].get('span'), 'flavor': json.loads(flavor) if flavor else None, 'plain': data.get('text/plain')}
+        r.check(torn['updating'] and names(ctx, mid, B, ph['p0'], ph['p1']) and mid['span'] == pre['span'] and bool(pre['plain']) and bare(mid, pre['plain']) and torn['now'] == '',
+                '(c) a feed row naming the draft reaches pane B (issue #160): the pane is being set again, and until its read lands the copy names the dragged bytes and carries them as the pane shows them, though the model holds none of them now',
+                dict(mid, phrase=[ph['p0'], ph['p1'], ph['text']], pre=pre['span'], updating=torn['updating'], now=torn['now']))
+        landed = scene_set(ctx)
+        after = ctx.js(PANE_NOW % json.dumps('b'))
+        post = copied(ctx)
+        rebuilt = ctx.js('(() => { const now = document.querySelector("#sceneB article.dtext"); return {gone: !!window.__gateOld && !window.__gateOld.isConnected, stands: !!now && now !== window.__gateOld}; })()')
+        r.check(landed and rebuilt['gone'] and rebuilt['stands'], '(c) once its read lands, pane B\'s article is set again: the article it showed taken down, a new one standing', dict(rebuilt, landed=landed))
+        sb, sa = before['selection'], after['selection']
+        r.check(bool(sb) and bool(sa) and sa['held'] and sa['text'] == sb['text'], '(c) the platform\'s selection stands on the same words in the article set again (issue #160)', {'before': sb, 'after': sa})
+        fb, fa = before['first'], after['first']
+        r.check(bool(fb) and bool(fa) and fa['pos'] == fb['pos'] and abs(fa['top'] - fb['top']) <= 0.5, '(c) the first span in view holds still: the same block, its top where it stood on screen, half a pixel either way (issue #160)', {'before': fb, 'after': fa})
+        r.check(names(ctx, post, B, ph['p0'], ph['p1']) and post['span'] == pre['span'] and bare(post, pre['plain']),
+                '(c) the copy after it names the same bytes and carries the same words', {'pre': pre, 'post': post})
+        ties = ctx.js('window.__skep.scene.ties()')
+        r.check(len(ties) == ties0, '(c) the bands and lines between the panes as many as they stood', {'before': ties0, 'after': len(ties)})
+        figures['c'] = {'phrase': [ph['p0'], ph['p1'], ph['text']], 'span': pre['span'], 'first': [fb, fa], 'ties': ties_hold(r, '(c) pane B set again by a feed row naming the draft', ties, 0)}
+        # (d) pane A scrolled away; a second row, and the re-level clicked while its read is out: the act waits for it
+        ctx.js('document.getElementById("sceneA").scrollTop += 400')
+        ctx.frames(2)
+        waited = ctx.js('''((row) => { const S = window.__skep, a = document.getElementById('sceneA'), at = a.scrollTop;
+          S.model.feed(row);
+          document.querySelector('#scenebar [data-relevel]').click();
+          return {updating: S.scene.updating(), moved: a.scrollTop !== at}; })(%s)''' % json.dumps(row))
+        landed = scene_set(ctx)
+        r.check(waited['updating'] and not waited['moved'] and landed, '(d) a re-level clicked while pane B\'s read is out waits for it: pane A unmoved until the read lands (issue #160)', dict(waited, landed=landed))
+        level_holds(r, '(d) the re-level that waited for the setting', scene_level(ctx))
+        figures['d'] = waited
         ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(B))
         ctx.settle()
     ctx.js('window.__skep.scene.close()')
@@ -932,6 +1016,123 @@ def scene_copy(ctx, r):
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
     r.figures['scene_copy'] = figures
+
+
+def pane_corner(ctx, side):
+    """a reading scene's pane's corner as the person meets it — the address it names, its version statement, its act's
+    words and what it says the version read lacks — with the pane's head's address and the bar's name for it"""
+    return ctx.js('''((side) => { const id = side === 'a' ? 'sceneA' : 'sceneB', c = document.querySelector('#' + id + ' > .corner');
+      const q = (s) => { const e = c && c.querySelector(s); return e ? e.textContent : null; };
+      const h = document.querySelector('#' + id + ' .hd .addr'), b = document.querySelector('#scenebar [data-name="' + side + '"]');
+      return {addr: c ? c.dataset.corner : null, version: q('.version'), read: q('.read'), lacks: q('.lacks'), head: h ? h.textContent : null, bar: b ? b.textContent : null}; })(%s)''' % json.dumps(side))
+
+
+def line_before(ctx, side, pos):
+    """the screen top of the line a position stands on in a reading scene's pane — its own, else, where it sets no glyph of
+    its own (a block's separator), the line of the last character before it, sixteen positions back at most — read
+    through the gate's `scene.at`; None where none of them sets one"""
+    return ctx.js('''((side, pos) => { for (let k = pos; k >= Math.max(1, pos - 16); k--) { const a = window.__skep.scene.at(side, k, 1); if (a && a.line) return a.line.y; } return null; })(%s, %d)''' % (json.dumps(side), pos))
+
+
+def scene_versions(ctx, r):
+    """A PANE READS ANOTHER VERSION IN ITS PLACE (issue #160's design decision: "The corner's 'read version 4' replaces that
+    pane's text inside the scene. Focus stays on the selection, or else the first span in view, and the pane says so if
+    version 4 lacks it. Version 3 stays one act away"; "The pane's acts … name that version"): the scene on the edition
+    with two members, at its bare address, beside the first edition. The corner offers its act once a newer version has
+    arrived, which no gate run publishes, so the first read is the gate's door `scene.read` — the read the act makes:
+    (a) pane A, the edition at its bare address, names its newest member — by the harness's own reads of its chain —
+        shows its bare address, and its corner offers no act;
+    (b) a phrase of the text both versions hold selected in pane A, version 1 read in its place: pane A's record, the
+        address its acts name, its head, the bar's name and its corner are version 1's — "version 1 of 2", its act "read
+        version 2" — the selection stands on the same words, its first line at the top it stood at on screen, and the copy
+        names version 1 and the same bytes;
+    (c) the corner's act pressed as a person presses it: version 2 read back in its place, the selection on the same
+        words still, the corner offering version 1;
+    (d) nothing selected, the paragraph that opens with the stretch version 1 lacks — by the harness's own `compare` of
+        the two — first in view, version 1 read: the corner says the passage is not in version 1, and the line of the
+        position the two share nearest it stands where the paragraph's first line stood on screen.
+    The scene is ended and the edition left at its plain address"""
+    V, V1 = VERSIONED, VERSIONED + '.1'
+    figures = {}
+    ctx.leap(V, None)
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(V), json.dumps(DOC)))
+    ctx.settle()
+    ctx.frames(2)
+    panes = lambda: (ctx.js('window.__skep.scene.panes()') or {}).get('a') or {}
+    keep = ('src', 'names', 'shows', 'kind', 'k', 'n', 'read', 'lacks')
+    newest = member_of(ctx, V)
+    n = int(newest.rsplit('.', 1)[1]) if newest else 0
+    pa, corner = panes(), pane_corner(ctx, 'a') or {}
+    r.check(ctx.js('window.__skep.scene.isOpen()') and n >= 2 and pa.get('kind') == 'bare' and pa.get('names') == newest and pa.get('shows') == V and pa.get('k') == n and pa.get('read') is None and corner.get('read') is None,
+            f'(a) pane A, {V} at its bare address, names {newest} — its newest member, by the harness\'s own reads of its chain — shows its bare address, and its corner offers no act (issue #160)',
+            {'pane': {k: pa.get(k) for k in keep}, 'corner': corner, 'newest': newest})
+    gap = lacking_of(ctx, V, V1)
+    blocks = pa.get('blocks') or []
+    r.check(n >= 2 and gap is not None and bool(blocks), f'(a) version 1 of {V} lacks a stretch of its text, by the harness\'s own compare of the two', gap)
+    if n >= 2 and gap is not None and blocks:
+        t = lambda sid, values: ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(values)))
+        # (b) a phrase of the text both versions hold, past the stretch version 1 lacks, selected in pane A
+        end = blocks[-1]['pos'] + blocks[-1]['width'] - 1
+        ctx.js('''((pos) => { const a = window.__skep.scene.at('a', pos, 1), p = document.getElementById('sceneA'); if (a && a.line) p.scrollTop += a.line.y - (a.pane.y + 100); })(%d)''' % ((gap['hi'] + end) // 2))
+        ctx.frames(2)
+        ph = pane_phrase(ctx, 'a')
+        r.check(ph is not None and ph['p0'] >= gap['hi'], '(b) pane A shows a phrase of the text both versions hold, past the stretch version 1 lacks, for a drag', {'phrase': ph, 'gap': gap})
+        if ph:
+            ctx.drv.drag(*ph['start'], *ph['end'])
+            ctx.frames(2)
+            pre, before = copied(ctx), ctx.js(PANE_NOW % json.dumps('a'))
+            y0 = line_before(ctx, 'a', pre['span']['pos']) if pre['span'] else None
+            ctx.js('window.__skep.scene.read("a", 1)')
+            landed = scene_set(ctx)
+            pa, corner, post, after = panes(), pane_corner(ctx, 'a') or {}, copied(ctx), ctx.js(PANE_NOW % json.dumps('a'))
+            y1 = line_before(ctx, 'a', post['span']['pos']) if post['span'] else None
+            r.check(landed and [pa.get(k) for k in keep] == [V1, V1, V1, 'pinned', 1, n, n, None]
+                    and [corner.get(k) for k in ('addr', 'head', 'bar')] == [V1] * 3 and corner.get('version') == t('F.version-of', {'k': 1, 'n': n}) and corner.get('read') == t('F.versions.read', {'k': n}),
+                    f'(b) version 1 read in pane A\'s place: its record, the address its acts name, its head, the bar\'s name and its corner are version 1\'s — "version 1 of {n}", its act "read version {n}" (issue #160)',
+                    {'pane': {k: pa.get(k) for k in keep}, 'corner': corner, 'landed': landed})
+            sb, sa = before['selection'], after['selection']
+            r.check(bool(sb) and bool(sa) and sa['held'] and sa['text'] == sb['text'] and y0 is not None and y1 is not None and abs(y1 - y0) <= 0.5,
+                    '(b) the selection stands on the same words in version 1, its first line at the top it stood at on screen, half a pixel either way (issue #160)', {'before': sb, 'after': sa, 'line': [y0, y1]})
+            r.check(names(ctx, post, V1, post['span']['pos'] if post['span'] else -9, (post['span']['pos'] + post['span']['width']) if post['span'] else -9) and post['plain'] == pre['plain'] and bool(pre['plain']),
+                    '(b) the copy names version 1 and carries the same words (issue #160)', {'pre': pre, 'post': post})
+            figures['b'] = {'phrase': [ph['p0'], ph['p1'], ph['text']], 'span': [pre['span'], post['span']], 'line': [y0, y1]}
+            # (c) the corner's act pressed as a person presses it: version 2 read back in its place
+            at = click_on(ctx, '#sceneA > .corner [data-read]')
+            landed = scene_set(ctx)
+            pa, corner, back, again = panes(), pane_corner(ctx, 'a') or {}, copied(ctx), ctx.js(PANE_NOW % json.dumps('a'))
+            sc = again['selection']
+            r.check(bool(at) and at['hits'] and landed and [pa.get(k) for k in keep] == [newest, newest, newest, 'pinned', n, n, 1, None]
+                    and corner.get('version') == t('F.version-of', {'k': n, 'n': n}) and corner.get('read') == t('F.versions.read', {'k': 1}),
+                    f'(c) the corner\'s act, pressed, reads version {n} back in pane A\'s place, the corner offering version 1: the version left one act away (issue #160)',
+                    {'pressed': at, 'pane': {k: pa.get(k) for k in keep}, 'corner': corner})
+            r.check(bool(sc) and sc['held'] and bool(sb) and sc['text'] == sb['text'] and back['plain'] == pre['plain'] and bool(back['flavor']) and back['flavor']['addr'] == newest,
+                    '(c) the press leaves the selection standing, and the act carries it: on the same words still, the copy naming the version read', {'selection': sc, 'copy': back})
+            figures['c'] = {'pressed': at, 'span': back['span']}
+        # (d) nothing selected, the paragraph that opens with the stretch version 1 lacks first in view; version 1 read
+        ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); })()')
+        b0 = next((b['pos'] for b in blocks if b['pos'] <= gap['lo'] < b['pos'] + b['width']), None)
+        ctx.js('''((pos) => { const p = document.getElementById('sceneA'), e = p.querySelector(`article.dtext .run > [data-pos="${pos}"]`); if (!e) return;
+          p.scrollTop += e.getBoundingClientRect().top - (p.getBoundingClientRect().top + p.clientTop) + 2; })(%d)''' % (b0 or 0))
+        ctx.frames(2)
+        first = ctx.js(PANE_NOW % json.dumps('a'))['first']
+        y0 = line_before(ctx, 'a', b0) if b0 else None
+        ctx.js('window.__skep.scene.read("a", 1)')
+        landed = scene_set(ctx)
+        pa, corner = panes(), pane_corner(ctx, 'a') or {}
+        y1 = line_before(ctx, 'a', gap['at'])
+        r.check(b0 == gap['lo'] and bool(first) and first['pos'] == b0 and landed and pa.get('src') == V1 and pa.get('lacks') == 1 and corner.get('lacks') == t('F.floating.member', {'k': 1}),
+                f'(d) nothing selected, the paragraph that opens with the stretch version 1 lacks first in view, version 1 read: the corner says "{t("F.floating.member", {"k": 1})}" (issue #160)',
+                {'first': first, 'block': b0, 'gap': gap, 'pane': {k: pa.get(k) for k in keep}, 'corner': corner})
+        r.check(y0 is not None and y1 is not None and abs(y1 - y0) <= 0.5, f'(d) the line of position {gap["at"]}, the one the two share nearest the paragraph, stands where the paragraph\'s first line stood on screen, half a pixel either way',
+                {'line': [y0, y1], 'nearest': gap['at']})
+        figures['d'] = {'gap': gap, 'line': [y0, y1]}
+    ctx.js('window.__skep.scene.close()')
+    ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    chord(ctx, 'Escape')
+    ctx.leap(V, None)
+    r.figures['scene_versions'] = figures
 
 
 # the platform's selection by where its two ends stand — the overlay, a pane, the text layer — with its text, the span it
@@ -1986,6 +2187,8 @@ def run(ctx):
     ended()
     # ---- the copy from a reading scene's pane, and the pane's own text under a feed row (§2.4, §2.5) --------------
     scene_copy(ctx, r)
+    # ---- a pane reads another version in its place, the reader's place and selection carried (issue #160) ----------
+    scene_versions(ctx, r)
     # ---- no remount takes a selection the person holds outside the plane's text: a card's caption, a pane ----------
     selection_held_elsewhere(ctx, r)
     # ---- the focus and keyboard rules the one-owner lane added (FP-20) --------------------------------------------
@@ -1995,6 +2198,6 @@ def run(ctx):
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'a drag in each pane of the scene, then the copy', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

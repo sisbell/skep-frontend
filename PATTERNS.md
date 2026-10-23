@@ -45,7 +45,8 @@ fix; nothing here depends on their names.
   nothing of pixels, zoom or selection. It never reads the whole
   board.
 - **FP-7 View state is pure view.** The camera, the zoom band, the
-  selection, the trail, the hover, the version each box shows. It is
+  selection, the trail, the hover, the version each box shows, the
+  version each reading scene's pane reads. It is
   never written to any record or sent over the bridge. The spike proved the camera writes nothing;
   the gate keeps proving it.
 - **FP-8 Render is a function of model and view state.** On a dirty
@@ -203,6 +204,37 @@ fix; nothing here depends on their names.
   its line on screen (FP-8). A pan, a zoom or a newer version's arrival
   changes no box's version.
 
+## Freshness
+
+- **FP-23 A document is kept fresh by its kind.** Every surface that
+  shows a document — its box on the plane, a reading scene's pane —
+  follows the feed by the document's kind, and none offers a reload.
+  M-PUMP takes each row and drops what it names, so the view asks it
+  again, and only then tells the readers that keep text apart from the
+  model what it dropped (`onDrop`), so each reads fresh what it shows.
+  A draft is read again and set in its place, the words being read held
+  still, carried by their bytes' identity, never their positions: on the
+  plane the passage at the view's centre, in a pane its first span in
+  view and the selection. An edition read at its bare address keeps the
+  version it was read on: a newer version's arrival pins it to the
+  member its text is (FP-22 on the plane), its corner and its address
+  naming that member, never the latest, and its acts naming it too. A
+  pane says the arrival once, politely, and its corner offers the newest
+  in its place. A pinned version only counts its chain again. A link row
+  resets the marks, counts and lines of the text it reaches, as a
+  draft's update does. A pane is set again in one step: every read comes
+  first; then its text, the reader's place, the selection and the
+  scene's ties are set together, with nothing awaited, so no tie is
+  drawn over text it was not measured on, and an act on the panes waits
+  for the setting to land. A pane's version is the scene's own view
+  state, never a box's, and any scene restored is restored with it. The
+  page's own death takes what the dead session read down at once from
+  the plane, the ARIA mirror and every pane, then reads it again as a
+  guest. Two clauses bind the editor's lane, for the page types nothing
+  and composes no write (S-35 (a)): a draft is never set again while it
+  is being typed in, and a row from the window's own act is that act's
+  feedback, not news.
+
 ## Decisions in force
 
 Design decisions taken on issues and built, one line each, newest
@@ -275,7 +307,7 @@ surfaces also becomes a numbered rule above, with a Changes entry.
   changes a follow whose projection the board refuses by a name that
   says nothing of the far document: it lands at that document's head
   with the line, where it was faced at the link's bytes.
-- **#154** (built with this line): a document's versions share its one
+- **#154** (built `66ca03a`): a document's versions share its one
   box, which shows one of them — the plain address the trunk head, a
   version's address pinned there — named by the one line's address,
   its marker lit at a pinned version, by the corner, and at mid by the
@@ -296,6 +328,27 @@ surfaces also becomes a numbered rule above, with a Changes entry.
   written. This changes #153's none state for a version move: it lands
   at the nearest passage the two versions share, where a carry lands at
   the document's head.
+- **#160** (built with this line): each feed row naming a document,
+  with its `op`, reaches the reading scene's panes showing it, and each
+  pane behaves as its document does on the plane, by kind, offering no
+  reload. A draft updates in place, the first span in view and the
+  selection held on the same words. An edition opened at its bare
+  address keeps the version it opened on, its acts naming it; a newer
+  version's arrival pins its corner and address to the version shown
+  ("version 3 of 4", never "the latest"), says so once, politely, and
+  its corner's "read version 4" reads that version in the pane's place.
+  The selection, else the first span in view, keeps its line there, and
+  the pane says so where that version lacks it. Version 3 stays one act
+  away. A pinned pane only updates its "of n". Link rows change marks,
+  counts and lines, and formatting re-sets type as a draft update does.
+  A pane whose text changes is rebuilt with the scene's ties in one
+  step, and an act made mid-update waits for it. Each pane's corner is
+  a Tab stop whose accessible name says what the pane shows. Three
+  clauses bind what the page does not do yet: a draft is never updated
+  while it is being typed in, and rows from this window's own acts are
+  those acts' feedback, not news (the page types and writes nothing);
+  a scene restored by Back keeps each pane's version (Back restores no
+  scene yet).
 
 ## Changes
 
@@ -440,6 +493,25 @@ found.
   - FP-12 now says each box stands as the version it shows: with every
     held version a candidate for the mount, two articles stood in one
     box.
+- 2026-10-23, from issue #160 (a reading scene's panes said nothing
+  when their document changed, and kept what the model no longer held)
+  and its design decision. Every row now reaches the panes showing its
+  document, each pane follows the feed by its kind, and each pane is set
+  again in one step:
+  - FP-23 added. No feed row reached a pane, so an edition opened at its
+    bare address went on saying "the latest version" after a newer one
+    arrived. The page's death left a pane's text standing after the page
+    fell to guest class, and the ARIA mirror's items quoting it, until the
+    walk next moved. Ties were measured from the live model but
+    mapped through the pane's old text, and a copy from a pane named the
+    bare address, not the version it showed. On the plane, a draft set
+    again kept the reading position, not the words. The plane and the
+    scene each answered "what does a change to this document do here"
+    their own way. The rule names one answer by the document's kind, so
+    the next surface that shows a document follows the feed the same way.
+  - FP-7 now names the version each reading scene's pane reads as view
+    state, beside the version each box shows: the scene keeps it as its
+    own and never writes a box's pin.
 
 ## What these rule out
 

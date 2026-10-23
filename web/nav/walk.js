@@ -114,11 +114,15 @@
 // (`shown`): a keyboard user sees the list they stand in; a pointer user's
 // landing shows none. While the reading scene stands over the plane the tree
 // is inert (`cover`), out of the order and of the accessibility tree, the
-// scene's stops in its place ("In the scene: pane, pane, the scene's acts"),
-// until the scene's end puts it back.
+// scene's stops in its place ("In the scene: pane, pane, the scene's acts",
+// each pane's corner after it — issue #160), until the scene's end puts it
+// back. THE PAGE'S OWN DEATH (FP-23) takes the walk again where it stood, at
+// once from the model the death left, so the mirror names nothing the dead
+// session read, and again once its document is read at the guest's class
+// (`dropped`).
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21, FP-22.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21, FP-22, FP-23.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -698,6 +702,34 @@ export async function retakeFromView(byKey = false) {
   // 3. the place holding the centre: the account whose region holds it, else the board
   const at = accountAt(x, y, BOARD.addr) || BOARD.addr;
   if (!focus || focus.addr !== at) await focusTo(at, null, byKey, byKey);
+}
+
+/**
+ * THE PAGE'S OWN DEATH (FP-23: the death takes every surface still showing
+ * what the dead session read down at once, then reads it again as a guest),
+ * told by M-PUMP once it has emptied the model (its `onDrop`, naming no
+ * address): the walk taken again where it stood, at once, from the model the
+ * death left — its levels and every item named from what a guest's page holds
+ * now, so the mirror quotes nothing the dead session read and lists no
+ * document it alone could list — the walk's document standing whole; then,
+ * once that document is read at the guest's class, taken again there, on the
+ * span holding the position it stood at, or the link's end it stood on. A
+ * move made meanwhile overtakes it (the order of moves). Like a camera-made
+ * re-take, it carries the platform's focus only where the mirror held it.
+ * A feed row names what it dropped and leaves the walk where it stands.
+ * @param {import('../model/pump.js').Dropped} x
+ * @returns {Promise<void>}
+ */
+export async function dropped(x) {
+  const f = focus;
+  if (x.addrs || !f) return;
+  const at = landed ?? f.pos, doc = inDocument(f) ? f.addr : null;
+  const end = f.kind === 'link' && f.link ? { link: f.link.link.addr, key: f.link.key } : null;
+  await focusTo(f.addr, null, false, false);
+  if (!doc) return;
+  const move = moves;
+  await PUMP.loadWhole(doc);
+  if (move === moves) await focusTo(doc, f.kind === 'document' ? null : at, false, false, end);
 }
 
 /** @returns {Node[]} the siblings in order (the gate's a11y case) */

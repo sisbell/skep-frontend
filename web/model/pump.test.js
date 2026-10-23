@@ -111,7 +111,10 @@
 // whatever the model holds of it; a far end placed in the version its far
 // document's box shows; a `publish` row's member handed to the app before
 // the row drops anything of the trunk, no row of another op handed (a
-// mutant that hands it after the drop turns red);
+// mutant that hands it after the drop turns red); what each row the page
+// takes dropped told to the app after the drop, the row's op with it, and the
+// page's own death told as a drop of every record (issue #160: a mutant that
+// tells before the drop, or tells no death, turns red);
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -1421,6 +1424,30 @@ test('a feed row publishing a trunk\'s member is handed to the app before it dro
   fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'make_link', docs: [D + '.4'], class: 'published' } });
   fake.fire('feed', { board: 'b-1', update: { position: 5, at: 5, op: 'publish', docs: ['1.0.1.0.77'], class: 'published' } });
   assert.deepEqual(told, [], 'neither a row of another op nor a publish naming a document whole');
+});
+
+test('what each feed row the page takes dropped is told to the app after the drop, the row\'s op with it, and the page\'s own death as a drop of every record, after it — so a reader reading again reads fresh (issue #160)', async () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  /** @type {Array<{op: string | null, addrs: string[] | null, held: boolean, signed: boolean}>} */
+  const told = [];
+  PUMP.start({ onDirty: () => {}, onDrop: (x) => told.push({ op: x.row ? x.row.op : null, addrs: x.addrs ? [...x.addrs].sort() : null, held: REC.doc(D).from >= 0, signed: REC.session() !== null }) });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  await PUMP.loadWhole(D);
+  assert.ok(REC.doc(D).from >= 0, 'the text held before the rows');
+  fake.fire('feed', { board: 'b-1', update: { position: 3, at: 3, op: 'insert', docs: [D], class: 'published' } });
+  assert.ok(told.length > 0 && told.every((x) => x.op === 'insert' && JSON.stringify(x.addrs) === JSON.stringify([D]) && !x.held), `an edit row, its op and what it dropped told after the drop: ${JSON.stringify(told)}`);
+  await PUMP.loadWhole(D);
+  told.length = 0;
+  fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'publish', docs: [D + '.2'], class: 'published' } });
+  assert.ok(told.length > 0 && told.every((x) => x.op === 'publish' && JSON.stringify(x.addrs) === JSON.stringify([D, D + '.2']) && !x.held), `a publish, the member and its trunk dropped, told after: ${JSON.stringify(told)}`);
+  told.length = 0;
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  assert.ok(told.length > 0 && told.every((x) => x.op === null && x.addrs === null && !x.signed), `the page's own death told as a drop of every record, after the death: ${JSON.stringify(told)}`);
+  await new Promise((r) => setTimeout(r, 0));
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

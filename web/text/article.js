@@ -51,9 +51,11 @@
 // alone, never the controls the plane's are (`control`). THE CORNER's items
 // — an edition's state with "version ⟨k⟩ of ⟨n⟩" and R20's teaching, a
 // draft's kept state and its chip (C-28, at the document's corner and never
-// the HUD — ux-T2; the record §3.4 (viii)), the whole-document link count —
-// are made here too, and stand OUTSIDE the article: the article's box clips
-// whatever stands past its measure, so the corner's element is its holder's,
+// the HUD — ux-T2; the record §3.4 (viii)), the whole-document link count,
+// and in a reading scene's pane its act reading another version there and the
+// line saying the version it reads lacks the passage that act carried (issue
+// #160) — are made here too, and stand OUTSIDE the article: the article's box
+// clips whatever stands past its measure, so the corner's element is its holder's,
 // T-LAYER's beside the article on the plane and each pane's own in the scene
 // (foundations §3.1).
 // THE PLAN (`articlePlan`): the same article as P-LAY's rows — the head's
@@ -114,6 +116,8 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {string | null} deviceLabel the owner's device label where known
  * @property {string | null} ownerFingerprint the owner's device key fingerprint where known
  * @property {number | null} [members] the chain's member count as its box's document holds it (M-PUMP's probe records it there, every version sharing the count): what the corner's version statement reads at a version, its own record holding none; absent, the document's own
+ * @property {number | null} [read] a reading scene's pane's corner act, the one its Enter takes: the version it reads in the pane's place (SC; issue #160's design decision: "The corner's 'read version 4' replaces that pane's text inside the scene") — the newer one arrived, or the one the act left; absent or null, none
+ * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; issue #160: "the pane says so if version 4 lacks it"); absent or null, none
  */
 
 /**
@@ -439,10 +443,13 @@ function clauseHTML(c, scene) {
  * version its own number of the count its box's document holds (`members`),
  * so the corner names the version its box shows and offers the versions list
  * there too (issue #154's design decision: "The address bar and the box's
- * corner both name it"); a draft's chip (C-28); the whole-document link
- * count (rule (i)). The holder makes the element they stand in
- * (`data-corner` naming the document), which is the corner's one stop: no
- * item takes a focus of its own (D5 K-57).
+ * corner both name it"); in a reading scene's pane, where the version its
+ * pane reads lacks the passage its act carried, a line saying so (`lacks`),
+ * and its act reading another version in the pane's place (`read`; issue
+ * #160); a draft's chip (C-28); the whole-document link count (rule (i)).
+ * The holder makes the element they stand in (`data-corner` naming the
+ * document), which is the corner's one stop: no item takes a focus of its
+ * own (D5 K-57).
  * @param {Doc} d
  * @param {ArticleView} v
  */
@@ -458,6 +465,8 @@ export function cornerHTML(d, v) {
     else if (k) parts.push(`<span class="st">${esc(t('F.corner.pinned', { published: first, k }))}</span>`);
     else parts.push(`<span class="st">${esc(t('F.corner.latest', { published: first }))}</span>`);
     if (n != null && n >= 1 && (d.meta && d.meta.birth)) parts.push(`<span class="version" data-members="${n}">${esc(t('F.version-of', { k: k || n, n }))}</span>`);
+    if (v.lacks != null) parts.push(`<span class="lacks">${esc(t('F.floating.member', { k: v.lacks }))}</span>`);
+    if (v.read != null) parts.push(`<span class="read" data-read="${v.read}">${esc(t('F.versions.read', { k: v.read }))}</span>`);
   } else if (d.kind === 'draft') {
     const chip = v.localTrust ? t('C-28.flag-on') : t('C-28');
     parts.push(`<span class="chip" data-chip="1">${esc(chip)}</span>`);

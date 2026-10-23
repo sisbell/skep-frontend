@@ -18,10 +18,11 @@
 // run (K-57) → a landing's line's acts, while it stands (O-LAND; issue #153),
 // whose keys are the buttons' own → a standing overlay → the line (§4 rule
 // 5); while the scene
-// stands, its panes and its acts take the place of the plane's stop and the
-// corner (SC), and no key reaches what it covers — the walk, the selection,
-// the corner — wherever the focus is (`sceneKey`; D5 M-4: "the walk within
-// the focused pane"). Whether a key made an act is the focus owner's one
+// stands, its panes — each with its own corner, where Enter takes that
+// corner's act (SC's `key`; issue #160) — and its acts take the place of the
+// plane's stop and the corner (SC), and no key reaches what it covers — the
+// walk, the selection, the plane's corner — wherever the focus is
+// (`sceneKey`; D5 M-4: "the walk within the focused pane"). Whether a key made an act is the focus owner's one
 // reading, handed in by the app with each key (`Ctx.byKey`; FP-20), so a
 // teleport or a re-take a key made puts the platform's focus on its landing
 // wherever the key was pressed, the ring drawn (rules 10, 12). → at a
@@ -237,8 +238,9 @@ export async function dispatch(e, ctx) {
  * taken and do nothing, so the browser's own meanings never run (Mod+Shift+R
  * would reload), as F5 is (K-94). On the one line or a standing overlay every
  * other key is that control's own. Elsewhere ← ends the scene (K-63: "←
- * out of a pane's document"); a pane's own keys moved that pane before the
- * dispatch (SC's `key`, K-60), and → and Enter in a pane, and Shift with the
+ * out of a pane's document"); a pane's own keys moved that pane, and Enter at
+ * a pane's corner took the corner's act, before the dispatch (SC's `key`,
+ * K-60; issue #160), and → and Enter elsewhere in a pane, and Shift with the
  * arrows, are the platform's; on the scene's acts every other key is the
  * button's own — Enter and Space press it; a printable key anywhere else is
  * swallowed, the K-9 line shown.

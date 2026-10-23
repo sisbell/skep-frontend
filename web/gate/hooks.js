@@ -51,9 +51,16 @@
 // selection's span beside the platform's own and the way the platform's runs,
 // the copy door (the copy event
 // run against a stub clipboard, its flavors read back), the invalidation door
-// (`model.invalidate`: what a feed row naming a document does to what the
-// page holds of it — its delivered state dropped, its reads asked again,
-// reads alone), the strings. The app
+// (`model.invalidate`: what a feed row naming a document does to the model
+// alone — its delivered state dropped, its reads asked again, reads alone,
+// told to no reader), the feed door (`model.feed`: a feed row taken as the
+// feed would hand it, M-PUMP's own `takeRow` — the model, the view and a
+// reading scene's panes keeping fresh from it, reads alone; issue #160), each
+// pane of the reading scene as it stands — the address it names and the one
+// it shows, its kind, its version and its corner's act, the blocks its
+// article was made from — and whether one is being set again (`scene.panes`,
+// `scene.updating`), a version read in a pane's place as its corner's act
+// reads one (`scene.read`, reads alone), the strings. The app
 // installs it with its loop's frame buffer. Nothing here is shipped chrome;
 // nothing posts anywhere.
 // THE ORACLES MEASURE WHAT A PERSON MEETS, never what the page set: the
@@ -496,10 +503,12 @@ export function install(deps) {
       places: () => REC.places(), counts: () => REC.accounts().map((a) => ({ ...a, ...REC.countOf(a.account), links: LK.countAccount(a.account) })),
       indexState: () => REC.indexState(), floor: () => REC.floor(), links: () => REC.links(), link: (/** @type {string} */ a) => REC.link(a),
       session: () => REC.session(), board: () => REC.board(), health: () => REC.health(), mode: () => REC.mode(), daemon: () => REC.daemon(), device: () => REC.device(),
-      snapshot: () => REC.snapshot(), feed: () => REC.feedRows(), rev: () => REC.rev(),
+      snapshot: () => REC.snapshot(), feedRows: () => REC.feedRows(), rev: () => REC.rev(),
       loadWhole: (/** @type {string} */ addr) => PUMP.loadWhole(addr).then((d) => !!d),
-      /** what a feed row naming a document does to what the page holds of it: its delivered state dropped and its reads asked again — reads alone, nothing written */
+      /** what a feed row naming a document does to the model alone: its delivered state dropped and its reads asked again — reads alone, nothing written, no reader told */
       invalidate: (/** @type {string} */ addr) => { REC.invalidate(addr); PUMP.forget(addr); CAM.markDirty(); },
+      /** a feed row taken as the feed hands one (M-PUMP's `takeRow`): the model, the view and a reading scene's panes kept fresh from it — reads alone, nothing written */
+      feed: (/** @type {import('../bridge/shapes').FeedUpdate} */ update) => { PUMP.takeRow(update); CAM.markDirty(); },
     },
     mounted: (/** @type {string} */ addr) => { const rec = LAYER.mountedSet().get(addr); if (!rec) return null; const r = rec.el.getBoundingClientRect(); return { text: LAYER.mountedText(addr), rect: { x: r.left, y: r.top, w: r.width, h: r.height }, fs: rec.fs, lay: rec.lay }; },
     mountedAddrs: () => LAYER.mountedAddrs(),
@@ -596,6 +605,12 @@ export function install(deps) {
       /** its runs of shared identity, contiguous pairs merged, and the two ends it set level */
       pairs: () => SCENE.pairs(),
       at: sceneAt, ties: sceneTies,
+      /** each pane as it stands (issue #160): the address it was opened on, the record its text was made from, the address its acts name and the one it shows, its kind, its version, the chain's count, its corner's act, what its corner says it lacks, and the blocks its article was made from */
+      panes: () => SCENE.panes(),
+      /** is a pane being set again: an act on the panes waits for it */
+      updating: () => SCENE.updating(),
+      /** a version of a pane's document read in its place, as its corner's act reads the one it offers (SC's `readIn`) — reads alone */
+      read: (/** @type {'a' | 'b'} */ side, /** @type {number} */ k) => { SCENE.readIn(side, k); return true; },
     },
     select: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => SEL.select(addr, pos, width),
     strings: { pinned: () => pinned(), lacking: () => lacking() },
