@@ -362,10 +362,11 @@ def run(ctx):
     else:
         by_dom = {n['backendDOMNodeId']: n for n in ax.get('nodes', []) if 'backendDOMNodeId' in n}
         node = by_dom.get(backend(corner)) or {}
-        words = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.textContent : null; })()' % json.dumps(corner)) or ''
+        # its own words, each compact sign read whole by the name it carries (FP-26: a usual state's glyph named by its words)
+        words = ctx.js('(() => { const e = document.querySelector(%s); if (!e) return null; const k = e.cloneNode(true); k.querySelectorAll(".glyph[aria-label]").forEach((g) => { g.textContent = g.getAttribute("aria-label"); }); return k.textContent; })()' % json.dumps(corner)) or ''
         ax_role, ax_name = (node.get('role') or {}).get('value'), (node.get('name') or {}).get('value') or ''
         r.check(bool(node) and not node.get('ignored') and ax_role == 'group' and re.sub(r'\s+', '', ax_name) == re.sub(r'\s+', '', words) and words.strip() != '',
-                'the AX tree: the focused corner is a group, not hidden, named by its own words', {'ignored': node.get('ignored'), 'role': ax_role, 'name': ax_name[:120], 'words': words[:120]})
+                'the AX tree: the focused corner is a group, not hidden, named by its own words, a compact one\'s glyphs read whole', {'ignored': node.get('ignored'), 'role': ax_role, 'name': ax_name[:120], 'words': words[:120]})
         r.figures['corner_ax'] = {'answered': True, 'role': ax_role, 'name': ax_name[:160]}
     # the reveal bumps the layer: every mounted article is rebuilt, the corner's element is kept, and the focus with it
     ctx.js('(() => { window.__gateCorner = document.activeElement; window.__gateArticle = document.querySelector(%s); })()' % json.dumps('#domlayer article[data-addr="%s"]' % DOC))

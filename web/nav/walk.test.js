@@ -15,10 +15,12 @@
 // a mutant that leaves the tree in it turns red. The tree is named from ST as
 // the walk attaches it, and each level's group by its own level — a mutant
 // that drops the tree's name, or names every group by one level, turns red.
-// The mirror's item at a withheld run is the run's placeholder — the owner of
-// its origin, the arm for the reader, C-67's clause as the origin's edition
-// claims decide it — as the plane's placeholder shows them, its pointer a
-// control following the owner's passing claim, for a signed-in
+// The mirror's item at a withheld run is the run's placeholder whole — the
+// owner of its origin, the arm for the reader, C-67's clause as the origin's
+// edition claims decide it — as the plane's gap shows them where it holds the
+// face, its pointer a control following the owner's passing claim, and where
+// it holds less the face compact at its column's edge naming that owner (FP-26:
+// "the mirror reads every sign whole"), for a signed-in
 // reader, a guest whose device holds a key for this board and a guest with
 // none, at each state of the claims: none read, none standing, the owner's
 // edition standing, an edition quoting the draft alone: a mutant that names
@@ -56,7 +58,8 @@
 // flight a second ↓ cut short ends, the walk on the span the second reached
 // (a mutant that leaves a cut flight unsettled turns red). IN A DOCUMENT
 // FOLDED INTO COLUMNS (issue #15) the camera follows the walk to a span's line
-// in its own column at reading size, and to the document's outline framed, no
+// in its own column at reading size, the column framed with its corner and its
+// edge (issue #151), and to the document's outline framed, no
 // nearer than reading size; a re-take at reading scale takes the span in the
 // column under the view's centre — a mutant that places either by the
 // position's fraction of the extent down the room, frames the room, or frames
@@ -113,7 +116,8 @@ import * as LAYER from '../text/layer.js';
 import { withheldBlockHTML, entitlementArm, articleHTML, copyText } from '../text/article.js';
 import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, DOC_W } from '../plane/projection.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
-import { placeOf, STANDARD_FS } from '../plane/layout.js';
+import { placeOf, STANDARD_FS, EDGE } from '../plane/layout.js';
+import { CORNER, cornerWidth } from '../plane/register.js';
 import { STRINGS, t } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
@@ -380,6 +384,8 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
   const ORIGIN = 'http://127.0.0.1:8642', BOUND = [{ bindings: [ORIGIN + ' principal 1 account 1.0.1'] }];
   /** @type {Array<[typeof signedIn, Array<{bindings: string[]}>, string]>} each reader, the device's keys, and the arm the rule gives them */
   const readers = [[signedIn, BOUND, 'C-36.owner-grant.arm'], [null, BOUND, 'C-36.guest.key'], [null, [], 'R56.key-absent']];
+  /** @type {Set<boolean>} whether the gap held the face, over every reader and state */
+  const forms = new Set();
   try {
     for (const [reader, keys, id] of readers) {
       REC.setSession(reader); REC.takeKeyStore(keys, ORIGIN);
@@ -392,11 +398,17 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
         assert.equal(item, t('L.mirror.withheld', { kind: t('L.item.withheld'), document: W, length: t('L.item.positions', { n: 240 }), owner, origin: O, arm, clause: clause ? t('L.mirror.clause', { clause }) : '' }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
           `${who}, ${state}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause the claims decide`);
         assert.ok(clause ? item.includes(`${arm}. ${clause}. `) : item.includes(`${arm}. `) && !/\.\s+\./.test(item), `${who}, ${state}: the clause a sentence of its own after the arm, or nothing in its place: ${item}`);
-        const html = withheldBlockHTML(run, d, LAYER.viewFor(d));
-        assert.ok(html.includes(` data-owner="${owner}"`) && html.includes(`<span class="arm">${esc(arm)}</span>`) && (clause ? html.includes(`<span class="clause"${follows}>${esc(clause)}</span>`) : !html.includes('class="clause"')),
-          `${who}, ${state}: the plane's placeholder shows the same owner, arm and clause, the pointer a control following the owner's passing claim: ${html}`);
+        // the plane's gap: the same owner; where it holds the face whole, the same arm and clause, the pointer a control following
+        // the owner's passing claim; where it holds less, the face compact in its column's edge, naming the same owner (issue #151)
+        const html = withheldBlockHTML(run, d, LAYER.viewFor(d)), inGap = html.includes(' data-holds="face"');
+        forms.add(inGap);
+        assert.ok(html.includes(` data-owner="${owner}"`) && (inGap
+          ? html.includes(`<span class="arm">${esc(arm)}</span>`) && (clause ? html.includes(`<span class="clause"${follows}>${esc(clause)}</span>`) : !html.includes('class="clause"'))
+          : !html.includes('class="arm"') && html.includes(`>${esc(t('L.withheld.mark', { owner }))}</span>`)),
+          `${who}, ${state}: the plane's gap shows the same owner, and the same arm and clause where it holds the face, else the face compact at its column's edge: ${html}`);
       }
     }
+    assert.equal(forms.size, 2, 'its gap holds some readers\' faces whole and not others\'');
   } finally {
     REC.setSession(signedIn); REC.takeKeyStore([], ORIGIN);
   }
@@ -735,7 +747,7 @@ test('the item a landing stands on takes its line as its description — aria-de
 });
 
 // placed last: it lists a document no test above meets, and lists the index back as it found it
-test('in a document folded into columns the camera follows the walk to a span\'s line in its own column at reading size, and to the document\'s outline framed no nearer than reading size; a re-take at reading scale takes the span in the column under the view\'s centre (issue #15)', async () => {
+test('in a document folded into columns the camera follows the walk to a span\'s line in its own column at reading size, the column framed with its margins, and to the document\'s outline framed no nearer than reading size; a re-take at reading scale takes the span in the column under the view\'s centre (issue #15)', async () => {
   /** two views the same, within a flight's last step's rounding */
   const near = (/** @type {{x: number, y: number, scale: number}} */ a, /** @type {{x: number, y: number, scale: number}} */ b, /** @type {string} */ what) =>
     assert.ok([a.x - b.x, a.y - b.y, a.scale - b.scale].every((d, i) => Math.abs(d) <= 1e-9 * Math.max(1, Math.abs([b.x, b.y, b.scale][i]))), `${what}: ${JSON.stringify(a)}, not ${JSON.stringify(b)}`);
@@ -752,7 +764,8 @@ test('in a document folded into columns the camera follows the walk to a span\'s
     await run(WALK.key('down'));
     assert.deepEqual(walkAt(), ['block', H, at.pos], '↓ steps onto the span heading the next column');
     const line = placeOf(f, at.pos);
-    near(CAM.view(), { x: box.x + c.x + c.w / 2, y: box.y + line.y + line.h / 2, scale: 12.5 / f.fs }, 'the camera on its line, centred across its column, at reading size');
+    // the column the first of its row: the strip beside it holds the corner whole and its gap, its edge EDGE em on its right (issue #151)
+    near(CAM.view(), { x: box.x + c.x + c.w / 2 + (EDGE * 12.5 - (cornerWidth(false) + CORNER.gap)) / 2 / (12.5 / f.fs), y: box.y + line.y + line.h / 2, scale: 12.5 / f.fs }, 'the camera on its line, its column framed with its corner and its edge, at reading size');
     await run(WALK.key('out'));
     assert.deepEqual(walkAt(), ['document', H, null]);
     const s = LAYER.shapeOf(H), framed = CAM.viewForCell(s, 0.9);

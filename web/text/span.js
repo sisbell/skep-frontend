@@ -8,8 +8,8 @@
 // and these functions carry a character boundary to its byte position and
 // back through the block's own byte-offset table, so a multi-byte character
 // never shifts a position. The chrome inside a block's element — the
-// sameness hairline's label, C-33's mark, a link's symbol, the others'
-// count — is never a byte of the document; the one selector here names it
+// sameness hairline's label, C-33's mark, a link's symbol, the signs in its
+// column's edge — is never a byte of the document; the one selector here names it
 // for the layer's walk and the copy. K-8's extension (D5 §1.1: the first
 // press selects the focused span, each further one extends by a span) is
 // arithmetic over the document's blocks.
@@ -26,8 +26,8 @@ import { byteOffsets } from '../util.js';
  * @property {number} width positions (bytes)
  */
 
-/** the chrome inside a block's element, never the document's bytes: the hairline label, C-33's mark, the symbols, the others' count */
-export const CHROME = '.hairline, .pubmark, .sym, .others';
+/** the chrome inside a block's element, never the document's bytes: the hairline label, C-33's mark, the symbols, the signs in its column's edge — the others' count, a withheld run's mark */
+export const CHROME = '.hairline, .pubmark, .sym, .edge';
 
 /**
  * The byte position of a character boundary of a block's text: the block's

@@ -1,10 +1,11 @@
 // P-REG's test: each datum one variable (ux-T1 (a)) — the three linkers take
 // three hues; the visited value is lighter; the label floor stands above the
 // readable em; the tail shorter than a gutter at the smallest em an article
-// stands at; the CSS variables carry the same values.
+// stands at; the corner narrower compact than whole, holding a kept word
+// whole; the CSS variables carry the same values.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, TAIL, cssVariables } from './register.js';
+import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, TAIL, CORNER, cornerWidth, cssVariables } from './register.js';
 import { LOD_TXT_LO, UNMOUNT_EM } from './lod.js';
 import { GUTTER } from './layout.js';
 
@@ -28,4 +29,10 @@ test('the CSS variables carry the register\'s values', () => {
   const v = cssVariables();
   assert.equal(v['--hue-you'], HUE.you);
   assert.equal(v['--visited-alpha'], String(VISITED_ALPHA));
+  assert.deepEqual([v['--corner-px'], v['--corner-w'], v['--corner-compact-w'], v['--corner-pad']], [CORNER.px + 'px', CORNER.whole + 'em', CORNER.compact + 'em', CORNER.pad + 'px'], 'the corner\'s sizes, which the style sets it by');
+});
+test('the corner compact is narrower than whole, its padding inside its width, and holds a kept word whole: "document", at its size (issue #151; FP-26: never cut mid-word)', () => {
+  assert.deepEqual([cornerWidth(false), cornerWidth(true)], [CORNER.whole * CORNER.px, CORNER.compact * CORNER.px], 'its em at its size, the padding inside it');
+  assert.ok(cornerWidth(true) < cornerWidth(false));
+  assert.ok('document'.length * 0.6 * CORNER.px <= cornerWidth(true) - 2 * CORNER.pad, 'the compact corner\'s text holds the longest word its kept items carry');
 });

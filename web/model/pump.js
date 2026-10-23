@@ -160,7 +160,7 @@
 import * as PORT from '../bridge/port.js';
 import * as REC from './records.js';
 import * as F from './frames.js';
-import { cam, viewportWorld } from '../plane/camera.js';
+import { cam, viewportWorld, measure } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation } from '../plane/projection.js';
 import { estimate, estimatedSpan } from '../plane/layout.js';
@@ -759,13 +759,15 @@ export function visibleDocs(pad = 80) {
  * positions reach at least as far as the columns in view hold) — through its
  * end where the view stands over its room past the estimate's columns —
  * within WHOLE_CAP; past it, the estimated columns in view alone, which
- * T-LAYER lays out from their estimated column; rounded to SPAN_BLOCK.
+ * T-LAYER lays out from their estimated column; rounded to SPAN_BLOCK; every
+ * column at the measure in force (P-CAM's `measure`), which T-LAYER sets it
+ * at.
  * @param {Doc} d
  * @returns {[number, number] | null} [first position, one past the last]
  */
 export function spanWindow(d) {
   const extent = d.extent || 0; if (!extent) return null;
-  const box = docBox(d.addr), f = estimate(extent, box);
+  const cpl = measure(), box = docBox(d.addr), f = estimate(extent, box, cpl);
   const v = viewportWorld(0);
   if (!intersects(box, v)) return null;
   let lo = Infinity, hi = -1;
@@ -773,10 +775,10 @@ export function spanWindow(d) {
     const x = box.x + c.x, y = box.y + c.y;
     if (x + c.w >= v.x0 && x <= v.x1 && y + c.h >= v.y0 && y <= v.y1) { lo = Math.min(lo, i); hi = Math.max(hi, i); }
   });
-  const end = hi < 0 ? extent + 1 : Math.min(extent + 1, estimatedSpan(hi + 1)[1]);
+  const end = hi < 0 ? extent + 1 : Math.min(extent + 1, estimatedSpan(hi + 1, cpl)[1]);
   const up = (/** @type {number} */ n) => Math.min(extent + 1, Math.ceil((n - 1) / SPAN_BLOCK) * SPAN_BLOCK + 1);
   if (end <= WHOLE_CAP + 1 || hi < 0) return [1, Math.max(up(Math.min(end, WHOLE_CAP + 1)), Math.min(extent + 1, 1 + SPAN_BLOCK))];
-  const from = Math.max(1, Math.floor((estimatedSpan(lo)[0] - 1) / SPAN_BLOCK) * SPAN_BLOCK + 1);
+  const from = Math.max(1, Math.floor((estimatedSpan(lo, cpl)[0] - 1) / SPAN_BLOCK) * SPAN_BLOCK + 1);
   return [from, up(end)];
 }
 
@@ -823,7 +825,7 @@ export function pump() {
     for (const la of REC.unreadLinks(d.addr).slice(0, 12)) {
       if (need('k:' + la, F.readLink(la), (a) => { const v = F.decodeLinkValue(la, a); if (v) REC.takeLink(v); }, d.addr)) missing++;
     }
-    const em = estimate(d.extent, box).fs * cam.scale;
+    const em = estimate(d.extent, box, measure()).fs * cam.scale;
     if (drawn && em >= FETCH_EM && d.extent > 0) {
       const w = spanWindow(d);
       if (w && !holdsSpan(d, w[0], w[1])) {

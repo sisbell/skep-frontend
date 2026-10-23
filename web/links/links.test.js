@@ -196,12 +196,11 @@ test('the reveal chain: symbols at stage 2, beams at stage 3, hidden again on di
   LK.hide(D); assert.equal(LK.symbols(D).length, 0);
 });
 
-test('the most a reveal can set in a document\'s text: every passage end at it and each block\'s count as the hidden reveal counts it — the same at every stage, toggle and lens, and holding what each of them sets', () => {
-  const blocks = REC.doc(D).blocks;
-  const bound = () => { const u = LK.utmost(D); return { ends: u.shown.map((s) => [s.link.addr, s.end, s.pos, s.width]), counts: blocks.map((b) => u.countAt(b)) }; };
+test('the most a reveal can set in a document\'s text: every passage end at it — the same at every stage, toggle and lens, and holding what each of them sets — and no count, which stands in its column\'s edge and sets no line (issue #151; A-254)', () => {
+  const bound = () => LK.utmost(D).shown.map((s) => [s.link.addr, s.end, s.pos, s.width]);
   const first = bound();
-  assert.deepEqual(first.ends, [[D + '.0.2.1', 'from', 50, 10], [OTHER_HOME + '.0.2.1', 'to', 3, 10]], 'the owner\'s end and the other\'s; the social link, the whole-work end and the records left out');
-  assert.deepEqual(first.counts, [{ n: 1, social: true }, { n: 0, social: true }], 'the other\'s link counted at its block, as the hidden reveal counts it');
+  assert.deepEqual(first, [[D + '.0.2.1', 'from', 50, 10], [OTHER_HOME + '.0.2.1', 'to', 3, 10]], 'the owner\'s end and the other\'s; the social link, the whole-work end and the records left out');
+  assert.deepEqual(Object.keys(LK.utmost(D)), ['shown'], 'no count among what the text is folded for');
   /** @type {Array<[string, () => void]>} */
   const states = [
     ['hidden', () => {}],
@@ -215,9 +214,8 @@ test('the most a reveal can set in a document\'s text: every passage end at it a
     move();
     const now = bound();
     assert.deepEqual(now, first, `${name}: the bound stands as it was`);
-    const ends = now.ends.map((e) => e[0]);
+    const ends = now.map((e) => e[0]);
     assert.ok(LK.symbols(D).every((s) => ends.includes(s.link.addr)), `${name}: every symbol the reveal sets is among its ends`);
-    blocks.forEach((b, i) => assert.ok(LK.countAt(D, b).n <= first.counts[i].n, `${name}: no block's count above the bound's`));
   }
 });
 

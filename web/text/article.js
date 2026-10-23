@@ -14,7 +14,9 @@
 // draft-origin run in a published document — set ONCE per run in a block,
 // at its first stretch, however marks and symbols cut it (foundations §2.1:
 // "each change of origin between adjacent runs is marked by a hairline") —
-// the "+⟨n⟩ others" count at the block's edge, and the symbols the reveal
+// the "+⟨n⟩ others" count in its column's edge, level with the block's first
+// line and never inside the text (A-254; issue #151's design decision:
+// `edgeStyle`), and the symbols the reveal
 // asked for, each AT ITS SPAN (foundations §2.1; B1-S4: "No margin column:
 // the symbols are at the place"): right after the last word its span
 // touches, in the last paragraph it touches (`standOf`) — every link marked,
@@ -26,9 +28,12 @@
 // whose far end's text holds only part of its passage, or all of it in
 // pieces, or one the board would not tell of, titled with BM-HELD's line
 // (BM-HELD's `farSays`; issue #153); the
-// withheld block OCCUPYING its positions and naming the owner of its run's
-// origin, whoever owns the document windowing it (R56: the copy derives per
-// origin; B1-S7),
+// withheld run a GAP OCCUPYING its positions, as tall as its bars (F2.1-i),
+// naming the owner of its run's origin, whoever owns the document windowing
+// it (R56: the copy derives per origin; B1-S7) — its face in it where the gap
+// holds it, else compact in its column's edge, "⟨owner⟩ with a mark that
+// opens it whole" (foundations §2.1; `gapHolds`), so no face reflows the
+// text — the face
 // with the entitlement arm for that owner and this reader by PUB-5.121's
 // order — a signed-in reader's owner-grant default, a guest's split on
 // whether this device holds a key for the board (PUB-5.97) — and C-67's
@@ -54,15 +59,17 @@
 // the HUD — ux-T2; the record §3.4 (viii)), the whole-document link count,
 // and in a reading scene's pane its act reading another version there and the
 // line saying the version it reads lacks the passage that act carried (issue
-// #160) — are made here too, and stand OUTSIDE the article: the article's box
+// #160) — are made here too, whole or compact (FP-26), and stand OUTSIDE the
+// article: the article's box
 // clips whatever stands past its measure, so the corner's element is its holder's,
 // T-LAYER's beside the article on the plane and each pane's own in the scene
 // (foundations §3.1).
 // THE PLAN (`articlePlan`): the same article as P-LAY's rows — the head's
 // lines, each block's text at its size with the inline pieces it carries
-// (the hairline's label, C-33's mark, the symbols, the others' count), a
-// record's words and keys, the line a reference, an item not rendered or an
-// empty document takes, a withheld run's width, the scene-offers — each row
+// (the hairline's label, C-33's mark, the symbols), a record's words and
+// keys, the line a reference, an item not rendered or an empty document
+// takes, a withheld run's width, the scene-offers, and none of the signs a
+// column's edge holds, which set no line — each row
 // carrying where a column may break at it and each piece whether its
 // characters are the document's own, so P-LAY folds the lines into the
 // columns of the document's room and names the position each line starts at
@@ -90,14 +97,14 @@
 // whoever is looking — so a paste never joins text across an item.
 // Carries: the wireframe's §16 `articleHTML`, `withheldBlock`.
 // Rules: FP-1, FP-2, FP-8, FP-10 (reads LK/selection/focus as values), FP-21,
-// FP-22, FP-24.
+// FP-22, FP-24, FP-26.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
 import { t, plural } from '../strings.js';
 import { textOf } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
-import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '../plane/layout.js';
+import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, borderEm, headingSize, breakBetween, isSpace, gapOf, layoutOf, heightOf, wrap } from '../plane/layout.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -132,6 +139,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {number | null} [members] the chain's member count as its box's document holds it (M-PUMP's probe records it there, every version sharing the count): what the corner's version statement reads at a version, its own record holding none; absent, the document's own
  * @property {number | null} [read] a reading scene's pane's corner act, the one its Enter takes: the version it reads in the pane's place (SC; issue #160's design decision: "The corner's 'read version 4' replaces that pane's text inside the scene") — the newer one arrived, or the one the act left; absent or null, none
  * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; issue #160: "the pane says so if version 4 lacks it"); absent or null, none
+ * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
  */
 
 /**
@@ -165,8 +173,26 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {boolean} box C-33's mark follows it, an inline-block
  */
 
-/** a run's hairline label: its origin's address where the label is whole, the bare ≡ after */
-const labelOf = (/** @type {Origin} */ o, /** @type {Opening} */ at) => (at.whole ? '≡ ' + o.doc : '≡');
+/** a run's hairline label: its origin's address after the origin's mark where the label is whole, the bare mark after */
+const labelOf = (/** @type {Origin} */ o, /** @type {Opening} */ at) => (at.whole ? t('L.origin-mark') + ' ' + o.doc : t('L.origin-mark'));
+
+/**
+ * A sign's place in its column's edge (P-LAY's EDGE; issue #151's design
+ * decision: "each gutter widens into its column's edge and holds that
+ * column's counts and withheld marks"): beside the first line of the block it
+ * belongs to, EDGE_GAP past the text and as wide as the rest of the edge, its
+ * first line as tall as the block's first line so it stands level with it —
+ * never inside the text, so it sets no line (A-254: "so a link's arrival
+ * breaks no line"). Its sizes are in its own em, the count's of the block's,
+ * read from P-LAY's body em; the style sets it on the text's side the edge
+ * stands on (the plane's right; a reading scene's pane's inner side).
+ * @param {number} k the size of the block it stands beside, in the body's em
+ * @returns {string} its inline style
+ */
+function edgeStyle(k) {
+  const s = MEASURE.count * k;
+  return `--edge-in:${EDGE_GAP / s}em;--edge-w:${(EDGE - EDGE_GAP) / s}em;line-height:${(k * LINE_H) / s}`;
+}
 
 /** the stretches of a drawn link's end that meet a block */
 const runsIn = (/** @type {Shown} */ m, /** @type {{pos: number, width: number}} */ b) => m.runs.filter((r) => touches(b, r));
@@ -505,8 +531,46 @@ export function placeholderOf(b, reader, originOwner, clauseOf) {
 }
 
 /**
- * The placeholder occupying a withheld run (`placeholderOf`): its head, its
- * arm and, where one renders, its clause (`clauseHTML`), and the owner it
+ * @typedef {'face' | 'head' | 'owner' | 'mark'} GapHolds what a withheld run's gap holds (`gapHolds`): its face whole; its head; the owner of its origin; the origin's mark
+ */
+
+/**
+ * What a withheld run's gap holds at a measure (foundations §2.1's withheld
+ * run: "a gap of its true width carrying ⟨owner⟩ where the run holds it and
+ * else a mark keyed to its origin", "a run wide enough to hold its face
+ * carrying it in place, so the gap keeps encoding the width and no face
+ * reflows the text"; FP-26): the run's face whole — its head at the body's
+ * size, the arm and the clause beneath at the face's — where the gap's full
+ * lines (P-LAY's `gapOf`) hold it as P-LAY wraps it; else its head where they
+ * hold that; else its origin's owner, where a line of the gap holds the
+ * address; else the origin's mark. Whatever it holds, the gap stands on the
+ * run's bars, and where its face is not in it the face stands compact in the
+ * column's edge (`withheldBlockHTML`).
+ * @param {Placeholder} p
+ * @param {number} width the run's positions
+ * @param {number} cpl the measure
+ * @returns {GapHolds}
+ */
+export function gapHolds(p, width, cpl) {
+  const gap = gapOf(width, cpl), full = gap.filter((w) => w >= cpl).length;
+  const F = MEASURE.face, before = MEASURE.faceGap * F;
+  const face = [row('text', null, 1, [piece(p.head, 1)]), row('text', null, F, [piece(p.arm.text, F)], { before }), ...(p.clause ? [row('text', null, F, [piece(p.clause.text, F)], { before })] : [])];
+  if (heightOf(layoutOf(face, cpl)) <= full * LINE_H + 1e-9) return 'face';
+  if (wrap(face[0], cpl).length <= full) return 'head';
+  if ([...p.owner].length <= (full ? cpl : gap[0])) return 'owner';
+  return 'mark';
+}
+
+/**
+ * The gap occupying a withheld run (`placeholderOf`; F2.1-i: "its bars take
+ * its true width"): as tall as its bars, its ground drawn over the run's own
+ * lines — the last its remainder (`--wh-last`) — holding what `gapHolds`
+ * says it holds: its face whole, its head, arm and, where one renders, clause
+ * (`clauseHTML`); else its head, its origin's owner or the origin's mark,
+ * the face compact in the column's edge level with the run's first line —
+ * "⟨owner⟩ with a mark that opens it whole" (foundations §2.1), its act the
+ * run's face whole on the plane (APP-INPUT; O-FACES's `withheldRun`), a line
+ * in a reading scene's pane, where nothing is acted on (SC). The owner it
  * names carried (`data-owner`) for C-39's face at the run, which names the
  * same.
  * @param {Block} b the withheld run
@@ -515,8 +579,14 @@ export function placeholderOf(b, reader, originOwner, clauseOf) {
  */
 export function withheldBlockHTML(b, d, v) {
   const p = placeholderOf(b, v.reader, v.originOwner, v.clauseOf);
-  return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}">` +
-    `<span class="wh-head">${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span>${clauseHTML(p.clause, v.scene)}</span>`;
+  const cpl = v.cpl ?? MEASURE_CPL, gap = gapOf(b.width, cpl), holds = gapHolds(p, b.width, cpl);
+  const inside = holds === 'face' ? `<span class="wh-head">${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span>${clauseHTML(p.clause, v.scene)}`
+    : holds === 'head' ? `<span class="wh-head">${esc(p.head)}</span>`
+    : holds === 'owner' ? `<span class="wh-owner">${esc(p.owner)}</span>`
+    : `<span class="wh-origin">${esc(t('L.origin-mark'))}</span>`;
+  const mark = holds === 'face' ? '' : `<span class="wh-mark edge" data-mark="withheld"${control(v.scene)} style="${edgeStyle(1)}">${esc(t('L.withheld.mark', { owner: p.owner }))}</span>`;
+  return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}" data-holds="${holds}" style="height:${gap.length * LINE_H}em;--wh-last:${gap[gap.length - 1]}">` +
+    `${mark}${inside}</span>`;
 }
 
 /**
@@ -545,30 +615,37 @@ function clauseHTML(c, scene) {
  * pane reads lacks the passage its act carried, a line saying so (`lacks`),
  * and its act reading another version in the pane's place (`read`; issue
  * #160); a draft's chip (C-28); the whole-document link count (rule (i)).
- * The holder makes the element they stand in (`data-corner` naming the
- * document), which is the corner's one stop: no item takes a focus of its
- * own (D5 K-57).
+ * COMPACT (FP-26: "a usual state becomes a glyph … and a number or an
+ * exception keeps its words"; issue #151's design decision): an edition's
+ * state its version marker — unlit at the bare address, lit at a pinned
+ * version (foundations §3.1's ○) — and a draft's chip a glyph, each named by
+ * its whole words, which assistive technology reads and its act opens whole;
+ * "version ⟨k⟩ of ⟨n⟩", the whole-document count and a withheld document's
+ * state keep their words. The holder makes the element they stand in
+ * (`data-corner` naming the document), which is the corner's one stop: no
+ * item takes a focus of its own (D5 K-57).
  * @param {Doc} d
  * @param {ArticleView} v
+ * @param {boolean} [compact] the compact form
  */
-export function cornerHTML(d, v) {
+export function cornerHTML(d, v, compact = false) {
   const parts = [];
   const published = d.meta ? d.meta.published : d.kind === 'edition';
   const k = memberOf(d.addr);
+  /** a usual state: its words (a string's id and its values), or compact its glyph named by them */
+  const usual = (/** @type {string} */ cls, /** @type {string} */ id, /** @type {Record<string, string | number>} */ vals, /** @type {string} */ glyph, extra = '') =>
+    compact ? `<span class="${cls} glyph"${extra} role="img" aria-label="${esc(t(id, vals))}">${esc(t(glyph))}</span>` : `<span class="${cls}"${extra}>${esc(t(id, vals))}</span>`;
   if (d.refused === 'withheld') parts.push(`<span class="st">${esc(t('F.corner.withheld', { owner: d.account || '' }))}</span>`);
   else if (published) {
     const first = v.notebook ? t('F.published.notebook') : t('F.published');
     const n = v.members !== undefined ? v.members : d.members;
-    if (d.meta && d.meta.birth === null && !k) parts.push(`<span class="st">${esc(t('F.corner.no-versions', { published: first }))}</span>`);
-    else if (k) parts.push(`<span class="st">${esc(t('F.corner.pinned', { published: first, k }))}</span>`);
-    else parts.push(`<span class="st">${esc(t('F.corner.latest', { published: first }))}</span>`);
+    if (d.meta && d.meta.birth === null && !k) parts.push(usual('st', 'F.corner.no-versions', { published: first }, 'L.corner.bare'));
+    else if (k) parts.push(usual('st', 'F.corner.pinned', { published: first, k }, 'L.corner.pinned'));
+    else parts.push(usual('st', 'F.corner.latest', { published: first }, 'L.corner.bare'));
     if (n != null && n >= 1 && (d.meta && d.meta.birth)) parts.push(`<span class="version" data-members="${n}">${esc(t('F.version-of', { k: k || n, n }))}</span>`);
     if (v.lacks != null) parts.push(`<span class="lacks">${esc(t('F.floating.member', { k: v.lacks }))}</span>`);
     if (v.read != null) parts.push(`<span class="read" data-read="${v.read}">${esc(t('F.versions.read', { k: v.read }))}</span>`);
-  } else if (d.kind === 'draft') {
-    const chip = v.localTrust ? t('C-28.flag-on') : t('C-28');
-    parts.push(`<span class="chip" data-chip="1">${esc(chip)}</span>`);
-  }
+  } else if (d.kind === 'draft') parts.push(usual('chip', v.localTrust ? 'C-28.flag-on' : 'C-28', {}, 'L.corner.draft', ' data-chip="1"'));
   if (v.wholeLinks > 0) parts.push(`<span class="whole-links">${esc(v.wholeLinks === 1 ? t('F.whole-links.1') : t('F.whole-links', { n: v.wholeLinks }))}</span>`);
   return parts.join('');
 }
@@ -852,9 +929,9 @@ export function articleHTML(d, v, ownerAccount) {
     if (p.kind === 'record') { run += `<span class="${cls.join(' ')}" ${at}>${recordHTML(b, d, v)}</span>`; continue; }
     if (p.kind === 'ref') { run += `<span class="${cls.join(' ')} ref" ${at}>⟡</span>`; continue; }
     if (p.kind === 'hex') { run += `<span class="${cls.join(' ')}" ${at}>${esc(t('F.not-rendered', { width: b.width }))}</span>`; continue; }
-    const tag = p.level ? 'h' + Math.min(6, p.level + 1) : 'p';
-    const count = p.count.n > 0 ? `<span class="others" data-count="${p.count.n}">${esc(t('F.others-count', { n: p.count.n }))}</span>` : p.count.social ? `<span class="others social" data-count="0">◦</span>` : '';
-    run += `<${tag} class="${cls.join(' ')}" ${at}>${p.segs.map((s) => segHTML(s, v)).join('')}${count}</${tag}>`;
+    const tag = p.level ? 'h' + Math.min(6, p.level + 1) : 'p', edge = edgeStyle(headingSize(p.level));
+    const count = p.count.n > 0 ? `<span class="others edge" data-count="${p.count.n}" style="${edge}">${esc(t('F.others-count', { n: p.count.n }))}</span>` : p.count.social ? `<span class="others edge social" data-count="0" style="${edge}">◦</span>` : '';
+    run += `<${tag} class="${cls.join(' ')}" ${at}>${count}${p.segs.map((s) => segHTML(s, v)).join('')}</${tag}>`;
   }
   if (w.empty) run += `<p class="sp empty" data-addr="${esc(d.addr)}" data-pos="1" data-width="0">${esc(t('B1.empty_subspace'))}</p>`;
   for (const o of w.offers) run += `<span class="offer" data-scene="${esc(d.addr)}|${esc(o)}" role="button" tabindex="-1">${esc(t('B1.scene-offer', { D: o }))}</span>`;
@@ -894,10 +971,10 @@ const symbol = (k) => {
  * @param {number | null} pos the block it opens
  * @param {number} size the size its box is set at, in the body's em
  * @param {Piece[]} pieces
- * @param {{after?: number, before?: number, float?: Piece | null, width?: number, keep?: Keep}} [o] its margins in the body's em, its float, a withheld run's width, where a column may break at it (P-LAY's `Keep`; none inside it where none is said)
+ * @param {{after?: number, before?: number, width?: number, keep?: Keep}} [o] its margins in the body's em, a withheld run's width, where a column may break at it (P-LAY's `Keep`; none inside it where none is said)
  * @returns {Row}
  */
-const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, float: o.float ?? null, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0, keep: o.keep ?? 'whole' });
+const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0, keep: o.keep ?? 'whole' });
 
 /**
  * A paragraph's inline pieces at its size, as `segHTML` sets them: each
@@ -953,10 +1030,9 @@ export function articlePlan(d, v, ownerAccount) {
     } else if (p.kind === 'ref') rows.push(row('text', b.pos, 1, [piece('⟡', 1)], { after: gap }));
     else if (p.kind === 'hex') rows.push(row('text', b.pos, 1, [piece(t('F.not-rendered', { width: b.width }), 1)], { after: gap }));
     else {
-      const k = headingSize(p.level), c = MEASURE.count * k;
-      const float = p.count.n > 0 ? piece(t('F.others-count', { n: p.count.n }), c, MEASURE.countGap * c) : p.count.social ? piece('◦', c, MEASURE.countGap * c) : null;
+      const k = headingSize(p.level);
       const margins = p.level ? { before: MEASURE.headingBefore * k, after: MEASURE.headingAfter * k, keep: /** @type {const} */ ('heading') } : { after: gap * k, keep: /** @type {const} */ ('lines') };
-      rows.push(row('text', b.pos, k, paraPieces(p, k), { ...margins, float }));
+      rows.push(row('text', b.pos, k, paraPieces(p, k), margins));
     }
   }
   if (w.empty) rows.push(row('text', 1, 1, [piece(t('B1.empty_subspace'), 1)], { after: gap }));

@@ -96,8 +96,8 @@ def run(ctx):
     clause = {'C-67.pointer': 'then C-67\'s pointer, "a published edition may exist — follow the edition claim"',
               'C-67.quoting': 'then C-67\'s QUOTING sibling, naming %s' % decided.get('claimant')}.get(
         clause_id, 'and nothing in the place of C-67\'s clause — the board admits no edition claim on %s' % WINDOW[2])
-    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s placeholder occupies the run — "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", never its bytes — the guest\'s entitlement arm beneath it, %s, %s; the act at it, C-39\'s face, is the guest case\'s.' % (arm, clause), 'window-run-withheld',
-         claims=[(PLACEHOLDER, 'the withheld run\'s placeholder', None)])
+    step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s gap occupies the run, as tall as its bars, never its bytes — its head, "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", in it — and the run\'s face holds the guest\'s entitlement arm, %s, %s: whole in the gap where its lines hold it, else compact at its column\'s edge, its mark opening it whole (issue #151); the act at it, C-39\'s face, is the guest case\'s.' % (arm, clause), 'window-run-withheld',
+         claims=[(PLACEHOLDER, 'the withheld run\'s gap', None)])
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     ghost = next((s for s in shown if s['far'] == GHOST), None)
     r.check(ghost is not None, 'W-01 step 7: the first edition draws its citation of the ghost', [s['far'] for s in shown][:8])

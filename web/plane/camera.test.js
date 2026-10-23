@@ -13,7 +13,9 @@
 // its document is set again — a flight bound into the document moved with it,
 // never cut and settling true as it lands, one bound elsewhere carried on (a
 // mutant that cuts the flight, or moves the camera alone, turns red);
-// the edge stub's cut on its
+// the measure in force the viewport's fit at the reading size, moved by a
+// resize alone, never a zoom or a pan (issue #151: a mutant that reads the
+// scale turns red); the edge stub's cut on its
 // true bearing, STUB.inset px inside the visible view's border on every side
 // — below the chrome across the viewport's top, never under it — and the
 // triangle behind its tip on that bearing.
@@ -21,7 +23,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as CAM from './camera.js';
 import { WORLD_W, WORLD_H, DEPTH_SOUND, docBox } from './projection.js';
-import { STANDARD_FS, standardFs } from './layout.js';
+import { STANDARD_FS, MEASURE_CPL, standardFs } from './layout.js';
 import { STUB } from './register.js';
 
 test('screen and world project both ways about the viewport centre', () => {
@@ -212,6 +214,21 @@ test('the stub\'s triangle stands behind its tip on the bearing, STUB.length lon
   const ux = 3 / 5, uy = 4 / 5, base = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
   assert.ok(Math.abs(base.x - (tip.x - ux * STUB.length)) < 1e-9 && Math.abs(base.y - (tip.y - uy * STUB.length)) < 1e-9, 'the base\'s middle STUB.length behind the tip, away from the far end');
   assert.ok(Math.abs(Math.hypot(p.x - q.x, p.y - q.y) - STUB.width) < 1e-9 && Math.abs((p.x - q.x) * ux + (p.y - q.y) * uy) < 1e-9, 'the base STUB.width across, square to the bearing');
+});
+
+test('the measure in force is the fit of the viewport\'s width at the reading size: the full measure at 1440 px, fewer whole characters at 480, and back at the full on a reset; a zoom or a pan moves none of it (issue #151)', () => {
+  CAM._reset();
+  assert.deepEqual([CAM.READING_PX, CAM.measure(), CAM.fit()], [12.5, MEASURE_CPL, { cpl: MEASURE_CPL, compact: false }], 'before any viewport: the full measure');
+  CAM.setViewport(1440, 900);
+  assert.deepEqual(CAM.fit(), { cpl: MEASURE_CPL, compact: false }, '1440 px: the full measure, the corner whole');
+  CAM.setViewport(480, 900);
+  const narrow = CAM.fit();
+  assert.ok(narrow.compact && narrow.cpl === 39, `480 px: 39 characters beside the compact corner: ${JSON.stringify(narrow)}`);
+  CAM.set({ x: 1000, y: 1000, scale: 3 }); CAM.zoomAt(2, 100, 100); CAM.panBy(40, 10);
+  assert.deepEqual(CAM.fit(), narrow, 'a zoom and a pan: the measure as it was');
+  assert.deepEqual(CAM.viewAt({ x: 5, y: 6 }, 2), { x: 5, y: 6, scale: CAM.READING_PX / 2 }, 'a reading view at the reading size where none is given');
+  CAM._reset();
+  assert.equal(CAM.measure(), MEASURE_CPL, 'a reset: the full measure');
 });
 
 test('the dirty mark is taken once', () => {

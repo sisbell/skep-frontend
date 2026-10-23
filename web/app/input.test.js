@@ -1,8 +1,10 @@
 // APP-INPUT's test, on a page of stand-ins: the act at a withheld run's
-// placeholder conjures C-39's face naming the owner the placeholder names —
-// its run's origin's, by T-LAYER's one owner rule — with the arm beneath it
-// the placeholder's own (B1-S5, B1-S7), for a guest with no key and a guest
-// whose device holds a key for this board. Where the board answers the
+// gap conjures C-39's face naming the owner the gap names — its run's
+// origin's, by T-LAYER's one owner rule — with the arm beneath it the rule's
+// for that owner and this reader (B1-S5, B1-S7), and the act at the run's
+// face compact in its column's edge opens the face whole (issue #151: a
+// mutant that leaves the mark's act to C-39's face turns red), for a guest
+// with no key and a guest whose device holds a key for this board. Where the board answers the
 // origin's account's owner as the seat above it (`effective_owner`), a mutant
 // that reads the owner off the origin's record by a rule of its own names the
 // account and turns red; one that decides the face's arm on the session alone
@@ -76,7 +78,7 @@ import { esc, byteLength } from '../util.js';
 const datasetOf = (/** @type {string} */ tag) =>
   Object.fromEntries([...tag.matchAll(/ data-([a-z-]+)="([^"]*)"/g)].map(([, k, v]) => [k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()), v]));
 
-test('the act at a withheld run conjures C-39\'s face naming the owner its placeholder names, the arm beneath it the placeholder\'s own', () => {
+test('the act at a withheld run conjures C-39\'s face naming the owner its gap names, the arm beneath it the rule\'s for that owner and this reader; the act at its face compact in its column\'s edge opens the face whole', () => {
   const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
   /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
   const layer = new Map();
@@ -108,19 +110,30 @@ test('the act at a withheld run conjures C-39\'s face naming the owner its place
       REC.takeKeyStore(keys, ORIGIN);
       // the placeholder as the plane's article holds it: T-LAYER mounts T-ARTICLE's HTML from its view
       const article = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d));
-      const tag = (/<span class="withheld"[^>]*>/.exec(article) || [''])[0], arm = (/<span class="arm">([^<]*)<\/span>/.exec(article) || [])[1];
-      assert.equal(arm, esc(entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text), `${who}: the placeholder's arm is the rule's`);
+      const tag = (/<span class="withheld"[^>]*>/.exec(article) || [''])[0], arm = esc(entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text);
+      // the face whole in its gap where 240 positions hold it — the key-present arm's — else compact in its column's edge: R56's arm is too deep for them
+      const inGap = (/<span class="arm">([^<]*)<\/span>/.exec(article) || [])[1] ?? null, marked = article.includes(`>${esc(t('L.withheld.mark', { owner }))}</span>`);
+      assert.ok(id === 'R56.key-absent' ? inGap === null && marked : inGap === arm && !marked, `${who}: ${id === 'R56.key-absent' ? 'no arm in its gap, the face compact in its column\'s edge naming ' + owner : 'the face whole in its gap, the rule\'s arm'}`);
       const run = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag), isConnected: false });
       const holder = { dataset: { addr: D } };
       Object.assign(run, { closest: (/** @type {string} */ sel) => (sel === '[data-withheld]' ? run : sel === 'article' ? holder : null) });
-      assert.deepEqual([run.dataset.origin, run.dataset.owner], [O, owner], `${who}: the placeholder carries its origin and its origin's owner, the seat above the origin's account`);
+      assert.deepEqual([run.dataset.origin, run.dataset.owner], [O, owner], `${who}: the gap carries its origin and its origin's owner, the seat above the origin's account`);
       click({ target: run, clientX: 0, clientY: 0, stopPropagation() {} });
       const face = HOST.currentOverlay();
       assert.equal(face && face.id, 'face:C-39', `${who}: the act at the run conjures C-39's face`);
       assert.deepEqual(face && face.anchor, { el: run, span: { addr: D, pos: n + 1, width: 240 } }, `${who}: the face stands at the placeholder, the run's own positions beside it, where it stands once the text layer rebuilds or takes the placeholder down`);
       const html = face ? face.html : '';
       assert.ok(html.includes(`>${esc(t('C-39', { owner }))}</div>`), `${who}: the face names ${owner}, the owner the placeholder names — never the origin's account, 1.0.1.1`);
-      assert.ok(html.includes(`<div class="arm" data-string="${id}">${arm}</div>`), `${who}: the arm beneath it is the placeholder's own, ${id}: ${html}`);
+      assert.ok(html.includes(`<div class="arm" data-string="${id}">${arm}</div>`), `${who}: the arm beneath it is the rule's for the run's origin's owner and this reader, ${id}: ${html}`);
+      HOST.dismiss();
+      // the run's face compact in its column's edge: its act opens the face whole, as Enter at the run does (D5 K-7)
+      if (!marked) continue;
+      const mark = Object.assign(new globalThis.HTMLElement(), { dataset: { mark: 'withheld' } });
+      Object.assign(mark, { closest: (/** @type {string} */ sel) => (sel === '.wh-mark' ? mark : sel === '[data-withheld]' ? run : sel === 'article' ? holder : null) });
+      click({ target: mark, clientX: 0, clientY: 0, stopPropagation() {} });
+      const whole = HOST.currentOverlay();
+      assert.equal(whole && whole.id, 'face:withheld-run', `${who}: the act at the edge's mark opens the run's face whole`);
+      assert.ok(!!whole && whole.html.includes(arm) && whole.html.includes(esc(t('B1.withheld-run', { owner, account: owner, width: 240, origin: O }))), `${who}: its head and the arm the rule gives, whole`);
       HOST.dismiss();
     }
   } finally {
@@ -263,9 +276,9 @@ test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in
   globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
   globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
   try {
-    // a guest at 1.0.2's document, which windows a run of 1.0.1's draft O; 1.0.1 published an edition, H, whose claim on O
-    // passes: its FROM H's own bytes, which no span of O holds
-    const D = '1.0.2.0.6', O = '1.0.1.0.1004', H = '1.0.1.0.40', CLAIM = H + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
+    // a guest at 1.0.2's document, which windows a run of 1.0.1's draft O — twelve lines deep, so its gap holds its face whole —
+    // and 1.0.1 published an edition, H, whose claim on O passes: its FROM H's own bytes, which no span of O holds
+    const D = '1.0.2.0.6', O = '1.0.1.0.1004', H = '1.0.1.0.40', CLAIM = H + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14', RUN = 12 * 66;
     const text = 'Tumbler.\n\n', n = byteLength(text), edition = 'The published edition.', m = byteLength(edition);
     const fake = FAKE.create({
       // H read whole on the LEAP: its extent, its text, its image, its links — the claim among them, read already
@@ -276,9 +289,9 @@ test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in
     });
     PORT.boot(fake);
     REC.setSession(null);
-    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + 240 }]);
-    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 240, kind: 'withheld', text: '', ref: null, origin: O }]);
-    REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.2', birth: D + '.1', birthExtent: n + 240, placed: null, baseExtent: null, source: null, asOf: 1 });
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + RUN }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: RUN, kind: 'withheld', text: '', ref: null, origin: O }]);
+    REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.2', birth: D + '.1', birthExtent: n + RUN, placed: null, baseExtent: null, source: null, asOf: 1 });
     REC.takeLinks(D, []);
     REC.takeEditionClaims(O, [CLAIM]);
     REC.takeLink({ addr: CLAIM, from: [resolveSpan({ start: H + '.0.1.1', width: '0.0.0.0.0.0.0.' + m })], to: [resolveSpan(unitSpan(O))], type: R20 });
@@ -291,7 +304,7 @@ test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in
     INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
     const click = layer.get('click');
     assert.ok(click, 'the text layer takes a click');
-    // the placeholder as the plane's article holds it, and its pointer and its head as a click finds them in it
+    // the gap as the plane's article holds it, the face whole in it, and its pointer and its head as a click finds them in it
     const article = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d)), holder = { dataset: { addr: D } };
     const run = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf((/<span class="withheld"[^>]*>/.exec(article) || [''])[0]) });
     Object.assign(run, { closest: (/** @type {string} */ sel) => (sel === '[data-withheld]' ? run : sel === 'article' ? holder : null) });

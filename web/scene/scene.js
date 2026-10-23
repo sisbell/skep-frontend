@@ -140,8 +140,11 @@
 // column fits beside the pane's corner (`fitMeasure`, as the scene opens, as
 // a pane is set again and as its panes change size), so the panes break the
 // lines the plane breaks; against the pane's inner edge with its corner beside
-// it: a window wider than the measure needs widens the outer margins, never
-// the line, and the text keeps its place beside the bands at every width.
+// it, its column's edge between it and that inner edge — its counts and its
+// withheld runs' marks there, the bands leaving the pane beyond them
+// (foundations §3.1; issue #151's design decision): a window wider than the
+// measure needs widens the outer margins, never the line, and the text keeps
+// its place beside the bands at every width.
 // THE PANES ARE READ, NOT ACTED ON (B1-S9: "read both…; scroll each"): nothing
 // in a pane's article takes a pointer — its blocks, hairlines, symbols and
 // presence ⟡ and its corner's version statement carry none of the plane's

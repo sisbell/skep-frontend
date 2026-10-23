@@ -333,6 +333,7 @@ last. Each stands until a later decision says it changes it.
 - **#160** (built `8d5f13c`): each reading scene's pane follows the feed by its document's kind, set again in one step and offering no reload → FP-23
 - **#161** (built `ad883d5`): a copy stands in for every item its span covers that has no text, in the words the mirror announces, and a selection that touches an item covers it whole → FP-24
 - **#137** (built with this line): a jump's camera leaves at the act and its read runs beside the flight, the camera going on to the passage the read places unless the reader took it over; keys other than navigation acts pressed while a jump is in the air are made at its landing in order, and dropped where it never lands; a wheel series under way at the act is dropped; a board already marked unreachable gets no flight; changes #136: a jump says it is reading where its camera went → FP-25
+- **#151** (built with this line): each column's gutter widens into its edge, which holds that column's counts and withheld marks level with their blocks' first lines; the corner follows the column nearest the view's centre; a landing frames that column with its corner and its edge; the view's width at the reading size alone sets the measure; changes #15: the gutter → FP-26
 
 ## Changes
 

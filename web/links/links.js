@@ -93,10 +93,11 @@
 //     2 and as a BEAM where it has reached stage 3; the lenses by owner, type
 //     and endorsement filter the set per document for the session;
 //   - the most any reveal can set in a document's text — a symbol at every
-//     passage end, each block's count as the hidden reveal counts it — is
-//     what the plane's size is folded for (`utmost`; T-LAYER's fold, issue
-//     #15), so moving the chain, the toggle or a lens sets no document at
-//     another size and runs no column past its room;
+//     passage end — is what the plane's size is folded for (`utmost`;
+//     T-LAYER's fold, issue #15), so moving the chain, the toggle or a lens
+//     sets no document at another size and runs no column past its room; a
+//     block's count stands in its column's edge and sets no line (A-254;
+//     issue #151's design decision);
 //   - a link the person has FOLLOWED this session is drawn lighter (D-3:
 //     VALUE, the hue kept), the set client-side, never written;
 //   - a link LIT AT AN ARRIVAL — the one a landing followed, or the one a
@@ -564,22 +565,21 @@ export function countAt(addr, block) { return countUnder(state(addr), addr, bloc
 /**
  * The most link chrome any reveal can set in a document's text: every
  * passage end at the document, as `shown` gives the reveal that shows them
- * all — stage 2 and on, others' links on, no lens — and at each block the
- * "+⟨n⟩ others" count as the hidden reveal counts it, which shows none of
- * them. An article set with all of it is at least as long as at any stage,
- * toggle and lens, so the size T-LAYER folds it at for this — the step its
- * columns take (issue #15) — holds the article in its room at each, and
- * moving the reveal sets it at no other size — what A-254 places the count
- * by: "so a link's arrival breaks no line".
+ * all — stage 2 and on, others' links on, no lens. An article set with all of
+ * it is at least as long as at any stage, toggle and lens, so the size
+ * T-LAYER folds it at for this — the step its columns take (issue #15) —
+ * holds the article in its room at each, and moving the reveal sets it at no
+ * other size. The "+⟨n⟩ others" count is none of it: it stands in its
+ * column's edge and sets no line, "so a link's arrival breaks no line"
+ * (A-254; issue #151's design decision).
  * @param {string} addr
- * @returns {{shown: Shown[], countAt: (block: Block) => {n: number, social: boolean}}}
+ * @returns {{shown: Shown[]}}
  */
 export function utmost(addr) {
   /** @type {Shown[]} */
   const all = [];
   for (const l of REC.linksTouching(addr)) if (classify(l) === 'passage') all.push(...endsDrawn(l, addr, linkerOf(l, addr)));
-  const none = hidden();
-  return { shown: all, countAt: (block) => countUnder(none, addr, block) };
+  return { shown: all };
 }
 
 /**

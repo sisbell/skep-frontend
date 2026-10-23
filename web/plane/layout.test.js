@@ -6,10 +6,19 @@
 // taking no room, its margins collapsing with its neighbours'; a line holding
 // exactly `cpl` characters, the space after its last word hanging; a heading
 // wrapped at its own size; a break after a hyphen inside a word and none after
-// a slash; an inline-block set whole; a float beside the last line or on a
-// line of its own, as tall as its own line box; a withheld run as bars of its
-// width; each line naming the position its first own character stands at;
-// the measurements the CSS reads, one source. THE FOLD (issue #15's design
+// a slash; an inline-block set whole; a withheld run's gap its bars, one line
+// for each measure's count of its positions; each line naming the position its
+// first own character stands at; the measurements the CSS reads, one source.
+// THE EDGE (issue #151's design decision): each column followed by its edge
+// and a gutter, the edge EDGE_GAP past its text and inside its padded slot,
+// short of the next column's text (a mutant that drops the edge from the pitch
+// or the slot turns red). THE FIT: the full measure wherever the view holds a
+// column at the reading size with both its margins, the corner whole, else
+// compact — the corner compacted before the measure narrows (a mutant that
+// narrows first turns red) — else the most whole characters the view holds,
+// never more; a fold at a narrower measure every column and line at it, its
+// estimate's lines and spans at it too (a mutant that keeps the full measure
+// anywhere turns red). THE FOLD (issue #15's design
 // decision): every document set at MEASURE_CPL characters a line, from a
 // hundred positions to six hundred thousand (a mutant that lets the length
 // widen the column turns red); every line of a long article standing in a
@@ -20,7 +29,7 @@
 // or foot, a short paragraph moved whole, a record, a withheld run and the head
 // never split, a kept unit deeper than a column broken at a line anyway (a
 // mutant without each rule turns red); columns left to right, then row by row,
-// a gutter apart, a short document one column of its own length; the standard
+// each followed by its edge and a gutter, a short document one column of its own length; the standard
 // size until the columns fill the room, then steps each at least doubling the
 // room's capacity (a mutant that sets the size continuously, or steps by a
 // factor that does not double, turns red); the outline tracing the padded
@@ -37,8 +46,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   layoutOf, heightOf, wrap, breakBetween, cssMeasures, lineBox, columnsOf, fold, estimate, estimatedSpan, slot, outline, outlineRects, boundsOf, firstRow, padded,
-  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, standardFs, stepAt, stepFor,
-  MEASURE, BORDER, LINE_H, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, STANDARD_GRID, STANDARD_FS,
+  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, standardFs, stepAt, stepFor, gapOf, edgeOf, fitFor, columnW,
+  MEASURE, BORDER, LINE_H, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, EDGE, EDGE_GAP, STANDARD_GRID, STANDARD_FS,
 } from './layout.js';
 import { DOC_W, DOC_H } from './projection.js';
 
@@ -49,7 +58,7 @@ import { DOC_W, DOC_H } from './projection.js';
 /** @returns {Piece} */
 const piece = (/** @type {string} */ text, size = 1, o = {}) => ({ text, size, lead: 0, trail: 0, box: false, own: true, ...o });
 /** @returns {Row} */
-const row = (/** @type {Row['kind']} */ kind, /** @type {number | null} */ pos, /** @type {Piece[]} */ pieces, o = {}) => ({ kind, pos, size: 1, pieces, float: null, before: 0, after: 0, width: 0, keep: /** @type {const} */ ('lines'), ...o });
+const row = (/** @type {Row['kind']} */ kind, /** @type {number | null} */ pos, /** @type {Piece[]} */ pieces, o = {}) => ({ kind, pos, size: 1, pieces, before: 0, after: 0, width: 0, keep: /** @type {const} */ ('lines'), ...o });
 const para = (/** @type {number} */ pos, /** @type {string} */ text, size = 1) => row('text', pos, [piece(text, size)], { size, after: MEASURE.gap * size });
 /** a heading's row as T-ARTICLE plans it: its margins at its own size */
 const heading = (/** @type {number} */ pos, /** @type {string} */ text, size = MEASURE.h2) => row('text', pos, [piece(text, size)], { size, before: MEASURE.headingBefore * size, after: MEASURE.headingAfter * size, keep: /** @type {const} */ ('heading') });
@@ -178,15 +187,14 @@ test('an inline-block is set whole, a line free to break on either side of it', 
   assert.deepEqual(widths(lead, 20), [10], 'a lead and a trail take room on the line (0.6 em is one character)');
 });
 
-test('a float stands beside the last line where it fits, else on a line of its own', () => {
-  const count = piece('+3 others', 1, { own: false });
-  assert.equal(wrap(row('text', 1, [piece('aaaa')], { float: count }), 20).length, 1);
-  assert.equal(wrap(row('text', 1, [piece('aaaaaaaaaaaaaa')], { float: count }), 20).length, 2);
-  assert.equal(wrap(row('text', 1, [], { float: count }), 20).length, 1, 'a row with nothing but its float is the float\'s line');
+test('a withheld run\'s gap is its bars: a line for each measure\'s count of its positions, the last its remainder, one line of one position at the least; an empty row takes no line', () => {
+  assert.deepEqual(gapOf(240, MEASURE_CPL), [66, 66, 66, 42]);
+  assert.deepEqual(gapOf(132, MEASURE_CPL), [66, 66], 'a whole count of lines: the last full');
+  assert.deepEqual(gapOf(240, 40), [40, 40, 40, 40, 40, 40], 'at a narrower measure, more lines of it');
+  assert.deepEqual([gapOf(3, MEASURE_CPL), gapOf(0, MEASURE_CPL)], [[3], [1]], 'a short run one line of its width; none one line of one');
+  const L = layoutOf([row('withheld', 1, [], { width: 240, keep: 'whole' })], MEASURE_CPL);
+  assert.deepEqual(L.lines.map((l) => [l.w, l.h, l.at]), gapOf(240, MEASURE_CPL).map((w, i) => [w, LINE_H, 1 + i * MEASURE_CPL]), 'the layout\'s lines are its gap\'s, each a body line box');
   assert.equal(wrap(row('text', 1, []), 20).length, 0, 'an empty row takes no line');
-  const small = piece('+3 others', MEASURE.count, { own: false });
-  assert.deepEqual(wrap(row('text', 1, [piece('aaaaaaaaaaaaaaaaaa')], { float: small }), 20).map((l) => l.h), [LINE_H, lineBox(MEASURE.count)], 'a float on a line of its own is as tall as its own line box');
-  assert.deepEqual(wrap(row('text', 1, [piece('aaaa')], { float: small }), 20).map((l) => l.h), [LINE_H], 'beside the last line it adds none');
 });
 
 // ---- the fold ---------------------------------------------------------------------------------------------------
@@ -240,7 +248,7 @@ test('the standard size holds until the columns fill the room; each step after i
   assert.ok(close(standardFs({ w: ROOM.w / 7, h: ROOM.h / 7 }), STANDARD_FS / 7), 'a room 7 times smaller sets the standard 7 times smaller');
 });
 
-test('columns stand left to right, then row by row, a gutter apart; a document shorter than one column is one column of its own length', () => {
+test('columns stand left to right, then row by row, each followed by its edge and a gutter; a document shorter than one column is one column of its own length', () => {
   const short = fold(layoutOf(article([words(30, 1)]).rows).lines, ROOM);
   assert.equal(short.columns.length, 1);
   const L = short.lines[short.lines.length - 1];
@@ -250,7 +258,7 @@ test('columns stand left to right, then row by row, a gutter apart; a document s
   assert.ok(f.columns.length > f.across, 'more columns than a row holds');
   f.columns.forEach((c, i) => {
     const col = i % f.across, rowN = Math.floor(i / f.across);
-    assert.ok(close(c.x, (col * (COLUMN_W + GUTTER) + GUTTER / 2) * f.fs), `column ${i} at its place across`);
+    assert.ok(close(c.x, (col * (COLUMN_W + EDGE + GUTTER) + GUTTER / 2) * f.fs), `column ${i} at its place across: past the column before it, its edge and a gutter`);
     assert.ok(close(c.y, (rowN * (COLUMN_H + GUTTER) + GUTTER / 2) * f.fs), `column ${i} at its row`);
   });
   for (let i = 1; i < f.columns.length; i++) {
@@ -313,7 +321,62 @@ test('the outline traces the padded columns: one edge, each row\'s run of full c
   let sh = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], z = pts[(i + 1) % pts.length]; sh += a.x * z.y - z.x * a.y; }
   assert.ok(Math.abs(Math.abs(sh) / 2 - cols) < 1e-6 * cols, 'its area the padded columns\'');
   const r0 = firstRow(f);
-  assert.ok(close(r0.w, Math.min(f.across, f.columns.length) * (COLUMN_W + GUTTER) * f.fs) && close(r0.h, (COLUMN_H + GUTTER) * f.fs), 'the first row: its columns across, a column deep');
+  assert.ok(close(r0.w, Math.min(f.across, f.columns.length) * (COLUMN_W + EDGE + GUTTER) * f.fs) && close(r0.h, (COLUMN_H + GUTTER) * f.fs), 'the first row: its columns across, each with its edge, a column deep');
+});
+
+test('each column is followed by its edge — EDGE_GAP past its text, as deep as the column, inside its padded slot and its room — and the next column\'s text stands a gutter past the edge (issue #151)', () => {
+  const f = fold(layoutOf(article(Array.from({ length: 60 }, (_, i) => words(30, i))).rows).lines, ROOM);
+  assert.ok(f.across > 1, 'more than one column a row');
+  for (const [i, c] of f.columns.entries()) {
+    const e = edgeOf(f, c), p = padded(f, c);
+    assert.ok(close(e.x, c.x + c.w + EDGE_GAP * f.fs) && close(e.w, (EDGE - EDGE_GAP) * f.fs) && close(e.y, c.y) && close(e.h, c.h), `column ${i}'s edge EDGE_GAP past its text, the rest of the edge wide, as deep as the column`);
+    assert.ok(e.x >= p.x && e.x + e.w <= p.x + p.w + 1e-9 && close(p.x + p.w, c.x + c.w + (EDGE + GUTTER / 2) * f.fs), `column ${i}'s padded slot holds its edge, half a gutter past it`);
+    assert.ok(e.x + e.w <= ROOM.w + 1e-6, `column ${i}'s edge inside the room`);
+    const next = f.columns[i + 1];
+    if (next && (i + 1) % f.across) assert.ok(close(next.x - (e.x + e.w), GUTTER * f.fs), `column ${i + 1}'s text a gutter past column ${i}'s edge`);
+  }
+  assert.ok(close(standardFs(ROOM), Math.min(ROOM.w / (STANDARD_GRID[0] * (COLUMN_W + EDGE + GUTTER)), ROOM.h / (STANDARD_GRID[1] * (COLUMN_H + GUTTER)))), 'the standard size holds the standard grid of columns with their edges');
+});
+
+/** the corner as P-REG sizes it: whole 133 px, compact 78 px, 8 px from the text */
+const CORNER = { whole: 133, compact: 78, gap: 8 };
+/** the view a column at the reading size needs beside its margins, in px: the corner and its gap, the column, its edge and a gutter */
+const needs = (/** @type {number} */ cpl, /** @type {number} */ corner, readPx = 12.5) => corner + CORNER.gap + cpl * CHAR_W * readPx + (EDGE + GUTTER) * readPx;
+
+test('the fit: the full measure wherever the view holds a column at the reading size with both its margins, the corner whole, else compact — the corner compacted before the measure narrows — else the most whole characters the view holds beside them (issue #151; FP-26)', () => {
+  assert.deepEqual(fitFor(1440, 12.5, CORNER), { cpl: MEASURE_CPL, compact: false }, 'a 1440 px view: the full measure, the corner whole');
+  const whole = needs(MEASURE_CPL, CORNER.whole), compact = needs(MEASURE_CPL, CORNER.compact);
+  assert.deepEqual(fitFor(Math.ceil(whole), 12.5, CORNER), { cpl: MEASURE_CPL, compact: false }, `${Math.ceil(whole)} px: still whole`);
+  assert.deepEqual(fitFor(Math.floor(whole) - 1, 12.5, CORNER), { cpl: MEASURE_CPL, compact: true }, 'a px short of that: the corner compacts first, the measure kept');
+  assert.deepEqual(fitFor(Math.ceil(compact), 12.5, CORNER), { cpl: MEASURE_CPL, compact: true });
+  let prev = MEASURE_CPL;
+  for (let vw = Math.floor(compact) - 1; vw >= 320; vw -= 7) {
+    const f = fitFor(vw, 12.5, CORNER);
+    assert.ok(f.compact && Number.isInteger(f.cpl) && f.cpl < MEASURE_CPL && f.cpl <= prev, `${vw} px: a narrower whole count, never wider than at a wider view`);
+    assert.ok(needs(f.cpl, CORNER.compact) <= vw + 1e-9 && needs(f.cpl + 1, CORNER.compact) > vw, `${vw} px: the most characters the view holds beside the compact corner, ${f.cpl}`);
+    prev = f.cpl;
+  }
+  assert.equal(fitFor(480, 12.5, CORNER).cpl, 39, 'a 480 px view: 39 characters');
+  assert.deepEqual(fitFor(1, 12.5, CORNER), { cpl: 1, compact: true }, 'never below one');
+  assert.ok(fitFor(900, 20, CORNER).cpl < fitFor(900, 12.5, CORNER).cpl, 'a larger reading size holds fewer');
+});
+
+test('a fold at a narrower measure sets every column and every line at it — its standard size no smaller, the room\'s depth binding it — and its estimate\'s lines and spans at it too', () => {
+  const cpl = 40, { rows, positions } = article(Array.from({ length: 30 }, (_, i) => words(30, i)));
+  const f = fold(layoutOf(rows, cpl).lines, ROOM, { cpl }), full = fold(layoutOf(rows).lines, ROOM);
+  assert.equal(f.cpl, cpl);
+  assert.ok(f.columns.every((c) => close(c.w, columnW(cpl) * f.fs)) && f.lines.every((l) => l.w <= cpl + 1e-9), 'every column and every line at the measure');
+  assert.ok(f.columns.length > full.columns.length, `more columns of it: ${f.columns.length} against ${full.columns.length}`);
+  assert.ok(stepAt(ROOM, 0, cpl).fs >= stepAt(ROOM, 0).fs && close(stepAt(ROOM, 0, cpl).fs, ROOM.h / (STANDARD_GRID[1] * (COLUMN_H + GUTTER))), 'its standard size no smaller: the room\'s depth binds it');
+  f.columns.forEach((c, i) => { if (i % f.across) assert.ok(close(c.x - f.columns[i - 1].x, (columnW(cpl) + EDGE + GUTTER) * f.fs), 'the pitch its measure\'s'); });
+  // the estimate: a line for each measure's count of positions, the first column's span after the head at it
+  const e = estimate(positions, ROOM, cpl), e66 = estimate(positions, ROOM);
+  assert.ok(e.cpl === cpl && e.columns.length >= e66.columns.length, 'the estimate at the measure: as many columns or more');
+  const [a0, b0] = estimatedSpan(0, cpl), [a1, b1] = estimatedSpan(1, cpl);
+  assert.ok(a0 === 1 && b0 === a1 && b1 - a1 === COLUMN_LINES * cpl && (b0 - 1) % cpl === 0, 'its spans a column of lines of the measure each');
+  assert.equal(placeOf(e, a1).column, 1, 'a column\'s first estimated position in that column');
+  assert.ok(close(placeOf(e, a1 + cpl).y - placeOf(e, a1).y, LINE_H * e.fs), 'the next line a measure\'s count of positions on');
+  assert.equal(slot(ROOM, cpl).cpl, cpl);
 });
 
 test('the estimate never sets more columns than the text, so its size is never smaller than the text\'s; an unread extent is the first column slot', () => {
@@ -437,7 +500,8 @@ test('the measurements the CSS reads are P-LAY\'s, one source: the fold\'s measu
   assert.equal(v['--head'], MEASURE.head + 'em');
   assert.equal(v['--measure'], String(MEASURE_CPL));
   assert.equal(v['--gutter'], GUTTER + 'em');
-  assert.equal(Object.keys(v).length, Object.keys(MEASURE).length + Object.keys(BORDER).length + 2, 'every measure, every border and the fold\'s two, each a custom property');
+  assert.deepEqual([v['--edge'], v['--edge-gap'], v['--line-box'], v['--face'], v['--face-gap']], [EDGE + 'em', EDGE_GAP + 'em', LINE_H + 'em', MEASURE.face + 'em', MEASURE.faceGap + 'em'], 'the edge, its gap, a body line box and the withheld face\'s sizes');
+  assert.equal(Object.keys(v).length, Object.keys(MEASURE).length + Object.keys(BORDER).length + 5, 'every measure, every border and the fold\'s five — the measure, the gutter, the edge, its gap and the line box — each a custom property');
   assert.ok(Number.isInteger(LINE_H * LAY_FS * 64), 'a line box on the 1/64 px grid at the layout size');
   assert.equal(heightOf({ lines: [], blocks: new Map() }), 0);
   assert.equal(columnsOf([]).length, 0);

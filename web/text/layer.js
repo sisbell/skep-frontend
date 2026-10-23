@@ -63,16 +63,24 @@
 // — a document reaching reading size is text — and the first frame after the
 // press does what was held. Laid out ONCE at P-LAY's LAY_FS (16 px)
 // and its unitless LINE_H, so each element's line box is that element's own
-// size's (P-LAY's `lineBox`), each column exactly P-LAY's MEASURE_CPL
-// characters of its own face (`ch`, the style's `--measure`), and placed by
-// transform from the same camera arithmetic (registration 0 px — S1).
+// size's (P-LAY's `lineBox`), each column exactly THE MEASURE IN FORCE's
+// characters of its own face (P-CAM's `measure`, P-LAY's fit of the view:
+// MEASURE_CPL wherever the view holds it — issue #151's design decisions;
+// `ch`, the style's `--measure`, which this module sets on its layer:
+// `setMeasure`), and placed by transform from the same camera arithmetic
+// (registration 0 px — S1). A resize that moves the measure folds every
+// document again at it, and the article being read is set again in its place,
+// the passage held (see below); a zoom never moves it.
 // THE FOLD (issue #15's design decision; `foldOf`): every document is set at
 // one line length and one line height in P-LAY's equal columns inside its
 // room, BROKEN AT THE LINES AS RENDERED, after the reader's font and spacing
 // settings apply: an article is laid out once in one column (`measureLines`),
 // each row's element read for its top and its height — the lines P-LAY
 // predicts standing where the element stands, and set as the element sets
-// them where it sets them otherwise — and those lines broken into columns by
+// them where it sets them otherwise, kept by the article without its marks
+// and its counts, which set no line (`layoutKey`): a block's others' count
+// stands in its column's edge, so a count's arrival moves no line (A-254) —
+// and those lines broken into columns by
 // P-LAY's keep rules; a mounted article's parts are cut from that one column,
 // kept out of the page (its template), each placed at its first line's top in
 // its column, a block a cut falls in split at the point its line opens with,
@@ -137,11 +145,25 @@
 // reading scale (em 8, P-LOD's readable threshold, and above) carries its own
 // BESIDE its article, never inside it, as an element of the corner layer this
 // module keeps: on the document's one side, the left (the beams and the
-// blocks' counts take the right), in the strip P-PROJ's `clearLeftOf` keeps
-// free of every other document's box, at the interface's size, held to the
-// top of the document's visible part below the one line — its first column's
-// top, else just below the line — and never past its outline's bottom,
-// placed by translate alone from the same camera arithmetic. The element
+// blocks' counts take the right, the column's edge), at the interface's size,
+// BESIDE THE COLUMN NEAREST THE VIEW'S CENTRE (issue #151's design decision:
+// "The corner follows the column nearest the view's centre"; `besideOf`) —
+// beside a row's first column in the strip P-PROJ's `clearLeftOf` keeps free
+// of every other document's box, beside a later one in the gutter and the
+// edge of the column before it, below the signs that edge holds (foundations
+// §3.1: "an item at a y another already holds stacks below it"; `cornerTop`);
+// whole where its room holds it whole and the view's fit holds a column
+// beside it whole, else COMPACT, its usual states glyphs, its numbers and its
+// exceptions in their words (FP-26; T-ARTICLE's `cornerHTML`), a glyph's act
+// opening it whole where it stands (`openCorner`); where that room holds not
+// even the compact corner, or the signs leave it none, by its row's first
+// column, its own document's free room — held to the top of its column's
+// visible part below the one line — that column's top, else just below the
+// line — and never past its outline's bottom beside a row's first column, nor
+// past its row's foot beside another, placed by translate alone from the same
+// camera arithmetic. A reading view frames the column it reads with the
+// corner and the edge beside it (`frameOf`; issue #151: "The landing frames
+// the column, not the middle of a line"). The element
 // outlives its article's remounts and its items are rewritten only where they
 // change, so a focus on it survives them; the focused document's corner is
 // the plane's next Tab stop, named by its own words, and every other is out
@@ -215,15 +237,16 @@
 // Carries: the wireframe's §16 `mount`/`unmount`/`place`/`S1.frame`; S1's
 // `mount`, `place`, `S1.frame`; `driftSample` and `overlapCheck` become
 // gate hooks (`web/gate/hooks.js` reads `mounted`).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-22, FP-23, FP-24.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-22, FP-23, FP-24, FP-26.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
-import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor } from '../plane/camera.js';
+import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, measure, fit, READING_PX } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
-import { layoutOf, fold, estimate, slot, boundsOf, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, MEASURE_CPL, LAY_FS, LINE_H } from '../plane/layout.js';
+import { layoutOf, fold, estimate, slot, boundsOf, padded, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE } from '../plane/layout.js';
+import { CORNER, cornerWidth } from '../plane/register.js';
 import { articleHTML, articlePlan, cornerHTML, blockMarks, editionClause, copyText } from './article.js';
 import { farSays } from '../beams/held.js';
 import { homeOf, documentOf } from '../model/address.js';
@@ -297,7 +320,7 @@ import { t } from '../strings.js';
  * @property {number} grev the view revision at mount
  * @property {Fold} fold the fold it was set in: its size, its columns and the lines they hold
  * @property {number} fs the document's em in world units: its fold's
- * @property {string} corner the corner's items at mount (T-ARTICLE's `cornerHTML`); empty where it has none
+ * @property {{whole: string, compact: string}} corner the corner's items at mount, whole and compact (T-ARTICLE's `cornerHTML`); empty where it has none
  * @property {HTMLElement | null} template the article's one column, kept out of the page: what its parts are cut from; null where the platform does not set the article
  * @property {Unit[]} units its fold's lines by the row elements that set them
  * @property {Map<number, Cut | null>} cuts the points its lines open at, by line, as far as they were read; null where a line opens at no point found
@@ -315,12 +338,24 @@ import { t } from '../strings.js';
  * @typedef {Object} Corner — a document's corner on the plane: its element beside the article, kept across the article's remounts
  * @property {HTMLElement} el
  * @property {string} html the items it shows
- * @property {number} cap the widest it may stand (px): the strip beside the text column, gaps taken
+ * @property {boolean} compact it stands compact (FP-26)
+ * @property {number} column the column it stands beside, an index into the fold's columns
+ * @property {number} cap the widest it may stand (px): the room beside the column's text, gaps taken; Infinity where its form's width fits there
  * @property {number} w its width as laid out (px)
  * @property {number} h its height as laid out (px)
  * @property {boolean} stale its items or its cap changed since it was measured
  * @property {boolean} mine it is the focused document's: the Tab stop
+ * @property {number} blockedAt the column beside which the signs in the edge before it left it no room down to its row's foot, where it stands by its row's first column while the view's centre stays over that column; -1 where none
  */
+
+/**
+ * @typedef {Object} Beside — the column a corner stands beside and the room left of that column's text (`besideOf`)
+ * @property {number} column an index into the fold's columns
+ * @property {number} room the room for the corner left of the column's text, its gaps taken (px)
+ * @property {boolean} first the column is the first of its row: the room the strip left of the document's box gives it, which no other document's box reaches into (P-PROJ's `clearLeftOf`)
+ */
+
+/** @typedef {'whole' | 'compact'} CornerForm */
 
 /**
  * @typedef {Object} Folded — a document's fold as `foldOf` last set it
@@ -332,7 +367,7 @@ import { t } from '../strings.js';
 
 /**
  * @typedef {Object} Measured — a document's lines as the platform set them (`measureLines`)
- * @property {string} key the article they were set from (`articleOf`): one article sets one layout, whatever selection or focus marks it — its plan alone does not, for no row of it sizes a withheld run's face
+ * @property {string} key the article they were set from and the measure its column was set at (`layoutKey`): one article at one measure sets one layout, whatever selection or focus marks it and whatever counts its edges hold
  * @property {Line[]} lines
  * @property {number} n its serial: a fold made from other lines is made again
  */
@@ -359,8 +394,8 @@ import { t } from '../strings.js';
  * @property {(addr: string) => string} shown the version a document's box shows (N-GO's `shownIn`): the one version whose article stands there
  */
 
-/** the corner's distance from the text column, and from the edge of the strip it stands in (px) */
-const CORNER_GAP = 8;
+/** the corner's distance from the text column, and from the edge of the room it stands in (px): P-REG's */
+const CORNER_GAP = CORNER.gap;
 /** the time a frame gives the setting of documents in view that stand unmounted, so their bars are their lines as set (ms) */
 const MEASURE_BUDGET_MS = 6;
 /** the em, in px, the canvas draws a document's bars from (P-RENDER's): below it no bar stands, and no line is set for one */
@@ -372,6 +407,10 @@ const mounted = new Map();
 const panes = new WeakMap();
 /** @type {Map<string, Corner>} the corners on the plane, by document */
 const corners = new Map();
+/** @type {Set<string>} the documents whose corner a reader's act opened whole (`openCorner`), until it is closed or leaves */
+const openWhole = new Set();
+/** the measure the layer's style holds (`setMeasure`): what the columns of the articles it lays out are set at; 0 before it holds one */
+let styled = 0;
 /** @type {Map<string, Folded>} each document's fold, by document — a cache of `foldOf`, a function of the model and of the lines set */
 const folds = new Map();
 /** @type {Map<string, Measured>} each document's lines as the platform set them, by document */
@@ -415,7 +454,7 @@ const isShown = (/** @type {string} */ addr) => read.shown(addr) === addr;
  * @param {HTMLElement | null} cornersEl the corner layer's
  * @param {{measure?: boolean}} [opts] `measure` the platform sets the articles: their lines measured as rendered and their parts cut from them (the page; the node tests run without)
  */
-export function attach(el, cornersEl, opts = {}) { layer = el; cornerLayer = cornersEl; engine = !!opts.measure; }
+export function attach(el, cornersEl, opts = {}) { layer = el; cornerLayer = cornersEl; engine = !!opts.measure; styled = 0; }
 /**
  * The plane covered and uncovered (D5 §4 rule 5): while chrome stands over
  * the plane — the reading scene, whose panes carry their own corners — the
@@ -491,6 +530,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     deviceLabel: isOwnerYou && device ? device.label : null,
     ownerFingerprint: isOwnerYou && device ? device.fingerprint : null,
     members: REC.has(boxOf(d.addr)) ? REC.doc(boxOf(d.addr)).members : null,
+    cpl: scene ? MEASURE_CPL : measure(),
   };
   void ownerRow; void fingerprintCue;
   return v;
@@ -543,32 +583,48 @@ export function atReadingScale(addr, scale = cam.scale) { return readsAt(foldOf(
  * @returns {Fold}
  */
 function folded(d) {
-  const room = docBox(d.addr);
+  const room = docBox(d.addr), cpl = measure();
   if (d.from < 0) {
-    const key = d.extent != null ? `est:${d.extent}` : 'slot';
+    const key = d.extent != null ? `est:${d.extent}:${cpl}` : `slot:${cpl}`;
     const f = folds.get(d.addr);
     if (f && f.key === key) return f.fold;
-    const out = d.extent != null ? estimate(d.extent, room) : slot(room);
+    const out = d.extent != null ? estimate(d.extent, room, cpl) : slot(room, cpl);
     folds.set(d.addr, { key, plan: key, fold: out, set: false });
     return out;
   }
-  const key = `${d.rev}:${d.from}:${d.to}:${REC.rev()}:${grev}`;
+  const key = `${d.rev}:${d.from}:${d.to}:${REC.rev()}:${grev}:${cpl}`;
   const f = folds.get(d.addr);
   if (f && f.key === key) return f.fold;
   const v = viewFor(d), owner = ownerAccount(d);
   const now = articlePlan(d, v, owner);
-  const m = measured.get(d.addr), set = m && m.key === articleOf(d, v, owner) ? m : null;
+  const m = measured.get(d.addr), set = m && m.key === layoutKey(d, v, owner, cpl) ? m : null;
   const u = LK.utmost(d.addr);
-  const rows = articlePlan(d, { ...v, marks: u.shown, symbols: u.shown, countAt: u.countAt }, owner);
+  const rows = articlePlan(d, { ...v, marks: u.shown, symbols: u.shown }, owner);
   const after = Math.max(0, (d.extent || 0) + 1 - d.to);
-  const plan = `${d.extent}|${d.from}|${d.to}|${JSON.stringify(rows)}|${JSON.stringify(now)}|${set ? set.n : 0}`;
+  const plan = `${cpl}|${d.extent}|${d.from}|${d.to}|${JSON.stringify(rows)}|${JSON.stringify(now)}|${set ? set.n : 0}`;
   if (f && f.plan === plan) { folds.set(d.addr, { key, plan, fold: f.fold, set: !!set }); return f.fold; }
-  const opts = { after, heldTo: d.to };
-  const most = fold(gapped(d, layoutOf(rows).lines), room, opts);
-  const out = fold(gapped(d, set ? set.lines : layoutOf(now).lines), room, { ...opts, step: most.step });
+  const opts = { after, heldTo: d.to, cpl };
+  const most = fold(gapped(d, layoutOf(rows, cpl).lines), room, opts);
+  const out = fold(gapped(d, set ? set.lines : layoutOf(now, cpl).lines), room, { ...opts, step: most.step });
   folds.set(d.addr, { key, plan, fold: out, set: !!set });
   return out;
 }
+
+/** no count at a block: what the lines' key reads every block's as */
+const noCount = () => ({ n: 0, social: false });
+
+/**
+ * What a document's lines as the platform set them are kept by
+ * (`Measured`): its article with no block marked for the selection or the
+ * focus and no count in its edges — none of them sets a line, so a count's
+ * arrival leaves the lines as they were set (A-254) — at the measure its
+ * column was set at.
+ * @param {Doc} d
+ * @param {ArticleView} v
+ * @param {string} owner
+ * @param {number} cpl
+ */
+const layoutKey = (d, v, owner, cpl) => `${cpl}|${articleHTML(d, { ...v, selected: null, focus: null, countAt: noCount }, owner)}`;
 
 /**
  * The lines of an article with each block that follows positions the
@@ -657,10 +713,10 @@ const shapeIn = (/** @type {Doc} */ d) => shapeOf(d.addr);
 const shapeAt = (/** @type {string} */ addr, /** @type {Fold} */ f) => { const box = docBox(addr), b = boundsOf(f); return { x: box.x + b.x, y: box.y + b.y, w: b.w, h: b.h }; };
 
 /**
- * Where a reading view of a document centres, in world units: the line
- * holding the position, centred across its column (P-LAY's `placeOf`); the
- * first column's centre where no position is named — N-GO's landing and
- * N-WALK's flight to a span.
+ * The middle of the line holding a position, in world units: centred across
+ * its column (P-LAY's `placeOf`); the first column's centre where no position
+ * is named — what a reading view frames (`frameOf`) and Back's test of a
+ * line in view reads (`lineInView`).
  * @param {string} addr
  * @param {number | null} pos
  * @returns {{x: number, y: number}}
@@ -670,6 +726,30 @@ export function centreOf(addr, pos) {
   if (pos == null) { const c = f.columns[0]; return { x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }; }
   const p = placeIn(f, pos);
   return { x: box.x + p.x + p.w / 2, y: box.y + p.y + p.h / 2 };
+}
+
+/**
+ * Where a reading view of a document at a position centres so that it FRAMES
+ * the column (issue #151's design decision: "The landing frames the column,
+ * not the middle of a line. It brings the passage it names into view together
+ * with the whole column and both side margins"): the line holding the
+ * position (`centreOf`) — the first column's middle where none is named —
+ * moved across so the column's text, the corner beside it on its left in the
+ * form its room and the view's fit hold at that size (`roomBeside`,
+ * `formFor`; none where the corner stands by its row's first column instead)
+ * and its edge on its right stand centred together. N-GO's landing and N-WALK's flight to a span read
+ * it; the measure in force is one the view holds them at, at the reading size
+ * (P-LAY's `fitFor`).
+ * @param {string} addr
+ * @param {number | null} pos
+ * @param {number} [fsPx] the em the view reads the document at, in px: the reading size where none is given
+ * @returns {{x: number, y: number}}
+ */
+export function frameOf(addr, pos, fsPx = READING_PX) {
+  const f = foldOf(REC.doc(addr)), c = centreOf(addr, pos), scale = fsPx / f.fs;
+  const at = roomBeside(f, clearLeftOf(addr), pos == null ? 0 : Math.max(0, placeIn(f, pos).column), scale);
+  const corner = at.first || at.room >= cornerWidth(true) ? cornerWidth(formFor(at.room, false, fit().compact) === 'compact') + CORNER_GAP : 0;
+  return { x: c.x + (EDGE * fsPx - corner) / 2 / scale, y: c.y };
 }
 
 /**
@@ -762,23 +842,25 @@ const PARAGRAPH = 'p.sp:not(.empty)';
 const TEXT_BLOCK = 'p.sp, h2.sp, h3.sp, h4.sp, h5.sp, h6.sp';
 
 /**
- * An article's lines as the platform set them in one column (see the head):
- * each row's element — the head, each block, each scene-offer — read for its
- * top and its height, and the lines the plan sets in it (P-LAY's `layoutOf`)
- * standing where the element stands; where a text block's element is set
- * taller or shorter than its lines, the lines it sets — as many as its height
- * holds at its own pitch, a float's own line below them, full but the last,
- * their positions spread over the block — and where a block of another kind
- * is set taller, the room left a line of no ink, shorter, the lines that fit.
- * Every line keeps where a column may break before it, a paragraph broken two
- * lines in from either end and no heading broken.
+ * An article's lines as the platform set them in one column at the measure
+ * (see the head): each row's element — the head, each block, each
+ * scene-offer — read for its top and its height, and the lines the plan sets
+ * in it (P-LAY's `layoutOf`) standing where the element stands; where a text
+ * block's element is set taller or shorter than its lines, the lines it sets
+ * — as many as its height holds at its own pitch, full but the last, their
+ * positions spread over the block, the room left below them a line of no ink
+ * — and where a block of another kind is set taller, the room left a line of
+ * no ink, shorter, the lines that fit. Every line keeps where a column may
+ * break before it, a paragraph broken two lines in from either end and no
+ * heading broken.
  * @param {HTMLElement} col the column, laid out
  * @param {Row[]} rows the plan its article was made from
  * @param {Block[]} blocks the blocks it was made from
+ * @param {number} cpl the measure its column was set at
  * @returns {Line[]}
  */
-function measureLines(col, rows, blocks) {
-  const P = layoutOf(rows).lines;
+function measureLines(col, rows, blocks, cpl) {
+  const P = layoutOf(rows, cpl).lines;
   const top0 = col.getBoundingClientRect().top;
   /** @type {Array<{el: HTMLElement, lines: Line[]}>} each row element and the lines the plan sets in it */
   const groups = [];
@@ -808,7 +890,7 @@ function measureLines(col, rows, blocks) {
       const end = out[out.length - 1], deep = end.top + end.h - top;
       if (h - deep > half) out.push({ ...end, top: top + deep, h: h - deep, w: 0, nth: end.nth + 1, brk: false });
     } else {
-      // the lines the element sets: as many as its height holds at its own pitch, a float's own line below them
+      // the lines the element sets: as many as its height holds at its own pitch, the room left below them a line of no ink
       const pitch = parseFloat(getComputedStyle(g.el).lineHeight) / LAY_FS || L[0].h;
       const m = Math.max(1, Math.floor(h / pitch + 1e-3)), extra = h - m * pitch;
       const inner = g.el.matches(PARAGRAPH), b = blocks.find((x) => x.pos === L[0].pos);
@@ -816,7 +898,7 @@ function measureLines(col, rows, blocks) {
       for (let k = 0; k < m; k++) {
         const at = m === L.length ? L[k].at : a0 != null && a1 != null ? a0 + Math.floor((k * (a1 - a0)) / m) : a0;
         const brk = k === 0 ? L[0].brk : inner && k >= 2 && m - k >= 2 && (k >= L.length || L[k].brk || L.length < m);
-        out.push({ ...L[0], top: top + k * pitch, h: pitch, w: k < m - 1 ? MEASURE_CPL : last.w || MEASURE_CPL, nth: k, brk, at });
+        out.push({ ...L[0], top: top + k * pitch, h: pitch, w: k < m - 1 ? cpl : last.w || cpl, nth: k, brk, at });
       }
       if (extra > half) out.push({ ...L[0], top: top + m * pitch, h: extra, w: 0, nth: m, brk: false, at: a0 });
     }
@@ -1265,8 +1347,9 @@ function mount(d, v, span, banded) {
   let template = null;
   if (engine) {
     const m = measured.get(d.addr);
-    if (m && m.key === html) { template = document.createElement('div'); template.className = 'col'; template.innerHTML = html; }
-    else { const t1 = performance.now(); template = setLines(d, articlePlan(d, view, owner), html, made.blocks); measureMs = performance.now() - t1; }
+    const key = layoutKey(d, view, owner, measure());
+    if (m && m.key === key) { template = document.createElement('div'); template.className = 'col'; template.innerHTML = html; }
+    else { const t1 = performance.now(); template = setLines(d, articlePlan(d, view, owner), html, made.blocks, key); measureMs = performance.now() - t1; }
   }
   const f = foldOf(d);
   const lay = LAY_FS / f.fs, box = docBox(d.addr);
@@ -1278,7 +1361,7 @@ function mount(d, v, span, banded) {
   layer.appendChild(el);
   /** @type {Mounted} */
   const rec = {
-    el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fold: f, fs: f.fs, corner: cornerHTML(d, view),
+    el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fold: f, fs: f.fs, corner: { whole: cornerHTML(d, view), compact: cornerHTML(d, view, true) },
     template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', legible: false,
   };
   mounted.set(d.addr, rec);
@@ -1293,21 +1376,23 @@ function mount(d, v, span, banded) {
 
 /**
  * Set a document's article as the platform sets it: laid out once in one
- * column out of sight, its lines read (`measureLines`) and kept for the
- * article they were set from (`articleOf`), then taken out of the page — its
- * column answered, out of the page, the template a mounted article's parts
- * are cut from.
+ * column out of sight, at the measure in force the layer's style holds
+ * (`setMeasure`), its lines read (`measureLines`) and kept for the article
+ * they were set from (`articleOf`) at that measure, then taken out of the
+ * page — its column answered, out of the page, the template a mounted
+ * article's parts are cut from.
  * @param {Doc} d
  * @param {Row[]} rows its plan
  * @param {string} html the article, as `articleOf` makes it
  * @param {Block[]} blocks the blocks it was made from
+ * @param {string} key what its lines are kept by (`layoutKey`)
  * @returns {HTMLElement}
  */
-function setLines(d, rows, html, blocks) {
+function setLines(d, rows, html, blocks, key) {
   const { el, col } = articleEl(d, html);
   el.style.visibility = 'hidden';
   /** @type {HTMLElement} */ (layer).appendChild(el);
-  try { measured.set(d.addr, { key: html, lines: measureLines(col, rows, blocks), n: ++serial }); folds.delete(d.addr); }
+  try { measured.set(d.addr, { key, lines: measureLines(col, rows, blocks, measure()), n: ++serial }); folds.delete(d.addr); }
   finally { el.remove(); }
   return col;
 }
@@ -1322,7 +1407,7 @@ function setLines(d, rows, html, blocks) {
 function measureAside(d) {
   if (!layer) return;
   const v = viewFor(d), owner = ownerAccount(d);
-  setLines(d, articlePlan(d, v, owner), articleOf(d, v, owner), d.blocks);
+  setLines(d, articlePlan(d, v, owner), articleOf(d, v, owner), d.blocks, layoutKey(d, v, owner, measure()));
 }
 
 /**
@@ -1688,6 +1773,7 @@ export function holdAcross(from, to, at = null) {
  */
 export function frame(focused = () => false) {
   if (!layer) return;
+  if (engine) setMeasure();
   let v = viewNow();
   const reading = readingNow();
   const span = read.selection();
@@ -1734,6 +1820,21 @@ export function frame(focused = () => false) {
 }
 
 /**
+ * The layer's style set to the measure in force (P-CAM's `measure`; see the
+ * head) where it holds another, before anything is laid out in the frame: the
+ * columns of the articles it mounts, the lines it sets aside and the parts it
+ * cuts all take it, and every article set at another — its fold made again at
+ * the new one — goes stale and is set again in its place, the passage being
+ * read held (`frame`).
+ */
+function setMeasure() {
+  const cpl = measure();
+  if (!layer || cpl === styled) return;
+  layer.style.setProperty('--measure', String(cpl));
+  styled = cpl;
+}
+
+/**
  * The lines of the documents in view whose bars the canvas draws and whose
  * article stands unmounted — each the version its box shows — set as the
  * platform sets them, within the frame's budget, nearest the view's centre
@@ -1752,52 +1853,159 @@ function measureInView(v) {
 }
 
 /**
+ * The column a document's corner stands beside, and the room left of that
+ * column's text (see the head; issue #151's design decision: "The corner
+ * follows the column nearest the view's centre"): the column the visible
+ * view's centre stands over, else the nearest (P-LAY's `columnAt`); the room
+ * left of its text — for the first column of a row the strip left of the
+ * document's box, which no other document's box reaches into (P-PROJ's
+ * `clearLeftOf`), with the half gutter; for any other the gutter and the edge
+ * of the column before it — its two gaps taken. Where that room holds not even
+ * the compact corner, or the signs in that edge left the corner no room
+ * there (`blocked`), the room by the first column of its row (FP-26: "else
+ * moves into its own document's free room").
+ * @param {Fold} f
+ * @param {number} strip the strip left of the document's box, in world units (P-PROJ's `clearLeftOf`)
+ * @param {{x: number, y: number}} at the visible view's centre, in world units relative to the room
+ * @param {number} scale the camera's scale
+ * @param {number} [blocked] the column the signs before it left the corner no room beside; -1 where none
+ * @returns {Beside}
+ */
+export function besideOf(f, strip, at, scale, blocked = -1) {
+  const ci = columnAt(f, at.x, at.y), mine = roomBeside(f, strip, ci, scale);
+  return mine.first || (ci !== blocked && mine.room >= cornerWidth(true)) ? mine : roomBeside(f, strip, ci - (ci % f.across), scale);
+}
+
+/**
+ * The room left of a column's text for its document's corner (`besideOf`),
+ * its two gaps taken: the strip and the half gutter beside a row's first
+ * column, the gutter and the edge of the column before it beside any other.
+ * @param {Fold} f
+ * @param {number} strip the strip left of the document's box, in world units
+ * @param {number} i the column
+ * @param {number} scale
+ * @returns {Beside}
+ */
+export function roomBeside(f, strip, i, scale) {
+  const c = f.columns[i], first = i % f.across === 0, left = first ? -strip : f.columns[i - 1].x + f.columns[i - 1].w;
+  return { column: i, room: Math.max(0, Math.floor((c.x - left) * scale - 2 * CORNER_GAP)), first };
+}
+
+/**
+ * The form a corner stands in (FP-26: "To fit a view or a pane, margins
+ * compact first"; "Short of room it compacts there"): whole where its room
+ * holds it whole and the view holds a column at the reading size beside it
+ * whole (P-LAY's fit, `narrow` where it does not), or where a reader's act
+ * opened it whole (`openCorner`); else compact.
+ * @param {number} room the room beside its column (`besideOf`), in px
+ * @param {boolean} open
+ * @param {boolean} [narrow] the view's fit holds a column beside the compact corner alone
+ * @returns {CornerForm}
+ */
+export const formFor = (room, open, narrow = false) => (open || (!narrow && room >= cornerWidth(false)) ? 'whole' : 'compact');
+
+/**
+ * A corner's top on screen (see the head): held to the top of its column's
+ * visible part below the one line — its row's top, else just below the line
+ * — and never so low that it runs past `bottom`, unless it is taller than the
+ * room below its row's top; then moved below each sign it would meet of those
+ * the edge before its column holds (foundations §3.1: "an item at a y another
+ * already holds stacks below it"). Null where that move leaves it running
+ * past `bottom`: beside that column it has no room.
+ * @param {{x: number, w: number, h: number}} c the corner's left edge and its size, on screen
+ * @param {number} rowTop its column's top on screen
+ * @param {number} top the height it holds below: the one line's bottom and its gap
+ * @param {number} bottom the foot it never runs past
+ * @param {Rect[]} signs the signs in the edge before its column, on screen; none beside a row's first column
+ * @returns {number | null}
+ */
+export function cornerTop(c, rowTop, top, bottom, signs) {
+  let y = Math.max(rowTop, Math.min(Math.max(rowTop, top), bottom - c.h)), moved = false;
+  for (const s of [...signs].sort((a, b) => a.y - b.y)) {
+    if (s.x < c.x + c.w && c.x < s.x + s.w && s.y < y + c.h && y < s.y + s.h) { y = s.y + s.h + CORNER_GAP; moved = true; }
+  }
+  return moved && y + c.h > bottom + 0.5 ? null : y;
+}
+
+/** the signs a column's edge holds where its parts stand, on screen: the others' counts and the withheld runs' marks */
+function signsIn(/** @type {Mounted} */ rec, /** @type {number} */ ci) {
+  return /** @type {HTMLElement[]} */ ([...rec.el.querySelectorAll(`.col[data-column="${ci}"] .edge`)]).map((e) => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
+}
+
+/**
  * The corners' pass, after the articles are placed: each mounted document at
  * reading scale whose corner has items carries it, the rest are removed. The
- * writes come first (an element, items that changed, a cap that binds), the
- * reads together after them (one layout for every corner that changed, none
- * in a frame where none did), then the places: the corner's right edge a gap
- * short of the first column, its width the narrower of its own measure and
- * the strip, its top the first column's top or, where that has risen past the
- * one line, just below the line — and never so low that the corner runs past
- * the outline's bottom, unless it is taller than the room below the first
- * column's top.
+ * writes come first (an element, its form and items where they changed, a cap
+ * that binds), the reads together after them (one layout for every corner
+ * that changed, none in a frame where none did, and the signs in the edges the
+ * corners stand beside), then the places: beside the column nearest the
+ * view's centre (`besideOf`) — whole or compact by the room there and the
+ * view's fit (`formFor`), the room its cap only where not even its form fits — its right
+ * edge a gap short of that column's text, its top held to that column's
+ * visible top below the one line, never past the outline's bottom beside a
+ * row's first column, nor past its row's foot beside another, and below the
+ * signs the edge before it holds (`cornerTop`); where they leave it no room,
+ * the next frame stands it by its row's first column.
  * @param {(addr: string) => boolean} focused
  */
 function placeCorners(focused) {
   if (!cornerLayer) return;
-  /** @type {Array<{c: Corner, rec: Mounted}>} */
+  /** @type {Array<{c: Corner, rec: Mounted, at: Beside}>} */
   const shown = [];
+  const centre = viewCentre();
   for (const rec of mounted.values()) {
-    if (!rec.corner || !readsAt(rec.fs)) continue;
-    const c = corners.get(rec.d.addr) || makeCorner(cornerLayer, rec.d.addr);
-    if (c.html !== rec.corner) { c.el.innerHTML = rec.corner; c.html = rec.corner; c.stale = true; }
-    const cap = Math.max(0, Math.floor((clearLeftOf(rec.d.addr) + rec.fold.columns[0].x) * cam.scale - 2 * CORNER_GAP));
-    // a cap the corner's own measure stands inside, before and after, changes nothing laid out
-    if (cap !== c.cap && !(c.w < c.cap && c.w <= cap)) { c.el.style.maxWidth = cap + 'px'; c.cap = cap; c.stale = true; }
-    shown.push({ c, rec });
+    if (!rec.corner.whole || !readsAt(rec.fs)) continue;
+    const addr = rec.d.addr, box = docBox(addr), open = openWhole.has(addr);
+    const c = corners.get(addr) || makeCorner(cornerLayer, addr), p = { x: centre.x - box.x, y: centre.y - box.y };
+    // a column the signs before it left no room beside is tried again once the view's centre has left it
+    if (c.blockedAt !== columnAt(rec.fold, p.x, p.y)) c.blockedAt = -1;
+    const at = besideOf(rec.fold, clearLeftOf(addr), p, cam.scale, c.blockedAt);
+    const form = formFor(at.room, open, fit().compact), html = rec.corner[form];
+    if (c.html !== html) { c.el.innerHTML = html; c.html = html; c.stale = true; }
+    if ((form === 'compact') !== c.compact) { c.compact = form === 'compact'; c.el.classList.toggle('compact', c.compact); c.stale = true; }
+    // the room caps the corner only where not even its form's width fits there, a corner opened whole never
+    const cap = open || at.room >= cornerWidth(c.compact) ? Infinity : at.room;
+    if (cap !== c.cap) { c.el.style.maxWidth = cap === Infinity ? '' : cap + 'px'; c.cap = cap; c.stale = true; }
+    c.column = at.column;
+    shown.push({ c, rec, at });
   }
   const here = new Set(shown.map((s) => s.rec.d.addr));
   let lost = false;
   for (const addr of [...corners.keys()]) if (!here.has(addr)) lost = dropCorner(addr) || lost;
   if (shown.length) {
     for (const { c } of shown) if (c.stale) { c.w = c.el.offsetWidth; c.h = c.el.offsetHeight; c.stale = false; }
+    const signs = shown.map(({ rec, at }) => (at.first ? [] : signsIn(rec, at.column - 1)));
     const top = read.top() + CORNER_GAP;
-    for (const { c, rec } of shown) {
-      const box = docBox(rec.d.addr), col = rec.fold.columns[0], b = boundsOf(rec.fold);
-      const first = sy(box.y + col.y);
-      const y = Math.max(first, Math.min(Math.max(first, top), sy(box.y + b.y + b.h) - c.h));
-      const x = sx(box.x + col.x) - CORNER_GAP - c.w;
-      c.el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
+    shown.forEach(({ c, rec, at }, k) => {
+      const f = rec.fold, box = docBox(rec.d.addr), col = f.columns[at.column];
+      const foot = at.first ? boundsOf(f) : padded(f, f.columns[at.column - (at.column % f.across)]);
+      const x = sx(box.x + col.x) - CORNER_GAP - c.w, rowTop = sy(box.y + col.y);
+      const y = cornerTop({ x, w: c.w, h: c.h }, rowTop, top, sy(box.y + foot.y + foot.h), signs[k]);
+      // beside that column the signs before it leave it no room: the next frame stands it by its row's first column
+      if (y === null) { c.blockedAt = at.column; markDirty(); }
+      c.el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y ?? rowTop)}px)`;
       const mine = focused(rec.d.addr);
-      if (mine === c.mine) continue;
+      if (mine === c.mine) return;
       if (!mine) lost = c.el.contains(document.activeElement) || lost;
       c.mine = mine;
       if (mine) { c.el.tabIndex = 0; c.el.removeAttribute('aria-hidden'); }
       else { c.el.removeAttribute('tabindex'); c.el.setAttribute('aria-hidden', 'true'); }
-    }
+    });
   }
   if (lost) read.handOff();
+}
+
+/**
+ * A compact sign opened whole on its act (FP-26: "A compact sign opens whole
+ * on its act"): a document's corner standing compact made whole where it
+ * stands, over what is beside it, until the act again — at the corner opened,
+ * its version statement apart — closes it, or the corner leaves (APP-INPUT
+ * takes the act at the corner's glyph, and at the corner opened).
+ * @param {string} addr
+ */
+export function openCorner(addr) {
+  if (openWhole.has(addr)) openWhole.delete(addr); else openWhole.add(addr);
+  markDirty();
 }
 
 /**
@@ -1818,16 +2026,16 @@ function makeCorner(into, addr) {
   el.setAttribute('aria-hidden', 'true');
   into.appendChild(el);
   /** @type {Corner} */
-  const c = { el, html: '', cap: -1, w: 0, h: 0, stale: true, mine: false };
+  const c = { el, html: '', compact: false, column: 0, cap: Infinity, w: 0, h: 0, stale: true, mine: false, blockedAt: -1 };
   corners.set(addr, c);
   return c;
 }
 
-/** remove a document's corner; true where it held the focus */
+/** remove a document's corner, and its opening whole with it; true where it held the focus */
 function dropCorner(/** @type {string} */ addr) {
   const c = corners.get(addr); if (!c) return false;
   const held = c.el.contains(document.activeElement);
-  c.el.remove(); corners.delete(addr);
+  c.el.remove(); corners.delete(addr); openWhole.delete(addr);
   return held;
 }
 
@@ -1852,6 +2060,21 @@ export function spanRects(addr, pos, width = null) {
   }
   const rs = [...rec.el.querySelectorAll(`.sp[data-pos="${pos}"]`)].flatMap((sp) => [...sp.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height })));
   return rs.length ? rs : null;
+}
+
+/**
+ * The client rects of the signs its column's edge holds beside a block of a
+ * mounted article — its others' count, a withheld run's mark (issue #151's
+ * design decision) — where the part holding the block's first line stands:
+ * what a beam or a tail leaving the block's line starts past (BM's
+ * `leaveAt`); none where none stands.
+ * @param {string} addr
+ * @param {number} pos the block's first position
+ * @returns {Array<{x: number, y: number, w: number, h: number}>}
+ */
+export function signRects(addr, pos) {
+  const rec = mounted.get(addr); if (!rec) return [];
+  return [...rec.el.querySelectorAll(`[data-pos="${pos}"] > .edge`)].map((e) => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
 }
 
 /**
@@ -2221,6 +2444,8 @@ export function sceneCorner(d, view = viewFor(d, true)) { return cornerHTML(d, v
 
 /** a document's corner on the plane, or null where it carries none now (the gate's containment check reads it) */
 export function cornerOf(/** @type {string} */ addr) { const c = corners.get(addr); return c ? c.el : null; }
+/** a document's corner as the last frame placed it: the column it stands beside, whether it stands compact, and whether a reader's act opened it whole (`openCorner`); null where none stands */
+export function cornerAt(/** @type {string} */ addr) { const c = corners.get(addr); return c ? { column: c.column, compact: c.compact, opened: openWhole.has(addr) } : null; }
 
 /** the text of a mounted article (the gate's rendered case): its standing parts' blocks, in their lines' order */
 export function mountedText(/** @type {string} */ addr) {
@@ -2313,6 +2538,7 @@ export function clear() {
   owed = null;
   let lost = false;
   for (const a of [...corners.keys()]) lost = dropCorner(a) || lost;
+  openWhole.clear();
   if (lost) read.handOff();
 }
 

@@ -16,7 +16,9 @@
 // each beam leaves the text at its span's own line, from the place's edge
 // (foundations §2.1; S1 Q1): it starts at the right edge of the block
 // holding the stretch it leaves from — of the part of it that holds the line,
-// where the block is parted across columns (issue #15's fold) — level with
+// where the block is parted across columns (issue #15's fold), past the sign
+// the column's edge holds level with that line, so it is routed outside the
+// counts and the withheld marks (foundations §3.1; issue #151) — level with
 // the middle of the line-rect nearest the far end of every stretch LK says
 // its end stands in (LK's
 // `runs`; `spanRects` with each stretch's width — its rects line by line, so
@@ -122,6 +124,7 @@ import { farSays } from './held.js';
  * @property {(addr: string, pos: number, width: number) => Rect[]} lines the line rects of a span's own bytes in a mounted article; none where they are not laid out
  * @property {(addr: string, pos: number) => Rect[]} block the boxes of the block holding a position in a mounted article, one for each column that holds a part of it; none where it is not laid out
  * @property {(addr: string) => (Rect | null)} first the box of a mounted article's first block: the anchor of a whole-work end, and of one that floats
+ * @property {(addr: string, pos: number) => Rect[]} signs the signs its column's edge holds beside the block holding a position in a mounted article — its others' count, a withheld run's mark — where they stand; none elsewhere
  * @property {(addr: string) => boolean} mounted
  * @property {(addr: string) => Point} centre the centre of a document's box
  * @property {Rect} view the visible view (P-CAM's `visibleView`)
@@ -150,7 +153,7 @@ export function resize() {
   canvas.style.width = VW + 'px'; canvas.style.height = VH + 'px';
 }
 
-/** @typedef {{line: Rect, block: Rect}} Anchor a line of an end's stretch, with the box of the part of the block holding that stretch that holds the line */
+/** @typedef {{line: Rect, block: Rect, signs: Rect[]}} Anchor a line of an end's stretch, with the box of the part of the block holding that stretch that holds the line, and the signs its column's edge holds beside the block */
 
 /** the anchor whose line is nearest a point */
 function pickLine(/** @type {Anchor[]} */ anchors, /** @type {Point} */ p) {
@@ -161,8 +164,9 @@ function pickLine(/** @type {Anchor[]} */ anchors, /** @type {Point} */ p) {
 /**
  * Where a drawn end leaves its document's mounted text (see the head): the
  * right edge of the part of the block holding the line it leaves at, level
- * with the line's middle — toward a point, the line of its stretches nearest
- * it (a beam's, toward its far end); toward none, the last line of its last
+ * with the line's middle, past the sign its column's edge holds there
+ * (`pastSigns`) — toward a point, the line of its stretches nearest it (a
+ * beam's, toward its far end); toward none, the last line of its last
  * stretch, where its symbol stands (a tail's, which has no far end on the
  * plane — issue #132). Null where none of its stretches has a line laid out.
  * @param {Geometry} g
@@ -175,11 +179,32 @@ export function leaveAt(g, addr, runs, toward = null) {
   const near = anchorsOf(g, addr, runs);
   if (!near.length) return null;
   const a = toward ? pickLine(near, toward) : near[near.length - 1];
-  return { line: a.line, from: { x: a.block.x + a.block.w, y: a.line.y + a.line.h / 2 } };
+  return { line: a.line, from: { x: pastSigns(a), y: a.line.y + a.line.h / 2 } };
 }
-/** the lines of the stretches of a document's text, each with the part of the block holding its stretch that holds the line (`partOf`); none where they are not laid out */
+/**
+ * Where a stroke leaving a line of a block starts across (foundations §3.1:
+ * the place's own edge holds the blocks' counts and the withheld faces, "the
+ * beams routed outside them"): the right edge of the part of the block
+ * holding the line, else, where a sign its column's edge holds stands level
+ * with the line, as far past that sign as the sign stands past the text, so
+ * no stroke crosses a count or a withheld run's mark.
+ * @param {Anchor} a
+ * @returns {number}
+ */
+export function pastSigns(a) {
+  const right = a.block.x + a.block.w, m = a.line.y + a.line.h / 2;
+  let x = right;
+  for (const s of a.signs) if (s.x >= right - 0.5 && s.y - 0.5 <= m && m <= s.y + s.h + 0.5) x = Math.max(x, s.x + s.w + (s.x - right));
+  return x;
+}
+/** the lines of the stretches of a document's text, each with the part of the block holding its stretch that holds the line (`partOf`) and the signs beside that block; none where they are not laid out */
 function anchorsOf(/** @type {Geometry} */ g, /** @type {string} */ addr, /** @type {Array<{pos: number, width: number}>} */ runs) {
-  return runs.flatMap((r) => { const parts = g.block(addr, r.pos); return parts.length ? g.lines(addr, r.pos, r.width).map((line) => ({ line, block: partOf(parts, line) })) : []; });
+  return runs.flatMap((r) => {
+    const parts = g.block(addr, r.pos);
+    if (!parts.length) return [];
+    const signs = g.signs(addr, r.pos);
+    return g.lines(addr, r.pos, r.width).map((line) => ({ line, block: partOf(parts, line), signs }));
+  });
 }
 /** the part of a block holding a line: the box whose height holds the line's middle and whose width meets the line, half a px either way; the first where none does */
 function partOf(/** @type {Rect[]} */ parts, /** @type {Rect} */ line) {
@@ -224,7 +249,7 @@ const mid = (/** @type {Rect} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
  * @returns {Anchor[] | null}
  */
 function farAnchors(s, g) {
-  if (s.farWhole || LK.floats(s)) { const b = g.first(s.farAt); return b ? [{ line: b, block: b }] : []; }
+  if (s.farWhole || LK.floats(s)) { const b = g.first(s.farAt); return b ? [{ line: b, block: b, signs: [] }] : []; }
   return s.farRuns ? anchorsOf(g, s.farAt, s.farRuns) : null;
 }
 
@@ -361,6 +386,7 @@ export function pageGeometry(/** @type {Rect} */ seen = seenNow()) {
     lines: (addr, pos, width) => { const rs = (LAYER.spanRects(addr, pos, width) || []).filter((r) => r.w > 0 && r.h > 0); return rs.length ? rs : LAYER.lineBoxes(addr, pos, width) || []; },
     block: (addr, pos) => { const b = blockAt(addr, pos); return b ? parts(addr, b.pos) : []; },
     first: (addr) => parts(addr, (doc(addr).blocks[0] || { pos: 1 }).pos)[0] || null,
+    signs: (addr, pos) => { const b = blockAt(addr, pos); return b ? LAYER.signRects(addr, b.pos) : []; },
     mounted: LAYER.isMounted,
     centre: (addr) => { const b = docBox(addr); return { x: sx(b.x + b.w / 2), y: sy(b.y + b.h / 2) }; },
     view: seen,

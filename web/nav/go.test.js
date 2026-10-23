@@ -274,7 +274,8 @@ import * as LINKS from '../overlays/links-card.js';
 import * as SEL from '../overlays/selection.js';
 import * as INPUT from '../app/input.js';
 import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
-import { standardFs, placeOf } from '../plane/layout.js';
+import { standardFs, placeOf, EDGE } from '../plane/layout.js';
+import { CORNER, cornerWidth } from '../plane/register.js';
 import { entitlementArm } from '../text/article.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -1709,7 +1710,7 @@ test('a LEAP to a residue member its paragraphs set far smaller than its place\'
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a LEAP to a passage of an edition folded into columns lands on the passage\'s line in its own column, at reading size, the walk on the span holding it (issue #15)', async () => {
+test('a LEAP to a passage of an edition folded into columns lands on the passage\'s line in its own column — the column framed with its corner on its left and its edge on its right (issue #151) — at reading size, the walk on the span holding it (issue #15)', async () => {
   await PUMP.loadWhole(LONG);
   const d = REC.doc(LONG), f = LAYER.foldOf(d), box = docBox(LONG);
   // a passage inside the span heading the second row's first column, below the middle of the room's width
@@ -1717,7 +1718,10 @@ test('a LEAP to a passage of an edition folded into columns lands on the passage
   assert.ok(at && f.across > 1 && c.x + c.w < box.w / 2, `the span heading column ${f.across} of ${f.columns.length}, ${f.across} across`);
   const pos = at.pos + 4, line = placeOf(f, pos);
   await run(GO.leapTo(LONG, { pos }));
-  assert.ok(same(CAM.view(), { x: box.x + c.x + c.w / 2, y: box.y + line.y + line.h / 2, scale: 12.5 / f.fs }), `the camera on the passage's line, centred across its column, at reading size: ${JSON.stringify(CAM.view())}`);
+  // the column the first of its row: the strip beside it holds the corner whole, 133 px and its 8 px gap; its edge EDGE em on its right
+  const scale = 12.5 / f.fs, framed = box.x + c.x + c.w / 2 + (EDGE * 12.5 - (cornerWidth(false) + CORNER.gap)) / 2 / scale;
+  assert.ok(same(CAM.view(), { x: framed, y: box.y + line.y + line.h / 2, scale }), `the camera on the passage's line, its column framed with its corner and its edge, at reading size: ${JSON.stringify(CAM.view())}`);
+  assert.ok(CAM.sx(box.x + c.x) - (cornerWidth(false) + CORNER.gap) >= 0 && CAM.sx(box.x + c.x + c.w) + EDGE * 12.5 <= 1440, 'the corner, the column and its edge in view together');
   assert.deepEqual(walkAt(), ['block', LONG, at.pos]);
   assert.deepEqual(fake.unanswered, []);
 });

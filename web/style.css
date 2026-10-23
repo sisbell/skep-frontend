@@ -83,19 +83,22 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 
 /* THE TEXT LAYER (S1 Q7): laid out once at 16 px, moved by transform; the article stands on its document's room, its
    parts placed in it (issue #15's fold; issue #122: a document stands by line, each part a `.col` holding a run of one
-   column's lines, the measure wide, `--measure` characters of its face, placed at its first line's top; a part's flow
-   its own `.run`, the margin above its first block dropped; nothing clipped, for nothing stands past the room). The
-   parts take the pointer, the room between them never, so a press in a gutter falls to the canvas. Every element's line box
-   is the article's one unitless line height (P-LAY's LINE_H, set on the article by T-LAYER) of its own size — the
-   chrome inside a line (the hairline's label, C-33's mark, a symbol) is set at a line height of 1, so it never
-   deepens its line; a symbol's box is one character wide whatever face sets its ⟡ — a heading stands nearer the
-   block it heads than the block above it; the block holding the others' count, a float, is a formatting context of
-   its own, so the count stands inside it and the block after it keeps its lines; every other block is a plain block,
-   so the margins about one that sets no line (a separator alone) collapse into one, as P-LAY collapses an empty
-   row's: the lines P-LAY lays the bars out on (foundations §2.4: the handoff moves no line). An article on the plane
-   takes the pointer at reading scale alone, the `legible` class T-LAYER sets at the readable em 8 and above; below it
-   the layer's `none` holds, and a press on its text falls to the canvas as one on its bars does (foundations §2.4:
-   "bars or mounted text alike"). */
+   column's lines, the measure wide, `--measure` characters of its face — the measure in force, which T-LAYER sets on the
+   layer — placed at its first line's top; a part's flow its own `.run`, the margin above its first block dropped;
+   nothing clipped, for nothing stands past the room). The parts take the pointer, the room between them never, so a
+   press in a gutter falls to the canvas. Every element's line box is the article's one unitless line height (P-LAY's
+   LINE_H, set on the article by T-LAYER) of its own size — the chrome inside a line (the hairline's label, C-33's mark,
+   a symbol) is set at a line height of 1, so it never deepens its line; a symbol's box is one character wide whatever
+   face sets its ⟡ — a heading stands nearer the block it heads than the block above it; every block is a plain block,
+   so the margins about one that sets no line (a separator alone) collapse into one, as P-LAY collapses an empty row's:
+   the lines P-LAY lays the bars out on (foundations §2.4: the handoff moves no line). THE EDGE (issue #151's design
+   decision): a block's others' count and a withheld run's mark stand in their column's edge, placed out of the flow
+   beside the block's first line, `--edge-in` past the text and `--edge-w` wide in their own em (T-ARTICLE's
+   `edgeStyle`), so no sign sets a line. A withheld run is a gap as tall as its bars, its ground drawn on the run's own
+   lines — the last `--wh-last` characters wide — holding what its gap holds. An article on the plane takes the pointer
+   at reading scale alone, the `legible` class T-LAYER sets at the readable em 8 and above; below it the layer's `none`
+   holds, and a press on its text falls to the canvas as one on its bars does (foundations §2.4: "bars or mounted text
+   alike"). */
 #domlayer { position:fixed; inset:0; overflow:hidden; pointer-events:none; contain:strict; z-index:3; }
 .dtext { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; box-sizing:content-box;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color:#b9c1cb; -webkit-font-smoothing:antialiased; cursor:text; user-select:text; }
@@ -107,8 +110,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .hd .st, .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:var(--head); display:block; }
 .dtext .hd .pres { color:#b9c1cb; }
 .dtext .run { display:block; }
-.dtext .sp { display:block; margin:0 0 var(--gap); border-radius:2px; font-weight:400; }
-.dtext .sp:has(> .others) { display:flow-root; }
+.dtext .sp { display:block; position:relative; margin:0 0 var(--gap); border-radius:2px; font-weight:400; }
 .dtext h2.sp, .dtext h3.sp, .dtext h4.sp, .dtext h5.sp, .dtext h6.sp, .dtext h7.sp { font-size:1em; font-weight:600; color:#cfd6df; margin:var(--heading-before) 0 var(--heading-after); }
 .dtext h2.sp { font-size:var(--h2); } .dtext h3.sp { font-size:var(--h3); }
 /* the selection's bytes are the platform's own highlight; a block it touches carries the outline as its cue */
@@ -131,12 +133,17 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .sym { display:inline-block; border:var(--border-box) solid var(--mark-hue, #8b8f96); color:var(--mark-hue, #e8e6e1); padding:0 var(--sym-pad); font-size:var(--sym); line-height:1; margin-left:var(--sym-gap); vertical-align:baseline; opacity:var(--mark-value, 1);
   width:calc(1ch + 2 * var(--sym-pad) + 2 * var(--border-box)); text-align:center; }
 .dtext .sym.other { border-style:dashed; }
-.dtext .others { float:right; color:var(--dim); font-size:var(--count); margin-left:var(--count-gap); }
-.dtext .withheld { display:block; margin:0 0 var(--gap); padding:.4em .6em; border:1px solid #8b8f96; color:#cfd6df;
-  background: repeating-linear-gradient(45deg, #1b1f25, #1b1f25 6px, #22272f 6px, #22272f 12px); }
-.dtext .withheld .arm, .dtext .withheld .clause { display:block; font-size:.8em; color:#b9c1cb; margin-top:.3em; }
+/* a sign in its column's edge, beside its block's first line (see the head): the others' count, a withheld run's mark */
+.dtext .edge { position:absolute; top:0; left:calc(100% + var(--edge-in)); width:var(--edge-w); font-size:var(--count); font-weight:400; color:var(--dim); }
+.dtext .wh-mark { color:#cfd6df; }
+.dtext .withheld { display:block; position:relative; isolation:isolate; margin:0 0 var(--gap); color:#cfd6df; }
+.dtext .withheld::before { content:''; position:absolute; inset:0; z-index:-1;
+  background: repeating-linear-gradient(45deg, #1b1f25, #1b1f25 6px, #22272f 6px, #22272f 12px);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--line-box)), calc(var(--wh-last) * 1ch) calc(100% - var(--line-box)), calc(var(--wh-last) * 1ch) 100%, 0 100%); }
+.dtext .withheld .wh-head, .dtext .withheld .wh-owner, .dtext .withheld .wh-origin { display:block; }
+.dtext .withheld .arm, .dtext .withheld .clause { display:block; font-size:var(--face); color:#b9c1cb; margin-top:var(--face-gap); }
 /* the chrome inside a block is never the document's bytes: a drag crosses it unselected, the copy never carries it */
-.dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .others { user-select:none; -webkit-user-select:none; }
+.dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .edge { user-select:none; -webkit-user-select:none; }
 /* an item that holds no text — a record, a reference, an item this client cannot show, a withheld run's face — is selected
    whole wherever a selection touches it, and drawn so: the span takes it whole, and a copy writes its stand-in in its place
    (FP-24; issue #161). On the plane a press on a withheld run's face starts no selection: its click is its act's (APP-INPUT) */
@@ -149,23 +156,30 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    the only one the pointer reaches — and its corners, and on nothing a reading scene's pane holds — a pane's blocks,
    hairlines and symbols are read, never clicked (SC) */
 #domlayer .dtext .sp, #domlayer .dtext .hairline, #domlayer .dtext .sym { cursor:pointer; }
-/* C-67's pointer beneath a withheld run's arm, its LEAP to the edition the plane's act alone (a pane's is read, SC) */
-#domlayer .dtext .withheld .clause[data-home] { cursor:pointer; text-decoration:underline dotted; }
+/* C-67's pointer beneath a withheld run's arm, its LEAP to the edition, and the run's compact face in its column's edge,
+   which opens it whole: the plane's acts alone (a pane's are read, SC) */
+#domlayer .dtext .withheld .clause[data-home], #domlayer .dtext .wh-mark { cursor:pointer; text-decoration:underline dotted; }
 #domlayer .dtext .sp:hover { background:rgba(127,178,255,.08); }
 #beams { position:fixed; inset:0; pointer-events:none; z-index:4; }
 
 /* THE CORNER — on the document's one side, outside the measure, at the interface's size (foundations §3.1; ux-T2):
    beside the article, never inside the box that clips it. On the plane T-LAYER places each in the corner layer, over
-   the beams and under the chrome, by translate alone; the layer clips without scrolling, so a focus never moves it.
-   In the scene each pane's own stands on its outer side, held to the top of the pane's scroll. */
+   the beams and under the chrome, by translate alone, beside the column nearest the view's centre (issue #151's design
+   decision), whole — `--corner-w` wide — or compact — `--corner-compact-w`, its usual state a glyph whose act opens it
+   whole (FP-26); the layer clips without scrolling, so a focus never moves it. In the scene each pane's own stands on its
+   outer side, held to the top of the pane's scroll. */
 #corners { position:fixed; inset:0; overflow:clip; pointer-events:none; contain:strict; z-index:5; }
-.corner { font-size:11px; line-height:1.4; color:#8b8f96; user-select:none; -webkit-user-select:none; }
-#corners .corner { position:absolute; top:0; left:0; width:11em; padding:4px 6px; pointer-events:auto; background:var(--bg); border-radius:3px; will-change:transform; }
+.corner { font-size:var(--corner-px); line-height:1.4; color:#8b8f96; user-select:none; -webkit-user-select:none; }
+#corners .corner { position:absolute; top:0; left:0; width:var(--corner-w); padding:4px var(--corner-pad); pointer-events:auto; background:var(--bg); border-radius:3px; will-change:transform; }
+#corners .corner.compact { width:var(--corner-compact-w); }
 .corner .st { display:block; }
 .corner .version { display:block; color:#cfd6df; }
-/* the version statement's click cue on the plane's corner alone, whose act it is (K-57); a pane's corner is shown, not acted on */
-#corners .corner .version { cursor:pointer; text-decoration:underline dotted; }
+/* the version statement's click cue on the plane's corner alone, whose act it is (K-57), and a compact state's glyph, which
+   opens the corner whole; a pane's corner is shown, not acted on */
+#corners .corner .version, #corners .corner .glyph { cursor:pointer; }
+#corners .corner .version { text-decoration:underline dotted; }
 .corner .chip { display:inline-block; border:1px solid #4a5260; border-radius:3px; padding:0 .4em; color:#e8e6e1; margin-top:.3em; }
+.corner .chip.glyph { border:0; padding:0; }
 .corner .whole-links { display:block; margin-top:.3em; }
 
 /* A LANDING'S LINE (issue #153's design decision): at the text's edge beside the landing (O-LAND places it), over the
@@ -218,9 +232,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    and a pane's corner's act, which reads another version in the pane's place (issue #160). Each
    pane's text is one column at the plane's measure, `--measure` characters of its own face (issue #15: "side-by-side
    panes stay one column each, at the same line length"), at the largest size up to 14 px that fits beside its corner
-   (SC sets it); it stands against the pane's inner edge, where the bands and lines leave the pane (foundations §2.5),
-   its corner beside it on the outer side, so the room a wide window adds falls outside both — before pane A's corner,
-   after pane B's — and the text keeps its place beside the bands at every width. An auto margin takes that room */
+   (SC sets it); it stands against the pane's inner edge, its column's edge between them, where the bands and lines leave
+   the pane (foundations §2.5), its corner beside it on the outer side, so the room a wide window adds falls outside both —
+   before pane A's corner, after pane B's — and the text keeps its place beside the bands at every width. An auto margin
+   takes that room */
 #scene { position:fixed; inset:46px 20px 20px 20px; z-index:26; display:none; background:var(--bg); border:1px solid #6b7382; border-radius:4px; }
 #scene.on { display:block; }
 #scenebar { position:absolute; left:0; right:0; top:0; height:26px; padding:4px 10px; border-bottom:1px solid var(--line); color:var(--dim); font-size:11px; white-space:nowrap; overflow:hidden; }
@@ -229,7 +244,12 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .pane { position:absolute; top:26px; bottom:0; width:calc(50% - 70px); overflow:auto; padding:14px 18px; display:flex; align-items:flex-start; gap:14px; }
 #sceneA { left:0; } #sceneB { right:0; }
 .pane .dtext { position:static; transform:none; font-size:14px; line-height:1.5; flex:none; width:calc(var(--measure) * 1ch); height:auto; cursor:text; }
-.pane .corner { position:sticky; top:0; flex:0 0 11em; }
+/* a pane's column's edge stands on its inner side, the bands leaving the pane beyond its signs (foundations §3.1): pane A's on
+   the right of its text, pane B's on the left, the article's box taking the edge's room */
+#sceneA .dtext { padding-right:var(--edge); }
+#sceneB .dtext { padding-left:var(--edge); }
+#sceneB .dtext .edge { left:auto; right:calc(100% + var(--edge-in)); text-align:right; }
+.pane .corner { position:sticky; top:0; flex:0 0 var(--corner-w); }
 #sceneA > .corner { margin-left:auto; }
 /* a pane's corner's act — "read version ⟨n⟩" — the one click cue in a pane; the line saying the version it reads lacks
    the passage the act carried beside it */

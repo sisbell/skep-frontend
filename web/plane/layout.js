@@ -6,7 +6,7 @@
 // The bars are a layout of the article's own lines, never a guess at them:
 // T-ARTICLE's plan of the article — the head's lines, then each block's text
 // at its size with the inline pieces it carries — is wrapped here the way the
-// article's CSS wraps it: a column of exactly MEASURE_CPL characters of the
+// article's CSS wraps it: a column of exactly the measure's characters of the
 // article's monospace face (the style sets it in `ch`, `--measure`); a unit
 // placed on a line where its characters fit, the space after it hanging past
 // the column; a line broken at a space, after a hyphen, a dash, an ellipsis or
@@ -16,28 +16,43 @@
 // one unitless line height, `LINE_H`, which each element applies to its own em
 // — the article's chrome is held inside it); the margins around each block at
 // the block's own size, a heading's nearer the block below it than the block
-// above, adjoining margins collapsing to the larger; a float at a block's end
-// beside its last line where it fits, else on a line of its own, as tall as
-// its own line box. Each line carries where a column may break before it, by
-// its row's keep (`Row.keep`), and where in the document's bytes it starts.
+// above, adjoining margins collapsing to the larger. Each line carries where a
+// column may break before it, by its row's keep (`Row.keep`), and where in the
+// document's bytes it starts. No sign of the page's sets a line: a block's
+// others' count and a withheld run's mark stand in the column's edge.
 // THE FOLD (issue #15's design decision): every document is set at one line
-// length, MEASURE_CPL characters, and one line height, in equal columns of
-// COLUMN_LINES body line boxes (`columnsOf`) — a column filled to its depth
-// from its first line's top, the margin above a column's head dropped; a
-// heading kept with the first two lines after it; no paragraph line alone at a
-// column's head or foot (a paragraph of three lines or fewer moves whole); the
-// head, a record, a withheld face, a reference, an item not rendered and the
-// chrome never split; a kept unit deeper than a column broken at a line
-// anyway, so no text is dropped. The columns stand inside the document's room
-// (P-PROJ's box) left to right, then row by row, a GUTTER apart (`fold`); a
-// document shorter than one column is one column of its own length. Each
-// column is padded by half a gutter, so neighbouring padded columns meet and
-// their union has one edge, the document's (`outline`). THE STEPS: every
+// length — the measure, MEASURE_CPL characters wherever the view holds them
+// (THE FIT below) — and one line height, in equal columns of COLUMN_LINES
+// body line boxes (`columnsOf`) — a column filled to its depth from its first
+// line's top, the margin above a column's head dropped; a heading kept with
+// the first two lines after it; no paragraph line alone at a column's head or
+// foot (a paragraph of three lines or fewer moves whole); the head, a record,
+// a withheld run, a reference, an item not rendered and the chrome never
+// split; a kept unit deeper than a column broken at a line anyway, so no text
+// is dropped. The columns stand inside the document's room (P-PROJ's box) left
+// to right, then row by row (`fold`), each followed by ITS EDGE and a GUTTER
+// apart: THE EDGE (issue #151's design decision: "each gutter widens into its
+// column's edge and holds that column's counts and withheld marks") is the
+// room right of a column's text, EDGE em wide, where the column's signs stand
+// — its blocks' others' counts and its withheld runs' marks, each EDGE_GAP
+// past the text, level with its block's first line and never inside the text,
+// so a link's arrival breaks no line (A-254) and no face reflows it
+// (`edgeOf`). A document shorter than one column is one column of its own
+// length. Each column is padded by half a gutter, on its right past its edge,
+// so neighbouring padded columns meet and their union has one edge, the
+// document's (`outline`), its signs on its own ground. THE STEPS: every
 // document is set at its room's standard size (`standardFs`, the largest em at
-// which the room holds STANDARD_GRID columns) until its columns fill the room;
-// only then is the whole document set smaller, at the first step that holds
-// its columns, each step at least doubling the room's capacity (`stepAt`), so
-// a growing draft re-sets rarely. Length reads as a count of columns.
+// which the room holds STANDARD_GRID columns at the measure) until its columns
+// fill the room; only then is the whole document set smaller, at the first
+// step that holds its columns, each step at least doubling the room's capacity
+// (`stepAt`), so a growing draft re-sets rarely. Length reads as a count of
+// columns. THE FIT (issue #151's design decisions; FP-26: "margins compact
+// first, then the measure narrows in characters"): the measure the view sets
+// every line at (`fitFor`) — MEASURE_CPL wherever the view holds a column at
+// the reading size with both its margins beside it, the corner on its left,
+// whole, else compact, and the edge on its right; else, the corner compact,
+// the most characters the view holds beside them. It reads the view's width
+// and the reading size alone, so zoom never changes it.
 // Positions map to places and back (`placeOf`, `posAt`), a view reads as the
 // positions it shows and the ends it has run past (`windowIn`), the paging key
 // continues at the next column's top (`pageTarget`), and a document re-set in
@@ -47,17 +62,19 @@
 // never smaller than the one its text is set at; one whose extent is unread is
 // its first column slot (`slot`).
 // The measurements the article and this layout share are declared once here —
-// `MEASURE`, `BORDER` and the fold's measure and gutter set as custom
+// `MEASURE`, `BORDER` and the fold's measure, gutter and edge set as custom
 // properties at boot (`cssMeasures`), `LAY_FS` and `LINE_H` set on the article
 // by T-LAYER — so neither side can drift from the other. A withheld run is
-// bars of its true width (F2.1-i); its face at reading scale stands taller,
-// and the column holds the face as T-LAYER measures it.
+// bars of its true width (F2.1-i), and at reading scale a gap of the bars' own
+// size (`gapOf`): its face stands in it only where it fits, so the gap keeps
+// encoding the width and no face reflows the text.
 // Characters outside the monospace face (an ideograph, a fallback symbol)
 // are counted as one character each; the face sets them wider, and T-LAYER's
 // measure of the lines as rendered takes the place of these where they part.
 // Carries: the wireframe's §9 (`layoutOf`, the monospace metrics), its input
 // re-cut from the paragraphs to the article's plan.
-// Rules: FP-1, FP-2, FP-8, FP-10 (no state but a cache of a pure function).
+// Rules: FP-1, FP-2, FP-8, FP-10 (no state but a cache of a pure function),
+// FP-12, FP-26.
 
 import { DOC_W, DOC_H } from './projection.js';
 import { byteLength } from '../util.js';
@@ -74,7 +91,7 @@ import { byteLength } from '../util.js';
 
 /**
  * @typedef {'lines' | 'whole' | 'heading' | 'joined'} Keep how a column may break at a row:
- * 'lines' — between its lines, two at least on either side (a paragraph; its own float never parted from its last line);
+ * 'lines' — between its lines, two at least on either side (a paragraph);
  * 'whole' — never among its lines;
  * 'heading' — never among its lines, nor before the first two lines after it;
  * 'joined' — never among its lines, nor between it and the row before it (a record's keys, the head's lines after its first)
@@ -86,7 +103,6 @@ import { byteLength } from '../util.js';
  * @property {number | null} pos the first position of the block the row opens; null on a row that opens none
  * @property {number} size the size its box is set at, in the body's em: each of its lines is that size's line box (`lineBox`)
  * @property {Piece[]} pieces
- * @property {Piece | null} float a float at the row's end, on its right (the others' count)
  * @property {number} before the margin above it, in the body's em
  * @property {number} after the margin below it, in the body's em
  * @property {number} width a withheld run's positions (its bars); 0 on every other row
@@ -96,7 +112,7 @@ import { byteLength } from '../util.js';
 /**
  * @typedef {Object} Line — one line box of the article
  * @property {number} top its top, in the body's em below the article's first line's top
- * @property {number} h its height, in the body's em: its row's line box, or a float's own where the float stands on a line of its own
+ * @property {number} h its height, in the body's em: its row's line box
  * @property {number} w the width its content takes, in characters of the body's face
  * @property {number} size the largest font size on it, in the body's em
  * @property {Row['kind']} kind the kind of the row it belongs to
@@ -133,6 +149,7 @@ import { byteLength } from '../util.js';
  * @property {number} fs the body's em in world units: the size its step sets
  * @property {number} step its step: 0 the standard size
  * @property {number} across columns per row
+ * @property {number} cpl the measure its lines are set at, in characters of its face
  * @property {Room} room
  * @property {Line[]} lines the article's lines, in the flow's order
  * @property {Column[]} columns in reading order: left to right, then row by row
@@ -140,7 +157,7 @@ import { byteLength } from '../util.js';
  */
 
 /**
- * @typedef {Object} Unheld — a stretch of positions a fold holds no line for, estimated: a body line for each MEASURE_CPL of them, from a column's depth on
+ * @typedef {Object} Unheld — a stretch of positions a fold holds no line for, estimated: a body line for each measure's count of them, from a column's depth on
  * @property {number} from its first position
  * @property {number} to one past its last; Infinity for the positions after the last line held
  * @property {number} column the column it begins in
@@ -223,8 +240,10 @@ export const MEASURE = Object.freeze({
   mark: 0.72, markPad: 0.3, markGap: 0.3,
   /** a link's symbol: its size, its padding on either side, the room before it */
   sym: 0.75, symPad: 0.3, symGap: 0.3,
-  /** the others' count and the room before it */
-  count: 0.72, countGap: 0.5,
+  /** a sign in a column's edge: the others' count, a withheld run's mark */
+  count: 0.72,
+  /** a withheld run's arm and clause in its gap, and the room above each */
+  face: 0.8, faceGap: 0.3,
   /** the sameness boundary's padding */
   samePad: 0.25,
 });
@@ -232,20 +251,30 @@ export const MEASURE = Object.freeze({
 /** the borders, in px at LAY_FS: a mark's and a symbol's box, the sameness boundary */
 export const BORDER = Object.freeze({ box: 1, same: 2 });
 
-/** THE MEASURE: every document's line, the plane's and a reading scene's pane's alike, in characters of its face (the design's 60–66) */
+/** THE MEASURE at its full: every document's line wherever the view holds it (`fitFor`), the plane's and a reading scene's pane's alike, in characters of its face (the design's 60–66) */
 export const MEASURE_CPL = 66;
 /** a column's depth, in the body's line boxes */
 export const COLUMN_LINES = 36;
 /** the gutter between two columns, in the body's em: each column is padded by half of it */
 export const GUTTER = 2;
+/** a column's edge (see the head), in the body's em: the room right of its text that holds its signs */
+export const EDGE = 6;
+/** the room between a column's text and a sign in its edge, in the body's em */
+export const EDGE_GAP = 0.5;
 /** the columns a room holds at the standard size: across, then down */
 export const STANDARD_GRID = Object.freeze(/** @type {[number, number]} */ ([3, 4]));
-/** a column's text width, in the body's em */
-export const COLUMN_W = MEASURE_CPL * CHAR_W;
+/** a column's text width at a measure, in the body's em */
+export const columnW = (cpl = MEASURE_CPL) => cpl * CHAR_W;
+/** a column's text width at the full measure, in the body's em */
+export const COLUMN_W = columnW();
 /** a column's depth, in the body's em */
 export const COLUMN_H = COLUMN_LINES * LINE_H;
-/** the pitch of the column slots, across and down, in the body's em: a column and a gutter */
-const PITCH_W = COLUMN_W + GUTTER, PITCH_H = COLUMN_H + GUTTER;
+/** the pitch of the column slots across at a measure, in the body's em: a column's text, its edge and a gutter */
+const pitchW = (/** @type {number} */ cpl) => columnW(cpl) + EDGE + GUTTER;
+/** the pitch of the column slots down, in the body's em: a column and a gutter */
+const PITCH_H = COLUMN_H + GUTTER;
+/** the positions a full column of estimated lines holds at a measure */
+const perColumn = (/** @type {number} */ cpl) => COLUMN_LINES * cpl;
 /** the slack a fit is judged with, in the body's em: a twentieth of a 1/64 px at the layout size */
 const EPS = 1e-3 / LAY_FS;
 
@@ -257,7 +286,8 @@ export const borderEm = (/** @type {number} */ px) => px / LAY_FS;
 
 /**
  * The custom properties the article's CSS reads, one per shared value: the
- * fold's measure as a bare count, which the style multiplies by `1ch`.
+ * full measure as a bare count, which the style multiplies by `1ch` — the
+ * text layer sets the measure in force over it (`fitFor`).
  * @returns {Record<string, string>}
  */
 export function cssMeasures() {
@@ -269,58 +299,95 @@ export function cssMeasures() {
     '--offer': em(M.offer), '--offer-gap': em(M.offerGap), '--label': em(M.label), '--label-gap': em(M.labelGap),
     '--mark': em(M.mark), '--mark-pad': em(M.markPad), '--mark-gap': em(M.markGap),
     '--sym': em(M.sym), '--sym-pad': em(M.symPad), '--sym-gap': em(M.symGap),
-    '--count': em(M.count), '--count-gap': em(M.countGap), '--same-pad': em(M.samePad),
+    '--count': em(M.count), '--face': em(M.face), '--face-gap': em(M.faceGap), '--same-pad': em(M.samePad),
     '--border-box': px(BORDER.box), '--border-same': px(BORDER.same),
-    '--measure': String(MEASURE_CPL), '--gutter': em(GUTTER),
+    '--measure': String(MEASURE_CPL), '--gutter': em(GUTTER), '--edge': em(EDGE), '--edge-gap': em(EDGE_GAP), '--line-box': em(LINE_H),
   };
+}
+
+// ---- the fit ----------------------------------------------------------------------------------------------------
+
+/**
+ * @typedef {Object} CornerSize — the corner's width as the style sets it, whole and compact, and its gap from its column's text, in px (P-REG's CORNER)
+ * @property {number} whole
+ * @property {number} compact
+ * @property {number} gap
+ */
+
+/**
+ * @typedef {Object} Fit — the measure a view sets every document's line at (see the head), and the corner's form it holds a column with at the reading size
+ * @property {number} cpl the measure, in characters of a document's face
+ * @property {boolean} compact the corner stands compact beside it: the view holds the full measure with the corner compact alone, or narrows it
+ */
+
+/**
+ * THE FIT (see the head): the measure a view `vw` px wide sets every line
+ * at — MEASURE_CPL where it holds a column at the reading size with both its
+ * margins beside it: on its left the corner and its gap, on its right the
+ * column's edge, and a gutter's room between them and the view's sides; the
+ * corner whole, else compact; else, the corner compact, the most whole
+ * characters the view holds beside them, one at the least. It reads the
+ * view's width and the reading size alone: zoom never changes it.
+ * @param {number} vw the view's width, in px
+ * @param {number} readPx the reading size: the em a reading view sets a document's text at, in px
+ * @param {CornerSize} corner
+ * @returns {Fit}
+ */
+export function fitFor(vw, readPx, corner) {
+  const holds = (/** @type {number} */ cw) => Math.floor((vw - cw - corner.gap - (EDGE + GUTTER) * readPx) / (CHAR_W * readPx) + 1e-9);
+  if (holds(corner.whole) >= MEASURE_CPL) return { cpl: MEASURE_CPL, compact: false };
+  return { cpl: Math.max(1, Math.min(MEASURE_CPL, holds(corner.compact))), compact: true };
 }
 
 // ---- the steps --------------------------------------------------------------------------------------------------
 
-/** the slots a room holds across and down at a size */
-function slotsAt(/** @type {Room} */ room, /** @type {number} */ fs) {
-  return { across: Math.max(1, Math.floor(room.w / (fs * PITCH_W) + 1e-9)), down: Math.max(1, Math.floor(room.h / (fs * PITCH_H) + 1e-9)) };
+/** the slots a room holds across and down at a size, at a measure */
+function slotsAt(/** @type {Room} */ room, /** @type {number} */ fs, /** @type {number} */ cpl) {
+  return { across: Math.max(1, Math.floor(room.w / (fs * pitchW(cpl)) + 1e-9)), down: Math.max(1, Math.floor(room.h / (fs * PITCH_H) + 1e-9)) };
 }
 
 /**
- * A room's standard size: the largest em, in world units, at which the room
- * holds STANDARD_GRID columns — the size every document is set at until its
- * columns fill the room.
+ * A room's standard size at a measure: the largest em, in world units, at
+ * which the room holds STANDARD_GRID columns — the size every document is set
+ * at until its columns fill the room.
  * @param {Room} room
+ * @param {number} [cpl] the measure
  * @returns {number}
  */
-export function standardFs(room) {
+export function standardFs(room, cpl = MEASURE_CPL) {
   const [a, d] = STANDARD_GRID;
-  return Math.min(room.w / (a * PITCH_W), room.h / (d * PITCH_H));
+  return Math.min(room.w / (a * pitchW(cpl)), room.h / (d * PITCH_H));
 }
 
-/** the standard size of a depth-0 document's room (P-PROJ's box): the plane's standard type, a place's representative em */
+/** the standard size of a depth-0 document's room (P-PROJ's box) at the full measure: the plane's standard type, a place's representative em */
 export const STANDARD_FS = standardFs({ w: DOC_W, h: DOC_H });
 
-/** @type {Map<string, Step>} the steps worked out, by room and step: a cache of a pure function */
+/** @type {Map<string, Step>} the steps worked out, by room, step and measure: a cache of a pure function */
 const steps = new Map();
 
 /**
- * A room's step k: 0 the standard size; each step after it the largest size
- * at which the room holds at least STANDARD_GRID's count times 2^k columns, so
- * each at least doubles the capacity of the one before it.
+ * A room's step k at a measure: 0 the standard size; each step after it the
+ * largest size at which the room holds at least STANDARD_GRID's count times
+ * 2^k columns, so each at least doubles the capacity of the one before it.
  * @param {Room} room
  * @param {number} k
+ * @param {number} [cpl] the measure
  * @returns {Step}
  */
-export function stepAt(room, k) {
-  const key = `${room.w}x${room.h}:${k}`;
+export function stepAt(room, k, cpl = MEASURE_CPL) {
+  const key = `${room.w}x${room.h}:${k}:${cpl}`;
   let s = steps.get(key);
   if (s) return s;
+  const pw = pitchW(cpl);
   let fs;
-  if (k <= 0) fs = standardFs(room);
+  if (k <= 0) fs = standardFs(room, cpl);
   else {
     const need = STANDARD_GRID[0] * STANDARD_GRID[1] * 2 ** k;
     fs = 0;
     // the width's bound falls as the columns across grow: none past the first under the best found improves on it
-    for (let a = 1; room.w / (a * PITCH_W) > fs; a++) fs = Math.max(fs, Math.min(room.w / (a * PITCH_W), room.h / (Math.ceil(need / a) * PITCH_H)));
+    for (let a = 1; room.w / (a * pw) > fs; a++) fs = Math.max(fs, Math.min(room.w / (a * pw), room.h / (Math.ceil(need / a) * PITCH_H)));
   }
-  const at = slotsAt(room, fs);
+  const at = slotsAt(room, fs, cpl);
   s = { k: Math.max(0, k), fs, across: at.across, capacity: at.across * at.down };
   if (steps.size > 4096) steps.clear();
   steps.set(key, s);
@@ -329,15 +396,16 @@ export function stepAt(room, k) {
 
 /**
  * The step a document of `n` columns is set at: the first, from `from` on,
- * whose capacity holds them.
+ * whose capacity at the measure holds them.
  * @param {Room} room
  * @param {number} n
  * @param {number} [from] the smallest step to set it at
+ * @param {number} [cpl] the measure
  * @returns {Step}
  */
-export function stepFor(room, n, from = 0) {
-  let k = Math.max(0, from), s = stepAt(room, k);
-  while (s.capacity < n) s = stepAt(room, ++k);
+export function stepFor(room, n, from = 0, cpl = MEASURE_CPL) {
+  let k = Math.max(0, from), s = stepAt(room, k, cpl);
+  while (s.capacity < n) s = stepAt(room, ++k, cpl);
   return s;
 }
 
@@ -391,15 +459,13 @@ export function breakBetween(a, b, initial) {
  * @property {number} size the largest font size on it
  * @property {number} h its line box
  * @property {number} bytes the bytes of the row's own characters before its first unit
- * @property {boolean} float it holds the row's float alone
  */
 
 /**
  * A row's lines: its pieces wrapped in a column of `cpl` characters, every
  * width in characters of the body's face; each line as tall as the row's line
- * box, a float on a line of its own as tall as its own; each line naming the
- * bytes of the row's own characters before its first unit, where in the
- * block's text it starts.
+ * box; each line naming the bytes of the row's own characters before its
+ * first unit, where in the block's text it starts.
  * @param {Row} row
  * @param {number} cpl
  * @returns {Wrapped[]}
@@ -420,7 +486,7 @@ export function wrap(row, cpl) {
   const begin = () => { if (!unit) { unit = true; unitBytes = bytes; } };
   const place = () => {
     if (!unit) return;
-    if (has && used + hang + unitW > cap) { out.push({ w: used, size, h: lh, bytes: lineBytes, float: false }); used = unitW; size = unitSize; lineBytes = unitBytes; }
+    if (has && used + hang + unitW > cap) { out.push({ w: used, size, h: lh, bytes: lineBytes }); used = unitW; size = unitSize; lineBytes = unitBytes; }
     else { if (!has) lineBytes = unitBytes; used += hang + unitW; size = Math.max(size, unitSize); has = true; }
     unitW = 0; unitSize = 0; unit = false; hang = 0;
   };
@@ -452,21 +518,31 @@ export function wrap(row, cpl) {
     if (p.trail) { begin(); unitW += p.trail / CHAR_W; }
   }
   place();
-  if (has) out.push({ w: used, size, h: lh, bytes: lineBytes, float: false });
-  if (row.float) {
-    const fw = (row.float.lead + row.float.trail) / CHAR_W + [...row.float.text].length * row.float.size;
-    if (!has || used + hang + fw > cap) out.push({ w: 0, size: row.float.size, h: lineBox(row.float.size), bytes, float: true });
-  }
+  if (has) out.push({ w: used, size, h: lh, bytes: lineBytes });
   return out;
+}
+
+/**
+ * A withheld run's gap (see the head; F2.1-i: its bars take its true width):
+ * the width of each of its lines, in characters of the body's face — one line
+ * for each measure's count of its positions, the last its remainder, one line
+ * of one position at the least. Its bars, and at reading scale its gap, which
+ * holds the run's face only where the face fits (T-ARTICLE's).
+ * @param {number} width the run's positions
+ * @param {number} cpl the measure
+ * @returns {number[]}
+ */
+export function gapOf(width, cpl) {
+  return Array.from({ length: Math.max(1, Math.ceil(width / cpl)) }, (_, i) => Math.max(1, Math.min(cpl, width - i * cpl)));
 }
 
 /**
  * The article's lines: its rows wrapped at the measure and stacked from its
  * first line's top, each line box as tall as `wrap` gives it, the margins
- * between rows collapsing to the larger; a withheld run's rows its bars, one
- * line per `cpl` positions; each line marked where a column may break before
- * it, by the keep of its row and of the heading before it (`Row.keep`), and
- * where in the document's bytes it starts.
+ * between rows collapsing to the larger; a withheld run's rows its gap's lines
+ * (`gapOf`); each line marked where a column may break before it, by the keep
+ * of its row and of the heading before it (`Row.keep`), and where in the
+ * document's bytes it starts.
  * @param {Row[]} rows the article's plan (T-ARTICLE's `articlePlan`)
  * @param {number} [cpl] the column, in characters of the body's face
  * @returns {Layout}
@@ -487,15 +563,15 @@ export function layoutOf(rows, cpl = MEASURE_CPL) {
     else if (r.kind === 'head' || r.kind === 'chrome') pos = null;
     /** @type {Wrapped[]} */
     const set = r.kind === 'withheld'
-      ? Array.from({ length: Math.max(1, Math.ceil(r.width / cpl)) }, (_, i) => ({ w: Math.max(1, Math.min(cpl, r.width - i * cpl)), size: r.size, h: lineBox(r.size), bytes: i * cpl, float: false }))
+      ? gapOf(r.width, cpl).map((w, i) => ({ w, size: r.size, h: lineBox(r.size), bytes: i * cpl }))
       : wrap(r, cpl);
     margin = Math.max(margin, r.before);
     if (!set.length) { margin = Math.max(margin, r.after); continue; }
     y += margin;
     const b = pos != null ? blocks.get(pos) : undefined;
-    const nth0 = b ? b.n : 0, text = set.filter((l) => !l.float).length;
+    const nth0 = b ? b.n : 0;
     set.forEach((l, i) => {
-      let brk = i === 0 ? lines.length > 0 && r.keep !== 'joined' : r.keep === 'lines' && !l.float && i >= 2 && text - i >= 2;
+      let brk = i === 0 ? lines.length > 0 && r.keep !== 'joined' : r.keep === 'lines' && i >= 2 && set.length - i >= 2;
       if (owed > 0) { brk = false; owed--; }
       lines.push({ top: y, h: l.h, w: l.w, size: l.size, kind: r.kind, pos, nth: nth0 + i, brk, at: r.pos != null ? r.pos + l.bytes : r.kind === 'text' && pos != null ? pos : null });
       y += l.h;
@@ -542,23 +618,22 @@ export function columnsOf(lines) {
   return out;
 }
 
-/** the positions a full column of estimated lines holds */
-const PER_COLUMN = COLUMN_LINES * MEASURE_CPL;
-
 /**
  * The document folded into its room (see the head): its lines' columns, each
  * stretch of positions it does not hold estimated (`Fold.unheld`) — those
  * before a block (`Line.gap`) in columns of their own, those after its last
  * line held filling that line's column first — a body line for each
- * MEASURE_CPL of them; set at the first step from `step` on that holds every
- * column, placed left to right, then row by row, a gutter apart, each but the
- * last COLUMN_LINES body line boxes deep and the last its own length.
- * @param {Line[]} lines the article's lines, as T-LAYER measures them, else as `layoutOf` predicts them
+ * measure's count of them; set at the first step from `step` on that holds
+ * every column at the measure, placed left to right, then row by row, each
+ * column's text followed by its edge and a gutter, each but the last
+ * COLUMN_LINES body line boxes deep and the last its own length.
+ * @param {Line[]} lines the article's lines, as T-LAYER measures them, else as `layoutOf` predicts them — at the measure
  * @param {Room} room
- * @param {{step?: number, after?: number, heldTo?: number, lead?: number}} [opts] `step` the smallest step to set it at; `after` the positions after the last line held, the first of them `heldTo`; `lead` the depth, in the body's em, they begin at where no line is held
+ * @param {{step?: number, after?: number, heldTo?: number, lead?: number, cpl?: number}} [opts] `step` the smallest step to set it at; `after` the positions after the last line held, the first of them `heldTo`; `lead` the depth, in the body's em, they begin at where no line is held; `cpl` the measure, MEASURE_CPL where none is given
  * @returns {Fold}
  */
 export function fold(lines, room, opts = {}) {
+  const cpl = opts.cpl || MEASURE_CPL, per = perColumn(cpl);
   /** @type {Array<{first: number, n: number, top: number, h: number, estimated: boolean}>} */
   const cols = [];
   /** @type {Array<{from: number, to: number, column: number, depth: number, last: number}>} depths in the body's em */
@@ -566,13 +641,13 @@ export function fold(lines, room, opts = {}) {
   for (const c of columnsOf(lines)) {
     const l = lines[c.first], g = l.gap || 0;
     if (g > 0 && l.at != null) {
-      const n = Math.max(1, Math.ceil(g / PER_COLUMN));
+      const n = Math.max(1, Math.ceil(g / per));
       spans.push({ from: l.at - g, to: l.at, column: cols.length, depth: 0, last: cols.length + n - 1 });
       for (let k = 0; k < n; k++) cols.push({ first: c.first, n: 0, top: 0, h: COLUMN_H, estimated: true });
     }
     cols.push({ ...c, estimated: false });
   }
-  let rest = Math.ceil(Math.max(0, opts.after || 0) / MEASURE_CPL) * LINE_H;
+  let rest = Math.ceil(Math.max(0, opts.after || 0) / cpl) * LINE_H;
   if (rest > 0) {
     const fit = (/** @type {number} */ depth) => Math.min(rest, Math.max(0, Math.floor((COLUMN_H - depth + EPS) / LINE_H)) * LINE_H);
     const last = cols[cols.length - 1];
@@ -581,13 +656,13 @@ export function fold(lines, room, opts = {}) {
     for (; rest > EPS; rest -= COLUMN_H) cols.push({ first: lines.length, n: 0, top: 0, h: Math.min(COLUMN_H, rest), estimated: true });
   }
   if (!cols.length) cols.push({ first: 0, n: 0, top: 0, h: LINE_H, estimated: true });
-  const s = stepFor(room, cols.length, opts.step || 0);
+  const s = stepFor(room, cols.length, opts.step || 0, cpl), pw = pitchW(cpl);
   const columns = cols.map((c, i) => ({
-    x: ((i % s.across) * PITCH_W + GUTTER / 2) * s.fs, y: (Math.floor(i / s.across) * PITCH_H + GUTTER / 2) * s.fs,
-    w: COLUMN_W * s.fs, h: (i < cols.length - 1 ? COLUMN_H : c.h) * s.fs, first: c.first, n: c.n, top: c.top, estimated: c.estimated,
+    x: ((i % s.across) * pw + GUTTER / 2) * s.fs, y: (Math.floor(i / s.across) * PITCH_H + GUTTER / 2) * s.fs,
+    w: columnW(cpl) * s.fs, h: (i < cols.length - 1 ? COLUMN_H : c.h) * s.fs, first: c.first, n: c.n, top: c.top, estimated: c.estimated,
   }));
   const unheld = spans.map((u) => ({ from: u.from, to: u.to, column: u.column, depth: u.depth * s.fs, last: Math.min(u.last, columns.length - 1) }));
-  return { fs: s.fs, step: s.k, across: s.across, room: { w: room.w, h: room.h }, lines, columns, unheld };
+  return { fs: s.fs, step: s.k, across: s.across, cpl, room: { w: room.w, h: room.h }, lines, columns, unheld };
 }
 
 /** the head's lines every article opens with: its address, its state line and its byline, in the body's em */
@@ -595,39 +670,55 @@ const HEAD_H = lineBox(1) + 2 * lineBox(MEASURE.head);
 
 /**
  * A document whose text has not arrived, folded: its head's lines and a body
- * line for each MEASURE_CPL of its positions after them, every line full —
- * never more columns than its text sets, so its size is never smaller than
+ * line for each measure's count of its positions after them, every line full
+ * — never more columns than its text sets, so its size is never smaller than
  * the one its text is set at (M-PUMP's fetch em reads it). Its columns hold
  * no line; its positions stand in them from the head's foot on (`placeOf`).
  * @param {number} extent the content's positions
  * @param {Room} room
+ * @param {number} [cpl] the measure
  * @returns {Fold}
  */
-export function estimate(extent, room) { return fold([], room, { after: Math.max(1, extent), heldTo: 1, lead: HEAD_H }); }
+export function estimate(extent, room, cpl = MEASURE_CPL) { return fold([], room, { after: Math.max(1, extent), heldTo: 1, lead: HEAD_H, cpl }); }
 
 /**
- * The positions an estimated column holds (`estimate`), the first column's
- * after the head's lines: what M-PUMP reads for the columns in view.
+ * The positions an estimated column holds at a measure (`estimate`), the
+ * first column's after the head's lines: what M-PUMP reads for the columns in
+ * view.
  * @param {number} column
+ * @param {number} [cpl] the measure
  * @returns {[number, number]} [first position, one past the last]
  */
-export function estimatedSpan(column) {
-  const first = Math.max(0, COLUMN_LINES - Math.ceil(HEAD_H / LINE_H - 1e-9)) * MEASURE_CPL;
-  return column <= 0 ? [1, 1 + first] : [1 + first + (column - 1) * PER_COLUMN, 1 + first + column * PER_COLUMN];
+export function estimatedSpan(column, cpl = MEASURE_CPL) {
+  const first = Math.max(0, COLUMN_LINES - Math.ceil(HEAD_H / LINE_H - 1e-9)) * cpl, per = perColumn(cpl);
+  return column <= 0 ? [1, 1 + first] : [1 + first + (column - 1) * per, 1 + first + column * per];
 }
 
 /**
  * A document whose extent is unread, folded: its first column slot, at the
  * standard size, a column deep.
  * @param {Room} room
+ * @param {number} [cpl] the measure
  * @returns {Fold}
  */
-export function slot(room) { return fold([], room, { after: PER_COLUMN, heldTo: 1 }); }
+export function slot(room, cpl = MEASURE_CPL) { return fold([], room, { after: perColumn(cpl), heldTo: 1, cpl }); }
 
-/** a column padded by half a gutter on either side: its slot's share of the outline, which meets its neighbours' */
+/** a column padded by half a gutter on either side, its edge with it on its right: its slot's share of the outline, which meets its neighbours' */
 export function padded(/** @type {Fold} */ f, /** @type {Column} */ c) {
   const g = (GUTTER / 2) * f.fs;
-  return { x: c.x - g, y: c.y - g, w: c.w + 2 * g, h: c.h + 2 * g };
+  return { x: c.x - g, y: c.y - g, w: c.w + EDGE * f.fs + 2 * g, h: c.h + 2 * g };
+}
+
+/**
+ * A column's edge (see the head), in world units relative to the room: the
+ * room its signs stand in, from EDGE_GAP past its text to its edge's end, as
+ * deep as the column.
+ * @param {Fold} f
+ * @param {Column} c
+ * @returns {Rect}
+ */
+export function edgeOf(f, c) {
+  return { x: c.x + c.w + EDGE_GAP * f.fs, y: c.y, w: (EDGE - EDGE_GAP) * f.fs, h: c.h };
 }
 
 /**
@@ -735,7 +826,7 @@ export const columnOfLine = (/** @type {Fold} */ f, /** @type {number} */ i) => 
 /**
  * Where a position stands in a fold, in world units relative to the room: in
  * a stretch it holds no line for (`Fold.unheld`), its estimated line, a body
- * line for each MEASURE_CPL of the positions from the stretch's first, from
+ * line for each measure's count of the positions from the stretch's first, from
  * the stretch's column on; else the line holding it — the last line standing
  * at or before it — in its column; a position before every line, at the
  * first column's top.
@@ -747,7 +838,7 @@ export function placeOf(f, pos) {
   const lh = LINE_H * f.fs, deep = COLUMN_H * f.fs;
   const u = f.unheld.find((x) => pos >= x.from && pos < x.to);
   if (u) {
-    let i = u.column, depth = u.depth, k = Math.floor((pos - u.from) / MEASURE_CPL);
+    let i = u.column, depth = u.depth, k = Math.floor((pos - u.from) / f.cpl);
     for (;;) {
       const c = f.columns[i], fit = Math.max(1, Math.floor((deep - depth) / lh + 1e-6));
       if (k < fit || i >= u.last || i >= f.columns.length - 1) {
@@ -821,7 +912,7 @@ export function posAt(f, x, y) {
  * strip marks it over a document the walk keeps in view): in each column the
  * view meets, the lines whose boxes meet it — a line held by the position it
  * opens at, a line of a stretch the fold holds no line for estimated as
- * `placeOf` places those positions, a body line for each MEASURE_CPL of them —
+ * `placeOf` places those positions, a body line for each measure's count of them —
  * the first position and the last of them; and whether the view reaches the
  * first column's top and the last column's foot.
  * @param {Fold} f
@@ -849,9 +940,9 @@ export function windowIn(f, view) {
       for (let j = u.column; j < ci; j++) { k += fit(f.columns[j], depth, false); depth = 0; }
       const n = fit(c, depth, ci >= u.last || ci >= last);
       const a = Math.max(0, Math.floor((view.y0 - c.y - depth) / lh)), b = Math.min(n - 1, Math.floor((view.y1 - c.y - depth) / lh));
-      if (a > b || u.from + (k + a) * MEASURE_CPL >= u.to) continue;
-      take(u.from + (k + a) * MEASURE_CPL);
-      take(Math.min(u.from + (k + b) * MEASURE_CPL, u.to - 1));
+      if (a > b || u.from + (k + a) * f.cpl >= u.to) continue;
+      take(u.from + (k + a) * f.cpl);
+      take(Math.min(u.from + (k + b) * f.cpl, u.to - 1));
     }
   });
   if (from > to) return null;

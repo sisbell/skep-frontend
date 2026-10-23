@@ -128,7 +128,7 @@ import * as F from './frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell, docBox } from '../plane/projection.js';
-import { estimate, estimatedSpan } from '../plane/layout.js';
+import { estimate, estimatedSpan, MEASURE_CPL } from '../plane/layout.js';
 import { documentOf } from './address.js';
 
 const D = '1.0.1.0.3';
@@ -911,6 +911,22 @@ test('a view over a document\'s later columns reads its text from position 1 thr
   const w = huge[huge.length - 1];
   assert.ok(w && w[0] > PUMP.WHOLE_CAP && w[0] <= estimatedSpan(300)[0] && w[1] >= estimatedSpan(300)[1], `past the cap: the columns in view alone — ${JSON.stringify(w)}, column 300 holding ${estimatedSpan(300)}`);
   assert.ok(w[1] - w[0] < PUMP.WHOLE_CAP, 'never joined to the text held from position 1');
+});
+
+test('the span window reads the estimate at the measure in force: at a 480 px view the columns in view hold its narrower measure\'s positions, never the full measure\'s (issue #151)', () => {
+  const HUGE = '1.0.1.0.12', extent = 2000000;
+  REC.takeSpanSet(HUGE, [{ subspace: 1, ordinal: 1, positions: extent }]);
+  const box = docBox(HUGE);
+  try {
+    CAM.setViewport(480, 900);
+    const cpl = CAM.measure(), e = estimate(extent, box, cpl), c = e.columns[300];
+    assert.ok(cpl < MEASURE_CPL && e.cpl === cpl, `480 px: a measure of ${cpl}`);
+    CAM.reach(e.fs); CAM.set(CAM.viewAt({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }, e.fs));
+    const w = /** @type {[number, number]} */ (PUMP.spanWindow(REC.doc(HUGE)));
+    const [a, b] = estimatedSpan(300, cpl), [a66, b66] = estimatedSpan(300);
+    assert.ok(w && w[0] <= a && w[1] >= b, `the window holds column 300's positions at ${cpl} characters, ${a}–${b}: ${JSON.stringify(w)}`);
+    assert.ok(w[1] < a66 || w[0] > b66, `and none of what column 300 would hold at the full measure, ${a66}–${b66}`);
+  } finally { CAM._reset(); }
 });
 
 test('a projection the board declines answers the refusal it met, and the model holds what it says of the far document — the document marked where the board will say nothing of it, never where it is withheld; one the board did not answer holds nothing', async () => {

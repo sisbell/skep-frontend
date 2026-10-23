@@ -40,32 +40,36 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     it — B1-S2's words, the guest's arm beneath (A-170) — with no token
     unfilled and no act;
 (e) the window run at 1467 withheld: the model's block — its width, its
-    origin, no text — B1-S7's placeholder with its head, the guest's arm and
-    no C-33 mark, none of the owner's bytes anywhere in the page; C-67's
-    clause beneath the arm the one the origin's edition claims decide
+    origin, no text — B1-S7's gap at the run (issue #151's design decision:
+    a gap of its true width, its face in it where it fits, else compact in
+    its column's edge): its head in it, the face whole there — the guest's
+    arm — where its lines hold it, else compact at the edge naming its
+    owner, and no C-33 mark, none of the owner's bytes anywhere in the page;
+    C-67's clause beneath the arm the one the origin's edition claims decide
     (PUB-5.124), decided here from the page's own recorded reads of them —
     the active view's lookup, its claims' links and their homes' metadata,
     never the audit view's `edition_claims` — the pointer carrying the claim
-    PUB-3.107's order picks, and nothing in its place where they decide none;
-    the mirror's item the run's placeholder — its kind in the words a copy's
-    stand-in names it by, its owner,
-    its origin, the arm, and the clause where the placeholder shows one
-    (R94); the placeholder shown, and every row of
-    the article inside its box, measured where the placeholder stands tallest,
-    under R56's key-absent arm — where the page holds a key present it reads
-    its store as holding none for the measure and as it held it after, page
-    state alone — marked, waiting on the placeholder set in the
-    article's flow taller than the run it occupies; the content after the run
+    PUB-3.107's order picks, and nothing in its place where they decide none,
+    in the gap where it holds the face and else in the face its mark opens
+    whole; the mirror's item the run's face whole — its kind in the words a
+    copy's stand-in names it by, its owner, its origin, the arm, and the
+    clause where the claims decide one (R94; FP-26); the gap shown; and under
+    R56's key-absent arm, the deepest a guest meets — where the page holds a
+    key present it reads its store as holding none for these checks and as
+    it held it after, page state alone — the gap holding its head, the face
+    compact at its column's edge, the mark's act opening it whole with R56's
+    arm and the clause, the gap standing on the run's bars, and every row of
+    the article inside its box; the content after the run
     opening with a separator alone, a block that sets no line, the margins
     about it collapsing into one as P-LAY collapses an empty row's — the
-    block after it as far below the placeholder as its bars stand below the
+    block after it as far below the gap as its bars stand below the
     run's, never the empty block's gap further; THE COPY ACROSS THE RUN (issue
     #161's design decision) — a drag from the paragraph before it to the block
     after it, on the plane and in a reading scene's pane (the first edition
     beside FAR_LEAP; the draft opens nowhere for a guest), copying the text
     before, the run's stand-in in its place — its kind, its origin's owner, its
-    length — and the text after, never the two joined, the placeholder drawn
-    selected whole; a person's click on the placeholder conjuring C-39's face
+    length — and the text after, never the two joined, the gap drawn
+    selected whole; a person's click on the gap conjuring C-39's face
     and selecting nothing;
 (f) the guest's own acts: every link at the first edition drawn as its
     owner's, never "you"; C-39's face at the run with the placeholder's own
@@ -156,6 +160,37 @@ def read_store_as(ctx, rows):
     ctx.js('(async () => { const R = await import("./model/records.js"), L = await import("./text/layer.js"); R.takeKeyStore(%s, R.board().origin); L.bump(); })()' % json.dumps(rows))
     ctx.settle()
     ctx.frames(2)
+
+
+# where the first edition's withheld run's gap stands beside the canvas's own bars for the run (`barsOf`): its top, its height
+# and its count of lines on either side, in the part that holds it
+STANDS_ON_BARS = '''((addr, pos) => { const h = window.__skep.barsOf(addr); if (!h) return null;
+  const t = h.text.find((x) => x.pos === pos), b = t ? h.bars.find((x) => x.pos === pos && x.part === t.part) : null;
+  return t && b ? {text: [t.top, t.height, t.lines], bars: [b.top, b.height, b.lines]} : null; })(%s, %d)'''
+
+
+def gaps(ctx):
+    """each withheld run's gap in the first edition's mounted article as the page holds it: its position, width, origin,
+    the owner it carries and what it holds (issue #151's design decision) — its head, its arm, its clause and the claim
+    the clause follows, and the mark its column's edge holds where its face stands compact there"""
+    return ctx.js('''[...document.querySelectorAll(%s)].map((e) => { const q = (sel) => e.querySelector(sel);
+      return {pos: Number(e.dataset.pos), width: Number(e.dataset.width), origin: e.dataset.origin, owner: e.dataset.owner, holds: e.dataset.holds || null,
+              head: (q('.wh-head') || {}).textContent || null, arm: (q('.arm') || {}).textContent || null, clause: (q('.clause') || {}).textContent || null,
+              claim: (q('.clause') || {dataset: {}}).dataset.claim || null, mark: (q(':scope > .wh-mark') || {}).textContent || null}; })''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
+
+
+def mark_face(ctx):
+    """the act at the run's face compact in its column's edge, as the input reads a click — its press and its release at one
+    point, dispatched at the mark — and the face it shows: its id, its words, its arm, its clause and the claim the pointer
+    follows; an empty face where no mark stands"""
+    ok = ctx.js('''(() => { const m = document.querySelector(%s); if (!m) return false; const q = m.getBoundingClientRect();
+      const at = {bubbles: true, cancelable: true, composed: true, button: 0, clientX: q.left + q.width / 2, clientY: q.top + q.height / 2};
+      m.dispatchEvent(new PointerEvent('pointerdown', at)); m.dispatchEvent(new PointerEvent('pointerup', at)); m.dispatchEvent(new MouseEvent('click', at)); return true; })()''' % json.dumps(PLACEHOLDER + ' > .wh-mark'))
+    ctx.frames(2)
+    if not ok:
+        return {'id': None, 'words': None, 'arm': None, 'clause': None, 'claim': None}
+    return ctx.js('''(() => { const o = document.getElementById('overlay'), q = (s) => o.querySelector(s), w = q('.face-text'), a = q('.arm'), c = q('.clause'), b = q('.clause [data-run]');
+      return {id: window.__skep.overlay().id, words: w ? w.textContent : null, arm: a ? a.textContent : null, clause: c ? c.textContent : null, claim: b ? b.dataset.claim : null}; })()''')
 
 
 def calls(ctx):
@@ -405,58 +440,82 @@ def run(ctx):
     # (e) the window run at 1467, withheld
     ctx.leap(DOC, WINDOW[0])
     doc = run_withheld('(e) the model holds the window run as a withheld block — at 1467, 240 positions, its origin 1.0.1.0.1003 — and none of its text')
-    ph = ctx.js('''[...document.querySelectorAll(%s)].map((e) => ({pos: Number(e.dataset.pos), width: Number(e.dataset.width), origin: e.dataset.origin, owner: e.dataset.owner,
-      head: (e.querySelector('.wh-head') || {}).textContent || null, arm: (e.querySelector('.arm') || {}).textContent || null,
-      clause: (e.querySelector('.clause') || {}).textContent || null, claim: (e.querySelector('.clause') || {dataset: {}}).dataset.claim || null}))''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
+    ph = gaps(ctx)
     head = t(ctx, 'B1.withheld-run', {'owner': OWNER, 'account': OWNER, 'width': WINDOW[1], 'origin': WINDOW[2]})
     arm = t(ctx, arm_id, {'owner': OWNER})
+    mark = t(ctx, 'L.withheld.mark', {'owner': OWNER})
     c33 = ctx.js('document.querySelectorAll(%s).length' % json.dumps('#domlayer article[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
-    r.check(len(ph) == 1 and ph[0]['pos'] == WINDOW[0] and ph[0]['width'] == WINDOW[1] and ph[0]['origin'] == WINDOW[2] and ph[0]['head'] == head and ph[0]['arm'] == arm and c33 == 0,
-            '(e) the mounted article holds B1-S7\'s placeholder at the run — its position, width and origin, its head, the guest\'s arm for this device\'s key store (%s) — and no C-33 mark' % arm_id,
-            {'placeholders': ph, 'c33_marks': c33, 'key_here': store['key_here']})
+    # the run's gap holds its face whole where its full lines hold it — the head, the guest's arm and the clause — else its head, the
+    # face compact at its column's edge, its owner and the mark that opens it whole (issue #151's design decision)
+    g = ph[0] if len(ph) == 1 else {}
+    face_in = g.get('holds') == 'face'
+    r.check(len(ph) == 1 and g['pos'] == WINDOW[0] and g['width'] == WINDOW[1] and g['origin'] == WINDOW[2] and g['head'] == head and c33 == 0
+            and (g['arm'] == arm and g['mark'] is None if face_in else g['holds'] == 'head' and g['arm'] is None and g['mark'] == mark),
+            '(e) the mounted article holds B1-S7\'s gap at the run — its position, width and origin, its head — the face whole in it where its lines hold it, the guest\'s arm for this device\'s key store (%s), else compact at its column\'s edge naming %s — and no C-33 mark' % (arm_id, OWNER),
+            {'gaps': ph, 'c33_marks': c33, 'key_here': store['key_here']})
     leaked, legit_held = leaks(places)
     r.check(len(own) >= STRETCH and not leaked, f'(e) none of the owner\'s bytes over the run stands anywhere in the page: no stretch of {STRETCH} of its characters, white space folded, that the guest\'s own delivered text and labels do not hold', leaked[:4])
     # C-67's clause beneath the arm is the one the origin's edition claims decide, decided here from the page's own reads
     # of them — the active view's lookup, never the audit view's `edition_claims`, which refuses an origin the guest may
-    # not read — and where they decide none, nothing stands in its place
+    # not read — and where they decide none, nothing stands in its place: in the gap where it holds the face, else in the
+    # face its edge's mark opens whole
     clause_id, decided = ctx.edition_clause(WINDOW[2], OWNER)
     clause = t(ctx, clause_id, {'claimant': decided.get('claimant', '')}) if clause_id else None
-    r.check(decided['lookups'] >= 1 and not decided['audit'] and len(ph) == 1 and ph[0]['clause'] == clause and ph[0]['claim'] == decided.get('claim'),
-            '(e) C-67\'s clause beneath the placeholder is the one the origin\'s edition claims decide — read with the active view\'s lookup, never the audit view\'s edition_claims — the pointer following the claim PUB-3.107\'s order picks, and nothing stands in its place where they decide none (PUB-5.124)',
-            {'decided': clause_id, 'shown': ph[0]['clause'] if len(ph) == 1 else None, 'claim': ph[0]['claim'] if len(ph) == 1 else None, 'reads': decided})
+    shown_clause = g.get('clause') if face_in else None
+    shown_claim = g.get('claim') if face_in else None
+    if not face_in:
+        opened = mark_face(ctx)
+        shown_clause, shown_claim = opened['clause'], opened['claim']
+        ctx.esc()
+    r.check(decided['lookups'] >= 1 and not decided['audit'] and len(ph) == 1 and shown_clause == clause and shown_claim == decided.get('claim'),
+            '(e) C-67\'s clause beneath the arm is the one the origin\'s edition claims decide — read with the active view\'s lookup, never the audit view\'s edition_claims — the pointer following the claim PUB-3.107\'s order picks, and nothing stands in its place where they decide none (PUB-5.124)',
+            {'decided': clause_id, 'shown': shown_clause, 'claim': shown_claim, 'in_the_gap': face_in, 'reads': decided})
     r.figures['edition_clause'] = {'origin': WINDOW[2], 'decided': clause_id, 'reads': decided}
-    # the mirror's item at the run says what the placeholder shows: its words filled from the placeholder's own owner, arm
-    # and clause, the clause a sentence after the arm where one shows and nothing where none does, and the arm and the
-    # clause standing in it whole
+    # the mirror's item at the run says the face whole (FP-26: "the mirror reads every sign whole"): its words filled from the
+    # gap's own owner, the guest's arm and the clause the claims decide, the clause a sentence after the arm where one stands and
+    # nothing where none does, and the arm and the clause standing in it whole
     item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
-    said = ph[0] if len(ph) == 1 else {}
-    shown = bool(said.get('owner') and said.get('arm'))
-    after = t(ctx, 'L.mirror.clause', {'clause': said['clause']}) if said.get('clause') else ''
+    shown = bool(g.get('owner'))
+    after = t(ctx, 'L.mirror.clause', {'clause': clause}) if clause else ''
     kinds = item_words(ctx)
-    words = t(ctx, 'L.mirror.withheld', {'kind': kinds['withheld'], 'document': DOC, 'length': t(ctx, 'L.item.positions', {'n': WINDOW[1]}), 'owner': said['owner'], 'origin': WINDOW[2], 'arm': said['arm'], 'clause': after}) if shown else None
-    r.check(shown and item.startswith(words) and said['arm'] in item and (said.get('clause') or '') in item,
-            '(e) the mirror\'s current item at the landing is the run\'s placeholder: its kind in the words a copy\'s stand-in names it by (issue #161), its width, its owner, its origin, the arm, and the clause where the placeholder shows one (R56; R94)',
-            {'item': item, 'placeholder': {k: said.get(k) for k in ('owner', 'arm', 'clause')}})
+    words = t(ctx, 'L.mirror.withheld', {'kind': kinds['withheld'], 'document': DOC, 'length': t(ctx, 'L.item.positions', {'n': WINDOW[1]}), 'owner': g['owner'], 'origin': WINDOW[2], 'arm': arm, 'clause': after}) if shown else None
+    r.check(shown and item.startswith(words) and arm in item and (clause or '') in item,
+            '(e) the mirror\'s current item at the landing is the run\'s face whole: its kind in the words a copy\'s stand-in names it by (issue #161), its width, its owner, its origin, the arm, and the clause where the claims decide one (R56; R94)',
+            {'item': item, 'gap': {k: g.get(k) for k in ('owner', 'holds')}, 'arm': arm, 'clause': clause})
     ctx.view_doc_em(DOC, 14)
     ctx.view_at(DOC, WINDOW[0])
     vis = ctx.js('window.__skep.visible(%s)' % json.dumps(PLACEHOLDER))
-    r.check(len(vis) == 1 and vis[0]['inClip'] and vis[0]['inView'], '(e) the placeholder is shown: inside the article\'s clip and the viewport', [{k: v[k] for k in ('rect', 'clip', 'inClip', 'inView')} for v in vis])
-    # containment is held where the placeholder stands tallest: under R56's key-absent arm, the longest arm a guest meets.
-    # Where the page holds a key present, it reads its store as holding none for the measure, and as it held it after —
-    # the page's own state put back, never the harness's reading, so every check after this one meets what the page made
+    r.check(len(vis) == 1 and vis[0]['inClip'] and vis[0]['inView'], '(e) the gap is shown: inside the article\'s clip and the viewport', [{k: v[k] for k in ('rect', 'clip', 'inClip', 'inView')} for v in vis])
+    # under R56's key-absent arm, the deepest a guest meets: where the page holds a key present it reads its store as holding none
+    # for these checks, and as it held it after — the page's own state put back, never the harness's reading, so every check after
+    # this one meets what the page made. R56's face is deeper than the run's three full lines: the gap holds its head, the face
+    # compact at its column's edge, its mark opening it whole — the head, R56's arm and the clause — and the gap as tall as its
+    # bars, the column breaking where it did
     here = ctx.js('window.__skep.overlapCheck()')
     held = ctx.js('(async () => (await import("./model/records.js")).keyPresent())()')
     if held:
         read_store_as(ctx, [])
-    keyless = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.querySelector(".arm").textContent : null; })()' % json.dumps(PLACEHOLDER))
+    keyless = gaps(ctx)
+    k = keyless[0] if len(keyless) == 1 else {}
     ov = ctx.js('window.__skep.overlapCheck()')
-    r.check(keyless == t(ctx, 'R56.key-absent', {'owner': OWNER}), '(e) for the measure the placeholder stands under R56\'s key-absent arm, the tallest a guest meets', keyless)
-    r.check(not ov['blocks_cut'], '(e) containment at guest class, the placeholder under R56\'s key-absent arm: every row of the first edition — the placeholder and the text after it among them — lies inside its column, its clip and its box, the column breaking at the lines the face sets (issue #15)',
+    absent = t(ctx, 'R56.key-absent', {'owner': OWNER})
+    whole = mark_face(ctx)
+    ctx.esc()
+    r.check(k.get('holds') == 'head' and k.get('head') == head and k.get('arm') is None and k.get('mark') == mark
+            and whole['id'] == 'face:withheld-run' and whole['words'] == head and whole['arm'] == absent and whole['clause'] == clause,
+            '(e) under R56\'s key-absent arm, too deep for the run\'s gap: the gap holds its head, the face compact at its column\'s edge naming %s, and its mark\'s act opens the face whole — the head, R56\'s arm and the clause' % OWNER,
+            {'gap': k, 'face': whole})
+    stands = ctx.js(STANDS_ON_BARS % (json.dumps(DOC), WINDOW[0]))
+    r.check(bool(stands) and abs(stands['text'][0] - stands['bars'][0]) <= 1 and abs(stands['text'][1] - stands['bars'][1]) <= 1 and stands['text'][2] == stands['bars'][2],
+            '(e) under R56\'s key-absent arm the gap stands on the run\'s bars: its top, its height and its lines, 1 px either way — no face reflows the text (issue #151)', stands)
+    r.check(not ov['blocks_cut'], '(e) containment at guest class under R56\'s key-absent arm: every row of the first edition — the gap and the text after it among them — lies inside its column, its clip and its box, the column breaking at the lines as rendered (issue #15)',
             {'blocks_cut': ov['blocks_cut'][:6], 'worst_overflow_px': ov['worst_overflow_px']})
     if held:
         read_store_as(ctx, store['rows'])
-    back = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.querySelector(".arm").textContent : null; })()' % json.dumps(PLACEHOLDER))
-    r.check(back == arm, '(e) after the measure the placeholder stands under the guest\'s arm for this device\'s key store again (%s)' % arm_id, back)
+    again = gaps(ctx)
+    b = again[0] if len(again) == 1 else {}
+    r.check(b.get('holds') == g.get('holds') and b.get('arm') == g.get('arm') and b.get('mark') == g.get('mark'),
+            '(e) after the measure the gap holds what it held under the guest\'s arm for this device\'s key store again (%s)' % arm_id, {'before': g, 'after': b})
     # the content after the run opens with a separator alone: the margins about that empty block collapse into one, as
     # P-LAY collapses an empty row's, so the block after it stands as far below the placeholder as its bars stand below
     # the run's — the larger of their margins apart, never the empty block's gap more
@@ -464,10 +523,10 @@ def run(ctx):
     empty = bool(gap) and gap['empty']['pos'] == WINDOW[0] + WINDOW[1] and gap['empty']['text'] == '' and gap['empty']['height'] <= GAP_TOL_PX and gap['empty']['bar_lines'] == 0
     r.check(empty, '(e) after the run the content opens with a separator alone: a block of no text that sets no line, in the article and in P-LAY\'s bars', gap)
     r.check(empty and gap['bars_space'] is not None and abs(gap['space'] - gap['bars_space']) <= GAP_TOL_PX,
-            f'(e) the margins about that empty block collapse into one: the block after it stands below the placeholder as its bars stand below the run\'s, at the layout size, {GAP_TOL_PX} px either way', gap)
+            f'(e) the margins about that empty block collapse into one: the block after it stands below the gap as its bars stand below the run\'s, at the layout size, {GAP_TOL_PX} px either way', gap)
     r.figures['shots'].append(ctx.shot('guest/window-run.png'))
-    r.figures['run'] = {'placeholder': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': legit_held, 'mirror_item': item, 'shown': vis,
-                        'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px'], 'after_run': gap,
+    r.figures['run'] = {'gap': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': legit_held, 'mirror_item': item, 'shown': vis,
+                        'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px'], 'after_run': gap, 'under_r56': {'gap': k, 'face': whole, 'on_bars': stands},
                         'under_the_guests_arm': {'arm': arm_id, 'blocks_cut': here['blocks_cut'][:8], 'worst_overflow_px': here['worst_overflow_px']}}
     r.figures['copy_across_run'] = copy_across_run(ctx, r, doc, kinds['withheld'])
 

@@ -17,12 +17,15 @@
 // label, the short stroke P-RENDER draws for a link whose far document the
 // plane draws nowhere (issue #132's design decision); THE FOCUS RING its gap
 // outside its element's box and its stroke's width, which set how far inside
-// the visible view it is held (issue #141's design decision). LK reads this module to put a value on each
+// the visible view it is held (issue #141's design decision); THE CORNER its
+// size whole and compact, its padding and its gap from the text, which T-LAYER
+// places it by and P-LAY's fit holds a column beside (issue #151's design
+// decision). LK reads this module to put a value on each
 // link's mark; no drawing module reads it for a link (the seam's rule). The
 // values are the UI phase's.
 // Carries: the wireframe's §10 `COL`; S1 Q5's `same`/`provenance` classes
 // (the treatment OPEN).
-// Rules: FP-1, FP-2, FP-10 (no state).
+// Rules: FP-1, FP-2, FP-10 (no state), FP-26.
 
 /** the linker's hue — R60's palette */
 export const HUE = Object.freeze({
@@ -82,8 +85,9 @@ export const STUB = Object.freeze({ inset: 8, length: 10, width: 10 });
  * and no triangle, by which a link whose far document the plane draws
  * nowhere leaves its near end — `length` px rightward, its label `gap` px past
  * its end. Shorter than a gutter at the smallest em an article stands at
- * (P-LAY's GUTTER at P-LOD's UNMOUNT_EM), so a tail leaving a column's line
- * never reaches the next column's text (register.test.js holds it).
+ * (P-LAY's GUTTER at P-LOD's UNMOUNT_EM), so a tail leaving a column's line —
+ * past the signs its edge holds on that line — never reaches the next column's
+ * text (register.test.js holds it).
  */
 export const TAIL = Object.freeze({ length: 10, gap: 3 });
 
@@ -95,6 +99,22 @@ export const TAIL = Object.freeze({ length: 10, gap: 3 });
  * out of it marked on the facing edge
  */
 export const RING = Object.freeze({ gap: 3, width: 2.5 });
+
+/**
+ * THE CORNER (foundations §3.1; issue #151's design decision: "The corner
+ * follows the column nearest the view's centre"; FP-26): a document's state,
+ * version and whole-document count, set at the interface's size, `px` px —
+ * `whole` em wide whole, `compact` em wide compact, where a usual state is a
+ * glyph and every word kept wraps whole — padded `pad` px on either side
+ * inside that width, its right edge `gap` px from the text of the column it
+ * stands beside. The style reads them (`cssVariables`); T-LAYER places it by
+ * them, and P-LAY's fit holds a column beside it at the reading size
+ * (`cornerWidth`).
+ */
+export const CORNER = Object.freeze({ px: 11, whole: 11, compact: 7, pad: 6, gap: 8 });
+
+/** the corner's width on screen, whole or compact, in px: its em at its size, its padding inside it (the style's `border-box`) */
+export const cornerWidth = (/** @type {boolean} */ compact) => (compact ? CORNER.compact : CORNER.whole) * CORNER.px;
 
 /**
  * The smallest size a label on the plane is set at, in px — the far labels'
@@ -131,5 +151,6 @@ export function cssVariables() {
     '--same-boundary': SAMENESS.boundary, '--same-texture': SAMENESS.texture,
     '--visited-alpha': String(VISITED_ALPHA),
     '--col-bg': COL.bg, '--col-text': COL.text, '--col-title': COL.title, '--col-dim': COL.greek, '--col-land': COL.land, '--col-focus': COL.focus,
+    '--corner-px': CORNER.px + 'px', '--corner-w': CORNER.whole + 'em', '--corner-compact-w': CORNER.compact + 'em', '--corner-pad': CORNER.pad + 'px',
   };
 }

@@ -514,9 +514,10 @@ function moved() {
 
 /**
  * The camera follows the focus: fly to the element at its level's scale — a
- * document's outline framed, no nearer than reading size; a span's line in
- * its column at reading size (T-LAYER's fold) — nowhere where the document's
- * extent is read first and a later move overtook this one meanwhile.
+ * document's outline framed, no nearer than the reading size; a span's line,
+ * its column framed with both its margins, at the reading size (T-LAYER's
+ * `frameOf`; P-CAM's READING_PX) — nowhere where the document's extent is
+ * read first and a later move overtook this one meanwhile.
  * @param {number} move the move's count
  */
 async function flyToFocus(move) {
@@ -526,12 +527,12 @@ async function flyToFocus(move) {
   else if (focus.kind === 'document') {
     const d = REC.doc(focus.addr); if (d.extent == null) await PUMP.loadWhole(focus.addr);
     if (move !== moves) return;
-    // its outline framed, no nearer than reading size
+    // its outline framed, no nearer than the reading size
     const v = CAM.viewForCell(LAYER.shapeOf(focus.addr), 0.9);
-    await CAM.fly({ ...v, scale: Math.min(v.scale, 12.5 / LAYER.foldOf(REC.doc(focus.addr)).fs) }, 300);
+    await CAM.fly({ ...v, scale: Math.min(v.scale, CAM.READING_PX / LAYER.foldOf(REC.doc(focus.addr)).fs) }, 300);
   } else {
     const d = REC.doc(focus.addr);
-    await CAM.fly(CAM.viewAt(LAYER.centreOf(focus.addr, focus.pos), LAYER.foldOf(d).fs, 12.5), 260);
+    await CAM.fly(CAM.viewAt(LAYER.frameOf(focus.addr, focus.pos), LAYER.foldOf(d).fs), 260);
   }
   CAM.markDirty();
 }

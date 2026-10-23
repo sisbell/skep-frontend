@@ -1,7 +1,12 @@
 // P-CAM — the camera (the structure record §3.2 "P-CAM"). Layer 2, pure
 // view arithmetic beside the model (FP-11). PURE: the viewport size is an
 // input set by the app on resize; `step(now)` takes the clock.
-// State: VIEW — x, y, scale, the flight in progress and the zoom-in bound.
+// State: VIEW — x, y, scale, the flight in progress, the zoom-in bound, and
+// the viewport with THE MEASURE IN FORCE it sets: P-LAY's fit of the
+// viewport's width at THE READING SIZE (`READING_PX`, the em a reading view
+// sets a document's text at — the landing's, the walk's at a span), so every
+// document's line is set at the measure the view holds with its margins and a
+// resize alone moves it, never a zoom (issue #151's design decisions; FP-26).
 // THE ONE OWNER (FP-10). Never serialized, never sent (FP-7: "the camera
 // writes nothing"; the gate's ledger proves it). Where the camera is bound is
 // the flight's destination while one runs (`destination`): what a departure
@@ -35,11 +40,11 @@
 // visible view below the chrome across the viewport's top (`visibleView`),
 // the cut on the true bearing inside it (`edgeStub`) and the triangle at the
 // cut (`stubTriangle`), sized by P-REG's STUB.
-// Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11.
+// Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11, FP-26.
 
 import { WORLD_W, WORLD_H, DEPTH_SOUND, G, LEAF } from './projection.js';
-import { STANDARD_FS } from './layout.js';
-import { STUB } from './register.js';
+import { STANDARD_FS, MEASURE_CPL, fitFor } from './layout.js';
+import { STUB, CORNER, cornerWidth } from './register.js';
 
 /**
  * @typedef {Object} View
@@ -65,16 +70,29 @@ import { STUB } from './register.js';
 /** @type {View & {anim: Flight | null}} */
 export const cam = { x: WORLD_W / 2, y: WORLD_H / 2, scale: 1, anim: null };
 
+/** THE READING SIZE (see the head): the em, in px, a reading view sets a document's text at */
+export const READING_PX = 12.5;
+
 /** the viewport, set on resize */
 let VW = 1, VH = 1;
+/** the measure in force (see the head): the full measure until a viewport is set */
+let fitNow = /** @type {import('./layout.js').Fit} */ ({ cpl: MEASURE_CPL, compact: false });
 /** S3's constant zoom-in bound, the bound's floor */
 const S3_MAX = 40;
 /** the zoom-in bound: S3's, raised per E18 (a) by `reach`, never lowered */
 let maxS = S3_MAX;
 
 /** @param {number} vw @param {number} vh */
-export function setViewport(vw, vh) { VW = Math.max(1, vw); VH = Math.max(1, vh); }
+export function setViewport(vw, vh) {
+  VW = Math.max(1, vw); VH = Math.max(1, vh);
+  fitNow = fitFor(VW, READING_PX, { whole: cornerWidth(false), compact: cornerWidth(true), gap: CORNER.gap });
+}
 export function viewport() { return { VW, VH }; }
+
+/** the measure in force (see the head): its count of characters, and whether a column at the reading size stands beside its corner compact */
+export const fit = () => fitNow;
+/** the measure in force, in characters of a document's face */
+export const measure = () => fitNow.cpl;
 
 /** @param {number} wx @returns {number} */
 export const sx = (wx) => (wx - cam.x) * cam.scale + VW / 2;
@@ -144,15 +162,15 @@ export function viewForCell(c, fit = 0.92) {
 }
 
 /**
- * The view that reads a document at a place: its em at `fsPx` screen px,
- * centred on the point — a line's place in its column, or a column's centre
- * (P-LAY's `placeOf`, through T-LAYER's).
+ * The view that reads a document at a place: its em at `fsPx` screen px, the
+ * reading size where none is given, centred on the point — the frame of a
+ * line's column with its margins (T-LAYER's `frameOf`), or a column's centre.
  * @param {{x: number, y: number}} at the world point to centre
  * @param {number} fs the document's em in world units
  * @param {number} [fsPx]
  * @returns {View}
  */
-export function viewAt(at, fs, fsPx = 12.5) {
+export function viewAt(at, fs, fsPx = READING_PX) {
   return { x: at.x, y: at.y, scale: fsPx / fs };
 }
 
@@ -304,8 +322,8 @@ let dirtyFlag = true;
 export function markDirty() { dirtyFlag = true; }
 export function takeDirty() { const d = dirtyFlag; dirtyFlag = false; return d; }
 
-/** reset everything (tests): the view, any flight cut short, the viewport, the zoom-in bound at S3's, the dirty mark */
+/** reset everything (tests): the view, any flight cut short, the viewport and the full measure, the zoom-in bound at S3's, the dirty mark */
 export function _reset() {
   cut(); cam.x = WORLD_W / 2; cam.y = WORLD_H / 2; cam.scale = 1;
-  VW = 1; VH = 1; maxS = S3_MAX; dirtyFlag = true;
+  VW = 1; VH = 1; fitNow = { cpl: MEASURE_CPL, compact: false }; maxS = S3_MAX; dirtyFlag = true;
 }

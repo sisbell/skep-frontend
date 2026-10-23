@@ -74,23 +74,29 @@
 // resolves to the origin (PUB-3.2; RES-66), so a carried run would be found
 // nowhere there and faced as a dead end where the edition stands; and it
 // lights no link, the claim being a record LK never draws;
-// the rest of a withheld run's placeholder conjures C-39's face, naming
-// the owner the placeholder names (B1-S5, B1-S7), at the placeholder and,
+// a withheld run's face compact in its column's edge, "⟨owner⟩ with a mark
+// that opens it whole" (foundations §2.1; issue #151's design decision),
+// opens the run's face whole (O-FACES's `withheldRun`), as Enter at the run
+// does (D5 K-7), its pointer the face's act;
+// the rest of a withheld run's gap conjures C-39's face, naming
+// the owner the gap names (B1-S5, B1-S7), at the gap and,
 // once the text layer rebuilds or takes it down, at the run's own positions
-// (`runOf`; O-HOST's anchor) — a press on the placeholder starts no
+// (`runOf`; O-HOST's anchor) — a press on the gap starts no
 // selection, which the platform, selecting an item whole wherever a selection
 // touches it (FP-24), would otherwise make of it at every click, so its click
 // is its act's alone and a drag that crosses it from text still takes it
 // whole; the version statement at a document's
 // corner opens its members (the corner's act, the one Enter takes there —
-// K-57); a click on a block selects it whole (R11); a click on an account at
+// K-57), and a compact corner's glyph opens the corner whole, a click on the
+// corner opened closing it again (FP-26; T-LAYER's `openCorner`); a click on a
+// block selects it whole (R11); a click on an account at
 // far is a teleport to its region (a trail push); an empty click ends a card
 // or scene still reading (O-HOST's opening, ended alone: the overlay
 // standing under it stands), else dismisses the overlay, else clears the
 // selection.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
-// Rules: FP-1, FP-2, FP-9, FP-24, FP-25.
+// Rules: FP-1, FP-2, FP-9, FP-24, FP-25, FP-26.
 
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
@@ -210,12 +216,14 @@ export function attach(els) {
     if (Math.abs(e.clientX - lastDown.x) + Math.abs(e.clientY - lastDown.y) > 4) { e.stopPropagation(); return; }
     if (clickText(/** @type {HTMLElement} */ (e.target))) e.stopPropagation();
   });
-  // the corners: a click on the version statement takes the corner's act
+  // the corners: a click on the version statement takes the corner's act; one on a compact corner's glyph opens it whole, and one
+  // on the corner opened closes it again (FP-26)
   els.corners.addEventListener('click', (e) => {
     const target = /** @type {HTMLElement} */ (e.target);
     LINE.act();
-    const corner = /** @type {HTMLElement | null} */ (target.closest('.version') ? target.closest('[data-corner]') : null);
-    if (corner) { e.stopPropagation(); VERSIONS.fromCorner(corner, SEL.selected(), false); }
+    const holder = /** @type {HTMLElement | null} */ (target.closest('[data-corner]')), addr = holder ? holder.dataset.corner || '' : '';
+    if (holder && target.closest('.version')) { e.stopPropagation(); VERSIONS.fromCorner(holder, SEL.selected(), false); }
+    else if (holder && (target.closest('.glyph') || LAYER.cornerAt(addr)?.opened)) { e.stopPropagation(); LAYER.openCorner(addr); }
   });
   window.addEventListener('wheel', (e) => {
     const t = /** @type {HTMLElement} */ (e.target);
@@ -300,6 +308,13 @@ function clickText(target) {
   if (pointer) {
     const p = /** @type {HTMLElement} */ (pointer), home = p.dataset.home, holder = /** @type {HTMLElement | null} */ (p.closest('[data-withheld]')), run = holder ? runOf(holder) : null;
     if (home) GO.leapTo(home, { how: 'leap', site: run ? { span: run } : null });
+    return true;
+  }
+  // a withheld run's face compact in its column's edge opens it whole (FP-26), as Enter at the run does (D5 K-7)
+  const mark = target.closest('.wh-mark');
+  if (mark) {
+    const holder = /** @type {HTMLElement | null} */ (mark.closest('[data-withheld]')), run = holder ? runOf(holder) : null, b = run ? REC.blockByPos(run.addr, run.pos) : null;
+    if (run && b && b.kind === 'withheld') FACES.withheldRun(run.addr, b, (home, byKey) => GO.leapTo(home, { how: 'leap', byKey, site: { span: run } }));
     return true;
   }
   const wh = target.closest('[data-withheld]');

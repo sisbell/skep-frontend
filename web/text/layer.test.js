@@ -6,9 +6,24 @@
 // article whose own lines hold the standard grid hidden but not with its
 // symbols set at the step past it from the first, so no reveal re-sets it (a
 // fold of the hidden lines alone turns red); another's links arriving folding
-// it again. Where a passage stands and is read back — a reading view centred
+// it again; a count arriving at the hidden reveal setting no line, every line
+// and column as it stood (issue #151; a fold that sets the count turns red).
+// Where a passage stands and is read back — a reading view centred
 // on a position's line in its column, the position under a point, the outline
-// the plane draws — and the paging key's next column at reading scale. A
+// the plane draws — and the paging key's next column at reading scale. THE
+// CORNER (issue #151's design decision): beside the column nearest the view's
+// centre — the strip's room beside a row's first column, the gutter and the
+// edge before it beside a later one — whole where its room holds it, compact
+// where it holds the compact corner alone, by its row's first column where it
+// holds neither or the signs there leave it none (a mutant that keeps it by
+// the first column, or squeezes it whole into a gutter, turns red); held below
+// the one line, never past its foot, stacked below the signs it would meet. A
+// reading view frames its column with both its margins centred together (a
+// view on the column's middle alone turns red). THE MEASURE IN FORCE: the full
+// measure at 1440 px, 39 characters at 480, and a resize that moves it sets
+// the article being read again with the line under the view's centre kept in
+// place, at its size, a zoom moving neither (a frame that re-sets without the
+// hold, or a fold keyed on the scale, turns red). A
 // document's REGION (issue #141): its outline's bounds widened leftward by its
 // corner's strip, ending where its neighbour's begins; the document in view
 // while that region meets the visible view below the one line — the corner's
@@ -86,7 +101,8 @@ import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as LAYER from './layer.js';
 import * as CAM from '../plane/camera.js';
-import { layoutOf, fold, placeOf, padded, windowIn, standardFs, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER } from '../plane/layout.js';
+import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE } from '../plane/layout.js';
+import { CORNER, cornerWidth } from '../plane/register.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
 import { t } from '../strings.js';
@@ -187,6 +203,17 @@ test('another\'s links arriving fold it again: their counts at the hidden reveal
   assert.ok(g.fs === f.fs && inside(g), 'their symbols with others\' links on: inside the room, at the same size');
 });
 
+test('a count arriving at the hidden reveal sets no line: the fold\'s lines and columns as they were, the count in the article beside its block\'s first line (issue #151; A-254: "so a link\'s arrival breaks no line")', () => {
+  deliver();
+  const before = LAYER.foldOf(REC.doc(D)), b = REC.doc(D).blocks[3];
+  cite(OTHER_HOME, b, 1, 900);
+  assert.equal(LK.countAt(D, b).n, 1, 'another\'s link counted at its block, the reveal hidden');
+  const f = LAYER.foldOf(REC.doc(D));
+  assert.deepEqual([f.step, f.lines, f.columns], [before.step, before.lines, before.columns], 'every line and every column where it stood');
+  const html = LAYER.planOf(REC.doc(D)).find((r) => r.pos === b.pos);
+  assert.ok(html && !html.pieces.some((p) => p.text.includes(t('F.others-count', { n: 1 }))), 'the count no piece of the plan');
+});
+
 test('a reading view centres on the line holding a position, in its column; the position under a point reads it back; the outline is the plane\'s shape for the document', () => {
   deliver();
   const d = REC.doc(D), f = LAYER.foldOf(d), box = docBox(D);
@@ -256,6 +283,91 @@ test('a document\'s region is its outline\'s bounds widened leftward by the stri
     CAM._reset();
   }
 });
+
+// ---- the corner beside the column nearest the view's centre; the reading view's frame (issue #151) -----------------
+
+/** the middle of a column of a fold, in world units relative to the room */
+const middleOf = (/** @type {Fold} */ f, /** @type {number} */ i) => ({ x: f.columns[i].x + f.columns[i].w / 2, y: f.columns[i].y + f.columns[i].h / 2 });
+
+test('the corner stands beside the column nearest the view\'s centre: beside a row\'s first column in the strip\'s room, whole; beside a later one in the gutter and the edge before it, compact where they hold less than it whole and whole where they hold it; where they hold not even the compact corner, or the signs there leave it none, by its row\'s first column (issue #151; FP-26)', () => {
+  deliver();
+  const f = LAYER.foldOf(REC.doc(D)), strip = clearLeftOf(D), at = (/** @type {number} */ em) => em / f.fs;
+  assert.ok(f.across >= 3 && f.columns.length > f.across, `${f.across} across, ${f.columns.length} columns`);
+  const first = LAYER.besideOf(f, strip, middleOf(f, 0), at(12.5));
+  assert.deepEqual([first.column, first.first, first.room], [0, true, Math.floor((strip + f.columns[0].x) * at(12.5) - 2 * CORNER.gap)], 'over the first column: the strip\'s room beside it, its gaps taken');
+  assert.equal(LAYER.formFor(first.room, false), 'whole', 'the strip holds the corner whole');
+  const third = LAYER.besideOf(f, strip, middleOf(f, 2), at(12.5));
+  assert.deepEqual([third.column, third.first], [2, false], 'over the third column: beside it');
+  assert.ok(Math.abs(third.room - ((EDGE + GUTTER) * 12.5 - 2 * CORNER.gap)) <= 1, `the gutter and the second column's edge, its gaps taken: ${third.room} px`);
+  assert.ok(cornerWidth(true) <= third.room && third.room < cornerWidth(false), 'room for it compact, not whole');
+  assert.deepEqual([LAYER.formFor(third.room, false), LAYER.formFor(third.room, true)], ['compact', 'whole'], 'compact; whole where its act opened it');
+  assert.deepEqual([LAYER.formFor(first.room, false, true), LAYER.formFor(first.room, true, true)], ['compact', 'whole'], 'a view whose fit holds a column beside the compact corner alone: compact in the strip too, the margins compacted first (FP-26); whole where its act opened it');
+  const near = LAYER.besideOf(f, strip, middleOf(f, 2), at(30));
+  assert.deepEqual([near.column, LAYER.formFor(near.room, false)], [2, 'whole'], 'at 30 px an em the gutter and the edge hold it whole');
+  const small = LAYER.besideOf(f, strip, middleOf(f, 2), at(8));
+  assert.deepEqual([small.column, small.first], [0, true], 'at 8 px an em they hold not even the compact corner: by the row\'s first column, its own document\'s free room');
+  assert.deepEqual(LAYER.besideOf(f, strip, middleOf(f, 2), at(12.5), 2).column, 0, 'blocked beside the third column by the signs before it: by the row\'s first');
+  const row = LAYER.besideOf(f, strip, middleOf(f, f.across + 1), at(12.5));
+  assert.deepEqual([row.column, row.first], [f.across + 1, false], 'a later row\'s second column: beside it');
+  assert.equal(LAYER.besideOf(f, strip, middleOf(f, f.across), at(12.5)).first, true, 'a later row\'s first column: the strip, as the first row\'s');
+  assert.equal(LAYER.besideOf(f, strip, { x: -1e9, y: -1e9 }, at(12.5)).column, 0, 'a centre off every column: the nearest');
+});
+
+test('a corner holds to its column\'s visible top below the one line, never running past its foot, and stacks below each sign of the edge before its column it would meet; none where that leaves it no room (foundations §3.1: "an item at a y another already holds stacks below it")', () => {
+  const c = { x: 100, w: 78, h: 60 };
+  assert.equal(LAYER.cornerTop(c, 200, 38, 900, []), 200, 'its column\'s top in view: there');
+  assert.equal(LAYER.cornerTop(c, 10, 38, 900, []), 38, 'its column\'s top under the one line: just below the line');
+  assert.equal(LAYER.cornerTop(c, 10, 38, 80, []), 20, 'its foot risen: no lower than its height above the foot');
+  const count = { x: 90, y: 50, w: 60, h: 12 };
+  assert.equal(LAYER.cornerTop(c, 10, 38, 900, [count]), 50 + 12 + CORNER.gap, 'a count where it would stand: below it, a gap past it');
+  assert.equal(LAYER.cornerTop(c, 10, 38, 900, [count, { ...count, y: 125 }]), 125 + 12 + CORNER.gap, 'and below the next it would meet there');
+  assert.equal(LAYER.cornerTop(c, 10, 38, 900, [{ ...count, x: 300 }]), 38, 'a sign beside it, not under it: where it was');
+  assert.equal(LAYER.cornerTop(c, 10, 38, 120, [count]), null, 'below the sign it would run past the foot: no room beside that column');
+});
+
+test('a reading view frames its column with both its margins: the corner on its left in the form its room holds at the reading size, the edge on its right, the three centred in the view together (issue #151: "The landing frames the column, not the middle of a line")', () => {
+  deliver();
+  CAM._reset(); CAM.setViewport(1440, 900);
+  try {
+    const d = REC.doc(D), f = LAYER.foldOf(d), box = docBox(D), fs = f.fs;
+    const inThird = d.blocks.find((b) => placeOf(f, b.pos).column === 2);
+    assert.ok(inThird, 'a block opening in the third column');
+    /** @type {Array<[number | null, number, number, string]>} a position, its column, the corner's width beside it, what stands there */
+    const cases = [[null, 0, cornerWidth(false), 'no position: the first column, the strip holding the corner whole'], [/** @type {NonNullable<typeof inThird>} */ (inThird).pos, 2, cornerWidth(true), 'the third column: the gutter holding the corner compact']];
+    for (const [pos, i, corner, what] of cases) {
+      CAM.set(CAM.viewAt(LAYER.frameOf(D, pos), fs));
+      const c = f.columns[i], left = CAM.sx(box.x + c.x) - CORNER.gap - corner, right = CAM.sx(box.x + c.x + c.w) + EDGE * 12.5;
+      assert.ok(Math.abs((left + right) / 2 - 720) < 1e-6, `${what}: the corner, the column and its edge centred together — ${left} … ${right}`);
+      assert.ok(left >= 0 && right <= 1440 && Math.abs(CAM.cam.scale * fs - 12.5) < 1e-9, `${what}: all in view, at the reading size`);
+      assert.equal(LAYER.frameOf(D, pos).y, LAYER.centreOf(D, pos).y, `${what}: on the line holding it`);
+    }
+  } finally { CAM._reset(); }
+});
+
+test('the measure in force: every document folded at what the view holds — the full measure at 1440 px, 39 characters at 480 — and a resize that moves it sets again the article being read, the line under the view\'s centre kept where it stood in the view, at its size; never a zoom (issue #151; FP-26)', () => onLayer(() => {
+  deliver();
+  const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D));
+  assert.equal(f0.cpl, MEASURE_CPL, '1440 px: the full measure');
+  const c = f0.columns[4];
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h * 0.4, scale: 12 / f0.fs });
+  LAYER.frame();
+  assert.ok(LAYER.isMounted(D), 'read at em 12');
+  const pos = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y));
+  /** where the line holding `pos` stands on screen, from the view's centre, in the fold the document is set in now */
+  const fromCentre = () => { const p = placeOf(LAYER.foldOf(REC.doc(D)), pos), { VW, VH } = CAM.viewport(); return { x: CAM.sx(box.x + p.x) - VW / 2, y: CAM.sy(box.y + p.y) - VH / 2 }; };
+  const was = fromCentre(), em = CAM.cam.scale * f0.fs;
+  for (const [w, cpl] of /** @type {Array<[number, number]>} */ ([[480, 39], [1440, MEASURE_CPL]])) {
+    CAM.setViewport(w, 900);
+    LAYER.frame();
+    const f = LAYER.foldOf(REC.doc(D)), now = fromCentre();
+    assert.ok(f.cpl === cpl && f.columns.every((k) => Math.abs(k.w - columnW(cpl) * f.fs) < 1e-6) && f.lines.every((l) => l.w <= cpl + 1e-9), `${w} px: every column and line at ${cpl} characters`);
+    assert.ok(Math.abs(now.x - was.x) < 1e-6 && Math.abs(now.y - was.y) < 1e-6, `${w} px: the line where it stood in the view, from its centre — ${JSON.stringify(was)} → ${JSON.stringify(now)}`);
+    assert.ok(Math.abs(CAM.cam.scale * f.fs - em) < 1e-9, `${w} px: at its size on screen`);
+  }
+  const f = LAYER.foldOf(REC.doc(D));
+  CAM.zoomAt(2, 720, 450); LAYER.frame();
+  assert.ok(LAYER.foldOf(REC.doc(D)) === f && CAM.measure() === MEASURE_CPL, 'a zoom: the measure and the fold as they were');
+}, 1440, 900));
 
 // ---- what stands: every readable document, by line; the limit below reading size ------------------------------------
 
@@ -627,13 +739,14 @@ test('an article standing keeps its place down to 5.5; a document holding none t
   view(7);
   const all = settle();
   assert.deepEqual(all, inView(), 'em 7: every one in view stands, over the frames the limit takes');
-  view(6);
-  assert.ok(inView().length > all.length, 'em 6: more of the field in view');
-  assert.deepEqual(frame(), all, 'em 6 from above: those standing stand, and none takes a place below 6.5');
+  // 5.6: between the two thresholds, where the view takes in rows of the field no frame stood
+  view(5.6);
+  assert.ok(inView().length > all.length, 'em 5.6: more of the field in view');
+  assert.deepEqual(frame(), all, 'em 5.6 from above: those standing stand, and none takes a place below 6.5');
   view(5);
   assert.deepEqual(frame(), [], 'em 5: below 5.5, none stands');
-  view(6);
-  assert.deepEqual(frame(), [], 'em 6 from below: none takes a place below 6.5');
+  view(5.6);
+  assert.deepEqual(frame(), [], 'em 5.6 from below: none takes a place below 6.5');
   view(6.6);
   assert.deepEqual(settle(), inView(), 'em 6.6 from below: every one in view takes its place');
 }, 9000, 6000));
@@ -681,8 +794,8 @@ test('while a press stands no standing article is set again, but a document reac
 
 // ---- the owner a withheld run names ------------------------------------------------------------------------------------
 
-test('a guest meets a withheld run named for its origin\'s owner, whoever owns the document windowing it: on the plane\'s mounted article and in a reading scene\'s pane alike', () => onLayer(() => {
-  const O = '1.0.2.0.2', text = 'Tumbler.\n\n', width = 240, n = new TextEncoder().encode(text).length;
+test('a guest meets a withheld run named for its origin\'s owner, whoever owns the document windowing it: on the plane\'s mounted article and in a reading scene\'s pane alike — in its gap\'s face where the gap holds it (issue #151)', () => onLayer(() => {
+  const O = '1.0.2.0.2', text = 'Tumbler.\n\n', width = 12 * 66, n = new TextEncoder().encode(text).length;
   REC.setSession(null);
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + width }]);
   REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width, kind: 'withheld', text: '', ref: null, origin: O }]);

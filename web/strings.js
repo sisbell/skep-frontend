@@ -318,6 +318,15 @@ export const STRINGS = {
   'L.copy.item.owned': { text: '[⟨kind⟩, owner ⟨owner⟩, ⟨length⟩]', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
   'L.copy.item.contents': { text: '[⟨kind⟩: ⟨contents⟩]', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
   'L.copy.key': { text: '⟨label⟩ ⟨fingerprint⟩', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
+  // THE COMPACT SIGNS (FP-26; issue #151's design decision): the mark keyed to a run's origin — a hairline's compact label, and a
+  // withheld run's gap too short to carry its owner; a withheld run's face compact in its column's edge, "⟨owner⟩ with a mark that
+  // opens it whole" (foundations §2.1); the corner's usual states as glyphs — an edition's its version marker, unlit at the bare
+  // address and lit at a pinned version (foundations §3.1's ○), a draft's chip
+  'L.origin-mark': { text: '≡', cls: 'DRAFT', source: '', screen: 'a run\'s hairline; a withheld run\'s gap', lane: true },
+  'L.withheld.mark': { text: '⟨owner⟩ ▸', cls: 'DRAFT', source: '', screen: 'B1-S7, a column\'s edge', lane: true },
+  'L.corner.bare': { text: '○', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner, compact' },
+  'L.corner.pinned': { text: '●', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },
+  'L.corner.draft': { text: '◌', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },
 };
 
 /**

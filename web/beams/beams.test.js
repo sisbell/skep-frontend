@@ -16,7 +16,9 @@
 // over a laid-out geometry: it leaves the near block's right edge level
 // with the span's own line nearest the far end, never the block's middle — a
 // block parted across two columns the right edge of the part holding that
-// line (a mutant taking the two parts' bounds turns red); a
+// line (a mutant taking the two parts' bounds turns red), and past a sign its
+// column's edge holds level with that line, never across it (issue #151: a
+// mutant that leaves from the text's edge whatever stands there turns red); a
 // mounted far end in view takes the far span's own line nearest the start, at
 // the far block's left edge, where its stroke ends; a whole-work end, the far
 // article's first block; a mounted far end outside the visible view — its
@@ -50,7 +52,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { bundlesOf, beamOf, labelPlace, labelText } from './beams.js';
+import { bundlesOf, beamOf, labelPlace, labelText, pastSigns } from './beams.js';
 import { edgeStub } from '../plane/camera.js';
 import { HUE, NEUTRAL_HUE, STUB } from '../plane/register.js';
 import { t } from '../strings.js';
@@ -154,12 +156,13 @@ const NEAR_BLOCK = { x: 100, y: 90, w: 400, h: 60 };
 const FAR = [{ x: 700, y: 400, w: 50, h: 15 }, { x: 600, y: 418, w: 30, h: 15 }];
 const FAR_BLOCK = { x: 600, y: 390, w: 300, h: 50 };
 /** @returns {import('./beams.js').Geometry} */
-function geometry(/** @type {{farMounted: boolean, centre: {x: number, y: number}, far?: Rect[], farBlock?: Rect}} */ o) {
+function geometry(/** @type {{farMounted: boolean, centre: {x: number, y: number}, far?: Rect[], farBlock?: Rect, signs?: Rect[]}} */ o) {
   const far = o.far || FAR, farBlock = o.farBlock || FAR_BLOCK;
   return {
     lines: (addr, pos, width) => (addr === D && pos === 50 && width === 10 ? NEAR : addr === H && o.farMounted && pos === 1 && width === 5 ? far : []),
     block: (addr, pos) => (addr === D && pos >= 50 && pos < 60 ? [NEAR_BLOCK] : addr === H && o.farMounted && pos >= 1 && pos < 6 ? [farBlock] : []),
     first: (addr) => (addr === H && o.farMounted ? farBlock : null),
+    signs: (addr, pos) => (addr === D && pos >= 50 && pos < 60 ? o.signs || [] : []),
     mounted: (addr) => addr === D || (addr === H && o.farMounted),
     centre: () => o.centre,
     view: SEEN,
@@ -179,6 +182,16 @@ test('a block parted across two columns sends each line\'s beam from the right e
   assert.deepEqual(first && [first.from, first.line], [{ x: 500, y: 107.5 }, lines[0]], 'the far end below and to the left: the first column\'s line, from the first part\'s edge');
   const second = beamOf(own(), { ...g, centre: () => ({ x: 1200, y: -200 }) });
   assert.deepEqual(second && [second.from, second.line], [{ x: 960, y: 32.5 }, lines[1]], 'the far end above and to the right: the second column\'s line, from the second part\'s edge');
+});
+
+test('a beam leaving a line its column\'s edge holds a sign level with starts past that sign, as far past it as the sign stands past the text — never across it; a line no sign stands level with leaves from the text\'s edge (issue #151; foundations §3.1: "the beams routed outside them")', () => {
+  // the block's count in its edge, 12 px past the text, level with its first line
+  const count = { x: 512, y: 101, w: 60, h: 12 };
+  const high = beamOf(own(), geometry({ farMounted: false, centre: { x: 900, y: -300 }, signs: [count] }));
+  assert.deepEqual(high && [high.from, high.line], [{ x: 584, y: 107.5 }, NEAR[0]], 'the first line, the count level with it: from 12 px past the count');
+  const low = beamOf(own(), geometry({ farMounted: false, centre: { x: 50, y: 700 }, signs: [count] }));
+  assert.deepEqual(low && low.from, { x: 500, y: 125.5 }, 'the wrapped line, no sign level with it: from the text\'s edge');
+  assert.equal(pastSigns({ line: NEAR[0], block: NEAR_BLOCK, signs: [{ x: 300, y: 101, w: 60, h: 12 }] }), 500, 'a sign inside the text\'s edge is none of the edge\'s');
 });
 
 test('a beam leaves the near block\'s right edge level with the middle of its span\'s own line nearest the far end — never the block\'s middle', () => {

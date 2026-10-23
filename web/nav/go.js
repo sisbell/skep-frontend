@@ -692,13 +692,16 @@ function failed(act, entry, n, byKey) {
 
 /**
  * The view that reads a document at a position: its size (T-LAYER's fold) at
- * reading size, centred on the line holding the position in its column — the
- * first column's centre where none is named (T-LAYER's `centreOf`).
+ * the reading size (P-CAM's READING_PX), on the line holding the position,
+ * framing its column with both its margins — the corner on its left, the edge
+ * on its right (issue #151's design decision: "The landing frames the column,
+ * not the middle of a line"; T-LAYER's `frameOf`) — the first column where
+ * none is named.
  * @param {string} addr
  * @param {number | null} pos
  */
 export function viewFor(addr, pos) {
-  return CAM.viewAt(LAYER.centreOf(addr, pos), LAYER.foldOf(REC.doc(addr)).fs, 12.5);
+  return CAM.viewAt(LAYER.frameOf(addr, pos), LAYER.foldOf(REC.doc(addr)).fs, CAM.READING_PX);
 }
 
 /** the label a place's entry carries: the index's, else the record's */

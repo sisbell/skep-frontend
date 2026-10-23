@@ -29,11 +29,17 @@
 // view with its stub at the view's border (`connections`), the tails it drew
 // for links whose far document the plane draws nowhere (issue #132), each with
 // its links and the label set at its end (`tails`), each one leaving a
-// passage's line beside its links' marked words and the edge of the part of
-// its block holding the line (`tailAnchors`), a document's fold
-// — its size, its step and its columns on the plane — where a position
-// stands in it and which position stands under a point of the plane (`fold`,
-// `centreOf`, `posAt`), the labels it set
+// passage's line beside its links' marked words and where a stroke leaves
+// that line — the edge of the part of its block holding it, past the sign its
+// column's edge holds there (`tailAnchors`, `leaveEdge`), a document's fold
+// — its size, its step, its measure and its columns on the plane, each with
+// its edge — where a position stands in it and which position stands under a
+// point of the plane (`fold`, `centreOf`, `posAt`), the measure in force
+// (`measure`; issue #151's design decisions: the full measure wherever the
+// view holds it, the corner compacted first), a document's corner as placed
+// — the column it stands beside and its form (`corner`) — and where a
+// reading view frames a column with its corner and its edge (`frameOf`), the
+// labels it set
 // (`labels`: each one's kind, place, lines — their text, size and screen
 // rect — and the room its place gave it, the connections' counts and the
 // trail's pip numbers among them) and the parts of labels it left out with
@@ -104,7 +110,7 @@ import * as KEYS from '../nav/keys.js';
 import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
 import { docBox, accountCell, boardCell, boardLabelCell, DOC_W, depthOfDoc } from '../plane/projection.js';
-import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, LINE_H, boundsOf, outlineRects, firstRow } from '../plane/layout.js';
+import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, EDGE, EDGE_GAP, LINE_H, boundsOf, outlineRects, firstRow, edgeOf } from '../plane/layout.js';
 import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME } from '../plane/lod.js';
 import { RING } from '../plane/register.js';
 import { pinned, lacking } from '../strings.js';
@@ -232,7 +238,7 @@ export function install(deps) {
         if (over > 0.5) cut.push({ addr: rec.d.addr, pos: row.dataset.pos != null ? Number(row.dataset.pos) : null, row: row.classList[0] || row.tagName.toLowerCase(), overflow_px: r2(over) });
       }
       const corner = LAYER.cornerOf(rec.d.addr);
-      if (!corner) { if (rec.corner && rec.fs * CAM.cam.scale >= LOD_TXT_LO) missing.push(rec.d.addr); continue; }
+      if (!corner) { if (rec.corner.whole && rec.fs * CAM.cam.scale >= LOD_TXT_LO) missing.push(rec.d.addr); continue; }
       const cr = rectOf(corner);
       const clip = clipOf(corner);
       const over = clip ? overflowOf(cr, rectOf(clip)) : 0;
@@ -284,22 +290,38 @@ export function install(deps) {
     return { x: r.x, y: CAM.sy(box.y + c.y), w: r.w, h: c.h * CAM.cam.scale };
   }
   /**
+   * Where a stroke leaving a line of a mounted article leaves it, read from
+   * the article apart from the beams' and the canvas's own sets: the right
+   * edge of the part of the block holding the line — the column's, where the
+   * block is split across columns (issue #15) — or, where a sign the column's
+   * edge holds beside that block stands level with the line, as far past the
+   * sign as the sign stands past the text (foundations §3.1: "the beams
+   * routed outside them"; issue #151); null where no part holds the line.
+   * @param {HTMLElement} art
+   * @param {Rect} line
+   */
+  function leaveEdge(art, line) {
+    const mid = line.y + line.h / 2;
+    const part = /** @type {HTMLElement | undefined} */ ([.../** @type {NodeListOf<HTMLElement>} */ (art.querySelectorAll('.run > .sp'))].find((e) => { const q = rectOf(e); return q.y - 0.5 <= mid && mid <= q.y + q.h + 0.5 && q.x <= line.x + line.w && line.x <= q.x + q.w; }));
+    if (!part) return null;
+    const p = rectOf(part), right = p.x + p.w;
+    let edge = right;
+    for (const s of /** @type {NodeListOf<HTMLElement>} */ (part.querySelectorAll(':scope > .edge'))) { const q = rectOf(s); if (q.x >= right - 0.5 && q.y - 0.5 <= mid && mid <= q.y + q.h + 0.5) edge = Math.max(edge, q.x + q.w + (q.x - right)); }
+    return edge;
+  }
+  /**
    * The beam endpoints, each beside an oracle read apart from the beams' own
    * set: the client rects of its link's marked words in the near document's
-   * mounted article (every line they occupy) and the right edge of the part
-   * of its block that holds the line it leaves at — the column's, where the
-   * block is split across columns (issue #15). A beam leaves the text at its
-   * span's own line, from the place's edge (foundations §2.1; S1 Q1): the
-   * layout case holds each endpoint's y to one of those line rects and its x
-   * to the edge.
+   * mounted article (every line they occupy) and where a stroke leaves the
+   * line it leaves at (`leaveEdge`). A beam leaves the text at its span's own
+   * line, from the place's edge (foundations §2.1; S1 Q1): the layout case
+   * holds each endpoint's y to one of those line rects and its x to the edge.
    */
   function beamAnchors() {
     return BM.anchors().map((a) => {
       const rec = LAYER.mountedSet().get(a.near);
       const words = rec ? [...rec.el.querySelectorAll(`.lip[data-links~="${a.link}"]`)].flatMap((w) => [...w.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height }))) : [];
-      const mid = a.rect.y + a.rect.h / 2;
-      const part = rec ? [...rec.el.querySelectorAll('.run > .sp')].map(rectOf).find((q) => q.y - 0.5 <= mid && mid <= q.y + q.h + 0.5 && q.x <= a.rect.x + a.rect.w && a.rect.x <= q.x + q.w) : null;
-      return { ...a, words, edge: part ? part.x + part.w : null };
+      return { ...a, words, edge: rec ? leaveEdge(rec.el, a.rect) : null };
     });
   }
   /**
@@ -307,16 +329,14 @@ export function install(deps) {
    * reading scale it leaves the document's edge at its passage's line"), each
    * beside an oracle read apart from the canvas's own set, as `beamAnchors`
    * reads a beam's: the client rects of its links' marked words in its
-   * document's mounted article and the right edge of the part of its block
-   * that holds the line it leaves at.
+   * document's mounted article and where a stroke leaves the line it leaves at
+   * (`leaveEdge`).
    */
   function tailAnchors() {
     return RENDER.stats.tails.filter((tl) => tl.form === 'line' && tl.line).map((tl) => {
       const rec = LAYER.mountedSet().get(tl.at), line = /** @type {Rect} */ (tl.line);
       const words = rec ? tl.links.flatMap((l) => [...rec.el.querySelectorAll(`.lip[data-links~="${l}"]`)].flatMap((w) => [...w.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height })))) : [];
-      const mid = line.y + line.h / 2;
-      const part = rec ? [...rec.el.querySelectorAll('.run > .sp')].map(rectOf).find((q) => q.y - 0.5 <= mid && mid <= q.y + q.h + 0.5 && q.x <= line.x + line.w && line.x <= q.x + q.w) : null;
-      return { key: tl.key, at: tl.at, links: tl.links, pos: tl.pos, x: tl.from.x, y: tl.from.y, rect: line, words, edge: part ? part.x + part.w : null };
+      return { key: tl.key, at: tl.at, links: tl.links, pos: tl.pos, x: tl.from.x, y: tl.from.y, rect: line, words, edge: rec ? leaveEdge(rec.el, line) : null };
     });
   }
   /**
@@ -405,9 +425,9 @@ export function install(deps) {
     const f = LAYER.foldOf(REC.doc(addr)), box = docBox(addr), b = boundsOf(f), r0 = firstRow(f);
     const at = (/** @type {{x: number, y: number, w: number, h: number}} */ r) => ({ x: box.x + r.x, y: box.y + r.y, w: r.w, h: r.h });
     return {
-      addr, fs: f.fs, step: f.step, across: f.across, lines: f.lines.length,
+      addr, fs: f.fs, step: f.step, across: f.across, lines: f.lines.length, cpl: f.cpl,
       room: { x: box.x, y: box.y, w: box.w, h: box.h }, outline: at(b), rects: outlineRects(f).map(at), row: at(r0),
-      columns: f.columns.map((c) => ({ x: box.x + c.x, y: box.y + c.y, w: c.w, h: c.h, n: c.n, estimated: c.estimated })),
+      columns: f.columns.map((c) => ({ x: box.x + c.x, y: box.y + c.y, w: c.w, h: c.h, n: c.n, estimated: c.estimated, edge: at(edgeOf(f, c)) })),
     };
   }
   /** a reading scene's pane, by its side */
@@ -532,7 +552,7 @@ export function install(deps) {
     beamAnchors, arrivalAnchors, barsOf, tailAnchors,
     /** a document's fold as the plane sets it: its size, step, room, outline and columns */
     fold: foldView,
-    /** where a reading view of a document at a position centres: the line holding it, across its column; the first column's centre for none (T-LAYER's `centreOf`) */
+    /** the middle of the line holding a position, across its column; the first column's centre for none (T-LAYER's `centreOf`) */
     centreOf: (/** @type {string} */ addr, /** @type {number | null} */ pos = null) => LAYER.centreOf(addr, pos),
     /** the position under a world point of a document's fold, null where its column holds no line naming one (T-LAYER's `posAt`) */
     posAt: (/** @type {string} */ addr, /** @type {number} */ x, /** @type {number} */ y) => LAYER.posAt(addr, x, y),
@@ -627,7 +647,13 @@ export function install(deps) {
     /** the scale at which a document's em — the size the page sets it at (T-LAYER's fold) — is `em` px, or its box `docPx` px */
     scaleFor: (/** @type {string} */ addr, /** @type {'em' | 'doc'} */ kind, /** @type {number} */ v) => (kind === 'doc' ? v / docBox(addr).w : v / LAYER.foldOf(REC.doc(addr)).fs),
     boxOf: (/** @type {string} */ addr) => docBox(addr), accountCell: (/** @type {string} */ a) => accountCell(a), boardCell: (/** @type {string} */ b) => boardCell(b), boardLabelCell: (/** @type {string} */ b) => boardLabelCell(b), depthOf: (/** @type {string} */ a) => depthOfDoc(a),
-    constants: { DOC_W, STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME },
+    constants: { DOC_W, STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, EDGE, EDGE_GAP, READING_PX: CAM.READING_PX, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME },
+    /** the measure in force (P-CAM's fit; issue #151's design decision): the characters every document's line is set at, and whether a column at the reading size stands beside its corner compact */
+    measure: () => ({ ...CAM.fit() }),
+    /** a document's corner as T-LAYER placed it: the column it stands beside and whether it stands compact; null where none stands */
+    corner: (/** @type {string} */ addr) => LAYER.cornerAt(addr),
+    /** where a reading view of a document at a position centres, framing the column with its corner and its edge (T-LAYER's `frameOf`) */
+    frameOf: (/** @type {string} */ addr, /** @type {number | null} */ pos = null) => LAYER.frameOf(addr, pos),
     refresh: async () => { const ts = /** @type {number[]} */ ([]); await new Promise((res) => { const step = (/** @type {number} */ t) => { ts.push(t); if (ts.length < 60) requestAnimationFrame(step); else res(undefined); }; requestAnimationFrame(step); }); const iv = []; for (let i = 1; i < ts.length; i++) iv.push(ts[i] - ts[i - 1]); return r2(1000 / Math.max(0.1, pct(iv, 50))); },
   };
   /** @ts-ignore — the driver's door */
