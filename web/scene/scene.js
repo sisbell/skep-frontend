@@ -119,10 +119,12 @@
 // (FP-12; the structure record §3.4 (vii): `T-LAYER.sceneArticle` makes each
 // pane's article from the record and the view the scene keeps and keeps what
 // it was made from, `T-LAYER.rangeIn` finds a passage in it through those
-// blocks, and a drag in it selects as it does on the plane, its copy carrying
-// the passage's board and the address the pane's acts name beside the plain
-// text, as T-LAYER's copy event does for any article — §2.4, §2.5; the scene
-// keeps no DOM text of its own). Each pane carries
+// blocks, and a drag in it selects as it does on the plane — an item that
+// holds no text taken whole and drawn so — its copy carrying the passage's
+// board and the address the pane's acts name beside the plain text, the
+// span's items in order with a stand-in in each item's place, as T-LAYER's
+// copy event does for any article — §2.4, §2.5; FP-24; the scene keeps no DOM
+// text of its own). Each pane carries
 // its own document's corner (ux-T2: "each pane its own"; `T-LAYER.sceneCorner`
 // makes its items) on its OUTER side — pane A's left, pane B's right — held
 // to the top of the pane's scroll, so the bands and lines leave the inner
@@ -154,7 +156,7 @@
 // stage, after each pane has its selection. Companionate scrolling over the
 // bands is UNTESTED (S27) and not built. Carries: the wireframe's §19 whole
 // (its beams over `compare`'s pairs instead of the hand data's windows).
-// Rules: FP-1, FP-2, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23.
+// Rules: FP-1, FP-2, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';

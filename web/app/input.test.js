@@ -38,6 +38,10 @@
 // its answer shows nothing and the card standing under it stands (a mutant
 // that dismisses the standing card with it, or leaves the opening to the
 // overlay's dismissal, turns red); the next empty click dismisses that card.
+// A press on a withheld run's placeholder starts no selection — the platform
+// selects an item whole wherever a selection touches it (FP-24; issue #161),
+// and the placeholder's click is its act's alone — while a press on the text
+// beside it starts one (a page that refuses none, or every one, turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -409,5 +413,28 @@ test('an empty click made while a card reads ends its opening alone: its answer 
     assert.equal(HOST.currentState(), null, 'the next empty click dismisses the card that stood');
   } finally {
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a press on a withheld run\'s placeholder starts no selection — its click is its act\'s alone — and a press anywhere else on the text layer starts one', () => {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
+  const layer = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
+    const start = layer.get('selectstart');
+    assert.ok(start, 'the text layer hears a selection start');
+    /** an element of the layer, inside a placeholder or not */
+    const element = (/** @type {boolean} */ inside) => { const e = { nodeType: 1, closest: (/** @type {string} */ s) => (inside && s === '[data-withheld]' ? e : null) }; return e; };
+    const placeholder = element(true), word = element(false);
+    /** whether a selection starting at a node — a Text node, as the platform names one, or an element — is refused */
+    const refused = (/** @type {unknown} */ target) => { let no = false; start({ target, preventDefault() { no = true; } }); return no; };
+    assert.deepEqual([refused({ nodeType: 3, parentElement: placeholder }), refused(placeholder), refused({ nodeType: 3, parentElement: word }), refused(word)], [true, true, false, false],
+      'the placeholder\'s words and the placeholder refuse a selection\'s start; the text beside it does not');
+  } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window;
   }
 });

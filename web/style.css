@@ -133,8 +133,12 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .withheld { display:block; margin:0 0 var(--gap); padding:.4em .6em; border:1px solid #8b8f96; color:#cfd6df;
   background: repeating-linear-gradient(45deg, #1b1f25, #1b1f25 6px, #22272f 6px, #22272f 12px); }
 .dtext .withheld .arm, .dtext .withheld .clause { display:block; font-size:.8em; color:#b9c1cb; margin-top:.3em; }
-/* the chrome inside a block and the withheld run's face are never the document's bytes: a drag crosses them unselected, the copy never carries them */
-.dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .others, .dtext .withheld { user-select:none; -webkit-user-select:none; }
+/* the chrome inside a block is never the document's bytes: a drag crosses it unselected, the copy never carries it */
+.dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .others { user-select:none; -webkit-user-select:none; }
+/* an item that holds no text — a record, a reference, an item this client cannot show, a withheld run's face — is selected
+   whole wherever a selection touches it, and drawn so: the span takes it whole, and a copy writes its stand-in in its place
+   (FP-24; issue #161). On the plane a press on a withheld run's face starts no selection: its click is its act's (APP-INPUT) */
+.dtext .sp.blk-atom, .dtext .sp.blk-ref, .dtext .sp.blk-hex, .dtext .withheld { user-select:all; -webkit-user-select:all; }
 .dtext .rec { display:block; color:#cfd6df; }
 .dtext .rec .derived { display:block; color:#8b8f96; font-size:var(--derived); }
 .dtext .rec.not-rendered { color:#4b5563; font-style:italic; }

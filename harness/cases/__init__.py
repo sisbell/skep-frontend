@@ -13,9 +13,11 @@ counted under `expected` while it fails, and it FAILS the case the day it
 passes, so the mark comes off with the fix and never outlives it. The
 harness is not the product (FP-5): nothing in `web/` imports any of
 this."""
+import hashlib
 import importlib
 import json
 import os
+import struct
 import subprocess
 import time
 import urllib.error
@@ -39,6 +41,30 @@ WITHHELD = '1.0.2.0.2'       # its draft: withheld from every reader of this boa
 VERSIONED = '1.0.1.0.43'     # an edition with two members, the latest holding all of it, far from every place the later cases read
 NO_MATCH = 'qzx no label holds this'  # LEAP text no address, share form, URL, label or address prefix answers
 EDITION_CLASS = '1.1.0.1.0.1.0.3.14'  # R20's edition claim: every edition claim's type, its descriptive subtypes beneath it by prefix
+HOME = '1.0.1.0.1'           # the claimant's home document: its key record, one atom at position 1
+
+
+def key_fingerprint(alg, key_hex):
+    """a key's fingerprint, decided here apart from the page's (AUTH-1.8): SHA-256 over the tag `skep-key-v1`, then the alg
+    token and the raw key bytes, each framed by its 4-byte big-endian length (AUTH-1.12), as 64 lowercase hex"""
+    raw, name = bytes.fromhex(key_hex), alg.encode('utf8')
+    return hashlib.sha256(b'skep-key-v1' + struct.pack('>I', len(name)) + name + struct.pack('>I', len(raw)) + raw).hexdigest()
+
+
+def item_words(ctx):
+    """each kind of item that holds no text in the strings table's words (issue #161), by kind: what the ARIA mirror
+    announces at the item and a copy's stand-in names it by"""
+    return ctx.js('(async () => { const {t} = await import("./strings.js"); return {record: t("L.item.record"), reference: t("L.item.reference"), '
+                  'withheld: t("L.item.withheld"), unshown: t("L.item.unshown")}; })()')
+
+
+# is every glyph of an element inside the platform's selection: each of its text nodes, from its first character to its last,
+# within the selection's range — what a person sees drawn selected
+SELECTED_WHOLE = '''((sel) => { const e = document.querySelector(sel), s = window.getSelection();
+  if (!e || !s || !s.rangeCount || s.isCollapsed) return false;
+  const r = s.getRangeAt(0), w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT), nodes = [];
+  for (let n = w.nextNode(); n; n = w.nextNode()) if (n.data.length) nodes.push(n);
+  return nodes.length > 0 && nodes.every((n) => r.comparePoint(n, 0) === 0 && r.comparePoint(n, n.data.length) === 0); })(%s)'''
 
 
 def fields(addr):

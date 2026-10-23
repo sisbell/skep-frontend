@@ -24,7 +24,12 @@
 // edition standing, an edition quoting the draft alone: a mutant that names
 // the owner of the document windowing the run, or the origin's account, or
 // gives two readers one arm, or keeps the pointer where no claim stands, or
-// leaves an empty sentence where the clause's place is empty, turns red. A document a
+// leaves an empty sentence where the clause's place is empty, turns red. Every
+// block that holds no text is announced by its kind, in the words a copy's
+// stand-in names it by (issue #161): a record with the words and keys the
+// plane shows of it, a reference, hex and an atom of no record's value as an
+// item this client cannot show with its length — a mutant that reads the
+// value aloud, or names a kind in words the copy does not use, turns red. A document a
 // read answered `withheld` is named by its withheld box's words, its owner
 // the seat above a sub-account by the one owner rule: a mutant that calls it
 // published, or names the sub-account, turns red. A link whose far end floats
@@ -105,7 +110,7 @@ import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
-import { withheldBlockHTML, entitlementArm } from '../text/article.js';
+import { withheldBlockHTML, entitlementArm, articleHTML, copyText } from '../text/article.js';
 import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, DOC_W } from '../plane/projection.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
 import { placeOf, STANDARD_FS } from '../plane/layout.js';
@@ -355,7 +360,7 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
   const d = REC.doc(W), run = d.blocks[1];
   assert.deepEqual([run.kind, run.origin], ['withheld', O]);
   const words = STRINGS['L.mirror.withheld'].text;
-  assert.ok(['⟨owner⟩', '⟨origin⟩', '⟨arm⟩', '⟨clause⟩'].every((k) => words.includes(k)), `the item's words carry the owner, the origin, the arm and the clause: ${words}`);
+  assert.ok(['⟨kind⟩', '⟨length⟩', '⟨owner⟩', '⟨origin⟩', '⟨arm⟩', '⟨clause⟩'].every((k) => words.includes(k)), `the item's words carry its kind, its length, the owner, the origin, the arm and the clause: ${words}`);
   // two edition claims of the owner's, each homed in a published edition of theirs: one over its own fresh bytes, one quoting the draft
   const R20 = '1.1.0.1.0.1.0.3.14', OWN = '1.0.1.0.9.0.2.1', QUOTES = '1.0.1.0.11.0.2.1';
   for (const [c, from] of /** @type {Array<[string, string]>} */ ([[OWN, '1.0.1.0.9.0.1.1'], [QUOTES, O + '.0.1.1']])) {
@@ -384,7 +389,7 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
       for (const [state, hold, clause, follows] of states) {
         hold();
         const item = WALK.nameOf({ kind: 'block', addr: W, pos: run.pos, link: null }, 1, 2);
-        assert.equal(item, t('L.mirror.withheld', { document: W, width: 240, owner, origin: O, arm, clause: clause ? t('L.mirror.clause', { clause }) : '' }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
+        assert.equal(item, t('L.mirror.withheld', { kind: t('L.item.withheld'), document: W, length: t('L.item.positions', { n: 240 }), owner, origin: O, arm, clause: clause ? t('L.mirror.clause', { clause }) : '' }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
           `${who}, ${state}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause the claims decide`);
         assert.ok(clause ? item.includes(`${arm}. ${clause}. `) : item.includes(`${arm}. `) && !/\.\s+\./.test(item), `${who}, ${state}: the clause a sentence of its own after the arm, or nothing in its place: ${item}`);
         const html = withheldBlockHTML(run, d, LAYER.viewFor(d));
@@ -394,6 +399,41 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
     }
   } finally {
     REC.setSession(signedIn); REC.takeKeyStore([], ORIGIN);
+  }
+});
+
+test('the mirror announces every block that holds no text by its kind, in the words a copy\'s stand-in names it by — a record with the words and keys the plane shows of it, a reference, hex and an atom of no record\'s value as an item this client cannot show with its length — and never reads its raw value aloud (issue #161; R94)', () => {
+  // a home document of 1.0.2's: its key record, a link position's reference, four bytes of hex, a retirement record, which
+  // the record rule renders as no record
+  const H = '1.0.2.0.1';
+  const record = JSON.stringify({ type: 'skep-enroll', keys: [{ alg: 'mldsa65-ed25519', key: 'ab'.repeat(16), anchor: true, label: 'paper' }, { alg: 'mldsa65-ed25519', key: 'cd'.repeat(16), anchor: false, label: 'notebook' }] });
+  const retire = JSON.stringify({ type: 'skep-retire', fingerprints: ['ef'.repeat(32)] });
+  REC.takeSpanSet(H, [{ subspace: 1, ordinal: 1, positions: 7 }]);
+  REC.takeDelivery(H, [
+    { pos: 1, width: 1, kind: 'atom', text: record, ref: null, origin: null },
+    { pos: 2, width: 1, kind: 'ref', text: '', ref: H + '.0.2.1', origin: null },
+    { pos: 3, width: 4, kind: 'hex', text: 'deadbeef', ref: null, origin: null },
+    { pos: 7, width: 1, kind: 'atom', text: retire, ref: null, origin: null },
+  ]);
+  const d = REC.doc(H), made = { addr: H, runs: d.runs, blocks: d.blocks, image: d.image };
+  // what the plane shows of the record: its words and its keys line, read from the article T-ARTICLE makes
+  const html = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d));
+  const shows = (/** @type {string} */ cls) => ((new RegExp(`<span class="${cls}">([^<]*)</span>`).exec(html) || [])[1] || '').replace(/&amp;/g, '&');
+  const plane = [shows('rec-words'), shows('derived')];
+  assert.ok(plane.every(Boolean), `the plane shows the record's words and keys: ${html}`);
+  /** @type {Array<[number, string, string]>} each block: its first position, its kind's words, what the plane shows after them */
+  const want = [
+    [1, t('L.item.record'), t('L.mirror.shows', { shown: plane.join(' · ') })],
+    [2, t('L.item.reference'), ''],
+    [3, t('L.item.unshown'), t('L.mirror.shows', { shown: t('L.item.positions', { n: 4 }) })],
+    [7, t('L.item.unshown'), t('L.mirror.shows', { shown: t('L.item.positions.1') })],
+  ];
+  for (const [pos, kind, shown] of want) {
+    const item = WALK.nameOf({ kind: 'block', addr: H, pos, link: null }, 0, 4);
+    assert.equal(item, t('L.mirror.no-text', { kind, p: pos, extent: 7, document: H, same: '', shown }) + ' ' + t('L.mirror.item', { i: 1, n: 4 }), `the item at ${pos}: its kind, where it stands, what the plane shows`);
+    assert.ok(!/[{}]|skep-enroll|skep-retire|abab|cdcd|efef|deadbeef/.test(item), `the item at ${pos} reads no raw value aloud: ${item}`);
+    const b = /** @type {import('../model/records.js').Block} */ (d.blocks.find((x) => x.pos === pos));
+    assert.ok(copyText(made, { addr: H, pos, width: b.width }, (a) => a).startsWith('[' + kind), `a copy's stand-in at ${pos} names the kind the mirror announces, "${kind}"`);
   }
 });
 

@@ -201,16 +201,21 @@
 // in a pane so, and the platform's selection there is read and put back over
 // the same bytes (`selectionIn`, `selectIn`). The copy of any selection in an
 // article — a mounted one, or
-// a pane's, where a drag selects as it does on the plane (§2.5) — carries
-// the passage's board and address beside the plain text and never in it
-// (§2.4), in a flavor only a skep client reads; the plain text is the
-// document's own bytes over the span, as the article was made from them, no
-// label of the page among them: a range that starts in an article's head
-// starts at its first block.
+// a pane's, where a drag selects as it does on the plane (§2.5) — replaces
+// the clipboard and carries the passage's board and address beside the plain
+// text and never in it (§2.4), in a flavor only a skep client reads; the
+// plain text is the span's items in the text's order, as the article was
+// made from them (T-ARTICLE's `copyText`; FP-24): the document's own bytes
+// over each stretch of text, and in each item's place that holds none — a
+// record, a reference, a withheld run, an item this client cannot show — a
+// stand-in naming its kind, never its rendering, no label of the page among
+// them: a range that starts in an article's head starts at its first block,
+// and a range that touches an item covers it whole (`posOfPoint`), as it is
+// drawn (the style selects an item whole).
 // Carries: the wireframe's §16 `mount`/`unmount`/`place`/`S1.frame`; S1's
 // `mount`, `place`, `S1.frame`; `driftSample` and `overlapCheck` become
 // gate hooks (`web/gate/hooks.js` reads `mounted`).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-22, FP-23.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-22, FP-23, FP-24.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -219,7 +224,7 @@ import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor 
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, MEASURE_CPL, LAY_FS, LINE_H } from '../plane/layout.js';
-import { articleHTML, articlePlan, cornerHTML, blockMarks, editionClause } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, blockMarks, editionClause, copyText } from './article.js';
 import { farSays } from '../beams/held.js';
 import { homeOf, documentOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
@@ -2312,17 +2317,21 @@ export function clear() {
 }
 
 /**
- * The copy event's addition (§2.4): the copy of any selection in an article —
- * a mounted one, or a reading scene's pane's, where a drag selects as it does
- * on the plane (§2.5) — carries the passage's board and address beside the
+ * The copy event's addition (§2.4; FP-24): the copy of any selection in an
+ * article — a mounted one, or a reading scene's pane's, where a drag selects
+ * as it does on the plane (§2.5) — replaces the clipboard, the platform's own
+ * copy prevented, and carries the passage's board and address beside the
  * plain text and never in it, in a flavor only a skep client reads, as
  * `{board, addr, pos, width}`: the span the platform's selection covers in
  * the article it starts in, else ends in (`spanIn`), through the blocks that
- * article was made from. The plain text is the document's own bytes over
- * that span as the article was made from them — the bytes the person
- * selected, whatever the model has delivered since — so a paste anywhere else
- * carries the passage alone and no label of the page (the head's, a
- * hairline's, a mark's, a symbol's, a count's). A selection in no article
+ * article was made from, written whether or not the span holds text. The
+ * plain text is the span's items in the text's order as the article was made
+ * from them (T-ARTICLE's `copyText`) — the bytes the person selected,
+ * whatever the model has delivered since, each item that holds no text a
+ * stand-in in square brackets in its place, so a span of a record alone is
+ * never an empty clipboard — and a paste anywhere else carries the passage
+ * alone and no label of the page (the head's, a hairline's, a mark's, a
+ * symbol's, a count's, an item's rendering). A selection in no article
  * leaves the event to the platform.
  * @param {{clipboardData: {setData(format: string, data: string): void} | null, preventDefault(): void}} e the clipboard event (the gate's door hands a stub)
  * @param {string} board the board's origin
@@ -2334,7 +2343,7 @@ export function onCopy(e, board) {
   const range = s.getRangeAt(0), art = articleOfRange(range), made = art ? madeOf(art) : null;
   const span = art && made ? spanIn(art, made, range) : null;
   if (!span || !made) return null;
-  e.clipboardData.setData('text/plain', REC.textOf(made.runs, span.pos, span.pos + span.width));
+  e.clipboardData.setData('text/plain', copyText(made, span, originOwner));
   e.clipboardData.setData('application/x-skep-passage', JSON.stringify({ board, addr: span.addr, pos: span.pos, width: span.width }));
   e.preventDefault();
   return span;

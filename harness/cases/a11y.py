@@ -53,11 +53,15 @@ it, a press changing its checked state and neither its name nor its
 description; a box shown at a version (issue #154's design decision) — a
 LEAP to version 1's address, zoomed out to mid over it — listed by the
 mirror once, its current item, named by the version's address and its
-document's first line. Never a screen reader's voice — the seat's."""
+document's first line; an item that holds no text announced by its kind
+(issue #161's design decision) — the claimant's key record named "a record",
+the words a copy's stand-in names it by, then the words and keys the plane
+shows of it, never its raw value. Never a screen reader's voice — the
+seat's."""
 import json
 import re
 
-from . import DOC, FAR_LEAP, NO_MATCH, VERSIONED, WINDOW, Result
+from . import DOC, FAR_LEAP, HOME, NO_MATCH, VERSIONED, WINDOW, Result, item_words
 
 
 def run(ctx):
@@ -119,9 +123,11 @@ def run(ctx):
     r.check(item_name == want and writes == 0, 'a walk key moves the focus onto the item, whose name is its announcement; the status region is not written (D4, rule 12)', {'item': (item_name or '')[:90], 'want': (want or '')[:90], 'writes': writes, 'live': (live or '')[:90]})
     ctx.drv.key('ArrowUp')
     ctx.settle()
-    # the names: a span's name carries its position, its document and its text; a link's its type and far end
+    # the names: a span's name carries its position, its document and its text; a link's its type and far end; an item that
+    # holds no text its kind in the strings table's words (issue #161)
     names = [ctx.js('window.__skep.mirror.item(%d)' % i) for i in range(size)]
-    r.check(all(n.startswith('span at position ') or n.startswith('withheld run') or n.startswith('link ') for n in names), 'every name opens with its kind', [n[:40] for n in names if not (n.startswith('span at position ') or n.startswith('link '))])
+    kinds = tuple(['span at position ', 'link '] + [w + ' ' for w in item_words(ctx).values()])
+    r.check(all(n.startswith(kinds) for n in names), 'every name opens with its kind', [n[:40] for n in names if not n.startswith(kinds)])
     r.figures['mirror'] = {'size': size, 'rendered_items': len(items), 'sample': names[:2]}
     # the AX tree
     ax = ctx.drv.ax_tree()
@@ -855,6 +861,21 @@ def run(ctx):
             {'listed': [dict(i, text=i['text'][:120]) for i in listed], 'zooms': zooms, 'label': label})
     r.figures['pinned_box'] = {'zooms': zooms, 'listed': [i['text'][:120] for i in listed]}
     ctx.leap(VERSIONED, None)
+    # ---- an item that holds no text is announced by its kind (issue #161's design decision): at the claimant's home document,
+    # the walk on its key record, the mirror's item names it by the words a copy's stand-in names it by, then what the plane
+    # shows of it — its words and its keys line, read from the mounted article — and never its raw value
+    ctx.leap(HOME, 1)
+    words = item_words(ctx)
+    rec = ctx.js('''((a) => { const e = document.querySelector(`#domlayer article.dtext[data-addr="${a}"] .sp.blk-atom`), q = (s) => { const x = e && e.querySelector(s); return x ? x.textContent : null; };
+      const i = window.__skep.mirror.index(), li = document.getElementById('walk-' + i), f = window.__skep.view.focus();
+      return {words: q('.rec-words'), keys: q('.derived'), item: window.__skep.mirror.item(i), dom: li ? li.textContent : null, focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}}; })(%s)''' % json.dumps(HOME))
+    item = rec['item'] or ''
+    r.check(rec['focus'] == {'kind': 'block', 'addr': HOME, 'pos': 1} and item.startswith(words['record'] + ' at position 1 ') and bool(rec['words']) and rec['words'] in item
+            and bool(rec['keys']) and rec['keys'] in item and rec['dom'] == item,
+            'the mirror\'s item at the claimant\'s key record names its kind, "%s" — the words a copy\'s stand-in names it by — then what the plane shows of it, its words and its keys, and the DOM item says the same (issue #161; R94)' % words['record'],
+            dict(rec, item=item[:300]))
+    r.check(bool(item) and not re.search(r'[{}]|skep-enroll|[0-9a-f]{64}', item), 'the record\'s item reads no raw value aloud: no JSON, no key\'s hex', item[:300])
+    r.figures['record_item'] = item[:300]
     # leave the page as the case found it: the landing, the focus on no element
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')

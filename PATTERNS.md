@@ -235,6 +235,27 @@ fix; nothing here depends on their names.
   is being typed in, and a row from the window's own act is that act's
   feedback, not news.
 
+## The copy
+
+- **FP-24 A copy holds every item its span covers, each in its place.**
+  Every copy of a non-empty selection in an article — on the plane or
+  in a reading scene's pane — replaces the clipboard: the platform's own
+  copy is prevented, never refused, and its plain text is never empty.
+  The plain text follows the span's items in the text's order: text
+  copies as its text; every other item copies as a stand-in in square
+  brackets, in its place, naming its kind in the strings table's words
+  — the words the ARIA mirror announces at the item, read from one item
+  rule (`web/text/article.js`, `itemOf`): a record, a reference, a
+  withheld run with its owner and length, an item this client cannot
+  show with its length. A record's renderer may add the record's own
+  plain contents — the key record its keys' labels and fingerprints —
+  and no item's rendering on the plane, written for whoever is looking,
+  is ever copied. Text is never joined across an item, and items one
+  after another of one kind and owner share one stand-in. skep's own
+  clipboard entry is written for every span, text or none. A selection
+  that touches an item covers it whole and is drawn so, so what looks
+  selected is what is copied.
+
 ## Decisions in force
 
 Design decisions taken on issues and built, one line each, newest
@@ -328,7 +349,7 @@ surfaces also becomes a numbered rule above, with a Changes entry.
   written. This changes #153's none state for a version move: it lands
   at the nearest passage the two versions share, where a carry lands at
   the document's head.
-- **#160** (built with this line): each feed row naming a document,
+- **#160** (built `8d5f13c`): each feed row naming a document,
   with its `op`, reaches the reading scene's panes showing it, and each
   pane behaves as its document does on the plane, by kind, offering no
   reload. A draft updates in place, the first span in view and the
@@ -349,6 +370,23 @@ surfaces also becomes a numbered rule above, with a Changes entry.
   those acts' feedback, not news (the page types and writes nothing);
   a scene restored by Back keeps each pane's version (Back restores no
   scene yet).
+- **#161** (built with this line): every copy of a non-empty selection,
+  on the plane and in a reading scene's pane, replaces the clipboard,
+  its preventDefault kept: its plain text is never empty, never
+  refused, never the browser's own. It follows the span's items in
+  order: text as its text, every other item as a stand-in in square
+  brackets in its place, naming its kind in the strings table's words,
+  the kind the accessibility tree announces for it — a record, a
+  reference, a picture, a withheld run with its owner and length, an
+  item this client cannot show with its length; a record type's
+  renderer may add the record's own plain contents, the key record its
+  key labels and their fingerprints. No item's on-screen rendering is
+  copied. A mixed span marks every gap the same way, text never joined
+  across one, and adjacent gaps of one kind and owner share one
+  stand-in. skep's own clipboard entry is written whether or not the
+  span has text. A selection that touches an item covers it whole and
+  is drawn so. The page reads no picture cell yet, so a picture is,
+  for this client, an item it cannot show, announced and copied so.
 
 ## Changes
 
@@ -512,6 +550,21 @@ found.
   - FP-7 now names the version each reading scene's pane reads as view
     state, beside the version each box shows: the scene keeps it as its
     own and never writes a box's pin.
+- 2026-10-23, from issue #161 (copying a span that holds no text — a
+  record, a reference, a withheld run — emptied the clipboard) and its
+  design decision: FP-24 added. The copy's plain text was the span's
+  content bytes alone, and the platform's copy was prevented, so a span
+  of a record alone left the clipboard empty and whatever it held
+  before gone, and a span across a withheld run glued the text before
+  the run to the text after it, separated passages pasted as adjacent.
+  The ARIA mirror announced no kind for a record, a reference or an
+  item not shown, and read a record's raw value aloud, so the copy had
+  no announced kind to agree with; and a selection across a withheld
+  run's face was never drawn over it, though its span and its copy
+  carried the run. Each answered "what stands for an item that holds no
+  text" its own way. The rule names one item rule that the mirror and
+  the copy both read, so the next surface that shows or copies an item
+  names it the same way.
 
 ## What these rule out
 

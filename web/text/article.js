@@ -75,12 +75,26 @@
 // The structural family (headings, emphasis) is the owner's formatting:
 // rendered as formatting, never marked (rule (iii)) — here the corpus's own
 // markdown headings are set as headings.
+// THE ITEM RULE (`itemOf`; issue #161's design decision; FP-24): every block
+// that holds no text is an item of one kind — a record the record rule
+// renders, a reference, a withheld run, or an item this client cannot show
+// (hex, an atom of any other value; a picture cell among them until the page
+// reads picture cells) — named in the strings table's words (`itemWords`),
+// the one entry the ARIA mirror announces at the item (N-WALK) and a copy's
+// stand-in names it by. THE COPY'S PLAIN TEXT (`copyText`) is made here from
+// what an article was made from: a span's items in the text's order, each
+// stretch of text its own characters and each item a stand-in in square
+// brackets in its place — a withheld run's owner and length, an unshown
+// item's length, a record's own plain contents (`recordContents`: the key
+// record's key labels and fingerprints), never what the plane renders for
+// whoever is looking — so a paste never joins text across an item.
 // Carries: the wireframe's §16 `articleHTML`, `withheldBlock`.
 // Rules: FP-1, FP-2, FP-8, FP-10 (reads LK/selection/focus as values), FP-21,
-// FP-22.
+// FP-22, FP-24.
 
-import { esc, fingerprintCue, sliceBytes, byteLength } from '../util.js';
-import { t } from '../strings.js';
+import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
+import { t, plural } from '../strings.js';
+import { textOf } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
 import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '../plane/layout.js';
@@ -209,27 +223,53 @@ export function blockMarks(addr, b, selected, focus) {
 export const headingLevel = (text) => { const m = /^(#{1,6})\s/.exec(text); return m ? m[1].length : 0; };
 
 /**
+ * @typedef {Object} RecordValue — a record atom's value, where its type is one the record rule renders (D13)
+ * @property {'skep-enroll' | 'skep-head'} type
+ * @property {Array<{alg?: unknown, key?: unknown, label?: unknown, anchor?: unknown}>} keys a genesis record's keys, in the record's own order; none for the head record
+ * @property {unknown} position the head record's position
+ * @property {string} chain the head record's chain
+ */
+
+/**
+ * The value a record atom holds, where its type is one the record rule
+ * renders — the genesis record `skep-enroll`, the head record `skep-head` —
+ * else null: the one reading of an atom the plane's record (`recordOf`), the
+ * item rule (`itemOf`) and a copy's stand-in (`recordContents`) share.
+ * @param {Block} b
+ * @returns {RecordValue | null}
+ */
+function recordValue(b) {
+  if (b.kind !== 'atom') return null;
+  /** @type {any} */
+  let rec = null;
+  try { rec = JSON.parse(b.text); } catch { return null; }
+  if (!rec || typeof rec !== 'object' || (rec.type !== 'skep-enroll' && rec.type !== 'skep-head')) return null;
+  const keys = Array.isArray(rec.keys) ? rec.keys.filter((/** @type {unknown} */ k) => !!k && typeof k === 'object') : [];
+  return { type: rec.type, keys, position: rec.position ?? '', chain: String(rec.chain || '') };
+}
+
+/**
  * The record rule: a record atom that names its type renders as the record
  * it is (D13) — the genesis record to its account's owner and to a reader;
  * the head record `skep-head`; any other atom "not rendered" with its width.
+ * The plane draws it so, and the ARIA mirror's item at it says the same
+ * (N-WALK; R94).
  * @param {Block} b
  * @param {Doc} d
- * @param {ArticleView} v
+ * @param {Reader} reader who reads (M-REC's `reader`): the genesis record is "yours" to its account's owner
  * @returns {Rec}
  */
-function recordOf(b, d, v) {
-  /** @type {{type?: string, keys?: Array<{label?: string, anchor?: boolean}>, position?: number, chain?: string} | null} */
-  let rec = null;
-  try { rec = JSON.parse(b.text); } catch { rec = null; }
+export function recordOf(b, d, reader) {
+  const rec = recordValue(b);
   if (rec && rec.type === 'skep-enroll') {
-    const yours = v.reader.account && d.account === v.reader.account;
+    const yours = reader.account && d.account === reader.account;
     const words = yours ? t('F.home-record.yours') : t('F.home-record.other', { owner: d.account || '' });
-    const keys = (rec.keys || []).map((k) => `${k.label || ''} · ${k.anchor ? 'ANCHOR' : 'device'}`).join(' · ');
+    const keys = rec.keys.map((k) => `${k.label || ''} · ${k.anchor ? 'ANCHOR' : 'device'}`).join(' · ');
     return { type: 'skep-enroll', words, keys, position: null, chain: '' };
   }
   if (rec && rec.type === 'skep-head') {
-    const chain = String(rec.chain || '').slice(0, 12);
-    return { type: 'skep-head', words: `skep-head position ${rec.position ?? ''} · chain ${chain}…`, keys: '', position: rec.position ?? '', chain };
+    const chain = rec.chain.slice(0, 12);
+    return { type: 'skep-head', words: `skep-head position ${rec.position} · chain ${chain}…`, keys: '', position: rec.position, chain };
   }
   return { type: null, words: t('F.not-rendered', { width: b.width }), keys: '', position: null, chain: '' };
 }
@@ -241,10 +281,68 @@ function recordOf(b, d, v) {
  * @param {ArticleView} v
  */
 export function recordHTML(b, d, v) {
-  const r = recordOf(b, d, v);
+  const r = recordOf(b, d, v.reader);
   if (r.type === 'skep-enroll') return `<span class="rec" data-rec="skep-enroll"><span class="rec-words">${esc(r.words)}</span><span class="derived">${esc(r.keys)}</span></span>`;
   if (r.type === 'skep-head') return `<span class="rec" data-rec="skep-head"><span class="k">skep-head</span> position ${esc(r.position)} · chain ${esc(r.chain)}…</span>`;
   return `<span class="rec not-rendered">${esc(r.words)}</span>`;
+}
+
+/**
+ * @typedef {'record' | 'reference' | 'withheld' | 'unshown'} ItemKind — the kind of a block that holds no text (THE ITEM
+ * RULE, `itemOf`): a record the record rule renders, a link position's reference, a withheld run, or an item this client
+ * cannot show
+ */
+
+/** each item kind's words in the strings table: the one entry the ARIA mirror announces at the item and a copy's stand-in names it by (issue #161) */
+const ITEM_WORDS = /** @type {const} */ ({ record: 'L.item.record', reference: 'L.item.reference', withheld: 'L.item.withheld', unshown: 'L.item.unshown' });
+
+/**
+ * THE ITEM RULE (issue #161's design decision; FP-24): the kind of a block
+ * that holds no text — a record, an atom whose value the record rule renders
+ * as one (`recordOf`); a reference, a link position's item; a withheld run;
+ * else an item this client cannot show, hex or an atom of any other value —
+ * and null for a paragraph, whose text is the document's own. The ARIA
+ * mirror's item at the block (N-WALK) and a copy's stand-in in its place
+ * (`copyText`) both read it, so what is announced and what is pasted never
+ * part; its record is the one the plane renders as a record (`recordValue`).
+ * @param {Block} b
+ * @returns {ItemKind | null}
+ */
+export function itemOf(b) {
+  if (b.kind === 'para') return null;
+  if (b.kind === 'withheld') return 'withheld';
+  if (b.kind === 'ref') return 'reference';
+  return recordValue(b) ? 'record' : 'unshown';
+}
+
+/** an item's kind in the strings table's words (`ITEM_WORDS`) */
+export const itemWords = (/** @type {ItemKind} */ kind) => t(ITEM_WORDS[kind]);
+
+/** an item's length: its positions, counted in the strings table's words */
+export const itemLength = (/** @type {number} */ n) => plural(n, 'L.item.positions.1', 'L.item.positions');
+
+/**
+ * A record's own plain contents, as a copy's stand-in carries them after its
+ * kind (issue #161's design decision: "A record type's renderer may add the
+ * record's own plain contents. The key record adds its key labels and their
+ * fingerprints"): each key of a genesis record `skep-enroll`, in the record's
+ * own order — its label where it has one, then its fingerprint (AUTH-1.8,
+ * util's `keyFingerprint`) where its alg and value derive one; nothing for any
+ * other record, and never what the plane renders for whoever is looking ("your
+ * home document…"), which is not on the board.
+ * @param {Block} b
+ * @returns {string[]}
+ */
+export function recordContents(b) {
+  const rec = recordValue(b);
+  if (!rec || rec.type !== 'skep-enroll') return [];
+  return rec.keys.flatMap((k) => {
+    const label = typeof k.label === 'string' ? k.label : '';
+    const fingerprint = typeof k.alg === 'string' && typeof k.key === 'string' ? keyFingerprint(k.alg, k.key) : null;
+    if (label && fingerprint) return [t('L.copy.key', { label, fingerprint })];
+    if (fingerprint) return [fingerprint];
+    return label ? [label] : [];
+  });
 }
 
 /**
@@ -651,7 +749,7 @@ function walk(d, v, ownerAccount) {
     /** @type {Part} */
     const p = { b, kind: 'para', level: 0, segs: [], count: none, rec: null };
     if (b.kind === 'withheld') p.kind = 'withheld';
-    else if (b.kind === 'atom') { p.kind = 'record'; p.rec = recordOf(b, d, v); }
+    else if (b.kind === 'atom') { p.kind = 'record'; p.rec = recordOf(b, d, v.reader); }
     else if (b.kind === 'ref' || b.kind === 'hex') p.kind = b.kind;
     else {
       p.level = headingLevel(b.text);
@@ -865,4 +963,83 @@ export function articlePlan(d, v, ownerAccount) {
   const O = MEASURE.offer;
   for (const o of w.offers) rows.push(row('chrome', null, O, [piece(t('B1.scene-offer', { D: o }), O)], { before: MEASURE.offerGap * O, after: MEASURE.offerGap * O }));
   return rows;
+}
+
+// ---- the copy's plain text ------------------------------------------------------------------------------------------
+
+/**
+ * @typedef {Object} Copied — what a copy reads of an article: the document it is made as, and the runs, blocks and image it was made from (T-LAYER's `Made`)
+ * @property {string} addr
+ * @property {import('../model/frames.js').Run[]} runs
+ * @property {Block[]} blocks
+ * @property {import('../model/records.js').ImageRun[]} image
+ */
+
+/** @typedef {{kind: ItemKind, owner: string, width: number, contents: string[]}} Gap a stand-in being gathered: items one after another in the text, of one kind and one owner */
+
+/**
+ * The document whose permanent addresses the bytes at a position are, read
+ * through an image that covers it — as M-REC's `takeImage` names a
+ * transcluded run's origin; null where the image does not cover it.
+ * @param {import('../model/records.js').ImageRun[]} image
+ * @param {number} pos
+ * @returns {string | null}
+ */
+function bytesHome(image, pos) {
+  const r = image.find((x) => x.pos <= pos && pos < x.pos + x.width);
+  return r ? documentOf(r.prefix) : null;
+}
+
+/** a gap's stand-in, in square brackets (issue #161): its kind, then a withheld run's owner and length, an unshown item's length, a record's own plain contents */
+function standIn(/** @type {Gap} */ g) {
+  const kind = itemWords(g.kind);
+  if (g.kind === 'withheld') return t('L.copy.item.owned', { kind, owner: g.owner, length: itemLength(g.width) });
+  if (g.kind === 'unshown') return t('L.copy.item.sized', { kind, length: itemLength(g.width) });
+  return g.contents.length ? t('L.copy.item.contents', { kind, contents: g.contents.join(' · ') }) : t('L.copy.item', { kind });
+}
+
+/**
+ * THE COPY'S PLAIN TEXT (issue #161's design decision; FP-24): a span's items
+ * in the order its text holds them, read from what an article was made from —
+ * each run of text its own characters over the span (M-REC's `textOf`), each
+ * other item a stand-in in square brackets in its place naming its kind
+ * (`itemOf`, `itemWords`), a withheld run's owner and length after it, an
+ * item this client cannot show's length, a record's own plain contents
+ * (`recordContents`), and never what the plane draws of it. Text is never
+ * joined across an item, so a paste never makes separated passages look
+ * adjacent; items one after another of one kind and owner share one
+ * stand-in, their lengths summed and their contents in order. A withheld
+ * run's owner is its origin's, as its placeholder names it (`placeholderOf`);
+ * any other item's the owner of the document whose permanent addresses its
+ * bytes are (`bytesHome`), else the article's own document's. An item the
+ * span touches is taken whole, as the selection takes it.
+ * @param {Copied} made what the article was made from
+ * @param {Span} span the span copied
+ * @param {(doc: string) => string} ownerOf the owner account of a document, by the one owner rule (T-LAYER's `originOwner`)
+ * @returns {string}
+ */
+export function copyText(made, span, ownerOf) {
+  const p0 = span.pos, p1 = span.pos + span.width;
+  /** @type {string[]} */
+  const out = [];
+  /** @type {Gap | null} */
+  let gap = null;
+  const close = () => { if (gap) out.push(standIn(gap)); gap = null; };
+  for (const r of made.runs) {
+    if (r.pos >= p1 || r.pos + r.width <= p0) continue;
+    if (r.kind === 'content') {
+      const text = textOf([r], p0, p1);
+      if (text) { close(); out.push(text); }
+      continue;
+    }
+    const b = made.blocks.find((x) => x.pos === r.pos && x.kind !== 'para');
+    const kind = b ? itemOf(b) : null;
+    if (!b || !kind) continue;
+    const owner = kind === 'withheld' ? (b.origin ? ownerOf(b.origin) : '') : ownerOf(bytesHome(made.image, b.pos) || made.addr);
+    const contents = kind === 'record' ? recordContents(b) : [];
+    if (gap && gap.kind === kind && gap.owner === owner) { gap.width += b.width; gap.contents.push(...contents); }
+    else { close(); gap = { kind, owner, width: b.width, contents }; }
+  }
+  close();
+  return out.join('');
 }

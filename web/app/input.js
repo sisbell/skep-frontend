@@ -69,7 +69,11 @@
 // the rest of a withheld run's placeholder conjures C-39's face, naming
 // the owner the placeholder names (B1-S5, B1-S7), at the placeholder and,
 // once the text layer rebuilds or takes it down, at the run's own positions
-// (`runOf`; O-HOST's anchor); the version statement at a document's
+// (`runOf`; O-HOST's anchor) — a press on the placeholder starts no
+// selection, which the platform, selecting an item whole wherever a selection
+// touches it (FP-24), would otherwise make of it at every click, so its click
+// is its act's alone and a drag that crosses it from text still takes it
+// whole; the version statement at a document's
 // corner opens its members (the corner's act, the one Enter takes there —
 // K-57); a click on a block selects it whole (R11); a click on an account at
 // far is a teleport to its region (a trail push); an empty click ends a card
@@ -78,7 +82,7 @@
 // selection.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
-// Rules: FP-1, FP-2, FP-9.
+// Rules: FP-1, FP-2, FP-9, FP-24.
 
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
@@ -159,6 +163,8 @@ export function attach(els) {
     if (MAC ? e.metaKey : e.ctrlKey) { e.preventDefault(); cameraDrag(e); return; }
     lastDown = { x: e.clientX, y: e.clientY }; LAYER.press(true);
   });
+  // a press on a withheld run's placeholder starts no selection: its click is its act's (see the head)
+  els.layer.addEventListener('selectstart', (e) => { if (inPlaceholder(/** @type {Node | null} */ (e.target))) e.preventDefault(); });
   // a held press follows the pointer, and the drag it began carries the platform's selection's other end to it
   window.addEventListener('pointermove', (e) => {
     if (held) { held.moved += Math.abs(e.clientX - held.at.x) + Math.abs(e.clientY - held.at.y); held.at = { x: e.clientX, y: e.clientY }; }
@@ -202,6 +208,12 @@ export function attach(els) {
 
 let retakeT = 0;
 function scheduleRetake() { clearTimeout(retakeT); retakeT = window.setTimeout(() => WALK.retakeFromView(), 220); }
+
+/** does a node — the element or the text a selection starts at — lie in a withheld run's placeholder? */
+function inPlaceholder(/** @type {Node | null} */ n) {
+  const el = !n ? null : n.nodeType === 1 ? /** @type {Element} */ (n) : n.parentElement;
+  return !!el && !!el.closest('[data-withheld]');
+}
 
 /**
  * The run an element of an article names, as its own positions in the

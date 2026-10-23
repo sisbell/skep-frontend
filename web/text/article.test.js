@@ -70,15 +70,32 @@
 // place and the line saying the version it reads lacks the passage that act
 // carried, in the corner's one order; the plane's carries neither (issue #160:
 // a mutant that draws either always, or never, turns red).
+// THE ITEM RULE (issue #161): every block that holds no text is one kind — a
+// record the record rule renders, a reference, a withheld run, else an item
+// this client cannot show — and no paragraph is; a key record's own plain
+// contents are its keys' labels and fingerprints in the record's order, each
+// fingerprint built here apart from the page's (a mutant that hashes the hex
+// as text, frames no length, or groups the hex turns red). THE COPY'S PLAIN
+// TEXT is the span's items in order, a stand-in in each item's place — never
+// empty (a mutant that copies the text alone turns red), never a word of what
+// the plane draws; text is never joined across a withheld run, whose
+// stand-in names its origin's owner, never the windowing document's (a mutant
+// that names the document's owner turns red), and its length; items one
+// after another of one kind and owner share one stand-in, their lengths
+// summed, and of another owner, or with text between them, take one each (a
+// mutant that never merges, or merges across owners, turns red); a span of
+// text alone copies its own characters, as M-REC's `textOf` reads them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, cornerHTML, headingLevel, blockMarks } from './article.js';
+import { createHash } from 'node:crypto';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, cornerHTML, headingLevel, blockMarks, itemOf, recordContents, copyText } from './article.js';
 import { MEASURE } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
 import { t } from '../strings.js';
-import { esc } from '../util.js';
+import { esc, byteLength } from '../util.js';
 import { accountOf, homeOf, resolveSpan } from '../model/address.js';
+import { deriveBlocks, textOf } from '../model/records.js';
 
 /** @typedef {import('../model/records.js').Reader} Reader */
 /** the readers the arm is decided for: signed in, with a key bound at this board and with none; a guest with a key here; a guest with none */
@@ -532,4 +549,113 @@ test('each withheld run names its own origin\'s owner — in its head, its arm a
       }, `${JSON.stringify(reader)}: the run from ${r.origin} names ${r.owner}, in ${d.addr}, which 1.0.1 owns`);
     }
   }
+});
+
+// ---- the item rule and the copy's plain text (issue #161) ---------------------------------------------------------
+
+/** a key's fingerprint built here apart from the page's: SHA-256 over the tag, then each field's 4-byte big-endian length and its bytes (AUTH-1.8, AUTH-1.12) */
+const fingerprintOf = (/** @type {string} */ alg, /** @type {string} */ keyHex) => {
+  const be32 = (/** @type {number} */ n) => { const b = Buffer.alloc(4); b.writeUInt32BE(n); return b; };
+  const a = Buffer.from(alg, 'utf8'), raw = Buffer.from(keyHex, 'hex');
+  return createHash('sha256').update(Buffer.concat([Buffer.from('skep-key-v1', 'utf8'), be32(a.length), a, be32(raw.length), raw])).digest('hex');
+};
+/** a genesis record's value: each key `[label, key hex, anchor]`, a key whose label is null carrying none */
+const enroll = (/** @type {Array<[string | null, string, boolean]>} */ keys) => JSON.stringify({ type: 'skep-enroll', keys: keys.map(([label, key, anchor]) => ({ alg: 'mldsa65-ed25519', key, anchor, ...(label ? { label } : {}) })) });
+const KEY_A = '0a1b2c3d'.repeat(8), KEY_B = 'F0E1D2C3'.repeat(8);
+/**
+ * What a copy reads of a text made of items in order — each `[kind, text, width?, origin?]` placed after the one before
+ * it — its blocks derived from its runs as the model derives them, and its image as given.
+ * @param {string} addr
+ * @param {Array<[import('../model/frames.js').Run['kind'], string, number?, string?]>} items
+ * @param {import('../model/records.js').ImageRun[]} [image]
+ */
+const textMade = (addr, items, image = []) => {
+  let pos = 1;
+  /** @type {import('../model/frames.js').Run[]} */
+  const runs = [];
+  for (const [kind, text, width, origin] of items) {
+    const w = width ?? (kind === 'content' ? byteLength(text) : 1);
+    runs.push({ pos, width: w, kind, text, ref: null, origin: origin ?? null });
+    pos += w;
+  }
+  return { addr, runs, blocks: deriveBlocks(runs), image };
+};
+/** the whole of a text as a span */
+const whole = (/** @type {{addr: string, runs: Array<{pos: number, width: number}>}} */ m) => ({ addr: m.addr, pos: 1, width: m.runs.reduce((n, r) => n + r.width, 0) });
+/** a stand-in in the strings table's words */
+const standIn = {
+  record: (/** @type {string[]} */ contents = []) => (contents.length ? t('L.copy.item.contents', { kind: t('L.item.record'), contents: contents.join(' · ') }) : t('L.copy.item', { kind: t('L.item.record') })),
+  reference: () => t('L.copy.item', { kind: t('L.item.reference') }),
+  withheld: (/** @type {string} */ owner, /** @type {number} */ n) => t('L.copy.item.owned', { kind: t('L.item.withheld'), owner, length: n === 1 ? t('L.item.positions.1') : t('L.item.positions', { n }) }),
+  unshown: (/** @type {number} */ n) => t('L.copy.item.sized', { kind: t('L.item.unshown'), length: n === 1 ? t('L.item.positions.1') : t('L.item.positions', { n }) }),
+};
+
+test('the item rule names the kind of every block that holds no text — a record the record rule renders, a reference, a withheld run, else an item this client cannot show — and no paragraph', () => {
+  const m = textMade('1.0.1.0.1', [
+    ['content', 'Words.\n\n'], ['atom', enroll([['paper', KEY_A, true]])], ['atom', JSON.stringify({ type: 'skep-head', position: 7, chain: 'ab'.repeat(16) })],
+    ['ref', ''], ['withheld', '', 240, '1.0.1.0.1003'], ['hex', 'abcd', 2], ['atom_hex', 'fffe'], ['atom', JSON.stringify({ type: 'skep-retire', fingerprints: [] })], ['atom', 'not a value'],
+  ]);
+  assert.deepEqual(m.blocks.map((b) => itemOf(b)), [null, 'record', 'record', 'reference', 'withheld', 'unshown', 'unshown', 'unshown', 'unshown']);
+});
+
+test('a key record\'s own plain contents are each key\'s label and its fingerprint, in the record\'s order — a key with no label its fingerprint alone, upper-case hex read as its bytes — and the head record\'s none', () => {
+  const [b] = deriveBlocks([{ pos: 1, width: 1, kind: 'atom', text: enroll([['paper', KEY_A, true], [null, KEY_B, false]]), ref: null, origin: null }]);
+  assert.deepEqual(recordContents(b), [t('L.copy.key', { label: 'paper', fingerprint: fingerprintOf('mldsa65-ed25519', KEY_A) }), fingerprintOf('mldsa65-ed25519', KEY_B)]);
+  assert.match(recordContents(b)[1], /^[0-9a-f]{64}$/, 'the flat 64-lowercase-hex form the daemon emits (AUTH-1.9), never the grouped display');
+  const [head] = deriveBlocks([{ pos: 1, width: 1, kind: 'atom', text: JSON.stringify({ type: 'skep-head', position: 3, chain: 'cd'.repeat(16) }), ref: null, origin: null }]);
+  assert.deepEqual(recordContents(head), [], 'the head record adds nothing');
+  const [bad] = deriveBlocks([{ pos: 1, width: 1, kind: 'atom', text: enroll([['paper', 'not hex', true]]), ref: null, origin: null }]);
+  assert.deepEqual(recordContents(bad), ['paper'], 'a key whose value derives no fingerprint: its label alone');
+});
+
+test('a copy\'s plain text follows the span\'s items in order — its text as its text, each item that holds no text a stand-in in square brackets in its place naming its kind — never empty, and never what the plane draws of an item', () => {
+  const doc = '1.0.1.0.1';
+  const m = textMade(doc, [['content', 'Before — '], ['atom', enroll([['paper', KEY_A, true]])], ['content', ' between '], ['ref', ''], ['content', ' and '], ['hex', 'abcd', 2], ['content', ' after.']]);
+  const owner = (/** @type {string} */ a) => accountOf(a) || '';
+  const fp = fingerprintOf('mldsa65-ed25519', KEY_A);
+  assert.equal(copyText(m, whole(m), owner), `Before — ${standIn.record([t('L.copy.key', { label: 'paper', fingerprint: fp })])} between ${standIn.reference()} and ${standIn.unshown(2)} after.`);
+  for (const b of m.blocks.filter((x) => itemOf(x))) {
+    const alone = copyText(m, { addr: doc, pos: b.pos, width: b.width }, owner);
+    assert.ok(alone.length > 0 && alone.startsWith('[') && alone.endsWith(']'), `the ${itemOf(b)} alone: a stand-in, never an empty clipboard — ${alone}`);
+  }
+  const rendered = [t('F.home-record.yours'), t('F.home-record.other', { owner: '1.0.1' }), 'ANCHOR', t('F.not-rendered', { width: 2 }), '⟡'];
+  assert.ok(!rendered.some((w) => copyText(m, whole(m), owner).includes(w)), 'no word of what the plane draws for whoever is looking is copied');
+  const words = textMade(doc, [['content', 'Tumbler — ünïcode 🦊 text.\n\nThe second paragraph.']]);
+  for (const [p0, p1] of [[1, 12], [3, 30], [5, words.runs[0].width + 1]]) {
+    assert.equal(copyText(words, { addr: doc, pos: p0, width: p1 - p0 }, owner), textOf(words.runs, p0, p1), `a span of text alone, [${p0}, ${p1}): its own characters, as before`);
+  }
+});
+
+test('a withheld run\'s stand-in names its origin\'s owner — never the owner of the document windowing it — and its length, and text is never joined across it', () => {
+  const D = '1.0.2.0.5', O = '1.0.1.1.0.2';
+  const m = textMade(D, [['content', 'Tumbler.'], ['withheld', '', 240, O], ['content', 'After.']]);
+  // the one owner rule, as T-LAYER's `originOwner` answers it: the sub-account 1.0.1.1 owned by the seat above it
+  const owner = (/** @type {string} */ a) => (accountOf(a) === '1.0.1.1' ? '1.0.1' : accountOf(a) || '');
+  const copied = copyText(m, whole(m), owner);
+  assert.equal(copied, `Tumbler.${standIn.withheld('1.0.1', 240)}After.`);
+  assert.ok(!copied.includes('Tumbler.After.') && !copied.includes('1.0.2'), `the two texts stand apart, the run's owner its origin's: ${copied}`);
+  assert.equal(copyText(m, { addr: D, pos: 9, width: 1 }, owner), standIn.withheld('1.0.1', 240), 'a span touching the run takes it whole');
+});
+
+test('items one after another of one kind and one owner share one stand-in, their lengths summed and their contents in order; of another owner, or with text between them, a stand-in each', () => {
+  const D = '1.0.2.0.5';
+  const owner = (/** @type {string} */ a) => accountOf(a) || '';
+  // two runs withheld from origins of one owner, then one of another owner's
+  const runs = textMade(D, [['withheld', '', 10, '1.0.1.0.1003'], ['withheld', '', 5, '1.0.1.0.1004'], ['withheld', '', 3, '1.0.3.0.2']]);
+  assert.equal(copyText(runs, whole(runs), owner), standIn.withheld('1.0.1', 15) + standIn.withheld('1.0.3', 3));
+  // hex and an atom of no record's value, one owner: one stand-in
+  const unshown = textMade(D, [['hex', 'abcd', 2], ['atom', '{"type":"skep-retire","fingerprints":[]}']]);
+  assert.equal(copyText(unshown, whole(unshown), owner), standIn.unshown(3));
+  // two key records, their bytes in one I-space: one stand-in, the keys in order; the second transcluded from another
+  // account's I-space, as the image the article was made from places it: a stand-in each
+  const rec = (/** @type {Array<[string | null, string, boolean]>} */ k) => /** @type {[import('../model/frames.js').Run['kind'], string]} */ (['atom', enroll(k)]);
+  const two = [rec([['paper', KEY_A, true]]), rec([['laptop', KEY_B, false]])];
+  const keys = [t('L.copy.key', { label: 'paper', fingerprint: fingerprintOf('mldsa65-ed25519', KEY_A) }), t('L.copy.key', { label: 'laptop', fingerprint: fingerprintOf('mldsa65-ed25519', KEY_B) })];
+  const own = textMade('1.0.2.0.1', two, [{ pos: 1, width: 2, prefix: '1.0.2.0.1.0.1', ordinal: 1 }]);
+  assert.equal(copyText(own, whole(own), owner), standIn.record(keys));
+  const apart = textMade('1.0.2.0.1', two, [{ pos: 1, width: 1, prefix: '1.0.2.0.1.0.1', ordinal: 1 }, { pos: 2, width: 1, prefix: '1.0.3.0.1.0.1', ordinal: 1 }]);
+  assert.equal(copyText(apart, whole(apart), owner), standIn.record([keys[0]]) + standIn.record([keys[1]]));
+  // text between two items of one kind and owner: a stand-in each, the text in its place
+  const between = textMade(D, [['ref', ''], ['content', '\n\n'], ['ref', '']]);
+  assert.equal(copyText(between, whole(between), owner), standIn.reference() + '\n\n' + standIn.reference());
 });

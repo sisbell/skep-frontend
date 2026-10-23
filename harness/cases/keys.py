@@ -88,7 +88,14 @@ frame after it taking the pointer from the article. At em 9 a press that
 finds the text not standing under it — the view set and the press made in one
 evaluation, no frame between — is held for the text and acts on it once the
 frame sets it: a click selects the block, a drag the bytes it crosses, as on
-the standing text, and neither moves the camera or the trail (issue #122). In the reading scene a
+the standing text, and neither moves the camera or the trail (issue #122). The
+copy of an item that holds no text (issue #161's design decision): Enter at the
+claimant's key record selects it whole, and its copy is its stand-in — its
+kind in the strings table's words, each key's label and its fingerprint, the
+fingerprints the harness's own hashing gives and one the device's key store
+holds — never empty and never the words the plane draws, the skep flavor
+naming the record's one position; a drag over part of its words selects it
+whole and draws it so, every glyph inside the platform's selection. In the reading scene a
 drag selects as it does on the plane (§2.5): a drag over a phrase of a pane,
 or from its head into its first block, is copied as the passage's board and
 the address the pane's acts name beside the document's own bytes over the
@@ -118,7 +125,7 @@ the plane, while a caret alone in a pane gives the page's selection its
 highlight back. Each step leaves the page as it found it."""
 import json
 
-from . import DOC, FAR_LEAP, GHOST, NO_MATCH, SECOND_ACCOUNT, VERSIONED, WINDOW, Result
+from . import DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, item_words, key_fingerprint
 from .layout import click_on, inside, lacking_of, level_holds, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -888,6 +895,77 @@ PANE_NOW = '''((side) => { const pane = document.getElementById(side === 'a' ? '
   const inPane = (n) => { const e = !n ? null : n.nodeType === 1 ? n : n.parentElement; return !!e && pane.contains(e); };
   return {first: first ? {pos: Number(first.dataset.pos), top: first.getBoundingClientRect().top, text: first.textContent.slice(0, 40)} : null,
           selection: s && s.rangeCount && !s.isCollapsed ? {text: String(s), held: inPane(s.anchorNode) && inPane(s.focusNode)} : null}; })(%s)'''
+
+
+def strings(ctx, sid, values=None):
+    """one of the page's strings, its tokens filled (`strings.js`)"""
+    return ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(values or {})))
+
+
+def record_copy(ctx, r):
+    """THE COPY OF AN ITEM THAT HOLDS NO TEXT (issue #161's design decision; FP-24), at the claimant's home document, whose one
+    block is its key record — an atom, no content byte in it:
+    (a) Enter at the walk's item on the record selects it whole, and the copy's plain text is the record's stand-in: its kind
+        in the strings table's words, then each key's label and its fingerprint in the record's order — the fingerprints
+        decided here by the harness's own hashing of the record's keys, one of them the fingerprint the device's key store
+        holds as the shell computes it — never empty, and never the words the plane draws for whoever is looking; the skep
+        flavor names the board, the document and the record's one position;
+    (b) a drag over part of the record's words selects it whole and draws it so: every glyph of it inside the platform's
+        selection, the page's selection the record's one position.
+    The selection is cleared after; its figures"""
+    figures = {}
+    ctx.leap(HOME, 1)
+    chord(ctx, 'Escape')
+    d = ctx.js('window.__skep.model.doc(%s)' % json.dumps(HOME))
+    blk = next((b for b in d['blocks'] if b['kind'] == 'atom'), None)
+    try:
+        rec = json.loads(blk['text']) if blk else None
+    except ValueError:
+        rec = None
+    keys = [k for k in ((rec or {}).get('keys') or []) if isinstance(k, dict)]
+    r.check(bool(rec) and rec.get('type') == 'skep-enroll' and bool(keys) and blk['width'] == 1, 'the claimant\'s home document holds its key record, one atom of the genesis record\'s type with keys', blk and {k: blk[k] for k in ('pos', 'width', 'kind')})
+    if not keys:
+        return figures
+    span = {'addr': HOME, 'pos': blk['pos'], 'width': blk['width']}
+    fps = [key_fingerprint(k['alg'], k['key']) for k in keys]
+    held = {row.get('fingerprint') for row in ctx.key_store()['rows']}
+    kind = item_words(ctx)['record']
+    want = strings(ctx, 'L.copy.item.contents', {'kind': kind, 'contents': ' · '.join(strings(ctx, 'L.copy.key', {'label': k['label'], 'fingerprint': fp}) if k.get('label') else fp for k, fp in zip(keys, fps))})
+    block = '#domlayer article.dtext[data-addr="%s"] .sp.blk-atom' % HOME
+    plane = ctx.js('''((sel) => { const e = document.querySelector(sel), q = (s) => { const x = e && e.querySelector(s); return x ? x.textContent : null; }; return {words: q('.rec-words'), keys: q('.derived')}; })(%s)''' % json.dumps(block))
+    # (a) Enter at the walk's item on the record
+    on = ctx.js('(() => { const i = document.getElementById("walk-" + window.__skep.mirror.index()); if (i) i.focus({preventScroll: true}); return !!i && document.activeElement === i; })()')
+    chord(ctx, 'Enter')
+    sel = ctx.js('window.__skep.selection()')
+    c = copied(ctx)
+    plain = c['plain'] or ''
+    origin = ctx.js('window.__skep.model.board().origin')
+    r.check(on and sel == span and plain == want, 'Enter at the walk\'s item on the claimant\'s key record selects it whole, and the copy\'s plain text is its stand-in: "%s", then each key\'s label and its fingerprint in the record\'s order, never empty (issue #161)' % kind,
+            {'focused': on, 'selection': sel, 'plain': plain[:400], 'want': want[:400]})
+    r.check(bool(set(fps) & held), 'a fingerprint the stand-in carries is one the device\'s key store holds, as the shell computes it: the page, the harness and the shell hash a key alike', {'record': fps, 'store': sorted(held)})
+    drawn = [w for w in (plane['words'], plane['keys'], 'ANCHOR') if w and w in plain]
+    r.check(bool(plane['words']) and not drawn, 'the copy carries none of what the plane draws of the record for whoever is looking', {'drawn': drawn, 'plane': plane})
+    r.check(c['flavor'] == dict(span, board=origin) and c['span'] == span, 'the skep flavor names the board, the document and the record\'s one position, though the span holds no text', {'flavor': c['flavor'], 'span': c['span']})
+    figures['copied'] = plain[:400]
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    # (b) a drag over part of the record's words, from their first character to the middle of their line
+    at = ctx.js('''((sel) => { const w = document.querySelector(sel + ' .rec-words'); if (!w) return null; const n = w.firstChild, q = document.createRange();
+      q.setStart(n, 0); q.setEnd(n, 1); const a = q.getBoundingClientRect(), b = w.getClientRects()[0];
+      return {start: [a.left + 0.5, a.top + a.height / 2], end: [b.left + b.width / 2, a.top + a.height / 2]}; })(%s)''' % json.dumps(block))
+    r.check(at is not None, 'the record\'s words stand on the plane, for a drag over part of them', at)
+    if at:
+        ctx.drv.drag(*at['start'], *at['end'])
+        ctx.frames(2)
+        whole = ctx.js(SELECTED_WHOLE % json.dumps(block))
+        sel = ctx.js('window.__skep.selection()')
+        r.check(whole and sel == span, 'a drag over part of the record\'s words selects the record whole and draws it so: every glyph of it inside the platform\'s selection, the page\'s selection its one position (issue #161)',
+                {'selected_whole': whole, 'selection': sel, 'text': ctx.js('String(window.getSelection())')[:200]})
+        figures['drag'] = {'from': at['start'], 'to': at['end'], 'whole': whole}
+        chord(ctx, 'Escape')
+        chord(ctx, 'Escape')
+    ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    return figures
 
 
 def scene_copy(ctx, r):
@@ -2185,6 +2263,9 @@ def run(ctx):
             'Enter on the scene\'s × ends it: the trail as it stood, no selection, and the focus back on the walk\'s item the scene was opened from (K-63)',
             {'focused_x': on, 'scene': after['scene'], 'focus_back': back, 'at': after['at'], 'sel': after['sel'], 'trail_moved': after['trail'] != before['trail']})
     ended()
+    # ---- the copy of an item that holds no text: the claimant's key record (issue #161) -------------------------------
+    r.figures['record_copy'] = record_copy(ctx, r)
+    ctx.leap(DOC, WINDOW[0])
     # ---- the copy from a reading scene's pane, and the pane's own text under a feed row (§2.4, §2.5) --------------
     scene_copy(ctx, r)
     # ---- a pane reads another version in its place, the reader's place and selection carried (issue #160) ----------
@@ -2198,6 +2279,6 @@ def run(ctx):
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

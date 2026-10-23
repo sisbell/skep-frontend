@@ -47,7 +47,8 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     the active view's lookup, its claims' links and their homes' metadata,
     never the audit view's `edition_claims` — the pointer carrying the claim
     PUB-3.107's order picks, and nothing in its place where they decide none;
-    the mirror's item the run's placeholder — its owner,
+    the mirror's item the run's placeholder — its kind in the words a copy's
+    stand-in names it by, its owner,
     its origin, the arm, and the clause where the placeholder shows one
     (R94); the placeholder shown, and every row of
     the article inside its box, measured where the placeholder stands tallest,
@@ -58,7 +59,14 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     opening with a separator alone, a block that sets no line, the margins
     about it collapsing into one as P-LAY collapses an empty row's — the
     block after it as far below the placeholder as its bars stand below the
-    run's, never the empty block's gap further;
+    run's, never the empty block's gap further; THE COPY ACROSS THE RUN (issue
+    #161's design decision) — a drag from the paragraph before it to the block
+    after it, on the plane and in a reading scene's pane (the first edition
+    beside FAR_LEAP; the draft opens nowhere for a guest), copying the text
+    before, the run's stand-in in its place — its kind, its origin's owner, its
+    length — and the text after, never the two joined, the placeholder drawn
+    selected whole; a person's click on the placeholder conjuring C-39's face
+    and selecting nothing;
 (f) the guest's own acts: every link at the first edition drawn as its
     owner's, never "you"; C-39's face at the run with the placeholder's own
     arm beneath, standing beneath the placeholder, at the run's own positions
@@ -96,8 +104,8 @@ import re
 import time
 from collections import Counter
 
-from . import DOC, SECOND_ACCOUNT, WINDOW, WITHHELD, Result
-from .keys import placed_at, placed_at_box, placed_under, rebuilt_away, scene_set, stands_at
+from . import DOC, FAR_LEAP, SECOND_ACCOUNT, SELECTED_WHOLE, WINDOW, WITHHELD, Result, item_words
+from .keys import copied, placed_at, placed_at_box, placed_under, rebuilt_away, scene_set, stands_at
 
 OWNER = '1.0.1'
 # a stretch of the owner's bytes over the run, in characters with white space folded, that the guest's page must never hold
@@ -163,6 +171,116 @@ def wait_for(ctx, expr, max_s=10):
             return True
         time.sleep(0.1)
     return False
+
+
+# the points a drag across the window run presses and releases at, on the plane: half a pixel inside the first character of
+# the stretch before the run and the last character of the stretch after it, each where the platform hit-tests the article
+DRAG_ACROSS = '''((a, p, q) => { const S = window.__skep, rect = (x) => (S.spanRects(a, x, 1) || []).find((y) => y.w > 0 && y.h > 0) || null;
+  const s = rect(p), e = rect(q); if (!s || !e) return null;
+  const on = (x, y) => { const h = document.elementFromPoint(x, y); return !!h && !!h.closest('#domlayer article.dtext'); };
+  const start = [s.x + 0.5, s.y + s.h / 2], end = [e.x + e.w - 0.5, e.y + e.h / 2];
+  return {start, end, hits: on(...start) && on(...end)}; })(%s, %d, %d)'''
+
+
+def copy_across_run(ctx, r, doc, kind):
+    """THE COPY ACROSS THE WITHHELD RUN, as a guest (issue #161's design decision; FP-24): the paragraph before the run and the
+    block after it, the drag from six characters before the run to the fifth character after it —
+    (i) on the plane, the copy's plain text is the text before the run, the run's stand-in in its place — its kind in the
+        strings table's words, its origin's owner, its length — and the text after, never the two texts joined; every glyph
+        of the run's placeholder drawn inside the platform's selection;
+    (ii) a person's click on the placeholder conjures C-39's face and selects nothing: a press there starts no selection;
+    (iii) in a reading scene's pane — the first edition beside FAR_LEAP, as the draft opens nowhere for a guest — the same
+        drag copies the same text, the skep flavor naming the member the pane's acts name.
+    The selection is cleared, and the scene ended, after; its figures"""
+    figures = {}
+    blocks, end = doc['blocks'], WINDOW[0] + WINDOW[1]
+    paras = [b for b in blocks if b['kind'] == 'para' and b['text'].strip()]
+    prev = max((b for b in paras if b['pos'] + b['width'] <= WINDOW[0]), key=lambda b: b['pos'], default=None)
+    nxt = min((b for b in paras if b['pos'] >= end), key=lambda b: b['pos'], default=None)
+    r.check(bool(prev) and bool(nxt) and len(prev['text']) > 6 and len(nxt['text']) > 5, '(e) a paragraph stands before the window run and a block of text after it, for a drag across the run',
+            {'prev': prev and prev['pos'], 'next': nxt and nxt['pos']})
+    if not prev or not nxt:
+        return figures
+    p_start = prev['pos'] + len(prev['text'][:-6].encode('utf8'))
+    p_end = nxt['pos'] + len(nxt['text'][:4].encode('utf8'))
+    stand_in = t(ctx, 'L.copy.item.owned', {'kind': kind, 'owner': OWNER, 'length': t(ctx, 'L.item.positions', {'n': WINDOW[1]})})
+    text = lambda p0, p1: ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(DOC), p0, p1))
+
+    def across(c, addr):
+        """the copy across the run as the decision orders it: its span from before the run to after it, its plain text the
+        text before, the stand-in, the text after; and the flavor naming `addr`"""
+        s = c['span']
+        if not s or not (s['pos'] < WINDOW[0] and s['pos'] + s['width'] > end):
+            return False, None
+        want = text(s['pos'], WINDOW[0]) + stand_in + text(end, s['pos'] + s['width'])
+        return c['plain'] == want and bool(c['flavor']) and c['flavor']['addr'] == addr, want
+
+    def drawn(face):
+        """is a placeholder drawn selected whole: every glyph of it inside the platform's selection, and its words among the
+        selection's — which the platform leaves out of a selection over what it draws unselectable"""
+        head = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.textContent : null; })()' % json.dumps(face + ' .wh-head'))
+        return bool(ctx.js(SELECTED_WHOLE % json.dumps(face))) and bool(head) and squash(head) in squash(ctx.js('String(window.getSelection())'))
+
+    # (i) on the plane: the camera between the two points, at the readable em 9 or above, both in view
+    a, b = (ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), p)) for p in (p_start, p_end))
+    vp, em12, em9 = ctx.js('window.__skep.view.viewport()'), ctx.js('window.__skep.scaleFor(%s, "em", 12)' % json.dumps(DOC)), ctx.js('window.__skep.scaleFor(%s, "em", 9)' % json.dumps(DOC))
+    scale = max(em9, min(em12, 0.6 * vp['VW'] / max(1e-9, abs(a['x'] - b['x'])), 0.6 * vp['VH'] / max(1e-9, abs(a['y'] - b['y']))))
+    ctx.set_view((a['x'] + b['x']) / 2, (a['y'] + b['y']) / 2, scale)
+    at = ctx.js(DRAG_ACROSS % (json.dumps(DOC), p_start, p_end))
+    r.check(bool(at) and at['hits'], '(e) the text before the window run and the text after it stand on the plane under the pointer, for a drag across the run', at)
+    if at and at['hits']:
+        ctx.drv.drag(*at['start'], *at['end'])
+        ctx.frames(2)
+        c = copied(ctx)
+        ok, want = across(c, DOC)
+        r.check(ok, '(e) a drag across the window run on the plane copies the text before it, the run\'s stand-in in its place — "%s" — and the text after it: the two texts never joined (issue #161)' % stand_in,
+                {'plain': (c['plain'] or '')[-300:], 'want': (want or '')[-300:], 'span': c['span'], 'flavor': c['flavor']})
+        r.check(drawn(PLACEHOLDER), '(e) the run\'s placeholder is drawn selected whole: every glyph of it inside the platform\'s selection, its words among the selection\'s (issue #161)', ctx.js('String(window.getSelection())')[-300:])
+        figures['plane'] = {'span': c['span'], 'plain_tail': (c['plain'] or '')[-120:]}
+    ctx.esc()
+    ctx.esc()
+    # (ii) a person's click on the placeholder's words, where the platform hit-tests them
+    ctx.view_at(DOC, WINDOW[0])
+    hit = ctx.js('''((sel) => { const e = document.querySelector(sel); if (!e) return null; const q = e.getBoundingClientRect(), x = q.left + Math.min(30, q.width / 2), y = q.top + q.height / 2, h = document.elementFromPoint(x, y);
+      return {x, y, hits: !!h && e.contains(h)}; })(%s)''' % json.dumps(PLACEHOLDER + ' .wh-head'))
+    if hit and hit['hits']:
+        ctx.drv.mouse(hit['x'], hit['y'])
+        ctx.frames(2)
+    clicked = ctx.js('(() => { const s = window.getSelection(); return {id: window.__skep.overlay().id, sel: window.__skep.selection(), collapsed: !s || !s.rangeCount || s.isCollapsed}; })()')
+    r.check(bool(hit) and hit['hits'] and clicked['id'] == 'face:C-39' and clicked['sel'] is None and clicked['collapsed'],
+            '(e) a person\'s click on the run\'s placeholder conjures C-39\'s face and selects nothing: a press there starts no selection, though a selection crossing it takes it whole (issue #161)', {'hit': hit, 'after': clicked})
+    figures['click'] = clicked
+    ctx.esc()
+    # (iii) in a reading scene's pane
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(FAR_LEAP)))
+    opened = wait_for(ctx, 'window.__skep.scene.isOpen()') and scene_set(ctx)
+    face = '#sceneA .withheld[data-pos="%d"]' % WINDOW[0]
+    ctx.js('''((sel) => { const e = document.querySelector(sel), p = document.getElementById('sceneA'); if (e && p) p.scrollTop += e.getBoundingClientRect().top - p.getBoundingClientRect().top - 120; })(%s)''' % json.dumps(face))
+    ctx.frames(2)
+    ends = [ctx.js('window.__skep.scene.at("a", %d, 1)' % p) for p in (p_start, p_end)]
+    seen = all(e and e['line'] and inside_rect(e['line'], e['pane']) for e in ends)
+    names = ((ctx.js('window.__skep.scene.panes()') or {}).get('a') or {}).get('names')
+    r.check(opened and seen and bool(names), '(e) a reading scene stands on the first edition beside %s, as a guest, the text before the run and after it in view in pane A' % FAR_LEAP, {'opened': opened, 'ends': ends, 'names': names})
+    if opened and seen:
+        s, e = ends[0]['line'], ends[1]['line']
+        ctx.drv.drag(s['x'] + 0.5, s['y'] + s['h'] / 2, e['x'] + e['w'] - 0.5, e['y'] + e['h'] / 2)
+        ctx.frames(2)
+        c = copied(ctx)
+        ok, want = across(c, names)
+        r.check(ok, '(e) the same drag in a reading scene\'s pane copies the same text, the run\'s stand-in in its place, the flavor naming the member the pane\'s acts name, %s (issue #161)' % names,
+                {'plain': (c['plain'] or '')[-300:], 'want': (want or '')[-300:], 'span': c['span'], 'flavor': c['flavor']})
+        r.check(drawn(face), '(e) in the pane too the run\'s placeholder is drawn selected whole: every glyph of it inside the platform\'s selection, its words among the selection\'s (issue #161)', ctx.js('String(window.getSelection())')[-300:])
+        figures['pane'] = {'names': names, 'span': c['span']}
+    ctx.js('window.__skep.scene.close()')
+    ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(2)
+    ctx.leap(DOC, WINDOW[0])
+    return figures
+
+
+def inside_rect(a, b):
+    """is the rect `a` inside the rect `b`, half a pixel either way"""
+    return a['x'] >= b['x'] - 0.5 and a['y'] >= b['y'] - 0.5 and a['x'] + a['w'] <= b['x'] + b['w'] + 0.5 and a['y'] + a['h'] <= b['y'] + b['h'] + 0.5
 
 
 def run(ctx):
@@ -314,9 +432,10 @@ def run(ctx):
     said = ph[0] if len(ph) == 1 else {}
     shown = bool(said.get('owner') and said.get('arm'))
     after = t(ctx, 'L.mirror.clause', {'clause': said['clause']}) if said.get('clause') else ''
-    words = t(ctx, 'L.mirror.withheld', {'document': DOC, 'width': WINDOW[1], 'owner': said['owner'], 'origin': WINDOW[2], 'arm': said['arm'], 'clause': after}) if shown else None
+    kinds = item_words(ctx)
+    words = t(ctx, 'L.mirror.withheld', {'kind': kinds['withheld'], 'document': DOC, 'length': t(ctx, 'L.item.positions', {'n': WINDOW[1]}), 'owner': said['owner'], 'origin': WINDOW[2], 'arm': said['arm'], 'clause': after}) if shown else None
     r.check(shown and item.startswith(words) and said['arm'] in item and (said.get('clause') or '') in item,
-            '(e) the mirror\'s current item at the landing is the run\'s placeholder: the run, its width, its owner, its origin, the arm, and the clause where the placeholder shows one (R56; R94)',
+            '(e) the mirror\'s current item at the landing is the run\'s placeholder: its kind in the words a copy\'s stand-in names it by (issue #161), its width, its owner, its origin, the arm, and the clause where the placeholder shows one (R56; R94)',
             {'item': item, 'placeholder': {k: said.get(k) for k in ('owner', 'arm', 'clause')}})
     ctx.view_doc_em(DOC, 14)
     ctx.view_at(DOC, WINDOW[0])
@@ -350,6 +469,7 @@ def run(ctx):
     r.figures['run'] = {'placeholder': ph, 'stretches_tested': len(stretches), 'stretches_the_guest_holds': legit_held, 'mirror_item': item, 'shown': vis,
                         'blocks_cut': ov['blocks_cut'][:8], 'worst_overflow_px': ov['worst_overflow_px'], 'after_run': gap,
                         'under_the_guests_arm': {'arm': arm_id, 'blocks_cut': here['blocks_cut'][:8], 'worst_overflow_px': here['worst_overflow_px']}}
+    r.figures['copy_across_run'] = copy_across_run(ctx, r, doc, kinds['withheld'])
 
     # (c) the LEAP box at the first edition: no HOME level
     ctx.leap(DOC, WINDOW[0])

@@ -72,7 +72,13 @@
 // tree named as it attaches by ST's `L.mirror-label`, each level's group by
 // `L.mirror-level`, and each item by ST's `L.mirror.*` entries — what a screen
 // reader hears is the focus moving onto the item (rule 12); no live region
-// repeats it (D4). A withheld run's item is made from the record the plane's
+// repeats it (D4). Every block that holds no text is announced by its kind,
+// the item rule's (T-ARTICLE's `itemOf`; issue #161's design decision; FP-24)
+// in the strings table's words, the ones a copy's stand-in names it by in its
+// place — a record, a reference, a withheld run, an item this client cannot
+// show — then what the plane shows of it, a record's words and keys, an
+// unshown item's length, and never its raw value. A withheld run's item is
+// made from the record the plane's
 // placeholder is (T-ARTICLE's `placeholderOf`: the owner of its origin, the
 // entitlement arm for this reader, C-67's clause where the origin's edition
 // claims decide one, and nothing in its place where they do not — R56,
@@ -122,7 +128,7 @@
 // (`dropped`).
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21, FP-22, FP-23.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21, FP-22, FP-23, FP-24.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -130,7 +136,7 @@ import * as PUMP from '../model/pump.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from './focus.js';
-import { placeholderOf } from '../text/article.js';
+import { placeholderOf, itemOf, itemWords, itemLength, recordOf } from '../text/article.js';
 import { farSays } from '../beams/held.js';
 import { docBox, accountCell, boardCell, accountAt, clearLeftOf } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
@@ -294,12 +300,20 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
   if (n.kind === 'block') {
     const d = REC.doc(n.addr); const b = d.blocks.find((x) => x.pos === n.pos);
     if (!b) return t('L.mirror.span.bare', { p: n.pos ?? '', document: n.addr }) + pos;
-    if (b.kind === 'withheld') {
+    const kind = itemOf(b);
+    if (kind === 'withheld') {
       const w = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf);
-      return t('L.mirror.withheld', { document: n.addr, width: b.width, owner: w.owner, origin: b.origin || '', arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }) + pos;
+      return t('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), owner: w.owner, origin: b.origin || '', arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }) + pos;
     }
     const org = d.origins.find((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);
-    return t('L.mirror.span', { p: b.pos, extent: d.extent ?? '?', document: n.addr, same: org ? t('L.mirror.same', { origin: org.doc }) : '', text: b.text }) + pos;
+    const same = org ? t('L.mirror.same', { origin: org.doc }) : '';
+    if (kind) {
+      // what the plane shows of the item after its kind: a record's words and keys, an unshown item's length — never its raw value
+      const rec = kind === 'record' ? recordOf(b, d, REC.reader()) : null;
+      const shown = rec ? [rec.words, rec.keys].filter(Boolean).join(' · ') : kind === 'unshown' ? itemLength(b.width) : '';
+      return t('L.mirror.no-text', { kind: itemWords(kind), p: b.pos, extent: d.extent ?? '?', document: n.addr, same, shown: shown ? t('L.mirror.shows', { shown }) : '' }) + pos;
+    }
+    return t('L.mirror.span', { p: b.pos, extent: d.extent ?? '?', document: n.addr, same, text: b.text }) + pos;
   }
   if (n.kind === 'link' && n.link) {
     const l = n.link, says = farSays(l);
