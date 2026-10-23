@@ -9,9 +9,12 @@
 // page), the visibility oracle `visible`, the beams' anchors beside their
 // spans' own rects and the labels the beams set at their bundles' ends
 // (`beamLabels`), the arrival mark's outline beside its link's marked words
-// and its article (`arrivalAnchors`; the `go.leapTo` door lands as a follow
-// does where it names a link, and as a move to another arrangement of the
-// same material does where it carries a passage), the handoff
+// and its article — a landing's, or a one-step move's light along the trail
+// (issue #152) — (`arrivalAnchors`; the `go.leapTo` door lands as a follow
+// does where it names a link, its departure recording no step, for it names
+// no end of the link, and as a move to another arrangement of the same
+// material does where it carries a passage, its departure recording the
+// carry), the handoff
 // (`barsOf`: the canvas's own bars for a document beside its mounted
 // article's blocks), the reading scene's runs and the ends it set level
 // (`scene.pairs`), a passage's line in one of its panes (`scene.at`) and its
@@ -302,7 +305,9 @@ export function install(deps) {
     });
   }
   /**
-   * The arrival mark — its runs — and its outline as the last frame drew it
+   * The arrival mark — a landing's, or a one-step move's light along the
+   * trail, placed where its text holds its passage now (issue #152) — its
+   * runs — and its outline as the last frame drew it
    * (`outline`, the rects it stroked around, run by run), beside an oracle
    * read apart from the canvas's own set: the client rects of the followed
    * link's marked words in the landing's mounted article (every line they

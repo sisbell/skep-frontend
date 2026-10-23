@@ -195,13 +195,27 @@ surfaces also becomes a numbered rule above, with a Changes entry.
   document under the view's centre, else stays with the held focus while
   any of it is in view, else goes to the innermost account or board
   region holding the centre; the ring is clamped to the view.
-- **#143** (built with this line): a link's card draws as its lineage
+- **#143** (built `24ff9d5`): a link's card draws as its lineage
   only the claims made by the owner of the link each declares superseded
   — the account of the claim's home is `old`'s account, on both sides —
   a claimant the owner row does not name following its claim; every
   other claim stands behind one line after the rows, with no number,
   whose act lists them in its place as assertions naming their claimant
   ("you" for the reader) and what it is to the links.
+- **#152** (built with this line): each trail entry records the step
+  that left it — the link followed, or the passage carried by the
+  permanent addresses of its bytes, never its positions — and every
+  one-step move (Back, Forward, a jump to the adjacent entry) lights
+  that step at the end it lands on, with the arrival's marks and
+  lifetime: Back where it began, the focus returned to it where the view
+  shows it at reading scale and the mirror marking it
+  `aria-current="location"`; Forward what it marked on arrival; a jump
+  across two entries or more nothing. The passage is placed in its text
+  again at every read, whatever part it still holds lit, nothing and no
+  face where it holds none. Back relights no arrival; this changes
+  #136's mark on a return to a notice's entry, which lights the link the
+  notice came from only where the move crosses that follow — Forward
+  onto it — and never on Back or a longer jump.
 
 ## Changes
 

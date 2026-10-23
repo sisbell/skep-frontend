@@ -3,17 +3,23 @@
 // cursor and the claims standing unanswered — THE ONE OWNER (FP-10):
 // client-side, never written (law 1).
 // An entry is an address and a view (S3 Q7's tuple), its view RE-TAKEN
-// whenever the entry is departed, so Back lands on the passage left; an
-// entry a follow reached holds the link followed, which Back from it lights
-// at the entry before it, the follow's departure (foundations §2.2; N-GO's
-// `back`). The launch frame is the first entry (W-01); after it an entry is
-// pushed by a fresh TELEPORT — LEAP, follow, a click on a place, Enter, HOME,
-// WHOLE BOARD, an account's region — one push per act, made as the act is
-// made, never by panning or zooming, and never by a reading scene's end,
-// which leaves the camera where it found it (SC). Back, Forward and a jump
-// move the cursor and discard nothing, and a jump never pushes. A fresh
-// teleport made with the cursor behind the newest entry drops the entries
-// ahead of it before it pushes (a browser's history rule, stated).
+// whenever the entry is departed, so Back lands on the passage left, and THE
+// STEP THAT LEFT IT for the entry after it (issue #152's design decision),
+// written as a push departs it: the link followed for a follow, the passage
+// carried for a carrying LEAP — by identity, the permanent addresses of its
+// bytes, never its positions — and none for any other move, nor for a claim
+// departed, where the camera never stood. A one-step move across an entry's
+// step lights it at the end it lands on (N-GO's `back` and `forward`); a
+// cursor move writes none. The launch frame is the first entry (W-01);
+// after it an entry is pushed by a fresh TELEPORT — LEAP, follow, a click on
+// a place, Enter, HOME, WHOLE BOARD, an account's region — one push per act,
+// made as the act is made, never by panning or zooming, and never by a
+// reading scene's end, which leaves the camera where it found it (SC). Back,
+// Forward and a jump move the cursor and discard nothing, and a jump never
+// pushes. A fresh teleport made with the cursor behind the newest entry
+// writes its step on the cursor's entry in the place of the one it held and
+// drops the entries ahead of it before it pushes (a browser's history rule,
+// stated).
 // THE CLAIM: a teleport whose landing waits on a read pushes its entry as a
 // claim as it is made, numbered then and never handed back (issue #136's
 // design decision), so the trail holds every act's move in the order the
@@ -34,6 +40,27 @@
 // Rules: FP-1, FP-2, FP-7, FP-10.
 
 /** @typedef {{x: number, y: number, scale: number}} View */
+/** @typedef {import('../model/records.js').ISpan} ISpan */
+
+/**
+ * @typedef {Object} FollowStep — a follow, as the entry it left records it
+ * @property {'follow'} kind
+ * @property {string} link the link followed: lit by Back where the follow was made, and by Forward with the span it landed on
+ * @property {string} near the document holding the link's end the follow was made at
+ * @property {string} key that end's key (LK's `endKey`): Back returns the focus to its item there
+ * @property {string} far the document followed into
+ * @property {ISpan[] | null} spans the far end by identity — its slot's stored spans — which Forward outlines wherever the far document's text holds them; null where the end names the far document whole, Forward marking the block at its head
+ */
+
+/**
+ * @typedef {Object} CarryStep — a LEAP carrying a passage, as the entry it left records it
+ * @property {'carry'} kind
+ * @property {string} from the document the passage was carried from: Back outlines it there
+ * @property {string} to the document the LEAP was made to: Forward outlines it there
+ * @property {ISpan[]} spans the passage by identity (M-REC's `identityOf`), never empty: a passage the page cannot name so is carried by a LEAP that records no step
+ */
+
+/** @typedef {FollowStep | CarryStep} Step the step that left an entry for the one after it (issue #152's design decision): a follow, or a LEAP carrying a passage — any other move leaves none */
 
 /**
  * @typedef {Object} Site — where a notice stands, as data: O-HOST's anchor without an element, so an entry is read by value
@@ -57,7 +84,7 @@
  * @property {number | null} pos the position landed on, where one was
  * @property {number | null} width the positions of the run landed on from `pos`, where the landing named a span: the first run in the text of a follow's projected far end, or a carried passage's counterpart — one of the runs its landing outlined
  * @property {View} view the view at the entry — the landing's, re-taken at departure; the view the jump left from, where its read brought no place
- * @property {string | null} link the link followed to reach it, where one was — the one Back from it lights at the entry before it, and the one a return to it lights where it holds a notice
+ * @property {Step | null} step the step that left it for the entry after it, written as a push departed it; none while nothing has, and none where the push took no step this module records
  * @property {string | null} label the place's label at the push
  * @property {Notice | null} notice the face the entry shows: its jump's reading face while the read is out, then the face the read brought; null where it shows none
  */
@@ -81,17 +108,22 @@ function retake(/** @type {View | null} */ departedView) {
 }
 
 /**
- * Push a fresh teleport's entry: the departed entry's view re-taken first,
- * the entries ahead of the cursor dropped.
- * @param {Entry} e
+ * Push a fresh teleport's entry: the departed entry's view re-taken first
+ * and the step leaving it written on it, in the place of any it held — none
+ * where it stands as a claim, the camera never having landed there — and the
+ * entries ahead of the cursor dropped.
+ * @param {Omit<Entry, 'step'>} e
  * @param {View | null} departedView the view the camera was bound for as the teleport left
  * @param {boolean} [claim] the landing waits on a read: the entry stands as a claim until `settle` answers it
+ * @param {Step | null} [step] the step the teleport takes from the departed entry: a follow's, a carrying LEAP's; none for any other move
  * @returns {Entry} the entry as the trail holds it
  */
-export function push(e, departedView, claim = false) {
+export function push(e, departedView, claim = false, step = null) {
   retake(departedView);
+  if (cursor >= 0) entries[cursor].step = claims.has(entries[cursor]) ? null : step;
   entries = entries.slice(0, cursor + 1);
-  const held = { ...e, view: { ...e.view } };
+  /** @type {Entry} */
+  const held = { ...e, view: { ...e.view }, step: null };
   entries.push(held);
   cursor = entries.length - 1;
   if (claim) {

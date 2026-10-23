@@ -38,6 +38,10 @@
 // any other — a passage it transcludes, a version member's bytes, shared with
 // its trunk or minted under its own chain — once its held text places them,
 // as `find_links_v` answers every link on every byte of a document's image.
+// A PASSAGE CARRIED IS NAMED THE SAME WAY (issue #152's design decision): by
+// the permanent addresses of its bytes, read through the held image as the
+// act is made (`identityOf`), never by its positions, and read back to a
+// text by the same rule as a slot's (`placedIdentity`).
 // Where a link's far end stands in its far document's current text is
 // `project`'s answer (`takeProjection`, A-53) — or, where the board refused
 // it, what the refusal says of that document: withheld, not registered, or
@@ -114,6 +118,13 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /** @typedef {{pos: number, width: number}} Stretch a stretch of a document's text a stored span stands in: its first position and its positions */
+
+/**
+ * @typedef {Object} ISpan — bytes by identity: `width` consecutive permanent addresses from `ordinal` in the I-space `prefix` names — what a link's slot stores for a passage, and what a passage carried is recorded as (`identityOf`) — never a position, so where they stand is read again through a document's held image (`placedIdentity`)
+ * @property {string} prefix the I-space they lie in: a permanent address without its last field
+ * @property {number} ordinal the last field of their first permanent address
+ * @property {number} width
+ */
 
 /**
  * @typedef {'withheld' | 'unregistered' | 'refused'} Declined — a `project` the board refused, by what its refusal says of the
@@ -582,35 +593,89 @@ export function takeImage(addr, fromPos, runs) {
 }
 
 /**
- * Where a link's stored span stands in a document's held text now: the
- * positions of the held V→I image whose permanent addresses the span names
- * (the span's I-space, from its ordinal for its positions), in the text's
- * order, stretches adjoining in the text joined — a passage an edit moved
- * where the image puts it, one cut in two as two stretches, one transcluded
- * twice at both places. None where the image held places none of it: no
- * image read, the span outside the window it was read for, or the text no
- * longer holding it. A span naming a document or an account whole stands at
- * no position.
+ * Where bytes named by identity stand in a document's held text now: the
+ * positions of the held V→I image whose permanent addresses they name, in
+ * the text's order, stretches meeting in the text joined — a passage an edit
+ * moved where the image puts it, one cut in two as two stretches, one
+ * transcluded twice at both places. None where the image held places none of
+ * them: no image read, the bytes outside the window it was read for, or the
+ * text no longer holding them.
  * @param {string} addr
- * @param {EndRef} e
+ * @param {ISpan[]} spans
  * @returns {Stretch[]}
  */
-export function placed(addr, e) {
+export function placedIdentity(addr, spans) {
   const d = state.docs.get(addr);
-  if (!d || e.whole || e.ordinal == null) return [];
-  const { prefix, ordinal } = iPlace(e.start), end = ordinal + (e.positions || 1);
+  if (!d) return [];
   /** @type {Stretch[]} */
   const out = [];
-  for (const r of d.image) {
-    if (r.prefix !== prefix) continue;
-    const lo = Math.max(ordinal, r.ordinal), hi = Math.min(end, r.ordinal + r.width);
+  for (const s of spans) for (const r of d.image) {
+    if (r.prefix !== s.prefix) continue;
+    const lo = Math.max(s.ordinal, r.ordinal), hi = Math.min(s.ordinal + s.width, r.ordinal + r.width);
     if (lo < hi) out.push({ pos: r.pos + (lo - r.ordinal), width: hi - lo });
   }
   out.sort((a, b) => a.pos - b.pos);
   /** @type {Stretch[]} */
   const joined = [];
-  for (const s of out) { const last = joined[joined.length - 1]; if (last && last.pos + last.width === s.pos) last.width += s.width; else joined.push(s); }
+  for (const s of out) {
+    const last = joined[joined.length - 1];
+    if (last && s.pos <= last.pos + last.width) last.width = Math.max(last.width, s.pos + s.width - last.pos); else joined.push(s);
+  }
   return joined;
+}
+
+/**
+ * A link's stored span by identity: the permanent addresses its slot names
+ * (the span's I-space, from its ordinal for its positions); null for a span
+ * naming a document or an account whole, which names no bytes.
+ * @param {EndRef} e
+ * @returns {ISpan | null}
+ */
+export function identityOfEnd(e) {
+  return e.whole || e.ordinal == null ? null : { ...iPlace(e.start), width: e.positions || 1 };
+}
+
+/**
+ * Where a link's stored span stands in a document's held text now: its bytes
+ * (`identityOfEnd`) placed through the held image (`placedIdentity`). A span
+ * naming a document or an account whole stands at no position.
+ * @param {string} addr
+ * @param {EndRef} e
+ * @returns {Stretch[]}
+ */
+export function placed(addr, e) {
+  const i = identityOfEnd(e);
+  return i ? placedIdentity(addr, [i]) : [];
+}
+
+/**
+ * A stretch of a document's held text by identity (issue #152's design
+ * decision: a passage carried is recorded so, never by its positions): the
+ * permanent addresses of its bytes, read through the held V→I image — each
+ * image run it crosses cut to it, in the text's order — so wherever an edit
+ * moves it, `placedIdentity` finds it again. None unless the held image
+ * covers every position of it: a part named would be lit later as though it
+ * were the whole.
+ * @param {string} addr
+ * @param {number} pos
+ * @param {number} width
+ * @returns {ISpan[]}
+ */
+export function identityOf(addr, pos, width) {
+  const d = state.docs.get(addr);
+  if (!d || width < 1) return [];
+  const end = pos + width;
+  /** @type {ISpan[]} */
+  const out = [];
+  let at = pos;
+  for (const r of d.image) {
+    if (r.pos + r.width <= at) continue;
+    if (r.pos > at || at >= end) break;
+    const hi = Math.min(end, r.pos + r.width);
+    out.push({ prefix: r.prefix, ordinal: r.ordinal + (at - r.pos), width: hi - at });
+    at = hi;
+  }
+  return at >= end ? out : [];
 }
 
 /**

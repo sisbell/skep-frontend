@@ -161,9 +161,13 @@ edition's first blocks risen past the one line, which holds the first span
 in view — each pressed as a person presses it — light the arrival in the
 text landed in, no link named, on a span holding the carried stretch's own
 words, outlined inside the landing's article, its first line in the visible
-view; the first edition's own paragraph carried into the draft it windows
-lands at the draft's first block, unmarked, faced in the dead end's words
-with no act. THE CHROME: the
+view; Back from the hairline's landing lights the run where the carry was
+made, in the first edition, and Forward lights it in the draft again, each
+by the same marks, no link named (issue #152's design decision: every
+one-step move lights the step it crosses at the end it lands on); the first
+edition's own paragraph carried into the draft it windows lands at the
+draft's first block, unmarked, faced in the dead end's words with no act.
+THE CHROME: the
 LEAP box's rows share their columns, a place's longest label among them, no
 cell's text running past its column and the title's keeping a quarter of the
 row; the versions list sets each member on one line; the chrome over the
@@ -1039,10 +1043,12 @@ def lit_at(addr):
 
 def arrival_holds(ctx, r, name, carried):
     """the arrival a carried passage's landing lit (foundations §2.3's carry rule: "what of it the landing's text holds
-    marked there"): no link named, the run it stands at holding the text of the stretch of the passage it re-projects —
-    `carried`, the document and the positions [lo, hi) of that stretch, from the fixtures; outlined, every rect it
-    outlines inside the landing's article, the first line of the run it stands at — its line rect read from the
-    article's own text — among them and inside the visible view below the one line; its figures"""
+    marked there"), or the light Back or Forward across the carry lit at the end it landed on (issue #152): no link
+    named, the run it stands at holding the text of the stretch of the passage it re-projects —
+    `carried`, the document and the positions [lo, hi) of that stretch, from the fixtures; outlined on its lines that
+    stand, every rect it outlines inside the landing's article, the first line of the run it stands at — its line rect
+    read from the article's own text, or, where the run's last line stands in no part, the line its first character
+    opens, which the outline begins at — among them and inside the visible view below the one line; its figures"""
     a = ctx.js('window.__skep.arrivalAnchors()')
     doc, lo, hi = carried
     want = ctx.js('window.__skep.model.text(%s, %d, %d)' % (json.dumps(doc), lo, hi))
@@ -1054,10 +1060,13 @@ def arrival_holds(ctx, r, name, carried):
     vp = ctx.js('window.__skep.view.viewport()')
     view = {'x': 0, 'y': top, 'w': vp['VW'], 'h': vp['VH'] - top}
     outline, art = (a or {}).get('outline') or [], (a or {}).get('article')
-    first = next((q for q in ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(a['addr']), at['pos'], at['width'])) or [] if q['w'] > 0 and q['h'] > 0), None) if at else None
-    r.check(bool(outline) and art is not None and all(inside(o, art) for o in outline) and first is not None and any(rect_like(first, o) for o in outline) and inside(first, view),
-            f'{name}: the arrival is outlined on its span\'s lines, every one inside the landing\'s article, the first line of the run it stands at among them and inside the visible view',
-            {'lines': len(outline), 'first': first, 'article': art, 'view': view})
+    rects = lambda pos, width: [q for q in ctx.js('window.__skep.spanRects(%s, %d, %d)' % (json.dumps(a['addr']), pos, width)) or [] if q['w'] > 0 and q['h'] > 0]
+    whole = rects(at['pos'], at['width']) if at else []
+    first = whole[0] if whole else (next(iter(rects(at['pos'], 1)), None) if at else None)
+    opens = (lambda o: rect_like(first, o)) if whole else (lambda o: all(abs(first[k] - o[k]) <= ANCHOR_TOL_PX for k in ('x', 'y', 'h')))
+    r.check(bool(outline) and art is not None and all(inside(o, art) for o in outline) and first is not None and any(opens(o) for o in outline) and inside(first, view),
+            f'{name}: the arrival is outlined on its span\'s lines that stand, every one inside the landing\'s article, the first line of the run it stands at among them and inside the visible view',
+            {'lines': len(outline), 'first': first, 'whole': bool(whole), 'article': art, 'view': view})
     return {'arrival': a and {k: a[k] for k in ('addr', 'pos', 'runs')}, 'lines': len(outline)}
 
 
@@ -1072,9 +1081,10 @@ def first_in_view(ctx, addr):
 def carried_holds(ctx, r):
     """THE CARRY's checks (foundations §2.3: every move from a passage to another arrangement of the same material
     carries it, re-projected at the landing and marked there; P43): the source act on the window paragraph's "who wrote
-    this?" card, a click on the window run's hairline, the latest member's read act in the versions list holding a
-    paragraph, and in the list the corner's act opens with nothing selected, which holds the first span in view; the
-    carry into a text that holds none of the passage faced at the landing; its figures"""
+    this?" card, a click on the window run's hairline — Back from its landing lighting the run where the carry was made
+    and Forward lighting it at the landing again (issue #152) — the latest member's read act in the versions list
+    holding a paragraph, and in the list the corner's act opens with nothing selected, which holds the first span in
+    view; the carry into a text that holds none of the passage faced at the landing; its figures"""
     seen = {}
     ctx.esc()
     ctx.leap(DOC, WINDOW[0])
@@ -1095,6 +1105,14 @@ def carried_holds(ctx, r):
     r.check(bool(at) and at['hits'], 'the window run\'s hairline is what lies under the pointer', at)
     wait_for(ctx, lit_at(WINDOW[2]))
     seen['hairline'] = arrival_holds(ctx, r, 'a click on the window run\'s hairline', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
+    # Back from the hairline's landing lights the run where the carry was made, in the first edition, and Forward lights it
+    # in the draft again — each placed where its text holds the run's bytes now (issue #152)
+    ctx.js('window.__skep.go.back()')
+    wait_for(ctx, lit_at(DOC))
+    seen['hairline_back'] = arrival_holds(ctx, r, 'Back from the hairline\'s landing (issue #152)', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
+    ctx.js('window.__skep.go.forward()')
+    wait_for(ctx, lit_at(WINDOW[2]))
+    seen['hairline_forward'] = arrival_holds(ctx, r, 'Forward to the hairline\'s landing again (issue #152)', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
     # the versions list holding a paragraph: the latest member's read act marks it in the member
     ctx.leap(VERSIONED, None)
     doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(VERSIONED))

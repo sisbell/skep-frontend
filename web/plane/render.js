@@ -81,7 +81,9 @@
 // than the view ringed at the view's border, one out of it marked on the
 // facing edge (issue #141's design decision; P-REG's RING); the arrival
 // mark, every run of the span a follow, or a LEAP carrying a passage, landed
-// on outlined line by line over the mounted article. BARS MEAN ONLY "TOO SMALL TO READ" (issue #122's design decision):
+// on — or of the passage a one-step move along the trail lights, where its
+// text holds it now (N-GO's `arrivalMark`; issue #152's design decision) —
+// outlined line by line over the mounted article. BARS MEAN ONLY "TOO SMALL TO READ" (issue #122's design decision):
 // no document at reading size is ever drawn as bars — the canvas draws them
 // below P-LOD's readable threshold, and at or above it every document is real
 // text, T-LAYER standing every line of it in view in the frame its em gets
@@ -865,16 +867,21 @@ function drawFocus(seen) {
 /**
  * The arrival mark (foundations §2.1: "an outline around its span"; §3.2):
  * the span the landing named outlined line by line, each line-rect of its own
- * bytes in the mounted article, in every run the landing's text holds it in
+ * bytes in the mounted article that stands — a run whose first or last line
+ * stands in no part, out of view, outlined on the lines that stand
+ * (T-LAYER's `standingRects`) — in every run the landing's text holds it in
  * and nothing between them; where the link names the document whole, the
- * block holding the landing's position. The arrival's other mark, the link
- * followed drawn heavier, is BM's, by the weight LK's `markOf` gives it.
+ * block holding the landing's position. A one-step move's light is drawn
+ * with the same marks (issue #152's design decision), its runs read anew
+ * each frame from where its text holds the passage now (N-GO's
+ * `arrivalMark`). The arrival's other mark, the link followed drawn heavier,
+ * is BM's, by the weight LK's `markOf` gives it.
  */
 function drawArrival() {
   if (!ctx) return;
   const a = GO.arrivalMark(); if (!a) return;
   const b = a.runs ? null : REC.blockAt(a.addr, a.pos);
-  const rs = a.runs ? a.runs.flatMap((r) => LAYER.spanRects(a.addr, r.pos, r.width) || []) : b ? LAYER.spanRects(a.addr, b.pos) : null;
+  const rs = a.runs ? a.runs.flatMap((r) => LAYER.standingRects(a.addr, r.pos, r.width) || []) : b ? LAYER.spanRects(a.addr, b.pos) : null;
   const lines = (rs || []).filter((r) => r.w > 0 && r.h > 0);
   ctx.strokeStyle = HUE.you; ctx.lineWidth = 2; ctx.setLineDash([]);
   for (const r of lines) ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);

@@ -8,9 +8,10 @@
 // tail stands for it (issue #132's design decision) — each beam with the
 // mark LK gives it — the link's `markOf` at the document met, or, for a link
 // met from both its ends, the one `mergedMark` makes of the two — its hue,
-// its value, and its weight, a link lit at an arrival stroked heavier
-// (foundations §2.1's register: "the followed link drawn heavier"), dashed
-// for another's. Both its ends stand where the link's bytes stand NOW, never
+// its value, and its weight, a link lit at an arrival, or by a one-step move
+// along the trail that crossed its follow (issue #152's design decision),
+// stroked heavier (foundations §2.1's register: "the followed link drawn
+// heavier"), dashed for another's. Both its ends stand where the link's bytes stand NOW, never
 // where its slot stores them (the slot names the bytes' permanent I-spans):
 // each beam leaves the text at its span's own line, from the place's edge
 // (foundations §2.1; S1 Q1): it starts at the right edge of the block

@@ -297,7 +297,7 @@ test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in
     click({ target: ptr, clientX: 0, clientY: 0, stopPropagation() {} });
     await settled(() => WALK.current()?.addr === H);
     const e = TRAIL.current();
-    assert.deepEqual(e && [e.addr, e.pos, e.width, e.link], [H, null, null, null], 'a trail entry at the edition, landed in whole');
+    assert.deepEqual([e && [e.addr, e.pos, e.width], TRAIL.all()[TRAIL.cursorIndex() - 1]?.step], [[H, null, null], null], 'a trail entry at the edition, landed in whole, the run\'s entry recording no step: no link followed, no passage carried');
     assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr], ['document', H], 'the walk on the edition');
     assert.deepEqual([HOST.currentState(), GO.arrivalMark(), GO.litLinks()], [null, null, []], 'no face, nothing marked and no link lit: the claim is a record no link draws');
     assert.ok(!fake.asked.slice(from).some((k) => k.includes('"compare"')), 'no passage carried: no compare asked of the edition');

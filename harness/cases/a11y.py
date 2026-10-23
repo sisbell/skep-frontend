@@ -36,7 +36,12 @@ corner's, pane, pane, the scene's acts (K-61), with nothing the scene covers
 in the ring, nothing inside a pane a control or a stop in the AX tree (SC:
 the panes are read, never pressed), and Shift+Tab walking it back to the
 line, Esc ending it with the focus on the item it was opened from (K-63) and
-Mod+[ from a pane with the focus on the landing's item (rule 8); the links
+Mod+[ from a pane with the focus on the landing's item (rule 8); Back's light
+exposed (issue #152's design decision) — Mod+[ from a carried passage's
+landing returns the focus to the span holding the passage's start where the
+carry was made, every span item holding a stretch of it marked
+`aria-current="location"` and no other item, none once the next act puts the
+light out; the links
 card's overlay toggle a switch in the AX tree (R60; WAI-ARIA's switch) —
 named by B1-S4's words before its state and described by the count after
 it, a press changing its checked state and neither its name nor its
@@ -752,6 +757,36 @@ def run(ctx):
     f = at()
     r.check(box_open and not ctx.js('window.__skep.leap.isOpen()'), 'rule 18 / D2: Tab out of the open LEAP box closes it (#116)', {'box_open': box_open, 'still_open': ctx.js('window.__skep.leap.isOpen()'), 'landed': f})
     r.figures['leap_z'] = z
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    # ---- Back's light exposed (issue #152's design decision: "While lit, it is exposed to assistive technology"): the
+    # window run carried to its source, then Mod+[ — the focus returned to the span holding the run's start, every span
+    # item holding a stretch of the run marked aria-current="location" and no other item, none once the next act puts
+    # the light out
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.go.leapTo(%s, null, %s)' % (json.dumps(WINDOW[2]), json.dumps({'carry': {'addr': DOC, 'pos': WINDOW[0], 'width': WINDOW[1]}})))
+    ctx.settle()
+    ctx.frames(2)
+    ctx.drv.key('[', code='BracketLeft', mods=('Meta',))
+    ctx.settle()
+    ctx.frames(2)
+
+    def located():
+        """the mirror's items as the platform holds them: the focused one, the ones marked aria-current="location", and
+        the ones standing on a stretch of the run carried — each span of the first edition holding one — by kind and place"""
+        return ctx.js('''((addr, lo, hi) => { const e = document.activeElement, sib = window.__skep.mirror.siblings(), blocks = window.__skep.model.doc(addr).blocks;
+          const holds = (n) => n.kind === 'block' && n.addr === addr && blocks.some((b) => b.pos === n.pos && b.pos < hi && lo < b.pos + b.width);
+          const items = [...document.querySelectorAll('#mirror li[role="treeitem"]')].map((li) => ({...sib[Number(li.dataset.i)], current: li.getAttribute('aria-current'), focused: li === e}));
+          return {focused: items.find((i) => i.focused) || null, marked: items.filter((i) => i.current === 'location').map((i) => [i.kind, i.pos]),
+            owed: items.filter(holds).map((i) => [i.kind, i.pos])}; })(%s, %d, %d)''' % (json.dumps(DOC), WINDOW[0], WINDOW[0] + WINDOW[1]))
+    lit = located()
+    start = next((b['pos'] for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if b['pos'] <= WINDOW[0] < b['pos'] + b['width']), None)
+    f = lit['focused']
+    r.check(bool(f) and (f['kind'], f['addr'], f['pos']) == ('block', DOC, start) and f['current'] == 'location' and bool(lit['marked']) and lit['marked'] == lit['owed'],
+            'Mod+[ from the carry\'s landing returns the focus to the span holding the run\'s start, and every span item holding a stretch of the run, and no other item, is marked aria-current="location" (issue #152)', dict(lit, start=start))
+    ctx.leap(DOC, WINDOW[0])
+    out = located()
+    r.check(not out['marked'], 'the next act puts Back\'s light out: no item marked aria-current="location"', out)
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
     # leave the page as the case found it: the landing, the focus on no element

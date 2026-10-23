@@ -34,7 +34,11 @@
 // stands by line — at a fresh mount exactly the lines meeting the view,
 // padded, and a pan standing the lines entering in parts of their own, taking
 // down the parts that left and setting no standing part again (a whole
-// article, or a part set again to take a line, turns red); every line of the
+// article, or a part set again to take a line, turns red); the stretch of a
+// span the parts standing hold, which the arrival mark outlines — from the
+// first position of it a part standing holds to the last, a withheld run's
+// part holding the run whole (issue #152: one that answers the span whole, or
+// nothing, wherever a line of it stands in no part, turns red); every line of the
 // page's selection that stood stands through a pan and a zoom to em 5, no part
 // standing then that holds none of them, and goes with it, and its first and
 // last lines stand wherever the view is (one that holds no line, standing the
@@ -403,6 +407,22 @@ test('the limit\'s order: those holding the selection or the focus and the place
     { k: 4, em: 7.6, first: false, chars: 12 }, { k: 5, em: 6.6, first: false, chars: 3 }, { k: 6, em: 7.1, first: true, chars: 50000 },
   ];
   assert.deepEqual(LAYER.limitOrder(cands).map((c) => c.k), [6, 3, 2, 4, 1, 5]);
+});
+
+test('the stretch of a span the parts standing hold runs from the first position of it a part standing holds to the last: a span whose last lines stand in no part keeps the lines that stand, a withheld run\'s part holds the run whole, and a span no part standing holds has none (issue #152)', () => {
+  // a paragraph of 28 characters and its separator, set in two parts, its first 12 characters in the first; a withheld run of 6
+  // positions; a paragraph of 10
+  const blocks = /** @type {import('../model/records.js').Block[]} */ ([
+    { pos: 1, width: 30, kind: 'para', text: 'a'.repeat(28), origin: null },
+    { pos: 31, width: 6, kind: 'withheld', text: '', origin: '1.0.2.0.2' },
+    { pos: 37, width: 10, kind: 'para', text: 'b'.repeat(10), origin: null },
+  ]);
+  const head = { pos: 1, char: 0, length: 12 }, rest = { pos: 1, char: 12, length: 16 }, run = { pos: 31, char: 0, length: 0 }, last = { pos: 37, char: 0, length: 10 };
+  const span = (/** @type {number} */ pos, /** @type {number} */ width) => ({ addr: D, pos, width });
+  assert.deepEqual(LAYER.standingStretch(blocks, [head, rest, run, last], span(5, 40)), span(5, 40), 'every part standing: the span itself');
+  assert.deepEqual(LAYER.standingStretch(blocks, [head], span(5, 40)), span(5, 8), 'its lines past the first part standing in none: the first part\'s stretch of it');
+  assert.deepEqual(LAYER.standingStretch(blocks, [rest, run], span(5, 40)), span(13, 24), 'its first part and its last standing in none: from the second part\'s first character through the withheld run whole');
+  assert.equal(LAYER.standingStretch(blocks, [last], span(5, 20)), null, 'no part standing holds any of it: none');
 });
 
 test('a document stands by line: at a fresh mount the lines meeting the view, padded, stand, and no other; a pan stands the lines entering in parts of their own and takes down the parts none of whose lines is in view, setting no standing part again', () => onLayer(() => {

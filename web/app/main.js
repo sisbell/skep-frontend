@@ -24,14 +24,16 @@
 // frame HOME — the acting account's region at mid scale, a guest's the
 // board's extent — the trail's first entry (foundations §2.2; W-01; N-GO's
 // `launch`). What a module reads of an owner that imports it is handed in
-// once as the page boots (FP-10, FP-11): T-LAYER's readers, and LK's — N-GO's
-// links lit at an arrival, P-RENDER's test of where the plane draws a
-// document (`drawsDoc`, which tails a link whose far document is drawn
-// nowhere — issue #132) and T-LAYER's owner rule.
+// once as the page boots (FP-10, FP-11): T-LAYER's readers, LK's — N-GO's
+// links lit at an arrival or by a one-step move along the trail, P-RENDER's
+// test of where the plane draws a document (`drawsDoc`, which tails a link
+// whose far document is drawn nowhere — issue #132) and T-LAYER's owner rule
+// — and N-WALK's: where Back's light stands (N-GO's `backLight`; issue #152).
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
 // frame, the mirror's documents marked expanded or collapsed in place by the
-// view (N-WALK's `markExpanded`; issue #140), then P-RENDER, then BM, then
+// view (N-WALK's `markExpanded`; issue #140) and its items where Back's light
+// stands (`markLocated`; issue #152), then P-RENDER, then BM, then
 // O-HOST's place, the line, then the
 // press APP-INPUT holds at reading scale, acted on the text the frame set
 // (`afterFrame`) — and the frame buffer the gate reads. T-LAYER decides
@@ -130,6 +132,7 @@ function loop(/** @type {number} */ now) {
     const t0 = performance.now();
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
     WALK.markExpanded();
+    WALK.markLocated();
     const lod = RENDER.draw();
     BM.draw();
     HOST.place();
@@ -176,6 +179,7 @@ async function boot() {
   LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); } });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; } });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner });
+  WALK.readers({ located: () => GO.backLight() });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', resize); resize();
   document.addEventListener('copy', (e) => { const b = REC.board(); LAYER.onCopy(e, b ? b.origin : ''); });

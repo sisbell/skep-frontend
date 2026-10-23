@@ -30,7 +30,14 @@
 // held in the text's order until the document projected into is dropped, and
 // every document holding the link made again as they arrive and go (a mutant
 // that bumps no revision leaves an article titled from a projection no longer
-// held). The key store read for this board: a key present only where a
+// held). A stretch of a held text named by identity (issue #152's design
+// decision): the permanent addresses of its bytes, a transcluded run's its
+// source's, none unless the held image covers all of it (a mutant that names
+// it by its positions, or names the part the image covers, turns red); placed
+// back where those bytes stand now, in its own text after an edit moved them
+// and in another's, whatever part of them the text still holds, stretches
+// adjoining joined (a mutant that keeps the positions it was read at turns
+// red). The key store read for this board: a key present only where a
 // binding names its origin as the binding's whole first field — never
 // another origin whose text begins with this one's (a mutant that finds the
 // origin anywhere in the binding turns red), never a key bound nowhere — and
@@ -226,6 +233,22 @@ test('a stored span over image runs that adjoin in the text stands as one stretc
   REC.takeImage(D, 101, [{ iStart: OWN + '.101', width: 10 }, { iStart: OWN + '.111', width: 10 }]);
   assert.deepEqual(REC.placed(D, stored(OWN, 108, 6)), [{ pos: 108, width: 6 }], 'across the two runs: one stretch');
   assert.deepEqual(REC.placed(D, stored(OWN, 50, 4)), [], 'outside the window read: not placed, whatever the text holds there');
+});
+
+test('a stretch of a held text is named by identity — the permanent addresses of its bytes, each image run it crosses cut to it — and none unless the held image covers all of it; placed back where those bytes stand now, in any text, whatever part of them it still holds (issue #152)', () => {
+  const D = '1.0.1.0.3', OWN = D + '.0.1', S = '1.0.2.0.9';
+  // D's own first ten bytes, six of S's from its 3rd, then D's own 11th to 20th: the image read for positions 1 to 26
+  REC.takeImage(D, 1, [{ iStart: OWN + '.1', width: 10 }, { iStart: S + '.0.1.3', width: 6 }, { iStart: OWN + '.11', width: 10 }]);
+  const passage = REC.identityOf(D, 8, 12);
+  assert.deepEqual(passage, [{ prefix: OWN, ordinal: 8, width: 3 }, { prefix: S + '.0.1', ordinal: 3, width: 6 }, { prefix: OWN, ordinal: 11, width: 3 }], 'D\'s own 8th to 10th, S\'s 3rd to 8th, D\'s own 11th to 13th — never the positions 8 to 19');
+  assert.deepEqual(REC.placedIdentity(D, passage), [{ pos: 8, width: 12 }], 'placed back where it was read: one stretch');
+  assert.deepEqual([REC.identityOf(D, 20, 10), REC.identityOf('1.0.1.0.4', 1, 3)], [[], []], 'past the window the image was read for, or no image held: no identity, never a part of one');
+  // D as a later edit leaves it: four bytes minted under its second member's chain first, S's six bytes gone
+  REC.takeImage(D, 1, [{ iStart: D + '.2.0.1.1', width: 4 }, { iStart: OWN + '.1', width: 10 }, { iStart: OWN + '.11', width: 10 }]);
+  assert.deepEqual(REC.placedIdentity(D, passage), [{ pos: 12, width: 6 }], 'moved four on, S\'s bytes no longer held: the part the text still holds, its own two stretches now adjoining as one');
+  REC.takeImage(S, 1, [{ iStart: S + '.0.1.1', width: 20 }]);
+  assert.deepEqual(REC.placedIdentity(S, passage), [{ pos: 3, width: 6 }], 'in S, its own bytes where S holds them');
+  assert.deepEqual([REC.identityOfEnd(stored(OWN, 5, 3)), REC.identityOfEnd(resolveSpan({ start: D, width: '0.0.0.0.1' }))], [{ prefix: OWN, ordinal: 5, width: 3 }, null], 'a link\'s stored span is its bytes\' identity; a span naming a document whole names none');
 });
 
 test('where a link\'s slot projects is held in the text\'s order until the document projected into is dropped — its record held or not, by a feed row or the death — and every document holding the link is made again as it arrives and as it goes', () => {

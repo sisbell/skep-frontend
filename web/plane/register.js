@@ -53,10 +53,10 @@ export const VISITED_ALPHA = 0.45;
 
 /**
  * the arrival's weight: a link lit at an arrival — the one a landing
- * followed, the one Back came back along, the one the notice at the entry
- * landed on came from (N-GO's `litLinks`) — stroked at this many times the
- * drawer's own width (foundations §2.1's register: "the arrival an outline
- * around its span with the followed link drawn heavier")
+ * followed, or the one a one-step move along the trail crossed the follow
+ * of (N-GO's `litLinks`) — stroked at this many times the drawer's own width
+ * (foundations §2.1's register: "the arrival an outline around its span with
+ * the followed link drawn heavier")
  */
 export const ARRIVAL_WEIGHT = 2;
 

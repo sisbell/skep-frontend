@@ -79,8 +79,15 @@
 // issue #132), and a link whose far end floats
 // says "its passage is not in ⟨D⟩'s current text" as its symbol's title and
 // its stub do (LK's `floats`; foundations §2.3), so at each a screen reader
-// hears what the plane shows (R94). The mirror is rebuilt whole on every
-// move, and its Tab
+// hears what the plane shows (R94). BACK'S LIGHT IS EXPOSED (issue #152's
+// design decision: "While lit, it is exposed to assistive technology"): the
+// items it stands on — each span holding a stretch of the passage carried,
+// or the link's end the follow was made at — carry `aria-current="location"`
+// while it stands, written at the rebuild and marked again in place on each
+// dirty frame (`markLocated`), the light read through the reader the app
+// hands in (`readers`: N-GO's, which imports this module); Back's landing
+// names that end where the view shows it, and the walk stands on its item
+// (`focusTo`'s `end`). The mirror is rebuilt whole on every move, and its Tab
 // stop with it: the plane is ONE stop between the one line and the focused
 // document's corner (D5 §4 rule 5) — the current item, while the tree's
 // container stands out of the order; the container is the stop only where
@@ -104,6 +111,7 @@ import { placeholderOf } from '../text/article.js';
 import { docBox, accountCell, boardCell, accountAt, clearLeftOf } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
+import { touches } from '../text/span.js';
 import { esc } from '../util.js';
 import { t } from '../strings.js';
 
@@ -116,6 +124,20 @@ import { t } from '../strings.js';
  * @property {string} addr the board, the account, the document
  * @property {number | null} pos a block's first position
  * @property {Shown | null} link a drawn link
+ */
+
+/** @typedef {{link: string, key: string}} End a link's end among a document's elements: the link and its end's key (LK's `endKey`) */
+
+/**
+ * @typedef {Object} Located — where Back's light stands (issue #152's design decision; N-GO's `backLight`), which the mirror marks `aria-current="location"`
+ * @property {string} addr the document it stands in
+ * @property {Array<{pos: number, width: number}>} runs the stretches of its text the passage carried stands in; none for a link's end
+ * @property {End | null} end the link's end the follow was made at; null for a passage
+ */
+
+/**
+ * @typedef {Object} Readers — what the walk reads from an owner that imports it, handed in once by the app (FP-10, FP-11)
+ * @property {() => Located | null} located where Back's light stands (N-GO's `backLight`); null where none does
  */
 
 /** @type {Node | null} */
@@ -134,6 +156,11 @@ let moves = 0;
 let mirrorEl = null;
 /** @type {Array<(n: Node | null) => void>} */
 const watchers = [];
+/** @type {Readers} until the app hands its owner's in: no light stands */
+let read = { located: () => null };
+
+/** the owner that imports the walk hands its reader in once (the app) */
+export function readers(/** @type {Readers} */ r) { read = r; }
 
 /** the board's node */
 const BOARD = /** @type {Node} */ ({ kind: 'board', addr: '1', pos: null, link: null });
@@ -296,10 +323,12 @@ export function render() {
   const lo = Math.max(0, idx - W), hi = Math.min(total, idx + W);
   const lvl = total ? levelOf(siblings[0]) : 1;
   let html = `<ul role="group" aria-label="${esc(t('L.mirror-level', { n: lvl }))}">`;
+  const at = read.located();
   for (let i = lo; i < hi; i++) {
     const n = siblings[i];
     const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr)}"` : '';
-    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${esc(nameOf(n, i, total))}</li>`;
+    const located = isLocated(n, at) ? ' aria-current="location"' : '';
+    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${located} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${esc(nameOf(n, i, total))}</li>`;
   }
   html += '</ul>';
   mirrorEl.innerHTML = html;
@@ -320,6 +349,32 @@ export function markExpanded() {
   for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[aria-expanded]')])) {
     const v = String(!below(li.dataset.addr || ''));
     if (li.getAttribute('aria-expanded') !== v) li.setAttribute('aria-expanded', v);
+  }
+}
+
+/** does Back's light stand on a node (see the head): a span holding a stretch of the passage carried, or the link's end the follow was made at */
+function isLocated(/** @type {Node} */ n, /** @type {Located | null} */ at) {
+  if (!at || n.addr !== at.addr) return false;
+  if (n.kind === 'link') return !!at.end && !!n.link && n.link.link.addr === at.end.link && n.link.key === at.end.key;
+  const b = n.kind === 'block' && n.pos != null ? REC.blockByPos(n.addr, n.pos) : null;
+  return !!b && at.runs.some((r) => touches(b, r));
+}
+
+/**
+ * The mirror's items marked in place where Back's light stands (see the
+ * head): `aria-current="location"` on each item it stands on and on no other,
+ * nothing rebuilt, so the platform's focus stays on the item it stands on.
+ * The app's loop runs it on each dirty frame: the light goes out at the next
+ * act, and the passage it stands on moves as its text is set again, between
+ * the walk's moves.
+ */
+export function markLocated() {
+  if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
+  const at = read.located();
+  for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')])) {
+    const n = siblings[Number(li.dataset.i)], on = !!n && isLocated(n, at);
+    if (on && li.getAttribute('aria-current') !== 'location') li.setAttribute('aria-current', 'location');
+    else if (!on && li.getAttribute('aria-current') != null) li.removeAttribute('aria-current');
   }
 }
 
@@ -443,13 +498,18 @@ export async function enter() {
  * false) carries the focus to the new item only where the mirror held it,
  * the ring out, and leaves a focus standing elsewhere where it is. The
  * landing's levels are read first — a span's, its document's whole text — and
- * where a later move overtook it meanwhile it sets nothing.
+ * where a later move overtook it meanwhile it sets nothing. A landing may
+ * name a link's end in the document (`end`: Back's return to the follow it
+ * crossed — issue #152's design decision): the walk stands on that link's
+ * item where the document's elements list it, else on the span holding the
+ * position.
  * @param {string} addr a document, an account or a board
  * @param {number | null} pos
  * @param {boolean} [byKey] a key made the act
  * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood (an act); false carries it only where the mirror held it (a camera's re-take)
+ * @param {End | null} [end] the link's end to stand on, at `pos`
  */
-export async function focusTo(addr, pos, byKey = false, take = true) {
+export async function focusTo(addr, pos, byKey = false, take = true, end = null) {
   const move = ++moves;
   const held = mirrorHolds();
   const doc = documentOf(addr), acct = accountOf(addr);
@@ -462,7 +522,8 @@ export async function focusTo(addr, pos, byKey = false, take = true) {
     if (move !== moves) return;
     if (pos != null && kids.length) {
       const b = REC.blockAt(doc, pos);
-      let i = b ? kids.findIndex((n) => n.kind === 'block' && n.pos === b.pos) : -1;
+      const named = end ? kids.findIndex((n) => n.kind === 'link' && !!n.link && n.link.link.addr === end.link && n.link.key === end.key) : -1;
+      let i = named >= 0 ? named : b ? kids.findIndex((n) => n.kind === 'block' && n.pos === b.pos) : -1;
       // a position no block holds stands on the first span; one in a block that is no element of the walk — white space — on the element before it
       if (i < 0) { i = 0; if (b) kids.forEach((n, k) => { if (n.kind === 'block' && n.pos != null && n.pos <= pos) i = k; }); }
       stack = [{ siblings: [BOARD], idx: 0 }, { siblings: A.sibs, idx: A.i }, { siblings: D.sibs, idx: D.i }];

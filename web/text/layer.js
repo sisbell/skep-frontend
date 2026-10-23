@@ -97,7 +97,9 @@
 // design decision): N-WALK's re-take takes the document whose region holds the
 // view's centre, and keeps the one it stands on while that region meets the
 // visible view (`inView`), the one line marking the view's window over it
-// (`windowIn`). The marks and
+// (`windowIn`); N-GO's Back returns the focus to where the step it crossed
+// began only where that line stands in the visible view of the view Back
+// lands at (`lineInView`; issue #152's design decision). The marks and
 // symbols are placed from LK's `shown` and
 // `symbols`, a stretch several links mark in the one mark LK's `mergedMark`
 // gives; a withheld run's owner and C-67's clause beneath it from what the
@@ -579,8 +581,13 @@ export function regionOf(addr) {
   return { x: s.x - w, y: s.y, w: s.w + w, h: s.h };
 }
 
-/** the visible view in world units: the viewport below the one line, unpadded */
-function seenWorld() { const s = visibleView(read.top()); return { x0: wx(s.x), y0: wy(s.y), x1: wx(s.x + s.w), y1: wy(s.y + s.h) }; }
+/** the visible view in world units: the viewport below the one line, unpadded — with the camera where it stands, or at a view it is bound for */
+function seenWorld(/** @type {{x: number, y: number, scale: number} | null} */ at = null) {
+  const s = visibleView(read.top());
+  if (!at) return { x0: wx(s.x), y0: wy(s.y), x1: wx(s.x + s.w), y1: wy(s.y + s.h) };
+  const { VW, VH } = viewport(), x = (/** @type {number} */ px) => (px - VW / 2) / at.scale + at.x, y = (/** @type {number} */ py) => (py - VH / 2) / at.scale + at.y;
+  return { x0: x(s.x), y0: y(s.y), x1: x(s.x + s.w), y1: y(s.y + s.h) };
+}
 
 /**
  * Does a document stand in the visible view (see the head): its region meeting
@@ -622,6 +629,22 @@ export function centreOf(addr, pos) {
   if (pos == null) { const c = f.columns[0]; return { x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }; }
   const p = placeIn(f, pos);
   return { x: box.x + p.x + p.w / 2, y: box.y + p.y + p.h / 2 };
+}
+
+/**
+ * Does the line holding a position stand in the visible view with the camera
+ * at a view — its centre (`centreOf`) inside the viewport below the one line
+ * there: N-GO's Back, which returns the focus to where the step it crossed
+ * began only where the view it lands at shows it (issue #152's design
+ * decision).
+ * @param {string} addr
+ * @param {number} pos
+ * @param {{x: number, y: number, scale: number}} view
+ * @returns {boolean}
+ */
+export function lineInView(addr, pos, view) {
+  const c = centreOf(addr, pos), v = seenWorld(view);
+  return c.x >= v.x0 && c.x <= v.x1 && c.y >= v.y0 && c.y <= v.y1;
 }
 
 /**
@@ -1686,6 +1709,47 @@ export function spanRects(addr, pos, width = null) {
   }
   const rs = [...rec.el.querySelectorAll(`.sp[data-pos="${pos}"]`)].flatMap((sp) => [...sp.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height })));
   return rs.length ? rs : null;
+}
+
+/**
+ * The client rects of the bytes of a span its mounted article's standing
+ * parts hold, line by line: `spanRects` over the stretch of it the parts
+ * standing hold (`standingStretch`), so a span whose first or last line
+ * stands in no part — out of view, a column away — is outlined on the lines
+ * that stand (P-RENDER's arrival mark, and the light a one-step move along
+ * the trail draws with its marks: issue #152's design decision); null where
+ * no part standing holds any of it.
+ * @param {string} addr
+ * @param {number} pos
+ * @param {number} width
+ * @returns {Array<{x: number, y: number, w: number, h: number}> | null}
+ */
+export function standingRects(addr, pos, width) {
+  const rec = mounted.get(addr), made = rec && madeOf(rec.el); if (!rec || !made) return null;
+  const parts = blockEls(rec.el).map((e) => ({ pos: Number(e.dataset.pos), char: charBase(e), length: ownLength(e) }));
+  const s = standingStretch(made.blocks, parts, { addr, pos, width });
+  return s ? spanRects(addr, s.pos, s.width) : null;
+}
+
+/**
+ * The stretch of a span an article's standing parts hold: from the first
+ * position of it a part standing holds to the last — a paragraph's part
+ * holding the positions of its own characters, any other block's part the
+ * whole block; null where no part standing holds any of it.
+ * @param {Block[]} blocks the blocks the article was made from
+ * @param {Array<{pos: number, char: number, length: number}>} parts the parts standing: each by its block's first position, the character it starts at and its own characters
+ * @param {Span} span
+ * @returns {Span | null}
+ */
+export function standingStretch(blocks, parts, span) {
+  const end = span.pos + span.width;
+  let lo = Infinity, hi = -Infinity;
+  for (const p of parts) {
+    const b = blocks.find((x) => x.pos === p.pos); if (!b) continue;
+    const from = b.kind === 'para' ? posOfChar(b, p.char) : b.pos, to = b.kind === 'para' ? posOfChar(b, p.char + p.length) : b.pos + b.width;
+    if (from < end && span.pos < to) { lo = Math.min(lo, Math.max(from, span.pos)); hi = Math.max(hi, Math.min(to, end)); }
+  }
+  return lo < hi ? { addr: span.addr, pos: lo, width: hi - lo } : null;
 }
 
 // ---- the platform's selection ↔ a span ------------------------------------------

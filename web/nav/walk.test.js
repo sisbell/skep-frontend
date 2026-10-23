@@ -62,7 +62,14 @@
 // the camera is bound for, and is marked again in place as the camera takes
 // it across its threshold — a mutant that writes no `aria-expanded`, marks
 // nothing in place, or reads the camera where a flight is bound elsewhere
-// turns red. THE RE-TAKE'S ORDER (issue #141's design decision): over the cell
+// turns red. BACK'S LIGHT IS EXPOSED (issue #152's design decision): the
+// items it stands on — each span holding a stretch of the passage carried, or
+// the link's end the follow was made at — carry `aria-current="location"`,
+// written at the rebuild and marked again in place until the light goes out,
+// no other item marked — a mutant that writes none, marks nothing in place,
+// or marks every link's item turns red; a landing naming a link's end stands
+// the walk on its item, and on the span holding the position where the
+// document lists no such end. THE RE-TAKE'S ORDER (issue #141's design decision): over the cell
 // of a document the index does not list, at the near band, the re-take stands
 // the walk on the account; over the board's label cell, at the near band and
 // at the whole board's scale — the walk's document in view there, never kept
@@ -533,6 +540,66 @@ test('the mirror\'s item at a link names its far end as its tail and its card do
   REC.takeProjection(L, 2, THEIRS, 'unregistered');
   assert.ok(item().includes(`${t('F.card.to')} ${THEIRS} · ${t('L.far.unregistered')}`), `another account's: ${item()}`);
   REC.invalidate(THEIRS); REC.invalidate(GHOST);
+});
+
+// placed last with the tests around it: it attaches a mirror of its own
+test('the items Back\'s light stands on carry aria-current="location" — each span holding a stretch of the passage carried, or the link\'s end the follow was made at — written at the rebuild and marked again in place, on those items alone, until the light goes out; a landing naming a link\'s end stands the walk on its item (issue #152)', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @typedef {{attrs: Record<string, string>, dataset: {i?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void, removeAttribute: (k: string) => void}} Item */
+  /** @type {Item[]} the items the last rebuild wrote, as elements, each marked in place */
+  let items = [];
+  let rebuilds = 0;
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      rebuilds++;
+      items = [...html.matchAll(/<li\b[^>]*>/g)].map((m) => {
+        /** @type {Record<string, string>} */
+        const attrs = Object.fromEntries([...m[0].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+        return { attrs, dataset: { i: attrs['data-i'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; }, removeAttribute: (k) => { delete attrs[k]; } };
+      });
+    },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
+  };
+  /** the elements the items marked stand for: each one's kind and place */
+  const marked = () => items.filter((i) => i.attrs['aria-current'] === 'location').map((i) => { const n = WALK.siblingsNow()[Number(i.attrs['data-i'])]; return [n.kind, n.pos]; });
+  // a citation of the person's from D's "first", its far end another document whole
+  const L = D + '.0.2.9', span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 15, 5)], to: [{ start: '1.0.1.0.127', width: '0.0.0.0.1', doc: '1.0.1.0.127', account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null }], type: '1.1.0.1.0.1.0.3.13' });
+  const key = /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === L)).key;
+  /** @type {import('./walk.js').Located | null} where Back's light stands, as N-GO answers it */
+  let at = { addr: D, runs: [{ pos: 13, width: 3 }], end: null };
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    WALK.readers({ located: () => at });
+    await WALK.focusTo(D, 13);
+    assert.deepEqual(marked(), [['block', 11]], 'the rebuild: the span holding the passage\'s stretch, alone');
+    const was = rebuilds;
+    at = null;
+    WALK.markLocated();
+    assert.deepEqual(marked(), [], 'the light out: taken off in place');
+    at = { addr: D, runs: [], end: { link: L, key } };
+    WALK.markLocated();
+    assert.deepEqual(marked(), [['link', 15]], 'the link\'s end the follow was made at: its item alone');
+    at = { addr: D, runs: [{ pos: 5, width: 24 }], end: null };
+    WALK.markLocated();
+    assert.deepEqual(marked(), [['block', 1], ['block', 11], ['block', 27]], 'a passage across three spans: each span holding a stretch of it, and no link');
+    at = { addr: E, runs: [{ pos: 1, width: 30 }], end: null };
+    WALK.markLocated();
+    assert.deepEqual(marked(), [], 'a light standing in another document marks no item here');
+    assert.equal(rebuilds, was, 'every mark made in place, nothing rebuilt');
+    at = null;
+    await WALK.focusTo(D, 15, false, true, { link: L, key });
+    assert.deepEqual(walkAt(), ['link', D, 15], 'a landing naming the link\'s end: the walk on its item');
+    await WALK.focusTo(D, 15, false, true, { link: L, key: key + '-another' });
+    assert.deepEqual(walkAt(), ['block', D, 11], 'an end its document\'s elements do not list: the span holding the position');
+  } finally {
+    globalThis.document = platform;
+    WALK.readers({ located: () => null });
+  }
 });
 
 // placed last: it lists a document no test above meets, and lists the index back as it found it

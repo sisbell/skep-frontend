@@ -86,11 +86,11 @@
 //     another size and runs no column past its room;
 //   - a link the person has FOLLOWED this session is drawn lighter (D-3:
 //     VALUE, the hue kept), the set client-side, never written;
-//   - a link LIT AT AN ARRIVAL — the one a landing followed, the one Back
-//     came back along, the one the notice at the entry landed on came from
-//     (N-GO's `litLinks`) — is drawn heavier until the next act (foundations
-//     §2.1's register: "the arrival an outline around its span with the
-//     followed link drawn heavier": WEIGHT);
+//   - a link LIT AT AN ARRIVAL — the one a landing followed, or the one a
+//     one-step move along the trail crossed the follow of (N-GO's
+//     `litLinks`; issue #152's design decision) — is drawn heavier until the
+//     next act (foundations §2.1's register: "the arrival an outline around
+//     its span with the followed link drawn heavier": WEIGHT);
 //   - a link at a mark JOINING TWO DOCUMENTS — a mid connection, a scene's
 //     line — is decided ONCE, from the link and the two documents, never at
 //     each end apart: its linker you, else the document's owner where its

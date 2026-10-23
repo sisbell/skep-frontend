@@ -12,7 +12,12 @@
 // and nothing its push dropped comes back — so one Back from it returns to
 // the entry the jump was made from and a second goes one further either way
 // (a mutant that hands the entry back, or puts the dropped entries back,
-// turns red). A reset wakes every move waiting on a claim.
+// turns red). THE STEP (issue #152's design decision): a push writes the step
+// it takes on the entry it departs, in the place of any that entry held, and
+// none where it takes none or departs a claim (a mutant that writes the step
+// on the entry pushed, keeps the step an entry held, or writes one on a claim
+// turns red); a cursor move writes none. A reset wakes every move waiting on
+// a claim.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from './trail.js';
@@ -20,7 +25,7 @@ import * as T from './trail.js';
 /** @typedef {import('./trail.js').Notice} Notice */
 
 const v = (/** @type {number} */ n) => ({ x: n, y: n, scale: 1 });
-const e = (/** @type {string} */ addr, /** @type {number} */ n) => ({ addr, pos: null, width: null, view: v(n), link: null, label: null, notice: null });
+const e = (/** @type {string} */ addr, /** @type {number} */ n) => ({ addr, pos: null, width: null, view: v(n), label: null, notice: null });
 const addrs = () => T.all().map((x) => x.addr);
 /** @type {Notice} a jump's reading notice, as its claim holds it while its read is out */
 const reading = { face: 'reading', addr: 'x', refusal: null, site: null, at: { addr: 'b', pos: null }, offer: false };
@@ -98,6 +103,26 @@ test('a claim answered with a notice keeps its place and its number, holding the
     assert.equal(T.forward(v(70))?.addr, 'b');
     assert.equal(T.forward(v(80)), claim, `${was}: Forward returns to it`);
   }
+});
+
+test('a push writes the step it takes on the entry it departs, and the newest holds none; a push from behind the newest writes its own in the place of the one that entry held; a claim departed, and a move that takes no step, leave none; a cursor move writes none (issue #152)', () => {
+  /** @type {import('./trail.js').Step} */
+  const follow = { kind: 'follow', link: 'a.0.2.1', near: 'a', key: 'k', far: 'b', spans: [{ prefix: 'b.0.1', ordinal: 3, width: 4 }] };
+  /** @type {import('./trail.js').Step} */
+  const carry = { kind: 'carry', from: 'b', to: 'c', spans: [{ prefix: 'b.0.1', ordinal: 9, width: 2 }] };
+  /** @type {import('./trail.js').Step} */
+  const again = { ...carry, to: 'x' };
+  const steps = () => T.all().map((x) => x.step);
+  T.push(e('a', 1), null); T.push(e('b', 2), v(10), false, follow); T.push(e('c', 3), v(20), false, carry); T.push(e('d', 4), v(30));
+  assert.deepEqual(steps(), [follow, carry, null, null], 'each entry the step that left it: a follow, a carry, a move that takes none; the newest none, nothing having left it');
+  T.back(v(40)); T.back(v(50)); T.forward(v(60)); T.jump(4, v(70));
+  assert.deepEqual(steps(), [follow, carry, null, null], 'a cursor move writes none');
+  T.jump(3, v(80));
+  T.push(e('x', 5), v(90), false, again);
+  assert.deepEqual([addrs(), steps()], [['a', 'b', 'x'], [follow, again, null]], 'from behind the newest: b holds the step taken from it now, the entries ahead dropped');
+  const claim = T.push(e('y', 6), v(100), true);
+  T.push(e('z', 7), v(110), false, follow);
+  assert.deepEqual([steps()[2], claim.step], [null, null], 'x departed by a move that takes no step, and the claim departed before its read answered — the camera never stood there: none');
 });
 
 test('a reset wakes every move waiting on a claim', async () => {

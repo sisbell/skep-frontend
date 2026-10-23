@@ -223,7 +223,7 @@ test('each link lit at an arrival is drawn heavier, every other at the drawer\'s
   LK.readers({ lit: () => [OTHER_HOME + '.0.2.1'] });
   assert.deepEqual(weights(), [1, ARRIVAL_WEIGHT], 'the reader naming another: that one heavier');
   LK.readers({ lit: () => [OTHER_HOME + '.0.2.1', D + '.0.2.1'] });
-  assert.deepEqual(weights(), [ARRIVAL_WEIGHT, ARRIVAL_WEIGHT], 'the reader naming both — the one Back came back along and the one a notice came from: both heavier');
+  assert.deepEqual(weights(), [ARRIVAL_WEIGHT, ARRIVAL_WEIGHT], 'the reader naming both: both heavier');
   LK.readers({ lit: () => [] });
   assert.deepEqual(weights(), [1, 1], 'the reader naming none: none lit');
 });
