@@ -57,10 +57,12 @@ built everywhere, not fixed one surface at a time.
 
 A comment headed `## Design decision` on an issue is settled, not a
 first guess: build it as stated, or decline it back to `needs-design`
-with the reason. When you build one, add its line under
-`PATTERNS.md`'s `## Decisions in force` in the same commit; where the
-decision answers a question across surfaces, write it as a numbered
-rule there too, with a `## Changes` entry.
+with the reason. When you build one, add one line under
+`PATTERNS.md`'s `## Decisions in force`, in that list's form, in the
+same commit. Only where the decision answers a question across
+surfaces, also add or change a numbered rule there, stating only what
+must hold, with one line under `## Changes`. Never restate a rule in
+the decision line, or the decision in the rule.
 
 Sometimes, while fixing a page bug, you find the real cause is in the
 shell or the board: the shell has no read for what the page needs, the
