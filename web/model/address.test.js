@@ -2,7 +2,7 @@
 // Each claim fails when the module's rule is removed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fieldsOf, accountOf, documentOf, homeOf, memberOf, elementOf, kindOf, cmpAddr, isAddress, parseAddress, resolveSpan, parseVSpan, vSpan, unitSpan, commonsType, isUnder } from './address.js';
+import { fieldsOf, accountOf, documentOf, homeOf, memberOf, elementOf, kindOf, cmpAddr, isAddress, parseAddress, resolveSpan, parseVSpan, vSpan, unitSpan, commonsType, isUnder, isTrunkMember } from './address.js';
 
 test('the tumbler splits at zeros into dottable fields', () => {
   assert.deepEqual(fieldsOf('1.5.0.1.1.0.1'), [[1, 5], [1, 1], [1]]);
@@ -69,4 +69,12 @@ test('a commons type path names its ordinal under subspace 3', () => {
   assert.deepEqual(commonsType('1.1.0.1.0.1.0.3.13'), { ordinal: 13, sub: [] });
   assert.deepEqual(commonsType('1.1.0.1.0.1.0.3.14.2'), { ordinal: 14, sub: [2] });
   assert.equal(commonsType('1.0.1.0.3'), null);
+});
+
+test('a trunk member is the trunk\'s own `D.k`: never the trunk, a daughter, nor an element under either', () => {
+  assert.equal(isTrunkMember('1.0.1.0.3.2'), true);
+  assert.equal(isTrunkMember('1.0.1.0.3'), false, 'the trunk');
+  assert.equal(isTrunkMember('1.0.1.0.3.2.1'), false, 'a daughter');
+  assert.equal(isTrunkMember('1.0.1.0.3.2.0.2.1'), false, 'a link homed at the member');
+  assert.equal(isTrunkMember('1.0.1'), false, 'an account');
 });

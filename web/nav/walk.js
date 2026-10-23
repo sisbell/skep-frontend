@@ -27,7 +27,12 @@
 // run it shows the run's face whole, C-67's pointer its offered act (K-7,
 // N-KEYS'; O-FACES's `withheldRun`).
 // The plane linearizes board › account › document › block | link in record
-// order (S3 Q6); at reading scale the walk holds THE LINKS THE READING SCALE
+// order (S3 Q6) — EACH BOX ONCE, AS THE VERSION IT SHOWS (issue #154's
+// design decision: "The box shows one version"; N-GO's `shownIn`, the
+// reader `shown`): an account's documents are its boxes, each the version
+// its box shows, its spans and links that version's, and a landing or a
+// re-take at a document stands on the version its box shows; at reading
+// scale the walk holds THE LINKS THE READING SCALE
 // DRAWS (D5 §4 rule 2: the owner's and the person's own; others' only where a
 // peek or a lens shows them), after the blocks. A block whose text is only
 // white space is no span a person reads and no element of the walk (rule
@@ -113,7 +118,7 @@
 // until the scene's end puts it back.
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21, FP-22.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -161,6 +166,7 @@ import { t } from '../strings.js';
  * @typedef {Object} Readers — what the walk reads from an owner that imports it, handed in once by the app (FP-10, FP-11)
  * @property {() => Located | null} located where Back's light stands (N-GO's `backLight`); null where none does
  * @property {() => Described | null} described what the landing says of its passage, where it says anything (N-GO's `described`); null where nothing is said
+ * @property {(addr: string) => string} shown the version a document's box shows (N-GO's `shownIn`): the one the walk stands on and lists there
  */
 
 /** @type {Node | null} */
@@ -179,8 +185,8 @@ let moves = 0;
 let mirrorEl = null;
 /** @type {Array<(n: Node | null) => void>} */
 const watchers = [];
-/** @returns {Readers} the readers before the app hands its owner's in: no light stands, and no landing says anything */
-const noReaders = () => ({ located: () => null, described: () => null });
+/** @returns {Readers} the readers before the app hands its owner's in: no light stands, no landing says anything, and every box shows its plain address */
+const noReaders = () => ({ located: () => null, described: () => null, shown: (/** @type {string} */ addr) => documentOf(addr) || addr });
 /** @type {Readers} */
 let read = noReaders();
 
@@ -251,7 +257,7 @@ export const collapsed = () => !!focus && focus.kind === 'document' && below(foc
 export async function childrenOf(node) {
   if (!node) return [BOARD];
   if (node.kind === 'board') return REC.accounts().filter((a) => !a.system).map((a) => ({ kind: /** @type {const} */ ('account'), addr: a.account, pos: null, link: null }));
-  if (node.kind === 'account') return REC.placesOf(node.addr).map((p) => ({ kind: /** @type {const} */ ('document'), addr: p.doc, pos: null, link: null }));
+  if (node.kind === 'account') return REC.placesOf(node.addr).map((p) => ({ kind: /** @type {const} */ ('document'), addr: read.shown(p.doc), pos: null, link: null }));
   if (node.kind === 'document') {
     const d = await PUMP.loadWhole(node.addr); if (!d) return [];
     /** @type {Node[]} */
@@ -276,8 +282,9 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
     return t('L.mirror.account', { account: n.addr, documents, links, empty: c.documents ? '' : ' — ' + t('B1.empty_subspace') }) + pos;
   }
   if (n.kind === 'document') {
-    const d = REC.doc(n.addr); const p = REC.place(n.addr);
-    const state = d.refused === 'withheld' ? LAYER.withheldBox(d) : d.kind === 'draft' ? t('L.mirror.draft') : t('F.published');
+    // a version named by its box's document's place, the one the index lists (issue #154)
+    const d = REC.doc(n.addr); const p = REC.place(documentOf(n.addr) || n.addr);
+    const state = d.refused === 'withheld' ? LAYER.withheldBox(d) : (p ? p.kind : d.kind) === 'draft' ? t('L.mirror.draft') : t('F.published');
     return t('L.mirror.document', { document: n.addr, label: p && p.label ? '"' + p.label + '"' : '', state, extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' }) + pos;
   }
   if (n.kind === 'block') {
@@ -549,8 +556,9 @@ export async function enter() {
 }
 
 /**
- * The walk moves to a landing (a teleport, D5 §4 rule 8): the document, or
- * the span holding a position — the position kept as the one the landing
+ * The walk moves to a landing (a teleport, D5 §4 rule 8): the document — the
+ * version its box shows (see the head) — or the span holding a position in
+ * it — the position kept as the one the landing
  * named (`landedAt`); a place the index does not list on its own node among
  * the listed siblings (rule 12). The platform's focus goes to the landing's
  * item wherever the act was made, the ring drawn where a key made it and put
@@ -572,7 +580,7 @@ export async function enter() {
 export async function focusTo(addr, pos, byKey = false, take = true, end = null) {
   const move = ++moves;
   const held = mirrorHolds();
-  const doc = documentOf(addr), acct = accountOf(addr);
+  const doc = documentOf(addr) ? read.shown(addr) : null, acct = accountOf(addr);
   if (doc) {
     const d = REC.doc(doc);
     // the levels above the landing, each holding ITS OWN place in its siblings (so ← walks out to this document, this account)
@@ -612,7 +620,8 @@ const inDocument = (/** @type {Node} */ n) => n.kind === 'document' || n.kind ==
 
 /**
  * The document whose region holds a world point (T-LAYER's `regionOf`: its
- * outline and the strip its corner stands in), of those the index lists; of
+ * outline and the strip its corner stands in), of those the index lists — as
+ * the version its box shows, the region that version's (see the head); of
  * documents sharing the room past the sound depth, the first whose outline
  * holds it; null where no region does.
  * @param {number} x
@@ -623,11 +632,11 @@ function documentAt(x, y) {
   let best = null, on = false;
   for (const p of REC.places()) {
     if (p.system) continue;
-    // the room widened by the corner's strip: the region stands inside it
-    const b = docBox(p.doc), left = clearLeftOf(p.doc);
-    if (x < b.x - left || x > b.x + b.w || y < b.y || y > b.y + b.h || !holdsPoint(LAYER.regionOf(p.doc), x, y)) continue;
-    const outline = holdsPoint(LAYER.shapeOf(p.doc), x, y);
-    if (!best || (outline && !on)) { best = p.doc; on = outline; }
+    // the room widened by the corner's strip: the region stands inside it — the region of the version the box shows
+    const b = docBox(p.doc), left = clearLeftOf(p.doc), shown = read.shown(p.doc);
+    if (x < b.x - left || x > b.x + b.w || y < b.y || y > b.y + b.h || !holdsPoint(LAYER.regionOf(shown), x, y)) continue;
+    const outline = holdsPoint(LAYER.shapeOf(shown), x, y);
+    if (!best || (outline && !on)) { best = shown; on = outline; }
   }
   return best;
 }

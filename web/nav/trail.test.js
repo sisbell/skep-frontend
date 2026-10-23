@@ -18,6 +18,9 @@
 // on the entry pushed, keeps the step an entry held, or writes one on a claim
 // turns red); a cursor move writes none. A reset wakes every move waiting on
 // a claim.
+// A departure re-takes the place of the cursor's entry — the version its box
+// shows then — and never a claim's (issue #154: a newer version's arrival
+// pins a box on the member being read).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from './trail.js';
@@ -123,6 +126,15 @@ test('a push writes the step it takes on the entry it departs, and the newest ho
   const claim = T.push(e('y', 6), v(100), true);
   T.push(e('z', 7), v(110), false, follow);
   assert.deepEqual([steps()[2], claim.step], [null, null], 'x departed by a move that takes no step, and the claim departed before its read answered — the camera never stood there: none');
+});
+
+test('the cursor\'s entry\'s place re-taken as it is departed — the version its box shows then — never a claim\'s (issue #154)', () => {
+  T.push(e('d', 1), null);
+  T.retakePlace('d.2');
+  assert.deepEqual(addrs(), ['d.2'], 'the version its box shows');
+  T.push({ ...e('f', 2), notice: reading }, v(1), true);
+  T.retakePlace('f.3');
+  assert.deepEqual(addrs(), ['d.2', 'f'], 'a claim keeps the place its jump named');
 });
 
 test('a reset wakes every move waiting on a claim', async () => {

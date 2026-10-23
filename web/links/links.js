@@ -1,14 +1,19 @@
 // LK — THE LINK SEAM (the structure record §3.2 "LK"; the three-gaps note;
 // the gate ruling: what still moves is built behind ONE SEAM). Layer 2
 // (S-31 (a)), `web/links/`. State: VIEW — the reveal chain's stage and
-// lenses PER DOCUMENT for the session (S-29 (b); D-2 RULED PER DOCUMENT) and
-// THE VISITED-LINK SET (S-32 (a); D-3) — THE ONE OWNER of both (FP-10).
+// lenses PER DOCUMENT for the session (S-29 (b); D-2 RULED PER DOCUMENT) —
+// per document's BOX, which its versions share, so the stage, the others'
+// toggle and the lenses stand as they were when the box shows another
+// version (issue #154's design decision: "Lenses, link sets and the box's
+// mid and far counts stay as they were") — and THE VISITED-LINK SET (S-32
+// (a); D-3) — THE ONE OWNER of both (FP-10).
 // Imports: M-REC (the raw links, each link's type, the index), P-REG (the
 // values) and ST (the words a far end is named in) alone; M-ADDR's
-// arithmetic beneath. N-GO's links lit at an arrival, P-RENDER's test of
-// which documents the plane draws and T-LAYER's owner rule are read through
-// the readers the app hands in (`readers`), never imported — each of them
-// imports LK — and never kept here.
+// arithmetic beneath. N-GO's links lit at an arrival and the version each
+// box shows, P-RENDER's test of which documents the plane draws and
+// T-LAYER's owner rule are read through the readers the app hands in
+// (`readers`), never imported — each of them imports LK — and never kept
+// here.
 //
 // WHICH LINKS SHOW at a document and at a span, and HOW each is marked —
 // ITS RULE TODAY IS THE RULED DESIGNS' AND NOTHING MORE (foundations §2.1's
@@ -48,7 +53,11 @@
 //     never another of the link's ends in the same text (B1-S5);
 //   - its FAR end stands where `project` answers it sits in the far
 //     document's current text now (A-53: "the beam lands at the passage's
-//     current place (version-proof)"; M-REC's projection, `farRuns`); a far
+//     current place (version-proof)"; M-REC's projection, `farRuns`) — in
+//     the text of the version the far document's box shows (`farAt`; issue
+//     #154's design decision: "Beams, link marks and per-passage counts
+//     follow the version shown"), the box a member and its document share,
+//     though a follow lands at the address the link names; a far
 //     end that text holds none of FLOATS (`floats`), and its symbol, its stub
 //     and its mirror item say "its passage is not in ⟨D⟩'s current text"
 //     before anyone follows it (foundations §2.3: "the projection the beam
@@ -147,7 +156,7 @@
 // Carries: the wireframe's §16 `.sym`/`.lip` selection and the owner-link
 // marking in `articleHTML`, §17's wanted set, §18 `revealLinks`'s lens
 // filters, §10's by-linker colouring and mid lines, S1's `buildBeams`.
-// Rules: FP-1, FP-2, FP-7, FP-10, FP-11.
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-22.
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
@@ -189,13 +198,15 @@ import { t } from '../strings.js';
  * @property {EndRef | null} farEnd the other slot's first span, as stored
  * @property {1 | 2} farSlot the slot the far end lies in: 2 where this end is the link's from, 1 where it is its to
  * @property {boolean} farWhole
- * @property {Stretch[] | null} farRuns where the far end's passage stands in the far document's current text now (`project`'s answer, M-REC's projection), in the text's order; none where it floats — that text holds none of it; null where nothing places it: its projection not read or refused, or the far end naming a document whole, an account or nothing
+ * @property {string} farAt the version of the far document's box the far end is placed in: the one the box shows (the reader `shown`) — the document `far` names, or another version sharing its box; '' where the far end names no document
+ * @property {Stretch[] | null} farRuns where the far end's passage stands in `farAt`'s current text now (`project`'s answer, M-REC's projection), in the text's order; none where it floats — that text holds none of it; null where nothing places it: its projection not read or refused, or the far end naming a document whole, an account or nothing
  */
 /**
  * @typedef {Object} Readers — what LK reads from owners that import it, handed in once by the app
  * @property {() => readonly string[]} lit the links lit at an arrival (N-GO's `litLinks`); none where none is
  * @property {(addr: string) => boolean} drawn does the plane draw a document somewhere — at its box, or in the continuation's mark holding it, a version member at its document's (P-RENDER's `drawsDoc`)
  * @property {(addr: string) => string} owner the owner account of a document, by the one owner rule (T-LAYER's `originOwner`)
+ * @property {(addr: string) => string} shown the version a document's box shows: the plain address, or the version pinned there (N-GO's `shownIn`)
  */
 /**
  * @typedef {Object} Connection — a mid connection between two places the plane draws documents at
@@ -228,29 +239,32 @@ const SOCIAL_ORDINALS = new Set([42, 44]);
 /** the structural family — formatting, never counted (rule (iii)); the commons map's 3.22–3.29 (the registry file `link-types-structural.md` numbers them 2.20–2.22 — the discrepancy is reported) */
 const STRUCTURAL_ORDINALS = new Set([22, 23, 24, 25, 26, 27, 28, 29]);
 
-/** @type {Map<string, Reveal>} */
+/** @type {Map<string, Reveal>} each box's reveal, by its document (`boxOf`) */
 const reveals = new Map();
 /** @type {Set<string>} the followed links, the session's (D-3) */
 const visitedSet = new Set();
-/** the readers until the app hands its owners' in: no link lit, every document drawn, a document's owner its account */
-const noReaders = () => /** @type {Readers} */ ({ lit: () => [], drawn: () => true, owner: (addr) => accountOf(addr) || '' });
+/** the readers until the app hands its owners' in: no link lit, every document drawn, a document's owner its account, every box showing the version named */
+const noReaders = () => /** @type {Readers} */ ({ lit: () => [], drawn: () => true, owner: (addr) => accountOf(addr) || '', shown: (addr) => addr });
 /** @type {Readers} */
 let read = noReaders();
 
 /** the owners that import LK hand their readers in once (the app); a reader not handed in stands as it does until one is */
 export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReaders(), ...r }; }
 
+/** the box an address's reveal is kept under: its document's, which every version of it shares (see the head) */
+const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
+
 /** the reveal a document stands at until a card moves it: hidden, others' links off, no lens */
 const hidden = () => /** @type {Reveal} */ ({ stage: 1, others: false, lens: { owners: null, types: null, endorsed: false } });
 /** the hidden reveal, read at a document no card has moved — never handed out to be set */
 const HIDDEN = Object.freeze({ ...hidden(), lens: Object.freeze(hidden().lens) });
-/** the reveal standing at a document, read without making one: a far document a connection asks about stands at the hidden one */
-const revealAt = (/** @type {string} */ addr) => reveals.get(addr) || HIDDEN;
+/** the reveal standing at a document's box, read without making one: a far document a connection asks about stands at the hidden one */
+const revealAt = (/** @type {string} */ addr) => reveals.get(boxOf(addr)) || HIDDEN;
 
-/** the reveal's state at a document (hidden by default) */
+/** the reveal's state at a document — at its box, which every version of it shares (hidden by default) */
 export function state(/** @type {string} */ addr) {
-  let r = reveals.get(addr);
-  if (!r) { r = hidden(); reveals.set(addr, r); }
+  let r = reveals.get(boxOf(addr));
+  if (!r) { r = hidden(); reveals.set(boxOf(addr), r); }
   return r;
 }
 /** set the chain's stage at a document (the card's setter) */
@@ -422,8 +436,9 @@ export function draws(l, addr) {
 /**
  * A link's end drawn at a document: its stored span and that span's key
  * (`endKey`), where the span stands in the document's held text now, its
- * mark, and its far end with where that stands in its own document's current
- * text; null where the held text places the end nowhere.
+ * mark, and its far end with where that stands in the current text of the
+ * version its box shows (`farAt`); null where the held text places the end
+ * nowhere.
  * @param {Link} l
  * @param {string} addr the document holding the end (`endsIn`), whichever document minted its bytes
  * @param {'you' | 'owner' | 'others'} linker
@@ -436,10 +451,11 @@ function drawnEnd(l, addr, linker, end, e) {
   if (!runs.length) return null;
   const farSlot = end === 'from' ? 2 : 1;
   const far = (end === 'from' ? l.to : l.from)[0] || null;
-  const held = far && !far.whole && far.ordinal != null && far.doc ? REC.projection(l.addr, farSlot, far.doc) : undefined;
+  const at = far && far.doc ? read.shown(far.doc) : '';
+  const held = far && !far.whole && far.ordinal != null && at ? REC.projection(l.addr, farSlot, at) : undefined;
   return {
     link: l, near: addr, end, nearEnd: e, key: endKey(e), runs, pos: runs[0].pos, width: runs[0].width, mark: markOf(l, addr), linker,
-    far: far ? far.doc || far.account || '' : '', farEnd: far, farSlot, farWhole: !!(far && far.whole), farRuns: Array.isArray(held) ? held : null,
+    far: far ? far.doc || far.account || '' : '', farEnd: far, farSlot, farWhole: !!(far && far.whole), farAt: at, farRuns: Array.isArray(held) ? held : null,
   };
 }
 
@@ -474,9 +490,9 @@ export function shownAt(/** @type {string} */ addr, /** @type {{pos: number, wid
   return shown(addr).filter((s) => s.runs.some((r) => meets(r, span)));
 }
 
-/** does a drawn link's far end float — its far document's current text holding none of its passage (foundations §2.3)? */
+/** does a drawn link's far end float — the current text of the version its far box shows holding none of its passage (foundations §2.3)? */
 export const floats = (/** @type {Shown} */ s) => !!s.farRuns && s.farRuns.length === 0;
-/** where a drawn link's far end stands first in its far document's current text — the position a scene sets level with its near end — or null where nothing places it there */
+/** where a drawn link's far end stands first in the current text of the version its far box shows (`farAt`) — the position a scene sets level with its near end — or null where nothing places it there */
 export const farPos = (/** @type {Shown} */ s) => (s.farRuns && s.farRuns.length ? s.farRuns[0].pos : null);
 
 /**

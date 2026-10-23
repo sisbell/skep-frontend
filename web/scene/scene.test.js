@@ -34,7 +34,16 @@
 // line where nothing places it; a link met from both panes one line however
 // its ends moved, told apart by the spans the link stores (a mutant keying
 // the near end by where it stands draws two and turns red); and the opening
-// asking each crossing link's far end once, none it holds already.
+// asking each crossing link's far end once, none it holds already. A pane
+// holding another version of the box a far end names takes the line at the
+// far end where `project` places it in that version's own text (issue #154:
+// a mutant that matches the pane by the address the link names draws no
+// line, and one reading LK's placement there draws it at the plane's).
+// And the position two versions share nearest a passage the second holds
+// none of, where a version move keeps the passage's line (issue #154): the
+// last of a stretch before it or the first of one after it, the nearer, the
+// one before at a tie (a mutant that takes the first stretch, or the one
+// after at a tie, turns red), none where they share nothing.
 // Then the scene's focus, against the FAKE PORT and a page of stand-ins whose
 // focus lands only where the platform's does (D5 §4 rules 5 and 8; K-63;
 // the focus's owner N-FOCUS, whose own cases are `nav/focus.test.js` — these
@@ -77,7 +86,7 @@ import * as FACES from '../overlays/faces.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
-import { levels, merged, counterpart, counterparts, linesBetween } from './scene.js';
+import { levels, merged, counterpart, counterparts, nearest, linesBetween } from './scene.js';
 import * as LK from '../links/links.js';
 import { HUE, VISITED_ALPHA } from '../plane/register.js';
 
@@ -125,6 +134,17 @@ test('a passage\'s counterparts: every shared stretch inside it, each clipped to
   assert.deepEqual(counterparts([pair(11, 40, 3), pair(1, 20, 5)], 1, 20), [{ a: 1, b: 20, width: 5 }, { a: 11, b: 40, width: 3 }], 'in the first document\'s order, whatever order the pairs are named in');
   assert.deepEqual(counterparts([pair(1467, 1, 240)], 20, 30), [], 'nothing shared: none');
   assert.deepEqual(counterpart(moved, 1400, 100), counterparts(moved, 1400, 100)[0], 'the counterpart is the first');
+});
+
+test('the position two versions share nearest a passage the second holds none of: the last of a stretch ending before the passage\'s first position, or the first of one beginning after it, whichever lies nearer — the one before where both lie as near — with its counterpart; none where they share nothing (issue #154)', () => {
+  // the board's 1.0.1.0.43 against its first member: positions 134 to 184 its own, the stretches either side shared
+  const shared = [pair(1, 1, 133), pair(185, 197, 1972)];
+  assert.deepEqual(nearest(shared, 134), { a: 133, b: 133 }, 'the stretch before ends just before the passage: its last position, nearer than 185');
+  assert.deepEqual(nearest(shared, 180), { a: 185, b: 197 }, 'the stretch after begins nearer: its first position, in the second\'s positions');
+  assert.deepEqual(nearest([pair(1, 1, 10), pair(21, 31, 5)], 15), { a: 10, b: 10 }, 'as near either way: the one before');
+  assert.deepEqual(nearest([pair(21, 31, 5), pair(1, 1, 10)].reverse(), 18), { a: 21, b: 31 }, 'in any order the pairs are named in');
+  assert.deepEqual(nearest([pair(1, 1, 3), pair(4, 4, 7)], 30), { a: 10, b: 10 }, 'contiguous pairs one stretch: its last position');
+  assert.equal(nearest([], 15), null, 'nothing shared: none');
 });
 
 test('contiguous pairs — adjoining in both documents — are one run; a gap in either keeps them apart', () => {
@@ -230,6 +250,17 @@ test('a line\'s far end stands where `project` places its passage now, never whe
   assert.deepEqual(toB([{ pos: 30, width: 5 }]).map((l) => l[2]), [[30, 5]], 'stored at 1, standing at 30: at 30');
   assert.deepEqual(toB([]).map((l) => l[2]), [[3, 20]], 'floating: pane B\'s first block, to its end');
   assert.deepEqual(toB(null), [], 'placed nowhere: no line, never one to the stored position');
+}));
+
+test('a pane holding another version of the box a far end names takes the line at the far end where `project` places it in that version\'s own text, whatever version LK placed it in for the plane (issue #154)', () => asReader('1.0.1', () => {
+  const L = linkBy(DOC_A + '.0.2.1', '1.0.1'), B2 = DOC_B + '.2', blocks = [{ pos: 3, width: 20 }, { pos: 23, width: 60 }];
+  // LK placed the far end at DOC_B's 30, the plane's box showing DOC_B; the scene's pane holds DOC_B's second version, where it stands at 40
+  const atA = endShown(L, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5), [{ pos: 30, width: 5 }]);
+  REC.takeProjection(L.addr, 2, B2, [{ pos: 40, width: 5 }]);
+  try {
+    assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA]), paneLinks(B2, [], blocks))).map((l) => l[2]), [[40, 5]], 'at 40 in the version the pane holds, never the 30 LK placed it at in DOC_B');
+    assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA]), paneLinks(DOC_B, [], blocks))).map((l) => l[2]), [[30, 5]], 'the pane holding DOC_B: at 30, as LK placed it');
+  } finally { REC.invalidate(B2); }
 }));
 
 test('a link met from both panes is one line wherever its ends stand now: its ends told apart by the spans the link stores, never by where they stand', () => asReader('1.0.1', () => {

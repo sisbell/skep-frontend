@@ -50,6 +50,9 @@
 // venue shown") — a mutant that names an origin the page never found, or
 // leaves the origin's slot empty between its separators, or drops the origin
 // where a board stands, turns red.
+// At reading scale the line names the version the box shows — a pinned
+// version's address whole, its marker lit, its own position — and the strip's
+// act quotes the version's own words (issue #154; foundations §3.2).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -144,6 +147,31 @@ test('at reading scale the line names the document and the position the landing 
     assert.deepEqual(LINE.addressDisplay(), { text: `${place} › ${t('F.position', { p: 15 })}`, place, slot, addr: D, doc: D, pos: 15, member: null, whole: false, window: null }, `${band}: board › account › document › position`);
     assert.equal(LINE.currentAddress(), D, `${band}: the box holds the document`);
   }
+});
+
+test('at reading scale the line names the version the box shows: a pinned version\'s address whole, its marker lit, and its own position; the strip\'s act quotes the version\'s own words (issue #154; foundations §3.2: "its version address with ○ lit")', async () => {
+  const D2 = D + '.2', TEXT2 = 'Tumbler.\n\nThe second version holds this.';
+  Object.assign(script, reads(D2, TEXT2));
+  await PUMP.loadWhole(D2);
+  WALK.readers({ shown: (a) => (a === D || a === D2 ? D2 : a) });
+  const platform = { document: globalThis.document };
+  try {
+    over(D, 14 / STANDARD_FS);
+    await WALK.focusTo(D, 15);
+    const place = `1 › 1.0.1 › ${D2}`, slot = ` › ${t('F.position', { p: 99 })}`.length;
+    assert.deepEqual(LINE.addressDisplay(), { text: `${place} › ${t('F.position', { p: 15 })}`, place, slot, addr: D2, doc: D2, pos: 15, member: 2, whole: false, window: null }, 'board › account › the version\'s address › position, the member pinned');
+    assert.equal(LINE.currentAddress(), D2, 'the box opens holding the version');
+    const host = /** @type {any} */ ({ innerHTML: '', textContent: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false });
+    globalThis.document = /** @type {any} */ ({ activeElement: null, body: null });
+    LINE.attach(host, { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+    LINE.render(true);
+    assert.ok(/class="marker lit"[^>]*>●</.test(host.innerHTML), `the marker lit: ${host.innerHTML}`);
+    LINE.stripAct();
+    LINE.render(true);
+    assert.ok(host.innerHTML.includes('version holds this.'), `the strip's act quotes the version's own words, never the trunk's: ${host.innerHTML}`);
+    LINE.act();
+  } finally { WALK.readers({}); globalThis.document = platform.document; }
+  assert.deepEqual(fake.unanswered, []);
 });
 
 test('a document below its own reading scale is named alone, whatever the band — a continuation document at near, a depth-0 document set a step smaller at mid~near — its position\'s slot standing empty and as wide; at its own reading scale the position is named in that slot (issue #140)', async () => {

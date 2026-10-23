@@ -48,11 +48,14 @@ item described, none once the next act takes the line down; the links
 card's overlay toggle a switch in the AX tree (R60; WAI-ARIA's switch) —
 named by B1-S4's words before its state and described by the count after
 it, a press changing its checked state and neither its name nor its
-description. Never a screen reader's voice — the seat's."""
+description; a box shown at a version (issue #154's design decision) — a
+LEAP to version 1's address, zoomed out to mid over it — listed by the
+mirror once, its current item, named by the version's address and its
+document's first line. Never a screen reader's voice — the seat's."""
 import json
 import re
 
-from . import DOC, FAR_LEAP, NO_MATCH, WINDOW, Result
+from . import DOC, FAR_LEAP, NO_MATCH, VERSIONED, WINDOW, Result
 
 
 def run(ctx):
@@ -818,6 +821,26 @@ def run(ctx):
     r.check(not gone['items'] and gone['said'] is None, 'the next act takes the description down with the line', gone)
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
+    # ---- the mirror names a box once, by the version it shows (issue #154's design decision: "The box shows one version"):
+    # a LEAP to version 1's address pins the box there; zoomed out to mid over it, the mirror's documents list the box once,
+    # its current item, named by the version's address and its document's first line
+    member = VERSIONED + '.1'
+    ctx.leap(member)
+    zooms = 0
+    while zooms < 12 and ctx.js('window.__skep.view.lod().name') != 'mid':
+        ctx.drv.key('-', code='Minus', mods=('Meta',))
+        ctx.settle()
+        ctx.frames(2)
+        zooms += 1
+    ctx.frames(2)
+    listed = ctx.js('''((a) => [...document.querySelectorAll('#mirror [role=treeitem]')].map((li) => ({text: li.textContent, current: li.getAttribute('aria-selected') === 'true'}))
+      .filter((i) => i.text.startsWith('document ' + a + ',') || i.text.startsWith('document ' + a + '.')))(%s)''' % json.dumps(VERSIONED))
+    label = ctx.js('(window.__skep.model.places().find((p) => p.doc === %s) || {}).label' % json.dumps(VERSIONED))
+    r.check(len(listed) == 1 and listed[0]['current'] and listed[0]['text'].startswith('document %s, "%s"' % (member, label)),
+            'at mid over a box pinned to version 1 the mirror lists the box once, its current item, named by the version\'s address and its document\'s first line (issue #154)',
+            {'listed': [dict(i, text=i['text'][:120]) for i in listed], 'zooms': zooms, 'label': label})
+    r.figures['pinned_box'] = {'zooms': zooms, 'listed': [i['text'][:120] for i in listed]}
+    ctx.leap(VERSIONED, None)
     # leave the page as the case found it: the landing, the focus on no element
     ctx.leap(DOC, WINDOW[0])
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')

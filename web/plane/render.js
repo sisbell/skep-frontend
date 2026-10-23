@@ -10,7 +10,13 @@
 // landmarks ◆ — the address above the density mark and each count on lines
 // of its own beneath it (foundations §2.1: each count at a fixed place on
 // its mark); at MID the account frames ("nothing here yet" where empty — law
-// 13), the documents as their columns (T-LAYER's fold, P-LAY's: issue #15 —
+// 13), the documents as their columns, ONE BOX A DOCUMENT showing ONE
+// version of it (issue #154's design decision: "The box shows one version";
+// N-GO's `shownIn`): the version's own text, its fold, its bars and its
+// label — a pinned version's address marking the version the box holds —
+// and the box's document's edge, landmark, badge, history strip,
+// connections and tails, which stand as they were whichever version it
+// shows (T-LAYER's fold, P-LAY's: issue #15 —
 // no frame or rule around a column, the document's one edge tracing the
 // outside of its columns, P-LAY's `outline`, the edition/draft edge its
 // weight, so length reads as a count of columns; a document whose text has
@@ -112,7 +118,7 @@
 // The system account's rows are never drawn (the record §1.8; this lane's
 // cut). The chip is at the document's corner (T-ARTICLE), never here.
 // Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
-// Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports).
+// Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports), FP-22.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -128,7 +134,7 @@ import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuatio
 import { bars, outline, outlineRects, firstRow, GUTTER } from './layout.js';
 import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, LINE_BOX } from './labels.js';
 import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL } from './register.js';
-import { documentOf, accountOf, cmpAddr } from '../model/address.js';
+import { documentOf, accountOf, cmpAddr, memberOf } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
 import { t } from '../strings.js';
 
@@ -396,21 +402,23 @@ function firstBar(/** @type {import('./layout.js').Bar[]} */ B, /** @type {numbe
 }
 
 /**
- * Every document the plane may draw: the index's places, and the documents
- * the model holds that the index does not list — their text or their
- * metadata delivered, or a read of them answered `withheld`: existence and
- * owner, never bytes (B1-S2), drawn as the withheld box where it stands
- * whole and counted in its continuation's mark where one holds it (the
- * index at guest class lists no draft; a LEAP to one learns it exists) —
- * the system account's rows left out.
+ * Every box the plane may draw, ONE A DOCUMENT (see the head), as the record
+ * of the version it shows (N-GO's `shownIn`): the index's places, and the
+ * documents the model holds that the index does not list — a version of
+ * theirs with its text or its metadata delivered, or a read of them answered
+ * `withheld`: existence and owner, never bytes (B1-S2), drawn as the withheld
+ * box where it stands whole and counted in its continuation's mark where one
+ * holds it (the index at guest class lists no draft; a LEAP to one learns it
+ * exists) — the system account's rows left out.
  * @returns {Doc[]}
  */
 function drawable() {
   /** @type {Doc[]} */
   const out = [];
   const seen = new Set();
-  for (const p of REC.places()) { if (p.system) continue; out.push(REC.doc(p.doc)); seen.add(p.doc); }
-  for (const d of REC.docs()) if (!seen.has(d.addr) && !d.system && (d.from >= 0 || d.meta || d.refused === 'withheld')) out.push(d);
+  const box = (/** @type {string} */ doc) => { seen.add(doc); out.push(REC.doc(GO.shownIn(doc))); };
+  for (const p of REC.places()) { if (p.system || seen.has(p.doc)) continue; box(p.doc); }
+  for (const d of REC.docs()) { const doc = documentOf(d.addr) || d.addr; if (!seen.has(doc) && !d.system && (d.from >= 0 || d.meta || d.refused === 'withheld')) box(doc); }
   return out;
 }
 
@@ -450,12 +458,14 @@ function membersAt(docs, k) {
   return new Map([...by].map(([a, s]) => [a, [...s].sort(cmpAddr)]));
 }
 
-/** a box's label: the document's address past its region's prefix, led by the separator after the prefix — ".0.9", as the address display spells a field past a prefix (F-9; foundations §3.1) */
+/** a box's label: the address of the version it shows past its region's prefix, led by the separator after the prefix — ".0.9", a pinned version's ".0.9.2", as the address display spells a field past a prefix (F-9; foundations §3.1) */
 const shortAddr = (/** @type {Doc} */ d) => (d.account ? d.addr.slice(d.account.length) : d.addr);
 /** a draft, by the index's kind or by its metadata where read */
 const isDraft = (/** @type {Doc} */ d) => d.kind === 'draft' || (d.meta ? !d.meta.published : false);
+/** a document's first line: the index's; at a version, which the index lists none of, its own text's first paragraph's first line where the model holds it */
+const labelOf = (/** @type {Doc} */ d) => d.label ?? (memberOf(d.addr) != null ? (d.blocks.find((b) => b.kind === 'para' && b.text.trim()) || { text: '' }).text.trim().split('\n')[0] : '');
 /** a box's first line: the withheld statement (T-LAYER's `withheldBox`, which the ARIA mirror reads too), or the document's first line with its draft mark (a DRAFT convention, F-9) */
-const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? LAYER.withheldBox(d) : `${(d.label || '').replace(/^#+\s*/, '')}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
+const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? LAYER.withheldBox(d) : `${labelOf(d).replace(/^#+\s*/, '')}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
 
 /**
  * A continuation's mark: its cell, and its label — law 13's count of what it
@@ -521,7 +531,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     const doc = documentOf(addr) || addr, account = accountOf(doc);
     if (!drawsDoc(doc)) return null;
     const key = account && withinContinuation(doc, cont.held) ? account + ':' + cont.held : doc;
-    if (!cells.has(key)) cells.set(key, key === doc ? LAYER.shapeOf(doc) : continuationCell(/** @type {string} */ (account), cont.held));
+    if (!cells.has(key)) cells.set(key, key === doc ? LAYER.shapeOf(GO.shownIn(doc)) : continuationCell(/** @type {string} */ (account), cont.held));
     return key;
   };
   /** the places this frame draws: the boxes standing whole, the marks holding their documents */
@@ -559,9 +569,11 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   stats.residueMarks = marks.map((m) => drawMark(m, pass));
   for (const { d, alpha: a } of vis) {
     ctx.globalAlpha = a;
+    // the version the box shows draws its text and its label; the box's document its edge, its landmark, its badge and its strip
+    const doc = documentOf(d.addr) || d.addr, trunk = REC.doc(doc);
     const box = docBox(d.addr), f = LAYER.foldOf(d);
-    const draft = isDraft(d);
-    const landmark = /\.0\.1$/.test(d.addr);
+    const draft = isDraft(trunk);
+    const landmark = /\.0\.1$/.test(doc);
     const ground = d.refused === 'withheld' ? COL.withheld : COL.doc;
     // the document's one edge, around its columns: no frame or rule around a column (issue #15)
     const pts = outline(f);
@@ -588,12 +600,12 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
       const parts = [{ text: shortAddr(d), px: tf, ink: COL.title, weight: '600', fit: 'one' }];
       if (W > 90) {
         parts.push({ text: firstLine(d), px: sub, ink: COL.greek, fit: 'cut' });
-        const c = LK.countDoc(d.addr);
+        const c = LK.countDoc(doc);
         if (W > 110 && d.refused !== 'withheld' && (c.n || c.arriving)) parts.push({ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : plural(c.n, 'F.label.links.1', 'F.label.links'), px: sub, ink: COL.greek, fit: 'wrap' });
       }
       pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X, y: Y, w: W, h: H }, x: X, y: Y, align: 'left', alpha: a, plate: ground, parts });
       // the history strip along the first row's top: the members as marks
-      if (d.members && d.members > 1 && W > 60) { ctx.fillStyle = COL.land; for (let k = 0; k < d.members; k++) ctx.fillRect(X + k * 6, sy(box.y + row.y) + 2, 4, 2); }
+      if (trunk.members && trunk.members > 1 && W > 60) { ctx.fillStyle = COL.land; for (let k = 0; k < trunk.members; k++) ctx.fillRect(X + k * 6, sy(box.y + row.y) + 2, 4, 2); }
     }
     if (W < 26) continue;
     if (d.refused === 'withheld') { if (W > 60) { ctx.strokeStyle = COL.greek; ctx.setLineDash([2, 4]); ctx.strokeRect(X + W * 0.04, Y + H * 0.3, W * 0.92, H * 0.5); ctx.setLineDash([]); } continue; }
@@ -693,7 +705,7 @@ function tailsOf(docsDrawn, placeOf, alpha, pass, seen) {
     if (!ends.length) continue;
     const i = tl.at.indexOf(':');
     let from;
-    if (i < 0) { const box = docBox(tl.at), row = firstRow(LAYER.foldOf(REC.doc(tl.at))); from = { x: sx(box.x + row.x + row.w), y: sy(box.y + row.y + row.h / 2) }; }
+    if (i < 0) { const box = docBox(tl.at), row = firstRow(LAYER.foldOf(REC.doc(GO.shownIn(tl.at)))); from = { x: sx(box.x + row.x + row.w), y: sy(box.y + row.y + row.h / 2) }; }
     else { const c = continuationCell(tl.at.slice(0, i), Number(tl.at.slice(i + 1))); from = { x: sx(c.x + c.w), y: sy(c.y + c.h / 2) }; }
     sites.set('tail ' + tl.at, { at: tl.at, docs: tl.docs, ends, from, line: null, pos: null });
   }
@@ -929,15 +941,15 @@ export function tailAtScreen(px, py) {
   return stats.tails.find((tl) => holds({ x: tl.from.x, y: tl.from.y, w: tl.to.x - tl.from.x, h: 0 }, 5) || tl.rects.some((r) => holds(r, 0))) || null;
 }
 
-/** the document under a screen point where it stands whole, on its outline — one a continuation's mark holds is the mark's (a hit test; draws nothing) */
+/** the document under a screen point where it stands whole, on its outline — the version its box shows (N-GO's `shownIn`), the outline that version's; one a continuation's mark holds is the mark's (a hit test; draws nothing) */
 export function docAtScreen(/** @type {number} */ px, /** @type {number} */ py) {
   const { held } = residueDepth(cam.scale);
   const wxp = wx(px), wyp = wy(py);
   const inside = (/** @type {{x: number, y: number, w: number, h: number}} */ b, /** @type {number} */ x, /** @type {number} */ y) => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h;
   for (const p of REC.places()) {
     if (p.system || withinContinuation(p.doc, held)) continue;
-    const b = docBox(p.doc);
-    if (inside(b, wxp, wyp) && outlineRects(LAYER.foldOf(REC.doc(p.doc))).some((r) => inside(r, wxp - b.x, wyp - b.y))) return p.doc;
+    const b = docBox(p.doc), shown = GO.shownIn(p.doc);
+    if (inside(b, wxp, wyp) && outlineRects(LAYER.foldOf(REC.doc(shown))).some((r) => inside(r, wxp - b.x, wyp - b.y))) return shown;
   }
   return null;
 }

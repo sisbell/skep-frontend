@@ -102,6 +102,16 @@
 // read's image so refused read in parts and taken as one image, every run
 // placed across the seam; a whole read handing up the refusal its extent or
 // its text met (a mutant that drops it turns red);
+// each box read as it is drawn (issue #154's design decision: "The box shows
+// one version"): a box showing another of its versions reads that version
+// for its text and its image, and its document for its extent, metadata,
+// links and chain alone, the version read again after a feed row drops it
+// (a mutant that reads the document's text, or probes a chain from the
+// version, turns red); a version its box does not show asks nothing,
+// whatever the model holds of it; a far end placed in the version its far
+// document's box shows; a `publish` row's member handed to the app before
+// the row drops anything of the trunk, no row of another op handed (a
+// mutant that hands it after the drop turns red);
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -116,6 +126,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell, docBox } from '../plane/projection.js';
 import { estimate, estimatedSpan } from '../plane/layout.js';
+import { documentOf } from './address.js';
 
 const D = '1.0.1.0.3';
 const script = {
@@ -1300,6 +1311,116 @@ test('a whole read whose image the board refuses for its size reads it in parts 
   PORT.boot(FAKE.create({ ...script, [FAKE.keyOf('op', { frame: F.retrieveV(D, 1, 30) })]: withheld }));
   const t = await PUMP.wholeOf(D);
   assert.deepEqual([t.doc?.extent, t.refused], [30, withheld.refused], 'the text refused: the record with its extent, the refusal handed up');
+});
+
+/** a published document's metadata as `doc_metadata` answers it */
+const metaOf = (/** @type {string} */ doc, /** @type {string | null} */ birth = null) => ({ result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth, birth_extent: null, placed: null, base_extent: null, source: null } });
+const unregistered = { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
+/** N-GO's `shownIn` over a map of pins: the version each box shows, its document where none is pinned */
+const showing = (/** @type {Record<string, string>} */ pins) => (/** @type {string} */ a) => { const box = documentOf(a) || a; return pins[box] ?? box; };
+/** pump `n` times, each read answered between */
+async function pumped(n = 4) { for (let i = 0; i < n; i++) { PUMP.pump(); await new Promise((r) => setTimeout(r, 0)); } }
+
+test('a box showing another of its versions reads that version for its text and its image, and its document for its extent, metadata, links and chain alone; read again after a feed row drops it (issue #154)', async () => {
+  const M = D + '.1';
+  /** @type {Record<string, unknown>} */
+  const s = {
+    ...script,
+    // D's chain: D.2 its head, no D.3
+    [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: metaOf(D + '.2'),
+    [FAKE.keyOf('op', { frame: F.docMetadata(D + '.3') })]: unregistered,
+    // the version the box shows: twenty positions of D's bytes
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(M) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.20' }] } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(M) })]: metaOf(M),
+    [FAKE.keyOf('op', { frame: F.findLinksV(M, 1, 20) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+    [FAKE.keyOf('op', { frame: F.retrieveV(M, 1, 20) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: 'Tumbler.\n\nThe first.' }] } },
+    [FAKE.keyOf('op', { frame: F.image(M, 1, 20) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '20' }] } },
+  };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {}, shown: showing({ [D]: M }) });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  readAt(D, 30);
+  await pumped();
+  const key = (/** @type {object} */ frame) => FAKE.keyOf('op', { frame });
+  const own = [key(F.retrieveDocVSpanSet(D)), key(F.docMetadata(D)), key(F.findLinksV(D, 1, 30)), key(F.readLink(D + '.0.2.1')), key(F.docMetadata(D + '.2')), key(F.docMetadata(D + '.3'))];
+  const shownReads = [key(F.retrieveDocVSpanSet(M)), key(F.docMetadata(M)), key(F.findLinksV(M, 1, 20)), key(F.retrieveV(M, 1, 20)), key(F.image(M, 1, 20))];
+  assert.deepEqual([...new Set(fake.asked)].sort(), [...own, ...shownReads].sort(), 'the document read for its extent, metadata, links and chain; the version shown for its own and its text and image; the document\'s text never, nor the version\'s chain');
+  assert.deepEqual([REC.doc(D).from, REC.doc(D).members, REC.doc(M).from, REC.doc(M).to, REC.doc(M).imageFor, REC.doc(M).members], [-1, 2, 1, 21, [1, 21], null], 'the model holds the version\'s text and image and the document\'s chain, none of the document\'s text, and no chain probed from the version');
+  // a feed row naming the version shown drops it and its document: both read again as before, the version kept in view through its box
+  fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'make_link', docs: [M], class: 'published' } });
+  assert.deepEqual([REC.doc(M).from, REC.doc(M).extent], [-1, null], 'dropped by the row');
+  await pumped();
+  const count = (/** @type {string} */ k) => fake.asked.filter((x) => x === k).length;
+  assert.deepEqual(shownReads.map(count), [2, 2, 2, 2, 2], 'the version shown read again, its text and its image among it');
+  assert.deepEqual([REC.doc(M).from, REC.doc(M).to], [1, 21], 'its text held again');
+  assert.equal(fake.asked.filter((k) => k.includes('"op":"retrieve_v"') && k.includes(JSON.stringify(D))).length, 0, 'the document\'s text never asked');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a version its box does not show asks nothing, whatever the model holds of it (issue #154)', async () => {
+  const M = D + '.1';
+  const fake = FAKE.create({ ...script, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: unregistered });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {}, shown: showing({}) });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  // an earlier version read once, as a box showing it read it: its extent and its metadata held, none of its text
+  REC.takeSpanSet(M, F.decodeSpanSet({ as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.20' }] }));
+  const m = F.decodeDocMetadata(/** @type {any} */ (metaOf(M)).result);
+  if (m) REC.takeMetadata(M, m);
+  readAt(D, 30);
+  await pumped();
+  assert.deepEqual(fake.asked.filter((k) => k.includes(JSON.stringify(M))), [], 'nothing asked of the version the box does not show');
+  assert.equal(REC.doc(D).from, 1, 'the box\'s document read for its text, the version it shows');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a far end is placed in the version its far document\'s box shows: `project` into that version, never the document (issue #154)', async () => {
+  const FAR = '1.0.1.0.127', AT = FAR + '.1', L = D + '.0.2.3';
+  /** @type {Record<string, unknown>} */
+  const s = {
+    ...script,
+    [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [L] } },
+    [FAKE.keyOf('op', { frame: F.readLink(L) })]: citation(11, passageOf(FAR, 3, 4)),
+    [FAKE.keyOf('op', { frame: F.project(L, 2, AT) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.7', width: '0.4' }] } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: unregistered,
+  };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {}, shown: showing({ [FAR]: AT }) });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  await PUMP.loadWhole(D);
+  readAt(D, 30);
+  await pumped();
+  assert.deepEqual(fake.asked.filter((k) => k.includes('"op":"project"')), [FAKE.keyOf('op', { frame: F.project(L, 2, AT) })], 'one `project`, into the version FAR\'s box shows');
+  assert.deepEqual([REC.projection(L, 2, AT), REC.projection(L, 2, FAR)], [[{ pos: 7, width: 4 }], undefined], 'held at that version, nothing at the document');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a feed row publishing a trunk\'s member is handed to the app before it drops anything of the trunk; no row of another op, and no publish naming no member, is (issue #154: a box at its plain address keeps the version being read)', async () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  /** @type {Array<{member: string, held: boolean}>} */
+  const told = [];
+  PUMP.start({ onDirty: () => {}, onPublish: (member) => told.push({ member, held: REC.doc(D).from >= 0 }) });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  await PUMP.loadWhole(D);
+  assert.ok(REC.doc(D).from >= 0, 'the trunk\'s text held');
+  fake.fire('feed', { board: 'b-1', update: { position: 3, at: 3, op: 'publish', docs: [D + '.3'], class: 'published' } });
+  assert.deepEqual([[...new Set(told.map((x) => x.member))], told[0]?.held], [[D + '.3'], true], 'the member the row publishes handed over while the trunk\'s text stood');
+  assert.equal(REC.doc(D).from, -1, 'the row dropped the trunk after');
+  told.length = 0;
+  fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'make_link', docs: [D + '.4'], class: 'published' } });
+  fake.fire('feed', { board: 'b-1', update: { position: 5, at: 5, op: 'publish', docs: ['1.0.1.0.77'], class: 'published' } });
+  assert.deepEqual(told, [], 'neither a row of another op nor a publish naming a document whole');
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

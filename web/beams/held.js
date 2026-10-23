@@ -213,42 +213,55 @@ export function lineOf(s) {
 
 /**
  * What a drawn link's far end's text holds of its passage, before departure
- * (see the head), by the rule its landing reads: its projection (LK's
- * `farRuns`, M-REC's held answer), each run's bytes read by identity
- * through the far document's held image (M-REC's `identityOf`) against the
- * span the slot stores (`farEnd`) — and where that image does not cover
- * every run, a projection of fewer positions than the passage still proves
- * part, and nothing more is said; a projection the board refused by a name
- * that says nothing of the document, couldn't tell, by that name — save a
- * refusal for its size, which the follow asks again in parts. Null where the
- * text holds all of it in one piece, where it floats (LK's `floats`, the dead
+ * (see the head), by the rule its landing reads — the text of the version its
+ * far box shows (LK's `farAt`; issue #154's design decision): its projection
+ * (LK's `farRuns`, M-REC's held answer), each run's bytes read by identity
+ * through that version's held image (M-REC's `identityOf`) against the span
+ * the slot stores (`farEnd`) — and where that image does not cover every
+ * run, a projection of fewer positions than the passage still proves part,
+ * and nothing more is said; a projection the board refused by a name that
+ * says nothing of the document, couldn't tell, by that name — save a refusal
+ * for its size, which the follow asks again in parts. Null where the text
+ * holds all of it in one piece, where it floats (LK's `floats`, the dead
  * end's words), and where nothing tells.
  * @param {Shown} s
  * @returns {Said | null}
  */
 export function farHolds(s) {
-  if (!s.farEnd || s.farWhole || s.farEnd.ordinal == null || !s.far) return null;
-  const p = REC.projection(s.link.addr, s.farSlot, s.far);
-  if (p && typeof p === 'object' && !Array.isArray(p)) return SIZE_REFUSALS.includes(p.refused) ? null : unknownOf({ kind: 'refused', name: p.refused }, 'followed', s.far);
+  const at = s.farAt;
+  if (!s.farEnd || s.farWhole || s.farEnd.ordinal == null || !at) return null;
+  const p = REC.projection(s.link.addr, s.farSlot, at);
+  if (p && typeof p === 'object' && !Array.isArray(p)) return SIZE_REFUSALS.includes(p.refused) ? null : unknownOf({ kind: 'refused', name: p.refused }, 'followed', at);
   const passage = REC.identityOfEnd(s.farEnd);
   if (!Array.isArray(p) || !p.length || !passage) return null;
-  const d = REC.has(s.far) ? REC.doc(s.far) : null, withheld = !!d && d.blocks.some((b) => b.kind === 'withheld');
-  const ids = p.map((r) => REC.identityOf(s.far, r.pos, r.width));
-  if (ids.every((x) => x.length)) { const { pieces, places } = piecesOf(passage, ids); return saidOf(heldOf(pieces, passage.width, places), 'followed', s.far, withheld); }
-  return p.reduce((n, r) => n + r.width, 0) < passage.width ? saidOf({ holds: 'part', places: p.length }, 'followed', s.far, withheld) : null;
+  const d = REC.has(at) ? REC.doc(at) : null, withheld = !!d && d.blocks.some((b) => b.kind === 'withheld');
+  const ids = p.map((r) => REC.identityOf(at, r.pos, r.width));
+  if (ids.every((x) => x.length)) { const { pieces, places } = piecesOf(passage, ids); return saidOf(heldOf(pieces, passage.width, places), 'followed', at, withheld); }
+  return p.reduce((n, r) => n + r.width, 0) < passage.width ? saidOf({ holds: 'part', places: p.length }, 'followed', at, withheld) : null;
 }
+
+/**
+ * The dead end's words for a text that holds none of a passage (foundations
+ * §2.3): "its passage is not in ⟨D⟩'s current text" at a plain address, and
+ * "its passage is not in version ⟨k⟩" at a version member — the words of
+ * O-FACES' floating face.
+ * @param {string} addr the text's document: a plain address, or a version member
+ * @returns {string}
+ */
+export const floatingOf = (addr) => { const k = memberOf(addr); return k != null ? t('F.floating.member', { k }) : t('F.floating', { D: addr }); };
 
 /**
  * A drawn link's far end's state in words, before departure — what its stub,
  * its symbol's title, its mirror item and its card say: the dead end's words
- * where it floats (LK's `floats`), the line where its text holds part of it,
- * all of it in pieces, or nothing told (`farHolds`); '' where it holds all
- * of it in one piece or nothing is known.
+ * where it floats in the version its far box shows (LK's `floats`,
+ * `floatingOf`), the line where that text holds part of it, all of it in
+ * pieces, or nothing told (`farHolds`); '' where it holds all of it in one
+ * piece or nothing is known.
  * @param {Shown} s
  * @returns {string}
  */
 export function farSays(s) {
-  if (floats(s)) return t('F.floating', { D: s.far });
+  if (floats(s)) return floatingOf(s.farAt || s.far);
   const said = farHolds(s);
   return said ? lineOf(said) : '';
 }

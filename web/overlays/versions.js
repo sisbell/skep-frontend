@@ -4,20 +4,24 @@
 // the corner (D5 K-57), both through `fromCorner`: the chain's members `D.1 …
 // D.n` (M-PUMP's probe of the chain, `probeChain`, gave n — where the board
 // did not answer it, the members met, no count recorded, so the list opened
-// again probes again), each a LEAP that carries the passage held,
-// re-projected into the member and marked at the landing (N-GO's carry;
-// foundations §2.3; P43) — the held passage: the selection where it stands
-// in the corner's document, else the first span in view, the first block
-// whose box meets the visible view (§2.3: "the selection, else the first span
-// in view"); asked by a position alone, the block holding it, whole; else the
-// document's first block — `compare`d into each member over that member's own
+// again probes again), each read act a VERSION MOVE that lands in place
+// (N-GO's `toVersion`; issue #154's design decision: "A version move never
+// flies"), carrying the passage held, re-projected into the member and kept
+// on its screen line there — the held passage: the selection where it
+// stands in the corner's document, else the first span in view, the first
+// block whose box meets the visible view (§2.3: "the selection, else the
+// first span in view"); asked by a position alone, the block holding it,
+// whole; else the document's first block — always held in the version the
+// list was opened for, the one its box shows, whether the plain address or a
+// pinned version (`open`'s document): its blocks, its positions, `compare`d
+// from it into each member over that member's own
 // extent, one span read per member made for its row and kept nowhere (§2.1's
 // version row; A-39), in parts where the board refuses it for its size, and
 // marked by the one rule a landing reads (BM-HELD's, through N-GO's
 // `heldIn`; issue #153's design decision: "the version list — say it there
 // too"): whole, all of it in pieces, in part, not at all, or couldn't tell,
-// by the refusal met — its LEAP's landing naming the passage as the
-// selection where it is one — and each
+// by the refusal met — its landing naming the passage as the selection
+// where it is one — and each
 // offering "read side by side", the scene opened on the held passage, which
 // SC sets level with what the member holds of it. Each member is one row: its
 // acts and its mark in columns the rows share. It stands at the act's site,
@@ -33,7 +37,7 @@
 // where an act was made on the chrome while they read — Back, Esc, the LEAP
 // box opened, the next card asked or shown — nothing shows, and no member is
 // asked about after it. New — no draft in the wireframe. Rules: FP-1, FP-2,
-// FP-13, FP-20, FP-21.
+// FP-13, FP-20, FP-21, FP-22.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -67,17 +71,18 @@ import { esc } from '../util.js';
  * couldn't tell, by the refusal met, where no answer told; null, asking no
  * more, where the opening no longer stands.
  * @param {string} trunk
+ * @param {string} at the version the passage is held in
  * @param {{pos: number, width: number}} held
  * @param {number} k
  * @param {() => boolean} stands
  * @returns {Promise<Row | null>}
  */
-async function rowOf(trunk, held, k, stands) {
+async function rowOf(trunk, at, held, k, stands) {
   const member = versionAddress(trunk, k);
   const e = await PUMP.extentOf(member);
   if (!stands()) return null;
   if (!('extent' in e)) return { k, holds: 'unknown', places: 0, why: whyOf(e.refused) };
-  const h = await GO.heldIn({ addr: trunk, pos: held.pos, width: held.width }, member, e.extent);
+  const h = await GO.heldIn({ addr: at, pos: held.pos, width: held.width }, member, e.extent);
   if (!('held' in h)) return { k, holds: 'unknown', places: 0, why: whyOf(h.refused) };
   return { k, holds: h.held.holds, places: h.held.places, why: null };
 }
@@ -93,9 +98,11 @@ function stripOf(/** @type {Row} */ r) {
 }
 
 /**
- * Open the list for a document (a member address answers its document's).
- * @param {string} addr
- * @param {number | null} pos the held passage's first position, or null for the document's first block
+ * Open the list for a document — its chain its document's, a version's
+ * address answering its document's members, the passage held in the version
+ * named (see the head).
+ * @param {string} addr the version the list holds the passage in: the plain address, or a pinned version's
+ * @param {number | null} pos the held passage's first position in it, or null for its first block
  * @param {Anchor | null} anchor where the list stands, the act's site (O-HOST's anchor): the corner's version statement, the document's box beside it (`fromCorner`); a floating end's face's place, the head landed on (O-FACES' `floating`); null where the act was made at no place
  * @param {number | null} [width] the held passage's positions; null holds the block at `pos` whole
  * @param {boolean} [byKey] a key made the act: the list takes the focus on its current member
@@ -104,23 +111,24 @@ function stripOf(/** @type {Row} */ r) {
 export function open(addr, pos, anchor, width = null, byKey = false) {
   const trunk = documentOf(addr) || addr;
   return HOST.opening(async (stands) => {
-    const d = REC.doc(trunk);
+    const d = REC.doc(trunk), v = REC.doc(addr);
     if (d.extent == null) await PUMP.loadWhole(trunk);
+    if (v !== d && (v.extent == null || v.from < 0)) await PUMP.loadWhole(addr);
     let n = d.members;
     if (n == null) {
       const probed = await PUMP.probeChain(trunk, stands);
       if (!probed) return null;
       n = probed.n;
     }
-    /** the passage held: the span named; the block holding `pos`, whole; else the first block */
-    const holding = pos != null ? d.blocks.find((b) => pos >= b.pos && pos < b.pos + b.width) : d.blocks[0];
+    /** the passage held, in the version named: the span named; the block holding `pos`, whole; else the first block */
+    const holding = pos != null ? v.blocks.find((b) => pos >= b.pos && pos < b.pos + b.width) : v.blocks[0];
     /** @type {{pos: number, width: number} | null} */
     const held = pos != null && width != null && width > 0 ? { pos, width } : holding ? { pos: holding.pos, width: Math.max(1, holding.width) } : null;
     /** @type {Row[]} */
     const rows = [];
     for (let k = 1; k <= n; k++) {
       if (!stands()) return null;
-      const row = held ? await rowOf(trunk, held, k, stands) : { k, holds: null, places: 0, why: null };
+      const row = held ? await rowOf(trunk, addr, held, k, stands) : { k, holds: null, places: 0, why: null };
       if (!row) return null;
       rows.push(row);
     }
@@ -131,13 +139,13 @@ export function open(addr, pos, anchor, width = null, byKey = false) {
       `<ul class="rows versions">${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}</button> <span class="strip" data-holds="${r.holds === 'all' ? 'whole' : r.holds || ''}">${esc(stripOf(r))}</span> <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>`;
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
-    /** where a member's LEAP is made, as data: the list's own place — its span, else its world point — where the LEAP's reading face stands (N-GO) */
+    /** where a member's version move is made, as data: the list's own place — its span, else its world point — where its reading face stands (N-GO) */
     const site = anchor && anchor.span ? { span: anchor.span } : anchor && anchor.world ? { world: anchor.world } : null;
-    /** the passage held is the reader's selection — a width named — which the landing's line names so (issue #153) */
+    /** the passage held is the reader's selection — a width named — which the landing's line names so (issue #153), the move ending it with the text it stood in */
     const selected = pos != null && width != null && width > 0;
     for (const r of rows) {
-      acts['read' + r.k] = (_el, byKey) => GO.leapTo(versionAddress(trunk, r.k), { carry: held ? { addr: trunk, pos: held.pos, width: held.width, selected } : null, how: 'leap', byKey, site });
-      acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
+      acts['read' + r.k] = (_el, byKey) => GO.toVersion(versionAddress(trunk, r.k), { carry: held ? { addr, pos: held.pos, width: held.width, selected } : null, byKey, site });
+      acts['beside' + r.k] = () => SCENE.open(addr, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
     }
     HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });
   });

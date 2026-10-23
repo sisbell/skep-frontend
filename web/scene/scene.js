@@ -18,8 +18,11 @@
 // once per pair of its ends (`linesBetween`; P44: "never a stack, never
 // accumulated tint"), each end where the link's bytes stand in its pane's
 // text now — the near end at the stretch LK places it in, the far end where
-// `project` answers its passage sits (LK's `farRuns`, whose reads the
-// scene's opening asks for the links that cross between its panes), a far
+// `project` answers its passage sits in the pane's own text, whichever
+// version of the far document's box the pane holds and whatever version the
+// plane's box shows (issue #154's design decision: the box shows one version;
+// `farEndIn`), whose reads the scene's opening asks for the links that cross
+// between its panes, a far
 // end that floats at its pane's head, where its follow lands, and never at
 // the position the link stores — in the one mark LK gives it at a mark
 // joining the two panes' documents — its linker's hue, the owner of either
@@ -115,6 +118,7 @@ import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
 import { SAMENESS } from '../plane/register.js';
 import { markDirty } from '../plane/camera.js';
+import { documentOf } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -273,6 +277,31 @@ export function counterpart(pairs, pos, width) {
 }
 
 /**
+ * The position two documents share nearest a passage of the first that the
+ * second holds none of (issue #154's design decision: "If the new version
+ * lacks the passage, the nearest passage the two versions share keeps the
+ * line instead"): of the stretches of shared identity (`merged`), the last
+ * position of one ending before the passage's first position, or the first
+ * position of one beginning after it, whichever lies nearer that first
+ * position — the one before where both lie as near — with its counterpart in
+ * the second; null where the two share nothing. What N-GO's version move
+ * keeps the passage's line at where the version it moves to holds none of it.
+ * @param {ComparePair[]} pairs `compare`'s pairs, `u1` in the first document
+ * @param {number} pos the passage's first position
+ * @returns {{a: number, b: number} | null}
+ */
+export function nearest(pairs, pos) {
+  /** @type {{a: number, b: number, d: number} | null} */
+  let best = null;
+  for (const q of merged(pairs)) {
+    const before = q.u1 + q.width <= pos;
+    const a = before ? q.u1 + q.width - 1 : q.u1, d = Math.abs(pos - a);
+    if (!best || d < best.d || (d === best.d && before)) best = { a, b: q.u2 + (a - q.u1), d };
+  }
+  return best && { a: best.a, b: best.b };
+}
+
+/**
  * The two ends the scene sets level (§2.5: "position carries the match"):
  * where the opener names a position in the second document — a link's far
  * end — the held position and that one; else the passage held set level with
@@ -296,29 +325,38 @@ function restIn(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
   return b ? b.pos + b.width - pos : 1;
 }
 
+/** do two addresses name one box — a document and its versions share their document's (P-PROJ's `docBox`)? */
+const oneBox = (/** @type {string} */ a, /** @type {string} */ b) => (documentOf(a) || a) === (documentOf(b) || b);
+
 /**
- * A link's far end in the pane its document stands in, and the key it is
- * told apart by (LK's `endKey`): the first stretch `project` places its
- * passage in (LK's `farRuns`); where it names the document whole, or floats
- * — the pane's text holding none of it, where its follow lands at the head —
- * the pane's first block to the block's end; null where nothing places it,
- * its projection not read or refused.
+ * A link's far end in the pane whose document stands in the box its far end
+ * names, and the key it is told apart by (LK's `endKey`): the first stretch
+ * `project` places its passage in in the pane's own text — the projection
+ * the model holds into the pane's document, else LK's `farRuns` where LK
+ * placed it in that document (`farAt`), whatever version of the box the
+ * plane shows (issue #154's design decision); where it names the document
+ * whole, or floats — the pane's text holding none of it, where its follow
+ * lands at the head — the pane's first block to the block's end; null where
+ * nothing places it, its projection not read or refused.
  * @param {Shown} s the link as LK shows it at the other pane's document
- * @param {Block[]} blocks the blocks the pane's article was made from
+ * @param {PaneLinks} pane the pane its far end is sought in
  * @returns {{key: string, pos: number, width: number} | null}
  */
-function farEndIn(s, blocks) {
+function farEndIn(s, pane) {
   if (!s.farEnd) return null;
-  const key = LK.endKey(s.farEnd);
-  if (s.farWhole || LK.floats(s)) { const pos = (blocks[0] || { pos: 1 }).pos; return { key, pos, width: restIn(blocks, pos) }; }
-  const r = s.farRuns && s.farRuns[0];
+  const key = LK.endKey(s.farEnd), blocks = pane.blocks;
+  const held = s.farWhole ? undefined : REC.projection(s.link.addr, s.farSlot, pane.addr);
+  const runs = Array.isArray(held) ? held : (s.farAt || s.far) === pane.addr ? s.farRuns : null;
+  if (s.farWhole || (runs && !runs.length)) { const pos = (blocks[0] || { pos: 1 }).pos; return { key, pos, width: restIn(blocks, pos) }; }
+  const r = runs && runs[0];
   return r ? { key, pos: r.pos, width: r.width } : null;
 }
 
 /**
  * The links drawn as lines between the panes (§2.5: "a link's line drawn
  * where either pane's default composition draws that link"): every end LK
- * shows at either pane's document whose far end lies in the other's, each
+ * shows at either pane's document whose far end names the other's box — that
+ * document, or another version sharing its box (`oneBox`) — each
  * resolved to its end in pane A and its end in pane B — the near end at the
  * first stretch LK places it in, the far end where `farEndIn` places it, none
  * where nothing does — and each link ONCE per pair of ends, in the order met,
@@ -345,8 +383,8 @@ export function linesBetween(A, B) {
   const met = new Map();
   for (const [near, far, nearIsA] of /** @type {Array<[PaneLinks, PaneLinks, boolean]>} */ ([[A, B, true], [B, A, false]])) {
     for (const s of near.shown) {
-      if (s.far !== far.addr) continue;
-      const here = { key: LK.endKey(s.nearEnd), pos: s.pos, width: s.width }, there = farEndIn(s, far.blocks);
+      if (!s.far || !oneBox(s.far, far.addr)) continue;
+      const here = { key: LK.endKey(s.nearEnd), pos: s.pos, width: s.width }, there = farEndIn(s, far);
       if (!there) continue;
       const [a, b] = nearIsA ? [here, there] : [there, here];
       const key = `${s.link.addr} ${a.key} ${b.key}`;
@@ -360,9 +398,10 @@ export function linesBetween(A, B) {
 
 /**
  * The far ends a scene's lines need placed: each link LK shows at either of
- * two documents whose far end is a passage of the other, once per link and
- * slot, where no projection of it is held — the reads the scene's opening
- * asks with its `compare`, so its lines stand where the passages stand now.
+ * two documents whose far end is a passage of the other's box, once per link
+ * and slot, where no projection of it into the other is held — the reads the
+ * scene's opening asks with its `compare`, so its lines stand where the
+ * passages stand now in the pane's own text (`farEndIn`).
  * @param {string} a
  * @param {string} b
  * @returns {Array<{link: string, slot: 1 | 2, far: string}>}
@@ -372,7 +411,7 @@ function unplaced(a, b) {
   const out = new Map();
   for (const [near, far] of [[a, b], [b, a]]) {
     for (const s of LK.shown(near)) {
-      if (s.far !== far || !s.farEnd || s.farWhole || REC.projection(s.link.addr, s.farSlot, far) !== undefined) continue;
+      if (!s.far || !oneBox(s.far, far) || !s.farEnd || s.farWhole || REC.projection(s.link.addr, s.farSlot, far) !== undefined) continue;
       out.set(s.link.addr + ' ' + s.farSlot, { link: s.link.addr, slot: s.farSlot, far });
     }
   }

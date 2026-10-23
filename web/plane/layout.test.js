@@ -30,7 +30,9 @@
 // columns of their own; the view's window over a fold, its estimated lines read
 // as `placeOf` places them (a mutant reading the held lines alone, or an end by
 // the view's edge it never reached, turns red); the paging key's next column;
-// a re-set's hold.
+// a re-set's hold, and a hold across two versions' folds by the pair of
+// positions a version move names (issue #154: a mutant that reads the point's
+// own position in the second fold turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -413,6 +415,19 @@ test('a passage read in one fold is held to its place in another: its position\'
   const q = placeOf(b, /** @type {number} */ (line.at));
   assert.ok(close(h.to.x, q.x + 7 * (b.fs / a.fs)) && close(h.to.y, q.y + (p.h / 2) * (b.fs / a.fs)), 'the same offset from the same line, at the new size');
   assert.ok(close(h.k, a.fs / b.fs), 'the camera\'s scale grows by the sizes\' ratio, so the text keeps its size on screen');
+});
+
+test('a passage held across two versions\' folds by the pair of positions its mover names: the second position\'s line takes the offset from the first\'s, at the new size, whatever position the point itself reads (issue #154)', () => {
+  const { rows } = article(Array.from({ length: 40 }, (_, i) => words(30, i)));
+  const lines = layoutOf(rows).lines;
+  const a = fold(lines, ROOM), b = fold(lines, ROOM, { step: 2 });
+  const from = /** @type {number} */ (a.lines[Math.floor(a.lines.length * 0.6)].at), to = /** @type {number} */ (b.lines[Math.floor(b.lines.length * 0.2)].at);
+  const p = placeOf(a, from), pt = { x: p.x + 7, y: p.y + p.h / 2 };
+  const h = /** @type {NonNullable<ReturnType<typeof holdOf>>} */ (holdOf(a, b, pt, { from, to }));
+  assert.equal(h.pos, from, 'read from the first position named');
+  const q = placeOf(b, to);
+  assert.ok(close(h.to.x, q.x + 7 * (b.fs / a.fs)) && close(h.to.y, q.y + (p.h / 2) * (b.fs / a.fs)), 'the offset from the second position\'s line, at the new size — never the first position\'s line in the second fold');
+  assert.ok(close(h.k, a.fs / b.fs), 'the scale\'s factor the sizes\' ratio');
 });
 
 test('the measurements the CSS reads are P-LAY\'s, one source: the fold\'s measure as a count the style multiplies by 1ch', () => {

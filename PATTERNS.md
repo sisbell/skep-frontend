@@ -45,14 +45,16 @@ fix; nothing here depends on their names.
   nothing of pixels, zoom or selection. It never reads the whole
   board.
 - **FP-7 View state is pure view.** The camera, the zoom band, the
-  selection, the trail, the hover. It is never written to any record
-  or sent over the bridge. The spike proved the camera writes nothing;
+  selection, the trail, the hover, the version each box shows. It is
+  never written to any record or sent over the bridge. The spike proved the camera writes nothing;
   the gate keeps proving it.
 - **FP-8 Render is a function of model and view state.** On a dirty
   frame the text layer is placed first, so what is mounted is decided
   before anything is drawn; where the document being read is set
-  again on that frame, its columns broken anew, the camera is
-  re-anchored on the passage being read before anything is placed,
+  again on that frame, its columns broken anew, or its box takes
+  another of its versions (FP-22), the camera is re-anchored on the
+  passage being read — in the version taken, its counterpart there,
+  else the nearest passage the two share — before anything is placed,
   so the passage keeps its place and size on screen; then the canvas
   is repainted whole, drawing each line of a document as a bar or
   yielding it to its text by that frame's standing lines; then the
@@ -81,7 +83,9 @@ fix; nothing here depends on their names.
   mounted by visible line, by a stated policy, laid out once and moved
   by transform. No document at reading zoom is ever bars: every
   document in view there stands as text in the frame it gets there,
-  however many there are. Below reading zoom a stated limit holds the
+  however many there are. Each box stands as the one version it shows
+  (FP-22): another version's article is taken down as the box takes
+  it, save while a press is anchored in it. Below reading zoom a stated limit holds the
   frame's new mounts, never what stands, and nothing is taken down to
   make room. A line goes when it leaves the view or its document falls
   below the unmount threshold, but a line holding the selection, a
@@ -181,6 +185,24 @@ fix; nothing here depends on their names.
   the state before departure — a drawn link's far end, a versions row —
   says it by the same rule.
 
+## The box
+
+- **FP-22 A box shows one version.** Every version of a document
+  shares the document's box, and the box shows one of them: the
+  version pinned there, else the plain address, the trunk head. One
+  module owns which (`web/nav/go.js`, `shownIn`), and every surface
+  reads it there: the text layer mounts that version alone, the canvas
+  draws its fold, its bars and its label, the walk and the mirror stand
+  on it, the one line and the corner name it, a far end is placed in
+  the version its far box shows, and the model reads that version's
+  text, the box's document read only for what the box draws of the
+  document itself — its extent, its metadata, its links, its chain.
+  Only an act aimed at the box changes its version — a version move,
+  or an arrival by an address — and a version move lands in place: the
+  camera does not fly, the text is replaced, and the passage held keeps
+  its line on screen (FP-8). A pan, a zoom or a newer version's arrival
+  changes no box's version.
+
 ## Decisions in force
 
 Design decisions taken on issues and built, one line each, newest
@@ -234,7 +256,7 @@ surfaces also becomes a numbered rule above, with a Changes entry.
   #136's mark on a return to a notice's entry, which lights the link the
   notice came from only where the move crosses that follow — Forward
   onto it — and never on Back or a longer jump.
-- **#153** (built with this line): a carried or followed passage lands
+- **#153** (built `0c0acd6`): a carried or followed passage lands
   in one of four states, read by one rule — all of it in one piece, the
   outline alone; part, or all in pieces, the outline kept and a line at
   the text's edge beside the landing ("only part of what you selected is
@@ -253,6 +275,27 @@ surfaces also becomes a numbered rule above, with a Changes entry.
   changes a follow whose projection the board refuses by a name that
   says nothing of the far document: it lands at that document's head
   with the line, where it was faced at the link's bytes.
+- **#154** (built with this line): a document's versions share its one
+  box, which shows one of them — the plain address the trunk head, a
+  version's address pinned there — named by the one line's address,
+  its marker lit at a pinned version, by the corner, and at mid by the
+  box's label; a version move never flies: the camera stays, the box's
+  text is replaced, and the passage held — the selection, else the
+  first passage in view — matched by `compare` keeps its line on
+  screen, what the version holds of it marked; where the version holds
+  none of it, the nearest passage the two share keeps the line (the
+  version's head where they share none) and the box says the passage
+  is not in this version; beams, link marks and per-passage counts
+  follow the version shown, lenses, link sets and the mid and far
+  counts stay; each move takes a trail entry and Back restores the
+  version left at its view; only an act aimed at the box changes its
+  version — a version move, or an arrival by an address: a link, a
+  typed address, Back or Forward — never a pan, a zoom or a newer
+  version's arrival, which pins a box read at its plain address on the
+  member being read; the choice lives for the session and is never
+  written. This changes #153's none state for a version move: it lands
+  at the nearest passage the two versions share, where a carry lands at
+  the document's head.
 
 ## Changes
 
@@ -372,6 +415,31 @@ found.
   of it at the next. The rule names the one reading and what an outline
   alone promises, so the next surface that lands a passage, or speaks of
   one before departure, says the same four things.
+- 2026-10-23, from issue #154 (moving between versions of one document
+  flew to the version's own landing, and a member's text, once read,
+  was mounted over its document's box) and the design decision on it —
+  one box a document showing one version, named by the line and the
+  corner, version moves made in place with the passage held keeping its
+  line, and only acts aimed at the box changing its version:
+  - FP-22 added. The page held no idea of which version a box showed:
+    every surface took a version member as a document of its own, so a
+    member read beside its edition, or by a LEAP, was mounted over the
+    edition's box (issue #12's boundary note, which the gate held as an
+    expected failure), the versions list's read act flew to the
+    member's own landing, and the text layer, the canvas, the walk, the
+    line, the corner, the links and the reads each answered "which text
+    stands here" their own way. The rule names the one owner and what
+    each surface reads from it, so the next surface that draws a box
+    draws the version shown.
+  - FP-7 now names the version each box shows as view state: the
+    decision keeps the choice for the session and writes it nowhere.
+  - FP-8 now names a box taking another of its versions among the
+    re-sets that re-anchor the camera. A version's text breaks its lines
+    elsewhere, so the passage held left its line on the frame the box
+    took the version, and the decision keeps it there.
+  - FP-12 now says each box stands as the version it shows: with every
+    held version a candidate for the mount, two articles stood in one
+    box.
 
 ## What these rule out
 

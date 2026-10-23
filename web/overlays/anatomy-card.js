@@ -79,7 +79,7 @@ import * as LK from '../links/links.js';
 import * as GO from '../nav/go.js';
 import * as SCENE from '../scene/scene.js';
 import * as F from '../model/frames.js';
-import { lineOf, farHolds } from '../beams/held.js';
+import { lineOf, farHolds, floatingOf } from '../beams/held.js';
 import { t, typeName } from '../strings.js';
 import { esc, fill } from '../util.js';
 import { accountOf, isUnder } from '../model/address.js';
@@ -221,31 +221,34 @@ const retracted = (/** @type {Claim} */ c) => (c.active ? '' : ` · <span data-s
 const words = (/** @type {string} */ id, /** @type {Record<string, string>} */ html) => fill(esc(t(id)), html);
 
 /**
- * Where a drawn link's far passage stands in its far document's current
- * text: the projection LK carries (`farRuns`), or, where the model holds
- * none — no answer, nor a refusal — and the far document is not known
- * refused, `project` asked now; null where nothing places it.
+ * Where a drawn link's far passage stands in the current text of the version
+ * its far box shows (LK's `farAt`; issue #154's design decision): the
+ * projection LK carries (`farRuns`), or, where the model holds none — no
+ * answer, nor a refusal — and that version is not known refused, `project`
+ * asked now; null where nothing places it.
  * @param {Shown} s
  * @returns {Promise<Array<{pos: number, width: number}> | null>}
  */
 async function farPlace(s) {
-  if (!s.farEnd || s.farWhole || REC.projection(s.link.addr, s.farSlot, s.far) !== undefined || REC.doc(s.far).refused) return s.farRuns;
-  const p = await PUMP.projectEnd(s.link.addr, s.farSlot, s.far);
+  const at = s.farAt || s.far;
+  if (!s.farEnd || s.farWhole || REC.projection(s.link.addr, s.farSlot, at) !== undefined || REC.doc(at).refused) return s.farRuns;
+  const p = await PUMP.projectEnd(s.link.addr, s.farSlot, at);
   return 'runs' in p ? p.runs : null;
 }
 
 /**
- * The far end's passage in words: a passage's first words where it stands
- * now, "its passage is not in ⟨D⟩'s current text" where it floats, the
- * document's first words where the link names it whole; null where nothing
- * places it.
+ * The far end's passage in words, from the version its far box shows: a
+ * passage's first words where it stands now, the dead end's words where it
+ * floats (BM-HELD's `floatingOf`), the version's first words where the link
+ * names its document whole; null where nothing places it.
  * @param {Shown} s
  * @param {Array<{pos: number, width: number}> | null} runs where its passage stands now (`farPlace`)
  */
 async function farPassage(s, runs) {
-  if (s.farWhole) return fragment(s.far, null, 80);
+  const at = s.farAt || s.far;
+  if (s.farWhole) return fragment(at, null, 80);
   if (!runs) return null;
-  return runs.length ? fragment(s.far, runs[0].pos, runs[0].width) : t('F.floating', { D: s.far });
+  return runs.length ? fragment(at, runs[0].pos, runs[0].width) : floatingOf(at);
 }
 
 /**
@@ -326,7 +329,7 @@ function showCard(s, read, anchorEl, byKey, others = false) {
     kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl, span: bytes } : { span: bytes }, html, takeFocus: byKey, first: '[data-run="follow"]',
     acts: {
       follow: (_el, byKey) => GO.follow(s, byKey),
-      beside: () => { if (far && !dead) SCENE.open(near, far, { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null }); },
+      beside: () => { if (far && !dead) SCENE.open(near, s.farAt || far, { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null }); },
       claims: () => showCard(s, read, anchorEl, false, true),
     },
   });

@@ -85,6 +85,11 @@
 // stood on at the document's reading scale, the document whole at mid, and
 // the account takes it once it is out of view: a mutant that drops the kept
 // document, or keeps a span at mid, turns red.
+// The walk takes each box as the version it shows (issue #154): an account's
+// documents list that version, named in the mirror by its box's document's
+// first line and state (a mutant that reads the version's own place, which
+// the index lists none of, turns red), a landing at the document stands on
+// its spans, and a re-take over the box stands there.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -777,4 +782,24 @@ test('the walk keeps the document it stands in while that document\'s region mee
   } finally {
     index([D, E]);
   }
+});
+
+test('the walk takes each box as the version it shows (issue #154): an account\'s documents list the version its box shows, a landing at the document stands on that version\'s span, and a re-take over its box stands there', async () => {
+  const D2 = D + '.2', TEXT2 = 'Tumbler.\n\nThe second version.';
+  Object.assign(script, reads(D2, [{ content: TEXT2 }], TEXT2.length, [{ i_start: D2 + '.0.1.1', width: String(TEXT2.length) }]));
+  await PUMP.loadWhole(D2);
+  WALK.readers({ shown: (a) => (a === D || a === D2 ? D2 : a) });
+  try {
+    const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
+    assert.deepEqual(kids.map((n) => n.addr), [D2, E], 'the account lists the version D\'s box shows, in D\'s place');
+    const named = WALK.nameOf(kids[0], 0, kids.length), place = /** @type {NonNullable<ReturnType<typeof REC.place>>} */ (REC.place(D));
+    assert.ok(named.startsWith(t('L.mirror.document', { document: D2, label: '"' + place.label + '"', state: t('F.published'), extent: t('L.mirror.positions', { n: TEXT2.length }) })), 'the mirror names the version by its box\'s document\'s first line and state: ' + named);
+    await WALK.focusTo(D, 12);
+    assert.deepEqual([walkAt(), WALK.siblingsNow().map((n) => n.pos)], [['block', D2, 11], [1, 11]], 'a landing at D stands on the version\'s span, its siblings the version\'s');
+    await WALK.focusTo(E, 3);
+    at(LAYER.centreOf(D2, 11), 12.5 / LAYER.foldOf(REC.doc(D2)).fs);
+    await WALK.retakeFromView();
+    assert.deepEqual(walkAt(), ['block', D2, 11], 'a re-take over the box stands on the version it shows');
+  } finally { WALK.readers({}); }
+  assert.deepEqual(fake.unanswered, []);
 });

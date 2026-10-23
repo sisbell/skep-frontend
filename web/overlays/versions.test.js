@@ -9,9 +9,14 @@
 // that sums the pairs' widths marks it whole and turns red), all of it in
 // pieces with its places, couldn't tell by the refusal met where the board
 // did not answer (a mutant that leaves the strip blank turns red);
-// and each member's read act LEAPs carrying the passage held, the landing
-// marked at its counterpart in the member (a mutant that hands the member the
-// document's position unprojected marks nothing and turns red); and a list
+// and each member's read act is a version move carrying the passage held
+// (issue #154), landing in place — no flight, the camera where it stood, the
+// box taking the member (a mutant that LEAPs flies and turns red) — the
+// landing marked at its counterpart in the member (a mutant that hands the
+// member the document's position unprojected marks nothing and turns red);
+// a list opened at the version its box shows holds the passage in that
+// version, comparing and carrying it from there (a mutant that holds it in
+// the trunk asks a compare no script answers and turns red); and a list
 // whose probe of the chain meets a member the board did not answer records no
 // count, so the list opened again once the board answers probes the chain to
 // its end (a mutant that ends the chain at that member records a count cut
@@ -127,14 +132,36 @@ test('each row reads its member by the rule a landing reads (issue #153): whole,
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a member\'s read act LEAPs carrying the passage held: the landing marked at its counterpart in the member, never at the edition\'s position', async () => {
+test('a member\'s read act is a version move carrying the passage held (issue #154): it lands in place, never flying, the box taking the member and the landing marked at the passage\'s counterpart there, never at the edition\'s position', async () => {
   await VERSIONS.open(T, HELD.pos, null);
   const o = HOST.currentState();
   const read = o && o.acts ? o.acts['read2'] : null;
   assert.ok(read, 'the second member\'s row offers its read act');
+  const at = CAM.view();
+  let flew = false;
   read(/** @type {any} */ (hostEl), false);
-  for (let i = 0; i < 200 && (!GO.arrivalMark() || CAM.flying()); i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
+  for (let i = 0; i < 200 && !GO.arrivalMark(); i++) { await new Promise((r) => setTimeout(r, 0)); flew = flew || CAM.flying(); if (CAM.flying()) CAM.step(Infinity); }
   assert.deepEqual(GO.arrivalMark(), { addr: T2, pos: HELD.pos + PROLOGUE.length, runs: [{ pos: HELD.pos + PROLOGUE.length, width: HELD.width }], link: null });
+  const v = CAM.view();
+  assert.ok(!flew && v.x === at.x && v.y === at.y && v.scale === at.scale, 'no flight: the camera where it stood');
+  assert.equal(GO.shownIn(T), T2, 'the box takes the member');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the list opened at the version its box shows holds the passage in that version (issue #154): its rows compare the passage from it, and its read acts carry it from it — never the trunk\'s positions', async () => {
+  /** the second paragraph as the second member sets it: the passage held, read in that member */
+  const HELD2 = { pos: HELD.pos + PROLOGUE.length, width: HELD.width };
+  Object.assign(script, compared(T1, TEXT.length, [[HELD2.pos, HELD.pos, HELD.width]], T2, HELD2), compared(T2, TEXT2.length, [[HELD2.pos, HELD2.pos, HELD.width]], T2, HELD2));
+  await run(GO.leapTo(T2));
+  assert.equal(GO.shownIn(T), T2, 'a LEAP to the member: its box shows it');
+  await VERSIONS.open(T2, HELD2.pos, null);
+  assert.deepEqual(rows(), [[1, 'whole'], [2, 'whole']], hostEl.innerHTML);
+  assert.ok(hostEl.innerHTML.includes(esc(t('F.version-of', { k: 2, n: 2 }))), 'version 2 of 2: the list opened at the member');
+  const read = HOST.currentState()?.acts?.read1;
+  assert.ok(read, 'the first member\'s row offers its read act');
+  read(/** @type {any} */ (hostEl), false);
+  for (let i = 0; i < 200 && GO.arrivalMark()?.addr !== T1; i++) await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([GO.arrivalMark(), GO.shownIn(T)], [{ addr: T1, pos: HELD.pos, runs: [{ pos: HELD.pos, width: HELD.width }], link: null }, T1], 'carried from the member: its counterpart in the first');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -147,6 +174,14 @@ test('a list whose probe of the chain the board did not answer records no count,
   assert.deepEqual(rows(), [[1, 'whole'], [2, 'whole']], hostEl.innerHTML);
   assert.deepEqual(fake.unanswered, []);
 });
+
+/** an act run to its end, its flight stepped to its last frame */
+async function run(/** @type {Promise<unknown>} */ act) {
+  let done = false;
+  void act.then(() => { done = true; });
+  for (let i = 0; i < 200 && !done; i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
+  assert.ok(done, 'the act ran to its end');
+}
 
 /** an act's list read to its end: the host's opening pending no more */
 async function opened() {

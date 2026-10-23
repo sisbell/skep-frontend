@@ -7,7 +7,10 @@ and the account the document's own account field, read whole (the agent
 space's `1.0.1.1`) — and at mid,
 zoomed out from the landing, the account under the camera alone, never the
 document the walk stands on or a position, the LEAP box opening on it
-(foundations §2.2; B1-S2; K-30); a face's words
+(foundations §2.2; B1-S2; K-30); a version's address LEAPt to pinning its
+box there, the one line naming that address whole with its position and its
+version marker lit, and the plain address taking the box back to the trunk
+head, the marker unlit (issue #154); a face's words
 alone — the fifth cell's at a typed ghost address, with no wire token above
 them and no act beneath (B1-S8; C-42); the anatomy card's rows, each a value
 the page holds (a bare dash reads as B1-S5's "none"), its two lineage rows
@@ -34,7 +37,7 @@ W-01 step 7's (`walks`), which runs after `keys` reads LK's visited set."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, GHOST, WINDOW, Result
+from . import AGENT_SPACE, DOC, GHOST, VERSIONED, WINDOW, Result
 
 TOKEN = re.compile(r'⟨[^⟩]*⟩')
 BLANK = re.compile(r'[\s\-–—·.…]*')  # a value that is no value: dashes, dots and spaces, or nothing
@@ -119,6 +122,22 @@ def run(ctx):
     agent = ctx.js('window.__skep.line()')['address']
     r.check(agent['text'].split(' › ')[1:3] == [AGENT_SPACE, AGENT_SPACE + '.0.1'], 'the agent space\'s home document reads 1 › 1.0.1.1 › 1.0.1.1.0.1: the account segment is its own account field, read whole', {'address': agent, 'lod': ctx.js('window.__skep.view.lod()')['name']})
     r.figures['agent_line'] = agent
+    # ---- a pinned version: the one line names it (issue #154's design decision: "The address bar and the box's corner
+    # both name it"; foundations §3.2: "its version address with ○ lit") ----------------------------------------------
+    member = VERSIONED + '.1'
+    seg = lambda: ctx.js('''((a) => { const m = document.querySelector('#line .marker');
+      return {shown: window.__skep.go.shownIn(a), address: window.__skep.line().address, marker: m ? {lit: m.classList.contains('lit'), title: m.title} : null}; })(%s)''' % json.dumps(VERSIONED))
+    ctx.leap(member)
+    pinned = seg()
+    title = ctx.js('import("./strings.js").then(({t}) => t("L.version", {k: 1}))')
+    r.check(pinned['shown'] == member and pinned['address']['doc'] == member and pinned['address']['text'].split(' › ')[:3] == ['1', '1.0.1', member] and pinned['address']['pos'] is not None
+            and pinned['marker'] == {'lit': True, 'title': title},
+            'a LEAP to a version\'s address pins its box there, and the one line names the version\'s address whole and its position, its version marker lit and titled "%s" (issue #154)' % title, pinned)
+    ctx.leap(VERSIONED, None)
+    plain = seg()
+    r.check(plain['shown'] == VERSIONED and plain['address']['doc'] == VERSIONED and bool(plain['marker']) and not plain['marker']['lit'],
+            'a LEAP to the plain address takes the box back to the trunk head: the line names the plain address, its marker unlit (issue #154)', plain)
+    r.figures['pinned_line'] = {'pinned': pinned, 'plain': plain}
     # ---- a face's words, and nothing more -----------------------------------------------
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(GHOST))
     ctx.settle()

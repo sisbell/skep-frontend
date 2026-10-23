@@ -74,7 +74,8 @@
 // rendered as formatting, never marked (rule (iii)) — here the corpus's own
 // markdown headings are set as headings.
 // Carries: the wireframe's §16 `articleHTML`, `withheldBlock`.
-// Rules: FP-1, FP-2, FP-8, FP-10 (reads LK/selection/focus as values), FP-21.
+// Rules: FP-1, FP-2, FP-8, FP-10 (reads LK/selection/focus as values), FP-21,
+// FP-22.
 
 import { esc, fingerprintCue, sliceBytes, byteLength } from '../util.js';
 import { t } from '../strings.js';
@@ -112,6 +113,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {(doc: string) => (Clause | null)} clauseOf C-67's clause beneath a withheld run of an origin document, decided over what the page holds of the origin's edition claims (T-LAYER's `clauseOf`, by `editionClause`); null where nothing renders in its place
  * @property {string | null} deviceLabel the owner's device label where known
  * @property {string | null} ownerFingerprint the owner's device key fingerprint where known
+ * @property {number | null} [members] the chain's member count as its box's document holds it (M-PUMP's probe records it there, every version sharing the count): what the corner's version statement reads at a version, its own record holding none; absent, the document's own
  */
 
 /**
@@ -433,10 +435,14 @@ function clauseHTML(c, scene) {
 
 /**
  * The corner's items in foundations' one order (§3.1): an edition's state
- * with "version ⟨k⟩ of ⟨n⟩" and R20's teaching, keyed by venue; a draft's
- * chip (C-28); the whole-document link count (rule (i)). The holder makes
- * the element they stand in (`data-corner` naming the document), which is
- * the corner's one stop: no item takes a focus of its own (D5 K-57).
+ * with "version ⟨k⟩ of ⟨n⟩" and R20's teaching, keyed by venue — at a pinned
+ * version its own number of the count its box's document holds (`members`),
+ * so the corner names the version its box shows and offers the versions list
+ * there too (issue #154's design decision: "The address bar and the box's
+ * corner both name it"); a draft's chip (C-28); the whole-document link
+ * count (rule (i)). The holder makes the element they stand in
+ * (`data-corner` naming the document), which is the corner's one stop: no
+ * item takes a focus of its own (D5 K-57).
  * @param {Doc} d
  * @param {ArticleView} v
  */
@@ -447,7 +453,7 @@ export function cornerHTML(d, v) {
   if (d.refused === 'withheld') parts.push(`<span class="st">${esc(t('F.corner.withheld', { owner: d.account || '' }))}</span>`);
   else if (published) {
     const first = v.notebook ? t('F.published.notebook') : t('F.published');
-    const n = d.members;
+    const n = v.members !== undefined ? v.members : d.members;
     if (d.meta && d.meta.birth === null && !k) parts.push(`<span class="st">${esc(t('F.corner.no-versions', { published: first }))}</span>`);
     else if (k) parts.push(`<span class="st">${esc(t('F.corner.pinned', { published: first, k }))}</span>`);
     else parts.push(`<span class="st">${esc(t('F.corner.latest', { published: first }))}</span>`);

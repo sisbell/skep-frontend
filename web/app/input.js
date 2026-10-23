@@ -47,7 +47,9 @@
 // a continuation's mark is a teleport to its newest member
 // (foundations §2.1); below the readable threshold a document is a place
 // wherever the pointer falls, bars or mounted text alike — a teleport (a
-// trail push); each LEAP a click makes is made where it fell — the point of
+// trail push) to the version its box shows (N-GO's `shownIn`; issue #154's
+// design decision: a click on a place is no act on its box's version, which
+// it keeps); each LEAP a click makes is made where it fell — the point of
 // the plane, a run's own positions — where its reading face stands while it
 // reads (N-GO); at the readable threshold and above its text takes the click:
 // a symbol opens the anatomy card of the link's end it stands for, and a
@@ -337,7 +339,7 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   const residue = RENDER.residueAtScreen(px, py);
   /** the point of the plane the click fell on: where a teleport it makes is made */
   const site = { world: { x: CAM.wx(px), y: CAM.wy(py) } };
-  if (residue) { GO.leapTo(residue.newest, { how: 'click', site }); return; }
+  if (residue) { GO.leapTo(GO.shownIn(residue.newest), { how: 'click', site }); return; }
   const doc = RENDER.docAtScreen(px, py);
   if (doc) {
     if (!LAYER.atReadingScale(doc)) { GO.leapTo(doc, { how: 'click', site }); return; }

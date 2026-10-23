@@ -7,7 +7,15 @@
 // The needs, from the viewport and the LOD (FP-11: the plane's pure camera
 // arithmetic beside the model): at mid scale and nearer, for the documents
 // in view that stand whole — a continuation drawn as one mark asks nothing
-// for its members — the extent (`retrieve_doc_v_span_set`), the metadata
+// for its members — EACH BOX READ AS IT IS DRAWN (issue #154's design
+// decision: "The box shows one version"): the version the box shows (the
+// reader `shown`, N-GO's, which the app hands in) read for all of what
+// follows, the box's document, where the box shows another of its versions,
+// for what the box draws of the document itself alone — its extent, its
+// metadata, its links and their types, and its chain — and a version the box
+// does not show for nothing; the version shown kept in view through its box,
+// so a feed row or a death that drops it has it read again — the extent
+// (`retrieve_doc_v_span_set`), the metadata
 // (`doc_metadata`), the links touching them (`find_links_v`, then each new
 // link's type ONCE by `read_link` — E17 (a)), and, where legible, the span
 // window of text (`retrieve_v`: from position 1 through the columns in view,
@@ -16,7 +24,8 @@
 // transcluded runs, and the permanent addresses a link's stored span is read
 // back to the text through (M-REC's `placed`) — and where each far end its
 // read links send from it sits in its far document's current text now
-// (`project`, A-53) — from every passage end the document holds, its own
+// (`project`, A-53), into the version the far document's box shows — from
+// every passage end the document holds, its own
 // bytes and the ones its text transcludes alike (M-REC's `holdsEnd`) — so a
 // beam, a symbol and the mirror place a moved passage where it stands and say
 // so of one that has left the text before anyone follows it (foundations
@@ -107,7 +116,9 @@
 // dropped for the row (`applyFeedUpdate`) — each document the row names and
 // the trunk of a member among them (a new version's `publish` names the
 // member, and the trunk's text, its chain and where links project into it
-// are what changed), and the home of the link it names with the home's
+// are what changed — the member, a trunk's own `D.k+1`, handed to the app's
+// `onPublish` before anything is dropped, so a box read at its plain address
+// keeps the version being read: N-GO's `arrived`), and the home of the link it names with the home's
 // trunk, which a bare row, its `docs` reading `null`, names by its `link`
 // alone; a `drafts` row only while the page holds a session — a guest's
 // index lists no draft (search.md §4 (iii)), nor does the index of a page
@@ -139,7 +150,7 @@
 // shell's answer while it derives the end — and takes or awaits it, then is
 // asked once more in the form the end left the page: under the re-opened
 // session, or as a guest after a death.
-// Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11.
+// Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11, FP-22.
 
 import * as PORT from '../bridge/port.js';
 import * as REC from './records.js';
@@ -148,7 +159,7 @@ import { cam, viewportWorld } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation } from '../plane/projection.js';
 import { estimate, estimatedSpan } from '../plane/layout.js';
-import { versionAddress, homeOf } from './address.js';
+import { versionAddress, homeOf, documentOf, isTrunkMember } from './address.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
 /** @typedef {import('./records.js').Stretch} Stretch */
@@ -232,17 +243,26 @@ let indexing = 0;
 const whileOut = new Set();
 let dirty = () => {};
 let started = false;
+/** every box showing its plain address: the reader until the app hands N-GO's in */
+const plain = (/** @type {string} */ addr) => documentOf(addr) || addr;
+/** @type {(addr: string) => string} the version a document's box shows (N-GO's `shownIn`, handed in at `start`) */
+let shown = plain;
+/** @type {(member: string) => void} told of a feed row publishing a trunk's next member, before the row drops anything (N-GO's `arrived`, handed in at `start`) */
+let onPublish = () => {};
 
 /**
  * Start the pump: subscribe the model to the port's events, every board
  * event through `onBoard`.
- * @param {{onDirty: () => void}} opts
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void}} opts `shown` the version each box shows, which the view reads (see the head); `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`
  */
 export function start(opts) {
   dirty = opts.onDirty;
+  shown = opts.shown || plain;
+  onPublish = opts.onPublish || (() => {});
   started = true;
   onBoard('feed', (ev) => {
     if (!ev.update || !takesRow(ev.update)) return;
+    if (ev.update.op === 'publish') for (const named of Array.isArray(ev.update.docs) ? ev.update.docs : []) if (isTrunkMember(named)) onPublish(named);
     const dropped = REC.applyFeedUpdate(ev.update);
     for (const m of whileOut) m.rows.push(ev.update);
     for (const addr of dropped) forget(addr);
@@ -666,10 +686,13 @@ const nameOf = (/** @type {Refusal} */ r) => r.name;
 /**
  * The documents in view: every indexed or held document whose box meets the
  * viewport (the system account's rows left out) and stands shallower than
- * the continuation the scale draws as one mark (P-LOD's `residueDepth`). The
- * mark draws its members' count and its newest's label from the index, which
- * no read brings, and the band fades its depth-k boxes in below every size a
- * read serves; a member is read whole when it is the focus (`loadWhole`).
+ * the continuation the scale draws as one mark (P-LOD's `residueDepth`) —
+ * each box's document, and beside it the version its box shows where that is
+ * another (see the head), whether the model holds that version's text or a
+ * drop has emptied it; a version the box does not show none. The mark draws
+ * its members' count and its newest's label from the index, which no read
+ * brings, and the band fades its depth-k boxes in below every size a read
+ * serves; a member is read whole when it is the focus (`loadWhole`).
  * @param {number} [pad]
  * @returns {Doc[]}
  */
@@ -679,13 +702,21 @@ export function visibleDocs(pad = 80) {
   /** @type {Doc[]} */
   const out = [];
   const seen = new Set();
+  /** a box's document taken, and the version its box shows beside it */
+  const take = (/** @type {Doc} */ d) => {
+    out.push(d); seen.add(d.addr);
+    const s = shown(d.addr);
+    if (s !== d.addr && !seen.has(s)) { out.push(REC.doc(s)); seen.add(s); }
+  };
   for (const p of REC.places()) {
     if (p.system || withinContinuation(p.doc, k)) continue;
-    if (intersects(docBox(p.doc), v)) { out.push(REC.doc(p.doc)); seen.add(p.doc); }
+    if (intersects(docBox(p.doc), v)) take(REC.doc(p.doc));
   }
   for (const d of REC.docs()) {
     if (seen.has(d.addr) || d.system || withinContinuation(d.addr, k)) continue;
-    if ((d.from >= 0 || d.meta || d.extent != null) && intersects(docBox(d.addr), v)) out.push(d);
+    const doc = plain(d.addr);
+    if (doc !== d.addr) { if (shown(doc) === d.addr && !seen.has(doc) && intersects(docBox(doc), v)) take(REC.doc(doc)); continue; }
+    if ((d.from >= 0 || d.meta || d.extent != null) && intersects(docBox(d.addr), v)) take(d);
   }
   return out;
 }
@@ -747,6 +778,8 @@ export function pump() {
     if (d.refused) continue;
     const box = docBox(d.addr);
     const docPx = box.w * cam.scale;
+    /** the version its box shows, read for its text and what it is placed through; else the box's document, read for what its box draws of it alone */
+    const drawn = shown(d.addr) === d.addr;
     if (d.extent == null) {
       if (need('s:' + d.addr, F.retrieveDocVSpanSet(d.addr), (a) => REC.takeSpanSet(d.addr, F.decodeSpanSet(a)), d.addr, (r) => refuseDoc(d, r))) missing++;
       continue;
@@ -761,7 +794,7 @@ export function pump() {
       if (need('k:' + la, F.readLink(la), (a) => { const v = F.decodeLinkValue(la, a); if (v) REC.takeLink(v); }, d.addr)) missing++;
     }
     const em = estimate(d.extent, box).fs * cam.scale;
-    if (em >= FETCH_EM && d.extent > 0) {
+    if (drawn && em >= FETCH_EM && d.extent > 0) {
       const w = spanWindow(d);
       if (w && !holdsSpan(d, w[0], w[1])) {
         // joined to what is held where it meets it; a window past the whole read's cap read alone
@@ -779,22 +812,24 @@ export function pump() {
         if (need('p:' + p.link + ':' + p.slot + ':' + p.far, F.project(p.link, p.slot, p.far), (a) => REC.takeProjection(p.link, p.slot, p.far, stretchesOf(a)), p.far, (r) => declined(p.link, p.slot, p.far, r))) missing++;
       }
       for (const origin of REC.withheldOrigins(d.addr)) missing += needClaims(origin);
-      if (em >= LOD_TXT_LO && d.members == null && d.meta && d.meta.published) { if (probeMembers(d)) missing++; }
     }
+    // the chain, its box's document's alone: every version shares its count
+    if (em >= LOD_TXT_LO && d.extent > 0 && d.members == null && d.meta && d.meta.published && plain(d.addr) === d.addr) { if (probeMembers(d)) missing++; }
   }
   return missing;
 }
 
 /**
  * The far ends a document's read links send from it, whose place in their
- * far document's current text the view asks (`project`): for each link
- * touching the document with a passage end it holds (M-REC's `holdsEnd`, the
- * ends LK draws there: the document the span's trunk, or its held text
- * placing the span), the slot opposite — whose first span names a passage of
- * a document, what LK draws a beam to — once per link and slot; none whose
- * projection is held, or whose document a read found unregistered — its own
- * read, or another link's projection into it (`declined`) — or withheld,
- * which refuses the projection with it.
+ * far document's current text the view asks (`project`) — in the version the
+ * far document's box shows (the reader `shown`), where LK places them: for
+ * each link touching the document with a passage end it holds (M-REC's
+ * `holdsEnd`, the ends LK draws there: the document the span's trunk, or its
+ * held text placing the span), the slot opposite — whose first span names a
+ * passage of a document, what LK draws a beam to — once per link and slot;
+ * none whose projection is held, or whose document or version a read found
+ * unregistered — its own read, or another link's projection into it
+ * (`declined`) — or withheld, which refuses the projection with it.
  * @param {string} addr
  * @returns {Array<{link: string, slot: 1 | 2, far: string}>}
  */
@@ -806,8 +841,9 @@ function farEnds(addr) {
       const f = other[0];
       if (!f || f.whole || f.ordinal == null || !f.doc) continue;
       if (!near.some((e) => REC.holdsEnd(addr, e))) continue;
-      if (REC.projection(l.addr, slot, f.doc) !== undefined || (REC.has(f.doc) && REC.doc(f.doc).refused)) continue;
-      out.set(l.addr + ' ' + slot, { link: l.addr, slot, far: f.doc });
+      const at = shown(f.doc);
+      if (REC.projection(l.addr, slot, at) !== undefined || [f.doc, at].some((x) => REC.has(x) && REC.doc(x).refused)) continue;
+      out.set(l.addr + ' ' + slot, { link: l.addr, slot, far: at });
     }
   }
   return [...out.values()];
@@ -1091,7 +1127,7 @@ export async function projectEnd(linkAddr, slot, doc) {
 /**
  * Where a link's slot projects into a document now, read for an act and
  * kept nowhere (`project`): a version member's, for the offer of a landing's
- * line (N-GO; issue #153) — the model holds no member's text, so no beam or
+ * line (N-GO; issue #153), whose box shows another version, so no beam or
  * symbol reads it. Its runs in the text's order; the refusal met where the
  * board declines the read.
  * @param {string} linkAddr
@@ -1108,9 +1144,9 @@ export async function projectedIn(linkAddr, slot, doc) {
  * A document's content extent read for an act and kept nowhere
  * (`retrieve_doc_v_span_set`): a version member's, for its row in the
  * versions list (§2.1's version row: one span read per member, A-39) and for
- * the offer of a landing's line (N-GO; issue #153) — a member the model held
- * would be read and mounted over its document's box, which it shares. The
- * refusal met where the board declines the read.
+ * the offer of a landing's line (N-GO; issue #153) — a row asks no member's
+ * text, which a read act brings once the member is moved to. The refusal met
+ * where the board declines the read.
  * @param {string} addr
  * @returns {Promise<{extent: number} | {refused: Refusal}>}
  */

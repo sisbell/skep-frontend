@@ -888,15 +888,20 @@ export function pageTarget(f, view, dir) {
  * and as its offset from the line holding it (`posAt`, `placeOf`); that offset
  * from that position's line in the second, at the second's size; and the
  * factor the camera's scale takes for the text to keep its size on screen.
+ * Where the second fold is another version's (issue #154's design decision:
+ * a version move keeps the held passage's screen line), `pair` names the
+ * position of the first whose line the point is read from and the position
+ * of the second whose line takes it — their positions being two texts'.
  * @param {Fold} a the fold the passage was read in
  * @param {Fold} b the fold it is set in now
  * @param {{x: number, y: number}} p
+ * @param {{from: number, to: number} | null} [pair] the position of `a` the point is read from and the position of `b` that takes it; null where the point's own position does, in both
  * @returns {{pos: number, to: {x: number, y: number}, k: number} | null} null where the point names no position
  */
-export function holdOf(a, b, p) {
-  const pos = posAt(a, p.x, p.y);
+export function holdOf(a, b, p, pair = null) {
+  const pos = pair ? pair.from : posAt(a, p.x, p.y);
   if (pos == null) return null;
-  const from = placeOf(a, pos), to = placeOf(b, pos), s = b.fs / a.fs;
+  const from = placeOf(a, pos), to = placeOf(b, pair ? pair.to : pos), s = b.fs / a.fs;
   return { pos, to: { x: to.x + (p.x - from.x) * s, y: to.y + (p.y - from.y) * s }, k: a.fs / b.fs };
 }
 

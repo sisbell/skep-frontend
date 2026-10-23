@@ -224,8 +224,8 @@ const mid = (/** @type {Rect} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
  * @returns {Anchor[] | null}
  */
 function farAnchors(s, g) {
-  if (s.farWhole || LK.floats(s)) { const b = g.first(s.far); return b ? [{ line: b, block: b }] : []; }
-  return s.farRuns ? anchorsOf(g, s.far, s.farRuns) : null;
+  if (s.farWhole || LK.floats(s)) { const b = g.first(s.farAt); return b ? [{ line: b, block: b }] : []; }
+  return s.farRuns ? anchorsOf(g, s.farAt, s.farRuns) : null;
 }
 
 /**
@@ -257,14 +257,14 @@ function beamTo(s, line, from, to, view) {
  */
 export function beamOf(s, g) {
   if (!s.far) return null;
-  const far = g.mounted(s.far) ? farAnchors(s, g) : null;
+  const far = g.mounted(s.farAt) ? farAnchors(s, g) : null;
   if (far && far.length) {
     const left = leaveAt(g, s.near, s.runs, mid(far[0].line));
     if (!left) return null;
     const there = pickLine(far, left.from);
     return beamTo(s, left.line, left.from, { x: there.block.x, y: there.line.y + there.line.h / 2 }, g.view);
   }
-  const c = g.centre(s.far);
+  const c = g.centre(s.farAt);
   const left = leaveAt(g, s.near, s.runs, c);
   return left && beamTo(s, left.line, left.from, c, g.view);
 }

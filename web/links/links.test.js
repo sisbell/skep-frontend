@@ -63,6 +63,10 @@
 // document here yet" in the reader's own account under a complete index
 // listing none there; withheld, "withheld · ⟨owner⟩" by the owner rule
 // handed in; readable, its first line where the page holds one.
+// A document's reveal is its box's, which its versions share (issue #154:
+// lenses and link sets stay as they were); a far end stands in the version
+// its far box shows, placed by the projection into that version (`farAt`),
+// the link still naming its own far document.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -160,6 +164,29 @@ test('the badge counts what is homed in a document\'s version members with its o
   assert.deepEqual(LK.countDoc(D), { n: 2, social: false, arriving: false }, 'its own citation and the one homed in its second member');
   assert.deepEqual(LK.countDoc(M), { n: 1, social: false, arriving: false }, 'the member: the citation homed in it, never its trunk\'s');
   assert.equal(LK.countAccount('1.0.1').n, 2, 'the account: each once');
+});
+
+test('a document\'s reveal is its box\'s, which its versions share: the stage, the others\' toggle and the lenses set at the plain address stand at a version, and set at a version stand at the plain address (issue #154: "Lenses, link sets and the box\'s mid and far counts stay as they were")', () => {
+  const M = D + '.2';
+  LK.reveal(D, 2); LK.setOthers(D, true); LK.lens(D, { types: new Set([CITE]) });
+  const at = LK.state(M);
+  assert.deepEqual([at.stage, at.others, [...(at.lens.types || [])]], [2, true, [CITE]], 'set at D: standing at its version');
+  LK.clearLens(M); LK.hide(M);
+  assert.deepEqual([LK.state(D).stage, LK.state(D).lens.types], [1, null], 'set at the version: standing at D');
+});
+
+test('a far end stands in the version its far box shows (issue #154: "Beams, link marks and per-passage counts follow the version shown"): placed by the projection into that version, which the end names as `farAt`, the link still naming its own far document', () => {
+  const FAR = '1.0.1.0.127', FAR2 = FAR + '.2', L = D + '.0.2.9';
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 60, 5)], to: [span(FAR, 20, 5)], type: CITE });
+  REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 5 }]);
+  REC.takeProjection(L, 2, FAR2, [{ pos: 31, width: 5 }]);
+  const end = () => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === L));
+  assert.deepEqual([end().far, end().farAt, end().farRuns], [FAR, FAR, [{ pos: 20, width: 5 }]], 'the box showing FAR: there');
+  LK.readers({ shown: (a) => (a === FAR ? FAR2 : a) });
+  try {
+    assert.deepEqual([end().far, end().farAt, end().farRuns, LK.farPos(end())], [FAR, FAR2, [{ pos: 31, width: 5 }], 31], 'the box showing its second version: placed there, the link naming FAR still');
+  } finally { LK.readers({}); }
 });
 
 test('the reveal chain: symbols at stage 2, beams at stage 3, hidden again on dismiss', () => {

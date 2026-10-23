@@ -14,7 +14,11 @@
 // board at far scale ("the whole board is in view" at WHOLE BOARD), the
 // account under the camera at mid (B1-S2's `1.5 › 1.5.0.1`) whatever the
 // walk stands on, and nearer the walk's own place: board › account ›
-// document — the document the walk stands in, each segment read from its own
+// document — the document the walk stands in, named by the version its box
+// shows: the plain address, the trunk head, or a pinned version's address,
+// its marker lit (issue #154's design decision: "The address bar and the
+// box's corner both name it"; foundations §3.2: "its version address with ○
+// lit") — each segment read from its own
 // address: its node field, its account field whole at any depth (`1.0.1.1`
 // for the agent space's documents, B1-S6's `1.5 › 1.5.0.1.1 › …`) — or, where
 // a camera move ended over no document's region and the re-take stood the walk
@@ -74,7 +78,7 @@
 // removed; `whereAmI` RE-CUT to foundations §2.2, its document form nearer
 // than mid and its position at the document's own reading scale alone; the
 // diagnostics behind `h` are the gate's hooks).
-// Rules: FP-1, FP-2, FP-10, FP-13, FP-20.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-22.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from '../nav/trail.js';
@@ -86,7 +90,7 @@ import { drawChord } from '../nav/keys.js';
 import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
 import { boardCell, accountAt, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
-import { memberOf, documentOf, boardOf, accountOf } from '../model/address.js';
+import { memberOf, boardOf, accountOf } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -208,8 +212,7 @@ export function addressDisplay() {
   }
   const f = WALK.current(), nearer = lod.name === 'near' || lod.name === 'mid~near';
   if (f && nearer && (f.kind === 'block' || f.kind === 'document' || f.kind === 'link')) {
-    const doc = documentOf(f.addr) || f.addr;
-    const place = `${boardOf(doc)} › ${accountOf(doc)} › ${doc}`;
+    const place = `${boardOf(f.addr)} › ${accountOf(f.addr)} › ${f.addr}`;
     const pos = LAYER.atReadingScale(f.addr) ? WALK.landedAt() ?? f.pos ?? 1 : null;
     const widest = Math.max(1, REC.doc(f.addr).extent || 0, pos || 0);
     const win = pos != null && WALK.kept() ? LAYER.windowIn(f.addr) : null;
@@ -323,11 +326,11 @@ export function render(force = false) {
   FOCUS.keep(host, (e) => /** @type {HTMLElement} */ (e).dataset.act || null, () => { host.innerHTML = html; roving(); });
 }
 
-/** the strip's act (K-23): the ordinal and the passage's first words beneath, until the next act */
+/** the strip's act (K-23): the ordinal and the passage's first words beneath, the version's own, until the next act */
 export function stripAct() {
   const a = addressDisplay();
   if (!a.doc || a.pos == null) return;
-  const words = REC.textBetween(documentOf(a.doc) || a.doc, a.pos, a.pos + 60);
+  const words = REC.textBetween(a.doc, a.pos, a.pos + 60);
   transient(`${t('F.position', { p: a.pos })} · ${words}`, 'strip');
 }
 

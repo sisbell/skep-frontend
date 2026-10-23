@@ -44,6 +44,8 @@
 // whose every beam floats saying so at its end, and one whose every beam's
 // far text holds only part of its passage saying the line its landing says
 // (issue #153), one whose beams part saying nothing of it.
+// A far end in the version its far box shows ends at that version's mounted
+// article, never at the box's centre (issue #154).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -194,6 +196,18 @@ test('a mounted far end in view: the beam ends at the far block\'s left edge, le
   assert.ok(b);
   assert.deepEqual([b.to, b.stub, b.end], [{ x: 600, y: 425.5 }, false, { x: 600, y: 425.5 }], 'its stroke ends there');
   assert.deepEqual(b.line, NEAR[0], 'the near line nearest the far span');
+});
+
+test('a far end stands in the version its far box shows (issue #154): the beam ends at that version\'s mounted article, never at the box\'s centre for the document the link names', () => {
+  const H2 = H + '.2';
+  /** the far box showing H's second version: its article mounted, the far span's lines laid out in it; H's own never */
+  const g = geometry({ farMounted: true, centre: { x: 750, y: 415 } });
+  const version = { ...g, lines: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => g.lines(addr === H2 ? H : addr === H ? '' : addr, pos, width),
+    block: (/** @type {string} */ addr, /** @type {number} */ pos) => g.block(addr === H2 ? H : addr === H ? '' : addr, pos), mounted: (/** @type {string} */ addr) => addr === D || addr === H2 };
+  const b = beamOf({ ...own(), farAt: H2 }, version);
+  assert.deepEqual(b && [b.to, b.stub], [{ x: 600, y: 425.5 }, false], 'at the version\'s far block\'s left edge, level with the far span\'s line');
+  const named = beamOf(own(), version);
+  assert.deepEqual(named && named.to, { x: 750, y: 415 }, 'placed in the document the link names, unmounted: the box\'s centre');
 });
 
 test('a mounted whole-work far end in view: the beam ends at the far article\'s first block', () => {

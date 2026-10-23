@@ -19,6 +19,15 @@
 // later column is read leaves the line under the view's centre where it stood
 // on screen, at its size (a frame that rebuilds without re-anchoring turns
 // red), and a feed row's take-down holds it until the article stands again.
+// ONE ARTICLE A BOX (issue #154's design decision): of a document and its
+// version, both texts held, the article of the version the box shows stands
+// alone, and the box taking the other takes it down and stands the other (a
+// frame that mounts every held text, or keeps the version left standing,
+// turns red); the line being read keeps its place as the box takes the other
+// version — the line holding the position the move names standing where the
+// line it left stood, the scale by the ratio of the two folds' sizes (a
+// frame that sets the version taken with no hold, or holds by the position
+// alone, turns red) — and held across one version, at once.
 // Then WHAT STANDS (`frame`; issue #122's design decision), on a page of
 // stand-ins over a field of an account's 48 documents, every one at the
 // standard size: at the readable em every document in view stands in the one
@@ -364,6 +373,62 @@ test('a reveal that re-breaks the article while a later column is read leaves th
   const back = screen(under);
   assert.ok(Math.abs(back.x - held.x) < 1e-6 && Math.abs(back.y - held.y) < 1e-6, `the passage where it stood: ${JSON.stringify(held)} → ${JSON.stringify(back)}`);
   assert.ok(Math.abs(CAM.cam.scale * reset.fs - scale * f0.fs) < 1e-9, 'at its size on screen: the scale by the ratio of its sizes');
+}, 1440, 900));
+
+// ---- one article a box (issue #154's design decision: "The box shows one version") -----------------------------------
+
+/** D's second version: a prologue of its own set before D's text, so each of D's positions stands later in it */
+const D2 = D + '.2', PROLOGUE = 'A prologue the second version set before the text.\n\n', TEXT2 = PROLOGUE + TEXT;
+const SHIFT = new TextEncoder().encode(PROLOGUE).length;
+/** D's second version's text delivered whole */
+function deliver2() {
+  const n = new TextEncoder().encode(TEXT2).length;
+  REC.takeSpanSet(D2, [{ subspace: 1, ordinal: 1, positions: n }]);
+  REC.takeDelivery(D2, [{ pos: 1, width: n, kind: 'content', text: TEXT2, ref: null, origin: null }]);
+}
+/** the owners' readers, the box D and its versions share showing `shown` */
+const showing = (/** @type {{at: string}} */ box) => LAYER.readers({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: (a) => (a === D || a === D2 ? box.at : a) });
+
+test('a box shows one version: of a document and its version, both texts held, the article of the version the box shows stands alone, and the box taking the other takes it down and stands the other (issue #154)', () => onLayer((held) => {
+  deliver(); deliver2();
+  const box = { at: D };
+  showing(box);
+  const f = LAYER.foldOf(REC.doc(D)), c = f.columns[0], room = docBox(D);
+  CAM.set({ x: room.x + c.x + c.w / 2, y: room.y + c.y + c.h / 2, scale: 12 / f.fs });
+  LAYER.frame();
+  assert.deepEqual([LAYER.isMounted(D), LAYER.isMounted(D2), held.size], [true, false, 1], 'the box shows D: its article alone stands, the version\'s text held and never mounted over it');
+  box.at = D2;
+  LAYER.frame();
+  assert.deepEqual([LAYER.isMounted(D), LAYER.mountedSet().has(D), LAYER.isMounted(D2), held.size], [false, false, true, 1], 'the box takes the version: D\'s article taken down, the version\'s standing alone');
+  assert.deepEqual(LAYER.mountedAddrs(), [D2]);
+}, 1440, 900));
+
+test('a box taking another version keeps the line being read in place (issue #154): the line holding the position its mover names stands, in the version taken, where the line holding the position it left stood on screen, the scale by the ratio of the two folds\' sizes; held across one version, the line taken stands where the line left stood at once', () => onLayer(() => {
+  deliver(); deliver2();
+  const box = { at: D };
+  showing(box);
+  const room = docBox(D), f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[6];
+  CAM.set({ x: room.x + c.x + c.w / 2, y: room.y + c.y + c.h * 0.4, scale: 12 / f0.fs });
+  LAYER.frame();
+  const from = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y)), to = from + SHIFT;
+  /** where a position's line stands on screen in a version's fold as it is set now */
+  const screen = (/** @type {string} */ addr, /** @type {number} */ at) => { const p = placeOf(LAYER.foldOf(REC.doc(addr)), at); return { x: CAM.sx(room.x + p.x), y: CAM.sy(room.y + p.y) }; };
+  const was = screen(D, from), scale = CAM.cam.scale;
+  const f2 = LAYER.foldOf(REC.doc(D2));
+  assert.ok(f2.fs !== f0.fs, `the version set at another size: ${f2.fs} beside ${f0.fs}`);
+  assert.ok(Math.abs(screen(D2, to).y - was.y) > 1, 'unheld, the version\'s line would stand elsewhere on screen');
+  LAYER.holdAcross(D, D2, { from, to });
+  box.at = D2;
+  LAYER.frame();
+  assert.ok(LAYER.isMounted(D2), 'the version stands');
+  const now = screen(D2, to);
+  assert.ok(Math.abs(now.x - was.x) < 1e-6 && Math.abs(now.y - was.y) < 1e-6, `the version's line where the line left stood: ${JSON.stringify(was)} → ${JSON.stringify(now)}`);
+  assert.ok(Math.abs(CAM.cam.scale * f2.fs - scale * f0.fs) < 1e-9, 'at its size on screen: the scale by the ratio of the two folds\' sizes');
+  // held across one version, its article standing: the line taken where the line left stood, at once
+  const there = to + 200, stood = screen(D2, to), k = CAM.cam.scale;
+  LAYER.holdAcross(D2, D2, { from: to, to: there });
+  const moved = screen(D2, there);
+  assert.ok(Math.abs(moved.x - stood.x) < 1e-6 && Math.abs(moved.y - stood.y) < 1e-6 && CAM.cam.scale === k, `the line taken where the line left stood, the scale kept: ${JSON.stringify(stood)} → ${JSON.stringify(moved)}`);
 }, 1440, 900));
 
 test('every document in view at the readable em stands in the frame it gets there, however many: no count holds one back', () => onLayer((held) => {

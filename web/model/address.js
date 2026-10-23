@@ -134,6 +134,17 @@ export const memberOf = (key) => {
 export const versionAddress = (doc, k) => doc + '.' + k;
 
 /**
+ * Is an address a member of its trunk's own chain — `D.k`, never a daughter
+ * `D.k.m` nor an element under either: a `publish` minting one makes it the
+ * trunk's head ("a trunk member `D.k+1` was minted against `D.k`", wire.md
+ * §Namespace, `doc_metadata`). "1.0.1.0.3.2" → true; "1.0.1.0.3.2.1" →
+ * false; "1.0.1.0.3" → false.
+ * @param {string} key
+ * @returns {boolean}
+ */
+export const isTrunkMember = (key) => { const f = fieldsOf(key); return f.length === 3 && f[2].length === 2; };
+
+/**
  * An element address — a link's or a position's — resolved: "1.0.1.0.3.0.2.1"
  * → {doc: "1.0.1.0.3", subspace: 2, ordinal: 1}; anything shallower → null.
  * @param {string} key

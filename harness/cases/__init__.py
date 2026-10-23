@@ -83,10 +83,6 @@ def unit_span(addr):
 ALL = ['static', 'shapes', 'wire', 'rendered', 'text', 'layout', 'a11y', 'keys', 'frames', 'walks', 'shots', 'guest']
 
 # the page issues the marked checks wait on; each mark comes off the day its check passes
-# issue #12's boundary note
-XFAIL_MEMBER = ("page: a version member shares its document's box, and once the member's text is loaded (read side by side, "
-                "or a LEAP to the member) its article is mounted over the document's — which of them the box shows is the "
-                "design's to rule (web/text/layer.js `frame`; web/plane/projection.js `docBox`)")
 # issue #9's boundary note
 XFAIL_BEAM_LABELS = ("page: each bundle's label is set at its first beam's end, so stubs bound for different documents that land near "
                      "each other on the view's border, below the saturation the merge per direction waits for, set their labels over "

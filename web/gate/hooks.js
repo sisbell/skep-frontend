@@ -45,7 +45,9 @@
 // its new mounts, its articles in the mount band and their lines — what
 // stands of a document's article, part by part (`mountedLines`), the bridge
 // client's own call
-// log, the settle signal, the trail, the line's and the overlay's text, the
+// log, the settle signal, whether the camera flies (`view.flying`) and the
+// version each document's box shows (`go.shownIn`; issue #154), the trail,
+// the line's and the overlay's text, the
 // selection's span beside the platform's own and the way the platform's runs,
 // the copy door (the copy event
 // run against a stub clipboard, its flavors read back), the invalidation door
@@ -505,7 +507,7 @@ export function install(deps) {
     mountedLines: (/** @type {string} */ addr) => LAYER.mountedLines(addr),
     spanRects: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => LAYER.spanRects(addr, pos, width),
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
-    view: { camera: () => CAM.view(), focus: () => WALK.current(), ring: () => (RENDER.stats.ring ? { ...RENDER.stats.ring } : null), ringBounds, lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
+    view: { camera: () => CAM.view(), flying: () => CAM.flying(), focus: () => WALK.current(), ring: () => (RENDER.stats.ring ? { ...RENDER.stats.ring } : null), ringBounds, lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
     /** the focus's owner as it stands: the ring's rule, whether the plane holds the focus, the regions holding it oldest first */
     focus: () => ({ ring: FOCUS.ringShown(), plane: FOCUS.planeHolds(), standing: FOCUS.standing() }),
     driftSample, overlapCheck, visible,
@@ -576,8 +578,8 @@ export function install(deps) {
     esc: () => KEYS.esc(),
     mounts: () => LAYER.mounts(),
     beams: () => BM.count(),
-    /** the teleports; `leapTo`'s third argument names the runs of the span landed on — every run a far end projects to, `pos` at one of them — and the link followed to it, the landing then marked as a follow's is, or the passage the LEAP carries, re-projected and marked at the landing */
-    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{runs?: import('../nav/go.js').Run[] | null, link?: string | null, carry?: import('../nav/go.js').Carry | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, runs: o.runs ?? null, link: o.link ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), arrival: () => GO.arrivalMark(), landing: () => GO.landing(), described: () => GO.described(), landingAct: (/** @type {'beside' | 'version' | 'again'} */ which) => { GO.landingAct(which); return true; } },
+    /** the teleports; `leapTo`'s third argument names the runs of the span landed on — every run a far end projects to, `pos` at one of them — and the link followed to it, the landing then marked as a follow's is, or the passage the LEAP carries, re-projected and marked at the landing; `shownIn` the version a document's box shows (issue #154) */
+    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{runs?: import('../nav/go.js').Run[] | null, link?: string | null, carry?: import('../nav/go.js').Carry | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, runs: o.runs ?? null, link: o.link ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), shownIn: (/** @type {string} */ a) => GO.shownIn(a), arrival: () => GO.arrivalMark(), landing: () => GO.landing(), described: () => GO.described(), landingAct: (/** @type {'beside' | 'version' | 'again'} */ which) => { GO.landingAct(which); return true; } },
     /** a landing's line as it stands (issue #153): its words, its acts, its rect on screen, whether the scene covers it; null where none stands */
     landingLine: () => LANDING.shown(),
     leap: { open: () => LEAP.open(), close: () => LEAP.close(), rows: () => LEAP.currentRows(), isOpen: () => LEAP.isOpen() },
@@ -586,7 +588,7 @@ export function install(deps) {
       anatomy: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? ANATOMY.open(s, null).then(() => true) : Promise.resolve(false); },
       wrote: (/** @type {string} */ addr, /** @type {number} */ pos) => PROV.wrote(addr, pos).then(() => true),
       uses: (/** @type {string} */ addr, /** @type {number} */ pos) => PROV.uses(addr, pos).then(() => true),
-      versions: (/** @type {string} */ addr, /** @type {number | null} */ pos) => VERSIONS.open(addr, pos, null).then(() => true),
+      versions: (/** @type {string} */ addr, /** @type {number | null} */ pos, /** @type {number | null} */ width = null) => VERSIONS.open(addr, pos, null, width).then(() => true),
       trailList: () => { TRAILLIST.open(false); return true; },
     },
     scene: {

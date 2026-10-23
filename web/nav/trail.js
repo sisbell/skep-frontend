@@ -3,16 +3,22 @@
 // cursor and the claims standing unanswered — THE ONE OWNER (FP-10):
 // client-side, never written (law 1).
 // An entry is an address and a view (S3 Q7's tuple), its view RE-TAKEN
-// whenever the entry is departed, so Back lands on the passage left, and THE
+// whenever the entry is departed, so Back lands on the passage left — its
+// place re-taken with it where the box it names shows another version as it
+// is departed, a newer version's arrival having pinned the box on the member
+// being read (`retakePlace`; N-GO's `arrived`), so Back restores the version
+// read there (issue #154's design decision: "Back restores the earlier
+// version and its view") — and THE
 // STEP THAT LEFT IT for the entry after it (issue #152's design decision),
 // written as a push departs it: the link followed for a follow, the passage
-// carried for a carrying LEAP — by identity, the permanent addresses of its
-// bytes, never its positions — and none for any other move, nor for a claim
-// departed, where the camera never stood. A one-step move across an entry's
-// step lights it at the end it lands on (N-GO's `back` and `forward`); a
-// cursor move writes none. The launch frame is the first entry (W-01);
-// after it an entry is pushed by a fresh TELEPORT — LEAP, follow, a click on
-// a place, Enter, HOME, WHOLE BOARD, an account's region — one push per act,
+// carried for a carrying LEAP or a version move — by identity, the permanent
+// addresses of its bytes, never its positions — and none for any other move,
+// nor for a claim departed, where the camera never stood. A one-step move
+// across an entry's step lights it at the end it lands on (N-GO's `back` and
+// `forward`); a cursor move writes none. The launch frame is the first entry
+// (W-01); after it an entry is pushed by a fresh TELEPORT — LEAP, follow, a
+// click on a place, Enter, HOME, WHOLE BOARD, an account's region — or by a
+// version move, which lands in place (N-GO's `toVersion`), one push per act,
 // made as the act is made, never by panning or zooming, and never by a
 // reading scene's end, which leaves the camera where it found it (SC). Back,
 // Forward and a jump move the cursor and discard nothing, and a jump never
@@ -80,7 +86,7 @@
 
 /**
  * @typedef {Object} Entry
- * @property {string} addr the place teleported to — the place a jump named, whatever its read brought
+ * @property {string} addr the place teleported to — the place a jump named, whatever its read brought; at a document, the version its box showed as the entry was last departed (`retakePlace`)
  * @property {number | null} pos the position landed on, where one was
  * @property {number | null} width the positions of the run landed on from `pos`, where the landing named a span: the first run in the text of a follow's projected far end, or a carried passage's counterpart — one of the runs its landing outlined
  * @property {View} view the view at the entry — the landing's, re-taken at departure; the view the jump left from, where its read brought no place
@@ -105,6 +111,17 @@ const claims = new Map();
 /** the cursor's entry re-takes the view it is departed at — a claim's never: the camera never landed there */
 function retake(/** @type {View | null} */ departedView) {
   if (cursor >= 0 && departedView && !claims.has(entries[cursor])) entries[cursor].view = { ...departedView };
+}
+
+/**
+ * The cursor's entry's place re-taken as it is departed (see the head): the
+ * version its box shows then, where that is another than the one the entry
+ * names — a claim's never, the camera never having landed there. N-GO calls
+ * it before every move that departs the entry.
+ * @param {string} addr the version the box shows
+ */
+export function retakePlace(addr) {
+  if (cursor >= 0 && !claims.has(entries[cursor])) entries[cursor].addr = addr;
 }
 
 /**

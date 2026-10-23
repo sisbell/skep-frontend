@@ -63,6 +63,9 @@
 // windowing it — in its head, its arm and the owner it carries for C-39's
 // face (a mutant that names the article's owner, or one owner for every run,
 // turns red).
+// The corner at a pinned version names it — its own number of the count its
+// box's document holds — and offers the versions list there too; its record
+// holding no count, it takes the box's (issue #154).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, cornerHTML, headingLevel, blockMarks } from './article.js';
@@ -292,6 +295,14 @@ test('the corner: version k of n with R20\'s teaching keyed by venue; a draft\'s
   const off = cornerHTML(doc({ kind: 'draft', meta: null }), view({ localTrust: false }));
   assert.ok(off.includes('Readable by you alone'));
   assert.ok(![c, draft, off].some((h) => h.includes('tabindex')), 'no item takes a focus of its own: the corner is one stop (K-57)');
+});
+
+test('the corner at a pinned version names it — its own number of the count its box\'s document holds — and offers the versions list there too; its own record holding no count, it takes the box\'s (issue #154)', () => {
+  const member = doc({ addr: '1.0.1.0.3.1', members: null });
+  const c = cornerHTML(member, view({ members: 3 }));
+  assert.ok(c.includes(t('F.version-of', { k: 1, n: 3 })) && c.includes('class="version"'), `version 1 of 3, the list's act: ${c}`);
+  assert.ok(c.includes(t('F.corner.pinned', { published: t('F.published.notebook'), k: 1 })), 'the pinned version\'s state');
+  assert.ok(!cornerHTML(member, view()).includes('class="version"'), 'no count handed in, none of its own: no statement');
 });
 
 test('the article holds no corner: its items stand beside it, outside the box that clips the article', () => {

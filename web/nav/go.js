@@ -1,8 +1,37 @@
 // N-GO — a TELEPORT (the structure record §3.2 "N-GO"; S-7 (a)). Layer 2.
 // ENGINE-BOUND only through O-HOST; its arithmetic pure. State: VIEW — the
 // arrival's two marks, what a landing says of the passage it carried or
-// followed (`landing`), the light a one-step move along the trail made, and
-// the count of the navigation acts made — THE ONE OWNER of them (FP-10). It
+// followed (`landing`), the light a one-step move along the trail made, the
+// version each document's box shows, and the count of the navigation acts
+// made — THE ONE OWNER of them (FP-10).
+// THE BOX'S VERSION (issue #154's design decision: "One box per document …
+// The box shows one version"): every version of a document shares its box
+// (P-PROJ's `docBox`), and the box shows ONE of them — its plain address,
+// the trunk head, or a version pinned there (`shownIn`) — which T-LAYER
+// mounts, P-RENDER draws, N-WALK walks, the one line names, LK places a far
+// end in and M-PUMP reads, each through the reader the app hands it. Only an
+// act aimed at the box changes it (`pinTo`): a version move, or arriving by
+// an address — a LEAP's landing at the address it names, a follow's at the
+// address its link names, a cursor move's at its entry's — never a pan, a
+// zoom, the scene, HOME, WHOLE BOARD, or a click on a place, which goes to
+// what the box shows; and a newer version's ARRIVAL never changes what a box
+// shows (`arrived`): one read at its plain address keeps the member being
+// read, pinned there, its text never swapped under the reader (foundations
+// §3.2), the trail's entry re-taking that version as it is departed
+// (N-TRAIL's `retakePlace`). The choice lasts for the session and is never
+// written (FP-7). A VERSION MOVE NEVER FLIES (`toVersion`): the camera stays
+// and only the text is replaced — the reader's held passage, the selection
+// or the first passage in view, matched into the version moved to by
+// `compare` (`heldIn`) and keeping its screen line there (T-LAYER's
+// `holdAcross`, P-CAM's re-anchor; FP-8), whatever of it survives marked by
+// THE FOUR STATES' rule below; where that version lacks it, the nearest
+// passage the two share keeps the line instead (SC's `nearest`), else the
+// version's head, the box saying the passage is not in this version; a
+// selection standing in the version left ends with its text; each move a
+// trail entry, recording the passage carried, and Back restoring the earlier
+// version and its view. The moves between versions are the versions list's
+// read acts and a landing's line's version offer; a LEAP to a version's
+// address arrives by that address, as any LEAP does. It
 // orchestrates the owners: end a card or scene
 // still reading as the act is made, which then opens nothing (O-HOST's
 // opening), and dismiss the overlay and the scene — a follow at its landing,
@@ -13,8 +42,8 @@
 // made the act, which only the act's caller knows, so each teleport takes
 // `byKey` from it (D5 §4 rules 2 and 8) — re-project the
 // passage carried: a LEAP that moves from a passage to another arrangement of
-// the same material — a transcluded run's source, a document holding it, a
-// member from the versions list — carries it (foundations §2.3's carry rule;
+// the same material — a transcluded run's source, a document holding it —
+// carries it, as a version move does (foundations §2.3's carry rule;
 // P43), and once the landing's text is read, and never before, `compare`s it
 // against that text whole — in parts where the board refuses the read for
 // its size (M-PUMP's `compareParts`) — lands at its `counterpart` there (SC's
@@ -23,7 +52,8 @@
 // arrival by follow marks its span; where the text holds none of it, it
 // lands at THE DOCUMENT'S HEAD (`headOf`: its first block) with the dead
 // end's face, "its passage is not in ⟨D⟩'s current text" — at a member "…
-// not in version ⟨k⟩". `follow` reports the link followed to LK's visited
+// not in version ⟨k⟩" — a version move at the nearest passage the two
+// versions share (see above). `follow` reports the link followed to LK's visited
 // set (S-32 (a)) and lands at the span the slot projects to NOW (A-53 — the
 // document consulted before the link) — placed through the far text's image,
 // read in parts, where the board refuses the projection for its size: every
@@ -53,7 +83,8 @@
 // the text, with the places it stands in, and where the text shows withheld
 // text that the rest may be under it, offering the scene with where the
 // passage came from where that text holds it whole, and at a published
-// landing the latest member holding it whole once its reads find it; NONE,
+// landing the latest member holding it whole once its reads find it — a
+// version move, landing in place; NONE,
 // the dead end's face, as above; and COULDN'T TELL, where no answer told — a
 // read refused even in parts, by any name that says nothing of the document,
 // or a text the page could not read — the landing made unmarked at the
@@ -96,7 +127,8 @@
 // it; Back, Forward and a trail jump move the cursor and re-take the departed
 // view. A departure re-takes where the camera is bound (P-CAM's
 // `destination`), so one made during a flight re-takes the flight's
-// destination, never a point it was passing (foundations §2.3). Each act
+// destination, never a point it was passing (foundations §2.3), and the
+// version the departed entry's box shows (`departure`). Each act
 // makes ONE trail move, its own push or cursor move: the scene standing over
 // the plane is ended first, "a teleport dismissing the scene first" (§2.5),
 // and its end moves no entry (SC).
@@ -139,7 +171,8 @@
 // carried passage's `compare` is one more read its LEAP's claim waits on, the
 // claim settled at the landing that read placed.
 // Carries: the wireframe's §11 (`leapTo`, `goHome`), §18 `followLink`.
-// Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10, FP-21.
+// Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10, FP-21,
+// FP-22 (owns the version each box shows).
 
 import * as CAM from '../plane/camera.js';
 import * as TRAIL from './trail.js';
@@ -152,8 +185,9 @@ import * as SCENE from '../scene/scene.js';
 import * as FACES from '../overlays/faces.js';
 import * as LAYER from '../text/layer.js';
 import * as HELD from '../beams/held.js';
+import * as SEL from '../overlays/selection.js';
 import { accountCell, boardCell } from '../plane/projection.js';
-import { documentOf, memberOf, versionAddress } from '../model/address.js';
+import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember } from '../model/address.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').Link} Link */
@@ -203,6 +237,15 @@ import { documentOf, memberOf, versionAddress } from '../model/address.js';
 /** @typedef {{addr: string, spans: ISpan[] | null}} Passage a passage by identity in the document it is drawn in: its bytes' permanent addresses; null where it names the document whole, drawn at the block at its head */
 
 /**
+ * @typedef {Object} Placing — a version move's landing a landing's line has read already (its version offer; see `toVersion`): the passage held whole in the version moved to
+ * @property {number} from the position in the version the box shows whose line keeps its screen line
+ * @property {number} to the position in the version moved to that takes that line
+ * @property {Run[]} runs every run of the passage in the version moved to, each outlined
+ * @property {ISpan[]} spans the passage by identity, which the entry departed records
+ * @property {string | null} link the link the landing lights: a follow's offer's
+ */
+
+/**
  * @typedef {Object} Light — what a one-step move along the trail lights (see the head; issue #152's design decision): the step it crossed, at the end it landed on, with the arrival's own marks until the next act
  * @property {boolean} back Back's — where the step began, the walk returned to it and the mirror marking it (`backLight`); false for Forward's — what the step marked on arrival
  * @property {string | null} link the link it lights: the one the step followed; null for a carry
@@ -220,8 +263,50 @@ let lit = [];
 let landed = null;
 /** @type {((byKey: boolean) => Promise<void>) | null} the landing's read made again — its line's "try again", where a retry may tell */
 let retry = null;
-/** @type {((byKey: boolean) => void) | null} the LEAP the line's version offer makes */
-let toVersion = null;
+/** @type {((byKey: boolean) => void) | null} the version move the line's version offer makes */
+let versionOffer = null;
+/** @type {Map<string, string>} each box's version where one is pinned, by its document: a box absent shows its plain address, the trunk head (see the head) */
+const pins = new Map();
+
+/** the box an address stands in: its document's, which every version of it shares */
+const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
+
+/**
+ * The version a document's box shows (see the head): the version pinned
+ * there, else its plain address — the trunk head. What T-LAYER mounts in the
+ * box, P-RENDER draws there, N-WALK walks, LK places a far end in and M-PUMP
+ * reads, through the reader the app hands each.
+ * @param {string} addr a document address, its plain address or any version of it
+ * @returns {string}
+ */
+export const shownIn = (addr) => { const box = boxOf(addr); return pins.get(box) ?? box; };
+
+/**
+ * A box takes the version an act aimed at it arrives at (see the head): a
+ * version address pins it there; the plain address unpins it, to the trunk
+ * head. An address that names no document changes nothing.
+ * @param {string} addr
+ */
+function pinTo(addr) {
+  if (kindOf(addr) !== 'document') return;
+  const box = boxOf(addr);
+  if (addr === box) pins.delete(box); else pins.set(box, addr);
+  CAM.markDirty();
+}
+
+/**
+ * A departure (see the head): the view the camera is bound for (P-CAM's
+ * `destination`), and the departed entry's place re-taken where the box it
+ * names shows another version as it is left — a newer version's arrival
+ * pinned it on the member being read (`arrived`; N-TRAIL's `retakePlace`).
+ * Every navigation act departs through it.
+ * @returns {View}
+ */
+function departure() {
+  const e = TRAIL.current();
+  if (e && kindOf(e.addr) === 'document' && shownIn(e.addr) !== e.addr) TRAIL.retakePlace(shownIn(e.addr));
+  return CAM.destination();
+}
 
 /**
  * A passage as its text holds it now (issue #152's design decision:
@@ -275,14 +360,14 @@ let made = 0;
  * camera move calls nothing here (§3.2: "a pan or a zoom none").
  * @returns {number} the act's count
  */
-function nextAct() { arrival = null; light = null; lit = []; landed = null; retry = null; toVersion = null; HOST.endOpening(); return ++made; }
+function nextAct() { arrival = null; light = null; lit = []; landed = null; retry = null; versionOffer = null; HOST.endOpening(); return ++made; }
 
 /** what the landing says of the passage it carried or followed, until the next act (see the head); null where nothing landed so */
 export const landing = () => landed;
 /** the landing's line in words (BM-HELD's `lineOf`), for O-LAND's line; null where it has none */
 export const landingLine = () => (landed && landed.said ? HELD.lineOf(landed.said) : null);
 /** the acts the landing's line offers now: "try again" where a retry may tell; the version offer once its reads found one */
-export const landingOffers = () => ({ again: !!retry, version: !!toVersion });
+export const landingOffers = () => ({ again: !!retry, version: !!versionOffer });
 
 /**
  * What the landing says, for the mirror's description of the item it stands
@@ -302,16 +387,16 @@ export function described() {
 /**
  * One of the landing's line's acts (O-LAND's buttons): `beside`, the reading
  * scene with where the passage came from, the passage held there set level
- * with its counterpart here (SC); `version`, the LEAP to the latest member
- * holding the passage whole; `again`, the landing's read made again. Each
- * acts only while the landing's line stands.
+ * with its counterpart here (SC); `version`, the version move to the latest
+ * member holding the passage whole; `again`, the landing's read made again.
+ * Each acts only while the landing's line stands.
  * @param {'beside' | 'version' | 'again'} which
  * @param {boolean} [byKey] a key made the act
  */
 export function landingAct(which, byKey = false) {
   if (!landed) return;
   if (which === 'beside' && landed.beside) { const b = landed.beside; void SCENE.open(b.a, b.b, b.held); }
-  else if (which === 'version' && toVersion) toVersion(byKey);
+  else if (which === 'version' && versionOffer) versionOffer(byKey);
   else if (which === 'again' && retry) void retry(byKey);
 }
 
@@ -414,14 +499,14 @@ export async function heldIn(c, into, extent) {
  * @param {Span} c the passage carried
  * @param {Doc} d the document landed in, read whole
  * @param {Refusal | null} met the refusal the text's whole read met
- * @returns {Promise<{held: Held, pos: number, runs: Run[]} | 'none' | {refused: Refusal | null}>}
+ * @returns {Promise<{held: Held, at: number, pos: number, runs: Run[]} | 'none' | {refused: Refusal | null}>} `at` the passage's own position its counterpart `pos` holds
  */
 async function reproject(c, d, met) {
   if (d.extent == null) return { refused: met };
   const out = await heldIn(c, d.addr, d.extent);
   if ('refused' in out) return out;
   if (!out.counterparts.length) return 'none';
-  return { held: out.held, pos: out.counterparts[0].b, runs: inTextOrder(out.counterparts.map((h) => ({ pos: h.b, width: h.width }))) };
+  return { held: out.held, at: out.counterparts[0].a, pos: out.counterparts[0].b, runs: inTextOrder(out.counterparts.map((h) => ({ pos: h.b, width: h.width }))) };
 }
 
 /** does a document's held text show withheld text — a run withheld from the reader, under which the rest of a passage may stand (issue #153)? */
@@ -439,13 +524,13 @@ const floatingNotice = (/** @type {string} */ addr, /** @type {number} */ head, 
  * @param {Doc} d the document landed in
  * @param {Awaited<ReturnType<typeof reproject>>} held
  * @param {number | null} asked the position the LEAP named
- * @returns {{pos: number | null, runs: Run[] | null, said: Said | null, none: boolean}}
+ * @returns {{pos: number | null, at: number | null, runs: Run[] | null, said: Said | null, none: boolean}} `at` the passage's own position the landing holds, where it holds any
  */
 function carriedLanding(c, d, held, asked) {
   const subject = c.selected ? 'selected' : 'reading';
-  if (held === 'none') return { pos: headOf(d), runs: null, said: null, none: true };
-  if ('held' in held) return { pos: held.pos, runs: held.runs, said: HELD.saidOf(held.held, subject, d.addr, showsWithheld(d)), none: false };
-  return { pos: asked, runs: null, said: HELD.unknownOf(held.refused, subject, d.addr), none: false };
+  if (held === 'none') return { pos: headOf(d), at: null, runs: null, said: null, none: true };
+  if ('held' in held) return { pos: held.pos, at: held.at, runs: held.runs, said: HELD.saidOf(held.held, subject, d.addr, showsWithheld(d)), none: false };
+  return { pos: asked, at: null, runs: null, said: HELD.unknownOf(held.refused, subject, d.addr), none: false };
 }
 
 /** where a document's held text holds a passage named by identity whole, in one stretch (M-REC's `placedIdentity`); null where it does not */
@@ -461,10 +546,11 @@ function wholeAt(/** @type {string} */ addr, /** @type {ISpan[]} */ spans, /** @
  * held — each asked what its text holds of the passage (`holds`), never the
  * text landed in — its own member, or at the bare address its latest — the
  * first that holds all of it in one piece offered where no act was made
- * meanwhile; the reads stop there, and at the next act.
+ * meanwhile; the reads stop there, and at the next act. The offer is a
+ * version move (`toVersion`): the member shares the box landed in.
  * @param {number} act the landing's act
  * @param {string} addr the document landed in
- * @param {(member: string) => Promise<((byKey: boolean) => void) | null>} holds the LEAP to a member whose text holds all of the passage in one piece; null where it does not
+ * @param {(member: string) => Promise<((byKey: boolean) => void) | null>} holds the version move to a member whose text holds all of the passage in one piece; null where it does not
  */
 async function offerVersion(act, addr, holds) {
   const trunk = documentOf(addr) || addr, d = REC.doc(trunk), place = REC.place(trunk);
@@ -477,7 +563,7 @@ async function offerVersion(act, addr, holds) {
     if (k === own) continue;
     const go = await holds(versionAddress(trunk, k));
     if (!go) continue;
-    if (act === made && landed) { landed = { ...landed, version: k }; toVersion = go; CAM.markDirty(); }
+    if (act === made && landed) { landed = { ...landed, version: k }; versionOffer = go; CAM.markDirty(); }
     return;
   }
 }
@@ -554,27 +640,35 @@ async function followed(s, proj) {
  * A carried passage's landing's line and offers (see the head): what it
  * says; the scene with the text it came from, where that text holds the
  * passage whole; at a published landing, the latest member holding it
- * whole, sought once it has landed (`offerVersion`); and "try again", its
- * read made again (`againCarried`), where a retry may tell.
+ * whole, sought once it has landed (`offerVersion`) — a version move whose
+ * landing keeps the line of the passage's first held piece here at its
+ * counterpart there; and "try again", its read made again (`again`; a LEAP's
+ * by `againCarried`), where a retry may tell.
  * @param {number} act the landing's act
  * @param {Carry} c
  * @param {ISpan[]} carried the passage by identity, as the act was made
  * @param {Doc} d the document landed in
- * @param {ReturnType<typeof carriedLanding>} placed
+ * @param {{pos: number | null, at: number | null, said: Said | null, none: boolean}} placed
  * @param {Entry | null} entry the landing's trail entry
  * @param {string | null} link the link the landing names
+ * @param {(byKey: boolean) => Promise<void>} [again] the landing's read made again; a LEAP's by default
  */
-function sayCarried(act, c, carried, d, placed, entry, link) {
-  const addr = d.addr, said = placed.said, pos = placed.pos ?? headOf(d);
+function sayCarried(act, c, carried, d, placed, entry, link, again = (byKey) => againCarried(c, carried, d.addr, entry, link, placed.pos, byKey)) {
+  const addr = d.addr, said = placed.said, pos = placed.pos ?? headOf(d), w = Math.max(1, c.width);
   const offers = !!said && said.state !== 'unknown';
   const source = offers && c.addr !== addr ? (carried.length ? wholeAt(c.addr, carried, c.width) : { pos: c.pos, width: c.width }) : null;
   landed = { addr, pos, said, floating: placed.none, beside: source ? { a: c.addr, b: addr, held: { posA: source.pos, widthA: source.width, posB: null } } : null, version: null };
-  retry = said && said.again ? (byKey) => againCarried(c, carried, addr, entry, link, placed.pos, byKey) : null;
-  toVersion = null;
-  if (offers) void offerVersion(act, addr, async (member) => {
+  retry = said && said.again ? again : null;
+  versionOffer = null;
+  const at = placed.at;
+  if (offers && at != null) void offerVersion(act, addr, async (member) => {
     const e = await PUMP.extentOf(member);
     const h = 'extent' in e ? await heldIn(c, member, e.extent) : null;
-    return h && 'held' in h && h.held.holds === 'all' ? (byKey) => { void leapTo(member, { carry: c, how: 'leap', byKey, site: { span: { addr, pos } } }); } : null;
+    const whole = h && 'held' in h && h.held.holds === 'all' ? h.counterparts.find((p) => p.a <= c.pos && p.a + p.width >= c.pos + w) : null;
+    if (!whole) return null;
+    /** @type {Placing} the landing's line here kept at the counterpart of the passage's position it holds, the passage outlined whole there */
+    const there = { from: pos, to: whole.b + (at - whole.a), runs: [{ pos: whole.b + (c.pos - whole.a), width: w }], spans: carried, link: null };
+    return (byKey) => { void toVersion(member, { placed: there, byKey, site: { span: { addr, pos } } }); };
   });
 }
 
@@ -602,6 +696,7 @@ async function againCarried(c, carried, addr, entry, link, asked, byKey) {
   const notice = placed.none ? floatingNotice(addr, headOf(d), false) : null;
   if (entry) TRAIL.settle(entry, { view: v, pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
   if (act !== made) return;
+  pinTo(addr);
   arrival = link || placed.runs ? { addr, pos: placed.pos ?? 1, runs: placed.runs, link } : null;
   sayCarried(act, c, carried, d, placed, entry, link);
   const flight = land({ addr, pos: placed.pos, view: v }, byKey, 620);
@@ -634,6 +729,7 @@ async function landFollowed(act, s, entry, placed, byKey, again = false) {
   if (entry) TRAIL.settle(entry, { view: v, pos, width: widthAt(marked, pos), notice });
   if (act !== made) return;
   if (!again) dismissChrome();
+  pinTo(far);
   arrival = runs && placed.marked ? { addr: far, pos, runs: marked, link: l.addr } : null;
   lit = [l.addr];
   sayFollowed(act, s, entry, placed, pos);
@@ -647,9 +743,11 @@ async function landFollowed(act, s, entry, placed, byKey, again = false) {
  * scene with the document the follow was made from, where that text holds
  * the far end's passage whole; at a published far document, the latest
  * member holding it whole — its slot projected into each member and its runs'
- * bytes read, kept nowhere (M-PUMP's `projectedIn`) — offered as a LEAP
- * landing there as a follow does; and "try again", the projection read again
- * and the landing made from it, where a retry may tell.
+ * bytes read, kept nowhere (M-PUMP's `projectedIn`) — offered as a version
+ * move landing there as a follow does, the far end outlined and its link
+ * lit, the line of its first run here kept at its first run there; and "try
+ * again", the projection read again and the landing made from it, where a
+ * retry may tell.
  * @param {number} act the landing's act
  * @param {Shown} s
  * @param {Entry | null} entry
@@ -669,14 +767,17 @@ function sayFollowed(act, s, entry, placed, pos) {
     if (REC.doc(far).extent == null || REC.doc(far).from < 0) await PUMP.loadWhole(far);
     await landFollowed(at, s, entry, await followed(s, proj), byKey, true);
   } : null;
-  toVersion = null;
+  versionOffer = null;
   if (offers && passage) void offerVersion(act, far, async (member) => {
     const p = await PUMP.projectedIn(l.addr, s.farSlot, member);
     if (!('runs' in p) || !p.runs.length) return null;
     const ids = await idsOf(member, p.runs);
     if (!('ids' in ids)) return null;
     const { pieces, places } = HELD.piecesOf(passage, ids.ids);
-    return HELD.heldOf(pieces, passage.width, places).holds === 'all' ? (byKey) => { void leapTo(member, { pos: p.runs[0].pos, runs: p.runs, link: l.addr, how: 'leap', byKey, site: { span: { addr: far, pos } } }); } : null;
+    if (HELD.heldOf(pieces, passage.width, places).holds !== 'all') return null;
+    /** @type {Placing} */
+    const there = { from: pos, to: p.runs[0].pos, runs: p.runs, spans: [passage], link: l.addr };
+    return (byKey) => { void toVersion(member, { placed: there, byKey, site: { span: { addr: far, pos } } }); };
   });
 }
 
@@ -709,7 +810,7 @@ function sayFollowed(act, s, entry, placed, pos) {
  */
 export async function leapTo(addr, opts = {}) {
   const act = nextAct();
-  const departed = CAM.destination();
+  const departed = departure();
   const from = walkPlace();
   dismissChrome();
   let pos = opts.pos ?? null, runs = pos != null && opts.runs ? inTextOrder(opts.runs) : null;
@@ -741,12 +842,175 @@ export async function leapTo(addr, opts = {}) {
   if (entry) TRAIL.settle(entry, { view: v, pos, width: widthAt(runs, pos), notice });
   if (act !== made) return null;
   FACES.endReading();
+  pinTo(addr);
   if (link || (placed && placed.runs)) arrival = { addr, pos: pos ?? 1, runs, link };
   lit = link ? [link] : [];
   if (c && placed) sayCarried(act, c, carried, d, placed, entry, link);
   const flight = land({ addr, pos, view: v }, opts.byKey, opts.ms ?? (opts.how === 'click' ? 420 : 620));
   if (notice) showNotice(notice, true);
   return (await flight) ? d : null;
+}
+
+/**
+ * Where a version move stands its landing, from its reads (see the head):
+ * what the version moved to holds of the passage held (`reproject`) — its
+ * first held stretch's line kept at its counterpart there, every stretch
+ * outlined, the line where it holds part of it or all of it in pieces; where
+ * it holds none of it, the passage's line taken by the counterpart of the
+ * position the two versions share nearest the passage (SC's `nearest`, over
+ * `compare` of the two whole, in parts where the board refuses it for its
+ * size), else by the version's head where they share none, the dead end's
+ * face; where no answer told, the head, unmarked, with the couldn't-tell line.
+ * @param {Carry} c the passage held, in the version the box shows
+ * @param {string} was the version the box shows
+ * @param {Doc} d the version moved to, read whole
+ * @param {Refusal | null} met the refusal its whole read met
+ * @returns {Promise<{from: number, pos: number, at: number | null, runs: Run[] | null, said: Said | null, none: boolean}>} `from` the position in `was` whose line keeps its screen line; `pos` the one in `d` that takes it
+ */
+async function swapped(c, was, d, met) {
+  const subject = c.selected ? 'selected' : 'reading', head = headOf(d);
+  const held = await reproject(c, d, met);
+  if (held === 'none') {
+    const e = REC.doc(was).extent;
+    const out = e && d.extent ? await PUMP.compareParts({ doc: was, pos: 1, width: e }, { doc: d.addr, pos: 1, width: d.extent }) : null;
+    const near = out && 'pairs' in out ? SCENE.nearest(out.pairs, c.pos) : null;
+    return { from: c.pos, pos: near ? near.b : head, at: null, runs: null, said: null, none: true };
+  }
+  if ('held' in held) return { from: held.at, pos: held.pos, at: held.at, runs: held.runs, said: HELD.saidOf(held.held, subject, d.addr, showsWithheld(d)), none: false };
+  return { from: c.pos, pos: head, at: null, runs: null, said: HELD.unknownOf(held.refused, subject, d.addr), none: false };
+}
+
+/**
+ * A version move's landing, in place (see the head): a selection standing in
+ * the version left ended with its text (O-SELECTION's), the box's article
+ * set again as the version moved to with the line `from` stood on taken by
+ * `pos`'s (T-LAYER's `holdAcross`) — the camera where it stands — the box
+ * taking that version, the passage outlined where the version holds it and
+ * the link lit, and the walk moved to the landing, the ring drawn at it where
+ * a key made the act.
+ * @param {string} was the version the box showed
+ * @param {Doc} d the version moved to
+ * @param {{from: number, pos: number, runs: Run[] | null}} placed
+ * @param {string | null} link
+ * @param {boolean | undefined} byKey
+ */
+async function landInPlace(was, d, placed, link, byKey) {
+  const addr = d.addr, sel = SEL.selected();
+  if (sel && sel.addr === was && was !== addr) SEL.clear();
+  LAYER.holdAcross(was, addr, { from: placed.from, to: placed.pos });
+  pinTo(addr);
+  arrival = placed.runs || link ? { addr, pos: placed.pos, runs: placed.runs, link } : null;
+  lit = link ? [link] : [];
+  CAM.markDirty();
+  await WALK.focusTo(addr, LAYER.atReadingScale(addr, CAM.destination().scale) ? placed.pos : null, byKey, true);
+}
+
+/**
+ * A VERSION MOVE (see the head; issue #154's design decision: "Version
+ * moves land in place"): the next act — the overlays close and the trail
+ * gains the entry as it is made, a claim while its reads are out, recording
+ * the passage carried by identity, its reading face standing at `site` — to
+ * another version of the box the reader stands in: `addr` read whole where
+ * the page does not hold its text, then where its text holds the passage
+ * held (`swapped`) — or where a landing's line already read it (`placed`) —
+ * and, where no act was made meanwhile, the landing made IN PLACE
+ * (`landInPlace`): the camera stays, the box's text replaced, the passage's
+ * line kept, its four states said as a carried passage's are — the line, its
+ * offers, its "try again" landing in place again — the dead end's face where
+ * the version holds none of the passage, the entry's notice. A version the
+ * board says nothing of is faced as a LEAP faces it. Where an act was made
+ * while it read, it lands nowhere: its read fills its entry alone, at the
+ * view it was made from.
+ * @param {string} addr the version moved to: a version address, or the plain address, the trunk head
+ * @param {{carry?: Carry | null, placed?: Placing | null, site?: Site | null, byKey?: boolean}} [opts] `carry` the reader's held passage, in the version the box shows — the selection, else the first passage in view (O-VERSIONS); `placed` the landing a landing's line has read already (its version offer); `site` where the act was made, its reading face's place; `byKey` a key made the act
+ * @returns {Promise<Doc | null>} the version landed in; null where it faced in the place of a landing, or an act made while it read took its place
+ */
+export async function toVersion(addr, opts = {}) {
+  const act = nextAct();
+  const departed = departure();
+  const from = walkPlace();
+  dismissChrome();
+  const was = shownIn(addr), site = opts.site ?? null, given = opts.placed ?? null;
+  const c = opts.carry && opts.carry.addr === was ? opts.carry : null;
+  const spans = given ? given.spans : c ? REC.identityOf(c.addr, c.pos, Math.max(1, c.width)) : [];
+  /** @type {Step | null} the move, as the entry it departs records it: the passage carried by identity, from the version left to this one */
+  const step = spans.length ? { kind: 'carry', from: was, to: addr, spans } : null;
+  /** @type {Notice} */
+  const waiting = { face: 'reading', addr, refusal: null, site, at: from, offer: false };
+  const entry = TRAIL.push({ addr, pos: null, width: null, view: departed, label: labelOf(addr), notice: waiting }, departed, true, step);
+  showNotice(waiting);
+  let d = REC.doc(addr), met = null;
+  if (d.extent == null || d.from < 0) { const w = await PUMP.wholeOf(addr); met = w.refused; d = REC.doc(addr); }
+  if (d.refused === 'unregistered') {
+    /** @type {Notice} */
+    const notice = { face: 'unregistered', addr, refusal: null, site, at: from, offer: false };
+    TRAIL.settle(entry, { view: departed, notice });
+    if (act === made) showNotice(notice);
+    return null;
+  }
+  const head = { from: headOf(REC.doc(was)), pos: headOf(d), at: null, runs: null, said: null, none: false };
+  const placed = given ? { from: given.from, pos: given.to, at: null, runs: inTextOrder(given.runs), said: null, none: false } : c ? await swapped(c, was, d, met) : head;
+  const notice = placed.none ? floatingNotice(addr, placed.pos, false) : null;
+  TRAIL.settle(entry, { view: departed, pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
+  if (act !== made) return null;
+  FACES.endReading();
+  if (c && !given) sayCarried(act, c, spans, d, placed, entry, null, (byKey) => againVersion(c, spans, was, addr, entry, byKey));
+  const landing = landInPlace(was, d, placed, given ? given.link : null, opts.byKey);
+  if (notice) showNotice(notice, true);
+  await landing;
+  return d;
+}
+
+/**
+ * A version move's landing made again — its line's "try again" (see the
+ * head): the version read whole where the page does not hold its text, then
+ * what it holds of the passage (`swapped`), the move's entry settled with
+ * what that placed, and, where no act was made meanwhile, the landing made
+ * from it in place — the line the landing stands on taken by the one the
+ * answer places it on — with no trail move of its own.
+ * @param {Carry} c
+ * @param {ISpan[]} spans
+ * @param {string} was the version the move left
+ * @param {string} addr the version moved to
+ * @param {Entry} entry
+ * @param {boolean} byKey a key pressed "try again"
+ */
+async function againVersion(c, spans, was, addr, entry, byKey) {
+  const act = made, stood = landed ? landed.pos : headOf(REC.doc(addr));
+  let d = REC.doc(addr), met = null;
+  if (d.extent == null || d.from < 0) { const w = await PUMP.wholeOf(addr); met = w.refused; d = REC.doc(addr); }
+  const placed = await swapped(c, was, d, met);
+  const notice = placed.none ? floatingNotice(addr, placed.pos, false) : null;
+  TRAIL.settle(entry, { view: CAM.destination(), pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
+  if (act !== made) return;
+  sayCarried(act, c, spans, d, placed, entry, null, (k) => againVersion(c, spans, was, addr, entry, k));
+  const landing = landInPlace(addr, d, { ...placed, from: stood }, null, byKey);
+  if (notice) showNotice(notice, true);
+  await landing;
+}
+
+/**
+ * A NEWER VERSION'S ARRIVAL (see the head; foundations §3.2: "a published
+ * document read at its bare address keeps the member being read … never the
+ * text swapped under the reader"): a feed row publishing `D.(k+1)`, the
+ * trunk's next member and so its head, where `D`'s box shows its plain
+ * address and the page holds the text it shows — `D.k`'s — pins the box on
+ * `D.k`, its article set again as that member with the passage being read
+ * kept in place (T-LAYER's `holdAcross`), the walk standing there with it,
+ * and the box's version then named by the one line and the corner. Nothing
+ * where no member held the text before it (k = 0), where the box shows a
+ * pinned version already, or where the page holds none of the text. M-PUMP
+ * hands it each such row before the row drops what the page held of `D`.
+ * @param {string} member the member the row publishes
+ */
+export function arrived(member) {
+  const doc = documentOf(member), k = memberOf(member);
+  if (!doc || k == null || k < 2 || !isTrunkMember(member) || pins.has(doc) || !REC.has(doc) || REC.doc(doc).from < 0) return;
+  const read = versionAddress(doc, k - 1);
+  LAYER.holdAcross(doc, read);
+  pinTo(read);
+  const f = WALK.current();
+  if (f && boxOf(f.addr) === doc) void WALK.focusTo(read, f.pos, false, false);
 }
 
 /**
@@ -798,7 +1062,7 @@ export async function follow(s, byKey = false) {
   const site = { span: { addr: s.near, pos: s.pos, width: s.width } };
   if (!far) { FACES.invalidFollow(site); return; }
   LK.follow(l);
-  const departed = CAM.destination();
+  const departed = departure();
   /** @type {Notice} the follow's reading notice: at the link's bytes, the walk's place there where its read brings no place */
   const waiting = { face: 'reading', addr: far, refusal: null, site, at: { addr: s.near, pos: s.pos }, offer: false };
   /** @type {Step} the follow, as the entry it departs records it */
@@ -834,7 +1098,7 @@ function homeFrame() {
  */
 export async function home(byKey = false) {
   nextAct();
-  const departed = CAM.destination();
+  const departed = departure();
   dismissChrome();
   const h = homeFrame();
   TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: 'HOME', notice: null }, departed);
@@ -863,7 +1127,7 @@ export async function launch() {
  */
 export async function wholeBoard(byKey = false) {
   nextAct();
-  const departed = CAM.destination();
+  const departed = departure();
   dismissChrome();
   const node = boardNode();
   const target = CAM.viewForCell(boardCell(node), 0.92);
@@ -880,7 +1144,7 @@ export async function wholeBoard(byKey = false) {
  */
 export async function toAccount(acct, byKey = false) {
   nextAct();
-  const departed = CAM.destination();
+  const departed = departure();
   dismissChrome();
   const target = CAM.viewForCell(accountCell(acct), 0.85);
   TRAIL.push({ addr: acct, pos: null, width: null, view: target, label: null, notice: null }, departed);
@@ -950,6 +1214,7 @@ async function landAtCursor(e, act, byKey, l) {
   if (act !== made || !at) return;
   FACES.endReading();
   const n = at.notice;
+  if (!(n && n.at)) pinTo(at.addr);
   light = l; lit = l && l.link ? [l.link] : [];
   const back = l && l.back ? returnTo(l, at.view) : null;
   const flight = land(back ? { ...back, view: at.view } : n && n.at ? { addr: n.at.addr, pos: n.at.pos, view: at.view } : at, byKey, 500);
@@ -966,7 +1231,7 @@ async function landAtCursor(e, act, byKey, l) {
  */
 async function moveCursor(move, byKey) {
   const left = TRAIL.current(), from = TRAIL.cursorIndex();
-  const e = move(CAM.destination());
+  const e = move(departure());
   if (!e) return false;
   const act = nextAct();
   dismissChrome();

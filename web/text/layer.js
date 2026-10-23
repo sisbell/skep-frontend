@@ -9,6 +9,18 @@
 // made from, whether a press stands on the layer, the platform's selection as
 // it stood over an article taken down, and the page's selection while it is
 // owed its range — THE ONE OWNER (FP-10).
+// ONE ARTICLE A BOX (issue #154's design decision: "The box shows one
+// version"): a document's versions share its box, and the one standing there
+// is the version the box shows (N-GO's `shownIn`, the reader `shown`) — every
+// other version's article taken down, its text held or not, and none mounted
+// in a box another version's article still stands in under a press. WHERE A
+// BOX TAKES ANOTHER VERSION — a version move, a newer version's arrival —
+// the line being read keeps its place and its size on screen (`holdAcross`):
+// the version moved to, mounted fresh, re-anchors the camera on the
+// position its mover names, or, at an arrival, on the passage at the
+// visible view's centre, by position (P-LAY's `holdOf`, P-CAM's `reanchor`);
+// a cursor move to another version lands at its own entry's view and holds
+// nothing.
 // NO DOCUMENT AT READING SIZE IS EVER DRAWN AS BARS (issue #122's design
 // decision): bars mean only "too small to read". Every document in view whose
 // text has arrived stands as text in the frame its em reaches P-LOD's readable
@@ -189,7 +201,7 @@
 // Carries: the wireframe's §16 `mount`/`unmount`/`place`/`S1.frame`; S1's
 // `mount`, `place`, `S1.frame`; `driftSample` and `overlapCheck` become
 // gate hooks (`web/gate/hooks.js` reads `mounted`).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-22.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -200,7 +212,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, MEASURE_CPL, LAY_FS, LINE_H } from '../plane/layout.js';
 import { articleHTML, articlePlan, cornerHTML, blockMarks, editionClause } from './article.js';
 import { farSays } from '../beams/held.js';
-import { homeOf } from '../model/address.js';
+import { homeOf, documentOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { fingerprintCue } from '../util.js';
 import { t } from '../strings.js';
@@ -311,10 +323,11 @@ import { t } from '../strings.js';
  */
 
 /**
- * @typedef {Object} Hold — the passage at the visible view's centre as its document's article was taken down to be set again (see the head)
- * @property {string} addr
+ * @typedef {Object} Hold — the passage being read as its box's article was taken down to be set again (see the head): the one at the visible view's centre, or the line a version move names
+ * @property {string} addr the document whose article, mounted fresh, takes it: the same document set again, or the version its box takes
  * @property {Fold} fold the fold it stood in
  * @property {{x: number, y: number}} p where it stood, in world units relative to the room
+ * @property {{from: number, to: number} | null} pair the position of `fold` whose line it stood on and the position of `addr`'s that takes that line (a version move); null where the same position does (P-LAY's `holdOf`)
  */
 
 /**
@@ -324,6 +337,7 @@ import { t } from '../strings.js';
  * @property {() => number} top the one line's bottom edge on screen (L-LINE's): the corners hold below it, and the visible view stands below it
  * @property {() => void} handOff the focus's next home where a corner that held it leaves: the walk's current item (D5 §4 rule 4)
  * @property {() => (string | null)} navigated the place just navigated to: the trail's current entry's (N-TRAIL's), first in the limit's order where it is a document
+ * @property {(addr: string) => string} shown the version a document's box shows (N-GO's `shownIn`): the one version whose article stands there
  */
 
 /** the corner's distance from the text column, and from the edge of the strip it stands in (px) */
@@ -368,8 +382,14 @@ let kept = null;
 let owed = null;
 /** @type {Hold | null} */
 let hold = null;
+/** the box an address stands in: its document's, which every version of it shares */
+const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
+/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address */
+const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf });
 /** @type {Readers} */
-let read = { selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null };
+let read = noReaders();
+/** is a version the one its box shows (see the head)? */
+const isShown = (/** @type {string} */ addr) => read.shown(addr) === addr;
 
 /**
  * @param {HTMLElement} el the text layer's element
@@ -385,8 +405,8 @@ export function attach(el, cornersEl, opts = {}) { layer = el; cornerLayer = cor
  * @param {boolean} on chrome covers the plane (true) or has left it (false)
  */
 export function cover(on) { if (cornerLayer) FOCUS.cover(cornerLayer, on); }
-/** the owners hand their readers in once */
-export function readers(/** @type {Readers} */ r) { read = r; }
+/** the owners hand their readers in once; a reader left out reads as it does until one is */
+export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReaders(), ...r }; }
 /** the block the `lit` mark stands on (D3): the walk's focused block while the ring is drawn — the plane holds the focus and a key moved it — else none; never in a scene's pane */
 const litFocus = (scene = false) => (!scene && FOCUS.ringShown() ? read.focus() : null);
 /** bump the view revision: every mounted article is rebuilt on the next frame */
@@ -451,6 +471,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     originOwner, clauseOf,
     deviceLabel: isOwnerYou && device ? device.label : null,
     ownerFingerprint: isOwnerYou && device ? device.fingerprint : null,
+    members: REC.has(boxOf(d.addr)) ? REC.doc(boxOf(d.addr)).members : null,
   };
   void ownerRow; void fingerprintCue;
   return v;
@@ -666,13 +687,14 @@ function viewCentre() { const s = visibleView(read.top()); return { x: wx(s.x + 
 
 /**
  * The document whose outline holds a world point: a mounted one first, else
- * one whose text the model holds; null where none does.
+ * one whose text the model holds and whose box shows it; null where none
+ * does.
  * @param {{x: number, y: number}} p
  * @returns {Doc | null}
  */
 function docAt(p) {
   for (const rec of mounted.values()) if (holds(shapeAt(rec.d.addr, rec.fold), p)) return rec.d;
-  for (const d of REC.docs()) if (d.from >= 0 && !d.system && holds(docBox(d.addr), p) && holds(shapeIn(d), p)) return d;
+  for (const d of REC.docs()) if (d.from >= 0 && !d.system && isShown(d.addr) && holds(docBox(d.addr), p) && holds(shapeIn(d), p)) return d;
   return null;
 }
 
@@ -1424,7 +1446,9 @@ const wentStale = (rec) => rec.d.from !== rec.runFrom || rec.d.to !== rec.runTo 
 /**
  * The documents that mount afresh this frame (see the head): of those in view
  * whose text has arrived and that no article stands for — the system's apart,
- * a residue document only where it is the walk's focused one — every one at
+ * a version only where its box shows it and no other version's article
+ * stands in its box, a residue document only where it is the walk's focused
+ * one — every one at
  * P-LOD's readable em (8) and above, whatever the limit; then, of those at
  * S1's mount threshold (6.5) and above, as many as MOUNTS_PER_FRAME leaves
  * after the frame's mounts so far and these, in THE LIMIT'S ORDER: those
@@ -1445,8 +1469,10 @@ function chosen(v, focused, span, spent) {
   const readable = [];
   /** @type {Array<{d: Doc, em: number, first: boolean}>} */
   const rest = [];
+  /** the boxes an article stands in: under a press, another version's may still */
+  const taken = new Set([...mounted.keys()].map(boxOf));
   for (const d of REC.docs()) {
-    if (d.from < 0 || d.system || mounted.has(d.addr)) continue;
+    if (d.from < 0 || d.system || mounted.has(d.addr) || !isShown(d.addr) || taken.has(boxOf(d.addr))) continue;
     const box = docBox(d.addr);
     if (!intersects(box, v) || !intersects(shapeIn(d), v)) continue;
     const mine = focused(d.addr);
@@ -1492,7 +1518,7 @@ function readingNow() {
   for (const rec of mounted.values()) {
     if (!readsAt(rec.fs) || !holds(shapeAt(rec.d.addr, rec.fold), c)) continue;
     const box = docBox(rec.d.addr);
-    return { addr: rec.d.addr, fold: rec.fold, p: { x: c.x - box.x, y: c.y - box.y } };
+    return { addr: rec.d.addr, fold: rec.fold, p: { x: c.x - box.x, y: c.y - box.y }, pair: null };
   }
   return null;
 }
@@ -1506,7 +1532,7 @@ function readingNow() {
  * @returns {boolean} whether the camera moved
  */
 function keepPlace(h, rec) {
-  const at = holdOf(h.fold, rec.fold, h.p);
+  const at = holdOf(h.fold, rec.fold, h.p, h.pair);
   if (!at) return false;
   const box = docBox(rec.d.addr);
   const a = { x: box.x + h.p.x, y: box.y + h.p.y }, b = { x: box.x + at.to.x, y: box.y + at.to.y };
@@ -1517,10 +1543,37 @@ function keepPlace(h, rec) {
 }
 
 /**
+ * A box taking another version (see the head; N-GO's version move, a newer
+ * version's arrival): the line being read in `from`'s article held for
+ * `to`'s, which, mounted fresh, re-anchors the camera on it (`keepPlace`) —
+ * the line holding `at.from` taken by the one holding `at.to`, else the
+ * passage at the visible view's centre by its position; where `to` is
+ * `from` itself, its article standing, the camera re-anchored at once. No
+ * hold where `from`'s article does not stand, nor where no passage is read
+ * in it.
+ * @param {string} from the version the box shows as it moves
+ * @param {string} to the version it takes
+ * @param {{from: number, to: number} | null} [at] the position of `from` whose line is kept, and the position of `to` that takes it
+ */
+export function holdAcross(from, to, at = null) {
+  const rec = mounted.get(from);
+  if (!rec) { if (hold && boxOf(hold.addr) === boxOf(from)) hold = null; return; }
+  /** @type {Hold | null} */
+  let h = null;
+  if (at) { const p = placeIn(rec.fold, at.from); h = { addr: to, fold: rec.fold, p: { x: p.x, y: p.y }, pair: at }; }
+  else { const r = readingNow(); h = r && r.addr === from ? { ...r, addr: to } : null; }
+  if (from !== to) { hold = h; return; }
+  hold = null;
+  if (h) keepPlace(h, rec);
+}
+
+/**
  * The per-frame policy, run before the canvas draws, so P-RENDER yields to
  * exactly the lines standing this frame and draws the bars of exactly the
  * others (see the head). Each article's em is read against the mount band;
- * one that went stale is taken down and set again in its place, where it
+ * one whose box shows another version now is taken down, the box's move's
+ * hold standing for the version it shows (`holdAcross`); one that went stale
+ * is taken down and set again in its place, where it
  * still stands in view in the band or holds the page's selection — the
  * passage being read, where its article is taken down to be set again, held
  * until it stands again and the camera re-anchored on it then (`keepPlace`);
@@ -1559,6 +1612,8 @@ export function frame(focused = () => false) {
   const fresh = [];
   let spent = 0;
   if (!pressed) {
+    // a box that shows another version now: its article taken down, the hold the box's move set standing for the version it shows
+    for (const addr of [...mounted.keys()]) if (!isShown(addr)) unmount(addr);
     for (const [addr, rec] of [...mounted]) {
       if (!wentStale(rec)) continue;
       if (reading && reading.addr === addr) hold = reading;
@@ -1594,13 +1649,14 @@ export function frame(focused = () => false) {
 
 /**
  * The lines of the documents in view whose bars the canvas draws and whose
- * article stands unmounted, set as the platform sets them, within the frame's
- * budget, nearest the view's centre first (see `frame`).
+ * article stands unmounted — each the version its box shows — set as the
+ * platform sets them, within the frame's budget, nearest the view's centre
+ * first (see `frame`).
  * @param {{x0: number, y0: number, x1: number, y1: number}} v the world in view, padded
  */
 function measureInView(v) {
   const t0 = performance.now(), cx = cam.x, cy = cam.y;
-  const want = REC.docs().filter((d) => d.from >= 0 && !d.system && !mounted.has(d.addr) && !docBox(d.addr).residue && intersects(docBox(d.addr), v)
+  const want = REC.docs().filter((d) => d.from >= 0 && !d.system && isShown(d.addr) && !mounted.has(d.addr) && !docBox(d.addr).residue && intersects(docBox(d.addr), v)
     && foldOf(d).fs * cam.scale >= BARS_EM && !(folds.get(d.addr) || { set: true }).set);
   want.sort((a, b) => { const p = docBox(a.addr), q = docBox(b.addr); return Math.hypot(p.x + p.w / 2 - cx, p.y + p.h / 2 - cy) - Math.hypot(q.x + q.w / 2 - cx, q.y + q.h / 2 - cy); });
   for (const d of want) {

@@ -19,6 +19,9 @@
 // a refusal for its size or for an image that does not cover its runs beyond
 // what the projection's widths prove (a mutant that reads the positions the
 // text holds in place of its bytes' identity turns red).
+// A far end's state is read through the version its far box shows, its line
+// naming the version and the dead end's words its own: "its passage is not in
+// version ⟨k⟩" (issue #154).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -127,4 +130,19 @@ test('a drawn link\'s far end says before departure what its text holds of its p
   REC.takeDelivery(OTHER_HOME, [{ pos: 1, width: 10, kind: 'content', text: 'abcde\n\nfg\n', ref: null, origin: null }, { pos: 11, width: 30, kind: 'withheld', text: '', ref: null, origin: '1.0.2.0.6' }]);
   REC.takeProjection(L, 1, OTHER_HOME, [{ pos: 1, width: 2 }]);
   assert.equal(farSays(at()), t('L.held.part', { subject, where }) + t('L.held.withheld'), 'its text shows withheld text: the rest may be under it');
+});
+
+test('a drawn link\'s far end says what the version its far box shows holds of its passage (issue #154): read through that version\'s projection and image, the line naming the version — "version ⟨k⟩" — and the dead end\'s words there in the version\'s own: "its passage is not in version ⟨k⟩"', () => {
+  buildFar();
+  LK.setOthers(D, true);
+  const L = OTHER_HOME + '.0.2.1', V2 = OTHER_HOME + '.2', P = OTHER_HOME + '.0.1.';
+  const at = () => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === L));
+  LK.readers({ shown: (a) => (a === OTHER_HOME ? V2 : a) });
+  try {
+    REC.takeImage(V2, 1, [{ iStart: P + '1', width: 2 }, { iStart: OTHER_HOME + '.2.0.1.1', width: 38 }]);
+    REC.takeProjection(L, 1, V2, [{ pos: 1, width: 2 }]);
+    assert.equal(farSays(at()), t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.member', { k: 2 }) }), 'its first two bytes in the version: "only part of its passage is in version 2"');
+    REC.takeProjection(L, 1, V2, []);
+    assert.equal(farSays(at()), t('F.floating.member', { k: 2 }), 'none of it in the version: "its passage is not in version 2"');
+  } finally { LK.readers({}); }
 });
