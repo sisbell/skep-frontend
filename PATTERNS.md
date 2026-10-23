@@ -166,6 +166,25 @@ fix; nothing here depends on their names.
   first act where the replaced one held it, and a face never takes it.
   The ring and the one status region are the owner's to write.
 
+## The jump
+
+- **FP-25 A jump moves the reader when made; the read only fills the
+  place in. Everything follows the camera.** A jump flies at once
+  wherever the plane can place its destination and no failure is
+  known, and takes its trail entry at the act (`web/nav/go.js`,
+  `web/nav/trail.js`). Leaving a place ends its chrome and keeps that
+  chrome and the view in the place's entry; the focus goes to the
+  landing. Input acts where the camera is: a wheel, pinch or drag
+  takes over, the landing then only marks its passage and held keys
+  are dropped; every other key acts from the landing. "Reading",
+  "reaching" and a failure show where the camera is — at the act's
+  site only until the camera leaves, in the one line when out of view,
+  and always spoken in the status region. Where only a read can place
+  the destination, the camera waits, input acts on what is on screen,
+  and Esc or Back abandons the jump. A jump that ends without the
+  camera leaving gives its entry back. No act is cancelled by a pan or
+  zoom, and nothing flies the reader back unbidden.
+
 ## The landing
 
 - **FP-21 An outline alone means all of it, here, in one piece.** A
@@ -297,6 +316,7 @@ found.
 - 2026-10-23 · FP-23 · #160 · no feed row reached a pane, and the plane and the scene each answered what a change to a document does here their own way; one rule now answers by the document's kind
 - 2026-10-23 · FP-7 · #160 · the version a pane reads is the scene's own, never a box's pin, so it is view state beside the version each box shows
 - 2026-10-23 · FP-24 · #161 · the copy, the mirror and the selection each answered what stands for an item without text their own way, emptying the clipboard or joining text across a run; one item rule now names it for all three
+- 2026-10-23 · FP-25 · #137 #171 #227 #228 #237 · while a jump read, the trail, input, cards, walk and failures each answered "where is the reader" by a different clock
 
 ## What these rule out
 
