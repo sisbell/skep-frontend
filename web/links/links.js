@@ -52,7 +52,11 @@
 //     end that text holds none of FLOATS (`floats`), and its symbol, its stub
 //     and its mirror item say "its passage is not in ⟨D⟩'s current text"
 //     before anyone follows it (foundations §2.3: "the projection the beam
-//     already makes says so before the departure");
+//     already makes says so before the departure"); what that text holds of
+//     a far end that does not float — part of it, all of it in pieces, or
+//     nothing the board would tell — is BM-HELD's to read from the drawn end
+//     and its projection, by the rule its landing reads (`farHolds`,
+//     `farSays`; issue #153's design decision);
 //   - a link whose FAR DOCUMENT THE PLANE DRAWS NOWHERE — no index row, no
 //     text or metadata read, no withheld box of its own (P-RENDER's
 //     `drawsDoc`, the reader `drawn`) — stays in the set, counted, marked and

@@ -10,7 +10,9 @@
 // alone, it takes the block holding it, whole. An origin and a container
 // are each another arrangement of the passage's material, so each is a LEAP
 // that carries the span asked over, re-projected and marked at the landing
-// (N-GO; foundations §2.3's carry rule; P43). Each card takes the focus on
+// (N-GO; foundations §2.3's carry rule; P43), whose line names it as what the
+// reader selected where it is the selection's bytes, else as the text they
+// were reading (issue #153). Each card takes the focus on
 // its first act where a key made the act that asked — the slot's chord, Enter
 // on its button — and never otherwise (D5 §4 rule 4; the focus record's
 // rule 16). Each opens on its read (O-HOST's `opening`): where an act was
@@ -47,13 +49,19 @@ function spanOf(addr, pos, width) {
 /**
  * A LEAP to another arrangement of the span's material — an origin, a
  * container — carrying the span (N-GO's carry), made at the span the card
- * stands at, where its reading face stands while it reads.
+ * stands at, where its reading face stands while it reads; the span the
+ * selection's bytes where a width named them, which the landing's line names
+ * as what the reader selected, else the block read (issue #153).
  * @param {string} to
  * @param {string} addr the span's document
  * @param {{ordinal: number, positions: number}} sp
+ * @param {boolean} selected the span is the selection's
  * @param {boolean} byKey a key made the act
  */
-const carried = (to, addr, sp, byKey) => GO.leapTo(to, { how: 'leap', byKey, carry: { addr, pos: sp.ordinal, width: sp.positions }, site: { span: { addr, pos: sp.ordinal, width: sp.positions } } });
+const carried = (to, addr, sp, selected, byKey) => GO.leapTo(to, { how: 'leap', byKey, carry: { addr, pos: sp.ordinal, width: sp.positions, selected }, site: { span: { addr, pos: sp.ordinal, width: sp.positions } } });
+
+/** is the span asked over the selection's bytes — a width named — rather than the block a position names? */
+const isSelection = (/** @type {number | null} */ width) => width != null && width > 0;
 
 /**
  * who wrote this? (A-41, R29)
@@ -79,7 +87,7 @@ export function wrote(addr, pos, width = null, byKey = false) {
       rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${esc(r.text)}${r.same ? ` <button data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
-    rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => carried(r.o, addr, sp, byKey); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
+    rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => carried(r.o, addr, sp, isSelection(width), byKey); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
     HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts, takeFocus: byKey });
   });
 }
@@ -105,7 +113,7 @@ export function uses(addr, pos, width = null, byKey = false) {
       `<div class="clause" data-string="B1.C-72">${esc(t('B1.C-72'))}</div>`;
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
-    users.forEach((u, i) => { acts['u' + i] = (_el, byKey) => carried(u, addr, sp, byKey); });
+    users.forEach((u, i) => { acts['u' + i] = (_el, byKey) => carried(u, addr, sp, isSelection(width), byKey); });
     HOST.show({ kind: 'card', id: 'provenance:uses', anchor, html, acts, takeFocus: byKey });
   });
 }

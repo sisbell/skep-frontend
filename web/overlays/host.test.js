@@ -34,7 +34,9 @@
 // reads the element alone leaves it at the corner: each turns red); an
 // element its owner redrew from state is found again by its id, the overlay
 // beneath the one the page holds now (a mutant that reads the element alone
-// turns red).
+// turns red). A FACE IS SAID through the one status region, save one the
+// landing that met it describes where the focus lands (issue #153; a mutant
+// that says a told face again turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -44,6 +46,7 @@ import * as FACES from './faces.js';
 import * as TRAILLIST from './trail-list.js';
 import * as KEYS from '../nav/keys.js';
 import * as LEAP from '../nav/leap.js';
+import * as FOCUS from '../nav/focus.js';
 import * as CAM from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 
@@ -69,6 +72,16 @@ const card = (/** @type {string} */ id) => (/** @type {string} */ answer) => HOS
 
 /** the overlay standing: its id, or null where none stands */
 const standing = () => HOST.currentState()?.id ?? null;
+
+test('a face is said through the one status region, save one whose words the landing that met it says where the focus lands (`told`: issue #153), heard there once', () => {
+  let said = 0;
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() { said++; }, textContent: '' }) });
+  FACES.floating('1.0.1.0.127', null, false);
+  assert.deepEqual([standing(), said], ['face:floating', 1], 'a face shown: said');
+  FACES.floating('1.0.1.0.127', null, false, true);
+  assert.deepEqual([standing(), said], ['face:floating', 1], 'told by the landing\'s description: the status region not written again');
+  HOST.dismiss();
+});
 
 test('an opening nothing interrupts is pending while it reads, nothing shown, and shows its answer once they answer', async () => {
   const r = slow();

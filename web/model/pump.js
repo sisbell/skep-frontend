@@ -40,11 +40,18 @@
 // on its withheld runs' origins among it, so a pane the scene makes from it
 // and the walk's mirror item at a run hold the clause decided), where a
 // link's end projects now (`projectEnd`), a link's supersession lineage
-// (`lineage`: `in_claims` and `out_claims`, A-56, A-57), and the chain's
-// members (`probeChain`, the view's probe and the versions list's alike). A
-// class scan read whole — `loadWhole`'s `find_links_v`, the lineage's two —
-// is reissued on `scan_busy` (`readScan`): the daemon bounds each by the
-// same two permits the view's scans take.
+// (`lineage`: `in_claims` and `out_claims`, A-56, A-57), the chain's
+// members (`probeChain`, the view's probe and the versions list's alike),
+// and where a passage's bytes stand in a text (`compareParts`) and a text's
+// image over a region (`imageParts`). A class scan read whole — `loadWhole`'s
+// `find_links_v`, the lineage's two — is reissued on `scan_busy`
+// (`readScan`): the daemon bounds each by the same two permits the view's
+// scans take. A READ REFUSED FOR ITS SIZE (M-FRAMES's `SIZE_REFUSALS`) is
+// asked again IN PARTS (issue #153's design decision: "split a size refusal
+// … into smaller reads"): `compare`'s operands and an `image` region halved
+// until each part answers, within SPLIT_READS reads, so a landing tells what
+// its text holds of a passage, and a text of more runs than one `image`
+// answers is placed whole (`loadWhole`).
 // A READ THE BOARD DID NOT ANSWER (`unreachable`: the shell's dial, or the
 // dev provider's fetch, failed) teaches nothing, and is never taken as an
 // answer: a view's read so refused is HELD (`unreached`) — not missing, for
@@ -199,6 +206,8 @@ const SCAN_ATTEMPTS = 6;
 export const DROP_ATTEMPTS = 4;
 /** a read refused `session_ended` awaits its session's end at most this long — a bound on the shell's derive and re-open, which take board reads (unmeasured) */
 const END_WAIT_MS = 5000;
+/** an act's read the board refuses for its size (M-FRAMES's `SIZE_REFUSALS`) is asked in parts in at most this many reads in all (`compareParts`, `imageParts`); past it the size refusal is handed up (unmeasured: no document on the seeded board meets a size refusal) */
+export const SPLIT_READS = 32;
 
 /** @type {Set<string>} */
 const inflight = new Set();
@@ -479,6 +488,95 @@ async function readScan(frame, addr) {
 /** did the board not answer — the shell's dial, or the dev provider's fetch, failed? Nothing was learned of what was asked */
 const unanswered = (/** @type {Refusal} */ r) => r.kind === 'unreachable';
 
+/** did the board refuse a read for its size — a budget the same question asked over less can meet (M-FRAMES's `SIZE_REFUSALS`)? */
+export const sized = (/** @type {Refusal} */ r) => r.kind === 'refused' && F.SIZE_REFUSALS.includes(r.name);
+
+/** @typedef {{doc: string, pos: number, width: number}} Operand a stretch of a document's text a read is asked over: its positions [pos, pos + width) */
+
+/** a stretch cut in two at its middle position */
+const halves = (/** @type {Operand} */ o) => { const h = Math.floor(o.width / 2); return [{ ...o, width: h }, { ...o, pos: o.pos + h, width: o.width - h }]; };
+
+/** the operand a `compare` refusal localizes (wire.md §Errors: `site.operand`), where the board's verdict names one */
+function operandOf(/** @type {Refusal} */ r) {
+  const body = /** @type {{site?: {operand?: unknown} | null} | null} */ (r.kind === 'refused' ? r.body : null);
+  const named = body && body.site ? body.site.operand : null;
+  return named === 'first' || named === 'second' ? named : null;
+}
+
+/**
+ * Where a passage's bytes stand in a stretch of a document's text
+ * (`compare`): its pairs, the read asked IN PARTS where the board refuses it
+ * for its size (issue #153's design decision: "split a size refusal …
+ * into smaller reads and report the result") — the operand its refusal
+ * names (wire.md §Errors: `site.operand`), else the text sought in, halved,
+ * the other where that one is a single position, each half asked on its own
+ * and their pairs taken together (a stretch cut at a seam is rejoined by its
+ * reader: SC's `merged`), at most SPLIT_READS reads in all. Any other
+ * refusal is handed up; so is a size refusal past that bound, or of two
+ * single positions. Every refusal met is recorded.
+ * @param {Operand} a the passage
+ * @param {Operand} b the text it is sought in
+ * @returns {Promise<{pairs: import('./frames.js').ComparePair[]} | {refused: Refusal}>}
+ */
+export async function compareParts(a, b) {
+  /** @type {import('./frames.js').ComparePair[]} */
+  const pairs = [];
+  /** @type {Array<[Operand, Operand]>} */
+  const todo = [[a, b]];
+  /** @type {Refusal | null} the last size refusal met: the one handed up past the bound */
+  let last = null;
+  for (let reads = 0; todo.length; reads++) {
+    if (reads >= SPLIT_READS && last) return { refused: last };
+    const [x, y] = /** @type {[Operand, Operand]} */ (todo.shift());
+    const out = await read(F.compare([{ doc: x.doc, spans: [{ ordinal: x.pos, positions: x.width }] }], [{ doc: y.doc, spans: [{ ordinal: y.pos, positions: y.width }] }]));
+    if (!('refused' in out)) { pairs.push(...F.decodeCompare(out.answer)); continue; }
+    const r = out.refused;
+    refusals.push({ frame: 'compare', refusal: r, addr: y.doc });
+    const first = operandOf(r) === 'first' ? x.width >= 2 : y.width < 2;
+    if (!sized(r) || (first ? x : y).width < 2) return { refused: r };
+    last = r;
+    const [lo, hi] = halves(first ? x : y);
+    todo.unshift(first ? [lo, y] : [x, lo], first ? [hi, y] : [x, hi]);
+  }
+  return { pairs };
+}
+
+/**
+ * A document's V→I image over a region (`image`), asked IN PARTS where the
+ * board refuses it for its size (`image_too_large`: the region's runs past
+ * M8's budget; issue #153's design decision): the region halved, each half
+ * asked on its own, their runs taken in the text's order, at most
+ * SPLIT_READS reads in all. Any other refusal is handed up; so is a size
+ * refusal past that bound, or of a single position. Every refusal met is
+ * recorded.
+ * @param {string} addr
+ * @param {number} pos the region's first position
+ * @param {number} width its positions
+ * @param {Refusal | null} [met] the size refusal the region whole already met, so its halves are asked first
+ * @returns {Promise<{runs: Array<{iStart: string, width: number}>} | {refused: Refusal}>}
+ */
+export async function imageParts(addr, pos, width, met = null) {
+  /** @type {Array<{iStart: string, width: number}>} */
+  const runs = [];
+  /** @type {Operand} */
+  const region = { doc: addr, pos, width };
+  if (met && width < 2) return { refused: met };
+  /** @type {Operand[]} */
+  const todo = met ? halves(region) : [region];
+  let last = met;
+  for (let reads = 0; todo.length; reads++) {
+    if (reads >= SPLIT_READS && last) return { refused: last };
+    const o = /** @type {Operand} */ (todo.shift());
+    const out = await read(F.image(addr, o.pos, o.width));
+    if (!('refused' in out)) { runs.push(...F.decodeRuns(out.answer)); continue; }
+    refusals.push({ frame: 'image', refusal: out.refused, addr });
+    if (!sized(out.refused) || o.width < 2) return { refused: out.refused };
+    last = out.refused;
+    todo.unshift(...halves(o));
+  }
+  return { runs };
+}
+
 /**
  * Watch an address for a drop from now on, as a read of it goes out: the
  * watch reads true once what the page held of it has been dropped (M-REC's
@@ -750,7 +848,8 @@ const stretchesOf = (/** @type {unknown} */ answer) => F.decodeSpanSet(answer).f
 
 /**
  * A `project` the board refused, held by what its refusal says of the far
- * document (M-REC's `Declined`): `withheld`, `unregistered`, else `refused`.
+ * document (M-REC's `Declined`): `withheld`, `unregistered`, else the
+ * refusal by its name.
  * A `doc_not_registered` is the far document's own answer too — every read of
  * an unregistered address answers it — so the model keeps it of the document
  * (`refuseDoc`), and no projection into it is asked again (`farEnds`); a
@@ -765,7 +864,7 @@ const stretchesOf = (/** @type {unknown} */ answer) => F.decodeSpanSet(answer).f
  */
 function declined(link, slot, far, r) {
   if (r.kind !== 'refused') return;
-  REC.takeProjection(link, slot, far, r.name === 'withheld' ? 'withheld' : r.name === 'doc_not_registered' ? 'unregistered' : 'refused');
+  REC.takeProjection(link, slot, far, r.name === 'withheld' ? 'withheld' : r.name === 'doc_not_registered' ? 'unregistered' : { refused: r.name });
   if (r.name === 'doc_not_registered') refuseDoc(REC.doc(far), r);
 }
 
@@ -835,7 +934,8 @@ export async function probeChain(trunk, stands = () => true) {
 
 /**
  * Read a whole document now — the scene, the walk and a landing ask for all
- * of it: the extent, every position, the image, the links and their types,
+ * of it: the extent, every position, the image — in parts where the board
+ * refuses it whole for its size (`imageParts`) — the links and their types,
  * and the edition claims on each origin its withheld runs name (`readClaims`).
  * A pass the document was dropped under (`readWhole`) is begun again, and
  * reads again exactly what the drop took, at most DROP_ATTEMPTS passes; past
@@ -843,11 +943,22 @@ export async function probeChain(trunk, stands = () => true) {
  * @param {string} addr
  * @returns {Promise<Doc | null>} the record; null where the board refused its extent
  */
-export async function loadWhole(addr) {
+export async function loadWhole(addr) { return (await wholeOf(addr)).doc; }
+
+/**
+ * A whole read (`loadWhole`) with the refusal it met, which a landing that
+ * cannot read its text says it could not tell what that text holds by
+ * (issue #153's design decision): the extent's, where the board refused it,
+ * the record then null; the text's, where the board refused that, the record
+ * standing with what it held; none where both answered.
+ * @param {string} addr
+ * @returns {Promise<{doc: Doc | null, refused: Refusal | null}>}
+ */
+export async function wholeOf(addr) {
   for (let pass = 1; ; pass++) {
     const out = await readWhole(addr, watchDrops(addr));
     if (out !== 'dropped') return out;
-    if (pass >= DROP_ATTEMPTS) { dirty(); return REC.doc(addr); }
+    if (pass >= DROP_ATTEMPTS) { dirty(); return { doc: REC.doc(addr), refused: null }; }
   }
 }
 
@@ -858,14 +969,14 @@ export async function loadWhole(addr) {
  * alike.
  * @param {string} addr
  * @param {() => boolean} dropped the document dropped since the pass began
- * @returns {Promise<Doc | null | 'dropped'>} the record; null where the board refused its extent; 'dropped' where the document was dropped under the pass
+ * @returns {Promise<{doc: Doc | null, refused: Refusal | null} | 'dropped'>} the record — null where the board refused its extent — and the refusal its extent or its text met; 'dropped' where the document was dropped under the pass
  */
 async function readWhole(addr, dropped) {
   const d = REC.doc(addr);
   if (d.extent == null) {
     const out = await read(F.retrieveDocVSpanSet(addr));
     if (dropped()) return 'dropped';
-    if ('refused' in out) { refusals.push({ frame: 'retrieve_doc_v_span_set', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return null; }
+    if ('refused' in out) { refusals.push({ frame: 'retrieve_doc_v_span_set', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return { doc: null, refused: out.refused }; }
     REC.takeSpanSet(addr, F.decodeSpanSet(out.answer));
   }
   if (!d.meta) {
@@ -878,11 +989,17 @@ async function readWhole(addr, dropped) {
   if (whole > 0 && !(d.from === 1 && d.to >= whole + 1)) {
     const out = await read(F.retrieveV(addr, 1, whole));
     if (dropped()) return 'dropped';
-    if ('refused' in out) { refusals.push({ frame: 'retrieve_v', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return d; }
+    if ('refused' in out) { refusals.push({ frame: 'retrieve_v', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return { doc: d, refused: out.refused }; }
     REC.takeDelivery(addr, F.decodeDelivery(out.answer, 1));
     const im = await read(F.image(addr, 1, whole));
     if (dropped()) return 'dropped';
     if (!('refused' in im)) REC.takeImage(addr, 1, F.decodeRuns(im.answer));
+    else if (sized(im.refused)) {
+      // a text of more runs than one `image` answers: its image read in parts, taken whole, so every run is placed
+      const parts = await imageParts(addr, 1, whole, im.refused);
+      if (dropped()) return 'dropped';
+      if ('runs' in parts) REC.takeImage(addr, 1, parts.runs);
+    }
   }
   if (!d.linksRead && extent > 0) {
     const out = await readScan(F.findLinksV(addr, 1, extent), addr);
@@ -899,7 +1016,7 @@ async function readWhole(addr, dropped) {
     if (dropped()) return 'dropped';
   }
   dirty();
-  return d;
+  return { doc: d, refused: null };
 }
 
 /**
@@ -969,6 +1086,39 @@ export async function projectEnd(linkAddr, slot, doc) {
     if (holds) REC.takeProjection(linkAddr, slot, doc, runs);
     return { runs };
   }
+}
+
+/**
+ * Where a link's slot projects into a document now, read for an act and
+ * kept nowhere (`project`): a version member's, for the offer of a landing's
+ * line (N-GO; issue #153) — the model holds no member's text, so no beam or
+ * symbol reads it. Its runs in the text's order; the refusal met where the
+ * board declines the read.
+ * @param {string} linkAddr
+ * @param {1 | 2} slot
+ * @param {string} doc
+ * @returns {Promise<{runs: Stretch[]} | {refused: Refusal}>}
+ */
+export async function projectedIn(linkAddr, slot, doc) {
+  const out = await read(F.project(linkAddr, slot, doc));
+  return 'refused' in out ? out : { runs: stretchesOf(out.answer).sort((a, b) => a.pos - b.pos) };
+}
+
+/**
+ * A document's content extent read for an act and kept nowhere
+ * (`retrieve_doc_v_span_set`): a version member's, for its row in the
+ * versions list (§2.1's version row: one span read per member, A-39) and for
+ * the offer of a landing's line (N-GO; issue #153) — a member the model held
+ * would be read and mounted over its document's box, which it shares. The
+ * refusal met where the board declines the read.
+ * @param {string} addr
+ * @returns {Promise<{extent: number} | {refused: Refusal}>}
+ */
+export async function extentOf(addr) {
+  const out = await read(F.retrieveDocVSpanSet(addr));
+  if ('refused' in out) return out;
+  const c = F.decodeSpanSet(out.answer).find((s) => s.subspace === 1);
+  return { extent: c ? c.positions : 0 };
 }
 
 /**

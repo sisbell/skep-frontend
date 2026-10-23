@@ -14,7 +14,10 @@
 // does where it names a link, its departure recording no step, for it names
 // no end of the link, and as a move to another arrangement of the same
 // material does where it carries a passage, its departure recording the
-// carry), the handoff
+// carry), what a landing says of the passage it carried or followed — its
+// state, its offers, the mirror's description of its item (`go.landing`,
+// `go.described`) — and its line as it stands, its words, its acts and its
+// rect (`landingLine`; issue #153), the handoff
 // (`barsOf`: the canvas's own bars for a document beside its mounted
 // article's blocks), the reading scene's runs and the ends it set level
 // (`scene.pairs`), a passage's line in one of its panes (`scene.at`) and its
@@ -85,6 +88,7 @@ import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as PROV from '../overlays/provenance.js';
 import * as VERSIONS from '../overlays/versions.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
+import * as LANDING from '../overlays/landing.js';
 import * as KEYS from '../nav/keys.js';
 import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
@@ -573,7 +577,9 @@ export function install(deps) {
     mounts: () => LAYER.mounts(),
     beams: () => BM.count(),
     /** the teleports; `leapTo`'s third argument names the runs of the span landed on — every run a far end projects to, `pos` at one of them — and the link followed to it, the landing then marked as a follow's is, or the passage the LEAP carries, re-projected and marked at the landing */
-    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{runs?: import('../nav/go.js').Run[] | null, link?: string | null, carry?: import('../text/span.js').Span | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, runs: o.runs ?? null, link: o.link ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), arrival: () => GO.arrivalMark() },
+    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{runs?: import('../nav/go.js').Run[] | null, link?: string | null, carry?: import('../nav/go.js').Carry | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, runs: o.runs ?? null, link: o.link ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), arrival: () => GO.arrivalMark(), landing: () => GO.landing(), described: () => GO.described(), landingAct: (/** @type {'beside' | 'version' | 'again'} */ which) => { GO.landingAct(which); return true; } },
+    /** a landing's line as it stands (issue #153): its words, its acts, its rect on screen, whether the scene covers it; null where none stands */
+    landingLine: () => LANDING.shown(),
     leap: { open: () => LEAP.open(), close: () => LEAP.close(), rows: () => LEAP.currentRows(), isOpen: () => LEAP.isOpen() },
     cards: {
       links: (/** @type {string} */ a) => LINKS.show(a),

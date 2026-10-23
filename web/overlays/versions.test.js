@@ -4,6 +4,11 @@
 // past the document's length, holds it whole, which `compare` over the
 // document's length answers with nothing (a mutant that compares over the
 // document's extent marks it as holding none of the passage and turns red);
+// each row marked by the rule a landing reads (issue #153) — part where the
+// member holds as many positions as the passage and not all of it (a mutant
+// that sums the pairs' widths marks it whole and turns red), all of it in
+// pieces with its places, couldn't tell by the refusal met where the board
+// did not answer (a mutant that leaves the strip blank turns red);
 // and each member's read act LEAPs carrying the passage held, the landing
 // marked at its counterpart in the member (a mutant that hands the member the
 // document's position unprojected marks nothing and turns red); and a list
@@ -32,6 +37,8 @@ import { docBox } from '../plane/projection.js';
 import * as HOST from './host.js';
 import * as FACES from './faces.js';
 import * as VERSIONS from './versions.js';
+import { t } from '../strings.js';
+import { esc } from '../util.js';
 
 const T = '1.0.1.0.43', T1 = T + '.1', T2 = T + '.2';
 // the edition and its first member: two paragraphs; its second member: a prologue set before them, which stands the second paragraph 24 positions later
@@ -55,6 +62,10 @@ const compared = (/** @type {string} */ member, /** @type {number} */ extent, /*
 // another edition, U, of two members, each its text whole; the passage held where the list is opened on no position: its first block, whole
 const U = '1.0.1.0.44', U1 = U + '.1', U2 = U + '.2';
 const FIRST = { pos: 1, width: 'First.\n\n'.length };
+// another edition, V, of four members, the passage held its second paragraph: the first holding it whole; the second its first nine
+// positions and its first eight again — as many positions as the passage, never all of it; the third all of it in two pieces, its last
+// nine positions first; the fourth's extent the board does not answer
+const V = '1.0.1.0.45', V1 = V + '.1', V2 = V + '.2', V3 = V + '.3', V4 = V + '.4';
 const script = {
   ...reads(T, TEXT), ...reads(T1, TEXT), ...reads(T2, TEXT2),
   ...compared(T1, TEXT.length, [[HELD.pos, HELD.pos, HELD.width]]),
@@ -64,6 +75,11 @@ const script = {
   ...reads(U, TEXT, U), ...reads(U1, TEXT, U), ...reads(U2, TEXT, U),
   ...compared(U1, TEXT.length, [[1, 1, FIRST.width]], U, FIRST), ...compared(U2, TEXT.length, [[1, 1, FIRST.width]], U, FIRST),
   [FAKE.keyOf('op', { frame: F.docMetadata(U + '.3') })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
+  ...reads(V, TEXT, V), ...reads(V1, TEXT, V), ...reads(V2, TEXT, V), ...reads(V3, TEXT, V),
+  ...compared(V1, TEXT.length, [[HELD.pos, HELD.pos, HELD.width]], V),
+  ...compared(V2, TEXT.length, [[HELD.pos, 1, 9], [HELD.pos, 12, 8]], V),
+  ...compared(V3, TEXT.length, [[HELD.pos + 8, 1, HELD.width - 8], [HELD.pos, 15, 8]], V),
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(V4) })]: { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } },
 };
 /** the board out while U's chain is first probed: its second member's metadata not answered until the outage ends */
 let outage = true;
@@ -97,6 +113,17 @@ before(async () => {
 test('each member\'s row marks the passage held by `compare` over the member\'s own extent: a member longer than its document holds it whole past the document\'s length', async () => {
   await VERSIONS.open(T, HELD.pos, null);
   assert.deepEqual(rows(), [[1, 'whole'], [2, 'whole']], hostEl.innerHTML);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('each row reads its member by the rule a landing reads (issue #153): whole, in one piece; part, though it holds as many positions as the passage; all of it in pieces, its places named; couldn\'t tell, by the refusal met, where the board did not answer — never a strip left blank', async () => {
+  await PUMP.loadWhole(V);
+  REC.takeMembers(V, 4);
+  await VERSIONS.open(V, HELD.pos, null);
+  assert.deepEqual(rows(), [[1, 'whole'], [2, 'part'], [3, 'pieces'], [4, 'unknown']], hostEl.innerHTML);
+  const strips = [...hostEl.innerHTML.matchAll(/<span class="strip" data-holds="[a-z]*">([^<]*)<\/span>/g)].map((m) => m[1]);
+  assert.deepEqual(strips, [t('F.versions.whole'), t('F.versions.part'), t('L.versions.pieces', { n: 2 }), t('L.versions.unknown', { reason: t('F.daemon.unreachable') })].map(esc), 'each in its words');
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 

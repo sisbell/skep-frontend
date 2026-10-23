@@ -43,7 +43,10 @@
 // THE DIALOG'S NAME (D5): each overlay's own caption — its `.label`, a face's
 // own words — by `aria-labelledby`; a string per kind from ST where no
 // caption stands. A face a key or the system raised is heard through the one
-// status region without the focus moving (D4; K-58).
+// status region without the focus moving (D4; K-58) — save one whose words
+// the landing that met it says where the focus lands (`told`: the dead end's
+// face at its landing, N-WALK's description; issue #153), which is heard
+// there once.
 // Each act is told whether a key ran it by the controller's one reading:
 // Enter on its control, taken here before the platform's click, or the click
 // the platform makes from a key (Space on a button), which carries no click
@@ -86,6 +89,7 @@ import { esc } from '../util.js';
  * @property {(replaced: boolean) => void} [onDismiss] its end: `replaced` where the next act's overlay took its place, so what stands behind it (the selection) stands on; false where it was dismissed
  * @property {boolean} [takeFocus] a key made the act that opened it (the act's `byKey`): the focus goes to its first act
  * @property {string} [first] a selector for the control the focus goes to first where it is not the first in order — a list's current row
+ * @property {boolean} [told] a face whose words the landing that met it says where the focus lands (N-WALK's description; issue #153): the status region does not repeat them
  * @property {string} [id] a name the gate reads
  */
 
@@ -186,7 +190,7 @@ export function show(o) {
     else FOCUS.open('overlay', { el: host, from, byKey: !!o.takeFocus || (replacing && held), first: firstControl(host, o.first) });
   }
   place();
-  if (o.kind === 'face' && !o.takeFocus) FOCUS.say(faceWords(host));
+  if (o.kind === 'face' && !o.takeFocus && !o.told) FOCUS.say(faceWords(host));
   markDirty();
 }
 

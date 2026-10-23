@@ -54,9 +54,12 @@
 // sites, a beam from each.
 // The beams are bundled by the document they leave and their far document —
 // one bundle per destination, its far document's label and its count at its
-// end (§2.1), and, where every beam it holds floats, "its passage is not in
-// ⟨D⟩'s current text", the stub saying so before anyone follows it
-// (foundations §2.3; `labelText`) — above the end, or below it where above
+// end (§2.1), and, where every beam it holds says one state of what its far
+// end's text holds, those words — "its passage is not in ⟨D⟩'s current text"
+// where it floats, BM-HELD's line where that text holds part of it, all of it
+// in pieces, or the board would not tell (BM-HELD's `farSays`; issue #153) — the
+// stub saying so before anyone follows it (foundations §2.3; `labelText`) —
+// above the end, or below it where above
 // would reach past the visible view's top, and none where it would not stand
 // whole inside that view (`labelPlace`: a beam cut at its start, under the
 // one line or past the viewport, sets no label there) — each member stroked
@@ -74,7 +77,7 @@
 // the far end off screen alone), S1's `buildBeams` canvas arm (the SVG arm
 // DROPPED — S1's verdict).
 // Rules: FP-1, FP-2, FP-8 (redrawn whole), FP-10 (reads LK, T-LAYER and
-// L-LINE through their exports).
+// L-LINE through their exports), FP-21.
 
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
@@ -83,7 +86,7 @@ import { sx, sy, viewport, visibleView, edgeStub, stubTriangle } from '../plane/
 import { docBox } from '../plane/projection.js';
 import { COL } from '../plane/register.js';
 import { doc, blockAt, place } from '../model/records.js';
-import { t } from '../strings.js';
+import { farSays } from './held.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../plane/register.js').Mark} Mark */
@@ -311,19 +314,23 @@ export function bundlesOf(beams) {
 /**
  * A bundle's label (§2.1): its far document's address, its label from the
  * index cut to 32 characters, its count where it holds two beams or more —
- * and, where every beam it holds ends at a passage the far document's current
- * text no longer holds, "its passage is not in ⟨D⟩'s current text", the stub
- * saying so before anyone follows it (foundations §2.3; P44: what its members
- * share, so a bundle holding a beam that floats beside one that lands says
- * neither). A far document the board will say nothing of is drawn nowhere, so
- * no beam reaches it: its tail names it (issue #132).
+ * and, where every beam it holds says the same of what its far end's text
+ * holds (BM-HELD's `farSays`), those words: "its passage is not in ⟨D⟩'s current
+ * text" where every one floats, BM-HELD's line where every one's text holds
+ * only part of it, or all of it in pieces, or the board would not tell
+ * (issue #153), the stub saying so before anyone follows it (foundations
+ * §2.3; P44: what its members share, so a bundle holding a beam that floats
+ * beside one that lands says neither). A far document the board will say
+ * nothing of is drawn nowhere, so no beam reaches it: its tail names it
+ * (issue #132).
  * @param {Bundle<{s: Shown}>} b
  * @returns {string}
  */
 export function labelText(b) {
   const p = place(b.far);
+  const says = b.members.map((m) => farSays(m.s));
   return b.far + (p && p.label ? ' · ' + p.label.slice(0, 32) : '') + (b.members.length > 1 ? ` · ${b.members.length}` : '') +
-    (b.members.every((m) => LK.floats(m.s)) ? ' · ' + t('F.floating', { D: b.far }) : '');
+    (says[0] && says.every((w) => w === says[0]) ? ' · ' + says[0] : '');
 }
 
 /** the visible view now: the viewport below the one line */

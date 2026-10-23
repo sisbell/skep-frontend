@@ -48,7 +48,9 @@
 // link's two ends in one paragraph are two marks a click tells apart (a
 // mutant that writes the link alone turns red); a symbol
 // whose far end floats titled with "its passage is not in ⟨D⟩'s current
-// text" (a mutant that leaves the title its type alone turns red). The plan
+// text", and one whose far end's text holds part of its passage with the
+// line (issue #153; a mutant that leaves the title its type alone turns
+// red). The plan
 // the canvas's bars are laid out from: the head's three lines, a fourth where
 // links touch the document; a block's
 // pieces with its hairline's label, C-33's mark and its symbols at its size;
@@ -78,7 +80,7 @@ const KEYED = /** @type {Reader} */ ({ account: null, keyPresent: true }), KEYLE
 
 /** @returns {import('./article.js').ArticleView} */
 const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {}) => ({
-  selected: null, focus: null, marks: [], mergedMark, symbols: [], floats: () => false, countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
+  selected: null, focus: null, marks: [], mergedMark, symbols: [], says: () => '', countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
   reader: SIGNED, localTrust: true, notebook: true, scene: false, originKinds: new Map(), originOwner: (a) => accountOf(a) || '', clauseOf: () => null,
   deviceLabel: 'dev-notebook', ownerFingerprint: 'e4272902a11439e5', ...o,
 });
@@ -422,12 +424,14 @@ test('each mark carries the ends it draws: a symbol its link and its end\'s key,
   assert.deepEqual(lips, [['L', two.key, 'two'], ['L9', other.key, 'three '], ['L L9', `${four.key} ${other.key}`, 'four']], 'each stretch the ends marking it, their keys in the order it names their links');
 });
 
-test('a symbol whose far end floats is titled with its type and "its passage is not in ⟨D⟩\'s current text"; one whose far end stands somewhere, with its type alone', () => {
+test('a symbol is titled with its type and what its far end\'s text holds of its passage — "its passage is not in ⟨D⟩\'s current text" where it floats, the line where it holds part of it (issue #153) — and with its type alone where that text holds all of it', () => {
   const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: 'one two three', origin: null }] });
   const s = { ...shown(5, 3), link: { addr: 'L5', type: '1.1.0.1.0.1.0.3.13' }, far: '1.0.1.0.127' };
-  const title = (/** @type {boolean} */ floats) => (articleHTML(d, view({ symbols: [s], floats: () => floats }), '1.0.1').match(/<span class="sym [^"]*" data-link="L5"[^>]* title="([^"]*)"/) || [])[1];
-  assert.equal(title(true), esc('1.1.0.1.0.1.0.3.13 · ' + t('F.floating', { D: '1.0.1.0.127' })), 'said at the symbol, before anyone follows it');
-  assert.equal(title(false), '1.1.0.1.0.1.0.3.13');
+  const title = (/** @type {string} */ says) => (articleHTML(d, view({ symbols: [s], says: () => says }), '1.0.1').match(/<span class="sym [^"]*" data-link="L5"[^>]* title="([^"]*)"/) || [])[1];
+  const floating = t('F.floating', { D: '1.0.1.0.127' }), part = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: '1.0.1.0.127' }) });
+  assert.equal(title(floating), esc('1.1.0.1.0.1.0.3.13 · ' + floating), 'said at the symbol, before anyone follows it');
+  assert.equal(title(part), esc('1.1.0.1.0.1.0.3.13 · ' + part), 'a part held: the line at the symbol');
+  assert.equal(title(''), '1.1.0.1.0.1.0.3.13');
 });
 
 test('a heading\'s plan stands it nearer the block it heads: its room above at its own size, the smaller room below; a paragraph\'s gap after it alone', () => {

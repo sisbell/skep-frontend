@@ -94,6 +94,14 @@
 // again, turns red); a lookup that lands after such a row
 // taking nothing and asked again (a mutant that watches the origin's drops
 // alone takes the claims read before the row and turns red);
+// a read refused for its size asked again in parts (issue #153): a
+// `compare` over the halves of the operand its refusal names, else of the
+// text sought in, their pairs taken together, any other refusal handed up
+// at once, and no more than SPLIT_READS reads (a mutant that asks no part,
+// halves the wrong operand, or asks without a bound turns red); a whole
+// read's image so refused read in parts and taken as one image, every run
+// placed across the seam; a whole read handing up the refusal its extent or
+// its text met (a mutant that drops it turns red);
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -905,7 +913,7 @@ test('a projection the board declines answers the refusal it met, and the model 
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   assert.deepEqual(await PUMP.projectEnd(L, 2, FAR), declined, 'its own refusal');
-  assert.deepEqual([REC.projection(L, 2, FAR), REC.doc(FAR).refused], ['refused', null], 'held refused, saying nothing of FAR');
+  assert.deepEqual([REC.projection(L, 2, FAR), REC.doc(FAR).refused], [{ refused: 'not_a_link' }, null], 'held refused by its name — the reason a far end\'s words give for not telling what its text holds (issue #153) — saying nothing of FAR');
   assert.deepEqual(await PUMP.projectEnd(L, 2, GHOST), unregistered);
   assert.deepEqual([REC.projection(L, 2, GHOST), REC.doc(GHOST).refused], ['unregistered', 'unregistered'], 'the board says nothing of the ghost: held so, of the projection and the document');
   assert.deepEqual(await PUMP.projectEnd(L, 2, HIDDEN), withheld);
@@ -1221,6 +1229,77 @@ test('a whole read reads the edition claims on each origin its withheld runs nam
   assert.deepEqual([REC.link(EDITION)?.type, REC.link(FORK)?.from[0].doc, REC.doc(EDITION_HOME).meta?.published, REC.doc(FORK_HOME).meta?.owner], [F.EDITION_CLASS, O, true, '1.0.1.1'], 'each claim\'s link and each home\'s metadata with it');
   assert.ok(!fake.asked.some((k) => k.includes('"op":"edition_claims"')));
   assert.deepEqual(fake.unanswered, []);
+});
+
+/** a `compare` of the passage `a` against the stretch of text `b`, as M-PUMP asks it */
+const compareOf = (/** @type {{doc: string, pos: number, width: number}} */ a, /** @type {{doc: string, pos: number, width: number}} */ b) =>
+  F.compare([{ doc: a.doc, spans: [{ ordinal: a.pos, positions: a.width }] }], [{ doc: b.doc, spans: [{ ordinal: b.pos, positions: b.width }] }]);
+/** a `compare` answer from D into 1.0.1.0.127: each pair its position in each and its positions */
+const compared = (/** @type {Array<[number, number, number]>} */ pairs) => ({ result: { as_of: 1, resp: 'compare', pairs: pairs.map(([u1, u2, width]) => ({ d1: D, d2: '1.0.1.0.127', u1: { ordinal: String(u1), subspace: '1' }, u2: { ordinal: String(u2), subspace: '1' }, width: String(width) })) } });
+/** a budget refusal of the board's, naming the operand it localizes where one is given (wire.md §Errors: `site.operand`) */
+const budget = (/** @type {string} */ name, /** @type {string | null} */ operand = null) => ({ refused: { kind: 'refused', name, status: 200, code: name, detail: null, op: 'compare', body: { resp: 'rejected', code: name, disposition: 'permanent', op: 'compare', site: operand ? { operand } : null } } });
+
+test('a compare the board refuses for its size is asked again in parts — the operand its refusal names halved, else the text sought in — each part asked on its own and their pairs taken together; any other refusal handed up, and a size refusal past SPLIT_READS reads (issue #153)', async () => {
+  const FAR = '1.0.1.0.127', a = { doc: D, pos: 1, width: 10 }, b = { doc: FAR, pos: 1, width: 40 };
+  /** the board's answers to a script's compares, and the compares the pump asked */
+  const over = (/** @type {Record<string, unknown>} */ answers) => {
+    const fake = FAKE.create({ ...script, ...answers });
+    PORT.boot(fake); PUMP.start({ onDirty: () => {} }); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    return { fake, asked: () => fake.asked.filter((k) => k.includes('"op":"compare"')) };
+  };
+  const key = (/** @type {typeof a} */ x, /** @type {typeof b} */ y) => FAKE.keyOf('op', { frame: compareOf(x, y) });
+  // naming no operand: the text sought in halved, its first half holding the passage's first four positions at 5, its second the rest at 30
+  let p = over({ [key(a, b)]: budget('too_many_blocks'), [key(a, { ...b, width: 20 })]: compared([[1, 5, 4]]), [key(a, { ...b, pos: 21, width: 20 })]: compared([[5, 30, 6]]) });
+  assert.deepEqual(await PUMP.compareParts(a, b), { pairs: [{ d1: D, d2: FAR, u1: 1, u2: 5, width: 4 }, { d1: D, d2: FAR, u1: 5, u2: 30, width: 6 }] }, 'both halves\' pairs');
+  assert.deepEqual(p.asked(), [key(a, b), key(a, { ...b, width: 20 }), key(a, { ...b, pos: 21, width: 20 })], 'the whole, then each half in turn');
+  assert.deepEqual(p.fake.unanswered, []);
+  // naming the first operand: the passage halved
+  p = over({ [key(a, b)]: budget('too_many_pairs', 'first'), [key({ ...a, width: 5 }, b)]: compared([[1, 5, 5]]), [key({ ...a, pos: 6, width: 5 }, b)]: compared([[6, 30, 5]]) });
+  assert.deepEqual(await PUMP.compareParts(a, b), { pairs: [{ d1: D, d2: FAR, u1: 1, u2: 5, width: 5 }, { d1: D, d2: FAR, u1: 6, u2: 30, width: 5 }] }, 'the operand the refusal names halved');
+  assert.deepEqual(p.fake.unanswered, []);
+  // any other refusal: handed up, no part asked
+  const moved = { refused: { kind: 'refused', name: 'range_not_present', status: 200, code: 'range_not_present', detail: null, op: 'compare', body: null } };
+  p = over({ [key(a, b)]: moved });
+  assert.deepEqual([await PUMP.compareParts(a, b), p.asked().length], [moved, 1]);
+  // every part wider than four positions refused for its size, every narrower one answered: the 63 reads its parts would take bounded
+  // at SPLIT_READS, then the size refusal handed up
+  const one = { doc: D, pos: 1, width: 1 }, wide = { doc: FAR, pos: 1, width: 128 };
+  /** @type {Record<string, unknown>} */
+  const all = {};
+  const walk = (/** @type {typeof b} */ o) => { all[key(one, o)] = o.width > 4 ? budget('too_many_blocks') : compared([]); if (o.width > 4) { const h = Math.floor(o.width / 2); walk({ ...o, width: h }); walk({ ...o, pos: o.pos + h, width: o.width - h }); } };
+  walk(wide);
+  p = over(all);
+  const out = await PUMP.compareParts(one, wide);
+  assert.deepEqual(['refused' in out && out.refused.name, p.asked().length], ['too_many_blocks', PUMP.SPLIT_READS], 'bounded: never past SPLIT_READS reads');
+  // a part of a single position each refused for its size: handed up at once, no further part asked
+  p = over({ [key(one, { ...b, width: 1 })]: budget('too_many_pairs') });
+  const single = await PUMP.compareParts(one, { ...b, width: 1 });
+  assert.deepEqual(['refused' in single && single.refused.name, p.asked().length], ['too_many_pairs', 1], 'nothing left to halve: handed up');
+  assert.deepEqual(p.fake.unanswered, []);
+});
+
+test('a whole read whose image the board refuses for its size reads it in parts and takes them as one image, every run placed; one whose extent or text the board refuses hands that refusal up with the record (issue #153)', async () => {
+  const sized = { refused: { kind: 'refused', name: 'image_too_large', status: 200, code: 'image_too_large', detail: null, op: 'image', body: null } };
+  const fake = FAKE.create({
+    ...script, [FAKE.keyOf('op', { frame: F.image(D, 1, 30) })]: sized,
+    [FAKE.keyOf('op', { frame: F.image(D, 1, 15) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.1', width: '15' }] } },
+    [FAKE.keyOf('op', { frame: F.image(D, 16, 15) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: D + '.0.1.16', width: '11' }, { i_start: '1.0.1.0.1003.0.1.1', width: '4' }] } },
+  });
+  PORT.boot(fake); PUMP.start({ onDirty: () => {} }); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  const w = await PUMP.wholeOf(D);
+  assert.deepEqual([w.refused, w.doc?.imageFor], [null, [1, 31]], 'the image held over the whole text, nothing refused handed up');
+  assert.deepEqual(REC.identityOf(D, 14, 4), [{ prefix: D + '.0.1', ordinal: 14, width: 2 }, { prefix: D + '.0.1', ordinal: 16, width: 2 }], 'every position placed, across the parts\' seam');
+  assert.deepEqual(REC.doc(D).origins, [{ pos: 27, width: 4, doc: '1.0.1.0.1003' }], 'the transcluded run named from the second part');
+  assert.deepEqual(fake.unanswered, []);
+  REC._reset();
+  const busy = { refused: { kind: 'refused', name: 'busy', status: 503, code: 'busy', detail: null, op: 'retrieve_doc_v_span_set', body: null } };
+  PORT.boot(FAKE.create({ ...script, [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]: busy }));
+  assert.deepEqual(await PUMP.wholeOf(D), { doc: null, refused: busy.refused }, 'the extent refused: no record, the refusal handed up');
+  REC._reset();
+  const withheld = { refused: { kind: 'refused', name: 'withheld', status: 200, code: 'withheld', detail: null, op: 'retrieve_v', body: null } };
+  PORT.boot(FAKE.create({ ...script, [FAKE.keyOf('op', { frame: F.retrieveV(D, 1, 30) })]: withheld }));
+  const t = await PUMP.wholeOf(D);
+  assert.deepEqual([t.doc?.extent, t.refused], [30, withheld.refused], 'the text refused: the record with its extent, the refusal handed up');
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

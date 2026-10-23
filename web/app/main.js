@@ -28,13 +28,15 @@
 // links lit at an arrival or by a one-step move along the trail, P-RENDER's
 // test of where the plane draws a document (`drawsDoc`, which tails a link
 // whose far document is drawn nowhere — issue #132) and T-LAYER's owner rule
-// — and N-WALK's: where Back's light stands (N-GO's `backLight`; issue #152).
+// — and N-WALK's: where Back's light stands (N-GO's `backLight`; issue #152)
+// and what a landing says of its passage (N-GO's `described`; issue #153).
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
 // frame, the mirror's documents marked expanded or collapsed in place by the
-// view (N-WALK's `markExpanded`; issue #140) and its items where Back's light
-// stands (`markLocated`; issue #152), then P-RENDER, then BM, then
-// O-HOST's place, the line, then the
+// view (N-WALK's `markExpanded`; issue #140), its items where Back's light
+// stands (`markLocated`; issue #152) and the landing's item's description
+// (`markDescribed`; issue #153), then P-RENDER, then BM, then
+// O-HOST's place, the landing's line (O-LAND's `render`), the line, then the
 // press APP-INPUT holds at reading scale, acted on the text the frame set
 // (`afterFrame`) — and the frame buffer the gate reads. T-LAYER decides
 // what stands BEFORE the canvas draws, so a line crossing the mount threshold
@@ -71,6 +73,7 @@ import * as HOST from '../overlays/host.js';
 import * as FACES from '../overlays/faces.js';
 import * as SEL from '../overlays/selection.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
+import * as LANDING from '../overlays/landing.js';
 import * as LINE from '../line/line.js';
 import * as LEAP from '../nav/leap.js';
 import * as WALK from '../nav/walk.js';
@@ -133,9 +136,11 @@ function loop(/** @type {number} */ now) {
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
     WALK.markExpanded();
     WALK.markLocated();
+    WALK.markDescribed();
     const lod = RENDER.draw();
     BM.draw();
     HOST.place();
+    LANDING.render();
     if (SCENE.isOpen()) SCENE.draw();
     INPUT.afterFrame();
     const drawMs = performance.now() - t0;
@@ -157,6 +162,7 @@ function whereIs(/** @type {EventTarget | null} */ target) {
   if (t.closest('#leap')) return /** @type {const} */ ('field');
   if (t.matches && t.matches('input, textarea')) return /** @type {const} */ ('field');
   if (t.closest('#overlay')) return /** @type {const} */ ('overlay');
+  if (t.closest('#landing')) return /** @type {const} */ ('landing');
   if (t.closest('#line')) return /** @type {const} */ ('line');
   if (t.closest('#scenebar')) return /** @type {const} */ ('scene-acts');
   if (t.closest('#scene')) return /** @type {const} */ ('scene');
@@ -174,12 +180,13 @@ async function boot() {
   HOST.attach(el('overlay'));
   FOCUS.attach({ live: el('live') });
   WALK.attach(el('mirror'));
+  LANDING.attach(el('landing'), { handOff: () => WALK.focusItem() });
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
   LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); } });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; } });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner });
-  WALK.readers({ located: () => GO.backLight() });
+  WALK.readers({ located: () => GO.backLight(), described: () => GO.described() });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', resize); resize();
   document.addEventListener('copy', (e) => { const b = REC.board(); LAYER.onCopy(e, b ? b.origin : ''); });

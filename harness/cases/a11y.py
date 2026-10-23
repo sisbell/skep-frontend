@@ -41,7 +41,10 @@ exposed (issue #152's design decision) — Mod+[ from a carried passage's
 landing returns the focus to the span holding the passage's start where the
 carry was made, every span item holding a stretch of it marked
 `aria-current="location"` and no other item, none once the next act puts the
-light out; the links
+light out; a landing's line its item's description (issue #153's design
+decision) — a passage the draft holds part of, carried into it, the focus on
+the item at its first held piece, described by the line's words, the one
+item described, none once the next act takes the line down; the links
 card's overlay toggle a switch in the AX tree (R60; WAI-ARIA's switch) —
 named by B1-S4's words before its state and described by the count after
 it, a press changing its checked state and neither its name nor its
@@ -787,6 +790,32 @@ def run(ctx):
     ctx.leap(DOC, WINDOW[0])
     out = located()
     r.check(not out['marked'], 'the next act puts Back\'s light out: no item marked aria-current="location"', out)
+    ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+    ctx.frames(1)
+    # ---- a landing's line as the description of the item the focus lands on (issue #153's design decision: "Focus lands on
+    # the first held piece or landing point, the line as its description, so the screen-reader mirror says all four states"):
+    # a passage straddling the window run's start carried into the draft, which holds the run's half of it alone — the focus
+    # on the mirror's item at the first held piece, its accessible description the line's words; none once the next act
+    # takes the line down
+    ctx.js('window.__skep.go.leapTo(%s, null, %s)' % (json.dumps(WINDOW[2]), json.dumps({'carry': {'addr': DOC, 'pos': WINDOW[0] - 8, 'width': 16}})))
+    ctx.settle()
+    ctx.frames(3)
+
+    def described():
+        """the item the platform's focus stands on, the element its `aria-describedby` names and that element's words, every
+        item described, and what the landing says"""
+        return ctx.js('''(() => { const e = document.activeElement, sib = window.__skep.mirror.siblings();
+          const by = e && e.getAttribute ? e.getAttribute('aria-describedby') : null, d = by ? document.getElementById(by) : null;
+          const items = [...document.querySelectorAll('#mirror li[role="treeitem"][aria-describedby]')].map((li) => ({...sib[Number(li.dataset.i)]}));
+          return {focused: e && e.closest && e.closest('#mirror') ? {...sib[Number(e.dataset.i)]} : null, by, words: d ? d.textContent : null,
+                  hidden: !!d && d.hidden, items: items.map((i) => [i.kind, i.pos]), said: window.__skep.go.described(), line: window.__skep.landingLine()}; })()''')
+    d = described()
+    f = d['focused']
+    r.check(bool(f) and f['addr'] == WINDOW[2] and bool(d['said']) and d['by'] == 'walk-landing' and d['hidden'] and d['words'] == d['said']['words'] and bool(d['line']) and d['line']['words'] == d['words'] and len(d['items']) == 1,
+            'a landing the draft holds part of: the focus on its item, described by the line\'s words — the one item described (issue #153)', d)
+    ctx.leap(DOC, WINDOW[0])
+    gone = described()
+    r.check(not gone['items'] and gone['said'] is None, 'the next act takes the description down with the line', gone)
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
     # leave the page as the case found it: the landing, the focus on no element

@@ -15,7 +15,9 @@
 // page's order: the line (ONE stop, ← and → among its acts — K-22) → the
 // plane (the mirror's current item) → the focused document's corner, where
 // Enter takes the corner's act and the walk's keys and the swallow do not
-// run (K-57) → a standing overlay → the line (§4 rule 5); while the scene
+// run (K-57) → a landing's line's acts, while it stands (O-LAND; issue #153),
+// whose keys are the buttons' own → a standing overlay → the line (§4 rule
+// 5); while the scene
 // stands, its panes and its acts take the place of the plane's stop and the
 // corner (SC), and no key reaches what it covers — the walk, the selection,
 // the corner — wherever the focus is (`sceneKey`; D5 M-4: "the walk within
@@ -145,7 +147,7 @@ export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('
 
 /**
  * @typedef {Object} Ctx — where the focus is, and whether a key made the act
- * @property {'plane' | 'line' | 'box' | 'overlay' | 'corner' | 'scene' | 'scene-acts' | 'field'} where `scene` a reading scene's pane, `scene-acts` its bar's buttons
+ * @property {'plane' | 'line' | 'box' | 'overlay' | 'landing' | 'corner' | 'scene' | 'scene-acts' | 'field'} where `scene` a reading scene's pane, `scene-acts` its bar's buttons, `landing` a landing's line's acts (O-LAND)
  * @property {boolean} byKey a key made the act (the focus owner's one reading, `FOCUS.byKey`)
  */
 
@@ -209,7 +211,7 @@ export async function dispatch(e, ctx) {
     if (chord === '←' || chord === '→') { e.preventDefault(); return LINE.step(chord === '→' ? 1 : -1); }
     return false;
   }
-  if (ctx.where === 'overlay') return false; // the overlay's own keys
+  if (ctx.where === 'overlay' || ctx.where === 'landing') return false; // the overlay's own keys, and a landing's line's: Enter and Space press its act
   // the walk (K-1 … K-8): each key waits on the camera's flight, and the platform runs a key's default — a scroll of
   // the scroller the focus stands in, the mirror — as soon as the listeners return; so the default is prevented first
   if (chord === '↓') { e.preventDefault(); await WALK.key('down'); return true; }

@@ -379,7 +379,7 @@ test('a far end stands where `project` answers it sits now: placed elsewhere tha
   assert.deepEqual([at().farRuns, LK.floats(at()), LK.farPos(at())], [[{ pos: 2, width: 2 }, { pos: 9, width: 3 }], false, 2], 'where it stands now, in the text\'s order — its stored position 1');
   REC.takeProjection(OTHER_HOME + '.0.2.1', 1, OTHER_HOME, []);
   assert.deepEqual([at().farRuns, LK.floats(at()), LK.farPos(at())], [[], true, null], 'none: it floats');
-  REC.takeProjection(OTHER_HOME + '.0.2.1', 1, OTHER_HOME, 'refused');
+  REC.takeProjection(OTHER_HOME + '.0.2.1', 1, OTHER_HOME, { refused: 'not_a_link' });
   assert.deepEqual([at().farRuns, LK.floats(at())], [null, false], 'refused: placed nowhere, and no word of floating');
   const own = /** @type {import('./links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === D + '.0.2.1'));
   REC.takeProjection(D + '.0.2.1', 2, '1.0.1.0.127', []);
@@ -484,7 +484,7 @@ test('a far end is named by its address, then what the page holds of its documen
   LK.readers({ owner: (a) => (a === HIDDEN ? '1.0.4' : '') });
   assert.equal(named(TO_HIDDEN), `${HIDDEN} · ${t('F.corner.withheld', { owner: '1.0.4' })}`, 'its owner by the owner rule handed in');
   // a refusal that says nothing of the document: the address alone
-  REC.takeProjection(TO_HIDDEN, 2, HIDDEN, 'refused');
+  REC.takeProjection(TO_HIDDEN, 2, HIDDEN, { refused: 'not_a_link' });
   assert.equal(named(TO_HIDDEN), HIDDEN, 'refused for another reason: nothing said of the document');
   // readable: answered, its first line where the page holds one
   REC.takeProjection(TO_HIDDEN, 2, HIDDEN, [{ pos: 2, width: 3 }]);

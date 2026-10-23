@@ -41,8 +41,9 @@
 // red); a far end at the stretch `project` places it in (a mutant ending it
 // at the stored position's line turns red), at the far article's first block
 // where it floats, at its box's centre where no projection is held; a bundle
-// whose every beam floats saying so at its end, one whose beams part saying
-// nothing of it.
+// whose every beam floats saying so at its end, and one whose every beam's
+// far text holds only part of its passage saying the line its landing says
+// (issue #153), one whose beams part saying nothing of it.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -308,4 +309,15 @@ test('a bundle whose every beam floats says so at its end, "its passage is not i
   assert.ok(label().startsWith(H + ' · 2') && label().endsWith(words), label());
   REC.takeProjection(THIRD, 2, H, [{ pos: 9, width: 3 }]);
   assert.equal(label(), H + ' · 2', 'one lands: no word of floating');
+});
+
+test('a bundle whose every beam\'s far text holds only part of its passage says so at its end in the line its landing says; one whose beams part says nothing of it (issue #153; P44)', () => {
+  build([OWN, THIRD]);
+  // H holds the person's citation's first two bytes of five, and the third party's first of three
+  REC.takeProjection(OWN, 2, H, [{ pos: 1, width: 2 }]); REC.takeProjection(THIRD, 2, H, [{ pos: 9, width: 1 }]);
+  const label = () => labelText(bundlesOf(met([D]))[0]);
+  const words = ' · ' + t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: H }) });
+  assert.ok(label().startsWith(H + ' · 2') && label().endsWith(words), label());
+  REC.takeProjection(THIRD, 2, H, [{ pos: 9, width: 3 }]);
+  assert.equal(label(), H + ' · 2', 'the third party\'s whole: they part, and nothing is said');
 });

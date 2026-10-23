@@ -37,6 +37,17 @@ export const READ_OPS = Object.freeze([
 ]);
 
 /**
+ * The budget refusals a smaller read can meet (wire.md §Errors: M6's
+ * `too_many_blocks`, a `compare` operand past its blocks, and
+ * `too_many_pairs`, its report past its pairs; M8's `image_too_large`, an
+ * `image` region or a `project` read past its runs): each permanent for the
+ * request as sent, none for the same question asked over less — so a read
+ * of `compare` or `image` so refused is asked again in parts (M-PUMP's
+ * `compareParts`, `imageParts`; issue #153's design decision).
+ */
+export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs', 'image_too_large']);
+
+/**
  * @typedef {Object} Run — one delivered item, placed at its positions
  * @property {number} pos the first V-position (1-based)
  * @property {number} width positions

@@ -12,7 +12,12 @@
 // in view"); asked by a position alone, the block holding it, whole; else the
 // document's first block — `compare`d into each member over that member's own
 // extent, one span read per member made for its row and kept nowhere (§2.1's
-// version row; A-39), and marked whole / in part / not at all — and each
+// version row; A-39), in parts where the board refuses it for its size, and
+// marked by the one rule a landing reads (BM-HELD's, through N-GO's
+// `heldIn`; issue #153's design decision: "the version list — say it there
+// too"): whole, all of it in pieces, in part, not at all, or couldn't tell,
+// by the refusal met — its LEAP's landing naming the passage as the
+// selection where it is one — and each
 // offering "read side by side", the scene opened on the held passage, which
 // SC sets level with what the member holds of it. Each member is one row: its
 // acts and its mark in columns the rows share. It stands at the act's site,
@@ -28,16 +33,16 @@
 // where an act was made on the chrome while they read — Back, Esc, the LEAP
 // box opened, the next card asked or shown — nothing shows, and no member is
 // asked about after it. New — no draft in the wireframe. Rules: FP-1, FP-2,
-// FP-13, FP-20.
+// FP-13, FP-20, FP-21.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
-import * as F from '../model/frames.js';
 import * as GO from '../nav/go.js';
 import * as SCENE from '../scene/scene.js';
 import * as LAYER from '../text/layer.js';
 import * as LINE from '../line/line.js';
+import { whyOf } from '../beams/held.js';
 import { visibleView } from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 import { versionAddress, memberOf, documentOf } from '../model/address.js';
@@ -47,18 +52,44 @@ import { esc } from '../util.js';
 /** @typedef {import('./host.js').Anchor} Anchor */
 
 /**
- * A member's own content extent, read for its row (§2.1's version row: one
- * span read per member, A-39) and kept nowhere: a member the model held would
- * be read and mounted over its document's box, which it shares. Null where
- * the board declines the read.
- * @param {string} member
- * @returns {Promise<number | null>}
+ * @typedef {Object} Row — a member's row: what its text holds of the passage held
+ * @property {number} k the member
+ * @property {import('../beams/held.js').Holds | 'unknown' | null} holds all of it in one piece, in pieces, part, none; couldn't tell; null where no passage is held
+ * @property {number} places the stretches of its text holding it
+ * @property {string | null} why couldn't tell: the id of its reason's words (BM-HELD's `whyOf`)
  */
-async function extentOf(member) {
-  const out = await PUMP.read(F.retrieveDocVSpanSet(member));
-  if ('refused' in out) return null;
-  const c = F.decodeSpanSet(out.answer).find((s) => s.subspace === 1);
-  return c ? c.positions : 0;
+
+/**
+ * What a member's text holds of the passage held, for its row (see the
+ * head): its own content extent read for the row and kept nowhere (M-PUMP's
+ * `extentOf`), then the passage `compare`d into it by the one rule a landing
+ * reads (N-GO's `heldIn`), in parts where the board refuses it for its size;
+ * couldn't tell, by the refusal met, where no answer told; null, asking no
+ * more, where the opening no longer stands.
+ * @param {string} trunk
+ * @param {{pos: number, width: number}} held
+ * @param {number} k
+ * @param {() => boolean} stands
+ * @returns {Promise<Row | null>}
+ */
+async function rowOf(trunk, held, k, stands) {
+  const member = versionAddress(trunk, k);
+  const e = await PUMP.extentOf(member);
+  if (!stands()) return null;
+  if (!('extent' in e)) return { k, holds: 'unknown', places: 0, why: whyOf(e.refused) };
+  const h = await GO.heldIn({ addr: trunk, pos: held.pos, width: held.width }, member, e.extent);
+  if (!('held' in h)) return { k, holds: 'unknown', places: 0, why: whyOf(h.refused) };
+  return { k, holds: h.held.holds, places: h.held.places, why: null };
+}
+
+/** a row's strip, in words: whole, all of it in pieces, in part, not at all, couldn't tell; nothing where no passage is held */
+function stripOf(/** @type {Row} */ r) {
+  if (r.holds === 'all') return t('F.versions.whole');
+  if (r.holds === 'pieces') return t('L.versions.pieces', { n: r.places });
+  if (r.holds === 'part') return t('F.versions.part');
+  if (r.holds === 'none') return t('F.versions.none');
+  if (r.holds === 'unknown') return t('L.versions.unknown', { reason: t(r.why || 'L.held.why.other') });
+  return '';
 }
 
 /**
@@ -85,32 +116,27 @@ export function open(addr, pos, anchor, width = null, byKey = false) {
     const holding = pos != null ? d.blocks.find((b) => pos >= b.pos && pos < b.pos + b.width) : d.blocks[0];
     /** @type {{pos: number, width: number} | null} */
     const held = pos != null && width != null && width > 0 ? { pos, width } : holding ? { pos: holding.pos, width: Math.max(1, holding.width) } : null;
-    /** @type {Array<{k: number, holds: 'whole' | 'part' | 'none' | null}>} */
+    /** @type {Row[]} */
     const rows = [];
     for (let k = 1; k <= n; k++) {
       if (!stands()) return null;
-      /** @type {'whole' | 'part' | 'none' | null} */
-      let holds = null;
-      const member = versionAddress(trunk, k);
-      const extent = held ? await extentOf(member) : null;
-      if (held && extent === 0) holds = 'none';
-      else if (held && extent != null && stands()) {
-        const out = await PUMP.read(F.compare([{ doc: trunk, spans: [{ ordinal: held.pos, positions: held.width }] }], [{ doc: member, spans: [{ ordinal: 1, positions: extent }] }]));
-        if (!('refused' in out)) { const pairs = F.decodeCompare(out.answer); const covered = pairs.reduce((a, p) => a + p.width, 0); holds = covered >= held.width ? 'whole' : covered > 0 ? 'part' : 'none'; }
-      }
-      rows.push({ k, holds });
+      const row = held ? await rowOf(trunk, held, k, stands) : { k, holds: null, places: 0, why: null };
+      if (!row) return null;
+      rows.push(row);
     }
     return { n, held, rows };
   }, ({ n, held, rows }) => {
     const cur = memberOf(addr);
     const html = `<span class="label">${esc(trunk)} · ${esc(t('F.version-of', { k: cur || n, n }))}</span>` +
-      `<ul class="rows versions">${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}</button> <span class="strip" data-holds="${r.holds || ''}">${esc(r.holds === 'whole' ? t('F.versions.whole') : r.holds === 'part' ? t('F.versions.part') : r.holds === 'none' ? t('F.versions.none') : '')}</span> <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>`;
+      `<ul class="rows versions">${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}</button> <span class="strip" data-holds="${r.holds === 'all' ? 'whole' : r.holds || ''}">${esc(stripOf(r))}</span> <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>`;
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
     /** where a member's LEAP is made, as data: the list's own place — its span, else its world point — where the LEAP's reading face stands (N-GO) */
     const site = anchor && anchor.span ? { span: anchor.span } : anchor && anchor.world ? { world: anchor.world } : null;
+    /** the passage held is the reader's selection — a width named — which the landing's line names so (issue #153) */
+    const selected = pos != null && width != null && width > 0;
     for (const r of rows) {
-      acts['read' + r.k] = (_el, byKey) => GO.leapTo(versionAddress(trunk, r.k), { carry: held ? { addr: trunk, pos: held.pos, width: held.width } : null, how: 'leap', byKey, site });
+      acts['read' + r.k] = (_el, byKey) => GO.leapTo(versionAddress(trunk, r.k), { carry: held ? { addr: trunk, pos: held.pos, width: held.width, selected } : null, how: 'leap', byKey, site });
       acts['beside' + r.k] = () => SCENE.open(trunk, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
     }
     HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });

@@ -196,9 +196,22 @@ export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: n
 }
 
 /**
+ * The dead end's words for a document whose text holds none of a passage
+ * (foundations §2.3): "its passage is not in ⟨D⟩'s current text", and at a
+ * pinned member in its own words, "its passage is not in version ⟨k⟩" — the
+ * floating face's, and the landing's description where it lands there
+ * (N-GO's `described`; issue #153).
+ * @param {string} far
+ * @returns {{id: string, text: string}}
+ */
+export function floatingWords(far) {
+  const k = memberOf(far);
+  return k != null ? { id: 'F.floating.member', text: t('F.floating.member', { k }) } : { id: 'F.floating', text: t('F.floating', { D: far }) };
+}
+
+/**
  * A floating end: the passage a document's text no longer arranges
- * (foundations §2.3) — "its passage is not in ⟨D⟩'s current text", and at a
- * pinned member in its own words, "its passage is not in version ⟨k⟩" — met
+ * (foundations §2.3), in the dead end's words (`floatingWords`) — met
  * at the landing N-GO makes at the document's head, whether a followed
  * link's end or a carried passage brought the reader there (the carry rule's
  * empty case, P43). Where `offer` stands, the act opens the versions list to
@@ -206,17 +219,19 @@ export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: n
  * the face stood — the head landed on — and following it as the camera moves
  * (foundations §3.1: at the act's site); a carried passage's landing offers
  * none, for the list holds a passage of its own document and the carried one
- * is another's.
+ * is another's. Shown at the landing that met it, its words are that
+ * landing's description, said where the focus lands (`told`; N-WALK), and
+ * the status region does not repeat them (D4: a landing is told by the focus
+ * move); shown again at a cursor move, they are said there.
  * @param {string} far the document whose text holds none of the passage
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the head landed on: where the face stands, and the list its act opens
  * @param {boolean} [offer] the face offers the versions list
+ * @param {boolean} [told] the landing's description says its words
  */
-export function floating(far, anchor, offer = true) {
-  const k = memberOf(far);
+export function floating(far, anchor, offer = true, told = false) {
   const at = toAnchor(anchor);
-  const words = k != null ? { id: 'F.floating.member', text: t('F.floating.member', { k }) } : { id: 'F.floating', text: t('F.floating', { D: far }) };
-  HOST.show({ kind: 'face', id: 'face:floating', anchor: at, acts: offer ? { a0: (_el, byKey) => VERSIONS.open(far, null, at, null, byKey) } : {},
-    html: faceHTML({ ...words, acts: offer ? [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] : [] }) });
+  HOST.show({ kind: 'face', id: 'face:floating', anchor: at, told, acts: offer ? { a0: (_el, byKey) => VERSIONS.open(far, null, at, null, byKey) } : {},
+    html: faceHTML({ ...floatingWords(far), acts: offer ? [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] : [] }) });
 }
 
 /**

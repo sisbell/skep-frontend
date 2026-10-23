@@ -163,6 +163,24 @@ fix; nothing here depends on their names.
   first act where the replaced one held it, and a face never takes it.
   The ring and the one status region are the owner's to write.
 
+## The landing
+
+- **FP-21 An outline alone means all of it, here, in one piece.** A
+  landing that carried or followed a passage reads what the text it
+  landed in holds of it by one rule (`web/beams/held.js`), and lands in
+  one of four states, never silent about the rest: all of it in one
+  piece, the outline alone; part of it, or all of it in pieces, the
+  outline kept and one line beside it at the text's edge saying so;
+  none of it, the dead end's face; couldn't tell, where no answer told
+  — a read the board refuses for its size asked again in parts first —
+  the landing unmarked, its line saying it could not tell and why,
+  keyed on the refusal and never its token. The line is no overlay: it
+  stands while a card opens at the landing and leaves with the outline
+  at the next act. The item the focus lands on takes the line as its
+  description, so the mirror says every state. Every surface that knows
+  the state before departure — a drawn link's far end, a versions row —
+  says it by the same rule.
+
 ## Decisions in force
 
 Design decisions taken on issues and built, one line each, newest
@@ -202,7 +220,7 @@ surfaces also becomes a numbered rule above, with a Changes entry.
   other claim stands behind one line after the rows, with no number,
   whose act lists them in its place as assertions naming their claimant
   ("you" for the reader) and what it is to the links.
-- **#152** (built with this line): each trail entry records the step
+- **#152** (built `035735f`): each trail entry records the step
   that left it — the link followed, or the passage carried by the
   permanent addresses of its bytes, never its positions — and every
   one-step move (Back, Forward, a jump to the adjacent entry) lights
@@ -216,6 +234,25 @@ surfaces also becomes a numbered rule above, with a Changes entry.
   #136's mark on a return to a notice's entry, which lights the link the
   notice came from only where the move crosses that follow — Forward
   onto it — and never on Back or a longer jump.
+- **#153** (built with this line): a carried or followed passage lands
+  in one of four states, read by one rule — all of it in one piece, the
+  outline alone; part, or all in pieces, the outline kept and a line at
+  the text's edge beside the landing ("only part of what you selected is
+  in version 3 — in 2 places", "the text you were reading" where nothing
+  was selected; never "missing", "removed", "deleted" or "compare"; the
+  rest may be under withheld text it shows), offering the scene with
+  where it came from where that holds it whole and, at a published
+  landing, the latest version holding it whole; none, unchanged;
+  couldn't tell — a size refusal (`too_many_blocks`, `too_many_pairs`,
+  `image_too_large`) split into smaller reads first, any other refusal
+  landing unmarked with a line saying why, keyed on its code, and "try
+  again" where that helps. The line leaves with the outline; no edge
+  marks, no refusing or asking first. The focus lands on the first held
+  piece or the landing point, the line its description; a drawn link's
+  far end and the versions list say the state before departure. This
+  changes a follow whose projection the board refuses by a name that
+  says nothing of the far document: it lands at that document's head
+  with the line, where it was faced at the link's bytes.
 
 ## Changes
 
@@ -320,6 +357,21 @@ found.
     standing by line, the frame's mounted set no longer says which of
     its lines are text; drawing by document would draw bars under text,
     or leave lines empty, wherever only part of a document stands.
+- 2026-10-23, from issue #153 (a carried passage the landing held only
+  part of was outlined and said nothing of the rest; one whose read the
+  board declined landed unmarked and silent) and the design decision on
+  it — four states read by one rule, a line beside the landing for part,
+  pieces and couldn't tell, size refusals split into smaller reads, the
+  line the description of the item the focus lands on, the state said
+  before departure where a read knows it: FP-21 added. The page read
+  what a landing's text held of a passage at four sites, each its own
+  way — the carry by its counterparts, a follow by whatever runs its
+  projection named, the versions list by the sum of its pairs' widths,
+  which read a half held twice as whole, and a drawn far end by whether
+  it floated at all — and an outline meant all of it at one site and any
+  of it at the next. The rule names the one reading and what an outline
+  alone promises, so the next surface that lands a passage, or speaks of
+  one before departure, says the same four things.
 
 ## What these rule out
 

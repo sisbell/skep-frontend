@@ -167,7 +167,13 @@ by the same marks, no link named (issue #152's design decision: every
 one-step move lights the step it crosses at the end it lands on); the first
 edition's own paragraph carried into the draft it windows lands at the
 draft's first block, unmarked, faced in the dead end's words with no act.
-THE CHROME: the
+THE LINE (issue #153's design decision): the window run carried whole lands
+with the outline alone, no line; a passage straddling the run's start
+carried into the draft keeps its outline on the half the draft holds and
+says only part of it is there in a line at the text's edge beside the
+landing — its top the first held line's, offering it side by side with the
+first edition — inside the visible view, meeting no line of the outline and
+not the overlay, gone at the next act. THE CHROME: the
 LEAP box's rows share their columns, a place's longest label among them, no
 cell's text running past its column and the title's keeping a quarter of the
 row; the versions list sets each member on one line; the chrome over the
@@ -258,6 +264,9 @@ TAIL_GAP_PX = 3
 # canvas, and how many times the ink the beam lays there unlit it lays lit — the case's own floor for "heavier", held apart
 # from the page's ARRIVAL_WEIGHT
 BEAM_WINDOW_PX, HEAVIER_INK = 6, 1.5
+# a passage the draft holds part of (issue #153): the first edition's positions before the window run carried with as many of
+# the run's own
+PART_LEAD = 8
 
 
 def corner_of(ctx):
@@ -1105,6 +1114,9 @@ def carried_holds(ctx, r):
     r.check(bool(at) and at['hits'], 'the window run\'s hairline is what lies under the pointer', at)
     wait_for(ctx, lit_at(WINDOW[2]))
     seen['hairline'] = arrival_holds(ctx, r, 'a click on the window run\'s hairline', (DOC, WINDOW[0], WINDOW[0] + WINDOW[1]))
+    land, line = ctx.js('window.__skep.go.landing()'), ctx.js('window.__skep.landingLine()')
+    r.check(line is None and bool(land) and land['said'] is None, 'the window run carried whole into its source: all of it in one piece — the outline alone, no line (issue #153)',
+            {'said': land and land['said'], 'line': line})
     # Back from the hairline's landing lights the run where the carry was made, in the first edition, and Forward lights it
     # in the draft again — each placed where its text holds the run's bytes now (issue #152)
     ctx.js('window.__skep.go.back()')
@@ -1167,7 +1179,46 @@ def carried_holds(ctx, r):
             {'arrival': ctx.js('window.__skep.go.arrival()'), 'entry': {k: entry[k] for k in ('addr', 'pos', 'width')}, 'first_block': first, 'face': face, 'want': words})
     seen['empty'] = {'carried': [own['pos'], own['width']], 'landing': entry['pos'], 'face': face['text'][:80]}
     ctx.esc()
+    seen['part'] = part_holds(ctx, r)
     return seen
+
+
+def part_holds(ctx, r):
+    """THE LINE's checks (issue #153's design decision: "Mark what's held and say the rest in a line"): a passage straddling
+    the window run's start — the first edition's PART_LEAD positions before it and as many of the run's — carried into the
+    draft the run windows, which holds the run's half of it alone: the arrival outlined on that half, its words the run's;
+    the landing's state part, the line that stands led by "only part of the text you were reading is in ⟨D⟩'s current
+    text", offering to read it side by side with the first edition, which holds it whole, and no version — the draft has
+    none; standing at the text's edge beside the landing — past the right edge of the outline's first line, its top that
+    line's — inside the visible view below the one line, meeting no line of the outline and not the overlay; the next act
+    takes it down; its figures"""
+    ctx.leap(DOC, WINDOW[0])
+    lo = WINDOW[0] - PART_LEAD
+    ctx.js('window.__skep.go.leapTo(%s, null, %s)' % (json.dumps(WINDOW[2]), json.dumps({'carry': {'addr': DOC, 'pos': lo, 'width': 2 * PART_LEAD}})))
+    wait_for(ctx, lit_at(WINDOW[2]))
+    held = arrival_holds(ctx, r, 'a passage the draft holds part of (issue #153)', (DOC, WINDOW[0], WINDOW[0] + PART_LEAD))
+    land, line = ctx.js('window.__skep.go.landing()'), ctx.js('window.__skep.landingLine()')
+    words = ctx.js('import("./strings.js").then(({t}) => t("L.held.part", {subject: t("L.held.reading"), where: t("L.held.current", {D: %s})}))' % json.dumps(WINDOW[2]))
+    said = (land or {}).get('said') or {}
+    r.check(said.get('state') == 'part' and bool(line) and bool(words) and line['words'].startswith(words) and not line['covered'] and line['acts'] == ['beside'],
+            'the landing says only part of the passage carried is in the draft, in a line that stands, offering it side by side with the first edition (issue #153)',
+            {'said': said, 'line': line, 'want': words})
+    top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
+    vp = ctx.js('window.__skep.view.viewport()')
+    view = {'x': 0, 'y': top, 'w': vp['VW'], 'h': vp['VH'] - top}
+    a = ctx.js('window.__skep.arrivalAnchors()') or {}
+    outline = a.get('outline') or []
+    first = next(iter([q for q in ctx.js('window.__skep.spanRects(%s, %d, 1)' % (json.dumps(a.get('addr') or WINDOW[2]), a.get('pos') or 0)) or [] if q['w'] > 0 and q['h'] > 0]), None)
+    over = ctx.js('(() => { const o = document.getElementById("overlay"); if (!o.classList.contains("on")) return null; const q = o.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; })()')
+    rect = (line or {}).get('rect')
+    beside = bool(rect) and bool(first) and bool(outline) and rect['x'] >= max(o['x'] + o['w'] for o in outline if abs(o['y'] - first['y']) <= ANCHOR_TOL_PX + 1) - ANCHOR_TOL_PX and abs(rect['y'] - first['y']) <= ANCHOR_TOL_PX + 1
+    r.check(beside and inside(rect, view) and not any(meets(rect, o) for o in outline) and not (over and meets(rect, over)),
+            'the line stands at the text\'s edge beside the landing, its top the first held line\'s, inside the visible view, meeting no line of the outline and not the overlay (issue #153)',
+            {'line': rect, 'first': first, 'outline': outline[:4], 'overlay': over, 'view': view})
+    ctx.leap(DOC, WINDOW[0])
+    gone = ctx.js('window.__skep.landingLine()')
+    r.check(gone is None, 'the next act takes the line down with the outline (issue #153)', gone)
+    return {'held': held, 'said': said, 'line': rect}
 
 
 def chrome_holds(ctx, r):

@@ -255,10 +255,35 @@ export const STRINGS = {
   // same in the reader's own account where the index, known complete, lists no document at the address
   'L.far.unregistered': { text: 'nothing this board will say about this address', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, B1-S5, the ARIA mirror', lane: true },
   'L.far.empty': { text: 'no document here yet', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, B1-S5, the ARIA mirror', lane: true },
-  // a link whose far end floats: F.floating's words, as its symbol and its stub say them
+  // a link whose far end's text holds none of its passage, part of it or all of it in pieces, or the board would not tell:
+  // those words (BM-HELD's `farSays` — F.floating's, or its line), as its symbol and its stub say them
   'L.mirror.floating': { text: ' — ⟨sentence⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a jump reading, said at once where it was made until its read answers (issue #136's design decision)
   'L.reading': { text: 'reading ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reading: at the act\'s site', lane: true },
+  // a landing's line (issue #153's design decision, whose own words are the part line's, "only part of what you selected is
+  // in version 3 — in 2 places", and the subject "the text you were reading"): what of the passage carried or followed the
+  // text landed in holds, where that is not all of it in one piece, or where no answer told — the passage named by what it
+  // was to the reader, the text by F.floating's two forms, the places and the withheld text after it; the same words at a
+  // drawn link's far end before departure (BM-HELD's `lineOf`)
+  'L.held.part': { text: 'only part of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
+  'L.held.pieces': { text: 'all of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
+  'L.held.places': { text: ' — in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
+  'L.held.withheld': { text: '; the rest may be under the withheld text here', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
+  'L.held.unknown': { text: 'couldn\'t tell whether ⟨where⟩ holds ⟨subject⟩: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
+  'L.held.selected': { text: 'what you selected', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
+  'L.held.reading': { text: 'the text you were reading', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
+  'L.held.followed': { text: 'its passage', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
+  'L.held.member': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end', lane: true },
+  'L.held.current': { text: '⟨D⟩\'s current text', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end', lane: true },
+  // why no answer told (BM-HELD's `whyOf`), where no entry above already says it: never the refusal's token, never "compare"
+  'L.held.why.busy': { text: 'the board was busy', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
+  'L.held.why.size': { text: 'it is too large to check, even in parts', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
+  'L.held.why.withheld': { text: 'some of it is withheld from you', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
+  'L.held.why.unread': { text: 'its text could not be read', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
+  'L.held.why.other': { text: 'the board did not say', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row; a link\'s far end', lane: true },
+  // a versions row's strip for the two states F.versions' three do not name (issue #153's design decision)
+  'L.versions.pieces': { text: 'holds all of the passage, in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  'L.versions.unknown': { text: 'couldn\'t tell whether it holds the passage: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's title, the version marker's
   'L.dismiss': { text: 'dismiss (⟨chord⟩)', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   'L.version': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },

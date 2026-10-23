@@ -16,9 +16,10 @@
   mirror's (N-WALK), the overlay's its own caption as each opens (O-HOST).
   Their order here is the Tab ring's (D5 §4 rule 5): the one line (one
   stop; the LEAP box after it, while open — the line's stop, opened), the
-  plane's stop, the focused document's corner, the standing overlay, and the
-  line again; the scene, while it stands, in the place of the plane's stop
-  and its corner. The focus has one owner (FP-20, N-FOCUS), and one status
+  plane's stop, the focused document's corner, a landing's line's acts
+  while it stands, the standing overlay, and the line again; the scene,
+  while it stands, in the place of the plane's stop, its corner and the
+  landing's line. The focus has one owner (FP-20, N-FOCUS), and one status
   region (#live) it alone writes; the canvases are hidden from assistive
   technology, the mirror being the one accessible rendering.
 -->
@@ -49,6 +50,8 @@
 <div id="mirror" class="panel" role="tree" tabindex="0"></div>
 <!-- the corners (T-LAYER's): after the mirror, so Tab from the plane's stop lands on the focused document's corner (D5 §4 rule 5, K-57) -->
 <div id="corners"></div>
+<!-- a landing's line (O-LAND's; issue #153): after the corners and before the overlay, so its acts are the ring's stop after the corner; standing at the text's edge beside the landing, under the overlay -->
+<div id="landing" role="note"></div>
 <!-- the overlay (O-HOST's): after the corners, so a standing overlay is the ring's stop after the plane and its corner, and the one line's after it (D5 §4 rule 5); its stacking draws it over them all; named by its own caption as each opens; no live region of its own — a face is said through #live -->
 <div id="overlay" role="dialog"></div>
 <!-- the one status region (D4; N-FOCUS's): polite for the selection, a face and the line's transients, assertive for the session's death and halted writes -->

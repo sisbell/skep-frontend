@@ -22,7 +22,10 @@
 // at the position its slot stores, each mark and symbol carrying the ends it
 // draws by their links and their keys (LK's `endKey`), so a click opens the
 // card of the end clicked (APP-INPUT) — a symbol whose far end floats titled
-// "its passage is not in ⟨D⟩'s current text" (foundations §2.3); the
+// "its passage is not in ⟨D⟩'s current text" (foundations §2.3), and one
+// whose far end's text holds only part of its passage, or all of it in
+// pieces, or one the board would not tell of, titled with BM-HELD's line
+// (BM-HELD's `farSays`; issue #153); the
 // withheld block OCCUPYING its positions and naming the owner of its run's
 // origin, whoever owns the document windowing it (R56: the copy derives per
 // origin; B1-S7),
@@ -71,7 +74,7 @@
 // rendered as formatting, never marked (rule (iii)) — here the corpus's own
 // markdown headings are set as headings.
 // Carries: the wireframe's §16 `articleHTML`, `withheldBlock`.
-// Rules: FP-1, FP-2, FP-8, FP-10 (reads LK/selection/focus as values).
+// Rules: FP-1, FP-2, FP-8, FP-10 (reads LK/selection/focus as values), FP-21.
 
 import { esc, fingerprintCue, sliceBytes, byteLength } from '../util.js';
 import { t } from '../strings.js';
@@ -97,7 +100,7 @@ import { MEASURE, BORDER, borderEm, headingSize, breakBetween, isSpace } from '.
  * @property {Shown[]} marks the links to mark in place (LK.shown), each over every stretch its end stands in
  * @property {(marks: [Mark, ...Mark[]]) => Mark} mergedMark the one mark the links over one stretch merge into (LK.mergedMark)
  * @property {Shown[]} symbols the symbols at their spans (LK.symbols)
- * @property {(s: Shown) => boolean} floats whether a drawn link's far end floats, its far document's current text holding none of its passage (LK.floats)
+ * @property {(s: Shown) => string} says what a drawn link's far end's text holds of its passage, in words, before departure — the dead end's where it floats, BM-HELD's line where it holds part of it, all of it in pieces, or nothing told (BM-HELD's farSays); '' where nothing is said
  * @property {(block: Block) => {n: number, social: boolean}} countAt the others' count per block (LK.countAt)
  * @property {number} wholeLinks the links to this document as a whole
  * @property {Reader} reader who reads (M-REC's `reader`): the acting account, or a guest's null, and whether a key for this board is present
@@ -658,15 +661,19 @@ const control = (scene) => (scene ? '' : ' role="button" tabindex="-1"');
 
 /**
  * A link's symbol at its span: hue the linker's, dashed for another's,
- * lighter once followed; titled with its type, and, where its far end floats,
- * "its passage is not in ⟨D⟩'s current text" — said before anyone follows it
- * (foundations §2.3); carrying its link and its end's key (LK's `endKey`):
- * the end whose card a click on it opens (APP-INPUT).
+ * lighter once followed; titled with its type, and with what its far end's
+ * text holds of its passage where that is not all of it in one piece — "its
+ * passage is not in ⟨D⟩'s current text" where it floats, BM-HELD's line where
+ * it holds part of it, all of it in pieces, or the board would not tell —
+ * said before anyone follows it (foundations §2.3; issue #153); carrying its
+ * link and its end's key (LK's `endKey`): the end whose card a click on it
+ * opens (APP-INPUT).
  * @param {Shown} s
  * @param {ArticleView} v
  */
 function symHTML(s, v) {
-  const title = (s.link.type || '') + (v.floats(s) ? ' · ' + t('F.floating', { D: s.far }) : '');
+  const says = v.says(s);
+  const title = (s.link.type || '') + (says ? ' · ' + says : '');
   return `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" data-end="${esc(s.key)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"${control(v.scene)} title="${esc(title)}">⟡</span>`;
 }
 

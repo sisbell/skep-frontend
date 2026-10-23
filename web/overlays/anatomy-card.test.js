@@ -19,7 +19,10 @@
 // on follow, the line standing before follow (a mutant that names the card
 // no first act lands on the line and turns red), and the line's act shows it
 // again under its id with the claims in the line's place, a focus held on
-// the line going to follow.
+// the line going to follow; beneath its far end's words, the line its
+// landing says where that end's text holds only part of its passage, and
+// nothing where it holds all of it in one piece (issue #153; a mutant that
+// leaves the far end's words alone turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as ANATOMY from './anatomy-card.js';
@@ -254,6 +257,37 @@ test('the card: a key opens it on follow, the line standing before follow; the l
   assert.deepEqual(p.controls(), ['follow', 'beside', 'x'], 'the line gone');
   assert.deepEqual(listed(p.host.innerHTML), [{ id: 'L.card.claims.superseded-by', text: t('L.card.claims.superseded-by', { claimant: '1.0.2', link: '1.0.2.0.5.0.2.2' }) }], 'the claim behind it in the line\'s place');
   assert.equal(p.at(), 'follow', 'the focus held on the line goes to the card\'s first control (rule 11), never the body');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the card says beneath its far end\'s words what that end\'s text holds of its passage where it is not all of it in one piece — the line its landing says — and nothing where it is (issue #153)', async () => {
+  const p = cardPage();
+  HOST.attach(/** @type {any} */ (p.host));
+  // the first edition's citation of twenty-two of 1.0.1.0.127's bytes from its third, which an edit cut in two: four at 3, five at 20
+  const D = '1.0.1.0.3', FAR = '1.0.1.0.127', CUT = D + '.0.2.4';
+  const TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'The far edition.\n\nIts cited passage stands here.';
+  REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
+  REC.takeDelivery(FAR, [{ pos: 1, width: FAR_TEXT.length, kind: 'content', text: FAR_TEXT, ref: null, origin: null }]);
+  REC.takeImage(FAR, 1, [{ iStart: FAR + '.0.1.1', width: FAR_TEXT.length }]);
+  REC.takeLinks(D, [CUT]);
+  REC.takeLink({ addr: CUT, from: [resolveSpan({ start: D + '.0.1.1', width: '0.0.0.0.0.0.0.3' })], to: [resolveSpan({ start: FAR + '.0.1.3', width: '0.0.0.0.0.0.0.22' })], type: '1.1.0.1.0.1.0.3.13' });
+  REC.takeProjection(CUT, 2, FAR, [{ pos: 3, width: 4 }, { pos: 20, width: 5 }]);
+  const fake = FAKE.create({
+    [FAKE.keyOf('op', { frame: F.inClaims(CUT, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+    [FAKE.keyOf('op', { frame: F.outClaims(CUT, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+  });
+  PORT.boot(fake);
+  const drawn = () => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === CUT));
+  /** the line beneath the far end's words, as a person reads it; null where none stands */
+  const said = () => { const m = p.host.innerHTML.match(/<div class="end far">.*?<div class="note" data-string="L\.held\.(\w+)">(.*?)<\/div>/); return m ? [m[1], text(m[2])] : null; };
+  await ANATOMY.open(drawn(), null);
+  assert.deepEqual(said(), ['part', t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) }) + t('L.held.places', { n: 2 })], 'nine of its twenty-two bytes, in two places');
+  HOST.dismiss();
+  REC.takeProjection(CUT, 2, FAR, [{ pos: 3, width: 22 }]);
+  await ANATOMY.open(drawn(), null);
+  assert.equal(said(), null, 'all of it in one piece: the far end\'s words alone');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });

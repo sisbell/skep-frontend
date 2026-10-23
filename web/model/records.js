@@ -45,7 +45,8 @@
 // Where a link's far end stands in its far document's current text is
 // `project`'s answer (`takeProjection`, A-53) — or, where the board refused
 // it, what the refusal says of that document: withheld, not registered, or
-// nothing — held until that document's delivered state is dropped.
+// nothing, the refusal then held by its name — held until that document's
+// delivered state is dropped.
 // EVERY DROP COUNTED (`dropsOf`): how many times what the page held of an
 // address has been dropped — by `invalidate`, its record held or not, and by
 // every death, which drops every record. A read is answered by one channel
@@ -127,9 +128,10 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /**
- * @typedef {'withheld' | 'unregistered' | 'refused'} Declined — a `project` the board refused, by what its refusal says of the
- * document projected into: `withheld` from the reader, `doc_not_registered` — nothing the board will say of the address — or
- * another refusal (`not_a_link`), which says nothing of the document
+ * @typedef {'withheld' | 'unregistered' | {refused: string}} Declined — a `project` the board refused, by what its refusal
+ * says of the document projected into: `withheld` from the reader, `doc_not_registered` — nothing the board will say of the
+ * address — or another refusal by its name (`not_a_link`), which says nothing of the document and is the reason a far end's
+ * words give for not telling what its text holds (BM-HELD's `whyOf`; issue #153)
  */
 
 /**
@@ -561,6 +563,16 @@ function iPlace(/** @type {string} */ start) {
   const cut = start.lastIndexOf('.');
   return { prefix: start.slice(0, cut), ordinal: Number(start.slice(cut + 1)) };
 }
+
+/**
+ * One run of a V→I image as `image` answers it (`F.decodeRuns`), by
+ * identity: the permanent addresses from its first, for its positions — what
+ * a read of an image kept nowhere names (N-GO's follow reads the runs it
+ * lands on so where the far document's held image does not cover them).
+ * @param {{iStart: string, width: number}} r
+ * @returns {ISpan}
+ */
+export const iSpanOf = (r) => ({ ...iPlace(r.iStart), width: r.width });
 
 /**
  * The V→I image's runs over a window, kept whole — each placed at its

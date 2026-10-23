@@ -11,6 +11,10 @@
 // current text now (LK's `farRuns`, asked in the card's own opening where no
 // projection is held), never at the position the link stores; a far end that
 // floats reads "its passage is not in ⟨D⟩'s current text" (foundations §2.3),
+// one whose text holds only part of its passage, all of it in pieces, or one
+// the board would not tell of, says so beneath its words in BM-HELD's line
+// (BM-HELD's `farHolds`; issue #153's design decision: "where a read knows the
+// state before departure … say it there too"),
 // and one no passage's words place reads the words its tail and its mirror
 // item carry (LK's `farWords`; issue #132): "nothing this board will say
 // about this address", "withheld · ⟨owner⟩", the document's first line, so
@@ -66,7 +70,7 @@
 // Later: the age row with the read that answers it; walking the lineage's
 // links (A-56, A-57's act); B3-d's retract and edit (the editor's lane);
 // link sets' SET line.
-// Carries: the wireframe's §18 `anatomyCard`. Rules: FP-1, FP-2, FP-13, FP-20.
+// Carries: the wireframe's §18 `anatomyCard`. Rules: FP-1, FP-2, FP-13, FP-20, FP-21.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -75,6 +79,7 @@ import * as LK from '../links/links.js';
 import * as GO from '../nav/go.js';
 import * as SCENE from '../scene/scene.js';
 import * as F from '../model/frames.js';
+import { lineOf, farHolds } from '../beams/held.js';
 import { t, typeName } from '../strings.js';
 import { esc, fill } from '../util.js';
 import { accountOf, isUnder } from '../model/address.js';
@@ -273,7 +278,9 @@ export function open(s, anchorEl, byKey = false) {
 /**
  * The card made from its reads and shown (`open`): the far end's passage in
  * words where its passage's words are placed, else its far end's words as its
- * tail and its mirror item carry them (LK's `farWords`), else "…"; the
+ * tail and its mirror item carry them (LK's `farWords`), else "…" — and
+ * beneath them, where its text holds only part of its passage, all of it in
+ * pieces, or no answer told, BM-HELD's line (`farHolds`); the
  * lineage's claims named against this link's owner and the reader
  * (`supersessionRows`), and the line's act made from the same reads, the
  * card shown again under its id with the claims behind the line in its place.
@@ -297,6 +304,8 @@ function showCard(s, read, anchorEl, byKey, others = false) {
   const homePublished = homeDoc.meta ? homeDoc.meta.published : homePlace ? homePlace.kind === 'edition' : true;
   const dead = far && REC.doc(far).refused === 'unregistered';
   const farQuote = far ? farText ?? (LK.farWords(s) || '…') : t('B1.invalid');
+  const held = far ? farHolds(s) : null;
+  const farHeld = held ? `<div class="note" data-string="L.held.${held.state}">${esc(lineOf(held))}</div>` : '';
   const nearQuote = nearText ?? '…';
   const fromDoc = l.from[0] ? l.from[0].doc || l.from[0].account || '' : '';
   const toDoc = l.to[0] ? l.to[0].doc || l.to[0].account || '' : '';
@@ -304,7 +313,7 @@ function showCard(s, read, anchorEl, byKey, others = false) {
   const who = { owner: l.owner, reader: REC.reader().account };
   const html =
     `<span class="label" style="--mark-hue:${mark.hue}"><span class="sym-mark">⟡</span> ${esc(l.addr)}</span>` +
-    `<div class="ends"><div class="end far"><span class="k">${esc(s.end === 'from' ? t('F.card.to') : t('F.card.from'))}</span> <span class="code">${esc(far || '—')}</span><div class="quoted">${esc(farQuote)}</div></div>` +
+    `<div class="ends"><div class="end far"><span class="k">${esc(s.end === 'from' ? t('F.card.to') : t('F.card.from'))}</span> <span class="code">${esc(far || '—')}</span><div class="quoted">${esc(farQuote)}</div>${farHeld}</div>` +
     `<div class="end near"><span class="k">${esc(s.end === 'from' ? t('F.card.from') : t('F.card.to'))}</span> <span class="code">${esc(near)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${esc(nearQuote)}</div></div></div>` +
     `<div class="kv"><b>${esc(t('F.card.type'))}</b> <span data-string="R5.undocumented">${esc(typeName(l.type))}</span></div>` +
     `<div class="kv"><b>${esc(t('F.card.from'))}</b> <span class="code">${esc(fromDoc)}</span></div>` +

@@ -78,7 +78,9 @@
 // `farLabel`: its address, then what the board answered of its document —
 // issue #132), and a link whose far end floats
 // says "its passage is not in ⟨D⟩'s current text" as its symbol's title and
-// its stub do (LK's `floats`; foundations §2.3), so at each a screen reader
+// its stub do, and one whose far end's text holds part of its passage, all
+// of it in pieces, or the board would not tell, says BM-HELD's line
+// (`farSays`; foundations §2.3; issue #153), so at each a screen reader
 // hears what the plane shows (R94). BACK'S LIGHT IS EXPOSED (issue #152's
 // design decision: "While lit, it is exposed to assistive technology"): the
 // items it stands on — each span holding a stretch of the passage carried,
@@ -87,7 +89,19 @@
 // dirty frame (`markLocated`), the light read through the reader the app
 // hands in (`readers`: N-GO's, which imports this module); Back's landing
 // names that end where the view shows it, and the walk stands on its item
-// (`focusTo`'s `end`). The mirror is rebuilt whole on every move, and its Tab
+// (`focusTo`'s `end`). A LANDING'S LINE IS ITS ITEM'S DESCRIPTION (issue
+// #153's design decision: "Focus lands on the first held piece or landing
+// point, the line as its description, so the screen-reader mirror says all
+// four states"): the item a landing stands on — the span holding its
+// position, or its document where the walk stands on it whole — carries
+// `aria-describedby` naming the mirror's hidden description, which holds the
+// line's words where the text landed in holds part of the passage carried or
+// followed, all of it in pieces, or no answer told, and the dead end's words
+// where it holds none of it; nothing where it holds all of it in one piece,
+// which the outline alone says (N-GO's `described`, through the reader the
+// app hands in), written at the rebuild and marked again in place on each
+// dirty frame (`markDescribed`), so the focus moving onto the item says it
+// once. The mirror is rebuilt whole on every move, and its Tab
 // stop with it: the plane is ONE stop between the one line and the focused
 // document's corner (D5 §4 rule 5) — the current item, while the tree's
 // container stands out of the order; the container is the stop only where
@@ -99,7 +113,7 @@
 // until the scene's end puts it back.
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -108,6 +122,7 @@ import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from './focus.js';
 import { placeholderOf } from '../text/article.js';
+import { farSays } from '../beams/held.js';
 import { docBox, accountCell, boardCell, accountAt, clearLeftOf } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
@@ -136,8 +151,16 @@ import { t } from '../strings.js';
  */
 
 /**
+ * @typedef {Object} Described — what a landing says of the passage it carried or followed (issue #153's design decision; N-GO's `described`), which the mirror gives the item it stands on as its description
+ * @property {string} addr the document landed in
+ * @property {number} pos where the landing stands: the first held piece of the passage, or the landing point
+ * @property {string} words the line's words, or the dead end's where the text holds none of the passage
+ */
+
+/**
  * @typedef {Object} Readers — what the walk reads from an owner that imports it, handed in once by the app (FP-10, FP-11)
  * @property {() => Located | null} located where Back's light stands (N-GO's `backLight`); null where none does
+ * @property {() => Described | null} described what the landing says of its passage, where it says anything (N-GO's `described`); null where nothing is said
  */
 
 /** @type {Node | null} */
@@ -156,11 +179,16 @@ let moves = 0;
 let mirrorEl = null;
 /** @type {Array<(n: Node | null) => void>} */
 const watchers = [];
-/** @type {Readers} until the app hands its owner's in: no light stands */
-let read = { located: () => null };
+/** @returns {Readers} the readers before the app hands its owner's in: no light stands, and no landing says anything */
+const noReaders = () => ({ located: () => null, described: () => null });
+/** @type {Readers} */
+let read = noReaders();
 
-/** the owner that imports the walk hands its reader in once (the app) */
-export function readers(/** @type {Readers} */ r) { read = r; }
+/** the owner that imports the walk hands its readers in once (the app); one left out reads nothing */
+export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReaders(), ...r }; }
+
+/** the id of the mirror's hidden description of the landing, which the item it stands on names (see the head) */
+const DESCRIPTION = 'walk-landing';
 
 /** the board's node */
 const BOARD = /** @type {Node} */ ({ kind: 'board', addr: '1', pos: null, link: null });
@@ -263,10 +291,10 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
     return t('L.mirror.span', { p: b.pos, extent: d.extent ?? '?', document: n.addr, same: org ? t('L.mirror.same', { origin: org.doc }) : '', text: b.text }) + pos;
   }
   if (n.kind === 'link' && n.link) {
-    const l = n.link;
+    const l = n.link, says = farSays(l);
     return t('L.mirror.link', {
       link: l.link.addr, type: l.link.type || t('L.mirror.untyped'), direction: l.end === 'from' ? t('F.card.to') : t('F.card.from'), far: LK.farLabel(l),
-      floating: LK.floats(l) ? t('L.mirror.floating', { sentence: t('F.floating', { D: l.far }) }) : '',
+      floating: says ? t('L.mirror.floating', { sentence: says }) : '',
     }) + pos;
   }
   return '';
@@ -313,9 +341,11 @@ export function among(sibs, node) {
  * by a click — and the container itself where the walk's level holds no item
  * (a landing where the index lists nothing at its level). Each document's
  * item says whether it is expanded — at its reading scale — or collapsed
- * (see the head). Replacing the items removes the one the platform's focus
- * may stand on; the callers put it on the new current item through the
- * focus's owner (`FOCUS.land`), as every rebuild here is a move of the walk.
+ * (see the head), and the item a landing stands on its description (see the
+ * head), held in the mirror's one hidden element after the items. Replacing
+ * the items removes the one the platform's focus may stand on; the callers
+ * put it on the new current item through the focus's owner (`FOCUS.land`), as
+ * every rebuild here is a move of the walk.
  */
 export function render() {
   if (!mirrorEl) return;
@@ -323,14 +353,15 @@ export function render() {
   const lo = Math.max(0, idx - W), hi = Math.min(total, idx + W);
   const lvl = total ? levelOf(siblings[0]) : 1;
   let html = `<ul role="group" aria-label="${esc(t('L.mirror-level', { n: lvl }))}">`;
-  const at = read.located();
+  const at = read.located(), said = read.described();
   for (let i = lo; i < hi; i++) {
     const n = siblings[i];
     const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr)}"` : '';
     const located = isLocated(n, at) ? ' aria-current="location"' : '';
-    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${located} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${esc(nameOf(n, i, total))}</li>`;
+    const described = isDescribed(n, said) ? ` aria-describedby="${DESCRIPTION}"` : '';
+    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${esc(nameOf(n, i, total))}</li>`;
   }
-  html += '</ul>';
+  html += `</ul><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div>`;
   mirrorEl.innerHTML = html;
   mirrorEl.tabIndex = idx >= lo && idx < hi ? -1 : 0;
 }
@@ -375,6 +406,35 @@ export function markLocated() {
     const n = siblings[Number(li.dataset.i)], on = !!n && isLocated(n, at);
     if (on && li.getAttribute('aria-current') !== 'location') li.setAttribute('aria-current', 'location');
     else if (!on && li.getAttribute('aria-current') != null) li.removeAttribute('aria-current');
+  }
+}
+
+/** does a landing's description stand on a node (see the head): the span holding the landing's position, or its document, where the walk stands on it whole */
+function isDescribed(/** @type {Node} */ n, /** @type {Described | null} */ at) {
+  if (!at || n.addr !== at.addr) return false;
+  if (n.kind === 'document') return true;
+  const b = n.kind === 'block' && n.pos != null ? REC.blockByPos(n.addr, n.pos) : null;
+  return !!b && at.pos >= b.pos && at.pos < b.pos + b.width;
+}
+
+/**
+ * The landing's description marked in place (see the head): the hidden
+ * element's words set to what the landing says now, and `aria-describedby`
+ * on the item it stands on and on no other, nothing rebuilt, so the
+ * platform's focus stays on the item it stands on. The app's loop runs it on
+ * each dirty frame: the line goes out at the next act, and its words change
+ * as its reads answer — an offer found, a retry answered — between the walk's
+ * moves.
+ */
+export function markDescribed() {
+  if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
+  const said = read.described(), words = said ? said.words : '';
+  const el = typeof mirrorEl.querySelector === 'function' ? mirrorEl.querySelector('#' + DESCRIPTION) : null;
+  if (el && el.textContent !== words) el.textContent = words;
+  for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')])) {
+    const n = siblings[Number(li.dataset.i)], on = !!n && isDescribed(n, said);
+    if (on && li.getAttribute('aria-describedby') !== DESCRIPTION) li.setAttribute('aria-describedby', DESCRIPTION);
+    else if (!on && li.getAttribute('aria-describedby') != null) li.removeAttribute('aria-describedby');
   }
 }
 

@@ -199,6 +199,7 @@ import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, MEASURE_CPL, LAY_FS, LINE_H } from '../plane/layout.js';
 import { articleHTML, articlePlan, cornerHTML, blockMarks, editionClause } from './article.js';
+import { farSays } from '../beams/held.js';
 import { homeOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { fingerprintCue } from '../util.js';
@@ -441,7 +442,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
   /** @type {ArticleView} */
   const v = {
     selected: read.selection(), focus: litFocus(scene),
-    marks: LK.shown(d.addr), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr), floats: LK.floats, countAt: (b) => LK.countAt(d.addr, b),
+    marks: LK.shown(d.addr), mergedMark: LK.mergedMark, symbols: LK.symbols(d.addr), says: farSays, countAt: (b) => LK.countAt(d.addr, b),
     wholeLinks: LK.wholeLinks(d.addr).length,
     reader: REC.reader(),
     localTrust: !!(h && h.auth && h.auth.local_trust),

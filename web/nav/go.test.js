@@ -94,7 +94,7 @@
 // the first edition, whichever read faced it — a link naming no far
 // document, a dead reference or a far document withheld, met at its consult
 // or once the projection answered and its text was read, a projection the
-// board declines — and pressed on the anatomy card's follow, whose card the
+// board declines for what it says of the far document — and pressed on the anatomy card's follow, whose card the
 // face takes the place of (a mutant that drops the site from any one face,
 // or stands it at the control pressed, turns that row red).
 // A departure made
@@ -133,7 +133,34 @@
 // mutant that lands where a plain LEAP does, or faces nothing, turns red); a
 // Back made while the compare reads leaves the LEAP's entry ahead at the
 // counterpart the read placed, the arrival out and the passage lit where the
-// carry was made. A BACK MADE WHILE A CARD
+// carry was made. THE FOUR STATES (issue #153's design decision): a carry or
+// a follow whose text holds the passage in one piece says nothing beyond the
+// outline; one holding all of it in two stretches, or only part of it — a
+// carry's first five positions of twelve, a follow's nine bytes of twenty-two
+// in two runs — keeps its outline and says so in the line, the passage named
+// "what you selected" where it is the selection and "the text you were
+// reading" where it is not, "its passage" for a follow, the line the
+// description of the item the focus lands on (a mutant that lands silent, or
+// reads a follow's runs by their widths, turns red); it offers the text the
+// passage came from beside it where that holds it whole, and at a published
+// landing the latest member holding it in one piece, once its reads find it
+// — never the text landed in — whose LEAP carries it there, the outline
+// alone; it stands while a card opens at the landing and leaves with the
+// outline at the next act (a mutant that makes it an overlay a card replaces
+// turns red); a carry its text holds none of describes its item in the dead
+// end's words, its face told there and not by the status region, and said
+// there again where Back returns to its entry; a compare the board refuses
+// for its size is asked over each half of the text and lands as their pairs
+// place it (a mutant that asks no part turns red); one the board does not
+// answer lands at the place asked, unmarked, saying it could not tell and
+// why, with "try again", which reads again and lands at the counterpart,
+// re-settling its entry with no trail move (a mutant that faces, or
+// re-pushes, turns red); a follow whose projection the board declines by a
+// name that says nothing of the far document lands at that document's head,
+// unmarked, the link lit, its line keyed on its own projection's refusal,
+// never another read's (a mutant that faces it, or keys the line on the last
+// refusal met, turns red); one refused for its size is placed through the
+// far text's image, held as its projection. A BACK MADE WHILE A CARD
 // READS (O-HOST's opening): who wrote this?, who uses this?, the versions
 // list — ended while it counts the members and while it reads a member's
 // row — and the anatomy card each show nothing over the place Back landed
@@ -257,6 +284,21 @@ const takeShifted = () => { REC.takeLinks(D, [SHIFTED]); REC.takeLink({ addr: SH
 const DECLINED = D + '.0.2.7';
 /** the declined citation taken into the model, drawn at the first edition */
 const takeDeclined = () => { REC.takeLinks(D, [DECLINED]); REC.takeLink({ addr: DECLINED, from: [span(D, 13, 2)], to: [span(FAR, 3, 4)], type: CITE }); };
+// a citation from the first edition of a passage of FAR whose projection the board refuses `withheld`, a refusal that says FAR is
+// withheld from the reader (HIDDEN_PROJ); one whose projection it refuses for its size, `image_too_large`, its passage FAR's own
+// bytes at 30, four positions (SIZED_LINK)
+const HIDDEN_PROJ = D + '.0.2.11', SIZED_LINK = D + '.0.2.12';
+// a citation from the first edition of four of FAR's bytes from its third, its projection a run as wide as the passage (TWICE)
+const TWICE = D + '.0.2.13';
+// a citation from the first edition of three of MANY's bytes from its twelfth (MANY_LINK): MANY's text held, its image not — its
+// projection refused for its size, and its image too, whole, each half of it answering
+const MANY = '1.0.1.0.50', MANY_TEXT = 'A text of many runs.', MANY_LINK = D + '.0.2.14';
+/** the two citations taken into the model, drawn at the first edition */
+const takeRefusedProjections = () => {
+  REC.takeLinks(D, [HIDDEN_PROJ, SIZED_LINK]);
+  REC.takeLink({ addr: HIDDEN_PROJ, from: [span(D, 2, 2)], to: [span(FAR, 3, 4)], type: CITE });
+  REC.takeLink({ addr: SIZED_LINK, from: [span(D, 16, 2)], to: [span(FAR, 30, 4)], type: CITE });
+};
 // two citations from the first edition met late — each far document's extent held as a viewport's read leaves it, so the follow
 // consults nothing before the projection, which answers — whose far document's text the board, once the follow reads it, answers for
 // with nothing (GONE_LATE) or withholds from the reader (HIDDEN_LATE)
@@ -275,11 +317,19 @@ const late = (/** @type {string} */ link, /** @type {string} */ far, /** @type {
 /** FAR's head, where a dead end lands: its first paragraph's first position */
 const FAR_HEAD = 1;
 // FAR's second version member, a copy of its text; the passages LEAPs carry: one FAR holds at 20, five positions, one neither FAR nor
-// its member holds, and one FAR holds in two stretches, its first half at FAR's 25 and its second at FAR's 2
+// its member holds, and one FAR holds in two stretches, its first half at FAR's 25 and its second at FAR's 2 — its first member
+// holding it whole, at 2; one FAR holds the first five of its twelve positions of (PARTIAL), at 25, its first member none of it; one
+// whose compare the board does not answer until `outage` ends, FAR holding it at 20 (UNANSWERED); one the board refuses to compare
+// against FAR whole for its size, FAR's second half holding it whole at 30 (SIZED)
 const FAR2 = FAR + '.2';
 const SHARED = { addr: D, pos: 11, width: 5 }, UNSHARED = { addr: D, pos: 1, width: 8 }, MOVED = { addr: D, pos: 1, width: 10 };
-/** the `compare` a carried passage is re-projected by: the passage against the text landed in, whole */
-const carried = (/** @type {{addr: string, pos: number, width: number}} */ c, /** @type {string} */ into, /** @type {number} */ extent) => F.compare([{ doc: c.addr, spans: [{ ordinal: c.pos, positions: c.width }] }], [{ doc: into, spans: [{ ordinal: 1, positions: extent }] }]);
+const PARTIAL = { addr: D, pos: 1, width: 12 }, UNANSWERED = { addr: D, pos: 11, width: 4 }, SIZED = { addr: D, pos: 21, width: 4 };
+/** the `compare` a carried passage is re-projected by: the passage against the text landed in, whole — or the stretch of it named */
+const carried = (/** @type {{addr: string, pos: number, width: number}} */ c, /** @type {string} */ into, /** @type {number} */ extent, from = 1) => F.compare([{ doc: c.addr, spans: [{ ordinal: c.pos, positions: c.width }] }], [{ doc: into, spans: [{ ordinal: from, positions: extent }] }]);
+/** a `compare` answer: each pair its position in D, its position in `into`, its positions */
+const pairsOf = (/** @type {string} */ into, /** @type {Array<[number, number, number]>} */ pairs) => ({ result: { as_of: 1, resp: 'compare', pairs: pairs.map(([u1, u2, width]) => ({ d1: D, d2: into, u1: { ordinal: String(u1), subspace: '1' }, u2: { ordinal: String(u2), subspace: '1' }, width: String(width) })) } });
+/** the board not answering while `outage` stands (UNANSWERED's compare) */
+let outage = true;
 // FAR's first member, a copy of its text like the second; the passage the versions list holds at FAR: its second paragraph, whole
 const FAR1 = FAR + '.1';
 const FAR_HELD = { pos: FAR_TEXT.indexOf('Its') + 1, width: 'Its cited passage stands here.'.length };
@@ -345,7 +395,30 @@ const script = {
   // the dead reference's lineage, which its anatomy card reads: no claims either way
   [FAKE.keyOf('op', { frame: F.inClaims(DEAD, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   [FAKE.keyOf('op', { frame: F.outClaims(DEAD, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
-  ...reads(FAR2, FAR_TEXT, []),
+  ...reads(FAR2, FAR_TEXT, []), ...reads(FAR1, FAR_TEXT, []),
+  // the version offers' reads (issue #153): the cut citation's slot projected into FAR's first member, whole there at 3, and that
+  // run's bytes; the moved passage's compare against the first member, whole at 2; PARTIAL's against FAR, its first five positions at
+  // 25, and against the first member, none of it
+  [FAKE.keyOf('op', { frame: F.project(SPLIT, 2, FAR1) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.3', width: '0.22' }] } },
+  [FAKE.keyOf('op', { frame: F.image(FAR1, 3, 22) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: FAR + '.0.1.3', width: '22' }] } },
+  [FAKE.keyOf('op', { frame: carried(MOVED, FAR1, FAR_EXTENT) })]: pairsOf(FAR1, [[1, 2, 10]]),
+  [FAKE.keyOf('op', { frame: carried(PARTIAL, FAR, FAR_EXTENT) })]: pairsOf(FAR, [[1, 25, 5]]),
+  [FAKE.keyOf('op', { frame: carried(PARTIAL, FAR1, FAR_EXTENT) })]: pairsOf(FAR1, []),
+  // SIZED's compare against FAR whole refused for its size, then each half of FAR's text: the first holding none of it, the second
+  // all of it at 30
+  [FAKE.keyOf('op', { frame: carried(SIZED, FAR, FAR_EXTENT) })]: { refused: { kind: 'refused', name: 'too_many_blocks', code: 'too_many_blocks' } },
+  [FAKE.keyOf('op', { frame: carried(SIZED, FAR, FAR_EXTENT / 2) })]: pairsOf(FAR, []),
+  [FAKE.keyOf('op', { frame: carried(SIZED, FAR, FAR_EXTENT / 2, FAR_EXTENT / 2 + 1) })]: pairsOf(FAR, [[21, 30, 4]]),
+  // the citations' projections the board refuses: one `withheld`, which says FAR is withheld from the reader; one for its size
+  [FAKE.keyOf('op', { frame: F.project(HIDDEN_PROJ, 2, FAR) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+  [FAKE.keyOf('op', { frame: F.project(SIZED_LINK, 2, FAR) })]: { refused: { kind: 'refused', name: 'image_too_large', code: 'image_too_large' } },
+  // TWICE's projection into FAR: four positions from 20; into its first member, none
+  [FAKE.keyOf('op', { frame: F.project(TWICE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.4' }] } },
+  [FAKE.keyOf('op', { frame: F.project(TWICE, 2, FAR1) })]: { result: { as_of: 1, resp: 'span_set', set: [] } },
+  [FAKE.keyOf('op', { frame: F.project(MANY_LINK, 2, MANY) })]: { refused: { kind: 'refused', name: 'image_too_large', code: 'image_too_large' } },
+  [FAKE.keyOf('op', { frame: F.image(MANY, 1, MANY_TEXT.length) })]: { refused: { kind: 'refused', name: 'image_too_large', code: 'image_too_large' } },
+  [FAKE.keyOf('op', { frame: F.image(MANY, 1, MANY_TEXT.length / 2) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: MANY + '.0.1.1', width: String(MANY_TEXT.length / 2) }] } },
+  [FAKE.keyOf('op', { frame: F.image(MANY, MANY_TEXT.length / 2 + 1, MANY_TEXT.length / 2) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: MANY + '.0.1.' + (MANY_TEXT.length / 2 + 1), width: String(MANY_TEXT.length / 2) }] } },
   // where the carried passages stand in FAR and its member: the shared one at FAR's 20, five positions; the other nowhere; the moved
   // one's first five positions at FAR's 25 and its last five at FAR's 2
   [FAKE.keyOf('op', { frame: carried(SHARED, FAR, FAR_EXTENT) })]: { result: { as_of: 1, resp: 'compare', pairs: [{ d1: D, d2: FAR, u1: { ordinal: '11', subspace: '1' }, u2: { ordinal: '20', subspace: '1' }, width: '5' }] } },
@@ -363,6 +436,11 @@ const script = {
   [FAKE.keyOf('op', { frame: heldIn(FAR1) })]: holdsHeld(FAR1),
   [FAKE.keyOf('op', { frame: heldIn(FAR2) })]: holdsHeld(FAR2),
 };
+/** UNANSWERED's compare against FAR: the board not answering while `outage` stands, then FAR holding it at 20 */
+Object.defineProperty(script, FAKE.keyOf('op', { frame: carried(UNANSWERED, FAR, FAR_EXTENT) }), {
+  enumerable: true,
+  get: () => (outage ? { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } } : pairsOf(FAR, [[11, 20, 4]])),
+});
 
 /** @type {ReturnType<typeof FAKE.create>} */
 let fake;
@@ -423,7 +501,7 @@ test('a follow outlines the span its link\'s far end projects to — its first p
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a follow of a far end the far document\'s text holds in two runs apart outlines both, in the text\'s order, and lands at the first in the text', async () => {
+test('a follow of a far end the far document\'s text holds in two runs apart outlines both, in the text\'s order, and lands at the first in the text, its line saying only part of the passage is there, in two places, offering FAR\'s first member, which holds it whole (issue #153)', async () => {
   takeSplit();
   await run(GO.follow(drawn(SPLIT)));
   assert.deepEqual(marks(), [{ addr: FAR, pos: 3, runs: [{ pos: 3, width: 4 }, { pos: 20, width: 5 }], link: SPLIT }, [SPLIT]], 'every run the projection names, the gap between them not marked');
@@ -432,6 +510,15 @@ test('a follow of a far end the far document\'s text holds in two runs apart out
   const e = TRAIL.current();
   assert.deepEqual(e && [e.addr, e.pos, e.width], [FAR, 3, 4], 'the landing\'s entry at the run landed on');
   assert.deepEqual(departed()?.step, { kind: 'follow', link: SPLIT, near: D, key: drawn(SPLIT).key, far: FAR, spans: [{ prefix: FAR + '.0.1', ordinal: 3, width: 22 }] }, 'the entry departed recording the far end by the span its slot stores, never the two runs it stands in now');
+  // nine of the stored span's twenty-two bytes stand in FAR's text: part of it, in two places — never the outline alone
+  const words = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) }) + t('L.held.places', { n: 2 });
+  assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.said?.places, GO.landingLine()], ['part', 2, words], 'the line: "only part of its passage is in ⟨D⟩\'s current text — in 2 places"');
+  assert.deepEqual(GO.described(), { addr: FAR, pos: 3, words }, 'the mirror\'s description of the item the focus landed on: the line');
+  assert.equal(GO.landing()?.beside, null, 'no side-by-side offer: the first edition holds none of FAR\'s passage');
+  for (let i = 0; i < 50 && GO.landing()?.version == null; i++) await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([GO.landing()?.version, GO.landingOffers()], [1, { again: false, version: true }], 'FAR published, its first member holding the passage whole: offered, the latest member doing so other than the text landed in');
+  await run(GO.leapTo(D));
+  assert.deepEqual([GO.landing(), GO.landingLine(), GO.landingOffers()], [null, null, { again: false, version: false }], 'the next act: the line gone with the outline');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -490,7 +577,7 @@ test('a follow of a far end the far document\'s text no longer holds lands at th
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a follow whose projection the board declines faces the refusal its own projection met — never another read\'s, met while it was out and answered right behind it', async () => {
+test('a follow whose projection the board declines by a name that says nothing of the far document lands at that document\'s head, unmarked, the link lit, its line saying it could not tell why — its own projection\'s refusal, never another read\'s, met while it was out and answered right behind it (issue #153)', async () => {
   takeDeclined();
   await run(GO.leapTo(D));
   const from = fake.asked.length;
@@ -504,8 +591,51 @@ test('a follow whose projection the board declines faces the refusal its own pro
   projection(); other();
   await run(following); await reading;
   assert.equal(PUMP.refusalsMet().slice(-1)[0]?.refusal.name, 'doc_not_registered', 'the other read\'s refusal is the last the pump met');
-  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['face:not_a_link', { span: { addr: D, pos: 13, width: 2 } }], 'the follow faces its projection\'s own, at the link\'s bytes');
-  HOST.dismiss();
+  assert.deepEqual([faceShown(), marks(), walkAt()], [null, [null, [DECLINED]], ['block', FAR, FAR_HEAD]], 'no face in the landing\'s place: landed at FAR\'s head, nothing outlined, the link lit');
+  const e = TRAIL.current();
+  assert.deepEqual(e && [e.addr, e.pos, e.width, e.notice], [FAR, FAR_HEAD, null, null], 'its entry settled at the head, no notice');
+  const words = t('L.held.unknown', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }), reason: t('B1.not_a_link') });
+  assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.said?.why, GO.landingLine()], ['unknown', 'B1.not_a_link', words], 'the line: it could not tell, by the projection\'s own `not_a_link`');
+  assert.deepEqual(GO.landingOffers(), { again: false, version: false }, 'no "try again": the board\'s verdict is permanent');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow\'s line reads the far text\'s runs by the identity of their bytes, never by their widths: a run as wide as the passage, holding its first two bytes twice, is part of it (issue #153)', async () => {
+  REC.takeLinks(D, [TWICE]); REC.takeLink({ addr: TWICE, from: [span(D, 5, 2)], to: [span(FAR, 3, 4)], type: CITE });
+  // FAR's text as an edit left it: from its 20th position, the passage's first two bytes, then those two again
+  REC.takeImage(FAR, 1, [{ iStart: FAR + '.0.1.1', width: 19 }, { iStart: FAR + '.0.1.3', width: 2 }, { iStart: FAR + '.0.1.3', width: 2 }, { iStart: FAR + '.0.1.24', width: FAR_EXTENT - 23 }]);
+  try {
+    await run(GO.leapTo(D));
+    await run(GO.follow(drawn(TWICE)));
+    assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 20, runs: [{ pos: 20, width: 4 }], link: TWICE }, 'the run outlined');
+    const words = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) });
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', words], 'two of its four bytes, held twice: part — four positions are no proof of all of it');
+    await run(GO.leapTo(D));
+  } finally {
+    REC.takeImage(FAR, 1, [{ iStart: FAR + '.0.1.1', width: FAR_EXTENT }]);
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow whose projection the board refuses for its size places the far end through the far text\'s image — read in parts where the board refuses it whole for its size — the slot\'s bytes where that text holds them, held as its projection, and lands there, the outline alone where it holds all of it in one piece (issue #153)', async () => {
+  takeRefusedProjections();
+  await run(GO.leapTo(D));
+  await run(GO.follow(drawn(SIZED_LINK)));
+  assert.deepEqual(marks(), [{ addr: FAR, pos: 30, runs: [{ pos: 30, width: 4 }], link: SIZED_LINK }, [SIZED_LINK]], 'its passage at FAR\'s 30, placed by identity through FAR\'s image, outlined, the link lit');
+  assert.deepEqual(REC.projection(SIZED_LINK, 2, FAR), [{ pos: 30, width: 4 }], 'held as the projection the board would not answer');
+  assert.deepEqual([GO.landing()?.said, GO.landingLine(), GO.described()], [null, null, null], 'all of it in one piece: no line, and no description beyond the outline');
+  // MANY's text held, its image not: the follow reads that image, in parts where the board refuses it whole for its size
+  REC.takeSpanSet(MANY, [{ subspace: 1, ordinal: 1, positions: MANY_TEXT.length }]);
+  REC.takeDelivery(MANY, [{ pos: 1, width: MANY_TEXT.length, kind: 'content', text: MANY_TEXT, ref: null, origin: null }]);
+  REC.takeMetadata(MANY, { doc: MANY, published: true, owner: '1.0.1', birth: MANY + '.1', birthExtent: MANY_TEXT.length, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(MANY, []);
+  REC.takeLinks(D, [MANY_LINK]); REC.takeLink({ addr: MANY_LINK, from: [span(D, 19, 2)], to: [span(MANY, 12, 3)], type: CITE });
+  const from = fake.asked.length;
+  await run(GO.leapTo(D));
+  await run(GO.follow(drawn(MANY_LINK)));
+  const images = fake.asked.slice(from).filter((k) => k.includes('"op":"image"'));
+  assert.deepEqual(images, [F.image(MANY, 1, MANY_TEXT.length), F.image(MANY, 1, 10), F.image(MANY, 11, 10)].map((frame) => FAKE.keyOf('op', { frame })), 'MANY\'s image asked whole, refused for its size, then each half');
+  assert.deepEqual([marks(), REC.projection(MANY_LINK, 2, MANY)], [[{ addr: MANY, pos: 12, runs: [{ pos: 12, width: 3 }], link: MANY_LINK }, [MANY_LINK]], [{ pos: 12, width: 3 }]], 'its passage placed through the image read in parts, outlined, the link lit');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -625,7 +755,7 @@ test('Forward across a carry lights the passage in the text the LEAP was made to
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a LEAP carrying a passage the text landed in holds in two stretches marks both, in the text\'s order, and lands where the passage begins', async () => {
+test('a LEAP carrying a passage the text landed in holds in two stretches marks both, in the text\'s order, and lands where the passage begins, its line saying all of it is there in two places, offering the first edition beside it and FAR\'s first member, which holds it in one piece; that offer LEAPs carrying it there, the outline alone (issue #153)', async () => {
   await run(GO.leapTo(D));
   await run(GO.leapTo(FAR, { how: 'leap', carry: MOVED }));
   assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 25, runs: [{ pos: 2, width: 5 }, { pos: 25, width: 5 }], link: null }, 'every stretch of it the text holds, the landing at the counterpart of its first five positions');
@@ -634,6 +764,65 @@ test('a LEAP carrying a passage the text landed in holds in two stretches marks 
   assert.deepEqual(departed()?.step, { kind: 'carry', from: D, to: FAR, spans: [{ prefix: D + '.0.1', ordinal: 1, width: 10 }] }, 'the entry departed records the passage whole, by identity');
   assert.ok(same(CAM.view(), GO.viewFor(FAR, 25)), 'the camera at that stretch\'s view');
   assert.deepEqual([walkAt(), WALK.landedAt()], [['block', FAR, 19], 25], 'the walk on the paragraph holding it, at its position');
+  const words = t('L.held.pieces', { subject: t('L.held.reading'), where: t('L.held.current', { D: FAR }) }) + t('L.held.places', { n: 2 });
+  assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.described()], ['pieces', words, { addr: FAR, pos: 25, words }], 'all of it, in two pieces: "all of the text you were reading is in ⟨D⟩\'s current text — in 2 places", the description of the item landed on');
+  assert.deepEqual(GO.landing()?.beside, { a: D, b: FAR, held: { posA: 1, widthA: 10, posB: null } }, 'the first edition holds it whole: read side by side with it, set level with its counterpart here');
+  for (let i = 0; i < 50 && GO.landing()?.version == null; i++) await new Promise((r) => setTimeout(r, 0));
+  assert.equal(GO.landing()?.version, 1, 'the latest member holding it in one piece, other than the text landed in: FAR.1');
+  GO.landingAct('version');
+  for (let i = 0; i < 200 && (GO.arrivalMark()?.addr !== FAR1 || CAM.flying()); i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
+  assert.deepEqual([TRAIL.current()?.addr, GO.arrivalMark(), GO.landingLine()], [FAR1, { addr: FAR1, pos: 2, runs: [{ pos: 2, width: 10 }], link: null }, null], 'the LEAP to it carries the passage: its counterpart outlined there, in one piece, no line');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP carrying a passage the text landed in holds only part of keeps its outline and says so in a line — "what you selected" where it is the selection, "the text you were reading" where it is not — offering the text it came from beside it; the line stands while a card opens at the landing and leaves at the next act (issue #153)', async () => {
+  for (const selected of [true, false]) {
+    await run(GO.leapTo(D));
+    await run(GO.leapTo(FAR, { how: 'leap', carry: { ...PARTIAL, selected } }));
+    assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: 25, runs: [{ pos: 25, width: 5 }], link: null }, 'the part FAR holds outlined, as before');
+    const words = t('L.held.part', { subject: t(selected ? 'L.held.selected' : 'L.held.reading'), where: t('L.held.current', { D: FAR }) });
+    assert.deepEqual([GO.landing()?.said?.state, GO.landing()?.said?.places, GO.landingLine()], ['part', 1, words], `"only part of ${selected ? 'what you selected' : 'the text you were reading'} is in ⟨D⟩'s current text", no places at one place`);
+    assert.ok(!/missing|removed|deleted|compare/.test(words), `never "missing", "removed", "deleted" or "compare": ${words}`);
+    assert.deepEqual(GO.landing()?.beside, { a: D, b: FAR, held: { posA: 1, widthA: 12, posB: null } }, 'the first edition holds it whole: read side by side with it');
+    for (let i = 0; i < 50 && fake.asked.slice(-1)[0] !== FAKE.keyOf('op', { frame: carried(PARTIAL, FAR1, FAR_EXTENT) }); i++) await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal(GO.landing()?.version, null, 'FAR\'s first member holds none of it: no version offered');
+  }
+  await ANATOMY.open(drawn(PASSAGE), null);
+  assert.deepEqual([HOST.currentState()?.id, GO.landingLine() != null], ['anatomy:' + PASSAGE, true], 'a card opened at the landing stands, and the line with it: the line is no overlay a card takes the place of');
+  HOST.dismiss();
+  await run(GO.home());
+  assert.deepEqual([GO.landing(), GO.landingLine(), GO.described()], [null, null, null], 'the next act: the line gone with the outline');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP carrying a passage whose compare the board refuses for its size asks it again over each half of the text landed in, and lands as their pairs place it (issue #153)', async () => {
+  await run(GO.leapTo(D));
+  const from = fake.asked.length;
+  await run(GO.leapTo(FAR, { how: 'leap', carry: SIZED }));
+  const asked = fake.asked.slice(from).filter((k) => k.includes('"op":"compare"'));
+  assert.deepEqual(asked, [carried(SIZED, FAR, FAR_EXTENT), carried(SIZED, FAR, FAR_EXTENT / 2), carried(SIZED, FAR, FAR_EXTENT / 2, FAR_EXTENT / 2 + 1)].map((frame) => FAKE.keyOf('op', { frame })), 'the whole, refused, then each half');
+  assert.deepEqual([GO.arrivalMark(), GO.landingLine()], [{ addr: FAR, pos: 30, runs: [{ pos: 30, width: 4 }], link: null }, null], 'the second half holds it whole at 30: outlined there, in one piece, no line — never "couldn\'t tell"');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP carrying a passage whose compare the board does not answer lands at the place asked, unmarked, its line saying it could not tell — the board unreachable — with "try again", which reads again and lands at the counterpart, the entry it landed in settled there (issue #153)', async () => {
+  outage = true;
+  try {
+    await run(GO.leapTo(D));
+    await run(GO.leapTo(FAR, { how: 'leap', carry: UNANSWERED }));
+    assert.deepEqual([GO.arrivalMark(), walkAt(), faceShown()], [null, ['document', FAR, null], null], 'unmarked, at the document as asked, no face');
+    const words = t('L.held.unknown', { subject: t('L.held.reading'), where: t('L.held.current', { D: FAR }), reason: t('F.daemon.unreachable') });
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine(), GO.landingOffers()], ['unknown', words, { again: true, version: false }], '"couldn\'t tell whether ⟨D⟩\'s current text holds the text you were reading: board unreachable", and "try again"');
+    assert.deepEqual(GO.described(), { addr: FAR, pos: FAR_HEAD, words }, 'the line the description of the document landed on');
+    const entry = TRAIL.current(), n = TRAIL.length();
+    outage = false;
+    GO.landingAct('again');
+    for (let i = 0; i < 200 && (!GO.arrivalMark() || CAM.flying()); i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
+    assert.deepEqual([GO.arrivalMark(), GO.landingLine(), GO.landingOffers()], [{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 4 }], link: null }, null, { again: false, version: false }], 'answered: its counterpart outlined, in one piece, no line');
+    assert.deepEqual([TRAIL.length(), TRAIL.current() === entry, entry && [entry.pos, entry.width]], [n, true, [20, 4]], 'no trail move of its own: the entry it landed in settled at the counterpart');
+    assert.ok(same(CAM.view(), GO.viewFor(FAR, 20)), 'the camera at the counterpart');
+  } finally { outage = true; }
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -649,11 +838,17 @@ test('a LEAP carrying a passage the text landed in holds none of lands at its fi
   const f = faceShown();
   assert.ok(f && f.id === 'face:floating' && f.html.includes('data-string="F.floating"') && f.html.includes(esc(t('F.floating', { D: FAR }))), `the dead end's words: ${f && f.html}`);
   assert.equal(f && f.acts, false, 'no act: the versions list holds no passage of another document');
+  assert.deepEqual([GO.landingLine(), GO.described()], [null, { addr: FAR, pos: 1, words: t('F.floating', { D: FAR }) }], 'no line: the dead end\'s face says it, and its words are the description of the item landed on (issue #153)');
+  assert.equal(HOST.currentState()?.told, true, 'its face told by that description, never repeated by the status region');
   await run(GO.leapTo(D));
   assert.equal(faceShown(), null, 'the next act dismisses it');
   await run(GO.leapTo(FAR2, { how: 'leap', carry: UNSHARED }));
   const m = faceShown();
   assert.ok(m && m.html.includes('data-string="F.floating.member"') && m.html.includes(esc(t('F.floating.member', { k: 2 }))), `at a member, in the member's own words: ${m && m.html}`);
+  assert.equal(GO.described()?.words, t('F.floating.member', { k: 2 }), 'the description in the member\'s own words');
+  await run(GO.leapTo(D));
+  await run(GO.back());
+  assert.deepEqual([faceShown()?.id, HOST.currentState()?.told, GO.described()], ['face:floating', false, null], 'Back onto its entry shows the face again, said by the status region: no landing describes it there');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -1077,7 +1272,7 @@ test('a follow made from the selection\'s card: its reading face takes the card\
 });
 
 test('a follow that lands nowhere is faced at its site, the link\'s own bytes in the first edition, whichever read faced it — and pressed on the anatomy card\'s follow, the face takes the card\'s place there', async () => {
-  takeDead(); takeLocked(); takeDeclined(); takeLate(DEAD_LATE, GONE_LATE, 19); takeLate(LOCKED_LATE, HIDDEN_LATE, 25);
+  takeDead(); takeLocked(); takeRefusedProjections(); takeLate(DEAD_LATE, GONE_LATE, 19); takeLate(LOCKED_LATE, HIDDEN_LATE, 25);
   /** the link's own bytes in the first edition: where its face stands */
   const at = (/** @type {number} */ pos, /** @type {number} */ width) => ({ span: { addr: D, pos, width } });
   /** the card's follow as the host hands it to the act: a control of the card, which the face's markup removes */
@@ -1087,7 +1282,7 @@ test('a follow that lands nowhere is faced at its site, the link\'s own bytes in
     { what: 'a link naming no far document, faced at once', follow: () => GO.follow({ ...drawn(PASSAGE), far: '' }), face: 'face:invalid', site: at(11, 5) },
     { what: 'a dead reference, faced at the far document\'s consult', follow: () => GO.follow(drawn(DEAD)), face: 'face:doc_not_registered', site: at(23, 3) },
     { what: 'a far document withheld, faced at its consult', follow: () => GO.follow(drawn(LOCKED)), face: 'face:withheld', site: at(7, 2) },
-    { what: 'a projection the board declines', follow: () => GO.follow(drawn(DECLINED)), face: 'face:not_a_link', site: at(13, 2) },
+    { what: 'a projection the board declines for what it says of the far document — withheld from the reader', follow: () => GO.follow(drawn(HIDDEN_PROJ)), face: 'face:withheld', site: at(2, 2) },
     { what: 'a dead reference met once the projection answered and the text was read', follow: () => GO.follow(drawn(DEAD_LATE)), face: 'face:doc_not_registered', site: at(19, 2) },
     { what: 'a far document withheld, met once the projection answered and the text was read', follow: () => GO.follow(drawn(LOCKED_LATE)), face: 'face:withheld', site: at(25, 2) },
     {

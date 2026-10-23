@@ -260,8 +260,8 @@ test('where a link\'s slot projects is held in the text\'s order until the docum
   assert.ok(REC.doc(D).rev > rev, 'the document holding the link is made again as the projection arrives');
   assert.equal(REC.has(FAR), false, 'no record of the far document needed');
   REC.takeProjection(L, 1, D, []);
-  REC.takeProjection(D + '.0.2.2', 2, '1.0.1.0.9', 'refused');
-  assert.deepEqual([REC.projection(L, 1, D), REC.projection(D + '.0.2.2', 2, '1.0.1.0.9'), REC.projection(L, 1, FAR)], [[], 'refused', undefined], 'a floating end held as none, a refusal as refused, one never asked as nothing');
+  REC.takeProjection(D + '.0.2.2', 2, '1.0.1.0.9', { refused: 'not_a_link' });
+  assert.deepEqual([REC.projection(L, 1, D), REC.projection(D + '.0.2.2', 2, '1.0.1.0.9'), REC.projection(L, 1, FAR)], [[], { refused: 'not_a_link' }, undefined], 'a floating end held as none, a refusal by its name, one never asked as nothing');
   rev = REC.doc(D).rev;
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, op: 'publish', docs: [FAR + '.2'], class: 'published' }));
   assert.equal(REC.projection(L, 2, FAR), undefined, 'a feed row naming the far document drops where the slot projects into it');

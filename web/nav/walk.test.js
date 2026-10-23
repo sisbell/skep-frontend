@@ -28,8 +28,12 @@
 // read answered `withheld` is named by its withheld box's words, its owner
 // the seat above a sub-account by the one owner rule: a mutant that calls it
 // published, or names the sub-account, turns red. A link whose far end floats
-// says so at its item, as its symbol and its stub do (R94): a mutant whose
-// item says nothing of it turns red. A link's item names its far end as its
+// says so at its item, as its symbol and its stub do (R94), and one whose far
+// end's text holds part of its passage says the line (issue #153): a mutant
+// whose item says nothing of it turns red. The item a landing stands on
+// takes the landing's line as its description, the mirror's hidden element
+// holding its words, marked in place until the landing says nothing (issue
+// #153): a mutant whose item carries no description turns red. A link's item names its far end as its
 // tail and its card do (issue #132): its address alone while nothing is
 // answered of its document, then the words the board's answer gives — a
 // mutant that names the address alone, or speaks before an answer, turns red.
@@ -523,8 +527,15 @@ test('the mirror\'s item at a link whose far end floats says "its passage is not
   const floating = t('L.mirror.floating', { sentence: t('F.floating', { D: FAR }) });
   REC.takeProjection(L, 2, FAR, []);
   assert.ok(item().includes(floating), item());
-  REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 4 }]);
-  assert.ok(item() !== '' && !item().includes(t('F.floating', { D: FAR })), item());
+  // FAR's text as an edit left it: other bytes, then the passage's four from FAR's 20
+  REC.takeImage(FAR, 1, [{ iStart: '1.0.1.0.99.0.1.1', width: 19 }, { iStart: FAR + '.0.1.8', width: 4 }, { iStart: '1.0.1.0.99.0.1.20', width: 20 }]);
+  try {
+    REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 2 }]);
+    const part = t('L.held.part', { subject: t('L.held.followed'), where: t('L.held.current', { D: FAR }) });
+    assert.ok(item().includes(t('L.mirror.floating', { sentence: part })), `two of its four bytes there: the line, as its symbol and its stub say it (issue #153): ${item()}`);
+    REC.takeProjection(L, 2, FAR, [{ pos: 20, width: 4 }]);
+    assert.ok(item() !== '' && !item().includes(t('F.floating', { D: FAR })) && !item().includes(part), item());
+  } finally { REC.invalidate(FAR); }
 });
 
 test('the mirror\'s item at a link names its far end as its tail and its card do: its address alone while nothing is answered of its document, then the words the board\'s answer gives (issue #132)', () => {
@@ -599,6 +610,61 @@ test('the items Back\'s light stands on carry aria-current="location" — each s
   } finally {
     globalThis.document = platform;
     WALK.readers({ located: () => null });
+  }
+});
+
+// placed with the test above: it attaches a mirror of its own
+test('the item a landing stands on takes its line as its description — aria-describedby naming the mirror\'s hidden description, which holds the line\'s words — written at the rebuild and marked again in place, on that item alone, until the landing says nothing (issue #153)', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @typedef {{attrs: Record<string, string>, dataset: {i?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void, removeAttribute: (k: string) => void}} Item */
+  /** @type {Item[]} the items the last rebuild wrote, as elements, each marked in place */
+  let items = [];
+  /** @type {{textContent: string} | null} the mirror's hidden description as the last rebuild wrote it */
+  let words = null;
+  let rebuilds = 0;
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      rebuilds++;
+      items = [...html.matchAll(/<li\b[^>]*>/g)].map((m) => {
+        /** @type {Record<string, string>} */
+        const attrs = Object.fromEntries([...m[0].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+        return { attrs, dataset: { i: attrs['data-i'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; }, removeAttribute: (k) => { delete attrs[k]; } };
+      });
+      const d = html.match(/<div id="walk-landing" hidden>([^<]*)<\/div>/);
+      words = d ? { textContent: d[1] } : null;
+    },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
+    querySelector: (/** @type {string} */ sel) => (sel === '#walk-landing' ? words : null),
+  };
+  /** the elements the description stands on: each one's kind and place */
+  const described = () => items.filter((i) => i.attrs['aria-describedby'] === 'walk-landing').map((i) => { const n = WALK.siblingsNow()[Number(i.attrs['data-i'])]; return [n.kind, n.pos]; });
+  /** @type {import('./walk.js').Described | null} what the landing says, as N-GO answers it */
+  let said = { addr: D, pos: 13, words: 'only part of the text you were reading is in version 3' };
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    WALK.readers({ described: () => said });
+    await WALK.focusTo(D, 13);
+    assert.deepEqual([described(), words?.textContent], [[['block', 11]], said.words], 'the rebuild: the span holding the landing\'s position, alone, its description the line');
+    const was = rebuilds;
+    said = { ...said, words: 'all of the text you were reading is in version 3 — in 2 places' };
+    WALK.markDescribed();
+    assert.deepEqual([described(), words?.textContent], [[['block', 11]], said.words], 'its words changed in place');
+    said = null;
+    WALK.markDescribed();
+    assert.deepEqual([described(), words?.textContent], [[], ''], 'the landing says nothing: no description, its words emptied');
+    said = { addr: E, pos: 1, words: 'its passage is not in version 2' };
+    WALK.markDescribed();
+    assert.deepEqual(described(), [], 'a landing in another document describes no item here');
+    assert.equal(rebuilds, was, 'every mark made in place, nothing rebuilt');
+    said = { addr: D, pos: 13, words: 'its passage is not in version 2' };
+    await WALK.focusTo(D, null);
+    assert.deepEqual(described(), [['document', null]], 'the walk on the document whole: the document\'s item described');
+  } finally {
+    globalThis.document = platform;
+    WALK.readers({});
   }
 });
 
