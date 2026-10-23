@@ -46,13 +46,14 @@ function spanOf(addr, pos, width) {
 
 /**
  * A LEAP to another arrangement of the span's material — an origin, a
- * container — carrying the span (N-GO's carry).
+ * container — carrying the span (N-GO's carry), made at the span the card
+ * stands at, where its reading face stands while it reads.
  * @param {string} to
  * @param {string} addr the span's document
  * @param {{ordinal: number, positions: number}} sp
  * @param {boolean} byKey a key made the act
  */
-const carried = (to, addr, sp, byKey) => GO.leapTo(to, { how: 'leap', byKey, carry: { addr, pos: sp.ordinal, width: sp.positions } });
+const carried = (to, addr, sp, byKey) => GO.leapTo(to, { how: 'leap', byKey, carry: { addr, pos: sp.ordinal, width: sp.positions }, site: { span: { addr, pos: sp.ordinal, width: sp.positions } } });
 
 /**
  * who wrote this? (A-41, R29)

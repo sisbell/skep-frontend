@@ -6,7 +6,10 @@ NOTHING but show the K-9 line; Enter on the LEAP box as opened lands in
 place, ↓ choosing the first level, Enter on typed text that matches nothing
 goes nowhere — the box standing open over the text and its answer, the
 focus in its input, until Esc — and a typed account address a teleport
-with its trail entry (foundations §2.2, §2.3; K-31); the focus ring drawn
+with its trail entry (foundations §2.2, §2.3; K-31); an address the board
+says nothing about faced and keeping its entry, Mod+[ undoing that jump
+alone, the camera where it stood, and Mod+] showing its notice again
+(issue #136's design decision); the focus ring drawn
 at the focus every teleport a key made lands — the box's Enter, Mod+[ and Mod+],
 Mod+0, Mod+Shift+H, Enter on the line's ‹ back (K-22), Mod+3, Enter on a
 trail list row (K-41), Enter on a document (K-7) — and at the focus
@@ -84,7 +87,7 @@ the plane, while a caret alone in a pane gives the page's selection its
 highlight back. Each step leaves the page as it found it."""
 import json
 
-from . import DOC, NO_MATCH, SECOND_ACCOUNT, WINDOW, Result
+from . import DOC, GHOST, NO_MATCH, SECOND_ACCOUNT, WINDOW, Result
 from .layout import inside, level_holds, scene_level
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -1323,6 +1326,35 @@ def run(ctx):
     r.check(s['trail'] == cur - 1 and s['focus']['kind'] == 'board', 'a click on ‹ back goes back one trail entry (to WHOLE BOARD)', {'cursor': s['trail'], 'focus': s['focus']})
     r.check(g['ring'] is None, 'a click on ‹ back draws no ring at its landing: the pointer moved the focus', g)
     chord(ctx, ']', mods=('Meta',))
+    # a jump whose read ends in a notice keeps its entry (issue #136's design decision): Enter on an address the board says
+    # nothing about faces it and takes one entry, the newest, holding the notice; Mod+[ undoes it alone — the cursor back on
+    # the entry it was made from, the camera where it stood, the notice cleared — and Mod+] returns to it, the notice shown
+    # again where it was made
+    left, t0 = state(ctx), trail(ctx)
+    chord(ctx, 'l', mods=('Meta',))
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(GHOST)
+    ctx.frames(2)
+    chord(ctx, 'Enter')
+    overlay_up(ctx, 'face:')
+    faced, t1 = ctx.js('window.__skep.overlay().id'), trail(ctx)
+    newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+    r.check(faced == 'face:doc_not_registered' and t1['cursor'] == t0['cursor'] + 1 and len(t1['entries']) == t0['cursor'] + 2
+            and bool(newest) and newest['addr'] == GHOST and (newest.get('notice') or {}).get('face') == 'unregistered',
+            'Enter on an address the board says nothing about faces it and keeps its entry, the newest, holding the notice (#136)',
+            {'face': faced, 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])], 'newest': newest and {'addr': newest['addr'], 'notice': newest.get('notice')}})
+    chord(ctx, '[', mods=('Meta',))
+    s, t2 = state(ctx), trail(ctx)
+    r.check(t2['cursor'] == t0['cursor'] and len(t2['entries']) == len(t1['entries']) and same_view(left, s) and s['overlay'] is None,
+            'Mod+[ after the notice undoes the jump alone: the cursor on the entry it was made from, the camera where it stood, the notice cleared (#136)',
+            {'cursor': [t0['cursor'], t2['cursor']], 'cam_same': same_view(left, s), 'overlay': s['overlay']})
+    chord(ctx, ']', mods=('Meta',))
+    overlay_up(ctx, 'face:')
+    s, t3 = state(ctx), trail(ctx)
+    again = ctx.js('window.__skep.overlay().id')
+    r.check(t3['cursor'] == t0['cursor'] + 1 and again == 'face:doc_not_registered' and same_view(left, s) and s['focus'] == left['focus'],
+            'Mod+] returns to the jump\'s entry: the notice shown again, the camera and the walk where the jump was made (#136)',
+            {'cursor': [t0['cursor'], t3['cursor']], 'overlay': again, 'cam_same': same_view(left, s), 'focus': [left['focus'], s['focus']]})
     # ---- the trail: Mod+1…9 and Mod+Y (K-40, K-41) ------------------------------------------------------
     numbered = ctx.js('window.__skep.trail().numbered')
     chord(ctx, '3', mods=('Meta',), code='Digit3')

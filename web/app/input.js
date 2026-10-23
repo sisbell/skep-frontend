@@ -44,7 +44,9 @@
 // a continuation's mark is a teleport to its newest member
 // (foundations §2.1); below the readable threshold a document is a place
 // wherever the pointer falls, bars or mounted text alike — a teleport (a
-// trail push); at the readable threshold and above its text takes the click:
+// trail push); each LEAP a click makes is made where it fell — the point of
+// the plane, a run's own positions — where its reading face stands while it
+// reads (N-GO); at the readable threshold and above its text takes the click:
 // a symbol opens the anatomy card of the link's end it stands for, and a
 // stretch links mark that of the first end marking it — each mark carries
 // its ends by their links and their keys (LK's `endKey`; `endAt`), so of a
@@ -248,11 +250,15 @@ function clickText(target) {
     if (se.dataset.link) { const s = endAt(se, se.dataset.link, se.dataset.end || ''); if (s) ANATOMY.open(s, se, false); return true; }
   }
   const hair = target.closest('.hairline');
-  if (hair) { const h = /** @type {HTMLElement} */ (hair); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: runOf(h) }); return true; }
+  if (hair) { const h = /** @type {HTMLElement} */ (hair), run = runOf(h); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: run, site: run ? { span: run } : null }); return true; }
   const offer = target.closest('.offer');
   if (offer) { const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return true; }
   const pointer = target.closest('.clause[data-home]');
-  if (pointer) { const home = /** @type {HTMLElement} */ (pointer).dataset.home; if (home) GO.leapTo(home, { how: 'leap' }); return true; }
+  if (pointer) {
+    const p = /** @type {HTMLElement} */ (pointer), home = p.dataset.home, holder = /** @type {HTMLElement | null} */ (p.closest('[data-withheld]')), run = holder ? runOf(holder) : null;
+    if (home) GO.leapTo(home, { how: 'leap', site: run ? { span: run } : null });
+    return true;
+  }
   const wh = target.closest('[data-withheld]');
   if (wh) { const w = /** @type {HTMLElement} */ (wh), run = runOf(w); FACES.c39(w.dataset.owner || '', REC.reader(), run ? { el: w, span: run } : w); return true; }
   // the platform selected text under the click (a double-click's word): the selection IS that span (R11)
@@ -326,11 +332,13 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   if (tail) { ANATOMY.fromTail(tail, false); return; }
   const lod = lodOf(CAM.cam.scale);
   const residue = RENDER.residueAtScreen(px, py);
-  if (residue) { GO.leapTo(residue.newest, { how: 'click' }); return; }
+  /** the point of the plane the click fell on: where a teleport it makes is made */
+  const site = { world: { x: CAM.wx(px), y: CAM.wy(py) } };
+  if (residue) { GO.leapTo(residue.newest, { how: 'click', site }); return; }
   const doc = RENDER.docAtScreen(px, py);
   if (doc) {
     const em = LAYER.foldOf(REC.doc(doc)).fs * CAM.cam.scale;
-    if (em < LOD_TXT_LO) { GO.leapTo(doc, { how: 'click' }); return; }
+    if (em < LOD_TXT_LO) { GO.leapTo(doc, { how: 'click', site }); return; }
     return; // at reading scale a press on its text is held for the text (`afterFrame`); one in a gutter acts on nothing
   }
   if (lod.name === 'far' || lod.name === 'far~mid') {

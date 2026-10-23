@@ -5,7 +5,7 @@
 // THE VISITED-LINK SET (S-32 (a); D-3) — THE ONE OWNER of both (FP-10).
 // Imports: M-REC (the raw links, each link's type, the index), P-REG (the
 // values) and ST (the words a far end is named in) alone; M-ADDR's
-// arithmetic beneath. N-GO's link lit at an arrival, P-RENDER's test of
+// arithmetic beneath. N-GO's links lit at an arrival, P-RENDER's test of
 // which documents the plane draws and T-LAYER's owner rule are read through
 // the readers the app hands in (`readers`), never imported — each of them
 // imports LK — and never kept here.
@@ -86,10 +86,11 @@
 //     another size and runs no column past its room;
 //   - a link the person has FOLLOWED this session is drawn lighter (D-3:
 //     VALUE, the hue kept), the set client-side, never written;
-//   - the link LIT AT AN ARRIVAL — the one a landing followed, or the one
-//     Back came back along (N-GO's `litLink`) — is drawn heavier until the
-//     next act (foundations §2.1's register: "the arrival an outline around
-//     its span with the followed link drawn heavier": WEIGHT);
+//   - a link LIT AT AN ARRIVAL — the one a landing followed, the one Back
+//     came back along, the one the notice at the entry landed on came from
+//     (N-GO's `litLinks`) — is drawn heavier until the next act (foundations
+//     §2.1's register: "the arrival an outline around its span with the
+//     followed link drawn heavier": WEIGHT);
 //   - a link at a mark JOINING TWO DOCUMENTS — a mid connection, a scene's
 //     line — is decided ONCE, from the link and the two documents, never at
 //     each end apart: its linker you, else the document's owner where its
@@ -188,7 +189,7 @@ import { t } from '../strings.js';
  */
 /**
  * @typedef {Object} Readers — what LK reads from owners that import it, handed in once by the app
- * @property {() => string | null} lit the link lit at an arrival (N-GO's `litLink`); null where none is
+ * @property {() => readonly string[]} lit the links lit at an arrival (N-GO's `litLinks`); none where none is
  * @property {(addr: string) => boolean} drawn does the plane draw a document somewhere — at its box, or in the continuation's mark holding it, a version member at its document's (P-RENDER's `drawsDoc`)
  * @property {(addr: string) => string} owner the owner account of a document, by the one owner rule (T-LAYER's `originOwner`)
  */
@@ -228,7 +229,7 @@ const reveals = new Map();
 /** @type {Set<string>} the followed links, the session's (D-3) */
 const visitedSet = new Set();
 /** the readers until the app hands its owners' in: no link lit, every document drawn, a document's owner its account */
-const noReaders = () => /** @type {Readers} */ ({ lit: () => null, drawn: () => true, owner: (addr) => accountOf(addr) || '' });
+const noReaders = () => /** @type {Readers} */ ({ lit: () => [], drawn: () => true, owner: (addr) => accountOf(addr) || '' });
 /** @type {Readers} */
 let read = noReaders();
 
@@ -303,8 +304,8 @@ export function linkerOf(l, at, other = at) {
 /**
  * How one link is marked at a mark standing at a document, or joining two:
  * hue its linker's there (`linkerOf`), form its kind's, value lighter once
- * followed (D-3), weight heavier while it is the link lit at an arrival
- * (foundations §2.1's register).
+ * followed (D-3), weight heavier while it is among the links lit at an
+ * arrival (foundations §2.1's register).
  * @param {Link} l
  * @param {string} at the document the mark stands at, or one of the two it joins
  * @param {string} [other] the other document a mark joining two joins
@@ -312,7 +313,7 @@ export function linkerOf(l, at, other = at) {
  */
 export function markOf(l, at, other = at) {
   const linker = linkerOf(l, at, other);
-  return { hue: HUE[linker], linker, form: KIND_FORM.link, value: visitedSet.has(l.addr) ? VISITED_ALPHA : 1, weight: read.lit() === l.addr ? ARRIVAL_WEIGHT : 1, own: linker !== 'others' };
+  return { hue: HUE[linker], linker, form: KIND_FORM.link, value: visitedSet.has(l.addr) ? VISITED_ALPHA : 1, weight: read.lit().includes(l.addr) ? ARRIVAL_WEIGHT : 1, own: linker !== 'others' };
 }
 
 /**
@@ -324,7 +325,7 @@ export function markOf(l, at, other = at) {
  * is one, else none and NEUTRAL_HUE; lighter only where every member was
  * followed (D-3), else full — value carries the followed mark alone, so a
  * site followed in part has no value of its own; heavier only where every
- * member is the link lit, else the drawer's own weight; standing with no act
+ * member is lit, else the drawer's own weight; standing with no act
  * only where every member does; the form the link kind's, which every mark
  * `markOf` makes carries.
  * @param {[Mark, ...Mark[]]} marks the members' marks

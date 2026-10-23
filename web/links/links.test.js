@@ -1,9 +1,10 @@
 // LK's test — the rule over a hand-built model: the owner's links marked,
 // the person's own in their hue, the others' counted and not shown, the
 // lenses filtering, each drawn link naming the document it is drawn at, a
-// visited link lighter, the link lit at an arrival heavier and every other at
-// the drawer's own weight, as the reader the app hands in names it (a mutant
-// that weights by anything but the reader turns red), the records and
+// visited link lighter, each link lit at an arrival heavier and every other at
+// the drawer's own weight, as the reader the app hands in names them — two
+// lit at once both heavier (a mutant that weights by anything but the reader,
+// or by its first link alone, turns red), the records and
 // account-named ends never counted, the badge arriving until read and
 // counting what is homed in a document's version members with its own, a
 // member's own alone (a mutant that matches a home by equality, or by its
@@ -211,17 +212,19 @@ test('links merged at one site carry what they share and are neutral in what the
   }
 });
 
-test('the link lit at an arrival is drawn heavier, every other at the drawer\'s own weight — read through the reader handed in, none lit until it is', () => {
+test('each link lit at an arrival is drawn heavier, every other at the drawer\'s own weight — read through the reader handed in, none lit until it is', () => {
   const own = /** @type {any} */ (REC.link(D + '.0.2.1')), other = /** @type {any} */ (REC.link(OTHER_HOME + '.0.2.1'));
   const weights = () => [LK.markOf(own, D).weight, LK.markOf(other, D).weight];
   assert.deepEqual(weights(), [1, 1], 'no reader handed in: none lit');
-  LK.readers({ lit: () => D + '.0.2.1' });
+  LK.readers({ lit: () => [D + '.0.2.1'] });
   assert.deepEqual(weights(), [ARRIVAL_WEIGHT, 1], 'the link the reader names heavier, the other at its own');
   assert.equal(LK.shown(D)[0].mark.weight, ARRIVAL_WEIGHT, 'as drawn at its span');
   assert.equal(LK.markOf(own, D).hue, HUE.you, 'its hue kept');
-  LK.readers({ lit: () => OTHER_HOME + '.0.2.1' });
+  LK.readers({ lit: () => [OTHER_HOME + '.0.2.1'] });
   assert.deepEqual(weights(), [1, ARRIVAL_WEIGHT], 'the reader naming another: that one heavier');
-  LK.readers({ lit: () => null });
+  LK.readers({ lit: () => [OTHER_HOME + '.0.2.1', D + '.0.2.1'] });
+  assert.deepEqual(weights(), [ARRIVAL_WEIGHT, ARRIVAL_WEIGHT], 'the reader naming both — the one Back came back along and the one a notice came from: both heavier');
+  LK.readers({ lit: () => [] });
   assert.deepEqual(weights(), [1, 1], 'the reader naming none: none lit');
 });
 

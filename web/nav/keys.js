@@ -274,11 +274,12 @@ export function esc() {
 
 /**
  * Enter activates the focus (K-7): a place goes — the board, an account or a
- * document, each a teleport pushed on the trail — a withheld run shows its
- * face whole (§2.1), C-67's pointer its offered act, a LEAP to the edition its
- * claim names, reached by Tab (K-58); any other span is selected whole (D8:
- * until the editor's caret), a link's symbol opens its card, which takes the
- * focus as a key opened it (K-55).
+ * document, each a teleport pushed on the trail, a document's made at the
+ * document, where its reading face stands while it reads (N-GO) — a withheld
+ * run shows its face whole (§2.1), C-67's pointer its offered act, a LEAP to
+ * the edition its claim names made at the run, reached by Tab (K-58); any
+ * other span is selected whole (D8: until the editor's caret), a link's
+ * symbol opens its card, which takes the focus as a key opened it (K-55).
  * @param {boolean} byKey
  */
 async function activateFocus(byKey) {
@@ -286,10 +287,10 @@ async function activateFocus(byKey) {
   if (!f) { await WALK.enter(); return; }
   if (f.kind === 'account') { await GO.toAccount(f.addr, byKey); return; }
   if (f.kind === 'board') { await GO.wholeBoard(byKey); return; }
-  if (f.kind === 'document') { await GO.leapTo(f.addr, { how: 'key', byKey }); return; }
+  if (f.kind === 'document') { await GO.leapTo(f.addr, { how: 'key', byKey, site: { span: { addr: f.addr, pos: 1 } } }); return; }
   if (f.kind === 'block' && f.pos != null) {
     const b = REC.blockByPos(f.addr, f.pos);
-    if (b && b.kind === 'withheld') FACES.withheldRun(f.addr, b, (home, byKey) => GO.leapTo(home, { how: 'leap', byKey }));
+    if (b && b.kind === 'withheld') FACES.withheldRun(f.addr, b, (home, byKey) => GO.leapTo(home, { how: 'leap', byKey, site: { span: { addr: f.addr, pos: b.pos, width: b.width } } }));
     else SEL.select(f.addr, f.pos);
     return;
   }

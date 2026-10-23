@@ -7,7 +7,7 @@
 // NEUTRAL hue, which names no linker (P44's Use at §2.1's register); the
 // anchor's GRADE a line on the highlight's edge;
 // SAMENESS boundaries and a ground TEXTURE, never a tint; the VISITED-LINK
-// MARK takes VALUE (lighter, the hue kept — D-3); the link lit at an ARRIVAL
+// MARK takes VALUE (lighter, the hue kept — D-3); a link lit at an ARRIVAL
 // its stroke's WEIGHT (foundations §2.1: "the followed link drawn heavier");
 // a connection's KIND its line's form; a box's PUBLICATION STATE its edge's
 // weight; a LABEL's size its floor, below which no label on the plane is set
@@ -50,10 +50,11 @@ export const SAMENESS = Object.freeze({ treatment: 'provenance', boundary: '#7dd
 export const VISITED_ALPHA = 0.45;
 
 /**
- * the arrival's weight: the link lit at an arrival — the one a landing
- * followed, or the one Back came back along (N-GO's `litLink`) — stroked at
- * this many times the drawer's own width (foundations §2.1's register: "the
- * arrival an outline around its span with the followed link drawn heavier")
+ * the arrival's weight: a link lit at an arrival — the one a landing
+ * followed, the one Back came back along, the one the notice at the entry
+ * landed on came from (N-GO's `litLinks`) — stroked at this many times the
+ * drawer's own width (foundations §2.1's register: "the arrival an outline
+ * around its span with the followed link drawn heavier")
  */
 export const ARRIVAL_WEIGHT = 2;
 
@@ -105,7 +106,7 @@ export const COL = Object.freeze({
  * @property {'you' | 'owner' | 'others' | null} linker null where the merged links' linkers differ
  * @property {number[] | 'band'} form the kind's dash form
  * @property {number} value 1 = full; VISITED_ALPHA once followed — every merged link followed
- * @property {number} weight 1 = the drawer's own stroke; ARRIVAL_WEIGHT for the link lit at an arrival — every merged link lit
+ * @property {number} weight 1 = the drawer's own stroke; ARRIVAL_WEIGHT for a link lit at an arrival — every merged link lit
  * @property {boolean} own true where the mark stands with no act (the owner's or the person's) — every merged link's
  */
 

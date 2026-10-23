@@ -20,6 +20,10 @@
 // takes the focus, or says no clause turns red). Against the FAKE PORT,
 // "who wrote this?" and "who uses this?" asked of a document the reader may
 // not read show the document-level face, naming the document they asked of.
+// A jump reading (issue #136) says so in its own words at its site, heard
+// through the status region, offering no act and named apart from a notice's
+// face; it ends where it still stands, and a face shown in its place stands
+// on (a mutant that ends whatever stands turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -191,4 +195,20 @@ test('"who wrote this?" and "who uses this?" asked of a document the reader may 
     HOST.dismiss();
   }
   assert.deepEqual(fake.unanswered, []);
+});
+
+test('a jump reading says so in its own words, as a face is heard, and offers no act; it ends where it still stands, and an overlay shown since stands on (issue #136)', () => {
+  const D = '1.0.1.0.3', at = { span: { addr: D, pos: 11, width: 5 } };
+  FACES.reading(D, at);
+  const f = faceShown(), o = HOST.currentState();
+  assert.deepEqual([f?.id, f?.words, f?.acts, o?.anchor, o?.takeFocus], ['reading:' + D, ['L.reading', t('L.reading', { address: D })], false, at, undefined], 'its words at the site it is shown at, no act, no focus taken');
+  assert.ok(!f?.id.startsWith('face:'), 'never named as a notice\'s face is');
+  assert.equal(live.textContent, t('L.reading', { address: D }), 'heard through the one status region, as a face is');
+  FACES.endReading();
+  assert.equal(HOST.currentState(), null, 'ended where it stands');
+  FACES.reading(D, at);
+  FACES.unregistered(D, at);
+  FACES.endReading();
+  assert.equal(HOST.currentState()?.id, 'face:doc_not_registered', 'the face its read brought, shown in its place, stands on');
+  HOST.dismiss();
 });

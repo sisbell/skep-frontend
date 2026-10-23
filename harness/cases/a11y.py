@@ -89,17 +89,21 @@ def run(ctx):
       return want.map(([sel, name]) => { const e = document.querySelector(sel); return {sel, want: name, got: e ? e.getAttribute("aria-label") : null}; }); })()''')
     r.check(bool(named) and all(n['got'] == n['want'] for n in named), 'every region is named by its entry in strings.js — the one line, the LEAP box\'s input and rows, the scene, the mirror and its group at span grain (level 4)', [n for n in named if n['got'] != n['want']])
     r.figures['names'] = {n['sel']: n['got'] for n in named}
-    # a keyboard act announces the focus
+    # a keyboard act announces the focus. The status region is watched across the key alone: what an earlier act said there —
+    # the LEAP's reading face, heard as a face is (issue #136) — stands in it, and is no word of the key's
+    ctx.js('(() => { window.__gateLive = {writes: 0, seen: new MutationObserver((m) => { window.__gateLive.writes += m.length; })}; '
+           'window.__gateLive.seen.observe(document.getElementById("live"), {childList: true, characterData: true, subtree: true}); })()')
     ctx.drv.key('ArrowDown')
     ctx.settle()
     ctx.frames(2)
+    writes = ctx.js('(() => { window.__gateLive.seen.disconnect(); return window.__gateLive.writes; })()')
     idx2 = ctx.js('window.__skep.mirror.index()')
     live = ctx.js('document.getElementById("live").textContent')
     want = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())')
     item_name = ctx.js('(() => { const e = document.activeElement; return e && e.id === "walk-" + window.__skep.mirror.index() ? e.textContent : null; })()')
     r.check(idx2 == min(size - 1, idx + 1), 'ArrowDown moves the focus to the next sibling', {'before': idx, 'after': idx2})
     # D4 / rule 12: a walk key moves the focus onto the item, whose name IS its announcement; no live region repeats it
-    r.check(item_name == want and (live or '') == '', 'a walk key moves the focus onto the item, whose name is its announcement; the status region is not written (D4, rule 12)', {'item': (item_name or '')[:90], 'want': (want or '')[:90], 'live': (live or '')[:90]})
+    r.check(item_name == want and writes == 0, 'a walk key moves the focus onto the item, whose name is its announcement; the status region is not written (D4, rule 12)', {'item': (item_name or '')[:90], 'want': (want or '')[:90], 'writes': writes, 'live': (live or '')[:90]})
     ctx.drv.key('ArrowUp')
     ctx.settle()
     # the names: a span's name carries its position, its document and its text; a link's its type and far end

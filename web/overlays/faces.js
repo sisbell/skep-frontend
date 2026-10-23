@@ -28,7 +28,10 @@
 // `too_much_coverage`, the session's `no_key` (C-136 with this version's
 // limit), the death arms (C-137), `unreachable`; a withheld run's face whole,
 // Enter's act at the run (D5 K-7), made from the run's placeholder record
-// (T-ARTICLE's `placeholderOf`), C-67's pointer its offered act; a PUBLIC
+// (T-ARTICLE's `placeholderOf`), C-67's pointer its offered act; a jump
+// reading (issue #136's design decision: "while a jump reads, it says so at
+// once, where it was made"), its overlay named `reading:⟨address⟩` and never
+// `face:…`, the prefix a notice's face carries; a PUBLIC
 // `moment` rendered as a face with `answer`/`cancel` (no ceremony panel is
 // built here — a seam). A face never takes the focus (D5 §4 rule 4; K-58):
 // it is heard through the one status region (D4, O-HOST's), and a face
@@ -156,6 +159,35 @@ export function withheld(addr, anchor = null) {
   const d = REC.doc(addr);
   const arm = entitlementArm(REC.reader(), LAYER.ownerAccount(d));
   HOST.show({ kind: 'face', id: 'face:withheld', anchor: toAnchor(anchor), html: faceHTML({ id: 'B1.withheld-box', text: LAYER.withheldBox(d), acts: [] }, armHTML(arm)) });
+}
+
+/** the reading face's overlay id, before the address it names */
+const READING = 'reading:';
+
+/**
+ * A jump reading (issue #136's design decision): said at once where the jump
+ * was made — a follow at the link's own bytes, a LEAP at the site its act
+ * names, the LEAP box's at the viewport's corner — and heard through the one
+ * status region as every face is; gone with the next act, replaced by the
+ * face its read brings, or ended as the jump lands on a place
+ * (`endReading`); shown again where a cursor move lands on its entry while
+ * the read is out (N-GO). It offers no act. Shown over the overlay a follow
+ * was pressed from, it takes that overlay's place and its end with it, so
+ * what stands behind that overlay — the selection — ends as it would have
+ * with it: at the jump's landing, or under the face its read brings, standing
+ * on (O-HOST's replacement).
+ * @param {string} addr the place the jump named
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] where the jump was made
+ */
+export function reading(addr, anchor = null) {
+  const from = HOST.currentState();
+  HOST.show({ kind: 'face', id: READING + addr, anchor: toAnchor(anchor), html: faceHTML({ id: 'L.reading', text: t('L.reading', { address: addr }), acts: [] }), onDismiss: from ? from.onDismiss : undefined });
+}
+
+/** the reading face ends where it still stands — its jump landed on a place; an overlay shown since stands */
+export function endReading() {
+  const o = HOST.currentState();
+  if (o && o.id && o.id.startsWith(READING)) HOST.dismiss();
 }
 
 /** the `invalid` follow: no such link or slot */

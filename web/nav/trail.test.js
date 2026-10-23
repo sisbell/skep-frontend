@@ -2,21 +2,30 @@
 // Forward move the cursor and discard nothing; a jump never pushes; a push
 // behind the cursor drops the entries ahead. THE CLAIM: it stands where it
 // was pushed, and a departure from it re-takes nothing while it reads (a
-// mutant that re-takes a claim's view turns red); settled, it keeps its
-// place and takes its landing, what its push dropped staying dropped;
-// withdrawn as the newest, the entries its push dropped come back and a
-// cursor on it stands on the entry before (a mutant that forgets them turns
-// red); withdrawn behind a later push, it takes only itself out; and one a
-// later claim's push dropped is put back by no withdrawal (a mutant that
-// leaves it among the dropped turns red), while one settled meanwhile comes
-// back at its landing.
+// mutant that re-takes a claim's view turns red); settled with a place, it
+// keeps its place and takes its landing, its reading notice taken off (a
+// mutant that leaves the reading notice standing turns red), what its push
+// dropped staying dropped. Settled with a notice (issue #136's design
+// decision), whether the cursor stands on it or a Back left it while it read,
+// it keeps its place and the number it took as it was pushed, holding the
+// notice at the view its push left, the cursor where the last move put it,
+// and nothing its push dropped comes back — so one Back from it returns to
+// the entry the jump was made from and a second goes one further either way
+// (a mutant that hands the entry back, or puts the dropped entries back,
+// turns red). A reset wakes every move waiting on a claim.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from './trail.js';
 
+/** @typedef {import('./trail.js').Notice} Notice */
+
 const v = (/** @type {number} */ n) => ({ x: n, y: n, scale: 1 });
-const e = (/** @type {string} */ addr, /** @type {number} */ n) => ({ addr, pos: null, width: null, view: v(n), link: null, label: null });
+const e = (/** @type {string} */ addr, /** @type {number} */ n) => ({ addr, pos: null, width: null, view: v(n), link: null, label: null, notice: null });
 const addrs = () => T.all().map((x) => x.addr);
+/** @type {Notice} a jump's reading notice, as its claim holds it while its read is out */
+const reading = { face: 'reading', addr: 'x', refusal: null, site: null, at: { addr: 'b', pos: null }, offer: false };
+/** @type {Notice} what its read brought where it brought no place: the fifth cell */
+const faced = { ...reading, face: 'unregistered' };
 
 beforeEach(() => T._reset());
 
@@ -46,14 +55,15 @@ test('a fresh teleport behind the cursor drops the entries ahead', () => {
   assert.deepEqual(addrs(), ['a', 'd']);
 });
 
-test('a claim stands where it was pushed and is re-taken by no departure while it reads; settled, it keeps its place and takes its landing, what its push dropped staying dropped', () => {
+test('a claim stands where it was pushed and is re-taken by no departure while it reads; settled with a place, it keeps its place and takes its landing, its reading notice taken off, what its push dropped staying dropped', () => {
   T.push(e('a', 1), null); T.push(e('b', 2), null); T.push(e('c', 3), null);
   T.back(null);
-  const claim = T.push(e('x', 4), v(20), true);
+  const claim = T.push({ ...e('x', 4), notice: reading }, v(20), true);
   assert.deepEqual(addrs(), ['a', 'b', 'x'], 'pushed as it is made, the entry ahead dropped');
   assert.equal(T.all()[1].view.x, 20, 'the entry departed re-taken');
   assert.equal(T.current(), claim, 'the entry as the trail holds it');
   assert.ok(T.pending(claim), 'a claim standing unanswered');
+  assert.equal(claim.notice, reading, 'holding its reading notice while it reads');
   assert.equal(T.back(v(30))?.addr, 'b');
   T.forward(v(40));
   assert.equal(T.jump(2, v(50))?.addr, 'b');
@@ -62,56 +72,32 @@ test('a claim stands where it was pushed and is re-taken by no departure while i
   assert.equal(claim.view.x, 4, 'no departure re-takes a claim\'s view: the camera never landed there');
   T.settle(claim, { view: v(9), pos: 7, width: 2 });
   assert.equal(T.pending(claim), null, 'answered');
-  assert.deepEqual([claim.view.x, claim.pos, claim.width], [9, 7, 2], 'its landing');
+  assert.deepEqual([claim.view.x, claim.pos, claim.width, claim.notice], [9, 7, 2, null], 'its landing, and no notice: the read brought a place');
   assert.deepEqual(addrs(), ['a', 'b', 'x', 'y'], 'in its place; c stays dropped');
   T.back(v(80)); T.back(v(90));
   assert.equal(claim.view.x, 90, 'settled, it is re-taken as any entry is');
 });
 
-test('a withdrawn claim that was the newest leaves the trail as its push found it, a cursor on it on the entry before; its waiters woken', async () => {
-  T.push(e('a', 1), null); T.push(e('b', 2), null); T.push(e('c', 3), null);
-  T.back(null);
-  const claim = T.push(e('x', 4), null, true);
-  const answered = T.pending(claim);
-  T.withdraw(claim);
-  assert.deepEqual(addrs(), ['a', 'b', 'c'], 'the entry its push dropped put back');
-  assert.equal(T.current()?.addr, 'b');
-  assert.equal(T.pending(claim), null);
-  await answered;
-  // a cursor behind the claim stays where it stands
-  const again = T.push(e('x', 4), null, true);
-  T.back(null); T.back(null);
-  T.withdraw(again);
-  assert.deepEqual(addrs(), ['a', 'b', 'c']);
-  assert.equal(T.current()?.addr, 'a');
-});
-
-test('a withdrawn claim a later push stands after takes only itself out, a cursor past it staying on its entry', () => {
-  T.push(e('a', 1), null); T.push(e('b', 2), null); T.push(e('c', 3), null);
-  T.back(null);
-  const claim = T.push(e('x', 4), null, true);
-  T.push(e('y', 5), null);
-  T.withdraw(claim);
-  assert.deepEqual(addrs(), ['a', 'b', 'y'], 'c stays dropped: a push from b drops it too');
-  assert.equal(T.current()?.addr, 'y');
-});
-
-test('a claim a later claim\'s push dropped is put back by no withdrawal; one settled meanwhile comes back at its landing', () => {
-  T.push(e('a', 1), null);
-  const first = T.push(e('x', 2), null, true);
-  T.back(null);
-  const second = T.push(e('y', 3), null, true);
-  assert.deepEqual(addrs(), ['a', 'y']);
-  T.withdraw(first);
-  T.withdraw(second);
-  assert.deepEqual(addrs(), ['a'], 'the first came to nothing: nothing puts it back');
-  assert.equal(T.current()?.addr, 'a');
-  const third = T.push(e('x', 2), null, true);
-  T.back(null);
-  const fourth = T.push(e('y', 3), null, true);
-  T.settle(third, { view: v(9) });
-  T.withdraw(fourth);
-  assert.deepEqual(T.all().map((x) => [x.addr, x.view.x]), [['a', 1], ['x', 9]], 'the settled one put back, at its landing');
+test('a claim answered with a notice keeps its place and its number, holding the notice at the view its push left — answered with the cursor on it, or after a Back left it while it read; nothing its push dropped comes back, and one Back from it returns to the entry it was made from either way', async () => {
+  for (const left of [false, true]) {
+    T._reset();
+    T.push(e('a', 1), null); T.push(e('b', 2), null); T.push(e('c', 3), null);
+    T.back(v(30));
+    const claim = T.push({ ...e('x', 4), notice: reading }, v(20), true);
+    const answered = T.pending(claim);
+    if (left) assert.equal(T.back(v(40))?.addr, 'b', 'a Back while it reads: the cursor on the entry the jump was made from');
+    T.settle(claim, { view: v(20), notice: faced });
+    await answered;
+    const was = left ? 'answered after a Back left it' : 'answered with the cursor on it';
+    assert.deepEqual(addrs(), ['a', 'b', 'x'], `${was}: its place kept, and c, which its push dropped, stays dropped`);
+    assert.deepEqual(T.numbered().map((r) => [r.n, r.entry.addr]), [[1, 'x'], [2, 'b'], [3, 'a']], `${was}: its number the one it took as it was pushed`);
+    assert.deepEqual([claim.notice, claim.view.x, T.pending(claim)], [faced, 20, null], `${was}: holding the notice at the view its push left, answered`);
+    assert.equal(T.cursorIndex(), left ? 1 : 2, `${was}: the cursor where the last move put it`);
+    if (!left) assert.equal(T.back(v(50))?.addr, 'b', `${was}: one Back returns to the entry it was made from`);
+    assert.equal(T.back(v(60))?.addr, 'a', `${was}: a second goes one entry further`);
+    assert.equal(T.forward(v(70))?.addr, 'b');
+    assert.equal(T.forward(v(80)), claim, `${was}: Forward returns to it`);
+  }
 });
 
 test('a reset wakes every move waiting on a claim', async () => {
