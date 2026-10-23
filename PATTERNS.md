@@ -269,7 +269,7 @@ fix; nothing here depends on their names.
   read comes first; then its text, the reader's place, the selection
   and the scene's ties are set together, with nothing awaited, so no
   tie is drawn over text it was not measured on, and an act on the
-  panes waits for the setting to land. A pane's version is the scene's
+  panes, save a copy, waits for the setting to land. A pane's version is the scene's
   own view state, never a box's, and any scene restored is restored
   with it. The page's own death takes what the dead session read down
   at once from the plane, the ARIA mirror and every pane, then reads
@@ -280,7 +280,7 @@ fix; nothing here depends on their names.
 ## The copy
 
 - **FP-24 A copy holds every item its span covers, each in its place.**
-  Every copy of a non-empty selection in an article — on the plane or
+  Every copy of a selection holding a position in an article — on the plane or
   in a reading scene's pane — replaces the clipboard: the platform's own
   copy is prevented, never refused, and its plain text is never empty.
   The plain text follows the span's items in the text's order: text
@@ -294,9 +294,26 @@ fix; nothing here depends on their names.
   rendering on the plane, written for whoever is looking, is ever
   copied. Text is never joined across an item, and items one after
   another of one kind and owner share one stand-in. skep's own
-  clipboard entry is written for every span, text or none. A selection
+  clipboard entry is written for every such span, text or none. A selection
   that touches an item covers it whole and is drawn so, so what looks
   selected is what is copied.
+
+- **FP-27 A copy carries what the reader saw, named so it can never
+  drift.** Beside a copy's plain text, skep's own clipboard entry names
+  the material by identity — its bytes' runs, read along with each
+  text shown — and names where the words were read, by board and
+  document. For a published document it adds the member shown by its
+  version address, the positions in that member, and a mark when the
+  words were read at the plain address. A draft's positions are never
+  named, because they move. Copy reads the selection wherever it was
+  made — the plane, a pane, the walk or the mirror — at any moment,
+  waiting on no setting, so timing never changes what one act copies.
+  The page's own signs in an article (a head, an empty document's
+  line, a scene-offer, any label) take no selection, in the mirror
+  too, and are never copied. Outside a field, a copy that holds no
+  position prevents the platform's copy, leaves the clipboard
+  unchanged, and says so at the focus and, politely, in the status
+  region.
 
 ## Decisions in force
 
@@ -346,6 +363,9 @@ found.
 - 2026-10-23 · FP-26 · #151 #217 #220 #225 #230 #236 #241 · a fit test that failed dropped the sign without a word: labels, tail boards, the kept document's name, the shown version
 - 2026-10-23 · FP-12 · #217 · panes shrank their face to hold 66 characters and undid the reader's own zoom
 - 2026-10-23 · FP-21 · #158 #226 #238 #242 · the marks ended at the next act while #158 kept them, Back's light and the arrival's light meant different things, and stubs counted "places"
+- 2026-10-23 · FP-27 · #243 #244 #246 · the clipboard entry cited words by positions that move or by an address that floats, and a selection on a sign copied the page's furniture as the datum
+- 2026-10-23 · FP-23 · #243 · a pane's copy waited on its setting, so timing changed what one act copied
+- 2026-10-23 · FP-24 · #246 · a sign's selection had no span to stand in for; the rule now holds wherever a position is selected
 
 ## What these rule out
 
