@@ -73,9 +73,9 @@ half its paragraph or narrower, outlines that span's own lines — each line
 rect of its marked words, and nothing else — never the paragraph's box; that
 span cut into two runs apart — as a far end projects where a later edit cut
 its passage in two — it outlines each run's own lines and nothing between
-them; it is gone at the next act — HOME made from the landing, the camera
-set back on the landing's view (a camera move, no act) finds nothing outlined (§3.2:
-"both gone at the next act — a pan or a zoom none"); and, at BEAMED with the
+them; it is gone at the next landing — HOME made from the landing, the camera
+set back on the landing's view (a camera move, no act) finds nothing outlined
+(FP-21: "The state ends only at another landing"); and, at BEAMED with the
 reveal at stage 3, the link a landing names is drawn heavier (§2.1: "with the
 followed link drawn heavier"): its beam lays HEAVIER_INK times the ink or more
 about its start that it lays after a landing on the same span naming no link.
@@ -191,7 +191,23 @@ carried into the draft keeps its outline on the half the draft holds and
 says only part of it is there in a line at the text's edge beside the
 landing — its top the first held line's, offering it side by side with the
 first edition — inside the visible view, meeting no line of the outline and
-not the overlay, gone at the next act. THE VERSION MOVE (issue #154's
+not the overlay, gone at the next landing. THE RUNS (issue #158's design
+decision: "at any window size, a landing with more than one run outlines and
+labels every run; a step keeps them; and one Back still returns to where the
+reader departed"; FP-21): at 1440 × 900 and at NARROW_PX, the longest
+edition's first paragraph's head and its last's, farther apart than a view,
+landed in through the gate's door naming the two runs and the passage they
+hold by identity: the landing at piece 1, the line its label, "piece 1 of 2 ·
+only part of the passage", the step's acts first; both runs outlined, the
+one out of view too, and both again with the edition framed whole below its
+reading scale; every run's label its item's description in the mirror;
+Mod+G steps to piece 2 — the camera there at the reading size, its line in
+view, the line its label, both runs outlined still, the trail untouched; one
+Mod+[ returns to where the door was made, at the view it was made from; and
+Mod+] restores the arrival as left, at piece 2. Two runs of the first
+edition both in view: the other run's label stands at the text's edge beside
+its first line, past the text, inside the visible view, meeting no outlined
+line and not the line. THE VERSION MOVE (issue #154's
 design decision: "The box shows one version"; "Version moves land in
 place"): the edition with two members, its box showing its trunk head at its
 plain address and one article there — after the scene read its latest
@@ -1301,7 +1317,7 @@ def part_holds(ctx, r):
     text", offering to read it side by side with the first edition, which holds it whole, and no version — the draft has
     none; standing at the text's edge beside the landing — past the right edge of the outline's first line, its top that
     line's — inside the visible view below the one line, meeting no line of the outline and not the overlay; the next act
-    takes it down; its figures"""
+    takes it down — the next landing; its figures"""
     ctx.leap(DOC, WINDOW[0])
     lo = WINDOW[0] - PART_LEAD
     ctx.js('window.__skep.go.leapTo(%s, null, %s)' % (json.dumps(WINDOW[2]), json.dumps({'carry': {'addr': DOC, 'pos': lo, 'width': 2 * PART_LEAD}})))
@@ -1327,8 +1343,127 @@ def part_holds(ctx, r):
             {'line': rect, 'first': first, 'outline': outline[:4], 'overlay': over, 'view': view})
     ctx.leap(DOC, WINDOW[0])
     gone = ctx.js('window.__skep.landingLine()')
-    r.check(gone is None, 'the next act takes the line down with the outline (issue #153)', gone)
+    r.check(gone is None, 'the next landing takes the line down with the outline (issue #153)', gone)
     return {'held': held, 'said': said, 'line': rect}
+
+
+def pieces_view(ctx, addr):
+    """an arrival as the page shows it: its runs and the run the landing stands at, by index (`go.landing`), the line as it
+    stands — its words, its acts, its rect and the labels set for the other runs (`landingLine`) — the outline the canvas drew,
+    each rect with the run it outlines (`arrivalAnchors`), the mirror's descriptions (`go.described`), the visible view below
+    the one line, the camera, the em `addr` stands at, and the trail's cursor and length"""
+    return ctx.js('''((a) => { const S = window.__skep, l = S.go.landing(), m = S.arrivalAnchors(), t = S.trail(), c = S.view.camera(), p = S.view.viewport();
+      const top = document.getElementById('line').getBoundingClientRect().bottom;
+      return {landing: l && {addr: l.addr, pos: l.pos, current: l.current, runs: l.pieces ? l.pieces.runs.map((r) => ({pos: r.pos, width: r.width, piece: r.piece})) : null},
+              runs: m && m.runs, outline: m ? m.outline : [], line: S.landingLine(), described: S.go.described(),
+              view: {x: 0, y: top, w: p.VW, h: p.VH - top}, camera: c, em: S.fold(a).fs * c.scale, cursor: t.cursor, entries: t.entries.length}; })(%s)''' % json.dumps(addr))
+
+
+def passage_of(ctx, addr, runs):
+    """the passage two runs of a text's own bytes hold, by identity — from the first's first byte to the second's last, where
+    the text's held image places both in one I-space, in its order — read by the page's identity hook; None where it does not"""
+    ids = [ctx.js('window.__skep.model.identity(%s, %d, %d)' % (json.dumps(addr), x['pos'], x['width'])) or [] for x in runs]
+    if not all(ids) or len({i['prefix'] for xs in ids for i in xs}) != 1 or ids[1][0]['ordinal'] <= ids[0][-1]['ordinal']:
+        return None
+    return {'prefix': ids[0][0]['prefix'], 'ordinal': ids[0][0]['ordinal'], 'width': ids[1][-1]['ordinal'] + ids[1][-1]['width'] - ids[0][0]['ordinal']}
+
+
+def pieces_hold(ctx, r):
+    """THE RUNS (issue #158's design decision; FP-21), at 1440 × 900 and at NARROW_PX: the longest edition's first paragraph's
+    head and its last's — farther apart than a view — landed in through the gate's door naming the two runs and the passage
+    they hold by identity: the landing at piece 1, its line "piece 1 of 2 · only part of the passage" with the step's acts
+    first, the mirror's descriptions every run's label; both runs outlined — the second out of the visible view too — and
+    both again with the edition framed whole below its reading scale; Mod+G steps to piece 2 at the reading size, its line in
+    view, the line its label, both runs still outlined and the trail untouched; one Mod+[ returns where the door was made, at
+    its view; Mod+] restores the arrival as left, at piece 2. Then two runs of the first edition both in view: the other
+    run's label at the text's edge beside its first line, inside the visible view, meeting no outlined line and not the line;
+    its figures"""
+    seen = {}
+    longest, _, _ = ctx.longest_edition()
+    r.check(longest is not None, 'the runs: the longest edition the claimant\'s index lists')
+    if longest is None:
+        return seen
+    words = ctx.js('import("./strings.js").then(({t}) => ({one: t("L.piece", {k: 1, n: 2}), two: t("L.piece", {k: 2, n: 2}), part: t("L.piece.part")}))')
+    mine = lambda k, view: [o for o in view['outline'] if o.get('run') == k]
+    for size in ((1440, 900), (NARROW_PX, 700)):
+        name = '%d × %d' % size
+        was = ctx.resize(*size)
+        ctx.leap(longest)
+        paras = [b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(longest)) if b['kind'] == 'para' and b['width'] > 24 and not b['text'].startswith('#')]
+        runs = [{'pos': paras[0]['pos'], 'width': 12}, {'pos': paras[-1]['pos'], 'width': 12}] if len(paras) > 1 else []
+        passage = passage_of(ctx, longest, runs) if runs else None
+        r.check(passage is not None, f'the runs, {name}: two runs of the longest edition\'s own bytes, its first paragraph\'s head and its last\'s', {'runs': runs, 'passage': passage})
+        if passage is None:
+            ctx.resize(*was)
+            continue
+        departed, view0 = ctx.js('window.__skep.trail().cursor'), ctx.camera()
+        ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(longest), runs[0]['pos'], json.dumps({'runs': runs, 'passage': passage})))
+        ctx.settle()
+        ctx.frames(3)
+        v = pieces_view(ctx, longest)
+        land, line = v['landing'] or {}, v['line'] or {}
+        r.check(land.get('current') == 0 and [x['piece'] for x in land.get('runs') or []] == [1, 2] and line.get('words') == words['one'] + ' · ' + words['part'] and (line.get('acts') or [])[:2] == ['next', 'previous'],
+                f'the runs, {name}: the landing at piece 1, its line "piece 1 of 2 · only part of the passage", the step\'s acts first', {'landing': land, 'line': line})
+        r.check([x['words'] for x in (v['described'] or {}).get('runs') or []] == [words['one'], words['two']], f'the runs, {name}: every run\'s label its item\'s description in the mirror', v['described'])
+        r.check(bool(mine(0, v)) and bool(mine(1, v)) and all(inside(o, v['view']) for o in mine(0, v)) and not any(meets(o, v['view']) for o in mine(1, v)),
+                f'the runs, {name}: both outlined at the landing — piece 1 in the visible view, piece 2 out of it, farther than a view away, outlined all the same',
+                {'piece1': mine(0, v)[:3], 'piece2': mine(1, v)[:3], 'view': v['view']})
+        # the edition framed whole below its reading scale: both runs outlined in view
+        f, vp = ctx.js('window.__skep.fold(%s)' % json.dumps(longest)), ctx.js('window.__skep.view.viewport()')
+        o = f['outline']
+        ctx.set_view(o['x'] + o['w'] / 2, o['y'] + o['h'] / 2, 0.85 * min(vp['VW'] / o['w'], v['view']['h'] / o['h']))
+        far = pieces_view(ctx, longest)
+        r.check(far['em'] < 8 and bool(mine(0, far)) and bool(mine(1, far)) and all(meets(q, far['view']) for q in mine(0, far) + mine(1, far)),
+                f'the runs, {name}: the edition framed whole at its em {far["em"]:.2f}, below its reading scale: both runs outlined in view (issue #158: "Zooming out then shows all of them")',
+                {'em': far['em'], 'piece1': mine(0, far)[:2], 'piece2': mine(1, far)[:2]})
+        ctx.set_view(v['camera']['x'], v['camera']['y'], v['camera']['scale'])
+        # the step: Mod+G
+        ctx.drv.key('g', mods=('Meta',))
+        ctx.settle()
+        ctx.frames(3)
+        s = pieces_view(ctx, longest)
+        sl = s['line'] or {}
+        r.check((s['landing'] or {}).get('current') == 1 and sl.get('words') == words['two'] + ' · ' + words['part'] and abs(s['em'] - READING_PX) < 1e-3
+                and bool(mine(1, s)) and any(inside(q, s['view']) for q in mine(1, s)) and bool(mine(0, s)) and (s['cursor'], s['entries']) == (v['cursor'], v['entries']),
+                f'the runs, {name}: Mod+G steps to piece 2 — the camera there at the reading size, its line in view, the line its label, both runs still outlined, the trail untouched',
+                {'landing': s['landing'], 'line': sl.get('words'), 'em': s['em'], 'piece2': mine(1, s)[:2], 'trail': [s['cursor'], s['entries'], v['cursor'], v['entries']]})
+        # one Back: where the door was made
+        ctx.drv.key('[', code='BracketLeft', mods=('Meta',))
+        ctx.settle()
+        ctx.frames(3)
+        b = pieces_view(ctx, longest)
+        r.check(b['cursor'] == departed and same_view(b['camera'], view0), f'the runs, {name}: one Mod+[ returns to where the reader departed, at the view they left', {'cursor': [b['cursor'], departed], 'camera': [b['camera'], view0]})
+        ctx.drv.key(']', code='BracketRight', mods=('Meta',))
+        ctx.settle()
+        ctx.frames(3)
+        fw = pieces_view(ctx, longest)
+        r.check((fw['landing'] or {}).get('current') == 1 and (fw['line'] or {}).get('words') == words['two'] + ' · ' + words['part'] and bool(mine(0, fw)) and bool(mine(1, fw)),
+                f'the runs, {name}: Mod+] restores the arrival as the reader left it — both runs outlined, the landing at piece 2, its label the line\'s', {'landing': fw['landing'], 'line': (fw['line'] or {}).get('words')})
+        seen[name] = {'doc': longest, 'runs': runs, 'stepped_em': round(s['em'], 3), 'framed_em': round(far['em'], 3)}
+        ctx.resize(*was)
+    # two runs both in view, in the first edition's own bytes before its window run: the other run's label at the text's edge
+    ctx.leap(DOC, None)
+    paras = [b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if b['kind'] == 'para' and b['width'] > 24 and b['pos'] + 12 < WINDOW[0]]
+    runs = [{'pos': paras[0]['pos'], 'width': 12}, {'pos': paras[1]['pos'], 'width': 12}] if len(paras) > 1 else []
+    passage = passage_of(ctx, DOC, runs) if runs else None
+    r.check(passage is not None, 'the runs in view: two paragraphs of the first edition\'s own bytes', {'runs': runs})
+    if passage is not None:
+        ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), runs[0]['pos'], json.dumps({'runs': runs, 'passage': passage})))
+        ctx.settle()
+        ctx.frames(3)
+        v = pieces_view(ctx, DOC)
+        line = v['line'] or {}
+        labels = line.get('labels') or []
+        first = next(iter([q for q in ctx.js('window.__skep.spanRects(%s, %d, 1)' % (json.dumps(DOC), runs[1]['pos'])) or [] if q['w'] > 0 and q['h'] > 0]), None)
+        lab = labels[0] if len(labels) == 1 else None
+        edge = max((o['x'] + o['w'] for o in mine(1, v) if first and abs(o['y'] - first['y']) <= ANCHOR_TOL_PX + 1), default=None)
+        r.check(bool(lab) and lab['runs'] == [1] and lab['words'] == words['two'] and bool(first) and edge is not None and lab['rect']['x'] >= edge - ANCHOR_TOL_PX
+                and abs(lab['rect']['y'] - first['y']) <= ANCHOR_TOL_PX + 1 and inside(lab['rect'], v['view']) and not any(meets(lab['rect'], q) for q in v['outline']) and not meets(lab['rect'], line['rect']),
+                'the runs in view: piece 2\'s label, "piece 2 of 2", at the text\'s edge level with its first line, past the text, inside the visible view, meeting no outlined line and not the line',
+                {'labels': labels, 'first': first, 'edge': edge, 'line': line.get('rect')})
+        seen['in_view'] = {'runs': runs, 'labels': labels}
+    ctx.leap(DOC, WINDOW[0])
+    return seen
 
 
 def box_of(ctx, addr):
@@ -2178,7 +2313,7 @@ def run(ctx):
         ctx.set_view(landing['x'], landing['y'], landing['scale'])
         again = ctx.js('window.__skep.arrivalAnchors()')
         mounted = DOC in ctx.js('window.__skep.mountedAddrs()')
-        r.check(mounted and again is None, 'the arrival: gone at the next act — HOME made from the landing, the camera set back on the landing\'s view finds the article mounted and nothing outlined in it',
+        r.check(mounted and again is None, 'the arrival: gone at the next landing — HOME made from the landing, the camera set back on the landing\'s view finds the article mounted and nothing outlined in it',
                 {'mounted': mounted, 'arrival': again and {k: again[k] for k in ('addr', 'pos', 'runs', 'link')}, 'outline': again and again['outline'][:4]})
         # the link followed drawn heavier (foundations §2.1's register: "the arrival an outline around its span with the
         # followed link drawn heavier"): at BEAMED, whose citations draw beams — the first edition's every citation a tail — the
@@ -2289,6 +2424,7 @@ def run(ctx):
     r.figures['scene'] = scene_holds(ctx, r)
     r.figures['scene_kept'] = scene_kept_holds(ctx, r)
     r.figures['carried'] = carried_holds(ctx, r)
+    r.figures['pieces'] = pieces_hold(ctx, r)
     r.figures['versions'] = version_holds(ctx, r)
     r.figures['chrome'] = chrome_holds(ctx, r)
     r.figures['trail'] = trail_holds(ctx, r)

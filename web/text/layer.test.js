@@ -101,7 +101,7 @@ import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as LAYER from './layer.js';
 import * as CAM from '../plane/camera.js';
-import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE } from '../plane/layout.js';
+import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
@@ -672,6 +672,22 @@ test('the stretch of a span the parts standing hold runs from the first position
   assert.deepEqual(LAYER.standingStretch(blocks, [head], span(5, 40)), span(5, 8), 'its lines past the first part standing in none: the first part\'s stretch of it');
   assert.deepEqual(LAYER.standingStretch(blocks, [rest, run], span(5, 40)), span(13, 24), 'its first part and its last standing in none: from the second part\'s first character through the withheld run whole');
   assert.equal(LAYER.standingStretch(blocks, [last], span(5, 20)), null, 'no part standing holds any of it: none');
+});
+
+test('the fold\'s boxes of a span stand for any document whose text the model holds, mounted or not: each line holding a position of it, its column\'s width, with its line and its column — what an arrival is outlined on where no part of it stands (issue #158) — and none where its text has not arrived', () => {
+  deliver();
+  const d = REC.doc(D), f = LAYER.foldOf(d), box = docBox(D);
+  CAM.set({ x: box.x + box.w / 2, y: box.y + box.h / 2, scale: 2 / f.fs });
+  const b = d.blocks[40], own = f.lines.flatMap((l, i) => (l.pos === b.pos && l.at != null ? [i] : []));
+  const boxes = LAYER.foldBoxes(D, b.pos, b.width);
+  assert.ok(!LAYER.isMounted(D) && LAYER.lineBoxes(D, b.pos, b.width) === null, 'no article stands at em 2: the mount band\'s boxes none');
+  assert.deepEqual(boxes.map((x) => x.line), own, 'every line of the paragraph, and no other');
+  assert.ok(boxes.every((x) => x.column === columnOfLine(f, x.line)), 'each in the column holding its line');
+  const first = boxes[0], c = f.columns[first.column], l = f.lines[first.line];
+  assert.deepEqual(first.rect, { x: CAM.sx(box.x + c.x), y: CAM.sy(box.y + c.y + (l.top - c.top) * f.fs), w: c.w * CAM.cam.scale, h: l.h * f.fs * CAM.cam.scale }, 'its line\'s box on screen, its column\'s width');
+  assert.deepEqual(LAYER.foldBoxes(D, b.pos + 3, 1).map((x) => x.line), [own[0]], 'a position: the line holding it alone');
+  REC.invalidate(D);
+  assert.deepEqual(LAYER.foldBoxes(D, 1, 5), [], 'its text not arrived: none');
 });
 
 test('a document stands by line: at a fresh mount the lines meeting the view, padded, stand, and no other; a pan stands the lines entering in parts of their own and takes down the parts none of whose lines is in view, setting no standing part again', () => onLayer(() => {

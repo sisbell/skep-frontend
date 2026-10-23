@@ -31,7 +31,9 @@
 // — and N-WALK's: where Back's light stands (N-GO's `backLight`; issue #152)
 // and what a landing says of its passage (N-GO's `described`; issue #153);
 // and to L-LINE a jump's face standing out of the visible view (O-HOST's
-// `aside`; FP-25), which the line carries in its place;
+// `aside`; FP-25), which the line carries in its place, and the runs of an
+// arrival in several (N-GO's landing; issue #158), which its strip outlines;
+// to O-LAND the labels' layer, where every other run's label stands;
 // and to T-LAYER, LK, N-WALK and M-PUMP the version each document's box
 // shows (N-GO's `shownIn`; issue #154), M-PUMP handing N-GO each feed row
 // publishing a trunk's next member (`arrived`) and SC what each row and the
@@ -191,10 +193,10 @@ async function boot() {
   HOST.attach(el('overlay'));
   FOCUS.attach({ live: el('live') });
   WALK.attach(el('mirror'));
-  LANDING.attach(el('landing'), { handOff: () => WALK.focusItem() });
+  LANDING.attach(el('landing'), { handOff: () => WALK.focusItem(), pieces: el('pieces') });
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
-  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); }, aside: () => HOST.aside() });
+  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; } });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn });

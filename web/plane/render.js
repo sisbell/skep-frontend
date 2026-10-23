@@ -89,7 +89,12 @@
 // mark, every run of the span a follow, or a LEAP carrying a passage, landed
 // on — or of the passage a one-step move along the trail lights, where its
 // text holds it now (N-GO's `arrivalMark`; issue #152's design decision) —
-// outlined line by line over the mounted article. BARS MEAN ONLY "TOO SMALL TO READ" (issue #122's design decision):
+// outlined in view or not (issue #158's design decision: "Zooming out then
+// shows all of them"): line by line on its own glyphs where its lines stand
+// as text, and on its fold's lines elsewhere, each column's run of them one
+// extent, wherever its article stands or its box stands whole, never on a
+// continuation's mark; a press on an outlined run names it
+// (`arrivalAtScreen`). BARS MEAN ONLY "TOO SMALL TO READ" (issue #122's design decision):
 // no document at reading size is ever drawn as bars — the canvas draws them
 // below P-LOD's readable threshold, and at or above it every document is real
 // text, T-LAYER standing every line of it in view in the frame its em gets
@@ -110,15 +115,15 @@
 // triangle — the tails, each with its links, its stroke and the label set at
 // its end, and the labels drawn too, the labels' parts left out with the
 // rule that left each out, the box the focus ring outlined and the arrival
-// mark's rects, for the gate. The hit tests read the
+// mark's rects, each with the run it outlines, for the gate. The hit tests read the
 // draw's own rule: a click meets a document on its outline alone, where its
 // columns stand whole, a continuation's mark wherever the mark holds its
-// documents, and a tail on its stroke or its label as the last frame drew
-// them.
+// documents, a tail on its stroke or its label, and an arrival's run on its
+// outline, as the last frame drew them.
 // The system account's rows are never drawn (the record §1.8; this lane's
 // cut). The chip is at the document's corner (T-ARTICLE), never here.
 // Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
-// Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports), FP-22.
+// Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports), FP-21, FP-22.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -224,7 +229,7 @@ let DPR = 1;
  * the trail's pip numbers among them — `labelsLeftOut` the parts the pass left out, each with
  * the rule that left it out, `ring` the focused element's box on screen the
  * focus ring outlined, null where it drew none, and `arrival` the rects the
- * arrival mark outlined.
+ * arrival mark outlined, each with the run it outlines (`ArrivalRect`).
  */
 export const stats = {
   linksDrawn: 0, linesDrawn: 0, clusters: 0, docsDrawn: 0,
@@ -236,8 +241,10 @@ export const stats = {
   labels: /** @type {import('./labels.js').SetLabel[]} */ ([]),
   labelsLeftOut: /** @type {import('./labels.js').LeftOut[]} */ ([]),
   ring: /** @type {Rect | null} */ (null),
-  arrival: /** @type {Rect[]} */ ([]),
+  arrival: /** @type {ArrivalRect[]} */ ([]),
 };
+
+/** @typedef {Rect & {run: number}} ArrivalRect a rect the arrival mark outlined, and the run it outlines: an index into the arrival's `runs`; -1 for the block a mark naming the document whole stands on */
 
 /**
  * @typedef {Object} LaidOut — a document's fold and the bars the canvas draws for it, column by column
@@ -877,27 +884,66 @@ function drawFocus(seen) {
 }
 
 /**
- * The arrival mark (foundations §2.1: "an outline around its span"; §3.2):
- * the span the landing named outlined line by line, each line-rect of its own
- * bytes in the mounted article that stands — a run whose first or last line
- * stands in no part, out of view, outlined on the lines that stand
- * (T-LAYER's `standingRects`) — in every run the landing's text holds it in
- * and nothing between them; where the link names the document whole, the
+ * The extents of a span's fold lines no part stands for: each column's run
+ * of them one rect, their union (T-LAYER's `foldBoxes`, the lines that stand
+ * as text left out).
+ * @param {string} addr
+ * @param {number} pos
+ * @param {number} width
+ * @returns {Rect[]}
+ */
+function foldExtents(addr, pos, width) {
+  /** @type {Array<{column: number, line: number, rect: Rect}>} */
+  const runs = [];
+  for (const b of LAYER.foldBoxes(addr, pos, width)) {
+    if (LAYER.lineStands(addr, b.line)) continue;
+    const last = runs[runs.length - 1];
+    if (last && last.column === b.column && last.line + 1 === b.line) {
+      const r = last.rect, y1 = Math.max(r.y + r.h, b.rect.y + b.rect.h);
+      last.rect = { x: Math.min(r.x, b.rect.x), y: Math.min(r.y, b.rect.y), w: Math.max(r.x + r.w, b.rect.x + b.rect.w) - Math.min(r.x, b.rect.x), h: y1 - Math.min(r.y, b.rect.y) };
+      last.line = b.line;
+    } else runs.push({ column: b.column, line: b.line, rect: { ...b.rect } });
+  }
+  return runs.map((x) => x.rect);
+}
+
+/**
+ * The arrival mark (foundations §2.1: "an outline around its span"; §3.2;
+ * issue #158's design decision: "At the landing, outline every run, whether
+ * it is in view or not. Zooming out then shows all of them"): every run the
+ * landing's text holds the span in outlined, and nothing between them, in
+ * view or not: line by line on its own bytes' line-rects where its lines
+ * stand as text in its article (T-LAYER's `standingRects`), and on its
+ * fold's lines where they stand in no part — out of the view's padding, or
+ * the document below the mount band — each column's run of them one extent
+ * (`foldExtents`), wherever its article stands or its box stands whole, the
+ * far band over and no continuation's mark holding it, so no outline is
+ * drawn on a mark's ground; where the link names the document whole, the
  * block holding the landing's position. A one-step move's light is drawn
  * with the same marks (issue #152's design decision), its runs read anew
  * each frame from where its text holds the passage now (N-GO's
- * `arrivalMark`). The arrival's other mark, the link followed drawn heavier,
- * is BM's, by the weight LK's `markOf` gives it.
+ * `arrivalMark`). `stats.arrival` names each rect with the run it outlines.
+ * The arrival's other mark, the link followed drawn heavier, is BM's, by the
+ * weight LK's `markOf` gives it.
  */
 function drawArrival() {
   if (!ctx) return;
   const a = GO.arrivalMark(); if (!a) return;
-  const b = a.runs ? null : REC.blockAt(a.addr, a.pos);
-  const rs = a.runs ? a.runs.flatMap((r) => LAYER.standingRects(a.addr, r.pos, r.width) || []) : b ? LAYER.spanRects(a.addr, b.pos) : null;
-  const lines = (rs || []).filter((r) => r.w > 0 && r.h > 0);
+  const doc = documentOf(a.addr) || a.addr;
+  /** the fold's lines are outlined where no part stands: where the document's article stands, or its box stands whole */
+  const folds = !!LAYER.standing(a.addr) || (lodOf(cam.scale).name !== 'far' && !withinContinuation(doc, residueDepth(cam.scale).k));
+  const unstood = (/** @type {number} */ pos, /** @type {number} */ width) => (folds ? foldExtents(a.addr, pos, width) : []);
+  /** @type {ArrivalRect[]} */
+  const out = [];
+  const take = (/** @type {Rect[]} */ rs, /** @type {number} */ run) => { for (const r of rs) if (r.w > 0 && r.h > 0) out.push({ x: r.x, y: r.y, w: r.w, h: r.h, run }); };
+  if (a.runs) a.runs.forEach((r, i) => take([...(LAYER.standingRects(a.addr, r.pos, r.width) || []), ...unstood(r.pos, r.width)], i));
+  else {
+    const b = REC.blockAt(a.addr, a.pos);
+    if (b) take(LAYER.spanRects(a.addr, b.pos) || unstood(b.pos, b.width), -1);
+  }
   ctx.strokeStyle = HUE.you; ctx.lineWidth = 2; ctx.setLineDash([]);
-  for (const r of lines) ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
-  stats.arrival = lines;
+  for (const r of out) ctx.strokeRect(r.x - 2, r.y - 2, r.w + 4, r.h + 4);
+  stats.arrival = out;
 }
 
 /**
@@ -939,6 +985,22 @@ export function draw() {
 export function tailAtScreen(px, py) {
   const holds = (/** @type {Rect} */ r, /** @type {number} */ pad) => px >= r.x - pad && px <= r.x + r.w + pad && py >= r.y - pad && py <= r.y + r.h + pad;
   return stats.tails.find((tl) => holds({ x: tl.from.x, y: tl.from.y, w: tl.to.x - tl.from.x, h: 0 }, 5) || tl.rects.some((r) => holds(r, 0))) || null;
+}
+
+/**
+ * The run of the arrival under a screen point, on its outline as the last
+ * frame drew it, 3 px either way (a hit test; draws nothing): APP-INPUT's step
+ * to it, below its document's reading scale (issue #158's design decision:
+ * "Clicking an outlined run below reading scale does the same"); null where
+ * no outlined run holds the point.
+ * @param {number} px
+ * @param {number} py
+ * @returns {{addr: string, run: number} | null}
+ */
+export function arrivalAtScreen(px, py) {
+  const a = GO.arrivalMark();
+  const r = a ? stats.arrival.find((q) => q.run >= 0 && px >= q.x - 3 && px <= q.x + q.w + 3 && py >= q.y - 3 && py <= q.y + q.h + 3) : null;
+  return a && r ? { addr: a.addr, run: r.run } : null;
 }
 
 /** the document under a screen point where it stands whole, on its outline — the version its box shows (N-GO's `shownIn`), the outline that version's; one a continuation's mark holds is the mark's (a hit test; draws nothing) */

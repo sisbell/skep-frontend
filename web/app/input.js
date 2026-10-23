@@ -52,8 +52,12 @@
 // leaving its near end with its far end named (P-RENDER's; issue #132's
 // design decision) — lists its links, or opens the card of its one
 // (O-ANATOMY's `fromTail`), at any scale, before any place under it acts;
-// a continuation's mark is a teleport to its newest member
-// (foundations §2.1); below the readable threshold a document is a place
+// an outlined run of an arrival in several runs, below its document's reading
+// scale, is a step to it (N-GO's `stepTo`; issue #158's design decision:
+// "Clicking an outlined run below reading scale does the same"), the arrival
+// standing — its outline drawn only where its document stands whole, no
+// continuation's mark holding it; a continuation's mark is a teleport to its
+// newest member (foundations §2.1); below the readable threshold a document is a place
 // wherever the pointer falls, bars or mounted text alike — a teleport (a
 // trail push) to the version its box shows (N-GO's `shownIn`; issue #154's
 // design decision: a click on a place is no act on its box's version, which
@@ -96,7 +100,7 @@
 // selection.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
-// Rules: FP-1, FP-2, FP-9, FP-24, FP-25, FP-26.
+// Rules: FP-1, FP-2, FP-9, FP-21, FP-24, FP-25, FP-26.
 
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
@@ -383,11 +387,14 @@ function takeSelection() {
   SEL.select(span.addr, span.pos, span.width);
 }
 
-/** a click on the plane: a tail lists its links; a continuation's mark goes to its newest member; a place goes; an account at far goes to its region; else a card or scene still reading ends, the overlay standing under it standing, or else the overlay dismisses */
+/** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark goes to its newest member; a place goes; an account at far goes to its region; else a card or scene still reading ends, the overlay standing under it standing, or else the overlay dismisses */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   LINE.act();
   const tail = RENDER.tailAtScreen(px, py);
   if (tail) { ANATOMY.fromTail(tail, false); return; }
+  // an outlined run stands only where its document is drawn whole, never inside a continuation's mark
+  const piece = RENDER.arrivalAtScreen(px, py);
+  if (piece && !LAYER.atReadingScale(piece.addr) && GO.stepTo(piece.run, false)) return;
   const lod = lodOf(CAM.cam.scale);
   const residue = RENDER.residueAtScreen(px, py);
   /** the point of the plane the click fell on: where a teleport it makes is made */

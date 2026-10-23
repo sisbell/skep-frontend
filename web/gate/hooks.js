@@ -10,14 +10,19 @@
 // spans' own rects and the labels the beams set at their bundles' ends
 // (`beamLabels`), the arrival mark's outline beside its link's marked words
 // and its article — a landing's, or a one-step move's light along the trail
-// (issue #152) — (`arrivalAnchors`; the `go.leapTo` door lands as a follow
-// does where it names a link, its departure recording no step, for it names
-// no end of the link, and as a move to another arrangement of the same
-// material does where it carries a passage, its departure recording the
-// carry), what a landing says of the passage it carried or followed — its
-// state, its offers, the mirror's description of its item (`go.landing`,
-// `go.described`) — and its line as it stands, its words, its acts and its
-// rect (`landingLine`; issue #153), the handoff
+// (issue #152) — each rect with the run it outlines (`arrivalAnchors`; the
+// `go.leapTo` door lands as a follow does where it names a link, its
+// departure recording no step, for it names no end of the link, its runs read
+// against the passage it names by identity, where it names one, as a follow's
+// are — labelled where they are two or more (issue #158) — and as a move to
+// another arrangement of the same material does where it carries a passage,
+// its departure recording the carry), the bytes of a stretch of a held text
+// by identity (`model.identity`, the door's passage), what a landing says of
+// the passage it carried or followed — its state, its runs' labels and the
+// run it stands at, its offers, the mirror's descriptions of its items
+// (`go.landing`, `go.described`) — the step among its runs (`go.step`,
+// `go.stepTo`), and its line as it stands, its words, its acts, its rect and
+// the labels set for its other runs (`landingLine`; issues #153, #158), the handoff
 // (`barsOf`: the canvas's own bars for a document beside its mounted
 // article's blocks), the reading scene's runs and the ends it set level
 // (`scene.pairs`), a passage's line in one of its panes (`scene.at`) and its
@@ -534,6 +539,8 @@ export function install(deps) {
       session: () => REC.session(), board: () => REC.board(), health: () => REC.health(), mode: () => REC.mode(), daemon: () => REC.daemon(), device: () => REC.device(),
       snapshot: () => REC.snapshot(), feedRows: () => REC.feedRows(), rev: () => REC.rev(),
       loadWhole: (/** @type {string} */ addr) => PUMP.loadWhole(addr).then((d) => !!d),
+      /** a stretch of a held text by identity, through its held image (M-REC's `identityOf`): none where the image does not cover it */
+      identity: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => REC.identityOf(addr, pos, width),
       /** what a feed row naming a document does to the model alone: its delivered state dropped and its reads asked again — reads alone, nothing written, no reader told */
       invalidate: (/** @type {string} */ addr) => { REC.invalidate(addr); PUMP.forget(addr); CAM.markDirty(); },
       /** a feed row taken as the feed hands one (M-PUMP's `takeRow`): the model, the view and a reading scene's panes kept fresh from it — reads alone, nothing written */
@@ -616,9 +623,9 @@ export function install(deps) {
     esc: () => KEYS.esc(),
     mounts: () => LAYER.mounts(),
     beams: () => BM.count(),
-    /** the teleports; `leapTo`'s third argument names the runs of the span landed on — every run a far end projects to, `pos` at one of them — and the link followed to it, the landing then marked as a follow's is, or the passage the LEAP carries, re-projected and marked at the landing; `shownIn` the version a document's box shows (issue #154) */
-    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{runs?: import('../nav/go.js').Run[] | null, link?: string | null, carry?: import('../nav/go.js').Carry | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, runs: o.runs ?? null, link: o.link ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), shownIn: (/** @type {string} */ a) => GO.shownIn(a), inAir: () => GO.inAir(), arrival: () => GO.arrivalMark(), landing: () => GO.landing(), described: () => GO.described(), landingAct: (/** @type {'beside' | 'version' | 'again'} */ which) => { GO.landingAct(which); return true; } },
-    /** a landing's line as it stands (issue #153): its words, its acts, its rect on screen, whether the scene covers it; null where none stands */
+    /** the teleports; `leapTo`'s third argument names the runs of the span landed on — every run a far end projects to, `pos` at one of them — the link followed to it and the passage they hold by identity, the landing then marked and its runs labelled as a follow's are, or the passage the LEAP carries, re-projected and marked at the landing; `shownIn` the version a document's box shows (issue #154); `step` and `stepTo` the step among an arrival's runs (issue #158) */
+    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{runs?: import('../nav/go.js').Run[] | null, link?: string | null, passage?: import('../model/records.js').ISpan | null, carry?: import('../nav/go.js').Carry | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, runs: o.runs ?? null, link: o.link ?? null, passage: o.passage ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), shownIn: (/** @type {string} */ a) => GO.shownIn(a), inAir: () => GO.inAir(), arrival: () => GO.arrivalMark(), landing: () => GO.landing(), described: () => GO.described(), landingAct: (/** @type {'beside' | 'version' | 'again' | 'next' | 'previous'} */ which) => { GO.landingAct(which); return true; }, steps: () => GO.steps(), step: (/** @type {1 | -1} */ dir) => GO.step(dir), stepTo: (/** @type {number} */ i) => GO.stepTo(i), endArrival: () => GO.endArrival() },
+    /** a landing's line as it stands (issue #153): its words, its acts, its rect on screen, whether the scene covers it, and the labels set for its other runs (issue #158); null where none stands */
     landingLine: () => LANDING.shown(),
     leap: { open: () => LEAP.open(), close: () => LEAP.close(), rows: () => LEAP.currentRows(), isOpen: () => LEAP.isOpen() },
     cards: {

@@ -111,12 +111,18 @@
 // position, or its document where the walk stands on it whole — carries
 // `aria-describedby` naming the mirror's hidden description, which holds the
 // line's words where the text landed in holds part of the passage carried or
-// followed, all of it in pieces, or no answer told, and the dead end's words
-// where it holds none of it; nothing where it holds all of it in one piece,
-// which the outline alone says (N-GO's `described`, through the reader the
-// app hands in), written at the rebuild and marked again in place on each
-// dirty frame (`markDescribed`), so the focus moving onto the item says it
-// once. The mirror is rebuilt whole on every move, and its Tab
+// followed, all of it in pieces, or no answer told — the label of the run the
+// landing stands at, where the passage stands in several — and the dead end's
+// words where it holds none of it; nothing where it holds all of it in one
+// piece, which the outline alone says (N-GO's `described`, through the reader
+// the app hands in). EACH RUN'S ITEM CARRIES ITS LABEL (FP-21; issue #158's
+// design decision: "Each run's accessible item carries its label from the
+// moment of landing"): every span holding another run of a passage in several
+// is described by those runs' labels, a hidden description of its own. Each is
+// written at the rebuild and marked again in place on each
+// dirty frame (`markDescribed`) — a step moving the landing among the runs —
+// so the focus moving onto an item says it once, the landing's item the one
+// announcement. The mirror is rebuilt whole on every move, and its Tab
 // stop with it: the plane is ONE stop between the one line and the focused
 // document's corner (D5 §4 rule 5) — the current item, while the tree's
 // container stands out of the order; the container is the stop only where
@@ -170,10 +176,11 @@ import { t } from '../strings.js';
  */
 
 /**
- * @typedef {Object} Described — what a landing says of the passage it carried or followed (issue #153's design decision; N-GO's `described`), which the mirror gives the item it stands on as its description
+ * @typedef {Object} Described — what a landing says of the passage it carried or followed (issue #153's design decision; N-GO's `described`), which the mirror gives the items it stands on as their descriptions
  * @property {string} addr the document landed in
- * @property {number} pos where the landing stands: the first held piece of the passage, or the landing point
- * @property {string} words the line's words, or the dead end's where the text holds none of the passage
+ * @property {number} pos where the landing stands: the run it stands at, or the landing point
+ * @property {string} words the line's words — the label of the run it stands at, where the passage stands in several — or the dead end's where the text holds none of the passage
+ * @property {Array<{pos: number, width: number, words: string}>} runs every run of the passage where it stands in several, each with its own label; none where it stands in one
  */
 
 /**
@@ -209,6 +216,8 @@ export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReade
 
 /** the id of the mirror's hidden description of the landing, which the item it stands on names (see the head) */
 const DESCRIPTION = 'walk-landing';
+/** the id of the hidden description of the other runs an item holds, item i's (see the head) */
+const pieceId = (/** @type {number} */ i) => 'walk-piece-' + i;
 
 /** the board's node */
 const BOARD = /** @type {Node} */ ({ kind: 'board', addr: '1', pos: null, link: null });
@@ -385,14 +394,17 @@ export function render() {
   const lvl = total ? levelOf(siblings[0]) : 1;
   let html = `<ul role="group" aria-label="${esc(t('L.mirror-level', { n: lvl }))}">`;
   const at = read.located(), said = read.described();
+  let pieces = '';
   for (let i = lo; i < hi; i++) {
     const n = siblings[i];
     const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr)}"` : '';
     const located = isLocated(n, at) ? ' aria-current="location"' : '';
-    const described = isDescribed(n, said) ? ` aria-describedby="${DESCRIPTION}"` : '';
+    const by = describedBy(n, i, said);
+    const described = by ? ` aria-describedby="${by}"` : '';
     html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${esc(nameOf(n, i, total))}</li>`;
+    if (holdsRuns(n, said)) pieces += `<div id="${pieceId(i)}" hidden>${esc(otherRuns(n, said))}</div>`;
   }
-  html += `</ul><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div>`;
+  html += `</ul><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div>${pieces}`;
   mirrorEl.innerHTML = html;
   mirrorEl.tabIndex = idx >= lo && idx < hi ? -1 : 0;
 }
@@ -426,9 +438,9 @@ function isLocated(/** @type {Node} */ n, /** @type {Located | null} */ at) {
  * The mirror's items marked in place where Back's light stands (see the
  * head): `aria-current="location"` on each item it stands on and on no other,
  * nothing rebuilt, so the platform's focus stays on the item it stands on.
- * The app's loop runs it on each dirty frame: the light goes out at the next
- * act, and the passage it stands on moves as its text is set again, between
- * the walk's moves.
+ * The app's loop runs it on each dirty frame: the light goes out with the
+ * arrival — at the next landing, at Esc — and the passage it stands on moves
+ * as its text is set again, between the walk's moves.
  */
 export function markLocated() {
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
@@ -440,32 +452,68 @@ export function markLocated() {
   }
 }
 
+/** the block a span node stands for; null for every other node */
+const blockOf = (/** @type {Node} */ n) => (n.kind === 'block' && n.pos != null ? REC.blockByPos(n.addr, n.pos) : null);
+
 /** does a landing's description stand on a node (see the head): the span holding the landing's position, or its document, where the walk stands on it whole */
 function isDescribed(/** @type {Node} */ n, /** @type {Described | null} */ at) {
   if (!at || n.addr !== at.addr) return false;
   if (n.kind === 'document') return true;
-  const b = n.kind === 'block' && n.pos != null ? REC.blockByPos(n.addr, n.pos) : null;
+  const b = blockOf(n);
   return !!b && at.pos >= b.pos && at.pos < b.pos + b.width;
 }
 
+/** does a span node hold a run of a passage that stands in several (see the head)? */
+function holdsRuns(/** @type {Node} */ n, /** @type {Described | null} */ at) {
+  const b = at && n.addr === at.addr ? blockOf(n) : null;
+  return !!at && !!b && at.runs.some((r) => touches(b, r));
+}
+
+/** the labels of the runs a span node holds, the one the landing stands at apart, in the text's order: its own description's words (see the head); '' where it holds none */
+function otherRuns(/** @type {Node} */ n, /** @type {Described | null} */ at) {
+  const b = at && n.addr === at.addr ? blockOf(n) : null;
+  return at && b ? at.runs.filter((r) => r.pos !== at.pos && touches(b, r)).map((r) => r.words).join('; ') : '';
+}
+
 /**
- * The landing's description marked in place (see the head): the hidden
- * element's words set to what the landing says now, and `aria-describedby`
- * on the item it stands on and on no other, nothing rebuilt, so the
- * platform's focus stays on the item it stands on. The app's loop runs it on
- * each dirty frame: the line goes out at the next act, and its words change
- * as its reads answer — an offer found, a retry answered — between the walk's
- * moves.
+ * The descriptions a node names (see the head): the landing's, where it
+ * stands on it; its other runs' labels, where it holds any; null where it
+ * names none.
+ * @param {Node} n
+ * @param {number} i its index among its siblings
+ * @param {Described | null} at
+ * @returns {string | null} the ids, as `aria-describedby` takes them
+ */
+function describedBy(n, i, at) {
+  /** @type {string[]} */
+  const ids = [];
+  if (isDescribed(n, at)) ids.push(DESCRIPTION);
+  if (otherRuns(n, at)) ids.push(pieceId(i));
+  return ids.length ? ids.join(' ') : null;
+}
+
+/**
+ * The landing's descriptions marked in place (see the head): the hidden
+ * elements' words set to what the landing says now — its line's, and each
+ * span's other runs' labels — and `aria-describedby` on the items they stand
+ * on and on no other, nothing rebuilt, so the platform's focus stays on the
+ * item it stands on. The app's loop runs it on each dirty frame: the line
+ * goes with the arrival, its words change as its reads answer — an offer
+ * found, a retry answered — and a step moves the landing among its runs,
+ * between the walk's moves.
  */
 export function markDescribed() {
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
   const said = read.described(), words = said ? said.words : '';
-  const el = typeof mirrorEl.querySelector === 'function' ? mirrorEl.querySelector('#' + DESCRIPTION) : null;
+  const q = (/** @type {string} */ id) => (mirrorEl && typeof mirrorEl.querySelector === 'function' ? mirrorEl.querySelector('#' + id) : null);
+  const el = q(DESCRIPTION);
   if (el && el.textContent !== words) el.textContent = words;
   for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[role="treeitem"]')])) {
-    const n = siblings[Number(li.dataset.i)], on = !!n && isDescribed(n, said);
-    if (on && li.getAttribute('aria-describedby') !== DESCRIPTION) li.setAttribute('aria-describedby', DESCRIPTION);
-    else if (!on && li.getAttribute('aria-describedby') != null) li.removeAttribute('aria-describedby');
+    const i = Number(li.dataset.i), n = siblings[i], piece = q(pieceId(i));
+    if (n && piece) { const w = otherRuns(n, said); if (piece.textContent !== w) piece.textContent = w; }
+    const by = n ? describedBy(n, i, said) : null, named = by && !piece ? by.split(' ').filter((x) => x !== pieceId(i)).join(' ') || null : by;
+    if (named && li.getAttribute('aria-describedby') !== named) li.setAttribute('aria-describedby', named);
+    else if (!named && li.getAttribute('aria-describedby') != null) li.removeAttribute('aria-describedby');
   }
 }
 

@@ -1,7 +1,8 @@
-// BM-HELD — WHAT A TEXT HOLDS OF A PASSAGE, and the line that says it
+// BM-HELD — WHAT A TEXT HOLDS OF A PASSAGE, and the words that say it
 // (issue #153's design decision: "Mark what's held and say the rest in a
-// line"). Layer 2, beside BM in `web/beams/`. PURE: no DOM and no state of
-// its own; a far end's state read from what M-REC holds.
+// line"; issue #158's: each run labelled). Layer 2, beside BM in
+// `web/beams/`. PURE: no DOM and no state of its own; a far end's state read
+// from what M-REC holds.
 // A carried or a followed passage lands in one of four states, read here
 // from the stretches of the landing's text that hold it, each named by where
 // its stretch of the passage lies in the passage (`heldOf`): ALL, one
@@ -10,28 +11,48 @@
 // PART, the stretches together holding less; NONE, no stretch — the dead
 // end's face says it (foundations §2.3). A passage named by identity — a
 // followed far end, its slot's stored span — is read through the identity of
-// the bytes of each run its text holds it in (`piecesOf`). Where no answer
+// the bytes of each run its text holds it in (`piecesOf`), each run cut where
+// its bytes break the passage's order into the stretches an arrival
+// outlines (`stretchesOf`). Where no answer
 // tells — a read the board refused for any reason but its size, which is
 // asked again in parts first (M-PUMP's `compareParts`, `imageParts`), or one
 // still refused past SPLIT_READS parts — the state is COULDN'T TELL, its
 // reason keyed on the refusal's name and kind, never its token (`whyOf`),
 // "try again" offered only where a retry can change the answer (`retries`).
+// THE RUNS' LABELS (FP-21: "in several runs, each run labelled"; issue
+// #158's design decision), where two stretches of the text or more hold the
+// passage (`piecesIn`): stretches of different material are PIECES, each
+// numbered in the passage's own order, "piece ⟨k⟩ of ⟨n⟩", and none numbered
+// where every stretch holds the same; a stretch holding the material of one
+// before it in the text says "again", and the first of such stretches "again
+// later"; the run the landing stands at adds how much of the passage the
+// runs hold — "all of the passage", or "only part of the passage" and, where
+// the text shows withheld text, that the rest may be under it — and "in
+// another order" where the text holds the pieces out of the passage's own
+// (`labelOf`); labels that would stack merge into one naming the pieces they
+// hold, "pieces 1–4 of 9" (`mergedLabel`). "Part" names an amount alone, and
+// no label counts "places". A step takes the runs in the passage's order,
+// each repeat after the first of its material, wrapping (`stepFrom`); the
+// landing stands at the first (`Pieces.order`).
 // THE LINE (`lineOf`), for part, pieces and couldn't tell, names the passage
 // by what it was to the reader — "what you selected", "the text you were
 // reading", a followed link's "its passage" — and the text by F.floating's
 // two forms, "version ⟨k⟩" at a member, "⟨D⟩'s current text" at a bare
 // address (`whereOf`); it never says "missing", "removed", "deleted" or
 // "compare", and where the landing shows withheld text a part's line says
-// the rest may be under it. The landing says it (N-GO's `landing`, O-LAND's
-// line, N-WALK's description), and so does every surface that knows the
-// state before departure, each by this one rule (the decision: "Where a read
+// the rest may be under it. A landing in one run says it so (N-GO's
+// `landing`, O-LAND's line, N-WALK's description), counting no runs; a
+// landing in several says its runs' labels in its place, the label of the
+// run it stands at its line. Every surface that knows the
+// state before departure says it, each by this one rule (the decision: "Where a read
 // knows the state before departure — a drawn link's far end, the version
 // list — say it there too"): a versions row (O-VERSIONS, through N-GO's
 // `heldIn`), and a drawn link's far end (`farHolds`, `farSays`), read from
 // the end LK draws and what M-REC holds of its far document — its
 // projection, and the bytes of each run it names through that document's
 // held image — which its stub, its symbol's title, its mirror item and its
-// card say.
+// card say, the line counting the runs that hold it there (issue #242 holds
+// those words).
 // Rules: FP-1, FP-2, FP-21 (the one reading of what a landing's text holds).
 
 import * as REC from '../model/records.js';
@@ -46,6 +67,27 @@ import { t } from '../strings.js';
 /** @typedef {'all' | 'pieces' | 'part' | 'none'} Holds what a text holds of a passage: all of it in one stretch, all of it in several, part of it, none of it */
 
 /** @typedef {{at: number, width: number}} Piece a stretch of the passage one stretch of the text holds: where it begins in the passage, counted from 0, and its positions */
+
+/** @typedef {{pos: number, width: number, at: number}} Stretch a stretch of the text that holds one stretch of the passage, its bytes in the passage's own order: its first position in the text, its positions, and where its stretch of the passage begins in the passage, counted from 0 — the run an arrival outlines, labels and steps to */
+
+/**
+ * @typedef {Object} Labelled — one run of an arrival in several, as its label reads it (`piecesIn`)
+ * @property {number} pos its first position in the text
+ * @property {number} width its positions
+ * @property {number} at where its stretch of the passage begins in the passage, counted from 0
+ * @property {number | null} piece its material's number in the passage's own order; null where every run holds the same material
+ * @property {'again' | 'again-later' | null} repeat `again` where a run before it in the text holds the same material, `again-later` where it is the first of such runs; null where no other run does
+ */
+
+/**
+ * @typedef {Object} Pieces — an arrival in several runs, each labelled (see the head; FP-21)
+ * @property {Labelled[]} runs in the text's order, two or more
+ * @property {number} of the pieces: the runs' materials, each counted once
+ * @property {number[]} order the runs, by index, in the order a step takes them: the passage's own order, each repeat after the first run of its material, runs of one material in the text's order
+ * @property {boolean} whole the runs together hold every position of the passage
+ * @property {boolean} reordered the text holds the pieces out of the passage's order: each material's first run, in the text's order
+ * @property {boolean} withheld the runs hold only part of the passage and the text shows withheld text, under which the rest may stand
+ */
 
 /**
  * @typedef {Object} Held — what a text holds of a passage (`heldOf`)
@@ -124,6 +166,161 @@ export function piecesOf(passage, runs) {
   return { pieces, places };
 }
 
+/**
+ * The stretches of a text that hold a passage named by identity (see the
+ * head): each run's bytes, by identity in the text's order, cut to the
+ * passage's own and cut again wherever they break the passage's order —
+ * bytes that follow on in the text and in the passage both one stretch —
+ * each at its own positions in the text. Bytes of another I-space, or past
+ * the passage, hold none of it.
+ * @param {ISpan} passage
+ * @param {Array<{pos: number, width: number}>} runs the runs of the text, in its order
+ * @param {ISpan[][]} ids each run's bytes by identity, in the text's order, as many positions as the run
+ * @returns {Stretch[]} in the text's order
+ */
+export function stretchesOf(passage, runs, ids) {
+  /** @type {Stretch[]} */
+  const out = [];
+  runs.forEach((r, k) => {
+    let p = r.pos;
+    for (const s of ids[k] || []) {
+      const lo = Math.max(s.ordinal, passage.ordinal), hi = Math.min(s.ordinal + s.width, passage.ordinal + passage.width);
+      if (s.prefix === passage.prefix && lo < hi) {
+        const pos = p + (lo - s.ordinal), at = lo - passage.ordinal, last = out[out.length - 1];
+        if (last && last.pos + last.width === pos && last.at + last.width === at) last.width += hi - lo;
+        else out.push({ pos, width: hi - lo, at });
+      }
+      p += s.width;
+    }
+  });
+  return out.sort((a, b) => a.pos - b.pos);
+}
+
+/** a stretch's material: its stretch of the passage */
+const materialOf = (/** @type {Piece} */ s) => `${s.at} ${s.width}`;
+
+/**
+ * An arrival's runs labelled (see the head): each stretch of the text that
+ * holds the passage a run, in the text's order; their materials — each
+ * stretch of the passage they hold, counted once — numbered in the passage's
+ * own order, its first position first, a shorter before a longer from one
+ * position, and none numbered where they hold one material alone; a run
+ * holding the material of one before it in the text a repeat, the first of
+ * such runs "again later"; and the step's order, the landing at its first.
+ * Null where fewer than two stretches hold any of it: the outline alone, or
+ * the landing's line, says it.
+ * @param {Stretch[]} stretches
+ * @param {number} width the passage's positions
+ * @param {boolean} [withheld] the text shows withheld text
+ * @returns {Pieces | null}
+ */
+export function piecesIn(stretches, width, withheld = false) {
+  const runs = stretches.filter((s) => s.width > 0).sort((a, b) => a.pos - b.pos);
+  if (runs.length < 2) return null;
+  const kinds = [...new Map(runs.map((s) => [materialOf(s), s])).values()].sort((a, b) => a.at - b.at || a.width - b.width);
+  /** @type {Map<string, number>} each material's number, in the passage's own order */
+  const num = new Map(kinds.map((s, i) => [materialOf(s), i + 1]));
+  /** @type {Map<string, number>} each material's first run, by its index in the text's order */
+  const first = new Map();
+  /** @type {Map<string, number>} the runs holding each material */
+  const count = new Map();
+  runs.forEach((s, i) => { const k = materialOf(s); if (!first.has(k)) first.set(k, i); count.set(k, (count.get(k) || 0) + 1); });
+  const numOf = (/** @type {Stretch} */ s) => /** @type {number} */ (num.get(materialOf(s)));
+  /** @type {Labelled[]} */
+  const labelled = runs.map((s, i) => {
+    const k = materialOf(s), again = (count.get(k) || 0) > 1;
+    return { pos: s.pos, width: s.width, at: s.at, piece: kinds.length > 1 ? numOf(s) : null, repeat: !again ? null : first.get(k) === i ? 'again-later' : 'again' };
+  });
+  const order = runs.map((_, i) => i).sort((x, y) => numOf(runs[x]) - numOf(runs[y]) || x - y);
+  const firsts = [...first.values()].sort((a, b) => a - b).map((i) => numOf(runs[i]));
+  const held = heldOf(runs.map((s) => ({ at: s.at, width: s.width })), width);
+  const whole = held.holds === 'all' || held.holds === 'pieces';
+  return { runs: labelled, of: kinds.length, order, whole, reordered: firsts.some((n, i) => i > 0 && n < firsts[i - 1]), withheld: !whole && withheld };
+}
+
+/** what the run the landing stands at adds (see the head): how much of the passage the runs hold, and whether the text holds the pieces out of the passage's order */
+function amountOf(/** @type {Pieces} */ p) {
+  const amount = p.whole ? t('L.piece.all') : t('L.piece.part') + (p.withheld ? t('L.held.withheld') : '');
+  return p.reordered ? [amount, t('L.piece.order')] : [amount];
+}
+
+/**
+ * A run's label in words (see the head): its piece — "piece ⟨k⟩ of ⟨n⟩" —
+ * where the runs hold two materials or more; "again" where a run before it
+ * holds its material, "again later" where it is the first of such runs; and,
+ * at the run the landing stands at, how much of the passage the runs hold and
+ * "in another order" where the text holds the pieces out of the passage's.
+ * @param {Pieces} p
+ * @param {number} i the run, an index into `p.runs`
+ * @param {boolean} [current] the landing stands at it
+ * @returns {string}
+ */
+export function labelOf(p, i, current = false) {
+  const r = p.runs[i];
+  if (!r) return '';
+  /** @type {string[]} */
+  const words = [];
+  if (r.piece != null) words.push(t('L.piece', { k: r.piece, n: p.of }));
+  if (r.repeat) words.push(t(r.repeat === 'again' ? 'L.piece.again' : 'L.piece.again-later'));
+  if (current) words.push(...amountOf(p));
+  return words.join(' · ');
+}
+
+/** numbers in order as their ranges — consecutive ones `a–b` — joined: "1–3, 5" */
+function rangesOf(/** @type {number[]} */ ns) {
+  /** @type {string[]} */
+  const out = [];
+  for (let i = 0; i < ns.length; i++) {
+    let j = i;
+    while (j + 1 < ns.length && ns[j + 1] === ns[j] + 1) j++;
+    out.push(j > i ? `${ns[i]}–${ns[j]}` : String(ns[i]));
+    i = j;
+  }
+  return out.join(', ');
+}
+
+/**
+ * The label standing for runs whose labels would stack (issue #158's design
+ * decision: "Labels that would stack merge into one"): the pieces they hold —
+ * "pieces 1–4 of 9", consecutive numbers a range — then "again" where any of
+ * them holds the material of a run before it, else "again later" where one is
+ * the first of such runs; where the landing stands at one of them, how much of
+ * the passage the runs hold after. One run's own label where they are one.
+ * @param {Pieces} p
+ * @param {number[]} members the runs, by index into `p.runs`
+ * @param {number} [current] the run the landing stands at; -1 where none of them is
+ * @returns {string}
+ */
+export function mergedLabel(p, members, current = -1) {
+  if (members.length === 1) return labelOf(p, members[0], members[0] === current);
+  const runs = members.map((i) => p.runs[i]).filter(Boolean);
+  const nums = [...new Set(runs.flatMap((r) => (r.piece != null ? [r.piece] : [])))].sort((a, b) => a - b);
+  /** @type {string[]} */
+  const words = [];
+  if (nums.length > 1) words.push(t('L.pieces', { list: rangesOf(nums), n: p.of }));
+  else if (nums.length === 1) words.push(t('L.piece', { k: nums[0], n: p.of }));
+  if (runs.some((r) => r.repeat === 'again')) words.push(t('L.piece.again'));
+  else if (runs.some((r) => r.repeat === 'again-later')) words.push(t('L.piece.again-later'));
+  if (members.includes(current)) words.push(...amountOf(p));
+  return words.join(' · ');
+}
+
+/**
+ * The run a step takes the landing to from run `i` (FP-21: "Stepping the
+ * pieces follows find's concept, in passage order, wrapping"): the next in
+ * the step's order, or the one before it, round to the first from the last
+ * and to the last from the first.
+ * @param {Pieces} p
+ * @param {number} i the run the landing stands at, an index into `p.runs`
+ * @param {1 | -1} dir
+ * @returns {number}
+ */
+export function stepFrom(p, i, dir) {
+  const n = p.order.length, k = p.order.indexOf(i);
+  if (k < 0) return p.order[dir > 0 ? 0 : n - 1];
+  return p.order[(((k + dir) % n) + n) % n];
+}
+
 /** the shell's names for the end of the page's session: a read so refused is asked again in the form the end left the page */
 const ENDED = new Set(['session_ended', 'session_died', 'closed']);
 /** the board's names for a read it could not take now and takes asked again: its admission, its scan permits, its history reader */
@@ -196,17 +393,19 @@ export function unknownOf(r, subject, addr) {
 
 /**
  * The line's words (see the head): a part, "only part of ⟨subject⟩ is in
- * ⟨where⟩", with the places it stands in where they are two or more, and,
- * where the text shows withheld text, that the rest may be under it; pieces,
- * "all of ⟨subject⟩ is in ⟨where⟩" and its places; couldn't tell, "couldn't
- * tell whether ⟨where⟩ holds ⟨subject⟩: ⟨reason⟩".
+ * ⟨where⟩", with the places it stands in where they are two or more and the
+ * line counts them, and, where the text shows withheld text, that the rest
+ * may be under it; pieces, "all of ⟨subject⟩ is in ⟨where⟩" and its places
+ * where the line counts them; couldn't tell, "couldn't tell whether ⟨where⟩
+ * holds ⟨subject⟩: ⟨reason⟩".
  * @param {Said} s
+ * @param {boolean} [counts] the line counts the runs holding the passage — a drawn link's far end's, before departure; a landing's never, its outline showing them (FP-21: "nothing counts 'places'")
  * @returns {string}
  */
-export function lineOf(s) {
+export function lineOf(s, counts = true) {
   const subject = t(SUBJECTS[s.subject]), where = whereOf(s.addr);
   if (s.state === 'unknown') return t('L.held.unknown', { subject, where, reason: t(s.why || 'L.held.why.other') });
-  const places = s.places > 1 ? t('L.held.places', { n: s.places }) : '';
+  const places = counts && s.places > 1 ? t('L.held.places', { n: s.places }) : '';
   if (s.state === 'pieces') return t('L.held.pieces', { subject, where }) + places;
   return t('L.held.part', { subject, where }) + places + (s.withheld ? t('L.held.withheld') : '');
 }

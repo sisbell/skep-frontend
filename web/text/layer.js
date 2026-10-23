@@ -107,7 +107,9 @@
 // the view's centre first), so mid scale greeks the columns the mount sets
 // and no word moves at the hand-off; the loop runs `frame` before P-RENDER
 // draws, so the canvas draws or yields each line by the lines standing this
-// frame (`standing`). WHEN A DOCUMENT IS SET AGAIN WHILE IT IS READ — its article rebuilt in
+// frame (`standing`), and outlines an arrival's runs on the fold's own lines
+// where no part of them stands, any document's, mounted or not (`foldBoxes`;
+// issue #158). WHEN A DOCUMENT IS SET AGAIN WHILE IT IS READ — its article rebuilt in
 // another fold, or taken down for a feed row and mounted again — the passage
 // at the visible view's centre keeps its place and its size on screen
 // (`hold`; P-LAY's `holdOf`, P-CAM's `reanchor`): the passage's own bytes,
@@ -2081,10 +2083,11 @@ export function signRects(addr, pos) {
  * The client rects of the bytes of a span its mounted article's standing
  * parts hold, line by line: `spanRects` over the stretch of it the parts
  * standing hold (`standingStretch`), so a span whose first or last line
- * stands in no part — out of view, a column away — is outlined on the lines
- * that stand (P-RENDER's arrival mark, and the light a one-step move along
- * the trail draws with its marks: issue #152's design decision); null where
- * no part standing holds any of it.
+ * stands in no part — out of view, a column away — is outlined on its own
+ * glyphs where its lines stand (P-RENDER's arrival mark, its other lines
+ * outlined on their fold's boxes, `foldBoxes`, and the light a one-step move
+ * along the trail draws with its marks: issue #152's design decision); null
+ * where no part standing holds any of it.
  * @param {string} addr
  * @param {number} pos
  * @param {number} width
@@ -2472,9 +2475,44 @@ export function holdsText(addr, x, y) {
 
 /**
  * The screen boxes of the lines of a document's fold holding a span, each the
+ * width of its column, with the line it is (an index into the fold's lines,
+ * as `lineStands` reads them) and its column — in the fold its article stands
+ * in where one stands, else the one `foldOf` sets, whatever its scale: what
+ * P-RENDER outlines an arrival's run on where no part of it stands as text
+ * (issue #158's design decision: "outline every run, whether it is in view or
+ * not"), and what `lineBoxes` reads; none where the document's text has not
+ * arrived.
+ * @param {string} addr
+ * @param {number} pos
+ * @param {number} width
+ * @returns {Array<{line: number, column: number, rect: Rect}>}
+ */
+export function foldBoxes(addr, pos, width) {
+  const rec = mounted.get(addr), d = REC.doc(addr);
+  if (!rec && d.from < 0) return [];
+  const f = rec ? rec.fold : foldOf(d), blocks = rec ? rec.made.blocks : d.blocks, box = docBox(addr), end = pos + Math.max(1, width);
+  /** @type {Array<{line: number, column: number, rect: Rect}>} */
+  const out = [];
+  f.columns.forEach((c, ci) => {
+    for (let i = c.first; i < c.first + c.n; i++) {
+      const l = f.lines[i];
+      if (l.at == null) continue;
+      // the positions a line holds: from its first own character to the next line's of its block, else to its block's end
+      let next = Infinity;
+      for (let k = i + 1; k < f.lines.length && f.lines[k].pos === l.pos; k++) { const a = f.lines[k].at; if (a != null && a > l.at) { next = a; break; } }
+      const b = next === Infinity ? blocks.find((x) => x.pos === l.pos) : null;
+      const to = next === Infinity ? (b ? b.pos + b.width : l.at + 1) : next;
+      if (l.at < end && pos < to) out.push({ line: i, column: ci, rect: { x: sx(box.x + c.x), y: sy(box.y + c.y + (l.top - c.top) * f.fs), w: c.w * cam.scale, h: l.h * f.fs * cam.scale } });
+    }
+  });
+  return out;
+}
+
+/**
+ * The screen boxes of the lines of a document's fold holding a span, each the
  * width of its column — where the document's article stands in the mount
- * band: BM's beams leave a line that stands in no part where its fold sets
- * it; null where no such article stands.
+ * band (`foldBoxes`): BM's beams leave a line that stands in no part where its
+ * fold sets it; null where no such article stands.
  * @param {string} addr
  * @param {number} pos
  * @param {number} width
@@ -2482,22 +2520,7 @@ export function holdsText(addr, x, y) {
  */
 export function lineBoxes(addr, pos, width) {
   const rec = mounted.get(addr); if (!rec || !rec.banded) return null;
-  const f = rec.fold, box = docBox(addr), end = pos + Math.max(1, width);
-  /** @type {Rect[]} */
-  const out = [];
-  f.columns.forEach((c) => {
-    for (let i = c.first; i < c.first + c.n; i++) {
-      const l = f.lines[i];
-      if (l.at == null) continue;
-      // the positions a line holds: from its first own character to the next line's of its block, else to its block's end
-      let next = Infinity;
-      for (let k = i + 1; k < f.lines.length && f.lines[k].pos === l.pos; k++) { const a = f.lines[k].at; if (a != null && a > l.at) { next = a; break; } }
-      const b = next === Infinity ? rec.made.blocks.find((x) => x.pos === l.pos) : null;
-      const to = next === Infinity ? (b ? b.pos + b.width : l.at + 1) : next;
-      if (l.at < end && pos < to) out.push({ x: sx(box.x + c.x), y: sy(box.y + c.y + (l.top - c.top) * f.fs), w: c.w * cam.scale, h: l.h * f.fs * cam.scale });
-    }
-  });
-  return out;
+  return foldBoxes(addr, pos, width).map((b) => b.rect);
 }
 
 /** the boundary point of the text of the plane's layer under a screen point, as the platform finds it; null where none stands there */

@@ -102,8 +102,8 @@
 //     VALUE, the hue kept), the set client-side, never written;
 //   - a link LIT AT AN ARRIVAL — the one a landing followed, or the one a
 //     one-step move along the trail crossed the follow of (N-GO's
-//     `litLinks`; issue #152's design decision) — is drawn heavier until the
-//     next act (foundations §2.1's register: "the arrival an outline around
+//     `litLinks`; issue #152's design decision) — is drawn heavier while the
+//     arrival stands (FP-21; foundations §2.1's register: "the arrival an outline around
 //     its span with the followed link drawn heavier": WEIGHT);
 //   - a link at a mark JOINING TWO DOCUMENTS — a mid connection, a scene's
 //     line — is decided ONCE, from the link and the two documents, never at

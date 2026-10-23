@@ -40,8 +40,12 @@
 // it on the line moves; the strip marks the position, and, while the walk's
 // document is kept in view with the view's centre off its region (N-WALK's
 // `kept`), the view's window over it instead (T-LAYER's `windowIn`), open at
-// whichever end the view has run past (issue #141's design decision); the
-// version marker ○ beside it (unlit at the bare
+// whichever end the view has run past (issue #141's design decision); and
+// where an arrival in several runs stands in that document, each run as an
+// outlined extent along it, the one the landing stands at filled (issue
+// #158's design decision: "Draw the runs on the address line's position strip
+// as outlined extents"; N-GO's landing, through the reader the app hands in);
+// the version marker ○ beside it (unlit at the bare
 // address, lit at a pinned member; no sentence); itself LEAP's box (a click,
 // Enter or Mod+L opens it; the chord drawn for the platform in its title,
 // rule 19), which opens holding the address the display names (K-30), so the
@@ -84,7 +88,7 @@
 // removed; `whereAmI` RE-CUT to foundations §2.2, its document form nearer
 // than mid and its position at the document's own reading scale alone; the
 // diagnostics behind `h` are the gate's hooks).
-// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-22, FP-25.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from '../nav/trail.js';
@@ -121,7 +125,10 @@ let stop = 'back';
  * @property {(byKey: boolean) => void} trailList
  * @property {(el: HTMLElement) => void} signIn
  * @property {() => ({id: string, text: string} | null)} [aside] a jump's face standing out of the visible view: its string's id and its words (O-HOST's `aside`); null where none stands so
+ * @property {() => (Pieces | null)} [pieces] the runs of an arrival in several, in the document landed in (N-GO's landing); null where none stands
  */
+
+/** @typedef {{addr: string, runs: Array<{pos: number, width: number}>, current: number}} Pieces the runs of an arrival in several, the one the landing stands at by index */
 /** @type {Acts | null} */
 let acts = null;
 
@@ -300,8 +307,10 @@ function slot(a) {
  * The position strip: the document's length, the position named marked on
  * it — or, where the walk keeps the document in view off the view's centre,
  * the view's window over it, open at whichever end the view has run past
- * (issue #141's design decision); its room alone, hidden, where no position is
- * named.
+ * (issue #141's design decision) — and the runs of an arrival in several
+ * standing in that document, each an outlined extent from its first position
+ * to its last, the one the landing stands at filled (see the head); its room
+ * alone, hidden, where no position is named.
  * @param {AddressDisplay} a
  */
 function strip(a) {
@@ -316,7 +325,9 @@ function strip(a) {
     const from = w.start ? 0 : along(w.from), to = w.end ? 1 : along(w.to);
     mark = `<span class="strip-window${w.start ? ' open-start' : ''}${w.end ? ' open-end' : ''}" style="left:${pct(from)};width:${pct(to - from)}"></span>`;
   }
-  return `<span class="strip" data-act="strip" title="${esc(t('F.position', { p: a.pos }))}">${mark}</span>`;
+  const p = acts && acts.pieces ? acts.pieces() : null;
+  const runs = p && p.addr === a.doc ? p.runs.map((r, i) => `<span class="strip-run${i === p.current ? ' current' : ''}" style="left:${pct(along(r.pos))};width:${pct(along(r.pos + r.width) - along(r.pos))}"></span>`).join('') : '';
+  return `<span class="strip" data-act="strip" title="${esc(t('F.position', { p: a.pos }))}">${runs}${mark}</span>`;
 }
 
 /** rebuild the line from state; the focus kept on the act that held it (rule 11); the assertive words said once as they arrive (D4) */

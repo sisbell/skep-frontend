@@ -22,11 +22,24 @@
 // A far end's state is read through the version its far box shows, its line
 // naming the version and the dead end's words its own: "its passage is not in
 // version ⟨k⟩" (issue #154).
+// THE RUNS' LABELS (issue #158's design decision; FP-21): a text's runs cut
+// where their bytes break the passage's order, one stretch where they follow
+// on in both (a mutant joining them by the text alone turns red); runs of
+// different material numbered in the passage's own order, never the text's
+// (a mutant numbering by the text turns red), a repeat "again" and the first
+// of its material "again later", none numbered where every run holds the
+// same material; the run the landing stands at adding "all of the passage" or
+// "only part of the passage" — the withheld text's clause after a part — and
+// "in another order" where the text sets the pieces out of the passage's
+// order; labels that would stack merged into the pieces they hold, a range
+// for consecutive numbers; the step in the passage's order, a repeat after
+// the first of its material, wrapping (a mutant stepping in the text's order,
+// or stopping at the ends, turns red); and no label counts "places".
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { heldOf, piecesOf, lineOf, saidOf, unknownOf, whyOf, retries, whereOf, farHolds, farSays } from './held.js';
+import { heldOf, piecesOf, stretchesOf, piecesIn, labelOf, mergedLabel, stepFrom, lineOf, saidOf, unknownOf, whyOf, retries, whereOf, farHolds, farSays } from './held.js';
 import { t } from '../strings.js';
 
 const D = '1.0.1.0.3', OTHER_HOME = '1.0.2.0.5', CITE = '1.1.0.1.0.1.0.3.13';
@@ -145,4 +158,56 @@ test('a drawn link\'s far end says what the version its far box shows holds of i
     REC.takeProjection(L, 1, V2, []);
     assert.equal(farSays(at()), t('F.floating.member', { k: 2 }), 'none of it in the version: "its passage is not in version 2"');
   } finally { LK.readers({}); }
+});
+
+test('a text\'s runs are cut where their bytes break the passage\'s order, bytes that follow on in the text and in the passage one stretch, each at its own positions; bytes of another I-space or past the passage hold none of it (issue #158)', () => {
+  const P = '1.0.1.0.127.0.1', passage = { prefix: P, ordinal: 3, width: 10 };
+  // a run at 20 of eight positions: the passage's last five bytes, then its first three; a run at 40: another I-space's bytes, then the passage's 4th and 5th
+  const runs = [{ pos: 20, width: 8 }, { pos: 40, width: 4 }];
+  const ids = [[{ prefix: P, ordinal: 8, width: 5 }, { prefix: P, ordinal: 3, width: 3 }], [{ prefix: '1.0.1.0.3.0.1', ordinal: 3, width: 2 }, { prefix: P, ordinal: 6, width: 2 }]];
+  assert.deepEqual(stretchesOf(passage, runs, ids), [{ pos: 20, width: 5, at: 5 }, { pos: 25, width: 3, at: 0 }, { pos: 42, width: 2, at: 3 }], 'the first run cut at its break, the second\'s foreign bytes holding none of it');
+  assert.deepEqual(stretchesOf(passage, [{ pos: 7, width: 10 }], [[{ prefix: P, ordinal: 1, width: 6 }, { prefix: P, ordinal: 7, width: 4 }]]), [{ pos: 9, width: 8, at: 0 }],
+    'two image runs following on in the text and in the passage: one stretch, from the passage\'s first byte');
+});
+
+test('an arrival\'s runs labelled: pieces of different material numbered in the passage\'s own order — never the text\'s — a repeat "again" and the first of its material "again later"; the run the landing stands at adding how much of the passage the runs hold and "in another order"; no label counting places (FP-21; issue #158)', () => {
+  // the text holds the passage's second half at 10, its first half at 40, and its second half again at 70
+  const p = /** @type {import('./held.js').Pieces} */ (piecesIn([{ pos: 40, width: 5, at: 0 }, { pos: 10, width: 5, at: 5 }, { pos: 70, width: 5, at: 5 }], 10));
+  assert.ok(p, 'three runs: labelled');
+  assert.deepEqual(p.runs.map((r) => [r.pos, r.piece, r.repeat]), [[10, 2, 'again-later'], [40, 1, null], [70, 2, 'again']], 'in the text\'s order, numbered by the passage\'s: its first half piece 1');
+  assert.deepEqual([p.of, p.whole, p.reordered, p.order], [2, true, true, [1, 0, 2]], 'two pieces, all of the passage, out of its order; the step from piece 1, then piece 2, then its repeat');
+  const piece = (/** @type {number} */ k) => t('L.piece', { k, n: 2 });
+  assert.deepEqual(p.runs.map((_, i) => labelOf(p, i)), [piece(2) + ' · ' + t('L.piece.again-later'), piece(1), piece(2) + ' · ' + t('L.piece.again')]);
+  assert.equal(labelOf(p, 1, true), [piece(1), t('L.piece.all'), t('L.piece.order')].join(' · '), 'the run the landing stands at: "piece 1 of 2 · all of the passage · in another order"');
+  // the passage's first three and its last three positions alone, in its order, the text showing withheld text
+  const part = /** @type {import('./held.js').Pieces} */ (piecesIn([{ pos: 2, width: 3, at: 0 }, { pos: 30, width: 3, at: 7 }], 10, true));
+  assert.deepEqual([part.whole, part.reordered, part.withheld], [false, false, true]);
+  assert.equal(labelOf(part, 0, true), piece(1) + ' · ' + t('L.piece.part') + t('L.held.withheld'), '"only part of the passage", the rest maybe under the withheld text');
+  assert.ok([p, part].flatMap((x) => x.runs.map((_, i) => labelOf(x, i, true))).every((w) => !w.includes(t('L.held.places', { n: 2 }).trim()) && !/places/.test(w)), 'no label counts "places"');
+});
+
+test('runs holding one material are unnumbered — "again later", then "again" — the run the landing stands at saying how much; one run, or none, is no labelled arrival (issue #158)', () => {
+  const p = /** @type {import('./held.js').Pieces} */ (piecesIn([{ pos: 9, width: 4, at: 0 }, { pos: 30, width: 4, at: 0 }], 4));
+  assert.deepEqual(p.runs.map((r) => [r.piece, r.repeat]), [[null, 'again-later'], [null, 'again']], 'the same material twice: no number');
+  assert.deepEqual([labelOf(p, 0, true), labelOf(p, 1)], [t('L.piece.again-later') + ' · ' + t('L.piece.all'), t('L.piece.again')], 'the landing\'s words name the other copy and the amount');
+  assert.deepEqual([piecesIn([{ pos: 9, width: 4, at: 0 }], 4), piecesIn([], 4)], [null, null], 'one run: the outline or the landing\'s line says it');
+});
+
+test('labels that would stack merge into the pieces they hold — consecutive numbers a range — with the repeat\'s word and, where the landing stands at one of them, the amount; the step goes in the passage\'s order and wraps (issue #158)', () => {
+  // nine pieces of the passage in its own order at 10, 20, … 90
+  const p = /** @type {import('./held.js').Pieces} */ (piecesIn(Array.from({ length: 9 }, (_, i) => ({ pos: 10 * (i + 1), width: 2, at: 2 * i })), 20));
+  assert.equal(mergedLabel(p, [0, 1, 2, 3]), t('L.pieces', { list: '1–4', n: 9 }), '"pieces 1–4 of 9"');
+  assert.equal(mergedLabel(p, [0, 2, 3, 5]), t('L.pieces', { list: '1, 3–4, 6', n: 9 }), 'a gap named, never bridged by the range');
+  assert.equal(mergedLabel(p, [4]), labelOf(p, 4), 'one run: its own label');
+  assert.equal(mergedLabel(p, [0, 1], 0), [t('L.pieces', { list: '1–2', n: 9 }), t('L.piece.part')].join(' · '), 'the landing\'s group: the amount after');
+  assert.deepEqual([stepFrom(p, 0, 1), stepFrom(p, 8, 1), stepFrom(p, 0, -1), stepFrom(p, 4, -1)], [1, 0, 8, 3], 'next, wrapping past the last; previous, wrapping past the first');
+  const again = /** @type {import('./held.js').Pieces} */ (piecesIn([{ pos: 10, width: 2, at: 2 }, { pos: 20, width: 2, at: 0 }, { pos: 30, width: 2, at: 2 }], 4));
+  assert.equal(mergedLabel(again, [0, 1, 2]), [t('L.pieces', { list: '1–2', n: 2 }), t('L.piece.again')].join(' · '), 'a repeat inside the group: "again"');
+  assert.deepEqual([stepFrom(again, 1, 1), stepFrom(again, 0, 1), stepFrom(again, 2, 1)], [0, 2, 1], 'piece 1, then piece 2 where the text first holds it, then its repeat, then round');
+});
+
+test('a landing\'s line counts no runs; a drawn link\'s far end\'s still counts them (FP-21; issue #242 holds its words)', () => {
+  const s = /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part', places: 2 }, 'selected', '1.0.1.0.43.3'));
+  assert.equal(lineOf(s, false), 'only part of what you selected is in version 3', 'the landing\'s');
+  assert.equal(lineOf(s), 'only part of what you selected is in version 3 — in 2 places', 'the far end\'s');
 });

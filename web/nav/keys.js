@@ -27,7 +27,14 @@
 // guard); Esc closes the most recently opened of the box, a card or scene
 // still reading, the overlay, the scene and the selection (§4 rule 7's
 // "innermost thing"; D7: a scene stands over a selection, so it closes
-// first). Tab is the platform's, over the
+// first), and after them all ends the arrival (FP-21: "The state ends only at
+// another landing, at find opening, or at Esc after anything nearer"; N-GO's
+// `endArrival`). THE STEP (FP-21: "Stepping the pieces follows find's
+// concept"; issue #158's design decision): Mod+G and Mod+Shift+G — K-91's
+// find chords — step to the next and the previous run of an arrival in
+// several runs (N-GO's `step`), from the plane, the corner, the one line, a
+// landing's line and a standing overlay alike, while such an arrival stands,
+// and are the platform's while none does. Tab is the platform's, over the
 // page's order: the line (ONE stop, ← and → among its acts — K-22) → the
 // plane (the mirror's current item) → the focused document's corner, where
 // Enter takes the corner's act and the walk's keys and the swallow do not
@@ -63,8 +70,9 @@
 // (ix)): `/` → K-30 Mod+L / Mod+K; `0`/`g`/Home → K-13 Mod+0, K-14
 // Mod+Shift+H; `t` → K-41 Mod+Y; `1`–`9` (a push) → K-40 Mod+1…9 (a cursor
 // move); `+`/`-` → K-11 Mod+= / Mod+-; the arrows' pan and the `k` toggle →
-// the walk, always live (K-1…K-7). K-91 (find) is NOT in this lane's cut —
-// its box has no design form (reported). Every teleport a key makes, and
+// the walk, always live (K-1…K-7). K-91's find itself is NOT in this lane's
+// cut — its box has no design form (reported); its next and previous chords
+// step an arrival's runs (see above). Every teleport a key makes, and
 // every camera move a key makes that re-takes the focus, is told a key made
 // it, so the ring stands at the focus it lands (D5 §4 rule 2).
 // Rules: FP-1, FP-2, FP-9 (a key changes view state or asks for a read, and
@@ -129,6 +137,8 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-52', chord: 'Mod+Shift+Enter', act: 'selection.scene', surface: 'selection' },
   { id: 'K-55', chord: 'Enter', act: 'cards.open', surface: 'cards' },
   { id: 'K-57', chord: 'Enter', act: 'corner.act', surface: 'corner' },
+  { id: 'K-91', chord: 'Mod+G', act: 'arrival.next', surface: 'plane' },
+  { id: 'K-91', chord: 'Mod+Shift+G', act: 'arrival.previous', surface: 'plane' },
   { id: 'K-62', chord: 'Mod+R', act: 'scene.relevel', surface: 'scene' },
   { id: 'K-63', chord: 'Esc', act: 'esc', surface: 'scene' },
   { id: 'K-64', chord: 'Mod+=', act: 'scene.swallowZoomIn', surface: 'scene' },
@@ -256,6 +266,9 @@ function route(e, chord, ctx) {
   if (chord === 'Shift+↑') return () => { SEL.selectFocused('up'); return true; };
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
+  // the step (K-91's chords; FP-21): an arrival's next and previous run, live from the plane and every control on it — held for a
+  // jump's landing while one is in the air, which may stand an arrival in several runs; the platform's find where none steps
+  if (chord === 'Mod+G' || chord === 'Mod+Shift+G') return GO.steps() || GO.inAir() ? () => { GO.step(chord === 'Mod+G' ? 1 : -1, byKey); return true; } : null;
   // the corner (K-57): Enter takes its act; its other keys are the platform's
   if (ctx.where === 'corner') {
     const corner = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-corner]'));
@@ -356,7 +369,8 @@ function swallow(/** @type {KeyboardEvent} */ e) {
  * face among them, whose dismissal abandons the jump — then a jump reaching
  * whose face another overlay took the place of (FP-25: "Esc or Back abandons
  * the jump"; N-GO's `abandon`), the scene, then the selection, which a scene
- * stands over and which outlives it; on the bare plane nothing.
+ * stands over and which outlives it, then the arrival — its outline, its
+ * labels and its line (FP-21; N-GO's `endArrival`); on the bare plane nothing.
  */
 export function esc() {
   if (LEAP.isOpen()) { LEAP.close(); return; }
@@ -365,6 +379,7 @@ export function esc() {
   if (GO.abandon()) return;
   if (SCENE.isOpen()) { SCENE.close(); CAM.markDirty(); return; }
   if (SEL.selected()) { SEL.clear(); return; }
+  GO.endArrival();
 }
 
 /**

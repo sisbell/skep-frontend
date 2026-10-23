@@ -46,7 +46,13 @@ carry was made, every span item holding a stretch of it marked
 light out; a landing's line its item's description (issue #153's design
 decision) — a passage the draft holds part of, carried into it, the focus on
 the item at its first held piece, described by the line's words, the one
-item described, none once the next act takes the line down; the links
+item described, none once the next landing takes the line down; a landing
+in several runs (issue #158's design decision: "Each run's accessible item
+carries its label from the moment of landing") — two paragraphs of the first
+edition landed in through the gate's door naming the passage they hold —
+the focus on piece 1's item, described by the line's words, piece 2's item
+by its own label, and Mod+G moving the focus to piece 2's item, described by
+the line's words then, piece 1's by its label; the links
 card's overlay toggle a switch in the AX tree (R60; WAI-ARIA's switch) —
 named by B1-S4's words before its state and described by the count after
 it, a press changing its checked state and neither its name nor its
@@ -839,9 +845,43 @@ def run(ctx):
             'a landing the draft holds part of: the focus on its item, described by the line\'s words — the one item described (issue #153)', d)
     ctx.leap(DOC, WINDOW[0])
     gone = described()
-    r.check(not gone['items'] and gone['said'] is None, 'the next act takes the description down with the line', gone)
+    r.check(not gone['items'] and gone['said'] is None, 'the next landing takes the description down with the line', gone)
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
+    # ---- each run's item carries its label (issue #158): two paragraphs of the first edition's own bytes, landed in through the
+    # gate's door naming the runs and the passage they hold by identity; the focus on piece 1's item, its description the line's
+    # words, piece 2's item described by its own label; Mod+G: the focus on piece 2's item, the line's words its description then
+    paras = [b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if b['kind'] == 'para' and b['width'] > 24 and b['pos'] + 12 < WINDOW[0]]
+    runs = [{'pos': paras[0]['pos'], 'width': 12}, {'pos': paras[1]['pos'], 'width': 12}] if len(paras) > 1 else []
+    ids = [ctx.js('window.__skep.model.identity(%s, %d, %d)' % (json.dumps(DOC), x['pos'], x['width'])) or [] for x in runs]
+    one = bool(runs) and all(ids) and len({i['prefix'] for xs in ids for i in xs}) == 1
+    passage = {'prefix': ids[0][0]['prefix'], 'ordinal': ids[0][0]['ordinal'], 'width': ids[1][-1]['ordinal'] + ids[1][-1]['width'] - ids[0][0]['ordinal']} if one else None
+    r.check(passage is not None, 'two paragraphs of the first edition\'s own bytes, by identity', {'runs': runs})
+    if passage is not None:
+        ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), runs[0]['pos'], json.dumps({'runs': runs, 'passage': passage})))
+        ctx.settle()
+        ctx.frames(3)
+
+        def pieces():
+            """the item the focus stands on, and each item described with the words of every description it names"""
+            return ctx.js('''(() => { const e = document.activeElement, sib = window.__skep.mirror.siblings();
+              const items = [...document.querySelectorAll('#mirror li[role="treeitem"][aria-describedby]')].map((li) => ({pos: sib[Number(li.dataset.i)].pos,
+                words: li.getAttribute('aria-describedby').split(' ').map((id) => (document.getElementById(id) || {}).textContent)}));
+              return {focused: e && e.closest && e.closest('#mirror') ? sib[Number(e.dataset.i)].pos : null, items, line: (window.__skep.landingLine() || {}).words}; })()''')
+        label = ctx.js('import("./strings.js").then(({t}) => [t("L.piece", {k: 1, n: 2}), t("L.piece", {k: 2, n: 2})])')
+        p = pieces()
+        r.check(p['focused'] == runs[0]['pos'] and sorted(p['items'], key=lambda i: i['pos']) == [{'pos': runs[0]['pos'], 'words': [p['line']]}, {'pos': runs[1]['pos'], 'words': [label[1]]}],
+                'a landing in two runs: the focus on piece 1\'s item, described by the line\'s words, and piece 2\'s item by its own label, "%s" (issue #158)' % label[1], dict(p, runs=runs))
+        ctx.drv.key('g', mods=('Meta',))
+        ctx.settle()
+        ctx.frames(3)
+        q = pieces()
+        r.check(q['focused'] == runs[1]['pos'] and sorted(q['items'], key=lambda i: i['pos']) == [{'pos': runs[0]['pos'], 'words': [label[0]]}, {'pos': runs[1]['pos'], 'words': [q['line']]}] and q['line'] != p['line'],
+                'Mod+G: the focus on piece 2\'s item, the line\'s words its description now, piece 1\'s item its own label (issue #158)', q)
+        r.figures['pieces_described'] = {'landing': p, 'stepped': q}
+        ctx.leap(DOC, WINDOW[0])
+        ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
+        ctx.frames(1)
     # ---- the mirror names a box once, by the version it shows (issue #154's design decision: "The box shows one version"):
     # a LEAP to version 1's address pins the box there; zoomed out to mid over it, the mirror's documents list the box once,
     # its current item, named by the version's address and its document's first line

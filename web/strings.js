@@ -271,13 +271,13 @@ export const STRINGS = {
   'L.reading': { text: 'reading ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reading: where the camera is, else the one line', lane: true },
   'L.reaching': { text: 'reaching ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reaching: at the act\'s site, else the one line', lane: true },
   // a landing's line (issue #153's design decision, whose own words are the part line's, "only part of what you selected is
-  // in version 3 — in 2 places", and the subject "the text you were reading"): what of the passage carried or followed the
-  // text landed in holds, where that is not all of it in one piece, or where no answer told — the passage named by what it
-  // was to the reader, the text by F.floating's two forms, the places and the withheld text after it; the same words at a
-  // drawn link's far end before departure (BM-HELD's `lineOf`)
+  // in version 3", and the subject "the text you were reading"): what of the passage carried or followed the text landed in
+  // holds, where it stands in one run and that is not all of it, or where no answer told — the passage named by what it was
+  // to the reader, the text by F.floating's two forms, the withheld text after it; the same words at a drawn link's far end
+  // before departure, the places it stands in counted there alone (BM-HELD's `lineOf`)
   'L.held.part': { text: 'only part of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
   'L.held.pieces': { text: 'all of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
-  'L.held.places': { text: ' — in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
+  'L.held.places': { text: ' — in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
   'L.held.withheld': { text: '; the rest may be under the withheld text here', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
   'L.held.unknown': { text: 'couldn\'t tell whether ⟨where⟩ holds ⟨subject⟩: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
   'L.held.selected': { text: 'what you selected', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
@@ -291,6 +291,19 @@ export const STRINGS = {
   'L.held.why.withheld': { text: 'some of it is withheld from you', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
   'L.held.why.unread': { text: 'its text could not be read', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
   'L.held.why.other': { text: 'the board did not say', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row; a link\'s far end', lane: true },
+  // THE RUNS' LABELS (issue #158's design decision, whose own words are these — its first decision's "part 2 of 3" and "parts
+  // 1–4 of 9" with its word made "piece"): an arrival in several runs labels each at the text's edge — its piece in the
+  // passage's own order, a repeat's word, and at the run the landing stands at how much of the passage the runs hold and
+  // whether the text holds it in another order (BM-HELD's `labelOf`, `mergedLabel`); the landing's line steps among them
+  'L.piece': { text: 'piece ⟨k⟩ of ⟨n⟩', cls: 'DRAFT', source: '', screen: 'an arrival\'s run labels; a landing\'s line; the ARIA mirror', lane: true },
+  'L.pieces': { text: 'pieces ⟨list⟩ of ⟨n⟩', cls: 'DRAFT', source: '', screen: 'an arrival\'s run labels; a landing\'s line', lane: true },
+  'L.piece.again': { text: 'again', cls: 'DRAFT', source: '', screen: 'an arrival\'s run labels; a landing\'s line; the ARIA mirror', lane: true },
+  'L.piece.again-later': { text: 'again later', cls: 'DRAFT', source: '', screen: 'an arrival\'s run labels; a landing\'s line; the ARIA mirror', lane: true },
+  'L.piece.all': { text: 'all of the passage', cls: 'DRAFT', source: '', screen: 'a landing\'s line; the ARIA mirror', lane: true },
+  'L.piece.part': { text: 'only part of the passage', cls: 'DRAFT', source: '', screen: 'a landing\'s line; the ARIA mirror', lane: true },
+  'L.piece.order': { text: 'in another order', cls: 'DRAFT', source: '', screen: 'a landing\'s line; the ARIA mirror', lane: true },
+  'L.piece.next': { text: 'next piece', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
+  'L.piece.previous': { text: 'previous piece', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
   // a versions row's strip for the two states F.versions' three do not name (issue #153's design decision)
   'L.versions.pieces': { text: 'holds all of the passage, in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.unknown': { text: 'couldn\'t tell whether it holds the passage: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },

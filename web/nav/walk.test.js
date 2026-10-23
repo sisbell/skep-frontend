@@ -40,7 +40,11 @@
 // whose item says nothing of it turns red. The item a landing stands on
 // takes the landing's line as its description, the mirror's hidden element
 // holding its words, marked in place until the landing says nothing (issue
-// #153): a mutant whose item carries no description turns red. A link's item names its far end as its
+// #153): a mutant whose item carries no description turns red; where its
+// passage stands in several runs, every other span holding one carries that
+// run's label as its own description, and a step moves the landing's from
+// one to the next in place (issue #158): a mutant that describes the
+// landing's item alone, or rebuilds to move it, turns red. A link's item names its far end as its
 // tail and its card do (issue #132): its address alone while nothing is
 // answered of its document, then the words the board's answer gives — a
 // mutant that names the address alone, or speaks before an answer, turns red.
@@ -720,26 +724,75 @@ test('the item a landing stands on takes its line as its description — aria-de
   /** the elements the description stands on: each one's kind and place */
   const described = () => items.filter((i) => i.attrs['aria-describedby'] === 'walk-landing').map((i) => { const n = WALK.siblingsNow()[Number(i.attrs['data-i'])]; return [n.kind, n.pos]; });
   /** @type {import('./walk.js').Described | null} what the landing says, as N-GO answers it */
-  let said = { addr: D, pos: 13, words: 'only part of the text you were reading is in version 3' };
+  let said = { addr: D, pos: 13, words: 'only part of the text you were reading is in version 3', runs: [] };
   try {
     WALK.attach(/** @type {any} */ (mirror));
     WALK.readers({ described: () => said });
     await WALK.focusTo(D, 13);
     assert.deepEqual([described(), words?.textContent], [[['block', 11]], said.words], 'the rebuild: the span holding the landing\'s position, alone, its description the line');
     const was = rebuilds;
-    said = { ...said, words: 'all of the text you were reading is in version 3 — in 2 places' };
+    said = { ...said, words: 'all of the text you were reading is in version 3' };
     WALK.markDescribed();
     assert.deepEqual([described(), words?.textContent], [[['block', 11]], said.words], 'its words changed in place');
     said = null;
     WALK.markDescribed();
     assert.deepEqual([described(), words?.textContent], [[], ''], 'the landing says nothing: no description, its words emptied');
-    said = { addr: E, pos: 1, words: 'its passage is not in version 2' };
+    said = { addr: E, pos: 1, words: 'its passage is not in version 2', runs: [] };
     WALK.markDescribed();
     assert.deepEqual(described(), [], 'a landing in another document describes no item here');
     assert.equal(rebuilds, was, 'every mark made in place, nothing rebuilt');
-    said = { addr: D, pos: 13, words: 'its passage is not in version 2' };
+    said = { addr: D, pos: 13, words: 'its passage is not in version 2', runs: [] };
     await WALK.focusTo(D, null);
     assert.deepEqual(described(), [['document', null]], 'the walk on the document whole: the document\'s item described');
+  } finally {
+    globalThis.document = platform;
+    WALK.readers({});
+  }
+});
+
+// placed with the tests above: it attaches a mirror of its own
+test('where the landing\'s passage stands in several runs every other span holding one is described by that run\'s label, a hidden description of its own, and a step moves the landing\'s description from one to the next in place (issue #158: "Each run\'s accessible item carries its label")', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @typedef {{attrs: Record<string, string>, dataset: {i?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void, removeAttribute: (k: string) => void}} Item */
+  /** @type {Item[]} */
+  let items = [];
+  /** @type {Map<string, {textContent: string}>} the hidden descriptions the last rebuild wrote, by id */
+  let hidden = new Map();
+  let rebuilds = 0;
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      rebuilds++;
+      items = [...html.matchAll(/<li\b[^>]*>/g)].map((m) => {
+        /** @type {Record<string, string>} */
+        const attrs = Object.fromEntries([...m[0].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+        return { attrs, dataset: { i: attrs['data-i'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; }, removeAttribute: (k) => { delete attrs[k]; } };
+      });
+      hidden = new Map([...html.matchAll(/<div id="([\w-]+)" hidden>([^<]*)<\/div>/g)].map((m) => [m[1], { textContent: m[2] }]));
+    },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
+    querySelector: (/** @type {string} */ sel) => hidden.get(sel.slice(1)) || null,
+  };
+  /** each item described: its span's first position, and the words of every description it names */
+  const described = () => items.filter((i) => i.attrs['aria-describedby']).map((i) => [WALK.siblingsNow()[Number(i.attrs['data-i'])].pos, i.attrs['aria-describedby'].split(' ').map((id) => hidden.get(id)?.textContent)]);
+  const runs = [{ pos: 13, width: 3, words: 'piece 1 of 2' }, { pos: 28, width: 2, words: 'piece 2 of 2' }];
+  /** @type {import('./walk.js').Described | null} what the landing says, as N-GO answers it */
+  let said = { addr: D, pos: 13, words: 'piece 1 of 2 · all of the passage', runs };
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    WALK.readers({ described: () => said });
+    await WALK.focusTo(D, 13);
+    assert.deepEqual(described(), [[11, ['piece 1 of 2 · all of the passage']], [27, ['piece 2 of 2']]], 'the landing\'s item its line, the other run\'s span its label');
+    const was = rebuilds;
+    said = { ...said, pos: 28, words: 'piece 2 of 2 · all of the passage' };
+    WALK.markDescribed();
+    assert.deepEqual(described(), [[11, ['piece 1 of 2']], [27, ['piece 2 of 2 · all of the passage']]], 'a step: the landing\'s description moved to the run stepped to, the one left its own label');
+    said = null;
+    WALK.markDescribed();
+    assert.deepEqual(described(), [], 'the arrival ended: nothing described');
+    assert.equal(rebuilds, was, 'every mark made in place, nothing rebuilt');
   } finally {
     globalThis.document = platform;
     WALK.readers({});

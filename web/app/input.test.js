@@ -51,6 +51,11 @@
 // after the series, a pinch, and the camera key's drag each take the camera
 // over: the jump lands where the camera is, its flight ended (a page that
 // takes nothing over, or drops every wheel event, turns red).
+// A press on an outlined run of an arrival in several runs, below its
+// document's reading scale, is a step to it (issue #158's design decision:
+// "Clicking an outlined run below reading scale does the same"): the landing
+// standing there, the camera bound for its reading view, no trail entry, the
+// arrival standing (a page that teleports to the document there turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -187,6 +192,63 @@ test('a click on a run\'s hairline LEAPs to its source carrying the run, the lan
     assert.deepEqual(GO.arrivalMark(), { addr: O, pos: 12, runs: [{ pos: 12, width: 15 }], link: null }, 'the run marked where the source holds it');
     assert.deepEqual(fake.unanswered, [], 'the run carried, and no other passage');
   } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a press on an outlined run of an arrival in several runs, below its document\'s reading scale, is a step to it — the landing standing there, the camera bound for its reading view — never a teleport to the document: no trail entry, the arrival standing (issue #158)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the plane's listeners, by event */
+  const plane = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    // the first edition's run at 23, fifteen positions, carried into the draft 1.0.1.0.7, which holds its first seven at 12 and its last eight at 30
+    const D = '1.0.1.0.3', O = '1.0.1.0.7';
+    const text = 'Tumbler.\n\nAs it says: the window run.', source = 'A source.\n\nthe window run, and then more words here.';
+    const carried = { addr: D, pos: 23, width: 15 };
+    const fake = FAKE.create({
+      [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(O) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + byteLength(source) }] } },
+      [FAKE.keyOf('op', { frame: F.docMetadata(O) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: O, published: false, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } },
+      [FAKE.keyOf('op', { frame: F.retrieveV(O, 1, byteLength(source)) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: source }] } },
+      [FAKE.keyOf('op', { frame: F.image(O, 1, byteLength(source)) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: O + '.0.1.1', width: String(byteLength(source)) }] } },
+      [FAKE.keyOf('op', { frame: F.findLinksV(O, 1, byteLength(source)) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+      [FAKE.keyOf('op', { frame: F.compare([{ doc: D, spans: [{ ordinal: carried.pos, positions: carried.width }] }], [{ doc: O, spans: [{ ordinal: 1, positions: byteLength(source) }] }]) })]:
+        { result: { as_of: 1, resp: 'compare', pairs: [{ d1: D, d2: O, u1: { ordinal: '23', subspace: '1' }, u2: { ordinal: '12', subspace: '1' }, width: '7' }, { d1: D, d2: O, u1: { ordinal: '30', subspace: '1' }, u2: { ordinal: '30', subspace: '1' }, width: '8' }] } },
+    });
+    PORT.boot(fake);
+    REC.invalidate(O);
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
+    REC.takeDelivery(D, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: byteLength(text) }]);
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), classList: { add() {}, remove() {} } }, layer: listens(null), corners: listens(null) }));
+    CAM.setViewport(1440, 900);
+    const leap = GO.leapTo(O, { how: 'leap', carry: carried });
+    for (let i = 0; i < 300 && !GO.landing(); i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
+    await leap;
+    assert.deepEqual([GO.arrivalMark()?.runs, GO.landing()?.current], [[{ pos: 12, width: 7 }, { pos: 30, width: 8 }], 0], 'landed at piece 1, both runs outlined');
+    // zoomed out below the draft's reading scale, the canvas having outlined its second run here as its last frame drew it
+    CAM.set({ ...LAYER.centreOf(O, 30), scale: 3 / LAYER.foldOf(REC.doc(O)).fs });
+    assert.equal(LAYER.atReadingScale(O), false, 'below its reading scale');
+    RENDER.stats.arrival = [{ x: 700, y: 448, w: 40, h: 4, run: 1 }];
+    const entries = TRAIL.all().length, at = { clientX: 715, clientY: 450 };
+    plane.get('pointerdown')?.({ ...at, ctrlKey: false, metaKey: false, pointerId: 1 });
+    plane.get('pointerup')?.({ ...at });
+    assert.deepEqual([GO.landing()?.current, GO.landing()?.pos, TRAIL.all().length], [1, 30, entries], 'a step to the run pressed: the landing there, no trail entry');
+    const v = CAM.destination(), want = GO.viewFor(O, 30);
+    assert.ok(Math.abs(v.x - want.x) < 1e-6 && Math.abs(v.y - want.y) < 1e-6 && Math.abs(v.scale - want.scale) < 1e-9, 'the camera bound for its reading view');
+    assert.equal(GO.arrivalMark()?.addr, O, 'the arrival standing');
+    assert.deepEqual(fake.unanswered, []);
+  } finally {
+    RENDER.stats.arrival = [];
+    GO.endArrival();
+    if (CAM.flying()) CAM.step(Infinity);
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });

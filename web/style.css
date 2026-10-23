@@ -41,6 +41,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    document's reading scale and where no document is named, the room of both kept, so nothing after it on the line moves */
 #line .slot .pos { display:inline-block; }
 #line .strip.none { visibility:hidden; }
+#line .strip-run { position:absolute; top:1px; bottom:1px; min-width:2px; box-sizing:border-box; border:1px solid var(--hue-you); }
+#line .strip-run.current { background:var(--hue-you); }
 #line .marker { display:inline-block; width:2ch; text-align:center; color:var(--dim); }
 #line .marker.lit { color:var(--accent); }
 #line .marker.none { visibility:hidden; }
@@ -190,6 +192,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #landing.on { display:block; }
 #landing.covered { display:none; }
 #landing .acts { display:block; margin-top:3px; }
+/* AN ARRIVAL'S RUNS' LABELS (issue #158's design decision): each at the text's edge beside its run's first line (O-LAND places
+   them), in the arrival's hue, under the landing's line; their room the edge and the gutter beside it, wrapped there */
+#pieces { position:fixed; left:0; top:0; width:0; height:0; z-index:24; pointer-events:none; }
+#pieces .piece { position:absolute; font-size:10px; line-height:13px; color:var(--hue-you); white-space:normal; overflow-wrap:break-word; }
 
 /* THE OVERLAYS — one at a time, conjured by an act, dismissed by its end */
 #overlay { position:fixed; left:0; top:0; z-index:30; display:none; max-width:min(560px, 92vw); background:#1b1f25;

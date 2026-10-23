@@ -26,7 +26,11 @@
 // the strip marks the view's window over it — past the first edition's last
 // line, open at both ends; above the long edition's first line, open at its
 // start alone — and the position elsewhere: a mutant that marks the position
-// there, or opens an end the view never ran past, turns red. The LEAP box's prefill
+// there, or opens an end the view never ran past, turns red. Where an arrival
+// in several runs stands in the document named, the strip outlines each run
+// as an extent along it, the one the landing stands at filled, and none for
+// an arrival elsewhere (issue #158): a mutant that draws them as ticks, or in
+// another document's strip, turns red. The LEAP box's prefill
 // is the address the display names (K-30: "the box open holding the current
 // address"; the box is the line's stop, opened), so the box never opens on an
 // address the line does not show — a mutant whose prefill keeps a rule of its
@@ -317,6 +321,25 @@ test('while the walk keeps its document in view off the view\'s centre, the stri
     const open = `${w.start ? ' open-start' : ''}${w.end ? ' open-end' : ''}`;
     assert.equal(mark(), `<span class="strip-window${open}" style="left:${(from * 100).toFixed(1)}%;width:${((to - from) * 100).toFixed(1)}%">`, `${where}: the strip marks the window, open at the ends run past`);
   }
+});
+
+test('where an arrival in several runs stands in the document named, the strip outlines each run as an extent along it, from its first position to its last, the one the landing stands at filled; an arrival in another document draws none there (issue #158: "Draw the runs on the address line\'s position strip as outlined extents")', async () => {
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  /** @type {import('./line.js').Pieces | null} the arrival's runs, as N-GO's landing hands them in */
+  let pieces = null;
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {}, pieces: () => pieces });
+  await WALK.focusTo(D, 15);
+  CAM.set({ ...LAYER.centreOf(D, 15), scale: 12.5 / LAYER.foldOf(REC.doc(D)).fs });
+  /** the strip's runs as the line renders them: whether each is the one the landing stands at, its left and its width in % */
+  const runs = () => { LINE.render(true); return [...host.innerHTML.matchAll(/<span class="strip-run( current)?" style="left:([\d.]+)%;width:([\d.]+)%"><\/span>/g)].map((m) => [!!m[1], m[2], m[3]]); };
+  assert.deepEqual(runs(), [], 'no arrival: no runs drawn');
+  pieces = { addr: D, runs: [{ pos: 3, width: 4 }, { pos: 15, width: 5 }], current: 1 };
+  const extent = /** @type {number} */ (REC.doc(D).extent), along = (/** @type {number} */ p) => Math.max(0, Math.min(1, (p - 1) / extent));
+  const at = (/** @type {number} */ pos, /** @type {number} */ width) => [(along(pos) * 100).toFixed(1), ((along(pos + width) - along(pos)) * 100).toFixed(1)];
+  assert.deepEqual(runs(), [[false, ...at(3, 4)], [true, ...at(15, 5)]], 'each run an extent along the strip, the landing\'s filled');
+  assert.ok(/<span class="strip-run[^"]*"[^>]*><\/span><span class="strip-mark"/.test(host.innerHTML), 'the position marked over them');
+  pieces = { ...pieces, addr: '1.0.1.0.127' };
+  assert.deepEqual(runs(), [], 'an arrival in another document: none in this one\'s strip');
 });
 
 test('a restart the shell re-opened leaves the acting-as segment as it stood: no signed-out words, no sign-in (client.md §4b.2)', () => {

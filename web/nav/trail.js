@@ -14,7 +14,13 @@
 // carried for a carrying LEAP or a version move — by identity, the permanent
 // addresses of its bytes, never its positions — and none for any other move.
 // A one-step move across an entry's step lights it at the end it lands on
-// (N-GO's `back` and `forward`); a cursor move writes none. The launch frame
+// (N-GO's `back` and `forward`); a cursor move writes none. THE ARRIVAL KEPT
+// (FP-25: "Leaving a place ends its chrome and keeps that chrome and the view
+// in the place's entry"; FP-21: "a return restores outlines and labels as
+// left"): the arrival standing at an entry as the reader leaves it — its
+// outline, what its landing said, its runs' labels and the run it stood at —
+// written on the entry by value (`keep`, N-GO's), which a return to it
+// restores. The launch frame
 // is the first entry (W-01); after it an entry is pushed by a fresh TELEPORT —
 // LEAP, follow, a click on a place, Enter, HOME, WHOLE BOARD, an account's
 // region — or by a version move, which lands in place (N-GO's `toVersion`),
@@ -47,7 +53,7 @@
 // it dropped and the step it wrote standing again (FP-25).
 // Carries: the wireframe's §11 `pushTrail` (its de-duplication by address
 // and its cap of twelve DROPPED: the stack is the record of teleports).
-// Rules: FP-1, FP-2, FP-7, FP-10, FP-25.
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-25.
 
 /** @typedef {{x: number, y: number, scale: number}} View */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
@@ -71,6 +77,12 @@
  */
 
 /** @typedef {FollowStep | CarryStep} Step the step that left an entry for the one after it (issue #152's design decision): a follow, or a LEAP carrying a passage — any other move leaves none */
+
+/**
+ * @typedef {Object} Kept — the arrival as the reader left an entry (see the head): N-GO's, by value
+ * @property {import('./go.js').Arrival | null} arrival its outline, where its runs stood as the reader left
+ * @property {import('./go.js').Landing | null} landed what its landing said, its runs' labels and the run it stood at among them
+ */
 
 /**
  * @typedef {Object} Site — where a notice stands, as data: O-HOST's anchor without an element, so an entry is read by value
@@ -97,6 +109,7 @@
  * @property {Step | null} step the step that left it for the entry after it, written as a push departed it; none while nothing has, and none where the push took no step this module records
  * @property {string | null} label the place's label at the push
  * @property {Notice | null} notice the face the entry shows: its jump's reading face while the read is out, then the face the read brought; null where it shows none
+ * @property {Kept | null} kept the arrival as the reader last left the entry, which a return to it restores (see the head); null where none stood
  */
 
 /**
@@ -141,7 +154,7 @@ export function retakePlace(addr) {
  * Push a fresh teleport's entry: the departed entry's view re-taken first
  * and the step leaving it written on it, in the place of any it held, and the
  * entries ahead of the cursor dropped.
- * @param {Omit<Entry, 'step'>} e
+ * @param {Omit<Entry, 'step' | 'kept'>} e
  * @param {View | null} departedView the view the camera was bound for as the teleport left
  * @param {boolean} [claim] the landing waits on a read: the entry stands as a claim until `settle` answers it
  * @param {Step | null} [step] the step the teleport takes from the departed entry: a follow's, a carrying LEAP's; none for any other move
@@ -150,7 +163,7 @@ export function retakePlace(addr) {
 export function push(e, departedView, claim = false, step = null) {
   retake(departedView);
   /** @type {Entry} */
-  const held = { ...e, view: { ...e.view }, step: null };
+  const held = { ...e, view: { ...e.view }, step: null, kept: null };
   last = { entry: held, step: cursor >= 0 ? entries[cursor].step : null, dropped: entries.slice(cursor + 1) };
   if (cursor >= 0) entries[cursor].step = step;
   entries = entries.slice(0, cursor + 1);
@@ -188,6 +201,15 @@ export function settle(e, landing) {
   claims.delete(e);
   c.wake();
 }
+
+/**
+ * The arrival as the reader leaves an entry, written on it by value (see the
+ * head; N-GO's departure), in the place of any it held: what a return to it
+ * restores. Null where none stood there.
+ * @param {Entry} e
+ * @param {Kept | null} kept
+ */
+export function keep(e, kept) { e.kept = kept; }
 
 /**
  * What a cursor move that reached an entry waits on before it goes on to
