@@ -32,6 +32,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line .address { cursor:pointer; }
 #line .strip { display:inline-block; width:64px; height:8px; margin:0 6px -1px; border:1px solid #4a5260; border-radius:2px; position:relative; vertical-align:middle; }
 #line .strip-mark { position:absolute; top:0; bottom:0; width:3px; background:var(--accent); }
+/* the position's slot (issue #140): its words as wide as the document's widest position, then the strip — empty below the
+   document's reading scale, the room of both kept, so nothing after it on the line moves */
+#line .slot .pos { display:inline-block; }
+#line .strip.none { visibility:hidden; }
 #line .marker { color:var(--dim); }
 #line .marker.lit { color:var(--accent); }
 #line .transient { color:var(--warn); }

@@ -39,8 +39,9 @@
 // (`focus.test.js`). THE ORDER OF MOVES, a read held while a later move is
 // made: a landing in a document held in part, overtaken by a landing in
 // another, sets nothing when its read answers — a mutant that sets the walk
-// after the read turns red — and → on such a document, overtaken by ↑, enters
-// nothing, the levels above standing as ↑ left them; ↓ onto a document whose
+// after the read turns red — and → on such a document at its reading scale,
+// where → reads its spans, overtaken by ↑, enters nothing, the levels above
+// standing as ↑ left them (a mutant whose → asks nothing turns red); ↓ onto a document whose
 // extent is read before the camera follows, overtaken by a landing, flies the
 // camera nowhere (a mutant that flies after the read turns red); ↓ whose
 // flight a second ↓ cut short ends, the walk on the span the second reached
@@ -50,7 +51,18 @@
 // nearer than reading size; a re-take at reading scale takes the span in the
 // column under the view's centre — a mutant that places either by the
 // position's fraction of the extent down the room, frames the room, or frames
-// a short document's one column past reading size turns red.
+// a short document's one column past reading size turns red. THE GRAIN BELOW
+// A DOCUMENT IS THE DOCUMENT'S OWN (issue #140's design decision): over a
+// continuation document at the near band, its own em under the readable
+// threshold, a re-take stands the walk on the document whole, collapsed, and
+// → there enters nothing; at its own reading scale the re-take takes the span
+// under the view's centre — a mutant that takes a span by the camera's band,
+// or enters a collapsed document, turns red. Each document's item in the
+// mirror says whether it is expanded or collapsed by its own em at the view
+// the camera is bound for, and is marked again in place as the camera takes
+// it across its threshold — a mutant that writes no `aria-expanded`, marks
+// nothing in place, or reads the camera where a flight is bound elsewhere
+// turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -62,8 +74,8 @@ import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { withheldBlockHTML, entitlementArm } from '../text/article.js';
 import { accountCell, boardCell, docBox } from '../plane/projection.js';
-import { lodOf } from '../plane/lod.js';
-import { placeOf } from '../plane/layout.js';
+import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
+import { placeOf, STANDARD_FS } from '../plane/layout.js';
 import { STRINGS, t } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
@@ -85,6 +97,9 @@ const reads = (/** @type {string} */ doc, /** @type {Array<Record<string, unknow
 /** a third document, held in part as the viewport's read leaves it — its extent and its first paragraph — the rest of its text read on the walk's ask */
 const G = '1.0.1.0.7';
 const G_TEXT = 'First.\n\nSecond.\n\nThird.';
+/** the account's 49th document, its first continuation's first: its room a seventh of a depth-0 document's across, its type with it */
+const C1 = '1.0.1.0.49';
+const C1_TEXT = 'Tumbler.\n\nThe first field.';
 /** a document longer than a column: a hundred and twenty paragraphs of a line each, folded into its room's columns */
 const H = '1.0.1.0.40';
 const H_TEXT = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1} of an edition longer than one column.`).join('\n\n');
@@ -94,6 +109,7 @@ const script = {
   ...reads(E, [{ content: E_TEXT }], E_TEXT.length, [{ i_start: E + '.0.1.1', width: String(E_TEXT.length) }]),
   ...reads(G, [{ content: G_TEXT }], G_TEXT.length, [{ i_start: G + '.0.1.1', width: String(G_TEXT.length) }]),
   ...reads(H, [{ content: H_TEXT }], H_TEXT.length, [{ i_start: H + '.0.1.1', width: String(H_TEXT.length) }]),
+  ...reads(C1, [{ content: C1_TEXT }], C1_TEXT.length, [{ i_start: C1 + '.0.1.1', width: String(C1_TEXT.length) }]),
   // the edition claims on D's withheld run's origin: none
   [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1003') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
 };
@@ -220,9 +236,13 @@ test('→ whose read a later walk key overtook enters nothing when the read answ
   partly();
   await WALK.focusTo(G, null);
   assert.deepEqual(WALK.siblingsNow().map((n) => n.addr), [D, E, G]);
+  // the camera at G's reading scale, where → enters its spans and reads them first
+  CAM.set(CAM.viewAt(LAYER.centreOf(G, null), LAYER.foldOf(REC.doc(G)).fs, 12.5));
+  const text = FAKE.keyOf('op', { frame: F.retrieveV(G, 1, G_TEXT.length) }), from = fake.asked.length;
   const release = fake.hold('op', { frame: F.retrieveV(G, 1, G_TEXT.length) });
   const entering = WALK.key('in');
   await run(WALK.key('up'));
+  assert.ok(fake.asked.slice(from).includes(text), '→ asked for G\'s text before ↑ overtook it');
   release();
   await run(entering);
   assert.deepEqual(walkAt(), ['document', E, null], 'the walk where ↑ put it, not inside G');
@@ -259,6 +279,37 @@ test('a walk key whose flight a later walk key cut short ends: the walk on the s
   await run(second);
   await run(first);
   assert.deepEqual(walkAt(), ['block', D, 27]);
+});
+
+/** the index listing the documents given, all of account 1.0.1 */
+const index = (/** @type {string[]} */ docs) => REC.takeIndex(/** @type {any} */ ({ docs: docs.map((doc) => ({ doc, kind: 'edition', label: doc, standing: 'public' })), counts: [{ account: '1.0.1', documents: docs.length }], state: { arm: 'complete' } }));
+
+test('nearer than mid the walk takes a span only inside a document at its own reading scale: over a continuation document at the near band a re-take stands it on the document whole, collapsed, and → there enters nothing; at the document\'s own reading scale the re-take takes the span under the view\'s centre (issue #140)', async () => {
+  await PUMP.loadWhole(C1);
+  index([D, E, C1]);
+  try {
+    const fs = LAYER.foldOf(REC.doc(C1)).fs, at = LAYER.centreOf(C1, 15);
+    // the near band over the line holding position 15: the band's standard em 14 px, C1's own a seventh of it, where a click teleports
+    CAM.set({ ...at, scale: 14 / STANDARD_FS });
+    assert.equal(lodOf(CAM.cam.scale).name, 'near');
+    assert.ok(fs * CAM.cam.scale < LOD_TXT_LO, `C1's own em ${fs * CAM.cam.scale} px, below the readable threshold`);
+    await WALK.focusTo(D, 15);
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['document', C1, null], 'the re-take stands the walk on the document whole, as at mid');
+    assert.equal(WALK.collapsed(), true, 'collapsed: its spans are Enter\'s act\'s');
+    const view = CAM.view();
+    await run(WALK.key('in'));
+    assert.deepEqual(walkAt(), ['document', C1, null], '→ enters nothing');
+    assert.deepEqual(CAM.view(), view, 'and flies the camera nowhere');
+    // C1's own reading scale, over the same line: the re-take takes the span there
+    CAM.set(CAM.viewAt(at, fs, 12.5));
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['block', C1, 11], 'the span under the view\'s centre');
+    await run(WALK.key('out'));
+    assert.deepEqual([...(walkAt() || []), WALK.collapsed()], ['document', C1, null, false], '← to its document at its reading scale: not collapsed');
+  } finally {
+    index([D, E]);
+  }
 });
 
 test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin\'s owner, the entitlement arm for the reader and C-67\'s clause where the origin\'s edition claims decide one, as the plane\'s placeholder shows them (R56; R94; PUB-5.124)', () => {
@@ -389,6 +440,62 @@ test('while chrome covers the plane the tree is inert, through the rebuild, unti
   }
 });
 
+// placed last with the tests around it: it attaches a mirror of its own
+test('each document\'s item in the mirror says whether it is expanded — at its own reading scale — or collapsed, read at the view the camera is bound for, and is marked again in place as the camera takes it across its threshold, nothing rebuilt (issue #140)', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @type {Array<{attrs: Record<string, string>, dataset: {addr?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void}>} the items the last rebuild wrote, as elements, each marked in place */
+  let items = [];
+  let rebuilds = 0;
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      rebuilds++;
+      items = [...html.matchAll(/<li\b[^>]*>/g)].map((m) => {
+        /** @type {Record<string, string>} */
+        const attrs = Object.fromEntries([...m[0].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+        return { attrs, dataset: { addr: attrs['data-addr'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; } };
+      });
+    },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[aria-expanded]' ? items.filter((i) => 'aria-expanded' in i.attrs) : []),
+  };
+  /** each listed document's `aria-expanded`, by its address */
+  const expanded = () => Object.fromEntries(items.map((i) => [i.attrs['data-addr'], i.getAttribute('aria-expanded')]));
+  await PUMP.loadWhole(C1);
+  index([D, E, C1]);
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    const fs = LAYER.foldOf(REC.doc(C1)).fs, reading = CAM.viewAt(LAYER.centreOf(C1, null), fs, 12.5);
+    // the near band over D: D and E at their reading scale, C1 a seventh of their size and below its own
+    const b = docBox(D);
+    CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale: 14 / STANDARD_FS });
+    await WALK.focusTo(C1, null);
+    assert.deepEqual(expanded(), { [D]: 'true', [E]: 'true', [C1]: 'false' }, 'the rebuild: each document by its own em');
+    assert.equal(WALK.collapsed(), true);
+    // the camera at C1's own reading scale: its item marked expanded in place, no rebuild
+    const was = rebuilds;
+    CAM.set(reading);
+    WALK.markExpanded();
+    assert.deepEqual(expanded(), { [D]: 'true', [E]: 'true', [C1]: 'true' }, 'C1 at its reading scale: expanded');
+    assert.equal(WALK.collapsed(), false);
+    // a flight bound for the whole board, not yet flown: each read where the camera is bound, collapsed
+    const flight = CAM.fly(CAM.viewForCell(boardCell('1'), 0.92), 300);
+    WALK.markExpanded();
+    assert.deepEqual(expanded(), { [D]: 'false', [E]: 'false', [C1]: 'false' }, 'bound for the whole board: every document collapsed');
+    assert.equal(WALK.collapsed(), true, 'a key made during the flight acts where it lands');
+    // and back at the near band, the flight cut short
+    CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale: 14 / STANDARD_FS });
+    assert.equal(await flight, false);
+    WALK.markExpanded();
+    assert.deepEqual(expanded(), { [D]: 'true', [E]: 'true', [C1]: 'false' });
+    assert.equal(rebuilds, was, 'every mark made in place, nothing rebuilt');
+  } finally {
+    globalThis.document = platform;
+    index([D, E]);
+  }
+});
+
 test('the mirror\'s item at a link whose far end floats says "its passage is not in ⟨D⟩\'s current text", as its symbol and its stub do; one whose far end stands somewhere says nothing of it', () => {
   const L = D + '.0.2.1', FAR = '1.0.1.0.127';
   const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
@@ -419,7 +526,6 @@ test('the mirror\'s item at a link names its far end as its tail and its card do
 
 // placed last: it lists a document no test above meets, and lists the index back as it found it
 test('in a document folded into columns the camera follows the walk to a span\'s line in its own column at reading size, and to the document\'s outline framed no nearer than reading size; a re-take at reading scale takes the span in the column under the view\'s centre (issue #15)', async () => {
-  const index = (/** @type {string[]} */ docs) => REC.takeIndex(/** @type {any} */ ({ docs: docs.map((doc) => ({ doc, kind: 'edition', label: doc, standing: 'public' })), counts: [{ account: '1.0.1', documents: docs.length }], state: { arm: 'complete' } }));
   /** two views the same, within a flight's last step's rounding */
   const near = (/** @type {{x: number, y: number, scale: number}} */ a, /** @type {{x: number, y: number, scale: number}} */ b, /** @type {string} */ what) =>
     assert.ok([a.x - b.x, a.y - b.y, a.scale - b.scale].every((d, i) => Math.abs(d) <= 1e-9 * Math.max(1, Math.abs([b.x, b.y, b.scale][i]))), `${what}: ${JSON.stringify(a)}, not ${JSON.stringify(b)}`);

@@ -22,7 +22,13 @@
 // the focused pane"). Whether a key made an act is the focus owner's one
 // reading, handed in by the app with each key (`Ctx.byKey`; FP-20), so a
 // teleport or a re-take a key made puts the platform's focus on its landing
-// wherever the key was pressed, the ring drawn (rules 10, 12). The paging key
+// wherever the key was pressed, the ring drawn (rules 10, 12). → at a
+// document below its reading scale — the walk's one stop there, collapsed
+// (N-WALK's `collapsed`) — takes Enter's act, a teleport to its reading scale
+// pushed on the trail, as a click on it is (issue #140's design decision;
+// foundations §2.2: "a walk move into a document's reading scale, which lands
+// where Enter on that document lands"); at its reading scale → enters its
+// spans (K-3). The paging key
 // (K-6) at reading scale continues at the next column's top, where the view
 // already shows the foot of the column it reads (issue #15's design decision;
 // T-LAYER's `pageTarget`), and pages the view by most of its height
@@ -208,7 +214,7 @@ export async function dispatch(e, ctx) {
   // the scroller the focus stands in, the mirror — as soon as the listeners return; so the default is prevented first
   if (chord === '↓') { e.preventDefault(); await WALK.key('down'); return true; }
   if (chord === '↑') { e.preventDefault(); await WALK.key('up'); return true; }
-  if (chord === '→') { e.preventDefault(); await WALK.key('in'); return true; }
+  if (chord === '→') { e.preventDefault(); if (WALK.collapsed()) await activateFocus(byKey); else await WALK.key('in'); return true; }
   if (chord === '←') { e.preventDefault(); await WALK.key('out'); return true; }
   if (chord === 'Home') { e.preventDefault(); await WALK.key('first'); return true; }
   if (chord === 'End') { e.preventDefault(); await WALK.key('last'); return true; }
@@ -280,6 +286,8 @@ export function esc() {
  * the edition its claim names made at the run, reached by Tab (K-58); any
  * other span is selected whole (D8: until the editor's caret), a link's
  * symbol opens its card, which takes the focus as a key opened it (K-55).
+ * → at a document below its reading scale takes this act too (K-3; see the
+ * head).
  * @param {boolean} byKey
  */
 async function activateFocus(byKey) {

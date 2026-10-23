@@ -92,7 +92,14 @@
 // lands both below the mount's em and turns red). A LEAP to a passage of an
 // edition folded into columns (issue #15) lands on the passage's line in its
 // own column at reading size (a mutant that places it by the position's
-// fraction of the extent down the room turns red).
+// fraction of the extent down the room turns red). → AT A DOCUMENT BELOW ITS
+// READING SCALE (issue #140's design decision), dispatched as the platform
+// delivers it, is Enter's act: one trail entry pushed, the landing at reading
+// size, the walk on the document with the ring drawn, and → again enters its
+// first span with no entry (a mutant whose → walks in at any scale turns
+// red); Back to an entry whose view was left below its document's reading
+// scale stands the walk on the document whole, the entry keeping its position
+// (a mutant that lands on the entry's span whatever its view turns red).
 // THE CARRY (foundations §2.3; P43): a LEAP carrying a passage `compare`s it
 // against the text landed in once that text is read, lands at its
 // counterpart there and lights the arrival on that span, no link named (a
@@ -192,6 +199,8 @@ const DEEP = '1.0.1.0.145', RES = `1.0.1.0.${48 * (DEPTH_SOUND + 1) + 1}`;
 const DEEP_TEXT = 'A note minted after the page booted.', RES_TEXT = Array.from({ length: 2000 }, (_, i) => `Item ${i + 1}.`).join('\n\n');
 // LONG: an edition longer than a column — a hundred and twenty paragraphs of a line each, folded into its room's columns
 const LONG = '1.0.1.0.40', LONG_TEXT = Array.from({ length: 120 }, (_, i) => `Paragraph ${i + 1} of an edition longer than one column.`).join('\n\n');
+/** the account's 49th document, its first continuation's first: its room a seventh of a depth-0 document's across, its type with it */
+const CONT = '1.0.1.0.49', CONT_TEXT = 'A continuation note.\n\nIts second paragraph.';
 const NEAR_EXTENT = NEAR_TEXT.length, FAR_EXTENT = FAR_TEXT.length;
 const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
 const whole = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null });
@@ -293,6 +302,7 @@ const script = {
   ...reads(DEEP, DEEP_TEXT, []),
   ...reads(RES, RES_TEXT, []),
   ...reads(LONG, LONG_TEXT, []),
+  ...reads(CONT, CONT_TEXT, []),
   ...reads(EDITION, EDITION_TEXT, [EDITION_CLAIM]),
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GONE) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
   // where each citation's far end projects into FAR now: the passage at 20, five positions; FAR whole, all of it
@@ -1040,6 +1050,46 @@ test('a LEAP to a passage of an edition folded into columns lands on the passage
   await run(GO.leapTo(LONG, { pos }));
   assert.ok(same(CAM.view(), { x: box.x + c.x + c.w / 2, y: box.y + line.y + line.h / 2, scale: 12.5 / f.fs }), `the camera on the passage's line, centred across its column, at reading size: ${JSON.stringify(CAM.view())}`);
   assert.deepEqual(walkAt(), ['block', LONG, at.pos]);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+/** → as the platform delivers it at the plane */
+const right = /** @type {any} */ ({ type: 'keydown', key: 'ArrowRight', keyCode: 39, isComposing: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {} });
+
+test('→ at a document below its reading scale is Enter\'s act: a teleport to its reading scale, one trail entry pushed, the walk on the document with the ring drawn; → again enters its first span and pushes nothing (issue #140; foundations §2.2)', async () => {
+  await PUMP.loadWhole(CONT);
+  const fs = LAYER.foldOf(REC.doc(CONT)).fs, c = LAYER.centreOf(CONT, null);
+  assert.ok(depthOfDoc(CONT) === 1 && fs < LAYER.foldOf(REC.doc(D)).fs / 6, 'a continuation document, set at a seventh of a depth-0 document\'s size');
+  // the camera at the near band over it, its own em 2 px, where a click teleports; the walk on the document whole
+  CAM.set({ ...c, scale: 14 / LAYER.foldOf(REC.doc(D)).fs });
+  await WALK.focusTo(CONT, null);
+  assert.equal(WALK.collapsed(), true);
+  const n = TRAIL.length();
+  await run(KEYS.dispatch(right, { where: 'plane', byKey: true }));
+  assert.deepEqual([TRAIL.length(), TRAIL.cursorIndex(), TRAIL.current()?.addr], [n + 1, n, CONT], 'one entry pushed, its own');
+  assert.ok(Math.abs(emNow(CONT) - 12.5) < 1e-6, `the landing at its reading scale: ${emNow(CONT)} px an em`);
+  assert.deepEqual([walkAt(), WALK.ringShown(), WALK.collapsed()], [['document', CONT, null], true, false], 'the walk on the document, the ring drawn, expanded');
+  await run(KEYS.dispatch(right, { where: 'plane', byKey: true }));
+  assert.deepEqual(walkAt(), ['block', CONT, 1], '→ again enters its first span');
+  assert.deepEqual([TRAIL.length(), TRAIL.cursorIndex()], [n + 1, n], 'and pushes nothing');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to an entry whose view was left below its document\'s reading scale stands the walk on the document whole, its trail entry keeping the position (issue #140)', async () => {
+  await run(GO.leapTo(CONT, { pos: 25 }));
+  assert.deepEqual([walkAt(), WALK.landedAt()], [['block', CONT, 23], 25], 'the LEAP lands at reading size on the span holding 25');
+  // a zoom out below its reading scale — the chord's step before its re-take — then a LEAP away: CONT's entry re-takes that view
+  const left = { ...CAM.view(), scale: CAM.view().scale / 2 };
+  CAM.set(left);
+  await run(GO.leapTo(D));
+  await run(GO.back());
+  assert.ok(same(CAM.view(), left), 'Back lands at the view left, below CONT\'s reading scale');
+  assert.deepEqual([walkAt(), WALK.landedAt(), WALK.collapsed()], [['document', CONT, null], null, true], 'the walk on the document whole, collapsed, no position kept');
+  assert.equal(TRAIL.current()?.pos, 25, 'the entry keeps the position it landed at');
+  // Forward, and Back again at the view left: the same
+  await run(GO.forward());
+  await run(GO.back());
+  assert.deepEqual(walkAt(), ['document', CONT, null]);
   assert.deepEqual(fake.unanswered, []);
 });
 

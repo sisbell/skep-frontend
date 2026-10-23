@@ -2,7 +2,12 @@
 // Layer 2, pure. Carries the wireframe's §7 (S3's bands, unchanged) and S1's
 // mount thresholds (em 6.5 / 5.5, below the canvas's readable 8 — S1 Q7). The
 // text bands read the plane's standard type (P-LAY's STANDARD_FS), the size
-// every document is set at until its columns fill its room. THE LIMIT (issue
+// every document is set at until its columns fill its room. They decide how
+// deep the one line and the walk go, down to the document; whether either
+// goes on to a position or a span is the document's own em's, T-LAYER's
+// `atReadingScale` (issue #140's design decision), never a band's: a
+// continuation document, or one set a step smaller, is below its own
+// threshold well inside `near`. THE LIMIT (issue
 // #122's design decision): at most MOUNTS_PER_FRAME documents mount afresh in
 // a frame, those that reach the readable em counted first and never held
 // back — a limit on a frame's new mounts, never a ceiling on what stands.

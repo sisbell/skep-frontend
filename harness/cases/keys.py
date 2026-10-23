@@ -13,8 +13,14 @@ alone, the camera where it stood, and Mod+] showing its notice again
 at the focus every teleport a key made lands — the box's Enter, Mod+[ and Mod+],
 Mod+0, Mod+Shift+H, Enter on the line's ‹ back (K-22), Mod+3, Enter on a
 trail list row (K-41), Enter on a document (K-7) — and at the focus
-PageDown re-takes; the paging key (K-6) paging the view by 0.9 of its
-height below reading scale and, at reading scale, continuing at the next
+PageDown re-takes; a document below its own reading scale with the camera's
+band nearer than mid (issue #140's design decision) — the far edition, a
+continuation document, zoomed out by Mod+- to em 6.4 — the walk on it whole,
+the one line naming it alone with its position's slot standing empty,
+nothing after it moved, its mirror item collapsed, and → there Enter's act,
+a teleport to its reading scale with its trail entry, the item expanded, →
+again its first span with no entry; the paging key (K-6) paging the view by
+0.9 of its height below reading scale and, at reading scale, continuing at the next
 column's top — the view over a column whose foot it shows brought to the
 next column's text, half a gutter below the one line, and back by PageUp
 (issue #15); and no ring after a click on ‹ back (D5 §4 rule 2: drawn
@@ -87,7 +93,7 @@ the plane, while a caret alone in a pane gives the page's selection its
 highlight back. Each step leaves the page as it found it."""
 import json
 
-from . import DOC, GHOST, NO_MATCH, SECOND_ACCOUNT, WINDOW, Result
+from . import DOC, FAR_LEAP, GHOST, NO_MATCH, SECOND_ACCOUNT, WINDOW, Result
 from .layout import inside, level_holds, scene_level
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -1050,6 +1056,85 @@ def selection_held_elsewhere(ctx, r):
     r.figures['selection_elsewhere'] = figures
 
 
+def ax_expanded(ctx, name):
+    """the `expanded` state the AX tree gives the treeitem of an accessible name — where CDP answers the tree, else its
+    error, which the case notes"""
+    ax = ctx.drv.ax_tree()
+    if 'error' in ax:
+        return {'answered': False, 'error': ax['error']}
+    fold = lambda s: ' '.join((s or '').split())  # an accessible name folds whitespace
+    for n in ax.get('nodes', []):
+        if (n.get('role') or {}).get('value') == 'treeitem' and fold((n.get('name') or {}).get('value')) == fold(name):
+            return {'answered': True, 'expanded': next(((p.get('value') or {}).get('value') for p in n.get('properties') or [] if p.get('name') == 'expanded'), None)}
+    return {'answered': True, 'expanded': None, 'found': False}
+
+
+def collapsed_document(ctx, r):
+    """a document below its own reading scale (issue #140's design decision): the far edition, a continuation document
+    whose room is a 49th of a depth-0 document's across, LEAPed to and zoomed out by Mod+- three times, to an em of 6.4 —
+    the camera's band still nearer than mid, the standard type 49 times that — where a click teleports. The re-take
+    stands the walk on the document whole; the one line names it alone, no position, its position's slot standing
+    empty, so the acting segment stands where it stood at the landing; the mirror's current item, holding the focus, is
+    collapsed (`aria-expanded` false, and in the AX tree where CDP answers). → there is Enter's act: a teleport to its
+    reading scale, one trail entry pushed, the focus on the document, now expanded; → again enters its first span and
+    pushes nothing. The step ends at the first edition's landing"""
+    def seen():
+        """the walk, the line, the trail, the camera and the current item as the page stands — the line given time to
+        redraw (the loop redraws it every 120 ms), so the acting segment's place is read off what the line shows now"""
+        ctx.js('new Promise((r) => setTimeout(r, 300))')
+        return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), i = document.getElementById("walk-" + S.mirror.index()), a = document.querySelector("#line .seg.acting");
+          return {focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, lod: S.view.lod().name, address: S.line().address, trail: S.trail(), cam: S.view.camera(),
+                  item: i ? i.textContent : null, expanded: i ? i.getAttribute("aria-expanded") : null, on_item: !!i && document.activeElement === i,
+                  acting: a ? a.getBoundingClientRect().left : null, shown: document.querySelector("#line .address").textContent, index: S.mirror.index()}; })()''')
+    em = lambda s: s['cam']['scale'] / ctx.js('window.__skep.scaleFor(%s, "em", 1)' % json.dumps(FAR_LEAP))
+    ctx.leap(FAR_LEAP)
+    landing = seen()
+    r.check(landing['address']['doc'] == FAR_LEAP and landing['address']['pos'] is not None and landing['acting'] is not None,
+            'the far edition\'s landing, at its reading scale: the one line names the document and a position', {'address': landing['address'], 'em': em(landing)})
+    for _ in range(3):
+        chord(ctx, '-', mods=('Meta',))
+    ctx.frames(3)
+    out = seen()
+    t0 = out['trail']
+    r.check(out['lod'] in ('near', 'mid~near') and em(out) < 8,
+            'Mod+- three times from the far edition\'s landing: its own em below the readable threshold of 8, where a click teleports, the camera\'s band still nearer than mid',
+            {'lod': out['lod'], 'em': em(out)})
+    r.check(bool(out['focus']) and out['focus']['kind'] == 'document' and out['focus']['addr'] == FAR_LEAP,
+            'the re-take below the far edition\'s reading scale stands the walk on the document whole, never on a span (issue #140)', out['focus'])
+    place = '1 › 1.0.1 › ' + FAR_LEAP
+    r.check(out['address']['text'] == place and out['address']['pos'] is None and out['address']['doc'] == FAR_LEAP
+            and out['shown'].startswith(place) and 'position' not in out['shown'],
+            'the one line names the document alone, %s — no position below its reading scale (issue #140)' % place, {'address': out['address'], 'shown': out['shown']})
+    r.check(out['acting'] is not None and abs(out['acting'] - landing['acting']) <= 0.5,
+            'the position\'s slot stands empty: the acting segment stands where it stood at the landing (issue #140)', {'landing': landing['acting'], 'below': out['acting']})
+    r.check(out['on_item'] and out['expanded'] == 'false',
+            'the mirror\'s current item, holding the focus, is collapsed: aria-expanded false (issue #140)', {'on_item': out['on_item'], 'expanded': out['expanded']})
+    ax = ax_expanded(ctx, out['item'])
+    if ax['answered']:
+        r.check(ax['expanded'] is False, 'the AX tree gives the far edition\'s treeitem collapsed', ax)
+    else:
+        r.note('the collapsed document: Accessibility.getFullAXTree did not answer: ' + ax['error'])
+    chord(ctx, 'ArrowRight')
+    into = seen()
+    t1 = into['trail']
+    newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
+    r.check(t1['cursor'] == t0['cursor'] + 1 and len(t1['entries']) == t1['cursor'] + 1 and bool(newest) and newest['addr'] == FAR_LEAP
+            and abs(em(into) - 12.5) < 1e-6 and bool(into['focus']) and into['focus']['kind'] == 'document' and into['focus']['addr'] == FAR_LEAP,
+            '→ at the collapsed document is Enter\'s act: a teleport to its reading scale (em 12.5), its trail entry pushed, the walk on the document (issue #140; foundations §2.2)',
+            {'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])], 'newest': newest and newest['addr'], 'em': em(into), 'focus': into['focus']})
+    r.check(into['on_item'] and into['expanded'] == 'true', 'at its reading scale the far edition\'s item, holding the focus, is expanded: aria-expanded true', {'on_item': into['on_item'], 'expanded': into['expanded']})
+    chord(ctx, 'ArrowRight')
+    entered = seen()
+    t2 = entered['trail']
+    r.check(bool(entered['focus']) and entered['focus']['kind'] == 'block' and entered['focus']['addr'] == FAR_LEAP and entered['index'] == 0
+            and t2['cursor'] == t1['cursor'] and len(t2['entries']) == len(t1['entries']),
+            '→ again, at its reading scale, enters its first span and pushes nothing (K-3)', {'focus': entered['focus'], 'index': entered['index'], 'cursor': [t1['cursor'], t2['cursor']], 'entries': [len(t1['entries']), len(t2['entries'])]})
+    r.figures['collapsed_document'] = {'addr': FAR_LEAP, 'em': {'landing': em(landing), 'below': em(out), 'entered': em(into)}, 'lod_below': out['lod'],
+                                       'line': {'landing': landing['address']['text'], 'below': out['address']['text']}, 'acting_left': [landing['acting'], out['acting']],
+                                       'expanded': [out['expanded'], into['expanded']], 'ax': ax}
+    ctx.leap(DOC, WINDOW[0])
+
+
 def focus_rules(ctx, r):
     """the focus and keyboard rules the one-owner lane added (FP-20). Enter and Space act on the × and the address
     segment, both native buttons (#119, #102, rule 14); the line is one Tab stop its ← and → move among (#96, K-22); ↓
@@ -1377,6 +1462,8 @@ def run(ctx):
     r.check(focused and s['overlay'] is None and t1['cursor'] == len(t0['entries']) - 2 and len(t1['entries']) == len(t0['entries']),
             'Enter on the trail list\'s second row jumps to the second-newest entry: the list closes, nothing pushed', {'focused': focused, 'overlay': s['overlay'], 'cursor': [t0['cursor'], t1['cursor']], 'entries': len(t1['entries'])})
     ring_drawn(ctx, r, 'Enter on a trail list row')
+    # ---- a document below its own reading scale: named alone, collapsed, → its Enter (issue #140) ------------
+    collapsed_document(ctx, r)
     # ---- the walk (K-1 … K-8) -------------------------------------------------------------------------
     ctx.leap(DOC, WINDOW[0])
     f0 = state(ctx)['focus']
@@ -1779,6 +1866,6 @@ def run(ctx):
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'a drag in each pane of the scene, then the copy', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C']
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc and Mod+- ending the scene, then Mod+[ and Mod+]', 'Mod+[ and Mod+] in the scene', 'Mod+0 in the scene', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'a drag in each pane of the scene, then the copy', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

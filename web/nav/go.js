@@ -85,7 +85,10 @@
 // further. Back, Forward or a jump reaching an entry lands at once at what it
 // holds — at its view, the walk on its place: where its read brought no place
 // the place the notice names (the link's bytes a follow was made at, else the
-// walk's element as the LEAP was made), never the place the jump named — and
+// walk's element as the LEAP was made), never the place the jump named; on
+// that place's span only where the view reads its document at its reading
+// scale, else on the document whole, so a view re-taken below it leaves the
+// walk the grain the view gives (T-LAYER's one test; issue #140) — and
 // shows its notice again, the link it came from lit beside the one Back came
 // back along; reaching an entry still reading, it shows that entry's reading
 // face and lands once the read answers, where no act was made meanwhile. A
@@ -200,15 +203,18 @@ const widthAt = (/** @type {Run[] | null} */ runs, /** @type {number | null} */ 
 const headOf = (/** @type {import('../model/records.js').Doc} */ d) => (d.blocks[0] || { pos: 1 }).pos;
 
 /**
- * The landing: the walk moved to the place, the ring drawn at it where a key
- * made the act, and the camera flown to its view.
+ * The landing: the walk moved to the place — to the span holding its
+ * position only where its view reads the document at its reading scale,
+ * else to the document whole (see the head) — the ring drawn at it where a
+ * key made the act, and the camera flown to its view. A LEAP and a follow
+ * land at reading size; a cursor move lands at the view its entry was left at.
  * @param {{addr: string, pos: number | null, view: View}} at
  * @param {boolean | undefined} byKey
  * @param {number} ms
  * @returns {Promise<boolean>} the flight landed; false where a later act's flight, a pan or a zoom cut it short (P-CAM's `fly`)
  */
 async function land(at, byKey, ms) {
-  WALK.focusTo(at.addr, at.pos, byKey);
+  WALK.focusTo(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, byKey);
   CAM.markDirty();
   const landed = await CAM.fly(at.view, ms);
   CAM.markDirty();

@@ -13,13 +13,18 @@
 // (R6), naming the level the camera's scale reads (foundations §2.2): the
 // board at far scale ("the whole board is in view" at WHOLE BOARD), the
 // account under the camera at mid (B1-S2's `1.5 › 1.5.0.1`) whatever the
-// walk stands on, and at reading scale board › account › document ›
-// position — the document the walk stands in, each segment read from its own
-// address: its node field, its account field whole at any depth (`1.0.1.1`
-// for the agent space's documents, B1-S6's `1.5 › 1.5.0.1.1 › …`), and the
-// position the one a landing named inside the focused span (N-WALK's
-// `landedAt`; W-01 step 3, "position honored"), else the span's own first,
-// with the position strip; the version marker ○ beside it (unlit at the bare
+// walk stands on, and nearer board › account › document — the document the
+// walk stands in, each segment read from its own address: its node field,
+// its account field whole at any depth (`1.0.1.1` for the agent space's
+// documents, B1-S6's `1.5 › 1.5.0.1.1 › …`) — then THE POSITION'S SLOT
+// (issue #140's design decision): a position named only where that document
+// stands at its own reading scale — its em at the readable threshold,
+// T-LAYER's one test, which the press rule and the walk's span grain read
+// too, never the camera's band — the one a landing named inside the focused
+// span (N-WALK's `landedAt`; W-01 step 3, "position honored"), else the
+// span's own first, with the position strip; below it the slot stands empty,
+// as wide as the document's widest position and its strip, so nothing after
+// it on the line moves; the version marker ○ beside it (unlit at the bare
 // address, lit at a pinned member; no sentence); itself LEAP's box (a click,
 // Enter or Mod+L opens it; the chord drawn for the platform in its title,
 // rule 19), which opens holding the address the display names (K-30), so the
@@ -53,14 +58,16 @@
 // through the one status region. The chip is NOT a segment (ux-T2: the
 // document's corner). Carries: the wireframe's §15 (`whereAmI`,
 // `actingLine`, `updateHUD`, `setTransient`; the chip and the walk step
-// removed; `whereAmI` RE-CUT to foundations §2.2, its document form at
-// reading scale alone; the diagnostics behind `h` are the gate's hooks).
+// removed; `whereAmI` RE-CUT to foundations §2.2, its document form nearer
+// than mid and its position at the document's own reading scale alone; the
+// diagnostics behind `h` are the gate's hooks).
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from '../nav/trail.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
+import * as LAYER from '../text/layer.js';
 import * as PORT from '../bridge/port.js';
 import { drawChord } from '../nav/keys.js';
 import { cam, viewForCell } from '../plane/camera.js';
@@ -138,10 +145,12 @@ export function act() { if (transientSeg) { transientSeg = null; render(true); }
 
 /**
  * @typedef {Object} AddressDisplay — what the address segment names at the camera's scale (foundations §2.2)
- * @property {string} text the segment's words
+ * @property {string} text the segment's words: the place, then the position where one is named
+ * @property {string} place the place's words — the board, the account, or board › account › document — before the position's slot
+ * @property {number} slot the position's slot, in characters: as many as the document's widest position takes in its words, standing empty below the document's reading scale (issue #140); 0 where no document is named
  * @property {string} addr the address named — the board, the account under the camera, or the document the walk stands in (its member where one is pinned): the LEAP box's prefill
- * @property {string | null} doc the document named, at reading scale alone
- * @property {number | null} pos the position named inside it
+ * @property {string | null} doc the document named, nearer than mid
+ * @property {number | null} pos the position named inside it, at the document's own reading scale alone
  * @property {number | null} member the version member pinned
  * @property {boolean} whole the whole board is in view, at WHOLE BOARD's clamp
  */
@@ -149,27 +158,35 @@ export function act() { if (transientSeg) { transientSeg = null; render(true); }
 /** the address the display names: the LEAP box's prefill, so the box opens holding what the line shows (K-30) */
 export function currentAddress() { return addressDisplay().addr; }
 
+/** the position's words in its slot — ` › position ⟨p⟩` — and none where no position is named */
+const positionWords = (/** @type {number | null} */ p) => (p != null ? ' › ' + t('F.position', { p }) : '');
+
 /**
  * The address display: the level the camera's scale reads (foundations
  * §2.2) — at far scale the board; at mid the account under the camera
- * (B1-S2), whatever the walk stands on; at reading scale the document the
- * walk stands in and the position.
+ * (B1-S2), whatever the walk stands on; nearer the document the walk stands
+ * in, and the position only where that document stands at its own reading
+ * scale (T-LAYER's one test; issue #140), its slot standing empty below it.
  * @returns {AddressDisplay}
  */
 export function addressDisplay() {
   const lod = lodOf(cam.scale);
   if (lod.name === 'far' || lod.name === 'far~mid') {
     const whole = cam.scale <= viewForCell(boardCell('1'), 0.92).scale * 1.02;
-    return { text: '1' + (whole ? ' · ' + t('B1.clamp') : ''), addr: '1', doc: null, pos: null, member: null, whole };
+    const text = '1' + (whole ? ' · ' + t('B1.clamp') : '');
+    return { text, place: text, slot: 0, addr: '1', doc: null, pos: null, member: null, whole };
   }
   const f = WALK.current();
   if (f && (f.kind === 'block' || f.kind === 'document' || f.kind === 'link') && (lod.name === 'near' || lod.name === 'mid~near')) {
     const doc = documentOf(f.addr) || f.addr;
-    const pos = WALK.landedAt() ?? f.pos ?? 1;
-    return { text: `${boardOf(doc)} › ${accountOf(doc)} › ${doc} › ${t('F.position', { p: pos })}`, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false };
+    const place = `${boardOf(doc)} › ${accountOf(doc)} › ${doc}`;
+    const pos = LAYER.atReadingScale(f.addr) ? WALK.landedAt() ?? f.pos ?? 1 : null;
+    const widest = Math.max(1, REC.doc(f.addr).extent || 0, pos || 0);
+    return { text: place + positionWords(pos), place, slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false };
   }
   const acct = accountAt(cam.x, cam.y, '1');
-  return { text: acct ? `1 › ${acct}` : '1', addr: acct || '1', doc: null, pos: null, member: null, whole: false };
+  const text = acct ? `1 › ${acct}` : '1';
+  return { text, place: text, slot: 0, addr: acct || '1', doc: null, pos: null, member: null, whole: false };
 }
 
 /** the sign-in act, the guest's and the death arm's: its id names it across the line's rebuilds, as Back's does, so the session's face standing at it finds it again (O-HOST's anchor) */
@@ -218,9 +235,21 @@ function modeLine() {
   lastTrust = trust; lastMode = mode;
 }
 
-/** the position strip: the document's length with the view's window marked (the strip's statement on its act) */
+/**
+ * The position's slot (issue #140's design decision): the position's words,
+ * as wide as the document's widest position, then its strip — standing empty
+ * below the document's reading scale, the strip's room kept, so nothing after
+ * it on the line moves; nothing where no document is named.
+ * @param {AddressDisplay} a
+ */
+function slot(a) {
+  if (!a.slot) return '';
+  return `<span class="slot"><b class="pos" style="width:${a.slot}ch">${esc(positionWords(a.pos))}</b>${strip(a.doc, a.pos)}</span>`;
+}
+
+/** the position strip: the document's length with the view's window marked (the strip's statement on its act); its room alone, hidden, where no position is named */
 function strip(/** @type {string | null} */ doc, /** @type {number | null} */ pos) {
-  if (!doc) return '';
+  if (!doc || pos == null) return '<span class="strip none" aria-hidden="true"></span>';
   const d = REC.doc(doc);
   const extent = d.extent || 0;
   const frac = extent && pos ? Math.min(1, (pos - 1) / extent) : 0;
@@ -239,7 +268,7 @@ export function render(force = false) {
   lastState = acting.state; lastHalted = daemon.halted;
   const html =
     `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord('Mod+Y'))}">${esc(t('F.trail-list'))}</button></span>` +
-    `<span class="sep">│</span><button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}"><b>${esc(a.text)}</b>${strip(a.doc, a.pos)}<span class="marker ${a.member ? 'lit' : ''}" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></button>` +
+    `<span class="sep">│</span><button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}"><b>${esc(a.place)}</b>${slot(a)}<span class="marker ${a.member ? 'lit' : ''}" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></button>` +
     `<span class="sep">│</span><span class="seg acting" data-state="${acting.state}">${acting.html}</span>` +
     (daemon.html ? `<span class="sep">│</span><span class="seg daemon">${daemon.html}</span>` : '') +
     (transientSeg ? `<span class="sep">│</span><span class="seg transient" data-string="${esc(transientSeg.id)}">${transientSeg.html}</span>` : '');

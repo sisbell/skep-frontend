@@ -30,7 +30,9 @@
 // nowhere — issue #132) and T-LAYER's owner rule.
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
-// frame, then P-RENDER, then BM, then O-HOST's place, the line, then the
+// frame, the mirror's documents marked expanded or collapsed in place by the
+// view (N-WALK's `markExpanded`; issue #140), then P-RENDER, then BM, then
+// O-HOST's place, the line, then the
 // press APP-INPUT holds at reading scale, acted on the text the frame set
 // (`afterFrame`) — and the frame buffer the gate reads. T-LAYER decides
 // what stands BEFORE the canvas draws, so a line crossing the mount threshold
@@ -127,6 +129,7 @@ function loop(/** @type {number} */ now) {
   if (dirty) {
     const t0 = performance.now();
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
+    WALK.markExpanded();
     const lod = RENDER.draw();
     BM.draw();
     HOST.place();

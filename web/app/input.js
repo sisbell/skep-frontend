@@ -15,8 +15,11 @@
 // the drag's article through it. Below the readable threshold every press is
 // the canvas's, over bars or mounted text alike — T-LAYER gives an article
 // the pointer at reading scale alone — so a drag there is a drag off text and
-// selects nothing, and a click is the place's: keyed on legibility, never on
-// whether text is mounted. AT THE READABLE THRESHOLD AND ABOVE A PRESS ACTS ON
+// selects nothing, and a click is the place's: keyed on legibility — the
+// document's own em at the readable threshold, T-LAYER's one test
+// (`atReadingScale`), which the one line's position and the walk's span grain
+// read too (issue #140's design decision) — never on whether text is
+// mounted. AT THE READABLE THRESHOLD AND ABOVE A PRESS ACTS ON
 // THE TEXT (issue #122's design decision), never dropped and never a move to
 // the place: a press the canvas takes on a document's column there — the text
 // under it not yet standing, the view moved or the text arrived since the
@@ -91,7 +94,7 @@ import * as FACES from '../overlays/faces.js';
 import * as VERSIONS from '../overlays/versions.js';
 import * as LAYER from '../text/layer.js';
 import { sameSpan } from '../text/span.js';
-import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
+import { lodOf } from '../plane/lod.js';
 import { accountAt } from '../plane/projection.js';
 import { MAC } from '../nav/keys.js';
 
@@ -283,7 +286,7 @@ function clickText(target) {
 function textAt(px, py) {
   if (RENDER.residueAtScreen(px, py)) return null;
   const doc = RENDER.docAtScreen(px, py);
-  if (!doc || LAYER.foldOf(REC.doc(doc)).fs * CAM.cam.scale < LOD_TXT_LO) return null;
+  if (!doc || !LAYER.atReadingScale(doc)) return null;
   return LAYER.holdsText(doc, CAM.wx(px), CAM.wy(py)) ? doc : null;
 }
 
@@ -337,8 +340,7 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   if (residue) { GO.leapTo(residue.newest, { how: 'click', site }); return; }
   const doc = RENDER.docAtScreen(px, py);
   if (doc) {
-    const em = LAYER.foldOf(REC.doc(doc)).fs * CAM.cam.scale;
-    if (em < LOD_TXT_LO) { GO.leapTo(doc, { how: 'click', site }); return; }
+    if (!LAYER.atReadingScale(doc)) { GO.leapTo(doc, { how: 'click', site }); return; }
     return; // at reading scale a press on its text is held for the text (`afterFrame`); one in a gutter acts on nothing
   }
   if (lod.name === 'far' || lod.name === 'far~mid') {

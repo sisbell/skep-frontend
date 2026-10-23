@@ -6,7 +6,14 @@
 // named until the re-take stands it on the document, and the account the
 // camera's, not the walk's; at reading scale the document and the position the
 // landing named — a mutant that names the walk's document at mid turns red, and
-// so does one that drops the document form at mid~near. The LEAP box's prefill
+// so does one that drops the document form at mid~near. THE POSITION IS THE
+// DOCUMENT'S OWN TO NAME (issue #140's design decision): a document below its
+// own reading scale — a continuation document at the near band, a depth-0
+// document stepped down at mid~near — is named alone, no position, its
+// position's slot standing empty and as wide, nothing after it moved; at its
+// own reading scale the position is named in that slot — a mutant that names
+// a position by the camera's band, drops the slot below the threshold, sizes
+// it by the position shown, or draws the strip there turns red. The LEAP box's prefill
 // is the address the display names (K-30: "the box open holding the current
 // address"; the box is the line's stop, opened), so the box never opens on an
 // address the line does not show — a mutant whose prefill keeps a rule of its
@@ -38,14 +45,29 @@ import * as PUMP from '../model/pump.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
-import { docBox, accountCell, boardCell, DOC_W } from '../plane/projection.js';
+import * as LAYER from '../text/layer.js';
+import { docBox, accountCell, boardCell, depthOfDoc, DOC_W } from '../plane/projection.js';
 import { STANDARD_FS } from '../plane/layout.js';
-import { lodOf } from '../plane/lod.js';
+import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
 import { t } from '../strings.js';
 import * as WALK from '../nav/walk.js';
 import * as LINE from './line.js';
 
 const D = '1.0.1.0.3';
+/** the account's 49th document, its first continuation's first: its room a seventh of a depth-0 document's across */
+const C1 = '1.0.1.0.49';
+const C1_TEXT = 'Tumbler.\n\nThe first field.';
+/** a depth-0 document of more columns than its room holds at the standard size: set a step smaller than its neighbours */
+const LONG = '1.0.1.0.40';
+const LONG_TEXT = Array.from({ length: 300 }, (_, i) => `Item ${i + 1} of an edition longer than its room's twelve columns.`).join('\n\n');
+/** the reads of a document read whole, all its text one run of its own: its extent, its metadata, its text, its image, its links (none) */
+const reads = (/** @type {string} */ doc, /** @type {string} */ text) => ({
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } },
+  [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: doc + '.1', birth_extent: String(text.length), placed: null, base_extent: null, source: null } },
+  [FAKE.keyOf('op', { frame: F.retrieveV(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: text }] } },
+  [FAKE.keyOf('op', { frame: F.image(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: doc + '.0.1.1', width: String(text.length) }] } },
+  [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+});
 // D's reads, read whole: three spans — 1 "Tumbler.\n\n" (10), 11 "The first field." (16), 27 a withheld run (4)
 const script = {
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.30' }] } },
@@ -55,6 +77,8 @@ const script = {
   [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
   // the edition claims on the withheld run's origin: none
   [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1003') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  ...reads(C1, C1_TEXT),
+  ...reads(LONG, LONG_TEXT),
 };
 
 /** @type {ReturnType<typeof FAKE.create>} */
@@ -82,7 +106,7 @@ test('at mid the line names the account under the camera, never the walk\'s docu
   await WALK.focusTo(D, 15);
   over(D, MID);
   assert.equal(lodOf(CAM.cam.scale).name, 'mid');
-  const account = { text: '1 › 1.0.1', addr: '1.0.1', doc: null, pos: null, member: null, whole: false };
+  const account = { text: '1 › 1.0.1', place: '1 › 1.0.1', slot: 0, addr: '1.0.1', doc: null, pos: null, member: null, whole: false };
   assert.deepEqual(LINE.addressDisplay(), account, 'the walk still on the span the landing named: the line names the account, no document and no position');
   assert.equal(LINE.currentAddress(), '1.0.1', 'the LEAP box opens holding the address the line shows');
   // the re-take at mid's grain stands the walk on the document itself
@@ -93,7 +117,7 @@ test('at mid the line names the account under the camera, never the walk\'s docu
   // the camera over the next account's region, the walk left on D: the account named is the camera's
   const c = accountCell('1.0.2');
   CAM.set({ x: c.x + c.w / 2, y: c.y + c.h / 2, scale: MID });
-  assert.deepEqual(LINE.addressDisplay(), { ...account, text: '1 › 1.0.2', addr: '1.0.2' }, 'the account under the camera, not the walk\'s');
+  assert.deepEqual(LINE.addressDisplay(), { ...account, text: '1 › 1.0.2', place: '1 › 1.0.2', addr: '1.0.2' }, 'the account under the camera, not the walk\'s');
   assert.equal(LINE.currentAddress(), '1.0.2');
 });
 
@@ -102,8 +126,46 @@ test('at reading scale the line names the document and the position the landing 
     over(D, scale);
     assert.equal(lodOf(CAM.cam.scale).name, band);
     await WALK.focusTo(D, 15);
-    assert.deepEqual(LINE.addressDisplay(), { text: `1 › 1.0.1 › ${D} › ${t('F.position', { p: 15 })}`, addr: D, doc: D, pos: 15, member: null, whole: false }, `${band}: board › account › document › position`);
+    // D's extent, 30, takes two figures: the slot holds " › position ⟨two figures⟩"
+    const place = `1 › 1.0.1 › ${D}`, slot = ` › ${t('F.position', { p: 99 })}`.length;
+    assert.deepEqual(LINE.addressDisplay(), { text: `${place} › ${t('F.position', { p: 15 })}`, place, slot, addr: D, doc: D, pos: 15, member: null, whole: false }, `${band}: board › account › document › position`);
     assert.equal(LINE.currentAddress(), D, `${band}: the box holds the document`);
+  }
+});
+
+test('a document below its own reading scale is named alone, whatever the band — a continuation document at near, a depth-0 document set a step smaller at mid~near — its position\'s slot standing empty and as wide; at its own reading scale the position is named in that slot (issue #140)', async () => {
+  /** the line rendered into a stand-in element, and its position's slot read back from the markup: its width, its words, whether its strip shows */
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  const slotShown = () => {
+    LINE.render(true);
+    const m = /<b class="pos" style="width:(\d+)ch">([^<]*)<\/b><span class="strip( none)?"[^>]*>(?:<span class="strip-mark"[^>]*><\/span>)?<\/span><\/span><span class="marker/.exec(host.innerHTML);
+    return m && { width: Number(m[1]), words: m[2], strip: !m[3] };
+  };
+  await PUMP.loadWhole(C1);
+  await PUMP.loadWhole(LONG);
+  const fsOf = (/** @type {string} */ doc) => LAYER.foldOf(REC.doc(doc)).fs;
+  assert.ok(depthOfDoc(C1) === 1 && fsOf(C1) < STANDARD_FS / 6, `${C1} a continuation document, set at ${fsOf(C1) / STANDARD_FS} of the standard size`);
+  assert.ok(depthOfDoc(LONG) === 0 && fsOf(LONG) < STANDARD_FS * 0.8, `${LONG} at depth 0, set a step smaller than its neighbours: ${fsOf(LONG) / STANDARD_FS} of the standard size`);
+  /** @type {Array<[string, string, number, number]>} each document, the band the camera stands at over it, the scale, its extent */
+  const cases = [[C1, 'near', 14 / STANDARD_FS, C1_TEXT.length], [LONG, 'mid~near', 9.5 / STANDARD_FS, LONG_TEXT.length]];
+  for (const [doc, band, scale, extent] of cases) {
+    over(doc, scale);
+    assert.equal(lodOf(CAM.cam.scale).name, band);
+    assert.ok(fsOf(doc) * CAM.cam.scale < LOD_TXT_LO, `${doc} at ${band}: its own em, ${fsOf(doc) * CAM.cam.scale} px, below the readable threshold, where a click teleports`);
+    // the walk on the span a landing named, as a landing's cursor move or a zoom chord before its re-take leaves it
+    await WALK.focusTo(doc, 15);
+    assert.deepEqual([WALK.current()?.kind, WALK.landedAt()], ['block', 15]);
+    // the slot as wide as the document's widest position: its extent's figures
+    const place = `1 › 1.0.1 › ${doc}`, slot = ` › ${t('F.position', { p: '9'.repeat(String(extent).length) })}`.length;
+    assert.deepEqual(LINE.addressDisplay(), { text: place, place, slot, addr: doc, doc, pos: null, member: null, whole: false }, `${doc} at ${band}: the document alone, no position`);
+    assert.equal(LINE.currentAddress(), doc, `${doc} at ${band}: the box holds the document, no position`);
+    assert.deepEqual(slotShown(), { width: slot, words: '', strip: false }, `${doc} at ${band}: the position's slot stands empty, as wide, its strip's room kept and nothing drawn in it`);
+    // at its own reading scale, the walk where it stood: the position the landing named, in the same slot
+    over(doc, 12.5 / fsOf(doc));
+    const words = ` › ${t('F.position', { p: 15 })}`;
+    assert.deepEqual(LINE.addressDisplay(), { text: place + words, place, slot, addr: doc, doc, pos: 15, member: null, whole: false }, `${doc} at its reading scale: the position named`);
+    assert.deepEqual(slotShown(), { width: slot, words, strip: true }, `${doc} at its reading scale: the position and its strip in the slot, as wide`);
   }
 });
 
@@ -111,7 +173,7 @@ test('at far scale the line names the board, the whole board in view at its clam
   const whole = CAM.viewForCell(boardCell('1'), 0.92);
   CAM.set(whole);
   assert.equal(lodOf(CAM.cam.scale).name, 'far~mid', 'WHOLE BOARD on this viewport');
-  const board = { text: '1 · ' + t('B1.clamp'), addr: '1', doc: null, pos: null, member: null, whole: true };
+  const board = { text: '1 · ' + t('B1.clamp'), place: '1 · ' + t('B1.clamp'), slot: 0, addr: '1', doc: null, pos: null, member: null, whole: true };
   // the walk on the board, as WHOLE BOARD lands it
   await WALK.focusTo('1', null);
   assert.deepEqual(LINE.addressDisplay(), board);

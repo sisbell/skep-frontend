@@ -72,7 +72,14 @@
 // for the lines as set now, the larger: no reveal moves its type size and
 // nothing runs past its room. Every reader of a document's size above the
 // model reads it here; the model's pump, which may not, reads P-LAY's
-// estimate, never the smaller. Every size read here raises P-CAM's zoom-in
+// estimate, never the smaller. A document is AT READING SCALE where its own
+// em — that size at the scale — stands at P-LOD's readable threshold (8) or
+// above (`atReadingScale`; issue #140's design decision): the one test the
+// press rule, the one line's position and the walk's span grain read, as the
+// mount, the corner, the pointer and the paging here do — never the camera's
+// band, which reads a depth-0 document's standard size and so calls a
+// document set smaller than it readable where a click teleports past it.
+// Every size read here raises P-CAM's zoom-in
 // bound to read it (`reach`, E18 (a)), so the camera never stops short of the
 // reading scale of the text this module sets, however small its document is
 // set. The canvas's bars below the mount are the same fold's lines, measured
@@ -466,6 +473,21 @@ export function foldOf(d) {
   return f;
 }
 
+/** does an em of `fs` world units stand at P-LOD's readable threshold or above at a scale (see the head) */
+const readsAt = (/** @type {number} */ fs, scale = cam.scale) => fs * scale >= LOD_TXT_LO;
+
+/**
+ * Is a document at reading scale (see the head; issue #140's design
+ * decision): its own em — its fold's size at the scale — at P-LOD's readable
+ * threshold or above. The press rule, the one line and the walk's grain read
+ * it here, so a click places, the line names a position and the walk takes a
+ * span in the same documents.
+ * @param {string} addr
+ * @param {number} [scale] the scale it is read at: the camera's where none is given — a landing's or a flight's destination where the view is bound elsewhere
+ * @returns {boolean}
+ */
+export function atReadingScale(addr, scale = cam.scale) { return readsAt(foldOf(REC.doc(addr)).fs, scale); }
+
 /**
  * The fold `foldOf` answers (see there).
  * @param {Doc} d
@@ -602,7 +624,7 @@ export function pageTarget(dir) {
   const d = docAt(viewCentre());
   if (!d) return null;
   const f = foldOf(d), box = docBox(d.addr);
-  if (f.fs * cam.scale < LOD_TXT_LO) return null;
+  if (!readsAt(f.fs)) return null;
   const to = pageIn(f, { x0: wx(seen.x) - box.x, y0: wy(seen.y) - box.y, x1: wx(seen.x + seen.w) - box.x, y1: wy(seen.y + seen.h) - box.y }, dir);
   if (!to) return null;
   return { x: box.x + to.x, y: box.y + to.top + (VH / 2 - seen.y) / cam.scale, scale: cam.scale };
@@ -1310,7 +1332,7 @@ function markBlocks(rec, selected, focus) {
  * @param {Mounted} rec
  */
 function markLegible(rec) {
-  const on = rec.fs * cam.scale >= LOD_TXT_LO;
+  const on = readsAt(rec.fs);
   if (on === rec.legible) return;
   rec.legible = on;
   rec.el.classList.toggle('legible', on);
@@ -1361,8 +1383,8 @@ function chosen(v, focused, span, spent) {
     if (!intersects(box, v) || !intersects(shapeIn(d), v)) continue;
     const mine = focused(d.addr);
     if (box.residue && !mine) continue;
-    const em = foldOf(d).fs * cam.scale;
-    if (em >= LOD_TXT_LO) readable.push(d);
+    const fs = foldOf(d).fs, em = fs * cam.scale;
+    if (readsAt(fs)) readable.push(d);
     else if (em >= MOUNT_EM) rest.push({ d, em, first: mine || (!!span && span.addr === d.addr) || d.addr === now });
   }
   return [...readable, ...limitOrder(rest).slice(0, Math.max(0, MOUNTS_PER_FRAME - spent - readable.length)).map((w) => w.d)];
@@ -1400,7 +1422,7 @@ function viewNow() {
 function readingNow() {
   const c = viewCentre();
   for (const rec of mounted.values()) {
-    if (rec.fs * cam.scale < LOD_TXT_LO || !holds(shapeAt(rec.d.addr, rec.fold), c)) continue;
+    if (!readsAt(rec.fs) || !holds(shapeAt(rec.d.addr, rec.fold), c)) continue;
     const box = docBox(rec.d.addr);
     return { addr: rec.d.addr, fold: rec.fold, p: { x: c.x - box.x, y: c.y - box.y } };
   }
@@ -1537,7 +1559,7 @@ function placeCorners(focused) {
   /** @type {Array<{c: Corner, rec: Mounted}>} */
   const shown = [];
   for (const rec of mounted.values()) {
-    if (!rec.corner || rec.fs * cam.scale < LOD_TXT_LO) continue;
+    if (!rec.corner || !readsAt(rec.fs)) continue;
     const c = corners.get(rec.d.addr) || makeCorner(cornerLayer, rec.d.addr);
     if (c.html !== rec.corner) { c.el.innerHTML = rec.corner; c.html = rec.corner; c.stale = true; }
     const cap = Math.max(0, Math.floor((clearLeftOf(rec.d.addr) + rec.fold.columns[0].x) * cam.scale - 2 * CORNER_GAP));

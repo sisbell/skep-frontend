@@ -39,7 +39,20 @@
 // one line name the place landed on (rule 12). The camera follows the focus
 // (a walk move flies to the element at its level's scale) and the focus
 // follows the camera (any other move re-takes it at the element under the
-// view's centre at the scale's grain). The ARIA mirror (`role=tree`,
+// view's centre at the scale's grain). THE GRAIN BELOW A DOCUMENT IS THE
+// DOCUMENT'S OWN (issue #140's design decision): P-LOD's band decides how
+// deep the walk goes, down to the document; it steps by span only inside a
+// document at its reading scale — its own em at the readable threshold,
+// T-LAYER's one test, the one the press rule and the one line's position read
+// — and any other document is one stop, focused whole, as at mid, its mirror
+// item collapsed (`aria-expanded` false, `collapsed`). Entering such a
+// document from the keyboard is Enter's act (N-KEYS: a teleport to its
+// reading scale, pushed on the trail, as a click is), which expands it; there
+// `→` enters its spans. Collapsed or expanded is read at the view the
+// camera is bound for, so a key made during a flight acts where the flight
+// lands (D5 §4 rule 8), and each dirty frame marks the items again in place
+// (`markExpanded`), the camera crossing a document's threshold between the
+// walk's moves. The ARIA mirror (`role=tree`,
 // virtualised ±24, `aria-level`/`aria-posinset`/`aria-setsize`) is THE ONE
 // ACCESSIBLE RENDERING at span grain (S1 Q7; R94 at span grain — RULED), the
 // tree named as it attaches by ST's `L.mirror-label`, each level's group by
@@ -156,6 +169,16 @@ export const ringShown = () => FOCUS.ringShown();
 /** is a block an element of the walk (rule 20): any but a paragraph of white space alone */
 export const isElement = (/** @type {Block} */ b) => b.kind !== 'para' || b.text.trim() !== '';
 
+/** is a document below its reading scale at the view the camera is bound for (see the head; T-LAYER's one test) */
+const below = (/** @type {string} */ addr) => !LAYER.atReadingScale(addr, CAM.destination().scale);
+/**
+ * Does the walk stand on a document below its reading scale (see the head):
+ * one stop, focused whole, its mirror item collapsed — its spans reached
+ * through Enter's act, a teleport to its reading scale, which `→` takes there
+ * (N-KEYS); `key('in')` enters nothing there.
+ */
+export const collapsed = () => !!focus && focus.kind === 'document' && below(focus.addr);
+
 /**
  * The children of a node, in record order.
  * @param {Node | null} node null = the plane's root
@@ -252,10 +275,11 @@ export function among(sibs, node) {
  * (D5 §4 rule 5): the current item, the only item at tabindex 0, while the
  * tree's container stands out of the order — focusable still, by script and
  * by a click — and the container itself where the walk's level holds no item
- * (a landing where the index lists nothing at its level). Replacing the
- * items removes the one the platform's focus may stand on; the callers put
- * it on the new current item through the focus's owner (`FOCUS.land`), as
- * every rebuild here is a move of the walk.
+ * (a landing where the index lists nothing at its level). Each document's
+ * item says whether it is expanded — at its reading scale — or collapsed
+ * (see the head). Replacing the items removes the one the platform's focus
+ * may stand on; the callers put it on the new current item through the
+ * focus's owner (`FOCUS.land`), as every rebuild here is a move of the walk.
  */
 export function render() {
   if (!mirrorEl) return;
@@ -265,11 +289,29 @@ export function render() {
   let html = `<ul role="group" aria-label="${esc(t('L.mirror-level', { n: lvl }))}">`;
   for (let i = lo; i < hi; i++) {
     const n = siblings[i];
-    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}" data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${esc(nameOf(n, i, total))}</li>`;
+    const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr)}"` : '';
+    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${esc(nameOf(n, i, total))}</li>`;
   }
   html += '</ul>';
   mirrorEl.innerHTML = html;
   mirrorEl.tabIndex = idx >= lo && idx < hi ? -1 : 0;
+}
+
+/**
+ * The mirror's document items marked expanded or collapsed in place (see the
+ * head): `aria-expanded` set where an item says otherwise than its document's
+ * reading scale at the view the camera is bound for, nothing rebuilt, so the
+ * platform's focus stays on the item it stands on. The app's loop runs it on
+ * each dirty frame: the mirror is rebuilt at the walk's moves alone, and a
+ * camera move — a zoom chord, the wheel, a teleport's flight — takes a
+ * document across its threshold between them.
+ */
+export function markExpanded() {
+  if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
+  for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[aria-expanded]')])) {
+    const v = String(!below(li.dataset.addr || ''));
+    if (li.getAttribute('aria-expanded') !== v) li.setAttribute('aria-expanded', v);
+  }
 }
 
 /**
@@ -346,7 +388,8 @@ function stepped() { render(); focusItem({ byKey: true }); moved(); }
  * A walk key: ↓ ↑ siblings, → in, ← out, Home/End first/last, Enter acts;
  * Shift+↓ / Shift+↑ select by span (K-8, the selection's owner's, which
  * leaves the focus here — rule 15). → reads the children first, and enters
- * nothing where a later move overtook it meanwhile.
+ * nothing where a later move overtook it meanwhile, nor at a document below
+ * its reading scale (`collapsed`), whose spans Enter's act reaches.
  * @param {'down' | 'up' | 'in' | 'out' | 'first' | 'last'} k
  * @returns {Promise<boolean>}
  */
@@ -358,6 +401,7 @@ export async function key(k) {
     return true;
   }
   if (k === 'in') {
+    if (collapsed()) return true;
     const move = ++moves;
     const kids = await childrenOf(focus);
     if (move !== moves) return true;
@@ -434,12 +478,13 @@ export async function focusTo(addr, pos, byKey = false, take = true) {
 /**
  * The focus follows the camera (rule 3): after a camera move — the wheel,
  * the camera key's drag, a zoom chord, PageDown — re-take it at the element
- * under the view's centre at the scale's grain — far an account, mid a
- * document, reading the span in the column under it (T-LAYER's fold). A
- * key's move puts the platform's focus on the element wherever the key was
- * pressed, the ring drawn (rule 10); a pointer's or the wheel's carries it
- * only where the mirror held it, the ring out, and says nothing until the
- * next keyboard act (rule 12).
+ * under the view's centre at the scale's grain — far an account, nearer the
+ * document under it, and the span in the column under it where that
+ * document stands at its own reading scale (T-LAYER's fold and its one test;
+ * see the head). A key's move puts the platform's focus on the element
+ * wherever the key was pressed, the ring drawn (rule 10); a pointer's or the
+ * wheel's carries it only where the mirror held it, the ring out, and says
+ * nothing until the next keyboard act (rule 12).
  * @param {boolean} [byKey] a key made the camera move
  */
 export async function retakeFromView(byKey = false) {
@@ -461,7 +506,7 @@ export async function retakeFromView(byKey = false) {
     if (dd < bd) { bd = dd; best = p.doc; }
   }
   if (!best) return;
-  if (lod.name === 'near' || lod.name === 'mid~near') {
+  if (LAYER.atReadingScale(best)) {
     const d = REC.doc(best);
     if (d.blocks.length) {
       // the span in the column under the centre (T-LAYER's fold)
