@@ -98,14 +98,31 @@ fix; nothing here depends on their names.
   columns where the rendered lines break and the bars below the mount
   stand where the text will. This is the one reconciler the page
   keeps, in one module, kept small. It has two targets, the plane's
-  text layer and the reading scene's panes, each pane one column at
-  the plane's measure. The scene borrows the mount; it never keeps
-  DOM text of its own.
+  text layer and the reading scene's panes, each pane one column
+  whose measure narrows in characters to fit and never shrinks its
+  face; below forty characters a pane, the panes stack. The scene
+  borrows the mount; it never keeps DOM text of its own.
 - **FP-13 Each control redraws itself from state.** The LEAP box and
   its rows, the mirror, the trail, the one line, the status line, the
   live region and the cards are ordinary DOM. Each is a function that
   rebuilds its own element from state when that part of the state
   changes. No observers, no binding.
+
+## The fit
+
+- **FP-26 Fit changes how a sign is drawn, never whether it stands.**
+  Text is read at reading size. To fit a view or a pane, margins
+  compact first, then the measure narrows in characters; the face
+  never shrinks, and zoom never changes the measure. Every sign of
+  what the reader sees — an address, a state, a board, a version, a
+  count — keeps a legible size beside what it describes. Short of
+  room it compacts there, else moves into its own document's free
+  room, else the coarser scale's label carries it; it never stands on
+  another document's ground or on ink. Compact means: a usual state
+  becomes a glyph, a name becomes its address fields and is never cut
+  mid-word, and a number or an exception keeps its words. A compact
+  sign opens whole on its act, and the mirror reads every sign whole.
+  A document drawn smaller than its neighbours is framed and says so.
 
 ## The bridge
 
@@ -187,21 +204,30 @@ fix; nothing here depends on their names.
 
 ## The landing
 
-- **FP-21 An outline alone means all of it, here, in one piece.** A
-  landing that carried or followed a passage reads what the text it
-  landed in holds of it by one rule (`web/beams/held.js`), and lands in
-  one of four states, never silent about the rest: all of it in one
-  piece, the outline alone; part of it, or all of it in pieces, the
-  outline kept and one line beside it at the text's edge saying so;
-  none of it, the dead end's face; couldn't tell, where no answer told
-  — a read the board refuses for its size asked again in parts first —
-  the landing unmarked, its line saying it could not tell and why,
-  keyed on the refusal and never its token. The line is no overlay: it
-  stands while a card opens at the landing and leaves with the outline
-  at the next act. The item the focus lands on takes the line as its
-  description, so the mirror says every state. Every surface that knows
-  the state before departure — a drawn link's far end, a versions row —
-  says it by the same rule.
+- **FP-21 An outline alone means all of it, here, in one piece.** An
+  arrival is one state: the passage a landing carried or followed,
+  read from the text it landed in by one rule (`web/beams/held.js`),
+  outlined on every run it holds, plus at most one lit link — the one
+  crossed to get there, lit at the reader's end, the same at an
+  arrival, a Back and a Forward. The landing is never silent about the
+  rest: all of it in one piece, the outline alone; in several runs,
+  each run labelled — runs of different material are pieces, numbered
+  in the passage's own order, a repeat says "again" and the first of
+  them "again later", the current one adds "all of" or "only part of
+  the passage" and, if reordered, "in another order"; none of it, the
+  dead end's face; couldn't tell, where no answer told — a read the
+  board refuses for its size asked again in parts first — the landing
+  unmarked, its line saying it could not tell and why, keyed on the
+  refusal and never its token. "Part" names an amount only; nothing
+  counts "places". The state ends only at another landing, at find
+  opening, or at Esc after anything nearer; a pan, a zoom, a selection
+  or a step keeps it, and a return restores outlines and labels as
+  left. Stepping the pieces follows find's concept, in passage order,
+  wrapping, with the focus on the piece. The item the focus lands on
+  takes the crossing and the label as its description, the one
+  announcement; no light sets `aria-current`. Every surface that knows
+  the state before departure — a drawn link's far end, a versions row
+  — says it by the same rule, the short form heading the long.
 
 ## The box
 
@@ -317,6 +343,9 @@ found.
 - 2026-10-23 · FP-7 · #160 · the version a pane reads is the scene's own, never a box's pin, so it is view state beside the version each box shows
 - 2026-10-23 · FP-24 · #161 · the copy, the mirror and the selection each answered what stands for an item without text their own way, emptying the clipboard or joining text across a run; one item rule now names it for all three
 - 2026-10-23 · FP-25 · #137 #171 #227 #228 #237 · while a jump read, the trail, input, cards, walk and failures each answered "where is the reader" by a different clock
+- 2026-10-23 · FP-26 · #151 #217 #220 #225 #230 #236 #241 · a fit test that failed dropped the sign without a word: labels, tail boards, the kept document's name, the shown version
+- 2026-10-23 · FP-12 · #217 · panes shrank their face to hold 66 characters and undid the reader's own zoom
+- 2026-10-23 · FP-21 · #158 #226 #238 #242 · the marks ended at the next act while #158 kept them, Back's light and the arrival's light meant different things, and stubs counted "places"
 
 ## What these rule out
 
