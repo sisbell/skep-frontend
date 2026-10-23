@@ -2,7 +2,9 @@
 // §6.3; S-22 (a): loaded by `import()` under `?gate=` alone). ENGINE-BOUND.
 // `window.__skep`: the model's held records, the mounted articles' text, the
 // mirror's items, the camera and the focus, the focus ring the canvas drew
-// (`view.ring`: the box on screen it outlined, null where it drew none),
+// (`view.ring`: the box on screen it outlined, null where it drew none) and
+// the bounds it is clamped to (`view.ringBounds`: the visible view, inset by
+// the ring's reach — issue #141),
 // S1's `driftSample` and `overlapCheck` (the measuring code moved into the
 // page), the visibility oracle `visible`, the beams' anchors beside their
 // spans' own rects and the labels the beams set at their bundles' ends
@@ -83,9 +85,10 @@ import * as TRAILLIST from '../overlays/trail-list.js';
 import * as KEYS from '../nav/keys.js';
 import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
-import { docBox, accountCell, boardCell, DOC_W, depthOfDoc } from '../plane/projection.js';
+import { docBox, accountCell, boardCell, boardLabelCell, DOC_W, depthOfDoc } from '../plane/projection.js';
 import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, LINE_H, boundsOf, outlineRects, firstRow } from '../plane/layout.js';
 import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME } from '../plane/lod.js';
+import { RING } from '../plane/register.js';
 import { pinned, lacking } from '../strings.js';
 import { pct, r2 } from '../util.js';
 
@@ -460,6 +463,11 @@ export function install(deps) {
     while (begin > 0 && deps.frames[begin - 1].phase === name) begin--;
     return summarize(deps.frames.slice(begin + 2, end));
   }
+  /** the box the focus ring's element is clamped to on screen (P-RENDER's `ringBox`): the visible view below the one line, inset by the ring's gap and half its stroke (P-REG's RING) */
+  function ringBounds() {
+    const s = CAM.visibleView(LINE.bottom()), i = RING.gap + RING.width / 2;
+    return { x: s.x + i, y: s.y + i, w: s.w - 2 * i, h: s.h - 2 * i };
+  }
   /** wait until the view's needs are met */
   async function settle(maxMs = 8000) {
     const t0 = performance.now();
@@ -488,7 +496,7 @@ export function install(deps) {
     mountedLines: (/** @type {string} */ addr) => LAYER.mountedLines(addr),
     spanRects: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => LAYER.spanRects(addr, pos, width),
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
-    view: { camera: () => CAM.view(), focus: () => WALK.current(), ring: () => (RENDER.stats.ring ? { ...RENDER.stats.ring } : null), lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
+    view: { camera: () => CAM.view(), focus: () => WALK.current(), ring: () => (RENDER.stats.ring ? { ...RENDER.stats.ring } : null), ringBounds, lod: () => lodOf(CAM.cam.scale), viewport: () => CAM.viewport(), set: (/** @type {{x:number,y:number,scale:number}} */ v) => { CAM.set(v); CAM.markDirty(); }, bounds: () => CAM.bounds() },
     /** the focus's owner as it stands: the ring's rule, whether the plane holds the focus, the regions holding it oldest first */
     focus: () => ({ ring: FOCUS.ringShown(), plane: FOCUS.planeHolds(), standing: FOCUS.standing() }),
     driftSample, overlapCheck, visible,
@@ -581,7 +589,7 @@ export function install(deps) {
     thresholds: THRESHOLDS,
     /** the scale at which a document's em — the size the page sets it at (T-LAYER's fold) — is `em` px, or its box `docPx` px */
     scaleFor: (/** @type {string} */ addr, /** @type {'em' | 'doc'} */ kind, /** @type {number} */ v) => (kind === 'doc' ? v / docBox(addr).w : v / LAYER.foldOf(REC.doc(addr)).fs),
-    boxOf: (/** @type {string} */ addr) => docBox(addr), accountCell: (/** @type {string} */ a) => accountCell(a), boardCell: (/** @type {string} */ b) => boardCell(b), depthOf: (/** @type {string} */ a) => depthOfDoc(a),
+    boxOf: (/** @type {string} */ addr) => docBox(addr), accountCell: (/** @type {string} */ a) => accountCell(a), boardCell: (/** @type {string} */ b) => boardCell(b), boardLabelCell: (/** @type {string} */ b) => boardLabelCell(b), depthOf: (/** @type {string} */ a) => depthOfDoc(a),
     constants: { DOC_W, STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME },
     refresh: async () => { const ts = /** @type {number[]} */ ([]); await new Promise((res) => { const step = (/** @type {number} */ t) => { ts.push(t); if (ts.length < 60) requestAnimationFrame(step); else res(undefined); }; requestAnimationFrame(step); }); const iv = []; for (let i = 1; i < ts.length; i++) iv.push(ts[i] - ts[i - 1]); return r2(1000 / Math.max(0.1, pct(iv, 50))); },
   };

@@ -15,7 +15,9 @@
 // triangle's size, the one stub BM's beams and P-RENDER's mid connections
 // draw (P-CAM's `edgeStub`); THE TAIL its length and the gap before its
 // label, the short stroke P-RENDER draws for a link whose far document the
-// plane draws nowhere (issue #132's design decision). LK reads this module to put a value on each
+// plane draws nowhere (issue #132's design decision); THE FOCUS RING its gap
+// outside its element's box and its stroke's width, which set how far inside
+// the visible view it is held (issue #141's design decision). LK reads this module to put a value on each
 // link's mark; no drawing module reads it for a link (the seam's rule). The
 // values are the UI phase's.
 // Carries: the wireframe's §10 `COL`; S1 Q5's `same`/`provenance` classes
@@ -84,6 +86,15 @@ export const STUB = Object.freeze({ inset: 8, length: 10, width: 10 });
  * never reaches the next column's text (register.test.js holds it).
  */
 export const TAIL = Object.freeze({ length: 10, gap: 3 });
+
+/**
+ * THE FOCUS RING (D5 §4 rule 2; issue #141's design decision): stroked `gap`
+ * px outside its element's box, `width` px wide — its box clamped to the
+ * visible view inset by `gap` and half the width, so the whole stroke stands in
+ * the view: an element wider than the view ringed at the view's border, one
+ * out of it marked on the facing edge
+ */
+export const RING = Object.freeze({ gap: 3, width: 2.5 });
 
 /**
  * The smallest size a label on the plane is set at, in px — the far labels'

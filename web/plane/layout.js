@@ -38,7 +38,8 @@
 // only then is the whole document set smaller, at the first step that holds
 // its columns, each step at least doubling the room's capacity (`stepAt`), so
 // a growing draft re-sets rarely. Length reads as a count of columns.
-// Positions map to places and back (`placeOf`, `posAt`), the paging key
+// Positions map to places and back (`placeOf`, `posAt`), a view reads as the
+// positions it shows and the ends it has run past (`windowIn`), the paging key
 // continues at the next column's top (`pageTarget`), and a document re-set in
 // view hands the place its passage stands at now to the camera (`holdOf`).
 // A document whose text has not arrived is its estimated columns, every line
@@ -805,6 +806,57 @@ export function posAt(f, x, y) {
   for (let i = best; i < c.first + c.n; i++) { const a = f.lines[i].at; if (a != null) return a; }
   for (let i = best - 1; i >= c.first; i--) { const a = f.lines[i].at; if (a != null) return a; }
   return null;
+}
+
+/**
+ * @typedef {Object} Window — the positions a view shows of a fold, and the ends of it the view has run past
+ * @property {number} from the position the first line in view opens at
+ * @property {number} to the position the last line in view opens at
+ * @property {boolean} start the view reaches the fold's first line's top: it has run past the document's start
+ * @property {boolean} end the view reaches its last column's foot: it has run past the document's end
+ */
+
+/**
+ * The view's window over a fold (issue #141's design decision: the one line's
+ * strip marks it over a document the walk keeps in view): in each column the
+ * view meets, the lines whose boxes meet it — a line held by the position it
+ * opens at, a line of a stretch the fold holds no line for estimated as
+ * `placeOf` places those positions, a body line for each MEASURE_CPL of them —
+ * the first position and the last of them; and whether the view reaches the
+ * first column's top and the last column's foot.
+ * @param {Fold} f
+ * @param {{x0: number, y0: number, x1: number, y1: number}} view in world units relative to the room
+ * @returns {Window | null} null where the view meets no line naming a position
+ */
+export function windowIn(f, view) {
+  const lh = LINE_H * f.fs, deep = COLUMN_H * f.fs, last = f.columns.length - 1;
+  let from = Infinity, to = -Infinity;
+  const take = (/** @type {number} */ p) => { from = Math.min(from, p); to = Math.max(to, p); };
+  const across = (/** @type {Column} */ c) => c.x <= view.x1 && c.x + c.w >= view.x0;
+  /** the estimated lines a column holds from a depth below its text top: as many as a column's depth holds, the last column the rest of its own */
+  const fit = (/** @type {Column} */ c, /** @type {number} */ depth, /** @type {boolean} */ final) => Math.max(1, Math.floor(((final ? c.h : deep) - depth) / lh + 1e-6));
+  f.columns.forEach((c, ci) => {
+    if (!across(c) || c.y > view.y1 || c.y + c.h < view.y0) return;
+    for (let i = c.first; i < c.first + c.n; i++) {
+      const l = f.lines[i], top = c.y + (l.top - c.top) * f.fs;
+      if (top > view.y1) break;
+      if (l.at != null && top + l.h * f.fs >= view.y0) take(l.at);
+    }
+    for (const u of f.unheld) {
+      if (ci < u.column || ci > u.last) continue;
+      // the stretch's lines in the columns before this one, then this column's from the depth they begin at
+      let k = 0, depth = u.depth;
+      for (let j = u.column; j < ci; j++) { k += fit(f.columns[j], depth, false); depth = 0; }
+      const n = fit(c, depth, ci >= u.last || ci >= last);
+      const a = Math.max(0, Math.floor((view.y0 - c.y - depth) / lh)), b = Math.min(n - 1, Math.floor((view.y1 - c.y - depth) / lh));
+      if (a > b || u.from + (k + a) * MEASURE_CPL >= u.to) continue;
+      take(u.from + (k + a) * MEASURE_CPL);
+      take(Math.min(u.from + (k + b) * MEASURE_CPL, u.to - 1));
+    }
+  });
+  if (from > to) return null;
+  const c0 = f.columns[0], cz = f.columns[last], foot = cz.y + cz.h;
+  return { from, to, start: across(c0) && c0.y >= view.y0 && c0.y <= view.y1, end: across(cz) && foot >= view.y0 && foot <= view.y1 };
 }
 
 /**

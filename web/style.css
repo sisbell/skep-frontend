@@ -32,16 +32,26 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line .address { cursor:pointer; }
 #line .strip { display:inline-block; width:64px; height:8px; margin:0 6px -1px; border:1px solid #4a5260; border-radius:2px; position:relative; vertical-align:middle; }
 #line .strip-mark { position:absolute; top:0; bottom:0; width:3px; background:var(--accent); }
+/* the view's window over a document kept in view off the view's centre (issue #141): an edge at each end the view has not
+   run past, none at an end it has, where the window runs open to the strip's end */
+#line .strip-window { position:absolute; top:0; bottom:0; min-width:2px; background:rgba(127,178,255,.3); border:0 solid var(--accent); border-left-width:2px; border-right-width:2px; }
+#line .strip-window.open-start { border-left-width:0; }
+#line .strip-window.open-end { border-right-width:0; }
 /* the position's slot (issue #140): its words as wide as the document's widest position, then the strip — empty below the
-   document's reading scale, the room of both kept, so nothing after it on the line moves */
+   document's reading scale and where no document is named, the room of both kept, so nothing after it on the line moves */
 #line .slot .pos { display:inline-block; }
 #line .strip.none { visibility:hidden; }
-#line .marker { color:var(--dim); }
+#line .marker { display:inline-block; width:2ch; text-align:center; color:var(--dim); }
 #line .marker.lit { color:var(--accent); }
+#line .marker.none { visibility:hidden; }
 #line .transient { color:var(--warn); }
 #line button { padding:0 5px; }
-/* the address segment is a native button (K-22; rule 14), drawn as the segment it is, not as a key */
-#line button.address { background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; font-size:11px; line-height:inherit; cursor:pointer; vertical-align:baseline; }
+/* the address segment is a native button (K-22; rule 14), drawn as the segment it is, not as a key — one width at every
+   scale and focus (issue #141): the widest words it names, which the line sets on it (`--words`, in characters of its
+   face), then the strip's room (its 64px and 6px either side) and the marker's 2ch, its content clipped past it, so
+   nothing after it on the line moves; set at the line's top, as an inline-block clipping its content has no baseline of
+   its text's */
+#line button.address { display:inline-block; width:calc(var(--words) * 1ch + 76px + 2ch); overflow:hidden; text-align:left; background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; font-size:11px; line-height:inherit; cursor:pointer; vertical-align:top; }
 
 /* LEAP — the address segment opened (K-30); above the reading scene, which it may open over (#118) */
 #leap { top:34px; left:50%; transform:translateX(-50%); width:620px; display:none; z-index:27; }

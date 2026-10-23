@@ -77,9 +77,11 @@
 // the label floor, and no path between them (foundations §2.2 renders the
 // entries as pips: at reading scale a pip stands in the text column, where a
 // path would run between the glyphs of the article mounted over the canvas);
-// the focus ring; the arrival mark, every run of the span a follow, or a
-// LEAP carrying a passage, landed on outlined line by line over the mounted
-// article. BARS MEAN ONLY "TOO SMALL TO READ" (issue #122's design decision):
+// the focus ring, its box clamped inside the visible view — an element wider
+// than the view ringed at the view's border, one out of it marked on the
+// facing edge (issue #141's design decision; P-REG's RING); the arrival
+// mark, every run of the span a follow, or a LEAP carrying a passage, landed
+// on outlined line by line over the mounted article. BARS MEAN ONLY "TOO SMALL TO READ" (issue #122's design decision):
 // no document at reading size is ever drawn as bars — the canvas draws them
 // below P-LOD's readable threshold, and at or above it every document is real
 // text, T-LAYER standing every line of it in view in the frame its em gets
@@ -123,7 +125,7 @@ import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
 import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt } from './projection.js';
 import { bars, outline, outlineRects, firstRow, GUTTER } from './layout.js';
 import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, LINE_BOX } from './labels.js';
-import { COL, EDGE, HUE, LABEL_MIN_PX, TAIL } from './register.js';
+import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL } from './register.js';
 import { documentOf, accountOf, cmpAddr } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
 import { t } from '../strings.js';
@@ -810,25 +812,54 @@ function drawTrail() {
 }
 
 /**
+ * A box on screen clamped inside the visible view, inset by the focus ring's
+ * reach (P-REG's RING), so the ring's whole stroke stands in the view: an
+ * element wider than the view held at its border, one out of it collapsed to
+ * a mark on the facing edge (issue #141's design decision).
+ * @param {Rect} b
+ * @param {Rect} seen the visible view
+ * @returns {Rect}
+ */
+function ringBox(b, seen) {
+  const inset = RING.gap + RING.width / 2;
+  const x0 = seen.x + inset, y0 = seen.y + inset, x1 = seen.x + seen.w - inset, y1 = seen.y + seen.h - inset;
+  const clamp = (/** @type {number} */ v, /** @type {number} */ lo, /** @type {number} */ hi) => Math.max(lo, Math.min(hi, v));
+  const X = clamp(b.x, x0, x1), Y = clamp(b.y, y0, y1);
+  return { x: X, y: Y, w: clamp(b.x + b.w, x0, x1) - X, h: clamp(b.y + b.h, y0, y1) - Y };
+}
+
+/**
  * The focus ring at the walk's element while the plane holds the focus and
  * a key moved it (N-FOCUS's rule; D5 §4 rule 2) — its document's outline's
- * bounds for a document or a link (T-LAYER's `shapeOf`); a span whose article
- * stands is marked by its lit block instead, the ring's reading-scale form
- * (D3), so the canvas circles no document whose text is laid out.
- * `stats.ring` is the box it outlined.
+ * bounds for a document or a link (T-LAYER's `shapeOf`), the account's
+ * region, the board's; a span whose article stands is marked by its lit
+ * block instead, the ring's reading-scale form (D3), wherever a line of it
+ * meets the visible view, so the canvas circles no document whose text is
+ * laid out — and where none does (a span the re-take keeps while its
+ * document stays in view, N-WALK's), at its lines (T-LAYER's `lineBoxes`).
+ * Its box clamped to the visible view (`ringBox`). `stats.ring` is the box it
+ * outlined.
+ * @param {Rect} seen the visible view
  */
-function drawFocus() {
+function drawFocus(seen) {
   if (!ctx || !FOCUS.ringShown()) return;
   const f = WALK.current(); if (!f) return;
-  if (f.kind === 'block' && LAYER.isMounted(f.addr)) return;
-  let b = null;
-  if (f.kind === 'document' || f.kind === 'block' || f.kind === 'link') b = LAYER.shapeOf(f.addr);
-  else if (f.kind === 'account') b = accountCell(f.addr);
-  else if (f.kind === 'board') b = boardCell(f.addr);
-  if (!b) return;
-  const X = sx(b.x), Y = sy(b.y), W = b.w * cam.scale, H = b.h * cam.scale;
-  ctx.strokeStyle = COL.focus; ctx.lineWidth = 2.5; rrect(ctx, X - 3, Y - 3, W + 6, H + 6, Math.min(8, W * 0.06)); ctx.stroke();
-  stats.ring = { x: X, y: Y, w: W, h: H };
+  /** @type {Rect} the element's box on screen */
+  let b;
+  if (f.kind === 'block' && LAYER.isMounted(f.addr)) {
+    const blk = f.pos != null ? REC.blockByPos(f.addr, f.pos) : null;
+    const lines = blk ? LAYER.lineBoxes(f.addr, blk.pos, blk.width) || [] : [];
+    const meets = (/** @type {Rect} */ r) => r.x < seen.x + seen.w && r.x + r.w > seen.x && r.y < seen.y + seen.h && r.y + r.h > seen.y;
+    if (!lines.length || lines.some(meets)) return;
+    const x0 = Math.min(...lines.map((r) => r.x)), y0 = Math.min(...lines.map((r) => r.y));
+    b = { x: x0, y: y0, w: Math.max(...lines.map((r) => r.x + r.w)) - x0, h: Math.max(...lines.map((r) => r.y + r.h)) - y0 };
+  } else {
+    const w = f.kind === 'account' ? accountCell(f.addr) : f.kind === 'board' ? boardCell(f.addr) : LAYER.shapeOf(f.addr);
+    b = { x: sx(w.x), y: sy(w.y), w: w.w * cam.scale, h: w.h * cam.scale };
+  }
+  const r = ringBox(b, seen), g = RING.gap;
+  ctx.strokeStyle = COL.focus; ctx.lineWidth = RING.width; rrect(ctx, r.x - g, r.y - g, r.w + 2 * g, r.h + 2 * g, Math.min(8, r.w * 0.06)); ctx.stroke();
+  stats.ring = r;
 }
 
 /**
@@ -874,7 +905,7 @@ export function draw() {
   else if (lod.name === 'far~mid') { stats.clusters = drawClusters(1 - lod.fade, pass); drawAccountFrames(lod.fade, pass); stats.docsDrawn = drawDocs(lod, lod.fade, pass, seen); }
   else { drawAccountFrames(1, pass); stats.docsDrawn = drawDocs(lod, 1, pass, seen); }
   drawLabels(pass, seen);
-  drawStubs(); drawTails(); drawTrail(); drawFocus(); drawArrival();
+  drawStubs(); drawTails(); drawTrail(); drawFocus(seen); drawArrival();
   return lod;
 }
 

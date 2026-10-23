@@ -13,7 +13,18 @@ alone, the camera where it stood, and Mod+] showing its notice again
 at the focus every teleport a key made lands — the box's Enter, Mod+[ and Mod+],
 Mod+0, Mod+Shift+H, Enter on the line's ‹ back (K-22), Mod+3, Enter on a
 trail list row (K-41), Enter on a document (K-7) — and at the focus
-PageDown re-takes; a document below its own reading scale with the camera's
+PageDown re-takes, the ring clamped to the visible view (issue #141's design
+decision); a camera move ending over no document's region — Mod+= at the near
+band over the board's label cell, over a cell its account's index lists
+nothing in, past the board's left edge — re-taking the board or the account
+holding the view's centre, the one line naming it as mid scale does, its slot,
+strip and marker empty, the ring at the view's border or, the board out of
+the view, on its facing edge; PageDown past the first edition's last line
+keeping the walk on its span, the strip marking the view's window, the ring
+on the view's top edge across the span's column; the address segment one
+width, the acting segment at one x at WHOLE BOARD, HOME, the board and the
+account so re-taken, below a document's reading scale and at a position (issue
+#141); a document below its own reading scale with the camera's
 band nearer than mid (issue #140's design decision) — the far edition, a
 continuation document, zoomed out by Mod+- to em 6.4 — the walk on it whole,
 the one line naming it alone with its position's slot standing empty,
@@ -192,11 +203,17 @@ def ring(ctx):
     """the focus ring as the last frame drew it — the box on screen it outlined, None where it drew none — beside the
     focus and the focused element's box on screen, read from the projection, the fold and the camera: the bounds of the
     document's outline for a document, a span or a link (issue #15: the document's one edge traces its columns), the
-    account's cell, the board's"""
+    account's cell, the board's — clamped, as the ring is (issue #141's design decision), to the visible view, the
+    viewport below the one line's bottom as the page lays it out, inset by the ring's reach (`bounds`), so an element
+    wider than the view is ringed at its border and one out of it on the facing edge (`element` the box unclamped)"""
     return ctx.js('''(() => { const s = window.__skep, f = s.view.focus(), c = s.view.camera(), p = s.view.viewport();
       const b = !f ? null : f.kind === 'account' ? s.accountCell(f.addr) : f.kind === 'board' ? s.boardCell(f.addr) : s.fold(f.addr).outline;
-      return {ring: s.view.ring(), focus: f && {kind: f.kind, addr: f.addr, pos: f.pos},
-              box: b && {x: (b.x - c.x) * c.scale + p.VW / 2, y: (b.y - c.y) * c.scale + p.VH / 2, w: b.w * c.scale, h: b.h * c.scale}}; })()''')
+      const top = document.getElementById('line').getBoundingClientRect().bottom, i = s.view.ringBounds().x;
+      const k = {x: i, y: top + i, w: p.VW - 2 * i, h: p.VH - top - 2 * i}, cl = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+      const e = b && {x: (b.x - c.x) * c.scale + p.VW / 2, y: (b.y - c.y) * c.scale + p.VH / 2, w: b.w * c.scale, h: b.h * c.scale};
+      const x = e && cl(e.x, k.x, k.x + k.w), y = e && cl(e.y, k.y, k.y + k.h);
+      return {ring: s.view.ring(), focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, element: e, bounds: k,
+              box: e && {x, y, w: cl(e.x + e.w, k.x, k.x + k.w) - x, h: cl(e.y + e.h, k.y, k.y + k.h) - y}}; })()''')
 
 
 def ring_drawn(ctx, r, made):
@@ -1135,6 +1152,114 @@ def collapsed_document(ctx, r):
     ctx.leap(DOC, WINDOW[0])
 
 
+def kept_holds(ctx, r):
+    """THE KEPT FOCUS (issue #141's design decision: "keep the current focus … while any of its text or box is in view
+    … Reading past the last line … does not leave it"): at the first edition's landing on its first block, walked onto by
+    ↓ and ↑ so the ring is a key's, its first column's foot below the view, PageDown pages the view by 0.9 of its height
+    — the view's centre past the edition's text, in its room, off its outline, its last lines in view. The walk stays on
+    the first span; the one line names the edition and that span's position still, its strip marking the view's window
+    — open at the end where the last column's foot stands in the view, and only there — never the position; and the
+    ring stands on the view's top edge across the span's column, the span's lines above the view. PageUp returns"""
+    ctx.leap(DOC, 1)
+    chord(ctx, 'ArrowDown')
+    chord(ctx, 'ArrowUp')
+    f0 = state(ctx)['focus']
+    chord(ctx, 'PageDown')
+    ctx.js('new Promise((r) => setTimeout(r, 300))')  # the line redraws every 120 ms
+    s = ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), p = S.view.viewport(), w = document.querySelector("#line .strip-window");
+      return {focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, address: S.line().address, cam: S.view.camera(), VW: p.VW, VH: p.VH,
+              top: document.getElementById("line").getBoundingClientRect().bottom, inset: S.view.ringBounds().x, ring: S.view.ring(), rule: S.focus().ring,
+              fold: S.fold(%s), span: f ? S.centreOf(f.addr, f.pos) : null, strip: w ? w.className : null, tick: !!document.querySelector("#line .strip-mark")}; })()''' % json.dumps(DOC))
+    cam = s['cam']
+    sx = lambda x: (x - cam['x']) * cam['scale'] + s['VW'] / 2
+    sy = lambda y: (y - cam['y']) * cam['scale'] + s['VH'] / 2
+    o, last = s['fold']['outline'], s['fold']['columns'][-1]
+    off = sy(o['y'] + o['h']) < s['VH'] / 2 and sy(o['y'] + o['h']) > s['top']
+    end = s['top'] <= sy(last['y'] + last['h']) <= s['VH'] and sx(last['x']) <= s['VW'] and sx(last['x'] + last['w']) >= 0
+    a, w = s['address'], s['address']['window']
+    same = bool(f0) and bool(s['focus']) and all(s['focus'][q] == f0[q] for q in ('kind', 'addr', 'pos'))
+    r.check(same and f0['kind'] == 'block' and off and a['doc'] == DOC and a['pos'] == f0['pos'],
+            'PageDown past the first edition\'s last line, its last lines in view, keeps the walk on the span it stood on, and the line names the edition and that position (issue #141)',
+            {'from': f0, 'to': s['focus'], 'centre_off_outline': off, 'address': {k: a[k] for k in ('text', 'doc', 'pos')}})
+    r.check(bool(w) and not w['start'] and w['end'] == end and 1 <= w['from'] <= w['to'] <= ctx.js('window.__skep.model.doc(%s).extent' % json.dumps(DOC))
+            and bool(s['strip']) and ('open-end' in s['strip']) == end and 'open-start' not in s['strip'] and not s['tick'],
+            'the strip marks the view\'s window over the kept edition, open at its end only where its last column\'s foot stands in the view, and no position tick (issue #141)',
+            {'window': w, 'strip': s['strip'], 'last_foot_in_view': end, 'tick': s['tick']})
+    i, top = s['inset'], s['top']
+    k = {'x': i, 'y': top + i, 'w': s['VW'] - 2 * i, 'h': s['VH'] - top - 2 * i}
+    col = next((c for c in s['fold']['columns'] if s['span'] and c['x'] <= s['span']['x'] <= c['x'] + c['w']), None)
+    cl = lambda v, lo, hi: max(lo, min(hi, v))
+    want = col and {'x': cl(sx(col['x']), k['x'], k['x'] + k['w']), 'y': k['y'], 'w': cl(sx(col['x'] + col['w']), k['x'], k['x'] + k['w']) - cl(sx(col['x']), k['x'], k['x'] + k['w']), 'h': 0}
+    g = s['ring']
+    r.check(s['rule'] is True and bool(col) and bool(s['span']) and sy(s['span']['y']) < top and bool(g) and all(abs(g[q] - want[q]) <= 0.5 for q in ('x', 'y', 'w', 'h')),
+            'the ring, a key\'s, stands on the view\'s top edge across the kept span\'s column, its lines above the view (issue #141)', {'ring': g, 'want': want, 'rule': s['rule']})
+    chord(ctx, 'PageUp')
+    return {'focus': s['focus'], 'window': w, 'strip': s['strip'], 'ring': g, 'want': want}
+
+
+def retake_holds(ctx, r):
+    """THE RE-TAKE'S ORDER AND THE RING CLAMPED TO THE VIEW (issue #141's design decision): a key's camera move — Mod+=,
+    from a view at the near band — ending over no document's region re-takes the place holding the view's centre: over
+    the board's label cell the board, over the cell of a document its account's index lists nothing in the account, and
+    past the board's left edge the board; the one line names that place as mid scale names it, no document named; and
+    the ring stands around the place's cell clamped to the visible view: at the view's border where the cell is wider than
+    the view, on the view's right edge where the board lies to the right of it. THE ADDRESS SEGMENT IS ONE WIDTH: the
+    acting segment's left edge stands at one x, the segment at one width, at WHOLE BOARD, at HOME, on the board and the
+    account so re-taken — their slot, strip and marker empty — on the far edition below its reading scale and at a
+    position. The step ends at the first edition's landing"""
+    def seen():
+        """the walk, the line and the acting segment as the page stands, the line given time to redraw (every 120 ms)"""
+        ctx.js('new Promise((r) => setTimeout(r, 300))')
+        return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), a = document.querySelector("#line .seg.acting"), b = document.querySelector("#line button.address");
+          return {focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, address: S.line().address, lod: S.view.lod().name,
+                  acting: a ? a.getBoundingClientRect().left : null, segment: b ? b.getBoundingClientRect().width : null,
+                  empty: !!document.querySelector("#line .slot .strip.none") && !!document.querySelector("#line .marker.none")}; })()''')
+    near = ctx.js('window.__skep.scaleFor(%s, "em", 12.5)' % json.dumps(DOC))
+    listed = {q['doc'] for q in ctx.js('window.__skep.model.places()')}
+    free = next(((acct, '%s.0.%d' % (acct, n)) for acct in ('1.0.1', SECOND_ACCOUNT) for n in range(1, 49) if '%s.0.%d' % (acct, n) not in listed), None)
+    label, board = ctx.js('window.__skep.boardLabelCell("1")'), ctx.js('window.__skep.boardCell("1")')
+    states = {}
+    chord(ctx, '0', mods=('Meta',))
+    states['the whole board'] = seen()
+    chord(ctx, 'H', mods=('Meta', 'Shift'))
+    states['HOME'] = seen()
+    places = [('the board\'s label cell', label['x'] + label['w'] / 2, label['y'] + label['h'] / 2, ('board', '1'), '1', 'border'),
+              ('past the board\'s left edge', board['x'] - 2000, board['y'] + board['h'] / 2, ('board', '1'), '1', 'right')]
+    if free:
+        box = ctx.js('window.__skep.boxOf(%s)' % json.dumps(free[1]))
+        places.insert(1, ('the cell of %s, which the index does not list' % free[1], box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, ('account', free[0]), '1 › ' + free[0], 'border'))
+    else:
+        r.check(False, 'a cell no listed document stands in, in the claimant\'s account or the second (what the account\'s re-take stands on)', None)
+    rings = {}
+    for where, x, y, focus, text, edge in places:
+        ctx.set_view(x, y, near)
+        chord(ctx, '=', mods=('Meta',))
+        states[where] = q = seen()
+        g = ring(ctx)
+        f, k, a = q['focus'], g['bounds'], g['ring']
+        r.check(bool(f) and (f['kind'], f['addr']) == focus and q['lod'] == 'near' and q['address']['text'] == text and q['address']['doc'] is None and q['empty'],
+                'Mod+= ending at the near band over %s re-takes %s %s, and the line names it, %s, its slot, strip and marker empty (issue #141)' % (where, focus[0], focus[1], text),
+                {'focus': f, 'lod': q['lod'], 'address': q['address']['text'], 'empty': q['empty']})
+        ring_drawn(ctx, r, 'Mod+= over %s' % where)
+        at = {'border': k, 'right': {'x': k['x'] + k['w'], 'y': k['y'], 'w': 0, 'h': k['h']}}[edge]
+        r.check(bool(a) and all(abs(a[c] - at[c]) <= 0.5 for c in ('x', 'y', 'w', 'h')),
+                'over %s the ring stands %s (issue #141)' % (where, 'at the view\'s border: the cell wider than the view' if edge == 'border' else 'on the view\'s right edge: the board out of the view to its right'),
+                {'ring': a, 'want': at, 'element': g['element']})
+        rings[where] = a
+    ctx.leap(FAR_LEAP)
+    for _ in range(3):
+        chord(ctx, '-', mods=('Meta',))
+    states['the far edition below its reading scale'] = seen()
+    ctx.leap(DOC, WINDOW[0])
+    states['a position'] = seen()
+    first = states['the whole board']
+    moved = {w: (q['acting'], q['segment']) for w, q in states.items() if q['acting'] is None or first['acting'] is None or abs(q['acting'] - first['acting']) > 0.5 or abs(q['segment'] - first['segment']) > 0.5}
+    r.check(not moved and states['a position']['address']['pos'] is not None and states['the far edition below its reading scale']['address']['pos'] is None,
+            'the address segment is one width: the acting segment stands at one x at WHOLE BOARD, at HOME, on the board and the account a re-take stood the walk on, below a document\'s reading scale and at a position (issue #141)',
+            {w: {'acting': q['acting'], 'segment': q['segment'], 'address': q['address']['text']} for w, q in states.items()})
+    return {'free': free, 'rings': rings, 'acting': {w: q['acting'] for w, q in states.items()}, 'segment': first['segment']}
+
+
 def focus_rules(ctx, r):
     """the focus and keyboard rules the one-owner lane added (FP-20). Enter and Space act on the × and the address
     segment, both native buttons (#119, #102, rule 14); the line is one Tab stop its ← and → move among (#96, K-22); ↓
@@ -1464,6 +1589,8 @@ def run(ctx):
     ring_drawn(ctx, r, 'Enter on a trail list row')
     # ---- a document below its own reading scale: named alone, collapsed, → its Enter (issue #140) ------------
     collapsed_document(ctx, r)
+    # ---- a camera move ending over no document: the place holding the centre, the ring clamped, the line still (issue #141)
+    r.figures['retake'] = retake_holds(ctx, r)
     # ---- the walk (K-1 … K-8) -------------------------------------------------------------------------
     ctx.leap(DOC, WINDOW[0])
     f0 = state(ctx)['focus']
@@ -1713,16 +1840,18 @@ def run(ctx):
     chord(ctx, 'PageUp')
     r.figures['paging'] = paging_holds(ctx, r)
     # a camera move a key made re-takes the focus with the ring drawn at it (D5 §4 rules 2, 3): PageDown from a landing the
-    # gate's door made at the first edition's first block, which draws none, moves the focus to the span then under the
-    # view's centre
-    ctx.leap(DOC, 1)
+    # gate's door made on the longest edition, which draws none, its first column's foot in view, brings the next column's
+    # text under the view's centre and moves the focus to the span there
+    longest, _, _ = ctx.longest_edition()
+    ctx.leap(longest)
     f0, g0 = state(ctx)['focus'], ring(ctx)
     chord(ctx, 'PageDown')
     f1 = state(ctx)['focus']
-    r.check(g0['ring'] is None and bool(f0) and bool(f1) and (f1['kind'], f1['addr'], f1['pos']) != (f0['kind'], f0['addr'], f0['pos']),
-            'PageDown from a landing that drew no ring re-takes the focus at the span now under the view\'s centre', {'from': f0, 'to': f1, 'ring_before': g0['ring']})
+    r.check(g0['ring'] is None and bool(f0) and bool(f1) and f1['kind'] == 'block' and f1['addr'] == longest and (f1['kind'], f1['addr'], f1['pos']) != (f0['kind'], f0['addr'], f0['pos']),
+            'PageDown from a landing that drew no ring re-takes the focus at the span now under the view\'s centre', {'doc': longest, 'from': f0, 'to': f1, 'ring_before': g0['ring']})
     ring_drawn(ctx, r, 'PageDown')
     chord(ctx, 'PageUp')
+    r.figures['kept'] = kept_holds(ctx, r)
     # ---- the scene (K-62, K-63, K-64) ----------------------------------------------------------------
     open_scene(ctx)
     r.check(ctx.js('window.__skep.scene.isOpen()'), 'the scene opens between the window and its origin')

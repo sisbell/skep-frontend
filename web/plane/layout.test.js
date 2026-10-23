@@ -27,12 +27,15 @@
 // columns, one edge; the estimate never more columns than the text sets, so
 // its size never smaller (a mutant that counts a line per fewer positions
 // turns red); positions placed and read back; unheld positions estimated in
-// columns of their own; the paging key's next column; a re-set's hold.
+// columns of their own; the view's window over a fold, its estimated lines read
+// as `placeOf` places them (a mutant reading the held lines alone, or an end by
+// the view's edge it never reached, turns red); the paging key's next column;
+// a re-set's hold.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   layoutOf, heightOf, wrap, breakBetween, cssMeasures, lineBox, columnsOf, fold, estimate, estimatedSpan, slot, outline, outlineRects, boundsOf, firstRow, padded,
-  bars, placeOf, posAt, columnAt, pageTarget, holdOf, standardFs, stepAt, stepFor,
+  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, standardFs, stepAt, stepFor,
   MEASURE, BORDER, LINE_H, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, STANDARD_GRID, STANDARD_FS,
 } from './layout.js';
 import { DOC_W, DOC_H } from './projection.js';
@@ -355,6 +358,34 @@ test('positions the document does not hold are estimated: those after its lines 
   assert.ok(after >= 2 && g.columns.slice(1, after).every((c) => c.estimated), `the block after the gap in column ${after}, estimated columns before it`);
   assert.ok(g.columns[after].first === g.lines.findIndex((l) => l.pos === 100001), 'the block opens its column');
   assert.equal(placeOf(g, 50000).column > 0 && placeOf(g, 50000).column < after, true, 'a position in the gap stands in its estimated columns');
+});
+
+test('the view\'s window over a fold: the first and last positions of the lines a view meets — held, or estimated where the fold holds none — and whether it reaches the first column\'s top and the last column\'s foot (issue #141)', () => {
+  const { rows, positions } = article(Array.from({ length: 30 }, (_, i) => words(30, i)));
+  const f = fold(layoutOf(rows).lines, ROOM, { after: MEASURE_CPL * COLUMN_LINES * 3, heldTo: positions + 1 });
+  const ce = f.columns.findIndex((c) => c.estimated), last = f.columns.length - 1;
+  assert.ok(ce >= 2 && ce < last, `${ce} held columns, then ${last + 1 - ce} estimated ones`);
+  /** the positions the held lines meeting a band of a column open at */
+  const opens = (/** @type {import('./layout.js').Column} */ c, /** @type {number} */ y0, /** @type {number} */ y1) =>
+    f.lines.slice(c.first, c.first + c.n).filter((l) => { const t = c.y + (l.top - c.top) * f.fs; return l.at != null && t <= y1 && t + l.h * f.fs >= y0; }).map((l) => /** @type {number} */ (l.at));
+  // the middle third of the first column alone
+  const c0 = f.columns[0], band = { x0: c0.x, x1: c0.x + c0.w, y0: c0.y + c0.h / 3, y1: c0.y + (2 * c0.h) / 3 }, held = opens(c0, band.y0, band.y1);
+  assert.deepEqual(windowIn(f, band), { from: Math.min(...held), to: Math.max(...held), start: false, end: false }, 'a band of the first column: the positions its lines open at, neither end run past');
+  // the whole fold and more: its first position to its last estimated line's, both ends run past
+  const all = /** @type {NonNullable<ReturnType<typeof windowIn>>} */ (windowIn(f, { x0: -1e9, y0: -1e9, x1: 1e9, y1: 1e9 }));
+  assert.ok(all.start && all.end && all.from === 1 && all.to > positions && placeOf(f, all.to).column === last && placeOf(f, all.to + MEASURE_CPL).y === placeOf(f, all.to).y, `the whole fold: ${JSON.stringify(all)}`);
+  // the first estimated column from above its top to its middle: its first estimated line, and the last meeting the band, as `placeOf` places them
+  const c = f.columns[ce], top = { x0: c.x, x1: c.x + c.w, y0: c.y - 1, y1: c.y + c.h / 2 };
+  const w = /** @type {NonNullable<ReturnType<typeof windowIn>>} */ (windowIn(f, top));
+  assert.ok(w && !w.start && !w.end, `an estimated column's upper half: ${JSON.stringify(w)}`);
+  assert.ok(placeOf(f, w.from).column === ce && placeOf(f, w.from - MEASURE_CPL).column < ce, 'from: the column\'s first estimated line');
+  assert.ok(placeOf(f, w.to).column === ce && placeOf(f, w.to).y <= top.y1 && placeOf(f, w.to + MEASURE_CPL).y > top.y1, 'to: the last estimated line meeting the band');
+  // the last column's upper half, its foot below the view: the end not run past; its lower half and below its foot: run past
+  const z = f.columns[last], short = windowIn(f, { x0: z.x, x1: z.x + z.w, y0: z.y - 1, y1: z.y + z.h / 2 });
+  assert.ok(short && !short.end && !short.start, `the last column's upper half: no end run past — ${JSON.stringify(short)}`);
+  const past = windowIn(f, { x0: z.x, x1: z.x + z.w, y0: z.y + z.h / 2, y1: z.y + z.h + 100 * f.fs });
+  assert.ok(past && past.end && !past.start, `past the last column's foot: the end run past — ${JSON.stringify(past)}`);
+  assert.equal(windowIn(f, { x0: f.room.w + 1, x1: f.room.w + 2, y0: 0, y1: f.room.h }), null, 'a view meeting no column: no window');
 });
 
 test('the paging key continues at the next column\'s top where the view shows its column\'s foot, and pages within a column that runs past the view', () => {

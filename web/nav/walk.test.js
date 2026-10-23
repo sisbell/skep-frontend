@@ -62,7 +62,18 @@
 // the camera is bound for, and is marked again in place as the camera takes
 // it across its threshold — a mutant that writes no `aria-expanded`, marks
 // nothing in place, or reads the camera where a flight is bound elsewhere
-// turns red.
+// turns red. THE RE-TAKE'S ORDER (issue #141's design decision): over the cell
+// of a document the index does not list, at the near band, the re-take stands
+// the walk on the account; over the board's label cell, at the near band and
+// at the whole board's scale — the walk's document in view there, never kept
+// at far scale — and past the board's edge, on the board: a mutant that leaves
+// the walk where it stood turns red. Over a document's corner's strip it takes
+// the document, and over its room's empty depths, its text out of view, the
+// account: a mutant that tests the room, or the outline alone, turns red. Past
+// a document's last line, its last row in view, the walk keeps the span it
+// stood on at the document's reading scale, the document whole at mid, and
+// the account takes it once it is out of view: a mutant that drops the kept
+// document, or keeps a span at mid, turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -73,7 +84,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { withheldBlockHTML, entitlementArm } from '../text/article.js';
-import { accountCell, boardCell, docBox } from '../plane/projection.js';
+import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, DOC_W } from '../plane/projection.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
 import { placeOf, STANDARD_FS } from '../plane/layout.js';
 import { STRINGS, t } from '../strings.js';
@@ -558,6 +569,78 @@ test('in a document folded into columns the camera follows the walk to a span\'s
     CAM.set(CAM.viewAt(LAYER.centreOf(H, later.pos), f.fs, 12.5));
     await WALK.retakeFromView(true);
     assert.deepEqual(walkAt(), ['block', H, later.pos], 'the re-take: the span under the view\'s centre, in its column');
+  } finally {
+    index([D, E]);
+  }
+});
+
+/** the camera at a scale over a world point */
+const at = (/** @type {{x: number, y: number}} */ p, /** @type {number} */ scale) => CAM.set({ x: p.x, y: p.y, scale });
+/** a rect's centre */
+const middle = (/** @type {{x: number, y: number, w: number, h: number}} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+
+test('a camera move that ends over no document\'s region re-takes the place holding the view\'s centre — the account, else the board — at the near band and at far scale, past the board\'s edge too (issue #141)', async () => {
+  const near = 14 / STANDARD_FS, whole = CAM.viewForCell(boardCell('1'), 0.92).scale, label = boardLabelCell('1'), board = boardCell('1');
+  /** @type {Array<[string, {x: number, y: number}, number, boolean, Array<string | number | null>]>} each place, the point the camera stands over, its scale, whether the walk's document stands in view there, the walk's element after the re-take */
+  const places = [
+    ['the cell of a document the index does not list, at the near band', middle(docBox('1.0.1.0.30')), near, false, ['account', '1.0.1', null]],
+    ['the board\'s label cell, at the near band', middle(label), near, false, ['board', '1', null]],
+    ['the board\'s label cell, at the whole board\'s scale, where the grain stops at the account and no document is kept', middle(label), whole, true, ['board', '1', null]],
+    ['past the board\'s left edge, at the near band', { x: board.x - 2000, y: board.y + board.h / 2 }, near, false, ['board', '1', null]],
+  ];
+  for (const [where, p, scale, seen, after] of places) {
+    await WALK.focusTo(D, 15);
+    at(p, scale);
+    assert.equal(LAYER.inView(D), seen, `${where}: the walk's document ${seen ? 'in' : 'out of'} view`);
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), after, where);
+  }
+});
+
+test('a document\'s region holds its corner\'s strip: a re-take over the strip takes the document; one over its room\'s empty depths, its text out of view, takes the account (issue #141)', async () => {
+  const f = LAYER.foldOf(REC.doc(D)), s = LAYER.shapeOf(D), strip = clearLeftOf(D);
+  await WALK.focusTo(E, 3);
+  // the middle of D's corner's strip, beside its outline, at D's reading scale
+  at({ x: s.x - strip / 2, y: s.y + s.h / 2 }, 12.5 / f.fs);
+  await WALK.retakeFromView(true);
+  assert.deepEqual(walkAt()?.slice(0, 2), ['block', D], 'the strip is D\'s: a span of D, the nearest the centre');
+  // D's room's centre at the near band: D's one short column far above the view, the walk on E, out of view too
+  await WALK.focusTo(E, 3);
+  at(middle(docBox(D)), 14 / STANDARD_FS);
+  assert.ok(!LAYER.inView(D) && !LAYER.inView(E), 'neither document in view');
+  await WALK.retakeFromView(true);
+  assert.deepEqual(walkAt(), ['account', '1.0.1', null], 'the account: never D, whose text is out of view');
+});
+
+// placed last: it lists a document no test above meets, and lists the index back as it found it
+test('the walk keeps the document it stands in while that document\'s region meets the visible view: past its last line, its last row in view, the walk stays on its span at its reading scale, and stands on the document whole at mid; out of view, the account takes it (issue #141)', async () => {
+  await PUMP.loadWhole(H);
+  index([D, E, H]);
+  try {
+    const d = REC.doc(H), f = LAYER.foldOf(d), s = LAYER.shapeOf(H), reading = 12.5 / f.fs;
+    const later = d.blocks[Math.floor(d.blocks.length / 2)];
+    at(LAYER.centreOf(H, later.pos), reading);
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['block', H, later.pos], 'the span under the view\'s centre');
+    assert.equal(WALK.kept(), false, 'the centre over its region: not kept');
+    // the view's centre ten lines' ems below the outline's foot, inside its room, the last row's foot in view
+    const below = { x: s.x + s.w / 2, y: s.y + s.h + 10 * f.fs };
+    at(below, reading);
+    const r = LAYER.regionOf(H);
+    assert.ok(below.y > r.y + r.h && below.y < docBox(H).y + docBox(H).h && LAYER.inView(H), 'the centre in its room, off its region; the document in view');
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['block', H, later.pos], 'kept: the span the walk stood on, the reader past its last line');
+    assert.equal(WALK.kept(), true, 'kept, its region in view off the centre');
+    // mid, over the same point: below its reading scale a span is no stop of the walk's
+    at(below, 120 / DOC_W);
+    assert.equal(lodOf(CAM.cam.scale).name, 'mid');
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['document', H, null], 'kept whole at mid');
+    // the near band over a cell the index lists nothing in, far from H: the account
+    at(middle(docBox('1.0.1.0.30')), 14 / STANDARD_FS);
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['account', '1.0.1', null], 'H out of view: the account holding the centre');
+    assert.equal(WALK.kept(), false, 'an account is never kept');
   } finally {
     index([D, E]);
   }

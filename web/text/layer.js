@@ -91,7 +91,13 @@
 // another fold, or taken down for a feed row and mounted again — the passage
 // at the visible view's centre keeps its place and its size on screen
 // (`hold`; P-LAY's `holdOf`, P-CAM's `reanchor`). The paging key continues at
-// the next column's top at reading scale (`pageTarget`). The marks and
+// the next column's top at reading scale (`pageTarget`). A document's REGION
+// is its outline's bounds — its label, badge and blocks' counts inside them —
+// widened leftward by the strip its corner stands in (`regionOf`; issue #141's
+// design decision): N-WALK's re-take takes the document whose region holds the
+// view's centre, and keeps the one it stands on while that region meets the
+// visible view (`inView`), the one line marking the view's window over it
+// (`windowIn`). The marks and
 // symbols are placed from LK's `shown` and
 // `symbols`, a stretch several links mark in the one mark LK's `mergedMark`
 // gives; a withheld run's owner and C-67's clause beneath it from what the
@@ -189,7 +195,7 @@ import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
-import { layoutOf, fold, estimate, slot, boundsOf, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, holdOf, isSpace, columnOfLine, MEASURE_CPL, LAY_FS, LINE_H } from '../plane/layout.js';
+import { layoutOf, fold, estimate, slot, boundsOf, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, MEASURE_CPL, LAY_FS, LINE_H } from '../plane/layout.js';
 import { articleHTML, articlePlan, cornerHTML, blockMarks, editionClause } from './article.js';
 import { homeOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
@@ -557,6 +563,44 @@ const madeFrom = (/** @type {Doc} */ d) => ({ addr: d.addr, blocks: d.blocks, ru
 export function shapeOf(/** @type {string} */ addr) {
   const box = docBox(addr), b = boundsOf(foldOf(REC.doc(addr)));
   return { x: box.x + b.x, y: box.y + b.y, w: b.w, h: b.h };
+}
+
+/**
+ * A document's REGION, in world units (see the head; issue #141's design
+ * decision): its outline's bounds (`shapeOf`), which hold its label, its badge
+ * and its blocks' counts, widened leftward by the strip its corner stands in
+ * (P-PROJ's `clearLeftOf`), which no other document's box reaches into — so
+ * the regions of two documents in their own cells never overlap.
+ * @param {string} addr
+ * @returns {Rect}
+ */
+export function regionOf(addr) {
+  const s = shapeOf(addr), w = clearLeftOf(addr);
+  return { x: s.x - w, y: s.y, w: s.w + w, h: s.h };
+}
+
+/** the visible view in world units: the viewport below the one line, unpadded */
+function seenWorld() { const s = visibleView(read.top()); return { x0: wx(s.x), y0: wy(s.y), x1: wx(s.x + s.w), y1: wy(s.y + s.h) }; }
+
+/**
+ * Does a document stand in the visible view (see the head): its region meeting
+ * the viewport below the one line, unpadded — any of its text or box, or the
+ * strip its corner stands in.
+ * @param {string} addr
+ */
+export function inView(addr) { return intersects(regionOf(addr), seenWorld()); }
+
+/**
+ * The visible view's window over a document (P-LAY's `windowIn`): the
+ * positions its fold's lines in view open at, the first and the last, and
+ * whether the view has run past its start or its end; null where no line in
+ * view names a position.
+ * @param {string} addr
+ * @returns {import('../plane/layout.js').Window | null}
+ */
+export function windowIn(addr) {
+  const box = docBox(addr), v = seenWorld();
+  return foldWindow(foldOf(REC.doc(addr)), { x0: v.x0 - box.x, y0: v.y0 - box.y, x1: v.x1 - box.x, y1: v.y1 - box.y });
 }
 
 /** a document's outline's bounds, in world units (`shapeOf`) */

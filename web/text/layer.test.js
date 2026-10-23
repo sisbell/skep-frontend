@@ -8,7 +8,13 @@
 // fold of the hidden lines alone turns red); another's links arriving folding
 // it again. Where a passage stands and is read back — a reading view centred
 // on a position's line in its column, the position under a point, the outline
-// the plane draws — and the paging key's next column at reading scale. THE
+// the plane draws — and the paging key's next column at reading scale. A
+// document's REGION (issue #141): its outline's bounds widened leftward by its
+// corner's strip, ending where its neighbour's begins; the document in view
+// while that region meets the visible view below the one line — the corner's
+// strip alone in view among it — and the view's window over it read over that
+// visible view (a region of the outline alone, or a view that takes in what
+// stands under the one line, turns red). THE
 // PASSAGE IN VIEW KEEPS ITS PLACE: a reveal that re-breaks the article while a
 // later column is read leaves the line under the view's centre where it stood
 // on screen, at its size (a frame that rebuilds without re-anchoring turns
@@ -60,8 +66,8 @@ import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as LAYER from './layer.js';
 import * as CAM from '../plane/camera.js';
-import { layoutOf, fold, placeOf, padded, standardFs, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER } from '../plane/layout.js';
-import { docBox, intersects, depthOfDoc, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
+import { layoutOf, fold, placeOf, padded, windowIn, standardFs, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER } from '../plane/layout.js';
+import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -192,6 +198,43 @@ test('at reading scale the paging key continues at the next column\'s top where 
   CAM.set({ ...to, scale: 4 / f.fs });
   assert.equal(LAYER.pageTarget(1), null, 'below reading scale: the paging pages the view as it does anywhere');
   CAM._reset();
+});
+
+test('a document\'s region is its outline\'s bounds widened leftward by the strip its corner stands in, which meets no neighbour\'s; the document stands in view while its region meets the visible view below the one line, whose window over it reads the positions there (issue #141)', () => {
+  deliver();
+  CAM._reset(); CAM.setViewport(1440, 900);
+  const TOP = 30;
+  LAYER.readers({ selection: () => null, focus: () => null, top: () => TOP, handOff: () => {}, navigated: () => null });
+  try {
+    const s = LAYER.shapeOf(D), r = LAYER.regionOf(D), strip = clearLeftOf(D);
+    assert.deepEqual(r, { x: s.x - strip, y: s.y, w: s.w + strip, h: s.h }, 'the outline\'s bounds, widened leftward by the corner\'s strip');
+    // the neighbour on its left, read whole as D is: its region ends where D's begins
+    const L = '1.0.1.0.2';
+    REC.takeSpanSet(L, [{ subspace: 1, ordinal: 1, positions: EXTENT }]);
+    REC.takeDelivery(L, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+    const q = LAYER.regionOf(L);
+    assert.ok(q.x + q.w <= r.x + 1e-9 && r.x < s.x, `the neighbour's region, to ${q.x + q.w}, ends at or before D's, from ${r.x}`);
+    const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), scale = 12.5 / f.fs, c0 = f.columns[0];
+    /** the camera with D's outline's bottom-left at a screen point */
+    const footAt = (/** @type {number} */ px, /** @type {number} */ py) => CAM.set({ x: s.x - (px - 720) / scale, y: s.y + s.h - (py - 450) / scale, scale });
+    footAt(400, TOP - 10);
+    assert.equal(LAYER.inView(D), false, 'the outline\'s foot under the one line: out of the visible view');
+    footAt(400, TOP + 10);
+    assert.equal(LAYER.inView(D), true, 'its foot below the line: in view');
+    // the outline past the view's right edge, the corner's strip alone in it
+    CAM.set({ x: s.x - 720 / scale - strip / 2, y: s.y + s.h / 2, scale });
+    assert.ok(CAM.sx(s.x) > 1440 && CAM.sx(r.x) < 1440, 'the strip alone in the viewport');
+    assert.equal(LAYER.inView(D), true, 'the corner\'s strip in view: the document in view');
+    // the first column's top under the one line: the view has not run past the start
+    CAM.set({ x: box.x + c0.x + c0.w / 2, y: box.y + c0.y + (450 - TOP / 2) / scale, scale });
+    const v = { x0: CAM.wx(0) - box.x, x1: CAM.wx(1440) - box.x, y0: CAM.wy(TOP) - box.y, y1: CAM.wy(900) - box.y };
+    const w = LAYER.windowIn(D);
+    assert.deepEqual(w, windowIn(f, v), 'the window read over the visible view, in the room\'s units');
+    assert.ok(w && !w.start && !w.end, `the first column's top under the one line: the start not run past — ${JSON.stringify(w)}`);
+  } finally {
+    LAYER.readers({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null });
+    CAM._reset();
+  }
 });
 
 // ---- what stands: every readable document, by line; the limit below reading size ------------------------------------
