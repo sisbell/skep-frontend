@@ -49,7 +49,7 @@ function spanOf(addr, pos, width) {
 /**
  * A LEAP to another arrangement of the span's material — an origin, a
  * container — carrying the span (N-GO's carry), made at the span the card
- * stands at, where its reading face stands while it reads; the span the
+ * stands at, where the face of a failure known at the act stands; the span the
  * selection's bytes where a width named them, which the landing's line names
  * as what the reader selected, else the block read (issue #153).
  * @param {string} to

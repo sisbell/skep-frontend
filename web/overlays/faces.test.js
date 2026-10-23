@@ -23,7 +23,11 @@
 // A jump reading (issue #136) says so in its own words at its site, heard
 // through the status region, offering no act and named apart from a notice's
 // face; it ends where it still stands, and a face shown in its place stands
-// on (a mutant that ends whatever stands turns red).
+// on (a mutant that ends whatever stands turns red). A jump reaching (FP-25)
+// says so in its own words at the act's site, heard through the status
+// region, offering no act; its dismissal — Esc's — abandons the jump, and an
+// overlay shown in its place does not (a mutant that abandons on a
+// replacement, or never, turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -211,4 +215,19 @@ test('a jump reading says so in its own words, as a face is heard, and offers no
   FACES.endReading();
   assert.equal(HOST.currentState()?.id, 'face:doc_not_registered', 'the face its read brought, shown in its place, stands on');
   HOST.dismiss();
+});
+
+test('a jump reaching says so in its own words at the act\'s site, heard as a face is, offering no act; its dismissal abandons the jump, an overlay shown in its place does not (FP-25)', () => {
+  const D = '1.0.1.0.3', at = { span: { addr: D, pos: 11, width: 5 }, sign: D };
+  let abandoned = 0;
+  FACES.reaching(D, at, () => { abandoned++; });
+  const f = faceShown(), o = HOST.currentState();
+  assert.deepEqual([f?.id, f?.words, f?.acts, o?.anchor, o?.takeFocus], ['reaching:' + D, ['L.reaching', t('L.reaching', { address: D })], false, at, undefined], 'its words at the act\'s site, no act, no focus taken');
+  assert.equal(live.textContent, t('L.reaching', { address: D }), 'heard through the one status region');
+  FACES.unregistered(D, at);
+  assert.deepEqual([HOST.currentState()?.id, abandoned], ['face:doc_not_registered', 0], 'a face shown in its place: the jump not abandoned');
+  HOST.dismiss();
+  FACES.reaching(D, at, () => { abandoned++; });
+  HOST.dismiss();
+  assert.deepEqual([HOST.currentState(), abandoned], [null, 1], 'dismissed — Esc\'s innermost thing — it abandons the jump');
 });

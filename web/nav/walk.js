@@ -84,7 +84,11 @@
 // claims decide one, and nothing in its place where they do not — R56,
 // B1-S7, PUB-5.124), and a
 // document a read answered `withheld` is named by its withheld box's words
-// (T-LAYER's `withheldBox`: existence and owner — B1-S2), a link's item
+// (T-LAYER's `withheldBox`: existence and owner — B1-S2), one the board said
+// nothing about by a far end's words for it (`L.far.unregistered`), and one
+// no read or listing has told the state of by no state at all — never
+// "published" for a place a jump's walk stands on before its read answers
+// (FP-25), a link's item
 // names its far end as its tail, its card and every list naming it do (LK's
 // `farLabel`: its address, then what the board answered of its document —
 // issue #132), and a link whose far end floats
@@ -292,9 +296,11 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
     return t('L.mirror.account', { account: n.addr, documents, links, empty: c.documents ? '' : ' — ' + t('B1.empty_subspace') }) + pos;
   }
   if (n.kind === 'document') {
-    // a version named by its box's document's place, the one the index lists (issue #154)
+    // a version named by its box's document's place, the one the index lists (issue #154); its state as the board answered it —
+    // withheld, nothing it will say of the address, a draft, published — and none where nothing has told it yet
     const d = REC.doc(n.addr); const p = REC.place(documentOf(n.addr) || n.addr);
-    const state = d.refused === 'withheld' ? LAYER.withheldBox(d) : (p ? p.kind : d.kind) === 'draft' ? t('L.mirror.draft') : t('F.published');
+    const kind = p ? p.kind : d.kind !== 'unknown' ? d.kind : d.meta ? (d.meta.published ? 'edition' : 'draft') : null;
+    const state = d.refused === 'withheld' ? LAYER.withheldBox(d) : d.refused === 'unregistered' ? t('L.far.unregistered') : kind === 'draft' ? t('L.mirror.draft') : kind === 'edition' ? t('F.published') : '';
     return t('L.mirror.document', { document: n.addr, label: p && p.label ? '"' + p.label + '"' : '', state, extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' }) + pos;
   }
   if (n.kind === 'block') {

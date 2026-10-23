@@ -37,7 +37,15 @@
 // hold Mod — wherever the pointer is, M-8: a drag begun on an article with
 // the key held is the camera's, the pointer captured by the plane, and
 // selects nothing); it zooms by the PINCH (Ctrl+wheel as a trackpad sends it)
-// and by Mod+wheel (K-12). Whether a key made an act is never read here: a
+// and by Mod+wheel (K-12). THE CAMERA FOLLOWS THE READER WHILE A JUMP IS IN
+// THE AIR (FP-25: "a wheel, pinch or drag takes over"; issue #137's design
+// decision: "A wheel series already under way when the jump is made is
+// dropped"): a wheel series — wheel events less than SERIES_MS apart — under
+// way as a jump's camera left (N-GO's `airSince`) is dropped whole, each of
+// its events doing nothing, a trackpad's momentum never moving the camera the
+// jump took; any other wheel or pinch event, and the camera key's drag as it
+// moves, takes the camera over (N-GO's `takeOver`): the jump lands where the
+// camera is, its read only marking its passage. Whether a key made an act is never read here: a
 // pointer's act opens a card without the focus (D5 §4 rule 4; the focus
 // record's rule 16). A CLICK acts on what is under the pointer, keyed on
 // legibility: a TAIL — a link whose far document the plane draws nowhere,
@@ -50,8 +58,8 @@
 // trail push) to the version its box shows (N-GO's `shownIn`; issue #154's
 // design decision: a click on a place is no act on its box's version, which
 // it keeps); each LEAP a click makes is made where it fell — the point of
-// the plane, a run's own positions — where its reading face stands while it
-// reads (N-GO); at the readable threshold and above its text takes the click:
+// the plane, a run's own positions — where the face of a failure known at
+// the act, or its reaching, stands (N-GO); at the readable threshold and above its text takes the click:
 // a symbol opens the anatomy card of the link's end it stands for, and a
 // stretch links mark that of the first end marking it — each mark carries
 // its ends by their links and their keys (LK's `endKey`; `endAt`), so of a
@@ -82,7 +90,7 @@
 // selection.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
-// Rules: FP-1, FP-2, FP-9, FP-24.
+// Rules: FP-1, FP-2, FP-9, FP-24, FP-25.
 
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
@@ -119,6 +127,22 @@ import { MAC } from '../nav/keys.js';
 let held = null;
 /** the drag a held press began goes on: the platform's selection carried to the pointer as it moves, until the release */
 let carrying = false;
+/** the pause that ends a wheel series, in ms: the re-take's own pause (unmeasured) */
+export const SERIES_MS = 220;
+/** when the last wheel event came, and when the series it belongs to began, by its event's clock (the platform's, as `performance.now()` reads it) */
+let wheelAt = -Infinity, seriesFrom = -Infinity;
+
+/**
+ * A wheel event, by its time: true where it belongs to a series begun before
+ * the latest jump's camera left (N-GO's `airSince`), so it does nothing (see
+ * the head); a series begins at an event SERIES_MS or more after the last.
+ * @param {number} t the event's time
+ */
+function dropped(t) {
+  if (t - wheelAt >= SERIES_MS) seriesFrom = t;
+  wheelAt = t;
+  return seriesFrom < GO.airSince();
+}
 
 /**
  * Wire the pointer and the wheel.
@@ -144,7 +168,7 @@ export function attach(els) {
     if (!drag) return;
     const dx = e.clientX - drag.px, dy = e.clientY - drag.py;
     drag.px = e.clientX; drag.py = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
-    if (drag.cameraKey) { CAM.panBy(dx, dy); CAM.markDirty(); }
+    if (drag.cameraKey) { GO.takeOver(); CAM.panBy(dx, dy); CAM.markDirty(); }
   });
   els.plane.addEventListener('pointerup', (e) => {
     const d = drag; drag = null; els.plane.classList.remove('dragging');
@@ -197,6 +221,8 @@ export function attach(els) {
     const t = /** @type {HTMLElement} */ (e.target);
     if (t.closest && t.closest('#overlay, #scene, #leap, #mirror, #line')) return;
     e.preventDefault();
+    if (dropped(e.timeStamp)) return;
+    GO.takeOver();
     LINE.act();
     const wantZoom = e.ctrlKey || e.metaKey;
     if (wantZoom) CAM.zoomAt(Math.exp(-e.deltaY * (e.ctrlKey && !e.metaKey ? 0.012 : 0.0022)), e.clientX, e.clientY);

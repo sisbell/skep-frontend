@@ -30,6 +30,8 @@
 // whose far document is drawn nowhere — issue #132) and T-LAYER's owner rule
 // — and N-WALK's: where Back's light stands (N-GO's `backLight`; issue #152)
 // and what a landing says of its passage (N-GO's `described`; issue #153);
+// and to L-LINE a jump's face standing out of the visible view (O-HOST's
+// `aside`; FP-25), which the line carries in its place;
 // and to T-LAYER, LK, N-WALK and M-PUMP the version each document's box
 // shows (N-GO's `shownIn`; issue #154), M-PUMP handing N-GO each feed row
 // publishing a trunk's next member (`arrived`) and SC what each row and the
@@ -55,7 +57,8 @@
 // which issue #122's rule holds at none), and what T-LAYER stood: its new
 // mounts, its articles in the mount band and their lines. The global key
 // listener → N-KEYS, each key handed where the focus is and whether a key
-// made it by N-FOCUS's one reading (FP-20) — a chord the LEAP box closed on
+// made it by N-FOCUS's one reading (FP-20) — a key a jump in the air finds
+// held there for its landing (FP-25); a chord the LEAP box closed on
 // is read at the focus the close returned; ↓ and ↑ in an overlay move among
 // its controls through the controller; the pointer → APP-INPUT; the events
 // `moment` → a face, `held` → logged, not acted on (the editor's lane's);
@@ -65,7 +68,8 @@
 // `boot`; the bare keys RE-CUT to D5's chords; `startWalk` and the hand
 // board DROPPED), §0's params. Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9,
 // FP-11, FP-14, FP-15, FP-22 (N-GO's `shownIn` handed to every reader), FP-23
-// (SC's and N-WALK's `dropped` handed to M-PUMP).
+// (SC's and N-WALK's `dropped` handed to M-PUMP), FP-25 (O-HOST's `aside`
+// handed to the one line).
 
 import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';
@@ -190,7 +194,7 @@ async function boot() {
   LANDING.attach(el('landing'), { handOff: () => WALK.focusItem() });
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
-  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); } });
+  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); }, aside: () => HOST.aside() });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn });

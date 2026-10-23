@@ -1,26 +1,35 @@
 // N-TRAIL's test: pushed by teleports; the departed view re-taken; Back and
 // Forward move the cursor and discard nothing; a jump never pushes; a push
-// behind the cursor drops the entries ahead. THE CLAIM: it stands where it
-// was pushed, and a departure from it re-takes nothing while it reads (a
-// mutant that re-takes a claim's view turns red); settled with a place, it
+// behind the cursor drops the entries ahead. THE CLAIM (FP-25: the place its
+// camera left for): it stands where it was pushed, a departure from it
+// re-takes its view, and a push from it writes its step (a mutant that keeps
+// a claim's view, or writes it no step, turns red); settled with a place, it
 // keeps its place and takes its landing, its reading notice taken off (a
 // mutant that leaves the reading notice standing turns red), what its push
-// dropped staying dropped. Settled with a notice (issue #136's design
-// decision), whether the cursor stands on it or a Back left it while it read,
-// it keeps its place and the number it took as it was pushed, holding the
-// notice at the view its push left, the cursor where the last move put it,
-// and nothing its push dropped comes back — so one Back from it returns to
-// the entry the jump was made from and a second goes one further either way
-// (a mutant that hands the entry back, or puts the dropped entries back,
-// turns red). THE STEP (issue #152's design decision): a push writes the step
-// it takes on the entry it departs, in the place of any that entry held, and
-// none where it takes none or departs a claim (a mutant that writes the step
-// on the entry pushed, keeps the step an entry held, or writes one on a claim
-// turns red); a cursor move writes none. A reset wakes every move waiting on
-// a claim.
+// dropped staying dropped; settled with no view — the reader took the camera
+// over there — it keeps the view it stands at (a mutant that writes one turns
+// red). Settled with a notice (issue #136's design decision), whether the
+// cursor stands on it or a Back left it while it read, it keeps its place and
+// the number it took as it was pushed, holding the notice where it stands,
+// the cursor where the last move put it, and nothing its push dropped comes
+// back — so one Back from it returns to the entry the jump was made from and
+// a second goes one further either way (a mutant that hands the entry back,
+// or puts the dropped entries back, turns red). THE STEP (issue #152's design
+// decision): a push writes the step it takes on the entry it departs, in the
+// place of any that entry held, and none where it takes none (a mutant that
+// writes the step on the entry pushed, or keeps the step an entry held, turns
+// red); a cursor move writes none. A JUMP WHOSE CAMERA NEVER LEFT gives its
+// entry back (FP-25): its push undone — the entry gone, the cursor on the one
+// it was made from, that entry's step as the push found it, the entries the
+// push dropped standing again — and a move waiting on it woken; only the
+// newest entry, the last push's, is given back (a mutant that leaves the
+// dropped entries out, or the step the push wrote, turns red). A jump whose
+// camera leaves only once its read placed it re-takes the view of the entry
+// it was made from as it leaves. A reset wakes every move waiting on a claim.
 // A departure re-takes the place of the cursor's entry — the version its box
-// shows then — and never a claim's (issue #154: a newer version's arrival
-// pins a box on the member being read).
+// shows then — and never a claim's, which keeps the address its jump named
+// while it reads (issue #154: a newer version's arrival pins a box on the
+// member being read).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from './trail.js';
@@ -31,7 +40,7 @@ const v = (/** @type {number} */ n) => ({ x: n, y: n, scale: 1 });
 const e = (/** @type {string} */ addr, /** @type {number} */ n) => ({ addr, pos: null, width: null, view: v(n), label: null, notice: null });
 const addrs = () => T.all().map((x) => x.addr);
 /** @type {Notice} a jump's reading notice, as its claim holds it while its read is out */
-const reading = { face: 'reading', addr: 'x', refusal: null, site: null, at: { addr: 'b', pos: null }, offer: false };
+const reading = { face: 'reading', addr: 'x', refusal: null, site: { span: { addr: 'x', pos: 1 }, sign: 'x' }, offer: false };
 /** @type {Notice} what its read brought where it brought no place: the fifth cell */
 const faced = { ...reading, face: 'unregistered' };
 
@@ -63,7 +72,7 @@ test('a fresh teleport behind the cursor drops the entries ahead', () => {
   assert.deepEqual(addrs(), ['a', 'd']);
 });
 
-test('a claim stands where it was pushed and is re-taken by no departure while it reads; settled with a place, it keeps its place and takes its landing, its reading notice taken off, what its push dropped staying dropped', () => {
+test('a claim stands where it was pushed — the place its camera left for — and is re-taken by every departure while it reads; settled with a place, it keeps its place and takes its landing, its reading notice taken off, what its push dropped staying dropped; settled with no view, it keeps the view it stands at (FP-25)', () => {
   T.push(e('a', 1), null); T.push(e('b', 2), null); T.push(e('c', 3), null);
   T.back(null);
   const claim = T.push({ ...e('x', 4), notice: reading }, v(20), true);
@@ -73,20 +82,25 @@ test('a claim stands where it was pushed and is re-taken by no departure while i
   assert.ok(T.pending(claim), 'a claim standing unanswered');
   assert.equal(claim.notice, reading, 'holding its reading notice while it reads');
   assert.equal(T.back(v(30))?.addr, 'b');
+  assert.equal(claim.view.x, 30, 'a departure re-takes a claim\'s view: its camera left for it');
   T.forward(v(40));
   assert.equal(T.jump(2, v(50))?.addr, 'b');
+  assert.equal(claim.view.x, 50);
   T.forward(v(60));
   T.push(e('y', 5), v(70));
-  assert.equal(claim.view.x, 4, 'no departure re-takes a claim\'s view: the camera never landed there');
+  assert.equal(claim.view.x, 70, 'a push departing it re-takes it as any entry\'s');
   T.settle(claim, { view: v(9), pos: 7, width: 2 });
   assert.equal(T.pending(claim), null, 'answered');
   assert.deepEqual([claim.view.x, claim.pos, claim.width, claim.notice], [9, 7, 2, null], 'its landing, and no notice: the read brought a place');
   assert.deepEqual(addrs(), ['a', 'b', 'x', 'y'], 'in its place; c stays dropped');
   T.back(v(80)); T.back(v(90));
   assert.equal(claim.view.x, 90, 'settled, it is re-taken as any entry is');
+  const taken = T.push({ ...e('z', 6), notice: reading }, v(100), true);
+  T.settle(taken, { pos: 3, width: 1 });
+  assert.deepEqual([taken.view.x, taken.pos, T.pending(taken)], [6, 3, null], 'settled with no view — the reader took the camera over there: the view it stands at kept, its place taken');
 });
 
-test('a claim answered with a notice keeps its place and its number, holding the notice at the view its push left — answered with the cursor on it, or after a Back left it while it read; nothing its push dropped comes back, and one Back from it returns to the entry it was made from either way', async () => {
+test('a claim answered with a notice keeps its place and its number, holding the notice where it stands — answered with the cursor on it, or after a Back left it while it read; nothing its push dropped comes back, and one Back from it returns to the entry it was made from either way', async () => {
   for (const left of [false, true]) {
     T._reset();
     T.push(e('a', 1), null); T.push(e('b', 2), null); T.push(e('c', 3), null);
@@ -94,12 +108,12 @@ test('a claim answered with a notice keeps its place and its number, holding the
     const claim = T.push({ ...e('x', 4), notice: reading }, v(20), true);
     const answered = T.pending(claim);
     if (left) assert.equal(T.back(v(40))?.addr, 'b', 'a Back while it reads: the cursor on the entry the jump was made from');
-    T.settle(claim, { view: v(20), notice: faced });
+    T.settle(claim, { notice: faced });
     await answered;
     const was = left ? 'answered after a Back left it' : 'answered with the cursor on it';
     assert.deepEqual(addrs(), ['a', 'b', 'x'], `${was}: its place kept, and c, which its push dropped, stays dropped`);
     assert.deepEqual(T.numbered().map((r) => [r.n, r.entry.addr]), [[1, 'x'], [2, 'b'], [3, 'a']], `${was}: its number the one it took as it was pushed`);
-    assert.deepEqual([claim.notice, claim.view.x, T.pending(claim)], [faced, 20, null], `${was}: holding the notice at the view its push left, answered`);
+    assert.deepEqual([claim.notice, claim.view.x, T.pending(claim)], [faced, left ? 40 : 4, null], `${was}: holding the notice where it stands — the view a Back left it at, else its own — answered`);
     assert.equal(T.cursorIndex(), left ? 1 : 2, `${was}: the cursor where the last move put it`);
     if (!left) assert.equal(T.back(v(50))?.addr, 'b', `${was}: one Back returns to the entry it was made from`);
     assert.equal(T.back(v(60))?.addr, 'a', `${was}: a second goes one entry further`);
@@ -108,7 +122,7 @@ test('a claim answered with a notice keeps its place and its number, holding the
   }
 });
 
-test('a push writes the step it takes on the entry it departs, and the newest holds none; a push from behind the newest writes its own in the place of the one that entry held; a claim departed, and a move that takes no step, leave none; a cursor move writes none (issue #152)', () => {
+test('a push writes the step it takes on the entry it departs — a claim\'s too, the place its camera left for — and the newest holds none; a push from behind the newest writes its own in the place of the one that entry held; a move that takes no step leaves none; a cursor move writes none (issue #152; FP-25)', () => {
   /** @type {import('./trail.js').Step} */
   const follow = { kind: 'follow', link: 'a.0.2.1', near: 'a', key: 'k', far: 'b', spans: [{ prefix: 'b.0.1', ordinal: 3, width: 4 }] };
   /** @type {import('./trail.js').Step} */
@@ -125,7 +139,33 @@ test('a push writes the step it takes on the entry it departs, and the newest ho
   assert.deepEqual([addrs(), steps()], [['a', 'b', 'x'], [follow, again, null]], 'from behind the newest: b holds the step taken from it now, the entries ahead dropped');
   const claim = T.push(e('y', 6), v(100), true);
   T.push(e('z', 7), v(110), false, follow);
-  assert.deepEqual([steps()[2], claim.step], [null, null], 'x departed by a move that takes no step, and the claim departed before its read answered — the camera never stood there: none');
+  assert.deepEqual([steps()[2], claim.step], [null, follow], 'x departed by a move that takes no step: none; the claim departed before its read answered: the follow taken from it');
+});
+
+test('a jump whose camera never left gives its entry back: its push undone — the entry gone, a move waiting on it woken, the cursor on the entry it was made from, that entry\'s step as the push found it, the entries the push dropped standing again; only the last push, while it is the newest entry (FP-25)', async () => {
+  /** @type {import('./trail.js').Step} */
+  const carry = { kind: 'carry', from: 'b', to: 'c', spans: [{ prefix: 'b.0.1', ordinal: 9, width: 2 }] };
+  /** @type {import('./trail.js').Step} */
+  const other = { ...carry, to: 'r' };
+  T.push(e('a', 1), null); T.push(e('b', 2), v(10)); T.push(e('c', 3), v(20), false, carry);
+  T.back(v(30));
+  const r = T.push({ ...e('r', 4), notice: reading }, v(40), true, other);
+  assert.deepEqual([addrs(), T.all()[1].step], [['a', 'b', 'r'], other], 'pushed: c dropped, b holding the step taken from it');
+  const answered = T.pending(r);
+  assert.equal(T.giveBack(r), true, 'given back');
+  await answered;
+  assert.deepEqual([addrs(), T.cursorIndex(), T.all()[1].step, T.pending(r)], [['a', 'b', 'c'], 1, carry, null], 'the push undone: c standing again, the cursor on b, b\'s step as the push found it, the move waiting on r woken');
+  const s = T.push(e('s', 5), v(50));
+  T.push(e('t', 6), v(60));
+  assert.deepEqual([T.giveBack(s), addrs()], [false, ['a', 'b', 's', 't']], 'an entry no longer the newest, or no longer the last push\'s, is not given back');
+});
+
+test('a jump whose camera leaves only once its read placed it re-takes the view of the entry it was made from as it leaves (FP-25)', () => {
+  T.push(e('a', 1), v(1));
+  const r = T.push({ ...e('r', 2), notice: reading }, v(10), true);
+  assert.equal(T.all()[0].view.x, 10, 're-taken as the push departed it');
+  T.leaveFrom(r, v(20));
+  assert.equal(T.all()[0].view.x, 20, 're-taken where the camera stood as it left');
 });
 
 test('the cursor\'s entry\'s place re-taken as it is departed — the version its box shows then — never a claim\'s (issue #154)', () => {

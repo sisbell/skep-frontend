@@ -53,6 +53,10 @@
 // At reading scale the line names the version the box shows — a pinned
 // version's address whole, its marker lit, its own position — and the strip's
 // act quotes the version's own words (issue #154; foundations §3.2).
+// A jump's face standing out of the visible view is carried by the line in a
+// segment of its own, its string's id and its words, exactly while the reader
+// the app hands in names one (FP-25): a mutant that drops the segment, or
+// keeps it once the face is back in view, turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -66,6 +70,7 @@ import { docBox, accountCell, boardCell, depthOfDoc, DOC_W } from '../plane/proj
 import { STANDARD_FS } from '../plane/layout.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
 import { t } from '../strings.js';
+import { esc } from '../util.js';
 import * as WALK from '../nav/walk.js';
 import * as LINE from './line.js';
 
@@ -379,4 +384,19 @@ test('the session\'s own `writes` decides the acting-as segment: the keyless ses
   } finally {
     REC.takeKeyStore([], O); REC.setBoard(was.board); REC.setSession(was.session);
   }
+});
+
+test('a jump\'s face standing out of the visible view is carried by the line in a segment of its own — its string\'s id and its words — exactly while the reader the app hands in names one (FP-25: "in the one line when out of view")', () => {
+  /** @type {{id: string, text: string} | null} what O-HOST's `aside` answers */
+  let aside = null;
+  const el = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false };
+  LINE.attach(/** @type {any} */ (el), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {}, aside: () => aside });
+  LINE.render(true);
+  assert.ok(!el.innerHTML.includes('seg aside'), 'none out of view: no segment');
+  aside = { id: 'L.reading', text: t('L.reading', { address: D }) };
+  LINE.render();
+  assert.ok(el.innerHTML.includes(`<span class="seg aside" data-string="L.reading">${esc(aside.text)}</span>`), `the face's words in a segment of their own: ${el.innerHTML}`);
+  aside = null;
+  LINE.render();
+  assert.ok(!el.innerHTML.includes('seg aside'), 'back in view: the segment gone');
 });

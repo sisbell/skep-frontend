@@ -266,8 +266,10 @@ export const STRINGS = {
   // a link whose far end's text holds none of its passage, part of it or all of it in pieces, or the board would not tell:
   // those words (BM-HELD's `farSays` — F.floating's, or its line), as its symbol and its stub say them
   'L.mirror.floating': { text: ' — ⟨sentence⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // a jump reading, said at once where it was made until its read answers (issue #136's design decision)
-  'L.reading': { text: 'reading ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reading: at the act\'s site', lane: true },
+  // a jump reading, said where the camera is until its read answers; a jump reaching, said at the act's site while only a read
+  // can place its destination, the camera still (FP-25; issue #137's design decision, whose own word is "reaching")
+  'L.reading': { text: 'reading ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reading: where the camera is, else the one line', lane: true },
+  'L.reaching': { text: 'reaching ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reaching: at the act\'s site, else the one line', lane: true },
   // a landing's line (issue #153's design decision, whose own words are the part line's, "only part of what you selected is
   // in version 3 — in 2 places", and the subject "the text you were reading"): what of the passage carried or followed the
   // text landed in holds, where that is not all of it in one piece, or where no answer told — the passage named by what it

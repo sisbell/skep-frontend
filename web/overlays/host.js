@@ -13,8 +13,8 @@
 // act, a face, a walk's moment), a dismissal (`dismiss`), the next opening, or
 // the end of the opening alone, what stands staying (`endOpening`: Esc's
 // innermost thing, N-KEYS'; an empty click's, APP-INPUT's; the LEAP box
-// opened, N-LEAP's; a navigation act as it is made, N-GO's, before its
-// landing dismisses what stands) — so chrome asked for at a place the person
+// opened, N-LEAP's; a navigation act as it is made, N-GO's, before it
+// dismisses what stands as its camera leaves) — so chrome asked for at a place the person
 // has left never opens over the next one, nor over chrome made after it was
 // asked, and Esc closes what the person sees, never an opening they cannot.
 // Until it shows or ends it is `pending`; its reads may ask whether it
@@ -58,9 +58,15 @@
 // point, which still stands once T-LAYER has rebuilt or taken down the
 // article the element stood in, or rewritten its corner. An overlay stands
 // at the viewport's corner only where its anchor names nothing that stands
-// (`place`).
+// (`place`). A JUMP'S FACE — its reading, its reaching, the failure it met
+// — shows where the camera is (FP-25): its anchor names the document it
+// stands at (`sign`), and while that document's region is out of the visible
+// view (T-LAYER's `inView`) the face is hidden on the plane and the one line
+// carries its words in its place (`aside`, read through the reader the app
+// hands L-LINE); it is said through the status region as it is shown,
+// wherever it stands.
 // Carries: the wireframe's §18 `overlay` object, `anchorOfSpan`.
-// Rules: FP-1, FP-2, FP-9, FP-10 (its own DOM alone), FP-13, FP-20.
+// Rules: FP-1, FP-2, FP-9, FP-10 (its own DOM alone), FP-13, FP-20, FP-25.
 
 import { sx, sy, viewport, markDirty } from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
@@ -76,6 +82,7 @@ import { esc } from '../util.js';
  * @property {{addr: string, pos: number, width?: number}} [span] a span of a document — a block by its first position, or the bytes named by a width: beneath its first line in the mounted article, else at the document's box
  * @property {{x: number, y: number}} [world] a world point (follows the camera)
  * @property {{x: number, y: number}} [screen] a screen point
+ * @property {string} [sign] the document a jump's face stands at (FP-25): hidden on the plane while that document is out of the visible view, the one line carrying its words (`aside`)
  */
 
 /** @typedef {(el: HTMLElement, byKey: boolean) => void} Act an overlay's act, run on the element that bears its `data-run`; `byKey` a key ran it */
@@ -208,18 +215,23 @@ function standing(e) {
   return e.id ? document.getElementById(e.id) : null;
 }
 
+/** is the overlay a jump's face whose document stands out of the visible view (see the head)? */
+const away = (/** @type {Overlay | null} */ o) => !!o && !!o.anchor && !!o.anchor.sign && !LAYER.inView(o.anchor.sign);
+
 /**
  * Place the overlay at its anchor — per frame, clamped into the viewport:
  * beneath the element it was conjured at while that stands (`standing`);
  * else beneath its span's first line in the mounted article, or at the
  * document's box where none is mounted; else at its world point, else at its
  * screen point; else, its anchor naming nothing that stands, at the
- * viewport's corner.
+ * viewport's corner. A jump's face whose document stands out of the visible
+ * view is hidden there, the one line carrying its words (`aside`).
  */
 export function place() {
   if (!el || !current) return;
   const { VW, VH } = viewport();
   const a = current.anchor;
+  el.style.visibility = away(current) ? 'hidden' : '';
   let x = 20, y = 60;
   const at = a ? standing(a.el) : null;
   if (at) { const r = at.getBoundingClientRect(); x = r.left; y = r.bottom + 4; }
@@ -240,7 +252,7 @@ export function dismiss() {
   if (!el || !current) return;
   const o = current;
   current = null;
-  el.className = ''; el.innerHTML = ''; el.removeAttribute('data-id'); el.removeAttribute('aria-labelledby'); el.removeAttribute('aria-label');
+  el.className = ''; el.innerHTML = ''; el.style.visibility = ''; el.removeAttribute('data-id'); el.removeAttribute('aria-labelledby'); el.removeAttribute('aria-label');
   if (o.onDismiss) o.onDismiss(false);
   FOCUS.close('overlay');
   markDirty();
@@ -277,6 +289,18 @@ export const pending = () => reading !== 0;
 export function endOpening() {
   if (!reading) return;
   made++; reading = 0;
+}
+
+/**
+ * A jump's face standing out of the visible view (see the head; FP-25): the
+ * id of the string its words are, and its words as the status region said
+ * them, which the one line carries in its place; null where none stands so.
+ * @returns {{id: string, text: string} | null}
+ */
+export function aside() {
+  if (!el || !away(current)) return null;
+  const words = /** @type {HTMLElement | null} */ (el.querySelector('.face-text'));
+  return { id: words ? words.dataset.string || '' : '', text: faceWords(el) };
 }
 
 /** the overlay's text (the gate's text case) */

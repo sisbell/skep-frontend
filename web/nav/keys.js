@@ -2,7 +2,23 @@
 // designs/D5-keys.md §1.1–§1.8, §1.11 (the UI rows), §4 the focus model;
 // foundations §2.7). Layer 2. The TABLE pure; the dispatch acts on the owners
 // it names (the one layer-2 module that imports across the layer — S-7 (a)).
-// State: none but the swallow's transient mark (through the line).
+// State: VIEW — the keys a jump in the air holds for its landing, in the
+// order they were pressed — THE ONE OWNER of them (FP-10); the swallow's
+// transient mark is the line's.
+// THE KEYS A JUMP IN THE AIR FINDS (FP-25: "Input acts where the camera is
+// … every other key acts from the landing"; issue #137's design decision:
+// "Keys that are not navigation acts wait for the landing and then apply
+// there, in order"): the navigation acts — Mod+[, Mod+], Mod+1…9, Mod+0,
+// Mod+Shift+H — are made at once, the jump in the air abandoned (N-GO); every
+// other key the page would act on while N-GO's jump is in the air is held
+// (`hold`), its platform default prevented as it is pressed, and made at the
+// jump's landing, in the order pressed, with the context it was pressed in,
+// each read where the focus is then — so a key means the same however slowly
+// the board answers; a jump that never lands — the reader took the camera
+// over, its read failed, a later act overtook it — drops the keys it held. A
+// key pressed while held keys are being made waits behind them. The keys a
+// control takes as its own stay its own: a field's, the line's ← and → among
+// its acts, an overlay's and a landing's line's buttons.
 // No plane command rides a printable key (§2.7): every command is a CHORD
 // (Mod = ⌘ on macOS, Ctrl elsewhere — D5 §0, RULED) or a navigation key with
 // the platform's meaning; a printable key on the plane is SWALLOWED, never
@@ -52,7 +68,7 @@
 // every camera move a key makes that re-takes the focus, is told a key made
 // it, so the ring stands at the focus it lands (D5 §4 rule 2).
 // Rules: FP-1, FP-2, FP-9 (a key changes view state or asks for a read, and
-// marks the frame dirty), FP-13.
+// marks the frame dirty), FP-10, FP-13, FP-25.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -152,12 +168,34 @@ export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('
  * @property {boolean} byKey a key made the act (the focus owner's one reading, `FOCUS.byKey`)
  */
 
+/** @typedef {() => (boolean | Promise<boolean>)} Act a key's act, made: true where the page took the key */
+
+/**
+ * @typedef {Object} Held — a key a jump in the air held for its landing (see the head)
+ * @property {KeyboardEvent} e
+ * @property {Ctx} ctx where the focus was as it was pressed, and whether a key made it
+ * @property {Promise<boolean>} jump the landing it waits for (N-GO's `aground`): true where the jump landed, false where it never did
+ */
+
+/** @type {Held[]} the keys held, in the order they were pressed */
+const held = [];
+/** the held keys are being made at a landing, or wait for it: a key pressed meanwhile waits behind them */
+let replaying = false;
+/** a held key's act is being made now */
+let making = false;
+
+/** the keys held for a landing, and the one whose act is being made there (the gate's settle signal) */
+export const holding = () => held.length + (making ? 1 : 0);
+
 /**
  * Dispatch a key: true where the page took it (the caller then prevents the
  * default). A branch that waits before it answers prevents the default
  * itself, before the wait — the platform runs the default as soon as the
  * listeners return, not when the answer arrives. Nothing is dispatched
- * during an IME composition.
+ * during an IME composition. The navigation acts are made at once; every
+ * other key the page would act on while a jump is in the air — or while the
+ * keys it held are being made — waits for its landing (`hold`; see the head),
+ * save the line's ← and →, which move among its acts.
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  * @returns {Promise<boolean>}
@@ -173,59 +211,103 @@ export async function dispatch(e, ctx) {
     return false; // a field takes its keys
   }
   const byKey = ctx.byKey;
-  // Esc: the innermost thing, one order
-  if (chord === 'Esc') { esc(); return true; }
-  // the LEAP box
-  if (chord === 'Mod+L' || chord === 'Mod+K') { LEAP.open(); return true; }
-  // Back / Forward (K-20, K-21)
+  // the navigation acts — Back / Forward (K-20, K-21), the trail (K-40), WHOLE BOARD / HOME (K-13, K-14): made at once, a jump in the air abandoned (FP-25)
   if (chord === 'Mod+[') { GO.back(byKey); return true; }
   if (chord === 'Mod+]') { GO.forward(byKey); return true; }
-  // the trail (K-40, K-41)
   if (/^Mod\+[1-9]$/.test(chord)) { GO.toTrailEntry(Number(chord.slice(4)), byKey); return true; }
-  if (chord === 'Mod+Y') { TRAILLIST.open(byKey); return true; }
-  // WHOLE BOARD / HOME (K-13, K-14)
   if (chord === 'Mod+0') { GO.wholeBoard(byKey); return true; }
   if (chord === 'Mod+Shift+H') { GO.home(byKey); return true; }
-  if (chord === 'Mod+S') return true; // K-74: swallowed — no save exists; the corner's "kept" is the answer
+  const run = route(e, chord, ctx);
+  if (!run) return false;
+  if ((GO.inAir() || held.length > 0 || replaying) && !(ctx.where === 'line' && (chord === '←' || chord === '→'))) { e.preventDefault(); hold(e, ctx); return true; }
+  return run();
+}
+
+/**
+ * The act a key past the navigation acts makes where the focus is now,
+ * unmade: null where the page takes no such key there. Read again for a held
+ * key as it is made, so it acts where the focus is at the landing.
+ * @param {KeyboardEvent} e
+ * @param {string} chord
+ * @param {Ctx} ctx
+ * @returns {Act | null}
+ */
+function route(e, chord, ctx) {
+  const byKey = ctx.byKey;
+  // Esc: the innermost thing, one order
+  if (chord === 'Esc') return () => { esc(); return true; };
+  // the LEAP box
+  if (chord === 'Mod+L' || chord === 'Mod+K') return () => { LEAP.open(); return true; };
+  // the trail's list (K-41)
+  if (chord === 'Mod+Y') return () => { TRAILLIST.open(byKey); return true; };
+  if (chord === 'Mod+S') return () => true; // K-74: swallowed — no save exists; the corner's "kept" is the answer
   // the scene covers the plane: its keys alone, nothing under it takes one
   if (SCENE.isOpen()) return sceneKey(e, chord, ctx);
   // zoom (K-11)
-  if (chord === 'Mod+=') { zoomAboutFocus(1.25, byKey); return true; }
-  if (chord === 'Mod+-') { zoomAboutFocus(1 / 1.25, byKey); return true; }
+  if (chord === 'Mod+=') return () => { zoomAboutFocus(1.25, byKey); return true; };
+  if (chord === 'Mod+-') return () => { zoomAboutFocus(1 / 1.25, byKey); return true; };
   // the selection's slot chords (K-47 … K-52) and K-8's select-by-span — live from the plane and from a standing overlay alike; the selection's acts take no focus (rule 15), and the next K-8 press extends the selection from the walk's element
-  if (chord === 'Mod+Shift+O') { SEL.act('wrote', byKey); return true; }
-  if (chord === 'Mod+Shift+R') { SEL.act('uses', byKey); return true; }
-  if (chord === 'Mod+Shift+L') { SEL.act('links', byKey); return true; }
-  if (chord === 'Mod+Enter') { SEL.act('follow', byKey); return true; }
-  if (chord === 'Mod+Shift+Enter') { SEL.act('scene', byKey); return true; }
-  if (chord === 'Shift+↓') { SEL.selectFocused('down'); return true; }
-  if (chord === 'Shift+↑') { SEL.selectFocused('up'); return true; }
-  if (chord === 'Mod+Shift+P') { LINE.stripAct(); return true; }
-  if (chord === 'Mod+R' || e.key === 'F5') { return true; } // K-94: the plane is live; nothing reloads
+  if (chord === 'Mod+Shift+O') return () => { SEL.act('wrote', byKey); return true; };
+  if (chord === 'Mod+Shift+R') return () => { SEL.act('uses', byKey); return true; };
+  if (chord === 'Mod+Shift+L') return () => { SEL.act('links', byKey); return true; };
+  if (chord === 'Mod+Enter') return () => { SEL.act('follow', byKey); return true; };
+  if (chord === 'Mod+Shift+Enter') return () => { SEL.act('scene', byKey); return true; };
+  if (chord === 'Shift+↓') return () => { SEL.selectFocused('down'); return true; };
+  if (chord === 'Shift+↑') return () => { SEL.selectFocused('up'); return true; };
+  if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
+  if (chord === 'Mod+R' || e.key === 'F5') return () => true; // K-94: the plane is live; nothing reloads
   // the corner (K-57): Enter takes its act; its other keys are the platform's
   if (ctx.where === 'corner') {
     const corner = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (e.target).closest('[data-corner]'));
-    return chord === 'Enter' && !!corner && VERSIONS.fromCorner(corner, SEL.selected(), byKey);
+    return chord === 'Enter' && corner ? () => VERSIONS.fromCorner(corner, SEL.selected(), byKey) : null;
   }
   // the line is one stop (K-22): ← and → move among its acts; every other key is the act's own
-  if (ctx.where === 'line') {
-    if (chord === '←' || chord === '→') { e.preventDefault(); return LINE.step(chord === '→' ? 1 : -1); }
-    return false;
-  }
-  if (ctx.where === 'overlay' || ctx.where === 'landing') return false; // the overlay's own keys, and a landing's line's: Enter and Space press its act
+  if (ctx.where === 'line') return chord === '←' || chord === '→' ? () => { e.preventDefault(); return LINE.step(chord === '→' ? 1 : -1); } : null;
+  if (ctx.where === 'overlay' || ctx.where === 'landing') return null; // the overlay's own keys, and a landing's line's: Enter and Space press its act
   // the walk (K-1 … K-8): each key waits on the camera's flight, and the platform runs a key's default — a scroll of
   // the scroller the focus stands in, the mirror — as soon as the listeners return; so the default is prevented first
-  if (chord === '↓') { e.preventDefault(); await WALK.key('down'); return true; }
-  if (chord === '↑') { e.preventDefault(); await WALK.key('up'); return true; }
-  if (chord === '→') { e.preventDefault(); if (WALK.collapsed()) await activateFocus(byKey); else await WALK.key('in'); return true; }
-  if (chord === '←') { e.preventDefault(); await WALK.key('out'); return true; }
-  if (chord === 'Home') { e.preventDefault(); await WALK.key('first'); return true; }
-  if (chord === 'End') { e.preventDefault(); await WALK.key('last'); return true; }
-  if (chord === 'PageDown' || chord === 'PageUp') { page(chord === 'PageDown' ? 1 : -1); CAM.markDirty(); WALK.retakeFromView(byKey); return true; }
-  if (chord === 'Enter') { await activateFocus(byKey); return true; }
+  if (chord === '↓') return async () => { e.preventDefault(); await WALK.key('down'); return true; };
+  if (chord === '↑') return async () => { e.preventDefault(); await WALK.key('up'); return true; };
+  if (chord === '→') return async () => { e.preventDefault(); if (WALK.collapsed()) await activateFocus(byKey); else await WALK.key('in'); return true; };
+  if (chord === '←') return async () => { e.preventDefault(); await WALK.key('out'); return true; };
+  if (chord === 'Home') return async () => { e.preventDefault(); await WALK.key('first'); return true; };
+  if (chord === 'End') return async () => { e.preventDefault(); await WALK.key('last'); return true; };
+  if (chord === 'PageDown' || chord === 'PageUp') return () => { page(chord === 'PageDown' ? 1 : -1); CAM.markDirty(); WALK.retakeFromView(byKey); return true; };
+  if (chord === 'Enter') return async () => { await activateFocus(byKey); return true; };
   // a printable key on the plane: swallowed, the K-9 line at the focus
-  if (printable(e)) { swallow(e); return true; }
-  return false;
+  if (printable(e)) return () => { swallow(e); return true; };
+  return null;
+}
+
+/**
+ * A key a jump in the air finds is held for its landing (see the head; FP-25):
+ * made there, in the order pressed, with the context it was pressed in, each
+ * read where the focus is then (`route`); dropped, with every other key held
+ * for the same jump, where the jump never lands.
+ * @param {KeyboardEvent} e
+ * @param {Ctx} ctx
+ */
+function hold(e, ctx) {
+  held.push({ e, ctx, jump: GO.aground() });
+  if (!replaying) void replay();
+}
+
+/** the held keys made, each once the landing it waits for answers, one after another: a key's act ends before the next is read */
+async function replay() {
+  replaying = true;
+  try {
+    while (held.length) {
+      const k = held[0];
+      if (!(await k.jump)) { while (held.length && held[0].jump === k.jump) held.shift(); continue; }
+      held.shift();
+      const run = route(k.e, chordOf(k.e), k.ctx);
+      if (!run) continue;
+      making = true;
+      try { await run(); } finally { making = false; }
+    }
+  } finally {
+    replaying = false;
+  }
 }
 
 /**
@@ -247,19 +329,19 @@ export async function dispatch(e, ctx) {
  * @param {KeyboardEvent} e
  * @param {string} chord
  * @param {Ctx} ctx
- * @returns {boolean} the page took the key
+ * @returns {Act | null} the key's act; null where the page takes no such key there
  */
 function sceneKey(e, chord, ctx) {
-  if (chord === 'Mod+R') { SCENE.relevel(); return true; }
-  if (chord === 'Mod+=') return true; // swallowed: nothing is nearer than the scene's reading scale
-  if (chord === 'Mod+-') { SCENE.close(); CAM.markDirty(); return true; }
-  if (SLOT_CHORDS.has(chord) || e.key === 'F5') return true;
-  if (chord === 'Mod+Shift+P') { LINE.stripAct(); return true; }
-  if (ctx.where === 'overlay' || ctx.where === 'line') return false; // the overlay's or the line's own keys
-  if (chord === '←') { SCENE.close(); CAM.markDirty(); return true; }
-  if (ctx.where === 'scene-acts') return false; // the button's own keys
-  if (printable(e)) { swallow(e); return true; }
-  return false;
+  if (chord === 'Mod+R') return () => { SCENE.relevel(); return true; };
+  if (chord === 'Mod+=') return () => true; // swallowed: nothing is nearer than the scene's reading scale
+  if (chord === 'Mod+-') return () => { SCENE.close(); CAM.markDirty(); return true; };
+  if (SLOT_CHORDS.has(chord) || e.key === 'F5') return () => true;
+  if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
+  if (ctx.where === 'overlay' || ctx.where === 'line') return null; // the overlay's or the line's own keys
+  if (chord === '←') return () => { SCENE.close(); CAM.markDirty(); return true; };
+  if (ctx.where === 'scene-acts') return null; // the button's own keys
+  if (printable(e)) return () => { swallow(e); return true; };
+  return null;
 }
 
 /** a printable key no field takes: swallowed, the K-9 line at the focus until the next act (foundations §2.7) */
@@ -270,14 +352,17 @@ function swallow(/** @type {KeyboardEvent} */ e) {
 /**
  * Esc's one order (§4 rule 7; D7): the most recently opened thing closes —
  * the box, the card or scene still reading (O-HOST's opening, ended alone:
- * the overlay standing under it stands), the overlay, the scene, then the
- * selection, which a scene stands over and which outlives it; on the bare
- * plane nothing.
+ * the overlay standing under it stands), the overlay — a jump's reaching
+ * face among them, whose dismissal abandons the jump — then a jump reaching
+ * whose face another overlay took the place of (FP-25: "Esc or Back abandons
+ * the jump"; N-GO's `abandon`), the scene, then the selection, which a scene
+ * stands over and which outlives it; on the bare plane nothing.
  */
 export function esc() {
   if (LEAP.isOpen()) { LEAP.close(); return; }
   if (HOST.pending()) { HOST.endOpening(); return; }
   if (HOST.current()) { HOST.dismiss(); return; }
+  if (GO.abandon()) return;
   if (SCENE.isOpen()) { SCENE.close(); CAM.markDirty(); return; }
   if (SEL.selected()) { SEL.clear(); return; }
 }
@@ -285,7 +370,7 @@ export function esc() {
 /**
  * Enter activates the focus (K-7): a place goes — the board, an account or a
  * document, each a teleport pushed on the trail, a document's made at the
- * document, where its reading face stands while it reads (N-GO) — a withheld
+ * document, where the face of a failure known at the act stands (N-GO) — a withheld
  * run shows its face whole (§2.1), C-67's pointer its offered act, a LEAP to
  * the edition its claim names made at the run, reached by Tab (K-58); any
  * other span is selected whole (D8: until the editor's caret), a link's

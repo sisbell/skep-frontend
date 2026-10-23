@@ -437,6 +437,21 @@ test('the mirror announces every block that holds no text by its kind, in the wo
   }
 });
 
+test('the mirror names a document no read or listing has told the state of by no state at all, and one the board said nothing about in a far end\'s words for it — never "published": the item a jump\'s walk stands on before its read answers, and after it learns the board says nothing (FP-25; issue #137)', () => {
+  // an address in an account the index lists nothing for, never read
+  const U = '1.0.7.0.4';
+  const unread = WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1);
+  assert.equal(unread, t('L.mirror.document', { document: U, label: '', state: '', extent: '' }) + ' ' + t('L.mirror.item', { i: 1, n: 1 }), 'nothing told of it: no state');
+  assert.ok(!unread.includes(t('F.published')) && !unread.includes(t('L.mirror.draft')), `never "published", nor "a draft": ${unread}`);
+  REC.takeRefused(U, 'unregistered');
+  const gone = WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1);
+  assert.ok(gone.includes(t('L.far.unregistered')) && !gone.includes(t('F.published')), `the board said nothing about it: in a far end's words for it: ${gone}`);
+  REC.invalidate(U);
+  REC.takeMetadata(U, { doc: U, published: false, owner: '1.0.7', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  assert.ok(WALK.nameOf({ kind: 'document', addr: U, pos: null, link: null }, 0, 1).includes(t('L.mirror.draft')), 'its metadata read: a draft');
+  REC.invalidate(U);
+});
+
 test('the mirror names a document a read answered `withheld` by its withheld box\'s words — its owner by the one owner rule — and never "published" (B1-S2)', () => {
   // a draft in 1.0.2's sub-account 1.0.2.1, withheld from the reader: its owner the seat above the sub-account
   const X = '1.0.2.1.0.2', owner = '1.0.2';

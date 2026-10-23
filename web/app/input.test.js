@@ -42,6 +42,13 @@
 // selects an item whole wherever a selection touches it (FP-24; issue #161),
 // and the placeholder's click is its act's alone — while a press on the text
 // beside it starts one (a page that refuses none, or every one, turns red).
+// THE CAMERA FOLLOWS THE READER WHILE A JUMP IS IN THE AIR (FP-25; issue
+// #137's design decision): a wheel series under way as a LEAP's camera left
+// is dropped whole — the flight runs on to its destination and nothing moves
+// (a page that pans on it turns red) — and a wheel event SERIES_MS or more
+// after the series, a pinch, and the camera key's drag each take the camera
+// over: the jump lands where the camera is, its flight ended (a page that
+// takes nothing over, or drops every wheel event, turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -62,6 +69,7 @@ import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
 import { t } from '../strings.js';
+import { MAC } from '../nav/keys.js';
 import { esc, byteLength } from '../util.js';
 
 /** the attributes of an element's opening tag, as the platform's `dataset` reads them */
@@ -436,5 +444,57 @@ test('a press on a withheld run\'s placeholder starts no selection — its click
       'the placeholder\'s words and the placeholder refuse a selection\'s start; the text beside it does not');
   } finally {
     globalThis.document = platform.document; globalThis.window = platform.window;
+  }
+});
+
+test('a wheel series under way as a jump\'s camera left is dropped whole — the flight runs on to its destination, nothing moving — and a wheel event SERIES_MS or more after the series, a pinch, or the camera key\'s drag takes the camera over: the jump lands where the camera is (FP-25; issue #137)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the window's listeners, by event */
+  const win = new Map();
+  /** @type {Map<string, (e: unknown) => void>} the plane's */
+  const plane = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(win), getSelection: () => null, setTimeout: () => 0 });
+  /** two views the same */
+  const same = (/** @type {{x: number, y: number, scale: number}} */ a, /** @type {{x: number, y: number, scale: number}} */ b) => a.x === b.x && a.y === b.y && a.scale === b.scale;
+  try {
+    // a document whose text the page holds: a LEAP to it reads nothing and flies at once
+    const D = '1.0.1.0.61', text = 'A document the page holds.';
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
+    REC.takeDelivery(D, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
+    CAM.setViewport(1440, 900);
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), setPointerCapture() {}, classList: { add() {}, remove() {} } }, layer: listens(null), corners: listens(null) }));
+    const wheel = /** @type {(e: unknown) => void} */ (win.get('wheel'));
+    /** a wheel event at a time, by the event's clock; a pinch as a trackpad sends it where `ctrlKey` */
+    const roll = (/** @type {number} */ time, ctrlKey = false) => wheel({ target: { closest: () => null }, preventDefault() {}, ctrlKey, metaKey: false, deltaX: 0, deltaY: 40, clientX: 700, clientY: 450, timeStamp: time });
+    const t0 = performance.now() - 1;
+    roll(t0);
+    const leap = GO.leapTo(D);
+    const bound = CAM.destination(), at = CAM.view();
+    roll(t0 + 100);
+    assert.deepEqual([GO.inAir(), CAM.flying(), same(CAM.destination(), bound), same(CAM.view(), at)], [true, true, true, true], 'the series under way as the camera left goes on, dropped: the flight runs on to its destination, the camera never moved');
+    roll(t0 + 100 + INPUT.SERIES_MS);
+    assert.deepEqual([GO.inAir(), CAM.flying()], [false, false], 'a new series takes the camera over: the jump landed where the camera is, its flight ended');
+    assert.equal(await leap, null, 'the LEAP lands in no document');
+    /** @type {Array<[string, () => void]>} each other gesture that takes the camera over */
+    const gestures = [
+      ['a pinch', () => roll(t0 + 2000, true)],
+      ['the camera key\'s drag', () => {
+        const down = /** @type {(e: unknown) => void} */ (plane.get('pointerdown')), move = /** @type {(e: unknown) => void} */ (plane.get('pointermove'));
+        down({ clientX: 10, clientY: 10, pointerId: 1, metaKey: MAC, ctrlKey: !MAC });
+        move({ clientX: 40, clientY: 30 });
+      }],
+    ];
+    for (const [what, gesture] of gestures) {
+      const jump = GO.leapTo(D);
+      assert.equal(GO.inAir(), true, `${what}: the jump in the air`);
+      gesture();
+      assert.deepEqual([GO.inAir(), CAM.flying()], [false, false], `${what} takes the camera over`);
+      assert.equal(await jump, null);
+    }
+  } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });

@@ -45,6 +45,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line .marker.lit { color:var(--accent); }
 #line .marker.none { visibility:hidden; }
 #line .transient { color:var(--warn); }
+/* a jump's face whose document stands out of view, carried by the line in the face's own colour (FP-25) */
+#line .aside { color:#ffe2b8; }
 #line button { padding:0 5px; }
 /* the address segment is a native button (K-22; rule 14), drawn as the segment it is, not as a key — one width at every
    scale and focus (issue #141): the widest words it names, which the line sets on it (`--words`, in characters of its

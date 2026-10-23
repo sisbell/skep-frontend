@@ -2,8 +2,8 @@
 // ENGINE-BOUND only through O-HOST; its arithmetic pure. State: VIEW — the
 // arrival's two marks, what a landing says of the passage it carried or
 // followed (`landing`), the light a one-step move along the trail made, the
-// version each document's box shows, and the count of the navigation acts
-// made — THE ONE OWNER of them (FP-10).
+// version each document's box shows, the count of the navigation acts made,
+// the jump in the air and the jump reaching — THE ONE OWNER of them (FP-10).
 // THE BOX'S VERSION (issue #154's design decision: "One box per document …
 // The box shows one version"): every version of a document shares its box
 // (P-PROJ's `docBox`), and the box shows ONE of them — its plain address,
@@ -34,9 +34,8 @@
 // address arrives by that address, as any LEAP does. It
 // orchestrates the owners: end a card or scene
 // still reading as the act is made, which then opens nothing (O-HOST's
-// opening), and dismiss the overlay and the scene — a follow at its landing,
-// its reading face taking the place and the end of the overlay it was
-// pressed from as it is made, every other act as it is made — fly the
+// opening), and dismiss the overlay and the scene as the camera leaves the
+// place they stand at (THE JUMP, below) — fly the
 // camera (P-CAM), push the trail (N-TRAIL) with the departed view re-taken,
 // move the focus to the landing (N-WALK) — the ring drawn at it where a key
 // made the act, which only the act's caller knows, so each teleport takes
@@ -54,7 +53,7 @@
 // end's face, "its passage is not in ⟨D⟩'s current text" — at a member "…
 // not in version ⟨k⟩" — a version move at the nearest passage the two
 // versions share (see above). `follow` reports the link followed to LK's visited
-// set (S-32 (a)) and lands at the span the slot projects to NOW (A-53 — the
+// set as its camera leaves (S-32 (a)) and lands at the span the slot projects to NOW (A-53 — the
 // document consulted before the link) — placed through the far text's image,
 // read in parts, where the board refuses the projection for its size: every
 // run the far document's text holds it in, a passage a later edit cut in two
@@ -70,7 +69,7 @@
 // the span (foundations §2.3: "follow lands at the document's head with that
 // face … never a landing that reads as the passage gone"); a projection
 // refused for what it says of the far document — withheld, or nothing the
-// board will say of it — faces in the landing's place (see below). THE FOUR
+// board will say of it — faces where the camera went (see below). THE FOUR
 // STATES (issue #153's design decision: "an outline alone means 'all of it,
 // here, in one piece'; silence means 'nothing was carried'"): every landing
 // that carried or followed a passage reads what the text landed in holds of
@@ -132,47 +131,81 @@
 // makes ONE trail move, its own push or cursor move: the scene standing over
 // the plane is ended first, "a teleport dismissing the scene first" (§2.5),
 // and its end moves no entry (SC).
+// THE JUMP (FP-25: "A jump moves the reader when made; the read only fills
+// the place in. Everything follows the camera."; issue #137's design
+// decision): a jump flies at once wherever the plane can place its
+// destination — every address of the board the page opened has its place
+// before any read (P-PROJ's `docBox`, T-LAYER's fold of a text unread) — and
+// no failure is known: it takes its trail entry at the act, ends the chrome
+// of the place it leaves, moves the walk to the place it left for and flies
+// there (`leave`), and is IN THE AIR (`inAir`) from then until it lands. Its
+// reads run beside the flight. Where they answer first, the camera goes on
+// from where it is to the passage they placed and the jump lands there
+// (`goOn`); where the reader takes the camera over first — a wheel, a pinch,
+// the camera key's drag (`takeOver`, APP-INPUT's) — the jump lands where the
+// camera is, and its read, answering, only marks its passage where it falls:
+// the outline, the link lit, the landing's line, the dead end's face — the
+// camera and the walk where the reader left them, and the entry keeping the
+// view the reader leaves it at. While a jump is in the air every key but a
+// navigation act waits for its landing and is made there, in order (N-KEYS),
+// and a wheel series under way as its camera left is dropped (APP-INPUT, which
+// reads when that was: `airSince`); its landing answers `aground` — true as it
+// lands, false where it ends without landing: the reader took over, its read
+// failed, a later act overtook it — and a jump that never lands drops its held
+// keys. A jump says it is READING where the camera is (O-FACES' `reading`): at
+// the place it left for, out of the visible view of which the one line carries
+// its words (O-HOST's `sign`). A failure its reads learn in the air — a
+// document the board answers for with nothing, a follow's far document it
+// withholds from the reader, a projection refused for saying either — is faced
+// where the camera went, the camera staying, the walk re-taken there so the
+// mirror names what the read learned (N-WALK), and the entry holding the face
+// as its NOTICE where the camera went (`failed`); a dead end's face is the
+// notice beside the head it landed on. A failure KNOWN AT THE ACT (`known`) —
+// the board answered for the document with nothing; for a follow, it withholds
+// the far document, or the far end's projection was refused for saying either;
+// for a jump that must read, the board is marked unreachable ("a board already
+// marked unreachable gets no flight") — never leaves: no flight, no entry, no
+// read, the link not counted as followed, its face standing at the act's site
+// in the place of what stands there, the chrome kept, until Esc or the next
+// act. A jump WHERE ONLY A READ CAN PLACE THE DESTINATION — an address on a
+// board the plane does not draw, its text unread (`placeable`) — REACHES
+// (`reachFor`): its entry taken at the act, the camera still, input acting on
+// what is on screen, its REACHING face at the act's site in the place of what
+// stands there (O-FACES' `reaching`); Esc — that face's dismissal — Back and
+// every later act abandon it, its entry given back (`giveUp`; N-TRAIL's
+// `giveBack`); its read refused, it faces at the site and gives its entry
+// back; its read answered, the camera leaves as above.
 // THE ORDER OF ACTS (issue #136's design decision: every jump keeps its
 // trail entry, whatever its read brings, and no trail act waits on a read):
 // every act makes its trail move as it is made, so the trail holds the moves
 // in the order the acts were made, and only the latest act lands: each act
-// counts itself as it is made, the arrival's marks put out with the count
-// (`nextAct`) — Back, Forward and a jump where they move the cursor, a follow
-// even where it faces at once — and a landing that waited on a read lands
-// only where no act was made after its own. A LEAP and a follow push their
-// entry as N-TRAIL's claim, numbered as the jump is made and never handed
-// back, its landing placed by what they read first — a LEAP the whole of a
-// document whose text the page does not hold; a follow its far document, its
-// end's projection and its text — and while that read is out the jump says
-// so at once, where it was made: its READING face (O-FACES' `reading`) — a
-// follow's at the link's own bytes, a LEAP's at the site its act names, the
-// LEAP box's at the viewport's corner — gone with the next act, so the reader
-// sees Back leave it. The read fills the entry with what it brought (N-TRAIL's
-// `settle`): a place, its landing — at once where nothing is read — or, where
-// it ended in a face in the landing's place — a document the board answers
-// for with nothing, a follow's far document it withholds from the reader, a
-// projection refused for saying either — that face as the entry's NOTICE, the entry standing at the view
-// the jump left from; a dead end's face is the notice beside the head it
-// landed on. The notice is shown, and the link it came from lit, only where
-// no act was made after the jump: a read that ends after the reader left its
-// entry moves nothing — no camera, no walk, no face — and writes its own entry
-// alone. So at any board speed a jump then Back returns to where the jump was
-// made — after a quick notice clearing it — and a second Back goes one entry
-// further. Back, Forward or a jump reaching an entry lands at once at what it
-// holds — at its view, the walk where Back returns it, else on its place:
-// where its read brought no place the place the notice names (the link's
-// bytes a follow was made at, else the walk's element as the LEAP was made),
-// never the place the jump named; on that place's span only where the view
-// reads its document at its reading scale, else on the document whole, so a
-// view re-taken below it leaves the walk the grain the view gives (T-LAYER's
-// one test; issue #140) — and shows its notice again; reaching an entry
-// still reading, it shows that entry's reading face and lands once the read
-// answers, where no act was made meanwhile. A
-// carried passage's `compare` is one more read its LEAP's claim waits on, the
-// claim settled at the landing that read placed.
+// counts itself as it is made — the arrival's marks put out with the count,
+// a jump in the air abandoned and a jump reaching given back (`nextAct`) —
+// Back, Forward and a jump where they move the cursor, a follow even where it
+// faces at once, and a landing that waited on a read goes on only where no
+// act was made after its own. A LEAP and a follow push their entry as
+// N-TRAIL's claim, numbered as the jump is made and never handed back once
+// its camera leaves, the place it left for filled in by what they read — a
+// LEAP the whole of a document whose text the page does not hold; a follow
+// its far document, its end's projection and its text. The read fills the
+// entry with what it brought (N-TRAIL's `settle`): a place, its landing — at
+// once where nothing is read — or a notice. A read that ends after the reader
+// left its entry moves nothing — no camera, no walk, no face — and writes its
+// own entry alone. So at any board speed a jump then Back returns to where the
+// jump was made, and a second Back goes one entry further. Back, Forward or a
+// jump reaching an entry flies at once for what it holds — its view, the walk
+// where Back returns it, else on its place: on that place's span only where
+// the view reads its document at its reading scale, else on the document
+// whole, so a view re-taken below it leaves the walk the grain the view gives
+// (T-LAYER's one test; issue #140) — and shows its notice again; reaching an
+// entry still reading, it shows that entry's reading face there and goes on
+// once the read answers, where no act was made and the reader took nothing
+// over meanwhile. A carried passage's `compare` is one more read its LEAP's
+// claim waits on, the claim settled at the landing that read placed.
 // Carries: the wireframe's §11 (`leapTo`, `goHome`), §18 `followLink`.
 // Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10, FP-21,
-// FP-22 (owns the version each box shows).
+// FP-22 (owns the version each box shows), FP-25 (the jump moves the reader
+// when made).
 
 import * as CAM from '../plane/camera.js';
 import * as TRAIL from './trail.js';
@@ -187,7 +220,7 @@ import * as LAYER from '../text/layer.js';
 import * as HELD from '../beams/held.js';
 import * as SEL from '../overlays/selection.js';
 import { accountCell, boardCell } from '../plane/projection.js';
-import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember } from '../model/address.js';
+import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf } from '../model/address.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').Link} Link */
@@ -267,6 +300,34 @@ let retry = null;
 let versionOffer = null;
 /** @type {Map<string, string>} each box's version where one is pinned, by its document: a box absent shows its plain address, the trunk head (see the head) */
 const pins = new Map();
+
+/**
+ * @typedef {Object} Air — a jump in the air (see the head; FP-25): from the act its camera leaves at until it lands, the reader takes the camera over, its read fails, or a later act overtakes it
+ * @property {number} act the jump's act
+ * @property {Entry | null} entry its trail entry; null where it pushed none
+ * @property {Promise<boolean>} landed settled once: true as it lands, false where it ends without landing
+ * @property {(landed: boolean) => void} end settles `landed`
+ */
+
+/**
+ * @typedef {Object} Reach — a jump reaching (see the head): the camera still until a read places its destination
+ * @property {number} act the jump's act
+ * @property {string} addr the place it names
+ * @property {Entry | null} entry its trail entry, given back where it is abandoned
+ */
+
+/** @type {Air | null} the jump in the air */
+let air = null;
+/** when the latest jump's camera left, by the platform's clock (`performance.now()`) */
+let leftAt = -Infinity;
+/** the act of the jump in the air the reader took the camera over at: its read, answering, only marks its passage */
+let takenAt = 0;
+/** @type {WeakSet<Entry>} the entries the reader took the camera over at: a read answering there writes them no view */
+const takenOver = new WeakSet();
+/** @type {Reach | null} the jump reaching */
+let reach = null;
+/** a second leg's length, in ms, where the first has landed (unmeasured) */
+const SECOND_LEG_MS = 300;
 
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
@@ -354,13 +415,88 @@ let made = 0;
  * one-step move's light with them, and the landing's line, which leaves with
  * the outline (issue #153's design decision) — a card
  * or scene still reading ended, what stands staying for the act to dismiss
- * (O-HOST's opening), and the act counted. Every navigation act begins with
- * it, so none counts itself and leaves the last act's marks standing, and no
- * chrome asked at the place an act leaves opens while the act reads; a
- * camera move calls nothing here (§3.2: "a pan or a zoom none").
+ * (O-HOST's opening), a jump reaching given back and a jump in the air
+ * abandoned, never landed (FP-25: "navigation acts abandon the jump"), and the
+ * act counted. Every navigation act begins with it, so none counts itself and
+ * leaves the last act's marks standing, and no chrome asked at the place an
+ * act leaves opens while the act reads; a camera move calls nothing here
+ * (§3.2: "a pan or a zoom none").
  * @returns {number} the act's count
  */
-function nextAct() { arrival = null; light = null; lit = []; landed = null; retry = null; versionOffer = null; HOST.endOpening(); return ++made; }
+function nextAct() {
+  arrival = null; light = null; lit = []; landed = null; retry = null; versionOffer = null;
+  HOST.endOpening();
+  giveUp();
+  if (air) endAir(air.act, false);
+  return ++made;
+}
+
+/** is a jump in the air (see the head; FP-25)? */
+export const inAir = () => air !== null;
+/** when the latest jump's camera left, by the platform's clock (`performance.now()`): a wheel series begun before it is dropped whole (APP-INPUT) */
+export const airSince = () => leftAt;
+/** the landing of the jump in the air (see the head): true as it lands, false where it ends without landing; true at once where none is in the air — what the keys it holds wait on (N-KEYS) */
+export const aground = () => (air ? air.landed : Promise.resolve(true));
+/** is a jump reaching for a place only its read can place (see the head)? */
+export const isReaching = () => reach !== null;
+
+/**
+ * The reader takes the camera over (FP-25: "a wheel, pinch or drag takes
+ * over"; APP-INPUT's): the jump in the air lands where the camera is, never
+ * landing on its passage, so the keys it held are dropped; its read,
+ * answering, only marks its passage, and its entry keeps the view the reader
+ * leaves it at. Nothing where no jump is in the air.
+ */
+export function takeOver() {
+  const a = air;
+  if (!a) return;
+  takenAt = a.act;
+  if (a.entry) takenOver.add(a.entry);
+  endAir(a.act, false);
+}
+
+/** a jump's camera leaves (see the head): it is in the air from now */
+function takeOff(/** @type {number} */ act, /** @type {Entry | null} */ entry) {
+  /** @type {(landed: boolean) => void} */
+  let end = () => {};
+  /** @type {Promise<boolean>} */
+  const landing = new Promise((r) => { end = r; });
+  leftAt = performance.now();
+  air = { act, entry, landed: landing, end };
+}
+
+/** the jump in the air of an act ends: landed, or not — its held keys made there, or dropped (N-KEYS) */
+function endAir(/** @type {number} */ act, /** @type {boolean} */ ok) {
+  const a = air;
+  if (!a || a.act !== act) return;
+  air = null;
+  a.end(ok);
+}
+
+/**
+ * A jump reaching abandoned (see the head) — by Esc, its face's dismissal,
+ * by Back, or by any later act: its entry given back (N-TRAIL's `giveBack`),
+ * its face ended where it still stands. Nothing where none reaches.
+ */
+function giveUp() {
+  const r = reach;
+  if (!r) return;
+  reach = null;
+  if (r.entry) TRAIL.giveBack(r.entry);
+  if (HOST.currentIs('reaching:' + r.addr)) HOST.dismiss();
+}
+
+/**
+ * Esc abandons a jump reaching (FP-25: "Esc or Back abandons the jump") once
+ * nothing nearer stands — an overlay shown over its face since (N-KEYS' one
+ * order): its entry given back.
+ * @returns {boolean} a jump was reaching
+ */
+export function abandon() {
+  if (!reach) return false;
+  giveUp();
+  return true;
+}
 
 /** what the landing says of the passage it carried or followed, until the next act (see the head); null where nothing landed so */
 export const landing = () => landed;
@@ -400,7 +536,7 @@ export function landingAct(which, byKey = false) {
   else if (which === 'again' && retry) void retry(byKey);
 }
 
-/** the chrome a navigation act clears — every act as it is made, a follow as it lands: the standing overlay, a card or scene still reading (one asked while the follow read), which then opens nothing (O-HOST's opening), and the scene, whose end moves no trail entry — so the act's own trail move is its one */
+/** the chrome a navigation act clears as its camera leaves the place it stands at (FP-25: "leaving a place ends its chrome") — at the act, save where only a read can place the destination: the standing overlay, a card or scene still reading, which then opens nothing (O-HOST's opening), and the scene, whose end moves no trail entry — so the act's own trail move is its one */
 function dismissChrome() { HOST.dismiss(); SCENE.close(); }
 
 /**
@@ -422,8 +558,137 @@ function showNotice(n, told = false) {
   CAM.markDirty();
 }
 
-/** the walk's element as a jump is made: where the walk stands at the jump's entry where its read brings no place — the board where the walk stands on nothing */
-function walkPlace() { const f = WALK.current(); return f ? { addr: f.addr, pos: f.pos } : { addr: boardNode(), pos: null }; }
+/** where a jump's face stands at the place its camera left for (see the head): the document at the position the jump named, else its head, the document its sign */
+const siteAt = (/** @type {string} */ addr, /** @type {number | null} */ pos) => /** @type {Site} */ ({ span: { addr, pos: pos ?? 1 }, sign: addr });
+/** an act's site as a jump's face stands at it: a span's document its sign, out of the visible view of which the one line carries the face (O-HOST's `sign`); a site naming no span as it is */
+const signed = (/** @type {Site | null} */ site) => (site && site.span ? { ...site, sign: site.span.addr } : site);
+
+/** the board's answer where it is marked unreachable, by the one refusal shape: a jump that must read faces it at the act (see the head) */
+const UNREACHABLE = /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreachable', text: '' });
+
+/**
+ * A failure known at the act (see the head; FP-25: "a jump flies at once …
+ * where … no failure is known"; issue #137's design decision: "a board
+ * already marked unreachable gets no flight"): the board answered for the
+ * document with nothing; for a follow, it withholds the far document from
+ * the reader, or the far end's projection into it was refused for saying
+ * either; for a jump that must read, the board is marked unreachable — as a
+ * notice's face, its site the caller's to give; null where none is known.
+ * @param {string} addr the place the jump names
+ * @param {boolean} reads the jump must read before it lands
+ * @param {{link: string, slot: 1 | 2} | null} [end] a follow's far end
+ * @returns {Notice | null}
+ */
+function known(addr, reads, end = null) {
+  const d = REC.has(addr) ? REC.doc(addr) : null;
+  const p = end ? REC.projection(end.link, end.slot, addr) : undefined;
+  /** @type {Notice['face'] | null} */
+  const face = (d && d.refused === 'unregistered') || p === 'unregistered' ? 'unregistered'
+    : end && ((d && d.refused === 'withheld') || p === 'withheld') ? 'withheld'
+      : reads && REC.daemon() === 'unreachable' ? 'refused' : null;
+  return face ? { face, addr, refusal: face === 'refused' ? UNREACHABLE : null, site: null, offer: false } : null;
+}
+
+/**
+ * Can the plane place a document before any read of it (see the head)? On
+ * the board the page opened every address has its place; on another board,
+ * only once a read brought what draws it — its text, its metadata, or its
+ * withheld box (P-RENDER's `drawsDoc`).
+ * @param {string} addr
+ */
+function placeable(addr) {
+  if (boardOf(addr) === boardNode()) return true;
+  const d = REC.doc(addr);
+  return d.from >= 0 || !!d.meta || d.refused === 'withheld';
+}
+
+/**
+ * A jump reaching (see the head; FP-25: "Where only a read can place the
+ * destination, the camera waits, input acts on what is on screen, and Esc or
+ * Back abandons the jump"): its reaching face at the act's site in the place
+ * of what stands there, the camera still, its read made. Where the jump was
+ * abandoned meanwhile, nothing; where its read answered, the camera may
+ * leave; where the board refused it, the refusal faced at the site — the
+ * fifth cell, the withheld face, a refusal's by its name — and the entry
+ * given back.
+ * @param {number} act
+ * @param {string} addr
+ * @param {Entry | null} entry
+ * @param {Site | null} site the act's site
+ * @returns {Promise<{refused: Refusal | null} | null>} the read answered, with the refusal its text met; null where the jump ended without its camera leaving
+ */
+async function reachFor(act, addr, entry, site) {
+  const at = signed(site);
+  reach = { act, addr, entry };
+  FACES.reaching(addr, at, () => { if (reach && reach.act === act) giveUp(); });
+  const w = await PUMP.wholeOf(addr);
+  if (!reach || reach.act !== act) return null;
+  reach = null;
+  if (placeable(addr) || !w.refused) return { refused: w.refused };
+  if (entry) TRAIL.giveBack(entry);
+  FACES.showRefusal(at, w.refused, addr);
+  return null;
+}
+
+/**
+ * The camera leaves for a place (see the head): the jump in the air from
+ * now, the walk on the place and the flight begun (`land`).
+ * @param {number} act
+ * @param {Entry | null} entry
+ * @param {{addr: string, pos: number | null, view: View, end?: End | null}} at
+ * @param {boolean | undefined} byKey
+ * @param {number} ms
+ * @returns {Promise<boolean>} the flight landed
+ */
+function leave(act, entry, at, byKey, ms) {
+  takeOff(act, entry);
+  return land(at, byKey, ms);
+}
+
+/**
+ * A jump goes on to the place its reads placed (see the head): the walk on
+ * the place, and the camera from where it is to the view placed — the first
+ * leg cut short where it is still in the air, never flown back — or, where
+ * the camera is bound for that view already, on with the first leg; the jump
+ * in the air ends as the camera lands, or as anything else ends its flight.
+ * @param {number} act
+ * @param {Promise<boolean>} first the first leg's flight
+ * @param {{addr: string, pos: number | null, view: View, end?: End | null}} at
+ * @param {boolean | undefined} byKey
+ * @param {number} ms the first leg's length: a second leg flown while the first is in the air takes it again
+ * @returns {Promise<boolean>} the camera landed
+ */
+async function goOn(act, first, at, byKey, ms) {
+  const d = CAM.destination();
+  let ok;
+  if (d.x === at.view.x && d.y === at.view.y && d.scale === at.view.scale) { focusOn(at, byKey); ok = await first; }
+  else ok = await land(at, byKey, CAM.flying() ? ms : SECOND_LEG_MS);
+  endAir(act, ok);
+  return ok;
+}
+
+/**
+ * A failure a jump's reads learned in the air (see the head; issue #137's
+ * design decision: "If a read fails, the camera stays where it is and the
+ * failure is shown there"): its entry holding the face as its notice where
+ * the camera went; then, where no act was made since, the face shown there,
+ * the walk re-taken on the place — save where the reader took the camera
+ * over — so the mirror names what the read learned, the ring as the act left
+ * it, and the jump ended, never landed.
+ * @param {number} act
+ * @param {Entry | null} entry
+ * @param {Notice} n
+ * @param {boolean | undefined} byKey a key made the act
+ * @returns {boolean} no act was made since: the face shows
+ */
+function failed(act, entry, n, byKey) {
+  if (entry) TRAIL.settle(entry, { notice: n });
+  if (act !== made) return false;
+  showNotice(n);
+  if (takenAt !== act) void WALK.focusTo(n.addr, null, !!byKey, false);
+  endAir(act, false);
+  return true;
+}
 
 /**
  * The view that reads a document at a position: its size (T-LAYER's fold) at
@@ -447,20 +712,29 @@ const widthAt = (/** @type {Run[] | null} */ runs, /** @type {number | null} */ 
 const headOf = (/** @type {import('../model/records.js').Doc} */ d) => (d.blocks[0] || { pos: 1 }).pos;
 
 /**
- * The landing: the walk moved to the place — to the span holding its
- * position only where its view reads the document at its reading scale,
- * else to the document whole (see the head), to the link's end it names
- * where it names one — the ring drawn at it where a key made the act, and
- * the camera flown to its view. A LEAP and a follow land at reading size; a
- * cursor move lands at the view its entry was left at.
+ * The walk moved to a landing's place — to the span holding its position
+ * only where its view reads the document at its reading scale, else to the
+ * document whole (see the head), to the link's end it names where it names
+ * one — the ring drawn at it where a key made the act.
+ * @param {{addr: string, pos: number | null, view: View, end?: End | null}} at
+ * @param {boolean | undefined} byKey
+ */
+function focusOn(at, byKey) {
+  void WALK.focusTo(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, byKey, true, at.end ?? null);
+  CAM.markDirty();
+}
+
+/**
+ * The landing: the walk moved to the place (`focusOn`), and the camera flown
+ * to its view. A LEAP and a follow land at reading size; a cursor move lands
+ * at the view its entry was left at.
  * @param {{addr: string, pos: number | null, view: View, end?: End | null}} at
  * @param {boolean | undefined} byKey
  * @param {number} ms
  * @returns {Promise<boolean>} the flight landed; false where a later act's flight, a pan or a zoom cut it short (P-CAM's `fly`)
  */
 async function land(at, byKey, ms) {
-  WALK.focusTo(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, byKey, true, at.end ?? null);
-  CAM.markDirty();
+  focusOn(at, byKey);
   const landed = await CAM.fly(at.view, ms);
   CAM.markDirty();
   return landed;
@@ -512,7 +786,7 @@ async function reproject(c, d, met) {
 /** does a document's held text show withheld text — a run withheld from the reader, under which the rest of a passage may stand (issue #153)? */
 const showsWithheld = (/** @type {Doc} */ d) => d.blocks.some((b) => b.kind === 'withheld');
 /** the dead end's face as an entry's notice, beside the head a landing stands at (foundations §2.3): offering the versions list where a follow met it */
-const floatingNotice = (/** @type {string} */ addr, /** @type {number} */ head, /** @type {boolean} */ offer) => /** @type {Notice} */ ({ face: 'floating', addr, refusal: null, site: { span: { addr, pos: head } }, at: null, offer });
+const floatingNotice = (/** @type {string} */ addr, /** @type {number} */ head, /** @type {boolean} */ offer) => /** @type {Notice} */ ({ face: 'floating', addr, refusal: null, site: siteAt(addr, head), offer });
 
 /**
  * A carried passage's landing, from what its reads placed (`reproject`; see
@@ -707,33 +981,38 @@ async function againCarried(c, carried, addr, entry, link, asked, byKey) {
 /**
  * A follow's landing made from what its reads placed (`followed`; see the
  * head): its entry settled at the span — its first run in the text — or the
- * head, the dead end's face its notice where the far end floats; then, where
- * no act was made after `act`, the chrome dismissed (save where its line's
- * "try again" made it again), the arrival outlined where it marks its runs,
- * the link lit, the landing's line and offers said (`sayFollowed`), and the
- * walk and the camera moved there.
+ * head, the dead end's face its notice where the far end floats, its view
+ * left as the reader left it where they took the camera over there; then,
+ * where no act was made after `act`, the reading face ended, the arrival
+ * outlined where it marks its runs, the link lit, the landing's line and
+ * offers said (`sayFollowed`), and — save where the reader took the camera
+ * over while the follow was in the air, which only marks — the walk and the
+ * camera moved on there from its first leg (`goOn`), or there anew where its
+ * line's "try again" made it again.
  * @param {number} act
  * @param {Shown} s
  * @param {Entry | null} entry
  * @param {Awaited<ReturnType<typeof followed>>} placed
  * @param {boolean} byKey
- * @param {boolean} [again] made again by the line's "try again", the chrome left standing
+ * @param {Promise<boolean> | null} [first] the follow's first leg, in the air; null where its line's "try again" made it again
  */
-async function landFollowed(act, s, entry, placed, byKey, again = false) {
+async function landFollowed(act, s, entry, placed, byKey, first = null) {
   const far = s.far, l = s.link;
   const runs = placed.runs && placed.runs.length ? placed.runs : null;
   const pos = runs ? runs[0].pos : headOf(REC.doc(far)), marked = runs && placed.marked && !s.farWhole ? runs : null;
   const v = viewFor(far, pos);
   /** @type {Notice | null} a floating end: the dead end's face beside the head landed on, offering the versions list */
   const notice = placed.runs && !placed.runs.length ? floatingNotice(far, pos, true) : null;
-  if (entry) TRAIL.settle(entry, { view: v, pos, width: widthAt(marked, pos), notice });
+  if (entry) TRAIL.settle(entry, { view: takenOver.has(entry) ? undefined : v, pos, width: widthAt(marked, pos), notice });
   if (act !== made) return;
-  if (!again) dismissChrome();
+  FACES.endReading();
   pinTo(far);
   arrival = runs && placed.marked ? { addr: far, pos, runs: marked, link: l.addr } : null;
   lit = [l.addr];
   sayFollowed(act, s, entry, placed, pos);
-  const flight = land({ addr: far, pos, view: v }, byKey, 620);
+  if (first && takenAt === act) { if (notice) showNotice(notice); return; }
+  const at = { addr: far, pos, view: v };
+  const flight = first ? goOn(act, first, at, byKey, 620) : land(at, byKey, 620);
   if (notice) showNotice(notice, true);
   await flight;
 }
@@ -765,7 +1044,7 @@ function sayFollowed(act, s, entry, placed, pos) {
     const at = made;
     const proj = await PUMP.projectEnd(l.addr, s.farSlot, far);
     if (REC.doc(far).extent == null || REC.doc(far).from < 0) await PUMP.loadWhole(far);
-    await landFollowed(at, s, entry, await followed(s, proj), byKey, true);
+    await landFollowed(at, s, entry, await followed(s, proj), byKey);
   } : null;
   versionOffer = null;
   if (offers && passage) void offerVersion(act, far, async (member) => {
@@ -782,56 +1061,77 @@ function sayFollowed(act, s, entry, placed, pos) {
 }
 
 /**
- * LEAP to a place: the next act — the overlays close and the trail gains the
- * entry as it is made; the focus moves to the landing, the ring drawn at it
- * where a key made the act, and the camera flies; a landing that names the
- * link it followed outlines every run of the span it landed on and lights
- * that link — it names no end the link was followed from, so the entry it
- * departs records no step (the gate's door, its one caller). A document
- * whose text the page does not hold is read whole
- * first, its entry a claim while it reads and its reading face standing at
- * `site`; one the board answers for with nothing settles the entry with the
- * fifth cell as its notice, at the view the LEAP left from, the walk's
- * element as it was made its place. A carried passage is re-projected into
- * the text read (`reproject`, the claim waiting on it too, its reading face
- * standing): the landing is its counterpart there, and every stretch of it
- * the text holds is marked, the line saying where that is only part of it,
- * or all of it in pieces; where the text holds none of it, the document's
- * head, faced as a floating end is, the face the entry's notice; where no
- * answer told, the place as asked, unmarked, the line saying it could not
- * tell (`sayCarried`; issue #153). The entry it departs records the
- * carry (see the head), the passage by the permanent addresses of its bytes
- * as the held image names them as the act is made — none where the image
- * does not cover it, and then no step. Where an act was made while it read,
- * it lands nowhere and faces nothing: its read fills its entry alone.
+ * LEAP to a place: the next act — the trail gains the entry as it is made,
+ * and the camera leaves at once (see the head): the chrome of the place it
+ * leaves ended, the walk on the place it left for, the ring drawn at it where
+ * a key made the act, the camera flying there, its reads beside the flight.
+ * A landing that names the link it followed outlines every run of the span it
+ * landed on and lights that link — it names no end the link was followed
+ * from, so the entry it departs records no step (the gate's door, its one
+ * caller). A document whose text the page does not hold is read whole as the
+ * camera flies, its entry a claim while it reads and its reading face
+ * standing at the place the camera left for; the camera goes on to the place
+ * the read placed; one the board answers for with nothing settles the entry
+ * with the fifth cell as its notice where the camera went, faced there. A
+ * carried passage is re-projected into the text read (`reproject`, the claim
+ * waiting on it too, its reading face standing): the landing is its
+ * counterpart there, and every stretch of it the text holds is marked, the
+ * line saying where that is only part of it, or all of it in pieces; where
+ * the text holds none of it, the document's head, faced as a floating end is,
+ * the face the entry's notice; where no answer told, the place as asked,
+ * unmarked, the line saying it could not tell (`sayCarried`; issue #153). The
+ * entry it departs records the carry (see the head), the passage by the
+ * permanent addresses of its bytes as the held image names them as the act
+ * is made — none where the image does not cover it, and then no step. A LEAP
+ * whose failure is known at the act never leaves, its face at `site`; one to
+ * an address on a board the plane does not draw reaches for it first
+ * (`reachFor`). Where the reader took the camera over while it was in the air
+ * its reads only mark; where an act was made while it read, it goes on
+ * nowhere and faces nothing: its read fills its entry alone.
  * @param {string} addr a document address
- * @param {{pos?: number | null, runs?: Run[] | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, carry?: Carry | null, site?: Site | null, push?: boolean, ms?: number, byKey?: boolean}} [opts] `runs` every run of the span landed on, `pos` the first position of one of them, where the landing names a span; `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `site` where the act was made — a run's bytes, a card's span, a point of the plane — where the reading face stands while the LEAP reads and the face its read brings stands, null (the LEAP box) at the viewport's corner; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act
- * @returns {Promise<import('../model/records.js').Doc | null>} the document landed in; null where it faced in the place of a landing, an act made while it read took its place, or its flight was cut short before it landed
+ * @param {{pos?: number | null, runs?: Run[] | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, carry?: Carry | null, site?: Site | null, push?: boolean, ms?: number, byKey?: boolean}} [opts] `runs` every run of the span landed on, `pos` the first position of one of them, where the landing names a span; `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `site` where the act was made — a run's bytes, a card's span, a point of the plane — where the face of a failure known at the act stands, and a reaching face, null (the LEAP box) at the viewport's corner; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act
+ * @returns {Promise<import('../model/records.js').Doc | null>} the document landed in; null where it never left, faced in the place of a landing, an act made while it read took its place, the reader took the camera over, or its flight was cut short before it landed
  */
 export async function leapTo(addr, opts = {}) {
   const act = nextAct();
-  const departed = departure();
-  const from = walkPlace();
-  dismissChrome();
   let pos = opts.pos ?? null, runs = pos != null && opts.runs ? inTextOrder(opts.runs) : null;
-  const link = opts.link ?? null, site = opts.site ?? null;
-  const c = opts.carry ?? null, carried = c ? REC.identityOf(c.addr, c.pos, Math.max(1, c.width)) : [];
+  const link = opts.link ?? null, site = opts.site ?? null, ms = opts.ms ?? (opts.how === 'click' ? 420 : 620);
+  const c = opts.carry ?? null;
+  let d = REC.doc(addr);
+  let unread = d.extent == null || d.from < 0;
+  const fails = known(addr, unread || !!c);
+  if (fails) { lit = link ? [link] : []; showNotice({ ...fails, site: signed(site) }); return null; }
+  const carried = c ? REC.identityOf(c.addr, c.pos, Math.max(1, c.width)) : [];
   /** @type {Step | null} the carry, as the entry it departs records it: the passage by identity, from the document it was carried from to this one */
   const step = c && carried.length ? { kind: 'carry', from: c.addr, to: addr, spans: carried } : null;
-  let d = REC.doc(addr);
-  const unread = d.extent == null || d.from < 0;
-  /** @type {Notice | null} the LEAP's reading notice, where its landing waits on a read — the text unread, or the carried passage's `compare` */
-  const waiting = unread || c ? { face: 'reading', addr, refusal: null, site, at: from, offer: false } : null;
-  const entry = opts.push === false ? null : TRAIL.push({ addr, pos, width: widthAt(runs, pos), view: viewFor(addr, pos), label: labelOf(addr), notice: waiting }, departed, true, step);
-  if (waiting) showNotice(waiting);
+  /** @type {Notice | null} the LEAP's reading notice, where its landing waits on a read — the text unread, or the carried passage's `compare` — at the place its camera leaves for */
+  const waiting = unread || c ? { face: 'reading', addr, refusal: null, site: siteAt(addr, pos), offer: false } : null;
+  const entry = opts.push === false ? null : TRAIL.push({ addr, pos, width: widthAt(runs, pos), view: viewFor(addr, pos), label: labelOf(addr), notice: waiting }, departure(), !!waiting, step);
   /** @type {Refusal | null} the refusal the text's whole read met, which a carried passage's line says it could not tell by */
   let met = null;
+  if (unread && !placeable(addr)) {
+    const read = await reachFor(act, addr, entry, site);
+    if (!read) return null;
+    met = read.refused; d = REC.doc(addr); unread = false;
+    if (entry) TRAIL.leaveFrom(entry, CAM.destination());
+  }
+  dismissChrome();
+  const v0 = viewFor(addr, pos);
+  if (!unread && !c) {
+    // nothing to read: the landing as the act is made
+    if (entry) TRAIL.settle(entry, { view: v0, pos, width: widthAt(runs, pos), notice: null });
+    pinTo(addr);
+    if (link) arrival = { addr, pos: pos ?? 1, runs, link };
+    lit = link ? [link] : [];
+    const ok = await leave(act, entry, { addr, pos, view: v0 }, opts.byKey, ms);
+    endAir(act, ok);
+    return ok ? d : null;
+  }
+  const first = leave(act, entry, { addr, pos, view: v0 }, opts.byKey, ms);
+  if (waiting) showNotice(waiting);
   if (unread) { const w = await PUMP.wholeOf(addr); met = w.refused; d = REC.doc(addr); }
   if (d.refused === 'unregistered') {
-    /** @type {Notice} */
-    const notice = { face: 'unregistered', addr, refusal: null, site, at: from, offer: false };
-    if (entry) TRAIL.settle(entry, { view: departed, notice });
-    if (act === made) { lit = link ? [link] : []; showNotice(notice); }
+    if (failed(act, entry, { face: 'unregistered', addr, refusal: null, site: siteAt(addr, pos), offer: false }, opts.byKey)) lit = link ? [link] : [];
     return null;
   }
   const placed = c ? carriedLanding(c, d, await reproject(c, d, met), pos) : null;
@@ -839,14 +1139,15 @@ export async function leapTo(addr, opts = {}) {
   const v = viewFor(addr, pos);
   /** @type {Notice | null} a carried passage the text holds none of: the dead end's face beside the head landed on, offering no act */
   const notice = placed && placed.none ? floatingNotice(addr, headOf(d), false) : null;
-  if (entry) TRAIL.settle(entry, { view: v, pos, width: widthAt(runs, pos), notice });
+  if (entry) TRAIL.settle(entry, { view: takenOver.has(entry) ? undefined : v, pos, width: widthAt(runs, pos), notice });
   if (act !== made) return null;
   FACES.endReading();
   pinTo(addr);
   if (link || (placed && placed.runs)) arrival = { addr, pos: pos ?? 1, runs, link };
   lit = link ? [link] : [];
   if (c && placed) sayCarried(act, c, carried, d, placed, entry, link);
-  const flight = land({ addr, pos, view: v }, opts.byKey, opts.ms ?? (opts.how === 'click' ? 420 : 620));
+  if (takenAt === act) { if (notice) showNotice(notice); return null; }
+  const flight = goOn(act, first, { addr, pos, view: v }, opts.byKey, ms);
   if (notice) showNotice(notice, true);
   return (await flight) ? d : null;
 }
@@ -887,14 +1188,17 @@ async function swapped(c, was, d, met) {
  * `pos`'s (T-LAYER's `holdAcross`) — the camera where it stands — the box
  * taking that version, the passage outlined where the version holds it and
  * the link lit, and the walk moved to the landing, the ring drawn at it where
- * a key made the act.
+ * a key made the act — the platform's focus carried there only where the
+ * mirror held it, where the reader took the camera over while the move read
+ * (`take` false).
  * @param {string} was the version the box showed
  * @param {Doc} d the version moved to
  * @param {{from: number, pos: number, runs: Run[] | null}} placed
  * @param {string | null} link
  * @param {boolean | undefined} byKey
+ * @param {boolean} [take] the landing takes the platform's focus wherever it stood
  */
-async function landInPlace(was, d, placed, link, byKey) {
+async function landInPlace(was, d, placed, link, byKey, take = true) {
   const addr = d.addr, sel = SEL.selected();
   if (sel && sel.addr === was && was !== addr) SEL.clear();
   LAYER.holdAcross(was, addr, { from: placed.from, to: placed.pos });
@@ -902,7 +1206,7 @@ async function landInPlace(was, d, placed, link, byKey) {
   arrival = placed.runs || link ? { addr, pos: placed.pos, runs: placed.runs, link } : null;
   lit = link ? [link] : [];
   CAM.markDirty();
-  await WALK.focusTo(addr, LAYER.atReadingScale(addr, CAM.destination().scale) ? placed.pos : null, byKey, true);
+  await WALK.focusTo(addr, LAYER.atReadingScale(addr, CAM.destination().scale) ? placed.pos : null, byKey, take);
 }
 
 /**
@@ -918,9 +1222,12 @@ async function landInPlace(was, d, placed, link, byKey) {
  * line kept, its four states said as a carried passage's are — the line, its
  * offers, its "try again" landing in place again — the dead end's face where
  * the version holds none of the passage, the entry's notice. A version the
- * board says nothing of is faced as a LEAP faces it. Where an act was made
- * while it read, it lands nowhere: its read fills its entry alone, at the
- * view it was made from.
+ * board says nothing of is faced as a LEAP faces it, in place. The camera
+ * being at its destination already, the move is in the air from the act to
+ * its landing in place (see the head): keys wait for it, and where the reader
+ * takes the camera over meanwhile the landing leaves the platform's focus
+ * where it stands. Where an act was made while it read, it lands nowhere: its
+ * read fills its entry alone, at the view it was made from.
  * @param {string} addr the version moved to: a version address, or the plain address, the trunk head
  * @param {{carry?: Carry | null, placed?: Placing | null, site?: Site | null, byKey?: boolean}} [opts] `carry` the reader's held passage, in the version the box shows — the selection, else the first passage in view (O-VERSIONS); `placed` the landing a landing's line has read already (its version offer); `site` where the act was made, its reading face's place; `byKey` a key made the act
  * @returns {Promise<Doc | null>} the version landed in; null where it faced in the place of a landing, or an act made while it read took its place
@@ -928,36 +1235,38 @@ async function landInPlace(was, d, placed, link, byKey) {
 export async function toVersion(addr, opts = {}) {
   const act = nextAct();
   const departed = departure();
-  const from = walkPlace();
   dismissChrome();
-  const was = shownIn(addr), site = opts.site ?? null, given = opts.placed ?? null;
+  const was = shownIn(addr), site = signed(opts.site ?? null), given = opts.placed ?? null;
   const c = opts.carry && opts.carry.addr === was ? opts.carry : null;
   const spans = given ? given.spans : c ? REC.identityOf(c.addr, c.pos, Math.max(1, c.width)) : [];
   /** @type {Step | null} the move, as the entry it departs records it: the passage carried by identity, from the version left to this one */
   const step = spans.length ? { kind: 'carry', from: was, to: addr, spans } : null;
   /** @type {Notice} */
-  const waiting = { face: 'reading', addr, refusal: null, site, at: from, offer: false };
+  const waiting = { face: 'reading', addr, refusal: null, site, offer: false };
   const entry = TRAIL.push({ addr, pos: null, width: null, view: departed, label: labelOf(addr), notice: waiting }, departed, true, step);
+  takeOff(act, entry);
   showNotice(waiting);
   let d = REC.doc(addr), met = null;
   if (d.extent == null || d.from < 0) { const w = await PUMP.wholeOf(addr); met = w.refused; d = REC.doc(addr); }
   if (d.refused === 'unregistered') {
     /** @type {Notice} */
-    const notice = { face: 'unregistered', addr, refusal: null, site, at: from, offer: false };
-    TRAIL.settle(entry, { view: departed, notice });
+    const notice = { face: 'unregistered', addr, refusal: null, site, offer: false };
+    TRAIL.settle(entry, { notice });
     if (act === made) showNotice(notice);
+    endAir(act, false);
     return null;
   }
   const head = { from: headOf(REC.doc(was)), pos: headOf(d), at: null, runs: null, said: null, none: false };
   const placed = given ? { from: given.from, pos: given.to, at: null, runs: inTextOrder(given.runs), said: null, none: false } : c ? await swapped(c, was, d, met) : head;
   const notice = placed.none ? floatingNotice(addr, placed.pos, false) : null;
-  TRAIL.settle(entry, { view: departed, pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
+  TRAIL.settle(entry, { view: takenOver.has(entry) ? undefined : departed, pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
   if (act !== made) return null;
   FACES.endReading();
   if (c && !given) sayCarried(act, c, spans, d, placed, entry, null, (byKey) => againVersion(c, spans, was, addr, entry, byKey));
-  const landing = landInPlace(was, d, placed, given ? given.link : null, opts.byKey);
+  const landing = landInPlace(was, d, placed, given ? given.link : null, opts.byKey, takenAt !== act);
   if (notice) showNotice(notice, true);
   await landing;
+  endAir(act, true);
   return d;
 }
 
@@ -1016,13 +1325,14 @@ export function arrived(member) {
 /**
  * FOLLOW: the far end of a drawn link — an act made as it is pressed, the
  * last act's arrival put out and a card or scene still reading ended even
- * where the link names no far document and it faces at once; reported to
- * LK's visited set, its entry a claim on the trail as it is made, its
- * reading face standing at the link's own bytes in the place of the overlay
- * it was pressed from, with that overlay's end (O-FACES' `reading`); the far
- * document consulted, the slot projected into it NOW, its text read where the
- * page holds none; the claim settled at that span and the landing made there
- * — at its first run in the text, where the text holds it in several — the
+ * where the link names no far document and it faces at once; its entry a
+ * claim on the trail as it is made, and its camera leaving at once for the
+ * far document (see the head) — reported to LK's visited set as it leaves,
+ * the chrome of the place it leaves ended, the walk on the far document, its
+ * reading face standing there (O-FACES' `reading`); the far document
+ * consulted, the slot projected into it NOW, its text read where the page
+ * holds none; the claim settled at that span and the camera going on there
+ * — to its first run in the text, where the text holds it in several — the
  * arrival outlined on it — on every run's positions where the link names a
  * passage, at its first position where it names the document whole — and the
  * link lit, its line saying where the far text holds only part of the
@@ -1037,20 +1347,23 @@ export function arrived(member) {
  * refused for its size is placed through the far text's image read in parts.
  * A dead reference, a far document the board withholds from the reader — no
  * slot projected into it, a read the board refuses with the document, the
- * projection refused for either — is faced in
- * the landing's place: the claim settled with that face as its notice, at
- * the view the follow left from, the link's bytes the walk's place there, and
- * the link lit (B1-S8); a link naming no far document is faced at once. Each
- * such face stands at the act's site (foundations §3.1, F-G3): the link's own
- * bytes in its near document — the link the anatomy card offering the follow
- * is conjured at, inside the selection the follow slot acts on — and follows
- * them as the camera moves. The control the follow was pressed on, the
- * anatomy card's follow or a "which" list's row, is never its site: it stands
- * in the overlay the reading face takes the place of, and is gone as that
- * face shows. Where an act was made while it read, it lands nowhere, faces
- * nothing and lights nothing: its read fills its entry alone. The entry it
- * departs records the follow (see the head): the link, the end it was made
- * at, and the far end by identity — its slot's stored spans.
+ * projection refused for either — learned in the air is faced where the
+ * camera went (`failed`), the claim settled with that face as its notice
+ * there, and the link lit (B1-S8). One KNOWN AT THE ACT — and a link naming
+ * no far document — never leaves (see the head): no entry, no read, the link
+ * not counted as followed, and lit, its face at the act's site (foundations
+ * §3.1, F-G3): the link's own bytes in its near document — the link the
+ * anatomy card offering the follow is conjured at, inside the selection the
+ * follow slot acts on — following them as the camera moves, in the place of
+ * the overlay it was pressed from, the chrome under it standing. The control
+ * the follow was pressed on, the anatomy card's follow or a "which" list's
+ * row, is never its site. A far document on a board the plane does not draw
+ * is reached for first (`reachFor`). Where the reader took the camera over
+ * while it was in the air its reads only mark; where an act was made while it
+ * read, it goes on nowhere, faces nothing and lights nothing: its read fills
+ * its entry alone. The entry it departs records the follow (see the head):
+ * the link, the end it was made at, and the far end by identity — its slot's
+ * stored spans.
  * @param {Shown} s the link as drawn at its near document
  * @param {boolean} [byKey] a key made the follow
  */
@@ -1058,19 +1371,26 @@ export async function follow(s, byKey = false) {
   const act = nextAct();
   const l = s.link;
   const far = s.far;
-  /** @type {Site} where the follow is made — the link's own bytes: its reading face, and a face in its landing's place, stand there */
-  const site = { span: { addr: s.near, pos: s.pos, width: s.width } };
+  /** @type {Site} where the follow is made — the link's own bytes: a face known at the act, and a reaching face, stand there */
+  const site = { span: { addr: s.near, pos: s.pos, width: s.width }, sign: s.near };
   if (!far) { FACES.invalidFollow(site); return; }
-  LK.follow(l);
-  const departed = departure();
-  /** @type {Notice} the follow's reading notice: at the link's bytes, the walk's place there where its read brings no place */
-  const waiting = { face: 'reading', addr: far, refusal: null, site, at: { addr: s.near, pos: s.pos }, offer: false };
+  const fails = known(far, true, { link: l.addr, slot: s.farSlot });
+  if (fails) { lit = [l.addr]; showNotice({ ...fails, site }); return; }
+  /** @type {Notice} the follow's reading notice: at the far document, where its camera leaves for */
+  const waiting = { face: 'reading', addr: far, refusal: null, site: siteAt(far, null), offer: false };
   /** @type {Step} the follow, as the entry it departs records it */
   const step = { kind: 'follow', link: l.addr, near: s.near, key: s.key, far, spans: s.farWhole ? null : slotSpans(s) };
-  const entry = TRAIL.push({ addr: far, pos: null, width: null, view: viewFor(far, null), label: labelOf(far), notice: waiting }, departed, true, step);
+  const entry = TRAIL.push({ addr: far, pos: null, width: null, view: viewFor(far, null), label: labelOf(far), notice: waiting }, departure(), true, step);
+  if (!placeable(far)) {
+    if (!(await reachFor(act, far, entry, site))) return;
+    TRAIL.leaveFrom(entry, CAM.destination());
+  }
+  dismissChrome();
+  LK.follow(l);
+  const first = leave(act, entry, { addr: far, pos: null, view: viewFor(far, null) }, byKey, 620);
   showNotice(waiting);
-  /** the follow's read brought a face in the landing's place: its entry settled holding it, at the view the follow left from; the face shown and the link lit where no act was made after it */
-  const faced = (/** @type {Notice} */ notice) => { TRAIL.settle(entry, { view: departed, notice }); if (act === made) { lit = [l.addr]; showNotice(notice); } };
+  /** the follow's read brought a failure, learned in the air: faced where the camera went, the link lit where no act was made after it */
+  const faced = (/** @type {Notice} */ notice) => { if (failed(act, entry, notice, byKey)) lit = [l.addr]; };
   const fd = REC.doc(far);
   if (fd.refused !== 'unregistered' && fd.extent == null) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced({ ...waiting, face: 'unregistered' }); return; }
@@ -1081,7 +1401,7 @@ export async function follow(s, byKey = false) {
   if (d.extent == null || d.from < 0) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced({ ...waiting, face: 'unregistered' }); return; }
   if (REC.doc(far).refused === 'withheld') { faced({ ...waiting, face: 'withheld' }); return; }
-  await landFollowed(act, s, entry, await followed(s, proj), byKey);
+  await landFollowed(act, s, entry, await followed(s, proj), byKey, first);
 }
 
 /** HOME's place and view: the acting account's region at mid scale; a guest's the board's extent (R92 rider (c)) */
@@ -1097,12 +1417,12 @@ function homeFrame() {
  * @param {boolean} [byKey] a key made the act
  */
 export async function home(byKey = false) {
-  nextAct();
+  const act = nextAct();
   const departed = departure();
   dismissChrome();
   const h = homeFrame();
-  TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: 'HOME', notice: null }, departed);
-  await land({ addr: h.addr, pos: null, view: h.view }, byKey, 700);
+  const entry = TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: 'HOME', notice: null }, departed);
+  endAir(act, await leave(act, entry, { addr: h.addr, pos: null, view: h.view }, byKey, 700));
 }
 
 /**
@@ -1126,13 +1446,13 @@ export async function launch() {
  * @param {boolean} [byKey] a key made the act
  */
 export async function wholeBoard(byKey = false) {
-  nextAct();
+  const act = nextAct();
   const departed = departure();
   dismissChrome();
   const node = boardNode();
   const target = CAM.viewForCell(boardCell(node), 0.92);
-  TRAIL.push({ addr: node, pos: null, width: null, view: target, label: 'WHOLE BOARD', notice: null }, departed);
-  await land({ addr: node, pos: null, view: target }, byKey, 700);
+  const entry = TRAIL.push({ addr: node, pos: null, width: null, view: target, label: 'WHOLE BOARD', notice: null }, departed);
+  endAir(act, await leave(act, entry, { addr: node, pos: null, view: target }, byKey, 700));
 }
 
 /**
@@ -1143,12 +1463,12 @@ export async function wholeBoard(byKey = false) {
  * @param {boolean} [byKey] a key made the act
  */
 export async function toAccount(acct, byKey = false) {
-  nextAct();
+  const act = nextAct();
   const departed = departure();
   dismissChrome();
   const target = CAM.viewForCell(accountCell(acct), 0.85);
-  TRAIL.push({ addr: acct, pos: null, width: null, view: target, label: null, notice: null }, departed);
-  await land({ addr: acct, pos: null, view: target }, byKey, 400);
+  const entry = TRAIL.push({ addr: acct, pos: null, width: null, view: target, label: null, notice: null }, departed);
+  endAir(act, await leave(act, entry, { addr: acct, pos: null, view: target }, byKey, 400));
 }
 
 /** the node of the board the page opened on — every clean notebook is node 1 */
@@ -1195,13 +1515,16 @@ function returnTo(l, view) {
 
 /**
  * A cursor move's landing — Back, Forward, a jump — at what the entry the
- * move reached holds (issue #136's design decision): at its view, the walk
- * where Back's light returns it (`returnTo`), else on its place — where its
- * read brought no place, the place its notice names, never the place its
- * jump named — and its notice shown again; the move's light lit (`lightOf`),
- * with nothing of the entry's own: no arrival, no notice's link. An entry
- * still reading shows its reading face at once and lands once its read is
- * answered; nowhere, and lit nowhere, where an act was made after the move.
+ * move reached holds (issue #136's design decision; FP-25): the camera
+ * leaving at once for its view, the walk where Back's light returns it
+ * (`returnTo`), else on its place, and its notice shown again — a failure's
+ * where the camera went; the move's light lit (`lightOf`), with nothing of
+ * the entry's own: no arrival, no notice's link. An entry still reading shows
+ * its reading face at the place the camera left for, and once its read is
+ * answered the move goes on to what it brought — the place it placed, or the
+ * face it met, faced there as a failure learned in the air is — save where an
+ * act was made after the move, which ends it there, and where the reader took
+ * the camera over meanwhile, which shows what it brought and moves nothing.
  * @param {Entry} e the entry the move reached
  * @param {number} act the move's count
  * @param {boolean} byKey a key made the move
@@ -1209,27 +1532,37 @@ function returnTo(l, view) {
  */
 async function landAtCursor(e, act, byKey, l) {
   const answer = TRAIL.pending(e);
-  if (answer) { if (e.notice) showNotice(e.notice); await answer; }
-  const at = TRAIL.current();
-  if (act !== made || !at) return;
-  FACES.endReading();
-  const n = at.notice;
-  if (!(n && n.at)) pinTo(at.addr);
   light = l; lit = l && l.link ? [l.link] : [];
-  const back = l && l.back ? returnTo(l, at.view) : null;
-  const flight = land(back ? { ...back, view: at.view } : n && n.at ? { addr: n.at.addr, pos: n.at.pos, view: at.view } : at, byKey, 500);
+  if (!answer) pinTo(e.addr);
+  const back = l && l.back ? returnTo(l, e.view) : null;
+  const first = leave(act, e, back ? { ...back, view: e.view } : { addr: e.addr, pos: e.pos, view: e.view }, byKey, 500);
+  if (e.notice) showNotice(e.notice);
+  if (!answer) { endAir(act, await first); return; }
+  await answer;
+  if (act !== made) return;
+  FACES.endReading();
+  const n = e.notice;
+  if (n && n.face !== 'floating') { failed(act, null, n, byKey); return; }
+  pinTo(e.addr);
+  if (takenAt === act) { if (n) showNotice(n); return; }
+  const flight = goOn(act, first, { addr: e.addr, pos: e.pos, view: e.view }, byKey, 500);
   if (n) showNotice(n);
   await flight;
 }
 
 /**
  * A cursor move: the cursor moved by the trail's own move, landing on the
- * view left, the move's light lit where it crosses one step (`lightOf`).
+ * view left, the move's light lit where it crosses one step (`lightOf`). A
+ * jump reaching gives its entry back before the move reads the trail, and
+ * Back abandons it and does nothing more: the camera never left the entry it
+ * was made from (see the head).
  * @param {(departed: View) => (Entry | null)} move N-TRAIL's move
  * @param {boolean} byKey a key made the act
- * @returns {Promise<boolean>} the cursor moved
+ * @param {boolean} [abandons] the move is Back, which abandons a jump reaching
+ * @returns {Promise<boolean>} the cursor moved, or the jump reaching was abandoned
  */
-async function moveCursor(move, byKey) {
+async function moveCursor(move, byKey, abandons = false) {
+  if (reach) { giveUp(); if (abandons) { nextAct(); return true; } }
   const left = TRAIL.current(), from = TRAIL.cursorIndex();
   const e = move(departure());
   if (!e) return false;
@@ -1243,10 +1576,11 @@ async function moveCursor(move, byKey) {
  * Back: the cursor one entry back, lighting where the step it crossed
  * began — the link the follow from that entry took, or the passage the LEAP
  * from it carried — whether or not the entry it leaves still reads, for the
- * reader stood where the step began (see the head).
+ * reader stood where the step began (see the head); a jump reaching
+ * abandoned in its place.
  * @param {boolean} [byKey] a key made the act
  */
-export function back(byKey = false) { return moveCursor(TRAIL.back, byKey); }
+export function back(byKey = false) { return moveCursor(TRAIL.back, byKey, true); }
 /**
  * Forward: the cursor one entry ahead, lighting what the step it crossed
  * marked on arrival (see the head).

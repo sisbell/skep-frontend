@@ -64,6 +64,12 @@
 // as the provider's events bring them; the DAEMON's
 // segment (silent while the board runs; the notebook's forms where it does
 // not, "writes stopped on your notebook …" where `/health.writes.halted`);
+// A JUMP'S FACE OUT OF VIEW (FP-25: "'Reading', 'reaching' and a failure show
+// where the camera is … in the one line when out of view"): the words of a
+// jump's face whose document stands out of the visible view, in a segment of
+// their own while the plane hides the face (O-HOST's `aside`, read through
+// the reader the app hands in), said already through the status region as
+// the face was shown;
 // the TRANSIENT segments (the swallow line K-9; the mode line C-31 where the
 // pair flipped) until the next act. THE REBUILD KEEPS THE FOCUS (rule 11):
 // the line is rebuilt whenever its words change — every frame of a flight —
@@ -78,7 +84,7 @@
 // removed; `whereAmI` RE-CUT to foundations §2.2, its document form nearer
 // than mid and its position at the document's own reading scale alone; the
 // diagnostics behind `h` are the gate's hooks).
-// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-22.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-22, FP-25.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from '../nav/trail.js';
@@ -107,10 +113,19 @@ let lastState = -1;
 let lastHalted = false;
 /** the act holding the line's one Tab stop (K-22), by its `data-act` */
 let stop = 'back';
-/** @type {{open: (byKey: boolean) => void, back: (byKey: boolean) => void, forward: (byKey: boolean) => void, trailList: (byKey: boolean) => void, signIn: (el: HTMLElement) => void} | null} */
+/**
+ * @typedef {Object} Acts — the line's acts, and what it reads of the owners that import it, handed in once by the app (FP-10, FP-11)
+ * @property {(byKey: boolean) => void} open the address segment's act: the LEAP box
+ * @property {(byKey: boolean) => void} back
+ * @property {(byKey: boolean) => void} forward
+ * @property {(byKey: boolean) => void} trailList
+ * @property {(el: HTMLElement) => void} signIn
+ * @property {() => ({id: string, text: string} | null)} [aside] a jump's face standing out of the visible view: its string's id and its words (O-HOST's `aside`); null where none stands so
+ */
+/** @type {Acts | null} */
 let acts = null;
 
-/** @param {HTMLElement} e @param {NonNullable<typeof acts>} a */
+/** @param {HTMLElement} e @param {Acts} a */
 export function attach(e, a) {
   el = e; acts = a;
   el.setAttribute('aria-label', t('L.the-line'));
@@ -311,6 +326,7 @@ export function render(force = false) {
   const a = addressDisplay();
   const acting = actingSegment();
   const daemon = daemonSegment();
+  const aside = acts && acts.aside ? acts.aside() : null;
   if (acting.state === 5 && lastState !== 5 && lastState >= 0) FOCUS.say(acting.words, true);
   if (daemon.halted && !lastHalted) FOCUS.say(daemon.words, true);
   lastState = acting.state; lastHalted = daemon.halted;
@@ -319,6 +335,7 @@ export function render(force = false) {
     `<span class="sep">│</span><button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}" style="--words:${WORDS_CH}"><b>${esc(a.place)}</b>${slot(a)}<span class="marker${a.member ? ' lit' : ''}${a.doc ? '' : ' none'}" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></button>` +
     `<span class="sep">│</span><span class="seg acting" data-state="${acting.state}">${acting.html}</span>` +
     (daemon.html ? `<span class="sep">│</span><span class="seg daemon">${daemon.html}</span>` : '') +
+    (aside ? `<span class="sep">│</span><span class="seg aside" data-string="${esc(aside.id)}">${esc(aside.text)}</span>` : '') +
     (transientSeg ? `<span class="sep">│</span><span class="seg transient" data-string="${esc(transientSeg.id)}">${transientSeg.html}</span>` : '');
   if (!force && html === lastHTML) return;
   lastHTML = html;

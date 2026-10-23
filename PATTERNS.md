@@ -332,6 +332,7 @@ last. Each stands until a later decision says it changes it.
 - **#154** (built `66ca03a`): a document's versions share one box showing one of them, a version move lands in place and only an act aimed at the box changes its version; changes #153: on a version move the none state lands at the nearest passage the versions share → FP-22
 - **#160** (built `8d5f13c`): each reading scene's pane follows the feed by its document's kind, set again in one step and offering no reload → FP-23
 - **#161** (built `ad883d5`): a copy stands in for every item its span covers that has no text, in the words the mirror announces, and a selection that touches an item covers it whole → FP-24
+- **#137** (built with this line): a jump's camera leaves at the act and its read runs beside the flight, the camera going on to the passage the read places unless the reader took it over; keys other than navigation acts pressed while a jump is in the air are made at its landing in order, and dropped where it never lands; a wheel series under way at the act is dropped; a board already marked unreachable gets no flight; changes #136: a jump says it is reading where its camera went → FP-25
 
 ## Changes
 

@@ -19,9 +19,10 @@
 // leaves its entry ahead at the head and shows no face (a mutant that faces
 // after a later act turns red). Every act puts both marks out as it is made
 // — a LEAP, HOME, WHOLE BOARD, an account's region, a jump, Forward, a LEAP
-// that faces, and a follow that faces, at once or once its read answers, the
-// latter lighting the link its notice came from — and lights its own alone
-// (a mutant that drops the step from any one act turns red). THE STEP'S
+// that faces, and a follow that faces, its failure known at the act or
+// learned in the air, the latter lighting the link its face came from — and
+// lights its own alone (a mutant that drops the step from any one act turns
+// red). THE STEP'S
 // LIGHT (issue #152's design decision): the entry a follow or a carrying
 // LEAP departs records the step — the link, the end it was made at and its
 // far end by its slot's stored span; the passage carried by the permanent
@@ -55,48 +56,79 @@
 // nothing while the entry Back leaves still reads turns red); every act made while a
 // LEAP reads — a LEAP, a follow, HOME, WHOLE BOARD, an account's region —
 // stands after the LEAP's entry and lands (a mutant that leaves any one
-// uncounted turns red); Forward to a LEAP's entry while it reads lands at the
-// landing the read placed (a mutant that lands without waiting turns red); a
-// Back waiting on a claim puts both of the arrival's marks out as it is made
-// and lands nowhere once Forward has been made (the ring as Forward left it).
+// uncounted turns red); Forward to a LEAP's entry while it reads goes on to
+// the landing the read placed (a mutant that never goes on turns red); a
+// Back reaching a claim puts the arrival out as it is made, lighting the step
+// it crossed, and goes on nowhere once Forward has been made (the ring as
+// Forward left it).
+// THE JUMP (FP-25; issue #137's design decision), each read held: a LEAP to
+// a document whose text the page does not hold, and a follow, fly at once —
+// for the place the unread record gives, for the far document — the walk on
+// it and its reading face there, in the air, and go on to the place the read
+// gives once it answers (a mutant that waits on the read before it flies, or
+// never goes on, turns red); the reader taking the camera over while one is
+// in the air lands it where the camera is, its read only marking its passage,
+// the camera and the walk where the reader left them and the entry keeping
+// the reader's view for Back then Forward (a mutant that flies on, or writes
+// the read's view, turns red); keys pressed while one is in the air are held
+// and made at its landing in order, dropped where the reader took over, a Back
+// abandoned it or its read failed (a mutant that makes them at once, or makes
+// a dropped jump's, turns red); a navigation act is made at once. A board
+// already marked unreachable gets no flight: a LEAP that must read faces at
+// the act's site, no entry, nothing asked. A LEAP to an address on a board the
+// plane does not draw reaches for it: its entry taken at the act, the camera
+// still, its reaching face at the act's site; Esc — after anything nearer —
+// and Back abandon it, its entry given back and its answer moving nothing; its
+// read refused, it faces at the site and gives its entry back; its read
+// answered, the camera leaves, the entry it was made from keeping the view it
+// was left at (a mutant that flies, keeps the entry, or faces elsewhere turns
+// red).
 // A JUMP THAT ENDS IN A NOTICE KEEPS ITS ENTRY (issue #136's design
-// decision): a LEAP or a follow that faces holds its face as its entry's
-// notice, at the view it left from — a follow's the link's bytes as the
-// walk's place there, its link lit — dropping the entries ahead of the cursor
-// as any push does, nothing moved (a mutant that hands the entry back turns
-// red); answered before a Back or after it, the trail holds the same entries
-// and numbers, one Back lands where the jump was made, at the view it left,
-// and a second goes one entry further (a mutant that withdraws the entry
-// turns the quick arm red); a notice answered after the reader left moves
-// nothing, and Forward to its entry lands where the follow was made — the
-// walk on the link's bytes, never on the address the board said nothing
-// about — its face shown again at those bytes and its link lit, the follow
-// Forward crossed (a mutant that lands at the place the jump named, or shows
-// no face, turns red); Back onto a notice's entry from a follow made there
-// lights that follow's link alone (a mutant that relights the notice's link
-// turns red). A follow whose far document the board
-// withholds from the reader faces it with the document-level withheld face —
-// B1-S2's words naming its owner by the one owner rule, the arm beneath —
-// asks no projection of it, and keeps its entry holding the face (a mutant
-// that asks the projection the board refuses with the document turns red).
-// A JUMP SAYS IT IS READING at once, where it was made — a follow at the
-// link's own bytes, a LEAP at the site its act names, the LEAP box's at the
-// viewport's corner — Back leaving it, Forward to its entry while it reads
-// showing it again and its answer replacing it with the landing; a LEAP that
-// reads nothing says nothing (a mutant that shows no reading face, shows it
-// for a LEAP that reads nothing, or stands it anywhere but the act's site
-// turns red); a follow made from the selection's card shows its reading face
-// in the card's place, with the card's end — the selection standing under it
-// while it reads, ending with the landing as the card's dismissal ends it,
-// and standing under the face a dead reference brings until Esc (a mutant
-// whose reading face takes no end of the card it replaces turns red).
-// A FOLLOW THAT LANDS NOWHERE IS FACED AT ITS SITE, the link's own bytes in
-// the first edition, whichever read faced it — a link naming no far
-// document, a dead reference or a far document withheld, met at its consult
-// or once the projection answered and its text was read, a projection the
-// board declines for what it says of the far document — and pressed on the anatomy card's follow, whose card the
-// face takes the place of (a mutant that drops the site from any one face,
-// or stands it at the control pressed, turns that row red).
+// decision): a LEAP or a follow whose reads learn its failure in the air
+// holds its face as its entry's notice where its camera went — the walk on
+// the address there, the mirror naming it as the board answered it, a
+// follow's link lit — dropping the entries ahead of the cursor as any push
+// does (a mutant that hands the entry back turns red); answered before a Back
+// or after it, the trail holds the same entries and numbers, one Back lands
+// where the jump was made, at the view it left, and a second goes one entry
+// further (a mutant that withdraws the entry turns the quick arm red); a
+// notice answered after the reader left moves nothing, and Forward to its
+// entry lands where the camera went — the walk on the address the board said
+// nothing about, with the camera — its face shown again there and its link
+// lit, the follow Forward crossed (a mutant that lands where the follow was
+// made, or shows no face, turns red); Back onto a notice's entry from a follow
+// made from it lights that follow's link alone (a mutant that relights the
+// notice's link turns red). A JUMP WHOSE FAILURE IS KNOWN AT THE ACT NEVER
+// LEAVES (FP-25): a LEAP to an address the page knows the board says nothing
+// about, a follow of such a dead reference — no flight, no entry, nothing
+// asked, the link not counted as followed, its face at the act's site in the
+// place of the card standing there (a mutant that flies, pushes or asks turns
+// red). A follow whose far document the board withholds from the reader faces
+// it with the document-level withheld face — B1-S2's words naming its owner by
+// the one owner rule, the arm beneath — asks no projection of it, and keeps
+// its entry holding the face (a mutant that asks the projection the board
+// refuses with the document turns red).
+// A JUMP SAYS IT IS READING where the camera is — at the place it left for: a
+// follow's far document, the document a LEAP names whatever site its act
+// names — the one line carrying it while that place is out of view; Back
+// leaves it, Forward to its entry while it reads shows it again there and its
+// answer replaces it with the landing; a LEAP that reads nothing says nothing
+// (a mutant that shows no reading face, shows it for a LEAP that reads
+// nothing, or stands it at the act's site turns red); a follow made from the
+// selection's card ends the card and the selection as its camera leaves, at
+// the act (a mutant that leaves them standing until the landing turns red),
+// and one whose failure is known at the act faces in the card's place, the
+// selection standing under it until Esc.
+// A FOLLOW THAT LANDS NOWHERE IS FACED WHERE THE CAMERA IS: at its site, the
+// link's own bytes in the first edition, where its failure is known at the
+// act — a link naming no far document, a dead reference or a far document
+// withheld the page knows of — and pressed on the anatomy card's follow,
+// whose card the face takes the place of; at the far document, where its
+// camera went, where its reads learned it in the air — a projection the board
+// declines for what it says of the far document, a dead reference or a far
+// document withheld met once the projection answered and its text was read
+// (a mutant that stands any one face elsewhere, or at the control pressed,
+// turns that row red).
 // A departure made
 // during a flight re-takes the flight's destination, so Forward lands there —
 // after a LEAP's flight and after a Back's (a mutant that re-takes the camera
@@ -187,7 +219,7 @@
 // it leaves: asked while the act read — a follow of a dead reference, a LEAP
 // the board answers for with nothing — the card's answer shows nothing over
 // the face (a mutant whose show does not count itself turns red); asked
-// before the act — a follow faced at once, one faced once its read answers —
+// before the act — a follow faced at once, one faced once its read answers in the air —
 // likewise, held by the act's end of the opening and by the face's show alike
 // (a mutant that drops both turns red). ENTER AT A WITHHELD RUN (D5 K-7)
 // shows the run's face whole, taking no focus: its head, the arm, then C-67's
@@ -274,6 +306,10 @@ const PASSAGE = D + '.0.2.1', WHOLE = D + '.0.2.2';
 const DEAD = D + '.0.2.3';
 /** the dead reference taken into the model, drawn at the first edition */
 const takeDead = () => { REC.takeLinks(D, [DEAD]); REC.takeLink({ addr: DEAD, from: [span(D, 23, 3)], to: [span(GONE, 1, 3)], type: CITE }); };
+// a second dead reference from the first edition, into GONE: one no test follows before the page knows GONE says nothing
+const UNFOLLOWED = D + '.0.2.15';
+/** the second dead reference taken into the model, drawn at the first edition */
+const takeUnfollowed = () => { REC.takeLinks(D, [UNFOLLOWED]); REC.takeLink({ addr: UNFOLLOWED, from: [span(D, 9, 2)], to: [span(GONE, 4, 2)], type: CITE }); };
 // a citation from the first edition of a passage of FAR that a later edit to FAR cut in two: its far end projects to FAR's 3, four
 // positions, and FAR's 20, five
 const SPLIT = D + '.0.2.4';
@@ -374,6 +410,10 @@ function takeWindows() {
   REC.takeEditionClaims(ORIGIN, [QUOTING_CLAIM, EDITION_CLAIM]);
 }
 
+// REACH: a document on board 2, which the plane does not draw: only its read places it; REACH_GONE: an address there the board
+// answers for with nothing
+const REACH = '2.0.1.0.3', REACH_GONE = '2.0.1.0.4', REACH_TEXT = 'A document on another board.';
+
 /** the reads of a document read whole: its extent, its metadata, its text, its image, its links */
 const reads = (/** @type {string} */ doc, /** @type {string} */ text, /** @type {string[]} */ links) => ({
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } },
@@ -391,6 +431,8 @@ const script = {
   ...reads(LONG, LONG_TEXT, []),
   ...reads(CONT, CONT_TEXT, []),
   ...reads(EDITION, EDITION_TEXT, [EDITION_CLAIM]),
+  ...reads(REACH, REACH_TEXT, []),
+  [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(REACH_GONE) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GONE) })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
   // where each citation's far end projects into FAR now: the passage at 20, five positions; FAR whole, all of it
   [FAKE.keyOf('op', { frame: F.project(PASSAGE, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }] } },
@@ -584,20 +626,20 @@ test('a follow of a far end the far document\'s text no longer holds lands at th
   assert.equal(TRAIL.length(), n + 1, 'the follow\'s entry settled');
   const e = TRAIL.current();
   assert.deepEqual(e && [e.addr, e.pos, e.width, departed()?.step?.kind, departed()?.step?.link], [FAR, FAR_HEAD, null, 'follow', FLOAT], 'the landing\'s entry at the head, never the end\'s stored position, the entry departed recording the follow');
-  assert.deepEqual(e && e.notice && [e.notice.face, e.notice.addr, e.notice.site, e.notice.at], ['floating', FAR, { span: { addr: FAR, pos: FAR_HEAD } }, null], 'holding the dead end\'s face as its notice, beside the head it stands at');
+  assert.deepEqual(e && e.notice && [e.notice.face, e.notice.addr, e.notice.site], ['floating', FAR, { span: { addr: FAR, pos: FAR_HEAD }, sign: FAR }], 'holding the dead end\'s face as its notice, beside the head it stands at, its document its sign');
   assert.ok(same(CAM.view(), GO.viewFor(FAR, FAR_HEAD)), 'the camera at the head\'s view');
   assert.deepEqual(walkAt(), ['block', FAR, FAR_HEAD], 'the walk on the head');
   const f = faceShown();
   assert.ok(f && f.id === 'face:floating' && f.html.includes('data-string="F.floating"') && f.html.includes(esc(t('F.floating', { D: FAR }))), `the dead end's words: ${f && f.html}`);
   assert.equal(f && f.acts, true, 'offering its act');
-  assert.deepEqual(HOST.currentState()?.anchor, { span: { addr: FAR, pos: FAR_HEAD } }, 'standing at the head landed on, never at the act\'s site');
+  assert.deepEqual(HOST.currentState()?.anchor, { span: { addr: FAR, pos: FAR_HEAD }, sign: FAR }, 'standing at the head landed on, never at the act\'s site');
   await run(GO.leapTo(D));
   assert.equal(faceShown(), null, 'the next act dismisses it');
   await run(GO.back());
   assert.deepEqual([walkAt(), marks()], [['block', FAR, FAR_HEAD], [null, []]], 'Back lands at the head, lighting nothing: the step it crossed, a LEAP, carried nothing — the notice\'s link not relit, nor any arrival (issue #152)');
   const again = faceShown();
   assert.ok(again && again.id === 'face:floating' && again.html.includes(esc(t('F.floating', { D: FAR }))) && again.acts, 'the dead end\'s face shown there again, its act offered');
-  assert.deepEqual(HOST.currentState()?.anchor, { span: { addr: FAR, pos: FAR_HEAD } }, 'at the head');
+  assert.deepEqual(HOST.currentState()?.anchor, { span: { addr: FAR, pos: FAR_HEAD }, sign: FAR }, 'at the head');
   await run(GO.back());
   assert.deepEqual(marks(), [null, [FLOAT]], 'Back to the follow\'s departure lights the link there');
   assert.deepEqual(fake.unanswered, []);
@@ -690,15 +732,19 @@ test('every act puts the arrival\'s two marks out as it is made — HOME, WHOLE 
     await run(GO.follow(drawn(PASSAGE)));
     assert.deepEqual(marks(), [{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }, [PASSAGE]], 'the follow lit both');
   };
-  /** @type {Array<[string, () => Promise<unknown>, string[]]>} each act, and the links it lights of its own: a follow faced once its read answers lights the link its notice came from (issue #136); a jump to the entry behind, the link of the follow it crosses, as Back does (issue #152) */
+  /** GONE as the page holds it: known to be an address the board says nothing about, or not yet read */
+  const gone = (/** @type {boolean} */ known) => { if (known) REC.takeRefused(GONE, 'unregistered'); else REC.invalidate(GONE); };
+  /** @type {Array<[string, () => Promise<unknown>, string[]]>} each act, and the links it lights of its own: a follow that faces lights the link its face came from, known at the act or learned in the air (issue #136; FP-25); a jump to the entry behind, the link of the follow it crosses, as Back does (issue #152) */
   const acts = [
     ['HOME', () => GO.home(), []],
     ['WHOLE BOARD', () => GO.wholeBoard(), []],
     ['an account\'s region', () => GO.toAccount('1.0.1'), []],
     ['a jump to the entry behind', () => GO.toTrailEntry(2), [PASSAGE]],
-    ['a LEAP the board answers for with nothing', () => GO.leapTo(GONE), []],
+    ['a LEAP the board answers for with nothing, known at the act', () => { gone(true); return GO.leapTo(GONE); }, []],
+    ['a LEAP the board answers for with nothing, learned in the air', () => { gone(false); return GO.leapTo(GONE); }, []],
     ['a follow of a link naming no far document, faced at once', () => GO.follow({ ...drawn(PASSAGE), far: '' }), []],
-    ['a follow of a dead reference, faced once its read answers', () => GO.follow(drawn(DEAD)), [DEAD]],
+    ['a follow of a dead reference, known at the act', () => { gone(true); return GO.follow(drawn(DEAD)); }, [DEAD]],
+    ['a follow of a dead reference, learned in the air', () => { gone(false); return GO.follow(drawn(DEAD)); }, [DEAD]],
   ];
   for (const [what, act, own] of acts) {
     await landed();
@@ -1011,21 +1057,70 @@ test('an act made while a LEAP reads stands after the LEAP\'s entry and lands; t
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a LEAP that faces keeps its entry, numbered as it was made, holding the fifth cell at the view it left from, nothing moved: made with the cursor behind the newest entry, it drops the entry ahead as any push does', async () => {
+test('a LEAP to an address the page already knows the board says nothing about never leaves: no flight, no entry, nothing asked, the fifth cell at the act\'s site — the LEAP box\'s at the viewport\'s corner — in the place of the card standing there, the camera and the walk where it was made (FP-25; issue #137)', async () => {
   await run(GO.leapTo(D));
   await run(GO.leapTo(FAR));
   await run(GO.back());
-  const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view(), walked = walkAt();
-  await run(GO.leapTo(GONE));
+  REC.takeRefused(GONE, 'unregistered');
+  const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view(), walked = walkAt(), from = fake.asked.length;
+  /** @type {boolean | null} how the card standing at the act ended: replaced, or dismissed */
+  let ended = null;
+  HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span>', acts: {}, onDismiss: (replaced) => { ended = replaced; } });
+  const leap = GO.leapTo(GONE);
+  assert.deepEqual([CAM.flying(), GO.inAir()], [false, false], 'no flight');
+  assert.equal(await leap, null, 'it lands in no document');
+  assert.deepEqual([addrs(), TRAIL.cursorIndex()], [before, cursor], 'no entry: FAR\'s ahead of the cursor kept');
+  assert.deepEqual(fake.asked.slice(from), [], 'nothing asked of the board');
+  assert.deepEqual([faceShown()?.id, HOST.currentState()?.anchor, ended], ['face:doc_not_registered', null, true], 'the fifth cell at the viewport\'s corner, in the place of the card, which it replaced');
+  assert.ok(same(CAM.view(), at), 'the camera where the LEAP was made');
+  assert.deepEqual(walkAt(), walked, 'the walk where the LEAP was made');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP whose read learns the board says nothing about its address keeps its entry, numbered as it was made: its camera left at the act for the address\'s place, the fifth cell faced there, the camera staying where it went and the walk on the address, the entry holding the notice there; made with the cursor behind the newest entry, it drops the entry ahead as any push does (FP-25; issue #136)', async () => {
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR));
+  await run(GO.back());
+  REC.invalidate(GONE);
+  const before = addrs(), cursor = TRAIL.cursorIndex();
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(GONE) });
+  const leap = GO.leapTo(GONE);
+  const went = GO.viewFor(GONE, null), there = { span: { addr: GONE, pos: 1 }, sign: GONE };
+  assert.deepEqual([CAM.flying(), same(CAM.destination(), went), GO.inAir()], [true, true, true], 'the camera left at the act, for the address\'s place');
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['reading:' + GONE, there], 'reading where the camera went');
+  release();
+  await run(leap);
   assert.equal(REC.doc(GONE).refused, 'unregistered', 'the board answered for it with nothing');
   assert.deepEqual(addrs(), [...before.slice(0, cursor + 1), GONE], 'its entry after D\'s, FAR\'s ahead of the cursor dropped as any push drops it');
   assert.equal(TRAIL.cursorIndex(), cursor + 1, 'the cursor on its entry');
   const e = TRAIL.current();
-  assert.deepEqual(e && e.notice && [e.notice.face, e.notice.addr, e.notice.site, e.notice.at], ['unregistered', GONE, null, { addr: D, pos: null }], 'holding the fifth cell — an address asked at no place, at the viewport\'s corner — the walk\'s element as it was made its place');
-  assert.ok(e && same(e.view, at), 'at the view the LEAP left from');
-  assert.deepEqual([faceShown()?.id, HOST.currentState()?.anchor], ['face:doc_not_registered', null], 'the fifth cell shown at the viewport\'s corner');
-  assert.ok(same(CAM.view(), at), 'the camera where the LEAP was made');
-  assert.deepEqual(walkAt(), walked, 'the walk where the LEAP was made');
+  assert.deepEqual(e && e.notice && [e.notice.face, e.notice.addr, e.notice.site], ['unregistered', GONE, there], 'holding the fifth cell where the camera went');
+  assert.ok(e && same(e.view, went), 'its view where the camera went');
+  assert.deepEqual([faceShown()?.id, HOST.currentState()?.anchor], ['face:doc_not_registered', there], 'the fifth cell shown there');
+  assert.ok(same(CAM.view(), went), 'the camera staying where it went');
+  assert.deepEqual([walkAt(), GO.inAir()], [['document', GONE, null], false], 'the walk on the address\'s own node; the jump ended, never landed');
+  const item = WALK.mirrorItem(WALK.mirrorIndex()) || '';
+  assert.ok(item.includes(t('L.far.unregistered')) && !item.includes(t('F.published')), `the mirror names what the read learned, never "published": ${item}`);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a board already marked unreachable gets no flight: a LEAP that must read faces "board unreachable" at the act\'s site, no entry and nothing asked; one whose text the page holds reads nothing and flies (issue #137\'s design decision)', async () => {
+  await run(GO.leapTo(D));
+  unread();
+  REC.setDaemon('unreachable');
+  try {
+    const n = TRAIL.length(), at = CAM.view(), from = fake.asked.length;
+    const site = { span: { addr: D, pos: 11, width: 5 } };
+    const leap = GO.leapTo(C, { site });
+    assert.deepEqual([CAM.flying(), GO.inAir()], [false, false], 'no flight');
+    await run(leap);
+    assert.deepEqual([TRAIL.length(), same(CAM.view(), at), fake.asked.slice(from)], [n, true, []], 'no entry, the camera where it was, nothing asked');
+    assert.deepEqual([faceShown()?.id, HOST.currentState()?.anchor], ['face:unreachable', { ...site, sign: D }], 'faced at the act\'s site');
+    assert.ok(hostEl.innerHTML.includes(esc(t('F.daemon.unreachable'))), `in the daemon's words: ${hostEl.innerHTML}`);
+    await run(GO.leapTo(FAR));
+    assert.equal(TRAIL.current()?.addr, FAR, 'a LEAP to a document whose text the page holds flies');
+  } finally { REC.setDaemon('running'); }
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -1050,7 +1145,191 @@ test('Forward to a LEAP\'s entry while it reads lands once the read answers, at 
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a Back waiting on a LEAP\'s entry while it reads puts the arrival\'s marks out as it is made, and lands nowhere once Forward has been made: the ring as Forward left it', async () => {
+// ---- THE JUMP (FP-25; issue #137's design decision: "the camera leaves at once … the read only finishes the landing") --------
+
+/** a key as the platform delivers it at the plane: its key, and its modifiers */
+const keyOf = (/** @type {string} */ key, /** @type {{metaKey?: boolean, ctrlKey?: boolean, shiftKey?: boolean}} */ mods = {}) => /** @type {any} */ ({ type: 'keydown', key, keyCode: 0, isComposing: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {}, ...mods });
+/** the command modifier held, as this platform spells it (D5 §0: ⌘ on a Mac, Ctrl elsewhere) */
+const MOD = KEYS.MAC ? { metaKey: true } : { ctrlKey: true };
+/** the plane, a key making the act */
+const PLANE = /** @type {const} */ ({ where: 'plane', byKey: true });
+/** the keys held for a landing made, and every flight they and the jump start stepped to its end */
+async function drained() {
+  for (let i = 0; i < 400 && (KEYS.holding() > 0 || CAM.flying() || GO.inAir()); i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
+  assert.deepEqual([KEYS.holding(), CAM.flying(), GO.inAir()], [0, false, false], 'every held key made, every flight landed');
+}
+
+test('a LEAP to a document whose text the page does not hold flies at once for the place its unread record gives the position, its reading face there and the walk on the document, in the air; its read answering, the camera goes on to the place the read gives the position, the walk on its span, and the jump lands (FP-25; issue #137)', async () => {
+  unread();
+  await run(GO.leapTo(D));
+  const last = C_TEXT.lastIndexOf('A last') + 1;
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+  const leap = GO.leapTo(C, { pos: last });
+  const left = GO.viewFor(C, last);
+  assert.deepEqual([CAM.flying(), same(CAM.destination(), left), GO.inAir()], [true, true, true], 'the camera left at the act, for the place the unread record gives the position: in the air');
+  await new Promise((r) => setTimeout(r, 0)); // the walk's levels read, no flight stepped
+  assert.deepEqual([walkAt(), HOST.currentState()?.anchor], [['document', C, null], { span: { addr: C, pos: last }, sign: C }], 'the walk on the document, its reading face at the place it left for');
+  release();
+  await run(leap);
+  const placed = GO.viewFor(C, last);
+  assert.ok(!same(placed, left), 'the read moves the place');
+  assert.ok(same(CAM.view(), placed), 'the camera went on to the place the read gave');
+  assert.deepEqual([walkAt(), GO.inAir(), HOST.currentState()], [['block', C, last], false, null], 'the walk on its span, the jump landed, the reading face gone');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow flies at once for its far document and goes on to the span its far end projects to once the projection answers, marking it and lighting its link (FP-25)', async () => {
+  await run(GO.leapTo(D));
+  const release = fake.hold('op', { frame: F.project(PASSAGE, 2, FAR) });
+  const following = GO.follow(drawn(PASSAGE));
+  await new Promise((r) => setTimeout(r, 0)); // the walk's levels read, no flight stepped
+  assert.deepEqual([CAM.flying(), same(CAM.destination(), GO.viewFor(FAR, null)), GO.inAir(), walkAt()], [true, true, true, ['document', FAR, null]], 'the camera left at the act for the far document, the walk on it');
+  release();
+  await run(following);
+  assert.ok(same(CAM.view(), GO.viewFor(FAR, 20)), 'gone on to the span its far end projects to');
+  assert.deepEqual([marks(), GO.inAir()], [[{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }, [PASSAGE]], false], 'marked, its link lit, landed');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the reader taking the camera over while a jump is in the air lands it where the camera is: its read, answering, marks its passage where it falls and moves neither the camera nor the walk, and its entry keeps the view the reader left it at — answered before the reader leaves it or after, Forward returns there (FP-25)', async () => {
+  /** a follow of PASSAGE made from D, its projection held, the reader taking the camera over half way: the view and the walk the reader left */
+  const takenOver = async () => {
+    await run(GO.leapTo(D));
+    const release = fake.hold('op', { frame: F.project(PASSAGE, 2, FAR) });
+    const following = GO.follow(drawn(PASSAGE));
+    const flight = CAM.cam.anim;
+    assert.ok(flight, 'the camera left at the act');
+    CAM.step(flight.t0 + flight.ms / 2);
+    await new Promise((r) => setTimeout(r, 0)); // the walk's levels read, the flight stepped no further
+    // a wheel as APP-INPUT takes it: the camera taken over, then panned
+    GO.takeOver(); CAM.panBy(40, 30);
+    assert.deepEqual([walkAt(), GO.inAir()], [['document', FAR, null], false], 'the walk where the jump put it as its camera left; the jump landed where the camera is');
+    return { release, following, reader: CAM.view(), walked: walkAt() };
+  };
+  // answered while the reader stands at its entry
+  let t = await takenOver();
+  t.release();
+  await run(t.following);
+  assert.deepEqual(marks(), [{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }, [PASSAGE]], 'its passage marked where it falls, its link lit');
+  assert.ok(same(CAM.view(), t.reader) && !CAM.flying(), 'the camera where the reader left it');
+  assert.deepEqual(walkAt(), t.walked, 'the walk where it stood');
+  assert.deepEqual([TRAIL.current()?.addr, TRAIL.current()?.pos], [FAR, 20], 'its entry holds the passage');
+  await run(GO.back());
+  await run(GO.forward());
+  assert.ok(same(CAM.view(), t.reader), 'Back then Forward return to the view the reader left the entry at');
+  // answered after the reader left its entry by Back
+  t = await takenOver();
+  await run(GO.back());
+  t.release();
+  await run(t.following);
+  await run(GO.forward());
+  assert.ok(same(CAM.view(), t.reader), 'answered after Back: Forward returns to the view the reader left the entry at, never the one the read placed');
+  assert.equal(TRAIL.current()?.pos, 20, 'its entry holds the passage all the same');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('keys pressed while a jump is in the air wait for its landing and are made there in order; a jump that never lands — the reader took the camera over, a Back abandoned it, its read failed — drops them; a navigation act is made at once (FP-25; issue #137)', async () => {
+  /** the elements of C's text the walk steps through, by their first positions */
+  const spans = () => { const d = REC.doc(C); return d.blocks.filter((b) => b.text.trim() !== '').map((b) => b.pos); };
+  // made at the landing, in order
+  unread();
+  await run(GO.leapTo(D));
+  let release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+  let leap = GO.leapTo(C, { pos: 1 });
+  const pressed = [KEYS.dispatch(keyOf('ArrowDown'), PLANE), KEYS.dispatch(keyOf('ArrowDown'), PLANE)];
+  assert.equal(KEYS.holding(), 2, 'both held as they are pressed');
+  assert.deepEqual(await Promise.all(pressed), [true, true], 'taken');
+  assert.deepEqual([KEYS.holding(), walkAt()], [2, ['document', C, null]], 'held: the walk where the jump put it');
+  release();
+  await run(leap);
+  await drained();
+  assert.deepEqual(walkAt(), ['block', C, spans()[2]], 'made at the landing, in order: two spans on from the one landed on');
+  // dropped where the reader takes the camera over, where a Back abandons the jump, and where its read fails
+  /** @type {Array<[string, () => Promise<unknown>, () => (Array<string | number | null> | null)]>} each jump, what ends it without landing, and where the walk stands after */
+  const ends = [
+    ['the reader took the camera over', async () => { GO.takeOver(); CAM.panBy(10, 10); }, () => ['document', C, null]],
+    ['a Back abandoned it', () => run(GO.back()), () => walkAt()],
+  ];
+  for (const [what, end, after] of ends) {
+    unread();
+    await run(GO.leapTo(D));
+    release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+    leap = GO.leapTo(C, { pos: 1 });
+    const key = KEYS.dispatch(keyOf('ArrowDown'), PLANE);
+    assert.equal(KEYS.holding(), 1, `${what}: held as it is pressed`);
+    await key;
+    await end();
+    const want = after();
+    release();
+    await run(leap);
+    await drained();
+    assert.deepEqual(walkAt(), want, `${what}: the key held was dropped`);
+  }
+  REC.invalidate(GONE);
+  await run(GO.leapTo(D));
+  release = fake.hold('op', { frame: F.retrieveDocVSpanSet(GONE) });
+  leap = GO.leapTo(GONE);
+  const key = KEYS.dispatch(keyOf('ArrowDown'), PLANE);
+  assert.equal(KEYS.holding(), 1, 'its read failing: held as it is pressed');
+  await key;
+  release();
+  await run(leap);
+  await drained();
+  assert.deepEqual(walkAt(), ['document', GONE, null], 'its read failed: the key held was dropped, the walk where the camera went');
+  // a navigation act at once
+  unread();
+  await run(GO.leapTo(D));
+  release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+  leap = GO.leapTo(C);
+  const cursor = TRAIL.cursorIndex();
+  void KEYS.dispatch(keyOf('[', MOD), PLANE);
+  assert.equal(TRAIL.cursorIndex(), cursor - 1, 'Mod+[ moved the cursor at once, the jump in the air abandoned');
+  release();
+  await run(leap);
+  await drained();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a LEAP to an address on a board the plane does not draw reaches for it: its entry taken at the act, the camera still, a reaching face at the act\'s site in the place of what stands there; Esc and Back abandon it, its entry given back and its answer moving nothing; its read refused, it faces at the site and gives its entry back; its read answered, the camera leaves (FP-25; issue #137)', async () => {
+  await run(GO.leapTo(D));
+  const site = { span: { addr: D, pos: 11, width: 5 } }, signed = { ...site, sign: D };
+  const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view();
+  /** a card shown over the reaching face, then Esc twice: the card first, the innermost thing, then the jump */
+  const escAfterACard = async () => {
+    HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span>', acts: {} });
+    KEYS.esc();
+    assert.deepEqual([HOST.currentState(), GO.isReaching()], [null, true], 'the first Esc closes the card shown over the reaching face, the jump reaching on');
+    KEYS.esc();
+  };
+  for (const [what, abandon] of /** @type {Array<[string, () => Promise<unknown>]>} */ ([['Esc', async () => KEYS.esc()], ['Back', () => run(GO.back())], ['Esc after anything nearer', escAfterACard]])) {
+    REC.invalidate(REACH);
+    const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(REACH) });
+    const leap = GO.leapTo(REACH, { site });
+    assert.deepEqual([addrs(), CAM.flying(), GO.inAir(), GO.isReaching()], [[...before, REACH], false, false, true], `${what}: its entry taken at the act, the camera still, nothing in the air`);
+    assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['reaching:' + REACH, signed], `${what}: reaching, at the act's site`);
+    assert.ok(hostEl.innerHTML.includes(esc(t('L.reaching', { address: REACH }))), `${what}: in its own words`);
+    await abandon();
+    assert.deepEqual([addrs(), TRAIL.cursorIndex(), GO.isReaching(), HOST.currentState()], [before, cursor, false, null], `${what} abandoned it: its entry given back, the cursor where it was made`);
+    release();
+    await run(leap);
+    assert.deepEqual([addrs(), same(CAM.view(), at), HOST.currentState()], [before, true, null], `${what}: its answer moves nothing`);
+  }
+  await run(GO.leapTo(REACH_GONE, { site }));
+  assert.deepEqual([addrs(), faceShown()?.id, HOST.currentState()?.anchor, same(CAM.view(), at)], [before, 'face:doc_not_registered', signed, true], 'refused: the fifth cell at the act\'s site, its entry given back, the camera still');
+  HOST.dismiss();
+  REC.invalidate(REACH);
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(REACH) });
+  const leap = GO.leapTo(REACH, { site });
+  assert.equal(CAM.flying(), false, 'still while it reaches');
+  release();
+  await run(leap);
+  assert.deepEqual([addrs(), GO.isReaching(), HOST.currentState()], [[...before, REACH], false, null], 'its read answered: the camera left and landed, its entry kept');
+  assert.ok(same(CAM.view(), GO.viewFor(REACH, null)), 'at the place the read placed');
+  assert.ok(same(TRAIL.all()[cursor].view, at), 'the entry it was made from keeps the view the camera left it at');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a Back reaching a LEAP\'s entry while it reads puts the arrival out as it is made, lighting the step it crossed, and goes on nowhere once Forward has been made: the ring as Forward left it', async () => {
   unread();
   await run(GO.leapTo(D));
   const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
@@ -1065,7 +1344,7 @@ test('a Back waiting on a LEAP\'s entry while it reads puts the arrival\'s marks
   await run(leap);
   await run(back);
   assert.ok(lit && lit.link === PASSAGE, 'the follow lit the arrival');
-  assert.deepEqual(out, [null, []], 'Back put both out as it was made: the reader has left the span');
+  assert.deepEqual(out, [null, [PASSAGE]], 'Back put the follow\'s arrival out as it was made, lighting the link of the follow it crossed back over — made from the LEAP\'s entry, the place its camera had left for (issue #152; FP-25)');
   assert.deepEqual(addrs().slice(-3), [D, C, FAR]);
   assert.equal(TRAIL.current()?.addr, FAR);
   assert.ok(same(CAM.view(), landed), 'the camera at the follow\'s landing');
@@ -1074,19 +1353,45 @@ test('a Back waiting on a LEAP\'s entry while it reads puts the arrival\'s marks
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a follow that faces keeps its entry, holding its face at the view it left from, the link\'s bytes the walk\'s place there, the entry it departed recording the link, and lights the link: made with the cursor behind the newest entry, it drops the entry ahead as any push does', async () => {
+test('a follow of a dead reference the page already knows says nothing never leaves: no entry, nothing asked, the link not counted as followed and lit, the fifth cell at the link\'s own bytes (FP-25; issues #137, #227)', async () => {
+  takeUnfollowed();
+  REC.takeRefused(GONE, 'unregistered');
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR));
+  await run(GO.back());
+  const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view(), from = fake.asked.length;
+  const following = GO.follow(drawn(UNFOLLOWED));
+  assert.deepEqual([CAM.flying(), GO.inAir()], [false, false], 'no flight');
+  await run(following);
+  assert.deepEqual([addrs(), TRAIL.cursorIndex()], [before, cursor], 'no entry: FAR\'s ahead of the cursor kept');
+  assert.deepEqual([fake.asked.slice(from), LK.visited(UNFOLLOWED)], [[], false], 'nothing asked, and the link not counted as followed: its camera never left');
+  assert.deepEqual([faceShown()?.id, HOST.currentState()?.anchor], ['face:doc_not_registered', { span: { addr: D, pos: 9, width: 2 }, sign: D }], 'the fifth cell at the link\'s own bytes');
+  assert.deepEqual(marks(), [null, [UNFOLLOWED]], 'the link lit, nothing outlined');
+  assert.ok(same(CAM.view(), at), 'the camera where the follow was made');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow whose reads learn its far document says nothing keeps its entry: its camera left at the act for the far document, the link counted as followed as it left, the fifth cell faced where the camera went, the entry it departed recording the link and its own holding the notice there, the link lit; made with the cursor behind the newest entry, it drops the entry ahead as any push does (FP-25; issue #136)', async () => {
   takeDead();
   await run(GO.leapTo(D));
   await run(GO.leapTo(FAR));
   await run(GO.back());
-  const before = addrs(), cursor = TRAIL.cursorIndex(), at = CAM.view();
-  await run(GO.follow(drawn(DEAD)));
+  REC.invalidate(GONE);
+  const before = addrs(), cursor = TRAIL.cursorIndex();
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(GONE) });
+  const following = GO.follow(drawn(DEAD));
+  const went = GO.viewFor(GONE, null), there = { span: { addr: GONE, pos: 1 }, sign: GONE };
+  assert.deepEqual([CAM.flying(), same(CAM.destination(), went), LK.visited(DEAD)], [true, true, true], 'the camera left at the act for the far document, the link counted as followed');
+  release();
+  await run(following);
   assert.equal(REC.doc(GONE).refused, 'unregistered', 'a dead reference');
   assert.deepEqual(addrs(), [...before.slice(0, cursor + 1), GONE], 'its entry after D\'s, FAR\'s ahead of the cursor dropped as any push drops it');
   assert.equal(TRAIL.cursorIndex(), cursor + 1, 'the cursor on its entry');
   const e = TRAIL.current();
-  assert.deepEqual(e && e.notice && [departed()?.step?.link, e.notice.face, e.notice.addr, e.notice.site, e.notice.at], [DEAD, 'unregistered', GONE, { span: { addr: D, pos: 23, width: 3 } }, { addr: D, pos: 23 }], 'the entry departed recording the link; its own holding the fifth cell, at the link\'s own bytes, the walk\'s place there');
-  assert.ok(e && same(e.view, at), 'at the view the follow left from');
+  assert.deepEqual(e && e.notice && [departed()?.step?.link, e.notice.face, e.notice.addr, e.notice.site], [DEAD, 'unregistered', GONE, there], 'the entry departed recording the link; its own holding the fifth cell where the camera went');
+  assert.ok(e && same(e.view, went) && same(CAM.view(), went), 'the entry and the camera where the camera went');
+  assert.deepEqual([faceShown()?.id, HOST.currentState()?.anchor, walkAt()], ['face:doc_not_registered', there, ['document', GONE, null]], 'the fifth cell faced there, the walk with the camera');
   assert.deepEqual(marks(), [null, [DEAD]], 'the link lit, nothing outlined');
   assert.deepEqual(fake.unanswered, []);
 });
@@ -1143,7 +1448,7 @@ test('a jump that ends in a notice keeps its entry and takes one Back to undo at
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a notice whose read answers after the reader left its entry moves nothing; returned to, the entry lands where the follow was made — the walk on the link\'s bytes, never on the place it named — and shows its face there again, the link lit (issue #136)', async () => {
+test('a notice whose read answers after the reader left its entry moves nothing; returned to, the entry lands where the camera went — the walk on the address the board says nothing about, the mirror naming it so — and shows its face there again, the link lit (issue #136; FP-25)', async () => {
   takeDead();
   await run(GO.leapTo(FAR));
   await run(GO.leapTo(D));
@@ -1151,32 +1456,36 @@ test('a notice whose read answers after the reader left its entry moves nothing;
   const at = CAM.view(), n = TRAIL.length();
   const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(GONE) });
   const following = GO.follow(drawn(DEAD));
+  const went = GO.viewFor(GONE, null), there = { span: { addr: GONE, pos: 1 }, sign: GONE };
   await run(GO.back());
   release();
   await run(following);
   assert.deepEqual([HOST.currentState(), marks(), TRAIL.cursorIndex(), walkAt()], [null, [null, [DEAD]], n - 1, ['link', D, 23]], 'the read answered after the reader left: no face, the cursor where Back put it, the link lit where the follow was made and the walk returned to its end there (issue #152)');
   assert.ok(same(CAM.view(), at), 'the camera where Back put it');
   const e = TRAIL.all()[n];
-  assert.deepEqual(e && e.notice && [e.addr, e.notice.face], [GONE, 'unregistered'], 'its entry holds the answer');
+  assert.deepEqual(e && e.notice && [e.addr, e.notice.face, e.notice.site], [GONE, 'unregistered', there], 'its entry holds the answer, where the camera went');
+  assert.ok(e && same(e.view, went), 'at the view its camera left for, which Back re-took as it departed');
   await run(GO.forward());
   assert.equal(TRAIL.cursorIndex(), n, 'Forward returns to it');
-  assert.ok(same(CAM.view(), at), 'at the view the follow was made from');
-  assert.deepEqual([walkAt(), WALK.landedAt()], [['block', D, 11], 23], 'the walk on the link\'s bytes, in the span holding them');
-  assert.ok(WALK.siblingsNow().every((x) => x.addr !== GONE), 'the mirror names no element at the address the board says nothing about');
-  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['face:doc_not_registered', { span: { addr: D, pos: 23, width: 3 } }], 'its face shown again at the link\'s own bytes');
+  assert.ok(same(CAM.view(), went), 'where the camera went');
+  assert.deepEqual(walkAt(), ['document', GONE, null], 'the walk on the address the board says nothing about, with the camera — never on the link\'s bytes, out of view');
+  const item = WALK.mirrorItem(WALK.mirrorIndex()) || '';
+  assert.ok(item.includes(t('L.far.unregistered')) && !item.includes(t('F.published')), `the mirror names it as the board answered it: ${item}`);
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['face:doc_not_registered', there], 'its face shown again where the camera is');
   assert.deepEqual(marks(), [null, [DEAD]], 'the link it came from lit, nothing outlined');
   await run(GO.back());
   assert.deepEqual([HOST.currentState(), marks()], [null, [null, [DEAD]]], 'Back clears the face, lighting the link it came back along');
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('Back onto a notice\'s entry from a follow made at its place lights the link Back came back along alone — never the one the notice came from — and shows the notice again (issues #136, #152)', async () => {
+test('Back onto a notice\'s entry from a follow made from it lights the link Back came back along alone — never the one the notice came from — and shows the notice again (issues #136, #152)', async () => {
   takeDead();
   await run(GO.leapTo(D));
+  REC.invalidate(GONE); // learned in the air: the follow keeps its entry, holding the notice
   await run(GO.follow(drawn(DEAD)));
   assert.equal(faceShown()?.id, 'face:doc_not_registered', 'the dead reference faced, its entry the cursor\'s');
   await run(GO.follow(drawn(PASSAGE)));
-  assert.equal(TRAIL.current()?.addr, FAR, 'a follow made at the notice\'s place, landed in FAR');
+  assert.equal(TRAIL.current()?.addr, FAR, 'a follow made from the notice\'s entry, landed in FAR');
   await run(GO.back());
   assert.deepEqual(marks(), [null, [PASSAGE]], 'the follow Back crossed lit, nothing outlined: one move, one mark');
   assert.equal(faceShown()?.id, 'face:doc_not_registered', 'the notice shown again');
@@ -1195,7 +1504,8 @@ test('a jump to the entry behind lights as Back does and one to the entry ahead 
   assert.deepEqual([TRAIL.current()?.addr, marks()], [FAR, [{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }, [PASSAGE]]], 'to the entry ahead: what the follow it crossed marked on arrival, as Forward');
   await run(GO.toTrailEntry(3));
   assert.deepEqual([TRAIL.current()?.addr, marks()], [D, [null, [PASSAGE]]], 'to the entry behind: the link lit where the follow was made, as Back');
-  // the dead reference faced, then two LEAPs: its notice's entry two entries behind the cursor's
+  // the dead reference faced, learned in the air, then two LEAPs: its notice's entry two entries behind the cursor's
+  REC.invalidate(GONE);
   await run(GO.follow(drawn(DEAD)));
   await run(GO.leapTo(FAR));
   await run(GO.leapTo(D));
@@ -1228,7 +1538,7 @@ test('Back returns the walk to where the step it crossed began — the link\'s i
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a jump says it is reading at once, where it was made — a follow at the link\'s own bytes, a LEAP at the site its act names, the LEAP box\'s at the viewport\'s corner — and a LEAP that reads nothing says nothing; Back leaves it, Forward to its entry while it reads shows it again, and its answer replaces it with the landing (issue #136)', async () => {
+test('a jump says it is reading where the camera is — at the place it left for: a follow\'s far document, the document a LEAP names whatever site its act names — carried by the one line while that place is out of view, and a LEAP that reads nothing says nothing; Back leaves it, Forward to its entry while it reads shows it again there, and its answer replaces it with the landing (FP-25)', async () => {
   await run(GO.leapTo(FAR));
   await run(GO.leapTo(D));
   /** the reading face standing: its id, its kind, where it stands, and whether its words are the string's for the place it names */
@@ -1240,20 +1550,23 @@ test('a jump says it is reading at once, where it was made — a follow at the l
   };
   const projection = fake.hold('op', { frame: F.project(PASSAGE, 2, FAR) });
   const following = GO.follow(drawn(PASSAGE));
-  assert.deepEqual(readingShown(), { id: 'reading:' + FAR, kind: 'face', anchor: { span: { addr: D, pos: 11, width: 5 } }, words: true }, 'a follow says it is reading at once, at the link\'s own bytes');
+  assert.deepEqual(readingShown(), { id: 'reading:' + FAR, kind: 'face', anchor: { span: { addr: FAR, pos: 1 }, sign: FAR }, words: true }, 'a follow says it is reading at its far document, where its camera left for');
+  assert.ok(!LAYER.inView(FAR) && HOST.aside(), 'its far document out of view as the camera leaves: the one line carries it');
+  for (let i = 0; i < 20 && CAM.flying(); i++) CAM.step(Infinity);
+  assert.deepEqual([LAYER.inView(FAR), HOST.aside(), GO.inAir()], [true, null, true], 'the camera there, its read still out: the face on the plane, the line carrying nothing, the jump in the air');
   await run(GO.back());
   assert.equal(HOST.currentState(), null, 'Back leaves it');
   const forward = GO.forward();
-  assert.deepEqual(readingShown()?.anchor, { span: { addr: D, pos: 11, width: 5 } }, 'Forward to its entry while it reads shows it again, where it was made');
+  assert.deepEqual(readingShown()?.anchor, { span: { addr: FAR, pos: 1 }, sign: FAR }, 'Forward to its entry while it reads shows it again, at the place it left for');
   projection();
   await run(following); await run(forward);
   assert.equal(HOST.currentState(), null, 'its answer replaces it with the landing');
-  assert.deepEqual([TRAIL.current()?.addr, walkAt()], [FAR, ['block', FAR, 19]], 'Forward landed at the span its far end projects to');
+  assert.deepEqual([TRAIL.current()?.addr, walkAt()], [FAR, ['block', FAR, 19]], 'Forward went on to the span its far end projects to');
   for (const site of [{ world: { x: 5, y: 6 } }, null]) {
     unread();
     const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
     const leap = GO.leapTo(C, { site });
-    assert.deepEqual(readingShown(), { id: 'reading:' + C, kind: 'face', anchor: site, words: true }, site ? 'a LEAP says it is reading at the site its act names' : 'the LEAP box\'s at the viewport\'s corner');
+    assert.deepEqual(readingShown(), { id: 'reading:' + C, kind: 'face', anchor: { span: { addr: C, pos: 1 }, sign: C }, words: true }, site ? 'a LEAP says it is reading at the document it names, never at the site its act names' : 'the LEAP box\'s too');
     release();
     await run(leap);
     assert.equal(HOST.currentState(), null, 'gone as it lands');
@@ -1273,7 +1586,7 @@ test('a jump says it is reading at once, where it was made — a follow at the l
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a follow made from the selection\'s card: its reading face takes the card\'s place and its end — the selection stands under it while it reads, ends with the landing as the card\'s dismissal ends it, and stands under the face a dead reference brings until Esc (issue #136)', async () => {
+test('a follow made from the selection\'s card ends the card and the selection as its camera leaves, at the act, its reading face standing at the far document; one whose failure is known at the act never leaves, its face in the card\'s place, the selection standing under it until Esc (FP-25: "leaving a place ends its chrome")', async () => {
   const platform = { window: globalThis.window };
   globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
   try {
@@ -1283,14 +1596,15 @@ test('a follow made from the selection\'s card: its reading face takes the card\
     assert.equal(HOST.currentState()?.id, 'selection', 'the selection\'s card stands');
     const projection = fake.hold('op', { frame: F.project(PASSAGE, 2, FAR) });
     const following = GO.follow(drawn(PASSAGE));
-    assert.deepEqual([HOST.currentState()?.id, SEL.selected()], ['reading:' + FAR, { addr: D, pos: 11, width: 5 }], 'the reading face in the card\'s place, the selection standing under it');
+    assert.deepEqual([HOST.currentState()?.id, SEL.selected()], ['reading:' + FAR, null], 'the camera left: the card ended at the act and the selection with it, as the card\'s dismissal ends it; the reading face at the far document');
     projection();
     await run(following);
-    assert.deepEqual([HOST.currentState(), SEL.selected(), TRAIL.current()?.addr], [null, null, FAR], 'the landing ends the selection as the card\'s dismissal ends it');
+    assert.deepEqual([HOST.currentState(), SEL.selected(), TRAIL.current()?.addr], [null, null, FAR], 'landed, nothing standing');
     await run(GO.leapTo(D));
+    REC.takeRefused(GONE, 'unregistered');
     SEL.select(D, 23, 3);
     await run(GO.follow(drawn(DEAD)));
-    assert.deepEqual([HOST.currentState()?.id, SEL.selected()], ['face:doc_not_registered', { addr: D, pos: 23, width: 3 }], 'the face a dead reference brings stands over the selection');
+    assert.deepEqual([HOST.currentState()?.id, SEL.selected()], ['face:doc_not_registered', { addr: D, pos: 23, width: 3 }], 'a follow that never leaves: its face in the card\'s place, over the selection');
     KEYS.esc();
     assert.deepEqual([HOST.currentState(), SEL.selected()?.pos], [null, 23], 'Esc dismisses the face, the selection standing');
     KEYS.esc();
@@ -1302,20 +1616,24 @@ test('a follow made from the selection\'s card: its reading face takes the card\
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a follow that lands nowhere is faced at its site, the link\'s own bytes in the first edition, whichever read faced it — and pressed on the anatomy card\'s follow, the face takes the card\'s place there', async () => {
+test('a follow that lands nowhere is faced where the camera is: at its site — the link\'s own bytes in the first edition — where its failure is known at the act, pressed on the anatomy card\'s follow in the card\'s place there; at the far document, where its camera went, where its reads learned it in the air (FP-25)', async () => {
   takeDead(); takeLocked(); takeRefusedProjections(); takeLate(DEAD_LATE, GONE_LATE, 19); takeLate(LOCKED_LATE, HIDDEN_LATE, 25);
-  /** the link's own bytes in the first edition: where its face stands */
-  const at = (/** @type {number} */ pos, /** @type {number} */ width) => ({ span: { addr: D, pos, width } });
+  // known at the act: GONE says nothing, PRIVATE is withheld
+  REC.takeRefused(GONE, 'unregistered'); REC.takeRefused(PRIVATE, 'withheld');
+  /** the link's own bytes in the first edition: where a face known at the act stands */
+  const at = (/** @type {number} */ pos, /** @type {number} */ width) => ({ span: { addr: D, pos, width }, sign: D });
+  /** a far document's head: where the camera went, and a face its reads learned stands */
+  const there = (/** @type {string} */ far) => ({ span: { addr: far, pos: 1 }, sign: far });
   /** the card's follow as the host hands it to the act: a control of the card, which the face's markup removes */
   const pressed = Object.assign(new globalThis.HTMLElement(), { isConnected: false });
   /** @type {Array<{what: string, follow: () => Promise<unknown>, face: string, site: object}>} each follow that lands nowhere, the face it shows and where that face stands */
   const rows = [
     { what: 'a link naming no far document, faced at once', follow: () => GO.follow({ ...drawn(PASSAGE), far: '' }), face: 'face:invalid', site: at(11, 5) },
-    { what: 'a dead reference, faced at the far document\'s consult', follow: () => GO.follow(drawn(DEAD)), face: 'face:doc_not_registered', site: at(23, 3) },
-    { what: 'a far document withheld, faced at its consult', follow: () => GO.follow(drawn(LOCKED)), face: 'face:withheld', site: at(7, 2) },
-    { what: 'a projection the board declines for what it says of the far document — withheld from the reader', follow: () => GO.follow(drawn(HIDDEN_PROJ)), face: 'face:withheld', site: at(2, 2) },
-    { what: 'a dead reference met once the projection answered and the text was read', follow: () => GO.follow(drawn(DEAD_LATE)), face: 'face:doc_not_registered', site: at(19, 2) },
-    { what: 'a far document withheld, met once the projection answered and the text was read', follow: () => GO.follow(drawn(LOCKED_LATE)), face: 'face:withheld', site: at(25, 2) },
+    { what: 'a dead reference the page knows says nothing, faced at the act', follow: () => GO.follow(drawn(DEAD)), face: 'face:doc_not_registered', site: at(23, 3) },
+    { what: 'a far document the page knows is withheld, faced at the act', follow: () => GO.follow(drawn(LOCKED)), face: 'face:withheld', site: at(7, 2) },
+    { what: 'a projection the board declines for what it says of the far document — withheld from the reader — learned in the air', follow: () => GO.follow(drawn(HIDDEN_PROJ)), face: 'face:withheld', site: there(FAR) },
+    { what: 'a dead reference learned once the projection answered and the text was read', follow: () => GO.follow(drawn(DEAD_LATE)), face: 'face:doc_not_registered', site: there(GONE_LATE) },
+    { what: 'a far document withheld, learned once the projection answered and the text was read', follow: () => GO.follow(drawn(LOCKED_LATE)), face: 'face:withheld', site: there(HIDDEN_LATE) },
     {
       what: 'the anatomy card\'s follow, pressed',
       follow: async () => {
@@ -1332,7 +1650,7 @@ test('a follow that lands nowhere is faced at its site, the link\'s own bytes in
     await run(follow());
     const o = HOST.currentState();
     assert.equal(o?.id, face, `${what}: its face`);
-    assert.deepEqual(o?.anchor, site, `${what}: standing at the link's own bytes — never at the viewport's corner, nor at a control the face removed`);
+    assert.deepEqual(o?.anchor, site, `${what}: standing where the camera is — never at the viewport's corner, nor at a control the face removed`);
     HOST.dismiss();
   }
   assert.deepEqual(fake.unanswered, []);
@@ -1857,5 +2175,23 @@ test('a newer version\'s arrival never changes what a box shows (issue #154; fou
   GO.arrived(C + '.2');
   assert.equal(GO.shownIn(C), C, 'the page holds none of C\'s text: nothing');
   await run(GO.leapTo(FAR));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// placed last: it attaches a mirror, which every test above runs without
+test('a failure a jump\'s read learns in the air rebuilds the mirror where the walk stands: its item names the address as the board answered it, never "published" (FP-25; issue #137)', async () => {
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
+  WALK.attach(/** @type {any} */ (mirror));
+  await run(GO.leapTo(D));
+  REC.invalidate(GONE);
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(GONE) });
+  const leap = GO.leapTo(GONE);
+  await new Promise((r) => setTimeout(r, 0)); // the walk's levels read
+  /** the mirror's item at GONE, as the last rebuild wrote it */
+  const item = () => (new RegExp(`<li[^>]*data-addr="${GONE}"[^>]*>([^<]*)</li>`).exec(mirror.innerHTML) || [])[1] || '';
+  assert.ok(item() && !item().includes(esc(t('F.published'))) && !item().includes(esc(t('L.far.unregistered'))), `the walk on the address as the camera leaves, its state untold: ${item()}`);
+  release();
+  await run(leap);
+  assert.ok(item().includes(esc(t('L.far.unregistered'))), `the read learned the board says nothing: the mirror rebuilt, naming it so: ${item()}`);
   assert.deepEqual(fake.unanswered, []);
 });

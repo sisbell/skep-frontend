@@ -7,9 +7,12 @@ place, ↓ choosing the first level, Enter on typed text that matches nothing
 goes nowhere — the box standing open over the text and its answer, the
 focus in its input, until Esc — and a typed account address a teleport
 with its trail entry (foundations §2.2, §2.3; K-31); an address the board
-says nothing about faced and keeping its entry, Mod+[ undoing that jump
-alone, the camera where it stood, and Mod+] showing its notice again
-(issue #136's design decision); the focus ring drawn
+says nothing about, the page holding nothing of it, flown to at once and
+faced where the camera went, keeping its entry, Mod+[ undoing that jump
+alone, the camera back where it stood, and Mod+] returning there, its
+notice shown again (issue #136's design decision; FP-25) — and the same
+address, known now, never leaving: no entry, the camera where it stood,
+its face standing (FP-25; issue #137); the focus ring drawn
 at the focus every teleport a key made lands — the box's Enter, Mod+[ and Mod+],
 Mod+0, Mod+Shift+H, Enter on the line's ‹ back (K-22), Mod+3, Enter on a
 trail list row (K-41), Enter on a document (K-7) — and at the focus
@@ -53,8 +56,11 @@ layer rebuilds the article and takes the symbol away, and at the document's
 box once the layer takes the article down — never at the viewport's corner
 (foundations §3.1); a follow that lands nowhere — from the selection, by
 Mod+Enter or a row of its "which" list pressed, and the anatomy card's
-follow pressed — faced at the followed link's own bytes, the face taking
-the place of the list or card it was pressed on (foundations §3.1, F-G3);
+follow pressed, its far document known to say nothing — faced at the
+followed link's own bytes, the face taking the place of the list or card it
+was pressed on (foundations §3.1, F-G3), the link joining no visited set,
+for its camera never left, while a follow that leaves — a citation of the
+far edition — joins it (D-3; FP-25);
 Mod+Shift+O with no selection standing selecting the
 walk's block whole and answering over it — the page's own placement of the
 platform's selection never read back as the person's, whose card, shown
@@ -125,7 +131,7 @@ the plane, while a caret alone in a pane gives the page's selection its
 highlight back. Each step leaves the page as it found it."""
 import json
 
-from . import DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, item_words, key_fingerprint
+from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, item_words, key_fingerprint
 from .layout import click_on, inside, lacking_of, level_holds, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
@@ -1815,10 +1821,13 @@ def run(ctx):
     r.check(s['trail'] == cur - 1 and s['focus']['kind'] == 'board', 'a click on ‹ back goes back one trail entry (to WHOLE BOARD)', {'cursor': s['trail'], 'focus': s['focus']})
     r.check(g['ring'] is None, 'a click on ‹ back draws no ring at its landing: the pointer moved the focus', g)
     chord(ctx, ']', mods=('Meta',))
-    # a jump whose read ends in a notice keeps its entry (issue #136's design decision): Enter on an address the board says
-    # nothing about faces it and takes one entry, the newest, holding the notice; Mod+[ undoes it alone — the cursor back on
-    # the entry it was made from, the camera where it stood, the notice cleared — and Mod+] returns to it, the notice shown
-    # again where it was made
+    # a jump whose read learns the board says nothing about its address keeps its entry (issue #136's design decision;
+    # FP-25): Enter on the address — the page holding nothing of it, the gate's invalidation door (reads alone) dropping
+    # whatever an earlier case learned — flies at once for its place and faces it there, taking one entry, the newest, holding
+    # the notice, the walk on the address; Mod+[ undoes it alone — the cursor back on the entry it was made from, the camera
+    # where it stood, the notice cleared — and Mod+] returns to it, the camera and the walk where the camera went and the
+    # notice shown again there
+    ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(GHOST))
     left, t0 = state(ctx), trail(ctx)
     chord(ctx, 'l', mods=('Meta',))
     ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
@@ -1826,12 +1835,14 @@ def run(ctx):
     ctx.frames(2)
     chord(ctx, 'Enter')
     overlay_up(ctx, 'face:')
-    faced, t1 = ctx.js('window.__skep.overlay().id'), trail(ctx)
+    faced, t1, went = ctx.js('window.__skep.overlay().id'), trail(ctx), state(ctx)
     newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
     r.check(faced == 'face:doc_not_registered' and t1['cursor'] == t0['cursor'] + 1 and len(t1['entries']) == t0['cursor'] + 2
-            and bool(newest) and newest['addr'] == GHOST and (newest.get('notice') or {}).get('face') == 'unregistered',
-            'Enter on an address the board says nothing about faces it and keeps its entry, the newest, holding the notice (#136)',
-            {'face': faced, 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])], 'newest': newest and {'addr': newest['addr'], 'notice': newest.get('notice')}})
+            and bool(newest) and newest['addr'] == GHOST and (newest.get('notice') or {}).get('face') == 'unregistered'
+            and not same_view(left, went) and (went['focus'] or {}).get('addr') == GHOST,
+            'Enter on an address the board says nothing about flies for its place and faces it there, keeping its entry, the newest, holding the notice, the walk on the address (#136; FP-25)',
+            {'face': faced, 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])], 'newest': newest and {'addr': newest['addr'], 'notice': newest.get('notice')},
+             'camera_moved': not same_view(left, went), 'focus': went['focus']})
     chord(ctx, '[', mods=('Meta',))
     s, t2 = state(ctx), trail(ctx)
     r.check(t2['cursor'] == t0['cursor'] and len(t2['entries']) == len(t1['entries']) and same_view(left, s) and s['overlay'] is None,
@@ -1841,9 +1852,25 @@ def run(ctx):
     overlay_up(ctx, 'face:')
     s, t3 = state(ctx), trail(ctx)
     again = ctx.js('window.__skep.overlay().id')
-    r.check(t3['cursor'] == t0['cursor'] + 1 and again == 'face:doc_not_registered' and same_view(left, s) and s['focus'] == left['focus'],
-            'Mod+] returns to the jump\'s entry: the notice shown again, the camera and the walk where the jump was made (#136)',
-            {'cursor': [t0['cursor'], t3['cursor']], 'overlay': again, 'cam_same': same_view(left, s), 'focus': [left['focus'], s['focus']]})
+    r.check(t3['cursor'] == t0['cursor'] + 1 and again == 'face:doc_not_registered' and same_view(went, s) and s['focus'] == went['focus'],
+            'Mod+] returns to the jump\'s entry: the notice shown again, the camera and the walk where the camera went (#136; FP-25)',
+            {'cursor': [t0['cursor'], t3['cursor']], 'overlay': again, 'cam_same': same_view(went, s), 'focus': [went['focus'], s['focus']]})
+    # the same address, the page knowing now that the board says nothing about it, never leaves (FP-25; issue #137): Enter on
+    # it takes no entry and moves no camera, its face standing
+    chord(ctx, 'Escape')
+    known, k0 = state(ctx), trail(ctx)
+    chord(ctx, 'l', mods=('Meta',))
+    ctx.js('(() => { document.getElementById("leapq").value = ""; })()')
+    ctx.drv.ime(GHOST)
+    ctx.frames(2)
+    chord(ctx, 'Enter')
+    overlay_up(ctx, 'face:')
+    s, k1 = state(ctx), trail(ctx)
+    r.check(ctx.js('window.__skep.model.doc(%s).refused' % json.dumps(GHOST)) == 'unregistered' and ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered'
+            and k1['cursor'] == k0['cursor'] and len(k1['entries']) == len(k0['entries']) and same_view(known, s),
+            'Enter on the address again, known now to be one the board says nothing about, never leaves: its face standing, no entry taken, the camera where it stood (FP-25)',
+            {'overlay': ctx.js('window.__skep.overlay().id'), 'cursor': [k0['cursor'], k1['cursor']], 'entries': [len(k0['entries']), len(k1['entries'])], 'cam_same': same_view(known, s)})
+    chord(ctx, 'Escape')
     # ---- the trail: Mod+1…9 and Mod+Y (K-40, K-41) ------------------------------------------------------
     numbered = ctx.js('window.__skep.trail().numbered')
     chord(ctx, '3', mods=('Meta',), code='Digit3')
@@ -1997,14 +2024,18 @@ def run(ctx):
     s = state(ctx)
     r.check(s['overlay'] == 'card' and 'used by' in ctx.js('window.__skep.overlay().text'), 'Mod+Shift+R asks "who uses this?" (find_docs_containing)', ctx.js('window.__skep.overlay().text')[:160])
     chord(ctx, 'Escape')
+    # the links drawn at the selected block, in the order the "which" list rows them (LK's `shownAt`): each far document read
+    # whole (reads alone), so the page knows it says nothing before the follow is made (FP-25: a failure known at the act)
+    drawn_here = [x for x in shown if x['pos'] < linked['pos'] + linked['width'] and linked['pos'] < x['pos'] + x['width']]
+    for x in drawn_here:
+        ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(x['far']))
+    r.check(bool(drawn_here) and ctx.js('window.__skep.model.doc(%s).refused' % json.dumps(drawn_here[0]['far'])) == 'unregistered',
+            'the first link drawn at the selected block — the one a follow from it takes — cites an address the board says nothing about, as the page knows', [x['far'] for x in drawn_here])
     ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), linked['pos']))
     chord(ctx, 'Enter', mods=('Meta',))
     s = state(ctx)
-    # the links drawn at the selected block, in the order the "which" list rows them (LK's `shownAt`)
-    drawn_here = [x for x in shown if x['pos'] < linked['pos'] + linked['width'] and linked['pos'] < x['pos'] + x['width']]
     if n_here == 1:
         r.check(s['overlay'] == 'face' and 'nothing this board will say' in ctx.js('window.__skep.overlay().text'), 'Mod+Enter follows the one drawn link: its ghost target answers the dead-reference face', ctx.js('window.__skep.overlay().text')[:160])
-        r.check(ctx.js('window.__skep.links.visited(%s)' % json.dumps(shown[0]['link'])) or any(ctx.js('window.__skep.links.visited(%s)' % json.dumps(x['link'])) for x in shown), 'the followed link joins LK\'s visited set (D-3)')
     else:
         r.check(s['overlay'] == 'list', 'Mod+Enter at a span with several links asks which', {'n': n_here, 'overlay': s['overlay']})
         # its first row pressed with the pointer follows that row's link, the row gone with the list the face takes the place of
@@ -2018,14 +2049,17 @@ def run(ctx):
     placed = placed_at(ctx, DOC, drawn_here[0]['pos'], drawn_here[0]['width']) if drawn_here else None
     r.check(ctx.js('window.__skep.overlay().id') == 'face:doc_not_registered' and bool(placed) and stands_at(placed),
             'the dead-reference face a follow from the selection met stands at the followed link\'s own bytes, beneath their first line', {'id': ctx.js('window.__skep.overlay().id'), 'placed': placed, 'link': drawn_here[:1]})
+    r.check(bool(drawn_here) and not ctx.js('window.__skep.links.visited(%s)' % json.dumps(drawn_here[0]['link'])),
+            'a follow whose far document the page knows says nothing never leaves, and its link joins no visited set (D-3; FP-25: "the jump counts as made … as a followed link, when the camera leaves")', drawn_here[:1])
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
     r.check(state(ctx)['sel'] is None and state(ctx)['overlay'] is None, 'Esc clears the overlay, then the selection (one order)')
-    # the anatomy card's follow pressed with the pointer, at a link whose far end is a ghost: the control pressed stands in the
-    # card the dead-reference face takes the place of, so the face stands at the act's site — the link's own bytes, beneath their
-    # first line, where the card stood (foundations §3.1, F-G3) — never at the viewport's corner. After the visited set's check
-    # above, which this follow would otherwise answer
+    # the anatomy card's follow pressed with the pointer, at a link whose far end is a ghost the page knows says nothing (its
+    # far document read whole, reads alone): the follow never leaves, and the control pressed stands in the card the
+    # dead-reference face takes the place of, so the face stands at the act's site — the link's own bytes, beneath their first
+    # line, where the card stood (foundations §3.1, F-G3; FP-25) — never at the viewport's corner
     if link is not None:
+        ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(link['far']))
         ctx.leap(DOC, link['pos'])
         ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(DOC), json.dumps(link['link'])))
         ctx.frames(2)
@@ -2039,6 +2073,22 @@ def run(ctx):
                     'the anatomy card\'s follow, pressed, answers the dead-reference face at the link\'s own bytes, beneath their first line, in the card\'s place', {'id': ctx.js('window.__skep.overlay().id'), 'placed': placed})
         chord(ctx, 'Escape')
         r.check(state(ctx)['overlay'] is None, 'Esc dismisses the face')
+    # a follow that leaves joins LK's visited set as its camera leaves (D-3; FP-25): BEAMED's citation of the far edition — the
+    # first edition's every citation reaching a ghost — its links revealed whole and followed by the gate's door
+    ctx.leap(BEAMED, None)
+    ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(BEAMED))
+    ctx.frames(2)
+    beamed = ctx.js('window.__skep.links.shown(%s)' % json.dumps(BEAMED))
+    cite = next((x for x in beamed if x['far'] == FAR_LEAP), None)
+    r.check(cite is not None, '%s draws its citation of the far edition' % BEAMED, [x['far'] for x in beamed])
+    if cite is not None:
+        ctx.js('window.__skep.go.follow(%s, %s)' % (json.dumps(BEAMED), json.dumps(cite['link'])))
+        ctx.settle()
+        landed = ctx.js('window.__skep.trail()')
+        r.check(ctx.js('window.__skep.links.visited(%s)' % json.dumps(cite['link'])) and landed['entries'][landed['cursor']]['addr'] == FAR_LEAP,
+                'a follow that leaves — a citation of the far edition — joins LK\'s visited set, landed in the far edition (D-3; FP-25)', {'link': cite['link'], 'at': landed['entries'][landed['cursor']]['addr']})
+    ctx.js('window.__skep.links.hide(%s)' % json.dumps(BEAMED))
+    ctx.frames(2)
     # a slot's chord with no selection standing selects the walk's block whole and asks over it (D5 §1.6). The platform's
     # selection the page places reads back without the block's separator, and is never taken as a new one (APP-INPUT's
     # `takeSelection`): its card, shown while the answer reads, would be an act on the chrome ending the answer's opening

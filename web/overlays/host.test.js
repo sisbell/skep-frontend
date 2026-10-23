@@ -36,7 +36,13 @@
 // beneath the one the page holds now (a mutant that reads the element alone
 // turns red). A FACE IS SAID through the one status region, save one the
 // landing that met it describes where the focus lands (issue #153; a mutant
-// that says a told face again turns red).
+// that says a told face again turns red). A JUMP'S FACE SHOWS WHERE THE
+// CAMERA IS (FP-25): one whose anchor names the document it stands at is
+// hidden on the plane exactly while that document is out of the visible
+// view, the one line carrying its string's id and its words (`aside`)
+// exactly then; a face naming no document is never hidden (a mutant that
+// hides it whatever the view, never, or carries it in the line while it
+// shows, turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -49,6 +55,7 @@ import * as LEAP from '../nav/leap.js';
 import * as FOCUS from '../nav/focus.js';
 import * as CAM from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
+import { t } from '../strings.js';
 
 /** the host's stand-in element: what the host writes into it is what a person meets */
 const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
@@ -230,6 +237,37 @@ test('an overlay conjured at an element stands beneath it while it stands in the
   assert.ok(box.x > 6 && box.x < 1434 && box.y > 34 && box.y < 894, `the box's top-right stands in the viewport: ${JSON.stringify(box)}`);
   assert.deepEqual(placed(), box, 'the element gone: at the span named beside it — its document\'s box, no article of it mounted — never at the viewport\'s corner');
   HOST.dismiss();
+});
+
+test('a jump\'s face is hidden on the plane exactly while the document it stands at is out of the visible view, the one line carrying its string\'s id and its words exactly then; a face naming no document is never hidden (FP-25)', () => {
+  const D = '1.0.1.0.3', b = docBox(D), scale = Math.min(600 / b.w, 600 / b.h);
+  CAM.setViewport(1440, 900);
+  /** the face's parts the host reads its words from, read from the markup it wrote: its words, its arm, its clause, its note */
+  const parts = (/** @type {string} */ sel) => {
+    const classes = sel.split(',').map((s) => s.trim().replace(/^\./, ''));
+    return [...hostEl.innerHTML.matchAll(/<div class="([\w-]+)"(?: data-string="([^"]*)")?>([^<]*)<\/div>/g)].filter((m) => classes.includes(m[1])).map((m) => ({ id: '', dataset: { string: m[2] }, textContent: m[3] }));
+  };
+  const was = { one: hostEl.querySelector, all: hostEl.querySelectorAll, HTMLElement: globalThis.HTMLElement };
+  Object.assign(hostEl, { querySelector: (/** @type {string} */ sel) => parts(sel)[0] || null, querySelectorAll: parts });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  try {
+    CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale });
+    FACES.reading(D, { span: { addr: D, pos: 1 }, sign: D });
+    assert.deepEqual([/** @type {any} */ (hostEl.style).visibility, HOST.aside()], ['', null], 'its document in view: shown on the plane, nothing aside');
+    CAM.set({ x: b.x - 20 * b.w, y: b.y - 20 * b.h, scale });
+    HOST.place();
+    assert.deepEqual([/** @type {any} */ (hostEl.style).visibility, HOST.aside()], ['hidden', { id: 'L.reading', text: t('L.reading', { address: D }) }], 'its document out of view: hidden, the line carrying its words');
+    CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale });
+    HOST.place();
+    assert.deepEqual([/** @type {any} */ (hostEl.style).visibility, HOST.aside()], ['', null], 'back in view: shown again');
+    CAM.set({ x: b.x - 20 * b.w, y: b.y - 20 * b.h, scale });
+    FACES.unregistered(D, null);
+    assert.deepEqual([/** @type {any} */ (hostEl.style).visibility, HOST.aside()], ['', null], 'a face naming no document: never hidden');
+    HOST.dismiss();
+  } finally {
+    Object.assign(hostEl, { querySelector: was.one, querySelectorAll: was.all });
+    globalThis.HTMLElement = was.HTMLElement;
+  }
 });
 
 test('an element its owner redrew from state is found again by its id: the overlay stands beneath the one the page holds now', () => {

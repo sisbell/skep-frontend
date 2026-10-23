@@ -45,7 +45,9 @@
 // its new mounts, its articles in the mount band and their lines — what
 // stands of a document's article, part by part (`mountedLines`), the bridge
 // client's own call
-// log, the settle signal, whether the camera flies (`view.flying`) and the
+// log, the settle signal — the view's reads, the camera, a jump in the air or
+// reaching and the keys held for its landing (FP-25) — whether the camera
+// flies (`view.flying`), whether a jump is in the air (`go.inAir`) and the
 // version each document's box shows (`go.shownIn`; issue #154), the trail,
 // the line's and the overlay's text, the
 // selection's span beside the platform's own and the way the platform's runs,
@@ -486,12 +488,19 @@ export function install(deps) {
     const s = CAM.visibleView(LINE.bottom()), i = RING.gap + RING.width / 2;
     return { x: s.x + i, y: s.y + i, w: s.w - 2 * i, h: s.h - 2 * i };
   }
+  /**
+   * Settled: the view's needs met, nothing read for it, the camera still, no
+   * jump in the air or reaching (FP-25: an act's own reads escape the pump's
+   * count, and a jump made by a chord goes on once they answer), and no key
+   * held for a landing or being made there.
+   */
+  const settled = () => PUMP.inflightCount() === 0 && PUMP.pump() === 0 && !CAM.flying() && !GO.inAir() && !GO.isReaching() && KEYS.holding() === 0;
   /** wait until the view's needs are met */
   async function settle(maxMs = 8000) {
     const t0 = performance.now();
     while (performance.now() - t0 < maxMs) {
       await new Promise((r) => setTimeout(r, 60));
-      if (PUMP.inflightCount() === 0 && PUMP.pump() === 0 && !CAM.flying()) { await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); return performance.now() - t0; }
+      if (settled()) { await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))); return performance.now() - t0; }
     }
     return performance.now() - t0;
   }
@@ -543,7 +552,7 @@ export function install(deps) {
     frames: () => deps.frames.slice(),
     bridge: { calls: () => PORT.callLog(), adapter: () => PORT.adapterName(), stream: () => PORT.streamState() },
     pump: { missing: () => PUMP.pump(), inflight: () => PUMP.inflightCount(), refusals: () => PUMP.refusalsMet(), retries: () => PUMP.retriesPending() },
-    settled: () => PUMP.inflightCount() === 0 && PUMP.pump() === 0 && !CAM.flying(),
+    settled,
     lineAct: () => LINE.act(),
     trail: () => ({ entries: TRAIL.all(), cursor: TRAIL.cursorIndex(), numbered: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, pos: r.entry.pos, current: r.current })) }),
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay() }),
@@ -588,7 +597,7 @@ export function install(deps) {
     mounts: () => LAYER.mounts(),
     beams: () => BM.count(),
     /** the teleports; `leapTo`'s third argument names the runs of the span landed on — every run a far end projects to, `pos` at one of them — and the link followed to it, the landing then marked as a follow's is, or the passage the LEAP carries, re-projected and marked at the landing; `shownIn` the version a document's box shows (issue #154) */
-    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{runs?: import('../nav/go.js').Run[] | null, link?: string | null, carry?: import('../nav/go.js').Carry | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, runs: o.runs ?? null, link: o.link ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), shownIn: (/** @type {string} */ a) => GO.shownIn(a), arrival: () => GO.arrivalMark(), landing: () => GO.landing(), described: () => GO.described(), landingAct: (/** @type {'beside' | 'version' | 'again'} */ which) => { GO.landingAct(which); return true; } },
+    go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{runs?: import('../nav/go.js').Run[] | null, link?: string | null, carry?: import('../nav/go.js').Carry | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, runs: o.runs ?? null, link: o.link ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), shownIn: (/** @type {string} */ a) => GO.shownIn(a), inAir: () => GO.inAir(), arrival: () => GO.arrivalMark(), landing: () => GO.landing(), described: () => GO.described(), landingAct: (/** @type {'beside' | 'version' | 'again'} */ which) => { GO.landingAct(which); return true; } },
     /** a landing's line as it stands (issue #153): its words, its acts, its rect on screen, whether the scene covers it; null where none stands */
     landingLine: () => LANDING.shown(),
     leap: { open: () => LEAP.open(), close: () => LEAP.close(), rows: () => LEAP.currentRows(), isOpen: () => LEAP.isOpen() },
