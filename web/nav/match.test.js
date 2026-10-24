@@ -1,7 +1,8 @@
-// N-MATCH's test: an address exact; a share form recognized; labels and
-// address prefixes over the index; the levels with nothing typed, the board's
-// first where a board is held and none where none is (issue #215: a mutant
-// that lists the board's level with none held turns red).
+// N-MATCH's test: an address is exact, a share form and a URL are recognized
+// and go nowhere, labels match by text and addresses by prefix over the index
+// with the system account never listed, and with nothing typed the levels are
+// listed — the board's first where a board is held, and none where none is
+// (FP-35).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { matches, isShareForm, isUrl } from './match.js';

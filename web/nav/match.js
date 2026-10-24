@@ -1,18 +1,18 @@
-// N-MATCH — the LEAP box's matching rules (the structure record §3.2
-// "N-MATCH"; foundations §2.3). Layer 2. PURE.
-// Input that parses as an address is EXACT (Enter goes to its own target);
-// a share form (`skep://⟨token⟩`, `https://skep.network/l/⟨token⟩`,
-// `skep.link/⟨token⟩`) is recognized as one — its token's decoding
-// (deployment §3's varint tumbler, base58) is not in this lane's sources,
-// so the row says so (reported); a URL is the intake's (B8, the code lane).
-// Label matching takes only text that parses as none of these: the index's
-// labels and addresses by prefix; with nothing typed, the current address's
-// levels — the whole board first, where a board is held (FP-35), HOME where
-// it differs, the account's region, the whole document — then the landmarks
-// and the trail's entries.
-// Carries: the wireframe's §12 `leapInput` branches (`search_titles`
-// re-cut to this fold over the index; the intake arm LEFT for the code
-// lane). Rules: FP-1, FP-2, FP-6 (reads the index as values), FP-35.
+// N-MATCH — the LEAP box's matching rules (the structure record §3.2;
+// foundations §2.3). Layer 2, pure: no state, the index read as values
+// (FP-6). Input that parses as an address is exact, one row whose target is
+// its own address; a share form (`skep://⟨token⟩`,
+// `https://skep.network/l/⟨token⟩`, `skep.link/⟨token⟩`; deployment §3) and
+// a URL (B8) are each recognized as one row of their kind, its token not
+// decoded and its target empty. Label matching takes only text that parses
+// as none of these: the index's places whose address begins with the text or
+// whose label holds it, the system account's left out, at most `limit` rows,
+// ordered by where the text falls in the title and then by address. With
+// nothing typed, the current address's levels — the whole board first, where
+// a board is held (FP-35), HOME where it differs from the board, the
+// account's region where it is not HOME, the whole document — then the
+// landmarks and the trail's entries.
+// Rules: FP-1, FP-2, FP-6, FP-35.
 
 import { parseAddress, accountOf, documentOf, boardOf, cmpAddr } from '../model/address.js';
 

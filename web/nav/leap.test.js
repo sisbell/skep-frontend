@@ -1,24 +1,14 @@
 // N-LEAP's test, on stand-ins of the box's elements whose focus lands where
-// the platform's would. THE BOX AS OPENED TAKES THE ADDRESS THE LINE NAMES
-// (#171's rule 2: "An address box with nothing typed in it takes the new
-// address"; `takeAddress`): opened, it holds the current address, selected,
-// its levels beneath it, and as a landing changes that address the box takes
-// the new one, selected, its levels with it — a mutant that leaves it on the
-// address it opened with turns red; typed in, or with a row chosen by ↓, it
-// keeps its text and its rows — a mutant that refills it then turns red; and
-// closed, nothing is written to it. A LANDING NEVER CLOSES THE BOX (FP-20):
-// a move of the focus the page makes while its input holds the focus leaves
-// it there, and the box's close then gives it to the walk's element, the
-// landing — never the element it was opened from. A CHANGE OF THE PAGE'S
-// CLASS (issue #177) computes the rows standing in the box again from the
-// model at once — none naming what the class it left could read — its text,
-// its caret and its focus as they stood, and once more as the new class's
-// index answers (a mutant that leaves the rows standing, or never takes the
-// new index, turns red). WHERE NO BOARD IS HELD (issue #215; FP-35) the box
-// opens empty and lists no board's level, its status region says why in the
-// answer's place, and Enter — on the box as opened, a typed address or a
-// typed URL — closes it onto the no-board face, no LEAP made (a mutant that
-// lists the board's level, or lets Enter go nowhere silently, turns red).
+// the platform's would: the box as opened holds the current address and
+// takes the new one the line names as a landing changes it, while a box
+// typed in or with a row chosen keeps its text and its rows and a closed box
+// is written nothing; a landing never closes the box, whose close then gives
+// the focus to the walk's element; a change of the page's class computes the
+// rows standing in the box again from the model, at once and as the new
+// class's index answers, its text, its caret and its focus as they stood;
+// and where no board is held the box lists no board's level, says why, and
+// Enter closes it onto the no-board face with no LEAP made (FP-20, FP-29,
+// FP-35).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as LEAP from './leap.js';

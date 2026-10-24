@@ -1,7 +1,7 @@
-// N-KEYS's table test: every bound chord is a chord or a navigation key —
-// no plane command on a printable key (§2.7); D5's routed rows present; the
-// chord spelling of an event. M7 (a bare `t` bound beside the chord) turns
-// it red.
+// N-KEYS's table test, read from the module's source: every row of the table
+// is read, D5's routed rows are present, every bound chord is a chord or a
+// navigation key — no plane command rides a printable key (§2.7) — no row
+// binds a bare letter, digit or sign, and the dispatch guards the IME.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 

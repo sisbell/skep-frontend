@@ -1,79 +1,69 @@
-// N-TRAIL — the address stack with its cursor (the structure record §3.2
-// "N-TRAIL"; foundations §2.2). Layer 2. PURE. State: VIEW — the entries, the
-// cursor and the claims standing unanswered — THE ONE OWNER (FP-10):
-// client-side, never written (law 1).
-// An entry is an address and a view (S3 Q7's tuple), its view RE-TAKEN
-// whenever the entry is departed, so Back lands on the passage left — its
-// place re-taken with it where the box it names shows another version as it
-// is departed, a newer version's arrival having pinned the box on the member
-// being read (`retakePlace`; N-GO's `arrived`), so Back restores the version
-// read there (issue #154's design decision: "Back restores the earlier
-// version and its view") — WHAT THAT VIEW READS beside it, by value: the
+// N-TRAIL — the address stack with its cursor (the structure record §3.2;
+// foundations §2.2). Layer 2, pure. State (FP-10): the entries, the cursor,
+// the claims standing unanswered and the last push — view state, never
+// written (FP-7; law 1). The stack is the record of teleports: no entry is
+// de-duplicated by address, and no cap drops one.
+// An entry is an address and a view (S3 Q7), its view re-taken whenever the
+// entry is departed, so Back lands on the passage left; its place re-taken
+// with it where the box it names shows another version as it is departed
+// (`retakePlace`; N-GO's `departure`), so Back restores the version read
+// there (FP-22); beside the view, by value, what that view reads — the
 // passage at its visible centre, by its position, its byte's identity and
-// where it stood in its fold (T-LAYER's `Reading`), written with every view
-// the trail writes — a departure's, a jump's camera leaving (`leaveFrom`), a
-// landing's (`settle`) — and WHERE THE WALK STOOD in that passage's document
+// where it stood in its fold (T-LAYER's `Reading`) — written with every view
+// the trail writes: a departure's, a jump's camera leaving (`leaveFrom`), a
+// landing's (`settle`); and where the walk stood in that passage's document
 // as the entry was departed, by position and identity (`Stood`), until a
-// read places the entry's landing (`settle`); so a return lands on that
-// passage and that place wherever its document was set again since (issue
-// #221; N-GO's `landAtCursor`) — and THE
-// STEP THAT LEFT IT for the entry after it (issue #152's design decision),
-// written as a push departs it: the link followed for a follow, the passage
-// carried for a carrying LEAP or a version move — by identity, the permanent
-// addresses of its bytes, never its positions — and none for any other move.
-// A one-step move across an entry's step lights it at the end it lands on
-// (N-GO's `back` and `forward`); a cursor move writes none. THE ARRIVAL KEPT
-// (FP-25: "Leaving a place ends its chrome and keeps that chrome and the view
-// in the place's entry"; FP-21: "a return restores outlines and labels as
-// left"): the arrival standing at an entry as the reader leaves it — its
-// outline, what its landing said, its runs' labels and the run it stood at —
-// written on the entry by value (`keep`, N-GO's), which a return to it
-// restores. The launch frame
-// is the first entry (W-01); after it an entry is pushed by a fresh TELEPORT —
-// LEAP, follow, a click on a place, Enter, HOME, WHOLE BOARD, an account's
-// region, a walk's moment unfolded over a view the camera stands away from
-// (N-GO's `toView`) — or by a version move, which lands in place (N-GO's
-// `toVersion`), one push per act, made as the act is made (FP-25), never by
-// panning or zooming, and never by a reading scene's end, which leaves the
-// camera where it found it (SC). Back, Forward and a jump move the cursor and
-// discard nothing, and a jump never pushes. A fresh teleport made with the
-// cursor behind the newest entry writes its step on the cursor's entry in the
-// place of the one it held and drops the entries ahead of it before it pushes
-// (a browser's history rule, stated).
-// THE CLAIM: a teleport whose landing waits on a read pushes its entry as a
-// claim as it is made, numbered then and never handed back once its camera
-// leaves (issue #136's design decision; FP-25), so the trail holds every
-// act's move in the order the acts were made, whatever order the reads
-// answer in, and Back, Forward and a jump act at once on the trail as it
-// stands: at any board speed a jump then Back returns to where the jump left
-// from, a second Back goes one entry further, and each entry's number is the
-// one its key takes. A claim's view is its landing's as the records held at
-// the push place it, the place its camera left for, so a departure re-takes
-// it and a push from it writes its step as any entry's; it holds its jump's
-// reading notice. Its read answers it (`settle`) with what the read brought —
-// a place: the view and what it reads, the position and the positions the
-// read placed, where the walk then lands; the view left out where the reader
-// took the camera over at the entry, which keeps the view they left it at,
-// what it read and where the walk stood; or a NOTICE: the face the entry shows on
-// every return to it, the entry standing where the camera went — and what
-// its push dropped stays dropped, as any push's does. A cursor move that
-// reaches a claim goes on once it is answered (`pending`). A jump that ends
-// without its camera leaving — one only a read could place, abandoned or
-// refused — gives its entry back (`giveBack`): its push undone, the entries
-// it dropped and the step it wrote standing again (FP-25).
-// AN ENTRY HOLDS NO DOCUMENT'S WORDS (issue #177's design decision: "View
-// state holds addresses, positions and layout, never copies of text"; FP-29):
-// its address, its positions, its view, what that view reads and where the
-// walk stood — each by positions and identity — and its step — the step's
-// passage by identity — and an act's name where HOME or WHOLE BOARD pushed it; whoever
-// shows an entry reads what its document says from the model as it shows it
-// (N-GO's `wordsOf`). A change of the page's class keeps every entry, its
-// number and its address, and drops what the class it left read there: its
-// notice, save a claim's still reading, the arrival it kept, what its view
-// read and where the walk stood (`classChanged`).
-// Carries: the wireframe's §11 `pushTrail` (its de-duplication by address
-// and its cap of twelve DROPPED: the stack is the record of teleports).
-// Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-25, FP-29.
+// read places the entry's landing (`settle`), so a return lands on that
+// passage and that place wherever its document was set again since (N-GO's
+// `landAtCursor`). An entry records the step that left it for the entry
+// after it (`Step`), written as a push departs it: the link followed for a
+// follow, the passage carried for a carrying LEAP or a version move — by
+// identity, the permanent addresses of its bytes, never its positions — and
+// none for any other move; a cursor move writes none. It keeps the arrival
+// standing at it as the reader leaves it — its outline, what its landing
+// said, its runs' labels and the run it stood at — written on it by value
+// (`keep`; N-GO's), which a return restores (FP-25, FP-21).
+// The launch frame is the first entry (W-01); after it an entry is pushed by
+// a fresh teleport — LEAP, follow, a click on a place, Enter, HOME, WHOLE
+// BOARD, an account's region, a walk's moment unfolded over a view the
+// camera stands away from — or by a version move, one push per act, made as
+// the act is made (FP-25), never by panning or zooming, and never by a
+// reading scene's end. Back, Forward and a jump move the cursor and discard
+// nothing, and a jump never pushes. A fresh teleport made with the cursor
+// behind the newest entry writes its step on the cursor's entry in the place
+// of the one it held and drops the entries ahead of it before it pushes (a
+// browser's history rule).
+// The claim (FP-25): a teleport whose landing waits on a read pushes its
+// entry as a claim as it is made, numbered then and never handed back once
+// its camera leaves, so the trail holds every act's move in the order the
+// acts were made, whatever order the reads answer in, and Back, Forward and
+// a jump act at once on the trail as it stands: at any board speed a jump
+// then Back returns to where the jump left from, a second Back goes one
+// entry further, and each entry's number is the one its key takes. A claim's
+// view is its landing's as the records held at the push place it, the place
+// its camera left for, so a departure re-takes it and a push from it writes
+// its step as any entry's; it holds its jump's reading notice. Its read
+// answers it (`settle`) with what the read brought — a place: the view and
+// what it reads, the position and the positions the read placed, where the
+// walk then lands; the view left out where the reader took the camera over
+// at the entry, which keeps the view they left it at, what it read and where
+// the walk stood; or a notice: the face the entry shows on every return to
+// it, the entry standing where the camera went — and what its push dropped
+// stays dropped, as any push's does. A cursor move that reaches a claim goes
+// on once it is answered (`pending`). A jump that ends without its camera
+// leaving — one only a read could place, abandoned or refused — gives its
+// entry back (`giveBack`): its push undone, the entries it dropped and the
+// step it wrote standing again (FP-25).
+// An entry holds no document's words (FP-29): its address, its positions,
+// its view, what that view reads and where the walk stood — each by
+// positions and identity — its step, the step's passage by identity, and an
+// act's name where HOME or WHOLE BOARD pushed it; whoever shows an entry
+// reads what its document says from the model as it shows it (N-GO's
+// `wordsOf`). A change of the page's class keeps every entry, its number and
+// its address, and drops what the class it left read there: its notice, save
+// a claim's still reading, the arrival it kept, what its view read and where
+// the walk stood (`classChanged`).
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-22, FP-25, FP-29.
 
 /** @typedef {{x: number, y: number, scale: number}} View */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
@@ -112,7 +102,7 @@
  * @property {ISpan[]} spans the passage by identity (M-REC's `identityOf`), never empty: a passage the page cannot name so is carried by a LEAP that records no step
  */
 
-/** @typedef {FollowStep | CarryStep} Step the step that left an entry for the one after it (issue #152's design decision): a follow, or a LEAP carrying a passage — any other move leaves none */
+/** @typedef {FollowStep | CarryStep} Step the step that left an entry for the one after it: a follow, or a LEAP carrying a passage — any other move leaves none */
 
 /**
  * @typedef {Object} Kept — the arrival as the reader left an entry (see the head): N-GO's, by value
@@ -128,8 +118,8 @@
  */
 
 /**
- * @typedef {Object} Notice — the face an entry shows, as data (issue #136's design decision; FP-25): where the camera went while its jump's read is out, then on every return to the entry once its read brought it
- * @property {'reading' | 'unregistered' | 'withheld' | 'refused' | 'floating'} face `reading` while the jump's read is out; then what the read brought — where it brought no place to read, the fifth cell (`unregistered`) or a refusal's face by its name; at the place of a withheld document a follow landed at, its own withheld words (`withheld`; issue #179); beside the head it landed on, the dead end's (`floating`)
+ * @typedef {Object} Notice — the face an entry shows, as data (FP-25): where the camera went while its jump's read is out, then on every return to the entry once its read brought it
+ * @property {'reading' | 'unregistered' | 'withheld' | 'refused' | 'floating'} face `reading` while the jump's read is out; then what the read brought — where it brought no place to read, the fifth cell (`unregistered`) or a refusal's face by its name; at the place of a withheld document a follow landed at, its own withheld words (`withheld`); beside the head it landed on, the dead end's (`floating`)
  * @property {string} addr the document the face names
  * @property {import('../bridge/shapes').Refusal | null} refusal the refusal a `refused` face names; null for every other face
  * @property {Site | null} site where the face stands: the place the camera went — the document the jump named, at the position it named, else its head — or the head a floating end landed on
@@ -223,11 +213,11 @@ export function push(e, departed, claim = false, step = null) {
 }
 
 /**
- * A claim answered with what its read brought (issue #136's design
- * decision; FP-25): a place — its view and what that view reads, where the
- * reader did not take the camera over at the entry, the walk then landing on
- * the place and no longer where it stood, and the position and the positions
- * where the read placed them — or a notice, the face the entry shows on
+ * A claim answered with what its read brought (FP-25): a place — its view
+ * and what that view reads, where the reader did not take the camera over
+ * at the entry, the walk then landing on the place rather than where it
+ * stood, and the position and the positions where the read placed them — or
+ * a notice, the face the entry shows on
  * every return to it, the entry standing where the camera went; the reading
  * notice the claim held is taken off either way. The entry keeps its place
  * and its number, and what its push dropped stays dropped; every cursor move

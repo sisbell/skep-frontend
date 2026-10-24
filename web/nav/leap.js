@@ -1,63 +1,55 @@
-// N-LEAP — THE LEAP BOX (the structure record §3.2 "N-LEAP"; foundations
-// §2.3; B1-S11; D5 §1.4). Layer 2. ENGINE-BOUND. State: VIEW — open or
-// closed, the text, the rows, the selected row, whether ↓/↑ has carried the
-// choice into the rows, whether it stands as opened — nothing typed in it, no
-// row chosen. A control that rebuilds itself from its state
-// (FP-13). Opened by Mod+L / Mod+K or the address segment's act, holding the
-// CURRENT ADDRESS, selected (the address bar's habit), and listing beneath
-// it the address's levels — the whole board first, HOME where it differs,
-// the account's region, the whole document — then the landmarks and the
-// trail's entries, until a key is typed, no row chosen: Enter on the box as
-// opened lands in place — the current address — and pushes nothing, and a
-// listed level is gone to once ↓, ↑ or the pointer has chosen it (foundations
-// §2.3); typed text matches by N-MATCH over the model's index, its first
-// match selected; Enter goes to the selected row (the first match unless ↓/↑
-// chose another), a teleport and a trail entry whether it names a document,
-// an account or the board, the ring drawn at its landing as a key's (a click
-// on a row draws none); an address this client has no record of is asked
-// of the board and faced where nothing answers (C-42's content, B1-S8); where
-// typed text matches nothing the box says so, the index's state beside the
-// answer while the index is not complete, and Enter goes nowhere: the box
-// stands open over the text and its answer, the focus in its input, until the
-// text is corrected or Esc closes it (K-31). While an input method's
-// composition is open, Enter, Esc and the arrows are the IME's and act on
-// nothing here (D5 §0). THE BOX IS THE ONE LINE'S STOP, OPENED (the focus
-// record's rule 18; D5 §4 rule 4): its input takes the focus however it was
-// opened, as a field a click lands in does, and its close hands the focus
-// back through N-FOCUS, the focus's owner (K-34; FP-20): to the element it
-// was opened from, or to the walk's element where that no longer takes the
-// focus — as the mirror's item it was opened from no longer does once a
-// camera move under the box has re-taken the walk's focus and rebuilt the
-// mirror. A LANDING NEVER CLOSES THE BOX (#171's rule 2; FP-20): a jump's
-// landing, a version move's, a key made at one leave its text, its caret and
-// its focus as the reader left them (N-FOCUS's `land`), and its close then
-// gives the focus to the landing, the walk's element; the box as opened takes
-// the address the line names as that changes (`takeAddress`: "An address box
-// with nothing typed in it takes the new address"), so it never holds a place
-// the line does not show (K-30). The box is gone with the next act (M-1): a
-// chord inside it acts as anywhere, the box closed first and the chord read at
-// the focus the close returned; the field's own chords — select all, copy,
-// paste, cut, undo, the caret's — stay the input's; a focus that leaves the
-// box — Tab out of it (D2), a click elsewhere — closes it, and the focus
-// stands where it went.
-// Its layer stands above the reading scene's (#118), so Mod+L in the scene
-// shows the box over it. Opened, the box is an act on the chrome: a card or
-// scene still reading ends, what stands staying (O-HOST's opening), so no
-// answer arriving while the box stands opens over it or takes its focus, and
-// the box is Esc's innermost thing (N-KEYS'). The intake's URL arm and search
-// (K-35) are the code lane's. ITS ROWS ARE THE MODEL'S (issue #177's design
-// decision: "Everything drawn … comes from the model for what the reader can
-// now read"; FP-29): each row's words read from the index and the model as the
-// rows are computed — a trail entry's by N-GO's `wordsOf`, never a copy the
-// entry keeps — and a change of the page's class computes the rows standing
-// in the box again from the model at once (`classChanged`), and once more as
-// the index the new class reads answers (`takeIndex`), its text, its caret and
-// its focus left as they stand (FP-20). WHERE NO BOARD IS HELD (issue #215's
-// design decision; FP-35) it lists no board's level, its status region says
-// why — O-FACES' one entry — in the answer's place, and Enter, on a row or
-// none, closes it onto O-FACES' no-board face: a LEAP needs a board, and the
-// act is answered, never silent.
-// ITS ACCESSIBLE FORM (R94; the WAI-ARIA combobox, list autocomplete with
+// N-LEAP — the LEAP box (the structure record §3.2; foundations §2.3; B1-S11;
+// D5 §1.4). Layer 2, engine-bound. State (FP-10): open or closed, the rows,
+// the selected row, whether ↓/↑ has carried the choice into the rows,
+// whether the box stands as opened — nothing typed in it, no row chosen —
+// the status region's markup as last written, whether the rows stand over an
+// index a change of class dropped, and the current address's reader, the
+// line's. A control that rebuilds itself from its state (FP-13).
+// Opened (`open`), the box holds the current address, selected, and lists
+// beneath it the address's levels, the landmarks and the trail's entries
+// (N-MATCH's `levels`), no row chosen, until a key is typed: Enter on the box
+// as opened lands in place — the box closes, nothing moves and nothing is
+// pushed — and a listed row is gone to once ↓, ↑ or the pointer has chosen
+// it; typed text matches by N-MATCH over the model's index, its first match
+// selected, and Enter goes to the selected row (`go`): a teleport and a
+// trail entry through N-GO whether it names a document, an account or the
+// board, the ring drawn at its landing where a key made the act; a share
+// form's or a URL's row closes the box and goes nowhere, the intake not
+// being built; where typed text matches nothing the box says so, the index's
+// state beside the answer while the index is not complete, and Enter goes
+// nowhere, the box standing open over the text and its answer with the
+// focus in its input until the text is corrected or Esc closes it (K-31).
+// While an input method's composition is open, Enter, Esc and the arrows
+// are the IME's and act on nothing here (D5 §0).
+// The box is the one line's stop, opened (the focus record's rule 18; D5 §4
+// rule 4): its input takes the focus however it was opened, and its close
+// hands the focus back through N-FOCUS (K-34; FP-20) — to the element it
+// was opened from where that takes it, else to the walk's element. A landing
+// never closes the box (FP-20): a jump's landing, a version move's or a key
+// made at one leaves its text, its caret and its focus as they stand, and
+// its close then gives the focus to the walk's element; the box as opened
+// takes the address the line names as that changes (`takeAddress`), so it
+// never holds a place the line does not show (K-30). The box is gone with
+// the next act (M-1): a chord inside it acts as anywhere, the box closed
+// first and the chord read at the focus the close returned; the field's own
+// chords — select all, copy, paste, cut, undo, the caret's — stay the
+// input's; a focus that leaves the box — Tab out of it (D2), a click
+// elsewhere — closes it, and the focus stands where it went. Opened, the box
+// is an act on the chrome: a card or scene still reading ends, what stands
+// staying (O-HOST's `endOpening`), so no answer arriving while the box
+// stands opens over it or takes its focus, and the box is Esc's innermost
+// thing (N-KEYS').
+// Its rows are the model's (FP-29): each row's words are read from the index
+// and the model as the rows are computed — a trail entry's by N-GO's
+// `wordsOf`, never a copy the entry keeps — and a change of the page's class
+// computes the rows standing in the box again at once (`classChanged`) and
+// once more as the index the new class reads answers (`takeIndex`), its
+// text, its caret and its focus left as they stand (FP-20). Where no board
+// is held (FP-35) it lists no board's level, its status region says why in
+// the answer's place — O-FACES' words (`noBoardWords`) — and Enter, on a row
+// or none, closes it onto O-FACES' no-board face: a LEAP needs a board, and
+// the act is answered, never silent.
+// Its accessible form (R94; the WAI-ARIA combobox, list autocomplete with
 // automatic selection): the input is the combobox, expanded while it lists
 // rows, controlling the rows' listbox, the selected row `aria-selected`; the
 // box names the two as it attaches, the input by ST's `L.leap-label` and the
@@ -66,11 +58,9 @@
 // choice into the rows, and never on the box as opened or as typed, so what
 // a reader meets first is the box itself — the current address that Mod+C
 // copies and typing replaces (D5 K-30; §4 rule 4). The answer and the
-// index's state are the box's own status region (D4: the combobox's, beside
-// the page's one), written only when its words change: a live region speaks
-// whatever is rewritten, so an arrow or a further keystroke repeats nothing.
-// Carries: the wireframe's §12. Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20,
-// FP-29, FP-35.
+// index's state are the box's own status region (D4), written only when its
+// words change, so an arrow or a further keystroke repeats nothing.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-29, FP-35.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from './trail.js';
@@ -186,8 +176,7 @@ export function open(prefill = currentAddress() || '') {
 }
 
 /**
- * The box as opened takes the address the line names (see the head; #171's
- * rule 2: "An address box with nothing typed in it takes the new address"):
+ * The box as opened takes the address the line names (see the head; FP-20):
  * while nothing is typed in it and no row chosen, a landing, a version move
  * or a camera move that changes the current address puts that address in the
  * box, selected, its levels listed beneath it. The app's loop runs it beside
@@ -281,7 +270,7 @@ export async function go(i, byKey = false) {
   close();
   if (r.kind === 'board') { await GO.wholeBoard(byKey); return; }
   if (r.kind === 'home') { await GO.home(byKey); return; }
-  if (r.kind === 'share' || r.kind === 'url') return; // the share form's decoding and the intake are not this lane's
+  if (r.kind === 'share' || r.kind === 'url') return; // the share form's decoding and the intake are not built: the row goes nowhere
   if (r.kind === 'account') { await GO.toAccount(r.addr, byKey); return; }
   if (r.kind === 'address') {
     const doc = documentOf(r.addr);

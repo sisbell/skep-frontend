@@ -1,128 +1,23 @@
-// N-WALK's test against the FAKE PORT: a landing keeps the position it named
-// inside the span it focuses — the one line's position — while a walk key's
-// move names none, so stepping back onto the landing's span reads the span's
-// own first position; a position no span holds is never kept. The ring is
-// drawn at a landing a key made and put out by any other, and a camera move
-// re-takes the focus with the ring drawn where a key made the move — a mutant
-// that drops the re-take's word of the key turns red. A block of white space
-// alone is no element of the walk (rule 20): the mirror lists none, and a
-// landing inside one stands on the element before it — a mutant that lists
-// every block turns red. A landing the index does not list stands on its
-// own node, placed among the listed siblings in address order, so the mirror
-// and the line name it (rule 12) — a mutant that lands on the first listed
-// sibling turns red. The mirror's rebuild leaves the plane one Tab stop (D5
-// §4 rule 5): the current item while it stands, the tree out of the order —
-// a mutant that leaves the tree in it turns red. The tree is named from ST as
-// the walk attaches it, and each level's group by its own level — a mutant
-// that drops the tree's name, or names every group by one level, turns red.
-// The mirror's item at a withheld run is the run's placeholder whole — the
-// owner of its origin, the arm for the reader, C-67's clause as the origin's
-// edition claims decide it — as the plane's gap shows them where it holds the
-// face, its pointer a control following the owner's passing claim, and where
-// it holds less the face compact at its column's edge naming that owner (FP-26:
-// "the mirror reads every sign whole"), for a signed-in
-// reader, a guest whose device holds a key for this board and a guest with
-// none, at each state of the claims: none read, none standing, the owner's
-// edition standing, an edition quoting the draft alone: a mutant that names
-// the owner of the document windowing the run, or the origin's account, or
-// gives two readers one arm, or keeps the pointer where no claim stands, or
-// leaves an empty sentence where the clause's place is empty, turns red. Every
-// block that holds no text is announced by its kind, in the words a copy's
-// stand-in names it by (issue #161): a record with the words and keys the
-// plane shows of it, a reference, hex and an atom of no record's value as an
-// item this client cannot show with its length — a mutant that reads the
-// value aloud, or names a kind in words the copy does not use, turns red. A document a
-// read answered `withheld` is named by its withheld box's words, its owner
-// the seat above a sub-account by the one owner rule: a mutant that calls it
-// published, or names the sub-account, turns red. A link whose far end floats
-// says so at its item, as its symbol and its stub do (R94), and one whose far
-// end's text holds part of its passage says the line (issue #153): a mutant
-// whose item says nothing of it turns red. The item a landing stands on
-// takes the landing's line as its description, the mirror's hidden element
-// holding its words, marked in place until the landing says nothing (issue
-// #153): a mutant whose item carries no description turns red; where its
-// passage stands in several runs, every other span holding one carries that
-// run's label as its own description, and a step moves the landing's from
-// one to the next in place (issue #158): a mutant that describes the
-// landing's item alone, or rebuilds to move it, turns red. A link's item names its far end as its
-// tail and its card do (issue #132): its address alone while nothing is
-// answered of its document, then the words the board's answer gives — a
-// mutant that names the address alone, or speaks before an answer, turns red.
-// While chrome covers the plane the tree stays inert through the rebuild —
-// a mutant whose rebuild lifts the mark turns red — until the plane is
-// uncovered. The focus's return as an overlay closes is the controller's
-// (`focus.test.js`). THE ORDER OF MOVES, a read held while a later move is
-// made: a landing in a document held in part, overtaken by a landing in
-// another, sets nothing when its read answers — a mutant that sets the walk
-// after the read turns red — and → on such a document at its reading scale,
-// where → reads its spans, overtaken by ↑, enters nothing, the levels above
-// standing as ↑ left them (a mutant whose → asks nothing turns red); ↓ onto a document whose
-// extent is read before the camera follows, overtaken by a landing, flies the
-// camera nowhere (a mutant that flies after the read turns red); ↓ whose
-// flight a second ↓ cut short ends, the walk on the span the second reached
-// (a mutant that leaves a cut flight unsettled turns red). IN A DOCUMENT
-// FOLDED INTO COLUMNS (issue #15) the camera follows the walk to a span's line
-// in its own column at reading size, the column framed with its corner and its
-// edge (issue #151), and to the document's outline framed, no
-// nearer than reading size; a re-take at reading scale takes the span in the
-// column under the view's centre — a mutant that places either by the
-// position's fraction of the extent down the room, frames the room, or frames
-// a short document's one column past reading size turns red. THE GRAIN BELOW
-// A DOCUMENT IS THE DOCUMENT'S OWN (issue #140's design decision): over a
-// continuation document at the near band, its own em under the readable
-// threshold, a re-take stands the walk on the document whole, collapsed, and
-// → there enters nothing; at its own reading scale the re-take takes the span
-// under the view's centre — a mutant that takes a span by the camera's band,
-// or enters a collapsed document, turns red. Each document's item in the
-// mirror says whether it is expanded or collapsed by its own em at the view
-// the camera is bound for, and is marked again in place as the camera takes
-// it across its threshold — a mutant that writes no `aria-expanded`, marks
-// nothing in place, or reads the camera where a flight is bound elsewhere
-// turns red. BACK'S LIGHT IS EXPOSED (issue #152's design decision): the
-// items it stands on — each span holding a stretch of the passage carried, or
-// the link's end the follow was made at — carry `aria-current="location"`,
-// written at the rebuild and marked again in place until the light goes out,
-// no other item marked — a mutant that writes none, marks nothing in place,
-// or marks every link's item turns red; a landing naming a link's end stands
-// the walk on its item, and on the span holding the position where the
-// document lists no such end. THE RE-TAKE'S ORDER (issue #141's design decision): over the cell
-// of a document the index does not list, at the near band, the re-take stands
-// the walk on the account; over the board's label cell, at the near band and
-// at the whole board's scale — the walk's document in view there, never kept
-// at far scale — and past the board's edge, on the board: a mutant that leaves
-// the walk where it stood turns red. Over a document's corner's strip it takes
-// the document, and over its room's empty depths, its text out of view, the
-// account: a mutant that tests the room, or the outline alone, turns red. Past
-// a document's last line, its last row in view, the walk keeps the span it
-// stood on at the document's reading scale, the document whole at mid, and
-// the account takes it once it is out of view: a mutant that drops the kept
-// document, or keeps a span at mid, turns red.
-// The walk takes each box as the version it shows (issue #154): an account's
-// documents list that version, named in the mirror by its box's document's
-// first line and state (a mutant that reads the version's own place, which
-// the index lists none of, turns red), a landing at the document stands on
-// its spans, and a re-take over the box stands there.
-// The page's own death (FP-23; issue #160) takes the mirror down at once: no
-// item quotes what the dead session read, and the account's level lists no
-// document only its index listed — a mutant that leaves the mirror as it
-// stood, or rebuilds it over the levels it held, turns red — and once the
-// walk's document is read at the guest's class the walk stands again on the
-// span holding the position it stood at; where the guest may not read it, on
-// the document whole, its cover, named in its withheld box's words, and the
-// account's level lists it as the plane draws its box (issue #177: a mutant
-// that lists the index's places alone, or leaves the walk on nothing, turns
-// red). THE COUNT, THE SYMBOLS AND THE MIRROR AGREE (issue #202): with two
-// ends inside a withheld run and one in the text, the presence words count
-// three, the text's end is its own symbol and the run's two one symbol at the
-// run, the document's links the text's end alone, and the run's item counts
-// its two and holds them a level below, expanded whatever the camera does,
-// → entering them and ← back, Back's light at one marking the run's item (a
-// mutant that lists a run's ends among the document's, gives its item no
-// children, marks no light on it, or rewrites its expanded mark from the
-// camera turns red). WHERE NO BOARD IS HELD (issue #215; FP-35) the root says
-// why, in the words the one line says, and a camera move's re-take stands on
-// it alone at far scale and near (a mutant that names board 1, or re-takes
-// the account the grid finds under the centre, turns red).
+// N-WALK's test against the fake port: a landing keeps the position it named
+// inside the span it focuses while a walk key names none and a position no
+// span holds is never kept; the ring is drawn at a key-made landing or
+// re-take and put out by any other; a block of white space alone is no
+// element of the walk; a landing the index does not list stands on its own
+// node among the listed siblings; the mirror is one Tab stop, named from ST
+// with each level's group, its items naming a withheld run's placeholder,
+// each block that holds no text by its kind, a withheld or untold document by
+// its state and a link's far end as its tail does, its descriptions and
+// Back's light written at the rebuild and marked again in place, and its
+// inert mark kept through a rebuild; a move whose reads a later move overtook
+// sets nothing and flies nowhere; in a document folded into columns the
+// camera follows the walk to a span's line in its column and to the outline
+// framed no nearer than reading size; the grain below a document is the
+// document's own and the re-take's order holds at every band; each box is
+// walked as the version it shows; the page's own death takes the mirror down
+// and the walk stays on a covered draft; a withheld run's ends stand a level
+// below its item, counted and marked as the symbols are; and where no board
+// is held the root says why and the re-take stands on it alone (FP-20,
+// FP-21, FP-22, FP-23, FP-24, FP-29, FP-35).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -418,7 +313,7 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
           `${who}, ${state}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause the claims decide`);
         assert.ok(clause ? item.includes(`${arm}. ${clause}. `) : item.includes(`${arm}. `) && !/\.\s+\./.test(item), `${who}, ${state}: the clause a sentence of its own after the arm, or nothing in its place: ${item}`);
         // the plane's gap: the same owner; where it holds the face whole, the same arm and clause, the pointer a control following
-        // the owner's passing claim; where it holds less, the face compact in its column's edge, naming the same owner (issue #151)
+        // the owner's passing claim; where it holds less, the face compact in its column's edge, naming the same owner
         const html = withheldBlockHTML(run, d, LAYER.viewFor(d)), inGap = html.includes(' data-holds="face"');
         forms.add(inGap);
         assert.ok(html.includes(` data-owner="${owner}"`) && (inGap
@@ -832,7 +727,7 @@ test('in a document folded into columns the camera follows the walk to a span\'s
     await run(WALK.key('down'));
     assert.deepEqual(walkAt(), ['block', H, at.pos], '↓ steps onto the span heading the next column');
     const line = placeOf(f, at.pos);
-    // the column the first of its row: the strip beside it holds the corner whole and its gap, its edge EDGE em on its right (issue #151)
+    // the column the first of its row: the strip beside it holds the corner whole and its gap, its edge EDGE em on its right
     near(CAM.view(), { x: box.x + c.x + c.w / 2 + (EDGE * 12.5 - (cornerWidth(false) + CORNER.gap)) / 2 / (12.5 / f.fs), y: box.y + line.y + line.h / 2, scale: 12.5 / f.fs }, 'the camera on its line, its column framed with its corner and its edge, at reading size');
     await run(WALK.key('out'));
     assert.deepEqual(walkAt(), ['document', H, null]);

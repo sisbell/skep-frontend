@@ -1,62 +1,46 @@
-// N-FOCUS — THE ONE OWNER OF THE PLATFORM'S FOCUS (D5 §4 the focus model,
-// completed by the focus record's rules 10–22; FP-20 "the focus has one
-// owner"). Layer 2, beside N-WALK, a leaf: it imports nothing of the page.
-// ENGINE-BOUND, with no DOM of its own — it moves the focus of elements their
-// owners hand it. State: VIEW — whether a key made the last move of the focus
-// (the ring's rule), the last input's kind, the opener stack (which region
-// took the focus, and from which element) — THE ONE OWNER (FP-10).
-// THE PAGE HAS ONE FOCUS, THE PLATFORM'S (`document.activeElement`; rule 10).
-// The walk's POSITION is N-WALK's and persists while another region holds the
-// focus — a chord from the one line or a card still acts on the focused span —
-// but the ring is drawn only while the plane holds the focus and a key moved
-// it. No `.focus()` stands outside this module: five entries, which every
-// module calls and none bypasses —
-//   land(el, {byKey})      an act moved the focus to an element: a landing's
-//                          item, a walk key's, an arrow's next control (rule
-//                          12). The focus goes there wherever the key was
-//                          pressed — the mirror, the line, a card, the body —
-//                          and `byKey` sets the ring's rule; left out, the rule
-//                          stands as it was (a hand-off is no act). A FIELD THE
-//                          READER TYPES IN keeps the caret through it (#171's
-//                          rule 2: "A landing never closes a field the reader
-//                          is typing in"): the focus stays in the field, and
-//                          the regions holding it forget their openers.
-//   open(region, {…})      a region took the focus from an element — an
-//                          overlay, the LEAP box, the scene — remembered ONCE,
-//                          on one stack: a replacement, a rebuild or a second
-//                          opening of a standing region keeps the first opener
-//                          (rules 11, 13, 16). `byKey` alone decides whether
-//                          the region's `first` control takes the focus.
-//   close(region)          the region ends. A focus standing on nothing, or
-//                          still inside the region, returns to the opener where
-//                          that takes it, else to the walk's element — never
-//                          lost, never to the top (rule 4); to the walk's
-//                          element alone where a move passed over the region's
-//                          field ("Focus then goes to the landing"); one the
-//                          person moved elsewhere while the region stood stays
-//                          where they put it (#33's clause).
-//   keep(region, keyOf, rebuild)  a control redraws itself from state while it
-//                          holds the focus (FP-13): the focus returns, after the
-//                          redraw, to the element bearing the same key — an
-//                          act's `data-act`, a control's `data-run` — else to
-//                          the region's first control; never the body (rule 11).
+// N-FOCUS — the one owner of the platform's focus (FP-20; D5 §4; the focus
+// record's rules 10–22). Layer 2, a leaf: it imports nothing of the page and
+// keeps no DOM of its own, moving the focus of elements their owners hand it.
+// State (FP-10): whether a key made the last move of the focus (the ring's
+// rule), the last input's kind, and the opener stack — which region took the
+// focus, and from which element. The page has one focus, the platform's
+// (`document.activeElement`; rule 10), and no `.focus()` call stands outside
+// this module: five entries, which every module calls and none bypasses —
+//   land(el, {byKey})      an act moved the focus to an element (rule 12),
+//                          wherever the key was pressed; `byKey` sets the
+//                          ring's rule, and left out the rule stands (a
+//                          hand-off is no act). A field the reader types in
+//                          keeps the focus and its caret through it, and the
+//                          regions holding the field forget their openers.
+//   open(region, {…})      a region took the focus from an element,
+//                          remembered once on one stack: a second opening of
+//                          a standing region keeps the first opener (rules
+//                          11, 13, 16). `byKey` alone decides whether the
+//                          region's `first` control takes the focus.
+//   close(region)          the region ends: a focus standing on nothing, or
+//                          still inside the region, returns to the opener
+//                          where that takes it, else to the walk's element —
+//                          never lost, never to the top (rule 4); one the
+//                          person moved elsewhere stays where they put it.
+//   keep(region, keyOf, rebuild)  a control redrawn from state while it holds
+//                          the focus (FP-13): the focus returns, after the
+//                          redraw, to the element bearing the same key, else
+//                          to the region's first control, never the body
+//                          (rule 11).
 //   cover(el, on)          a region chrome stands over is `inert`: out of the
 //                          order and of the accessibility tree (rules 17, 22).
-// — and ONE reading of "a key made it", `byKey(event)`: a keyboard event, or a
-// click the platform made from a key (`detail` 0); and ONE of "a field the
-// reader types in", `isField(el)`: an input or a textarea. THE RING (D5 §4
-// rule 2, the platform's focus-visible rule): drawn while the plane's stop
-// holds the focus and a key moved it there — a walk key, a key-made landing
-// or re-take, a Tab into the plane; put out by a pointer's landing, a
-// camera-made re-take, and whenever the focus leaves the plane (`ringShown`);
-// a move that leaves the focus in a field sets the rule the landing takes
-// once the field closes onto it. THE STATUS REGION (D4):
-// one standing `role="status"` region this module alone writes (`say`) —
-// polite for the selection, a face and the line's transients, assertive for
-// the session's death, a session a restart lost and the acquire did not get
-// back, and halted writes; nothing for a camera move; a
+// — and one reading of "a key made it", `byKey(event)`: a keyboard event, or
+// a click the platform made from a key (`detail` 0); and one of "a field the
+// reader types in", `isField(el)`: an input or a textarea. The ring
+// (`ringShown`; D5 §4 rule 2): drawn while the plane's stop holds the focus
+// and a key moved it there, put out by a pointer's landing, a camera-made
+// re-take, and whenever the focus leaves the plane; a move that leaves the
+// focus in a field sets the rule the landing takes once the field closes onto
+// it. The status region (D4): one standing `role="status"` region this
+// module alone writes (`say`), polite unless the caller asks assertive; a
 // key-made landing is told by the focus move alone (rule 12), never repeated
-// here. The LEAP box's own status region is the combobox's (N-LEAP).
+// here. N-WALK registers the plane's stop and the walk's element, the app the
+// status region (`attach`).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-20.
 
 /**
@@ -90,10 +74,9 @@ const active = () => (typeof document === 'undefined' ? null : document.activeEl
 const onNothing = (/** @type {Element | null} */ e) => !e || (typeof document !== 'undefined' && e === document.body);
 
 /**
- * One reading of "a field the reader types in" (FP-20; #171's rule 2): an
- * input or a textarea — the address box, a moment's answer — whose keys are
- * its own (N-KEYS' `field`, which the app reads here) and whose caret no move
- * the page makes takes (`land`).
+ * One reading of a field the reader types in (FP-20): an input or a
+ * textarea — the address box, a moment's answer — whose caret no move the
+ * page makes takes (`land`).
  * @param {Element | null} e
  */
 export const isField = (e) => !!e && typeof e.matches === 'function' && e.matches('input, textarea');
@@ -161,8 +144,8 @@ export function byKey(e) {
  * draws it, a pointer's puts it out; left out, the rule stands (a hand-off).
  * A null element moves nothing and sets the rule alone (a camera-made re-take
  * that carries no focus puts the ring out). A focus standing in a field the
- * reader types in stays there, its caret and its text with it (see the head;
- * #171's rule 2): the move sets the rule alone, and every region holding the
+ * reader types in stays there, its caret and its text with it (see the
+ * head): the move sets the rule alone, and every region holding the
  * field forgets its opener, so the field's close gives the focus to the walk's
  * element — where the move put the walk.
  * @param {Element | null} el
@@ -260,11 +243,9 @@ export function keep(region, keyOf, rebuild) {
 export function cover(el, on) { /** @type {HTMLElement} */ (el).inert = on; }
 
 /**
- * The status region (D4): one standing region, written here alone — polite
- * for the selection, a face, the line's transients; assertive for the
- * session's death, a session a restart lost and the acquire did not get back,
- * and halted writes. Nothing for a camera move; a landing is told by the
- * focus move.
+ * The status region (D4) written: one standing region this module alone
+ * writes, polite unless the caller asks assertive. Nothing is said for a
+ * camera move, and a landing is told by the focus move alone.
  * @param {string} text
  * @param {boolean} [assertive]
  */

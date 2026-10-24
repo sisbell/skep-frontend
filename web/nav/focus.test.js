@@ -1,34 +1,11 @@
 // N-FOCUS's test, on a page of stand-ins whose focus lands only where the
-// platform's would (FP-20; the focus record's rules 10–16). ONE OWNER: no
-// `.focus()` call stands in any module of the page outside the controller —
-// a mutant that focuses an element from the walk, the box, the host, the
-// scene or the app turns red. ONE READING of "a key made it" (`byKey`): a
-// keyboard event, a click of detail 0; a pointer's click never — a mutant
-// reading a pointer's click as a key's turns red. THE RING'S RULE (`land`,
-// `ringShown`): drawn where a key moved the focus into the plane and put out
-// by a pointer's landing, a camera-made re-take and the focus leaving the
-// plane — a mutant that draws it while the one line holds the focus turns
-// red. THE OPENER STACK (`open`, `close`): a region's opener is remembered
-// once, a second opening or a replacement keeping the first — a mutant that
-// reads the opener again turns red; the close returns the focus to the
-// opener where that takes it, else to the walk's element — never to the top
-// — and leaves a focus the person moved elsewhere; a focus still inside the
-// closing region is taken off it first. A FIELD THE READER TYPES IN KEEPS THE
-// CARET (`land`, `isField`; #171's rule 2): a move the page makes while an
-// input holds the focus leaves it there, the ring's rule set as asked, and the
-// region holding the field then closes onto the walk's element, never onto
-// its opener — a mutant that moves the focus out of the field, or keeps the
-// opener, turns red. A REBUILD KEEPS THE FOCUS (`keep`):
-// on the control bearing the same key, else the region's first control,
-// never the body; a region that held no focus moves nothing. THE HOST'S
-// CASES (O-HOST, rules 11, 13, 16): an overlay a key opened takes the focus
-// on its first act, never the dismiss, which is a native button after the
-// content; the versions list on its current member; a pointer-opened one
-// takes none and its dismissal returns the focus where the pointer left it;
-// a rebuild with the same id keeps the control pressed; a replacement whose
-// predecessor held the focus takes it on its first act, a face replacing it
-// returns the focus to the chain's opener with the face standing; the dialog
-// is named by its own caption.
+// platform's would: one owner — no `.focus()` call stands in any module of
+// the page outside the controller — one reading of "a key made it", the
+// ring's rule, the opener stack remembered once and its close's return, a
+// field keeping its caret through a move the page makes, a rebuild keeping
+// the focus, and the host's cases: which control an overlay gives the focus
+// as a key or a pointer opens it, as a rebuild, a replacement or a face takes
+// its place, and as it is dismissed (FP-20; the focus record's rules 10–16).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -165,7 +142,7 @@ test('a pointer\'s opening takes no focus; the close returns a focus on nothing 
   p.doc.activeElement = p.body;
   FOCUS.close('overlay');
   assert.equal(p.at(), 'the line\'s act', 'back to the opener');
-  // the opener no longer takes the focus: a corner the walk has left, an item a rebuild replaced
+  // an opener that does not take the focus: a corner the walk has left, an item a rebuild replaced
   const gone = p.element('a corner the walk has left', () => false);
   gone.focus();
   p.doc.activeElement = gone;

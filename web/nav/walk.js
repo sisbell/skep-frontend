@@ -1,166 +1,109 @@
-// N-WALK — the linearization, THE WALK'S POSITION and the ARIA mirror (the
-// structure record §3.2 "N-WALK"; S-27 (a) the mirror inside it; D5 §4 the
-// focus model; foundations §2.7). Layer 2. Mixed: the tree arithmetic pure,
-// the mirror ENGINE-BOUND. State: VIEW — the walk's position (the element the
-// walk stands on, its siblings and the levels above) and the position a
-// landing named inside the focused span (the one line's position, W-01 step
-// 3's "position honored", until the walk moves) and the count of its moves —
-// THE ONE OWNER of the walk's position (FP-10). THE ORDER OF MOVES: every
-// move — a walk key, a landing, a re-take — counts itself as it starts, and
-// one whose reads a later move overtook sets nothing when they answer and
-// flies the camera nowhere, so the walk stands where the latest move put it
-// whatever order the reads answer in. THE FOCUS IS N-FOCUS's (FP-20): the
-// page has one focus, the platform's, and every move of it this module asks
-// for goes through the controller's `land` — a walk key, a landing, a
-// key-made re-take each put the platform's focus on the walk's element
-// wherever the key was pressed (rules 10, 12), the ring drawn where a key
-// made the move and put out by a pointer's landing or a camera-made re-take
-// (D5 §4 rule 2, the platform's focus-visible rule); a camera-made re-take
-// carries the focus to the new element only where the mirror held it, and
-// leaves a focus standing in the one line, a card or the scene where it is;
-// and no move takes the caret from a field the reader types in, where the
-// focus stays until the field closes onto the walk's element (N-FOCUS's
-// `land`; issue #171's rule 2).
-// Every move names a position or none, so a landing's position never
-// outlives the span it was named in: a walk key names none, and the line
-// reads the span's own first position. At launch the platform's focus rests
-// on the walk's element with the ring out (rule 21). Enter at a focused span
-// selects the block whole, as a click on plain text does, until the editor's
-// caret exists (D8; K-7's "text takes the caret" waits on D6); at a withheld
-// run it shows the run's face whole, C-67's pointer its offered act (K-7,
-// N-KEYS'; O-FACES's `withheldRun`).
-// The plane linearizes board › account › document › block | link in record
-// order (S3 Q6) — EACH BOX ONCE, AS THE VERSION IT SHOWS (issue #154's
-// design decision: "The box shows one version"; N-GO's `shownIn`, the
-// reader `shown`): an account's documents are its boxes — every one the
-// plane draws, the model's one list (M-REC's `known`): its index's places and
-// each it holds a read's answer for, a covered one among them (issue #177;
-// FP-29) — each the version
-// its box shows, its spans and links that version's, and a landing or a
-// re-take at a document stands on the version its box shows; at reading
-// scale the walk holds THE LINKS THE READING SCALE
-// DRAWS (D5 §4 rule 2: the owner's and the person's own; others' only where a
-// peek or a lens shows them), after the blocks — EXACTLY WHAT IS DRAWN, where
-// it is drawn (issue #202's design decision: "The mirror lists exactly what is
-// drawn. A run's links go on the run's item"): an end LK draws at a withheld
-// run (LK's `Shown.run`) is a child of the run's item, never a link of the
-// document's own — D5 §4 rule 2's "a bundle's [children] its links", K-53's
-// "→ into its links" — the run's item saying how many end there and standing
-// expanded, → entering them a level below, Enter at each opening its card
-// (K-55) and Enter at the run still showing its face; Back to such an end
-// stands on the run's item, and Back's light marks it. A block whose text is only
-// white space is no span a person reads and no element of the walk (rule
-// 20): the mirror lists none, and a landing inside one stands on the element
-// before it; a position no block holds stands on the first span. A landing
-// the index does not list — a withheld document, one
-// unchanged since the index's floor, its account — lands on ITS OWN node,
-// placed among the listed siblings in address order, so the mirror and the
-// one line name the place landed on (rule 12). The camera follows the focus
-// (a walk move flies to the element at its level's scale) and the focus
-// follows the camera (any other move re-takes it at the scale's grain). THE
-// RE-TAKE'S ORDER (issue #141's design decision), so the walk never stands on
-// a place out of view: the document whose REGION holds the view's centre —
-// its outline, which holds its label, badge and counts, and the strip its
-// corner stands in (T-LAYER's `regionOf`); else the document the walk stands
-// on, its own element or a span or a link in it, KEPT while its region meets
-// the visible view (T-LAYER's `inView`) — reading past its last line, or
-// panning to its corner, never leaves it, and the one line marks the view's
-// window over it (`kept`); else the account whose region holds the centre,
-// else the board. At far scale the grain stops at the account, and the last
-// alone is read. WHERE NO BOARD IS HELD (issue #215's design decision: "The
-// mirror's board sentence says what the line says"; FP-35) the root names no
-// board: it says why, the words O-FACES' one entry gives (`noBoardWords`,
-// through the reader the app hands in), and the re-take stands on it alone,
-// naming no account the grid finds under the centre. THE GRAIN BELOW A
-// DOCUMENT IS THE DOCUMENT'S OWN (issue #140's design decision): P-LOD's
-// band decides how deep the walk goes, down to the document; it steps by
-// span only inside a document at its reading scale — its own em at the
-// readable threshold,
-// T-LAYER's one test, the one the press rule and the one line's position read
-// — and any other document is one stop, focused whole, as at mid, its mirror
-// item collapsed (`aria-expanded` false, `collapsed`). Entering such a
-// document from the keyboard is Enter's act (N-KEYS: a teleport to its
-// reading scale, pushed on the trail, as a click is), which expands it; there
-// `→` enters its spans. Collapsed or expanded is read at the view the
-// camera is bound for, so a key made during a flight acts where the flight
-// lands (D5 §4 rule 8), and each dirty frame marks the items again in place
-// (`markExpanded`), the camera crossing a document's threshold between the
-// walk's moves. The ARIA mirror (`role=tree`,
-// virtualised ±24, `aria-level`/`aria-posinset`/`aria-setsize`) is THE ONE
-// ACCESSIBLE RENDERING at span grain (S1 Q7; R94 at span grain — RULED), the
-// tree named as it attaches by ST's `L.mirror-label`, each level's group by
-// `L.mirror-level`, and each item by ST's `L.mirror.*` entries — what a screen
-// reader hears is the focus moving onto the item (rule 12); no live region
+// N-WALK — the linearization, the walk's position and the ARIA mirror (the
+// structure record §3.2; S-27 (a); D5 §4; foundations §2.7). Layer 2, mixed:
+// the tree arithmetic pure, the mirror engine-bound. State (FP-10): the
+// walk's position — the element the walk stands on, its siblings and the
+// levels above — the position a landing named inside the focused span (W-01
+// step 3), kept until the walk moves; the count of its moves; the mirror's
+// element; and the readers the app hands in (`readers`; FP-11): where Back's
+// light stands and what a landing says (N-GO's `backLight` and `described`),
+// the version each box shows (N-GO's `shownIn`) and why no board is held
+// (O-FACES' `noBoardWords`). The walk is always live: it has no toggle.
+// The order of moves: every move — a walk key, a landing, a re-take — counts
+// itself as it starts, and one whose reads a later move overtook sets
+// nothing when they answer and flies the camera nowhere, so the walk stands
+// where the latest move put it whatever order the reads answer in. The focus
+// is N-FOCUS's (FP-20): every move of it this module asks for goes through
+// the controller's `land` — a walk key, a landing and a key-made re-take
+// each put the platform's focus on the walk's element wherever the key was
+// pressed (rules 10, 12), the ring drawn where a key made the move and put
+// out by a pointer's landing or a camera-made re-take (D5 §4 rule 2); a
+// camera-made re-take carries the focus to the new element only where the
+// mirror held it, leaving a focus standing elsewhere where it is; and no
+// move takes the caret from a field the reader types in. Every move names a
+// position or none, so a landing's position never outlives the span it was
+// named in: a walk key names none, and the line reads the span's own first
+// position. At launch the platform's focus rests on the walk's element with
+// the ring out (rule 21). Enter at a focused span selects the block whole
+// (D8); at a withheld run it shows the run's face whole (K-7; N-KEYS').
+// The linearization: board › account › document › block | link in record
+// order (S3 Q6), each box once, as the version it shows (FP-22; the `shown`
+// reader): an account's documents are every box the plane draws — the
+// model's one list (M-REC's `known`), a covered one among them (FP-29) —
+// each the version its box shows, its spans and links that version's; at
+// reading scale the walk holds the links the reading scale draws after the
+// blocks, exactly what is drawn where it is drawn: an end LK draws at a
+// withheld run (LK's `Shown.run`) is a child of the run's item, a level
+// below, never a link of the document's own — the run's item saying how many
+// end there and standing expanded, → entering them, Enter at each opening
+// its card (K-55) and Enter at the run still showing its face. A block whose
+// text is only white space is no element of the walk (rule 20): the mirror
+// lists none, and a landing inside one stands on the element before it; a
+// position no block holds stands on the first span. A landing the index does
+// not list — a withheld document, one unchanged since the index's floor, its
+// account — lands on its own node, placed among the listed siblings in
+// address order (`among`; rule 12). The camera follows the focus — a walk
+// move flies to the element at its level's scale (`flyToFocus`) — and the
+// focus follows the camera: any other move re-takes it at the scale's grain
+// (`retakeFromView`). The re-take's order, so the walk never stands on a
+// place out of view: the document whose region holds the view's centre
+// (T-LAYER's `regionOf`); else the document the walk stands on, kept while
+// its region meets the visible view (T-LAYER's `inView`; `kept`); else the
+// account whose region holds the centre, else the board. At far scale the
+// grain stops at the account, and the last alone is read. Where no board is
+// held (FP-35) the root names no board: it says why, in the words the
+// `noBoard` reader gives, and the re-take stands on it alone. The grain below
+// a document is the document's own: P-LOD's band decides how deep the walk
+// goes, down to the document; it steps by span only inside a document at its
+// reading scale (T-LAYER's `atReadingScale`), and any other document is one
+// stop, focused whole, its mirror item collapsed (`collapsed`); entering it
+// from the keyboard is Enter's act (N-KEYS'), which expands it, and there →
+// enters its spans. Collapsed or expanded is read at the view the camera is
+// bound for, so a key made during a flight acts where the flight lands (D5
+// §4 rule 8), and each dirty frame marks the items again in place
+// (`markExpanded`).
+// The ARIA mirror (`role=tree`, virtualised to 24 items either side of the
+// current one, `aria-level`/`aria-posinset`/`aria-setsize`) is the one
+// accessible rendering at span grain (S1 Q7; R94), the tree named as it
+// attaches by ST's `L.mirror-label`, each level's group by `L.mirror-level`
+// and each item by ST's `L.mirror.*` entries (`nameOf`); what a screen reader
+// hears is the focus moving onto the item (rule 12), and no live region
 // repeats it (D4). Every block that holds no text is announced by its kind,
-// the item rule's (T-ARTICLE's `itemOf`; issue #161's design decision; FP-24)
-// in the strings table's words, the ones a copy's stand-in names it by in its
-// place — a record, a reference, a withheld run, an item this client cannot
-// show — then what the plane shows of it, a record's words and keys, an
-// unshown item's length, and never its raw value. A withheld run's item is
-// made from the record the plane's
-// placeholder is (T-ARTICLE's `placeholderOf`: the owner of its origin, the
-// entitlement arm for this reader, C-67's clause where the origin's edition
-// claims decide one — "edition claims not read" where a read of them failed —
-// and nothing in its place where they do not — R56, B1-S7, PUB-5.124; issue
-// #186), and a
+// the item rule's (T-ARTICLE's `itemOf`; FP-24), in the strings table's
+// words, then what the plane shows of it — a record's words and keys, an
+// unshown item's length — and never its raw value; a withheld run's item is
+// made from the record the plane's placeholder is (T-ARTICLE's
+// `placeholderOf`: the owner of its origin, the entitlement arm for this
+// reader, C-67's clause where the origin's edition claims decide one and
+// nothing in its place where they do not — R56, B1-S7, PUB-5.124); a
 // document a read answered `withheld` is named by its withheld box's words
-// (T-LAYER's `withheldBox`: existence and owner — B1-S2), one the board said
-// nothing about by a far end's words for it (`L.far.unregistered`), and one
-// no read or listing has told the state of by no state at all — never
-// "published" for a place a jump's walk stands on before its read answers
-// (FP-25), a link's item
-// names its far end as its tail, its card and every list naming it do (LK's
-// `farLabel`: its address, then what the board answered of its document —
-// issue #132), and a link whose far end floats
-// says "its passage is not in ⟨D⟩'s current text" as its symbol's title and
-// its stub do, and one whose far end's text holds part of its passage, all
-// of it in pieces, or the board would not tell, says BM-HELD's line
-// (`farSays`; foundations §2.3; issue #153), so at each a screen reader
-// hears what the plane shows (R94). BACK'S LIGHT IS EXPOSED (issue #152's
-// design decision: "While lit, it is exposed to assistive technology"): the
-// items it stands on — each span holding a stretch of the passage carried,
-// or the link's end the follow was made at — carry `aria-current="location"`
-// while it stands, written at the rebuild and marked again in place on each
-// dirty frame (`markLocated`), the light read through the reader the app
-// hands in (`readers`: N-GO's, which imports this module); Back's landing
-// names that end where the view shows it, and the walk stands on its item
-// (`focusTo`'s `end`). A LANDING'S LINE IS ITS ITEM'S DESCRIPTION (issue
-// #153's design decision: "Focus lands on the first held piece or landing
-// point, the line as its description, so the screen-reader mirror says all
-// four states"): the item a landing stands on — the span holding its
-// position, or its document where the walk stands on it whole — carries
-// `aria-describedby` naming the mirror's hidden description, which holds the
-// line's words where the text landed in holds part of the passage carried or
-// followed, all of it in pieces, or no answer told — the label of the run the
-// landing stands at, where the passage stands in several — and the dead end's
-// words where it holds none of it; nothing where it holds all of it in one
-// piece, which the outline alone says (N-GO's `described`, through the reader
-// the app hands in). EACH RUN'S ITEM CARRIES ITS LABEL (FP-21; issue #158's
-// design decision: "Each run's accessible item carries its label from the
-// moment of landing"): every span holding another run of a passage in several
-// is described by those runs' labels, a hidden description of its own. Each is
-// written at the rebuild and marked again in place on each
-// dirty frame (`markDescribed`) — a step moving the landing among the runs —
-// so the focus moving onto an item says it once, the landing's item the one
-// announcement. The mirror is rebuilt whole on every move, and its Tab
-// stop with it: the plane is ONE stop between the one line and the focused
-// document's corner (D5 §4 rule 5) — the current item, while the tree's
+// (T-LAYER's `withheldBox`; B1-S2), one the board said nothing about by a far
+// end's words for it (`L.far.unregistered`), and one no read or listing has
+// told the state of by no state at all (FP-25); a link's item names its far
+// end as its tail does (LK's `farLabel`), and says BM-HELD's line where the
+// far end floats or its text holds part of its passage (`farSays`;
+// foundations §2.3). Back's light is exposed: the items it stands on — each
+// span holding a stretch of the passage carried, or the link's end the follow
+// was made at, at a withheld run the run's item — carry
+// `aria-current="location"` while it stands, written at the rebuild and
+// marked again in place on each dirty frame (`markLocated`). A landing's line
+// is its item's description (FP-21): the item a landing stands on carries
+// `aria-describedby` naming the mirror's hidden description, which holds what
+// the landing says (the `described` reader), and every span holding another
+// run of a passage in several is described by those runs' labels, a hidden
+// description of its own, each written at the rebuild and marked again in
+// place (`markDescribed`), so the focus moving onto an item says it once. The
+// mirror is rebuilt whole on every move (`render`), and its Tab stop with it:
+// the plane is one stop (D5 §4 rule 5) — the current item, while the tree's
 // container stands out of the order; the container is the stop only where
-// the mirror holds no item. The panel is shown while the ring is drawn
-// (`shown`): a keyboard user sees the list they stand in; a pointer user's
-// landing shows none. While the reading scene stands over the plane the tree
-// is inert (`cover`), out of the order and of the accessibility tree, the
-// scene's stops in its place ("In the scene: pane, pane, the scene's acts",
-// each pane's corner after it — issue #160), until the scene's end puts it
-// back. THE PAGE'S OWN DEATH (FP-23) takes the walk again where it stood, at
-// once from the model the death left, so the mirror names nothing the dead
-// session read, and again once its document is read at the guest's class
-// (`dropped`) — on that document still where the guest may not read it, named
-// by its withheld box's words, its cover (issue #177's design decision: "The
-// walk stays put on that withheld form, never on nothing"; FP-29).
-// Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
-// ELIMINATED: the walk is always live).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-35.
+// the mirror holds no item. The panel is shown while the ring is drawn.
+// While chrome stands over the plane the tree is inert (`cover`), out of the
+// order and of the accessibility tree.
+// The page's own death (FP-23) takes the walk again where it stood, at once
+// from the model the death left, and again once its document is read at the
+// guest's class (`dropped`) — on that document still where the guest may not
+// read it, named by its withheld box's words, its cover (FP-29).
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-21, FP-22, FP-23,
+// FP-24, FP-29, FP-35.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -191,14 +134,14 @@ import { t } from '../strings.js';
 /** @typedef {{link: string, key: string}} End a link's end among a document's elements: the link and its end's key (LK's `endKey`) */
 
 /**
- * @typedef {Object} Located — where Back's light stands (issue #152's design decision; N-GO's `backLight`), which the mirror marks `aria-current="location"`
+ * @typedef {Object} Located — where Back's light stands (N-GO's `backLight`), which the mirror marks `aria-current="location"`
  * @property {string} addr the document it stands in
  * @property {Array<{pos: number, width: number}>} runs the stretches of its text the passage carried stands in; none for a link's end
  * @property {End | null} end the link's end the follow was made at; null for a passage
  */
 
 /**
- * @typedef {Object} Described — what a landing says of the passage it carried or followed (issue #153's design decision; N-GO's `described`), which the mirror gives the items it stands on as their descriptions
+ * @typedef {Object} Described — what a landing says of the passage it carried or followed (N-GO's `described`), which the mirror gives the items it stands on as their descriptions
  * @property {string} addr the document landed in
  * @property {number} pos where the landing stands: the run it stands at, or the landing point
  * @property {string} words the line's words — the label of the run it stands at, where the passage stands in several — or the dead end's where the text holds none of the passage
@@ -336,7 +279,7 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
     return t('L.mirror.account', { account: n.addr, documents, links, empty: c.documents ? '' : ' — ' + t('B1.empty_subspace') }) + pos;
   }
   if (n.kind === 'document') {
-    // a version named by its box's document's place, the one the index lists (issue #154); its state as the board answered it —
+    // a version named by its box's document's place, the one the index lists (FP-22); its state as the board answered it —
     // withheld, nothing it will say of the address, a draft, published — and none where nothing has told it yet
     const d = REC.doc(n.addr); const p = REC.place(documentOf(n.addr) || n.addr);
     const kind = p ? p.kind : d.kind !== 'unknown' ? d.kind : d.meta ? (d.meta.published ? 'edition' : 'draft') : null;
@@ -682,9 +625,8 @@ export async function enter() {
  * landing's levels are read first — a span's, its document's whole text — and
  * where a later move overtook it meanwhile it sets nothing. A landing may
  * name a link's end in the document (`end`: Back's return to the follow it
- * crossed — issue #152's design decision): the walk stands on that link's
- * item where the document's elements list it, else on the span holding the
- * position.
+ * crossed): the walk stands on that link's item where the document's
+ * elements list it, else on the span holding the position.
  * @param {string} addr a document, an account or a board
  * @param {number | null} pos
  * @param {boolean} [byKey] a key made the act
@@ -770,7 +712,7 @@ export function kept() {
 /**
  * The focus follows the camera (rule 3): after a camera move — the wheel,
  * the camera key's drag, a zoom chord, PageDown — re-take it at the scale's
- * grain, in THE RE-TAKE'S ORDER (issue #141's design decision; see the head).
+ * grain, in the re-take's order (see the head).
  * Nearer than far: the document whose region holds the view's centre, and the
  * span in the column under it where that document stands at its own reading
  * scale (T-LAYER's fold and its one test); else the walk's own document, kept
@@ -816,9 +758,8 @@ export async function retakeFromView(byKey = false) {
 }
 
 /**
- * THE PAGE'S OWN DEATH (FP-23: the death takes every surface still showing
- * what the dead session read down at once, then reads it again as a guest),
- * told by M-PUMP once it has emptied the model (its `onDrop`, naming no
+ * The page's own death (FP-23), told by M-PUMP once it has emptied the model
+ * (its `onDrop`, naming no
  * address): the walk taken again where it stood, at once, from the model the
  * death left — its levels and every item named from what a guest's page holds
  * now, so the mirror quotes nothing the dead session read and lists no

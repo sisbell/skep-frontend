@@ -1,333 +1,18 @@
-// N-GO's test against the FAKE PORT: a follow lands on the span its link's
-// far end projects to NOW, outlines that span — its first position and its
-// positions, never the position alone (a mutant that drops the projection's
-// width turns red) — and lights the link followed; a far end the far
-// document's text holds in two runs apart, a passage a later edit cut in
-// two, is outlined in both, in the text's order whatever order the board's
-// set names them in, each labelled, the landing at piece 1 (a mutant that
-// keeps the projection's first member alone, or the set's order, turns red);
-// one an edit set in another order lands at piece 1, never the first run in
-// the text (a mutant landing at the first in the text turns red); one whose
-// bytes repeat is cut into a run of each, unnumbered, "again later" then
-// "again" (a mutant reading the run whole turns red);
-// a link naming the far document whole outlines the document's first
-// position, no width. A follow of a floating end, one the far document's
-// text holds none of, lands at that document's head — its entry settled
-// there, the entry it departed recording the follow, the camera and the walk
-// there — the link lit and nothing outlined, the dead end's face standing at
-// the head with its act, the entry's notice, and Back returns to it, the face
-// shown there again and nothing lit, the link lit again by the Back that
-// crosses the follow (a mutant that faces in place, outlines the head, lands
-// at the end's stored position, stands the face at the act's site, or shows
-// no face on the return turns red); a Back made while its projection reads
-// leaves its entry ahead at the head and shows no face (a mutant that faces
-// after a later act turns red). THE ARRIVAL'S LIFE (FP-21, FP-25): every act
-// whose camera leaves puts both marks out as it leaves — a LEAP, HOME, WHOLE
-// BOARD, an account's region, a jump, Forward, a LEAP or a follow whose
-// failure is learned in the air, the latter lighting the link its face came
-// from — and lights its own alone (a mutant that keeps the marks past any one
-// of them turns red); an act that never leaves keeps them — a LEAP whose
-// failure is known at the act, a follow of a link naming no far document, a
-// follow known to fail at the act, which lights its own link (a mutant that
-// puts them out at the act turns red); a pan, a zoom, a selection and a step
-// keep them, and Esc ends them (a mutant that ends them at a camera move, or
-// keeps them past Esc, turns red); a return restores the outline and the
-// labels as the reader left them, the run a step took the landing to with
-// them, the walk on it, and one Back still returns to where the reader
-// departed (a mutant that restores nothing turns red). THE STEP (FP-21): a
-// step takes the landing among its runs in the passage's order, wrapping,
-// flying to the run at reading size with the walk on it, and pushes nothing
-// (a mutant that steps in the text's order, or pushes, turns red). THE STEP'S
-// LIGHT (issue #152's design decision): the entry a follow or a carrying
-// LEAP departs records the step — the link, the end it was made at and its
-// far end by its slot's stored span; the passage carried by the permanent
-// addresses of its bytes, never its positions. Back lights the link a follow
-// took from the entry it lands on, at the follow's departure, outlining
-// nothing, and the passage a LEAP carried from it, no link lit, wherever its
-// text holds it now — moved, where it stands; in part, that part; not at
-// all, nothing and no face (a mutant that keeps the positions it was carried
-// from turns red); Back across a LEAP that carried nothing lights no link,
-// the landing it reaches restoring its outline as the reader left it (a
-// mutant that relights the follow's link Back did not cross turns red).
-// Forward lights what the step it crosses marked on arrival —
-// the far end outlined, its link lit; the passage carried, in the text the
-// LEAP was made to (a mutant that lights it where the carry began turns
-// red). A jump to the entry behind lights as Back does and one to the entry
-// ahead as Forward does; one across two entries or more lights nothing, onto
-// a notice's entry too (a mutant that lights a longer jump turns red). Back
-// returns the walk to where the step began — the link's item, the passage's
-// first stretch — where the view it lands at shows it at its document's
-// reading scale, and to the entry's place where it does not (a mutant that
-// returns it whatever the view, or never, turns red).
-// Every teleport a key made draws the focus ring at its landing, and one the
-// pointer made puts it out (a mutant that drops any one teleport's word of
-// the key turns red; one that draws the ring at every landing turns red).
-// THE ORDER OF ACTS, each with an answer held while acts are made: a Back or
-// a jump made while a LEAP reads acts from the LEAP's entry, which stands
-// ahead of the cursor at its landing, and the LEAP lands nowhere (a mutant
-// that pushes after the read, or lands an act a later one overtook, turns
-// red); a Back made while a follow reads leaves the follow's entry ahead at
-// its span, the arrival out and the link lit where the follow was made — the
-// reader stood there — the walk returned to its end (a mutant that lights
-// nothing while the entry Back leaves still reads turns red); every act made while a
-// LEAP reads — a LEAP, a follow, HOME, WHOLE BOARD, an account's region —
-// stands after the LEAP's entry and lands (a mutant that leaves any one
-// uncounted turns red); Forward to a LEAP's entry while it reads goes on to
-// the landing the read placed (a mutant that never goes on turns red); a
-// Back reaching a claim puts the arrival out as it is made, lighting the step
-// it crossed, and goes on nowhere once Forward has been made (the ring as
-// Forward left it).
-// THE JUMP (FP-25; issue #137's design decision), each read held: a LEAP to
-// a document whose text the page does not hold, and a follow, fly at once —
-// for the place the unread record gives, for the far document — the walk on
-// it and its reading face there, in the air, and go on to the place the read
-// gives once it answers (a mutant that waits on the read before it flies, or
-// never goes on, turns red); the reader taking the camera over while one is
-// in the air lands it where the camera is, its read only marking its passage,
-// the camera and the walk where the reader left them and the entry keeping
-// the reader's view for Back then Forward (a mutant that flies on, or writes
-// the read's view, turns red); keys pressed while one is in the air are held
-// and made at its landing in order, dropped where the reader took over, a Back
-// abandoned it or its read failed (a mutant that makes them at once, or makes
-// a dropped jump's, turns red); a navigation act is made at once. A board
-// already marked unreachable gets no flight: a LEAP that must read faces at
-// the act's site, no entry, nothing asked. A LEAP to an address on a board the
-// plane does not draw reaches for it: its entry taken at the act, the camera
-// still, its reaching face at the act's site; Esc — after anything nearer —
-// and Back abandon it, its entry given back and its answer moving nothing; its
-// read refused, it faces at the site and gives its entry back; its read
-// answered, the camera leaves, the entry it was made from keeping the view it
-// was left at (a mutant that flies, keeps the entry, or faces elsewhere turns
-// red).
-// A JUMP THAT ENDS IN A NOTICE KEEPS ITS ENTRY (issue #136's design
-// decision): a LEAP or a follow whose reads learn its failure in the air
-// holds its face as its entry's notice where its camera went — the walk on
-// the address there, the mirror naming it as the board answered it, a
-// follow's link lit — dropping the entries ahead of the cursor as any push
-// does (a mutant that hands the entry back turns red); answered before a Back
-// or after it, the trail holds the same entries and numbers, one Back lands
-// where the jump was made, at the view it left, and a second goes one entry
-// further (a mutant that withdraws the entry turns the quick arm red); a
-// notice answered after the reader left moves nothing, and Forward to its
-// entry lands where the camera went — the walk on the address the board said
-// nothing about, with the camera — its face shown again there and its link
-// lit, the follow Forward crossed (a mutant that lands where the follow was
-// made, or shows no face, turns red); Back onto a notice's entry from a follow
-// made from it lights that follow's link alone (a mutant that relights the
-// notice's link turns red). A JUMP WHOSE FAILURE IS KNOWN AT THE ACT NEVER
-// LEAVES (FP-25): a LEAP to an address the page knows the board says nothing
-// about, a follow of such a dead reference — no flight, no entry, nothing
-// asked, the link not counted as followed, its face at the act's site in the
-// place of the card standing there (a mutant that flies, pushes or asks turns
-// red). A FOLLOW TO A WITHHELD DOCUMENT LANDS AT ITS PLACE (issue #179's design
-// decision), whether its own read learns it in the air, the page knows it at
-// the act, the projection says it, or its text is refused once the projection
-// answered: its entry settled at the document whole holding its own withheld
-// words, the link counted as followed and lit, nothing outlined, the jump
-// landed and the walk on the document; the face at the document's place with
-// no sign hiding it — B1-S2's words naming its owner by the one owner rule,
-// the arm beneath, whole the first time and compact the next, its head
-// opening the rest — told by the landing's description (a mutant that faces
-// at the departure, fails it in the air, signs the face or says it through the
-// status region turns red), asking no projection of it (a mutant that asks the
-// projection the board refuses with the document turns red); one whose text
-// the page holds — access changed after it was read — never leaves, its own
-// words at the link's own bytes, named by the follow's caption, the far
-// document's address before them (a mutant that flies it turns red).
-// A JUMP SAYS IT IS READING where the camera is — at the place it left for: a
-// follow's far document, the document a LEAP names whatever site its act
-// names — the one line carrying it while that place is out of view; Back
-// leaves it, Forward to its entry while it reads shows it again there and its
-// answer replaces it with the landing; a LEAP that reads nothing says nothing
-// (a mutant that shows no reading face, shows it for a LEAP that reads
-// nothing, or stands it at the act's site turns red); a follow made from the
-// selection's card ends the card and the selection as its camera leaves, at
-// the act (a mutant that leaves them standing until the landing turns red),
-// and one whose failure is known at the act faces in the card's place, the
-// selection standing under it until Esc.
-// A FOLLOW THAT LANDS NOWHERE IS FACED WHERE THE CAMERA IS: at its site, the
-// link's own bytes in the first edition, where its failure is known at the
-// act — a link naming no far document, a dead reference, a far document
-// withheld whose text the page holds, its face standing with no sign — and
-// pressed on the anatomy card's follow, whose card the face takes the place
-// of; at the far document, where its camera went, where its reads learned it
-// in the air — a dead reference met once the projection answered and its
-// text was read (a mutant that stands any one face elsewhere, or at the
-// control pressed, turns that row red).
-// A departure made
-// during a flight re-takes the flight's destination, so Forward lands there —
-// after a LEAP's flight and after a Back's (a mutant that re-takes the camera
-// mid-flight turns red) — and the act whose flight it cut short ends, the
-// LEAP answering no document landed in (a mutant that leaves a cut flight
-// unsettled, or answers the LEAP's document whatever its flight answered,
-// turns red).
-// A LEAP lands at reading scale at any depth (E18 (a)): to a document minted
-// a grid deeper than any the page booted with, and to a residue member whose
-// many paragraphs fill its room's columns at under two fifths of its place's
-// standard size (a camera whose bound stops at the places' standard sizes
-// lands both below the mount's em and turns red). A LEAP to a passage of an
-// edition folded into columns (issue #15) lands on the passage's line in its
-// own column at reading size (a mutant that places it by the position's
-// fraction of the extent down the room turns red). → AT A DOCUMENT BELOW ITS
-// READING SCALE (issue #140's design decision), dispatched as the platform
-// delivers it, is Enter's act: one trail entry pushed, the landing at reading
-// size, the walk on the document with the ring drawn, and → again enters its
-// first span with no entry (a mutant whose → walks in at any scale turns
-// red); Back to an entry whose view was left below its document's reading
-// scale stands the walk on the document whole, the entry keeping its position
-// (a mutant that lands on the entry's span whatever its view turns red).
-// THE CARRY (foundations §2.3; P43): a LEAP carrying a passage `compare`s it
-// against the text landed in once that text is read, lands at its
-// counterpart there and lights the arrival on that span, no link named (a
-// mutant that ignores the carry, or lights the carried position unprojected,
-// turns red); a passage the text holds in two stretches, its second half
-// standing first, is marked in both, in the text's order, the landing at the
-// passage's start (a mutant that marks the first stretch alone, keeps the
-// passage's order, or lands at the first in the text turns red); Back to it
-// lands on that span and lights nothing; where the
-// text holds none of it, it lands at the first block, unmarked, faced in the
-// dead end's words — at a member in the member's — and offering no act (a
-// mutant that lands where a plain LEAP does, or faces nothing, turns red); a
-// Back made while the compare reads leaves the LEAP's entry ahead at the
-// counterpart the read placed, the arrival out and the passage lit where the
-// carry was made. THE FOUR STATES (issue #153's design decision): a carry or
-// a follow whose text holds the passage in one piece says nothing beyond the
-// outline; one holding only part of it in one stretch — a carry's first
-// five positions of twelve — keeps its outline and says so in the line, the
-// passage named "what you selected" where it is the selection and "the text
-// you were reading" where it is not, counting no runs; one in several runs —
-// all of it in two stretches, a follow's nine bytes of twenty-two in two runs
-// — labels each run, its piece in the passage's own order, the line the label
-// of the run it stands at, which adds how much of the passage the runs hold
-// and "in another order" where the text sets them so, every label the
-// description of its item and the line the description of the item the focus
-// lands on (a mutant that lands silent, counts "places", or reads a follow's
-// runs by their widths, turns red); it offers the text the
-// passage came from beside it where that holds it whole, and at a published
-// landing the latest member holding it in one piece, once its reads find it
-// — never the text landed in — whose LEAP carries it there, the outline
-// alone, and none where the board did not end the chain (issue #184: a
-// mutant that offers from a chain cut short turns red); it stands while a card opens at the landing and leaves with the
-// outline at the next landing (a mutant that makes it an overlay a card replaces
-// turns red); a carry its text holds none of describes its item in the dead
-// end's words, its face told there and not by the status region, and told so
-// again where Back returns to its entry, the landing restored; a compare the board refuses
-// for its size is asked over each half of the text and lands as their pairs
-// place it (a mutant that asks no part turns red); one the board does not
-// answer lands at the place asked, unmarked, saying it could not tell and
-// why, with "try again", which reads again and lands at the counterpart,
-// re-settling its entry with no trail move (a mutant that faces, or
-// re-pushes, turns red); a follow whose projection the board declines by a
-// name that says nothing of the far document lands at that document's head,
-// unmarked, the link lit, its line keyed on its own projection's refusal,
-// never another read's (a mutant that faces it, or keys the line on the last
-// refusal met, turns red); one refused for its size is placed through the
-// far text's image, held as its projection. A BACK MADE WHILE A CARD
-// READS (O-HOST's opening): who wrote this?, who uses this?, the versions
-// list — ended while it counts the members and while it reads a member's
-// row — and the anatomy card each show nothing over the place Back landed
-// once their reads answer (a mutant that opens any one of them without the
-// host's opening turns its row red), the versions list asking nothing after
-// its end (a mutant that drops any of its checks turns red); asked again
-// with no act after it, each shows. THE ANATOMY CARD STANDS AT ITS SITE:
-// opened at an element, at that element, the link's own bytes beside it,
-// where it stands once the text layer rebuilds or takes the element down;
-// opened at none, at those bytes (a mutant that anchors it at the element
-// alone turns red). THE ANATOMY CARD OPENS IN THE ACT THAT
-// ASKS FOR IT — a links-card row, Enter at the link's element, a click on
-// its symbol, a click on its marked span: a Back made at once ends it, and
-// nothing shows over the place Back landed once its reads answer (a mutant
-// that puts any one caller behind an `import()`, the opening begun only once
-// the load answers, turns its row red); asked with no act after it, each
-// shows; Esc made at once after a row ends the card still reading alone, the
-// links card standing until the next Esc (the same mutant at the row turns
-// it red). A FOLLOW MADE WHILE A CARD READS ends
-// the card's opening as it is made, the follow's landing still to come: once
-// the card's read answers nothing shows over the place the follow leaves —
-// the follow's reading face stands there — and the follow lands (a mutant
-// whose act leaves the opening reading turns red). A FACE A NAVIGATION ACT SHOWS stands over a card asked at the place
-// it leaves: asked while the act read — a follow of a dead reference, a LEAP
-// the board answers for with nothing — the card's answer shows nothing over
-// the face (a mutant whose show does not count itself turns red); asked
-// before the act — a follow faced at once, one faced once its read answers in the air —
-// likewise, held by the act's end of the opening and by the face's show alike
-// (a mutant that drops both turns red). NO LANDING ENDS CHROME (issue #171's
-// design decision): a card shown while a jump is in the air — a LEAP to a
-// document whose text the page does not hold, a follow, a Forward reaching an
-// entry still reading — stands over its landing, and one asked then opens
-// there once its read answers (a mutant that dismisses chrome or ends the
-// opening at the landing, or ends the opening with the reading face's end,
-// turns red). AN OVERLAY WHOSE FIELD HOLDS THE CARET STANDS THROUGH A JUMP
-// (its rule 2): a walk's moment being answered stands through a LEAP that
-// reaches, one whose read fails in the air and one landing at a dead end, its
-// entry holding the face the read met as its notice (a mutant whose departure
-// dismisses it, or whose faces take its place, turns red). ENTER AT A
-// WITHHELD RUN (D5 K-7)
-// shows the run's face whole, taking no focus: its head, the arm, then C-67's
-// pointer, a button following the origin owner's passing claim — the face's
-// act, which run by a key LEAPs to that claim's home, a trail entry with the
-// ring drawn that Back returns to the run from (a mutant that selects the run
-// as any other span, or beside its face, or leaves the pointer no act, turns
-// red); every claim
-// quoting, the QUOTING sibling a line and no act; no claim, the head and the
-// arm alone; Enter at any other span still selects it whole (D8). A TAIL
-// PRESSED (issue #132) reads its documents whole first — a mutant that lists
-// before reading finds no end where the page holds no text, and turns red —
-// then shows its one link's card, its far end in the words its tail carries
-// ("no document here yet", a dead reference in the reader's own account: a
-// mutant that keeps the card's "…" turns red), or lists its several links,
-// each row naming its far end and opening that link's card; a Back made
-// while it reads shows nothing.
-// A VERSION MOVE (issue #154's design decision): the versions list's read act
-// lands in place — the camera never flies, the box takes the version, the
-// trail takes one entry recording the passage carried, the arrival at its
-// counterpart and the walk on it (a mutant that flies, or leaves the box on
-// the version left, turns red); Back restores the version left at its view,
-// Forward the version moved to; a version lacking the passage keeps its line
-// at the nearest passage the two share, saying the passage is not in that
-// version, one sharing nothing at its head; a compare the board does not
-// answer lands at the head unmarked, its "try again" landing in place with no
-// trail move of its own; a selection standing in the version left ends with
-// its text. Only an act aimed at a box changes its version — a LEAP, a
-// follow, Back, Forward — never HOME, WHOLE BOARD, a pan or a zoom; a newer
-// version's arrival pins a box read at its plain address on the member being
-// read (a mutant that swaps the text under the reader turns red), and does
-// nothing where the box is pinned already, where no member held the text
-// before, for a daughter, or where the page holds none of the text.
-// A CHANGE OF THE PAGE'S CLASS (issue #177): the arrival goes — its outline,
-// labels, line and descriptions — no entry keeps it or a notice, so Back and
-// Forward restore none of it (a mutant that keeps the entries' arrivals turns
-// red); no entry holds a document's words — HOME's its act's name, a draft's
-// its box's first line read from the model, nothing until a read answers it,
-// then the cover's (a mutant that copies the label at the push turns red);
-// Back to a covered draft's entry reads it first, then lands on its covered
-// box framed whole, the walk on it and its withheld face there in the
-// ending's words, and once covered faces at once (a mutant that lands on the
-// entry's view, or shows no face, turns red).
-// Back across a follow made at a link's end drawn at a withheld run outlines
-// the whole run from its start, lights the link and stands the walk on the
-// run's item (issue #202: a page whose Back marks no run turns red).
-// WHERE NO BOARD IS HELD (issue #215; FP-35) the launch pushes no entry, the
-// walk on its root, and every act that needs a board — a LEAP, HOME, WHOLE
-// BOARD, an account's region, the walk's keys, K-8, the selection's chords,
-// the strip — answers at its site with the no-board face, its "try again"
-// with it, making no entry, no flight and no read; PageDown stays the
-// camera's; a moment's unfold flies the camera alone (a page that flies to
-// board 1, pushes an entry naming it, or says nothing, turns red).
-// THE PASSAGE LEFT (issue #221): Back to an entry whose document was set
-// again while the reader was away — a narrower view folding it at another
-// measure, an edit setting new bytes before the passage — lands where the
-// passage under the visible centre stands at the height it stood and at its
-// em, its own bytes under the centre, where the view left now reads another
-// line (a mutant that flies to the view left, or places the passage by its
-// old position, turns red); one whose text a feed row dropped flies at once to
-// the view left, reads the text beside the flight and goes on to the passage
-// once it answers (a mutant that lands at the view left turns red); and Back
-// puts the walk where it stood as the reader left, never on the landing made
-// there (a mutant that stands it on the landing turns red).
-// The overlay host stands on a stand-in element, the platform's document a
-// stand-in beside it, so a face a landing shows is read back from what the
-// host wrote.
+// N-GO's test against the fake port: what each navigation act — a LEAP, a
+// follow, a version move, HOME, WHOLE BOARD, an account's region, a moment's
+// view, Back, Forward and a trail jump — marks, lights, says and pushes, and
+// where its camera, its walk, its focus ring and its faces go, at any board
+// speed and in whatever order the reads answer: the arrival's two marks and
+// their life, the four states and the runs' labels, the step and its light,
+// the order of acts, the jump in the air and the keys it holds, a jump
+// reaching, failures known at the act and learned in the air, a follow to a
+// withheld document, the chrome a landing leaves standing and a field that
+// keeps its caret, cards opened while an act reads, Enter at a withheld run
+// and a tail pressed, the box's version, a change of the page's class, where
+// no board is held, and the passage Back lands on (FP-20, FP-21, FP-22,
+// FP-25, FP-29, FP-35). The overlay host stands on a stand-in element, the
+// platform's document a stand-in beside it, so a face a landing shows is read
+// back from what the host wrote.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -390,7 +75,7 @@ const takeUnfollowed = () => { REC.takeLinks(D, [UNFOLLOWED]); REC.takeLink({ ad
 const SPLIT = D + '.0.2.4';
 /** the cut citation taken into the model, drawn at the first edition */
 const takeSplit = () => { REC.takeLinks(D, [SPLIT]); REC.takeLink({ addr: SPLIT, from: [span(D, 1, 3)], to: [span(FAR, 3, 22)], type: CITE }); };
-// a citation from the first edition of a passage FAR's current text no longer holds — a floating end: its far end, stored at FAR's 8,
+// a citation from the first edition of a passage FAR's current text does not hold — a floating end: its far end, stored at FAR's 8,
 // projects to nothing there
 const FLOAT = D + '.0.2.5';
 /** the floating citation taken into the model, drawn at the first edition */
@@ -432,7 +117,7 @@ const takeRefusedProjections = () => {
 // with nothing (GONE_LATE) or withholds from the reader (HIDDEN_LATE)
 const GONE_LATE = '1.0.1.0.13', DEAD_LATE = D + '.0.2.8', HIDDEN_LATE = '1.0.2.0.7', LOCKED_LATE = D + '.0.2.9', LATE_EXTENT = 20;
 // a citation from the first edition of a passage of TURNED, 1.0.2's draft whose text the page read and the board now withholds from
-// the reader — its access changed after the text was read (issue #179's design decision's first case: "Its text is on screen")
+// the reader — its access changed after the text was read
 const TURNED = '1.0.2.0.8', TURNED_TEXT = 'A draft read before its owner withdrew it.', TURNED_LINK = D + '.0.2.18';
 /** the turned citation taken into the model, drawn at the first edition, TURNED's text held and its read refused `withheld` since */
 const takeTurned = () => {
@@ -544,7 +229,7 @@ const script = {
   [FAKE.keyOf('op', { frame: F.inClaims(DEAD, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   [FAKE.keyOf('op', { frame: F.outClaims(DEAD, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   ...reads(FAR2, FAR_TEXT, []), ...reads(FAR1, FAR_TEXT, []),
-  // the version offers' reads (issue #153): the cut citation's slot projected into FAR's first member, whole there at 3, and that
+  // the version offers' reads: the cut citation's slot projected into FAR's first member, whole there at 3, and that
   // run's bytes; the moved passage's compare against the first member, whole at 2; PARTIAL's against FAR, its first five positions at
   // 25, and against the first member, none of it
   [FAKE.keyOf('op', { frame: F.project(SPLIT, 2, FAR1) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.3', width: '0.22' }] } },
@@ -630,7 +315,7 @@ before(async () => {
   PUMP.start({ onDirty: () => {} });
   // the walk reads N-GO as the app hands it in: where Back's light stands, what a landing says, the version each box shows
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn });
-  // the text layer reads the version each box shows as the app hands it in: the one whose passage a view reads (issue #221)
+  // the text layer reads the version each box shows as the app hands it in: the one whose passage a view reads
   LAYER.readers({ shown: GO.shownIn });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: FAR, kind: 'edition', label: 'far', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
@@ -645,7 +330,7 @@ before(async () => {
 
 /** the arrival's two marks: the span outlined and the links lit */
 const marks = () => [GO.arrivalMark(), GO.litLinks()];
-/** the entry behind the cursor's: the one the last push departed, holding the step it took (issue #152) */
+/** the entry behind the cursor's: the one the last push departed, holding the step it took */
 const departed = () => TRAIL.all()[TRAIL.cursorIndex() - 1];
 
 test('a follow outlines the span its link\'s far end projects to — its first position and its positions — and lights the link followed', async () => {
@@ -883,7 +568,7 @@ test('every act whose camera leaves puts the arrival\'s two marks out as it leav
   };
   /** GONE as the page holds it: known to be an address the board says nothing about, or not yet read */
   const gone = (/** @type {boolean} */ known) => { if (known) REC.takeRefused(GONE, 'unregistered'); else REC.invalidate(GONE); };
-  /** @type {Array<[string, () => Promise<unknown>, typeof arrived | null, string[]]>} each act, the arrival it leaves standing — none where its camera leaves — and the links lit after it: a follow that faces lights the link its face came from, known at the act or learned in the air (issue #136; FP-25); a jump to the entry behind, the link of the follow it crosses, as Back does (issue #152) */
+  /** @type {Array<[string, () => Promise<unknown>, typeof arrived | null, string[]]>} each act, the arrival it leaves standing — none where its camera leaves — and the links lit after it: a follow that faces lights the link its face came from, known at the act or learned in the air (FP-25); a jump to the entry behind, the link of the follow it crosses, as Back does */
   const acts = [
     ['HOME', () => GO.home(), null, []],
     ['WHOLE BOARD', () => GO.wholeBoard(), null, []],
@@ -1295,7 +980,7 @@ test('Forward to a LEAP\'s entry while it reads lands once the read answers, at 
   assert.deepEqual(fake.unanswered, []);
 });
 
-// ---- THE JUMP (FP-25; issue #137's design decision: "the camera leaves at once … the read only finishes the landing") --------
+// ---- THE JUMP (FP-25) --------
 
 /** a key as the platform delivers it at the plane: its key, and its modifiers */
 const keyOf = (/** @type {string} */ key, /** @type {{metaKey?: boolean, ctrlKey?: boolean, shiftKey?: boolean}} */ mods = {}) => /** @type {any} */ ({ type: 'keydown', key, keyCode: 0, isComposing: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, preventDefault() {}, ...mods });
@@ -1722,7 +1407,7 @@ test('Back returns the walk to where the step it crossed began — the link\'s i
   assert.deepEqual(fake.unanswered, []);
 });
 
-// ---- THE RUNS' LABELS, THE STEP AND THE ARRIVAL'S LIFE (FP-21; issue #158's design decision) -----------------------------
+// ---- THE RUNS' LABELS, THE STEP AND THE ARRIVAL'S LIFE (FP-21) -----------------------------
 
 // a citation from the first edition of a passage of FAR an edit set in another order: its far end, FAR's 30th to 39th bytes, stands
 // with its second half at FAR's 5 and its first half at FAR's 25;
@@ -2305,7 +1990,7 @@ test('an overlay whose field holds the caret — a walk\'s moment being answered
     for (const [i, [what, before, held, jump, at, notice]] of jumps.entries()) {
       await run(GO.leapTo(D));
       before();
-      // a walk of its own for each jump: the moment the last one left folded opens its walk's next folded (issue #182)
+      // a walk of its own for each jump: the moment the last one left folded opens its walk's next folded
       const id = 'm-171-' + i;
       FACES.moment({ id, kind: 'ask', data: { text: 'name this' }, walk: 'w-171-' + i, board: null, answerable: true });
       globalThis.document.activeElement = /** @type {any} */ (field);
@@ -2421,7 +2106,7 @@ test('a tail pressed (issue #132) reads its documents whole first, then shows it
   assert.deepEqual(fake.unanswered, []);
 });
 
-// ---- THE VERSION MOVE (issue #154's design decision: "Version moves land in place") ------------------------------------
+// ---- THE VERSION MOVE (FP-22) ------------------------------------
 
 /** a `compare` answer from `d1`'s text into `d2`'s: each pair its position in `d1`, its position in `d2`, its positions */
 const between = (/** @type {string} */ d1, /** @type {string} */ d2, /** @type {Array<[number, number, number]>} */ pairs) => ({ result: { as_of: 1, resp: 'compare', pairs: pairs.map(([u1, u2, width]) => ({ d1, d2, u1: { ordinal: String(u1), subspace: '1' }, u2: { ordinal: String(u2), subspace: '1' }, width: String(width) })) } });
@@ -2575,7 +2260,7 @@ test('a newer version\'s arrival never changes what a box shows (issue #154; fou
   assert.deepEqual(fake.unanswered, []);
 });
 
-// ---- THE PASSAGE LEFT (issue #221: "Back finds where that passage sits now and lands on it") ---------------------------
+// ---- THE PASSAGE LEFT: Back lands on the passage the reader left ---------------------------
 
 // REWRITTEN, DROPPED: two drafts of eighty paragraphs, which an edit sets a paragraph of new bytes before while the reader is
 // away: the first's text set again in one step, as a refresh sets it (M-REC's `setAgain`); the second's dropped, as a feed row

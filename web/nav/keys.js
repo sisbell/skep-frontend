@@ -1,89 +1,64 @@
-// N-KEYS — D5's key table as a dispatch (the structure record §3.2 "N-KEYS";
-// designs/D5-keys.md §1.1–§1.8, §1.11 (the UI rows), §4 the focus model;
-// foundations §2.7). Layer 2. The TABLE pure; the dispatch acts on the owners
-// it names (the one layer-2 module that imports across the layer — S-7 (a)).
-// State: VIEW — the keys a jump in the air holds for its landing, in the
-// order they were pressed — THE ONE OWNER of them (FP-10); the swallow's
-// transient mark is the line's.
-// THE KEYS A JUMP IN THE AIR FINDS (FP-25: "Input acts where the camera is
-// … every other key acts from the landing"; issue #137's design decision:
-// "Keys that are not navigation acts wait for the landing and then apply
-// there, in order"): the navigation acts — Mod+[, Mod+], Mod+1…9, Mod+0,
-// Mod+Shift+H — are made at once, the jump in the air abandoned (N-GO); every
-// other key the page would act on while N-GO's jump is in the air is held
-// (`hold`), its platform default prevented as it is pressed, and made at the
-// jump's landing, in the order pressed, with the context it was pressed in,
-// each read where the focus is then — so a key means the same however slowly
-// the board answers; a jump that never lands — the reader took the camera
-// over, its read failed, a later act overtook it — drops the keys it held. A
-// key pressed while held keys are being made waits behind them. The keys a
-// control takes as its own stay its own: a field's, the line's ← and → among
-// its acts, an overlay's and a landing's line's buttons.
-// No plane command rides a printable key (§2.7): every command is a CHORD
-// (Mod = ⌘ on macOS, Ctrl elsewhere — D5 §0, RULED) or a navigation key with
-// the platform's meaning; a printable key on the plane is SWALLOWED, never
-// dispatched, the swallow line K-9 shown at the focus until the next act; no
-// key is dispatched while an input method's composition is open (the IME
-// guard); Esc closes the most recently opened of the box, a card or scene
-// still reading, the overlay, the scene and the selection (§4 rule 7's
-// "innermost thing"; D7: a scene stands over a selection, so it closes
-// first), and after them all ends the arrival (FP-21: "The state ends only at
-// another landing, at find opening, or at Esc after anything nearer"; N-GO's
-// `endArrival`). THE STEP (FP-21: "Stepping the pieces follows find's
-// concept"; issue #158's design decision): Mod+G and Mod+Shift+G — K-91's
-// find chords — step to the next and the previous run of an arrival in
-// several runs (N-GO's `step`), from the plane, the corner, the one line, a
-// landing's line and a standing overlay alike, while such an arrival stands,
-// and are the platform's while none does. Tab is the platform's, over the
-// page's order: the line (ONE stop, ← and → among its acts — K-22) → the
-// plane (the mirror's current item) → the focused document's corner, where
-// Enter takes the corner's act and the walk's keys and the swallow do not
-// run (K-57) → a landing's line's acts, while it stands (O-LAND; issue #153),
-// whose keys are the buttons' own → a standing overlay → the line (§4 rule
-// 5); while the scene
-// stands, its panes — each with its own corner, where Enter takes that
-// corner's act (SC's `key`; issue #160) — and its acts take the place of the
-// plane's stop and the corner (SC), and no key reaches what it covers — the
-// walk, the selection, the plane's corner — wherever the focus is
-// (`sceneKey`; D5 M-4: "the walk within the focused pane"). Whether a key made an act is the focus owner's one
-// reading, handed in by the app with each key (`Ctx.byKey`; FP-20), so a
-// teleport or a re-take a key made puts the platform's focus on its landing
-// wherever the key was pressed, the ring drawn (rules 10, 12). → at a
-// document below its reading scale — the walk's one stop there, collapsed
-// (N-WALK's `collapsed`) — takes Enter's act, a teleport to its reading scale
-// pushed on the trail, as a click on it is (issue #140's design decision;
-// foundations §2.2: "a walk move into a document's reading scale, which lands
-// where Enter on that document lands"); at its reading scale → enters its
-// spans (K-3). The paging key
-// (K-6) at reading scale continues at the next column's top, where the view
-// already shows the foot of the column it reads (issue #15's design decision;
-// T-LAYER's `pageTarget`), and pages the view by most of its height
-// everywhere else. Mod+S is
-// swallowed: no save exists (K-74). Shift with ← and → is never dispatched:
-// it is the platform's own (D5 K-71, its text keys "Shift extending"), which
-// extends a selection the platform holds where that selection holds the
-// focus — after a drag, not from the mirror's item or an overlay (the gate's
-// figures, Chrome on its machine) — and APP-INPUT reads what it does back
-// into the page's selection (R11).
-// The wireframe's bare keys (`/`, `t`, `k`, `0`–`9`, `+`, `-`, `h`, `?`, `w`,
-// `n`, `p`) are a sketch and are RE-CUT here to D5's rows (the record §3.4
-// (ix)): `/` → K-30 Mod+L / Mod+K; `0`/`g`/Home → K-13 Mod+0, K-14
-// Mod+Shift+H; `t` → K-41 Mod+Y; `1`–`9` (a push) → K-40 Mod+1…9 (a cursor
-// move); `+`/`-` → K-11 Mod+= / Mod+-; the arrows' pan and the `k` toggle →
-// the walk, always live (K-1…K-7). K-91's find itself is NOT in this lane's
-// cut — its box has no design form (reported); its next and previous chords
-// step an arrival's runs (see above). Every teleport a key makes, and
-// every camera move a key makes that re-takes the focus, is told a key made
-// it, so the ring stands at the focus it lands (D5 §4 rule 2).
-// WHERE NO BOARD IS HELD (issue #215's design decision: "an act that needs a
-// board the reader lacks answers where it is taken and names what still
-// works. This covers … home and the keyboard walk. None stays silent";
-// FP-35): the walk's keys at the plane (K-1 … K-5, K-7), K-8, the
-// selection's slot chords (K-47 … K-52) and the strip (K-23) each answer with
-// O-FACES' no-board face, why and what still works, as HOME and WHOLE BOARD
-// do through N-GO; the paging keys and the zoom chords stay the camera's.
-// Rules: FP-1, FP-2, FP-9 (a key changes view state or asks for a read, and
-// marks the frame dirty), FP-10, FP-13, FP-25, FP-35.
+// N-KEYS — D5's key table as a dispatch (the structure record §3.2; D5
+// §1.1–§1.8, §1.11, §4; foundations §2.7). Layer 2. The table (`TABLE`) is
+// pure; the dispatch acts on the owners it names, the one layer-2 module
+// that imports across the layer (S-7 (a)). State (FP-10): the keys a jump in
+// the air holds for its landing, in the order they were pressed, and whether
+// they are being made; the swallow's transient mark is the line's.
+// The dispatch (`dispatch`; FP-25): the navigation acts — Mod+[ and Mod+]
+// (K-20, K-21), Mod+1…9 (K-40), Mod+0 and Mod+Shift+H (K-13, K-14) — are
+// made at once, a jump in the air abandoned (N-GO); every other key the page
+// would act on while N-GO's jump is in the air, or while held keys are being
+// made, is held (`hold`), its platform default prevented as it is pressed,
+// and made at the jump's landing (`replay`) in the order pressed, with the
+// context it was pressed in, its act read again where the focus is then
+// (`route`), so a key means the same however slowly the board answers; a
+// jump that never lands drops the keys it held. The keys a control takes as
+// its own stay its own: a field's, the line's ← and → among its acts, an
+// overlay's and a landing's line's buttons.
+// No plane command rides a printable key (§2.7): every command is a chord
+// (Mod = ⌘ on macOS, Ctrl elsewhere; D5 §0) or a navigation key with the
+// platform's meaning; a printable key on the plane is swallowed, never
+// dispatched, the K-9 line shown at the focus (`swallow`); Mod+S is
+// swallowed too (K-74), Mod+R and F5 taken and nothing reloaded (K-94), and
+// the platform's own chords — copy, paste, cut, select all, print, close,
+// quit, minimize, hide, preferences — are never taken (K-92, K-93). No key is
+// dispatched while an input method's composition is open (the IME guard).
+// Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
+// box, a card or scene still reading, the overlay, a jump reaching, the
+// scene, the selection, and after them all the arrival (FP-21; N-GO's
+// `endArrival`). Mod+L and Mod+K open the LEAP box (K-30), Mod+Y the trail's
+// list (K-41), Mod+= and Mod+- zoom the camera by 1.25 about the view's
+// centre and re-take the focus (K-11), Mod+Shift+P shows the one line's strip
+// (K-23), and the selection's slot chords (K-47 … K-52) and K-8's
+// select-by-span act from the plane and from a standing overlay alike. Mod+G
+// and Mod+Shift+G (K-91) step to the next and the previous run of an arrival
+// in several runs (N-GO's `step`), from the plane and every control on it
+// alike, while such an arrival stands or a jump is in the air that may land
+// one, and are the platform's otherwise (FP-21). Where the focus is
+// (`Ctx.where`) decides the rest: in a field every key but Esc is the field's
+// own; on the line ← and → move among its acts and every other key is the
+// act's own (K-22); at a corner Enter takes the corner's act (K-57) and its
+// other keys are the platform's; in an overlay and at a landing's line every
+// key is the control's own; on the plane the walk's keys (K-1 … K-5) move
+// the walk, Enter activates the focus (K-7) and the paging keys page the
+// camera (K-6); while the scene stands its keys alone are read (`sceneKey`;
+// D5 M-4), and nothing under it takes one. Whether a key made an act is the
+// focus owner's one reading, handed in by the app with each key (`Ctx.byKey`;
+// FP-20), so a teleport or a re-take a key made puts the platform's focus on
+// its landing wherever the key was pressed, the ring drawn (rules 10, 12). →
+// at a document below its reading scale (N-WALK's `collapsed`) takes Enter's
+// act, a teleport to its reading scale pushed on the trail (foundations
+// §2.2); at its reading scale → enters its spans (K-3). The paging key
+// continues at the next column's top where the view shows the foot of the
+// column it reads (T-LAYER's `pageTarget`; FP-12), and pages the view by 0.9
+// of its height everywhere else. Shift with ← and → is never dispatched: it
+// is the platform's own (K-71), and APP-INPUT reads what it does back into
+// the page's selection. Where no board is held (FP-35) the walk's keys at
+// the plane (K-1 … K-5, K-7), K-8, the selection's slot chords (K-47 … K-52)
+// and the strip (K-23) each answer with O-FACES' no-board face, as HOME and
+// WHOLE BOARD do through N-GO; the paging keys and the zoom chords stay the
+// camera's.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-25, FP-35.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -101,18 +76,18 @@ import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { t } from '../strings.js';
 
-/** the platform's primary command modifier: ⌘ on macOS, Ctrl elsewhere (D5 §0 RULED) */
+/** the platform's primary command modifier: ⌘ on macOS, Ctrl elsewhere (D5 §0) */
 export const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || '');
 
 /**
- * @typedef {Object} Row — one row of D5's table the lane built
+ * @typedef {Object} Row — one row of D5's key table
  * @property {string} id K-n
  * @property {string} chord the key as D5 writes it (`Mod+L`, `↓`, `Enter`)
  * @property {string} act the act's name
  * @property {'plane' | 'line' | 'box' | 'trail' | 'selection' | 'cards' | 'corner' | 'scene' | 'platform'} surface
  */
 
-/** THE TABLE — every chord this lane binds, by D5's row (K-9's swallow, K-10's quasimode and K-12's pinch are the input module's) */
+/** the table: every chord the page binds, by D5's row — K-9's swallow, K-10's quasimode and K-12's pinch are APP-INPUT's */
 export const TABLE = Object.freeze(/** @type {Row[]} */ ([
   { id: 'K-1', chord: '↓', act: 'walk.down', surface: 'plane' },
   { id: 'K-2', chord: '↑', act: 'walk.up', surface: 'plane' },
@@ -178,7 +153,7 @@ export function chordOf(/** @type {KeyboardEvent} */ e) {
 /** is the key printable (it would type a character in a field)? */
 export const printable = (/** @type {KeyboardEvent} */ e) => e.key.length === 1 && !(MAC ? e.metaKey : e.ctrlKey) && !e.altKey;
 
-/** how a chord is drawn for this platform (D5 §0: the UI lane's) */
+/** how a chord is drawn for this platform (D5 §0) */
 export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('Mod+', '⌘').replace('Shift+', '⇧').replace('Enter', '↩') : chord.replace('Mod', 'Ctrl'));
 
 /**
@@ -345,10 +320,10 @@ async function replay() {
  * selection's slot chords, which have nothing to act on in the scene, are
  * taken and do nothing, so the browser's own meanings never run (Mod+Shift+R
  * would reload), as F5 is (K-94). On the one line or a standing overlay every
- * other key is that control's own. Elsewhere ← ends the scene (K-63: "←
- * out of a pane's document"); a pane's own keys moved that pane, and Enter at
- * a pane's corner took the corner's act, before the dispatch (SC's `key`,
- * K-60; issue #160), and → and Enter elsewhere in a pane, and Shift with the
+ * other key is that control's own. Elsewhere ← ends the scene (K-63); a
+ * pane's own keys moved that pane, and Enter at a pane's corner took the
+ * corner's act, before the dispatch (SC's `key`, K-60), and → and Enter
+ * elsewhere in a pane, and Shift with the
  * arrows, are the platform's; on the scene's acts every other key is the
  * button's own — Enter and Space press it; a printable key anywhere else is
  * swallowed, the K-9 line shown.
@@ -380,8 +355,8 @@ function swallow(/** @type {KeyboardEvent} */ e) {
  * the box, the card or scene still reading (O-HOST's opening, ended alone:
  * the overlay standing under it stands), the overlay — a jump's reaching
  * face among them, whose dismissal abandons the jump — then a jump reaching
- * whose face another overlay took the place of (FP-25: "Esc or Back abandons
- * the jump"; N-GO's `abandon`), the scene, then the selection, which a scene
+ * whose face another overlay took the place of (FP-25; N-GO's `abandon`),
+ * the scene, then the selection, which a scene
  * stands over and which outlives it, then the arrival — its outline, its
  * labels and its line (FP-21; N-GO's `endArrival`); on the bare plane nothing.
  */
@@ -401,7 +376,7 @@ export function esc() {
  * document, where the face of a failure known at the act stands (N-GO) — a withheld
  * run shows its face whole (§2.1), C-67's pointer its offered act, a LEAP to
  * the edition its claim names made at the run, reached by Tab (K-58); any
- * other span is selected whole (D8: until the editor's caret), a link's
+ * other span is selected whole (D8), a link's
  * symbol opens its card, which takes the focus as a key opened it (K-55).
  * → at a document below its reading scale takes this act too (K-3; see the
  * head).
@@ -426,9 +401,8 @@ async function activateFocus(byKey) {
  * A paging key (K-6): at reading scale, the view's centre over a column whose
  * foot the view already shows (PageDown) or whose top it shows (PageUp), the
  * next column's top — or the previous one's — brought to the top of the view,
- * centred across it, at once (T-LAYER's `pageTarget`; issue #15: "the paging
- * keys continue at the next column's top"); anywhere else the view paged by
- * 0.9 of its height.
+ * centred across it, at once (T-LAYER's `pageTarget`; FP-12); anywhere else
+ * the view paged by 0.9 of its height.
  * @param {1 | -1} dir
  */
 function page(dir) {
@@ -438,7 +412,7 @@ function page(dir) {
   CAM.panBy(0, dir > 0 ? -VH * 0.9 : VH * 0.9);
 }
 
-/** a zoom chord (K-11): the camera stepped about the view's centre, the focus re-taken at the new grain with the ring drawn (rule 10: a key's re-take takes the platform's focus wherever the key was pressed) */
+/** a zoom chord (K-11): the camera stepped about the view's centre, the focus re-taken at the new grain with the ring drawn (rule 10) */
 function zoomAboutFocus(/** @type {number} */ factor, /** @type {boolean} */ byKey) {
   const { VW, VH } = CAM.viewport();
   CAM.zoomAt(factor, VW / 2, VH / 2);

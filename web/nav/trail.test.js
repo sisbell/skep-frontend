@@ -1,42 +1,15 @@
-// N-TRAIL's test: pushed by teleports; the departed view re-taken; Back and
-// Forward move the cursor and discard nothing; a jump never pushes; a push
-// behind the cursor drops the entries ahead. THE CLAIM (FP-25: the place its
-// camera left for): it stands where it was pushed, a departure from it
-// re-takes its view, and a push from it writes its step (a mutant that keeps
-// a claim's view, or writes it no step, turns red); settled with a place, it
-// keeps its place and takes its landing, its reading notice taken off (a
-// mutant that leaves the reading notice standing turns red), what its push
-// dropped staying dropped; settled with no view — the reader took the camera
-// over there — it keeps the view it stands at (a mutant that writes one turns
-// red). Settled with a notice (issue #136's design decision), whether the
-// cursor stands on it or a Back left it while it read, it keeps its place and
-// the number it took as it was pushed, holding the notice where it stands,
-// the cursor where the last move put it, and nothing its push dropped comes
-// back — so one Back from it returns to the entry the jump was made from and
-// a second goes one further either way (a mutant that hands the entry back,
-// or puts the dropped entries back, turns red). THE STEP (issue #152's design
-// decision): a push writes the step it takes on the entry it departs, in the
-// place of any that entry held, and none where it takes none (a mutant that
-// writes the step on the entry pushed, or keeps the step an entry held, turns
-// red); a cursor move writes none. A JUMP WHOSE CAMERA NEVER LEFT gives its
-// entry back (FP-25): its push undone — the entry gone, the cursor on the one
-// it was made from, that entry's step as the push found it, the entries the
-// push dropped standing again — and a move waiting on it woken; only the
-// newest entry, the last push's, is given back (a mutant that leaves the
-// dropped entries out, or the step the push wrote, turns red). A jump whose
-// camera leaves only once its read placed it re-takes the view of the entry
-// it was made from as it leaves. A reset wakes every move waiting on a claim.
-// A departure re-takes the place of the cursor's entry — the version its box
-// shows then — and never a claim's, which keeps the address its jump named
-// while it reads (issue #154: a newer version's arrival pins a box on the
-// member being read). WHAT A VIEW READS AND WHERE THE WALK STOOD (issue
-// #221): every departure — a push's, Back's, Forward's, a jump's, a jump's
-// camera leaving — re-takes both beside the view on the entry it leaves (a
-// mutant that re-takes the view alone turns red); a landing that writes a
-// view writes what that view reads and drops where the walk stood, one that
-// writes none keeps both (a mutant that keeps the walk past a landing turns
-// red); a change of the page's class drops both (a mutant that keeps them
-// turns red).
+// N-TRAIL's test: entries pushed by teleports, each departure re-taking the
+// view, what it reads and where the walk stood on the entry it leaves; Back,
+// Forward and a jump moving the cursor and dropping nothing, a push behind
+// the cursor dropping the entries ahead; a claim standing where it was
+// pushed, re-taken by every departure, settled with a place — its reading
+// notice taken off, what its push dropped staying dropped — or with no view
+// where the reader took the camera over, or with a notice, keeping its place
+// and its number either way; the step a push writes on the entry it departs
+// and a cursor move writes nowhere; a jump whose camera never left giving its
+// entry back; the place of the cursor's entry re-taken and never a claim's;
+// a change of the page's class dropping what each entry's view read; and a
+// reset waking every move waiting on a claim (FP-22, FP-25, FP-29).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from './trail.js';

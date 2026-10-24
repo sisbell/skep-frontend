@@ -1,313 +1,195 @@
-// N-GO — a TELEPORT (the structure record §3.2 "N-GO"; S-7 (a)). Layer 2.
-// ENGINE-BOUND only through O-HOST; its arithmetic pure. State: VIEW — the
-// arrival's two marks, what a landing says of the passage it carried or
-// followed (`landing`) and the run it stands at, the trail entry they stand
-// at, the light a one-step move along the trail made, the
-// version each document's box shows, the count of the navigation acts made,
-// the jump in the air and the jump reaching — THE ONE OWNER of them (FP-10).
-// THE BOX'S VERSION (issue #154's design decision: "One box per document …
-// The box shows one version"): every version of a document shares its box
-// (P-PROJ's `docBox`), and the box shows ONE of them — its plain address,
-// the trunk head, or a version pinned there (`shownIn`) — which T-LAYER
-// mounts, P-RENDER draws, N-WALK walks, the one line names, LK places a far
-// end in and M-PUMP reads, each through the reader the app hands it. Only an
-// act aimed at the box changes it (`pinTo`): a version move, or arriving by
-// an address — a LEAP's landing at the address it names, a follow's at the
-// address its link names, a cursor move's at its entry's — never a pan, a
-// zoom, the scene, HOME, WHOLE BOARD, or a click on a place, which goes to
-// what the box shows; and a newer version's ARRIVAL never changes what a box
-// shows (`arrived`): one read at its plain address keeps the member being
-// read, pinned there, its text never swapped under the reader (foundations
-// §3.2), the trail's entry re-taking that version as it is departed
-// (N-TRAIL's `retakePlace`). The choice lasts for the session and is never
-// written (FP-7). A VERSION MOVE NEVER FLIES (`toVersion`): the camera stays
-// and only the text is replaced — the reader's held passage, the selection
-// or the first passage in view, matched into the version moved to by
-// `compare` (`heldIn`) and keeping its screen line there (T-LAYER's
-// `holdAcross`, P-CAM's re-anchor; FP-8), whatever of it survives marked by
-// THE FOUR STATES' rule below; where that version lacks it, the nearest
-// passage the two share keeps the line instead (SC's `nearest`), else the
-// version's head, the box saying the passage is not in this version; a
-// selection standing in the version left ends with its text; each move a
-// trail entry, recording the passage carried, and Back restoring the earlier
-// version and its view. The moves between versions are the versions list's
-// read acts and a landing's line's version offer; a LEAP to a version's
-// address arrives by that address, as any LEAP does. It
-// orchestrates the owners: end a card or scene
-// still reading as the act is made, which then opens nothing (O-HOST's
-// opening), and dismiss the overlay and the scene as the camera leaves the
-// place they stand at (THE JUMP, below) — fly the
-// camera (P-CAM), push the trail (N-TRAIL) with the departed view re-taken,
-// move the focus to the landing (N-WALK) — the ring drawn at it where a key
-// made the act, which only the act's caller knows, so each teleport takes
-// `byKey` from it (D5 §4 rules 2 and 8) — re-project the
-// passage carried: a LEAP that moves from a passage to another arrangement of
-// the same material — a transcluded run's source, a document holding it —
-// carries it, as a version move does (foundations §2.3's carry rule;
-// P43), and once the landing's text is read, and never before, `compare`s it
-// against that text whole — in parts where the board refuses the read for
-// its size (M-PUMP's `compareParts`) — lands at its `counterpart` there (SC's
-// rule, the scene's own) and marks every stretch of it that text holds
-// (`counterparts`: "what of it the landing's text holds marked there") as an
-// arrival by follow marks its span; where the text holds none of it, it
-// lands at THE DOCUMENT'S HEAD (`headOf`: its first block) with the dead
-// end's face, "its passage is not in ⟨D⟩'s current text" — at a member "…
-// not in version ⟨k⟩" — a version move at the nearest passage the two
-// versions share (see above). `follow` reports the link followed to LK's visited
-// set as its camera leaves (S-32 (a)) and lands at the span the slot projects to NOW (A-53 — the
-// document consulted before the link) — placed through the far text's image,
-// read in parts, where the board refuses the projection for its size: every
-// run the far document's text holds it in, a passage a later edit cut in two
-// among them — each run cut again where its bytes break the passage's order
-// (BM-HELD's `stretchesOf`) — the landing at piece 1, the first run in the
-// step's order (BM-HELD's `Pieces.order`), or at the first in the text where
-// the passage stands in one run or its bytes could not be read, whose first
-// position and positions its trail entry carries — with THE ARRIVAL's two marks
-// (foundations §3.2: "the span the link names marked, and the link followed
-// lit"; §2.1's register: "an outline around its span with the followed link
-// drawn heavier"): every run of that span outlined (`arrivalMark`) and the
-// link lit (`litLinks`, which LK reads to draw each heavier). A FLOATING END,
-// one the slot projects to nothing in the far document's text (A-37's
-// "spans, possibly empty"), lands at that document's head with the dead
-// end's face, the link lit and nothing outlined, for the text holds none of
-// the span (foundations §2.3: "follow lands at the document's head with that
-// face … never a landing that reads as the passage gone"); a projection
-// refused for what it says of the far document — withheld, or nothing the
-// board will say of it — faces where the camera went (see below). THE FOUR
-// STATES (issue #153's design decision: "an outline alone means 'all of it,
-// here, in one piece'; silence means 'nothing was carried'"): every landing
-// that carried or followed a passage reads what the text landed in holds of
-// it by BM-HELD's one rule — a carry's stretches in the passage's own
-// positions, a follow's runs by the identity of their bytes against the span
-// the slot stores — ALL of it in one piece, the outline alone; PART, or ALL
-// IN PIECES, the outline kept and A LINE beside it (`landing`, O-LAND's line,
-// BM-HELD's words): in one run, the line naming the passage by what it was
-// to the reader — "what you selected", "the text you were reading", a link's
-// "its passage" — and the text, and where the text shows withheld text that
-// the rest may be under it; in SEVERAL RUNS (FP-21: "each run labelled"),
-// every run labelled by BM-HELD's rule (`piecesIn`, `labelOf`) — its piece in
-// the passage's own order, a repeat's word — the line the label of the run
-// the landing stands at, which adds how much of the passage the runs hold
-// and whether the text holds it in another order, and no second notice; the
-// line offering the scene with where the
-// passage came from where that text holds it whole, and at a published
-// landing the latest member holding it whole once its reads find it — a
-// version move, landing in place; NONE,
-// the dead end's face, as above; and COULDN'T TELL, where no answer told — a
-// read refused even in parts, by any name that says nothing of the document,
-// or a text the page could not read — the landing made unmarked at the
-// place as asked (a follow's, the far document's head, or its first run
-// where its bytes could not be read), its line saying it could not tell and
-// why, keyed on the refusal, and offering "try again" where a retry may tell,
-// which reads again and lands from the answer, re-settling its entry, with
-// no trail move of its own. The line stands with the outline (THE ARRIVAL'S
-// LIFE, below); the walk's element, where the focus lands, takes the line as
-// its description, and the dead end's words where the text holds none of it
-// — and every item holding another of its runs that run's label — from the
-// landing on (`described`, N-WALK's), so the mirror says all four, the
-// landing's item its one announcement; and the dead end's face at its
-// landing is told there, never by the status region as well.
-// THE STEP (FP-21: "Stepping the pieces follows find's concept, in passage
-// order, wrapping, with the focus on the piece"; issue #158's design
-// decision): where the passage stands in several runs, a step — Mod+G and
-// Mod+Shift+G (N-KEYS), the line's "next piece" and "previous piece", a press
-// on an outlined run below reading scale (APP-INPUT) — takes the landing to
-// the next run in the passage's order, or the one before it, wrapping
-// (BM-HELD's `stepFrom`): the camera to the view that reads it at the reading
-// size (`viewFor`), the walk on its span with the platform's focus there, its
-// label the line's, and no trail move and no act counted (`step`, `stepTo`).
-// THE STEP'S LIGHT (issue #152's design decision):
-// the entry a follow or a carrying LEAP departs records the step (N-TRAIL's
-// `Step`) — the link followed, the end it was made at and its far end; the
-// passage carried — each passage by identity, the permanent addresses of its
-// bytes as the act is made (M-REC's `identityOf`; a link's stored spans),
-// never its positions; and every ONE-STEP MOVE along the trail — Back,
-// Forward, a jump to the adjacent entry, by any control — lights the step it
-// crosses at the end it lands on, with the arrival's own marks and lifetime:
-// Back where the step began — the link followed, lit, or the passage
-// carried, outlined — with no off-screen indicator, for it was in view as the
-// step was taken, the walk returned to it where the view Back lands at shows
-// it at its document's reading scale, and the mirror marking it for
-// assistive technology while it stands (`backLight`) — a link's end LK draws
-// at a withheld run (LK's `Shown.run`) the WHOLE RUN outlined besides, the
-// walk returned to the run's item (issue #202's design decision: "Arriving by
-// a link that ends here marks the whole run, lights the symbol and puts focus
-// on the run"; `runMark`), never an offset inside its gap; Forward what the step
-// marked on arrival — the passage carried, outlined in the text landed in,
-// or the far end followed, outlined, its link lit; a jump across two entries
-// or more nothing. Back lights no notice's link and no link but the one it
-// came back over: one move, one lit link. A light's passage is placed in its text
-// again at every read (`arrivalMark`; M-REC's `placedIdentity`), whatever
-// part of it the text still holds lit, and none where it holds none, with no
-// face; where the entry reached keeps an arrival, that arrival's outline
-// stands in its place.
-// THE ARRIVAL'S LIFE (FP-21: "The state ends only at another landing, at find
-// opening, or at Esc after anything nearer; a pan, a zoom, a selection or a
-// step keeps it, and a return restores outlines and labels as left"; FP-25:
-// "Leaving a place ends its chrome and keeps that chrome and the view in the
-// place's entry"): the arrival — its outline, its labels, its line and its
-// offers, the light, the link lit — stands until the camera leaves the place
-// for another landing, as a jump flies, a cursor move leaves or a version move
-// lands in place (`dismissChrome`), which keeps the outline and what the
-// landing said in the entry left (`leaveHere`; N-TRAIL's `keep`), or until Esc
-// ends it once nothing nearer stands (`endArrival`, N-KEYS'); an act that never
-// leaves — its failure known at the act, a jump reaching abandoned — keeps it
-// whole, a follow known to fail at the act lighting its own link; a camera
-// move makes no act here. A cursor move restores the arrival the entry it
-// reaches keeps (`landAtCursor`): its outline and its labels as the reader
-// left them, the run it stood at the one the walk lands on, the link lit the
-// one the move crossed (its light's), and its offers that read none.
+// N-GO — the teleport (the structure record §3.2; S-7 (a)). Layer 2,
+// engine-bound only through O-HOST, its arithmetic pure. State (FP-10): the
+// arrival mark and the links lit (the arrival's two marks), what a landing
+// says of the passage it carried or followed and the run it stands at
+// (`landing`), its line's retry and version offer, the light a one-step move
+// along the trail made, the trail entry the arrival stands at, the version
+// each document's box shows (`pins`), the count of the navigation acts made,
+// the jump in the air, when its camera left and whether the reader took it
+// over, and the jump reaching. View state, never written (FP-7).
+// The box's version (FP-22): every version of a document shares its box, and
+// the box shows one of them — the version pinned there, else its plain
+// address, the trunk head (`shownIn`) — which every surface reads through
+// the reader the app hands it. Only an act aimed at the box changes it
+// (`pinTo`): a version move, or arriving by an address — a LEAP's landing at
+// the address it names, a follow's at the address its link names, a cursor
+// move's at its entry's — never a pan, a zoom, the scene, HOME, WHOLE BOARD
+// or a click on a place; and a newer version's arrival changes no box
+// (`arrived`): a box read at its plain address is pinned on the member being
+// read, its text standing (foundations §3.2), the entry re-taking that
+// version as it is departed (N-TRAIL's `retakePlace`). A version move never
+// flies (`toVersion`): the camera stays and the text alone is replaced, the
+// passage held — the selection, else the first passage in view — found in
+// the version moved to by `compare` (`heldIn`, `swapped`) and keeping its
+// screen line there (T-LAYER's `holdAcross`; FP-8), what survives of it
+// marked by the four states below; where that version lacks it, the nearest
+// passage the two share keeps the line (SC's `nearest`), else the version's
+// head, with the dead end's face; a selection standing in the version left
+// ends with its text; each move takes a trail entry recording the passage
+// carried, and Back restores the version left at its view.
+// Every navigation act (`nextAct`) first ends a card or scene still reading
+// (O-HOST's `endOpening`), gives a jump reaching back and abandons the jump
+// in the air, and counts itself: only the latest act lands, and a landing
+// that waited on a read goes on only where no act was made after its own.
+// Each act makes one trail move, its own push or cursor move, and departs
+// through `departure`: the departed entry re-takes where the camera is bound
+// (P-CAM's `destination`) — so a departure made during a flight re-takes the
+// flight's destination, never a point it was passing (foundations §2.3) —
+// with what that view reads (T-LAYER's `readAt`), where the walk stands in
+// the document it reads (`stoodIn`), and the version the entry's box shows.
+// As its camera leaves, an act ends the chrome of the place it leaves
+// (`dismissChrome`; FP-25): the arrival, kept by value in the entry left for
+// a return (`leaveHere`; N-TRAIL's `keep`), the standing overlay — save one
+// whose field holds the caret, which stands through the jump (FP-20; O-HOST's
+// `typing`) — and the scene, whose end moves no entry. The camera is flown
+// (P-CAM's `fly`) and the walk moved to the landing (N-WALK's `focusTo`), the
+// ring drawn there where a key made the act, which only the caller knows, so
+// every act takes `byKey` from it (D5 §4 rules 2 and 8); a LEAP and a follow
+// land at the reading size, framing the passage's column (`viewFor`).
+// The arrival's two marks: every run of the span landed on outlined
+// (`arrivalMark`) and the link followed lit (`litLinks`), which LK draws
+// heavier (foundations §2.1). A follow (`follow`) reports the link to LK's
+// visited set as its camera leaves (S-32 (a)) and lands at the span the slot
+// projects to in the far document's current text (A-53) — placed through the
+// far text's image, read in parts, where the board refuses the projection
+// for its size — every run the text holds it in, each cut where its bytes
+// break the passage's order (BM-HELD's `stretchesOf`), the landing at piece
+// 1 (BM-HELD's `Pieces.order`) or at the first run in the text where the
+// passage stands in one run or its bytes could not be read. A floating end,
+// one the slot projects to nothing (A-37), lands at the far document's head
+// with the dead end's face, the link lit and nothing outlined (foundations
+// §2.3). A carry (`leapTo` with `carry`; foundations §2.3; P43): a LEAP from
+// a passage to another arrangement of the same material carries it and, once
+// the landing's text is read and never before, `compare`s it against that
+// text whole — in parts where the board refuses the read for its size
+// (M-PUMP's `compareParts`) — lands at its counterpart (SC's `counterparts`)
+// and marks every stretch the text holds; where it holds none, the document's
+// head (`headOf`) with the dead end's face.
+// The four states (FP-21): every landing that carried or followed a passage
+// reads what the text landed in holds of it by BM-HELD's one rule — all of
+// it in one piece, the outline alone; part, or all in pieces, the outline
+// and a line beside it (`landing`, `landingLine`; BM-HELD's words), in one
+// run the line naming the passage by what it was to the reader, in several
+// runs every run labelled (BM-HELD's `piecesIn`, `labelOf`) and the line the
+// label of the run the landing stands at, the line offering the scene with
+// where the passage came from where that text holds it whole and, at a
+// published landing, the latest member holding it whole once its reads find
+// one (`offerVersion`), a version move; none, the dead end's face; couldn't
+// tell — a read refused by a name that says nothing of the document, or a
+// text the page could not read — the landing unmarked at the place as asked,
+// its line saying it could not tell and why, keyed on the refusal, and
+// offering "try again" where a retry may tell, which reads again and lands
+// from the answer with no trail move (`againCarried`, `againVersion`). The
+// walk's element takes the line, or the dead end's or the withheld
+// document's words, as its description, and every item holding another run
+// that run's label (`described`), so the mirror says all four; a face told by
+// the landing's description is never said by the status region too.
+// The step (FP-21): where the passage stands in several runs, Mod+G and
+// Mod+Shift+G (N-KEYS), the line's "next piece" and "previous piece" and a
+// press on an outlined run (APP-INPUT) take the landing to the next run in
+// the passage's order, or the one before it, wrapping (BM-HELD's `stepFrom`):
+// the camera to the view that reads it at the reading size, the walk on its
+// span with the platform's focus there, its label the line's, and no trail
+// move and no act counted (`step`, `stepTo`).
+// The step's light: the entry a follow or a carrying LEAP departs records the
+// step (N-TRAIL's `Step`) — the link followed, the end it was made at and its
+// far end, or the passage carried — each passage by identity, the permanent
+// addresses of its bytes as the act is made (M-REC's `identityOf`), never its
+// positions. A one-step move along the trail — Back, Forward, a jump to the
+// adjacent entry — lights the step it crosses at the end it lands on
+// (`lightOf`), with the arrival's own marks and lifetime: Back where the step
+// began — the link followed, lit, or the passage carried, outlined — the walk
+// returned to it where the view Back lands at shows it at its document's
+// reading scale (`returnTo`) and the mirror marking it while it stands
+// (`backLight`), a link's end LK draws at a withheld run outlining the whole
+// run, the walk on the run's item (`runMark`); Forward what the step marked
+// on arrival; a jump across two entries or more nothing. One move lights one
+// link, the one it crossed. A light's passage is placed in its text again at
+// every read (`placedMark`; M-REC's `placedIdentity`), whatever part the text
+// still holds, none where it holds none, with no face.
+// The arrival's life (FP-21, FP-25): the arrival — its outline, its labels,
+// its line and its offers, the light, the link lit — stands until the camera
+// leaves the place for another landing, as a jump flies, a cursor move leaves
+// or a version move lands in place, or until Esc ends it once nothing nearer
+// stands (`endArrival`); an act that never leaves keeps it whole, a follow
+// known to fail at the act lighting its own link; a camera move makes no act
+// here. A cursor move restores the arrival the entry it reaches keeps
+// (`landAtCursor`): its outline and its labels as the reader left them, the
+// run it stood at, the link lit the one the move crossed, and none of its
+// offers that read.
 // HOME (the acting account's region), WHOLE BOARD (the board at the clamp)
-// and an account's region push too (D5-F3; foundations §2.2: LEAP, the
-// keyboard's Enter and a click on a place are teleports, whatever they
-// reach), and so does a walk's moment unfolded where the camera stands away
-// from the view its walk showed it over, which it flies back to, the walk
-// re-taken there without the platform's focus, which the moment's face takes
-// (`toView`; issue #182's design decision: "It brings back the view the walk
-// shows the face over"); the launch frame is HOME, set without a flight and
-// pushed as the trail's first entry (W-01), so Back after the first teleport
-// returns to it; Back, Forward and a trail jump move the cursor and re-take
-// the departed view. WHERE NO BOARD IS HELD (issue #215's design decision:
-// "never draw or name a board the client has no record of … an act that
-// needs a board the reader lacks answers where it is taken and names what
-// still works"; FP-35) the launch names no place — no entry is pushed, the
-// walk's root saying why — and a LEAP, HOME, WHOLE BOARD and an account's
-// region never leave: each act counted as it is made, its answer O-FACES'
-// no-board face at its site (`noBoard`), no entry, no flight, no read; a
-// walk's moment unfolded flies the camera alone back to its view. A
-// departure re-takes where the camera is bound (P-CAM's
-// `destination`), so one made during a flight re-takes the flight's
-// destination, never a point it was passing (foundations §2.3), with what
-// that view reads (T-LAYER's `readAt`) and where the walk stands in the
-// document it reads (`stoodIn`) — none where a jump in the air has not yet
-// brought the walk to the place its camera left for — and the version the
-// departed entry's box shows (`departure`). Each act
-// makes ONE trail move, its own push or cursor move: the scene standing over
-// the plane is ended first, "a teleport dismissing the scene first" (§2.5),
-// and its end moves no entry (SC).
-// THE JUMP (FP-25: "A jump moves the reader when made; the read only fills
-// the place in. Everything follows the camera."; issue #137's design
-// decision): a jump flies at once wherever the plane can place its
-// destination — every address of the board the page opened has its place
-// before any read (P-PROJ's `docBox`, T-LAYER's fold of a text unread) — and
-// no failure is known: it takes its trail entry at the act, ends the chrome
-// of the place it leaves, moves the walk to the place it left for and flies
-// there (`leave`), and is IN THE AIR (`inAir`) from then until it lands. NO
-// LANDING ENDS CHROME (issue #171's design decision: "a card ends when the
-// camera leaves its place, not when a read lands"): a card shown while the
-// jump is in the air stands over its landing, and one asked then opens there
-// (O-HOST's `complete`); and none takes a caret (its rule 2: "A landing never
-// closes a field the reader is typing in"): an overlay whose field holds the
-// caret stands through the departure and the faces too (`dismissChrome`;
-// O-HOST's `typing`), the field keeping the focus (N-FOCUS's `land`). Its
-// reads run beside the flight. Where they answer first, the camera goes on
-// from where it is to the passage they placed and the jump lands there
-// (`goOn`); where the reader takes the camera over first — a wheel, a pinch,
-// the camera key's drag (`takeOver`, APP-INPUT's) — the jump lands where the
-// camera is, and its read, answering, only marks its passage where it falls:
-// the outline, the link lit, the landing's line, the dead end's face — the
-// camera and the walk where the reader left them, and the entry keeping the
-// view the reader leaves it at. While a jump is in the air every key but a
-// navigation act waits for its landing and is made there, in order (N-KEYS),
-// and a wheel series under way as its camera left is dropped (APP-INPUT, which
-// reads when that was: `airSince`); its landing answers `aground` — true as it
-// lands, false where it ends without landing: the reader took over, its read
-// failed, a later act overtook it — and a jump that never lands drops its held
-// keys. A jump says it is READING where the camera is (O-FACES' `reading`): at
-// the place it left for, out of the visible view of which the one line carries
-// its words (O-HOST's `sign`). A failure its reads learn in the air — a
-// document the board answers for with nothing, a follow's far end projected
-// into one — is faced where the camera went, the camera staying, the walk
-// re-taken there so the mirror names what the read learned (N-WALK), and the
-// entry holding the face as its NOTICE where the camera went (`failed`); a
-// dead end's face is the notice beside the head it landed on. A FOLLOW TO A
-// WITHHELD DOCUMENT (issue #179's design decision: "Show no notice at the
-// departure. Finish the follow like any jump and land at the document's
-// place, where its own withheld words stand") lands, its reads learning it in
-// the air — the far document's own read refused `withheld`, or the far end's
-// projection refused for it — once the claims its face decides C-67's
-// pointer from are read (O-FACES' `prepare`): at the document whole, the link
-// lit and nothing outlined, the face of its own withheld words standing at
-// its place as the entry's notice, told by the landing's description where
-// the focus lands (`landWithheld`); from then on the link's far end is named
-// in those words (LK's `farWords`). A failure KNOWN AT THE ACT (`known`) —
-// the board answered for the document with nothing; for a follow, the far end
-// projected into such a document, or into one withheld from the reader whose
-// text the page holds or held under the class it left, access having changed
-// after it was read (O-FACES' `accessChanged`; the decision's first case:
-// "Its text is on screen … Show the change instead"); for a jump that must
-// read, the board is marked unreachable ("a board already marked unreachable
-// gets no flight") — never leaves: no flight, no entry, no read, the link not
-// counted as followed, its face standing at the act's site in the place of
-// what stands there, the chrome kept, until Esc or the next act. A withheld
+// and an account's region push too (foundations §2.2), and so does a walk's
+// moment unfolded where the camera stands away from the view its walk showed
+// it over, which it flies back to, the walk re-taken there without the
+// platform's focus (`toView`). The launch frame is HOME, set without a flight
+// and pushed as the trail's first entry (W-01). Where no board is held
+// (FP-35) the launch names no place — no entry is pushed — and a LEAP, HOME,
+// WHOLE BOARD and an account's region never leave: each act counted as it is
+// made, its answer O-FACES' no-board face at its site, no entry, no flight,
+// no read; a moment unfolded flies the camera alone.
+// The jump (FP-25): a jump flies at once wherever the plane can place its
+// destination (`placeable`: every address of the board the page opened,
+// before any read; another board's once a read brought what draws it) and no
+// failure is known (`known`): it takes its trail entry at the act — as
+// N-TRAIL's claim where its landing waits on a read, filled in by what it
+// reads (`settle`) — ends the chrome of the place it leaves, moves the walk
+// to the place it left for and flies there (`leave`), and is in the air
+// (`inAir`) until it lands. No landing ends chrome: a card shown while the
+// jump is in the air stands over its landing, and one asked then opens
+// there. Its reads run beside the flight: where they answer first, the
+// camera goes on from where it is to the passage they placed (`goOn`); where
+// the reader takes the camera over first (`takeOver`; APP-INPUT's), the jump
+// lands where the camera is and its read, answering, only marks its passage
+// where it falls, the entry keeping the view the reader leaves it at. While
+// a jump is in the air every key but a navigation act waits for its landing
+// (N-KEYS; `aground` answers it: true as the jump lands, false where it ends
+// without landing), and a wheel series begun before its camera left is
+// dropped (APP-INPUT; `airSince`). A jump says it is reading where the camera
+// is (O-FACES' `reading`), at the place it left for. A failure its reads
+// learn in the air is faced where the camera went (`failed`), the camera
+// staying, the walk re-taken there, the entry holding the face as its notice;
+// a follow to a far document the board withholds lands at the document
+// whole, the face of its own withheld words at its place as the notice, the
+// link lit and nothing outlined, told by the landing's description
+// (`landWithheld`), its claims read first (O-FACES' `prepare`); a withheld
 // document's face stands where it is shown whatever the camera does, no sign
-// hiding it, for its acts — C-67's pointer, the sign-in — are reached by Tab
-// with the face standing (the decision: "Its offered act must be reachable by
-// keyboard without dismissing the face"). A jump WHERE ONLY A READ CAN PLACE
-// THE DESTINATION — an address on a board the plane does not draw, its text
-// unread (`placeable`) — REACHES
-// (`reachFor`): its entry taken at the act, the camera still, input acting on
-// what is on screen, its REACHING face at the act's site in the place of what
-// stands there (O-FACES' `reaching`); Esc — that face's dismissal — Back and
-// every later act abandon it, its entry given back (`giveUp`; N-TRAIL's
-// `giveBack`); its read refused, it faces at the site and gives its entry
-// back; its read answered, the camera leaves as above.
-// THE ORDER OF ACTS (issue #136's design decision: every jump keeps its
-// trail entry, whatever its read brings, and no trail act waits on a read):
-// every act makes its trail move as it is made, so the trail holds the moves
-// in the order the acts were made, and only the latest act lands: each act
-// counts itself as it is made — a card or scene still reading ended, a jump in
-// the air abandoned and a jump reaching given back (`nextAct`) —
-// Back, Forward and a jump where they move the cursor, a follow even where it
-// faces at once, and a landing that waited on a read goes on only where no
-// act was made after its own. A LEAP and a follow push their entry as
-// N-TRAIL's claim, numbered as the jump is made and never handed back once
-// its camera leaves, the place it left for filled in by what they read — a
-// LEAP the whole of a document whose text the page does not hold; a follow
-// its far document, its end's projection and its text. The read fills the
-// entry with what it brought (N-TRAIL's `settle`): a place, its landing — at
-// once where nothing is read — or a notice. A read that ends after the reader
-// left its entry moves nothing — no camera, no walk, no face — and writes its
-// own entry alone. So at any board speed a jump then Back returns to where the
-// jump was made, and a second Back goes one entry further. Back, Forward or a
-// jump reaching an entry flies at once for what it holds — its view, placed
-// again where the document it read was set since — a measure the view moved,
-// a text an edit or a feed row changed, another version its box shows — so
-// the passage the reader left keeps its place and its size on screen, the
-// view itself where that passage stands where it stood (`returning`;
-// T-LAYER's `keptAt`; foundations §2.2: "so Back lands on the passage left";
-// issue #221), that text read first, beside the flight, where the page holds
-// none of it now (`placeRead`); the walk where Back returns it, else
-// where it stood as the reader left the entry, placed again likewise, else on
-// its place: on that place's span only where
-// the view reads its document at its reading scale, else on the document
-// whole, so a view re-taken below it leaves the walk the grain the view gives
-// (T-LAYER's one test; issue #140) — and shows its notice again; reaching an
-// entry still reading, it shows that entry's reading face there and goes on
-// once the read answers, where no act was made and the reader took nothing
-// over meanwhile. A carried passage's `compare` is one more read its LEAP's
-// claim waits on, the claim settled at the landing that read placed.
-// THE COVER (issue #177's design decision: "Keep every place, and cover the
-// material"; FP-29): a trail entry holds no document's words — HOME and WHOLE
+// hiding it, so its acts are reached by Tab with the face standing. A failure
+// known at the act — the board answered for the document with nothing; a
+// follow's far end projected into such a document, or into one withheld
+// whose text the page holds or held (O-FACES' `accessChanged`); for a jump
+// that must read, the board marked unreachable — never leaves: no flight, no
+// entry, no read, the link not counted as followed, its face at the act's
+// site in the place of what stands there (`showNotice`), the chrome kept. A
+// jump where only a read can place the destination reaches (`reachFor`): its
+// entry taken at the act, the camera still, its reaching face at the act's
+// site (O-FACES' `reaching`); Esc, Back and every later act abandon it, its
+// entry given back (`giveUp`; N-TRAIL's `giveBack`); its read refused, it
+// faces at the site and gives its entry back; answered, the camera leaves as
+// above.
+// A cursor move (`moveCursor`; `back`, `forward`, `toTrailEntry`) flies at
+// once for what the entry holds — its view, placed again where the document
+// it read was set since (`returning`; T-LAYER's `keptAt`), that text read
+// first beside the flight where the page holds none of it (`placeRead`) —
+// the walk where Back's light returns it, else on the run the restored
+// landing stood at, else where it stood as the reader left the entry, else
+// on its place (`walkOf`), on a span only where the view reads its document
+// at its reading scale, and shows the entry's notice again; reaching an
+// entry still reading, it shows that entry's reading face and goes on once
+// the read answers, where no act was made and the reader took nothing over.
+// The cover (FP-29): a trail entry holds no document's words — HOME and WHOLE
 // BOARD push their act's name, the strings table's, and every other entry's
-// words are read from the model as the trail list and the LEAP box show it
-// (`wordsOf`: the words its box's first line says now, "withheld · ⟨owner⟩"
-// once a read covers it, nothing while nothing has answered). A change of the
-// page's class (`classChanged`) puts the arrival out — its outline, its
-// labels, its line, its offers, the light and the links lit, nothing the
-// dead class measured surviving — and drops the notices and the arrivals the
-// entries kept, what their views read and where the walk stood (N-TRAIL's);
-// a cursor move reaching an entry whose document is
-// covered (M-REC's `covered`) lands on the covered box framed whole, its
-// document-level withheld face standing there, whose sign-in act is the
-// way back — read first where the page holds nothing yet of a document the
-// class it left could read, as a LEAP reads an unread document beside its
-// flight.
-// Carries: the wireframe's §11 (`leapTo`, `goHome`), §18 `followLink`.
-// Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10, FP-20 (a
-// field holding the caret keeps it and its chrome), FP-21, FP-22 (owns the
-// version each box shows), FP-25 (the jump moves the reader when made),
-// FP-29 (the cover), FP-35 (where no board is held).
+// words are read from the model as they are shown (`wordsOf`: the words its
+// box's first line says, nothing while nothing has answered). A change of the
+// page's class (`classChanged`) puts the arrival out, nothing the dead class
+// measured surviving, and drops what the entries kept (N-TRAIL's); a cursor
+// move reaching an entry whose document is covered (M-REC's `covered`) lands
+// on the covered box framed whole, its withheld face standing there, whose
+// sign-in act is the way back (`coverOf`, `coverRead`, `showCover`).
+// Figures: a click's flight 420 ms, every other LEAP's and a follow's 620,
+// HOME's and WHOLE BOARD's 700, an account's and a moment's view's 400, a
+// cursor move's 500, a step's 420; a second leg SECOND_LEG_MS (unmeasured).
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-20, FP-21, FP-22, FP-25, FP-29,
+// FP-35.
 
 import * as CAM from '../plane/camera.js';
 import * as TRAIL from './trail.js';
@@ -359,7 +241,7 @@ import { t } from '../strings.js';
  */
 
 /**
- * @typedef {Object} Carry — a passage a LEAP carries (foundations §2.3's carry rule; P43): a span of the text it is carried from, and what it was to the reader, which the landing's line names it by (issue #153's design decision)
+ * @typedef {Object} Carry — a passage a LEAP carries (foundations §2.3; P43): a span of the text it is carried from, and what it was to the reader, which the landing's line names it by
  * @property {string} addr the document it is carried from
  * @property {number} pos its first position there
  * @property {number} width its positions
@@ -367,7 +249,7 @@ import { t } from '../strings.js';
  */
 
 /**
- * @typedef {Object} Landing — what a landing says of the passage it carried or followed (issue #153's design decision: "Mark what's held and say the rest in a line"; issue #158's: each run labelled), while its arrival stands (see the head)
+ * @typedef {Object} Landing — what a landing says of the passage it carried or followed, while its arrival stands (see the head)
  * @property {string} addr the document landed in
  * @property {number} pos where it stands: the run it stands at — piece 1 as it lands, the one a step took it to after — or the landing point: the place as asked, or the document's head
  * @property {Said | null} said what the text holds of the passage: part of it, all of it in pieces, or no answer told — the line itself where the passage stands in one run; null where it holds all of it in one piece, which the outline alone says, or none of it
@@ -399,7 +281,7 @@ import { t } from '../strings.js';
  */
 
 /**
- * @typedef {Object} Light — what a one-step move along the trail lights (see the head; issue #152's design decision): the step it crossed, at the end it landed on, with the arrival's own marks and life
+ * @typedef {Object} Light — what a one-step move along the trail lights (see the head): the step it crossed, at the end it landed on, with the arrival's own marks and life
  * @property {boolean} back Back's — where the step began, the walk returned to it and the mirror marking it (`backLight`); false for Forward's — what the step marked on arrival
  * @property {string | null} link the link it lights: the one the step followed; null for a carry
  * @property {(End & {addr: string}) | null} end the link's end Back lights it at — the one the follow was made at, in its document; null for every other light
@@ -455,10 +337,9 @@ const SECOND_LEG_MS = 300;
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
 
 /**
- * The version a document's box shows (see the head): the version pinned
- * there, else its plain address — the trunk head. What T-LAYER mounts in the
- * box, P-RENDER draws there, N-WALK walks, LK places a far end in and M-PUMP
- * reads, through the reader the app hands each.
+ * The version a document's box shows (see the head; FP-22): the version
+ * pinned there, else its plain address — the trunk head. Every surface reads
+ * it through the reader the app hands it.
  * @param {string} addr a document address, its plain address or any version of it
  * @returns {string}
  */
@@ -527,8 +408,7 @@ function stoodIn(r) {
 const seen = (/** @type {View} */ view) => ({ view, reading: LAYER.readAt(view) });
 
 /**
- * A passage as its text holds it now (issue #152's design decision:
- * "Re-project the passage when drawing"): every stretch of it the
+ * A passage as its text holds it now: every stretch of it the
  * document's held text places (M-REC's `placedIdentity`), in the text's
  * order, the mark at the first; a far end naming its document whole at the
  * block at the document's head; null where the text holds none of it, or
@@ -563,8 +443,7 @@ export const arrivalMark = () => arrival || (light && light.passage ? placedMark
 export const litLinks = () => lit;
 
 /**
- * Where Back's light stands now (issue #152's design decision: "While lit,
- * it is exposed to assistive technology"), for the mirror (N-WALK's reader,
+ * Where Back's light stands now, for the mirror (N-WALK's reader,
  * the app's to hand in): the stretches of the passage carried its text holds
  * now, or the link's end the follow was made at; null where Back lit nothing
  * its text still holds, and for every other light.
@@ -583,12 +462,12 @@ let made = 0;
 /**
  * The next act, made: a card or scene still reading ended, what stands
  * staying for the act to dismiss (O-HOST's opening), a jump reaching given
- * back and a jump in the air abandoned, never landed (FP-25: "navigation acts
- * abandon the jump"), and the act counted. Every navigation act begins with
+ * back and a jump in the air abandoned, never landed (FP-25), and the act
+ * counted. Every navigation act begins with
  * it, so no chrome asked at the place an act leaves opens while the act
  * reads; the arrival stands until the act's camera leaves the place
  * (`dismissChrome`), so an act that never leaves keeps it (see the head); a
- * camera move calls nothing here (§3.2: "a pan or a zoom none").
+ * camera move calls nothing here (§3.2).
  * @returns {number} the act's count
  */
 function nextAct() {
@@ -602,9 +481,8 @@ function nextAct() {
 function putOut() { arrival = null; light = null; lit = []; landed = null; retry = null; versionOffer = null; CAM.markDirty(); }
 
 /**
- * The reader leaves the place they stand at (see the head; FP-25: "Leaving a
- * place ends its chrome and keeps that chrome and the view in the place's
- * entry"): the arrival standing there — its outline as it stands, a light's
+ * The reader leaves the place they stand at (see the head; FP-25): the
+ * arrival standing there — its outline as it stands, a light's
  * among them, and what its landing said, its runs' labels and the run it
  * stands at — kept in that place's trail entry by value for a return to it
  * (N-TRAIL's `keep`), then put out with the links lit and its offers. The
@@ -617,9 +495,8 @@ function leaveHere() {
 }
 
 /**
- * Esc ends the arrival (FP-21: "The state ends only at another landing, at
- * find opening, or at Esc after anything nearer"; N-KEYS' one order, once
- * nothing nearer stands): its outline, its labels, its line, the light and
+ * Esc ends the arrival (FP-21; N-KEYS' one order, once nothing nearer
+ * stands): its outline, its labels, its line, the light and
  * the link lit — the place's entry keeping none of it as the reader leaves.
  * @returns {boolean} an arrival stood
  */
@@ -630,8 +507,8 @@ export function endArrival() {
 }
 
 /**
- * A change of the page's class (see the head; FP-21: a change of the page's
- * class ends the arrival; FP-23), told by the app as M-PUMP tells the drop of
+ * A change of the page's class (see the head; FP-21, FP-23), told by the app
+ * as M-PUMP tells the drop of
  * every record: the arrival put out — its outline, its labels, its line, its
  * offers, the light and the links lit — the place's entry keeping none of
  * it, and every entry's notice and kept arrival dropped (N-TRAIL's
@@ -653,8 +530,8 @@ export const aground = () => (air ? air.landed : Promise.resolve(true));
 export const isReaching = () => reach !== null;
 
 /**
- * The reader takes the camera over (FP-25: "a wheel, pinch or drag takes
- * over"; APP-INPUT's): the jump in the air lands where the camera is, never
+ * The reader takes the camera over (FP-25; APP-INPUT's): the jump in the air
+ * lands where the camera is, never
  * landing on its passage, so the keys it held are dropped; its read,
  * answering, only marks its passage, and its entry keeps the view the reader
  * leaves it at. Nothing where no jump is in the air.
@@ -699,8 +576,8 @@ function giveUp() {
 }
 
 /**
- * Esc abandons a jump reaching (FP-25: "Esc or Back abandons the jump") once
- * nothing nearer stands — an overlay shown over its face since (N-KEYS' one
+ * Esc abandons a jump reaching (FP-25) once nothing nearer stands — an
+ * overlay shown over its face since (N-KEYS' one
  * order): its entry given back.
  * @returns {boolean} a jump was reaching
  */
@@ -729,10 +606,8 @@ export const landingOffers = () => ({ steps: !!landed && !!landed.pieces, again:
 
 /**
  * What the landing says, for the mirror's descriptions of the items it
- * stands on (N-WALK's `described`; issue #153's design decision: "the line as
- * its description, so the screen-reader mirror says all four states"; FP-21:
- * "The item the focus lands on takes … the label as its description, the one
- * announcement"): its line's words — the label of the run it stands at, where
+ * stands on (N-WALK's `described`; FP-21): its line's words — the label of
+ * the run it stands at, where
  * the passage stands in several — or the dead end's where the text holds none
  * of the passage, or a withheld document's own words whole where a follow
  * landed at one (O-FACES' `withheldText`), and every run's own label; null
@@ -771,7 +646,7 @@ export function landingAct(which, byKey = false) {
 export const steps = () => !!landed && !!landed.pieces;
 
 /**
- * THE STEP (see the head): the landing taken to the next run of its passage
+ * The step (see the head): the landing taken to the next run of its passage
  * in the passage's order, or the one before it, wrapping (BM-HELD's
  * `stepFrom`) — `stepTo`'s; nothing where no step stands.
  * @param {1 | -1} dir
@@ -810,13 +685,12 @@ export function stepTo(i, byKey = false) {
 
 /**
  * The chrome a navigation act clears as its camera leaves the place it
- * stands at (FP-25: "leaving a place ends its chrome") — at the act, save
- * where only a read can place the destination: the arrival, kept in the
- * entry it stood at (`leaveHere`), the entry the act moves to the one the
- * landing's arrival stands at from now; the standing overlay — save one whose
- * field holds the caret, an answer the reader is typing, which stands through
- * the jump (#171's rule 2: "dismissChrome leaves alone an overlay with the
- * caret in it"; O-HOST's `typing`) — and a card or scene still reading, which
+ * stands at (FP-25) — at the act, save where only a read can place the
+ * destination: the arrival, kept in the entry it stood at (`leaveHere`), the
+ * entry the act moves to the one the landing's arrival stands at from now;
+ * the standing overlay — save one whose field holds the caret, an answer the
+ * reader is typing, which stands through the jump (FP-20; O-HOST's `typing`)
+ * — and a card or scene still reading, which
  * then opens nothing (O-HOST's opening); and the scene, whose end moves no
  * trail entry — so the act's own trail move is its one.
  * @param {Entry | null} to the entry the act moves to; null where it takes none
@@ -830,9 +704,9 @@ function dismissChrome(to) { leaveHere(); here = to; if (HOST.typing()) HOST.end
  * each at its site; the dead end's at the landing that met it, and a
  * withheld document's at the place a follow landed at, told by that
  * landing's description, where the focus lands, never by the status region
- * as well (`told`; issues #153, #179). A withheld document's face offers
- * C-67's pointer as a LEAP from its site (`pointTo`), and one known at the
- * act carries the act's caption (issue #179).
+ * as well (`told`). A withheld document's face offers C-67's pointer as a
+ * LEAP from its site (`pointTo`), and one known at the act carries the act's
+ * caption.
  * @param {Notice} n
  * @param {boolean} [told] the landing that met it says its words (`described`)
  * @param {string | null} [caption] the act's caption, where the face answers it at its site
@@ -863,14 +737,12 @@ const signed = (/** @type {Site | null} */ site) => (site && site.span ? { ...si
 const UNREACHABLE = /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreachable', text: '' });
 
 /**
- * A failure known at the act (see the head; FP-25: "a jump flies at once …
- * where … no failure is known"; issue #137's design decision: "a board
- * already marked unreachable gets no flight"): the board answered for the
- * document with nothing; for a follow, the far end's projection into such a
- * document, or a far document withheld from the reader — known so, or by the
- * far end's projection — whose text the page holds or held under the class
- * it left (O-FACES' `accessChanged`; issue #179's design decision's first
- * case), any other withheld far document being a place the follow lands at;
+ * A failure known at the act (see the head; FP-25): the board answered for
+ * the document with nothing; for a follow, the far end's projection into
+ * such a document, or a far document withheld from the reader — known so, or
+ * by the far end's projection — whose text the page holds or held under the
+ * class it left (O-FACES' `accessChanged`), any other withheld far document
+ * being a place the follow lands at;
  * for a jump that must read, the board is marked unreachable — as a notice's
  * face, its site the caller's to give; null where none is known.
  * @param {string} addr the place the jump names
@@ -902,9 +774,8 @@ function placeable(addr) {
 }
 
 /**
- * A jump reaching (see the head; FP-25: "Where only a read can place the
- * destination, the camera waits, input acts on what is on screen, and Esc or
- * Back abandons the jump"): its reaching face at the act's site in the place
+ * A jump reaching (see the head; FP-25): its reaching face at the act's site
+ * in the place
  * of what stands there, the camera still, its read made. Where the jump was
  * abandoned meanwhile, nothing; where its read answered, the camera may
  * leave; where the board refused it, the refusal faced at the site — the
@@ -967,9 +838,8 @@ async function goOn(act, first, at, byKey, ms) {
 }
 
 /**
- * A failure a jump's reads learned in the air (see the head; issue #137's
- * design decision: "If a read fails, the camera stays where it is and the
- * failure is shown there") — a document the board answers for with nothing,
+ * A failure a jump's reads learned in the air (see the head) — a document
+ * the board answers for with nothing,
  * a follow's far end projected into one: its entry holding the face as its
  * notice where the camera went; then, where no act was made since, the face
  * shown there, the walk re-taken on the place — save where the reader took
@@ -994,9 +864,8 @@ function failed(act, entry, n, byKey) {
  * The view that reads a document at a position: its size (T-LAYER's fold) at
  * the reading size (P-CAM's READING_PX), on the line holding the position,
  * framing its column with both its margins — the corner on its left, the edge
- * on its right (issue #151's design decision: "The landing frames the column,
- * not the middle of a line"; T-LAYER's `frameOf`) — the first column where
- * none is named.
+ * on its right (T-LAYER's `frameOf`; FP-26) — the first column where none is
+ * named.
  * @param {string} addr
  * @param {number | null} pos
  */
@@ -1064,8 +933,8 @@ async function land(at, byKey, ms) {
 }
 
 /**
- * What a text holds of a passage (BM-HELD's rule; issue #153's design
- * decision): the passage `compare`d against the text whole, in parts where
+ * What a text holds of a passage (BM-HELD's rule; FP-21): the passage
+ * `compare`d against the text whole, in parts where
  * the board refuses the read for its size (M-PUMP's `compareParts`), every
  * stretch of it the text holds (SC's `counterparts`) — the one rule a
  * carried passage's landing, its line's version offer and the versions
@@ -1111,7 +980,7 @@ async function reproject(c, d, met) {
   return { held: out.held, at: c.pos + first.at, pos: first.pos, runs: stretches.map((s) => ({ pos: s.pos, width: s.width })), pieces };
 }
 
-/** does a document's held text show withheld text — a run withheld from the reader, under which the rest of a passage may stand (issue #153)? */
+/** does a document's held text show withheld text — a run withheld from the reader, under which the rest of a passage may stand? */
 const showsWithheld = (/** @type {Doc} */ d) => d.blocks.some((b) => b.kind === 'withheld');
 /** the dead end's face as an entry's notice, beside the head a landing stands at (foundations §2.3): offering the versions list where a follow met it */
 const floatingNotice = (/** @type {string} */ addr, /** @type {number} */ head, /** @type {boolean} */ offer) => /** @type {Notice} */ ({ face: 'floating', addr, refusal: null, site: siteAt(addr, head), offer });
@@ -1143,16 +1012,14 @@ function wholeAt(/** @type {string} */ addr, /** @type {ISpan[]} */ spans, /** @
 }
 
 /**
- * The line's offer at a published landing (issue #153's design decision: "at
- * a published landing, the latest version holding it whole"): the landing's
- * document's members, newest first — its chain read to its end (M-PUMP's
- * `probeChain`) — each asked what its text holds of the passage (`holds`),
- * never the text landed in — its own member, or at the bare address its
- * latest — the first that holds all of it in one piece offered where no act
- * was made meanwhile; the reads stop there, and at the next act. Nothing is
- * offered where the board did not end the chain: "the last that holds it"
- * names the chain whole (issue #184's design decision: "nothing built from it
- * claims to be the whole chain"). The offer is a version move (`toVersion`):
+ * The line's offer at a published landing (FP-21): the landing's document's
+ * members, newest first — its chain read to its end (M-PUMP's `probeChain`)
+ * — each asked what its text holds of the passage (`holds`), never the text
+ * landed in — its own member, or at the bare address its latest — the first
+ * that holds all of it in one piece offered where no act was made meanwhile;
+ * the reads stop there, and at the next act. Nothing is offered where the
+ * board did not end the chain: the latest that holds it names the chain
+ * whole. The offer is a version move (`toVersion`):
  * the member shares the box landed in.
  * @param {number} act the landing's act
  * @param {string} addr the document landed in
@@ -1202,7 +1069,7 @@ async function idsOf(addr, runs) {
 const slotSpans = (/** @type {Shown} */ s) => (s.farSlot === 2 ? s.link.to : s.link.from).flatMap((e) => { const i = REC.identityOfEnd(e); return i ? [i] : []; });
 /** does a document's held image cover its whole text? */
 const imageCovers = (/** @type {Doc} */ d) => !!d.imageFor && d.extent != null && d.imageFor[0] <= 1 && d.imageFor[1] >= d.extent + 1;
-/** does a projection's refusal say something of the far document — withheld from the reader, a place the follow lands at with its own withheld words (`landWithheld`; issue #179), or nothing the board will say of the address, faced in the landing's place, there being nothing to land at? Every other refusal says nothing of it, and the follow lands, its line saying it could not tell (issue #153) */
+/** does a projection's refusal say something of the far document — withheld from the reader, a place the follow lands at with its own withheld words (`landWithheld`), or nothing the board will say of the address, faced in the landing's place, there being nothing to land at? Every other refusal says nothing of it, and the follow lands, its line saying it could not tell */
 const ofDocument = (/** @type {Refusal} */ r) => r.kind === 'refused' && (r.name === 'withheld' || r.name === 'doc_not_registered');
 
 /**
@@ -1378,8 +1245,7 @@ async function landFollowed(act, s, entry, placed, byKey, first = null) {
 
 /**
  * A follow's landing at a far document withheld from the reader (see the
- * head; issue #179's design decision: "land at the document's place, where
- * its own withheld words stand"), its reads having learned it in the air:
+ * head), its reads having learned it in the air:
  * the claims its face decides C-67's pointer from read first (O-FACES'
  * `prepare`); its entry settled at the document whole — its view left as the
  * reader left it where they took the camera over there — with the face of
@@ -1483,7 +1349,7 @@ function sayFollowed(act, s, entry, placed, pos) {
  * line saying where that is only part of it, or all of it in pieces; where
  * the text holds none of it, the document's head, faced as a floating end is,
  * the face the entry's notice; where no answer told, the place as asked,
- * unmarked, the line saying it could not tell (`sayCarried`; issue #153). The
+ * unmarked, the line saying it could not tell (`sayCarried`). The
  * entry it departs records the carry (see the head), the passage by the
  * permanent addresses of its bytes as the held image names them as the act
  * is made — none where the image does not cover it, and then no step. A LEAP
@@ -1655,14 +1521,14 @@ async function landInPlace(was, d, placed, link, byKey, take = true) {
 }
 
 /**
- * A VERSION MOVE (see the head; issue #154's design decision: "Version
- * moves land in place"): the next act — the overlays close and the trail
+ * A version move (see the head; FP-22): the next act — the overlays close
+ * and the trail
  * gains the entry as it is made, a claim while its reads are out, recording
  * the passage carried by identity, its reading face standing at `site` — to
  * another version of the box the reader stands in: `addr` read whole where
  * the page does not hold its text, then where its text holds the passage
  * held (`swapped`) — or where a landing's line already read it (`placed`) —
- * and, where no act was made meanwhile, the landing made IN PLACE
+ * and, where no act was made meanwhile, the landing made in place
  * (`landInPlace`): the camera stays, the box's text replaced, the passage's
  * line kept, its four states said as a carried passage's are — the line, its
  * offers, its "try again" landing in place again — the dead end's face where
@@ -1744,9 +1610,8 @@ async function againVersion(c, spans, was, addr, entry, byKey) {
 }
 
 /**
- * A NEWER VERSION'S ARRIVAL (see the head; foundations §3.2: "a published
- * document read at its bare address keeps the member being read … never the
- * text swapped under the reader"): a feed row publishing `D.(k+1)`, the
+ * A newer version's arrival (see the head; foundations §3.2; FP-22): a feed
+ * row publishing `D.(k+1)`, the
  * trunk's next member and so its head, where `D`'s box shows its plain
  * address and the page holds the text it shows — `D.k`'s — pins the box on
  * `D.k`, its article set again as that member with the passage being read
@@ -1768,21 +1633,21 @@ export function arrived(member) {
 }
 
 /**
- * FOLLOW: the far end of a drawn link — an act made as it is pressed, the
+ * Follow: the far end of a drawn link — an act made as it is pressed, the
  * card or scene still reading ended even
  * where the link names no far document and it faces at once; its entry a
  * claim on the trail as it is made, and its camera leaving at once for the
  * far document (see the head) — reported to LK's visited set as it leaves,
  * the chrome of the place it leaves ended, the walk on the far document, its
  * reading face standing there (O-FACES' `reading`); the far document
- * consulted, the slot projected into it NOW, its text read where the page
+ * consulted, the slot projected into its current text, its text read where the page
  * holds none; the claim settled at that span and the camera going on there
  * — to piece 1, where the text holds it in several runs — the
  * arrival outlined on it — on every run's positions where the link names a
  * passage, each run labelled where they are two or more, at its first
  * position where it names the document whole — and the
  * link lit, its line saying where the far text holds only part of the
- * passage, or all of it in pieces (`followed`, `landFollowed`; issue #153). A
+ * passage, or all of it in pieces (`followed`, `landFollowed`). A
  * floating end, one the slot projects to nothing in the far
  * document's text, settles the claim at that document's head and lands there,
  * the link lit and nothing outlined, with the dead end's face standing at the
@@ -1794,11 +1659,11 @@ export function arrived(member) {
  * A far document the board withholds from the reader — a read of it refused
  * `withheld`, or the projection refused for it — learned in the air lands at
  * that document whole, its own withheld words standing at its place as the
- * claim's notice, the link lit and nothing outlined (`landWithheld`; issue
- * #179). A dead reference — no slot projected into it, a read the board
+ * claim's notice, the link lit and nothing outlined (`landWithheld`). A dead
+ * reference — no slot projected into it, a read the board
  * refuses with the document, the projection refused for it — learned in the
  * air is faced where the camera went (`failed`), the claim settled with that
- * face as its notice there, and the link lit (B1-S8). One KNOWN AT THE ACT —
+ * face as its notice there, and the link lit (B1-S8). One known at the act —
  * a withheld far document among them only where its text is on screen
  * (`known`), its face captioned by the follow — and a link naming no far
  * document never leave (see the head): no entry, no read, the arrival
@@ -1890,8 +1755,8 @@ export async function home(byKey = false) {
 }
 
 /**
- * The launch frame — HOME, foundations §2.2's last arm and the one this page
- * builds — set without a flight, and the trail's first entry (W-01), so the
+ * The launch frame — HOME (foundations §2.2) — set without a flight, and the
+ * trail's first entry (W-01), so the
  * first teleport re-takes its view as it departs and Back returns to it. The
  * landing puts the platform's focus on the walk's element with the ring out
  * (the focus record's rule 21), so the first Tab moves on from it and a
@@ -1946,8 +1811,7 @@ const atView = (/** @type {View} */ v) => { const d = CAM.destination(); return 
 
 /**
  * A walk's moment unfolded over the view its walk showed it over (O-FACES'
- * `unfold`; issue #182's design decision: "It brings back the view the walk
- * shows the face over"): the act counted as it is made — a card or scene
+ * `unfold`; FP-28): the act counted as it is made — a card or scene
  * still reading ended, a jump in the air abandoned, so no read it left
  * answers over the face — and, where the camera is bound elsewhere, a
  * teleport there as an account's is: its trail entry taken at the act, the
@@ -1992,8 +1856,7 @@ function lightOf(left, e, by) {
 }
 
 /**
- * Where Back returns the walk (issue #152's design decision: "Where it is in
- * view, keyboard focus returns to it"): the link's end the follow was made
+ * Where Back returns the walk: the link's end the follow was made
  * at — its item, where its first stretch stands now — or the first stretch of
  * the passage carried its text holds now, where that stretch's line stands in
  * the visible view of the view Back lands at and its document stands at its
@@ -2012,9 +1875,8 @@ function returnTo(l, view) {
 
 /**
  * A cursor move's landing — Back, Forward, a jump — at what the entry the
- * move reached holds (issue #136's design decision; FP-25): the arrival the
- * entry keeps restored as the reader left it (see the head; FP-21: "a return
- * restores outlines and labels as left") — its outline, what its landing
+ * move reached holds (FP-25): the arrival the entry keeps restored as the
+ * reader left it (see the head; FP-21) — its outline, what its landing
  * said, its runs' labels and the run it stood at, and none of its offers that
  * read — the camera leaving at once for its view, placed again where the
  * document it read was set since (`returning`), the walk where Back's light
@@ -2075,8 +1937,7 @@ async function landAtCursor(e, act, byKey, l) {
 /** @typedef {{addr: string, pos: number | null, end: End | null}} WalkTo where a cursor move puts the walk: a place, the position in it, and the link's end there */
 
 /**
- * Where a cursor move reaching an entry lands (see `landAtCursor`; issue
- * #221's: "Back finds where that passage sits now and lands on it"): the
+ * Where a cursor move reaching an entry lands (see `landAtCursor`): the
  * view the entry was left at, placed again where the document that view read
  * was set since — a measure that moved, a text an edit or a feed row
  * changed, another version its box shows — so the passage the reader left
