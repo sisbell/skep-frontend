@@ -368,16 +368,11 @@ fix; nothing here depends on their names.
 - **FP-34 A slot shows its value, that it is being read, or why it
   cannot — never its template's placeholder.** A slot is never dropped
   for want of its value and never holds another value. While its value
-  is read it stands as an empty box of its own width, and the value
-  fills the box with nothing beside it moving; a value too long for the
-  box is cut there and shown whole on its act. Where the value cannot
-  be had, the slot says why in that cause's own words, never one word
-  for every cause, and neighbouring slots one cause empties say it
-  once. Where the slot does not apply, its state's own words stand in
-  its place. A slot reads only from the board the one line names; on
-  another host's board it shows the address and reads on the reader's
-  act. Its accessible name gives its role and what it shows, pending
-  included.
+  is read it stands as an empty box of its own width, and filling it
+  moves nothing beside it. Where the value cannot be had, the slot says
+  why in that cause's own words, never one word for every cause, and
+  neighbouring slots one cause empties say it once; where the slot does
+  not apply, its state's own words stand in its place.
 
 ## The box
 
