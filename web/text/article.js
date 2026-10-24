@@ -19,11 +19,23 @@
 // `edgeStyle`), and the symbols the reveal
 // asked for, each AT ITS SPAN (foundations §2.1; B1-S4: "No margin column:
 // the symbols are at the place"): right after the last word its span
-// touches, in the last paragraph it touches (`standOf`) — every link marked,
-// and its symbol set, at the stretches LK says its end stands in now, never
-// at the position its slot stores, each mark and symbol carrying the ends it
-// draws by their links and their keys (LK's `endKey`), so a click opens the
-// card of the end clicked (APP-INPUT) — a symbol whose far end floats titled
+// touches, in the last paragraph its drawn stretches touch (`standOf`) —
+// every link marked, and its symbol set, at the stretches LK says its end is
+// drawn on now (LK's `drawnIn`), never at the position its slot stores, each
+// mark and symbol carrying the ends it draws by their links and their keys
+// (LK's `endKey`), so a click opens the card of the end clicked (APP-INPUT);
+// THE ENDS DRAWN AT A WITHHELD RUN (issue #202's design decision: "An end
+// wholly inside withheld text is drawn at the start of the withheld run it
+// falls in, beside the run's notice") merge into ONE SYMBOL at the start of
+// its gap's first line, before the notice's words, at every stage of the
+// reveal — the gap has no text to mark — in the one mark their links merge
+// into, a count after its ⟡ where it stands for two or more (`runSymHTML`),
+// no stretch of the gap marked or tinted, so the gap still reads as empty;
+// the others' links drawn there counted in its column's edge, below the
+// face's compact mark where that stands there; and a symbol is LIT — drawn
+// heavier while an arrival stands — where every link it stands for is lit
+// (`symbolLit`), marked in place by T-LAYER, never made into the article
+// (FP-30); a symbol whose far end floats titled
 // "its passage is not in ⟨D⟩'s current text" (foundations §2.3), and one
 // whose far end's text holds only part of its passage, or all of it in
 // pieces, or one the board would not tell of, titled with BM-HELD's line
@@ -100,17 +112,18 @@
 // whoever is looking — so a paste never joins text across an item.
 // Carries: the wireframe's §16 `articleHTML`, `withheldBlock`.
 // Rules: FP-1, FP-2, FP-8, FP-10 (reads LK/selection/focus as values), FP-21,
-// FP-22, FP-24, FP-26.
+// FP-22, FP-24, FP-26, FP-30.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
 import { t, plural } from '../strings.js';
 import { textOf } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
-import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, borderEm, headingSize, breakBetween, isSpace, gapOf, layoutOf, heightOf, wrap } from '../plane/layout.js';
+import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm, headingSize, breakBetween, isSpace, gapOf, layoutOf, heightOf, wrap } from '../plane/layout.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
+/** @typedef {import('../model/records.js').Stretch} Stretch */
 /** @typedef {import('../model/records.js').Origin} Origin */
 /** @typedef {import('../model/records.js').Reader} Reader */
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -188,19 +201,41 @@ const labelOf = (/** @type {Origin} */ o, /** @type {Opening} */ at) => (at.whol
  * never inside the text, so it sets no line (A-254: "so a link's arrival
  * breaks no line"). Its sizes are in its own em, the count's of the block's,
  * read from P-LAY's body em; the style sets it on the text's side the edge
- * stands on (the plane's right; a reading scene's pane's inner side).
+ * stands on (the plane's right; a reading scene's pane's inner side). A sign
+ * stacked below another beside the same block — a withheld run's count below
+ * its face's compact mark — stands the lines that sign takes below the
+ * block's first line (`edgeLines`).
  * @param {number} k the size of the block it stands beside, in the body's em
+ * @param {number} [below] the edge's lines above it, of the signs before it beside the block
  * @returns {string} its inline style
  */
-function edgeStyle(k) {
+function edgeStyle(k, below = 0) {
   const s = MEASURE.count * k;
-  return `--edge-in:${EDGE_GAP / s}em;--edge-w:${(EDGE - EDGE_GAP) / s}em;line-height:${(k * LINE_H) / s}`;
+  return `--edge-in:${EDGE_GAP / s}em;--edge-w:${(EDGE - EDGE_GAP) / s}em;line-height:${(k * LINE_H) / s}` + (below ? `;top:${(below * k * LINE_H) / s}em` : '');
 }
+
+/**
+ * The lines a sign's words take in its column's edge, at the size of the
+ * block it stands beside (`edgeStyle`), as P-LAY wraps them across the edge's
+ * width.
+ * @param {string} words
+ * @param {number} k the size of the block it stands beside, in the body's em
+ */
+const edgeLines = (words, k) => wrap(row('text', null, MEASURE.count * k, [piece(words, MEASURE.count * k)]), (EDGE - EDGE_GAP) / CHAR_W).length;
+
+/**
+ * The others' count in a block's column's edge: "+⟨n⟩ others", or the social
+ * types' one unnumbered mark where none is counted; nothing where neither
+ * stands.
+ * @param {{n: number, social: boolean}} c
+ * @param {number} k the block's size, in the body's em
+ * @param {number} [below] the edge's lines above it (`edgeStyle`)
+ */
+const countHTML = (c, k, below = 0) => (c.n > 0 ? `<span class="others edge" data-count="${c.n}" style="${edgeStyle(k, below)}">${esc(t('F.others-count', { n: c.n }))}</span>`
+  : c.social ? `<span class="others edge social" data-count="0" style="${edgeStyle(k, below)}">◦</span>` : '');
 
 /** the stretches of a drawn link's end that meet a block */
 const runsIn = (/** @type {Shown} */ m, /** @type {{pos: number, width: number}} */ b) => m.runs.filter((r) => touches(b, r));
-/** the last stretch a drawn link's end stands in, in the text's order: its symbol stands after the last word its span touches there */
-const tail = (/** @type {Shown} */ s) => s.runs[s.runs.length - 1];
 
 /**
  * The marks a block carries in its article: `sel` where the selection
@@ -218,6 +253,21 @@ export function blockMarks(addr, b, selected, focus) {
 }
 
 /**
+ * Is a link's symbol lit — drawn heavier while an arrival stands (foundations
+ * §2.1's register: "the followed link drawn heavier": WEIGHT; FP-30: "Lit
+ * means the reader crossed this link to get here") — the links it stands for
+ * merged as P44 merges one site's marks: heavier only where every one of them
+ * is among the links lit (LK's `lit`; its `mergedMark`'s weight). The one rule
+ * T-LAYER marks a standing article's symbols by in place, as `blockMarks` its
+ * blocks, so an arrival rebuilds no article and sets no line (FP-12): the
+ * article is made, and its lines measured, with no symbol lit.
+ * @param {string[]} links the links the symbol stands for
+ * @param {readonly string[]} lit the links lit at an arrival
+ * @returns {boolean}
+ */
+export const symbolLit = (links, lit) => links.length > 0 && links.every((l) => lit.includes(l));
+
+/**
  * @typedef {Object} Rec — a record atom as it renders (the record rule)
  * @property {'skep-enroll' | 'skep-head' | null} type null where it is not rendered
  * @property {string} words its words
@@ -232,7 +282,8 @@ export function blockMarks(addr, b, selected, focus) {
  * @property {'withheld' | 'record' | 'ref' | 'hex' | 'para'} kind
  * @property {number} level a paragraph's heading level, 0 for a paragraph
  * @property {Seg[]} segs a paragraph's stretches, the symbols standing in it among them
- * @property {{n: number, social: boolean}} count the others' count at a paragraph
+ * @property {Shown[]} ends a withheld run's: the ends drawn at it (LK's `Shown.run`), in the order LK drew them, which the one symbol at the start of its gap stands for
+ * @property {{n: number, social: boolean}} count the others' count at a paragraph or a withheld run
  * @property {Rec | null} rec a record atom's record
  */
 
@@ -571,21 +622,26 @@ export function placeholderOf(b, reader, originOwner, clauseOf) {
  * size, the arm and the clause beneath at the face's — where the gap's full
  * lines (P-LAY's `gapOf`) hold it as P-LAY wraps it; else its head where they
  * hold that; else its origin's owner, where a line of the gap holds the
- * address; else the origin's mark. Whatever it holds, the gap stands on the
- * run's bars, and where its face is not in it the face stands compact in the
- * column's edge (`withheldBlockHTML`).
+ * address; else the origin's mark — each measured with the symbol the ends
+ * drawn at the run merge into standing first in its first line (`runSymbol`;
+ * issue #202's design decision), so a symbol there steps the notice to a
+ * smaller form and is never dropped (FP-26). Whatever it holds, the gap
+ * stands on the run's bars, and where its face is not in it the face stands
+ * compact in the column's edge (`withheldBlockHTML`).
  * @param {Placeholder} p
  * @param {number} width the run's positions
  * @param {number} cpl the measure
+ * @param {number} [ends] the ends drawn at the run, which its one symbol stands for; none, no symbol
  * @returns {GapHolds}
  */
-export function gapHolds(p, width, cpl) {
+export function gapHolds(p, width, cpl, ends = 0) {
   const gap = gapOf(width, cpl), full = gap.filter((w) => w >= cpl).length;
   const F = MEASURE.face, before = MEASURE.faceGap * F;
-  const face = [row('text', null, 1, [piece(p.head, 1)]), row('text', null, F, [piece(p.arm.text, F)], { before }), ...(p.clause ? [row('text', null, F, [piece(p.clause.text, F)], { before })] : [])];
+  const sym = ends ? [runSymbol(1, ends)] : [];
+  const face = [row('text', null, 1, [...sym, piece(p.head, 1)]), row('text', null, F, [piece(p.arm.text, F)], { before }), ...(p.clause ? [row('text', null, F, [piece(p.clause.text, F)], { before })] : [])];
   if (heightOf(layoutOf(face, cpl)) <= full * LINE_H + 1e-9) return 'face';
   if (wrap(face[0], cpl).length <= full) return 'head';
-  if ([...p.owner].length <= (full ? cpl : gap[0])) return 'owner';
+  if ([...p.owner].length + sym.reduce((w, x) => w + boxWidth(x), 0) <= (full ? cpl : gap[0])) return 'owner';
   return 'mark';
 }
 
@@ -598,23 +654,32 @@ export function gapHolds(p, width, cpl) {
  * the face compact in the column's edge level with the run's first line —
  * "⟨owner⟩ with a mark that opens it whole" (foundations §2.1), its act the
  * run's face whole on the plane (APP-INPUT; O-FACES's `withheldRun`), a line
- * in a reading scene's pane, where nothing is acted on (SC). The owner it
- * names carried (`data-owner`) for C-39's face at the run, which names the
- * same.
+ * in a reading scene's pane, where nothing is acted on (SC). The ends drawn
+ * at the run (`Part.ends`; issue #202's design decision) stand as the one
+ * symbol they merge into, first in the gap's first line, before whatever it
+ * holds (`runSymHTML`), and the others' links drawn there are counted in the
+ * column's edge, below the face's compact mark where that stands there
+ * (`countHTML`). The owner it names carried (`data-owner`) for C-39's face at
+ * the run, which names the same.
  * @param {Block} b the withheld run
  * @param {Doc} d
  * @param {ArticleView} v
+ * @param {{ends: Shown[], count: {n: number, social: boolean}}} [at] the ends drawn at the run, and the others' count there
  */
-export function withheldBlockHTML(b, d, v) {
+export function withheldBlockHTML(b, d, v, at = { ends: [], count: { n: 0, social: false } }) {
   const p = placeholderOf(b, v.reader, v.originOwner, v.clauseOf);
-  const cpl = v.cpl ?? MEASURE_CPL, gap = gapOf(b.width, cpl), holds = gapHolds(p, b.width, cpl);
-  const inside = holds === 'face' ? `<span class="wh-head">${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span>${clauseHTML(p.clause, v.scene)}`
-    : holds === 'head' ? `<span class="wh-head">${esc(p.head)}</span>`
-    : holds === 'owner' ? `<span class="wh-owner">${esc(p.owner)}</span>`
-    : `<span class="wh-origin">${esc(t('L.origin-mark'))}</span>`;
-  const mark = holds === 'face' ? '' : `<span class="wh-mark edge" data-mark="withheld"${control(v.scene)} style="${edgeStyle(1)}">${esc(t('L.withheld.mark', { owner: p.owner }))}</span>`;
+  const cpl = v.cpl ?? MEASURE_CPL, gap = gapOf(b.width, cpl), holds = gapHolds(p, b.width, cpl, at.ends.length);
+  const [one, ...more] = at.ends;
+  const sym = one ? runSymHTML([one, ...more], v) : '';
+  const inside = holds === 'face' ? `<span class="wh-head">${sym}${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span>${clauseHTML(p.clause, v.scene)}`
+    : holds === 'head' ? `<span class="wh-head">${sym}${esc(p.head)}</span>`
+    : holds === 'owner' ? `<span class="wh-owner">${sym}${esc(p.owner)}</span>`
+    : `<span class="wh-origin">${sym}${esc(t('L.origin-mark'))}</span>`;
+  const words = t('L.withheld.mark', { owner: p.owner });
+  const mark = holds === 'face' ? '' : `<span class="wh-mark edge" data-mark="withheld"${control(v.scene)} style="${edgeStyle(1)}">${esc(words)}</span>`;
+  const count = countHTML(at.count, 1, mark ? edgeLines(words, 1) : 0);
   return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}" data-holds="${holds}" style="height:${gap.length * LINE_H}em;--wh-last:${gap[gap.length - 1]}">` +
-    `${mark}${inside}</span>`;
+    `${mark}${count}${inside}</span>`;
 }
 
 /**
@@ -744,7 +809,7 @@ export function standOf(text, c0, c1, chromeAt) {
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {Set<string>} labelled the origins already labelled whole in this article
- * @param {Shown[]} standing the symbols standing in this block: the ones whose span's last paragraph it is
+ * @param {Array<{s: Shown, r: Stretch}>} standing the symbols standing in this block, each with the stretch it stands after: its last drawn stretch a paragraph holds, which ends in this one
  * @returns {Seg[]}
  */
 function segmentsOf(b, d, v, labelled, standing) {
@@ -762,8 +827,7 @@ function segmentsOf(b, d, v, labelled, standing) {
   }
   /** the chrome standing before a character, as the line sets it */
   const chromeAt = (/** @type {number} */ i) => { const r = opening.get(i); return r ? { label: labelOf(r.o, r.opens), box: r.opens.c33 } : null; };
-  const stands = standing.map((s) => {
-    const r = tail(s);
+  const stands = standing.map(({ s, r }) => {
     const st = standOf(b.text, charOfPos(b, Math.max(b.pos, r.pos)), charOfPos(b, Math.min(b.pos + b.width, r.pos + r.width)), chromeAt);
     return { s, after: st.after, pos: posOfChar(b, st.at) };
   });
@@ -822,12 +886,16 @@ function headOf(d, v, owner) {
 
 /**
  * The one walk of a document both renderings are made from: the head, then
- * each block decided once — withheld, a record, a reference, an item not
- * rendered, or a paragraph with its heading level, its stretches with the
- * symbols standing at them, and its others' count — then the empty
- * document's line and the scene-offers. A symbol stands in the last
- * paragraph its span touches — the paragraph its last stretch ends in —
- * once however many it crosses.
+ * each block decided once — withheld, with the ends drawn at it and its
+ * others' count, a record, a reference, an item not rendered, or a paragraph
+ * with its heading level, its stretches with the symbols standing at them,
+ * and its others' count — then the empty document's line and the
+ * scene-offers. A symbol stands in the last paragraph its drawn stretches
+ * touch — the paragraph the last of them a paragraph holds ends in — once
+ * however many it crosses; an end LK draws at a withheld run (`Shown.run`)
+ * stands in that run's gap at every stage, the gap having no text to mark
+ * (issue #202's design decision: "Links shown by default, and the reader's
+ * own links, appear at the run at once").
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -839,21 +907,26 @@ function walk(d, v, ownerAccount) {
   if (d.refused) return { head, parts: null, empty: false, offers: [] };
   /** @type {Set<string>} */
   const labelled = new Set();
-  // the symbols standing in each paragraph, by its first position: the last paragraph each one's span touches
-  /** @type {Map<number, Shown[]>} */
+  // the symbols standing in each paragraph, by its first position: the paragraph the last of each one's drawn stretches a paragraph holds ends in
+  /** @type {Map<number, Array<{s: Shown, r: Stretch}>>} */
   const standing = new Map();
   for (const s of v.symbols) {
-    const r = tail(s);
-    let last = null;
-    for (const b of d.blocks) if (b.kind === 'para' && touches(b, r)) last = b;
-    if (last) standing.set(last.pos, [...(standing.get(last.pos) || []), s]);
+    if (s.run) continue;
+    for (let i = s.runs.length - 1; i >= 0; i--) {
+      const r = s.runs[i];
+      let last = null;
+      for (const b of d.blocks) if (b.kind === 'para' && touches(b, r)) last = b;
+      if (!last) continue;
+      standing.set(last.pos, [...(standing.get(last.pos) || []), { s, r }]);
+      break;
+    }
   }
   const none = { n: 0, social: false };
   /** @type {Part[]} */
   const parts = d.blocks.map((b) => {
     /** @type {Part} */
-    const p = { b, kind: 'para', level: 0, segs: [], count: none, rec: null };
-    if (b.kind === 'withheld') p.kind = 'withheld';
+    const p = { b, kind: 'para', level: 0, segs: [], ends: [], count: none, rec: null };
+    if (b.kind === 'withheld') { p.kind = 'withheld'; p.ends = v.marks.filter((s) => !!s.run && s.run.pos === b.pos); p.count = v.countAt(b); }
     else if (b.kind === 'atom') { p.kind = 'record'; p.rec = recordOf(b, d, v.reader); }
     else if (b.kind === 'ref' || b.kind === 'hex') p.kind = b.kind;
     else {
@@ -890,9 +963,31 @@ const control = (scene) => (scene ? '' : ' role="button" tabindex="-1"');
  * @param {ArticleView} v
  */
 function symHTML(s, v) {
-  const says = v.says(s);
-  const title = (s.link.type || '') + (says ? ' · ' + says : '');
-  return `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" data-end="${esc(s.key)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"${control(v.scene)} title="${esc(title)}">⟡</span>`;
+  return `<span class="sym ${s.linker === 'others' ? 'other' : ''} ${s.mark.value < 1 ? 'visited' : ''}" data-link="${esc(s.link.addr)}" data-end="${esc(s.key)}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"${control(v.scene)} title="${esc(titleOf(s, v))}">⟡</span>`;
+}
+
+/** a symbol's title for one end it stands for: its link's type, then what its far end's text holds of its passage where the view says anything of it (see `symHTML`) */
+const titleOf = (/** @type {Shown} */ s, /** @type {ArticleView} */ v) => { const says = v.says(s); return (s.link.type || '') + (says ? ' · ' + says : ''); };
+
+/**
+ * The one symbol the ends drawn at a withheld run merge into (issue #202's
+ * design decision: "Several ends in one run merge into one symbol with a
+ * count"; P44: "co-located marks of one class merge"), first in its gap's
+ * first line, beside the notice: in the one mark their links merge into (the
+ * view's `mergedMark`) — dashed where every one is another's, lighter where
+ * every one was followed — its ⟡ followed by how many it stands for where
+ * they are two or more, a bare numeral, as a merged tail's count is; titled
+ * with each end's own title; carrying every end by its link and its key
+ * (LK's `endKey`), in the order LK drew them, so a click opens the card of
+ * its one end or lists its several (APP-INPUT; O-ANATOMY). Its width, in
+ * characters, the style reads from `--sym-chars`.
+ * @param {[Shown, ...Shown[]]} ends
+ * @param {ArticleView} v
+ */
+function runSymHTML(ends, v) {
+  const [first, ...rest] = ends;
+  const m = v.mergedMark([first.mark, ...rest.map((s) => s.mark)]), n = ends.length > 1 ? String(ends.length) : '';
+  return `<span class="sym at-run ${m.linker === 'others' ? 'other' : ''} ${m.value < 1 ? 'visited' : ''}" data-links="${ends.map((s) => esc(s.link.addr)).join(' ')}" data-ends="${ends.map((s) => esc(s.key)).join(' ')}" style="--mark-hue:${m.hue};--mark-value:${m.value};--sym-chars:${1 + n.length}"${control(v.scene)} title="${esc(ends.map((s) => titleOf(s, v)).join('; '))}">⟡${n}</span>`;
 }
 
 /**
@@ -948,7 +1043,7 @@ export function articleHTML(d, v, ownerAccount) {
   let run = '';
   for (const p of w.parts) {
     const b = p.b;
-    if (p.kind === 'withheld') { run += withheldBlockHTML(b, d, v); continue; }
+    if (p.kind === 'withheld') { run += withheldBlockHTML(b, d, v, { ends: p.ends, count: p.count }); continue; }
     const mark = blockMarks(d.addr, b, v.selected, v.focus);
     const cls = ['sp', 'blk-' + b.kind];
     if (mark.sel) cls.push('sel');
@@ -957,9 +1052,8 @@ export function articleHTML(d, v, ownerAccount) {
     if (p.kind === 'record') { run += `<span class="${cls.join(' ')}" ${at}>${recordHTML(b, d, v)}</span>`; continue; }
     if (p.kind === 'ref') { run += `<span class="${cls.join(' ')} ref" ${at}>⟡</span>`; continue; }
     if (p.kind === 'hex') { run += `<span class="${cls.join(' ')}" ${at}>${esc(t('F.not-rendered', { width: b.width }))}</span>`; continue; }
-    const tag = p.level ? 'h' + Math.min(6, p.level + 1) : 'p', edge = edgeStyle(headingSize(p.level));
-    const count = p.count.n > 0 ? `<span class="others edge" data-count="${p.count.n}" style="${edge}">${esc(t('F.others-count', { n: p.count.n }))}</span>` : p.count.social ? `<span class="others edge social" data-count="0" style="${edge}">◦</span>` : '';
-    run += `<${tag} class="${cls.join(' ')}" ${at}>${count}${p.segs.map((s) => segHTML(s, v)).join('')}</${tag}>`;
+    const tag = p.level ? 'h' + Math.min(6, p.level + 1) : 'p';
+    run += `<${tag} class="${cls.join(' ')}" ${at}>${countHTML(p.count, headingSize(p.level))}${p.segs.map((s) => segHTML(s, v)).join('')}</${tag}>`;
   }
   if (w.empty) run += `<p class="sp empty" data-addr="${esc(d.addr)}" data-pos="1" data-width="0">${esc(t('B1.empty_subspace'))}</p>`;
   for (const o of w.offers) run += `<span class="offer" data-scene="${esc(d.addr)}|${esc(o)}" role="button" tabindex="-1">${esc(t('B1.scene-offer', { D: o }))}</span>`;
@@ -993,6 +1087,21 @@ const symbol = (k) => {
   const s = MEASURE.sym * k, edge = borderEm(BORDER.box) + MEASURE.symPad * s;
   return { text: '⟡', size: s, lead: MEASURE.symGap * s + edge, trail: edge, box: true, own: false };
 };
+/**
+ * The symbol the ends drawn at a withheld run merge into (`runSymHTML`): an
+ * inline-block at a symbol's size, its ⟡ and, where it stands for two or
+ * more, their count, its border and padding either side, the room after it —
+ * it stands first in its line.
+ * @param {number} k the size of the line it stands in, in the body's em
+ * @param {number} n the ends it stands for
+ * @returns {Piece}
+ */
+const runSymbol = (k, n) => {
+  const s = MEASURE.sym * k, edge = borderEm(BORDER.box) + MEASURE.symPad * s;
+  return { text: '⟡' + (n > 1 ? String(n) : ''), size: s, lead: edge, trail: edge + MEASURE.symGap * s, box: true, own: false };
+};
+/** an inline-block's width in characters of the body's face, as P-LAY's `wrap` sets it */
+const boxWidth = (/** @type {Piece} */ p) => (p.lead + p.trail) / CHAR_W + [...p.text].length * p.size;
 /**
  * A row of the plan.
  * @param {Row['kind']} kind

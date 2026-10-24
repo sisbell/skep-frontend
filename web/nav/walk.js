@@ -40,7 +40,15 @@
 // re-take at a document stands on the version its box shows; at reading
 // scale the walk holds THE LINKS THE READING SCALE
 // DRAWS (D5 §4 rule 2: the owner's and the person's own; others' only where a
-// peek or a lens shows them), after the blocks. A block whose text is only
+// peek or a lens shows them), after the blocks — EXACTLY WHAT IS DRAWN, where
+// it is drawn (issue #202's design decision: "The mirror lists exactly what is
+// drawn. A run's links go on the run's item"): an end LK draws at a withheld
+// run (LK's `Shown.run`) is a child of the run's item, never a link of the
+// document's own — D5 §4 rule 2's "a bundle's [children] its links", K-53's
+// "→ into its links" — the run's item saying how many end there and standing
+// expanded, → entering them a level below, Enter at each opening its card
+// (K-55) and Enter at the run still showing its face; Back to such an end
+// stands on the run's item, and Back's light marks it. A block whose text is only
 // white space is no span a person reads and no element of the walk (rule
 // 20): the mirror lists none, and a landing inside one stands on the element
 // before it; a position no block holds stands on the first span. A landing
@@ -295,11 +303,16 @@ export async function childrenOf(node) {
     const d = await PUMP.loadWhole(node.addr); if (!d) return [];
     /** @type {Node[]} */
     const out = d.blocks.filter(isElement).map((b) => ({ kind: /** @type {const} */ ('block'), addr: node.addr, pos: b.pos, link: null }));
-    for (const s of LK.shown(node.addr)) out.push({ kind: 'link', addr: node.addr, pos: s.pos, link: s });
+    for (const s of LK.shown(node.addr)) if (!s.run) out.push({ kind: 'link', addr: node.addr, pos: s.pos, link: s });
     return out;
   }
+  // a withheld run's: the ends drawn at it (see the head)
+  if (node.kind === 'block' && node.pos != null) return runEnds(node.addr, node.pos).map((s) => ({ kind: /** @type {const} */ ('link'), addr: node.addr, pos: s.pos, link: s }));
   return [];
 }
+
+/** the ends LK draws at the withheld run a document's block at `pos` is, in the order it draws them; none for any other block */
+const runEnds = (/** @type {string} */ addr, /** @type {number} */ pos) => LK.shown(addr).filter((s) => !!s.run && s.run.pos === pos);
 
 /** the accessible name of a node (what the mirror's item says), from ST's entries */
 export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type {number} */ total) {
@@ -327,8 +340,9 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
     if (!b) return t('L.mirror.span.bare', { p: n.pos ?? '', document: n.addr }) + pos;
     const kind = itemOf(b);
     if (kind === 'withheld') {
-      const w = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf);
-      return t('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), owner: w.owner, origin: b.origin || '', arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }) + pos;
+      const w = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), ends = runEnds(n.addr, b.pos).length;
+      const links = ends ? t('L.mirror.run-links', { links: ends === 1 ? t('F.label.links.1') : t('F.label.links', { n: ends }) }) : '';
+      return t('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), owner: w.owner, origin: b.origin || '', arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }) + links + pos;
     }
     const org = d.origins.find((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);
     const same = org ? t('L.mirror.same', { origin: org.doc }) : '';
@@ -350,7 +364,8 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
   return '';
 }
 
-const levelOf = (/** @type {Node} */ n) => (n.kind === 'board' ? 1 : n.kind === 'account' ? 2 : n.kind === 'document' ? 3 : 4);
+/** a node's level in the tree: board › account › document › span | link, a withheld run's links a level below the run (see the head) */
+const levelOf = (/** @type {Node} */ n) => (n.kind === 'board' ? 1 : n.kind === 'account' ? 2 : n.kind === 'document' ? 3 : n.kind === 'link' && n.link && n.link.run ? 5 : 4);
 
 /**
  * Move the walk to item `i` of `sibs` — the one way it moves. A landing
@@ -391,7 +406,8 @@ export function among(sibs, node) {
  * by a click — and the container itself where the walk's level holds no item
  * (a landing where the index lists nothing at its level). Each document's
  * item says whether it is expanded — at its reading scale — or collapsed
- * (see the head), and the item a landing stands on its description (see the
+ * (see the head) — a withheld run's item, where ends are drawn at it, expanded,
+ * → entering them — and the item a landing stands on its description (see the
  * head), held in the mirror's one hidden element after the items. Replacing
  * the items removes the one the platform's focus may stand on; the callers
  * put it on the new current item through the focus's owner (`FOCUS.land`), as
@@ -407,7 +423,7 @@ export function render() {
   let pieces = '';
   for (let i = lo; i < hi; i++) {
     const n = siblings[i];
-    const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr)}"` : '';
+    const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr)}"` : n.kind === 'block' && n.pos != null && runEnds(n.addr, n.pos).length ? ' aria-expanded="true"' : '';
     const located = isLocated(n, at) ? ' aria-current="location"' : '';
     const by = describedBy(n, i, said);
     const described = by ? ` aria-describedby="${by}"` : '';
@@ -426,22 +442,28 @@ export function render() {
  * platform's focus stays on the item it stands on. The app's loop runs it on
  * each dirty frame: the mirror is rebuilt at the walk's moves alone, and a
  * camera move — a zoom chord, the wheel, a teleport's flight — takes a
- * document across its threshold between them.
+ * document across its threshold between them. A withheld run's item, which
+ * no camera move expands or collapses, is left as the rebuild wrote it.
  */
 export function markExpanded() {
   if (!mirrorEl || typeof mirrorEl.querySelectorAll !== 'function') return;
   for (const li of /** @type {HTMLElement[]} */ ([...mirrorEl.querySelectorAll('li[aria-expanded]')])) {
+    const n = siblings[Number(li.dataset.i)];
+    if (!n || n.kind !== 'document') continue;
     const v = String(!below(li.dataset.addr || ''));
     if (li.getAttribute('aria-expanded') !== v) li.setAttribute('aria-expanded', v);
   }
 }
 
-/** does Back's light stand on a node (see the head): a span holding a stretch of the passage carried, or the link's end the follow was made at */
+/** does Back's light stand on a node (see the head): a span holding a stretch of the passage carried, or the link's end the follow was made at — at a withheld run, where LK draws that end there, the run's item */
 function isLocated(/** @type {Node} */ n, /** @type {Located | null} */ at) {
   if (!at || n.addr !== at.addr) return false;
-  if (n.kind === 'link') return !!at.end && !!n.link && n.link.link.addr === at.end.link && n.link.key === at.end.key;
+  const end = at.end;
+  if (n.kind === 'link') return !!end && !!n.link && n.link.link.addr === end.link && n.link.key === end.key;
   const b = n.kind === 'block' && n.pos != null ? REC.blockByPos(n.addr, n.pos) : null;
-  return !!b && at.runs.some((r) => touches(b, r));
+  if (!b) return false;
+  if (end) return b.kind === 'withheld' && runEnds(n.addr, b.pos).some((s) => s.link.addr === end.link && s.key === end.key);
+  return at.runs.some((r) => touches(b, r));
 }
 
 /**

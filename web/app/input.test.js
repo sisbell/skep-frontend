@@ -56,6 +56,9 @@
 // "Clicking an outlined run below reading scale does the same"): the landing
 // standing there, the camera bound for its reading view, no trail entry, the
 // arrival standing (a page that teleports to the document there turns red).
+// A click on the one symbol a withheld run's ends merge into opens its one
+// end's card or lists its several there, never the run's C-39 face (issue
+// #202: a page that lets the click fall to the run turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -330,6 +333,60 @@ async function settled(/** @type {() => boolean} */ done) {
   for (let i = 0; i < 200 && !(done() && !CAM.flying()); i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
   assert.ok(done() && !CAM.flying(), 'the act ran to its end');
 }
+
+test('a click on the one symbol a withheld run\'s ends merge into opens its one end\'s card, or lists its several there — a target of its own, never the run\'s C-39 face (issue #202: "The symbol opens the link\'s card. … The run\'s own act stays a separate target")', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
+  const layer = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    // a document of the reader's: its first paragraph, then eight of another account's draft's bytes withheld, two of the reader's citations on them
+    const D = '1.0.1.0.24', O = '1.0.2.0.19', FAR = '1.0.1.0.132', CITE = '1.1.0.1.0.1.0.3.13', text = 'Tumbler.\n\n', n = byteLength(text);
+    const [A, B] = [D + '.0.2.1', D + '.0.2.2'];
+    const fake = FAKE.create(Object.fromEntries([A, B].flatMap((l) => [
+      [FAKE.keyOf('op', { frame: F.inClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
+      [FAKE.keyOf('op', { frame: F.outClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
+    ])));
+    PORT.boot(fake);
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + 8 }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }, { iStart: O + '.0.1.1', width: 8 }]);
+    REC.takeLinks(D, [A, B]);
+    for (const [l, at] of /** @type {Array<[string, number]>} */ ([[A, 2], [B, 6]])) REC.takeLink({ addr: l, from: [resolveSpan({ start: `${O}.0.1.${at}`, width: '0.0.0.0.0.0.0.2' })], to: [resolveSpan(unitSpan(FAR))], type: CITE });
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
+    const click = /** @type {(e: unknown) => void} */ (layer.get('click'));
+    const d = REC.doc(D), article = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d));
+    const tag = /** @type {string} */ ((article.match(/<span class="sym at-run [^"]*"[^>]*>/) || [])[0]);
+    assert.ok(tag, `the run's one symbol in the plane's article: ${article}`);
+    const run = { dataset: { withheld: '1', owner: '1.0.2', pos: String(n + 1), width: '8' } };
+    const holder = { dataset: { addr: D } };
+    /** a click on a symbol carrying these attributes, inside the run's gap */
+    const press = async (/** @type {Record<string, string>} */ dataset) => {
+      const el = Object.assign(new globalThis.HTMLElement(), { dataset, isConnected: false, getBoundingClientRect: () => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0 }) });
+      Object.assign(el, { closest: (/** @type {string} */ sel) => (sel === '.sym' ? el : sel === '[data-withheld]' ? run : sel === 'article' ? holder : null) });
+      click({ target: el, clientX: 0, clientY: 0, stopPropagation() {} });
+      for (let i = 0; i < 200 && !HOST.currentOverlay(); i++) await new Promise((r) => setTimeout(r, 0));
+      return { el, shown: HOST.currentOverlay() };
+    };
+    const both = await press(datasetOf(tag));
+    assert.deepEqual([both.shown?.id, both.shown?.kind], [`ends:${D}:${n + 1}`, 'list'], 'both ends: listed at the symbol, never C-39\'s face');
+    HOST.dismiss();
+    const keyA = /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === A)).key;
+    const one = await press({ links: A, ends: keyA });
+    assert.deepEqual([one.shown?.id, one.shown?.anchor], ['anatomy:' + A, { el: one.el, span: { addr: D, pos: n + 1, width: 8 } }], 'one end: its card, at the symbol and the run');
+    HOST.dismiss();
+    assert.deepEqual(fake.unanswered, []);
+  } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
 
 test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in whole — a trail entry Back returns from, no passage carried, no link lit, no face — and a click on the rest of the placeholder conjures C-39\'s face', async () => {
   const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };

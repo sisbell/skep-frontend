@@ -22,7 +22,11 @@
 // the line going to follow; beneath its far end's words, the line its
 // landing says where that end's text holds only part of its passage, and
 // nothing where it holds all of it in one piece (issue #153; a mutant that
-// leaves the far end's words alone turns red).
+// leaves the far end's words alone turns red). An end drawn at a withheld
+// run: its card says it is withheld, by the owner of the run's origin, with
+// no read of its bytes (a mutant that reads them turns red), and the run's
+// one symbol standing for several lists them at the symbol, each row its own
+// end's card (issue #202).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as ANATOMY from './anatomy-card.js';
@@ -288,6 +292,45 @@ test('the card says beneath its far end\'s words what that end\'s text holds of 
   REC.takeProjection(CUT, 2, FAR, [{ pos: 3, width: 22 }]);
   await ANATOMY.open(drawn(), null);
   assert.equal(said(), null, 'all of it in one piece: the far end\'s words alone');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('an end LK draws at a withheld run: its card says the end is withheld and whose — the owner of the run\'s origin, as its placeholder names it — with no read of the withheld bytes, and shows the other end; the run\'s one symbol standing for several lists them at the symbol, each row opening its own end\'s card (issue #202)', async () => {
+  const p = cardPage();
+  HOST.attach(/** @type {any} */ (p.host));
+  // a document of 1.0.1's: its first paragraph, then eight of 1.0.2's draft's bytes withheld from the reader, two of 1.0.1's citations on them
+  const D = '1.0.1.0.31', O = '1.0.2.0.9', FAR = '1.0.1.0.131', CITE = '1.1.0.1.0.1.0.3.13', TEXT = 'Tumbler.\n\n', n = TEXT.length;
+  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text: TEXT, ref: null, origin: null }, { pos: n + 1, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }, { iStart: O + '.0.1.1', width: 8 }]);
+  const [A, B] = [D + '.0.2.1', D + '.0.2.2'];
+  REC.takeLinks(D, [A, B]);
+  for (const [l, at] of /** @type {Array<[string, number]>} */ ([[A, 2], [B, 6]])) REC.takeLink({ addr: l, from: [resolveSpan({ start: `${O}.0.1.${at}`, width: '0.0.0.0.0.0.0.2' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: CITE });
+  const fake = FAKE.create(Object.fromEntries([A, B].flatMap((l) => [
+    [FAKE.keyOf('op', { frame: F.inClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
+    [FAKE.keyOf('op', { frame: F.outClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
+  ])));
+  PORT.boot(fake);
+  const end = (/** @type {string} */ l) => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === l));
+  assert.deepEqual([end(A).pos, end(A).width, end(A).run?.origin], [n + 1, 8, O], 'drawn at the run\'s start, the run\'s whole extent');
+  /** a card's two ends as a person reads them, far first: which end, its document, its words */
+  const ends = () => [...p.host.innerHTML.matchAll(/<div class="end (far|near)"><span class="k">[^<]*<\/span> <span class="code">([^<]*)<\/span>.*?<div class="quoted">([^<]*)<\/div>/g)].map((m) => [m[1], m[2], text(m[3])]);
+  await ANATOMY.open(end(A), null);
+  assert.deepEqual(ends(), [['far', FAR, '…'], ['near', D, t('F.corner.withheld', { owner: '1.0.2' })]], 'the other end shown; this end withheld, by the owner of the run\'s origin — never D\'s');
+  assert.ok(!fake.asked.some((k) => k.includes('"retrieve_v"')), `no read of the withheld bytes: ${fake.asked}`);
+  HOST.dismiss();
+  // the run's one symbol, standing for both, pressed: both listed at it, each row its own end's card
+  const el = /** @type {any} */ ({ isConnected: true, getBoundingClientRect: () => ({ left: 0, top: 0, right: 10, bottom: 10, width: 10, height: 10 }) });
+  ANATOMY.fromSymbol([end(A), end(B)], el);
+  const list = HOST.currentState();
+  assert.deepEqual([list?.id, list?.kind, list?.anchor], [`ends:${D}:${n + 1}`, 'list', { el, span: { addr: D, pos: n + 1, width: 8 } }], 'a list at the symbol, at the run\'s positions where the symbol is taken down');
+  assert.deepEqual(p.controls(), ['t0', 't1', 'x'], 'a row for each end');
+  assert.ok(p.host.innerHTML.includes(`→ ${FAR}</button>`), 'each row naming its far end as its tail would');
+  const act = list?.acts?.t1;
+  assert.ok(act);
+  await act(/** @type {any} */ (p.kid('t1')), false);
+  for (let i = 0; i < 50 && HOST.currentState()?.id !== 'anatomy:' + B; i++) await new Promise((r) => setTimeout(r, 0));
+  assert.equal(HOST.currentState()?.id, 'anatomy:' + B, 'the second row opens the second end\'s card');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });

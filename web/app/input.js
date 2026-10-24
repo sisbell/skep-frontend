@@ -68,6 +68,10 @@
 // stretch links mark that of the first end marking it — each mark carries
 // its ends by their links and their keys (LK's `endKey`; `endAt`), so of a
 // link with two ends in one article the card is the clicked end's (B1-S5);
+// the one symbol a withheld run's ends merge into (issue #202's design
+// decision: "The symbol opens the link's card") opens its one end's card, or
+// lists its several there (O-ANATOMY's `fromSymbol`; P44), a target of its
+// own beside the run, whose act stays C-39's face;
 // the presence indicator's ⟡ asks to see the links;
 // a run's hairline label goes to its source carrying the run, marked where
 // the source's current text holds it (foundations §2.3's carry rule; P43);
@@ -303,6 +307,14 @@ function clickText(target) {
     const se = /** @type {HTMLElement} */ (sym);
     if (se.dataset.reveal) { LINKS.show(se.dataset.reveal); return true; }
     if (se.dataset.link) { const s = endAt(se, se.dataset.link, se.dataset.end || ''); if (s) ANATOMY.open(s, se, false); return true; }
+    if (se.dataset.links) {
+      // a withheld run's symbol: the ends it stands for, as LK draws them now
+      const keys = (se.dataset.ends || '').split(' ');
+      const ends = se.dataset.links.split(' ').flatMap((l, i) => { const s = endAt(se, l, keys[i] || ''); return s ? [s] : []; });
+      const [one, two, ...more] = ends;
+      if (one && two) ANATOMY.fromSymbol([one, two, ...more], se, false); else if (one) ANATOMY.open(one, se, false);
+      return true;
+    }
   }
   const hair = target.closest('.hairline');
   if (hair) { const h = /** @type {HTMLElement} */ (hair), run = runOf(h); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: run, site: run ? { span: run } : null }); return true; }

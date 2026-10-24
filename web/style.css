@@ -141,9 +141,14 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .hairline.compact { opacity:.7; }
 .dtext .pubmark { display:inline-block; font-size:var(--mark); line-height:1; color:#cfd6df; border:var(--border-box) solid #4a5260; padding:0 var(--mark-pad); margin-right:var(--mark-gap); }
 .dtext .sym { display:inline-block; border:var(--border-box) solid var(--mark-hue, #8b8f96); color:var(--mark-hue, #e8e6e1); padding:0 var(--sym-pad); font-size:var(--sym); line-height:1; margin-left:var(--sym-gap); vertical-align:baseline; opacity:var(--mark-value, 1);
-  width:calc(1ch + 2 * var(--sym-pad) + 2 * var(--border-box)); text-align:center; }
+  width:calc(var(--sym-chars, 1) * 1ch + 2 * var(--sym-pad) + 2 * var(--border-box)); text-align:center; }
 .dtext .sym.other { border-style:dashed; }
-/* a sign in its column's edge, beside its block's first line (see the head): the others' count, a withheld run's mark */
+/* the one symbol the ends drawn at a withheld run merge into (issue #202): first in its gap's first line, the room after it,
+   `--sym-chars` its ⟡ and its count; and a symbol lit at an arrival, heavier by a ring that takes no room, so no line moves */
+.dtext .withheld .sym { margin-left:0; margin-right:var(--sym-gap); }
+.dtext .sym.heavier { box-shadow:0 0 0 var(--border-box) var(--mark-hue, #8b8f96); }
+/* a sign in its column's edge, beside its block's first line (see the head): the others' count, a withheld run's mark — a
+   run's count stacked below its mark by the `top` T-ARTICLE sets */
 .dtext .edge { position:absolute; top:0; left:calc(100% + var(--edge-in)); width:var(--edge-w); font-size:var(--count); font-weight:400; color:var(--dim); }
 .dtext .wh-mark { color:#cfd6df; }
 .dtext .withheld { display:block; position:relative; isolation:isolate; margin:0 0 var(--gap); color:#cfd6df; }

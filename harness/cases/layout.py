@@ -86,7 +86,9 @@ set back on the landing's view (a camera move, no act) finds nothing outlined
 (FP-21: "The state ends only at another landing"); and, at BEAMED with the
 reveal at stage 3, the link a landing names is drawn heavier (§2.1: "with the
 followed link drawn heavier"): its beam lays HEAVIER_INK times the ink or more
-about its start that it lays after a landing on the same span naming no link.
+about its start that it lays after a landing on the same span naming no link,
+and its symbol in the mounted article is marked heavier, unlit after the
+landing naming none (FP-30; issue #202).
 THE HANDOFF (law 8;
 foundations §2.4: the bars become text and no line moves; S1 Q7; issue #15:
 mid scale greeks the columns the mount sets): at each level, and at the
@@ -2477,6 +2479,10 @@ def run(ctx):
         beamed = [x for x in ctx.js('window.__skep.links.shown(%s)' % json.dumps(BEAMED)) if ctx.js('window.__skep.links.tailed(%s, %s)' % (json.dumps(BEAMED), json.dumps(x['link']))) is False]
         heavy = beamed[0] if beamed else None
         ink = {True: None, False: None}
+        # and its symbol in the article, marked heavier in place while the arrival stands (FP-30; issue #202): the one the
+        # landing names, and none where it names none
+        sym = {True: None, False: None}
+        sym_at = '#domlayer article.dtext[data-addr="%s"] .sym[data-link="%s"]' % (BEAMED, heavy['link']) if heavy else ''
         if heavy is not None:
             ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(BEAMED))
             for named in (True, False):
@@ -2484,12 +2490,16 @@ def run(ctx):
                 ctx.settle()
                 ctx.frames(3)
                 ink[named] = beam_ink(ctx, BEAMED, heavy['link'], heavy['pos'])
+                sym[named] = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.classList.contains("heavier") : null; })()' % json.dumps(sym_at))
             ctx.js('window.__skep.links.hide(%s)' % json.dumps(BEAMED))
         lit, unlit = ink[True], ink[False]
         r.check(bool(lit) and bool(unlit) and unlit['ink'] > 0 and lit['ink'] >= HEAVIER_INK * unlit['ink'],
                 f'the arrival: the link followed drawn heavier — at {BEAMED}, the reveal at stage 3, the landing that names a link drawn as a beam lays {HEAVIER_INK:g} times the ink or more within {BEAM_WINDOW_PX} px of its beam\'s start that a landing on the same span naming none lays',
                 {'link': heavy and heavy['link'], 'lit': lit, 'unlit': unlit})
-        r.figures['arrival'].update(gone_at_next_act=again is None, beam_ink={'doc': BEAMED, 'link': heavy and heavy['link'], 'lit': lit and round(lit['ink'], 2), 'unlit': unlit and round(unlit['ink'], 2)})
+        r.check(sym[True] is True and sym[False] is False,
+                f'the arrival: the link followed lights its symbol too — at {BEAMED}, the landing that names it marks the link\'s symbol in the mounted article heavier, and a landing on the same span naming none leaves it unlit (FP-30; issue #202)',
+                {'link': heavy and heavy['link'], 'named': sym[True], 'naming_none': sym[False]})
+        r.figures['arrival'].update(gone_at_next_act=again is None, beam_ink={'doc': BEAMED, 'link': heavy and heavy['link'], 'lit': lit and round(lit['ink'], 2), 'unlit': unlit and round(unlit['ink'], 2)}, symbol_lit={'named': sym[True], 'naming_none': sym[False]})
         ctx.leap(DOC, WINDOW[0])
     # the mount thresholds: mounted at em 6.5 and above, unmounted below 5.5; at each step the frames it drew drew no
     # document both as bars and as text, nor left one yielded and unmounted; where the article stands just mounted, it

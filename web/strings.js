@@ -277,6 +277,8 @@ export const STRINGS = {
   'L.mirror.shows': { text: ': ⟨shown⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // C-67's clause after a withheld run's arm, where the origin's edition claims decide one (PUB-5.124); the empty place says nothing
   'L.mirror.clause': { text: ' ⟨clause⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
+  // after a withheld run's face, the links drawn at the run, its item's children (issue #202): ⟨links⟩ their count (F.label.links)
+  'L.mirror.run-links': { text: ' ⟨links⟩ ending in it.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // C-67's place where a read of the edition claims failed, in the words of issue #186's design decision: "a face whose read
   // failed says 'edition claims not read'. A blank there would read as 'no claim'"
   'L.clause.unread': { text: 'edition claims not read', cls: 'DRAFT', source: '', screen: 'B1-S7; the document-level withheld face; the ARIA mirror', lane: true },

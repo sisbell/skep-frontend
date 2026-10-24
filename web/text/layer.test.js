@@ -101,7 +101,11 @@
 // room three steps past the standard, is read at reading scale (a size that
 // leaves the bound at its place's turns red), and a feed row dropping its
 // text, its size its place's standard again, takes no scale from under its
-// reader (a bound set from the latest size turns red).
+// reader (a bound set from the latest size turns red). A standing article's
+// symbols are marked heavier in place where every link one stands for is lit
+// at an arrival, nothing rebuilt, and a span wholly inside a withheld run
+// stands at the run's own boxes (issue #202: a layer that marks nothing, or
+// reads the span as a range inside the gap, turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -458,18 +462,19 @@ function meeting(/** @type {string} */ addr) {
  * The test run on the text layer over a page of stand-ins — its element `w` × `h` px, which holds what the layer
  * mounts (`held`), and the platform's selection on nothing — then every article taken down, the owners' readers
  * handing in nothing, and the platform's `document` and `window` put back. The stand-ins lay nothing out: the layer
- * sets the lines P-LAY predicts, its articles' HTML whole and their parts the runs of lines that stand.
+ * sets the lines P-LAY predicts, its articles' HTML whole and their parts the runs of lines that stand; each answers
+ * a selector with the stand-ins `answers` names for it, else with none.
  */
-function onLayer(/** @type {(held: Set<unknown>) => void} */ body, w = VW, h = VH) {
+function onLayer(/** @type {(held: Set<unknown>) => void} */ body, w = VW, h = VH, /** @type {Map<string, unknown[]> | null} */ answers = null) {
   const platform = { document: globalThis.document, window: globalThis.window };
   /** @type {Set<unknown>} */
   const held = new Set();
   const element = () => {
-    /** @type {{className: string, innerHTML: string, dataset: object, style: object, children: unknown[], classList: {toggle(): void}, setAttribute(): void, appendChild(c: unknown): void, querySelectorAll(): unknown[], getBoundingClientRect(): object, remove(): void}} */
+    /** @type {{className: string, innerHTML: string, dataset: object, style: object, children: unknown[], classList: {toggle(): void}, setAttribute(): void, appendChild(c: unknown): void, querySelectorAll(sel: string): unknown[], getBoundingClientRect(): object, remove(): void}} */
     const e = {
       className: '', innerHTML: '', dataset: {}, style: {}, children: [], classList: { toggle() {} }, setAttribute() {},
       appendChild(c) { e.children.push(c); },
-      querySelectorAll: () => [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }),
+      querySelectorAll: (/** @type {string} */ sel) => (answers && answers.get(sel)) || [], getBoundingClientRect: () => ({ top: 0, left: 0, width: 0, height: 0 }),
       remove() { held.delete(e); },
     };
     return e;
@@ -929,4 +934,37 @@ test('a document set smaller than its place\'s standard raises the zoom-in bound
   CAM.panBy(1, 0);
   assert.equal(CAM.view().scale, reading.scale, 'the next pan keeps its reader\'s scale');
   CAM._reset();
+});
+
+test('a standing article\'s symbols are marked heavier in place where every link one stands for is lit at an arrival — a text symbol its link, a withheld run\'s every end drawn at it — nothing rebuilt, and unmarked as the arrival goes; a span wholly inside a withheld run stands at the run\'s own boxes, never a line inside its gap (FP-30; issue #202)', () => {
+  const O = '1.0.2.0.9', TEXT1 = 'Tumbler.\n\n', n = TEXT1.length, RUN = n + 1;
+  /** @type {Map<string, boolean>} each symbol's `heavier` mark as last set, by the links it stands for */
+  const heavier = new Map();
+  const sym = (/** @type {Record<string, string>} */ dataset) => ({ dataset, classList: { toggle: (/** @type {string} */ c, /** @type {boolean} */ on) => { if (c === 'heavier') heavier.set(dataset.link || dataset.links, on); } } });
+  const gap = { getClientRects: () => [{ left: 10, top: 20, width: 300, height: 40 }] };
+  const answers = new Map([['.sym[data-link], .sym[data-links]', [sym({ link: 'L1' }), sym({ links: 'L1 L2' })]], [`.withheld[data-pos="${RUN}"]`, [gap]]]);
+  onLayer(() => {
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + 8 }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text: TEXT1, ref: null, origin: null }, { pos: RUN, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);
+    REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }, { iStart: O + '.0.1.1', width: 8 }]);
+    const f = LAYER.foldOf(REC.doc(D)), at = LAYER.centreOf(D, null);
+    CAM.set({ x: at.x, y: at.y, scale: 12 / f.fs });
+    LAYER.frame();
+    assert.ok(LAYER.isMounted(D), 'its article stands at em 12');
+    const el = LAYER.mountedSet().get(D)?.el;
+    const marks = () => [heavier.get('L1'), heavier.get('L1 L2')];
+    assert.deepEqual(marks(), [false, false], 'nothing lit: neither marked');
+    LK.readers({ lit: () => ['L1'] });
+    LAYER.frame();
+    assert.deepEqual(marks(), [true, false], 'L1 lit: its text symbol heavier, the run\'s — standing for L2 too — not (P44)');
+    LK.readers({ lit: () => ['L2', 'L1'] });
+    LAYER.frame();
+    assert.deepEqual(marks(), [true, true], 'both lit: both heavier');
+    LK.readers({ lit: () => [] });
+    LAYER.frame();
+    assert.deepEqual(marks(), [false, false], 'the arrival gone: both unmarked');
+    assert.equal(LAYER.mountedSet().get(D)?.el, el, 'every mark made in place, the article standing on its element');
+    assert.deepEqual(LAYER.spanRects(D, RUN + 3, 2), [{ x: 10, y: 20, w: 300, h: 40 }], 'two positions inside the run: the run\'s own box');
+    assert.deepEqual(LAYER.spanRects(D, RUN, 8), [{ x: 10, y: 20, w: 300, h: 40 }], 'the run whole: its own box');
+  }, 1440, 900, answers);
 });

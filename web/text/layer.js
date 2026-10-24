@@ -138,7 +138,13 @@
 // article's blocks for them in place by T-ARTICLE's one rule (`blockMarks`):
 // a change of the selection or the focus rebuilds no article, so the
 // platform's selection stands as the person left it (foundations §2.1: "the
-// SELECTION is the platform's own, transient"; D5 §2). THE LIT BLOCK IS THE
+// SELECTION is the platform's own, transient"; D5 §2); and its symbols
+// heavier, in place, where every link one stands for is lit at an arrival
+// (LK's `lit`, T-ARTICLE's `symbolLit`; FP-30), so an arrival sets no line
+// (`markLit`). A span wholly inside a withheld run stands at the run's own
+// boxes — its gap's, one for each part of it standing — never at an offset
+// inside the gap (`spanRects`; issue #202's design decision: "Arriving by a
+// link that ends here marks the whole run"). THE LIT BLOCK IS THE
 // FOCUS RING'S READING-SCALE FORM (the focus record's D3; D5 §4 rule 2): one
 // mark, under the ring's one rule — lit while the plane holds the focus and
 // a key moved it (N-FOCUS's `ringShown`), out after a pointer's landing as
@@ -262,7 +268,7 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE, GUTTER } from '../plane/layout.js';
 import { CORNER, HOLD, COL, cornerWidth } from '../plane/register.js';
 import { holdTop, heldLine, across, lineHeight, face } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, blockMarks, editionClause, copyText } from './article.js';
+import { articleHTML, articlePlan, cornerHTML, blockMarks, symbolLit, editionClause, copyText } from './article.js';
 import { farSays } from '../beams/held.js';
 import { homeOf, documentOf, memberOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
@@ -346,6 +352,7 @@ import { t } from '../strings.js';
  * @property {BlockTop[]} blockTops where each block part standing stood as its part was set (the gate's span registration)
  * @property {BlockPart[]} marked each block part standing with the block it shows: the elements the selection's and the focus's marks stand on
  * @property {string} markedFor the selection and the focus its blocks are marked for (`marksKey`); '' where a part set since awaits its marks
+ * @property {string | null} litFor the links lit its symbols are marked heavier for (`markLit`); null where a part set since awaits its marks
  * @property {boolean} legible it takes the pointer: its em stood at P-LOD's readable threshold or above at the last frame no press stood through (`markLegible`)
  */
 
@@ -1346,6 +1353,7 @@ function fill(rec, v, span) {
     rec.marked = rec.parts.flatMap((p) => p.blocks);
     rec.blockTops = rec.parts.flatMap((p) => p.tops);
     rec.markedFor = '';
+    rec.litFor = null;
   }
   return added;
 }
@@ -1389,7 +1397,7 @@ function mount(d, v, span, banded) {
   /** @type {Mounted} */
   const rec = {
     el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fold: f, fs: f.fs, corner: { whole: cornerHTML(d, view), compact: cornerHTML(d, view, true) },
-    template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', legible: false,
+    template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', litFor: null, legible: false,
   };
   mounted.set(d.addr, rec);
   const t2 = performance.now();
@@ -1603,6 +1611,26 @@ function markBlocks(rec, selected, focus) {
     const m = blockMarks(rec.d.addr, b, selected, focus);
     el.classList.toggle('sel', m.sel);
     el.classList.toggle('lit', m.lit);
+  }
+}
+
+/**
+ * Mark a standing article's symbols heavier where every link one stands for
+ * is lit at an arrival, by T-ARTICLE's rule (`symbolLit`), where the links lit
+ * changed since they were last marked or a part was set since: a class set
+ * or taken off where it differs, nothing rebuilt, so no line is set again
+ * (FP-12) — a text symbol stands for its one link, a withheld run's for every
+ * end drawn at the run (see the head).
+ * @param {Mounted} rec
+ * @param {readonly string[]} lit the links lit (LK's `lit`)
+ */
+function markLit(rec, lit) {
+  const key = lit.join(' ');
+  if (key === rec.litFor) return;
+  rec.litFor = key;
+  for (const el of /** @type {HTMLElement[]} */ ([...rec.el.querySelectorAll('.sym[data-link], .sym[data-links]')])) {
+    const links = el.dataset.link ? [el.dataset.link] : (el.dataset.links || '').split(' ').filter(Boolean);
+    el.classList.toggle('heavier', symbolLit(links, lit));
   }
 }
 
@@ -1876,8 +1904,8 @@ export function frame(focused = () => false) {
     if (!rec.parts.length && !(rec.banded && intersects(shapeAt(addr, rec.fold), v))) unmount(addr);
   }
   for (const rec of mounted.values()) place(rec);
-  const focus = litFocus();
-  for (const rec of mounted.values()) { markBlocks(rec, span, focus); if (!pressed || fresh.includes(rec.d.addr)) markLegible(rec); }
+  const focus = litFocus(), lit = LK.lit();
+  for (const rec of mounted.values()) { markBlocks(rec, span, focus); markLit(rec, lit); if (!pressed || fresh.includes(rec.d.addr)) markLegible(rec); }
   placeCorners(focused);
   placeHeld();
   if (span && !pressed && (fresh.includes(span.addr) || (owed && sameSpan(owed, span)))) placeAgain(span);
@@ -2220,7 +2248,10 @@ function dropCorner(/** @type {string} */ addr) {
  * it standing (the edge a beam leaves from, the arrival at a document named
  * whole); with one, those of the bytes named, line by line, where the parts
  * holding its first and last positions stand (S1 Q1: the line a beam leaves
- * at, the arrival mark's outline, an overlay at the selection).
+ * at, the arrival mark's outline, an overlay at the selection) — and where
+ * the span lies wholly inside a withheld run, whose gap holds no bytes to
+ * name, the run's own boxes, one for each part of its gap standing, never a
+ * line at an offset inside the gap (see the head).
  * @param {string} addr
  * @param {number} pos the block's first position, or the span's
  * @param {number | null} [width] the span's positions
@@ -2228,12 +2259,14 @@ function dropCorner(/** @type {string} */ addr) {
  */
 export function spanRects(addr, pos, width = null) {
   const rec = mounted.get(addr); if (!rec) return null;
-  if (width != null) {
+  const run = width != null ? rec.made.blocks.find((b) => b.kind === 'withheld' && b.pos <= pos && pos + width <= b.pos + b.width) : null;
+  if (width != null && !run) {
     const r = rangeOf({ addr, pos, width });
     const rs = r ? [...r.getClientRects()].map((q) => ({ x: q.left, y: q.top, w: q.width, h: q.height })) : [];
     return rs.length ? rs : null;
   }
-  const rs = [...rec.el.querySelectorAll(`.sp[data-pos="${pos}"]`)].flatMap((sp) => [...sp.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height })));
+  const parts = run ? `.withheld[data-pos="${run.pos}"]` : `.sp[data-pos="${pos}"]`;
+  const rs = [...rec.el.querySelectorAll(parts)].flatMap((sp) => [...sp.getClientRects()].map((r) => ({ x: r.left, y: r.top, w: r.width, h: r.height })));
   return rs.length ? rs : null;
 }
 

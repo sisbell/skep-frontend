@@ -80,7 +80,11 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     selected whole; a person's click on the gap conjuring C-39's face
     and selecting nothing;
 (f) the guest's own acts: every link at the first edition drawn as its
-    owner's, never "you"; C-39's face at the run with the placeholder's own
+    owner's, never "you"; each end LK draws there standing in the article the
+    plane makes of it — a mark or a symbol carrying its key, one wholly inside
+    a withheld run in the run's one symbol — and listed once in the mirror, a
+    withheld run's among the run's item's children (issue #202's design
+    decision: "The mirror lists exactly what is drawn"); C-39's face at the run with the placeholder's own
     arm beneath, standing beneath the placeholder, at the run's own positions
     once the text layer rebuilds the article and takes the placeholder away,
     and at the document's box once the layer takes the article down — never
@@ -185,11 +189,13 @@ STANDS_ON_BARS = '''((addr, pos) => { const h = window.__skep.barsOf(addr); if (
 
 def gaps(ctx):
     """each withheld run's gap in the first edition's mounted article as the page holds it: its position, width, origin,
-    the owner it carries and what it holds (issue #151's design decision) — its head, its arm, its clause and the claim
-    the clause follows, and the mark its column's edge holds where its face stands compact there"""
+    the owner it carries and what it holds (issue #151's design decision) — its head, its own words apart from the symbol
+    the links drawn at the run merge into (issue #202), its arm, its clause and the claim the clause follows, and the mark
+    its column's edge holds where its face stands compact there"""
     return ctx.js('''[...document.querySelectorAll(%s)].map((e) => { const q = (sel) => e.querySelector(sel);
+      const words = (x) => { if (!x) return null; const c = x.cloneNode(true); c.querySelectorAll('.sym').forEach((s) => s.remove()); return c.textContent || null; };
       return {pos: Number(e.dataset.pos), width: Number(e.dataset.width), origin: e.dataset.origin, owner: e.dataset.owner, holds: e.dataset.holds || null,
-              head: (q('.wh-head') || {}).textContent || null, arm: (q('.arm') || {}).textContent || null, clause: (q('.clause') || {}).textContent || null,
+              head: words(q('.wh-head')), arm: (q('.arm') || {}).textContent || null, clause: (q('.clause') || {}).textContent || null,
               claim: (q('.clause') || {dataset: {}}).dataset.claim || null, mark: (q(':scope > .wh-mark') || {}).textContent || null}; })''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
 
 
@@ -266,8 +272,9 @@ def copy_across_run(ctx, r, doc, kind):
 
     def drawn(face):
         """is a placeholder drawn selected whole: every glyph of it inside the platform's selection, and its words among the
-        selection's — which the platform leaves out of a selection over what it draws unselectable"""
-        head = ctx.js('(() => { const e = document.querySelector(%s); return e ? e.textContent : null; })()' % json.dumps(face + ' .wh-head'))
+        selection's — which the platform leaves out of a selection over what it draws unselectable, the symbol of the links
+        drawn at the run among it (issue #202)"""
+        head = ctx.js('(() => { const e = document.querySelector(%s); if (!e) return null; const c = e.cloneNode(true); c.querySelectorAll(".sym").forEach((s) => s.remove()); return c.textContent; })()' % json.dumps(face + ' .wh-head'))
         return bool(ctx.js(SELECTED_WHOLE % json.dumps(face))) and bool(head) and squash(head) in squash(ctx.js('String(window.getSelection())'))
 
     # (i) on the plane: the camera between the two points, at the readable em 9 or above, both in view
@@ -557,6 +564,28 @@ def run(ctx):
     # (f) the guest's own acts
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
     r.check(bool(shown) and all(s['linker'] == 'owner' for s in shown), '(f) every link drawn at the first edition is its owner\'s, never the person\'s: a guest owns none', sorted({s['linker'] for s in shown}))
+    # one rule of where an end is drawn (issue #202's design decision): every end LK draws at the first edition stands in the
+    # article the plane makes of it — on its text as a mark or a symbol carrying its key, or, wholly inside a withheld run, in
+    # the run's one symbol — and is listed once in the mirror: among the document's own links, or a withheld run's among the
+    # run's item's children, which are those ends exactly
+    agree = ctx.js('''(async () => { const [A, L, W, R] = await Promise.all([import("./text/article.js"), import("./text/layer.js"), import("./nav/walk.js"), import("./model/records.js")]);
+      const addr = %s, d = R.doc(addr), tpl = document.createElement('template'); tpl.innerHTML = A.articleHTML(d, L.viewFor(d), L.ownerAccount(d));
+      const keysOf = (e) => (e.dataset.ends || e.dataset.end || '').split(' ').filter(Boolean);
+      const inText = [...tpl.content.querySelectorAll('.lip[data-ends], .sym[data-end]')].filter((e) => !e.closest('.withheld')).flatMap(keysOf);
+      const atRuns = [...tpl.content.querySelectorAll('.withheld .sym[data-ends]')].map((e) => ({pos: Number(e.closest('.withheld').dataset.pos), keys: keysOf(e)}));
+      const node = (kind, pos) => ({kind, addr, pos, link: null}), ends = (ns) => ns.filter((n) => n.kind === 'link' && n.link).map((n) => n.link.link.addr + ' ' + n.link.key);
+      const listed = ends(await W.childrenOf(node('document', null)));
+      const runs = [];
+      for (const b of d.blocks.filter((x) => x.kind === 'withheld')) runs.push({pos: b.pos, ends: ends(await W.childrenOf(node('block', b.pos)))});
+      return {inText, atRuns, listed, runs}; })()''' % json.dumps(DOC))
+    each = [dict(s, id=s['link'] + ' ' + s['key']) for s in shown]
+    listed = agree['listed'] + [e for g in agree['runs'] for e in g['ends']]
+    run_keys = {g['pos']: g['keys'] for g in agree['atRuns']}
+    drawn_ok = all((s['key'] in run_keys.get(s['run']['pos'], [])) if s.get('run') else (s['key'] in agree['inText']) for s in each)
+    runs_ok = all(sorted(g['ends']) == sorted(s['id'] for s in each if s.get('run') and s['run']['pos'] == g['pos']) for g in agree['runs'])
+    r.check(drawn_ok and runs_ok and all(listed.count(s['id']) == 1 for s in each) and len(listed) == len(each),
+            '(f) one rule of where an end is drawn: every end LK draws at the first edition stands in its article — a mark or a symbol carrying its key, a withheld run\'s in the run\'s one symbol — and is listed once in the mirror, a withheld run\'s among its item\'s children (issue #202)',
+            {'ends': [(s['id'], s['pos'], bool(s.get('run'))) for s in each], 'at_runs': agree['atRuns'], 'listed': listed})
     # the act at the run, as the input reads a click: its press and its release at one point. The placeholder stands past the
     # article's clip, where the platform hands a person's pointer to nothing, so the events are dispatched at the element
     ctx.js('''(() => { const e = document.querySelector(%s); if (!e) return false; const q = e.getBoundingClientRect();

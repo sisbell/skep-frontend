@@ -92,7 +92,10 @@
 // from the beams' and the canvas's own sets.
 // The doors that move the reveal chain redraw the links card where it stands
 // open, as the card's own acts do, so a shot after a door shows the state it
-// set. Carries: S1's `driftSample`, `overlapCheck`, `canvasSpanRect`/
+// set. Each end `links.shown` lists carries its key (LK's `endKey`) and the
+// withheld run it is drawn at, where it lies wholly inside one (LK's
+// `Shown.run`; issue #202), so a case holds the article's marks and the
+// mirror's items to the ends LK draws. Carries: S1's `driftSample`, `overlapCheck`, `canvasSpanRect`/
 // `domSpanRects`; S3's §17 `runPath`/`summarize`/`settle` and its
 // `THRESHOLDS`; the wireframe's §15 diagnostics.
 
@@ -614,7 +617,7 @@ export function install(deps) {
     },
     reveal: (/** @type {string} */ addr) => { const r = LK.state(addr); const o = r.lens.owners, ty = r.lens.types; return { stage: r.stage, others: r.others, lens: { owners: o ? [...o] : null, types: ty ? [...ty] : null, endorsed: r.lens.endorsed } }; },
     links: {
-      shown: (/** @type {string} */ addr) => LK.shown(addr).map((s) => ({ link: s.link.addr, end: s.end, pos: s.pos, width: s.width, far: s.far, linker: s.linker, value: s.mark.value, hue: s.mark.hue })),
+      shown: (/** @type {string} */ addr) => LK.shown(addr).map((s) => ({ link: s.link.addr, end: s.end, key: s.key, pos: s.pos, width: s.width, run: s.run ? { ...s.run } : null, far: s.far, linker: s.linker, value: s.mark.value, hue: s.mark.hue })),
       countDoc: (/** @type {string} */ a) => LK.countDoc(a), countAccount: (/** @type {string} */ a) => LK.countAccount(a), visited: (/** @type {string} */ l) => LK.visited(l),
       classify: (/** @type {string} */ l) => { const x = REC.link(l); return x ? LK.classify(x) : null; },
       /** does a document's composition draw the link — LK's `draws`, the one rule which links show, a link standing at a mark joining two documents where either draws it; false where the model holds no such link */

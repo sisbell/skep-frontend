@@ -334,7 +334,10 @@ fix; nothing here depends on their names.
   one maker or how many it holds; an end's colour is the colour of the
   link's symbol at that end's document, at every scale, neutral only
   where an end's links differ. A follow that fails lights nothing, and
-  its label carries the far end's state from the read it made. Where
+  its label carries the far end's state from the read it made. Each end
+  is drawn in one place by one rule — on the part of it the reader can
+  read, else at the start of the withheld run it lies in — and every
+  surface that counts, marks or lists the end reads that place. Where
   the page cannot tell a fact, it says so, and why. No fact is carried
   by colour alone.
 
@@ -483,6 +486,7 @@ last. Each stands until a later decision says it changes it.
 - **#182**: a folded moment is one segment of the one line naming its walk and its step and that it waits on the reader, never cut short of room, the shell told nothing; its act unfolds the moment as it was left, its typed text and its refusal with it, over the view its walk showed it over, the focus on its first words; only its own cancel, named by its walk, sends `cancel(id)`; its walk's next moment opens as the last was left; a statement never folds, what its walk does next and when it ends waiting on skep #627, and what a cancel leaves behind on skep #628 → FP-28 (What stands), FP-20
 - **#184**: the versions list keeps every member its probe read, and its open end says whether the board ended the chain there — the head's row marked latest, by a shape, only where the board answered that no member follows; else one line in the list's own type saying how far it read and that it is not known to be complete, "then the board stopped answering" where the board did not answer, with "try again" going on from there and nothing resuming by itself — the version being read and the members the feed names past the stop listed "not read" and dated "as last read ⟨when⟩"; while it is not known to be complete, nothing built from it claims a total or a latest
 - **#186**: a withheld origin's edition claims decide one clause beneath the arm of every face naming that origin — a withheld run's and the document's own, never a link address inside it — the pointer as a working link, the quoting form, or nothing where no claim is admitted, a failed read of them worded "edition claims not read"; changes #179: the document's own words carry that clause, not the pointer alone → FP-33
+- **#202**: the ends drawn at a withheld run stand as one symbol beside its notice at every stage, a count after it where they are two or more, and others' ends there are counted in its column's edge; its item in the mirror holds them a level below; the symbol opens the one card or lists the several; Back across a follow made there outlines the whole run, lights its symbol and stands on the run's item → FP-30, FP-21
 
 ## What these rule out
 

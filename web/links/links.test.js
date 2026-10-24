@@ -69,7 +69,13 @@
 // the link still naming its own far document. A drawn end carries the mark
 // its far document gives the link beside its own, each decided at its own
 // document (issue #166: a mutant marking the far end as the near, or both
-// from the two documents together, turns red).
+// from the two documents together, turns red). WHERE AN END IS DRAWN is one
+// rule (issue #202): on its stretches outside every withheld run, each cut
+// where one stands, else at the start of the withheld run holding its last
+// position, the run's whole extent its one stretch; an end on the bytes of a
+// run a document windows drawn at the run, another's there counted at the
+// run's block, and drawn on its words once the run is read (a mutant that
+// draws every stretch as it is placed turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -537,4 +543,48 @@ test('a far end is named by its address, then what the page holds of its documen
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: '1.0.1.0.127', kind: 'edition', label: '# The far edition', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
   assert.equal(named(D + '.0.2.1'), '1.0.1.0.127 · The far edition', 'the index listing it: the index\'s first line');
   assert.equal(LK.farWords(end(D + '.0.2.1')), 'The far edition', 'the words alone, which a tail\'s label sets beneath its address');
+});
+
+test('where an end is drawn is one rule (`drawnIn`; issue #202): on the stretches of it outside every withheld run, each cut where one stands; wholly inside withheld text, at the start of the run holding its last position, the run\'s whole extent its one stretch; none where the text places none of it', () => {
+  const para = (/** @type {number} */ pos, /** @type {number} */ width) => /** @type {import('../model/records.js').Block} */ ({ pos, width, kind: 'para', text: 'x', origin: null });
+  const run = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {string} */ origin) => /** @type {import('../model/records.js').Block} */ ({ pos, width, kind: 'withheld', text: '', origin });
+  const blocks = [para(1, 42), run(43, 20, '1.0.2.0.9'), para(63, 20), run(83, 10, '1.0.3.0.4')];
+  assert.deepEqual(LK.drawnIn([para(1, 42)], [{ pos: 5, width: 3 }]), { runs: [{ pos: 5, width: 3 }], run: null }, 'no withheld run: every stretch as placed');
+  assert.deepEqual(LK.drawnIn(blocks, [{ pos: 40, width: 30 }]), { runs: [{ pos: 40, width: 3 }, { pos: 63, width: 7 }], run: null }, 'a stretch crossing a withheld run: the parts either side of it alone');
+  assert.deepEqual(LK.drawnIn(blocks, [{ pos: 50, width: 4 }, { pos: 70, width: 2 }]), { runs: [{ pos: 70, width: 2 }], run: null }, 'an end with a readable part: drawn on that part alone');
+  assert.deepEqual(LK.drawnIn(blocks, [{ pos: 50, width: 4 }]), { runs: [{ pos: 43, width: 20 }], run: { pos: 43, width: 20, origin: '1.0.2.0.9' } }, 'wholly inside a withheld run: at its start, its whole extent — never at the offset 50');
+  assert.deepEqual(LK.drawnIn(blocks, [{ pos: 45, width: 2 }, { pos: 85, width: 3 }]).run, { pos: 83, width: 10, origin: '1.0.3.0.4' }, 'wholly withheld across two runs: the one holding its last position');
+  assert.deepEqual(LK.drawnIn(blocks, []), { runs: [], run: null }, 'placed nowhere: not drawn');
+});
+
+/** O, a draft whose bytes D windows: D as a run of O's twenty bytes leaves it — its first paragraph, the run withheld from the reader, its last paragraph */
+const O = '1.0.2.0.9';
+function windowed(/** @type {'withheld' | 'content'} */ kind = 'withheld') {
+  REC.takeDelivery(D, [
+    { pos: 1, width: 42, kind: 'content', text: 'x'.repeat(40) + '\n\n', ref: null, origin: null },
+    kind === 'withheld' ? { pos: 43, width: 20, kind: 'withheld', text: '', ref: null, origin: O } : { pos: 43, width: 20, kind: 'content', text: 'z'.repeat(18) + '\n\n', ref: null, origin: null },
+    { pos: 63, width: 38, kind: 'content', text: 'y'.repeat(38), ref: null, origin: null },
+  ]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 42 }, { iStart: O + '.0.1.1', width: 20 }, { iStart: D + '.0.1.43', width: 38 }]);
+}
+
+test('an end lying wholly inside withheld text is drawn at the run\'s start — its one stretch the run\'s whole extent, never an offset inside the gap — another\'s there counted at the run\'s block, and drawn on its words once the run is read (issue #202)', () => {
+  const MINE = D + '.0.2.5', THEIRS = OTHER_HOME + '.0.2.7', SPLIT = D + '.0.2.6';
+  REC.takeLinks(D, [MINE, THEIRS, SPLIT]);
+  REC.takeLink({ addr: MINE, from: [span(O, 3, 4)], to: [whole('1.0.1.0.127')], type: CITE });
+  REC.takeLink({ addr: THEIRS, from: [span(O, 10, 5)], to: [span(OTHER_HOME, 20, 3)], type: CITE });
+  windowed();
+  const [first, gap, last] = REC.doc(D).blocks;
+  assert.deepEqual([gap.pos, gap.width, gap.kind], [43, 20, 'withheld']);
+  const at = () => LK.shown(D).filter((s) => s.link.addr === MINE).map((s) => ({ pos: s.pos, width: s.width, runs: s.runs, run: s.run }));
+  assert.deepEqual(at(), [{ pos: 43, width: 20, runs: [{ pos: 43, width: 20 }], run: { pos: 43, width: 20, origin: O } }], 'the person\'s link on O\'s bytes 3–6, at positions 45–48 of the gap: drawn at the run\'s start, the run\'s whole extent');
+  assert.deepEqual(LK.shownAt(D, { pos: 43, width: 20 }).map((s) => s.link.addr), [MINE], 'a span over the run meets it');
+  assert.deepEqual([first, gap, last].map((b) => LK.countAt(D, b).n), [1, 1, 0], 'another\'s link on O\'s bytes counted at the run\'s block, as the other\'s into D\'s own first paragraph is at its');
+  // an end stored as two spans, one in the run and one in D's own text: each span its own end, the one in the text drawn on its words
+  REC.takeLink({ addr: SPLIT, from: [span(O, 15, 2), span(D, 50, 3)], to: [whole('1.0.1.0.127')], type: CITE });
+  assert.deepEqual(LK.shown(D).filter((s) => s.link.addr === SPLIT).map((s) => [s.pos, s.width, !!s.run]), [[43, 20, true], [70, 3, false]], 'each of its spans drawn by the rule: the run\'s, the text\'s on its words');
+  // the run read: its bytes the reader's now, the end drawn on its words
+  windowed('content');
+  assert.deepEqual(at(), [{ pos: 45, width: 4, runs: [{ pos: 45, width: 4 }], run: null }], 'the run readable: the end on its own words');
+  assert.deepEqual(REC.doc(D).blocks.map((b) => LK.countAt(D, b).n), [1, 1, 0], 'another\'s counted at the paragraph its words stand in');
 });

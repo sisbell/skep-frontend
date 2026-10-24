@@ -101,10 +101,20 @@
 // summed, and of another owner, or with text between them, take one each (a
 // mutant that never merges, or merges across owners, turns red); a span of
 // text alone copies its own characters, as M-REC's `textOf` reads them.
+// THE ENDS DRAWN AT A WITHHELD RUN (issue #202) stand as one symbol at the
+// start of its gap's first line, before the notice's words, carrying every
+// end's key and, for two or more, their count, at every stage, no stretch of
+// the gap marked; another's there counted in the column's edge below the
+// face's compact mark; the plan unmoved, and the gap measured with the
+// symbol in it, its notice stepping to a smaller form (a mutant that drops
+// the symbol, the count, its stacking or the measure turns red). A symbol
+// stands after the last of its stretches a paragraph holds (a mutant that
+// stands it by its last stretch alone turns red), and is lit where every link
+// it stands for is lit, the article made with none lit.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, headingLevel, blockMarks, itemOf, recordContents, copyText } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, headingLevel, blockMarks, symbolLit, itemOf, recordContents, copyText } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -760,4 +770,51 @@ test('items one after another of one kind and one owner share one stand-in, thei
   // text between two items of one kind and owner: a stand-in each, the text in its place
   const between = textMade(D, [['ref', ''], ['content', '\n\n'], ['ref', '']]);
   assert.equal(copyText(between, whole(between), owner), standIn.reference() + '\n\n' + standIn.reference());
+});
+
+test('the ends drawn at a withheld run stand as ONE symbol at the start of its gap\'s first line, before the notice\'s words — every end\'s key on it, its count where it stands for two or more — at every stage of the reveal, no stretch of the gap marked; another\'s counted in the column\'s edge, below the face\'s compact mark; the plan unmoved (issue #202)', () => {
+  const O = '1.0.1.0.1003', RUN = { pos: 11, width: 240, origin: O };
+  const d = doc({ blocks: [{ pos: 1, width: 10, kind: 'para', text: 'Tumbler.', origin: null }, runOf(240, 11)] });
+  /** an end LK draws at the run (LK's `Shown.run`): its one stretch the run's whole extent */
+  const atRun = (/** @type {string} */ link, /** @type {string} */ key, value = 1) => ({ ...shown(11, 240), link: { addr: link, type: null }, key, run: RUN, runs: [{ pos: 11, width: 240 }], mark: { hue: HUE.you, linker: 'you', form: [], value, own: true } });
+  const inText = shown(1, 3), a = atRun('R1', 'k1'), b = atRun('R2', 'k2');
+  const counted = (/** @type {import('../model/records.js').Block} */ x) => ({ n: x.kind === 'withheld' ? 1 : 0, social: false });
+  const v = view({ reader: KEYLESS, marks: [inText, a, b], symbols: [], countAt: counted });
+  const html = articleHTML(d, v, '1.0.1');
+  const gap = /** @type {RegExpExecArray} */ (/<span class="withheld" data-pos="11"[^>]*>(.*)<\/span><\/div>$/.exec(html))[1];
+  assert.ok(html.includes(esc(t('B1.presence', { n: 3 }))), 'the presence words count the three ends drawn: two at the run, one in the text');
+  const syms = [...gap.matchAll(/<span class="sym at-run [^"]*" data-links="([^"]*)" data-ends="([^"]*)" style="([^"]*)" role="button" tabindex="-1" title="[^"]*">([^<]*)<\/span>/g)].map((m) => m.slice(1));
+  assert.deepEqual(syms.map((m) => [m[0], m[1], m[3]]), [['R1 R2', 'k1 k2', '⟡2']], `one symbol at the run, carrying both ends and their count, a control on the plane, at stage 1: ${gap}`);
+  assert.ok(syms[0][2].includes(`--mark-hue:${HUE.you}`) && syms[0][2].includes('--sym-chars:2'), 'in the mark its links merge into, its width its ⟡ and its count');
+  assert.ok(/^<span class="wh-mark edge"[^>]*>[^<]*<\/span><span class="others edge"[^>]*>[^<]*<\/span><span class="wh-head"><span class="sym at-run /.test(gap), `first in the gap's first line, before the notice's words, after the edge's signs: ${gap}`);
+  assert.ok(!/class="[^"]*\blip\b/.test(gap) && !gap.includes('depth'), 'no stretch of the gap marked: it still reads as empty');
+  const count = /<span class="others edge" data-count="(\d+)" style="([^"]*)">([^<]*)<\/span>/.exec(gap);
+  assert.deepEqual(count && [count[1], count[3]], ['1', esc(t('F.others-count', { n: 1 }))], 'another\'s end there counted in the edge');
+  assert.ok(count && count[2].endsWith(`;top:${LINE_H / MEASURE.count}em`), `stacked one edge line below the face's compact mark: ${count && count[2]}`);
+  // one end alone: no count after its ⟡
+  assert.ok(articleHTML(d, view({ reader: KEYLESS, marks: [a] }), '1.0.1').includes('data-links="R1" data-ends="k1" style="--mark-hue:' + HUE.you + ';--mark-value:1;--sym-chars:1" role="button" tabindex="-1" title="">⟡</span>'), 'one end: its ⟡ alone');
+  // the plan: the gap's row and every block's the same, the ends drawn at the run or not
+  const rows = (/** @type {import('./article.js').ArticleView} */ w) => JSON.stringify(articlePlan(d, w, '1.0.1').filter((r) => r.kind !== 'head'));
+  assert.equal(rows(v), rows(view({ reader: KEYLESS, marks: [inText] })), 'no row moved: the gap stands on its bars');
+  // what the gap holds is measured with the symbol first in its first line: it steps the notice to a smaller form, never drops the symbol (FP-26)
+  const p = placeholderOf(runOf(5), SIGNED, (x) => accountOf(x) || '', () => null);
+  assert.deepEqual([gapHolds(p, 5, MEASURE_CPL), gapHolds(p, 5, MEASURE_CPL, 2)], ['owner', 'mark'], 'five positions hold the owner\'s address alone; with the symbol before it, the origin\'s mark');
+  const five = withheldBlockHTML(runOf(5), d, view(), { ends: [a, b], count: { n: 0, social: false } });
+  assert.ok(five.includes('data-holds="mark"') && five.includes('>⟡2</span>' + esc(t('L.origin-mark')) + '</span>'), `the symbol stands, before the origin's mark: ${five}`);
+});
+
+test('a symbol stands after the last of its stretches a paragraph holds — an end whose last stretch lies in an item that holds no text keeps its symbol in the text (issue #202)', () => {
+  const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: 'one two three', origin: null }, { pos: 14, width: 1, kind: 'atom', text: '{}', origin: null }] });
+  const s = { ...shown(5, 3), runs: [{ pos: 5, width: 3 }, { pos: 14, width: 1 }] };
+  assert.deepEqual(piecesOf(d, view({ marks: [s], symbols: [s] }), 1), ['one ', 'two', '⟡', ' three'], 'after "two", the last of its words a paragraph holds');
+  assert.equal(symsIn(articleHTML(d, view({ marks: [s], symbols: [s] }), '1.0.1')).length, 1);
+});
+
+test('a symbol is lit where every link it stands for is lit — one rule, T-LAYER\'s in place — and the article is made with none lit, so an arrival sets no line (FP-30; issue #202)', () => {
+  assert.deepEqual([symbolLit(['A'], ['A']), symbolLit(['A'], []), symbolLit(['A', 'B'], ['A']), symbolLit(['A', 'B'], ['B', 'A']), symbolLit([], ['A'])], [true, false, false, true, false], 'its one link lit; one of its two not; both; a symbol standing for none never');
+  const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: 'one two three', origin: null }, runOf(240, 14)] });
+  const lit = { ...shown(5, 3), mark: { ...shown(5, 3).mark, weight: 2 } };
+  const atRun = { ...lit, link: { addr: 'R', type: null }, key: 'k', run: { pos: 14, width: 240, origin: '1.0.1.0.1003' }, runs: [{ pos: 14, width: 240 }] };
+  const html = articleHTML(d, view({ marks: [lit, atRun], symbols: [lit] }), '1.0.1');
+  assert.ok(symsIn(html).length === 1 && html.includes('sym at-run') && !html.includes('heavier'), 'made with nothing lit, whatever the weight its links\' marks carry');
 });

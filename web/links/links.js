@@ -51,6 +51,15 @@
 //     its key, `endKey`) wherever it stands, and every mark and symbol drawn
 //     for it carries that key, so a click opens the card of the end clicked,
 //     never another of the link's ends in the same text (B1-S5);
+//   - WHERE AN END IS DRAWN is ONE RULE (`drawnIn`; issue #202's design
+//     decision: "One rule decides where every link end is drawn"): on the
+//     stretches of it the reader can read, cut where a withheld run stands;
+//     an end lying wholly inside withheld text at the START of the withheld
+//     run holding its last stretch (`Shown.run`), the run's whole extent its
+//     one stretch — never at an offset inside the gap, never a tint over it —
+//     so the article's marks and symbols (T-ARTICLE), the presence count and
+//     the ARIA mirror (N-WALK), all reading `shown`, and the others' count
+//     (`countAt`) name the same ends;
 //   - its FAR end stands where `project` answers it sits in the far
 //     document's current text now (A-53: "the beam lands at the passage's
 //     current place (version-proof)"; M-REC's projection, `farRuns`) — in
@@ -104,7 +113,9 @@
 //     one-step move along the trail crossed the follow of (N-GO's
 //     `litLinks`; issue #152's design decision) — is drawn heavier while the
 //     arrival stands (FP-21; foundations §2.1's register: "the arrival an outline around
-//     its span with the followed link drawn heavier": WEIGHT);
+//     its span with the followed link drawn heavier": WEIGHT), its beams by
+//     `markOf`'s weight and its symbols in a standing article by the links
+//     lit (`lit`, which T-LAYER marks them by in place);
 //   - a link at a mark JOINING TWO DOCUMENTS — a mid connection, a scene's
 //     line — stands there where EITHER document's composition draws it
 //     (`draws`; §2.5: "drawn where either pane's default composition draws
@@ -157,13 +168,13 @@
 // when it lands, THIS FILE's rule and its state change; NO DRAWING MODULE
 // CHANGES (BM, T-LAYER, P-RENDER, SC, the cards draw what `shown`, `shownAt`,
 // `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`, `markOf`,
-// `mergedMark`, `floats`, `farPos`, `farWords`, `farLabel` and `endKey` give
-// them, and T-LAYER sets each document at the size the fold of what `utmost`
-// gives takes).
+// `mergedMark`, `lit`, `floats`, `farPos`, `farWords`, `farLabel`, `drawnIn`
+// and `endKey` give them, and T-LAYER sets each document at the size the
+// fold of what `utmost` gives takes).
 // Carries: the wireframe's §16 `.sym`/`.lip` selection and the owner-link
 // marking in `articleHTML`, §17's wanted set, §18 `revealLinks`'s lens
 // filters, §10's by-linker colouring and mid lines, S1's `buildBeams`.
-// Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-22.
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-22, FP-30.
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
@@ -190,13 +201,27 @@ import { t } from '../strings.js';
 /** @typedef {import('../model/records.js').Stretch} Stretch */
 
 /**
- * @typedef {Object} Shown — one end of a link drawn at a document: the span its slot stores there, where that span stands in the document's text now, and where its far end stands in the far document's
+ * @typedef {Object} WithheldRun — a run of a text withheld from the reader, where an end lying wholly inside it is drawn (`drawnIn`)
+ * @property {number} pos its first position: where the end's symbol stands, at the start of the run
+ * @property {number} width its positions
+ * @property {string | null} origin the document its bytes are withheld from, whose owner its placeholder names (R56)
+ */
+
+/**
+ * @typedef {Object} Drawn — where an end is drawn in a text (`drawnIn`)
+ * @property {Stretch[]} runs the stretches it is drawn on, in the text's order: the stretches of it outside every withheld run; else, where it lies wholly inside withheld text, the one withheld run's whole extent; none where the text places none of it
+ * @property {WithheldRun | null} run the withheld run it is drawn at, where it lies wholly inside withheld text; null where it is drawn on text the reader can read
+ */
+
+/**
+ * @typedef {Object} Shown — one end of a link drawn at a document: the span its slot stores there, where that span is drawn in the document's text now, and where its far end stands in the far document's
  * @property {Link} link
  * @property {string} near the document it is drawn at — one whose text holds `end` (M-REC's `holdsEnd`), whichever end that is, whichever document minted its bytes and wherever the link is homed
  * @property {'from' | 'to'} end which end this document holds
  * @property {EndRef} nearEnd the span of the slot this end draws, as stored: the bytes' identity, by which an end met from both its documents is told apart wherever it stands
  * @property {string} key `nearEnd`'s key (`endKey`): what every mark and symbol drawn for this end carries, so a click on one finds this end and no other of the link's
- * @property {Stretch[]} runs every stretch of the near document's held text `nearEnd` stands in now (M-REC's `placed`), in the text's order — never empty: an end the held text places nowhere is not drawn
+ * @property {Stretch[]} runs where `nearEnd` is drawn in the near document's held text now (`drawnIn` over M-REC's `placed`), in the text's order — never empty: an end the held text places nowhere is not drawn
+ * @property {WithheldRun | null} run the withheld run it is drawn at, where the held text holds it wholly inside withheld text — `runs` the run's whole extent; null where it is drawn on text the reader can read
  * @property {number} pos the first stretch's first position
  * @property {number} width the first stretch's positions
  * @property {Mark} mark the mark the near document gives the link (`markOf` at `near`): the one its symbol takes here, and a beam's colour at this end
@@ -342,6 +367,9 @@ export function markOf(l, at, other = at) {
   return { hue: HUE[linker], linker, form: KIND_FORM.link, value: visitedSet.has(l.addr) ? VISITED_ALPHA : 1, weight: read.lit().includes(l.addr) ? ARRIVAL_WEIGHT : 1, own: linker !== 'others' };
 }
 
+/** the links lit at an arrival, as the reader handed in names them (see the head): the ones `markOf` weights heavier, and the ones a standing article's symbols are marked heavier by in place (T-LAYER); none where none is */
+export const lit = () => read.lit();
+
 /**
  * The one mark links drawn at one site merge into — a stretch of text
  * several mark, a mid connection holding several, a bundle's end holding
@@ -442,11 +470,50 @@ export function draws(l, addr) {
 }
 
 /**
+ * WHERE AN END IS DRAWN in a text (see the head; issue #202's design
+ * decision): on every stretch of it the text holds outside its withheld runs,
+ * each stretch cut where a withheld run stands; else, where the text holds it
+ * wholly inside withheld text, AT THE START of the withheld run holding its
+ * last stretch, the run's whole extent its one stretch — never at an offset
+ * inside the gap; none where the text places none of it. The one rule every
+ * surface reads a drawn end's place by, through `shown` and the others' count
+ * (`countAt`).
+ * @param {Block[]} blocks the text's blocks, in position order
+ * @param {Stretch[]} placed where the end's bytes stand in the text (M-REC's `placed`), in the text's order
+ * @returns {Drawn}
+ */
+export function drawnIn(blocks, placed) {
+  const withheld = blocks.filter((b) => b.kind === 'withheld');
+  if (!withheld.length) return { runs: placed, run: null };
+  /** @type {Stretch[]} */
+  const readable = [];
+  for (const r of placed) {
+    let at = r.pos;
+    const end = r.pos + r.width;
+    for (const b of withheld) {
+      if (b.pos + b.width <= at || b.pos >= end) continue;
+      if (b.pos > at) readable.push({ pos: at, width: b.pos - at });
+      at = b.pos + b.width;
+    }
+    if (at < end) readable.push({ pos: at, width: end - at });
+  }
+  if (readable.length || !placed.length) return { runs: readable, run: null };
+  // every position of it withheld: the run holding its last position — the last stretch's, as a symbol stands after the last word its span touches
+  const last = placed[placed.length - 1], p = last.pos + last.width - 1;
+  const b = /** @type {Block} */ (withheld.find((x) => x.pos <= p && p < x.pos + x.width));
+  return { runs: [{ pos: b.pos, width: b.width }], run: { pos: b.pos, width: b.width, origin: b.origin } };
+}
+
+/** the blocks the model holds of a document's text; none where it holds no record of it */
+const blocksOf = (/** @type {string} */ addr) => (REC.has(addr) ? REC.doc(addr).blocks : []);
+
+/**
  * A link's end drawn at a document: its stored span and that span's key
- * (`endKey`), where the span stands in the document's held text now, its
- * mark, and its far end with where that stands in the current text of the
- * version its box shows (`farAt`) and the mark that version gives the link;
- * null where the held text places the end nowhere.
+ * (`endKey`), where the span is drawn in the document's held text now
+ * (`drawnIn`) — the withheld run it is drawn at, where it lies wholly inside
+ * one — its mark, and its far end with where that stands in the current
+ * text of the version its box shows (`farAt`) and the mark that version gives
+ * the link; null where the held text places the end nowhere.
  * @param {Link} l
  * @param {string} addr the document holding the end (`endsIn`), whichever document minted its bytes
  * @param {'you' | 'owner' | 'others'} linker
@@ -455,7 +522,7 @@ export function draws(l, addr) {
  * @returns {Shown | null}
  */
 function drawnEnd(l, addr, linker, end, e) {
-  const runs = REC.placed(addr, e);
+  const { runs, run } = drawnIn(blocksOf(addr), REC.placed(addr, e));
   if (!runs.length) return null;
   const farSlot = end === 'from' ? 2 : 1;
   const far = (end === 'from' ? l.to : l.from)[0] || null;
@@ -463,7 +530,7 @@ function drawnEnd(l, addr, linker, end, e) {
   const at = far && far.doc ? read.shown(far.doc) : '';
   const held = far && !far.whole && far.ordinal != null && at ? REC.projection(l.addr, farSlot, at) : undefined;
   return {
-    link: l, near: addr, end, nearEnd: e, key: endKey(e), runs, pos: runs[0].pos, width: runs[0].width, mark: markOf(l, addr), linker,
+    link: l, near: addr, end, nearEnd: e, key: endKey(e), runs, run, pos: runs[0].pos, width: runs[0].width, mark: markOf(l, addr), linker,
     far: named, farEnd: far, farSlot, farWhole: !!(far && far.whole), farAt: at, farMark: markOf(l, at || named), farRuns: Array.isArray(held) ? held : null,
   };
 }
@@ -564,7 +631,8 @@ export function beams(/** @type {string} */ addr) { return state(addr).stage >= 
 
 /**
  * The others' links touching a block that are NOT shown — the "+⟨n⟩ others"
- * count (rule (i)–(iii)); zero where none.
+ * count (rule (i)–(iii)), a withheld run's the ends drawn at it (`drawnIn`);
+ * zero where none.
  * @param {string} addr
  * @param {Block} block
  */
@@ -592,20 +660,23 @@ export function utmost(addr) {
 
 /**
  * The others' passage links touching a block that a reveal does not show —
- * an end standing in the block where its held text places it (M-REC's
- * `placed`) — and whether a social link touches the document.
+ * an end drawn in the block where its held text places it (`drawnIn` over
+ * M-REC's `placed`): on its readable stretches, or at the withheld run it
+ * lies wholly inside, counted at that run's block — and whether a social link
+ * touches the document.
  * @param {Reveal} r
  * @param {string} addr
  * @param {Block} block
  */
 function countUnder(r, addr, block) {
   let n = 0, social = false;
+  const blocks = blocksOf(addr);
   for (const l of REC.linksTouching(addr)) {
     const kind = classify(l);
     if (kind === 'social') { social = true; continue; }
     if (kind !== 'passage') continue;
     if (linkerOf(l, addr) !== 'others' || lets(r, l, 'others')) continue;
-    if (endsIn(l, addr).some(({ e }) => REC.placed(addr, e).some((p) => meets(p, block)))) n++;
+    if (endsIn(l, addr).some(({ e }) => drawnIn(blocks, REC.placed(addr, e)).runs.some((p) => meets(p, block)))) n++;
   }
   return { n, social };
 }

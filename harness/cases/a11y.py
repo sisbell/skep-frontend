@@ -83,10 +83,12 @@ def run(ctx):
     idx = ctx.js('window.__skep.mirror.index()')
     doc = ctx.js('window.__skep.model.doc(%s)' % json.dumps(DOC))
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
-    # rule 20: a block of white space alone is no element of the walk; the mirror lists the elements (every block but those) and the drawn links
+    # rule 20: a block of white space alone is no element of the walk; the mirror lists the elements (every block but those) and
+    # the drawn links — those drawn at a withheld run its item's own, a level below (issue #202)
     elements = [b for b in doc['blocks'] if b['kind'] != 'para' or (b['text'] or '').strip() != '']
     blank = [b for b in doc['blocks'] if b['kind'] == 'para' and (b['text'] or '').strip() == '']
-    r.check(size == len(elements) + len(shown), 'the mirror\'s set is the document\'s elements (no blank block) and its drawn links (rule 20)', {'size': size, 'elements': len(elements), 'blank_blocks': len(blank), 'links': len(shown)})
+    loose = [s for s in shown if not s.get('run')]
+    r.check(size == len(elements) + len(loose), 'the mirror\'s set is the document\'s elements (no blank block) and its drawn links, a withheld run\'s apart (rule 20; issue #202)', {'size': size, 'elements': len(elements), 'blank_blocks': len(blank), 'links': len(loose), 'at_runs': len(shown) - len(loose)})
     items = ctx.js('''[...document.querySelectorAll('#mirror [role=treeitem]')].map(li => ({id: li.id, level: li.getAttribute('aria-level'), pos: li.getAttribute('aria-posinset'), size: li.getAttribute('aria-setsize'), sel: li.getAttribute('aria-selected'), tab: li.getAttribute('tabindex'), text: li.textContent}))''')
     r.check(len(items) >= 1, 'the mirror renders treeitems', len(items))
     r.check(all(int(i['size']) == size for i in items), 'every item\'s aria-setsize is the set\'s size', {i['pos']: i['size'] for i in items if int(i['size']) != size})

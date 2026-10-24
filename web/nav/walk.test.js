@@ -111,7 +111,15 @@
 // the document whole, its cover, named in its withheld box's words, and the
 // account's level lists it as the plane draws its box (issue #177: a mutant
 // that lists the index's places alone, or leaves the walk on nothing, turns
-// red).
+// red). THE COUNT, THE SYMBOLS AND THE MIRROR AGREE (issue #202): with two
+// ends inside a withheld run and one in the text, the presence words count
+// three, the text's end is its own symbol and the run's two one symbol at the
+// run, the document's links the text's end alone, and the run's item counts
+// its two and holds them a level below, expanded whatever the camera does,
+// → entering them and ← back, Back's light at one marking the run's item (a
+// mutant that lists a run's ends among the document's, gives its item no
+// children, marks no light on it, or rewrites its expanded mark from the
+// camera turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -552,7 +560,7 @@ test('while chrome covers the plane the tree is inert, through the rebuild, unti
 test('each document\'s item in the mirror says whether it is expanded — at its own reading scale — or collapsed, read at the view the camera is bound for, and is marked again in place as the camera takes it across its threshold, nothing rebuilt (issue #140)', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });
-  /** @type {Array<{attrs: Record<string, string>, dataset: {addr?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void}>} the items the last rebuild wrote, as elements, each marked in place */
+  /** @type {Array<{attrs: Record<string, string>, dataset: {addr?: string, i?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void}>} the items the last rebuild wrote, as elements, each marked in place */
   let items = [];
   let rebuilds = 0;
   const mirror = {
@@ -563,7 +571,7 @@ test('each document\'s item in the mirror says whether it is expanded — at its
       items = [...html.matchAll(/<li\b[^>]*>/g)].map((m) => {
         /** @type {Record<string, string>} */
         const attrs = Object.fromEntries([...m[0].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
-        return { attrs, dataset: { addr: attrs['data-addr'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; } };
+        return { attrs, dataset: { addr: attrs['data-addr'], i: attrs['data-i'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, v) => { attrs[k] = v; } };
       });
     },
     querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[aria-expanded]' ? items.filter((i) => 'aria-expanded' in i.attrs) : []),
@@ -936,6 +944,84 @@ test('the walk takes each box as the version it shows (issue #154): an account\'
 });
 
 // placed last: the death empties the model every test above reads
+// attaches a mirror of its own, as the tests around it do
+test('the count, the article\'s symbols and the mirror name the same ends, two lying inside a withheld run among them (issue #202: "Add a test that the count, the symbols and the mirror agree for an end inside a withheld run"): the presence words count three; the text\'s end is its own symbol and the run\'s two one symbol at the run carrying both; the document\'s links the text\'s end alone, the run\'s item counting its two and holding them a level below, → entering them and ← back; Back\'s light at one marks the run\'s item', async () => {
+  const W = '1.0.2.0.6', O = '1.0.1.0.1003', CITE = '1.1.0.1.0.1.0.3.13', text = 'Tumbler.\n\n', n = byteLength(text), RUN = n + 1;
+  const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => resolveSpan({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w });
+  const far = resolveSpan(unitSpan('1.0.1.0.127'));
+  // W, held whole: its first paragraph, then eight of O's bytes withheld from the reader; W's owner's three links, one on its own words and two on O's
+  REC.takeSpanSet(W, [{ subspace: 1, ordinal: 1, positions: n + 8 }]);
+  REC.takeMetadata(W, { doc: W, published: true, owner: '1.0.2', birth: W + '.1', birthExtent: n + 8, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeDelivery(W, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: RUN, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);
+  REC.takeImage(W, 1, [{ iStart: W + '.0.1.1', width: n }, { iStart: O + '.0.1.1', width: 8 }]);
+  const [T, A, B] = [W + '.0.2.1', W + '.0.2.2', W + '.0.2.3'];
+  REC.takeLinks(W, [T, A, B]);
+  REC.takeLink({ addr: T, from: [span(W, 2, 3)], to: [far], type: CITE });
+  REC.takeLink({ addr: A, from: [span(O, 2, 2)], to: [far], type: CITE });
+  REC.takeLink({ addr: B, from: [span(O, 5, 2)], to: [far], type: CITE });
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @type {Array<{attrs: Record<string, string>, dataset: {addr?: string, i?: string}, getAttribute: (k: string) => string | null, setAttribute: (k: string, v: string) => void}>} the items the last rebuild wrote, as elements */
+  let items = [];
+  let html = '';
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return html; },
+    set innerHTML(/** @type {string} */ v) {
+      html = v;
+      items = [...v.matchAll(/<li\b[^>]*>/g)].map((m) => {
+        /** @type {Record<string, string>} */
+        const attrs = Object.fromEntries([...m[0].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+        return { attrs, dataset: { addr: attrs['data-addr'], i: attrs['data-i'] }, getAttribute: (k) => attrs[k] ?? null, setAttribute: (k, x) => { attrs[k] = x; } };
+      });
+    },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[aria-expanded]' ? items.filter((i) => 'aria-expanded' in i.attrs) : []),
+  };
+  const view = CAM.view();
+  try {
+    LK.reveal(W, 2);
+    const ends = LK.shown(W), key = (/** @type {string} */ l) => /** @type {import('../links/links.js').Shown} */ (ends.find((s) => s.link.addr === l)).key;
+    assert.deepEqual(ends.map((s) => [s.link.addr, s.pos, s.run ? s.run.pos : null]), [[T, 2, null], [A, RUN, RUN], [B, RUN, RUN]], 'LK draws the text\'s end on its words and the run\'s two at its start');
+    // the count and the symbols, from the article the plane makes
+    const d = REC.doc(W), html = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d));
+    assert.ok(html.includes(esc(t('B1.presence', { n: 3 }))), 'the presence words: three links');
+    const inText = [...html.matchAll(/<span class="sym [^"]*" data-link="([^"]*)" data-end="([^"]*)"/g)].map((m) => [m[1], m[2]]);
+    const atRun = [...html.matchAll(/<span class="sym at-run [^"]*" data-links="([^"]*)" data-ends="([^"]*)"[^>]*>([^<]*)<\/span>/g)].map((m) => [m[1], m[2], m[3]]);
+    assert.deepEqual([inText, atRun], [[[T, key(T)]], [[`${A} ${B}`, `${key(A)} ${key(B)}`, '⟡2']]], `the text's end its own symbol; the run's two one symbol carrying both: ${html}`);
+    // the mirror: the document's links the text's end alone; the run's item its two, a level below
+    const kids = await WALK.childrenOf({ kind: 'document', addr: W, pos: null, link: null });
+    assert.deepEqual(kids.map((x) => [x.kind, x.pos, x.link ? x.link.link.addr : null]), [['block', 1, null], ['block', RUN, null], ['link', 2, T]], 'the document\'s elements: its two blocks and the text\'s end');
+    const runNode = /** @type {import('./walk.js').Node} */ (kids[1]);
+    assert.deepEqual((await WALK.childrenOf(runNode)).map((x) => [x.kind, x.link ? x.link.link.addr : null, x.link ? x.link.key : null]), [['link', A, key(A)], ['link', B, key(B)]], 'the run\'s item\'s children: the two ends drawn at it, exactly');
+    assert.ok(WALK.nameOf(runNode, 1, 3).includes(t('L.mirror.run-links', { links: t('F.label.links', { n: 2 }) })), `the run's item says two links end in it: ${WALK.nameOf(runNode, 1, 3)}`);
+    WALK.attach(/** @type {any} */ (mirror));
+    await WALK.focusTo(W, RUN);
+    assert.deepEqual(walkAt(), ['block', W, RUN]);
+    assert.ok(/id="walk-1"[^>]*aria-level="4"[^>]*aria-expanded="true"/.test(mirror.innerHTML), `the run's item, expanded: ${mirror.innerHTML}`);
+    // the camera at the whole board, W far below its reading scale: the documents' items are marked again in place, never the run's
+    CAM.set(CAM.viewForCell(boardCell('1'), 0.92));
+    WALK.markExpanded();
+    assert.equal(items.find((i) => i.attrs.id === 'walk-1')?.getAttribute('aria-expanded'), 'true', 'no camera move collapses the run\'s item: → still enters its links');
+    CAM.set(view);
+    await run(WALK.key('in'));
+    assert.deepEqual([walkAt(), WALK.siblingsNow().map((x) => x.link && x.link.link.addr)], [['link', W, RUN], [A, B]], '→ enters its links');
+    assert.ok(/aria-level="5"/.test(mirror.innerHTML) && !/aria-level="4"/.test(mirror.innerHTML), 'a level below the run\'s');
+    await run(WALK.key('out'));
+    assert.deepEqual(walkAt(), ['block', W, RUN], '← back to the run\'s item');
+    // Back to a follow made at one of them: the walk on the run's item, which the light marks
+    WALK.readers({ located: () => ({ addr: W, runs: [], end: { link: A, key: key(A) } }) });
+    await WALK.focusTo(W, RUN, false, true, { link: A, key: key(A) });
+    assert.deepEqual(walkAt(), ['block', W, RUN], 'Back naming the end: the run\'s item');
+    assert.ok(/id="walk-1"[^>]*aria-current="location"/.test(mirror.innerHTML) && (mirror.innerHTML.match(/aria-current/g) || []).length === 1, `the light marks the run's item alone: ${mirror.innerHTML}`);
+  } finally {
+    globalThis.document = platform;
+    CAM.set(view);
+    WALK.readers({ located: () => null });
+    LK.hide(W);
+    REC.invalidate(W);
+  }
+});
+
 test('the page\'s own death takes the mirror down at once — no item quoting what the dead session read, no document only it could list — and takes the walk again on the span it stood on once its document is read at the guest\'s class (FP-23; issue #160)', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });

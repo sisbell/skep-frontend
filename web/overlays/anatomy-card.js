@@ -18,7 +18,15 @@
 // and one no passage's words place reads the words its tail and its mirror
 // item carry (LK's `farWords`; issue #132): "nothing this board will say
 // about this address", "withheld · ⟨owner⟩", the document's first line, so
-// the reader knows what a follow will meet before making it
+// the reader knows what a follow will meet before making it. AN END IN
+// WITHHELD TEXT (issue #202's design decision: "The card says this end is
+// withheld, and whose it is, and shows the other end") reads "withheld ·
+// ⟨owner⟩", the owner of the run's origin, by the one owner rule its
+// placeholder names (T-LAYER's `originOwner`; R56; FP-33): a near end LK
+// draws at a withheld run (`Shown.run`) with no read, and any stretch a read
+// answers as withheld in those words, never its bytes (`fragment`); the far
+// end it leads to is the document that minted its bytes, named as any far
+// end is — "withheld · ⟨owner⟩" where that document is withheld too
 // — then its anatomy — type
 // (R5's form where the commons documents none: on this notebook no registry
 // document is seeded, so every type reads "undocumented here"), from, to,
@@ -66,7 +74,9 @@
 // whole first — at mid scale the page holds none of their text — so each link
 // stands at its own bytes as LK draws it there; one link's card opens as its
 // symbol's would, and several are listed, each row naming its link by its
-// type and its far end (LK's `farLabel`) and opening that link's card.
+// type and its far end (LK's `farLabel`) and opening that link's card; the
+// one symbol a withheld run's ends merge into, pressed, lists them so at the
+// symbol (`fromSymbol`; P44: "The members are whole on one act at the mark").
 // Later: the age row with the read that answers it; walking the lineage's
 // links (A-56, A-57's act); B3-d's retract and edit (the editor's lane);
 // link sets' SET line.
@@ -79,6 +89,7 @@ import * as LK from '../links/links.js';
 import * as GO from '../nav/go.js';
 import * as SCENE from '../scene/scene.js';
 import * as F from '../model/frames.js';
+import * as LAYER from '../text/layer.js';
 import { lineOf, farHolds, floatingOf } from '../beams/held.js';
 import { t, typeName } from '../strings.js';
 import { esc, fill } from '../util.js';
@@ -95,7 +106,10 @@ import { accountOf, isUnder } from '../model/address.js';
  * @property {string | null} reader the reader's account, named "you" wherever it is a claimant; null for a guest
  */
 
-/** the first words of a passage: from the model where delivered, else one read */
+/** a passage in withheld text in words (see the head): "withheld · ⟨owner⟩", the owner of the run's origin by the one owner rule its placeholder names */
+const withheldWords = (/** @type {string | null} */ origin) => t('F.corner.withheld', { owner: origin ? LAYER.originOwner(origin) : '' });
+
+/** the first words of a passage: from the model where delivered, else one read, each stretch it answers withheld in a withheld run's words (see the head) */
 async function fragment(/** @type {string} */ addr, /** @type {number | null} */ pos, /** @type {number} */ width) {
   if (REC.doc(addr).refused === 'unregistered') return null;
   if (pos == null) { const p = REC.place(addr); return p && p.label ? p.label : REC.textBetween(addr, 1, 80) || null; }
@@ -104,7 +118,7 @@ async function fragment(/** @type {string} */ addr, /** @type {number | null} */
   const out = await PUMP.read(F.retrieveV(addr, pos, Math.min(width, 120)));
   if ('refused' in out) return null;
   const runs = F.decodeDelivery(out.answer, pos);
-  return runs.map((r) => (r.kind === 'content' ? r.text : r.kind === 'withheld' ? `[withheld · ${r.width}]` : '')).join('');
+  return runs.map((r) => (r.kind === 'content' ? r.text : r.kind === 'withheld' ? withheldWords(r.origin) : '')).join('');
 }
 
 /** the account that made a supersession claim: the account of its home, the document the claim resides in, whose owner alone may deposit it there (wire.md §Links (writes)) — the home as given where its address names no account */
@@ -252,14 +266,15 @@ async function farPassage(s, runs) {
 }
 
 /**
- * The card's reads: the near end's words, where the far end's passage stands
- * now (`farPlace`) and its words, the link's lineage.
+ * The card's reads: the near end's words — a withheld run's, with no read,
+ * where LK draws the end at one (see the head) — where the far end's passage
+ * stands now (`farPlace`) and its words, the link's lineage.
  * @param {Shown} s
  * @returns {Promise<Read>}
  */
 function cardReads(s) {
   return Promise.all([
-    fragment(s.near, s.pos, s.width),
+    s.run ? withheldWords(s.run.origin) : fragment(s.near, s.pos, s.width),
     s.far ? farPlace(s).then(async (runs) => ({ runs, words: await farPassage(s, runs) })) : Promise.resolve({ runs: null, words: null }),
     PUMP.lineage(s.link.addr),
   ]);
@@ -359,23 +374,40 @@ export function fromTail(tail, byKey = false) {
     for (const l of tail.links) { const s = met.get(l); if (s) ends.push(s); }
     if (!ends.length || !stands()) return null;
     return ends.length === 1 ? { one: ends[0], read: await cardReads(ends[0]) } : { many: ends };
-  }, (r) => { if ('one' in r) showCard(r.one, r.read, null, byKey); else listTail(r.many, tail.world, byKey); });
+  }, (r) => { if ('one' in r) showCard(r.one, r.read, null, byKey); else listEnds(r.many, { world: tail.world }, 'tail', byKey); });
 }
 
 /**
- * A tail's links listed (`fromTail`), at the tail: each row its link's type
- * and its far end named in the words its tail carries (LK's `farLabel`), in
- * its mark, opening that link's card as a links-card row does.
+ * The one symbol a withheld run's ends merge into, pressed where it stands
+ * for several (see the head; APP-INPUT's): its ends listed at the symbol, at
+ * the run's own positions once the text layer takes the symbol down, as a
+ * tail's are — each row opening that end's card. One end opens its card, as
+ * any symbol's does (`open`).
+ * @param {[Shown, Shown, ...Shown[]]} ends the ends it stands for, as LK draws them
+ * @param {HTMLElement} el the symbol
+ * @param {boolean} [byKey] a key pressed it: the list takes the focus on its first row
+ */
+export function fromSymbol(ends, el, byKey = false) {
+  const [s] = ends;
+  listEnds(ends, { el, span: { addr: s.near, pos: s.pos, width: s.width } }, `ends:${s.near}:${s.pos}`, byKey);
+}
+
+/**
+ * Ends listed — a tail's (`fromTail`), at the tail; a withheld run's symbol's
+ * (`fromSymbol`), at the symbol: each row its link's type and its far end
+ * named in the words its tail carries (LK's `farLabel`), in its mark, opening
+ * that link's card as a links-card row does.
  * @param {Shown[]} ends
- * @param {{x: number, y: number}} world where the tail leaves, in world units
+ * @param {import('./host.js').Anchor} anchor where the list stands
+ * @param {string} id
  * @param {boolean} byKey
  */
-function listTail(ends, world, byKey) {
+function listEnds(ends, anchor, id, byKey) {
   const near = [...new Set(ends.map((s) => s.near))].join(', ');
   const html = `<span class="label">${esc(t('B1.see-links'))} · ${esc(near)}</span><ul class="rows">${ends.map((s, i) =>
     `<li><button data-run="t${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${esc(LK.farLabel(s))}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   ends.forEach((s, i) => { acts['t' + i] = (_el, byKey) => open(s, null, byKey); });
-  HOST.show({ kind: 'list', id: 'tail', anchor: { world }, html, acts, takeFocus: byKey });
+  HOST.show({ kind: 'list', id, anchor, html, acts, takeFocus: byKey });
 }

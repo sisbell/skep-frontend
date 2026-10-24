@@ -128,7 +128,11 @@
 // carried, outlined — with no off-screen indicator, for it was in view as the
 // step was taken, the walk returned to it where the view Back lands at shows
 // it at its document's reading scale, and the mirror marking it for
-// assistive technology while it stands (`backLight`); Forward what the step
+// assistive technology while it stands (`backLight`) — a link's end LK draws
+// at a withheld run (LK's `Shown.run`) the WHOLE RUN outlined besides, the
+// walk returned to the run's item (issue #202's design decision: "Arriving by
+// a link that ends here marks the whole run, lights the symbol and puts focus
+// on the run"; `runMark`), never an offset inside its gap; Forward what the step
 // marked on arrival — the passage carried, outlined in the text landed in,
 // or the far end followed, outlined, its link lit; a jump across two entries
 // or more nothing. Back lights no notice's link and no link but the one it
@@ -482,8 +486,22 @@ function placedMark(p, link) {
   return runs.length ? { addr: p.addr, pos: runs[0].pos, runs, link } : null;
 }
 
-/** the arrival mark while it stands (see the head): a landing's, as its reads placed it, or the one a return restored; else a one-step move's light, its passage placed in its text as it is read (`placedMark`); null where neither stands */
-export const arrivalMark = () => arrival || (light && light.passage ? placedMark(light.passage, light.link) : null);
+/**
+ * Back's light at a link's end LK draws at a withheld run (see the head):
+ * the run outlined whole, the mark at its start, its link the one lit; null
+ * where LK draws the end on text, where Back lights its link alone, or draws
+ * it nowhere now.
+ * @param {End & {addr: string}} end the end the follow was made at, in its document
+ * @param {string | null} link
+ * @returns {Arrival | null}
+ */
+function runMark(end, link) {
+  const s = LK.shown(end.addr).find((x) => x.link.addr === end.link && x.key === end.key);
+  return s && s.run ? { addr: end.addr, pos: s.run.pos, runs: [{ pos: s.run.pos, width: s.run.width }], link } : null;
+}
+
+/** the arrival mark while it stands (see the head): a landing's, as its reads placed it, or the one a return restored; else a one-step move's light, its passage placed in its text as it is read (`placedMark`), or Back's at a link's end drawn at a withheld run, the run (`runMark`); null where neither stands */
+export const arrivalMark = () => arrival || (light && light.passage ? placedMark(light.passage, light.link) : light && light.end ? runMark(light.end, light.link) : null);
 /** the links lit while the arrival stands — drawn heavier by LK, which reads them through the reader the app wires (foundations §2.1's register); none where none is */
 export const litLinks = () => lit;
 

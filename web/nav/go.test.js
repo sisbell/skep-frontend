@@ -304,6 +304,9 @@
 // box framed whole, the walk on it and its withheld face there in the
 // ending's words, and once covered faces at once (a mutant that lands on the
 // entry's view, or shows no face, turns red).
+// Back across a follow made at a link's end drawn at a withheld run outlines
+// the whole run from its start, lights the link and stands the walk on the
+// run's item (issue #202: a page whose Back marks no run turns red).
 // The overlay host stands on a stand-in element, the platform's document a
 // stand-in beside it, so a face a landing shows is read back from what the
 // host wrote.
@@ -705,6 +708,40 @@ test('a link naming the far document whole outlines the document\'s first positi
   await run(GO.forward());
   assert.deepEqual(marks(), arrived, 'Forward: what the follow marked on arrival, the block at the far document\'s head (issue #152)');
   assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back across a follow made at a link\'s end drawn at a withheld run marks the whole run — outlined at its start, its whole extent, never an offset inside its gap — lights the link, and stands the walk on the run\'s item, which Back\'s light marks; Forward lights the far end, the run no longer marked (issue #202\'s design decision: "Arriving by a link that ends here marks the whole run, lights the symbol and puts focus on the run")', async () => {
+  // RD, held whole: its first paragraph, then eight of a draft's bytes withheld from the reader; the person's citation of FAR whole on three of them
+  const RD = '1.0.1.0.41', O = '1.0.2.0.29', RL = RD + '.0.2.1', text = 'Tumbler.\n\n', n = text.length, RUN = n + 1;
+  REC.takeSpanSet(RD, [{ subspace: 1, ordinal: 1, positions: n + 8 }]);
+  REC.takeMetadata(RD, { doc: RD, published: true, owner: '1.0.1', birth: RD + '.1', birthExtent: n + 8, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeDelivery(RD, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: RUN, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);
+  REC.takeImage(RD, 1, [{ iStart: RD + '.0.1.1', width: n }, { iStart: O + '.0.1.1', width: 8 }]);
+  REC.takeLinks(RD, [RL]);
+  REC.takeLink({ addr: RL, from: [span(O, 3, 3)], to: [whole(FAR)], type: CITE });
+  REC.takeEditionClaims(O, []);
+  // the follow's projection into FAR, as the board answers a link naming it whole: its whole text
+  script[FAKE.keyOf('op', { frame: F.project(RL, 2, FAR) })] = { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + FAR_EXTENT }] } };
+  const was = fake.unanswered.length;
+  try {
+    const s = /** @type {import('../links/links.js').Shown} */ (LK.shown(RD).find((x) => x.link.addr === RL));
+    assert.deepEqual([s.pos, s.width, s.run && s.run.pos], [RUN, 8, RUN], 'drawn at the run\'s start');
+    await run(GO.leapTo(RD, { pos: RUN }));
+    assert.deepEqual([walkAt(), marks()], [['block', RD, RUN], [null, []]], 'at the run: the walk on its item, nothing marked');
+    await run(GO.follow(s));
+    assert.equal(TRAIL.current()?.addr, FAR, 'the follow goes to the other end');
+    await run(GO.back());
+    assert.equal(TRAIL.current()?.addr, RD, 'Back to the follow\'s departure');
+    assert.deepEqual(marks(), [{ addr: RD, pos: RUN, runs: [{ pos: RUN, width: 8 }], link: RL }, [RL]], 'the whole run outlined from its start, the link lit');
+    assert.deepEqual(walkAt(), ['block', RD, RUN], 'the walk on the run\'s item');
+    assert.deepEqual(GO.backLight(), { addr: RD, runs: [], end: { link: RL, key: s.key } }, 'Back\'s light at the end, which the mirror marks on the run\'s item');
+    await run(GO.forward());
+    assert.deepEqual(marks(), [{ addr: FAR, pos: 1, runs: null, link: RL }, [RL]], 'Forward: the far end lit, the run no longer marked');
+    assert.equal(fake.unanswered.length, was, 'nothing asked the script does not answer');
+  } finally {
+    GO.endArrival();
+    REC.invalidate(RD);
+  }
 });
 
 test('a follow of a far end the far document\'s text no longer holds lands at that document\'s head, faced there, the link lit and nothing outlined; Back returns to it, the face shown there again and nothing lit, the link lit again only where Back crosses the follow', async () => {
