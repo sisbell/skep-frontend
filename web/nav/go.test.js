@@ -2222,19 +2222,21 @@ test('an overlay whose field holds the caret — a walk\'s moment being answered
     ['a LEAP carrying a passage the text landed in holds none of, at the dead end', () => {}, carried(UNSHARED, FAR, FAR_EXTENT), () => GO.leapTo(FAR, { how: 'leap', carry: UNSHARED }), FAR, 'floating'],
   ];
   try {
-    for (const [what, before, held, jump, at, notice] of jumps) {
+    for (const [i, [what, before, held, jump, at, notice]] of jumps.entries()) {
       await run(GO.leapTo(D));
       before();
-      FACES.moment({ id: 'm-171', kind: 'ask', data: 'name this', walk: 'w-1', board: null, answerable: true });
+      // a walk of its own for each jump: the moment the last one left folded opens its walk's next folded (issue #182)
+      const id = 'm-171-' + i;
+      FACES.moment({ id, kind: 'ask', data: { text: 'name this' }, walk: 'w-171-' + i, board: null, answerable: true });
       globalThis.document.activeElement = /** @type {any} */ (field);
       const release = fake.hold('op', { frame: held });
       const jumping = jump();
-      assert.equal(HOST.currentState()?.id, 'moment:m-171', `${what}: the moment stands as the jump is made, no reaching or reading face in its place`);
+      assert.equal(HOST.currentState()?.id, 'moment:' + id, `${what}: the moment stands as the jump is made, no reaching or reading face in its place`);
       release();
       await run(jumping);
       const e = TRAIL.current();
       assert.deepEqual([e?.addr, e?.notice?.face ?? null], [at, notice], `${what}: its entry ${notice ? 'holds the face the read met as its notice' : 'at the place it landed'}`);
-      assert.deepEqual([HOST.currentState()?.id, globalThis.document.activeElement], ['moment:m-171', /** @type {any} */ (field)], `${what}: the moment stands through it, its field holding the focus`);
+      assert.deepEqual([HOST.currentState()?.id, globalThis.document.activeElement], ['moment:' + id, /** @type {any} */ (field)], `${what}: the moment stands through it, its field holding the focus`);
       globalThis.document.activeElement = /** @type {any} */ (null);
       HOST.dismiss();
     }

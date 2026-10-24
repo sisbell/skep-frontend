@@ -90,6 +90,14 @@
 // their own while the plane hides the face (O-HOST's `aside`, read through
 // the reader the app hands in), said already through the status region as
 // the face was shown;
+// A WALK'S FOLDED MOMENT (issue #182's design decision: "folds the moment
+// into one segment of the top line … It never yields when the line runs
+// short"): after the acting-as segment, one segment for each walk whose
+// moment stands folded — its walk, its step and "waits on you" (O-FACES'
+// `folded`, read through the reader the app hands in), said through the
+// status region as it folds — its act, inside the line's one stop, unfolding
+// it (O-FACES' `unfold`); short of room every other segment is cut first, the
+// address's last, and the walk's never (the style's);
 // the TRANSIENT segments (the swallow line K-9; the mode line C-31 where the
 // pair flipped) until the next act, or a change of the page's class, which
 // takes one quoting what the class it left read down with it. THE REBUILD
@@ -158,6 +166,8 @@ let stop = 'back';
  * @property {(el: HTMLElement) => void} signIn
  * @property {() => ({id: string, text: string} | null)} [aside] a jump's face standing out of the visible view: its string's id and its words (O-HOST's `aside`); null where none stands so
  * @property {() => (Pieces | null)} [pieces] the runs of an arrival in several, in the document landed in (N-GO's landing); null where none stands
+ * @property {() => Array<{key: string, words: string}>} [walks] the walks' folded moments, each its walk and its segment's words (O-FACES' `folded`)
+ * @property {(key: string, byKey: boolean) => void} [walk] a walk's segment's act: its moment unfolded (O-FACES' `unfold`)
  */
 
 /** @typedef {{addr: string, runs: Array<{pos: number, width: number}>, current: number}} Pieces the runs of an arrival in several, the one the landing stands at by index */
@@ -173,6 +183,7 @@ export function attach(e, a) {
     const which = /** @type {HTMLElement} */ (b).dataset.act;
     const byKey = FOCUS.byKey(ev);
     if (which === 'back') acts.back(byKey); else if (which === 'forward') acts.forward(byKey); else if (which === 'address') acts.open(byKey); else if (which === 'trail') acts.trailList(byKey); else if (which === 'signin') acts.signIn(/** @type {HTMLElement} */ (b));
+    else if (which && which.startsWith(WALK_ACT) && acts.walk) acts.walk(which.slice(WALK_ACT.length), byKey);
     ev.stopPropagation();
   });
   // the stop follows the focus: the act a Tab or a press lands on is the one the ring returns to
@@ -323,6 +334,15 @@ export function addressDisplay() {
 /** the sign-in act, the guest's and the death arm's: its id names it across the line's rebuilds, as Back's does, so the session's face standing at it finds it again (O-HOST's anchor) */
 const SIGN_IN = `<button id="line-signin" data-act="signin">${esc(t('F.sign-in'))}</button>`;
 
+/** a walk's segment's act, before the walk it unfolds: its `data-act`, by which the line's one stop and a rebuild find it again */
+const WALK_ACT = 'walk:';
+
+/** the walks' segments (see the head): one for each walk's folded moment, its act unfolding it, never cut short of room */
+function walkSegments() {
+  const folded = acts && acts.walks ? acts.walks() : [];
+  return folded.map((w) => `<span class="sep">│</span><button class="seg walk" data-act="${esc(WALK_ACT + w.key)}" data-string="L.walk.waits">${esc(w.words)}</button>`).join('');
+}
+
 /**
  * @typedef {Object} Acting — the acting-as segment (`actingSegment`)
  * @property {string} html
@@ -444,6 +464,7 @@ export function render(force = false) {
     `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord('Mod+Y'))}">${esc(t('F.trail-list'))}</button></span>` +
     `<span class="sep">│</span><button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}" style="--words:${WORDS_CH}"><b>${esc(a.place)}</b>${slot(a)}<span class="marker${a.member ? ' lit' : ''}${a.doc ? '' : ' none'}" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></button>` +
     `<span class="sep">│</span><span class="seg acting" data-state="${acting.state}">${acting.html}</span>` +
+    walkSegments() +
     (daemon.html ? `<span class="sep">│</span><span class="seg daemon">${daemon.html}</span>` : '') +
     (aside ? `<span class="sep">│</span><span class="seg aside" data-string="${esc(aside.id)}">${esc(aside.text)}</span>` : '') +
     (transientSeg ? `<span class="sep">│</span><span class="seg transient" data-string="${esc(transientSeg.id)}">${transientSeg.html}</span>` : '');

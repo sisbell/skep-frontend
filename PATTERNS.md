@@ -289,7 +289,10 @@ fix; nothing here depends on their names.
   where all of its subject stands it moves there; where part or none
   does it stays, says so, and offers the version that holds it. What
   is shown away from the focus, or changed under it without the
-  reader's act, is spoken in the status region.
+  reader's act, is spoken in the status region. A walk's moment ends
+  only as the shell ends it: what ends any other surface folds it,
+  never closes it, and one raised where a surface of the reader's
+  stands covers none of it.
 
 ## The landing
 
@@ -465,6 +468,7 @@ last. Each stands until a later decision says it changes it.
 - **#175**: a session a restart lost — its reason naming no re-opened reference, or a call answered `session_ended` — is asked for again by the boot's own `session(board)`, which changes nothing at the board, and the page's own `close(session)` is its sign-out, taken as it goes out, the one end to read "signed out" — a death of an arm this page holds no words for (seeded, blocked, unreachable) reads the guest line instead; past a second still out the line reads "reconnecting as ⟨account⟩ after a restart", got back it says nothing, and refused it shows the guest state boot shows for that refusal led by "could not reconnect as ⟨account⟩ after a restart"; writes held as not yet kept meanwhile, a write whose answer was lost resent only once a read shows it did not land, and no call while a claim's panel stands wait on the editor's and the ceremonies' lanes, this page composing no write and showing no panel → FP-28
 - **#177**: at a session's ending the documents in view and on the trail are read again, and one the reader can no longer read stands in place as a guest's withheld box, "withheld · ⟨owner⟩" where its first line stood, at one neutral size with no length, ticks or window, its face offering sign-in in the one line's words for that ending; the walk stays on it; a reading scene's pane on it stays open, its identity bands gone and the lines homed in the readable pane ending at its head; trail entries keep their numbers and addresses, their words read as shown, and following one lands on the withheld face; cards on covered material close; one status message says the ending and what is covered; a restart the shell re-opens covers nothing (#175); words not yet kept, which wait for sign-in, wait on the editor's lane, this page composing no write → FP-29, FP-21
 - **#179**: a `withheld` refusal describes the document the board names in `site.addr`, by the first case that holds — its text on screen shows the change, the ending's words and sign-in where the session ended; a follow's destination is landed at like any jump, no notice at the departure; a link address inside it keeps C-39's words; else its own withheld words at the act — those words its address unless it is the document in view, "withheld · ⟨owner⟩", whose act could open it and the pointer to a claimed edition, whole the first time a session shows them and compact after, each face the act's answer, tied to it in markup, its act reached by keyboard while it stands; the access-withdrawn notice waits on skep #577's read of a withdrawal, and the act's repeat after sign-in on the ceremonies' lane → FP-25, FP-26
+- **#182**: a folded moment is one segment of the one line naming its walk and its step and that it waits on the reader, never cut short of room, the shell told nothing; its act unfolds the moment as it was left, its typed text and its refusal with it, over the view its walk showed it over, the focus on its first words; only its own cancel, named by its walk, sends `cancel(id)`; its walk's next moment opens as the last was left; a statement never folds, what its walk does next and when it ends waiting on skep #627, and what a cancel leaves behind on skep #628 → FP-28 (What stands), FP-20
 
 ## What these rule out
 

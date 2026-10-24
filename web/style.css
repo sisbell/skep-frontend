@@ -56,6 +56,14 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    nothing after it on the line moves; set at the line's top, as an inline-block clipping its content has no baseline of
    its text's */
 #line button.address { display:inline-block; width:calc(var(--words) * 1ch + 76px + 2ch); overflow:hidden; text-align:left; background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; font-size:11px; line-height:inherit; cursor:pointer; vertical-align:top; }
+/* the line is one row of its acts and its segments, set on their text's baseline: short of room the segments are cut — the
+   acting-as segment and every one after it first, then the address's — and a walk's folded moment never (issue #182's
+   design decision: "It never yields when the line runs short"); with room, the address segment stands at its one width */
+#line { display:flex; align-items:baseline; }
+#line > * { flex:none; }
+#line > .seg { flex:0 1000 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+#line > button.address { flex:0 1 auto; min-width:0; }
+#line > .seg.walk { flex:none; overflow:visible; color:var(--warn); }
 
 /* LEAP — the address segment opened (K-30); above the reading scene, which it may open over (#118) */
 #leap { top:34px; left:50%; transform:translateX(-50%); width:620px; display:none; z-index:27; }
@@ -242,6 +250,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #overlay button[aria-pressed="true"] { background:#22303f; border-color:var(--accent); }
 #overlay .slots button { margin:2px 2px 2px 0; }
 #overlay .clause, #overlay .note { color:var(--dim); font-size:10.5px; margin-top:6px; }
+/* a refusal of a walk's moment's own answer, drawn inside its face (issue #182) */
+#overlay .note.refused { color:var(--warn); }
 #overlay .k { color:var(--warn); }
 #overlay [aria-current="true"] { border-color:var(--accent); }
 #overlay .strip { color:var(--dim); font-size:.9em; }

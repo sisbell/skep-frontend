@@ -71,7 +71,11 @@
 // A jump's face standing out of the visible view is carried by the line in a
 // segment of its own, its string's id and its words, exactly while the reader
 // the app hands in names one (FP-25): a mutant that drops the segment, or
-// keeps it once the face is back in view, turns red.
+// keeps it once the face is back in view, turns red. Each walk's folded
+// moment stands as a segment after the acting-as segment exactly while the
+// reader names it, its act the walk's unfold, told whether a key made it
+// (issue #182): a mutant that drops the segment, sets it before the acting-as
+// segment, or wires its act to nothing turns red.
 // The places the line names (issue #169's design decision: "Named once") are
 // its address display's: the board alone at far, the account under the camera
 // at mid, nearer the walk's document by its box — a pinned version by the box
@@ -466,6 +470,31 @@ test('a jump\'s face standing out of the visible view is carried by the line in 
   aside = null;
   LINE.render();
   assert.ok(!el.innerHTML.includes('seg aside'), 'back in view: the segment gone');
+});
+
+test('each walk\'s folded moment stands as a segment of the one line after the acting-as segment — the walk, its step and "waits on you" — exactly while the reader the app hands in names it, a native button of the line\'s stop whose act is the walk\'s unfold, told whether a key made it (issue #182: "folds the moment into one segment of the top line")', () => {
+  /** @type {Array<{key: string, words: string}>} what O-FACES' `folded` answers */
+  let walks = [];
+  /** @type {Array<[string, boolean]>} the unfolds the segment's act asked for: the walk, and whether a key made the act */
+  const unfolded = [];
+  /** @type {{click: ((ev: any) => void) | null}} the line's click listener, as it attaches */
+  const on = { click: null };
+  const el = { innerHTML: '', setAttribute() {}, addEventListener(/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) { if (type === 'click') on.click = fn; }, querySelectorAll: () => [], contains: () => false };
+  LINE.attach(/** @type {any} */ (el), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {}, walks: () => walks, walk: (key, byKey) => { unfolded.push([key, byKey]); } });
+  LINE.render(true);
+  assert.ok(!el.innerHTML.includes('seg walk'), 'nothing folded: no segment');
+  const words = t('L.walk.waits', { walk: 'claim', step: 'name this device' });
+  walks = [{ key: 'claim|b-1', words }];
+  LINE.render();
+  const seg = `<button class="seg walk" data-act="walk:claim|b-1" data-string="L.walk.waits">${esc(words)}</button>`;
+  assert.ok(el.innerHTML.includes(seg), `the walk's words in a segment of their own: ${el.innerHTML}`);
+  assert.ok(el.innerHTML.indexOf(seg) > el.innerHTML.indexOf('seg acting'), 'after the acting-as segment');
+  const pressed = { dataset: { act: 'walk:claim|b-1' } };
+  for (const detail of [1, 0]) on.click?.({ type: 'click', detail, target: { closest: () => pressed }, stopPropagation() {} });
+  assert.deepEqual(unfolded, [['claim|b-1', false], ['claim|b-1', true]], 'a press on it unfolds its walk\'s moment: a pointer\'s, then a key\'s');
+  walks = [];
+  LINE.render();
+  assert.ok(!el.innerHTML.includes('seg walk'), 'unfolded, or ended: the segment gone');
 });
 
 /** the one status region's stand-in: what the line says through it, and how */

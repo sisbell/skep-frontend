@@ -156,10 +156,14 @@
 // HOME (the acting account's region), WHOLE BOARD (the board at the clamp)
 // and an account's region push too (D5-F3; foundations §2.2: LEAP, the
 // keyboard's Enter and a click on a place are teleports, whatever they
-// reach); the launch frame is HOME, set without a flight and pushed as the
-// trail's first entry (W-01), so Back after the first teleport returns to
-// it; Back, Forward and a trail jump move the cursor and re-take the departed
-// view. A departure re-takes where the camera is bound (P-CAM's
+// reach), and so does a walk's moment unfolded where the camera stands away
+// from the view its walk showed it over, which it flies back to, the walk
+// re-taken there without the platform's focus, which the moment's face takes
+// (`toView`; issue #182's design decision: "It brings back the view the walk
+// shows the face over"); the launch frame is HOME, set without a flight and
+// pushed as the trail's first entry (W-01), so Back after the first teleport
+// returns to it; Back, Forward and a trail jump move the cursor and re-take
+// the departed view. A departure re-takes where the camera is bound (P-CAM's
 // `destination`), so one made during a flight re-takes the flight's
 // destination, never a point it was passing (foundations §2.3), and the
 // version the departed entry's box shows (`departure`). Each act
@@ -318,6 +322,15 @@ import { t } from '../strings.js';
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 
 /** @typedef {{pos: number, width: number}} Run one run of a marked span in the text landed in: its first position and its positions */
+
+/**
+ * @typedef {Object} Destination — where a jump's camera and walk go (`land`)
+ * @property {string} addr the place the walk moves to
+ * @property {number | null} pos the position in it the walk stands on, where its view reads it at its reading scale
+ * @property {View} view the view the camera flies to
+ * @property {End | null} [end] the link's end the walk stands on there
+ * @property {boolean} [take] the platform's focus goes to the walk's element — save where named false: a walk's moment unfolded holds it (`toView`)
+ */
 
 /**
  * @typedef {Object} Carry — a passage a LEAP carries (foundations §2.3's carry rule; P43): a span of the text it is carried from, and what it was to the reader, which the landing's line names it by (issue #153's design decision)
@@ -846,7 +859,7 @@ async function reachFor(act, addr, entry, site) {
  * now, the walk on the place and the flight begun (`land`).
  * @param {number} act
  * @param {Entry | null} entry
- * @param {{addr: string, pos: number | null, view: View, end?: End | null}} at
+ * @param {Destination} at
  * @param {boolean | undefined} byKey
  * @param {number} ms
  * @returns {Promise<boolean>} the flight landed
@@ -864,7 +877,7 @@ function leave(act, entry, at, byKey, ms) {
  * in the air ends as the camera lands, or as anything else ends its flight.
  * @param {number} act
  * @param {Promise<boolean>} first the first leg's flight
- * @param {{addr: string, pos: number | null, view: View, end?: End | null}} at
+ * @param {Destination} at
  * @param {boolean | undefined} byKey
  * @param {number} ms the first leg's length: a second leg flown while the first is in the air takes it again
  * @returns {Promise<boolean>} the camera landed
@@ -949,12 +962,13 @@ const headOf = (/** @type {import('../model/records.js').Doc} */ d) => (d.blocks
  * The walk moved to a landing's place — to the span holding its position
  * only where its view reads the document at its reading scale, else to the
  * document whole (see the head), to the link's end it names where it names
- * one — the ring drawn at it where a key made the act.
- * @param {{addr: string, pos: number | null, view: View, end?: End | null}} at
+ * one — the platform's focus with it, save where the place says it stays
+ * where it is, and the ring drawn at it where a key made the act.
+ * @param {Destination} at
  * @param {boolean | undefined} byKey
  */
 function focusOn(at, byKey) {
-  void WALK.focusTo(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, byKey, true, at.end ?? null);
+  void WALK.focusTo(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, byKey, at.take ?? true, at.end ?? null);
   CAM.markDirty();
 }
 
@@ -962,7 +976,7 @@ function focusOn(at, byKey) {
  * The landing: the walk moved to the place (`focusOn`), and the camera flown
  * to its view. A LEAP and a follow land at reading size; a cursor move lands
  * at the view its entry was left at.
- * @param {{addr: string, pos: number | null, view: View, end?: End | null}} at
+ * @param {Destination} at
  * @param {boolean | undefined} byKey
  * @param {number} ms
  * @returns {Promise<boolean>} the flight landed; false where a later act's flight, a pan or a zoom cut it short (P-CAM's `fly`)
@@ -1835,6 +1849,31 @@ export async function toAccount(acct, byKey = false) {
   const entry = TRAIL.push({ addr: acct, pos: null, width: null, view: target, label: null, notice: null }, departed);
   dismissChrome(entry);
   endAir(act, await leave(act, entry, { addr: acct, pos: null, view: target }, byKey, 400));
+}
+
+/** does the camera stand at a view: its centre within half a pixel of the view's, its scale the view's */
+const atView = (/** @type {View} */ v) => { const d = CAM.destination(); return Math.abs(d.x - v.x) * d.scale < 0.5 && Math.abs(d.y - v.y) * d.scale < 0.5 && Math.abs(d.scale / v.scale - 1) < 1e-3; };
+
+/**
+ * A walk's moment unfolded over the view its walk showed it over (O-FACES'
+ * `unfold`; issue #182's design decision: "It brings back the view the walk
+ * shows the face over"): the act counted as it is made — a card or scene
+ * still reading ended, a jump in the air abandoned, so no read it left
+ * answers over the face — and, where the camera is bound elsewhere, a
+ * teleport there as an account's is: its trail entry taken at the act, the
+ * chrome of the place it leaves ended, the walk re-taken on the place and the
+ * camera flown to the view, the platform's focus left where the moment's face
+ * puts it.
+ * @param {{addr: string, view: View}} at the place the walk's trail entry named and the view the camera was bound for
+ * @param {boolean} [byKey] a key made the act
+ */
+export async function toView(at, byKey = false) {
+  const act = nextAct();
+  if (atView(at.view)) return;
+  const departed = departure();
+  const entry = TRAIL.push({ addr: at.addr, pos: null, width: null, view: at.view, label: null, notice: null }, departed);
+  dismissChrome(entry);
+  endAir(act, await leave(act, entry, { addr: at.addr, pos: null, view: at.view, take: false }, byKey, 400));
 }
 
 /** the node of the board the page opened on — every clean notebook is node 1 */

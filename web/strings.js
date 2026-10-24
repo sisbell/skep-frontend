@@ -221,9 +221,22 @@ export const STRINGS = {
   // the session ended and what is covered"): the ending's words — the one line's — then the documents the view stood on that
   // the reader can no longer read, each now its withheld box, "withheld · ⟨owner⟩"
   'L.covered': { text: '⟨ending⟩ — withheld from you now: ⟨documents⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
-  'L.moment': { text: 'the shell asks: ⟨kind⟩', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
-  'L.answer': { text: 'answer', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
-  'L.cancel': { text: 'cancel', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
+  // A WALK'S MOMENT (issue #182's design decision, whose own words "waits on you" are): its face's caption by its kind, its
+  // answers, its cancel named by its walk and beside it that what cancelling leaves behind is not told to the page, a label
+  // box's default and its empty field flagged, a moment the shell no longer holds; and the walk's segment of the one line
+  'L.moment.label': { text: 'the shell asks for a name', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.moment.ask': { text: 'the shell asks', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.moment.yes_no': { text: 'the shell asks yes or no', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.moment.statement': { text: 'the shell says', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.answer': { text: 'answer', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.moment.yes': { text: 'yes', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.moment.no': { text: 'no', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.moment.cancel': { text: 'cancel ⟨walk⟩', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.moment.leaves': { text: 'what cancelling leaves behind cannot be shown here — the shell does not tell this page', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.moment.default': { text: 'left empty, the answer is ⟨default⟩', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.moment.empty': { text: 'a name is needed — this box offers none of its own', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.moment.gone': { text: 'this moment no longer waits — the shell has ended it', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
+  'L.walk.waits': { text: '⟨walk⟩ · ⟨step⟩ — waits on you', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.at-position': { text: 'at position ⟨p⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   // the anatomy card's lineage by its claims' authority (issue #143's design decision): a claimant the owner row does not
   // name, after its claim on a row; the line the claims without authority stand behind; each of them listed as an

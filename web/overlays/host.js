@@ -31,8 +31,11 @@
 // the act that opened it — `takeFocus` is that act's `byKey` and nothing
 // else decides it — and takes it on its FIRST ACT, never the dismiss (rule
 // 13): a card's first act, a list's current row where one is current (the
-// versions list's member; `first` names it), else its first row, a moment's
-// first control. The dismiss is a native button placed after the content,
+// versions list's member; `first` names it), else its first row; a walk's
+// moment, which takes it whatever made it stand (K-80), its first control as
+// it arrives and its first words as it is unfolded (O-FACES'; issue #182's
+// design decision: "Unfolding moves focus to the face's first words"). The
+// dismiss is a native button placed after the content,
 // reached by Tab and pressed by Enter or Space (rule 14), its title drawn
 // for the platform (rule 19). An overlay REBUILT by its own act (`show` with
 // the same id — a lens, the switch, show more) keeps the focus on the control
@@ -44,6 +47,10 @@
 // markup written here removes a control of this host that held it; the
 // dismissal hands the focus back through the controller — to that element,
 // or to the walk's element where it no longer takes the focus (rule 16).
+// AN OVERLAY'S END (`onDismiss`) runs while the element still holds what it
+// wrote — a dismissal's before the element is emptied, a replacement's before
+// the next is written — so an end that reads it reads it there: a walk's
+// moment folds with the text typed in its field (O-FACES'; issue #182).
 // A FIELD HOLDING THE CARET (#171's rule 2: "A landing never closes a field
 // the reader is typing in"; FP-20): while the overlay's own field holds the
 // platform's focus — a moment's answer being typed (`typing`) — no face takes
@@ -117,7 +124,7 @@ import { esc } from '../util.js';
  * @property {Anchor | null} anchor
  * @property {string} html
  * @property {Record<string, Act>} [acts] handlers by `data-run` name
- * @property {(replaced: boolean) => void} [onDismiss] its end: `replaced` where the next act's overlay took its place, so what stands behind it (the selection) stands on; false where it was dismissed
+ * @property {(replaced: boolean) => void} [onDismiss] its end, run while the element still holds what it wrote: `replaced` where the next act's overlay took its place, so what stands behind it (the selection) stands on; false where it was dismissed
  * @property {boolean} [takeFocus] a key made the act that opened it (the act's `byKey`): the focus goes to its first act
  * @property {string} [first] a selector for the control the focus goes to first where it is not the first in order — a list's current row
  * @property {boolean} [told] a face whose words the landing that met it says where the focus lands (N-WALK's description; issue #153): the status region does not repeat them
@@ -318,13 +325,13 @@ export function complete(id) {
   if (current && current.id === id) takeDown();
 }
 
-/** the current overlay taken down: its element emptied, its end run, the focus returned through the controller */
+/** the current overlay taken down: its end run while its element still holds what it wrote — a walk's moment folds with the text typed in its field (O-FACES') — then its element emptied and the focus returned through the controller */
 function takeDown() {
   if (!el || !current) return;
   const o = current;
   current = null;
-  el.className = ''; el.innerHTML = ''; el.style.visibility = ''; el.removeAttribute('data-id'); el.removeAttribute('aria-labelledby'); el.removeAttribute('aria-label'); el.removeAttribute('aria-describedby');
   if (o.onDismiss) o.onDismiss(false);
+  el.className = ''; el.innerHTML = ''; el.style.visibility = ''; el.removeAttribute('data-id'); el.removeAttribute('aria-labelledby'); el.removeAttribute('aria-label'); el.removeAttribute('aria-describedby');
   FOCUS.close('overlay');
   markDirty();
 }

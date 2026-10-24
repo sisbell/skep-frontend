@@ -260,6 +260,11 @@ screen) — every part of it standing meets the view, fewer of its lines stand
 than it holds, each part's blocks are their text over the characters they
 hold, and each part stands on its bars; at its own em 4, below the mount, its
 article down and each block part's bars inside the column that holds it.
+A WALK'S FOLDED MOMENT (issue #182's design decision: "It never yields when
+the line runs short"): a moment raised through the gate's door and folded by
+Esc stands as its segment of the one line, whole inside the line in a window
+WALK_PX wide while the acting-as segment before it is cut short, its act
+unfolding it, the shell told nothing.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `tailAnchors`, `arrivalAnchors`, `spanRects`, `visible`, `barsOf`, `labels`,
 `scene.at`, `scene.ties`, the frame buffer, `beamLabels`, `connections`, `tails`,
@@ -326,6 +331,9 @@ READING_PX = 12.5
 # the window the narrow view is held at (issue #151's design decision: "a narrow window ... the measure narrows to what the view
 # holds") — and the passage LEAPt to there: the first edition's paragraph that holds the window run, its longest
 NARROW_PX, PASSAGE = 480, 541
+# the window a walk's folded moment is read in (issue #182's design decision: "It never yields when the line runs short"): too
+# narrow for the one line's every segment, wide enough for its acts and the walk's segment
+WALK_PX = 900
 # the trail's strip: its half-width about the segment between two entries, how far it keeps inside the document's box,
 # and the disc left out about each entry's point — a pip's radius, its ring and the ring's stroke being under 11 px
 TRAIL_STRIP_PX, TRAIL_INSET_PX, PIP_CLEAR_PX = 1.5, 4, 14
@@ -1792,6 +1800,55 @@ def chrome_holds(ctx, r):
     return {'leap_rows': len(cells), 'leap_columns': [round(c['w'], 1) for c in cells[0]] if cells else None, 'alpha': alpha}
 
 
+def walk_holds(ctx, r):
+    """A WALK'S FOLDED MOMENT (issue #182's design decision: "Dismissing it changes how much room it takes, never whether it
+    is there … It never yields when the line runs short"): a label box owed an answer raised through the gate's door as the
+    shell's event raises one, over nothing standing — whole, its face standing; Esc folds it into its segment of the one
+    line, naming the walk and its step and that it waits on the reader, its face gone and the shell told nothing. In a
+    window WALK_PX wide, too narrow for the line's every segment, the segment stands whole inside the line while the
+    acting-as segment before it is cut short; its act unfolds the moment, the focus on its first words, and Esc folds it
+    again. The moment is the gate's own, which no walk waits on and the next case's fresh page leaves behind; its figures"""
+    walk, step = 'gate-182', 'name this device'
+    m = {'id': 'gate-moment-182', 'kind': 'label', 'data': {'title': step, 'statements': [], 'default': None}, 'walk': walk, 'board': None, 'answerable': True}
+    ctx.js('window.__skep.leap.close()')
+    ctx.js('window.__skep.dismiss()')
+    ctx.js('window.__skep.scene.close()')
+    ctx.js('document.activeElement && document.activeElement.blur && document.activeElement.blur()')
+    ctx.frames(2)
+    n0 = len(ctx.js('window.__skep.bridge.calls()'))
+    ctx.js('window.__skep.moments.raise(%s)' % json.dumps(m))
+    ctx.frames(2)
+    whole = ctx.js('window.__skep.overlay()')
+    ctx.esc()
+    words = '%s · %s — waits on you' % (walk, step)
+    folded = ctx.js('window.__skep.moments.folded()')
+    r.check(whole['id'] == 'moment:gate-moment-182' and ctx.js('window.__skep.overlay()')['id'] is None and folded == [{'key': walk + '|', 'words': words}],
+            'a walk\'s moment raised over nothing stands whole; Esc folds it into its segment, naming the walk and its step and that it waits on the reader (issue #182)',
+            {'raised': whole['id'], 'folded': folded})
+    was = ctx.resize(WALK_PX, 900)
+    try:
+        ctx.js('new Promise((r) => setTimeout(r, 300))')  # the line redraws on its own cadence, every 120 ms
+        seen = ctx.js('''(() => { const line = document.getElementById('line'), q = (e) => { if (!e) return null; const b = e.getBoundingClientRect();
+            return {left: b.left, right: b.right, width: b.width, over: e.scrollWidth - e.clientWidth, text: e.textContent}; };
+          return {line: q(line), walk: q(line.querySelector('.seg.walk')), acting: q(line.querySelector('.seg.acting'))}; })()''')
+        line, seg, acting = seen['line'], seen['walk'], seen['acting']
+        r.check(bool(seg) and seg['text'] == words and seg['over'] <= 0 and seg['right'] <= line['right'] + 0.5 and bool(acting) and acting['over'] > 0,
+                f'a {WALK_PX} px window, short of room: the walk\'s segment stands whole inside the one line, its words uncut, the acting-as segment before it cut short (issue #182: "It never yields when the line runs short")',
+                seen)
+        ctx.js("document.querySelector('#line .seg.walk').click()")
+        ctx.frames(2)
+        unfolded = ctx.js('({id: window.__skep.overlay().id, first: !!document.activeElement && document.activeElement.classList.contains("moment-words"), folded: window.__skep.moments.folded()})')
+        r.check(unfolded['id'] == 'moment:gate-moment-182' and unfolded['first'] and unfolded['folded'] == [],
+                'the segment\'s act unfolds the moment, the focus on its first words, its segment gone (issue #182: "Unfolding moves focus to the face\'s first words")', unfolded)
+        ctx.esc()
+    finally:
+        ctx.resize(*was)
+    calls = [c['name'] for c in ctx.js('window.__skep.bridge.calls()')[n0:]]
+    r.check('answer' not in calls and 'cancel' not in calls and ctx.js('window.__skep.moments.folded()') == [{'key': walk + '|', 'words': words}],
+            'folded, unfolded and folded again, the moment told the shell nothing — no answer, no cancel — and stands folded', sorted(set(calls)))
+    return {'window': WALK_PX, 'line': seen['line'], 'walk': seen['walk'], 'acting': seen['acting']}
+
+
 def trail_view(ctx):
     """the plane's canvas along the segment between the trail's two newest entries, as far as the segment runs on screen
     inside the first edition's box, TRAIL_INSET_PX inside its edges, the disc about every entry's point left out: the
@@ -2549,5 +2606,6 @@ def run(ctx):
     r.figures['stub'] = stub_holds(ctx, r)
     r.figures['hold'] = hold_holds(ctx, r)
     r.figures['longest'] = longest_holds(ctx, r)
+    r.figures['walk'] = walk_holds(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

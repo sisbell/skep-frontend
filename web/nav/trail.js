@@ -23,14 +23,15 @@
 // restores. The launch frame
 // is the first entry (W-01); after it an entry is pushed by a fresh TELEPORT —
 // LEAP, follow, a click on a place, Enter, HOME, WHOLE BOARD, an account's
-// region — or by a version move, which lands in place (N-GO's `toVersion`),
-// one push per act, made as the act is made (FP-25), never by panning or
-// zooming, and never by a reading scene's end, which leaves the camera where
-// it found it (SC). Back, Forward and a jump move the cursor and discard
-// nothing, and a jump never pushes. A fresh teleport made with the cursor
-// behind the newest entry writes its step on the cursor's entry in the place
-// of the one it held and drops the entries ahead of it before it pushes (a
-// browser's history rule, stated).
+// region, a walk's moment unfolded over a view the camera stands away from
+// (N-GO's `toView`) — or by a version move, which lands in place (N-GO's
+// `toVersion`), one push per act, made as the act is made (FP-25), never by
+// panning or zooming, and never by a reading scene's end, which leaves the
+// camera where it found it (SC). Back, Forward and a jump move the cursor and
+// discard nothing, and a jump never pushes. A fresh teleport made with the
+// cursor behind the newest entry writes its step on the cursor's entry in the
+// place of the one it held and drops the entries ahead of it before it pushes
+// (a browser's history rule, stated).
 // THE CLAIM: a teleport whose landing waits on a read pushes its entry as a
 // claim as it is made, numbered then and never handed back once its camera
 // leaves (issue #136's design decision; FP-25), so the trail holds every

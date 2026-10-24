@@ -63,7 +63,9 @@
 // reaching and the keys held for its landing (FP-25) — whether the camera
 // flies (`view.flying`), whether a jump is in the air (`go.inAir`) and the
 // version each document's box shows (`go.shownIn`; issue #154), the trail,
-// the line's and the overlay's text, the
+// the line's and the overlay's text, a walk's moment raised as the shell's
+// event raises one and the folded moments the line's walks' segments are
+// (`moments`; issue #182), the
 // selection's span beside the platform's own and the way the platform's runs,
 // the copy door (the copy event
 // run against a stub clipboard, its flavors read back), the invalidation door
@@ -104,6 +106,7 @@ import * as TRAIL from '../nav/trail.js';
 import * as LINE from '../line/line.js';
 import * as HOST from '../overlays/host.js';
 import * as SEL from '../overlays/selection.js';
+import * as FACES from '../overlays/faces.js';
 import * as LK from '../links/links.js';
 import * as BM from '../beams/beams.js';
 import * as GO from '../nav/go.js';
@@ -587,6 +590,8 @@ export function install(deps) {
     trail: () => ({ entries: TRAIL.all(), cursor: TRAIL.cursorIndex(), numbered: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, pos: r.entry.pos, current: r.current })) }),
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay() }),
     overlay: () => ({ id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text() }),
+    /** a walk's moment raised as the shell's `moment` event raises one (O-FACES' `moment`; issue #182), and the folded moments the one line's walks' segments are, each its walk and its words (`folded`) */
+    moments: { raise: (/** @type {import('../bridge/shapes').MomentEvent} */ m) => { FACES.moment(m); return true; }, folded: () => FACES.folded() },
     selection: () => SEL.selected(),
     /** the platform's own selection: whether it is collapsed, whether it runs backward (its focus point before its anchor, read from the platform, never from the page), and the span it covers in a mounted article (null outside one) */
     platformSelection: () => {

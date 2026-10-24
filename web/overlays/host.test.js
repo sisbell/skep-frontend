@@ -8,11 +8,16 @@
 // itself turns red). An opening that gives up, or whose reads throw, is
 // pending no more (a mutant that clears it only where it shows turns red).
 // AN OVERLAY SHOWN is an act on the chrome, whatever conjures it — the trail
-// list, a walk's moment, a follow's face, a rebuild of the standing overlay
-// by its own act: the opening still reading ends as it is shown, its answer
-// never covers what was shown, and one Esc closes what was shown, made before
-// the answer or after it (a mutant whose show does not count itself turns
-// every row red). THE LEAP BOX opened while an opening reads ends it, the
+// list, a walk's moment unfolded by its segment's act, a follow's face, a
+// rebuild of the standing overlay by its own act: the opening still reading
+// ends as it is shown, its answer never covers what was shown, and one Esc
+// closes what was shown, made before the answer or after it (a mutant whose
+// show does not count itself turns every row red). A WALK'S MOMENT the shell
+// raises while an opening reads takes nothing's place (issue #182): it opens
+// folded, its segment said, and the card asked shows (a mutant whose moment
+// shows whatever stands turns red). AN OVERLAY'S END runs while its element
+// still holds what it wrote (a mutant that empties the element first turns
+// red). THE LEAP BOX opened while an opening reads ends it, the
 // overlay standing under it staying: its answer shows nothing and the box
 // stands (a mutant whose box leaves the opening reading, or dismisses what
 // stands, turns red).
@@ -185,12 +190,14 @@ test('an opening that gives up shows nothing and is pending no more; nor is one 
 test('an overlay shown while an opening reads ends it, whatever conjures it: its answer never covers what was shown, and one Esc closes what was shown, before the answer or after it', async () => {
   /** the links card at a document, the others' switch in a state: shown again by the switch's own act, it is rebuilt */
   const links = (/** @type {boolean} */ on) => HOST.show({ kind: 'card', id: 'links:1.0.1.0.3', anchor: null, html: `<span class="label">links</span><button data-run="others" role="switch" aria-checked="${on}">others' links</button>`, acts: {} });
-  /** @type {import('../bridge/shapes').MomentEvent} a walk's moment, as the shell raises it */
-  const moment = { id: 'm-1', kind: 'statement', data: 'the walk says', walk: 'w-1', board: null, answerable: true };
+  /** @type {import('../bridge/shapes').MomentEvent} a walk's moment, as the shell raises it: a question owed an answer */
+  const moment = { id: 'm-1', kind: 'ask', data: { text: 'which devices are lost?' }, walk: 'w-1', board: null, answerable: true };
+  /** the walk's moment folded, nothing standing: raised over nothing, then dismissed */
+  const folded = () => { if (!FACES.folded().length) { FACES.moment(moment); HOST.dismiss(); } };
   /** @type {Array<{what: string, id: string, before?: () => void, show: () => void}>} each overlay shown while the opening reads, the id it stands as, and what stood before the opening began */
   const rows = [
     { what: 'the trail list', id: 'trail-list', show: () => TRAILLIST.open() },
-    { what: 'a walk\'s moment', id: 'moment:m-1', show: () => FACES.moment(moment) },
+    { what: 'a walk\'s moment unfolded by its segment\'s act', id: 'moment:m-1', before: folded, show: () => FACES.unfold(FACES.folded()[0].key) },
     { what: 'a follow\'s face', id: 'face:invalid', show: () => FACES.invalidFollow(null) },
     { what: 'a rebuild of the standing overlay by its own act', id: 'links:1.0.1.0.3', before: () => links(false), show: () => links(true) },
   ];
@@ -214,6 +221,33 @@ test('an overlay shown while an opening reads ends it, whatever conjures it: its
       }
     }
   }
+});
+
+test('a walk\'s moment the shell raises while an opening reads takes nothing\'s place (issue #182; FP-28): it opens folded, its segment said, and the card asked shows its answer', async () => {
+  /** @type {string[]} what the status region was given to say */
+  const said = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); } }) });
+  const r = slow();
+  const o = HOST.opening(() => r.read, card('provenance:wrote'));
+  FACES.moment({ id: 'm-182', kind: 'yes_no', data: { text: 'was the device stolen?' }, walk: 'w-182', board: null, answerable: true });
+  assert.deepEqual([HOST.pending(), standing(), FACES.folded().find((f) => f.key.startsWith('w-182|'))?.words], [true, null, t('L.walk.waits', { walk: 'w-182', step: 'was the device stolen?' })], 'the opening still reading, nothing shown, the walk\'s segment standing');
+  assert.equal(said[said.length - 1], t('L.walk.waits', { walk: 'w-182', step: 'was the device stolen?' }), 'the segment said through the status region');
+  r.answer('its origin');
+  await o;
+  assert.equal(standing(), 'provenance:wrote', 'the card asked shows its answer');
+  HOST.dismiss();
+});
+
+test('an overlay\'s end runs while its element still holds what it wrote, dismissed or replaced — a walk\'s moment folds with the text typed in its field (issue #182)', () => {
+  /** @type {Array<[boolean, string]>} each end as it ran: replaced or dismissed, and what the element held then */
+  const ends = [];
+  const end = (/** @type {boolean} */ replaced) => { ends.push([replaced, hostEl.innerHTML]); };
+  HOST.show({ kind: 'card', id: 'card:a', anchor: null, html: '<span class="label">a</span>', acts: {}, onDismiss: end });
+  HOST.show({ kind: 'card', id: 'card:b', anchor: null, html: '<span class="label">b</span>', acts: {}, onDismiss: end });
+  HOST.dismiss();
+  assert.deepEqual(ends.map(([replaced, html]) => [replaced, html.startsWith('<span class="label">')]), [[true, true], [false, true]], 'each end met its own markup standing');
+  assert.ok(ends[0][1].includes('>a<') && ends[1][1].includes('>b<'), JSON.stringify(ends));
+  assert.equal(hostEl.innerHTML, '', 'then the element emptied');
 });
 
 test('Esc\'s one order: a card still reading is the innermost thing — Esc ends it alone, the card standing under it stands; the next Esc dismisses that card', async () => {
@@ -271,7 +305,7 @@ test('a face shown while the standing overlay\'s field holds the caret takes not
   // the platform's parse of a markup string, written into nothing the page shows: a template's content
   globalThis.document.createElement = /** @type {any} */ (() => { const t = { innerHTML: '', get content() { return { querySelectorAll: (/** @type {string} */ sel) => faceParts(t.innerHTML, sel) }; } }; return t; });
   try {
-    FACES.moment({ id: 'm-171', kind: 'ask', data: 'name this', walk: 'w-1', board: null, answerable: true });
+    FACES.moment({ id: 'm-171', kind: 'ask', data: { text: 'name this' }, walk: 'w-171', board: null, answerable: true });
     globalThis.document.activeElement = /** @type {any} */ (field);
     assert.equal(HOST.typing(), true, 'the moment holds the caret');
     FACES.reading('1.0.1.0.3', null);
@@ -412,7 +446,8 @@ test('a change of the page\'s class takes down what the host wrote from what the
     FACES.reading('1.0.1.0.3', null);
     HOST.classChanged();
     assert.equal(standing(), 'reading:1.0.1.0.3', 'a jump\'s reading face stands: its read is asked again at the new class');
-    FACES.moment({ id: 'm-177', kind: 'statement', data: 'the walk says', walk: 'w-1', board: null, answerable: true });
+    FACES.endReading();
+    FACES.moment({ id: 'm-177', kind: 'label', data: { title: 'name this device', statements: [], default: null }, walk: 'w-177', board: null, answerable: true });
     HOST.classChanged();
     assert.equal(standing(), 'moment:m-177', 'a moment\'s face stands: the shell\'s, not the page\'s');
     HOST.dismiss();

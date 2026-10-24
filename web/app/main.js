@@ -33,8 +33,10 @@
 // — and N-WALK's: where Back's light stands (N-GO's `backLight`; issue #152)
 // and what a landing says of its passage (N-GO's `described`; issue #153);
 // and to L-LINE a jump's face standing out of the visible view (O-HOST's
-// `aside`; FP-25), which the line carries in its place, and the runs of an
-// arrival in several (N-GO's landing; issue #158), which its strip outlines;
+// `aside`; FP-25), which the line carries in its place, the runs of an
+// arrival in several (N-GO's landing; issue #158), which its strip outlines,
+// and the walks' folded moments with the act that unfolds each (O-FACES'
+// `folded` and `unfold`; issue #182), which its walks' segments are;
 // to O-LAND the labels' layer, where every other run's label stands;
 // to T-LAYER the document the one line names (L-LINE's `named`; issue
 // #169's design decision: "Named once"), whose label it never holds over
@@ -79,7 +81,7 @@
 // held there for its landing (FP-25); a chord the LEAP box closed on
 // is read at the focus the close returned; ↓ and ↑ in an overlay move among
 // its controls through the controller; the pointer → APP-INPUT; the events
-// `moment` → a face, `held` → logged, not acted on (the editor's lane's);
+// `moment` → a walk's moment (O-FACES'), `held` → logged, not acted on (the editor's lane's);
 // the failure reporter (a line in the page, posted nowhere). NO WRITE is
 // composed or sent anywhere in this page (S-35 (a)).
 // Carries: the wireframe's §23 (`loop`, the listener, `reportFailure`,
@@ -231,7 +233,7 @@ async function boot() {
   LANDING.attach(el('landing'), { handOff: () => WALK.focusItem(), pieces: el('pieces') });
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
-  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; } });
+  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey) });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn });

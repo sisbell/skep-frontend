@@ -3,7 +3,9 @@
 // PURE table + ENGINE through O-HOST. State: VIEW — the documents whose own
 // withheld words a face has shown whole in the page's session, the own-words
 // face shown last, and the reads of the claims its faces asked — the one
-// owner, emptied at a change of the page's class (`classChanged`).
+// owner, emptied at a change of the page's class (`classChanged`) — and each
+// walk's moment, whole, folded or ended, which that change keeps, for it is
+// the shell's (`walks`).
 // A face is keyed on the refusal's ONE `name` — the board's token (the
 // `detail` of a `credential_refused`, else the `code`) or the shell's own —
 // and its `kind` (the halt's, the block's, `unreachable`), never on prose;
@@ -63,20 +65,47 @@
 // `reaching:⟨address⟩` and never `face:…`, the prefix a notice's face
 // carries — each anchored, as every face N-GO shows for a jump is, with the
 // document it stands at, out of the visible view of which the one line
-// carries its words (O-HOST's `sign`); a PUBLIC
-// `moment` rendered as a face with `answer`/`cancel` (no ceremony panel is
-// built here — a seam). A face never takes the focus (D5 §4 rule 4; K-58):
-// it is heard through the one status region (D4, O-HOST's), and a face
-// offered by a key's act takes none either; the moment's face alone takes it,
-// on its first control (K-80). A refusal's face that answers an act carries
+// carries its words (O-HOST's `sign`). A face never takes the focus (D5 §4
+// rule 4; K-58): it is heard through the one status region (D4, O-HOST's),
+// and a face offered by a key's act takes none either; a walk's moment alone
+// takes it. A refusal's face that answers an act carries
 // the act's own caption, the words its card names itself by (`caption`), so
 // O-HOST names it as the act's answer and says the caption before its words
 // (issue #179's design decision: "Announce each face as the act's answer,
 // tied to the act in markup"); a landing's face is tied by the item's
-// description where the focus lands instead (`told`). Carries: the
-// wireframe's §18 `face` (its words and acts; its reviewer's label stays in
-// the wireframe), `deadReferenceFace`'s fifth cell, `c39Face`. Rules: FP-1,
-// FP-2, FP-13, FP-20, FP-25, FP-26, FP-28, FP-29.
+// description where the focus lands instead (`told`).
+// A WALK'S MOMENT IS THE WALK'S STATE (issue #182's design decision: "The
+// screen shows it for exactly as long as the walk stands at it"): a PUBLIC
+// `moment` is drawn by its kind — a label box its title, its statements, its
+// field and the default it offers; a question its words and its field; a
+// yes-or-no question its words and its two answers; a statement its words
+// alone (no ceremony panel is built here — a seam) — and what ends any other
+// overlay — Esc, an empty click, a navigation act, which then proceeds,
+// another overlay the reader opens — FOLDS it (its `onDismiss`) into one
+// segment of the one line naming its walk and its step and that it waits on
+// the reader (`folded`, L-LINE's), said through the status region without
+// moving the focus, the shell told nothing. The segment's act unfolds it as
+// it was left, its typed text and its refusal with it, over the view its walk
+// showed it over (N-GO's `toView`), the focus on its first words (`unfold`).
+// Only its own acts tell the shell: its answer, in the form its kind takes
+// (`MomentEvent`) — a label box's empty field the default the box offers,
+// else flagged at the box and never sent; a yes-or-no question's yes or no —
+// and its cancel, named by its walk, beside it the line that what cancelling
+// leaves behind is not told to this page (skep #628); a refusal of either is
+// drawn inside the face, `no_such_moment` ending the moment. It leaves only as
+// the shell ends it: its answer or its cancel accepted, or its walk's next
+// moment, which opens as the last was left — whole, or folded, the segment
+// said and the camera unmoved. One arriving where the reader stands at a
+// surface of their own (FP-28) — an overlay, an opening still reading, the
+// reading scene, a field holding the caret — opens folded; else whole, taking
+// the focus on its first control (K-80). A statement, which no walk waits on,
+// never folds: what its walk does after it, and the walk's end, the shell
+// does not tell the page (skep #627) — shown whole where its walk's last
+// moment was left whole and nothing of the reader's stands, else said
+// through the status region alone.
+// Carries: the wireframe's §18 `face` (its words and acts; its reviewer's
+// label stays in the wireframe), `deadReferenceFace`'s fifth cell, `c39Face`.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-25, FP-26, FP-28, FP-29.
 
 import * as HOST from './host.js';
 import * as VERSIONS from './versions.js';
@@ -84,6 +113,11 @@ import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
 import * as LAYER from '../text/layer.js';
+import * as GO from '../nav/go.js';
+import * as TRAIL from '../nav/trail.js';
+import * as FOCUS from '../nav/focus.js';
+import * as SCENE from '../scene/scene.js';
+import * as CAM from '../plane/camera.js';
 import { entitlementArm, placeholderOf } from '../text/article.js';
 import { memberOf } from '../model/address.js';
 import { t } from '../strings.js';
@@ -92,6 +126,7 @@ import { esc } from '../util.js';
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 /** @typedef {import('../bridge/shapes').DeathReason} DeathReason */
 /** @typedef {import('../bridge/shapes').MomentEvent} MomentEvent */
+/** @typedef {import('../nav/trail.js').View} View */
 /** @typedef {import('./host.js').Anchor} Anchor */
 /** @typedef {import('./host.js').Overlay} Overlay */
 /** @typedef {import('../model/records.js').Reader} Reader */
@@ -574,24 +609,224 @@ export function deathFace(reason, anchor) {
 }
 
 /**
- * A PUBLIC moment of a walk, rendered as a face with `answer` and `cancel`
- * (no ceremony panel is built here — the ceremonies are a seam).
+ * @typedef {Object} Walk — a walk's moment as the page holds it (see the head), until the shell ends it
+ * @property {string} key the walk it is of (`walkOf`)
+ * @property {MomentEvent} m the moment
+ * @property {boolean} folded folded into its segment of the one line, its face taken down; once ended, how it was left, which its walk's next moment opens as
+ * @property {string} typed the text its field held as it was last folded or drawn again, which its face is drawn with
+ * @property {{id: string, text: string} | null} note what its face says beneath its field: the refusal its own answer or cancel met, or a label box's empty field flagged
+ * @property {boolean} ended the shell ended it — its answer or its cancel accepted, refused `no_such_moment`, or its walk's next moment raised — or it is a statement, which no walk waits on: its face taken down at its end, never folded, and no segment drawn for it
+ * @property {boolean} sending its answer or its cancel is out: no other goes until the shell answers it
+ * @property {{addr: string, view: View}} at the view its walk shows its face over — the reader's trail entry and where the camera is bound, as the moment arrived and as its face was last folded — which its unfold brings back (N-GO's `toView`)
+ */
+
+/** @type {Map<string, Walk>} each walk's moment, by its walk (`walkOf`); an ended one kept for how it was left (see the head) */
+const walks = new Map();
+
+/** the walk a moment is of: its name at its board — the event names no run of it (skep #627) */
+const walkOf = (/** @type {MomentEvent} */ m) => `${m.walk}|${m.board ?? ''}`;
+/** the overlay a moment's face stands as */
+const faceOf = (/** @type {MomentEvent} */ m) => 'moment:' + m.id;
+/** where the reader stands now: the trail entry the camera was last sent to, and the view the camera is bound for */
+const here = () => ({ addr: (TRAIL.current() || { addr: '1' }).addr, view: CAM.destination() });
+/** a moment the shell no longer holds, in its face's words */
+const gone = () => ({ id: 'L.moment.gone', text: t('L.moment.gone') });
+
+/**
+ * A moment's data as its kind carries it (`skep-shell`'s person): a
+ * statement's and a question's `text`, a label box's `title`, `statements`
+ * and `default`; a string as it is; nothing else drawn.
+ * @param {MomentEvent} m
+ * @returns {{words: string, statements: string[], fallback: string | null}} its first words, a label box's statements, and the default the box offers
+ */
+function dataOf(m) {
+  if (typeof m.data === 'string') return { words: m.data, statements: [], fallback: null };
+  const d = m.data && typeof m.data === 'object' ? /** @type {Record<string, unknown>} */ (m.data) : {};
+  const words = m.kind === 'label' ? d.title : d.text;
+  return {
+    words: typeof words === 'string' ? words : '',
+    statements: Array.isArray(d.statements) ? d.statements.filter((s) => typeof s === 'string') : [],
+    fallback: m.kind === 'label' && typeof d.default === 'string' ? d.default : null,
+  };
+}
+
+/** a walk's segment of the one line (see the head): its walk, its step — a label box's title, a question's words, else its kind's caption — and that it waits on the reader */
+const segmentWords = (/** @type {Walk} */ w) => t('L.walk.waits', { walk: w.m.walk, step: dataOf(w.m).words || t('L.moment.' + w.m.kind) });
+
+/**
+ * Does the reader stand at a surface of their own a moment's face would take
+ * the place of (see the head; FP-28: "A card, a list, a selection, a reading
+ * scene or a field being typed in ends when the reader closes it, replaces
+ * it, or leaves its place, and by nothing else")? An overlay other than the
+ * face of the walk's moment before, an opening still reading, the reading
+ * scene, or a field holding the caret — the LEAP box's, or that face's own.
+ * @param {Walk | undefined} prev the walk's moment before
+ */
+function busy(prev) {
+  const own = !!prev && HOST.currentIs(faceOf(prev.m));
+  return (HOST.hasCurrent() && !own) || HOST.pending() || SCENE.isOpen() || FOCUS.isField(typeof document === 'undefined' ? null : document.activeElement);
+}
+
+/**
+ * A PUBLIC moment of a walk, raised by the shell (see the head), ending its
+ * walk's moment before it. A moment owed an answer opens as that one was
+ * left: folded — and so where the reader stands at a surface of their own
+ * (`busy`) — its segment said and the camera unmoved; else whole, over the
+ * view the reader stands at, the focus on its first control (K-80). A
+ * statement, owed nothing, never folds: shown whole where its walk's moment
+ * before was left whole and the reader stands at no surface of their own,
+ * taking no focus, and said through the status region either way.
  * @param {MomentEvent} m
  */
 export function moment(m) {
-  const data = typeof m.data === 'string' ? m.data : JSON.stringify(m.data);
-  const input = m.kind === 'label' || m.kind === 'ask' ? `<input type="text" data-answer="1" aria-label="${esc(t('L.answer'))}">` : '';
+  const key = walkOf(m), prev = walks.get(key), left = !!prev && prev.folded;
+  const quiet = left || busy(prev);
+  if (prev) prev.ended = true;
+  /** @type {Walk} */
+  const w = { key, m, folded: m.answerable ? quiet : left, typed: '', note: null, ended: !m.answerable, sending: false, at: quiet && prev ? prev.at : here() };
+  walks.set(key, w);
+  if (!quiet) draw(w, 'arrive');
+  if (quiet || !m.answerable) FOCUS.say(m.answerable ? segmentWords(w) : dataOf(m).words);
+  CAM.markDirty();
+}
+
+/**
+ * A walk's moment's face drawn whole (see the head), its field holding the
+ * text typed and its note beneath it: as it arrives, the focus on its first
+ * control; unfolded, on its first words; again in its place, the focus kept
+ * where it stands (O-HOST's rebuild). Its end folds it (`fold`).
+ * @param {Walk} w
+ * @param {'arrive' | 'unfold' | 'again'} how
+ */
+function draw(w, how) {
   HOST.show({
-    kind: 'moment', id: 'moment:' + m.id, anchor: null, takeFocus: true,
-    html: `<span class="label"><span class="code">${esc(m.walk)}</span> · ${esc(t('L.moment', { kind: m.kind }))}</span><div class="face-text">${esc(data)}</div>${input}` +
-      `<div class="acts"><button data-run="answer">${esc(t('L.answer'))}</button>${m.answerable ? `<button data-run="cancel">${esc(t('L.cancel'))}</button>` : ''}</div>`,
-    acts: {
-      answer: () => {
-        const el = HOST.element(); const inp = el ? /** @type {HTMLInputElement | null} */ (el.querySelector('[data-answer]')) : null;
-        const value = m.kind === 'yes_no' ? true : m.kind === 'statement' ? null : inp ? inp.value : null;
-        PORT.answer({ id: m.id, value }); HOST.dismiss();
-      },
-      cancel: () => { PORT.cancel({ id: m.id }); HOST.dismiss(); },
-    },
+    kind: 'moment', id: faceOf(w.m), anchor: null, takeFocus: how !== 'again', first: how === 'unfold' ? '.moment-words' : undefined, html: momentHTML(w),
+    acts: { answer: () => answer(w), yes: () => { void reply(w, 'answer', true); }, no: () => { void reply(w, 'answer', false); }, cancel: () => { void reply(w, 'cancel', null); } },
+    onDismiss: () => fold(w),
   });
+}
+
+/**
+ * A walk's moment's face (see the head): its walk and its kind's caption, its
+ * first words, a label box's statements, its field holding the text typed,
+ * the default a label box offers, its note, then its answers and its cancel
+ * named by its walk, and beside them what cancelling leaves behind, which the
+ * page is not told (skep #628).
+ * @param {Walk} w
+ */
+function momentHTML(w) {
+  const m = w.m, d = dataOf(m), caption = 'L.moment.' + m.kind;
+  const field = m.kind === 'label' || m.kind === 'ask' ? `<input type="text" data-answer="1" aria-label="${esc(t('L.answer'))}" value="${esc(w.typed)}">` : '';
+  const fallback = d.fallback != null ? `<div class="note" data-string="L.moment.default">${esc(t('L.moment.default', { default: d.fallback }))}</div>` : '';
+  const note = w.note ? `<div class="note refused" data-string="${esc(w.note.id)}">${esc(w.note.text)}</div>` : '';
+  const answers = m.kind === 'yes_no' ? `<button data-run="yes">${esc(t('L.moment.yes'))}</button><button data-run="no">${esc(t('L.moment.no'))}</button>`
+    : m.answerable ? `<button data-run="answer">${esc(t('L.answer'))}</button>` : '';
+  const cancel = m.answerable ? `<button data-run="cancel" data-string="L.moment.cancel">${esc(t('L.moment.cancel', { walk: m.walk }))}</button>` : '';
+  return `<span class="label"><span class="code">${esc(m.walk)}</span> · <span data-string="${esc(caption)}">${esc(t(caption))}</span></span>` +
+    `<div class="face-text moment-words" tabindex="-1">${esc(d.words)}</div>${d.statements.map((s) => `<div class="note">${esc(s)}</div>`).join('')}${field}${fallback}${note}` +
+    (answers || cancel ? `<div class="acts">${answers}${cancel}</div>` : '') +
+    (m.answerable ? `<div class="note" data-string="L.moment.leaves">${esc(t('L.moment.leaves'))}</div>` : '');
+}
+
+/** the text a moment's field holds where its face stands in the host's element — read before the host empties it — else the text kept */
+function typedIn(/** @type {Walk} */ w) {
+  const el = HOST.element();
+  const f = el && typeof el.getAttribute === 'function' && el.getAttribute('data-id') === faceOf(w.m) ? /** @type {HTMLInputElement | null} */ (el.querySelector('[data-answer]')) : null;
+  return f ? f.value : w.typed;
+}
+
+/**
+ * The answer act (see the head): the field's text, in the form the moment's
+ * kind takes — a label box's empty field the default the box offers, `null`,
+ * or, where it offers none, flagged at the box and never sent (foundations
+ * §3.4 F-C4: "an empty label is faced at the box and never committed").
+ * @param {Walk} w
+ */
+function answer(w) {
+  w.typed = typedIn(w);
+  if (w.m.kind !== 'label' || w.typed) { void reply(w, 'answer', w.typed); return; }
+  if (dataOf(w.m).fallback != null) { void reply(w, 'answer', null); return; }
+  w.note = { id: 'L.moment.empty', text: t('L.moment.empty') };
+  noted(w);
+}
+
+/**
+ * The moment's own act told to the shell — its answer, or its cancel — one at
+ * a time, and settled by the shell's word (see the head): accepted, the
+ * moment ends, its face taken down where it stands; refused, the refusal its
+ * note — `no_such_moment` ending it. A moment already ended sends nothing,
+ * its note saying so.
+ * @param {Walk} w
+ * @param {'answer' | 'cancel'} call
+ * @param {unknown} value the answer, in the form the moment's kind takes; nothing for a cancel
+ */
+async function reply(w, call, value) {
+  if (w.sending) return;
+  if (w.ended) { w.note = gone(); noted(w); return; }
+  w.sending = true;
+  const out = await (call === 'answer' ? PORT.answer({ id: w.m.id, value }) : PORT.cancel({ id: w.m.id }));
+  w.sending = false;
+  if ('result' in out) {
+    w.ended = true; w.note = null;
+    if (HOST.currentIs(faceOf(w.m))) HOST.dismiss();
+    CAM.markDirty();
+    return;
+  }
+  const r = out.refused, said = wordsFor(r);
+  if (r.name === 'no_such_moment') w.ended = true;
+  w.note = w.ended ? gone() : { id: said.id, text: said.text };
+  noted(w);
+}
+
+/** a moment's note shown (see the head): drawn inside its face, again in its place, where it stands; said through the status region where it is folded */
+function noted(/** @type {Walk} */ w) {
+  if (HOST.currentIs(faceOf(w.m))) { w.typed = typedIn(w); draw(w, 'again'); }
+  else if (w.note) FOCUS.say(w.note.text);
+  CAM.markDirty();
+}
+
+/**
+ * A walk's moment's face ended (its `onDismiss`; see the head): folded into
+ * its segment of the one line — its field's text kept, the view it was left
+ * over recorded, the segment said through the status region — the shell told
+ * nothing; save a moment the shell ended, or one its walk's next moment took
+ * the place of, which goes.
+ * @param {Walk} w
+ */
+function fold(w) {
+  if (w.ended || walks.get(w.key) !== w) return;
+  w.typed = typedIn(w);
+  w.at = here();
+  w.folded = true;
+  FOCUS.say(segmentWords(w));
+  CAM.markDirty();
+}
+
+/**
+ * The segment's act (see the head; L-LINE's, the app's to hand in): the
+ * walk's moment unfolded as it was left — its typed text and its note with
+ * it — over the view its walk showed it over, the camera brought back there
+ * first where it stands away (N-GO's `toView`: an act, and a trail entry like
+ * any jump's), the focus on its first words. Nothing where the walk holds no
+ * folded moment.
+ * @param {string} key the walk (`walkOf`)
+ * @param {boolean} [byKey] a key made the act
+ */
+export function unfold(key, byKey = false) {
+  const w = walks.get(key);
+  if (!w || !w.folded || w.ended) return;
+  w.folded = false;
+  void GO.toView(w.at, byKey);
+  draw(w, 'unfold');
+}
+
+/**
+ * The walks' folded moments (see the head), for the one line — L-LINE's
+ * reader, the app's to hand in: each its walk (`walkOf`), which its segment's
+ * act unfolds it by, and its segment's words, in the order the walks first
+ * asked.
+ * @returns {Array<{key: string, words: string}>}
+ */
+export function folded() {
+  return [...walks.values()].filter((w) => w.folded && !w.ended).map((w) => ({ key: w.key, words: segmentWords(w) }));
 }
