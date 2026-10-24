@@ -20,6 +20,21 @@
 // label set before it. Through a crossfade a place drawn the weaker — an
 // alpha below a half — sets no label and blocks none, as the click takes the
 // stronger (P-LOD's `residueDepth`).
+// THE HOLD (issue #169's design decision: "Held below the line"): a label
+// naming a place the one line does not name is handed its place's shape on
+// screen (`Hold`), and where its first line would stand above P-REG's HOLD
+// gap below the line it stands HELD there instead (`holdTop`, the corner's
+// hold too, so the two stand level): at the top-left of its place's visible
+// part, on one line of its type across that part, on its place's ground
+// (`heldLine`) — its head, an address or a count, whole or no label at all; a
+// badge kept whole beside it or dropped; a first line cut to the room the two
+// leave, ending in its ellipsis, or dropped; never wrapped — the room across
+// its line read from its place's shape at the line's foot (`across`), the
+// narrowest row it meets, so it never leaves its place. Its place's foot
+// rising pushes it up under the line, a held label standing while its bottom
+// is in view; a held label meeting one set before it — the held label of the
+// region holding its place — stands just below it. A label with no hold —
+// the board's, a place the line names, a count — keeps the rule above.
 // A CONNECTION'S COUNT (foundations §2.1's register: "one connection drawn
 // per document pair with its count"; P44, which forbids a merged mark that
 // hides its count) names a pair of places and no shape, so every place's
@@ -32,9 +47,9 @@
 // over a column; its room runs from the tail's end rightward to the first
 // shape its lines would meet, else to the visible view's edge (`roomRight`),
 // and the tail's stroke is held short of any other place's shape the same way.
-// Rules: FP-1, FP-2, FP-8, FP-10 (no state).
+// Rules: FP-1, FP-2, FP-8, FP-10 (no state), FP-26.
 
-import { LABEL_MIN_PX } from './register.js';
+import { LABEL_MIN_PX, HOLD } from './register.js';
 
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect a screen rect */
 /** @typedef {{x: number, y: number}} Point a screen point */
@@ -44,6 +59,9 @@ export const LINE_BOX = 1.2;
 /** the alpha at and above which a place drawn through a crossfade is the stronger */
 export const STRONGER = 0.5;
 const ELLIPSIS = '…';
+
+/** the face a label is set in, at a size and weight: the canvas's, and the held label's over a mounted article (T-LAYER's), so the pass's measure and the text set agree */
+export const face = (/** @type {number} */ px, weight = 'normal') => `${weight === 'normal' ? '' : weight + ' '}${px}px ui-monospace, Menlo, monospace`;
 
 /**
  * The size a label is set at: its rule's size on the half-px grid, never
@@ -84,6 +102,14 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
  * @property {number} alpha the alpha its place is drawn at
  * @property {string | null} plate the ink of its place's ground, laid across its room behind each line over what the place draws beneath it; null for none
  * @property {Part[]} parts in order down from its first line, each set below the one before; a part left out takes every part after it out with it, so the first, its head, set or the label left out whole
+ * @property {Hold | null} hold where it stands held below the one line once its first line would rise above the hold (see the head); null for a label never held — the board's, a place the line names, a label naming no place
+ */
+
+/**
+ * @typedef {Object} Hold — the place a label holds in below the one line (see the head)
+ * @property {Rect[]} rects its place's shape on screen: rects sharing their left edge, each row as wide as the one above it or narrower — a document's outline, a mark, a cell
+ * @property {number} pad how far inside them a held label stands, in px: a document's half gutter
+ * @property {string | null} plate the ink of its place's ground, laid across its held line; null for none
  */
 
 /**
@@ -106,15 +132,16 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
  * @typedef {Object} SetLabel — a label the pass set: the lines of the parts it set
  * @property {LabelKind} kind
  * @property {string} place
- * @property {Rect} within
+ * @property {Rect} within its room; a held label's, its held line across its place's visible part
  * @property {number} alpha
  * @property {string | null} plate
- * @property {SetLine[]} lines
+ * @property {SetLine[]} lines a held label's, the parts it set on its one line, left to right
+ * @property {boolean} held it stands held below the one line (see the head)
  */
 
 /**
  * @typedef {'faint' | 'width' | 'height' | 'view' | 'meets' | 'after'} Reason why a part was left out:
- * its place drawn the weaker through a crossfade; a word, or a line never cut, wider than its place; its lines past its place's bottom; reaching past the visible view — under the one line, or past the viewport; meeting another place's shape or a label set before it; a part before it left out
+ * its place drawn the weaker through a crossfade; a word, or a line never cut, wider than its place — held, a part its one line has no room for; its lines past its place's bottom — held, below the labels it stands under; reaching past the visible view — under the one line, or past the viewport — held, wholly under the line; meeting another place's shape or a label set before it; a part before it left out
  */
 
 /**
@@ -194,8 +221,93 @@ function linesOf(p, rows, fits) {
 }
 
 /**
- * The pass: each label set in order where its place holds it (see the head),
- * the parts it could not set left out with the rule that left each out.
+ * Where a sign held below the one line stands (see the head): at its own
+ * place's top `at` while that stands at `top` or below; else at `top`, never
+ * so low that it runs past `foot` — its place's foot rising pushes it up
+ * under the line — and never above `at`, where its place is shorter than it.
+ * T-LAYER's corner holds by it too, so a label and a corner held stand level.
+ * @param {number} at its place's top for it, on screen: where it stands unheld
+ * @param {number} top the height it holds below: the one line's bottom and P-REG's HOLD gap
+ * @param {number} foot the foot it never runs past
+ * @param {number} h its height
+ * @returns {number}
+ */
+export function holdTop(at, top, foot, h) { return Math.max(at, Math.min(Math.max(at, top), foot - h)); }
+
+/**
+ * The room across a held line (see the head) in a place drawn as rects
+ * sharing their left edge, each row as wide as the one above it or narrower:
+ * from that edge to the right edge of the rects holding the line's foot —
+ * the narrowest the line meets — `pad` inside either; null where none holds it.
+ * @param {Rect[]} rects
+ * @param {number} y the line's top
+ * @param {number} h its height
+ * @param {number} pad
+ * @returns {{x: number, w: number} | null}
+ */
+export function across(rects, y, h, pad) {
+  const foot = y + h - 0.5, at = rects.filter((r) => r.y <= foot && foot < r.y + r.h);
+  if (!at.length) return null;
+  const left = Math.min(...at.map((r) => r.x)), right = Math.max(...at.map((r) => r.x + r.w));
+  return { x: left + pad, w: right - left - 2 * pad };
+}
+
+/**
+ * @typedef {Object} HeldPart — a part a held label sets on its one line
+ * @property {Part} part
+ * @property {string} text what it sets: its own words, or a first line cut, ending in its ellipsis
+ * @property {number} px the size it is set at
+ * @property {string} weight
+ * @property {number} x its left edge, in px from the line's start
+ * @property {number} w its width
+ */
+
+/**
+ * A label's held form (see the head): its parts on one line `width` px wide,
+ * in their order, each at its size, a space at its size before each after the
+ * first — its head whole, else none; each later part never cut (a badge, a
+ * count) kept whole where it fits beside the head and the others kept, else
+ * dropped; each first line cut to the room those leave, ending in its
+ * ellipsis, else dropped.
+ * @param {Part[]} parts
+ * @param {number} width
+ * @param {Measure} measure
+ * @returns {HeldPart[] | null} null where the head does not fit whole
+ */
+export function heldLine(parts, width, measure) {
+  const ps = parts.map((p) => ({ p, text: p.text.trim().replace(/\s+/g, ' '), px: sizeOf(p.px), weight: p.weight || 'normal' })).filter((x) => x.text);
+  if (!ps.length) return null;
+  const wide = (/** @type {typeof ps[number]} */ x, /** @type {string} */ s) => measure(s, x.px, x.weight);
+  const gap = (/** @type {typeof ps[number]} */ x) => wide(x, ' ');
+  let used = wide(ps[0], ps[0].text);
+  if (used > width + 1e-6) return null;
+  /** @type {Map<typeof ps[number], string>} what each part kept sets */
+  const kept = new Map([[ps[0], ps[0].text]]);
+  for (const x of ps.slice(1)) {
+    if (x.p.fit === 'cut' || x.p.fit === 'fill') continue;
+    const need = gap(x) + wide(x, x.text);
+    if (used + need <= width + 1e-6) { kept.set(x, x.text); used += need; }
+  }
+  for (const x of ps.slice(1)) {
+    if (x.p.fit !== 'cut' && x.p.fit !== 'fill') continue;
+    const room = width - used - gap(x), fits = (/** @type {string} */ s) => wide(x, s) <= room + 1e-6;
+    const s = fits(x.text) ? x.text : cutTo(x.text, fits);
+    if (s) { kept.set(x, s); used += gap(x) + wide(x, s); }
+  }
+  let at = 0;
+  return ps.filter((x) => kept.has(x)).map((x, i) => {
+    const text = /** @type {string} */ (kept.get(x)), w = wide(x, text);
+    if (i) at += gap(x);
+    const out = { part: x.p, text, px: x.px, weight: x.weight, x: at, w };
+    at += w;
+    return out;
+  });
+}
+
+/**
+ * The pass: each label set in order where its place holds it, or held below
+ * the one line (see the head), the parts it could not set left out with the
+ * rule that left each out.
  * @param {Label[]} labels in the order their places were drawn
  * @param {Shape[]} shapes every place's shape the frame drew
  * @param {Rect} view the visible view (P-CAM's `visibleView`): the viewport below the one line
@@ -207,11 +319,18 @@ export function setLabels(labels, shapes, view, measure) {
   const set = [];
   /** @type {LeftOut[]} */
   const out = [];
-  /** @type {Rect[]} the lines set so far */
+  /** @type {Rect[]} the lines set so far — a held label's, its line across its place */
   const taken = [];
   const strong = shapes.filter((s) => s.alpha >= STRONGER);
+  const top = view.y + HOLD.gap;
   for (const l of labels) {
     const parts = l.parts.filter((p) => p.text.trim());
+    if (l.hold && parts.length && l.y < top - 1e-6) {
+      const r = held(l, l.hold, parts);
+      if (r.label) { set.push(r.label); taken.push(r.label.within); }
+      out.push(...r.out);
+      continue;
+    }
     /** @type {SetLine[]} */
     const lines = [];
     /** @type {Reason | null} */
@@ -241,12 +360,50 @@ export function setLabels(labels, shapes, view, measure) {
       y += texts.length * lh;
     }
     if (lines.length) {
-      set.push({ kind: l.kind, place: l.place, within: l.within, alpha: l.alpha, plate: l.plate, lines });
+      set.push({ kind: l.kind, place: l.place, within: l.within, alpha: l.alpha, plate: l.plate, lines, held: false });
       for (const m of lines) taken.push(m.rect);
     }
     parts.slice(i).forEach((p, j) => out.push({ kind: l.kind, place: l.place, text: p.text, reason: j || !why ? 'after' : why }));
   }
   return { set, out };
+
+  /**
+   * A label held below the one line (see the head): its line `holdTop` places
+   * — one line box of its largest part — moved below each line set before it
+   * that it would meet, across its place at the line's foot (`across`) inside
+   * the visible view, its parts set on it (`heldLine`); left out where its
+   * place is drawn the weaker, it has no room above its place's foot below
+   * those lines, its head does not fit, it stands wholly under the one line, or
+   * it meets another place's shape; each part its line drops left out for its
+   * width.
+   * @param {Label} l
+   * @param {Hold} hold
+   * @param {Part[]} parts its parts with words
+   * @returns {{label: SetLabel | null, out: LeftOut[]}}
+   */
+  function held(l, hold, parts) {
+    const lh = Math.max(...parts.map((p) => lineHeight(p.px))), foot = Math.max(...hold.rects.map((r) => r.y + r.h)) - hold.pad;
+    let y = holdTop(l.y, top, foot, lh), x0 = 0, x1 = 0;
+    /** @type {Reason | null} */
+    let why = l.alpha < STRONGER ? 'faint' : null;
+    while (!why) {
+      const a = across(hold.rects, y, lh, hold.pad);
+      if (!a || y + lh > foot + 0.5) { why = 'height'; break; }
+      x0 = Math.max(a.x, view.x); x1 = Math.min(a.x + a.w, view.x + view.w);
+      const band = { x: x0, y, w: x1 - x0, h: lh }, over = taken.filter((r) => meets(band, r));
+      if (!over.length) break;
+      y = Math.max(...over.map((r) => r.y + r.h));
+    }
+    const line = why ? null : heldLine(parts, x1 - x0, measure);
+    if (!why && !line) why = 'width';
+    if (!why && y + lh <= view.y + 0.5) why = 'view';
+    /** @type {SetLine[]} */
+    const lines = (line || []).map((m) => ({ text: m.text, px: m.px, ink: m.part.ink, weight: m.weight, rect: { x: x0 + m.x, y, w: m.w, h: lh } }));
+    if (!why && lines.some((m) => strong.some((s) => s.place !== l.place && meets(m.rect, s.rect)))) why = 'meets';
+    if (why || !line) return { label: null, out: parts.map((p, j) => ({ kind: l.kind, place: l.place, text: p.text, reason: j ? 'after' : /** @type {Reason} */ (why) })) };
+    const dropped = parts.filter((p) => !line.some((m) => m.part === p)).map((p) => ({ kind: l.kind, place: l.place, text: p.text, reason: /** @type {Reason} */ ('width') }));
+    return { label: { kind: l.kind, place: l.place, within: { x: x0, y, w: x1 - x0, h: lh }, alpha: l.alpha, plate: hold.plate, lines, held: true }, out: dropped };
+  }
 }
 
 /**

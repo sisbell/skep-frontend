@@ -118,11 +118,16 @@ fix; nothing here depends on their names.
   count — keeps a legible size beside what it describes. Short of
   room it compacts there, else moves into its own document's free
   room, else the coarser scale's label carries it; it never stands on
-  another document's ground or on ink. Compact means: a usual state
-  becomes a glyph, a name becomes its address fields and is never cut
-  mid-word, and a number or an exception keeps its words. A compact
-  sign opens whole on its act, and the mirror reads every sign whole.
-  A document drawn smaller than its neighbours is framed and says so.
+  another document's ground or on ink. A place's name that would rise
+  under the one line with its place is held below the line inside the
+  place's visible part, unless the line names the place; held, it
+  stands on its place's own ground over that place's first lines, on
+  no other ink, its address whole or no name at all. Compact means: a
+  usual state becomes a glyph, a name becomes its address fields and
+  is never cut mid-word, and a number or an exception keeps its words.
+  A compact sign opens whole on its act, and the mirror reads every
+  sign whole. A document drawn smaller than its neighbours is framed
+  and says so.
 
 ## The bridge
 
@@ -336,6 +341,7 @@ last. Each stands until a later decision says it changes it.
 - **#151** (built with this line): each column's gutter widens into its edge, which holds that column's counts and withheld marks level with their blocks' first lines; the corner follows the column nearest the view's centre; a landing frames that column with its corner and its edge; the view's width at the reading size alone sets the measure; changes #15: the gutter → FP-26
 - **#158** (built with this line): a landing lands at piece 1; every run of its passage is outlined in view or not, wherever its document is drawn, and labelled at the text's edge level with its first line, labels that would stack merged ("pieces 1–4 of 9"); Mod+G and Mod+Shift+G, the line's "next piece · previous piece" showing its chords, and a press on an outlined run below reading scale step among the runs at reading scale, adding nothing to Back; the position strip outlines each run; changes #153: with several runs the line is the current run's label → FP-21
 - **#166** (built with this line): each end of a beam, and of a reading scene's line between its panes, takes the colour the link's symbol takes at the document that end touches, whichever side drew it; ends that differ change colour once on open ground midway between the two documents — in the scene, the middle of the gap — and a stub keeps its near end's colour; a link drawn from both ends is one beam, counted once; neutral marks only a bundle whose links differ at that end
+- **#169** (built with this line): a held label stands at the top-left of its box's or region's visible part, one line of its type with its link badge, never wrapped, its words dropped before its address; the box's bottom edge pushes it up under the line; it stands just below the held label of the region holding it, level with the corner and never over it; the box's top edge and history strip stay where the box begins → FP-26
 
 ## Changes
 
@@ -370,6 +376,7 @@ found.
 - 2026-10-23 · FP-27 · #243 #244 #246 · the clipboard entry cited words by positions that move or by an address that floats, and a selection on a sign copied the page's furniture as the datum
 - 2026-10-23 · FP-23 · #243 · a pane's copy waited on its setting, so timing changed what one act copied
 - 2026-10-23 · FP-24 · #246 · a sign's selection had no span to stand in for; the rule now holds wherever a position is selected
+- 2026-10-23 · FP-26 · #169 · a label whose place rose under the one line was left out, so a document read past its top lost its name while its corner held
 
 ## What these rule out
 

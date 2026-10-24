@@ -36,7 +36,9 @@ a teleport to its reading scale with its trail entry, the item expanded, →
 again its first span with no entry; the paging key (K-6) paging the view by
 0.9 of its height below reading scale and, at reading scale, continuing at the next
 column's top — the view over a column whose foot it shows brought to the
-next column's text, half a gutter below the one line, and back by PageUp
+next column's text, half a gutter below the one line, the line naming the
+document paged and no label held over its text (issue #169's design
+decision: "Anything brought into view ... lands below the label"), and back by PageUp
 (issue #15); and no ring after a click on ‹ back (D5 §4 rule 2: drawn
 once a key has moved the focus); the scene's own end — Esc,
 zoom-out — making no trail move, so Back after it moves the camera and the
@@ -610,6 +612,7 @@ def paging_holds(ctx, r):
     chord(ctx, 'PageDown')
     ctx.settle()
     down = at(1) if len(f['columns']) > 1 else None
+    paged = ctx.js('({named: window.__skep.named(), held: window.__skep.heldLabel(%s)})' % json.dumps(longest))
     chord(ctx, 'PageUp')
     ctx.settle()
     up = at(0)
@@ -617,6 +620,8 @@ def paging_holds(ctx, r):
     r.check(len(f['columns']) > 1 and foot <= seen()['VH'] and stands(down),
             'at reading scale, the view over a column whose foot it shows, PageDown brings the next column\'s top half a gutter below the one line, centred across it, at the scale it stood at',
             {'doc': longest, 'columns': len(f['columns']), 'foot': foot, 'down': down})
+    r.check(paged['named']['doc'] == longest and paged['held'] is None,
+            'PageDown lands in the document it paged: the one line names it, and no label is held over the text it brought into view (issue #169: "Anything brought into view ... lands below the label")', paged)
     r.check(stands(up), 'PageUp from the second column\'s top brings the first column\'s top back the same way', up)
     return {'doc': longest, 'columns': len(f['columns']), 'down': down, 'up': up}
 

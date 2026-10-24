@@ -61,6 +61,11 @@
 // segment of its own, its string's id and its words, exactly while the reader
 // the app hands in names one (FP-25): a mutant that drops the segment, or
 // keeps it once the face is back in view, turns red.
+// The places the line names (issue #169's design decision: "Named once") are
+// its address display's: the board alone at far, the account under the camera
+// at mid, nearer the walk's document by its box — a pinned version by the box
+// it shares — or the account the walk stands on: a mutant that names the
+// walk's document at mid, or a version by its own address, turns red.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -257,6 +262,26 @@ test('nearer than mid the line names the account or the board the walk stands on
   CAM.set({ ...unlisted(), scale: NEAR });
   await WALK.retakeFromView(true);
   assert.deepEqual(LINE.addressDisplay(), named('1 › 1.0.1', '1.0.1'), 'the account the re-take stood the walk on: no document named, none out of view');
+});
+
+test('the places the line names are those its address display names: the board alone at far, the account under the camera at mid, nearer the walk\'s document by its box — a pinned version by the box every version shares — or the account the walk stands on (issue #169: "Named once")', async () => {
+  CAM.set(CAM.viewForCell(boardCell('1'), 0.92));
+  await WALK.focusTo(D, 15);
+  assert.deepEqual(LINE.named(), { board: '1', account: null, doc: null }, 'far: the board alone');
+  over(D, MID);
+  assert.deepEqual(LINE.named(), { board: '1', account: '1.0.1', doc: null }, 'mid: the account under the camera, never the walk\'s document');
+  over(D, NEAR);
+  assert.deepEqual(LINE.named(), { board: '1', account: '1.0.1', doc: D }, 'near: the walk\'s document');
+  const D2 = D + '.2';
+  Object.assign(script, reads(D2, 'Tumbler.\n\nThe second version holds this.'));
+  await PUMP.loadWhole(D2);
+  WALK.readers({ shown: (a) => (a === D || a === D2 ? D2 : a) });
+  try {
+    await WALK.focusTo(D, 15);
+    assert.deepEqual([LINE.addressDisplay().doc, LINE.named()], [D2, { board: '1', account: '1.0.1', doc: D }], 'the box showing its version: the line names the version, the box named by the address it shares');
+  } finally { WALK.readers({}); }
+  await WALK.focusTo('1.0.2', null);
+  assert.deepEqual(LINE.named(), { board: '1', account: '1.0.2', doc: null }, 'near, the walk on an account: that account');
 });
 
 test('the address segment is one width at every scale and focus, and where no document is named its position\'s slot, its strip and its marker stand empty, their room kept, so nothing after it on the line moves (issue #141)', async () => {

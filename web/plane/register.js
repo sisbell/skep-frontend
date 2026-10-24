@@ -17,7 +17,9 @@
 // label, the short stroke P-RENDER draws for a link whose far document the
 // plane draws nowhere (issue #132's design decision); THE FOCUS RING its gap
 // outside its element's box and its stroke's width, which set how far inside
-// the visible view it is held (issue #141's design decision); THE CORNER its
+// the visible view it is held (issue #141's design decision); THE HOLD its gap
+// below the one line, where a label and a corner whose place has risen under
+// the line stand level (issue #169's design decision); THE CORNER its
 // size whole and compact, its padding and its gap from the text, which T-LAYER
 // places it by and P-LAY's fit holds a column beside (issue #151's design
 // decision). LK reads this module to put a value on each
@@ -99,6 +101,14 @@ export const TAIL = Object.freeze({ length: 10, gap: 3 });
  * out of it marked on the facing edge
  */
 export const RING = Object.freeze({ gap: 3, width: 2.5 });
+
+/**
+ * THE HOLD (issue #169's design decision: "Held below the line"): a sign
+ * whose place has risen under the one line — a place's label, a document's
+ * corner — stands `gap` px below the line's bottom edge, so every sign held
+ * there stands level with the others (P-LABEL's `holdTop`)
+ */
+export const HOLD = Object.freeze({ gap: 8 });
 
 /**
  * THE CORNER (foundations §3.1; issue #151's design decision: "The corner

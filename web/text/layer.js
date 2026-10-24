@@ -3,9 +3,9 @@
 // scene's panes; the scene BORROWS this mount). Layer 2. ENGINE-BOUND. State:
 // VIEW — the mounted set with each record's layout scale, revision, what it
 // was made from, the fold it was set in, the parts of it standing, its marks
-// and whether it takes the pointer, the corners beside it, each document's
-// fold and its lines as the platform set them, the passage being read while
-// its document is set again, what each reading scene's pane's article was
+// and whether it takes the pointer, the corners beside it and the labels held
+// over it, each document's fold and its lines as the platform set them, the
+// passage being read while its document is set again, what each reading scene's pane's article was
 // made from, whether a press stands on the layer, the platform's selection as
 // it stood over an article taken down, and the page's selection while it is
 // owed its range — THE ONE OWNER (FP-10).
@@ -163,8 +163,9 @@
 // visible part below the one line — that column's top, else just below the
 // line — and never past its outline's bottom beside a row's first column, nor
 // past its row's foot beside another, placed by translate alone from the same
-// camera arithmetic. A reading view frames the column it reads with the
-// corner and the edge beside it (`frameOf`; issue #151: "The landing frames
+// camera arithmetic: P-LABEL's one hold (`holdTop`), P-REG's HOLD gap below
+// the line, so it stands level with a label held there. A reading view frames
+// the column it reads with the corner and the edge beside it (`frameOf`; issue #151: "The landing frames
 // the column, not the middle of a line"). The element
 // outlives its article's remounts and its items are rewritten only where they
 // change, so a focus on it survives them; the focused document's corner is
@@ -173,7 +174,17 @@
 // stands over the plane the corner layer is inert (`cover`, through N-FOCUS,
 // the focus's owner — FP-20), the scene's panes carrying their own (D5 §4
 // rule 5); a corner that leaves while it holds the focus hands it to the
-// walk (D5 §4 rule 4). The press
+// walk (D5 §4 rule 4). THE HELD LABEL (issue #169's design decision: "Held
+// below the line"): a document whose article stands in the mount band has no
+// label on the canvas, its head naming it; once its outline's first row rises
+// above the hold, and while the one line does not name it ("Named once", the
+// reader the app hands in), its label stands held below the line as an
+// element of the corner layer over its text — the canvas's words for its box,
+// read here (`docLabel`), so the two never part, on one line across its
+// outline's visible part, on its box's ground, pushed up under the line by
+// its outline's foot, beside its corner and never over it (`besideCorner`),
+// drawn and never announced, taking the pointer where its article does
+// (`placeHeld`). The press
 // rule's text half (§2.4): an article takes the pointer at reading scale
 // alone — its em at P-LOD's readable threshold (8) and above, the `legible`
 // class the style gives its columns' pointer (`markLegible`) — so below it a
@@ -247,13 +258,14 @@ import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, measure, fit, READING_PX } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
-import { layoutOf, fold, estimate, slot, boundsOf, padded, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE } from '../plane/layout.js';
-import { CORNER, cornerWidth } from '../plane/register.js';
+import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE, GUTTER } from '../plane/layout.js';
+import { CORNER, HOLD, COL, cornerWidth } from '../plane/register.js';
+import { holdTop, heldLine, across, lineHeight, face } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, blockMarks, editionClause, copyText } from './article.js';
 import { farSays } from '../beams/held.js';
-import { homeOf, documentOf } from '../model/address.js';
+import { homeOf, documentOf, memberOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
-import { fingerprintCue } from '../util.js';
+import { fingerprintCue, esc } from '../util.js';
 import { t } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
@@ -345,6 +357,8 @@ import { t } from '../strings.js';
  * @property {number} cap the widest it may stand (px): the room beside the column's text, gaps taken; Infinity where its form's width fits there
  * @property {number} w its width as laid out (px)
  * @property {number} h its height as laid out (px)
+ * @property {number} x its left edge as last placed, on screen (px): its document's held label stands clear of it
+ * @property {number} y its top as last placed, on screen (px)
  * @property {boolean} stale its items or its cap changed since it was measured
  * @property {boolean} mine it is the focused document's: the Tab stop
  * @property {number} blockedAt the column beside which the signs in the edge before it left it no room down to its row's foot, where it stands by its row's first column while the view's centre stays over that column; -1 where none
@@ -358,6 +372,13 @@ import { t } from '../strings.js';
  */
 
 /** @typedef {'whole' | 'compact'} CornerForm */
+
+/**
+ * @typedef {Object} HeldLabel — a mounted document's label held below the one line (`placeHeld`): its element in the corner layer, kept across frames
+ * @property {HTMLElement} el
+ * @property {string} html its parts, each where its line sets it
+ * @property {string} place where it stands, how wide and tall, and its ground, as last written
+ */
 
 /**
  * @typedef {Object} Folded — a document's fold as `foldOf` last set it
@@ -390,10 +411,11 @@ import { t } from '../strings.js';
  * @typedef {Object} Readers — what the layer reads of other owners' state, handed in once by the app (FP-10: through the owners' exports)
  * @property {() => (Span | null)} selection the selection (O-SELECTION's span)
  * @property {() => ({addr: string, pos: number} | null)} focus the focused block (N-WALK's)
- * @property {() => number} top the one line's bottom edge on screen (L-LINE's): the corners hold below it, and the visible view stands below it
+ * @property {() => number} top the one line's bottom edge on screen (L-LINE's): the corners and the held labels hold below it, and the visible view stands below it
  * @property {() => void} handOff the focus's next home where a corner that held it leaves: the walk's current item (D5 §4 rule 4)
  * @property {() => (string | null)} navigated the place just navigated to: the trail's current entry's (N-TRAIL's), first in the limit's order where it is a document
  * @property {(addr: string) => string} shown the version a document's box shows (N-GO's `shownIn`): the one version whose article stands there
+ * @property {() => (string | null)} named the document the one line names, by its box (L-LINE's `named`): the one whose label is never held over its text; null where it names none
  */
 
 /** the corner's distance from the text column, and from the edge of the room it stands in (px): P-REG's */
@@ -411,6 +433,8 @@ const panes = new WeakMap();
 const corners = new Map();
 /** @type {Set<string>} the documents whose corner a reader's act opened whole (`openCorner`), until it is closed or leaves */
 const openWhole = new Set();
+/** @type {Map<string, HeldLabel>} the labels held over mounted articles, by document */
+const helds = new Map();
 /** the measure the layer's style holds (`setMeasure`): what the columns of the articles it lays out are set at; 0 before it holds one */
 let styled = 0;
 /** @type {Map<string, Folded>} each document's fold, by document — a cache of `foldOf`, a function of the model and of the lines set */
@@ -444,8 +468,8 @@ let owed = null;
 let hold = null;
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
-/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address */
-const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf });
+/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document named */
+const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null });
 /** @type {Readers} */
 let read = noReaders();
 /** is a version the one its box shows (see the head)? */
@@ -1466,6 +1490,39 @@ export function clauseOf(origin) {
  */
 export function withheldBox(d) { return t('B1.withheld-box', { owner: ownerAccount(d) }); }
 
+/** a box's address as its label sets it: the address of the version it shows past its region's prefix, led by the separator after the prefix — ".0.9", a pinned version's ".0.9.2", as the address display spells a field past a prefix (F-9; foundations §3.1) */
+export const shortAddr = (/** @type {Doc} */ d) => (d.account ? d.addr.slice(d.account.length) : d.addr);
+/** a draft, by the index's kind or by its metadata where read */
+export const isDraft = (/** @type {Doc} */ d) => d.kind === 'draft' || (d.meta ? !d.meta.published : false);
+/** a document's first line: the index's; at a version, which the index lists none of, its own text's first paragraph's first line where the model holds it */
+const firstWords = (/** @type {Doc} */ d) => d.label ?? (memberOf(d.addr) != null ? (d.blocks.find((b) => b.kind === 'para' && b.text.trim()) || { text: '' }).text.trim().split('\n')[0] : '');
+/** a box's first line: the withheld statement (`withheldBox`, which the ARIA mirror reads too), or the document's first line with its draft mark (a DRAFT convention, F-9) */
+export const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? withheldBox(d) : `${firstWords(d).replace(/^#+\s*/, '')}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
+
+/**
+ * A document's label on the plane — P-RENDER's on its box, and its held form
+ * over its mounted article (see the head) — read here, so the two never part:
+ * the address of the version its box shows (`shortAddr`) at 1.25 of its em,
+ * no larger than its outline's first row holds; where that row is wider than
+ * 90 px, its first line (`firstLine`) at 0.72 of that; past 110 px, its links'
+ * badge, none at a withheld box, whose links no read brings.
+ * @param {Doc} d the version its box shows
+ * @param {number} w its outline's first row's text width on screen, in px
+ * @param {number} fsPx its em on screen, in px
+ * @returns {import('../plane/labels.js').Part[]}
+ */
+export function docLabel(d, w, fsPx) {
+  const tf = Math.min(w * 0.085, fsPx * 1.25), sub = tf * 0.72;
+  /** @type {import('../plane/labels.js').Part[]} */
+  const parts = [{ text: shortAddr(d), px: tf, ink: COL.title, weight: '600', fit: 'one' }];
+  if (w > 90) {
+    parts.push({ text: firstLine(d), px: sub, ink: COL.greek, fit: 'cut' });
+    const c = LK.countDoc(boxOf(d.addr));
+    if (w > 110 && d.refused !== 'withheld' && (c.n || c.arriving)) parts.push({ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : c.n === 1 ? t('F.label.links.1') : t('F.label.links', { n: c.n }), px: sub, ink: COL.greek, fit: 'wrap' });
+  }
+  return parts;
+}
+
 /** take a mounted article down; where the platform's selection stands in it, it is kept (`kept`) for the frame that puts it back */
 function unmount(/** @type {string} */ addr) {
   const rec = mounted.get(addr); if (!rec) return;
@@ -1756,8 +1813,9 @@ export function holdAcross(from, to, at = null) {
  * standing outside the band, or out of view, is taken down. Everything is
  * placed, each standing article's blocks marked for the selection and the
  * walk's focus in place (`markBlocks`), each given the pointer at reading
- * scale alone (`markLegible`), and each article's corner placed beside it;
- * where the article holding the selection was mounted this frame, or the
+ * scale alone (`markLegible`), and each article's corner placed beside it,
+ * then its label held below the one line where its top has risen under it
+ * (`placeHeld`); where the article holding the selection was mounted this frame, or the
  * selection is owed its range, the platform's range is put back over the
  * span, its anchor at the end it stood at, unless the person holds a selection
  * outside the layer (`placeAgain`); then the lines of the documents in view
@@ -1813,6 +1871,7 @@ export function frame(focused = () => false) {
   const focus = litFocus();
   for (const rec of mounted.values()) { markBlocks(rec, span, focus); if (!pressed || fresh.includes(rec.d.addr)) markLegible(rec); }
   placeCorners(focused);
+  placeHeld();
   if (span && !pressed && (fresh.includes(span.addr) || (owed && sameSpan(owed, span)))) placeAgain(span);
   if (owed && !sameSpan(owed, span)) owed = null;
   if (engine && !pressed) measureInView(v);
@@ -1908,21 +1967,22 @@ export const formFor = (room, open, narrow = false) => (open || (!narrow && room
 
 /**
  * A corner's top on screen (see the head): held to the top of its column's
- * visible part below the one line — its row's top, else just below the line
- * — and never so low that it runs past `bottom`, unless it is taller than the
+ * visible part below the one line — its row's top, else just below the line,
+ * level with a label held there (P-LABEL's `holdTop`, the one hold) — and
+ * never so low that it runs past `bottom`, unless it is taller than the
  * room below its row's top; then moved below each sign it would meet of those
  * the edge before its column holds (foundations §3.1: "an item at a y another
  * already holds stacks below it"). Null where that move leaves it running
  * past `bottom`: beside that column it has no room.
  * @param {{x: number, w: number, h: number}} c the corner's left edge and its size, on screen
  * @param {number} rowTop its column's top on screen
- * @param {number} top the height it holds below: the one line's bottom and its gap
+ * @param {number} top the height it holds below: the one line's bottom and P-REG's HOLD gap
  * @param {number} bottom the foot it never runs past
  * @param {Rect[]} signs the signs in the edge before its column, on screen; none beside a row's first column
  * @returns {number | null}
  */
 export function cornerTop(c, rowTop, top, bottom, signs) {
-  let y = Math.max(rowTop, Math.min(Math.max(rowTop, top), bottom - c.h)), moved = false;
+  let y = holdTop(rowTop, top, bottom, c.h), moved = false;
   for (const s of [...signs].sort((a, b) => a.y - b.y)) {
     if (s.x < c.x + c.w && c.x < s.x + s.w && s.y < y + c.h && y < s.y + s.h) { y = s.y + s.h + CORNER_GAP; moved = true; }
   }
@@ -1977,7 +2037,7 @@ function placeCorners(focused) {
   if (shown.length) {
     for (const { c } of shown) if (c.stale) { c.w = c.el.offsetWidth; c.h = c.el.offsetHeight; c.stale = false; }
     const signs = shown.map(({ rec, at }) => (at.first ? [] : signsIn(rec, at.column - 1)));
-    const top = read.top() + CORNER_GAP;
+    const top = read.top() + HOLD.gap;
     shown.forEach(({ c, rec, at }, k) => {
       const f = rec.fold, box = docBox(rec.d.addr), col = f.columns[at.column];
       const foot = at.first ? boundsOf(f) : padded(f, f.columns[at.column - (at.column % f.across)]);
@@ -1985,7 +2045,8 @@ function placeCorners(focused) {
       const y = cornerTop({ x, w: c.w, h: c.h }, rowTop, top, sy(box.y + foot.y + foot.h), signs[k]);
       // beside that column the signs before it leave it no room: the next frame stands it by its row's first column
       if (y === null) { c.blockedAt = at.column; markDirty(); }
-      c.el.style.transform = `translate(${Math.round(x)}px, ${Math.round(y ?? rowTop)}px)`;
+      c.x = Math.round(x); c.y = Math.round(y ?? rowTop);
+      c.el.style.transform = `translate(${c.x}px, ${c.y}px)`;
       const mine = focused(rec.d.addr);
       if (mine === c.mine) return;
       if (!mine) lost = c.el.contains(document.activeElement) || lost;
@@ -1995,6 +2056,110 @@ function placeCorners(focused) {
     });
   }
   if (lost) read.handOff();
+}
+
+/**
+ * The stretches of a held label's line its document's corner leaves it (see
+ * the head; issue #169's design decision: "The two never overlap"): where the
+ * corner's box meets the line, the stretch left of the corner, ending a gap
+ * short of it, then the stretch right of it, beginning a gap past it — each
+ * that has width; else the line whole.
+ * @param {{x: number, w: number}} line the line's room across, on screen
+ * @param {{y: number, h: number}} band the line's top and its height
+ * @param {Rect | null} corner the corner's box on screen; null where none stands
+ * @returns {Array<{x: number, w: number}>} in the order a label tries them
+ */
+export function besideCorner(line, band, corner) {
+  if (!corner || corner.y >= band.y + band.h || corner.y + corner.h <= band.y || corner.x >= line.x + line.w || corner.x + corner.w <= line.x) return [line];
+  const end = line.x + line.w, from = corner.x + corner.w + CORNER_GAP;
+  return [{ x: line.x, w: corner.x - CORNER_GAP - line.x }, { x: from, w: end - from }].filter((s) => s.w > 0);
+}
+
+/** @type {CanvasRenderingContext2D | null} the context the held labels' words are measured by */
+let measurer = null;
+/** a string's width set at a size and weight in the labels' face (P-LABEL's `face`), which the held label's words are set in: P-LABEL's measure */
+function measureWords(/** @type {string} */ s, /** @type {number} */ px, /** @type {string} */ weight) {
+  if (!measurer) measurer = document.createElement('canvas').getContext('2d');
+  if (!measurer) return Infinity;
+  measurer.font = face(px, weight);
+  return measurer.measureText(s).width;
+}
+
+/**
+ * THE HELD LABEL's pass (see the head), after the corners: each document
+ * whose article stands in the mount band — where the canvas sets no label of
+ * it — whose outline's first row has risen above the hold below the one line
+ * and which the line does not name carries its label held there: the canvas's
+ * words for its box (`docLabel`), on one line across its outline's visible
+ * part at that height (P-LABEL's `holdTop`, `across`, `heldLine`), its box's
+ * edge pushing it up under the line, on its box's ground, over the text it
+ * covers; where its corner's box meets that line, in the stretch left of the
+ * corner, else the stretch right of it (`besideCorner`), none where neither
+ * holds its address. It takes the pointer where its article does
+ * (`legible`), so a press on it reaches none of the lines it covers, and
+ * below that a press on it falls to the canvas, as one on the box does. Its
+ * element is rewritten only where what it shows changed; the rest are removed.
+ */
+function placeHeld() {
+  if (!cornerLayer) return;
+  const seen = visibleView(read.top()), top = seen.y + HOLD.gap, named = read.named(), scale = cam.scale;
+  /** @type {Set<string>} */
+  const here = new Set();
+  for (const rec of mounted.values()) {
+    const addr = rec.d.addr;
+    if (!rec.banded || boxOf(addr) === named) continue;
+    const f = rec.fold, box = docBox(addr), row = firstRow(f), g = (GUTTER / 2) * f.fs, at = sy(box.y + row.y + g);
+    if (at >= top) continue;
+    const rects = outlineRects(f).map((r) => ({ x: sx(box.x + r.x), y: sy(box.y + r.y), w: r.w * scale, h: r.h * scale }));
+    const parts = docLabel(rec.d, (row.w - 2 * g) * scale, f.fs * scale), pad = g * scale;
+    const lh = Math.max(...parts.map((p) => lineHeight(p.px))), foot = Math.max(...rects.map((r) => r.y + r.h)) - pad;
+    const y = Math.round(holdTop(at, top, foot, lh)), a = across(rects, y, lh, pad);
+    if (!a || y + lh <= seen.y + 0.5) continue;
+    const x0 = Math.max(a.x, seen.x), c = corners.get(addr);
+    let line = null, room = { x: 0, w: 0 };
+    for (const s of besideCorner({ x: x0, w: Math.min(a.x + a.w, seen.x + seen.w) - x0 }, { y, h: lh }, c ? { x: c.x, y: c.y, w: c.w, h: c.h } : null)) {
+      // on whole px, never past the stretch's right end
+      const x = Math.round(s.x), w = Math.floor(s.x + s.w) - x;
+      line = heldLine(parts, w, measureWords);
+      if (line) { room = { x, w }; break; }
+    }
+    if (!line) continue;
+    here.add(addr);
+    const h = helds.get(addr) || makeHeld(cornerLayer, addr);
+    const html = line.map((m) => `<span style="left:${m.x}px;font:${face(m.px, m.weight)};line-height:${lh}px;color:${m.part.ink}">${esc(m.text)}</span>`).join('');
+    if (h.html !== html) { h.el.innerHTML = html; h.html = html; }
+    const ground = rec.d.refused === 'withheld' ? COL.withheld : COL.doc, place = `${room.x}|${y}|${room.w}|${lh}|${ground}`;
+    if (h.place !== place) { Object.assign(h.el.style, { transform: `translate(${room.x}px, ${y}px)`, width: room.w + 'px', height: lh + 'px', background: ground }); h.place = place; }
+    h.el.classList.toggle('legible', rec.legible);
+  }
+  for (const [addr, h] of [...helds]) if (!here.has(addr)) { h.el.remove(); helds.delete(addr); }
+}
+
+/**
+ * A document's held label's element in the corner layer (see the head): no
+ * corner — nothing reads it as one — out of the Tab order and hidden from
+ * assistive technology, for a hold is drawn, never announced.
+ * @param {HTMLElement} into the corner layer
+ * @param {string} addr
+ * @returns {HeldLabel}
+ */
+function makeHeld(into, addr) {
+  const el = document.createElement('div');
+  el.className = 'held';
+  el.dataset.held = addr;
+  el.setAttribute('aria-hidden', 'true');
+  into.appendChild(el);
+  /** @type {HeldLabel} */
+  const h = { el, html: '', place: '' };
+  helds.set(addr, h);
+  return h;
+}
+
+/** a document's label held over its mounted article as the last frame placed it — its words and its rect on screen — or null where none stands (the gate's) */
+export function heldOf(/** @type {string} */ addr) {
+  const h = helds.get(addr); if (!h) return null;
+  const r = h.el.getBoundingClientRect();
+  return { text: [...h.el.children].map((s) => s.textContent || ''), rect: { x: r.left, y: r.top, w: r.width, h: r.height }, legible: h.el.classList.contains('legible') };
 }
 
 /**
@@ -2028,7 +2193,7 @@ function makeCorner(into, addr) {
   el.setAttribute('aria-hidden', 'true');
   into.appendChild(el);
   /** @type {Corner} */
-  const c = { el, html: '', compact: false, column: 0, cap: Infinity, w: 0, h: 0, stale: true, mine: false, blockedAt: -1 };
+  const c = { el, html: '', compact: false, column: 0, cap: Infinity, w: 0, h: 0, x: 0, y: 0, stale: true, mine: false, blockedAt: -1 };
   corners.set(addr, c);
   return c;
 }
@@ -2554,13 +2719,15 @@ export function extendTo(/** @type {number} */ x, /** @type {number} */ y) {
   if (p && s && s.rangeCount) s.extend(p.node, p.offset);
 }
 
-/** unmount everything and take the corners down (a board change); a corner that held the focus hands it to the walk */
+/** unmount everything and take the corners and the held labels down (a board change); a corner that held the focus hands it to the walk */
 export function clear() {
   for (const a of [...mounted.keys()]) unmount(a);
   hold = null;
   owed = null;
   let lost = false;
   for (const a of [...corners.keys()]) lost = dropCorner(a) || lost;
+  for (const h of helds.values()) h.el.remove();
+  helds.clear();
   openWhole.clear();
   if (lost) read.handOff();
 }

@@ -544,7 +544,8 @@ test('a wheel series under way as a jump\'s camera left is dropped whole — the
     const wheel = /** @type {(e: unknown) => void} */ (win.get('wheel'));
     /** a wheel event at a time, by the event's clock; a pinch as a trackpad sends it where `ctrlKey` */
     const roll = (/** @type {number} */ time, ctrlKey = false) => wheel({ target: { closest: () => null }, preventDefault() {}, ctrlKey, metaKey: false, deltaX: 0, deltaY: 40, clientX: 700, clientY: 450, timeStamp: time });
-    const t0 = performance.now() - 1;
+    // whole milliseconds, so every time below is exact: from a fractional clock (t0 + 100 + SERIES_MS) − (t0 + 100) can round below SERIES_MS
+    const t0 = Math.floor(performance.now()) - 1;
     roll(t0);
     const leap = GO.leapTo(D);
     const bound = CAM.destination(), at = CAM.view();

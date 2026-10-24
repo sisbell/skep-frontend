@@ -183,6 +183,13 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .chip { display:inline-block; border:1px solid #4a5260; border-radius:3px; padding:0 .4em; color:#e8e6e1; margin-top:.3em; }
 .corner .chip.glyph { border:0; padding:0; }
 .corner .whole-links { display:block; margin-top:.3em; }
+/* A LABEL HELD BELOW THE ONE LINE over a mounted article's text (issue #169's design decision: "Held below the line"): one line
+   of its type across the box's visible part, on the box's ground T-LAYER sets, with no rule, shadow, tint or border, so the box
+   reads as continuing above; each part where P-LABEL's held line sets it, in the labels' face. It takes the pointer where its
+   article does (`legible`), so a press on it reaches none of the lines it covers, and below that falls to the canvas */
+#corners .held { position:absolute; top:0; left:0; overflow:hidden; pointer-events:none; will-change:transform; user-select:none; -webkit-user-select:none; }
+#corners .held.legible { pointer-events:auto; }
+#corners .held span { position:absolute; top:0; white-space:pre; }
 
 /* A LANDING'S LINE (issue #153's design decision): at the text's edge beside the landing (O-LAND places it), over the
    beams and the corners, under the reading scene, the LEAP box and the overlay; opaque, as all chrome over the plane is,

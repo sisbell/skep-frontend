@@ -74,7 +74,15 @@
 // above it, where a label would be hidden, or cut through at the line's edge
 // — meeting no other place's shape and no label set before it (F-9;
 // foundations §2.1), a document's on a plate of its ground over the bars
-// beneath; then the stubs' triangles, over the places and their labels
+// beneath; and where its place has risen under the one line, HELD below it
+// (issue #169's design decision: "Held below the line"; P-LABEL's hold) —
+// every label naming a place, a document's, a continuation's mark's, a
+// cluster's address and an account frame's, each handed its place's shape on
+// screen and its ground, but the board's and those of the places the line
+// names (L-LINE's `named`: "Named once"), whose labels keep the rule above —
+// the box's edge and history strip standing where the box begins, so it reads
+// as continuing above; a document whose article stands in the mount band has
+// its label held over its text by T-LAYER instead; then the stubs' triangles, over the places and their labels
 // as the pips are, for the stubs' strokes run behind the boxes, which at mid
 // scale stand along most of the view's border and would hide a triangle drawn
 // with its stroke, and the tails' strokes with them, for a tail leaving a
@@ -123,7 +131,7 @@
 // The system account's rows are never drawn (the record §1.8; this lane's
 // cut). The chip is at the document's corner (T-ARTICLE), never here.
 // Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
-// Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports), FP-21, FP-22.
+// Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports), FP-21, FP-22, FP-26.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -137,9 +145,9 @@ import { cam, sx, sy, wx, wy, viewport, viewportWorld, visibleView, edgeStub, st
 import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
 import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt } from './projection.js';
 import { bars, outline, outlineRects, firstRow, GUTTER } from './layout.js';
-import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, LINE_BOX } from './labels.js';
+import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, face, LINE_BOX } from './labels.js';
 import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL } from './register.js';
-import { documentOf, accountOf, cmpAddr, memberOf } from '../model/address.js';
+import { documentOf, accountOf, cmpAddr } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
 import { t } from '../strings.js';
 
@@ -267,8 +275,6 @@ function rrect(/** @type {CanvasRenderingContext2D} */ c, /** @type {number} */ 
   c.beginPath(); const rr = Math.max(0, Math.min(r, w / 2, h / 2));
   c.moveTo(x + rr, y); c.arcTo(x + w, y, x + w, y + h, rr); c.arcTo(x + w, y + h, x, y + h, rr); c.arcTo(x, y + h, x, y, rr); c.arcTo(x, y, x + w, y, rr); c.closePath();
 }
-/** the canvas's face at a size and weight */
-const face = (/** @type {number} */ px, weight = 'normal') => `${weight === 'normal' ? '' : weight + ' '}${px}px ui-monospace, Menlo, monospace`;
 const plural = (/** @type {number} */ n, /** @type {string} */ one, /** @type {string} */ many) => (n === 1 ? t(one) : t(many, { n }));
 
 /** @type {Map<string, number>} the widths the canvas measured, by weight, size and string */
@@ -310,10 +316,11 @@ function drawBoard(/** @type {Pass} */ pass) {
   const parts = [{ text: t('L.board-label', { node: '1', origin: b ? b.origin : '', venue: t('F.venue.notebook'), claimant }), px: Math.max(10, Math.min(13, W * 0.03)), ink: COL.title, fit: 'wrap' }];
   const floor = REC.floor();
   if (floor != null && !REC.countsExact()) parts.push({ text: t('F.board-residue', { floor }), px: 10, ink: COL.greek, fit: 'wrap' });
-  pass.labels.push({ kind: 'board', place: '1', within: { x: RX, y: RY, w: room.w * cam.scale - 16, h: room.h * cam.scale - 12 }, x: RX, y: RY, align: 'left', alpha: 1, plate: null, parts });
+  // the line names the board at every scale: its label is never held
+  pass.labels.push({ kind: 'board', place: '1', within: { x: RX, y: RY, w: room.w * cam.scale - 16, h: room.h * cam.scale - 12 }, x: RX, y: RY, align: 'left', alpha: 1, plate: null, parts, hold: null });
 }
 
-/** the accounts as clusters (FAR): the mark, the density, and the labels at their places on the mark */
+/** the accounts as clusters (FAR): the mark, the density, and the labels at their places on the mark — the address held below the one line on the mark's ground */
 function drawClusters(/** @type {number} */ alpha, /** @type {Pass} */ pass) {
   if (!ctx) return 0;
   ctx.globalAlpha = alpha;
@@ -344,7 +351,7 @@ function drawClusters(/** @type {number} */ alpha, /** @type {Pass} */ pass) {
     const outer = rad + 1;
     const ax = Math.min(15, W * 0.09), cpx = Math.min(12, W * 0.075);
     pass.labels.push({ kind: 'cluster', place: a.account, within: { x: mark.x + 3, y: mark.y, w: mark.w - 6, h: cy - outer - mark.y }, x: cx, y: cy - outer - lineHeight(ax), align: 'center', alpha, plate: null,
-      parts: [{ text: a.account, px: ax, ink: COL.title, fit: 'one' }] });
+      parts: [{ text: a.account, px: ax, ink: COL.title, fit: 'one' }], hold: { rects: [mark], pad: 3, plate: COL.cluster } });
     /** @type {Part[]} */
     const counts = [
       { text: `${count.exact ? count.documents : t('L.lower-bound', { n: count.documents })} ${t('F.count.documents')}`, px: cpx, ink: COL.text, fit: 'wrap' },
@@ -353,14 +360,14 @@ function drawClusters(/** @type {number} */ alpha, /** @type {Pass} */ pass) {
     const land = REC.landmarks().filter((p) => p.account === a.account).length;
     if (land) counts.push({ text: '◆'.repeat(Math.min(4, land)), px: cpx, ink: COL.land, fit: 'one' });
     if (!count.documents) counts.push({ text: t('B1.empty_subspace'), px: cpx, ink: COL.greek, fit: 'wrap' });
-    pass.labels.push({ kind: 'cluster', place: a.account, within: { x: mark.x + 3, y: cy + outer, w: mark.w - 6, h: mark.y + mark.h - cy - outer }, x: cx, y: cy + outer, align: 'center', alpha, plate: null, parts: counts });
+    pass.labels.push({ kind: 'cluster', place: a.account, within: { x: mark.x + 3, y: cy + outer, w: mark.w - 6, h: mark.y + mark.h - cy - outer }, x: cx, y: cy + outer, align: 'center', alpha, plate: null, parts: counts, hold: null });
   }
   ctx.globalAlpha = 1;
   return n;
 }
 
-/** the account frames at mid and nearer: the region exists because the address does; its label at its foot, and an empty one says so */
-function drawAccountFrames(/** @type {number} */ alpha, /** @type {Pass} */ pass) {
+/** the account frames at mid and nearer: the region exists because the address does; its label at its foot, held below the one line but where the line names the account, and an empty one says so */
+function drawAccountFrames(/** @type {number} */ alpha, /** @type {Pass} */ pass, /** @type {import('../line/line.js').Named} */ named) {
   if (!ctx) return;
   const v = viewportWorld(120);
   const frames = new Set(REC.accounts().filter((a) => !a.system).map((a) => a.account));
@@ -376,8 +383,9 @@ function drawAccountFrames(/** @type {number} */ alpha, /** @type {Pass} */ pass
     const px = Math.max(10, Math.min(13, W * 0.025));
     const within = { x: X + 8, y: Y + 4, w: W - 16, h: H - 8 };
     pass.labels.push({ kind: 'frame', place: acct, within, x: X + 8, y: Y + H - 4 - lineHeight(px), align: 'left', alpha, plate: null,
-      parts: [{ text: `${acct} · ${count.exact ? docs : t('L.lower-bound', { n: docs })} · ${links.arriving ? t('L.arriving') + ' ' : ''}${plural(links.n, 'F.label.links.1', 'F.label.links')}`, px, ink: COL.greek, fit: 'one' }] });
-    if (!count.documents) pass.labels.push({ kind: 'frame', place: acct, within, x: X + W / 2, y: Y + H / 2 - lineHeight(14) / 2, align: 'center', alpha, plate: null, parts: [{ text: t('B1.empty_subspace'), px: 14, ink: COL.text, fit: 'wrap' }] });
+      parts: [{ text: `${acct} · ${count.exact ? docs : t('L.lower-bound', { n: docs })} · ${links.arriving ? t('L.arriving') + ' ' : ''}${plural(links.n, 'F.label.links.1', 'F.label.links')}`, px, ink: COL.greek, fit: 'one' }],
+      hold: named.account === acct ? null : { rects: [within], pad: 0, plate: null } });
+    if (!count.documents) pass.labels.push({ kind: 'frame', place: acct, within, x: X + W / 2, y: Y + H / 2 - lineHeight(14) / 2, align: 'center', alpha, plate: null, parts: [{ text: t('B1.empty_subspace'), px: 14, ink: COL.text, fit: 'wrap' }], hold: null });
   }
 }
 
@@ -465,21 +473,13 @@ function membersAt(docs, k) {
   return new Map([...by].map(([a, s]) => [a, [...s].sort(cmpAddr)]));
 }
 
-/** a box's label: the address of the version it shows past its region's prefix, led by the separator after the prefix — ".0.9", a pinned version's ".0.9.2", as the address display spells a field past a prefix (F-9; foundations §3.1) */
-const shortAddr = (/** @type {Doc} */ d) => (d.account ? d.addr.slice(d.account.length) : d.addr);
-/** a draft, by the index's kind or by its metadata where read */
-const isDraft = (/** @type {Doc} */ d) => d.kind === 'draft' || (d.meta ? !d.meta.published : false);
-/** a document's first line: the index's; at a version, which the index lists none of, its own text's first paragraph's first line where the model holds it */
-const labelOf = (/** @type {Doc} */ d) => d.label ?? (memberOf(d.addr) != null ? (d.blocks.find((b) => b.kind === 'para' && b.text.trim()) || { text: '' }).text.trim().split('\n')[0] : '');
-/** a box's first line: the withheld statement (T-LAYER's `withheldBox`, which the ARIA mirror reads too), or the document's first line with its draft mark (a DRAFT convention, F-9) */
-const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? LAYER.withheldBox(d) : `${labelOf(d).replace(/^#+\s*/, '')}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
-
 /**
  * A continuation's mark: its cell, and its label — law 13's count of what it
- * holds and its newest member's label as a box draws it, the address past
- * the region's prefix with the first line beneath, as many lines as the mark
- * has room for (the label pass sets it, the lines it set read back into
- * `lines`).
+ * holds and its newest member's label as a box draws it (T-LAYER's
+ * `shortAddr`, `firstLine`), the address past the region's prefix with the
+ * first line beneath, as many lines as the mark has room for, held below the
+ * one line on the mark's ground (the label pass sets it, the lines it set read
+ * back into `lines`).
  * @param {{key: string, account: string, k: number, members: string[], cell: Cell, alpha: number}} m
  * @param {Pass} pass
  * @returns {ResidueMark}
@@ -496,14 +496,14 @@ function drawMark(m, pass) {
   pass.shapes.push({ place: m.key, rect, alpha: m.alpha });
   pass.labels.push({ kind: 'mark', place: m.key, within: { x: X + pad, y: Y + pad, w: W - 2 * pad, h: H - 2 * pad }, x: X + pad, y: Y + pad, align: 'left', alpha: m.alpha, plate: null,
     parts: [
-      { text: t('F.residue.newest', { n: exact ? n : t('L.lower-bound', { n }), label: shortAddr(newest) }), px: f, ink: COL.title, fit: 'wrap' },
-      { text: firstLine(newest), px: f, ink: COL.greek, fit: 'fill' },
-    ] });
+      { text: t('F.residue.newest', { n: exact ? n : t('L.lower-bound', { n }), label: LAYER.shortAddr(newest) }), px: f, ink: COL.title, fit: 'wrap' },
+      { text: LAYER.firstLine(newest), px: f, ink: COL.greek, fit: 'fill' },
+    ], hold: { rects: [rect], pad, plate: COL.residue } });
   return { key: m.key, account: m.account, k: m.k, n, exact, newest: newest.addr, members: m.members, alpha: m.alpha, lines: [], rect };
 }
 
-/** the documents as extents; the continuations too small to stand whole as marks; the mid connections, against the visible view `seen` */
-function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} */ alpha, /** @type {Pass} */ pass, /** @type {Rect} */ seen) {
+/** the documents as extents; the continuations too small to stand whole as marks; the mid connections, against the visible view `seen`; a label held below the one line but where the line names its document (`named`) */
+function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} */ alpha, /** @type {Pass} */ pass, /** @type {Rect} */ seen, /** @type {import('../line/line.js').Named} */ named) {
   if (!ctx) return 0;
   const { VW, VH } = viewport();
   const v = viewportWorld(80);
@@ -579,7 +579,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     // the version the box shows draws its text and its label; the box's document its edge, its landmark, its badge and its strip
     const doc = documentOf(d.addr) || d.addr, trunk = REC.doc(doc);
     const box = docBox(d.addr), f = LAYER.foldOf(d);
-    const draft = isDraft(trunk);
+    const draft = LAYER.isDraft(trunk);
     const landmark = /\.0\.1$/.test(doc);
     const ground = d.refused === 'withheld' ? COL.withheld : COL.doc;
     // the document's one edge, around its columns: no frame or rule around a column (issue #15)
@@ -591,7 +591,8 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     ctx.strokeStyle = landmark ? COL.land : draft ? COL.draftEdge : COL.docEdge;
     ctx.lineWidth = landmark ? EDGE.landmark : draft ? EDGE.draft : EDGE.edition;
     if (draft) ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
-    for (const r of outlineRects(f)) pass.shapes.push({ place: d.addr, rect: { x: sx(box.x + r.x), y: sy(box.y + r.y), w: r.w * cam.scale, h: r.h * cam.scale }, alpha: a });
+    const rects = outlineRects(f).map((r) => ({ x: sx(box.x + r.x), y: sy(box.y + r.y), w: r.w * cam.scale, h: r.h * cam.scale }));
+    for (const rect of rects) pass.shapes.push({ place: d.addr, rect, alpha: a });
     // the first row, where the label and the history strip stand: its columns' text, inside their half gutters
     const row = firstRow(f), g = (GUTTER / 2) * f.fs;
     const X = sx(box.x + row.x + g), Y = sy(box.y + row.y + g), W = (row.w - 2 * g) * cam.scale, H = (row.h - 2 * g) * cam.scale;
@@ -601,16 +602,10 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     const stand = LAYER.standing(d.addr), whole = !!stand && stand.fold !== f;
     if (mountedHere || whole) stats.yielded.push(d.addr);
     if (W >= 10 && !mountedHere) {
-      // the label: the ADDRESS past its region's prefix; the first line a DRAFT convention (F-9); the badge from LK, none at a withheld box, whose links no read brings — set by the label pass on the document's ground, where the row holds it
-      const tf = Math.min(W * 0.085, fsPx * 1.25), sub = tf * 0.72;
-      /** @type {Part[]} */
-      const parts = [{ text: shortAddr(d), px: tf, ink: COL.title, weight: '600', fit: 'one' }];
-      if (W > 90) {
-        parts.push({ text: firstLine(d), px: sub, ink: COL.greek, fit: 'cut' });
-        const c = LK.countDoc(doc);
-        if (W > 110 && d.refused !== 'withheld' && (c.n || c.arriving)) parts.push({ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : plural(c.n, 'F.label.links.1', 'F.label.links'), px: sub, ink: COL.greek, fit: 'wrap' });
-      }
-      pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X, y: Y, w: W, h: H }, x: X, y: Y, align: 'left', alpha: a, plate: ground, parts });
+      // the label: the ADDRESS past its region's prefix; the first line a DRAFT convention (F-9); the badge from LK, none at a withheld box, whose links no read brings (T-LAYER's `docLabel`) — set by the label pass on the
+      // document's ground, where the row holds it, else held below the one line in its outline, but where the line names the document
+      pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X, y: Y, w: W, h: H }, x: X, y: Y, align: 'left', alpha: a, plate: ground, parts: LAYER.docLabel(d, W, fsPx),
+        hold: named.doc === doc ? null : { rects, pad: g * cam.scale, plate: ground } });
       // the history strip along the first row's top: the members as marks
       if (trunk.members && trunk.members > 1 && W > 60) { ctx.fillStyle = COL.land; for (let k = 0; k < trunk.members; k++) ctx.fillRect(X + k * 6, sy(box.y + row.y) + 2, 4, 2); }
     }
@@ -648,7 +643,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     const at = onStroke(k.p, k.q, { w, h: lh }, pass.shapes, seen);
     const x0 = Math.max(at.x - w / 2, seen.x), y0 = Math.max(at.y - lh / 2, seen.y);
     const within = { x: x0, y: y0, w: Math.max(0, Math.min(at.x + w / 2, seen.x + seen.w) - x0), h: Math.max(0, Math.min(at.y + lh / 2, seen.y + seen.h) - y0) };
-    pass.labels.push({ kind: 'connection', place: k.place, within, x: at.x, y: at.y - lh / 2, align: 'center', alpha, plate: COL.bg, parts: [{ text, px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }] });
+    pass.labels.push({ kind: 'connection', place: k.place, within, x: at.x, y: at.y - lh / 2, align: 'center', alpha, plate: COL.bg, parts: [{ text, px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }], hold: null });
   }
   ctx.globalAlpha = 1;
   return vis.length;
@@ -734,7 +729,7 @@ function tailsOf(docsDrawn, placeOf, alpha, pass, seen) {
     const parts = one ? [{ text: one.far, px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }, { text: words, px: LABEL_MIN_PX, ink: COL.greek, fit: 'cut' }]
       : [{ text: String(site.ends.length), px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }];
     const x = to.x + TAIL.gap, y = site.from.y - lh / 2, h = (words ? 2 : 1) * lh;
-    pass.labels.push({ kind: 'tail', place: key, within: { x, y, w: roomRight({ x, y }, h, pass.shapes, seen, key), h }, x, y, align: 'left', alpha, plate: COL.bg, parts });
+    pass.labels.push({ kind: 'tail', place: key, within: { x, y, w: roomRight({ x, y }, h, pass.shapes, seen, key), h }, x, y, align: 'left', alpha, plate: COL.bg, parts, hold: null });
     return {
       key, form: site.line ? 'line' : 'box', at: site.at, docs: site.docs, links: site.ends.map((e) => e.link.addr), far: site.ends.map((e) => e.far),
       from: site.from, to, world: { x: wx(site.from.x), y: wy(site.from.y) }, line: site.line, pos: site.pos,
@@ -745,13 +740,15 @@ function tailsOf(docsDrawn, placeOf, alpha, pass, seen) {
 
 /**
  * The labels' one pass (P-LABEL): every label the places handed over, set
- * over their shapes inside the visible view, each line on the plate its
- * place asks for, laid across the label's room; `stats` takes the labels set
- * and the parts left out — a part reaching under the one line or past the
- * viewport left out by the pass's 'view' with every part after it, so a
- * label whose head reaches there is left out whole — each mark the lines set
- * on it, each connection the count set on it, each tail the lines set at its
- * end, and `drawn` each document whose label was set.
+ * over their shapes inside the visible view, or held below the one line, each
+ * on the plate its place asks for, laid across the label's room behind each
+ * of its lines — a held label's, its one line across its place — before its
+ * words are set; `stats` takes the labels set and the parts left out — a part
+ * of a label with no hold reaching under the one line or past the viewport
+ * left out by the pass's 'view' with every part after it, so a label whose
+ * head reaches there is left out whole — each mark the lines set on it, each
+ * connection the count set on it, each tail the lines set at its end, and
+ * `drawn` each document whose label was set.
  * @param {Pass} pass
  * @param {Rect} seen the visible view (P-CAM's `visibleView`): the viewport below the one line
  */
@@ -761,9 +758,10 @@ function drawLabels(pass, seen) {
   c.textAlign = 'left'; c.textBaseline = 'middle';
   for (const l of set) {
     c.globalAlpha = l.alpha;
+    // the plate laid once under each line: a held label's one line across its place, else each of its lines across its room
+    if (l.plate) { c.fillStyle = l.plate; for (const r of l.held ? [l.within] : l.lines.map((x) => x.rect)) c.fillRect(l.within.x, r.y, l.within.w, r.h); }
     for (const line of l.lines) {
       const r = line.rect;
-      if (l.plate) { c.fillStyle = l.plate; c.fillRect(l.within.x, r.y, l.within.w, r.h); }
       c.font = face(line.px, line.weight); c.fillStyle = line.ink;
       c.fillText(line.text, r.x, r.y + r.h / 2);
     }
@@ -827,7 +825,7 @@ function drawTrail() {
     if (r.n > 9) continue;
     const text = String(r.n), w = measure(text, px, 'normal');
     c.font = face(px); c.fillStyle = COL.bg; c.fillText(text, X - w / 2, Y);
-    stats.labels.push({ kind: 'pip', place: e.addr, within: { x: X - r9, y: Y - r9, w: 2 * r9, h: 2 * r9 }, alpha: 1, plate: null, lines: [{ text, px, ink: COL.bg, weight: 'normal', rect: { x: X - w / 2, y: Y - lh / 2, w, h: lh } }] });
+    stats.labels.push({ kind: 'pip', place: e.addr, within: { x: X - r9, y: Y - r9, w: 2 * r9, h: 2 * r9 }, alpha: 1, plate: null, lines: [{ text, px, ink: COL.bg, weight: 'normal', rect: { x: X - w / 2, y: Y - lh / 2, w, h: lh } }], held: false });
   }
   c.globalAlpha = 1; c.restore();
 }
@@ -950,14 +948,15 @@ function drawArrival() {
  * Draw the frame: a function of model and view state (FP-8) — the places,
  * then their labels, then the stubs' triangles and the tails' strokes, the
  * trail, the focus ring and the arrival mark; the connections, the tails and
- * the labels against one visible view, read once for the frame.
+ * the labels against one visible view, and the places the one line names
+ * (L-LINE's `named`), read once for the frame.
  * @returns {import('./lod.js').Lod}
  */
 export function draw() {
   const lod = lodOf(cam.scale);
   if (!ctx || !cv) return lod;
   const { VW, VH } = viewport();
-  const seen = visibleView(LINE.bottom());
+  const seen = visibleView(LINE.bottom()), named = LINE.named();
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
   ctx.fillStyle = COL.bg; ctx.fillRect(0, 0, VW, VH);
   ctx.textBaseline = 'alphabetic';
@@ -967,8 +966,8 @@ export function draw() {
   const pass = { labels: [], shapes: [] };
   drawBoard(pass);
   if (lod.name === 'far') stats.clusters = drawClusters(1, pass);
-  else if (lod.name === 'far~mid') { stats.clusters = drawClusters(1 - lod.fade, pass); drawAccountFrames(lod.fade, pass); stats.docsDrawn = drawDocs(lod, lod.fade, pass, seen); }
-  else { drawAccountFrames(1, pass); stats.docsDrawn = drawDocs(lod, 1, pass, seen); }
+  else if (lod.name === 'far~mid') { stats.clusters = drawClusters(1 - lod.fade, pass); drawAccountFrames(lod.fade, pass, named); stats.docsDrawn = drawDocs(lod, lod.fade, pass, seen, named); }
+  else { drawAccountFrames(1, pass, named); stats.docsDrawn = drawDocs(lod, 1, pass, seen, named); }
   drawLabels(pass, seen);
   drawStubs(); drawTails(); drawTrail(); drawFocus(seen); drawArrival();
   return lod;

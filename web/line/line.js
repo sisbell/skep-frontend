@@ -24,7 +24,11 @@
 // a camera move ended over no document's region and the re-take stood the walk
 // on the account or the board holding the view's centre (N-WALK; issue #141's
 // design decision), that place in the breadcrumb mid scale names it by,
-// `1 › ⟨account⟩` or `1`, the document's fields blank. THE ADDRESS SEGMENT IS
+// `1 › ⟨account⟩` or `1`, the document's fields blank. THE PLACES IT NAMES ARE
+// THE PLANE'S RUNNING HEAD (issue #169's design decision: "Named once"): its
+// board, its account and its document, by its box (`named`), which the
+// plane's labels and T-LAYER's held labels read, so none of them holds a
+// label below the line. THE ADDRESS SEGMENT IS
 // ONE WIDTH at every scale and focus (issue #141): the widest words it names
 // (`WORDS_CH`), then the strip's room and the marker's (the style's), its
 // content clipped past it, never wrapped; where no document is named its
@@ -88,7 +92,7 @@
 // removed; `whereAmI` RE-CUT to foundations §2.2, its document form nearer
 // than mid and its position at the document's own reading scale alone; the
 // diagnostics behind `h` are the gate's hooks).
-// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from '../nav/trail.js';
@@ -100,7 +104,7 @@ import { drawChord } from '../nav/keys.js';
 import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
 import { boardCell, accountAt, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
-import { memberOf, boardOf, accountOf } from '../model/address.js';
+import { memberOf, boardOf, accountOf, documentOf } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -197,6 +201,26 @@ export function act() { if (transientSeg) { transientSeg = null; render(true); }
 
 /** the address the display names: the LEAP box's prefill, so the box opens holding what the line shows (K-30) */
 export function currentAddress() { return addressDisplay().addr; }
+
+/**
+ * @typedef {Object} Named — the places the address display names (issue #169's design decision: "Named once"): the line is their running head, so none of them holds a label below it
+ * @property {string} board
+ * @property {string | null} account the account named — under the camera at mid, the walk's own nearer — null where none is
+ * @property {string | null} doc the document named nearer than mid, by its box: the address every version of it shares; null where none is
+ */
+
+/**
+ * The places the address display names (`addressDisplay`; issue #169's
+ * design decision: "Named once"): its board, the account it names and the
+ * document it names, by its box — read by the plane's labels and T-LAYER's
+ * held labels, through the reader the app hands in, so a place the line
+ * names holds no label below it.
+ * @returns {Named}
+ */
+export function named() {
+  const a = addressDisplay(), doc = a.doc ? documentOf(a.doc) || a.doc : null;
+  return { board: boardOf(a.addr), account: accountOf(a.addr), doc };
+}
 
 /** the position's words in its slot — ` › position ⟨p⟩` — and none where no position is named */
 const positionWords = (/** @type {number | null} */ p) => (p != null ? ' › ' + t('F.position', { p }) : '');
@@ -364,7 +388,7 @@ export function stripAct() {
 
 /** the line's text (the gate's text case) */
 export const text = () => (el ? el.textContent || '' : '');
-/** the line's bottom edge on screen: the plane's corners hold below it (T-LAYER reads it through the reader the app hands in) */
+/** the line's bottom edge on screen: the plane's labels and corners hold below it (T-LAYER reads it through the reader the app hands in) */
 export const bottom = () => (el ? el.getBoundingClientRect().bottom : 0);
 export const state = () => actingSegment().state;
 export const modeSeen = () => lastMode;

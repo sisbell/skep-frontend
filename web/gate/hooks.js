@@ -42,11 +42,14 @@
 // point of the plane (`fold`, `centreOf`, `posAt`), the measure in force
 // (`measure`; issue #151's design decisions: the full measure wherever the
 // view holds it, the corner compacted first), a document's corner as placed
-// — the column it stands beside and its form (`corner`) — and where a
+// — the column it stands beside and its form (`corner`) — its label held
+// below the one line over its mounted article (`heldLabel`; issue #169), the
+// places the line names (`named`), and where a
 // reading view frames a column with its corner and its edge (`frameOf`), the
 // labels it set
 // (`labels`: each one's kind, place, lines — their text, size and screen
-// rect — and the room its place gave it, the connections' counts and the
+// rect — the room its place gave it, and whether it stands held below the one
+// line, the connections' counts and the
 // trail's pip numbers among them) and the parts of labels it left out with
 // the rule that left each out (`labelsLeftOut`), S3's camera paths
 // (`runPath`) and the frame buffer —
@@ -659,6 +662,10 @@ export function install(deps) {
     measure: () => ({ ...CAM.fit() }),
     /** a document's corner as T-LAYER placed it: the column it stands beside and whether it stands compact; null where none stands */
     corner: (/** @type {string} */ addr) => LAYER.cornerAt(addr),
+    /** a document's label T-LAYER held below the one line over its mounted article (issue #169): its parts' words, its rect on screen and whether it takes the pointer; null where none stands */
+    heldLabel: (/** @type {string} */ addr) => LAYER.heldOf(addr),
+    /** the places the one line names (L-LINE's `named`; issue #169's "Named once"): its board, its account and its document by its box */
+    named: () => LINE.named(),
     /** where a reading view of a document at a position centres, framing the column with its corner and its edge (T-LAYER's `frameOf`) */
     frameOf: (/** @type {string} */ addr, /** @type {number | null} */ pos = null) => LAYER.frameOf(addr, pos),
     refresh: async () => { const ts = /** @type {number[]} */ ([]); await new Promise((res) => { const step = (/** @type {number} */ t) => { ts.push(t); if (ts.length < 60) requestAnimationFrame(step); else res(undefined); }; requestAnimationFrame(step); }); const iv = []; for (let i = 1; i < ts.length; i++) iv.push(ts[i] - ts[i - 1]); return r2(1000 / Math.max(0.1, pct(iv, 50))); },

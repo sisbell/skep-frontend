@@ -23,7 +23,15 @@ one beside its article, clipped by no box of the page and reaching into no
 other document's box, mounted or only drawn; the first edition's in view
 below the one line at each level, held there while its first column's top
 has risen past the line, and never below its outline's bottom as that
-bottom rises; and following the column nearest the view's centre — issue
+bottom rises; THE HELD LABEL beside it (issue #169's design decision: "Held
+below the line"): landed in, and while the walk stands in it, the first
+edition, which the line names, holds no label over its text, its first
+column's top risen past the line; with the walk stepped out to its account,
+its label stands held below the line over its text — its address first, at
+its first column's text left, level with its corner and apart from it,
+inside its outline, hidden from assistive technology and taking the pointer
+— and with its outline's foot risen near the line, pushed up by it, its
+bottom on that foot inside the half gutter; and following the column nearest the view's centre — issue
 #151's design decision: at the reading size over the second column it stands
 beside that column in the gutter, compact, clear of the first column's text
 and inside its own box, its glyph's act opening it whole there). THE TAILS (issue #132's design decision: a link whose far
@@ -111,7 +119,8 @@ an account's cell, a continuation's mark, the first row of a document's
 outline — and inside the visible view below the one line, which stands opaque over the strip above
 it, a connection's count centred on its stroke, the segment between its
 two places' centres, a tail's label at its stroke's end, its first line
-centred on the stroke; (iii)
+centred on the stroke, and a label held below the one line on one line
+inside its place's shape — a document's outline — its bottom in view; (iii)
 no two meet; (iv) none meets another place: the outline of a document in
 view that no mark drawn the stronger holds — the rects of its columns — a continuation's mark, an account's
 cell that does not hold its place — a connection's count and a tail's label,
@@ -130,10 +139,13 @@ whole in the visible view whose outline's first row holds its address at the
 label floor, every other named left out by the rule that left it out, and
 the continuation's mark, at WHOLE BOARD the
 board and the acting account's cluster — while a box risen under the one
-line carries none: the first edition's label is left out whole, by the
-rule that leaves out a label past the visible view, never set where the
-line hides it nor cut through at its edge, and the labels of the documents
-below the line are set. THE TYPE (the typography review's findings 10 and
+line, which names its account and not it, holds its label below the line
+(issue #169's design decision: "Held below the line"): the first edition's,
+one line, its address first, its top HOLD_GAP_PX below the line's bottom
+or, its outline's foot risen near the line, its bottom on that foot inside
+the half gutter, at its first column's text left, inside its outline, on
+its ground, its bottom in view, the labels of the documents below the line
+set as ever; its outline risen wholly under the line, none. THE TYPE (the typography review's findings 10 and
 17): every element of the first edition that sets text in its lines spaces them at
 1.35 of its own size, a sign in a column's edge apart; the head's lines and the headings stand on P-LAY's
 line box for their size, as the engine lays it out (the rounding `lineBox`
@@ -300,11 +312,15 @@ LABEL_TOL_PX = 0.5
 # how far above the one line's bottom the first edition's box's top stands at S3's mid-extents: its address's line, set at
 # the floor half a gutter below the top of its outline's first row, wholly under the line, then across the line's bottom edge
 UNDER_LINE_PX = (20, 6)
-# the corner's gap from the text, the page's CORNER_GAP: where the corner holds below the one line
+# the corner's gap from the text, the page's CORNER_GAP
 CORNER_GAP_PX = 8
+# the hold's gap below the one line's bottom, where a label and a corner whose place has risen under the line stand level (issue #169)
+# — the case's own, held apart from the page's HOLD
+HOLD_GAP_PX = 8
 # a column's edge, in the body's em, and the gap between its text and a sign in it (issue #151's design decision: "each gutter
-# widens into its column's edge") — the case's own, held apart from the page's EDGE and EDGE_GAP
-EDGE_EM, EDGE_GAP_EM = 6, 0.5
+# widens into its column's edge") — the case's own, held apart from the page's EDGE and EDGE_GAP — and the gutter between two
+# columns, each column padded by half of it, held apart from the page's GUTTER
+EDGE_EM, EDGE_GAP_EM, GUTTER_EM = 6, 0.5, 2
 # the reading size, the em a landing sets a document at, in px: the case's own, held apart from the page's READING_PX
 READING_PX = 12.5
 # the window the narrow view is held at (issue #151's design decision: "a narrow window ... the measure narrows to what the view
@@ -326,6 +342,20 @@ BEAM_WINDOW_PX, HEAVIER_INK = 6, 1.5
 # a passage the draft holds part of (issue #153): the first edition's positions before the window run carried with as many of
 # the run's own
 PART_LEAD = 8
+
+
+def held_label(ctx):
+    """the first edition's label T-LAYER holds below the one line over its mounted article (issue #169) as the page shows it — its
+    words, its rect, whether a press at its start meets it, what assistive technology is told of it, whether it reads as a corner —
+    beside its corner, its outline's rects, its first column's text left, its outline's bottom and the half gutter on screen, the
+    one line's bottom and the places the line names"""
+    return ctx.js('''(() => { const S = window.__skep, h = S.heldLabel(%s), f = S.fold(%s), c = S.view.camera(), p = S.view.viewport();
+      const scr = (b) => ({x: (b.x - c.x) * c.scale + p.VW / 2, y: (b.y - c.y) * c.scale + p.VH / 2, w: b.w * c.scale, h: b.h * c.scale});
+      const el = document.querySelector(%s), v = S.visible(%s), o = scr(f.outline);
+      const hit = h ? document.elementFromPoint(h.rect.x + Math.min(4, h.rect.w / 2), h.rect.y + h.rect.h / 2) : null;
+      return {label: h, hidden: el ? el.getAttribute('aria-hidden') : null, cornerLike: el ? el.matches('.corner, [data-corner]') : null, takes: !!hit && !!el && el.contains(hit),
+              corner: v.length === 1 ? v[0].rect : null, rects: f.rects.map(scr), left: scr(f.columns[0]).x, bottom: o.y + o.h, gutter: %s / 2 * f.fs * c.scale,
+              line: document.getElementById('line').getBoundingClientRect().bottom, named: S.named()}; })()''' % (json.dumps(DOC), json.dumps(DOC), json.dumps('#corners [data-held="%s"]' % DOC), json.dumps(CORNER), GUTTER_EM))
 
 
 def corner_of(ctx):
@@ -489,7 +519,9 @@ def label_view(ctx):
     across (P-PROJ's G) — the first row of the outline of each document labelled, where its label stands, the visible
     view below the one line, and each mid connection drawn — its two places, named as a pair in sorted order, its count,
     the count set on it, and its places' centres, a document's its outline's, a mark's the centre of its continuation's
-    cell — and each tail drawn: its site, its links and their far documents, where its stroke leaves and ends"""
+    cell — and each tail drawn: its site, its links and their far documents, where its stroke leaves and ends; the shape of
+    each held label's place (issue #169), by its kind and place — a document's outline's rects, a mark's cell, an
+    account's cell — and the places the one line names"""
     return ctx.js('''(async () => {
       const P = await import('./plane/projection.js');
       const S = window.__skep, c = S.view.camera(), p = S.view.viewport(), lod = S.view.lod();
@@ -511,9 +543,12 @@ def label_view(ctx):
       // each document's label room: its outline's first row, inside the half gutter its columns are padded by
       const inner = (f) => { const g = S.constants.GUTTER / 2 * f.fs; return scr({x: f.row.x + g, y: f.row.y + g, w: f.row.w - 2 * g, h: f.row.h - 2 * g}); };
       const rows = Object.fromEntries(boxesDrawn ? places.filter((q) => !held.has(q.doc) && crosses(scr(S.boxOf(q.doc)), view)).map((q) => [q.doc, inner(S.fold(q.doc))]) : []);
+      // the shape of each held label's place: a document's outline's rects, a mark's cell, an account's cell
+      const shapeOf = (l) => l.kind === 'doc' ? S.fold(l.place).rects.map(scr) : l.kind === 'mark' ? [cell(l.place)] : [scr(S.accountCell(l.place))];
       return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})),
               boxes, rows, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, connections, mounted: S.mountedAddrs(),
-              tails: S.tails().map((t) => ({key: t.key, links: t.links, far: t.far, from: t.from, to: t.to}))};
+              tails: S.tails().map((t) => ({key: t.key, links: t.links, far: t.far, from: t.from, to: t.to})),
+              held: Object.fromEntries(labels.filter((l) => l.held).map((l) => [l.kind + ' ' + l.place, shapeOf(l)])), named: S.named()};
     })()''')
 
 
@@ -566,6 +601,22 @@ def at_tail(v, label, line):
             and q['y'] >= first['y'] - LABEL_TOL_PX and inside(q, v['seen']))
 
 
+def in_shape(q, shape):
+    """does a held line stand inside its place's shape — rects sharing their left edge, a document's outline's rows — between
+    the left and right edges of the rects holding its foot, the narrowest row it meets, LABEL_TOL_PX either way?"""
+    at = q['y'] + q['h'] - LABEL_TOL_PX
+    row = [s for s in shape if s['y'] <= at < s['y'] + s['h']]
+    return bool(row) and q['x'] >= min(s['x'] for s in row) - LABEL_TOL_PX and q['x'] + q['w'] <= max(s['x'] + s['w'] for s in row) + LABEL_TOL_PX
+
+
+def in_held(v, label, line):
+    """does a label held below the one line stand inside its place's shape (`in_shape`), its bottom inside the visible view
+    and the line across it inside the view, LABEL_TOL_PX either way (issue #169: "A label never leaves its box")?"""
+    q, seen = line['rect'], v['seen']
+    return (in_shape(q, v['held'].get(label['kind'] + ' ' + label['place'], []))
+            and q['y'] + q['h'] > seen['y'] + LABEL_TOL_PX and q['x'] >= seen['x'] - LABEL_TOL_PX and q['x'] + q['w'] <= seen['x'] + seen['w'] + LABEL_TOL_PX)
+
+
 def labels_hold(r, name, v):
     """THE LABELS' checks at one view; its figures: the labels set by kind, the parts left out by rule, the
     connections' counts set and left out"""
@@ -573,10 +624,14 @@ def labels_hold(r, name, v):
     small = [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'px': x['px']} for l in labels for x in l['lines'] if x['px'] < MIN_LABEL_PX]
     r.check(not small, f'{name}: (i) every label the canvas set, the trail\'s pip numbers among them, is {MIN_LABEL_PX} px or larger', small[:6])
     placed = [(l, place_of(v, l), x) for l in labels if l['kind'] != 'pip' for x in l['lines']]
-    outside = [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'rect': x['rect'], 'place_rect': p} for l, p, x in placed
-               if (not on_stroke(v, l, x) if l['kind'] == 'connection' else not at_tail(v, l, x) if l['kind'] == 'tail' else p is None or not inside(x['rect'], p) or not inside(x['rect'], v['seen']))]
-    r.check(not outside, f'{name}: (ii) every label lies inside its place, as the projection gives it, and inside the visible view below the one line, which stands opaque over the strip above it — a connection\'s count centred on its stroke, the segment between its two places\' centres, a tail\'s label at its stroke\'s end — {LABEL_TOL_PX} px either way',
+    outside = [{'kind': l['kind'], 'place': l['place'], 'held': l.get('held'), 'text': x['text'], 'rect': x['rect'], 'place_rect': p} for l, p, x in placed
+               if (not on_stroke(v, l, x) if l['kind'] == 'connection' else not at_tail(v, l, x) if l['kind'] == 'tail' else not in_held(v, l, x) if l.get('held')
+                   else p is None or not inside(x['rect'], p) or not inside(x['rect'], v['seen']))]
+    r.check(not outside, f'{name}: (ii) every label lies inside its place, as the projection gives it, and inside the visible view below the one line, which stands opaque over the strip above it — a connection\'s count centred on its stroke, the segment between its two places\' centres, a tail\'s label at its stroke\'s end, a label held below the line inside its place\'s shape, its bottom in view — {LABEL_TOL_PX} px either way',
             {'outside': outside[:6], 'seen': v['seen']})
+    lines = [(l, [x['rect'] for x in l['lines']]) for l in labels if l.get('held')]
+    r.check(all(len({(q['y'], q['h']) for q in qs}) == 1 for _, qs in lines), f'{name}: every label held below the one line stands on one line, never wrapped (issue #169)',
+            [[l['kind'], l['place'], qs] for l, qs in lines if len({(q['y'], q['h']) for q in qs}) != 1][:4])
     crossing = [{'a': [a[0]['kind'], a[0]['place'], a[2]['text']], 'b': [b[0]['kind'], b[0]['place'], b[2]['text']]} for i, a in enumerate(placed) for b in placed[i + 1:] if meets(a[2]['rect'], b[2]['rect'])]
     r.check(not crossing, f'{name}: (iii) no two labels meet', crossing[:6])
     met = []
@@ -2211,13 +2266,44 @@ def run(ctx):
     held = corner_of(ctx)
     r.check(held['top'] < held['line'] and held['corner'] is not None and held['corner']['inView'] and held['line'] <= held['corner']['rect']['y'] <= held['line'] + 16,
             'the first column\'s top above the one line: the corner holds just below the line, in view', held)
-    rise = held['line'] + CORNER_GAP_PX + (held['corner']['rect']['h'] if held['corner'] else 0) - 20
+    # THE HELD LABEL (issue #169's design decision): the walk still in the first edition, where the run's landing stood it, the line
+    # names it — no label held over its text; stepped out to its account, the line names the account — its label held there
+    named = held_label(ctx)
+    r.check(held['top'] < held['line'] and named['named']['doc'] == DOC and named['label'] is None,
+            'landed in the first edition, the walk in it, its first column\'s top risen past the one line: the line names it, and no label is held over its text — the line is its running head', {'named': named['named'], 'label': named['label']})
+    ctx.js('window.__skep.walk.key("out")')
+    ctx.js('window.__skep.walk.key("out")')
+    ctx.settle()
+    ctx.set_view(c0['x'] + c0['w'] / 2, c0['y'] + (vp['VH'] / 2 - (line - 100)) / s14, s14)
+    hl = held_label(ctx)
+    q, cq = (hl['label'] or {}).get('rect'), hl['corner']
+    r.check(hl['named']['doc'] is None and hl['named']['account'] == account_of(DOC) and bool(q) and hl['label']['text'][:1] == [DOC[len(account_of(DOC)):]]
+            and abs(q['y'] - (hl['line'] + HOLD_GAP_PX)) <= 1 and abs(q['x'] - hl['left']) <= 1 and in_shape(q, hl['rects']),
+            f'the walk stepped out to the first edition\'s account, which the line names: its label held over its text, {HOLD_GAP_PX} px below the line, at its first column\'s text left, inside its outline, its address first',
+            {'named': hl['named'], 'label': hl['label'], 'line': hl['line'], 'left': hl['left'], 'outline': hl['rects']})
+    r.check(bool(q and cq) and abs(q['y'] - cq['y']) <= 1 and not meets(q, cq),
+            'the held label and the corner stand level below the line, and never overlap (issue #169: "The corner keeps its side, outside the text, level with the label")', {'label': q, 'corner': cq})
+    r.check(bool(q) and hl['hidden'] == 'true' and hl['cornerLike'] is False and hl['takes'] and hl['label']['legible'],
+            'the held label is drawn and never announced — hidden from assistive technology, no corner to the page\'s readers — and at the reading size a press on it meets it, never the text it covers',
+            {'aria_hidden': hl['hidden'], 'corner_like': hl['cornerLike'], 'takes_press': hl['takes'], 'legible': hl['label'] and hl['label']['legible']})
+    rise = held['line'] + HOLD_GAP_PX + (held['corner']['rect']['h'] if held['corner'] else 0) - 20
     ctx.set_view(c0['x'] + c0['w'] / 2, f['outline']['y'] + f['outline']['h'] + (vp['VH'] / 2 - rise) / s14, s14)
     rising = corner_of(ctx)
     rc = rising['corner']
     r.check(rc is not None and abs(rising['bottom'] - rise) <= 1 and abs(rc['rect']['y'] + rc['rect']['h'] - rising['bottom']) <= 1,
             f'the outline\'s bottom risen to {round(rise)} px, less than the corner\'s height below where it holds: the corner rises with it, its bottom at the outline\'s, never past it', rising)
-    r.figures['corner_held'] = {'held': held['corner'] and held['corner']['rect'], 'line': held['line'], 'rising': rc and rc['rect'], 'box_bottom': rising['bottom']}
+    # the outline's foot risen within the held label's line box of the hold: the label pushed up under the line too, its bottom on the foot
+    # inside the half gutter
+    foot = hl['line'] + hl['gutter'] + 0.75 * (q['h'] if q else 0)
+    ctx.set_view(c0['x'] + c0['w'] / 2, f['outline']['y'] + f['outline']['h'] + (vp['VH'] / 2 - foot) / s14, s14)
+    pushed = held_label(ctx)
+    pq = (pushed['label'] or {}).get('rect')
+    r.check(bool(pq) and abs(pq['y'] + pq['h'] - (pushed['bottom'] - pushed['gutter'])) <= 1 and pq['y'] < pushed['line'] < pq['y'] + pq['h'] and not (pushed['corner'] and meets(pq, pushed['corner'])),
+            'the outline\'s foot risen near the line: the held label rises with it, its bottom on the foot inside the half gutter, pushed up under the line and still in view, clear of the corner',
+            {'label': pq, 'bottom': pushed['bottom'], 'gutter': pushed['gutter'], 'line': pushed['line'], 'corner': pushed['corner']})
+    r.figures['corner_held'] = {'held': held['corner'] and held['corner']['rect'], 'line': held['line'], 'rising': rc and rc['rect'], 'box_bottom': rising['bottom'],
+                                'held_label': q, 'held_label_pushed': pq}
+    ctx.leap(DOC, WINDOW[0])
     # the corner follows the column nearest the view's centre, and the measure narrows to what a narrow view holds (issue #151)
     r.figures['corner_follows'] = corner_follows(ctx, r)
     r.figures['measure_narrows'] = measure_narrows(ctx, r)
@@ -2395,24 +2481,56 @@ def run(ctx):
         at = first if kind == 'em' else {'x': box['x'] + box['w'] / 2, 'y': box['y'] + box['h'] / 2}
         ctx.set_view(at['x'], at['y'], ctx.js('window.__skep.scaleFor(%s, %s, %s)' % (json.dumps(DOC), json.dumps(kind), value)))
         seen[name] = labels_hold(r, name, label_view(ctx))
-    # a box risen under the one line: S3's mid-extents, the first edition's box's top UNDER_LINE_PX above the line's bottom
+    # a box risen under the one line (issue #169's design decision: "Held below the line"): S3's mid-extents, where the line names the
+    # account under the camera and never the first edition, its box's top UNDER_LINE_PX above the line's bottom; then its outline's
+    # foot risen to within its label's line box of the hold, then past the line
     vp = ctx.js('window.__skep.view.viewport()')
     s90 = ctx.js('window.__skep.scaleFor(%s, "doc", 90)' % json.dumps(DOC))
-    for under in UNDER_LINE_PX:
-        name = 'under-the-line-%d' % under
-        top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
-        ctx.set_view(box['x'] + box['w'] / 2, box['y'] + (vp['VH'] / 2 - (top - under)) / s90, s90)
+    f90 = ctx.js('window.__skep.fold(%s)' % json.dumps(DOC))
+    short = DOC[len(account_of(DOC)):]
+    lh = None
+    def risen(name, y_at):
+        """the camera at mid-extents with the first edition's outline's top at `y_at` on screen; the label view, and the first
+        edition's label set there, with its outline on screen and the half gutter"""
+        ctx.set_view(box['x'] + box['w'] / 2, f90['outline']['y'] + (vp['VH'] / 2 - y_at) / s90, s90)
         v = label_view(ctx)
         seen[name] = labels_hold(r, name, v)
         cam = ctx.camera()
-        box_top = (box['y'] - cam['y']) * cam['scale'] + vp['VH'] / 2
-        mine = [[x['text'], x['rect']] for l in v['labels'] if l['kind'] == 'doc' and l['place'] == DOC for x in l['lines']]
-        why = [o['reason'] for o in v['out'] if o['kind'] == 'doc' and o['place'] == DOC]
-        below = sorted(l['place'] for l in v['labels'] if l['kind'] == 'doc' and l['place'] != DOC and all(x['rect']['y'] >= v['seen']['y'] - LABEL_TOL_PX for x in l['lines']))
-        r.check(abs(v['seen']['y'] - box_top - under) <= LABEL_TOL_PX and not mine and why[:1] == ['view'] and bool(below),
-                f'{name}: the first edition\'s box\'s top {under} px above the one line\'s bottom, its address reaching under the line: its label is left out whole, by the rule that leaves out a label past the visible view — never set where the line hides it, nor cut through at the line\'s edge — and the labels of the documents below the line are set',
-                {'line': v['seen']['y'], 'box_top': box_top, 'set': mine, 'left_out': why, 'set_below': below[:8]})
-        seen[name].update(box_top=round(box_top, 2), line=v['seen']['y'])
+        sy = lambda y: (y - cam['y']) * cam['scale'] + vp['VH'] / 2
+        o = {'top': sy(f90['outline']['y']), 'bottom': sy(f90['outline']['y'] + f90['outline']['h']), 'left': (f90['outline']['x'] - cam['x']) * cam['scale'] + vp['VW'] / 2}
+        mine = next((l for l in v['labels'] if l['kind'] == 'doc' and l['place'] == DOC), None)
+        seen[name].update(outline_top=round(o['top'], 2), outline_bottom=round(o['bottom'], 2), line=v['seen']['y'], held=mine and [[x['text'], x['rect']] for x in mine['lines']])
+        return v, o, mine, GUTTER_EM / 2 * f90['fs'] * cam['scale']
+    for under in UNDER_LINE_PX:
+        name = 'under-the-line-%d' % under
+        top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
+        v, o, mine, g = risen(name, top - under)
+        line = v['seen']['y']
+        below = sorted(l['place'] for l in v['labels'] if l['kind'] == 'doc' and l['place'] != DOC and all(x['rect']['y'] >= line - LABEL_TOL_PX for x in l['lines']))
+        q = mine['lines'][0]['rect'] if mine else None
+        at_hold = bool(q) and abs(q['y'] - (line + HOLD_GAP_PX)) <= LABEL_TOL_PX
+        on_foot = bool(q) and abs(q['y'] + q['h'] - (o['bottom'] - g)) <= LABEL_TOL_PX
+        r.check(abs(line - o['top'] - under) <= LABEL_TOL_PX and v['named']['doc'] is None and bool(mine) and mine.get('held') and mine['lines'][0]['text'] == short and mine.get('plate') is not None
+                and abs(q['x'] - (o['left'] + g)) <= LABEL_TOL_PX and q['y'] <= line + HOLD_GAP_PX + LABEL_TOL_PX and q['y'] + q['h'] <= o['bottom'] - g + LABEL_TOL_PX and (at_hold or on_foot) and bool(below),
+                f'{name}: the first edition\'s box\'s top {under} px above the one line\'s bottom, the line naming its account and not it: its label held below the line — one line, its address first, on its ground, at its first column\'s text left, its top {HOLD_GAP_PX} px below the line or its bottom on its outline\'s foot inside the half gutter — and the labels of the documents below the line set',
+                {'line': line, 'outline': o, 'gutter': g, 'named': v['named'], 'held': mine and {'lines': [[x['text'], x['rect']] for x in mine['lines']], 'plate': mine.get('plate'), 'held': mine.get('held')},
+                 'left_out': [[x['text'], x['reason']] for x in v['out'] if x['kind'] == 'doc' and x['place'] == DOC], 'set_below': below[:8]})
+        if q:
+            lh = q['h']
+    # the outline's foot risen to within the label's line box of the hold — the label floor's where no label was held — the label pushed up
+    # under the line, its bottom on the foot; then risen wholly under the line
+    lh = lh or MIN_LABEL_PX * 1.2
+    top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
+    h90 = f90['outline']['h'] * s90
+    v, o, mine, g = risen('under-the-line-foot', top + g + 0.75 * lh - h90)
+    q = mine['lines'][0]['rect'] if mine else None
+    r.check(bool(q) and mine.get('held') and abs(q['y'] + q['h'] - (o['bottom'] - g)) <= LABEL_TOL_PX and q['y'] < v['seen']['y'] and q['y'] + q['h'] > v['seen']['y'],
+            'under-the-line-foot: the first edition\'s outline\'s foot risen near the one line pushes its held label up under the line, its bottom on the foot inside the half gutter, still in view',
+            {'line': v['seen']['y'], 'outline': o, 'gutter': g, 'held': mine and [[x['text'], x['rect']] for x in mine['lines']]})
+    v, o, mine, g = risen('under-the-line-gone', top - 2 - h90)
+    why = [x['reason'] for x in v['out'] if x['kind'] == 'doc' and x['place'] == DOC]
+    r.check(mine is None and why[:1] == ['view'], 'under-the-line-gone: the first edition\'s outline risen wholly under the one line: no label, left out past the visible view',
+            {'line': v['seen']['y'], 'outline': o, 'set': mine and [[x['text'], x['rect']] for x in mine['lines']], 'left_out': why})
     for name, door in (('home', 'home'), ('whole-board', 'wholeBoard')):
         ctx.js('window.__skep.go.%s()' % door)
         ctx.settle()

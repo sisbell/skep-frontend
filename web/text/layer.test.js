@@ -17,7 +17,10 @@
 // where it holds the compact corner alone, by its row's first column where it
 // holds neither or the signs there leave it none (a mutant that keeps it by
 // the first column, or squeezes it whole into a gutter, turns red); held below
-// the one line, never past its foot, stacked below the signs it would meet. A
+// the one line, never past its foot, stacked below the signs it would meet, by
+// the one hold a label holds by (issue #169: a rule of its own turns red); a
+// held label's line clear of it, ending a gap short of it or beginning a gap
+// past it where its box meets the line (one that overlaps it turns red). A
 // reading view frames its column with both its margins centred together (a
 // view on the column's middle alone turns red). THE MEASURE IN FORCE: the full
 // measure at 1440 px, 39 characters at 480, and a resize that moves it sets
@@ -103,6 +106,7 @@ import * as LAYER from './layer.js';
 import * as CAM from '../plane/camera.js';
 import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
+import { holdTop } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
 import { t } from '../strings.js';
@@ -323,6 +327,22 @@ test('a corner holds to its column\'s visible top below the one line, never runn
   assert.equal(LAYER.cornerTop(c, 10, 38, 900, [count, { ...count, y: 125 }]), 125 + 12 + CORNER.gap, 'and below the next it would meet there');
   assert.equal(LAYER.cornerTop(c, 10, 38, 900, [{ ...count, x: 300 }]), 38, 'a sign beside it, not under it: where it was');
   assert.equal(LAYER.cornerTop(c, 10, 38, 120, [count]), null, 'below the sign it would run past the foot: no room beside that column');
+});
+
+test('a corner holds by the one hold a label holds by, so the two stand level below the one line: with no sign before its column its top is P-LABEL\'s `holdTop` for its column, at its top, at the hold, pushed up by its foot (issue #169: "The corner keeps its side, outside the text, level with the label")', () => {
+  const c = { x: 100, w: 78, h: 60 };
+  for (const [rowTop, bottom] of [[200, 900], [10, 900], [10, 80], [-500, 20], [30, 70]]) assert.equal(LAYER.cornerTop(c, rowTop, 38, bottom, []), holdTop(rowTop, 38, bottom, c.h), `its column's top at ${rowTop}, its foot at ${bottom}`);
+});
+
+test('a held label\'s line never meets its corner: where the corner\'s box meets the line, the stretch left of it ends a gap short of it and the stretch right of it begins a gap past it; the line whole where the corner stands beside it, above it or below it (issue #169: "The two never overlap")', () => {
+  const line = { x: 100, w: 600 }, band = { y: 42, h: 18 }, g = CORNER.gap;
+  assert.deepEqual(LAYER.besideCorner(line, band, null), [line], 'no corner: the line whole');
+  assert.deepEqual(LAYER.besideCorner(line, band, { x: 300, y: 42, w: 77, h: 60 }), [{ x: 100, w: 300 - g - 100 }, { x: 377 + g, w: 700 - 377 - g }], 'a corner standing on the line, beside a later column: left of it, then right of it');
+  assert.deepEqual(LAYER.besideCorner(line, band, { x: 15, y: 42, w: 77, h: 60 }), [line], 'a row\'s first column\'s corner, left of the line\'s start: the line whole');
+  assert.deepEqual(LAYER.besideCorner(line, band, { x: 300, y: 60, w: 77, h: 60 }), [line], 'the corner below the line: the line whole');
+  assert.deepEqual(LAYER.besideCorner(line, band, { x: 300, y: -18, w: 77, h: 60 }), [line], 'the corner above it: the line whole');
+  assert.deepEqual(LAYER.besideCorner(line, band, { x: 104, y: 42, w: 77, h: 60 }), [{ x: 181 + g, w: 700 - 181 - g }], 'the corner at the line\'s start: the stretch past it alone');
+  for (const s of LAYER.besideCorner(line, band, { x: 300, y: 50, w: 77, h: 60 })) assert.ok(s.x + s.w <= 300 - g || s.x >= 377 + g, `${JSON.stringify(s)} a gap clear of the corner`);
 });
 
 test('a reading view frames its column with both its margins: the corner on its left in the form its room holds at the reading size, the edge on its right, the three centred in the view together (issue #151: "The landing frames the column, not the middle of a line")', () => {
