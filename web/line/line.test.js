@@ -1,107 +1,21 @@
-// L-LINE's test against the FAKE PORT: the address display names the level
-// the camera's scale reads (foundations §2.2) — at far scale the board, the
-// whole board in view at its clamp; at mid the account under the camera
-// (B1-S2: "THE ONE LINE reads `1.5 › 1.5.0.1`"), never the document the walk
-// stands on and never a position, though the walk keeps the span a landing
-// named until the re-take stands it on the document, and the account the
-// camera's, not the walk's; at reading scale the document and the position the
-// landing named — a mutant that names the walk's document at mid turns red, and
-// so does one that drops the document form at mid~near. THE POSITION IS THE
-// DOCUMENT'S OWN TO NAME (issue #140's design decision): a document below its
-// own reading scale — a continuation document at the near band, a depth-0
-// document stepped down at mid~near — is named alone, no position, its
-// position's slot standing empty and as wide, nothing after it moved; at its
-// own reading scale the position is named in that slot — a mutant that names
-// a position by the camera's band, drops the slot below the threshold, sizes
-// it by the position shown, or draws the strip there turns red. Nearer than
-// mid an account or the board the walk stands on is named as mid scale names
-// it — the account a key's re-take over no document's region stood the walk
-// on among them (issue #141's design decision) — never the account under the
-// camera nor a document out of view: a mutant that names the camera's account
-// there turns red. The address segment is ONE WIDTH at the whole board, at mid,
-// on an account nearer, on a document below its reading scale and at a
-// position, its slot, strip and marker standing empty where no document is
-// named: a mutant that sizes the segment by its words, or drops the empty slot,
-// turns red. While the walk keeps its document in view off the view's centre
-// the strip marks the view's window over it — past the first edition's last
-// line, open at both ends; above the long edition's first line, open at its
-// start alone — and the position elsewhere: a mutant that marks the position
-// there, or opens an end the view never ran past, turns red. Where an arrival
-// in several runs stands in the document named, the strip outlines each run
-// as an extent along it, the one the landing stands at filled, and none for
-// an arrival elsewhere (issue #158): a mutant that draws them as ticks, or in
-// another document's strip, turns red. The LEAP box's prefill
-// is the address the display names (K-30: "the box open holding the current
-// address"; the box is the line's stop, opened), so the box never opens on an
-// address the line does not show — a mutant whose prefill keeps a rule of its
-// own (the walk's document at mid, the account the arithmetic finds at the
-// whole board's centre) turns red. A restart the shell re-opened leaves the
-// acting-as segment as it stood (client.md §4b.2: "no death chrome") — a
-// mutant that takes the restart for a death, or re-opens it as a session no
-// write may go out under, turns red. A restart that re-opened none (issue
-// #175's design decision) leaves it as it stood for the first second, then
-// reads "reconnecting as ⟨account⟩ after a restart" in its place, nothing
-// said, and as it stood again once the session is back; the call again
-// refused, the guest state boot shows for that refusal led by "could not
-// reconnect as ⟨account⟩ after a restart", said assertively once — never the
-// signed-out words (a mutant that reads "signed out", says the reconnecting,
-// or drops the lead, turns red). A death of an arm whose words this page does
-// not hold — seeded, blocked, unreachable — reads the guest line in the death
-// arm's place, said assertively, "signed out" the page's own close's alone (a
-// mutant that falls back to "signed out" turns red). The session's own
-// `writes` decides the segment: the keyless session for reading alone reads
-// foundations §3.3 state 3's words, over an empty key store and over one
-// holding a key bound
-// here for its principal, with no key claimed and no sign-in; a session that
-// writes reads state 2, naming the label of the key it is opened with — the
-// key bound here for its principal, else the store's one key (M-REC's
-// `device`) — so a mutant that reads every session as state 2, or decides by
-// a key bound at this board, turns red; where that key cannot be named, its
-// slot says why in its own words — two keys bound here, an empty store, a
-// store not read, a key with no label — never its template placeholder
-// (FP-34; issue #208: a mutant that shows "⟨device label⟩" turns red). The
-// sign-in act bears
-// its id in the guest's line and in the death arm's, as Back does, so the
-// session's face standing at it finds it again as the line is rebuilt
-// (O-HOST's anchor) — a mutant that drops the id from either arm turns red.
-// The guest line names the board's origin where `boards()` found a board
-// (foundations §3.3 state 1: "the board and venue shown") — a mutant that
-// drops the origin turns red. WHERE IT FOUND NONE (issue #215's design
-// decision; FP-35) the line names no board, venue, origin or sign-in, and
-// says why in the guest line's place, in none of §3.3's states: at an empty
-// list `F.unclaimed`, an inert act whose press says beginning a notebook
-// isn't built yet, in the line and through the status region; at a list
-// refused its words, "try again" beside them where the board did not answer —
-// its press the act the app hands in — and none where the provider itself
-// refused (a mutant that shows the guest line, its venue or its sign-in, or
-// offers a retry where none may tell, turns red); and the address display
-// reads "go to an address" alone at every scale, naming no place, so the
-// LEAP box opens empty and the plane holds no label as named, the segment its
-// one width (a mutant that names board 1 or the account under the camera
-// turns red).
-// At reading scale the line names the version the box shows — a pinned
-// version's address whole, its marker lit, its own position — and the strip's
-// act quotes the version's own words (issue #154; foundations §3.2).
-// A jump's face standing out of the visible view is carried by the line in a
-// segment of its own, its string's id and its words, exactly while the reader
-// the app hands in names one (FP-25): a mutant that drops the segment, or
-// keeps it once the face is back in view, turns red. Each walk's folded
-// moment stands as a segment after the acting-as segment exactly while the
-// reader names it, its act the walk's unfold, told whether a key made it
-// (issue #182): a mutant that drops the segment, sets it before the acting-as
-// segment, or wires its act to nothing turns red.
-// The places the line names (issue #169's design decision: "Named once") are
-// its address display's: the board alone at far, the account under the camera
-// at mid, nearer the walk's document by its box — a pinned version by the box
-// it shares — or the account the walk stands on: a mutant that names the
-// walk's document at mid, or a version by its own address, turns red.
-// THE COVER (issue #177): at a document a read refused the line names no
-// position, strip or window at its reading scale (a mutant that names the
-// slot fold's first position turns red); a change of the page's class takes
-// the transient down, and is said ONCE as the reads it asked answer — the
-// ending's words, then the documents it covered — and nothing while they
-// read (a mutant that says the ending alone first, or never names the cover,
-// turns red).
+// L-LINE's test against the fake port: the address display names the level
+// the camera's scale reads — the board at far, the account under the camera
+// at mid, nearer the walk's document by the version its box shows and the
+// position the landing named, or the account or board the walk stands on —
+// a position only at the document's own reading scale, its slot standing
+// empty and as wide below it, the segment one width throughout, the strip
+// marking the view's window while the walk keeps its document off-centre and
+// outlining an arrival's runs, and the LEAP box opening on the address shown;
+// the acting-as segment through a re-opened restart, a restart reconnecting
+// and one refused, a death of an arm the page holds no words for, the
+// keyless and the signed session's words with the device label's slot and
+// its causes, the guest line with the board's origin and its sign-in act's
+// id, and where no board is held why in the guest line's place and "go to an
+// address" alone; a jump's face out of view and a walk's folded moment as
+// segments; the places the line names; and the cover — no position at a
+// refused document, the transient taken down and the class change said once
+// with what it covered (FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28,
+// FP-29, FP-34, FP-35).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';

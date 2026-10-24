@@ -1,130 +1,114 @@
-// T-ARTICLE — a document's article as HTML from its record and the view
-// state handed in (the structure record §3.2 "T-ARTICLE"). Layer 2. PURE: a
-// function of values (FP-8); no DOM, no state.
-// The head (the address, the state line, the byline — never a name alone,
-// R44 — the presence indicator with its ⟡); THE BYLINE (foundations §2.1's
-// account row; FP-34; issue #208's design decision: "A slot never shows its
-// template placeholder"): its owner's address, then its SLOTS, each a box of
-// its own width whatever it shows — the device label's, and on a byline not
-// the reader's own the fingerprint cue's (§2.1: "no cue on the reader's own
-// account") — filled from the owner's facts as the page holds them (M-REC's
-// `accountKey`, handed in as `keyOf`): the device-flagged genesis entry's
-// label, cut to its box on a word's end and whole on its act and in its
-// accessible name, and its fingerprint's cue; an empty box while they are
-// read; else the cause's words, said once where one cause empties both
-// slots; each slot named by its role and what it shows (`bylineOf`); the
-// plan's line the same whatever they show, so nothing beside them moves;
-// the blocks with their marks —
-// the selection (a byte span: every block it touches is marked, the
+// T-ARTICLE — a document's article as HTML and as P-LAY's plan from its
+// record and the view state handed in (the structure record §3.2). Layer 2.
+// Pure: a function of values (FP-8); no DOM, no state.
+// The article: the head — the address, the state line, the byline (never a
+// name alone, R44) and the presence line with its ⟡ where links touch; then
+// the blocks with their marks. The byline (`bylineOf`; foundations §2.1;
+// FP-34): its owner's address, then its slots, each a box of its own width
+// whatever it shows — the device label's, and on a byline not the reader's
+// own the fingerprint cue's — filled from the owner's facts as the page
+// holds them (the view's `keyOf`): the device-flagged genesis entry's label,
+// cut to its box on a word's end (`cutTo`) and whole on its act, in its title
+// and in its accessible name, and its fingerprint's cue; an empty box while
+// they are read; else the cause's words, said once where one cause empties
+// both slots; each slot named by its role and what it shows; the plan's line
+// the same whatever they show, so nothing beside them moves. A block's
+// marks: the selection (a byte span: every block it touches is marked, the
 // platform's highlight showing the bytes themselves) and the focus (a
-// block), each by `blockMarks`, the rule T-LAYER marks a standing article by,
-// the owner's and the person's links in place (each stretch in the one mark
-// its links merge into, LK's `mergedMark`: hue the linker's, neutral where
-// theirs differ), each transcluded run's sameness
-// boundary with the origin's label (the hairline, whole at the first run of
-// that origin, compact after) and the entitled reader's mark C-33 on a
-// draft-origin run in a published document — set ONCE per run in a block,
-// at its first stretch, however marks and symbols cut it (foundations §2.1:
-// "each change of origin between adjacent runs is marked by a hairline") —
-// the "+⟨n⟩ others" count in its column's edge, level with the block's first
-// line and never inside the text (A-254; issue #151's design decision:
-// `edgeStyle`), and the symbols the reveal
-// asked for, each AT ITS SPAN (foundations §2.1; B1-S4: "No margin column:
-// the symbols are at the place"): right after the last word its span
-// touches, in the last paragraph its drawn stretches touch (`standOf`) —
-// every link marked, and its symbol set, at the stretches LK says its end is
-// drawn on now (LK's `drawnIn`), never at the position its slot stores, each
-// mark and symbol carrying the ends it draws by their links and their keys
-// (LK's `endKey`), so a click opens the card of the end clicked (APP-INPUT);
-// THE ENDS DRAWN AT A WITHHELD RUN (issue #202's design decision: "An end
-// wholly inside withheld text is drawn at the start of the withheld run it
-// falls in, beside the run's notice") merge into ONE SYMBOL at the start of
-// its gap's first line, before the notice's words, at every stage of the
-// reveal — the gap has no text to mark — in the one mark their links merge
-// into, a count after its ⟡ where it stands for two or more (`runSymHTML`),
-// no stretch of the gap marked or tinted, so the gap still reads as empty;
-// the others' links drawn there counted in its column's edge, below the
-// face's compact mark where that stands there; and a symbol is LIT — drawn
-// heavier while an arrival stands — where every link it stands for is lit
-// (`symbolLit`), marked in place by T-LAYER, never made into the article
-// (FP-30); a symbol whose far end floats titled
-// "its passage is not in ⟨D⟩'s current text" (foundations §2.3), and one
-// whose far end's text holds only part of its passage, or all of it in
-// pieces, or one the board would not tell of, titled with BM-HELD's line
-// (BM-HELD's `farSays`; issue #153); the
-// withheld run a GAP OCCUPYING its positions, as tall as its bars (F2.1-i),
-// naming the owner of its run's origin, whoever owns the document windowing
-// it (R56: the copy derives per origin; B1-S7) — its face in it where the gap
-// holds it, else compact in its column's edge, "⟨owner⟩ with a mark that
-// opens it whole" (foundations §2.1; `gapHolds`), so no face reflows the
-// text — the face
-// with the entitlement arm for that owner and this reader by PUB-5.121's
-// order — a signed-in reader's owner-grant default, a guest's split on
-// whether this device holds a key for the board (PUB-5.97) — and C-67's
-// clause beneath, decided over the origin's whole admitted-claim set
-// (`editionClause`; PUB-5.124, RES-164): the POINTER where an admitted claim's
-// edition holds bytes the reader can reach, naming the one claim it follows
-// by PUB-3.107's origin-keyed order (RES-152) — a control on the plane, whose
-// act is a LEAP to that claim's home, the edition (B1-S7 → S6; APP-INPUT),
-// and in a reading scene's pane a line, as every mark there is (SC) — the
-// QUOTING sibling where every admitted claim quotes the draft, the UNREAD
-// place, "edition claims not read", where a read they are decided from
-// failed (issue #186's design decision: "A blank there would read as 'no
-// claim'"), and nothing — the arm's own copy alone — where none is admitted,
-// where the board refused their lookup as withheld from the reader, or where
-// they are not yet read — the placeholder's one record (`placeholderOf`), which the ARIA
-// mirror's item at the run and the run's face whole (O-FACES's `withheldRun`,
-// D5 K-7) read too, so the run a sighted reader sees and the one a screen
-// reader hears never part (R94); a record atom rendered
-// as the record it is (the genesis
-// record's words); an unknown item kind "not rendered" with its width; the
-// scene-mode variant, a reading scene's pane's article, which nothing in the
-// pane acts on (SC): no scene-offer, and its symbols and presence ⟡ marks
-// alone, never the controls the plane's are (`control`). THE CORNER's items
-// — an edition's state with "version ⟨k⟩ of ⟨n⟩" and R20's teaching, a
-// draft's kept state and its chip (C-28, at the document's corner and never
-// the HUD — ux-T2; the record §3.4 (viii)), the whole-document link count,
-// and in a reading scene's pane its act reading another version there and the
-// line saying the version it reads lacks the passage that act carried (issue
-// #160) — are made here too, whole or compact (FP-26), and stand OUTSIDE the
-// article: the article's box
-// clips whatever stands past its measure, so the corner's element is its holder's,
-// T-LAYER's beside the article on the plane and each pane's own in the scene
-// (foundations §3.1).
-// THE PLAN (`articlePlan`): the same article as P-LAY's rows — the head's
+// block), each by `blockMarks`, the one rule T-LAYER marks a standing
+// article by; the owner's and the person's links in place, each stretch in
+// the one mark its links merge into (the view's `mergedMark`); each
+// transcluded run's sameness boundary with the origin's label (the hairline,
+// whole at the first run of that origin, compact after) and C-33's mark on a
+// draft-origin run in a published document, set once per run in a block, at
+// its first stretch, however marks and symbols cut it (foundations §2.1);
+// the others' count in its column's edge, level with the block's first line
+// and never inside the text, so it sets no line (`edgeStyle`; A-254;
+// FP-26); and the symbols the reveal asked for, each at its span
+// (foundations §2.1; B1-S4): right after the last word its span touches, in
+// the last paragraph its drawn stretches touch (`standOf`). Every link is
+// marked, and its symbol set, at the stretches LK says its end is drawn on
+// (the view's `marks`, `symbols`), never at the position its slot stores,
+// each mark and symbol carrying the ends it draws by their links and their
+// keys, so a click opens the card of the end clicked (APP-INPUT). The ends
+// drawn at a withheld run merge into one symbol at the start of its gap's
+// first line, before the notice's words, at every stage of the reveal — the
+// gap has no text to mark — in the one mark their links merge into, a count
+// after its ⟡ where it stands for two or more (`runSymHTML`), no stretch of
+// the gap marked, so the gap still reads as empty (FP-30); the others' links
+// drawn there are counted in its column's edge, below the face's compact
+// mark where that stands there. A symbol is lit — drawn heavier while an
+// arrival stands — where every link it stands for is lit (`symbolLit`),
+// marked in place by T-LAYER and never made into the article (FP-30); it is
+// titled with its type and with what its far end's text holds of its
+// passage where that is not all of it in one piece (the view's `says`;
+// foundations §2.3; FP-21).
+// The withheld run is a gap occupying its positions, as tall as its bars
+// (F2.1-i), naming the owner of its run's origin, whoever owns the document
+// windowing it (R56; B1-S7) — its face in it where the gap holds it, else
+// compact in its column's edge, so no face reflows the text (`gapHolds`;
+// foundations §2.1; FP-26). The face: the entitlement arm for that owner and
+// this reader (`entitlementArm`; PUB-5.121, PUB-5.97) and C-67's clause
+// beneath, decided over the origin's whole admitted-claim set
+// (`editionClause`; PUB-5.124, RES-164): the pointer where an admitted
+// claim's edition holds bytes the reader can reach, naming the one claim it
+// follows (PUB-3.107; RES-152) — on the plane a control whose act is a LEAP
+// to that claim's home, the edition (B1-S7 → S6; APP-INPUT), in a reading
+// scene's pane a line, as every mark there is (SC) — the quoting sibling
+// where every admitted claim quotes the draft, the unread place where a read
+// they are decided from failed (FP-33), and nothing — the arm's own copy
+// alone — where none is admitted, where the board refused their lookup as
+// withheld from the reader, or where they are not yet read. The placeholder
+// is one record (`placeholderOf`), which the ARIA mirror's item at the run
+// (N-WALK) and the run's face whole (O-FACES's `withheldRun`) read too, so
+// the run a sighted reader sees and the one a screen reader hears never part
+// (R94). A record atom renders as the record it is (`recordOf`; D13); any
+// other item this client cannot show as "not rendered" with its width. The
+// scene-mode variant (the view's `scene`), a reading scene's pane's article:
+// no scene-offer, and its symbols and presence ⟡ marks alone, never the
+// controls the plane's are (`control`).
+// The corner's items (`cornerHTML`; foundations §3.1): an edition's state
+// with "version ⟨k⟩ of ⟨n⟩" and R20's teaching — at a pinned version its
+// own number of the count its box's document holds (FP-22) — a draft's kept
+// state and its chip (C-28; ux-T2), the whole-document link count, and in a
+// reading scene's pane its act reading another version there and the line
+// saying the version it reads lacks the passage that act carried (FP-23),
+// whole or compact (FP-26). They stand outside the article: the article's
+// box clips whatever stands past its measure, so the corner's element is its
+// holder's, T-LAYER's beside the article on the plane and each pane's own in
+// the scene.
+// The plan (`articlePlan`): the same article as P-LAY's rows — the head's
 // lines, each block's text at its size with the inline pieces it carries
 // (the hairline's label, C-33's mark, the symbols), a record's words and
 // keys, the line a reference, an item not rendered or an empty document
 // takes, a withheld run's width, the scene-offers, and none of the signs a
-// column's edge holds, which set no line — each row
-// carrying where a column may break at it and each piece whether its
-// characters are the document's own, so P-LAY folds the lines into the
-// columns of the document's room and names the position each line starts at
-// (issue #15) — which P-LAY lays out as the bars the canvas draws below
-// reading scale, so the handoff swaps bars for text and no line moves (law 8;
-// S1 Q7). The HTML and
-// the plan are made from one walk of the document (`walk`), so the two can
-// never decide a block differently; every size and gap the plan carries is
-// P-LAY's shared measurement, which the CSS reads too.
-// The structural family (headings, emphasis) is the owner's formatting:
-// rendered as formatting, never marked (rule (iii)) — here the corpus's own
-// markdown headings are set as headings.
-// THE ITEM RULE (`itemOf`; issue #161's design decision; FP-24): every block
-// that holds no text is an item of one kind — a record the record rule
-// renders, a reference, a withheld run, or an item this client cannot show
-// (hex, an atom of any other value; a picture cell among them until the page
-// reads picture cells) — named in the strings table's words (`itemWords`),
-// the one entry the ARIA mirror announces at the item (N-WALK) and a copy's
-// stand-in names it by. THE COPY'S PLAIN TEXT (`copyText`) is made here from
+// column's edge holds, which set no line — each row carrying where a column
+// may break at it and each piece whether its characters are the document's
+// own, so P-LAY folds the lines into the columns of the document's room and
+// names the position each line starts at (FP-12), and lays them out as the
+// bars the canvas draws below reading scale, so the hand-off swaps bars for
+// text and no line moves (FP-8; law 8; S1 Q7). The HTML and the plan are
+// made from one walk of the document (`walk`), so the two can never decide a
+// block differently; every size and gap the plan carries is P-LAY's shared
+// measurement, which the CSS reads too. A markdown heading is set as a
+// heading, the owner's formatting rendered as formatting and never marked
+// (rule (iii)).
+// The item rule (`itemOf`; FP-24): every block that holds no text is an
+// item of one kind — a record the record rule renders, a reference, a
+// withheld run, or an item this client cannot show (hex, an atom of any
+// other value) — named in the strings table's words (`itemWords`), the one
+// entry the ARIA mirror announces at the item (N-WALK) and a copy's stand-in
+// names it by. The copy's plain text (`copyText`; FP-24) is made here from
 // what an article was made from: a span's items in the text's order, each
 // stretch of text its own characters and each item a stand-in in square
 // brackets in its place — a withheld run's owner and length, an unshown
-// item's length, a record's own plain contents (`recordContents`: the key
-// record's key labels and fingerprints), never what the plane renders for
-// whoever is looking — so a paste never joins text across an item.
-// Carries: the wireframe's §16 `articleHTML`, `withheldBlock`.
-// Rules: FP-1, FP-2, FP-8, FP-10 (reads LK/selection/focus as values), FP-21,
-// FP-22, FP-24, FP-26, FP-30, FP-34.
+// item's length, a record's own plain contents (`recordContents`) — never
+// what the plane renders for whoever is looking, so a paste never joins text
+// across an item.
+// Figures: the device label's slot is LABEL_CH (24) characters wide, the
+// fingerprint cue's CUE_CH, the cue's own width.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-21, FP-22, FP-23, FP-24, FP-26,
+// FP-30, FP-33, FP-34.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
 import { t, plural } from '../strings.js';
@@ -166,8 +150,8 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {(doc: string) => (Clause | null)} clauseOf C-67's clause beneath a withheld run of an origin document, decided over what the page holds of the origin's edition claims (T-LAYER's `clauseOf`, by `editionClause`); null where nothing renders in its place
  * @property {(account: string) => (AccountFacts | undefined)} keyOf an account's byline facts as the page holds them (M-REC's `accountKey`): its device key, or why its byline names none; undefined while they are read
  * @property {number | null} [members] the chain's member count as its box's document holds it (M-PUMP's probe records it there, every version sharing the count): what the corner's version statement reads at a version, its own record holding none; absent, the document's own
- * @property {number | null} [read] a reading scene's pane's corner act, the one its Enter takes: the version it reads in the pane's place (SC; issue #160's design decision: "The corner's 'read version 4' replaces that pane's text inside the scene") — the newer one arrived, or the one the act left; absent or null, none
- * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; issue #160: "the pane says so if version 4 lacks it"); absent or null, none
+ * @property {number | null} [read] a reading scene's pane's corner act, the one its Enter takes: the version it reads in the pane's place (SC; FP-23) — the newer one arrived, or the one the act left; absent or null, none
+ * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; FP-23); absent or null, none
  * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
  */
 
@@ -205,15 +189,14 @@ export const CUE_CH = fingerprintCue('0'.repeat(64)).length;
 /** the separator between a byline's owner and its slots, and between its slots */
 const BY_SEP = ' · ';
 
-/** each cause's words in the strings table (FP-34: "Causes that have no words yet get their own in the copy refresh") */
+/** each cause's words in the strings table (FP-34) */
 const CAUSE_WORDS = /** @type {const} */ ({
   unsigned: 'F.slot.unsigned', 'by-reference': 'L.slot.by-reference', 'not-recorded': 'F.slot.not-recorded',
   withheld: 'F.corner.withheld', unreachable: 'F.daemon.unreachable', unread: 'L.slot.unread',
 });
 
 /**
- * A label cut to a slot's box (FP-26: a name is "never cut mid-word"; issue #208's design decision: "A label too long for
- * the box is cut and shown whole on its act"): the label whole where the box holds it; else the longest run of it the box
+ * A label cut to a slot's box (FP-26, FP-34): the label whole where the box holds it; else the longest run of it the box
  * holds with an ellipsis after it, ending at a word's end — before a space, or after a hyphen, an underscore or a period;
  * where its first word alone overruns the box, as many of its characters as the box holds with the ellipsis.
  * @param {string} label
@@ -230,10 +213,10 @@ export function cutTo(label, ch) {
 }
 
 /**
- * THE BYLINE (see the head; FP-34): the owner's address and its slots — the device label's, and the fingerprint cue's
- * where the byline is not the reader's own (foundations §2.1: "no cue on the reader's own account") — each read from the
- * owner's facts as the view holds them (`keyOf`): its value — the label cut to its box (`cutTo`), "no label" where the
- * genesis entry carries none, the fingerprint's cue (`fingerprintCue`); an empty box while they are read; else the
+ * The byline (see the head; FP-34): the owner's address and its slots — the device label's, and the fingerprint cue's
+ * where the byline is not the reader's own (foundations §2.1) — each read from the
+ * owner's facts as the view holds them (`keyOf`): its value — the label cut to its box (`cutTo`), `L.slot.unlabelled`
+ * where the genesis entry carries none, the fingerprint's cue (`fingerprintCue`); an empty box while they are read; else the
  * cause's words (`CAUSE_WORDS`), a withheld read naming its owner, said once where it empties both slots. Each slot's
  * accessible name gives its role and what it shows — that it is being read, while it is (`told`).
  * @param {string} owner
@@ -308,13 +291,11 @@ function bylineHTML(by) {
 const labelOf = (/** @type {Origin} */ o, /** @type {Opening} */ at) => (at.whole ? t('L.origin-mark') + ' ' + o.doc : t('L.origin-mark'));
 
 /**
- * A sign's place in its column's edge (P-LAY's EDGE; issue #151's design
- * decision: "each gutter widens into its column's edge and holds that
- * column's counts and withheld marks"): beside the first line of the block it
- * belongs to, EDGE_GAP past the text and as wide as the rest of the edge, its
- * first line as tall as the block's first line so it stands level with it —
- * never inside the text, so it sets no line (A-254: "so a link's arrival
- * breaks no line"). Its sizes are in its own em, the count's of the block's,
+ * A sign's place in its column's edge (P-LAY's EDGE; FP-26): beside the
+ * first line of the block it belongs to, EDGE_GAP past the text and as wide
+ * as the rest of the edge, its first line as tall as the block's first line
+ * so it stands level with it — never inside the text, so it sets no line
+ * (A-254). Its sizes are in its own em, the count's of the block's,
  * read from P-LAY's body em; the style sets it on the text's side the edge
  * stands on (the plane's right; a reading scene's pane's inner side). A sign
  * stacked below another beside the same block — a withheld run's count below
@@ -369,8 +350,7 @@ export function blockMarks(addr, b, selected, focus) {
 
 /**
  * Is a link's symbol lit — drawn heavier while an arrival stands (foundations
- * §2.1's register: "the followed link drawn heavier": WEIGHT; FP-30: "Lit
- * means the reader crossed this link to get here") — the links it stands for
+ * §2.1; FP-30) — the links it stands for
  * merged as P44 merges one site's marks: heavier only where every one of them
  * is among the links lit (LK's `lit`; its `mergedMark`'s weight). The one rule
  * T-LAYER marks a standing article's symbols by in place, as `blockMarks` its
@@ -458,16 +438,16 @@ export function recordHTML(b, d, v) {
 }
 
 /**
- * @typedef {'record' | 'reference' | 'withheld' | 'unshown'} ItemKind — the kind of a block that holds no text (THE ITEM
- * RULE, `itemOf`): a record the record rule renders, a link position's reference, a withheld run, or an item this client
+ * @typedef {'record' | 'reference' | 'withheld' | 'unshown'} ItemKind — the kind of a block that holds no text (the item
+ * rule, `itemOf`): a record the record rule renders, a link position's reference, a withheld run, or an item this client
  * cannot show
  */
 
-/** each item kind's words in the strings table: the one entry the ARIA mirror announces at the item and a copy's stand-in names it by (issue #161) */
+/** each item kind's words in the strings table: the one entry the ARIA mirror announces at the item and a copy's stand-in names it by (FP-24) */
 const ITEM_WORDS = /** @type {const} */ ({ record: 'L.item.record', reference: 'L.item.reference', withheld: 'L.item.withheld', unshown: 'L.item.unshown' });
 
 /**
- * THE ITEM RULE (issue #161's design decision; FP-24): the kind of a block
+ * The item rule (FP-24): the kind of a block
  * that holds no text — a record, an atom whose value the record rule renders
  * as one (`recordOf`); a reference, a link position's item; a withheld run;
  * else an item this client cannot show, hex or an atom of any other value —
@@ -494,13 +474,11 @@ export const itemLength = (/** @type {number} */ n) => plural(n, 'L.item.positio
 
 /**
  * A record's own plain contents, as a copy's stand-in carries them after its
- * kind (issue #161's design decision: "A record type's renderer may add the
- * record's own plain contents. The key record adds its key labels and their
- * fingerprints"): each key of a genesis record `skep-enroll`, in the record's
+ * kind (FP-24): each key of a genesis record `skep-enroll`, in the record's
  * own order — its label where it has one, then its fingerprint (AUTH-1.8,
  * util's `keyFingerprint`) where its alg and value derive one; nothing for any
- * other record, and never what the plane renders for whoever is looking ("your
- * home document…"), which is not on the board.
+ * other record, and never what the plane renders for whoever is looking,
+ * which is not on the board.
  * @param {Block} b
  * @returns {string[]}
  */
@@ -529,8 +507,8 @@ export function recordContents(b) {
  * universally granted origin, and the board answers a guest no universal
  * grant (wire.md §Grants); the revoked arm's record reaches the page only in
  * a raw link read, which no face may be made from (PUB-5.21) — the two wait
- * on a read the board does not serve (skep #577); the no-grant arm is a
- * build's without a grant primitive, which this board has.
+ * on a read the board does not serve; the no-grant arm is a build's without
+ * a grant primitive, which this board has.
  * @param {Reader} reader who reads (M-REC's `reader`)
  * @param {string} owner the owner account of the document withheld — a run's origin's
  * @returns {{id: string, text: string}} the arm's string id and its words
@@ -556,7 +534,7 @@ export function entitlementArm(reader, owner) {
  */
 
 /**
- * @typedef {Object} Unread — C-67's place where a read the clause is decided from failed (issue #186's design decision: "a face whose read failed says 'edition claims not read'. A blank there would read as 'no claim'"), so nothing is followed
+ * @typedef {Object} Unread — C-67's place where a read the clause is decided from failed (FP-33), so nothing is followed: a blank there would read as no claim
  * @property {'L.clause.unread'} id its string
  * @property {string} text its words
  */
@@ -606,33 +584,32 @@ function admitted(c, owner) {
 }
 
 /**
- * C-67's clause beneath a withheld run of `origin` (PUB-5.124), its answers
- * decided over the origin's WHOLE admitted-claim set, never per claim
- * (RES-164): the POINTER where any admitted claim passes the resolution test
- * — its FROM holds a span, and none of its spans lies in the origin (the
- * span's document, `homeOf`: the board's `document_of` arithmetic), so its
- * edition holds bytes the reader can reach — following the passing claim
- * PUB-3.107's origin-keyed order picks (RES-152): a passing claim whose home
- * the origin's owner owns first, the lowest-addressed among several (PUB-4.7's
- * pattern), else the lowest-addressed passing claim, a delegate's edition
- * being bytes this reader can reach as they stand; the QUOTING sibling where
- * every admitted claim quotes — a FROM holding a span of the origin, or none —
- * naming the lowest-addressed claimant; and the EMPTY place, null, where none
- * is admitted (RES-85), the arm's own copy then standing alone. The board
- * refusing the lookup as a read withheld from the reader leaves the empty
- * place too (issue #186's design decision: "If the board refuses the read
- * for documents withheld from the reader, no face carries the clause"); the
- * lookup failing any other way, or a listed claim's admission waiting on a
- * read that failed (`ClaimSeen.failed`) where no admitted claim known passes
- * and none waits on a read still to answer, leaves THE UNREAD PLACE, "edition
- * claims not read" ("A blank there would read as 'no claim'"). Undecided —
- * the lookup not answered, or a listed claim waiting on a read not yet made —
- * the clause is the empty place, unless an admitted claim already known
- * passes, the pointer then following the pick among the claims known (the
- * article is made again as the rest are read): no reader is pointed at an
- * edition, told nothing published carries the bytes, or told the claims were
- * not read, on reads the page has not made. Addresses are ordered as tumblers
- * (`cmpAddr`), never as strings.
+ * C-67's clause beneath a withheld run of `origin` (PUB-5.124; FP-33), its
+ * answers decided over the origin's whole admitted-claim set, never per
+ * claim (RES-164): the pointer where any admitted claim passes the
+ * resolution test — its FROM holds a span, and none of its spans lies in the
+ * origin (the span's document, `homeOf`: the board's `document_of`
+ * arithmetic), so its edition holds bytes the reader can reach — following
+ * the passing claim PUB-3.107's origin-keyed order picks (RES-152): a
+ * passing claim whose home the origin's owner owns first, the
+ * lowest-addressed among several (PUB-4.7), else the lowest-addressed
+ * passing claim, a delegate's edition being bytes this reader can reach as
+ * they stand; the quoting sibling where every admitted claim quotes — a FROM
+ * holding a span of the origin, or none — naming the lowest-addressed
+ * claimant; and the empty place, null, where none is admitted (RES-85), the
+ * arm's own copy then standing alone. The board refusing the lookup as a
+ * read withheld from the reader leaves the empty place too; the lookup
+ * failing any other way, or a listed claim's admission waiting on a read
+ * that failed (`ClaimSeen.failed`) where no admitted claim known passes and
+ * none waits on a read still to answer, leaves the unread place (`unread`),
+ * for a blank there would read as no claim. Undecided — the lookup not
+ * answered, or a listed claim waiting on a read not yet made — the clause is
+ * the empty place, unless an admitted claim already known passes, the
+ * pointer then following the pick among the claims known (the article is
+ * made again as the rest are read): no reader is pointed at an edition, told
+ * nothing published carries the bytes, or told the claims were not read, on
+ * reads the page has not made. Addresses are ordered as tumblers (`cmpAddr`),
+ * never as strings.
  * @param {string} origin the withheld run's origin document
  * @param {string} owner the origin's owner (T-LAYER's `originOwner`)
  * @param {ClaimsSeen} claims what the page holds of the lookup on the origin
@@ -680,7 +657,7 @@ const unread = () => /** @type {Unread} */ ({ id: 'L.clause.unread', text: t('L.
  * B1-S7's ⟨owner⟩ is always derivable (A-289); the head naming that owner,
  * the entitlement arm (`entitlementArm`) the one for it, then C-67's clause
  * as the origin's edition claims decide it (`clauseOf`), or nothing in its
- * place (R56: the face is ARM × CLAUSE). The plane's and a pane's placeholder
+ * place (R56). The plane's and a pane's placeholder
  * (`withheldBlockHTML`), the ARIA mirror's item at the run (N-WALK) and the
  * run's face whole (O-FACES's `withheldRun`, D5 K-7) are all made from it:
  * R94's one record, never a second rendering that can drift.
@@ -705,20 +682,17 @@ export function placeholderOf(b, reader, originOwner, clauseOf) {
  */
 
 /**
- * What a withheld run's gap holds at a measure (foundations §2.1's withheld
- * run: "a gap of its true width carrying ⟨owner⟩ where the run holds it and
- * else a mark keyed to its origin", "a run wide enough to hold its face
- * carrying it in place, so the gap keeps encoding the width and no face
- * reflows the text"; FP-26): the run's face whole — its head at the body's
- * size, the arm and the clause beneath at the face's — where the gap's full
- * lines (P-LAY's `gapOf`) hold it as P-LAY wraps it; else its head where they
- * hold that; else its origin's owner, where a line of the gap holds the
- * address; else the origin's mark — each measured with the symbol the ends
- * drawn at the run merge into standing first in its first line (`runSymbol`;
- * issue #202's design decision), so a symbol there steps the notice to a
- * smaller form and is never dropped (FP-26). Whatever it holds, the gap
- * stands on the run's bars, and where its face is not in it the face stands
- * compact in the column's edge (`withheldBlockHTML`).
+ * What a withheld run's gap holds at a measure (foundations §2.1; FP-26), so
+ * the gap keeps encoding the width and no face reflows the text: the run's
+ * face whole — its head at the body's size, the arm and the clause beneath
+ * at the face's — where the gap's full lines (P-LAY's `gapOf`) hold it as
+ * P-LAY wraps it; else its head where they hold that; else its origin's
+ * owner, where a line of the gap holds the address; else the origin's mark —
+ * each measured with the symbol the ends drawn at the run merge into
+ * standing first in its first line (`runSymbol`; FP-30), so a symbol there
+ * steps the notice to a smaller form and is never dropped. Whatever it
+ * holds, the gap stands on the run's bars, and where its face is not in it
+ * the face stands compact in the column's edge (`withheldBlockHTML`).
  * @param {Placeholder} p
  * @param {number} width the run's positions
  * @param {number} cpl the measure
@@ -737,21 +711,20 @@ export function gapHolds(p, width, cpl, ends = 0) {
 }
 
 /**
- * The gap occupying a withheld run (`placeholderOf`; F2.1-i: "its bars take
- * its true width"): as tall as its bars, its ground drawn over the run's own
- * lines — the last its remainder (`--wh-last`) — holding what `gapHolds`
- * says it holds: its face whole, its head, arm and, where one renders, clause
- * (`clauseHTML`); else its head, its origin's owner or the origin's mark,
- * the face compact in the column's edge level with the run's first line —
- * "⟨owner⟩ with a mark that opens it whole" (foundations §2.1), its act the
- * run's face whole on the plane (APP-INPUT; O-FACES's `withheldRun`), a line
- * in a reading scene's pane, where nothing is acted on (SC). The ends drawn
- * at the run (`Part.ends`; issue #202's design decision) stand as the one
- * symbol they merge into, first in the gap's first line, before whatever it
- * holds (`runSymHTML`), and the others' links drawn there are counted in the
- * column's edge, below the face's compact mark where that stands there
- * (`countHTML`). The owner it names carried (`data-owner`) for C-39's face at
- * the run, which names the same.
+ * The gap occupying a withheld run (`placeholderOf`; F2.1-i): as tall as its
+ * bars, its ground drawn over the run's own lines — the last its remainder
+ * (`--wh-last`) — holding what `gapHolds` says it holds: its face whole, its
+ * head, arm and, where one renders, clause (`clauseHTML`); else its head, its
+ * origin's owner or the origin's mark, the face compact in the column's edge
+ * level with the run's first line — the owner with a mark that opens it
+ * whole (foundations §2.1), its act the run's face whole on the plane
+ * (APP-INPUT; O-FACES's `withheldRun`), a line in a reading scene's pane,
+ * where nothing is acted on (SC). The ends drawn at the run (`Part.ends`;
+ * FP-30) stand as the one symbol they merge into, first in the gap's first
+ * line, before whatever it holds (`runSymHTML`), and the others' links drawn
+ * there are counted in the column's edge, below the face's compact mark where
+ * that stands there (`countHTML`). The owner it names is carried
+ * (`data-owner`) for C-39's face at the run, which names the same.
  * @param {Block} b the withheld run
  * @param {Doc} d
  * @param {ArticleView} v
@@ -794,16 +767,14 @@ function clauseHTML(c, scene) {
  * with "version ⟨k⟩ of ⟨n⟩" and R20's teaching, keyed by venue — at a pinned
  * version its own number of the count its box's document holds (`members`),
  * so the corner names the version its box shows and offers the versions list
- * there too (issue #154's design decision: "The address bar and the box's
- * corner both name it"); in a reading scene's pane, where the version its
- * pane reads lacks the passage its act carried, a line saying so (`lacks`),
- * and its act reading another version in the pane's place (`read`; issue
- * #160); a draft's chip (C-28); the whole-document link count (rule (i)).
- * COMPACT (FP-26: "a usual state becomes a glyph … and a number or an
- * exception keeps its words"; issue #151's design decision): an edition's
- * state its version marker — unlit at the bare address, lit at a pinned
- * version (foundations §3.1's ○) — and a draft's chip a glyph, each named by
- * its whole words, which assistive technology reads and its act opens whole;
+ * there too (FP-22); in a reading scene's pane, where the version its pane
+ * reads lacks the passage its act carried, a line saying so (`lacks`), and
+ * its act reading another version in the pane's place (`read`; FP-23); a
+ * draft's chip (C-28); the whole-document link count (rule (i)). Compact
+ * (FP-26): an edition's state its version marker — unlit at the bare
+ * address, lit at a pinned version (foundations §3.1) — and a draft's chip a
+ * glyph, each named by its whole words, which assistive technology reads and
+ * its act opens whole;
  * "version ⟨k⟩ of ⟨n⟩", the whole-document count and a withheld document's
  * state keep their words. The holder makes the element they stand in
  * (`data-corner` naming the document), which is the corner's one stop: no
@@ -983,8 +954,7 @@ function headOf(d, v, owner) {
  * touch — the paragraph the last of them a paragraph holds ends in — once
  * however many it crosses; an end LK draws at a withheld run (`Shown.run`)
  * stands in that run's gap at every stage, the gap having no text to mark
- * (issue #202's design decision: "Links shown by default, and the reader's
- * own links, appear at the run at once").
+ * (FP-30).
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -1045,7 +1015,7 @@ const control = (scene) => (scene ? '' : ' role="button" tabindex="-1"');
  * text holds of its passage where that is not all of it in one piece — "its
  * passage is not in ⟨D⟩'s current text" where it floats, BM-HELD's line where
  * it holds part of it, all of it in pieces, or the board would not tell —
- * said before anyone follows it (foundations §2.3; issue #153); carrying its
+ * said before anyone follows it (foundations §2.3; FP-21); carrying its
  * link and its end's key (LK's `endKey`): the end whose card a click on it
  * opens (APP-INPUT).
  * @param {Shown} s
@@ -1059,9 +1029,8 @@ function symHTML(s, v) {
 const titleOf = (/** @type {Shown} */ s, /** @type {ArticleView} */ v) => { const says = v.says(s); return (s.link.type || '') + (says ? ' · ' + says : ''); };
 
 /**
- * The one symbol the ends drawn at a withheld run merge into (issue #202's
- * design decision: "Several ends in one run merge into one symbol with a
- * count"; P44: "co-located marks of one class merge"), first in its gap's
+ * The one symbol the ends drawn at a withheld run merge into (FP-30; P44),
+ * first in its gap's
  * first line, beside the notice: in the one mark their links merge into (the
  * view's `mergedMark`) — dashed where every one is another's, lighter where
  * every one was followed — its ⟡ followed by how many it stands for where
@@ -1087,7 +1056,7 @@ function runSymHTML(ends, v) {
  * opens (APP-INPUT); its run's ground and, where it opens its run, the run's
  * boundary, hairline and C-33's mark — the hairline naming the run's origin
  * and carrying the run's own positions in this document, the passage its
- * gesture to the source carries (foundations §2.1; §2.3's carry rule) — then
+ * gesture to the source carries (foundations §2.1, §2.3) — then
  * the symbols standing at it — the text's own characters untouched.
  * @param {Seg} s
  * @param {ArticleView} v the view: in its scene-mode variant the symbols no controls
@@ -1194,7 +1163,7 @@ const boxWidth = (/** @type {Piece} */ p) => (p.lead + p.trail) / CHAR_W + [...p
 /**
  * A byline's pieces (`bylineHTML`): its owner and the separator, then its slots' box, one inline-block as wide as every
  * slot and separator in it — its characters no-break spaces, for it sets its width alone — so its line is the same whatever the
- * slots show, read or not (FP-34: "The value fills the box and nothing beside it moves").
+ * slots show, read or not (FP-34).
  * @param {Byline} by
  * @param {number} k the head's size, in the body's em
  * @returns {Piece[]}
@@ -1239,7 +1208,7 @@ function paraPieces(p, k) {
  * size with its margins — a heading's room above it and the smaller room
  * below, every other block's gap after it — the empty document's line, the
  * scene-offers — from the same walk the HTML is made from; each row's keep,
- * where a column may break at it (issue #15's keep rules): a paragraph
+ * where a column may break at it (FP-12): a paragraph
  * between its lines, a heading kept with the first two lines after it, the
  * head, a record, a withheld run, a reference, an item not rendered and the
  * chrome whole.
@@ -1301,7 +1270,7 @@ function bytesHome(image, pos) {
   return r ? documentOf(r.prefix) : null;
 }
 
-/** a gap's stand-in, in square brackets (issue #161): its kind, then a withheld run's owner and length, an unshown item's length, a record's own plain contents */
+/** a gap's stand-in, in square brackets (FP-24): its kind, then a withheld run's owner and length, an unshown item's length, a record's own plain contents */
 function standIn(/** @type {Gap} */ g) {
   const kind = itemWords(g.kind);
   if (g.kind === 'withheld') return t('L.copy.item.owned', { kind, owner: g.owner, length: itemLength(g.width) });
@@ -1310,7 +1279,7 @@ function standIn(/** @type {Gap} */ g) {
 }
 
 /**
- * THE COPY'S PLAIN TEXT (issue #161's design decision; FP-24): a span's items
+ * The copy's plain text (FP-24): a span's items
  * in the order its text holds them, read from what an article was made from —
  * each run of text its own characters over the span (M-REC's `textOf`), each
  * other item a stand-in in square brackets in its place naming its kind

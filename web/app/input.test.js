@@ -1,69 +1,21 @@
-// APP-INPUT's test, on a page of stand-ins: the act at a withheld run's
-// gap conjures C-39's face naming the owner the gap names — its run's
-// origin's, by T-LAYER's one owner rule — with the arm beneath it the rule's
-// for that owner and this reader (B1-S5, B1-S7), and the act at the run's
-// face compact in its column's edge opens the face whole (issue #151: a
-// mutant that leaves the mark's act to C-39's face turns red), for a guest
-// with no key and a guest whose device holds a key for this board. Where the board answers the
-// origin's account's owner as the seat above it (`effective_owner`), a mutant
-// that reads the owner off the origin's record by a rule of its own names the
-// account and turns red; one that decides the face's arm on the session alone
-// tells the keyed guest no key is here and turns red. The face stands at the
-// placeholder, the run's own positions in the article beside it, where it
-// stands once the text layer rebuilds or takes the placeholder down (a mutant
-// that anchors it at the placeholder alone turns red). A click on a run's
-// hairline, against the FAKE PORT, LEAPs to its source carrying the run,
-// which the source's text holds elsewhere: the landing is marked at the run's
-// counterpart there (a mutant that LEAPs without the run, or carries the
-// block it stands in, turns red). A click on a link's symbol, and one on a
-// stretch it marks, against the FAKE PORT, opens the anatomy card of the end
-// clicked: of a citation from a document's own bytes to a passage of another
-// that the document transcludes, both its ends in one article, each mark's
-// card stands at its own end's bytes and reads that end near and the other
-// far (a mutant that finds the end by its link alone, the link's first end
-// in the article answering every mark, turns red; so does an article whose
-// marks carry no end's key). A click on C-67's pointer beneath a withheld
-// run's arm, against the FAKE PORT, LEAPs to the edition its claim names —
-// the claim's home, landed in whole, its trail entry the one Back returns to
-// the run from — carrying no passage, lighting no link and showing no face (a
-// mutant that leaves the pointer to the placeholder's C-39, or carries the
-// run, turns red); a click on the rest of that placeholder still conjures
-// C-39's face.
-// A press at the readable em on a document whose text does not stand yet —
-// no frame run since the camera moved there — is held for the text, never
-// dropped and never a move to the place (issue #122's design decision): it
-// selects nothing while no text stands under it, and after the frame that
-// sets the text it is the text's click, selecting the block under it whole,
-// with no trail entry and no flight (a page that drops the press, or makes it
-// the place's, turns red).
-// An empty click made while a card reads ends its opening alone (O-HOST's):
-// its answer shows nothing and the card standing under it stands (a mutant
-// that dismisses the standing card with it, or leaves the opening to the
-// overlay's dismissal, turns red); the next empty click dismisses that card.
-// A press on a withheld run's placeholder starts no selection — the platform
-// selects an item whole wherever a selection touches it (FP-24; issue #161),
-// and the placeholder's click is its act's alone — while a press on the text
-// beside it starts one (a page that refuses none, or every one, turns red).
-// THE CAMERA FOLLOWS THE READER WHILE A JUMP IS IN THE AIR (FP-25; issue
-// #137's design decision): a wheel series under way as a LEAP's camera left
-// is dropped whole — the flight runs on to its destination and nothing moves
-// (a page that pans on it turns red) — and a wheel event SERIES_MS or more
-// after the series, a pinch, and the camera key's drag each take the camera
-// over: the jump lands where the camera is, its flight ended (a page that
-// takes nothing over, or drops every wheel event, turns red).
-// A press on an outlined run of an arrival in several runs, below its
-// document's reading scale, is a step to it (issue #158's design decision:
-// "Clicking an outlined run below reading scale does the same"): the landing
-// standing there, the camera bound for its reading view, no trail entry, the
-// arrival standing (a page that teleports to the document there turns red).
-// A click on the one symbol a withheld run's ends merge into opens its one
-// end's card or lists its several there, never the run's C-39 face (issue
-// #202: a page that lets the click fall to the run turns red). A click on a
-// byline's cut label opens it whole and a click again closes it, selecting
-// nothing (FP-34: a page that lets the click fall to the block turns red).
-// Where no board is held a click at far scale is an empty one, naming no
-// account the grid finds under it (issue #215; FP-35: a page that teleports to
-// that account turns red).
+// APP-INPUT's test, on a page of stand-ins and against the fake port: the
+// act at a withheld run's gap conjures C-39's face naming the owner the gap
+// names, with the arm the rule gives that owner and this reader, anchored at
+// the run's own positions, and the act at the run's compact face opens it
+// whole; a hairline's click LEAPs to its source carrying the run; a symbol's
+// click and a marked stretch's open the card of the end clicked; C-67's
+// pointer LEAPs to the claim's home whole, carrying no passage and lighting
+// no link, while the rest of the placeholder still conjures C-39's face; a
+// press at the readable em on text not yet standing is held for it and
+// becomes the text's click; an empty click ends a card's opening alone, then
+// dismisses the card; a press on a placeholder starts no selection; a wheel
+// series under way as a jump's camera left is dropped whole, and a later
+// wheel, a pinch or the camera key's drag takes the camera over; a press on
+// an outlined run below reading scale is a step to it; a withheld run's one
+// symbol opens its ends' card or list, never C-39's face; a byline's cut
+// label opens and closes on its clicks, selecting nothing; and where no
+// board is held a click at far scale is an empty one (FP-12, FP-21, FP-24,
+// FP-25, FP-30, FP-34, FP-35).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';

@@ -1,7 +1,5 @@
 // T-SPAN — the selection's arithmetic over a block (the structure record
-// §3.2 "T-LAYER"'s span half; foundations §2.4: a drag at reading scale
-// SELECTS the text it crosses, R11's one continuous gesture; §3.1: the
-// selection IS the span). Layer 2. PURE: no DOM, no state.
+// §3.2; foundations §2.4, §3.1; R11). Layer 2. Pure: no DOM, no state.
 // A span is a byte range of one document, `{addr, pos, width}` in
 // V-positions — one byte each (wire.md §Value encodings) — never a character
 // range: the platform's selection speaks in characters of a block's text,
@@ -9,11 +7,10 @@
 // back through the block's own byte-offset table, so a multi-byte character
 // never shifts a position. The chrome inside a block's element — the
 // sameness hairline's label, C-33's mark, a link's symbol, the signs in its
-// column's edge — is never a byte of the document; the one selector here names it
-// for the layer's walk and the copy. K-8's extension (D5 §1.1: the first
-// press selects the focused span, each further one extends by a span) is
-// arithmetic over the document's blocks.
-// Rules: FP-1, FP-2, FP-7 (the selection is view state), FP-8.
+// column's edge — is never a byte of the document; the one selector here
+// names it (`CHROME`) for T-LAYER's walk of a block's text nodes and the
+// copy. K-8's extension (D5 §1.1) is arithmetic over the document's blocks.
+// Rules: FP-1, FP-2, FP-7, FP-8.
 
 import { byteOffsets } from '../util.js';
 

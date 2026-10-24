@@ -1,279 +1,255 @@
-// T-LAYER — THE ONE RECONCILER (the structure record §3.2 "T-LAYER"; FP-12:
-// one reconciler, two targets — the plane's text layer and the reading
-// scene's panes; the scene BORROWS this mount). Layer 2. ENGINE-BOUND. State:
-// VIEW — the mounted set with each record's layout scale, revision, what it
-// was made from, the fold it was set in, the parts of it standing, its marks
-// and whether it takes the pointer, the corners beside it and the labels held
-// over it, each document's fold and its lines as the platform set them, the
-// passage being read while its document is set again, what each reading scene's pane's article was
-// made from, whether a press stands on the layer, the platform's selection as
-// it stood over an article taken down, and the page's selection while it is
-// owed its range — THE ONE OWNER (FP-10).
-// ONE ARTICLE A BOX (issue #154's design decision: "The box shows one
-// version"): a document's versions share its box, and the one standing there
-// is the version the box shows (N-GO's `shownIn`, the reader `shown`) — every
-// other version's article taken down, its text held or not, and none mounted
-// in a box another version's article still stands in under a press. WHERE A
-// BOX TAKES ANOTHER VERSION — a version move, a newer version's arrival —
-// the line being read keeps its place and its size on screen (`holdAcross`):
-// the version moved to, mounted fresh, re-anchors the camera on the
-// position its mover names, or, at an arrival, on the passage at the
-// visible view's centre, by position (P-LAY's `holdOf`, P-CAM's `reanchor`);
-// a cursor move to another version lands at its own entry's view and holds
-// nothing.
-// NO DOCUMENT AT READING SIZE IS EVER DRAWN AS BARS (issue #122's design
-// decision): bars mean only "too small to read". Every document in view whose
-// text has arrived stands as text in the frame its em reaches P-LOD's readable
-// threshold (8), whatever else that frame mounts. Below it a document mounts
-// from S1's mount threshold (em 6.5, so bars become text while they are still
-// too small to read and no character positions disagree — S1 Q7) and keeps
-// its claim down to 5.5 (S1's hysteresis), and THE LIMIT (P-LOD's
-// MOUNTS_PER_FRAME) is spent on those: at most that many documents newly
-// mounted in a frame, the frame's readable mounts counted first, then the
-// documents holding the selection or the walk's focus and the document just
-// navigated to — the walk's focused document first whatever its size, its
-// corner the plane's next Tab stop (the focus record's D6; D5 K-57) — then the
-// largest em first, equal ems in the model's order (`chosen`): never by
-// length, which would bar short notes first. The limit holds a mount back for
-// the frames after; it never takes one down, and nothing is taken down to make
-// room. A DOCUMENT STANDS BY LINE, never whole (`fill`): the lines of its fold
-// whose boxes meet the view, padded, column by column, stand as PARTS — each
-// a run of one column's lines cut from the article at the points its lines
-// open at as the platform set them (`cutOf`) — so what stands is bounded by
-// the screen however many documents are in view. A line entering the view
-// stands in a part of its own, and a part none of whose lines is in view
-// goes; no standing part is rebuilt to take a line. The head, a record, a
-// withheld face, a reference, an item not rendered and a scene-offer stand
-// whole, cut only where the fold's columns cut them; a paragraph or a heading
-// is cut at any line. THE LINES THAT HOLD THE SELECTION OR THE FOCUS STAY for
-// as long as they hold them, out of view and below 5.5 as well
-// (`heldParts`): those the platform's selection meets — a press's, even
-// collapsed, the drag being made — the one the platform's focus stands in,
-// and those of the page's span, its first and last lines standing wherever
-// the view is so its range can be placed (`placeAgain`); an article left with
-// such lines alone stands outside the mount band (`isMounted` false). What
-// assistive technology receives is the document itself, never what stands:
-// the ARIA mirror's items are made from the model (S1 Q7). An article goes
-// stale where its run, its revision or its fold changed, and is rebuilt in its
-// place; the walk's focused document is the one residue document of its cell
-// that mounts. WHILE A PRESS STANDS on the layer (`press`) no standing article
-// is rebuilt or loses the pointer and no range is placed over the drag: the
-// platform's drag-selection is anchored in the article's own nodes, which a
-// rebuild would take away. Documents and lines still mount as the view asks
-// — a document reaching reading size is text — and the first frame after the
-// press does what was held. Laid out ONCE at P-LAY's LAY_FS (16 px)
-// and its unitless LINE_H, so each element's line box is that element's own
-// size's (P-LAY's `lineBox`), each column exactly THE MEASURE IN FORCE's
-// characters of its own face (P-CAM's `measure`, P-LAY's fit of the view:
-// MEASURE_CPL wherever the view holds it — issue #151's design decisions;
-// `ch`, the style's `--measure`, which this module sets on its layer:
-// `setMeasure`), and placed by transform from the same camera arithmetic
-// (registration 0 px — S1). A resize that moves the measure folds every
-// document again at it, and the article being read is set again in its place,
-// the passage held (see below); a zoom never moves it.
-// THE FOLD (issue #15's design decision; `foldOf`): every document is set at
-// one line length and one line height in P-LAY's equal columns inside its
-// room, BROKEN AT THE LINES AS RENDERED, after the reader's font and spacing
-// settings apply: an article is laid out once in one column (`measureLines`),
-// each row's element read for its top and its height — the lines P-LAY
-// predicts standing where the element stands, and set as the element sets
-// them where it sets them otherwise, kept by the article without its marks
-// and its counts, which set no line (`layoutKey`): a block's others' count
-// stands in its column's edge, so a count's arrival moves no line (A-254) —
-// and those lines broken into columns by
-// P-LAY's keep rules; a mounted article's parts are cut from that one column,
-// kept out of the page (its template), each placed at its first line's top in
-// its column, a block a cut falls in split at the point its line opens with,
-// chrome included, each part keeping its block's keys and the tail naming the
-// character it starts at (`data-char`), so every reader of a block here — the
-// selection's mapping, the marks, the rects — reads it across the parts of it
-// that stand. Its size is the step P-LAY's fold takes for the plan
-// carrying the most link chrome any reveal can set in it (LK's `utmost`) and
-// for the lines as set now, the larger: no reveal moves its type size and
-// nothing runs past its room. Every reader of a document's size above the
-// model reads it here; the model's pump, which may not, reads P-LAY's
-// estimate, never the smaller. A document is AT READING SCALE where its own
-// em — that size at the scale — stands at P-LOD's readable threshold (8) or
-// above (`atReadingScale`; issue #140's design decision): the one test the
-// press rule, the one line's position and the walk's span grain read, as the
-// mount, the corner, the pointer and the paging here do — never the camera's
-// band, which reads a depth-0 document's standard size and so calls a
-// document set smaller than it readable where a click teleports past it.
-// Every size read here raises P-CAM's zoom-in
-// bound to read it (`reach`, E18 (a)), so the camera never stops short of the
-// reading scale of the text this module sets, however small its document is
-// set. The canvas's bars below the mount are the same fold's lines, measured
-// where the document's text has been set in view (a frame's budget, nearest
-// the view's centre first), so mid scale greeks the columns the mount sets
-// and no word moves at the hand-off; the loop runs `frame` before P-RENDER
-// draws, so the canvas draws or yields each line by the lines standing this
-// frame (`standing`), and outlines an arrival's runs on the fold's own lines
-// where no part of them stands, any document's, mounted or not (`foldBoxes`;
-// issue #158). WHEN A DOCUMENT IS SET AGAIN WHILE IT IS READ — its article rebuilt in
-// another fold, or taken down for a feed row and mounted again — the passage
-// at the visible view's centre keeps its place and its size on screen
-// (`hold`; P-LAY's `holdOf`, P-CAM's `reanchor`): the passage's own bytes,
-// carried by their identity through the image the article was made from into
-// the text set again, so an edit above the view moves no word the reader
-// reads (FP-23; issue #160), its position where that text's image places none
-// of them, and by position for now where the text comes before its image, the
-// bytes kept for the re-set the image's arrival makes (`still`). A VIEW THE
-// READER LEAVES AND COMES BACK TO by the trail is placed again the same way
-// (issue #221; foundations §2.2: "so Back lands on the passage left"): what a
-// view reads — the passage at its visible centre in the document at its own
-// reading scale there, by its position, its byte's identity and its place in
-// the fold (`readAt`) — N-TRAIL keeps beside the view, and a return lands at
-// the view that keeps that passage at its place and its size on screen in the
-// fold its document stands in then, its lines set as the platform sets them
-// first, the view itself where the passage stands where it stood (`keptAt`).
+// T-LAYER — the one reconciler (the structure record §3.2; FP-12: one
+// reconciler, two targets, the plane's text layer and the reading scene's
+// panes, which borrow this mount). Layer 2. Engine-bound. State (FP-10): the
+// mounted set (`mounted`) — each record's layout scale, revision, what it was
+// made from, the fold it was set in, the parts of it standing, its marks and
+// whether it takes the pointer — the corners beside the articles and the
+// labels held over them, which corners and cut labels a reader's act opened
+// whole, each document's fold and its lines as the platform set them, the
+// passage being read while its document is set again (`hold`), what each
+// reading scene's pane's article was made from (`panes`), whether a press
+// stands on the layer, the platform's selection as it stood over an article
+// taken down (`kept`), the page's selection while it is owed its range
+// (`owed`), the span the platform's selection was last placed over, the
+// measure the layer's style holds, the view revision, and the mount log and
+// frame counts the gate reads.
+// One article a box (FP-22): a document's versions share its box, and the
+// one standing there is the version the box shows (the reader `shown`,
+// N-GO's `shownIn`) — every other version's article taken down, and none
+// mounted in a box another version's article still stands in under a press.
+// Where a box takes another version — a version move, a newer version's
+// arrival — the line being read keeps its place and its size on screen
+// (`holdAcross`): the version taken, mounted fresh, re-anchors the camera on
+// the position its mover names, or, at an arrival, on the passage at the
+// visible view's centre — its bytes where the version's image places them,
+// else its position (P-LAY's `holdOf`, P-CAM's `reanchor`).
+// No document at reading size is ever drawn as bars (FP-12): every document
+// in view whose text has arrived stands as text in the frame its em reaches
+// P-LOD's readable threshold (LOD_TXT_LO, an em of 8 px), whatever else that
+// frame mounts. Below it a document mounts from the mount threshold
+// (MOUNT_EM, 6.5, so bars become text while they are still too small to read
+// and no character positions disagree — S1 Q7) and keeps its claim down to
+// UNMOUNT_EM, 5.5, and the limit (MOUNTS_PER_FRAME) is spent on those: at
+// most that many documents newly mounted in a frame, the readable mounts
+// counted first, then those holding the page's selection or the walk's
+// focus and the document just navigated to, whatever their size, then the
+// largest em first, equal ems in the model's order (`chosen`, `limitOrder`)
+// — never by length, which would bar short notes first. The limit holds a
+// mount back for the frames after; it never takes one down, and nothing is
+// taken down to make room. A document stands by line, never whole (`fill`):
+// the lines of its fold whose boxes meet the view, padded 40 px, column by
+// column, stand as parts — each a run of one column's lines cut from the
+// article at the points its lines open at as the platform set them
+// (`cutOf`) — so what stands is bounded by the screen however many documents
+// are in view. A line entering the view stands in a part of its own, and a
+// part none of whose lines is in view goes; no standing part is rebuilt to
+// take a line. The head, a record, a withheld face, a reference, an item not
+// rendered and a scene-offer stand whole, cut only where the fold's columns
+// cut them; a paragraph or a heading is cut at any line. The lines that hold
+// the selection or the focus stay for as long as they hold them, out of view
+// and below 5.5 as well (`heldParts`): those the platform's selection meets
+// — a press's, even collapsed, the drag being made — the one the platform's
+// focus stands in, and those of the page's span, its first and last lines
+// standing wherever the view is so its range can be placed (`placeAgain`);
+// an article left with such lines alone stands outside the mount band
+// (`isMounted` false). What assistive technology receives is the document
+// itself, never what stands: the articles are hidden from it, the ARIA
+// mirror's items being made from the model (S1 Q7). An article goes stale
+// where its run, its revision, the view revision or its fold changed
+// (`wentStale`), and is rebuilt in its place; the walk's focused document is
+// the one residue document of its cell that mounts. While a press stands on
+// the layer (`press`) no standing article is rebuilt or loses the pointer and
+// no range is placed over the drag: the platform's drag-selection is
+// anchored in the article's own nodes, which a rebuild would take away;
+// documents and lines still mount as the view asks, and the first frame
+// after the press does what was held.
+// An article is laid out once at P-LAY's LAY_FS (16 px) and its unitless
+// LINE_H, so each element's line box is its own size's, each column exactly
+// the measure in force's characters of its own face (P-CAM's `measure`,
+// MEASURE_CPL wherever the view holds it; the style's `--measure`, which
+// this module sets on its layer: `setMeasure`), and placed by transform from
+// the same camera arithmetic (S1). A resize that moves the measure folds
+// every document again at it, and the article being read is set again in
+// its place, the passage held; a zoom never moves it. The fold (`foldOf`;
+// FP-12, FP-8): every document is set at one line length and one line height
+// in P-LAY's equal columns inside its room, broken at the lines as rendered,
+// after the reader's font and spacing settings apply: an article is laid out
+// once in one column (`measureLines`), each row's element read for its top
+// and its height, kept by the article without its marks, its counts and its
+// byline's facts, which set no line (`layoutKey`; A-254; FP-34), and those
+// lines broken into columns by P-LAY's keep rules; a mounted article's parts
+// are cut from that one column, kept out of the page (its template), each
+// placed at its first line's top in its column, a block a cut falls in split
+// at the point its line opens with, chrome included, each part keeping its
+// block's keys and the tail naming the character it starts at
+// (`data-char`), so every reader of a block here — the selection's mapping,
+// the marks, the rects — reads it across the parts of it that stand. Its
+// size is the step P-LAY's fold takes for the plan carrying the most link
+// chrome any reveal can set in it (LK's `utmost`) and for the lines as set,
+// the larger: no reveal moves its type size and nothing runs past its room.
+// Every reader of a document's size above the model reads it here. A
+// document is at reading scale where its own em — that size at the scale —
+// stands at the readable threshold or above (`atReadingScale`): the one test
+// the mount, the corner, the pointer and the paging here read, and APP-INPUT,
+// L-LINE and N-WALK with them — never the camera's band, which reads a
+// depth-0 document's standard size. Every size read here raises P-CAM's
+// zoom-in bound to read it (`reach`; E18 (a)), so the camera never stops
+// short of the reading scale of the text this module sets. The
+// canvas's bars below the mount are the same fold's lines, measured where
+// the document's text has been set in view (`measureInView`: a frame's
+// budget of MEASURE_BUDGET_MS, nearest the view's centre first, no document
+// below BARS_EM), so mid scale greeks the columns the mount sets and no word
+// moves at the hand-off; the loop runs `frame` before P-RENDER draws, so the
+// canvas draws or yields each line by the lines standing this frame
+// (`standing`), and outlines an arrival's runs on the fold's own lines where
+// no part of them stands (`foldBoxes`; FP-21). When a document is set again
+// while it is read — its article rebuilt in another fold, or taken down for
+// a feed row and mounted again — the passage at the visible view's centre
+// keeps its place and its size on screen (`hold`, `keepPlace`): the
+// passage's own bytes, carried by their identity through the image the
+// article was made from into the text set again, so an edit above the view
+// moves no word the reader reads (FP-8, FP-23), its position where that
+// image places none of them, and by position where the text comes before its
+// image, the bytes kept for the re-set the image's arrival makes (`still`).
+// A view the reader leaves and comes back to by the trail is placed again
+// the same way (foundations §2.2): what a view reads — the passage at its
+// visible centre in the document at its own reading scale there, by its
+// position, its byte's identity and its place in the fold (`readAt`) —
+// N-TRAIL keeps beside the view, and a return lands at the view that keeps
+// that passage at its place and its size on screen in the fold its document
+// stands in then, its lines set as the platform sets them first (`keptAt`).
 // The paging key continues at the next column's top at reading scale
-// (`pageTarget`). A document's REGION
-// is its outline's bounds — its label, badge and blocks' counts inside them —
-// widened leftward by the strip its corner stands in (`regionOf`; issue #141's
-// design decision): N-WALK's re-take takes the document whose region holds the
-// view's centre, and keeps the one it stands on while that region meets the
-// visible view (`inView`), the one line marking the view's window over it
-// (`windowIn`); N-GO's Back returns the focus to where the step it crossed
-// began only where that line stands in the visible view of the view Back
-// lands at (`lineInView`; issue #152's design decision). The marks and
-// symbols are placed from LK's `shown` and
-// `symbols`, a stretch several links mark in the one mark LK's `mergedMark`
-// gives; a withheld run's owner and C-67's clause beneath it from what the
-// model holds of its origin (`originOwner`, `clauseOf`), the article made
-// again as the origin's edition claims and the reads of them arrive, fail and
-// go (M-REC's revision);
-// the selection from O-SELECTION and the focus from N-WALK are
-// handed to T-ARTICLE as values at mount, and each frame marks a standing
-// article's blocks for them in place by T-ARTICLE's one rule (`blockMarks`):
-// a change of the selection or the focus rebuilds no article, so the
-// platform's selection stands as the person left it (foundations §2.1: "the
-// SELECTION is the platform's own, transient"; D5 §2); and its symbols
-// heavier, in place, where every link one stands for is lit at an arrival
-// (LK's `lit`, T-ARTICLE's `symbolLit`; FP-30), so an arrival sets no line
-// (`markLit`). THE BYLINE (FP-34; issue #208's design decision): each
-// article's byline is made from its owner's facts as the model holds them
-// (M-REC's `accountKey`, the view's `keyOf`), never this device's key, and
-// its lines are kept by the article with its slots read, their boxes empty
-// (`layoutKey`), so the facts' arrival — which makes every document its owner
-// owns again (M-REC's revision) — sets no line; a cut label opens whole on
-// its act, marked in place (`openLabel`, `markLabel`). A span wholly inside a withheld run stands at the run's own
-// boxes — its gap's, one for each part of it standing — never at an offset
-// inside the gap (`spanRects`; issue #202's design decision: "Arriving by a
-// link that ends here marks the whole run"). THE LIT BLOCK IS THE
-// FOCUS RING'S READING-SCALE FORM (the focus record's D3; D5 §4 rule 2): one
-// mark, under the ring's one rule — lit while the plane holds the focus and
-// a key moved it (N-FOCUS's `ringShown`), out after a pointer's landing as
-// every control's ring is — the canvas circling no document whose text
-// stands.
-// THE CORNER (foundations §3.1; ux-T2; D5 K-57): each mounted document at
-// reading scale (em 8, P-LOD's readable threshold, and above) carries its own
-// BESIDE its article, never inside it, as an element of the corner layer this
-// module keeps: on the document's one side, the left (the beams and the
-// blocks' counts take the right, the column's edge), at the interface's size,
-// BESIDE THE COLUMN NEAREST THE VIEW'S CENTRE (issue #151's design decision:
-// "The corner follows the column nearest the view's centre"; `besideOf`) —
-// beside a row's first column in the strip P-PROJ's `clearLeftOf` keeps free
-// of every other document's box, beside a later one in the gutter and the
-// edge of the column before it, below the signs that edge holds (foundations
-// §3.1: "an item at a y another already holds stacks below it"; `cornerTop`);
-// whole where its room holds it whole and the view's fit holds a column
-// beside it whole, else COMPACT, its usual states glyphs, its numbers and its
-// exceptions in their words (FP-26; T-ARTICLE's `cornerHTML`), a glyph's act
-// opening it whole where it stands (`openCorner`); where that room holds not
-// even the compact corner, or the signs leave it none, by its row's first
-// column, its own document's free room — held to the top of its column's
-// visible part below the one line — that column's top, else just below the
-// line — and never past its outline's bottom beside a row's first column, nor
-// past its row's foot beside another, placed by translate alone from the same
-// camera arithmetic: P-LABEL's one hold (`holdTop`), P-REG's HOLD gap below
-// the line, so it stands level with a label held there. A reading view frames
-// the column it reads with the corner and the edge beside it (`frameOf`; issue #151: "The landing frames
-// the column, not the middle of a line"). The element
-// outlives its article's remounts and its items are rewritten only where they
-// change, so a focus on it survives them; the focused document's corner is
-// the plane's next Tab stop, named by its own words, and every other is out
-// of the order and hidden from assistive technology; while the reading scene
-// stands over the plane the corner layer is inert (`cover`, through N-FOCUS,
-// the focus's owner — FP-20), the scene's panes carrying their own (D5 §4
-// rule 5); a corner that leaves while it holds the focus hands it to the
-// walk (D5 §4 rule 4). THE HELD LABEL (issue #169's design decision: "Held
-// below the line"): a document whose article stands in the mount band has no
-// label on the canvas, its head naming it; once its outline's first row rises
-// above the hold, and while the one line does not name it ("Named once", the
-// reader the app hands in), its label stands held below the line as an
-// element of the corner layer over its text — the canvas's words for its box,
-// read here (`docLabel`), so the two never part, on one line across its
+// (`pageTarget`). A document's region is its outline's bounds widened
+// leftward by the strip its corner stands in (`regionOf`); whether it meets
+// the visible view (`inView`), the view's window over it (`windowIn`) and
+// whether a position's line stands in a view (`lineInView`) are read here by
+// N-WALK, L-LINE and N-GO.
+// The marks and symbols are placed from LK's `shown` and `symbols`, a
+// stretch several links mark in the one mark LK's `mergedMark` gives; a
+// withheld run's owner and C-67's clause beneath it from what the model
+// holds of its origin (`originOwner`, `clauseOf`), the article made again
+// as the origin's edition claims and the reads of them arrive, fail and go
+// (M-REC's revision); the selection from O-SELECTION and the focus from
+// N-WALK are handed to T-ARTICLE as values at mount, and each frame marks a
+// standing article's blocks for them in place by T-ARTICLE's one rule
+// (`blockMarks`), so a change of the selection or the focus rebuilds no
+// article and the platform's selection stands as the person left it
+// (foundations §2.1; D5 §2); its symbols are marked heavier, in place, where
+// every link one stands for is lit at an arrival (LK's `lit`, T-ARTICLE's
+// `symbolLit`; FP-30), so an arrival sets no line (`markLit`). The byline
+// (FP-34): each article's byline is made from its owner's facts as the model
+// holds them (M-REC's `accountKey`, the view's `keyOf`), never this device's
+// key, and its lines are kept by the article with its slots read, their
+// boxes empty (`layoutKey`), so the facts' arrival — which makes every
+// document its owner owns again (M-REC's revision) — sets no line; a cut
+// label opens whole on its act, marked in place (`openLabel`, `markLabel`).
+// A span wholly inside a withheld run stands at the run's own boxes — its
+// gap's, one for each part of it standing — never at an offset inside the
+// gap (`spanRects`; FP-30, FP-21). The lit block is the focus ring's
+// reading-scale form (the focus record's D3; D5 §4 rule 2): one mark, under
+// the ring's one rule — lit while the plane holds the focus and a key moved
+// it (N-FOCUS's `ringShown`), out after a pointer's landing — the canvas
+// circling no document whose text stands.
+// The corner (foundations §3.1; ux-T2; D5 K-57; FP-26): each mounted
+// document at reading scale carries its own beside its article, never inside
+// it, as an element of the corner layer this module keeps: on the document's
+// left (the beams and the blocks' counts take the right, the column's edge),
+// at the interface's size, beside the column nearest the view's centre
+// (`besideOf`) — beside a row's first column in the strip P-PROJ's
+// `clearLeftOf` keeps free of every other document's box, beside a later one
+// in the gutter and the edge of the column before it, below the signs that
+// edge holds (`cornerTop`); whole where its room holds it whole and the
+// view's fit holds a column beside it whole, else compact, its usual states
+// glyphs, its numbers and its exceptions in their words (T-ARTICLE's
+// `cornerHTML`), a glyph's act opening it whole where it stands
+// (`openCorner`); where that room holds not even the compact corner, or the
+// signs leave it none, by its row's first column, its own document's free
+// room — held to the top of its column's visible part below the one line,
+// else just below the line, and never past its outline's bottom beside a
+// row's first column, nor past its row's foot beside another, placed by
+// translate alone from the same camera arithmetic: P-LABEL's one hold
+// (`holdTop`), P-REG's HOLD gap below the line, so it stands level with a
+// label held there. A reading view frames the column it reads with the
+// corner and the edge beside it (`frameOf`). The element outlives its
+// article's remounts and its items are rewritten only where they change, so
+// a focus on it survives them; the focused document's corner is the plane's
+// next Tab stop, named by its own words, and every other is out of the order
+// and hidden from assistive technology; while the reading scene stands over
+// the plane the corner layer is inert (`cover`, through N-FOCUS, the focus's
+// owner — FP-20), the scene's panes carrying their own (D5 §4 rule 5); a
+// corner that leaves while it holds the focus hands it to the walk (D5 §4
+// rule 4). The held label (FP-26): a document whose article stands in the
+// mount band has no label on the canvas, its head naming it; once its
+// outline's first row rises above the hold, and while the one line does not
+// name it (the reader `named`), its label stands held below the line as an
+// element of the corner layer over its text — the canvas's words for its
+// box, read here (`docLabel`), so the two never part, on one line across its
 // outline's visible part, on its box's ground, pushed up under the line by
 // its outline's foot, beside its corner and never over it (`besideCorner`),
 // drawn and never announced, taking the pointer where its article does
-// (`placeHeld`). The press
-// rule's text half (§2.4): an article takes the pointer at reading scale
-// alone — its em at P-LOD's readable threshold (8) and above, the `legible`
-// class the style gives its columns' pointer (`markLegible`) — so below it a
-// press on mounted text falls to the canvas as one on its bars does, and a
-// press between its columns falls to the canvas at any scale, the document a
-// place "bars or mounted text alike" and the press keyed "on legibility and
-// never on whether text is mounted"; the class moves on a standing article
-// only while no press stands, so a drag begun on legible text keeps the
-// article it is anchored in through a zoom below the threshold. A drag
-// selects text and never pans, and this module holds whether a press stands
-// (APP-INPUT reports its start and its end). A press the canvas took at
-// reading scale before the text under it stood is APP-INPUT's to hold: once
-// the frame has set that text, the platform's selection is collapsed at the
-// press (`caretAt`) and the drag's other end carried to the pointer
-// (`extendTo`), as the platform does on text it is pressed on. THE SELECTION IS A BYTE
-// SPAN (R11; foundations §3.1) and the platform's selection is its one mark
-// (§2.1): this module carries the platform's range to the span it covers —
-// each block's own text nodes walked, part by part, the chrome inside a block
-// skipped, a character boundary carried to its byte position by T-SPAN
-// through the blocks the article was made from, never the model's newest,
-// which a delivery under a press may have replaced — and the span back to a
-// range over the parts that stand, a position no standing part holds naming
-// no point (`pointOfPos`). That range is placed over the mounted article when
-// the page makes the selection, its anchor at the span's start — owed until
-// the frame stands the span's first and last lines, where no part held them
-// — and again after a remount (the reveal, a lens, a delivery), since a
-// remount rebuilds the element and the platform's range dies with the old
-// one: read as the old article is taken down, the selection goes back with its
-// anchor at the end it stood at, so the platform's own keys (D5 K-71) go on
-// extending it from there. What no
-// interface carries is macOS's "no direction yet" of a selection a pointer
-// made: put back, it extends from its anchor, as one a key extended does.
-// The platform holds one selection, and no remount takes it from the person:
-// a selection standing outside the layer — a drag in a reading scene's pane,
+// (`placeHeld`).
+// The press rule's text half (foundations §2.4): an article takes the
+// pointer at reading scale alone — its em at the readable threshold and
+// above, the `legible` class the style gives its columns' pointer
+// (`markLegible`) — so below it a press on mounted text falls to the canvas
+// as one on its bars does, and a press between its columns falls to the
+// canvas at any scale: the press is keyed on legibility, never on whether
+// text is mounted; the class moves on a standing article only while no
+// press stands, so a drag begun on legible text keeps the article it is
+// anchored in through a zoom below the threshold. A drag selects text and
+// never pans, and this module holds whether a press stands (APP-INPUT
+// reports its start and its end). A press the canvas took at reading scale
+// before the text under it stood is APP-INPUT's to hold: once the frame has
+// set that text, the platform's selection is collapsed at the press
+// (`caretAt`) and the drag's other end carried to the pointer (`extendTo`),
+// as the platform does on text it is pressed on.
+// The selection is a byte span (R11; foundations §3.1) and the platform's
+// selection is its one mark (§2.1): this module carries the platform's range
+// to the span it covers (`spanIn`, `spanOfSelection`) — each block's own
+// text nodes walked, part by part, the chrome inside a block skipped, a
+// character boundary carried to its byte position by T-SPAN through the
+// blocks the article was made from, never the model's newest, which a
+// delivery under a press may have replaced — and the span back to a range
+// over the parts that stand (`rangeIn`), a position no standing part holds
+// naming no point (`pointOfPos`). That range is placed over the mounted
+// article when the page makes the selection (`placeSelection`), its anchor
+// at the span's start — owed until the frame stands the span's first and
+// last lines, where no part held them — and again after a remount (the
+// reveal, a lens, a delivery), since a remount rebuilds the element and the
+// platform's range dies with the old one: read as the old article is taken
+// down, the selection goes back with its anchor at the end it stood at, so
+// the platform's own keys (D5 K-71) go on extending it from there; the
+// platform carries no "no direction yet" for a selection a pointer made, so
+// put back it extends from its anchor, as one a key extended does. The
+// platform holds one selection, and no remount takes it from the person: a
+// selection standing outside the layer — a drag in a reading scene's pane,
 // over an overlay's text — is theirs, whenever they made it, and the page's
 // goes back only where the platform's is collapsed, absent or in the layer,
 // so the copy is of what the person chose (`placeAgain`).
-// THE READING SCENE'S PANES BORROW THE MOUNT (`sceneArticle`; the structure
-// record §3.4 (vii)): each pane's article is made here, T-ARTICLE's
-// scene-mode variant laid out by the pane's own style — one column at the
-// plane's measure — from a record and the view it draws (`sceneView`), which
-// the scene keeps so a pane is set again from them with no read, named as the
-// scene names it (SC; issue #160), and what it was made from is kept beside
-// it as a mounted article's is (`madeOf`) — its document's blocks, runs and
-// image as the model held them, which the model
-// replaces whole and never edits in place, so they stay the article's own
-// while it stands, whatever the model has delivered since. Every position in
+// The reading scene's panes borrow the mount (`sceneArticle`; FP-12; the
+// structure record §3.4 (vii)): each pane's article is made here,
+// T-ARTICLE's scene-mode variant laid out by the pane's own style — one
+// column at the plane's measure — from a record and the view it draws
+// (`sceneView`), which the scene keeps so a pane is set again from them with
+// no read (SC; FP-23), and what it was made from is kept beside it as a
+// mounted article's is (`madeOf`) — its document's blocks, runs and image as
+// the model held them, which the model replaces whole and never edits in
+// place, so they stay the article's own while it stands. Every position in
 // an article is mapped through them (`rangeIn`): the scene finds a passage
 // in a pane so, and the platform's selection there is read and put back over
-// the same bytes (`selectionIn`, `selectIn`). The copy of any selection in an
-// article — a mounted one, or
-// a pane's, where a drag selects as it does on the plane (§2.5) — replaces
-// the clipboard and carries the passage's board and address beside the plain
-// text and never in it (§2.4), in a flavor only a skep client reads; the
-// plain text is the span's items in the text's order, as the article was
-// made from them (T-ARTICLE's `copyText`; FP-24): the document's own bytes
-// over each stretch of text, and in each item's place that holds none — a
-// record, a reference, a withheld run, an item this client cannot show — a
-// stand-in naming its kind, never its rendering, no label of the page among
-// them: a range that starts in an article's head starts at its first block,
-// and a range that touches an item covers it whole (`posOfPoint`), as it is
-// drawn (the style selects an item whole).
-// Carries: the wireframe's §16 `mount`/`unmount`/`place`/`S1.frame`; S1's
-// `mount`, `place`, `S1.frame`; `driftSample` and `overlapCheck` become
-// gate hooks (`web/gate/hooks.js` reads `mounted`).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-22, FP-23, FP-24, FP-26,
-// FP-34.
+// the same bytes (`selectionIn`, `selectIn`). The copy of any selection in
+// an article — a mounted one, or a pane's (foundations §2.4, §2.5) —
+// replaces the clipboard and carries the passage's board and address beside
+// the plain text and never in it, in a flavor only a skep client reads
+// (`onCopy`; FP-24): the plain text is the span's items in the text's order,
+// as the article was made from them (T-ARTICLE's `copyText`), no label of
+// the page among them — a range that starts in an article's head starts at
+// its first block, and a range that touches an item covers it whole
+// (`posOfPoint`), as it is drawn. The gate's hooks read the mounted set and
+// the mount log (`mountedSet`, `mounts`); APP records each frame's counts
+// (`frameStats`).
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-24,
+// FP-26, FP-30, FP-34.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -302,7 +278,7 @@ import { t } from '../strings.js';
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
 
 /**
- * @typedef {Object} Made — what an article was made from: its document, and the blocks, runs and image the model held of it as the article was made. The model replaces a document's blocks, runs and image whole and never edits them in place, so these stay the article's own while it stands, whatever the model has delivered since: every position in the article is mapped through them (`rangeIn`), a copy takes its bytes from them (`onCopy`), and a reader's place in it is carried by its bytes' identity into the text it is set again as (`readingNow`; SC's pane set again — issue #160)
+ * @typedef {Object} Made — what an article was made from: its document, and the blocks, runs and image the model held of it as the article was made. The model replaces a document's blocks, runs and image whole and never edits them in place, so these stay the article's own while it stands, whatever the model has delivered since: every position in the article is mapped through them (`rangeIn`), a copy takes its bytes from them (`onCopy`), and a reader's place in it is carried by its bytes' identity into the text it is set again as (`readingNow`; SC's pane set again — FP-23)
  * @property {string} addr the document — for a reading scene's pane, the address its acts name (`sceneArticle`)
  * @property {Block[]} blocks
  * @property {Run[]} runs
@@ -427,11 +403,11 @@ import { t } from '../strings.js';
  * @property {{x: number, y: number}} p where it stood, in world units relative to the room
  * @property {{from: number, to: number} | null} pair the position of `fold` whose line it stood on and the position of `addr`'s that takes that line (a version move); null where its bytes' identity names it (`ids`), else the same position (P-LAY's `holdOf`)
  * @property {number | null} pos the position the line it stood on opens at (P-LAY's `posAt`): the one `ids` is read from
- * @property {ISpan[]} ids the byte `pos` names, by identity, read through the image the article was made from (M-REC's `identityIn`): where the text set again holds it now is the line that takes the passage's (FP-8: the passage kept, never its position; issue #160) — none where that image did not cover it
+ * @property {ISpan[]} ids the byte `pos` names, by identity, read through the image the article was made from (M-REC's `identityIn`): where the text set again holds it now is the line that takes the passage's (FP-8, FP-23) — none where that image did not cover it
  * @property {{x: number, y: number, scale: number} | null} left the camera as a re-set whose text came before its image left it, by position: `ids` kept for the re-set the image's arrival makes, while the camera stands there (`still`); null where it is no such hold
  */
 /**
- * @typedef {Object} Reading — the passage a view reads (`readAt`), by value — positions, a byte's identity and a place, no fold and no words: what N-TRAIL keeps beside an entry's view, so a return lands on that passage wherever its document was set since (`keptAt`; issue #221)
+ * @typedef {Object} Reading — the passage a view reads (`readAt`), by value — positions, a byte's identity and a place, no fold and no words: what N-TRAIL keeps beside an entry's view, so a return lands on that passage wherever its document was set since (`keptAt`)
  * @property {string} addr the document: the version its box showed
  * @property {number} pos the position the line under the view's visible centre opens at (P-LAY's `posAt`)
  * @property {ISpan[]} ids that position's byte by identity, through the document's held image (M-REC's `identityOf`); none where the image did not cover it
@@ -525,7 +501,7 @@ export function attach(el, cornersEl, opts = {}) { layer = el; cornerLayer = cor
  * @param {boolean} on chrome covers the plane (true) or has left it (false)
  */
 export function cover(on) { if (cornerLayer) FOCUS.cover(cornerLayer, on); }
-/** the owners hand their readers in once; a reader left out reads as it does until one is */
+/** the owners hand their readers in once; a reader left out reads as the default does (`noReaders`) */
 export function readers(/** @type {Partial<Readers>} */ r) { read = { ...noReaders(), ...r }; }
 /** the block the `lit` mark stands on (D3): the walk's focused block while the ring is drawn — the plane holds the focus and a key moved it — else none; never in a scene's pane */
 const litFocus = (scene = false) => (!scene && FOCUS.ringShown() ? read.focus() : null);
@@ -621,8 +597,8 @@ export function foldOf(d) {
 const readsAt = (/** @type {number} */ fs, scale = cam.scale) => fs * scale >= LOD_TXT_LO;
 
 /**
- * Is a document at reading scale (see the head; issue #140's design
- * decision): its own em — its fold's size at the scale — at P-LOD's readable
+ * Is a document at reading scale (see the head): its own em — its fold's
+ * size at the scale — at P-LOD's readable
  * threshold or above. The press rule, the one line and the walk's grain read
  * it here, so a click places, the line names a position and the walk takes a
  * span in the same documents.
@@ -675,9 +651,8 @@ const unread = () => undefined;
  * (`Measured`): its article with no block marked for the selection or the
  * focus, no count in its edges and its byline's slots read, their boxes
  * empty — none of them sets a line, so a count's arrival leaves the lines as
- * they were set (A-254), and so does a byline's facts' (FP-34: "The value
- * fills the box and nothing beside it moves") — at the measure its column was
- * set at.
+ * they were set (A-254), and so does a byline's facts' (FP-34) — at the
+ * measure its column was set at.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} owner
@@ -724,8 +699,8 @@ export function shapeOf(/** @type {string} */ addr) {
 }
 
 /**
- * A document's REGION, in world units (see the head; issue #141's design
- * decision): its outline's bounds (`shapeOf`), which hold its label, its badge
+ * A document's region, in world units (see the head): its outline's bounds
+ * (`shapeOf`), which hold its label, its badge
  * and its blocks' counts, widened leftward by the strip its corner stands in
  * (P-PROJ's `clearLeftOf`), which no other document's box reaches into — so
  * the regions of two documents in their own cells never overlap.
@@ -794,10 +769,8 @@ export function centreOf(addr, pos) {
 }
 
 /**
- * Where a reading view of a document at a position centres so that it FRAMES
- * the column (issue #151's design decision: "The landing frames the column,
- * not the middle of a line. It brings the passage it names into view together
- * with the whole column and both side margins"): the line holding the
+ * Where a reading view of a document at a position centres so that it frames
+ * the column (FP-26): the line holding the
  * position (`centreOf`) — the first column's middle where none is named —
  * moved across so the column's text, the corner beside it on its left in the
  * form its room and the view's fit hold at that size (`roomBeside`,
@@ -821,8 +794,7 @@ export function frameOf(addr, pos, fsPx = READING_PX) {
  * Does the line holding a position stand in the visible view with the camera
  * at a view — its centre (`centreOf`) inside the viewport below the one line
  * there: N-GO's Back, which returns the focus to where the step it crossed
- * began only where the view it lands at shows it (issue #152's design
- * decision).
+ * began only where the view it lands at shows it.
  * @param {string} addr
  * @param {number} pos
  * @param {{x: number, y: number, scale: number}} view
@@ -863,7 +835,7 @@ function docAt(p) {
 }
 
 /**
- * Where the paging key continues at reading scale (issue #15; P-LAY's
+ * Where the paging key continues at reading scale (FP-12; P-LAY's
  * `pageTarget`): the document under the visible view's centre at its readable
  * em or above, the view over a column whose foot it shows (PageDown) or whose
  * top it shows (PageUp) — the view that brings the next column's top, or the
@@ -1498,8 +1470,7 @@ export function originOwner(addr) { return REC.ownerAccount(REC.doc(addr)); }
  * since (M-REC's `readFailed`). The plane's placeholder, a pane's, the ARIA
  * mirror's item at the run, the run's face whole and the document's own
  * withheld face all read it (T-ARTICLE's `placeholderOf`, O-FACES), so none
- * of them part (R94; issue #186's design decision: "One fact, one
- * placement").
+ * of them part (R94; FP-33).
  * @param {string} origin
  * @returns {import('./article.js').Clause | null}
  */
@@ -1516,8 +1487,7 @@ export function clauseOf(origin) {
 /**
  * A document a read answered `withheld`, as the plane names it — B1-S2's
  * withheld box: existence and owner, never bytes — in the corner's own words,
- * "withheld · ⟨owner⟩" (foundations §3.1; issue #177's design decision:
- * "'withheld · ⟨owner⟩' stands where its first line stood"), its owner by the
+ * "withheld · ⟨owner⟩" (foundations §3.1; FP-29), its owner by the
  * one owner rule (M-REC's `ownerAccount`). The box's first line (P-RENDER), the ARIA
  * mirror's item at the document (N-WALK), a trail entry's words (N-GO's
  * `wordsOf`) and the face a refused read of it conjures (O-FACES's
@@ -1575,7 +1545,7 @@ function unmount(/** @type {string} */ addr) {
  * point before its anchor; null where none stands in the article, or it is
  * collapsed. A mounted article taken down keeps it for the frame that puts
  * it back (`kept`); a pane set again puts it back over the same bytes (SC;
- * issue #160).
+ * FP-23).
  * @param {HTMLElement} el the article's element
  * @returns {{span: Span, backward: boolean} | null}
  */
@@ -1656,9 +1626,8 @@ function markLit(rec, lit) {
 }
 
 /**
- * A byline's cut label opened whole on its act (FP-34; issue #208's design
- * decision: "A label too long for the box is cut and shown whole on its
- * act"), or closed again by the act again: the document's article marks its
+ * A byline's cut label opened whole on its act (FP-34), or closed again by
+ * the act again: the document's article marks its
  * cut label `open` in place (`markLabel`), and the style sets the whole label
  * over what is beside it, its box unmoved. APP-INPUT takes the act at the
  * label on the plane; in a reading scene's pane nothing acts (SC), its title
@@ -1760,7 +1729,7 @@ function chosen(v, focused, span, spent) {
 }
 
 /**
- * THE LIMIT'S ORDER (see the head): the documents below the readable em that
+ * The limit's order (see the head): the documents below the readable em that
  * may mount, those holding the page's selection or the walk's focus and the
  * document just navigated to first (`first`), then the largest em first,
  * equal in both in the order given — the model's (the sort is stable). Never
@@ -1825,7 +1794,7 @@ function still(h, reading) {
  * the position its line opened at in the fold it stood in, and the one where
  * the image the article stands again from places that byte now; null where
  * the hold names none, or that image places none of it — the image not read
- * yet, or the text no longer holding the byte.
+ * yet, or the text without the byte.
  * @param {Hold} h
  * @param {Mounted} rec the article standing again
  * @returns {{from: number, to: number} | null}
@@ -1884,7 +1853,7 @@ export function holdAcross(from, to, at = null) {
 }
 
 /**
- * What a view reads (see the head; issue #221): `readingNow`'s rule taken at
+ * What a view reads (see the head): `readingNow`'s rule taken at
  * a view the camera may stand away from — a departure's, bound for a
  * flight's destination — against the fold each document stands in now, never
  * a mounted article: the document whose outline holds the view's visible
@@ -1911,8 +1880,8 @@ export function readAt(view) {
 }
 
 /**
- * The view that keeps what a view read where it stood (see the head; issue
- * #221: "Back lands on the passage left"): the view moved so the passage it
+ * The view that keeps what a view read where it stood (see the head): the
+ * view moved so the passage it
  * read keeps its place and its size on screen in the fold its document stands
  * in now — `keepPlace`'s arithmetic (P-LAY's `holdOf`, P-CAM's `reanchored`) —
  * in the version its box shows now, by the passage's byte where that text's
@@ -2057,16 +2026,14 @@ function measureInView(v) {
 
 /**
  * The column a document's corner stands beside, and the room left of that
- * column's text (see the head; issue #151's design decision: "The corner
- * follows the column nearest the view's centre"): the column the visible
+ * column's text (see the head; FP-26): the column the visible
  * view's centre stands over, else the nearest (P-LAY's `columnAt`); the room
  * left of its text — for the first column of a row the strip left of the
  * document's box, which no other document's box reaches into (P-PROJ's
  * `clearLeftOf`), with the half gutter; for any other the gutter and the edge
  * of the column before it — its two gaps taken. Where that room holds not even
  * the compact corner, or the signs in that edge left the corner no room
- * there (`blocked`), the room by the first column of its row (FP-26: "else
- * moves into its own document's free room").
+ * there (`blocked`), the room by the first column of its row (FP-26).
  * @param {Fold} f
  * @param {number} strip the strip left of the document's box, in world units (P-PROJ's `clearLeftOf`)
  * @param {{x: number, y: number}} at the visible view's centre, in world units relative to the room
@@ -2095,8 +2062,7 @@ export function roomBeside(f, strip, i, scale) {
 }
 
 /**
- * The form a corner stands in (FP-26: "To fit a view or a pane, margins
- * compact first"; "Short of room it compacts there"): whole where its room
+ * The form a corner stands in (FP-26): whole where its room
  * holds it whole and the view holds a column at the reading size beside it
  * whole (P-LAY's fit, `narrow` where it does not), or where a reader's act
  * opened it whole (`openCorner`); else compact.
@@ -2113,8 +2079,8 @@ export const formFor = (room, open, narrow = false) => (open || (!narrow && room
  * level with a label held there (P-LABEL's `holdTop`, the one hold) — and
  * never so low that it runs past `bottom`, unless it is taller than the
  * room below its row's top; then moved below each sign it would meet of those
- * the edge before its column holds (foundations §3.1: "an item at a y another
- * already holds stacks below it"). Null where that move leaves it running
+ * the edge before its column holds (foundations §3.1). Null where that move
+ * leaves it running
  * past `bottom`: beside that column it has no room.
  * @param {{x: number, w: number, h: number}} c the corner's left edge and its size, on screen
  * @param {number} rowTop its column's top on screen
@@ -2202,7 +2168,7 @@ function placeCorners(focused) {
 
 /**
  * The stretches of a held label's line its document's corner leaves it (see
- * the head; issue #169's design decision: "The two never overlap"): where the
+ * the head; FP-26): where the
  * corner's box meets the line, the stretch left of the corner, ending a gap
  * short of it, then the stretch right of it, beginning a gap past it — each
  * that has width; else the line whole.
@@ -2228,7 +2194,7 @@ function measureWords(/** @type {string} */ s, /** @type {number} */ px, /** @ty
 }
 
 /**
- * THE HELD LABEL's pass (see the head), after the corners: each document
+ * The held label's pass (see the head), after the corners: each document
  * whose article stands in the mount band — where the canvas sets no label of
  * it — whose outline's first row has risen above the hold below the one line
  * and which the line does not name carries its label held there: the canvas's
@@ -2305,8 +2271,8 @@ export function heldOf(/** @type {string} */ addr) {
 }
 
 /**
- * A compact sign opened whole on its act (FP-26: "A compact sign opens whole
- * on its act"): a document's corner standing compact made whole where it
+ * A compact sign opened whole on its act (FP-26): a document's corner
+ * standing compact made whole where it
  * stands, over what is beside it, until the act again — at the corner opened,
  * its version statement apart — closes it, or the corner leaves (APP-INPUT
  * takes the act at the corner's glyph, and at the corner opened).
@@ -2378,8 +2344,8 @@ export function spanRects(addr, pos, width = null) {
 
 /**
  * The client rects of the signs its column's edge holds beside a block of a
- * mounted article — its others' count, a withheld run's mark (issue #151's
- * design decision) — where the part holding the block's first line stands:
+ * mounted article — its others' count, a withheld run's mark (FP-26) — where
+ * the part holding the block's first line stands:
  * what a beam or a tail leaving the block's line starts past (BM's
  * `leaveAt`); none where none stands.
  * @param {string} addr
@@ -2398,8 +2364,8 @@ export function signRects(addr, pos) {
  * stands in no part — out of view, a column away — is outlined on its own
  * glyphs where its lines stand (P-RENDER's arrival mark, its other lines
  * outlined on their fold's boxes, `foldBoxes`, and the light a one-step move
- * along the trail draws with its marks: issue #152's design decision); null
- * where no part standing holds any of it.
+ * along the trail draws with its marks); null where no part standing holds
+ * any of it.
  * @param {string} addr
  * @param {number} pos
  * @param {number} width
@@ -2667,7 +2633,7 @@ export function placeSelection(span) {
  * anchor's end alone: taking an article down leaves a selection that stood
  * in it collapsed in the layer, where the put-back takes it. The span owed its
  * range (`placeSelection`) goes on so; it stays owed while its first or last
- * line stands in no part, and is owed no longer once the person holds a
+ * line stands in no part, and stops being owed once the person holds a
  * selection of their own outside the layer.
  * @param {Span} span
  */
@@ -2705,7 +2671,7 @@ export function symbolRect(/** @type {string} */ addr, /** @type {string} */ lin
  * variant): the links LK shows at its document now, their counts, its
  * corner's state — what the scene keeps beside the pane as it sets it, so the
  * pane's marks and lines stay the ones its text was set with, and it is set
- * again from them with no read (SC; issue #160).
+ * again from them with no read (SC; FP-23).
  * @param {Doc} d
  * @returns {ArticleView}
  */
@@ -2723,7 +2689,7 @@ export const sceneView = (d) => viewFor(d, true);
  * what the scene kept of them as it last set the pane, and named by the
  * addresses the scene gives it: the one its acts name and its positions are
  * mapped against — at an edition read at its bare address, the member its
- * text is (SC; issue #160) — and the one its head shows.
+ * text is (SC; FP-23) — and the one its head shows.
  * @param {Doc} d the record its text is made from
  * @param {{view?: ArticleView, names?: string, shows?: string}} [as] `view` the view it draws — the record's now (`sceneView`) where none is given; `names` the address it is made as (`Made.addr`), which a copy from it names and its spans are measured against — the record's where none is given; `shows` the address its head names — `names` where none is given
  * @returns {HTMLElement}
@@ -2791,9 +2757,8 @@ export function holdsText(addr, x, y) {
  * as `lineStands` reads them) and its column — in the fold its article stands
  * in where one stands, else the one `foldOf` sets, whatever its scale: what
  * P-RENDER outlines an arrival's run on where no part of it stands as text
- * (issue #158's design decision: "outline every run, whether it is in view or
- * not"), and what `lineBoxes` reads; none where the document's text has not
- * arrived.
+ * (FP-21), and what `lineBoxes` reads; none where the document's text has
+ * not arrived.
  * @param {string} addr
  * @param {number} pos
  * @param {number} width
@@ -2881,9 +2846,10 @@ export function clear() {
 }
 
 /**
- * The copy event's addition (§2.4; FP-24): the copy of any selection in an
- * article — a mounted one, or a reading scene's pane's, where a drag selects
- * as it does on the plane (§2.5) — replaces the clipboard, the platform's own
+ * The copy event's addition (foundations §2.4; FP-24): the copy of any
+ * selection in an article — a mounted one, or a reading scene's pane's, where
+ * a drag selects as it does on the plane (§2.5) — replaces the clipboard, the
+ * platform's own
  * copy prevented, and carries the passage's board and address beside the
  * plain text and never in it, in a flavor only a skep client reads, as
  * `{board, addr, pos, width}`: the span the platform's selection covers in

@@ -1,116 +1,21 @@
-// T-LAYER's test: the fold a document is set in once its text has arrived
-// (`foldOf`) — every document at the measure, in columns inside its room; its
-// size the step that holds the article carrying the most any reveal can set
-// in it, so at every stage, toggle and lens its size stands and its columns
-// stay inside the room, however the model moves between them (issue #15); an
-// article whose own lines hold the standard grid hidden but not with its
-// symbols set at the step past it from the first, so no reveal re-sets it (a
-// fold of the hidden lines alone turns red); another's links arriving folding
-// it again; a count arriving at the hidden reveal setting no line, every line
-// and column as it stood (issue #151; a fold that sets the count turns red).
-// Where a passage stands and is read back — a reading view centred
-// on a position's line in its column, the position under a point, the outline
-// the plane draws — and the paging key's next column at reading scale. THE
-// CORNER (issue #151's design decision): beside the column nearest the view's
-// centre — the strip's room beside a row's first column, the gutter and the
-// edge before it beside a later one — whole where its room holds it, compact
-// where it holds the compact corner alone, by its row's first column where it
-// holds neither or the signs there leave it none (a mutant that keeps it by
-// the first column, or squeezes it whole into a gutter, turns red); held below
-// the one line, never past its foot, stacked below the signs it would meet, by
-// the one hold a label holds by (issue #169: a rule of its own turns red); a
-// held label's line clear of it, ending a gap short of it or beginning a gap
-// past it where its box meets the line (one that overlaps it turns red). A
-// reading view frames its column with both its margins centred together (a
-// view on the column's middle alone turns red). THE MEASURE IN FORCE: the full
-// measure at 1440 px, 39 characters at 480, and a resize that moves it sets
-// the article being read again with the line under the view's centre kept in
-// place, at its size, a zoom moving neither (a frame that re-sets without the
-// hold, or a fold keyed on the scale, turns red). A
-// document's REGION (issue #141): its outline's bounds widened leftward by its
-// corner's strip, ending where its neighbour's begins; the document in view
-// while that region meets the visible view below the one line — the corner's
-// strip alone in view among it — and the view's window over it read over that
-// visible view (a region of the outline alone, or a view that takes in what
-// stands under the one line, turns red). THE
-// PASSAGE IN VIEW KEEPS ITS PLACE: a reveal that re-breaks the article while a
-// later column is read leaves the line under the view's centre where it stood
-// on screen, at its size (a frame that rebuilds without re-anchoring turns
-// red), and a feed row's take-down holds it until the article stands again.
-// ONE ARTICLE A BOX (issue #154's design decision): of a document and its
-// version, both texts held, the article of the version the box shows stands
-// alone, and the box taking the other takes it down and stands the other (a
-// frame that mounts every held text, or keeps the version left standing,
-// turns red); the line being read keeps its place as the box takes the other
-// version — the line holding the position the move names standing where the
-// line it left stood, the scale by the ratio of the two folds' sizes (a
-// frame that sets the version taken with no hold, or holds by the position
-// alone, turns red) — and held across one version, at once. AN EDIT ABOVE
-// THE VIEW (issue #160): a document taken down for a feed row and set again
-// keeps the line the reader read on the same words, carried by their identity
-// through the image its article was made from (a frame that holds the
-// position turns red); where the text comes before its image, held by its
-// position until the image's arrival sets it again, a camera the reader moved
-// meanwhile standing where they left it (a frame with no such hold, or one
-// that pulls back a camera the reader moved, turns red).
-// Then WHAT STANDS (`frame`; issue #122's design decision), on a page of
-// stand-ins over a field of an account's 48 documents, every one at the
-// standard size: at the readable em every document in view stands in the one
-// frame, more than the limit (a ceiling on what stands turns red); below it at
-// most the limit mounts afresh in a frame — the one holding the page's
-// selection, the walk's focused one and the place just navigated to first,
-// though last in the model's order, then the rest in the model's order, long
-// documents and short notes of one size alike — none taken down or set again,
-// and the frames after mount the rest (a cap that never mounts the rest, an
-// order that leaves the first last, or one by length, turns red); the limit's
-// order itself, the largest em first after the first, equal ems in the order
-// given (one by length, or that drops the first, turns red); a document
-// stands by line — at a fresh mount exactly the lines meeting the view,
-// padded, and a pan standing the lines entering in parts of their own, taking
-// down the parts that left and setting no standing part again (a whole
-// article, or a part set again to take a line, turns red); the stretch of a
-// span the parts standing hold, which the arrival mark outlines — from the
-// first position of it a part standing holds to the last, a withheld run's
-// part holding the run whole (issue #152: one that answers the span whole, or
-// nothing, wherever a line of it stands in no part, turns red); every line of the
-// page's selection that stood stands through a pan and a zoom to em 5, no part
-// standing then that holds none of them, and goes with it, and its first and
-// last lines stand wherever the view is (one that holds no line, standing the
-// selection's ends alone, turns red); an article standing keeps its place down to 5.5 (one
-// that asks 6.5 of it turns red); a stale article is set again in its place,
-// whatever the limit, never dropped; and while a press stands no standing
-// article is set again, but the documents a pan brings in at the readable em
-// stand (one that mounts nothing under a press turns red), the first frame
-// after it setting again what went stale.
-// And the owner a withheld run names, on the plane's mounted article and in
-// a reading scene's pane alike: its origin's, by the one rule the byline's
-// owner is found by, whoever owns the document windowing it (a view that
-// hands the article's owner back turns red).
-// And C-67's clause beneath a withheld origin, from what the model holds:
-// "edition claims not read" where a read a listed claim's admission waits on
-// failed, the empty place while one is out, decided again as the read
-// answers (issue #186: a clause that leaves a failed read blank turns red).
-// And what an article was made from, on the plane and in a reading scene's
-// pane alike: its document's blocks and runs as the model held them, kept
-// through a feed row naming the document and a delivery of other text, so its
-// positions are mapped and its bytes copied through the text it shows (a pane
-// whose article keeps nothing, or a record that answers the model's newest,
-// turns red).
-// And the camera's zoom-in bound, which every size read here reaches: a
-// residue member of two thousand one-line paragraphs, its columns filling its
-// room three steps past the standard, is read at reading scale (a size that
-// leaves the bound at its place's turns red), and a feed row dropping its
-// text, its size its place's standard again, takes no scale from under its
-// reader (a bound set from the latest size turns red). A standing article's
-// symbols are marked heavier in place where every link one stands for is lit
-// at an arrival, nothing rebuilt, and a span wholly inside a withheld run
-// stands at the run's own boxes (issue #202: a layer that marks nothing, or
-// reads the span as a range inside the gap, turns red). An owner's byline
-// facts arriving set a standing article again, its byline filled, the fold
-// it stands in as it stood (FP-34: a model that makes nothing again leaves
-// the empty boxes standing and turns red); its cut label marked open in
-// place on its act and closed on the act again (a layer that marks nothing
-// turns red).
+// T-LAYER's test, on a page of stand-ins: the fold a document is set in —
+// one size at every stage, toggle and lens, inside its room at the measure,
+// a count setting no line; where a passage stands and is read back, and the
+// paging key's next column; the corner beside the column nearest the view's
+// centre, whole or compact by its room, held below the one line by the one
+// hold a label holds by and never meeting a held label's line; a reading
+// view framing its column with both margins; the measure in force and a
+// resize re-setting the article being read with the passage held; a
+// document's region and the view's window over it; the passage in view
+// keeping its place through a reveal, a feed row's take-down, a version move
+// and an edit above the view, by its bytes' identity; what stands — every
+// readable document in the one frame, the limit's order below it, by line,
+// the selection's and the focus's lines held, hysteresis, stale articles set
+// again and a press holding them; the owner a withheld run names; C-67's
+// clause from the model; what an article was made from; the zoom-in bound;
+// symbols marked heavier in place and a span inside a withheld run at the
+// run's boxes; and a byline's facts arriving and its cut label opening in
+// place (FP-8, FP-12, FP-20, FP-22, FP-23, FP-26, FP-30, FP-34).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -301,7 +206,7 @@ test('a document\'s region is its outline\'s bounds widened leftward by the stri
   }
 });
 
-// ---- the corner beside the column nearest the view's centre; the reading view's frame (issue #151) -----------------
+// ---- the corner beside the column nearest the view's centre; the reading view's frame (FP-26) ----------------------
 
 /** the middle of a column of a fold, in world units relative to the room */
 const middleOf = (/** @type {Fold} */ f, /** @type {number} */ i) => ({ x: f.columns[i].x + f.columns[i].w / 2, y: f.columns[i].y + f.columns[i].h / 2 });
@@ -528,7 +433,7 @@ test('a reveal that re-breaks the article while a later column is read leaves th
   assert.ok(Math.abs(CAM.cam.scale * reset.fs - scale * f0.fs) < 1e-9, 'at its size on screen: the scale by the ratio of its sizes');
 }, 1440, 900));
 
-// ---- one article a box (issue #154's design decision: "The box shows one version") -----------------------------------
+// ---- one article a box (FP-22) ---------------------------------------------------------------------------------------
 
 /** D's second version: a prologue of its own set before D's text, so each of D's positions stands later in it */
 const D2 = D + '.2', PROLOGUE = 'A prologue the second version set before the text.\n\n', TEXT2 = PROLOGUE + TEXT;
@@ -584,7 +489,7 @@ test('a box taking another version keeps the line being read in place (issue #15
   assert.ok(Math.abs(moved.x - stood.x) < 1e-6 && Math.abs(moved.y - stood.y) < 1e-6 && CAM.cam.scale === k, `the line taken where the line left stood, the scale kept: ${JSON.stringify(stood)} → ${JSON.stringify(moved)}`);
 }, 1440, 900));
 
-// ---- an edit above the view (issue #160; FP-8, FP-23) ------------------------------------------------------------------
+// ---- an edit above the view (FP-8, FP-23) ------------------------------------------------------------------------------
 
 /** D's text with the prologue set before it, its bytes minted after the old text's: every old byte stands SHIFT later, its identity kept */
 const EDITED_IMAGE = [{ iStart: `${D}.0.1.${EXTENT + 1}`, width: SHIFT }, { iStart: D + '.0.1.1', width: EXTENT }];

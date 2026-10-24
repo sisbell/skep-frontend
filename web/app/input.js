@@ -1,114 +1,95 @@
-// APP-INPUT — pointer, wheel, resize → view state + the pump (the structure
-// record §3.2 "APP"; foundations §2.4's press rule; D5 K-10, K-12). Layer 3.
-// ENGINE-BOUND. INPUT NEVER DRAWS (FP-9): a handler changes view state, or
-// asks for a read, and marks the frame dirty.
-// The press rule (§2.4, RE-CUT from the wireframe's drag-to-pan): a pointer's
-// DRAG NEVER PANS — at the readable threshold and above it selects the text
-// it crosses (the platform's selection on the mounted layer), and THAT
-// SELECTION IS THE PAGE'S (R11's one continuous gesture): as the drag ends,
-// and whenever the platform's selection changes outside a drag, the span it
-// covers is read through T-LAYER's mapping and handed to O-SELECTION — a
-// change of view state, never a draw. The drag is T-LAYER's press: it stands
-// from the button going down on an article to the button's release, the
-// platform's cancel, or a context menu (which takes the release on some
-// platforms); this module reports its start and its end, and T-LAYER holds
-// the drag's article through it. Below the readable threshold every press is
-// the canvas's, over bars or mounted text alike — T-LAYER gives an article
-// the pointer at reading scale alone — so a drag there is a drag off text and
-// selects nothing, and a click is the place's: keyed on legibility — the
-// document's own em at the readable threshold, T-LAYER's one test
-// (`atReadingScale`), which the one line's position and the walk's span grain
-// read too (issue #140's design decision) — never on whether text is
-// mounted. AT THE READABLE THRESHOLD AND ABOVE A PRESS ACTS ON
-// THE TEXT (issue #122's design decision), never dropped and never a move to
-// the place: a press the canvas takes on a document's column there — the text
-// under it not yet standing, the view moved or the text arrived since the
-// last frame — is HELD, the frame marked dirty, until the frame after it has
-// set that text (T-LAYER stands every line in view of a readable document in
-// the frame it gets there), then acted on the text under it as a press on any
-// standing article is (`afterFrame`): released, the text layer's click at the
-// element under it; the button still down, the platform's drag from the
-// press's point (T-LAYER's `caretAt`), its other end carried as the pointer
-// moves (`extendTo`) and taken as the page's selection at the release. A
-// camera move, the person's next press, or the text standing and none of it
-// under the press drops it; a press in a gutter acts on nothing, as one beside
-// any article does. The camera pans by the WHEEL and
-// two-finger scroll, by the keys, and by the held camera key's drag (K-10:
-// hold Mod — wherever the pointer is, M-8: a drag begun on an article with
-// the key held is the camera's, the pointer captured by the plane, and
-// selects nothing); it zooms by the PINCH (Ctrl+wheel as a trackpad sends it)
-// and by Mod+wheel (K-12). THE CAMERA FOLLOWS THE READER WHILE A JUMP IS IN
-// THE AIR (FP-25: "a wheel, pinch or drag takes over"; issue #137's design
-// decision: "A wheel series already under way when the jump is made is
-// dropped"): a wheel series — wheel events less than SERIES_MS apart — under
-// way as a jump's camera left (N-GO's `airSince`) is dropped whole, each of
-// its events doing nothing, a trackpad's momentum never moving the camera the
-// jump took; any other wheel or pinch event, and the camera key's drag as it
-// moves, takes the camera over (N-GO's `takeOver`): the jump lands where the
-// camera is, its read only marking its passage. Whether a key made an act is never read here: a
-// pointer's act opens a card without the focus (D5 §4 rule 4; the focus
-// record's rule 16). A CLICK acts on what is under the pointer, keyed on
-// legibility: a TAIL — a link whose far document the plane draws nowhere,
-// leaving its near end with its far end named (P-RENDER's; issue #132's
-// design decision) — lists its links, or opens the card of its one
-// (O-ANATOMY's `fromTail`), at any scale, before any place under it acts;
-// an outlined run of an arrival in several runs, below its document's reading
-// scale, is a step to it (N-GO's `stepTo`; issue #158's design decision:
-// "Clicking an outlined run below reading scale does the same"), the arrival
-// standing — its outline drawn only where its document stands whole, no
-// continuation's mark holding it; a continuation's mark is a teleport to its
-// newest member (foundations §2.1); below the readable threshold a document is a place
-// wherever the pointer falls, bars or mounted text alike — a teleport (a
-// trail push) to the version its box shows (N-GO's `shownIn`; issue #154's
-// design decision: a click on a place is no act on its box's version, which
-// it keeps); each LEAP a click makes is made where it fell — the point of
-// the plane, a run's own positions — where the face of a failure known at
-// the act, or its reaching, stands (N-GO); at the readable threshold and above its text takes the click:
-// a symbol opens the anatomy card of the link's end it stands for, and a
-// stretch links mark that of the first end marking it — each mark carries
-// its ends by their links and their keys (LK's `endKey`; `endAt`), so of a
-// link with two ends in one article the card is the clicked end's (B1-S5);
-// the one symbol a withheld run's ends merge into (issue #202's design
-// decision: "The symbol opens the link's card") opens its one end's card, or
-// lists its several there (O-ANATOMY's `fromSymbol`; P44), a target of its
-// own beside the run, whose act stays C-39's face;
-// the presence indicator's ⟡ asks to see the links;
-// a byline's cut label opens whole over what is beside it, and the act again
-// closes it (FP-34; T-LAYER's `openLabel`);
-// a run's hairline label goes to its source carrying the run, marked where
-// the source's current text holds it (foundations §2.3's carry rule; P43);
-// the scene-offer opens the scene;
-// C-67's pointer beneath a withheld run's arm is a LEAP to the edition its
-// claim names, the claim's home, landed in whole (B1-S7 → S6): it carries no
-// passage, for an edition's bytes are fresh identity and no span of it
-// resolves to the origin (PUB-3.2; RES-66), so a carried run would be found
-// nowhere there and faced as a dead end where the edition stands; and it
-// lights no link, the claim being a record LK never draws;
-// a withheld run's face compact in its column's edge, "⟨owner⟩ with a mark
-// that opens it whole" (foundations §2.1; issue #151's design decision),
-// opens the run's face whole (O-FACES's `withheldRun`), as Enter at the run
-// does (D5 K-7), its pointer the face's act;
-// the rest of a withheld run's gap conjures C-39's face, naming
-// the owner the gap names (B1-S5, B1-S7), at the gap and,
-// once the text layer rebuilds or takes it down, at the run's own positions
-// (`runOf`; O-HOST's anchor) — a press on the gap starts no
-// selection, which the platform, selecting an item whole wherever a selection
-// touches it (FP-24), would otherwise make of it at every click, so its click
-// is its act's alone and a drag that crosses it from text still takes it
-// whole; the version statement at a document's
-// corner opens its members (the corner's act, the one Enter takes there —
-// K-57), and a compact corner's glyph opens the corner whole, a click on the
-// corner opened closing it again (FP-26; T-LAYER's `openCorner`); a click on a
-// block selects it whole (R11); a click on an account at
-// far is a teleport to its region (a trail push) — on the board the page
-// holds: where it holds none, the grid names no account and the click is an
-// empty one (FP-35); an empty click ends a card
-// or scene still reading (O-HOST's opening, ended alone: the overlay
-// standing under it stands), else dismisses the overlay, else clears the
-// selection.
-// Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
-// layer click handling, re-cut.
-// Rules: FP-1, FP-2, FP-9, FP-21, FP-24, FP-25, FP-26, FP-34, FP-35.
+// APP-INPUT — pointer, wheel and resize → view state and the pump (the
+// structure record §3.2; foundations §2.4; D5 K-10, K-12). Layer 3.
+// Engine-bound. Input never draws (FP-9): a handler changes view state, or
+// asks for a read, and marks the frame dirty. State: the press held for the
+// text under it (`held`), whether the drag it began is carrying the
+// platform's selection to the pointer (`carrying`), and the wheel series'
+// clock (`wheelAt`, `seriesFrom`).
+// The press rule (foundations §2.4): a pointer's drag never pans. At the
+// readable threshold and above it selects the text it crosses — the
+// platform's selection on the mounted layer — and that selection is the
+// page's (R11): as the drag ends, and whenever the platform's selection
+// changes outside a drag, the span it covers is read through T-LAYER's
+// mapping and handed to O-SELECTION. The drag is T-LAYER's press, from the
+// button going down on an article to its release, the platform's cancel or a
+// context menu; this module reports its start and its end. Below the
+// readable threshold every press is the canvas's, over bars or mounted text
+// alike, so a drag there selects nothing and a click is the place's — keyed
+// on the document's own em at the readable threshold (T-LAYER's
+// `atReadingScale`), never on whether text is mounted. At the readable
+// threshold and above a press acts on the text (FP-12), never dropped and
+// never a move to the place: a press the canvas takes on a document's column
+// there — the text under it not yet standing — is held, the frame marked
+// dirty, until the frame after it has set that text, then acted on as a
+// press on any standing article is (`afterFrame`): released, the text
+// layer's click at the element under it; the button still down, the
+// platform's drag from the press's point (T-LAYER's `caretAt`), its other
+// end carried as the pointer moves (`extendTo`) and taken as the page's
+// selection at the release. A camera move, the person's next press, chrome
+// standing over it, or the text standing with none of it under the press
+// drops it; a press in a gutter acts on nothing.
+// The camera pans by the wheel and two-finger scroll and by the camera key's
+// drag (K-10: Mod held, wherever the pointer is — M-8: a drag begun on an
+// article with the key held is the camera's, the pointer captured by the
+// plane, and selects nothing); it zooms by the pinch (Ctrl+wheel, as a
+// trackpad sends it) and by Mod+wheel (K-12). While a jump is in the air
+// (FP-25) a wheel series — wheel events less than SERIES_MS apart — begun
+// before the jump's camera left (N-GO's `airSince`) is dropped whole, so a
+// trackpad's momentum never moves the camera the jump took; any other wheel
+// or pinch event, and the camera key's drag as it moves, takes the camera
+// over (N-GO's `takeOver`). A wheel schedules the walk's re-take, and the
+// camera key's drag re-takes as it ends (N-WALK's `retakeFromView`). Whether
+// a key made an act is never read here: a pointer's act opens a card without
+// the focus (D5 §4 rule 4).
+// A click acts on what is under the pointer, keyed on legibility. On the
+// plane (`clickPlane`): a tail — a link whose far document the plane draws
+// nowhere — lists its links or opens the card of its one (O-ANATOMY's
+// `fromTail`), at any scale, before any place under it acts; an outlined run
+// of an arrival in several runs, below its document's reading scale, is a
+// step to it (N-GO's `stepTo`; FP-21); a continuation's mark is a teleport
+// to its newest member (foundations §2.1); below the readable threshold a
+// document is a place wherever the pointer falls, bars or mounted text
+// alike — a teleport to the version its box shows, which P-RENDER's hit
+// test answers (FP-22); each LEAP a click makes is made where it fell, where
+// the face of a failure known at the act, or its reaching, stands (N-GO);
+// an account at far is a teleport to its region, on the board the page
+// holds — where it holds none the click is an empty one (FP-35); an empty
+// click ends a card or scene still reading (O-HOST's opening), else
+// dismisses the overlay, else clears the selection. At the readable
+// threshold and above the text takes the click (`clickText`): a symbol opens
+// the anatomy card of the link's end it stands for, and a stretch links
+// mark that of the first end marking it — each mark carries its ends by
+// their links and their keys (LK's `endKey`; `endAt`), so of a link with two
+// ends in one article the card is the clicked end's (B1-S5); the one symbol
+// a withheld run's ends merge into opens its one end's card or lists its
+// several (O-ANATOMY's `fromSymbol`; FP-30), a target of its own beside the
+// run; the presence indicator's ⟡ asks to see the links; a byline's cut
+// label opens whole, and the act again closes it (T-LAYER's `openLabel`;
+// FP-34); a run's hairline label goes to its source carrying the run
+// (foundations §2.3; P43); the scene-offer opens the scene; C-67's pointer
+// beneath a withheld run's arm is a LEAP to the claim's home, the edition,
+// landed in whole (B1-S7 → S6) — it carries no passage, for an edition's
+// bytes are fresh identity and no span of it resolves to the origin
+// (PUB-3.2; RES-66), and lights no link, the claim being a record LK never
+// draws; a withheld run's face compact in its column's edge opens the run's
+// face whole (O-FACES's `withheldRun`; FP-26), as Enter at the run does (D5
+// K-7); the rest of a withheld run's gap conjures C-39's face naming the
+// owner the gap names (B1-S5, B1-S7), anchored at the gap and, once the text
+// layer rebuilds or takes it down, at the run's own positions (`runOf`;
+// O-HOST's anchor) — a press on the gap starts no selection, which the
+// platform, selecting an item whole wherever a selection touches it (FP-24),
+// would otherwise make of it at every click; a selection the platform made
+// (a double-click's word) is the page's; a click on a block selects it whole
+// (R11). On the corners: the version statement opens the document's members
+// (the corner's act, the one Enter takes there — K-57), a compact corner's
+// glyph opens the corner whole and a click on the corner opened closes it
+// again (T-LAYER's `openCorner`; FP-26).
+// Figures: a press that moves more than 4 px is a drag, not a click; a wheel
+// series ends at SERIES_MS (220 ms, unmeasured) of quiet, and the re-take
+// follows a wheel 220 ms after it; a pinch zooms by e^(-Δy·0.012), Mod+wheel
+// by e^(-Δy·0.0022).
+// Rules: FP-1, FP-2, FP-9, FP-12, FP-21, FP-22, FP-24, FP-25, FP-26, FP-30,
+// FP-34, FP-35.
 
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
@@ -265,7 +246,7 @@ function inPlaceholder(/** @type {Node | null} */ n) {
  * The run an element of an article names, as its own positions in the
  * article that holds it, which T-ARTICLE sets on the element: a hairline's
  * transcluded run, the passage its gesture to the source carries
- * (foundations §2.1; §2.3's carry rule); a placeholder's withheld run, where
+ * (foundations §2.1, §2.3); a placeholder's withheld run, where
  * C-39's face stands once the text layer rebuilds or takes down the
  * placeholder (O-HOST's anchor). Null where the element stands in no article
  * or names no run.

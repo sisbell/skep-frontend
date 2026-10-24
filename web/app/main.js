@@ -1,108 +1,75 @@
-// APP — the one module that wires and starts the loop (the structure record
-// §3.2 "APP"; FP-11's top). Layer 3. ENGINE-BOUND. State: the dirty mark and
-// the frame buffer (view plumbing).
-// BOOT: the URL's two flags — `?provider=<secret>` selects the bridge client
-// over `skep-dev serve` (S-14 (b), S-36 (a): the one flag, the port the verb's
-// default; the secret handed to B-DEV alone), `?gate=` loads `web/gate/` by
-// `import()` (S-22 (a)) — the ledger FIRST, before any call; absent the flag
-// the page boots against the port with NO adapter and the one line says so
-// (the shell's global is the shell's lane's). `?gate=guest` is the gate's
-// GUEST: the boot as shipped with `session(board)` never asked, so every
-// read takes the guest form and every screen its guest arm — a visitor's
-// page before any sign-in is asked (the harness's guest case; the installed
-// app loads with no query and never reaches it). Then the board, by M-PUMP's
-// `openBoard`: `boards()` (its first row the board the page holds, its
-// reference kept; an empty list or a refusal none, and why — issue #215's
-// design decision; FP-35), and for the board held `fingerprint()` (the
-// device's key store, read for this board: whether a key is bound here —
-// R56's "key present", which the entitlement arms read — and which key is the
-// session's, M-REC's `device`, read before the session so the one line's
-// device label is taken with it, FP-34; a refusal held as the store not
-// read), `session(board)` by M-PUMP's acquire (`acquireSession`;
-// S-37 (a) and issue #175's design decision: the boot's own call, made again
-// by the same routine where a restart loses the session, FP-28 — the session
-// kept as the shell opened it: its reference, never a token, and whether a
-// write may go out under it; `close(session)` at `pagehide` on a keepalive
-// fetch), `health(board)` and `probe()` by M-PUMP's
-// `readHealth` and `readProbe`, the model's index by its `readIndex`
-// (`places` at the page's class, skep #463) — each of the three answers
-// laid under the board's events taken while it was out — then the launch
-// (`launch`): the launch frame HOME — the acting account's region at mid
-// scale, a guest's the board's extent — the trail's first entry (foundations
-// §2.2; W-01; N-GO's `launch`); with no board held, the walk's root, saying
-// why, and no entry. A board the list read again at the reader's "try again"
-// finds launches the same way (M-PUMP's `onOpen`). What a module reads of an
-// owner that imports it is handed in
-// once as the page boots (FP-10, FP-11): T-LAYER's readers, LK's — N-GO's
-// links lit at an arrival or by a one-step move along the trail, P-RENDER's
-// test of where the plane draws a document (`drawsDoc`, which tails a link
-// whose far document is drawn nowhere — issue #132) and T-LAYER's owner rule
-// — and N-WALK's: where Back's light stands (N-GO's `backLight`; issue #152),
-// what a landing says of its passage (N-GO's `described`; issue #153) and why
-// no board is held, which its root says (O-FACES' `noBoardWords`; FP-35);
-// and to L-LINE the list read again at its "try again" (O-FACES'
-// `tryBoardsAgain`), a jump's face standing out of the visible view (O-HOST's
-// `aside`; FP-25), which the line carries in its place, the runs of an
-// arrival in several (N-GO's landing; issue #158), which its strip outlines,
-// and the walks' folded moments with the act that unfolds each (O-FACES'
-// `folded` and `unfold`; issue #182), which its walks' segments are;
-// to O-LAND the labels' layer, where every other run's label stands;
-// to T-LAYER the document the one line names (L-LINE's `named`; issue
-// #169's design decision: "Named once"), whose label it never holds over
-// its text;
-// and to T-LAYER, LK, N-WALK and M-PUMP the version each document's box
-// shows (N-GO's `shownIn`; issue #154), M-PUMP handing N-GO each feed row
-// publishing a trunk's next member (`arrived`) and SC what each row and each
-// change of the page's class, its own death among them, dropped, after the
-// drop (`dropped`), so a reading scene's panes are kept fresh by their kind,
-// and N-WALK the same, so the death takes the mirror down with them (FP-23;
-// issue #160); at a change of class the overlay host, the LEAP box, N-GO and
-// the one line first, so the overlay, the box's rows, the arrival, the
-// trail's notices and the line's transient made from what the class the page
-// left could read go with it (FP-29; issue #177), and to M-PUMP the places
-// the trail's entries name, which the change reads again beside the view's
-// (`stands`).
-// THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
-// cadence, draw when dirty or animating or an overlay stands — T-LAYER's
-// frame, the mirror's documents marked expanded or collapsed in place by the
-// view (N-WALK's `markExpanded`; issue #140), its items where Back's light
-// stands (`markLocated`; issue #152) and the landing's item's description
-// (`markDescribed`; issue #153), then P-RENDER, then BM, then
-// O-HOST's place, the landing's line (O-LAND's `render`), the line, then the
-// press APP-INPUT holds at reading scale, acted on the text the frame set
-// (`afterFrame`) — and the frame buffer the gate reads; the line on its own
-// cadence, the LEAP box as opened taking the address it names beside it
-// (N-LEAP's `takeAddress`; issue #171), and one standing over a change of the
-// page's class the index its new class reads (`takeIndex`; issue #177).
-// T-LAYER decides what stands BEFORE
-// the canvas draws, so a line crossing the mount threshold or entering the
-// view is drawn as a bar or yielded to its text by the same frame's standing
-// lines — never both, never neither (law 13) — and the
-// arrival mark reads the article where this frame placed it; each frame's
-// record counts the documents the canvas drew a label or a bar for that stands
-// as text (`both`), the ones it yielded a line or the whole of to text that
-// does not stand (`neither`), the bars it drew at the readable em (`barred`,
-// which issue #122's rule holds at none), and what T-LAYER stood: its new
-// mounts, its articles in the mount band and their lines. The global key
-// listener → N-KEYS, each key handed where the focus is — a field as N-FOCUS
-// reads one (`isField`) — and whether a key made it by N-FOCUS's one reading
-// (FP-20) — a key a jump in the air finds
-// held there for its landing (FP-25); a chord the LEAP box closed on
-// is read at the focus the close returned; ↓ and ↑ in an overlay move among
-// its controls through the controller; the pointer → APP-INPUT; the events
-// `moment` → a walk's moment (O-FACES'), `held` → logged, not acted on (the editor's lane's);
-// the failure reporter (a line in the page, posted nowhere). NO WRITE is
+// APP — the one module that wires the owners and starts the loop (the
+// structure record §3.2; FP-11's top). Layer 3. Engine-bound. State: the
+// loop's cadences and its last readings of the model, the layer and the
+// camera, the gate's phase, the frame buffer the gate reads (`frames`, at
+// most FRAME_CAP of them) and what boot found (`bootInfo`).
+// Boot (`boot`): the URL's two flags — `?provider=<secret>` selects the
+// bridge client over `skep-dev serve` (S-14 (b), S-36 (a): the one flag, the
+// port the verb's default, the secret handed to B-DEV alone; FP-15), and
+// `?gate=` loads `web/gate/` by `import()` (S-22 (a)), the ledger first,
+// before any call. Absent the provider flag the page boots against the port
+// with no adapter and the one line says so. `?gate=guest` boots at guest
+// class with `session(board)` never asked, so every read takes the guest
+// form and every screen its guest arm. Then the board, by M-PUMP's
+// `openBoard`: `boards()`, and for the board held its key store
+// (`fingerprint()`, read before the session so the one line's device label
+// is taken with it — FP-34), the session by M-PUMP's acquire (S-37 (a);
+// FP-28: the boot's own call, made again where a restart loses the session;
+// the session kept as the shell opened it, its reference and never a token;
+// `close(session)` at `pagehide`), its health, its daemon and the model's
+// index (`places` at the page's class); where the list held no board, none
+// is launched at or named (FP-35). Then the launch (`launch`): the launch
+// frame HOME, the trail's first entry (foundations §2.2; W-01; N-GO's
+// `launch`), or with no board the walk's root, saying why, and no entry; a
+// board the list read again finds launches the same way (M-PUMP's `onOpen`).
+// What a module reads of an owner above it is handed in once as the page
+// boots (FP-10, FP-11): T-LAYER's readers (the selection, the walk's focus,
+// the line's bottom, the trail's current entry, the version each box shows
+// — N-GO's `shownIn`, FP-22 — and the document the line names — L-LINE's
+// `named`, FP-26); LK's (the links lit, P-RENDER's `drawsDoc`, T-LAYER's
+// owner rule, `shownIn`); N-WALK's (Back's light, what a landing says,
+// `shownIn`, why no board is held); L-LINE's acts and readers (the LEAP box,
+// Back, Forward, the trail's list, sign-in, the board list's retry, a
+// jump's face out of view — O-HOST's `aside`, FP-25 — the runs of an arrival
+// in several, and the walks' folded moments with the act that unfolds each —
+// O-FACES' `folded`, `unfold`); O-LAND's hand-off and its pieces' element;
+// and M-PUMP's (`shownIn`, N-GO's `arrived` for each feed row publishing a
+// trunk's next member, `dropped` for what each row and each change of the
+// page's class dropped, and the places the trail's entries name, which a
+// change reads again beside the view's — FP-23, FP-29).
+// The loop (`loop`, on `requestAnimationFrame`): step the camera's flight,
+// pump every 90 ms, and on a dirty frame — the mark, a camera move, a model
+// or layer revision, a flight, an overlay standing, a phase — run T-LAYER's
+// frame first, so what stands is decided before anything is drawn (FP-8),
+// mark the mirror's documents, Back's light and the landing's description in
+// place (N-WALK's `markExpanded`, `markLocated`, `markDescribed`), then
+// P-RENDER, BM, O-HOST's place, the landing's line (O-LAND's `render`), the
+// scene's ties where the scene is open (SC's `draw`), then the press
+// APP-INPUT holds at reading scale, acted on the text the frame set
+// (`afterFrame`); and record the frame: its interval, its draw time, the
+// documents the canvas drew a label or a bar for that stand as text (`both`),
+// the ones it yielded a line or the whole of to text that does not stand
+// (`neither`), the bars it drew at the readable em (`barred`), and what
+// T-LAYER stood — its new mounts, its articles in the mount band and their
+// lines. Every 120 ms the line is rebuilt and the LEAP box takes the
+// address beside it and, standing over a change of the page's class, the
+// index its new class reads (N-LEAP's `takeAddress`, `takeIndex`).
+// A change of the page's class (`dropped`): the overlay host, the faces, the
+// LEAP box, N-GO and the one line first, so what the class the page left
+// could read goes with it (FP-29), then each reading scene's pane and the
+// walk (FP-23).
+// The global key listener → N-KEYS, each key handed where the focus is
+// (`whereIs`; a field as N-FOCUS reads one, `isField`) and whether a key
+// made it by N-FOCUS's one reading (FP-20): a chord the LEAP box closed on
+// is read at the focus the close returned (M-1); in the scene the scene's
+// keys go first (SC's `key`); ↓ and ↑ in an overlay move among its controls
+// through the controller; every key but Tab and Shift is the line's next
+// act. The pointer → APP-INPUT; the copy event → T-LAYER's `onCopy`; the
+// events `moment` → a walk's moment (O-FACES'), `held` → logged, not acted
+// on; the failure reporter (a line in the page, posted nowhere). No write is
 // composed or sent anywhere in this page (S-35 (a)).
-// Carries: the wireframe's §23 (`loop`, the listener, `reportFailure`,
-// `boot`; the bare keys RE-CUT to D5's chords; `startWalk` and the hand
-// board DROPPED), §0's params. Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9,
-// FP-11, FP-14, FP-15, FP-22 (N-GO's `shownIn` handed to every reader), FP-23
-// (SC's and N-WALK's `dropped` handed to M-PUMP), FP-25 (O-HOST's `aside`
-// handed to the one line), FP-26 (L-LINE's `named` handed to T-LAYER), FP-28
-// (the boot's session opened by M-PUMP's acquire), FP-29 (a change of class
-// told to every surface showing what the class it left read), FP-34 (the key
-// store read before the session, the line's device label taken with it),
-// FP-35 (no board launched at, or named, where the list held none).
+// Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9, FP-10, FP-11, FP-14, FP-15,
+// FP-20, FP-22, FP-23, FP-25, FP-26, FP-28, FP-29, FP-34, FP-35.
 
 import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';

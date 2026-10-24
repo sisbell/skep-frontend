@@ -1,139 +1,102 @@
-// L-LINE — THE ONE LINE (the structure record §3.2 "L-LINE"; foundations
-// §3.1, §3.3; S-9 (a) its own module). Layer 2. ENGINE-BOUND. A control
-// rebuilt from state (FP-13). State: VIEW — the transient segment and its
-// expiry (the next act), and the act holding the line's one Tab stop.
-// The line is the page's toolbar, named as it attaches by ST's `L.the-line`,
-// and ONE TAB STOP (D5 §1.3, K-22; §4 rule 5): its acts hold a roving stop
-// — the act last stood on, else the first that takes the focus — and ← and →
-// move among them, Enter and Space pressing the one stood on, each a native
-// button (rule 14). Its acts at the left edge — Back, Forward, the trail's
-// list; each told whether a key made it by the focus owner's one reading
-// (FP-20), so the ring is drawn at the landing a key made (D5 §4 rule 2) and
-// the trail's list takes the focus by a key alone — then THE ADDRESS DISPLAY
-// (R6), naming the level the camera's scale reads (foundations §2.2): the
-// board at far scale ("the whole board is in view" at WHOLE BOARD), the
-// account under the camera at mid (B1-S2's `1.5 › 1.5.0.1`) whatever the
-// walk stands on, and nearer the walk's own place: board › account ›
-// document — the document the walk stands in, named by the version its box
-// shows: the plain address, the trunk head, or a pinned version's address,
-// its marker lit (issue #154's design decision: "The address bar and the
-// box's corner both name it"; foundations §3.2: "its version address with ○
-// lit") — each segment read from its own
-// address: its node field, its account field whole at any depth (`1.0.1.1`
-// for the agent space's documents, B1-S6's `1.5 › 1.5.0.1.1 › …`) — or, where
-// a camera move ended over no document's region and the re-take stood the walk
-// on the account or the board holding the view's centre (N-WALK; issue #141's
-// design decision), that place in the breadcrumb mid scale names it by,
-// `1 › ⟨account⟩` or `1`, the document's fields blank. THE PLACES IT NAMES ARE
-// THE PLANE'S RUNNING HEAD (issue #169's design decision: "Named once"): its
-// board, its account and its document, by its box (`named`), which the
-// plane's labels and T-LAYER's held labels read, so none of them holds a
-// label below the line. THE ADDRESS SEGMENT IS
-// ONE WIDTH at every scale and focus (issue #141): the widest words it names
-// (`WORDS_CH`), then the strip's room and the marker's (the style's), its
-// content clipped past it, never wrapped; where no document is named its
-// position's slot, its strip and its marker stand empty, their room kept, so
-// nothing after it on the line moves. Then THE POSITION'S SLOT
-// (issue #140's design decision): a position named only where that document
-// holds text the reader may read — none at a document a read refused, a
-// covered one among them, whose box measures nothing (issue #177's design
-// decision: "no length, ticks or window"; FP-29) — and stands at its own
-// reading scale — its em at the readable threshold,
-// T-LAYER's one test, which the press rule and the walk's span grain read
-// too, never the camera's band — the one a landing named inside the focused
-// span (N-WALK's `landedAt`; W-01 step 3, "position honored"), else the
-// span's own first, with the position strip; below it the slot stands empty,
-// as wide as the document's widest position and its strip, so nothing after
-// it on the line moves; the strip marks the position, and, while the walk's
-// document is kept in view with the view's centre off its region (N-WALK's
-// `kept`), the view's window over it instead (T-LAYER's `windowIn`), open at
-// whichever end the view has run past (issue #141's design decision); and
-// where an arrival in several runs stands in that document, each run as an
-// outlined extent along it, the one the landing stands at filled (issue
-// #158's design decision: "Draw the runs on the address line's position strip
-// as outlined extents"; N-GO's landing, through the reader the app hands in);
-// the version marker ○ beside it (unlit at the bare
-// address, lit at a pinned member; no sentence); itself LEAP's box (a click,
-// Enter or Mod+L opens it; the chord drawn for the platform in its title,
-// rule 19), which opens holding the address the display names (K-30), so the
-// box never opens on a place the line does not show. WHERE NO BOARD IS HELD
-// (issue #215's design decision: "The address display shows only 'go to an
-// address'"; FP-35) the display reads "go to an address" alone, at every
-// scale, naming no board, account or document, its act the LEAP box, which
-// opens empty; then the ACTING-AS
-// segment — STATE 2 through the signed session, the one a write may go out
-// under ("acting as 1.0.1 (principal ⟨N⟩) · ⟨device label⟩ · key present on
-// this device · http://127.0.0.1:⟨P⟩ · LOCAL notebook"), its device label A
-// SLOT (FP-34; issue #208's design decision): the label of the key M-REC's
-// `device` names, read with the session — the boot reads the device's store
-// before it opens one — else why it names none, never the template's token
-// (`deviceSlot`); STATE 3 through the keyless session for
-// reading alone, the bare session whose every write the shell refuses
-// ("reading as 1.0.1 with no key — local trust; writing needs your key · on
-// your LOCAL notebook · http://127.0.0.1:⟨P⟩"; foundations §3.1's line, §3.3
-// state 3, E16 (a′)) — the session's own `writes` deciding which, never a key
-// bound at this board, which speaks for no one session; STATE 1 where no
-// session stands on the board the page holds ("reading as a guest", the
-// board's origin and the venue, §3.3 state 1's "the board and venue shown";
-// its one act, sign in — the session's refusal faced there); where NO BOARD
-// is held, none of the seven: why, as O-FACES' one entry says it
-// (`noBoardWords`; FP-35), in the guest line's place, naming no venue,
-// origin, claimant or sign-in — at an empty list `F.unclaimed`, the doors'
-// act, inert in this build and saying beginning a notebook isn't built yet as
-// it is pressed; at a list refused its words and, where a retry may tell,
-// "try again", the list read again (the app's act, O-FACES'
-// `tryBoardsAgain`); the death arm where the session died (C-137's words, by
-// the death's arm: O-FACES's `deathWords`, the guest line's in their place
-// for an arm this page holds none for, "signed out" the `closed` arm's alone,
-// the person's own sign-out) — never at a restart (client.md
-// §4b.2): where the shell re-opened the session M-PUMP takes it in the ended
-// one's place, and where it re-opened none, or a call finds the shell no
-// longer holds it, M-PUMP's acquire asks for it again (issue #175's design
-// decision; FP-28) — past a second still out, "reconnecting as ⟨account⟩
-// after a restart" in the acting-as segment's place, the session's state
-// kept; back, the segment as it stood; refused, the guest state boot shows
-// for that refusal, led by "could not reconnect as ⟨account⟩ after a
-// restart"; the other states only as the provider's events bring them; the
-// DAEMON's
-// segment (silent while the board runs; the notebook's forms where it does
-// not, "writes stopped on your notebook …" where `/health.writes.halted`);
-// A JUMP'S FACE OUT OF VIEW (FP-25: "'Reading', 'reaching' and a failure show
-// where the camera is … in the one line when out of view"): the words of a
-// jump's face whose document stands out of the visible view, in a segment of
-// their own while the plane hides the face (O-HOST's `aside`, read through
-// the reader the app hands in), said already through the status region as
-// the face was shown;
-// A WALK'S FOLDED MOMENT (issue #182's design decision: "folds the moment
-// into one segment of the top line … It never yields when the line runs
-// short"): after the acting-as segment, one segment for each walk whose
-// moment stands folded — its walk, its step and "waits on you" (O-FACES'
-// `folded`, read through the reader the app hands in), said through the
-// status region as it folds — its act, inside the line's one stop, unfolding
-// it (O-FACES' `unfold`); short of room every other segment is cut first, the
-// address's last, and the walk's never (the style's);
-// the TRANSIENT segments (the swallow line K-9; the mode line C-31 where the
-// pair flipped) until the next act, or a change of the page's class, which
-// takes one quoting what the class it left read down with it. THE REBUILD
-// KEEPS THE FOCUS (rule 11):
-// the line is rebuilt whenever its words change — every frame of a flight —
-// and the act that held the focus has it back by its `data-act`, through the
-// focus's owner; an overlay standing at Back (the trail's list) or at sign in
-// (the session's face) finds its act again by the act's id (O-HOST's
-// anchor). What a screen reader is told (D4): a transient segment and
-// the mode line politely, the session's death, a session a restart lost that
-// the acquire could not get back, and halted writes assertively — nothing
-// while it reconnects nor as it returns — through the one status region; a
-// change of the page's class (issue #177's design decision: "One status
-// message says the session ended and what is covered"; FP-29) is said ONCE,
-// as the reads it asked answer (M-PUMP's `rereading`), UNREACHED_MS at the
-// most after it: the ending's words, then the documents it covered (M-REC's
-// `coveredDocs`) — never the ending alone first. The
-// chip is NOT a segment (ux-T2: the
-// document's corner). Carries: the wireframe's §15 (`whereAmI`,
-// `actingLine`, `updateHUD`, `setTransient`; the chip and the walk step
-// removed; `whereAmI` RE-CUT to foundations §2.2, its document form nearer
-// than mid and its position at the document's own reading scale alone; the
-// diagnostics behind `h` are the gate's hooks).
+// L-LINE — the one line (the structure record §3.2; foundations §3.1, §3.3;
+// S-9 (a)). Layer 2. Engine-bound. A control rebuilt from state (FP-13).
+// State: the transient segment and its expiry (the next act), the act
+// holding the line's one Tab stop (`stop`), the last render's words that are
+// said once as they arrive, and when the page's class last changed with its
+// message not yet said (`changedAt`).
+// The line is the page's toolbar, named as it attaches (`L.the-line`), and
+// one Tab stop (D5 §1.3, K-22; §4 rule 5): its acts hold a roving stop — the
+// act last stood on, else the first that takes the focus — ← and → move
+// among them (`step`), Enter and Space press the one stood on, each a native
+// button (rule 14). Its segments, left to right: the acts — Back, Forward,
+// the trail's list — each told whether a key made it by the focus owner's
+// one reading (FP-20); the address display (R6; `addressDisplay`), naming
+// the level the camera's scale reads (foundations §2.2): the board at far
+// scale, with `B1.clamp` at WHOLE BOARD; the account under the camera at mid
+// (B1-S2), whatever the walk stands on; nearer, the walk's own place — board
+// › account › document, the document the walk stands in named by the version
+// its box shows, its marker lit at a pinned version (FP-22; foundations
+// §3.2) — or, where the walk stands on an account or the board, that place
+// as mid scale names it, the document's fields blank; where no board is held
+// `L.go-to-address` alone, at every scale (FP-35). The places it names are
+// the plane's running head (`named`; FP-26): the plane's labels and T-LAYER's
+// held labels read them through the reader the app hands in, so none of them
+// holds a label below the line. The address segment is one width at every
+// scale and focus: the widest words it names (`WORDS_CH`), then the strip's
+// room and the marker's (the style's), its content clipped past it; where no
+// document is named its position's slot, strip and marker stand empty, their
+// room kept, so nothing after it on the line moves. The position's slot
+// (`slot`): a position named only where the document holds text the reader
+// may read — none at a document a read refused, a covered one among them
+// (FP-29) — and stands at its own reading scale (T-LAYER's `atReadingScale`,
+// the one test the press rule and the walk's grain read too), the one a
+// landing named inside the focused span (N-WALK's `landedAt`), else the
+// span's own first; below that scale the slot stands empty, as wide as the
+// document's widest position and its strip. The strip (`strip`) marks the
+// position, or, while the walk keeps its document in view with the view's
+// centre off its region (N-WALK's `kept`), the view's window over it
+// (T-LAYER's `windowIn`), open at whichever end the view has run past; where
+// an arrival in several runs stands in that document, each run is an
+// outlined extent along it, the one the landing stands at filled (FP-21;
+// N-GO's landing, through the reader the app hands in); the strip's act
+// (K-23; `stripAct`) quotes the position and the passage's first words. The
+// version marker beside it: ○ at the bare address, ● at a pinned member. The
+// segment is LEAP's box's act (a click, Enter or Mod+L; the chord drawn for
+// the platform in its title, rule 19), which opens holding the address the
+// display names (K-30; `currentAddress`), so the box never opens on a place
+// the line does not show, and empty where no board is held.
+// The acting-as segment (`actingSegment`), its state among foundations §3.3's
+// seven: state 2 through the signed session, the one a write may go out
+// under (`F.acting-as`), its device label a slot (FP-34; `deviceSlot`) —
+// the label of the key the session was opened with (M-REC's `device`), read
+// with the session, else why it names none, never the template's token;
+// state 3 through the keyless session for reading alone (`F.keyless-session`;
+// §3.3 state 3, E16 (a′)) — the session's own `writes` deciding which, never
+// a key bound at this board; state 1 where no session stands on the board
+// the page holds (`B1.guest-line`, the board's origin and the venue; its one
+// act sign-in, the session's refusal beside it, state 3 where the refusal
+// was `no_key`); where no board is held, none of the seven: why, as O-FACES'
+// one entry says it (`noBoardWords`; FP-35), in the guest line's place — at
+// an empty list `F.unclaimed`, the doors' act, inert, saying beginning a
+// notebook isn't built yet as it is pressed; at a list refused its words and,
+// where a retry may tell, `B1.try-again`, the list read again (the app's
+// act); the death arm where the session died (O-FACES's `deathWords`, the
+// guest line's in their place for an arm this page holds none for, "signed
+// out" the `closed` arm's alone) — never at a restart (client.md §4b.2): a
+// session the shell re-opened M-PUMP takes in the ended one's place, and one
+// it re-opened none of M-PUMP's acquire asks for again (FP-28) — past a
+// second still out `L.reconnecting` in the segment's place, the session's
+// state kept; back, the segment as it stood; refused, the guest state boot
+// shows for that refusal, led by `L.reconnect-refused`. The daemon's segment
+// (`daemonSegment`): silent while the board runs; its stopped, unreachable
+// and halted-writes forms where it does not. A jump's face out of view
+// (FP-25): the words of a jump's face whose document stands out of the
+// visible view, in a segment of their own while the plane hides the face
+// (O-HOST's `aside`, read through the reader the app hands in), said already
+// through the status region as the face was shown. A walk's folded moment
+// (FP-28, FP-20; `walkSegments`): after the acting-as segment, one segment
+// for each walk whose moment stands folded — its walk, its step and that it
+// waits on the reader (O-FACES' `folded`), said through the status region as
+// it folds — its act, inside the line's one stop, unfolding it (O-FACES'
+// `unfold`); short of room every other segment is cut first, the address's
+// last, and the walk's never (the style's). The transient segments (the
+// swallow line K-9; the mode line C-31 where the pair flipped) stand until
+// the next act (`act`), or a change of the page's class, which takes one
+// quoting what the class it left read down with it (`classChanged`).
+// The rebuild keeps the focus (rule 11; `render`): the line is rebuilt
+// whenever its words change — every frame of a flight — and the act that held
+// the focus has it back by its `data-act`, through the focus's owner; an
+// overlay standing at Back (the trail's list) or at sign-in (the session's
+// face) finds its act again by the act's id (O-HOST's anchor). What a screen
+// reader is told (D4): a transient segment and the mode line politely; the
+// session's death, a session a restart lost that the acquire could not get
+// back, and halted writes assertively, once as they arrive — nothing while
+// it reconnects nor as it returns — through the one status region; a change
+// of the page's class is said once (FP-29), as the reads it asked answer
+// (M-PUMP's `rereading`), UNREACHED_MS at the most after it: the ending's
+// words, then the documents it covered (M-REC's `coveredDocs`), the first
+// COVERED_NAMED by address and the rest counted — never the ending alone
+// first. The chip is no segment (ux-T2: the document's corner).
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28,
 // FP-29, FP-34, FP-35.
 
@@ -266,28 +229,28 @@ function endingSaid(ending) {
  * @typedef {Object} AddressDisplay — what the address segment names at the camera's scale (foundations §2.2)
  * @property {string} text the segment's words: the place, then the position where one is named
  * @property {string} place the place's words — the board, the account, or board › account › document — before the position's slot
- * @property {number} slot the position's slot, in characters: as many as the document's widest position takes in its words, standing empty below the document's reading scale (issue #140); 0 where no document is named
+ * @property {number} slot the position's slot, in characters: as many as the document's widest position takes in its words, standing empty below the document's reading scale; 0 where no document is named
  * @property {string} addr the address named — the board, the account under the camera at mid, nearer the account or the board the walk stands on, or the document the walk stands in (its member where one is pinned): the LEAP box's prefill; '' where no board is held
  * @property {string | null} doc the document named, nearer than mid
  * @property {number | null} pos the position named inside it, at the document's own reading scale alone
  * @property {number | null} member the version member pinned
  * @property {boolean} whole the whole board is in view, at WHOLE BOARD's clamp
- * @property {import('../plane/layout.js').Window | null} window the view's window over the document named, the strip's mark where the walk keeps it in view off the view's centre (N-WALK's `kept`; issue #141); null where it is not kept, no position is named, or no line in view names one
+ * @property {import('../plane/layout.js').Window | null} window the view's window over the document named, the strip's mark where the walk keeps it in view off the view's centre (N-WALK's `kept`); null where it is not kept, no position is named, or no line in view names one
  */
 
 /** the address the display names: the LEAP box's prefill, so the box opens holding what the line shows (K-30) */
 export function currentAddress() { return addressDisplay().addr; }
 
 /**
- * @typedef {Object} Named — the places the address display names (issue #169's design decision: "Named once"): the line is their running head, so none of them holds a label below it
+ * @typedef {Object} Named — the places the address display names (FP-26): the line is their running head, so none of them holds a label below it
  * @property {string} board the board named; '' where no board is held (FP-35)
  * @property {string | null} account the account named — under the camera at mid, the walk's own nearer — null where none is
  * @property {string | null} doc the document named nearer than mid, by its box: the address every version of it shares; null where none is
  */
 
 /**
- * The places the address display names (`addressDisplay`; issue #169's
- * design decision: "Named once"): its board, the account it names and the
+ * The places the address display names (`addressDisplay`; FP-26): its board,
+ * the account it names and the
  * document it names, by its box — read by the plane's labels and T-LAYER's
  * held labels, through the reader the app hands in, so a place the line
  * names holds no label below it.
@@ -319,10 +282,10 @@ const WORDS_CH = (() => {
  * §2.2) — at far scale the board; at mid the account under the camera
  * (B1-S2), whatever the walk stands on; nearer the walk's own place: the
  * document it stands in, and the position only where that document stands at
- * its own reading scale (T-LAYER's one test; issue #140), its slot standing
+ * its own reading scale (T-LAYER's `atReadingScale`), its slot standing
  * empty below it, the strip's window where the walk keeps the document in
  * view off the view's centre; or the account or the board it stands on, named
- * as at mid (issue #141); the account under the camera where it stands nowhere.
+ * as at mid; the account under the camera where it stands nowhere.
  * Where no board is held, at every scale, "go to an address" alone, naming
  * no place (FP-35).
  * @returns {AddressDisplay}
@@ -376,14 +339,12 @@ function aroundToken(text, token) {
 }
 
 /**
- * THE DEVICE LABEL'S SLOT (FP-34; issue #208's design decision: "The line's
- * device label names this client's own key, which was named at setup, so take
- * it with the session"): the label of the key this device opened the
- * session with (M-REC's `device`) — the store read with the session, so it is
- * never an empty box — else why it names none, in that cause's words: the key
- * carries no label; the store was not read; the session does not name its
- * key among the several it may have been opened with (skep #579). Named by
- * its role and what it shows.
+ * The device label's slot (FP-34): the label of the key this device opened
+ * the session with (M-REC's `device`) — the store read with the session, so
+ * it is never an empty box — else why it names none, in that cause's words:
+ * the key carries no label; the store was not read; the session does not
+ * name its key among the several it may have been opened with. Named by its
+ * role and what it shows.
  * @param {import('../model/records.js').DeviceKey | import('../model/records.js').DeviceCause | null} dev
  * @returns {{shows: string, html: string}}
  */
@@ -427,8 +388,8 @@ function noBoardSegment() {
  * foundations §3.3's seven — while M-PUMP's acquire is out past a second for
  * a session a restart lost, "reconnecting as" in the session's place, the
  * session's state kept; where it was refused, the guest state boot shows for
- * that refusal, led by "could not reconnect as" (issue #175's design
- * decision); a death's words O-FACES's (`deathWords`), the guest line's in
+ * that refusal, led by "could not reconnect as" (FP-28); a death's words
+ * O-FACES's (`deathWords`), the guest line's in
  * their place for an arm it holds none for. Where no board is held, why
  * (`noBoardSegment`), and none of the seven.
  * @returns {Acting}
@@ -484,10 +445,10 @@ function modeLine() {
 }
 
 /**
- * The position's slot (issue #140's design decision): the position's words,
- * as wide as the document's widest position, then its strip — standing empty
- * below the document's reading scale, and where no document is named, the
- * strip's room kept, so nothing after it on the line moves (issue #141).
+ * The position's slot: the position's words, as wide as the document's
+ * widest position, then its strip — standing empty below the document's
+ * reading scale, and where no document is named, the strip's room kept, so
+ * nothing after it on the line moves.
  * @param {AddressDisplay} a
  */
 function slot(a) {
@@ -497,8 +458,8 @@ function slot(a) {
 /**
  * The position strip: the document's length, the position named marked on
  * it — or, where the walk keeps the document in view off the view's centre,
- * the view's window over it, open at whichever end the view has run past
- * (issue #141's design decision) — and the runs of an arrival in several
+ * the view's window over it, open at whichever end the view has run past —
+ * and the runs of an arrival in several
  * standing in that document, each an outlined extent from its first position
  * to its last, the one the landing stands at filled (see the head); its room
  * alone, hidden, where no position is named.

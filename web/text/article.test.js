@@ -1,126 +1,23 @@
-// T-ARTICLE's test: the article from a record — the withheld run a gap as
-// tall as its bars, its last line its remainder, never its text, holding its
-// face whole where its full lines hold it, else its head, else its origin's
-// owner, else the origin's mark, the face compact in its column's edge then —
-// its owner and a mark that opens it whole, a control on the plane alone (a
-// mutant that stands the face in every gap, or never, or leaves out the
-// edge's mark, turns red) (issue #151's design decision); its entitlement arm
-// the one rule's for the reader (C-39's face reads it too): a signed-in principal's
-// owner-grant default, whatever key signed the session; a guest whose device
-// holds a key for this board C-36's key-present default, never told that no
-// key on this device opens an account (a mutant that decides on the session
-// alone turns red); a guest with none R56's key-absent default, naming the
-// owner. C-67's clause beneath the arm decided over the origin's whole
-// admitted-claim set (PUB-5.124, RES-164): nothing in its place where no
-// claim stands, where the lookup, a claim's link or its home is not read yet,
-// or where the board refused the lookup as withheld from the reader (a mutant
-// that keeps the pointer unconditional turns red); "edition claims not read"
-// where the lookup failed any other way, or a listed claim's admission waits
-// on a read that failed and no admitted claim passes nor waits on a read
-// still out (issue #186: a mutant that leaves the place blank over a failed
-// read, or says QUOTING over one, turns red), a line on the plane and in a
-// pane alike; the pointer
-// where any admitted claim's FROM holds bytes outside the origin — a
-// delegate's among them — even listed after one that quotes (a mutant that
-// decides by the first claim turns red), following the passing claim
-// PUB-3.107's order picks — the origin owner's own first, though a delegate's
-// is addressed lower; the lowest-addressed of the owner's as tumblers; the
-// lowest-addressed passing claim where none of the owner's passes (a mutant
-// that takes the lowest address alone, the first listed, or orders addresses
-// as strings turns red) — on the plane a control carrying that claim and its
-// home, in a pane a line (a mutant that carries no claim, or makes the pane's
-// a control, turns red); the QUOTING sibling where every
-// admitted claim's FROM holds the origin's bytes or none, naming the
-// lowest-addressed claimant; a claim homed in a draft or a doc 1, another
-// account's, or typed outside the edition class never counted (a mutant with
-// no admission test turns red); the owner's link marked at its
-// span, and a stretch several links mark in the one mark they merge into —
-// neutral in the hue where their linkers differ, lighter only where every one
-// was followed (a mutant that takes the first link's mark turns red); the
-// selected span marks every block it touches and no other, and the
-// focus its own block, by the one rule T-LAYER marks a standing article by; the
-// transcluded run's hairline and C-33's mark, once per run however marks and
-// symbols cut it (a mutant that sets them at every stretch turns red), each
-// hairline carrying the whole run's positions, in every block the run
-// crosses (a mutant that carries the block's part alone turns red); the
-// corner's version statement and a draft's chip (C-28), items of one stop
-// that the article never holds (they stand beside it, outside the box that
-// clips it); the record rule; headings as formatting. Each symbol AT ITS
-// SPAN, in the HTML and the plan alike: right after the last word its span
-// touches — never at the paragraph's end past the words after it (a mutant
-// that sets them there turns red), never inside a word, after a hyphen where
-// the line may break there — once, in the last paragraph a span crossing two
-// touches; after a run's chrome where the word runs into its hairline with no
-// break between them; the others' count in its column's edge, the block's
-// first child out of its text and no piece of its plan, so it sets no line (a
-// mutant that floats it in the text turns red); the corner compact — its
-// usual states glyphs named by their whole words, its numbers and its
-// exceptions in their words (a mutant that compacts a number turns red);
-// an end standing in two stretches marked in both, the
-// text between them not, its one symbol after its last stretch (a mutant
-// that marks or stands it by the first stretch alone turns red); each mark
-// carrying the ends it draws — a symbol its link and its end's key, a
-// stretch the links and the keys of the ends marking it, in one order — so a
-// link's two ends in one paragraph are two marks a click tells apart (a
-// mutant that writes the link alone turns red); a symbol
-// whose far end floats titled with "its passage is not in ⟨D⟩'s current
-// text", and one whose far end's text holds part of its passage with the
-// line (issue #153; a mutant that leaves the title its type alone turns
-// red). The plan
-// the canvas's bars are laid out from: the head's three lines, a fourth where
-// links touch the document; a block's
-// pieces with its hairline's label, C-33's mark and its symbols at its size;
-// a heading's margins standing it nearer the block it heads; the same blocks,
-// in the same order, as the HTML. The scene-mode variant, a reading scene's
-// pane's article: no scene-offer and no row for one in the plan, and no mark
-// a control — the plane's offer, symbols and presence ⟡ are (a mutant that
-// offers the scene in a pane, or keeps a symbol's button there, turns red).
-// Each withheld run names its own origin's owner, whoever owns the document
-// windowing it — in its head, its arm, its edge's mark and the owner it
-// carries for C-39's face (a mutant that names the article's owner, or one
-// owner for every run, turns red).
-// The corner at a pinned version names it — its own number of the count its
-// box's document holds — and offers the versions list there too; its record
-// holding no count, it takes the box's (issue #154). A reading scene's pane's
-// corner, handed them, carries its act reading another version in the pane's
-// place and the line saying the version it reads lacks the passage that act
-// carried, in the corner's one order; the plane's carries neither (issue #160:
-// a mutant that draws either always, or never, turns red).
-// THE ITEM RULE (issue #161): every block that holds no text is one kind — a
-// record the record rule renders, a reference, a withheld run, else an item
-// this client cannot show — and no paragraph is; a key record's own plain
-// contents are its keys' labels and fingerprints in the record's order, each
-// fingerprint built here apart from the page's (a mutant that hashes the hex
-// as text, frames no length, or groups the hex turns red). THE COPY'S PLAIN
-// TEXT is the span's items in order, a stand-in in each item's place — never
-// empty (a mutant that copies the text alone turns red), never a word of what
-// the plane draws; text is never joined across a withheld run, whose
-// stand-in names its origin's owner, never the windowing document's (a mutant
-// that names the document's owner turns red), and its length; items one
-// after another of one kind and owner share one stand-in, their lengths
-// summed, and of another owner, or with text between them, take one each (a
-// mutant that never merges, or merges across owners, turns red); a span of
-// text alone copies its own characters, as M-REC's `textOf` reads them.
-// THE ENDS DRAWN AT A WITHHELD RUN (issue #202) stand as one symbol at the
-// start of its gap's first line, before the notice's words, carrying every
-// end's key and, for two or more, their count, at every stage, no stretch of
-// the gap marked; another's there counted in the column's edge below the
-// face's compact mark; the plan unmoved, and the gap measured with the
-// symbol in it, its notice stepping to a smaller form (a mutant that drops
-// the symbol, the count, its stacking or the measure turns red). A symbol
-// stands after the last of its stretches a paragraph holds (a mutant that
-// stands it by its last stretch alone turns red), and is lit where every link
-// it stands for is lit, the article made with none lit.
-// THE BYLINE (issue #208; FP-34): its owner, then its slots — on another's
-// byline the device label and the fingerprint cue its owner's facts hold, on
-// the reader's own the label alone (a mutant that cues the reader's own turns
-// red) — never a ⟨token⟩: empty boxes named as being read while the facts
-// are, else each cause's words, said once where one cause empties both slots
-// (a mutant that shows the template, or says the cause twice, turns red); the
-// plan's byline line the same in every state (a mutant that sets the slots'
-// words in the plan turns red); a label its box does not hold cut on a word's
-// end, whole on its act, in its title and in its name (a mutant that cuts
-// mid-word turns red).
+// T-ARTICLE's test: the article made from a record — a withheld run's gap as
+// tall as its bars, holding its face, its head, its owner or the origin's
+// mark by what its full lines hold, the face compact in the column's edge
+// otherwise and a control on the plane alone; the entitlement arm by the
+// reader; C-67's clause decided over the origin's whole admitted-claim set,
+// the pointer a control on the plane and a line in a pane; links marked at
+// their spans in the one mark they merge into; the selection's and the
+// focus's marks by the one rule; a run's hairline and C-33's mark once per
+// run; each symbol at its span, after its last word and after a run's chrome,
+// titled with what its far end holds; each mark carrying the ends it draws;
+// the others' count in the column's edge, setting no line; the corner's
+// items, whole and compact, outside the article, a pane's with its read act
+// and its lacking line; the record rule and headings; the plan the bars are
+// laid out from, the same blocks as the HTML; the scene-mode variant with no
+// offer and no control; each withheld run naming its own origin's owner; the
+// item rule and the copy's plain text with its stand-ins; the ends drawn at
+// a withheld run as one symbol with its count, the plan unmoved; a symbol
+// lit where every link it stands for is lit; and the byline's slots, never a
+// placeholder, cut on a word's end and whole on their act (FP-12, FP-21,
+// FP-22, FP-23, FP-24, FP-26, FP-30, FP-33, FP-34).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -653,7 +550,7 @@ test('the scene-mode variant, a pane\'s article: no scene-offer and no row for o
   assert.ok(!/ role="(?!img")[^"]*"| tabindex=/.test(inPane), 'and nothing in the pane\'s article is a control or a stop: a byline\'s slots are named by their words alone');
 });
 
-// ---- the byline (issue #208; FP-34) -----------------------------------------------------------------------------------
+// ---- the byline (FP-34) -----------------------------------------------------------------------------------------------
 
 /** a byline's slots as the HTML sets them: each its role, its classes, its width, the words it shows, its whole, its cause's string and its name */
 const slotsIn = (/** @type {string} */ html) => {
@@ -730,7 +627,6 @@ test('a device label its box does not hold is cut on a word\'s end with an ellip
   assert.deepEqual(by && { cls: by.slots[0].cls, shows: by.slots[0].shows, whole: by.slots[0].whole, title: by.slots[0].title, name: by.slots[0].name }, { cls: 'slot cut', shows: esc('Shane’s MacBook Pro…'), whole: esc(long), title: esc(long), name: named('label', long) }, 'cut in its box, whole beside it for its act, in its title and in its name');
 });
 
-/** a withheld run's placeholder in an article's HTML, by its first position: the owner it carries, its head and its arm as the reader meets them; null where none stands there */
 test('each withheld run names its own origin\'s owner — in its head, its arm, its edge\'s mark and the owner it carries — whoever owns the document windowing it', () => {
   const d = doc({ blocks: [
     { pos: 1, width: 10, kind: 'para', text: 'Tumbler.', origin: null },
@@ -754,7 +650,7 @@ test('each withheld run names its own origin\'s owner — in its head, its arm, 
   }
 });
 
-// ---- the item rule and the copy's plain text (issue #161) ---------------------------------------------------------
+// ---- the item rule and the copy's plain text (FP-24) --------------------------------------------------------------
 
 /** a key's fingerprint built here apart from the page's: SHA-256 over the tag, then each field's 4-byte big-endian length and its bytes (AUTH-1.8, AUTH-1.12) */
 const fingerprintOf = (/** @type {string} */ alg, /** @type {string} */ keyHex) => {

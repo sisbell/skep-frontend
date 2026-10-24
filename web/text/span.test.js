@@ -1,9 +1,9 @@
 // T-SPAN's test: a character boundary of a block and its byte position
-// round-trip over text holding a multi-byte character — a mutant that adds
-// the character index to the block's first position turns red; a position
-// inside a character resolves past it, as `sliceBytes` cuts; K-8's extension
-// widens by one block in the direction pressed and stops at the document's
-// edges; a block is touched by the span that overlaps it.
+// round-trip over text holding a multi-byte character, a position inside a
+// character resolving past it as `sliceBytes` cuts; K-8's extension widens
+// by one block in the direction pressed and stops at the document's edges;
+// a block is touched by the span that overlaps it, and two spans are the
+// same where they name the same bytes.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { posOfChar, charOfPos, extended, touches, sameSpan, spanOfBlock } from './span.js';
