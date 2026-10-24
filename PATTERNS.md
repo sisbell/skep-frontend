@@ -353,6 +353,24 @@ fix; nothing here depends on their names.
   on screen (FP-8). A pan, a zoom or a newer version's arrival changes
   no box's version.
 
+## The session
+
+- **FP-32 A session's ending is one entry, read by every surface.** Each
+  way a session ends is one entry in the strings table: a head the line
+  shows uncut at any width, and the whole form the head opens, which
+  together say what ended the session as far as the board's records
+  show and name the act, if any, that brings the reading back. The line,
+  the sign-in face, every covered place and the status message read
+  only that entry; "signed out" is the reader's own sign-out alone. A
+  board that stops answering names no cause and gets one attempt once
+  it answers, what was read standing uncovered until then, a refused
+  attempt worded once by the refusal. In each view the covered place
+  nearest the focus carries the ending's words, the whole form first
+  and the head after; every other covered place carries a mark keyed to
+  those words that opens them there; in a covered pane the words stand
+  level with the passage held beside it. The act appears only where it
+  works, is the same act the line offers, and the line keeps its own.
+
 ## Freshness
 
 - **FP-23 A document is kept fresh by its kind.** Every surface that
@@ -491,6 +509,7 @@ found.
 - 2026-10-23 · FP-30 · #257 #258 #259 #260 · a link's marks meant different things by state the reader could not see: a failed follow's light, unnumbered runs, a maker shown by hue alone, a connection's colour that changed with the zoom
 - 2026-10-23 · FP-21 · #258 · runs whose bytes the board will not read were numbered as if their order were known
 - 2026-10-23 · FP-31 · #254 #255 · a count fell to 5.6 px at the readable size and the measure to 19 characters at 320 px, signs giving way before margins
+- 2026-10-23 · FP-32 · #268 #269 · four surfaces wrote their own words for an ended session and fell through to "signed out", false for three causes of four, and a covered place offered no way back in
 
 ## What these rule out
 
