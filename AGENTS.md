@@ -1,7 +1,8 @@
 # Agent instructions for this repository
 
 Read `PATTERNS.md` first. Its numbered rules (FP-1 … FP-35) bind every
-file under `web/`; a module's head comment cites the ones that bind it.
+file under `web/`; a module's head comment cites the ones that bind it
+(§Comments).
 
 ## The page
 
@@ -23,6 +24,30 @@ no drawing module changes.
 Strings the page shows come from `web/strings.js`: pinned by their
 `C-n` id in the design's copy inventory, or marked DRAFT with the
 screen that needed it. Invent no wording.
+
+## Comments
+
+Comments are for the next reader's reasoning; they describe the code as
+it stands.
+
+- A module's head says what the module owns and does — its state, its
+  acts, the order and figures it keeps — and cites the FP rules that
+  bind it by number. It names another module only where it hands off
+  ("T-LAYER mounts it"); what another module does is that module's head.
+- A function or type opens with one summary sentence. What a caller must
+  know — when it throws, what it refuses, a precondition — follows.
+- A comment states the present. Issue numbers, design decisions, dates
+  and history ("no longer", "was", "as before") belong in the commit
+  body.
+- A comment cites a rule by its id — `FP-n`, a design rule such as
+  `A-53`, a record section such as foundations §2.3 — and never quotes
+  or restates it. A design decision a fix builds is cited by the FP it
+  rides in `PATTERNS.md`, not quoted from its issue.
+- A comment says what the code does. One that disagrees with the code is
+  corrected to the code.
+- A test file's head says what the file proves, in a sentence or two; a
+  test's name says its case. Setup shared across tests is a helper, not
+  a comment repeated.
 
 ## The gate
 
