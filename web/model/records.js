@@ -9,7 +9,9 @@
 // edition claims the active view lists on each origin a withheld run names
 // (PUB-5.124; `takeEditionClaims`), the board, the session as `session`
 // opened it (its REFERENCE, a name, never a token; its principal and
-// account; whether a write may go out under it), health and the derived
+// account; whether a write may go out under it) and, where a restart lost it
+// (issue #175's design decision), the account the page is reconnecting as or
+// could not reconnect as (`reconnect`), health and the derived
 // mode, the daemon's state, the device's key store as `fingerprint`
 // answered it — whether it holds a key bound at this board (R56's "key
 // present") and which of its keys is the session's (`device`); THE CLIENT INDEX
@@ -19,12 +21,15 @@
 // was read laid over it (`takeIndex`), and kept by the feed's rows — never
 // from `/changes`, never by enumerating documents. THE CLASS: every record
 // read here was read at the page's class, and the page's own session's death
-// (`sessionDied`) drops every one — the index, each document's delivered state
+// (`sessionDied`), a session a restart lost and the re-acquire did not regain
+// (`sessionLost`), or one regained as another principal (`sessionRegained`),
+// drops every one (`dropClass`) — the index, each document's delivered state
 // and its row, the links and where their slots project, the edition claims,
 // the owners and key sets, the drafts rows held — so what stands after
-// it is what a guest's page holds before it reads (foundations §2.1: the
-// index "masked at the reader's class"; client.md §4e.3); M-PUMP reads it
-// all again at guest class. It knows nothing of pixels, zoom, selection or
+// it is what a page holds before it reads at the class the change leaves it
+// at, a guest's after a death (foundations §2.1: the index "masked at the
+// reader's class"; client.md §4e.3); M-PUMP reads it all again at that
+// class. It knows nothing of pixels, zoom, selection or
 // lenses: "the links touching an address" is the RAW set as delivered —
 // which of them show, and how, is LK's (the seam).
 // A LINK'S SLOT NAMES BYTES, NEVER A PLACE: a V-spec slot is recorded as the
@@ -49,11 +54,12 @@
 // delivered state is dropped.
 // EVERY DROP COUNTED (`dropsOf`): how many times what the page held of an
 // address has been dropped — by `invalidate`, its record held or not, and by
-// every death, which drops every record. A read is answered by one channel
-// and the feed's rows come by another, and nothing orders the two, so a read
-// can land after the row of a write it was read before: M-PUMP reads the
-// count as a read goes out and again as it lands, and takes nothing learned
-// across a drop. The edition claims held are dropped together — a feed row
+// every drop of the class (`dropClass`), which drops every record. A read is
+// answered by one channel and the feed's rows come by another, and nothing
+// orders the two, so a read can land after the row of a write it was read
+// before: M-PUMP reads the count as a read goes out and again as it lands,
+// and takes nothing learned across a drop. The edition claims held are
+// dropped together — a feed row
 // names a claim's home, never the origin it claims — and their drops counted
 // apart (`claimDrops`).
 // THE `H` DOCUMENT (the record §1.8, OPEN): the system account's rows are
@@ -177,6 +183,12 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /**
+ * @typedef {Object} Reconnect — the page's session lost at a restart and not regained (issue #175's design decision): the account the lost session acted as, and whether the re-acquire was refused
+ * @property {string | null} as the account — null for a session of no account
+ * @property {boolean} refused false while the re-acquire is out past a second ("reconnecting as"), true once it was refused ("could not reconnect as")
+ */
+
+/**
  * @typedef {Object} Reader — who reads, as the entitlement arm at a withheld document or run is decided for them (PUB-5.97's key-split defaults, in PUB-5.121's order; R56)
  * @property {string | null} account the acting account, or null (a guest)
  * @property {boolean} keyPresent the device's key store holds a key bound at this board's origin: PUB-5.97's "an enrolled key for this board present"
@@ -189,8 +201,10 @@ const state = {
   session: null,
   /** @type {DeathReason | null} */
   sessionDied: null,
-  /** @type {{kind: string, name: string} | null} the refusal `session()` met, where it did */
+  /** @type {{kind: string, name: string} | null} the refusal `session()` met, where it did — at boot, or re-acquiring a session a restart lost */
   sessionRefused: null,
+  /** @type {Reconnect | null} the page's session lost at a restart and not regained, where the line says so (`setReconnecting`, `sessionLost`) */
+  reconnect: null,
   /** @type {unknown} the `/health` document verbatim */
   health: null,
   /** @type {Mode | null} */
@@ -219,8 +233,8 @@ const state = {
   claimDrops: 0,
   /** @type {Map<string, number>} how many times each address's delivered state has been dropped (`invalidate`), its record held or not */
   drops: new Map(),
-  /** how many times the page's own session's death has dropped every record (`sessionDied`) */
-  deaths: 0,
+  /** how many times a change of the page's class has dropped every record (`dropClass`) */
+  classDrops: 0,
   /** @type {Map<string, OwnerRow>} */
   owners: new Map(),
   /** @type {Map<string, {enrolled: Array<{fingerprint: string, anchor: boolean}>, retired: Array<{fingerprint: string}>}>} */
@@ -245,32 +259,80 @@ export const rev = () => state.rev;
 export function setBoard(b) { state.board = b; bump(); }
 export const board = () => state.board;
 /** @param {SessionOpened | null} s */
-export function setSession(s) { state.session = s; state.sessionDied = null; bump(); }
+export function setSession(s) { state.session = s; state.sessionDied = null; state.reconnect = null; bump(); }
 export const session = () => state.session;
 /** @param {{kind: string, name: string} | null} r */
 export function setSessionRefused(r) { state.sessionRefused = r; bump(); }
 export const sessionRefused = () => state.sessionRefused;
 /**
- * The death signal: the line drops "acting as" at once, and every read held
- * at the session's class goes with the session — the index (its rows, counts
- * and state), each document's delivered state and the index's row on it, the
- * links and where their slots project, the edition claims, the owners and key
- * sets, and the feed's drafts rows — so no frame after it draws, lists or
- * counts what the session could read and a guest cannot. Every address is counted dropped
- * once more (`dropsOf`), so no read out across the death is taken. M-PUMP
- * reads the index again in the guest form, and the view asks the rest.
- * @param {DeathReason} reason
+ * Every read held at the page's class dropped with it (THE CLASS): the
+ * index (its rows, counts and state), each document's delivered state and
+ * the index's row on it, the links and where their slots project, the
+ * edition claims, the owners and key sets, and the feed's drafts rows — so no
+ * frame after it draws, lists or counts what the class could read and the
+ * next cannot. Every address is counted dropped once more (`dropsOf`), so no
+ * read out across the change is taken. M-PUMP reads the index again at the
+ * class the page reads at now, and the view asks the rest.
  */
-export function sessionDied(reason) {
-  state.deaths++;
-  state.sessionDied = reason; state.session = null;
+function dropClass() {
+  state.classDrops++;
   state.index.clear(); state.counts.clear(); state.indexState = null;
   for (const d of state.docs.values()) { drop(d); unlist(d); }
   state.links.clear(); state.projections.clear(); state.editionClaims.clear(); state.owners.clear(); state.keySets.clear();
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
+}
+/**
+ * The death signal: the line drops "acting as" at once, and every read held
+ * at the session's class goes with the session (`dropClass`).
+ * @param {DeathReason} reason
+ */
+export function sessionDied(reason) {
+  dropClass();
+  state.sessionDied = reason; state.session = null; state.reconnect = null;
   bump();
 }
 export const deathReason = () => state.sessionDied;
+/**
+ * The page reconnecting as the account its session acted as, a restart
+ * having lost it and the re-acquire not back within a second (issue #175's
+ * design decision): the session stands, and what was read at its class with
+ * it, until the re-acquire settles.
+ */
+export function setReconnecting() {
+  if (!state.session) return;
+  state.reconnect = { as: state.session.account, refused: false }; bump();
+}
+/**
+ * The re-acquire of a session a restart lost, refused (issue #175's design
+ * decision): every read held at the session's class goes with it
+ * (`dropClass`), as at a death — but no death is recorded, for the shell
+ * named none — the refusal `session()` met kept as boot keeps it, and the
+ * account the page could not reconnect as kept.
+ * @param {{kind: string, name: string}} r the refusal the re-acquire met
+ */
+export function sessionLost(r) {
+  const as = state.session ? state.session.account : null;
+  dropClass();
+  state.session = null; state.sessionRefused = r; state.reconnect = { as, refused: true };
+  bump();
+}
+/**
+ * A session the re-acquire opened in the place of one a restart lost (issue
+ * #175's design decision), taken as `setSession` takes it — every read held
+ * at the lost session's class dropped first (`dropClass`) where the new one
+ * acts as another principal, so nothing read at one principal's class is
+ * held under another's.
+ * @param {SessionOpened} s
+ * @returns {boolean} the principal another: every read dropped
+ */
+export function sessionRegained(s) {
+  const other = !!state.session && state.session.principal !== s.principal;
+  if (other) dropClass();
+  setSession(s);
+  return other;
+}
+/** the page's session lost at a restart and not regained, where the line says so; null where it is not */
+export const reconnect = () => state.reconnect;
 /** @param {unknown} h @param {Mode | null} mode */
 export function setHealth(h, mode) { state.health = h; state.mode = mode; bump(); }
 export const health = () => /** @type {{auth?: {claimant?: string | null, local_trust?: boolean}, log_position?: number, writes?: {halted?: boolean}} | null} */ (state.health);
@@ -751,13 +813,14 @@ export function invalidate(/** @type {string} */ addr) {
 
 /**
  * How many times what the page held of an address has been dropped: by
- * `invalidate`, its record held or not, and by every death, which drops every
- * record. It never falls, so a read that finds it moved between going out
- * and landing was learned of what the page no longer holds.
+ * `invalidate`, its record held or not, and by every drop of the class
+ * (`dropClass`), which drops every record. It never falls, so a read that
+ * finds it moved between going out and landing was learned of what the page
+ * no longer holds.
  * @param {string} addr
  * @returns {number}
  */
-export const dropsOf = (addr) => (state.drops.get(addr) ?? 0) + state.deaths;
+export const dropsOf = (addr) => (state.drops.get(addr) ?? 0) + state.classDrops;
 
 /** a document's delivered state dropped — everything its reads brought; the record stands, its runs and blocks given new empty ones as a delivery gives new ones */
 function drop(/** @type {Doc} */ d) {
@@ -874,12 +937,12 @@ export function takeEditionClaims(origin, claims) {
 export const editionClaimsOf = (/** @type {string} */ origin) => state.editionClaims.get(origin);
 /**
  * How many times the edition claims held have been dropped — together, at a
- * feed row that may have changed them, and at every death — so a lookup that
- * finds the count moved between going out and landing was answered of claims
- * the page no longer holds. It never falls.
+ * feed row that may have changed them, and at every drop of the class — so a
+ * lookup that finds the count moved between going out and landing was
+ * answered of claims the page no longer holds. It never falls.
  * @returns {number}
  */
-export const claimDrops = () => state.claimDrops + state.deaths;
+export const claimDrops = () => state.claimDrops + state.classDrops;
 
 /** the origins a document's delivered withheld runs name, each once, in position order */
 export function withheldOrigins(/** @type {string} */ addr) {
@@ -980,9 +1043,9 @@ export const feedRows = () => state.feed.slice();
 
 /** reset everything (tests) */
 export function _reset() {
-  state.board = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.health = null; state.mode = null;
+  state.board = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
   state.keys = []; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
-  state.links.clear(); state.projections.clear(); state.drops.clear(); state.deaths = 0; state.editionClaims.clear(); state.claimDrops = 0;
+  state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.editionClaims.clear(); state.claimDrops = 0;
   state.owners.clear(); state.keySets.clear(); state.feed = []; state.rev = 0;
 }
 

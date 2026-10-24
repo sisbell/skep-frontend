@@ -38,9 +38,20 @@
 // whole board's centre) turns red. A restart the shell re-opened leaves the
 // acting-as segment as it stood (client.md §4b.2: "no death chrome") — a
 // mutant that takes the restart for a death, or re-opens it as a session no
-// write may go out under, turns red. The session's own `writes` decides the
-// segment: the keyless session for reading alone reads foundations §3.3
-// state 3's words, over an empty key store and over one holding a key bound
+// write may go out under, turns red. A restart that re-opened none (issue
+// #175's design decision) leaves it as it stood for the first second, then
+// reads "reconnecting as ⟨account⟩ after a restart" in its place, nothing
+// said, and as it stood again once the session is back; the call again
+// refused, the guest state boot shows for that refusal led by "could not
+// reconnect as ⟨account⟩ after a restart", said assertively once — never the
+// signed-out words (a mutant that reads "signed out", says the reconnecting,
+// or drops the lead, turns red). A death of an arm whose words this page does
+// not hold — seeded, blocked, unreachable — reads the guest line in the death
+// arm's place, said assertively, "signed out" the page's own close's alone (a
+// mutant that falls back to "signed out" turns red). The session's own
+// `writes` decides the segment: the keyless session for reading alone reads
+// foundations §3.3 state 3's words, over an empty key store and over one
+// holding a key bound
 // here for its principal, with no key claimed and no sign-in; a session that
 // writes reads state 2, naming the label of the key it is opened with — the
 // key bound here for its principal, else the store's one key (M-REC's
@@ -81,6 +92,7 @@ import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 import * as WALK from '../nav/walk.js';
+import * as FOCUS from '../nav/focus.js';
 import * as LINE from './line.js';
 
 const D = '1.0.1.0.3';
@@ -447,4 +459,74 @@ test('a jump\'s face standing out of the visible view is carried by the line in 
   aside = null;
   LINE.render();
   assert.ok(!el.innerHTML.includes('seg aside'), 'back in view: the segment gone');
+});
+
+/** the one status region's stand-in: what the line says through it, and how */
+const live = { textContent: '', live: '', setAttribute(/** @type {string} */ k, /** @type {string} */ v) { if (k === 'aria-live') live.live = v; } };
+
+test('a restart that re-opened none leaves the acting-as segment as it stood for the first second, then reads "reconnecting as ⟨account⟩ after a restart" in its place, the session\'s state kept, and stands as it stood again once the session is back as the same account — never the signed-out words, nothing said (issue #175)', async (ctx) => {
+  ctx.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise((r) => setImmediate(r));
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  const was = LINE.actingSegment(), s = /** @type {import('../bridge/shapes').SessionOpened} */ (REC.session());
+  assert.equal(was.state, 2, 'acting as, through the signed session');
+  LINE.render(true);
+  live.textContent = '';
+  script[FAKE.keyOf('session', { board: 'b-1' })] = { result: { ...s, session: 's-11' } };
+  const call = fake.hold('session', { board: 'b-1' });
+  fake.fire('session-died', { session: s.session, reason: { arm: 'restart', reopened: false } });
+  assert.deepEqual(LINE.actingSegment(), was, 'within the first second: as it stood');
+  ctx.mock.timers.tick(PUMP.RECONNECTING_MS);
+  const back = LINE.actingSegment();
+  assert.deepEqual([back.state, back.words, back.alarm], [2, t('L.reconnecting', { account: '1.0.1' }), false], 'past it: reconnecting, the session\'s state kept');
+  assert.ok(back.html.includes('data-string="L.reconnecting"') && !back.html.includes('C-137') && !back.html.includes('data-act="signin"'), back.html);
+  LINE.render();
+  assert.equal(live.textContent, '', 'nothing said while it reconnects');
+  call();
+  await flush();
+  assert.deepEqual([LINE.actingSegment(), REC.session()?.session], [was, 's-11'], 'back as the same account: the segment as it stood, under the session got back');
+  LINE.render();
+  assert.equal(live.textContent, '', 'nothing said as it returns');
+});
+
+test('a restart whose call again is refused leaves the page in the guest state boot shows for that refusal — no_key\'s keyless cell, state 3 — led by "could not reconnect as ⟨account⟩ after a restart" and said assertively once; never the signed-out words (issue #175)', async () => {
+  const flush = () => new Promise((r) => setImmediate(r));
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  const was = /** @type {import('../bridge/shapes').SessionOpened} */ (REC.session());
+  LINE.render(true);
+  live.textContent = '';
+  script[FAKE.keyOf('session', { board: 'b-1' })] = { refused: { kind: 'shell', name: 'no_key' } };
+  try {
+    fake.fire('session-died', { session: was.session, reason: { arm: 'restart', reopened: false, refused: 'no_key' } });
+    await flush();
+    const seg = LINE.actingSegment(), lead = t('L.reconnect-refused', { account: '1.0.1' });
+    assert.deepEqual([REC.session(), seg.state, seg.words, seg.alarm], [null, 3, lead, true], 'a guest, in the keyless cell boot shows for no_key, led by the words');
+    assert.ok(seg.html.startsWith(`<span data-string="L.reconnect-refused">${esc(lead)}</span> · <span data-string="B1.guest-line">`) && seg.html.includes('data-string="L.session-refused"') && seg.html.includes('data-act="signin"'), `boot's guest segment for the refusal, its sign-in among it, after the words: ${seg.html}`);
+    assert.ok(!seg.html.includes('C-137'), 'never the signed-out words');
+    LINE.render();
+    assert.deepEqual([live.textContent, live.live], [lead, 'assertive'], 'said assertively as it arrives');
+    live.textContent = '';
+    LINE.render(true);
+    assert.equal(live.textContent, '', 'said once');
+  } finally { REC.setSession(was); REC.setSessionRefused(null); }
+});
+
+test('a death of an arm whose words this page does not hold — seeded, blocked, unreachable — reads the guest line in the death arm\'s place, its sign-in among it, said assertively; "signed out" the page\'s own close\'s alone (issue #175: "\'signed out\' stays on the sign-out path alone")', () => {
+  const was = REC.session(), guest = t('B1.guest-line');
+  try {
+    for (const reason of [{ arm: 'seeded', account: '1.0.1.1', as_of: 9, writer: 'fp-2' }, { arm: 'blocked', record: '1.0.1.0.7', ground: null }, { arm: 'unreachable', text: 'refused' }]) {
+      REC.setSession(was);
+      REC.sessionDied(/** @type {import('../bridge/shapes').DeathReason} */ (reason));
+      const seg = LINE.actingSegment();
+      assert.deepEqual([seg.state, seg.words, seg.alarm], [5, guest, true], `the ${reason.arm} arm: the death, in the guest line's words, said assertively`);
+      assert.ok(seg.html.startsWith('<span data-string="B1.guest-line">') && seg.html.includes('data-act="signin"') && !seg.html.includes('C-137'), `the ${reason.arm} arm: ${seg.html}`);
+    }
+    REC.setSession(was);
+    REC.sessionDied({ arm: 'closed' });
+    assert.ok(LINE.actingSegment().html.startsWith('<span data-string="C-137.signed-out">'), 'the page\'s own close: "signed out"');
+  } finally { REC.setSession(was); }
 });

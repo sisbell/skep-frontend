@@ -11,11 +11,13 @@
 // reading" — no places named at one place, the withheld text's clause on a
 // part alone, and never "missing", "removed", "deleted" or "compare"; the
 // reason a line could not tell by keyed on the refusal's name and kind,
-// never its token, and "try again" offered only where a retry can change
-// the answer (a mutant that offers it for a budget or a verdict of the
-// board's turns red). A drawn link's far end says before departure what its
-// text holds of its passage, by the rule its landing reads: part, all of it
-// in pieces, couldn't tell by the refusal's name, nothing for all of it, for
+// never its token, a session the shell no longer held the text that could
+// not be read and never "signed out" (issue #175), and "try again" offered
+// only where a retry can change the answer (a mutant that offers it for a
+// budget or a verdict of the board's turns red). A drawn link's far end says
+// before departure what its text holds of its passage, by the rule its
+// landing reads: part, all of it in pieces, couldn't tell by the refusal's
+// name, nothing for all of it, for
 // a refusal for its size or for an image that does not cover its runs beyond
 // what the projection's widths prove (a mutant that reads the positions the
 // text holds in place of its bytes' identity turns red).
@@ -90,8 +92,9 @@ test('couldn\'t tell says why, keyed on the refusal\'s name and kind, never its 
   /** @type {Array<[{kind: string, name: string} | null, string, boolean]>} each refusal, its reason's words and whether a retry may tell */
   const rows = [
     [{ kind: 'unreachable', name: 'unreachable' }, 'F.daemon.unreachable', true],
-    [{ kind: 'shell', name: 'session_ended' }, 'C-137.signed-out', true],
-    [{ kind: 'shell', name: 'session_died' }, 'C-137.signed-out', true],
+    // a session the shell no longer held: the text that could not be read, never the sign-out's "signed out" (issue #175)
+    [{ kind: 'shell', name: 'session_ended' }, 'L.held.why.unread', true],
+    [{ kind: 'shell', name: 'session_died' }, 'L.held.why.unread', true],
     [{ kind: 'refused', name: 'scan_busy' }, 'L.held.why.busy', true],
     [{ kind: 'refused', name: 'too_many_blocks' }, 'L.held.why.size', false],
     [{ kind: 'refused', name: 'image_too_large' }, 'L.held.why.size', false],

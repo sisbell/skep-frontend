@@ -153,6 +153,21 @@ fix; nothing here depends on their names.
   the dev provider, committed as fetched and never hand-edited, and
   the gate fails on a drift. The page never invents a wire shape.
 
+## The session
+
+- **FP-28 The page gets its session back, and only the person signs
+  out.** One routine opens the page's session (`web/model/pump.js`),
+  at boot and wherever the session is lost without the person's act,
+  as the port tells it. Each loss gets one attempt, made once its
+  board answers; a loss told while it is out joins it, and an answer
+  after it settles is dropped. While it is out, what was read stands
+  and every read waits, then goes again under what it left, so no
+  surface meets a lost session's refusal. Got back as the same
+  principal, nothing on screen changes; refused, the page stands at
+  the class and in the state the same refusal at boot leaves it.
+  "Signed out" names the person's own sign-out alone, on every
+  surface.
+
 ## The gate
 
 - **FP-17 Every claim is a test that fails without its fix.** Text,
@@ -349,6 +364,7 @@ last. Each stands until a later decision says it changes it.
 - **#166** (built with this line): each end of a beam, and of a reading scene's line between its panes, takes the colour the link's symbol takes at the document that end touches, whichever side drew it; ends that differ change colour once on open ground midway between the two documents — in the scene, the middle of the gap — and a stub keeps its near end's colour; a link drawn from both ends is one beam, counted once; neutral marks only a bundle whose links differ at that end
 - **#169** (built with this line): a held label stands at the top-left of its box's or region's visible part, one line of its type with its link badge, never wrapped, its words dropped before its address; the box's bottom edge pushes it up under the line; it stands just below the held label of the region holding it, level with the corner and never over it; the box's top edge and history strip stay where the box begins → FP-26
 - **#171** (built with this line): a card ends when the camera leaves its place, never when a read lands, so a card shown while a jump is in the air stands at its landing and one asked then opens there; a landing never closes a field the reader is typing in, which stands with its text, caret and focus until the reader closes it, the focus then going to the landing, and an address box with nothing typed in it takes the new address; a refused write still waiting on the reader's answer is never ended by a landing → FP-25, FP-20
+- **#175** (built with this line): a session a restart lost — its reason naming no re-opened reference, or a call answered `session_ended` — is asked for again by the boot's own `session(board)`, which changes nothing at the board, and the page's own `close(session)` is its sign-out, taken as it goes out, the one end to read "signed out" — a death of an arm this page holds no words for (seeded, blocked, unreachable) reads the guest line instead; past a second still out the line reads "reconnecting as ⟨account⟩ after a restart", got back it says nothing, and refused it shows the guest state boot shows for that refusal led by "could not reconnect as ⟨account⟩ after a restart"; writes held as not yet kept meanwhile, a write whose answer was lost resent only once a read shows it did not land, and no call while a claim's panel stands wait on the editor's and the ceremonies' lanes, this page composing no write and showing no panel → FP-28
 
 ## Changes
 
@@ -385,6 +401,7 @@ found.
 - 2026-10-23 · FP-24 · #246 · a sign's selection had no span to stand in for; the rule now holds wherever a position is selected
 - 2026-10-23 · FP-26 · #169 · a label whose place rose under the one line was left out, so a document read past its top lost its name while its corner held
 - 2026-10-23 · FP-20 · #171 · every landing moved the focus to the walk's element wherever it stood, so an address being typed in the LEAP box closed under the reader with its text, and a jump's departure and faces ended a walk's moment being answered
+- 2026-10-23 · FP-28 · #175 · the line, a face and a landing's reason each answered a session the person never closed their own way, all three saying "signed out", and nothing asked for a session again after boot
 
 ## What these rule out
 

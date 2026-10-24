@@ -213,6 +213,11 @@ export const STRINGS = {
   'L.whole-board': { text: 'WHOLE BOARD', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'L.board-label': { text: 'board ⟨node⟩ · ⟨origin⟩ · ⟨venue⟩ · claimed by ⟨claimant⟩', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S3' },
   'L.session-refused': { text: 'no session — the provider refused: ⟨name⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  // a session a restart lost (issue #175's design decision, whose own words these are): the boot's own call made again and
+  // not back within a second, said in the acting-as segment's place; refused, leading the guest state boot shows for that
+  // refusal — "signed out" never said of either, for it is the person's own sign-out's alone (C-137)
+  'L.reconnecting': { text: 'reconnecting as ⟨account⟩ after a restart', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  'L.reconnect-refused': { text: 'could not reconnect as ⟨account⟩ after a restart', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.moment': { text: 'the shell asks: ⟨kind⟩', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
   'L.answer': { text: 'answer', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
   'L.cancel': { text: 'cancel', cls: 'DRAFT', source: '', screen: 'a face', lane: true },

@@ -3,10 +3,17 @@
 // The TWENTY-THREE calls (§4b.1's twenty, `held`, `resolve`, and `places` —
 // skep #463) as functions, the SEVEN events as a subscription, the two
 // answers to a moment, and the adapter beneath, selected at boot (S-14 (b):
-// by the URL's flag). State: the event subscribers alone — no copy of any
-// record. The port composes no frame, decodes no answer and refuses no
-// call: every answer is the adapter's `Outcome` handed up as it came, in the
-// one refusal shape (`{kind, name, …}`, §4.4). The write calls and the
+// by the URL's flag). State: the event subscribers and the session's
+// watchers alone — no copy of any record. The port composes no frame,
+// decodes no answer and refuses no call: every answer is the adapter's
+// `Outcome` handed up as it came, in the one refusal shape (`{kind, name,
+// …}`, §4.4). THE SESSION'S NOTICES (issue #175's design decision:
+// "`web/bridge/port.js` notifies it"; FP-28): a call crossing the port that
+// names a session is told to the session's watchers, M-PUMP's acquire among
+// them, where the page's own `close(session)` goes out — the person's
+// sign-out — and where its answer is refused as from a session the shell no
+// longer holds (`lostSession`), the refusal handed up unchanged after the
+// notice. The write calls and the
 // ceremonial rows are DECLARED here from the first lane and called by no
 // screen of this lane (S-35 (a); the ceremonies a seam).
 // Types: the generated declarations in `./shapes.d.ts` (S-16 (a) — fetched
@@ -40,10 +47,30 @@ export const CALLS = Object.freeze([
 /** the seven events */
 export const EVENTS = Object.freeze(['mode', 'session-died', 'daemon', 'feed', 'index', 'moment', 'held']);
 
+/** the shell's names for an answer to a call made under a session it no longer holds: `session_ended` — no session under that reference, a stale one from before the shell's own restart among them (client.md §4b.1, THE PIN) — and `session_died`, the death's reason beside it */
+const LOST = Object.freeze(['session_ended', 'session_died']);
+
+/**
+ * Is a refusal the shell's answer to a call made under a session it no
+ * longer holds (`LOST`)?
+ * @param {{kind: string, name: string}} r
+ * @returns {boolean}
+ */
+export const lostSession = (r) => r.kind === 'shell' && LOST.includes(r.name);
+
+/**
+ * @typedef {{closed: string} | {lost: string, refusal: Refusal}} SessionNotice — what a call told of a session as it crossed
+ * the port: `closed`, the session the page's own `close(session)` names, told as the call goes out — the person's sign-out;
+ * `lost`, the session an answer refused as from a session the shell no longer holds names (`lostSession`) — the refusal's
+ * own `session`, else the one the call went out under — with the refusal
+ */
+
 /** @type {Adapter | null} */
 let adapter = null;
 /** @type {Map<string, Array<(data: unknown) => void>>} */
 const subs = new Map();
+/** @type {Array<(n: SessionNotice) => void>} */
+const sessionWatchers = [];
 
 /** the port's own refusal where no adapter stands beneath it (the page's own name, not the crate's — reported) */
 const NO_ADAPTER = Object.freeze({ kind: /** @type {const} */ ('shell'), name: 'no_adapter' });
@@ -61,6 +88,11 @@ export const adapterName = () => (adapter ? adapter.name : null);
 export const hasAdapter = () => adapter !== null;
 
 /**
+ * One call through the adapter, its session's notices told (see the head):
+ * the page's own `close(session)` as it goes out, after the adapter has it,
+ * so whatever a watcher calls follows it; an answer refused as from a
+ * session the shell no longer holds before it is handed up, so its caller
+ * meets what the watchers made of it.
  * @template T
  * @param {string} name
  * @param {unknown} args
@@ -68,11 +100,32 @@ export const hasAdapter = () => adapter !== null;
  */
 function call(name, args) {
   if (!adapter) return Promise.resolve(/** @type {Outcome<T>} */ ({ refused: /** @type {Refusal} */ (NO_ADAPTER) }));
-  return /** @type {Promise<Outcome<T>>} */ (adapter.call(name, args));
+  const out = adapter.call(name, args);
+  const sent = /** @type {{session?: unknown} | null} */ (args)?.session;
+  if (name === 'close' && typeof sent === 'string') tell({ closed: sent });
+  return /** @type {Promise<Outcome<T>>} */ (out.then((o) => {
+    if ('refused' in o && lostSession(o.refused)) {
+      const named = /** @type {{session?: unknown}} */ (o.refused).session;
+      const lost = typeof named === 'string' ? named : typeof sent === 'string' ? sent : null;
+      if (lost) tell({ lost, refusal: o.refused });
+    }
+    return o;
+  }));
 }
 
 /** @param {string} name @param {unknown} data */
 function emit(name, data) { for (const fn of subs.get(name) || []) fn(data); }
+
+/** @param {SessionNotice} n */
+function tell(n) { for (const fn of sessionWatchers) fn(n); }
+
+/**
+ * Watch the sessions the calls name as they cross the port (see the head):
+ * the page's own `close(session)`, and every answer refused as from a
+ * session the shell no longer holds.
+ * @param {(n: SessionNotice) => void} fn
+ */
+export function onSession(fn) { sessionWatchers.push(fn); }
 
 /**
  * Subscribe to one of the seven events (or `*` for every event).

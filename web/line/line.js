@@ -66,10 +66,19 @@
 // session stands ("reading as a guest", the board's origin where `boards()`
 // found a board and none where it found none, and the venue, §3.3 state 1's
 // "the board and venue shown"; its one act, sign in — the session's refusal
-// faced there), the death arm where the session died (C-137's
-// words) — never at a restart the shell re-opened, whose session M-PUMP
-// takes in the ended one's place (client.md §4b.2) — the other states only
-// as the provider's events bring them; the DAEMON's
+// faced there), the death arm where the session died (C-137's words, by the
+// death's arm: O-FACES's `deathWords`, the guest line's in their place for an
+// arm this page holds none for, "signed out" the `closed` arm's alone, the
+// person's own sign-out) — never at a restart (client.md
+// §4b.2): where the shell re-opened the session M-PUMP takes it in the ended
+// one's place, and where it re-opened none, or a call finds the shell no
+// longer holds it, M-PUMP's acquire asks for it again (issue #175's design
+// decision; FP-28) — past a second still out, "reconnecting as ⟨account⟩
+// after a restart" in the acting-as segment's place, the session's state
+// kept; back, the segment as it stood; refused, the guest state boot shows
+// for that refusal, led by "could not reconnect as ⟨account⟩ after a
+// restart"; the other states only as the provider's events bring them; the
+// DAEMON's
 // segment (silent while the board runs; the notebook's forms where it does
 // not, "writes stopped on your notebook …" where `/health.writes.halted`);
 // A JUMP'S FACE OUT OF VIEW (FP-25: "'Reading', 'reaching' and a failure show
@@ -85,14 +94,16 @@
 // focus's owner; an overlay standing at Back (the trail's list) or at sign in
 // (the session's face) finds its act again by the act's id (O-HOST's
 // anchor). What a screen reader is told (D4): a transient segment and
-// the mode line politely, the session's death and halted writes assertively,
-// through the one status region. The chip is NOT a segment (ux-T2: the
+// the mode line politely, the session's death, a session a restart lost that
+// the acquire could not get back, and halted writes assertively — nothing
+// while it reconnects nor as it returns — through the one status region. The
+// chip is NOT a segment (ux-T2: the
 // document's corner). Carries: the wireframe's §15 (`whereAmI`,
 // `actingLine`, `updateHUD`, `setTransient`; the chip and the walk step
 // removed; `whereAmI` RE-CUT to foundations §2.2, its document form nearer
 // than mid and its position at the document's own reading scale alone; the
 // diagnostics behind `h` are the gate's hooks).
-// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from '../nav/trail.js';
@@ -100,6 +111,7 @@ import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import * as LAYER from '../text/layer.js';
 import * as PORT from '../bridge/port.js';
+import { deathWords } from '../overlays/faces.js';
 import { drawChord } from '../nav/keys.js';
 import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
@@ -115,8 +127,8 @@ let transientSeg = null;
 let lastHTML = '';
 let lastMode = /** @type {string | null} */ (null);
 let lastTrust = /** @type {boolean | null} */ (null);
-/** the acting segment's state at the last render, for the death arm said once */
-let lastState = -1;
+/** the acting segment's assertive words at the last render, said once as they arrive (`Acting.alarm`); '' where none stood, null before the first render, whose words are no news */
+let lastAlarm = /** @type {string | null} */ (null);
 /** the daemon's halted writes at the last render, said once */
 let lastHalted = false;
 /** the act holding the line's one Tab stop (K-22), by its `data-act` */
@@ -273,28 +285,50 @@ export function addressDisplay() {
 /** the sign-in act, the guest's and the death arm's: its id names it across the line's rebuilds, as Back's does, so the session's face standing at it finds it again (O-HOST's anchor) */
 const SIGN_IN = `<button id="line-signin" data-act="signin">${esc(t('F.sign-in'))}</button>`;
 
-/** the acting-as segment's words, and its state among foundations §3.3's seven */
+/**
+ * @typedef {Object} Acting — the acting-as segment (`actingSegment`)
+ * @property {string} html
+ * @property {number} state its state among foundations §3.3's seven
+ * @property {string} words its words, what the status region says where they are said
+ * @property {boolean} alarm its words said assertively once as they arrive (D4): the session's death, and a session a restart lost that M-PUMP's acquire could not get back
+ */
+
+/**
+ * The acting-as segment (see the head): its words, and its state among
+ * foundations §3.3's seven — while M-PUMP's acquire is out past a second for
+ * a session a restart lost, "reconnecting as" in the session's place, the
+ * session's state kept; where it was refused, the guest state boot shows for
+ * that refusal, led by "could not reconnect as" (issue #175's design
+ * decision); a death's words O-FACES's (`deathWords`), the guest line's in
+ * their place for an arm it holds none for.
+ * @returns {Acting}
+ */
 export function actingSegment() {
-  const s = REC.session(), b = REC.board(), dev = REC.device(), dead = REC.deathReason(), refused = REC.sessionRefused();
+  const s = REC.session(), b = REC.board(), dev = REC.device(), dead = REC.deathReason(), refused = REC.sessionRefused(), lost = REC.reconnect();
   // the board's origin where `boards()` found one; the boot opens a session only on a board it found
   const origin = b ? b.origin : '';
-  if (!PORT.hasAdapter()) return { html: `<span data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`, state: 0, words: t('L.no-adapter') };
+  if (!PORT.hasAdapter()) return { html: `<span data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`, state: 0, words: t('L.no-adapter'), alarm: false };
+  if (s && lost && !lost.refused) {
+    const words = t('L.reconnecting', { account: lost.as || '' });
+    return { html: `<span data-string="L.reconnecting">${esc(words)}</span>`, state: s.writes ? 2 : 3, words, alarm: false };
+  }
   if (s && !s.writes) {
     const words = t('F.keyless-session', { account: s.account || '', origin });
-    return { html: `<span data-string="F.keyless-session">${esc(words)}</span>`, state: 3, words };
+    return { html: `<span data-string="F.keyless-session">${esc(words)}</span>`, state: 3, words, alarm: false };
   }
   if (s) {
     const words = t('F.acting-as', { account: s.account || '', N: s.principal, 'device label': dev && dev.label ? dev.label : '⟨device label⟩', origin });
-    return { html: `<span data-string="F.acting-as">${esc(words)}</span>`, state: 2, words };
-  }
-  if (dead) {
-    const arm = dead.arm;
-    const words = arm === 'mode' ? t('C-137.mode') : arm === 'retired' ? t('C-137.self') : t('C-137.signed-out');
-    const id = arm === 'mode' ? 'C-137.mode' : arm === 'retired' ? 'C-137.self' : 'C-137.signed-out';
-    return { html: `<span data-string="${id}">${esc(words)}</span> ${SIGN_IN}`, state: 5, words };
+    return { html: `<span data-string="F.acting-as">${esc(words)}</span>`, state: 2, words, alarm: false };
   }
   const guest = `<span data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span>${origin ? ` · ${esc(origin)}` : ''} · <span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span> ${SIGN_IN}`;
-  return { html: guest + (refused ? ` <span class="dim" data-string="L.session-refused">${esc(t('L.session-refused', { name: refused.name }))}</span>` : ''), state: refused && refused.name === 'no_key' ? 3 : 1, words: t('B1.guest-line') };
+  if (dead) {
+    // C-137's words for the arm; an arm whose words this page does not hold reads as the guest the page now is
+    const w = deathWords(dead);
+    return w ? { html: `<span data-string="${w.id}">${esc(w.text)}</span> ${SIGN_IN}`, state: 5, words: w.text, alarm: true } : { html: guest, state: 5, words: t('B1.guest-line'), alarm: true };
+  }
+  const lead = lost && lost.refused ? t('L.reconnect-refused', { account: lost.as || '' }) : '';
+  const html = (lead ? `<span data-string="L.reconnect-refused">${esc(lead)}</span> · ` : '') + guest + (refused ? ` <span class="dim" data-string="L.session-refused">${esc(t('L.session-refused', { name: refused.name }))}</span>` : '');
+  return { html, state: refused && refused.name === 'no_key' ? 3 : 1, words: lead || t('B1.guest-line'), alarm: !!lead };
 }
 
 /** the daemon's segment: silent while the board runs */
@@ -362,9 +396,9 @@ export function render(force = false) {
   const acting = actingSegment();
   const daemon = daemonSegment();
   const aside = acts && acts.aside ? acts.aside() : null;
-  if (acting.state === 5 && lastState !== 5 && lastState >= 0) FOCUS.say(acting.words, true);
+  if (acting.alarm && lastAlarm !== null && acting.words !== lastAlarm) FOCUS.say(acting.words, true);
   if (daemon.halted && !lastHalted) FOCUS.say(daemon.words, true);
-  lastState = acting.state; lastHalted = daemon.halted;
+  lastAlarm = acting.alarm ? acting.words : ''; lastHalted = daemon.halted;
   const html =
     `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord('Mod+Y'))}">${esc(t('F.trail-list'))}</button></span>` +
     `<span class="sep">│</span><button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}" style="--words:${WORDS_CH}"><b>${esc(a.place)}</b>${slot(a)}<span class="marker${a.member ? ' lit' : ''}${a.doc ? '' : ' none'}" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></button>` +

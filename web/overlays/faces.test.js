@@ -27,7 +27,11 @@
 // says so in its own words at the act's site, heard through the status
 // region, offering no act; its dismissal — Esc's — abandons the jump, and an
 // overlay shown in its place does not (a mutant that abandons on a
-// replacement, or never, turns red).
+// replacement, or never, turns red). At the line's sign-in act a death's face
+// says its arm's words, the line's own — "signed out" the page's own close's
+// alone — and no refusal of a session the shell no longer holds reads
+// "signed out" (issue #175: a mutant that says the sign-out's words for the
+// mode or the retirement arm, or for `session_ended`, turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -230,4 +234,23 @@ test('a jump reaching says so in its own words at the act\'s site, heard as a fa
   FACES.reaching(D, at, () => { abandoned++; });
   HOST.dismiss();
   assert.deepEqual([HOST.currentState(), abandoned], [null, 1], 'dismissed — Esc\'s innermost thing — it abandons the jump');
+});
+
+test('at the line\'s sign-in act a death\'s face says its arm\'s words — the mode arm\'s, the self-retirement\'s, the sign-out marker\'s for the page\'s own close alone — the words the line\'s death arm says; an arm whose words this page does not hold shows none, and no refusal of a session the shell no longer holds reads "signed out" (C-137; issue #175: "\'signed out\' stays on the sign-out path alone")', () => {
+  /** @type {Array<[import('../bridge/shapes').DeathReason, string]>} each death's reason, and the string its face says */
+  const deaths = [[{ arm: 'mode', mode: 'ENFORCING' }, 'C-137.mode'], [{ arm: 'retired', fingerprint: 'fp-1', own: true }, 'C-137.self'], [{ arm: 'closed' }, 'C-137.signed-out']];
+  for (const [reason, id] of deaths) {
+    FACES.deathFace(reason, null);
+    const f = faceShown();
+    assert.deepEqual([f?.id, f?.words, f?.acts, FACES.deathWords(reason)], ['face:session:' + reason.arm, [id, t(id)], false, { id, text: t(id) }], `the ${reason.arm} arm: its words at the act, the line's own (deathWords)`);
+    assert.equal(live.textContent, t(id), `the ${reason.arm} arm: heard as a face is`);
+    HOST.dismiss();
+  }
+  /** @type {import('../bridge/shapes').DeathReason[]} the arms whose faces read records this page does not read */
+  const wordless = [{ arm: 'seeded', account: '1.0.1.1', as_of: 9, writer: 'fp-2' }, { arm: 'blocked', record: '1.0.1.0.7', ground: null }, { arm: 'unreachable', text: 'refused' }];
+  for (const reason of wordless) {
+    FACES.deathFace(reason, null);
+    assert.deepEqual([FACES.deathWords(reason), HOST.currentState()], [null, null], `the ${reason.arm} arm: no words, so no face — never the sign-out's`);
+  }
+  for (const name of ['session_ended', 'session_died']) assert.notEqual(FACES.wordsFor(/** @type {Refusal} */ ({ kind: 'shell', name })).id, 'C-137.signed-out', `${name}: a session the shell no longer holds is not the person's sign-out`);
 });

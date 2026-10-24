@@ -14,8 +14,8 @@
 // for what the box draws of the document itself alone — its extent, its
 // metadata, its links and their types, and its chain — and a version the box
 // does not show for nothing; the version shown kept in view through its box,
-// so a feed row or a death that drops it has it read again — the extent
-// (`retrieve_doc_v_span_set`), the metadata
+// so a feed row or a change of class that drops it has it read again — the
+// extent (`retrieve_doc_v_span_set`), the metadata
 // (`doc_metadata`), the links touching them (`find_links_v`, then each new
 // link's type ONCE by `read_link` — E17 (a)), and, where legible, the span
 // window of text (`retrieve_v`: from position 1 through the columns in view,
@@ -42,9 +42,11 @@
 // lookup of the edition claims on the origin (M-FRAMES's `editionClaimsAt`),
 // then each listed claim's link (`read_link`) and its home's metadata
 // (`doc_metadata`), the page's own reads of both, memoized with them.
-// Asked by an act rather than the view: the client index (`readIndex`:
-// `places`, at boot and again at the page's own session's death — the view
-// asking nothing while it is out), the board's health and its daemon at boot
+// Asked by an act rather than the view: the page's session
+// (`acquireSession`: `session(board)`, at boot and for a session lost — see
+// THE ACQUIRE below), the client index (`readIndex`: `places`, at boot and
+// again at every change of the page's class — the view asking nothing while
+// it is out), the board's health and its daemon at boot
 // (`readHealth`, `readProbe`), a whole document (`loadWhole`, the claims
 // on its withheld runs' origins among it, so a pane the scene makes from it
 // and the walk's mirror item at a run hold the clause decided), where a
@@ -77,15 +79,15 @@
 // by one channel and the feed's rows by another, and nothing orders the two,
 // so a read can land after the row of a write it was read before. Every read
 // M-REC takes for a document watches the address whose drop voids it
-// (`watchDrops`, M-REC's `dropsOf`, a death dropping every one) — the document
-// it is read for; a projection's, the document projected into, under which the
-// model holds it; the edition-claim lookup's, the claims held, which a feed row
-// drops together (M-REC's `claimDrops`), its key counting the drops so it is
-// asked again after each — and takes nothing it learned across a drop: a view's read is
-// left unasked, its slot freed, and asked again as the view next needs it; the
-// view's probe of a chain records no count; an act's whole read (`loadWhole`)
-// is begun again, and its projection (`projectEnd`) asked again, at most
-// DROP_ATTEMPTS times.
+// (`watchDrops`, M-REC's `dropsOf`, a change of class dropping every one) —
+// the document it is read for; a projection's, the document projected into,
+// under which the model holds it; the edition-claim lookup's, the claims
+// held, which a feed row drops together (M-REC's `claimDrops`), its key
+// counting the drops so it is asked again after each — and takes nothing it
+// learned across a drop: a view's read is left unasked, its slot freed, and
+// asked again as the view next needs it; the view's probe of a chain records
+// no count; an act's whole read (`loadWhole`) is begun again, and its
+// projection (`projectEnd`) asked again, at most DROP_ATTEMPTS times.
 // A READ OF THE BOARD'S STATE THE BOARD'S EVENTS OVERTOOK keeps what they
 // brought (`overtaken`): the shell answers the listing between its feed
 // thread's ticks, which can emit a feed row before the index the listing
@@ -95,18 +97,21 @@
 // taken while it is out (`whileOut`) and lays its answer under them as it
 // lands: the listing under the feed rows, by M-REC's own rule for a row, and
 // under an `index` state (`takeIndex`); the health under the last `mode`; the
-// probe's daemon under a `daemon` event. The page's own death empties every
-// record of the rows and the state taken before it, which were the dead
-// session's class's. A row taken before a listing goes out is laid over
+// probe's daemon under a `daemon` event. Every change of the page's class
+// empties every record of the rows and the state taken before it, which were
+// the class's it left. A row taken before a listing goes out is laid over
 // nothing: the listing names no feed position to tell whether it holds the
 // row (reported: skep #572).
 // The reads go through `op(session, frame)` — the claimant's class — or the
 // guest form where no session stands; a followed far board's reads would
 // take the guest form over its origin (no such board is seeded). EVERY READ
-// AT THE PAGE'S CLASS (`atClass`): a read the page's class — its principal,
-// or guest — changed under while it was out, its session's death taken
-// meanwhile, is asked once more in the form the page takes now, so no answer
-// to the dead session's class reaches the model after the death.
+// AT THE PAGE'S CLASS (`atClass`): a read waits for the acquire out, if one
+// is, before it goes; a read the page's class — its principal, or guest —
+// changed under while it was out, a death or a session not regained taken
+// meanwhile, is asked again in the form the page takes now, so no answer to
+// a class the page has left reaches the model; and a read that met the end of
+// the session it went out under is asked again under what the end left the
+// page, so no answer of a session the shell no longer holds is handed up.
 // The shell's bus carries every board's events and every session's to every
 // page (client.md §4b.2); the page takes its own. A board event — `feed`,
 // `index`, `mode`, `daemon` — is taken where it names the page's board, and
@@ -137,25 +142,47 @@
 // last-opened session, so a person's second tab would otherwise take
 // neither (reported to skep: until every session is named, the page cannot
 // tell its principal's other sessions from another principal's). `mode`
-// and `daemon` → M-REC's state; `session-died` → M-REC's death where it
-// names the page's own session: a page that holds no session (a guest) or
-// holds another was never signed in under the one that ended. The death
-// drops every read the model held at the session's class (M-REC's
-// `sessionDied`); the needs answered under it are asked again, the drop of
-// every record is told to `onDrop`, and the index
-// is read again in the guest form, as the shell narrows its own at the death
-// (client.md §4e.3: "at `session-died` in every arm but the shell's OWN
-// RESTART"), so the page's index, its counts and what it draws are a
-// guest's (foundations §2.1: "masked at the reader's class"). The shell's
-// own restart, where the shell re-opened the session under a key it holds,
-// is no death: the page goes on under the re-opened reference the reason
-// names, with no face, holding what it read (client.md §4b.2; ps3-13 (b),
-// cs6-6 reading (i)). A read can meet the end before the event does —
-// `session_died`, carrying the event's reason, or `session_ended`, the
-// shell's answer while it derives the end — and takes or awaits it, then is
-// asked once more in the form the end left the page: under the re-opened
-// session, or as a guest after a death.
-// Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11, FP-22, FP-23.
+// and `daemon` → M-REC's state, the daemon's `running` making the call of an
+// acquire waiting for its board (below); `session-died` → the end of the
+// page's own session where it names it: a page that holds no session (a
+// guest) or holds another was never signed in under the one that ended. A death drops every read the
+// model held at the session's class (M-REC's `sessionDied`); the needs
+// answered under it are asked again, the drop of every record is told to
+// `onDrop`, and the index is read again in the guest form, as the shell
+// narrows its own at the death (client.md §4e.3: "at `session-died` in every
+// arm but the shell's OWN RESTART"), so the page's index, its counts and
+// what it draws are a guest's (foundations §2.1: "masked at the reader's
+// class"). The shell's own restart is no death (client.md §4b.2; ps3-13 (b),
+// cs6-6 reading (i)): where the shell re-opened the session under a key it
+// holds, the page goes on under the re-opened reference the reason names,
+// with no face, holding what it read; where it re-opened none, the session is
+// LOST — as is one a call finds the shell no longer holds (`session_ended`:
+// a reference from before the shell's own restart, which announces none) —
+// told by the port (B-PORT's `onSession`), as is a read's `session_died`,
+// whose reason is taken as the event's.
+// THE ACQUIRE (issue #175's design decision: "Get the session back, and never
+// say 'signed out' unless the person signed out"; FP-28): the page's session
+// is opened by one routine (`acquireSession`), the boot's `session(board)` —
+// at boot, and again for a session lost: ONE ATTEMPT per lost session, a loss
+// told while it is out joining it, made once the board answers — at once,
+// unless the page knows its daemon stopped or unreachable, else at the
+// board's `running` — and none after a refused one. While it is out what was
+// read stands and every read waits for it (`atClass`); past RECONNECTING_MS
+// the line reads that the page is reconnecting (M-REC's `setReconnecting`). It
+// settles on the first of its answer, the shell's re-open of the session, or
+// a death of another arm; an answer after it settled is stale and dropped, a
+// session it opened closed, so none stands with no owner. Opened, the session
+// is taken in the lost one's place with nothing said and what was read held —
+// dropped and read again only where it acts as another principal (M-REC's
+// `sessionRegained`). Refused, what was read is dropped as at a death, and the
+// refusal kept as boot keeps it with the account the page could not
+// reconnect as (M-REC's `sessionLost`), the page reading as a guest. The
+// page's own `close(session)`, told by the port as it goes out, is no loss:
+// it is the person's sign-out (client.md §4b.2: "`close(session)` stays the
+// page's sign-out"), taken at once as the death the shell's close carries,
+// the `closed` arm.
+// Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11, FP-22, FP-23,
+// FP-28.
 
 import * as PORT from '../bridge/port.js';
 import * as REC from './records.js';
@@ -220,8 +247,8 @@ export const UNREACHED_MS = 2000;
 const SCAN_ATTEMPTS = 6;
 /** an act's read — a whole document (`loadWhole`), where a link's end projects (`projectEnd`) — is made at most this many times while what it reads is dropped under it (unmeasured) */
 export const DROP_ATTEMPTS = 4;
-/** a read refused `session_ended` awaits its session's end at most this long — a bound on the shell's derive and re-open, which take board reads (unmeasured) */
-const END_WAIT_MS = 5000;
+/** an acquire for a session lost that is not back within this long has the line read "reconnecting as ⟨account⟩ after a restart" (issue #175's design decision: "within about a second") */
+export const RECONNECTING_MS = 1000;
 /** an act's read the board refuses for its size (M-FRAMES's `SIZE_REFUSALS`) is asked in parts in at most this many reads in all (`compareParts`, `imageParts`); past it the size refusal is handed up (unmeasured: no document on the seeded board meets a size refusal) */
 export const SPLIT_READS = 32;
 
@@ -238,13 +265,18 @@ let scansInFlight = 0;
 const refusals = [];
 /** @type {Array<(r: {frame: string, refusal: Refusal, addr: string}) => void>} */
 const refusalWatchers = [];
-/** @type {Set<() => void>} the reads awaiting the page's session's end, each woken as it is taken */
-const awaitingEnd = new Set();
-/** the page's session a read found ended with no end taken within END_WAIT_MS — its `session-died` never reached the page — so no read under it waits again */
-let unended = /** @type {string | null} */ (null);
+/**
+ * @typedef {Object} Attempt — one call of `session(board)` the page makes (`acquireSession`; see the head): at boot, or for its session lost
+ * @property {string | null} lost the reference of the session it is made for, lost; null at boot
+ * @property {boolean} made its call made — false while it waits for the board to answer
+ * @property {Promise<void>} settled resolved as it settles
+ * @property {() => void} settle settles it: its answer, the shell's re-open or a death taken, any answer after it stale
+ */
+/** @type {Attempt | null} the acquire out, else null */
+let attempt = null;
 /** the client index's reads out (`readIndex`): while one is, the view asks nothing and `pump` counts it missing */
 let indexing = 0;
-/** @type {Set<Meanwhile>} one record for each read of the board's state out — two listings at once where a death meets the boot's */
+/** @type {Set<Meanwhile>} one record for each read of the board's state out — two listings at once where a change of class meets the boot's */
 const whileOut = new Set();
 let dirty = () => {};
 let started = false;
@@ -254,19 +286,20 @@ const plain = (/** @type {string} */ addr) => documentOf(addr) || addr;
 let shown = plain;
 /** @type {(member: string) => void} told of a feed row publishing a trunk's next member, before the row drops anything (N-GO's `arrived`, handed in at `start`) */
 let onPublish = () => {};
-/** @type {(d: Dropped) => void} told of what each feed row the page takes, and its own session's death, dropped of what it held, after the drop (SC's `dropped`, handed in at `start`) */
+/** @type {(d: Dropped) => void} told of what each feed row the page takes, and every change of its class, dropped of what it held, after the drop (SC's `dropped`, handed in at `start`) */
 let onDrop = () => {};
 
 /**
- * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, or every record at the page's own session's death
- * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for the death
- * @property {string[] | null} addrs the addresses the row dropped, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`); null for the death, which drops every record
+ * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, or every record at a change of the page's class — its session's death among them (`classChanged`)
+ * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for a change of class
+ * @property {string[] | null} addrs the addresses the row dropped, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`); null for a change of class, which drops every record
  */
 
 /**
  * Start the pump: subscribe the model to the port's events, every board
- * event through `onBoard`.
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void}} opts `shown` the version each box shows, which the view reads (see the head); `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and its own session's death, dropped, after the drop
+ * event through `onBoard`, and to the sessions the calls name as they cross
+ * the port (B-PORT's `onSession`).
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void}} opts `shown` the version each box shows, which the view reads (see the head); `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop
  */
 export function start(opts) {
   dirty = opts.onDirty;
@@ -277,9 +310,17 @@ export function start(opts) {
   onBoard('feed', (ev) => { if (ev.update) takeRow(ev.update); });
   onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); for (const m of whileOut) m.state = true; dirty(); } });
   onBoard('mode', (ev) => { REC.setMode(ev); for (const m of whileOut) m.mode = ev; dirty(); });
-  onBoard('daemon', (ev) => { REC.setDaemon(ev.state); for (const m of whileOut) m.daemon = true; if (ev.state === 'running') unreached.clear(); dirty(); });
+  onBoard('daemon', (ev) => {
+    REC.setDaemon(ev.state); for (const m of whileOut) m.daemon = true;
+    if (ev.state === 'running') { unreached.clear(); if (attempt && !attempt.made) void make(attempt); }
+    dirty();
+  });
   PORT.on('session-died', (d) => { const ev = /** @type {SessionDiedEvent | null} */ (d); if (ev) takeEnd(ev.session, ev.reason); dirty(); });
+  PORT.onSession((n) => { if ('closed' in n) takeEnd(n.closed, CLOSED); else metEnd(n.lost, n.refusal); dirty(); });
 }
+
+/** the reason the shell's own close carries (`skep-shell`'s `sessions::closed`): the page's own `close(session)`, its sign-out, taken as it goes out */
+const CLOSED = /** @type {DeathReason} */ (Object.freeze({ arm: 'closed' }));
 
 /**
  * Subscribe to a board event, handed on where it names the page's board
@@ -329,51 +370,133 @@ function ofFace(ev) {
 }
 
 /**
- * A session's end, met by `session-died` or by a read's `session_died`,
- * which carries the event's reason; taken where it names the page's own
- * session. The shell's own restart, where the shell re-opened the session
- * under a key it holds, is no death: the page goes on under the reference
- * the reason names, the principal and the account the same, with no face
- * (client.md §4b.2: "the page re-acquires a reference with no face";
- * ps3-13 (b), cs6-6 reading (i)). Every other end, a restart that re-opened
- * none among them, is M-REC's death: what the model read at the session's
- * class dropped, every need answered or held under it asked again, every
- * read of the board's state out left holding no feed row and no `index`
- * state taken before the death — so a listing out across it, the boot's
- * asked once more as a guest (`atClass`), lays none of the dead session's
- * over a guest's — the index read again in the guest form (`readIndex`), and
- * the drop of every record told to `onDrop`, so what a reader holds apart
- * from the model — a reading scene's pane — is read again at the guest's
- * class too. The reads awaiting the end are woken.
+ * A session's end — `session-died`, a read's `session_died`, which carries
+ * the event's reason, or the page's own close (`CLOSED`) — taken where it
+ * names the page's own session. The shell's own restart is no death
+ * (client.md §4b.2: "the page re-acquires a reference with no face"; ps3-13
+ * (b), cs6-6 reading (i)): where its reason names the session the shell
+ * re-opened, the page goes on under that reference, the principal and the
+ * account the same, with no face; where it names none, the session is lost
+ * (`lose`). Every other end is M-REC's death (`sessionDied`), its class's
+ * reads dropped (`classChanged`). Either settles an acquire out for the
+ * session, its answer then stale.
  * @param {string} ended the session the end names
  * @param {DeathReason} reason
  */
 function takeEnd(ended, reason) {
   const s = REC.session();
   if (!s || s.session !== ended) return;
-  const reopened = reason.arm === 'restart' && reason.reopened === true ? reason.session : null;
-  if (typeof reopened === 'string') REC.setSession({ ...s, session: reopened });
-  else {
-    REC.sessionDied(reason); asked.clear(); retryAt.clear(); unreached.clear();
-    for (const m of whileOut) { m.rows = []; m.state = false; }
-    readIndex();
-    onDrop({ row: null, addrs: null });
-  }
-  for (const wake of [...awaitingEnd]) wake();
+  const reopened = reason.arm === 'restart' && reason.reopened === true && typeof reason.session === 'string' ? reason.session : null;
+  if (reason.arm === 'restart' && reopened == null) { lose(ended); return; }
+  if (attempt && attempt.lost === ended) attempt.settle();
+  if (reopened != null) REC.setSession({ ...s, session: reopened });
+  else { REC.sessionDied(reason); classChanged(); }
 }
 
 /**
- * The page's session's end, awaited: woken as `takeEnd` takes it, or after
- * END_WAIT_MS, the session marked `unended` where it still stands.
- * @param {string} sent
- * @returns {Promise<void>}
+ * A call answered as from a session the shell no longer holds (B-PORT's
+ * `onSession`): `session_died` carries the end's reason, taken as the
+ * event's (`takeEnd`); `session_ended` carries none — the session lost
+ * (`lose`), as is a `session_died` whose reason cannot be read.
+ * @param {string} ref the session the answer names
+ * @param {Refusal} r
  */
-function endTaken(sent) {
-  return new Promise((resolve) => {
-    const wake = () => { clearTimeout(timer); awaitingEnd.delete(wake); resolve(); };
-    const timer = setTimeout(() => { if (REC.session()?.session === sent) unended = sent; wake(); }, END_WAIT_MS);
-    awaitingEnd.add(wake);
-  });
+function metEnd(ref, r) {
+  const reason = r.name === 'session_died' ? /** @type {{reason?: {arm?: unknown} | null}} */ (r).reason : null;
+  if (reason && typeof reason.arm === 'string') takeEnd(ref, /** @type {DeathReason} */ (reason));
+  else lose(ref);
+}
+
+/**
+ * The page's own session lost without the person's act (see the head): the
+ * acquire begun for it, or joined where one is out for it already; nothing
+ * where the page holds another session or none.
+ * @param {string} ref
+ */
+function lose(ref) {
+  const s = REC.session();
+  if (!s || s.session !== ref || (attempt && attempt.lost === ref)) return;
+  void begin(ref);
+}
+
+/**
+ * THE ACQUIRE (see the head; FP-28): the page's session opened by the
+ * boot's own call, `session(board)` — the one routine boot and a session
+ * lost share; boot calls it, and awaits it before its other reads.
+ * @returns {Promise<void>} settled as the attempt settles
+ */
+export function acquireSession() { return attempt ? attempt.settled : begin(null); }
+
+/**
+ * One attempt begun (see the head): its call made at once where the board
+ * answers as far as the page knows, else at the board's `running`; for a
+ * session lost, the line made to read that the page is reconnecting where it
+ * is still out past RECONNECTING_MS.
+ * @param {string | null} lost the lost session's reference; null at boot
+ * @returns {Promise<void>} settled as it settles
+ */
+function begin(lost) {
+  let resolve = () => {};
+  const settled = new Promise((/** @type {(v: void) => void} */ r) => { resolve = r; });
+  /** @type {Attempt} */
+  const a = {
+    lost, made: false, settled,
+    settle: () => { if (timer) clearTimeout(timer); if (attempt === a) attempt = null; resolve(); },
+  };
+  const timer = lost == null ? null : setTimeout(() => { if (attempt === a) REC.setReconnecting(); }, RECONNECTING_MS);
+  attempt = a;
+  if (answers()) void make(a);
+  return settled;
+}
+
+/** does the page's board answer, as far as the page knows: no `daemon` event, nor the boot's probe, says it stopped or unreachable? */
+const answers = () => { const d = REC.daemon(); return d !== 'stopped' && d !== 'unreachable'; };
+
+/**
+ * An attempt's one call, `session(board)`, and its answer taken (see the
+ * head): at boot, the session opened or the refusal met; for a session lost,
+ * the session taken in its place (M-REC's `sessionRegained`) — what was read
+ * dropped and read again where it acts as another principal — or the refusal
+ * taken (M-REC's `sessionLost`), what was read dropped and the index read
+ * again as a guest; then the attempt settled. An answer that lands after the
+ * attempt settled is stale and taken nowhere, a session it opened closed.
+ * @param {Attempt} a
+ */
+async function make(a) {
+  a.made = true;
+  const b = REC.board();
+  const out = b ? await PORT.session({ board: b.board }) : null;
+  if (attempt !== a) { if (out && 'result' in out) void PORT.close({ session: out.result.session }); return; }
+  if (out) {
+    if ('result' in out) {
+      if (a.lost == null) REC.setSession(out.result);
+      else if (REC.sessionRegained(out.result)) classChanged();
+    } else {
+      const r = { kind: out.refused.kind, name: out.refused.name };
+      if (a.lost == null) REC.setSessionRefused(r);
+      else { REC.sessionLost(r); classChanged(); }
+    }
+  }
+  a.settle();
+  dirty();
+}
+
+/**
+ * What follows every record M-REC held being dropped at a change of the
+ * page's class — a death, a session lost and not regained, or one regained
+ * as another principal: every need answered or held asked again, every read
+ * of the board's state out left holding no feed row and no `index` state
+ * taken before the change — so a listing out across it, asked again at the
+ * new class (`atClass`), lays none of the class it left over the new one's —
+ * the index read again at the class the page reads at now (`readIndex`), and
+ * the drop of every record told to `onDrop`, so what a reader holds apart
+ * from the model — a reading scene's pane — is read again at that class too.
+ */
+function classChanged() {
+  asked.clear(); retryAt.clear(); unreached.clear();
+  for (const m of whileOut) { m.rows = []; m.state = false; }
+  void readIndex();
+  onDrop({ row: null, addrs: null });
 }
 
 /** the refusals the reads met */
@@ -391,25 +514,34 @@ export function read(frame) { return atClass((s) => ask(s, frame)); }
 /**
  * One call at the page's class: made under the page's session, or in the
  * guest form where none stands (`call` composes the form from the session it
- * is handed). It is made once more, in the form the page takes then, where
- * the page's class — its principal, or guest — changed while it was out, so
- * no answer to a class the page has left is handed up: a death taken
- * meanwhile asks it again as a guest. It is made once more too where it met
- * the end of the session it went out under and the end left the page
- * another, the one the shell re-opened in its place — the class the same;
- * where the end left the page that same session (a `session_ended` no end
- * followed) the refusal is handed up. Once more at most.
+ * is handed), once the acquire out, if one is, has settled (see the head).
+ * It is made again, in the form the page takes then, where the page's class
+ * — its principal, or guest — changed while it was out, so no answer to a
+ * class the page has left is handed up: a death, or a session not regained,
+ * taken meanwhile asks it again as a guest. It is made again too where it
+ * met the end of the session it went out under — the port having told the
+ * end to the acquire, whose attempt it then awaits — and the end left the
+ * page another, the one the shell re-opened or the acquire opened in its
+ * place, the class the same; so no refusal of a session the shell no longer
+ * holds is handed up. Each time again follows the page's session or its
+ * class changing, which only a restart, a death or an attempt does.
  * @template {object} T
  * @param {(s: {session: string} | null) => Promise<T | {refused: Refusal}>} call
  * @returns {Promise<T | {refused: Refusal}>}
  */
 async function atClass(call) {
-  const s = REC.session();
-  const out = await call(s);
-  const r = 'refused' in out ? /** @type {{refused: Refusal}} */ (out).refused : null;
-  const ended = !!s && !!r && (await metEnd(s.session, r));
-  const now = REC.session();
-  return classOf(now) !== classOf(s) || (ended && !!now && now.session !== s?.session) ? call(now) : out;
+  if (attempt) await attempt.settled;
+  let s = REC.session();
+  let out = await call(s);
+  for (;;) {
+    const r = 'refused' in out ? /** @type {{refused: Refusal}} */ (out).refused : null;
+    const ended = !!s && !!r && PORT.lostSession(r);
+    if (attempt) await attempt.settled;
+    const now = REC.session();
+    if (classOf(now) === classOf(s) && !(ended && !!now && now.session !== s?.session)) return out;
+    s = now;
+    out = await call(s);
+  }
 }
 
 /** the class a page reads at: its session's principal; a guest's none */
@@ -442,8 +574,8 @@ async function overtaken(ask, take) {
  * answer M-REC's index whole with the feed rows and any `index` state taken
  * while it was out laid over it (`overtaken`, `takeIndex`); a refusal leaves
  * the index as it stands — the rows taken since the board was known, or
- * since the death. While the read is out the view asks nothing and `pump`
- * counts it missing, so no document is asked for against an index the
+ * since the class changed. While the read is out the view asks nothing and
+ * `pump` counts it missing, so no document is asked for against an index the
  * answer is about to replace, and the gate's settle waits for it.
  * @returns {Promise<{result: PlacesAnswer} | {refused: Refusal}>}
  */
@@ -492,28 +624,6 @@ async function ask(s, frame) {
   const b = REC.board();
   const out = await PORT.op(s ? { session: s.session, frame } : { guest: /** @type {const} */ (true), board: b ? b.board : undefined, frame });
   return 'refused' in out ? { refused: out.refused } : { answer: out.result };
-}
-
-/**
- * Is a read's refusal the end of the session it went out under? The
- * shell's `session_died` carries the end's reason, taken at once;
- * `session_ended` carries none — the shell answers it from its table while
- * it derives the end, the event following — so the end is awaited, unless a
- * read under that session already waited for it in vain.
- * @param {string} sent the session the read went out under
- * @param {Refusal} r
- * @returns {Promise<boolean>}
- */
-async function metEnd(sent, r) {
-  if (r.kind !== 'shell') return false;
-  if (r.name === 'session_died') {
-    const reason = /** @type {{arm?: unknown} | null | undefined} */ (r.reason);
-    if (reason && typeof reason.arm === 'string') takeEnd(sent, /** @type {DeathReason} */ (reason));
-    return true;
-  }
-  if (r.name !== 'session_ended') return false;
-  if (REC.session()?.session === sent && sent !== unended) await endTaken(sent);
-  return true;
 }
 
 /**
@@ -640,7 +750,7 @@ function watchDrops(addr) { const at = REC.dropsOf(addr); return () => REC.drops
 /**
  * Watch the edition claims held for a drop from now on, as a lookup of them
  * goes out: a feed row that may have changed them drops them together, and a
- * death with them (M-REC's `claimDrops`), whichever origin was asked.
+ * change of class with them (M-REC's `claimDrops`), whichever origin was asked.
  * @returns {() => boolean} dropped since the watch began
  */
 function watchClaims() { const at = REC.claimDrops(); return () => REC.claimDrops() !== at; }

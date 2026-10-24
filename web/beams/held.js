@@ -56,6 +56,7 @@
 // Rules: FP-1, FP-2, FP-21 (the one reading of what a landing's text holds).
 
 import * as REC from '../model/records.js';
+import { lostSession } from '../bridge/port.js';
 import { floats } from '../links/links.js';
 import { SIZE_REFUSALS } from '../model/frames.js';
 import { memberOf } from '../model/address.js';
@@ -321,25 +322,23 @@ export function stepFrom(p, i, dir) {
   return p.order[(((k + dir) % n) + n) % n];
 }
 
-/** the shell's names for the end of the page's session: a read so refused is asked again in the form the end left the page */
-const ENDED = new Set(['session_ended', 'session_died', 'closed']);
 /** the board's names for a read it could not take now and takes asked again: its admission, its scan permits, its history reader */
 const BUSY = new Set(['busy', 'scan_busy', 'history_busy']);
 
 /**
  * Why no answer told what a text holds of a passage (see the head): the id
- * of the words keyed on the refusal met — the board out, the session ended,
- * the board busy, a read still too large in parts, the passage's range no
- * longer where it was, a text withheld from the reader, no such link — every
- * other refusal the board's silence; where none was met, the text that could
- * not be read.
+ * of the words keyed on the refusal met — the board out, the board busy, a
+ * read still too large in parts, the passage's range no longer where it was,
+ * a text withheld from the reader, no such link — every other refusal the
+ * board's silence; where none was met, or a session the shell no longer held
+ * was (B-PORT's `lostSession` — a read M-PUMP asks again under the session it
+ * gets back, never the person's sign-out), the text that could not be read.
  * @param {Met | null} r
  * @returns {string}
  */
 export function whyOf(r) {
-  if (!r) return 'L.held.why.unread';
+  if (!r || lostSession(r)) return 'L.held.why.unread';
   if (r.kind === 'unreachable') return 'F.daemon.unreachable';
-  if (ENDED.has(r.name)) return 'C-137.signed-out';
   if (BUSY.has(r.name)) return 'L.held.why.busy';
   if (SIZE_REFUSALS.includes(r.name)) return 'L.held.why.size';
   if (r.name === 'range_not_present') return 'B1.range_not_present';
@@ -350,13 +349,13 @@ export function whyOf(r) {
 
 /**
  * Can a retry change the answer (the decision's "'try again' where that
- * helps")? The board out, the session ended, the board busy, the text that
+ * helps")? The board out, the session lost, the board busy, the text that
  * could not be read: each read again may answer. Every budget and verdict of
  * the board's is permanent (wire.md §Errors: "no retry shrinks the request").
  * @param {Met | null} r
  * @returns {boolean}
  */
-export const retries = (r) => !r || r.kind === 'unreachable' || ENDED.has(r.name) || BUSY.has(r.name);
+export const retries = (r) => !r || r.kind === 'unreachable' || lostSession(r) || BUSY.has(r.name);
 
 /** the text a line names (see the head): "version ⟨k⟩" at a member, "⟨D⟩'s current text" at a bare address */
 export const whereOf = (/** @type {string} */ addr) => { const k = memberOf(addr); return k != null ? t('L.held.member', { k }) : t('L.held.current', { D: addr }); };

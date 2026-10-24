@@ -11,10 +11,12 @@
 // read takes the guest form and every screen its guest arm — a visitor's
 // page before any sign-in is asked (the harness's guest case; the installed
 // app loads with no query and never reaches it). Then `boards()` (the
-// reference kept), `session(board)` ONCE AT BOOT (S-37 (a) — the session
-// kept as the shell opened it: its reference for the page's life, never a
-// token, and whether a write may go out under it; `close(session)` at
-// `pagehide` on a keepalive fetch), `fingerprint()` (the device's key
+// reference kept), `session(board)` by M-PUMP's acquire (`acquireSession`;
+// S-37 (a) and issue #175's design decision: the boot's own call, made again
+// by the same routine where a restart loses the session, FP-28 — the session
+// kept as the shell opened it: its reference, never a token, and whether a
+// write may go out under it; `close(session)` at `pagehide` on a keepalive
+// fetch), `fingerprint()` (the device's key
 // store, read for this board: whether a key is bound here — R56's "key
 // present", which the entitlement arms read — and which key is the
 // session's, M-REC's `device`), `health(board)` and `probe()` by M-PUMP's
@@ -39,10 +41,11 @@
 // its text;
 // and to T-LAYER, LK, N-WALK and M-PUMP the version each document's box
 // shows (N-GO's `shownIn`; issue #154), M-PUMP handing N-GO each feed row
-// publishing a trunk's next member (`arrived`) and SC what each row and the
-// page's own death dropped, after the drop (`dropped`), so a reading scene's
-// panes are kept fresh by their kind, and N-WALK the same, so the death takes
-// the mirror down with them (FP-23; issue #160).
+// publishing a trunk's next member (`arrived`) and SC what each row and each
+// change of the page's class, its own death among them, dropped, after the
+// drop (`dropped`), so a reading scene's panes are kept fresh by their kind,
+// and N-WALK the same, so the death takes the mirror down with them (FP-23;
+// issue #160).
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
 // frame, the mirror's documents marked expanded or collapsed in place by the
@@ -77,7 +80,8 @@
 // board DROPPED), §0's params. Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9,
 // FP-11, FP-14, FP-15, FP-22 (N-GO's `shownIn` handed to every reader), FP-23
 // (SC's and N-WALK's `dropped` handed to M-PUMP), FP-25 (O-HOST's `aside`
-// handed to the one line), FP-26 (L-LINE's `named` handed to T-LAYER).
+// handed to the one line), FP-26 (L-LINE's `named` handed to T-LAYER), FP-28
+// (the boot's session opened by M-PUMP's acquire).
 
 import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';
@@ -202,7 +206,7 @@ async function boot() {
   LANDING.attach(el('landing'), { handOff: () => WALK.focusItem(), pieces: el('pieces') });
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
-  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (REC.deathReason()) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ ({ kind: 'shell', name: 'session_died' }), b); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; } });
+  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(), dead = REC.deathReason(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (dead) FACES.deathFace(dead, b); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; } });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn });
@@ -237,11 +241,7 @@ async function boot() {
     else bootInfo.boardsRefused = 'refused' in b ? b.refused : 'none';
     const board = REC.board();
     if (board) {
-      if (!GUEST) {
-        const s = await PORT.session({ board: board.board });
-        if ('result' in s) REC.setSession(s.result);
-        else REC.setSessionRefused({ kind: s.refused.kind, name: s.refused.name });
-      }
+      if (!GUEST) await PUMP.acquireSession();
       const fp = await PORT.fingerprint({});
       if ('result' in fp) REC.takeKeyStore(fp.result, board.origin);
       await PUMP.readHealth(board.board);

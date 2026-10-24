@@ -17,7 +17,29 @@
 // a session's end is taken by the page whose session it is and by no other;
 // a restart the shell re-opened is no death — the page goes on under the
 // re-opened session, reading and taking drafts rows under it, holding what
-// it read and reading no index — and a restart that re-opened none is one;
+// it read and reading no index; THE ACQUIRE (issue #175's design decision):
+// the boot's session opened by the one routine, one call, its refusal kept;
+// a restart that re-opened none is no death either — the boot's own call is
+// made again, once, and the page goes on under the session it opens, holding
+// what it read, reading no index and dropping nothing (a mutant that takes it
+// for a death, or drops what was read, turns red); refused, what was read is
+// dropped and the index read again as a guest, no death recorded, the
+// refusal kept with the account the page could not reconnect as (a mutant
+// that records a death or keeps what was read turns red); a read refused
+// `session_ended` with no event — a reference from before the shell's own
+// restart — asks for the session again and is answered under it, never
+// handing the refusal up (a mutant that hands it up, or waits and gives up,
+// turns red); every loss told while the call is out joins it, one call for
+// all of them (a mutant that calls per loss turns red); the shell's re-open
+// settles the call out, its later answer stale and its session closed (a
+// mutant that takes the late answer turns red); a late `session_ended` after
+// a refused call asks for none again; a board known unreachable has the call
+// made at its `running` alone, reads waiting meanwhile (a mutant that calls
+// at once turns red); a session opened as another principal taken only once
+// what was read is dropped; the page's own `close(session)` its sign-out,
+// taken as the call goes out as the `closed` end, a read meeting
+// `session_ended` after it asking for no session (a mutant that takes the
+// close for a loss signs the person back in and turns red);
 // the page's own death drops what the model read at the session's class and
 // reads the index again in the guest form, the view asking nothing until it
 // answers, then asking again as a guest what it read under the session (a
@@ -25,12 +47,10 @@
 // asked as answered, lets the view ask meanwhile or reads the index under the
 // dead session turns red); a read out under the session when the page takes
 // its death is asked once more in the guest form, the guest's answer handed
-// up, never the session's; a read that meets the restart before the event
-// takes its `session_died`, or awaits the end its `session_ended` comes
-// before, and is asked once more under the re-opened session; another end a
-// read meets is the death, the read asked once more in the guest form; a
-// `session_ended` no end follows is waited for a bounded time, once per
-// session, and is no death;
+// up, never the session's; a read that meets the re-opened restart before
+// the event takes its `session_died` and is asked once more under the
+// re-opened session; another end a read meets is the death, the read asked
+// once more in the guest form;
 // a listing read while the feed brings a row and an `index` state lays them
 // over its answer — the document the row mints listed and counted over the
 // listing's count, the state the event's — and one out across the page's
@@ -335,10 +355,36 @@ function sessionsSent(fake, named = 'op') {
   return sent;
 }
 
-test('a restart the shell re-opened is no death: the page goes on under the re-opened session, its reads and drafts rows with it, holding what it read; a restart that re-opened none is a death, which drops them and reads the index as a guest', async () => {
-  const fake = FAKE.create(script);
+/** a restart the shell re-opened no session at: the reason names none (skep-shell's `derive_death`) */
+const UNOPENED = { arm: 'restart', reopened: false };
+/** the board's `session(board)` answering a session under the reference `ref` — principal 1's, account 1.0.1's, unless `other` names others */
+const opened = (/** @type {string} */ ref, other = {}) => ({ [FAKE.keyOf('session', { board: 'b-1' })]: { result: { session: ref, principal: 1, account: '1.0.1', writes: true, ...other } } });
+/** the board's `session(board)` refused, `no_key`'s keyless cell */
+const NO_KEY = { [FAKE.keyOf('session', { board: 'b-1' })]: { refused: { kind: 'shell', name: 'no_key' } } };
+/** how many times the page called `session(board)`, as the fake port received each call — a held one at once */
+const opens = (/** @type {ReturnType<typeof FAKE.create>} */ fake) => fake.asked.filter((k) => k.startsWith('session:')).length;
+/** every answer the fake port gives and every step a promise makes taken, a timer's apart */
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+test('the boot\'s session is opened by the acquire: one call, the session taken, or the refusal kept with nothing said of a restart (S-37 (a); issue #175)', async () => {
+  /** @type {Array<[Record<string, unknown>, string | null, {kind: string, name: string} | null]>} each answer, the session it leaves the page, the refusal it keeps */
+  const answers = [[opened('s-1'), 's-1', null], [NO_KEY, null, { kind: 'shell', name: 'no_key' }]];
+  for (const [answer, session, refusal] of answers) {
+    REC._reset();
+    const fake = FAKE.create(answer);
+    PORT.boot(fake);
+    PUMP.start({ onDirty: () => {} });
+    REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    await PUMP.acquireSession();
+    assert.deepEqual([opens(fake), REC.session()?.session ?? null, REC.sessionRefused(), REC.reconnect(), REC.deathReason()], [1, session, refusal, null, null], session ? 'opened' : 'refused');
+  }
+});
+
+test('a restart the shell re-opened is no death: the page goes on under the re-opened session, its reads and drafts rows with it, holding what it read; one that re-opened none is no death either — the boot\'s own call is made again, once, and the page goes on under the session it opens, holding what it read, reading no index and dropping nothing (issue #175)', async () => {
+  const fake = FAKE.create({ ...script, ...opened('s-10') });
   PORT.boot(fake);
-  PUMP.start({ onDirty: () => {} });
+  let drops = 0;
+  PUMP.start({ onDirty: () => {}, onDrop: (d) => { if (!d.row) drops++; } });
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeIndex(indexAt('building'));
@@ -347,18 +393,40 @@ test('a restart the shell re-opened is no death: the page goes on under the re-o
   fake.fire('session-died', { session: 's-1', reason: REOPENED });
   assert.deepEqual(REC.session(), { session: 's-9', principal: 1, account: '1.0.1' }, 'the re-opened reference, the principal and the account the same');
   assert.equal(REC.deathReason(), null, 'no death, so no death chrome (client.md §4b.2)');
-  assert.deepEqual([listings, REC.place(D)?.kind, REC.textBetween(D, 1, 9)], [[], 'edition', 'Tumbler.'], 'it reads no index and holds what it read under the session');
+  assert.deepEqual([listings, REC.place(D)?.kind, REC.textBetween(D, 1, 9), opens(fake)], [[], 'edition', 'Tumbler.', 0], 'it reads no index, holds what it read under the session and asks for no session');
   await PUMP.read(F.docMetadata(D));
   assert.deepEqual(sent, ['s-9'], 'the next read goes out under the re-opened session');
   fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
   assert.equal(REC.place('1.0.1.0.1013')?.kind, 'draft', 'its drafts rows still taken');
-  const refused = { arm: 'restart', reopened: false, refused: 'no_key' };
-  fake.fire('session-died', { session: 's-9', reason: refused });
-  assert.equal(REC.session(), null, 'a restart the shell could not re-open names no session: a death');
-  assert.deepEqual(REC.deathReason(), refused);
-  assert.deepEqual([listings, REC.place('1.0.1.0.1013'), REC.textBetween(D, 1, 9)], [['guest'], undefined, ''], 'the death drops the draft\'s place and the text, and reads the index in the guest form');
-  await new Promise((r) => setTimeout(r, 0));
+  fake.fire('session-died', { session: 's-9', reason: UNOPENED });
+  await flush();
+  assert.deepEqual(REC.session(), { session: 's-10', principal: 1, account: '1.0.1', writes: true }, 'a restart that re-opened none: the session the boot\'s own call opens again');
+  assert.deepEqual([opens(fake), REC.deathReason(), REC.reconnect(), drops], [1, null, null, 0], 'one call; no death, nothing to say and nothing dropped');
+  assert.deepEqual([listings, REC.place('1.0.1.0.1013')?.kind, REC.textBetween(D, 1, 9)], [[], 'draft', 'Tumbler.'], 'it holds what it read — the draft\'s place, the text — and reads no index');
+  await PUMP.read(F.docMetadata(D));
+  assert.deepEqual(sent, ['s-9', 's-10'], 'the next read goes out under the session got back');
+});
+
+test('a restart that re-opened none whose call again is refused: what the session read is dropped and the index read again in the guest form — no death recorded, for the shell named none, the refusal kept as boot keeps it with the account the page could not reconnect as; no second call (issue #175)', async () => {
+  const fake = FAKE.create({ ...script, ...NO_KEY });
+  PORT.boot(fake);
+  let drops = 0;
+  PUMP.start({ onDirty: () => {}, onDrop: (d) => { if (!d.row) drops++; } });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeIndex(indexAt('building'));
+  REC.takeDelivery(D, [{ pos: 1, width: 8, kind: 'content', text: 'Tumbler.', ref: null, origin: null }]);
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
+  const listings = sessionsSent(fake, 'places');
+  fake.fire('session-died', { session: 's-1', reason: { ...UNOPENED, refused: 'no_key' } });
+  await flush();
+  assert.deepEqual([REC.session(), REC.deathReason()], [null, null], 'a guest, and no death recorded');
+  assert.deepEqual([REC.sessionRefused(), REC.reconnect()], [{ kind: 'shell', name: 'no_key' }, { as: '1.0.1', refused: true }], 'the refusal as boot keeps it, and the account it could not reconnect as');
+  assert.deepEqual([listings, REC.place('1.0.1.0.1013'), REC.textBetween(D, 1, 9), drops], [['guest'], undefined, '', 1], 'what the session read dropped and told, and the index read again in the guest form');
   assert.deepEqual(REC.places().map((p) => p.doc), [D, '1.0.1.0.127'], 'the guest\'s listing, no draft among it');
+  fake.fire('session-died', { session: 's-1', reason: UNOPENED });
+  await flush();
+  assert.equal(opens(fake), 1, 'one call, never made again');
 });
 
 test('a read that meets the re-opened restart before the event takes its end and is asked once more under the re-opened session; the event after it changes nothing', async () => {
@@ -522,24 +590,28 @@ test('the board\'s health and its daemon, each read while a mode or a daemon eve
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a read refused session_ended — the shell\'s answer while it derives the end — awaits the end the event brings and is asked once more under the re-opened session', async () => {
+test('a read refused session_ended while the shell derives the end asks for the session again; the event re-opening it settles that, the page going on under the re-opened session, and the call\'s later answer is stale — taken nowhere, the session it opened closed (issue #175)', async () => {
   const frame = F.docMetadata(D);
-  const s = { ...script };
+  const s = { ...script, ...opened('s-10'), [FAKE.keyOf('close', { session: 's-10' })]: { result: {} } };
   firstThen(s, frame, { refused: { kind: 'shell', name: 'session_ended', session: 's-1' } }, script[FAKE.keyOf('op', { frame })]);
   const fake = FAKE.create(s);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   const sent = sessionsSent(fake);
+  const call = fake.hold('session', { board: 'b-1' });
   let done = false;
   const pending = PUMP.read(frame).then((o) => { done = true; return o; });
-  await new Promise((r) => setTimeout(r, 0));
-  assert.deepEqual([sent, done], [['s-1'], false], 'refused, the read awaits the end');
+  await flush();
+  assert.deepEqual([sent, opens(fake), done], [['s-1'], 1, false], 'refused, the read waits for the call made again, out');
   fake.fire('session-died', { session: 's-1', reason: REOPENED });
   const out = await pending;
   assert.ok('answer' in out, 'the answer, never the refusal');
-  assert.deepEqual(sent, ['s-1', 's-9']);
-  assert.equal(REC.deathReason(), null);
+  assert.deepEqual([sent, REC.session()?.session, REC.deathReason()], [['s-1', 's-9'], 's-9', null], 'asked again under the session the shell re-opened');
+  call();
+  await flush();
+  assert.equal(REC.session()?.session, 's-9', 'the call\'s later answer taken nowhere');
+  assert.ok(fake.asked.includes(FAKE.keyOf('close', { session: 's-10' })), 'the session it opened closed, so none stands with no owner');
 });
 
 test('a read refused session_ended after the event brought the re-opened session is asked once more under it at once', async () => {
@@ -561,27 +633,121 @@ test('a read refused session_ended after the event brought the re-opened session
   assert.deepEqual(sent, ['s-1', 's-9']);
 });
 
-test('a read refused session_ended that no end follows waits a bounded time, hands the refusal up and invents no death; a read under that session after it waits no more', async (t) => {
-  t.mock.timers.enable({ apis: ['setTimeout'] });
-  const flush = () => new Promise((r) => setImmediate(r));
+test('a read refused session_ended — a reference from before the shell\'s own restart, which announces none — asks for the session again by the boot\'s own call and is answered under the session it opens: no refusal handed up, no death (issue #175)', async () => {
   const frame = F.docMetadata(D);
-  const fake = FAKE.create({ [FAKE.keyOf('op', { frame })]: { refused: { kind: 'shell', name: 'session_ended', session: 's-7' } } });
+  const s = { ...script, ...opened('s-2') };
+  firstThen(s, frame, { refused: { kind: 'shell', name: 'session_ended', session: 's-7' } }, script[FAKE.keyOf('op', { frame })]);
+  const fake = FAKE.create(s);
   PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-7', principal: 1, account: '1.0.1' });
-  const done = [false, false];
-  const first = PUMP.read(frame).then((o) => { done[0] = true; return o; });
+  const sent = sessionsSent(fake);
+  const out = await PUMP.read(frame);
+  assert.ok('answer' in out, 'the answer, never the refusal');
+  assert.deepEqual([sent, opens(fake)], [['s-7', 's-2'], 1], 'asked again under the session the one call opened');
+  assert.deepEqual([REC.session()?.session, REC.deathReason()], ['s-2', null], 'no death');
+});
+
+test('every loss told while the call again is out joins it — the restart\'s event, two reads refused session_ended, one refused session_died naming the restart — and each read is answered under the session the one call opens (issue #175)', async () => {
+  const frames = [F.docMetadata(D), F.retrieveDocVSpanSet(D), F.findLinksV(D, 1, 30)];
+  const s = { ...script, ...opened('s-2') };
+  const ended = { refused: { kind: 'shell', name: 'session_ended', session: 's-1' } };
+  const died = { refused: { kind: 'shell', name: 'session_died', session: 's-1', reason: UNOPENED } };
+  frames.forEach((frame, i) => firstThen(s, frame, i < 2 ? ended : died, script[FAKE.keyOf('op', { frame })]));
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const sent = sessionsSent(fake);
+  const ops = frames.map((frame) => fake.hold('op', { frame }));
+  const call = fake.hold('session', { board: 'b-1' });
+  const reads = frames.map((frame) => PUMP.read(frame));
   await flush();
-  assert.equal(done[0], false, 'the read awaits the end');
-  t.mock.timers.tick(60000);
+  fake.fire('session-died', { session: 's-1', reason: UNOPENED });
+  for (const release of ops) release();
   await flush();
-  assert.equal(done[0], true, 'the wait is bounded');
-  const out = await first;
-  assert.equal('refused' in out && out.refused.name, 'session_ended', 'the refusal handed up');
-  assert.deepEqual([REC.session()?.session, REC.deathReason()], ['s-7', null], 'no death invented: the page holds what it held');
-  const second = PUMP.read(frame).then((o) => { done[1] = true; return o; });
+  assert.deepEqual([opens(fake), REC.session()?.session, REC.deathReason()], [1, 's-1', null], 'one call out, held; the lost session stands meanwhile, no death');
+  call();
+  const outs = await Promise.all(reads);
+  assert.ok(outs.every((o) => 'answer' in o), 'every read answered, none the refusal');
+  assert.deepEqual([opens(fake), sent.slice(0, 3), sent.slice(3)], [1, ['s-1', 's-1', 's-1'], ['s-2', 's-2', 's-2']], 'one call; each read asked again under the session it opened');
+});
+
+test('after the call again is refused, a late session_ended for the lost reference asks for no session again, and its read is asked once more in the guest form (issue #175)', async () => {
+  const frame = F.docMetadata(D);
+  const s = { ...script, ...NO_KEY };
+  firstThen(s, frame, { refused: { kind: 'shell', name: 'session_ended', session: 's-1' } }, script[FAKE.keyOf('op', { frame })]);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const sent = sessionsSent(fake);
+  const op = fake.hold('op', { frame });
+  const late = PUMP.read(frame);
   await flush();
-  assert.equal(done[1], true, 'a read under that session after it waits no more');
-  await second;
+  fake.fire('session-died', { session: 's-1', reason: UNOPENED });
+  await flush();
+  assert.deepEqual([REC.session(), opens(fake)], [null, 1], 'the call again refused: a guest');
+  op();
+  const out = await late;
+  assert.ok('answer' in out, 'the guest\'s answer, never the refusal');
+  assert.deepEqual([opens(fake), sent], [1, ['s-1', 'guest']], 'no second call; the read asked once more as a guest');
+});
+
+test('a session lost while its board is known unreachable is asked for again at the board\'s running and never before, every read waiting for it meanwhile (issue #175: "once the board is answering")', async () => {
+  const frame = F.docMetadata(D);
+  const fake = FAKE.create({ ...script, ...opened('s-2') });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  fake.fire('daemon', { board: 'b-1', state: 'unreachable' });
+  const sent = sessionsSent(fake);
+  fake.fire('session-died', { session: 's-1', reason: UNOPENED });
+  let done = false;
+  const pending = PUMP.read(frame).then((o) => { done = true; return o; });
+  await flush();
+  assert.deepEqual([opens(fake), sent, done], [0, [], false], 'no call while the board does not answer; the read waits, asked nowhere');
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  const out = await pending;
+  assert.ok('answer' in out);
+  assert.deepEqual([opens(fake), sent, REC.session()?.session], [1, ['s-2'], 's-2'], 'at running, the one call; the read asked under the session it opened');
+});
+
+test('a session the call again opens as another principal is taken only once what the lost session read is dropped, the index read again under it (issue #175; M-REC\'s THE CLASS)', async () => {
+  const fake = FAKE.create({ ...script, ...opened('s-2', { principal: 2, account: '1.0.2' }) });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeIndex(indexAt('building'));
+  REC.takeDelivery(D, [{ pos: 1, width: 8, kind: 'content', text: 'Tumbler.', ref: null, origin: null }]);
+  const listings = sessionsSent(fake, 'places');
+  fake.fire('session-died', { session: 's-1', reason: UNOPENED });
+  await flush();
+  assert.deepEqual([REC.session()?.session, REC.session()?.principal, REC.deathReason()], ['s-2', 2, null], 'the session opened, another principal\'s');
+  assert.deepEqual([REC.textBetween(D, 1, 9), listings], ['', ['s-2']], 'principal 1\'s text dropped, the index read again under the new session');
+});
+
+test('the page\'s own close(session) is its sign-out, never a loss: taken as the call goes out as the end the shell\'s close carries, and a read out under the session that meets session_ended asks for no session but is asked once more as a guest (client.md §4b.2: "`close(session)` stays the page\'s sign-out"; issue #175)', async () => {
+  const frame = F.docMetadata(D);
+  const s = { ...script, ...opened('s-2'), [FAKE.keyOf('close', { session: 's-1' })]: { result: {} } };
+  firstThen(s, frame, { refused: { kind: 'shell', name: 'session_ended', session: 's-1' } }, script[FAKE.keyOf('op', { frame })]);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  const sent = sessionsSent(fake), listings = sessionsSent(fake, 'places');
+  const op = fake.hold('op', { frame });
+  const pending = PUMP.read(frame);
+  await flush();
+  const closing = PORT.close({ session: 's-1' });
+  assert.deepEqual([REC.session(), REC.deathReason(), listings], [null, { arm: 'closed' }, ['guest']], 'as the close goes out: the sign-out\'s end, the index read again in the guest form');
+  op();
+  const out = await pending;
+  await closing;
+  assert.ok('answer' in out, 'the guest\'s answer, never the refusal');
+  assert.deepEqual([opens(fake), sent], [0, ['s-1', 'guest']], 'no session asked for; the read asked once more as a guest');
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  assert.deepEqual([REC.session(), REC.deathReason(), opens(fake)], [null, { arm: 'closed' }, 0], 'the shell\'s own event after it changes nothing');
 });
 
 test('no call the pump makes is a write: every op frame names a read op', async () => {

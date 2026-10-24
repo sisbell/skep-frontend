@@ -67,12 +67,14 @@
 // by `compare` and kept on its line, the corner saying so where the version
 // lacks it (F.floating.member), and the version left one act away — the
 // pane's own state, never a box's: N-GO's pins are never touched (FP-22).
-// THE PAGE'S OWN DEATH reaches every pane at once: each is taken down to what
-// the death left of its record — nothing of the dead session's text or links,
-// the ties with them — and read again at the guest's class, a document
-// withheld from the guest standing as its head alone (records.js's
-// `sessionDied`: "no frame after it draws … what the session could read and a
-// guest cannot"). EVERY SETTING IS ONE STEP (`setPanes`; "no tie is ever drawn
+// THE PAGE'S OWN DEATH reaches every pane at once, as does every other change
+// of its class — a session a restart lost and the acquire did not get back
+// among them (M-PUMP's `classChanged`): each is taken down to what the drop
+// left of its record — nothing of the session's text or links, the ties with
+// them — and read again at the class the page reads at then, a document
+// withheld from a guest standing as its head alone (records.js's
+// `dropClass`: "no frame after it draws … what the class could read and the
+// next cannot"). EVERY SETTING IS ONE STEP (`setPanes`; "no tie is ever drawn
 // over text it was not measured on"): the reads first — the text whole, the
 // two texts' `compare`, where each far end crossing between them stands — then,
 // where the scene still stands and no later setting was asked of the pane,
@@ -1125,8 +1127,9 @@ function newest(row, src) {
 /**
  * What one of the board's events dropped, told by M-PUMP after the drop
  * (its `onDrop`; see the head): each pane the drop reached kept fresh by its
- * kind — at the page's own death every pane taken down at once and read again
- * at the guest's class; a row naming a newer member pinning an edition at its
+ * kind — at the page's own death, or any other change of its class, every
+ * pane taken down at once and read again at the class the page reads at then;
+ * a row naming a newer member pinning an edition at its
  * bare address at once, or counting a version's chain again; any other row
  * reaching a pane's text reading it again in its place.
  * @param {Dropped} x

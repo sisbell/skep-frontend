@@ -26,9 +26,14 @@
 // rule, by the reader), `range_not_present`, the `invalid` follow,
 // `scan_busy`, `endsets_too_large`, `too_many_blocks`, `too_many_pairs`,
 // `too_much_coverage`, the session's `no_key` (C-136 with this version's
-// limit), the death arms (C-137), `unreachable`; a withheld run's face whole,
-// Enter's act at the run (D5 K-7), made from the run's placeholder record
-// (T-ARTICLE's `placeholderOf`), C-67's pointer its offered act; a jump
+// limit), `unreachable`; at the one line's sign-in act the session's refusal
+// — the boot's, or the re-acquire's of a session a restart lost — and a
+// death's arm (C-137, by the death's reason: `deathWords`, the words the
+// line's death arm says too), "signed out" the sign-out marker's alone and
+// never a restart's (issue #175's design decision; FP-28); a withheld run's
+// face whole, Enter's act at the run (D5 K-7), made from the run's
+// placeholder record (T-ARTICLE's `placeholderOf`), C-67's pointer its
+// offered act; a jump
 // reading and a jump reaching (FP-25: "'Reading', 'reaching' and a failure
 // show where the camera is"), their overlays named `reading:⟨address⟩` and
 // `reaching:⟨address⟩` and never `face:…`, the prefix a notice's face
@@ -42,7 +47,7 @@
 // on its first control (K-80). Carries: the wireframe's §18 `face` (its words
 // and acts; its reviewer's label stays in the wireframe),
 // `deadReferenceFace`'s fifth cell, `c39Face`. Rules: FP-1, FP-2, FP-13,
-// FP-20, FP-25.
+// FP-20, FP-25, FP-28.
 
 import * as HOST from './host.js';
 import * as VERSIONS from './versions.js';
@@ -55,6 +60,7 @@ import { t } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+/** @typedef {import('../bridge/shapes').DeathReason} DeathReason */
 /** @typedef {import('../bridge/shapes').MomentEvent} MomentEvent */
 /** @typedef {import('./host.js').Anchor} Anchor */
 /** @typedef {import('../model/records.js').Reader} Reader */
@@ -88,7 +94,6 @@ export function wordsFor(r, ctx = {}) {
     case 'too_much_coverage': return f('B1.too_much_coverage');
     case 'empty_subspace': return f('B1.empty_subspace');
     case 'no_key': return f('C-136');
-    case 'session_ended': case 'session_died': case 'closed': return f('C-137.signed-out');
     case 'busy': return f('C-138.busy');
     case 'unreachable': return f('F.daemon.unreachable');
     case 'no_adapter': return f('L.no-adapter');
@@ -295,8 +300,9 @@ export function c39(owner, reader, anchor) {
 }
 
 /**
- * The session's refusal at the line's sign-in act: `no_key` → C-136 with
- * this version's limit; any other by its name.
+ * The session's refusal at the line's sign-in act — the boot's, or the
+ * re-acquire's of a session a restart lost: `no_key` → C-136 with this
+ * version's limit; any other by its name.
  * @param {Refusal} r
  * @param {HTMLElement | null} anchor
  */
@@ -304,6 +310,35 @@ export function sessionFace(r, anchor) {
   const face = wordsFor(r);
   const extra = r.name === 'no_key' ? `<div class="note" data-string="F.keyless-limit">${esc(t('F.keyless-limit'))}</div>` : '';
   HOST.show({ kind: 'face', id: 'face:session:' + r.name, anchor: toAnchor(anchor), html: faceHTML(face, extra) });
+}
+
+/**
+ * The death's words (C-137), by its reason's arm: the MODE arm's "this
+ * board now requires a signed session", the SELF-retirement's "sign in with
+ * the new key", and the sign-out marker's "signed out" for the `closed` arm
+ * alone — the page's own close, the person's sign-out (issue #175's design
+ * decision: "'signed out' stays on the sign-out path alone"; FP-28); none
+ * for an arm whose words this page does not hold — the seeded, the blocked
+ * and the unreachable arms, whose faces read records it does not read. The
+ * one line's death arm and its sign-in act's face both say them
+ * (`deathFace`). A restart is no death (M-PUMP), so none is ever a restart's.
+ * @param {DeathReason} reason
+ * @returns {{id: string, text: string} | null}
+ */
+export function deathWords(reason) {
+  const id = reason.arm === 'closed' ? 'C-137.signed-out' : reason.arm === 'mode' ? 'C-137.mode' : reason.arm === 'retired' ? 'C-137.self' : null;
+  return id ? { id, text: t(id) } : null;
+}
+
+/**
+ * The death's face at the line's sign-in act: its words (`deathWords`);
+ * nothing where this page holds none for its arm.
+ * @param {DeathReason} reason
+ * @param {HTMLElement | null} anchor
+ */
+export function deathFace(reason, anchor) {
+  const words = deathWords(reason);
+  if (words) HOST.show({ kind: 'face', id: 'face:session:' + reason.arm, anchor: toAnchor(anchor), html: faceHTML({ ...words, acts: [] }) });
 }
 
 /**

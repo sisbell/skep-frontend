@@ -53,7 +53,8 @@
 // once the field closes onto it. THE STATUS REGION (D4):
 // one standing `role="status"` region this module alone writes (`say`) —
 // polite for the selection, a face and the line's transients, assertive for
-// the session's death and halted writes; nothing for a camera move; a
+// the session's death, a session a restart lost and the acquire did not get
+// back, and halted writes; nothing for a camera move; a
 // key-made landing is told by the focus move alone (rule 12), never repeated
 // here. The LEAP box's own status region is the combobox's (N-LEAP).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-20.
@@ -261,8 +262,9 @@ export function cover(el, on) { /** @type {HTMLElement} */ (el).inert = on; }
 /**
  * The status region (D4): one standing region, written here alone — polite
  * for the selection, a face, the line's transients; assertive for the
- * session's death and halted writes. Nothing for a camera move; a landing is
- * told by the focus move.
+ * session's death, a session a restart lost and the acquire did not get back,
+ * and halted writes. Nothing for a camera move; a landing is told by the
+ * focus move.
  * @param {string} text
  * @param {boolean} [assertive]
  */
