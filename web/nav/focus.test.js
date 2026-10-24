@@ -13,7 +13,12 @@
 // reads the opener again turns red; the close returns the focus to the
 // opener where that takes it, else to the walk's element — never to the top
 // — and leaves a focus the person moved elsewhere; a focus still inside the
-// closing region is taken off it first. A REBUILD KEEPS THE FOCUS (`keep`):
+// closing region is taken off it first. A FIELD THE READER TYPES IN KEEPS THE
+// CARET (`land`, `isField`; #171's rule 2): a move the page makes while an
+// input holds the focus leaves it there, the ring's rule set as asked, and the
+// region holding the field then closes onto the walk's element, never onto
+// its opener — a mutant that moves the focus out of the field, or keeps the
+// opener, turns red. A REBUILD KEEPS THE FOCUS (`keep`):
 // on the control bearing the same key, else the region's first control,
 // never the body; a region that held no focus moves nothing. THE HOST'S
 // CASES (O-HOST, rules 11, 13, 16): an overlay a key opened takes the focus
@@ -103,6 +108,33 @@ test('the ring\'s rule: drawn where a key moved the focus into the plane, out by
   FOCUS.land(null, { byKey: false });
   assert.equal(p.at(), 'the item', 'a camera-made re-take that carries no focus moves none');
   assert.equal(FOCUS.ringShown(), false, '— and puts the ring out');
+});
+
+test('a field the reader types in keeps the caret through a move the page makes: the focus stays in it, the ring\'s rule set as asked, and the region holding it closes onto the walk\'s element — never its opener, which still takes the focus (#171\'s rule 2)', () => {
+  const p = page();
+  const plane = p.element('the tree'), item = p.element('the item'), landed = p.element('the landing\'s item'), box = p.element('the box'), rows = p.element('the box\'s rows');
+  const field = Object.assign(p.element('the box\'s input'), { matches: (/** @type {string} */ sel) => sel.split(',').map((s) => s.trim()).includes('input') });
+  plane.contains = (x) => x === item || x === landed || x === plane;
+  box.contains = (x) => x === field || x === rows;
+  let walk = item;
+  FOCUS.attach({ plane: /** @type {any} */ (plane), home: () => /** @type {any} */ (walk) });
+  assert.deepEqual([FOCUS.isField(/** @type {any} */ (field)), FOCUS.isField(/** @type {any} */ (item)), FOCUS.isField(null)], [true, false, false], 'one reading of a field: an input or a textarea, never another element');
+  item.focus();
+  FOCUS.open('box', { el: /** @type {any} */ (box), byKey: true, first: /** @type {any} */ (field) });
+  assert.equal(p.at(), 'the box\'s input', 'the box\'s input takes the focus, the item its opener');
+  walk = landed; // a landing arrives under the box: the walk stands on its item
+  assert.equal(FOCUS.land(/** @type {any} */ (landed), { byKey: true }), false, 'the landing\'s move puts the focus nowhere');
+  assert.deepEqual([p.at(), FOCUS.ringShown()], ['the box\'s input', false], 'the caret stays in the field, no ring drawn while the plane does not hold the focus');
+  FOCUS.land(/** @type {any} */ (field), {});
+  assert.equal(p.at(), 'the box\'s input', 'a move onto the field itself is a move like any other');
+  FOCUS.close('box');
+  assert.deepEqual([p.at(), FOCUS.ringShown()], ['the landing\'s item', true], 'its close gives the focus to the walk\'s element — the landing — never the item it was opened from, the ring as the landing\'s key set it');
+  // a focus on a control of a region that is no field moves as ever
+  FOCUS.open('box', { el: /** @type {any} */ (box), byKey: true, first: /** @type {any} */ (rows) });
+  assert.equal(p.at(), 'the box\'s rows');
+  FOCUS.land(/** @type {any} */ (item), { byKey: true });
+  assert.equal(p.at(), 'the item', 'no field holds the focus: the move takes it');
+  FOCUS.close('box');
 });
 
 test('a region\'s opener is remembered once: a second opening keeps the first, and the close returns the focus there', () => {

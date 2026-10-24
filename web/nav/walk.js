@@ -17,7 +17,10 @@
 // made the move and put out by a pointer's landing or a camera-made re-take
 // (D5 §4 rule 2, the platform's focus-visible rule); a camera-made re-take
 // carries the focus to the new element only where the mirror held it, and
-// leaves a focus standing in the one line, a card or the scene where it is.
+// leaves a focus standing in the one line, a card or the scene where it is;
+// and no move takes the caret from a field the reader types in, where the
+// focus stays until the field closes onto the walk's element (N-FOCUS's
+// `land`; issue #171's rule 2).
 // Every move names a position or none, so a landing's position never
 // outlives the span it was named in: a walk key names none, and the line
 // reads the span's own first position. At launch the platform's focus rests
@@ -634,7 +637,8 @@ export async function enter() {
  * it — the position kept as the one the landing
  * named (`landedAt`); a place the index does not list on its own node among
  * the listed siblings (rule 12). The platform's focus goes to the landing's
- * item wherever the act was made, the ring drawn where a key made it and put
+ * item wherever the act was made — save from a field the reader types in
+ * (see the head) — the ring drawn where a key made it and put
  * out where anything else did (D5 §4 rule 2); a camera-made re-take (`take`
  * false) carries the focus to the new item only where the mirror held it,
  * the ring out, and leaves a focus standing elsewhere where it is. The

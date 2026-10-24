@@ -51,18 +51,21 @@
 // (`markDescribed`; issue #153), then P-RENDER, then BM, then
 // O-HOST's place, the landing's line (O-LAND's `render`), the line, then the
 // press APP-INPUT holds at reading scale, acted on the text the frame set
-// (`afterFrame`) — and the frame buffer the gate reads. T-LAYER decides
-// what stands BEFORE the canvas draws, so a line crossing the mount threshold
-// or entering the view is drawn as a bar or yielded to its text by the same
-// frame's standing lines — never both, never neither (law 13) — and the
+// (`afterFrame`) — and the frame buffer the gate reads; the line on its own
+// cadence, the LEAP box as opened taking the address it names beside it
+// (N-LEAP's `takeAddress`; issue #171). T-LAYER decides what stands BEFORE
+// the canvas draws, so a line crossing the mount threshold or entering the
+// view is drawn as a bar or yielded to its text by the same frame's standing
+// lines — never both, never neither (law 13) — and the
 // arrival mark reads the article where this frame placed it; each frame's
 // record counts the documents the canvas drew a label or a bar for that stands
 // as text (`both`), the ones it yielded a line or the whole of to text that
 // does not stand (`neither`), the bars it drew at the readable em (`barred`,
 // which issue #122's rule holds at none), and what T-LAYER stood: its new
 // mounts, its articles in the mount band and their lines. The global key
-// listener → N-KEYS, each key handed where the focus is and whether a key
-// made it by N-FOCUS's one reading (FP-20) — a key a jump in the air finds
+// listener → N-KEYS, each key handed where the focus is — a field as N-FOCUS
+// reads one (`isField`) — and whether a key made it by N-FOCUS's one reading
+// (FP-20) — a key a jump in the air finds
 // held there for its landing (FP-25); a chord the LEAP box closed on
 // is read at the focus the close returned; ↓ and ↑ in an overlay move among
 // its controls through the controller; the pointer → APP-INPUT; the events
@@ -168,7 +171,7 @@ function loop(/** @type {number} */ now) {
     lastRev = rev; lastLayerRev = lrev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
   }
   lastT = now;
-  if (now - lineT > 120) { lineT = now; LINE.render(); }
+  if (now - lineT > 120) { lineT = now; LINE.render(); LEAP.takeAddress(); }
 }
 
 /** where the key event's focus is */
@@ -176,7 +179,7 @@ function whereIs(/** @type {EventTarget | null} */ target) {
   const t = /** @type {HTMLElement | null} */ (target);
   if (!t || !t.closest) return /** @type {const} */ ('plane');
   if (t.closest('#leap')) return /** @type {const} */ ('field');
-  if (t.matches && t.matches('input, textarea')) return /** @type {const} */ ('field');
+  if (FOCUS.isField(t)) return /** @type {const} */ ('field');
   if (t.closest('#overlay')) return /** @type {const} */ ('overlay');
   if (t.closest('#landing')) return /** @type {const} */ ('landing');
   if (t.closest('#line')) return /** @type {const} */ ('line');

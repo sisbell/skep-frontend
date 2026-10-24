@@ -201,10 +201,10 @@ export function reaching(addr, anchor, abandon) {
   HOST.show({ kind: 'face', id: REACHING + addr, anchor: toAnchor(anchor), html: faceHTML({ id: 'L.reaching', text: t('L.reaching', { address: addr }), acts: [] }), onDismiss: (replaced) => { if (!replaced) abandon(); } });
 }
 
-/** the reading face ends where it still stands — its jump's read answered; an overlay shown since stands */
+/** the reading face ends where it still stands — its jump's read answered, its own completion (O-HOST's `complete`): an overlay shown since stands, and a card asked since still opens */
 export function endReading() {
   const o = HOST.currentState();
-  if (o && o.id && o.id.startsWith(READING)) HOST.dismiss();
+  if (o && o.id && o.id.startsWith(READING)) HOST.complete(o.id);
 }
 
 /** the `invalid` follow: no such link or slot */

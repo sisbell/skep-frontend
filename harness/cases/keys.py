@@ -6,7 +6,11 @@ NOTHING but show the K-9 line; Enter on the LEAP box as opened lands in
 place, ↓ choosing the first level, Enter on typed text that matches nothing
 goes nowhere — the box standing open over the text and its answer, the
 focus in its input, until Esc — and a typed account address a teleport
-with its trail entry (foundations §2.2, §2.3; K-31); an address the board
+with its trail entry (foundations §2.2, §2.3; K-31); a landing arriving
+under the box the reader is typing in leaving it open with its text, its
+caret and its focus, Esc then closing it onto the landing, and the box as
+opened taking the address the line names once a landing changes it (#171's
+rule 2); an address the board
 says nothing about, the page holding nothing of it, flown to at once and
 faced where the camera went, keeping its entry, Mod+[ undoing that jump
 alone, the camera back where it stood, and Mod+] returning there, its
@@ -1663,6 +1667,45 @@ def focus_rules(ctx, r):
     ctx.leap(DOC, WINDOW[0])
 
 
+def box_through_landing(ctx, r):
+    """#171's rule 2 (FP-20): a landing never closes the LEAP box the reader is typing in — the box stands with its text, its
+    caret and its focus, and Esc then closes it onto the landing, the walk's element; the box as opened, nothing typed in it,
+    takes the address the line names once a landing has changed it, selected. Each landing arrives through the gate's door
+    while the box stands, as one whose read answered after the box opened arrives"""
+    box = lambda: ctx.js('''(() => { const q = document.getElementById('leapq');
+      return {open: window.__skep.leap.isOpen(), focused: document.activeElement === q, value: q.value, caret: [q.selectionStart, q.selectionEnd]}; })()''')
+    ctx.leap(DOC, WINDOW[0])
+    chord(ctx, 'l', mods=('Meta',))
+    ctx.drv.ime(NO_MATCH)  # typed over the address the box opened holding, selected
+    ctx.frames(2)
+    typed = box()
+    ctx.js('window.__skep.go.leapTo(%s, 1)' % json.dumps(DOC))
+    ctx.settle()
+    ctx.frames(10)
+    landed, focus = box(), ctx.js('window.__skep.view.focus()')
+    r.check(typed['open'] and typed['value'] == NO_MATCH and landed == typed and bool(focus) and focus['addr'] == DOC and focus['pos'] == 1,
+            'a landing arriving under the LEAP box the reader is typing in leaves it open, its text, its caret and its focus as they were, the walk on the landing (#171\'s rule 2: "A landing never closes a field the reader is typing in")',
+            {'typed': typed, 'landed': landed, 'focus': focus})
+    chord(ctx, 'Escape')
+    at = ctx.js('''(() => { const a = document.activeElement;
+      return {item: !!a && a.getAttribute('role') === 'treeitem' && !!a.closest('#mirror'), id: a ? a.id : null, current: 'walk-' + window.__skep.mirror.index()}; })()''')
+    s = state(ctx)
+    r.check(not s['leap'] and at['item'] and at['id'] == at['current'] and s['focus'] == focus,
+            'Esc then closes the box onto the landing: the focus on the mirror\'s item the walk stands on (#171\'s rule 2: "Focus then goes to the landing")',
+            {'leap': s['leap'], 'at': at, 'focus': [focus, s['focus']]})
+    chord(ctx, 'l', mods=('Meta',))
+    opened = box()
+    ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(FAR_LEAP))
+    ctx.settle()
+    ctx.frames(10)
+    took, line = box(), ctx.js('window.__skep.line().address.addr')
+    r.check(opened['open'] and opened['value'] != line and took['open'] and took['focused'] and took['value'] == line and took['caret'] == [0, len(line)],
+            'the LEAP box as opened, nothing typed in it, takes the address the line names once a landing changes it, selected, the focus in it (#171\'s rule 2: "An address box with nothing typed in it takes the new address")',
+            {'opened': opened, 'took': took, 'line': line})
+    chord(ctx, 'Escape')
+    r.check(not state(ctx)['leap'], 'Esc closes the box that took the new address')
+
+
 def run(ctx):
     r = Result()
     ctx.leap(DOC, WINDOW[0])
@@ -1788,6 +1831,8 @@ def run(ctx):
     s = state(ctx)
     r.check(trail(ctx)['cursor'] == t0['cursor'] and same_view(left, s), 'Mod+[ from the account returns to the entry the LEAP left, at the view it left', {'cursor': s['trail'], 'cam': s['cam'], 'left': left['cam']})
     ring_drawn(ctx, r, 'Mod+[ from the account')
+    # ---- a landing never closes the LEAP box the reader is typing in (#171's rule 2) --------------------------------
+    box_through_landing(ctx, r)
     # ---- WHOLE BOARD and HOME (K-13, K-14) --------------------------------------------------------
     chord(ctx, '0', mods=('Meta',))
     s = state(ctx)

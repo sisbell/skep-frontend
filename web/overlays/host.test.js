@@ -42,7 +42,16 @@
 // view, the one line carrying its string's id and its words (`aside`)
 // exactly then; a face naming no document is never hidden (a mutant that
 // hides it whatever the view, never, or carries it in the line while it
-// shows, turns red).
+// shows, turns red). A FIELD HOLDING THE CARET (#171's rule 2): a face shown
+// while the standing overlay's own field holds the focus takes nothing's
+// place — the overlay stands with its caret, and the face's words, a told
+// face's too, are said through the status region — while with the focus
+// elsewhere the face takes its place (a mutant whose face replaces the
+// overlay holding the caret, or says nothing of a told face, turns red). AN
+// OVERLAY'S OWN COMPLETION (`complete`) is no act on the chrome: the reading
+// face taken down as its read answers ends no card asked while it stood, and
+// leaves another overlay standing; a dismissal still ends one (a mutant
+// whose completion counts as an act turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -202,6 +211,59 @@ test('the LEAP box opened while an opening reads ends it, the card standing unde
   assert.deepEqual([LEAP.isOpen(), standing()], [false, 'selection'], 'Esc closes the box, the innermost thing');
   KEYS.esc();
   assert.equal(standing(), null, 'the next Esc dismisses the card');
+});
+
+/** the parts of a face's markup the host reads its words from — its words, its arm, its clause, its note — each as an element bearing its text */
+const faceParts = (/** @type {string} */ html, /** @type {string} */ sel) => {
+  const classes = sel.split(',').map((s) => s.trim().replace(/^\./, ''));
+  return [...html.matchAll(/<div class="([\w-]+)"(?: data-string="([^"]*)")?>([^<]*)<\/div>/g)].filter((m) => classes.includes(m[1])).map((m) => ({ id: '', dataset: { string: m[2] }, textContent: m[3] }));
+};
+
+test('a face shown while the standing overlay\'s field holds the caret takes nothing\'s place: the overlay stands with its caret, and the face\'s words — a told face\'s too — are said through the status region; with the caret elsewhere, the face takes its place (#171\'s rule 2)', () => {
+  /** @type {string[]} what the status region was given to say */
+  const said = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); } }) });
+  /** the moment's answer field, the platform's focus in it */
+  const field = { id: 'the answer', matches: (/** @type {string} */ sel) => sel.split(',').map((s) => s.trim()).includes('input'), blur() {}, focus() {} };
+  const was = { contains: hostEl.contains, createElement: globalThis.document.createElement, active: globalThis.document.activeElement };
+  hostEl.contains = /** @type {any} */ ((/** @type {unknown} */ x) => x === field);
+  // the platform's parse of a markup string, written into nothing the page shows: a template's content
+  globalThis.document.createElement = /** @type {any} */ (() => { const t = { innerHTML: '', get content() { return { querySelectorAll: (/** @type {string} */ sel) => faceParts(t.innerHTML, sel) }; } }; return t; });
+  try {
+    FACES.moment({ id: 'm-171', kind: 'ask', data: 'name this', walk: 'w-1', board: null, answerable: true });
+    globalThis.document.activeElement = /** @type {any} */ (field);
+    assert.equal(HOST.typing(), true, 'the moment holds the caret');
+    FACES.reading('1.0.1.0.3', null);
+    FACES.floating('1.0.1.0.127', null, false, true);
+    assert.deepEqual([standing(), globalThis.document.activeElement], ['moment:m-171', /** @type {any} */ (field)], 'the moment stands, its field holding the focus');
+    assert.deepEqual(said, [t('L.reading', { address: '1.0.1.0.3' }), t('F.floating', { D: '1.0.1.0.127' })], 'each face said, the one its landing would tell too: no focus moves to tell it');
+    globalThis.document.activeElement = /** @type {any} */ ({ id: 'the answer button' });
+    assert.equal(HOST.typing(), false, 'the focus on the moment\'s button: no caret held');
+    FACES.invalidFollow(null);
+    assert.equal(standing(), 'face:invalid', 'the caret elsewhere, the face takes its place');
+    HOST.dismiss();
+  } finally {
+    hostEl.contains = was.contains; globalThis.document.createElement = was.createElement; globalThis.document.activeElement = was.active;
+  }
+});
+
+test('an overlay\'s own completion is no act on the chrome: the reading face taken down as its read answers ends no card asked while it stood, whose answer shows; another overlay standing is left (issue #171)', async () => {
+  FACES.reading('1.0.1.0.3', null);
+  const r = slow();
+  const o = HOST.opening(() => r.read, card('provenance:wrote'));
+  FACES.endReading();
+  assert.deepEqual([standing(), HOST.pending()], [null, true], 'the reading face taken down, the card still reading');
+  r.answer('its origin');
+  await o;
+  assert.equal(standing(), 'provenance:wrote', 'its answer shows');
+  HOST.complete('reading:1.0.1.0.3');
+  assert.equal(standing(), 'provenance:wrote', 'a completion names the overlay it ends: the card stands');
+  const again = slow();
+  const ended = HOST.opening(() => again.read, card('provenance:uses'));
+  HOST.dismiss();
+  again.answer('its users');
+  await ended;
+  assert.equal(standing(), null, 'a dismissal is an act on the chrome: the card still reading ends with it');
 });
 
 test('an opening begins in the act that asks for it: no module of the page loads another by `import()`, the app alone loading its gate\'s so (S-22 (a))', () => {

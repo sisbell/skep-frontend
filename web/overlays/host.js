@@ -17,6 +17,10 @@
 // dismisses what stands as its camera leaves) — so chrome asked for at a place the person
 // has left never opens over the next one, nor over chrome made after it was
 // asked, and Esc closes what the person sees, never an opening they cannot.
+// An overlay's own completion is no act on the chrome (`complete`): a jump's
+// reading face taken down as its read answers ends no opening asked while it
+// stood, whose answer then shows where the camera is (FP-25; issue #171: "a
+// card ends when the camera leaves its place, not when a read lands").
 // Until it shows or ends it is `pending`; its reads may ask whether it
 // `stands`, so one that has ended asks no more. An opening begins in the act
 // that asks for it, nothing awaited first: the page imports every module it
@@ -40,6 +44,12 @@
 // markup written here removes a control of this host that held it; the
 // dismissal hands the focus back through the controller — to that element,
 // or to the walk's element where it no longer takes the focus (rule 16).
+// A FIELD HOLDING THE CARET (#171's rule 2: "A landing never closes a field
+// the reader is typing in"; FP-20): while the overlay's own field holds the
+// platform's focus — a moment's answer being typed (`typing`) — no face takes
+// its place: a face shown then is said through the status region, a told one
+// too, for no focus moves to tell it, and the overlay stands with its text and
+// its caret, as N-GO's departure leaves it standing.
 // THE DIALOG'S NAME (D5): each overlay's own caption — its `.label`, a face's
 // own words — by `aria-labelledby`; a string per kind from ST where no
 // caption stands. A face a key or the system raised is heard through the one
@@ -163,18 +173,40 @@ export function firstControl(/** @type {HTMLElement} */ host, /** @type {string 
 }
 
 /** a face's words, for the status region: its text, its arm, its clause, its note */
-const faceWords = (/** @type {HTMLElement} */ host) => [...host.querySelectorAll('.face-text, .arm, .clause, .note')].map((e) => e.textContent || '').join(' ');
+const faceWords = (/** @type {ParentNode} */ host) => [...host.querySelectorAll('.face-text, .arm, .clause, .note')].map((e) => e.textContent || '').join(' ');
+
+/** a face's words read from its markup, written into nothing the page shows: what the status region says of a face held back (see the head) */
+function wordsOf(/** @type {string} */ html) {
+  if (typeof document.createElement !== 'function') return '';
+  const scratch = document.createElement('template');
+  scratch.innerHTML = html;
+  return faceWords(scratch.content);
+}
+
+/**
+ * Does the standing overlay hold the caret (see the head; #171's rule 2): the
+ * platform's focus in a field of its own — an answer the reader is typing
+ * (N-FOCUS's `isField`)?
+ */
+export function typing() {
+  const a = document.activeElement;
+  return !!el && !!current && !!a && el.contains(a) && FOCUS.isField(a);
+}
 
 /**
  * Show an overlay — the chrome's next act, so an opening still reading ends
  * and its answer never covers this overlay (an opening's own answer reaches
  * here only where it stands); a replacement is not a dismissal of what stands
- * behind it (the reveal, the selection); the same id is a rebuild.
+ * behind it (the reveal, the selection); the same id is a rebuild. A face
+ * shown while the standing overlay holds the caret takes nothing's place: its
+ * words are said through the status region, and the overlay stands with its
+ * text and its caret (see the head).
  * @param {Overlay} o
  */
 export function show(o) {
   made++; reading = 0;
   if (!el) return;
+  if (o.kind === 'face' && typing()) { const words = wordsOf(o.html); if (words) FOCUS.say(words); return; }
   const host = el;
   const from = document.activeElement; // where the act found the focus — read first, for the markup written below removes a control of this host that held it
   const held = !!from && from !== document.body && host.contains(from);
@@ -249,6 +281,22 @@ export function place() {
 /** dismiss the current overlay — the chrome's next act, so an opening still reading ends with it; its end runs; the focus returns through the controller, to the chain's opener or the walk's element */
 export function dismiss() {
   made++; reading = 0;
+  takeDown();
+}
+
+/**
+ * The overlay standing ends by its own completion — a jump's reading face,
+ * its read answered (O-FACES' `endReading`): taken down as a dismissal takes
+ * it, but no act on the chrome, so an opening asked while it stood still
+ * shows its answer (see the head). Nothing where another overlay stands.
+ * @param {string} id the overlay that completed
+ */
+export function complete(id) {
+  if (current && current.id === id) takeDown();
+}
+
+/** the current overlay taken down: its element emptied, its end run, the focus returned through the controller */
+function takeDown() {
   if (!el || !current) return;
   const o = current;
   current = null;

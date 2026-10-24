@@ -241,7 +241,18 @@
 // the face (a mutant whose show does not count itself turns red); asked
 // before the act — a follow faced at once, one faced once its read answers in the air —
 // likewise, held by the act's end of the opening and by the face's show alike
-// (a mutant that drops both turns red). ENTER AT A WITHHELD RUN (D5 K-7)
+// (a mutant that drops both turns red). NO LANDING ENDS CHROME (issue #171's
+// design decision): a card shown while a jump is in the air — a LEAP to a
+// document whose text the page does not hold, a follow, a Forward reaching an
+// entry still reading — stands over its landing, and one asked then opens
+// there once its read answers (a mutant that dismisses chrome or ends the
+// opening at the landing, or ends the opening with the reading face's end,
+// turns red). AN OVERLAY WHOSE FIELD HOLDS THE CARET STANDS THROUGH A JUMP
+// (its rule 2): a walk's moment being answered stands through a LEAP that
+// reaches, one whose read fails in the air and one landing at a dead end, its
+// entry holding the face the read met as its notice (a mutant whose departure
+// dismisses it, or whose faces take its place, turns red). ENTER AT A
+// WITHHELD RUN (D5 K-7)
 // shows the run's face whole, taking no focus: its head, the arm, then C-67's
 // pointer, a button following the origin owner's passing claim — the face's
 // act, which run by a key LEAPs to that claim's home, a trail entry with the
@@ -287,6 +298,7 @@ import * as CAM from '../plane/camera.js';
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
 import * as HOST from '../overlays/host.js';
+import * as FACES from '../overlays/faces.js';
 import * as PROV from '../overlays/provenance.js';
 import * as VERSIONS from '../overlays/versions.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
@@ -2056,6 +2068,53 @@ test('a follow made while a card reads ends its opening as it is made: once the 
   assert.deepEqual(fake.unanswered, []);
 });
 
+// who wrote the passages the reader meets where the jumps below land: C's first five positions, FAR's at 20
+Object.assign(script, {
+  [FAKE.keyOf('op', { frame: F.showOrigin(C, 1, 5) })]: { result: { as_of: 1, resp: 'addrs', addrs: [C] } },
+  [FAKE.keyOf('op', { frame: F.showOrigin(FAR, 20, 5) })]: { result: { as_of: 1, resp: 'addrs', addrs: [FAR] } },
+});
+
+test('no landing ends chrome (issue #171\'s design decision: "a card ends when the camera leaves its place, not when a read lands"): a card shown while a jump is in the air stands over its landing, and one asked then opens there once its reads answer — a LEAP to a document whose text the page does not hold, a follow, a Forward reaching an entry still reading', async () => {
+  /** @type {Array<[string, () => Promise<{release: () => void, jumping: Promise<unknown>, at: string, asks: [string, number]}>]>} each jump made with its read held — the read's release, the jump in the air, the place it lands, and the passage there a card is asked over */
+  const jumps = [
+    ['a LEAP to a document whose text the page does not hold', async () => {
+      unread(); await run(GO.leapTo(D));
+      const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+      return { release, jumping: GO.leapTo(C), at: C, asks: [C, 1] };
+    }],
+    ['a follow', async () => {
+      await run(GO.leapTo(D));
+      const release = fake.hold('op', { frame: F.project(PASSAGE, 2, FAR) });
+      return { release, jumping: GO.follow(drawn(PASSAGE)), at: FAR, asks: [FAR, 20] };
+    }],
+    ['a Forward reaching an entry still reading', async () => {
+      unread(); await run(GO.leapTo(D));
+      const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+      const leap = GO.leapTo(C);
+      await run(GO.back());
+      return { release, jumping: Promise.all([leap, GO.forward()]), at: C, asks: [C, 1] };
+    }],
+  ];
+  for (const [what, make] of jumps) {
+    for (const asked of [false, true]) {
+      const j = await make();
+      assert.ok(GO.inAir() && HOST.currentState()?.id === 'reading:' + j.at, `${what}: in the air, reading where its camera went`);
+      // the reader, while it is in the air: a card shown over the place on screen, or one asked there, its read slow
+      const card = asked ? fake.hold('op', { frame: F.showOrigin(j.asks[0], j.asks[1], 5) }) : () => {};
+      const opening = asked ? PROV.wrote(j.asks[0], j.asks[1], 5) : (HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span>', acts: {} }), Promise.resolve());
+      j.release();
+      await run(j.jumping);
+      const e = TRAIL.current();
+      assert.ok(!GO.inAir() && e && e.addr === j.at && same(CAM.view(), e.view), `${what}: landed, the camera gone on to its entry's view`);
+      card();
+      await opening;
+      assert.equal(HOST.currentState()?.id, asked ? 'provenance:wrote' : 'a card', asked ? `${what}: the card asked in the air opens over the landing once its read answers` : `${what}: the card shown in the air stands over the landing`);
+      HOST.dismiss();
+    }
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
 test('a face a navigation act shows stands over a card asked at the place it leaves, whether the card was asked while the act read or before it', async () => {
   takeDead();
   /** @type {Array<{what: string, act: () => Promise<unknown>, face: string, held: object | null, during: boolean}>} each act that faces, the face it shows, the read it faces on, and whether the card is asked while that read is out */
@@ -2080,6 +2139,42 @@ test('a face a navigation act shows stands over a card asked at the place it lea
     await asked;
     assert.equal(HOST.currentState()?.id, face, `${what}: the card's answer shows nothing over the face`);
     HOST.dismiss();
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('an overlay whose field holds the caret — a walk\'s moment being answered — stands through a jump (#171\'s rule 2: "A landing never closes a field the reader is typing in"): its departure leaves it standing, no face takes its place, and the entry holds the face the read met as its notice — a LEAP that reaches, one whose read fails in the air, one landing at a dead end', async () => {
+  /** the moment's answer field, the platform's focus in it: inside the overlay's element */
+  const field = { id: 'the answer', matches: (/** @type {string} */ sel) => sel.split(',').map((s) => s.trim()).includes('input'), blur() {}, focus() {} };
+  const was = hostEl.contains;
+  hostEl.contains = /** @type {any} */ ((/** @type {unknown} */ x) => x === field);
+  const site = { span: { addr: D, pos: 11, width: 5 } };
+  /** @type {Array<[string, () => void, object, () => Promise<unknown>, string, string | null]>} each jump: what it is, what the page holds before it, the read held while it is in the air, the jump, the place it lands, and the face its entry holds as its notice */
+  const jumps = [
+    ['a LEAP to an address on a board the plane does not draw, reaching for it', () => REC.invalidate(REACH), F.retrieveDocVSpanSet(REACH), () => GO.leapTo(REACH, { site }), REACH, null],
+    ['a LEAP whose read learns the board says nothing about its address, in the air', () => REC.invalidate(GONE), F.retrieveDocVSpanSet(GONE), () => GO.leapTo(GONE), GONE, 'unregistered'],
+    ['a LEAP carrying a passage the text landed in holds none of, at the dead end', () => {}, carried(UNSHARED, FAR, FAR_EXTENT), () => GO.leapTo(FAR, { how: 'leap', carry: UNSHARED }), FAR, 'floating'],
+  ];
+  try {
+    for (const [what, before, held, jump, at, notice] of jumps) {
+      await run(GO.leapTo(D));
+      before();
+      FACES.moment({ id: 'm-171', kind: 'ask', data: 'name this', walk: 'w-1', board: null, answerable: true });
+      globalThis.document.activeElement = /** @type {any} */ (field);
+      const release = fake.hold('op', { frame: held });
+      const jumping = jump();
+      assert.equal(HOST.currentState()?.id, 'moment:m-171', `${what}: the moment stands as the jump is made, no reaching or reading face in its place`);
+      release();
+      await run(jumping);
+      const e = TRAIL.current();
+      assert.deepEqual([e?.addr, e?.notice?.face ?? null], [at, notice], `${what}: its entry ${notice ? 'holds the face the read met as its notice' : 'at the place it landed'}`);
+      assert.deepEqual([HOST.currentState()?.id, globalThis.document.activeElement], ['moment:m-171', /** @type {any} */ (field)], `${what}: the moment stands through it, its field holding the focus`);
+      globalThis.document.activeElement = /** @type {any} */ (null);
+      HOST.dismiss();
+    }
+  } finally {
+    hostEl.contains = was;
+    globalThis.document.activeElement = /** @type {any} */ (null);
   }
   assert.deepEqual(fake.unanswered, []);
 });

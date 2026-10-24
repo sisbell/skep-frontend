@@ -177,16 +177,22 @@ fix; nothing here depends on their names.
   item, a walk key's, an arrow's next control), `open` and `close` (a
   region took the focus and gave it back), `keep` (a control redrawn
   from state while it holds the focus), `cover` (a region chrome
-  stands over is inert) — and one reading of whether a key made an
-  act (`byKey`). No `.focus()` call stands outside it. A rebuild keeps
-  the focus: a control redrawn from state puts the focus back on the
-  element bearing the same key, never on the body. A control that
-  closes returns the focus to the element that opened it where that
-  still takes it, else to the walk's element; never lost, never to
-  the top. A replacement is not a dismissal: an overlay that takes
-  another's place keeps the chain's one opener, takes the focus on its
-  first act where the replaced one held it, and a face never takes it.
-  The ring and the one status region are the owner's to write.
+  stands over is inert) — and one reading each of whether a key made
+  an act (`byKey`) and of a field the reader types in (`isField`). No
+  `.focus()` call stands outside it. A rebuild keeps the focus: a
+  control redrawn from state puts the focus back on the element
+  bearing the same key, never on the body. A control that closes
+  returns the focus to the element that opened it where that still
+  takes it, else to the walk's element; never lost, never to the top.
+  A field the reader types in keeps the caret through every move the
+  page makes: a landing, a key made at one, a place left or a notice
+  shown takes neither its focus nor its text, nor ends the chrome it
+  stands in, and once a landing has passed over it, that chrome's
+  close gives the focus to the walk's element. A replacement is not a
+  dismissal: an overlay that takes another's place keeps the chain's
+  one opener, takes the focus on its first act where the replaced one
+  held it, and a face never takes it. The ring and the one status
+  region are the owner's to write.
 
 ## The jump
 
@@ -342,6 +348,7 @@ last. Each stands until a later decision says it changes it.
 - **#158** (built with this line): a landing lands at piece 1; every run of its passage is outlined in view or not, wherever its document is drawn, and labelled at the text's edge level with its first line, labels that would stack merged ("pieces 1–4 of 9"); Mod+G and Mod+Shift+G, the line's "next piece · previous piece" showing its chords, and a press on an outlined run below reading scale step among the runs at reading scale, adding nothing to Back; the position strip outlines each run; changes #153: with several runs the line is the current run's label → FP-21
 - **#166** (built with this line): each end of a beam, and of a reading scene's line between its panes, takes the colour the link's symbol takes at the document that end touches, whichever side drew it; ends that differ change colour once on open ground midway between the two documents — in the scene, the middle of the gap — and a stub keeps its near end's colour; a link drawn from both ends is one beam, counted once; neutral marks only a bundle whose links differ at that end
 - **#169** (built with this line): a held label stands at the top-left of its box's or region's visible part, one line of its type with its link badge, never wrapped, its words dropped before its address; the box's bottom edge pushes it up under the line; it stands just below the held label of the region holding it, level with the corner and never over it; the box's top edge and history strip stay where the box begins → FP-26
+- **#171** (built with this line): a card ends when the camera leaves its place, never when a read lands, so a card shown while a jump is in the air stands at its landing and one asked then opens there; a landing never closes a field the reader is typing in, which stands with its text, caret and focus until the reader closes it, the focus then going to the landing, and an address box with nothing typed in it takes the new address; a refused write still waiting on the reader's answer is never ended by a landing → FP-25, FP-20
 
 ## Changes
 
@@ -377,6 +384,7 @@ found.
 - 2026-10-23 · FP-23 · #243 · a pane's copy waited on its setting, so timing changed what one act copied
 - 2026-10-23 · FP-24 · #246 · a sign's selection had no span to stand in for; the rule now holds wherever a position is selected
 - 2026-10-23 · FP-26 · #169 · a label whose place rose under the one line was left out, so a document read past its top lost its name while its corner held
+- 2026-10-23 · FP-20 · #171 · every landing moved the focus to the walk's element wherever it stood, so an address being typed in the LEAP box closed under the reader with its text, and a jump's departure and faces ended a walk's moment being answered
 
 ## What these rule out
 

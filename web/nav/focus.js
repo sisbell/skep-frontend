@@ -16,7 +16,11 @@
 //                          12). The focus goes there wherever the key was
 //                          pressed — the mirror, the line, a card, the body —
 //                          and `byKey` sets the ring's rule; left out, the rule
-//                          stands as it was (a hand-off is no act).
+//                          stands as it was (a hand-off is no act). A FIELD THE
+//                          READER TYPES IN keeps the caret through it (#171's
+//                          rule 2: "A landing never closes a field the reader
+//                          is typing in"): the focus stays in the field, and
+//                          the regions holding it forget their openers.
 //   open(region, {…})      a region took the focus from an element — an
 //                          overlay, the LEAP box, the scene — remembered ONCE,
 //                          on one stack: a replacement, a rebuild or a second
@@ -26,9 +30,11 @@
 //   close(region)          the region ends. A focus standing on nothing, or
 //                          still inside the region, returns to the opener where
 //                          that takes it, else to the walk's element — never
-//                          lost, never to the top (rule 4); one the person moved
-//                          elsewhere while the region stood stays where they put
-//                          it (#33's clause).
+//                          lost, never to the top (rule 4); to the walk's
+//                          element alone where a move passed over the region's
+//                          field ("Focus then goes to the landing"); one the
+//                          person moved elsewhere while the region stood stays
+//                          where they put it (#33's clause).
 //   keep(region, keyOf, rebuild)  a control redraws itself from state while it
 //                          holds the focus (FP-13): the focus returns, after the
 //                          redraw, to the element bearing the same key — an
@@ -37,11 +43,14 @@
 //   cover(el, on)          a region chrome stands over is `inert`: out of the
 //                          order and of the accessibility tree (rules 17, 22).
 // — and ONE reading of "a key made it", `byKey(event)`: a keyboard event, or a
-// click the platform made from a key (`detail` 0). THE RING (D5 §4 rule 2, the
-// platform's focus-visible rule): drawn while the plane's stop holds the focus
-// and a key moved it there — a walk key, a key-made landing or re-take, a Tab
-// into the plane; put out by a pointer's landing, a camera-made re-take, and
-// whenever the focus leaves the plane (`ringShown`). THE STATUS REGION (D4):
+// click the platform made from a key (`detail` 0); and ONE of "a field the
+// reader types in", `isField(el)`: an input or a textarea. THE RING (D5 §4
+// rule 2, the platform's focus-visible rule): drawn while the plane's stop
+// holds the focus and a key moved it there — a walk key, a key-made landing
+// or re-take, a Tab into the plane; put out by a pointer's landing, a
+// camera-made re-take, and whenever the focus leaves the plane (`ringShown`);
+// a move that leaves the focus in a field sets the rule the landing takes
+// once the field closes onto it. THE STATUS REGION (D4):
 // one standing `role="status"` region this module alone writes (`say`) —
 // polite for the selection, a face and the line's transients, assertive for
 // the session's death and halted writes; nothing for a camera move; a
@@ -53,7 +62,7 @@
  * @typedef {Object} Entry — a region holding the focus, and where it took it from
  * @property {string} region `overlay`, `box`, `scene`
  * @property {Element} el the region's element: a focus inside it is the region's
- * @property {Element | null} opener the element the focus stood on as the region opened; null where it stood on nothing
+ * @property {Element | null} opener the element the focus stood on as the region opened; null where it stood on nothing, or where a move passed over a field the region holds (`land`)
  */
 
 /** @type {Element | null} the plane's stop's region: the ARIA mirror (N-WALK's), registered as it attaches */
@@ -78,6 +87,15 @@ let wired = false;
 const active = () => (typeof document === 'undefined' ? null : document.activeElement);
 /** does the focus stand on nothing — the body, or no element? */
 const onNothing = (/** @type {Element | null} */ e) => !e || (typeof document !== 'undefined' && e === document.body);
+
+/**
+ * One reading of "a field the reader types in" (FP-20; #171's rule 2): an
+ * input or a textarea — the address box, a moment's answer — whose keys are
+ * its own (N-KEYS' `field`, which the app reads here) and whose caret no move
+ * the page makes takes (`land`).
+ * @param {Element | null} e
+ */
+export const isField = (e) => !!e && typeof e.matches === 'function' && e.matches('input, textarea');
 
 /**
  * The owners register what the controller needs, each as it attaches: the
@@ -141,13 +159,23 @@ export function byKey(e) {
  * wherever the key was pressed; `byKey` is the ring's rule — a key's landing
  * draws it, a pointer's puts it out; left out, the rule stands (a hand-off).
  * A null element moves nothing and sets the rule alone (a camera-made re-take
- * that carries no focus puts the ring out).
+ * that carries no focus puts the ring out). A focus standing in a field the
+ * reader types in stays there, its caret and its text with it (see the head;
+ * #171's rule 2): the move sets the rule alone, and every region holding the
+ * field forgets its opener, so the field's close gives the focus to the walk's
+ * element — where the move put the walk.
  * @param {Element | null} el
  * @param {{byKey?: boolean}} [opts]
  * @returns {boolean} the focus stands on the element
  */
 export function land(el, opts = {}) {
   if (opts.byKey !== undefined) ringByKey = opts.byKey;
+  const at = active();
+  if (el && at && at !== el && isField(at)) {
+    for (const s of stack) if (s.el.contains(at)) s.opener = null;
+    changed();
+    return false;
+  }
   const on = el ? focusEl(el) : false;
   changed();
   return on;

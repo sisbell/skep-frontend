@@ -173,7 +173,14 @@
 // before any read (P-PROJ's `docBox`, T-LAYER's fold of a text unread) — and
 // no failure is known: it takes its trail entry at the act, ends the chrome
 // of the place it leaves, moves the walk to the place it left for and flies
-// there (`leave`), and is IN THE AIR (`inAir`) from then until it lands. Its
+// there (`leave`), and is IN THE AIR (`inAir`) from then until it lands. NO
+// LANDING ENDS CHROME (issue #171's design decision: "a card ends when the
+// camera leaves its place, not when a read lands"): a card shown while the
+// jump is in the air stands over its landing, and one asked then opens there
+// (O-HOST's `complete`); and none takes a caret (its rule 2: "A landing never
+// closes a field the reader is typing in"): an overlay whose field holds the
+// caret stands through the departure and the faces too (`dismissChrome`;
+// O-HOST's `typing`), the field keeping the focus (N-FOCUS's `land`). Its
 // reads run beside the flight. Where they answer first, the camera goes on
 // from where it is to the passage they placed and the jump lands there
 // (`goOn`); where the reader takes the camera over first — a wheel, a pinch,
@@ -238,9 +245,9 @@
 // over meanwhile. A carried passage's `compare` is one more read its LEAP's
 // claim waits on, the claim settled at the landing that read placed.
 // Carries: the wireframe's §11 (`leapTo`, `goHome`), §18 `followLink`.
-// Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10, FP-21,
-// FP-22 (owns the version each box shows), FP-25 (the jump moves the reader
-// when made).
+// Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10, FP-20 (a
+// field holding the caret keeps it and its chrome), FP-21, FP-22 (owns the
+// version each box shows), FP-25 (the jump moves the reader when made).
 
 import * as CAM from '../plane/camera.js';
 import * as TRAIL from './trail.js';
@@ -669,12 +676,15 @@ export function stepTo(i, byKey = false) {
  * stands at (FP-25: "leaving a place ends its chrome") — at the act, save
  * where only a read can place the destination: the arrival, kept in the
  * entry it stood at (`leaveHere`), the entry the act moves to the one the
- * landing's arrival stands at from now; the standing overlay, a card or scene
- * still reading, which then opens nothing (O-HOST's opening); and the scene,
- * whose end moves no trail entry — so the act's own trail move is its one.
+ * landing's arrival stands at from now; the standing overlay — save one whose
+ * field holds the caret, an answer the reader is typing, which stands through
+ * the jump (#171's rule 2: "dismissChrome leaves alone an overlay with the
+ * caret in it"; O-HOST's `typing`) — and a card or scene still reading, which
+ * then opens nothing (O-HOST's opening); and the scene, whose end moves no
+ * trail entry — so the act's own trail move is its one.
  * @param {Entry | null} to the entry the act moves to; null where it takes none
  */
-function dismissChrome(to) { leaveHere(); here = to; HOST.dismiss(); SCENE.close(); }
+function dismissChrome(to) { leaveHere(); here = to; if (HOST.typing()) HOST.endOpening(); else HOST.dismiss(); SCENE.close(); }
 
 /**
  * An entry's notice shown (O-FACES): its jump's reading face while its read

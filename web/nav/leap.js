@@ -1,7 +1,8 @@
 // N-LEAP — THE LEAP BOX (the structure record §3.2 "N-LEAP"; foundations
 // §2.3; B1-S11; D5 §1.4). Layer 2. ENGINE-BOUND. State: VIEW — open or
 // closed, the text, the rows, the selected row, whether ↓/↑ has carried the
-// choice into the rows. A control that rebuilds itself from its state
+// choice into the rows, whether it stands as opened — nothing typed in it, no
+// row chosen. A control that rebuilds itself from its state
 // (FP-13). Opened by Mod+L / Mod+K or the address segment's act, holding the
 // CURRENT ADDRESS, selected (the address bar's habit), and listing beneath
 // it the address's levels — the whole board first, HOME where it differs,
@@ -27,11 +28,18 @@
 // was opened from, or to the walk's element where that no longer takes the
 // focus — as the mirror's item it was opened from no longer does once a
 // camera move under the box has re-taken the walk's focus and rebuilt the
-// mirror. The box is gone with the next act (M-1): a chord inside it acts as
-// anywhere, the box closed first and the chord read at the focus the close
-// returned; the field's own chords — select all, copy, paste, cut, undo, the
-// caret's — stay the input's; a focus that leaves the box — Tab out of it
-// (D2), a click elsewhere — closes it, and the focus stands where it went.
+// mirror. A LANDING NEVER CLOSES THE BOX (#171's rule 2; FP-20): a jump's
+// landing, a version move's, a key made at one leave its text, its caret and
+// its focus as the reader left them (N-FOCUS's `land`), and its close then
+// gives the focus to the landing, the walk's element; the box as opened takes
+// the address the line names as that changes (`takeAddress`: "An address box
+// with nothing typed in it takes the new address"), so it never holds a place
+// the line does not show (K-30). The box is gone with the next act (M-1): a
+// chord inside it acts as anywhere, the box closed first and the chord read at
+// the focus the close returned; the field's own chords — select all, copy,
+// paste, cut, undo, the caret's — stay the input's; a focus that leaves the
+// box — Tab out of it (D2), a click elsewhere — closes it, and the focus
+// stands where it went.
 // Its layer stands above the reading scene's (#118), so Mod+L in the scene
 // shows the box over it. Opened, the box is an act on the chrome: a card or
 // scene still reading ends, what stands staying (O-HOST's opening), so no
@@ -75,6 +83,8 @@ let rows = [];
 let sel = -1;
 /** ↓ or ↑ has carried the choice into the rows — set only where a row stands, so `sel` names one */
 let inRows = false;
+/** the box stands as opened: nothing typed in it, no row chosen — it holds the current address the line names (`takeAddress`) */
+let asOpened = false;
 /** the status region's markup as last written */
 let noteHTML = '';
 /** @type {() => string | null} the current address's reader (the line's) */
@@ -91,7 +101,7 @@ export function attach(e, cur) {
   els = e; currentAddress = cur;
   e.input.setAttribute('aria-label', t('L.leap-label'));
   e.rows.setAttribute('aria-label', t('L.leap-rows-label'));
-  e.input.addEventListener('input', () => { compute(e.input.value); render(); });
+  e.input.addEventListener('input', () => { asOpened = false; compute(e.input.value); render(); });
   e.input.addEventListener('keydown', (ev) => {
     if (ev.isComposing || ev.key === 'Process' || ev.keyCode === 229) { ev.stopPropagation(); return; } // the IME's until it commits (D5 §0)
     const mod = MAC ? ev.metaKey : ev.ctrlKey;
@@ -133,7 +143,7 @@ function compute(/** @type {string} */ text) { rows = matches(text, ctx()); sel 
 function choose(/** @type {1 | -1} */ step) {
   if (!rows.length) return;
   sel = Math.max(0, Math.min(rows.length - 1, sel + step));
-  inRows = true;
+  inRows = true; asOpened = false;
   render();
 }
 
@@ -150,7 +160,7 @@ export function open(prefill = currentAddress() || '') {
   if (!els) return;
   HOST.endOpening();
   const from = document.activeElement;
-  openState = true;
+  openState = true; asOpened = true;
   els.box.classList.add('on');
   els.input.value = prefill;
   compute('');
@@ -159,7 +169,25 @@ export function open(prefill = currentAddress() || '') {
   els.input.select();
   markDirty();
 }
-/** close the box: the focus back through the focus's owner — to the opener, else the walk's element; one that left the box already stays where it went */
+
+/**
+ * The box as opened takes the address the line names (see the head; #171's
+ * rule 2: "An address box with nothing typed in it takes the new address"):
+ * while nothing is typed in it and no row chosen, a landing, a version move
+ * or a camera move that changes the current address puts that address in the
+ * box, selected, its levels listed beneath it. The app's loop runs it beside
+ * the line's rebuild; a box typed in, or with a row chosen, keeps its text.
+ */
+export function takeAddress() {
+  if (!els || !openState || !asOpened) return;
+  const addr = currentAddress() || '';
+  if (els.input.value === addr) return;
+  els.input.value = addr;
+  compute('');
+  render();
+  els.input.select();
+}
+/** close the box: the focus back through the focus's owner — to the opener, else the walk's element, the walk's element alone where a landing passed over the box; one that left the box already stays where it went */
 export function close() {
   if (!els || !openState) return;
   openState = false; inRows = false; els.box.classList.remove('on');
