@@ -1,5 +1,7 @@
-// M-ADDR's test (S-5 (a): beside its module; S-20 (a): `node --test web/`).
-// Each claim fails when the module's rule is removed.
+// M-ADDR's test: the tumbler's fields; the account, document, home, member,
+// element and kind an address names; address order and the exact parse; the
+// wire's V-spans, unit spans and absolute spans spelled and resolved; the
+// commons type path; and which addresses are a trunk's own members.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fieldsOf, accountOf, documentOf, homeOf, memberOf, elementOf, kindOf, cmpAddr, isAddress, parseAddress, resolveSpan, parseVSpan, vSpan, unitSpan, commonsType, isUnder, isTrunkMember, parentAccount, docOneOf } from './address.js';

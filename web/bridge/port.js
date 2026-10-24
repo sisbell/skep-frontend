@@ -1,25 +1,20 @@
-// B-PORT — the page's ONE interface (the structure record §3.2 "B-PORT";
-// client.md §4b.1's calls and §4b.2's events; FP-14, FP-15). Layer 0.
-// The TWENTY-THREE calls (§4b.1's twenty, `held`, `resolve`, and `places` —
-// skep #463) as functions, the SEVEN events as a subscription, the two
-// answers to a moment, and the adapter beneath, selected at boot (S-14 (b):
-// by the URL's flag). State: the event subscribers and the session's
-// watchers alone — no copy of any record. The port composes no frame,
-// decodes no answer and refuses no call: every answer is the adapter's
-// `Outcome` handed up as it came, in the one refusal shape (`{kind, name,
-// …}`, §4.4). THE SESSION'S NOTICES (issue #175's design decision:
-// "`web/bridge/port.js` notifies it"; FP-28): a call crossing the port that
-// names a session is told to the session's watchers, M-PUMP's acquire among
-// them, where the page's own `close(session)` goes out — the person's
-// sign-out — and where its answer is refused as from a session the shell no
-// longer holds (`lostSession`), the refusal handed up unchanged after the
-// notice. The write calls and the
-// ceremonial rows are DECLARED here from the first lane and called by no
-// screen of this lane (S-35 (a); the ceremonies a seam).
-// Types: the generated declarations in `./shapes.d.ts` (S-16 (a) — fetched
-// from `GET /bridge/shapes`, committed as fetched, never hand-edited).
-// Carries: the wireframe's §4b `shell.act` (its one seam) and §4's `wire.op`
-// signature. ENGINE-BOUND only through its adapter.
+// B-PORT — the page's one interface to the shell (the structure record §3.2;
+// client.md §4b.1's calls and §4b.2's events; FP-14, FP-15). Layer 0,
+// engine-bound only through its adapter. The twenty-three calls (§4b.1's
+// twenty, `held`, `resolve` and `places`) and the two answers to a moment
+// (`answer`, `cancel`) as functions, the seven events as a subscription, and
+// the adapter beneath, handed to `boot` (S-14 (b)). State: the event
+// subscribers and the session watchers alone — no copy of any record. The
+// port composes no frame, decodes no answer and refuses no call: every
+// answer is the adapter's `Outcome` handed up as it came, in the one refusal
+// shape (`{kind, name, …}`, §4.4). The session's notices (FP-28): a call
+// crossing the port that names a session is told to the session watchers —
+// where the page's own `close(session)` goes out, the person's sign-out, and
+// where an answer is refused as from a session the shell does not hold
+// (`lostSession`), the refusal handed up unchanged after the notice. The
+// write calls and the ceremonial rows are declared here and called by no
+// screen (S-35 (a)).
+// Types: the generated declarations in `./shapes.d.ts` (S-16 (a); FP-16).
 
 /** @typedef {import('./shapes').Bridge} Bridge */
 /** @typedef {import('./shapes').EventName} EventName */
@@ -39,7 +34,7 @@
  * @property {() => string} streamState the event stream's state
  */
 
-/** every call name the port carries, in `skep-shell`'s `CALLS` order plus `places` */
+/** the call names in `skep-shell`'s `CALLS` order plus `places`; the two answers to a moment, `answer` and `cancel`, stand apart */
 export const CALLS = Object.freeze([
   'boards', 'session', 'close', 'keygen', 'fingerprint', 'claim', 'enroll', 'bind', 'recover', 'rotate', 'retire',
   'handoff', 'accept', 'health', 'probe', 'op', 'upload', 'fetch', 'restore', 'search', 'places', 'held', 'resolve',
@@ -47,12 +42,12 @@ export const CALLS = Object.freeze([
 /** the seven events */
 export const EVENTS = Object.freeze(['mode', 'session-died', 'daemon', 'feed', 'index', 'moment', 'held']);
 
-/** the shell's names for an answer to a call made under a session it no longer holds: `session_ended` — no session under that reference, a stale one from before the shell's own restart among them (client.md §4b.1, THE PIN) — and `session_died`, the death's reason beside it */
+/** the shell's names for an answer to a call made under a session it does not hold (client.md §4b.1): `session_ended` — no session under that reference, one from before the shell's own restart among them — and `session_died`, the death's reason beside it */
 const LOST = Object.freeze(['session_ended', 'session_died']);
 
 /**
- * Is a refusal the shell's answer to a call made under a session it no
- * longer holds (`LOST`)?
+ * Is a refusal the shell's answer to a call made under a session it does
+ * not hold (`LOST`)?
  * @param {{kind: string, name: string}} r
  * @returns {boolean}
  */
@@ -61,7 +56,7 @@ export const lostSession = (r) => r.kind === 'shell' && LOST.includes(r.name);
 /**
  * @typedef {{closed: string} | {lost: string, refusal: Refusal}} SessionNotice — what a call told of a session as it crossed
  * the port: `closed`, the session the page's own `close(session)` names, told as the call goes out — the person's sign-out;
- * `lost`, the session an answer refused as from a session the shell no longer holds names (`lostSession`) — the refusal's
+ * `lost`, the session an answer refused as from a session the shell does not hold names (`lostSession`) — the refusal's
  * own `session`, else the one the call went out under — with the refusal
  */
 
@@ -72,7 +67,7 @@ const subs = new Map();
 /** @type {Array<(n: SessionNotice) => void>} */
 const sessionWatchers = [];
 
-/** the port's own refusal where no adapter stands beneath it (the page's own name, not the crate's — reported) */
+/** the port's own refusal where no adapter stands beneath it (the page's own name, not the crate's) */
 const NO_ADAPTER = Object.freeze({ kind: /** @type {const} */ ('shell'), name: 'no_adapter' });
 
 /**
@@ -88,11 +83,11 @@ export const adapterName = () => (adapter ? adapter.name : null);
 export const hasAdapter = () => adapter !== null;
 
 /**
- * One call through the adapter, its session's notices told (see the head):
- * the page's own `close(session)` as it goes out, after the adapter has it,
- * so whatever a watcher calls follows it; an answer refused as from a
- * session the shell no longer holds before it is handed up, so its caller
- * meets what the watchers made of it.
+ * One call through the adapter, its session's notices told: the page's own
+ * `close(session)` as it goes out, after the adapter has it, so whatever a
+ * watcher calls follows it; an answer refused as from a session the shell
+ * does not hold before it is handed up, so its caller meets what the
+ * watchers made of it.
  * @template T
  * @param {string} name
  * @param {unknown} args
@@ -120,9 +115,9 @@ function emit(name, data) { for (const fn of subs.get(name) || []) fn(data); }
 function tell(n) { for (const fn of sessionWatchers) fn(n); }
 
 /**
- * Watch the sessions the calls name as they cross the port (see the head):
- * the page's own `close(session)`, and every answer refused as from a
- * session the shell no longer holds.
+ * Watch the sessions the calls name as they cross the port: the page's own
+ * `close(session)`, and every answer refused as from a session the shell
+ * does not hold.
  * @param {(n: SessionNotice) => void} fn
  */
 export function onSession(fn) { sessionWatchers.push(fn); }
@@ -138,7 +133,7 @@ export function on(name, fn) {
   /** @type {Array<(data: unknown) => void>} */ (subs.get(name)).push(fn);
 }
 
-// ---- the twenty-three calls, typed by the generated declarations ----------------
+// ---- the calls and the two answers to a moment, typed by the generated declarations ----------------
 
 /** @type {Bridge['boards']} */
 export const boards = (args = {}) => call('boards', args);

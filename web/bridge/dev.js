@@ -1,24 +1,21 @@
-// B-DEV — adapter (ii): THE BRIDGE CLIENT over `skep-dev serve` (the
-// structure record §3.2 "B-DEV", §4.3; P-6 as re-cut 2026-10-11; FP-15's one
-// named exception to FP-14). Layer 0. ENGINE-BOUND (`fetch`, `EventSource`)
-// — THE PAGE's ONLY NETWORK CODE: the static gate case forbids `fetch(` and
-// `EventSource` everywhere outside `web/bridge/` and `web/gate/`.
-// Every call is ONE `POST <provider>/bridge/<name>` with the row's argument
-// object as the body and the run's ADMISSION SECRET in the `Skep-Provider`
-// header — the secret read from the page URL's `?provider=` (S-36 (a): the
-// one flag; the provider at the verb's default `http://127.0.0.1:8742`),
-// held in this module alone, sent nowhere else; it admits the page to the
-// provider and grants nothing at the board (named apart from a token — the
-// page holds NO TOKEN, FP-14). The answer `{result}` or `{refused}` is handed
-// up OPAQUE: this module composes no frame, decodes no answer, refuses no
-// call and replays no fixture. The seven events come off ONE `EventSource`
-// on `/bridge/events?provider=<secret>` (an `EventSource` sends no custom
-// header), re-emitted by name. `close(session)` at `pagehide` rides a
-// `keepalive` fetch — best-effort, the browser's (the record §11 stop 23).
-// State: the provider's origin and the secret, the stream, and ITS OWN CALL
-// LOG (name, bytes, ms, outcome) which the gate holds equal to `GET
-// /bridge/log`'s `call` entries and to the ledger's `fetch` count (class 5).
-// Carries: the wireframe's §4 op/byte LOG, grown into this log.
+// B-DEV — the bridge client over `skep-dev serve`, the development adapter
+// beneath B-PORT (the structure record §3.2, §4.3; FP-15's one exception to
+// FP-14). Layer 0. Engine-bound (`fetch`, `EventSource`): the page's only
+// network code. Every call is one `POST <provider>/bridge/<name>` with the
+// row's argument object as the body and the run's admission secret in the
+// `Skep-Provider` header — the secret the boot reads from the page URL's
+// `?provider=` (S-36 (a)) and hands to `create`, the provider at the verb's
+// default `http://127.0.0.1:8742`; the secret is held in this module alone
+// and sent nowhere else, admits the page to the provider and grants nothing
+// at the board, and the page holds no token (FP-14). The answer, `{result}`
+// or `{refused}`, is handed up opaque: this module composes no frame, decodes
+// no answer, refuses no call and replays no fixture. The seven events come
+// off one `EventSource` on `/bridge/events?provider=<secret>` (an
+// `EventSource` sends no custom header), re-emitted by name. `close(session)`
+// at `pagehide` rides a `keepalive` fetch, best-effort, the browser's.
+// State: the provider's origin and the secret, the stream, and its own call
+// log (name, bytes, ms, outcome), which the gate holds equal to `GET
+// /bridge/log`'s `call` entries and to the ledger's `fetch` count.
 // Rules: FP-1, FP-2, FP-4, FP-14, FP-15, FP-16.
 
 /** @typedef {import('./port.js').Adapter} Adapter */
@@ -94,7 +91,7 @@ export function create({ provider = DEFAULT_PROVIDER, secret, record = false }) 
       entry.outcome = 'provider';
       return { refused: /** @type {Refusal} */ ({ kind: 'shell', name: `provider_${res.status}`, status: res.status, text: text.slice(0, 200) }) };
     } catch (e) {
-      // a CORS failure or a closed port reaches the page as a TypeError with nothing readable (the record §10 item 21)
+      // a CORS failure or a closed port reaches the page as a TypeError with nothing readable
       entry.ms = performance.now() - t0;
       entry.outcome = 'unreachable';
       return { refused: /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreachable', text: String(e && /** @type {Error} */ (e).message || e) }) };

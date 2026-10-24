@@ -1,102 +1,14 @@
-// M-REC's test: the index from `places`, each answer replacing the one
-// before it whole, blocks tiling their bytes, a document's blocks and runs
-// replaced whole and never edited in place (T-LAYER maps an article's
-// positions, and copies its bytes, through the blocks and runs it was made
-// from), the feed keeping the index and invalidating, each row's commit time
-// held and the highest member of a trunk's own chain a held row names read
-// from them (issue #184: a mutant that takes a daughter's member, or a time
-// older than the newest carried, turns red), the system account held and
-// marked, the death dropping every read held at the session's class, the
-// chain's proved end with its count; the edition-claim lookup held listed,
-// withheld or unread, and a failed read of a listed claim's link or home held
-// through a drop of the claims until a read answers it, its home is dropped
-// or the death (issue #186: a mutant that drops it with the claims, or keeps
-// it past its answer, turns red).
-// THE COVER (issue #177): the death keeps which documents the class it left
-// could read — read, or listed — and a document one of them that a read at
-// the new class withholds is covered, a box the model knows; never one the
-// page never met nor one withheld before the change (a mutant that covers
-// every withheld document, or keeps nothing of what the class could read,
-// turns red).
-// A listing takes the feed rows taken while it was read laid over it by the
-// rules of a row taken after it — a mint listed and counted over the
-// listing's count, a publish of a listed draft counted once, a delegation's
-// account listed — and keeps an `index` state taken meanwhile; with nothing
-// taken meanwhile it is the listing exactly (a mutant that lays nothing over,
-// lays the rows before the listing's counts, or takes the listing's state
-// always turns red).
-// A link homed at a version member keeps the member as its home, its owner
-// the member's account, and a link made there drops what was held of the
-// member and of its trunk, whatever the row names (a mutant that reads the
-// home as the trunk turns red). A bare row — its `docs` null, lost testimony
-// — drops the home of the link it names and the home's trunk whatever its
-// op, named or `null`, and a row answers the addresses it dropped, each
-// once (a mutant that drops a `make_link`'s home alone turns red).
-// A ROW THAT NAMES NOTHING (issue #212): a bare row naming no link, whatever
-// its op, drops nothing — not even the edition claims — and marks the board,
-// a recorded delegation's `[]` marking nothing; a refresh takes the mark once
-// and a change of class drops it (a mutant that drops at such a row, or marks
-// at a recorded one, turns red); a delivery keeps the position it was read
-// at; a newer member's arrival hands the trunk's text to the member, the
-// trunk keeping none (a mutant that hands nothing turns red); a refresh's drop
-// keeps the documents shown and what they read through — their links' values
-// and projections, the claims on their origins and the claims' homes, their
-// owners' causes — and drops the rest, each counted (a mutant that drops a
-// kept link's projection, or keeps another's, turns red); a shown document
-// set again in one step, its text and image replaced whole, never merged, a
-// part not carried standing (a mutant that merges turns red).
-// A link's stored span placed through the held V→I image, never at its
-// stored ordinal: moved by an edit, cut in two, held twice, minted under a
-// member's chain, no longer held, outside the window read (a mutant that
-// places a span at its stored ordinal, compares the trunk alone, or keeps the
-// first stretch turns red); an end held by the trunk its span's address lies
-// under, read or not, and by any other document whose held text places it —
-// a passage transcluded, a member's bytes (a mutant that holds by the span's
-// address alone, or by the held text alone, turns red); `project`'s answers
-// held in the text's order until the document projected into is dropped, and
-// every document holding the link made again as they arrive and go (a mutant
-// that bumps no revision leaves an article titled from a projection no longer
-// held). A stretch of a held text named by identity (issue #152's design
-// decision): the permanent addresses of its bytes, a transcluded run's its
-// source's, none unless the held image covers all of it (a mutant that names
-// it by its positions, or names the part the image covers, turns red); placed
-// back where those bytes stand now, in its own text after an edit moved them
-// and in another's, whatever part of them the text still holds, stretches
-// adjoining joined (a mutant that keeps the positions it was read at turns
-// red); the same, read through an image held apart from the model — the one
-// an article was made from — and placed back through the model's now (issue
-// #160: a mutant that reads the model's image in place of the one handed in
-// turns red). The key store read for this board: a key present only where a
-// binding names its origin as the binding's whole first field — never
-// another origin whose text begins with this one's (a mutant that finds the
-// origin anywhere in the binding turns red), never a key bound nowhere — and
-// the reader the arms are decided for keeping it through a session's death.
-// The session's key on this device: the one key bound here for its
-// principal, the binding's origin and principal each read whole; else, under
-// a session that writes, the store's one key; under a session that writes
-// where none can be named — two keys bound for the principal, an empty store
-// — that it is not named, and a store the page did not read held unread and
-// said so (FP-34: a mutant that names the store's first key, or names none
-// with no cause, turns red); none for a guest or for the bare session no key
-// is bound for (a mutant that matches the origin or the principal as a
-// prefix, or names a key for a guest or the bare session, turns red); the
-// death leaves the session no key and the store standing. A document's owner
-// read by the one owner rule; a record atom's value read for the record rule
-// alone. An account's byline facts held as read, every held document it owns
-// made again; a cause — never a value — dropped at a feed row touching a doc
-// 1 and at a change of class, each drop counted (a mutant that drops at every
-// row, drops a value, or counts no drop turns red).
-// Every drop of an address counted — by `invalidate`, its record held or not
-// and none made for it, and by a death, every address's — and no read taken
-// moving the count (a mutant that counts no death turns red). The edition
-// claims on an origin held until a link written anywhere, a publish, a bare
-// row whose op is `null` — which may be either — or the death drops them
-// all, each drop counted, and kept through any other row (a mutant that
-// drops them at no row, at a named op alone, or at every row, turns red); each
-// document windowing the origin made again as the claims, a listed claim's
-// link or its home's metadata arrive and go, and no other document (a mutant
-// that bumps no revision leaves a placeholder's clause decided from claims no
-// longer held).
+// M-REC's test: the index built from `places` and kept by the feed, each
+// listing replacing the last whole with the rows taken meanwhile laid over
+// it; deliveries into blocks that tile their bytes, runs and blocks replaced
+// whole and never edited in place; a link's stored span placed through the
+// held V→I image, and an end held by the trunk its address lies under or by
+// the text that places it; a stretch named by identity and placed back
+// through any image; projections, edition claims and failed reads held until
+// their drops, every drop counted; a bare row's mark, a newer member taking a
+// trunk's text, a refresh's drop and a shown document set again in one step;
+// the key store, the session's key and the byline's facts; the death
+// dropping every read held at the session's class, and the cover it leaves.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';

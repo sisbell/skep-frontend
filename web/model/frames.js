@@ -1,40 +1,32 @@
 // M-FRAMES — the wire frames the page composes and the answers it decodes
-// (the structure record §3.2 "M-FRAMES"). Layer 1 (the model). PURE.
-// THE READS ALONE (S-35 (a) RULED: this lane composes NO WRITE FRAME; the
-// write composers arrive with the editor's lane): `retrieve_v`,
-// `retrieve_doc_v_span_set`, `doc_metadata`, `find_links_v`,
-// `find_links_ftt`, `read_link`, `follow_link`, `image`, `project`,
-// `compare`, `show_origin`, `find_docs_containing`, `effective_owner`,
-// `principal_prefix`, `key_set`, the supersession lineage `in_claims` and
-// `out_claims` (A-56, A-57), and the `/op-at` form `{at, frame}` around
-// any read — each spelled as `docs/wire.md` spells it at the pin
-// (`db24cc1b`). The edition claims on a withheld run's origin, which C-67's
-// clause is decided from (PUB-5.124), are `find_links_ftt`'s ACTIVE-view
-// lookup (`editionClaimsAt`); the audit view's `edition_claims` is not
-// composed (PUB-8.46). The enrollment records naming an account, which the
-// byline's device label and fingerprint are read from (R22's naming input;
-// FP-34), are `find_links_ftt`'s two-slot lookup too (`enrollmentsOf`), as
-// skep-client's credential read composes it (AUTH-2.113, AUTH-5.68).
-// `count_v` is NOT composed (E17 (a): every count is LK's fold
-// of `find_links_v`'s answer). The wireframe's simulated names
-// (`list_docs`, `search_titles`, `list_landmarks`, `count_v`) have no wire
-// twin and are gone: the index comes from `places` and the feed.
+// (the structure record §3.2). Layer 1 (the model), pure: no state.
+// The reads alone (S-35 (a)): `retrieve_v`, `retrieve_doc_v_span_set`,
+// `doc_metadata`, `find_links_v`, `find_links_ftt`, `read_link`,
+// `follow_link`, `image`, `project`, `compare`, `show_origin`,
+// `find_docs_containing`, `effective_owner`, `principal_prefix`, `key_set`,
+// the supersession lineage `in_claims` and `out_claims` (A-56, A-57), and
+// the `/op-at` form `{at, frame}` around any read — each spelled as
+// `docs/wire.md` spells it. The edition claims on a withheld run's origin
+// (PUB-5.124) are `find_links_ftt`'s active-view lookup (`editionClaimsAt`);
+// the audit view's `edition_claims` is not composed (PUB-8.46). The
+// enrollment records naming an account (R22; FP-34) are `find_links_ftt`'s
+// two-slot lookup too (`enrollmentsOf`; AUTH-2.113, AUTH-5.68). `count_v` is
+// not composed (E17 (a)).
 // The answers decoded: the delivery's items (`content`, `hex`, `atom`,
 // `atom_hex`, `ref`, `withheld`), a span set, an `addrs` list, a link value,
 // a follow, the V→I runs, a compare report, `doc_metadata` — its `at`, the
-// position that minted the address asked, as `c7551c0d` answers it and null
-// from a board before it, among it — `effective_owner`'s pair, `maybe_addr`,
-// `key_set`, the lineage's `claims` (A-82), a `rejected` document.
-// Carries: the wireframe's §4 `_serve` cases (re-cut to the wire's names),
-// §8's `ask`. Rules: FP-1, FP-2, FP-6, FP-16 (the frames' shapes are the wire
-// document's; pinned by this module's test against its examples).
+// position that minted the address asked, null where the board keeps none —
+// `effective_owner`'s pair, `maybe_addr`, `key_set`, the lineage's `claims`
+// (A-82), and a `rejected` document.
+// Rules: FP-1, FP-2, FP-6, FP-16 (this module's test pins every frame to the
+// wire document's examples).
 
 import { vSpan, unitSpan, parseVSpan, resolveSpan } from './address.js';
 import { byteLength } from '../util.js';
 
 /** @typedef {import('./address.js').EndRef} EndRef */
 
-/** the read op names this module composes — the static gate case greps `web/` for any other `"op"` */
+/** the read op names this module composes; the gate holds every `"op"` literal under `web/` to this list */
 export const READ_OPS = Object.freeze([
   'retrieve_v', 'retrieve_doc_v_span_set', 'doc_metadata', 'find_links_v', 'find_links_ftt', 'read_link',
   'follow_link', 'image', 'project', 'compare', 'show_origin', 'find_docs_containing', 'effective_owner',
@@ -46,9 +38,8 @@ export const READ_OPS = Object.freeze([
  * `too_many_blocks`, a `compare` operand past its blocks, and
  * `too_many_pairs`, its report past its pairs; M8's `image_too_large`, an
  * `image` region or a `project` read past its runs): each permanent for the
- * request as sent, none for the same question asked over less — so a read
- * of `compare` or `image` so refused is asked again in parts (M-PUMP's
- * `compareParts`, `imageParts`; issue #153's design decision).
+ * request as sent, none for the same question asked over less, so M-PUMP
+ * asks a `compare` or an `image` so refused again in parts.
  */
 export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs', 'image_too_large']);
 
@@ -80,7 +71,7 @@ export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs',
  * @property {number | null} baseExtent
  * @property {string | null} source
  * @property {number | null} at the position of the commit that minted the address asked — a version member its own mint,
- * the trunk its creation (wire.md §Namespace, `doc_metadata`) — null where the board's build minted it before it kept one
+ * the trunk its creation (wire.md §Namespace, `doc_metadata`) — null where the board keeps none for it
  * @property {number} asOf
  */
 
@@ -143,29 +134,27 @@ export const findLinksFtt = (q) => ({ op: 'find_links_ftt', q });
 /** the edition class (R20): the commons type every edition claim is typed under, its descriptive subtypes beneath it by prefix (wire.md §Link discovery reads, `edition_claims`) */
 export const EDITION_CLASS = '1.1.0.1.0.1.0.3.14';
 /**
- * The edition claims on an origin under the ACTIVE view — the read PUB-5.124's
- * pointer is decided from (PUB-8.46 keeps a read whose answer decides only
- * what a surface shows on the active view, served by the ops part 06 gives):
- * `find_links_ftt` constrained in two slots, the origin's unit span in `to`
- * and the edition class's in `ty`, `from` and `home` `"any"`, as wire.md
- * composes the lookup of a type's name — served from the coverage index, no
- * class scan, and naming no document, so no argument of it is withheld. Never
- * the audit view's `edition_claims`, whose `target` is a document argument:
- * at the origin of a withheld run, which the reader may not read, it answers
- * `withheld`.
+ * The edition claims on an origin under the active view (PUB-5.124,
+ * PUB-8.46): `find_links_ftt` constrained in two slots, the origin's unit
+ * span in `to` and the edition class's in `ty`, `from` and `home` `"any"`,
+ * as wire.md composes the lookup of a type's name — served from the coverage
+ * index, no class scan, and naming no document, so no argument of it is
+ * withheld. Never the audit view's `edition_claims`, whose `target` is a
+ * document argument: at the origin of a withheld run, which the reader may
+ * not read, it answers `withheld`.
  * @param {string} origin
  */
 export const editionClaimsAt = (origin) => findLinksFtt({ from: 'any', home: 'any', to: [unitSpan(origin)], ty: [unitSpan(EDITION_CLASS)] });
 /** the enrollment class (AUTH-5.4): the commons type every credential enrollment record's deposit is typed under (skep-client's `T_ENROLL`) */
 export const ENROLL_CLASS = '1.1.0.1.0.1.0.3.1';
 /**
- * The enrollment records naming an account (AUTH-2.113's residence read;
- * AUTH-5.68's discovery): `find_links_ftt` constrained in two slots, the
- * account's unit span in `to` and the enrollment class's in `ty`, `from` and
- * `home` `"any"` — skep-client's `links_of` — so no class scan. The query
- * matches by span overlap, so a record naming an account above the one asked,
- * or beneath it, answers too: a record is the account's only where its own
- * `to` names it (M-PUMP's `readAccount`).
+ * The enrollment records naming an account (AUTH-2.113, AUTH-5.68):
+ * `find_links_ftt` constrained in two slots, the account's unit span in `to`
+ * and the enrollment class's in `ty`, `from` and `home` `"any"` —
+ * skep-client's `links_of` — so no class scan. The query matches by span
+ * overlap, so a record naming an account above the one asked, or beneath it,
+ * answers too: a record is the account's only where its own `to` names it,
+ * which M-PUMP's `readAccount` checks.
  * @param {string} account
  */
 export const enrollmentsOf = (account) => findLinksFtt({ from: 'any', home: 'any', to: [unitSpan(account)], ty: [unitSpan(ENROLL_CLASS)] });

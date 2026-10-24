@@ -1,11 +1,8 @@
 // M-FRAMES's test: every composer spells its frame as `docs/wire.md`'s
-// `<!-- wire: request … -->` examples at the pin spell it (FP-16's residue:
-// the frames are the wire document's) — `find_links_ftt` with unit spans as
-// the lookup of a type's name, and the edition-claim lookup and the
-// enrollment records' lookup in that shape, never the audit view's
-// `edition_claims`; no write composer exists; every decoder reads the wire's
-// example answers — `doc_metadata`'s mint position among them, null from a
-// board that keeps none.
+// request examples spell it (FP-16), the edition-claim and enrollment
+// lookups take `find_links_ftt`'s two-slot shape and never the audit view's
+// `edition_claims`, no write composer exists, and every decoder reads the
+// wire's example answers, `doc_metadata`'s mint position among them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as F from './frames.js';

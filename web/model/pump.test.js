@@ -1,201 +1,14 @@
-// M-PUMP's test against the FAKE PORT (FP-15's proof, half one): the model
-// built from a scripted sequence of answers and events, no write composed;
-// a link's end projected NOW as every run the board answers, an end the
-// text holds in two runs as both (a mutant that keeps the first alone turns
-// red);
-// the view's reads ask nothing for a document a continuation's mark holds;
-// a view's read the board did not answer is held, never taken as answered —
-// not missing while held, its refusal recorded once for the outage — and
-// asked again at once where the daemon is announced `running`, else past
-// UNREACHED_MS, for the shell announces no outage its stream rides out (a
-// mutant that records it as answered, or holds it until `running` alone,
-// turns red), and at once where its document is forgotten or the page's own
-// session dies, as a guest; the view's probe of a chain that meets a member
-// the board did not answer records no count, and probes again as the daemon
-// is back (a mutant that ends the chain there records a count cut short and
-// turns red);
-// a session's end is taken by the page whose session it is and by no other;
-// a restart the shell re-opened is no death — the page goes on under the
-// re-opened session, reading and taking drafts rows under it, holding what
-// it read and reading no index; THE ACQUIRE (issue #175's design decision):
-// the boot's session opened by the one routine, one call, its refusal kept;
-// a restart that re-opened none is no death either — the boot's own call is
-// made again, once, and the page goes on under the session it opens, holding
-// what it read, reading no index and dropping nothing (a mutant that takes it
-// for a death, or drops what was read, turns red); refused, what was read is
-// dropped and the index read again as a guest, no death recorded, the
-// refusal kept with the account the page could not reconnect as (a mutant
-// that records a death or keeps what was read turns red); a read refused
-// `session_ended` with no event — a reference from before the shell's own
-// restart — asks for the session again and is answered under it, never
-// handing the refusal up (a mutant that hands it up, or waits and gives up,
-// turns red); every loss told while the call is out joins it, one call for
-// all of them (a mutant that calls per loss turns red); the shell's re-open
-// settles the call out, its later answer stale and its session closed (a
-// mutant that takes the late answer turns red); a late `session_ended` after
-// a refused call asks for none again; a board known unreachable has the call
-// made at its `running` alone, reads waiting meanwhile (a mutant that calls
-// at once turns red); a session opened as another principal taken only once
-// what was read is dropped; the page's own `close(session)` its sign-out,
-// taken as the call goes out as the `closed` end, a read meeting
-// `session_ended` after it asking for no session (a mutant that takes the
-// close for a loss signs the person back in and turns red);
-// the page's own death drops what the model read at the session's class and
-// reads the index again in the guest form, the view asking nothing until it
-// answers, then asking again as a guest what it read under the session (a
-// mutant that re-reads the index alone, drops alone, keeps what the view
-// asked as answered, lets the view ask meanwhile or reads the index under the
-// dead session turns red); a read out under the session when the page takes
-// its death is asked once more in the guest form, the guest's answer handed
-// up, never the session's; a read that meets the re-opened restart before
-// the event takes its `session_died` and is asked once more under the
-// re-opened session; another end a read meets is the death, the read asked
-// once more in the guest form;
-// a listing read while the feed brings a row and an `index` state lays them
-// over its answer — the document the row mints listed and counted over the
-// listing's count, the state the event's — and one out across the page's
-// own death lays over its answer the rows taken after the death alone (a
-// mutant that lays nothing over, lays the rows before the listing's counts,
-// takes the listing's state always, or keeps the dead session's rows turns
-// red); the board's health and its daemon each laid under a `mode` or a
-// `daemon` event taken while it was out, the answer standing where none was
-// (a mutant that lays the answer over the event, or drops the answer,
-// turns red);
-// a board's events by its own page alone, and none before the page knows
-// its board; a drafts row by a page holding a session, never by a guest or
-// a page whose session ended; the index state of the face the page reads —
-// the guest face's for a guest and for a session of no account, a
-// session's for every other page, under another session's name too (a
-// second tab of the same person);
-// a link's lineage read under the audit view, a class scan the board answers
-// `scan_busy` asked again, and a lineage side whose read is refused learned
-// as nothing, never as no claim;
-// at reading scale where each far end a document's read links send sits now
-// asked once per link and far slot — none for a document named whole, none
-// into one a read found unregistered, none whose place the model holds — and
-// held, its stretches, none or what the refusal says of the far document: a
-// `doc_not_registered` held of the document too, so no projection into it is
-// asked again, a `withheld` of the projection alone, the document never
-// marked, so a projection into it is still asked (a mutant that asks none,
-// asks one held already, holds every refusal bare, or marks the document
-// withheld from its projection turns red), and asked again once a feed row names a new
-// member of the document projected into (a mutant that forgets the member's
-// address alone, never its trunk's, asks none again and turns red); a far
-// end sent from bytes the document transcludes asked as one sent from its
-// own bytes is (a mutant that sends far ends from the bytes a document
-// minted alone turns red); a projection asked by an act answering the
-// refusal it met, held refused, and nothing held where the board did not
-// answer (a mutant that answers a bare "refused" turns red);
-// a read that lands after its document was dropped — the board's answers and
-// the feed's rows come by two channels nothing orders — takes nothing: a
-// view's read, its refusal included, left unasked and asked again, the text
-// read before a new version's row never put back and the image read over the
-// text read after it, a projection's read watching the document projected
-// into (a mutant that takes a dropped read, takes its refusal, or watches the
-// document the link sends from turns red); an act's whole read begun again,
-// across the page's own death too, and its projection asked again, each at
-// most DROP_ATTEMPTS times (a mutant that discards without beginning again,
-// counts no death, or asks without a bound turns red); the view's probe of a
-// chain its trunk is dropped under recording no count and probing again;
-// THE CHAIN'S END IS THE BOARD'S ANSWER (issue #184): a probe whose trunk's
-// metadata the page does not hold asks its first member, never taking the
-// chain for one of none (a mutant that does turns red); the view's probe
-// reads at most eight members and records them as read so far, holding
-// nothing to be asked again, and an act's probe goes on from there to the
-// end the board answers (a mutant that caps the act's probe, records the cap
-// as the end, or holds the capped count turns red); an act's probe goes on
-// past the members a probe before it read, and one stopped at a refusal the
-// board gave records what it read as read so far (a mutant that takes the
-// refusal for the end turns red); an
-// image placed from the window it was asked for, never from one a text read
-// widened before it landed;
-// a bare feed row — its docs null — naming the home of the link it deposited
-// by its link alone, whatever its op, named or null: the view asks again what
-// it read of the home, the new link read with it (a mutant that forgets the
-// row's docs alone, or drops a `make_link`'s home alone, turns red);
-// the edition claims on the origin of a withheld run asked by the view at
-// reading scale and by a whole read — the active view's `find_links_ftt`
-// lookup, never the audit view's `edition_claims` — then each listed claim's
-// link and its home's metadata, each once (a mutant that asks none, or asks
-// the audit view, turns red); dropped by every row that may change them — a
-// link written anywhere, a publish, a bare row whose op is null — and by the
-// page's own death, and asked again, any other row leaving them held (a
-// mutant that drops them at no row, at a named op alone, or never asks
-// again, turns red); a lookup that lands after such a row
-// taking nothing and asked again (a mutant that watches the origin's drops
-// alone takes the claims read before the row and turns red); a lookup refused
-// held by whether it was withheld from the reader — unread where the refusal
-// says nothing of the claims, asked again past a drop of them alone — and a
-// failed read of a listed claim's link or its home's metadata, the board not
-// answering among them, held failed, which an act asks again where one
-// refused as withheld is an answer (issue #186: a mutant that holds every
-// refusal alike, tells the view nothing of a read the board did not answer,
-// or never asks a failed read again turns red);
-// a read refused for its size asked again in parts (issue #153): a
-// `compare` over the halves of the operand its refusal names, else of the
-// text sought in, their pairs taken together, any other refusal handed up
-// at once, and no more than SPLIT_READS reads (a mutant that asks no part,
-// halves the wrong operand, or asks without a bound turns red); a whole
-// read's image so refused read in parts and taken as one image, every run
-// placed across the seam; a whole read handing up the refusal its extent or
-// its text met (a mutant that drops it turns red);
-// each box read as it is drawn (issue #154's design decision: "The box shows
-// one version"): a box showing another of its versions reads that version
-// for its text and its image, and its document for its extent, metadata,
-// links and chain alone, the version read again after a feed row drops it
-// (a mutant that reads the document's text, or probes a chain from the
-// version, turns red); a version its box does not show asks nothing,
-// whatever the model holds of it; a far end placed in the version its far
-// document's box shows; a `publish` row's member handed to the app before
-// the row drops anything of the trunk, no row of another op handed (a
-// mutant that hands it after the drop turns red); what each row the page
-// takes dropped told to the app after the drop, the row's op with it, and the
-// page's own death told as a drop of every record (issue #160: a mutant that
-// tells before the drop, or tells no death, turns red);
-// THE BYLINE'S FACTS (issue #208; FP-34): read by the view for the owner of
-// each text it draws at reading scale, once, a read out joined, never below
-// the reading em (a mutant that never asks them turns red); the sole
-// device-flagged entry of the genesis enrollment — the record whose own `to`
-// names the account, one homed in another account's doc 1 before its own
-// doc 1's lowest-addressed, its atom placed through the home's image (a
-// mutant that keeps a sub-account's record, sorts by address alone, reads
-// the atom at its stored ordinal or reads the anchor's entry turns red); with
-// no key enrolled and none retired, the tables above it climbed — by
-// reference, else unsigned (a mutant that never climbs turns red); a cause
-// where none can be named — not recorded, withheld naming the owner of what
-// was withheld, not read; the board not answering held through its pause and
-// asked again at the daemon's `running` (a mutant that holds nothing turns
-// red); a cause a feed row touching a doc 1 overtook never taken and asked
-// again, a value taken whatever the row (a mutant that takes the cause turns
-// red);
-// A ROW NAMING NOTHING (issue #212): such rows mark the board and drop
-// nothing as they come, the refresh armed and counted missing; once the run
-// is in, ONE refresh for every row of it counts the chain of each edition read
-// at its bare address and reads again what the view shows, set in one step
-// and never emptied meanwhile, a link the board no longer answers gone and a
-// draft out of view dropped unread (a mutant that empties what is shown
-// first, or arms nothing, turns red); a row naming a shown document while the
-// refresh's reads of it are out voids them (a mutant that sets them turns
-// red); an edition whose chain advanced past the member its text is — the
-// newest minted at or before the position its text was read at, never the
-// chain's end the page held — pinned on that member, which takes its text,
-// nothing read at the bare address (a mutant that tells the member by the end
-// held, or hands nothing, turns red); one whose member cannot be told left as
-// it stands; a change of class mid-refresh ends it (a mutant that arrives
-// after it turns red); the claims on a shown document's origins read again and
-// held as they answer now (a mutant that reads them and keeps the old turns
-// red); a publish row's member taking the trunk's text where the box pins on
-// it, none of it read again (a mutant that hands nothing turns red);
-// THE BOARD OPENED (issue #215; FP-35): `boards()` first, then for the board
-// held the key store, the session where one is asked, the health, the daemon
-// and the index in the boot's order; an empty list or a refusal holds none,
-// why kept, nothing asked past the list (a mutant that reads on, or keeps no
-// cause, turns red); "try again" one read for presses made while it is out, a
-// board found opened as the boot opened it and the app told once (a mutant
-// that reads per press, or never tells the app, turns red);
-// with SKEP_REPLAY naming a script the harness recorded from the provider,
-// the model's snapshot is printed for the gate to hold deep-equal to the
-// page's (half two: `harness/cases/wire.py`).
+// M-PUMP's test against the fake port (FP-15): the model built from scripted
+// answers and events with no write composed; the view's reads and probes —
+// each box read as it is drawn, far ends projected into the version the far
+// box shows, the edition claims and the byline's facts read once — and what
+// a read the board did not answer, a drop that overtook a read, a size
+// refusal or a `scan_busy` does to each; the acquire, a session's end and the
+// page's own death, every read asked again at the page's class; a listing,
+// the health and the daemon laid under the events that overtook them; the
+// board opened in the boot's order and read again at "try again"; and the
+// one refresh a run of bare rows earns. With SKEP_REPLAY naming a script the
+// harness recorded, the model's snapshot is printed for the gate.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -1722,7 +1535,7 @@ test('a box showing another of its versions reads that version for its text and 
   const shownReads = [key(F.retrieveDocVSpanSet(M)), key(F.docMetadata(M)), key(F.findLinksV(M, 1, 20)), key(F.retrieveV(M, 1, 20)), key(F.image(M, 1, 20))];
   assert.deepEqual([...new Set(fake.asked)].sort(), [...own, ...shownReads].sort(), 'the document read for its extent, metadata, links and chain; the version shown for its own and its text and image; the document\'s text never, nor the version\'s chain');
   assert.deepEqual([REC.doc(D).from, REC.doc(D).members, REC.doc(M).from, REC.doc(M).to, REC.doc(M).imageFor, REC.doc(M).members], [-1, 2, 1, 21, [1, 21], null], 'the model holds the version\'s text and image and the document\'s chain, none of the document\'s text, and no chain probed from the version');
-  // a feed row naming the version shown drops it and its document: both read again as before, the version kept in view through its box
+  // a feed row naming the version shown drops it and its document: both read again as at first, the version kept in view through its box
   fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'make_link', docs: [M], class: 'published' } });
   assert.deepEqual([REC.doc(M).from, REC.doc(M).extent], [-1, null], 'dropped by the row');
   await pumped();
@@ -1820,7 +1633,7 @@ test('what each feed row the page takes dropped is told to the app after the dro
   await new Promise((r) => setTimeout(r, 0));
 });
 
-// ---- the byline's facts (issue #208; FP-34) -------------------------------------------------------------------------
+// ---- the byline's facts (FP-34) -------------------------------------------------------------------------
 
 /** a key's fingerprint, built here apart from the page's: SHA-256 over the tag, then each field's 4-byte big-endian length and its bytes (AUTH-1.8) */
 const fingerprintOf = (/** @type {string} */ alg, /** @type {string} */ keyHex) => {
@@ -1977,7 +1790,7 @@ test('a byline read the board did not answer is held — not asked again inside 
   assert.deepEqual(REC.accountKey('1.0.18'), { label: 'dev', fingerprint: fingerprintOf(ALG, KEY_B) }, 'taken');
 });
 
-// ---- a row naming nothing (issue #212) ---------------------------------------------------------------------------------
+// ---- a row naming nothing ---------------------------------------------------------------------------------
 
 /** a member of D's chain as `doc_metadata` answers it, minted at `at` — a version member dates its own mint (wire.md §Namespace) */
 const mintedAt = (/** @type {number} */ at) => ({ result: { as_of: 9, at, resp: 'doc_metadata', doc: D, published: true, owner: '1.0.1', birth: D + '.1', birth_extent: '30', placed: null, base_extent: null, source: null } });

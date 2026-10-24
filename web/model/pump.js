@@ -1,261 +1,109 @@
-// M-PUMP — view-driven, span-shaped fetching (the structure record §3.2
-// "M-PUMP"; W §8 carried and grown: the frames are the wire's, the index
-// from `places` and the feed, `loadWhole` kept). Layer 1, port-bound.
-// ENGINE-BOUND (the port). State: the in-flight set (model-side plumbing).
-// NO WRITE PATH: `writes.js` is the editor's lane's (S-33 (b)); nothing here
-// hands a write frame to `op` (S-35 (a); class 5 proves it).
-// The needs, from the viewport and the LOD (FP-11: the plane's pure camera
-// arithmetic beside the model): at mid scale and nearer, for the documents
-// in view that stand whole — a continuation drawn as one mark asks nothing
-// for its members — EACH BOX READ AS IT IS DRAWN (issue #154's design
-// decision: "The box shows one version"): the version the box shows (the
-// reader `shown`, N-GO's, which the app hands in) read for all of what
-// follows, the box's document, where the box shows another of its versions,
-// for what the box draws of the document itself alone — its extent, its
-// metadata, its links and their types, and its chain — and a version the box
-// does not show for nothing; the version shown kept in view through its box,
-// so a feed row or a change of class that drops it has it read again — the
-// extent (`retrieve_doc_v_span_set`), the metadata
-// (`doc_metadata`), the links touching them (`find_links_v`, then each new
-// link's type ONCE by `read_link` — E17 (a)), and, where legible, the span
-// window of text (`retrieve_v`: from position 1 through the columns in view,
-// every column's place reading every line before it — issue #15's fold) with
-// its V→I image (`image`) — the
-// transcluded runs, and the permanent addresses a link's stored span is read
-// back to the text through (M-REC's `placed`) — and where each far end its
-// read links send from it sits in its far document's current text now
-// (`project`, A-53), into the version the far document's box shows — from
-// every passage end the document holds, its own
-// bytes and the ones its text transcludes alike (M-REC's `holdsEnd`) — so a
-// beam, a symbol and the mirror place a moved passage where it stands and say
-// so of one that has left the text before anyone follows it (foundations
-// §2.3), and a far end's label names a document withheld from the reader or
-// one the board will say nothing of (LK's `farWords`; issue #132): a refusal
-// held by what it says of the far document (`declined`), a
-// `doc_not_registered` taken as the far document's own read's answer, for
-// every read of an unregistered address answers it, and a `withheld` never —
-// a document known withheld is drawn as its withheld box, and a far end
-// learned withheld by its projection alone is named so at its tail instead;
-// the chain's members probed where a document is read; and, for each
-// origin its delivered withheld runs name, the reads C-67's clause beneath
-// the run is decided from (PUB-5.124, PUB-5.99, PUB-7.50) — the active view's
-// lookup of the edition claims on the origin (M-FRAMES's `editionClaimsAt`),
-// then each listed claim's link (`read_link`) and its home's metadata
-// (`doc_metadata`), the page's own reads of both, memoized with them — a
-// refusal of the lookup held by whether it was withheld, and one of the
-// others that says nothing of what it reads, or the board not answering,
-// held failed, so the clause says the claims were not read (issue #186's
-// design decision: "A blank there would read as 'no claim'"); and, for the
-// owner of each document whose text it draws (M-REC's `ownerAccount`), THE
-// BYLINE'S FACTS (`readAccount`; FP-34; issue #208's design decision: "The
-// byline's label and fingerprint are public on the document's board. Read
-// them once per account, because they never change"), which a reading
-// scene's pane reads as it is set too: the account's device key — the sole
-// device-flagged entry of its genesis enrollment (R22's naming input) — else
-// why its byline names none, all of it read on the page's own board, the one
-// the one line names, and kept for the page's life — a cause until a feed row
-// naming a doc 1, or a change of class, drops it, the board not answering
-// held for UNREACHED_MS as a view's read is.
-// Asked by an act rather than the view: THE BOARD (`openBoard`; issue #215's
-// design decision: "never draw or name a board the client has no record of";
-// FP-35): `boards()`, at boot and again at the reader's "try again" where it
-// was refused (`retryBoards`, one read out at a time, the app told of a board
-// it opens: `onOpen`), its first row the board the page holds, an empty list
-// or a refusal none and why (M-REC's `takeBoards`), and for the board held,
-// in this order, the device's key store (`fingerprint`, before the session,
-// so the one line names the key the session opens with — FP-34), the
-// session, its health, its daemon and its index, each below, nothing past
-// the list where it holds none; the page's session
-// (`acquireSession`: `session(board)`, at boot and for a session lost — see
-// THE ACQUIRE below), the client index (`readIndex`: `places`, at boot and
-// again at every change of the page's class — the view asking nothing while
-// it is out), the board's health and its daemon at boot
-// (`readHealth`, `readProbe`), a whole document (`loadWhole`, the claims
-// on its withheld runs' origins among it, so a pane the scene makes from it
-// and the walk's mirror item at a run hold the clause decided), the reads of
-// C-67's clause beneath a face stating a withheld origin, made before the
-// face shows where the page holds no answer to one (`claimsToRead`,
-// `readClaims`; issue #186's design decision: "Make this read together with
-// the reads that draw the face"), where a
-// link's end projects now (`projectEnd`), a link's supersession lineage
-// (`lineage`: `in_claims` and `out_claims`, A-56, A-57), the chain's
-// members to its end (`probeChain`: the versions list's, a landing's
-// offer's, a pane's — the view's own probe reads at most MEMBER_PROBE_CAP),
-// and where a passage's bytes stand in a text (`compareParts`) and a text's
-// image over a region (`imageParts`). A class scan read whole — `loadWhole`'s
-// `find_links_v`, the lineage's two — is reissued on `scan_busy`
-// (`readScan`): the daemon bounds each by the same two permits the view's
-// scans take. A READ REFUSED FOR ITS SIZE (M-FRAMES's `SIZE_REFUSALS`) is
-// asked again IN PARTS (issue #153's design decision: "split a size refusal
-// … into smaller reads"): `compare`'s operands and an `image` region halved
-// until each part answers, within SPLIT_READS reads, so a landing tells what
-// its text holds of a passage, and a text of more runs than one `image`
-// answers is placed whole (`loadWhole`).
-// A READ THE BOARD DID NOT ANSWER (`unreachable`: the shell's dial, or the
-// dev provider's fetch, failed) teaches nothing, and is never taken as an
-// answer: a view's read so refused is HELD (`unreached`) — not missing, for
-// nothing can arrive for it while the board is out, and its refusal recorded
-// once for the outage — and asked again at once where the shell announces
-// the daemon `running`, else after UNREACHED_MS. The pause stands beside the
-// event, for the shell announces no outage its event stream rides out — a
-// board back within its reconnect wait (`skep-client`'s `RECONNECT_WAIT`),
-// a read's own dial failing while the stream stands — and no `running`
-// follows an outage it never announced. A probe of the chain that meets a
-// member the board did not answer records no count, so the view's is probed
-// again as a held read is asked again, never left at a chain cut short.
-// THE CHAIN'S END IS THE BOARD'S ANSWER (issue #184's design decision: "say
-// whether the board ended the chain there"): a probe records a count as the
-// whole chain only where the board answered that no member follows it; a
-// count it stopped short of an end at — the view's cap, a refusal the board
-// gave — is recorded as read so far, and an act's probe goes on from it.
-// A READ A DROP OVERTOOK teaches nothing either: the board's answers come back
-// by one channel and the feed's rows by another, and nothing orders the two,
-// so a read can land after the row of a write it was read before. Every read
-// M-REC takes for a document watches the address whose drop voids it
-// (`watchDrops`, M-REC's `dropsOf`, a change of class dropping every one) —
-// the document it is read for; a projection's, the document projected into,
-// under which the model holds it; the edition-claim lookup's, the claims
-// held, which a feed row drops together (M-REC's `claimDrops`), its key
-// counting the drops so it is asked again after each — and takes nothing it
-// learned across a drop: a view's read is left unasked, its slot freed, and
-// asked again as the view next needs it; the view's probe of a chain records
-// no count; an act's whole read (`loadWhole`) is begun again, and its
-// projection (`projectEnd`) asked again, at most DROP_ATTEMPTS times.
-// A READ OF THE BOARD'S STATE THE BOARD'S EVENTS OVERTOOK keeps what they
-// brought (`overtaken`): the shell answers the listing between its feed
-// thread's ticks, which can emit a feed row before the index the listing
-// comes from holds it, and the health and the probe on the caller's thread;
-// it emits each event once, as what it carries moves; and nothing orders an
-// answer against the events. So each such read keeps a record of the events
-// taken while it is out (`whileOut`) and lays its answer under them as it
-// lands: the listing under the feed rows, by M-REC's own rule for a row, and
-// under an `index` state (`takeIndex`); the health under the last `mode`; the
-// probe's daemon under a `daemon` event. Every change of the page's class
-// empties every record of the rows and the state taken before it, which were
-// the class's it left. A row taken before a listing goes out is laid over
-// nothing: the listing names no feed position to tell whether it holds the
-// row (reported: skep #572).
-// The reads go through `op(session, frame)` — the claimant's class — or the
-// guest form where no session stands; a followed far board's reads would
-// take the guest form over its origin (no such board is seeded). EVERY READ
-// AT THE PAGE'S CLASS (`atClass`): a read waits for the acquire out, if one
-// is, before it goes; a read the page's class — its principal, or guest —
-// changed under while it was out, a death or a session not regained taken
-// meanwhile, is asked again in the form the page takes now, so no answer to
-// a class the page has left reaches the model; and a read that met the end of
-// the session it went out under is asked again under what the end left the
-// page, so no answer of a session the shell no longer holds is handed up.
-// The shell's bus carries every board's events and every session's to every
-// page (client.md §4b.2); the page takes its own. A board event — `feed`,
-// `index`, `mode`, `daemon` — is taken where it names the page's board, and
-// none before the board is known: the boot's `health`, `probe` and `places`
-// answer all it would set. The feed's rows → M-REC's index and
-// invalidation, and the view asks again what it read of each address M-REC
-// dropped for the row (`applyFeedUpdate`) — each document the row names and
-// the trunk of a member among them (a new version's `publish` names the
-// member, and the trunk's text, its chain and where links project into it
-// are what changed — the member, a trunk's own `D.k+1`, handed to the app's
-// `onPublish` before anything is dropped, so a box read at its plain address
-// keeps the version being read: N-GO's `arrived`, the member it pins the box
-// on taking the trunk's text, so the box's text stands through the row
-// (`arrive`, M-REC's `takeAsMember`)), and the home of the link it names with the home's
-// trunk, which a bare row, its `docs` reading `null`, names by its `link`
-// alone — and what each row dropped told to the app's `onDrop` after the drop
-// (`takeRow`), with the row's `op`, so a reading scene's pane showing a
-// document the row reached is kept fresh by its kind, reading fresh (SC;
-// issue #160's design decision). THE REFRESH (issue #212's design decision:
-// "When a row names no document and no link, whatever op it carries, the page
-// treats it as naming everything it holds of that board"; FP-23): such a row
-// only marks the board (M-REC's `bare`), and once the run's rows are in — no
-// row taken for RUN_QUIET_MS, every row taken re-arming it, and at the latest
-// RUN_MAX_MS after the run's first bare row, for the shell announces no run's
-// end — ONE refresh runs, however many rows were bare (`refresh`). First the
-// chain of every edition the page holds the text of at its bare address is
-// counted, to the end the board answers, each member's mint position read
-// with it (`countChain`); one whose chain advanced past the member its text
-// is — the newest minted at or before the position the text was read at
-// (`memberShown`) — takes the arrival a `publish` row brings (`arrive`), its
-// box pinned on that member, which keeps the text; one whose member cannot be
-// told is left as it stands. Then what the view shows — nearer than far
-// scale, the pins taken — is kept and everything else dropped (M-REC's
-// `takeRefresh`); each shown document is read again as the view reads it
-// (`readFresh`), standing as held until its reads land, then set in one step
-// (M-REC's `setAgain`), T-LAYER holding the words being read still; then
-// every reader is told (`onDrop`, the chains counted beside), so a reading
-// scene's pane is kept fresh by its kind. A read the board did not answer
-// leaves what it would have set standing and the board marked again, the
-// next refresh made once UNREACHED_MS has passed; a change of the page's
-// class ends the refresh, the reads at the new class making it whole. While
-// a refresh is armed or out the view counts it missing, so the gate's settle
-// waits for it. The page holds no draft being typed in — that waits on the
-// editor's lane — so no setting waits for one. A `drafts` row is taken only
-// while the page holds a session — a guest's
-// index lists no draft (search.md §4 (iii)), nor does the index of a page
-// whose session was refused or ended. `index` → M-REC's state where
-// it is the face the page reads ("a face receives the state of the pair it
-// searches"): the guest face's, which names no session, for a page with no
-// session or with a session of no account, for which no drafts index
-// stands; a session's for every other page, never the guest face's. A
-// signed-in page takes a drafts row or a face's state named under another
-// session too: the shell reads a principal's drafts once, under whichever
-// of its sessions it reaches first, and names the principal's face by its
-// last-opened session, so a person's second tab would otherwise take
-// neither (reported to skep: until every session is named, the page cannot
-// tell its principal's other sessions from another principal's). `mode`
-// and `daemon` → M-REC's state, the daemon's `running` making the call of an
-// acquire waiting for its board (below); `session-died` → the end of the
-// page's own session where it names it: a page that holds no session (a
-// guest) or holds another was never signed in under the one that ended. A death drops every read the
-// model held at the session's class (M-REC's `sessionDied`); the needs
-// answered under it are asked again, the drop of every record is told to
-// `onDrop`, and the index is read again in the guest form, as the shell
-// narrows its own at the death (client.md §4e.3: "at `session-died` in every
-// arm but the shell's OWN RESTART"), so the page's index, its counts and
-// what it draws are a guest's (foundations §2.1: "masked at the reader's
-// class"). The shell's own restart is no death (client.md §4b.2; ps3-13 (b),
-// cs6-6 reading (i)): where the shell re-opened the session under a key it
-// holds, the page goes on under the re-opened reference the reason names,
-// with no face, holding what it read; where it re-opened none, the session is
-// LOST — as is one a call finds the shell no longer holds (`session_ended`:
-// a reference from before the shell's own restart, which announces none) —
-// told by the port (B-PORT's `onSession`), as is a read's `session_died`,
-// whose reason is taken as the event's.
-// THE ACQUIRE (issue #175's design decision: "Get the session back, and never
-// say 'signed out' unless the person signed out"; FP-28): the page's session
-// is opened by one routine (`acquireSession`), the boot's `session(board)` —
-// at boot, and again for a session lost: ONE ATTEMPT per lost session, a loss
-// told while it is out joining it, made once the board answers — at once,
-// unless the page knows its daemon stopped or unreachable, else at the
-// board's `running` — and none after a refused one. While it is out what was
-// read stands and every read waits for it (`atClass`); past RECONNECTING_MS
-// the line reads that the page is reconnecting (M-REC's `setReconnecting`). It
-// settles on the first of its answer, the shell's re-open of the session, or
-// a death of another arm; an answer after it settled is stale and dropped, a
-// session it opened closed, so none stands with no owner. Opened, the session
-// is taken in the lost one's place with nothing said and what was read held —
-// dropped and read again only where it acts as another principal (M-REC's
-// `sessionRegained`). Refused, what was read is dropped as at a death, and the
-// refusal kept as boot keeps it with the account the page could not
-// reconnect as (M-REC's `sessionLost`), the page reading as a guest. The
-// page's own `close(session)`, told by the port as it goes out, is no loss:
-// it is the person's sign-out (client.md §4b.2: "`close(session)` stays the
-// page's sign-out"), taken at once as the death the shell's close carries,
-// the `closed` arm.
-// THE PLACES THE VIEW STOOD ON (issue #177's design decision: "Re-read each
-// document the view stands on"; FP-29): every change of the page's class
-// takes, before anything is dropped, the documents in view — nearer than far
-// scale, where the view reads — and the documents the view's state names
-// beside them (`stands`, the trail's entries, the app's to hand in), and asks
-// each one's extent again at the class the page reads at then — none its index
-// lists, which it reads as it reads every place it lists — in view first and
-// nearest the view's centre, until the board answers it (`reread`): one
-// the new class may not read is held `withheld` (`refuseDoc`), M-REC's cover,
-// and drawn as the withheld box a guest meets, at its own place; one it may
-// read the view reads on as it reads any document it holds. The one line
-// says the change once these reads and the index's are answered
-// (`rereading`).
-// Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11, FP-22, FP-23,
-// FP-28, FP-29, FP-34, FP-35.
+// M-PUMP — view-driven, span-shaped fetching (the structure record §3.2).
+// Layer 1, port-bound: every read goes through B-PORT's `op` under the
+// page's session, or in the guest form where none stands; nothing here hands
+// a write frame to `op` (S-35 (a)), and what is read is M-REC's to hold.
+// State: the in-flight set and the view's scans among it; the keys answered
+// (`asked`), refused retry-class with the time they may go again (`retryAt`),
+// and held while the board did not answer (`unreached`); the refusals met;
+// the acquire out (`attempt`); the index reads out (`indexing`); a record of
+// the events taken while each read of the board's state is out (`whileOut`);
+// the places the view stood on at the last change of class (`standing`); the
+// refresh armed or out, and the changes of class taken; how the board was
+// opened; and the readers the app hands in at `start` — the version each box
+// shows (N-GO's `shownIn`), who is told of a member's arrival (N-GO's
+// `arrived`) and of each drop (SC's `dropped`), the places the view's state
+// names (the trail's), and who is told of a board found open.
+// The view's needs (`pump`; FP-11: the plane's pure camera arithmetic beside
+// the model): at mid scale and nearer, for the documents in view that stand
+// whole — a continuation drawn as one mark asks nothing for its members —
+// each box is read as it is drawn (FP-22): the version the box shows for
+// everything below, and the box's document, where the box shows another
+// version, for what the box draws of the document itself alone — its extent,
+// its metadata, its links and their types, and its chain. The reads, within
+// MAX_INFLIGHT and the daemon's MAX_SCANS: the extent
+// (`retrieve_doc_v_span_set`), the metadata (`doc_metadata`), the links
+// touching the document (`find_links_v`, then each new link once by
+// `read_link`; E17 (a)) and, from FETCH_EM up, the span window of text
+// (`retrieve_v`: from position 1 through the columns in view, every column's
+// place read from every line before it — FP-12) with its V→I image
+// (`image`), where each far end its links send from it stands in the far
+// document's current text (`project`, A-53) into the version the far box
+// shows, from every passage end the document holds (M-REC's `holdsEnd`), the
+// edition claims on each origin its withheld runs name (`editionClaimsAt`,
+// then each listed claim's link and its home's metadata; PUB-5.124) and the
+// byline's facts of its owner (`readAccount`; FP-34), read once per account
+// for the page's life; and, from LOD_TXT_LO up at the box's document alone,
+// the chain's members up to MEMBER_PROBE_CAP (`probeMembers`).
+// Asked by an act: the board (`openBoard`, `retryBoards`; FP-35) — `boards()`
+// and, for the board held, in this order, the device's key store
+// (`fingerprint`, before the session, so the key the session is opened with
+// is known with it — FP-34), the session, its health, its daemon and its
+// index; the page's session (`acquireSession`); the client index
+// (`readIndex`: `places`, at boot and at every change of class, the view
+// asking nothing while it is out); a whole document (`loadWhole`, `wholeOf`);
+// the reads a face stating a withheld origin needs before it shows
+// (`claimsToRead`, `readClaims`); where a link's end projects (`projectEnd`,
+// `projectedIn`); a member's extent (`extentOf`); a link's lineage
+// (`lineage`: `in_claims` and `out_claims` under the audit view; A-56,
+// A-57); the chain to its end (`probeChain`); and where a passage's bytes
+// stand in a text (`compareParts`) and a text's image over a region
+// (`imageParts`).
+// The orders every read keeps. A read goes at the page's class (`atClass`):
+// it waits for an acquire out, and one the class changed under, or that met
+// the end of the session it went out under, is asked again in the form the
+// page takes then, so no answer to a class the page has left, or of a
+// session the shell does not hold, reaches the model. A read the board did
+// not answer (`unreachable`) teaches nothing: a view's read so refused is
+// held (`unreached`), not missing, its refusal recorded once for the outage,
+// and asked again at the daemon's `running` or after UNREACHED_MS. A read a
+// drop overtook teaches nothing either: the board's answers and the feed's
+// rows come by two channels nothing orders, so every read watches the drops
+// of the address it is read for (`watchDrops`, `watchClaims`) and takes
+// nothing learned across one — a view's read is left unasked, an act's read
+// begun again, at most DROP_ATTEMPTS times. A read refused for its size
+// (`SIZE_REFUSALS`) is asked again in parts, within SPLIT_READS (FP-21). A
+// class scan read whole is asked again on `scan_busy`, within SCAN_ATTEMPTS.
+// A read of the board's state the board's events overtook keeps what they
+// brought (`overtaken`): the listing is laid under the feed rows and the
+// `index` state taken while it was out, the health under the last `mode`,
+// the probe's daemon under a `daemon` event. The chain's end is the board's
+// answer: a probe records the whole chain only where the board answered that
+// no member follows; a count it stopped short at is recorded as read so far.
+// The events: a board event is taken where it names the page's board, none
+// before the board is known. A feed row the page takes (`takeRow`; a
+// `drafts` row only while it holds a session) hands a `publish` row's member
+// to the app before anything is dropped (`arrive`), then goes to M-REC's
+// index and invalidation, the view's answers for each address dropped
+// forgotten, and what it dropped told after the drop (`onDrop`; FP-23). A
+// row naming no document and no link marks the board, and once the run is in
+// — no row for RUN_QUIET_MS, at the latest RUN_MAX_MS after its first bare
+// row — one refresh runs (`refresh`): each edition held at its bare address
+// has its chain counted and, where it advanced past the member its text is
+// (`memberShown`), takes that member's arrival; what the view shows is read
+// again (`readFresh`) and set in one step (M-REC's `setAgain`), the rest
+// dropped (M-REC's `takeRefresh`); every reader is told. An `index` state is
+// taken where it is the face the page reads (`ofFace`). A session's end
+// (`takeEnd`) — `session-died`, a read's `session_died`, or the page's own
+// `close(session)`, its sign-out — is taken where it names the page's own
+// session: the shell's own restart is no death — the page goes on under the
+// session the reason names, or, where it re-opened none, the session is lost
+// — and every other end is M-REC's death, which drops every read at the
+// class (`classChanged`).
+// The acquire (FP-28): the page's session is opened by one routine
+// (`acquireSession`), at boot and for a session lost — one attempt per lost
+// session, a loss told while it is out joining it, made once the board
+// answers, none after a refused one. While it is out every read waits; past
+// RECONNECTING_MS the line reads that the page is reconnecting. An answer
+// after the attempt settled is stale, a session it opened closed. Regained
+// as another principal, or refused, what was read is dropped as at a death.
+// A change of class (`classChanged`; FP-29) takes the documents in view and
+// those the view's state names before anything is dropped (`stoodOn`), reads
+// the index again, asks each one's extent again at the new class, in view
+// first and nearest the centre (`reread`), and tells every reader of the
+// drop; a document the new class may not read is held `withheld`, M-REC's
+// cover.
+// Rules: FP-1, FP-2, FP-6, FP-9, FP-11, FP-21, FP-22, FP-23, FP-28, FP-29,
+// FP-34, FP-35.
 
 import * as PORT from '../bridge/port.js';
 import * as REC from './records.js';
@@ -310,7 +158,7 @@ import { keyFingerprint } from '../util.js';
  * @typedef {Object} Lineage — a link's supersession lineage as read (B1-S5;
  * A-56, A-57, A-82): each side the claims the board answered, in its order,
  * or null where no `claims` answer came back — the read refused — so nothing
- * was learned of that side, which is never B1-S5's "none"
+ * was learned of that side, never that it has none
  * @property {Claim[] | null} supersededBy the claims whose `old` is the link: each one's `new` supersedes it
  * @property {Claim[] | null} supersedes the claims whose `new` is the link: each one's `old` it supersedes
  */
@@ -324,7 +172,7 @@ import { keyFingerprint } from '../util.js';
  */
 
 const MAX_INFLIGHT = 6;
-/** the daemon's class-scan pool is two permits (wire.md §Link discovery reads); `find_links_v`, `in_claims` and `out_claims` meet it at this pin (a finding, reported): at most two of the view's in flight */
+/** the daemon's class-scan pool is two permits (wire.md §Link discovery reads), which `find_links_v`, `in_claims` and `out_claims` take: at most two of the view's scans in flight */
 const MAX_SCANS = 2;
 /** positions per fetched block — the span window rounds to it */
 const SPAN_BLOCK = 2048;
@@ -334,15 +182,15 @@ export const WHOLE_CAP = 262144;
 const FETCH_EM = 5;
 /** the view's probe of a chain reads at most this many members (`D.1`, `D.2`, …); an act's probe reads to the chain's end */
 const MEMBER_PROBE_CAP = 8;
-/** a retry-class refusal (`scan_busy`) is reissued after this pause — "reissued at once", paced */
+/** a retry-class refusal (`scan_busy`, `history_busy`) is reissued after this pause */
 const RETRY_MS = 120;
-/** a view's read the board did not answer is held this long, then asked again where no `running` came first — `skep-shell`'s own `PROBE_CADENCE`, the interval at which the shell asks a board's `/health` again while it holds a burst there (unmeasured here) */
+/** a view's read the board did not answer is held this long, then asked again where no `running` came first — the interval `skep-shell`'s `PROBE_CADENCE` asks a board's `/health` again at (unmeasured here) */
 export const UNREACHED_MS = 2000;
 /** a class scan read whole is asked at most this many times while the board answers `scan_busy` */
 const SCAN_ATTEMPTS = 6;
 /** an act's read — a whole document (`loadWhole`), where a link's end projects (`projectEnd`) — is made at most this many times while what it reads is dropped under it (unmeasured) */
 export const DROP_ATTEMPTS = 4;
-/** an acquire for a session lost that is not back within this long has the line read "reconnecting as ⟨account⟩ after a restart" (issue #175's design decision: "within about a second") */
+/** an acquire for a session lost that is not back within this long has the line read that the page is reconnecting (FP-28) */
 export const RECONNECTING_MS = 1000;
 /** an act's read the board refuses for its size (M-FRAMES's `SIZE_REFUSALS`) is asked in parts in at most this many reads in all (`compareParts`, `imageParts`); past it the size refusal is handed up (unmeasured: no document on the seeded board meets a size refusal) */
 export const SPLIT_READS = 32;
@@ -367,7 +215,7 @@ const refusals = [];
 /** @type {Array<(r: {frame: string, refusal: Refusal, addr: string}) => void>} */
 const refusalWatchers = [];
 /**
- * @typedef {Object} Attempt — one call of `session(board)` the page makes (`acquireSession`; see the head): at boot, or for its session lost
+ * @typedef {Object} Attempt — one call of `session(board)` the page makes (`acquireSession`): at boot, or for its session lost
  * @property {string | null} lost the reference of the session it is made for, lost; null at boot
  * @property {boolean} made its call made — false while it waits for the board to answer
  * @property {Promise<void>} settled resolved as it settles
@@ -397,7 +245,7 @@ let onOpen = () => {};
 let opening = { session: true };
 /** @type {Promise<boolean> | null} the list read again, out (`retryBoards`): a second press joins it */
 let boardsOut = null;
-/** @type {Set<string>} the places the view stood on as the page's class last changed, each asked again at the new class until answered (see the head; `reread`) */
+/** @type {Set<string>} the places the view stood on as the page's class last changed, each asked again at the new class until answered (`reread`) */
 let standing = new Set();
 /** @type {ReturnType<typeof setTimeout> | null} the refresh armed for the board a bare row marked (`arm`), else null */
 let armed = null;
@@ -419,7 +267,7 @@ let classes = 0;
  * Start the pump: subscribe the model to the port's events, every board
  * event through `onBoard`, and to the sessions the calls name as they cross
  * the port (B-PORT's `onSession`).
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], onOpen?: () => void}} opts `shown` the version each box shows, which the view reads (see the head); `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `onOpen` told once a board the list read again found is open (`retryBoards`)
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `onOpen` told once a board the list read again found is open (`retryBoards`)
  */
 export function start(opts) {
   dirty = opts.onDirty;
@@ -460,7 +308,7 @@ function onBoard(name, take) {
 const takesRow = (/** @type {FeedUpdate} */ u) => u.class !== 'drafts' || REC.session() !== null;
 
 /**
- * A feed row the page takes (`takesRow`; see the head): the member a
+ * A feed row the page takes (`takesRow`): the member a
  * `publish` names arriving first (`arrive`), while the page still holds the
  * trunk's text; then the row laid into M-REC's index and invalidation, every
  * read out of the board's state given it, and the view's answers for each
@@ -483,7 +331,7 @@ export function takeRow(u) {
 }
 
 /**
- * A newer member's arrival at its trunk (see the head; FP-22, FP-23): told
+ * A newer member's arrival at its trunk (FP-22, FP-23): told
  * to the app (`onPublish`, N-GO's `arrived`), which pins the trunk's box on
  * the member its text is where the box shows its plain address and the page
  * holds that text; where it did, that member takes the trunk's text (M-REC's
@@ -499,7 +347,7 @@ function arrive(member) {
 }
 
 /**
- * The refresh armed for the board a bare row marked (see the head): made
+ * The refresh armed for the board a bare row marked: made
  * once no feed row has come for `quiet`, at the latest RUN_MAX_MS after the
  * run's first bare row; each row taken while the board stands marked arms it
  * again. A refresh out arms the next as it ends.
@@ -529,8 +377,7 @@ function ofFace(ev) {
  * A session's end — `session-died`, a read's `session_died`, which carries
  * the event's reason, or the page's own close (`CLOSED`) — taken where it
  * names the page's own session. The shell's own restart is no death
- * (client.md §4b.2: "the page re-acquires a reference with no face"; ps3-13
- * (b), cs6-6 reading (i)): where its reason names the session the shell
+ * (client.md §4b.2): where its reason names the session the shell
  * re-opened, the page goes on under that reference, the principal and the
  * account the same, with no face; where it names none, the session is lost
  * (`lose`). Every other end is M-REC's death (`sessionDied`), its class's
@@ -550,7 +397,7 @@ function takeEnd(ended, reason) {
 }
 
 /**
- * A call answered as from a session the shell no longer holds (B-PORT's
+ * A call answered as from a session the shell does not hold (B-PORT's
  * `onSession`): `session_died` carries the end's reason, taken as the
  * event's (`takeEnd`); `session_ended` carries none — the session lost
  * (`lose`), as is a `session_died` whose reason cannot be read.
@@ -564,7 +411,7 @@ function metEnd(ref, r) {
 }
 
 /**
- * The page's own session lost without the person's act (see the head): the
+ * The page's own session lost without the person's act: the
  * acquire begun for it, or joined where one is out for it already; nothing
  * where the page holds another session or none.
  * @param {string} ref
@@ -576,7 +423,7 @@ function lose(ref) {
 }
 
 /**
- * THE ACQUIRE (see the head; FP-28): the page's session opened by the
+ * The acquire (FP-28): the page's session opened by the
  * boot's own call, `session(board)` — the one routine boot and a session
  * lost share; boot calls it, and awaits it before its other reads.
  * @returns {Promise<void>} settled as the attempt settles
@@ -584,7 +431,7 @@ function lose(ref) {
 export function acquireSession() { return attempt ? attempt.settled : begin(null); }
 
 /**
- * One attempt begun (see the head): its call made at once where the board
+ * One attempt begun: its call made at once where the board
  * answers as far as the page knows, else at the board's `running`; for a
  * session lost, the line made to read that the page is reconnecting where it
  * is still out past RECONNECTING_MS.
@@ -609,8 +456,8 @@ function begin(lost) {
 const answers = () => { const d = REC.daemon(); return d !== 'stopped' && d !== 'unreachable'; };
 
 /**
- * An attempt's one call, `session(board)`, and its answer taken (see the
- * head): at boot, the session opened or the refusal met; for a session lost,
+ * An attempt's one call, `session(board)`, and its answer taken: at boot,
+ * the session opened or the refusal met; for a session lost,
  * the session taken in its place (M-REC's `sessionRegained`) — what was read
  * dropped and read again where it acts as another principal — or the refusal
  * taken (M-REC's `sessionLost`), what was read dropped and the index read
@@ -662,7 +509,7 @@ function classChanged(stood) {
 }
 
 /**
- * The places the view stands on (see the head): the documents in view —
+ * The places the view stands on: the documents in view —
  * nearer than far scale, where the view reads — and the documents the view's
  * state names beside them (`stands`), each once. Taken as a change of the
  * page's class is taken, before anything is dropped.
@@ -675,7 +522,7 @@ function stoodOn() {
 
 /**
  * The places the view stood on as the page's class last changed, asked again
- * at the class the page reads at now (see the head): each one's extent
+ * at the page's current class: each one's extent
  * (`retrieve_doc_v_span_set`), in view first and nearest the view's centre,
  * a refusal held of the document as any view's read's is (`refuseDoc`). A
  * place answered for leaves the set: its extent read, a refusal held, a read
@@ -707,7 +554,7 @@ function pending(/** @type {string} */ addr) {
 }
 
 /**
- * Are the reads a change of the page's class asked still out (see the head):
+ * Are the reads a change of the page's class asked still out:
  * the index read again, or a place the view stood on not yet answered for
  * (`reread`)? The one line says the change once they are answered.
  * @returns {boolean}
@@ -729,7 +576,7 @@ export function read(frame) { return atClass((s) => ask(s, frame)); }
 /**
  * One call at the page's class: made under the page's session, or in the
  * guest form where none stands (`call` composes the form from the session it
- * is handed), once the acquire out, if one is, has settled (see the head).
+ * is handed), once the acquire out, if one is, has settled.
  * It is made again, in the form the page takes then, where the page's class
  * — its principal, or guest — changed while it was out, so no answer to a
  * class the page has left is handed up: a death, or a session not regained,
@@ -737,8 +584,8 @@ export function read(frame) { return atClass((s) => ask(s, frame)); }
  * met the end of the session it went out under — the port having told the
  * end to the acquire, whose attempt it then awaits — and the end left the
  * page another, the one the shell re-opened or the acquire opened in its
- * place, the class the same; so no refusal of a session the shell no longer
- * holds is handed up. Each time again follows the page's session or its
+ * place, the class the same; so no refusal of a session the shell does not
+ * hold is handed up. Each time again follows the page's session or its
  * class changing, which only a restart, a death or an attempt does.
  * @template {object} T
  * @param {(s: {session: string} | null) => Promise<T | {refused: Refusal}>} call
@@ -784,7 +631,7 @@ async function overtaken(ask, take) {
 }
 
 /**
- * THE BOARD OPENED (see the head; issue #215's design decision; FP-35):
+ * The board opened (FP-35):
  * `boards()` read and its answer M-REC's (`takeBoards`) — its first row the
  * board the page holds; an empty list or a refusal none, and why — and, for
  * the board held, in this order: the device's key store (`fingerprint`),
@@ -810,8 +657,8 @@ export async function openBoard(opts) {
 }
 
 /**
- * The list read again at the reader's "try again", where it was refused (see
- * the head): opened as the boot opened it (`openBoard`), one read out at a
+ * The list read again at the reader's "try again", where it was refused:
+ * opened as the boot opened it (`openBoard`), one read out at a
  * time, a press made while one is out joining it; a board it finds held, the
  * app told (`onOpen`), which launches there.
  * @returns {Promise<boolean>} a board is held
@@ -831,7 +678,7 @@ export function retryBoards() {
 }
 
 /**
- * The client index read at the page's class (skep #463): `places` under the
+ * The client index read at the page's class: `places` under the
  * page's session, or in the guest form where none stands (`atClass`), the
  * answer M-REC's index whole with the feed rows and any `index` state taken
  * while it was out laid over it (`overtaken`, `takeIndex`); a refusal leaves
@@ -927,9 +774,8 @@ function operandOf(/** @type {Refusal} */ r) {
 
 /**
  * Where a passage's bytes stand in a stretch of a document's text
- * (`compare`): its pairs, the read asked IN PARTS where the board refuses it
- * for its size (issue #153's design decision: "split a size refusal …
- * into smaller reads and report the result") — the operand its refusal
+ * (`compare`): its pairs, the read asked in parts where the board refuses it
+ * for its size (FP-21) — the operand its refusal
  * names (wire.md §Errors: `site.operand`), else the text sought in, halved,
  * the other where that one is a single position, each half asked on its own
  * and their pairs taken together (a stretch cut at a seam is rejoined by its
@@ -964,9 +810,9 @@ export async function compareParts(a, b) {
 }
 
 /**
- * A document's V→I image over a region (`image`), asked IN PARTS where the
+ * A document's V→I image over a region (`image`), asked in parts where the
  * board refuses it for its size (`image_too_large`: the region's runs past
- * M8's budget; issue #153's design decision): the region halved, each half
+ * M8's budget; FP-21): the region halved, each half
  * asked on its own, their runs taken in the text's order, at most
  * SPLIT_READS reads in all. Any other refusal is handed up; so is a size
  * refusal past that bound, or of a single position. Every refusal met is
@@ -1002,8 +848,8 @@ export async function imageParts(addr, pos, width, met = null) {
 /**
  * Watch an address for a drop from now on, as a read of it goes out: the
  * watch reads true once what the page held of it has been dropped (M-REC's
- * `dropsOf`), and what the read learned is then of what the page no longer
- * holds.
+ * `dropsOf`), and what the read learned is then of what the page does not
+ * hold.
  * @param {string} addr
  * @returns {() => boolean} dropped since the watch began
  */
@@ -1034,7 +880,8 @@ function hold(key) {
 
 /**
  * A need: a read keyed for the in-flight set, issued within the budget;
- * answered once; a retry-class refusal (`scan_busy`) reissued after a pause;
+ * answered once; a retry-class refusal (`scan_busy`, `history_busy`) reissued
+ * after a pause;
  * a read the board did not answer held (`hold`) and asked again past its
  * pause or at the daemon's `running`, its refusal recorded and told to
  * `onRefused` once for the outage; any other refusal recorded, told to
@@ -1091,7 +938,7 @@ const nameOf = (/** @type {Refusal} */ r) => r.name;
  * viewport (the system account's rows left out) and stands shallower than
  * the continuation the scale draws as one mark (P-LOD's `residueDepth`) —
  * each box's document, and beside it the version its box shows where that is
- * another (see the head), whether the model holds that version's text or a
+ * another, whether the model holds that version's text or a
  * drop has emptied it; a version the box does not show none. The mark draws
  * its members' count and its newest's label from the index, which no read
  * brings, and the band fades its depth-k boxes in below every size a read
@@ -1125,7 +972,7 @@ export function visibleDocs(pad = 80) {
 }
 
 /**
- * The span window a document's columns in view need (issue #15): the place
+ * The span window a document's columns in view need (FP-12): the place
  * of every column is read from every line before it, so its text from
  * position 1 through one estimated column past the last one in view (P-LAY's
  * `estimate`, every line full: never more columns than its text sets, so its
@@ -1310,8 +1157,7 @@ function claimNeeds(claim) {
  * no answer to (`readClaims`'s reads): the lookup, where it has not answered
  * or failed, or a read a listed claim's admission waits on (`claimNeeds`)? A
  * face stating the origin makes them before it shows, so its clause is in its
- * first frame (O-FACES; issue #186's design decision: "Make this read
- * together with the reads that draw the face").
+ * first frame (O-FACES; FP-33).
  * @param {string} origin
  * @returns {boolean}
  */
@@ -1364,8 +1210,7 @@ function refuseDoc(/** @type {Doc} */ d, /** @type {Refusal} */ r) {
  * says it (`refuseDoc`); where it says nothing of the document — any refusal
  * but `withheld` and `doc_not_registered`, or the board not answering — the
  * read held failed (M-REC's `takeFailedRead`), so the clause of an edition
- * claim homed there says its claims were not read (issue #186's design
- * decision: "A blank there would read as 'no claim'").
+ * claim homed there says its claims were not read (FP-33).
  * @param {Doc} d
  * @param {Refusal} r
  */
@@ -1379,7 +1224,7 @@ function metaRefused(d, r) {
  * A read of a link refused: where the refusal says nothing of the link's home
  * — any but `withheld`, which the home's own refusal answers — the read held
  * failed (M-REC's `takeFailedRead`), so the clause of the edition claim it
- * is says its claims were not read (issue #186's design decision).
+ * is says its claims were not read (FP-33).
  * @param {string} link
  * @param {Refusal} r
  */
@@ -1470,7 +1315,7 @@ export function heldChain(trunk) {
 
 /**
  * The chain's members, for an act — the versions list, a landing's offer, a
- * reading scene's pane (see the head): the chain's end held, answered with
+ * reading scene's pane: the chain's end held, answered with
  * nothing asked; else probed to its end (`probePass`, uncapped) past the
  * members known — those the record holds, or the `from` a probe before it
  * read where that is more — a pass the trunk was dropped under begun again
@@ -1513,7 +1358,7 @@ export async function loadWhole(addr) { return (await wholeOf(addr)).doc; }
 /**
  * A whole read (`loadWhole`) with the refusal it met, which a landing that
  * cannot read its text says it could not tell what that text holds by
- * (issue #153's design decision): the extent's, where the board refused it,
+ * (FP-21): the extent's, where the board refused it,
  * the record then null; the text's, where the board refused that, the record
  * standing with what it held; none where both answered.
  * @param {string} addr
@@ -1628,9 +1473,9 @@ export async function readClaims(origin) {
 // ---- the refresh -----------------------------------------------------------------
 
 /**
- * THE REFRESH (see the head; issue #212's design decision): what the rows
- * naming nothing marked the board for, made once the run's rows are in
- * (`arm`), or at once by the gate and the tests. The mark taken (M-REC's
+ * The refresh (FP-23): what the rows naming nothing marked the board for,
+ * made once the run's rows are in (`arm`), or at once by the gate and the
+ * tests. The mark taken (M-REC's
  * `unmarkBare`) — nothing where none stood or a refresh is out — then, a
  * change of the page's class ending it wherever it stands: (1) the chain of
  * every edition the page holds the text of at its bare address counted
@@ -1725,11 +1570,11 @@ async function bounded(items, fn, limit = MAX_INFLIGHT) {
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => { while (next < items.length) await fn(items[next++]); }));
 }
 
-/** is a record an edition read at its bare address (see the head): a trunk, published, holding text, its box showing its plain address? */
+/** is a record an edition read at its bare address: a trunk, published, holding text, its box showing its plain address? */
 const atBare = (/** @type {Doc} */ d) => d.from >= 0 && !d.system && plain(d.addr) === d.addr && shown(d.addr) === d.addr && (d.meta ? d.meta.published : d.kind === 'edition');
 
 /**
- * A chain counted for a refresh (see the head): each member's metadata asked
+ * A chain counted for a refresh: each member's metadata asked
  * in turn to the end the board answers — `doc_not_registered` past the last —
  * from the end the record holds, read again, else the first; then, where
  * `down` and the first member asked was minted after the text the record holds
@@ -1766,9 +1611,8 @@ async function countChain(d, down) {
 }
 
 /**
- * The member a bare address's text is (see the head; wire.md §Arrangement:
- * "Every arrangement reader of a bare DOCUMENT address answers the document's
- * trunk HEAD"): the newest the board says was minted at or before the
+ * The member a bare address's text is (wire.md §Arrangement): the newest the
+ * board says was minted at or before the
  * position the text was read at (`Doc.readAt`) — 0 where every member was
  * minted after it; where the board gave a member no mint position, or the
  * text no position, the end of the chain the record held where the board
@@ -1784,7 +1628,7 @@ function memberShown(d, c) {
 }
 
 /**
- * What a shown document's refresh reads (see the head), as the view reads it
+ * What a shown document's refresh reads, as the view reads it
  * (`pump`) — each part the record holds asked again: its extent, its
  * metadata, its links — within the view's scan permits, a scan the board kept
  * busy said unheard — and each one's value, and, where its box shows it, its
@@ -1935,8 +1779,8 @@ function accountWanted(/** @type {string} */ account) {
 }
 
 /**
- * The view's read of an account's byline facts (see the head;
- * `readAccount`): missing while it is out, or while the page holds none and
+ * The view's read of an account's byline facts (`readAccount`): missing
+ * while it is out, or while the page holds none and
  * can ask; not missing once held — a cause the board's silence left held
  * included, for nothing will arrive for it until its pause ends.
  * @param {string} account
@@ -1951,7 +1795,7 @@ function needAccount(account) {
 }
 
 /**
- * THE BYLINE'S FACTS FOR AN ACCOUNT (see the head; FP-34): read where the
+ * The byline's facts for an account (FP-34): read where the
  * page holds none, or holds that the board did not answer and the pause it
  * holds that for has ended — once for every reader of them, a read out
  * joined. A value is taken always, for it never changes; a cause only where
@@ -1977,9 +1821,8 @@ export function readAccount(account) {
 }
 
 /**
- * An account's byline facts as its board answers them (`readAccount`; R22's
- * naming input: "the sole DEVICE-FLAGGED entry of its GENESIS ENROLLMENT …
- * read by one enroll-typed lookup"). Its own credential table first
+ * An account's byline facts as its board answers them (`readAccount`; R22).
+ * Its own credential table first
  * (`key_set`): where it holds no key and never held one — none enrolled,
  * none retired — the table is read at each account above it while each holds
  * none enrolled (wire.md §Sessions), the first that holds one making its
@@ -1988,13 +1831,12 @@ export function readAccount(account) {
  * `enrollmentsOf`), each one's link read (`read_link`) and kept where its own
  * `to` names the account, the genesis the first homed in another account's
  * doc 1, else the lowest-addressed homed in its own (skep-client's credential
- * read: "the genesis is the enrollment homed in the genesis registry's doc 1
- * — another account's, or the own doc 1's lowest link"); its record atom
+ * read); its record atom
  * placed in its home's text through the home's V→I image (AUTH-2.114) and read
  * (`retrieve_v`); the record's one device-flagged entry — the record rule's
  * `anchor` false — its label, none where it carries none, and its fingerprint
  * (AUTH-1.8, util's `keyFingerprint`). NOT RECORDED where no genesis stands,
- * the home's text no longer places its atom, or its record names not exactly
+ * the home's text does not place its atom, or its record names not exactly
  * one device-flagged entry. A refusal says why where it can (`KeyCause`):
  * withheld from the reader, naming the owner of the document withheld; the
  * board not answering; else unread.
@@ -2055,7 +1897,7 @@ function placedRuns(/** @type {Array<{iStart: string, width: number}>} */ runs) 
 }
 
 /**
- * Where a link's slot projects NOW into a document (A-53: "the spans"): every
+ * Where a link's slot projects into a document's current text (A-53): every
  * V-span of the text's content the board answers, as stretches in the text's
  * order — the wire names no order for a span set — an end the document's
  * text holds in several runs, a passage a later edit cut in two among them,
@@ -2092,7 +1934,7 @@ export async function projectEnd(linkAddr, slot, doc) {
 /**
  * Where a link's slot projects into a document now, read for an act and
  * kept nowhere (`project`): a version member's, for the offer of a landing's
- * line (N-GO; issue #153), whose box shows another version, so no beam or
+ * line (N-GO), whose box shows another version, so no beam or
  * symbol reads it. Its runs in the text's order; the refusal met where the
  * board declines the read.
  * @param {string} linkAddr
@@ -2108,8 +1950,8 @@ export async function projectedIn(linkAddr, slot, doc) {
 /**
  * A document's content extent read for an act and kept nowhere
  * (`retrieve_doc_v_span_set`): a version member's, for its row in the
- * versions list (§2.1's version row: one span read per member, A-39) and for
- * the offer of a landing's line (N-GO; issue #153) — a row asks no member's
+ * versions list (A-39) and for the offer of a landing's line (N-GO) — a row
+ * asks no member's
  * text, which a read act brings once the member is moved to. The refusal met
  * where the board declines the read.
  * @param {string} addr

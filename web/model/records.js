@@ -1,114 +1,73 @@
-// M-REC — THE MODEL (the structure record §3.2 "M-REC"; FP-6: what the
-// viewport asked for and nothing more). Layer 1. PURE: runnable under Node
-// against a fake port. State: MODEL — THE ONE OWNER (FP-10) of the held
-// records: documents (their index row, their extent, their delivered runs
-// and the blocks derived from them, their metadata, their V→I image as read
-// and the transclusion origins it shows, the raw set of links touching them),
-// links as delivered with the type learned once (E17 (a)), where a link's
-// slot sits in a document's current text as `project` answered it, the
-// edition claims the active view lists on each origin a withheld run names
-// (PUB-5.124; `takeEditionClaims`) — or that their lookup was refused as a
-// read withheld from the reader, or failed — and the reads a listed claim's
-// admission waits on that failed (`takeFailedRead`; issue #186's design
-// decision: "a face whose read failed says 'edition claims not read'"), the
-// board — the first row `boards()` answered — or, where it answered none,
-// why the page holds no board (`noBoard`: the list empty, or refused; issue
-// #215's design decision; FP-35), the session as `session`
-// opened it (its REFERENCE, a name, never a token; its principal and
-// account; whether a write may go out under it) and, where a restart lost it
-// (issue #175's design decision), the account the page is reconnecting as or
-// could not reconnect as (`reconnect`), health and the derived
-// mode, the daemon's state, the device's key store as `fingerprint`
-// answered it, or that it was not read — whether it holds a key bound at
-// this board (R56's "key present") and which of its keys is the session's,
-// else why none can be named (`device`); THE BYLINE'S FACTS per account
-// (FP-34; issue #208's design decision: "Read them once per account, because
-// they never change"): the device key its byline names — the sole
-// device-flagged entry of its genesis enrollment (R22's naming input) — or
-// why it can name none (`takeAccountKey`), the owner of a document found by
-// the one owner rule (`ownerAccount`); THE CLIENT INDEX
-// built from `places` (skep #463 — the documents per account, their labels,
-// kinds and standing; the counts per account; the index's state and floor),
-// each answer replacing the index whole with the feed's rows taken while it
-// was read laid over it (`takeIndex`), and kept by the feed's rows — never
-// from `/changes`, never by enumerating documents. THE CLASS: every record
-// read here was read at the page's class, and the page's own session's death
-// (`sessionDied`), a session a restart lost and the re-acquire did not regain
-// (`sessionLost`), or one regained as another principal (`sessionRegained`),
-// drops every one (`dropClass`) — the index, each document's delivered state
-// and its row, the links and where their slots project, the edition claims,
-// the owners and key sets, the drafts rows held, and every byline cause, for
-// a value is the same at every class and never changes — so what stands after
-// it is what a page holds before it reads at the class the change leaves it
-// at, a guest's after a death (foundations §2.1: the index "masked at the
-// reader's class"; client.md §4e.3); M-PUMP reads it all again at that
-// class. THE COVER (issue #177's design decision: "Keep every place, and
-// cover the material"; FP-29): the change keeps which documents the class it
-// left could read — each record holding its text, its metadata or its
-// extent, and each place its index listed (`couldRead`) — and a document
-// one of them that a read at the new class answers `withheld` is COVERED
-// (`covered`): its place stands, drawn as the withheld box a guest meets,
-// and the walk, the trail, the one line and the faces say so. Every
-// document the model knows exists — listed, or answered for — is one box
-// (`known`), which the plane draws and the walk lists alike. It knows
-// nothing of pixels, zoom, selection or
-// lenses: "the links touching an address" is the RAW set as delivered —
-// which of them show, and how, is LK's (the seam).
-// A LINK'S SLOT NAMES BYTES, NEVER A PLACE: a V-spec slot is recorded as the
-// permanent I-spans of the bytes it named (wire.md §Links, `make_link`), so
-// where a drawn end's stored span stands in a document's text now is read
-// through that document's V→I image as held (`placed`) — a passage an edit
-// moved stands where the image puts it, one cut in two stands in two runs,
-// one the text no longer holds stands nowhere — and a document holds an end
-// wherever its bytes stand, whichever document minted them (`holdsEnd`): the
-// trunk the span's address lies under (`EndRef.doc`) by that address alone,
-// any other — a passage it transcludes, a version member's bytes, shared with
-// its trunk or minted under its own chain — once its held text places them,
-// as `find_links_v` answers every link on every byte of a document's image.
-// A PASSAGE CARRIED IS NAMED THE SAME WAY (issue #152's design decision): by
-// the permanent addresses of its bytes, read through the held image as the
-// act is made (`identityOf`), never by its positions, and read back to a
-// text by the same rule as a slot's (`placedIdentity`).
-// Where a link's far end stands in its far document's current text is
-// `project`'s answer (`takeProjection`, A-53) — or, where the board refused
-// it, what the refusal says of that document: withheld, not registered, or
-// nothing, the refusal then held by its name — held until that document's
-// delivered state is dropped.
-// EVERY DROP COUNTED (`dropsOf`): how many times what the page held of an
-// address has been dropped — by `invalidate`, its record held or not, by a
-// refresh's drop and its setting again, by a newer member's arrival taking a
-// trunk's text (`takeRefresh`, `setAgain`, `takeAsMember`), and by every drop
-// of the class (`dropClass`), which drops every record. A read is
-// answered by one channel and the feed's rows come by another, and nothing
-// orders the two, so a read can land after the row of a write it was read
-// before: M-PUMP reads the count as a read goes out and again as it lands,
-// and takes nothing learned across a drop. The edition claims held are
-// dropped together — a feed row
-// names a claim's home, never the origin it claims — and their drops counted
-// apart (`claimDrops`); a failed read of a claim's link or its home's
-// metadata stands through them, a fact of that read, until a read of it
-// answers or what the page held of it is dropped. A byline's cause — not its
-// value — is dropped at every feed row naming a doc 1, where every credential
-// record is homed (AUTH-2.127), and at every change of class, and its drops
-// counted (`keyDrops`): an account that had no genesis may enroll one.
-// A ROW THAT NAMES NOTHING (issue #212's design decision: "the page treats it
-// as naming everything it holds of that board"): a bare row whose `docs` read
-// `null` and that names no link drops nothing and MARKS its board (`bare`),
-// however many such rows a run carries; M-PUMP's one refresh after the run
-// takes the mark (`unmarkBare`) and gives everything held what a row naming
-// it gets, by its kind: an edition whose chain advanced past the member its
-// text is hands that text to the member (`takeAsMember`), what no shown
-// document reads through is dropped (`takeRefresh`), and each shown document
-// is set again in one step from its fresh reads (`setAgain`), standing as held
-// until they land. Every text taken keeps the position it was read at
-// (`Doc.readAt`), which tells the member a bare address's text is.
-// THE `H` DOCUMENT (the record §1.8, OPEN): the system account's rows are
-// HELD here and marked `system`; the plane does not draw them (this lane's
-// cut, reported).
-// Carries: the wireframe's §5 (`state.docs`, `clientDoc`,
-// `invalidateClient`), §8's `takeDelivery`/`mergeLinks`, §3's landmarks (now
-// the index's). Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14 (no token held),
-// FP-29 (the cover), FP-34 (the slot), FP-35 (why no board is held).
+// M-REC — the model (the structure record §3.2; FP-6). Layer 1, pure:
+// runnable under Node against a fake port. State: the one owner (FP-10) of
+// every record the page reads at its class — the board, the first row
+// `boards()` answered, or why none is held (`noBoard`; FP-35); the session
+// as `session` opened it — its reference, a name and never a token (FP-14),
+// its principal and account, whether a write may go out under it — the death
+// that ended it, the refusal `session()` met, and the account the page is
+// reconnecting as or could not (`reconnect`); health and the derived mode;
+// the daemon's state; the device's key store as `fingerprint` answered it,
+// or that it was not read (`keyPresent`, `device`; FP-34); the client index
+// built from `places` — the documents per account with their labels, kinds
+// and standing, the counts per account, the index's state and floor — each
+// answer replacing it whole with the feed rows taken meanwhile laid over it
+// (`takeIndex`), and kept by the feed's rows, never from `/changes` nor by
+// enumerating documents; documents — their index row, extent, delivered
+// runs and the blocks derived from them, metadata, V→I image as read with
+// the transclusion origins it shows, the raw set of links touching them,
+// their chain's count and whether the board ended it there, the position
+// their text was read at (`Doc.readAt`), and a refusal a read of them met;
+// links as delivered, the type learned once (E17 (a)); where a link's slot
+// projects into a document's current text as `project` answered it, or what
+// its refusal said of that document (`Declined`; A-53), held until that
+// document's delivered state is dropped; the edition claims the active view
+// lists on each origin a withheld run names, or that the lookup was withheld
+// or failed (`Lookup`; PUB-5.124), and the failed reads a listed claim's
+// admission waits on (`takeFailedRead`); the owners and key sets; the
+// byline's facts per account, its device key or why it names none
+// (`AccountFacts`; FP-34); the feed's rows as they arrived; and a bare row's
+// mark on the board (`bare`).
+// A link's slot names bytes, never a place (wire.md §Links): where a stored
+// span stands in a document's text is read through that document's held V→I
+// image (`placed`) — moved where the image puts it, cut in two as two
+// stretches, nowhere where the text does not hold it — and a document holds
+// an end wherever its bytes stand, whichever document minted them
+// (`holdsEnd`): the trunk the span's address lies under by that address
+// alone, any other once its held text places them. A passage carried is
+// named the same way, by the permanent addresses of its bytes read through
+// the held image (`identityOf`), and read back by a slot's rule
+// (`placedIdentity`).
+// Every drop is counted and the counts never fall (`dropsOf`, `claimDrops`,
+// `keyDrops`): the board's answers come by one channel and the feed's rows
+// by another, so a read can land after the row of a write it was read
+// before; M-PUMP reads a count as a read goes out and again as it lands, and
+// takes nothing learned across a drop. The edition claims held are dropped
+// together — a feed row names a claim's home, never the origin it claims —
+// and a failed read of a claim's link or home stands through those drops
+// until a read of it answers or what the page held of it is dropped. A
+// byline's cause — never its value, which is the same at every class — is
+// dropped at every feed row naming a doc 1 (AUTH-2.127) and at every change
+// of class.
+// A bare row, its `docs` null and naming no link, drops nothing and marks
+// its board (`bare`; FP-23); M-PUMP's one refresh after the run takes the
+// mark (`unmarkBare`), hands an advanced edition's text to the member it is
+// (`takeAsMember`), drops what no shown document reads through
+// (`takeRefresh`) and sets each shown document again in one step
+// (`setAgain`), each standing as held until its reads land.
+// The class: the page's own session's death (`sessionDied`), a lost session
+// not regained (`sessionLost`) or one regained as another principal
+// (`sessionRegained`) drops every record (`dropClass`), keeping only which
+// documents the class it left could read (`couldRead`); a document one of
+// them that a read at the new class answers `withheld` is covered
+// (`covered`; FP-29): its place stands, drawn and named as the withheld box
+// a guest meets. Every document the model knows exists — listed, or
+// answered for — is one box (`known`). The system account's rows are held
+// and marked `system` for the drawing modules to leave out. The model knows
+// nothing of pixels, zoom, selection or lenses: the links touching an
+// address are the raw set as delivered, and which of them show, and how, is
+// LK's.
+// Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14, FP-22, FP-23, FP-29, FP-34,
+// FP-35.
 
 import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder, isTrunkMember, docOneOf } from './address.js';
 import { byteOffsets } from '../util.js';
@@ -131,9 +90,9 @@ import { byteOffsets } from '../util.js';
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 
 /**
- * @typedef {'none' | {refused: {kind: string, name: string}}} NoBoard — why the page holds no board (issue #215's design
- * decision; FP-35), as `boards()` answered: `none` the list empty — no board on this machine has begun; `refused` the list
- * could not be read, which says nothing of whether one exists, the refusal by its kind and its one name
+ * @typedef {'none' | {refused: {kind: string, name: string}}} NoBoard — why the page holds no board (FP-35), as `boards()`
+ * answered: `none` the list empty — no board on this machine has begun; `refused` the list could not be read, which says
+ * nothing of whether one exists, the refusal by its kind and its one name
  */
 
 /** the system account whose head document `H` the daemon writes (wire.md §The other endpoints: `1.1.0.1.0.2`) */
@@ -185,8 +144,8 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
 /**
  * @typedef {'withheld' | 'unregistered' | {refused: string}} Declined — a `project` the board refused, by what its refusal
  * says of the document projected into: `withheld` from the reader, `doc_not_registered` — nothing the board will say of the
- * address — or another refusal by its name (`not_a_link`), which says nothing of the document and is the reason a far end's
- * words give for not telling what its text holds (BM-HELD's `whyOf`; issue #153)
+ * address — or another refusal by its name (`not_a_link`), which says nothing of the document; BM-HELD's `whyOf` reads it
+ * for the reason a far end's words give for not telling what its text holds
  */
 
 /**
@@ -234,7 +193,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /**
- * @typedef {Object} Reconnect — the page's session lost at a restart and not regained (issue #175's design decision): the account the lost session acted as, and whether the re-acquire was refused
+ * @typedef {Object} Reconnect — the page's session lost at a restart and not regained (FP-28): the account the lost session acted as, and whether the re-acquire was refused
  * @property {string | null} as the account — null for a session of no account
  * @property {boolean} refused false while the re-acquire is out past a second ("reconnecting as"), true once it was refused ("could not reconnect as")
  */
@@ -249,7 +208,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
 /**
  * @typedef {Object} Reader — who reads, as the entitlement arm at a withheld document or run is decided for them (PUB-5.97's key-split defaults, in PUB-5.121's order; R56)
  * @property {string | null} account the acting account, or null (a guest)
- * @property {boolean} keyPresent the device's key store holds a key bound at this board's origin: PUB-5.97's "an enrolled key for this board present"
+ * @property {boolean} keyPresent the device's key store holds a key bound at this board's origin (PUB-5.97)
  */
 
 /**
@@ -262,7 +221,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @typedef {Object} DeviceCause — why the session's key on this device cannot be named (`device`; FP-34)
  * @property {'store-unread' | 'key-untold'} cause `store-unread` the device's key store was not read — `fingerprint`
  * refused, or not answered; `key-untold` the store holds more than one key the session may have been opened with, or
- * none, and `session` does not name the one it was (reported: skep #579)
+ * none, and `session` does not name the one it was
  */
 
 /**
@@ -274,14 +233,13 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /**
- * @typedef {Object} KeyCause — why an account's byline can name no device key (FP-34; issue #208's design decision:
- * "When the value can't be had, the slot says why")
+ * @typedef {Object} KeyCause — why an account's byline can name no device key (FP-34)
  * @property {'unsigned' | 'by-reference' | 'not-recorded' | 'withheld' | 'unreachable' | 'unread'} cause `unsigned` no
  * account at or above it holds a key, so no key made its writes; `by-reference` it holds no key of its own and its writes
- * are signed with the keys of an account above it (wire.md §Sessions: "an unseeded sub-account opens against its
- * holder's set"); `not-recorded` it holds keys of its own and the board holds no genesis enrollment naming one
- * device-flagged key for it; `withheld` a read its facts wait on was refused as withheld from the reader; `unreachable`
- * the board did not answer; `unread` the board refused a read for a reason that says none of these
+ * are signed with the keys of an account above it (wire.md §Sessions); `not-recorded` it holds keys of its own and the
+ * board holds no genesis enrollment naming one device-flagged key for it; `withheld` a read its facts wait on was refused
+ * as withheld from the reader; `unreachable` the board did not answer; `unread` the board refused a read for a reason
+ * that says none of these
  * @property {string} [owner] where `withheld`, the owner of the document withheld
  */
 
@@ -372,11 +330,9 @@ export const rev = () => state.rev;
 export function setBoard(b) { state.board = b; state.noBoard = null; bump(); }
 export const board = () => state.board;
 /**
- * The board list as `boards()` answered it (issue #215's design decision:
- * "never draw or name a board the client has no record of"; FP-35): its
- * first row the board the page holds; an empty list no board, none on this
- * machine having begun; a refusal no board, and nothing known of whether one
- * exists (`noBoard`).
+ * The board list as `boards()` answered it (FP-35): its first row the board
+ * the page holds; an empty list no board, none on this machine having begun;
+ * a refusal no board, and nothing known of whether one exists (`noBoard`).
  * @param {{result: BoardRow[]} | {refused: Refusal}} out
  */
 export function takeBoards(out) {
@@ -418,8 +374,8 @@ function dropClass() {
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
 }
 /**
- * The death signal: the line drops "acting as" at once, and every read held
- * at the session's class goes with the session (`dropClass`).
+ * The death signal: the session goes, and every read held at its class with
+ * it (`dropClass`).
  * @param {DeathReason} reason
  */
 export function sessionDied(reason) {
@@ -430,20 +386,20 @@ export function sessionDied(reason) {
 export const deathReason = () => state.sessionDied;
 /**
  * The page reconnecting as the account its session acted as, a restart
- * having lost it and the re-acquire not back within a second (issue #175's
- * design decision): the session stands, and what was read at its class with
- * it, until the re-acquire settles.
+ * having lost it and the re-acquire not back within a second (FP-28): the
+ * session stands, and what was read at its class with it, until the
+ * re-acquire settles.
  */
 export function setReconnecting() {
   if (!state.session) return;
   state.reconnect = { as: state.session.account, refused: false }; bump();
 }
 /**
- * The re-acquire of a session a restart lost, refused (issue #175's design
- * decision): every read held at the session's class goes with it
- * (`dropClass`), as at a death — but no death is recorded, for the shell
- * named none — the refusal `session()` met kept as boot keeps it, and the
- * account the page could not reconnect as kept.
+ * The re-acquire of a session a restart lost, refused (FP-28): every read
+ * held at the session's class goes with it (`dropClass`), as at a death —
+ * but no death is recorded, for the shell named none — the refusal
+ * `session()` met kept as boot keeps it, and the account the page could not
+ * reconnect as kept.
  * @param {{kind: string, name: string}} r the refusal the re-acquire met
  */
 export function sessionLost(r) {
@@ -453,11 +409,11 @@ export function sessionLost(r) {
   bump();
 }
 /**
- * A session the re-acquire opened in the place of one a restart lost (issue
- * #175's design decision), taken as `setSession` takes it — every read held
- * at the lost session's class dropped first (`dropClass`) where the new one
- * acts as another principal, so nothing read at one principal's class is
- * held under another's.
+ * A session the re-acquire opened in the place of one a restart lost
+ * (FP-28), taken as `setSession` takes it — every read held at the lost
+ * session's class dropped first (`dropClass`) where the new one acts as
+ * another principal, so nothing read at one principal's class is held under
+ * another's.
  * @param {SessionOpened} s
  * @returns {boolean} the principal another: every read dropped
  */
@@ -513,7 +469,7 @@ export const keyPresent = () => !!state.keys && state.keys.some((k) => k.princip
  * store not read, or more than one key it may have been opened with — or
  * none — for the shell signs with the newest binding, `fingerprint` does not
  * order bindings across keys, and `session` does not name the key it opened
- * with (reported: skep #579). None for a guest, and none for a bare session
+ * with. None for a guest, and none for a bare session
  * no one key is bound for, whose open read no key: the one line's slot does
  * not apply to either. So no label or fingerprint shown is of a key other
  * than the one this principal's signed session is opened with here.
@@ -539,13 +495,13 @@ export const reader = () => ({ account: state.session ? state.session.account : 
 // ---- the index -----------------------------------------------------------------
 
 /**
- * Build the index from `places` (skep #463): every document of the board's
- * document index at the call's class, in address order; the counts per
+ * Build the index from `places`: every document of the board's document
+ * index at the call's class, in address order; the counts per
  * account; the index's state. The answer replaces the index whole, and the
  * feed rows taken while it was read are laid over it in the order taken, by
  * the rule a row taken after it follows (`listRow`): the listing names no
- * feed position (skep #572), and the shell can emit a row before the index it
- * lists from holds it, and emits each row once. A record that neither the
+ * feed position, and the shell can emit a row before the index it lists from
+ * holds it, and emits each row once. A record that neither the
  * answer nor those rows list keeps none of its row. The answer's state is
  * taken where no `index` state was taken while it was read, for the shell
  * emits a state once, as it moves, and the answer can be the older.
@@ -841,9 +797,8 @@ function iPlace(/** @type {string} */ start) {
 
 /**
  * One run of a V→I image as `image` answers it (`F.decodeRuns`), by
- * identity: the permanent addresses from its first, for its positions — what
- * a read of an image kept nowhere names (N-GO's follow reads the runs it
- * lands on so where the far document's held image does not cover them).
+ * identity: the permanent addresses from its first, for its positions — the
+ * form a reader of an image kept outside the model names its runs in.
  * @param {{iStart: string, width: number}} r
  * @returns {ISpan}
  */
@@ -891,7 +846,7 @@ function imageInto(/** @type {Doc} */ d, /** @type {number} */ fromPos, /** @typ
  * moved where the image puts it, one cut in two as two stretches, one
  * transcluded twice at both places. None where the image held places none of
  * them: no image read, the bytes outside the window it was read for, or the
- * text no longer holding them.
+ * text not holding them.
  * @param {string} addr
  * @param {ISpan[]} spans
  * @returns {Stretch[]}
@@ -954,9 +909,9 @@ export function placed(addr, e) {
 }
 
 /**
- * A stretch of a document's held text by identity (issue #152's design
- * decision: a passage carried is recorded so, never by its positions): the
- * permanent addresses of its bytes, read through the held V→I image — each
+ * A stretch of a document's held text by identity — a passage carried is
+ * recorded by its bytes, never by its positions: the permanent addresses of
+ * its bytes, read through the held V→I image — each
  * image run it crosses cut to it, in the text's order — so wherever an edit
  * moves it, `placedIdentity` finds it again. None unless the held image
  * covers every position of it: a part named would be lit later as though it
@@ -975,7 +930,7 @@ export function identityOf(addr, pos, width) {
  * A stretch of a text by identity, read through an image that covers it — a
  * document's held image (`identityOf`), or the one an article was made from
  * (T-LAYER's `Made`), which a pane set again carries its reader's place
- * through (SC; issue #160): each image run it crosses cut to it, in the
+ * through (SC): each image run it crosses cut to it, in the
  * text's order. None unless the image covers every position of it.
  * @param {ImageRun[]} image
  * @param {number} pos
@@ -1045,7 +1000,7 @@ export function invalidate(/** @type {string} */ addr) {
  * (`takeAsMember`), and by every drop of the class
  * (`dropClass`), which drops every record. It never falls, so a read that
  * finds it moved between going out and landing was learned of what the page
- * no longer holds.
+ * does not hold.
  * @param {string} addr
  * @returns {number}
  */
@@ -1171,9 +1126,8 @@ export function takeEditionClaims(origin, claims) {
 /** the edition claims held on an origin (`Lookup`), or undefined where the lookup has not answered */
 export const editionClaimsOf = (/** @type {string} */ origin) => state.editionClaims.get(origin);
 /**
- * A read an edition claim's admission waits on failed (PUB-5.99; issue
- * #186's design decision: "a face whose read failed says 'edition claims not
- * read'"): the claim's link (`read_link`), or a document's metadata
+ * A read an edition claim's admission waits on failed (PUB-5.99; FP-33):
+ * the claim's link (`read_link`), or a document's metadata
  * (`doc_metadata`) — a claim's home's — refused for a reason that says
  * nothing of what it reads, or not answered. Held until a read of it answers
  * (`takeLink`, `takeMetadata`, `takeRefused`), what the page held of it is
@@ -1192,7 +1146,7 @@ export const readFailed = (/** @type {string} */ addr) => state.failedReads.has(
  * How many times the edition claims held have been dropped — together, at a
  * feed row that may have changed them, and at every drop of the class — so a
  * lookup that finds the count moved between going out and landing was
- * answered of claims the page no longer holds. It never falls.
+ * answered of claims the page does not hold. It never falls.
  * @returns {number}
  */
 export const claimDrops = () => state.claimDrops + state.classDrops;
@@ -1266,7 +1220,7 @@ export const accountKey = (/** @type {string} */ account) => state.accountKeys.g
 /**
  * How many times the byline causes held have been dropped (`dropKeyCauses`),
  * so a read of an account's facts that finds the count moved between going
- * out and landing learned a cause of what the board may hold no longer. A
+ * out and landing learned a cause that may not hold at the board by then. A
  * value never changes, and is taken whatever the count. It never falls.
  * @returns {number}
  */
@@ -1308,11 +1262,11 @@ const inDocOne = (/** @type {string} */ addr) => { const a = accountOf(addr), tr
  * feed) — names its home by its `link` alone, the one link the journal says
  * the write deposited, whether its op is named or `null`; where the journal
  * decides no link the row serves `link: null`, though the shell's shape
- * declares `link` never null (reported: skep #581). A bare row naming neither
- * — a `nullify` by its op alone, an `edit_link`, a `version`, an arrangement
- * write or a mint, whatever its op — names no document of what it touched, for
- * the journal works out what such a write touched and serves none of it
- * (reported: skep #582): it drops nothing and marks the board (`bare`), the
+ * declares `link` never null. A bare row naming neither — a `nullify` by its
+ * op alone, an `edit_link`, a `version`, an arrangement write or a mint,
+ * whatever its op — names no document of what it touched, for the journal
+ * works out what such a write touched and serves none of it: it drops
+ * nothing and marks the board (`bare`), the
  * refresh after the run giving everything held what a row naming it gets (see
  * the head). A row after which the edition claims may be others
  * (`CLAIM_WRITES`, a `null` op among them) drops every one held; a row
@@ -1464,9 +1418,8 @@ export function projectionsOf(links) {
 }
 
 /**
- * A refresh's drop (see the head; issue #212's design decision: "Drafts, link
- * reads and everything else held are dropped"): what a feed row naming each
- * document held would drop, but for the documents `keep` names — those shown,
+ * A refresh's drop (FP-23): what a feed row naming each document held would
+ * drop, but for the documents `keep` names — those shown,
  * and the members an advanced edition's text was handed to — and what their
  * drawing reads through: every other record's delivered state, each counted
  * dropped (`dropsOf`), the homes of the edition claims on a kept document's
@@ -1510,10 +1463,9 @@ export function takeRefresh(keep) {
 }
 
 /**
- * A shown document set again from a refresh's fresh reads (see the head;
- * issue #212's design decision: "What is shown stays until its fresh read
- * lands. Then it is set in one step"), in one step: each part the reads
- * carried replacing what the record held of it — its text and its image whole
+ * A shown document set again from a refresh's fresh reads (FP-23), in one
+ * step: each part the reads carried replacing what the record held of it —
+ * its text and its image whole
  * over the window read, never merged with what they replace, given new arrays
  * as a delivery gives them, so an article made from the old keeps it and
  * carries the words being read by their bytes' identity (T-LAYER) — each part

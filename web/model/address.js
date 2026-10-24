@@ -1,13 +1,13 @@
-// M-ADDR — the tumbler grammar (the structure record §3.2 "M-ADDR").
-// Layer 1 (the model). PURE.
-// An address is the glossary's tumbler: `node . 0 . user . 0 . document . 0 .
-// element`, the fields separated by zeros, each field itself dottable
-// (`1.5` a sub-node of `1`; `1.0.1.1` a sub-account of `1.0.1`; `1.0.1.0.3.2`
-// the second version member of document `1.0.1.0.3`; `1.0.1.0.3.0.2.1` the
-// first link of that document — element subspace 2, ordinal 1).
-// Carries: the wireframe's §2 first half (`fieldsOf`, `boardOf`,
-// `accountOf`, `cmpAddr`); the padded path moves to the projection.
-// Rules: FP-1, FP-2, FP-6 (knows nothing of pixels).
+// M-ADDR — the tumbler grammar (the structure record §3.2). Layer 1 (the
+// model), pure: no state. An address is the glossary's tumbler, `node . 0 .
+// user . 0 . document . 0 . element`, the fields separated by zeros, each
+// field itself dottable (`1.5` a sub-node of `1`; `1.0.1.1` a sub-account of
+// `1.0.1`; `1.0.1.0.3.2` the second version member of document `1.0.1.0.3`;
+// `1.0.1.0.3.0.2.1` the first link of that document — element subspace 2,
+// ordinal 1). This module reads an address's fields and the board, account,
+// document, home, member and element it names, orders addresses, and spells
+// and parses the wire's spans.
+// Rules: FP-1, FP-2, FP-6.
 
 /**
  * @typedef {Object} ElementRef
@@ -20,10 +20,10 @@
  * @typedef {Object} EndRef — one span of a link's slot, read from the wire's
  * absolute span (`{start, width}` as `link_value` and `follow` carry them).
  * A V-spec slot is recorded as the permanent I-spans of the bytes it named
- * (wire.md §Links, `make_link`: "the recorded endset is the permanent
- * I-spans"), so a passage end names the bytes' identity and never where they
- * sit: where its bytes stand in a document's text now is M-REC's `placed`
- * through the held V→I image, or the board's `project`
+ * (wire.md §Links, `make_link`), so a passage end names the bytes' identity
+ * and never where they sit: where its bytes stand in a document's current
+ * text is read through that document's held V→I image (M-REC's `placed`), or
+ * answered by the board's `project`
  * @property {string} start the span's start address as the wire spelled it
  * @property {string} width the width as the wire spelled it
  * @property {string | null} doc the trunk document the span's permanent addresses lie under — where its bytes were minted, in its own I-space or a version member's chain (`1.0.1.0.3.2.0.1.5` names `1.0.1.0.3`) — or the document it names whole, a member named whole as itself: the one document the span names, never each document whose text holds its bytes, which M-REC's `holdsEnd` answers
@@ -51,7 +51,8 @@ export function fieldsOf(key) {
 
 /**
  * Is `text` a well-formed dotted address? Digits and dots, no empty field,
- * no leading zero component, at most one zero between fields.
+ * no leading zero component, at most one zero between fields and none first
+ * or last.
  * @param {string} text
  * @returns {boolean}
  */
@@ -94,8 +95,7 @@ export const accountOf = (key) => {
  * The account directly above an account, by the address grammar: its user
  * field's last component dropped — "1.0.1.1" → "1.0.1"; a top-level account
  * ("1.0.1"), and anything that names no account, → null. The climb a session
- * authenticates by (wire.md §Sessions: "read it at the account, then at each
- * account above"; skep-client's `parent_account`).
+ * authenticates by (wire.md §Sessions; skep-client's `parent_account`).
  * @param {string} account
  * @returns {string | null}
  */
@@ -125,8 +125,8 @@ export const documentOf = (key) => {
  * → "1.0.1.0.2.2"; "1.0.1.0.3.0.2.1" → "1.0.1.0.3"; a document or a member
  * answers itself; an account or node → null. A link takes its address in
  * its home's link subspace (wire.md §Links (writes), `make_link`), and a
- * member can be the home ("a write homed in `1.0.1.0.1.1`", §Arrangement,
- * `version`), so the home is the member where `documentOf` names its trunk.
+ * member can be the home (wire.md §Arrangement, `version`), so the home is
+ * the member where `documentOf` names its trunk.
  * @param {string} key
  * @returns {string | null}
  */
@@ -153,9 +153,8 @@ export const versionAddress = (doc, k) => doc + '.' + k;
 /**
  * Is an address a member of its trunk's own chain — `D.k`, never a daughter
  * `D.k.m` nor an element under either: a `publish` minting one makes it the
- * trunk's head ("a trunk member `D.k+1` was minted against `D.k`", wire.md
- * §Namespace, `doc_metadata`). "1.0.1.0.3.2" → true; "1.0.1.0.3.2.1" →
- * false; "1.0.1.0.3" → false.
+ * trunk's head (wire.md §Namespace, `doc_metadata`). "1.0.1.0.3.2" → true;
+ * "1.0.1.0.3.2.1" → false; "1.0.1.0.3" → false.
  * @param {string} key
  * @returns {boolean}
  */
@@ -220,7 +219,7 @@ export const vSpan = (ordinal, positions, subspace = 1) => ({ start: `${subspace
  * An address's unit span — the address as `start` and a width of as many
  * components, zeros then `1` (wire.md §Link discovery reads, the name of a
  * type): the span a query slot names an address and everything under it by
- * (L10: hierarchy is prefix) — "1.0.1.0.1003" → width "0.0.0.0.1".
+ * (L10) — "1.0.1.0.1003" → width "0.0.0.0.1".
  * @param {string} addr
  * @returns {{start: string, width: string}}
  */
@@ -277,5 +276,5 @@ export function commonsType(ty) {
   return { ordinal: rest[0], sub: rest.slice(1) };
 }
 
-/** the wire's display convention for an account's label where it publishes no name: the address itself (R44 — never a name alone) */
+/** the wire's display convention for an account's label where it publishes no name: the address itself (R44) */
 export const labelOf = (/** @type {string} */ account) => account;
