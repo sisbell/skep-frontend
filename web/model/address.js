@@ -91,6 +91,23 @@ export const accountOf = (key) => {
 };
 
 /**
+ * The account directly above an account, by the address grammar: its user
+ * field's last component dropped — "1.0.1.1" → "1.0.1"; a top-level account
+ * ("1.0.1"), and anything that names no account, → null. The climb a session
+ * authenticates by (wire.md §Sessions: "read it at the account, then at each
+ * account above"; skep-client's `parent_account`).
+ * @param {string} account
+ * @returns {string | null}
+ */
+export const parentAccount = (account) => {
+  const f = fieldsOf(account);
+  return f.length === 2 && f[1].length >= 2 ? f[0].join('.') + '.0.' + f[1].slice(0, -1).join('.') : null;
+};
+
+/** an account's doc 1, at its computable address (AUTH-2.109) — "1.0.1" → "1.0.1.0.1": a credential record is homed in a doc 1 (AUTH-2.127) */
+export const docOneOf = (/** @type {string} */ account) => account + '.0.1';
+
+/**
  * The trunk document an address lies under: "1.0.1.0.3.2" → "1.0.1.0.3";
  * "1.0.1.0.3.0.2.1" → "1.0.1.0.3"; an account or node → null.
  * @param {string} key

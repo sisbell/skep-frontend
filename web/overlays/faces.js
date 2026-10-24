@@ -397,7 +397,7 @@ function ownWords(addr, at) {
   return {
     addr: at && at.span && at.span.addr === addr ? null : addr,
     head: { id: 'F.corner.withheld', text: LAYER.withheldBox(d) },
-    arm: entitlementArm(REC.reader(), LAYER.ownerAccount(d)),
+    arm: entitlementArm(REC.reader(), REC.ownerAccount(d)),
     clause: LAYER.clauseOf(addr),
   };
 }

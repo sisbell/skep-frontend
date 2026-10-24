@@ -73,6 +73,8 @@
 // lists its several there (O-ANATOMY's `fromSymbol`; P44), a target of its
 // own beside the run, whose act stays C-39's face;
 // the presence indicator's ⟡ asks to see the links;
+// a byline's cut label opens whole over what is beside it, and the act again
+// closes it (FP-34; T-LAYER's `openLabel`);
 // a run's hairline label goes to its source carrying the run, marked where
 // the source's current text holds it (foundations §2.3's carry rule; P43);
 // the scene-offer opens the scene;
@@ -104,7 +106,7 @@
 // selection.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
-// Rules: FP-1, FP-2, FP-9, FP-21, FP-24, FP-25, FP-26.
+// Rules: FP-1, FP-2, FP-9, FP-21, FP-24, FP-25, FP-26, FP-34.
 
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
@@ -320,6 +322,9 @@ function clickText(target) {
   if (hair) { const h = /** @type {HTMLElement} */ (hair), run = runOf(h); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: run, site: run ? { span: run } : null }); return true; }
   const offer = target.closest('.offer');
   if (offer) { const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return true; }
+  // a byline's cut label opens whole on its act, and closes on it again (FP-34)
+  const label = target.closest('.slot[data-cut]');
+  if (label) { const art = /** @type {HTMLElement | null} */ (label.closest('article')), addr = art ? art.dataset.addr || '' : ''; if (addr) LAYER.openLabel(addr); return true; }
   const pointer = target.closest('.clause[data-home]');
   if (pointer) {
     const p = /** @type {HTMLElement} */ (pointer), home = p.dataset.home, holder = /** @type {HTMLElement | null} */ (p.closest('[data-withheld]')), run = holder ? runOf(holder) : null;

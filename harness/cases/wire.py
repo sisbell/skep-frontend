@@ -68,7 +68,7 @@ def run(ctx):
     r.figures['cold_open'] = {'calls': boot.get('coldOpenCalls'), 'bytes': boot.get('coldOpenBytes'), 'ms': boot.get('coldOpenMs'),
                               'places_bytes': boot.get('placesBytes'), 'places_docs': boot.get('placesDocs'), 'deepest_depth': boot.get('deepestDepth'),
                               'first_settle_s': ctx.env.get('first_settle_s')}
-    r.check(boot.get('coldOpenCalls') == ['boards', 'session', 'fingerprint', 'health', 'probe', 'places'], 'the cold open\'s six calls in order', boot.get('coldOpenCalls'))
+    r.check(boot.get('coldOpenCalls') == ['boards', 'fingerprint', 'session', 'health', 'probe', 'places'], 'the cold open\'s six calls in order — the key store read before the session, so the one line names the key the session opens with from its first frame (FP-34)', boot.get('coldOpenCalls'))
     # the provider's log for this run so far: the dials the cold open caused
     log = ctx.provider_log()
     run_rows = [e for e in log if e['seq'] > ctx.seq0]

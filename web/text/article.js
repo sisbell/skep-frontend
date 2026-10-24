@@ -2,7 +2,19 @@
 // state handed in (the structure record §3.2 "T-ARTICLE"). Layer 2. PURE: a
 // function of values (FP-8); no DOM, no state.
 // The head (the address, the state line, the byline — never a name alone,
-// R44 — the presence indicator with its ⟡); the blocks with their marks —
+// R44 — the presence indicator with its ⟡); THE BYLINE (foundations §2.1's
+// account row; FP-34; issue #208's design decision: "A slot never shows its
+// template placeholder"): its owner's address, then its SLOTS, each a box of
+// its own width whatever it shows — the device label's, and on a byline not
+// the reader's own the fingerprint cue's (§2.1: "no cue on the reader's own
+// account") — filled from the owner's facts as the page holds them (M-REC's
+// `accountKey`, handed in as `keyOf`): the device-flagged genesis entry's
+// label, cut to its box on a word's end and whole on its act and in its
+// accessible name, and its fingerprint's cue; an empty box while they are
+// read; else the cause's words, said once where one cause empties both
+// slots; each slot named by its role and what it shows (`bylineOf`); the
+// plan's line the same whatever they show, so nothing beside them moves;
+// the blocks with their marks —
 // the selection (a byte span: every block it touches is marked, the
 // platform's highlight showing the bytes themselves) and the focus (a
 // block), each by `blockMarks`, the rule T-LAYER marks a standing article by,
@@ -112,11 +124,11 @@
 // whoever is looking — so a paste never joins text across an item.
 // Carries: the wireframe's §16 `articleHTML`, `withheldBlock`.
 // Rules: FP-1, FP-2, FP-8, FP-10 (reads LK/selection/focus as values), FP-21,
-// FP-22, FP-24, FP-26, FP-30.
+// FP-22, FP-24, FP-26, FP-30, FP-34.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
 import { t, plural } from '../strings.js';
-import { textOf } from '../model/records.js';
+import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
 import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm, headingSize, breakBetween, isSpace, gapOf, layoutOf, heightOf, wrap } from '../plane/layout.js';
@@ -126,6 +138,8 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
 /** @typedef {import('../model/records.js').Stretch} Stretch */
 /** @typedef {import('../model/records.js').Origin} Origin */
 /** @typedef {import('../model/records.js').Reader} Reader */
+/** @typedef {import('../model/records.js').AccountFacts} AccountFacts */
+/** @typedef {import('../model/records.js').RecordValue} RecordValue */
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../plane/register.js').Mark} Mark */
 /** @typedef {import('./span.js').Span} Span */
@@ -148,10 +162,9 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {boolean} notebook the venue
  * @property {boolean} scene the scene-mode variant: a reading scene's pane's article — no scene-offer, and no mark a control
  * @property {Map<string, 'edition' | 'draft' | 'unknown'>} originKinds the kind of each origin document (for C-33)
- * @property {(doc: string) => string} originOwner the owner account of an origin document, by the one rule the byline's owner is found by (T-LAYER's `ownerAccount`): the owner a withheld run's placeholder names (R56)
+ * @property {(doc: string) => string} originOwner the owner account of an origin document, by the one rule the byline's owner is found by (M-REC's `ownerAccount`): the owner a withheld run's placeholder names (R56)
  * @property {(doc: string) => (Clause | null)} clauseOf C-67's clause beneath a withheld run of an origin document, decided over what the page holds of the origin's edition claims (T-LAYER's `clauseOf`, by `editionClause`); null where nothing renders in its place
- * @property {string | null} deviceLabel the owner's device label where known
- * @property {string | null} ownerFingerprint the owner's device key fingerprint where known
+ * @property {(account: string) => (AccountFacts | undefined)} keyOf an account's byline facts as the page holds them (M-REC's `accountKey`): its device key, or why its byline names none; undefined while they are read
  * @property {number | null} [members] the chain's member count as its box's document holds it (M-PUMP's probe records it there, every version sharing the count): what the corner's version statement reads at a version, its own record holding none; absent, the document's own
  * @property {number | null} [read] a reading scene's pane's corner act, the one its Enter takes: the version it reads in the pane's place (SC; issue #160's design decision: "The corner's 'read version 4' replaces that pane's text inside the scene") — the newer one arrived, or the one the act left; absent or null, none
  * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; issue #160: "the pane says so if version 4 lacks it"); absent or null, none
@@ -162,9 +175,111 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @typedef {Object} Head — the head's lines
  * @property {string} addr
  * @property {string} state the state line
- * @property {string} by the byline
+ * @property {Byline} byline the byline
  * @property {string} presence the presence line, '' where no link touches
  */
+
+/**
+ * @typedef {Object} Slot — one slot of a byline (FP-34): a box of its own width, what it shows in it, and its accessible
+ * name
+ * @property {'label' | 'fingerprint'} role the device label's slot, or the fingerprint cue's
+ * @property {number} ch its box's width, in characters of the head's face
+ * @property {'value' | 'pending' | 'cause'} state it shows its value; it is read, an empty box; it says why it can show none
+ * @property {string} shows the words its box shows: its value — a label cut to its box — or the cause's; none while it is read, or where a slot beside it says its cause (`Byline.once`)
+ * @property {string} whole its value whole where `shows` cuts it, else `shows` — the cause's words where it says why
+ * @property {string} cause the string id of the cause's words; '' where it shows its value or is read
+ * @property {string} told what its accessible name says it shows, after its role (`L.slot.named`): its value whole, the cause's words, or that it is being read
+ */
+
+/**
+ * @typedef {Object} Byline — the head's byline (`bylineOf`)
+ * @property {string} owner the owner's address
+ * @property {Slot[]} slots the device label's slot, then — on a byline not the reader's own — the fingerprint cue's
+ * @property {boolean} once one cause empties both slots: it is said once, in the first
+ */
+
+/** the device label's slot, in characters of the head's face (FP-34): a label the box does not hold is cut to it */
+export const LABEL_CH = 24;
+/** the fingerprint cue's slot, in characters of the head's face: the cue's own width (`fingerprintCue`) */
+export const CUE_CH = fingerprintCue('0'.repeat(64)).length;
+/** the separator between a byline's owner and its slots, and between its slots */
+const BY_SEP = ' · ';
+
+/** each cause's words in the strings table (FP-34: "Causes that have no words yet get their own in the copy refresh") */
+const CAUSE_WORDS = /** @type {const} */ ({
+  unsigned: 'F.slot.unsigned', 'by-reference': 'L.slot.by-reference', 'not-recorded': 'F.slot.not-recorded',
+  withheld: 'F.corner.withheld', unreachable: 'F.daemon.unreachable', unread: 'L.slot.unread',
+});
+
+/**
+ * A label cut to a slot's box (FP-26: a name is "never cut mid-word"; issue #208's design decision: "A label too long for
+ * the box is cut and shown whole on its act"): the label whole where the box holds it; else the longest run of it the box
+ * holds with an ellipsis after it, ending at a word's end — before a space, or after a hyphen, an underscore or a period;
+ * where its first word alone overruns the box, as many of its characters as the box holds with the ellipsis.
+ * @param {string} label
+ * @param {number} ch the box's width, in characters
+ * @returns {string}
+ */
+export function cutTo(label, ch) {
+  const chars = [...label];
+  if (chars.length <= ch) return label;
+  const room = ch - 1;
+  let end = 0;
+  for (let i = 1; i <= room; i++) if (chars[i] === ' ' || '-_.'.includes(chars[i - 1])) end = i;
+  return chars.slice(0, end || room).join('').trimEnd() + '…';
+}
+
+/**
+ * THE BYLINE (see the head; FP-34): the owner's address and its slots — the device label's, and the fingerprint cue's
+ * where the byline is not the reader's own (foundations §2.1: "no cue on the reader's own account") — each read from the
+ * owner's facts as the view holds them (`keyOf`): its value — the label cut to its box (`cutTo`), "no label" where the
+ * genesis entry carries none, the fingerprint's cue (`fingerprintCue`); an empty box while they are read; else the
+ * cause's words (`CAUSE_WORDS`), a withheld read naming its owner, said once where it empties both slots. Each slot's
+ * accessible name gives its role and what it shows — that it is being read, while it is (`told`).
+ * @param {string} owner
+ * @param {ArticleView} v
+ * @returns {Byline}
+ */
+export function bylineOf(owner, v) {
+  const facts = owner ? v.keyOf(owner) : undefined;
+  /** @returns {Slot} */
+  const slot = (/** @type {'label' | 'fingerprint'} */ role) => {
+    const ch = role === 'label' ? LABEL_CH : CUE_CH;
+    if (facts === undefined) return { role, ch, state: 'pending', shows: '', whole: '', cause: '', told: t('L.slot.reading') };
+    if ('cause' in facts) {
+      const id = CAUSE_WORDS[facts.cause], words = t(id, { owner: facts.owner || owner });
+      return { role, ch, state: 'cause', shows: words, whole: words, cause: id, told: words };
+    }
+    if (role === 'fingerprint') { const cue = fingerprintCue(facts.fingerprint); return { role, ch, state: 'value', shows: cue, whole: cue, cause: '', told: cue }; }
+    if (facts.label === null) { const words = t('L.slot.unlabelled'); return { role, ch, state: 'cause', shows: words, whole: words, cause: 'L.slot.unlabelled', told: words }; }
+    return { role, ch, state: 'value', shows: cutTo(facts.label, ch), whole: facts.label, cause: '', told: facts.label };
+  };
+  const own = !!v.reader.account && v.reader.account === owner;
+  const slots = own ? [slot('label')] : [slot('label'), slot('fingerprint')];
+  const once = slots.length === 2 && facts !== undefined && 'cause' in facts;
+  if (once) slots[1] = { ...slots[1], shows: '' };
+  return { owner, slots, once };
+}
+
+/** the room a byline's slots take, in characters of the head's face: each slot's box and the separators between them, whatever they show */
+const slotsCh = (/** @type {Byline} */ by) => by.slots.reduce((n, s) => n + s.ch, 0) + BY_SEP.length * (by.slots.length - 1);
+
+/**
+ * A byline as HTML (`bylineOf`): its owner, then its slots in a box of their own width, each a box of its own — a
+ * pending one empty, a cut label carrying its whole, which its act shows over what is beside it (on the plane: T-LAYER's
+ * `openLabel`), and its title — each named by its role and what it shows; the separator between them unseen where one
+ * cause empties both.
+ * @param {Byline} by
+ */
+function bylineHTML(by) {
+  const slots = by.slots.map((s) => {
+    const cut = s.state === 'value' && s.shows !== s.whole;
+    const cls = ['slot', s.state === 'pending' ? 'pending' : '', cut ? 'cut' : ''].filter(Boolean).join(' ');
+    const attrs = `data-slot="${s.role}"${s.cause ? ` data-string="${s.cause}"` : ''}${cut ? ` data-cut="1" title="${esc(s.whole)}"` : ''} role="img" aria-label="${esc(t('L.slot.named', { role: t(s.role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows: s.told }))}" style="width:${s.ch}ch"`;
+    return `<span class="${cls}" ${attrs}>${esc(s.shows)}${cut ? `<span class="whole">${esc(s.whole)}</span>` : ''}</span>`;
+  }).join(`<span class="slot-sep">${esc(BY_SEP)}</span>`);
+  return `<span class="by">${esc(by.owner + BY_SEP)}<span class="slots${by.once ? ' once' : ''}" style="width:${slotsCh(by)}ch">${slots}</span></span>`;
+}
 
 /**
  * @typedef {Object} Opening — what a run's first stretch in a block carries for the run: its boundary and its hairline, and C-33's mark where the run has one
@@ -303,34 +418,9 @@ export const symbolLit = (links, lit) => links.length > 0 && links.every((l) => 
 export const headingLevel = (text) => { const m = /^(#{1,6})\s/.exec(text); return m ? m[1].length : 0; };
 
 /**
- * @typedef {Object} RecordValue — a record atom's value, where its type is one the record rule renders (D13)
- * @property {'skep-enroll' | 'skep-head'} type
- * @property {Array<{alg?: unknown, key?: unknown, label?: unknown, anchor?: unknown}>} keys a genesis record's keys, in the record's own order; none for the head record
- * @property {unknown} position the head record's position
- * @property {string} chain the head record's chain
- */
-
-/**
- * The value a record atom holds, where its type is one the record rule
- * renders — the genesis record `skep-enroll`, the head record `skep-head` —
- * else null: the one reading of an atom the plane's record (`recordOf`), the
- * item rule (`itemOf`) and a copy's stand-in (`recordContents`) share.
- * @param {Block} b
- * @returns {RecordValue | null}
- */
-function recordValue(b) {
-  if (b.kind !== 'atom') return null;
-  /** @type {any} */
-  let rec = null;
-  try { rec = JSON.parse(b.text); } catch { return null; }
-  if (!rec || typeof rec !== 'object' || (rec.type !== 'skep-enroll' && rec.type !== 'skep-head')) return null;
-  const keys = Array.isArray(rec.keys) ? rec.keys.filter((/** @type {unknown} */ k) => !!k && typeof k === 'object') : [];
-  return { type: rec.type, keys, position: rec.position ?? '', chain: String(rec.chain || '') };
-}
-
-/**
  * The record rule: a record atom that names its type renders as the record
- * it is (D13) — the genesis record to its account's owner and to a reader;
+ * it is (D13), its value read by M-REC's `recordValue` — the genesis record to
+ * its account's owner and to a reader;
  * the head record `skep-head`; any other atom "not rendered" with its width.
  * The plane draws it so, and the ARIA mirror's item at it says the same
  * (N-WALK; R94).
@@ -384,7 +474,8 @@ const ITEM_WORDS = /** @type {const} */ ({ record: 'L.item.record', reference: '
  * and null for a paragraph, whose text is the document's own. The ARIA
  * mirror's item at the block (N-WALK) and a copy's stand-in in its place
  * (`copyText`) both read it, so what is announced and what is pasted never
- * part; its record is the one the plane renders as a record (`recordValue`).
+ * part; its record is the one the plane renders as a record (M-REC's
+ * `recordValue`).
  * @param {Block} b
  * @returns {ItemKind | null}
  */
@@ -478,7 +569,7 @@ export function entitlementArm(reader, owner) {
  * @property {{type: string | null, from: EndRef[]} | null} link the link as `read_link` answered it — its type as the page reads every link's, the type slot's first address — or null where unread
  * @property {string} home the document the claim resides in, from its address (M-ADDR's `homeOf`)
  * @property {boolean | null} published whether the home is published (`doc_metadata`): false where a read of it was refused `withheld` or `doc_not_registered`, null where none answered yet
- * @property {string} claimant the home's owner, by the one owner rule (T-LAYER's `ownerAccount`): who claims
+ * @property {string} claimant the home's owner, by the one owner rule (M-REC's `ownerAccount`): who claims
  * @property {boolean} failed a read its admission waits on failed — its link's, or its home's metadata — refused for a reason that says nothing of what it reads, or not answered, and unanswered since (M-REC's `readFailed`)
  */
 
@@ -865,23 +956,21 @@ function segmentsOf(b, d, v, labelled, standing) {
 }
 
 /**
- * The head's lines: the address, the state line, the byline, and the
- * presence line where links touch.
+ * The head's lines: the address, the state line, the byline (`bylineOf`),
+ * and the presence line where links touch.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} owner
  * @returns {Head}
  */
 function headOf(d, v, owner) {
-  const cue = v.ownerFingerprint ? fingerprintCue(v.ownerFingerprint) : '⟨fingerprint⟩';
-  const label = v.deviceLabel || '⟨device label⟩';
   const published = d.meta ? d.meta.published : d.kind === 'edition';
   const state = d.refused === 'withheld' ? t('F.corner.withheld', { owner })
     : d.refused === 'unregistered' ? t('B1.doc_not_registered', { address: d.addr })
     : published ? t('B1.state-line') : t('F.label.draft');
   const touching = v.marks.length;
   const presence = touching ? (touching === 1 ? t('B1.presence.1') : t('B1.presence', { n: touching })) : '';
-  return { addr: d.addr, state, by: `${owner} · ${label} · ${cue}`, presence };
+  return { addr: d.addr, state, byline: bylineOf(owner, v), presence };
 }
 
 /**
@@ -1036,7 +1125,7 @@ function segHTML(s, v) {
 export function articleHTML(d, v, ownerAccount) {
   const w = walk(d, v, ownerAccount);
   const hd = w.head;
-  let h = `<div class="hd"><span class="addr">${esc(hd.addr)}</span><span class="st">${esc(hd.state)}</span><span class="by">${esc(hd.by)}</span>`;
+  let h = `<div class="hd"><span class="addr">${esc(hd.addr)}</span><span class="st">${esc(hd.state)}</span>${bylineHTML(hd.byline)}`;
   if (hd.presence) h += `<span class="pres"><span class="sym reveal" data-reveal="${esc(d.addr)}"${control(v.scene)}>⟡</span> ${esc(hd.presence)}</span>`;
   h += `</div>`;
   if (!w.parts) return h;
@@ -1103,6 +1192,15 @@ const runSymbol = (k, n) => {
 /** an inline-block's width in characters of the body's face, as P-LAY's `wrap` sets it */
 const boxWidth = (/** @type {Piece} */ p) => (p.lead + p.trail) / CHAR_W + [...p.text].length * p.size;
 /**
+ * A byline's pieces (`bylineHTML`): its owner and the separator, then its slots' box, one inline-block as wide as every
+ * slot and separator in it — its characters no-break spaces, for it sets its width alone — so its line is the same whatever the
+ * slots show, read or not (FP-34: "The value fills the box and nothing beside it moves").
+ * @param {Byline} by
+ * @param {number} k the head's size, in the body's em
+ * @returns {Piece[]}
+ */
+const bylinePieces = (by, k) => [piece(by.owner + BY_SEP, k), { text: ' '.repeat(slotsCh(by)), size: k, lead: 0, trail: 0, box: true, own: false }];
+/**
  * A row of the plan.
  * @param {Row['kind']} kind
  * @param {number | null} pos the block it opens
@@ -1155,7 +1253,7 @@ export function articlePlan(d, v, ownerAccount) {
   const H = MEASURE.head, gap = MEASURE.gap;
   const joined = /** @type {const} */ ({ keep: 'joined' });
   /** @type {Row[]} */
-  const rows = [row('head', null, 1, [piece(w.head.addr, 1)]), row('head', null, H, [piece(w.head.state, H)], joined), row('head', null, H, [piece(w.head.by, H)], joined)];
+  const rows = [row('head', null, 1, [piece(w.head.addr, 1)]), row('head', null, H, [piece(w.head.state, H)], joined), row('head', null, H, bylinePieces(w.head.byline, H), joined)];
   if (w.head.presence) rows.push(row('head', null, H, [symbol(H), piece(' ' + w.head.presence, H)], joined));
   if (!w.parts) return rows;
   for (const p of w.parts) {

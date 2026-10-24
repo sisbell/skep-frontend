@@ -56,7 +56,11 @@
 // writes reads state 2, naming the label of the key it is opened with — the
 // key bound here for its principal, else the store's one key (M-REC's
 // `device`) — so a mutant that reads every session as state 2, or decides by
-// a key bound at this board, turns red. The sign-in act bears
+// a key bound at this board, turns red; where that key cannot be named, its
+// slot says why in its own words — two keys bound here, an empty store, a
+// store not read, a key with no label — never its template placeholder
+// (FP-34; issue #208: a mutant that shows "⟨device label⟩" turns red). The
+// sign-in act bears
 // its id in the guest's line and in the death arm's, as Back does, so the
 // session's face standing at it finds it again as the line is rebuilt
 // (O-HOST's anchor) — a mutant that drops the id from either arm turns red.
@@ -451,6 +455,34 @@ test('the session\'s own `writes` decides the acting-as segment: the keyless ses
       REC.setSession({ session: 's-3', principal: 1, account: '1.0.1', writes: true });
       const seg = LINE.actingSegment();
       assert.deepEqual([seg.state, seg.words], [2, t('F.acting-as', { account: '1.0.1', N: 1, 'device label': label, origin: O })], `a session that writes over ${holds}: state 2, naming ${label}`);
+      assert.ok(seg.html.includes(`<span class="slot" data-slot="label" role="img" aria-label="${esc(t('L.slot.named', { role: t('L.slot.device-label'), shows: label }))}">${esc(label)}</span>`), `over ${holds}: the device label's slot, named by its role and its label`);
+    }
+  } finally {
+    REC.takeKeyStore([], O); REC.setBoard(was.board); REC.setSession(was.session);
+  }
+});
+
+test('the one line\'s device label never shows its template placeholder: where the key the session was opened with cannot be named, its slot says why — two keys bound here for the principal, an empty store, a store the page could not read, a key with no label — each in its own words, named by its role and them (FP-34; issue #208)', () => {
+  const was = { board: REC.board(), session: REC.session() };
+  const O = 'http://127.0.0.1:8642';
+  /** a key of the store as `fingerprint` answers it, bound here for principal 1 */
+  const key = (/** @type {string} */ fingerprint, /** @type {string} */ label) => ({ fingerprint, label, bindings: [`${O} principal 1 account 1.0.1`], unbound: false, payload: null });
+  try {
+    REC.setBoard({ board: 'b-1', name: '', origin: O });
+    REC.setSession({ session: 's-3', principal: 1, account: '1.0.1', writes: true });
+    /** @type {Array<[string, ReturnType<typeof key>[] | null, string]>} each store, and the string its slot says */
+    const stores = [
+      ['two keys bound here for the principal', [key('e4272902a11439e5', 'dev-notebook'), key('5b1d77e0c9f2a3b4', 'second-device')], 'L.slot.key-untold'],
+      ['an empty store', [], 'L.slot.key-untold'],
+      ['a store the page could not read', null, 'L.slot.store-unread'],
+      ['a key with no label', [key('e4272902a11439e5', '')], 'L.slot.unlabelled'],
+    ];
+    for (const [holds, store, id] of stores) {
+      REC.takeKeyStore(store, O);
+      const seg = LINE.actingSegment();
+      assert.deepEqual([seg.state, seg.words], [2, t('F.acting-as', { account: '1.0.1', N: 1, 'device label': t(id), origin: O })], `${holds}: state 2, its slot saying "${t(id)}"`);
+      assert.ok(seg.html.includes(`<span class="slot" data-slot="label" data-string="${id}" role="img" aria-label="${esc(t('L.slot.named', { role: t('L.slot.device-label'), shows: t(id) }))}">${esc(t(id))}</span>`), `${holds}: the slot carries its cause's string and its name: ${seg.html}`);
+      assert.ok(!/⟨[^⟩]*⟩/.test(seg.html) && !/⟨[^⟩]*⟩/.test(seg.words), `${holds}: no ⟨token⟩ in the line`);
     }
   } finally {
     REC.takeKeyStore([], O); REC.setBoard(was.board); REC.setSession(was.session);

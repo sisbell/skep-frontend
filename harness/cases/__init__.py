@@ -17,6 +17,7 @@ import hashlib
 import importlib
 import json
 import os
+import re
 import struct
 import subprocess
 import time
@@ -102,6 +103,215 @@ def unit_span(addr):
     """an address's unit span: the address, and a width of as many components, zeros then 1 (wire.md)"""
     n = len(addr.split('.'))
     return {'start': addr, 'width': '.'.join(['0'] * (n - 1) + ['1'])}
+
+
+# ---- the byline's facts and the placeholder sweep (issue #208; FP-34) ------------------------------------------------
+
+ENROLL_CLASS = '1.1.0.1.0.1.0.3.1'  # wire.md §Credentials: enroll — `from` the record's positions in its home, `to` the subject account
+# each cause a byline names in its slots' place, by the string the page says it in (the strings table's ids)
+CAUSE_WORDS = {'unsigned': 'F.slot.unsigned', 'by-reference': 'L.slot.by-reference', 'not-recorded': 'F.slot.not-recorded',
+               'withheld': 'F.corner.withheld', 'unreachable': 'F.daemon.unreachable', 'unread': 'L.slot.unread'}
+
+
+def parent_account(account):
+    """the account directly above an account: its user field less its last component; None above a top-level one"""
+    f = fields(account)
+    return '.'.join(f[0]) + '.0.' + '.'.join(f[1][:-1]) if len(f) == 2 and len(f[1]) >= 2 else None
+
+
+def tumbler(addr):
+    """an address's components, for address order"""
+    return [int(x) for x in addr.split('.')]
+
+
+def cue_of(fingerprint):
+    """a fingerprint's cue: its first four groups of four hex digits, spaced (foundations §2.1's account row)"""
+    return ' '.join(fingerprint[i:i + 4] for i in range(0, 16, 4))
+
+
+def byline_facts(ctx, account):
+    """An account's byline facts, decided here apart from the page's by the harness's own token-free reads of the board (R22's
+    naming input: "the sole DEVICE-FLAGGED entry of its GENESIS ENROLLMENT"): its credential table first — with no key
+    enrolled and none retired, the tables above it, by reference where one holds a key and unsigned where none does; else
+    the enrollment records whose own `to` names it alone, the genesis the first homed outside its own account, else the
+    lowest-addressed homed in it, by home then by link; its record atom placed in its home's text through the home's V→I
+    image and read; the record's one entry flagged a device — its label, None where it carries none, and its fingerprint.
+    Not recorded where no genesis stands, the image places no byte of it, or the record names not exactly one device; a
+    refusal its cause. Answers {'label', 'fingerprint'} or {'cause'[, 'owner']}"""
+    def why(answer, about):
+        return {'cause': 'withheld', 'owner': account_of(about) or about} if answer.get('code') == 'withheld' else {'cause': 'unread'}
+    ks = ctx.daemon_op({'op': 'key_set', 'account': account})
+    if ks.get('resp') != 'key_set':
+        return why(ks, account)
+    if not ks.get('enrolled') and not ks.get('retired'):
+        up = parent_account(account)
+        while up:
+            above = ctx.daemon_op({'op': 'key_set', 'account': up})
+            if above.get('resp') != 'key_set':
+                return why(above, up)
+            if above.get('enrolled'):
+                return {'cause': 'by-reference'}
+            up = parent_account(up)
+        return {'cause': 'unsigned'}
+    found = ctx.daemon_op({'op': 'find_links_ftt', 'q': {'from': 'any', 'home': 'any', 'to': [unit_span(account)], 'ty': [unit_span(ENROLL_CLASS)]}})
+    if found.get('resp') != 'addrs':
+        return why(found, account)
+    records = []
+    for link in found.get('addrs') or []:
+        v = ctx.daemon_op({'op': 'read_link', 'a': link})
+        if v.get('resp') != 'link_value':
+            return why(v, home_of(link) or link)
+        slots = (v.get('link') or {}).get('slots') or []
+        frm, to = (list(slots) + [[], []])[:2]
+        if len(to) == 1 and to[0]['start'] == account and frm and len(fields(frm[0]['start'])) >= 4:
+            records.append((account_of(home_of(link)) == account, tumbler(home_of(link)), tumbler(link), home_of(link), frm[0]['start']))
+    if not records:
+        return {'cause': 'not-recorded'}
+    _, _, _, home, atom = min(records)
+    span = ctx.daemon_op({'op': 'retrieve_doc_v_span_set', 'doc': home})
+    if span.get('resp') != 'span_set':
+        return why(span, home)
+    extent = next((int(x['width'].split('.')[-1]) for x in span.get('set') or [] if x['start'].startswith('1.')), 0)
+    image = ctx.daemon_op({'op': 'image', 'd': home, 'region': [{'start': '1.1', 'width': '0.%d' % extent}]}) if extent else {'resp': 'runs', 'runs': []}
+    if image.get('resp') != 'runs':
+        return why(image, home)
+    prefix, ordinal, at, pos = atom.rsplit('.', 1)[0], int(atom.rsplit('.', 1)[1]), None, 1
+    for run in image.get('runs') or []:
+        i_prefix, i_ordinal, width = run['i_start'].rsplit('.', 1)[0], int(run['i_start'].rsplit('.', 1)[1]), int(run['width'].split('.')[-1])
+        if at is None and i_prefix == prefix and i_ordinal <= ordinal < i_ordinal + width:
+            at = pos + ordinal - i_ordinal
+        pos += width
+    if at is None:
+        return {'cause': 'not-recorded'}
+    got = ctx.daemon_op({'op': 'retrieve_v', 'specs': [{'doc': home, 'span': {'start': '1.%d' % at, 'width': '0.1'}}]})
+    if got.get('resp') != 'delivery':
+        return why(got, home)
+    item = (got.get('items') or [{}])[0]
+    try:
+        record = json.loads(item['atom']) if isinstance(item.get('atom'), str) else None
+    except ValueError:
+        record = None
+    keys = record.get('keys') if isinstance(record, dict) and record.get('type') == 'skep-enroll' and isinstance(record.get('keys'), list) else []
+    devices = [k for k in keys if isinstance(k, dict) and not k.get('anchor')]
+    if len(devices) != 1 or not isinstance(devices[0].get('alg'), str) or not isinstance(devices[0].get('key'), str):
+        return {'cause': 'not-recorded'}
+    label = devices[0].get('label')
+    return {'label': label if isinstance(label, str) and label else None, 'fingerprint': key_fingerprint(devices[0]['alg'], devices[0]['key'])}
+
+
+def byline_expected(ctx, facts, own):
+    """what a byline's slots show and are named, from an account's facts (`byline_facts`) as the page's strings say them:
+    the device label's slot — its label, or the words for a label not given — and, on a byline not the reader's own, the
+    fingerprint cue's; where a cause names none, its words in the first slot and the second empty, each slot named by its
+    role and the cause's words"""
+    t = lambda sid, values=None: ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(values or {})))
+    named = lambda role, shows: t('L.slot.named', {'role': t('L.slot.device-label' if role == 'label' else 'L.slot.fingerprint'), 'shows': shows})
+    if 'cause' in facts:
+        words = t(CAUSE_WORDS[facts['cause']], {'owner': facts.get('owner', '')})
+        shows = [words] if own else [words, '']
+        return {'shows': shows, 'names': [named('label', words)] + ([] if own else [named('fingerprint', words)])}
+    label = facts['label'] or t('L.slot.unlabelled')
+    shows = [label] if own else [label, cue_of(facts['fingerprint'])]
+    return {'shows': shows, 'names': [named('label', label)] + ([] if own else [named('fingerprint', shows[1])])}
+
+
+# a byline as the page shows it in an article's head (`%s` the article's selector): its owner's words and each slot — the words
+# its box shows, its own text apart from the whole a cut label carries for its act, the whole, and its accessible name
+BYLINE_SHOWN = '''((sel) => { const by = document.querySelector(sel + ' .hd .by'); if (!by) return null;
+  const own = (e) => { const c = e.cloneNode(true); c.querySelectorAll('.whole').forEach((w) => w.remove()); return c.textContent; };
+  return {owner: by.firstChild && by.firstChild.nodeType === 3 ? by.firstChild.data : null,
+          slots: [...by.querySelectorAll('.slot')].map((s) => ({role: s.dataset.slot, shows: own(s), whole: (s.querySelector('.whole') || {}).textContent || null,
+                                                               name: s.getAttribute('aria-label'), pending: s.classList.contains('pending')}))}; })(%s)'''
+
+
+def byline_shown(ctx, article):
+    """a byline as the page shows it in the article a selector names (`BYLINE_SHOWN`); None where no head stands"""
+    return ctx.js(BYLINE_SHOWN % json.dumps(article))
+
+
+# THE PLACEHOLDER SWEEP's page half (issue #208's design decision: "A slot never shows its template placeholder"; "Test for the
+# placeholders themselves, not for angle brackets, because some deliberate marks use brackets"): every placeholder the strings
+# table's templates hold — each ⟨token⟩ of each template, matched whole, never a bracket alone — that the page shows or tells
+# now — in its text, every text node in the body; in the attributes that name or describe an element to a person or to
+# assistive technology; in a field's value; in the labels the plane's canvas set — with the documents' own words taken out
+# first: the text of a block in an article, wherever an article stands, and every stretch the page quotes of what a document
+# holds — a span between quotes a held text holds, a text whole that opens a held text or label, cut or not (the mirror quotes
+# blocks and labels, the LEAP box and the trail list show labels). Each hit with its source, its token, its context and where it
+# stands. `window.__gateTokens` and `window.__gateStrip` are kept for the AX tree's names (`placeholder_sweep`)
+SWEEP_PAGE = r'''(async () => {
+  const R = await import('./model/records.js'), S = await import('./strings.js');
+  const TOKENS = [...new Set(Object.values(S.STRINGS).flatMap((e) => [...e.text.matchAll(/⟨[^⟩]*⟩/g)].map((m) => m[0])))];
+  window.__gateTokens = TOKENS;
+  const fold = (s) => String(s || '').replace(/\s+/g, ' ').trim(), cut = (s) => s.replace(/…$/, '').trim();
+  const corpus = [];
+  for (const d of R.docs()) { for (const b of d.blocks || []) if (b.text) corpus.push(fold(b.text)); if (d.label) corpus.push(fold(d.label)); }
+  for (const p of R.places()) if (p.label) corpus.push(fold(p.label));
+  const holds = (s) => !!s && corpus.some((c) => c.includes(s)), opens = (s) => !!s && corpus.some((c) => c.startsWith(s));
+  /** a text with the documents' own words it quotes taken out: the whole where it opens a held text or label; the stretch between its outermost quotes, then each quoted stretch, where a held text holds it */
+  const strip = (raw) => {
+    let s = fold(raw);
+    if (opens(cut(s))) return '';
+    for (const [a, b] of [['"', '"'], ['“', '”']]) {
+      const i = s.indexOf(a), j = s.lastIndexOf(b);
+      if (i >= 0 && j > i && holds(cut(fold(s.slice(i + 1, j))))) s = s.slice(0, i + 1) + s.slice(j);
+      s = s.replace(new RegExp(a + '([^' + b + ']*)' + b, 'g'), (m, inner) => (holds(cut(fold(inner))) ? a + b : m));
+    }
+    return s;
+  };
+  window.__gateStrip = (texts) => texts.map((x) => strip(x));
+  const where = (e) => { const parts = []; for (let x = e; x && x !== document.body && parts.length < 4; x = x.parentElement) parts.unshift(x.id ? '#' + x.id : x.tagName.toLowerCase() + (x.classList && x.classList.length ? '.' + [...x.classList].slice(0, 2).join('.') : '')); return parts.join(' > '); };
+  const hits = [];
+  const sweep = (source, raw, at) => {
+    if (!String(raw || '').includes('⟨')) return;
+    const s = strip(raw);
+    for (const token of TOKENS) for (let i = s.indexOf(token); i >= 0; i = s.indexOf(token, i + token.length)) hits.push({source, token, context: s.slice(Math.max(0, i - 32), i + token.length + 32), at});
+  };
+  const chrome = '.hairline, .pubmark, .sym, .edge, .rec';
+  const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) {
+    const p = n.parentElement;
+    if (!p || p.closest('script, style, template')) continue;
+    if (p.closest('article.dtext .run > .sp') && !p.closest(chrome)) continue;
+    sweep('text', n.data, where(p));
+  }
+  for (const e of document.body.querySelectorAll('*')) {
+    for (const a of ['title', 'aria-label', 'aria-description', 'aria-roledescription', 'aria-placeholder', 'aria-valuetext', 'placeholder', 'alt']) if (e.hasAttribute(a)) sweep('attr ' + a, e.getAttribute(a), where(e));
+    if ((e.tagName === 'INPUT' || e.tagName === 'TEXTAREA') && e.value) sweep('value', e.value, where(e));
+  }
+  for (const l of window.__skep.labels()) for (const line of l.lines || []) sweep('canvas', line.text, l.kind + ' ' + l.place);
+  return hits;
+})()'''
+
+# the AX tree's roles whose text is the DOM's own, swept there: a text run, and a listbox option, whose name is its row's text nodes
+SWEEP_AX_SKIP = {'StaticText', 'InlineTextBox', 'option'}
+
+
+def placeholder_sweep(ctx):
+    """THE PLACEHOLDER SWEEP (issue #208): the page's half (`SWEEP_PAGE`) and the AX tree's — every node's name, description
+    and value but those whose text is the DOM's own, searched for the same tokens of the strings table's templates, the
+    documents' own words taken out as the page's half takes them — where CDP answers the tree, else that half's hits alone
+    and a note. Answers the hits"""
+    hits = ctx.js(SWEEP_PAGE)
+    ax = ctx.drv.ax_tree()
+    if 'error' in ax:
+        return hits + [{'source': 'ax', 'token': None, 'context': 'Accessibility.getFullAXTree did not answer: ' + ax['error'], 'at': None}]
+    found = []
+    for n in ax.get('nodes', []):
+        role = (n.get('role') or {}).get('value')
+        if n.get('ignored') or role in SWEEP_AX_SKIP:
+            continue
+        for k in ('name', 'description', 'value'):
+            v = (n.get(k) or {}).get('value')
+            if isinstance(v, str) and '⟨' in v:
+                found.append((role, k, v))
+    if found:
+        tokens = ctx.js('window.__gateTokens')
+        stripped = ctx.js('window.__gateStrip(%s)' % json.dumps([v for _, _, v in found]))
+        for (role, k, _), s in zip(found, stripped):
+            for token in tokens:
+                for m in re.finditer(re.escape(token), s):
+                    hits.append({'source': 'ax ' + k, 'token': token, 'context': s[max(0, m.start() - 32):m.end() + 32], 'at': role})
+    return hits
 
 # the order the gate runs them in: the two that need no page first, then the
 # wire's cold-open figures before the other classes move the camera; the wire

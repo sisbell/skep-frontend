@@ -141,7 +141,13 @@
 // SELECTION is the platform's own, transient"; D5 §2); and its symbols
 // heavier, in place, where every link one stands for is lit at an arrival
 // (LK's `lit`, T-ARTICLE's `symbolLit`; FP-30), so an arrival sets no line
-// (`markLit`). A span wholly inside a withheld run stands at the run's own
+// (`markLit`). THE BYLINE (FP-34; issue #208's design decision): each
+// article's byline is made from its owner's facts as the model holds them
+// (M-REC's `accountKey`, the view's `keyOf`), never this device's key, and
+// its lines are kept by the article with its slots read, their boxes empty
+// (`layoutKey`), so the facts' arrival — which makes every document its owner
+// owns again (M-REC's revision) — sets no line; a cut label opens whole on
+// its act, marked in place (`openLabel`, `markLabel`). A span wholly inside a withheld run stands at the run's own
 // boxes — its gap's, one for each part of it standing — never at an offset
 // inside the gap (`spanRects`; issue #202's design decision: "Arriving by a
 // link that ends here marks the whole run"). THE LIT BLOCK IS THE
@@ -257,7 +263,8 @@
 // Carries: the wireframe's §16 `mount`/`unmount`/`place`/`S1.frame`; S1's
 // `mount`, `place`, `S1.frame`; `driftSample` and `overlapCheck` become
 // gate hooks (`web/gate/hooks.js` reads `mounted`).
-// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-22, FP-23, FP-24, FP-26.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-22, FP-23, FP-24, FP-26,
+// FP-34.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -272,7 +279,7 @@ import { articleHTML, articlePlan, cornerHTML, blockMarks, symbolLit, editionCla
 import { farSays } from '../beams/held.js';
 import { homeOf, documentOf, memberOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
-import { fingerprintCue, esc } from '../util.js';
+import { esc } from '../util.js';
 import { t } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
@@ -353,6 +360,7 @@ import { t } from '../strings.js';
  * @property {BlockPart[]} marked each block part standing with the block it shows: the elements the selection's and the focus's marks stand on
  * @property {string} markedFor the selection and the focus its blocks are marked for (`marksKey`); '' where a part set since awaits its marks
  * @property {string | null} litFor the links lit its symbols are marked heavier for (`markLit`); null where a part set since awaits its marks
+ * @property {boolean | null} labelFor whether its byline's cut label is marked open (`markLabel`); null where a part set since awaits its mark
  * @property {boolean} legible it takes the pointer: its em stood at P-LOD's readable threshold or above at the last frame no press stood through (`markLegible`)
  */
 
@@ -441,6 +449,8 @@ const panes = new WeakMap();
 const corners = new Map();
 /** @type {Set<string>} the documents whose corner a reader's act opened whole (`openCorner`), until it is closed or leaves */
 const openWhole = new Set();
+/** @type {Set<string>} the documents whose byline's cut label a reader's act opened whole (`openLabel`), until the act again closes it */
+const openLabels = new Set();
 /** @type {Map<string, HeldLabel>} the labels held over mounted articles, by document */
 const helds = new Map();
 /** the measure the layer's style holds (`setMeasure`): what the columns of the articles it lays out are set at; 0 before it holds one */
@@ -541,13 +551,9 @@ export const lineStands = (/** @type {string} */ addr, /** @type {number} */ i) 
  */
 export function mountedLines(addr) { const rec = mounted.get(addr); return rec ? rec.parts.map((p) => ({ column: p.column, first: p.first, end: p.end })) : null; }
 
-/** the article's view state, from the owners' readers and LK */
+/** the article's view state, from the owners' readers and LK: a byline's facts the model's for its owner's account (M-REC's `accountKey`), never this device's key */
 export function viewFor(/** @type {Doc} */ d, scene = false) {
-  const s = REC.session();
   const h = REC.health();
-  const device = REC.device();
-  const ownerRow = REC.ownerOf(d.account || '');
-  const isOwnerYou = !!(s && s.account && d.account === s.account);
   /** @type {Map<string, 'edition' | 'draft' | 'unknown'>} */
   const originKinds = new Map();
   for (const o of d.origins) { const od = REC.doc(o.doc); const p = REC.place(o.doc); originKinds.set(o.doc, p ? p.kind : od.meta ? (od.meta.published ? 'edition' : 'draft') : od.kind); }
@@ -560,13 +566,10 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     localTrust: !!(h && h.auth && h.auth.local_trust),
     notebook: true,
     scene, originKinds,
-    originOwner, clauseOf,
-    deviceLabel: isOwnerYou && device ? device.label : null,
-    ownerFingerprint: isOwnerYou && device ? device.fingerprint : null,
+    originOwner, clauseOf, keyOf: REC.accountKey,
     members: REC.has(boxOf(d.addr)) ? REC.doc(boxOf(d.addr)).members : null,
     cpl: scene ? MEASURE_CPL : measure(),
   };
-  void ownerRow; void fingerprintCue;
   return v;
 }
 
@@ -629,7 +632,7 @@ function folded(d) {
   const key = `${d.rev}:${d.from}:${d.to}:${REC.rev()}:${grev}:${cpl}`;
   const f = folds.get(d.addr);
   if (f && f.key === key) return f.fold;
-  const v = viewFor(d), owner = ownerAccount(d);
+  const v = viewFor(d), owner = REC.ownerAccount(d);
   const now = articlePlan(d, v, owner);
   const m = measured.get(d.addr), set = m && m.key === layoutKey(d, v, owner, cpl) ? m : null;
   const u = LK.utmost(d.addr);
@@ -646,19 +649,23 @@ function folded(d) {
 
 /** no count at a block: what the lines' key reads every block's as */
 const noCount = () => ({ n: 0, social: false });
+/** no byline facts held: what the lines' key reads every byline as — its slots read, their boxes empty */
+const unread = () => undefined;
 
 /**
  * What a document's lines as the platform set them are kept by
  * (`Measured`): its article with no block marked for the selection or the
- * focus and no count in its edges — none of them sets a line, so a count's
- * arrival leaves the lines as they were set (A-254) — at the measure its
- * column was set at.
+ * focus, no count in its edges and its byline's slots read, their boxes
+ * empty — none of them sets a line, so a count's arrival leaves the lines as
+ * they were set (A-254), and so does a byline's facts' (FP-34: "The value
+ * fills the box and nothing beside it moves") — at the measure its column was
+ * set at.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} owner
  * @param {number} cpl
  */
-const layoutKey = (d, v, owner, cpl) => `${cpl}|${articleHTML(d, { ...v, selected: null, focus: null, countAt: noCount }, owner)}`;
+const layoutKey = (d, v, owner, cpl) => `${cpl}|${articleHTML(d, { ...v, selected: null, focus: null, countAt: noCount, keyOf: unread }, owner)}`;
 
 /**
  * The lines of an article with each block that follows positions the
@@ -1354,6 +1361,7 @@ function fill(rec, v, span) {
     rec.blockTops = rec.parts.flatMap((p) => p.tops);
     rec.markedFor = '';
     rec.litFor = null;
+    rec.labelFor = null;
   }
   return added;
 }
@@ -1376,7 +1384,7 @@ function mount(d, v, span, banded) {
   if (!layer || mounted.has(d.addr) || d.from < 0) return null;
   const t0 = performance.now();
   const made = madeFrom(d);
-  const view = viewFor(d), owner = ownerAccount(d), html = articleOf(d, view, owner);
+  const view = viewFor(d), owner = REC.ownerAccount(d), html = articleOf(d, view, owner);
   let measureMs = 0;
   /** @type {HTMLElement | null} */
   let template = null;
@@ -1397,7 +1405,7 @@ function mount(d, v, span, banded) {
   /** @type {Mounted} */
   const rec = {
     el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fold: f, fs: f.fs, corner: { whole: cornerHTML(d, view), compact: cornerHTML(d, view, true) },
-    template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', litFor: null, legible: false,
+    template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', litFor: null, labelFor: null, legible: false,
   };
   mounted.set(d.addr, rec);
   const t2 = performance.now();
@@ -1441,29 +1449,18 @@ function setLines(d, rows, html, blocks, key) {
  */
 function measureAside(d) {
   if (!layer) return;
-  const v = viewFor(d), owner = ownerAccount(d);
+  const v = viewFor(d), owner = REC.ownerAccount(d);
   setLines(d, articlePlan(d, v, owner), articleOf(d, v, owner), d.blocks, layoutKey(d, v, owner, measure()));
 }
 
 /**
- * The owner account of a document: by `effective_owner` where read, else by
- * its metadata where read, else its account. The one rule an owner is named
- * by — an article's byline, each withheld run's origin's (`originOwner`), a
- * withheld document's box (`withheldBox`) — so none of them part.
- */
-export function ownerAccount(/** @type {Doc} */ d) {
-  const row = d.account ? REC.ownerOf(d.account) : undefined;
-  return (row && row.prefix) || (d.meta && d.meta.owner) || d.account || '';
-}
-
-/**
  * The owner account of an origin document, by the one owner rule
- * (`ownerAccount`): the owner a withheld run's placeholder names
+ * (M-REC's `ownerAccount`): the owner a withheld run's placeholder names
  * (T-ARTICLE's `placeholderOf`) — on the plane, in a pane, and in the ARIA
  * mirror's item at the run.
  * @param {string} addr the origin document
  */
-export function originOwner(addr) { return ownerAccount(REC.doc(addr)); }
+export function originOwner(addr) { return REC.ownerAccount(REC.doc(addr)); }
 
 /**
  * C-67's clause beneath a withheld run of an origin (PUB-5.124), by
@@ -1471,7 +1468,7 @@ export function originOwner(addr) { return ownerAccount(REC.doc(addr)); }
  * origin's edition claims: the active view's lookup (M-REC's
  * `editionClaimsOf`) — the claims listed, or that it was refused as withheld
  * or failed — each listed claim's link as read, and its home's publication
- * state and owner — the owner by the one owner rule (`ownerAccount`), as the
+ * state and owner — the owner by the one owner rule (M-REC's `ownerAccount`), as the
  * origin's (`originOwner`), so the pointer follows the claim whose home the
  * origin's owner owns first — and whether a read of either failed, unanswered
  * since (M-REC's `readFailed`). The plane's placeholder, a pane's, the ARIA
@@ -1487,7 +1484,7 @@ export function clauseOf(origin) {
   const claims = Array.isArray(listed) ? listed.map((claim) => {
     const home = homeOf(claim) || claim, h = REC.has(home) ? REC.doc(home) : null, link = REC.link(claim) || null;
     const published = h && h.meta ? h.meta.published : h && h.refused ? false : null;
-    return { claim, link, home, published, claimant: h ? ownerAccount(h) : '', failed: (!link && REC.readFailed(claim)) || (published === null && REC.readFailed(home)) };
+    return { claim, link, home, published, claimant: h ? REC.ownerAccount(h) : '', failed: (!link && REC.readFailed(claim)) || (published === null && REC.readFailed(home)) };
   }) : listed ?? null;
   return editionClause(origin, originOwner(origin), claims);
 }
@@ -1497,14 +1494,14 @@ export function clauseOf(origin) {
  * withheld box: existence and owner, never bytes — in the corner's own words,
  * "withheld · ⟨owner⟩" (foundations §3.1; issue #177's design decision:
  * "'withheld · ⟨owner⟩' stands where its first line stood"), its owner by the
- * one owner rule (`ownerAccount`). The box's first line (P-RENDER), the ARIA
+ * one owner rule (M-REC's `ownerAccount`). The box's first line (P-RENDER), the ARIA
  * mirror's item at the document (N-WALK), a trail entry's words (N-GO's
  * `wordsOf`) and the face a refused read of it conjures (O-FACES's
  * `withheld`) all read it, so what a sighted reader sees and what a screen
  * reader hears never part (R94).
  * @param {Doc} d
  */
-export function withheldBox(d) { return t('F.corner.withheld', { owner: ownerAccount(d) }); }
+export function withheldBox(d) { return t('F.corner.withheld', { owner: REC.ownerAccount(d) }); }
 
 /** a box's address as its label sets it: the address of the version it shows past its region's prefix, led by the separator after the prefix — ".0.9", a pinned version's ".0.9.2", as the address display spells a field past a prefix (F-9; foundations §3.1) */
 export const shortAddr = (/** @type {Doc} */ d) => (d.account ? d.addr.slice(d.account.length) : d.addr);
@@ -1632,6 +1629,37 @@ function markLit(rec, lit) {
     const links = el.dataset.link ? [el.dataset.link] : (el.dataset.links || '').split(' ').filter(Boolean);
     el.classList.toggle('heavier', symbolLit(links, lit));
   }
+}
+
+/**
+ * A byline's cut label opened whole on its act (FP-34; issue #208's design
+ * decision: "A label too long for the box is cut and shown whole on its
+ * act"), or closed again by the act again: the document's article marks its
+ * cut label `open` in place (`markLabel`), and the style sets the whole label
+ * over what is beside it, its box unmoved. APP-INPUT takes the act at the
+ * label on the plane; in a reading scene's pane nothing acts (SC), its title
+ * and its accessible name carrying the label whole.
+ * @param {string} addr
+ */
+export function openLabel(addr) {
+  if (openLabels.has(addr)) openLabels.delete(addr); else openLabels.add(addr);
+  markDirty();
+}
+/** is a document's byline's cut label opened whole (`openLabel`)? */
+export const labelOpened = (/** @type {string} */ addr) => openLabels.has(addr);
+
+/**
+ * Mark a standing article's cut label open where its act opened it, and
+ * closed where it did not (`openLabel`), where that changed since it was last
+ * marked or a part was set since: a class set or taken off, nothing rebuilt,
+ * so no line is set again (FP-12).
+ * @param {Mounted} rec
+ */
+function markLabel(rec) {
+  const on = openLabels.has(rec.d.addr);
+  if (on === rec.labelFor) return;
+  rec.labelFor = on;
+  for (const el of /** @type {HTMLElement[]} */ ([...rec.el.querySelectorAll('.slot.cut')])) el.classList.toggle('open', on);
 }
 
 /**
@@ -1905,7 +1933,7 @@ export function frame(focused = () => false) {
   }
   for (const rec of mounted.values()) place(rec);
   const focus = litFocus(), lit = LK.lit();
-  for (const rec of mounted.values()) { markBlocks(rec, span, focus); markLit(rec, lit); if (!pressed || fresh.includes(rec.d.addr)) markLegible(rec); }
+  for (const rec of mounted.values()) { markBlocks(rec, span, focus); markLit(rec, lit); markLabel(rec); if (!pressed || fresh.includes(rec.d.addr)) markLegible(rec); }
   placeCorners(focused);
   placeHeld();
   if (span && !pressed && (fresh.includes(span.addr) || (owed && sameSpan(owed, span)))) placeAgain(span);
@@ -2627,7 +2655,7 @@ export function sceneArticle(d, as = {}) {
   const el = document.createElement('article');
   el.className = 'dtext scene';
   el.dataset.addr = names;
-  el.innerHTML = articleHTML(shows === d.addr ? d : { ...d, addr: shows }, as.view ?? viewFor(d, true), ownerAccount(d));
+  el.innerHTML = articleHTML(shows === d.addr ? d : { ...d, addr: shows }, as.view ?? viewFor(d, true), REC.ownerAccount(d));
   panes.set(el, { ...madeFrom(d), addr: names });
   return el;
 }
@@ -2638,7 +2666,7 @@ export function sceneArticle(d, as = {}) {
  * @param {Doc} d
  * @returns {import('../plane/layout.js').Row[]}
  */
-export function planOf(d) { return articlePlan(d, viewFor(d), ownerAccount(d)); }
+export function planOf(d) { return articlePlan(d, viewFor(d), REC.ownerAccount(d)); }
 
 /**
  * A pane's corner items (ux-T2: each pane its own), from the view the pane's
@@ -2770,6 +2798,7 @@ export function clear() {
   for (const h of helds.values()) h.el.remove();
   helds.clear();
   openWhole.clear();
+  openLabels.clear();
   if (lost) read.handOff();
 }
 

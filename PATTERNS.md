@@ -353,6 +353,22 @@ fix; nothing here depends on their names.
   face, so a face an act shows stands with the fact from its first
   frame, and the fact never moves the text around it.
 
+## The slot
+
+- **FP-34 A slot shows its value, that it is being read, or why it
+  cannot — never its template's placeholder.** A slot is never dropped
+  for want of its value and never holds another value. While its value
+  is read it stands as an empty box of its own width, and the value
+  fills the box with nothing beside it moving; a value too long for the
+  box is cut there and shown whole on its act. Where the value cannot
+  be had, the slot says why in that cause's own words, never one word
+  for every cause, and neighbouring slots one cause empties say it
+  once. Where the slot does not apply, its state's own words stand in
+  its place. A slot reads only from the board the one line names; on
+  another host's board it shows the address and reads on the reader's
+  act. Its accessible name gives its role and what it shows, pending
+  included.
+
 ## The box
 
 - **FP-22 A box shows one version.** Every version of a document
@@ -487,6 +503,7 @@ last. Each stands until a later decision says it changes it.
 - **#184**: the versions list keeps every member its probe read, and its open end says whether the board ended the chain there — the head's row marked latest, by a shape, only where the board answered that no member follows; else one line in the list's own type saying how far it read and that it is not known to be complete, "then the board stopped answering" where the board did not answer, with "try again" going on from there and nothing resuming by itself — the version being read and the members the feed names past the stop listed "not read" and dated "as last read ⟨when⟩"; while it is not known to be complete, nothing built from it claims a total or a latest
 - **#186**: a withheld origin's edition claims decide one clause beneath the arm of every face naming that origin — a withheld run's and the document's own, never a link address inside it — the pointer as a working link, the quoting form, or nothing where no claim is admitted, a failed read of them worded "edition claims not read"; changes #179: the document's own words carry that clause, not the pointer alone → FP-33
 - **#202**: the ends drawn at a withheld run stand as one symbol beside its notice at every stage, a count after it where they are two or more, and others' ends there are counted in its column's edge; its item in the mirror holds them a level below; the symbol opens the one card or lists the several; Back across a follow made there outlines the whole run, lights its symbol and stands on the run's item → FP-30, FP-21
+- **#208**: a byline's device label and fingerprint are its owner's, the sole device-flagged entry of the account's genesis enrollment, read once per account on its board, the reader's own byline carrying no fingerprint; the one line's device label is the key this device opened the session with, its key store read before the session → FP-34
 
 ## What these rule out
 

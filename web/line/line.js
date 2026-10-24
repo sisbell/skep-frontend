@@ -59,8 +59,11 @@
 // box never opens on a place the line does not show; then the ACTING-AS
 // segment — STATE 2 through the signed session, the one a write may go out
 // under ("acting as 1.0.1 (principal ⟨N⟩) · ⟨device label⟩ · key present on
-// this device · http://127.0.0.1:⟨P⟩ · LOCAL notebook", the device label the
-// one M-REC's `device` names); STATE 3 through the keyless session for
+// this device · http://127.0.0.1:⟨P⟩ · LOCAL notebook"), its device label A
+// SLOT (FP-34; issue #208's design decision): the label of the key M-REC's
+// `device` names, read with the session — the boot reads the device's store
+// before it opens one — else why it names none, never the template's token
+// (`deviceSlot`); STATE 3 through the keyless session for
 // reading alone, the bare session whose every write the shell refuses
 // ("reading as 1.0.1 with no key — local trust; writing needs your key · on
 // your LOCAL notebook · http://127.0.0.1:⟨P⟩"; foundations §3.1's line, §3.3
@@ -122,7 +125,7 @@
 // than mid and its position at the document's own reading scale alone; the
 // diagnostics behind `h` are the gate's hooks).
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28,
-// FP-29.
+// FP-29, FP-34.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -344,6 +347,37 @@ function walkSegments() {
 }
 
 /**
+ * A string's words on either side of one of its tokens left unfilled — the
+ * place a slot stands in the line (FP-34), so the token itself never reaches
+ * the page; null where the string holds no such token.
+ * @param {string} text the string, every other token filled
+ * @param {string} token the token's name, without its brackets
+ * @returns {[string, string] | null}
+ */
+function aroundToken(text, token) {
+  const mark = '⟨' + token + '⟩', i = text.indexOf(mark);
+  return i < 0 ? null : [text.slice(0, i), text.slice(i + mark.length)];
+}
+
+/**
+ * THE DEVICE LABEL'S SLOT (FP-34; issue #208's design decision: "The line's
+ * device label names this client's own key, which was named at setup, so take
+ * it with the session"): the label of the key this device opened the
+ * session with (M-REC's `device`) — the store read with the session, so it is
+ * never an empty box — else why it names none, in that cause's words: the key
+ * carries no label; the store was not read; the session does not name its
+ * key among the several it may have been opened with (skep #579). Named by
+ * its role and what it shows.
+ * @param {import('../model/records.js').DeviceKey | import('../model/records.js').DeviceCause | null} dev
+ * @returns {{shows: string, html: string}}
+ */
+function deviceSlot(dev) {
+  const cause = !dev || 'cause' in dev ? (dev && dev.cause === 'store-unread' ? 'L.slot.store-unread' : 'L.slot.key-untold') : dev.label ? '' : 'L.slot.unlabelled';
+  const shows = cause ? t(cause) : dev && 'label' in dev && dev.label ? dev.label : '';
+  return { shows, html: `<span class="slot" data-slot="label"${cause ? ` data-string="${cause}"` : ''} role="img" aria-label="${esc(t('L.slot.named', { role: t('L.slot.device-label'), shows }))}">${esc(shows)}</span>` };
+}
+
+/**
  * @typedef {Object} Acting — the acting-as segment (`actingSegment`)
  * @property {string} html
  * @property {number} state its state among foundations §3.3's seven
@@ -375,8 +409,10 @@ export function actingSegment() {
     return { html: `<span data-string="F.keyless-session">${esc(words)}</span>`, state: 3, words, alarm: false };
   }
   if (s) {
-    const words = t('F.acting-as', { account: s.account || '', N: s.principal, 'device label': dev && dev.label ? dev.label : '⟨device label⟩', origin });
-    return { html: `<span data-string="F.acting-as">${esc(words)}</span>`, state: 2, words, alarm: false };
+    // F.acting-as's every token filled but its device label, whose slot stands in its place
+    const text = t('F.acting-as', { account: s.account || '', N: s.principal, origin }), parts = aroundToken(text, 'device label'), slot = deviceSlot(dev);
+    const words = parts ? parts[0] + slot.shows + parts[1] : text;
+    return { html: `<span data-string="F.acting-as">${parts ? esc(parts[0]) + slot.html + esc(parts[1]) : esc(text)}</span>`, state: 2, words, alarm: false };
   }
   const guest = `<span data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span>${origin ? ` · ${esc(origin)}` : ''} · <span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span> ${SIGN_IN}`;
   if (dead) {

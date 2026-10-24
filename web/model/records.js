@@ -17,8 +17,14 @@
 // (issue #175's design decision), the account the page is reconnecting as or
 // could not reconnect as (`reconnect`), health and the derived
 // mode, the daemon's state, the device's key store as `fingerprint`
-// answered it — whether it holds a key bound at this board (R56's "key
-// present") and which of its keys is the session's (`device`); THE CLIENT INDEX
+// answered it, or that it was not read — whether it holds a key bound at
+// this board (R56's "key present") and which of its keys is the session's,
+// else why none can be named (`device`); THE BYLINE'S FACTS per account
+// (FP-34; issue #208's design decision: "Read them once per account, because
+// they never change"): the device key its byline names — the sole
+// device-flagged entry of its genesis enrollment (R22's naming input) — or
+// why it can name none (`takeAccountKey`), the owner of a document found by
+// the one owner rule (`ownerAccount`); THE CLIENT INDEX
 // built from `places` (skep #463 — the documents per account, their labels,
 // kinds and standing; the counts per account; the index's state and floor),
 // each answer replacing the index whole with the feed's rows taken while it
@@ -29,7 +35,8 @@
 // (`sessionLost`), or one regained as another principal (`sessionRegained`),
 // drops every one (`dropClass`) — the index, each document's delivered state
 // and its row, the links and where their slots project, the edition claims,
-// the owners and key sets, the drafts rows held — so what stands after
+// the owners and key sets, the drafts rows held, and every byline cause, for
+// a value is the same at every class and never changes — so what stands after
 // it is what a page holds before it reads at the class the change leaves it
 // at, a guest's after a death (foundations §2.1: the index "masked at the
 // reader's class"; client.md §4e.3); M-PUMP reads it all again at that
@@ -76,16 +83,19 @@
 // names a claim's home, never the origin it claims — and their drops counted
 // apart (`claimDrops`); a failed read of a claim's link or its home's
 // metadata stands through them, a fact of that read, until a read of it
-// answers or what the page held of it is dropped.
+// answers or what the page held of it is dropped. A byline's cause — not its
+// value — is dropped at every feed row naming a doc 1, where every credential
+// record is homed (AUTH-2.127), and at every change of class, and its drops
+// counted (`keyDrops`): an account that had no genesis may enroll one.
 // THE `H` DOCUMENT (the record §1.8, OPEN): the system account's rows are
 // HELD here and marked `system`; the plane does not draw them (this lane's
 // cut, reported).
 // Carries: the wireframe's §5 (`state.docs`, `clientDoc`,
 // `invalidateClient`), §8's `takeDelivery`/`mergeLinks`, §3's landmarks (now
 // the index's). Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14 (no token held),
-// FP-29 (the cover).
+// FP-29 (the cover), FP-34 (the slot).
 
-import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder, isTrunkMember } from './address.js';
+import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder, isTrunkMember, docOneOf } from './address.js';
 import { byteOffsets } from '../util.js';
 
 /** @typedef {import('./frames.js').Run} Run */
@@ -218,6 +228,49 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {boolean} keyPresent the device's key store holds a key bound at this board's origin: PUB-5.97's "an enrolled key for this board present"
  */
 
+/**
+ * @typedef {Object} DeviceKey — a key of the device's store: its label, none where it carries none, and its fingerprint
+ * @property {string | null} label
+ * @property {string} fingerprint
+ */
+
+/**
+ * @typedef {Object} DeviceCause — why the session's key on this device cannot be named (`device`; FP-34)
+ * @property {'store-unread' | 'key-untold'} cause `store-unread` the device's key store was not read — `fingerprint`
+ * refused, or not answered; `key-untold` the store holds more than one key the session may have been opened with, or
+ * none, and `session` does not name the one it was (reported: skep #579)
+ */
+
+/**
+ * @typedef {Object} AccountKey — an account's device key as its byline names it (FP-34; R22's naming input): the sole
+ * DEVICE-FLAGGED entry of its GENESIS ENROLLMENT (PUB-5.61, PUB-5.62) — its label, carried verbatim across rotation and
+ * burn (AUTH-5.59 step 6, AUTH-5.69), none where the entry carries none, and its fingerprint (AUTH-1.8)
+ * @property {string | null} label
+ * @property {string} fingerprint 64 lowercase hex
+ */
+
+/**
+ * @typedef {Object} KeyCause — why an account's byline can name no device key (FP-34; issue #208's design decision:
+ * "When the value can't be had, the slot says why")
+ * @property {'unsigned' | 'by-reference' | 'not-recorded' | 'withheld' | 'unreachable' | 'unread'} cause `unsigned` no
+ * account at or above it holds a key, so no key made its writes; `by-reference` it holds no key of its own and its writes
+ * are signed with the keys of an account above it (wire.md §Sessions: "an unseeded sub-account opens against its
+ * holder's set"); `not-recorded` it holds keys of its own and the board holds no genesis enrollment naming one
+ * device-flagged key for it; `withheld` a read its facts wait on was refused as withheld from the reader; `unreachable`
+ * the board did not answer; `unread` the board refused a read for a reason that says none of these
+ * @property {string} [owner] where `withheld`, the owner of the document withheld
+ */
+
+/** @typedef {AccountKey | KeyCause} AccountFacts — what the page holds of an account's byline: its device key, or why it names none */
+
+/**
+ * @typedef {Object} RecordValue — a record atom's value, where its type is one the record rule renders (D13)
+ * @property {'skep-enroll' | 'skep-head'} type
+ * @property {Array<{alg?: unknown, key?: unknown, label?: unknown, anchor?: unknown}>} keys a genesis record's keys, in the record's own order; none for the head record
+ * @property {unknown} position the head record's position
+ * @property {string} chain the head record's chain
+ */
+
 const state = {
   /** @type {{board: string, name: string, origin: string} | null} */
   board: null,
@@ -233,8 +286,8 @@ const state = {
   health: null,
   /** @type {Mode | null} */
   mode: null,
-  /** @type {Array<{label: string | null, fingerprint: string, principals: number[]}>} the key store's keys as `fingerprint` answers them, each with the principals its bindings name at this board's origin (`takeKeyStore`) */
-  keys: [],
+  /** @type {Array<{label: string | null, fingerprint: string, principals: number[]}> | null} the key store's keys as `fingerprint` answers them, each with the principals its bindings name at this board's origin (`takeKeyStore`); null where the store was not read */
+  keys: null,
   /** @type {'running' | 'stopped' | 'unreachable' | null} */
   daemon: null,
   /** @type {boolean} */
@@ -267,6 +320,10 @@ const state = {
   owners: new Map(),
   /** @type {Map<string, {enrolled: Array<{fingerprint: string, anchor: boolean}>, retired: Array<{fingerprint: string}>}>} */
   keySets: new Map(),
+  /** @type {Map<string, AccountFacts>} the byline's facts per account (`takeAccountKey`) */
+  accountKeys: new Map(),
+  /** how many times the byline causes held have been dropped (`keyDrops`) */
+  keyDrops: 0,
   /** @type {Array<{position: number, op: string | null, docs: string[], cls: string, time: number | null}>} the feed's rows as they arrived (the newest last), each with its commit's wall-clock unix milliseconds where the row carries them (wire.md §The change feed, `time`) */
   feed: [],
   rev: 0,
@@ -296,8 +353,8 @@ export const sessionRefused = () => state.sessionRefused;
  * Every read held at the page's class dropped with it (THE CLASS): the
  * index (its rows, counts and state), each document's delivered state and
  * the index's row on it, the links and where their slots project, the
- * edition claims and the failed reads of them, the owners and key sets, and
- * the feed's drafts rows — so no
+ * edition claims and the failed reads of them, the owners and key sets, the
+ * byline causes (`dropKeyCauses`) and the feed's drafts rows — so no
  * frame after it draws, lists or counts what the class could read and the
  * next cannot. Every address is counted dropped once more (`dropsOf`), so no
  * read out across the change is taken. What the class could read is kept by
@@ -311,6 +368,7 @@ function dropClass() {
   state.index.clear(); state.counts.clear(); state.indexState = null;
   for (const d of state.docs.values()) { drop(d); unlist(d); }
   state.links.clear(); state.projections.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.owners.clear(); state.keySets.clear();
+  dropKeyCauses();
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
 }
 /**
@@ -386,38 +444,43 @@ export const daemon = () => state.daemon;
  * so the origin is the binding's whole first field and never a prefix of it
  * (`…:8642` is not `…:86420`'s), and the principal its whole second (`1` is
  * not `12`). A session's death leaves it standing: the store is the
- * device's, not the session's.
- * @param {FingerprintRow[]} rows the store's keys, each with its bindings
+ * device's, not the session's. Null — the `fingerprint` call refused — holds
+ * the store unread, as the page holds it before it reads one.
+ * @param {FingerprintRow[] | null} rows the store's keys, each with its bindings; null where the store was not read
  * @param {string} origin this board's origin, as `boards` answers it
  */
 export function takeKeyStore(rows, origin) {
   const head = origin + ' principal ';
   const principalOf = (/** @type {string} */ b) => { const n = b.startsWith(head) ? b.slice(head.length).split(' ')[0] : ''; return /^\d+$/.test(n) ? [Number(n)] : []; };
-  state.keys = rows.map((r) => ({ label: r.label, fingerprint: r.fingerprint, principals: r.bindings.flatMap(principalOf) }));
+  state.keys = rows ? rows.map((r) => ({ label: r.label, fingerprint: r.fingerprint, principals: r.bindings.flatMap(principalOf) })) : null;
   bump();
 }
-/** does the device's key store hold a key bound at this board, for any principal (R56's "key present")? */
-export const keyPresent = () => state.keys.some((k) => k.principals.length > 0);
+/** does the device's key store hold a key bound at this board, for any principal (R56's "key present")? None where the store was not read */
+export const keyPresent = () => !!state.keys && state.keys.some((k) => k.principals.length > 0);
 /**
  * The device's key for the page's session at this board, as the shell picks
  * the key a signed session is opened with (skep-client's `FileStore::select`):
  * the one key of the store bound here for the session's principal; else,
  * under a session that writes, the store's one key, which the shell signs
- * with where no binding names one. None for a guest; none where several keys
- * are bound for the principal, for the shell signs with the newest binding
- * and `fingerprint` does not order bindings across keys, and `session` does
- * not name the key it opened with (reported: skep #579); none for a bare
- * session no key is bound for, whose open read no key — so no label or
- * fingerprint shown is of a key other than the one this principal's signed
- * session is opened with here.
- * @returns {{label: string | null, fingerprint: string} | null}
+ * with where no binding names one. Under a session that writes, where no key
+ * can be named, why (FP-34: the slot says why, never another key): the
+ * store not read, or more than one key it may have been opened with — or
+ * none — for the shell signs with the newest binding, `fingerprint` does not
+ * order bindings across keys, and `session` does not name the key it opened
+ * with (reported: skep #579). None for a guest, and none for a bare session
+ * no one key is bound for, whose open read no key: the one line's slot does
+ * not apply to either. So no label or fingerprint shown is of a key other
+ * than the one this principal's signed session is opened with here.
+ * @returns {DeviceKey | DeviceCause | null}
  */
 export function device() {
-  const s = state.session;
+  const s = state.session, keys = state.keys;
   if (!s) return null;
-  const bound = state.keys.filter((k) => k.principals.includes(s.principal));
-  const key = bound.length ? (bound.length === 1 ? bound[0] : null) : s.writes && state.keys.length === 1 ? state.keys[0] : null;
-  return key ? { label: key.label, fingerprint: key.fingerprint } : null;
+  if (!keys) return s.writes ? { cause: 'store-unread' } : null;
+  const bound = keys.filter((k) => k.principals.includes(s.principal));
+  const key = bound.length === 1 ? bound[0] : !bound.length && s.writes && keys.length === 1 ? keys[0] : null;
+  if (key) return { label: key.label, fingerprint: key.fingerprint };
+  return s.writes ? { cause: 'key-untold' } : null;
 }
 /**
  * Who reads now — the acting account, or a guest's null, and whether a key
@@ -658,6 +721,26 @@ export function blockAt(/** @type {string} */ addr, /** @type {number} */ pos) {
 export function blockByPos(/** @type {string} */ addr, /** @type {number} */ pos) {
   const d = state.docs.get(addr); if (!d) return null;
   return d.blocks.find((b) => b.pos === pos) || null;
+}
+
+/**
+ * The value a record atom holds, where its type is one the record rule
+ * renders — the genesis record `skep-enroll`, the head record `skep-head` —
+ * else null: the one reading of an atom the plane's record (T-ARTICLE's
+ * `recordOf`), the item rule (`itemOf`), a copy's stand-in
+ * (`recordContents`) and a byline's genesis entry (M-PUMP's `readAccount`)
+ * share.
+ * @param {{kind: string, text: string}} item a block, or a delivered run
+ * @returns {RecordValue | null}
+ */
+export function recordValue(item) {
+  if (item.kind !== 'atom') return null;
+  /** @type {any} */
+  let rec = null;
+  try { rec = JSON.parse(item.text); } catch { return null; }
+  if (!rec || typeof rec !== 'object' || (rec.type !== 'skep-enroll' && rec.type !== 'skep-head')) return null;
+  const keys = Array.isArray(rec.keys) ? rec.keys.filter((/** @type {unknown} */ k) => !!k && typeof k === 'object') : [];
+  return { type: rec.type, keys, position: rec.position ?? '', chain: String(rec.chain || '') };
 }
 /**
  * The text of a set of delivered runs between two positions (bytes): the
@@ -1074,6 +1157,70 @@ export const ownerOf = (/** @type {string} */ addr) => state.owners.get(addr);
 export function takeKeySet(/** @type {string} */ account, /** @type {{enrolled: Array<{fingerprint: string, anchor: boolean}>, retired: Array<{fingerprint: string}>}} */ ks) { state.keySets.set(account, ks); bump(); }
 export const keySetOf = (/** @type {string} */ account) => state.keySets.get(account);
 
+/**
+ * The owner account of a document: by `effective_owner` where read, else by
+ * its metadata where read, else its account. The one rule an owner is named
+ * by — an article's byline and the account its facts are read for
+ * (`accountKey`), each withheld run's origin's (T-LAYER's `originOwner`), a
+ * withheld document's box (T-LAYER's `withheldBox`) — so none of them part.
+ * @param {Doc} d
+ * @returns {string}
+ */
+export function ownerAccount(d) {
+  const row = d.account ? state.owners.get(d.account) : undefined;
+  return (row && row.prefix) || (d.meta && d.meta.owner) || d.account || '';
+}
+
+// ---- the byline's facts --------------------------------------------------------
+
+/**
+ * An account's byline facts, read (M-PUMP's `readAccount`): its device key,
+ * or why its byline names none (`AccountFacts`). Every held document the
+ * account owns (`ownerAccount`) is made again: its byline is decided again
+ * from what the page holds now.
+ * @param {string} account
+ * @param {AccountFacts} facts
+ */
+export function takeAccountKey(account, facts) {
+  state.accountKeys.set(account, facts);
+  rebyline(new Set([account]));
+  bump();
+}
+/** an account's byline facts as the page holds them (`takeAccountKey`); undefined while they are not read */
+export const accountKey = (/** @type {string} */ account) => state.accountKeys.get(account);
+/**
+ * How many times the byline causes held have been dropped (`dropKeyCauses`),
+ * so a read of an account's facts that finds the count moved between going
+ * out and landing learned a cause of what the board may hold no longer. A
+ * value never changes, and is taken whatever the count. It never falls.
+ * @returns {number}
+ */
+export const keyDrops = () => state.keyDrops;
+
+/** every held document one of these accounts owns gains a revision: its byline is decided again from what the page holds now */
+function rebyline(/** @type {Set<string>} */ accounts) {
+  if (!accounts.size) return;
+  for (const d of state.docs.values()) if (accounts.has(ownerAccount(d))) d.rev++;
+}
+
+/**
+ * Every byline cause held dropped — never a value, which never changes — and
+ * the drop counted (`keyDrops`); each held document whose owner's cause was
+ * held made again, so the view asks its facts again. At a feed row naming a
+ * doc 1 (`applyFeedUpdate`), where a credential record is homed (AUTH-2.127):
+ * an account that had no genesis may enroll one; and at a change of class.
+ */
+function dropKeyCauses() {
+  state.keyDrops++;
+  /** @type {Set<string>} */
+  const dropped = new Set();
+  for (const [account, facts] of state.accountKeys) if ('cause' in facts) { state.accountKeys.delete(account); dropped.add(account); }
+  rebyline(dropped);
+}
+
+/** is an address an account's doc 1, or under it — a member of it, an element of it (`docOneOf`)? */
+const inDocOne = (/** @type {string} */ addr) => { const a = accountOf(addr), trunk = documentOf(addr); return !!a && trunk === docOneOf(a); };
+
 // ---- the feed ------------------------------------------------------------------
 
 /**
@@ -1090,7 +1237,8 @@ export const keySetOf = (/** @type {string} */ account) => state.keySets.get(acc
  * — a `nullify` by its op alone, an `edit_link`, a `version` — drops no
  * document: the journal works out what such a write touched and serves none
  * of it (reported: skep #582). A row after which the edition claims may be
- * others (`CLAIM_WRITES`, a `null` op among them) drops every one held.
+ * others (`CLAIM_WRITES`, a `null` op among them) drops every one held; a row
+ * touching a doc 1 drops every byline cause held (`dropKeyCauses`).
  * @param {FeedUpdate} u
  * @returns {string[]} the addresses dropped, each once: what the view asks again (M-PUMP)
  */
@@ -1105,6 +1253,7 @@ export function applyFeedUpdate(u) {
   for (const named of home ? [...docsNamed, home] : docsNamed) { touched.add(documentOf(named) || named); touched.add(named); }
   for (const addr of touched) invalidate(addr);
   if (u.op == null || CLAIM_WRITES.has(u.op)) dropClaims();
+  if ([...touched].some(inDocOne)) dropKeyCauses();
   bump();
   return [...touched];
 }
@@ -1161,9 +1310,9 @@ export function feedTime() {
 /** reset everything (tests) */
 export function _reset() {
   state.board = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
-  state.keys = []; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
+  state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops = 0;
-  state.owners.clear(); state.keySets.clear(); state.feed = []; state.rev = 0;
+  state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.rev = 0;
 }
 
 /** a deep, serializable picture of the model for the gate and the fake-port test */

@@ -61,11 +61,19 @@
 // the reader the arms are decided for keeping it through a session's death.
 // The session's key on this device: the one key bound here for its
 // principal, the binding's origin and principal each read whole; else, under
-// a session that writes, the store's one key; none for a guest, for two keys
-// bound for the principal, or for the bare session no key is bound for (a
-// mutant that matches the origin or the principal as a prefix, names the
-// store's first key, or names a key for a guest or the bare session turns
-// red); the death leaves the session no key and the store standing.
+// a session that writes, the store's one key; under a session that writes
+// where none can be named — two keys bound for the principal, an empty store
+// — that it is not named, and a store the page did not read held unread and
+// said so (FP-34: a mutant that names the store's first key, or names none
+// with no cause, turns red); none for a guest or for the bare session no key
+// is bound for (a mutant that matches the origin or the principal as a
+// prefix, or names a key for a guest or the bare session, turns red); the
+// death leaves the session no key and the store standing. A document's owner
+// read by the one owner rule; a record atom's value read for the record rule
+// alone. An account's byline facts held as read, every held document it owns
+// made again; a cause — never a value — dropped at a feed row touching a doc
+// 1 and at a change of class, each drop counted (a mutant that drops at every
+// row, drops a value, or counts no drop turns red).
 // Every drop of an address counted — by `invalidate`, its record held or not
 // and none made for it, and by a death, every address's — and no read taken
 // moving the count (a mutant that counts no death turns red). The edition
@@ -482,30 +490,92 @@ test('the key store is read for this board: a key is present only where a bindin
   assert.equal(REC.keyPresent(), true, 'a key bound here among its other bindings, whatever its principal');
 });
 
-test('the session\'s key on this device is the one bound here for its principal — else, under a session that writes, the store\'s one key — and none for a guest, for two keys bound, or for the bare session no key is bound for', () => {
+test('the session\'s key on this device is the one bound here for its principal — else, under a session that writes, the store\'s one key — and, under a session that writes, why none can be named: two keys bound, or none; none for a guest or for the bare session no key is bound for (FP-34)', () => {
   const O = 'http://127.0.0.1:8642';
   /** a key of the store as `fingerprint` answers it, bound where its bindings say */
   const key = (/** @type {string} */ fingerprint, /** @type {string} */ label, /** @type {string[]} */ bindings) => ({ fingerprint, label, bindings, unbound: !bindings.length, payload: null });
   const here = key('e4272902a11439e5', 'dev-notebook', [`${O} principal 1 account 1.0.1`]);
   const elsewhere = key('9a0c33f1b2d4e6a8', 'other-board', ['http://127.0.0.1:9000 principal 1 account 1.0.1']);
   const signed = { session: 's-1', principal: 1, account: '1.0.1', writes: true };
+  const untold = { cause: 'key-untold' };
   REC.takeKeyStore([here], O);
   assert.equal(REC.device(), null, '(a) a guest: no key is the session\'s, though one is bound here');
   REC.setSession(signed);
   REC.takeKeyStore([key('7c41d0e2a9b83f56', 'longer-origin', ['http://127.0.0.1:86420 principal 1 account 1.0.1']), key('3e8f62b1c0d4a975', 'longer-principal', [`${O} principal 12 account 1.0.12`])], O);
-  assert.equal(REC.device(), null, '(b) bound at an origin whose text begins with this one\'s, and here for principal 12: neither is principal 1\'s here');
+  assert.deepEqual(REC.device(), untold, '(b) bound at an origin whose text begins with this one\'s, and here for principal 12: neither is principal 1\'s here, and two keys stand — the key is not named');
   REC.takeKeyStore([elsewhere, here], O);
   assert.deepEqual(REC.device(), { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' }, '(c) the key bound here for the principal, never the store\'s first');
   REC.takeKeyStore([here, key('5b1d77e0c9f2a3b4', 'second-device', [`${O} principal 1 account 1.0.1`])], O);
-  assert.equal(REC.device(), null, '(d) two keys bound here for the principal: the shell signs with the newest binding, which the store\'s answer does not order across keys');
+  assert.deepEqual(REC.device(), untold, '(d) two keys bound here for the principal: the shell signs with the newest binding, which the store\'s answer does not order across keys — the key is not named, never the first');
   REC.takeKeyStore([elsewhere], O);
   assert.deepEqual(REC.device(), { label: 'other-board', fingerprint: '9a0c33f1b2d4e6a8' }, '(e) no key bound here, a session that writes: the store\'s one key, which the shell signs with');
+  REC.takeKeyStore([], O);
+  assert.deepEqual(REC.device(), untold, '(f) an empty store under a session that writes: no key can be named');
   REC.setSession({ ...signed, writes: false });
-  assert.equal(REC.device(), null, '(e) the bare session over the same store: no key opened it, and none is bound here for its principal');
+  REC.takeKeyStore([elsewhere], O);
+  assert.equal(REC.device(), null, '(g) the bare session over the same store: no key opened it, and none is bound here for its principal — no slot to fill');
   REC.takeKeyStore([here], O);
   REC.setSession(signed);
   REC.sessionDied({ arm: 'closed' });
   assert.deepEqual([REC.device(), REC.keyPresent()], [null, true], 'the death: no session, so no key is its; the device\'s store stands');
+});
+
+test('a key store the page did not read is held unread: under a session that writes the device\'s key says so, the bare session and a guest name none, and no key is present (FP-34)', () => {
+  const O = 'http://127.0.0.1:8642';
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
+  assert.deepEqual(REC.device(), { cause: 'store-unread' }, 'nothing read yet: the store is unread');
+  REC.takeKeyStore([{ fingerprint: 'e4272902a11439e5', label: 'dev-notebook', bindings: [`${O} principal 1 account 1.0.1`], unbound: false, payload: null }], O);
+  assert.deepEqual(REC.device(), { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' }, 'read: the key bound here');
+  REC.takeKeyStore(null, O);
+  assert.deepEqual([REC.device(), REC.keyPresent()], [{ cause: 'store-unread' }, false], 'the `fingerprint` call refused: the store held unread, never the store read before it, and no key present');
+  REC.setSession({ session: 's-2', principal: 1, account: '1.0.1', writes: false });
+  assert.equal(REC.device(), null, 'the bare session: no slot to fill');
+  REC.setSession(null);
+  assert.equal(REC.device(), null, 'a guest: none');
+});
+
+test('a document\'s owner is its account\'s `effective_owner` row where read, else its metadata\'s owner, else its account', () => {
+  const D = '1.0.1.1.0.4';
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 4 }]);
+  assert.equal(REC.ownerAccount(REC.doc(D)), '1.0.1.1', 'its account');
+  REC.takeMetadata(D, { doc: D, published: true, owner: '1.0.1.1', birth: D + '.1', birthExtent: 4, placed: null, baseExtent: null, source: null, asOf: 1 });
+  assert.equal(REC.ownerAccount(REC.doc(D)), '1.0.1.1', 'its metadata\'s owner');
+  REC.takeOwner('1.0.1.1', /** @type {any} */ ({ prefix: '1.0.1' }));
+  assert.equal(REC.ownerAccount(REC.doc(D)), '1.0.1', 'the account\'s effective owner, the seat above it');
+});
+
+test('a record atom\'s value is read where its type is one the record rule renders, and nothing else is', () => {
+  const enroll = JSON.stringify({ type: 'skep-enroll', keys: [{ alg: 'mldsa65-ed25519', key: 'ab', label: 'paper', anchor: true }, null, { alg: 'mldsa65-ed25519', key: 'cd', label: 'dev', anchor: false }] });
+  assert.deepEqual(REC.recordValue({ kind: 'atom', text: enroll }), { type: 'skep-enroll', keys: [{ alg: 'mldsa65-ed25519', key: 'ab', label: 'paper', anchor: true }, { alg: 'mldsa65-ed25519', key: 'cd', label: 'dev', anchor: false }], position: '', chain: '' }, 'the genesis record, its keys in its own order, a key that is no object dropped');
+  assert.deepEqual(REC.recordValue({ kind: 'atom', text: JSON.stringify({ type: 'skep-head', position: 7, chain: 'ab' }) }), { type: 'skep-head', keys: [], position: 7, chain: 'ab' }, 'the head record');
+  for (const [what, item] of /** @type {Array<[string, {kind: string, text: string}]>} */ ([['another type', { kind: 'atom', text: JSON.stringify({ type: 'skep-retire' }) }], ['no value', { kind: 'atom', text: 'not json' }], ['text', { kind: 'content', text: enroll }]])) {
+    assert.equal(REC.recordValue(item), null, `${what}: none`);
+  }
+});
+
+test('an account\'s byline facts are held as read: every held document it owns made again, no other; a cause dropped at a feed row touching a doc 1 and at a change of class, each drop counted, and a value kept through both (FP-34; AUTH-2.127)', () => {
+  const MINE = '1.0.1.0.3', OTHER = '1.0.2.0.5';
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
+  for (const d of [MINE, OTHER]) REC.takeSpanSet(d, [{ subspace: 1, ordinal: 1, positions: 4 }]);
+  const revs = () => [REC.doc(MINE).rev, REC.doc(OTHER).rev];
+  const [r0, o0] = revs();
+  assert.equal(REC.accountKey('1.0.1'), undefined, 'nothing read: undefined');
+  REC.takeAccountKey('1.0.1', { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' });
+  REC.takeAccountKey('1.0.2', { cause: 'unsigned' });
+  assert.deepEqual([REC.accountKey('1.0.1'), REC.accountKey('1.0.2')], [{ label: 'dev-notebook', fingerprint: 'e4272902a11439e5' }, { cause: 'unsigned' }]);
+  assert.deepEqual(revs(), [r0 + 1, o0 + 1], 'each read makes again the documents its account owns, once');
+  const n0 = REC.keyDrops();
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 1, at: 1, op: 'insert', docs: ['1.0.1.0.7'], class: 'published' }));
+  assert.deepEqual([REC.keyDrops(), REC.accountKey('1.0.2')], [n0, { cause: 'unsigned' }], 'a row touching no doc 1: nothing dropped, nothing counted');
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 2, at: 2, op: 'make_link', docs: ['1.0.2.0.1'], class: 'published', link: '1.0.2.0.1.0.2.1' }));
+  assert.deepEqual([REC.keyDrops(), REC.accountKey('1.0.2'), REC.accountKey('1.0.1')], [n0 + 1, undefined, { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' }], 'a link made in a doc 1: the cause dropped and the drop counted, the value kept');
+  assert.equal(REC.doc(OTHER).rev, o0 + 2, 'the document whose owner\'s cause dropped is made again, so the view asks its facts again');
+  REC.takeAccountKey('1.0.2', { cause: 'not-recorded' });
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 3, at: 3, op: null, docs: null, class: 'published', link: '1.0.3.0.1.0.2.4' }));
+  assert.deepEqual([REC.keyDrops(), REC.accountKey('1.0.2')], [n0 + 2, undefined], 'a bare row whose link is homed in another account\'s doc 1: every cause held dropped');
+  REC.takeAccountKey('1.0.2', { cause: 'withheld', owner: '1.0.2' });
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual([REC.keyDrops(), REC.accountKey('1.0.2'), REC.accountKey('1.0.1')], [n0 + 3, undefined, { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' }], 'a change of class: the cause dropped, counted, the value kept — a value never changes');
 });
 
 test('a session is a reference, never a token; the death signal drops it', () => {

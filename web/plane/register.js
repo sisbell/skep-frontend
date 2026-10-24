@@ -160,7 +160,7 @@ export function cssVariables() {
     '--hue-you': HUE.you, '--hue-owner': HUE.owner, '--hue-others': HUE.others,
     '--same-boundary': SAMENESS.boundary, '--same-texture': SAMENESS.texture,
     '--visited-alpha': String(VISITED_ALPHA),
-    '--col-bg': COL.bg, '--col-text': COL.text, '--col-title': COL.title, '--col-dim': COL.greek, '--col-land': COL.land, '--col-focus': COL.focus,
+    '--col-bg': COL.bg, '--col-doc': COL.doc, '--col-text': COL.text, '--col-title': COL.title, '--col-dim': COL.greek, '--col-land': COL.land, '--col-focus': COL.focus,
     '--corner-px': CORNER.px + 'px', '--corner-w': CORNER.whole + 'em', '--corner-compact-w': CORNER.compact + 'em', '--corner-pad': CORNER.pad + 'px',
   };
 }

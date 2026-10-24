@@ -119,6 +119,17 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .hd .addr { font-weight:600; }
 .dtext .hd .st, .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:var(--head); display:block; }
 .dtext .hd .pres { color:#b9c1cb; }
+/* THE BYLINE'S SLOTS (FP-34; issue #208's design decision: "the slot keeps its place as an empty box of its own width"): a
+   box as wide as its slots, each slot a box of its own width (`ch` T-ARTICLE sets) whatever it shows, set at its line's top
+   and one line box tall, so the line is P-LAY's whatever the slots hold; one being read an empty box on a faint ground; a
+   cut label's whole, over what is beside it on its act (T-LAYER's `openLabel`), on the document's ground, its box unmoved;
+   one cause emptying both slots said once in the first, the separator after it unseen */
+.dtext .hd .slots { display:inline-block; white-space:pre; vertical-align:top; }
+.dtext .hd .slot { display:inline-block; position:relative; vertical-align:top; height:1lh; white-space:pre; }
+.dtext .hd .slot.pending { background:rgba(139,143,150,.12); border-radius:2px; }
+.dtext .hd .slot .whole { display:none; position:absolute; left:0; top:0; z-index:1; height:1lh; padding-right:.5ch; white-space:pre; background:var(--col-doc); color:#cfd6df; }
+.dtext .hd .slot.open .whole { display:block; }
+.dtext .hd .slots.once .slot-sep { visibility:hidden; }
 .dtext .run { display:block; }
 .dtext .sp { display:block; position:relative; margin:0 0 var(--gap); border-radius:2px; font-weight:400; }
 .dtext h2.sp, .dtext h3.sp, .dtext h4.sp, .dtext h5.sp, .dtext h6.sp, .dtext h7.sp { font-size:1em; font-weight:600; color:#cfd6df; margin:var(--heading-before) 0 var(--heading-after); }
@@ -170,7 +181,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* the click cues stand where a click acts: APP-INPUT takes the clicks on the plane's text layer — a legible article's,
    the only one the pointer reaches — and its corners, and on nothing a reading scene's pane holds — a pane's blocks,
    hairlines and symbols are read, never clicked (SC) */
-#domlayer .dtext .sp, #domlayer .dtext .hairline, #domlayer .dtext .sym { cursor:pointer; }
+#domlayer .dtext .sp, #domlayer .dtext .hairline, #domlayer .dtext .sym, #domlayer .dtext .slot.cut { cursor:pointer; }
 /* C-67's pointer beneath a withheld run's arm, its LEAP to the edition, and the run's compact face in its column's edge,
    which opens it whole: the plane's acts alone (a pane's are read, SC) */
 #domlayer .dtext .withheld .clause[data-home], #domlayer .dtext .wh-mark { cursor:pointer; text-decoration:underline dotted; }

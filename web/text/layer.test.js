@@ -105,7 +105,12 @@
 // symbols are marked heavier in place where every link one stands for is lit
 // at an arrival, nothing rebuilt, and a span wholly inside a withheld run
 // stands at the run's own boxes (issue #202: a layer that marks nothing, or
-// reads the span as a range inside the gap, turns red).
+// reads the span as a range inside the gap, turns red). An owner's byline
+// facts arriving set a standing article again, its byline filled, the fold
+// it stands in as it stood (FP-34: a model that makes nothing again leaves
+// the empty boxes standing and turns red); its cut label marked open in
+// place on its act and closed on the act again (a layer that marks nothing
+// turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -845,7 +850,7 @@ test('a guest meets a withheld run named for its origin\'s owner, whoever owns t
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + width }]);
   REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width, kind: 'withheld', text: '', ref: null, origin: O }]);
   const d = REC.doc(D);
-  assert.equal(LAYER.ownerAccount(d), '1.0.1', 'the first edition is 1.0.1\'s');
+  assert.equal(REC.ownerAccount(d), '1.0.1', 'the first edition is 1.0.1\'s');
   const at = LAYER.centreOf(D, null);
   CAM.set({ x: at.x, y: at.y, scale: 12 / LAYER.foldOf(d).fs });
   LAYER.frame();
@@ -967,4 +972,35 @@ test('a standing article\'s symbols are marked heavier in place where every link
     assert.deepEqual(LAYER.spanRects(D, RUN + 3, 2), [{ x: 10, y: 20, w: 300, h: 40 }], 'two positions inside the run: the run\'s own box');
     assert.deepEqual(LAYER.spanRects(D, RUN, 8), [{ x: 10, y: 20, w: 300, h: 40 }], 'the run whole: its own box');
   }, 1440, 900, answers);
+});
+
+test('an owner\'s byline facts arriving set a standing article again, its byline filled, and move no line — the fold it stands in as it stood; its cut label marked open in place on its act, closed again on the act again, nothing rebuilt (FP-34; issue #208)', () => {
+  /** @type {boolean[]} the `open` mark the cut label was given, in order */
+  const opened = [];
+  const label = { classList: { toggle: (/** @type {string} */ c, /** @type {boolean} */ on) => { if (c === 'open') opened.push(on); } } };
+  onLayer(() => {
+    REC.setSession(null);
+    const text = 'Tumbler.\n\nThe first field.', n = new TextEncoder().encode(text).length;
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
+    const at = LAYER.centreOf(D, null);
+    CAM.set({ x: at.x, y: at.y, scale: 12 / LAYER.foldOf(REC.doc(D)).fs });
+    LAYER.frame();
+    const standing = () => LAYER.mountedSet().get(D)?.el;
+    const html = () => String(/** @type {any} */ (standing())?.children[0].innerHTML);
+    assert.ok(LAYER.isMounted(D) && html().includes('class="slot pending"'), 'its owner\'s facts not read: the byline\'s boxes stand empty');
+    const fold = LAYER.foldOf(REC.doc(D)), el = standing();
+    REC.takeAccountKey('1.0.1', { label: 'Shane’s MacBook Pro (work, 2024)', fingerprint: 'ab'.repeat(32) });
+    LAYER.frame();
+    assert.ok(standing() !== el && html().includes(`>${esc('Shane’s MacBook Pro…')}<span class="whole">`) && html().includes('>abab abab abab abab</span>') && !html().includes('slot pending'), `set again, its byline filled: ${html().slice(0, 600)}`);
+    assert.equal(LAYER.foldOf(REC.doc(D)), fold, 'the fold it stands in as it stood: what the slots show sets no line');
+    const filled = standing();
+    LAYER.openLabel(D);
+    LAYER.frame();
+    assert.deepEqual([LAYER.labelOpened(D), opened.at(-1)], [true, true], 'its act opens the cut label whole');
+    LAYER.openLabel(D);
+    LAYER.frame();
+    assert.deepEqual([LAYER.labelOpened(D), opened.at(-1)], [false, false], 'the act again closes it');
+    assert.equal(standing(), filled, 'each mark made in place, the article standing on its element');
+  }, 1440, 900, new Map([['.slot.cut', [label]]]));
 });

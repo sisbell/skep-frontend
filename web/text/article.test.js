@@ -111,10 +111,20 @@
 // stands after the last of its stretches a paragraph holds (a mutant that
 // stands it by its last stretch alone turns red), and is lit where every link
 // it stands for is lit, the article made with none lit.
+// THE BYLINE (issue #208; FP-34): its owner, then its slots — on another's
+// byline the device label and the fingerprint cue its owner's facts hold, on
+// the reader's own the label alone (a mutant that cues the reader's own turns
+// red) — never a ⟨token⟩: empty boxes named as being read while the facts
+// are, else each cause's words, said once where one cause empties both slots
+// (a mutant that shows the template, or says the cause twice, turns red); the
+// plan's byline line the same in every state (a mutant that sets the slots'
+// words in the plan turns red); a label its box does not hold cut on a word's
+// end, whole on its act, in its title and in its name (a mutant that cuts
+// mid-word turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, headingLevel, blockMarks, symbolLit, itemOf, recordContents, copyText } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, headingLevel, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, LABEL_CH, CUE_CH } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -128,11 +138,14 @@ import { deriveBlocks, textOf } from '../model/records.js';
 const SIGNED = /** @type {Reader} */ ({ account: '1.0.1', keyPresent: true }), BARE = /** @type {Reader} */ ({ account: '1.0.1', keyPresent: false });
 const KEYED = /** @type {Reader} */ ({ account: null, keyPresent: true }), KEYLESS = /** @type {Reader} */ ({ account: null, keyPresent: false });
 
+/** the byline's facts of 1.0.1, the owner of the documents the tests read, as the page holds them read */
+const OWN_FACTS = /** @type {import('../model/records.js').AccountFacts} */ ({ label: 'dev-notebook', fingerprint: 'e4272902a11439e5' + '0'.repeat(48) });
+
 /** @returns {import('./article.js').ArticleView} */
 const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {}) => ({
   selected: null, focus: null, marks: [], mergedMark, symbols: [], says: () => '', countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
   reader: SIGNED, localTrust: true, notebook: true, scene: false, originKinds: new Map(), originOwner: (a) => accountOf(a) || '', clauseOf: () => null,
-  deviceLabel: 'dev-notebook', ownerFingerprint: 'e4272902a11439e5', ...o,
+  keyOf: (a) => (a === '1.0.1' ? OWN_FACTS : undefined), ...o,
 });
 /** @returns {import('../model/records.js').Doc} */
 const doc = (/** @type {Partial<import('../model/records.js').Doc>} */ o = {}) => ({
@@ -446,7 +459,8 @@ const shown = (/** @type {number} */ pos, /** @type {number} */ width) => /** @t
 test('the plan\'s head is the article\'s: three lines, a fourth where links touch the document', () => {
   const d = doc({ blocks: [{ pos: 1, width: 20, kind: 'para', text: 'abcdefghijklmnopqrst', origin: null }] });
   const bare = articlePlan(d, view(), '1.0.1').filter((r) => r.kind === 'head');
-  assert.deepEqual(bare.map((r) => r.pieces.map((p) => p.text).join('')), ['1.0.1.0.3', t('B1.state-line'), '1.0.1 · dev-notebook · e427 2902 a114 39e5']);
+  assert.deepEqual(bare.map((r) => r.pieces.map((p) => p.text).join('')), ['1.0.1.0.3', t('B1.state-line'), '1.0.1 · ' + ' '.repeat(LABEL_CH)], 'the byline: its owner, then the box its one slot takes on the reader\'s own byline, whatever it shows (FP-34)');
+  assert.equal(bare[2].pieces[1].box, true, 'the slots one inline-block, which no line breaks inside');
   assert.deepEqual(bare.map((r) => r.pieces[0].size), [1, MEASURE.head, MEASURE.head], 'the address at the body\'s size, the state line and the byline at the head\'s');
   const marked = articlePlan(d, view({ marks: [shown(5, 4)] }), '1.0.1').filter((r) => r.kind === 'head');
   assert.equal(marked.length, 4);
@@ -636,7 +650,84 @@ test('the scene-mode variant, a pane\'s article: no scene-offer and no row for o
   assert.ok(!inPane.includes('class="offer"') && !articlePlan(d, pane, '1.0.1').some((r) => r.kind === 'chrome'), 'in a pane: no offer, and no row for one');
   assert.ok(/<span class="sym [^"]*" data-link="L9"[^>]* role="button" tabindex="-1"/.test(onPlane) && /data-reveal="[^"]*" role="button" tabindex="-1"/.test(onPlane), 'on the plane: the link\'s symbol and the presence ⟡ are buttons a click acts on');
   assert.ok(symsIn(inPane).length === 1 && inPane.includes('data-reveal="1.0.1.0.3"'), 'in a pane: the link\'s symbol and the presence ⟡ stand');
-  assert.ok(!/ role=| tabindex=/.test(inPane), 'and nothing in the pane\'s article is a control or a stop');
+  assert.ok(!/ role="(?!img")[^"]*"| tabindex=/.test(inPane), 'and nothing in the pane\'s article is a control or a stop: a byline\'s slots are named by their words alone');
+});
+
+// ---- the byline (issue #208; FP-34) -----------------------------------------------------------------------------------
+
+/** a byline's slots as the HTML sets them: each its role, its classes, its width, the words it shows, its whole, its cause's string and its name */
+const slotsIn = (/** @type {string} */ html) => {
+  const box = /<span class="by">([^<]*)<span class="(slots[^"]*)" style="width:(\d+)ch">(.*?)<\/span><\/span><(?:span class="pres"|\/div)/.exec(html);
+  if (!box) return null;
+  const slots = [...box[4].matchAll(/<span class="(slot[^"]*)" data-slot="(\w+)"((?: data-string="[^"]*")?)((?: data-cut="1" title="[^"]*")?) role="img" aria-label="([^"]*)" style="width:(\d+)ch">([^<]*)(?:<span class="whole">([^<]*)<\/span>)?<\/span>/g)].map((m) => ({
+    cls: m[1], role: m[2], cause: (/data-string="([^"]*)"/.exec(m[3]) || [])[1] ?? null, title: (/title="([^"]*)"/.exec(m[4]) || [])[1] ?? null, name: m[5], ch: Number(m[6]), shows: m[7], whole: m[8] ?? null,
+  }));
+  return { owner: box[1], cls: box[2], ch: Number(box[3]), slots };
+};
+/** a slot's accessible name, in the strings table's words */
+const named = (/** @type {'label' | 'fingerprint'} */ role, /** @type {string} */ shows) => esc(t('L.slot.named', { role: t(role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows }));
+/** the byline row of an article's plan: its pieces' text */
+const bylineRow = (/** @type {import('../model/records.js').Doc} */ d, /** @type {import('./article.js').ArticleView} */ v) => JSON.stringify(articlePlan(d, v, d.account || '').filter((r) => r.kind === 'head')[2]);
+
+test('a byline names its owner, then its slots: on another\'s, the device label and the fingerprint cue the owner\'s genesis entry holds; on the reader\'s own, the label alone — each a box of its own width, named by its role and what it shows (FP-34; issue #208)', () => {
+  const OTHER = '1.0.2', d = doc({ addr: '1.0.2.0.5', account: OTHER, meta: null });
+  const facts = /** @type {import('../model/records.js').AccountFacts} */ ({ label: 'agent-runner', fingerprint: '9a0c33f1b2d4e6a8' + '1'.repeat(48) });
+  const other = slotsIn(articleHTML(d, view({ keyOf: (a) => (a === OTHER ? facts : undefined) }), OTHER));
+  assert.deepEqual(other, {
+    owner: OTHER + ' · ', cls: 'slots', ch: LABEL_CH + 3 + CUE_CH, slots: [
+      { cls: 'slot', role: 'label', cause: null, title: null, name: named('label', 'agent-runner'), ch: LABEL_CH, shows: 'agent-runner', whole: null },
+      { cls: 'slot', role: 'fingerprint', cause: null, title: null, name: named('fingerprint', '9a0c 33f1 b2d4 e6a8'), ch: CUE_CH, shows: '9a0c 33f1 b2d4 e6a8', whole: null },
+    ],
+  }, 'another\'s byline: the label and the cue, each in its box');
+  const own = slotsIn(articleHTML(doc(), view(), '1.0.1'));
+  assert.deepEqual(own && [own.ch, own.slots.map((s) => [s.role, s.shows, s.name])], [LABEL_CH, [['label', 'dev-notebook', named('label', 'dev-notebook')]]], 'the reader\'s own byline: its label alone, no cue (foundations §2.1)');
+  const guest = slotsIn(articleHTML(doc(), view({ reader: KEYLESS }), '1.0.1'));
+  assert.deepEqual(guest && guest.slots.map((s) => s.shows), ['dev-notebook', 'e427 2902 a114 39e5'], 'a guest meets the owner\'s label and cue');
+});
+
+test('a byline never shows a placeholder: while its facts are read its boxes stand empty, named as being read; where none can be named its cause says why, once where one cause empties both slots; a genesis entry with no label says so — and the plan\'s line is the same in every state (FP-34; issue #208: "A slot never shows its template placeholder")', () => {
+  const OTHER = '1.0.2', d = doc({ addr: '1.0.2.0.5', account: OTHER, meta: null });
+  /** @type {Array<[string, import('../model/records.js').AccountFacts | undefined, string[], string | null]>} each state, the facts handed in, what the slots show, and the cause's string */
+  const states = [
+    ['being read', undefined, ['', ''], null],
+    ['read', { label: 'agent-runner', fingerprint: 'ab'.repeat(32) }, ['agent-runner', 'abab abab abab abab'], null],
+    ['no label', { label: null, fingerprint: 'ab'.repeat(32) }, [t('L.slot.unlabelled'), 'abab abab abab abab'], 'L.slot.unlabelled'],
+    ['unsigned', { cause: 'unsigned' }, [t('F.slot.unsigned'), ''], 'F.slot.unsigned'],
+    ['by reference', { cause: 'by-reference' }, [t('L.slot.by-reference'), ''], 'L.slot.by-reference'],
+    ['not recorded', { cause: 'not-recorded' }, [t('F.slot.not-recorded'), ''], 'F.slot.not-recorded'],
+    ['withheld', { cause: 'withheld', owner: '1.0.9' }, [t('F.corner.withheld', { owner: '1.0.9' }), ''], 'F.corner.withheld'],
+    ['unreachable', { cause: 'unreachable' }, [t('F.daemon.unreachable'), ''], 'F.daemon.unreachable'],
+    ['not read', { cause: 'unread' }, [t('L.slot.unread'), ''], 'L.slot.unread'],
+  ];
+  const rows = new Set();
+  for (const [state, facts, shows, cause] of states) {
+    const v = view({ reader: KEYLESS, keyOf: (a) => (a === OTHER ? facts : undefined) });
+    const html = articleHTML(d, v, OTHER), by = slotsIn(html);
+    assert.ok(by, `${state}: the byline stands`);
+    assert.ok(!/⟨[^⟩]*⟩/.test(html) && !/⟨[^⟩]*⟩/.test(bylineRow(d, v)), `${state}: no ⟨token⟩ in the article or its plan`);
+    assert.deepEqual(by.slots.map((s) => s.shows), shows.map(esc), `${state}: the slots show ${JSON.stringify(shows)}`);
+    assert.deepEqual(by.slots.map((s) => s.ch), [LABEL_CH, CUE_CH], `${state}: each slot its own width`);
+    assert.equal(by.slots[0].cause, cause, `${state}: the cause\'s string carried`);
+    const once = !!facts && 'cause' in facts;
+    assert.equal(by.cls, once ? 'slots once' : 'slots', `${state}: one cause said once`);
+    const told = facts === undefined ? t('L.slot.reading') : shows[0];
+    assert.equal(by.slots[0].name, named('label', told), `${state}: the label's slot named by its role and what it shows`);
+    if (facts === undefined) assert.deepEqual(by.slots.map((s) => [s.cls, s.name]), [['slot pending', named('label', t('L.slot.reading'))], ['slot pending', named('fingerprint', t('L.slot.reading'))]], 'being read: empty boxes, named so');
+    if (once) assert.equal(by.slots[1].name, named('fingerprint', shows[0]), `${state}: the empty slot beside the cause named by it too`);
+    rows.add(bylineRow(d, v));
+  }
+  assert.equal(rows.size, 1, 'the plan\'s byline line the same in every state: what the slots show moves nothing beside them');
+});
+
+test('a device label its box does not hold is cut on a word\'s end with an ellipsis, carries itself whole for its act and its title, and is named whole (FP-26; FP-34; issue #208: "A label too long for the box is cut and shown whole on its act")', () => {
+  assert.equal(cutTo('dev-notebook', LABEL_CH), 'dev-notebook', 'a label the box holds: whole');
+  assert.equal(cutTo('Shane’s MacBook Pro (work, 2024)', LABEL_CH), 'Shane’s MacBook Pro…', 'cut before a space');
+  assert.equal(cutTo('build-agent-ci-runner-internal', LABEL_CH), 'build-agent-ci-runner-…', 'cut after a hyphen, where a line may break');
+  assert.equal(cutTo('abcdefghijklmnopqrstuvwxyz0123', LABEL_CH), 'abcdefghijklmnopqrstuvw…', 'one word longer than the box: as many of its characters as the box holds');
+  for (const label of ['Shane’s MacBook Pro (work, 2024)', 'build-agent-ci-runner-internal', 'abcdefghijklmnopqrstuvwxyz0123']) assert.ok([...cutTo(label, LABEL_CH)].length <= LABEL_CH, `${label}: within the box`);
+  const long = 'Shane’s MacBook Pro (work, 2024)';
+  const by = slotsIn(articleHTML(doc({ addr: '1.0.2.0.5', account: '1.0.2', meta: null }), view({ reader: KEYLESS, keyOf: () => ({ label: long, fingerprint: 'ab'.repeat(32) }) }), '1.0.2'));
+  assert.deepEqual(by && { cls: by.slots[0].cls, shows: by.slots[0].shows, whole: by.slots[0].whole, title: by.slots[0].title, name: by.slots[0].name }, { cls: 'slot cut', shows: esc('Shane’s MacBook Pro…'), whole: esc(long), title: esc(long), name: named('label', long) }, 'cut in its box, whole beside it for its act, in its title and in its name');
 });
 
 /** a withheld run's placeholder in an article's HTML, by its first position: the owner it carries, its head and its arm as the reader meets them; null where none stands there */

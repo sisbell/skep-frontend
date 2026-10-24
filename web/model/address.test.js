@@ -2,7 +2,16 @@
 // Each claim fails when the module's rule is removed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { fieldsOf, accountOf, documentOf, homeOf, memberOf, elementOf, kindOf, cmpAddr, isAddress, parseAddress, resolveSpan, parseVSpan, vSpan, unitSpan, commonsType, isUnder, isTrunkMember } from './address.js';
+import { fieldsOf, accountOf, documentOf, homeOf, memberOf, elementOf, kindOf, cmpAddr, isAddress, parseAddress, resolveSpan, parseVSpan, vSpan, unitSpan, commonsType, isUnder, isTrunkMember, parentAccount, docOneOf } from './address.js';
+
+test('the account above an account is its user field less its last component, none above a top-level account; an account\'s doc 1 is its computable address', () => {
+  assert.equal(parentAccount('1.0.1.1'), '1.0.1');
+  assert.equal(parentAccount('1.0.1.1.2'), '1.0.1.1');
+  assert.equal(parentAccount('1.0.1'), null, 'a top-level account: none above it');
+  assert.equal(parentAccount('1.0.1.0.3'), null, 'a document names no account');
+  assert.equal(parentAccount('1'), null);
+  assert.equal(docOneOf('1.0.1.1'), '1.0.1.1.0.1');
+});
 
 test('the tumbler splits at zeros into dottable fields', () => {
   assert.deepEqual(fieldsOf('1.5.0.1.1.0.1'), [[1, 5], [1, 1], [1]]);

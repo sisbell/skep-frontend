@@ -152,6 +152,22 @@
 // takes dropped told to the app after the drop, the row's op with it, and the
 // page's own death told as a drop of every record (issue #160: a mutant that
 // tells before the drop, or tells no death, turns red);
+// THE BYLINE'S FACTS (issue #208; FP-34): read by the view for the owner of
+// each text it draws at reading scale, once, a read out joined, never below
+// the reading em (a mutant that never asks them turns red); the sole
+// device-flagged entry of the genesis enrollment — the record whose own `to`
+// names the account, one homed in another account's doc 1 before its own
+// doc 1's lowest-addressed, its atom placed through the home's image (a
+// mutant that keeps a sub-account's record, sorts by address alone, reads
+// the atom at its stored ordinal or reads the anchor's entry turns red); with
+// no key enrolled and none retired, the tables above it climbed — by
+// reference, else unsigned (a mutant that never climbs turns red); a cause
+// where none can be named — not recorded, withheld naming the owner of what
+// was withheld, not read; the board not answering held through its pause and
+// asked again at the daemon's `running` (a mutant that holds nothing turns
+// red); a cause a feed row touching a doc 1 overtook never taken and asked
+// again, a value taken whatever the row (a mutant that takes the cause turns
+// red);
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -166,7 +182,8 @@ import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell, docBox } from '../plane/projection.js';
 import { estimate, estimatedSpan, MEASURE_CPL } from '../plane/layout.js';
-import { documentOf } from './address.js';
+import { documentOf, unitSpan } from './address.js';
+import { createHash } from 'node:crypto';
 
 const D = '1.0.1.0.3';
 const script = {
@@ -186,7 +203,10 @@ const script = {
   [FAKE.keyOf('op', { frame: F.editionClaimsAt('1.0.1.0.1003') })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
 };
 
-beforeEach(() => { REC._reset(); });
+/** the byline's facts of 1.0.1, the owner of the documents the tests read, held from the start: the reads a test holds the view to are its documents' own — the byline's reads are held by the tests that make them (`readAccount`) */
+const OWN_FACTS = { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' };
+
+beforeEach(() => { REC._reset(); REC.takeAccountKey('1.0.1', OWN_FACTS); });
 
 test('the model after a scripted cold open and a whole read, over the fake port', async () => {
   const fake = FAKE.create(script);
@@ -1764,6 +1784,163 @@ test('what each feed row the page takes dropped is told to the app after the dro
   fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
   assert.ok(told.length > 0 && told.every((x) => x.op === null && x.addrs === null && !x.signed), `the page's own death told as a drop of every record, after the death: ${JSON.stringify(told)}`);
   await new Promise((r) => setTimeout(r, 0));
+});
+
+// ---- the byline's facts (issue #208; FP-34) -------------------------------------------------------------------------
+
+/** a key's fingerprint, built here apart from the page's: SHA-256 over the tag, then each field's 4-byte big-endian length and its bytes (AUTH-1.8) */
+const fingerprintOf = (/** @type {string} */ alg, /** @type {string} */ keyHex) => {
+  const be32 = (/** @type {number} */ n) => { const b = Buffer.alloc(4); b.writeUInt32BE(n); return b; };
+  const a = Buffer.from(alg, 'utf8'), raw = Buffer.from(keyHex, 'hex');
+  return createHash('sha256').update(Buffer.concat([Buffer.from('skep-key-v1', 'utf8'), be32(a.length), a, be32(raw.length), raw])).digest('hex');
+};
+const ALG = 'mldsa65-ed25519', KEY_A = '0a1b2c3d'.repeat(8), KEY_B = 'f0e1d2c3'.repeat(8), KEY_C = '5a6b7c8d'.repeat(8);
+/** `key_set` as the board answers it */
+const keySetOf = (/** @type {object[]} */ enrolled, /** @type {object[]} */ retired = []) => ({ result: { as_of: 1, resp: 'key_set', enrolled, retired } });
+/** one key enrolled */
+const ONE_KEY = [{ alg: ALG, anchor: false, fingerprint: 'ab'.repeat(32) }];
+/** an enrollment record's link as `read_link` answers it: from its record's one byte `atom` to the account `to` it enrolls */
+const enrollment = (/** @type {string} */ atom, /** @type {string} */ to) => ({ result: { as_of: 1, resp: 'link_value', link: { slots: [[unitSpan(atom)], [unitSpan(to)], [{ start: F.ENROLL_CLASS, width: '0.0.0.0.0.0.0.0.1' }]] } } });
+/** a genesis record of keys, each `[key, label, anchor]`, a label of null carrying none */
+const genesisRecord = (/** @type {Array<[string, string | null, boolean]>} */ keys) => ({ type: 'skep-enroll', keys: keys.map(([key, label, anchor]) => ({ alg: ALG, key, anchor, ...(label ? { label } : {}) })) });
+const opKey = (/** @type {object} */ frame) => FAKE.keyOf('op', { frame });
+/**
+ * The reads of an account's byline facts as its board answers them: its credential table holding one key, the enrollment
+ * records naming it — each `[link, to, atom]` — and the genesis's `home`: its text `extent` positions, its V→I image `runs`,
+ * its record atom read at position `at`.
+ * @param {string} account
+ * @param {Array<[string, string, string]>} records
+ * @param {{home: string, extent: number, runs: Array<{i_start: string, width: string}>, at: number, record: object}} g
+ */
+function genesisReads(account, records, g) {
+  return {
+    [opKey(F.keySet(account))]: keySetOf(ONE_KEY),
+    [opKey(F.enrollmentsOf(account))]: { result: { as_of: 1, resp: 'addrs', addrs: records.map(([l]) => l) } },
+    ...Object.fromEntries(records.map(([l, to, atom]) => [opKey(F.readLink(l)), enrollment(atom, to)])),
+    [opKey(F.retrieveDocVSpanSet(g.home))]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + g.extent }] } },
+    [opKey(F.image(g.home, 1, g.extent))]: { result: { as_of: 1, resp: 'runs', runs: g.runs } },
+    [opKey(F.retrieveV(g.home, g.at, 1))]: { result: { as_of: 1, resp: 'delivery', items: [{ atom: JSON.stringify(g.record) }] } },
+  };
+}
+/** the port booted over a script, the pump started over it, the board known */
+function bylineBoard(/** @type {Record<string, unknown>} */ s) {
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  return fake;
+}
+/** how many times a frame was asked */
+const asksOf = (/** @type {ReturnType<typeof FAKE.create>} */ fake, /** @type {object} */ frame) => fake.asked.filter((k) => k === opKey(frame)).length;
+
+test('at reading scale the view reads the byline facts of the owner of each text it draws — once, a read out joined, missing while out and not once held — and nothing below the reading em (FP-34)', async () => {
+  REC._reset();
+  const s = { ...script, [opKey(F.keySet('1.0.1'))]: keySetOf([]) };
+  const fake = bylineBoard(s);
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  CAM.setViewport(1440, 900);
+  CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  await pumped();
+  assert.equal(asksOf(fake, F.keySet('1.0.1')), 0, 'at HOME, where no text is read, no byline is');
+  const release = fake.hold('op', { frame: F.keySet('1.0.1') });
+  readAt(D, 30);
+  PUMP.pump();
+  await flush();
+  assert.ok(PUMP.pump() > 0, 'missing while out');
+  await flush();
+  assert.deepEqual([asksOf(fake, F.keySet('1.0.1')), REC.accountKey('1.0.1')], [1, undefined], 'asked once, its read out joined by every pass');
+  release();
+  await pumped();
+  assert.deepEqual([asksOf(fake, F.keySet('1.0.1')), REC.accountKey('1.0.1')], [1, { cause: 'unsigned' }], 'answered: no key enrolled and none above — unsigned — and never asked again once held');
+});
+
+test('an account\'s byline facts are the sole device-flagged entry of its genesis enrollment — the record whose own `to` names the account, the lowest-addressed in its own doc 1, its atom placed through the home\'s image and read there — its label, and its fingerprint (FP-34; R22)', async () => {
+  const A = '1.0.4', HOME = '1.0.4.0.1';
+  const s = genesisReads(A, [
+    ['1.0.4.0.1.0.2.3', A, '1.0.4.0.1.0.1.3'],
+    ['1.0.4.0.1.0.2.1', '1.0.4.1', '1.0.4.0.1.0.1.1'],
+    ['1.0.4.0.1.0.2.2', A, '1.0.4.0.1.0.1.2'],
+  ], {
+    // an edit set a byte before the record's: the atom minted at ordinal 2 stands at position 3 now
+    home: HOME, extent: 4, runs: [{ i_start: '1.0.4.0.1.0.1.9', width: '1' }, { i_start: '1.0.4.0.1.0.1.1', width: '3' }], at: 3,
+    record: genesisRecord([[KEY_A, 'paper', true], [KEY_B, 'dev-laptop', false]]),
+  });
+  const fake = bylineBoard(s);
+  await PUMP.readAccount(A);
+  assert.deepEqual(REC.accountKey(A), { label: 'dev-laptop', fingerprint: fingerprintOf(ALG, KEY_B) }, 'the record\'s device-flagged entry: its label and its fingerprint, never the anchor\'s');
+  assert.deepEqual(fake.unanswered, [], 'every read the script names: the lowest-addressed record whose `to` is the account — never the sub-account\'s, lower though it is — its atom read at the position the image places it, never its stored ordinal');
+});
+
+test('an account\'s genesis is the enrollment homed in another account\'s doc 1 first, before any in its own; with no key enrolled and none retired the byline climbs the credential tables above it — by reference where one holds a key, unsigned where none does — and with a key retired it never climbs (FP-34; wire.md §Sessions)', async () => {
+  const OUT = '1.0.7.0.1', A = '1.0.5';
+  const s = {
+    ...genesisReads(A, [['1.0.5.0.1.0.2.1', A, '1.0.5.0.1.0.1.1'], ['1.0.7.0.1.0.2.9', A, '1.0.7.0.1.0.1.4']], {
+      home: OUT, extent: 4, runs: [{ i_start: '1.0.7.0.1.0.1.1', width: '4' }], at: 4, record: genesisRecord([[KEY_C, 'registry-device', false]]),
+    }),
+    [opKey(F.keySet('1.0.6.1'))]: keySetOf([]), [opKey(F.keySet('1.0.6'))]: keySetOf(ONE_KEY),
+    [opKey(F.keySet('1.0.8.1'))]: keySetOf([]), [opKey(F.keySet('1.0.8'))]: keySetOf([]),
+    [opKey(F.keySet('1.0.11.1'))]: keySetOf([], ONE_KEY), [opKey(F.enrollmentsOf('1.0.11.1'))]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  };
+  const fake = bylineBoard(s);
+  await Promise.all([A, '1.0.6.1', '1.0.8.1', '1.0.11.1'].map((a) => PUMP.readAccount(a)));
+  assert.deepEqual(REC.accountKey(A), { label: 'registry-device', fingerprint: fingerprintOf(ALG, KEY_C) }, 'homed in 1.0.7\'s doc 1: the genesis, though its own doc 1\'s record is lower-addressed');
+  assert.deepEqual([REC.accountKey('1.0.6.1'), REC.accountKey('1.0.8.1')], [{ cause: 'by-reference' }, { cause: 'unsigned' }], 'its credentials those of the account above it; none anywhere above');
+  assert.deepEqual([REC.accountKey('1.0.11.1'), asksOf(fake, F.keySet('1.0.11'))], [{ cause: 'not-recorded' }, 0], 'a key retired: its genesis looked for, never the table above');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('where an account\'s byline can name no key it says why: its genesis names not exactly one device-flagged entry, or none stands — not recorded; a read withheld from the reader — withheld, naming the owner of what was withheld; a read refused any other way — not read (FP-34)', async () => {
+  const s = {
+    ...genesisReads('1.0.12', [['1.0.12.0.1.0.2.1', '1.0.12', '1.0.12.0.1.0.1.1']], { home: '1.0.12.0.1', extent: 1, runs: [{ i_start: '1.0.12.0.1.0.1.1', width: '1' }], at: 1, record: genesisRecord([[KEY_A, 'one', false], [KEY_B, 'two', false]]) }),
+    ...genesisReads('1.0.13', [['1.0.13.0.1.0.2.1', '1.0.13', '1.0.13.0.1.0.1.1']], { home: '1.0.13.0.1', extent: 2, runs: [{ i_start: '1.0.13.0.1.0.1.5', width: '2' }], at: 1, record: genesisRecord([[KEY_A, 'gone', false]]) }),
+    [opKey(F.keySet('1.0.14.1'))]: keySetOf(ONE_KEY),
+    [opKey(F.enrollmentsOf('1.0.14.1'))]: { result: { as_of: 1, resp: 'addrs', addrs: ['1.0.14.0.1.0.2.1'] } },
+    [opKey(F.readLink('1.0.14.0.1.0.2.1'))]: enrollment('1.0.14.0.1.0.1.2', '1.0.14.1'),
+    [opKey(F.retrieveDocVSpanSet('1.0.14.0.1'))]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+    [opKey(F.keySet('1.0.15'))]: { refused: { kind: 'refused', name: 'bad_request', code: 'bad_request' } },
+  };
+  const fake = bylineBoard(s);
+  await Promise.all(['1.0.12', '1.0.13', '1.0.14.1', '1.0.15'].map((a) => PUMP.readAccount(a)));
+  assert.deepEqual(REC.accountKey('1.0.12'), { cause: 'not-recorded' }, 'two device-flagged entries: no one of them the byline\'s');
+  assert.deepEqual(REC.accountKey('1.0.13'), { cause: 'not-recorded' }, 'the home\'s text no longer places the record\'s byte');
+  assert.deepEqual(REC.accountKey('1.0.14.1'), { cause: 'withheld', owner: '1.0.14' }, 'the genesis\'s home withheld: the owner of the home, never the account read');
+  assert.deepEqual(REC.accountKey('1.0.15'), { cause: 'unread' }, 'a refusal that says nothing of the facts');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a byline read the board did not answer is held — not asked again inside its pause — and asked again at the daemon\'s running; a cause that lands after a feed row touching a doc 1 is never taken and is asked again, while a value is taken whatever the row (FP-34; AUTH-2.127)', async (t) => {
+  t.mock.method(performance, 'now', () => 1000);
+  const s = {
+    [opKey(F.keySet('1.0.17'))]: keySetOf([]),
+    ...genesisReads('1.0.18', [['1.0.18.0.1.0.2.1', '1.0.18', '1.0.18.0.1.0.1.1']], { home: '1.0.18.0.1', extent: 1, runs: [{ i_start: '1.0.18.0.1.0.1.1', width: '1' }], at: 1, record: genesisRecord([[KEY_B, 'dev', false]]) }),
+  };
+  const out = inTurn(s, F.keySet('1.0.16'), UNREACHABLE, keySetOf([]));
+  const fake = bylineBoard(s);
+  await PUMP.readAccount('1.0.16');
+  await PUMP.readAccount('1.0.16');
+  assert.deepEqual([out.asks(), REC.accountKey('1.0.16')], [1, { cause: 'unreachable' }], 'the board not answering: held, and not asked again inside its pause');
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  await PUMP.readAccount('1.0.16');
+  assert.deepEqual([out.asks(), REC.accountKey('1.0.16')], [2, { cause: 'unsigned' }], 'asked again at once as the daemon is back');
+  // a cause read across a feed row touching a doc 1: its account may have enrolled since
+  const held = fake.hold('op', { frame: F.keySet('1.0.17') });
+  const p = PUMP.readAccount('1.0.17');
+  assert.equal(PUMP.readAccount('1.0.17'), p, 'a read out is joined');
+  fake.fire('feed', { board: 'b-1', update: { position: 9, at: 9, op: 'make_link', docs: ['1.0.17.0.1'], class: 'published', link: '1.0.17.0.1.0.2.1' } });
+  held();
+  await p;
+  assert.equal(REC.accountKey('1.0.17'), undefined, 'the cause the row overtook is never taken');
+  await PUMP.readAccount('1.0.17');
+  assert.deepEqual([asksOf(fake, F.keySet('1.0.17')), REC.accountKey('1.0.17')], [2, { cause: 'unsigned' }], 'asked again, and taken');
+  // a value read across such a row: a value never changes
+  const atom = fake.hold('op', { frame: F.retrieveV('1.0.18.0.1', 1, 1) });
+  const q = PUMP.readAccount('1.0.18');
+  await flush();
+  fake.fire('feed', { board: 'b-1', update: { position: 10, at: 10, op: 'make_link', docs: ['1.0.18.0.1'], class: 'published', link: '1.0.18.0.1.0.2.2' } });
+  atom();
+  await q;
+  assert.deepEqual(REC.accountKey('1.0.18'), { label: 'dev', fingerprint: fingerprintOf(ALG, KEY_B) }, 'taken');
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

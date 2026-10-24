@@ -191,6 +191,10 @@ export const STRINGS = {
   'F.versions.whole': { text: 'holds the passage whole', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the versions list' },
   'F.versions.part': { text: 'holds the passage in part', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the versions list' },
   'F.versions.none': { text: 'does not hold the passage', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the versions list' },
+  // a byline's slots where no key can be named (FP-34; issue #208's design decision, whose own words these are, as
+  // foundations §3.2 names a hand): no key made the writes; the board lost it
+  'F.slot.unsigned': { text: 'unsigned', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the byline' },
+  'F.slot.not-recorded': { text: 'not recorded', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the byline' },
   'F.leap.arriving': { text: 'the index is still building — what is listed here is what has arrived', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
   'F.index.state': { text: 'index: ⟨arm⟩', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
 
@@ -379,6 +383,20 @@ export const STRINGS = {
   'L.corner.bare': { text: '○', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner, compact' },
   'L.corner.pinned': { text: '●', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },
   'L.corner.draft': { text: '◌', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },
+  // THE SLOTS (FP-34; issue #208's design decision: "Each slot's accessible name gives its role and what it shows, including
+  // while it is pending"; "Causes that have no words yet get their own in the copy refresh"): a slot's accessible name, its
+  // roles, what a slot being read shows; the causes the decision does not word — an account whose writes are signed with
+  // the keys of one above it (R42's term), a genesis entry with no label, a read refused for another reason — and the one
+  // line's own: the device's key store not read, the session's key not named among several (skep #579)
+  'L.slot.named': { text: '⟨role⟩: ⟨shows⟩', cls: 'DRAFT', source: '', screen: 'the byline; the one line', lane: true },
+  'L.slot.device-label': { text: 'device label', cls: 'DRAFT', source: '', screen: 'the byline; the one line', lane: true },
+  'L.slot.fingerprint': { text: 'fingerprint', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
+  'L.slot.reading': { text: 'being read', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
+  'L.slot.by-reference': { text: 'by reference', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
+  'L.slot.unlabelled': { text: 'no label', cls: 'DRAFT', source: '', screen: 'the byline; the one line', lane: true },
+  'L.slot.unread': { text: 'not read', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
+  'L.slot.store-unread': { text: 'key store not read', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  'L.slot.key-untold': { text: 'key not named', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
 };
 
 /**

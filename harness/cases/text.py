@@ -1,7 +1,23 @@
 """TEXT — class 3 (the structure record §6.3; T3 (3); M8): the one line's
 segments in STATE 2 (acting as the claimant through the signed session, the
 model keeping it as the provider opened it: one a write may go out under,
-`SessionOpened.writes`); its address at a landing — the position the one
+`SessionOpened.writes`), its device label the label of the key the session
+is opened with — decided here from the device's key store as the shell
+selects it, the one key bound at this board for the session's principal,
+else the store's one key, with no fallback for a key it does not name
+(FP-34); THE PLACEHOLDER SWEEP (issue #208's design decision: "A slot never
+shows its template placeholder") at every surface this case visits, a
+reading scene and the guest's page among them — no ⟨token⟩ of the strings
+table's templates, matched whole and never a bracket alone, in the page's
+text, its attributes, a field, the canvas's labels or the AX tree, the
+documents' own words apart; THE BYLINE (FP-34): the first
+edition's on the owner's page its label alone, on the guest's its label and
+its cue, the agent space's home's and each reading scene pane's as their
+owners' facts decide — the owner each document's metadata names, its facts
+decided here by the harness's own reads of the board: the credential table,
+the climb above it, the genesis enrollment's sole device-flagged entry —
+each slot named by its role and what it shows, the panes' in the AX tree
+too; its address at a landing — the position the one
 the landing named, the trail's entry's (W-01 step 3, "position honored"),
 and the account the document's own account field, read whole (the agent
 space's `1.0.1.1`) — and at mid,
@@ -37,7 +53,7 @@ W-01 step 7's (`walks`), which runs after `keys` reads LK's visited set."""
 import json
 import re
 
-from . import AGENT_SPACE, DOC, GHOST, VERSIONED, WINDOW, Result
+from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, VERSIONED, WINDOW, Result, byline_expected, byline_facts, byline_shown, placeholder_sweep
 
 TOKEN = re.compile(r'⟨[^⟩]*⟩')
 BLANK = re.compile(r'[\s\-–—·.…]*')  # a value that is no value: dashes, dots and spaces, or nothing
@@ -80,12 +96,28 @@ def run(ctx):
     ctx.leap(DOC, WINDOW[0])
     line = ctx.js('window.__skep.line()')
     sess = ctx.js('window.__skep.model.session()')
-    dev = ctx.js('window.__skep.model.device()')
     board = ctx.js('window.__skep.model.board()')
     r.check((sess or {}).get('writes') is True, 'the model keeps the session as the provider opened it: one a write may go out under, the signed session STATE 2 speaks for', {k: (sess or {}).get(k) for k in ('principal', 'account', 'writes')})
     r.check(line['state'] == 2, 'the acting-as segment is in STATE 2 (a signed session stands)', line['state'])
-    expect = 'acting as %s (principal %s) · %s · key present on this device · %s · LOCAL notebook' % (sess['account'], sess['principal'], dev['label'] if dev else '⟨device label⟩', board['origin'])
-    r.check(norm(expect) in norm(line['text']), 'the acting-as segment reads foundations §3.3\'s STATE 2 with the session\'s values', {'expect': expect, 'line': line['text']})
+    # the key the shell opens the signed session with, decided here from the device's store apart from the page's reading
+    # (skep-client's `FileStore::select`): the one key bound at this board for the session's principal, else the store's one key
+    store = ctx.key_store()
+    bound = [row for row in store['rows'] if any(b.startswith('%s principal %s ' % (board['origin'], sess['principal'])) for b in row.get('bindings') or [])]
+    opened = bound if bound else store['rows']
+    r.check(len(opened) == 1, 'the device\'s key store names the one key the session is opened with: one bound at this board for its principal, else the store\'s one key — no fallback for a key the store does not name',
+            {'bound': [row.get('label') for row in bound], 'rows': [row.get('label') for row in store['rows']], 'refused': store['refused']})
+    label = (opened[0].get('label') if len(opened) == 1 else None) or ctx.js('(async () => (await import("./strings.js")).t("L.slot.unlabelled"))()')
+    expect = 'acting as %s (principal %s) · %s · key present on this device · %s · LOCAL notebook' % (sess['account'], sess['principal'], label, board['origin'])
+    r.check(len(opened) == 1 and norm(expect) in norm(line['text']), 'the acting-as segment reads foundations §3.3\'s STATE 2 with the session\'s values, its device label the label of the key the session is opened with (FP-34)', {'expect': expect, 'line': line['text']})
+    sweeps = {}
+
+    def swept(where):
+        """the placeholder sweep at a surface (issue #208): no ⟨token⟩ a template left unfilled shown or told there"""
+        hits = placeholder_sweep(ctx)
+        sweeps[where] = [h['token'] for h in hits]
+        r.check(not hits, f'{where}: no template placeholder the page shows or tells — no token of the strings table\'s templates in its text, its attributes, a field, the canvas\'s labels or the AX tree, the documents\' own words apart (FP-34; issue #208)', hits[:6])
+
+    swept('the first edition\'s landing')
     r.check(line['address']['doc'] == DOC and line['address']['pos'] is not None, 'the address segment names the document and the position', line['address'])
     r.check('1 › 1.0.1 › 1.0.1.0.3 › position' in line['text'], 'the where-am-I reads board › account › document › position', line['text'][:160])
     marks = wording_marks(ctx, '#line')
@@ -114,6 +146,7 @@ def run(ctx):
     ctx.js('window.__skep.leap.open()')
     ctx.frames(2)
     held = ctx.js('document.getElementById("leapq").value')
+    swept('mid, the LEAP box open over it')
     ctx.esc()
     r.check(held == '1.0.1', 'at mid the LEAP box opens holding the address the line shows: the account', held)
     r.figures['mid_line'] = {'zooms': zooms, 'address': at_mid, 'leap': held}
@@ -122,6 +155,7 @@ def run(ctx):
     agent = ctx.js('window.__skep.line()')['address']
     r.check(agent['text'].split(' › ')[1:3] == [AGENT_SPACE, AGENT_SPACE + '.0.1'], 'the agent space\'s home document reads 1 › 1.0.1.1 › 1.0.1.1.0.1: the account segment is its own account field, read whole', {'address': agent, 'lod': ctx.js('window.__skep.view.lod()')['name']})
     r.figures['agent_line'] = agent
+    swept('the agent space\'s home document')
     # ---- a pinned version: the one line names it (issue #154's design decision: "The address bar and the box's corner
     # both name it"; foundations §3.2: "its version address with ○ lit") ----------------------------------------------
     member = VERSIONED + '.1'
@@ -129,6 +163,7 @@ def run(ctx):
       return {shown: window.__skep.go.shownIn(a), address: window.__skep.line().address, marker: m ? {lit: m.classList.contains('lit'), title: m.title} : null}; })(%s)''' % json.dumps(VERSIONED))
     ctx.leap(member)
     pinned = seg()
+    swept('a box pinned to version 1')
     title = ctx.js('import("./strings.js").then(({t}) => t("L.version", {k: 1}))')
     r.check(pinned['shown'] == member and pinned['address']['doc'] == member and pinned['address']['text'].split(' › ')[:3] == ['1', '1.0.1', member] and pinned['address']['pos'] is not None
             and pinned['marker'] == {'lit': True, 'title': title},
@@ -146,6 +181,7 @@ def run(ctx):
     r.check('doc_not_registered' not in face['text'].lower() and face['acts'] == 0, 'the fifth cell\'s face is its words alone: no wire token above them, no act beneath (B1-S8; C-42)', face)
     marks = wording_marks(ctx, '#overlay')
     r.check('B1.doc_not_registered' in marks['shown'] and not marks['marked'], 'the face\'s words are set apart by no class of theirs in the inventory — no dotted underline, no bar at their left', marks)
+    swept('the dead-reference face')
     ctx.esc()
     r.check(ctx.js('window.__skep.overlay()')['kind'] is None, 'Esc dismisses the face')
     r.figures['face'] = face['text'][:300]
@@ -206,7 +242,73 @@ def run(ctx):
         r.check((shown_line is not None) == bool(stray) and (shown_line is None or norm(shown_line) == norm(words['others'])), 'one line follows the rows, in its own words and no number in them, where a claim answered lacks authority, and none where every claim has it', {'line': shown_line, 'without_authority': stray})
         lineage['line'] = shown_line
         r.figures['anatomy_lineage'] = lineage
+        swept('the anatomy card')
         ctx.esc()
+    # ---- THE BYLINE (issue #208; FP-34): each byline's slots filled from its owner's facts, decided here by the harness's own
+    # reads of the board apart from the page's — the owner its document's metadata names, as the page names it — the
+    # reader's own byline its label alone, another's its label and its cue, a cause's words where the facts name no key ----
+    def byline_holds(where, article, doc, reader):
+        """the byline of `doc`'s article — the selector `article` names it — against its owner's facts; its figures"""
+        owner = ctx.daemon_op({'op': 'doc_metadata', 'doc': doc}).get('owner')
+        facts = byline_facts(ctx, owner) if owner else {'cause': 'unread'}
+        want = byline_expected(ctx, facts, owner == reader)
+        shown = byline_shown(ctx, article)
+        got = shown and {'owner': shown['owner'], 'shows': [s['whole'] or s['shows'] for s in shown['slots']], 'names': [s['name'] for s in shown['slots']]}
+        slots = 'its label alone, the reader\'s own' if owner == reader else 'its label and its cue'
+        stands = ctx.js('''((a, sel) => { const S = window.__skep, d = S.model.doc(a), e = document.querySelector(sel);
+          return {article: !!e, head: !!(e && e.querySelector('.hd')), lines: S.mountedLines(a), from: d.from, to: d.to, blocks: d.blocks.map((b) => [b.pos, b.kind]), refused: d.refused,
+                  camera: S.view.camera(), lod: S.view.lod().name}; })(%s, %s)''' % (json.dumps(doc), json.dumps(article)))
+        r.check(bool(owner) and bool(shown) and got == {'owner': owner + ' · ', 'shows': want['shows'], 'names': want['names']} and not any(s['pending'] for s in shown['slots']),
+                '%s: the byline names its owner, %s, then its slots filled from the owner\'s facts as the board answers them — %s, or the cause\'s words where they name no key — each named by its role and what it shows (FP-34; issue #208)' % (where, owner, slots),
+                {'facts': facts, 'want': want, 'shown': shown, 'stands': stands})
+        return {'owner': owner, 'facts': facts, 'shows': got and got['shows']}
+
+    bylines = {}
+    ctx.leap(DOC, None)
+    bylines['own'] = byline_holds('the first edition', '#domlayer article.dtext[data-addr="%s"]' % DOC, DOC, sess['account'])
+    swept('the first edition\'s head')
+    # the agent space's home document holds no text on this board, so the plane mounts no article of it: the facts the page read
+    # of its owner at the landing, and the byline of the article a reading scene's pane makes of it — T-LAYER's own, read whole —
+    # set aside the plane where no one meets it, and taken down
+    agent = AGENT_SPACE + '.0.1'
+    ctx.leap(agent, None)
+    held = ctx.js('(async (a) => { const R = await import("./model/records.js"); return R.accountKey(R.ownerAccount(R.doc(a))) ?? null; })(%s)' % json.dumps(agent))
+    ctx.js('''(async (a) => { const L = await import('./text/layer.js'), R = await import('./model/records.js');
+      await window.__skep.model.loadWhole(a);
+      const host = document.createElement('div'); host.id = 'gate-pane'; host.style.cssText = 'position:absolute;left:-10000px;top:0;width:900px';
+      host.appendChild(L.sceneArticle(R.doc(a))); document.body.appendChild(host); })(%s)''' % json.dumps(agent))
+    bylines['agent_space'] = byline_holds('the agent space\'s home document, in the article a pane makes of it', '#gate-pane article.dtext', agent, sess['account'])
+    ctx.js('document.getElementById("gate-pane").remove()')
+    r.check(held == bylines['agent_space']['facts'], 'the page read the facts of the agent space\'s home\'s owner at the landing, as the board answers them, though the plane mounts no article of it', {'page': held, 'board': bylines['agent_space']['facts']})
+    # a reading scene's panes: each byline set with its owner's facts read before the pane was set, and told to assistive
+    # technology by its slots' names — a pane's article is what it reads there
+    ctx.leap(DOC, WINDOW[0])
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(FAR_LEAP)))
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.scene.isOpen() && !window.__skep.scene.updating() || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    ctx.settle()
+    ctx.frames(2)
+    for side, doc in (('A', DOC), ('B', FAR_LEAP)):
+        bylines['pane ' + side] = byline_holds('pane %s of a reading scene, on %s' % (side, doc), '#scene%s article.dtext' % side, doc, sess['account'])
+    ax = ctx.drv.ax_tree()
+    if 'error' in ax:
+        r.note('the panes\' bylines in the AX tree: Accessibility.getFullAXTree did not answer: ' + ax['error'])
+    else:
+        imgs = [(n.get('name') or {}).get('value') for n in ax.get('nodes', []) if not n.get('ignored') and (n.get('role') or {}).get('value') in ('image', 'img')]
+        named_in_panes = [byline_shown(ctx, '#scene%s article.dtext' % side) for side in 'AB']
+        names = [s['name'] for b in named_in_panes if b for s in b['slots']]
+        r.check(bool(names) and all(nm in imgs for nm in names), 'the AX tree tells each pane\'s byline slots by their names: its role and what it shows (FP-34)', {'names': names, 'images': imgs[:12]})
+    swept('a reading scene on the first edition and %s' % FAR_LEAP)
+    ctx.js('window.__skep.scene.close()')
+    ctx.frames(2)
+    # the guest page: another's byline — the owner's label and its cue
+    ctx.open_page('guest')
+    ctx.leap(DOC, None)
+    bylines['guest'] = byline_holds('the first edition on the guest\'s page', '#domlayer article.dtext[data-addr="%s"]' % DOC, DOC, None)
+    swept('the guest\'s page at the first edition\'s head')
+    ctx.open_page('all')
+    ctx.leap(DOC, WINDOW[0])
+    r.figures['bylines'] = bylines
+    r.figures['sweeps'] = sweeps
     # ---- every PINNED string against its source ------------------------------------------
     pinned = ctx.js('window.__skep.strings.pinned()')
     sources = {}

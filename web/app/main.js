@@ -11,15 +11,17 @@
 // read takes the guest form and every screen its guest arm — a visitor's
 // page before any sign-in is asked (the harness's guest case; the installed
 // app loads with no query and never reaches it). Then `boards()` (the
-// reference kept), `session(board)` by M-PUMP's acquire (`acquireSession`;
+// reference kept), `fingerprint()` (the device's key store, read for this
+// board: whether a key is bound here — R56's "key present", which the
+// entitlement arms read — and which key is the session's, M-REC's `device`,
+// read before the session so the one line's device label is taken with it,
+// FP-34; a refusal held as the store not read), `session(board)` by M-PUMP's
+// acquire (`acquireSession`;
 // S-37 (a) and issue #175's design decision: the boot's own call, made again
 // by the same routine where a restart loses the session, FP-28 — the session
 // kept as the shell opened it: its reference, never a token, and whether a
 // write may go out under it; `close(session)` at `pagehide` on a keepalive
-// fetch), `fingerprint()` (the device's key
-// store, read for this board: whether a key is bound here — R56's "key
-// present", which the entitlement arms read — and which key is the
-// session's, M-REC's `device`), `health(board)` and `probe()` by M-PUMP's
+// fetch), `health(board)` and `probe()` by M-PUMP's
 // `readHealth` and `readProbe`, the model's index by its `readIndex`
 // (`places` at the page's class, skep #463) — each of the three answers
 // laid under the board's events taken while it was out — then the launch
@@ -91,7 +93,8 @@
 // (SC's and N-WALK's `dropped` handed to M-PUMP), FP-25 (O-HOST's `aside`
 // handed to the one line), FP-26 (L-LINE's `named` handed to T-LAYER), FP-28
 // (the boot's session opened by M-PUMP's acquire), FP-29 (a change of class
-// told to every surface showing what the class it left read).
+// told to every surface showing what the class it left read), FP-34 (the key
+// store read before the session, the line's device label taken with it).
 
 import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';
@@ -268,9 +271,10 @@ async function boot() {
     else bootInfo.boardsRefused = 'refused' in b ? b.refused : 'none';
     const board = REC.board();
     if (board) {
-      if (!GUEST) await PUMP.acquireSession();
+      // the device's key store before the session, so the key the session is opened with is named with it (FP-34)
       const fp = await PORT.fingerprint({});
-      if ('result' in fp) REC.takeKeyStore(fp.result, board.origin);
+      REC.takeKeyStore('result' in fp ? fp.result : null, board.origin);
+      if (!GUEST) await PUMP.acquireSession();
       await PUMP.readHealth(board.board);
       await PUMP.readProbe();
       const pl = await PUMP.readIndex();

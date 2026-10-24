@@ -71,7 +71,9 @@
 // runs the scene read and kept beside it, pane A's after its corner and pane
 // B's before it, so each corner stands on its pane's outer side (a mutant
 // that makes a pane's article itself, or sets both after their corners,
-// turns red).
+// turns red); its byline set with its owner's facts, read before the pane is
+// set (FP-34: a mutant that sets the pane before they are read leaves an
+// empty box a pane set from its kept view shows again, and turns red).
 // And THE OPENING (O-HOST's): the dismissal a navigation act makes first,
 // Esc, or an overlay shown — a follow's face — made while the scene reads
 // ends its opening — made while it reads its documents, no `compare` is
@@ -382,7 +384,9 @@ const reads = (doc, text, o = {}) => {
 const compared = (/** @type {string} */ d1, /** @type {string} */ t1, /** @type {string} */ d2, /** @type {string} */ t2, /** @type {Array<[number, number, number]>} */ shared = []) => ({
   [FAKE.keyOf('op', { frame: F.compare([{ doc: d1, spans: [{ ordinal: 1, positions: t1.length }] }], [{ doc: d2, spans: [{ ordinal: 1, positions: t2.length }] }]) })]: { result: { as_of: 1, resp: 'compare', pairs: shared.map(([u1, u2, width]) => ({ d1, d2, u1: { ordinal: String(u1), subspace: '1' }, u2: { ordinal: String(u2), subspace: '1' }, width: String(width) })) } },
 });
-const script = { ...reads(A, A_TEXT), ...reads(B, B_TEXT), ...compared(A, A_TEXT, B, B_TEXT), ...compared(B, B_TEXT, A, A_TEXT) };
+/** the byline's facts of 1.0.1, the panes' owner, as its board answers them: no key enrolled at it and none above — unsigned (FP-34) */
+const OWNER_KEYS = { [FAKE.keyOf('op', { frame: F.keySet('1.0.1') })]: { result: { as_of: 1, resp: 'key_set', enrolled: [], retired: [] } } };
+const script = { ...reads(A, A_TEXT), ...reads(B, B_TEXT), ...compared(A, A_TEXT, B, B_TEXT), ...compared(B, B_TEXT, A, A_TEXT), ...OWNER_KEYS };
 
 /** @type {ReturnType<typeof FAKE.create>} */
 let fake;
@@ -521,6 +525,10 @@ test('each pane holds T-LAYER\'s article of its document, made from the text the
     assert.deepEqual(LAYER.madeOf(/** @type {any} */ (placed.el)), { addr: addr + '.1', blocks: d.blocks, runs: d.runs, image: d.image }, `${addr}: the pane's article is T-LAYER's, made from the blocks, runs and image the scene read, as ${addr}.1 — the member its text is, which its acts name`);
   }
   assert.deepEqual(SCENE.pair(), { a: A + '.1', b: B + '.1' }, 'the addresses the panes\' acts name and their positions are measured against');
+  for (const [side, placed] of /** @type {const} */ ([['A', a[0]], ['B', b[0]]])) {
+    const html = String(/** @type {any} */ (placed.el).innerHTML);
+    assert.ok(html.includes(`data-slot="label" data-string="F.slot.unsigned"`) && html.includes(`>${esc(t('F.slot.unsigned'))}</span>`) && !html.includes('slot pending'), `pane ${side}: its byline set with its owner's facts, read before the pane was set — never an empty box a pane set from its kept view would show again (FP-34)`);
+  }
   assert.deepEqual(fake.unanswered, []);
 }));
 

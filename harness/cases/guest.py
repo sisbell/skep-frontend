@@ -569,7 +569,7 @@ def run(ctx):
     # the run's one symbol — and is listed once in the mirror: among the document's own links, or a withheld run's among the
     # run's item's children, which are those ends exactly
     agree = ctx.js('''(async () => { const [A, L, W, R] = await Promise.all([import("./text/article.js"), import("./text/layer.js"), import("./nav/walk.js"), import("./model/records.js")]);
-      const addr = %s, d = R.doc(addr), tpl = document.createElement('template'); tpl.innerHTML = A.articleHTML(d, L.viewFor(d), L.ownerAccount(d));
+      const addr = %s, d = R.doc(addr), tpl = document.createElement('template'); tpl.innerHTML = A.articleHTML(d, L.viewFor(d), R.ownerAccount(d));
       const keysOf = (e) => (e.dataset.ends || e.dataset.end || '').split(' ').filter(Boolean);
       const inText = [...tpl.content.querySelectorAll('.lip[data-ends], .sym[data-end]')].filter((e) => !e.closest('.withheld')).flatMap(keysOf);
       const atRuns = [...tpl.content.querySelectorAll('.withheld .sym[data-ends]')].map((e) => ({pos: Number(e.closest('.withheld').dataset.pos), keys: keysOf(e)}));

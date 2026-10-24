@@ -58,7 +58,9 @@
 // arrival standing (a page that teleports to the document there turns red).
 // A click on the one symbol a withheld run's ends merge into opens its one
 // end's card or lists its several there, never the run's C-39 face (issue
-// #202: a page that lets the click fall to the run turns red).
+// #202: a page that lets the click fall to the run turns red). A click on a
+// byline's cut label opens it whole and a click again closes it, selecting
+// nothing (FP-34: a page that lets the click fall to the block turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -119,7 +121,7 @@ test('the act at a withheld run conjures C-39\'s face naming the owner its gap n
     for (const [who, keys, id] of guests) {
       REC.takeKeyStore(keys, ORIGIN);
       // the placeholder as the plane's article holds it: T-LAYER mounts T-ARTICLE's HTML from its view
-      const article = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d));
+      const article = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d));
       const tag = (/<span class="withheld"[^>]*>/.exec(article) || [''])[0], arm = esc(entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text);
       // the face whole in its gap where 240 positions hold it — the key-present arm's — else compact in its column's edge: R56's arm is too deep for them
       const inGap = (/<span class="arm">([^<]*)<\/span>/.exec(article) || [])[1] ?? null, marked = article.includes(`>${esc(t('L.withheld.mark', { owner }))}</span>`);
@@ -180,7 +182,7 @@ test('a click on a run\'s hairline LEAPs to its source carrying the run, the lan
     REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 22 }, { iStart: O + '.0.1.12', width: 15 }]);
     const d = REC.doc(D);
     // the hairline as the plane's article holds it, in the article T-LAYER mounts from its view
-    const tag = (/<span class="hairline[^>]*>/.exec(articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d))) || [''])[0];
+    const tag = (/<span class="hairline[^>]*>/.exec(articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d))) || [''])[0];
     const article = { dataset: { addr: D } };
     const hair = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag) });
     Object.assign(hair, { closest: (/** @type {string} */ sel) => (sel === '.hairline' ? hair : sel === 'article' ? article : null) });
@@ -298,7 +300,7 @@ test('a click on a link\'s symbol, or on a stretch it marks, opens the card of t
     const click = layer.get('click');
     assert.ok(click, 'the text layer takes a click');
     // the citation's symbols and the stretches it marks as the plane's article holds them, each in the text's order: its from end's, then its to end's
-    const article = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d));
+    const article = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d));
     /** @type {Array<[string, string[]]>} */
     const marks = [['.sym', article.match(/<span class="sym [^"]*" data-link="[^"]*"[^>]*>/g) || []], ['.lip', article.match(/<span class="seg lip[^"]*"[^>]*>/g) || []]];
     const holder = { dataset: { addr: D } };
@@ -362,7 +364,7 @@ test('a click on the one symbol a withheld run\'s ends merge into opens its one 
     }));
     INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
     const click = /** @type {(e: unknown) => void} */ (layer.get('click'));
-    const d = REC.doc(D), article = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d));
+    const d = REC.doc(D), article = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d));
     const tag = /** @type {string} */ ((article.match(/<span class="sym at-run [^"]*"[^>]*>/) || [])[0]);
     assert.ok(tag, `the run's one symbol in the plane's article: ${article}`);
     const run = { dataset: { withheld: '1', owner: '1.0.2', pos: String(n + 1), width: '8' } };
@@ -426,7 +428,7 @@ test('a click on C-67\'s pointer LEAPs to the edition its claim names, landed in
     const click = layer.get('click');
     assert.ok(click, 'the text layer takes a click');
     // the gap as the plane's article holds it, the face whole in it, and its pointer and its head as a click finds them in it
-    const article = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d)), holder = { dataset: { addr: D } };
+    const article = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d)), holder = { dataset: { addr: D } };
     const run = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf((/<span class="withheld"[^>]*>/.exec(article) || [''])[0]) });
     Object.assign(run, { closest: (/** @type {string} */ sel) => (sel === '[data-withheld]' ? run : sel === 'article' ? holder : null) });
     const ptr = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf((/<span class="clause"[^>]*>/.exec(article) || [''])[0]) });
@@ -629,6 +631,41 @@ test('a wheel series under way as a jump\'s camera left is dropped whole — the
       assert.deepEqual([GO.inAir(), CAM.flying()], [false, false], `${what} takes the camera over`);
       assert.equal(await jump, null);
     }
+  } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a click on a byline\'s cut label opens it whole and a click again closes it, selecting nothing — the label\'s act alone (FP-34; issue #208: "A label too long for the box is cut and shown whole on its act")', () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the text layer's listeners, by event */
+  const layer = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    // another account's document, its owner's genesis entry labelled longer than the label's box
+    const D = '1.0.2.0.6', OWNER = '1.0.2', text = 'Tumbler.\n\n';
+    REC.setSession(null);
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
+    REC.takeDelivery(D, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
+    REC.takeAccountKey(OWNER, { label: 'Shane’s MacBook Pro (work, 2024)', fingerprint: 'ab'.repeat(32) });
+    const d = REC.doc(D);
+    // the label as the plane's article holds it, in the article T-LAYER mounts from its view
+    const tag = (/<span class="slot cut"[^>]*>/.exec(articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d))) || [''])[0];
+    assert.ok(tag.includes('data-cut="1"'), `the label cut in its box: ${tag}`);
+    const article = { dataset: { addr: D } };
+    const label = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag) });
+    Object.assign(label, { closest: (/** @type {string} */ sel) => (sel === '.slot[data-cut]' ? label : sel === 'article' ? article : null) });
+    INPUT.attach(/** @type {any} */ ({ plane: listens(null), layer: listens(layer), corners: listens(null) }));
+    const click = /** @type {(e: unknown) => void} */ (layer.get('click'));
+    let stopped = 0;
+    const act = () => click({ target: label, clientX: 0, clientY: 0, stopPropagation() { stopped++; } });
+    act();
+    assert.deepEqual([LAYER.labelOpened(D), SEL.selected(), stopped], [true, null, 1], 'a click opens it whole, selecting nothing, the click its own');
+    act();
+    assert.deepEqual([LAYER.labelOpened(D), SEL.selected()], [false, null], 'a click again closes it');
   } finally {
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }

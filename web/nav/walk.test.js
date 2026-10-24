@@ -445,7 +445,7 @@ test('the mirror announces every block that holds no text by its kind, in the wo
   ]);
   const d = REC.doc(H), made = { addr: H, runs: d.runs, blocks: d.blocks, image: d.image };
   // what the plane shows of the record: its words and its keys line, read from the article T-ARTICLE makes
-  const html = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d));
+  const html = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d));
   const shows = (/** @type {string} */ cls) => ((new RegExp(`<span class="${cls}">([^<]*)</span>`).exec(html) || [])[1] || '').replace(/&amp;/g, '&');
   const plane = [shows('rec-words'), shows('derived')];
   assert.ok(plane.every(Boolean), `the plane shows the record's words and keys: ${html}`);
@@ -983,7 +983,7 @@ test('the count, the article\'s symbols and the mirror name the same ends, two l
     const ends = LK.shown(W), key = (/** @type {string} */ l) => /** @type {import('../links/links.js').Shown} */ (ends.find((s) => s.link.addr === l)).key;
     assert.deepEqual(ends.map((s) => [s.link.addr, s.pos, s.run ? s.run.pos : null]), [[T, 2, null], [A, RUN, RUN], [B, RUN, RUN]], 'LK draws the text\'s end on its words and the run\'s two at its start');
     // the count and the symbols, from the article the plane makes
-    const d = REC.doc(W), html = articleHTML(d, LAYER.viewFor(d), LAYER.ownerAccount(d));
+    const d = REC.doc(W), html = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d));
     assert.ok(html.includes(esc(t('B1.presence', { n: 3 }))), 'the presence words: three links');
     const inText = [...html.matchAll(/<span class="sym [^"]*" data-link="([^"]*)" data-end="([^"]*)"/g)].map((m) => [m[1], m[2]]);
     const atRun = [...html.matchAll(/<span class="sym at-run [^"]*" data-links="([^"]*)" data-ends="([^"]*)"[^>]*>([^<]*)<\/span>/g)].map((m) => [m[1], m[2], m[3]]);

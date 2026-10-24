@@ -169,7 +169,8 @@
 // stage, after each pane has its selection. Companionate scrolling over the
 // bands is UNTESTED (S27) and not built. Carries: the wireframe's §19 whole
 // (its beams over `compare`'s pairs instead of the hand data's windows).
-// Rules: FP-1, FP-2, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24, FP-29.
+// Rules: FP-1, FP-2, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24, FP-29,
+// FP-34.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -627,7 +628,10 @@ function placedInto(src, shown) {
 
 /**
  * A pane's record read before it is set (see the head): whole (M-PUMP's
- * `wholeOf`), and the chain's count where the board ended the chain there —
+ * `wholeOf`), its owner's byline facts (M-PUMP's `readAccount`; FP-34), so the
+ * byline the pane is set with shows them, or why it can show none, never an
+ * empty box a pane set from its kept view would show again; and the chain's
+ * count where the board ended the chain there —
  * held, or, at an edition at its bare address, read to its end (`probeChain`):
  * the member its text is, which its acts name. A count the board did not end
  * the chain at is no count: the head is not known there (issue #184's design
@@ -644,6 +648,7 @@ function placedInto(src, shown) {
 async function readPane(src, stands = () => true) {
   const w = await PUMP.wholeOf(src);
   if (!w.doc && !REC.doc(src).refused) return null;
+  await PUMP.readAccount(REC.ownerAccount(REC.doc(src)));
   const box = REC.has(boxOf(src)) ? REC.doc(boxOf(src)) : null;
   let n = box && box.ended ? box.members : null;
   if (w.doc && kindAt(src, w.doc) === 'bare' && n == null && stands()) { const p = await PUMP.probeChain(src, stands); n = p && p.ended ? p.n : null; }

@@ -45,7 +45,17 @@
 // refusal of the lookup held by whether it was withheld, and one of the
 // others that says nothing of what it reads, or the board not answering,
 // held failed, so the clause says the claims were not read (issue #186's
-// design decision: "A blank there would read as 'no claim'").
+// design decision: "A blank there would read as 'no claim'"); and, for the
+// owner of each document whose text it draws (M-REC's `ownerAccount`), THE
+// BYLINE'S FACTS (`readAccount`; FP-34; issue #208's design decision: "The
+// byline's label and fingerprint are public on the document's board. Read
+// them once per account, because they never change"), which a reading
+// scene's pane reads as it is set too: the account's device key — the sole
+// device-flagged entry of its genesis enrollment (R22's naming input) — else
+// why its byline names none, all of it read on the page's own board, the one
+// the one line names, and kept for the page's life — a cause until a feed row
+// naming a doc 1, or a change of class, drops it, the board not answering
+// held for UNREACHED_MS as a view's read is.
 // Asked by an act rather than the view: the page's session
 // (`acquireSession`: `session(board)`, at boot and for a session lost — see
 // THE ACQUIRE below), the client index (`readIndex`: `places`, at boot and
@@ -209,7 +219,7 @@
 // says the change once these reads and the index's are answered
 // (`rereading`).
 // Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11, FP-22, FP-23,
-// FP-28, FP-29.
+// FP-28, FP-29, FP-34.
 
 import * as PORT from '../bridge/port.js';
 import * as REC from './records.js';
@@ -218,10 +228,13 @@ import { cam, viewportWorld, measure } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation } from '../plane/projection.js';
 import { estimate, estimatedSpan } from '../plane/layout.js';
-import { versionAddress, homeOf, documentOf, isTrunkMember, kindOf } from './address.js';
+import { versionAddress, homeOf, documentOf, isTrunkMember, kindOf, accountOf, parentAccount, cmpAddr } from './address.js';
+import { keyFingerprint } from '../util.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
 /** @typedef {import('./records.js').Stretch} Stretch */
+/** @typedef {import('./records.js').AccountFacts} AccountFacts */
+/** @typedef {import('./records.js').KeyCause} KeyCause */
 /** @typedef {import('./address.js').EndRef} EndRef */
 /** @typedef {import('./frames.js').Claim} Claim */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -289,6 +302,8 @@ export const SPLIT_READS = 32;
 
 /** @type {Set<string>} */
 const inflight = new Set();
+/** @type {Map<string, Promise<void>>} the byline reads out, by account (`readAccount`): every reader of one joins it */
+const accountsOut = new Map();
 /** @type {Set<string>} keys already asked and answered (a refusal included), not to be asked again until invalidated */
 const asked = new Set();
 /** @type {Map<string, number>} keys refused retry-class, with the time they may be asked again */
@@ -1036,6 +1051,8 @@ export function pump() {
       if (need('k:' + la, F.readLink(la), (a) => { const v = F.decodeLinkValue(la, a); if (v) REC.takeLink(v); }, d.addr, (r) => linkRefused(la, r))) missing++;
     }
     const em = estimate(d.extent, box, measure()).fs * cam.scale;
+    // the byline of a text the view draws: its owner's facts
+    if (drawn && em >= FETCH_EM) missing += needAccount(REC.ownerAccount(d));
     if (drawn && em >= FETCH_EM && d.extent > 0) {
       const w = spanWindow(d);
       if (w && !holdsSpan(d, w[0], w[1])) {
@@ -1453,6 +1470,135 @@ export async function readClaims(origin) {
     if ('refused' in out) linkRefused(c, out.refused);
     else { const v = F.decodeLinkValue(c, out.answer); if (v) REC.takeLink(v); }
   }));
+}
+
+/** the key an account's byline read is held under while the board does not answer it (`hold`) */
+const accountKeyOf = (/** @type {string} */ account) => 'a:' + account;
+
+/** are an account's byline facts to be read: none held, or the board not answering held and its pause ended? */
+function accountWanted(/** @type {string} */ account) {
+  const f = REC.accountKey(account);
+  return f === undefined || ('cause' in f && f.cause === 'unreachable' && !held(accountKeyOf(account)));
+}
+
+/**
+ * The view's read of an account's byline facts (see the head;
+ * `readAccount`): missing while it is out, or while the page holds none and
+ * can ask; not missing once held — a cause the board's silence left held
+ * included, for nothing will arrive for it until its pause ends.
+ * @param {string} account
+ * @returns {number} the needs still missing
+ */
+function needAccount(account) {
+  if (!account) return 0;
+  if (accountsOut.has(account)) return 1;
+  if (!accountWanted(account)) return 0;
+  void readAccount(account);
+  return 1;
+}
+
+/**
+ * THE BYLINE'S FACTS FOR AN ACCOUNT (see the head; FP-34): read where the
+ * page holds none, or holds that the board did not answer and the pause it
+ * holds that for has ended — once for every reader of them, a read out
+ * joined. A value is taken always, for it never changes; a cause only where
+ * no drop of the byline causes overtook it (M-REC's `keyDrops`), else it is
+ * asked again as the view next needs it; the board not answering held for
+ * UNREACHED_MS (`hold`), asked again past it or at the daemon's `running`.
+ * @param {string} account
+ * @returns {Promise<void>} settled once what was read is taken, or nothing is
+ */
+export function readAccount(account) {
+  const out = accountsOut.get(account);
+  if (out) return out;
+  if (!account || !accountWanted(account)) return Promise.resolve();
+  const p = (async () => {
+    const at = REC.keyDrops();
+    const facts = await factsOf(account);
+    if ('cause' in facts && REC.keyDrops() !== at) return;
+    if ('cause' in facts && facts.cause === 'unreachable') hold(accountKeyOf(account)); else unreached.delete(accountKeyOf(account));
+    REC.takeAccountKey(account, facts);
+  })().finally(() => { accountsOut.delete(account); dirty(); });
+  accountsOut.set(account, p);
+  return p;
+}
+
+/**
+ * An account's byline facts as its board answers them (`readAccount`; R22's
+ * naming input: "the sole DEVICE-FLAGGED entry of its GENESIS ENROLLMENT …
+ * read by one enroll-typed lookup"). Its own credential table first
+ * (`key_set`): where it holds no key and never held one — none enrolled,
+ * none retired — the table is read at each account above it while each holds
+ * none enrolled (wire.md §Sessions), the first that holds one making its
+ * writes signed BY REFERENCE with that account's keys, and none UNSIGNED.
+ * Else its genesis enrollment: the enrollment records naming it (M-FRAMES's
+ * `enrollmentsOf`), each one's link read (`read_link`) and kept where its own
+ * `to` names the account, the genesis the first homed in another account's
+ * doc 1, else the lowest-addressed homed in its own (skep-client's credential
+ * read: "the genesis is the enrollment homed in the genesis registry's doc 1
+ * — another account's, or the own doc 1's lowest link"); its record atom
+ * placed in its home's text through the home's V→I image (AUTH-2.114) and read
+ * (`retrieve_v`); the record's one device-flagged entry — the record rule's
+ * `anchor` false — its label, none where it carries none, and its fingerprint
+ * (AUTH-1.8, util's `keyFingerprint`). NOT RECORDED where no genesis stands,
+ * the home's text no longer places its atom, or its record names not exactly
+ * one device-flagged entry. A refusal says why where it can (`KeyCause`):
+ * withheld from the reader, naming the owner of the document withheld; the
+ * board not answering; else unread.
+ * @param {string} account
+ * @returns {Promise<AccountFacts>}
+ */
+async function factsOf(account) {
+  /** @type {(r: Refusal, about: string) => KeyCause} */
+  const why = (r, about) => (unanswered(r) ? { cause: 'unreachable' } : r.name === 'withheld' ? { cause: 'withheld', owner: accountOf(about) || about } : { cause: 'unread' });
+  const own = await read(F.keySet(account));
+  if ('refused' in own) return why(own.refused, account);
+  const ks = F.decodeKeySet(own.answer);
+  if (!ks) return { cause: 'unread' };
+  if (!ks.enrolled.length && !ks.retired.length) {
+    for (let above = parentAccount(account); above; above = parentAccount(above)) {
+      const up = await read(F.keySet(above));
+      if ('refused' in up) return why(up.refused, above);
+      const set = F.decodeKeySet(up.answer);
+      if (set && set.enrolled.length) return { cause: 'by-reference' };
+    }
+    return { cause: 'unsigned' };
+  }
+  const found = await read(F.enrollmentsOf(account));
+  if ('refused' in found) return why(found.refused, account);
+  /** @type {Array<{link: string, home: string, atom: EndRef}>} */
+  const records = [];
+  for (const link of F.decodeAddrs(found.answer)) {
+    const lv = await read(F.readLink(link));
+    if ('refused' in lv) return why(lv.refused, homeOf(link) || link);
+    const v = F.decodeLinkValue(link, lv.answer);
+    const to = v && v.to.length === 1 ? v.to[0] : null, atom = v ? v.from[0] : null;
+    if (to && to.start === account && atom && !atom.whole) records.push({ link, home: homeOf(link) || link, atom });
+  }
+  const homed = (/** @type {{home: string}} */ r) => Number(accountOf(r.home) === account);
+  const [genesis] = records.sort((x, y) => homed(x) - homed(y) || cmpAddr(x.home, y.home) || cmpAddr(x.link, y.link));
+  if (!genesis) return { cause: 'not-recorded' };
+  const ext = await extentOf(genesis.home);
+  if ('refused' in ext) return why(ext.refused, genesis.home);
+  const im = ext.extent > 0 ? await imageParts(genesis.home, 1, ext.extent) : { runs: [] };
+  if ('refused' in im) return why(im.refused, genesis.home);
+  const id = REC.identityOfEnd(genesis.atom), [at] = id ? REC.placedIn(placedRuns(im.runs), [id]) : [];
+  if (!at) return { cause: 'not-recorded' };
+  const got = await read(F.retrieveV(genesis.home, at.pos, 1));
+  if ('refused' in got) return why(got.refused, genesis.home);
+  const [run] = F.decodeDelivery(got.answer, at.pos);
+  const rec = run ? REC.recordValue(run) : null;
+  const devices = rec && rec.type === 'skep-enroll' ? rec.keys.filter((k) => !k.anchor) : [];
+  const [entry] = devices;
+  const fingerprint = devices.length === 1 && typeof entry.alg === 'string' && typeof entry.key === 'string' ? keyFingerprint(entry.alg, entry.key) : null;
+  if (!fingerprint) return { cause: 'not-recorded' };
+  return { label: typeof entry.label === 'string' && entry.label ? entry.label : null, fingerprint };
+}
+
+/** a V→I image as `image` answers it (`F.decodeRuns`), each run placed at its positions from the text's first: what M-REC's `placedIn` reads bytes by identity through */
+function placedRuns(/** @type {Array<{iStart: string, width: number}>} */ runs) {
+  let pos = 1;
+  return runs.map((r) => { const run = { pos, ...REC.iSpanOf(r) }; pos += r.width; return run; });
 }
 
 /**

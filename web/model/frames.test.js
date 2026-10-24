@@ -1,9 +1,10 @@
 // M-FRAMES's test: every composer spells its frame as `docs/wire.md`'s
 // `<!-- wire: request … -->` examples at the pin spell it (FP-16's residue:
 // the frames are the wire document's) — `find_links_ftt` with unit spans as
-// the lookup of a type's name, and the edition-claim lookup in that shape,
-// never the audit view's `edition_claims`; no write composer exists; every
-// decoder reads the wire's example answers.
+// the lookup of a type's name, and the edition-claim lookup and the
+// enrollment records' lookup in that shape, never the audit view's
+// `edition_claims`; no write composer exists; every decoder reads the wire's
+// example answers.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as F from './frames.js';
@@ -59,6 +60,12 @@ test('the edition claims on an origin are the active view\'s lookup in the wire\
     '{"op":"find_links_ftt","q":{"from":"any","home":"any","to":[{"start":"1.0.1.0.1003","width":"0.0.0.0.1"}],"ty":[{"start":"1.1.0.1.0.1.0.3.14","width":"0.0.0.0.0.0.0.0.1"}]}}');
   assert.equal(F.EDITION_CLASS, '1.1.0.1.0.1.0.3.14');
   assert.ok(!F.READ_OPS.includes('edition_claims'), 'edition_claims is no read this module composes (the static gate holds every `op` literal to READ_OPS)');
+});
+
+test('the enrollment records naming an account are the lookup of their type in the wire\'s two-slot shape — the account\'s unit span in `to`, the enroll class\'s in `ty` (wire.md §Credentials: enroll `1.1.0.1.0.1.0.3.1`, `to` the subject account)', () => {
+  assert.equal(canon(F.enrollmentsOf('1.0.1.1')),
+    '{"op":"find_links_ftt","q":{"from":"any","home":"any","to":[{"start":"1.0.1.1","width":"0.0.0.1"}],"ty":[{"start":"1.1.0.1.0.1.0.3.1","width":"0.0.0.0.0.0.0.0.1"}]}}');
+  assert.equal(F.ENROLL_CLASS, '1.1.0.1.0.1.0.3.1');
 });
 
 test('no write composer exists (S-35 (a)): every op this module names is a read', () => {

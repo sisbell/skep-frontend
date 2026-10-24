@@ -11,7 +11,11 @@
 // (`db24cc1b`). The edition claims on a withheld run's origin, which C-67's
 // clause is decided from (PUB-5.124), are `find_links_ftt`'s ACTIVE-view
 // lookup (`editionClaimsAt`); the audit view's `edition_claims` is not
-// composed (PUB-8.46). `count_v` is NOT composed (E17 (a): every count is LK's fold
+// composed (PUB-8.46). The enrollment records naming an account, which the
+// byline's device label and fingerprint are read from (R22's naming input;
+// FP-34), are `find_links_ftt`'s two-slot lookup too (`enrollmentsOf`), as
+// skep-client's credential read composes it (AUTH-2.113, AUTH-5.68).
+// `count_v` is NOT composed (E17 (a): every count is LK's fold
 // of `find_links_v`'s answer). The wireframe's simulated names
 // (`list_docs`, `search_titles`, `list_landmarks`, `count_v`) have no wire
 // twin and are gone: the index comes from `places` and the feed.
@@ -149,6 +153,19 @@ export const EDITION_CLASS = '1.1.0.1.0.1.0.3.14';
  * @param {string} origin
  */
 export const editionClaimsAt = (origin) => findLinksFtt({ from: 'any', home: 'any', to: [unitSpan(origin)], ty: [unitSpan(EDITION_CLASS)] });
+/** the enrollment class (AUTH-5.4): the commons type every credential enrollment record's deposit is typed under (skep-client's `T_ENROLL`) */
+export const ENROLL_CLASS = '1.1.0.1.0.1.0.3.1';
+/**
+ * The enrollment records naming an account (AUTH-2.113's residence read;
+ * AUTH-5.68's discovery): `find_links_ftt` constrained in two slots, the
+ * account's unit span in `to` and the enrollment class's in `ty`, `from` and
+ * `home` `"any"` — skep-client's `links_of` — so no class scan. The query
+ * matches by span overlap, so a record naming an account above the one asked,
+ * or beneath it, answers too: a record is the account's only where its own
+ * `to` names it (M-PUMP's `readAccount`).
+ * @param {string} account
+ */
+export const enrollmentsOf = (account) => findLinksFtt({ from: 'any', home: 'any', to: [unitSpan(account)], ty: [unitSpan(ENROLL_CLASS)] });
 /** @param {string} a */
 export const readLink = (a) => ({ op: 'read_link', a });
 /** @param {string} a @param {1 | 2 | 3} slot */
