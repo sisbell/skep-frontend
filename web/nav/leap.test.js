@@ -14,14 +14,22 @@
 // model at once — none naming what the class it left could read — its text,
 // its caret and its focus as they stood, and once more as the new class's
 // index answers (a mutant that leaves the rows standing, or never takes the
-// new index, turns red).
+// new index, turns red). WHERE NO BOARD IS HELD (issue #215; FP-35) the box
+// opens empty and lists no board's level, its status region says why in the
+// answer's place, and Enter — on the box as opened, a typed address or a
+// typed URL — closes it onto the no-board face, no LEAP made (a mutant that
+// lists the board's level, or lets Enter go nowhere silently, turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as LEAP from './leap.js';
 import * as FOCUS from './focus.js';
 import * as REC from '../model/records.js';
 import * as TRAIL from './trail.js';
+import * as HOST from '../overlays/host.js';
+import * as PORT from '../bridge/port.js';
+import * as FAKE from '../test/fake-port.js';
 import { t } from '../strings.js';
+import { esc } from '../util.js';
 
 /** the platform's document: its focus — the body where it stands on nothing */
 const body = { id: 'the body' };
@@ -69,6 +77,8 @@ const key = (/** @type {string} */ k) => input.fire('keydown', { key: k, keyCode
 
 beforeEach(() => {
   LEAP.close();
+  // the board the page opened, whose level the box lists first
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
   line = '1.0.1.0.3'; walk = item;
   item.focus();
   input.selected = null;
@@ -153,4 +163,33 @@ test('a change of the page\'s class computes the rows standing in the box again 
     LEAP.takeIndex();
     assert.deepEqual([shown().rows, input.value, globalThis.document.activeElement], [[EDITION.doc], 'notes', /** @type {any} */ (input)], 'the guest\'s index answered: the rows over it, the text and the focus kept');
   } finally { REC._reset(); TRAIL._reset(); }
+});
+
+test('where no board is held the box opens empty and lists no board\'s level, its status region says why in the answer\'s place, and Enter — on the box as opened, a typed address or a typed URL — closes it onto the no-board face, no LEAP made (issue #215\'s design decision; FP-35)', () => {
+  const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
+  HOST.attach(/** @type {any} */ (hostEl));
+  PORT.boot(FAKE.create({}));
+  try {
+    REC.takeBoards({ result: [] });
+    line = '';
+    LEAP.open();
+    assert.deepEqual(shown(), { open: true, value: '', selected: true, rows: [] }, 'opened empty: no board\'s level, nothing to list');
+    assert.equal(note.innerHTML, `<span data-string="F.unclaimed">${esc(t('F.unclaimed'))}</span>`, 'its status region says why, never "nothing … on this board"');
+    key('Enter');
+    assert.deepEqual([LEAP.isOpen(), HOST.currentState()?.id], [false, 'face:no-board'], 'Enter as opened: closed onto the no-board face');
+    HOST.dismiss();
+    LEAP.open();
+    input.value = '1.0.1.0.3';
+    input.fire('input');
+    assert.deepEqual(shown().rows, ['1.0.1.0.3'], 'a typed address: its row');
+    key('Enter');
+    assert.deepEqual([LEAP.isOpen(), HOST.currentState()?.id, TRAIL.all().length], [false, 'face:no-board', 0], 'Enter on it: the face, and no LEAP — no trail entry');
+    HOST.dismiss();
+    LEAP.open();
+    input.value = 'https://example.org/page';
+    input.fire('input');
+    assert.deepEqual(LEAP.currentRows().map((r) => r.kind), ['url'], 'a typed URL: its row');
+    key('Enter');
+    assert.deepEqual([LEAP.isOpen(), HOST.currentState()?.id], [false, 'face:no-board'], 'Enter on it: answered too, never silent');
+  } finally { HOST.dismiss(); REC._reset(); }
 });

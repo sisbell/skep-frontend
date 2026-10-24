@@ -1,5 +1,7 @@
 // N-MATCH's test: an address exact; a share form recognized; labels and
-// address prefixes over the index; the levels with nothing typed.
+// address prefixes over the index; the levels with nothing typed, the board's
+// first where a board is held and none where none is (issue #215: a mutant
+// that lists the board's level with none held turns red).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { matches, isShareForm, isUrl } from './match.js';
@@ -35,4 +37,9 @@ test('nothing typed: the levels, the whole board first, HOME, the landmarks, the
   const r = matches('', ctx);
   assert.deepEqual(r.map((x) => x.kind), ['board', 'home', 'document', 'landmark', 'trail']);
   assert.equal(r[0].addr, '1');
+});
+test('nothing typed, no board held: no board\'s level is listed — the rows begin at what the reader holds (issue #215; FP-35)', () => {
+  const r = matches('', { ...ctx, board: null, home: null, current: null, landmarks: [], trail: [] });
+  assert.deepEqual(r, [], 'nothing to list: no board, no HOME, no address named');
+  assert.deepEqual(matches('', { ...ctx, board: null }).map((x) => x.kind), ['home', 'document', 'landmark', 'trail'], 'the board row alone left out');
 });

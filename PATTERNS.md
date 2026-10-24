@@ -182,6 +182,16 @@ fix; nothing here depends on their names.
   the dev provider, committed as fetched and never hand-edited, and
   the gate fails on a drift. The page never invents a wire shape.
 
+## The board
+
+- **FP-35 Only a board the page holds is drawn or named.** No surface
+  draws, names, walks to or flies to a board the page holds no record
+  of, nor any place on it. Where it holds none, why is one entry
+  (`web/overlays/faces.js`), with the act that works where one does,
+  and the one line, the mirror and every answer read that entry alone.
+  An act that needs a board the reader lacks answers where it is taken
+  and names what still works; none is silent.
+
 ## The session
 
 - **FP-28 The page gets its session back, and only the person signs
@@ -505,6 +515,7 @@ last. Each stands until a later decision says it changes it.
 - **#202**: the ends drawn at a withheld run stand as one symbol beside its notice at every stage, a count after it where they are two or more, and others' ends there are counted in its column's edge; its item in the mirror holds them a level below; the symbol opens the one card or lists the several; Back across a follow made there outlines the whole run, lights its symbol and stands on the run's item → FP-30, FP-21
 - **#208**: a byline's device label and fingerprint are its owner's, the sole device-flagged entry of the account's genesis enrollment, read once per account on its board, the reader's own byline carrying no fingerprint; the one line's device label is the key this device opened the session with, its key store read before the session → FP-34
 - **#212**: a feed row naming no document and no link marks its board, and once the feed has delivered the run one refresh gives everything held there what a row naming it gets — each held edition's chain counted first and one that advanced pinned to the member it shows, keeping its text, the rest dropped, what is shown read again and standing until its read lands, then set in one step — and while the shell's index reports changes it could not place, the board's label says so → FP-23
+- **#215**: where `boards()` found no board the address display reads "go to an address" alone; an empty list stands `F.unclaimed` in the guest line's place, inert until the doors exist and saying beginning a notebook isn't built yet; a refused one says the boards on this machine could not be read, with "try again" where a retry may tell; the doors, "read without a notebook" and a launch carrying an address wait on skep #640 and #641 → FP-35
 
 ## What these rule out
 

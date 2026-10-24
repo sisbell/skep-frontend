@@ -108,9 +108,23 @@
 // does not tell the page (skep #627) — shown whole where its walk's last
 // moment was left whole and nothing of the reader's stands, else said
 // through the status region alone.
+// WHERE NO BOARD IS HELD (issue #215's design decision: "never draw or name
+// a board the client has no record of"; FP-35): why is ONE ENTRY, which the
+// one line, the ARIA mirror's root and every act needing a board read alone
+// (`noBoardWords`) — no shell and no provider beneath the port,
+// `L.no-adapter`; `boards()` answered an empty list, `F.unclaimed`, worded
+// true where no board on this machine has begun, its act the doors', which
+// this build has not, so it stands inert and says beginning a notebook isn't
+// built yet; the list refused, "the boards on this machine could not be read
+// — that does not mean there are none", "try again" offered where a retry may
+// tell (BM-HELD's `retries`). Such an act answers at its site with a face of
+// those words and what still works (`noBoard`), and "try again" reads the list
+// again (`tryBoardsAgain`; M-PUMP's `retryBoards`): a board found, the page
+// launches there and the face goes; a refusal again said, so no press is
+// silent.
 // Carries: the wireframe's §18 `face` (its words and acts; its reviewer's
 // label stays in the wireframe), `deadReferenceFace`'s fifth cell, `c39Face`.
-// Rules: FP-1, FP-2, FP-13, FP-20, FP-25, FP-26, FP-28, FP-29.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-25, FP-26, FP-28, FP-29, FP-35.
 
 import * as HOST from './host.js';
 import * as VERSIONS from './versions.js';
@@ -124,6 +138,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
 import * as CAM from '../plane/camera.js';
 import { entitlementArm, placeholderOf } from '../text/article.js';
+import { retries } from '../beams/held.js';
 import { memberOf } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -156,6 +171,14 @@ import { esc } from '../util.js';
  * @property {{id: string, text: string}} head the withheld box's words, "withheld · ⟨owner⟩" (T-LAYER's `withheldBox`)
  * @property {{id: string, text: string}} arm the entitlement arm for its owner and this reader (T-ARTICLE's `entitlementArm`)
  * @property {Clause | null} clause C-67's clause as the edition claims on the document decide it (T-LAYER's `clauseOf`); null where they decide none
+ */
+
+/**
+ * @typedef {Object} NoBoardWords — why the page holds no board, as every surface says it (see the head; `noBoardWords`)
+ * @property {string} id the statement's string
+ * @property {string} text its words
+ * @property {boolean} again the list was refused where a retry may tell: "try again" reads it again (`tryBoardsAgain`)
+ * @property {boolean} doors the list answered empty: the statement's act opens the doors, which this build has not — it stands inert, saying so (`L.no-notebook-yet`)
  */
 
 /** @type {Set<string>} the documents whose own withheld words a face has shown whole in the page's session (see the head) */
@@ -459,6 +482,60 @@ export function signIn(anchor) {
   const r = REC.sessionRefused(), dead = REC.deathReason();
   if (r) sessionFace(/** @type {Refusal} */ (r), anchor);
   else if (dead) deathFace(dead, anchor);
+}
+
+/**
+ * Why the page holds no board, as one entry (see the head; FP-35): no shell
+ * and no provider beneath the port, `L.no-adapter`; the list empty,
+ * `F.unclaimed`, its act the doors', inert in this build; the list refused,
+ * `L.boards-unread`, "try again" where a retry may tell (BM-HELD's
+ * `retries`). Null where a board is held, or the list has not answered.
+ * @returns {NoBoardWords | null}
+ */
+export function noBoardWords() {
+  if (REC.board()) return null;
+  if (!PORT.hasAdapter()) return { id: 'L.no-adapter', text: t('L.no-adapter'), again: false, doors: false };
+  const why = REC.noBoard();
+  if (!why) return null;
+  if (why === 'none') return { id: 'F.unclaimed', text: t('F.unclaimed'), again: false, doors: true };
+  return { id: 'L.boards-unread', text: t('L.boards-unread'), again: retries(why.refused), doors: false };
+}
+
+/**
+ * AN ACT THAT NEEDS A BOARD the page holds none of (see the head; issue
+ * #215's design decision: "an act that needs a board the reader lacks
+ * answers where it is taken and names what still works … None stays
+ * silent"): a face at the act's site — `noBoardWords`' words, and beneath
+ * them what works: at the empty list, that beginning a notebook isn't built
+ * yet; at a list refused where a retry may tell, "try again"
+ * (`tryBoardsAgain`). It takes no focus and is heard through the status
+ * region, as every face is.
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the act's site; null where the act names none — a chord, a row of the LEAP box — the viewport's corner
+ */
+export function noBoard(anchor) {
+  const w = noBoardWords();
+  if (!w) return;
+  const extra = w.doors ? `<div class="note" data-string="L.no-notebook-yet">${esc(t('L.no-notebook-yet'))}</div>` : '';
+  HOST.show({ kind: 'face', id: 'face:no-board', anchor: toAnchor(anchor), acts: w.again ? { a0: () => { void tryBoardsAgain(); } } : {},
+    html: faceHTML({ id: w.id, text: w.text, acts: w.again ? [{ label: t('B1.try-again') }] : [] }, extra) });
+}
+
+/**
+ * "try again" at a board list refused (see the head) — the one line's act
+ * and the no-board face's: the list read again (M-PUMP's `retryBoards`). A
+ * board found, the page launches there (the app's `onOpen`) and the face
+ * standing at the act goes; refused again, the face standing shown again
+ * with what the list says now, else those words said through the status
+ * region, so the press is never silent.
+ * @returns {Promise<void>}
+ */
+export async function tryBoardsAgain() {
+  const held = await PUMP.retryBoards();
+  const face = HOST.currentIs('face:no-board') ? HOST.currentState() : null;
+  if (held) { if (face) HOST.dismiss(); return; }
+  const w = noBoardWords();
+  if (face) noBoard(face.anchor);
+  else if (w) FOCUS.say(w.text);
 }
 
 /** the reading face's overlay id, before the address it names */

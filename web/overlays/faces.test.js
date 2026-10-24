@@ -79,7 +79,14 @@
 // caret; one raised over a card or a caret opens folded (a mutant that never
 // opens one folded turns red); and an unfold is an act, so a jump in the air
 // faces nothing over it (a mutant whose unfold at its view counts no act
-// turns red).
+// turns red). WHERE NO BOARD IS HELD (issue #215; FP-35) why is one entry —
+// no adapter, the list empty, the list refused, "try again" only where the
+// board did not answer — and an act needing a board answers at its site with
+// a face of those words and what still works: at the empty list that
+// beginning a notebook isn't built yet; at a list refused retry-class "try
+// again", which reads the list again, the face shown again and said where it
+// is refused again, gone where a board is found (a mutant that offers a retry
+// where none may tell, or whose press is silent, turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -162,6 +169,8 @@ before(() => {
   REC.takeOwner('1.0.2.1', { prefix: OWNER, principal: 901 });
   REC.takeRefused(X, 'withheld');
   REC.takeEditionClaims(X, []);
+  // the board the page opened: the acts below — a jump, WHOLE BOARD, a moment's unfold — are made on it
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
 });
 
 /**
@@ -775,4 +784,60 @@ test('the withheld face at a COVERED document — one the class the page left re
     assert.deepEqual(faceShown()?.arm?.[0], entitlementArm({ account: '1.0.1', keyPresent: true }, '1.0.1').id, 'no ending standing: the entitlement arm, as at any withheld document');
     HOST.dismiss();
   } finally { REC.setSessionRefused(null); REC.takeOwner('1.0.2.1', { prefix: OWNER, principal: 901 }); REC.takeRefused(X, 'withheld'); }
+});
+
+test('why no board is held is one entry — no shell and no provider, the list empty, the list refused — "try again" offered only where a retry may tell; an act needing a board answers at its site with a face of those words and what still works — at the empty list that beginning a notebook isn\'t built yet, at a list the board did not answer "try again", which reads the list again: refused again, the face shown again where it stood and said; a board found, the face gone (issue #215\'s design decision: "an act that needs a board the reader lacks answers where it is taken and names what still works"; FP-35)', async () => {
+  const was = { board: REC.board(), session: REC.session() }, at = { world: { x: 3, y: 4 } };
+  const BOARDS = FAKE.keyOf('boards', {}), UNREACHED = { refused: { kind: 'unreachable', name: 'unreachable', text: 'refused' } };
+  /** the provider's answers, as the next read finds them */
+  const script = /** @type {Record<string, unknown>} */ ({ [BOARDS]: UNREACHED });
+  const settle = async () => { for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0)); };
+  try {
+    HOST.dismiss();
+    REC.setSession(null);
+    PORT.boot(null);
+    REC.takeBoards({ result: [] });
+    assert.deepEqual(FACES.noBoardWords(), { id: 'L.no-adapter', text: t('L.no-adapter'), again: false, doors: false }, 'no shell and no provider: the page reaches nothing');
+    const fake = FAKE.create(script);
+    PORT.boot(fake);
+    REC.setBoard(was.board);
+    assert.equal(FACES.noBoardWords(), null, 'a board held: nothing to say');
+    REC.takeBoards({ result: [] });
+    assert.deepEqual(FACES.noBoardWords(), { id: 'F.unclaimed', text: t('F.unclaimed'), again: false, doors: true }, 'the list empty: no board on this machine is yours until you claim one');
+    FACES.noBoard(at);
+    let f = faceShown();
+    assert.deepEqual([f?.id, f?.words, f?.acts, HOST.currentState()?.anchor], ['face:no-board', ['F.unclaimed', t('F.unclaimed')], [], at], 'its face at the act\'s site: why, no act');
+    assert.ok(f && f.html.includes(`<div class="note" data-string="L.no-notebook-yet">${esc(t('L.no-notebook-yet'))}</div>`), `and that beginning a notebook isn't built yet: ${f && f.html}`);
+    assert.equal(live.textContent, `${t('F.unclaimed')} ${t('L.no-notebook-yet')}`, 'said through the status region');
+    HOST.dismiss();
+    REC.takeBoards({ refused: { kind: 'shell', name: 'provider_403' } });
+    assert.deepEqual(FACES.noBoardWords(), { id: 'L.boards-unread', text: t('L.boards-unread'), again: false, doors: false }, 'the provider\'s own refusal: its words, no retry tells');
+    FACES.noBoard(at);
+    assert.deepEqual([faceShown()?.words?.[0], faceShown()?.acts], ['L.boards-unread', []], 'its face offers nothing');
+    HOST.dismiss();
+    REC.takeBoards(/** @type {any} */ (UNREACHED));
+    assert.deepEqual(FACES.noBoardWords(), { id: 'L.boards-unread', text: t('L.boards-unread'), again: true, doors: false }, 'the board not answering: a retry may tell');
+    FACES.noBoard(at);
+    f = faceShown();
+    assert.ok(f && f.acts.join() === 'a0' && f.html.includes(`<button data-run="a0" class="">${esc(t('B1.try-again'))}</button>`), `its face offers "try again": ${f && f.html}`);
+    live.textContent = '';
+    HOST.currentState()?.acts?.a0(/** @type {any} */ ({}), false);
+    await settle();
+    assert.deepEqual([fake.asked.filter((k) => k === BOARDS).length, faceShown()?.id, HOST.currentState()?.anchor, live.textContent], [1, 'face:no-board', at, t('L.boards-unread')], 'refused again: the list read once, the face shown again where it stood, and said');
+    Object.assign(script, {
+      [BOARDS]: { result: [{ board: 'b-1', name: ORIGIN, origin: ORIGIN }] },
+      [FAKE.keyOf('fingerprint', {})]: { result: [] },
+      [FAKE.keyOf('session', { board: 'b-1' })]: { refused: { kind: 'shell', name: 'no_key' } },
+      [FAKE.keyOf('health', { board: 'b-1' })]: { result: { health: { log_position: 8, auth: { claimant: '1.0.1', local_trust: false }, writes: { halted: false } }, mode: 'ENFORCING' } },
+      [FAKE.keyOf('probe', {})]: { result: { daemon: 'running', dialed: null, signed: null } },
+      [FAKE.keyOf('places', { board: 'b-1' })]: { refused: { kind: 'unreachable', name: 'unreachable', text: '' } },
+    });
+    HOST.currentState()?.acts?.a0(/** @type {any} */ ({}), false);
+    await settle();
+    assert.deepEqual([REC.board()?.board, REC.noBoard(), HOST.currentState()], ['b-1', null, null], 'the board found: held, and the face gone');
+    assert.deepEqual(fake.unanswered, []);
+  } finally {
+    HOST.dismiss();
+    REC.setSessionRefused(null); REC.setBoard(was.board); REC.setSession(was.session);
+  }
 });

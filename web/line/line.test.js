@@ -64,11 +64,21 @@
 // its id in the guest's line and in the death arm's, as Back does, so the
 // session's face standing at it finds it again as the line is rebuilt
 // (O-HOST's anchor) — a mutant that drops the id from either arm turns red.
-// The guest line names the board's origin where `boards()` found a board, and
-// no origin where it found none (foundations §3.3 state 1: "the board and
-// venue shown") — a mutant that names an origin the page never found, or
-// leaves the origin's slot empty between its separators, or drops the origin
-// where a board stands, turns red.
+// The guest line names the board's origin where `boards()` found a board
+// (foundations §3.3 state 1: "the board and venue shown") — a mutant that
+// drops the origin turns red. WHERE IT FOUND NONE (issue #215's design
+// decision; FP-35) the line names no board, venue, origin or sign-in, and
+// says why in the guest line's place, in none of §3.3's states: at an empty
+// list `F.unclaimed`, an inert act whose press says beginning a notebook
+// isn't built yet, in the line and through the status region; at a list
+// refused its words, "try again" beside them where the board did not answer —
+// its press the act the app hands in — and none where the provider itself
+// refused (a mutant that shows the guest line, its venue or its sign-in, or
+// offers a retry where none may tell, turns red); and the address display
+// reads "go to an address" alone at every scale, naming no place, so the
+// LEAP box opens empty and the plane holds no label as named, the segment its
+// one width (a mutant that names board 1 or the account under the camera
+// turns red).
 // At reading scale the line names the version the box shows — a pinned
 // version's address whole, its marker lit, its own position — and the strip's
 // act quotes the version's own words (issue #154; foundations §3.2).
@@ -413,21 +423,83 @@ test('the sign-in act bears its id in the guest\'s line and in the death arm\'s,
   for (const s of [guest, dead]) assert.equal((s.html.match(/<button[^>]*data-act="signin"[^>]*>/g) || []).join(), '<button id="line-signin" data-act="signin">', `state ${s.state}: one sign-in act, bearing its id`);
 });
 
-test('the guest line names the board\'s origin where `boards()` found a board, and no origin where it found none (foundations §3.1; §3.3 state 1, "the board and venue shown")', () => {
+test('the guest line names the board `boards()` found — its origin between the guest line and the venue — and its sign-in (foundations §3.1; §3.3 state 1, "the board and venue shown")', () => {
   const was = { board: REC.board(), session: REC.session() };
   /** the segment's words as the line shows them, its tags taken out */
   const shown = (/** @type {string} */ html) => html.replace(/<[^>]*>/g, '');
   try {
     REC.setSession(null);
-    REC.setBoard(null);
-    const none = LINE.actingSegment();
-    assert.deepEqual([none.state, shown(none.html)], [1, `${t('B1.guest-line')} · ${t('F.venue.notebook')} ${t('F.sign-in')}`], 'no board found: the guest line and the venue, no origin and no empty slot for one');
-    REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:9000' });
+    REC.takeBoards({ result: [{ board: 'b-1', name: 'http://127.0.0.1:9000', origin: 'http://127.0.0.1:9000' }] });
     const found = LINE.actingSegment();
     assert.deepEqual([found.state, shown(found.html)], [1, `${t('B1.guest-line')} · http://127.0.0.1:9000 · ${t('F.venue.notebook')} ${t('F.sign-in')}`], 'a board found: its origin between the guest line and the venue');
   } finally {
     REC.setBoard(was.board); REC.setSession(was.session);
   }
+});
+
+test('where `boards()` found no board the line names none — no guest line, venue, origin, claimant or sign-in — but says why in the guest line\'s place, none of §3.3\'s states: at an empty list `F.unclaimed`, an inert act whose press says beginning a notebook isn\'t built yet; at a list refused, its words, with "try again" beside them where a retry may tell — the board not answering — and none where it may not — the provider\'s own refusal (issue #215\'s design decision; FP-35)', () => {
+  const was = { board: REC.board(), session: REC.session() };
+  /** the segment's words as the line shows them, its tags taken out */
+  const shown = (/** @type {string} */ html) => html.replace(/<[^>]*>/g, '');
+  /** @type {{click: ((ev: any) => void) | null}} the line's click listener, as it attaches */
+  const on = { click: null };
+  let again = 0;
+  const host = { innerHTML: '', setAttribute() {}, addEventListener(/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) { if (type === 'click') on.click = fn; }, querySelectorAll: () => [], contains: () => false };
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {}, again: () => { again++; } });
+  /** a pointer's press on the line's act named */
+  const press = (/** @type {string} */ act) => on.click?.({ type: 'click', detail: 1, target: { closest: () => ({ dataset: { act } }) }, stopPropagation() {} });
+  try {
+    REC.setSession(null);
+    REC.takeBoards({ result: [] });
+    const empty = LINE.actingSegment();
+    assert.deepEqual([empty.state, empty.words, empty.alarm], [0, t('F.unclaimed'), false], 'the list empty: why, none of the seven states, nothing said assertively');
+    assert.equal(empty.html, `<button id="line-unclaimed" data-act="unclaimed" class="inert" data-string="F.unclaimed">${esc(t('F.unclaimed'))}</button>`, 'the doors\' act, inert, standing alone in the guest line\'s place');
+    LINE.render(true);
+    for (const word of [t('B1.guest-line'), t('F.venue.notebook'), t('F.sign-in'), 'data-act="signin"', 'acting as']) assert.ok(!host.innerHTML.includes(word), `the line names no ${word}: ${host.innerHTML}`);
+    live.textContent = '';
+    press('unclaimed');
+    assert.ok(host.innerHTML.includes(`<span class="seg transient" data-string="L.no-notebook-yet">${esc(t('L.no-notebook-yet'))}</span>`), `its press says beginning a notebook isn't built yet, in the line: ${host.innerHTML}`);
+    assert.equal(live.textContent, t('L.no-notebook-yet'), 'and through the status region');
+    LINE.act();
+    REC.takeBoards({ refused: { kind: 'unreachable', name: 'unreachable', text: 'refused' } });
+    const unreached = LINE.actingSegment();
+    assert.deepEqual([unreached.state, shown(unreached.html)], [0, `${t('L.boards-unread')} ${t('B1.try-again')}`], 'the board not answering: its words, and "try again"');
+    assert.ok(unreached.html.startsWith(`<span data-string="L.boards-unread">${esc(t('L.boards-unread'))}</span> <button id="line-again" data-act="again">`), unreached.html);
+    LINE.render(true);
+    press('again');
+    assert.equal(again, 1, 'its press reads the list again: the act the app hands in');
+    REC.takeBoards({ refused: { kind: 'shell', name: 'provider_403', status: 403, text: 'not admitted' } });
+    const refused = LINE.actingSegment();
+    assert.deepEqual([refused.state, shown(refused.html), refused.html.includes('data-act')], [0, t('L.boards-unread'), false], 'the provider\'s own refusal: its words, and no retry offered where none may tell');
+  } finally {
+    LINE.act(); REC.setBoard(was.board); REC.setSession(was.session);
+  }
+});
+
+test('where no board is held the address display reads "go to an address" alone at every scale — at far, at mid over an account\'s cell, near over the document the walk stands on — naming no board, account or document, so the LEAP box opens empty and no place\'s label is held as named; the segment its one width, its slot, strip and marker empty (issue #215\'s design decision: "The address display shows only \'go to an address\'"; FP-35)', async () => {
+  const was = REC.board(), go = t('L.go-to-address');
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [], contains: () => false };
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  /** the segment as the line renders it: its width in characters and its markup */
+  const segment = () => { LINE.render(true); return { width: Number((/--words:(\d+)/.exec(host.innerHTML) || [])[1]), html: (/<button class="seg address"[^]*?<\/button>/.exec(host.innerHTML) || [''])[0] }; };
+  try {
+    await WALK.focusTo(D, 15);
+    over(D, 14 / STANDARD_FS);
+    const held = segment();
+    REC.takeBoards({ result: [] });
+    /** @type {Array<[string, () => void]>} each scale, and where the camera stands at it */
+    const scales = [['far', () => CAM.set(CAM.viewForCell(boardCell('1'), 0.92))], ['mid, over an account\'s cell', () => over(D, MID)], ['near, over the document the walk stands on', () => over(D, 14 / STANDARD_FS)]];
+    for (const [where, stand] of scales) {
+      stand();
+      assert.deepEqual(LINE.addressDisplay(), { text: go, place: go, slot: 0, addr: '', doc: null, pos: null, member: null, whole: false, window: null }, `${where}: "go to an address" alone`);
+      assert.equal(LINE.currentAddress(), '', `${where}: the LEAP box opens empty`);
+      assert.deepEqual(LINE.named(), { board: '', account: null, doc: null }, `${where}: no place named`);
+      const s = segment();
+      assert.equal(s.width, held.width, `${where}: the segment as wide as with a board`);
+      assert.ok(s.html.includes(`<b>${esc(go)}</b><span class="slot"><b class="pos" style="width:0ch"></b><span class="strip none" aria-hidden="true"></span></span><span class="marker none"`), `${where}: its words alone, slot, strip and marker empty: ${s.html}`);
+    }
+  } finally { REC.setBoard(was); }
 });
 
 test('the session\'s own `writes` decides the acting-as segment: the keyless session reads state 3\'s words over any key store, a session that writes reads state 2 with the label of the key it is opened with (foundations §3.1, §3.3; E16 (a′))', () => {

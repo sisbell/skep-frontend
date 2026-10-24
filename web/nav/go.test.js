@@ -307,6 +307,13 @@
 // Back across a follow made at a link's end drawn at a withheld run outlines
 // the whole run from its start, lights the link and stands the walk on the
 // run's item (issue #202: a page whose Back marks no run turns red).
+// WHERE NO BOARD IS HELD (issue #215; FP-35) the launch pushes no entry, the
+// walk on its root, and every act that needs a board — a LEAP, HOME, WHOLE
+// BOARD, an account's region, the walk's keys, K-8, the selection's chords,
+// the strip — answers at its site with the no-board face, its "try again"
+// with it, making no entry, no flight and no read; PageDown stays the
+// camera's; a moment's unfold flies the camera alone (a page that flies to
+// board 1, pushes an entry naming it, or says nothing, turns red).
 // The overlay host stands on a stand-in element, the platform's document a
 // stand-in beside it, so a face a landing shows is read back from what the
 // host wrote.
@@ -2620,5 +2627,51 @@ test('a change of the page\'s class (issue #177: "Keep every place, and cover th
     /** @type {any} */ (globalThis.document).getElementById = platform.getElementById;
     HOST.dismiss();
     REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  }
+});
+
+test('where no board is held the launch names no place — no trail entry, the walk on its root — and every act that needs a board answers where it is taken: a LEAP, HOME, WHOLE BOARD, an account\'s region, and from the plane the walk\'s keys, K-8, the selection\'s chords and the strip, each with the no-board face — why, and "try again" where a retry may tell — making no entry, no flight and no read; the paging key stays the camera\'s; a walk\'s moment unfolded flies the camera alone, pushing nothing (issue #215\'s design decision: "an act that needs a board the reader lacks answers where it is taken and names what still works … None stays silent"; FP-35)', async () => {
+  const was = { board: REC.board(), session: REC.session() };
+  /** a key as the platform hands it: the command modifier the platform's (D5 §0) */
+  const key = (/** @type {string} */ k, /** @type {{mod?: boolean, shift?: boolean}} */ o = {}) => /** @type {any} */ ({ key: k, metaKey: !!o.mod && KEYS.MAC, ctrlKey: !!o.mod && !KEYS.MAC, shiftKey: !!o.shift, altKey: false, isComposing: false, keyCode: 0, preventDefault() {}, target: { closest: () => null } });
+  try {
+    HOST.dismiss();
+    REC.setSession(null);
+    REC.takeBoards({ refused: { kind: 'unreachable', name: 'unreachable', text: 'refused' } });
+    TRAIL._reset();
+    await GO.launch();
+    assert.deepEqual([TRAIL.all().length, walkAt()], [0, ['board', '1', null]], 'the launch: no entry pushed, the walk on its root');
+    const asked = fake.asked.length, at = CAM.view();
+    /** each act that needs a board, made where it is made */
+    const acts = /** @type {Array<[string, () => Promise<unknown>]>} */ ([
+      ['a LEAP', () => GO.leapTo(D, { how: 'leap', site: { world: { x: 1, y: 2 } } })],
+      ['HOME', () => GO.home(true)],
+      ['WHOLE BOARD', () => GO.wholeBoard(true)],
+      ['an account\'s region', () => GO.toAccount('1.0.1', true)],
+      ...[['↓', key('ArrowDown')], ['→', key('ArrowRight')], ['Home', key('Home')], ['Enter', key('Enter')], ['Shift+↓', key('ArrowDown', { shift: true })],
+        ['Mod+Shift+O', key('O', { mod: true, shift: true })], ['Mod+Shift+L', key('L', { mod: true, shift: true })], ['Mod+Enter', key('Enter', { mod: true })], ['Mod+Shift+P', key('P', { mod: true, shift: true })],
+        ['Mod+Shift+H', key('H', { mod: true, shift: true })], ['Mod+0', key('0', { mod: true })]]
+        .map(([what, e]) => /** @type {[string, () => Promise<unknown>]} */ ([`the key ${what}`, async () => { assert.equal(await KEYS.dispatch(e, { where: 'plane', byKey: true }), true, `${what}: taken`); }])),
+    ]);
+    for (const [what, act] of acts) {
+      HOST.dismiss();
+      await run(act());
+      const f = faceShown();
+      assert.equal(f?.id, 'face:no-board', `${what}: answered with the no-board face`);
+      assert.ok(f && f.html.includes(`data-string="L.boards-unread">${esc(t('L.boards-unread'))}</div>`) && f.html.includes(`>${esc(t('B1.try-again'))}</button>`), `${what}: why, and "try again": ${f && f.html}`);
+      assert.deepEqual([TRAIL.all().length, CAM.flying(), same(CAM.view(), at), fake.asked.length - asked], [0, false, true, 0], `${what}: no entry, no flight, no read`);
+    }
+    HOST.dismiss();
+    await run(GO.leapTo(D, { how: 'leap', site: { world: { x: 1, y: 2 } } }));
+    assert.deepEqual(HOST.currentState()?.anchor, { world: { x: 1, y: 2 } }, 'a LEAP\'s face stands at the act\'s site');
+    HOST.dismiss();
+    assert.equal(await KEYS.dispatch(key('PageDown'), { where: 'plane', byKey: true }), true);
+    assert.deepEqual([HOST.currentState(), same(CAM.view(), at)], [null, false], 'PageDown: the camera paged, no face');
+    const back = { ...at, x: at.x + 1000 };
+    await run(GO.toView({ addr: '1', view: back }));
+    assert.deepEqual([TRAIL.all().length, same(CAM.view(), back), walkAt()], [0, true, ['board', '1', null]], 'a moment\'s unfold: the camera alone brought back, no entry, the walk where it stood');
+  } finally {
+    HOST.dismiss();
+    REC.setBoard(was.board); REC.setSession(was.session);
   }
 });

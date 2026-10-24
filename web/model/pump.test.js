@@ -186,6 +186,13 @@
 // held as they answer now (a mutant that reads them and keeps the old turns
 // red); a publish row's member taking the trunk's text where the box pins on
 // it, none of it read again (a mutant that hands nothing turns red);
+// THE BOARD OPENED (issue #215; FP-35): `boards()` first, then for the board
+// held the key store, the session where one is asked, the health, the daemon
+// and the index in the boot's order; an empty list or a refusal holds none,
+// why kept, nothing asked past the list (a mutant that reads on, or keeps no
+// cause, turns red); "try again" one read for presses made while it is out, a
+// board found opened as the boot opened it and the app told once (a mutant
+// that reads per press, or never tells the app, turns red);
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -2125,6 +2132,50 @@ test('a publish row\'s member arriving where the box showed its plain address ta
   assert.deepEqual([pins[D], m.runs === runs, m.image === image, m.from, m.to, REC.textBetween(D + '.1', 1, 27)], [D + '.1', true, true, 1, 31, 'Tumbler.\n\nThe first field.'], 'the box pinned on D.1, which holds the text and image D held');
   assert.deepEqual([t.from, t.runs], [-1, []], 'D holds none of it');
   assert.deepEqual(fake.asked.slice(from), [], 'nothing read');
+});
+
+test('the board opened as the boot opens it: `boards()` first, then for the board it holds the key store, the session where one is asked, the health, the daemon and the index, in that order; an empty list or a refusal holds none, why kept, nothing asked past the list; "try again" reads the list again, one read for presses made while it is out, a board it finds opened as the boot opened one and the app told once (issue #215\'s design decision; FP-35)', async () => {
+  const BOARDS = FAKE.keyOf('boards', {}), ORIGIN = 'http://127.0.0.1:8642';
+  const ROW = { board: 'b-1', name: ORIGIN, origin: ORIGIN };
+  /** the board's own reads, past the list */
+  const reads = {
+    [FAKE.keyOf('fingerprint', {})]: { result: [] },
+    [FAKE.keyOf('session', { board: 'b-1' })]: { result: { session: 's-1', principal: 1, account: '1.0.1', writes: true } },
+    [FAKE.keyOf('health', { board: 'b-1' })]: { result: { health: { log_position: 8, auth: { claimant: '1.0.1', local_trust: false }, writes: { halted: false } }, mode: 'ENFORCING' } },
+    [FAKE.keyOf('probe', {})]: { result: { daemon: 'running', dialed: null, signed: null } },
+    [FAKE.keyOf('places', { board: 'b-1' })]: { result: indexAt('complete') },
+  };
+  let opened = 0;
+  /** the calls a fake answered, by name */
+  const names = (/** @type {ReturnType<typeof FAKE.create>} */ f) => f.calls().map((c) => c.name);
+  // the list empty: no board on this machine has begun
+  let fake = FAKE.create({ ...reads, [BOARDS]: { result: [] } });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {}, onOpen: () => { opened++; } });
+  const empty = await PUMP.openBoard({ session: true });
+  assert.deepEqual([REC.board(), REC.noBoard(), empty.places, names(fake)], [null, 'none', null, ['boards']], 'an empty list: no board, why kept, nothing asked past the list');
+  // the list refused: the board not answering
+  fake = FAKE.create({ ...reads, [BOARDS]: { refused: { kind: 'unreachable', name: 'unreachable', text: 'refused' } } });
+  PORT.boot(fake);
+  const refused = await PUMP.openBoard({ session: true });
+  assert.deepEqual([REC.board(), REC.noBoard(), refused.places, names(fake)], [null, { refused: { kind: 'unreachable', name: 'unreachable' } }, null, ['boards']], 'a refusal: no board, its kind and its name kept, nothing asked past the list');
+  // "try again", the list answering now: two presses while the read is out, one read
+  fake = FAKE.create({ ...reads, [BOARDS]: { result: [ROW] } });
+  PORT.boot(fake);
+  const release = fake.hold('boards', {});
+  const first = PUMP.retryBoards(), second = PUMP.retryBoards();
+  release();
+  assert.deepEqual(await Promise.all([first, second]), [true, true], 'both presses answered: a board held');
+  assert.deepEqual([fake.asked.filter((k) => k === BOARDS).length, names(fake)], [1, ['boards', 'fingerprint', 'session', 'health', 'probe', 'places']], 'one list read, then the board\'s reads in the boot\'s order, the session asked as the boot asked it');
+  assert.deepEqual([REC.board(), REC.noBoard(), REC.session()?.session, REC.countsExact(), opened], [ROW, null, 's-1', true, 1], 'the board held, its session and its index taken, the app told once');
+  assert.deepEqual([await PUMP.retryBoards(), names(fake).length, opened], [true, 6, 1], 'a board held: nothing read again, nothing told');
+  // the gate's guest: no session asked
+  REC._reset();
+  fake = FAKE.create({ ...reads, [BOARDS]: { result: [ROW] } });
+  PORT.boot(fake);
+  const guest = await PUMP.openBoard({ session: false });
+  assert.deepEqual([names(fake), REC.session(), guest.places && 'result' in guest.places], [['boards', 'fingerprint', 'health', 'probe', 'places'], null, true], 'a guest: the board\'s reads but the session');
+  assert.deepEqual(fake.unanswered, []);
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

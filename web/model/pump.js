@@ -56,7 +56,16 @@
 // the one line names, and kept for the page's life — a cause until a feed row
 // naming a doc 1, or a change of class, drops it, the board not answering
 // held for UNREACHED_MS as a view's read is.
-// Asked by an act rather than the view: the page's session
+// Asked by an act rather than the view: THE BOARD (`openBoard`; issue #215's
+// design decision: "never draw or name a board the client has no record of";
+// FP-35): `boards()`, at boot and again at the reader's "try again" where it
+// was refused (`retryBoards`, one read out at a time, the app told of a board
+// it opens: `onOpen`), its first row the board the page holds, an empty list
+// or a refusal none and why (M-REC's `takeBoards`), and for the board held,
+// in this order, the device's key store (`fingerprint`, before the session,
+// so the one line names the key the session opens with — FP-34), the
+// session, its health, its daemon and its index, each below, nothing past
+// the list where it holds none; the page's session
 // (`acquireSession`: `session(board)`, at boot and for a session lost — see
 // THE ACQUIRE below), the client index (`readIndex`: `places`, at boot and
 // again at every change of the page's class — the view asking nothing while
@@ -246,7 +255,7 @@
 // says the change once these reads and the index's are answered
 // (`rereading`).
 // Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11, FP-22, FP-23,
-// FP-28, FP-29, FP-34.
+// FP-28, FP-29, FP-34, FP-35.
 
 import * as PORT from '../bridge/port.js';
 import * as REC from './records.js';
@@ -279,7 +288,14 @@ import { keyFingerprint } from '../util.js';
 /** @typedef {import('../bridge/shapes').DaemonEvent} DaemonEvent */
 /** @typedef {import('../bridge/shapes').SessionDiedEvent} SessionDiedEvent */
 /** @typedef {import('../bridge/shapes').DeathReason} DeathReason */
+/** @typedef {import('../bridge/shapes').BoardRow} BoardRow */
 /** @typedef {{feed: FeedEvent, index: IndexEvent, mode: ModeEvent, daemon: DaemonEvent}} BoardEvents — the events that name their board, by name */
+
+/**
+ * @typedef {Object} Opened — what opening the board read (`openBoard`)
+ * @property {{result: BoardRow[]} | {refused: Refusal}} boards the list as `boards()` answered it
+ * @property {{result: PlacesAnswer} | {refused: Refusal} | null} places the board's index as `places` answered it; null where no board is held
+ */
 
 /**
  * @typedef {Object} Meanwhile — what the board's events brought while one read
@@ -375,6 +391,12 @@ let onPublish = () => {};
 let onDrop = () => {};
 /** @type {() => string[]} the places the view's state names beside the view — the trail's entries — read again at a change of the page's class (handed in at `start`) */
 let stands = () => [];
+/** @type {() => void} told once a board the list read again found is open (`retryBoards`): the app's launch there (handed in at `start`) */
+let onOpen = () => {};
+/** @type {{session: boolean}} how the page opens its board (`openBoard`): whether it asks a session — the gate's guest asks none — as the boot opened it, which the list read again keeps */
+let opening = { session: true };
+/** @type {Promise<boolean> | null} the list read again, out (`retryBoards`): a second press joins it */
+let boardsOut = null;
 /** @type {Set<string>} the places the view stood on as the page's class last changed, each asked again at the new class until answered (see the head; `reread`) */
 let standing = new Set();
 /** @type {ReturnType<typeof setTimeout> | null} the refresh armed for the board a bare row marked (`arm`), else null */
@@ -397,7 +419,7 @@ let classes = 0;
  * Start the pump: subscribe the model to the port's events, every board
  * event through `onBoard`, and to the sessions the calls name as they cross
  * the port (B-PORT's `onSession`).
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void, stands?: () => string[]}} opts `shown` the version each box shows, which the view reads (see the head); `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], onOpen?: () => void}} opts `shown` the version each box shows, which the view reads (see the head); `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `onOpen` told once a board the list read again found is open (`retryBoards`)
  */
 export function start(opts) {
   dirty = opts.onDirty;
@@ -405,6 +427,7 @@ export function start(opts) {
   onPublish = opts.onPublish || (() => {});
   onDrop = opts.onDrop || (() => {});
   stands = opts.stands || (() => []);
+  onOpen = opts.onOpen || (() => {});
   standing = new Set();
   started = true;
   onBoard('feed', (ev) => { if (ev.update) takeRow(ev.update); });
@@ -758,6 +781,53 @@ async function overtaken(ask, take) {
     take(out, m);
     return out;
   } finally { whileOut.delete(m); }
+}
+
+/**
+ * THE BOARD OPENED (see the head; issue #215's design decision; FP-35):
+ * `boards()` read and its answer M-REC's (`takeBoards`) — its first row the
+ * board the page holds; an empty list or a refusal none, and why — and, for
+ * the board held, in this order: the device's key store (`fingerprint`),
+ * before the session, so the key the session is opened with is named with it
+ * (FP-34); the session, where one is asked (`acquireSession`); the board's
+ * health and its daemon (`readHealth`, `readProbe`); its index
+ * (`readIndex`). Nothing past the list where it holds none.
+ * @param {{session: boolean}} opts `session` the page's session is asked — the gate's guest asks none; kept for the list read again (`retryBoards`)
+ * @returns {Promise<Opened>}
+ */
+export async function openBoard(opts) {
+  opening = opts;
+  const boards = await PORT.boards({});
+  REC.takeBoards(boards);
+  const b = REC.board();
+  if (!b) return { boards, places: null };
+  const fp = await PORT.fingerprint({});
+  REC.takeKeyStore('result' in fp ? fp.result : null, b.origin);
+  if (opts.session) await acquireSession();
+  await readHealth(b.board);
+  await readProbe();
+  return { boards, places: await readIndex() };
+}
+
+/**
+ * The list read again at the reader's "try again", where it was refused (see
+ * the head): opened as the boot opened it (`openBoard`), one read out at a
+ * time, a press made while one is out joining it; a board it finds held, the
+ * app told (`onOpen`), which launches there.
+ * @returns {Promise<boolean>} a board is held
+ */
+export function retryBoards() {
+  if (REC.board()) return Promise.resolve(true);
+  if (!boardsOut) {
+    boardsOut = openBoard(opening).then(() => {
+      boardsOut = null;
+      const held = !!REC.board();
+      if (held) onOpen();
+      dirty();
+      return held;
+    });
+  }
+  return boardsOut;
 }
 
 /**

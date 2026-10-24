@@ -145,7 +145,8 @@ export const STRINGS = {
   'F.home-record.yours': { text: 'your home document — published here from birth, kept at this address; it holds your key record', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
   'F.home-record.other': { text: '⟨owner⟩\'s home document — it holds their key record', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
   'F.key-record.other': { text: 'this page holds ⟨owner⟩\'s key record', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
-  'F.unclaimed': { text: 'unclaimed — no board on this machine is yours until you claim one', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
+  // issue #215's design decision words it so it is true where no board exists: the guest line's place at an empty board list
+  'F.unclaimed': { text: 'no board on this machine is yours until you claim one', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line; the ARIA mirror; an act that needs a board' },
   'F.keyless-limit': { text: 'this version of the client offers neither act — enrolling this device and importing a paper come with the key ceremonies', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 3' },
   'F.flip': { text: 'local trust is now on — anything running on this machine can write as you here and read every draft you have written, with no key', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 6' },
   'F.flip.run': { text: '— for this run of the notebook: quitting the client ends it, and the next start runs without it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 6' },
@@ -207,6 +208,11 @@ export const STRINGS = {
 
   // ---- strings THIS LANE NEEDED that the inventory lacks (reported) -----------
   'L.no-adapter': { text: 'no shell and no provider — this page reaches nothing', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  // WHERE NO BOARD IS HELD (issue #215's design decision, whose own words these are): the board list refused, in the guest
+  // line's place; the address display's one segment; the empty list's statement answered while the doors are unbuilt
+  'L.boards-unread': { text: 'the boards on this machine could not be read — that does not mean there are none', cls: 'DRAFT', source: '', screen: 'the one line; the ARIA mirror; an act that needs a board', lane: true },
+  'L.go-to-address': { text: 'go to an address', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  'L.no-notebook-yet': { text: 'beginning a notebook isn\'t built yet', cls: 'DRAFT', source: '', screen: 'the one line; an act that needs a board', lane: true },
   'L.refused': { text: '⟨name⟩ — refused; nothing was written', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
   'L.seam.annotate': { text: 'annotate — comes with the annotation lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection', lane: true },
   'L.seam.quote': { text: 'quote — comes with the annotation lane; nothing is written here', cls: 'DRAFT', source: '', screen: 'the selection', lane: true },
@@ -267,7 +273,6 @@ export const STRINGS = {
   // the mirror's item names (N-WALK's `nameOf`): what a screen reader hears at each element of the walk
   'L.mirror.item': { text: 'Item ⟨i⟩ of ⟨n⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.board': { text: 'board ⟨node⟩, ⟨origin⟩: ⟨n⟩ accounts.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  'L.mirror.board.bare': { text: 'board ⟨node⟩: ⟨n⟩ accounts.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.account': { text: 'account ⟨account⟩: ⟨documents⟩ documents, ⟨links⟩ links⟨empty⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.at-least': { text: 'at least ⟨n⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.document': { text: 'document ⟨document⟩, ⟨label⟩, ⟨state⟩⟨extent⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },

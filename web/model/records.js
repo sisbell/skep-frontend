@@ -11,7 +11,9 @@
 // read withheld from the reader, or failed — and the reads a listed claim's
 // admission waits on that failed (`takeFailedRead`; issue #186's design
 // decision: "a face whose read failed says 'edition claims not read'"), the
-// board, the session as `session`
+// board — the first row `boards()` answered — or, where it answered none,
+// why the page holds no board (`noBoard`: the list empty, or refused; issue
+// #215's design decision; FP-35), the session as `session`
 // opened it (its REFERENCE, a name, never a token; its principal and
 // account; whether a write may go out under it) and, where a restart lost it
 // (issue #175's design decision), the account the page is reconnecting as or
@@ -106,7 +108,7 @@
 // Carries: the wireframe's §5 (`state.docs`, `clientDoc`,
 // `invalidateClient`), §8's `takeDelivery`/`mergeLinks`, §3's landmarks (now
 // the index's). Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14 (no token held),
-// FP-29 (the cover), FP-34 (the slot).
+// FP-29 (the cover), FP-34 (the slot), FP-35 (why no board is held).
 
 import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder, isTrunkMember, docOneOf } from './address.js';
 import { byteOffsets } from '../util.js';
@@ -125,6 +127,14 @@ import { byteOffsets } from '../util.js';
 /** @typedef {import('../bridge/shapes').Standing} Standing */
 /** @typedef {import('../bridge/shapes').SessionOpened} SessionOpened */
 /** @typedef {import('../bridge/shapes').FingerprintRow} FingerprintRow */
+/** @typedef {import('../bridge/shapes').BoardRow} BoardRow */
+/** @typedef {import('../bridge/shapes').Refusal} Refusal */
+
+/**
+ * @typedef {'none' | {refused: {kind: string, name: string}}} NoBoard — why the page holds no board (issue #215's design
+ * decision; FP-35), as `boards()` answered: `none` the list empty — no board on this machine has begun; `refused` the list
+ * could not be read, which says nothing of whether one exists, the refusal by its kind and its one name
+ */
 
 /** the system account whose head document `H` the daemon writes (wire.md §The other endpoints: `1.1.0.1.0.2`) */
 export const SYSTEM_ACCOUNT = '1.1.0.1';
@@ -288,6 +298,8 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
 const state = {
   /** @type {{board: string, name: string, origin: string} | null} */
   board: null,
+  /** @type {NoBoard | null} why the page holds no board, where `boards()` answered none (`takeBoards`); null where a board is held, or the list has not answered */
+  noBoard: null,
   /** @type {SessionOpened | null} the session as `session` opened it: `writes` the signed session's, never the bare one's, which reads alone */
   session: null,
   /** @type {DeathReason | null} */
@@ -356,9 +368,25 @@ export const rev = () => state.rev;
 
 // ---- the board, the session, health, the daemon ------------------------------
 
-/** @param {{board: string, name: string, origin: string} | null} b */
-export function setBoard(b) { state.board = b; bump(); }
+/** @param {{board: string, name: string, origin: string} | null} b the board the page holds; null for none, why left untold */
+export function setBoard(b) { state.board = b; state.noBoard = null; bump(); }
 export const board = () => state.board;
+/**
+ * The board list as `boards()` answered it (issue #215's design decision:
+ * "never draw or name a board the client has no record of"; FP-35): its
+ * first row the board the page holds; an empty list no board, none on this
+ * machine having begun; a refusal no board, and nothing known of whether one
+ * exists (`noBoard`).
+ * @param {{result: BoardRow[]} | {refused: Refusal}} out
+ */
+export function takeBoards(out) {
+  const row = 'result' in out ? out.result[0] : undefined;
+  state.board = row ? { board: row.board, name: row.name, origin: row.origin } : null;
+  state.noBoard = row ? null : 'result' in out ? 'none' : { refused: { kind: out.refused.kind, name: out.refused.name } };
+  bump();
+}
+/** why the page holds no board, as `boards()` answered (`NoBoard`); null where a board is held, or the list has not answered */
+export const noBoard = () => state.noBoard;
 /** @param {SessionOpened | null} s */
 export function setSession(s) { state.session = s; state.sessionDied = null; state.reconnect = null; bump(); }
 export const session = () => state.session;
@@ -1526,7 +1554,7 @@ export function setAgain(addr, fresh) {
 
 /** reset everything (tests) */
 export function _reset() {
-  state.board = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
+  state.board = null; state.noBoard = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
   state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops = 0;
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.rev = 0;

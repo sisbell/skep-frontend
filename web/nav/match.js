@@ -7,11 +7,12 @@
 // so the row says so (reported); a URL is the intake's (B8, the code lane).
 // Label matching takes only text that parses as none of these: the index's
 // labels and addresses by prefix; with nothing typed, the current address's
-// levels — the whole board first, HOME where it differs, the account's
-// region, the whole document — then the landmarks and the trail's entries.
+// levels — the whole board first, where a board is held (FP-35), HOME where
+// it differs, the account's region, the whole document — then the landmarks
+// and the trail's entries.
 // Carries: the wireframe's §12 `leapInput` branches (`search_titles`
 // re-cut to this fold over the index; the intake arm LEFT for the code
-// lane). Rules: FP-1, FP-2, FP-6 (reads the index as values).
+// lane). Rules: FP-1, FP-2, FP-6 (reads the index as values), FP-35.
 
 import { parseAddress, accountOf, documentOf, boardOf, cmpAddr } from '../model/address.js';
 
@@ -34,7 +35,7 @@ export const isUrl = (/** @type {string} */ s) => /^https?:\/\//i.test(s.trim())
 /**
  * The rows for the typed text.
  * @param {string} text
- * @param {{places: Place[], landmarks: Place[], trail: Array<{n: number, addr: string, label: string | null}>, current: string | null, board: string, home: string | null, levelWords: {board: string, home: string, account: string, document: string}}} ctx
+ * @param {{places: Place[], landmarks: Place[], trail: Array<{n: number, addr: string, label: string | null}>, current: string | null, board: string | null, home: string | null, levelWords: {board: string, home: string, account: string, document: string}}} ctx `board` the node of the board held; null where none is
  * @param {number} [limit]
  * @returns {Row[]}
  */
@@ -58,12 +59,12 @@ export function matches(text, ctx, limit = 24) {
   return out;
 }
 
-/** the levels beneath the current address, the whole board first */
+/** the levels beneath the current address, the whole board first where a board is held */
 export function levels(/** @type {Parameters<typeof matches>[1]} */ ctx) {
   /** @type {Row[]} */
   const out = [];
   const cur = ctx.current;
-  out.push({ kind: 'board', addr: ctx.board, title: ctx.levelWords.board, sub: ctx.board, exact: false });
+  if (ctx.board) out.push({ kind: 'board', addr: ctx.board, title: ctx.levelWords.board, sub: ctx.board, exact: false });
   if (ctx.home && ctx.home !== ctx.board) out.push({ kind: 'home', addr: ctx.home, title: ctx.levelWords.home, sub: ctx.home, exact: false });
   if (cur) {
     const acct = accountOf(cur), doc = documentOf(cur);

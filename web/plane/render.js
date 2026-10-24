@@ -5,7 +5,10 @@
 // The board's region with its label and, at the floor, the residue
 // statement, and while the shell's index reports changes it could not place,
 // that a document such a change created is not shown (issue #212's design
-// decision), all in the cell of its user grid no account takes; at FAR the
+// decision), all in the cell of its user grid no account takes — WHERE NO
+// BOARD IS HELD none of it, nor an account's frame under the view, nor a
+// ring at the walk's root (issue #215's design decision: "`render.js` draws
+// no board: no outline, label, origin or count"; FP-35); at FAR the
 // accounts as clusters with their counts — documents (exact, or a lower
 // bound "≥ n" where the index runs from a floor), links held here (LK's
 // fold; HOLLOW while any document's links are unread — "arriving"), the
@@ -133,7 +136,7 @@
 // The system account's rows are never drawn (the record §1.8; this lane's
 // cut). The chip is at the document's corner (T-ARTICLE), never here.
 // Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
-// Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports), FP-21, FP-22, FP-26.
+// Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports), FP-21, FP-22, FP-26, FP-35.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -319,11 +322,11 @@ export function boardStatements() {
   return out;
 }
 
-/** the board's region: an outline; its label and its statements (`boardStatements`), in the cell of its user grid no account takes */
+/** the board's region: an outline; its label and its statements (`boardStatements`), in the cell of its user grid no account takes; nothing where no board is held (FP-35) */
 function drawBoard(/** @type {Pass} */ pass) {
-  if (!ctx) return;
-  const { VW, VH } = viewport();
   const b = REC.board(), h = REC.health();
+  if (!ctx || !b) return;
+  const { VW, VH } = viewport();
   const c = boardCell('1');
   const X = sx(c.x), Y = sy(c.y), W = c.w * cam.scale, H = c.h * cam.scale;
   if (X + W < 0 || X > VW || Y + H < 0 || Y > VH) return;
@@ -332,7 +335,7 @@ function drawBoard(/** @type {Pass} */ pass) {
   const RX = sx(room.x) + 8, RY = sy(room.y) + 6;
   const claimant = h && h.auth && h.auth.claimant ? h.auth.claimant : '—';
   /** @type {Part[]} */
-  const parts = [{ text: t('L.board-label', { node: '1', origin: b ? b.origin : '', venue: t('F.venue.notebook'), claimant }), px: Math.max(10, Math.min(13, W * 0.03)), ink: COL.title, fit: 'wrap' }];
+  const parts = [{ text: t('L.board-label', { node: '1', origin: b.origin, venue: t('F.venue.notebook'), claimant }), px: Math.max(10, Math.min(13, W * 0.03)), ink: COL.title, fit: 'wrap' }];
   for (const text of boardStatements()) parts.push({ text, px: 10, ink: COL.greek, fit: 'wrap' });
   // the line names the board at every scale: its label is never held
   pass.labels.push({ kind: 'board', place: '1', within: { x: RX, y: RY, w: room.w * cam.scale - 16, h: room.h * cam.scale - 12 }, x: RX, y: RY, align: 'left', alpha: 1, plate: null, parts, hold: null });
@@ -384,13 +387,13 @@ function drawClusters(/** @type {number} */ alpha, /** @type {Pass} */ pass) {
   return n;
 }
 
-/** the account frames at mid and nearer: the region exists because the address does; its label at its foot, held below the one line but where the line names the account, and an empty one says so */
+/** the account frames at mid and nearer: the region exists because the address does — on the board the page holds, none where it holds none (FP-35); its label at its foot, held below the one line but where the line names the account, and an empty one says so */
 function drawAccountFrames(/** @type {number} */ alpha, /** @type {Pass} */ pass, /** @type {import('../line/line.js').Named} */ named) {
   if (!ctx) return;
   const v = viewportWorld(120);
   const frames = new Set(REC.accounts().filter((a) => !a.system).map((a) => a.account));
   const under = (/** @type {string | null} */ x) => x && frames.add(x);
-  under(accountUnderView());
+  if (REC.board()) under(accountUnderView());
   for (const acct of frames) {
     const b = accountCell(acct);
     if (!intersects(b, v)) continue;
@@ -865,10 +868,11 @@ function ringBox(b, seen) {
  * The focus ring at the walk's element while the plane holds the focus and
  * a key moved it (N-FOCUS's rule; D5 §4 rule 2) — its document's outline's
  * bounds for a document or a link (T-LAYER's `shapeOf`), the account's
- * region, the board's; a span whose article stands is marked by its lit
- * block instead, the ring's reading-scale form (D3), wherever a line of it
- * meets the visible view, so the canvas circles no document whose text is
- * laid out — and where none does (a span the re-take keeps while its
+ * region, the board's — none at the walk's root where no board is held,
+ * whose cell names none (FP-35); a span whose article stands is marked by
+ * its lit block instead, the ring's reading-scale form (D3), wherever a
+ * line of it meets the visible view, so the canvas circles no document whose
+ * text is laid out — and where none does (a span the re-take keeps while its
  * document stays in view, N-WALK's), at its lines (T-LAYER's `lineBoxes`).
  * Its box clamped to the visible view (`ringBox`). `stats.ring` is the box it
  * outlined.
@@ -876,7 +880,7 @@ function ringBox(b, seen) {
  */
 function drawFocus(seen) {
   if (!ctx || !FOCUS.ringShown()) return;
-  const f = WALK.current(); if (!f) return;
+  const f = WALK.current(); if (!f || (f.kind === 'board' && !REC.board())) return;
   /** @type {Rect} the element's box on screen */
   let b;
   if (f.kind === 'block' && LAYER.isMounted(f.addr)) {

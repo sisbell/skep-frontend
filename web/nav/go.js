@@ -167,7 +167,15 @@
 // shows the face over"); the launch frame is HOME, set without a flight and
 // pushed as the trail's first entry (W-01), so Back after the first teleport
 // returns to it; Back, Forward and a trail jump move the cursor and re-take
-// the departed view. A departure re-takes where the camera is bound (P-CAM's
+// the departed view. WHERE NO BOARD IS HELD (issue #215's design decision:
+// "never draw or name a board the client has no record of … an act that
+// needs a board the reader lacks answers where it is taken and names what
+// still works"; FP-35) the launch names no place — no entry is pushed, the
+// walk's root saying why — and a LEAP, HOME, WHOLE BOARD and an account's
+// region never leave: each act counted as it is made, its answer O-FACES'
+// no-board face at its site (`noBoard`), no entry, no flight, no read; a
+// walk's moment unfolded flies the camera alone back to its view. A
+// departure re-takes where the camera is bound (P-CAM's
 // `destination`), so one made during a flight re-takes the flight's
 // destination, never a point it was passing (foundations §2.3), and the
 // version the departed entry's box shows (`departure`). Each act
@@ -287,7 +295,7 @@
 // Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10, FP-20 (a
 // field holding the caret keeps it and its chrome), FP-21, FP-22 (owns the
 // version each box shows), FP-25 (the jump moves the reader when made),
-// FP-29 (the cover).
+// FP-29 (the cover), FP-35 (where no board is held).
 
 import * as CAM from '../plane/camera.js';
 import * as TRAIL from './trail.js';
@@ -1433,15 +1441,17 @@ function sayFollowed(act, s, entry, placed, pos) {
  * whose failure is known at the act never leaves, its face at `site`, the
  * arrival standing — the door's link lit; one to
  * an address on a board the plane does not draw reaches for it first
- * (`reachFor`). Where the reader took the camera over while it was in the air
- * its reads only mark; where an act was made while it read, it goes on
- * nowhere and faces nothing: its read fills its entry alone.
+ * (`reachFor`); where no board is held, none leaves, the no-board face at
+ * `site` (see the head). Where the reader took the camera over while it was
+ * in the air its reads only mark; where an act was made while it read, it
+ * goes on nowhere and faces nothing: its read fills its entry alone.
  * @param {string} addr a document address
  * @param {{pos?: number | null, runs?: Run[] | null, how?: 'click' | 'key' | 'leap' | 'follow', link?: string | null, passage?: ISpan | null, carry?: Carry | null, site?: Site | null, push?: boolean, ms?: number, byKey?: boolean}} [opts] `runs` every run of the span landed on, `pos` the first position of one of them, where the landing names a span; `passage` the passage those runs hold, by identity, which labels them (the door's); `carry` the passage a move to another arrangement of the same material carries (foundations §2.3's carry rule; P43), which places the landing in the place of `pos`; `site` where the act was made — a run's bytes, a card's span, a point of the plane — where the face of a failure known at the act stands, and a reaching face, null (the LEAP box) at the viewport's corner; `how` the act, for the flight's length alone — a click on a place flies in 420 ms, every other act in 620 ms; `byKey` a key made the act
  * @returns {Promise<import('../model/records.js').Doc | null>} the document landed in; null where it never left, faced in the place of a landing, an act made while it read took its place, the reader took the camera over, or its flight was cut short before it landed
  */
 export async function leapTo(addr, opts = {}) {
   const act = nextAct();
+  if (!REC.board()) { FACES.noBoard(opts.site ?? null); return null; }
   let pos = opts.pos ?? null, runs = pos != null && opts.runs ? inTextOrder(opts.runs) : null;
   const link = opts.link ?? null, site = opts.site ?? null, ms = opts.ms ?? (opts.how === 'click' ? 420 : 620);
   const c = opts.carry ?? null, passage = runs ? opts.passage ?? null : null;
@@ -1815,11 +1825,14 @@ function homeFrame() {
 }
 
 /**
- * HOME — the acting account's region at mid scale; a guest's the board's extent (R92 rider (c))
+ * HOME — the acting account's region at mid scale; a guest's the board's
+ * extent (R92 rider (c)); where no board is held, the act answered where it
+ * was made, why and what still works (see the head)
  * @param {boolean} [byKey] a key made the act
  */
 export async function home(byKey = false) {
   const act = nextAct();
+  if (!REC.board()) { FACES.noBoard(null); return; }
   const departed = departure();
   const h = homeFrame();
   const entry = TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: t('F.level.home'), notice: null }, departed);
@@ -1833,22 +1846,26 @@ export async function home(byKey = false) {
  * first teleport re-takes its view as it departs and Back returns to it. The
  * landing puts the platform's focus on the walk's element with the ring out
  * (the focus record's rule 21), so the first Tab moves on from it and a
- * screen reader lands on the place the launch names.
+ * screen reader lands on the place the launch names. Where no board is held
+ * it names none (see the head): no entry is pushed, and the walk's root,
+ * saying why, takes the focus.
  */
 export async function launch() {
   const h = homeFrame();
   CAM.set(h.view);
-  here = TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: t('F.level.home'), notice: null }, null);
+  if (REC.board()) here = TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: t('F.level.home'), notice: null }, null);
   await WALK.focusTo(h.addr, null);
   CAM.markDirty();
 }
 
 /**
- * WHOLE BOARD — the board the camera is over, at the clamp (law 13)
+ * WHOLE BOARD — the board the camera is over, at the clamp (law 13); where
+ * no board is held, the act answered where it was made (see the head)
  * @param {boolean} [byKey] a key made the act
  */
 export async function wholeBoard(byKey = false) {
   const act = nextAct();
+  if (!REC.board()) { FACES.noBoard(null); return; }
   const departed = departure();
   const node = boardNode();
   const target = CAM.viewForCell(boardCell(node), 0.92);
@@ -1860,12 +1877,14 @@ export async function wholeBoard(byKey = false) {
 /**
  * An account's region at mid scale — a teleport whatever reaches it: a LEAP
  * to the account's address or its level, Enter on it, a click on it at far
- * (foundations §2.2).
+ * (foundations §2.2); where no board is held, the act answered where it was
+ * made (see the head).
  * @param {string} acct
  * @param {boolean} [byKey] a key made the act
  */
 export async function toAccount(acct, byKey = false) {
   const act = nextAct();
+  if (!REC.board()) { FACES.noBoard(null); return; }
   const departed = departure();
   const target = CAM.viewForCell(accountCell(acct), 0.85);
   const entry = TRAIL.push({ addr: acct, pos: null, width: null, view: target, label: null, notice: null }, departed);
@@ -1885,13 +1904,15 @@ const atView = (/** @type {View} */ v) => { const d = CAM.destination(); return 
  * teleport there as an account's is: its trail entry taken at the act, the
  * chrome of the place it leaves ended, the walk re-taken on the place and the
  * camera flown to the view, the platform's focus left where the moment's face
- * puts it.
+ * puts it. Where no board is held the camera alone is flown back: the view
+ * stands on no place an entry or the walk could name (see the head).
  * @param {{addr: string, view: View}} at the place the walk's trail entry named and the view the camera was bound for
  * @param {boolean} [byKey] a key made the act
  */
 export async function toView(at, byKey = false) {
   const act = nextAct();
   if (atView(at.view)) return;
+  if (!REC.board()) { await CAM.fly(at.view, 400); CAM.markDirty(); return; }
   const departed = departure();
   const entry = TRAIL.push({ addr: at.addr, pos: null, width: null, view: at.view, label: null, notice: null }, departed);
   dismissChrome(entry);

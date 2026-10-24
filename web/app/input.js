@@ -100,13 +100,15 @@
 // K-57), and a compact corner's glyph opens the corner whole, a click on the
 // corner opened closing it again (FP-26; T-LAYER's `openCorner`); a click on a
 // block selects it whole (R11); a click on an account at
-// far is a teleport to its region (a trail push); an empty click ends a card
+// far is a teleport to its region (a trail push) — on the board the page
+// holds: where it holds none, the grid names no account and the click is an
+// empty one (FP-35); an empty click ends a card
 // or scene still reading (O-HOST's opening, ended alone: the overlay
 // standing under it stands), else dismisses the overlay, else clears the
 // selection.
 // Carries: the wireframe's §11 (the pointer and wheel handlers) and §16's
 // layer click handling, re-cut.
-// Rules: FP-1, FP-2, FP-9, FP-21, FP-24, FP-25, FP-26, FP-34.
+// Rules: FP-1, FP-2, FP-9, FP-21, FP-24, FP-25, FP-26, FP-34, FP-35.
 
 import * as CAM from '../plane/camera.js';
 import * as RENDER from '../plane/render.js';
@@ -404,7 +406,7 @@ function takeSelection() {
   SEL.select(span.addr, span.pos, span.width);
 }
 
-/** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark goes to its newest member; a place goes; an account at far goes to its region; else a card or scene still reading ends, the overlay standing under it standing, or else the overlay dismisses */
+/** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark goes to its newest member; a place goes; an account at far goes to its region, where a board is held; else a card or scene still reading ends, the overlay standing under it standing, or else the overlay dismisses */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   LINE.act();
   const tail = RENDER.tailAtScreen(px, py);
@@ -422,7 +424,7 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
     if (!LAYER.atReadingScale(doc)) { GO.leapTo(doc, { how: 'click', site }); return; }
     return; // at reading scale a press on its text is held for the text (`afterFrame`); one in a gutter acts on nothing
   }
-  if (lod.name === 'far' || lod.name === 'far~mid') {
+  if ((lod.name === 'far' || lod.name === 'far~mid') && REC.board()) {
     const acct = accountAt(CAM.wx(px), CAM.wy(py), '1');
     if (acct) { GO.toAccount(acct); return; }
   }

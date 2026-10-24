@@ -67,10 +67,15 @@
 // panning to its corner, never leaves it, and the one line marks the view's
 // window over it (`kept`); else the account whose region holds the centre,
 // else the board. At far scale the grain stops at the account, and the last
-// alone is read. THE GRAIN BELOW A DOCUMENT IS THE
-// DOCUMENT'S OWN (issue #140's design decision): P-LOD's band decides how
-// deep the walk goes, down to the document; it steps by span only inside a
-// document at its reading scale — its own em at the readable threshold,
+// alone is read. WHERE NO BOARD IS HELD (issue #215's design decision: "The
+// mirror's board sentence says what the line says"; FP-35) the root names no
+// board: it says why, the words O-FACES' one entry gives (`noBoardWords`,
+// through the reader the app hands in), and the re-take stands on it alone,
+// naming no account the grid finds under the centre. THE GRAIN BELOW A
+// DOCUMENT IS THE DOCUMENT'S OWN (issue #140's design decision): P-LOD's
+// band decides how deep the walk goes, down to the document; it steps by
+// span only inside a document at its reading scale — its own em at the
+// readable threshold,
 // T-LAYER's one test, the one the press rule and the one line's position read
 // — and any other document is one stop, focused whole, as at mid, its mirror
 // item collapsed (`aria-expanded` false, `collapsed`). Entering such a
@@ -155,7 +160,7 @@
 // walk stays put on that withheld form, never on nothing"; FP-29).
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21, FP-22, FP-23, FP-24, FP-29.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-35.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -205,6 +210,7 @@ import { t } from '../strings.js';
  * @property {() => Located | null} located where Back's light stands (N-GO's `backLight`); null where none does
  * @property {() => Described | null} described what the landing says of its passage, where it says anything (N-GO's `described`); null where nothing is said
  * @property {(addr: string) => string} shown the version a document's box shows (N-GO's `shownIn`): the one the walk stands on and lists there
+ * @property {() => ({id: string, text: string} | null)} noBoard why no board is held, the words the root says in the board's place (O-FACES' `noBoardWords`); null where a board is held, or the list has not answered
  */
 
 /** @type {Node | null} */
@@ -223,8 +229,8 @@ let moves = 0;
 let mirrorEl = null;
 /** @type {Array<(n: Node | null) => void>} */
 const watchers = [];
-/** @returns {Readers} the readers before the app hands its owner's in: no light stands, no landing says anything, and every box shows its plain address */
-const noReaders = () => ({ located: () => null, described: () => null, shown: (/** @type {string} */ addr) => documentOf(addr) || addr });
+/** @returns {Readers} the readers before the app hands its owner's in: no light stands, no landing says anything, every box shows its plain address, and no board's absence is told */
+const noReaders = () => ({ located: () => null, described: () => null, shown: (/** @type {string} */ addr) => documentOf(addr) || addr, noBoard: () => null });
 /** @type {Readers} */
 let read = noReaders();
 
@@ -318,8 +324,10 @@ const runEnds = (/** @type {string} */ addr, /** @type {number} */ pos) => LK.sh
 export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type {number} */ total) {
   const pos = ' ' + t('L.mirror.item', { i: i + 1, n: total });
   if (n.kind === 'board') {
-    const b = REC.board(); const accts = REC.accounts().filter((a) => !a.system).length;
-    return (b ? t('L.mirror.board', { node: n.addr, origin: b.origin, n: accts }) : t('L.mirror.board.bare', { node: n.addr, n: accts })) + pos;
+    // where no board is held the root names none: it says why, as the one line does (FP-35)
+    const b = REC.board();
+    if (!b) { const why = read.noBoard(); return why ? why.text + pos : pos.trim(); }
+    return t('L.mirror.board', { node: n.addr, origin: b.origin, n: REC.accounts().filter((a) => !a.system).length }) + pos;
   }
   if (n.kind === 'account') {
     const c = REC.countOf(n.addr); const lk = LK.countAccount(n.addr);
@@ -769,7 +777,8 @@ export function kept() {
  * while its region meets the visible view, a span or a link in it taken to
  * the document where it stands below its reading scale. Else, and at far
  * scale, where the grain stops at the account: the account whose region holds
- * the centre, else the board. A key's move puts the platform's focus on the
+ * the centre, else the board — the root alone where no board is held (see the
+ * head). A key's move puts the platform's focus on the
  * element wherever the key was pressed, the ring drawn (rule 10); a
  * pointer's or the wheel's carries it only where the mirror held it, the ring
  * out, and says nothing until the next keyboard act (rule 12).
@@ -801,8 +810,8 @@ export async function retakeFromView(byKey = false) {
       return;
     }
   }
-  // 3. the place holding the centre: the account whose region holds it, else the board
-  const at = accountAt(x, y, BOARD.addr) || BOARD.addr;
+  // 3. the place holding the centre: the account whose region holds it, else the board — the root alone where no board is held
+  const at = (REC.board() && accountAt(x, y, BOARD.addr)) || BOARD.addr;
   if (!focus || focus.addr !== at) await focusTo(at, null, byKey, byKey);
 }
 

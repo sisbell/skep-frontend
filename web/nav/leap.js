@@ -52,7 +52,11 @@
 // entry keeps — and a change of the page's class computes the rows standing
 // in the box again from the model at once (`classChanged`), and once more as
 // the index the new class reads answers (`takeIndex`), its text, its caret and
-// its focus left as they stand (FP-20).
+// its focus left as they stand (FP-20). WHERE NO BOARD IS HELD (issue #215's
+// design decision; FP-35) it lists no board's level, its status region says
+// why — O-FACES' one entry — in the answer's place, and Enter, on a row or
+// none, closes it onto O-FACES' no-board face: a LEAP needs a board, and the
+// act is answered, never silent.
 // ITS ACCESSIBLE FORM (R94; the WAI-ARIA combobox, list autocomplete with
 // automatic selection): the input is the combobox, expanded while it lists
 // rows, controlling the rows' listbox, the selected row `aria-selected`; the
@@ -66,13 +70,14 @@
 // the page's one), written only when its words change: a live region speaks
 // whatever is rewritten, so an arrow or a further keystroke repeats nothing.
 // Carries: the wireframe's §12. Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20,
-// FP-29.
+// FP-29, FP-35.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from './trail.js';
 import * as GO from './go.js';
 import * as FOCUS from './focus.js';
 import * as HOST from '../overlays/host.js';
+import * as FACES from '../overlays/faces.js';
 import { MAC } from './keys.js';
 import { matches } from './match.js';
 import { t } from '../strings.js';
@@ -142,7 +147,7 @@ function ctx() {
   return {
     places: REC.places(), landmarks: REC.landmarks(),
     trail: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, label: GO.wordsOf(r.entry) })),
-    current: cur, board: '1', home: s && s.account ? s.account : null,
+    current: cur, board: REC.board() ? GO.boardNode() : null, home: s && s.account ? s.account : null,
     levelWords: { board: t('F.level.board'), home: t('F.level.home'), account: t('F.level.account'), document: t('F.level.document') },
   };
 }
@@ -239,7 +244,7 @@ export function close() {
   markDirty();
 }
 
-/** rebuild the rows, the input's combobox state and the status region — the answer, then the index's state (FP-13) */
+/** rebuild the rows, the input's combobox state and the status region — the answer, then the index's state; where no board is held, why in their place (FP-13, FP-35) */
 export function render() {
   if (!els) return;
   const st = REC.indexState();
@@ -247,7 +252,8 @@ export function render() {
   const typed = els.input.value.trim();
   els.rows.innerHTML = rows.map((r, i) => `<div class="hit ${i === sel ? 'sel' : ''}" id="${rowId(i)}" data-i="${i}" role="option" aria-selected="${i === sel}"><span class="a">${esc(r.addr)}</span><span>${esc(r.title)}</span><span class="a">${esc(r.sub)}${r.kind === 'landmark' ? ' ' + esc(t('F.landmark')) : ''}</span></div>`).join('');
   comboState();
-  const answer = !rows.length && typed ? `<span data-string="F.leap.none">${esc(t('F.leap.none'))}</span>` : '';
+  const why = FACES.noBoardWords();
+  const answer = why ? `<span data-string="${esc(why.id)}">${esc(why.text)}</span>` : !rows.length && typed ? `<span data-string="F.leap.none">${esc(t('F.leap.none'))}</span>` : '';
   const stateLine = st && st.arm !== 'complete' ? `<span data-string="F.index.state">${esc(t('F.index.state', { arm: st.arm }))}</span>${floor != null ? ` · <span data-string="F.leap.floor">${esc(t('F.leap.floor', { floor }))}</span>` : ''}${st.arm === 'building' || st.arm === 'widening' ? ` · <span data-string="F.leap.arriving">${esc(t('F.leap.arriving'))}</span>` : ''}` : '';
   const note = [answer, stateLine].filter(Boolean).join(' · ');
   if (note === noteHTML) return;
@@ -262,11 +268,14 @@ export function render() {
  * text that matches nothing, since nothing typed lists the levels, the whole
  * board first — nowhere: the box stays open over the text and the answer
  * `render` wrote, the focus in its input, nothing moved and nothing pushed
- * (foundations §2.3).
+ * (foundations §2.3). Where no board is held, whatever is chosen, the box
+ * closes and the act is answered with why and what still works (O-FACES'
+ * `noBoard`; FP-35).
  * @param {number} i the row chosen
  * @param {boolean} [byKey] Enter made the act, not a click on the row
  */
 export async function go(i, byKey = false) {
+  if (!REC.board()) { close(); FACES.noBoard(null); return; }
   if (!rows.length) return;
   const r = rows[i]; if (!r) { close(); return; }
   close();

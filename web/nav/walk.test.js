@@ -119,7 +119,10 @@
 // → entering them and ← back, Back's light at one marking the run's item (a
 // mutant that lists a run's ends among the document's, gives its item no
 // children, marks no light on it, or rewrites its expanded mark from the
-// camera turns red).
+// camera turns red). WHERE NO BOARD IS HELD (issue #215; FP-35) the root says
+// why, in the words the one line says, and a camera move's re-take stands on
+// it alone at far scale and near (a mutant that names board 1, or re-takes
+// the account the grid finds under the centre, turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -1078,5 +1081,38 @@ test('the walk on a draft the session read stays on it once the guest\'s read an
   } finally {
     globalThis.document = platform;
     REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  }
+});
+
+test('where no board is held the walk\'s root names none: it says why, in the words the reader the app hands in gives — the one line\'s — and a camera move\'s re-take stands on it alone, never on the account the grid finds under the view\'s centre, at far scale and near (issue #215\'s design decision: "The mirror\'s board sentence says what the line says"; FP-35)', async () => {
+  const was = { board: REC.board(), session: REC.session() };
+  /** @type {{id: string, text: string} | null} what O-FACES' `noBoardWords` answers, the reader the app hands in */
+  let why = { id: 'F.unclaimed', text: t('F.unclaimed') };
+  WALK.readers({ noBoard: () => why });
+  try {
+    REC.setSession(null);
+    REC.takeBoards({ result: [] });
+    await WALK.focusTo('1', null);
+    const item = t('L.mirror.item', { i: 1, n: 1 });
+    assert.equal(WALK.mirrorItem(0), `${t('F.unclaimed')} ${item}`, 'the list empty: the root says why, never "board 1"');
+    why = { id: 'L.boards-unread', text: t('L.boards-unread') };
+    assert.equal(WALK.mirrorItem(0), `${t('L.boards-unread')} ${item}`, 'the list refused: its words');
+    // the view's centre over a cell of 1.0.1's the index lists nothing in: the grid would find the account there
+    const cell = docBox('1.0.1.0.30'), centre = { x: cell.x + cell.w / 2, y: cell.y + cell.h / 2 };
+    /** @type {Array<[string, number]>} */
+    const scales = [['far', CAM.viewForCell(boardCell('1'), 0.92).scale / 4], ['near', 14 / STANDARD_FS]];
+    for (const [band, scale] of scales) {
+      await WALK.focusTo('1', null);
+      CAM.set({ ...centre, scale });
+      await WALK.retakeFromView(true);
+      assert.deepEqual(walkAt(), ['board', '1', null], `${band}: the re-take stands on the root, naming no account`);
+    }
+    REC.setBoard(was.board);
+    CAM.set({ ...centre, scale: CAM.viewForCell(boardCell('1'), 0.92).scale / 4 });
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['account', '1.0.1', null], 'with the board held, the same re-take names the account the grid finds there');
+  } finally {
+    WALK.readers({});
+    REC.setBoard(was.board); REC.setSession(was.session);
   }
 });

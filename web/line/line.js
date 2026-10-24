@@ -56,7 +56,11 @@
 // address, lit at a pinned member; no sentence); itself LEAP's box (a click,
 // Enter or Mod+L opens it; the chord drawn for the platform in its title,
 // rule 19), which opens holding the address the display names (K-30), so the
-// box never opens on a place the line does not show; then the ACTING-AS
+// box never opens on a place the line does not show. WHERE NO BOARD IS HELD
+// (issue #215's design decision: "The address display shows only 'go to an
+// address'"; FP-35) the display reads "go to an address" alone, at every
+// scale, naming no board, account or document, its act the LEAP box, which
+// opens empty; then the ACTING-AS
 // segment — STATE 2 through the signed session, the one a write may go out
 // under ("acting as 1.0.1 (principal ⟨N⟩) · ⟨device label⟩ · key present on
 // this device · http://127.0.0.1:⟨P⟩ · LOCAL notebook"), its device label A
@@ -69,13 +73,19 @@
 // your LOCAL notebook · http://127.0.0.1:⟨P⟩"; foundations §3.1's line, §3.3
 // state 3, E16 (a′)) — the session's own `writes` deciding which, never a key
 // bound at this board, which speaks for no one session; STATE 1 where no
-// session stands ("reading as a guest", the board's origin where `boards()`
-// found a board and none where it found none, and the venue, §3.3 state 1's
-// "the board and venue shown"; its one act, sign in — the session's refusal
-// faced there), the death arm where the session died (C-137's words, by the
-// death's arm: O-FACES's `deathWords`, the guest line's in their place for an
-// arm this page holds none for, "signed out" the `closed` arm's alone, the
-// person's own sign-out) — never at a restart (client.md
+// session stands on the board the page holds ("reading as a guest", the
+// board's origin and the venue, §3.3 state 1's "the board and venue shown";
+// its one act, sign in — the session's refusal faced there); where NO BOARD
+// is held, none of the seven: why, as O-FACES' one entry says it
+// (`noBoardWords`; FP-35), in the guest line's place, naming no venue,
+// origin, claimant or sign-in — at an empty list `F.unclaimed`, the doors'
+// act, inert in this build and saying beginning a notebook isn't built yet as
+// it is pressed; at a list refused its words and, where a retry may tell,
+// "try again", the list read again (the app's act, O-FACES'
+// `tryBoardsAgain`); the death arm where the session died (C-137's words, by
+// the death's arm: O-FACES's `deathWords`, the guest line's in their place
+// for an arm this page holds none for, "signed out" the `closed` arm's alone,
+// the person's own sign-out) — never at a restart (client.md
 // §4b.2): where the shell re-opened the session M-PUMP takes it in the ended
 // one's place, and where it re-opened none, or a call finds the shell no
 // longer holds it, M-PUMP's acquire asks for it again (issue #175's design
@@ -125,7 +135,7 @@
 // than mid and its position at the document's own reading scale alone; the
 // diagnostics behind `h` are the gate's hooks).
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28,
-// FP-29, FP-34.
+// FP-29, FP-34, FP-35.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -134,7 +144,7 @@ import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import * as LAYER from '../text/layer.js';
 import * as PORT from '../bridge/port.js';
-import { deathWords } from '../overlays/faces.js';
+import { deathWords, noBoardWords } from '../overlays/faces.js';
 import { drawChord } from '../nav/keys.js';
 import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
@@ -167,6 +177,7 @@ let stop = 'back';
  * @property {(byKey: boolean) => void} forward
  * @property {(byKey: boolean) => void} trailList
  * @property {(el: HTMLElement) => void} signIn
+ * @property {() => void} [again] the board list's "try again", where it was refused retry-class: the list read again (O-FACES' `tryBoardsAgain`)
  * @property {() => ({id: string, text: string} | null)} [aside] a jump's face standing out of the visible view: its string's id and its words (O-HOST's `aside`); null where none stands so
  * @property {() => (Pieces | null)} [pieces] the runs of an arrival in several, in the document landed in (N-GO's landing); null where none stands
  * @property {() => Array<{key: string, words: string}>} [walks] the walks' folded moments, each its walk and its segment's words (O-FACES' `folded`)
@@ -186,6 +197,8 @@ export function attach(e, a) {
     const which = /** @type {HTMLElement} */ (b).dataset.act;
     const byKey = FOCUS.byKey(ev);
     if (which === 'back') acts.back(byKey); else if (which === 'forward') acts.forward(byKey); else if (which === 'address') acts.open(byKey); else if (which === 'trail') acts.trailList(byKey); else if (which === 'signin') acts.signIn(/** @type {HTMLElement} */ (b));
+    else if (which === 'unclaimed') transient(t('L.no-notebook-yet'), 'L.no-notebook-yet');
+    else if (which === 'again') { if (acts.again) acts.again(); }
     else if (which && which.startsWith(WALK_ACT) && acts.walk) acts.walk(which.slice(WALK_ACT.length), byKey);
     ev.stopPropagation();
   });
@@ -254,7 +267,7 @@ function endingSaid(ending) {
  * @property {string} text the segment's words: the place, then the position where one is named
  * @property {string} place the place's words — the board, the account, or board › account › document — before the position's slot
  * @property {number} slot the position's slot, in characters: as many as the document's widest position takes in its words, standing empty below the document's reading scale (issue #140); 0 where no document is named
- * @property {string} addr the address named — the board, the account under the camera at mid, nearer the account or the board the walk stands on, or the document the walk stands in (its member where one is pinned): the LEAP box's prefill
+ * @property {string} addr the address named — the board, the account under the camera at mid, nearer the account or the board the walk stands on, or the document the walk stands in (its member where one is pinned): the LEAP box's prefill; '' where no board is held
  * @property {string | null} doc the document named, nearer than mid
  * @property {number | null} pos the position named inside it, at the document's own reading scale alone
  * @property {number | null} member the version member pinned
@@ -267,7 +280,7 @@ export function currentAddress() { return addressDisplay().addr; }
 
 /**
  * @typedef {Object} Named — the places the address display names (issue #169's design decision: "Named once"): the line is their running head, so none of them holds a label below it
- * @property {string} board
+ * @property {string} board the board named; '' where no board is held (FP-35)
  * @property {string | null} account the account named — under the camera at mid, the walk's own nearer — null where none is
  * @property {string | null} doc the document named nearer than mid, by its box: the address every version of it shares; null where none is
  */
@@ -310,9 +323,12 @@ const WORDS_CH = (() => {
  * empty below it, the strip's window where the walk keeps the document in
  * view off the view's centre; or the account or the board it stands on, named
  * as at mid (issue #141); the account under the camera where it stands nowhere.
+ * Where no board is held, at every scale, "go to an address" alone, naming
+ * no place (FP-35).
  * @returns {AddressDisplay}
  */
 export function addressDisplay() {
+  if (!REC.board()) { const text = t('L.go-to-address'); return { text, place: text, slot: 0, addr: '', doc: null, pos: null, member: null, whole: false, window: null }; }
   const lod = lodOf(cam.scale);
   if (lod.name === 'far' || lod.name === 'far~mid') {
     const whole = cam.scale <= viewForCell(boardCell('1'), 0.92).scale * 1.02;
@@ -380,10 +396,31 @@ function deviceSlot(dev) {
 /**
  * @typedef {Object} Acting — the acting-as segment (`actingSegment`)
  * @property {string} html
- * @property {number} state its state among foundations §3.3's seven
+ * @property {number} state its state among foundations §3.3's seven; 0 for none of them — no adapter, no board held
  * @property {string} words its words, what the status region says where they are said
  * @property {boolean} alarm its words said assertively once as they arrive (D4): the session's death, and a session a restart lost that M-PUMP's acquire could not get back
  */
+
+/** the board list's "try again" (see the head): its id names it across the line's rebuilds, as sign-in's does */
+const AGAIN = `<button id="line-again" data-act="again">${esc(t('B1.try-again'))}</button>`;
+
+/**
+ * The acting-as segment where no board is held (see the head; FP-35): why,
+ * as O-FACES' one entry says it (`noBoardWords`), in the guest line's place,
+ * naming no venue, origin, claimant or sign-in — at an empty list
+ * `F.unclaimed`, the doors' act, inert in this build, saying so as it is
+ * pressed; at a list refused its words, and "try again" beside them where a
+ * retry may tell; nothing while the list has not answered. None of §3.3's
+ * seven states.
+ * @returns {Acting}
+ */
+function noBoardSegment() {
+  const w = noBoardWords();
+  if (!w) return { html: '', state: 0, words: '', alarm: false };
+  const html = w.doors ? `<button id="line-unclaimed" data-act="unclaimed" class="inert" data-string="${esc(w.id)}">${esc(w.text)}</button>`
+    : `<span data-string="${esc(w.id)}">${esc(w.text)}</span>${w.again ? ' ' + AGAIN : ''}`;
+  return { html, state: 0, words: w.text, alarm: false };
+}
 
 /**
  * The acting-as segment (see the head): its words, and its state among
@@ -392,14 +429,16 @@ function deviceSlot(dev) {
  * session's state kept; where it was refused, the guest state boot shows for
  * that refusal, led by "could not reconnect as" (issue #175's design
  * decision); a death's words O-FACES's (`deathWords`), the guest line's in
- * their place for an arm it holds none for.
+ * their place for an arm it holds none for. Where no board is held, why
+ * (`noBoardSegment`), and none of the seven.
  * @returns {Acting}
  */
 export function actingSegment() {
   const s = REC.session(), b = REC.board(), dev = REC.device(), dead = REC.deathReason(), refused = REC.sessionRefused(), lost = REC.reconnect();
-  // the board's origin where `boards()` found one; the boot opens a session only on a board it found
-  const origin = b ? b.origin : '';
   if (!PORT.hasAdapter()) return { html: `<span data-string="L.no-adapter">${esc(t('L.no-adapter'))}</span>`, state: 0, words: t('L.no-adapter'), alarm: false };
+  if (!b) return noBoardSegment();
+  // the board's origin, as `boards()` answered it; the boot opens a session only on the board it holds
+  const origin = b.origin;
   if (s && lost && !lost.refused) {
     const words = t('L.reconnecting', { account: lost.as || '' });
     return { html: `<span data-string="L.reconnecting">${esc(words)}</span>`, state: s.writes ? 2 : 3, words, alarm: false };

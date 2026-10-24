@@ -10,13 +10,15 @@
 // GUEST: the boot as shipped with `session(board)` never asked, so every
 // read takes the guest form and every screen its guest arm — a visitor's
 // page before any sign-in is asked (the harness's guest case; the installed
-// app loads with no query and never reaches it). Then `boards()` (the
-// reference kept), `fingerprint()` (the device's key store, read for this
-// board: whether a key is bound here — R56's "key present", which the
-// entitlement arms read — and which key is the session's, M-REC's `device`,
-// read before the session so the one line's device label is taken with it,
-// FP-34; a refusal held as the store not read), `session(board)` by M-PUMP's
-// acquire (`acquireSession`;
+// app loads with no query and never reaches it). Then the board, by M-PUMP's
+// `openBoard`: `boards()` (its first row the board the page holds, its
+// reference kept; an empty list or a refusal none, and why — issue #215's
+// design decision; FP-35), and for the board held `fingerprint()` (the
+// device's key store, read for this board: whether a key is bound here —
+// R56's "key present", which the entitlement arms read — and which key is the
+// session's, M-REC's `device`, read before the session so the one line's
+// device label is taken with it, FP-34; a refusal held as the store not
+// read), `session(board)` by M-PUMP's acquire (`acquireSession`;
 // S-37 (a) and issue #175's design decision: the boot's own call, made again
 // by the same routine where a restart loses the session, FP-28 — the session
 // kept as the shell opened it: its reference, never a token, and whether a
@@ -25,16 +27,21 @@
 // `readHealth` and `readProbe`, the model's index by its `readIndex`
 // (`places` at the page's class, skep #463) — each of the three answers
 // laid under the board's events taken while it was out — then the launch
-// frame HOME — the acting account's region at mid scale, a guest's the
-// board's extent — the trail's first entry (foundations §2.2; W-01; N-GO's
-// `launch`). What a module reads of an owner that imports it is handed in
+// (`launch`): the launch frame HOME — the acting account's region at mid
+// scale, a guest's the board's extent — the trail's first entry (foundations
+// §2.2; W-01; N-GO's `launch`); with no board held, the walk's root, saying
+// why, and no entry. A board the list read again at the reader's "try again"
+// finds launches the same way (M-PUMP's `onOpen`). What a module reads of an
+// owner that imports it is handed in
 // once as the page boots (FP-10, FP-11): T-LAYER's readers, LK's — N-GO's
 // links lit at an arrival or by a one-step move along the trail, P-RENDER's
 // test of where the plane draws a document (`drawsDoc`, which tails a link
 // whose far document is drawn nowhere — issue #132) and T-LAYER's owner rule
-// — and N-WALK's: where Back's light stands (N-GO's `backLight`; issue #152)
-// and what a landing says of its passage (N-GO's `described`; issue #153);
-// and to L-LINE a jump's face standing out of the visible view (O-HOST's
+// — and N-WALK's: where Back's light stands (N-GO's `backLight`; issue #152),
+// what a landing says of its passage (N-GO's `described`; issue #153) and why
+// no board is held, which its root says (O-FACES' `noBoardWords`; FP-35);
+// and to L-LINE the list read again at its "try again" (O-FACES'
+// `tryBoardsAgain`), a jump's face standing out of the visible view (O-HOST's
 // `aside`; FP-25), which the line carries in its place, the runs of an
 // arrival in several (N-GO's landing; issue #158), which its strip outlines,
 // and the walks' folded moments with the act that unfolds each (O-FACES'
@@ -94,7 +101,8 @@
 // handed to the one line), FP-26 (L-LINE's `named` handed to T-LAYER), FP-28
 // (the boot's session opened by M-PUMP's acquire), FP-29 (a change of class
 // told to every surface showing what the class it left read), FP-34 (the key
-// store read before the session, the line's device label taken with it).
+// store read before the session, the line's device label taken with it),
+// FP-35 (no board launched at, or named, where the list held none).
 
 import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';
@@ -223,6 +231,21 @@ function whereIs(/** @type {EventTarget | null} */ target) {
   return /** @type {const} */ ('plane');
 }
 
+/**
+ * The launch (see the head): the zoom-in bound read from the deepest place
+ * the index lists (P-CAM's `setDeepest`), then the launch frame (N-GO's
+ * `launch`) — HOME, the trail's first entry, where a board is held; the
+ * walk's root, saying why, where none is — the platform's focus on the walk's
+ * element with the ring out (rule 21). At boot, and where the list read again
+ * opens a board the boot found none of (M-PUMP's `onOpen`).
+ */
+async function launch() {
+  let deepest = 0; for (const p of REC.places()) if (!p.system) deepest = Math.max(deepest, depthOfDoc(p.doc));
+  CAM.setDeepest(deepest); bootInfo.deepestDepth = deepest;
+  await GO.launch();
+  LINE.render(true);
+}
+
 async function boot() {
   /** @type {typeof import('../gate/ledger.js') | null} */
   let ledger = null;
@@ -236,10 +259,10 @@ async function boot() {
   LANDING.attach(el('landing'), { handOff: () => WALK.focusItem(), pieces: el('pieces') });
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
-  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey) });
+  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey) });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn });
-  WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn });
+  WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords() });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', resize); resize();
   document.addEventListener('copy', (e) => { const b = REC.board(); LAYER.onCopy(e, b ? b.origin : ''); });
@@ -258,40 +281,23 @@ async function boot() {
   // the adapter: the bridge client where the flag stands; nothing otherwise
   const adapter = SECRET ? DEV.create({ provider: DEV.DEFAULT_PROVIDER, secret: SECRET, record: !!GATE }) : null;
   PORT.boot(adapter);
-  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().map((e) => e.addr) });
+  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().map((e) => e.addr), onOpen: () => { void launch(); } });
   PORT.on('moment', (d) => FACES.moment(/** @type {import('../bridge/shapes').MomentEvent} */ (d)));
   const heldSeen = /** @type {unknown[]} */ ([]);
   PORT.on('held', (d) => { heldSeen.push(d); console.log('held event (not acted on — the editor\'s lane\'s)', d); });
   bootInfo.adapter = PORT.adapterName(); bootInfo.gate = !!GATE; bootInfo.heldSeen = heldSeen;
 
   const t0 = performance.now();
-  if (adapter) {
-    const b = await PORT.boards({});
-    if ('result' in b && b.result.length) { const row = b.result[0]; REC.setBoard({ board: row.board, name: row.name, origin: row.origin }); }
-    else bootInfo.boardsRefused = 'refused' in b ? b.refused : 'none';
-    const board = REC.board();
-    if (board) {
-      // the device's key store before the session, so the key the session is opened with is named with it (FP-34)
-      const fp = await PORT.fingerprint({});
-      REC.takeKeyStore('result' in fp ? fp.result : null, board.origin);
-      if (!GUEST) await PUMP.acquireSession();
-      await PUMP.readHealth(board.board);
-      await PUMP.readProbe();
-      const pl = await PUMP.readIndex();
-      if ('result' in pl) { bootInfo.placesBytes = JSON.stringify(pl.result).length; bootInfo.placesDocs = pl.result.docs.length; }
-      else bootInfo.placesRefused = pl.refused;
-      let deepest = 0; for (const p of REC.places()) if (!p.system) deepest = Math.max(deepest, depthOfDoc(p.doc));
-      CAM.setDeepest(deepest); bootInfo.deepestDepth = deepest;
-      window.addEventListener('pagehide', () => { const x = REC.session(); if (x) PORT.closeAtUnload(x.session); });
-    }
-  }
+  // the board, and for the board held its key store, the session (none for the gate's guest), its health, its daemon and its index
+  const opened = await PUMP.openBoard({ session: !GUEST });
+  if (!REC.board()) bootInfo.boardsRefused = 'refused' in opened.boards ? opened.boards.refused : 'none';
+  if (opened.places && 'result' in opened.places) { bootInfo.placesBytes = JSON.stringify(opened.places.result).length; bootInfo.placesDocs = opened.places.result.docs.length; }
+  else if (opened.places) bootInfo.placesRefused = opened.places.refused;
+  window.addEventListener('pagehide', () => { const x = REC.session(); if (x) PORT.closeAtUnload(x.session); });
   bootInfo.coldOpenMs = Math.round(performance.now() - t0);
   bootInfo.coldOpenCalls = PORT.callLog().map((c) => c.name);
   bootInfo.coldOpenBytes = PORT.callLog().reduce((a, c) => a + c.bytesIn + c.bytesOut, 0);
-  // the launch frame: HOME — the acting account's region at mid scale; a guest's the board's extent — the trail's first entry,
-  // the platform's focus on the walk's element with the ring out (rule 21)
-  await GO.launch();
-  LINE.render(true);
+  await launch();
   if (GATE) {
     const hooks = await import('../gate/hooks.js');
     hooks.install({ frames, phase, boot: bootInfo });

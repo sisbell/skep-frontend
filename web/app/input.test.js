@@ -61,7 +61,10 @@
 // #202: a page that lets the click fall to the run turns red). A click on a
 // byline's cut label opens it whole and a click again closes it, selecting
 // nothing (FP-34: a page that lets the click fall to the block turns red).
-import { test } from 'node:test';
+// Where no board is held a click at far scale is an empty one, naming no
+// account the grid finds under it (issue #215; FP-35: a page that teleports to
+// that account turns red).
+import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
 import * as HOST from '../overlays/host.js';
@@ -80,6 +83,7 @@ import * as RENDER from '../plane/render.js';
 import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
+import { accountCell, boardCell } from '../plane/projection.js';
 import { t } from '../strings.js';
 import { MAC } from '../nav/keys.js';
 import { esc, byteLength } from '../util.js';
@@ -87,6 +91,9 @@ import { esc, byteLength } from '../util.js';
 /** the attributes of an element's opening tag, as the platform's `dataset` reads them */
 const datasetOf = (/** @type {string} */ tag) =>
   Object.fromEntries([...tag.matchAll(/ data-([a-z-]+)="([^"]*)"/g)].map(([, k, v]) => [k.replace(/-([a-z])/g, (_, c) => c.toUpperCase()), v]));
+
+// the board the page opened: the page makes every act below on the board `boards()` answered
+before(() => { REC.setBoard({ board: 'b-1', name: '', origin: '' }); });
 
 test('the act at a withheld run conjures C-39\'s face naming the owner its gap names, the arm beneath it the rule\'s for that owner and this reader; the act at its face compact in its column\'s edge opens the face whole', () => {
   const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
@@ -667,6 +674,43 @@ test('a click on a byline\'s cut label opens it whole and a click again closes i
     act();
     assert.deepEqual([LAYER.labelOpened(D), SEL.selected()], [false, null], 'a click again closes it');
   } finally {
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('where no board is held a click on the plane at far scale names no account the grid finds under it: it is an empty click — no teleport, no trail entry, no face — where, the board held, the same click goes to that account\'s region (issue #215\'s design decision: "never draw or name a board the client has no record of"; FP-35)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the plane's listeners, by event */
+  const plane = new Map();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  const was = REC.board();
+  try {
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), classList: { add() {}, remove() {} } }, layer: listens(null), corners: listens(null) }));
+    // the camera at far scale over the middle of 1.0.2's cell, which the grid holds whatever the index lists
+    CAM.setViewport(1440, 900);
+    const c = accountCell('1.0.2');
+    CAM.set({ x: c.x + c.w / 2, y: c.y + c.h / 2, scale: CAM.viewForCell(boardCell('1'), 0.92).scale / 2 });
+    assert.ok(['far', 'far~mid'].includes(lodOf(CAM.cam.scale).name), 'at far scale');
+    TRAIL._reset();
+    const at = { clientX: 720, clientY: 450 };
+    const click = () => { plane.get('pointerdown')?.({ ...at, ctrlKey: false, metaKey: false, pointerId: 1 }); plane.get('pointerup')?.({ ...at }); };
+    REC.takeBoards({ result: [] });
+    click();
+    assert.deepEqual([TRAIL.all().length, HOST.currentState(), CAM.flying()], [0, null, false], 'no board held: an empty click — no entry, no face, no flight');
+    REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    click();
+    assert.deepEqual([TRAIL.current()?.addr, CAM.flying()], ['1.0.2', true], 'the board held: the account\'s region, its entry pushed and the camera leaving');
+    CAM.step(Infinity);
+  } finally {
+    HOST.dismiss();
+    REC.setBoard(was);
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });

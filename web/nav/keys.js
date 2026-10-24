@@ -75,8 +75,15 @@
 // step an arrival's runs (see above). Every teleport a key makes, and
 // every camera move a key makes that re-takes the focus, is told a key made
 // it, so the ring stands at the focus it lands (D5 §4 rule 2).
+// WHERE NO BOARD IS HELD (issue #215's design decision: "an act that needs a
+// board the reader lacks answers where it is taken and names what still
+// works. This covers … home and the keyboard walk. None stays silent";
+// FP-35): the walk's keys at the plane (K-1 … K-5, K-7), K-8, the
+// selection's slot chords (K-47 … K-52) and the strip (K-23) each answer with
+// O-FACES' no-board face, why and what still works, as HOME and WHOLE BOARD
+// do through N-GO; the paging keys and the zoom chords stay the camera's.
 // Rules: FP-1, FP-2, FP-9 (a key changes view state or asks for a read, and
-// marks the frame dirty), FP-10, FP-13, FP-25.
+// marks the frame dirty), FP-10, FP-13, FP-25, FP-35.
 
 import * as GO from './go.js';
 import * as WALK from './walk.js';
@@ -149,6 +156,8 @@ export const TABLE = Object.freeze(/** @type {Row[]} */ ([
 
 /** the selection's slot chords (K-47 … K-52): the TABLE's selection rows */
 const SLOT_CHORDS = new Set(TABLE.filter((r) => r.surface === 'selection').map((r) => r.chord));
+/** the walk's keys at the plane (K-1 … K-5, K-7) */
+const WALK_KEYS = new Set(['↓', '↑', '→', '←', 'Home', 'End', 'Enter']);
 
 /** the chord a KeyboardEvent spells, in D5's notation — `Mod+Shift+L`, `↓`, `Enter`, or the printable key itself */
 export function chordOf(/** @type {KeyboardEvent} */ e) {
@@ -256,6 +265,9 @@ function route(e, chord, ctx) {
   // zoom (K-11)
   if (chord === 'Mod+=') return () => { zoomAboutFocus(1.25, byKey); return true; };
   if (chord === 'Mod+-') return () => { zoomAboutFocus(1 / 1.25, byKey); return true; };
+  // no board held (see the head): the selection's chords, K-8 and the strip answer why, as the walk's keys do below
+  const lacking = REC.board() ? null : () => { FACES.noBoard(null); return true; };
+  if (lacking && (SLOT_CHORDS.has(chord) || chord === 'Shift+↓' || chord === 'Shift+↑' || chord === 'Mod+Shift+P')) return lacking;
   // the selection's slot chords (K-47 … K-52) and K-8's select-by-span — live from the plane and from a standing overlay alike; the selection's acts take no focus (rule 15), and the next K-8 press extends the selection from the walk's element
   if (chord === 'Mod+Shift+O') return () => { SEL.act('wrote', byKey); return true; };
   if (chord === 'Mod+Shift+R') return () => { SEL.act('uses', byKey); return true; };
@@ -277,6 +289,7 @@ function route(e, chord, ctx) {
   // the line is one stop (K-22): ← and → move among its acts; every other key is the act's own
   if (ctx.where === 'line') return chord === '←' || chord === '→' ? () => { e.preventDefault(); return LINE.step(chord === '→' ? 1 : -1); } : null;
   if (ctx.where === 'overlay' || ctx.where === 'landing') return null; // the overlay's own keys, and a landing's line's: Enter and Space press its act
+  if (lacking && WALK_KEYS.has(chord)) return lacking;
   // the walk (K-1 … K-8): each key waits on the camera's flight, and the platform runs a key's default — a scroll of
   // the scroller the focus stands in, the mirror — as soon as the listeners return; so the default is prevented first
   if (chord === '↓') return async () => { e.preventDefault(); await WALK.key('down'); return true; };
