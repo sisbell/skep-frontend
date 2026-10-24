@@ -66,7 +66,10 @@
 // A document's reveal is its box's, which its versions share (issue #154:
 // lenses and link sets stay as they were); a far end stands in the version
 // its far box shows, placed by the projection into that version (`farAt`),
-// the link still naming its own far document.
+// the link still naming its own far document. A drawn end carries the mark
+// its far document gives the link beside its own, each decided at its own
+// document (issue #166: a mutant marking the far end as the near, or both
+// from the two documents together, turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -186,6 +189,21 @@ test('a far end stands in the version its far box shows (issue #154: "Beams, lin
   LK.readers({ shown: (a) => (a === FAR ? FAR2 : a) });
   try {
     assert.deepEqual([end().far, end().farAt, end().farRuns, LK.farPos(end())], [FAR, FAR2, [{ pos: 31, width: 5 }], 31], 'the box showing its second version: placed there, the link naming FAR still');
+  } finally { LK.readers({}); }
+});
+
+test('a drawn end carries beside its own mark the mark its far document gives the link — the one the link\'s symbol takes there, read at the version its far box shows — each decided at its own document, never from the two together (issue #166\'s design decision)', () => {
+  build({ session: '1.0.9' });
+  const L = D + '.0.2.9', FAR2 = OTHER_HOME + '.2';
+  REC.takeLinks(D, [L]);
+  REC.takeLink({ addr: L, from: [span(D, 60, 5)], to: [span(OTHER_HOME, 20, 5)], type: CITE });
+  const end = () => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === L));
+  const look = (/** @type {import('../plane/register.js').Mark} */ m) => [m.hue, m.linker, m.weight];
+  assert.deepEqual([look(end().mark), look(end().farMark)], [[HUE.owner, 'owner', 1], [HUE.others, 'others', 1]], 'D\'s owner\'s link into another account\'s document: the owner\'s at D, another\'s at its far end');
+  LK.readers({ shown: (a) => (a === OTHER_HOME ? FAR2 : a), lit: () => [L] });
+  try {
+    assert.deepEqual([end().farAt, end().farMark], [FAR2, LK.markOf(/** @type {import('./links.js').Link} */ (REC.link(L)), FAR2)], 'the box showing its second version: the mark the version gives it');
+    assert.deepEqual([end().mark.weight, end().farMark.weight], [ARRIVAL_WEIGHT, ARRIVAL_WEIGHT], 'lit at an arrival: heavier at both its ends');
   } finally { LK.readers({}); }
 });
 

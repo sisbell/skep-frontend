@@ -18,13 +18,17 @@
 // pane's default composition draws that link"; P44): a link both panes show
 // is one line, whichever pane meets it — a followed one at its own lighter
 // value, two links between the same ends a line each (a mutant that draws a
-// line per meeting turns red); drawn in the one mark its link takes at a
-// mark joining the two panes' documents (foundations §2.1's register: "the
-// owner of either"), the owner of either document's solid in the owner's
-// hue — whichever pane is A, whether the other pane shows it at its span as
-// another's or not at all, and whichever pane alone shows it (a mutant that
-// merges the panes' marks, or takes either pane's own, turns red) — and a
-// third party's dashed in theirs; a far end naming a document whole at that
+// line per meeting turns red); each END drawn in the mark its pane's document
+// gives the link, the one its symbol takes in that pane (issue #166's design
+// decision): the owner's solid at the pane of the document its maker owns and
+// another's dashed at the other — whichever pane is A, whether the other pane
+// shows it at its span or not at all, and whichever pane alone shows it (a
+// mutant that marks the line by the owner of either document, or both ends by
+// one pane's mark, turns red) — and a third party's dashed in theirs at both;
+// a line whose ends differ changing colour once, at the middle of the gap,
+// each stretch from there in its own end's ink, a clipped end's triangle in
+// its own end's hue (a mutant changing it elsewhere, or filling a triangle in
+// the other end's hue, turns red); a far end naming a document whole at that
 // pane's first block; one document in both panes drawing a link inside it
 // once for each way its ends stand across them (a mutant that tells ends
 // apart by their document alone, folding the two into one, turns red); no
@@ -113,7 +117,9 @@ import * as GO from '../nav/go.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
-import { HUE, VISITED_ALPHA } from '../plane/register.js';
+import { inkOf } from '../beams/beams.js';
+import { HUE, VISITED_ALPHA, SAMENESS } from '../plane/register.js';
+import { recorder } from '../test/canvas.js';
 
 /** @returns {import('../model/frames.js').ComparePair} */
 const pair = (/** @type {number} */ u1, /** @type {number} */ u2, /** @type {number} */ width) => ({ d1: '1.0.1.0.3', d2: '1.0.1.0.3.2', u1, u2, width });
@@ -213,8 +219,10 @@ const endShown = (/** @type {{addr: string, owner: string}} */ link, /** @type {
 };
 /** a pane's links: its document, the ends LK shows there, the blocks its article was made from — by default two, the first at 1 */
 const paneLinks = (/** @type {string} */ addr, /** @type {Array<ReturnType<typeof endShown>>} */ shown, blocks = [{ pos: 1, width: 40 }, { pos: 41, width: 60 }]) => /** @type {any} */ ({ addr, shown, blocks });
-/** each line: its link, its end in pane A, its end in pane B, its hue, its value, dashed */
-const drawn = (/** @type {import('./scene.js').Line[]} */ lines) => lines.map((l) => [l.link, [l.a.pos, l.a.width], [l.b.pos, l.b.width], l.hue, l.value, l.dashed]);
+/** an end's ink as a line draws it: its hue, and whether it is dashed */
+const looks = (/** @type {import('../beams/beams.js').Ink} */ i) => [i.hue, i.dash.length > 0];
+/** each line: its link, its end in pane A, its end in pane B, the ink at its end in pane A and at its end in pane B, its value */
+const drawn = (/** @type {import('./scene.js').Line[]} */ lines) => lines.map((l) => [l.link, [l.a.pos, l.a.width], [l.b.pos, l.b.width], looks(l.ink.a), looks(l.ink.b), l.value]);
 /** a lines test read as the person of `account` reads, LK's followed set and toggles fresh; the session the focus tests read put back after it */
 function asReader(/** @type {string} */ account, /** @type {() => void} */ body) {
   const was = REC.session();
@@ -226,17 +234,17 @@ function asReader(/** @type {string} */ account, /** @type {() => void} */ body)
 test('a link both panes show is one line between its two ends, its end in pane A first, whichever pane meets it — never one per pane', () => asReader('1.0.1', () => {
   const L = linkBy(DOC_A + '.0.2.1', '1.0.1');
   const atA = endShown(L, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5)), atB = endShown(L, passage(DOC_B, 1, 5), passage(DOC_A, 50, 10));
-  const one = [[L.addr, [50, 10], [1, 5], HUE.you, 1, false]];
+  const one = [[L.addr, [50, 10], [1, 5], [HUE.you, false], [HUE.you, false], 1]];
   assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA]), paneLinks(DOC_B, [atB]))), one, 'met from both panes: one line');
   assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, []), paneLinks(DOC_B, [atB]))), one, 'met from pane B alone: the same line');
   LK.follow(L.addr);
   const followed = [endShown(L, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5)), endShown(L, passage(DOC_B, 1, 5), passage(DOC_A, 50, 10))];
-  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [followed[0]]), paneLinks(DOC_B, [followed[1]]))).map((l) => l[4]), [VISITED_ALPHA], 'a followed link drawn once, lighter — never stacked back toward full');
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [followed[0]]), paneLinks(DOC_B, [followed[1]]))).map((l) => l[5]), [VISITED_ALPHA], 'a followed link drawn once, lighter — never stacked back toward full');
   const L2 = linkBy(DOC_A + '.0.2.2', '1.0.1');
   assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [atA, { ...atA, link: L2 }]), paneLinks(DOC_B, [atB]))).map((l) => l[0]), [L.addr, L2.addr], 'two links between the same two ends: a line each');
 }));
 
-test('a link the owner of either pane\'s document made is drawn in the owner\'s hue, solid, whichever pane is A and whatever the other pane shows at its span — never neutral (foundations §2.1: "the owner of either")', () => asReader('1.0.9', () => {
+test('a link the owner of one pane\'s document made is drawn at each end in the mark its pane\'s document gives it — the owner\'s solid at that pane, another\'s dashed at the other — whichever pane is A and whatever either pane shows at its span, each end the mark its pane\'s symbol takes (issue #166\'s design decision: "Opening that view never recolours the link it opened on")', () => asReader('1.0.9', () => {
   const P = '1.0.1.0.31', Q = '1.0.2.0.51', L = P + '.0.2.1';
   REC.takeImage(P, 1, [{ iStart: P + '.0.1.1', width: 60 }]); REC.takeImage(Q, 1, [{ iStart: Q + '.0.1.1', width: 10 }]);
   REC.takeLinks(P, [L]); REC.takeLinks(Q, [L]);
@@ -246,18 +254,33 @@ test('a link the owner of either pane\'s document made is drawn in the owner\'s 
   for (const on of [false, true]) {
     LK.setOthers(Q, on);
     for (const [a, b] of [[P, Q], [Q, P]]) {
-      assert.deepEqual(linesBetween(pane(a), pane(b)).map((l) => [l.link, l.hue, l.value, l.dashed]), [[L, HUE.owner, 1, false]], `${a} in pane A, the other pane's toggle ${on ? 'on' : 'off'}`);
+      const lines = linesBetween(pane(a), pane(b)).map((l) => [l.link, { [a]: looks(l.ink.a), [b]: looks(l.ink.b) }, l.value]);
+      assert.deepEqual(lines, [[L, { [P]: [HUE.owner, false], [Q]: [HUE.others, true] }, 1]], `${a} in pane A, the other pane's toggle ${on ? 'on' : 'off'}`);
     }
   }
-  assert.deepEqual([LK.shown(P).map((s) => s.linker), LK.shown(Q).map((s) => s.linker)], [['owner'], ['others']], 'each pane marks it at its span as its own composition does: P\'s owner\'s at P, another\'s at Q');
+  assert.deepEqual([LK.shown(P), LK.shown(Q)].map((at) => at.map((s) => looks(inkOf(s.mark)))), [[[HUE.owner, false]], [[HUE.others, true]]], 'each end the mark its pane\'s symbol takes: P\'s owner\'s at P, another\'s at Q');
 }));
 
-test('a link one pane alone shows is drawn as it is marked between the two panes\' documents: another\'s dashed in their hue, the owner of either document\'s solid in the owner\'s, whichever pane shows it', () => asReader('1.0.1', () => {
+test('a link one pane alone shows is drawn at each end in the mark that end\'s pane\'s document gives it: a third party\'s dashed in their hue at both; pane B\'s document\'s owner\'s solid in the owner\'s at B and dashed as another\'s at A, whichever pane shows it', () => asReader('1.0.1', () => {
   const theirs = linkBy('1.0.3.0.9.0.2.1', '1.0.3'), owners = linkBy(DOC_B + '.0.2.1', '1.0.2');
-  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [endShown(theirs, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5))]), paneLinks(DOC_B, []))), [[theirs.addr, [50, 10], [1, 5], HUE.others, 1, true]], 'a third party\'s, shown at pane A');
-  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, []), paneLinks(DOC_B, [endShown(owners, passage(DOC_B, 1, 5), passage(DOC_A, 50, 10))]))), [[owners.addr, [50, 10], [1, 5], HUE.owner, 1, false]], 'pane B\'s document\'s owner\'s, shown at pane B');
-  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [endShown(owners, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5))]), paneLinks(DOC_B, []))), [[owners.addr, [50, 10], [1, 5], HUE.owner, 1, false]], 'pane B\'s document\'s owner\'s, shown at pane A alone, where it is another\'s: the owner\'s still');
+  const another = [HUE.others, true], owner = [HUE.owner, false];
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [endShown(theirs, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5))]), paneLinks(DOC_B, []))), [[theirs.addr, [50, 10], [1, 5], another, another, 1]], 'a third party\'s, shown at pane A');
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, []), paneLinks(DOC_B, [endShown(owners, passage(DOC_B, 1, 5), passage(DOC_A, 50, 10))]))), [[owners.addr, [50, 10], [1, 5], another, owner, 1]], 'pane B\'s document\'s owner\'s, shown at pane B');
+  assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [endShown(owners, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5))]), paneLinks(DOC_B, []))), [[owners.addr, [50, 10], [1, 5], another, owner, 1]], 'pane B\'s document\'s owner\'s, shown at pane A alone, where it is another\'s: the owner\'s still at B');
 }));
+
+test('a line whose ends\' inks differ changes colour once, at the middle of the gap: pane A\'s end\'s ink to there and pane B\'s from there, one curve, each clipped end\'s triangle in its own end\'s hue; a band, its inks alike, one stroke (issue #166\'s design decision: "changing at the middle of the gap")', () => {
+  const ink = { a: inkOf(/** @type {any} */ ({ hue: HUE.owner, linker: 'owner' })), b: inkOf(/** @type {any} */ ({ hue: HUE.others, linker: 'others' })) };
+  const { ctx, strokes, fills } = recorder();
+  SCENE.drawTie(ctx, { x: 400, y: 100, clipped: true, above: true }, { x: 520, y: 300, clipped: true, above: false }, ink);
+  assert.deepEqual(strokes.map((s) => [s.hue, s.dash, s.cap]), [[HUE.owner, [], 'butt'], [HUE.others, [5, 4], 'butt']], 'pane A\'s end the owner\'s, solid; pane B\'s another\'s, dashed; butt-capped, so they meet and never overlap');
+  assert.deepEqual(strokes.map((s) => s.start), [{ x: 460, y: 200 }, { x: 460, y: 200 }], 'both drawn from the middle of the gap, so the dashed one begins in ink there');
+  assert.deepEqual(strokes.map((s) => s.curve[2]), [{ x: 400, y: 100 }, { x: 520, y: 300 }], 'pane A\'s back to its end at pane A\'s edge, pane B\'s on to its end at pane B\'s');
+  assert.deepEqual(fills, [HUE.owner, HUE.others], 'each clipped end\'s triangle in its own end\'s hue');
+  const band = recorder(), same = { hue: SAMENESS.boundary, dash: [] };
+  SCENE.drawTie(band.ctx, { x: 400, y: 100, clipped: false, above: false }, { x: 520, y: 140, clipped: false, above: false }, { a: same, b: same });
+  assert.deepEqual(band.strokes.map((s) => [s.hue, s.start, s.curve[2]]), [[SAMENESS.boundary, { x: 400, y: 100 }, { x: 520, y: 140 }]], 'inks alike: one stroke, from pane A\'s end to pane B\'s');
+});
 
 test('a far end naming the other pane\'s document whole stands at that pane\'s first block, to the block\'s end', () => asReader('1.0.1', () => {
   const blocks = [{ pos: 3, width: 20 }, { pos: 23, width: 60 }];

@@ -106,16 +106,22 @@
 //     arrival stands (FP-21; foundations §2.1's register: "the arrival an outline around
 //     its span with the followed link drawn heavier": WEIGHT);
 //   - a link at a mark JOINING TWO DOCUMENTS — a mid connection, a scene's
-//     line — is decided ONCE, from the link and the two documents, never at
-//     each end apart: its linker you, else the document's owner where its
-//     owner owns EITHER of the two (foundations §2.1's register: "the
-//     document's owner the owner of either"), else everyone else (`markOf`
-//     given both); it stands there where EITHER document's composition
-//     draws it (`draws`; §2.5: "drawn where either pane's default
-//     composition draws that link");
+//     line — stands there where EITHER document's composition draws it
+//     (`draws`; §2.5: "drawn where either pane's default composition draws
+//     that link"); at a mid connection it is marked ONCE, from the link and
+//     the two documents, never at each end apart: its linker you, else the
+//     document's owner where its owner owns EITHER of the two (foundations
+//     §2.1's register: "the document's owner the owner of either"), else
+//     everyone else (`markOf` given both);
+//   - a BEAM and a scene's LINE are marked BY END: each end in the mark the
+//     document it touches gives the link, the one the link's symbol takes
+//     there (`markOf` at that document: a drawn end's `mark` at its near
+//     end, its `farMark` at the version its far box shows), never by which
+//     document drew it (issue #166's design decision: "Colour each end of a
+//     beam by the document it touches, never by which side drew it");
 //   - links drawn at ONE SITE — a stretch of text several mark, a mid
-//     connection holding several, a beam met from both its ends — are ONE
-//     MARK carrying what they share (P44; its Use at §2.1's register:
+//     connection holding several, a bundle's end holding several beams — are
+//     ONE MARK carrying what they share (P44; its Use at §2.1's register:
 //     "neutral in any variable its members do not share — hue where their
 //     linkers differ"): the linker's hue where every one's linker is one,
 //     else the neutral hue; lighter only where every one was followed;
@@ -141,8 +147,8 @@
 //     connection's are, so a place's tail and its connections are joined by
 //     one rule and part every link between them; the scene's
 //     pane-to-pane lines are drawn from the shown set at both panes'
-//     documents, each link once per pair of its ends, in its one mark joining
-//     the two.
+//     documents, each link once per pair of its ends, each end in the mark
+//     its pane's document gives the link.
 // WHAT REPLACES THIS RULE LATER: link sets (`_designs/LINK-SETS/…` §4, in
 // review) — at a version `E.k` the default view is `E`'s OWN SET plus the sets
 // its author has `E.k` read with plus the reader's own links; everything else
@@ -193,13 +199,14 @@ import { t } from '../strings.js';
  * @property {Stretch[]} runs every stretch of the near document's held text `nearEnd` stands in now (M-REC's `placed`), in the text's order — never empty: an end the held text places nowhere is not drawn
  * @property {number} pos the first stretch's first position
  * @property {number} width the first stretch's positions
- * @property {Mark} mark
+ * @property {Mark} mark the mark the near document gives the link (`markOf` at `near`): the one its symbol takes here, and a beam's colour at this end
  * @property {'you' | 'owner' | 'others'} linker
  * @property {string} far the document the other end names, or '' where it names none
  * @property {EndRef | null} farEnd the other slot's first span, as stored
  * @property {1 | 2} farSlot the slot the far end lies in: 2 where this end is the link's from, 1 where it is its to
  * @property {boolean} farWhole
  * @property {string} farAt the version of the far document's box the far end is placed in: the one the box shows (the reader `shown`) — the document `far` names, or another version sharing its box; '' where the far end names no document
+ * @property {Mark} farMark the mark the far document gives the link (`markOf` at `farAt`, else at the address `far` names): the one its symbol takes there, and a beam's colour at its far end (issue #166's design decision)
  * @property {Stretch[] | null} farRuns where the far end's passage stands in `farAt`'s current text now (`project`'s answer, M-REC's projection), in the text's order; none where it floats — that text holds none of it; null where nothing places it: its projection not read or refused, or the far end naming a document whole, an account or nothing
  */
 /**
@@ -305,7 +312,7 @@ export function classify(l) {
 /**
  * The linker of a link at a mark: you, where the person made it; else the
  * document's owner, where its owner owns the document the mark stands at —
- * at a mark joining two documents, a mid connection or a scene's line,
+ * at a mark joining two documents, a mid connection or a tail marked as one,
  * either of them (foundations §2.1's register: "the document's owner the
  * owner of either"); else everyone else as one.
  * @param {Link} l
@@ -337,10 +344,10 @@ export function markOf(l, at, other = at) {
 
 /**
  * The one mark links drawn at one site merge into — a stretch of text
- * several mark, a mid connection holding several, a beam met from both its
- * ends — carrying what they share and nothing they do not (P44; its Use at
- * §2.1's register: "neutral in any variable its members do not share — hue
- * where their linkers differ"): the linker and its hue where every member's
+ * several mark, a mid connection holding several, a bundle's end holding
+ * several beams — carrying what they share and nothing they do not (P44; its
+ * Use at §2.1's register: "neutral in any variable its members do not share —
+ * hue where their linkers differ"): the linker and its hue where every member's
  * is one, else none and NEUTRAL_HUE; lighter only where every member was
  * followed (D-3), else full — value carries the followed mark alone, so a
  * site followed in part has no value of its own; heavier only where every
@@ -438,8 +445,8 @@ export function draws(l, addr) {
  * A link's end drawn at a document: its stored span and that span's key
  * (`endKey`), where the span stands in the document's held text now, its
  * mark, and its far end with where that stands in the current text of the
- * version its box shows (`farAt`); null where the held text places the end
- * nowhere.
+ * version its box shows (`farAt`) and the mark that version gives the link;
+ * null where the held text places the end nowhere.
  * @param {Link} l
  * @param {string} addr the document holding the end (`endsIn`), whichever document minted its bytes
  * @param {'you' | 'owner' | 'others'} linker
@@ -452,11 +459,12 @@ function drawnEnd(l, addr, linker, end, e) {
   if (!runs.length) return null;
   const farSlot = end === 'from' ? 2 : 1;
   const far = (end === 'from' ? l.to : l.from)[0] || null;
+  const named = far ? far.doc || far.account || '' : '';
   const at = far && far.doc ? read.shown(far.doc) : '';
   const held = far && !far.whole && far.ordinal != null && at ? REC.projection(l.addr, farSlot, at) : undefined;
   return {
     link: l, near: addr, end, nearEnd: e, key: endKey(e), runs, pos: runs[0].pos, width: runs[0].width, mark: markOf(l, addr), linker,
-    far: far ? far.doc || far.account || '' : '', farEnd: far, farSlot, farWhole: !!(far && far.whole), farAt: at, farRuns: Array.isArray(held) ? held : null,
+    far: named, farEnd: far, farSlot, farWhole: !!(far && far.whole), farAt: at, farMark: markOf(l, at || named), farRuns: Array.isArray(held) ? held : null,
   };
 }
 

@@ -26,19 +26,22 @@
 // decision: the box shows one version; `farEndIn`), whose reads each setting
 // of a pane asks for the links that cross between the panes, a far
 // end that floats at its pane's head, where its follow lands, and never at
-// the position the link stores — in the one mark LK gives it at a mark
-// joining the two panes' documents — its linker's hue, the owner of either
-// document's the owner's (foundations §2.1's register), dashed only for
-// another's — and
+// the position the link stores — each END in the mark its pane's document
+// gives the link, the one the link's symbol takes in that pane (issue #166's
+// design decision: "Lines between the side-by-side view's panes follow the
+// same rule, changing at the middle of the gap"), inked as BM inks a beam's
+// ends — its linker's hue there, dashed only for another's — and where the two
+// differ the line changing colour once, at the middle of the gap (`drawTie`),
+// so opening the scene never recolours the link it opened on — and
 // SHARED IDENTITY as BANDS from `compare`'s pairs, each run
 // of contiguous pairs one band (`merged`; no link); each leaves its pane at
 // its passage's first line — measured, through T-LAYER's byte-span mapping
 // over the pane's article and the blocks it was made from, when the scene is
 // set level, a pane is set again or the panes change size, and moved with
 // each pane's scroll — and one whose end has left its pane is clipped at the
-// pane's edge with the stub's triangle. Every tie is measured from what its
-// panes were set with, never the model's now: a read that drops a pane's
-// document moves no tie off its text (`measure`).
+// pane's edge with the stub's triangle, in that end's hue. Every tie is
+// measured from what its panes were set with, never the model's now: a read
+// that drops a pane's document moves no tie off its text (`measure`).
 // A PANE IS KEPT FRESH BY ITS KIND (FP-23; issue #160's design decision: "each
 // pane behaves as its document does on the plane, by kind"): each feed row
 // M-PUMP takes reaches the panes after it drops what it named (`dropped`, its
@@ -170,6 +173,7 @@ import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
+import { inkOf, strokeOf, strokeIn } from '../beams/beams.js';
 import { SAMENESS } from '../plane/register.js';
 import { markDirty } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
@@ -184,6 +188,7 @@ import { esc } from '../util.js';
 /** @typedef {import('../model/records.js').ISpan} ISpan */
 /** @typedef {import('../model/pump.js').Dropped} Dropped */
 /** @typedef {import('../links/links.js').Shown} Shown */
+/** @typedef {import('../beams/beams.js').Ink} Ink */
 /** @typedef {import('../text/article.js').ArticleView} ArticleView */
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 
@@ -236,9 +241,8 @@ import { esc } from '../util.js';
  * @property {string} link the link's address
  * @property {{pos: number, width: number}} a its end in pane A's document
  * @property {{pos: number, width: number}} b its end in pane B's document
- * @property {string} hue
- * @property {number} value
- * @property {boolean} dashed another's link
+ * @property {{a: Ink, b: Ink}} ink each end's: the mark its pane's document gives the link, as a stroke takes it (BM's `inkOf`)
+ * @property {number} value the link's own, alike at both its ends
  */
 
 /**
@@ -290,7 +294,7 @@ import { esc } from '../util.js';
  * @property {Pane} b
  * @property {ComparePair[]} pairs
  * @property {Level} level
- * @property {Array<Tie & {hue: string, value: number, dashed: boolean}>} ties
+ * @property {Array<Tie & {ink: {a: Ink, b: Ink}, value: number}>} ties
  * @property {string} size the panes' sizes the ties were measured at
  * @property {number} updating the settings reading
  * @property {Array<() => void>} waiting the acts made while one reads, in the order made (`whenSet`)
@@ -302,6 +306,8 @@ const LEVEL_AT = 40;
 const PANE_FS = 14;
 /** the bands drawn at most */
 const MAX_BANDS = 400;
+/** @type {Ink} a band's ink at both its ends: sameness's boundary, never a linker's hue (P-REG) */
+const BAND_INK = { hue: SAMENESS.boundary, dash: [] };
 /** the keys a pane takes, moving it alone (K-60) */
 const MOVES = ['PageDown', 'PageUp', '↓', '↑', 'Home', 'End'];
 const SIDES = /** @type {const} */ (['a', 'b']);
@@ -524,12 +530,13 @@ function farEndIn(s, pane) {
  * those two ways into one line and leave the pair the scene sets level
  * without the line that confirms it, and never by where they stand now, which
  * the two panes read from two answers.
- * A line is drawn in the one mark LK gives its link at
- * a mark joining the two panes' documents (`LK.markOf` given both;
- * foundations §2.1's register: "the document's owner the owner of either"),
- * whichever pane meets it and however each pane marks it at its own span: its
- * linker's hue and its value, dashed only for another's (P44: "never a stack,
- * never accumulated tint").
+ * Each END of a line is drawn in the mark its pane's document gives the link
+ * — the one the link's symbol takes in that pane (`LK.markOf` at that
+ * document; issue #166's design decision: "Lines between the side-by-side
+ * view's panes follow the same rule"): its hue there, dashed only for
+ * another's, as BM inks a beam's ends (`inkOf`), whichever pane meets it, so
+ * opening the scene never recolours the link it opened on; its value the
+ * link's own (P44: "never a stack, never accumulated tint").
  * @param {PaneLinks} A pane A's
  * @param {PaneLinks} B pane B's
  * @returns {Line[]}
@@ -545,8 +552,8 @@ export function linesBetween(A, B) {
       const [a, b] = nearIsA ? [here, there] : [there, here];
       const key = `${s.link.addr} ${a.key} ${b.key}`;
       if (met.has(key)) continue;
-      const mark = LK.markOf(s.link, A.addr, B.addr);
-      met.set(key, { link: s.link.addr, a: { pos: a.pos, width: a.width }, b: { pos: b.pos, width: b.width }, hue: mark.hue, value: mark.value, dashed: mark.linker === 'others' });
+      const atA = LK.markOf(s.link, A.addr), atB = LK.markOf(s.link, B.addr);
+      met.set(key, { link: s.link.addr, a: { pos: a.pos, width: a.width }, b: { pos: b.pos, width: b.width }, ink: { a: inkOf(atA), b: inkOf(atB) }, value: atA.value });
     }
   }
   return [...met.values()];
@@ -866,12 +873,12 @@ function measure() {
   const out = [];
   for (const p of S.pairs.slice(0, MAX_BANDS)) {
     const la = lineIn(E.paneA, S.a.names, p.u1, p.width), lb = lineIn(E.paneB, S.b.names, p.u2, p.width);
-    if (la && lb) out.push({ kind: 'band', link: null, a: { pos: p.u1, width: p.width, y: la.y }, b: { pos: p.u2, width: p.width, y: lb.y }, hue: SAMENESS.boundary, value: 0.7, dashed: false });
+    if (la && lb) out.push({ kind: 'band', link: null, a: { pos: p.u1, width: p.width, y: la.y }, b: { pos: p.u2, width: p.width, y: lb.y }, ink: { a: BAND_INK, b: BAND_INK }, value: 0.7 });
   }
   // the link lines between the panes — the set LK gave at each pane's document as it was set (the seam)
   for (const l of linesBetween(linksOf(S.a), linksOf(S.b))) {
     const la = lineIn(E.paneA, S.a.names, l.a.pos, l.a.width), lb = lineIn(E.paneB, S.b.names, l.b.pos, l.b.width);
-    if (la && lb) out.push({ kind: 'link', link: l.link, a: { ...l.a, y: la.y }, b: { ...l.b, y: lb.y }, hue: l.hue, value: l.value, dashed: l.dashed });
+    if (la && lb) out.push({ kind: 'link', link: l.link, a: { ...l.a, y: la.y }, b: { ...l.b, y: lb.y }, ink: l.ink, value: l.value });
   }
   S.ties = out;
   S.size = sizeOf(E);
@@ -1223,19 +1230,40 @@ export function draw() {
   const out = [];
   for (const tie of S.ties) {
     const ea = at(fa, tie.a), eb = at(fb, tie.b);
-    const x0 = fa.x1, x1 = fb.x0, mx = (x0 + x1) / 2;
-    ctx.strokeStyle = tie.hue; ctx.globalAlpha = tie.value; ctx.lineWidth = tie.kind === 'band' ? 6 : 1.6; ctx.setLineDash(tie.dashed ? [5, 4] : []);
-    ctx.beginPath(); ctx.moveTo(x0, ea.y); ctx.bezierCurveTo(mx, ea.y, mx, eb.y, x1, eb.y); ctx.stroke(); ctx.setLineDash([]);
-    if (ea.clipped) stub(ctx, x0 + 6, ea.y, ea.above ? -1 : 1); if (eb.clipped) stub(ctx, x1 - 6, eb.y, eb.above ? -1 : 1);
+    const x0 = fa.x1, x1 = fb.x0;
+    ctx.globalAlpha = tie.value; ctx.lineWidth = tie.kind === 'band' ? 6 : 1.6;
+    drawTie(ctx, { x: x0, ...ea }, { x: x1, ...eb }, tie.ink);
     out.push({ kind: tie.kind, link: tie.link, a: { pos: tie.a.pos, width: tie.a.width, x: x0 + c.left, y: ea.y + c.top, clipped: ea.clipped }, b: { pos: tie.b.pos, width: tie.b.width, x: x1 + c.left, y: eb.y + c.top, clipped: eb.clipped } });
   }
   ctx.globalAlpha = 1;
   drawnTies = out;
 }
 
-function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ dir) {
+/** where along a tie's stroke its ends' inks meet: the half of its parameter, where BM's curve between the panes' inner edges stands at the middle of the gap (`strokeOf`) */
+const GAP_MIDDLE = 0.5;
+
+/**
+ * Draw one tie between the panes (`draw`), its width and alpha set on the
+ * context: BM's curve from its end at pane A's inner edge to its end at pane
+ * B's, each end in its own pane's ink, a line whose two differ changing
+ * colour once at the middle of the gap, one stroke with no dot or break at
+ * the change (issue #166's design decision: "changing at the middle of the
+ * gap"; BM's `strokeIn`); an end whose line has left its pane clipped at the
+ * pane's edge with the stub's triangle, in its own end's hue.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{x: number, y: number, clipped: boolean, above: boolean}} a its end at pane A's inner edge, on the canvas
+ * @param {{x: number, y: number, clipped: boolean, above: boolean}} b its end at pane B's
+ * @param {{a: Ink, b: Ink}} ink
+ */
+export function drawTie(ctx, a, b, ink) {
+  strokeIn(ctx, strokeOf(a, b), ink.a, ink.b, GAP_MIDDLE);
+  if (a.clipped) stub(ctx, a.x + 6, a.y, a.above ? -1 : 1, ink.a.hue);
+  if (b.clipped) stub(ctx, b.x - 6, b.y, b.above ? -1 : 1, ink.b.hue);
+}
+
+function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ dir, /** @type {string} */ hue) {
   ctx.save(); ctx.translate(x, y); ctx.rotate(dir < 0 ? -Math.PI / 2 : Math.PI / 2);
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, -4); ctx.lineTo(-8, 4); ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill(); ctx.restore();
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, -4); ctx.lineTo(-8, 4); ctx.closePath(); ctx.fillStyle = hue; ctx.fill(); ctx.restore();
 }
 
 /**

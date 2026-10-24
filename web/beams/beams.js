@@ -5,13 +5,22 @@
 // It decides nothing of which links, nor how each is marked: it draws
 // `LK.beams(addr)` for every mounted document at stage 3 — a link whose far
 // document the plane draws nowhere none: LK leaves it out, and P-RENDER's
-// tail stands for it (issue #132's design decision) — each beam with the
-// mark LK gives it — the link's `markOf` at the document met, or, for a link
-// met from both its ends, the one `mergedMark` makes of the two — its hue,
-// its value, and its weight, a link lit at an arrival, or by a one-step move
-// along the trail that crossed its follow (issue #152's design decision),
-// stroked heavier (foundations §2.1's register: "the followed link drawn
-// heavier"), dashed for another's. Both its ends stand where the link's bytes stand NOW, never
+// tail stands for it (issue #132's design decision) — each END of a beam in
+// the mark LK gives the link at the document that end touches, the one the
+// link's symbol takes there (the drawn end's `mark` at its near end, its
+// `farMark` at its far end), whichever document drew it (issue #166's design
+// decision: "Colour each end of a beam by the document it touches, never by
+// which side drew it") — its hue, its value, and its weight, a link lit at an
+// arrival, or by a one-step move along the trail that crossed its follow
+// (issue #152's design decision), stroked heavier (foundations §2.1's
+// register: "the followed link drawn heavier"), dashed for another's
+// (`inkOf`). Where its two ends' marks differ — the maker owning one end's
+// document alone — the stroke changes colour ONCE, at the first point along
+// it as far from the far document's box as from the near one's, on the open
+// ground between the two and inside neither (`changeAt`): one stroke of one
+// width, with no dot or break at the change (`strokeIn`); a beam whose far
+// end is off screen keeps its near end's colour all the way to the stub.
+// Both its ends stand where the link's bytes stand NOW, never
 // where its slot stores them (the slot names the bytes' permanent I-spans):
 // each beam leaves the text at its span's own line, from the place's edge
 // (foundations §2.1; S1 Q1): it starts at the right edge of the block
@@ -47,15 +56,19 @@
 // a document stands by line) — so an end laid out is off screen where it
 // stands outside that view, as a box's centre is; `beamTo` reads both the stub
 // and where its stroke ends from that one test. A link met from both its ends, or twice
-// inside one document, is one beam — its two ends told apart by the document
-// each is drawn at and the span the link stores for it, wherever they stand
-// now — marked with what its meetings' marks share whichever document
-// mounted first (`bundlesOf`; P44: "never a stack, never accumulated tint");
-// one stored end drawn at two documents — the one that minted its bytes and
-// one whose text transcludes them, or a trunk and its member — stands at two
-// sites, a beam from each.
+// inside one document, is one beam, counted once — its two ends told apart by
+// the document each is drawn at, a far end's the version its far box shows,
+// and the span the link stores for it, wherever they stand now — the first
+// met kept, each end in its own document's mark, so it looks the same
+// whichever side drew it and whether both did (`bundlesOf`; P44: "never a
+// stack, never accumulated tint"); one stored end drawn at two documents —
+// the one that minted its bytes and one whose text transcludes them — stands
+// at two sites, a beam from each.
 // The beams are bundled by the document they leave and their far document —
-// one bundle per destination, its far document's label and its count at its
+// one bundle per destination, marked at each end with what its beams' marks
+// share there, neutral only where its links take different colours at that
+// end and a single link's never (issue #166's design decision: "Neutral keeps
+// one meaning"), its far document's label and its count at its
 // end (§2.1), and, where every beam it holds says one state of what its far
 // end's text holds, those words — "its passage is not in ⟨D⟩'s current text"
 // where it floats, BM-HELD's line where that text holds part of it, all of it
@@ -94,20 +107,28 @@ import { farSays } from './held.js';
 /** @typedef {import('../plane/register.js').Mark} Mark */
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect a screen rect */
 /** @typedef {{x: number, y: number}} Point a screen point */
+/** @typedef {[Point, Point, Point, Point]} Cubic a stroke's curve: its start, its two control points, its end */
+
+/**
+ * @typedef {Object} Ink — how a stretch of a stroke is drawn: a link's mark there, as a stroke takes it (`inkOf`)
+ * @property {string} hue
+ * @property {number[]} dash the canvas's dash pattern; none for a solid stroke
+ */
 
 /**
  * @typedef {Object} Beam — one shown link, drawn from where its end stands
- * @property {Shown} s the link as LK shows it at the document the beam leaves (`s.near`)
+ * @property {Shown} s the link as LK shows it at the document the beam leaves (`s.near`): the mark it takes there (`s.mark`), and the mark the document its far end touches gives it (`s.farMark`)
  * @property {Rect} line the line of the near end's stretches the beam leaves at
  * @property {Point} from where it leaves: the right edge of the block holding that line's stretch, level with the line's middle
  * @property {Point} to its far end: the left edge of the block holding the far stretch, level with that stretch's line nearest `from` — the far article's first block for a whole-work end or one that floats; where nothing is laid out there, the far document's box's centre
  * @property {boolean} stub the far end is off screen, `to` outside the visible view (foundations §2.1): the stroke is cut at the view's border, and the cut carries the triangle on the true bearing
  * @property {Point} end where the stroke ends: at `to`, or, for a stub, at the cut on the bearing to `to` (P-CAM's `edgeStub`)
+ * @property {number | null} change where along its stroke (`strokeOf(from, end)`) its colour changes from its near end's mark to its far end's (`changeAt`); null where it changes nowhere: a stub, its near end's colour to the border, or two ends marked alike
  */
 
 /**
  * @template B
- * @typedef {{near: string, far: string, members: Array<B & {mark: Mark}>}} Bundle the beams one document sends to one far document (§2.1: one bundle per destination), in the order met, each with the mark it is drawn in: what its meetings' marks share (`bundlesOf`)
+ * @typedef {{near: string, far: string, members: B[], marks: {near: Mark, far: Mark}}} Bundle the beams one document sends to one far document (§2.1: one bundle per destination), each once, in the order met, and what their marks share at each end (`mergedMark`): neutral at an end where its links take different colours there, and only there (`bundlesOf`)
  */
 
 /**
@@ -126,7 +147,7 @@ import { farSays } from './held.js';
  * @property {(addr: string) => (Rect | null)} first the box of a mounted article's first block: the anchor of a whole-work end, and of one that floats
  * @property {(addr: string, pos: number) => Rect[]} signs the signs its column's edge holds beside the block holding a position in a mounted article — its others' count, a withheld run's mark — where they stand; none elsewhere
  * @property {(addr: string) => boolean} mounted
- * @property {(addr: string) => Point} centre the centre of a document's box
+ * @property {(addr: string) => Rect} box a document's box: a far end not laid out stands at its centre, and a beam's colour changes on the ground between two of them (`changeAt`)
  * @property {Rect} view the visible view (P-CAM's `visibleView`)
  */
 
@@ -238,6 +259,123 @@ export function labelPlace(end, m, seen) {
 const mid = (/** @type {Rect} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
 
 /**
+ * A link's mark as a stroke takes it (see the head): its hue, dashed for
+ * another's (B1-S4's dashed overlay beam) — at each end of a beam, and of a
+ * reading scene's line between its panes (SC). Its value and its weight are
+ * the link's own, alike at every mark of it, and set on the stroke whole.
+ * @param {Mark} m
+ * @returns {Ink}
+ */
+export const inkOf = (m) => ({ hue: m.hue, dash: m.linker === 'others' ? [5, 4] : [] });
+/** do two inks draw a stroke alike? */
+const alike = (/** @type {Ink} */ a, /** @type {Ink} */ b) => a.hue === b.hue && a.dash.join() === b.dash.join();
+
+/**
+ * A beam's stroke from where it leaves to where it ends (S1's `buildBeams`):
+ * leaving level and arriving level, its two control points level with its two
+ * ends at the middle of the run across — so the point at the half of its
+ * parameter stands at that middle, midway between its two ends.
+ * @param {Point} from
+ * @param {Point} end
+ * @returns {Cubic}
+ */
+export function strokeOf(from, end) {
+  const mx = (from.x + end.x) / 2;
+  return [from, { x: mx, y: from.y }, { x: mx, y: end.y }, end];
+}
+
+/**
+ * The point at `t` along a stroke's curve: its start at 0, its end at 1.
+ * @param {Cubic} c
+ * @param {number} t
+ * @returns {Point}
+ */
+export function pointOn([p0, p1, p2, p3], t) {
+  const u = 1 - t, a = u * u * u, b = 3 * u * u * t, c = 3 * u * t * t, d = t * t * t;
+  return { x: a * p0.x + b * p1.x + c * p2.x + d * p3.x, y: a * p0.y + b * p1.y + c * p2.y + d * p3.y };
+}
+
+/**
+ * A stroke's curve cut at `t` into the stretch before it and the stretch after
+ * (de Casteljau's construction): the two together exactly the one curve, the
+ * first ending and the second starting at its point at `t`.
+ * @param {Cubic} c
+ * @param {number} t
+ * @returns {[Cubic, Cubic]}
+ */
+export function cutAt([p0, p1, p2, p3], t) {
+  const at = (/** @type {Point} */ p, /** @type {Point} */ q) => ({ x: p.x + (q.x - p.x) * t, y: p.y + (q.y - p.y) * t });
+  const a = at(p0, p1), b = at(p1, p2), c = at(p2, p3), ab = at(a, b), bc = at(b, c), m = at(ab, bc);
+  return [[p0, a, ab, m], [m, bc, c, p3]];
+}
+
+/** a point's distance from a rect: none inside it, its edges included */
+const away = (/** @type {Rect} */ r, /** @type {Point} */ p) => Math.hypot(Math.max(r.x - p.x, 0, p.x - r.x - r.w), Math.max(r.y - p.y, 0, p.y - r.y - r.h));
+/** the points along a stroke `changeAt` reads before it closes in on the change between two of them */
+const CHANGE_SAMPLES = 64;
+/** the halvings that close in on it, past which the point stands still at any size the plane draws */
+const CHANGE_HALVINGS = 40;
+
+/**
+ * Where along a stroke joining two documents its colour changes (issue
+ * #166's design decision: "the stroke changes colour once, midway between the
+ * two documents' edges, never inside either document's margin"): the
+ * parameter of the first point along it as far from the far document's box as
+ * from the near one's — on the open ground between the two, inside neither,
+ * for two documents that mark a link apart lie in two accounts' cells, each
+ * box inside its own cell's margin (P-PROJ's `docBox`), and never meet. Null
+ * where no point along it stands so: a stroke that starts no nearer its near
+ * document than its far one, or never comes as near its far one.
+ * @param {Cubic} c
+ * @param {Rect} near the near document's box
+ * @param {Rect} far the far document's box
+ * @returns {number | null}
+ */
+export function changeAt(c, near, far) {
+  /** has the stroke reached the far document's ground at `t`: as near its box as the near one's, or nearer? */
+  const reached = (/** @type {number} */ t) => { const p = pointOn(c, t); return away(far, p) <= away(near, p); };
+  if (reached(0)) return null;
+  for (let i = 1; i <= CHANGE_SAMPLES; i++) {
+    if (!reached(i / CHANGE_SAMPLES)) continue;
+    let lo = (i - 1) / CHANGE_SAMPLES, hi = i / CHANGE_SAMPLES;
+    for (let k = 0; k < CHANGE_HALVINGS; k++) { const t = (lo + hi) / 2; if (reached(t)) hi = t; else lo = t; }
+    return hi;
+  }
+  return null;
+}
+
+/**
+ * Stroke a curve in its near end's ink, or, cut where its colour changes
+ * (`t`; `cutAt`), the stretch before in the near ink and the stretch after in
+ * the far — one stroke of one width, with no dot or break at the change
+ * (issue #166's design decision): each stretch butt-capped at the one point,
+ * so the two meet there and never overlap, which at a stroke's alpha would
+ * set a dot, and each drawn from that point, so a dashed one begins in ink
+ * where the other ends. Inks alike, or no change, it is stroked whole in the
+ * near ink, its dash begun at its start. Its width and alpha are the
+ * caller's, set on the context: a beam's (`draw`) and a reading scene's line
+ * between its panes (SC).
+ * @param {CanvasRenderingContext2D} c2d
+ * @param {Cubic} c
+ * @param {Ink} near
+ * @param {Ink} far
+ * @param {number | null} t
+ */
+export function strokeIn(c2d, c, near, far, t) {
+  c2d.lineCap = 'butt';
+  if (t == null || alike(near, far)) { stretch(c2d, c, near); return; }
+  const [before, after] = cutAt(c, t);
+  stretch(c2d, [before[3], before[2], before[1], before[0]], near);
+  stretch(c2d, after, far);
+}
+/** stroke one stretch of a curve in one ink, its dash begun at the stretch's start */
+function stretch(/** @type {CanvasRenderingContext2D} */ c2d, /** @type {Cubic} */ [p0, p1, p2, p3], /** @type {Ink} */ ink) {
+  c2d.strokeStyle = ink.hue; c2d.setLineDash(ink.dash);
+  c2d.beginPath(); c2d.moveTo(p0.x, p0.y); c2d.bezierCurveTo(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y); c2d.stroke();
+  c2d.setLineDash([]);
+}
+
+/**
  * Where a beam's far end anchors in its mounted far article: the lines of
  * every stretch `project` places the far passage in (LK's `farRuns`), each
  * with its block; the far article's first block for a whole-work end and for
@@ -260,17 +398,20 @@ function farAnchors(s, g) {
  * stub, its stroke cut at the view's border on the bearing to `to` (P-CAM's
  * `edgeStub`). Every beam `beamOf` lays out is made here, so its stub and
  * where its stroke ends — and its bundle's label with it — are read from the
- * one test against the one view.
+ * one test against the one view. A stub keeps its near end's colour to the
+ * border; a beam ending in view whose two ends' marks differ changes colour
+ * once, between its two documents' boxes (`changeAt`).
  * @param {Shown} s
  * @param {Rect} line
  * @param {Point} from
  * @param {Point} to
- * @param {Rect} view the visible view
+ * @param {Geometry} g
  * @returns {Beam}
  */
-function beamTo(s, line, from, to, view) {
-  const stub = !holds(view, to);
-  return { s, line, from, to, stub, end: stub ? edgeStub(from, to, view) : to };
+function beamTo(s, line, from, to, g) {
+  const stub = !holds(g.view, to), end = stub ? edgeStub(from, to, g.view) : to;
+  const change = stub || alike(inkOf(s.mark), inkOf(s.farMark)) ? null : changeAt(strokeOf(from, end), g.box(s.near), g.box(s.farAt));
+  return { s, line, from, to, stub, end, change };
 }
 
 /**
@@ -287,16 +428,16 @@ export function beamOf(s, g) {
     const left = leaveAt(g, s.near, s.runs, mid(far[0].line));
     if (!left) return null;
     const there = pickLine(far, left.from);
-    return beamTo(s, left.line, left.from, { x: there.block.x, y: there.line.y + there.line.h / 2 }, g.view);
+    return beamTo(s, left.line, left.from, { x: there.block.x, y: there.line.y + there.line.h / 2 }, g);
   }
-  const c = g.centre(s.farAt);
+  const c = mid(g.box(s.farAt));
   const left = leaveAt(g, s.near, s.runs, c);
-  return left && beamTo(s, left.line, left.from, c, g.view);
+  return left && beamTo(s, left.line, left.from, c, g);
 }
 
-/** a beam's identity: its link and its two ends, unordered, each the document it stands at — the near end the one drawing it, the far end the one its slot names — with the key of the span the link stores for it (LK's `endKey`): the same beam whichever end it is drawn from, wherever either end stands now, and a beam from each document one stored end is drawn at */
+/** a beam's identity: its link and its two ends, unordered, each the document it stands at — the near end the one drawing it, the far end the version its far box shows, which the far end is placed in (LK's `farAt`) — with the key of the span the link stores for it (LK's `endKey`): the same beam whichever end it is drawn from, whichever version a box shows, wherever either end stands now, and a beam from each document one stored end is drawn at */
 function endsOf(/** @type {Shown} */ s) {
-  const there = s.farEnd ? `${s.far} ${LK.endKey(s.farEnd)}` : '';
+  const there = s.farEnd ? `${s.farAt || s.far} ${LK.endKey(s.farEnd)}` : '';
   return s.link.addr + ' ' + [`${s.near} ${LK.endKey(s.nearEnd)}`, there].sort().join(' | ');
 }
 
@@ -305,35 +446,37 @@ function endsOf(/** @type {Shown} */ s) {
  * beams leave and far document they reach (§2.1: one bundle per
  * destination), and each beam once — a link met from both its ends, or from
  * both inside one document, is one beam between the same two ends (`endsOf`:
- * each end's document and stored span), the first met, marked with what
- * every meeting's mark shares (LK's `mergedMark`; P44): a link LK marks alike
- * at both its documents keeps that mark, and one that is the owner's at one
- * and another's at the other is drawn in the neutral hue, undashed, whichever
- * is met first; a link whose endset holds two spans in one document keeps a
- * beam from each, and so does one stored end drawn at two documents, the one
- * that minted its bytes and one transcluding them, or a trunk and its member.
+ * each end's document and stored span), counted once, the first met kept as
+ * it was met, for each end's mark is its own document's whichever end drew
+ * it (LK's `mark` and `farMark`; issue #166's design decision); a link whose
+ * endset holds two spans in one document keeps a beam from each, and so does
+ * one stored end drawn at two documents, the one that minted its bytes and
+ * one transcluding them. Each bundle is marked at each end with what its
+ * beams' marks share there (LK's `mergedMark`; P44): neutral where its links
+ * take different colours at that end, a single link's mark its own.
  * @template {{s: Shown}} B
  * @param {B[]} beams
  * @returns {Bundle<B>[]}
  */
 export function bundlesOf(beams) {
-  /** @type {Map<string, {first: B, marks: [Mark, ...Mark[]]}>} each beam's first meeting and every meeting's mark, by its identity */
+  /** @type {Map<string, B>} each beam's first meeting, by its identity */
   const once = new Map();
-  for (const bm of beams) {
-    const ends = endsOf(bm.s), m = once.get(ends);
-    if (m) m.marks.push(bm.s.mark);
-    else once.set(ends, { first: bm, marks: [bm.s.mark] });
-  }
-  /** @type {Map<string, Bundle<B>>} */
+  for (const bm of beams) { const ends = endsOf(bm.s); if (!once.has(ends)) once.set(ends, bm); }
+  /** @type {Map<string, {near: string, far: string, members: [B, ...B[]]}>} */
   const out = new Map();
-  for (const { first, marks } of once.values()) {
-    const member = { ...first, mark: LK.mergedMark(marks) };
+  for (const first of once.values()) {
     const key = first.s.near + '>' + first.s.far;
     const b = out.get(key);
-    if (b) b.members.push(member);
-    else out.set(key, { near: first.s.near, far: first.s.far, members: [member] });
+    if (b) b.members.push(first);
+    else out.set(key, { near: first.s.near, far: first.s.far, members: [first] });
   }
-  return [...out.values()];
+  return [...out.values()].map((b) => ({ ...b, marks: { near: shared(b.members, (s) => s.mark), far: shared(b.members, (s) => s.farMark) } }));
+}
+
+/** what a bundle's beams' marks share at one of its ends (LK's `mergedMark`) */
+function shared(/** @type {[{s: Shown}, ...Array<{s: Shown}>]} */ members, /** @type {(s: Shown) => Mark} */ at) {
+  const [first, ...rest] = members;
+  return LK.mergedMark([at(first.s), ...rest.map((m) => at(m.s))]);
 }
 
 /**
@@ -388,7 +531,7 @@ export function pageGeometry(/** @type {Rect} */ seen = seenNow()) {
     first: (addr) => parts(addr, (doc(addr).blocks[0] || { pos: 1 }).pos)[0] || null,
     signs: (addr, pos) => { const b = blockAt(addr, pos); return b ? LAYER.signRects(addr, b.pos) : []; },
     mounted: LAYER.isMounted,
-    centre: (addr) => { const b = docBox(addr); return { x: sx(b.x + b.w / 2), y: sy(b.y + b.h / 2) }; },
+    box: (addr) => { const b = docBox(addr), x = sx(b.x), y = sy(b.y); return { x, y, w: sx(b.x + b.w) - x, h: sy(b.y + b.h) - y }; },
     view: seen,
   };
   return g;
@@ -404,7 +547,7 @@ export function build(seen = seenNow()) {
   return built;
 }
 
-/** draw the bundles, and each one's label at its first member's end where it stands whole in the visible view — redrawn whole every frame (FP-8) */
+/** draw the bundles — each beam's two ends in their own documents' marks, its stub's triangle in its near end's — and each one's label at its first member's end where it stands whole in the visible view — redrawn whole every frame (FP-8) */
 export function draw() {
   labelsSet = [];
   if (!ctx || !canvas) return;
@@ -418,15 +561,12 @@ export function draw() {
   const alpha = Math.max(0.25, Math.min(0.85, 24 / n));
   for (const b of set) {
     for (const bm of b.members.slice(0, 20)) {
-      const { hue, value, weight, linker } = bm.mark;
-      ctx.strokeStyle = hue; ctx.globalAlpha = alpha * value; ctx.lineWidth = 1.6 * weight;
-      ctx.setLineDash(linker === 'others' ? [5, 4] : []);
-      const { x: x0, y: y0 } = bm.from, { x: x1, y: y1 } = bm.end;
-      const mx = (x0 + x1) / 2;
-      ctx.beginPath(); ctx.moveTo(x0, y0); ctx.bezierCurveTo(mx, y0, mx, y1, x1, y1); ctx.stroke(); ctx.setLineDash([]);
+      const { mark, farMark } = bm.s;
+      ctx.globalAlpha = alpha * mark.value; ctx.lineWidth = 1.6 * mark.weight;
+      strokeIn(ctx, strokeOf(bm.from, bm.end), inkOf(mark), inkOf(farMark), bm.change);
       if (bm.stub) {
         const [p, q, r] = stubTriangle(bm.end, bm.to);
-        ctx.fillStyle = hue; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.lineTo(r.x, r.y); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = mark.hue; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.lineTo(r.x, r.y); ctx.closePath(); ctx.fill();
       }
     }
     // the bundle's label at its end

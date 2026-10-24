@@ -1,18 +1,30 @@
 // BM's test — the bundles over LK's rule on a hand-built model: one per
 // document a beam leaves and far document it reaches, whatever document the
 // links are homed in (a mutant keying them by the link's home turns red);
-// each beam once, a link met from both its ends or from both inside one
-// document drawn once (a mutant without the once-rule turns red), and a link
+// each beam once, counted once, a link met from both its ends or from both
+// inside one document drawn once (a mutant without the once-rule turns red),
+// and so is one met from both its ends while its far box shows another
+// version of its document (a mutant keying the far end by the document the
+// link names draws it twice and turns red), and a link
 // whose endset holds two spans keeping a beam from each (a mutant keying the
 // rule by the link alone turns red), as one stored end drawn at two
 // documents — the one that minted its bytes and one transcluding them — does,
 // each beam in its own document's mark (a mutant keying a beam by its stored
-// spans alone folds the two into one, neutral where the two documents mark
-// it apart, and turns red); a beam met from both its ends marked with what
-// its meetings' marks share — neutral where the link is another's at one end
-// and the owner's at the other, whichever document is met first (a mutant
-// that keeps the first meeting's mark turns red), the person's own in their
-// hue, one met at one end alone as that end marks it. Then a beam's ends
+// spans alone folds the two into one and turns red). Each END of a beam in
+// the mark the document it touches gives the link, the one the link's symbol
+// takes there, whether one side drew it or both and whichever met it first,
+// never neutral (issue #166's design decision: a mutant that merges its
+// meetings' marks, that marks its far end as its near, or that marks both by
+// the owner of either turns red); where the two differ the stroke changing
+// colour once, at the first point along it as far from the far document's box
+// as from the near one's, outside both (a mutant cutting it at its curve's
+// middle, inside the near document's box, turns red), cut there into two
+// stretches of the one curve meeting at that point, each butt-capped and
+// drawn from it in its own end's ink; a stub, and a beam whose ends' marks
+// agree, one stroke in its near end's ink; a bundle marked at each end with
+// what its beams' marks share there — neutral only where its links take
+// different colours at that end, a single link never (a mutant that marks a
+// bundle by its first beam turns red). Then a beam's ends
 // over a laid-out geometry: it leaves the near block's right edge level
 // with the span's own line nearest the far end, never the block's middle — a
 // block parted across two columns the right edge of the part holding that
@@ -52,10 +64,11 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { bundlesOf, beamOf, labelPlace, labelText, pastSigns } from './beams.js';
+import { bundlesOf, beamOf, labelPlace, labelText, pastSigns, inkOf, strokeOf, pointOn, strokeIn } from './beams.js';
 import { edgeStub } from '../plane/camera.js';
 import { HUE, NEUTRAL_HUE, STUB } from '../plane/register.js';
 import { t } from '../strings.js';
+import { recorder } from '../test/canvas.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13';
 // the person's edition, another account's, a third account's
@@ -105,7 +118,7 @@ test('a third party\'s link between D and H, homed at neither, joins that bundle
   assert.deepEqual(members(bs).map(([l]) => l).sort(), [INTO, OWN, THIRD].sort());
 });
 
-test('each beam once: a link met from both its ends, and a link with both ends inside one document, are drawn once', () => {
+test('each beam once, counted once: a link met from both its ends, and a link with both ends inside one document, are drawn once — and so is one met from both its ends while its far box shows another version of its document', () => {
   LK.reveal(H, 3);
   const all = met([D, H]);
   assert.ok(all.filter((b) => b.s.link.addr === OWN).length === 2 && all.filter((b) => b.s.link.addr === INSIDE).length === 2, 'LK shows each at both its ends');
@@ -113,19 +126,49 @@ test('each beam once: a link met from both its ends, and a link with both ends i
   assert.equal(drawn.filter(([l]) => l === OWN).length, 1, 'the person\'s citation, met at D and at H, once');
   assert.equal(drawn.filter(([l]) => l === INSIDE).length, 1, 'the link inside D, met at both its ends, once');
   assert.deepEqual(bundlesOf(all).map((b) => [b.near, b.far]), [[D, H], [D, D]], 'the first met keeps it: no bundle from H back to D');
+  // H's box showing its second version, whose text holds H's twenty bytes: the links into H met at D and at that version
+  const H2 = H + '.2';
+  REC.takeImage(H2, 1, [{ iStart: H + '.0.1.1', width: 20 }]);
+  REC.takeLinks(H2, [OWN, INTO, THIRD, TWO]);
+  LK.readers({ shown: (a) => (a === H ? H2 : a) });
+  try {
+    const both = met([D, H2]);
+    assert.deepEqual([OWN, INTO].map((l) => both.filter((b) => b.s.link.addr === l).map((b) => b.s.near)), [[D, H2], [D, H2]], 'LK shows each at D and at the version H\'s box shows');
+    /** each bundle met from the documents named, with its count */
+    const counted = (/** @type {string[]} */ docs) => bundlesOf(met(docs)).map((b) => [b.near, b.far, b.members.length]);
+    assert.deepEqual(counted([D, H2]), counted([D]), 'each once, D\'s bundle counted as from D alone: no bundle from the version back to D');
+  } finally { LK.readers({}); }
 });
 
-test('a beam met from both its ends is marked with what its meetings share: neutral where it is another\'s at one end and the owner\'s at the other, whichever document is met first (P44)', () => {
+test('each end of a beam takes the colour of the document it touches, the one the link\'s symbol takes there — whether one side drew it or both, whichever met it first — and is never neutral (issue #166\'s design decision)', () => {
+  /** the hue and linker a mark draws in */
+  const look = (/** @type {import('../plane/register.js').Mark} */ m) => [m.hue, m.linker];
+  /** a link's symbol's look at a document, as its article sets it there */
+  const symbol = (/** @type {string} */ l, /** @type {string} */ at) => look(/** @type {import('../links/links.js').Shown} */ (LK.symbols(at).find((s) => s.link.addr === l)).mark);
+  /** the beams met from the documents named, each with the look of its end at each document it joins */
+  const drawn = (/** @type {string[]} */ docs) => bundlesOf(met(docs)).flatMap((b) => b.members);
+  const ends = (/** @type {string} */ l, /** @type {string[]} */ docs) => drawn(docs).filter((m) => m.s.link.addr === l).map((m) => ({ [m.s.near]: look(m.s.mark), [m.s.farAt]: look(m.s.farMark) }));
   LK.reveal(H, 3);
-  /** each beam's link and the hue and linker it is drawn in */
-  const marks = (/** @type {string[]} */ docs) => bundlesOf(met(docs)).flatMap((b) => b.members).map((m) => [m.s.link.addr, m.mark.hue, m.mark.linker]);
-  assert.deepEqual(LK.beams(H).filter((s) => s.link.addr === INTO).map((s) => s.linker), ['owner'], 'another\'s link into D, H\'s owner\'s at H');
+  assert.deepEqual([symbol(INTO, D), symbol(INTO, H)], [[HUE.others, 'others'], [HUE.owner, 'owner']], 'H\'s owner\'s link into D: another\'s at D, its toggle on there, and the owner\'s at H');
   for (const order of [[D, H], [H, D]]) {
-    const drawn = marks(order);
-    assert.deepEqual(drawn.filter(([l]) => l === INTO), [[INTO, NEUTRAL_HUE, null]], `another's at D, its toggle on, and the owner's at H: neutral, undashed (${order.join(' then ')})`);
-    assert.deepEqual(drawn.filter(([l]) => l === OWN), [[OWN, HUE.you, 'you']], `the person's at both its ends: their hue (${order.join(' then ')})`);
-    assert.deepEqual(drawn.filter(([l]) => l === THIRD), [[THIRD, HUE.others, 'others']], `a third party's, met at D alone: as D marks it, dashed (${order.join(' then ')})`);
+    assert.deepEqual(ends(INTO, order), [{ [D]: symbol(INTO, D), [H]: symbol(INTO, H) }], `met at both (${order.join(' then ')}): one beam, each end its symbol's there`);
+    assert.deepEqual(ends(OWN, order), [{ [D]: [HUE.you, 'you'], [H]: [HUE.you, 'you'] }], `the person's own at both (${order.join(' then ')}): their hue at each end`);
+    assert.ok(drawn(order).every((m) => m.s.mark.hue !== NEUTRAL_HUE && m.s.farMark.hue !== NEUTRAL_HUE), `no beam neutral at either end (${order.join(' then ')})`);
   }
+  LK.reveal(H, 2);
+  assert.deepEqual([LK.beams(H).length, symbol(INTO, H)], [0, [HUE.owner, 'owner']], 'H at symbols: its symbol stands, no beam leaves it');
+  assert.deepEqual(ends(INTO, [D]), [{ [D]: symbol(INTO, D), [H]: symbol(INTO, H) }], 'drawn from D alone: the same beam, its far end in H\'s symbol\'s colour');
+});
+
+test('only a bundle of differing colours is neutral, and only at the end where they differ; a single link never is (issue #166\'s design decision: "Neutral keeps one meaning")', () => {
+  /** each bundle D sends, with its hue at each end */
+  const hues = (/** @type {string[]} */ links) => { build(links); return bundlesOf(met([D])).map((b) => [b.near, b.far, b.marks.near.hue, b.marks.far.hue]); };
+  assert.deepEqual(hues([OWN, INTO, THIRD]), [[D, H, NEUTRAL_HUE, NEUTRAL_HUE]], 'the person\'s, H\'s owner\'s and a third party\'s: their colours differ at D and at H');
+  assert.deepEqual(hues([INTO, THIRD]), [[D, H, HUE.others, NEUTRAL_HUE]], 'H\'s owner\'s and a third party\'s: another\'s both at D, apart at H');
+  assert.deepEqual(hues([OWN]), [[D, H, HUE.you, HUE.you]], 'one link: its own colour at each end');
+  build(Object.keys(LINKS)); LK.reveal(H, 3);
+  const beams = bundlesOf(met([D, H])).flatMap((b) => b.members);
+  assert.ok(beams.length > 1 && beams.every((m) => m.s.mark.hue !== NEUTRAL_HUE && m.s.farMark.hue !== NEUTRAL_HUE), 'no single beam neutral at either end, whichever bundle holds it');
 });
 
 test('a link whose endset holds two spans in D keeps a beam from each', () => {
@@ -145,16 +188,19 @@ test('one stored end drawn at two documents — the one that minted its bytes an
   // another reader: the citation D's owner's at D, and another's at T, its toggle on there
   REC.setSession({ session: 's-2', principal: 2, account: '1.0.9' });
   LK.setOthers(T, true);
-  assert.deepEqual(bundlesOf(met([D, T])).flatMap((b) => b.members).map((m) => [m.s.near, m.mark.hue, m.mark.linker]), [[D, HUE.owner, 'owner'], [T, HUE.others, 'others']], 'each beam in its own document\'s mark, never the neutral hue of the two folded');
+  assert.deepEqual(bundlesOf(met([D, T])).flatMap((b) => b.members).map((m) => [m.s.near, m.s.mark.hue, m.s.mark.linker]), [[D, HUE.owner, 'owner'], [T, HUE.others, 'others']], 'each beam leaving in its own document\'s mark, never one folded into the other');
 });
 
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
-// a laid-out geometry: D mounted, its span at 50 wrapping onto two lines in a block 400 px wide from x 100; H, where mounted, its span at 1
-// wrapping onto two lines in a block from x 600 (or the block and lines handed in); H's box centred at `centre`
+// a laid-out geometry: D mounted, its span at 50 wrapping onto two lines in a block 400 px wide from x 100, in D's box; H, where mounted,
+// its span at 1 wrapping onto two lines in a block from x 600 (or the block and lines handed in); H's box centred at `centre`
 const NEAR = [{ x: 300, y: 100, w: 200, h: 15 }, { x: 100, y: 118, w: 80, h: 15 }];
 const NEAR_BLOCK = { x: 100, y: 90, w: 400, h: 60 };
+const NEAR_BOX = { x: 80, y: 30, w: 440, h: 500 };
 const FAR = [{ x: 700, y: 400, w: 50, h: 15 }, { x: 600, y: 418, w: 30, h: 15 }];
 const FAR_BLOCK = { x: 600, y: 390, w: 300, h: 50 };
+/** a document's box on screen centred at a point: 100 × 80 px */
+const around = (/** @type {{x: number, y: number}} */ p) => ({ x: p.x - 50, y: p.y - 40, w: 100, h: 80 });
 /** @returns {import('./beams.js').Geometry} */
 function geometry(/** @type {{farMounted: boolean, centre: {x: number, y: number}, far?: Rect[], farBlock?: Rect, signs?: Rect[]}} */ o) {
   const far = o.far || FAR, farBlock = o.farBlock || FAR_BLOCK;
@@ -164,12 +210,14 @@ function geometry(/** @type {{farMounted: boolean, centre: {x: number, y: number
     first: (addr) => (addr === H && o.farMounted ? farBlock : null),
     signs: (addr, pos) => (addr === D && pos >= 50 && pos < 60 ? o.signs || [] : []),
     mounted: (addr) => addr === D || (addr === H && o.farMounted),
-    centre: () => o.centre,
+    box: (addr) => (addr === D ? NEAR_BOX : around(o.centre)),
     view: SEEN,
   };
 }
 /** the visible view: a 1000 × 800 viewport below a one line 25 px tall */
 const SEEN = { x: 0, y: 25, w: 1000, h: 775 };
+/** a point's distance from a rect: none inside it */
+const away = (/** @type {Rect} */ r, /** @type {{x: number, y: number}} */ p) => Math.hypot(Math.max(r.x - p.x, 0, p.x - r.x - r.w), Math.max(r.y - p.y, 0, p.y - r.y - r.h));
 const inside = (/** @type {{x: number, y: number, w: number, h: number}} */ a, /** @type {typeof SEEN} */ b) => a.x >= b.x && a.y >= b.y && a.x + a.w <= b.x + b.w && a.y + a.h <= b.y + b.h;
 const own = () => /** @type {import('../links/links.js').Shown} */ (LK.beams(D).find((s) => s.link.addr === OWN));
 
@@ -180,7 +228,7 @@ test('a block parted across two columns sends each line\'s beam from the right e
   const g = { ...geometry({ farMounted: false, centre: { x: 50, y: 700 } }), lines: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => (addr === D && pos === 50 && width === 10 ? lines : []), block: (/** @type {string} */ addr) => (addr === D ? parts : []) };
   const first = beamOf(own(), g);
   assert.deepEqual(first && [first.from, first.line], [{ x: 500, y: 107.5 }, lines[0]], 'the far end below and to the left: the first column\'s line, from the first part\'s edge');
-  const second = beamOf(own(), { ...g, centre: () => ({ x: 1200, y: -200 }) });
+  const second = beamOf(own(), { ...g, box: () => around({ x: 1200, y: -200 }) });
   assert.deepEqual(second && [second.from, second.line], [{ x: 960, y: 32.5 }, lines[1]], 'the far end above and to the right: the second column\'s line, from the second part\'s edge');
 });
 
@@ -253,7 +301,7 @@ test('a far end not laid out whose box\'s centre stands under the one line is of
   const g = { ...geometry({ farMounted: true, centre: { x: 900, y: 10 } }), lines: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => (addr === D && pos === 50 && width === 10 ? NEAR : []) };
   const b = beamOf(own(), g);
   assert.ok(b && b.stub && Math.abs(b.end.y - (SEEN.y + STUB.inset)) < 1e-9, `outside the visible view, though inside the viewport: its stroke cut STUB.inset px below the line (${JSON.stringify(b && b.end)})`);
-  const c = beamOf(own(), { ...g, centre: () => ({ x: 900, y: 40 }) });
+  const c = beamOf(own(), { ...g, box: () => around({ x: 900, y: 40 }) });
   assert.deepEqual(c && [c.stub, c.end], [false, { x: 900, y: 40 }], 'below the line, in view: no stub, the beam ends at the box\'s centre');
 });
 
@@ -270,6 +318,48 @@ test('a far end not laid out whose box\'s centre stands in the visible view is w
   assert.ok(above && above.stub, 'above the view: a stub');
   assert.deepEqual(above.end, edgeStub(above.from, above.to, SEEN), 'its stroke cut where P-CAM\'s edgeStub cuts the bearing to its box');
   assert.ok(Math.abs(above.end.y - (SEEN.y + STUB.inset)) < 1e-9, `STUB.inset px below the one line (${JSON.stringify(above.end)})`);
+});
+
+test('differing ends change colour once, outside both documents: the stroke cut at the first point along it as far from the far document\'s box as from the near one\'s, the two stretches of the one curve meeting there, each butt-capped and drawn from it in its own end\'s ink; a stub, and a beam whose ends agree, one stroke in its near end\'s (issue #166\'s design decision)', () => {
+  // H's owner's link into D, another's at D and the owner's at H, its far end projected where its slot stores it, at H's 7
+  REC.takeProjection(INTO, 1, H, [{ pos: 7, width: 5 }]);
+  const into = /** @type {import('../links/links.js').Shown} */ (LK.beams(D).find((s) => s.link.addr === INTO));
+  // D's box to x 720 and H's from x 840; the link's line leaving D's block at x 500, its far line in H's block from x 900
+  const D_BOX = { x: 80, y: 0, w: 640, h: 700 }, H_BOX = { x: 840, y: 0, w: 640, h: 700 };
+  /** @type {import('./beams.js').Geometry} */
+  const g = {
+    lines: (addr, pos, width) => (addr === D && pos === 3 && width === 10 ? [{ x: 300, y: 100, w: 200, h: 15 }] : addr === H && pos === 7 && width === 5 ? [{ x: 950, y: 400, w: 50, h: 15 }] : []),
+    block: (addr) => (addr === D ? [{ x: 100, y: 90, w: 400, h: 60 }] : addr === H ? [{ x: 900, y: 390, w: 300, h: 50 }] : []),
+    first: () => null, signs: () => [], mounted: (addr) => addr === D || addr === H,
+    box: (addr) => (addr === D ? D_BOX : H_BOX), view: SEEN,
+  };
+  const b = beamOf(into, g);
+  assert.ok(b && b.change != null, 'its ends differ: it changes');
+  assert.deepEqual([b.from, b.end, b.stub], [{ x: 500, y: 107.5 }, { x: 900, y: 407.5 }, false]);
+  const c = strokeOf(b.from, b.end), at = pointOn(c, b.change);
+  assert.ok(Math.abs(at.x - 780) < 1e-6 && Math.abs(away(D_BOX, at) - away(H_BOX, at)) < 1e-6 && away(D_BOX, at) > 0,
+    `midway between the two boxes' edges, outside both (${JSON.stringify(at)}) — never at the curve's middle, x ${pointOn(c, 0.5).x}, inside D's box`);
+  const { ctx, strokes } = recorder();
+  strokeIn(ctx, c, inkOf(into.mark), inkOf(into.farMark), b.change);
+  assert.deepEqual(strokes.map((s) => [s.hue, s.dash, s.cap]), [[HUE.others, [5, 4], 'butt'], [HUE.owner, [], 'butt']], 'two stretches: D\'s end another\'s, dashed, H\'s the owner\'s, solid — butt-capped, whatever cap the context held, so they meet and never overlap');
+  assert.ok(strokes.every((s) => Math.hypot(s.start.x - at.x, s.start.y - at.y) < 1e-9), 'each drawn from the one point, so the dashed one begins in ink there');
+  assert.deepEqual(strokes.map((s) => s.curve[2]), [b.from, b.end], 'D\'s back to where the beam leaves D, H\'s on to where it ends in H');
+  for (const [s, on] of /** @type {Array<[import('../test/canvas.js').Stroke, (u: number) => number]>} */ ([[strokes[0], (u) => b.change * (1 - u)], [strokes[1], (u) => b.change + (1 - b.change) * u]])) {
+    const part = /** @type {import('./beams.js').Cubic} */ ([s.start, ...s.curve]);
+    for (const u of [0.25, 0.5, 0.75]) { const p = pointOn(part, u), q = pointOn(c, on(u)); assert.ok(Math.hypot(p.x - q.x, p.y - q.y) < 1e-6, `every point of each stretch on the one curve (${s.hue} at ${u})`); }
+  }
+  // the same beam, its far end past the view's right border: a stub, in D's colour to the border
+  const stub = beamOf(into, { ...g, view: { x: 0, y: 25, w: 850, h: 775 } });
+  assert.ok(stub && stub.stub && stub.change === null, 'a stub changes nowhere');
+  const cut = recorder();
+  strokeIn(cut.ctx, strokeOf(stub.from, stub.end), inkOf(into.mark), inkOf(into.farMark), stub.change);
+  assert.deepEqual(cut.strokes.map((s) => [s.hue, s.dash]), [[HUE.others, [5, 4]]], 'one stroke, D\'s end\'s ink');
+  // the person's own, theirs at both ends
+  const mine = beamOf(own(), geometry({ farMounted: false, centre: { x: 750, y: 415 } }));
+  assert.ok(mine && mine.change === null, 'the person\'s own, theirs at both ends: no change');
+  const one = recorder();
+  strokeIn(one.ctx, strokeOf(mine.from, mine.end), inkOf(mine.s.mark), inkOf(mine.s.farMark), mine.change);
+  assert.deepEqual(one.strokes.map((s) => [s.hue, s.dash]), [[HUE.you, []]], 'one stroke in their hue');
 });
 
 test('a bundle\'s label stands above its end, toward the view\'s middle, and below its end where above would reach past the visible view\'s top', () => {
