@@ -129,6 +129,35 @@ fix; nothing here depends on their names.
   sign whole. A document drawn smaller than its neighbours is framed
   and says so.
 
+- **FP-29 The strip under the top line follows one rule; draw order
+  never decides what shows there.** Upward stubs — the plane's, the
+  beams' and their labels — keep the border on one row, and while a
+  name holds, its place's ground runs up to the line with the stubs
+  drawn on it; held names stand below that row, no triangle or stub
+  label touches them, and only a beam's line may pass beneath. Every
+  place's name heads its visible part: a name holds once it would pass
+  under the stub row or its parent's held row, unless the line names
+  it; held rows stack outermost first and never overlap, each its
+  place's ground across that place's width; the first row shows its
+  whole address, and its board where the line names another, each row
+  beneath only its own fields, so read together the rows give every
+  address whole. A document's corner stands on its name's row, at the
+  column being read. No act leaves its target — a focus, a caret, a
+  selection or a landing — under the strip.
+- **FP-31 A sign is a mark that says where, or words that say what.**
+  A mark stays in the text at the text's scale, takes no width, moves no
+  word and never leaves its characters. Words never stand in a line or
+  on ink: they stand at the column's edge level with their line, or in
+  its corner, on the screen-sized layer, placed each frame by the
+  transform that places their line, neighbours stacking downward joined
+  to their line; they keep their share of the text's size and never fall
+  below the smallest readable text size, their room reserved beside the
+  column at the text's own size. While the text is readable no sign is
+  hidden or dropped to make room, and no zoom lays text out again. A
+  narrowing view gives up empty space first, then each sign's full form
+  for its compact one, and only then the measure, which has no floor in
+  characters.
+
 ## The bridge
 
 - **FP-14 The page never dials a board.** Every read, every write,
@@ -219,7 +248,8 @@ fix; nothing here depends on their names.
   page makes: a landing, a key made at one, a place left or a notice
   shown takes neither its focus nor its text, nor ends the chrome it
   stands in, and once a landing has passed over it, that chrome's
-  close gives the focus to the walk's element. A replacement is not a
+  close gives the focus to the surface a key replayed at the landing
+  opened, else to the walk's element. A replacement is not a
   dismissal: an overlay that takes another's place keeps the chain's
   one opener, takes the focus on its first act where the replaced one
   held it, and a face never takes it. The ring and the one status
@@ -244,6 +274,23 @@ fix; nothing here depends on their names.
   camera leaving gives its entry back. No act is cancelled by a pan or
   zoom, and nothing flies the reader back unbidden.
 
+## What stands
+
+- **FP-28 A surface ends only by the reader's act.** A card, a list, a
+  selection, a reading scene or a field being typed in ends when the
+  reader closes it, replaces it, or leaves its place, and by nothing
+  else: a read that lands or fails, a version move and a replayed key
+  stand beside it, never closing or covering it and never taking its
+  caret; a failure's face stacks below the card it concerns, and Esc
+  closes the face first. Each surface is named by what it is about —
+  a link, a span's bytes, a document, the version shown — so it leaves
+  and returns with its place, the scene with its panes' versions, and
+  the landing rule re-checks it whenever the text under it changes:
+  where all of its subject stands it moves there; where part or none
+  does it stays, says so, and offers the version that holds it. What
+  is shown away from the focus, or changed under it without the
+  reader's act, is spoken in the status region.
+
 ## The landing
 
 - **FP-21 An outline alone means all of it, here, in one piece.** An
@@ -265,11 +312,28 @@ fix; nothing here depends on their names.
   opening, at Esc after anything nearer, or at a change of the page's
   class (FP-23); a pan, a zoom, a selection or a step keeps it, and a
   return restores outlines and labels as left. Stepping the pieces follows find's concept, in passage order,
-  wrapping, with the focus on the piece. The item the focus lands on
+  wrapping, with the focus on the piece. Where the board will not read
+  the runs' bytes, no run is numbered: each is labelled one of its
+  count, the line says only part and why, and stepping follows the
+  document's order. The item the focus lands on
   takes the crossing and the label as its description, the one
   announcement; no light sets `aria-current`. Every surface that knows
   the state before departure — a drawn link's far end, a versions row
   — says it by the same rule, the short form heading the long.
+
+## The link's marks
+
+- **FP-30 Every mark of a link says one fact, the same way everywhere,
+  and only where the page knows it.** Lit means the reader crossed this
+  link to get here; a piece's number is its place in the passage; the
+  maker is who made the link, named in words on every label and mirror
+  item, "yours" or the maker as the card names them, a bundle naming its
+  one maker or how many it holds; an end's colour is the colour of the
+  link's symbol at that end's document, at every scale, neutral only
+  where an end's links differ. A follow that fails lights nothing, and
+  its label carries the far end's state from the read it made. Where
+  the page cannot tell a fact, it says so, and why. No fact is carried
+  by colour alone.
 
 ## The box
 
@@ -421,6 +485,12 @@ found.
 - 2026-10-23 · FP-28 · #175 · the line, a face and a landing's reason each answered a session the person never closed their own way, all three saying "signed out", and nothing asked for a session again after boot
 - 2026-10-23 · FP-29 · #177 · at a session's end the walk, the scene's panes, the trail, the cards and the one line each kept what the dead session read their own way, the trail its drafts' first lines, and the plane dropped the places it no longer listed
 - 2026-10-23 · FP-21 · #177 · the arrival outlived a change of the page's class, its line and its descriptions speaking what the dead class measured
+- 2026-10-23 · FP-28 · #264 #265 #266 #267 · a late arrival won over what the reader held: a face replaced a card, a replayed key closed a field, a card stayed over swapped text, Back returned the words but not the work
+- 2026-10-23 · FP-20 · #267 · a key replayed at a landing opened a surface the field's Esc then never reached
+- 2026-10-23 · FP-29 · #261 #262 #263 · the strip's signs were layered by draw order: an account's name stood at its frame's foot, the corner on its column's top below the held name, and stubs over held names
+- 2026-10-23 · FP-30 · #257 #258 #259 #260 · a link's marks meant different things by state the reader could not see: a failed follow's light, unnumbered runs, a maker shown by hue alone, a connection's colour that changed with the zoom
+- 2026-10-23 · FP-21 · #258 · runs whose bytes the board will not read were numbered as if their order were known
+- 2026-10-23 · FP-31 · #254 #255 · a count fell to 5.6 px at the readable size and the measure to 19 characters at 320 px, signs giving way before margins
 
 ## What these rule out
 
