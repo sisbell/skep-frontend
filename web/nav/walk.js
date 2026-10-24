@@ -87,8 +87,9 @@
 // made from the record the plane's
 // placeholder is (T-ARTICLE's `placeholderOf`: the owner of its origin, the
 // entitlement arm for this reader, C-67's clause where the origin's edition
-// claims decide one, and nothing in its place where they do not — R56,
-// B1-S7, PUB-5.124), and a
+// claims decide one — "edition claims not read" where a read of them failed —
+// and nothing in its place where they do not — R56, B1-S7, PUB-5.124; issue
+// #186), and a
 // document a read answered `withheld` is named by its withheld box's words
 // (T-LAYER's `withheldBox`: existence and owner — B1-S2), one the board said
 // nothing about by a far end's words for it (`L.far.unregistered`), and one

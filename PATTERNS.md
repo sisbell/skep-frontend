@@ -338,6 +338,18 @@ fix; nothing here depends on their names.
   the page cannot tell a fact, it says so, and why. No fact is carried
   by colour alone.
 
+## The faces
+
+- **FP-33 A fact about a document reads the same on every face that
+  states the document.** Each face that states a document carries a fact
+  the page reads of it in the same words, in the same place, taken only
+  from the read that answers that fact. A blank place means the read
+  found nothing; where the read failed, the face says the fact was not
+  read; where the board refuses the read as withheld from the reader, no
+  face states the fact. The read is made with the reads that draw the
+  face, so a face an act shows stands with the fact from its first
+  frame, and the fact never moves the text around it.
+
 ## The box
 
 - **FP-22 A box shows one version.** Every version of a document
@@ -470,6 +482,7 @@ last. Each stands until a later decision says it changes it.
 - **#179**: a `withheld` refusal describes the document the board names in `site.addr`, by the first case that holds — its text on screen shows the change, the ending's words and sign-in where the session ended; a follow's destination is landed at like any jump, no notice at the departure; a link address inside it keeps C-39's words; else its own withheld words at the act — those words its address unless it is the document in view, "withheld · ⟨owner⟩", whose act could open it and the pointer to a claimed edition, whole the first time a session shows them and compact after, each face the act's answer, tied to it in markup, its act reached by keyboard while it stands; the access-withdrawn notice waits on skep #577's read of a withdrawal, and the act's repeat after sign-in on the ceremonies' lane → FP-25, FP-26
 - **#182**: a folded moment is one segment of the one line naming its walk and its step and that it waits on the reader, never cut short of room, the shell told nothing; its act unfolds the moment as it was left, its typed text and its refusal with it, over the view its walk showed it over, the focus on its first words; only its own cancel, named by its walk, sends `cancel(id)`; its walk's next moment opens as the last was left; a statement never folds, what its walk does next and when it ends waiting on skep #627, and what a cancel leaves behind on skep #628 → FP-28 (What stands), FP-20
 - **#184**: the versions list keeps every member its probe read, and its open end says whether the board ended the chain there — the head's row marked latest, by a shape, only where the board answered that no member follows; else one line in the list's own type saying how far it read and that it is not known to be complete, "then the board stopped answering" where the board did not answer, with "try again" going on from there and nothing resuming by itself — the version being read and the members the feed names past the stop listed "not read" and dated "as last read ⟨when⟩"; while it is not known to be complete, nothing built from it claims a total or a latest
+- **#186**: a withheld origin's edition claims decide one clause beneath the arm of every face naming that origin — a withheld run's and the document's own, never a link address inside it — the pointer as a working link, the quoting form, or nothing where no claim is admitted, a failed read of them worded "edition claims not read"; changes #179: the document's own words carry that clause, not the pointer alone → FP-33
 
 ## What these rule out
 

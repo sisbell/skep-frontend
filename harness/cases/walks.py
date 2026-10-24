@@ -94,7 +94,8 @@ def run(ctx):
     # and C-67's clause by the origin's edition claims (PUB-5.124), as the page's own reads of them decide it
     clause_id, decided = ctx.edition_clause(WINDOW[2])
     clause = {'C-67.pointer': 'then C-67\'s pointer, "a published edition may exist — follow the edition claim"',
-              'C-67.quoting': 'then C-67\'s QUOTING sibling, naming %s' % decided.get('claimant')}.get(
+              'C-67.quoting': 'then C-67\'s QUOTING sibling, naming %s' % decided.get('claimant'),
+              'L.clause.unread': 'then "edition claims not read" in the place of C-67\'s clause — a read of the claims on %s failed' % WINDOW[2]}.get(
         clause_id, 'and nothing in the place of C-67\'s clause — the board admits no edition claim on %s' % WINDOW[2])
     step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s gap occupies the run, as tall as its bars, never its bytes — its head, "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", in it — and the run\'s face holds the guest\'s entitlement arm, %s, %s: whole in the gap where its lines hold it, else compact at its column\'s edge, its mark opening it whole (issue #151); the act at it, C-39\'s face, is the guest case\'s.' % (arm, clause), 'window-run-withheld',
          claims=[(PLACEHOLDER, 'the withheld run\'s gap', None)])

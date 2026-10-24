@@ -131,7 +131,8 @@
 // `symbols`, a stretch several links mark in the one mark LK's `mergedMark`
 // gives; a withheld run's owner and C-67's clause beneath it from what the
 // model holds of its origin (`originOwner`, `clauseOf`), the article made
-// again as the origin's edition claims arrive and go (M-REC's revision);
+// again as the origin's edition claims and the reads of them arrive, fail and
+// go (M-REC's revision);
 // the selection from O-SELECTION and the focus from N-WALK are
 // handed to T-ARTICLE as values at mount, and each frame marks a standing
 // article's blocks for them in place by T-ARTICLE's one rule (`blockMarks`):
@@ -1460,22 +1461,26 @@ export function originOwner(addr) { return ownerAccount(REC.doc(addr)); }
  * C-67's clause beneath a withheld run of an origin (PUB-5.124), by
  * T-ARTICLE's one rule (`editionClause`) over what the model holds of the
  * origin's edition claims: the active view's lookup (M-REC's
- * `editionClaimsOf`), each listed claim's link as read, and its home's
- * publication state and owner — the owner by the one owner rule
- * (`ownerAccount`), as the origin's (`originOwner`), so the pointer follows
- * the claim whose home the origin's owner owns first. The plane's
- * placeholder, a pane's, the ARIA mirror's item at the run and the run's face
- * whole all read it (T-ARTICLE's `placeholderOf`), so none of them part
- * (R94).
+ * `editionClaimsOf`) — the claims listed, or that it was refused as withheld
+ * or failed — each listed claim's link as read, and its home's publication
+ * state and owner — the owner by the one owner rule (`ownerAccount`), as the
+ * origin's (`originOwner`), so the pointer follows the claim whose home the
+ * origin's owner owns first — and whether a read of either failed, unanswered
+ * since (M-REC's `readFailed`). The plane's placeholder, a pane's, the ARIA
+ * mirror's item at the run, the run's face whole and the document's own
+ * withheld face all read it (T-ARTICLE's `placeholderOf`, O-FACES), so none
+ * of them part (R94; issue #186's design decision: "One fact, one
+ * placement").
  * @param {string} origin
  * @returns {import('./article.js').Clause | null}
  */
 export function clauseOf(origin) {
   const listed = REC.editionClaimsOf(origin);
   const claims = Array.isArray(listed) ? listed.map((claim) => {
-    const home = homeOf(claim) || claim, h = REC.has(home) ? REC.doc(home) : null;
-    return { claim, link: REC.link(claim) || null, home, published: h && h.meta ? h.meta.published : h && h.refused ? false : null, claimant: h ? ownerAccount(h) : '' };
-  }) : null;
+    const home = homeOf(claim) || claim, h = REC.has(home) ? REC.doc(home) : null, link = REC.link(claim) || null;
+    const published = h && h.meta ? h.meta.published : h && h.refused ? false : null;
+    return { claim, link, home, published, claimant: h ? ownerAccount(h) : '', failed: (!link && REC.readFailed(claim)) || (published === null && REC.readFailed(home)) };
+  }) : listed ?? null;
   return editionClause(origin, originOwner(origin), claims);
 }
 

@@ -41,7 +41,11 @@
 // the run is decided from (PUB-5.124, PUB-5.99, PUB-7.50) — the active view's
 // lookup of the edition claims on the origin (M-FRAMES's `editionClaimsAt`),
 // then each listed claim's link (`read_link`) and its home's metadata
-// (`doc_metadata`), the page's own reads of both, memoized with them.
+// (`doc_metadata`), the page's own reads of both, memoized with them — a
+// refusal of the lookup held by whether it was withheld, and one of the
+// others that says nothing of what it reads, or the board not answering,
+// held failed, so the clause says the claims were not read (issue #186's
+// design decision: "A blank there would read as 'no claim'").
 // Asked by an act rather than the view: the page's session
 // (`acquireSession`: `session(board)`, at boot and for a session lost — see
 // THE ACQUIRE below), the client index (`readIndex`: `places`, at boot and
@@ -49,9 +53,11 @@
 // it is out), the board's health and its daemon at boot
 // (`readHealth`, `readProbe`), a whole document (`loadWhole`, the claims
 // on its withheld runs' origins among it, so a pane the scene makes from it
-// and the walk's mirror item at a run hold the clause decided), the edition
-// claims on a withheld document whose face decides C-67's pointer from them
-// (`readClaims`; issue #179's design decision), where a
+// and the walk's mirror item at a run hold the clause decided), the reads of
+// C-67's clause beneath a face stating a withheld origin, made before the
+// face shows where the page holds no answer to one (`claimsToRead`,
+// `readClaims`; issue #186's design decision: "Make this read together with
+// the reads that draw the face"), where a
 // link's end projects now (`projectEnd`), a link's supersession lineage
 // (`lineage`: `in_claims` and `out_claims`, A-56, A-57), the chain's
 // members to its end (`probeChain`: the versions list's, a landing's
@@ -865,8 +871,9 @@ function hold(key) {
  * A need: a read keyed for the in-flight set, issued within the budget;
  * answered once; a retry-class refusal (`scan_busy`) reissued after a pause;
  * a read the board did not answer held (`hold`) and asked again past its
- * pause or at the daemon's `running`, its refusal recorded once for the
- * outage; any other refusal recorded and not asked again until invalidated.
+ * pause or at the daemon's `running`, its refusal recorded and told to
+ * `onRefused` once for the outage; any other refusal recorded, told to
+ * `onRefused`, and not asked again until invalidated.
  * A read that lands after its document was dropped (`watchDrops`), or the
  * edition claims for a lookup of them (`watchClaims`), frees its slot and
  * takes nothing — no answer, no refusal recorded, no hold, no retry — its key
@@ -878,7 +885,7 @@ function hold(key) {
  * @param {object} frame
  * @param {(answer: unknown) => void} take
  * @param {string} addr the document the read is for — a projection's, the document projected into: its drop voids the read, and a refusal is recorded against it
- * @param {(r: Refusal) => void} [onRefused]
+ * @param {(r: Refusal) => void} [onRefused] told of each refusal the need keeps — one the board gave, or the board not answering (`unreachable`), whose read is asked again past its pause — never of a retry-class one
  * @param {(addr: string) => () => boolean} [watch] the drop that voids the read, watched from the moment it goes out: `addr`'s (`watchDrops`), or the edition claims' (`watchClaims`)
  * @returns {boolean} missing
  */
@@ -899,7 +906,7 @@ function need(key, frame, take, addr, onRefused, watch = watchDrops) {
     if ('refused' in out) {
       const refusal = out.refused;
       const record = () => { const r = { frame: /** @type {{op?: string}} */ (frame).op || 'op', refusal, addr }; refusals.push(r); for (const w of refusalWatchers) w(r); };
-      if (unanswered(refusal)) { if (hold(key)) record(); }
+      if (unanswered(refusal)) { if (hold(key)) { record(); if (onRefused) onRefused(refusal); } }
       else {
         unreached.delete(key); record();
         if (refusal.name === 'scan_busy' || refusal.name === 'history_busy') { retryAt.set(key, performance.now() + RETRY_MS); }
@@ -1020,13 +1027,13 @@ export function pump() {
       continue;
     }
     if (!d.meta && docPx > 40) {
-      if (need('m:' + d.addr, F.docMetadata(d.addr), (a) => { const m = F.decodeDocMetadata(a); if (m) REC.takeMetadata(d.addr, m); }, d.addr, (r) => refuseDoc(d, r))) missing++;
+      if (need('m:' + d.addr, F.docMetadata(d.addr), (a) => { const m = F.decodeDocMetadata(a); if (m) REC.takeMetadata(d.addr, m); }, d.addr, (r) => metaRefused(d, r))) missing++;
     }
     if (!d.linksRead && docPx > 18 && d.extent > 0) {
       if (need('l:' + d.addr, F.findLinksV(d.addr, 1, d.extent), (a) => REC.takeLinks(d.addr, F.decodeAddrs(a)), d.addr)) missing++;
     }
     for (const la of REC.unreadLinks(d.addr).slice(0, 12)) {
-      if (need('k:' + la, F.readLink(la), (a) => { const v = F.decodeLinkValue(la, a); if (v) REC.takeLink(v); }, d.addr)) missing++;
+      if (need('k:' + la, F.readLink(la), (a) => { const v = F.decodeLinkValue(la, a); if (v) REC.takeLink(v); }, d.addr, (r) => linkRefused(la, r))) missing++;
     }
     const em = estimate(d.extent, box, measure()).fs * cam.scale;
     if (drawn && em >= FETCH_EM && d.extent > 0) {
@@ -1087,32 +1094,68 @@ function farEnds(addr) {
 /**
  * The view's reads of C-67's clause beneath the withheld runs of one origin
  * (PUB-5.124, PUB-5.99, PUB-7.50): the active view's lookup of the edition
- * claims on it (M-FRAMES's `editionClaimsAt`) where the model holds none, its
- * key counting the drops of the claims held (M-REC's `claimDrops`), so it is
- * asked again after each and a lookup out across one takes nothing
- * (`watchClaims`); then, for each claim listed, its link (`read_link`) where
- * the model holds none, and its home's publication state and owner
- * (`doc_metadata`) where the model holds neither nor a refusal of it — the
- * page's own reads of a link and a document, keyed as the view keys them, so
- * each is read once for every reader of it. T-ARTICLE's `editionClause`
- * decides the clause from what they hold.
+ * claims on it (M-FRAMES's `editionClaimsAt`) where the model holds no
+ * answer — none, or a failed one — its key counting the drops of the claims
+ * held (M-REC's `claimDrops`), so it is asked again after each and a lookup
+ * out across one takes nothing (`watchClaims`), a refusal held by whether it
+ * was withheld (`lookupRefused`); then, for each claim listed, the reads its
+ * admission waits on (`claimNeeds`) — its home's publication state and owner
+ * (`doc_metadata`), a refusal held of the home (`metaRefused`), and its link
+ * (`read_link`), a refusal held as failed (`linkRefused`) — the page's own
+ * reads of a document and a link, keyed as the view keys them, so each is
+ * read once for every reader of it. T-ARTICLE's `editionClause` decides the
+ * clause from what they hold.
  * @param {string} origin
  * @returns {number} the needs still missing
  */
 function needClaims(origin) {
-  const claims = REC.editionClaimsOf(origin);
-  if (claims === undefined) {
-    const take = (/** @type {string[] | 'refused'} */ c) => REC.takeEditionClaims(origin, c);
-    return need('e:' + REC.claimDrops() + ':' + origin, F.editionClaimsAt(origin), (a) => take(F.decodeAddrs(a)), origin, () => take('refused'), watchClaims) ? 1 : 0;
+  const listed = REC.editionClaimsOf(origin);
+  if (listed === undefined || listed === 'unread') {
+    return need('e:' + REC.claimDrops() + ':' + origin, F.editionClaimsAt(origin), (a) => REC.takeEditionClaims(origin, F.decodeAddrs(a)), origin, (r) => REC.takeEditionClaims(origin, lookupRefused(r)), watchClaims) ? 1 : 0;
   }
   let missing = 0;
-  for (const c of claims === 'refused' ? [] : claims) {
-    const home = homeOf(c) || c, h = REC.has(home) ? REC.doc(home) : null;
-    if (!REC.link(c) && need('k:' + c, F.readLink(c), (a) => { const v = F.decodeLinkValue(c, a); if (v) REC.takeLink(v); }, home)) missing++;
-    if (!(h && (h.meta || h.refused)) && need('m:' + home, F.docMetadata(home), (a) => { const m = F.decodeDocMetadata(a); if (m) REC.takeMetadata(home, m); }, home, (r) => refuseDoc(REC.doc(home), r))) missing++;
+  for (const c of Array.isArray(listed) ? listed : []) {
+    const n = claimNeeds(c), home = n.home;
+    if (n.meta && need('m:' + home, F.docMetadata(home), (a) => { const m = F.decodeDocMetadata(a); if (m) REC.takeMetadata(home, m); }, home, (r) => metaRefused(REC.doc(home), r))) missing++;
+    if (n.link && need('k:' + c, F.readLink(c), (a) => { const v = F.decodeLinkValue(c, a); if (v) REC.takeLink(v); }, home, (r) => linkRefused(c, r))) missing++;
   }
   return missing;
 }
+
+/**
+ * The reads an edition claim's admission waits on (PUB-5.99), as the page
+ * holds them: its home's metadata, where neither it nor a refusal of the
+ * home is held; and its link, where none is held — neither where the home is
+ * refused, or read unpublished, which admits the claim nowhere whatever its
+ * link says. A read held failed (M-REC's `readFailed`) waits still: an act
+ * asks it again (`readClaims`), and the view as it asks any refused read.
+ * @param {string} claim
+ * @returns {{home: string, meta: boolean, link: boolean}}
+ */
+function claimNeeds(claim) {
+  const home = homeOf(claim) || claim, h = REC.has(home) ? REC.doc(home) : null;
+  const nowhere = !!h && (!!h.refused || (!!h.meta && !h.meta.published));
+  return { home, meta: !nowhere && !(h && h.meta), link: !nowhere && !REC.link(claim) };
+}
+
+/**
+ * Does C-67's clause beneath a withheld origin wait on a read the page holds
+ * no answer to (`readClaims`'s reads): the lookup, where it has not answered
+ * or failed, or a read a listed claim's admission waits on (`claimNeeds`)? A
+ * face stating the origin makes them before it shows, so its clause is in its
+ * first frame (O-FACES; issue #186's design decision: "Make this read
+ * together with the reads that draw the face").
+ * @param {string} origin
+ * @returns {boolean}
+ */
+export function claimsToRead(origin) {
+  const listed = REC.editionClaimsOf(origin);
+  if (listed === undefined || listed === 'unread') return true;
+  return Array.isArray(listed) && listed.some((c) => { const n = claimNeeds(c); return n.meta || n.link; });
+}
+
+/** the edition-claim lookup refused, as the model holds it (M-REC's `Lookup`): 'withheld' where the board refused it as a read withheld from the reader, else 'unread' — the board not answering among it */
+const lookupRefused = (/** @type {Refusal} */ r) => (nameOf(r) === 'withheld' ? 'withheld' : 'unread');
 
 /** `project`'s span set as stretches of the text's content: each V-span's first position and its positions */
 const stretchesOf = (/** @type {unknown} */ answer) => F.decodeSpanSet(answer).filter((s) => s.subspace === 1).map((s) => ({ pos: s.ordinal, width: s.positions }));
@@ -1145,6 +1188,32 @@ function refuseDoc(/** @type {Doc} */ d, /** @type {Refusal} */ r) {
   if (n === 'doc_not_registered') REC.takeRefused(d.addr, 'unregistered');
   else if (n === 'withheld') REC.takeRefused(d.addr, 'withheld');
 }
+
+/**
+ * A read of a document's metadata refused: the fact kept where the refusal
+ * says it (`refuseDoc`); where it says nothing of the document — any refusal
+ * but `withheld` and `doc_not_registered`, or the board not answering — the
+ * read held failed (M-REC's `takeFailedRead`), so the clause of an edition
+ * claim homed there says its claims were not read (issue #186's design
+ * decision: "A blank there would read as 'no claim'").
+ * @param {Doc} d
+ * @param {Refusal} r
+ */
+function metaRefused(d, r) {
+  refuseDoc(d, r);
+  const n = nameOf(r);
+  if (n !== 'withheld' && n !== 'doc_not_registered') REC.takeFailedRead(d.addr);
+}
+
+/**
+ * A read of a link refused: where the refusal says nothing of the link's home
+ * — any but `withheld`, which the home's own refusal answers — the read held
+ * failed (M-REC's `takeFailedRead`), so the clause of the edition claim it
+ * is says its claims were not read (issue #186's design decision).
+ * @param {string} link
+ * @param {Refusal} r
+ */
+function linkRefused(link, r) { if (nameOf(r) !== 'withheld') REC.takeFailedRead(link); }
 
 /**
  * The view's probe of a document's chain (`probePass`, at most
@@ -1347,37 +1416,43 @@ async function readWhole(addr, dropped) {
 
 /**
  * C-67's reads for one origin, for an act — a whole read (`readWhole`), a
- * withheld document's face, which decides its pointer from them (O-FACES'
- * `prepare`) — as the view asks them (`needClaims`): the lookup of the
- * edition claims on it where the model holds none, taken where no drop of
- * the claims held overtook it (`watchClaims`); then each listed claim's link
- * and each listed claim's home's metadata the model lacks, the metadata
- * taken where the home was not dropped under it (`watchDrops`) and a refusal
- * of it held as the home's. A lookup or a link refused teaches the model
- * nothing here: the view asks it again, and records the refusal.
+ * face stating the origin, which shows once they answer (O-FACES' `prepare`)
+ * — as the view asks them (`needClaims`), each one the page holds no answer
+ * to, a failed one asked again: the lookup of the edition claims on it, taken
+ * where no drop of the claims held overtook it (`watchClaims`); then the
+ * metadata of each listed claim's home, at once, and the link of each claim
+ * whose home may be published (`claimNeeds`), at once, each taken where its
+ * home was not dropped under it (`watchDrops`). A refusal is held as the view
+ * holds it: the lookup's by whether it was withheld (`lookupRefused`), a
+ * home's of the home (`metaRefused`), a link's as failed (`linkRefused`) —
+ * the board not answering, as failed.
  * @param {string} origin
  */
 export async function readClaims(origin) {
-  if (REC.editionClaimsOf(origin) === undefined) {
+  const held = REC.editionClaimsOf(origin);
+  if (held === undefined || held === 'unread') {
     const dropped = watchClaims();
     const out = await read(F.editionClaimsAt(origin));
-    if (dropped() || 'refused' in out) return;
-    REC.takeEditionClaims(origin, F.decodeAddrs(out.answer));
+    if (dropped()) return;
+    REC.takeEditionClaims(origin, 'refused' in out ? lookupRefused(out.refused) : F.decodeAddrs(out.answer));
   }
-  const claims = REC.editionClaimsOf(origin);
-  for (const c of Array.isArray(claims) ? claims : []) {
-    if (!REC.link(c)) {
-      const out = await read(F.readLink(c));
-      if (!('refused' in out)) { const v = F.decodeLinkValue(c, out.answer); if (v) REC.takeLink(v); }
-    }
-    const home = homeOf(c) || c, h = REC.has(home) ? REC.doc(home) : null;
-    if (h && (h.meta || h.refused)) continue;
+  const listed = REC.editionClaimsOf(origin);
+  const claims = Array.isArray(listed) ? listed : [];
+  const homes = [...new Set(claims.filter((c) => claimNeeds(c).meta).map((c) => claimNeeds(c).home))];
+  await Promise.all(homes.map(async (home) => {
     const dropped = watchDrops(home);
     const out = await read(F.docMetadata(home));
-    if (dropped()) continue;
-    if ('refused' in out) refuseDoc(REC.doc(home), out.refused);
+    if (dropped()) return;
+    if ('refused' in out) metaRefused(REC.doc(home), out.refused);
     else { const m = F.decodeDocMetadata(out.answer); if (m) REC.takeMetadata(home, m); }
-  }
+  }));
+  await Promise.all(claims.filter((c) => claimNeeds(c).link).map(async (c) => {
+    const dropped = watchDrops(claimNeeds(c).home);
+    const out = await read(F.readLink(c));
+    if (dropped()) return;
+    if ('refused' in out) linkRefused(c, out.refused);
+    else { const v = F.decodeLinkValue(c, out.answer); if (v) REC.takeLink(v); }
+  }));
 }
 
 /**

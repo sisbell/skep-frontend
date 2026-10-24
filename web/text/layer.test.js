@@ -86,6 +86,10 @@
 // a reading scene's pane alike: its origin's, by the one rule the byline's
 // owner is found by, whoever owns the document windowing it (a view that
 // hands the article's owner back turns red).
+// And C-67's clause beneath a withheld origin, from what the model holds:
+// "edition claims not read" where a read a listed claim's admission waits on
+// failed, the empty place while one is out, decided again as the read
+// answers (issue #186: a clause that leaves a failed read blank turns red).
 // And what an article was made from, on the plane and in a reading scene's
 // pane alike: its document's blocks and runs as the model held them, kept
 // through a feed row naming the document and a delivery of other text, so its
@@ -851,6 +855,27 @@ test('a guest meets a withheld run named for its origin\'s owner, whoever owns t
     assert.ok(!html.includes(arm('1.0.1')), `${where}: no arm names 1.0.1, the owner of the document windowing the run`);
   }
 }, 1440, 900));
+
+// ---- C-67's clause, from what the model holds ---------------------------------------------------------------------------
+
+test('C-67\'s clause beneath a withheld origin reads the model whole: where a read a listed claim\'s admission waits on failed — its home\'s metadata, or its link — "edition claims not read"; while one is out, the empty place; and the read that answers it decides the clause again (issue #186\'s design decision: "A blank there would read as \'no claim\'")', () => {
+  const O = '1.0.1.0.1003', H = '1.0.1.0.9', C = H + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
+  const notRead = { id: 'L.clause.unread', text: t('L.clause.unread') };
+  REC.takeEditionClaims(O, [C]);
+  assert.equal(LAYER.clauseOf(O), null, 'the claim listed, its reads out: the empty place');
+  REC.takeFailedRead(H);
+  assert.deepEqual(LAYER.clauseOf(O), notRead, 'its home\'s metadata read failed');
+  REC.takeMetadata(H, { doc: H, published: true, owner: '1.0.1', birth: H + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
+  assert.equal(LAYER.clauseOf(O), null, 'the home answered, its link out: the empty place');
+  REC.takeFailedRead(C);
+  assert.deepEqual(LAYER.clauseOf(O), notRead, 'its link\'s read failed');
+  REC.takeLink({ addr: C, from: [span(H, 1, 20)], to: [whole(O)], type: R20 });
+  assert.deepEqual(LAYER.clauseOf(O), { id: 'C-67.pointer', text: t('C-67.pointer'), claim: C, home: H }, 'the link answered: the edition over its own bytes, the pointer');
+  REC.takeEditionClaims(O, 'unread');
+  assert.deepEqual(LAYER.clauseOf(O), notRead, 'the lookup failed');
+  REC.takeEditionClaims(O, 'withheld');
+  assert.equal(LAYER.clauseOf(O), null, 'the lookup refused as withheld from the reader: no clause');
+});
 
 // ---- what an article was made from -------------------------------------------------------------------------------------
 

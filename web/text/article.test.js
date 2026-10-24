@@ -12,8 +12,14 @@
 // alone turns red); a guest with none R56's key-absent default, naming the
 // owner. C-67's clause beneath the arm decided over the origin's whole
 // admitted-claim set (PUB-5.124, RES-164): nothing in its place where no
-// claim stands, or where the lookup, a claim's link or its home is not read
-// (a mutant that keeps the pointer unconditional turns red); the pointer
+// claim stands, where the lookup, a claim's link or its home is not read yet,
+// or where the board refused the lookup as withheld from the reader (a mutant
+// that keeps the pointer unconditional turns red); "edition claims not read"
+// where the lookup failed any other way, or a listed claim's admission waits
+// on a read that failed and no admitted claim passes nor waits on a read
+// still out (issue #186: a mutant that leaves the place blank over a failed
+// read, or says QUOTING over one, turns red), a line on the plane and in a
+// pane alike; the pointer
 // where any admitted claim's FROM holds bytes outside the origin — a
 // delegate's among them — even listed after one that quotes (a mutant that
 // decides by the first claim turns red), following the passing claim
@@ -201,25 +207,30 @@ const ORIGIN = '1.0.1.0.1003', OWNER = '1.0.1', R20 = '1.1.0.1.0.1.0.3.14';
 const bytesOf = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => resolveSpan({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w });
 /**
  * An edition claim at `addr` as the page holds its two reads: typed R20, homed where its address says, its home
- * published and owned by the home's account, its FROM twenty of the home's own bytes — each unless `o` says otherwise.
+ * published and owned by the home's account, its FROM twenty of the home's own bytes, no read of it failed — each unless
+ * `o` says otherwise.
  * @param {string} addr
- * @param {{type?: string | null, from?: import('../model/address.js').EndRef[], published?: boolean | null, claimant?: string, link?: null}} [o]
+ * @param {{type?: string | null, from?: import('../model/address.js').EndRef[], published?: boolean | null, claimant?: string, link?: null, failed?: boolean}} [o]
  * @returns {import('./article.js').ClaimSeen}
  */
 const claim = (addr, o = {}) => {
   const home = homeOf(addr) || addr;
   return {
     claim: addr, home, link: o.link === null ? null : { type: o.type === undefined ? R20 : o.type, from: o.from ?? [bytesOf(home, 1, 20)] },
-    published: o.published === undefined ? true : o.published, claimant: o.claimant ?? (accountOf(home) || ''),
+    published: o.published === undefined ? true : o.published, claimant: o.claimant ?? (accountOf(home) || ''), failed: o.failed ?? false,
   };
 };
 /** C-67's pointer following a claim, the LEAP to that claim's home its act */
 const pointer = (/** @type {string} */ followed) => ({ id: 'C-67.pointer', text: t('C-67.pointer'), claim: followed, home: homeOf(followed) });
 const quoting = (/** @type {string} */ claimant) => ({ id: 'C-67.quoting', text: t('C-67.quoting', { claimant }) });
+/** C-67's unread place: a read the clause is decided from failed */
+const unread = () => ({ id: 'L.clause.unread', text: t('L.clause.unread') });
 
-test('C-67\'s clause is the empty place where the origin carries no edition claim, or where its lookup is unread or refused (RES-85)', () => {
+test('C-67\'s clause is the empty place where the origin carries no edition claim, where its lookup has not answered, or where the board refused the lookup as withheld from the reader; "edition claims not read" where the lookup failed any other way (RES-85; issue #186\'s design decision: "If the board refuses the read for documents withheld from the reader, no face carries the clause. Otherwise, a face whose read failed says \'edition claims not read\'")', () => {
   assert.equal(editionClause(ORIGIN, OWNER, []), null, 'no claim on the origin: nothing in the clause\'s place');
-  assert.equal(editionClause(ORIGIN, OWNER, null), null, 'the lookup unread or refused: nothing');
+  assert.equal(editionClause(ORIGIN, OWNER, null), null, 'the lookup not answered: nothing');
+  assert.equal(editionClause(ORIGIN, OWNER, 'withheld'), null, 'the lookup refused as withheld from the reader: nothing');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, 'unread'), unread(), 'the lookup failed any other way: "edition claims not read", never a blank that reads as no claim');
 });
 
 test('the pointer where an admitted claim\'s edition holds bytes the reader can reach; the QUOTING sibling where its FROM holds the origin\'s, or none (PUB-5.124)', () => {
@@ -254,11 +265,22 @@ test('a claim failing admission — its home a draft or its claimant\'s own doc 
 });
 
 test('a claim whose link or whose home the page has not read leaves the clause the empty place, unless an admitted claim known already passes', () => {
-  const unread = claim('1.0.1.0.9.0.2.1', { link: null }), homeless = claim('1.0.1.0.10.0.2.1', { published: null });
-  assert.equal(editionClause(ORIGIN, OWNER, [unread]), null, 'its link unread');
-  assert.equal(editionClause(ORIGIN, OWNER, [homeless]), null, 'its home unread');
-  assert.equal(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.11.0.2.1', { from: [] }), unread]), null, 'a quoting claim beside an unread one: never QUOTING on reads not made');
-  assert.deepEqual(editionClause(ORIGIN, OWNER, [unread, homeless, claim('1.0.1.0.12.0.2.1')]), pointer('1.0.1.0.12.0.2.1'), 'an admitted claim known to pass: the pointer, whatever the others turn out to be');
+  const linkless = claim('1.0.1.0.9.0.2.1', { link: null }), homeless = claim('1.0.1.0.10.0.2.1', { published: null });
+  assert.equal(editionClause(ORIGIN, OWNER, [linkless]), null, 'its link not read yet');
+  assert.equal(editionClause(ORIGIN, OWNER, [homeless]), null, 'its home not read yet');
+  assert.equal(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.11.0.2.1', { from: [] }), linkless]), null, 'a quoting claim beside one not read yet: never QUOTING on reads not made');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [linkless, homeless, claim('1.0.1.0.12.0.2.1')]), pointer('1.0.1.0.12.0.2.1'), 'an admitted claim known to pass: the pointer, whatever the others turn out to be');
+});
+
+test('a claim whose admission waits on a read that failed — its link\'s, or its home\'s metadata — leaves "edition claims not read" where no admitted claim known passes and none waits on a read still out; never QUOTING, nor a blank, over it (issue #186\'s design decision: "A blank there would read as \'no claim\'")', () => {
+  const linkFailed = claim('1.0.1.0.9.0.2.1', { link: null, failed: true }), homeFailed = claim('1.0.1.0.10.0.2.1', { published: null, failed: true });
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [linkFailed]), unread(), 'its link\'s read failed');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [homeFailed]), unread(), 'its home\'s metadata read failed');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.11.0.2.1', { from: [] }), linkFailed]), unread(), 'beside a claim that quotes: never QUOTING on a read that failed');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.2.0.5.0.2.1'), homeFailed]), unread(), 'beside a claim admitted nowhere');
+  assert.equal(editionClause(ORIGIN, OWNER, [linkFailed, claim('1.0.1.0.12.0.2.1', { link: null })]), null, 'beside a claim whose read is still out: the empty place until it answers');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [linkFailed, homeFailed, claim('1.0.1.0.12.0.2.1')]), pointer('1.0.1.0.12.0.2.1'), 'an admitted claim known to pass: the pointer, whatever the failed reads would have said');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.9.0.2.1', { published: false, failed: true })]), null, 'a failed read of a claim the page knows admitted nowhere — its home refused — changes nothing');
 });
 
 test('the pointer follows the passing claim PUB-3.107\'s origin-keyed order picks: one whose home the origin\'s owner owns first, the lowest-addressed of several as tumblers, else the lowest-addressed passing claim (RES-152)', () => {
@@ -275,7 +297,7 @@ test('the pointer follows the passing claim PUB-3.107\'s origin-keyed order pick
   assert.deepEqual(editionClause(ORIGIN, OWNER, [quotes, claim('1.0.1.1.0.5.0.2.1'), claim('1.0.1.1.0.4.0.2.1')]), pointer('1.0.1.1.0.4.0.2.1'), 'the lowest-addressed passing claim, the owner\'s quoting one followed nowhere');
 });
 
-test('on the plane the pointer is a control carrying the claim it follows and that claim\'s home; in a pane it is a line, and the QUOTING sibling is a line everywhere', () => {
+test('on the plane the pointer is a control carrying the claim it follows and that claim\'s home; in a pane it is a line, and the QUOTING sibling and the unread place are lines everywhere', () => {
   const run = runOf(WIDE);
   const own = '1.0.1.0.9.0.2.1';
   const passes = () => editionClause(ORIGIN, OWNER, [claim('1.0.1.1.0.4.0.2.1'), claim(own)]);
@@ -285,6 +307,7 @@ test('on the plane the pointer is a control carrying the claim it follows and th
   assert.deepEqual(clauseIn(view({ clauseOf: passes })), [` data-claim="${own}" data-home="1.0.1.0.9" role="button" tabindex="-1"`, esc(t('C-67.pointer'))], 'on the plane: a button carrying the owner\'s claim and its home, the edition');
   assert.deepEqual(clauseIn(view({ clauseOf: passes, scene: true })), ['', esc(t('C-67.pointer'))], 'in a pane: a line, nothing in a pane acting on a mark (SC)');
   for (const scene of [false, true]) assert.deepEqual(clauseIn(view({ clauseOf: quotes, scene })), ['', esc(t('C-67.quoting', { claimant: OWNER }))], `${scene ? 'in a pane' : 'on the plane'}: the QUOTING sibling follows nothing`);
+  for (const scene of [false, true]) assert.deepEqual(clauseIn(view({ clauseOf: () => editionClause(ORIGIN, OWNER, 'unread'), scene })), ['', esc(t('L.clause.unread'))], `${scene ? 'in a pane' : 'on the plane'}: "edition claims not read" follows nothing`);
 });
 
 test('the placeholder\'s clause is the one its origin\'s claims decide; where they decide none, the arm\'s own copy stands alone', () => {

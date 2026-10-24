@@ -17,9 +17,17 @@
 // board names in the rejection's `site.addr`, never another the act named (a
 // mutant that takes the act's turns red), named by the act's caption and said
 // so (a mutant that drops it turns red); C-67's pointer beneath the arm where
-// the edition claims on the document decide one, the claims read for the face
-// once and the face shown again as they land, its act the LEAP handed in (a
-// mutant that never shows it again turns red). A mutant that fills C-39 with
+// the edition claims on the document decide one, its act the LEAP handed in,
+// the claims read once before the face shows, nothing standing while they
+// are out (a mutant that shows the face before they answer turns red). Every
+// face stating a withheld origin — the document's own words and a run's face
+// whole — carries C-67's clause in the same words beneath the arm (issue
+// #186): the QUOTING sibling a line, with or without a LEAP (a mutant that
+// shows the document's pointer alone turns red); "edition claims not read"
+// where the board refused the lookup another way or did not answer it (a
+// mutant that leaves the place blank turns red); nothing where it refused the
+// lookup as withheld from the reader; and the description a landing at the
+// document says carries it. A mutant that fills C-39 with
 // the owner, takes the owner from the document's address, drops the arm, or
 // decides it on the session alone turns red. A withheld run's face whole
 // (D5 K-7) is its placeholder's record: the head naming its origin's owner,
@@ -29,7 +37,9 @@
 // act, the LEAP to that claim's home — none of C-39's words, at the run's own
 // positions, taking no focus, the status region saying it whole, the clause
 // with it (a mutant that drops the clause, offers an act beside the pointer,
-// takes the focus, or says no clause turns red). Against the FAKE PORT,
+// takes the focus, or says no clause turns red); where the model holds no
+// answer to its origin's claims, they are read before it shows (a mutant that
+// shows it first turns red). Against the FAKE PORT,
 // "who wrote this?" and "who uses this?" asked of a document the reader may
 // not read show the document-level face, naming the document they asked of,
 // each named by its card's caption (a mutant that drops it turns red).
@@ -274,7 +284,7 @@ test('"who wrote this?" and "who uses this?" asked of a document the reader may 
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a withheld document\'s own words carry C-67\'s pointer where the edition claims on it decide one, its act the LEAP the caller hands in: the claims read for the face where the model holds none, once, the face shown at once and shown again with the pointer as they land; shown again compact, the pointer one act away with the arm (issue #179\'s design decision: "the pointer to any claimed published edition the reader can open")', async () => {
+test('a withheld document\'s own words carry C-67\'s pointer where the edition claims on it decide one, its act the LEAP the caller hands in: where the model holds none, the claims read before the face shows — once, nothing standing while they are out — and the face shown once they answer, the pointer in its first frame; shown again compact, the pointer one act away with the arm (issue #179\'s design decision: "the pointer to any claimed published edition the reader can open"; issue #186\'s: "Make this read together with the reads that draw the face. That way the clause is in the face\'s first frame")', async () => {
   // 1.0.2's draft X2, in its sub-account, withheld from the reader; its edition E2, published, claiming X2 from E2's own bytes
   const X2 = '1.0.2.1.0.4', E2 = '1.0.2.0.12', CLAIM = E2 + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
   const lookup = FAKE.keyOf('op', { frame: F.editionClaimsAt(X2) });
@@ -291,11 +301,13 @@ test('a withheld document\'s own words carry C-67\'s pointer where the edition c
   const leaps = [];
   const asked = { follow: (/** @type {string} */ home, /** @type {boolean} */ byKey) => { leaps.push([home, byKey]); } };
   const pointer = `<div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${CLAIM}" data-home="${E2}">${esc(t('C-67.pointer'))}</button></div>`;
+  const release = fake.hold('op', { frame: F.editionClaimsAt(X2) });
   FACES.withheld(X2, null, asked);
-  assert.deepEqual([faceShown()?.id, faceShown()?.open, faceShown()?.acts], ['face:withheld', true, ['head']], 'shown whole at once, before the claims answer: no pointer yet');
-  for (let i = 0; i < 50 && !faceShown()?.acts.includes('follow'); i++) await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([HOST.currentState(), HOST.pending()], [null, true], 'nothing stands while the claims are read: the face opens on its reads');
+  release();
+  for (let i = 0; i < 50 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
   const f = faceShown(), arm = entitlementArm(REC.reader(), OWNER);
-  assert.ok(f && f.open && f.html.includes(`<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>${pointer}<button class="x"`), `shown again whole as the claims land, the pointer beneath the arm, the last before the dismiss: ${f && f.html}`);
+  assert.ok(f && f.id === 'face:withheld' && f.open && f.html.includes(`<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>${pointer}<button class="x"`), `shown once the claims answer, whole, the pointer beneath the arm in its first frame, the last before the dismiss: ${f && f.html}`);
   HOST.currentState()?.acts?.follow(/** @type {any} */ ({}), true);
   assert.deepEqual(leaps, [[E2, true]], 'its act the LEAP to the edition the claim names');
   HOST.dismiss();
@@ -308,6 +320,78 @@ test('a withheld document\'s own words carry C-67\'s pointer where the edition c
   assert.deepEqual(faceShown()?.acts, ['head'], 'no LEAP handed in: no pointer');
   HOST.dismiss();
   assert.deepEqual([fake.asked.filter((k) => k === lookup).length, fake.unanswered], [1, []], 'the claims asked once');
+});
+
+test('every face stating a withheld origin carries C-67\'s clause in the same words beneath the arm — the document\'s own words and a run\'s face whole alike: the QUOTING sibling a line, with or without a LEAP; "edition claims not read" where the board refused the lookup another way or did not answer it; nothing where it refused the lookup as withheld from the reader — each face reading the claims before it shows, the description a landing at the document says carrying the clause too (issue #186\'s design decision: "One fact, one placement"; "A blank there would read as \'no claim\'"; "If the board refuses the read for documents withheld from the reader, no face carries the clause")', async () => {
+  // 1.0.2's drafts in its sub-account, withheld from the reader, each with a run of it 1.0.1's edition W windows; E, 1.0.2's
+  // published edition, claiming the first by quoting it
+  const W = '1.0.1.0.17', E = '1.0.2.0.13', QUOTES = E + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
+  const [QUOTED, REFUSED, UNANSWERED, HIDDEN] = ['1.0.2.1.0.6', '1.0.2.1.0.7', '1.0.2.1.0.8', '1.0.2.1.0.9'];
+  const lookup = (/** @type {string} */ origin) => FAKE.keyOf('op', { frame: F.editionClaimsAt(origin) });
+  const fake = FAKE.create({
+    [lookup(QUOTED)]: { result: { as_of: 1, resp: 'addrs', addrs: [QUOTES] } },
+    [FAKE.keyOf('op', { frame: F.readLink(QUOTES) })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: QUOTED + '.0.1.1', width: '0.0.0.0.0.0.0.20' }], [{ start: QUOTED, width: '0.0.0.0.0.1' }], [{ start: R20, width: '0.0.0.0.0.0.0.0.1' }]] } } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(E) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: E, published: true, owner: OWNER, birth: E + '.1', birth_extent: '20', placed: null, base_extent: null, source: null } },
+    [lookup(REFUSED)]: { refused: { kind: 'refused', name: 'busy', code: 'busy' } },
+    [lookup(UNANSWERED)]: { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } },
+    [lookup(HIDDEN)]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+  });
+  PORT.boot(fake);
+  readAs(READERS[0]);
+  const arm = entitlementArm(REC.reader(), OWNER), armLine = `<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>`;
+  /** @type {Array<[string, string, string | null]>} each origin, what its lookup answered, and the clause every face stating it carries: its string, or none */
+  const cases = [
+    [QUOTED, 'an edition quoting the draft alone', 'C-67.quoting'],
+    [REFUSED, 'the lookup refused for a reason that says nothing of the claims', 'L.clause.unread'],
+    [UNANSWERED, 'the lookup not answered', 'L.clause.unread'],
+    [HIDDEN, 'the lookup refused as withheld from the reader', null],
+  ];
+  for (const [origin, what, id] of cases) {
+    REC.takeRefused(origin, 'withheld');
+    FACES.classChanged();
+    const words = id ? t(id, { claimant: OWNER }) : null, clause = id ? `<div class="clause" data-string="${id}">${esc(words || '')}</div>` : '';
+    // the document's own words, no LEAP handed in: nothing stands until the lookup answers, then the clause in its first frame
+    FACES.withheld(origin, null, {});
+    assert.equal(HOST.currentState(), null, `${what}: the document's face opens on its reads`);
+    for (let i = 0; i < 50 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
+    const own = HOST.currentState();
+    assert.ok(own?.id === 'face:withheld' && own.html.endsWith(armLine + clause), `${what}: the document's face, ${id ? `"${words}" a line beneath the arm` : 'nothing beneath the arm'}: ${own?.html}`);
+    assert.deepEqual(Object.keys(own?.acts || {}), ['head'], `${what}: the clause offers no act`);
+    HOST.dismiss();
+    // a run of it, its face whole, in the same words
+    FACES.withheldRun(W, /** @type {import('../model/records.js').Block} */ ({ pos: 11, width: 240, kind: 'withheld', text: '', origin }), () => {});
+    for (let i = 0; i < 50 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
+    const run = HOST.currentState();
+    assert.ok(run?.id === 'face:withheld-run' && run.html.endsWith(armLine + clause), `${what}: the run's face, the same clause beneath the arm: ${run?.html}`);
+    HOST.dismiss();
+    assert.equal(FACES.withheldText(origin), [t('F.corner.withheld', { owner: OWNER }), arm.text, ...(words ? [words] : [])].join(' '), `${what}: the description a landing at the document says`);
+  }
+  assert.deepEqual([[QUOTED, REFUSED, UNANSWERED, HIDDEN].map((o) => fake.asked.filter((k) => k === lookup(o)).length), fake.unanswered], [[1, 1, 1, 1], []], 'each lookup asked once between two drops of the claims: the run\'s face reads what the document\'s face left held, a failed read among it');
+});
+
+test('a withheld run\'s face reads the claims on its origin before it shows, where the model holds none: nothing stands while they are out, and the face shows once, its clause in its first frame (issue #186\'s design decision: "Make this read together with the reads that draw the face")', async () => {
+  // a run of 1.0.2's draft X4 in 1.0.1's edition W4; 1.0.2's edition E4 claiming X4 from E4's own bytes
+  const X4 = '1.0.2.1.0.10', W4 = '1.0.1.0.18', E4 = '1.0.2.0.14', CLAIM = E4 + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
+  const fake = FAKE.create({
+    [FAKE.keyOf('op', { frame: F.editionClaimsAt(X4) })]: { result: { as_of: 1, resp: 'addrs', addrs: [CLAIM] } },
+    [FAKE.keyOf('op', { frame: F.readLink(CLAIM) })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: E4 + '.0.1.1', width: '0.0.0.0.0.0.0.20' }], [{ start: X4, width: '0.0.0.0.0.1' }], [{ start: R20, width: '0.0.0.0.0.0.0.0.1' }]] } } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(E4) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: E4, published: true, owner: OWNER, birth: E4 + '.1', birth_extent: '20', placed: null, base_extent: null, source: null } },
+  });
+  PORT.boot(fake);
+  readAs(READERS[0]);
+  /** @type {Array<[string, boolean]>} the LEAPs the pointer's act asked for */
+  const leaps = [];
+  const release = fake.hold('op', { frame: F.editionClaimsAt(X4) });
+  FACES.withheldRun(W4, /** @type {import('../model/records.js').Block} */ ({ pos: 11, width: 240, kind: 'withheld', text: '', origin: X4 }), (home, byKey) => { leaps.push([home, byKey]); });
+  assert.deepEqual([HOST.currentState(), HOST.pending()], [null, true], 'nothing stands while the claims are read');
+  release();
+  for (let i = 0; i < 50 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
+  const o = HOST.currentState();
+  assert.ok(o?.id === 'face:withheld-run' && o.html.endsWith(`<div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${CLAIM}" data-home="${E4}">${esc(t('C-67.pointer'))}</button></div>`), `shown once the claims answer, the pointer in its first frame: ${o?.html}`);
+  o?.acts?.follow(/** @type {any} */ ({}), true);
+  assert.deepEqual(leaps, [[E4, true]], 'its act the LEAP to the edition the claim names');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
 });
 
 test('a jump reading says so in its own words, as a face is heard, and offers no act; it ends where it still stands, and an overlay shown since stands on (issue #136)', () => {

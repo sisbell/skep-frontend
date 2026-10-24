@@ -43,9 +43,12 @@
 // by PUB-3.107's origin-keyed order (RES-152) — a control on the plane, whose
 // act is a LEAP to that claim's home, the edition (B1-S7 → S6; APP-INPUT),
 // and in a reading scene's pane a line, as every mark there is (SC) — the
-// QUOTING sibling where every admitted claim quotes the draft, and nothing —
-// the arm's own copy alone — where none is admitted or the claims are not yet
-// read — the placeholder's one record (`placeholderOf`), which the ARIA
+// QUOTING sibling where every admitted claim quotes the draft, the UNREAD
+// place, "edition claims not read", where a read they are decided from
+// failed (issue #186's design decision: "A blank there would read as 'no
+// claim'"), and nothing — the arm's own copy alone — where none is admitted,
+// where the board refused their lookup as withheld from the reader, or where
+// they are not yet read — the placeholder's one record (`placeholderOf`), which the ARIA
 // mirror's item at the run and the run's face whole (O-FACES's `withheldRun`,
 // D5 K-7) read too, so the run a sighted reader sees and the one a screen
 // reader hears never part (R94); a record atom rendered
@@ -410,15 +413,26 @@ export function entitlementArm(reader, owner) {
  * @property {string} text its words, naming the lowest-addressed claimant
  */
 
-/** @typedef {Pointer | Quoting} Clause — C-67's clause as it renders: its string id and its words, and, where it is the pointer, the claim it follows */
+/**
+ * @typedef {Object} Unread — C-67's place where a read the clause is decided from failed (issue #186's design decision: "a face whose read failed says 'edition claims not read'. A blank there would read as 'no claim'"), so nothing is followed
+ * @property {'L.clause.unread'} id its string
+ * @property {string} text its words
+ */
+
+/** @typedef {Pointer | Quoting | Unread} Clause — C-67's clause as it renders: its string id and its words, and, where it is the pointer, the claim it follows */
 
 /**
  * @typedef {Object} ClaimSeen — one edition claim the lookup on an origin listed, as the page holds its two reads of it (PUB-7.50)
  * @property {string} claim the claim's address — a link
  * @property {{type: string | null, from: EndRef[]} | null} link the link as `read_link` answered it — its type as the page reads every link's, the type slot's first address — or null where unread
  * @property {string} home the document the claim resides in, from its address (M-ADDR's `homeOf`)
- * @property {boolean | null} published whether the home is published (`doc_metadata`): false where a read of it was refused, null where none answered yet
+ * @property {boolean | null} published whether the home is published (`doc_metadata`): false where a read of it was refused `withheld` or `doc_not_registered`, null where none answered yet
  * @property {string} claimant the home's owner, by the one owner rule (T-LAYER's `ownerAccount`): who claims
+ * @property {boolean} failed a read its admission waits on failed — its link's, or its home's metadata — refused for a reason that says nothing of what it reads, or not answered, and unanswered since (M-REC's `readFailed`)
+ */
+
+/**
+ * @typedef {ClaimSeen[] | 'withheld' | 'unread' | null} ClaimsSeen — what the page holds of the edition-claim lookup on an origin (M-REC's `Lookup`): the claims listed, each as its reads hold it; 'withheld' where the board refused the lookup as a read withheld from the reader; 'unread' where it failed any other way; null where it has not answered
  */
 
 /** @typedef {import('../model/address.js').EndRef} EndRef */
@@ -450,8 +464,8 @@ function admitted(c, owner) {
 }
 
 /**
- * C-67's clause beneath a withheld run of `origin` (PUB-5.124), its three
- * answers decided over the origin's WHOLE admitted-claim set, never per claim
+ * C-67's clause beneath a withheld run of `origin` (PUB-5.124), its answers
+ * decided over the origin's WHOLE admitted-claim set, never per claim
  * (RES-164): the POINTER where any admitted claim passes the resolution test
  * — its FROM holds a span, and none of its spans lies in the origin (the
  * span's document, `homeOf`: the board's `document_of` arithmetic), so its
@@ -462,28 +476,37 @@ function admitted(c, owner) {
  * being bytes this reader can reach as they stand; the QUOTING sibling where
  * every admitted claim quotes — a FROM holding a span of the origin, or none —
  * naming the lowest-addressed claimant; and the EMPTY place, null, where none
- * is admitted (RES-85), the arm's own copy then standing alone. Undecided —
- * the lookup unread or refused, or a listed claim's link or its home not read
- * — the clause is the empty place too, unless an admitted claim already known
+ * is admitted (RES-85), the arm's own copy then standing alone. The board
+ * refusing the lookup as a read withheld from the reader leaves the empty
+ * place too (issue #186's design decision: "If the board refuses the read
+ * for documents withheld from the reader, no face carries the clause"); the
+ * lookup failing any other way, or a listed claim's admission waiting on a
+ * read that failed (`ClaimSeen.failed`) where no admitted claim known passes
+ * and none waits on a read still to answer, leaves THE UNREAD PLACE, "edition
+ * claims not read" ("A blank there would read as 'no claim'"). Undecided —
+ * the lookup not answered, or a listed claim waiting on a read not yet made —
+ * the clause is the empty place, unless an admitted claim already known
  * passes, the pointer then following the pick among the claims known (the
  * article is made again as the rest are read): no reader is pointed at an
- * edition, or told nothing published carries the bytes, on reads the page has
- * not made. Addresses are ordered as tumblers (`cmpAddr`), never as strings.
+ * edition, told nothing published carries the bytes, or told the claims were
+ * not read, on reads the page has not made. Addresses are ordered as tumblers
+ * (`cmpAddr`), never as strings.
  * @param {string} origin the withheld run's origin document
  * @param {string} owner the origin's owner (T-LAYER's `originOwner`)
- * @param {ClaimSeen[] | null} claims the claims the lookup listed; null where it is unread or refused
+ * @param {ClaimsSeen} claims what the page holds of the lookup on the origin
  * @returns {Clause | null}
  */
 export function editionClause(origin, owner, claims) {
-  if (!claims) return null;
+  if (claims === 'unread') return unread();
+  if (!Array.isArray(claims)) return null;
   /** @type {ClaimSeen[]} the admitted claims whose edition holds bytes the reader can reach */
   const passing = [];
   /** @type {string[]} the claimants of the admitted claims that quote */
   const quoting = [];
-  let undecided = false;
+  let waiting = false, failed = false;
   for (const c of claims) {
     const a = admitted(c, owner);
-    if (a === null) { undecided = true; continue; }
+    if (a === null) { if (c.failed) failed = true; else waiting = true; continue; }
     if (!a || !c.link) continue;
     if (c.link.from.length && !c.link.from.some((e) => homeOf(e.start) === origin)) passing.push(c);
     else quoting.push(c.claimant);
@@ -491,9 +514,14 @@ export function editionClause(origin, owner, claims) {
   const own = passing.filter((c) => c.claimant === owner);
   const [pick] = (own.length ? own : passing).sort((x, y) => cmpAddr(x.claim, y.claim));
   if (pick) return { id: 'C-67.pointer', text: t('C-67.pointer'), claim: pick.claim, home: pick.home };
-  if (undecided || !quoting.length) return null;
+  if (waiting) return null;
+  if (failed) return unread();
+  if (!quoting.length) return null;
   return { id: 'C-67.quoting', text: t('C-67.quoting', { claimant: quoting.sort(cmpAddr)[0] }) };
 }
+
+/** C-67's unread place, in its words (`Unread`) */
+const unread = () => /** @type {Unread} */ ({ id: 'L.clause.unread', text: t('L.clause.unread') });
 
 /**
  * @typedef {Object} Placeholder — what R56's placeholder at a withheld run shows a reader: existence and owner, never bytes (B1-S7)
@@ -594,8 +622,8 @@ export function withheldBlockHTML(b, d, v) {
  * the pointer is a control (`control`) carrying the claim it follows and that
  * claim's home (`data-claim`, `data-home`): its act is the LEAP to the home,
  * the edition, that APP-INPUT makes (B1-S7 → S6). In a reading scene's pane,
- * where nothing acts on a mark (SC), it is a line; the QUOTING sibling is a
- * line everywhere, for it follows nothing.
+ * where nothing acts on a mark (SC), it is a line; the QUOTING sibling and
+ * the unread place are lines everywhere, for they follow nothing.
  * @param {Clause | null} c
  * @param {boolean} scene the scene-mode variant
  */

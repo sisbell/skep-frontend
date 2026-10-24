@@ -123,7 +123,14 @@
 // mutant that drops them at no row, at a named op alone, or never asks
 // again, turns red); a lookup that lands after such a row
 // taking nothing and asked again (a mutant that watches the origin's drops
-// alone takes the claims read before the row and turns red);
+// alone takes the claims read before the row and turns red); a lookup refused
+// held by whether it was withheld from the reader — unread where the refusal
+// says nothing of the claims, asked again past a drop of them alone — and a
+// failed read of a listed claim's link or its home's metadata, the board not
+// answering among them, held failed, which an act asks again where one
+// refused as withheld is an answer (issue #186: a mutant that holds every
+// refusal alike, tells the view nothing of a read the board did not answer,
+// or never asks a failed read again turns red);
 // a read refused for its size asked again in parts (issue #153): a
 // `compare` over the halves of the operand its refusal names, else of the
 // text sought in, their pairs taken together, any other refusal handed up
@@ -1495,6 +1502,62 @@ test('a whole read reads the edition claims on each origin its withheld runs nam
   assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [1, [EDITION, FORK]], 'the lookup read with the document');
   assert.deepEqual([REC.link(EDITION)?.type, REC.link(FORK)?.from[0].doc, REC.doc(EDITION_HOME).meta?.published, REC.doc(FORK_HOME).meta?.owner], [F.EDITION_CLASS, O, true, '1.0.1.1'], 'each claim\'s link and each home\'s metadata with it');
   assert.ok(!fake.asked.some((k) => k.includes('"op":"edition_claims"')));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+/** a refusal that says nothing of what a read names, and the board not answering one */
+const BUSY = { refused: { kind: 'refused', name: 'busy', code: 'busy' } }, NO_ANSWER = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
+/** the board refusing a read as of a document withheld from the reader */
+const WITHHELD_READ = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
+
+test('the view holds the lookup\'s refusal by whether it was withheld — a refusal that says nothing of the claims held unread, asked again only past a drop of the claims — and a read a listed claim\'s admission waits on that failed, the board not answering among them, held failed (issue #186\'s design decision: "If the board refuses the read for documents withheld from the reader, no face carries the clause. Otherwise, a face whose read failed says \'edition claims not read\'")', async () => {
+  const s = claimed({ ...script });
+  const lookup = inTurn(s, F.editionClaimsAt(O), BUSY, WITHHELD_READ, claimsOn([EDITION, FORK]));
+  s[FAKE.keyOf('op', { frame: F.readLink(EDITION) })] = BUSY;
+  s[FAKE.keyOf('op', { frame: F.docMetadata(FORK_HOME) })] = NO_ANSWER;
+  const fake = readingD(s);
+  forgetClaims();
+  await settle();
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [1, 'unread'], 'refused for a reason that says nothing of the claims: held unread');
+  PUMP.pump();
+  await settle();
+  assert.equal(lookup.asks(), 1, 'not asked again while the claims stand undropped');
+  /** a row that may change the claims, dropping every one held */
+  const linkWritten = (/** @type {number} */ position) => fake.fire('feed', { board: 'b-1', update: { position, at: position, op: 'make_link', docs: ['1.0.2.0.5'], link: '1.0.2.0.5.0.2.1', class: 'published' } });
+  linkWritten(4);
+  await settle();
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [2, 'withheld'], 'past a drop, asked again: refused as withheld from the reader, held so');
+  linkWritten(5);
+  await settle();
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [3, [EDITION, FORK]], 'past the next, the claims listed');
+  assert.deepEqual([REC.readFailed(EDITION), REC.readFailed(FORK_HOME), REC.readFailed(EDITION_HOME), REC.readFailed(FORK)], [true, true, false, false], 'the edition\'s link refused, and the fork\'s home unanswered: each held failed, and no read that answered');
+  assert.equal(PUMP.claimsToRead(O), true, 'the clause waits on the reads that failed');
+  forgetClaims();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('an act\'s reads of the edition claims hold a refusal as the view holds them, and ask again a read the page holds no answer to — a failed one among them — while one refused as withheld from the reader is an answer, never asked again', async () => {
+  const s = claimed({ ...script }), HIDDEN_ORIGIN = '1.0.1.0.1004';
+  const lookup = inTurn(s, F.editionClaimsAt(O), BUSY, claimsOn([EDITION]));
+  const link = inTurn(s, F.readLink(EDITION), NO_ANSWER, claimLink(passageOf(EDITION_HOME, 1, 20)));
+  const hidden = inTurn(s, F.editionClaimsAt(HIDDEN_ORIGIN), WITHHELD_READ);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  forgetClaims();
+  await PUMP.readClaims(O);
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O), PUMP.claimsToRead(O)], [1, 'unread', true], 'the lookup refused: held unread, a read the clause still waits on');
+  await PUMP.readClaims(O);
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O), REC.doc(EDITION_HOME).meta?.published], [2, [EDITION], true], 'asked again by the next act: the claim listed, its home read');
+  assert.deepEqual([link.asks(), REC.readFailed(EDITION), PUMP.claimsToRead(O)], [1, true, true], 'its link unanswered: held failed');
+  await PUMP.readClaims(O);
+  assert.deepEqual([lookup.asks(), link.asks(), REC.link(EDITION)?.type, REC.readFailed(EDITION), PUMP.claimsToRead(O)], [2, 2, F.EDITION_CLASS, false, false], 'the next act asks the failed link alone, and every read answered');
+  await PUMP.readClaims(HIDDEN_ORIGIN);
+  await PUMP.readClaims(HIDDEN_ORIGIN);
+  assert.deepEqual([hidden.asks(), REC.editionClaimsOf(HIDDEN_ORIGIN), PUMP.claimsToRead(HIDDEN_ORIGIN)], [1, 'withheld', false], 'refused as withheld from the reader: an answer, asked once');
+  forgetClaims();
   assert.deepEqual(fake.unanswered, []);
 });
 

@@ -101,6 +101,8 @@ test('the act at a withheld run conjures C-39\'s face naming the owner its gap n
     const text = 'Tumbler.\n\n', n = new TextEncoder().encode(text).length;
     REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + 240 }]);
     REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 240, kind: 'withheld', text: '', ref: null, origin: O }]);
+    // the edition claims on the origin read, none listed: every read the run's face waits on answered, so it shows at once
+    REC.takeEditionClaims(O, []);
     const d = REC.doc(D);
     HOST.attach(/** @type {any} */ ({
       ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},

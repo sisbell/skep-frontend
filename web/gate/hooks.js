@@ -60,7 +60,8 @@
 // stands of a document's article, part by part (`mountedLines`), the bridge
 // client's own call
 // log, the settle signal — the view's reads, the camera, a jump in the air or
-// reaching and the keys held for its landing (FP-25) — whether the camera
+// reaching and the keys held for its landing (FP-25), chrome opening on its
+// reads (issue #186) — whether the camera
 // flies (`view.flying`), whether a jump is in the air (`go.inAir`) and the
 // version each document's box shows (`go.shownIn`; issue #154), the trail,
 // the line's and the overlay's text, a walk's moment raised as the shell's
@@ -522,10 +523,12 @@ export function install(deps) {
   /**
    * Settled: the view's needs met, nothing read for it, the camera still, no
    * jump in the air or reaching (FP-25: an act's own reads escape the pump's
-   * count, and a jump made by a chord goes on once they answer), and no key
-   * held for a landing or being made there.
+   * count, and a jump made by a chord goes on once they answer), no chrome
+   * opening on its reads (O-HOST's `pending`: a card, or a face reading its
+   * clause before it shows — issue #186), and no key held for a landing or
+   * being made there.
    */
-  const settled = () => PUMP.inflightCount() === 0 && PUMP.pump() === 0 && !CAM.flying() && !GO.inAir() && !GO.isReaching() && KEYS.holding() === 0;
+  const settled = () => PUMP.inflightCount() === 0 && PUMP.pump() === 0 && !CAM.flying() && !GO.inAir() && !GO.isReaching() && !HOST.pending() && KEYS.holding() === 0;
   /** wait until the view's needs are met */
   async function settle(maxMs = 8000) {
     const t0 = performance.now();

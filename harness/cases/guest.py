@@ -40,10 +40,12 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     "who wrote this?" asked of that withheld document faced as its box names
     it — its withheld box's words, the guest's arm beneath (A-170) — whole,
     named by the card's caption as the act's answer and described by its words,
-    said caption first, with no token unfilled and no act but its head's and
-    C-67's pointer where the claims on it decide one; asked again, compact —
-    its head alone, reached by Tab from the walk's item with the face standing,
-    Enter opening the rest in place (issue #179);
+    said caption first, with no token unfilled, C-67's clause beneath the arm
+    in the words a run of it carries as the claims on it decide it (issue #186:
+    "One fact, one placement"), and no act but its head's and the pointer
+    where the claims decide one; asked again, compact — its head alone, the
+    arm and the clause one act away, reached by Tab from the walk's item with
+    the face standing, Enter opening the rest in place (issue #179);
 (e) the window run at 1467 withheld: the model's block — its width, its
     origin, no text — B1-S7's gap at the run (issue #151's design decision:
     a gap of its true width, its face in it where it fits, else compact in
@@ -54,7 +56,8 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     (PUB-5.124), decided here from the page's own recorded reads of them —
     the active view's lookup, its claims' links and their homes' metadata,
     never the audit view's `edition_claims` — the pointer carrying the claim
-    PUB-3.107's order picks, and nothing in its place where they decide none,
+    PUB-3.107's order picks, "edition claims not read" where a read of them
+    failed (issue #186), and nothing in its place where they decide none,
     in the gap where it holds the face and else in the face its mark opens
     whole; the mirror's item the run's face whole — its kind in the words a
     copy's stand-in names it by, its owner, its origin, the arm, and the
@@ -197,7 +200,7 @@ def mark_face(ctx):
     ok = ctx.js('''(() => { const m = document.querySelector(%s); if (!m) return false; const q = m.getBoundingClientRect();
       const at = {bubbles: true, cancelable: true, composed: true, button: 0, clientX: q.left + q.width / 2, clientY: q.top + q.height / 2};
       m.dispatchEvent(new PointerEvent('pointerdown', at)); m.dispatchEvent(new PointerEvent('pointerup', at)); m.dispatchEvent(new MouseEvent('click', at)); return true; })()''' % json.dumps(PLACEHOLDER + ' > .wh-mark'))
-    ctx.frames(2)
+    ctx.settle(); ctx.frames(2)
     if not ok:
         return {'id': None, 'words': None, 'arm': None, 'clause': None, 'claim': None}
     return ctx.js('''(() => { const o = document.getElementById('overlay'), q = (s) => o.querySelector(s), w = q('.face-text'), a = q('.arm'), c = q('.clause'), b = q('.clause [data-run]');
@@ -593,7 +596,7 @@ def run(ctx):
     ctx.leap(DOC, WINDOW[0])
     at_run = ctx.js('(() => { const f = window.__skep.view.focus(), e = document.activeElement; return {focus: f && [f.kind, f.addr, f.pos], on_item: !!e && e.id === "walk-" + window.__skep.mirror.index()}; })()')
     ctx.drv.key('Enter')
-    ctx.frames(2)
+    ctx.settle(); ctx.frames(2)
     whole = ctx.js('''(() => { const o = document.getElementById('overlay'), q = (s) => o.querySelector(s), e = document.activeElement, w = q('.face-text'), a = q('.arm'), c = q('.clause'), b = q('.clause [data-run]');
       return {id: window.__skep.overlay().id, words_id: w ? w.dataset.string : null, words: w ? w.textContent : null, arm_id: a ? a.dataset.string : null, arm: a ? a.textContent : null,
               clause_id: c ? c.dataset.string : null, clause: c ? c.textContent : null, claim: b ? b.dataset.claim : null, acts: o.querySelectorAll('[data-run]').length,
@@ -657,10 +660,13 @@ def run(ctx):
     # face names the document by existence and owner as its box does, the entitlement arm beneath (A-170; R56) — the act's
     # answer, named by its card's caption and described by its words, said through the status region caption first; its
     # own withheld words whole the first time the session shows them, no address before them at the document's own place,
-    # C-67's pointer beneath the arm where the edition claims on it decide one (issue #179's design decision)
-    FACE = '''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm'), l = o.querySelector('.label'), e = document.activeElement;
+    # C-67's clause beneath the arm in the words a run of it carries, as the edition claims on it decide it — the pointer
+    # its act where they decide one, nothing where they decide none (issue #179's design decision; issue #186's: "One fact,
+    # one placement")
+    FACE = '''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm'), c = o.querySelector('.clause'), l = o.querySelector('.label'), e = document.activeElement;
       return {id: window.__skep.overlay().id, words: w ? w.textContent : null, words_id: w ? w.dataset.string : null, open: w ? w.getAttribute('aria-expanded') : null,
-              arm: a ? a.textContent : null, arm_id: a ? a.dataset.string : null, caption: l ? l.textContent : null, caption_id: l ? l.id : null, words_el: w ? w.id : null,
+              arm: a ? a.textContent : null, arm_id: a ? a.dataset.string : null, clause: c ? c.textContent : null, clause_id: c ? c.dataset.string : null,
+              caption: l ? l.textContent : null, caption_id: l ? l.id : null, words_el: w ? w.id : null,
               address: !!o.querySelector('.face-addr'), named_by: o.getAttribute('aria-labelledby'), described_by: o.getAttribute('aria-describedby'),
               live: document.getElementById('live').textContent, text: o.textContent, acts: [...o.querySelectorAll('[data-run]')].map((b) => b.dataset.run),
               focus: e && e !== o && o.contains(e) ? (e.dataset.run || e.tagName.toLowerCase()) : null}; })()'''
@@ -668,12 +674,13 @@ def run(ctx):
     face = ctx.js(FACE)
     guests_arm = t(ctx, arm_id, {'owner': SECOND_ACCOUNT})
     caption = '%s · %s · %s' % (t(ctx, 'B1.who-wrote'), WITHHELD, t(ctx, 'F.position', {'p': 1}))
-    clause, decided = ctx.edition_clause(WITHHELD, SECOND_ACCOUNT)
-    acts = ['head'] + (['follow'] if clause == 'C-67.pointer' else [])
+    own_clause_id, own_decided = ctx.edition_clause(WITHHELD, SECOND_ACCOUNT)
+    own_clause = t(ctx, own_clause_id, {'claimant': own_decided.get('claimant', '')}) if own_clause_id else None
+    acts = ['head'] + (['follow'] if own_clause_id == 'C-67.pointer' else [])
     r.check(face['id'] == 'face:withheld' and face['words_id'] == 'F.corner.withheld' and face['words'] == want[1] and face['open'] == 'true' and face['arm_id'] == arm_id and face['arm'] == guests_arm
-            and not face['address'] and '⟨' not in face['text'] and face['acts'] == acts,
-            '(d) "who wrote this?" asked of the withheld document faces it as its box names it — "%s" — whole, the guest\'s arm for this device\'s key store beneath, %s for %s, no address before it at its own place, no token unfilled, and no act but its head\'s and C-67\'s pointer where the claims on it decide one (A-170; issue #179)' % (want[1], arm_id, SECOND_ACCOUNT),
-            {'face': face, 'guests_arm': guests_arm[:80], 'key_here': store['key_here'], 'clause': clause, 'decided_from': decided})
+            and not face['address'] and '⟨' not in face['text'] and face['acts'] == acts and face['clause_id'] == own_clause_id and face['clause'] == own_clause,
+            '(d) "who wrote this?" asked of the withheld document faces it as its box names it — "%s" — whole, the guest\'s arm for this device\'s key store beneath, %s for %s, then C-67\'s clause as the edition claims on it decide it, in the words a run of it carries, no address before it at its own place, no token unfilled, and no act but its head\'s and the pointer where the claims decide one (A-170; issues #179, #186)' % (want[1], arm_id, SECOND_ACCOUNT),
+            {'face': face, 'guests_arm': guests_arm[:80], 'key_here': store['key_here'], 'clause': own_clause_id, 'decided_from': own_decided})
     r.check(face['caption'] == caption and face['named_by'] == face['caption_id'] and bool(face['words_el']) and face['words_el'] in (face['described_by'] or '').split()
             and face['live'].startswith(caption + ' ' + want[1]),
             '(d) the face is the act\'s answer: named by the card\'s caption "%s", described by its words, said through the status region caption first (issue #179: "Announce each face as the act\'s answer, tied to the act in markup")' % caption, face)
@@ -690,10 +697,11 @@ def run(ctx):
     tabbed = ctx.js(FACE)
     ctx.drv.key('Enter'); ctx.settle(); ctx.frames(2)
     opened = ctx.js(FACE)
-    r.check(compact['id'] == 'face:withheld' and compact['words'] == want[1] and compact['open'] == 'false' and compact['arm'] is None and compact['acts'] == ['head']
+    r.check(compact['id'] == 'face:withheld' and compact['words'] == want[1] and compact['open'] == 'false' and compact['arm'] is None and compact['clause'] is None and compact['acts'] == ['head']
             and tabbed['id'] == 'face:withheld' and tabbed['focus'] == 'head'
-            and opened['id'] == 'face:withheld' and opened['open'] == 'true' and opened['arm'] == guests_arm and opened['focus'] == 'head' and opened['acts'] == acts,
-            '(d) asked again, the face is compact — "%s" alone, the arm one act away; Tab from the walk\'s item reaches its head with the face standing, and Enter there opens the rest in place, the focus kept on the head (issue #179)' % want[1],
+            and opened['id'] == 'face:withheld' and opened['open'] == 'true' and opened['arm'] == guests_arm and opened['clause_id'] == own_clause_id and opened['clause'] == own_clause
+            and opened['focus'] == 'head' and opened['acts'] == acts,
+            '(d) asked again, the face is compact — "%s" alone, the arm and the clause one act away; Tab from the walk\'s item reaches its head with the face standing, and Enter there opens the rest in place, the clause with it, the focus kept on the head (issues #179, #186)' % want[1],
             {'compact': compact, 'tabbed': tabbed, 'opened': opened})
     r.figures['shots'].append(ctx.shot('guest/withheld-face-opened.png'))
     r.figures['withheld_face_compact'] = {'compact': compact, 'opened': opened}

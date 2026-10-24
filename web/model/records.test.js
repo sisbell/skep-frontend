@@ -7,7 +7,11 @@
 // from them (issue #184: a mutant that takes a daughter's member, or a time
 // older than the newest carried, turns red), the system account held and
 // marked, the death dropping every read held at the session's class, the
-// chain's proved end with its count.
+// chain's proved end with its count; the edition-claim lookup held listed,
+// withheld or unread, and a failed read of a listed claim's link or home held
+// through a drop of the claims until a read answers it, its home is dropped
+// or the death (issue #186: a mutant that drops it with the claims, or keeps
+// it past its answer, turns red).
 // THE COVER (issue #177): the death keeps which documents the class it left
 // could read — read, or listed — and a document one of them that a read at
 // the new class withholds is covered, a box the model knows; never one the
@@ -335,11 +339,41 @@ test('the edition claims on an origin are held until a feed row that may change 
   assert.deepEqual([REC.editionClaimsOf(O), REC.claimDrops()], [[C], drops], 'a row that writes no link and publishes nothing leaves them held');
   assert.deepEqual(made(() => REC.applyFeedUpdate(/** @type {any} */ ({ position: 12331, at: 12331, op: 'make_link', docs: ['1.0.2.0.5'], class: 'published', link: '1.0.2.0.5.0.2.1' }))), [1, 0], 'a link written anywhere: the windowing document made again');
   assert.deepEqual([REC.editionClaimsOf(O), REC.claimDrops()], [undefined, drops + 1], 'every claim held dropped, the drop counted');
-  REC.takeEditionClaims(O, 'refused');
-  assert.equal(REC.editionClaimsOf(O), 'refused', 'a lookup refused is held refused');
+  assert.deepEqual(made(() => REC.takeEditionClaims(O, 'withheld')), [1, 0], 'a lookup refused as withheld from the reader: the windowing document made again');
+  assert.equal(REC.editionClaimsOf(O), 'withheld', 'held as withheld');
+  REC.takeEditionClaims(O, 'unread');
+  assert.equal(REC.editionClaimsOf(O), 'unread', 'a lookup that failed any other way is held unread');
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.sessionDied({ arm: 'closed' });
   assert.deepEqual([REC.editionClaimsOf(O), REC.claimDrops()], [undefined, drops + 2], 'the death drops them with every read at the session\'s class, and is counted');
+});
+
+test('a failed read of a listed claim\'s link or its home\'s metadata is held — through a drop of the claims — until a read of it answers, what the page held of it is dropped, or the death; each document windowing an origin whose claim it decides is made again as it lands and as it goes, and no other (issue #186)', () => {
+  const W = '1.0.1.0.3', O = '1.0.1.0.1003', C = '1.0.1.0.9.0.2.1', H = '1.0.1.0.9', PLAIN = '1.0.1.0.5';
+  REC.takeDelivery(W, [{ pos: 1, width: 10, kind: 'content', text: 'Tumbler.\n\n', ref: null, origin: null }, { pos: 11, width: 4, kind: 'withheld', text: '', ref: null, origin: O }]);
+  REC.takeDelivery(PLAIN, [{ pos: 1, width: 5, kind: 'content', text: 'plain', ref: null, origin: null }]);
+  REC.takeEditionClaims(O, [C]);
+  const made = (/** @type {() => void} */ act) => { const at = [REC.doc(W).rev, REC.doc(PLAIN).rev]; act(); return [REC.doc(W).rev - at[0], REC.doc(PLAIN).rev - at[1]]; };
+  assert.deepEqual(made(() => REC.takeFailedRead(C)), [1, 0], 'the claim\'s link\'s read failed: the windowing document made again, no other');
+  assert.deepEqual(made(() => REC.takeFailedRead(H)), [1, 0], 'its home\'s metadata read failed');
+  assert.deepEqual([REC.readFailed(C), REC.readFailed(H), REC.readFailed(O)], [true, true, false], 'each held, and nothing else');
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, op: 'make_link', docs: ['1.0.2.0.5'], class: 'published', link: '1.0.2.0.5.0.2.1' }));
+  assert.deepEqual([REC.editionClaimsOf(O), REC.readFailed(C), REC.readFailed(H)], [undefined, true, true], 'the claims dropped, the failed reads of the link and the home held: facts of those reads');
+  REC.takeEditionClaims(O, [C]);
+  assert.deepEqual(made(() => REC.takeLink({ addr: C, from: [], to: [], type: '1.1.0.1.0.1.0.3.14' })), [1, 0], 'the link read again and answered');
+  assert.equal(REC.readFailed(C), false, 'its failed read answered');
+  assert.deepEqual(made(() => REC.invalidate(H)), [1, 0], 'the home dropped by a feed row, to be read again');
+  assert.equal(REC.readFailed(H), false, 'its failed read dropped with it');
+  REC.takeFailedRead(H);
+  REC.takeMetadata(H, { doc: H, published: true, owner: '1.0.1', birth: H + '.1', birthExtent: 5, placed: null, baseExtent: null, source: null, asOf: 1 });
+  assert.equal(REC.readFailed(H), false, 'the home\'s metadata answered');
+  REC.takeFailedRead(H);
+  REC.takeRefused(H, 'withheld');
+  assert.equal(REC.readFailed(H), false, 'a refusal that says something of the home answers it too');
+  REC.takeFailedRead(C);
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.sessionDied({ arm: 'closed' });
+  assert.equal(REC.readFailed(C), false, 'the death drops it with every read at the session\'s class');
 });
 
 test('every drop of an address is counted — by invalidate, its record held or not and none made for it, and by a death, every address\'s — and no read taken moves the count', () => {

@@ -6,15 +6,17 @@
 // State: VIEW — the current overlay, and the opening still reading with the
 // count of the acts made on the chrome (the one owner). THE OPENING: chrome
 // that opens on its reads — the reading scene, the versions list, the
-// provenance cards, the anatomy card — opens through `opening`, one rule for
-// all of them: as its reads begin it is the chrome's next act, and its answer
-// shows only where no act was made on the chrome while it read — an overlay
-// shown (`show`, whatever conjures it: an act's card or its rebuild by its own
-// act, a face, a walk's moment), a dismissal (`dismiss`), the next opening, or
-// the end of the opening alone, what stands staying (`endOpening`: Esc's
-// innermost thing, N-KEYS'; an empty click's, APP-INPUT's; the LEAP box
-// opened, N-LEAP's; a navigation act as it is made, N-GO's, before it
-// dismisses what stands as its camera leaves) — so chrome asked for at a place the person
+// provenance cards, the anatomy card, a face stating a withheld origin whose
+// clause's reads are out (O-FACES; issue #186) — opens through `opening`, one
+// rule for all of them: as its reads begin it is the chrome's next act, and
+// its answer shows only where no act was made on the chrome while it read —
+// an overlay shown (`show`, whatever conjures it: an act's card or its
+// rebuild by its own act, a face, a walk's moment), a dismissal (`dismiss`),
+// the next opening, or the end of the opening alone, what stands staying
+// (`endOpening`: Esc's innermost thing, N-KEYS'; an empty click's,
+// APP-INPUT's; the LEAP box opened, N-LEAP's; a navigation act as it is made,
+// N-GO's, before it dismisses what stands as its camera leaves) — so chrome
+// asked for at a place the person
 // has left never opens over the next one, nor over chrome made after it was
 // asked, and Esc closes what the person sees, never an opening they cannot.
 // An overlay's own completion is no act on the chrome (`complete`): a jump's

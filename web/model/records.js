@@ -7,7 +7,11 @@
 // links as delivered with the type learned once (E17 (a)), where a link's
 // slot sits in a document's current text as `project` answered it, the
 // edition claims the active view lists on each origin a withheld run names
-// (PUB-5.124; `takeEditionClaims`), the board, the session as `session`
+// (PUB-5.124; `takeEditionClaims`) — or that their lookup was refused as a
+// read withheld from the reader, or failed — and the reads a listed claim's
+// admission waits on that failed (`takeFailedRead`; issue #186's design
+// decision: "a face whose read failed says 'edition claims not read'"), the
+// board, the session as `session`
 // opened it (its REFERENCE, a name, never a token; its principal and
 // account; whether a write may go out under it) and, where a restart lost it
 // (issue #175's design decision), the account the page is reconnecting as or
@@ -70,7 +74,9 @@
 // and takes nothing learned across a drop. The edition claims held are
 // dropped together — a feed row
 // names a claim's home, never the origin it claims — and their drops counted
-// apart (`claimDrops`).
+// apart (`claimDrops`); a failed read of a claim's link or its home's
+// metadata stands through them, a fact of that read, until a read of it
+// answers or what the page held of it is dropped.
 // THE `H` DOCUMENT (the record §1.8, OPEN): the system account's rows are
 // HELD here and marked `system`; the plane does not draw them (this lane's
 // cut, reported).
@@ -200,6 +206,13 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /**
+ * @typedef {string[] | 'withheld' | 'unread'} Lookup — the edition-claim lookup's answer for an origin as the page holds it
+ * (`takeEditionClaims`): the claims of the edition class the active view lists on it, in the order answered; 'withheld'
+ * where the board refused it as a read of a document withheld from the reader; 'unread' where it failed any other way —
+ * refused for a reason that says nothing of the claims, or not answered
+ */
+
+/**
  * @typedef {Object} Reader — who reads, as the entitlement arm at a withheld document or run is decided for them (PUB-5.97's key-split defaults, in PUB-5.121's order; R56)
  * @property {string | null} account the acting account, or null (a guest)
  * @property {boolean} keyPresent the device's key store holds a key bound at this board's origin: PUB-5.97's "an enrolled key for this board present"
@@ -238,8 +251,10 @@ const state = {
   links: new Map(),
   /** @type {Map<string, Map<string, Stretch[] | Declined>>} `project`'s answers, by the document projected into, then by `⟨link⟩ ⟨slot⟩` */
   projections: new Map(),
-  /** @type {Map<string, string[] | 'refused'>} the edition-claim lookup's answer per origin (`takeEditionClaims`) */
+  /** @type {Map<string, Lookup>} the edition-claim lookup's answer per origin (`takeEditionClaims`) */
   editionClaims: new Map(),
+  /** @type {Set<string>} the links and documents whose read an edition claim's admission waits on failed, unanswered since (`takeFailedRead`) */
+  failedReads: new Set(),
   /** how many times the edition claims held have been dropped together at a feed row (`claimDrops`) */
   claimDrops: 0,
   /** @type {Map<string, number>} how many times each address's delivered state has been dropped (`invalidate`), its record held or not */
@@ -281,7 +296,8 @@ export const sessionRefused = () => state.sessionRefused;
  * Every read held at the page's class dropped with it (THE CLASS): the
  * index (its rows, counts and state), each document's delivered state and
  * the index's row on it, the links and where their slots project, the
- * edition claims, the owners and key sets, and the feed's drafts rows — so no
+ * edition claims and the failed reads of them, the owners and key sets, and
+ * the feed's drafts rows — so no
  * frame after it draws, lists or counts what the class could read and the
  * next cannot. Every address is counted dropped once more (`dropsOf`), so no
  * read out across the change is taken. What the class could read is kept by
@@ -294,7 +310,7 @@ function dropClass() {
   state.readBefore = new Set([...state.index.keys(), ...[...state.docs.values()].filter((d) => !d.refused && (d.from >= 0 || d.meta || d.extent != null)).map((d) => d.addr)]);
   state.index.clear(); state.counts.clear(); state.indexState = null;
   for (const d of state.docs.values()) { drop(d); unlist(d); }
-  state.links.clear(); state.projections.clear(); state.editionClaims.clear(); state.owners.clear(); state.keySets.clear();
+  state.links.clear(); state.projections.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.owners.clear(); state.keySets.clear();
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
 }
 /**
@@ -551,17 +567,18 @@ export function takeSpanSet(/** @type {string} */ addr, /** @type {Array<{subspa
   d.rev++; bump();
 }
 
-/** `doc_metadata`'s answer; where the document is an edition claim's home, each document windowing the claim's origin is made again (`reclause`) */
+/** `doc_metadata`'s answer, a failed read of it before answered (`takeFailedRead`); where the document is an edition claim's home, each document windowing the claim's origin is made again (`reclause`) */
 export function takeMetadata(/** @type {string} */ addr, /** @type {DocMeta} */ meta) {
   const d = doc(addr);
   d.meta = meta;
   if (!state.index.has(addr) && !memberOf(addr)) d.kind = meta.published ? 'edition' : 'draft';
+  state.failedReads.delete(addr);
   d.rev++; reclause(claiming((c) => homeOf(c) === addr)); bump();
 }
 
-/** a read of this document refused: `doc_not_registered` or `withheld`; where it is an edition claim's home, each document windowing the claim's origin is made again */
+/** a read of this document refused: `doc_not_registered` or `withheld` — an answer, a failed read of it before answered; where it is an edition claim's home, each document windowing the claim's origin is made again */
 export function takeRefused(/** @type {string} */ addr, /** @type {'unregistered' | 'withheld'} */ what) {
-  const d = doc(addr); d.refused = what; d.rev++; reclause(claiming((c) => homeOf(c) === addr)); bump();
+  const d = doc(addr); d.refused = what; state.failedReads.delete(addr); d.rev++; reclause(claiming((c) => homeOf(c) === addr)); bump();
 }
 
 /**
@@ -857,13 +874,16 @@ export function holdsEnd(addr, e) {
  */
 export function takeMembers(addr, n, ended = true) { const d = doc(addr); d.members = n; d.ended = ended; d.rev++; bump(); }
 
-/** drop a document's delivered state (a feed row named it; the viewport asks again), and where every link's slot projects into it, whether or not the page holds its record — the drop counted first (`dropsOf`), no record made for it; where it is an edition claim's home, each document windowing the claim's origin is made again */
+/** drop a document's delivered state (a feed row named it; the viewport asks again), and where every link's slot projects into it, whether or not the page holds its record — the drop counted first (`dropsOf`), no record made for it — and a failed read of it or of a link homed in it (`takeFailedRead`), which is asked again; where it is an edition claim's home, each document windowing the claim's origin is made again */
 export function invalidate(/** @type {string} */ addr) {
   state.drops.set(addr, (state.drops.get(addr) ?? 0) + 1);
   const d = state.docs.get(addr);
   const projected = unproject(addr);
-  if (d) { drop(d); reclause(claiming((c) => homeOf(c) === addr)); }
-  if (d || projected) bump();
+  const failed = [...state.failedReads].filter((a) => homeOf(a) === addr);
+  for (const a of failed) state.failedReads.delete(a);
+  if (d || failed.length) reclause(claiming((c) => homeOf(c) === addr));
+  if (d) drop(d);
+  if (d || projected || failed.length) bump();
 }
 
 /**
@@ -891,10 +911,11 @@ export function takeLinks(/** @type {string} */ addr, /** @type {string[]} */ ad
   for (const a of addrs) d.links.add(a);
   d.linksRead = true; d.rev++; bump();
 }
-/** `read_link`'s answer: the link's slots, its type learned once, its home read from its address whole — the version member it is homed at, where it is one (`homeOf`); where it is an edition claim, each document windowing the claim's origin is made again */
+/** `read_link`'s answer: the link's slots, its type learned once, its home read from its address whole — the version member it is homed at, where it is one (`homeOf`) — a failed read of it before answered (`takeFailedRead`); where it is an edition claim, each document windowing the claim's origin is made again */
 export function takeLink(/** @type {LinkValue} */ v) {
   const home = homeOf(v.addr) || v.addr;
   state.links.set(v.addr, { addr: v.addr, home, owner: accountOf(home), type: v.type, from: v.from, to: v.to });
+  state.failedReads.delete(v.addr);
   reclause(claiming((c) => c === v.addr));
   bump();
 }
@@ -972,24 +993,43 @@ const CLAIM_WRITES = new Set(['make_link', 'emit', 'edit_link', 'nullify', 'asse
 
 /**
  * The edition-claim lookup's answer for an origin (PUB-5.124; M-FRAMES's
- * `editionClaimsAt`): the claims of the edition class the active view lists
- * on it, in the order answered, or 'refused' where the board declined the
- * read. Held until a feed row may have changed them (`applyFeedUpdate`) or
- * the session's death; each listed claim's link (`takeLink`) and its home's
- * metadata (`takeMetadata`) are the page's own reads of them, held beside it.
- * Every held document windowing the origin is made again, as it is wherever
- * a claim's link or its home's metadata arrives or goes: its placeholder's
- * clause is decided again (T-ARTICLE's `editionClause`).
+ * `editionClaimsAt`), as the page holds it (`Lookup`): the claims listed,
+ * 'withheld' or 'unread'. Held until a feed row may have changed them
+ * (`applyFeedUpdate`) or the session's death; each listed claim's link
+ * (`takeLink`) and its home's metadata (`takeMetadata`) are the page's own
+ * reads of them, held beside it, and a failed one of those reads too
+ * (`takeFailedRead`). Every held document windowing the origin is made again,
+ * as it is wherever a claim's link or its home's metadata arrives, fails or
+ * goes: its placeholder's clause is decided again (T-ARTICLE's
+ * `editionClause`).
  * @param {string} origin
- * @param {string[] | 'refused'} claims
+ * @param {Lookup} claims
  */
 export function takeEditionClaims(origin, claims) {
-  state.editionClaims.set(origin, claims === 'refused' ? claims : [...claims]);
+  state.editionClaims.set(origin, Array.isArray(claims) ? [...claims] : claims);
   reclause(new Set([origin]));
   bump();
 }
-/** the edition claims held on an origin: the claims listed, 'refused', or undefined where none is held */
+/** the edition claims held on an origin (`Lookup`), or undefined where the lookup has not answered */
 export const editionClaimsOf = (/** @type {string} */ origin) => state.editionClaims.get(origin);
+/**
+ * A read an edition claim's admission waits on failed (PUB-5.99; issue
+ * #186's design decision: "a face whose read failed says 'edition claims not
+ * read'"): the claim's link (`read_link`), or a document's metadata
+ * (`doc_metadata`) — a claim's home's — refused for a reason that says
+ * nothing of what it reads, or not answered. Held until a read of it answers
+ * (`takeLink`, `takeMetadata`, `takeRefused`), what the page held of it is
+ * dropped (`invalidate`), or the class drops every read; each held document
+ * windowing the origin of a claim it decides is made again.
+ * @param {string} addr the link, or the document
+ */
+export function takeFailedRead(addr) {
+  state.failedReads.add(addr);
+  reclause(claiming((c) => c === addr || homeOf(c) === addr));
+  bump();
+}
+/** has a read of a link, or of a document's metadata, failed, unanswered since (`takeFailedRead`)? */
+export const readFailed = (/** @type {string} */ addr) => state.failedReads.has(addr);
 /**
  * How many times the edition claims held have been dropped — together, at a
  * feed row that may have changed them, and at every drop of the class — so a
@@ -1009,7 +1049,7 @@ export function withheldOrigins(/** @type {string} */ addr) {
 function claiming(/** @type {(claim: string) => boolean} */ named) {
   /** @type {Set<string>} */
   const out = new Set();
-  for (const [origin, claims] of state.editionClaims) if (claims !== 'refused' && claims.some(named)) out.add(origin);
+  for (const [origin, claims] of state.editionClaims) if (Array.isArray(claims) && claims.some(named)) out.add(origin);
   return out;
 }
 
@@ -1122,7 +1162,7 @@ export function feedTime() {
 export function _reset() {
   state.board = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
   state.keys = []; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
-  state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.editionClaims.clear(); state.claimDrops = 0;
+  state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops = 0;
   state.owners.clear(); state.keySets.clear(); state.feed = []; state.rev = 0;
 }
 
