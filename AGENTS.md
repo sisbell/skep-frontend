@@ -85,11 +85,13 @@ first guess: build it as stated, or decline it back to `needs-design`
 with the reason. When you build one, add one line under
 `PATTERNS.md`'s `## Decisions in force`, in that list's form — the
 issue, the decision in one sentence, the rule it rides — with no commit
-hash and no date, in the same commit. Only where the decision answers a
-question across surfaces, also add or change a numbered rule there,
-stating only what must hold; the reason for the change goes in the
-commit body, never in the file. Never restate a rule in the decision
-line, or the decision in the rule.
+hash and no date, in the same commit. Never add or change a numbered
+rule in `PATTERNS.md`. Where a decision answers a question across
+surfaces, propose the rule in your report under a heading
+`## Proposed rule` — stated only as what must hold, and the surfaces it
+binds — and build the decision under the rules as they stand; the owner
+adds the rule. The reason for any change goes in the commit body, never in the
+file. Never restate a rule in the decision line.
 
 Sometimes, while fixing a page bug, you find the real cause is in the
 shell or the board: the shell has no read for what the page needs, the
