@@ -45,7 +45,14 @@
 // scene still reading ends, what stands staying (O-HOST's opening), so no
 // answer arriving while the box stands opens over it or takes its focus, and
 // the box is Esc's innermost thing (N-KEYS'). The intake's URL arm and search
-// (K-35) are the code lane's.
+// (K-35) are the code lane's. ITS ROWS ARE THE MODEL'S (issue #177's design
+// decision: "Everything drawn … comes from the model for what the reader can
+// now read"; FP-29): each row's words read from the index and the model as the
+// rows are computed — a trail entry's by N-GO's `wordsOf`, never a copy the
+// entry keeps — and a change of the page's class computes the rows standing
+// in the box again from the model at once (`classChanged`), and once more as
+// the index the new class reads answers (`takeIndex`), its text, its caret and
+// its focus left as they stand (FP-20).
 // ITS ACCESSIBLE FORM (R94; the WAI-ARIA combobox, list autocomplete with
 // automatic selection): the input is the combobox, expanded while it lists
 // rows, controlling the rows' listbox, the selected row `aria-selected`; the
@@ -58,7 +65,8 @@
 // index's state are the box's own status region (D4: the combobox's, beside
 // the page's one), written only when its words change: a live region speaks
 // whatever is rewritten, so an arrow or a further keystroke repeats nothing.
-// Carries: the wireframe's §12. Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20.
+// Carries: the wireframe's §12. Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20,
+// FP-29.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from './trail.js';
@@ -87,6 +95,8 @@ let inRows = false;
 let asOpened = false;
 /** the status region's markup as last written */
 let noteHTML = '';
+/** the rows stand computed over an index a change of the page's class dropped: computed again once the new class's index answers (`takeIndex`) */
+let stale = false;
 /** @type {() => string | null} the current address's reader (the line's) */
 let currentAddress = () => null;
 
@@ -131,7 +141,7 @@ function ctx() {
   const cur = currentAddress();
   return {
     places: REC.places(), landmarks: REC.landmarks(),
-    trail: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, label: r.entry.label })),
+    trail: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, label: GO.wordsOf(r.entry) })),
     current: cur, board: '1', home: s && s.account ? s.account : null,
     levelWords: { board: t('F.level.board'), home: t('F.level.home'), account: t('F.level.account'), document: t('F.level.document') },
   };
@@ -187,6 +197,39 @@ export function takeAddress() {
   render();
   els.input.select();
 }
+/** the rows standing in the box computed again from the model (see the head): over the text in it — the levels where it stands as opened — its text, its caret and its focus left as they stand (FP-20) */
+function relist() {
+  if (!els || !openState) return;
+  compute(asOpened ? '' : els.input.value);
+  render();
+}
+
+/**
+ * A change of the page's class (see the head; FP-23), told by the app as
+ * M-PUMP tells the drop of every record: the rows standing in the box
+ * computed again from the model now (`relist`), so none names what the class
+ * the page left could read, and once more as the index the new class reads
+ * answers (`takeIndex`).
+ */
+export function classChanged() {
+  if (!els || !openState) return;
+  relist();
+  stale = true;
+}
+
+/**
+ * The box standing over a change of the page's class takes the index the new
+ * class reads (see the head) once it answers — the index's state known again
+ * (M-REC's `indexState`): its rows computed again over it (`relist`). The
+ * app's loop runs it beside the line's rebuild; a box closed meanwhile takes
+ * nothing.
+ */
+export function takeIndex() {
+  if (!stale || (openState && REC.indexState() == null)) return;
+  stale = false;
+  relist();
+}
+
 /** close the box: the focus back through the focus's owner — to the opener, else the walk's element, the walk's element alone where a landing passed over the box; one that left the box already stays where it went */
 export function close() {
   if (!els || !openState) return;

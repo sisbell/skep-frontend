@@ -35,7 +35,10 @@
 // position's slot, its strip and its marker stand empty, their room kept, so
 // nothing after it on the line moves. Then THE POSITION'S SLOT
 // (issue #140's design decision): a position named only where that document
-// stands at its own reading scale — its em at the readable threshold,
+// holds text the reader may read — none at a document a read refused, a
+// covered one among them, whose box measures nothing (issue #177's design
+// decision: "no length, ticks or window"; FP-29) — and stands at its own
+// reading scale — its em at the readable threshold,
 // T-LAYER's one test, which the press rule and the walk's span grain read
 // too, never the camera's band — the one a landing named inside the focused
 // span (N-WALK's `landedAt`; W-01 step 3, "position honored"), else the
@@ -88,7 +91,9 @@
 // the reader the app hands in), said already through the status region as
 // the face was shown;
 // the TRANSIENT segments (the swallow line K-9; the mode line C-31 where the
-// pair flipped) until the next act. THE REBUILD KEEPS THE FOCUS (rule 11):
+// pair flipped) until the next act, or a change of the page's class, which
+// takes one quoting what the class it left read down with it. THE REBUILD
+// KEEPS THE FOCUS (rule 11):
 // the line is rebuilt whenever its words change — every frame of a flight —
 // and the act that held the focus has it back by its `data-act`, through the
 // focus's owner; an overlay standing at Back (the trail's list) or at sign in
@@ -96,16 +101,23 @@
 // anchor). What a screen reader is told (D4): a transient segment and
 // the mode line politely, the session's death, a session a restart lost that
 // the acquire could not get back, and halted writes assertively — nothing
-// while it reconnects nor as it returns — through the one status region. The
+// while it reconnects nor as it returns — through the one status region; a
+// change of the page's class (issue #177's design decision: "One status
+// message says the session ended and what is covered"; FP-29) is said ONCE,
+// as the reads it asked answer (M-PUMP's `rereading`), UNREACHED_MS at the
+// most after it: the ending's words, then the documents it covered (M-REC's
+// `coveredDocs`) — never the ending alone first. The
 // chip is NOT a segment (ux-T2: the
 // document's corner). Carries: the wireframe's §15 (`whereAmI`,
 // `actingLine`, `updateHUD`, `setTransient`; the chip and the walk step
 // removed; `whereAmI` RE-CUT to foundations §2.2, its document form nearer
 // than mid and its position at the document's own reading scale alone; the
 // diagnostics behind `h` are the gate's hooks).
-// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28,
+// FP-29.
 
 import * as REC from '../model/records.js';
+import * as PUMP from '../model/pump.js';
 import * as TRAIL from '../nav/trail.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
@@ -131,6 +143,10 @@ let lastTrust = /** @type {boolean | null} */ (null);
 let lastAlarm = /** @type {string | null} */ (null);
 /** the daemon's halted writes at the last render, said once */
 let lastHalted = false;
+/** when the page's class last changed, its one message not yet said (`classChanged`); null where none waits */
+let changedAt = /** @type {number | null} */ (null);
+/** the documents the change's message names at the most, the rest counted */
+const COVERED_NAMED = 5;
 /** the act holding the line's one Tab stop (K-22), by its `data-act` */
 let stop = 'back';
 /**
@@ -197,6 +213,27 @@ export function step(dir) {
 export function transient(/** @type {string} */ text, id = 'transient') { transientSeg = { html: esc(text), id }; FOCUS.say(text); render(true); }
 /** the next act clears the transient segment */
 export function act() { if (transientSeg) { transientSeg = null; render(true); } }
+/**
+ * A change of the page's class (see the head; FP-23, FP-29), told by the app
+ * as M-PUMP tells the drop of every record: the transient segment taken down
+ * — the strip's act quotes the text it was made at — and the change's one
+ * message held until the reads it asked answer (`render`).
+ */
+export function classChanged() { transientSeg = null; changedAt = performance.now(); render(true); }
+
+/**
+ * The change's one message (see the head): the ending's words, then the
+ * documents the change covered, the first COVERED_NAMED by address and the
+ * rest counted — the ending's alone where it covered none.
+ * @param {string} ending the acting-as segment's words for the ending
+ * @returns {string}
+ */
+function endingSaid(ending) {
+  const docs = REC.coveredDocs();
+  if (!docs.length) return ending;
+  const named = docs.slice(0, COVERED_NAMED).join(', ') + (docs.length > COVERED_NAMED ? ' ' + t('F.others-count', { n: docs.length - COVERED_NAMED }) : '');
+  return t('L.covered', { ending, documents: named });
+}
 
 /**
  * @typedef {Object} AddressDisplay — what the address segment names at the camera's scale (foundations §2.2)
@@ -271,7 +308,8 @@ export function addressDisplay() {
   const f = WALK.current(), nearer = lod.name === 'near' || lod.name === 'mid~near';
   if (f && nearer && (f.kind === 'block' || f.kind === 'document' || f.kind === 'link')) {
     const place = `${boardOf(f.addr)} › ${accountOf(f.addr)} › ${f.addr}`;
-    const pos = LAYER.atReadingScale(f.addr) ? WALK.landedAt() ?? f.pos ?? 1 : null;
+    // a document a read refused — withheld, a covered one among them, or nothing the board will say of it — holds no position to name
+    const pos = !REC.doc(f.addr).refused && LAYER.atReadingScale(f.addr) ? WALK.landedAt() ?? f.pos ?? 1 : null;
     const widest = Math.max(1, REC.doc(f.addr).extent || 0, pos || 0);
     const win = pos != null && WALK.kept() ? LAYER.windowIn(f.addr) : null;
     return { text: place + positionWords(pos), place, slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, window: win };
@@ -396,7 +434,10 @@ export function render(force = false) {
   const acting = actingSegment();
   const daemon = daemonSegment();
   const aside = acts && acts.aside ? acts.aside() : null;
-  if (acting.alarm && lastAlarm !== null && acting.words !== lastAlarm) FOCUS.say(acting.words, true);
+  if (changedAt != null) {
+    // a change of the page's class: said once, its ending with what it covered, as the reads it asked answer — never the ending alone first
+    if (!PUMP.rereading() || performance.now() - changedAt >= PUMP.UNREACHED_MS) { changedAt = null; if (acting.alarm) FOCUS.say(endingSaid(acting.words), true); }
+  } else if (acting.alarm && lastAlarm !== null && acting.words !== lastAlarm) FOCUS.say(acting.words, true);
   if (daemon.halted && !lastHalted) FOCUS.say(daemon.words, true);
   lastAlarm = acting.alarm ? acting.words : ''; lastHalted = daemon.halted;
   const html =

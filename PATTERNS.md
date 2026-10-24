@@ -168,6 +168,22 @@ fix; nothing here depends on their names.
   "Signed out" names the person's own sign-out alone, on every
   surface.
 
+## The cover
+
+- **FP-29 A change of the page's class keeps every place and covers
+  its material.** View state holds addresses, positions and layout;
+  what a surface shows of a document it reads from the model, or from
+  the read it was last set from, never from a copy that outlives that
+  read. At a change of the page's class every document the view stands
+  on — in view, or named by the view's state — is read again at the
+  new class. One the reader can no longer read is covered: its place,
+  its address and its trail entry stand; it is drawn, walked and named
+  as the withheld box a guest meets, its sign-in offered in the one
+  line's words for the ending; nothing the class it left measured of
+  it — a length, a position, a window, an arrival, a notice, a card —
+  survives. The change is said once, its ending and what it covered,
+  as the reads it asked answer.
+
 ## The gate
 
 - **FP-17 Every claim is a test that fails without its fix.** Text,
@@ -246,9 +262,9 @@ fix; nothing here depends on their names.
   unmarked, its line saying it could not tell and why, keyed on the
   refusal and never its token. "Part" names an amount only; nothing
   counts "places". The state ends only at another landing, at find
-  opening, or at Esc after anything nearer; a pan, a zoom, a selection
-  or a step keeps it, and a return restores outlines and labels as
-  left. Stepping the pieces follows find's concept, in passage order,
+  opening, at Esc after anything nearer, or at a change of the page's
+  class (FP-23); a pan, a zoom, a selection or a step keeps it, and a
+  return restores outlines and labels as left. Stepping the pieces follows find's concept, in passage order,
   wrapping, with the focus on the piece. The item the focus lands on
   takes the crossing and the label as its description, the one
   announcement; no light sets `aria-current`. Every surface that knows
@@ -365,6 +381,7 @@ last. Each stands until a later decision says it changes it.
 - **#169** (built with this line): a held label stands at the top-left of its box's or region's visible part, one line of its type with its link badge, never wrapped, its words dropped before its address; the box's bottom edge pushes it up under the line; it stands just below the held label of the region holding it, level with the corner and never over it; the box's top edge and history strip stay where the box begins → FP-26
 - **#171** (built with this line): a card ends when the camera leaves its place, never when a read lands, so a card shown while a jump is in the air stands at its landing and one asked then opens there; a landing never closes a field the reader is typing in, which stands with its text, caret and focus until the reader closes it, the focus then going to the landing, and an address box with nothing typed in it takes the new address; a refused write still waiting on the reader's answer is never ended by a landing → FP-25, FP-20
 - **#175** (built with this line): a session a restart lost — its reason naming no re-opened reference, or a call answered `session_ended` — is asked for again by the boot's own `session(board)`, which changes nothing at the board, and the page's own `close(session)` is its sign-out, taken as it goes out, the one end to read "signed out" — a death of an arm this page holds no words for (seeded, blocked, unreachable) reads the guest line instead; past a second still out the line reads "reconnecting as ⟨account⟩ after a restart", got back it says nothing, and refused it shows the guest state boot shows for that refusal led by "could not reconnect as ⟨account⟩ after a restart"; writes held as not yet kept meanwhile, a write whose answer was lost resent only once a read shows it did not land, and no call while a claim's panel stands wait on the editor's and the ceremonies' lanes, this page composing no write and showing no panel → FP-28
+- **#177** (built with this line): at a session's ending the documents in view and on the trail are read again, and one the reader can no longer read stands in place as a guest's withheld box, "withheld · ⟨owner⟩" where its first line stood, at one neutral size with no length, ticks or window, its face offering sign-in in the one line's words for that ending; the walk stays on it; a reading scene's pane on it stays open, its identity bands gone and the lines homed in the readable pane ending at its head; trail entries keep their numbers and addresses, their words read as shown, and following one lands on the withheld face; cards on covered material close; one status message says the ending and what is covered; a restart the shell re-opens covers nothing (#175); words not yet kept, which wait for sign-in, wait on the editor's lane, this page composing no write → FP-29, FP-21
 
 ## Changes
 
@@ -402,6 +419,8 @@ found.
 - 2026-10-23 · FP-26 · #169 · a label whose place rose under the one line was left out, so a document read past its top lost its name while its corner held
 - 2026-10-23 · FP-20 · #171 · every landing moved the focus to the walk's element wherever it stood, so an address being typed in the LEAP box closed under the reader with its text, and a jump's departure and faces ended a walk's moment being answered
 - 2026-10-23 · FP-28 · #175 · the line, a face and a landing's reason each answered a session the person never closed their own way, all three saying "signed out", and nothing asked for a session again after boot
+- 2026-10-23 · FP-29 · #177 · at a session's end the walk, the scene's panes, the trail, the cards and the one line each kept what the dead session read their own way, the trail its drafts' first lines, and the plane dropped the places it no longer listed
+- 2026-10-23 · FP-21 · #177 · the arrival outlived a change of the page's class, its line and its descriptions speaking what the dead class measured
 
 ## What these rule out
 

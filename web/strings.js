@@ -100,7 +100,6 @@ export const STRINGS = {
   'B1.follow': { text: 'follow', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S6' },
   'B1.side-by-side': { text: 'read side by side', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S9' },
   'B1.show-more': { text: 'show more', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4' },
-  'B1.withheld-box': { text: '⟨owner⟩ · withheld', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S2' },
   'B1.withheld-run': { text: 'withheld · ⟨owner⟩ (⟨account⟩) · ⟨width⟩ positions · origin ⟨origin⟩', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S7' },
 
   // ---- DRAFT: designs/foundations.md ----------------------------------------
@@ -218,6 +217,10 @@ export const STRINGS = {
   // refusal — "signed out" never said of either, for it is the person's own sign-out's alone (C-137)
   'L.reconnecting': { text: 'reconnecting as ⟨account⟩ after a restart', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.reconnect-refused': { text: 'could not reconnect as ⟨account⟩ after a restart', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  // the one status message at a session's ending (issue #177's design decision, whose own words are "One status message says
+  // the session ended and what is covered"): the ending's words — the one line's — then the documents the view stood on that
+  // the reader can no longer read, each now its withheld box, "withheld · ⟨owner⟩"
+  'L.covered': { text: '⟨ending⟩ — withheld from you now: ⟨documents⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
   'L.moment': { text: 'the shell asks: ⟨kind⟩', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
   'L.answer': { text: 'answer', cls: 'DRAFT', source: '', screen: 'a face', lane: true },
   'L.cancel': { text: 'cancel', cls: 'DRAFT', source: '', screen: 'a face', lane: true },

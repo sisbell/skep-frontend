@@ -107,7 +107,11 @@
 // document only its index listed — a mutant that leaves the mirror as it
 // stood, or rebuilds it over the levels it held, turns red — and once the
 // walk's document is read at the guest's class the walk stands again on the
-// span holding the position it stood at.
+// span holding the position it stood at; where the guest may not read it, on
+// the document whole, its cover, named in its withheld box's words, and the
+// account's level lists it as the plane draws its box (issue #177: a mutant
+// that lists the index's places alone, or leaves the walk on nothing, turns
+// red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -473,7 +477,7 @@ test('the mirror names a document a read answered `withheld` by its withheld box
   const X = '1.0.2.1.0.2', owner = '1.0.2';
   REC.takeOwner('1.0.2.1', { prefix: owner, principal: 901 });
   REC.takeRefused(X, 'withheld');
-  const box = t('B1.withheld-box', { owner });
+  const box = t('F.corner.withheld', { owner });
   assert.equal(LAYER.withheldBox(REC.doc(X)), box, 'the box names the seat that owns the document, never its sub-account');
   const item = WALK.nameOf({ kind: 'document', addr: X, pos: null, link: null }, 0, 1);
   assert.ok(item.includes(box), `the item says what the box says: ${item}`);
@@ -564,8 +568,8 @@ test('each document\'s item in the mirror says whether it is expanded — at its
     },
     querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[aria-expanded]' ? items.filter((i) => 'aria-expanded' in i.attrs) : []),
   };
-  /** each listed document's `aria-expanded`, by its address */
-  const expanded = () => Object.fromEntries(items.map((i) => [i.attrs['data-addr'], i.getAttribute('aria-expanded')]));
+  /** each of D's, E's and C1's items' `aria-expanded`, by its address — the account lists every box the plane draws (M-REC's `known`), the documents the tests above read among them */
+  const expanded = () => Object.fromEntries(items.filter((i) => [D, E, C1].includes(i.attrs['data-addr'] || '')).map((i) => [i.attrs['data-addr'], i.getAttribute('aria-expanded')]));
   await PUMP.loadWhole(C1);
   index([D, E, C1]);
   try {
@@ -918,7 +922,7 @@ test('the walk takes each box as the version it shows (issue #154): an account\'
   WALK.readers({ shown: (a) => (a === D || a === D2 ? D2 : a) });
   try {
     const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
-    assert.deepEqual(kids.map((n) => n.addr), [D2, E], 'the account lists the version D\'s box shows, in D\'s place');
+    assert.deepEqual(kids.map((n) => n.addr).filter((a) => [D, D2, E].includes(a)), [D2, E], 'the account lists the version D\'s box shows, in D\'s place, never D');
     const named = WALK.nameOf(kids[0], 0, kids.length), place = /** @type {NonNullable<ReturnType<typeof REC.place>>} */ (REC.place(D));
     assert.ok(named.startsWith(t('L.mirror.document', { document: D2, label: '"' + place.label + '"', state: t('F.published'), extent: t('L.mirror.positions', { n: TEXT2.length }) })), 'the mirror names the version by its box\'s document\'s first line and state: ' + named);
     await WALK.focusTo(D, 12);
@@ -956,6 +960,35 @@ test('the page\'s own death takes the mirror down at once — no item quoting wh
     assert.deepEqual(walkAt(), ['block', D, 11], 'its document read at the guest\'s class: the walk on the span holding the position it stood at');
     assert.ok(mirror.innerHTML.includes('The first field.'), 'the mirror quotes what the guest reads there');
     assert.deepEqual(fake.unanswered, []);
+  } finally {
+    globalThis.document = platform;
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  }
+});
+
+// placed after the death above: the guest's page, the session it held ended
+test('the walk on a draft the session read stays on it once the guest\'s read answers it withheld — never on nothing — named in its withheld box\'s words, and the account\'s level lists it among the boxes the plane draws, its cover (issue #177: "The walk stays put on that withheld form, never on nothing")', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
+  const DR = '1.0.1.0.13', TEXT = 'The draft\'s own words.\n\nAnd more.';
+  // DR's reads under the session; the guest's read of its extent refused, withheld
+  Object.assign(script, reads(DR, [{ content: TEXT }], TEXT.length, [{ i_start: DR + '.0.1.1', width: String(TEXT.length) }]));
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    REC.invalidate(DR);
+    await PUMP.loadWhole(DR);
+    await WALK.focusTo(DR, 1);
+    assert.ok(mirror.innerHTML.includes('The draft'), 'the walk on the draft\'s span, the mirror quoting it');
+    script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })] = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
+    REC.sessionDied({ arm: 'closed' });
+    await WALK.dropped({ row: null, addrs: null });
+    const box = t('F.corner.withheld', { owner: '1.0.1' });
+    assert.deepEqual([walkAt(), REC.covered(DR)], [['document', DR, null], true], 'the walk on the covered draft, whole: never on nothing');
+    assert.ok(!mirror.innerHTML.includes('The draft') && (WALK.mirrorItem(WALK.mirrorIndex()) || '').includes(box), `named in its withheld box's words, none of its text: ${WALK.mirrorItem(WALK.mirrorIndex())}`);
+    const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
+    assert.ok(kids.some((n) => n.addr === DR), 'the account\'s level lists the covered draft, as the plane draws its box');
   } finally {
     globalThis.document = platform;
     REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });

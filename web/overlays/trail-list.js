@@ -9,8 +9,11 @@
 // the ring drawn at the landing where a key made the jump. Opened by a key —
 // Mod+Y, Enter on the line's act — it takes the focus on its newest row, the
 // first (K-41; the focus record's rule 13); opened by a click on the line's
-// act it takes none (rule 16).
-// Carries: the wireframe's §11 `renderTrail`. Rules: FP-1, FP-2, FP-13, FP-20.
+// act it takes none (rule 16). Each row's words are read from the model as
+// the list is made (N-GO's `wordsOf`; issue #177's design decision: "Draft
+// labels become 'withheld · ⟨owner⟩'"), never kept in an entry.
+// Carries: the wireframe's §11 `renderTrail`. Rules: FP-1, FP-2, FP-13, FP-20,
+// FP-29.
 
 import * as HOST from './host.js';
 import * as TRAIL from '../nav/trail.js';
@@ -26,7 +29,7 @@ export function open(byKey = false) {
   const rows = TRAIL.numbered();
   const html = `<span class="label">${esc(t('F.trail-list'))}</span>` +
     (rows.length
-      ? `<ul class="rows">${rows.map((r) => `<li><button data-run="j${r.n}" aria-current="${r.current}"><span class="k">${r.n <= 9 ? r.n : '·'}</span> ${esc(r.entry.addr)}${r.entry.pos != null ? ` · ${esc(t('F.position', { p: r.entry.pos }))}` : ''} <span class="dim">${esc(r.entry.label || '')}</span></button></li>`).join('')}</ul>`
+      ? `<ul class="rows">${rows.map((r) => `<li><button data-run="j${r.n}" aria-current="${r.current}"><span class="k">${r.n <= 9 ? r.n : '·'}</span> ${esc(r.entry.addr)}${r.entry.pos != null ? ` · ${esc(t('F.position', { p: r.entry.pos }))}` : ''} <span class="dim">${esc(GO.wordsOf(r.entry))}</span></button></li>`).join('')}</ul>`
       : `<div class="dim">—</div>`);
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};

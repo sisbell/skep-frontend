@@ -51,7 +51,11 @@
 // OVERLAY'S OWN COMPLETION (`complete`) is no act on the chrome: the reading
 // face taken down as its read answers ends no card asked while it stood, and
 // leaves another overlay standing; a dismissal still ends one (a mutant
-// whose completion counts as an act turns red).
+// whose completion counts as an act turns red). A CHANGE OF THE PAGE'S CLASS
+// (issue #177) dismisses the card standing — its end run, the focus it held
+// on the walk's element — and ends an opening still reading, while a jump's
+// reading face and a moment's stand (a mutant that leaves the card, or
+// dismisses what stands through it, turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -345,5 +349,37 @@ test('an element its owner redrew from state is found again by its id: the overl
   } finally {
     globalThis.document.getElementById = find;
     HOST.dismiss();
+  }
+});
+
+test('a change of the page\'s class takes down what the host wrote from what the class it left could read (issue #177: "Cards on covered material close onto the cover"): the card standing dismissed — its end run, the focus it held handed to the walk\'s element — and an opening still reading ended, its answer showing nothing; a jump\'s reading face and a moment\'s stand through it', async () => {
+  const doc = /** @type {any} */ (globalThis.document);
+  /** the walk's element, and a control of the card holding the focus */
+  const item = { id: 'the walk\'s item', isConnected: true, focus() { doc.activeElement = item; } };
+  const act = { id: 'the card\'s act', blur() { doc.activeElement = null; } };
+  const was = { contains: hostEl.contains, active: doc.activeElement };
+  FOCUS.attach({ home: () => /** @type {any} */ (item) });
+  hostEl.contains = /** @type {any} */ ((/** @type {unknown} */ x) => x === act);
+  try {
+    /** @type {boolean | null} how the card's end ran: replaced, or dismissed */
+    let ended = null;
+    HOST.show({ kind: 'card', id: 'anatomy:1.0.1.0.1003.0.2.1', anchor: null, html: '<span class="label">its passage</span>', acts: {}, onDismiss: (replaced) => { ended = replaced; } });
+    doc.activeElement = act;
+    const r = slow();
+    const o = HOST.opening(() => r.read, card('provenance:wrote'));
+    HOST.classChanged();
+    assert.deepEqual([standing(), ended, HOST.pending(), doc.activeElement], [null, false, false, item], 'the card dismissed, its end run, the opening ended, the focus it held on the walk\'s element');
+    r.answer('its origin');
+    await o;
+    assert.equal(standing(), null, 'the opening\'s answer shows nothing');
+    FACES.reading('1.0.1.0.3', null);
+    HOST.classChanged();
+    assert.equal(standing(), 'reading:1.0.1.0.3', 'a jump\'s reading face stands: its read is asked again at the new class');
+    FACES.moment({ id: 'm-177', kind: 'statement', data: 'the walk says', walk: 'w-1', board: null, answerable: true });
+    HOST.classChanged();
+    assert.equal(standing(), 'moment:m-177', 'a moment\'s face stands: the shell\'s, not the page\'s');
+    HOST.dismiss();
+  } finally {
+    hostEl.contains = was.contains; doc.activeElement = was.active; FOCUS.attach({ home: () => null });
   }
 });

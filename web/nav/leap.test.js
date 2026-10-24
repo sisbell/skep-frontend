@@ -9,11 +9,19 @@
 // closed, nothing is written to it. A LANDING NEVER CLOSES THE BOX (FP-20):
 // a move of the focus the page makes while its input holds the focus leaves
 // it there, and the box's close then gives it to the walk's element, the
-// landing — never the element it was opened from.
+// landing — never the element it was opened from. A CHANGE OF THE PAGE'S
+// CLASS (issue #177) computes the rows standing in the box again from the
+// model at once — none naming what the class it left could read — its text,
+// its caret and its focus as they stood, and once more as the new class's
+// index answers (a mutant that leaves the rows standing, or never takes the
+// new index, turns red).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as LEAP from './leap.js';
 import * as FOCUS from './focus.js';
+import * as REC from '../model/records.js';
+import * as TRAIL from './trail.js';
+import { t } from '../strings.js';
 
 /** the platform's document: its focus — the body where it stands on nothing */
 const body = { id: 'the body' };
@@ -107,4 +115,42 @@ test('a landing never closes the box: a move the page makes leaves the focus in 
   assert.deepEqual([globalThis.document.activeElement, LEAP.isOpen()], [/** @type {any} */ (input), true], 'the landing\'s move leaves the focus in the input, the box open');
   key('Escape');
   assert.deepEqual([LEAP.isOpen(), globalThis.document.activeElement], [false, /** @type {any} */ (landed)], 'Esc closes the box onto the landing, the walk\'s element, though the item it was opened from still takes the focus');
+});
+
+test('a change of the page\'s class computes the rows standing in the box again from the model at once — none naming what the class it left could read — its text, its caret and its focus as they stood, and once more as the new class\'s index answers; a trail entry\'s row reads its document\'s words from the model, the cover\'s once a read withholds it (issue #177)', () => {
+  const listing = (/** @type {Array<{doc: string, kind: string, label: string}>} */ docs) => /** @type {any} */ ({ docs: docs.map((d) => ({ ...d, standing: 'public' })), counts: [{ account: '1.0.1', documents: docs.length }], state: { arm: 'complete' } });
+  const DRAFT = { doc: '1.0.1.0.1003', kind: 'draft', label: 'notes the draft holds' }, EDITION = { doc: '1.0.1.0.3', kind: 'edition', label: 'notes on tumblers' };
+  /** the session reading both, the draft's entry on the trail */
+  const signedIn = () => { REC._reset(); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' }); REC.takeIndex(listing([DRAFT, EDITION])); };
+  const trailRow = () => LEAP.currentRows().find((r) => r.kind === 'trail' && r.addr === DRAFT.doc)?.sub;
+  TRAIL.push({ addr: DRAFT.doc, pos: null, width: null, view: { x: 0, y: 0, scale: 1 }, label: null, notice: null }, null);
+  try {
+    // as opened: the levels, the landmarks and the trail's entries
+    signedIn();
+    LEAP.open();
+    assert.equal(trailRow(), `${DRAFT.label} · ${t('F.label.draft')}`, 'the draft\'s trail row: its box\'s first line, read from the model');
+    REC.sessionDied({ arm: 'closed' });
+    LEAP.classChanged();
+    assert.equal(trailRow(), '', 'at once: nothing answered of the draft, nothing said of it');
+    REC.takeRefused(DRAFT.doc, 'withheld');
+    REC.takeIndex(listing([EDITION]));
+    LEAP.takeIndex();
+    assert.equal(trailRow(), t('F.corner.withheld', { owner: '1.0.1' }), 'the guest\'s read withholds it: the cover\'s words');
+    LEAP.close();
+    // typed in
+    signedIn();
+    LEAP.open();
+    input.value = 'notes';
+    input.fire('input');
+    input.selected = [2, 2];
+    assert.deepEqual(shown().rows.sort(), [DRAFT.doc, EDITION.doc].sort(), 'typed in: the draft and the edition the session\'s index lists');
+    REC.sessionDied({ arm: 'closed' });
+    LEAP.classChanged();
+    assert.deepEqual([shown().rows, input.value, input.selected, globalThis.document.activeElement, LEAP.isOpen()], [[], 'notes', [2, 2], /** @type {any} */ (input), true], 'at once: no row the dead class\'s index gave; the text, the caret and the focus as they stood');
+    LEAP.takeIndex();
+    assert.deepEqual(shown().rows, [], 'the new class\'s index not yet answered: nothing taken');
+    REC.takeIndex(listing([EDITION]));
+    LEAP.takeIndex();
+    assert.deepEqual([shown().rows, input.value, globalThis.document.activeElement], [[EDITION.doc], 'notes', /** @type {any} */ (input)], 'the guest\'s index answered: the rows over it, the text and the focus kept');
+  } finally { REC._reset(); TRAIL._reset(); }
 });

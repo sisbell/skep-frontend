@@ -32,12 +32,13 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     its box the account's residue cell, where the continuation's one mark
     stands; and a LEAP to a withheld document with a box of its own (the
     second account's draft) drawing its withheld box, its label the address
-    and B1-S2's words alone (existence and owner, never bytes) — the one
+    and its words, "withheld · ⟨owner⟩", alone (existence and owner, never
+    bytes; B1-S2) — the one
     line naming that landing is marked, waiting on the walk's focus at a
     document the index does not list; at both landings the mirror's current
     item naming the document in its withheld box's words, never published;
     "who wrote this?" asked of that withheld document faced as its box names
-    it — B1-S2's words, the guest's arm beneath (A-170) — with no token
+    it — its withheld box's words, the guest's arm beneath (A-170) — with no token
     unfilled and no act;
 (e) the window run at 1467 withheld: the model's block — its width, its
     origin, no text — B1-S7's gap at the run (issue #151's design decision:
@@ -87,8 +88,14 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     fallen page, in the line's signed-out state, is held to the guest's (d)
     and (e): its index read again in the guest form, every read after the
     close a guest's or refused; no draft listed, none of the claimant's; each
-    count the places listed; the draft it read holding no text, nothing
-    mounted for it; no label or mark drawing a draft at HOME; the window run
+    count the places listed; the card standing over the draft's run taken
+    down; the draft it read holding no text, nothing
+    mounted for it — the draft the trail names, and each in view, read again
+    at the guest's class and COVERED (issue #177's design decision), said once with the
+    ending, its trail row the cover's words, "withheld · ⟨owner⟩", never its
+    first line, Back to it its withheld face with the ending's words and the
+    sign-in its act, the walk on it; no label or mark drawing a draft at HOME
+    but that cover, counted in its continuation's mark; the window run
     a withheld block with none of its text; none of the owner's bytes
     anywhere in the page;
 (h) the owner's page opened once more stands a reading scene on the first
@@ -414,11 +421,14 @@ def run(ctx):
                     named.append({'kind': l['kind'], 'place': l['place'], 'text': x['text']})
         return named
 
-    def draws_no_draft(name):
-        """no label at a draft's box, no mark holding a draft, no label line naming a draft's first line or the draft mark"""
+    def draws_no_draft(name, covered=()):
+        """no label at a draft's box, no mark holding a draft, no label line naming a draft's first line or the draft mark —
+        save a draft the page holds covered (issue #177): one the session read, withheld from the reader now, its place kept
+        as the withheld box a guest meets, existence and owner, its label the cover's words"""
         labels, marks = ctx.js('window.__skep.labels()'), ctx.js('window.__skep.residues()')
-        at = [l['place'] for l in labels if l['kind'] == 'doc' and l['place'] in drafts]
-        held = [{'mark': m['key'], 'newest': m['newest'], 'drafts': [a for a in m['members'] if a in drafts][:4]} for m in marks if m['newest'] in drafts or any(a in drafts for a in m['members'])]
+        hidden = [d for d in drafts if d not in covered]
+        at = [l['place'] for l in labels if l['kind'] == 'doc' and l['place'] in hidden]
+        held = [{'mark': m['key'], 'newest': m['newest'], 'drafts': [a for a in m['members'] if a in hidden][:4]} for m in marks if m['newest'] in hidden or any(a in hidden for a in m['members'])]
         named = naming_a_draft(labels)
         r.check(not at and not held and not named, f'(d) {name}: no label or mark draws a draft — none at a draft\'s box, no mark holding one, no line naming a draft\'s first line or the draft mark',
                 {'at_draft': at[:4], 'marks': held[:4], 'named': named[:4]})
@@ -614,7 +624,7 @@ def run(ctx):
     r.check(d['refused'] == 'withheld' and d['from'] == -1 and not d['blocks'] and draft not in shown_at['mounted'] and not shown_at['chip'] and not shown_at['corner'],
             '(d) a LEAP to a draft of the claimant\'s: its read refused `withheld`, no text delivered, nothing mounted, no corner and no chip', {'draft': draft, 'refused': d['refused'], 'from': d['from'], 'blocks': len(d['blocks']), **shown_at})
     published = t(ctx, 'F.published')
-    named_withheld = t(ctx, 'B1.withheld-box', {'owner': OWNER})
+    named_withheld = t(ctx, 'F.corner.withheld', {'owner': OWNER})
     draft_item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
     r.check(draft_item.startswith('document %s,' % draft) and named_withheld in draft_item and published not in draft_item,
             '(d) at that landing the mirror\'s current item names the draft as its withheld box does — "%s" — and never published (B1-S2)' % named_withheld, draft_item)
@@ -628,7 +638,7 @@ def run(ctx):
     ctx.settle(); ctx.frames(2)
     w = ctx.js('window.__skep.model.doc(%s)' % json.dumps(WITHHELD))
     at_box = [[x['text'] for x in l['lines']] for l in ctx.js('window.__skep.labels()') if l['kind'] == 'doc' and l['place'] == WITHHELD]
-    want = [WITHHELD[len(SECOND_ACCOUNT):], t(ctx, 'B1.withheld-box', {'owner': SECOND_ACCOUNT})]
+    want = [WITHHELD[len(SECOND_ACCOUNT):], t(ctx, 'F.corner.withheld', {'owner': SECOND_ACCOUNT})]
     r.check(w['refused'] == 'withheld' and w['from'] == -1 and at_box == [want],
             '(d) a LEAP to a withheld document with a box of its own draws its withheld box, its label the address and "%s" alone: existence and owner, never bytes (B1-S2)' % want[1],
             {'refused': w['refused'], 'labels_at_the_box': at_box, 'want': want})
@@ -646,7 +656,7 @@ def run(ctx):
       return {id: window.__skep.overlay().id, words: w ? w.textContent : null, words_id: w ? w.dataset.string : null, arm: a ? a.textContent : null,
               arm_id: a ? a.dataset.string : null, text: o.textContent, acts: o.querySelectorAll('[data-run]').length}; })()''')
     guests_arm = t(ctx, arm_id, {'owner': SECOND_ACCOUNT})
-    r.check(face['id'] == 'face:withheld' and face['words_id'] == 'B1.withheld-box' and face['words'] == want[1] and face['arm_id'] == arm_id and face['arm'] == guests_arm
+    r.check(face['id'] == 'face:withheld' and face['words_id'] == 'F.corner.withheld' and face['words'] == want[1] and face['arm_id'] == arm_id and face['arm'] == guests_arm
             and '⟨' not in face['text'] and face['acts'] == 0,
             '(d) "who wrote this?" asked of the withheld document faces it as its box names it — "%s" — the guest\'s arm for this device\'s key store beneath, %s for %s, no token unfilled and no act (A-170)' % (want[1], arm_id, SECOND_ACCOUNT),
             {'face': face, 'guests_arm': guests_arm[:80], 'key_here': store['key_here']})
@@ -675,6 +685,9 @@ def run(ctx):
     r.check(WINDOW[2] in drafts and draft_read['from'] >= 0 and bool(draft_read['blocks']) and again == secret,
             '(g) before its end the owner\'s page reads the claimant\'s draft %s and the window run\'s bytes' % WINDOW[2],
             {'draft_listed': WINDOW[2] in drafts, 'draft_from': draft_read['from'], 'draft_blocks': len(draft_read['blocks']), 'run_bytes': len(again.encode('utf8'))})
+    # a card standing over the run the draft's bytes fill as the session ends: made from what the session read
+    ctx.js('window.__skep.cards.wrote(%s, %d)' % (json.dumps(DOC), WINDOW[0])); ctx.settle(); ctx.frames(2)
+    card = ctx.js('window.__skep.overlay().id')
     n0 = len(calls(ctx))
     closed = close_session()
     fell = wait_for(ctx, 'window.__skep.model.session() === null && window.__skep.line().state === 5')
@@ -682,6 +695,34 @@ def run(ctx):
     ids = ctx.js('[...document.querySelectorAll("#line [data-string]")].map((e) => e.dataset.string)')
     r.check(closed and fell and 'C-137.signed-out' in ids, '(g) the page\'s own `close(session)` ends its session: the page takes the end, the line in its signed-out state',
             {'closed': closed, 'fell': fell, 'strings': ids})
+    r.check(card == 'provenance:wrote' and ctx.js('window.__skep.overlay().id') is None,
+            '(g) the card standing over the draft\'s run as the session ends — made from what the session read — is taken down with it (issue #177: "Cards on covered material close onto the cover")', {'before': card, 'after': ctx.js('window.__skep.overlay().id')})
+    # THE COVER (issue #177): the draft the trail names, read again at the guest's class and covered — its trail row the cover's
+    # words, never its first line; the change said once, its ending and what it covered; Back to its entry its withheld face,
+    # the ending's words and the sign-in its act, the walk on it — then Forward to where the reader stood
+    covered = [d for d in drafts if ctx.js('window.__skep.model.doc(%s).refused' % json.dumps(d)) == 'withheld']
+    cover_words = t(ctx, 'F.corner.withheld', {'owner': OWNER})
+    # what the change covered: each a draft of the claimant's the view stood on — in view, or named by the trail — the one the trail names among them
+    said = t(ctx, 'L.covered', {'ending': t(ctx, 'C-137.signed-out'), 'documents': ', '.join(covered[:5]) + (' ' + t(ctx, 'F.others-count', {'n': len(covered) - 5}) if len(covered) > 5 else '')})
+    told = wait_for(ctx, 'document.getElementById("live").textContent === %s' % json.dumps(said), 5)
+    r.check(WINDOW[2] in covered and told, '(g) the draft the trail names is read again at the guest\'s class and covered — withheld from the reader now, as is each draft in view — and the change is said once: the ending, then what it covered (issue #177)',
+            {'covered': covered, 'live': ctx.js('document.getElementById("live").textContent'), 'want': said})
+    ctx.js('window.__skep.cards.trailList()'); ctx.frames(1)
+    rows = ctx.js('''[...document.querySelectorAll('#overlay [data-run]')].map((b) => ({text: b.textContent, words: (b.querySelector('.dim') || {}).textContent || ''}))''')
+    ctx.esc()
+    row = next((x for x in rows if WINDOW[2] in x['text']), None)
+    first_line = plain(next((p['label'] for p in owner_places if p['doc'] == WINDOW[2]), '') or '')
+    r.check(bool(row) and row['words'] == cover_words and (not first_line or first_line not in row['text']),
+            '(g) the draft\'s trail row keeps its number and its address and says "%s", never its first line (issue #177)' % cover_words, {'row': row, 'first_line': first_line})
+    ctx.js('window.__skep.go.back()'); ctx.settle(); ctx.frames(2)
+    back = ctx.js('''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm'), b = o.querySelector('[data-run]'), T = window.__skep.trail();
+      return {id: window.__skep.overlay().id, words: w ? w.textContent : null, arm: a ? a.dataset.string : null, act: b ? b.textContent : null, focus: window.__skep.view.focus(), entry: T.entries[T.cursor].addr}; })()''')
+    r.check(back['id'] == 'face:withheld' and back['words'] == cover_words and back['arm'] == 'C-137.signed-out' and back['act'] == t(ctx, 'F.sign-in')
+            and bool(back['focus']) and back['focus']['kind'] == 'document' and back['focus']['addr'] == WINDOW[2] and back['entry'] == WINDOW[2],
+            '(g) Back to the draft\'s entry lands on its cover: the withheld face, "%s", the ending\'s words beneath and the sign-in its act; the walk on the draft, never on nothing (issue #177)' % cover_words, back)
+    r.figures['shots'].append(ctx.shot('guest/fallen-cover.png'))
+    ctx.esc()
+    ctx.js('window.__skep.go.forward()'); ctx.settle(); ctx.frames(2)
     after = calls(ctx)[n0:]
     at = next((i for i, c in enumerate(after) if c['name'] == 'close'), len(after))
     reads = [c for c in after[at + 1:] if c['name'] in ('op', 'places')]
@@ -695,7 +736,7 @@ def run(ctx):
     r.check(gone['from'] == -1 and not gone['blocks'] and WINDOW[2] not in ctx.js('window.__skep.mountedAddrs()'),
             '(g) the draft the page read under its session holds no text, and nothing is mounted for it', {'from': gone['from'], 'blocks': len(gone['blocks'])})
     ctx.js('window.__skep.go.home()'); ctx.settle(); ctx.frames(2)
-    fallen_home = draws_no_draft('the fallen page\'s HOME')
+    fallen_home = draws_no_draft('the fallen page\'s HOME', covered)
     ctx.leap(DOC, WINDOW[0])
     run_withheld('(g) the fallen page holds the window run as the guest\'s does: a withheld block at 1467, 240 positions, its origin 1.0.1.0.1003, and none of its text')
     fallen_leaks, _ = leaks(fallen)

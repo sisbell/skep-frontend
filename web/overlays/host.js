@@ -75,8 +75,17 @@
 // carries its words in its place (`aside`, read through the reader the app
 // hands L-LINE); it is said through the status region as it is shown,
 // wherever it stands.
+// A CHANGE OF THE PAGE'S CLASS (issue #177's design decision: "Cards on
+// covered material close onto the cover"; FP-23, FP-29): what the host wrote
+// was made from what the class the page left could read, so the change takes
+// it down at once (`classChanged`) — the opening still reading ended, its
+// answer showing nothing, and the standing overlay dismissed, the focus
+// returning through the controller — save a jump's reading or reaching face,
+// whose read the new class answers, and a moment's face, which is the
+// shell's.
 // Carries: the wireframe's §18 `overlay` object, `anchorOfSpan`.
-// Rules: FP-1, FP-2, FP-9, FP-10 (its own DOM alone), FP-13, FP-20, FP-25.
+// Rules: FP-1, FP-2, FP-9, FP-10 (its own DOM alone), FP-13, FP-20, FP-25,
+// FP-29.
 
 import { sx, sy, viewport, markDirty } from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
@@ -332,6 +341,20 @@ export async function opening(reads, show) {
 
 /** is an opening still reading — chrome asked for, nothing yet shown for it? */
 export const pending = () => reading !== 0;
+
+/** does an overlay stand through a change of the page's class (see the head): a jump's reading or reaching face, or a moment's */
+const outlasts = (/** @type {Overlay} */ o) => o.kind === 'moment' || /^(reading|reaching):/.test(o.id || '');
+
+/**
+ * A change of the page's class (see the head), told by the app as M-PUMP
+ * tells the drop of every record: the opening still reading ended, and the
+ * standing overlay dismissed — its end run, the focus returned through the
+ * controller — save one that stands through it (`outlasts`).
+ */
+export function classChanged() {
+  endOpening();
+  if (current && !outlasts(current)) dismiss();
+}
 
 /** the opening still reading ends, what stands staying — Esc's and an empty click's innermost thing, the LEAP box opened, a navigation act as it is made: its answer shows nothing */
 export function endOpening() {

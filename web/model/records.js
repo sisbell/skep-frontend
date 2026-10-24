@@ -29,7 +29,16 @@
 // it is what a page holds before it reads at the class the change leaves it
 // at, a guest's after a death (foundations §2.1: the index "masked at the
 // reader's class"; client.md §4e.3); M-PUMP reads it all again at that
-// class. It knows nothing of pixels, zoom, selection or
+// class. THE COVER (issue #177's design decision: "Keep every place, and
+// cover the material"; FP-29): the change keeps which documents the class it
+// left could read — each record holding its text, its metadata or its
+// extent, and each place its index listed (`couldRead`) — and a document
+// one of them that a read at the new class answers `withheld` is COVERED
+// (`covered`): its place stands, drawn as the withheld box a guest meets,
+// and the walk, the trail, the one line and the faces say so. Every
+// document the model knows exists — listed, or answered for — is one box
+// (`known`), which the plane draws and the walk lists alike. It knows
+// nothing of pixels, zoom, selection or
 // lenses: "the links touching an address" is the RAW set as delivered —
 // which of them show, and how, is LK's (the seam).
 // A LINK'S SLOT NAMES BYTES, NEVER A PLACE: a V-spec slot is recorded as the
@@ -67,7 +76,8 @@
 // cut, reported).
 // Carries: the wireframe's §5 (`state.docs`, `clientDoc`,
 // `invalidateClient`), §8's `takeDelivery`/`mergeLinks`, §3's landmarks (now
-// the index's). Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14 (no token held).
+// the index's). Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14 (no token held),
+// FP-29 (the cover).
 
 import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder } from './address.js';
 import { byteOffsets } from '../util.js';
@@ -235,6 +245,8 @@ const state = {
   drops: new Map(),
   /** how many times a change of the page's class has dropped every record (`dropClass`) */
   classDrops: 0,
+  /** @type {Set<string>} the documents the class the page last left could read, as the change found them (`dropClass`, `couldRead`) */
+  readBefore: new Set(),
   /** @type {Map<string, OwnerRow>} */
   owners: new Map(),
   /** @type {Map<string, {enrolled: Array<{fingerprint: string, anchor: boolean}>, retired: Array<{fingerprint: string}>}>} */
@@ -271,11 +283,14 @@ export const sessionRefused = () => state.sessionRefused;
  * edition claims, the owners and key sets, and the feed's drafts rows — so no
  * frame after it draws, lists or counts what the class could read and the
  * next cannot. Every address is counted dropped once more (`dropsOf`), so no
- * read out across the change is taken. M-PUMP reads the index again at the
- * class the page reads at now, and the view asks the rest.
+ * read out across the change is taken. What the class could read is kept by
+ * address alone (`couldRead`), for the cover (see the head). M-PUMP reads
+ * the index again at the class the page reads at now, and the view asks the
+ * rest.
  */
 function dropClass() {
   state.classDrops++;
+  state.readBefore = new Set([...state.index.keys(), ...[...state.docs.values()].filter((d) => !d.refused && (d.from >= 0 || d.meta || d.extent != null)).map((d) => d.addr)]);
   state.index.clear(); state.counts.clear(); state.indexState = null;
   for (const d of state.docs.values()) { drop(d); unlist(d); }
   state.links.clear(); state.projections.clear(); state.editionClaims.clear(); state.owners.clear(); state.keySets.clear();
@@ -493,6 +508,39 @@ export function doc(addr) {
 export const has = (addr) => state.docs.has(addr);
 /** every held document */
 export const docs = () => [...state.docs.values()];
+
+/**
+ * Every document the model knows exists, ONE A BOX (see the head): by its
+ * document's address, a version member's its trunk's — the index's places,
+ * in address order, then each held record a read answered for, its text, its
+ * metadata or a `withheld` refusal (existence and owner, never bytes: B1-S2),
+ * in the order first held — the system account's rows left out. The plane
+ * draws a box for each (P-RENDER's `drawable`) and the walk lists each under
+ * its account (N-WALK's `childrenOf`), so the two never part.
+ * @returns {string[]}
+ */
+export function known() {
+  /** @type {string[]} */
+  const out = [];
+  const seen = new Set();
+  const take = (/** @type {string} */ doc) => { seen.add(doc); out.push(doc); };
+  for (const p of places()) if (!p.system && !seen.has(p.doc)) take(p.doc);
+  for (const d of state.docs.values()) { const doc = documentOf(d.addr) || d.addr; if (!seen.has(doc) && !d.system && (d.from >= 0 || d.meta || d.refused === 'withheld')) take(doc); }
+  return out;
+}
+
+/** could the class the page last left read a document — its record holding its text, its metadata or its extent, or its index listing it, as the change found them (see the head)? None before the page's class first changes */
+export const couldRead = (/** @type {string} */ addr) => state.readBefore.has(addr);
+/**
+ * Is a document COVERED (see the head; FP-29): a read at the page's class
+ * answered `withheld` of a document the class it last left could read
+ * (`couldRead`) — its place kept, its material withheld from the reader now.
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export const covered = (addr) => { const d = state.docs.get(addr); return !!d && d.refused === 'withheld' && state.readBefore.has(addr); };
+/** every document covered now (`covered`), in address order */
+export const coveredDocs = () => [...state.docs.keys()].filter(covered).sort(cmpAddr);
 
 /** the span set: the content extent (subspace 1) and the link positions (subspace 2) */
 export function takeSpanSet(/** @type {string} */ addr, /** @type {Array<{subspace: number, ordinal: number, positions: number}>} */ set) {
@@ -1045,7 +1093,7 @@ export const feedRows = () => state.feed.slice();
 export function _reset() {
   state.board = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
   state.keys = []; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.docs.clear();
-  state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.editionClaims.clear(); state.claimDrops = 0;
+  state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.editionClaims.clear(); state.claimDrops = 0;
   state.owners.clear(); state.keySets.clear(); state.feed = []; state.rev = 0;
 }
 

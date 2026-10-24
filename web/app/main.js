@@ -45,7 +45,12 @@
 // change of the page's class, its own death among them, dropped, after the
 // drop (`dropped`), so a reading scene's panes are kept fresh by their kind,
 // and N-WALK the same, so the death takes the mirror down with them (FP-23;
-// issue #160).
+// issue #160); at a change of class the overlay host, the LEAP box, N-GO and
+// the one line first, so the overlay, the box's rows, the arrival, the
+// trail's notices and the line's transient made from what the class the page
+// left could read go with it (FP-29; issue #177), and to M-PUMP the places
+// the trail's entries name, which the change reads again beside the view's
+// (`stands`).
 // THE LOOP (`requestAnimationFrame`): step the camera's flight, pump on its
 // cadence, draw when dirty or animating or an overlay stands — T-LAYER's
 // frame, the mirror's documents marked expanded or collapsed in place by the
@@ -56,7 +61,9 @@
 // press APP-INPUT holds at reading scale, acted on the text the frame set
 // (`afterFrame`) — and the frame buffer the gate reads; the line on its own
 // cadence, the LEAP box as opened taking the address it names beside it
-// (N-LEAP's `takeAddress`; issue #171). T-LAYER decides what stands BEFORE
+// (N-LEAP's `takeAddress`; issue #171), and one standing over a change of the
+// page's class the index its new class reads (`takeIndex`; issue #177).
+// T-LAYER decides what stands BEFORE
 // the canvas draws, so a line crossing the mount threshold or entering the
 // view is drawn as a bar or yielded to its text by the same frame's standing
 // lines — never both, never neither (law 13) — and the
@@ -81,7 +88,8 @@
 // FP-11, FP-14, FP-15, FP-22 (N-GO's `shownIn` handed to every reader), FP-23
 // (SC's and N-WALK's `dropped` handed to M-PUMP), FP-25 (O-HOST's `aside`
 // handed to the one line), FP-26 (L-LINE's `named` handed to T-LAYER), FP-28
-// (the boot's session opened by M-PUMP's acquire).
+// (the boot's session opened by M-PUMP's acquire), FP-29 (a change of class
+// told to every surface showing what the class it left read).
 
 import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';
@@ -175,7 +183,23 @@ function loop(/** @type {number} */ now) {
     lastRev = rev; lastLayerRev = lrev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
   }
   lastT = now;
-  if (now - lineT > 120) { lineT = now; LINE.render(); LEAP.takeAddress(); }
+  if (now - lineT > 120) { lineT = now; LINE.render(); LEAP.takeAddress(); LEAP.takeIndex(); }
+}
+
+/**
+ * What a feed row or a change of the page's class dropped, told by M-PUMP
+ * after the drop (its `onDrop`): at a change of class — FP-23, FP-29 — the
+ * overlay, the LEAP box's rows, the arrival and the trail's notices, and the
+ * one line's transient taken down from the model at once, the overlay first
+ * so the focus a closing card hands back stands on the walk's element as the
+ * walk is taken again; then each reading scene's pane kept fresh by its kind,
+ * and the walk taken again where it stood.
+ * @param {import('../model/pump.js').Dropped} x
+ */
+function dropped(x) {
+  if (!x.addrs) { HOST.classChanged(); LEAP.classChanged(); GO.classChanged(); LINE.classChanged(); }
+  SCENE.dropped(x);
+  void WALK.dropped(x);
 }
 
 /** where the key event's focus is */
@@ -206,7 +230,7 @@ async function boot() {
   LANDING.attach(el('landing'), { handOff: () => WALK.focusItem(), pieces: el('pieces') });
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
-  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => { const r = REC.sessionRefused(), dead = REC.deathReason(); if (r) FACES.sessionFace(/** @type {import('../bridge/shapes').Refusal} */ (r), b); else if (dead) FACES.deathFace(dead, b); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; } });
+  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; } });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn });
@@ -228,7 +252,7 @@ async function boot() {
   // the adapter: the bridge client where the flag stands; nothing otherwise
   const adapter = SECRET ? DEV.create({ provider: DEV.DEFAULT_PROVIDER, secret: SECRET, record: !!GATE }) : null;
   PORT.boot(adapter);
-  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: (x) => { SCENE.dropped(x); void WALK.dropped(x); } });
+  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().map((e) => e.addr) });
   PORT.on('moment', (d) => FACES.moment(/** @type {import('../bridge/shapes').MomentEvent} */ (d)));
   const heldSeen = /** @type {unknown[]} */ ([]);
   PORT.on('held', (d) => { heldSeen.push(d); console.log('held event (not acted on — the editor\'s lane\'s)', d); });

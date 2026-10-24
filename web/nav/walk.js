@@ -32,7 +32,10 @@
 // The plane linearizes board › account › document › block | link in record
 // order (S3 Q6) — EACH BOX ONCE, AS THE VERSION IT SHOWS (issue #154's
 // design decision: "The box shows one version"; N-GO's `shownIn`, the
-// reader `shown`): an account's documents are its boxes, each the version
+// reader `shown`): an account's documents are its boxes — every one the
+// plane draws, the model's one list (M-REC's `known`): its index's places and
+// each it holds a read's answer for, a covered one among them (issue #177;
+// FP-29) — each the version
 // its box shows, its spans and links that version's, and a landing or a
 // re-take at a document stands on the version its box shows; at reading
 // scale the walk holds THE LINKS THE READING SCALE
@@ -138,10 +141,12 @@
 // back. THE PAGE'S OWN DEATH (FP-23) takes the walk again where it stood, at
 // once from the model the death left, so the mirror names nothing the dead
 // session read, and again once its document is read at the guest's class
-// (`dropped`).
+// (`dropped`) — on that document still where the guest may not read it, named
+// by its withheld box's words, its cover (issue #177's design decision: "The
+// walk stays put on that withheld form, never on nothing"; FP-29).
 // Carries: the wireframe's §13 whole; the bare `k` toggle DROPPED (M-7
 // ELIMINATED: the walk is always live).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21, FP-22, FP-23, FP-24.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13 (the mirror rebuilt from state), FP-20, FP-21, FP-22, FP-23, FP-24, FP-29.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -283,7 +288,8 @@ export const collapsed = () => !!focus && focus.kind === 'document' && below(foc
 export async function childrenOf(node) {
   if (!node) return [BOARD];
   if (node.kind === 'board') return REC.accounts().filter((a) => !a.system).map((a) => ({ kind: /** @type {const} */ ('account'), addr: a.account, pos: null, link: null }));
-  if (node.kind === 'account') return REC.placesOf(node.addr).map((p) => ({ kind: /** @type {const} */ ('document'), addr: read.shown(p.doc), pos: null, link: null }));
+  // an account's documents as the plane draws them: every box the model knows of under it, a covered one among them (M-REC's `known`)
+  if (node.kind === 'account') return REC.known().filter((doc) => accountOf(doc) === node.addr).sort(cmpAddr).map((doc) => ({ kind: /** @type {const} */ ('document'), addr: read.shown(doc), pos: null, link: null }));
   if (node.kind === 'document') {
     const d = await PUMP.loadWhole(node.addr); if (!d) return [];
     /** @type {Node[]} */

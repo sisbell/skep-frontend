@@ -74,7 +74,12 @@
 // them — and read again at the class the page reads at then, a document
 // withheld from a guest standing as its head alone (records.js's
 // `dropClass`: "no frame after it draws … what the class could read and the
-// next cannot"). EVERY SETTING IS ONE STEP (`setPanes`; "no tie is ever drawn
+// next cannot"): A PANE ON A COVERED DRAFT STAYS OPEN (issue #177's design
+// decision; FP-29), its head's "withheld · ⟨owner⟩" its cover, the bands of
+// shared identity gone with its text, and every line homed in the readable
+// pane whose far end lies in it ending at the cover (`farEndIn`, `coverIn`),
+// clipped and stubbed as any end whose line has left its pane.
+// EVERY SETTING IS ONE STEP (`setPanes`; "no tie is ever drawn
 // over text it was not measured on"): the reads first — the text whole, the
 // two texts' `compare`, where each far end crossing between them stands — then,
 // where the scene still stands and no later setting was asked of the pane,
@@ -164,7 +169,7 @@
 // stage, after each pane has its selection. Companionate scrolling over the
 // bands is UNTESTED (S27) and not built. Carries: the wireframe's §19 whole
 // (its beams over `compare`'s pairs instead of the hand data's windows).
-// Rules: FP-1, FP-2, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24.
+// Rules: FP-1, FP-2, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24, FP-29.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -211,7 +216,8 @@ import { esc } from '../util.js';
  * @typedef {Object} End — one end of a band or a line: its passage, and where the passage's first line stands in its pane's scrolled content
  * @property {number} pos the passage's first position
  * @property {number} width its positions
- * @property {number} y the first line's middle, px below the pane's content top
+ * @property {number} y the first line's middle, px below the pane's content top — at a cover, its head's withheld statement's
+ * @property {boolean} [cover] it ends at its pane's cover (`Passage`)
  */
 
 /**
@@ -226,8 +232,8 @@ import { esc } from '../util.js';
  * @typedef {Object} Drawn — a tie as the last draw drew it, its ends on screen
  * @property {'band' | 'link'} kind
  * @property {string | null} link
- * @property {{pos: number, width: number, x: number, y: number, clipped: boolean}} a
- * @property {{pos: number, width: number, x: number, y: number, clipped: boolean}} b
+ * @property {{pos: number, width: number, x: number, y: number, clipped: boolean, cover: boolean}} a
+ * @property {{pos: number, width: number, x: number, y: number, clipped: boolean, cover: boolean}} b
  */
 
 /**
@@ -236,13 +242,16 @@ import { esc } from '../util.js';
  * @property {Shown[]} shown the links LK showed at that record as the pane was set (`LK.shown`)
  * @property {Block[]} blocks the blocks its article was made from, where a far end naming the document whole stands
  * @property {Map<string, Stretch[] | Declined>} [placed] where the far ends of the links crossing into it stood in its text as the pane was set (`project`'s answers), by `⟨link⟩ ⟨slot⟩`
+ * @property {boolean} [cover] it shows a cover: its record a read answered `withheld` as it was set — a covered draft's pane its head alone (issue #177) — where every far end crossing into it ends
  */
+
+/** @typedef {{pos: number, width: number, cover?: boolean}} Passage one end of a line between the panes, as a passage of its pane's document: its first position and its positions; `cover` where it ends at its pane's cover, its head's withheld statement, which holds no position */
 
 /**
  * @typedef {Object} Line — a link's line between the panes, its ends as passages, before they are measured
  * @property {string} link the link's address
- * @property {{pos: number, width: number}} a its end in pane A's document
- * @property {{pos: number, width: number}} b its end in pane B's document
+ * @property {Passage} a its end in pane A's document
+ * @property {Passage} b its end in pane B's document
  * @property {{a: Ink, b: Ink}} ink each end's: the mark its pane's document gives the link, as a stroke takes it (BM's `inkOf`)
  * @property {number} value the link's own, alike at both its ends
  */
@@ -500,21 +509,27 @@ function restIn(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
  * (`farAt`), whatever version of the box the plane shows (issue #154's design
  * decision); where it names the document whole, or floats — the pane's text
  * holding none of it, where its follow lands at the head — the pane's first
- * block to the block's end; null where nothing places it, its projection not
- * read or refused.
+ * block to the block's end; at a pane that shows a cover, at the cover, its
+ * head's withheld statement (issue #177's design decision: "Link lines homed
+ * in the readable pane stay, ending at the cover"); null where nothing places
+ * it, its projection not read or refused.
  * @param {Shown} s the link as LK showed it at the other pane's document
  * @param {PaneLinks} pane the pane its far end is sought in
- * @returns {{key: string, pos: number, width: number} | null}
+ * @returns {{key: string} & Passage | null}
  */
 function farEndIn(s, pane) {
   if (!s.farEnd) return null;
   const key = LK.endKey(s.farEnd), blocks = pane.blocks;
+  if (pane.cover) return { key, pos: 0, width: 0, cover: true };
   const held = s.farWhole || !pane.placed ? undefined : pane.placed.get(s.link.addr + ' ' + s.farSlot);
   const runs = Array.isArray(held) ? held : (s.farAt || s.far) === pane.addr ? s.farRuns : null;
   if (s.farWhole || (runs && !runs.length)) { const pos = (blocks[0] || { pos: 1 }).pos; return { key, pos, width: restIn(blocks, pos) }; }
   const r = runs && runs[0];
   return r ? { key, pos: r.pos, width: r.width } : null;
 }
+
+/** an end of a line as a passage alone (`Passage`): its first position, its positions, and whether it ends at its pane's cover */
+const passage = (/** @type {Passage} */ e) => (e.cover ? { pos: e.pos, width: e.width, cover: true } : { pos: e.pos, width: e.width });
 
 /**
  * The links drawn as lines between the panes (§2.5: "a link's line drawn
@@ -523,7 +538,8 @@ function farEndIn(s, pane) {
  * other's box — that document, or another version sharing its box
  * (`oneBox`) — each resolved to its end in pane A and its end in pane B — the
  * near end at the first stretch LK placed it in, the far end where
- * `farEndIn` places it, none where nothing does — and each link ONCE per
+ * `farEndIn` places it, at the cover where its pane shows one, none where
+ * nothing does — and each link ONCE per
  * pair of ends, in the order met, pane A's ends first. A link both panes show
  * is met from each; a document in both panes meets a link inside it from each
  * end in each pane, and draws it once for each way its two ends stand across
@@ -555,7 +571,7 @@ export function linesBetween(A, B) {
       const key = `${s.link.addr} ${a.key} ${b.key}`;
       if (met.has(key)) continue;
       const atA = LK.markOf(s.link, A.addr), atB = LK.markOf(s.link, B.addr);
-      met.set(key, { link: s.link.addr, a: { pos: a.pos, width: a.width }, b: { pos: b.pos, width: b.width }, ink: { a: inkOf(atA), b: inkOf(atB) }, value: atA.value });
+      met.set(key, { link: s.link.addr, a: passage(a), b: passage(b), ink: { a: inkOf(atA), b: inkOf(atB) }, value: atA.value });
     }
   }
   return [...met.values()];
@@ -858,15 +874,35 @@ function roomBelow(/** @type {NonNullable<typeof els>} */ E) {
 /** the panes' sizes, the measure the ties' ends were taken at */
 const sizeOf = (/** @type {NonNullable<typeof els>} */ E) => `${E.paneA.clientWidth}x${E.paneA.clientHeight}|${E.paneB.clientWidth}x${E.paneB.clientHeight}`;
 
-/** what a pane gives the lines between the panes: what it was set with (`PaneLinks`) */
-const linksOf = (/** @type {Pane} */ P) => ({ addr: P.src, shown: P.view.marks, blocks: P.d.blocks, placed: P.placed });
+/** what a pane gives the lines between the panes: what it was set with (`PaneLinks`), a cover where its record was refused `withheld` */
+const linksOf = (/** @type {Pane} */ P) => ({ addr: P.src, shown: P.view.marks, blocks: P.d.blocks, placed: P.placed, cover: P.d.refused === 'withheld' });
+
+/**
+ * Where a pane's cover stands (issue #177): its article's head's withheld
+ * statement — "withheld · ⟨owner⟩" — the line every far end crossing into
+ * the pane ends at, in px below the pane's content top; null where the pane
+ * holds no article.
+ * @param {HTMLElement} pane
+ * @returns {{top: number, y: number} | null} the statement's top, and its middle
+ */
+function coverIn(pane) {
+  const art = articleIn(pane);
+  const st = art ? /** @type {HTMLElement | null} */ (art.el.querySelector('.hd .st')) : null;
+  const r = st ? st.getBoundingClientRect() : null;
+  if (!r || !r.height) return null;
+  const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop;
+  return { top: r.top - origin, y: r.top + r.height / 2 - origin };
+}
+
+/** where an end of a line stands in its pane: at its passage's first line (`lineIn`), else at the pane's cover (`coverIn`) */
+const endIn = (/** @type {HTMLElement} */ pane, /** @type {string} */ names, /** @type {Passage} */ e) => (e.cover ? coverIn(pane) : lineIn(pane, names, e.pos, e.width));
 
 /**
  * Measure the ties: each run of shared identity, and each link between the
  * two documents once per pair of its ends (`linesBetween`), its ends at
- * their passages' first lines in the panes' content — every one from what the
- * panes were set with, never the model's now; a tie an end of which lies in
- * none of its pane's blocks is left out.
+ * their passages' first lines in the panes' content, or at a pane's cover —
+ * every one from what the panes were set with, never the model's now; a tie
+ * an end of which lies in none of its pane's blocks is left out.
  */
 function measure() {
   const S = scene, E = els;
@@ -879,7 +915,7 @@ function measure() {
   }
   // the link lines between the panes — the set LK gave at each pane's document as it was set (the seam)
   for (const l of linesBetween(linksOf(S.a), linksOf(S.b))) {
-    const la = lineIn(E.paneA, S.a.names, l.a.pos, l.a.width), lb = lineIn(E.paneB, S.b.names, l.b.pos, l.b.width);
+    const la = endIn(E.paneA, S.a.names, l.a), lb = endIn(E.paneB, S.b.names, l.b);
     if (la && lb) out.push({ kind: 'link', link: l.link, a: { ...l.a, y: la.y }, b: { ...l.b, y: lb.y }, ink: l.ink, value: l.value });
   }
   S.ties = out;
@@ -1236,7 +1272,7 @@ export function draw() {
     const x0 = fa.x1, x1 = fb.x0;
     ctx.globalAlpha = tie.value; ctx.lineWidth = tie.kind === 'band' ? 6 : 1.6;
     drawTie(ctx, { x: x0, ...ea }, { x: x1, ...eb }, tie.ink);
-    out.push({ kind: tie.kind, link: tie.link, a: { pos: tie.a.pos, width: tie.a.width, x: x0 + c.left, y: ea.y + c.top, clipped: ea.clipped }, b: { pos: tie.b.pos, width: tie.b.width, x: x1 + c.left, y: eb.y + c.top, clipped: eb.clipped } });
+    out.push({ kind: tie.kind, link: tie.link, a: { pos: tie.a.pos, width: tie.a.width, x: x0 + c.left, y: ea.y + c.top, clipped: ea.clipped, cover: !!tie.a.cover }, b: { pos: tie.b.pos, width: tie.b.width, x: x1 + c.left, y: eb.y + c.top, clipped: eb.clipped, cover: !!tie.b.cover } });
   }
   ctx.globalAlpha = 1;
   drawnTies = out;

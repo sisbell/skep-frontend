@@ -16,11 +16,16 @@
 // read's document consult → THE DOCUMENT-LEVEL WITHHELD FACE (B1 §1's
 // A-170; B1-S8's WITHHELD state; R56: existence and owner, never bytes —
 // "who wrote this?", "who uses this?" or a follow's far end asking of a
-// document the reader may not read): the document named in B1-S2's withheld
-// box's words, the words the plane's box and the ARIA mirror's item say
-// (T-LAYER's `withheldBox`), its owner by the one owner rule, the entitlement
-// arm for that owner and this reader beneath them (T-ARTICLE's one rule),
-// and no act — never C-39, whose words are a link address's alone;
+// document the reader may not read): the document named in the withheld
+// box's words, "withheld · ⟨owner⟩", the words the plane's box, the corner and
+// the ARIA mirror's item say (T-LAYER's `withheldBox`), its owner by the one
+// owner rule, the entitlement arm for that owner and this reader beneath
+// them (T-ARTICLE's one rule), and no act — never C-39, whose words are a
+// link address's alone; at a COVERED document while the session's ending
+// stands (issue #177's design decision: "sign-in is offered in the one line's
+// words for that ending"; FP-29; M-REC's `covered`), the one line's words for
+// that ending in the arm's place (`endingWords`) and its sign-in act, the
+// line's own (`signIn`);
 // `not_a_link`, C-39 at a link address inside a withheld document with the
 // entitlement arm the run's placeholder carries beneath it (T-ARTICLE's one
 // rule, by the reader), `range_not_present`, the `invalid` follow,
@@ -47,7 +52,7 @@
 // on its first control (K-80). Carries: the wireframe's §18 `face` (its words
 // and acts; its reviewer's label stays in the wireframe),
 // `deadReferenceFace`'s fifth cell, `c39Face`. Rules: FP-1, FP-2, FP-13,
-// FP-20, FP-25, FP-28.
+// FP-20, FP-25, FP-28, FP-29.
 
 import * as HOST from './host.js';
 import * as VERSIONS from './versions.js';
@@ -155,18 +160,57 @@ export function unregistered(addr, anchor = null) {
  * THE DOCUMENT-LEVEL WITHHELD FACE (B1 §1's A-170; B1-S8's WITHHELD state):
  * a document a read's consult refused `withheld` — met by "who wrote this?"
  * or "who uses this?" over its bytes, or by a followed link's far end — named
- * by existence and owner, never bytes (R56): B1-S2's withheld box's words,
- * which the plane's box and the ARIA mirror's item say too (T-LAYER's
- * `withheldBox`), its owner by the one owner rule, then the entitlement arm
- * for that owner and this reader (T-ARTICLE's `entitlementArm`, the rule the
- * run's placeholder reads). It offers no act.
+ * by existence and owner, never bytes (R56): the withheld box's words,
+ * "withheld · ⟨owner⟩", which the plane's box, the corner and the ARIA
+ * mirror's item say too (T-LAYER's `withheldBox`), its owner by the one owner
+ * rule, then the entitlement arm for that owner and this reader (T-ARTICLE's
+ * `entitlementArm`, the rule the run's placeholder reads), offering no act.
+ * At a COVERED document while the session's ending stands (see the head;
+ * M-REC's `covered`) — a cursor move reaching its trail entry lands there
+ * (N-GO) — the one line's words for that ending stand in the arm's place
+ * (`endingWords`), and its one act is the line's sign-in (`signIn`), faced
+ * where this face stood: the way back.
  * @param {string} addr the document withheld
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] the act's site
  */
 export function withheld(addr, anchor = null) {
-  const d = REC.doc(addr);
-  const arm = entitlementArm(REC.reader(), LAYER.ownerAccount(d));
-  HOST.show({ kind: 'face', id: 'face:withheld', anchor: toAnchor(anchor), html: faceHTML({ id: 'B1.withheld-box', text: LAYER.withheldBox(d), acts: [] }, armHTML(arm)) });
+  const d = REC.doc(addr), at = toAnchor(anchor);
+  const box = { id: 'F.corner.withheld', text: LAYER.withheldBox(d) };
+  const ending = REC.covered(addr) ? endingWords() : null;
+  if (ending) {
+    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, acts: { a0: () => signIn(at) }, html: faceHTML({ ...box, acts: [{ label: t('F.sign-in') }] }, armHTML(ending)) });
+    return;
+  }
+  HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, html: faceHTML({ ...box, acts: [] }, armHTML(entitlementArm(REC.reader(), LAYER.ownerAccount(d)))) });
+}
+
+/**
+ * The one line's words for the session's ending (L-LINE's acting-as segment;
+ * issue #175's design decision): a death's (`deathWords`), the guest line in
+ * their place for an arm this page holds none for; a session a restart lost
+ * that the acquire could not get back, "could not reconnect as ⟨account⟩
+ * after a restart" leading the guest line; null where no ending stands.
+ * @returns {{id: string, text: string} | null}
+ */
+export function endingWords() {
+  const dead = REC.deathReason(), lost = REC.reconnect();
+  const guest = { id: 'B1.guest-line', text: t('B1.guest-line') };
+  if (dead) return deathWords(dead) || guest;
+  if (lost && lost.refused) return { id: 'L.reconnect-refused', text: t('L.reconnect-refused', { account: lost.as || '' }) + ' · ' + guest.text };
+  return null;
+}
+
+/**
+ * The sign-in act — the one line's, and a covered document's face's (see
+ * the head): the session's refusal faced where the page holds one — the
+ * boot's, or the re-acquire's of a session a restart lost — else the death's
+ * (`deathFace`); nothing where neither stands.
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor where the act was made
+ */
+export function signIn(anchor) {
+  const r = REC.sessionRefused(), dead = REC.deathReason();
+  if (r) sessionFace(/** @type {Refusal} */ (r), anchor);
+  else if (dead) deathFace(dead, anchor);
 }
 
 /** the reading face's overlay id, before the address it names */
@@ -304,7 +348,7 @@ export function c39(owner, reader, anchor) {
  * re-acquire's of a session a restart lost: `no_key` → C-136 with this
  * version's limit; any other by its name.
  * @param {Refusal} r
- * @param {HTMLElement | null} anchor
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor
  */
 export function sessionFace(r, anchor) {
   const face = wordsFor(r);
@@ -334,7 +378,7 @@ export function deathWords(reason) {
  * The death's face at the line's sign-in act: its words (`deathWords`);
  * nothing where this page holds none for its arm.
  * @param {DeathReason} reason
- * @param {HTMLElement | null} anchor
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor
  */
 export function deathFace(reason, anchor) {
   const words = deathWords(reason);

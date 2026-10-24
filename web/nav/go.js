@@ -244,10 +244,26 @@
 // once the read answers, where no act was made and the reader took nothing
 // over meanwhile. A carried passage's `compare` is one more read its LEAP's
 // claim waits on, the claim settled at the landing that read placed.
+// THE COVER (issue #177's design decision: "Keep every place, and cover the
+// material"; FP-29): a trail entry holds no document's words — HOME and WHOLE
+// BOARD push their act's name, the strings table's, and every other entry's
+// words are read from the model as the trail list and the LEAP box show it
+// (`wordsOf`: the words its box's first line says now, "withheld · ⟨owner⟩"
+// once a read covers it, nothing while nothing has answered). A change of the
+// page's class (`classChanged`) puts the arrival out — its outline, its
+// labels, its line, its offers, the light and the links lit, nothing the
+// dead class measured surviving — and drops the notices and the arrivals the
+// entries kept (N-TRAIL's); a cursor move reaching an entry whose document is
+// covered (M-REC's `covered`) lands on the covered box framed whole, its
+// document-level withheld face standing there, whose sign-in act is the
+// way back — read first where the page holds nothing yet of a document the
+// class it left could read, as a LEAP reads an unread document beside its
+// flight.
 // Carries: the wireframe's §11 (`leapTo`, `goHome`), §18 `followLink`.
 // Rules: FP-1, FP-2, FP-7, FP-9 (marks dirty, never draws), FP-10, FP-20 (a
 // field holding the caret keeps it and its chrome), FP-21, FP-22 (owns the
-// version each box shows), FP-25 (the jump moves the reader when made).
+// version each box shows), FP-25 (the jump moves the reader when made),
+// FP-29 (the cover).
 
 import * as CAM from '../plane/camera.js';
 import * as TRAIL from './trail.js';
@@ -263,6 +279,7 @@ import * as HELD from '../beams/held.js';
 import * as SEL from '../overlays/selection.js';
 import { accountCell, boardCell } from '../plane/projection.js';
 import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf } from '../model/address.js';
+import { t } from '../strings.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').Link} Link */
@@ -505,6 +522,20 @@ export function endArrival() {
   if (!arrivalMark() && !landed && !lit.length) return false;
   putOut();
   return true;
+}
+
+/**
+ * A change of the page's class (see the head; FP-21: a change of the page's
+ * class ends the arrival; FP-23), told by the app as M-PUMP tells the drop of
+ * every record: the arrival put out — its outline, its labels, its line, its
+ * offers, the light and the links lit — the place's entry keeping none of
+ * it, and every entry's notice and kept arrival dropped (N-TRAIL's
+ * `classChanged`), so nothing the class the page left measured is drawn,
+ * described or restored.
+ */
+export function classChanged() {
+  putOut();
+  TRAIL.classChanged();
 }
 
 /** is a jump in the air (see the head; FP-25)? */
@@ -851,8 +882,20 @@ export function viewFor(addr, pos) {
   return CAM.viewAt(LAYER.frameOf(addr, pos), LAYER.foldOf(REC.doc(addr)).fs, CAM.READING_PX);
 }
 
-/** the label a place's entry carries: the index's, else the record's */
-function labelOf(/** @type {string} */ addr) { const p = REC.place(addr); return p ? p.label : REC.doc(addr).label; }
+/**
+ * An entry's words as the trail list and the LEAP box show it (see the head):
+ * its act's name where HOME or WHOLE BOARD pushed it; at a document, the
+ * words its box's first line says now (T-LAYER's `firstLine`) — the index's
+ * first line where the index lists it, "withheld · ⟨owner⟩" where a read
+ * answered `withheld`, nothing where nothing has answered — read from the
+ * model as it is shown, never kept in the entry; nothing for any other place.
+ * @param {Entry} e
+ * @returns {string}
+ */
+export function wordsOf(e) {
+  if (e.label != null) return e.label;
+  return kindOf(e.addr) === 'document' && REC.has(e.addr) ? LAYER.firstLine(REC.doc(e.addr)) : '';
+}
 
 /**
  * Runs in the text's order, by their first positions: `compare`'s stretches
@@ -1304,7 +1347,7 @@ export async function leapTo(addr, opts = {}) {
   const step = c && carried.length ? { kind: 'carry', from: c.addr, to: addr, spans: carried } : null;
   /** @type {Notice | null} the LEAP's reading notice, where its landing waits on a read — the text unread, or the carried passage's `compare` — at the place its camera leaves for */
   const waiting = unread || c ? { face: 'reading', addr, refusal: null, site: siteAt(addr, pos), offer: false } : null;
-  const entry = opts.push === false ? null : TRAIL.push({ addr, pos, width: widthAt(runs, pos), view: viewFor(addr, pos), label: labelOf(addr), notice: waiting }, departure(), !!waiting, step);
+  const entry = opts.push === false ? null : TRAIL.push({ addr, pos, width: widthAt(runs, pos), view: viewFor(addr, pos), label: null, notice: waiting }, departure(), !!waiting, step);
   /** @type {Refusal | null} the refusal the text's whole read met, which a carried passage's line says it could not tell by */
   let met = null;
   if (unread && !placeable(addr)) {
@@ -1475,7 +1518,7 @@ export async function toVersion(addr, opts = {}) {
   const step = spans.length ? { kind: 'carry', from: was, to: addr, spans } : null;
   /** @type {Notice} */
   const waiting = { face: 'reading', addr, refusal: null, site, offer: false };
-  const entry = TRAIL.push({ addr, pos: null, width: null, view: departed, label: labelOf(addr), notice: waiting }, departed, true, step);
+  const entry = TRAIL.push({ addr, pos: null, width: null, view: departed, label: null, notice: waiting }, departed, true, step);
   dismissChrome(entry);
   takeOff(act, entry);
   showNotice(waiting);
@@ -1615,7 +1658,7 @@ export async function follow(s, byKey = false) {
   const waiting = { face: 'reading', addr: far, refusal: null, site: siteAt(far, null), offer: false };
   /** @type {Step} the follow, as the entry it departs records it */
   const step = { kind: 'follow', link: l.addr, near: s.near, key: s.key, far, spans: s.farWhole ? null : slotSpans(s) };
-  const entry = TRAIL.push({ addr: far, pos: null, width: null, view: viewFor(far, null), label: labelOf(far), notice: waiting }, departure(), true, step);
+  const entry = TRAIL.push({ addr: far, pos: null, width: null, view: viewFor(far, null), label: null, notice: waiting }, departure(), true, step);
   if (!placeable(far)) {
     if (!(await reachFor(act, far, entry, site))) return;
     TRAIL.leaveFrom(entry, CAM.destination());
@@ -1655,7 +1698,7 @@ export async function home(byKey = false) {
   const act = nextAct();
   const departed = departure();
   const h = homeFrame();
-  const entry = TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: 'HOME', notice: null }, departed);
+  const entry = TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: t('F.level.home'), notice: null }, departed);
   dismissChrome(entry);
   endAir(act, await leave(act, entry, { addr: h.addr, pos: null, view: h.view }, byKey, 700));
 }
@@ -1671,7 +1714,7 @@ export async function home(byKey = false) {
 export async function launch() {
   const h = homeFrame();
   CAM.set(h.view);
-  here = TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: 'HOME', notice: null }, null);
+  here = TRAIL.push({ addr: h.addr, pos: null, width: null, view: h.view, label: t('F.level.home'), notice: null }, null);
   await WALK.focusTo(h.addr, null);
   CAM.markDirty();
 }
@@ -1685,7 +1728,7 @@ export async function wholeBoard(byKey = false) {
   const departed = departure();
   const node = boardNode();
   const target = CAM.viewForCell(boardCell(node), 0.92);
-  const entry = TRAIL.push({ addr: node, pos: null, width: null, view: target, label: 'WHOLE BOARD', notice: null }, departed);
+  const entry = TRAIL.push({ addr: node, pos: null, width: null, view: target, label: t('L.whole-board'), notice: null }, departed);
   dismissChrome(entry);
   endAir(act, await leave(act, entry, { addr: node, pos: null, view: target }, byKey, 700));
 }
@@ -1765,6 +1808,10 @@ function returnTo(l, view) {
  * face it met, faced there as a failure learned in the air is — save where an
  * act was made after the move, which ends it there, and where the reader took
  * the camera over meanwhile, which shows what it brought and moves nothing.
+ * An entry whose document is covered lands on the covered box framed whole,
+ * its withheld face standing there (see the head; `coverOf`), the read that
+ * tells it made first beside the flight where the page holds nothing yet of
+ * a document the class it left could read (`coverRead`).
  * @param {Entry} e the entry the move reached
  * @param {number} act the move's count
  * @param {boolean} byKey a key made the move
@@ -1775,11 +1822,13 @@ async function landAtCursor(e, act, byKey, l) {
   arrival = e.kept ? e.kept.arrival : null; landed = e.kept ? e.kept.landed : null;
   light = l; lit = l && l.link ? [l.link] : [];
   if (!answer) pinTo(e.addr);
+  const cover = answer ? null : coverOf(e);
   const back = l && l.back ? returnTo(l, e.view) : null;
   const stood = landed && landed.addr === shownIn(e.addr) ? landed.pos : e.pos;
-  const first = leave(act, e, back ? { ...back, view: e.view } : { addr: e.addr, pos: stood, view: e.view }, byKey, 500);
+  const first = leave(act, e, cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view: e.view } : { addr: e.addr, pos: stood, view: e.view }, byKey, 500);
   if (e.notice) showNotice(e.notice, !!landed && landed.floating && landed.addr === e.notice.addr);
-  if (!answer) { endAir(act, await first); return; }
+  if (cover === 'covered') showCover(e.addr);
+  if (!answer) { if (cover === 'unread') await coverRead(act, e, first, byKey); else endAir(act, await first); return; }
   await answer;
   if (act !== made) return;
   FACES.endReading();
@@ -1789,6 +1838,51 @@ async function landAtCursor(e, act, byKey, l) {
   if (takenAt === act) { if (n) showNotice(n); return; }
   const flight = goOn(act, first, { addr: e.addr, pos: e.pos, view: e.view }, byKey, 500);
   if (n) showNotice(n);
+  await flight;
+}
+
+/**
+ * Where a cursor move reaching an entry meets a cover (see the head): the
+ * entry's document covered — a read at the page's class answered `withheld`
+ * of a document the class it left could read (M-REC's `covered`) — or one
+ * that class could read the page holds nothing of yet, which a read must tell
+ * first ('unread'); null for every other entry, and for one holding a
+ * notice, which shows its own face.
+ * @param {Entry} e
+ * @returns {'covered' | 'unread' | null}
+ */
+function coverOf(e) {
+  if (e.notice || kindOf(e.addr) !== 'document') return null;
+  if (REC.covered(e.addr)) return 'covered';
+  const d = REC.has(e.addr) ? REC.doc(e.addr) : null;
+  return REC.couldRead(e.addr) && (!d || (d.extent == null && !d.refused)) ? 'unread' : null;
+}
+
+/** a covered document's landing (see the head): its box framed whole at the reading size — the entry's view frames columns the cover does not draw — the walk on the document */
+const coveredAt = (/** @type {string} */ addr) => ({ addr, pos: null, view: viewFor(addr, null) });
+/** a covered document's face at its box's head (see the head): the document-level withheld face, its sign-in act the way back (O-FACES' `withheld`) */
+function showCover(/** @type {string} */ addr) { FACES.withheld(addr, siteAt(addr, null)); CAM.markDirty(); }
+
+/**
+ * A cursor move reaching an entry whose document the class the page left
+ * could read and the page holds nothing of yet (see the head): its read made
+ * beside the flight, as a LEAP to an unread document makes it; where it
+ * answers the document covered and no act was made meanwhile, the camera
+ * going on to the covered box framed whole, its face standing there — the
+ * face alone where the reader took the camera over — else the move landing
+ * where its flight lands.
+ * @param {number} act the move's count
+ * @param {Entry} e the entry the move reached
+ * @param {Promise<boolean>} first the move's flight
+ * @param {boolean} byKey a key made the move
+ */
+async function coverRead(act, e, first, byKey) {
+  await PUMP.wholeOf(e.addr);
+  if (act !== made) return;
+  if (!REC.covered(e.addr)) { endAir(act, await first); return; }
+  if (takenAt === act) { showCover(e.addr); return; }
+  const flight = goOn(act, first, coveredAt(e.addr), byKey, 500);
+  showCover(e.addr);
   await flight;
 }
 

@@ -51,9 +51,18 @@
 // without its camera leaving — one only a read could place, abandoned or
 // refused — gives its entry back (`giveBack`): its push undone, the entries
 // it dropped and the step it wrote standing again (FP-25).
+// AN ENTRY HOLDS NO DOCUMENT'S WORDS (issue #177's design decision: "View
+// state holds addresses, positions and layout, never copies of text"; FP-29):
+// its address, its positions, its view and its step — the step's passage by
+// identity — and an act's name where HOME or WHOLE BOARD pushed it; whoever
+// shows an entry reads what its document says from the model as it shows it
+// (N-GO's `wordsOf`). A change of the page's class keeps every entry, its
+// number and its address, and drops what the class it left read there: its
+// notice, save a claim's still reading, and the arrival it kept
+// (`classChanged`).
 // Carries: the wireframe's §11 `pushTrail` (its de-duplication by address
 // and its cap of twelve DROPPED: the stack is the record of teleports).
-// Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-25.
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-25, FP-29.
 
 /** @typedef {{x: number, y: number, scale: number}} View */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
@@ -107,7 +116,7 @@
  * @property {number | null} width the positions of the run landed on from `pos`, where the landing named a span: the first run in the text of a follow's projected far end, or a carried passage's counterpart — one of the runs its landing outlined
  * @property {View} view the view at the entry — the landing's, re-taken at departure; where the camera went, where its read brought no place
  * @property {Step | null} step the step that left it for the entry after it, written as a push departed it; none while nothing has, and none where the push took no step this module records
- * @property {string | null} label the place's label at the push
+ * @property {string | null} label the act's name where HOME or WHOLE BOARD pushed the entry, the strings table's; null for every other entry, whose document's words are read from the model as it is shown (see the head)
  * @property {Notice | null} notice the face the entry shows: its jump's reading face while the read is out, then the face the read brought; null where it shows none
  * @property {Kept | null} kept the arrival as the reader last left the entry, which a return to it restores (see the head); null where none stood
  */
@@ -210,6 +219,16 @@ export function settle(e, landing) {
  * @param {Kept | null} kept
  */
 export function keep(e, kept) { e.kept = kept; }
+
+/**
+ * A change of the page's class (see the head; FP-23): every entry keeps its
+ * place, its number, its address, its positions, its view and its step, and
+ * drops the notice the class it left met there — save a claim's, its read
+ * still out, which the new class answers — and the arrival it kept.
+ */
+export function classChanged() {
+  for (const e of entries) { e.kept = null; if (!claims.has(e)) e.notice = null; }
+}
 
 /**
  * What a cursor move that reached an entry waits on before it goes on to

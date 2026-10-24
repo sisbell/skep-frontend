@@ -418,23 +418,19 @@ function firstBar(/** @type {import('./layout.js').Bar[]} */ B, /** @type {numbe
 
 /**
  * Every box the plane may draw, ONE A DOCUMENT (see the head), as the record
- * of the version it shows (N-GO's `shownIn`): the index's places, and the
- * documents the model holds that the index does not list — a version of
- * theirs with its text or its metadata delivered, or a read of them answered
- * `withheld`: existence and owner, never bytes (B1-S2), drawn as the withheld
- * box where it stands whole and counted in its continuation's mark where one
- * holds it (the index at guest class lists no draft; a LEAP to one learns it
- * exists) — the system account's rows left out.
+ * of the version it shows (N-GO's `shownIn`): every document the model knows
+ * exists (M-REC's `known`, the one list the walk's accounts read too) — the
+ * index's places, and the documents the model holds that the index does not
+ * list — a version of theirs with its text or its metadata delivered, or a
+ * read of them answered `withheld`: existence and owner, never bytes (B1-S2),
+ * drawn as the withheld box where it stands whole and counted in its
+ * continuation's mark where one holds it (the index at guest class lists no
+ * draft; a LEAP to one learns it exists, and a change of class covers one the
+ * view stood on) — the system account's rows left out.
  * @returns {Doc[]}
  */
 function drawable() {
-  /** @type {Doc[]} */
-  const out = [];
-  const seen = new Set();
-  const box = (/** @type {string} */ doc) => { seen.add(doc); out.push(REC.doc(GO.shownIn(doc))); };
-  for (const p of REC.places()) { if (p.system || seen.has(p.doc)) continue; box(p.doc); }
-  for (const d of REC.docs()) { const doc = documentOf(d.addr) || d.addr; if (!seen.has(doc) && !d.system && (d.from >= 0 || d.meta || d.refused === 'withheld')) box(doc); }
-  return out;
+  return REC.known().map((doc) => REC.doc(GO.shownIn(doc)));
 }
 
 /** @type {{rev: number, docs: Set<string>}} the documents `drawable` lists, each as its document, at a model revision: a cache of a pure function of the model */

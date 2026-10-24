@@ -485,15 +485,18 @@ test('a read out under the session when the page takes its death is asked once m
   assert.deepEqual('answer' in out ? F.decodeDelivery(out.answer, 1).map((r) => r.kind) : out, ['content', 'withheld'], 'the guest\'s answer, the run withheld — never the session\'s bytes');
 });
 
-test('the page\'s own death drops what it read at the session\'s class and reads the index again in the guest form, the view asking nothing until it answers and then asking again as a guest', async () => {
+test('the page\'s own death drops what it read at the session\'s class and reads the index again in the guest form, the view asking nothing until it answers and then asking again as a guest — the edition, and the draft the view stood on, which the guest may not read: held `withheld`, a box the model knows, covered at its own place (issue #177)', async () => {
   const DR = '1.0.1.0.5', L = DR + '.0.2.1';
   const edition = { doc: D, kind: 'edition', label: 'd', standing: 'public' };
-  const fake = FAKE.create({
+  /** @type {Record<string, unknown>} */
+  const s = {
     // the listing keys on the board alone, in either form: the session's is set by hand below, so this one is the guest's
     [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [edition], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } } },
     [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]: script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })],
-    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.12' }] } },
-  });
+  };
+  // the draft's extent under the session; withheld from the guest
+  inTurn(s, F.retrieveDocVSpanSet(DR), { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.12' }] } }, { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } });
+  const fake = FAKE.create(s);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
@@ -517,15 +520,16 @@ test('the page\'s own death drops what it read at the session\'s class and reads
   assert.deepEqual([REC.places(), REC.countOf('1.0.1').documents, REC.indexState()], [[], 0, null], 'at once: the session\'s index, its counts and its state dropped');
   assert.deepEqual([dr.from, dr.runs, dr.meta, dr.extent, dr.kind, dr.label, dr.standing], [-1, [], null, null, 'unknown', null, null], 'the draft\'s text, metadata, extent and row dropped');
   assert.deepEqual([REC.doc(D).extent, [...REC.doc(D).links], REC.link(L)], [null, [], undefined], 'the edition\'s extent and the draft-homed link dropped');
-  assert.deepEqual([listings, PUMP.visibleDocs(), PUMP.settled()], [['guest'], [], false], 'the index asked again in the guest form; while it is out nothing stands in view and the page is not settled');
+  assert.deepEqual([listings, PUMP.visibleDocs(), PUMP.settled(), PUMP.rereading()], [['guest'], [], false, true], 'the index asked again in the guest form; while it is out nothing is read for the view, the page is not settled and the change\'s reads are out');
   release();
   await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(REC.places().map((p) => p.doc), [D], 'the guest\'s index: the edition alone');
   assert.deepEqual([REC.countOf('1.0.1').documents, REC.countsExact()], [1, true], 'its count and its state the guest\'s listing\'s');
-  assert.deepEqual(PUMP.visibleDocs().map((d) => d.addr), [D], 'the draft no longer in view');
+  assert.deepEqual([PUMP.visibleDocs().map((d) => d.addr), PUMP.rereading()], [[D], true], 'the draft unlisted and holding nothing, its place still to be read again');
   PUMP.pump();
   await new Promise((r) => setTimeout(r, 0));
-  assert.deepEqual([ops, REC.doc(D).extent, listings], [['s-1', 's-1', 'guest'], 30, ['guest']], 'the edition\'s extent, answered under the session, asked again in the guest form; the index read once');
+  assert.deepEqual([ops, REC.doc(D).extent, listings], [['s-1', 's-1', 'guest', 'guest'], 30, ['guest']], 'each place the view stood on — the edition and the draft — asked again in the guest form; the index read once');
+  assert.deepEqual([REC.doc(DR).refused, REC.covered(DR), REC.covered(D), REC.known(), PUMP.rereading()], ['withheld', true, false, [D, DR], false], 'the draft withheld from the guest: covered, a box the model knows — the edition the guest reads none — and the change\'s reads answered');
 });
 
 test('a listing read while the feed brings a row and an index state lays them over its answer: the document the row mints listed and counted, the state the event\'s — the shell emits each once, and its listing may not hold the row yet', async () => {

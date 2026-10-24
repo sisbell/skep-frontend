@@ -4,6 +4,12 @@
 // positions, and copies its bytes, through the blocks and runs it was made
 // from), the feed keeping the index and invalidating, the system account
 // held and marked, the death dropping every read held at the session's class.
+// THE COVER (issue #177): the death keeps which documents the class it left
+// could read — read, or listed — and a document one of them that a read at
+// the new class withholds is covered, a box the model knows; never one the
+// page never met nor one withheld before the change (a mutant that covers
+// every withheld document, or keeps nothing of what the class could read,
+// turns red).
 // A listing takes the feed rows taken while it was read laid over it by the
 // rules of a row taken after it — a mint listed and counted over the
 // listing's count, a publish of a listed draft counted once, a delegation's
@@ -150,6 +156,25 @@ test('the death drops every read held at the session\'s class — the index, eac
   assert.deepEqual([REC.links(), REC.projection('1.0.1.0.2.0.2.1', 2, '1.0.1.0.4'), REC.ownerOf('1.0.1.1'), REC.keySetOf('1.0.1')], [[], undefined, undefined, undefined], 'the links and where they project, the owners and the key sets');
   assert.deepEqual(REC.feedRows().map((r) => r.cls), ['published'], 'the published row held, the drafts row dropped');
   assert.equal(REC.textOf(taken, 1, 13), 'draft words.', 'the runs a reader took before the death read as they stood');
+});
+
+test('a document is covered where the class the page left could read it — its text, metadata or extent held, or its index listing it — and a read at the new class answers it `withheld`: never one the page never read, nor one withheld before the change; each is a box the model knows, none read at the new class before its answer (issue #177)', () => {
+  const READ = '1.0.1.0.2', LISTED = '1.0.1.0.4', HELD = '1.0.2.0.7', NEVER = '1.0.3.0.9';
+  REC.takeIndex(/** @type {any} */ (PLACES));
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeSpanSet(READ, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+  REC.takeRefused(HELD, 'withheld');
+  assert.deepEqual([REC.couldRead(READ), REC.coveredDocs()], [false, []], 'before any change of class: nothing could be read before, nothing covered');
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual([READ, LISTED, HELD, NEVER].map(REC.couldRead), [true, true, false, false], 'the class it left could read the draft it read and the edition its index listed; neither the document withheld from it nor one it never met');
+  assert.equal(REC.known().includes(READ), false, 'dropped, the draft is no box the model knows until a read answers for it');
+  for (const a of [READ, LISTED, HELD, NEVER]) REC.takeRefused(a, 'withheld');
+  assert.deepEqual([READ, LISTED, HELD, NEVER].map(REC.covered), [true, true, false, false], 'each a read at the new class withholds: covered where the class it left could read it');
+  assert.deepEqual(REC.coveredDocs(), [READ, LISTED]);
+  assert.ok([READ, LISTED, HELD, NEVER].every((a) => REC.known().includes(a)), 'each withheld one a box the model knows: existence and owner');
+  REC.setSession({ session: 's-2', principal: 1, account: '1.0.1' });
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual([REC.couldRead(READ), REC.coveredDocs()], [false, []], 'a later change: what was withheld from the class it leaves is no longer its to cover');
 });
 
 test('the system account\'s rows are held and marked, never a landmark', () => {

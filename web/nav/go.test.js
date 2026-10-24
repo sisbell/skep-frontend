@@ -284,6 +284,16 @@
 // read (a mutant that swaps the text under the reader turns red), and does
 // nothing where the box is pinned already, where no member held the text
 // before, for a daughter, or where the page holds none of the text.
+// A CHANGE OF THE PAGE'S CLASS (issue #177): the arrival goes — its outline,
+// labels, line and descriptions — no entry keeps it or a notice, so Back and
+// Forward restore none of it (a mutant that keeps the entries' arrivals turns
+// red); no entry holds a document's words — HOME's its act's name, a draft's
+// its box's first line read from the model, nothing until a read answers it,
+// then the cover's (a mutant that copies the label at the push turns red);
+// Back to a covered draft's entry reads it first, then lands on its covered
+// box framed whole, the walk on it and its withheld face there in the
+// ending's words, and once covered faces at once (a mutant that lands on the
+// entry's view, or shows no face, turns red).
 // The overlay host stands on a stand-in element, the platform's document a
 // stand-in beside it, so a face a landing shows is read back from what the
 // host wrote.
@@ -304,6 +314,7 @@ import * as VERSIONS from '../overlays/versions.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as LINKS from '../overlays/links-card.js';
 import * as SEL from '../overlays/selection.js';
+import * as TRAILLIST from '../overlays/trail-list.js';
 import * as INPUT from '../app/input.js';
 import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
 import { standardFs, placeOf, EDGE } from '../plane/layout.js';
@@ -1442,7 +1453,7 @@ test('a follow whose far document the board withholds from the reader faces it w
   assert.equal(REC.doc(PRIVATE).refused, 'withheld', 'the board withholds the far document');
   const f = faceShown(), arm = entitlementArm({ account: '1.0.1', keyPresent: false }, PRIVATE_OWNER);
   assert.equal(f && f.id, 'face:withheld', 'the document-level withheld face (A-170; B1-S8)');
-  assert.ok(f && f.html.includes(`<div class="face-text" data-string="B1.withheld-box">${esc(t('B1.withheld-box', { owner: PRIVATE_OWNER }))}</div>`), `B1-S2's words naming ${PRIVATE_OWNER}, the seat above the far document's sub-account: ${f && f.html}`);
+  assert.ok(f && f.html.includes(`<div class="face-text" data-string="F.corner.withheld">${esc(t('F.corner.withheld', { owner: PRIVATE_OWNER }))}</div>`), `the withheld box's words naming ${PRIVATE_OWNER}, the seat above the far document's sub-account: ${f && f.html}`);
   assert.ok(f && f.html.includes(`<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>`), 'the entitlement arm for that owner and this reader beneath them');
   assert.ok(f && !f.html.includes('⟨') && !f.acts, 'no token left unfilled, and no act');
   assert.ok(!fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.project(LOCKED, 2, PRIVATE) })), 'no projection asked of a document the board withholds: it refuses one with the document');
@@ -2443,4 +2454,54 @@ test('a failure a jump\'s read learns in the air rebuilds the mirror where the w
   await run(leap);
   assert.ok(item().includes(esc(t('L.far.unregistered'))), `the read learned the board says nothing: the mirror rebuilt, naming it so: ${item()}`);
   assert.deepEqual(fake.unanswered, []);
+});
+
+// placed last: the death empties the model every test above reads
+test('a change of the page\'s class (issue #177: "Keep every place, and cover the material"): the arrival goes — its outline, its labels, its line, its descriptions — and no entry keeps it or a notice, so Back and Forward restore none of it; no entry holds a document\'s words, each read from the model as it is shown — nothing for the draft the session read until a read answers it, then "withheld · ⟨owner⟩" — and Back to the draft\'s entry reads it first, then lands on its covered box framed whole, the walk on it and its withheld face there, offering the sign-in in the ending\'s words; once covered, the face at once', async () => {
+  const DR = '1.0.1.0.21', DR_TEXT = 'The draft the session reads.\n\nIts second paragraph.';
+  const platform = { getElementById: globalThis.document.getElementById };
+  /** @type {any} */ (globalThis.document).getElementById = () => null;
+  Object.assign(script, reads(DR, DR_TEXT, []));
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: FAR, kind: 'edition', label: 'far', standing: 'public' }, { doc: DR, kind: 'draft', label: 'the draft', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 3 }], state: { arm: 'complete' } }));
+  takeSplit();
+  /** the trail list's rows as the host wrote them */
+  const listed = () => { TRAILLIST.open(); const html = hostEl.innerHTML; HOST.dismiss(); return html; };
+  /** the words the trail shows for an address's newest entry */
+  const wordsAt = (/** @type {string} */ addr) => { const e = [...TRAIL.all()].reverse().find((x) => x.addr === addr); return e ? GO.wordsOf(e) : null; };
+  try {
+    await run(GO.home());
+    assert.equal(GO.wordsOf(/** @type {import('./trail.js').Entry} */ (TRAIL.current())), t('F.level.home'), 'HOME\'s entry its act\'s name, the strings table\'s');
+    await run(GO.leapTo(DR));
+    await run(GO.leapTo(D));
+    await run(GO.follow(drawn(SPLIT)));
+    assert.ok(GO.landing() && GO.landingLine() && GO.described() && GO.arrivalMark(), 'the follow landed: its outline, its labels, its line');
+    assert.deepEqual([wordsAt(DR), TRAIL.all().every((e) => e.label == null || [t('F.level.home'), t('L.whole-board')].includes(e.label))], ['the draft · ' + t('F.label.draft'), true], 'the draft\'s entry read from the model as its box\'s first line; no entry keeps a document\'s words, HOME\'s and WHOLE BOARD\'s their act\'s name alone');
+    assert.ok(listed().includes('the draft'), 'the trail list names the draft while the session reads it');
+    // the session ends: the model emptied, then the app tells N-GO, as M-PUMP tells the drop of every record; the guest may not read the draft
+    script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })] = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
+    REC.sessionDied({ arm: 'closed' });
+    GO.classChanged();
+    assert.deepEqual([GO.landing(), GO.landingLine(), GO.described(), GO.arrivalMark(), GO.litLinks()], [null, null, null, null, []], 'the arrival gone: nothing the dead session measured drawn or described');
+    assert.ok(TRAIL.all().every((e) => e.kept === null && e.notice === null), 'no entry keeps an arrival or a notice');
+    assert.deepEqual([wordsAt(DR), listed().includes('the draft')], ['', false], 'nothing answered of the draft yet: its entry says nothing, never its first line');
+    await run(GO.back());
+    assert.deepEqual([TRAIL.current()?.addr, GO.landing(), GO.described()], [D, null, null], 'Back to D: nothing restored');
+    const asks = () => fake.asked.filter((k) => k === FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })).length, before = asks();
+    await run(GO.back());
+    const covered = t('F.corner.withheld', { owner: '1.0.1' });
+    assert.deepEqual([asks() - before, REC.covered(DR), TRAIL.current()?.addr], [1, true, DR], 'Back to the draft\'s entry reads it first: covered');
+    assert.ok(HOST.currentIs('face:withheld') && hostEl.innerHTML.includes(esc(t('C-137.signed-out'))) && hostEl.innerHTML.includes(esc(t('F.sign-in'))), `its withheld face there, the ending's words and the sign-in its act: ${hostEl.innerHTML}`);
+    assert.deepEqual([walkAt(), same(CAM.view(), GO.viewFor(DR, null))], [['document', DR, null], true], 'the walk on the covered draft, its box framed whole');
+    assert.deepEqual([wordsAt(DR), listed().includes(esc(covered))], [covered, true], 'its entry\'s words the cover\'s, in the trail list too');
+    await run(GO.forward());
+    await run(GO.forward());
+    assert.deepEqual([TRAIL.current()?.addr, GO.landing(), GO.described(), GO.landingLine()], [FAR, null, null, null], 'Forward to the follow\'s entry: its arrival restored by none');
+    await run(GO.back());
+    await run(GO.back());
+    assert.deepEqual([asks() - before, HOST.currentIs('face:withheld'), walkAt()], [1, true, ['document', DR, null]], 'covered already: the face at once, nothing read again');
+  } finally {
+    /** @type {any} */ (globalThis.document).getElementById = platform.getElementById;
+    HOST.dismiss();
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  }
 });

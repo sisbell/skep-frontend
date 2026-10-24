@@ -1,7 +1,8 @@
 // O-FACES's test, on a stand-in of the overlay host's element: a `withheld`
 // refusal of a read's document consult shows THE DOCUMENT-LEVEL WITHHELD
 // FACE (B1 §1's A-170; R56: existence and owner, never bytes) — the document
-// named in B1-S2's withheld box's words, the words the plane's box says, its
+// named in the withheld box's words, "withheld · ⟨owner⟩" — the words the
+// plane's box, the corner and the mirror say — its
 // owner by the one owner rule (the seat above a sub-account, never the
 // sub-account), the entitlement arm for that owner and this reader beneath,
 // for a signed-in reader, a guest whose device holds a key for this board and
@@ -31,7 +32,13 @@
 // says its arm's words, the line's own — "signed out" the page's own close's
 // alone — and no refusal of a session the shell no longer holds reads
 // "signed out" (issue #175: a mutant that says the sign-out's words for the
-// mode or the retirement arm, or for `session_ended`, turns red).
+// mode or the retirement arm, or for `session_ended`, turns red). At a
+// COVERED document while the ending stands (issue #177) the withheld face
+// says the one line's words for that ending in the arm's place — the
+// sign-out's, or a refused re-acquire's leading the guest line — and offers
+// the line's sign-in act, faced where it stood; with no ending standing, the
+// arm as anywhere (a mutant that keeps the entitlement arm, or offers no act,
+// turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -120,7 +127,7 @@ function heldToTheFace(reader, what) {
   const arm = entitlementArm({ account: reader.session ? reader.session.account : null, keyPresent: reader.keys.length > 0 }, OWNER);
   assert.equal(arm.id, reader.arm, `${what}, ${who}: the rule's arm for this reader is ${reader.arm}`);
   assert.equal(f?.id, 'face:withheld', `${what}, ${who}: the document-level withheld face`);
-  assert.deepEqual(f.words, ['B1.withheld-box', t('B1.withheld-box', { owner: OWNER })], `${what}, ${who}: B1-S2's words, naming ${OWNER}, the seat above the sub-account — never 1.0.2.1`);
+  assert.deepEqual(f.words, ['F.corner.withheld', t('F.corner.withheld', { owner: OWNER })], `${what}, ${who}: the withheld box's words, "withheld · ⟨owner⟩", naming ${OWNER}, the seat above the sub-account — never 1.0.2.1`);
   assert.equal(f.words[1], LAYER.withheldBox(REC.doc(X)), `${what}, ${who}: the words the plane's withheld box says`);
   assert.deepEqual(f.arm, [arm.id, arm.text], `${what}, ${who}: the entitlement arm for ${OWNER} and this reader beneath them`);
   assert.ok(!f.html.includes('⟨'), `${what}, ${who}: no token left unfilled: ${f.html}`);
@@ -253,4 +260,36 @@ test('at the line\'s sign-in act a death\'s face says its arm\'s words — the m
     assert.deepEqual([FACES.deathWords(reason), HOST.currentState()], [null, null], `the ${reason.arm} arm: no words, so no face — never the sign-out's`);
   }
   for (const name of ['session_ended', 'session_died']) assert.notEqual(FACES.wordsFor(/** @type {Refusal} */ ({ kind: 'shell', name })).id, 'C-137.signed-out', `${name}: a session the shell no longer holds is not the person's sign-out`);
+});
+
+// placed last: the endings drop every read the tests above hold
+test('the withheld face at a COVERED document — one the class the page left read, withheld from the class it reads at now — while the ending stands says the one line\'s words for that ending in the arm\'s place, and offers the line\'s sign-in act, faced where the face stood: "signed out" for the page\'s own close; "could not reconnect as ⟨account⟩ after a restart" leading the guest line for a re-acquire refused — never the entitlement arm (issue #177: "sign-in is offered in the one line\'s words for that ending")', () => {
+  const Y = '1.0.1.0.8', at = { span: { addr: Y, pos: 1 }, sign: Y };
+  /** @type {Array<[string, () => void, {id: string, text: string}, string]>} each ending, its words and the face its sign-in act shows */
+  const endings = [
+    ['the page\'s own close', () => REC.sessionDied({ arm: 'closed' }), { id: 'C-137.signed-out', text: t('C-137.signed-out') }, 'face:session:closed'],
+    ['a re-acquire refused', () => REC.sessionLost({ kind: 'shell', name: 'no_key' }), { id: 'L.reconnect-refused', text: t('L.reconnect-refused', { account: '1.0.1' }) + ' · ' + t('B1.guest-line') }, 'face:session:no_key'],
+  ];
+  try {
+    for (const [what, end, words, signIn] of endings) {
+      readAs(READERS[0]);
+      REC.invalidate(Y);
+      REC.takeSpanSet(Y, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+      end();
+      REC.takeRefused(Y, 'withheld');
+      assert.equal(REC.covered(Y), true, `${what}: the draft the session read, withheld now, is covered`);
+      FACES.withheld(Y, at);
+      const f = faceShown(), o = HOST.currentState();
+      assert.deepEqual([f?.id, f?.words, f?.arm], ['face:withheld', ['F.corner.withheld', t('F.corner.withheld', { owner: '1.0.1' })], [words.id, words.text]], `${what}: the withheld box's words, the ending's beneath them`);
+      assert.ok(f && f.html.includes(`<button data-run="a0" class="">${esc(t('F.sign-in'))}</button>`) && !f.html.includes('R56') && !f.html.includes(esc(t('R56.key-absent', { owner: '1.0.1' }))), `${what}: its one act the line's sign-in, no entitlement arm: ${f && f.html}`);
+      o?.acts?.a0(/** @type {any} */ ({}), false);
+      assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], [signIn, at], `${what}: its act faces what the line's sign-in faces, where the face stood`);
+      HOST.dismiss();
+    }
+    REC.setSession(READERS[0].session);
+    REC.takeRefused(Y, 'withheld');
+    FACES.withheld(Y, at);
+    assert.deepEqual(faceShown()?.arm?.[0], entitlementArm({ account: '1.0.1', keyPresent: true }, '1.0.1').id, 'no ending standing: the entitlement arm, as at any withheld document');
+    HOST.dismiss();
+  } finally { REC.setSessionRefused(null); REC.takeOwner('1.0.2.1', { prefix: OWNER, principal: 901 }); REC.takeRefused(X, 'withheld'); }
 });

@@ -181,8 +181,21 @@
 // it is the person's sign-out (client.md §4b.2: "`close(session)` stays the
 // page's sign-out"), taken at once as the death the shell's close carries,
 // the `closed` arm.
+// THE PLACES THE VIEW STOOD ON (issue #177's design decision: "Re-read each
+// document the view stands on"; FP-29): every change of the page's class
+// takes, before anything is dropped, the documents in view — nearer than far
+// scale, where the view reads — and the documents the view's state names
+// beside them (`stands`, the trail's entries, the app's to hand in), and asks
+// each one's extent again at the class the page reads at then — none its index
+// lists, which it reads as it reads every place it lists — in view first and
+// nearest the view's centre, until the board answers it (`reread`): one
+// the new class may not read is held `withheld` (`refuseDoc`), M-REC's cover,
+// and drawn as the withheld box a guest meets, at its own place; one it may
+// read the view reads on as it reads any document it holds. The one line
+// says the change once these reads and the index's are answered
+// (`rereading`).
 // Rules: FP-1, FP-2, FP-6, FP-9 (fetches, never draws), FP-11, FP-22, FP-23,
-// FP-28.
+// FP-28, FP-29.
 
 import * as PORT from '../bridge/port.js';
 import * as REC from './records.js';
@@ -191,7 +204,7 @@ import { cam, viewportWorld, measure } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation } from '../plane/projection.js';
 import { estimate, estimatedSpan } from '../plane/layout.js';
-import { versionAddress, homeOf, documentOf, isTrunkMember } from './address.js';
+import { versionAddress, homeOf, documentOf, isTrunkMember, kindOf } from './address.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
 /** @typedef {import('./records.js').Stretch} Stretch */
@@ -288,6 +301,10 @@ let shown = plain;
 let onPublish = () => {};
 /** @type {(d: Dropped) => void} told of what each feed row the page takes, and every change of its class, dropped of what it held, after the drop (SC's `dropped`, handed in at `start`) */
 let onDrop = () => {};
+/** @type {() => string[]} the places the view's state names beside the view — the trail's entries — read again at a change of the page's class (handed in at `start`) */
+let stands = () => [];
+/** @type {Set<string>} the places the view stood on as the page's class last changed, each asked again at the new class until answered (see the head; `reread`) */
+let standing = new Set();
 
 /**
  * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, or every record at a change of the page's class — its session's death among them (`classChanged`)
@@ -299,13 +316,15 @@ let onDrop = () => {};
  * Start the pump: subscribe the model to the port's events, every board
  * event through `onBoard`, and to the sessions the calls name as they cross
  * the port (B-PORT's `onSession`).
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void}} opts `shown` the version each box shows, which the view reads (see the head); `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void, stands?: () => string[]}} opts `shown` the version each box shows, which the view reads (see the head); `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view
  */
 export function start(opts) {
   dirty = opts.onDirty;
   shown = opts.shown || plain;
   onPublish = opts.onPublish || (() => {});
   onDrop = opts.onDrop || (() => {});
+  stands = opts.stands || (() => []);
+  standing = new Set();
   started = true;
   onBoard('feed', (ev) => { if (ev.update) takeRow(ev.update); });
   onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); for (const m of whileOut) m.state = true; dirty(); } });
@@ -390,7 +409,7 @@ function takeEnd(ended, reason) {
   if (reason.arm === 'restart' && reopened == null) { lose(ended); return; }
   if (attempt && attempt.lost === ended) attempt.settle();
   if (reopened != null) REC.setSession({ ...s, session: reopened });
-  else { REC.sessionDied(reason); classChanged(); }
+  else { const stood = stoodOn(); REC.sessionDied(reason); classChanged(stood); }
 }
 
 /**
@@ -470,11 +489,11 @@ async function make(a) {
   if (out) {
     if ('result' in out) {
       if (a.lost == null) REC.setSession(out.result);
-      else if (REC.sessionRegained(out.result)) classChanged();
+      else { const stood = stoodOn(); if (REC.sessionRegained(out.result)) classChanged(stood); }
     } else {
       const r = { kind: out.refused.kind, name: out.refused.name };
       if (a.lost == null) REC.setSessionRefused(r);
-      else { REC.sessionLost(r); classChanged(); }
+      else { const stood = stoodOn(); REC.sessionLost(r); classChanged(stood); }
     }
   }
   a.settle();
@@ -488,16 +507,72 @@ async function make(a) {
  * of the board's state out left holding no feed row and no `index` state
  * taken before the change — so a listing out across it, asked again at the
  * new class (`atClass`), lays none of the class it left over the new one's —
- * the index read again at the class the page reads at now (`readIndex`), and
- * the drop of every record told to `onDrop`, so what a reader holds apart
- * from the model — a reading scene's pane — is read again at that class too.
+ * the index read again at the class the page reads at now (`readIndex`), the
+ * places the view stood on asked again at that class (`reread`), and the drop
+ * of every record told to `onDrop`, so what a reader holds apart from the
+ * model — a reading scene's pane — is read again at that class too.
+ * @param {string[]} stood the places the view stood on as the change was taken, before anything was dropped (`stoodOn`)
  */
-function classChanged() {
+function classChanged(stood) {
   asked.clear(); retryAt.clear(); unreached.clear();
   for (const m of whileOut) { m.rows = []; m.state = false; }
+  standing = new Set(stood);
   void readIndex();
   onDrop({ row: null, addrs: null });
 }
+
+/**
+ * The places the view stands on (see the head): the documents in view —
+ * nearer than far scale, where the view reads — and the documents the view's
+ * state names beside them (`stands`), each once. Taken as a change of the
+ * page's class is taken, before anything is dropped.
+ * @returns {string[]}
+ */
+function stoodOn() {
+  const inView = started && lodOf(cam.scale).name !== 'far' ? visibleDocs().map((d) => d.addr) : [];
+  return [...new Set([...inView, ...stands().filter((a) => kindOf(a) === 'document')])];
+}
+
+/**
+ * The places the view stood on as the page's class last changed, asked again
+ * at the class the page reads at now (see the head): each one's extent
+ * (`retrieve_doc_v_span_set`), in view first and nearest the view's centre,
+ * a refusal held of the document as any view's read's is (`refuseDoc`). A
+ * place answered for leaves the set: its extent read, a refusal held, a read
+ * answered and not asked again, or a listing by the index the page reads at
+ * now, which that class reads as it reads every place it lists; one the board
+ * did not answer stands held until its pause ends.
+ * @returns {number} the needs still missing
+ */
+function reread() {
+  if (!standing.size) return 0;
+  const v = viewportWorld(80);
+  const order = [...standing].map((addr) => {
+    const b = docBox(addr);
+    return { addr, out: intersects(b, v) ? 0 : 1, d: Math.hypot(b.x + b.w / 2 - cam.x, b.y + b.h / 2 - cam.y) };
+  }).sort((a, b) => a.out - b.out || a.d - b.d);
+  let missing = 0;
+  for (const { addr } of order) {
+    if (!pending(addr)) { standing.delete(addr); continue; }
+    const d = REC.doc(addr);
+    if (need('s:' + addr, F.retrieveDocVSpanSet(addr), (a) => REC.takeSpanSet(addr, F.decodeSpanSet(a)), addr, (r) => refuseDoc(d, r))) missing++;
+  }
+  return missing;
+}
+
+/** is a place the view stood on still to be answered for at the page's class (`reread`): no extent read, no refusal held, no read answered, and no listing by the index the page reads at now */
+function pending(/** @type {string} */ addr) {
+  const d = REC.has(addr) ? REC.doc(addr) : null;
+  return !REC.place(addr) && !asked.has('s:' + addr) && (!d || (d.extent == null && !d.refused));
+}
+
+/**
+ * Are the reads a change of the page's class asked still out (see the head):
+ * the index read again, or a place the view stood on not yet answered for
+ * (`reread`)? The one line says the change once they are answered.
+ * @returns {boolean}
+ */
+export const rereading = () => indexing > 0 || [...standing].some(pending);
 
 /** the refusals the reads met */
 export const refusalsMet = () => refusals.slice();
@@ -901,16 +976,18 @@ function holdsSpan(/** @type {Doc} */ d, /** @type {number} */ from, /** @type {
 
 /**
  * The reads the view needs now, issued within the budget — none while the
- * index is read (`readIndex`), which counts as a need missing. Returns the
- * count of needs still missing — the gate's settle signal with `inflight()`.
+ * index is read (`readIndex`), which counts as a need missing; the places the
+ * view stood on as the page's class last changed first (`reread`), at any
+ * scale. Returns the count of needs still missing — the gate's settle signal
+ * with `inflight()`.
  * @returns {number}
  */
 export function pump() {
   if (!started) return 0;
   if (indexing) return 1;
   const lod = lodOf(cam.scale);
-  let missing = 0;
-  if (lod.name === 'far') return 0;
+  let missing = reread();
+  if (lod.name === 'far') return missing;
   const vis = visibleDocs();
   // nearest the centre first
   const cx = cam.x, cy = cam.y;

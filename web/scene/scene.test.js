@@ -32,7 +32,11 @@
 // pane's first block; one document in both panes drawing a link inside it
 // once for each way its ends stand across them (a mutant that tells ends
 // apart by their document alone, folding the two into one, turns red); no
-// line to a document neither pane holds. Each end where the link's bytes
+// line to a document neither pane holds; a line homed in the readable pane
+// whose far end lies in a pane showing a cover — a covered draft's head
+// alone, its projection refused — ending at the cover, in either pane (issue
+// #177: a mutant that drops it, as a refused projection's end, turns red).
+// Each end where the link's bytes
 // stand now: the far end where `project` places it (a mutant drawing to the
 // stored position turns red), at its pane's first block where it floats, no
 // line where nothing places it; a link met from both panes one line however
@@ -298,6 +302,19 @@ test('one document in both panes: a link inside it is drawn once for each way it
 
 test('a link whose far end lies outside the other pane\'s document draws no line between the panes', () => asReader('1.0.1', () => {
   assert.deepEqual(linesBetween(paneLinks(DOC_A, [endShown(linkBy(DOC_A + '.0.2.1', '1.0.1'), passage(DOC_A, 50, 10), passage(DOC_C, 1, 5))]), paneLinks(DOC_B, [])), []);
+}));
+
+test('a line homed in the readable pane whose far end lies in a pane showing a cover — a covered draft\'s, its head alone, its projection refused `withheld` — ends at the cover, its end there marked so, in either pane; read as no cover the refused projection places it nowhere (issue #177: "Link lines homed in the readable pane stay, ending at the cover")', () => asReader('1.0.1', () => {
+  const L = linkBy(DOC_A + '.0.2.1', '1.0.1');
+  const refused = new Map([[L.addr + ' 2', /** @type {'withheld'} */ ('withheld')]]);
+  /** the draft's pane: its head alone, the projection into it refused withheld, and whether it shows a cover */
+  const draft = (/** @type {string} */ addr, /** @type {boolean} */ cover) => ({ ...paneLinks(addr, [], []), placed: refused, cover });
+  const atA = endShown(L, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5), null);
+  const ends = (/** @type {import('./scene.js').Line[]} */ lines) => lines.map((l) => [l.link, l.a, l.b, looks(l.ink.a), looks(l.ink.b)]);
+  assert.deepEqual(ends(linesBetween(paneLinks(DOC_A, [atA]), draft(DOC_B, true))), [[L.addr, { pos: 50, width: 10 }, { pos: 0, width: 0, cover: true }, [HUE.you, false], [HUE.you, false]]], 'one line, from its passage in pane A to the cover in pane B, in its ends\' marks');
+  assert.deepEqual(linesBetween(paneLinks(DOC_A, [atA]), draft(DOC_B, false)), [], 'read as no cover: the refused projection places it nowhere, no line');
+  const toA = endShown(L, passage(DOC_B, 50, 10), passage(DOC_A, 1, 5), null);
+  assert.deepEqual(ends(linesBetween(draft(DOC_A, true), paneLinks(DOC_B, [toA]))).map((l) => [l[1], l[2]]), [[{ pos: 0, width: 0, cover: true }, { pos: 50, width: 10 }]], 'the cover in pane A: its end there');
 }));
 
 test('a line\'s far end stands where `project` places its passage now, never where the link stores it; one that floats at its pane\'s first block, where its follow lands; one nothing places draws no line', () => asReader('1.0.1', () => {

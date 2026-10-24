@@ -77,6 +77,13 @@
 // at mid, nearer the walk's document by its box — a pinned version by the box
 // it shares — or the account the walk stands on: a mutant that names the
 // walk's document at mid, or a version by its own address, turns red.
+// THE COVER (issue #177): at a document a read refused the line names no
+// position, strip or window at its reading scale (a mutant that names the
+// slot fold's first position turns red); a change of the page's class takes
+// the transient down, and is said ONCE as the reads it asked answer — the
+// ending's words, then the documents it covered — and nothing while they
+// read (a mutant that says the ending alone first, or never names the cover,
+// turns red).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -528,5 +535,58 @@ test('a death of an arm whose words this page does not hold — seeded, blocked,
     REC.setSession(was);
     REC.sessionDied({ arm: 'closed' });
     assert.ok(LINE.actingSegment().html.startsWith('<span data-string="C-137.signed-out">'), 'the page\'s own close: "signed out"');
+  } finally { REC.setSession(was); }
+});
+
+test('at a document a read refused — a covered draft among them — the line names no position, no strip and no window at its reading scale, and a change of the page\'s class takes down the transient the strip\'s act left, which quotes the text it was made at (issue #177: "no length, ticks or window")', async () => {
+  const W = '1.0.1.0.8';
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  REC.takeRefused(W, 'withheld');
+  await WALK.focusTo(W, null);
+  CAM.set(CAM.viewAt(LAYER.centreOf(W, null), LAYER.foldOf(REC.doc(W)).fs, 14));
+  assert.ok(LAYER.atReadingScale(W) && lodOf(CAM.cam.scale).name === 'near', 'its box at its own reading scale, near');
+  const a = LINE.addressDisplay();
+  assert.deepEqual([a.doc, a.pos, a.window], [W, null, null], 'the document named, no position and no window');
+  LINE.render(true);
+  assert.ok(host.innerHTML.includes('<span class="strip none" aria-hidden="true"></span>') && !host.innerHTML.includes('strip-mark'), `no strip and no mark on it: ${host.innerHTML}`);
+  await WALK.focusTo(D, 15);
+  over(D, 14 / STANDARD_FS);
+  LINE.stripAct();
+  assert.ok(host.innerHTML.includes('seg transient') && host.innerHTML.includes(esc(REC.textBetween(D, 15, 75))), 'the strip\'s act: the passage\'s words in the transient');
+  LINE.classChanged();
+  assert.ok(!host.innerHTML.includes('seg transient'), `the change takes the transient down: ${host.innerHTML}`);
+});
+
+// placed last: the death empties the model every test above reads
+test('a change of the page\'s class is said once, as the reads it asked answer: the ending\'s words, then the documents it covered — never the ending alone first, and nothing while they read (issue #177: "One status message says the session ended and what is covered")', async () => {
+  const DR = '1.0.1.0.6', flush = () => new Promise((r) => setTimeout(r, 0));
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  const was = REC.session();
+  // a draft the session read, in view at HOME beside the edition; the guest's listing the edition alone, the draft withheld from the guest
+  REC.takeSpanSet(DR, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+  script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })] = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
+  script[FAKE.keyOf('places', { board: 'b-1' })] = { result: { docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } } };
+  CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  LINE.render(true);
+  live.textContent = '';
+  const listing = fake.hold('places', { board: 'b-1' });
+  try {
+    fake.fire('session-died', { session: /** @type {{session: string}} */ (was).session, reason: { arm: 'closed' } });
+    LINE.classChanged();
+    LINE.render();
+    assert.deepEqual([live.textContent, PUMP.rereading()], ['', true], 'nothing said while the index is read again: the ending is never said alone first');
+    listing();
+    await flush();
+    for (let i = 0; i < 10 && PUMP.rereading(); i++) { PUMP.pump(); await flush(); }
+    assert.deepEqual([PUMP.rereading(), REC.covered(DR)], [false, true], 'the places the view stood on read again: the draft withheld from the guest, covered');
+    LINE.render();
+    assert.deepEqual([live.textContent, live.live], [t('L.covered', { ending: t('C-137.signed-out'), documents: DR }), 'assertive'], 'said once the reads answer: the ending, then what it covered');
+    live.textContent = '';
+    LINE.render(true);
+    assert.equal(live.textContent, '', 'said once');
   } finally { REC.setSession(was); }
 });
