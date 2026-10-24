@@ -119,11 +119,21 @@
 // about, a follow of such a dead reference — no flight, no entry, nothing
 // asked, the link not counted as followed, its face at the act's site in the
 // place of the card standing there (a mutant that flies, pushes or asks turns
-// red). A follow whose far document the board withholds from the reader faces
-// it with the document-level withheld face — B1-S2's words naming its owner by
-// the one owner rule, the arm beneath — asks no projection of it, and keeps
-// its entry holding the face (a mutant that asks the projection the board
-// refuses with the document turns red).
+// red). A FOLLOW TO A WITHHELD DOCUMENT LANDS AT ITS PLACE (issue #179's design
+// decision), whether its own read learns it in the air, the page knows it at
+// the act, the projection says it, or its text is refused once the projection
+// answered: its entry settled at the document whole holding its own withheld
+// words, the link counted as followed and lit, nothing outlined, the jump
+// landed and the walk on the document; the face at the document's place with
+// no sign hiding it — B1-S2's words naming its owner by the one owner rule,
+// the arm beneath, whole the first time and compact the next, its head
+// opening the rest — told by the landing's description (a mutant that faces
+// at the departure, fails it in the air, signs the face or says it through the
+// status region turns red), asking no projection of it (a mutant that asks the
+// projection the board refuses with the document turns red); one whose text
+// the page holds — access changed after it was read — never leaves, its own
+// words at the link's own bytes, named by the follow's caption, the far
+// document's address before them (a mutant that flies it turns red).
 // A JUMP SAYS IT IS READING where the camera is — at the place it left for: a
 // follow's far document, the document a LEAP names whatever site its act
 // names — the one line carrying it while that place is out of view; Back
@@ -137,14 +147,13 @@
 // selection standing under it until Esc.
 // A FOLLOW THAT LANDS NOWHERE IS FACED WHERE THE CAMERA IS: at its site, the
 // link's own bytes in the first edition, where its failure is known at the
-// act — a link naming no far document, a dead reference or a far document
-// withheld the page knows of — and pressed on the anatomy card's follow,
-// whose card the face takes the place of; at the far document, where its
-// camera went, where its reads learned it in the air — a projection the board
-// declines for what it says of the far document, a dead reference or a far
-// document withheld met once the projection answered and its text was read
-// (a mutant that stands any one face elsewhere, or at the control pressed,
-// turns that row red).
+// act — a link naming no far document, a dead reference, a far document
+// withheld whose text the page holds, its face standing with no sign — and
+// pressed on the anatomy card's follow, whose card the face takes the place
+// of; at the far document, where its camera went, where its reads learned it
+// in the air — a dead reference met once the projection answered and its
+// text was read (a mutant that stands any one face elsewhere, or at the
+// control pressed, turns that row red).
 // A departure made
 // during a flight re-takes the flight's destination, so Forward lands there —
 // after a LEAP's flight and after a Back's (a mutant that re-takes the camera
@@ -400,6 +409,18 @@ const takeRefusedProjections = () => {
 // consults nothing before the projection, which answers — whose far document's text the board, once the follow reads it, answers for
 // with nothing (GONE_LATE) or withholds from the reader (HIDDEN_LATE)
 const GONE_LATE = '1.0.1.0.13', DEAD_LATE = D + '.0.2.8', HIDDEN_LATE = '1.0.2.0.7', LOCKED_LATE = D + '.0.2.9', LATE_EXTENT = 20;
+// a citation from the first edition of a passage of TURNED, 1.0.2's draft whose text the page read and the board now withholds from
+// the reader — its access changed after the text was read (issue #179's design decision's first case: "Its text is on screen")
+const TURNED = '1.0.2.0.8', TURNED_TEXT = 'A draft read before its owner withdrew it.', TURNED_LINK = D + '.0.2.18';
+/** the turned citation taken into the model, drawn at the first edition, TURNED's text held and its read refused `withheld` since */
+const takeTurned = () => {
+  REC.takeSpanSet(TURNED, [{ subspace: 1, ordinal: 1, positions: TURNED_TEXT.length }]);
+  REC.takeDelivery(TURNED, [{ pos: 1, width: TURNED_TEXT.length, kind: 'content', text: TURNED_TEXT, ref: null, origin: null }]);
+  REC.takeRefused(TURNED, 'withheld');
+  REC.takeLinks(D, [TURNED_LINK]); REC.takeLink({ addr: TURNED_LINK, from: [span(D, 5, 2)], to: [{ ...span(TURNED, 1, 5), account: '1.0.2' }], type: CITE });
+};
+/** the edition claims the board answers on a withheld document whose face decides C-67's pointer from them: none */
+const noClaims = (/** @type {string} */ doc) => ({ [FAKE.keyOf('op', { frame: F.editionClaimsAt(doc) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } } });
 /** a citation met late taken into the model, drawn at the first edition from `pos`, two positions, its far document's extent held and its text not */
 const takeLate = (/** @type {string} */ link, /** @type {string} */ far, /** @type {number} */ pos) => {
   REC.invalidate(far); REC.takeSpanSet(far, [{ subspace: 1, ordinal: 1, positions: LATE_EXTENT }]);
@@ -488,9 +509,11 @@ const script = {
   // the moved citation's far end where FAR's text holds it now, and its lineage and the floating one's, which their anatomy cards read
   [FAKE.keyOf('op', { frame: F.project(SHIFTED, 2, FAR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.20', width: '0.5' }] } },
   ...Object.fromEntries([SHIFTED, FLOAT].flatMap((l) => [F.inClaims(l, 'audit'), F.outClaims(l, 'audit')]).map((frame) => [FAKE.keyOf('op', { frame }), { result: { as_of: 1, resp: 'claims', claims: [] } }])),
-  // the withheld citation's far document: its span set and the projection into it refused `withheld`, the document consulted first
+  // the withheld citation's far document: its span set and the projection into it refused `withheld`, the document consulted first;
+  // the edition claims on each document a follow lands at withheld, none
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(PRIVATE) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
   [FAKE.keyOf('op', { frame: F.project(LOCKED, 2, PRIVATE) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+  ...noClaims(PRIVATE), ...noClaims(FAR), ...noClaims(HIDDEN_LATE), ...noClaims(TURNED),
   // the declined citation's projection into FAR: no such slot
   [FAKE.keyOf('op', { frame: F.project(DECLINED, 2, FAR) })]: { refused: { kind: 'refused', name: 'not_a_link', code: 'not_a_link' } },
   ...late(DEAD_LATE, GONE_LATE, 'doc_not_registered'),
@@ -1443,23 +1466,57 @@ test('a follow whose reads learn its far document says nothing keeps its entry: 
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a follow whose far document the board withholds from the reader faces it withheld — B1-S2\'s words naming its owner, the arm beneath — asks no projection of it, and keeps its entry holding the face', async () => {
-  takeLocked();
+test('a follow whose far document the board withholds from the reader lands at that document\'s place (issue #179\'s design decision: "Show no notice at the departure. Finish the follow like any jump and land at the document\'s place, where its own withheld words stand"): its entry taken at the act and settled at the document whole, holding its own withheld words there as its notice; the link counted as followed and lit, nothing outlined, the jump landed, the walk on the document; the face at the document\'s place, no sign hiding it — B1-S2\'s words naming its owner by the one owner rule, the arm beneath, whole the first time and compact the next, its head opening the rest — told by the landing\'s description and not the status region; no projection asked of a document the board withholds — whether its own read learns it in the air, the page knows it at the act, the projection says it, or its text is refused once the projection answered', async () => {
+  takeLocked(); takeRefusedProjections(); takeLate(LOCKED_LATE, HIDDEN_LATE, 25);
+  /** @type {Array<{what: string, link: string, far: string, owner: string, before?: () => void, whole: boolean}>} each way a follow meets a withheld far document, its owner, and whether its own words show whole there */
+  const ways = [
+    { what: 'its own read refused `withheld` in the air', link: LOCKED, far: PRIVATE, owner: PRIVATE_OWNER, whole: true },
+    { what: 'known withheld at the act, its text never read', link: LOCKED, far: PRIVATE, owner: PRIVATE_OWNER, before: () => REC.takeRefused(PRIVATE, 'withheld'), whole: false },
+    { what: 'the projection refused for it in the air', link: HIDDEN_PROJ, far: FAR, owner: '1.0.1', whole: true },
+    { what: 'its text refused once the projection answered', link: LOCKED_LATE, far: HIDDEN_LATE, owner: '1.0.2', whole: true },
+  ];
+  for (const { what, link, far, owner, before, whole } of ways) {
+    await run(GO.leapTo(D));
+    await run(GO.leapTo(FAR));
+    await run(GO.back());
+    if (before) before();
+    const trail = addrs(), cursor = TRAIL.cursorIndex(), from = fake.asked.length;
+    const following = GO.follow(drawn(link)), landing = GO.aground();
+    assert.deepEqual([CAM.flying(), LK.visited(link), TRAIL.current()?.addr], [true, true, far], `${what}: no notice at the departure — the camera left at the act, the link counted as followed, its entry taken`);
+    await run(following);
+    assert.equal(await landing, true, `${what}: the jump landed`);
+    const e = TRAIL.current(), place = { span: { addr: far, pos: 1 } };
+    assert.deepEqual([addrs(), TRAIL.cursorIndex()], [[...trail.slice(0, cursor + 1), far], cursor + 1], `${what}: its entry after D's, FAR's ahead of the cursor dropped as any push drops it`);
+    assert.deepEqual(e && [e.pos, e.notice], [null, { face: 'withheld', addr: far, refusal: null, site: place, offer: false }], `${what}: the entry at the document whole, holding its own withheld words at its place`);
+    assert.deepEqual([marks(), walkAt()], [[null, [link]], ['document', far, null]], `${what}: the link lit, nothing outlined, the walk on the document`);
+    const o = HOST.currentState(), f = faceShown(), arm = entitlementArm({ account: '1.0.1', keyPresent: false }, owner);
+    assert.deepEqual([o?.id, o?.anchor, o?.told], ['face:withheld', place, true], `${what}: its face at the document's place, no sign hiding it, told by the landing`);
+    assert.ok(f && f.html.includes(`data-string="F.corner.withheld" data-run="head" aria-expanded="${whole}">${esc(t('F.corner.withheld', { owner }))}</button>`), `${what}: the withheld box's words naming ${owner}, ${whole ? 'whole' : 'compact'}: ${f && f.html}`);
+    assert.equal(!!f && f.html.includes(`<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>`), whole, `${what}: the arm beneath them ${whole ? 'standing' : 'one act away'}`);
+    assert.ok(f && !f.html.includes('face-addr') && !f.html.includes('⟨'), `${what}: no address before them — it is the document landed at — and no token unfilled`);
+    assert.deepEqual(GO.described(), { addr: far, pos: 1, words: FACES.withheldText(far), runs: [] }, `${what}: the landing's description its own words whole`);
+    if (!whole) {
+      o?.acts?.head(/** @type {any} */ (hostEl), true);
+      const opened = faceShown()?.html || '';
+      assert.ok(opened.includes('aria-expanded="true"') && opened.includes(`<div class="arm" data-string="${arm.id}">`), `${what}: its head's act opens the rest: ${opened}`);
+    }
+    assert.ok(!fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.project(LOCKED, 2, PRIVATE) })), `${what}: no projection asked of a document the board withholds: it refuses one with the document`);
+    HOST.dismiss();
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a follow whose far document\'s text the page holds and the board now withholds — access changed after it was read (issue #179\'s design decision\'s first case: "Its text is on screen … Show the change instead") — never leaves: no entry, the link not counted as followed and lit, its own withheld words at the link\'s own bytes with no sign hiding them, named by the follow\'s caption, the far document\'s address before them', async () => {
+  takeTurned();
   await run(GO.leapTo(D));
-  await run(GO.leapTo(FAR));
-  await run(GO.back());
-  const before = addrs(), cursor = TRAIL.cursorIndex(), from = fake.asked.length;
-  await run(GO.follow(drawn(LOCKED)));
-  assert.equal(REC.doc(PRIVATE).refused, 'withheld', 'the board withholds the far document');
-  const f = faceShown(), arm = entitlementArm({ account: '1.0.1', keyPresent: false }, PRIVATE_OWNER);
-  assert.equal(f && f.id, 'face:withheld', 'the document-level withheld face (A-170; B1-S8)');
-  assert.ok(f && f.html.includes(`<div class="face-text" data-string="F.corner.withheld">${esc(t('F.corner.withheld', { owner: PRIVATE_OWNER }))}</div>`), `the withheld box's words naming ${PRIVATE_OWNER}, the seat above the far document's sub-account: ${f && f.html}`);
-  assert.ok(f && f.html.includes(`<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>`), 'the entitlement arm for that owner and this reader beneath them');
-  assert.ok(f && !f.html.includes('⟨') && !f.acts, 'no token left unfilled, and no act');
-  assert.ok(!fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.project(LOCKED, 2, PRIVATE) })), 'no projection asked of a document the board withholds: it refuses one with the document');
-  assert.deepEqual(addrs(), [...before.slice(0, cursor + 1), PRIVATE], 'its entry after D\'s, FAR\'s ahead of the cursor dropped as any push drops it');
-  assert.equal(TRAIL.cursorIndex(), cursor + 1, 'the cursor on its entry');
-  assert.deepEqual(TRAIL.current()?.notice?.face, 'withheld', 'holding the withheld face');
+  const n = TRAIL.length();
+  await run(GO.follow(drawn(TURNED_LINK)));
+  const o = HOST.currentState(), html = hostEl.innerHTML, arm = entitlementArm({ account: '1.0.1', keyPresent: false }, '1.0.2');
+  assert.deepEqual([TRAIL.length(), LK.visited(TURNED_LINK), GO.litLinks(), CAM.flying()], [n, false, [TURNED_LINK], false], 'no flight, no entry, the link not counted as followed and lit');
+  assert.deepEqual([o?.id, o?.anchor], ['face:withheld', { span: { addr: D, pos: 5, width: 2 } }], 'its face at the link\'s own bytes, no sign hiding it');
+  assert.ok(html.startsWith(`<span class="label">${esc(t('B1.follow') + ' · ' + TURNED)}</span><div class="face-addr code">${TURNED}</div>`), `named by the follow's caption, the far document's address before its words: ${html}`);
+  assert.ok(html.includes(`>${esc(t('F.corner.withheld', { owner: '1.0.2' }))}</button><div class="arm" data-string="${arm.id}">`), 'its own withheld words whole, the arm beneath');
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -1790,10 +1847,10 @@ test('a follow made from the selection\'s card ends the card and the selection a
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a follow that lands nowhere is faced where the camera is: at its site — the link\'s own bytes in the first edition — where its failure is known at the act, pressed on the anatomy card\'s follow in the card\'s place there; at the far document, where its camera went, where its reads learned it in the air (FP-25)', async () => {
-  takeDead(); takeLocked(); takeRefusedProjections(); takeLate(DEAD_LATE, GONE_LATE, 19); takeLate(LOCKED_LATE, HIDDEN_LATE, 25);
-  // known at the act: GONE says nothing, PRIVATE is withheld
-  REC.takeRefused(GONE, 'unregistered'); REC.takeRefused(PRIVATE, 'withheld');
+test('a follow that lands nowhere is faced where the camera is: at its site — the link\'s own bytes in the first edition — where its failure is known at the act, pressed on the anatomy card\'s follow in the card\'s place there, a withheld far document\'s face standing there with no sign hiding it; at the far document, where its camera went, where its reads learned it in the air (FP-25)', async () => {
+  takeDead(); takeTurned(); takeLate(DEAD_LATE, GONE_LATE, 19);
+  // known at the act: GONE says nothing; TURNED, whose text the page holds, is withheld
+  REC.takeRefused(GONE, 'unregistered');
   /** the link's own bytes in the first edition: where a face known at the act stands */
   const at = (/** @type {number} */ pos, /** @type {number} */ width) => ({ span: { addr: D, pos, width }, sign: D });
   /** a far document's head: where the camera went, and a face its reads learned stands */
@@ -1804,10 +1861,8 @@ test('a follow that lands nowhere is faced where the camera is: at its site — 
   const rows = [
     { what: 'a link naming no far document, faced at once', follow: () => GO.follow({ ...drawn(PASSAGE), far: '' }), face: 'face:invalid', site: at(11, 5) },
     { what: 'a dead reference the page knows says nothing, faced at the act', follow: () => GO.follow(drawn(DEAD)), face: 'face:doc_not_registered', site: at(23, 3) },
-    { what: 'a far document the page knows is withheld, faced at the act', follow: () => GO.follow(drawn(LOCKED)), face: 'face:withheld', site: at(7, 2) },
-    { what: 'a projection the board declines for what it says of the far document — withheld from the reader — learned in the air', follow: () => GO.follow(drawn(HIDDEN_PROJ)), face: 'face:withheld', site: there(FAR) },
+    { what: 'a far document withheld whose text the page holds, faced at the act, its face standing whatever the camera does', follow: () => GO.follow(drawn(TURNED_LINK)), face: 'face:withheld', site: { span: { addr: D, pos: 5, width: 2 } } },
     { what: 'a dead reference learned once the projection answered and the text was read', follow: () => GO.follow(drawn(DEAD_LATE)), face: 'face:doc_not_registered', site: there(GONE_LATE) },
-    { what: 'a far document withheld, learned once the projection answered and the text was read', follow: () => GO.follow(drawn(LOCKED_LATE)), face: 'face:withheld', site: there(HIDDEN_LATE) },
     {
       what: 'the anatomy card\'s follow, pressed',
       follow: async () => {

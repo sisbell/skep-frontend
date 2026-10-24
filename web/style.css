@@ -216,6 +216,13 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #overlay .x:hover { color:var(--ink); background:none; }
 #overlay .reason[hidden] { display:none; }
 #overlay .face-text { color:#ffe2b8; margin:4px 0; }
+/* a withheld document's own words (issue #179's design decision): its address before them where the face stands away from
+   it; its head the disclosure whose act opens the rest and folds it, drawn as the words with the disclosure's mark, which
+   assistive technology does not read — the button's state says it */
+#overlay .face-addr { color:var(--dim); margin:2px 0 0; }
+#overlay button.face-text { display:block; background:none; border:0; padding:0; text-align:left; white-space:normal; font-size:inherit; }
+#overlay button.face-text::before { content:'▸ ' / ''; color:var(--dim); }
+#overlay button.face-text[aria-expanded="true"]::before { content:'▾ ' / ''; }
 #overlay .quoted { color:#cfd6df; border-left:2px solid #6b7382; padding-left:.5em; margin:3px 0; max-height:6em; overflow:hidden; }
 #overlay .kv b { color:#cfd6df; font-weight:600; display:inline-block; min-width:8em; }
 #overlay .ends { display:flex; gap:10px; margin-bottom:6px; }

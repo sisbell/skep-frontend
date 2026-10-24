@@ -36,7 +36,11 @@
 // beneath the one the page holds now (a mutant that reads the element alone
 // turns red). A FACE IS SAID through the one status region, save one the
 // landing that met it describes where the focus lands (issue #153; a mutant
-// that says a told face again turns red). A JUMP'S FACE SHOWS WHERE THE
+// that says a told face again turns red). A FACE THAT ANSWERS AN ACT (issue
+// #179) is named by the act's caption and described by its words, and said
+// caption first; one with no caption is named by its words and described by
+// nothing (a mutant that describes it by nothing, or says its words alone,
+// turns red). A JUMP'S FACE SHOWS WHERE THE
 // CAMERA IS (FP-25): one whose anchor names the document it stands at is
 // hidden on the plane exactly while that document is out of the visible
 // view, the one line carrying its string's id and its words (`aside`)
@@ -101,6 +105,39 @@ test('a face is said through the one status region, save one whose words the lan
   FACES.floating('1.0.1.0.127', null, false, true);
   assert.deepEqual([standing(), said], ['face:floating', 1], 'told by the landing\'s description: the status region not written again');
   HOST.dismiss();
+});
+
+test('a face that answers an act is named by the act\'s caption and described by its words, each part in its order, and said through the status region caption first; a face with no caption is named by its words and described by nothing (issue #179\'s design decision: "Announce each face as the act\'s answer, tied to the act in markup")', () => {
+  /** @type {Record<string, string>} the dialog's attributes as the host set them */
+  const attrs = {};
+  /** @type {Array<{classes: string[], textContent: string, id: string}>} the parts of the markup the host wrote, each by its classes and its text, its id the host's to set */
+  let parts = [];
+  const el = {
+    className: '', style: {}, addEventListener() {}, getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false,
+    setAttribute: (/** @type {string} */ k, /** @type {string} */ v) => { attrs[k] = v; }, removeAttribute: (/** @type {string} */ k) => { delete attrs[k]; },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ v) { parts = [...v.matchAll(/<(div|span|button) class="([^"]*)"[^>]*>(.*?)<\/\1>/g)].map((m) => ({ classes: m[2].split(/\s+/), textContent: m[3].replace(/<[^>]*>/g, ''), id: '' })); },
+    querySelector: (/** @type {string} */ sel) => parts.find((p) => p.classes.includes(sel.replace(/^\./, ''))) || null,
+    querySelectorAll: (/** @type {string} */ sel) => { const cs = sel.split(',').map((x) => x.trim().replace(/^\./, '')); return parts.filter((p) => p.classes.some((c) => cs.includes(c))); },
+  };
+  /** @type {string[]} what the status region was given to say */
+  const said = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); } }) });
+  HOST.attach(/** @type {any} */ (el));
+  try {
+    const caption = `${t('B1.who-wrote')} · 1.0.1.0.3 · ${t('F.position', { p: 11 })}`, words = t('B1.too_much_coverage');
+    FACES.showRefusal(null, /** @type {any} */ ({ kind: 'refused', name: 'too_much_coverage', code: 'too_much_coverage', detail: null, op: 'show_origin', body: null }), '1.0.1.0.3', { caption });
+    const label = parts.find((p) => p.classes.includes('label')), text = parts.find((p) => p.classes.includes('face-text'));
+    assert.deepEqual([attrs['aria-labelledby'], label?.id, attrs['aria-describedby'], text?.id], ['overlay-name', 'overlay-name', 'overlay-said-0', 'overlay-said-0'], 'named by the act\'s caption, described by its words');
+    assert.equal(said[said.length - 1], `${caption} ${words}`, 'said as the act\'s answer: its caption, then its words');
+    FACES.invalidFollow(null);
+    assert.deepEqual([attrs['aria-labelledby'], parts.find((p) => p.classes.includes('face-text'))?.id, attrs['aria-describedby'], said[said.length - 1]], ['overlay-name', 'overlay-name', undefined, t('B1.invalid')], 'no caption: named by its words, described by nothing, said as its words');
+    HOST.dismiss();
+    assert.deepEqual([attrs['aria-labelledby'], attrs['aria-describedby']], [undefined, undefined], 'taken down: neither stands');
+  } finally {
+    HOST.dismiss();
+    HOST.attach(/** @type {any} */ (hostEl));
+  }
 });
 
 test('an opening nothing interrupts is pending while it reads, nothing shown, and shows its answer once they answer', async () => {

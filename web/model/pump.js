@@ -49,7 +49,9 @@
 // it is out), the board's health and its daemon at boot
 // (`readHealth`, `readProbe`), a whole document (`loadWhole`, the claims
 // on its withheld runs' origins among it, so a pane the scene makes from it
-// and the walk's mirror item at a run hold the clause decided), where a
+// and the walk's mirror item at a run hold the clause decided), the edition
+// claims on a withheld document whose face decides C-67's pointer from them
+// (`readClaims`; issue #179's design decision), where a
 // link's end projects now (`projectEnd`), a link's supersession lineage
 // (`lineage`: `in_claims` and `out_claims`, A-56, A-57), the chain's
 // members (`probeChain`, the view's probe and the versions list's alike),
@@ -1275,17 +1277,18 @@ async function readWhole(addr, dropped) {
 }
 
 /**
- * C-67's reads for one origin, for an act (`readWhole`), as the view asks
- * them (`needClaims`): the lookup of the edition claims on it where the model
- * holds none, taken where no drop of the claims held overtook it
- * (`watchClaims`); then each listed claim's link and each listed claim's
- * home's metadata the model lacks, the metadata taken where the home was not
- * dropped under it (`watchDrops`) and a refusal of it held as the home's. A
- * lookup or a link refused teaches the model nothing here: the view asks it
- * again, and records the refusal.
+ * C-67's reads for one origin, for an act — a whole read (`readWhole`), a
+ * withheld document's face, which decides its pointer from them (O-FACES'
+ * `prepare`) — as the view asks them (`needClaims`): the lookup of the
+ * edition claims on it where the model holds none, taken where no drop of
+ * the claims held overtook it (`watchClaims`); then each listed claim's link
+ * and each listed claim's home's metadata the model lacks, the metadata
+ * taken where the home was not dropped under it (`watchDrops`) and a refusal
+ * of it held as the home's. A lookup or a link refused teaches the model
+ * nothing here: the view asks it again, and records the refusal.
  * @param {string} origin
  */
-async function readClaims(origin) {
+export async function readClaims(origin) {
   if (REC.editionClaimsOf(origin) === undefined) {
     const dropped = watchClaims();
     const out = await read(F.editionClaimsAt(origin));

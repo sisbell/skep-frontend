@@ -197,20 +197,36 @@
 // keys. A jump says it is READING where the camera is (O-FACES' `reading`): at
 // the place it left for, out of the visible view of which the one line carries
 // its words (O-HOST's `sign`). A failure its reads learn in the air — a
-// document the board answers for with nothing, a follow's far document it
-// withholds from the reader, a projection refused for saying either — is faced
-// where the camera went, the camera staying, the walk re-taken there so the
-// mirror names what the read learned (N-WALK), and the entry holding the face
-// as its NOTICE where the camera went (`failed`); a dead end's face is the
-// notice beside the head it landed on. A failure KNOWN AT THE ACT (`known`) —
-// the board answered for the document with nothing; for a follow, it withholds
-// the far document, or the far end's projection was refused for saying either;
-// for a jump that must read, the board is marked unreachable ("a board already
-// marked unreachable gets no flight") — never leaves: no flight, no entry, no
-// read, the link not counted as followed, its face standing at the act's site
-// in the place of what stands there, the chrome kept, until Esc or the next
-// act. A jump WHERE ONLY A READ CAN PLACE THE DESTINATION — an address on a
-// board the plane does not draw, its text unread (`placeable`) — REACHES
+// document the board answers for with nothing, a follow's far end projected
+// into one — is faced where the camera went, the camera staying, the walk
+// re-taken there so the mirror names what the read learned (N-WALK), and the
+// entry holding the face as its NOTICE where the camera went (`failed`); a
+// dead end's face is the notice beside the head it landed on. A FOLLOW TO A
+// WITHHELD DOCUMENT (issue #179's design decision: "Show no notice at the
+// departure. Finish the follow like any jump and land at the document's
+// place, where its own withheld words stand") lands, its reads learning it in
+// the air — the far document's own read refused `withheld`, or the far end's
+// projection refused for it — once the claims its face decides C-67's
+// pointer from are read (O-FACES' `prepare`): at the document whole, the link
+// lit and nothing outlined, the face of its own withheld words standing at
+// its place as the entry's notice, told by the landing's description where
+// the focus lands (`landWithheld`); from then on the link's far end is named
+// in those words (LK's `farWords`). A failure KNOWN AT THE ACT (`known`) —
+// the board answered for the document with nothing; for a follow, the far end
+// projected into such a document, or into one withheld from the reader whose
+// text the page holds or held under the class it left, access having changed
+// after it was read (O-FACES' `accessChanged`; the decision's first case:
+// "Its text is on screen … Show the change instead"); for a jump that must
+// read, the board is marked unreachable ("a board already marked unreachable
+// gets no flight") — never leaves: no flight, no entry, no read, the link not
+// counted as followed, its face standing at the act's site in the place of
+// what stands there, the chrome kept, until Esc or the next act. A withheld
+// document's face stands where it is shown whatever the camera does, no sign
+// hiding it, for its acts — C-67's pointer, the sign-in — are reached by Tab
+// with the face standing (the decision: "Its offered act must be reachable by
+// keyboard without dismissing the face"). A jump WHERE ONLY A READ CAN PLACE
+// THE DESTINATION — an address on a board the plane does not draw, its text
+// unread (`placeable`) — REACHES
 // (`reachFor`): its entry taken at the act, the camera still, input acting on
 // what is on screen, its REACHING face at the act's site in the place of what
 // stands there (O-FACES' `reaching`); Esc — that face's dismissal — Back and
@@ -319,6 +335,7 @@ import { t } from '../strings.js';
  * @property {Pieces | null} pieces where the passage stands in several runs, each one's label (BM-HELD's `piecesIn`), the line the label of the run it stands at; null where it stands in one, or where the bytes of its runs could not be read
  * @property {number} current the run it stands at, an index into `pieces.runs`; 0 where no pieces stand
  * @property {boolean} floating the text holds none of the passage: the dead end's face says so
+ * @property {boolean} withheld the document landed at is withheld from the reader: the face of its own withheld words says so (`landWithheld`)
  * @property {{a: string, b: string, held: import('../scene/scene.js').Held} | null} beside the line's offer to read the passage side by side with where it came from, where that text holds it whole
  * @property {number | null} version the line's offer at a published landing: the latest member holding the passage whole, once its reads find one; null until then, or where none does
  */
@@ -629,14 +646,15 @@ export const landingOffers = () => ({ steps: !!landed && !!landed.pieces, again:
  * "The item the focus lands on takes … the label as its description, the one
  * announcement"): its line's words — the label of the run it stands at, where
  * the passage stands in several — or the dead end's where the text holds none
- * of the passage, and every run's own label; null where the text holds all
- * of it in one piece — the outline alone says that — and where nothing landed
- * so.
+ * of the passage, or a withheld document's own words whole where a follow
+ * landed at one (O-FACES' `withheldText`), and every run's own label; null
+ * where the text holds all of it in one piece — the outline alone says that —
+ * and where nothing landed so.
  * @returns {Described | null}
  */
 export function described() {
   if (!landed) return null;
-  const words = landingLine() ?? (landed.floating ? FACES.floatingWords(landed.addr).text : null);
+  const words = landingLine() ?? (landed.floating ? FACES.floatingWords(landed.addr).text : landed.withheld ? FACES.withheldText(landed.addr) : null);
   if (!words) return null;
   const p = landed.pieces;
   const runs = p ? p.runs.map((r, i) => ({ pos: r.pos, width: r.width, words: HELD.labelOf(p, i) })) : [];
@@ -721,23 +739,35 @@ function dismissChrome(to) { leaveHere(); here = to; if (HOST.typing()) HOST.end
  * An entry's notice shown (O-FACES): its jump's reading face while its read
  * is out, else the face the read brought — the fifth cell, the
  * document-level withheld face, a refusal's by its name, the dead end's —
- * each at its site; the dead end's at the landing that met it told by that
+ * each at its site; the dead end's at the landing that met it, and a
+ * withheld document's at the place a follow landed at, told by that
  * landing's description, where the focus lands, never by the status region
- * as well (`told`; issue #153).
+ * as well (`told`; issues #153, #179). A withheld document's face offers
+ * C-67's pointer as a LEAP from its site (`pointTo`), and one known at the
+ * act carries the act's caption (issue #179).
  * @param {Notice} n
  * @param {boolean} [told] the landing that met it says its words (`described`)
+ * @param {string | null} [caption] the act's caption, where the face answers it at its site
  */
-function showNotice(n, told = false) {
+function showNotice(n, told = false, caption = null) {
+  const asked = { caption, follow: pointTo(n.site), told };
   if (n.face === 'reading') FACES.reading(n.addr, n.site);
   else if (n.face === 'unregistered') FACES.unregistered(n.addr, n.site);
-  else if (n.face === 'withheld') FACES.withheld(n.addr, n.site);
-  else if (n.face === 'refused' && n.refusal) FACES.showRefusal(n.site, n.refusal, n.addr);
+  else if (n.face === 'withheld') FACES.withheld(n.addr, n.site, asked);
+  else if (n.face === 'refused' && n.refusal) FACES.showRefusal(n.site, n.refusal, n.addr, asked);
   else if (n.face === 'floating') FACES.floating(n.addr, n.site, n.offer, told);
   CAM.markDirty();
 }
 
+/** C-67's pointer's act at a withheld document's face: the LEAP to the edition its claim names, made where the face stands */
+const pointTo = (/** @type {Site | null} */ site) => (/** @type {string} */ home, /** @type {boolean} */ byKey) => { void leapTo(home, { how: 'leap', byKey, site }); };
+
 /** where a jump's face stands at the place its camera left for (see the head): the document at the position the jump named, else its head, the document its sign */
 const siteAt = (/** @type {string} */ addr, /** @type {number | null} */ pos) => /** @type {Site} */ ({ span: { addr, pos: pos ?? 1 }, sign: addr });
+/** where a withheld document's face stands at its place (see the head): its head, no sign hiding it as the camera moves */
+const placeAt = (/** @type {string} */ addr) => /** @type {Site} */ ({ span: { addr, pos: headOf(REC.doc(addr)) } });
+/** a site as a withheld document's face stands at it: no sign (see the head) */
+const unsigned = (/** @type {Site} */ site) => { const { sign: _, ...rest } = site; return /** @type {Site} */ (rest); };
 /** an act's site as a jump's face stands at it: a span's document its sign, out of the visible view of which the one line carries the face (O-HOST's `sign`); a site naming no span as it is */
 const signed = (/** @type {Site | null} */ site) => (site && site.span ? { ...site, sign: site.span.addr } : site);
 
@@ -748,10 +778,13 @@ const UNREACHABLE = /** @type {Refusal} */ ({ kind: 'unreachable', name: 'unreac
  * A failure known at the act (see the head; FP-25: "a jump flies at once …
  * where … no failure is known"; issue #137's design decision: "a board
  * already marked unreachable gets no flight"): the board answered for the
- * document with nothing; for a follow, it withholds the far document from
- * the reader, or the far end's projection into it was refused for saying
- * either; for a jump that must read, the board is marked unreachable — as a
- * notice's face, its site the caller's to give; null where none is known.
+ * document with nothing; for a follow, the far end's projection into such a
+ * document, or a far document withheld from the reader — known so, or by the
+ * far end's projection — whose text the page holds or held under the class
+ * it left (O-FACES' `accessChanged`; issue #179's design decision's first
+ * case), any other withheld far document being a place the follow lands at;
+ * for a jump that must read, the board is marked unreachable — as a notice's
+ * face, its site the caller's to give; null where none is known.
  * @param {string} addr the place the jump names
  * @param {boolean} reads the jump must read before it lands
  * @param {{link: string, slot: 1 | 2} | null} [end] a follow's far end
@@ -762,7 +795,7 @@ function known(addr, reads, end = null) {
   const p = end ? REC.projection(end.link, end.slot, addr) : undefined;
   /** @type {Notice['face'] | null} */
   const face = (d && d.refused === 'unregistered') || p === 'unregistered' ? 'unregistered'
-    : end && ((d && d.refused === 'withheld') || p === 'withheld') ? 'withheld'
+    : end && ((d && d.refused === 'withheld') || p === 'withheld') && FACES.accessChanged(addr) ? 'withheld'
       : reads && REC.daemon() === 'unreachable' ? 'refused' : null;
   return face ? { face, addr, refusal: face === 'refused' ? UNREACHABLE : null, site: null, offer: false } : null;
 }
@@ -848,11 +881,12 @@ async function goOn(act, first, at, byKey, ms) {
 /**
  * A failure a jump's reads learned in the air (see the head; issue #137's
  * design decision: "If a read fails, the camera stays where it is and the
- * failure is shown there"): its entry holding the face as its notice where
- * the camera went; then, where no act was made since, the face shown there,
- * the walk re-taken on the place — save where the reader took the camera
- * over — so the mirror names what the read learned, the ring as the act left
- * it, and the jump ended, never landed.
+ * failure is shown there") — a document the board answers for with nothing,
+ * a follow's far end projected into one: its entry holding the face as its
+ * notice where the camera went; then, where no act was made since, the face
+ * shown there, the walk re-taken on the place — save where the reader took
+ * the camera over — so the mirror names what the read learned, the ring as
+ * the act left it, and the jump ended, never landed.
  * @param {number} act
  * @param {Entry | null} entry
  * @param {Notice} n
@@ -1075,7 +1109,7 @@ async function idsOf(addr, runs) {
 const slotSpans = (/** @type {Shown} */ s) => (s.farSlot === 2 ? s.link.to : s.link.from).flatMap((e) => { const i = REC.identityOfEnd(e); return i ? [i] : []; });
 /** does a document's held image cover its whole text? */
 const imageCovers = (/** @type {Doc} */ d) => !!d.imageFor && d.extent != null && d.imageFor[0] <= 1 && d.imageFor[1] >= d.extent + 1;
-/** does a projection's refusal say something of the far document — withheld from the reader, or nothing the board will say of the address — so a follow faces it in the landing's place, there being no text to land in? Every other refusal says nothing of it, and the follow lands, its line saying it could not tell (issue #153) */
+/** does a projection's refusal say something of the far document — withheld from the reader, a place the follow lands at with its own withheld words (`landWithheld`; issue #179), or nothing the board will say of the address, faced in the landing's place, there being nothing to land at? Every other refusal says nothing of it, and the follow lands, its line saying it could not tell (issue #153) */
 const ofDocument = (/** @type {Refusal} */ r) => r.kind === 'refused' && (r.name === 'withheld' || r.name === 'doc_not_registered');
 
 /**
@@ -1162,7 +1196,7 @@ function sayCarried(act, c, carried, d, placed, entry, link, again = (byKey) => 
   const offers = !!said && said.state !== 'unknown';
   const source = offers && c.addr !== addr ? (carried.length ? wholeAt(c.addr, carried, c.width) : { pos: c.pos, width: c.width }) : null;
   const pieces = placed.pieces;
-  landed = { addr, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating: placed.none, beside: source ? { a: c.addr, b: addr, held: { posA: source.pos, widthA: source.width, posB: null } } : null, version: null };
+  landed = { addr, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating: placed.none, withheld: false, beside: source ? { a: c.addr, b: addr, held: { posA: source.pos, widthA: source.width, posB: null } } : null, version: null };
   retry = said && said.again ? again : null;
   versionOffer = null;
   const at = placed.at;
@@ -1250,6 +1284,46 @@ async function landFollowed(act, s, entry, placed, byKey, first = null) {
 }
 
 /**
+ * A follow's landing at a far document withheld from the reader (see the
+ * head; issue #179's design decision: "land at the document's place, where
+ * its own withheld words stand"), its reads having learned it in the air:
+ * the claims its face decides C-67's pointer from read first (O-FACES'
+ * `prepare`); its entry settled at the document whole — its view left as the
+ * reader left it where they took the camera over there — with the face of
+ * its own withheld words at its place as the notice; then, where no act was
+ * made after `act`, the reading face ended, the box taking the address the
+ * link names, the link lit and nothing outlined, the landing saying the
+ * document is withheld (`described`), and — save where the reader took the
+ * camera over while the follow was in the air, which only shows the face —
+ * the walk and the camera moved on to the document from the first leg
+ * (`goOn`), the face told there by the landing's description.
+ * @param {number} act
+ * @param {Shown} s
+ * @param {Entry | null} entry
+ * @param {boolean} byKey
+ * @param {Promise<boolean>} first the follow's first leg, in the air
+ */
+async function landWithheld(act, s, entry, byKey, first) {
+  const far = s.far;
+  await FACES.prepare(far);
+  const v = viewFor(far, null);
+  /** @type {Notice} the document's own withheld words at its place */
+  const notice = { face: 'withheld', addr: far, refusal: null, site: placeAt(far), offer: false };
+  if (entry) TRAIL.settle(entry, { view: takenOver.has(entry) ? undefined : v, pos: null, width: null, notice });
+  if (act !== made) return;
+  FACES.endReading();
+  pinTo(far);
+  arrival = null;
+  lit = [s.link.addr];
+  landed = { addr: far, pos: headOf(REC.doc(far)), said: null, pieces: null, current: 0, floating: false, withheld: true, beside: null, version: null };
+  retry = null; versionOffer = null;
+  if (takenAt === act) { showNotice(notice); return; }
+  const flight = goOn(act, first, { addr: far, pos: null, view: v }, byKey, 620);
+  showNotice(notice, true);
+  await flight;
+}
+
+/**
  * A follow's landing's line and offers (see the head): what it says, its
  * runs' labels where they are two or more, the landing at piece 1; the
  * scene with the document the follow was made from, where that text holds
@@ -1272,7 +1346,7 @@ function sayFollowed(act, s, entry, placed, pos) {
   const passage = !s.farWhole && s.farEnd ? REC.identityOfEnd(s.farEnd) : null;
   const offers = !!said && said.state !== 'unknown' && !!passage;
   const source = offers && passage && s.near !== far ? wholeAt(s.near, [passage], passage.width) : null;
-  landed = { addr: far, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating: !!placed.runs && !placed.runs.length, beside: source ? { a: s.near, b: far, held: { posA: source.pos, widthA: source.width, posB: pos } } : null, version: null };
+  landed = { addr: far, pos, said, pieces, current: pieces ? pieces.order[0] : 0, floating: !!placed.runs && !placed.runs.length, withheld: false, beside: source ? { a: s.near, b: far, held: { posA: source.pos, widthA: source.width, posB: pos } } : null, version: null };
   retry = said && said.again ? async (byKey) => {
     const at = made;
     const proj = await PUMP.projectEnd(l.addr, s.farSlot, far);
@@ -1424,7 +1498,7 @@ function namedRuns(addr, runs, passage) {
 function sayNamed(addr, pos, named) {
   const said = named.held ? HELD.saidOf(named.held, 'followed', addr, showsWithheld(REC.doc(addr))) : null;
   if (!said && !named.pieces) return;
-  landed = { addr, pos, said, pieces: named.pieces, current: named.pieces ? named.pieces.order[0] : 0, floating: false, beside: null, version: null };
+  landed = { addr, pos, said, pieces: named.pieces, current: named.pieces ? named.pieces.order[0] : 0, floating: false, withheld: false, beside: null, version: null };
 }
 
 /**
@@ -1622,14 +1696,19 @@ export function arrived(member) {
  * too, unmarked, the link lit, its line saying it could not tell why — the
  * projection's own refusal, whatever other read met one meanwhile — and one
  * refused for its size is placed through the far text's image read in parts.
- * A dead reference, a far document the board withholds from the reader — no
- * slot projected into it, a read the board refuses with the document, the
- * projection refused for either — learned in the air is faced where the
- * camera went (`failed`), the claim settled with that face as its notice
- * there, and the link lit (B1-S8). One KNOWN AT THE ACT — and a link naming
- * no far document — never leaves (see the head): no entry, no read, the
- * arrival standing, the link not counted as followed, and lit where it names
- * a far document, its face at the act's site (foundations
+ * A far document the board withholds from the reader — a read of it refused
+ * `withheld`, or the projection refused for it — learned in the air lands at
+ * that document whole, its own withheld words standing at its place as the
+ * claim's notice, the link lit and nothing outlined (`landWithheld`; issue
+ * #179). A dead reference — no slot projected into it, a read the board
+ * refuses with the document, the projection refused for it — learned in the
+ * air is faced where the camera went (`failed`), the claim settled with that
+ * face as its notice there, and the link lit (B1-S8). One KNOWN AT THE ACT —
+ * a withheld far document among them only where its text is on screen
+ * (`known`), its face captioned by the follow — and a link naming no far
+ * document never leave (see the head): no entry, no read, the arrival
+ * standing, the link not counted as followed, and lit where it names a far
+ * document, its face at the act's site (foundations
  * §3.1, F-G3): the link's own bytes in its near document — the link the
  * anatomy card offering the follow is conjured at, inside the selection the
  * follow slot acts on — following them as the camera moves, in the place of
@@ -1653,7 +1732,12 @@ export async function follow(s, byKey = false) {
   const site = { span: { addr: s.near, pos: s.pos, width: s.width }, sign: s.near };
   if (!far) { FACES.invalidFollow(site); return; }
   const fails = known(far, true, { link: l.addr, slot: s.farSlot });
-  if (fails) { lit = [l.addr]; showNotice({ ...fails, site }); return; }
+  if (fails) {
+    lit = [l.addr];
+    if (fails.face === 'withheld') showNotice({ ...fails, site: unsigned(site) }, false, `${t('B1.follow')} · ${far}`);
+    else showNotice({ ...fails, site });
+    return;
+  }
   /** @type {Notice} the follow's reading notice: at the far document, where its camera leaves for */
   const waiting = { face: 'reading', addr: far, refusal: null, site: siteAt(far, null), offer: false };
   /** @type {Step} the follow, as the entry it departs records it */
@@ -1672,13 +1756,17 @@ export async function follow(s, byKey = false) {
   const fd = REC.doc(far);
   if (fd.refused !== 'unregistered' && fd.extent == null) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced({ ...waiting, face: 'unregistered' }); return; }
-  if (REC.doc(far).refused === 'withheld') { faced({ ...waiting, face: 'withheld' }); return; }
+  if (REC.doc(far).refused === 'withheld') { await landWithheld(act, s, entry, byKey, first); return; }
   const proj = await PUMP.projectEnd(l.addr, s.farSlot, far);
-  if ('refused' in proj && ofDocument(proj.refused)) { faced({ ...waiting, face: 'refused', refusal: proj.refused }); return; }
+  if ('refused' in proj && ofDocument(proj.refused)) {
+    if (proj.refused.name === 'withheld') await landWithheld(act, s, entry, byKey, first);
+    else faced({ ...waiting, face: 'refused', refusal: proj.refused });
+    return;
+  }
   const d = REC.doc(far);
   if (d.extent == null || d.from < 0) await PUMP.loadWhole(far);
   if (REC.doc(far).refused === 'unregistered') { faced({ ...waiting, face: 'unregistered' }); return; }
-  if (REC.doc(far).refused === 'withheld') { faced({ ...waiting, face: 'withheld' }); return; }
+  if (REC.doc(far).refused === 'withheld') { await landWithheld(act, s, entry, byKey, first); return; }
   await landFollowed(act, s, entry, await followed(s, proj), byKey, first);
 }
 
@@ -1826,14 +1914,14 @@ async function landAtCursor(e, act, byKey, l) {
   const back = l && l.back ? returnTo(l, e.view) : null;
   const stood = landed && landed.addr === shownIn(e.addr) ? landed.pos : e.pos;
   const first = leave(act, e, cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view: e.view } : { addr: e.addr, pos: stood, view: e.view }, byKey, 500);
-  if (e.notice) showNotice(e.notice, !!landed && landed.floating && landed.addr === e.notice.addr);
+  if (e.notice) showNotice(e.notice, !!landed && (landed.floating || landed.withheld) && landed.addr === e.notice.addr);
   if (cover === 'covered') showCover(e.addr);
   if (!answer) { if (cover === 'unread') await coverRead(act, e, first, byKey); else endAir(act, await first); return; }
   await answer;
   if (act !== made) return;
   FACES.endReading();
   const n = e.notice;
-  if (n && n.face !== 'floating') { failed(act, null, n, byKey); return; }
+  if (n && n.face !== 'floating' && n.face !== 'withheld') { failed(act, null, n, byKey); return; }
   pinTo(e.addr);
   if (takenAt === act) { if (n) showNotice(n); return; }
   const flight = goOn(act, first, { addr: e.addr, pos: e.pos, view: e.view }, byKey, 500);
@@ -1860,8 +1948,8 @@ function coverOf(e) {
 
 /** a covered document's landing (see the head): its box framed whole at the reading size — the entry's view frames columns the cover does not draw — the walk on the document */
 const coveredAt = (/** @type {string} */ addr) => ({ addr, pos: null, view: viewFor(addr, null) });
-/** a covered document's face at its box's head (see the head): the document-level withheld face, its sign-in act the way back (O-FACES' `withheld`) */
-function showCover(/** @type {string} */ addr) { FACES.withheld(addr, siteAt(addr, null)); CAM.markDirty(); }
+/** a covered document's face at its box's head (see the head): the document-level withheld face, its sign-in act the way back (O-FACES' `withheld`), standing there whatever the camera does */
+function showCover(/** @type {string} */ addr) { const site = placeAt(addr); FACES.withheld(addr, site, { follow: pointTo(site) }); CAM.markDirty(); }
 
 /**
  * A cursor move reaching an entry whose document the class the page left

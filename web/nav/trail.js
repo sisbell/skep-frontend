@@ -102,7 +102,7 @@
 
 /**
  * @typedef {Object} Notice — the face an entry shows, as data (issue #136's design decision; FP-25): where the camera went while its jump's read is out, then on every return to the entry once its read brought it
- * @property {'reading' | 'unregistered' | 'withheld' | 'refused' | 'floating'} face `reading` while the jump's read is out; then what the read brought — where it brought no place to read, the fifth cell (`unregistered`), the document-level withheld face or a refusal's face by its name; beside the head it landed on, the dead end's (`floating`)
+ * @property {'reading' | 'unregistered' | 'withheld' | 'refused' | 'floating'} face `reading` while the jump's read is out; then what the read brought — where it brought no place to read, the fifth cell (`unregistered`) or a refusal's face by its name; at the place of a withheld document a follow landed at, its own withheld words (`withheld`; issue #179); beside the head it landed on, the dead end's (`floating`)
  * @property {string} addr the document the face names
  * @property {import('../bridge/shapes').Refusal | null} refusal the refusal a `refused` face names; null for every other face
  * @property {Site | null} site where the face stands: the place the camera went — the document the jump named, at the position it named, else its head — or the head a floating end landed on

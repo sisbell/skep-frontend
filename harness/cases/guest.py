@@ -38,8 +38,12 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     document the index does not list; at both landings the mirror's current
     item naming the document in its withheld box's words, never published;
     "who wrote this?" asked of that withheld document faced as its box names
-    it — its withheld box's words, the guest's arm beneath (A-170) — with no token
-    unfilled and no act;
+    it — its withheld box's words, the guest's arm beneath (A-170) — whole,
+    named by the card's caption as the act's answer and described by its words,
+    said caption first, with no token unfilled and no act but its head's and
+    C-67's pointer where the claims on it decide one; asked again, compact —
+    its head alone, reached by Tab from the walk's item with the face standing,
+    Enter opening the rest in place (issue #179);
 (e) the window run at 1467 withheld: the model's block — its width, its
     origin, no text — B1-S7's gap at the run (issue #151's design decision:
     a gap of its true width, its face in it where it fits, else compact in
@@ -650,18 +654,49 @@ def run(ctx):
     r.figures['shots'].append(ctx.shot('guest/withheld-box.png'))
     r.figures['withheld_box'] = {'addr': WITHHELD, 'labels': at_box, 'mirror_item': withheld_item, 'draft_mirror_item': draft_item}
     # "who wrote this?" asked of the withheld document: the board refuses the read's document consult `withheld`, and the
-    # face names the document by existence and owner as its box does, the entitlement arm beneath (A-170; R56)
+    # face names the document by existence and owner as its box does, the entitlement arm beneath (A-170; R56) — the act's
+    # answer, named by its card's caption and described by its words, said through the status region caption first; its
+    # own withheld words whole the first time the session shows them, no address before them at the document's own place,
+    # C-67's pointer beneath the arm where the edition claims on it decide one (issue #179's design decision)
+    FACE = '''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm'), l = o.querySelector('.label'), e = document.activeElement;
+      return {id: window.__skep.overlay().id, words: w ? w.textContent : null, words_id: w ? w.dataset.string : null, open: w ? w.getAttribute('aria-expanded') : null,
+              arm: a ? a.textContent : null, arm_id: a ? a.dataset.string : null, caption: l ? l.textContent : null, caption_id: l ? l.id : null, words_el: w ? w.id : null,
+              address: !!o.querySelector('.face-addr'), named_by: o.getAttribute('aria-labelledby'), described_by: o.getAttribute('aria-describedby'),
+              live: document.getElementById('live').textContent, text: o.textContent, acts: [...o.querySelectorAll('[data-run]')].map((b) => b.dataset.run),
+              focus: e && e !== o && o.contains(e) ? (e.dataset.run || e.tagName.toLowerCase()) : null}; })()'''
     ctx.js('window.__skep.cards.wrote(%s, 1)' % json.dumps(WITHHELD)); ctx.settle(); ctx.frames(2)
-    face = ctx.js('''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm');
-      return {id: window.__skep.overlay().id, words: w ? w.textContent : null, words_id: w ? w.dataset.string : null, arm: a ? a.textContent : null,
-              arm_id: a ? a.dataset.string : null, text: o.textContent, acts: o.querySelectorAll('[data-run]').length}; })()''')
+    face = ctx.js(FACE)
     guests_arm = t(ctx, arm_id, {'owner': SECOND_ACCOUNT})
-    r.check(face['id'] == 'face:withheld' and face['words_id'] == 'F.corner.withheld' and face['words'] == want[1] and face['arm_id'] == arm_id and face['arm'] == guests_arm
-            and '⟨' not in face['text'] and face['acts'] == 0,
-            '(d) "who wrote this?" asked of the withheld document faces it as its box names it — "%s" — the guest\'s arm for this device\'s key store beneath, %s for %s, no token unfilled and no act (A-170)' % (want[1], arm_id, SECOND_ACCOUNT),
-            {'face': face, 'guests_arm': guests_arm[:80], 'key_here': store['key_here']})
+    caption = '%s · %s · %s' % (t(ctx, 'B1.who-wrote'), WITHHELD, t(ctx, 'F.position', {'p': 1}))
+    clause, decided = ctx.edition_clause(WITHHELD, SECOND_ACCOUNT)
+    acts = ['head'] + (['follow'] if clause == 'C-67.pointer' else [])
+    r.check(face['id'] == 'face:withheld' and face['words_id'] == 'F.corner.withheld' and face['words'] == want[1] and face['open'] == 'true' and face['arm_id'] == arm_id and face['arm'] == guests_arm
+            and not face['address'] and '⟨' not in face['text'] and face['acts'] == acts,
+            '(d) "who wrote this?" asked of the withheld document faces it as its box names it — "%s" — whole, the guest\'s arm for this device\'s key store beneath, %s for %s, no address before it at its own place, no token unfilled, and no act but its head\'s and C-67\'s pointer where the claims on it decide one (A-170; issue #179)' % (want[1], arm_id, SECOND_ACCOUNT),
+            {'face': face, 'guests_arm': guests_arm[:80], 'key_here': store['key_here'], 'clause': clause, 'decided_from': decided})
+    r.check(face['caption'] == caption and face['named_by'] == face['caption_id'] and bool(face['words_el']) and face['words_el'] in (face['described_by'] or '').split()
+            and face['live'].startswith(caption + ' ' + want[1]),
+            '(d) the face is the act\'s answer: named by the card\'s caption "%s", described by its words, said through the status region caption first (issue #179: "Announce each face as the act\'s answer, tied to the act in markup")' % caption, face)
     r.figures['shots'].append(ctx.shot('guest/withheld-face.png'))
     r.figures['withheld_face'] = face
+    ctx.esc()
+    # asked again: its own withheld words compact — the head alone, the rest one act away — its act reached by Tab from the
+    # walk's item with the face standing, Enter opening the rest in place (issue #179: "Its offered act must be reachable by
+    # keyboard without dismissing the face")
+    ctx.js('window.__skep.cards.wrote(%s, 1)' % json.dumps(WITHHELD)); ctx.settle(); ctx.frames(2)
+    compact = ctx.js(FACE)
+    ctx.js('document.getElementById("walk-" + window.__skep.mirror.index()).focus({preventScroll: true})'); ctx.frames(1)
+    ctx.drv.key('Tab'); ctx.frames(2)
+    tabbed = ctx.js(FACE)
+    ctx.drv.key('Enter'); ctx.settle(); ctx.frames(2)
+    opened = ctx.js(FACE)
+    r.check(compact['id'] == 'face:withheld' and compact['words'] == want[1] and compact['open'] == 'false' and compact['arm'] is None and compact['acts'] == ['head']
+            and tabbed['id'] == 'face:withheld' and tabbed['focus'] == 'head'
+            and opened['id'] == 'face:withheld' and opened['open'] == 'true' and opened['arm'] == guests_arm and opened['focus'] == 'head' and opened['acts'] == acts,
+            '(d) asked again, the face is compact — "%s" alone, the arm one act away; Tab from the walk\'s item reaches its head with the face standing, and Enter there opens the rest in place, the focus kept on the head (issue #179)' % want[1],
+            {'compact': compact, 'tabbed': tabbed, 'opened': opened})
+    r.figures['shots'].append(ctx.shot('guest/withheld-face-opened.png'))
+    r.figures['withheld_face_compact'] = {'compact': compact, 'opened': opened}
     ctx.esc()
 
     # (a) the whole guest run: the page's own log, and the provider's from the navigation on

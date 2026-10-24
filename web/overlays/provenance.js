@@ -17,10 +17,15 @@
 // on its button — and never otherwise (D5 §4 rule 4; the focus record's
 // rule 16). Each opens on its read (O-HOST's `opening`): where an act was
 // made on the chrome while it read — Back, Esc, the LEAP box opened, the
-// next card asked or shown — nothing shows, a refusal's face included. The
-// two marks' variants (C-33, C-34) are the article's where they fire. Faces:
-// `too_much_coverage`. Carries: the wireframe's §18 `provenanceCard`. Rules:
-// FP-1, FP-2, FP-13, FP-20.
+// next card asked or shown — nothing shows, a refusal's face included. A
+// refusal's face is the act's answer, carrying the caption the card would
+// have carried (O-FACES' `caption`; issue #179's design decision): a
+// `withheld` one the document-level withheld face of the document the board
+// names, read for before it shows — the edition claims on it, which decide
+// C-67's pointer (O-FACES' `prepare`), its act a LEAP from the span asked
+// over. The two marks' variants (C-33, C-34) are the article's where they
+// fire. Faces: `too_much_coverage`. Carries: the wireframe's §18
+// `provenanceCard`. Rules: FP-1, FP-2, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -64,6 +69,30 @@ const carried = (to, addr, sp, selected, byKey) => GO.leapTo(to, { how: 'leap', 
 const isSelection = (/** @type {number | null} */ width) => width != null && width > 0;
 
 /**
+ * An act's read, and where the board refuses it `withheld`, the reads the
+ * face of the document it names is made from (O-FACES' `prepare`), asked
+ * while the opening stands (see the head).
+ * @param {string} addr the document the act names
+ * @param {object} frame
+ * @returns {(stands: () => boolean) => Promise<{answer: unknown} | {refused: import('../bridge/shapes').Refusal}>}
+ */
+const asking = (addr, frame) => async (stands) => {
+  const out = await PUMP.read(frame);
+  if ('refused' in out && out.refused.name === 'withheld' && stands()) await FACES.prepare(FACES.refusedDocument(out.refused, addr));
+  return out;
+};
+
+/**
+ * What a refusal's face at a card's span is handed (see the head): the
+ * card's caption, the act's; C-67's pointer's act, a LEAP to the edition
+ * from the span asked over.
+ * @param {string} caption
+ * @param {{span: {addr: string, pos: number, width: number}}} anchor
+ * @returns {import('./faces.js').Asked}
+ */
+const answering = (caption, anchor) => ({ caption, follow: (home, byKey) => { void GO.leapTo(home, { how: 'leap', byKey, site: anchor }); } });
+
+/**
  * who wrote this? (A-41, R29)
  * @param {string} addr
  * @param {number} pos the span's first position
@@ -74,8 +103,9 @@ const isSelection = (/** @type {number | null} */ width) => width != null && wid
 export function wrote(addr, pos, width = null, byKey = false) {
   const sp = spanOf(addr, pos, width);
   const anchor = { span: { addr, pos: sp.ordinal, width: sp.positions } };
-  return HOST.opening(() => PUMP.read(F.showOrigin(addr, sp.ordinal, sp.positions)), (out) => {
-    if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr); return; }
+  const caption = `${t('B1.who-wrote')} · ${addr} · ${t('F.position', { p: sp.ordinal })}`;
+  return HOST.opening(asking(addr, F.showOrigin(addr, sp.ordinal, sp.positions)), (out) => {
+    if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr, answering(caption, anchor)); return; }
     const origins = F.decodeAddrs(out.answer);
     const rows = origins.map((o) => {
       const owner = REC.doc(o).meta ? REC.doc(o).meta?.owner : accountOf(o);
@@ -83,7 +113,7 @@ export function wrote(addr, pos, width = null, byKey = false) {
       const text = same ? t('B1.wrote', { owner: owner || '', account: owner || '', origin: o }) : t('B1.wrote.here', { owner: owner || '', account: owner || '', origin: o });
       return { o, same, text };
     });
-    const html = `<span class="label">${esc(t('B1.who-wrote'))} · ${esc(addr)} · ${esc(t('F.position', { p: sp.ordinal }))}</span>` +
+    const html = `<span class="label">${esc(caption)}</span>` +
       rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${esc(r.text)}${r.same ? ` <button data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
@@ -103,11 +133,12 @@ export function wrote(addr, pos, width = null, byKey = false) {
 export function uses(addr, pos, width = null, byKey = false) {
   const sp = spanOf(addr, pos, width);
   const anchor = { span: { addr, pos: sp.ordinal, width: sp.positions } };
-  return HOST.opening(() => PUMP.read(F.findDocsContaining([{ doc: addr, spans: [sp] }])), (out) => {
-    if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr); return; }
+  const caption = `${t('B1.who-uses')} · ${addr} · ${t('F.position', { p: sp.ordinal })}`;
+  return HOST.opening(asking(addr, F.findDocsContaining([{ doc: addr, spans: [sp] }])), (out) => {
+    if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr, answering(caption, anchor)); return; }
     const users = F.decodeAddrs(out.answer).filter((u) => u !== addr);
     const answer = users.length ? t('B1.uses', { documents: users.join(', ') }) : t('B1.uses.none');
-    const html = `<span class="label">${esc(t('B1.who-uses'))} · ${esc(addr)} · ${esc(t('F.position', { p: sp.ordinal }))}</span>` +
+    const html = `<span class="label">${esc(caption)}</span>` +
       `<div class="answer" data-string="${users.length ? 'B1.uses' : 'B1.uses.none'}">${esc(answer)}</div>` +
       (users.length ? `<div class="acts">${users.map((u, i) => `<button data-run="u${i}">${esc(u)}</button>`).join('')}</div>` : '') +
       `<div class="clause" data-string="B1.C-72">${esc(t('B1.C-72'))}</div>`;

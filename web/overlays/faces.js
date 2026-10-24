@@ -1,6 +1,9 @@
 // O-FACES — a refusal's face at the act's site (the structure record §3.2
 // "O-FACES"; foundations §3.1, F-G3; §4.4 the one refusal shape). Layer 2.
-// PURE table + ENGINE through O-HOST. State: none.
+// PURE table + ENGINE through O-HOST. State: VIEW — the documents whose own
+// withheld words a face has shown whole in the page's session, the own-words
+// face shown last, and the reads of the claims its faces asked — the one
+// owner, emptied at a change of the page's class (`classChanged`).
 // A face is keyed on the refusal's ONE `name` — the board's token (the
 // `detail` of a `credential_refused`, else the `code`) or the shell's own —
 // and its `kind` (the halt's, the block's, `unreachable`), never on prose;
@@ -12,20 +15,36 @@
 // answered for the document, the UNREGISTERED-OR-UNREACHABLE face — C-42's
 // content, DRAFT — and the floor face MUST NOT render; it offers no act,
 // for B1-S8's one act, "try again", is the unreachable node's, and the
-// board's answer here is byte-identical to never-held), `withheld` on a
-// read's document consult → THE DOCUMENT-LEVEL WITHHELD FACE (B1 §1's
-// A-170; B1-S8's WITHHELD state; R56: existence and owner, never bytes —
-// "who wrote this?", "who uses this?" or a follow's far end asking of a
-// document the reader may not read): the document named in the withheld
-// box's words, "withheld · ⟨owner⟩", the words the plane's box, the corner and
-// the ARIA mirror's item say (T-LAYER's `withheldBox`), its owner by the one
-// owner rule, the entitlement arm for that owner and this reader beneath
-// them (T-ARTICLE's one rule), and no act — never C-39, whose words are a
-// link address's alone; at a COVERED document while the session's ending
-// stands (issue #177's design decision: "sign-in is offered in the one line's
-// words for that ending"; FP-29; M-REC's `covered`), the one line's words for
-// that ending in the arm's place (`endingWords`) and its sign-in act, the
-// line's own (`signIn`);
+// board's answer here is byte-identical to never-held), `withheld` → THE
+// DOCUMENT-LEVEL WITHHELD FACE (B1 §1's A-170; B1-S8's WITHHELD state; R56:
+// existence and owner, never bytes; issue #179's design decision: "describe
+// the document the board refused") — "who wrote this?" or "who uses this?"
+// asked of a document the reader may not read, a follow's far end withheld —
+// of the document the board names (`refusedDocument`: the rejection's
+// `site.addr`, else the document the act named), by the first case that
+// holds: ITS TEXT ON SCREEN, the page holding its text or having held it
+// under the class it left (`accessChanged`; M-REC's `covered`) — where the
+// session's ending stands, the one line's words for that ending in the arm's
+// place (`endingWords`) and its sign-in act, the line's own (`signIn`; issue
+// #177's design decision: "sign-in is offered in the one line's words for
+// that ending"; FP-29), the act's repeat once signed in the ceremonies'
+// lane's, and the access-withdrawn notice for a withdrawal on record waiting
+// on a read the board does not serve (skep #577); else, and at every other
+// document, ITS OWN WITHHELD WORDS (`ownWords`): its full address, save where
+// the face stands at the document's own place; the withheld box's words,
+// "withheld · ⟨owner⟩", which the plane's box, the corner and the ARIA
+// mirror's item say (T-LAYER's `withheldBox`), its owner by the one owner
+// rule; and beneath them the entitlement arm for that owner and this reader
+// (T-ARTICLE's one rule) and C-67's pointer where the edition claims on the
+// document decide one (T-LAYER's `clauseOf`), its act the LEAP its caller
+// hands in — the claims read for it where the model holds none (`prepare`),
+// the face shown again as they land. Whole the first time a face shows them
+// in the page's session, compact after (FP-26: "A compact sign opens whole on
+// its act"): the address and the head, the head a disclosure whose act opens
+// the rest, and folds it again. Never C-39, whose words are a link address's
+// alone (the decision's third case: a link inspected inside the document); a
+// follow to a withheld document whose text the page does not hold lands at
+// the document's place first (N-GO; the decision's second case);
 // `not_a_link`, C-39 at a link address inside a withheld document with the
 // entitlement arm the run's placeholder carries beneath it (T-ARTICLE's one
 // rule, by the reader), `range_not_present`, the `invalid` follow,
@@ -49,15 +68,21 @@
 // built here — a seam). A face never takes the focus (D5 §4 rule 4; K-58):
 // it is heard through the one status region (D4, O-HOST's), and a face
 // offered by a key's act takes none either; the moment's face alone takes it,
-// on its first control (K-80). Carries: the wireframe's §18 `face` (its words
-// and acts; its reviewer's label stays in the wireframe),
-// `deadReferenceFace`'s fifth cell, `c39Face`. Rules: FP-1, FP-2, FP-13,
-// FP-20, FP-25, FP-28, FP-29.
+// on its first control (K-80). A refusal's face that answers an act carries
+// the act's own caption, the words its card names itself by (`caption`), so
+// O-HOST names it as the act's answer and says the caption before its words
+// (issue #179's design decision: "Announce each face as the act's answer,
+// tied to the act in markup"); a landing's face is tied by the item's
+// description where the focus lands instead (`told`). Carries: the
+// wireframe's §18 `face` (its words and acts; its reviewer's label stays in
+// the wireframe), `deadReferenceFace`'s fifth cell, `c39Face`. Rules: FP-1,
+// FP-2, FP-13, FP-20, FP-25, FP-26, FP-28, FP-29.
 
 import * as HOST from './host.js';
 import * as VERSIONS from './versions.js';
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
+import * as PUMP from '../model/pump.js';
 import * as LAYER from '../text/layer.js';
 import { entitlementArm, placeholderOf } from '../text/article.js';
 import { memberOf } from '../model/address.js';
@@ -68,7 +93,9 @@ import { esc } from '../util.js';
 /** @typedef {import('../bridge/shapes').DeathReason} DeathReason */
 /** @typedef {import('../bridge/shapes').MomentEvent} MomentEvent */
 /** @typedef {import('./host.js').Anchor} Anchor */
+/** @typedef {import('./host.js').Overlay} Overlay */
 /** @typedef {import('../model/records.js').Reader} Reader */
+/** @typedef {import('../text/article.js').Pointer} Pointer */
 
 /**
  * @typedef {Object} Face
@@ -76,6 +103,91 @@ import { esc } from '../util.js';
  * @property {string} text
  * @property {Array<{label: string, run?: () => void, inert?: boolean}>} acts
  */
+
+/**
+ * @typedef {Object} Asked — what the act a refusal's face answers hands it (see the head)
+ * @property {string | null} [caption] the act's own caption, the words its card names itself by: the face is named by it, the act's answer; none where a landing's item's description ties the face instead
+ * @property {(home: string, byKey: boolean) => void} [follow] C-67's pointer's act, handed in by its caller: the LEAP to the edition its claim names; the pointer stands only where one is handed in
+ * @property {boolean} [told] the landing that met the face says its words where the focus lands (N-GO's `described`): the status region does not repeat them
+ */
+
+/**
+ * @typedef {Object} OwnWords — a withheld document's own withheld words (see the head; `ownWords`)
+ * @property {string | null} addr its full address, before its words; null where the face stands at the document's own place
+ * @property {{id: string, text: string}} head the withheld box's words, "withheld · ⟨owner⟩" (T-LAYER's `withheldBox`)
+ * @property {{id: string, text: string}} arm the entitlement arm for its owner and this reader (T-ARTICLE's `entitlementArm`)
+ * @property {Pointer | null} pointer C-67's pointer where the edition claims on the document decide one; null where they decide none, or the quoting sibling
+ */
+
+/** @type {Set<string>} the documents whose own withheld words a face has shown whole in the page's session (see the head) */
+const seenWhole = new Set();
+/** @type {{addr: string, overlay: Overlay, pointer: string, again: () => void} | null} the own-words face shown last, with the claim its pointer followed as it was made ('' for none): shown again, in the form it stands in, where the claims its pointer is decided from land deciding another */
+let ownFace = null;
+/** @type {Map<string, Promise<void>>} the reads of the edition claims on a withheld document a face asked, by the drops of the claims held and the document: each asked once until the claims held drop (M-REC's `claimDrops`) */
+const claimReads = new Map();
+
+/**
+ * The document a `withheld` refusal names (wire.md §Rejections: `site.addr`,
+ * "the document argument a READ may not" read, the first in declaration
+ * order where a read carries several), from the rejection the shell hands up
+ * whole as the refusal's `body`; the document the refused act named where
+ * the body names none.
+ * @param {Refusal} r
+ * @param {string} addr the document the act named
+ * @returns {string}
+ */
+export function refusedDocument(r, addr) {
+  const body = r.kind === 'refused' && r.body && typeof r.body === 'object' ? /** @type {{site?: unknown}} */ (r.body) : null;
+  const site = body && body.site && typeof body.site === 'object' ? /** @type {{addr?: unknown}} */ (body.site) : null;
+  return site && typeof site.addr === 'string' && site.addr ? site.addr : addr;
+}
+
+/**
+ * Did access to a document change after its text was read (see the head; the
+ * decision's first case, "Its text is on screen")? The page holds its text,
+ * or held it under the class it left — a covered document (M-REC's
+ * `covered`), its place standing as the cover draws it. A follow to such a
+ * document faces at the act (N-GO's `known`); to any other withheld
+ * document, it lands at the document's place.
+ * @param {string} addr
+ * @returns {boolean}
+ */
+export const accessChanged = (addr) => REC.covered(addr) || (REC.has(addr) && REC.doc(addr).from >= 0);
+
+/**
+ * The reads a withheld document's own words are made from, made where the
+ * model holds none (see the head): the edition claims on it, which decide
+ * C-67's pointer (M-PUMP's `readClaims`), asked once until the claims held
+ * drop. An act that shows the face once its reads answer awaits it — the
+ * provenance cards' openings, a follow in the air; a face shown before it
+ * answers is shown again as it lands (`withheld`).
+ * @param {string} addr the withheld document
+ * @returns {Promise<void>}
+ */
+export function prepare(addr) {
+  if (REC.editionClaimsOf(addr) !== undefined) return Promise.resolve();
+  const key = REC.claimDrops() + ':' + addr;
+  let asked = claimReads.get(key);
+  if (!asked) { asked = PUMP.readClaims(addr); claimReads.set(key, asked); }
+  return asked;
+}
+
+/**
+ * A change of the page's class (see the head; FP-29), told by the app as
+ * O-HOST is told: a new session's first face of each withheld document is
+ * shown whole again, and nothing the class the page left read is asked by it
+ * or shown again from it.
+ */
+export function classChanged() {
+  seenWhole.clear();
+  ownFace = null;
+  claimReads.clear();
+}
+
+/** an act's caption, which names the face shown in its answer (see the head) */
+const captionHTML = (/** @type {string | null | undefined} */ caption) => (caption ? `<span class="label">${esc(caption)}</span>` : '');
+/** C-67's pointer beneath an arm, the face's act: a button following the claim it names to the edition its home is */
+const pointerHTML = (/** @type {Pointer} */ c) => `<div class="clause" data-string="${esc(c.id)}"><button data-run="follow" data-claim="${esc(c.claim)}" data-home="${esc(c.home)}">${esc(c.text)}</button></div>`;
 
 /**
  * The words for a refusal, by its name. A `withheld` refusal is not among
@@ -117,21 +229,23 @@ const armHTML = (/** @type {{id: string, text: string}} */ arm) => `<div class="
 
 /**
  * Show a refusal's face at an anchor: a `withheld` refusal as the
- * document-level withheld face (`withheld`), naming the document the read
- * asked of; every other by its name (`wordsFor`), with the acts given.
+ * document-level withheld face (`withheld`) of the document the board names
+ * (`refusedDocument`); every other by its name (`wordsFor`), with the acts
+ * given. Either carries the caption of the act it answers, where one is
+ * handed in (see the head).
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor
  * @param {Refusal} r
- * @param {string} addr the document the refused read asked of
- * @param {Array<{label: string, run?: () => void, inert?: boolean}>} [acts]
+ * @param {string} addr the document the refused act named
+ * @param {Asked & {acts?: Array<{label: string, run?: () => void, inert?: boolean}>}} [asked]
  */
-export function showRefusal(anchor, r, addr, acts = []) {
-  if (r.name === 'withheld') { withheld(addr, anchor); return; }
+export function showRefusal(anchor, r, addr, asked = {}) {
+  if (r.name === 'withheld') { withheld(refusedDocument(r, addr), anchor, asked); return; }
   const face = wordsFor(r, { addr });
-  face.acts.push(...acts);
+  face.acts.push(...(asked.acts || []));
   /** @type {Record<string, import('./host.js').Act>} */
   const handlers = {};
   face.acts.forEach((a, i) => { handlers['a' + i] = () => { if (a.run) a.run(); }; });
-  HOST.show({ kind: 'face', id: 'face:' + r.name, anchor: toAnchor(anchor), html: faceHTML(face), acts: handlers });
+  HOST.show({ kind: 'face', id: 'face:' + r.name, anchor: toAnchor(anchor), html: captionHTML(asked.caption) + faceHTML(face), acts: handlers });
 }
 
 /** @param {Anchor | HTMLElement | {x: number, y: number} | null} a */
@@ -157,31 +271,105 @@ export function unregistered(addr, anchor = null) {
 }
 
 /**
- * THE DOCUMENT-LEVEL WITHHELD FACE (B1 §1's A-170; B1-S8's WITHHELD state):
- * a document a read's consult refused `withheld` — met by "who wrote this?"
- * or "who uses this?" over its bytes, or by a followed link's far end — named
- * by existence and owner, never bytes (R56): the withheld box's words,
- * "withheld · ⟨owner⟩", which the plane's box, the corner and the ARIA
- * mirror's item say too (T-LAYER's `withheldBox`), its owner by the one owner
- * rule, then the entitlement arm for that owner and this reader (T-ARTICLE's
- * `entitlementArm`, the rule the run's placeholder reads), offering no act.
- * At a COVERED document while the session's ending stands (see the head;
- * M-REC's `covered`) — a cursor move reaching its trail entry lands there
- * (N-GO) — the one line's words for that ending stand in the arm's place
- * (`endingWords`), and its one act is the line's sign-in (`signIn`), faced
- * where this face stood: the way back.
+ * THE DOCUMENT-LEVEL WITHHELD FACE (B1 §1's A-170; B1-S8's WITHHELD state;
+ * issue #179's design decision): a withheld document — met by "who wrote
+ * this?" or "who uses this?" over its bytes, or by a followed link's far
+ * end — named by existence and owner, never bytes (R56), by the first case
+ * that holds (see the head). Its text on screen (`accessChanged`) while the
+ * session's ending stands — a covered document a cursor move's landing
+ * reaches among them (N-GO) — the withheld box's words, "withheld · ⟨owner⟩"
+ * (T-LAYER's `withheldBox`), the one line's words for that ending beneath
+ * them (`endingWords`), and its one act the line's sign-in (`signIn`), faced
+ * where this face stood: the way back. Else its own withheld words
+ * (`ownWords`): whole the first time a face shows them in the page's
+ * session, compact after, its head the disclosure that opens the rest and
+ * folds it again, said through the status region as the reader's act changes
+ * it; C-67's pointer among the rest where the claims on the document decide
+ * one and a LEAP is handed in for it — the claims read where the model holds
+ * none (`prepare`), and the face shown again in its form as they land, where
+ * it still stands, its pointer changed and no opening reading (O-HOST's
+ * `pending`).
  * @param {string} addr the document withheld
- * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] the act's site
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] where the face stands: the act's site, or the place a landing stands at
+ * @param {Asked} [asked]
  */
-export function withheld(addr, anchor = null) {
-  const d = REC.doc(addr), at = toAnchor(anchor);
-  const box = { id: 'F.corner.withheld', text: LAYER.withheldBox(d) };
-  const ending = REC.covered(addr) ? endingWords() : null;
+export function withheld(addr, anchor = null, asked = {}) {
+  const at = toAnchor(anchor);
+  const ending = accessChanged(addr) ? endingWords() : null;
   if (ending) {
-    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, acts: { a0: () => signIn(at) }, html: faceHTML({ ...box, acts: [{ label: t('F.sign-in') }] }, armHTML(ending)) });
+    const box = { id: 'F.corner.withheld', text: LAYER.withheldBox(REC.doc(addr)) };
+    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, told: asked.told, acts: { a0: () => signIn(at) }, html: captionHTML(asked.caption) + faceHTML({ ...box, acts: [{ label: t('F.sign-in') }] }, armHTML(ending)) });
     return;
   }
-  HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, html: faceHTML({ ...box, acts: [] }, armHTML(entitlementArm(REC.reader(), LAYER.ownerAccount(d)))) });
+  const show = (/** @type {boolean} */ open, /** @type {boolean | undefined} */ told) => {
+    const w = ownWords(addr, at), follow = asked.follow, pointer = follow ? w.pointer : null;
+    /** @type {Record<string, import('./host.js').Act>} */
+    const acts = { head: () => show(!open, false) };
+    if (open && pointer && follow) { const home = pointer.home; acts.follow = (_el, byKey) => follow(home, byKey); }
+    if (open) seenWhole.add(addr);
+    /** @type {Overlay} */
+    const o = { kind: 'face', id: 'face:withheld', anchor: at, told, acts, html: captionHTML(asked.caption) + ownHTML(w, open, pointer) };
+    ownFace = { addr, overlay: o, pointer: pointerOf(addr), again: () => show(open, told) };
+    HOST.show(o);
+  };
+  show(!seenWhole.has(addr), asked.told);
+  if (REC.editionClaimsOf(addr) !== undefined) return;
+  void prepare(addr).then(() => {
+    const f = ownFace;
+    if (f && f.addr === addr && HOST.currentState() === f.overlay && !HOST.pending() && pointerOf(addr) !== f.pointer) f.again();
+  });
+}
+
+/**
+ * A withheld document's own withheld words (see the head): its full address
+ * where the face stands away from the document's own place, the withheld
+ * box's words, the entitlement arm for its owner and this reader, and C-67's
+ * pointer where the edition claims on it decide one.
+ * @param {string} addr
+ * @param {Anchor | null} at where the face stands
+ * @returns {OwnWords}
+ */
+function ownWords(addr, at) {
+  const d = REC.doc(addr), c = LAYER.clauseOf(addr);
+  return {
+    addr: at && at.span && at.span.addr === addr ? null : addr,
+    head: { id: 'F.corner.withheld', text: LAYER.withheldBox(d) },
+    arm: entitlementArm(REC.reader(), LAYER.ownerAccount(d)),
+    pointer: c && c.id === 'C-67.pointer' ? c : null,
+  };
+}
+
+/** the claim C-67's pointer follows at a withheld document now; '' where none is decided — what the face shown last is compared by as the claims land */
+const pointerOf = (/** @type {string} */ addr) => { const c = LAYER.clauseOf(addr); return c && c.id === 'C-67.pointer' ? c.claim : ''; };
+
+/**
+ * A withheld document's own words as its face writes them (see the head):
+ * its address, in its own element, where it stands; its head, the disclosure
+ * whose act opens the rest and folds it again; and, open, the rest beneath —
+ * the arm, then the pointer where one stands.
+ * @param {OwnWords} w
+ * @param {boolean} open
+ * @param {Pointer | null} pointer
+ */
+function ownHTML(w, open, pointer) {
+  return (w.addr ? `<div class="face-addr code">${esc(w.addr)}</div>` : '') +
+    `<button class="face-text" data-string="${esc(w.head.id)}" data-run="head" aria-expanded="${open}">${esc(w.head.text)}</button>` +
+    (open ? armHTML(w.arm) + (pointer ? pointerHTML(pointer) : '') : '');
+}
+
+/**
+ * The words a withheld document's face says whole at the document's own
+ * place, as the ARIA mirror reads them (FP-26: "the mirror reads every sign
+ * whole"; see the head): the withheld box's words, then the ending's words
+ * where its text was on screen as the session ended, else the arm and C-67's
+ * pointer where decided — the description of the item a follow's landing
+ * there stands on (N-GO's `described`).
+ * @param {string} addr
+ * @returns {string}
+ */
+export function withheldText(addr) {
+  const ending = accessChanged(addr) ? endingWords() : null, w = ownWords(addr, { span: { addr, pos: 1 } });
+  return [w.head.text, ...(ending ? [ending.text] : [w.arm.text, ...(w.pointer ? [w.pointer.text] : [])])].join(' ');
 }
 
 /**
@@ -324,7 +512,7 @@ export function withheldRun(addr, b, follow) {
   if (c && c.id === 'C-67.pointer') {
     const home = c.home;
     acts.follow = (_el, byKey) => follow(home, byKey);
-    clause = `<div class="clause" data-string="${esc(c.id)}"><button data-run="follow" data-claim="${esc(c.claim)}" data-home="${esc(home)}">${esc(c.text)}</button></div>`;
+    clause = pointerHTML(c);
   } else if (c) clause = `<div class="clause" data-string="${esc(c.id)}">${esc(c.text)}</div>`;
   HOST.show({ kind: 'face', id: 'face:withheld-run', anchor: { span: { addr, pos: b.pos, width: b.width } }, acts,
     html: faceHTML({ id: 'B1.withheld-run', text: p.head, acts: [] }, armHTML(p.arm) + clause) });

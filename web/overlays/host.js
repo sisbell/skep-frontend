@@ -52,11 +52,16 @@
 // its caret, as N-GO's departure leaves it standing.
 // THE DIALOG'S NAME (D5): each overlay's own caption — its `.label`, a face's
 // own words — by `aria-labelledby`; a string per kind from ST where no
-// caption stands. A face a key or the system raised is heard through the one
-// status region without the focus moving (D4; K-58) — save one whose words
-// the landing that met it says where the focus lands (`told`: the dead end's
-// face at its landing, N-WALK's description; issue #153), which is heard
-// there once.
+// caption stands. A FACE THAT ANSWERS AN ACT, captioned by the act's own
+// words (O-FACES' `caption`), is named by that caption and described by its
+// words (`aria-describedby`), so it is met as the act's answer (issue #179's
+// design decision: "Announce each face as the act's answer, tied to the act
+// in markup"). A face a key or the system raised is heard through the one
+// status region without the focus moving (D4; K-58), its caption before its
+// words — save one whose words the landing that met it says where the focus
+// lands (`told`: the dead end's face at its landing, a follow's at a
+// withheld document's place, N-WALK's description; issues #153, #179), which
+// is heard there once.
 // Each act is told whether a key ran it by the controller's one reading:
 // Enter on its control, taken here before the platform's click, or the click
 // the platform makes from a key (Space on a button), which carries no click
@@ -166,14 +171,21 @@ const dismissButton = () => `<button class="x" data-x="1" title="${esc(t('L.dism
 
 /**
  * The dialog's name (D5): its own caption where one stands — the `.label`,
- * a face's words — else ST's string for its kind.
+ * a face's words — else ST's string for its kind; a face named by the
+ * caption of the act it answers is described by its words, each part of
+ * them in their order (see the head).
  * @param {HTMLElement} host
  * @param {Overlay} o
  */
 function name(host, o) {
-  const caption = /** @type {HTMLElement | null} */ (host.querySelector('.label')) || (o.kind === 'face' ? /** @type {HTMLElement | null} */ (host.querySelector('.face-text')) : null);
+  const label = /** @type {HTMLElement | null} */ (host.querySelector('.label'));
+  const caption = label || (o.kind === 'face' ? /** @type {HTMLElement | null} */ (host.querySelector('.face-text')) : null);
   if (caption) { caption.id = 'overlay-name'; host.setAttribute('aria-labelledby', 'overlay-name'); host.removeAttribute('aria-label'); }
   else { host.removeAttribute('aria-labelledby'); host.setAttribute('aria-label', t('L.dialog.' + o.kind)); }
+  const said = label && o.kind === 'face' ? /** @type {HTMLElement[]} */ ([...host.querySelectorAll(SAID)]).filter((e) => e !== label) : [];
+  said.forEach((e, i) => { e.id = 'overlay-said-' + i; });
+  if (said.length) host.setAttribute('aria-describedby', said.map((e) => e.id).join(' '));
+  else host.removeAttribute('aria-describedby');
 }
 
 /** the control an overlay's focus goes to first: the one it names, else its first act in order — never the dismiss */
@@ -181,8 +193,10 @@ export function firstControl(/** @type {HTMLElement} */ host, /** @type {string 
   return /** @type {HTMLElement | null} */ ((first && host.querySelector(first)) || host.querySelector(FIRST));
 }
 
-/** a face's words, for the status region: its text, its arm, its clause, its note */
-const faceWords = (/** @type {ParentNode} */ host) => [...host.querySelectorAll('.face-text, .arm, .clause, .note')].map((e) => e.textContent || '').join(' ');
+/** the parts of a face's words, in their order: the caption of the act it answers, the address it names, its text, its arm, its clause, its note */
+const SAID = '.label, .face-addr, .face-text, .arm, .clause, .note';
+/** a face's words, for the status region: its parts' (`SAID`), the caption of the act it answers first */
+const faceWords = (/** @type {ParentNode} */ host) => [...host.querySelectorAll(SAID)].map((e) => e.textContent || '').join(' ');
 
 /** a face's words read from its markup, written into nothing the page shows: what the status region says of a face held back (see the head) */
 function wordsOf(/** @type {string} */ html) {
@@ -309,7 +323,7 @@ function takeDown() {
   if (!el || !current) return;
   const o = current;
   current = null;
-  el.className = ''; el.innerHTML = ''; el.style.visibility = ''; el.removeAttribute('data-id'); el.removeAttribute('aria-labelledby'); el.removeAttribute('aria-label');
+  el.className = ''; el.innerHTML = ''; el.style.visibility = ''; el.removeAttribute('data-id'); el.removeAttribute('aria-labelledby'); el.removeAttribute('aria-label'); el.removeAttribute('aria-describedby');
   if (o.onDismiss) o.onDismiss(false);
   FOCUS.close('overlay');
   markDirty();

@@ -189,15 +189,16 @@ function loop(/** @type {number} */ now) {
 /**
  * What a feed row or a change of the page's class dropped, told by M-PUMP
  * after the drop (its `onDrop`): at a change of class — FP-23, FP-29 — the
- * overlay, the LEAP box's rows, the arrival and the trail's notices, and the
- * one line's transient taken down from the model at once, the overlay first
- * so the focus a closing card hands back stands on the walk's element as the
- * walk is taken again; then each reading scene's pane kept fresh by its kind,
- * and the walk taken again where it stood.
+ * overlay, the faces' memory of what they showed whole, the LEAP box's rows,
+ * the arrival and the trail's notices, and the one line's transient taken
+ * down from the model at once, the overlay first so the focus a closing card
+ * hands back stands on the walk's element as the walk is taken again; then
+ * each reading scene's pane kept fresh by its kind, and the walk taken again
+ * where it stood.
  * @param {import('../model/pump.js').Dropped} x
  */
 function dropped(x) {
-  if (!x.addrs) { HOST.classChanged(); LEAP.classChanged(); GO.classChanged(); LINE.classChanged(); }
+  if (!x.addrs) { HOST.classChanged(); FACES.classChanged(); LEAP.classChanged(); GO.classChanged(); LINE.classChanged(); }
   SCENE.dropped(x);
   void WALK.dropped(x);
 }
