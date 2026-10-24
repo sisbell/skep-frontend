@@ -215,6 +215,9 @@ export const STRINGS = {
   'L.lower-bound': { text: '≥ ⟨n⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'L.whole-board': { text: 'WHOLE BOARD', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'L.board-label': { text: 'board ⟨node⟩ · ⟨origin⟩ · ⟨venue⟩ · claimed by ⟨claimant⟩', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S3' },
+  // the board's statement while the shell's index reports changes it could not place (issue #212's design decision, whose own
+  // words these are): a change a row naming no document carried, whose new place the page cannot find
+  'L.board-unplaced': { text: 'some changes here could not be traced to their documents; a document such a change created is not shown until it changes again', cls: 'DRAFT', source: '', screen: 'B1-S3', lane: true },
   'L.session-refused': { text: 'no session — the provider refused: ⟨name⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   // a session a restart lost (issue #175's design decision, whose own words these are): the boot's own call made again and
   // not back within a second, said in the acting-as segment's place; refused, leading the guest state boot shows for that

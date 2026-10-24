@@ -257,7 +257,14 @@ else a document its citations reach, else the longest edition — the reveal
 leaves the line under the view's centre where it stood on screen, at its em;
 where no document tried holds such a paragraph on this board the check is
 left unmeasured and says so, `layer.test.js` holding the rule over the page's
-own fold. THE LONGEST EDITION the claimant's index lists, found by the case's
+own fold. ROWS NAMING NOTHING (issue #212's design decision: "One refresh per
+run"; "What is shown stays until its fresh read lands"): at em 12.5 over the
+first edition at its bare address, three rows naming no document and no link
+handed to the page together through the gate's feed door, reads alone: no
+read goes out as they come; then one refresh counts the edition's chain, each
+member asked once, and reads its text window again once where the member its
+text is can be told, its article standing in every frame, the line under the
+view's centre where it stood on screen. THE LONGEST EDITION the claimant's index lists, found by the case's
 own reads of each edition's span set: LEAPt to, its article mounted at the
 measure, its columns inside its room and every row inside its column and its
 room; standing BY LINE (issue #122's design decision: the cost bounded by the
@@ -2103,6 +2110,65 @@ def hold_holds(ctx, r):
     return {'doc': doc, 'pos': pos, 'tried': tried, 'before': before, 'after': after}
 
 
+def bare_holds(ctx, r):
+    """ROWS NAMING NOTHING (issue #212's design decision: "A bare row only marks its board. Once the feed has delivered
+    what it has, one refresh runs, however many rows were bare"; "What is shown stays until its fresh read lands. Then it
+    is set in one step, with the words being read held still: no blanking and no lost place"): the first edition at its
+    bare address, at em 12.5 over a paragraph of its own; three rows naming no document and no link — an op unnamed, a
+    `nullify` and a `version` by their op alone — handed to the page through the gate's feed door as the feed hands rows,
+    reads alone, in one evaluation: no read goes out as they come; once the run is in, one refresh counts the edition's
+    chain, each member's metadata asked once, and — where the board answers each member's mint position, or the page holds
+    the chain's end, either telling the member the text is — reads the edition's text window again once, else leaves it as
+    it stands and reads none of it; its article standing in every frame from the rows to the settle, the line under the
+    view's centre where it stood on screen, DRIFT_TOL_PX either way, at its em; its figures"""
+    ctx.leap(DOC)
+    shown = ctx.js('window.__skep.go.shownIn(%s)' % json.dumps(DOC))
+    r.check(shown == DOC, 'the first edition\'s box shows its plain address: its text is what its bare address answered', shown)
+    ctx.view_doc_em(DOC, 12.5)
+    blocks = [b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if b['kind'] == 'para' and b['text'].strip()]
+    ctx.view_at(DOC, blocks[len(blocks) // 2]['pos'])
+    cam = ctx.camera()
+    pos = ctx.js('window.__skep.posAt(%s, %s, %s)' % (json.dumps(DOC), cam['x'], cam['y']))
+
+    def seen():
+        """where the passage under the view's centre stands now: its line on screen, and the article's em"""
+        return ctx.js('''((a, p) => { const S = window.__skep, q = (S.spanRects(a, p, 1) || []).find((x) => x.w > 0 && x.h > 0), m = S.mounted(a);
+          return {line: q || null, em: m ? m.fs * S.view.camera().scale : null}; })(%s, %s)''' % (json.dumps(DOC), json.dumps(pos)))
+    before = seen()
+    held = ctx.js('(() => { const d = window.__skep.model.doc(%s); return {members: d.members, ended: d.ended}; })()' % json.dumps(DOC))
+    rows = [{'position': 0, 'at': 0, 'op': op, 'docs': None, 'class': 'published'} for op in (None, 'nullify', 'version')]
+    came = ctx.js('''((rows, a) => { const S = window.__skep, n = S.bridge.calls().length;
+      window.__gateBare = {frames: 0, standing: 0, stop: false};
+      const watch = () => { const g = window.__gateBare; if (g.stop) return; g.frames++; const m = S.mounted(a); if (m && m.text) g.standing++; requestAnimationFrame(watch); };
+      requestAnimationFrame(watch);
+      for (const row of rows) S.model.feed(row);
+      return {n, calls: S.bridge.calls().length - n}; })(%s, %s)''' % (json.dumps(rows), json.dumps(DOC)))
+    ctx.settle()
+    ctx.frames(3)
+    watched = ctx.js('(() => { const g = window.__gateBare; g.stop = true; return {frames: g.frames, standing: g.standing}; })()')
+    after = seen()
+    calls = [c for c in ctx.js('window.__skep.bridge.calls()')[came['n']:] if c.get('frame')]
+    frames = [json.loads(c['frame']) for c in calls]
+    member = lambda f: f.get('op') == 'doc_metadata' and f.get('doc', '').startswith(DOC + '.') and f['doc'].count('.') == DOC.count('.') + 1
+    members = [f['doc'] for f in frames if member(f)]
+    answers = [json.loads(c['answer']) for c, f in zip(calls, frames) if member(f) and c.get('answer')]
+    minted = any(isinstance(a.get('result'), dict) and a['result'].get('at') is not None for a in answers)
+    texts = [f for f in frames if f.get('op') == 'retrieve_v' and (f.get('specs') or [{}])[0].get('doc') == DOC]
+    told = minted or bool(held['ended'])
+    r.check(came['calls'] == 0, 'three rows naming nothing, handed to the page together: no read goes out as they come — they mark the board (issue #212)', came)
+    r.check(bool(members) and len(set(members)) == len(members), 'once the run is in, one refresh counts the first edition\'s chain: each member\'s metadata asked once', members)
+    r.check(len(texts) == (1 if told else 0),
+            'the edition\'s text window read again once, the member its text is told by '
+            + ('the board\'s mint positions' if minted else 'the chain\'s end the page held') if told else
+            'the board answering no mint position and the page holding no chain\'s end, the edition left as it stands, none of its text read',
+            {'texts': len(texts), 'minted': minted, 'held': held})
+    r.check(watched['frames'] > 0 and watched['standing'] == watched['frames'], 'the first edition\'s article stands in every frame from the rows to the settle: nothing shown is emptied while its read is out', watched)
+    kept = bool(before['line'] and after['line']) and abs(after['line']['y'] - before['line']['y']) <= DRIFT_TOL_PX and before['em'] and after['em'] and abs(after['em'] - before['em']) <= 1e-6
+    r.check(pos is not None and kept, f'the line under the view\'s centre stands where it stood on screen, {DRIFT_TOL_PX} px either way, at its em', {'pos': pos, 'before': before, 'after': after})
+    return {'pos': pos, 'members': members, 'minted': minted, 'held': held, 'texts': len(texts), 'frames': watched, 'before': before, 'after': after,
+            'reads': sorted(set(f.get('op') for f in frames))}
+
+
 def longest_holds(ctx, r):
     """THE LONGEST EDITION the claimant's index lists (the typography review's finding 7: under a size fitted to its
     length its line ran wider than the window) — found by the harness's own reads of each edition's span set — shown at
@@ -2628,6 +2694,7 @@ def run(ctx):
     r.figures['trail'] = trail_holds(ctx, r)
     r.figures['stub'] = stub_holds(ctx, r)
     r.figures['hold'] = hold_holds(ctx, r)
+    r.figures['bare'] = bare_holds(ctx, r)
     r.figures['longest'] = longest_holds(ctx, r)
     r.figures['walk'] = walk_holds(ctx, r)
     ctx.leap(DOC, WINDOW[0])

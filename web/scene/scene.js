@@ -59,7 +59,14 @@
 // version to keep, and it is read again in place as the plane's box is (N-GO's
 // `arrived`). A pane on a VERSION only counts the chain again: its "of ⟨n⟩"
 // (`count`). A row whose op the journal could not name is taken as any it
-// could be: a newer member named pins, else the pane is read again. A link
+// could be: a newer member named pins, else the pane is read again. A REFRESH
+// — M-PUMP's, after rows naming nothing (issue #212's design decision: "each
+// held document and link then gets exactly what a row naming it gets") —
+// reaches every pane once the model's documents are set again (`refreshed`):
+// an edition at its bare address whose chain the refresh counted past the
+// member its text is pinned at once from what it kept, one whose member is
+// not known left as it shows, and every other pane read again in its place,
+// a version's count taken first. A link
 // row reaching a pane's text reads it again, its marks, counts and lines with
 // it, formatting setting its type again as a draft's update does. THE
 // CORNER'S ACT (`act`; "read version 4") reads the version it offers in that
@@ -1174,9 +1181,10 @@ function newest(row, src) {
  * (its `onDrop`; see the head): each pane the drop reached kept fresh by its
  * kind — at the page's own death, or any other change of its class, every
  * pane taken down at once and read again at the class the page reads at then;
- * a row naming a newer member pinning an edition at its
- * bare address at once, or counting a version's chain again; any other row
- * reaching a pane's text reading it again in its place.
+ * a refresh reaching every pane (`refreshed`); a row naming a newer member
+ * pinning an edition at its bare address at once, or counting a version's
+ * chain again; any other row reaching a pane's text reading it again in its
+ * place.
  * @param {Dropped} x
  */
 export function dropped(x) {
@@ -1187,6 +1195,7 @@ export function dropped(x) {
     for (const side of SIDES) void update(side);
     return;
   }
+  if (x.chains) { for (const side of SIDES) refreshed(S, side, x.chains); return; }
   for (const side of SIDES) {
     const P = S[side];
     if (!x.addrs.some((a) => oneBox(a, P.src))) continue;
@@ -1195,6 +1204,29 @@ export function dropped(x) {
     if (P.kind === 'pinned') { if (m != null) count(S, side, m); if (x.addrs.includes(P.src)) void update(side); continue; }
     void update(side);
   }
+}
+
+/**
+ * A refresh reaching a pane (see the head; M-PUMP's `refresh`, told once the
+ * model's shown documents are set again): an edition at its bare address
+ * whose member is not known left as it shows, for a read of its bare address
+ * may answer a newer member; one whose chain the refresh counted past the
+ * member its text is pinned at once from what it kept (`pin`), which reads
+ * that member itself; a version counting the chain the refresh counted
+ * (`count`); then each other pane read again in its place (`update`), whose
+ * own reads pin a bare address's pane where its chain advanced.
+ * @param {Scene} S
+ * @param {'a' | 'b'} side
+ * @param {Map<string, {n: number}>} chains the chains the refresh counted, by trunk
+ */
+function refreshed(S, side, chains) {
+  const P = S[side], c = chains.get(boxOf(P.src));
+  if (P.kind === 'bare') {
+    if (P.k == null) return;
+    if (c && P.k >= 1 && c.n > P.k) { pin(S, side, P.k, c.n); return; }
+  }
+  if (P.kind === 'pinned' && c) count(S, side, c.n);
+  void update(side);
 }
 
 /**

@@ -31,8 +31,20 @@
 // home as the trunk turns red). A bare row — its `docs` null, lost testimony
 // — drops the home of the link it names and the home's trunk whatever its
 // op, named or `null`, and a row answers the addresses it dropped, each
-// once; a bare row naming no link drops no document (a mutant that drops a
-// `make_link`'s home alone turns red).
+// once (a mutant that drops a `make_link`'s home alone turns red).
+// A ROW THAT NAMES NOTHING (issue #212): a bare row naming no link, whatever
+// its op, drops nothing — not even the edition claims — and marks the board,
+// a recorded delegation's `[]` marking nothing; a refresh takes the mark once
+// and a change of class drops it (a mutant that drops at such a row, or marks
+// at a recorded one, turns red); a delivery keeps the position it was read
+// at; a newer member's arrival hands the trunk's text to the member, the
+// trunk keeping none (a mutant that hands nothing turns red); a refresh's drop
+// keeps the documents shown and what they read through — their links' values
+// and projections, the claims on their origins and the claims' homes, their
+// owners' causes — and drops the rest, each counted (a mutant that drops a
+// kept link's projection, or keeps another's, turns red); a shown document
+// set again in one step, its text and image replaced whole, never merged, a
+// part not carried standing (a mutant that merges turns red).
 // A link's stored span placed through the held V→I image, never at its
 // stored ordinal: moved by an edit, cut in two, held twice, minted under a
 // member's chain, no longer held, outside the window read (a mutant that
@@ -428,7 +440,7 @@ test('a link homed at a version member keeps the member as its home, never its t
   assert.deepEqual([REC.doc(D).from, REC.doc(M).from], [-1, -1], 'the row naming neither: the member the new link is homed at and its trunk both dropped');
 });
 
-test('a bare row — its docs null, lost testimony — drops the home of the link it names and the home\'s trunk whatever its op, and answers what it dropped; one naming no link drops no document; a null op drops the edition claims', () => {
+test('a bare row — its docs null, lost testimony — drops the home of the link it names and the home\'s trunk whatever its op, and answers what it dropped, a null op dropping the edition claims; one naming no link drops nothing, the claims included, and marks the board (issue #212)', () => {
   const D = '1.0.1.0.2', M = D + '.2', W = '1.0.1.0.3', O = '1.0.1.0.1003', C = '1.0.1.0.9.0.2.1';
   for (const addr of [D, M, W]) REC.takeDelivery(addr, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
   REC.takeEditionClaims(O, [C]);
@@ -438,12 +450,105 @@ test('a bare row — its docs null, lost testimony — drops the home of the lin
   assert.deepEqual(dropped, [D, M], 'answered, the trunk then the member: what the view asks again');
   assert.equal(REC.editionClaimsOf(O), undefined, 'its op unnamed, it may be any link write: the edition claims dropped');
   REC.takeEditionClaims(O, [C]);
+  assert.equal(REC.bare(), false, 'a row naming a link marks nothing');
   // a write the journal decides nothing of: every term null
   const undecided = REC.applyFeedUpdate(/** @type {any} */ ({ position: 12331, at: 12331, op: null, docs: null, key: null, time: null, link: null, new_prefix: null, new_id: null, placed: null, base_extent: null, class: 'published' }));
   assert.deepEqual([undecided, REC.doc(W).from], [[], 1], 'naming no document and no link: nothing dropped, nothing answered');
-  assert.equal(REC.editionClaimsOf(O), undefined, 'its op unnamed, it may be a link write or a publish: the edition claims dropped');
+  assert.deepEqual([REC.editionClaimsOf(O), REC.bare()], [[C], true], 'not even the edition claims: it marks the board, whose refresh gives each what a row naming it would');
   const recorded = REC.applyFeedUpdate(/** @type {any} */ ({ position: 12332, at: 12332, op: 'make_link', docs: [W], class: 'published', link: W + '.0.2.4' }));
   assert.deepEqual([recorded, REC.doc(W).from], [[W], -1], 'a recorded make_link names its home in its docs and by its link: dropped, and answered once');
+});
+
+test('a row naming no document and no link marks the board whatever its op — a nullify, a version or a publish by its op alone, a delegation, an op unnamed — dropping nothing, its delegation\'s account still listed; a recorded row naming no document marks nothing; a refresh takes the mark once, and a change of class drops it (issue #212)', () => {
+  const D = '1.0.1.0.3';
+  REC.takeIndex(/** @type {any} */ (PLACES));
+  REC.takeDelivery(D, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 1, at: 1, op: 'delegate', docs: [], class: 'published', new_prefix: '1.0.3', new_id: 3 }));
+  assert.equal(REC.bare(), false, 'a recorded delegation touches no document, its `docs` empty: no bare row');
+  for (const [i, op] of /** @type {Array<string | null>} */ (['nullify', 'version', 'publish', 'delegate', null]).entries()) {
+    const drops = REC.dropsOf(D);
+    const out = REC.applyFeedUpdate(/** @type {any} */ ({ position: 2 + i, at: 2 + i, op, docs: null, class: 'published', ...(op === 'delegate' ? { new_prefix: '1.0.4', new_id: 4 } : {}) }));
+    assert.deepEqual([out, REC.doc(D).from, REC.dropsOf(D), REC.bare()], [[], 1, drops, true], `a bare ${op ?? 'unnamed'} row: nothing dropped, the board marked`);
+    assert.deepEqual([REC.unmarkBare(), REC.unmarkBare(), REC.bare()], [true, false, false], 'the mark taken once');
+  }
+  assert.ok(REC.accounts().some((a) => a.account === '1.0.4'), 'a bare delegation\'s account listed, as its row says');
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 9, at: 9, op: null, docs: null, class: 'published' }));
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.sessionDied({ arm: 'closed' });
+  assert.equal(REC.bare(), false, 'a change of class drops the mark: its reads at the new class make the page whole');
+});
+
+test('a delivery keeps the position it was answered at — the text\'s, for a widening read asks the whole window again — and a drop forgets it (issue #212)', () => {
+  const D = '1.0.1.0.3';
+  REC.takeDelivery(D, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }], 7);
+  assert.equal(REC.doc(D).readAt, 7);
+  REC.takeDelivery(D, [{ pos: 1, width: 11, kind: 'content', text: 'hello world', ref: null, origin: null }], 9);
+  assert.equal(REC.doc(D).readAt, 9, 'the last delivery\'s');
+  REC.invalidate(D);
+  assert.equal(REC.doc(D).readAt, null, 'dropped with the text');
+});
+
+test('a newer member\'s arrival hands the trunk\'s text to the member it is — its runs, blocks, image and window as they stood, the position it was read at, its extent where the member holds none — the trunk keeping none of it, its drop counted; nothing where the member holds text of its own (issue #212)', () => {
+  const D = '1.0.1.0.3', M = D + '.1';
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 11 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: 11, kind: 'content', text: 'hello world', ref: null, origin: null }], 5);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 11 }]);
+  const t = REC.doc(D), runs = t.runs, blocks = t.blocks, image = t.image, drops = REC.dropsOf(D);
+  assert.equal(REC.takeAsMember(D, M), true);
+  const m = REC.doc(M);
+  assert.deepEqual([m.runs === runs, m.blocks === blocks, m.image === image, m.from, m.to, m.readAt, m.imageFor, m.extent], [true, true, true, 1, 12, 5, [1, 12], 11], 'the member holds the trunk\'s text, image and extent as they stood');
+  assert.deepEqual([t.from, t.runs, t.blocks, t.image, t.readAt, t.imageFor, REC.dropsOf(D)], [-1, [], [], [], null, null, drops + 1], 'the trunk none of it, its drop counted');
+  REC.takeDelivery(D, [{ pos: 1, width: 3, kind: 'content', text: 'new', ref: null, origin: null }], 8);
+  assert.equal(REC.takeAsMember(D, M), false, 'the member holds text of its own: nothing handed');
+  assert.deepEqual([REC.textBetween(M, 1, 12), REC.textBetween(D, 1, 4)], ['hello world', 'new']);
+});
+
+test('a refresh\'s drop keeps the documents shown and what they read through — their links\' values and where those project, the edition claims on their withheld runs\' origins and the claims\' homes, their owners\' byline causes — and drops the rest as a row naming each would, each drop counted; the index, its counts and the feed\'s rows stand (issue #212)', () => {
+  const A = '1.0.1.0.3', B = '1.0.2.0.5', FAR = '1.0.1.0.127', O = '1.0.1.0.1003', O2 = '1.0.2.0.9', H = '1.0.1.0.30', C = H + '.0.2.1';
+  const L1 = A + '.0.2.1', L2 = B + '.0.2.1';
+  const meta = (/** @type {string} */ doc, /** @type {string} */ owner) => ({ doc, published: true, owner, birth: doc + '.1', birthExtent: 5, placed: null, baseExtent: null, source: null, at: 3, asOf: 9 });
+  REC.takeIndex(/** @type {any} */ (PLACES));
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 1, at: 1, op: 'insert', docs: ['1.0.1.0.4'], class: 'published' }));
+  REC.takeDelivery(A, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }, { pos: 6, width: 4, kind: 'withheld', text: '', ref: null, origin: O }]);
+  REC.takeDelivery(B, [{ pos: 1, width: 5, kind: 'content', text: 'world', ref: null, origin: null }, { pos: 6, width: 4, kind: 'withheld', text: '', ref: null, origin: O2 }]);
+  REC.takeLinks(A, [L1]); REC.takeLinks(B, [L2]);
+  for (const addr of [L1, L2]) REC.takeLink({ addr, from: [], to: [], type: null });
+  REC.takeProjection(L1, 2, FAR, [{ pos: 3, width: 2 }]); REC.takeProjection(L2, 1, A, [{ pos: 1, width: 2 }]);
+  REC.takeEditionClaims(O, [C]); REC.takeEditionClaims(O2, []);
+  REC.takeLink({ addr: C, from: [], to: [], type: '1.1.0.1.0.1.0.3.14' });
+  REC.takeMetadata(H, meta(H, '1.0.1')); REC.takeMetadata(FAR, meta(FAR, '1.0.1'));
+  REC.takeAccountKey('1.0.1', { cause: 'unsigned' }); REC.takeAccountKey('1.0.2', { cause: 'unsigned' }); REC.takeAccountKey('1.0.9', { label: 'k', fingerprint: 'ab' });
+  const [claims, keys, a, b, rev] = [REC.claimDrops(), REC.keyDrops(), REC.dropsOf(A), REC.dropsOf(B), REC.doc(A).rev];
+  assert.deepEqual(REC.projectionsOf(new Set([L1])), [{ link: L1, slot: 2, addr: FAR }], 'the projections held of a link\'s slots: what a refresh asks again');
+  const dropped = REC.takeRefresh(new Set([A]));
+  assert.deepEqual([REC.textBetween(A, 1, 6), [...REC.doc(A).links], REC.dropsOf(A), REC.doc(A).rev], ['hello', [L1], a, rev], 'the document shown stands as held, its drop not counted: its setting again counts it');
+  assert.deepEqual([REC.doc(B).from, REC.dropsOf(B), dropped.includes(B), dropped.includes(FAR), REC.doc(FAR).meta], [-1, b + 1, true, true, null], 'one not shown dropped and counted, a far document as any other');
+  assert.deepEqual([REC.link(L1)?.addr, REC.link(C)?.addr, REC.link(L2)], [L1, C, undefined], 'the values of its links and of the claims on its origins kept; another\'s dropped');
+  assert.deepEqual([REC.projection(L1, 2, FAR), REC.projection(L2, 1, A)], [[{ pos: 3, width: 2 }], undefined], 'where its links project kept, into a document dropped too; another link\'s gone');
+  assert.deepEqual([REC.editionClaimsOf(O), REC.editionClaimsOf(O2), REC.claimDrops(), REC.doc(H).meta?.published], [[C], undefined, claims + 1, true], 'the claims on its origins and their homes kept; others dropped, the drop counted');
+  assert.deepEqual([REC.accountKey('1.0.1'), REC.accountKey('1.0.2'), REC.accountKey('1.0.9'), REC.keyDrops()], [{ cause: 'unsigned' }, undefined, { label: 'k', fingerprint: 'ab' }, keys + 1], 'its owner\'s cause kept, another\'s dropped and counted, a value kept');
+  assert.deepEqual([REC.places().length, REC.countOf('1.0.1').documents, REC.feedRows().length], [5, 3, 1], 'the index, its counts and the feed\'s rows stand');
+});
+
+test('a shown document set again from a refresh\'s reads in one step: each part they carried replacing what it held — its text and image whole over the window read, never merged, given new arrays — each part they did not carry standing, one revision, the drop counted; refused, dropped whole holding the refusal (issue #212)', () => {
+  const D = '1.0.1.0.3', L1 = D + '.0.2.1', L2 = D + '.0.2.2';
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 15 }]);
+  REC.takeMetadata(D, { doc: D, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, at: 2, asOf: 5 });
+  REC.takeDelivery(D, [{ pos: 1, width: 10, kind: 'content', text: 'old words.', ref: null, origin: null }, { pos: 11, width: 5, kind: 'withheld', text: '', ref: null, origin: '1.0.1.0.1003' }], 5);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 10 }, { iStart: '1.0.1.0.1003.0.1.1', width: 5 }]);
+  REC.takeLinks(D, [L1]); REC.takeLink({ addr: L1, from: [], to: [], type: null });
+  const d = REC.doc(D), runs = d.runs, rev = d.rev, drops = REC.dropsOf(D), meta = d.meta;
+  REC.setAgain(D, {
+    spans: [{ subspace: 1, ordinal: 1, positions: 8 }], links: [L2], values: [{ addr: L2, from: [], to: [], type: null }],
+    text: { runs: [{ pos: 1, width: 8, kind: 'content', text: 'new one.', ref: null, origin: null }], asOf: 9 },
+    image: { from: 1, runs: [{ iStart: D + '.0.1.16', width: 8 }] },
+  });
+  assert.deepEqual([REC.textBetween(D, 1, 16), d.runs.length, d.blocks.length, d.from, d.to, d.readAt, d.extent], ['new one.', 1, 1, 1, 9, 9, 8], 'its text replaced whole: nothing of the old past the new text\'s end');
+  assert.deepEqual([d.image.map((r) => [r.pos, r.width, r.ordinal]), d.imageFor, d.origins], [[[1, 8, 16]], [1, 9], []], 'its image replaced whole');
+  assert.deepEqual([[...d.links], REC.link(L2)?.addr, d.meta === meta], [[L2], L2, true], 'its links the fresh ones, their values read; its metadata, not carried, standing');
+  assert.deepEqual([d.rev, REC.dropsOf(D), REC.textOf(runs, 1, 11)], [rev + 1, drops + 1, 'old words.'], 'one revision, the drop counted, and the runs an article was made from as they were');
+  REC.setAgain(D, { refused: 'withheld' });
+  assert.deepEqual([d.refused, d.from, d.extent, d.meta, [...d.links]], ['withheld', -1, null, null, []], 'refused: dropped whole, the refusal held');
 });
 
 test('a feed row names a document: the place is kept, what was held is dropped; a system row is marked', () => {

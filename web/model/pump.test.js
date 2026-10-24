@@ -168,6 +168,24 @@
 // red); a cause a feed row touching a doc 1 overtook never taken and asked
 // again, a value taken whatever the row (a mutant that takes the cause turns
 // red);
+// A ROW NAMING NOTHING (issue #212): such rows mark the board and drop
+// nothing as they come, the refresh armed and counted missing; once the run
+// is in, ONE refresh for every row of it counts the chain of each edition read
+// at its bare address and reads again what the view shows, set in one step
+// and never emptied meanwhile, a link the board no longer answers gone and a
+// draft out of view dropped unread (a mutant that empties what is shown
+// first, or arms nothing, turns red); a row naming a shown document while the
+// refresh's reads of it are out voids them (a mutant that sets them turns
+// red); an edition whose chain advanced past the member its text is — the
+// newest minted at or before the position its text was read at, never the
+// chain's end the page held — pinned on that member, which takes its text,
+// nothing read at the bare address (a mutant that tells the member by the end
+// held, or hands nothing, turns red); one whose member cannot be told left as
+// it stands; a change of class mid-refresh ends it (a mutant that arrives
+// after it turns red); the claims on a shown document's origins read again and
+// held as they answer now (a mutant that reads them and keeps the old turns
+// red); a publish row's member taking the trunk's text where the box pins on
+// it, none of it read again (a mutant that hands nothing turns red);
 // with SKEP_REPLAY naming a script the harness recorded from the provider,
 // the model's snapshot is printed for the gate to hold deep-equal to the
 // page's (half two: `harness/cases/wire.py`).
@@ -182,7 +200,7 @@ import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell, docBox } from '../plane/projection.js';
 import { estimate, estimatedSpan, MEASURE_CPL } from '../plane/layout.js';
-import { documentOf, unitSpan } from './address.js';
+import { documentOf, memberOf, unitSpan, versionAddress } from './address.js';
 import { createHash } from 'node:crypto';
 
 const D = '1.0.1.0.3';
@@ -1446,9 +1464,11 @@ const claimed = (/** @type {Record<string, unknown>} */ s) => Object.assign(s, {
 /** what the pump asked of the origin, the claims and their homes in tests before this one asked anew */
 const forgetClaims = () => { for (const a of [O, EDITION_HOME, FORK_HOME]) PUMP.forget(a); };
 
-test('at reading scale the view asks the edition claims on the origin of each withheld run its document holds — the active view\'s lookup, never the audit view\'s `edition_claims` — and each listed claim\'s link and its home\'s metadata, once; a row that may change the claims drops them and the view asks again, any other row leaves them held', async () => {
-  const s = claimed({ ...script });
-  const lookup = inTurn(s, F.editionClaimsAt(O), claimsOn([EDITION, FORK]));
+test('at reading scale the view asks the edition claims on the origin of each withheld run its document holds — the active view\'s lookup, never the audit view\'s `edition_claims` — and each listed claim\'s link and its home\'s metadata, once; a row that may change the claims drops them and the view asks again, any other row leaves them held; a row naming nothing drops none, the refresh after it asking them again (issue #212)', async () => {
+  // D's first member as the board answers it, which the refresh counts D's chain from
+  const s = claimed({ ...script, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.1') })]: script[FAKE.keyOf('op', { frame: F.docMetadata(D) })] });
+  // the two claims at each of the eight lookups the view makes; the edition's alone after them, at the refresh's
+  const lookup = inTurn(s, F.editionClaimsAt(O), ...Array(8).fill(claimsOn([EDITION, FORK])), claimsOn([EDITION]));
   const fake = readingD(s);
   forgetClaims();
   await settle();
@@ -1464,18 +1484,25 @@ test('at reading scale the view asks the edition claims on the origin of each wi
   const rows = [
     { op: 'make_link', docs: ['1.0.2.0.5'], link: '1.0.2.0.5.0.2.1' }, { op: 'emit', docs: ['1.0.2.0.5'] }, { op: 'edit_link', docs: ['1.0.2.0.5'] },
     { op: 'nullify', docs: ['1.0.2.0.5'] }, { op: 'assert_sup', docs: ['1.0.2.0.5'] }, { op: 'publish', docs: ['1.0.2.0.6.1'] },
-    // bare rows (wire.md §The change feed): a link the journal names, its op unnamed — a make_link, an emit or an assert_sup —
-    // and a write it decides nothing of, every term null — an edit_link, or a publish under a node no walk reaches, among others
-    { op: null, docs: null, link: '1.0.2.0.5.0.2.2' }, { op: null, docs: null, link: null },
+    // a bare row (wire.md §The change feed): a link the journal names, its op unnamed — a make_link, an emit or an assert_sup
+    { op: null, docs: null, link: '1.0.2.0.5.0.2.2' },
   ];
   for (const [i, row] of rows.entries()) {
-    const what = row.op ?? (row.link ? 'bare link' : 'bare');
+    const what = row.op ?? 'bare link';
     fake.fire('feed', { board: 'b-1', update: { position: 5 + i, at: 5 + i, class: 'published', ...row } });
     assert.equal(REC.editionClaimsOf(O), undefined, `a ${what} row drops the claims held`);
     await settle();
     assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [2 + i, [EDITION, FORK]], `and the view asks the lookup again after the ${what}`);
   }
   assert.deepEqual([F.readLink(EDITION), F.readLink(FORK), F.docMetadata(EDITION_HOME), F.docMetadata(FORK_HOME)].map(times), [1, 1, 1, 1], 'the links and the metadata held through the drops: read once in all');
+  // a write the journal decides nothing of, every term null — an edit_link, or a publish under a node no walk reaches, among
+  // others: the claims stand as it comes, the board marked; the refresh after the run asks them again with what they wait on
+  fake.fire('feed', { board: 'b-1', update: { position: 5 + rows.length, at: 5 + rows.length, class: 'published', op: null, docs: null, link: null } });
+  assert.deepEqual([REC.editionClaimsOf(O), REC.bare()], [[EDITION, FORK], true], 'a row naming nothing: the claims stand, the board marked');
+  await PUMP.refresh();
+  await settle();
+  assert.deepEqual([lookup.asks(), REC.editionClaimsOf(O)], [2 + rows.length, [EDITION]], 'the refresh asks the lookup again, and holds what it answers now');
+  assert.deepEqual([F.readLink(EDITION), F.readLink(FORK), F.docMetadata(EDITION_HOME), F.docMetadata(FORK_HOME)].map(times), [2, 1, 2, 1], 'and the claim it lists, its link and its home\'s metadata, once');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -1941,6 +1968,163 @@ test('a byline read the board did not answer is held — not asked again inside 
   atom();
   await q;
   assert.deepEqual(REC.accountKey('1.0.18'), { label: 'dev', fingerprint: fingerprintOf(ALG, KEY_B) }, 'taken');
+});
+
+// ---- a row naming nothing (issue #212) ---------------------------------------------------------------------------------
+
+/** a member of D's chain as `doc_metadata` answers it, minted at `at` — a version member dates its own mint (wire.md §Namespace) */
+const mintedAt = (/** @type {number} */ at) => ({ result: { as_of: 9, at, resp: 'doc_metadata', doc: D, published: true, owner: '1.0.1', birth: D + '.1', birth_extent: '30', placed: null, base_extent: null, source: null } });
+/** a delivery of one content run, answered at `asOf` */
+const deliveredAt = (/** @type {string} */ text, /** @type {number} */ asOf) => ({ result: { as_of: asOf, resp: 'delivery', items: [{ content: text }] } });
+/** the feed's row naming no document and no link, its op `op` (wire.md §The change feed: a bare row the journal decides no document of) */
+const naming = (/** @type {number} */ position, /** @type {string | null} */ op) => ({ board: 'b-1', update: { position, at: position, op, docs: null, class: 'published' } });
+/** a frame's script key */
+const opKeyOf = (/** @type {object} */ frame) => FAKE.keyOf('op', { frame });
+
+test('rows naming nothing mark the board and drop nothing as they come; once the run is in — no row for RUN_QUIET_MS — one refresh counts the chain of each edition read at its bare address and reads again what the view shows, set in one step and never emptied meanwhile, a link the board no longer answers gone, and a draft out of view dropped unread (issue #212)', async () => {
+  const OUT = '1.0.2.0.7';
+  const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.2'))]: NOT_REGISTERED };
+  // D's text read at 5 before the run and at 9 after it; its link, then none
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9));
+  inTurn(s, F.findLinksV(D, 1, 30), script[opKeyOf(F.findLinksV(D, 1, 30))], { result: { as_of: 9, resp: 'addrs', addrs: [] } });
+  const fake = readingD(s);
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).readAt, REC.doc(D).members, REC.linksTouching(D).length], [BEFORE, 5, 1, 1], 'D read at its reading em: its text, read at 5, its chain of one member and its link');
+  // a draft of another account's read before, out of view
+  REC.takeDelivery(OUT, [{ pos: 1, width: 5, kind: 'content', text: 'draft', ref: null, origin: null }], 5);
+  const from = fake.asked.length, runs = REC.doc(D).runs;
+  let emptied = false, watching = true;
+  REC.watch(() => { if (watching && REC.doc(D).from < 0) emptied = true; });
+  fake.fire('feed', naming(20, null)); fake.fire('feed', naming(21, 'nullify')); fake.fire('feed', naming(22, 'version'));
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(OUT).from, REC.bare(), fake.asked.length - from, PUMP.settled()], [BEFORE, 1, true, 0, false], 'as they come: nothing dropped and nothing asked, the board marked, the refresh armed and counted missing');
+  await new Promise((r) => setTimeout(r, PUMP.RUN_QUIET_MS + 50));
+  await settle();
+  watching = false;
+  const times = (/** @type {object} */ frame) => fake.asked.slice(from).filter((k) => k === opKeyOf(frame)).length;
+  assert.deepEqual([F.docMetadata(D + '.1'), F.docMetadata(D + '.2'), F.retrieveV(D, 1, 30), F.image(D, 1, 30)].map(times), [1, 1, 1, 1], 'one refresh for the three: D\'s chain counted once, its text and its image read once');
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).readAt, emptied, REC.bare(), REC.doc(D).runs !== runs], [AFTER, 9, false, false, true], 'set again from what it read, never emptied while its reads were out, given new runs');
+  assert.deepEqual(REC.linksTouching(D), [], 'a link the board no longer answers gone');
+  assert.deepEqual([REC.doc(OUT).from, fake.asked.slice(from).filter((k) => k.includes(OUT)).length], [-1, 0], 'the draft out of view dropped, nothing read of it');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('an edition whose chain the refresh counts past the member its text is — the newest minted at or before the position its text was read at, never the chain\'s end the page held, counted after a newer member was minted — takes that member\'s successor\'s arrival: its box pinned on the member, which takes its text and is read again at its own address, nothing read at the bare address (issue #212)', async () => {
+  const M = D + '.1', NEXT = D + '.2';
+  const s = {
+    ...script, [opKeyOf(F.docMetadata(M))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.3'))]: NOT_REGISTERED,
+    // D.1 at its own address: the text D's bare address answered at 5, its own links none
+    [opKeyOf(F.retrieveDocVSpanSet(M))]: script[opKeyOf(F.retrieveDocVSpanSet(D))], [opKeyOf(F.retrieveV(M, 1, 30))]: deliveredAt(BEFORE, 9),
+    [opKeyOf(F.image(M, 1, 30))]: script[opKeyOf(F.image(D, 1, 30))], [opKeyOf(F.findLinksV(M, 1, 30))]: { result: { as_of: 9, resp: 'addrs', addrs: [] } },
+    // D.2 minted at 7, after D's text was read at 5 and before the view probed its chain
+    [opKeyOf(F.docMetadata(NEXT))]: mintedAt(7),
+  };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5));
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  /** @type {Record<string, string>} */
+  const pins = {};
+  /** @type {string[]} */
+  const told = [];
+  PUMP.start({ onDirty: () => {}, shown: showing(pins), onPublish: (member) => { told.push(member); const k = memberOf(member); if (k != null && k >= 2) pins[D] = versionAddress(D, k - 1); } });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  readAt(D, 30);
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).readAt, REC.doc(D).members, REC.doc(D).ended], [BEFORE, 5, 2, true], 'D read at its bare address at 5, its chain counted after to two members');
+  const from = fake.asked.length, runs = REC.doc(D).runs;
+  fake.fire('feed', naming(20, null));
+  await PUMP.refresh();
+  await settle();
+  const asked = fake.asked.slice(from);
+  assert.ok(asked.includes(opKeyOf(F.docMetadata(M))), 'counted from the end held, D.2 minted past the text\'s position: D.1 asked below it');
+  assert.deepEqual([told, pins[D], REC.textBetween(M, 1, 31), REC.doc(D).from], [[NEXT], M, BEFORE, -1], 'D.2, minted after the text was read, arrives: the box pinned on D.1, which holds the text, D holding none');
+  assert.ok(REC.doc(M).runs !== runs && !asked.includes(opKeyOf(F.retrieveV(D, 1, 30))), 'D.1 set again from its own read; nothing read at the bare address');
+  assert.deepEqual([asked.filter((k) => k === opKeyOf(F.retrieveV(M, 1, 30))).length, REC.doc(D).members], [1, 2], 'D.1 read once at its own address; the box\'s document counted to its two members');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a row naming a shown document while the refresh\'s reads of it are out voids them: the refresh sets nothing of it, and the view reads it again after the row (issue #212)', async () => {
+  const MIDDLE = 'Tumbler.\n\nThe first field, mid';
+  const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.2'))]: NOT_REGISTERED };
+  // D's text: as the view first reads it, as the refresh reads it before the row, and as the view reads it after
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(MIDDLE, 9), deliveredAt(AFTER, 11));
+  const fake = readingD(s);
+  await settle();
+  const text = opKeyOf(F.retrieveV(D, 1, 30)), asks = () => fake.asked.filter((k) => k === text).length, before = asks();
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  fake.fire('feed', naming(20, null));
+  const out = PUMP.refresh();
+  for (let i = 0; i < 40 && asks() === before; i++) await new Promise((r) => setTimeout(r, 0));
+  assert.equal(asks(), before + 1, 'the refresh reads D\'s text again');
+  fake.fire('feed', { board: 'b-1', update: { position: 21, at: 21, op: 'insert', docs: [D], class: 'published' } });
+  for (let i = 0; i < 20 && asks() === before + 1; i++) { PUMP.pump(); await new Promise((r) => setTimeout(r, 0)); }
+  release();
+  await out;
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).readAt], [AFTER, 11], 'the text the view read after the row, never the one the refresh read before it');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('an edition whose member the page cannot tell — the board giving no mint position, the record no chain\'s end — is left by the refresh as it stands: its text kept, nothing of it read again, the board not marked again (issue #212)', async () => {
+  const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: script[opKeyOf(F.docMetadata(D))], [opKeyOf(F.docMetadata(D + '.2'))]: NOT_REGISTERED };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  await PUMP.loadWhole(D);
+  // HOME: D in view below its reading em, so the view counts no chain
+  CAM.setViewport(1440, 900);
+  CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  const from = fake.asked.length, runs = REC.doc(D).runs;
+  fake.fire('feed', naming(20, null));
+  await PUMP.refresh();
+  assert.deepEqual([REC.doc(D).runs === runs, REC.doc(D).members, REC.bare()], [true, null, false], 'its text as it stood, no chain\'s end taken, no mark again');
+  assert.deepEqual(fake.asked.slice(from), [opKeyOf(F.docMetadata(D + '.1')), opKeyOf(F.docMetadata(D + '.2'))], 'its chain counted, and nothing else read');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a change of the page\'s class while a refresh is out ends it: nothing it counted under the class it left arrives, though the view has read the text again at the new class meanwhile, nothing is set again, and the mark goes with the class (issue #212)', async () => {
+  const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.2'))]: mintedAt(7), [opKeyOf(F.docMetadata(D + '.3'))]: NOT_REGISTERED };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5));
+  const fake = readingD(s);
+  /** @type {string[]} */
+  const told = [];
+  PUMP.start({ onDirty: () => {}, onPublish: (member) => told.push(member) });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  await PUMP.loadWhole(D);
+  fake.fire('feed', naming(20, null));
+  const release = fake.hold('op', { frame: F.docMetadata(D + '.2') });
+  const out = PUMP.refresh();
+  await untilAsked(fake, F.docMetadata(D + '.2'));
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  // the view reads D again as a guest while the refresh's count is out: its text at 5 again
+  for (let i = 0; i < 20 && REC.doc(D).from < 0; i++) { PUMP.pump(); await new Promise((r) => setTimeout(r, 0)); }
+  assert.equal(REC.doc(D).readAt, 5, 'D\'s text read again at the new class');
+  const reads = fake.asked.filter((k) => k === opKeyOf(F.retrieveV(D, 1, 30))).length;
+  release();
+  await out;
+  assert.deepEqual([told, fake.asked.filter((k) => k === opKeyOf(F.retrieveV(D, 1, 30))).length, REC.bare()], [[], reads, false], 'its chain advanced past the member its text is, yet nothing arrives and nothing is read or set again: the death ended the refresh, the mark with it');
+});
+
+test('a publish row\'s member arriving where the box showed its plain address takes the trunk\'s text as the member it is: the box pinned on it keeps its text standing, none of it read again, the trunk holding none (issue #212)', async () => {
+  const fake = FAKE.create(script);
+  PORT.boot(fake);
+  /** @type {Record<string, string>} */
+  const pins = {};
+  PUMP.start({ onDirty: () => {}, shown: showing(pins), onPublish: (member) => { const k = memberOf(member); if (k != null && k >= 2) pins[D] = versionAddress(D, k - 1); } });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  REC.takeIndex(indexAt('complete'));
+  PUMP.forget(D);
+  await PUMP.loadWhole(D);
+  const t = REC.doc(D), runs = t.runs, image = t.image, from = fake.asked.length;
+  fake.fire('feed', published(D + '.2'));
+  const m = REC.doc(D + '.1');
+  assert.deepEqual([pins[D], m.runs === runs, m.image === image, m.from, m.to, REC.textBetween(D + '.1', 1, 27)], [D + '.1', true, true, 1, 31, 'Tumbler.\n\nThe first field.'], 'the box pinned on D.1, which holds the text and image D held');
+  assert.deepEqual([t.from, t.runs], [-1, []], 'D holds none of it');
+  assert.deepEqual(fake.asked.slice(from), [], 'nothing read');
 });
 
 test('replay: a recorded script from the provider builds the model; the snapshot printed for the gate', async () => {

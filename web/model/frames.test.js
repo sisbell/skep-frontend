@@ -4,7 +4,8 @@
 // the lookup of a type's name, and the edition-claim lookup and the
 // enrollment records' lookup in that shape, never the audit view's
 // `edition_claims`; no write composer exists; every decoder reads the wire's
-// example answers.
+// example answers — `doc_metadata`'s mint position among them, null from a
+// board that keeps none.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as F from './frames.js';
@@ -96,6 +97,10 @@ test('the answers decode as the wire gives them', () => {
   assert.deepEqual(F.decodeCompare({ as_of: 9, pairs: [{ d1: '1.0.1.0.1', d2: '1.0.1.0.2', u1: { ordinal: '1', subspace: '1' }, u2: { ordinal: '3', subspace: '1' }, width: '5' }], resp: 'compare' }), [{ d1: '1.0.1.0.1', d2: '1.0.1.0.2', u1: 1, u2: 3, width: 5 }]);
   const m = F.decodeDocMetadata({ as_of: 9, base_extent: '3', birth: '1.0.1.0.1.1', birth_extent: '5', doc: '1.0.1.0.1', owner: '1.0.1', placed: '5', published: true, resp: 'doc_metadata', source: null });
   assert.ok(m); assert.equal(m.birthExtent, 5); assert.equal(m.published, true); assert.equal(m.source, null);
+  assert.equal(m.at, null, 'a board before it kept mint positions answers none');
+  // wire.md's own, asked of the birth version `1.0.1.0.1.1`, minted at 7 (§Namespace, `doc_metadata`)
+  const minted = F.decodeDocMetadata(JSON.parse('{"as_of":9,"at":7,"base_extent":"3","birth":"1.0.1.0.1.1","birth_extent":"5","doc":"1.0.1.0.1","owner":"1.0.1","placed":"5","published":true,"resp":"doc_metadata","source":null,"time":1786838400047,"time_from":"feed"}'));
+  assert.equal(minted?.at, 7, 'the position that minted the address asked: what tells the member a bare address\'s text is (issue #212)');
   assert.deepEqual(F.decodeEffectiveOwner({ as_of: 9, prefix: '1.0.1', principal: 900, resp: 'effective_owner' }), { prefix: '1.0.1', principal: 900 });
   assert.equal(F.decodeMaybeAddr({ addr: null, as_of: 9, resp: 'maybe_addr' }), null);
   const rej = F.rejected({ code: 'unauthenticated', disposition: 'permanent', op: 'insert', resp: 'rejected' });

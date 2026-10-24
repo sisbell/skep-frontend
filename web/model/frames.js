@@ -21,9 +21,10 @@
 // twin and are gone: the index comes from `places` and the feed.
 // The answers decoded: the delivery's items (`content`, `hex`, `atom`,
 // `atom_hex`, `ref`, `withheld`), a span set, an `addrs` list, a link value,
-// a follow, the V→I runs, a compare report, `doc_metadata`,
-// `effective_owner`'s pair, `maybe_addr`, `key_set`, the lineage's `claims`
-// (A-82), a `rejected` document.
+// a follow, the V→I runs, a compare report, `doc_metadata` — its `at`, the
+// position that minted the address asked, as `c7551c0d` answers it and null
+// from a board before it, among it — `effective_owner`'s pair, `maybe_addr`,
+// `key_set`, the lineage's `claims` (A-82), a `rejected` document.
 // Carries: the wireframe's §4 `_serve` cases (re-cut to the wire's names),
 // §8's `ask`. Rules: FP-1, FP-2, FP-6, FP-16 (the frames' shapes are the wire
 // document's; pinned by this module's test against its examples).
@@ -78,6 +79,8 @@ export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs',
  * @property {number | null} placed
  * @property {number | null} baseExtent
  * @property {string | null} source
+ * @property {number | null} at the position of the commit that minted the address asked — a version member its own mint,
+ * the trunk its creation (wire.md §Namespace, `doc_metadata`) — null where the board's build minted it before it kept one
  * @property {number} asOf
  */
 
@@ -321,7 +324,7 @@ export function decodeDocMetadata(/** @type {unknown} */ answer) {
   const m = {
     doc: String(a.doc), published: !!a.published, owner: String(a.owner),
     birth: a.birth == null ? null : String(a.birth), birthExtent: num(a.birth_extent), placed: num(a.placed), baseExtent: num(a.base_extent),
-    source: a.source == null ? null : String(a.source), asOf: Number(a.as_of),
+    source: a.source == null ? null : String(a.source), at: num(a.at), asOf: Number(a.as_of),
   };
   return m;
 }

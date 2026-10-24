@@ -100,7 +100,11 @@
 // the order made (a mutant that acts at once turns red); the page's own death
 // takes every pane down at once, no tie standing, and reads each again as a
 // guest, a draft withheld standing as its head alone (a mutant that keeps the
-// dead session's text turns red). A passage the corner's act carries placed by
+// dead session's text turns red); a refresh after a row naming nothing (issue
+// #212) pins an edition at its bare address whose chain it counted past the
+// member its text is at once, reading nothing at the bare address, and reads
+// the draft beside it again (a mutant that takes the refresh for a row naming
+// no pane's document turns red). A passage the corner's act carries placed by
 // the one rule: its first shared stretch's counterpart, else the nearest
 // shared position's, else the version's head; a far end the lines read where
 // the pane was set, never the model's now.
@@ -745,4 +749,27 @@ test('the page\'s own death takes every pane down at once — nothing of the dea
     assert.deepEqual(LAYER.madeOf(a)?.blocks.map((x) => x.text), ['A version.', 'Its words.'], 'the version read again as the guest reads it');
     assert.deepEqual(fake.unanswered, []);
   } finally { REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' }); }
+}));
+
+test('a refresh after a row naming nothing reaches every pane: an edition read at its bare address whose chain the refresh counted past the member its text is pinned at once — "version 2 of 3", the arrival said once — and read nowhere at its bare address; the draft beside it read again in its place (issue #212)', () => onPage(async (p) => {
+  // an edition of two members read at its bare address, and a draft, neither met before; the third member minted since, which no row named
+  const RE = '1.0.1.0.11', RE2 = RE + '.2', DR9 = '1.0.1.0.12';
+  const RE_TEXT = 'The refreshed.\n\nIts second version holds this.', DR9_TEXT = 'A note.\n\nIts words.';
+  Object.assign(script, reads(RE, RE_TEXT, { members: 2 }), reads(RE2, RE_TEXT), reads(DR9, DR9_TEXT, { published: false }), compared(RE, RE_TEXT, DR9, DR9_TEXT), compared(RE2, RE_TEXT, DR9, DR9_TEXT));
+  await SCENE.open(RE, DR9);
+  assert.deepEqual(paneState('a'), { kind: 'bare', src: RE, names: RE2, shows: RE, k: 2, n: 2, read: null, lacks: null }, 'pane A read at its bare address, its text the second member\'s');
+  Object.assign(script, { [FAKE.keyOf('op', { frame: F.docMetadata(RE + '.3') })]: metadata(RE + '.3', true, RE_TEXT.length), [FAKE.keyOf('op', { frame: F.docMetadata(RE + '.4') })]: NOT_REGISTERED });
+  const told = p.said.length, from = fake.asked.length, unanswered = fake.unanswered.length;
+  fake.fire('feed', row(30, null, null, 'published'));
+  assert.deepEqual(paneState('a'), { kind: 'bare', src: RE, names: RE2, shows: RE, k: 2, n: 2, read: null, lacks: null }, 'the row alone reaches no pane');
+  await PUMP.refresh();
+  assert.deepEqual(paneState('a'), { kind: 'pinned', src: RE2, names: RE2, shows: RE2, k: 2, n: 3, read: 3, lacks: null }, 'at once as the refresh tells the panes: pinned to the member its text is, offering the newest');
+  assert.ok(p.cornerA.innerHTML.includes(esc(t('F.version-of', { k: 2, n: 3 }))), `its corner reads version 2 of 3: ${p.cornerA.innerHTML}`);
+  assert.deepEqual(p.said.slice(told), [t('F.arrival.pane', { k: 2 })], 'the arrival said once');
+  await landed();
+  const asked = fake.asked.slice(from);
+  assert.ok(!asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(RE, 1, RE_TEXT.length) })), 'nothing read at the bare address');
+  assert.ok(asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(RE2, 1, RE_TEXT.length) })), 'the member read whole, the pane set again from it');
+  assert.ok(asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(DR9, 1, DR9_TEXT.length) })) && paneState('b')?.kind === 'draft', 'the draft read again in its place');
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
 }));

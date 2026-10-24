@@ -147,13 +147,40 @@
 // member, and the trunk's text, its chain and where links project into it
 // are what changed — the member, a trunk's own `D.k+1`, handed to the app's
 // `onPublish` before anything is dropped, so a box read at its plain address
-// keeps the version being read: N-GO's `arrived`), and the home of the link it names with the home's
+// keeps the version being read: N-GO's `arrived`, the member it pins the box
+// on taking the trunk's text, so the box's text stands through the row
+// (`arrive`, M-REC's `takeAsMember`)), and the home of the link it names with the home's
 // trunk, which a bare row, its `docs` reading `null`, names by its `link`
 // alone — and what each row dropped told to the app's `onDrop` after the drop
 // (`takeRow`), with the row's `op`, so a reading scene's pane showing a
 // document the row reached is kept fresh by its kind, reading fresh (SC;
-// issue #160's design decision); a `drafts` row only while the page holds a
-// session — a guest's
+// issue #160's design decision). THE REFRESH (issue #212's design decision:
+// "When a row names no document and no link, whatever op it carries, the page
+// treats it as naming everything it holds of that board"; FP-23): such a row
+// only marks the board (M-REC's `bare`), and once the run's rows are in — no
+// row taken for RUN_QUIET_MS, every row taken re-arming it, and at the latest
+// RUN_MAX_MS after the run's first bare row, for the shell announces no run's
+// end — ONE refresh runs, however many rows were bare (`refresh`). First the
+// chain of every edition the page holds the text of at its bare address is
+// counted, to the end the board answers, each member's mint position read
+// with it (`countChain`); one whose chain advanced past the member its text
+// is — the newest minted at or before the position the text was read at
+// (`memberShown`) — takes the arrival a `publish` row brings (`arrive`), its
+// box pinned on that member, which keeps the text; one whose member cannot be
+// told is left as it stands. Then what the view shows — nearer than far
+// scale, the pins taken — is kept and everything else dropped (M-REC's
+// `takeRefresh`); each shown document is read again as the view reads it
+// (`readFresh`), standing as held until its reads land, then set in one step
+// (M-REC's `setAgain`), T-LAYER holding the words being read still; then
+// every reader is told (`onDrop`, the chains counted beside), so a reading
+// scene's pane is kept fresh by its kind. A read the board did not answer
+// leaves what it would have set standing and the board marked again, the
+// next refresh made once UNREACHED_MS has passed; a change of the page's
+// class ends the refresh, the reads at the new class making it whole. While
+// a refresh is armed or out the view counts it missing, so the gate's settle
+// waits for it. The page holds no draft being typed in — that waits on the
+// editor's lane — so no setting waits for one. A `drafts` row is taken only
+// while the page holds a session — a guest's
 // index lists no draft (search.md §4 (iii)), nor does the index of a page
 // whose session was refused or ended. `index` → M-REC's state where
 // it is the face the page reads ("a face receives the state of the pair it
@@ -228,13 +255,17 @@ import { cam, viewportWorld, measure } from '../plane/camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, withinContinuation } from '../plane/projection.js';
 import { estimate, estimatedSpan } from '../plane/layout.js';
-import { versionAddress, homeOf, documentOf, isTrunkMember, kindOf, accountOf, parentAccount, cmpAddr } from './address.js';
+import { versionAddress, homeOf, documentOf, memberOf, isTrunkMember, kindOf, accountOf, parentAccount, cmpAddr } from './address.js';
 import { keyFingerprint } from '../util.js';
 
 /** @typedef {import('./records.js').Doc} Doc */
 /** @typedef {import('./records.js').Stretch} Stretch */
 /** @typedef {import('./records.js').AccountFacts} AccountFacts */
 /** @typedef {import('./records.js').KeyCause} KeyCause */
+/** @typedef {import('./records.js').Fresh} Fresh */
+/** @typedef {import('./records.js').FreshClaims} FreshClaims */
+/** @typedef {import('./records.js').Declined} Declined */
+/** @typedef {import('./frames.js').LinkValue} LinkValue */
 /** @typedef {import('./address.js').EndRef} EndRef */
 /** @typedef {import('./frames.js').Claim} Claim */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -299,6 +330,10 @@ export const DROP_ATTEMPTS = 4;
 export const RECONNECTING_MS = 1000;
 /** an act's read the board refuses for its size (M-FRAMES's `SIZE_REFUSALS`) is asked in parts in at most this many reads in all (`compareParts`, `imageParts`); past it the size refusal is handed up (unmeasured: no document on the seeded board meets a size refusal) */
 export const SPLIT_READS = 32;
+/** a run of feed rows is taken to be in once no row has come for this long: the shell emits a tick's rows back to back and announces no run's end (`skep-shell`'s feed thread; unmeasured) */
+export const RUN_QUIET_MS = 250;
+/** a refresh runs at the latest this long after the first bare row of a run, however the rows keep coming (unmeasured) */
+export const RUN_MAX_MS = 2000;
 
 /** @type {Set<string>} */
 const inflight = new Set();
@@ -342,11 +377,20 @@ let onDrop = () => {};
 let stands = () => [];
 /** @type {Set<string>} the places the view stood on as the page's class last changed, each asked again at the new class until answered (see the head; `reread`) */
 let standing = new Set();
+/** @type {ReturnType<typeof setTimeout> | null} the refresh armed for the board a bare row marked (`arm`), else null */
+let armed = null;
+/** when the run the armed refresh waits on began, by the platform's clock: its first bare row */
+let runFrom = 0;
+/** a refresh is out (`refresh`) */
+let refreshing = false;
+/** the changes of the page's class taken (`classChanged`): a refresh begun under another ends */
+let classes = 0;
 
 /**
- * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, or every record at a change of the page's class — its session's death among them (`classChanged`)
- * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for a change of class
- * @property {string[] | null} addrs the addresses the row dropped, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`); null for a change of class, which drops every record
+ * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, a refresh's, or every record at a change of the page's class — its session's death among them (`classChanged`)
+ * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for a refresh and a change of class
+ * @property {string[] | null} addrs the addresses the row dropped, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`) — or those a refresh dropped or set again; null for a change of class, which drops every record
+ * @property {Map<string, Chain>} [chains] a refresh's alone (`refresh`): the chain of each edition it counted, by its trunk — what a reading scene's pane at a bare address is pinned by
  */
 
 /**
@@ -394,22 +438,55 @@ const takesRow = (/** @type {FeedUpdate} */ u) => u.class !== 'drafts' || REC.se
 
 /**
  * A feed row the page takes (`takesRow`; see the head): the member a
- * `publish` names handed to `onPublish` first, while the page still holds the
+ * `publish` names arriving first (`arrive`), while the page still holds the
  * trunk's text; then the row laid into M-REC's index and invalidation, every
  * read out of the board's state given it, and the view's answers for each
  * address it dropped forgotten, so the view asks them again; then what it
  * dropped told to `onDrop`, after the drop, so a reader reading again reads
- * fresh. The gate's door hands it a row as the feed would (`model.feed`).
+ * fresh; and, while a row naming nothing has the board marked, the refresh
+ * armed again (`arm`), the run not yet in. The gate's door hands it a row as
+ * the feed would (`model.feed`).
  * @param {FeedUpdate} u
  */
 export function takeRow(u) {
   if (!takesRow(u)) return;
-  if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) onPublish(named);
+  if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) arrive(named);
   const dropped = REC.applyFeedUpdate(u);
   for (const m of whileOut) m.rows.push(u);
   for (const addr of dropped) forget(addr);
   onDrop({ row: u, addrs: dropped });
+  if (REC.bare()) arm(RUN_QUIET_MS);
   dirty();
+}
+
+/**
+ * A newer member's arrival at its trunk (see the head; FP-22, FP-23): told
+ * to the app (`onPublish`, N-GO's `arrived`), which pins the trunk's box on
+ * the member its text is where the box shows its plain address and the page
+ * holds that text; where it did, that member takes the trunk's text (M-REC's
+ * `takeAsMember`), so the box keeps it standing and no read of it is made.
+ * @param {string} member the trunk's newer member, `D.k+1`
+ */
+function arrive(member) {
+  onPublish(member);
+  const trunk = documentOf(member), k = memberOf(member);
+  if (!trunk || k == null || k < 2) return;
+  const read = versionAddress(trunk, k - 1);
+  if (shown(trunk) === read) REC.takeAsMember(trunk, read);
+}
+
+/**
+ * The refresh armed for the board a bare row marked (see the head): made
+ * once no feed row has come for `quiet`, at the latest RUN_MAX_MS after the
+ * run's first bare row; each row taken while the board stands marked arms it
+ * again. A refresh out arms the next as it ends.
+ * @param {number} quiet
+ */
+function arm(quiet) {
+  if (refreshing) return;
+  const now = performance.now();
+  if (armed == null) runFrom = now; else clearTimeout(armed);
+  armed = setTimeout(() => { armed = null; void refresh(); }, Math.max(0, Math.min(quiet, runFrom + RUN_MAX_MS - now)));
 }
 
 /**
@@ -547,10 +624,13 @@ async function make(a) {
  * the index read again at the class the page reads at now (`readIndex`), the
  * places the view stood on asked again at that class (`reread`), and the drop
  * of every record told to `onDrop`, so what a reader holds apart from the
- * model — a reading scene's pane — is read again at that class too.
+ * model — a reading scene's pane — is read again at that class too; a refresh
+ * armed or out ended, the reads at the new class making it whole.
  * @param {string[]} stood the places the view stood on as the change was taken, before anything was dropped (`stoodOn`)
  */
 function classChanged(stood) {
+  classes++;
+  if (armed != null) { clearTimeout(armed); armed = null; }
   asked.clear(); retryAt.clear(); unreached.clear();
   for (const m of whileOut) { m.rows = []; m.state = false; }
   standing = new Set(stood);
@@ -1016,15 +1096,15 @@ function holdsSpan(/** @type {Doc} */ d, /** @type {number} */ from, /** @type {
  * The reads the view needs now, issued within the budget — none while the
  * index is read (`readIndex`), which counts as a need missing; the places the
  * view stood on as the page's class last changed first (`reread`), at any
- * scale. Returns the count of needs still missing — the gate's settle signal
- * with `inflight()`.
+ * scale; a refresh armed or out (`refresh`) counted missing. Returns the count
+ * of needs still missing — the gate's settle signal with `inflight()`.
  * @returns {number}
  */
 export function pump() {
   if (!started) return 0;
   if (indexing) return 1;
   const lod = lodOf(cam.scale);
-  let missing = reread();
+  let missing = reread() + (armed != null || refreshing ? 1 : 0);
   if (lod.name === 'far') return missing;
   const vis = visibleDocs();
   // nearest the centre first
@@ -1060,7 +1140,7 @@ export function pump() {
         const meets = d.from >= 0 && w[0] <= d.to && d.from <= w[1];
         const from = meets ? Math.min(d.from, w[0]) : w[0];
         const to = meets ? Math.max(d.to, w[1]) : w[1];
-        if (need('r:' + d.addr + ':' + from + ':' + to, F.retrieveV(d.addr, from, to - from), (a) => REC.takeDelivery(d.addr, F.decodeDelivery(a, from)), d.addr, (r) => refuseDoc(d, r))) missing++;
+        if (need('r:' + d.addr + ':' + from + ':' + to, F.retrieveV(d.addr, from, to - from), (a) => REC.takeDelivery(d.addr, F.decodeDelivery(a, from), F.asOf(a)), d.addr, (r) => refuseDoc(d, r))) missing++;
       }
       if (d.from >= 0 && (!d.imageFor || d.imageFor[0] > d.from || d.imageFor[1] < d.to)) {
         // placed from the window it was asked for: a text read widening the window can land first
@@ -1195,9 +1275,12 @@ const stretchesOf = (/** @type {unknown} */ answer) => F.decodeSpanSet(answer).f
  */
 function declined(link, slot, far, r) {
   if (r.kind !== 'refused') return;
-  REC.takeProjection(link, slot, far, r.name === 'withheld' ? 'withheld' : r.name === 'doc_not_registered' ? 'unregistered' : { refused: r.name });
+  REC.takeProjection(link, slot, far, declinedAs(r));
   if (r.name === 'doc_not_registered') refuseDoc(REC.doc(far), r);
 }
+
+/** what a `project` the board refused says of the document projected into, as the model holds it (M-REC's `Declined`): `withheld`, `unregistered`, else the refusal by its name */
+const declinedAs = (/** @type {Refusal} */ r) => /** @type {Declined} */ (r.name === 'withheld' ? 'withheld' : r.name === 'doc_not_registered' ? 'unregistered' : { refused: r.name });
 
 /** a document's read refused: `doc_not_registered` or `withheld` — the model keeps the fact */
 function refuseDoc(/** @type {Doc} */ d, /** @type {Refusal} */ r) {
@@ -1402,7 +1485,7 @@ async function readWhole(addr, dropped) {
     const out = await read(F.retrieveV(addr, 1, whole));
     if (dropped()) return 'dropped';
     if ('refused' in out) { refusals.push({ frame: 'retrieve_v', refusal: out.refused, addr }); refuseDoc(d, out.refused); dirty(); return { doc: d, refused: out.refused }; }
-    REC.takeDelivery(addr, F.decodeDelivery(out.answer, 1));
+    REC.takeDelivery(addr, F.decodeDelivery(out.answer, 1), F.asOf(out.answer));
     const im = await read(F.image(addr, 1, whole));
     if (dropped()) return 'dropped';
     if (!('refused' in im)) REC.takeImage(addr, 1, F.decodeRuns(im.answer));
@@ -1470,6 +1553,306 @@ export async function readClaims(origin) {
     if ('refused' in out) linkRefused(c, out.refused);
     else { const v = F.decodeLinkValue(c, out.answer); if (v) REC.takeLink(v); }
   }));
+}
+
+// ---- the refresh -----------------------------------------------------------------
+
+/**
+ * THE REFRESH (see the head; issue #212's design decision): what the rows
+ * naming nothing marked the board for, made once the run's rows are in
+ * (`arm`), or at once by the gate and the tests. The mark taken (M-REC's
+ * `unmarkBare`) — nothing where none stood or a refresh is out — then, a
+ * change of the page's class ending it wherever it stands: (1) the chain of
+ * every edition the page holds the text of at its bare address counted
+ * (`countChain`), at most MAX_INFLIGHT at once, and, once every one is, each
+ * whose chain advanced past the member its text is (`memberShown`) taking the
+ * arrival of that member's successor (`arrive`), its box pinned on the member,
+ * which keeps the text — the box holding the view's centre last, so the
+ * passage being read there is held across its move (T-LAYER's `holdAcross`) —
+ * one whose member cannot be told, or whose box the app did not pin, left as
+ * it stands; (2) what the view shows, nearer than far scale and with
+ * the pins taken, kept with the members a text was handed to and the editions
+ * left as they stand, and everything else dropped (M-REC's `takeRefresh`), the
+ * view's answers for each forgotten; (3) each shown document read again
+ * (`readFresh`), at most MAX_INFLIGHT at once, and set in one step as its
+ * reads land (M-REC's `setAgain`) — none a drop overtook (`watchDrops`), which
+ * the view reads again, its claims left out where a drop of the claims
+ * overtook them (`watchClaims`), and its owner's byline cause where a drop of
+ * the causes did (M-REC's `keyDrops`) — its answers forgotten so the view asks
+ * again what it holds none of; (4) every reader told (`onDrop`), the chains
+ * counted beside. A read the board did not answer marks the board again, the
+ * next refresh made once UNREACHED_MS has passed; a bare row taken while it was
+ * out arms the next as it ends.
+ * @returns {Promise<void>}
+ */
+export async function refresh() {
+  if (armed != null) { clearTimeout(armed); armed = null; }
+  if (refreshing || !REC.unmarkBare()) return;
+  refreshing = true;
+  const cls = classes, out = () => classes !== cls;
+  let unheard = false;
+  try {
+    /** @type {Map<string, Chain>} */
+    const chains = new Map();
+    /** @type {Set<string>} the editions left as they stand */
+    const left = new Set();
+    /** @type {Set<string>} the members an advanced edition's text was handed to */
+    const handed = new Set();
+    /** @type {Array<{doc: string, s: number}>} the editions whose chain advanced past the member their text is */
+    const advanced = [];
+    await bounded(REC.docs().filter(atBare), async (d) => {
+      const c = await countChain(d, true);
+      if ('met' in c) { if (unanswered(c.met)) unheard = true; left.add(d.addr); return; }
+      chains.set(d.addr, { n: c.n, ended: true, met: null });
+      const s = memberShown(d, c);
+      if (s == null) left.add(d.addr);
+      else if (s >= 1 && c.n > s) advanced.push({ doc: d.addr, s });
+    });
+    if (out()) return;
+    // the box holding the view's centre arrives last: the passage being read is held across its move (T-LAYER's `holdAcross`), which a later arrival would end
+    const centre = (/** @type {string} */ doc) => { const b = docBox(doc); return b.x <= cam.x && cam.x <= b.x + b.w && b.y <= cam.y && cam.y <= b.y + b.h ? 1 : 0; };
+    for (const { doc, s } of advanced.sort((a, b) => centre(a.doc) - centre(b.doc))) {
+      const member = versionAddress(doc, s);
+      arrive(versionAddress(doc, s + 1));
+      if (shown(doc) === member) handed.add(member); else left.add(doc);
+    }
+    const showing = lodOf(cam.scale).name !== 'far' ? visibleDocs().map((d) => d.addr).filter((a) => !left.has(a)) : [];
+    const dropped = REC.takeRefresh(new Set([...showing, ...handed, ...left]));
+    for (const a of dropped) forget(a);
+    /** @type {Map<string, Promise<AccountFacts>>} each owner's byline facts, read once for the refresh */
+    const facts = new Map();
+    await bounded(showing, async (addr) => {
+      const gone = watchDrops(addr), claimsGone = watchClaims(), causes = REC.keyDrops();
+      const r = await readFresh(addr, chains, facts);
+      if (out() || gone()) return;
+      if (r.unheard) unheard = true;
+      if (claimsGone()) delete r.fresh.claims;
+      if (r.fresh.byline && 'cause' in r.fresh.byline.facts && REC.keyDrops() !== causes) delete r.fresh.byline;
+      REC.setAgain(addr, r.fresh);
+      forget(addr);
+    });
+    if (out()) return;
+    onDrop({ row: null, addrs: [...dropped, ...showing], chains });
+  } finally {
+    refreshing = false;
+    if (unheard && !out()) REC.markBare();
+    if (REC.bare()) arm(unheard ? UNREACHED_MS : RUN_QUIET_MS);
+    dirty();
+  }
+}
+
+/**
+ * Each of `items` handed to `fn`, at most `limit` at once — the view's own
+ * budget — settled once every one has.
+ * @template T
+ * @param {T[]} items
+ * @param {(item: T) => Promise<void>} fn
+ * @param {number} [limit]
+ * @returns {Promise<void>}
+ */
+async function bounded(items, fn, limit = MAX_INFLIGHT) {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => { while (next < items.length) await fn(items[next++]); }));
+}
+
+/** is a record an edition read at its bare address (see the head): a trunk, published, holding text, its box showing its plain address? */
+const atBare = (/** @type {Doc} */ d) => d.from >= 0 && !d.system && plain(d.addr) === d.addr && shown(d.addr) === d.addr && (d.meta ? d.meta.published : d.kind === 'edition');
+
+/**
+ * A chain counted for a refresh (see the head): each member's metadata asked
+ * in turn to the end the board answers — `doc_not_registered` past the last —
+ * from the end the record holds, read again, else the first; then, where
+ * `down` and the first member asked was minted after the text the record holds
+ * was read, the members below it, down to one minted before it; each member's
+ * mint position kept (M-FRAMES's `DocMeta.at`). The refusal it stopped at
+ * where a read met another, the board not answering among them.
+ * @param {Doc} d
+ * @param {boolean} down whether the member the record's text is is wanted (`memberShown`)
+ * @returns {Promise<{n: number, at: Map<number, number | null>} | {met: Refusal}>}
+ */
+async function countChain(d, down) {
+  /** @type {Map<number, number | null>} */
+  const at = new Map();
+  /** member `k` asked: 'member' where the board answers it, 'end' past the chain's end, else the refusal met */
+  const ask = async (/** @type {number} */ k) => {
+    const out = await read(F.docMetadata(versionAddress(d.addr, k)));
+    if (!('refused' in out)) { const m = F.decodeDocMetadata(out.answer); at.set(k, m ? m.at : null); return /** @type {const} */ ('member'); }
+    return out.refused.kind === 'refused' && out.refused.name === 'doc_not_registered' ? /** @type {const} */ ('end') : out.refused;
+  };
+  const from = Math.max(1, d.members ?? 1);
+  let n = from - 1;
+  for (let k = from; ; k++) {
+    const r = await ask(k);
+    if (r === 'end') break;
+    if (r !== 'member') return { met: r };
+    n = k;
+  }
+  for (let k = from - 1; down && k >= 1 && d.readAt != null && (at.get(k + 1) ?? -Infinity) > d.readAt; k--) {
+    const r = await ask(k);
+    if (r === 'end') break;
+    if (r !== 'member') return { met: r };
+  }
+  return { n, at };
+}
+
+/**
+ * The member a bare address's text is (see the head; wire.md §Arrangement:
+ * "Every arrangement reader of a bare DOCUMENT address answers the document's
+ * trunk HEAD"): the newest the board says was minted at or before the
+ * position the text was read at (`Doc.readAt`) — 0 where every member was
+ * minted after it; where the board gave a member no mint position, or the
+ * text no position, the end of the chain the record held where the board
+ * ended it there; null where neither names one.
+ * @param {Doc} d
+ * @param {{n: number, at: Map<number, number | null>}} c
+ * @returns {number | null}
+ */
+function memberShown(d, c) {
+  const readAt = d.readAt, ats = [...c.at];
+  if (readAt != null && ats.length && ats.every(([, a]) => a != null)) return ats.reduce((s, [k, a]) => (a != null && a <= readAt && k > s ? k : s), 0);
+  return d.ended && d.members != null ? d.members : null;
+}
+
+/**
+ * What a shown document's refresh reads (see the head), as the view reads it
+ * (`pump`) — each part the record holds asked again: its extent, its
+ * metadata, its links — within the view's scan permits, a scan the board kept
+ * busy said unheard — and each one's value, and, where its box shows it, its
+ * text over the window it holds — from the first position where the text is
+ * now shorter than the window's start — with its image there; where the slots
+ * of the links touching it project, each projection held (M-REC's
+ * `projectionsOf`); the edition claims on its withheld runs' origins where
+ * held, with the reads each claim's admission waits on (`claimsFresh`); its
+ * owner's byline facts where a cause is held, read once an account
+ * (`facts`); its chain from what the refresh counted, else counted again. A
+ * part the board did not answer is left out, so it stands as held, and the
+ * reads said unheard; a read of the document refused as withheld or not
+ * registered ends them, the refusal its fresh state.
+ * @param {string} addr
+ * @param {Map<string, Chain>} chains
+ * @param {Map<string, Promise<AccountFacts>>} facts
+ * @returns {Promise<{fresh: Fresh, unheard: boolean}>}
+ */
+async function readFresh(addr, chains, facts) {
+  const d = REC.doc(addr), drawn = shown(addr) === addr;
+  /** @type {Fresh} */
+  const f = {};
+  let unheard = false;
+  /** the board's answer to a read, else null: the board not answering noted, and a read of the document itself (`own`) refused as withheld or not registered taken as its fresh state */
+  const ask = async (/** @type {object} */ frame, own = false) => {
+    const out = await read(frame);
+    if (!('refused' in out)) return out.answer;
+    if (unanswered(out.refused)) unheard = true;
+    else if (own && out.refused.name === 'withheld') f.refused = 'withheld';
+    else if (own && out.refused.name === 'doc_not_registered') f.refused = 'unregistered';
+    return null;
+  };
+  if (d.extent != null || d.refused) {
+    const a = await ask(F.retrieveDocVSpanSet(addr), true);
+    if (f.refused) return { fresh: f, unheard };
+    if (a) f.spans = F.decodeSpanSet(a);
+  }
+  if (d.meta) {
+    const a = await ask(F.docMetadata(addr), true);
+    if (f.refused) return { fresh: f, unheard };
+    const m = a ? F.decodeDocMetadata(a) : null;
+    if (m) f.meta = m;
+  }
+  const content = f.spans ? f.spans.find((s) => s.subspace === 1) : null;
+  const extent = f.spans ? (content ? content.positions : 0) : d.extent ?? 0;
+  if (d.linksRead && extent > 0) {
+    // within the view's scan permits (MAX_SCANS), which the daemon's two bound
+    while (scansInFlight >= MAX_SCANS) await new Promise((r) => setTimeout(r, RETRY_MS));
+    scansInFlight++;
+    const out = await readScan(F.findLinksV(addr, 1, extent), addr).finally(() => { scansInFlight--; });
+    if ('refused' in out) { if (unanswered(out.refused) || out.refused.name === 'scan_busy') unheard = true; }
+    else {
+      const links = F.decodeAddrs(out.answer);
+      /** @type {LinkValue[]} */
+      const values = [];
+      await bounded(links, async (la) => { const a = await ask(F.readLink(la)); const v = a ? F.decodeLinkValue(la, a) : null; if (v) values.push(v); });
+      f.links = links; f.values = values;
+    }
+  }
+  if (drawn && d.from >= 0) {
+    const from = d.from <= extent ? d.from : 1, to = Math.min(extent + 1, from + d.to - d.from);
+    if (to > from) {
+      const a = await ask(F.retrieveV(addr, from, to - from), true);
+      if (f.refused) return { fresh: f, unheard };
+      if (a) {
+        f.text = { runs: F.decodeDelivery(a, from), asOf: F.asOf(a) };
+        const im = await imageParts(addr, from, to - from);
+        if ('runs' in im) f.image = { from, runs: im.runs };
+        else if (unanswered(im.refused)) unheard = true;
+      }
+    } else f.text = { runs: [], asOf: null };
+  }
+  /** @type {NonNullable<Fresh['projections']>} */
+  const projections = [];
+  await bounded(REC.projectionsOf(new Set(f.links ?? d.links)), async (p) => {
+    const out = await read(F.project(p.link, p.slot, p.addr));
+    if (!('refused' in out)) projections.push({ ...p, runs: stretchesOf(out.answer).sort((x, y) => x.pos - y.pos) });
+    else if (unanswered(out.refused)) unheard = true;
+    else if (out.refused.kind === 'refused') projections.push({ ...p, runs: declinedAs(out.refused) });
+  });
+  if (projections.length) f.projections = projections;
+  const origins = f.text ? [...new Set(f.text.runs.flatMap((r) => (r.kind === 'withheld' && r.origin ? [r.origin] : [])))] : REC.withheldOrigins(addr);
+  /** @type {FreshClaims[]} */
+  const claims = [];
+  for (const origin of origins) {
+    if (REC.editionClaimsOf(origin) === undefined) continue;
+    const c = await claimsFresh(origin);
+    if (c) claims.push(c); else unheard = true;
+  }
+  if (claims.length) f.claims = claims;
+  const owner = drawn && d.from >= 0 ? REC.ownerAccount(d) : '', held = owner ? REC.accountKey(owner) : undefined;
+  if (held && 'cause' in held) {
+    let p = facts.get(owner);
+    if (!p) { p = factsOf(owner); facts.set(owner, p); }
+    const got = await p;
+    if ('cause' in got && got.cause === 'unreachable') unheard = true; else f.byline = { account: owner, facts: got };
+  }
+  const chain = d.members == null ? null : chains.get(addr) ?? null;
+  if (chain) f.members = { n: chain.n, ended: true };
+  else if (d.members != null) {
+    const c = await countChain(d, false);
+    if (!('met' in c)) f.members = { n: c.n, ended: true };
+    else if (unanswered(c.met)) unheard = true;
+  }
+  return { fresh: f, unheard };
+}
+
+/**
+ * The edition claims on an origin as a refresh reads them (`readFresh`), as
+ * the view holds them: the lookup (M-FRAMES's `editionClaimsAt`), a refusal
+ * held by whether it was withheld (`lookupRefused`); then each listed claim's
+ * home's metadata — a refusal of it as withheld or not registered taken of the
+ * home, any other, the board not answering among them, a failed read
+ * (`metaRefused`) — and each claim's link, a refusal of it but `withheld` a
+ * failed read (`linkRefused`). Null where the board did not answer the
+ * lookup: the claims held stand.
+ * @param {string} origin
+ * @returns {Promise<FreshClaims | null>}
+ */
+async function claimsFresh(origin) {
+  const out = await read(F.editionClaimsAt(origin));
+  if ('refused' in out && unanswered(out.refused)) return null;
+  const lookup = 'refused' in out ? lookupRefused(out.refused) : F.decodeAddrs(out.answer);
+  const listed = Array.isArray(lookup) ? lookup : [];
+  /** @type {FreshClaims} */
+  const c = { origin, lookup, values: [], homes: [], failed: [] };
+  await bounded([...new Set(listed.map((claim) => homeOf(claim) || claim))], async (home) => {
+    const m = await read(F.docMetadata(home));
+    if (!('refused' in m)) { const meta = F.decodeDocMetadata(m.answer); if (meta) c.homes.push({ home, meta, refused: null }); }
+    else if (m.refused.name === 'withheld' || m.refused.name === 'doc_not_registered') c.homes.push({ home, meta: null, refused: m.refused.name === 'withheld' ? 'withheld' : 'unregistered' });
+    else c.failed.push(home);
+  });
+  await bounded(listed, async (claim) => {
+    const v = await read(F.readLink(claim));
+    if (!('refused' in v)) { const lv = F.decodeLinkValue(claim, v.answer); if (lv) c.values.push(lv); }
+    else if (v.refused.name !== 'withheld') c.failed.push(claim);
+  });
+  return c;
 }
 
 /** the key an account's byline read is held under while the board does not answer it (`hold`) */
