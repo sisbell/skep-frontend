@@ -1,53 +1,52 @@
-// P-LABEL — the plane's labels, set in one pass (P-RENDER's labels, the
-// structure record §3.2 "P-RENDER", their placement kept pure so that it is
-// tested apart from the canvas). Layer 1, PURE: the canvas's own measure is
-// an input. State: none.
+// P-LABEL — the plane's labels, set in one pass (the structure record §3.2;
+// P-RENDER's labels, their placement kept pure so it is tested apart from
+// the canvas). Layer 1, pure: the canvas's own measure is an input. State:
+// none.
 // Each label is drawn only where its place holds it (foundations §2.1;
-// F-9), and legibility, not frame cost, is what the scales buy (§2.1): a
-// label is set at its rule's size and never below P-REG's LABEL_MIN_PX, and
+// F-9): a label is set at its rule's size and never below P-REG's
+// LABEL_MIN_PX, and
 // one its place cannot hold at that size is left out — never cut through an
 // address or a count, which a cut turns into another document or another
 // number; a first line alone is cut, to its place's width, ending in its
-// ellipsis (F-9: "cut to the extent"). P-RENDER hands the pass every label
-// once every place's shapes are drawn, in the order the places were drawn —
-// the board, the clusters, the account frames, the continuations' marks, the
-// documents — then each mid connection's count, and the pass sets each one
-// only where, wrapped at its spaces to its place's width by the canvas's
-// measure, it lies whole inside its place and inside the visible view — the
-// viewport below the one line, which stands opaque over the plane, so a
-// label under it would be hidden, or cut through at its edge — and meets no
-// other place's shape (a cluster's mark, a box, a continuation's mark) and no
-// label set before it. Through a crossfade a place drawn the weaker — an
-// alpha below a half — sets no label and blocks none, as the click takes the
-// stronger (P-LOD's `residueDepth`).
-// THE HOLD (issue #169's design decision: "Held below the line"): a label
-// naming a place the one line does not name is handed its place's shape on
-// screen (`Hold`), and where its first line would stand above P-REG's HOLD
-// gap below the line it stands HELD there instead (`holdTop`, the corner's
-// hold too, so the two stand level): at the top-left of its place's visible
-// part, on one line of its type across that part, on its place's ground
-// (`heldLine`) — its head, an address or a count, whole or no label at all; a
-// badge kept whole beside it or dropped; a first line cut to the room the two
-// leave, ending in its ellipsis, or dropped; never wrapped — the room across
-// its line read from its place's shape at the line's foot (`across`), the
-// narrowest row it meets, so it never leaves its place. Its place's foot
-// rising pushes it up under the line, a held label standing while its bottom
-// is in view; a held label meeting one set before it — the held label of the
-// region holding its place — stands just below it. A label with no hold —
-// the board's, a place the line names, a count — keeps the rule above.
-// A CONNECTION'S COUNT (foundations §2.1's register: "one connection drawn
-// per document pair with its count"; P44, which forbids a merged mark that
-// hides its count) names a pair of places and no shape, so every place's
-// shape blocks it; it stands on its stroke where its room meets none of them
-// (`onStroke`): the clear stretch nearest the stroke's middle, between its two
-// ends and inside the visible view. A TAIL'S LABEL (issue #132's design
-// decision: a link whose far document the plane draws nowhere leaves its near
-// end by a short tail "ending in that label") names its tail, and every
-// place's shape blocks it, its own document's among them, so it never stands
-// over a column; its room runs from the tail's end rightward to the first
-// shape its lines would meet, else to the visible view's edge (`roomRight`),
-// and the tail's stroke is held short of any other place's shape the same way.
-// Rules: FP-1, FP-2, FP-8, FP-10 (no state), FP-26.
+// ellipsis (F-9). P-RENDER hands the pass every label once every place's
+// shapes are drawn, in the order the places were drawn — the board, the
+// clusters, the account frames, the continuations' marks, the documents —
+// then each mid connection's count, and the pass sets each one only where,
+// wrapped at its spaces to its place's width by the canvas's measure, it lies
+// whole inside its place and inside the visible view — the viewport below
+// the one line, which stands opaque over the plane, so a label under it
+// would be hidden, or cut through at its edge — and meets no other place's
+// shape (a cluster's mark, a box, a continuation's mark) and no label set
+// before it. Through a crossfade a place drawn the weaker — an alpha below a
+// half — sets no label and blocks none, as the click takes the stronger
+// (P-LOD's `residueDepth`).
+// The hold (FP-26): a label naming a place the one line does not name is
+// handed its place's shape on screen (`Hold`), and where its first line
+// would stand above P-REG's HOLD gap below the line it stands held there
+// instead (`holdTop`, the corner's hold too, so the two stand level): at the
+// top-left of its place's visible part, on one line of its type across that
+// part, on its place's ground (`heldLine`) — its head, an address or a
+// count, whole or no label at all; a badge kept whole beside it or dropped;
+// a first line cut to the room the two leave, ending in its ellipsis, or
+// dropped; never wrapped — the room across its line read from its place's
+// shape at the line's foot (`across`), the narrowest row it meets, so it
+// never leaves its place. Its place's foot rising pushes it up under the
+// line, a held label standing while its bottom is in view; a held label
+// meeting one set before it — the held label of the region holding its place
+// — stands just below it. A label with no hold — the board's, a place the
+// line names, a count — keeps the rule above.
+// A connection's count (foundations §2.1's register; P44) names a pair of
+// places and no shape, so every place's shape blocks it; it stands on its
+// stroke where its room meets none of them (`onStroke`): the clear stretch
+// nearest the stroke's middle, between its two ends and inside the visible
+// view. A tail's label names its tail, and every place's shape blocks it,
+// its own document's among them, so it never stands over a column; its room
+// runs from the tail's end rightward to the first shape its lines would
+// meet, else to the visible view's edge (`roomRight`), and the tail's stroke
+// is held short of any other place's shape the same way.
+// Figures: a line box 1.2 em; the stronger side of a crossfade at alpha 0.5
+// and above; a meeting more than half a px each way.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-26.
 
 import { LABEL_MIN_PX, HOLD } from './register.js';
 
@@ -89,7 +88,7 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
  * @property {string} [weight] its face's weight; the regular where absent
  */
 
-/** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'doc' | 'connection' | 'tail' | 'pip'} LabelKind the place a label names; 'connection' a mid connection's count; 'tail' a tail's far end in words, or its count (issue #132); 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
+/** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'doc' | 'connection' | 'tail' | 'pip'} LabelKind the place a label names; 'connection' a mid connection's count; 'tail' a tail's far end in words, or its count; 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
 
 /**
  * @typedef {Object} Label — a label a drawing function hands the pass

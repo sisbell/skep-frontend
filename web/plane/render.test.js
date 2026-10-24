@@ -1,14 +1,10 @@
-// P-RENDER's test: the board's statements beneath its label (B1-S3) — at
-// the floor the residue statement, and while the shell's index reports
-// changes it could not place (the arm `unplaced`), that a document such a
-// change created is not shown, every count a lower bound meanwhile (issue
-// #212's design decision: a page that says nothing while the arm stands, or
-// draws a count exact under it, turns red); complete, nothing. WHERE NO BOARD
-// IS HELD (issue #215's design decision; FP-35) a whole frame, drawn on a
-// recording context, names none — no board's label, origin or count, no frame
-// of the account under the view, no string set, no ring at the walk's root —
-// where the same frames with the board held do (a page that draws board 1, or
-// frames the account the grid finds under the view, turns red).
+// P-RENDER's test, on a recording context: the board's statements beneath
+// its label (B1-S3) — the residue statement at the floor, that a document
+// the shell's index could not place is not shown while its arm stands, every
+// count a lower bound meanwhile, and nothing when complete (FP-23); and
+// where no board is held a whole frame names none — no board's label, origin
+// or count, no frame of the account under the view, no ring at the walk's
+// root — where the same frames with the board held do (FP-35).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';

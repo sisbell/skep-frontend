@@ -1,8 +1,9 @@
 // P-LAY — the article's lines and the columns they fold into, in world units
-// (the structure record §3.2 "P-LAY"). Layer 2, pure. The bars the canvas
-// draws for a document below reading scale stand where its article's glyphs
-// stand once T-LAYER mounts it, so the handoff swaps bars for text and no line
-// moves (law 8; foundations §2.4: "no character positions disagree", S1 Q7).
+// (the structure record §3.2). Layer 2, pure. State: none but a cache of a
+// pure function (`steps`). The bars the canvas draws for a document below
+// reading scale stand where its article's glyphs stand once T-LAYER mounts
+// it, so the handoff swaps bars for text and no line moves (law 8;
+// foundations §2.4; S1 Q7).
 // The bars are a layout of the article's own lines, never a guess at them:
 // T-ARTICLE's plan of the article — the head's lines, then each block's text
 // at its size with the inline pieces it carries — is wrapped here the way the
@@ -20,9 +21,9 @@
 // column may break before it, by its row's keep (`Row.keep`), and where in the
 // document's bytes it starts. No sign of the page's sets a line: a block's
 // others' count and a withheld run's mark stand in the column's edge.
-// THE FOLD (issue #15's design decision): every document is set at one line
-// length — the measure, MEASURE_CPL characters wherever the view holds them
-// (THE FIT below) — and one line height, in equal columns of COLUMN_LINES
+// The fold (FP-12): every document is set at one line length — the measure,
+// MEASURE_CPL characters wherever the view holds them (the fit below) — and
+// one line height, in equal columns of COLUMN_LINES
 // body line boxes (`columnsOf`) — a column filled to its depth from its first
 // line's top, the margin above a column's head dropped; a heading kept with
 // the first two lines after it; no paragraph line alone at a column's head or
@@ -30,25 +31,23 @@
 // a withheld run, a reference, an item not rendered and the chrome never
 // split; a kept unit deeper than a column broken at a line anyway, so no text
 // is dropped. The columns stand inside the document's room (P-PROJ's box) left
-// to right, then row by row (`fold`), each followed by ITS EDGE and a GUTTER
-// apart: THE EDGE (issue #151's design decision: "each gutter widens into its
-// column's edge and holds that column's counts and withheld marks") is the
-// room right of a column's text, EDGE em wide, where the column's signs stand
+// to right, then row by row (`fold`), each followed by its edge and a gutter
+// apart: the edge (FP-26) is the room right of a column's text, EDGE em
+// wide, where the column's signs stand
 // — its blocks' others' counts and its withheld runs' marks, each EDGE_GAP
 // past the text, level with its block's first line and never inside the text,
 // so a link's arrival breaks no line (A-254) and no face reflows it
 // (`edgeOf`). A document shorter than one column is one column of its own
 // length. Each column is padded by half a gutter, on its right past its edge,
 // so neighbouring padded columns meet and their union has one edge, the
-// document's (`outline`), its signs on its own ground. THE STEPS: every
+// document's (`outline`), its signs on its own ground. The steps: every
 // document is set at its room's standard size (`standardFs`, the largest em at
 // which the room holds STANDARD_GRID columns at the measure) until its columns
 // fill the room; only then is the whole document set smaller, at the first
 // step that holds its columns, each step at least doubling the room's capacity
 // (`stepAt`), so a growing draft re-sets rarely. Length reads as a count of
-// columns. THE FIT (issue #151's design decisions; FP-26: "margins compact
-// first, then the measure narrows in characters"): the measure the view sets
-// every line at (`fitFor`) — MEASURE_CPL wherever the view holds a column at
+// columns. The fit (FP-26): the measure the view sets every line at
+// (`fitFor`) — MEASURE_CPL wherever the view holds a column at
 // the reading size with both its margins beside it, the corner on its left,
 // whole, else compact, and the edge on its right; else, the corner compact,
 // the most characters the view holds beside them. It reads the view's width
@@ -71,10 +70,11 @@
 // Characters outside the monospace face (an ideograph, a fallback symbol)
 // are counted as one character each; the face sets them wider, and T-LAYER's
 // measure of the lines as rendered takes the place of these where they part.
-// Carries: the wireframe's §9 (`layoutOf`, the monospace metrics), its input
-// re-cut from the paragraphs to the article's plan.
-// Rules: FP-1, FP-2, FP-8, FP-10 (no state but a cache of a pure function),
-// FP-12, FP-26.
+// Figures: the measure 66 characters, a column 36 body line boxes, a gutter 2
+// em, an edge 6 em with its signs 0.5 em past the text, the standard grid 3
+// columns across by 4 down, the layout size 16 px and its line height 1.35
+// cut to the 1/64 px grid.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-26.
 
 import { DOC_W, DOC_H } from './projection.js';
 import { byteLength } from '../util.js';
@@ -251,7 +251,7 @@ export const MEASURE = Object.freeze({
 /** the borders, in px at LAY_FS: a mark's and a symbol's box, the sameness boundary */
 export const BORDER = Object.freeze({ box: 1, same: 2 });
 
-/** THE MEASURE at its full: every document's line wherever the view holds it (`fitFor`), the plane's and a reading scene's pane's alike, in characters of its face (the design's 60–66) */
+/** the measure at its full: every document's line wherever the view holds it (`fitFor`), the plane's and a reading scene's pane's alike, in characters of its face (FP-12) */
 export const MEASURE_CPL = 66;
 /** a column's depth, in the body's line boxes */
 export const COLUMN_LINES = 36;
@@ -321,7 +321,7 @@ export function cssMeasures() {
  */
 
 /**
- * THE FIT (see the head): the measure a view `vw` px wide sets every line
+ * The fit (see the head): the measure a view `vw` px wide sets every line
  * at — MEASURE_CPL where it holds a column at the reading size with both its
  * margins beside it: on its left the corner and its gap, on its right the
  * column's edge, and a gutter's room between them and the view's sides; the
@@ -523,8 +523,8 @@ export function wrap(row, cpl) {
 }
 
 /**
- * A withheld run's gap (see the head; F2.1-i: its bars take its true width):
- * the width of each of its lines, in characters of the body's face — one line
+ * A withheld run's gap (see the head; F2.1-i): the width of each of its
+ * lines, in characters of the body's face — one line
  * for each measure's count of its positions, the last its remainder, one line
  * of one position at the least. Its bars, and at reading scale its gap, which
  * holds the run's face only where the face fits (T-ARTICLE's).
@@ -744,7 +744,7 @@ export function outlineRects(f) {
 }
 
 /**
- * The document's one edge (issue #15: no frame or rule around a column): the
+ * The document's one edge, no frame or rule around a column (FP-12): the
  * polygon around its padded columns, clockwise from its top-left, in world
  * units relative to the room — the rows share their left edge, each as wide
  * as the one above it or narrower, the last column, where shorter, a step.
@@ -908,9 +908,8 @@ export function posAt(f, x, y) {
  */
 
 /**
- * The view's window over a fold (issue #141's design decision: the one line's
- * strip marks it over a document the walk keeps in view): in each column the
- * view meets, the lines whose boxes meet it — a line held by the position it
+ * The view's window over a fold: in each column the view meets, the lines
+ * whose boxes meet it — a line held by the position it
  * opens at, a line of a stretch the fold holds no line for estimated as
  * `placeOf` places those positions, a body line for each measure's count of them —
  * the first position and the last of them; and whether the view reaches the
@@ -951,9 +950,8 @@ export function windowIn(f, view) {
 }
 
 /**
- * Where the paging key continues at reading scale (issue #15's design
- * decision: "the paging keys continue at the next column's top"): with the
- * view's centre over a column whose foot the view already shows (PageDown),
+ * Where the paging key continues at reading scale: with the view's centre
+ * over a column whose foot the view already shows (PageDown),
  * or whose top it already shows (PageUp), the next column's top, or the
  * previous one's, brought to the top of the view, centred across; none where
  * the column runs past the view that way — the paging pages within it — and
@@ -973,15 +971,13 @@ export function pageTarget(f, view, dir) {
 }
 
 /**
- * Where a passage read in one fold of a document stands in another (issue
- * #15: "the passage in view keeps its place and size on screen"): the point
- * `p` of the first, in world units relative to the room, read as a position
- * and as its offset from the line holding it (`posAt`, `placeOf`); that offset
- * from that position's line in the second, at the second's size; and the
- * factor the camera's scale takes for the text to keep its size on screen.
- * Where the second fold is another version's (issue #154's design decision:
- * a version move keeps the held passage's screen line), `pair` names the
- * position of the first whose line the point is read from and the position
+ * Where a passage read in one fold of a document stands in another (FP-8):
+ * the point `p` of the first, in world units relative to the room, read as a
+ * position and as its offset from the line holding it (`posAt`, `placeOf`);
+ * that offset from that position's line in the second, at the second's size;
+ * and the factor the camera's scale takes for the text to keep its size on
+ * screen. Where the second fold is another version's (FP-22), `pair` names
+ * the position of the first whose line the point is read from and the position
  * of the second whose line takes it — their positions being two texts'.
  * @param {Fold} a the fold the passage was read in
  * @param {Fold} b the fold it is set in now

@@ -1,38 +1,19 @@
 // P-LABEL's test: every label set at its rule's size and never below the
-// floor; an address or a count never cut — a place too narrow for one leaves
-// it out, a count wrapped at its spaces; a first line alone cut, ending in
-// its ellipsis, or wrapped down to its place's bottom; a part past its
-// place's bottom left out with every part after it; no label meeting another
-// place's shape or a label set before it; through a crossfade the weaker
-// side setting nothing and blocking nothing; and, over many random frames,
-// every line set inside its place and the viewport, no two lines meeting. A
-// CONNECTION'S COUNT: its pair named alike from either end; on its stroke at
-// the middle where nothing meets it there, else in the clear stretch nearest
-// the middle, never past the stroke's ends nor out of the visible view, a
-// place drawn the weaker blocking nothing, the middle where nothing is clear
-// and the pass then leaving it out; and, over many random strokes, wherever
-// a stroke has room clear of every place, the pass sets the count there. A
-// TAIL'S ROOM (issue #132): from a point rightward to the first shape drawn
-// the stronger its band meets, none where one holds the point, else to the
-// visible view's edge, a place named left out, a shape drawn the weaker or
-// touching the band by half a px no bound (a mutant that stops at a shape
-// above the band, or never stops, turns red); a tail's label set in that
-// room meeting nothing, its address whole and its words cut to it. THE HOLD
-// (issue #169's design decision: "Held below the line"): a sign holds at its
-// place's top while that stands below the hold, else at the hold, pushed up
-// under the line by its place's foot; a label handed its place's shape whose
-// first line would rise above the hold stands held — one line at the hold, at
-// its place's visible part's top-left, on its place's ground, its address
-// first, its badge whole or dropped, its words cut then dropped, no label
-// where the address does not fit (a mutant that wraps it, cuts the address,
-// or drops the badge before the words turns red); pushed up under the line by
-// its place's foot while its bottom is in view, left out wholly under it; one
-// inside a region's held label standing just below it (a mutant that sets
-// the two on one line turns red); a label with no hold — a place the line
-// names — left out under the line as before (one that holds it turns red);
-// its room across the narrowest row its line meets; and, over many random
-// frames, every held line inside its place, its bottom in view, meeting no
-// other place's shape and no other line.
+// floor; an address or a count never cut, a first line cut or wrapped down
+// to its place's bottom, a part past the bottom left out with every part
+// after it; no label meeting another place's shape or a label set before it,
+// the weaker side of a crossfade setting and blocking nothing; a connection's
+// count named alike from either end and standing on its stroke in the clear
+// stretch nearest the middle, between the ends and inside the visible view;
+// a tail's room rightward to the first shape its band meets, and its label
+// set in it; the hold (FP-26) — a sign held at its place's top or at the
+// hold and pushed up by its place's foot, a held label one line at the
+// top-left of its place's visible part, its address first, its badge whole
+// or dropped and its words cut then dropped, one inside a region's held label
+// just below it, a label with no hold left out under the line, its room the
+// narrowest row its line meets; and, over many random frames, every line and
+// every held line inside its place and the view, meeting no other place's
+// shape and no other line.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, holdTop, heldLine, across, LINE_BOX } from './labels.js';
@@ -307,7 +288,7 @@ test('a tail\'s label set in its room meets no shape: its address whole, its wor
   assert.deepEqual([narrow.set.length, narrow.out[0].reason], [0, 'width'], 'fifty px: the address does not fit — left out, never cut');
 });
 
-// ---- the hold (issue #169's design decision: "Held below the line") ---------------------------------------------------
+// ---- the hold (FP-26) ------------------------------------------------------------------------------------------------
 
 /** the visible view below a one line 30 px deep, and the hold's height below it */
 const SEEN = { x: 0, y: 30, w: 1000, h: 770 }, HELD_AT = SEEN.y + HOLD.gap;

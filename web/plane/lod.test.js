@@ -1,8 +1,7 @@
 // P-LOD's test: S3's bands — the text bands at the plane's standard type —
-// and S1's mount thresholds below the glyph band;
-// the continuation a scale draws as one mark — at HOME the first (foundations
-// §2.1: the oldest 48 whole, the rest one residue), crossfading through the
-// far band, the one past the sound depth at any scale.
+// and S1's mount thresholds below the glyph band; the continuation a scale
+// draws as one mark — at HOME the first (foundations §2.1), crossfading
+// through the far band, the one past the sound depth at any scale.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { lodOf, residueDepth, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, clusterGrain } from './lod.js';

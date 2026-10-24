@@ -1,92 +1,26 @@
-// O-FACES's test, on a stand-in of the overlay host's element: a `withheld`
-// refusal of a read's document consult shows THE DOCUMENT-LEVEL WITHHELD
-// FACE (B1 §1's A-170; R56: existence and owner, never bytes) — the document
-// named in the withheld box's words, "withheld · ⟨owner⟩" — the words the
-// plane's box, the corner and the mirror say — its
-// owner by the one owner rule (the seat above a sub-account, never the
-// sub-account), the entitlement arm for that owner and this reader beneath,
-// for a signed-in reader, a guest whose device holds a key for this board and
-// a guest with none — the owner-grant default, C-36's key-present default and
-// R56's key-absent default; no token left unfilled, none of C-39's words,
-// which are a link address's alone, and no act but its head's (issue #179's
-// design decision): its address before its words where the face stands away
-// from the document's place, whole the first time a session shows them and
-// compact the next, its head opening the rest and folding it, a change of the
-// page's class a new session (a mutant that always shows them whole, never
-// starts a new session, or drops the address turns red); of the document the
-// board names in the rejection's `site.addr`, never another the act named (a
-// mutant that takes the act's turns red), named by the act's caption and said
-// so (a mutant that drops it turns red); C-67's pointer beneath the arm where
-// the edition claims on the document decide one, its act the LEAP handed in,
-// the claims read once before the face shows, nothing standing while they
-// are out (a mutant that shows the face before they answer turns red). Every
-// face stating a withheld origin — the document's own words and a run's face
-// whole — carries C-67's clause in the same words beneath the arm (issue
-// #186): the QUOTING sibling a line, with or without a LEAP (a mutant that
-// shows the document's pointer alone turns red); "edition claims not read"
-// where the board refused the lookup another way or did not answer it (a
-// mutant that leaves the place blank turns red); nothing where it refused the
-// lookup as withheld from the reader; and the description a landing at the
-// document says carries it. A mutant that fills C-39 with
-// the owner, takes the owner from the document's address, drops the arm, or
-// decides it on the session alone turns red. A withheld run's face whole
-// (D5 K-7) is its placeholder's record: the head naming its origin's owner,
-// the arm for that owner and each reader, then C-67's clause as the origin's
-// edition claims decide it — nothing where none stands, the QUOTING sibling a
-// line, the pointer a button carrying the claim it follows, the face's one
-// act, the LEAP to that claim's home — none of C-39's words, at the run's own
-// positions, taking no focus, the status region saying it whole, the clause
-// with it (a mutant that drops the clause, offers an act beside the pointer,
-// takes the focus, or says no clause turns red); where the model holds no
-// answer to its origin's claims, they are read before it shows (a mutant that
-// shows it first turns red). Against the FAKE PORT,
-// "who wrote this?" and "who uses this?" asked of a document the reader may
-// not read show the document-level face, naming the document they asked of,
-// each named by its card's caption (a mutant that drops it turns red).
-// A jump reading (issue #136) says so in its own words at its site, heard
-// through the status region, offering no act and named apart from a notice's
-// face; it ends where it still stands, and a face shown in its place stands
-// on (a mutant that ends whatever stands turns red). A jump reaching (FP-25)
-// says so in its own words at the act's site, heard through the status
-// region, offering no act; its dismissal — Esc's — abandons the jump, and an
-// overlay shown in its place does not (a mutant that abandons on a
-// replacement, or never, turns red). At the line's sign-in act a death's face
-// says its arm's words, the line's own — "signed out" the page's own close's
-// alone — and no refusal of a session the shell no longer holds reads
-// "signed out" (issue #175: a mutant that says the sign-out's words for the
-// mode or the retirement arm, or for `session_ended`, turns red). At a
-// COVERED document while the ending stands (issue #177) the withheld face
-// says the one line's words for that ending in the arm's place — the
-// sign-out's, or a refused re-acquire's leading the guest line — and offers
-// the line's sign-in act, faced where it stood; with no ending standing, the
-// arm as anywhere (a mutant that keeps the entitlement arm, or offers no act,
-// turns red); and so at a document whose text the page holds as the ending
-// stands (issue #179's first case: a mutant that reads the cover alone turns
-// red). A WALK'S MOMENT IS THE WALK'S STATE (issue #182), on a page of
-// stand-ins against the FAKE PORT: every way the page ends an overlay — Esc,
-// an empty click's dismissal, a navigation act, another overlay — folds it
-// into its segment of the one line, said, its typed text kept, the shell told
-// nothing (a mutant whose end does not fold, or folds without the text,
-// turns red); the segment's act unfolds it as it was left, over the view it
-// was left over — a jump back with its trail entry where the camera stands
-// away, none where it stands there — the focus on its first words, the walk's
-// landing taking none (a mutant that keeps no text turns red); it is drawn
-// by its kind, "no" answering false, a label box's empty field its default
-// and one offering none flagged and never sent (a mutant answering yes alone
-// turns red); a refusal of its answer is drawn inside its face, and
-// `no_such_moment` ends it; only its own cancel cancels; its walk's next
-// moment opens as the last was left, save where the last's field holds the
-// caret; one raised over a card or a caret opens folded (a mutant that never
-// opens one folded turns red); and an unfold is an act, so a jump in the air
-// faces nothing over it (a mutant whose unfold at its view counts no act
-// turns red). WHERE NO BOARD IS HELD (issue #215; FP-35) why is one entry —
-// no adapter, the list empty, the list refused, "try again" only where the
-// board did not answer — and an act needing a board answers at its site with
-// a face of those words and what still works: at the empty list that
-// beginning a notebook isn't built yet; at a list refused retry-class "try
-// again", which reads the list again, the face shown again and said where it
-// is refused again, gone where a board is found (a mutant that offers a retry
-// where none may tell, or whose press is silent, turns red).
+// O-FACES's test, on a stand-in of the overlay host's element and against
+// the fake port: the document-level withheld face a `withheld` refusal shows
+// (A-170; R56) — the withheld box's words naming the owner by the one owner
+// rule, the entitlement arm for that owner and each reader beneath, its
+// address before its words away from the document's place, whole the first
+// time a session shows it and compact the next, of the document the board
+// names in `site.addr`, named by the act's caption (FP-26); C-67's clause
+// beneath the arm in the same words on the document's face and a run's — the
+// pointer, the quoting sibling, "edition claims not read", nothing where the
+// lookup was refused as withheld — the claims read once before either shows
+// (FP-33); a withheld run's face whole as its placeholder's record, at the
+// run's positions, taking no focus; "who wrote this?" and "who uses this?"
+// refused `withheld` showing that face; a jump reading and a jump reaching
+// (FP-25); a death's face saying its arm's words, "signed out" the page's own
+// close's alone (FP-28); the withheld face at a covered document while the
+// ending stands saying the ending's words and offering sign-in (FP-29); a
+// walk's moment as the walk's state (FP-28) — folded by every way the page
+// ends an overlay with its typed text kept, unfolded over the view it was
+// left over, drawn by its kind, its refusal drawn inside it, only its own
+// cancel cancelling, its walk's next moment opening as the last was left,
+// one raised over a surface of the reader's opening folded, an unfold an act;
+// and where no board is held, why as one entry and the no-board face with
+// what still works (FP-35).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as FACES from './faces.js';
@@ -685,8 +619,7 @@ test('the walk\'s next moment opens as the last was left: folded, its segment up
     FACES.moment(ask('m-whole-2', 'whole', 'which device is this?'));
     assert.deepEqual([HOST.currentState()?.id, segment('whole')], ['moment:m-whole-2', undefined], 'whole, in the last one\'s place, nothing folded');
     HOST.dismiss();
-    // the last one's field holding the caret (FP-20: "A field the reader types in keeps the caret through every move the page
-    // makes"): the next opens folded, the last one's face standing with its text and its caret
+    // the last one's field holding the caret (FP-20): the next opens folded, the last one's face standing with its text and its caret
     FACES.moment(ask('m-caret-1', 'caret', 'which devices are lost?'));
     page.kid('[data-answer]').value = 'the old ph';
     const caret = page.doc.activeElement;
@@ -766,7 +699,7 @@ test('the withheld face at a COVERED document — one the class the page left re
       assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], [signIn, at], `${what}: its act faces what the line's sign-in faces, where the face stood`);
       HOST.dismiss();
     }
-    // a document read after the page's own close, then withheld: its text on screen, access changed after it was read (issue #179's first case)
+    // a document read after the page's own close, then withheld: its text on screen, access changed after it was read
     readAs(READERS[0]);
     REC.sessionDied({ arm: 'closed' });
     const Z = '1.0.1.0.14';

@@ -1,9 +1,8 @@
-// O-SELECTION — THE SELECTION and its acts in fixed slots (the structure
-// record §3.2 "O-SELECTION"; foundations §3.1; D5 §1.6). Layer 2.
-// ENGINE-BOUND. State: VIEW — the selection — THE ONE OWNER; T-LAYER reads
-// it through the reader handed in.
-// THE SELECTION IS THE SPAN (R11, MUST; foundations §3.1): a byte range of
-// one document, `{addr, pos, width}` in V-positions, made in one continuous
+// O-SELECTION — the selection and its acts in fixed slots (the structure
+// record §3.2; foundations §3.1; D5 §1.6). Layer 2. ENGINE-BOUND. State
+// (FP-10): the selection; T-LAYER reads it through the reader handed in.
+// The selection is the span (R11; foundations §3.1): a byte range of one
+// document, `{addr, pos, width}` in V-positions, made in one continuous
 // gesture — a drag over the mounted text at reading scale (§2.4), read back
 // from the platform's own selection through T-LAYER's mapping as the drag
 // ends and as it changes — or by a key: a click on a block and Enter at the
@@ -19,24 +18,22 @@
 // text, in a reading scene's pane or an overlay's text, which stands as they
 // made it. The acts take the span exactly: "who wrote this?" and "who uses
 // this?" ask over its bytes; "follow" and "read side by side" count only the
-// links DRAWN at the span (`LK.shownAt`), inert where none, asking which only
-// at two or more and naming the far document at one. The slots, in this
-// order and never moved: annotate · quote · who
-// wrote this? · who uses this? · see the links · follow · read side by side ·
-// link to… — each showing its chord (D5-F8); annotate, quote and "link to…"
-// are INERT in this lane with their reason (B8's and the editor's lanes —
-// seams): an inert slot keeps its place and gives its reason when activated,
-// at the slot and through the one status region (P47; the focus record's
-// rule 14). THE SELECTION'S ACTS NEVER TAKE THE FOCUS, however the selection
-// was made (D5 §4 rule 4; rule 15): K-8 selects and extends from the walk's
-// element and leaves the focus there; the card is reached by its chords or
-// by Tab, and each act's card takes the focus as the act was made — a chord
-// or Enter on the slot, never a click (rule 16). A selection made is said
-// through the status region (D4). Dismissed with the selection; an act's
-// card taking the acts' place is a replacement, not a dismissal, and the
-// selection stands under it. The focus and the mirror stay at block grain
-// (D5-F11, RULED: the assistive path is met at span grain).
-// Carries: the wireframe's §16 `selectSpan`, §18 `selectionActs`.
+// links drawn at the span (LK's `shownAt`), inert where none, asking which
+// only at two or more and naming the far document at one. The slots, in this
+// order and never moved: annotate · quote · who wrote this? · who uses this?
+// · see the links · follow · read side by side · link to… — each showing its
+// chord (D5-F8); annotate, quote and "link to…" are inert, each with its
+// reason (`INERT_REASON`): an inert slot keeps its place and gives its reason
+// when activated, at the slot and through the one status region (P47; the
+// focus record's rule 14). The selection's acts never take the focus,
+// however the selection was made (D5 §4 rule 4; rule 15): K-8 selects and
+// extends from the walk's element and leaves the focus there; the card is
+// reached by its chords or by Tab, and each act's card takes the focus as the
+// act was made — a chord or Enter on the slot, never a click (rule 16). A
+// selection made is said through the status region (D4). Dismissed with the
+// selection; an act's card taking the acts' place is a replacement, not a
+// dismissal, and the selection stands under it. The focus and the mirror
+// stay at block grain (D5-F11).
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20.
 
 import * as HOST from './host.js';
@@ -122,7 +119,7 @@ const SLOTS = /** @type {const} */ ([
   ['linkto', 'D5.link-to', ''],
 ]);
 
-/** the inert slots' reasons (the seams), by slot */
+/** the inert slots' reasons, by slot */
 const INERT_REASON = /** @type {Record<string, string>} */ ({ annotate: 'L.seam.annotate', quote: 'L.seam.quote', linkto: 'L.seam.link-to' });
 
 /**
@@ -190,7 +187,7 @@ export function act(which, byKey = false) {
   if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) SCENE.open(addr, drawn[0].farAt || drawn[0].far, { posA: pos, widthA: width, posB: LK.farPos(drawn[0]) }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
 }
 
-/** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3), named as its tail and its mirror item name it (LK's `farLabel`; issue #132); it takes the focus on its first row where a key asked */
+/** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3), named as its tail and its mirror item name it (LK's `farLabel`); it takes the focus on its first row where a key asked */
 function which_(/** @type {import('../links/links.js').Shown[]} */ drawn, /** @type {'follow' | 'scene'} */ what, /** @type {boolean} */ byKey) {
   const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.link.owner || '')} · ${esc(LK.farLabel(s))}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */

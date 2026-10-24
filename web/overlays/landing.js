@@ -1,38 +1,34 @@
-// O-LAND — A LANDING'S LINE AND ITS RUNS' LABELS (issue #153's design
-// decision: "Mark what's held and say the rest in a line"; issue #158's: each
-// run labelled at the text's edge). Layer 2. ENGINE-BOUND. State: VIEW — the
-// state its elements were last written from (the one owner of `#landing`'s
-// DOM and of the labels' layer, FP-10).
+// O-LAND — a landing's line and its runs' labels (FP-21). Layer 2.
+// ENGINE-BOUND. State (FP-10): the state its elements were last written
+// from — the one owner of `#landing`'s DOM and of the labels' layer.
 // Where a carried or followed passage lands and the text landed in holds
 // only part of it, all of it in pieces, or no answer told, or holds it in
 // several runs (N-GO's `landing`; BM-HELD's line and labels), one line stands
-// AT THE TEXT'S EDGE BESIDE THE LANDING: past the right edge of the part of
+// at the text's edge beside the landing: past the right edge of the part of
 // the block holding the line of the run the landing stands at, its top level
 // with that line's (BM's `leaveAt`, the point a beam leaves the text by) —
 // where that text is not laid out, beside its document's box — stacked
 // beneath the standing overlay where the two would meet, held inside the
 // visible view's height, and never moved left onto the text: where the view
 // leaves it less room than its widest, it narrows into the room there. Where
-// the passage stands in several runs (FP-21: "in several runs, each run
-// labelled"), the line's words are the label of the run the landing stands
-// at — and every other run's label stands at the text's edge beside its own
-// first line, by the same rule, in the labels' layer (`#pieces`, hidden from
-// assistive technology, the mirror carrying every label — N-WALK's): the
-// labels that would stack, in one column's edge, merge into one (issue
-// #158's design decision: "Labels that would stack merge into one"; BM-HELD's
-// `mergedLabel`; `stacks`), the line taking the label of its group; a label
-// whose run's line stands out of the visible view, or whose room — to the
-// next column's text, else its document's box's edge — is narrower than its
-// floor, stands nowhere (FP-26: never on another document's ground or on
-// ink). The line is no overlay: O-HOST holds one at a time, and a card opened
-// at the landing would take its place while the outline stands. It is redrawn
-// from state (FP-13): written again where what the landing says changes — its
-// words, the run it stands at, its offers as their reads answer — and placed
-// on each dirty frame; gone with the arrival (N-GO's), and hidden while the
-// reading scene stands over the plane, out of the page's order (N-FOCUS's
-// `cover`). Its acts are native buttons, in the Tab ring after the focused
-// document's corner (D5 §4 rule 5): "next piece" and "previous piece", where
-// the passage stands in several runs, each showing its chord (Mod+G,
+// the passage stands in several runs (FP-21), the line's words are the label
+// of the run the landing stands at — and every other run's label stands at
+// the text's edge beside its own first line, by the same rule, in the labels'
+// layer (`#pieces`, hidden from assistive technology, the mirror carrying
+// every label — N-WALK's): the labels that would stack, in one column's edge,
+// merge into one (BM-HELD's `mergedLabel`; `stacks`), the line taking the
+// label of its group; a label whose run's line stands out of the visible
+// view, or whose room — to the next column's text, else its document's box's
+// edge — is narrower than its floor, stands nowhere (FP-26). The line is no
+// overlay: O-HOST holds one at a time, and a card opened at the landing would
+// take its place while the outline stands. It is redrawn from state (FP-13):
+// written again where what the landing says changes — its words, the run it
+// stands at, its offers as their reads answer — and placed on each dirty
+// frame; gone with the arrival (N-GO's), and hidden while the reading scene
+// stands over the plane, out of the page's order (N-FOCUS's `cover`). Its
+// acts are native buttons, in the Tab ring after the focused document's
+// corner (D5 §4 rule 5): "next piece" and "previous piece", where the
+// passage stands in several runs, each showing its chord (Mod+G,
 // Mod+Shift+G: N-KEYS'), the step among them (N-GO's `step`; FP-21); "read
 // side by side" with where the passage came from, where that text holds it
 // whole; "read version ⟨k⟩, the last that holds it" at a published landing,
@@ -42,6 +38,9 @@
 // first. A rebuild keeps the focus on the act bearing the same key (N-FOCUS's
 // `keep`), and a line gone while its act held the focus hands it to the
 // walk's element (`handOff`, the app's).
+// Figures: a label's face 10 px on 13 px lines, 6 px a character, standing
+// in no room narrower than four characters; the line's face 16 px lines, 6.6
+// px a character, its acts 26 px, its width at most 420 px.
 // Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-21, FP-26.
 
 import * as GO from '../nav/go.js';
@@ -199,8 +198,7 @@ function edgeAt(g, addr, pos) {
 export const heightOf = (words, room, face = LABEL) => Math.max(1, Math.ceil((words.length * face.ch) / Math.max(face.ch, room))) * face.lh;
 
 /**
- * The runs whose labels would stack (issue #158's design decision: "Labels
- * that would stack merge into one"): in each column's edge — one left edge,
+ * The runs whose labels would stack: in each column's edge — one left edge,
  * half a px either way — the runs in their tops' order, each joining the
  * group above it where its top stands inside the room that group's label
  * takes, a group's taking the most any of its runs' would. Pure: what the

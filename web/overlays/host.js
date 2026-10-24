@@ -1,105 +1,91 @@
-// O-HOST — one act-overlay at a time (the structure record §3.2 "O-HOST";
-// foundations §3.1: every control is chrome an ACT conjures and its end
-// dismisses — an HTML layer positioned over the plane at the act's site,
-// following its place as the camera moves, gone with Esc, the next act or
-// its own completion; never a fixed region). Layer 2. ENGINE-BOUND.
-// State: VIEW — the current overlay, and the opening still reading with the
-// count of the acts made on the chrome (the one owner). THE OPENING: chrome
-// that opens on its reads — the reading scene, the versions list, the
-// provenance cards, the anatomy card, a face stating a withheld origin whose
-// clause's reads are out (O-FACES; issue #186) — opens through `opening`, one
-// rule for all of them: as its reads begin it is the chrome's next act, and
-// its answer shows only where no act was made on the chrome while it read —
-// an overlay shown (`show`, whatever conjures it: an act's card or its
-// rebuild by its own act, a face, a walk's moment), a dismissal (`dismiss`),
-// the next opening, or the end of the opening alone, what stands staying
-// (`endOpening`: Esc's innermost thing, N-KEYS'; an empty click's,
-// APP-INPUT's; the LEAP box opened, N-LEAP's; a navigation act as it is made,
-// N-GO's, before it dismisses what stands as its camera leaves) — so chrome
-// asked for at a place the person
-// has left never opens over the next one, nor over chrome made after it was
-// asked, and Esc closes what the person sees, never an opening they cannot.
-// An overlay's own completion is no act on the chrome (`complete`): a jump's
-// reading face taken down as its read answers ends no opening asked while it
-// stood, whose answer then shows where the camera is (FP-25; issue #171: "a
-// card ends when the camera leaves its place, not when a read lands").
-// Until it shows or ends it is `pending`; its reads may ask whether it
-// `stands`, so one that has ended asks no more. An opening begins in the act
-// that asks for it, nothing awaited first: the page imports every module it
-// acts through as it loads, the app alone loading its gate's by `import()`
-// (S-22 (a)), for an act made while a module loaded would end no opening, and
-// the chrome would open over the place that act reached. THE FOCUS is N-FOCUS's
-// (FP-20; D5 §4 rule 4): an overlay takes the focus only where a KEY made
-// the act that opened it — `takeFocus` is that act's `byKey` and nothing
-// else decides it — and takes it on its FIRST ACT, never the dismiss (rule
-// 13): a card's first act, a list's current row where one is current (the
-// versions list's member; `first` names it), else its first row; a walk's
-// moment, which takes it whatever made it stand (K-80), its first control as
-// it arrives and its first words as it is unfolded (O-FACES'; issue #182's
-// design decision: "Unfolding moves focus to the face's first words"). The
-// dismiss is a native button placed after the content,
-// reached by Tab and pressed by Enter or Space (rule 14), its title drawn
-// for the platform (rule 19). An overlay REBUILT by its own act (`show` with
-// the same id — a lens, the switch, show more) keeps the focus on the control
-// bearing the same `data-run` (rule 11); one REPLACING another whose control
-// held the focus takes it on its first act, and a FACE replacing it never
-// takes it — the focus returns to the replaced overlay's opener with the face
-// standing (rule 11). The opener is the controller's one memory: the element
-// the focus stood on as the first overlay of a chain opened, read before the
-// markup written here removes a control of this host that held it; the
-// dismissal hands the focus back through the controller — to that element,
-// or to the walk's element where it no longer takes the focus (rule 16).
-// AN OVERLAY'S END (`onDismiss`) runs while the element still holds what it
-// wrote — a dismissal's before the element is emptied, a replacement's before
-// the next is written — so an end that reads it reads it there: a walk's
-// moment folds with the text typed in its field (O-FACES'; issue #182).
-// A FIELD HOLDING THE CARET (#171's rule 2: "A landing never closes a field
-// the reader is typing in"; FP-20): while the overlay's own field holds the
-// platform's focus — a moment's answer being typed (`typing`) — no face takes
-// its place: a face shown then is said through the status region, a told one
-// too, for no focus moves to tell it, and the overlay stands with its text and
-// its caret, as N-GO's departure leaves it standing.
-// THE DIALOG'S NAME (D5): each overlay's own caption — its `.label`, a face's
+// O-HOST — one act-overlay at a time (the structure record §3.2; foundations
+// §3.1): an HTML layer positioned over the plane at the act's site, following
+// its place as the camera moves, gone with Esc, the next act or its own
+// completion, never a fixed region. Layer 2. ENGINE-BOUND. State (FP-10):
+// the current overlay, and the opening still reading with the count of the
+// acts made on the chrome.
+// The opening: chrome that opens on its reads — the reading scene, the
+// versions list, the provenance cards, the anatomy card, a face stating a
+// withheld origin whose clause's reads are out (O-FACES; FP-33) — opens
+// through `opening`, one rule for all of them: as its reads begin it is the
+// chrome's next act, and its answer shows only where no act was made on the
+// chrome while it read — an overlay shown (`show`, whatever conjures it), a
+// dismissal (`dismiss`), the next opening, or the end of the opening alone,
+// what stands staying (`endOpening`: Esc's innermost thing, an empty click's,
+// the LEAP box opened, a navigation act as it is made) — so chrome asked for
+// at a place the person has left never opens over the next one, nor over
+// chrome made after it was asked, and Esc closes what the person sees, never
+// an opening they cannot. An overlay's own completion is no act on the chrome
+// (`complete`): a jump's reading face taken down as its read answers ends no
+// opening asked while it stood, whose answer then shows where the camera is
+// (FP-25). Until it shows or ends it is `pending`; its reads may ask whether
+// it `stands`, so one that has ended asks no more. An opening begins in the
+// act that asks for it, nothing awaited first: the page imports every module
+// it acts through as it loads, the app alone loading its gate's by
+// `import()` (S-22 (a)), for an act made while a module loaded would end no
+// opening, and the chrome would open over the place that act reached.
+// The focus is N-FOCUS's (FP-20; D5 §4 rule 4): an overlay takes the focus
+// only where a key made the act that opened it — `takeFocus` is that act's
+// `byKey` and nothing else decides it — and takes it on its first act, never
+// the dismiss (rule 13): a card's first act, a list's current row where one
+// is current (`first` names it), else its first row; a walk's moment, which
+// takes it whatever made it stand (K-80), its first control as it arrives and
+// its first words as it is unfolded (O-FACES'). The dismiss is a native
+// button placed after the content, reached by Tab and pressed by Enter or
+// Space (rule 14), its title drawn for the platform (rule 19). An overlay
+// rebuilt by its own act (`show` with the same id) keeps the focus on the
+// control bearing the same `data-run` (rule 11); one replacing another whose
+// control held the focus takes it on its first act, and a face replacing it
+// never takes it — the focus returns to the replaced overlay's opener with
+// the face standing (rule 11). The opener is the controller's one memory: the
+// element the focus stood on as the first overlay of a chain opened, read
+// before the markup written here removes a control of this host that held
+// it; the dismissal hands the focus back through the controller — to that
+// element, or to the walk's element where it no longer takes the focus (rule
+// 16). An overlay's end (`onDismiss`) runs while the element still holds
+// what it wrote — a dismissal's before the element is emptied, a
+// replacement's before the next is written — so an end that reads it reads
+// it there: a walk's moment folds with the text typed in its field
+// (O-FACES'). A field holding the caret (FP-20): while the overlay's own
+// field holds the platform's focus — a moment's answer being typed
+// (`typing`) — no face takes its place: a face shown then is said through the
+// status region, a told one too, for no focus moves to tell it, and the
+// overlay stands with its text and its caret, as N-GO's departure leaves it
+// standing.
+// The dialog's name (D5): each overlay's own caption — its `.label`, a face's
 // own words — by `aria-labelledby`; a string per kind from ST where no
-// caption stands. A FACE THAT ANSWERS AN ACT, captioned by the act's own
+// caption stands. A face that answers an act, captioned by the act's own
 // words (O-FACES' `caption`), is named by that caption and described by its
-// words (`aria-describedby`), so it is met as the act's answer (issue #179's
-// design decision: "Announce each face as the act's answer, tied to the act
-// in markup"). A face a key or the system raised is heard through the one
-// status region without the focus moving (D4; K-58), its caption before its
-// words — save one whose words the landing that met it says where the focus
-// lands (`told`: the dead end's face at its landing, a follow's at a
-// withheld document's place, N-WALK's description; issues #153, #179), which
-// is heard there once.
+// words (`aria-describedby`), so it is met as the act's answer. A face a key
+// or the system raised is heard through the one status region without the
+// focus moving (D4; K-58), its caption before its words — save one whose
+// words the landing that met it says where the focus lands (`told`; N-WALK's
+// description), which is heard there once.
 // Each act is told whether a key ran it by the controller's one reading:
 // Enter on its control, taken here before the platform's click, or the click
 // the platform makes from a key (Space on a button), which carries no click
 // count — a pointer's carries its count.
-// A pan or a zoom is never "the next act": the overlay follows its anchor —
+// A pan or a zoom is never the next act: the overlay follows its anchor —
 // the element the act was made at while it stands in the page, or while an
 // element bearing its id does (the same control, redrawn from state by its
 // owner, FP-13); else the place named beside it, a span's bytes or a world
 // point, which still stands once T-LAYER has rebuilt or taken down the
 // article the element stood in, or rewritten its corner. An overlay stands
 // at the viewport's corner only where its anchor names nothing that stands
-// (`place`). A JUMP'S FACE — its reading, its reaching, the failure it met
-// — shows where the camera is (FP-25): its anchor names the document it
-// stands at (`sign`), and while that document's region is out of the visible
-// view (T-LAYER's `inView`) the face is hidden on the plane and the one line
+// (`place`). A jump's face — its reading, its reaching, the failure it met —
+// shows where the camera is (FP-25): its anchor names the document it stands
+// at (`sign`), and while that document's region is out of the visible view
+// (T-LAYER's `inView`) the face is hidden on the plane and the one line
 // carries its words in its place (`aside`, read through the reader the app
 // hands L-LINE); it is said through the status region as it is shown,
 // wherever it stands.
-// A CHANGE OF THE PAGE'S CLASS (issue #177's design decision: "Cards on
-// covered material close onto the cover"; FP-23, FP-29): what the host wrote
-// was made from what the class the page left could read, so the change takes
-// it down at once (`classChanged`) — the opening still reading ended, its
-// answer showing nothing, and the standing overlay dismissed, the focus
-// returning through the controller — save a jump's reading or reaching face,
-// whose read the new class answers, and a moment's face, which is the
-// shell's.
-// Carries: the wireframe's §18 `overlay` object, `anchorOfSpan`.
-// Rules: FP-1, FP-2, FP-9, FP-10 (its own DOM alone), FP-13, FP-20, FP-25,
-// FP-29.
+// A change of the page's class (FP-23, FP-29): what the host wrote was made
+// from what the class the page left could read, so the change takes it down
+// at once (`classChanged`) — the opening still reading ended, its answer
+// showing nothing, and the standing overlay dismissed, the focus returning
+// through the controller — save a jump's reading or reaching face, whose
+// read the new class answers, and a moment's face, which is the shell's.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-25, FP-28, FP-29.
 
 import { sx, sy, viewport, markDirty } from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
@@ -129,7 +115,7 @@ import { esc } from '../util.js';
  * @property {(replaced: boolean) => void} [onDismiss] its end, run while the element still holds what it wrote: `replaced` where the next act's overlay took its place, so what stands behind it (the selection) stands on; false where it was dismissed
  * @property {boolean} [takeFocus] a key made the act that opened it (the act's `byKey`): the focus goes to its first act
  * @property {string} [first] a selector for the control the focus goes to first where it is not the first in order — a list's current row
- * @property {boolean} [told] a face whose words the landing that met it says where the focus lands (N-WALK's description; issue #153): the status region does not repeat them
+ * @property {boolean} [told] a face whose words the landing that met it says where the focus lands (N-WALK's description): the status region does not repeat them
  * @property {string} [id] a name the gate reads
  */
 
@@ -216,7 +202,7 @@ function wordsOf(/** @type {string} */ html) {
 }
 
 /**
- * Does the standing overlay hold the caret (see the head; #171's rule 2): the
+ * Does the standing overlay hold the caret (see the head; FP-20): the
  * platform's focus in a field of its own — an answer the reader is typing
  * (N-FOCUS's `isField`)?
  */

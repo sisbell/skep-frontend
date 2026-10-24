@@ -1,32 +1,17 @@
 // O-ANATOMY's test: the lineage as the card sets it (B1-S5; A-56, A-57,
-// A-82; issue #143's design decision). A claim has authority where its
-// claimant — the account of its home, read whole — owns the link it declares
-// superseded, `old`'s account, whatever `new` is. The rows draw the claims
-// with authority alone: "superseded by" the `new` of each claim whose `old` is
-// the link, "supersedes" the `old` of each claim whose `new` is it, in the
-// answer's order, a retracted claim marked retracted, "none" where a side
-// answered no claim with authority, and no row where its read was refused; a
-// claimant the owner row does not name follows its claim — "you" for the
-// reader — the claims then parting at "; " (a mutant that tests `new`, drops
-// the naming or names every claimant turns red); neither row holds a
-// control. Every other claim stands behind one line after the rows, its words
-// the line's and no number in them, and no line stands where every claim has
-// authority (a mutant that draws another account's claim on the row turns
-// red); the line's act made, the claims stand in its place as assertions
-// naming their claimant — "you" for the reader, the verb agreeing — and what
-// the claimant is to the links, a retracted one marked. The card itself,
-// against the FAKE PORT on a stand-in of the host's element: a key opens it
-// on follow, the line standing before follow (a mutant that names the card
-// no first act lands on the line and turns red), and the line's act shows it
-// again under its id with the claims in the line's place, a focus held on
-// the line going to follow; beneath its far end's words, the line its
-// landing says where that end's text holds only part of its passage, and
-// nothing where it holds all of it in one piece (issue #153; a mutant that
-// leaves the far end's words alone turns red). An end drawn at a withheld
-// run: its card says it is withheld, by the owner of the run's origin, with
-// no read of its bytes (a mutant that reads them turns red), and the run's
-// one symbol standing for several lists them at the symbol, each row its own
-// end's card (issue #202).
+// A-82) — a claim has authority where its claimant, the account of its home
+// read whole, owns the link it declares superseded; the rows draw the claims
+// with authority alone, in the answer's order, a retracted one marked, "none"
+// where a side answered none and no row where its read was refused, a
+// claimant the owner row does not name following its claim; every other
+// claim behind one line whose act lists them as assertions naming their
+// claimant and what it is to the links. The card itself, against the fake
+// port on a stand-in of the host's element: a key opens it on follow, the
+// line standing before follow, and the line's act shows it again under its
+// id; beneath its far end's words the line its landing says where that end's
+// text holds only part of its passage (FP-21); and an end drawn at a withheld
+// run says it is withheld and whose, with no read of its bytes, the run's one
+// symbol listing its several ends (FP-30).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as ANATOMY from './anatomy-card.js';

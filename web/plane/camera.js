@@ -1,46 +1,41 @@
-// P-CAM — the camera (the structure record §3.2 "P-CAM"). Layer 2, pure
-// view arithmetic beside the model (FP-11). PURE: the viewport size is an
-// input set by the app on resize; `step(now)` takes the clock.
-// State: VIEW — x, y, scale, the flight in progress, the zoom-in bound, and
-// the viewport with THE MEASURE IN FORCE it sets: P-LAY's fit of the
-// viewport's width at THE READING SIZE (`READING_PX`, the em a reading view
-// sets a document's text at — the landing's, the walk's at a span), so every
-// document's line is set at the measure the view holds with its margins and a
-// resize alone moves it, never a zoom (issue #151's design decisions; FP-26).
-// THE ONE OWNER (FP-10). Never serialized, never sent (FP-7: "the camera
-// writes nothing"; the gate's ledger proves it). Where the camera is bound is
-// the flight's destination while one runs (`destination`): what a departure
-// re-takes, so input made during a flight lands at its destination, never at
-// a point the flight was passing (foundations §2.3). Every flight `fly`
-// starts settles its promise once: true as it lands, false where a newer
-// flight, `set`, a pan or a zoom cuts it short (`cut`), so the act awaiting
-// it ends whatever ends its flight. A RE-ANCHOR (`reanchor`; issue #15: "the
-// passage in view keeps its place and size on screen") moves the view with
-// the text it reads where a document is set again: the point the passage
-// stood at to where it stands now, the scale by the ratio of its sizes — and
-// a flight bound for that document with it, never cut, still settling true as
-// it lands; the same move re-places a view kept apart from the camera, a
-// trail entry's, at a return to it (`reanchored`; issue #221).
-// THE ZOOM-IN BOUND (E18 (a)): it never stops short of the reading scale of a
+// P-CAM — the camera (the structure record §3.2). Layer 2, pure view
+// arithmetic beside the model (FP-11): the viewport size is an input the app
+// sets on resize, and `step(now)` takes the clock.
+// State (FP-10): x, y, scale, the flight in progress, the zoom-in bound, and
+// the viewport with the measure in force it sets — P-LAY's fit of the
+// viewport's width at the reading size (`READING_PX`, the em a reading view
+// sets a document's text at), so a resize alone moves the measure, never a
+// zoom (FP-26). View state, never serialized or sent (FP-7).
+// Where the camera is bound is the flight's destination while one runs
+// (`destination`): what a departure re-takes, so input made during a flight
+// lands at its destination, never at a point the flight was passing
+// (foundations §2.3). Every flight `fly` starts settles its promise once:
+// true as it lands, false where a newer flight, `set`, a pan or a zoom cuts
+// it short (`cut`), so the act awaiting it ends whatever ends its flight. A
+// re-anchor (`reanchor`; FP-8) moves the view with the text it reads where a
+// document is set again: the point the passage stood at to where it stands
+// now, the scale by the ratio of its sizes — and a flight bound for that
+// document with it, never cut, still settling true as it lands; the same
+// move re-places a view kept apart from the camera, a trail entry's
+// (`reanchored`).
+// The zoom-in bound (E18 (a)) never stops short of the reading scale of a
 // place the projection draws — the deepest place's standard type at boot
 // (`setDeepest`; P-LAY's STANDARD_FS), and every size T-LAYER sets a document
 // at (`reach`), smaller than its place's standard wherever the document's
 // columns fill its room — so a landing, a zoom and the mount read every
-// document at reading scale at any depth, however small it is set. One bound
-// for the plane, which only rises: a bound per document would snap the zoom
-// as the view left one, and a bound that fell — a document's text dropped by
-// a feed row, its size its estimate's again until the text is read anew —
-// would take the scale from under its reader on the next pan or flight step.
-// Carries: the wireframe's §6 (`cam`, `sx`/`sy`/`wx`/`wy`, `homeView`,
-// `viewForCell`, `setCam`, `clampCam`) and §11's `flyTo`/`stepAnim`/
-// `viewForDoc` (here `viewAt`, a reading view centred on a place P-LAY's fold
-// names); S3's bounds (`minS` from the world, `maxS` 40), the zoom-in
-// bound widened from S3's per E18 (a); and §17's
-// `edgeStub`, THE EDGE STUB's screen arithmetic that BM's beams and
-// P-RENDER's mid connections share (foundations §2.1, §2.5; S1 Q3): the
-// visible view below the chrome across the viewport's top (`visibleView`),
-// the cut on the true bearing inside it (`edgeStub`) and the triangle at the
-// cut (`stubTriangle`), sized by P-REG's STUB.
+// document at reading scale at any depth. One bound for the plane, which
+// only rises: a bound per document would snap the zoom as the view left one,
+// and a bound that fell — a document's text dropped by a feed row, its size
+// its estimate's again until the text is read anew — would take the scale
+// from under its reader on the next pan or flight step.
+// The edge stub's screen arithmetic, which BM's beams and P-RENDER's mid
+// connections share (foundations §2.1, §2.5; S1 Q3): the visible view below
+// the chrome across the viewport's top (`visibleView`), the cut on the true
+// bearing inside it (`edgeStub`) and the triangle at the cut
+// (`stubTriangle`), sized by P-REG's STUB.
+// Figures: the reading size 12.5 px an em; the bound's floor 40 (S3's); the
+// clamp's margin 0.6 of the world's width; a flight 620 ms where none is
+// given, dipping out where its distance exceeds 1.5 viewports.
 // Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11, FP-26.
 
 import { WORLD_W, WORLD_H, DEPTH_SOUND, G, LEAF } from './projection.js';
@@ -71,7 +66,7 @@ import { STUB, CORNER, cornerWidth } from './register.js';
 /** @type {View & {anim: Flight | null}} */
 export const cam = { x: WORLD_W / 2, y: WORLD_H / 2, scale: 1, anim: null };
 
-/** THE READING SIZE (see the head): the em, in px, a reading view sets a document's text at */
+/** the reading size (see the head): the em, in px, a reading view sets a document's text at */
 export const READING_PX = 12.5;
 
 /** the viewport, set on resize */
@@ -106,8 +101,8 @@ export const wy = (py) => (py - VH / 2) / cam.scale + cam.y;
 
 /**
  * E18 (a): the zoom-in bound rises to read an em of `fs` world units at 36
- * px (reading scale is ~14 px per em), and never falls — a larger em than
- * one reached lowers nothing (see the head).
+ * px, past the reading size, and never falls — a larger em than one reached
+ * lowers nothing (see the head).
  * @param {number} fs an em a document is set at, in world units
  */
 export function reach(fs) { if (fs > 0) maxS = Math.max(maxS, (30 / fs) * 1.2); }
@@ -153,7 +148,7 @@ export function destination() { return cam.anim ? { ...cam.anim.to } : view(); }
 
 /**
  * The view that frames a cell (a board's or an account's) at the clamp —
- * HOME / WHOLE BOARD: "you can see everything" (law 13).
+ * HOME and WHOLE BOARD (law 13).
  * @param {{x:number,y:number,w:number,h:number}} c
  * @param {number} [fit]
  * @returns {View}
@@ -191,9 +186,9 @@ const easeInOut = (/** @type {number} */ u) => (u < 0.5 ? 4 * u * u * u : 1 - Ma
 
 /**
  * A flight to a view: a transform of the view (law 6), dipping out for far
- * targets (the wireframe's arc), from where the camera stands — the flight in
- * progress cut short there. It settles once: true where it lands, false where
- * a newer flight, `set`, a pan or a zoom cuts it short.
+ * targets (`arc`), from where the camera stands — the flight in progress cut
+ * short there. It settles once: true where it lands, false where a newer
+ * flight, `set`, a pan or a zoom cuts it short.
  * @param {View} t
  * @param {number} [ms]
  * @param {number} [now]
@@ -269,7 +264,7 @@ export function reanchor(a, b, k, within) {
   clamp();
 }
 
-/** pan by screen px (input never draws — FP-9; it moves view state) */
+/** pan by screen px: view state moved, nothing drawn (FP-9) */
 export function panBy(/** @type {number} */ dx, /** @type {number} */ dy) { cut(); cam.x -= dx / cam.scale; cam.y -= dy / cam.scale; clamp(); }
 
 /** zoom by a factor about a screen point */
@@ -327,9 +322,8 @@ export function stubTriangle(tip, to) {
 }
 
 /**
- * THE DIRTY MARK — view plumbing the loop reads (FP-9: a handler changes
- * view state and marks the frame dirty; it never draws). Any view owner
- * calls `markDirty()`; the app's loop takes it.
+ * The dirty mark — view plumbing the loop reads (FP-9). Any view owner calls
+ * `markDirty()`; the app's loop takes it.
  */
 let dirtyFlag = true;
 export function markDirty() { dirtyFlag = true; }

@@ -1,92 +1,76 @@
-// O-FACES — a refusal's face at the act's site (the structure record §3.2
-// "O-FACES"; foundations §3.1, F-G3; §4.4 the one refusal shape). Layer 2.
-// PURE table + ENGINE through O-HOST. State: VIEW — the documents whose own
+// O-FACES — a refusal's face at the act's site (the structure record §3.2;
+// foundations §3.1, F-G3; §4.4 the one refusal shape). Layer 2. A pure table,
+// and the engine through O-HOST. State (FP-10): the documents whose own
 // withheld words a face has shown whole in the page's session, and the reads
-// of the claims its faces asked — the one owner, emptied at a change of the
-// page's class (`classChanged`) — and each walk's moment, whole, folded or
-// ended, which that change keeps, for it is the shell's (`walks`).
-// A face is keyed on the refusal's ONE `name` — the board's token (the
+// of the claims its faces asked — emptied at a change of the page's class
+// (`classChanged`) — and each walk's moment, whole, folded or ended, which
+// that change keeps, for it is the shell's (`walks`).
+// A face is keyed on the refusal's one `name` — the board's token (the
 // `detail` of a `credential_refused`, else the `code`) or the shell's own —
 // and its `kind` (the halt's, the block's, `unreachable`), never on prose;
 // the disposition shapes the offered act. The name keys the face and names
 // the overlay (`face:⟨name⟩`, the gate's reading); a person meets the words
 // alone, never the token, which reads as a claim the words may refuse to
-// make. The read path's faces: `doc_not_registered` → THE FIFTH CELL
-// (B1-S8: where this client holds no record of its own that the board
-// answered for the document, the UNREGISTERED-OR-UNREACHABLE face — C-42's
-// content, DRAFT — and the floor face MUST NOT render; it offers no act,
-// for B1-S8's one act, "try again", is the unreachable node's, and the
-// board's answer here is byte-identical to never-held), `withheld` → THE
-// DOCUMENT-LEVEL WITHHELD FACE (B1 §1's A-170; B1-S8's WITHHELD state; R56:
-// existence and owner, never bytes; issue #179's design decision: "describe
-// the document the board refused") — "who wrote this?" or "who uses this?"
-// asked of a document the reader may not read, a follow's far end withheld —
-// of the document the board names (`refusedDocument`: the rejection's
-// `site.addr`, else the document the act named), by the first case that
-// holds: ITS TEXT ON SCREEN, the page holding its text or having held it
-// under the class it left (`accessChanged`; M-REC's `covered`) — where the
-// session's ending stands, the one line's words for that ending in the arm's
-// place (`endingWords`) and its sign-in act, the line's own (`signIn`; issue
-// #177's design decision: "sign-in is offered in the one line's words for
-// that ending"; FP-29), the act's repeat once signed in the ceremonies'
-// lane's, and the access-withdrawn notice for a withdrawal on record waiting
-// on a read the board does not serve (skep #577); else, and at every other
-// document, ITS OWN WITHHELD WORDS (`ownWords`): its full address, save where
-// the face stands at the document's own place; the withheld box's words,
-// "withheld · ⟨owner⟩", which the plane's box, the corner and the ARIA
-// mirror's item say (T-LAYER's `withheldBox`), its owner by the one owner
-// rule; and beneath them the entitlement arm for that owner and this reader
+// make. The read path's faces: `doc_not_registered` → the fifth cell (B1-S8:
+// where this client holds no record of its own that the board answered for
+// the document, the unregistered-or-unreachable face, C-42's content; it
+// offers no act, for B1-S8's one act, "try again", is the unreachable node's,
+// and the board's answer here is byte-identical to never-held); `withheld` →
+// the document-level withheld face (B1 §1's A-170; B1-S8; R56) — "who wrote
+// this?" or "who uses this?" asked of a document the reader may not read, a
+// follow's far end withheld — of the
+// document the board names (`refusedDocument`: the rejection's `site.addr`,
+// else the document the act named), by the first case that holds: its text
+// on screen, the page holding its text or having held it under the class it
+// left (`accessChanged`; M-REC's `covered`) — where the session's ending
+// stands, the one line's words for that ending in the arm's place
+// (`endingWords`) and its sign-in act, the line's own (`signIn`; FP-29);
+// else, and at every other document, its own withheld words (`ownWords`):
+// its full address, save where the face stands at the document's own place;
+// the withheld box's words (T-LAYER's `withheldBox`), its owner by the one
+// owner rule; and beneath them the entitlement arm for that owner and this reader
 // (T-ARTICLE's one rule) and C-67's clause as the edition claims on the
 // document decide it (T-LAYER's `clauseOf`) — the clause a withheld run of it
-// carries, in the same words (issue #186's design decision: "One fact, one
-// placement"): the pointer, its act the LEAP its caller hands in; the QUOTING
-// sibling; "edition claims not read" where a read of them failed; nothing
-// where they decide none. A FACE STATING A WITHHELD ORIGIN — this one, and a
-// withheld run's — makes the reads its clause waits on before it shows, where
-// the page holds no answer to one, so the clause is in its first frame
-// (`whenRead`; the decision: "Make this read together with the reads that
-// draw the face"). Whole the first time a face shows them
-// in the page's session, compact after (FP-26: "A compact sign opens whole on
-// its act"): the address and the head, the head a disclosure whose act opens
-// the rest, and folds it again. Never C-39, whose words are a link address's
-// alone (the decision's third case: a link inspected inside the document); a
-// follow to a withheld document whose text the page does not hold lands at
-// the document's place first (N-GO; the decision's second case);
+// carries, in the same words (FP-33): the pointer, its act the LEAP its
+// caller hands in; the quoting sibling; "edition claims not read" where a
+// read of them failed; nothing where they decide none. A face stating a
+// withheld origin — this one, and a withheld run's — makes the reads its
+// clause waits on before it shows, where the page holds no answer to one, so
+// the clause is in its first frame (`whenRead`; FP-33). Whole the first time
+// a face shows them in the page's session, compact after (FP-26): the
+// address and the head, the head a disclosure whose act opens the rest, and
+// folds it again. Never C-39, whose words are a link address's alone;
 // `not_a_link`, C-39 at a link address inside a withheld document with the
-// entitlement arm the run's placeholder carries beneath it (T-ARTICLE's one
-// rule, by the reader), `range_not_present`, the `invalid` follow,
-// `scan_busy`, `endsets_too_large`, `too_many_blocks`, `too_many_pairs`,
+// entitlement arm the run's placeholder
+// carries beneath it (T-ARTICLE's one rule, by the reader),
+// `range_not_present`, the `invalid` follow, `scan_busy`,
+// `endsets_too_large`, `too_many_blocks`, `too_many_pairs`,
 // `too_much_coverage`, the session's `no_key` (C-136 with this version's
 // limit), `unreachable`; at the one line's sign-in act the session's refusal
 // — the boot's, or the re-acquire's of a session a restart lost — and a
 // death's arm (C-137, by the death's reason: `deathWords`, the words the
 // line's death arm says too), "signed out" the sign-out marker's alone and
-// never a restart's (issue #175's design decision; FP-28); a withheld run's
-// face whole, Enter's act at the run (D5 K-7), made from the run's
-// placeholder record (T-ARTICLE's `placeholderOf`) once its clause's reads
-// answer, C-67's pointer its offered act; a jump
-// reading and a jump reaching (FP-25: "'Reading', 'reaching' and a failure
-// show where the camera is"), their overlays named `reading:⟨address⟩` and
-// `reaching:⟨address⟩` and never `face:…`, the prefix a notice's face
-// carries — each anchored, as every face N-GO shows for a jump is, with the
-// document it stands at, out of the visible view of which the one line
-// carries its words (O-HOST's `sign`). A face never takes the focus (D5 §4
-// rule 4; K-58): it is heard through the one status region (D4, O-HOST's),
-// and a face offered by a key's act takes none either; a walk's moment alone
-// takes it. A refusal's face that answers an act carries
+// never a restart's (FP-28); a withheld run's face whole, Enter's act at the
+// run (D5 K-7), made from the run's placeholder record (T-ARTICLE's
+// `placeholderOf`) once its clause's reads answer, C-67's pointer its offered
+// act; a jump reading and a jump reaching (FP-25), their overlays named
+// `reading:⟨address⟩` and `reaching:⟨address⟩` and never `face:…`, the
+// prefix a notice's face carries — each anchored, as every face N-GO shows
+// for a jump is, with the document it stands at, out of the visible view of
+// which the one line carries its words (O-HOST's `sign`). A face never takes
+// the focus (D5 §4 rule 4; K-58): it is heard through the one status region
+// (D4, O-HOST's), and a face offered by a key's act takes none either; a
+// walk's moment alone takes it. A refusal's face that answers an act carries
 // the act's own caption, the words its card names itself by (`caption`), so
-// O-HOST names it as the act's answer and says the caption before its words
-// (issue #179's design decision: "Announce each face as the act's answer,
-// tied to the act in markup"); a landing's face is tied by the item's
-// description where the focus lands instead (`told`).
-// A WALK'S MOMENT IS THE WALK'S STATE (issue #182's design decision: "The
-// screen shows it for exactly as long as the walk stands at it"): a PUBLIC
-// `moment` is drawn by its kind — a label box its title, its statements, its
-// field and the default it offers; a question its words and its field; a
-// yes-or-no question its words and its two answers; a statement its words
-// alone (no ceremony panel is built here — a seam) — and what ends any other
-// overlay — Esc, an empty click, a navigation act, which then proceeds,
-// another overlay the reader opens — FOLDS it (its `onDismiss`) into one
+// O-HOST names it as the act's answer and says the caption before its words;
+// a landing's face is tied by the item's description where the focus lands
+// instead (`told`).
+// A walk's moment is the walk's state (FP-28): a public `moment` is drawn by
+// its kind — a label box its title, its statements, its field and the default
+// it offers; a question its words and its field; a yes-or-no question its
+// words and its two answers; a statement its words alone — and what ends any
+// other overlay — Esc, an empty click, a navigation act, which then proceeds,
+// another overlay the reader opens — folds it (its `onDismiss`) into one
 // segment of the one line naming its walk and its step and that it waits on
 // the reader (`folded`, L-LINE's), said through the status region without
 // moving the focus, the shell told nothing. The segment's act unfolds it as
@@ -96,35 +80,31 @@
 // (`MomentEvent`) — a label box's empty field the default the box offers,
 // else flagged at the box and never sent; a yes-or-no question's yes or no —
 // and its cancel, named by its walk, beside it the line that what cancelling
-// leaves behind is not told to this page (skep #628); a refusal of either is
-// drawn inside the face, `no_such_moment` ending the moment. It leaves only as
-// the shell ends it: its answer or its cancel accepted, or its walk's next
+// leaves behind is not told to this page; a refusal of either is drawn
+// inside the face, `no_such_moment` ending the moment. It leaves only as the
+// shell ends it: its answer or its cancel accepted, or its walk's next
 // moment, which opens as the last was left — whole, or folded, the segment
 // said and the camera unmoved. One arriving where the reader stands at a
 // surface of their own (FP-28) — an overlay, an opening still reading, the
 // reading scene, a field holding the caret — opens folded; else whole, taking
 // the focus on its first control (K-80). A statement, which no walk waits on,
 // never folds: what its walk does after it, and the walk's end, the shell
-// does not tell the page (skep #627) — shown whole where its walk's last
-// moment was left whole and nothing of the reader's stands, else said
-// through the status region alone.
-// WHERE NO BOARD IS HELD (issue #215's design decision: "never draw or name
-// a board the client has no record of"; FP-35): why is ONE ENTRY, which the
-// one line, the ARIA mirror's root and every act needing a board read alone
+// does not tell the page — shown whole where its walk's last moment was left
+// whole and nothing of the reader's stands, else said through the status
+// region alone.
+// Where no board is held (FP-35): why is one entry, which the one line, the
+// ARIA mirror's root and every act needing a board read alone
 // (`noBoardWords`) — no shell and no provider beneath the port,
-// `L.no-adapter`; `boards()` answered an empty list, `F.unclaimed`, worded
-// true where no board on this machine has begun, its act the doors', which
-// this build has not, so it stands inert and says beginning a notebook isn't
-// built yet; the list refused, "the boards on this machine could not be read
-// — that does not mean there are none", "try again" offered where a retry may
-// tell (BM-HELD's `retries`). Such an act answers at its site with a face of
-// those words and what still works (`noBoard`), and "try again" reads the list
-// again (`tryBoardsAgain`; M-PUMP's `retryBoards`): a board found, the page
-// launches there and the face goes; a refusal again said, so no press is
-// silent.
-// Carries: the wireframe's §18 `face` (its words and acts; its reviewer's
-// label stays in the wireframe), `deadReferenceFace`'s fifth cell, `c39Face`.
-// Rules: FP-1, FP-2, FP-13, FP-20, FP-25, FP-26, FP-28, FP-29, FP-35.
+// `L.no-adapter`; `boards()` answered an empty list, `F.unclaimed`, its act
+// the doors', which this build has not, so it stands inert and says
+// beginning a notebook isn't built yet; the list refused, `L.boards-unread`,
+// "try again" offered where a retry may tell (BM-HELD's `retries`). Such an
+// act answers at its site with a face of those words and what still works
+// (`noBoard`), and "try again" reads the list again (`tryBoardsAgain`;
+// M-PUMP's `retryBoards`): a board found, the page launches there and the
+// face goes; a refusal again said, so no press is silent.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-25, FP-26, FP-28, FP-29, FP-33,
+// FP-35.
 
 import * as HOST from './host.js';
 import * as VERSIONS from './versions.js';
@@ -188,8 +168,8 @@ const claimReads = new Map();
 
 /**
  * The document a `withheld` refusal names (wire.md §Rejections: `site.addr`,
- * "the document argument a READ may not" read, the first in declaration
- * order where a read carries several), from the rejection the shell hands up
+ * the first in declaration order where a read carries several), from the
+ * rejection the shell hands up
  * whole as the refusal's `body`; the document the refused act named where
  * the body names none.
  * @param {Refusal} r
@@ -203,9 +183,9 @@ export function refusedDocument(r, addr) {
 }
 
 /**
- * Did access to a document change after its text was read (see the head; the
- * decision's first case, "Its text is on screen")? The page holds its text,
- * or held it under the class it left — a covered document (M-REC's
+ * Did access to a document change after its text was read (see the head)?
+ * The page holds its text, or held it under the class it left — a covered
+ * document (M-REC's
  * `covered`), its place standing as the cover draws it. A follow to such a
  * document faces at the act (N-GO's `known`); to any other withheld
  * document, it lands at the document's place.
@@ -235,10 +215,8 @@ export function prepare(addr) {
 
 /**
  * A face stating a withheld origin, shown with C-67's clause in its first
- * frame (see the head; issue #186's design decision: "Make this read
- * together with the reads that draw the face. That way the clause is in the
- * face's first frame and never pushes text down"): at once where the page
- * holds an answer to every read the clause waits on (M-PUMP's
+ * frame (see the head; FP-33): at once where the page holds an answer to
+ * every read the clause waits on (M-PUMP's
  * `claimsToRead`); else as chrome opening on those reads (O-HOST's
  * `opening`; `prepare`), shown once they answer where no act was made on the
  * chrome meanwhile — with the clause they decide, "edition claims not read"
@@ -352,10 +330,10 @@ function toAnchor(a) {
 }
 
 /**
- * THE FIFTH CELL (B1-S8): an address this board will say nothing about — the
+ * The fifth cell (B1-S8): an address this board will say nothing about — the
  * board answered `doc_not_registered` and this client holds no record that
  * it ever answered for the document — met by a typed address (B1-S11 → S8)
- * or by a followed link's far end (THE DEAD REFERENCE, at its site). C-42's
+ * or by a followed link's far end (the dead reference, at its site). C-42's
  * content and nothing more, and no act: the answer is byte-identical to
  * never-held, and the model keeps it as a fact.
  * @param {string} addr
@@ -366,9 +344,9 @@ export function unregistered(addr, anchor = null) {
 }
 
 /**
- * THE DOCUMENT-LEVEL WITHHELD FACE (B1 §1's A-170; B1-S8's WITHHELD state;
- * issue #179's design decision): a withheld document — met by "who wrote
- * this?" or "who uses this?" over its bytes, or by a followed link's far
+ * The document-level withheld face (B1 §1's A-170; B1-S8; FP-26): a withheld
+ * document — met by "who wrote this?" or "who uses this?" over its bytes, or
+ * by a followed link's far
  * end — named by existence and owner, never bytes (R56), by the first case
  * that holds (see the head). Its text on screen (`accessChanged`) while the
  * session's ending stands — a covered document a cursor move's landing
@@ -442,8 +420,8 @@ function ownHTML(w, open, clause) {
 
 /**
  * The words a withheld document's face says whole at the document's own
- * place, as the ARIA mirror reads them (FP-26: "the mirror reads every sign
- * whole"; see the head): the withheld box's words, then the ending's words
+ * place, as the ARIA mirror reads them (FP-26; see the head): the withheld
+ * box's words, then the ending's words
  * where its text was on screen as the session ended, else the arm and C-67's
  * clause where one stands — the description of the item a follow's landing
  * there stands on (N-GO's `described`), whose face offers the pointer's act.
@@ -457,7 +435,7 @@ export function withheldText(addr) {
 
 /**
  * The one line's words for the session's ending (L-LINE's acting-as segment;
- * issue #175's design decision): a death's (`deathWords`), the guest line in
+ * FP-28): a death's (`deathWords`), the guest line in
  * their place for an arm this page holds none for; a session a restart lost
  * that the acquire could not get back, "could not reconnect as ⟨account⟩
  * after a restart" leading the guest line; null where no ending stands.
@@ -502,10 +480,8 @@ export function noBoardWords() {
 }
 
 /**
- * AN ACT THAT NEEDS A BOARD the page holds none of (see the head; issue
- * #215's design decision: "an act that needs a board the reader lacks
- * answers where it is taken and names what still works … None stays
- * silent"): a face at the act's site — `noBoardWords`' words, and beneath
+ * An act that needs a board the page holds none of (see the head; FP-35): a
+ * face at the act's site — `noBoardWords`' words, and beneath
  * them what works: at the empty list, that beginning a notebook isn't built
  * yet; at a list refused where a retry may tell, "try again"
  * (`tryBoardsAgain`). It takes no focus and is heard through the status
@@ -544,8 +520,8 @@ const READING = 'reading:';
 const REACHING = 'reaching:';
 
 /**
- * A jump reading (FP-25: "'Reading' … show[s] where the camera is"): said as
- * the camera leaves, at the place it left for — the document the jump named,
+ * A jump reading (FP-25): said as the camera leaves, at the place it left
+ * for — the document the jump named,
  * its anchor's `sign`, out of the visible view of which the one line carries
  * its words — and heard through the one status region as every face is; gone
  * with the next act, replaced by the face its read brings, or ended as the
@@ -559,9 +535,8 @@ export function reading(addr, anchor = null) {
 }
 
 /**
- * A jump reaching (FP-25: "Where only a read can place the destination, the
- * camera waits … and Esc or Back abandons the jump"): its destination one
- * only a read can place — a board the plane does not draw — said at the act's
+ * A jump reaching (FP-25): its destination one only a read can place — a
+ * board the plane does not draw — said at the act's
  * site in the place of what stands there, the camera still, and heard through
  * the one status region as every face is. Its dismissal — Esc's, the
  * innermost thing — abandons the jump (`abandon`); a replacement does not,
@@ -591,7 +566,7 @@ export function invalidFollow(/** @type {Anchor | HTMLElement | {x: number, y: n
  * (foundations §2.3): "its passage is not in ⟨D⟩'s current text", and at a
  * pinned member in its own words, "its passage is not in version ⟨k⟩" — the
  * floating face's, and the landing's description where it lands there
- * (N-GO's `described`; issue #153).
+ * (N-GO's `described`; FP-21).
  * @param {string} far
  * @returns {{id: string, text: string}}
  */
@@ -627,8 +602,8 @@ export function floating(far, anchor, offer = true, told = false) {
 
 /**
  * A withheld run's face whole, the act at the run by the keyboard (D5 K-7;
- * foundations §1 row 8: the placeholder "with R56's arm, whole on the run's
- * act"), made from the run's placeholder as one record (T-ARTICLE's
+ * foundations §1 row 8), made from the run's placeholder as one record
+ * (T-ARTICLE's
  * `placeholderOf`; R94): its head, the entitlement arm for its origin's owner
  * and this reader, then C-67's clause as the origin's edition claims decide
  * it (`clauseFace`) — the pointer the face's offered act, in its own words,
@@ -679,12 +654,10 @@ export function sessionFace(r, anchor) {
 }
 
 /**
- * The death's words (C-137), by its reason's arm: the MODE arm's "this
- * board now requires a signed session", the SELF-retirement's "sign in with
- * the new key", and the sign-out marker's "signed out" for the `closed` arm
- * alone — the page's own close, the person's sign-out (issue #175's design
- * decision: "'signed out' stays on the sign-out path alone"; FP-28); none
- * for an arm whose words this page does not hold — the seeded, the blocked
+ * The death's words (C-137), by its reason's arm: the mode arm's, the
+ * self-retirement's, and the sign-out marker's "signed out" for the `closed`
+ * arm alone — the page's own close, the person's sign-out (FP-28); none for
+ * an arm whose words this page does not hold — the seeded, the blocked
  * and the unreachable arms, whose faces read records it does not read. The
  * one line's death arm and its sign-in act's face both say them
  * (`deathFace`). A restart is no death (M-PUMP), so none is ever a restart's.
@@ -722,7 +695,7 @@ export function deathFace(reason, anchor) {
 /** @type {Map<string, Walk>} each walk's moment, by its walk (`walkOf`); an ended one kept for how it was left (see the head) */
 const walks = new Map();
 
-/** the walk a moment is of: its name at its board — the event names no run of it (skep #627) */
+/** the walk a moment is of: its name at its board — the event names no run of it */
 const walkOf = (/** @type {MomentEvent} */ m) => `${m.walk}|${m.board ?? ''}`;
 /** the overlay a moment's face stands as */
 const faceOf = (/** @type {MomentEvent} */ m) => 'moment:' + m.id;
@@ -754,9 +727,7 @@ const segmentWords = (/** @type {Walk} */ w) => t('L.walk.waits', { walk: w.m.wa
 
 /**
  * Does the reader stand at a surface of their own a moment's face would take
- * the place of (see the head; FP-28: "A card, a list, a selection, a reading
- * scene or a field being typed in ends when the reader closes it, replaces
- * it, or leaves its place, and by nothing else")? An overlay other than the
+ * the place of (see the head; FP-28)? An overlay other than the
  * face of the walk's moment before, an opening still reading, the reading
  * scene, or a field holding the caret — the LEAP box's, or that face's own.
  * @param {Walk | undefined} prev the walk's moment before
@@ -810,7 +781,7 @@ function draw(w, how) {
  * first words, a label box's statements, its field holding the text typed,
  * the default a label box offers, its note, then its answers and its cancel
  * named by its walk, and beside them what cancelling leaves behind, which the
- * page is not told (skep #628).
+ * page is not told.
  * @param {Walk} w
  */
 function momentHTML(w) {
@@ -838,7 +809,7 @@ function typedIn(/** @type {Walk} */ w) {
  * The answer act (see the head): the field's text, in the form the moment's
  * kind takes — a label box's empty field the default the box offers, `null`,
  * or, where it offers none, flagged at the box and never sent (foundations
- * §3.4 F-C4: "an empty label is faced at the box and never committed").
+ * §3.4 F-C4).
  * @param {Walk} w
  */
 function answer(w) {

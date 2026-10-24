@@ -1,70 +1,21 @@
-// O-HOST's test: THE OPENING still reading (the rule in the head), on a
-// stand-in of the host's element. Chrome that opens on its reads is pending
-// while they read and shows its answer where no act was made on the chrome
-// meanwhile; where one was, its answer shows nothing and its reads are told
-// it no longer stands: a dismissal with nothing standing (a mutant whose
-// dismissal returns before it counts turns red), and the next opening,
-// whichever of the two answers first (a mutant whose opening does not count
-// itself turns red). An opening that gives up, or whose reads throw, is
-// pending no more (a mutant that clears it only where it shows turns red).
-// AN OVERLAY SHOWN is an act on the chrome, whatever conjures it — the trail
-// list, a walk's moment unfolded by its segment's act, a follow's face, a
-// rebuild of the standing overlay by its own act: the opening still reading
-// ends as it is shown, its answer never covers what was shown, and one Esc
-// closes what was shown, made before the answer or after it (a mutant whose
-// show does not count itself turns every row red). A WALK'S MOMENT the shell
-// raises while an opening reads takes nothing's place (issue #182): it opens
-// folded, its segment said, and the card asked shows (a mutant whose moment
-// shows whatever stands turns red). AN OVERLAY'S END runs while its element
-// still holds what it wrote (a mutant that empties the element first turns
-// red). THE LEAP BOX opened while an opening reads ends it, the
-// overlay standing under it staying: its answer shows nothing and the box
-// stands (a mutant whose box leaves the opening reading, or dismisses what
-// stands, turns red).
-// ESC'S ONE ORDER (N-KEYS): a card still reading is the innermost thing —
-// Esc ends it alone and the card standing under it stands (a mutant that
-// dismisses the standing card with it, or leaves the opening to the
-// dismissal, turns red); the next Esc dismisses that card; the LEAP box,
-// opened after the card, closes before it.
-// AN OPENING BEGINS IN THE ACT THAT ASKS FOR IT: no module of the page loads
-// another by `import()` — the app alone loads its gate's so (S-22 (a)) — so
-// no load stands between an act and the opening it begins (a mutant that
-// puts a card or a list behind an `import()` turns red).
-// THE ANCHOR (foundations §3.1: at the act's site, never a fixed region): an
-// overlay conjured at an element stands beneath it while it stands in the
-// page, and at the span named beside it once the text layer takes the
-// element away — the document's box, where no article of it is mounted —
-// never at the viewport's corner (a mutant that reads the span before the
-// element moves the overlay off an element still standing, and one that
-// reads the element alone leaves it at the corner: each turns red); an
-// element its owner redrew from state is found again by its id, the overlay
-// beneath the one the page holds now (a mutant that reads the element alone
-// turns red). A FACE IS SAID through the one status region, save one the
-// landing that met it describes where the focus lands (issue #153; a mutant
-// that says a told face again turns red). A FACE THAT ANSWERS AN ACT (issue
-// #179) is named by the act's caption and described by its words, and said
-// caption first; one with no caption is named by its words and described by
-// nothing (a mutant that describes it by nothing, or says its words alone,
-// turns red). A JUMP'S FACE SHOWS WHERE THE
-// CAMERA IS (FP-25): one whose anchor names the document it stands at is
-// hidden on the plane exactly while that document is out of the visible
-// view, the one line carrying its string's id and its words (`aside`)
-// exactly then; a face naming no document is never hidden (a mutant that
-// hides it whatever the view, never, or carries it in the line while it
-// shows, turns red). A FIELD HOLDING THE CARET (#171's rule 2): a face shown
-// while the standing overlay's own field holds the focus takes nothing's
-// place — the overlay stands with its caret, and the face's words, a told
-// face's too, are said through the status region — while with the focus
-// elsewhere the face takes its place (a mutant whose face replaces the
-// overlay holding the caret, or says nothing of a told face, turns red). AN
-// OVERLAY'S OWN COMPLETION (`complete`) is no act on the chrome: the reading
-// face taken down as its read answers ends no card asked while it stood, and
-// leaves another overlay standing; a dismissal still ends one (a mutant
-// whose completion counts as an act turns red). A CHANGE OF THE PAGE'S CLASS
-// (issue #177) dismisses the card standing — its end run, the focus it held
-// on the walk's element — and ends an opening still reading, while a jump's
-// reading face and a moment's stand (a mutant that leaves the card, or
-// dismisses what stands through it, turns red).
+// O-HOST's test, on a stand-in of the host's element: the opening still
+// reading — pending while its reads are out, its answer shown only where no
+// act was made on the chrome meanwhile, ended by a dismissal, the next
+// opening, an overlay shown whatever conjures it, the LEAP box opened or
+// Esc's one order, its reads told it no longer stands, and pending no more
+// where it gives up or throws; a walk's moment raised while one reads opening
+// folded (FP-28); an overlay's end running while its element still holds
+// what it wrote; an overlay's own completion no act on the chrome; no module
+// of the page loading another by `import()` (S-22 (a)); the anchor — beneath
+// its element while that stands, at the span beside it once the text layer
+// takes the element away, an element redrawn from state found again by its
+// id; a face said through the status region save a told one, and a face that
+// answers an act named by the act's caption and described by its words; a
+// jump's face hidden exactly while its document is out of the visible view,
+// the one line carrying its words (FP-25); a face shown while the standing
+// overlay's field holds the caret taking nothing's place (FP-20); and a
+// change of the page's class dismissing the card standing and ending the
+// opening, a jump's reading face and a moment's standing through it (FP-29).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';

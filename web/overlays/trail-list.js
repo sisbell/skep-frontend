@@ -1,19 +1,16 @@
-// O-TRAIL-LIST — the trail's list (the structure record §3.2 "O-TRAIL-LIST";
-// foundations §2.2; B1-S12). Layer 2. ENGINE-BOUND. State: none. A transient
-// overlay conjured beside Back and Forward and gone with its end like every
-// other — never a toggle (the wireframe's `t` toggle re-cut, K-41 Mod+Y); it
-// stands beneath Back, which the host finds again by its id as the one line
-// is rebuilt (O-HOST's anchor);
-// every entry numbered newest-first, the same numbers as the pips and the
-// chords Mod+1 … Mod+9; Enter or a click jumps (a cursor move, never a push),
-// the ring drawn at the landing where a key made the jump. Opened by a key —
-// Mod+Y, Enter on the line's act — it takes the focus on its newest row, the
-// first (K-41; the focus record's rule 13); opened by a click on the line's
-// act it takes none (rule 16). Each row's words are read from the model as
-// the list is made (N-GO's `wordsOf`; issue #177's design decision: "Draft
-// labels become 'withheld · ⟨owner⟩'"), never kept in an entry.
-// Carries: the wireframe's §11 `renderTrail`. Rules: FP-1, FP-2, FP-13, FP-20,
-// FP-29.
+// O-TRAIL-LIST — the trail's list (the structure record §3.2; foundations
+// §2.2; B1-S12). Layer 2. ENGINE-BOUND. State: none. A transient overlay
+// conjured beside Back and Forward and gone with its end like every other —
+// never a toggle (K-41 Mod+Y); it stands beneath Back, which the host finds
+// again by its id as the one line is rebuilt (O-HOST's anchor); every entry
+// numbered newest-first, the same numbers as the pips and the chords Mod+1 …
+// Mod+9; Enter or a click jumps (a cursor move, never a push), the ring drawn
+// at the landing where a key made the jump. Opened by a key — Mod+Y, Enter on
+// the line's act — it takes the focus on its newest row, the first (K-41; the
+// focus record's rule 13); opened by a click on the line's act it takes none
+// (rule 16). Each row's words are read from the model as the list is made
+// (N-GO's `wordsOf`; FP-29), never kept in an entry.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-29.
 
 import * as HOST from './host.js';
 import * as TRAIL from '../nav/trail.js';

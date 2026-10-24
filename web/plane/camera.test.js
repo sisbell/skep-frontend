@@ -1,24 +1,12 @@
 // P-CAM's test: the projection to the screen and back, the clamp, a flight
-// that lands, where the camera is bound while a flight runs (a mutant that
-// answers the view mid-flight turns red), every flight settled once — true
-// as it lands, false where a newer flight, `set`, a pan, a zoom or a reset
-// cuts it short, the camera then where the cut put it (a mutant that drops
-// the settling from any one of them, settles a cut flight true or lands with
-// no answer turns red), the zoom bound widened per E18 (a)
-// — the deepest place's standard type at boot, and every size a document is
-// set at: a flight to read a document set smaller than its place's standard
-// lands at its reading scale (a bound held at the places' standard turns
-// red), and no size reached after lowers the bound (one set from the latest
-// size turns red); a re-anchor keeping a passage's place and size on screen as
-// its document is set again — a flight bound into the document moved with it,
-// never cut and settling true as it lands, one bound elsewhere carried on (a
-// mutant that cuts the flight, or moves the camera alone, turns red);
-// the measure in force the viewport's fit at the reading size, moved by a
-// resize alone, never a zoom or a pan (issue #151: a mutant that reads the
-// scale turns red); the edge stub's cut on its
-// true bearing, STUB.inset px inside the visible view's border on every side
-// — below the chrome across the viewport's top, never under it — and the
-// triangle behind its tip on that bearing.
+// that lands and where the camera is bound while it runs, every flight
+// settled once — true as it lands, false where a newer flight, `set`, a pan,
+// a zoom or a reset cuts it short — the zoom-in bound raised per E18 (a) by
+// the deepest place and by every size a document is set at and never
+// lowered, a re-anchor keeping a passage's place and size on screen with a
+// flight bound into its document moved with it, the measure in force moved
+// by a resize alone (FP-26), and the edge stub's cut and triangle on the true
+// bearing inside the visible view.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as CAM from './camera.js';

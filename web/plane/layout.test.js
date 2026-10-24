@@ -1,47 +1,22 @@
 // P-LAY's test: the article's lines as its CSS sets them — each line box its
-// block's own size's, on the 1/64 px grid as the engine lays it out (the
-// figures measured on the gate's machine); the head's lines before the first
-// block; a heading's margins nearer the block below it, the gap after every
-// other block at its own size; a block that sets no line (a separator alone)
-// taking no room, its margins collapsing with its neighbours'; a line holding
-// exactly `cpl` characters, the space after its last word hanging; a heading
-// wrapped at its own size; a break after a hyphen inside a word and none after
-// a slash; an inline-block set whole; a withheld run's gap its bars, one line
-// for each measure's count of its positions; each line naming the position its
-// first own character stands at; the measurements the CSS reads, one source.
-// THE EDGE (issue #151's design decision): each column followed by its edge
-// and a gutter, the edge EDGE_GAP past its text and inside its padded slot,
-// short of the next column's text (a mutant that drops the edge from the pitch
-// or the slot turns red). THE FIT: the full measure wherever the view holds a
-// column at the reading size with both its margins, the corner whole, else
-// compact — the corner compacted before the measure narrows (a mutant that
-// narrows first turns red) — else the most whole characters the view holds,
-// never more; a fold at a narrower measure every column and line at it, its
-// estimate's lines and spans at it too (a mutant that keeps the full measure
-// anywhere turns red). THE FOLD (issue #15's design
-// decision): every document set at MEASURE_CPL characters a line, from a
-// hundred positions to six hundred thousand (a mutant that lets the length
-// widen the column turns red); every line of a long article standing in a
-// column inside its room, no bar past its column (a mutant that clips the
-// article at the room drops lines and turns red); columns COLUMN_LINES body
-// line boxes deep, the margin above a column's head dropped; a heading kept
-// with the first two lines after it, no paragraph line alone at a column's head
-// or foot, a short paragraph moved whole, a record, a withheld run and the head
-// never split, a kept unit deeper than a column broken at a line anyway (a
-// mutant without each rule turns red); columns left to right, then row by row,
-// each followed by its edge and a gutter, a short document one column of its own length; the standard
-// size until the columns fill the room, then steps each at least doubling the
-// room's capacity (a mutant that sets the size continuously, or steps by a
-// factor that does not double, turns red); the outline tracing the padded
-// columns, one edge; the estimate never more columns than the text sets, so
-// its size never smaller (a mutant that counts a line per fewer positions
-// turns red); positions placed and read back; unheld positions estimated in
-// columns of their own; the view's window over a fold, its estimated lines read
-// as `placeOf` places them (a mutant reading the held lines alone, or an end by
-// the view's edge it never reached, turns red); the paging key's next column;
-// a re-set's hold, and a hold across two versions' folds by the pair of
-// positions a version move names (issue #154: a mutant that reads the point's
-// own position in the second fold turns red).
+// block's own size's on the 1/64 px grid (the figures measured on the gate's
+// machine), the head's lines first, a heading's margins and the gap after
+// every other block, a block that sets no line taking no room, a line holding
+// exactly `cpl` characters, a heading wrapped at its own size, the breaks a
+// word allows, an inline-block set whole, a withheld run's gap its bars, each
+// line naming its first own position, and the measurements the CSS reads
+// from one source; the edge each column is followed by (FP-26); the fit —
+// the full measure wherever the view holds a column with both its margins,
+// the corner compacted before the measure narrows, else the most whole
+// characters the view holds — and a fold at a narrower measure (FP-26); the
+// fold (FP-12) — every document at MEASURE_CPL characters a line, every line
+// in a column inside its room, columns COLUMN_LINES deep with the keeps held,
+// columns left to right then row by row, the standard size then steps each at
+// least doubling the capacity, the outline one edge, the estimate never more
+// columns than the text; positions placed and read back, unheld positions
+// estimated, the view's window over a fold, the paging key's next column, and
+// a passage held across two folds — a version's by the pair of positions a
+// version move names (FP-22).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {

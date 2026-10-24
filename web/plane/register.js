@@ -1,33 +1,27 @@
-// P-REG — the visual variables' VALUES (the structure record §3.2 "P-REG";
-// foundations §2.1's register: each datum one variable, held client-wide,
-// no variable carrying two data — ux-T1 (a)). Layer 2, pure constants the
+// P-REG — the visual variables' values (the structure record §3.2;
+// foundations §2.1's register; ux-T1 (a)). Layer 2, pure constants the
 // renderers and the CSS share (`main.js` sets them as custom properties).
-// The LINKER takes HUE from a small palette — you, the document's owner,
-// everyone else as one — and a mark merging links whose linkers differ the
-// NEUTRAL hue, which names no linker (P44's Use at §2.1's register); the
-// anchor's GRADE a line on the highlight's edge;
-// SAMENESS boundaries and a ground TEXTURE, never a tint; the VISITED-LINK
-// MARK takes VALUE (lighter, the hue kept — D-3); a link lit at an ARRIVAL
-// its stroke's WEIGHT (foundations §2.1: "the followed link drawn heavier");
-// a connection's KIND its line's form; a box's PUBLICATION STATE its edge's
-// weight; a LABEL's size its floor, below which no label on the plane is set
-// (P-LABEL); THE EDGE STUB its inset from the view's border and its
+// State: none. The linker takes hue from a small palette — you, the
+// document's owner, everyone else as one — and a mark merging links whose
+// linkers differ the neutral hue, which names no linker (P44); the anchor's
+// grade a line on the highlight's edge; sameness boundaries and a ground
+// texture, never a tint; the visited-link mark takes value (lighter, the hue
+// kept — D-3); a link lit at an arrival its stroke's weight (foundations
+// §2.1); a connection's kind its line's form; a box's publication state its
+// edge's weight; a label's size its floor, below which no label on the plane
+// is set (P-LABEL); the edge stub its inset from the view's border and its
 // triangle's size, the one stub BM's beams and P-RENDER's mid connections
-// draw (P-CAM's `edgeStub`); THE TAIL its length and the gap before its
+// draw (P-CAM's `edgeStub`); the tail its length and the gap before its
 // label, the short stroke P-RENDER draws for a link whose far document the
-// plane draws nowhere (issue #132's design decision); THE FOCUS RING its gap
-// outside its element's box and its stroke's width, which set how far inside
-// the visible view it is held (issue #141's design decision); THE HOLD its gap
-// below the one line, where a label and a corner whose place has risen under
-// the line stand level (issue #169's design decision); THE CORNER its
-// size whole and compact, its padding and its gap from the text, which T-LAYER
-// places it by and P-LAY's fit holds a column beside (issue #151's design
-// decision). LK reads this module to put a value on each
-// link's mark; no drawing module reads it for a link (the seam's rule). The
-// values are the UI phase's.
-// Carries: the wireframe's §10 `COL`; S1 Q5's `same`/`provenance` classes
-// (the treatment OPEN).
-// Rules: FP-1, FP-2, FP-10 (no state), FP-26.
+// plane draws nowhere; the focus ring its gap outside its element's box and
+// its stroke's width, which set how far inside the visible view it is held;
+// the hold its gap below the one line, where a label and a corner whose
+// place has risen under the line stand level (FP-26); the corner its size
+// whole and compact, its padding and its gap from the text, which T-LAYER
+// places it by and P-LAY's fit holds a column beside (FP-26). LK reads this
+// module to put a value on each link's mark; no drawing module reads it for
+// a link.
+// Rules: FP-1, FP-2, FP-10, FP-26.
 
 /** the linker's hue — R60's palette */
 export const HUE = Object.freeze({
@@ -41,16 +35,15 @@ export const HUE = Object.freeze({
 
 /**
  * the hue of a mark merging links whose linkers differ (P44; foundations
- * §2.1: "neutral in any variable its members do not share — hue where their
- * linkers differ"): a near-white carrying no linker's hue, lighter than
- * `HUE.others`' blue-grey so the two never read alike
+ * §2.1): a near-white carrying no linker's hue, lighter than `HUE.others`'
+ * blue-grey so the two never read alike
  */
 export const NEUTRAL_HUE = '#e8e6e1';
 
 /** the grade's line (the anchor's edge), never hue */
 export const GRADE = Object.freeze({ exact: 'solid', drifted: 'dashed', orphaned: 'dotted' });
 
-/** sameness: boundaries and a ground texture; S1 Q5's two treatments, the verdict OPEN */
+/** sameness: boundaries and a ground texture (S1 Q5) */
 export const SAMENESS = Object.freeze({ treatment: 'provenance', boundary: '#7ddc9a', texture: 'rgba(125,220,154,0.07)' });
 
 /** the visited-link value: the symbol drawn lighter, the hue kept (D-3) */
@@ -60,8 +53,7 @@ export const VISITED_ALPHA = 0.45;
  * the arrival's weight: a link lit at an arrival — the one a landing
  * followed, or the one a one-step move along the trail crossed the follow
  * of (N-GO's `litLinks`) — stroked at this many times the drawer's own width
- * (foundations §2.1's register: "the arrival an outline around its span with
- * the followed link drawn heavier")
+ * (foundations §2.1's register)
  */
 export const ARRIVAL_WEIGHT = 2;
 
@@ -75,7 +67,7 @@ export const EDGE = Object.freeze({ edition: 1.4, draft: 0.8, withheld: 0.8, lan
 export const STACK = Object.freeze(['sameness', 'own', 'grade', 'refused', 'arrival', 'selection']);
 
 /**
- * THE EDGE STUB (foundations §2.5; S1 Q3): a stroke cut at the visible
+ * The edge stub (foundations §2.5; S1 Q3): a stroke cut at the visible
  * view's border with a triangle on the true bearing, its tip `inset` px
  * inside the border, `length` px along the bearing and `width` px across its
  * base — the one stub BM's beams and P-RENDER's mid connections draw
@@ -83,8 +75,8 @@ export const STACK = Object.freeze(['sameness', 'own', 'grade', 'refused', 'arri
 export const STUB = Object.freeze({ inset: 8, length: 10, width: 10 });
 
 /**
- * THE TAIL (issue #132's design decision): the short stroke, with no bearing
- * and no triangle, by which a link whose far document the plane draws
+ * The tail: the short stroke, with no bearing and no triangle, by which a
+ * link whose far document the plane draws
  * nowhere leaves its near end — `length` px rightward, its label `gap` px past
  * its end. Shorter than a gutter at the smallest em an article stands at
  * (P-LAY's GUTTER at P-LOD's UNMOUNT_EM), so a tail leaving a column's line —
@@ -94,8 +86,8 @@ export const STUB = Object.freeze({ inset: 8, length: 10, width: 10 });
 export const TAIL = Object.freeze({ length: 10, gap: 3 });
 
 /**
- * THE FOCUS RING (D5 §4 rule 2; issue #141's design decision): stroked `gap`
- * px outside its element's box, `width` px wide — its box clamped to the
+ * The focus ring (D5 §4 rule 2): stroked `gap` px outside its element's
+ * box, `width` px wide — its box clamped to the
  * visible view inset by `gap` and half the width, so the whole stroke stands in
  * the view: an element wider than the view ringed at the view's border, one
  * out of it marked on the facing edge
@@ -103,17 +95,16 @@ export const TAIL = Object.freeze({ length: 10, gap: 3 });
 export const RING = Object.freeze({ gap: 3, width: 2.5 });
 
 /**
- * THE HOLD (issue #169's design decision: "Held below the line"): a sign
- * whose place has risen under the one line — a place's label, a document's
+ * The hold (FP-26): a sign whose place has risen under the one line — a
+ * place's label, a document's
  * corner — stands `gap` px below the line's bottom edge, so every sign held
  * there stands level with the others (P-LABEL's `holdTop`)
  */
 export const HOLD = Object.freeze({ gap: 8 });
 
 /**
- * THE CORNER (foundations §3.1; issue #151's design decision: "The corner
- * follows the column nearest the view's centre"; FP-26): a document's state,
- * version and whole-document count, set at the interface's size, `px` px —
+ * The corner (foundations §3.1; FP-26): a document's state, version and
+ * whole-document count, set at the interface's size, `px` px —
  * `whole` em wide whole, `compact` em wide compact, where a usual state is a
  * glyph and every word kept wraps whole — padded `pad` px on either side
  * inside that width, its right edge `gap` px from the text of the column it
@@ -128,12 +119,11 @@ export const cornerWidth = (/** @type {boolean} */ compact) => (compact ? CORNER
 
 /**
  * The smallest size a label on the plane is set at, in px — the far labels'
- * size, above P-LOD's readable em (foundations §2.1: legibility, not frame
- * cost, is what the scales buy); its value the UI phase's (S3 Q4).
+ * size, above P-LOD's readable em (foundations §2.1; S3 Q4).
  */
 export const LABEL_MIN_PX = 9;
 
-/** the canvas palette (the wireframe's COL) */
+/** the canvas palette */
 export const COL = Object.freeze({
   bg: '#0e1013', doc: '#161b22', docEdge: '#39424e', draftEdge: '#5a4a2a', title: '#cfd6df', text: '#b9c1cb',
   greek: '#4b5563', cluster: '#1b2430', clusterEdge: '#3a4a5e', land: '#ffb454', focus: '#7ddc9a',

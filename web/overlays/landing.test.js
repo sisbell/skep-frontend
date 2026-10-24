@@ -1,20 +1,13 @@
-// O-LAND's test against the FAKE PORT, on a stand-in of the line's element
-// (issue #153's design decision): a LEAP whose text holds only part of the
-// passage carried stands the line — the landing's words, and its acts as the
-// landing offers them, here the scene with the text it came from — written
-// from N-GO's state (a mutant that writes the words alone, or no line,
-// turns red); a press on an act is N-GO's; the next landing takes the line
-// down with the outline, and where one of its acts held the focus the focus goes
-// to the walk's element (a mutant that drops the hand-off leaves the focus
-// on nothing and turns red); a landing that says nothing stands no line.
-// A landing in several runs (issue #158's design decision): the line the
-// label of the run it stands at, its acts the step's — "next piece",
-// "previous piece", each showing its chord — before its offers; a press on
-// one steps, and the line takes the label of the run stepped to (a mutant
-// that leaves the step out, or writes the old words, turns red). The labels
-// that would stack in one column's edge are one group, a group's room the
-// most its labels take (a mutant grouping across columns, or by the first
-// label's height alone, turns red).
+// O-LAND's test against the fake port, on a stand-in of the line's element:
+// a LEAP whose text holds only part of the passage carried stands the line —
+// the landing's words and its acts, written from N-GO's state — a press on an
+// act is N-GO's, the next landing takes the line down with the outline and a
+// focus its act held goes to the walk's element, and a landing that says
+// nothing stands no line; a landing in several runs makes the line the label
+// of the run it stands at with the step's acts first, a press on one stepping
+// and the line taking the label of the run stepped to (FP-21); and the labels
+// that would stack in one column's edge are one group, whose room is the
+// most any of its labels takes.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';

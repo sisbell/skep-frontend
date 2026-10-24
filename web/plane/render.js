@@ -1,142 +1,89 @@
-// P-RENDER — the canvas (the structure record §3.2 "P-RENDER"). Layer 2.
-// ENGINE-BOUND. State: none of the model's or the view's — the canvas and
-// the per-frame `stats` alone (FP-8: repainted whole on a dirty frame;
-// nothing drawn on the canvas is updated in place).
-// The board's region with its label and, at the floor, the residue
-// statement, and while the shell's index reports changes it could not place,
-// that a document such a change created is not shown (issue #212's design
-// decision), all in the cell of its user grid no account takes — WHERE NO
-// BOARD IS HELD none of it, nor an account's frame under the view, nor a
-// ring at the walk's root (issue #215's design decision: "`render.js` draws
-// no board: no outline, label, origin or count"; FP-35); at FAR the
-// accounts as clusters with their counts — documents (exact, or a lower
-// bound "≥ n" where the index runs from a floor), links held here (LK's
-// fold; HOLLOW while any document's links are unread — "arriving"), the
-// landmarks ◆ — the address above the density mark and each count on lines
-// of its own beneath it (foundations §2.1: each count at a fixed place on
-// its mark); at MID the account frames ("nothing here yet" where empty — law
-// 13), the documents as their columns, ONE BOX A DOCUMENT showing ONE
-// version of it (issue #154's design decision: "The box shows one version";
-// N-GO's `shownIn`): the version's own text, its fold, its bars and its
-// label — a pinned version's address marking the version the box holds —
-// and the box's document's edge, landmark, badge, history strip,
-// connections and tails, which stand as they were whichever version it
-// shows (T-LAYER's fold, P-LAY's: issue #15 —
-// no frame or rule around a column, the document's one edge tracing the
-// outside of its columns, P-LAY's `outline`, the edition/draft edge its
-// weight, so length reads as a count of columns; a document whose text has
-// not arrived its estimated columns, one whose extent is unread its first
-// column slot), in the outline's first row the address label — its fields
-// past its account's prefix, led by their separator as the address display
-// spells them (foundations §3.1) — and its first line — a DRAFT convention —
-// the badge from LK's `countDoc`, the members' marks on the strip along its
-// top; a document a read answered `withheld`,
-// whether the index lists it or not, as the withheld box — its owner and the
-// word (T-LAYER's `withheldBox`, the ARIA mirror's words for it too), no
-// badge, B1-S2), each account's CONTINUATION whose documents
-// the scale draws too small to stand whole as ONE MARK (foundations §2.1;
-// P44; P-LOD's `residueDepth`, crossfading with the boxes it holds through
-// the far band): law 13's count of what it holds — "≥ n" where the index
-// runs from a floor — and its newest member's label as a box draws it, its
-// act a teleport to that member, its members drawn as boxes only as the band
-// fades them in; the mid connections from LK's `connections`, each end at
-// the outline that draws a document or the mark that holds it — a far end the
-// frame does not draw at the outline or the mark that would, and none where
-// the plane draws its document nowhere (`drawsDoc`, the documents `drawable`
-// lists, the one test LK reads through the reader the app hands it) — a line between two places standing
-// in the visible view (the viewport below the one line, a place's centre
-// inside it), and from the place standing there toward one out of it THE EDGE STUB:
-// its stroke cut at the view's border on the true bearing, the cut P-CAM's
-// `edgeStub` that BM's beams share (foundations §2.1: "one whose far end is
-// out of view ending at the view's edge as §2.5's stub does"); two places
-// both out of view joined only where the frame draws both; a connection
-// holding more than one link carrying its COUNT, the bare numeral, on its
-// stroke where the stroke runs clear of every place — before a stub's
-// triangle — over a plate of the plane's ground, so the line passes behind
-// its number (foundations §2.1's register: "one connection drawn per
-// document pair with its count"; P44 forbids a merged mark that hides it;
-// P-LABEL's `onStroke`); THE TAILS (issue #132's design decision), from LK's
-// `tails`: a link joining a drawn document to one the plane draws nowhere is
-// no connection and no stub, never pointing at the address's place, which
-// can lie inside a mark naming another document, but a short horizontal
-// stroke with no bearing and no triangle leaving its near end, P-REG's
-// TAIL.length rightward — held short of any other place's shape (P-LABEL's
-// `roomRight`) — in the mark its links merge into: at mid scale from its
-// place's right edge, a document's outline's first row or a mark, at its
-// middle; where the document's article stands in the mount band, from each
-// passage's line where its symbol stands, at the edge of the part of its
-// block holding the line, the point a beam leaves it at (BM's `leaveAt`),
-// the passages leaving by one line one tail; each drawn only where it leaves
-// inside the visible view, and set ending in its LABEL, at its end, by the
-// pass: one link's far end named — its address whole, then LK's `farWords`
-// cut to the room — or the count of several, the bare numeral, its stroke a
-// shape no label meets; a press on it lists its links (APP-INPUT's,
-// `tailAtScreen`); THE LABELS —
-// every string the canvas sets but the trail's pip numbers — handed to
-// P-LABEL's one pass once every place's shapes are drawn, and set over them
-// at no less than P-REG's LABEL_MIN_PX, each only where its place holds it
-// whole inside the visible view — the one line stands opaque over the strip
-// above it, where a label would be hidden, or cut through at the line's edge
-// — meeting no other place's shape and no label set before it (F-9;
-// foundations §2.1), a document's on a plate of its ground over the bars
-// beneath; and where its place has risen under the one line, HELD below it
-// (issue #169's design decision: "Held below the line"; P-LABEL's hold) —
-// every label naming a place, a document's, a continuation's mark's, a
-// cluster's address and an account frame's, each handed its place's shape on
-// screen and its ground, but the board's and those of the places the line
-// names (L-LINE's `named`: "Named once"), whose labels keep the rule above —
-// the box's edge and history strip standing where the box begins, so it reads
-// as continuing above; a document whose article stands in the mount band has
-// its label held over its text by T-LAYER instead; then the stubs' triangles, over the places and their labels
-// as the pips are, for the stubs' strokes run behind the boxes, which at mid
-// scale stand along most of the view's border and would hide a triangle drawn
-// with its stroke, and the tails' strokes with them, for a tail leaving a
-// passage's line starts inside its document's outline, whose ground would
-// cover it; then the trail's pips numbered newest-first, each number at
-// the label floor, and no path between them (foundations §2.2 renders the
-// entries as pips: at reading scale a pip stands in the text column, where a
-// path would run between the glyphs of the article mounted over the canvas);
-// the focus ring, its box clamped inside the visible view — an element wider
-// than the view ringed at the view's border, one out of it marked on the
-// facing edge (issue #141's design decision; P-REG's RING); the arrival
-// mark, every run of the span a follow, or a LEAP carrying a passage, landed
-// on — or of the passage a one-step move along the trail lights, where its
-// text holds it now (N-GO's `arrivalMark`; issue #152's design decision) —
-// outlined in view or not (issue #158's design decision: "Zooming out then
-// shows all of them"): line by line on its own glyphs where its lines stand
-// as text, and on its fold's lines elsewhere, each column's run of them one
-// extent, wherever its article stands or its box stands whole, never on a
-// continuation's mark; a press on an outlined run names it
-// (`arrivalAtScreen`). BARS MEAN ONLY "TOO SMALL TO READ" (issue #122's design decision):
-// no document at reading size is ever drawn as bars — the canvas draws them
-// below P-LOD's readable threshold, and at or above it every document is real
-// text, T-LAYER standing every line of it in view in the frame its em gets
-// there. A document's bars are the lines of T-LAYER's fold (`foldOf`: the
-// article's own lines, as the platform set them where it has, in the columns
-// the mount sets them in), each bar where its line's glyphs will stand, in
-// its column, so the handoff swaps bars for text in place and mid scale
-// greeks the columns the mount sets (law 8; S1 Q7; issue #15); a line T-LAYER
-// stands as text yields its bar (`standing`), line by line, a document whose
-// article stands in the mount band its label, and one whose article stands in
-// another fold — a stale one a press holds — the whole of it. The loop runs
-// T-LAYER's frame BEFORE this draw, so what stands is settled when a
-// document's label and bars are drawn or yielded; `stats` names both sets,
-// line by line, and counts the bars drawn at the readable em (`barred`, 0 by
-// the rule), and the loop holds them against what stands at the frame's end;
-// it names the marks, the connections — each with its count and the numeral the
-// pass set on it, each stub with the place it is bound for, its cut and its
-// triangle — the tails, each with its links, its stroke and the label set at
-// its end, and the labels drawn too, the labels' parts left out with the
-// rule that left each out, the box the focus ring outlined and the arrival
-// mark's rects, each with the run it outlines, for the gate. The hit tests read the
-// draw's own rule: a click meets a document on its outline alone, where its
-// columns stand whole, a continuation's mark wherever the mark holds its
-// documents, a tail on its stroke or its label, and an arrival's run on its
-// outline, as the last frame drew them.
-// The system account's rows are never drawn (the record §1.8; this lane's
-// cut). The chip is at the document's corner (T-ARTICLE), never here.
-// Carries: the wireframe's §10 whole and §21's `drawAccountFrames`.
-// Rules: FP-1, FP-2, FP-8, FP-10 (reads through exports), FP-21, FP-22, FP-26, FP-35.
+// P-RENDER — the canvas (the structure record §3.2). Layer 2. ENGINE-BOUND.
+// State: none of the model's or the view's — the canvas and the per-frame
+// `stats` alone; the canvas is repainted whole on a dirty frame (FP-8).
+// The frame (`draw`), in order: the board's region with its label and its
+// statements (`boardStatements`; FP-23) in the cell of its user grid no
+// account takes — where no board is held none of it, nor an account's frame
+// under the view, nor a ring at the walk's root (FP-35); at far the accounts
+// as clusters with their counts, exact or a lower bound where the index runs
+// from a floor, the address above the density mark and each count on lines
+// of its own beneath it (foundations §2.1); at mid the account frames, an
+// empty one saying so (law 13), the mid connections behind, the
+// continuations too small to stand whole as one mark each (foundations §2.1;
+// P44; P-LOD's `residueDepth`), crossfading with the boxes they hold through
+// the far band — law 13's count of what it holds and its newest member's
+// label, its act a teleport to that member — and the documents as their
+// columns, one box a document showing one version of it (FP-22; N-GO's
+// `shownIn`): the version's own text, its fold, its bars and its label, and
+// the box's document's edge, landmark, badge, history strip, connections and
+// tails, which stand as they are whichever version it shows. A document's
+// one edge traces the outside of its columns (P-LAY's `outline`), the
+// edition or draft edge its weight, so length reads as a count of columns
+// (FP-12); a document whose text has not arrived is its estimated columns,
+// one whose extent is unread its first column slot; in the outline's first
+// row its label (T-LAYER's `docLabel`) and the members' marks on the strip
+// along its top; a document a read answered `withheld`, whether the index
+// lists it or not, as the withheld box (B1-S2). The mid connections come
+// from LK's `connections`, each end at the outline that draws a document or
+// the mark that holds it — none where the plane draws its document nowhere
+// (`drawsDoc`, the one test LK reads through the reader the app hands it) —
+// a line between two places standing in the visible view, and from the place
+// standing there toward one out of it the edge stub: its stroke cut at the
+// view's border on the true bearing (P-CAM's `edgeStub`; foundations §2.1,
+// §2.5); two places both out of view joined only where the frame draws both;
+// a connection holding more than one link carrying its count, the bare
+// numeral, on its stroke where the stroke runs clear of every place, over a
+// plate of the plane's ground (foundations §2.1's register; P44; P-LABEL's
+// `onStroke`). The tails (`tailsOf`), from LK's `tails`: a link joining a
+// drawn document to one the plane draws nowhere is no connection and no
+// stub, but a short horizontal stroke with no bearing and no triangle
+// leaving its near end, P-REG's TAIL.length rightward, held short of any
+// other place's shape (P-LABEL's `roomRight`), in the mark its links merge
+// into — at mid scale from its place's right edge at its middle; where the
+// document's article stands in the mount band, from each passage's line
+// where its symbol stands (BM's `leaveAt`), the passages leaving by one line
+// one tail — each drawn only where it leaves inside the visible view and set
+// ending in its label by the pass: one link's far end named, its address
+// whole then LK's `farWords` cut to the room, or the count of several; a
+// press on it lists its links (`tailAtScreen`).
+// The labels — every string the canvas sets but the trail's pip numbers —
+// are handed to P-LABEL's one pass once every place's shapes are drawn
+// (`drawLabels`), each set only where its place holds it whole inside the
+// visible view, meeting no other place's shape and no label set before it
+// (F-9; foundations §2.1), a document's on a plate of its ground over the
+// bars beneath; where its place has risen under the one line, held below it
+// (FP-26) — every label naming a place is handed its place's shape and its
+// ground, but the board's and those of the places the line names (L-LINE's
+// `named`), whose labels keep the rule above; a document whose article
+// stands in the mount band has its label held over its text by T-LAYER
+// instead. Then the stubs' triangles and the tails' strokes, over the places
+// and their labels, for the stubs' strokes run behind the boxes, which at
+// mid scale stand along most of the view's border and would hide a triangle
+// drawn with its stroke, and a tail leaving a passage's line starts inside
+// its document's outline, whose ground would cover it; then the trail's pips
+// numbered newest-first at the label floor, and no path between them
+// (foundations §2.2); the focus ring, its box clamped inside the visible view
+// (P-REG's RING; `drawFocus`); and the arrival mark, every run of the span
+// landed on, or of the passage a one-step move along the trail lights,
+// outlined in view or not (FP-21; `drawArrival`), a press on an outlined run
+// naming it (`arrivalAtScreen`).
+// Bars mean only too small to read (FP-12): no document at reading size is
+// ever drawn as bars — the canvas draws them below P-LOD's readable
+// threshold, and at or above it every document is real text, T-LAYER
+// standing every line of it in view in the frame its em gets there. A
+// document's bars are the lines of T-LAYER's fold (`foldOf`), each bar where
+// its line's glyphs will stand, in its column, so the handoff swaps bars for
+// text in place and mid scale greeks the columns the mount sets (law 8; S1
+// Q7); a line T-LAYER stands as text yields its bar (`standing`), line by
+// line, a document whose article stands in the mount band its label, and one
+// whose article stands in another fold — a stale one a press holds — the
+// whole of it. The app's loop runs T-LAYER's frame before `draw`, so what
+// stands is settled when a document's label and bars are drawn or yielded.
+// `stats` names what the frame drew, for the gate; the hit tests
+// (`docAtScreen`, `residueAtScreen`, `tailAtScreen`, `arrivalAtScreen`) read
+// the draw's own rule, as the last frame drew it. The system account's rows
+// are never drawn (the record §1.8).
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-21, FP-22, FP-23, FP-26, FP-35.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -310,7 +257,7 @@ function measure(text, px, weight) {
  * residue statement; while the shell's index reports changes it could not
  * place — the arm `unplaced`, whose counts the model never draws as exact
  * (M-REC's `countsExact`) — that a document such a change created is not
- * shown (issue #212's design decision: "the board's label says so").
+ * shown (FP-23).
  * @returns {string[]}
  */
 export function boardStatements() {
@@ -438,7 +385,7 @@ function firstBar(/** @type {import('./layout.js').Bar[]} */ B, /** @type {numbe
 }
 
 /**
- * Every box the plane may draw, ONE A DOCUMENT (see the head), as the record
+ * Every box the plane may draw, one a document (see the head), as the record
  * of the version it shows (N-GO's `shownIn`): every document the model knows
  * exists (M-REC's `known`, the one list the walk's accounts read too) — the
  * index's places, and the documents the model holds that the index does not
@@ -462,7 +409,7 @@ let drawnDocs = { rev: -1, docs: new Set() };
  * version member as its document, whose box the two share? The one test of
  * where a link's far end can stand on the plane: the connections end only at
  * such a document, and LK tails a link whose far document is none (the
- * reader the app hands it; issue #132).
+ * reader the app hands it).
  * @param {string} addr
  * @returns {boolean}
  */
@@ -599,7 +546,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     const draft = LAYER.isDraft(trunk);
     const landmark = /\.0\.1$/.test(doc);
     const ground = d.refused === 'withheld' ? COL.withheld : COL.doc;
-    // the document's one edge, around its columns: no frame or rule around a column (issue #15)
+    // the document's one edge, around its columns: no frame or rule around a column (FP-12)
     const pts = outline(f);
     ctx.beginPath();
     for (let i = 0; i < pts.length; i++) { const p = pts[i]; if (i) ctx.lineTo(sx(box.x + p.x), sy(box.y + p.y)); else ctx.moveTo(sx(box.x + p.x), sy(box.y + p.y)); }
@@ -619,7 +566,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     const stand = LAYER.standing(d.addr), whole = !!stand && stand.fold !== f;
     if (mountedHere || whole) stats.yielded.push(d.addr);
     if (W >= 10 && !mountedHere) {
-      // the label: the ADDRESS past its region's prefix; the first line a DRAFT convention (F-9); the badge from LK, none at a withheld box, whose links no read brings (T-LAYER's `docLabel`) — set by the label pass on the
+      // the label: the address past its region's prefix, the first line (F-9) and the badge, none at a withheld box, whose links no read brings (T-LAYER's `docLabel`) — set by the label pass on the
       // document's ground, where the row holds it, else held below the one line in its outline, but where the line names the document
       pass.labels.push({ kind: 'doc', place: d.addr, within: { x: X, y: Y, w: W, h: H }, x: X, y: Y, align: 'left', alpha: a, plate: ground, parts: LAYER.docLabel(d, W, fsPx),
         hold: named.doc === doc ? null : { rects, pad: g * cam.scale, plate: ground } });
@@ -631,7 +578,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     if (landmark) { ctx.fillStyle = COL.land; const s = Math.max(4, Math.min(11, W * 0.03)), cx = sx(box.x + row.x + row.w / 2), ty = sy(box.y + row.y); ctx.beginPath(); ctx.moveTo(cx, ty - s * 1.6); ctx.lineTo(cx + s, ty - s * 0.3); ctx.lineTo(cx, ty + s); ctx.lineTo(cx - s, ty - s * 0.3); ctx.closePath(); ctx.fill(); }
     if (fsPx < 3 || whole || d.from < 0) continue;
     // the bars, column by column: the article's own lines, each where its glyphs will stand, a line standing as text yielding its bar — and
-    // at the readable em every line in view stands, for bars mean only "too small to read" (issue #122)
+    // at the readable em every line in view stands, for bars mean only too small to read (FP-12)
     const B = laidOut(d).bars;
     let set = 0;
     const below = wy(VH + fsPx) - box.y;
@@ -851,7 +798,7 @@ function drawTrail() {
  * A box on screen clamped inside the visible view, inset by the focus ring's
  * reach (P-REG's RING), so the ring's whole stroke stands in the view: an
  * element wider than the view held at its border, one out of it collapsed to
- * a mark on the facing edge (issue #141's design decision).
+ * a mark on the facing edge.
  * @param {Rect} b
  * @param {Rect} seen the visible view
  * @returns {Rect}
@@ -924,11 +871,9 @@ function foldExtents(addr, pos, width) {
 }
 
 /**
- * The arrival mark (foundations §2.1: "an outline around its span"; §3.2;
- * issue #158's design decision: "At the landing, outline every run, whether
- * it is in view or not. Zooming out then shows all of them"): every run the
- * landing's text holds the span in outlined, and nothing between them, in
- * view or not: line by line on its own bytes' line-rects where its lines
+ * The arrival mark (foundations §2.1, §3.2; FP-21): every run the landing's
+ * text holds the span in outlined, and nothing between them, in view or
+ * not: line by line on its own bytes' line-rects where its lines
  * stand as text in its article (T-LAYER's `standingRects`), and on its
  * fold's lines where they stand in no part — out of the view's padding, or
  * the document below the mount band — each column's run of them one extent
@@ -936,8 +881,8 @@ function foldExtents(addr, pos, width) {
  * far band over and no continuation's mark holding it, so no outline is
  * drawn on a mark's ground; where the link names the document whole, the
  * block holding the landing's position. A one-step move's light is drawn
- * with the same marks (issue #152's design decision), its runs read anew
- * each frame from where its text holds the passage now (N-GO's
+ * with the same marks, its runs read anew each frame from where its text
+ * holds the passage now (N-GO's
  * `arrivalMark`). `stats.arrival` names each rect with the run it outlines.
  * The arrival's other mark, the link followed drawn heavier, is BM's, by the
  * weight LK's `markOf` gives it.
@@ -1007,9 +952,8 @@ export function tailAtScreen(px, py) {
 /**
  * The run of the arrival under a screen point, on its outline as the last
  * frame drew it, 3 px either way (a hit test; draws nothing): APP-INPUT's step
- * to it, below its document's reading scale (issue #158's design decision:
- * "Clicking an outlined run below reading scale does the same"); null where
- * no outlined run holds the point.
+ * to it, below its document's reading scale (FP-21); null where no outlined
+ * run holds the point.
  * @param {number} px
  * @param {number} py
  * @returns {{addr: string, run: number} | null}

@@ -1,31 +1,27 @@
-// O-VERSIONS — the members' list (the structure record §3.2 "O-VERSIONS";
-// foundations §2.1's version row; F2.1-e). Layer 2. ENGINE-BOUND. State:
-// none. On the corner's act — a click on its version statement, or Enter at
-// the corner (D5 K-57), both through `fromCorner`: the chain's members `D.1 …
-// D.n`, every one M-PUMP's probe of the chain read (`probeChain`, to the
-// chain's end), each read act a VERSION MOVE that lands in place
-// (N-GO's `toVersion`; issue #154's design decision: "A version move never
-// flies"), carrying the passage held, re-projected into the member and kept
-// on its screen line there — the held passage: the selection where it
-// stands in the corner's document, else the first span in view, the first
-// block whose box meets the visible view (§2.3: "the selection, else the
-// first span in view"); asked by a position alone, the block holding it,
-// whole; else the document's first block — always held in the version the
-// list was opened for, the one its box shows, whether the plain address or a
-// pinned version (`open`'s document): its blocks, its positions, `compare`d
-// from it into each member over that member's own
-// extent, one span read per member made for its row and kept nowhere (§2.1's
-// version row; A-39), in parts where the board refuses it for its size, and
-// marked by the one rule a landing reads (BM-HELD's, through N-GO's
-// `heldIn`; issue #153's design decision: "the version list — say it there
-// too"): whole, all of it in pieces, in part, not at all, or couldn't tell,
-// by the refusal met — its landing naming the passage as the selection
-// where it is one — and each
-// offering "read side by side", the scene opened on the held passage, which
-// SC sets level with what the member holds of it. Each member is one row: its
-// acts and its mark in columns the rows share.
-// THE OPEN END SAYS WHETHER THE BOARD ENDED THE CHAIN THERE (issue #184's
-// design decision: "keep every member the probe read"). Where the board
+// O-VERSIONS — the members' list (the structure record §3.2; foundations
+// §2.1's version row; F2.1-e). Layer 2. ENGINE-BOUND. State: none. On the
+// corner's act — a click on its version statement, or Enter at the corner
+// (D5 K-57), both through `fromCorner`: the chain's members `D.1 … D.n`,
+// every one M-PUMP's probe of the chain read (`probeChain`, to the chain's
+// end), each read act a version move that lands in place (N-GO's
+// `toVersion`; FP-22), carrying the passage held, re-projected into the
+// member and kept on its screen line there — the held passage: the selection
+// where it stands in the corner's document, else the first span in view, the
+// first block whose box meets the visible view (foundations §2.3); asked by a
+// position alone, the block holding it, whole; else the document's first
+// block — always held in the version the list was opened for, the one its
+// box shows, whether the plain address or a pinned version (`open`'s
+// document): its blocks, its positions, `compare`d from it into each member
+// over that member's own extent, one span read per member made for its row
+// and kept nowhere (§2.1's version row; A-39), in parts where the board
+// refuses it for its size, and marked by the one rule a landing reads
+// (BM-HELD's, through N-GO's `heldIn`; FP-21): whole, all of it in pieces,
+// in part, not at all, or couldn't tell, by the refusal met — its landing
+// naming the passage as the selection where it is one — and each offering
+// "read side by side", the scene opened on the held passage, which SC sets
+// level with what the member holds of it. Each member is one row: its acts
+// and its mark in columns the rows share.
+// The open end says whether the board ended the chain there. Where the board
 // answered that no member follows the last read, the head's row carries the
 // latest version's mark — a shape, named in words for assistive technology —
 // and the caption counts the chain, "version ⟨k⟩ of ⟨n⟩". Where it did not,
@@ -48,22 +44,20 @@
 // did not reach, keeps every row it told, and shows the list again in its
 // place, the line gone once the end is proved. Nothing goes on by itself, and
 // no refusal's face stands for a board that refused nothing.
-// It stands at the act's site,
-// which the act that opens it hands in (O-HOST's anchor; foundations §3.1):
-// opened by the corner's act, beneath the version statement, and at the
-// document's box, on the left where the corner stands, once T-LAYER rewrites
-// the corner or takes it down; opened by a floating end's face (O-FACES'
-// `floating`), where the face stood, at the head landed on, and following it
-// as the camera moves. The list takes the focus where
-// a key made the act — Enter at the corner — on its CURRENT member's read
-// act, and never where a click on the statement did (D5 §4 rule 4; the focus
+// It stands at the act's site, which the act that opens it hands in (O-HOST's
+// anchor; foundations §3.1): opened by the corner's act, beneath the version
+// statement, and at the document's box, on the left where the corner stands,
+// once T-LAYER rewrites the corner or takes it down; opened by a floating
+// end's face (O-FACES' `floating`), where the face stood, at the head landed
+// on, and following it as the camera moves. The list takes the focus where a
+// key made the act — Enter at the corner — on its current member's read act,
+// and never where a click on the statement did (D5 §4 rule 4; the focus
 // record's rules 13 and 16); shown again by its own "try again", the focus
 // stays on the control bearing the same act, else goes to its first (rule
-// 11). It opens on its reads (O-HOST's `opening`):
-// where an act was made on the chrome while they read — Back, Esc, the LEAP
-// box opened, the next card asked or shown — nothing shows, and no member is
-// asked about after it. New — no draft in the wireframe. Rules: FP-1, FP-2,
-// FP-13, FP-20, FP-21, FP-22.
+// 11). It opens on its reads (O-HOST's `opening`): where an act was made on
+// the chrome while they read, nothing shows, and no member is asked about
+// after it.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-22.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -243,7 +237,7 @@ function showList(l, anchor, pos, width, byKey) {
   const acts = {};
   /** where a member's version move is made, as data: the list's own place — its span, else its world point — where its reading face stands (N-GO) */
   const site = anchor && anchor.span ? { span: anchor.span } : anchor && anchor.world ? { world: anchor.world } : null;
-  /** the passage held is the reader's selection — a width named — which the landing's line names so (issue #153), the move ending it with the text it stood in */
+  /** the passage held is the reader's selection — a width named — which the landing's line names so (FP-21), the move ending it with the text it stood in */
   const selected = pos != null && width != null && width > 0;
   for (const r of rows) {
     acts['read' + r.k] = (_el, byKey) => GO.toVersion(versionAddress(trunk, r.k), { carry: held ? { addr, pos: held.pos, width: held.width, selected } : null, byKey, site });

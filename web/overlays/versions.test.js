@@ -1,49 +1,17 @@
-// O-VERSIONS' test against the FAKE PORT: each member's row marks whether it
-// holds the passage held by `compare` over the member's own extent, one span
-// read per member — a member longer than its document, holding the passage
-// past the document's length, holds it whole, which `compare` over the
-// document's length answers with nothing (a mutant that compares over the
-// document's extent marks it as holding none of the passage and turns red);
-// each row marked by the rule a landing reads (issue #153) — part where the
-// member holds as many positions as the passage and not all of it (a mutant
-// that sums the pairs' widths marks it whole and turns red), all of it in
-// pieces with its places, couldn't tell by the refusal met where the board
-// did not answer (a mutant that leaves the strip blank turns red);
-// and each member's read act is a version move carrying the passage held
-// (issue #154), landing in place — no flight, the camera where it stood, the
-// box taking the member (a mutant that LEAPs flies and turns red) — the
-// landing marked at its counterpart in the member (a mutant that hands the
-// member the document's position unprojected marks nothing and turns red);
-// a list opened at the version its box shows holds the passage in that
-// version, comparing and carrying it from there (a mutant that holds it in
-// the trunk asks a compare no script answers and turns red). THE OPEN END
-// (issue #184's design decision): the head's row carries the latest version's
-// mark, and the caption counts the chain, only where the board ended the
-// chain there, a count held as read so far read on from its next member (a
-// mutant that marks the head of a chain not ended, or counts it, turns red);
-// a list whose probe the board stopped answering keeps every member it read,
-// records no count, and says at its open end how far it read, that it is not
-// known to be complete and "try again" (a mutant that draws no line turns
-// red); "try again" goes on from the members read, asking neither the
-// document nor a row it told again, and the line goes once the board ends the
-// chain (a mutant that probes from the birth again, or reads the told rows
-// again, turns red); the version being read is listed past the stop, current
-// and "not read" (a mutant that lists nothing past the stop turns red); the
-// members a held feed row names past it are listed "not read", the line
-// dating them by the newest row's commit time (a mutant that reads no feed
-// turns red); a chain of ten members is listed to its end (a mutant that
-// caps the list's probe at the view's eight turns red); and a board that
-// answers nothing leaves the list no member and the line that no version
-// could be read (a mutant that takes a trunk of no metadata for a chain of
-// none turns red). The list stands at the act's site: opened by a
-// floating end's face, where the face stood, the head landed on — never at
-// the viewport's corner (a mutant whose face hands the list no place turns
-// red); opened by the corner's act at its version statement, at the
-// statement, the document's box beside it — its top-left, the side the corner
-// stands on — where it stands once T-LAYER rewrites the corner or takes it
-// down (a mutant that anchors it at the statement alone turns red). The
-// overlay host stands on a stand-in element, the platform's document a
-// stand-in beside it, so the rows are read from what the host wrote.
+// O-VERSIONS' test against the fake port, the overlay host on a stand-in
+// element: each member's row marks what its text holds of the passage held,
+// by `compare` over the member's own extent and by the rule a landing reads
+// (FP-21) — whole, part, all of it in pieces, couldn't tell by the refusal
+// met; each read act a version move carrying the passage held and landing in
+// place, the box taking the member, and a list opened at the version its box
+// shows holding the passage in that version (FP-22); the open end — the
+// head's row marked latest and the caption counting the chain only where the
+// board ended it, a list whose probe stopped keeping every member read and
+// saying how far it read, "try again" going on from there, the version being
+// read and the members a feed row names listed "not read", a chain of ten
+// listed to its end, a board that answers nothing leaving no member; and the
+// list standing at the act's site — a floating end's face's place, or the
+// corner's statement and the document's box beside it.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -86,7 +54,7 @@ const FIRST = { pos: 1, width: 'First.\n\n'.length };
 // positions and its first eight again — as many positions as the passage, never all of it; the third all of it in two pieces, its last
 // nine positions first; the fourth's extent the board does not answer
 const V = '1.0.1.0.45', V1 = V + '.1', V2 = V + '.2', V3 = V + '.3', V4 = V + '.4';
-// THE OPEN END (issue #184): X, of four members, its third's metadata the board never answers, its fourth one a feed row names;
+// the open end: X, of four members, its third's metadata the board never answers, its fourth one a feed row names;
 // Y, of ten members, past the view's cap of eight, whose eleventh — past its end — the board does not answer while `beyond`
 // stands; Z, which the board does not answer at all
 const X = '1.0.1.0.46', X1 = X + '.1', X2 = X + '.2', X3 = X + '.3', X4 = X + '.4';

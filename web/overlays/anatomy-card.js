@@ -1,86 +1,67 @@
-// O-ANATOMY — THE ANATOMY CARD (the structure record §3.2 "O-ANATOMY";
-// B1-S5; foundations §3.1). Layer 2. ENGINE-BOUND. State: none.
+// O-ANATOMY — the anatomy card (the structure record §3.2; B1-S5;
+// foundations §3.1). Layer 2. ENGINE-BOUND. State: none.
 // Conjured at a link's symbol (or at its marked span, the link's own bytes),
 // following it as the camera moves, and at the link's own bytes once the text
 // layer rebuilds or takes down the article the element it was conjured at
-// stood in (O-HOST's anchor): led by each end's passage in words, the
-// far end's first (so a click answers with what the link leads to) — the
-// near end the document the link is drawn at (LK's `near`), whichever of its
-// ends lies there, read where LK places it in that text now, and the far end
-// the other, read where `project` answers its passage sits in its document's
-// current text now (LK's `farRuns`, asked in the card's own opening where no
-// projection is held), never at the position the link stores; a far end that
-// floats reads "its passage is not in ⟨D⟩'s current text" (foundations §2.3),
-// one whose text holds only part of its passage, all of it in pieces, or one
-// the board would not tell of, says so beneath its words in BM-HELD's line
-// (BM-HELD's `farHolds`; issue #153's design decision: "where a read knows the
-// state before departure … say it there too"),
-// and one no passage's words place reads the words its tail and its mirror
-// item carry (LK's `farWords`; issue #132): "nothing this board will say
-// about this address", "withheld · ⟨owner⟩", the document's first line, so
-// the reader knows what a follow will meet before making it. AN END IN
-// WITHHELD TEXT (issue #202's design decision: "The card says this end is
-// withheld, and whose it is, and shows the other end") reads "withheld ·
-// ⟨owner⟩", the owner of the run's origin, by the one owner rule its
+// stood in (O-HOST's anchor): led by each end's passage in words, the far
+// end's first, so a click answers with what the link leads to — the near end
+// the document the link is drawn at (LK's `near`), whichever of its ends lies
+// there, read where LK places it in that text now, and the far end the other,
+// read where `project` answers its passage sits in its document's current
+// text (LK's `farRuns`, asked in the card's own opening where no projection
+// is held), never at the position the link stores; a far end that floats
+// reads the dead end's words (foundations §2.3), one whose text holds only
+// part of its passage, all of it in pieces, or one the board would not tell
+// of, says so beneath its words in BM-HELD's line (BM-HELD's `farHolds`;
+// FP-21), and one no passage's words place reads the words its tail and its
+// mirror item carry (LK's `farWords`), so the reader knows what a follow will
+// meet before making it. An end in withheld text (FP-30) reads the withheld
+// box's words, naming the owner of the run's origin by the one owner rule its
 // placeholder names (T-LAYER's `originOwner`; R56; FP-33): a near end LK
 // draws at a withheld run (`Shown.run`) with no read, and any stretch a read
 // answers as withheld in those words, never its bytes (`fragment`); the far
 // end it leads to is the document that minted its bytes, named as any far
-// end is — "withheld · ⟨owner⟩" where that document is withheld too
-// — then its anatomy — type
-// (R5's form where the commons documents none: on this notebook no registry
-// document is seeded, so every type reads "undocumented here"), from, to,
-// home (published → the link is public; a draft → hidden with its home),
-// owner (never a name alone), then its lineage (A-56, A-57, A-82), read
-// under the audit view (M-PUMP's `lineage`), so a retracted claim stands,
-// marked "retracted", wherever it falls. THE LINEAGE IS THE CLAIMS WITH
-// AUTHORITY (issue #143's design decision; `hasAuthority`): a claim's
-// claimant, the account of its home, owns the link it declares superseded,
-// the account of `old`'s own address — `old`'s on both sides, for on a
-// "supersedes" row this link is `new`, whose owner does not decide. A
-// supersession claim homes wherever its author chose (wire.md §Links
-// (writes): a deposit needs its home's owner alone), so a stranger can claim
-// another's link superseded, and the reads answer every claim whose home the
-// reader may read. "superseded by" names the `new` of each such claim whose
-// `old` is this link, "supersedes" the `old` of each such claim whose `new`
-// is it, and a claimant the owner row does not name follows its claim ("—
-// by its owner, ⟨claimant⟩": another account marked its own link superseded
-// by this one); a side that answered no such claim reads B1-S5's "none", and
-// a side whose read was refused draws no row, for nothing was learned of it.
-// Every other claim stands behind one line after the rows, no number in it,
-// "other accounts' claims — show them", whose act opens them in its place,
-// each an assertion naming its claimant — "you" for the reader — and, in
-// words, what the claimant is to the links: this link's owner, an account
-// above or under the superseded link's owner. Position and wording carry
-// authority, never colour alone. Its acts follow either end and open the
-// scene.
-// B1-S5's age row is not drawn: the age (the commit's position and time,
-// from the feed) is not held for a link older than this page's feed, which
-// starts at the head — and a row standing with no value would read as
+// end is. Then its anatomy — type (R5's form), from, to, home (published →
+// the link is public; a draft → hidden with its home), owner (never a name
+// alone), then its lineage (A-56, A-57, A-82), read under the audit view
+// (M-PUMP's `lineage`), so a retracted claim stands, marked retracted,
+// wherever it falls. The lineage is the claims with authority
+// (`hasAuthority`): a claim's claimant, the account of its home, owns the
+// link it declares superseded, the account of `old`'s own address — `old`'s
+// on both sides, for on a "supersedes" row this link is `new`, whose owner
+// does not decide. A supersession claim homes wherever its author chose
+// (wire.md §Links (writes): a deposit needs its home's owner alone), so a
+// stranger can claim another's link superseded, and the reads answer every
+// claim whose home the reader may read. "superseded by" names the `new` of
+// each such claim whose `old` is this link, "supersedes" the `old` of each
+// such claim whose `new` is it, and a claimant the owner row does not name
+// follows its claim; a side that answered no such claim reads B1-S5's
+// "none", and a side whose read was refused draws no row, for nothing was
+// learned of it. Every other claim stands behind one line after the rows, no
+// number in it, whose act opens them in its place, each an assertion naming
+// its claimant — "you" for the reader — and, in words, what the claimant is
+// to the links: this link's owner, an account above or under the superseded
+// link's owner. Position and wording carry authority, never colour alone.
+// Its acts follow either end and open the scene. B1-S5's age row is not
+// drawn: the age is not held for a link older than this page's feed, which
+// starts at the head, and a row standing with no value would read as
 // B1-S5's "none". The link's mark comes from LK's `markOf`, so the card and
-// the symbol agree. The card takes the focus on its first act — follow, the
-// line standing before it — where a key opened it (Enter at the link's
-// element, K-55; a links-card row's Enter) and never where a click did (D5
-// §4 rule 4; the focus record's rule 16); the line's act rebuilds it, a
-// focus held on the line going to its first control (rule 11). It opens on
-// its reads, the ends' words and the lineage (O-HOST's `opening`), the opening
-// begun in the act that asks for the card — each caller imports this module
-// as the page loads, so no load stands between the act and the opening:
-// where an act was made on the chrome while they read — Back, Esc, the LEAP
-// box opened, the next card asked or shown — nothing shows. A TAIL pressed
-// (P-RENDER's, APP-INPUT's; issue #132's design decision: "Tails from one
-// passage or box merge into one tail showing their count, which lists them
-// when activated") opens on its reads too (`fromTail`): its documents read
-// whole first — at mid scale the page holds none of their text — so each link
-// stands at its own bytes as LK draws it there; one link's card opens as its
-// symbol's would, and several are listed, each row naming its link by its
-// type and its far end (LK's `farLabel`) and opening that link's card; the
-// one symbol a withheld run's ends merge into, pressed, lists them so at the
-// symbol (`fromSymbol`; P44: "The members are whole on one act at the mark").
-// Later: the age row with the read that answers it; walking the lineage's
-// links (A-56, A-57's act); B3-d's retract and edit (the editor's lane);
-// link sets' SET line.
-// Carries: the wireframe's §18 `anatomyCard`. Rules: FP-1, FP-2, FP-13, FP-20, FP-21.
+// the symbol agree.
+// The card takes the focus on its first act — follow, the line standing
+// before it — where a key opened it (Enter at the link's element, K-55; a
+// links-card row's Enter) and never where a click did (D5 §4 rule 4; the
+// focus record's rule 16); the line's act rebuilds it, a focus held on the
+// line going to its first control (rule 11). It opens on its reads, the
+// ends' words and the lineage (O-HOST's `opening`), the opening begun in the
+// act that asks for the card: where an act was made on the chrome while they
+// read, nothing shows. A tail pressed (P-RENDER's) opens on its reads too
+// (`fromTail`): its documents read whole first — at mid scale the page holds
+// none of their text — so each link stands at its own bytes as LK draws it
+// there; one link's card opens as its symbol's would, and several are
+// listed, each row naming its link by its type and its far end (LK's
+// `farLabel`) and opening that link's card; the one symbol a withheld run's
+// ends merge into, pressed, lists them so at the symbol (`fromSymbol`; P44).
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-30, FP-33.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -101,7 +82,7 @@ import { accountOf, isUnder } from '../model/address.js';
 /** @typedef {[string | null, {runs: Array<{pos: number, width: number}> | null, words: string | null}, Lineage]} Read what the card is made from: the near end's words, where the far end's passage stands and its words, the link's lineage */
 
 /**
- * @typedef {Object} Who — the accounts the lineage's claims are named against (issue #143's design decision)
+ * @typedef {Object} Who — the accounts the lineage's claims are named against
  * @property {string | null} owner this link's owner: the account the card's owner row names
  * @property {string | null} reader the reader's account, named "you" wherever it is a claimant; null for a guest
  */
@@ -125,8 +106,8 @@ async function fragment(/** @type {string} */ addr, /** @type {number | null} */
 const claimantOf = (/** @type {Claim} */ c) => accountOf(c.home) || c.home;
 
 /**
- * Has a supersession claim authority (issue #143's design decision)? Its
- * claimant (`claimantOf`) owns the link it declares superseded: the account
+ * Has a supersession claim authority? Its claimant (`claimantOf`) owns the
+ * link it declares superseded: the account
  * of `old`'s own address. The test is `old`'s on both sides of the card —
  * on a "supersedes" row this link is `new`, and its owner does not decide.
  * @param {Claim} c
@@ -143,8 +124,8 @@ export function hasAuthority(c) { return claimantOf(c) === accountOf(c.old); }
  */
 
 /**
- * The lineage (B1-S5; A-56, A-57, A-82; issue #143's design decision). The
- * rows draw the claims with authority (`hasAuthority`): "superseded by" the
+ * The lineage (B1-S5; A-56, A-57, A-82). The rows draw the claims with
+ * authority (`hasAuthority`): "superseded by" the
  * `new` of each claim whose `old` is the link, "supersedes" the `old` of each
  * claim whose `new` is it, in the answer's order, each followed by its
  * claimant where the owner row does not name it ("— by its owner,
@@ -236,8 +217,8 @@ const words = (/** @type {string} */ id, /** @type {Record<string, string>} */ h
 
 /**
  * Where a drawn link's far passage stands in the current text of the version
- * its far box shows (LK's `farAt`; issue #154's design decision): the
- * projection LK carries (`farRuns`), or, where the model holds none — no
+ * its far box shows (LK's `farAt`; FP-22): the projection LK carries
+ * (`farRuns`), or, where the model holds none — no
  * answer, nor a refusal — and that version is not known refused, `project`
  * asked now; null where nothing places it.
  * @param {Shown} s

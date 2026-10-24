@@ -1,31 +1,27 @@
-// O-PROV — PROVENANCE (the structure record §3.2 "O-PROV"; B1-S10). Layer 2.
+// O-PROV — provenance (the structure record §3.2; B1-S10). Layer 2.
 // ENGINE-BOUND. State: none.
 // "who wrote this?" — `show_origin` over the selected span's own bytes
-// answers byte-granular through transclusion chains: the origin
-// document(s), the sameness mark's gesture to the source; "who uses this?"
-// — `find_docs_containing` over the same bytes names the documents whose
-// arrangement holds the passage, short by a stated copy and by any document
-// the reader may not read, which the blind-spot line says (C-72, DRAFT).
-// Each act takes the span exactly as selected (R11); asked by a position
-// alone, it takes the block holding it, whole. An origin and a container
-// are each another arrangement of the passage's material, so each is a LEAP
-// that carries the span asked over, re-projected and marked at the landing
-// (N-GO; foundations §2.3's carry rule; P43), whose line names it as what the
+// answers byte-granular through transclusion chains: the origin document(s);
+// "who uses this?" — `find_docs_containing` over the same bytes names the
+// documents whose arrangement holds the passage, short by a stated copy and
+// by any document the reader may not read, which the blind-spot line says
+// (C-72). Each act takes the span exactly as selected (R11); asked by a
+// position alone, it takes the block holding it, whole. An origin and a
+// container are each another arrangement of the passage's material, so each
+// is a LEAP that carries the span asked over, re-projected and marked at the
+// landing (N-GO; foundations §2.3; P43), whose line names it as what the
 // reader selected where it is the selection's bytes, else as the text they
-// were reading (issue #153). Each card takes the focus on
-// its first act where a key made the act that asked — the slot's chord, Enter
-// on its button — and never otherwise (D5 §4 rule 4; the focus record's
-// rule 16). Each opens on its read (O-HOST's `opening`): where an act was
-// made on the chrome while it read — Back, Esc, the LEAP box opened, the
-// next card asked or shown — nothing shows, a refusal's face included. A
-// refusal's face is the act's answer, carrying the caption the card would
-// have carried (O-FACES' `caption`; issue #179's design decision): a
-// `withheld` one the document-level withheld face of the document the board
-// names, read for before it shows — the edition claims on it, which decide
-// C-67's pointer (O-FACES' `prepare`), its act a LEAP from the span asked
-// over. The two marks' variants (C-33, C-34) are the article's where they
-// fire. Faces: `too_much_coverage`. Carries: the wireframe's §18
-// `provenanceCard`. Rules: FP-1, FP-2, FP-13, FP-20.
+// were reading (FP-21). Each card takes the focus on its first act where a
+// key made the act that asked — the slot's chord, Enter on its button — and
+// never otherwise (D5 §4 rule 4; the focus record's rule 16). Each opens on
+// its read (O-HOST's `opening`): where an act was made on the chrome while it
+// read, nothing shows, a refusal's face included. A refusal's face is the
+// act's answer, carrying the caption the card would have carried (O-FACES'
+// `caption`): a `withheld` one the document-level withheld face of the
+// document the board names, read for before it shows — the edition claims on
+// it, which decide C-67's pointer (O-FACES' `prepare`), its act a LEAP from
+// the span asked over. Faces: `too_much_coverage`.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-21.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -56,7 +52,7 @@ function spanOf(addr, pos, width) {
  * container — carrying the span (N-GO's carry), made at the span the card
  * stands at, where the face of a failure known at the act stands; the span the
  * selection's bytes where a width named them, which the landing's line names
- * as what the reader selected, else the block read (issue #153).
+ * as what the reader selected, else the block read (FP-21).
  * @param {string} to
  * @param {string} addr the span's document
  * @param {{ordinal: number, positions: number}} sp

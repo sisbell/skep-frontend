@@ -1,30 +1,26 @@
-// O-LINKS — THE LINKS CARD (the structure record §3.2 "O-LINKS"; B1-S4).
-// Layer 2. ENGINE-BOUND. State: VIEW — the card's open state alone. The
-// reveal chain's stage and the lenses LIVE IN LK (S-29 (b)): this card
-// RENDERS them and SETS them through LK's setters, owning neither; it asks
-// LK which links to list and draws nothing of its own choosing. The rows:
-// the chain's stage (symbol → content), the overlay toggle — one switch
-// whose words are B1-S4's, "others' links: ⟨state⟩ · n touch this
-// document", split at ⟨state⟩: the words before it name the switch and the
+// O-LINKS — the links card (the structure record §3.2; B1-S4). Layer 2.
+// ENGINE-BOUND. State (FP-10): the card's open state alone. The reveal
+// chain's stage and the lenses live in LK (S-29 (b)): this card renders them
+// and sets them through LK's setters, owning neither; it asks LK which links
+// to list and draws nothing of its own choosing. The rows: the chain's stage
+// (symbol → content), the overlay toggle — one switch whose words are
+// B1-S4's, split at ⟨state⟩: the words before it name the switch and the
 // count after it describes it, the same in both states, and the state is the
 // word set between them and the switch's `aria-checked`, both the state LK
-// holds (R60 — the content of others' links; their existence the count's;
-// WAI-ARIA's switch: its label does not change with its state), the lenses by
-// owner, type and endorsement (R9; D-2 per document for the session), the
-// links, each row naming its far end as its tail and its mirror item do (LK's
-// `farLabel`; issue #132) and opening its link's anatomy card at the link's own bytes,
-// "show more" (the windowed list, the end marked, no page ever expires —
-// A-287), the blind-spot clause (R4's cross-board disclosure, E3 (a)). The
-// card's dismissal returns the chain to hidden; an act's card taking its
-// place is a replacement (O-HOST), so the chain stands — the symbols stay at
-// their spans, each opening its own card. The card takes the focus on its
-// first act where a key asked for it and never otherwise (the focus
-// record's rule 16); rebuilt by its own act, it keeps the focus on the
+// holds (R60; WAI-ARIA's switch, whose label does not change with its state)
+// — the lenses by owner, type and endorsement (R9; D-2 per document for the
+// session), the links, each row naming its far end as its tail and its
+// mirror item do (LK's `farLabel`) and opening its link's anatomy card at the
+// link's own bytes, "show more" (the windowed list, the end marked, no page
+// ever expires — A-287), the blind-spot clause (R4's cross-board disclosure,
+// E3 (a)). The card's dismissal returns the chain to hidden; an act's card
+// taking its place is a replacement (O-HOST), so the chain stands — the
+// symbols stay at their spans, each opening its own card. The card takes the
+// focus on its first act where a key asked for it and never otherwise (the
+// focus record's rule 16); rebuilt by its own act, it keeps the focus on the
 // control pressed (rule 11, O-HOST's); a row's card takes the focus as the
-// row's act was made (rule 11). Later: the SET axis (link sets — the rows
-// change, the drawing does not).
-// Carries: the wireframe's §18 `revealLinks`. Rules: FP-1, FP-2, FP-10,
-// FP-13 (rebuilt from LK's state on every change), FP-20.
+// row's act was made (rule 11). Figures: twelve rows a page.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20.
 
 import * as HOST from './host.js';
 import * as ANATOMY from './anatomy-card.js';

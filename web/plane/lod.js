@@ -1,21 +1,20 @@
-// P-LOD — the level-of-detail bands (the structure record §3.2 "P-LOD").
-// Layer 2, pure. Carries the wireframe's §7 (S3's bands, unchanged) and S1's
-// mount thresholds (em 6.5 / 5.5, below the canvas's readable 8 — S1 Q7). The
-// text bands read the plane's standard type (P-LAY's STANDARD_FS), the size
-// every document is set at until its columns fill its room. They decide how
-// deep the one line and the walk go, down to the document; whether either
-// goes on to a position or a span is the document's own em's, T-LAYER's
-// `atReadingScale` (issue #140's design decision), never a band's: a
-// continuation document, or one set a step smaller, is below its own
-// threshold well inside `near`. THE LIMIT (issue
-// #122's design decision): at most MOUNTS_PER_FRAME documents mount afresh in
-// a frame, those that reach the readable em counted first and never held
+// P-LOD — the level-of-detail bands (the structure record §3.2). Layer 2,
+// pure. State: none. S3's bands, and S1's mount thresholds (S1 Q7): a
+// document mounts at em 6.5 and stands down to 5.5, below the canvas's
+// readable 8. The text bands read the plane's standard type (P-LAY's
+// STANDARD_FS), the size every document is set at until its columns fill its
+// room. They decide how deep the one line and the walk go, down to the
+// document; whether either goes on to a position or a span is the document's
+// own em's (T-LAYER's `atReadingScale`), never a band's: a continuation
+// document, or one set a step smaller, is below its own threshold well inside
+// `near`. The limit (FP-12): at most MOUNTS_PER_FRAME documents mount afresh
+// in a frame, those that reach the readable em counted first and never held
 // back — a limit on a frame's new mounts, never a ceiling on what stands.
 // The continuations' band (foundations §2.1; P44): an account's continuation
 // whose documents the scale draws smaller than the far band's upper edge is
 // drawn as one mark, crossfading with its documents' boxes through the far
 // band as the clusters crossfade with the extents.
-// Rules: FP-1, FP-2, FP-7.
+// Rules: FP-1, FP-2, FP-7, FP-12.
 
 import { DOC_W, CELL, G, LEAF, DEPTH_SOUND } from './projection.js';
 import { STANDARD_FS } from './layout.js';

@@ -1,49 +1,40 @@
-// P-PROJ — the address → position projection (the structure record §3.2
-// "P-PROJ"). Layer 2 (the plane's pure arithmetic, read by the model's pump
-// and by every renderer — FP-11's "the plane's pure camera arithmetic").
-// PURE: caches of a pure function; no state of its own.
+// P-PROJ — the address → position projection (the structure record §3.2).
+// Layer 2: the plane's pure arithmetic, read by the model's pump and by every
+// renderer (FP-11). State: none but caches of a pure function.
 //
 // Position is a pure function of the address (foundations §2.1; law 3):
 // the plane's grid is fixed by the address space — each digit picks a cell
-// in a grid of its parent's cell IN READING ORDER, its ordinal counted along
+// in a grid of its parent's cell in reading order, its ordinal counted along
 // the grid's rows, so consecutive mints stand side by side but across a
 // row's end; each depth's grid has a fixed dimension, a constant never
-// derived from a count (the wireframe's G, 7 cells across at a document's
-// digit); the grid's LAST cell holds, from the start, the next grid of the
-// same dimension, in which the digits past the grid's other cells CONTINUE
-// in reading order (the continuation rule, E18 (a) RULED), so a cell's place
-// is a function of its own digit and its parent prefix alone, no two
-// siblings share a place, and a mint moves no place already drawn. A
-// sub-node's region sits inside its parent node's cell at the digit's slot
-// and the parent's own accounts at the separator's slot (slot 0).
+// derived from a count (`G`, 7 cells across at a document's digit); the
+// grid's last cell holds, from the start, the next grid of the same
+// dimension, in which the digits past the grid's other cells continue in
+// reading order (E18 (a)), so a cell's place is a function of its own digit
+// and its parent prefix alone, no two siblings share a place, and a mint
+// moves no place already drawn. A sub-node's region sits inside its parent
+// node's cell at the digit's slot and the parent's own accounts at the
+// separator's slot (slot 0).
 //
-// Carries: the wireframe's §2 second half (`PAD`, `G`, `CELL`, `cellOf`,
-// `docBox`) — the PERMUTATION (`perm`, `shuffled`, the ring offset) DROPPED
-// per foundations §2.1 ("S3's cellOf without its permutation"; the ring
-// offset "retired, an overplot"). The structure record's §8.2 row for W §2
-// and its §11 stop 18 still say "the permutation CARRIED as-is" — they
-// predate the design and are owed (reported).
-//
-// THE CONTINUATIONS: an account's continuation k is the last cell of its
+// The continuations: an account's continuation k is the last cell of its
 // document grid k − 1 (`continuationCell`), holding every document at
 // continuation depth k and deeper (`withinContinuation`). Where the camera
 // draws a continuation's documents too small to stand whole, the plane draws
-// the continuation as ONE MARK (foundations §2.1: "its mid frame shows its
-// oldest 48 whole and the other 152 as one residue, its newest's label on
-// it"; P44; P-LOD's `residueDepth`, P-RENDER).
+// the continuation as one mark (foundations §2.1; P44; P-LOD's
+// `residueDepth`, P-RENDER).
 //
-// THE PRECISION FLOOR (this lane's finding, reported): world positions are
-// doubles; a document at continuation depth k has a cell 7^k smaller than
-// its account's position, so past DEPTH_SOUND grids the arithmetic the
-// camera runs (`(wx - cam.x) * scale`) loses the box. Documents deeper than
-// that have no box of their own: they share the cell of the continuation
-// past the sound depth, `continuationCell(account, DEPTH_SOUND + 1)`, marked
-// `residue` — a continuation always drawn as one mark — and the one of them
-// the focus names mounts there. E18 (a) holds: the zoom bound reaches the
-// reading scale of every place the projection draws, and of every face a
-// document there is set at (P-CAM's `setDeepest` and `reach`).
+// The precision floor: world positions are doubles; a document at
+// continuation depth k has a cell 7^k smaller than its account's position,
+// so past DEPTH_SOUND grids the arithmetic the camera runs
+// (`(wx - cam.x) * scale`) loses the box. Documents deeper than that have no
+// box of their own: they share the cell of the continuation past the sound
+// depth, `continuationCell(account, DEPTH_SOUND + 1)`, marked `residue` — a
+// continuation always drawn as one mark — and the one of them the focus
+// names mounts there. E18 (a) holds: the zoom bound reaches the reading
+// scale of every place the projection draws, and of every face a document
+// there is set at (P-CAM's `setDeepest` and `reach`).
 //
-// Rules: FP-1, FP-2, FP-7 (never serialized), FP-10 (no state), FP-11.
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-11.
 
 import { fieldsOf, accountOf, boardOf, kindOf } from '../model/address.js';
 
@@ -68,9 +59,9 @@ import { fieldsOf, accountOf, boardOf, kindOf } from '../model/address.js';
 
 export const WORLD_W = 1e6;
 export const WORLD_H = 1.5e6;
-/** digits per field: node 3, user 2, document 1 (the wireframe's PAD) */
+/** digits per field: node 3, user 2, document 1 */
 export const PAD = [3, 2, 1];
-/** grid cells across, per padded level (the wireframe's G; 7 at the document's digit) */
+/** grid cells across, per padded level: 7 at the document's digit */
 export const G = [2, 3, 2, 3, 2, 7];
 /** the leaf level (the document's digit) */
 export const LEAF = G.length - 1;
@@ -87,7 +78,7 @@ export const CELL = (() => {
 })();
 export const DOC_CELL_W = CELL[LEAF][0];
 export const DOC_CELL_H = CELL[LEAF][1];
-/** the document's box inside its cell (the wireframe's 0.80 / 0.86): its room, which P-LAY folds its columns into */
+/** the document's box inside its cell, 0.80 of its width and 0.86 of its height: its room, which P-LAY folds its columns into */
 export const DOC_W = DOC_CELL_W * 0.8;
 export const DOC_H = DOC_CELL_H * 0.86;
 
@@ -108,7 +99,7 @@ export function pathOf(key) {
 }
 
 /**
- * Where a digit sits in its level's grid, in READING ORDER with the
+ * Where a digit sits in its level's grid, in reading order with the
  * continuation: the usable cells are the first g²−1 (indices 0 … g²−2), the
  * last cell (index g²−1) holds the next grid. At the leaf the digit is
  * 1-based (document 1 is the first cell); elsewhere digit 0 is the
@@ -143,7 +134,7 @@ export function cellOf(a, depthCap = DEPTH_SOUND) {
     // past the sound depth a leaf shares the residue: the continuation cell at the cap
     if (leaf && k > depthCap) { k = depthCap; col = g - 1; row = g - 1; }
     let cw = w / g, ch = h / g;
-    // descend k times into the continuation cell — the LAST cell of each grid
+    // descend k times into the continuation cell — the last cell of each grid
     for (let i = 0; i < k; i++) { x += (g - 1) * cw; y += (g - 1) * ch; cw /= g; ch /= g; }
     x += col * cw; y += row * ch;
     w = cw; h = ch;

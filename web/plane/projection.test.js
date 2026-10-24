@@ -1,7 +1,8 @@
-// P-PROJ's test: reading order with the continuation (foundations §2.1), no
-// permutation; a mint moves no place; siblings never collide; each
-// continuation's cell holds its documents and none shallower; the residue
-// past the sound depth. M2 (the cell arithmetic off by one) turns it red.
+// P-PROJ's test: reading order with the continuation (foundations §2.1); a
+// mint moves no place; siblings never collide; each continuation's cell
+// holds its documents and none shallower; the residue past the sound depth;
+// the clear strip left of a box; the account under a point and the board's
+// label cell.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, boardLabelCell, clearLeftOf, continuationCell, withinContinuation, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
