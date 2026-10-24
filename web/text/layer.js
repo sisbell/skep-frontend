@@ -117,8 +117,17 @@
 // the text set again, so an edit above the view moves no word the reader
 // reads (FP-23; issue #160), its position where that text's image places none
 // of them, and by position for now where the text comes before its image, the
-// bytes kept for the re-set the image's arrival makes (`still`). The paging
-// key continues at the next column's top at reading scale (`pageTarget`). A document's REGION
+// bytes kept for the re-set the image's arrival makes (`still`). A VIEW THE
+// READER LEAVES AND COMES BACK TO by the trail is placed again the same way
+// (issue #221; foundations §2.2: "so Back lands on the passage left"): what a
+// view reads — the passage at its visible centre in the document at its own
+// reading scale there, by its position, its byte's identity and its place in
+// the fold (`readAt`) — N-TRAIL keeps beside the view, and a return lands at
+// the view that keeps that passage at its place and its size on screen in the
+// fold its document stands in then, its lines set as the platform sets them
+// first, the view itself where the passage stands where it stood (`keptAt`).
+// The paging key continues at the next column's top at reading scale
+// (`pageTarget`). A document's REGION
 // is its outline's bounds — its label, badge and blocks' counts inside them —
 // widened leftward by the strip its corner stands in (`regionOf`; issue #141's
 // design decision): N-WALK's re-take takes the document whose region holds the
@@ -269,7 +278,7 @@
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
-import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, measure, fit, READING_PX } from '../plane/camera.js';
+import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, READING_PX } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE, GUTTER } from '../plane/layout.js';
@@ -420,6 +429,15 @@ import { t } from '../strings.js';
  * @property {number | null} pos the position the line it stood on opens at (P-LAY's `posAt`): the one `ids` is read from
  * @property {ISpan[]} ids the byte `pos` names, by identity, read through the image the article was made from (M-REC's `identityIn`): where the text set again holds it now is the line that takes the passage's (FP-8: the passage kept, never its position; issue #160) — none where that image did not cover it
  * @property {{x: number, y: number, scale: number} | null} left the camera as a re-set whose text came before its image left it, by position: `ids` kept for the re-set the image's arrival makes, while the camera stands there (`still`); null where it is no such hold
+ */
+/**
+ * @typedef {Object} Reading — the passage a view reads (`readAt`), by value — positions, a byte's identity and a place, no fold and no words: what N-TRAIL keeps beside an entry's view, so a return lands on that passage wherever its document was set since (`keptAt`; issue #221)
+ * @property {string} addr the document: the version its box showed
+ * @property {number} pos the position the line under the view's visible centre opens at (P-LAY's `posAt`)
+ * @property {ISpan[]} ids that position's byte by identity, through the document's held image (M-REC's `identityOf`); none where the image did not cover it
+ * @property {{x: number, y: number}} p the visible centre, in world units relative to the room
+ * @property {{x: number, y: number}} line where the fold set that position's line, in world units relative to the room (P-LAY's `placeOf`)
+ * @property {number} fs the fold's em, in world units
  */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
 
@@ -725,6 +743,12 @@ function seenWorld(/** @type {{x: number, y: number, scale: number} | null} */ a
   if (!at) return { x0: wx(s.x), y0: wy(s.y), x1: wx(s.x + s.w), y1: wy(s.y + s.h) };
   const { VW, VH } = viewport(), x = (/** @type {number} */ px) => (px - VW / 2) / at.scale + at.x, y = (/** @type {number} */ py) => (py - VH / 2) / at.scale + at.y;
   return { x0: x(s.x), y0: y(s.y), x1: x(s.x + s.w), y1: y(s.y + s.h) };
+}
+
+/** the visible view's centre in world units — the viewport's below the one line — with the camera at a view (`readAt`) */
+function centreAt(/** @type {{x: number, y: number, scale: number}} */ at) {
+  const v = seenWorld(at);
+  return { x: (v.x0 + v.x1) / 2, y: (v.y0 + v.y1) / 2 };
 }
 
 /**
@@ -1857,6 +1881,60 @@ export function holdAcross(from, to, at = null) {
   if (from !== to) { hold = h; return; }
   hold = null;
   if (h) keepPlace(h, rec);
+}
+
+/**
+ * What a view reads (see the head; issue #221): `readingNow`'s rule taken at
+ * a view the camera may stand away from — a departure's, bound for a
+ * flight's destination — against the fold each document stands in now, never
+ * a mounted article: the document whose outline holds the view's visible
+ * centre at its own reading scale there, a version only where its box shows
+ * it and only where the page holds its text; the position the line under that
+ * centre opens at (P-LAY's `posAt`), that position's byte by identity through
+ * the document's held image, and where the fold sets that line and the
+ * centre. Null where the view reads no document so.
+ * @param {{x: number, y: number, scale: number}} view
+ * @returns {Reading | null}
+ */
+export function readAt(view) {
+  const c = centreAt(view);
+  for (const d of REC.docs()) {
+    if (d.from < 0 || d.system || !isShown(d.addr) || !holds(docBox(d.addr), c) || !holds(shapeIn(d), c)) continue;
+    const f = foldOf(d);
+    if (!readsAt(f.fs, view.scale)) continue;
+    const box = docBox(d.addr), p = { x: c.x - box.x, y: c.y - box.y }, pos = posIn(f, p.x, p.y);
+    if (pos == null) continue;
+    const line = placeIn(f, pos);
+    return { addr: d.addr, pos, ids: REC.identityOf(d.addr, pos, 1), p, line: { x: line.x, y: line.y }, fs: f.fs };
+  }
+  return null;
+}
+
+/**
+ * The view that keeps what a view read where it stood (see the head; issue
+ * #221: "Back lands on the passage left"): the view moved so the passage it
+ * read keeps its place and its size on screen in the fold its document stands
+ * in now — `keepPlace`'s arithmetic (P-LAY's `holdOf`, P-CAM's `reanchored`) —
+ * in the version its box shows now, by the passage's byte where that text's
+ * held image places it, else by its position; that fold's lines set as the
+ * platform sets them first where they are not set at the measure in force
+ * (`measureAside`), so the view is placed on the lines the reader will meet.
+ * The view itself where the passage stands where it stood. Null where the
+ * page holds none of that document's text: a read must bring it first.
+ * @param {{x: number, y: number, scale: number}} view
+ * @param {Reading} r what it read
+ * @returns {{x: number, y: number, scale: number} | null}
+ */
+export function keptAt(view, r) {
+  const addr = read.shown(r.addr), d = REC.has(addr) ? REC.doc(addr) : null;
+  if (!d || d.from < 0) return null;
+  if (engine && layer) { foldOf(d); if (!(folds.get(addr) || { set: true }).set) { setMeasure(); measureAside(d); } }
+  const f = foldOf(d), at = r.ids.length ? REC.placedIdentity(addr, r.ids) : [];
+  const now = placeIn(f, at.length ? at[0].pos : r.pos), s = f.fs / r.fs;
+  if (now.x === r.line.x && now.y === r.line.y && s === 1) return view;
+  const box = docBox(addr);
+  const a = { x: box.x + r.p.x, y: box.y + r.p.y }, b = { x: box.x + now.x + (r.p.x - r.line.x) * s, y: box.y + now.y + (r.p.y - r.line.y) * s };
+  return reanchored(view, a, b, r.fs / f.fs);
 }
 
 /**

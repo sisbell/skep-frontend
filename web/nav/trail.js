@@ -8,7 +8,15 @@
 // is departed, a newer version's arrival having pinned the box on the member
 // being read (`retakePlace`; N-GO's `arrived`), so Back restores the version
 // read there (issue #154's design decision: "Back restores the earlier
-// version and its view") — and THE
+// version and its view") — WHAT THAT VIEW READS beside it, by value: the
+// passage at its visible centre, by its position, its byte's identity and
+// where it stood in its fold (T-LAYER's `Reading`), written with every view
+// the trail writes — a departure's, a jump's camera leaving (`leaveFrom`), a
+// landing's (`settle`) — and WHERE THE WALK STOOD in that passage's document
+// as the entry was departed, by position and identity (`Stood`), until a
+// read places the entry's landing (`settle`); so a return lands on that
+// passage and that place wherever its document was set again since (issue
+// #221; N-GO's `landAtCursor`) — and THE
 // STEP THAT LEFT IT for the entry after it (issue #152's design decision),
 // written as a push departs it: the link followed for a follow, the passage
 // carried for a carrying LEAP or a version move — by identity, the permanent
@@ -43,9 +51,10 @@
 // the push place it, the place its camera left for, so a departure re-takes
 // it and a push from it writes its step as any entry's; it holds its jump's
 // reading notice. Its read answers it (`settle`) with what the read brought —
-// a place: the view, the position and the positions the read placed, the
-// view left out where the reader took the camera over at the entry, which
-// keeps the view they left it at; or a NOTICE: the face the entry shows on
+// a place: the view and what it reads, the position and the positions the
+// read placed, where the walk then lands; the view left out where the reader
+// took the camera over at the entry, which keeps the view they left it at,
+// what it read and where the walk stood; or a NOTICE: the face the entry shows on
 // every return to it, the entry standing where the camera went — and what
 // its push dropped stays dropped, as any push's does. A cursor move that
 // reaches a claim goes on once it is answered (`pending`). A jump that ends
@@ -54,19 +63,36 @@
 // it dropped and the step it wrote standing again (FP-25).
 // AN ENTRY HOLDS NO DOCUMENT'S WORDS (issue #177's design decision: "View
 // state holds addresses, positions and layout, never copies of text"; FP-29):
-// its address, its positions, its view and its step — the step's passage by
-// identity — and an act's name where HOME or WHOLE BOARD pushed it; whoever
+// its address, its positions, its view, what that view reads and where the
+// walk stood — each by positions and identity — and its step — the step's
+// passage by identity — and an act's name where HOME or WHOLE BOARD pushed it; whoever
 // shows an entry reads what its document says from the model as it shows it
 // (N-GO's `wordsOf`). A change of the page's class keeps every entry, its
 // number and its address, and drops what the class it left read there: its
-// notice, save a claim's still reading, and the arrival it kept
-// (`classChanged`).
+// notice, save a claim's still reading, the arrival it kept, what its view
+// read and where the walk stood (`classChanged`).
 // Carries: the wireframe's §11 `pushTrail` (its de-duplication by address
 // and its cap of twelve DROPPED: the stack is the record of teleports).
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-25, FP-29.
 
 /** @typedef {{x: number, y: number, scale: number}} View */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
+/** @typedef {import('../text/layer.js').Reading} Reading */
+
+/**
+ * @typedef {Object} Stood — where the walk stood in a document as the reader left an entry (see the head): a return puts it back there
+ * @property {string} addr the document: the version its box showed
+ * @property {number | null} pos the position it stood at — the one a landing named in its span, else the span's or the link's own; null where it stood on the document whole
+ * @property {ISpan[]} ids that position's byte by identity (M-REC's `identityOf`), which a return places in the text its box shows then; none where the held image did not cover it
+ * @property {import('./walk.js').End | null} end the link's end it stood on; null where it stood on none
+ */
+
+/**
+ * @typedef {Object} Departure — what a departure re-takes of the entry it leaves (see the head): N-GO's, read as the act is made
+ * @property {View} view the view the camera is bound for
+ * @property {Reading | null} reading what that view reads (T-LAYER's `readAt`); null where it reads no passage
+ * @property {Stood | null} stood where the walk stands in the document that view reads; null where it stands outside it, or the view reads none
+ */
 
 /**
  * @typedef {Object} FollowStep — a follow, as the entry it left records it
@@ -116,6 +142,8 @@
  * @property {number | null} pos the position landed on, where one was
  * @property {number | null} width the positions of the run landed on from `pos`, where the landing named a span: the first run in the text of a follow's projected far end, or a carried passage's counterpart — one of the runs its landing outlined
  * @property {View} view the view at the entry — the landing's, re-taken at departure; where the camera went, where its read brought no place
+ * @property {Reading | null} reading what its view reads, written with the view (see the head): a return re-places the view by it; null where it reads no passage
+ * @property {Stood | null} stood where the walk stood as the entry was last departed (see the head): a return puts it back there; null where it stood outside the document its view read, or a read has placed the entry's landing since
  * @property {Step | null} step the step that left it for the entry after it, written as a push departed it; none while nothing has, and none where the push took no step this module records
  * @property {string | null} label the act's name where HOME or WHOLE BOARD pushed the entry, the strings table's; null for every other entry, whose document's words are read from the model as it is shown (see the head)
  * @property {Notice | null} notice the face the entry shows: its jump's reading face while the read is out, then the face the read brought; null where it shows none
@@ -144,9 +172,12 @@ const claims = new Map();
 /** @type {Pushed | null} the last push, until the next */
 let last = null;
 
-/** the cursor's entry re-takes the view it is departed at: a claim's too, the place its camera left for */
-function retake(/** @type {View | null} */ departedView) {
-  if (cursor >= 0 && departedView) entries[cursor].view = { ...departedView };
+/** an entry re-takes a departure from it (see the head): the view, what it reads and where the walk stood, by value */
+function taken(/** @type {Entry} */ e, /** @type {Departure} */ d) { e.view = { ...d.view }; e.reading = d.reading; e.stood = d.stood; }
+
+/** the cursor's entry re-takes the departure from it: a claim's too, the place its camera left for */
+function retake(/** @type {Departure | null} */ departed) {
+  if (cursor >= 0 && departed) taken(entries[cursor], departed);
 }
 
 /**
@@ -161,19 +192,21 @@ export function retakePlace(addr) {
 }
 
 /**
- * Push a fresh teleport's entry: the departed entry's view re-taken first
- * and the step leaving it written on it, in the place of any it held, and the
- * entries ahead of the cursor dropped.
- * @param {Omit<Entry, 'step' | 'kept'>} e
- * @param {View | null} departedView the view the camera was bound for as the teleport left
+ * Push a fresh teleport's entry: the departure from the cursor's entry
+ * re-taken there first and the step leaving it written on it, in the place
+ * of any it held, and the entries ahead of the cursor dropped. The entry
+ * pushed reads nothing and holds no walk until a departure or a landing
+ * writes them.
+ * @param {Omit<Entry, 'step' | 'kept' | 'reading' | 'stood'>} e
+ * @param {Departure | null} departed the departure from the cursor's entry as the teleport left
  * @param {boolean} [claim] the landing waits on a read: the entry stands as a claim until `settle` answers it
  * @param {Step | null} [step] the step the teleport takes from the departed entry: a follow's, a carrying LEAP's; none for any other move
  * @returns {Entry} the entry as the trail holds it
  */
-export function push(e, departedView, claim = false, step = null) {
-  retake(departedView);
+export function push(e, departed, claim = false, step = null) {
+  retake(departed);
   /** @type {Entry} */
-  const held = { ...e, view: { ...e.view }, step: null, kept: null };
+  const held = { ...e, view: { ...e.view }, reading: null, stood: null, step: null, kept: null };
   last = { entry: held, step: cursor >= 0 ? entries[cursor].step : null, dropped: entries.slice(cursor + 1) };
   if (cursor >= 0) entries[cursor].step = step;
   entries = entries.slice(0, cursor + 1);
@@ -191,18 +224,19 @@ export function push(e, departedView, claim = false, step = null) {
 
 /**
  * A claim answered with what its read brought (issue #136's design
- * decision; FP-25): a place — its view, where the reader did not take the
- * camera over at the entry, and the position and the positions where the
- * read placed them — or a notice, the face the entry shows on every return
- * to it, the entry standing where the camera went; the reading notice the
- * claim held is taken off either way. The entry keeps its place and its
- * number, and what its push dropped stays dropped; every cursor move waiting
- * on it is woken.
+ * decision; FP-25): a place — its view and what that view reads, where the
+ * reader did not take the camera over at the entry, the walk then landing on
+ * the place and no longer where it stood, and the position and the positions
+ * where the read placed them — or a notice, the face the entry shows on
+ * every return to it, the entry standing where the camera went; the reading
+ * notice the claim held is taken off either way. The entry keeps its place
+ * and its number, and what its push dropped stays dropped; every cursor move
+ * waiting on it is woken.
  * @param {Entry} e
- * @param {{view?: View, pos?: number | null, width?: number | null, notice?: Notice | null}} landing `view` left out, the entry keeps the view it stands at
+ * @param {{view?: View, reading?: Reading | null, pos?: number | null, width?: number | null, notice?: Notice | null}} landing `view` left out, the entry keeps the view it stands at, what it reads and where the walk stood
  */
 export function settle(e, landing) {
-  if (landing.view) e.view = { ...landing.view };
+  if (landing.view) { e.view = { ...landing.view }; e.reading = landing.reading ?? null; e.stood = null; }
   if (landing.pos !== undefined) e.pos = landing.pos;
   if (landing.width !== undefined) e.width = landing.width;
   e.notice = landing.notice ?? null;
@@ -222,13 +256,14 @@ export function settle(e, landing) {
 export function keep(e, kept) { e.kept = kept; }
 
 /**
- * A change of the page's class (see the head; FP-23): every entry keeps its
- * place, its number, its address, its positions, its view and its step, and
- * drops the notice the class it left met there — save a claim's, its read
- * still out, which the new class answers — and the arrival it kept.
+ * A change of the page's class (see the head; FP-23, FP-29): every entry
+ * keeps its place, its number, its address, its positions, its view and its
+ * step, and drops the notice the class it left met there — save a claim's,
+ * its read still out, which the new class answers — the arrival it kept,
+ * what its view read and where the walk stood.
  */
 export function classChanged() {
-  for (const e of entries) { e.kept = null; if (!claims.has(e)) e.notice = null; }
+  for (const e of entries) { e.kept = null; e.reading = null; e.stood = null; if (!claims.has(e)) e.notice = null; }
 }
 
 /**
@@ -241,14 +276,15 @@ export function pending(e) { const c = claims.get(e); return c ? c.answered : nu
 
 /**
  * A jump whose camera leaves only once a read placed its destination, after
- * its entry was pushed (FP-25): the entry it was made from re-takes the view
- * the camera leaves it at.
+ * its entry was pushed (FP-25): the entry it was made from re-takes the
+ * departure from it as the camera leaves — the view it leaves it at, what
+ * that view reads and where the walk stands.
  * @param {Entry} e the jump's entry, the cursor's
- * @param {View} view
+ * @param {Departure} departed
  */
-export function leaveFrom(e, view) {
+export function leaveFrom(e, departed) {
   const i = entries.indexOf(e);
-  if (i > 0 && i === cursor) entries[i - 1].view = { ...view };
+  if (i > 0 && i === cursor) taken(entries[i - 1], departed);
 }
 
 /**
@@ -274,29 +310,29 @@ export function giveBack(e) {
 }
 
 /** @returns {Entry | null} the entry behind the cursor, moving to it; null at the oldest */
-export function back(/** @type {View | null} */ departedView) {
+export function back(/** @type {Departure | null} */ departed) {
   if (cursor <= 0) return null;
-  retake(departedView);
+  retake(departed);
   cursor--;
   return entries[cursor];
 }
 /** @returns {Entry | null} */
-export function forward(/** @type {View | null} */ departedView) {
+export function forward(/** @type {Departure | null} */ departed) {
   if (cursor < 0 || cursor >= entries.length - 1) return null;
-  retake(departedView);
+  retake(departed);
   cursor++;
   return entries[cursor];
 }
 /**
  * Jump to entry n, newest-first (1 = the newest) — a cursor move, never a push.
  * @param {number} n
- * @param {View | null} departedView
+ * @param {Departure | null} departed
  * @returns {Entry | null}
  */
-export function jump(n, departedView) {
+export function jump(n, departed) {
   const i = entries.length - n;
   if (i < 0 || i >= entries.length) return null;
-  retake(departedView);
+  retake(departed);
   cursor = i;
   return entries[cursor];
 }

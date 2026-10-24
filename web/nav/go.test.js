@@ -314,6 +314,17 @@
 // with it, making no entry, no flight and no read; PageDown stays the
 // camera's; a moment's unfold flies the camera alone (a page that flies to
 // board 1, pushes an entry naming it, or says nothing, turns red).
+// THE PASSAGE LEFT (issue #221): Back to an entry whose document was set
+// again while the reader was away — a narrower view folding it at another
+// measure, an edit setting new bytes before the passage — lands where the
+// passage under the visible centre stands at the height it stood and at its
+// em, its own bytes under the centre, where the view left now reads another
+// line (a mutant that flies to the view left, or places the passage by its
+// old position, turns red); one whose text a feed row dropped flies at once to
+// the view left, reads the text beside the flight and goes on to the passage
+// once it answers (a mutant that lands at the view left turns red); and Back
+// puts the walk where it stood as the reader left, never on the landing made
+// there (a mutant that stands it on the landing turns red).
 // The overlay host stands on a stand-in element, the platform's document a
 // stand-in beside it, so a face a landing shows is read back from what the
 // host wrote.
@@ -619,6 +630,8 @@ before(async () => {
   PUMP.start({ onDirty: () => {} });
   // the walk reads N-GO as the app hands it in: where Back's light stands, what a landing says, the version each box shows
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn });
+  // the text layer reads the version each box shows as the app hands it in: the one whose passage a view reads (issue #221)
+  LAYER.readers({ shown: GO.shownIn });
   REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: FAR, kind: 'edition', label: 'far', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
   CAM.setViewport(1440, 900);
@@ -2559,6 +2572,109 @@ test('a newer version\'s arrival never changes what a box shows (issue #154; fou
   GO.arrived(C + '.2');
   assert.equal(GO.shownIn(C), C, 'the page holds none of C\'s text: nothing');
   await run(GO.leapTo(FAR));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- THE PASSAGE LEFT (issue #221: "Back finds where that passage sits now and lands on it") ---------------------------
+
+// REWRITTEN, DROPPED: two drafts of eighty paragraphs, which an edit sets a paragraph of new bytes before while the reader is
+// away: the first's text set again in one step, as a refresh sets it (M-REC's `setAgain`); the second's dropped, as a feed row
+// drops it, and read again as Back reaches it
+const REWRITTEN = '1.0.1.0.42', DROPPED = '1.0.1.0.43';
+const EIGHTY = Array.from({ length: 80 }, (_, i) => `Line ${i + 1} of a draft an edit rewrites above the reader.`).join('\n\n');
+const INSERTED = 'A paragraph an edit set before the rest.\n\n';
+Object.assign(script, reads(REWRITTEN, EIGHTY, []), reads(DROPPED, EIGHTY, []));
+
+/** the passage under a view's visible centre in a document — the line it opens at — that line's first byte by identity, the centre's height below that line's top in px, and the em in px */
+function under(/** @type {string} */ addr, /** @type {{x: number, y: number, scale: number}} */ v) {
+  const f = LAYER.foldOf(REC.doc(addr)), box = docBox(addr), pos = /** @type {number} */ (LAYER.posAt(addr, v.x, v.y));
+  return { pos, ids: REC.identityOf(addr, pos, 1), dy: (v.y - (box.y + placeOf(f, pos).y)) * v.scale, em: f.fs * v.scale };
+}
+/** the same passage, at the same height from the centre within a thousandth of a px, at the same em */
+const samePassage = (/** @type {ReturnType<typeof under>} */ a, /** @type {ReturnType<typeof under>} */ b) => a.pos === b.pos && Math.abs(a.dy - b.dy) < 1e-3 && Math.abs(a.em - b.em) < 1e-9;
+
+test('Back lands on the passage the reader left after a narrower view folds its document again at the measure the view holds: the view left now reads another line, and Back flies to the one that keeps the passage under the visible centre at the height it stood and at its em (issue #221)', async () => {
+  await PUMP.loadWhole(LONG);
+  const d = REC.doc(LONG), f = LAYER.foldOf(d);
+  const at = /** @type {import('../model/records.js').Block} */ (d.blocks.find((b) => placeOf(f, b.pos).column === f.across));
+  await run(GO.leapTo(LONG, { pos: at.pos + 4 }));
+  const left = CAM.view(), was = under(LONG, left);
+  assert.equal(was.pos, at.pos, 'the passage under the centre: the line holding the position the LEAP named');
+  await run(GO.leapTo(FAR));
+  CAM.setViewport(400, 900);
+  try {
+    assert.ok(LAYER.foldOf(REC.doc(LONG)).cpl < f.cpl, 'the measure narrowed: LONG folded again');
+    assert.ok(!samePassage(under(LONG, left), was), 'the view left now reads another line');
+    await run(GO.back());
+    assert.equal(TRAIL.current()?.addr, LONG);
+    assert.ok(samePassage(under(LONG, CAM.view()), was), `Back: the passage left under the visible centre, at the height it stood and its em: ${JSON.stringify([under(LONG, CAM.view()), was])}`);
+    assert.deepEqual(walkAt(), ['block', LONG, at.pos], 'the walk on the span it stood on');
+  } finally {
+    CAM.setViewport(1440, 900);
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back lands on the passage the reader left after an edit set new bytes before it while they were away: its own bytes under the visible centre, at the height they stood and their em, never the line the view left now reads (issue #221)', async () => {
+  await PUMP.loadWhole(REWRITTEN);
+  const f = LAYER.foldOf(REC.doc(REWRITTEN)), at = /** @type {import('../model/records.js').Block} */ (REC.doc(REWRITTEN).blocks.find((b) => placeOf(f, b.pos).column === f.across));
+  await run(GO.leapTo(REWRITTEN, { pos: at.pos }));
+  const left = CAM.view(), was = under(REWRITTEN, left), k = INSERTED.length;
+  assert.deepEqual(was.ids, [{ prefix: REWRITTEN + '.0.1', ordinal: at.pos, width: 1 }], 'the passage\'s first byte, the draft\'s own');
+  await run(GO.leapTo(FAR));
+  REC.setAgain(REWRITTEN, {
+    spans: [{ subspace: 1, ordinal: 1, positions: k + EIGHTY.length }],
+    text: { runs: [{ pos: 1, width: k + EIGHTY.length, kind: 'content', text: INSERTED + EIGHTY, ref: null, origin: null }], asOf: 2 },
+    image: { from: 1, runs: [{ iStart: '1.0.1.0.99.0.1.1', width: k }, { iStart: REWRITTEN + '.0.1.1', width: EIGHTY.length }] },
+  });
+  assert.ok(!samePassage(under(REWRITTEN, left), { ...was, pos: was.pos + k }), 'the view left now reads another line');
+  await run(GO.back());
+  const now = under(REWRITTEN, CAM.view());
+  assert.ok(samePassage(now, { ...was, pos: was.pos + k }), `Back: the line the passage's bytes open now under the visible centre, at the height it stood and its em: ${JSON.stringify([now, was])}`);
+  assert.deepEqual(now.ids, was.ids, 'the passage\'s own bytes, never its old position');
+  assert.deepEqual(walkAt(), ['block', REWRITTEN, at.pos + k], 'the walk on the span holding them');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a passage whose text a feed row dropped while the reader was away flies at once to the view it was left at, reads the text beside the flight, and goes on to the view that keeps the passage under the visible centre once the read answers (issue #221; FP-25)', async () => {
+  await PUMP.loadWhole(DROPPED);
+  const f = LAYER.foldOf(REC.doc(DROPPED)), at = /** @type {import('../model/records.js').Block} */ (REC.doc(DROPPED).blocks.find((b) => placeOf(f, b.pos).column === f.across));
+  await run(GO.leapTo(DROPPED, { pos: at.pos }));
+  const left = CAM.view(), was = under(DROPPED, left), k = INSERTED.length, text = INSERTED + EIGHTY;
+  await run(GO.leapTo(FAR));
+  // the text dropped, and the board answering it as the edit left it
+  REC.invalidate(DROPPED);
+  Object.assign(script, {
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DROPPED) })]: { result: { as_of: 2, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } },
+    [FAKE.keyOf('op', { frame: F.retrieveV(DROPPED, 1, text.length) })]: { result: { as_of: 2, resp: 'delivery', items: [{ content: text }] } },
+    [FAKE.keyOf('op', { frame: F.image(DROPPED, 1, text.length) })]: { result: { as_of: 2, resp: 'runs', runs: [{ i_start: '1.0.1.0.99.0.1.1', width: String(k) }, { i_start: DROPPED + '.0.1.1', width: String(EIGHTY.length) }] } },
+    [FAKE.keyOf('op', { frame: F.findLinksV(DROPPED, 1, text.length) })]: { result: { as_of: 2, resp: 'addrs', addrs: [] } },
+  });
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(DROPPED) });
+  const back = GO.back();
+  assert.ok(CAM.flying() && same(CAM.destination(), left), 'the camera left at once for the view the entry was left at');
+  for (let i = 0; i < 20 && CAM.flying(); i++) CAM.step(Infinity);
+  assert.deepEqual([same(CAM.view(), left), GO.inAir()], [true, true], 'there, the read still out: in the air');
+  release();
+  await run(back);
+  const now = under(DROPPED, CAM.view());
+  assert.ok(samePassage(now, { ...was, pos: was.pos + k }) && now.ids.length === 1 && now.ids[0].ordinal === at.pos, `the read answered: gone on to the passage's own bytes under the visible centre, at the height they stood and their em: ${JSON.stringify([now, was])}`);
+  assert.deepEqual([walkAt(), GO.inAir()], [['block', DROPPED, at.pos + k], false], 'the walk on the span holding them, landed');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back puts the walk where it stood as the reader left the entry, never on the landing made there: three spans on by ↓, the camera following, a LEAP away, then Back — the walk on the span it stood on (issue #221)', async () => {
+  await PUMP.loadWhole(LONG);
+  const spans = REC.doc(LONG).blocks.filter(WALK.isElement), at = spans[40];
+  await run(GO.leapTo(LONG, { pos: at.pos + 4 }));
+  assert.deepEqual([walkAt(), WALK.landedAt()], [['block', LONG, at.pos], at.pos + 4], 'the LEAP\'s landing');
+  for (let i = 0; i < 3; i++) await run(WALK.key('down'));
+  assert.deepEqual(walkAt(), ['block', LONG, spans[43].pos], 'three spans on, the camera following');
+  const left = CAM.view();
+  await run(GO.leapTo(FAR));
+  await run(GO.back());
+  assert.ok(same(CAM.view(), left), 'Back at the view left: nothing set again');
+  assert.deepEqual(walkAt(), ['block', LONG, spans[43].pos], 'the walk on the span it stood on');
   assert.deepEqual(fake.unanswered, []);
 });
 

@@ -19,7 +19,8 @@
 // the text it reads where a document is set again: the point the passage
 // stood at to where it stands now, the scale by the ratio of its sizes — and
 // a flight bound for that document with it, never cut, still settling true as
-// it lands.
+// it lands; the same move re-places a view kept apart from the camera, a
+// trail entry's, at a return to it (`reanchored`; issue #221).
 // THE ZOOM-IN BOUND (E18 (a)): it never stops short of the reading scale of a
 // place the projection draws — the deepest place's standard type at boot
 // (`setDeepest`; P-LAY's STANDARD_FS), and every size T-LAYER sets a document
@@ -231,9 +232,21 @@ export function step(now) {
 export const flying = () => cam.anim !== null;
 
 /**
- * The re-anchor (see the head): the world point `a` a passage stood at moved
- * to `b`, where it stands now, its text set `k` times smaller — the view taken
- * so `b` stands where `a` stood on screen, at `k` times the scale, so the
+ * The re-anchor's move, on a view (see the head): the world point `a` a
+ * passage stood at moved to `b`, where it stands now, its text set `k` times
+ * smaller — the view taken so `b` stands where `a` stood on screen, at `k`
+ * times the scale. `reanchor` moves the camera and a flight so; T-LAYER's
+ * `keptAt` moves a view kept apart from the camera, a trail entry's.
+ * @param {View} v
+ * @param {{x: number, y: number}} a
+ * @param {{x: number, y: number}} b
+ * @param {number} k the passage's old em over its new
+ * @returns {View}
+ */
+export const reanchored = (v, a, b, k) => ({ x: b.x + (v.x - a.x) / k, y: b.y + (v.y - a.y) / k, scale: v.scale * k });
+
+/**
+ * The re-anchor (see the head): the camera moved by `reanchored`, so the
  * passage keeps its place and its size; a flight bound inside `within` — the
  * document's room — moved the same way, from where it set out to where it
  * lands, never cut, so it lands where its passage stands now and settles true.
@@ -244,7 +257,7 @@ export const flying = () => cam.anim !== null;
  * @param {{x: number, y: number, w: number, h: number}} [within] the document's room, in world units
  */
 export function reanchor(a, b, k, within) {
-  const move = (/** @type {View} */ v) => ({ x: b.x + (v.x - a.x) / k, y: b.y + (v.y - a.y) / k, scale: v.scale * k });
+  const move = (/** @type {View} */ v) => reanchored(v, a, b, k);
   const f = cam.anim;
   if (f) {
     const inside = !!within && f.to.x >= within.x && f.to.x <= within.x + within.w && f.to.y >= within.y && f.to.y <= within.y + within.h;

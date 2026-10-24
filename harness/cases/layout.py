@@ -18,7 +18,10 @@ zoom) every column a whole count fewer than the full measure, the page's
 measure in force, the landed line's column, its corner — compact — and its
 edge inside the view at the reading size, a zoom changing no count, and the
 window put back the full measure again, the line under the view's centre at
-the height it stood; the corner (foundations §3.1: every mounted document at reading scale carries
+the height it stood; and Back made once the window is put back lands on the
+passage left in the narrow one, which the view left there no longer reads —
+the same line under the visible view's centre, at the height it stood and at
+its em (issue #221); the corner (foundations §3.1: every mounted document at reading scale carries
 one beside its article, clipped by no box of the page and reaching into no
 other document's box, mounted or only drawn; the first edition's in view
 below the one line at each level, held there while its first column's top
@@ -2359,6 +2362,47 @@ def measure_narrows(ctx, r):
     return {'window': NARROW_PX, 'cpl': round(cpl[0], 3) if cpl else None, 'fit': fit, 'before': before, 'after': after}
 
 
+def back_after_resize(ctx, r):
+    """THE PASSAGE LEFT (issue #221: "Back finds where that passage sits now and lands on it"): in a window NARROW_PX wide
+    the first edition LEAPt to a passage, the position its line under the visible view's centre opens at noted, with the
+    height of the line holding it from that centre and the em; a LEAP to the far edition, the window put back — every
+    document folded again at the full measure, so the line holding that position stands elsewhere from the visible centre
+    of the view left — and Mod+[: the line holding it at the height it stood from the visible centre, 1 px either way, at
+    its em; its figures"""
+    was = ctx.resize(NARROW_PX, 900)
+    try:
+        ctx.settle()
+        ctx.leap(DOC, PASSAGE)
+        ctx.frames(3)
+        mid = seen_centre(ctx)
+        under = ctx.js('window.__skep.posAt(%s, %s, %s)' % (json.dumps(DOC), mid['x'], mid['y']))
+        before = line_from(ctx, under, mid)
+        before['em'] = ctx.js('window.__skep.fold(%s).fs' % json.dumps(DOC)) * ctx.camera()['scale']
+        left = ctx.camera()
+        ctx.leap(FAR_LEAP)
+    finally:
+        ctx.resize(*was)
+    ctx.settle()
+    ctx.frames(3)
+    # the view left, in the window put back: the line holding the position, from that view's visible centre, on screen
+    stale = ctx.js('''((v) => { const S = window.__skep, p = S.view.viewport(), top = document.getElementById('line').getBoundingClientRect().bottom, at = S.centreOf(%s, %s);
+      return (at.y - v.y) * v.scale + p.VH / 2 - (top + p.VH) / 2; })(%s)''' % (json.dumps(DOC), json.dumps(under), json.dumps(left)))
+    line_px = ctx.js('window.__skep.fold(%s).fs' % json.dumps(DOC)) * left['scale'] * 1.35
+    r.check(stale is not None and abs(stale - before['dy']) > line_px,
+            f'the window put back from {NARROW_PX} px: the first edition folded again at the full measure, the line holding the passage left no longer where it stood from the visible centre of the view left',
+            {'under': under, 'dy_before': before['dy'], 'dy_from_the_view_left': stale, 'line_px': line_px})
+    ctx.drv.key('[', code='BracketLeft', mods=('Meta',))
+    ctx.settle()
+    ctx.frames(3)
+    after = line_from(ctx, under, seen_centre(ctx))
+    after['em'] = ctx.js('window.__skep.fold(%s).fs' % json.dumps(DOC)) * ctx.camera()['scale']
+    entry = ctx.js('(() => { const t = window.__skep.trail(); return t.entries[t.cursor].addr; })()')
+    r.check(entry == DOC and abs(after['dy'] - before['dy']) <= 1 and abs(after['em'] - before['em']) <= 1e-6,
+            'Mod+[ lands on the passage left in the narrow window: the line holding it at the height it stood from the visible view\'s centre, 1 px either way, at its em (issue #221)',
+            {'entry': entry, 'under': under, 'before': before, 'after': after})
+    return {'window': NARROW_PX, 'pos': under, 'dy_from_the_view_left': stale, 'before': before, 'after': after}
+
+
 def step(ctx, em):
     """the camera over the first edition at an em, and what the frames that step drew show: the most documents any of
     them drew as bars under their own mounted text (`both`), and yielded to text that was not mounted (`neither`)"""
@@ -2445,6 +2489,8 @@ def run(ctx):
     # the corner follows the column nearest the view's centre, and the measure narrows to what a narrow view holds (issue #151)
     r.figures['corner_follows'] = corner_follows(ctx, r)
     r.figures['measure_narrows'] = measure_narrows(ctx, r)
+    # Back after the window was put back from a narrow one lands on the passage left there (issue #221)
+    r.figures['back_after_resize'] = back_after_resize(ctx, r)
     # a continuous zoom: drift sampled across a sweep, about the first column
     first = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(DOC))
     s_lo = ctx.js('window.__skep.scaleFor(%s, "em", 7)' % json.dumps(DOC))
