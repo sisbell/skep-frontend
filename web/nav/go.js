@@ -1070,12 +1070,15 @@ function wholeAt(/** @type {string} */ addr, /** @type {ISpan[]} */ spans, /** @
 /**
  * The line's offer at a published landing (issue #153's design decision: "at
  * a published landing, the latest version holding it whole"): the landing's
- * document's members, newest first — its chain probed where its count is not
- * held — each asked what its text holds of the passage (`holds`), never the
- * text landed in — its own member, or at the bare address its latest — the
- * first that holds all of it in one piece offered where no act was made
- * meanwhile; the reads stop there, and at the next act. The offer is a
- * version move (`toVersion`): the member shares the box landed in.
+ * document's members, newest first — its chain read to its end (M-PUMP's
+ * `probeChain`) — each asked what its text holds of the passage (`holds`),
+ * never the text landed in — its own member, or at the bare address its
+ * latest — the first that holds all of it in one piece offered where no act
+ * was made meanwhile; the reads stop there, and at the next act. Nothing is
+ * offered where the board did not end the chain: "the last that holds it"
+ * names the chain whole (issue #184's design decision: "nothing built from it
+ * claims to be the whole chain"). The offer is a version move (`toVersion`):
+ * the member shares the box landed in.
  * @param {number} act the landing's act
  * @param {string} addr the document landed in
  * @param {(member: string) => Promise<((byKey: boolean) => void) | null>} holds the version move to a member whose text holds all of the passage in one piece; null where it does not
@@ -1083,8 +1086,9 @@ function wholeAt(/** @type {string} */ addr, /** @type {ISpan[]} */ spans, /** @
 async function offerVersion(act, addr, holds) {
   const trunk = documentOf(addr) || addr, d = REC.doc(trunk), place = REC.place(trunk);
   if (!(d.meta ? d.meta.published : !!place && place.kind === 'edition')) return;
-  let n = d.members;
-  if (n == null) { const p = await PUMP.probeChain(trunk, () => act === made); if (!p) return; n = p.n; }
+  const chain = await PUMP.probeChain(trunk, () => act === made);
+  if (!chain || !chain.ended) return;
+  const n = chain.n;
   const own = memberOf(addr) ?? n;
   for (let k = n; k >= 1; k--) {
     if (act !== made) return;

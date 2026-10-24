@@ -328,9 +328,22 @@ export const STRINGS = {
   // a versions row's strip for the two states F.versions' three do not name (issue #153's design decision)
   'L.versions.pieces': { text: 'holds all of the passage, in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.unknown': { text: 'couldn\'t tell whether it holds the passage: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  // THE LIST'S OPEN END (issue #184's design decision, whose own words the cut lines, "not read" and the date are): where the
+  // board did not end the chain at the last member read, a line saying how far the list was read and that it is not known
+  // to be complete — "then the board stopped answering" where the board did not answer, the clause dropped where it stopped
+  // short at another refusal — a row past the members read, and the date of the members the feed named past them; where it
+  // did end the chain there, the mark the head's row takes, a shape, and its name
+  'L.versions.cut': { text: 'read to version ⟨k⟩, then the board stopped answering — this list is not known to be complete', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  'L.versions.cut.none': { text: 'the board did not answer — no version could be read', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  'L.versions.open': { text: 'read to version ⟨k⟩ — this list is not known to be complete', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  'L.versions.open.none': { text: 'no version could be read — this list is not known to be complete', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  'L.versions.not-read': { text: 'not read', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  'L.versions.as-of': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  'L.versions.latest': { text: 'the latest version', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  'L.versions.latest-mark': { text: '▲', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's title, the version marker's
   'L.dismiss': { text: 'dismiss (⟨chord⟩)', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
-  'L.version': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  'L.version': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'the one line; the versions list', lane: true },
   // the overlay dialog's name where no caption stands in it (the focus record's D5): one per kind
   'L.dialog.card': { text: 'a card', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   'L.dialog.list': { text: 'a list', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },

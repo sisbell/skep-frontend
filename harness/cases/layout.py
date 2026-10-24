@@ -238,7 +238,10 @@ dead end's face saying it is not in version 1, the nearest shared
 position's counterpart keeping the line the stretch stood on. THE CHROME: the
 LEAP box's rows share their columns, a place's longest label among them, no
 cell's text running past its column and the title's keeping a quarter of the
-row; the versions list sets each member on one line; the chrome over the
+row; the versions list sets each member on one line, the board having
+ended the chain at its head, the head's read act alone carrying the latest
+version's mark, named in words, and no line standing at the list's open end
+(issue #184); the chrome over the
 plane — the LEAP box, the scene, the one line, the mirror, a corner — is
 opaque. THE TRAIL (foundations §2.2: the entries render as pips): along the
 segment between two consecutive entries in the first edition, inside its box
@@ -1133,6 +1136,15 @@ def scene_holds(ctx, r):
     split = [row for row in rows if len(row) < 3 or max(c['y'] for c in row) >= min(c['y'] + c['h'] for c in row)]
     r.check(len(rows) == doc['members'] and not split, 'the versions list: each member one row — its read act, what it holds of the passage and its side-by-side act share one line', {'rows': rows, 'members': doc['members']})
     seen['versions_rows'] = [[round(c['y'], 1) for c in row] for row in rows]
+    # the board ends this chain at its head (issue #184's design decision: "End proved"): the head's read act alone carries the
+    # latest version's mark, a shape named in words, and no line stands at the list's open end
+    head = ctx.js('''(async () => { const {t} = await import("./strings.js");
+      return {marked: [...document.querySelectorAll('#overlay .rows.versions [data-run^="read"]')].map((b) => !!b.querySelector('.latest')),
+              name: (document.querySelector('#overlay .rows.versions .latest') || {getAttribute: () => null}).getAttribute('aria-label'), want: t('L.versions.latest'),
+              open: !!document.querySelector('#overlay .open-end')}; })()''')
+    r.check(head['marked'] == [False] * (doc['members'] - 1) + [True] and head['name'] == head['want'] and not head['open'],
+            'the versions list of a chain the board ended at its head: the head\'s read act alone carries the latest version\'s mark, named in words, and no line stands at the open end (issue #184)', dict(head, members=doc['members'], ended=doc.get('ended')))
+    seen['versions_head'] = head
     ctx.js('document.querySelector(%s).click()' % json.dumps('#overlay [data-run="beside%d"]' % doc['members']))
     ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.scene.isOpen() || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
     ctx.settle()

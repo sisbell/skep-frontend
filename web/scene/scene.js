@@ -627,13 +627,16 @@ function placedInto(src, shown) {
 
 /**
  * A pane's record read before it is set (see the head): whole (M-PUMP's
- * `wholeOf`), and, at an edition at its bare address, its chain's members
- * where the page holds no count (`probeChain`) — the member its text is,
- * which its acts name. Null where the board did not answer, which leaves a
- * pane as it shows; `whole` false where the board refused the text for what
- * it says of the document — withheld from the reader, or nothing it will say
- * of the address — the record then standing as that refusal (a pane read
- * again at the death; a scene opens on two texts read whole alone).
+ * `wholeOf`), and the chain's count where the board ended the chain there —
+ * held, or, at an edition at its bare address, read to its end (`probeChain`):
+ * the member its text is, which its acts name. A count the board did not end
+ * the chain at is no count: the head is not known there (issue #184's design
+ * decision: "nothing built from it claims to be the whole chain"). Null where
+ * the board did not answer, which leaves a pane as it shows; `whole` false
+ * where the board refused the text for what it says of the document —
+ * withheld from the reader, or nothing it will say of the address — the
+ * record then standing as that refusal (a pane read again at the death; a
+ * scene opens on two texts read whole alone).
  * @param {string} src
  * @param {() => boolean} [stands] the opening the read is made for still stands: a probe asks no more once it ends
  * @returns {Promise<{d: Doc, n: number | null, whole: boolean} | null>}
@@ -641,8 +644,9 @@ function placedInto(src, shown) {
 async function readPane(src, stands = () => true) {
   const w = await PUMP.wholeOf(src);
   if (!w.doc && !REC.doc(src).refused) return null;
-  let n = REC.has(boxOf(src)) ? REC.doc(boxOf(src)).members : null;
-  if (w.doc && kindAt(src, w.doc) === 'bare' && n == null && stands()) { const p = await PUMP.probeChain(src, stands); n = p && p.known ? p.n : null; }
+  const box = REC.has(boxOf(src)) ? REC.doc(boxOf(src)) : null;
+  let n = box && box.ended ? box.members : null;
+  if (w.doc && kindAt(src, w.doc) === 'bare' && n == null && stands()) { const p = await PUMP.probeChain(src, stands); n = p && p.ended ? p.n : null; }
   return { d: REC.doc(src), n, whole: !!w.doc };
 }
 

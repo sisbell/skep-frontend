@@ -244,6 +244,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #overlay .rows.versions { display:grid; grid-template-columns:max-content minmax(0, 1fr) max-content; column-gap:6px; align-items:baseline; }
 #overlay .rows.versions li { grid-column:1 / -1; display:grid; grid-template-columns:subgrid; align-items:baseline; }
 #overlay .rows.versions button { width:auto; }
+/* the head's mark where the board ended the chain there (issue #184): a shape beside its read act's words; the line at an
+   open end stands in the list's own type, with no icon, colour or box */
+#overlay .rows.versions .latest { margin-left:.35em; }
+#overlay .open-end { margin:4px 0 0; }
 #overlay .sym-mark { color:var(--mark-hue, var(--accent)); opacity:var(--mark-value, 1); }
 #overlay .lenses { margin:6px 0; }
 #overlay .lens-label { color:var(--dim); margin:0 6px 0 2px; }

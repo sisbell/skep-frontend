@@ -185,6 +185,14 @@ export function keyFingerprint(alg, keyHex) {
 }
 
 /**
+ * A moment as the page names it to a person: its date and its time of day,
+ * in the reader's own locale and time zone.
+ * @param {number} ms unix milliseconds
+ * @returns {string}
+ */
+export const timeOf = (ms) => new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ms));
+
+/**
  * Replace ⟨tokens⟩ in a design string with values; a token left unfilled
  * stays as the design writes it.
  * @param {string} s

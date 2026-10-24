@@ -54,7 +54,8 @@
 // (`readClaims`; issue #179's design decision), where a
 // link's end projects now (`projectEnd`), a link's supersession lineage
 // (`lineage`: `in_claims` and `out_claims`, A-56, A-57), the chain's
-// members (`probeChain`, the view's probe and the versions list's alike),
+// members to its end (`probeChain`: the versions list's, a landing's
+// offer's, a pane's — the view's own probe reads at most MEMBER_PROBE_CAP),
 // and where a passage's bytes stand in a text (`compareParts`) and a text's
 // image over a region (`imageParts`). A class scan read whole — `loadWhole`'s
 // `find_links_v`, the lineage's two — is reissued on `scan_busy`
@@ -75,8 +76,13 @@
 // board back within its reconnect wait (`skep-client`'s `RECONNECT_WAIT`),
 // a read's own dial failing while the stream stands — and no `running`
 // follows an outage it never announced. A probe of the chain that meets a
-// member the board did not answer records no count, so it is probed again
-// as a held read is asked again, never left at a chain cut short.
+// member the board did not answer records no count, so the view's is probed
+// again as a held read is asked again, never left at a chain cut short.
+// THE CHAIN'S END IS THE BOARD'S ANSWER (issue #184's design decision: "say
+// whether the board ended the chain there"): a probe records a count as the
+// whole chain only where the board answered that no member follows it; a
+// count it stopped short of an end at — the view's cap, a refusal the board
+// gave — is recorded as read so far, and an act's probe goes on from it.
 // A READ A DROP OVERTOOK teaches nothing either: the board's answers come back
 // by one channel and the feed's rows by another, and nothing orders the two,
 // so a read can land after the row of a write it was read before. Every read
@@ -243,6 +249,14 @@ import { versionAddress, homeOf, documentOf, isTrunkMember, kindOf } from './add
  * @property {Claim[] | null} supersedes the claims whose `new` is the link: each one's `old` it supersedes
  */
 
+/**
+ * @typedef {{n: number, ended: true, met: null} | {n: number, ended: false, met: Refusal | null}} Chain — what a probe of
+ * a version chain read (`probeChain`): its members `D.1 … D.n`, each answered; `ended` where the board answered that no
+ * member follows `D.n` — `doc_not_registered` at `D.n+1`, or a trunk born with none — else `met`, the refusal the probe
+ * stopped at (`unreachable` where the board did not answer), null where it stopped at its cap or at a trunk dropped
+ * under every pass
+ */
+
 const MAX_INFLIGHT = 6;
 /** the daemon's class-scan pool is two permits (wire.md §Link discovery reads); `find_links_v`, `in_claims` and `out_claims` meet it at this pin (a finding, reported): at most two of the view's in flight */
 const MAX_SCANS = 2;
@@ -252,7 +266,7 @@ const SPAN_BLOCK = 2048;
 export const WHOLE_CAP = 262144;
 /** the em (px), by P-LAY's estimate, at which a document's text is fetched — below S1's mount em, and the estimate's size never smaller than the one T-LAYER folds the article at and mounts it at (its columns never more than the text's), so the text is there when the layer mounts */
 const FETCH_EM = 5;
-/** at most this many members probed (`D.2`, `D.3`, …) */
+/** the view's probe of a chain reads at most this many members (`D.1`, `D.2`, …); an act's probe reads to the chain's end */
 const MEMBER_PROBE_CAP = 8;
 /** a retry-class refusal (`scan_busy`) is reissued after this pause — "reissued at once", paced */
 const RETRY_MS = 120;
@@ -1133,12 +1147,14 @@ function refuseDoc(/** @type {Doc} */ d, /** @type {Refusal} */ r) {
 }
 
 /**
- * The view's probe of a document's chain (`probeChain`), one at a time: a
- * count recorded is not probed again until invalidated; a probe that met a
- * member the board did not answer is held as a view's read is (`hold`), and
- * probed again past its pause or at the daemon's `running`; one its trunk was
- * dropped under is left unasked, as a view's read is (`need`), and probed
- * again as the view next needs it.
+ * The view's probe of a document's chain (`probePass`, at most
+ * MEMBER_PROBE_CAP members), one at a time: a count recorded — the chain's
+ * end, or the members read before the cap or a refusal the board gave — is
+ * not probed again until invalidated; a probe that met a member the board did
+ * not answer is held as a view's read is (`hold`), and probed again past its
+ * pause or at the daemon's `running`; one its trunk was dropped under is left
+ * unasked, as a view's read is (`need`), and probed again as the view next
+ * needs it.
  * @param {Doc} d
  * @returns {boolean} missing
  */
@@ -1148,45 +1164,98 @@ function probeMembers(d) {
   if (inflight.has(key)) return true;
   if (held(key)) return false;
   inflight.add(key);
-  const dropped = watchDrops(d.addr);
-  probeChain(d.addr).then((p) => {
+  probePass(d.addr, () => true, 0, MEMBER_PROBE_CAP).then((p) => {
     inflight.delete(key);
-    if (dropped()) return;
-    if (p && p.known) { unreached.delete(key); asked.add(key); } else hold(key);
+    if (!p || p.dropped) return;
+    if (p.met && unanswered(p.met)) hold(key); else { unreached.delete(key); asked.add(key); }
     dirty();
   });
   return true;
 }
 
 /**
- * The chain's members: `D.1` is the birth; `D.k` answers until the first
- * refusal (`doc_not_registered` past the chain's end), at most
- * MEMBER_PROBE_CAP; the count `known` and recorded (M-REC's `takeMembers`).
- * A member the board did not answer ends the probe with the members met,
- * nothing recorded and the count not `known`: the chain's end was not met, and
- * a count cut short there would stand until invalidated. A trunk dropped while
- * the probe reads (`watchDrops`) — a new member's `publish` drops it — answers
- * the members met, nothing recorded and the count not `known`: the end met may
- * be the one before the new member. Null, nothing recorded, where `stands`
- * reads false before a member is asked — an opening that has ended asks no
- * more.
+ * One pass of a probe of a chain, past the `from` members known: `D.1`
+ * exists where the trunk's metadata names a birth, none where it names none
+ * — the chain's end, met with nothing asked — and is asked where the record
+ * holds no metadata; then each `D.k` is asked until the board answers one
+ * `doc_not_registered`, the chain's end (the members of a published chain
+ * are all published, so none is withheld from a reader of it), or the pass
+ * reaches `cap` members or meets another refusal. The count is recorded
+ * (M-REC's `takeMembers`) where the board answered every read the pass made
+ * and it read a member or met the end — `ended` where it met the end — so a
+ * chain cut short where the board did not answer stands unrecorded and is
+ * probed again; nothing is recorded where the trunk was dropped while it read
+ * (`watchDrops`: a new member's `publish` drops it, and the end met may be the
+ * one before that member). Null, nothing recorded, where `stands` reads false
+ * before a member is asked — an opening that has ended asks no more.
  * @param {string} trunk
- * @param {() => boolean} [stands]
- * @returns {Promise<{n: number, known: boolean} | null>}
+ * @param {() => boolean} stands
+ * @param {number} from the members known to exist, `D.1 … D.from`: the pass asks `D.from+1` first
+ * @param {number} cap the most members the pass reads
+ * @returns {Promise<(Chain & {dropped: boolean}) | null>} `dropped` the trunk was dropped while it read, nothing recorded
  */
-export async function probeChain(trunk, stands = () => true) {
+async function probePass(trunk, stands, from, cap) {
   const dropped = watchDrops(trunk);
   const d = REC.doc(trunk);
-  let n = d.meta && d.meta.birth ? 1 : 0;
-  for (let k = 2; k <= MEMBER_PROBE_CAP && n >= 1; k++) {
+  let n = from >= 1 ? from : d.meta && d.meta.birth ? 1 : 0;
+  let ended = from < 1 && !!d.meta && !d.meta.birth;
+  /** @type {Refusal | null} */
+  let met = null;
+  for (let k = n + 1; !ended && k <= cap; k++) {
     if (!stands()) return null;
     const out = await read(F.docMetadata(versionAddress(trunk, k)));
-    if ('refused' in out) { if (unanswered(out.refused)) return { n, known: false }; break; }
+    if ('refused' in out) {
+      if (out.refused.kind === 'refused' && out.refused.name === 'doc_not_registered') ended = true;
+      else met = out.refused;
+      break;
+    }
     n = k;
   }
-  if (dropped()) return { n, known: false };
-  REC.takeMembers(trunk, n);
-  return { n, known: true };
+  if (dropped()) return { n, ended: false, met: null, dropped: true };
+  if ((ended || n >= 1) && !(met && unanswered(met))) REC.takeMembers(trunk, n, ended);
+  return ended ? { n, ended: true, met: null, dropped: false } : { n, ended: false, met, dropped: false };
+}
+
+/**
+ * The chain the record holds where the board ended it there, as a probe of it
+ * answers (`probeChain`), read at once — so an act that holds it begins its
+ * own reads in the act (O-HOST's opening); null where the record holds no
+ * count, or a count the board did not end the chain at.
+ * @param {string} trunk
+ * @returns {Chain | null}
+ */
+export function heldChain(trunk) {
+  const d = REC.doc(trunk);
+  return d.members != null && d.ended ? { n: d.members, ended: true, met: null } : null;
+}
+
+/**
+ * The chain's members, for an act — the versions list, a landing's offer, a
+ * reading scene's pane (see the head): the chain's end held, answered with
+ * nothing asked; else probed to its end (`probePass`, uncapped) past the
+ * members known — those the record holds, or the `from` a probe before it
+ * read where that is more — a pass the trunk was dropped under begun again
+ * past the members it read, which stand, for a member is never unminted, at
+ * most DROP_ATTEMPTS passes. What it read where it stopped short of the end,
+ * and why (`Chain`); null where `stands` read false before a member was
+ * asked.
+ * @param {string} trunk
+ * @param {() => boolean} [stands]
+ * @param {number} [from] the members a probe before this one read
+ * @returns {Promise<Chain | null>}
+ */
+export async function probeChain(trunk, stands = () => true, from = 0) {
+  const held = heldChain(trunk);
+  if (held) return held;
+  const d = REC.doc(trunk);
+  let n = Math.max(from, d.members ?? 0);
+  for (let pass = 1; ; pass++) {
+    const p = await probePass(trunk, stands, n, Infinity);
+    if (!p) return null;
+    if (!p.dropped) return p.ended ? { n: p.n, ended: true, met: null } : { n: p.n, ended: false, met: p.met };
+    n = p.n;
+    if (pass >= DROP_ATTEMPTS) return { n, ended: false, met: null };
+  }
 }
 
 /**

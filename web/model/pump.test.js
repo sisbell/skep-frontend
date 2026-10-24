@@ -96,7 +96,17 @@
 // across the page's own death too, and its projection asked again, each at
 // most DROP_ATTEMPTS times (a mutant that discards without beginning again,
 // counts no death, or asks without a bound turns red); the view's probe of a
-// chain its trunk is dropped under recording no count and probing again; an
+// chain its trunk is dropped under recording no count and probing again;
+// THE CHAIN'S END IS THE BOARD'S ANSWER (issue #184): a probe whose trunk's
+// metadata the page does not hold asks its first member, never taking the
+// chain for one of none (a mutant that does turns red); the view's probe
+// reads at most eight members and records them as read so far, holding
+// nothing to be asked again, and an act's probe goes on from there to the
+// end the board answers (a mutant that caps the act's probe, records the cap
+// as the end, or holds the capped count turns red); an act's probe goes on
+// past the members a probe before it read, and one stopped at a refusal the
+// board gave records what it read as read so far (a mutant that takes the
+// refusal for the end turns red); an
 // image placed from the window it was asked for, never from one a text read
 // widened before it landed;
 // a bare feed row — its docs null — naming the home of the link it deposited
@@ -1262,6 +1272,63 @@ test('the view\'s probe of a chain its trunk is dropped under records no count a
   assert.equal(REC.doc(D).members, null, 'the end met before the row is not recorded');
   await settle();
   assert.deepEqual([third.asks(), REC.doc(D).members], [2, 3], 'probed again: the chain to its new end');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+/** the `doc_metadata` reads the fake port was asked since `from`, by the address each asked of */
+const metadataAsked = (/** @type {ReturnType<typeof FAKE.create>} */ fake, from = 0) => fake.asked.slice(from).flatMap((k) => { const m = /^op:\{"doc":"([^"]*)","op":"doc_metadata"\}$/.exec(k); return m ? [m[1]] : []; });
+
+test('a probe of a chain whose trunk\'s metadata the page does not hold asks its first member, never taking the chain for one of none: answered, the chain is counted from it to its end; not answered, nothing is recorded (issue #184)', async () => {
+  const member = script[FAKE.keyOf('op', { frame: F.docMetadata(D) })];
+  const s = { ...script, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: member, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.3') })]: NOT_REGISTERED };
+  inTurn(s, F.docMetadata(D + '.1'), UNREACHABLE, member);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  assert.equal(REC.doc(D).meta, null, 'no metadata held');
+  const out = await PUMP.probeChain(D);
+  assert.deepEqual([out?.n, out?.ended, out && out.met && out.met.kind, REC.doc(D).members], [0, false, 'unreachable', null], 'its first member not answered: nothing read, nothing recorded — never a count of none');
+  assert.deepEqual(await PUMP.probeChain(D), { n: 2, ended: true, met: null }, 'asked again: its first and second answer, its third is not registered');
+  assert.deepEqual([REC.doc(D).members, REC.doc(D).ended], [2, true]);
+  assert.deepEqual(metadataAsked(fake), [D + '.1', D + '.1', D + '.2', D + '.3'], 'its members asked, from the first');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the view\'s probe of a chain reads at most eight members and records them as read so far, never as the whole chain; an act\'s probe goes on from there to the end the board answers, which it records as the chain (issue #184)', async () => {
+  const member = script[FAKE.keyOf('op', { frame: F.docMetadata(D) })];
+  /** @type {Record<string, unknown>} D's ten members, its eleventh not registered */
+  const s = { ...script, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.11') })]: NOT_REGISTERED };
+  for (let k = 2; k <= 10; k++) s[FAKE.keyOf('op', { frame: F.docMetadata(D + '.' + k) })] = member;
+  const fake = readingD(s);
+  await PUMP.loadWhole(D);
+  const from = fake.asked.length, waiting = PUMP.retriesPending();
+  PUMP.pump();
+  await settle();
+  assert.deepEqual([REC.doc(D).members, REC.doc(D).ended, PUMP.retriesPending()], [8, false, waiting], 'eight members read: the end not met, and nothing held to be asked again');
+  assert.deepEqual(metadataAsked(fake, from), [2, 3, 4, 5, 6, 7, 8].map((k) => D + '.' + k), 'its second to its eighth asked, its birth its first');
+  PUMP.pump();
+  await settle();
+  assert.equal(metadataAsked(fake, from).length, 7, 'the count recorded: the view asks no more');
+  const act = fake.asked.length;
+  assert.deepEqual(await PUMP.probeChain(D), { n: 10, ended: true, met: null }, 'an act\'s probe: read on to the end');
+  assert.deepEqual(metadataAsked(fake, act), [D + '.9', D + '.10', D + '.11'], 'from the ninth, never a member read before');
+  assert.deepEqual([REC.doc(D).members, REC.doc(D).ended], [10, true]);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('an act\'s probe goes on past the members a probe before it read, asking the next first; one stopped at a refusal the board gave records the members read as read so far (issue #184)', async () => {
+  const member = script[FAKE.keyOf('op', { frame: F.docMetadata(D) })];
+  const withheld = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
+  const s = { ...script, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.4') })]: member, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.5') })]: withheld };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  await PUMP.loadWhole(D);
+  const from = fake.asked.length;
+  const out = await PUMP.probeChain(D, () => true, 3);
+  assert.deepEqual([out?.n, out?.ended, out && out.met && out.met.kind, out && out.met && out.met.name], [4, false, 'refused', 'withheld'], 'three read before: the fourth answers, the fifth is refused');
+  assert.deepEqual(metadataAsked(fake, from), [D + '.4', D + '.5'], 'the fourth asked first');
+  assert.deepEqual([REC.doc(D).members, REC.doc(D).ended], [4, false], 'recorded as read so far, never as the chain');
   assert.deepEqual(fake.unanswered, []);
 });
 

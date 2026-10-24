@@ -206,7 +206,8 @@
 // passage came from beside it where that holds it whole, and at a published
 // landing the latest member holding it in one piece, once its reads find it
 // — never the text landed in — whose LEAP carries it there, the outline
-// alone; it stands while a card opens at the landing and leaves with the
+// alone, and none where the board did not end the chain (issue #184: a
+// mutant that offers from a chain cut short turns red); it stands while a card opens at the landing and leaves with the
 // outline at the next landing (a mutant that makes it an overlay a card replaces
 // turns red); a carry its text holds none of describes its item in the dead
 // end's words, its face told there and not by the status region, and told so
@@ -557,11 +558,16 @@ const script = {
   [FAKE.keyOf('op', { frame: usesCited })]: { result: { as_of: 1, resp: 'addrs', addrs: [D, FAR] } },
   [FAKE.keyOf('op', { frame: F.inClaims(PASSAGE, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   [FAKE.keyOf('op', { frame: F.outClaims(PASSAGE, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
-  [FAKE.keyOf('op', { frame: F.docMetadata(FAR + '.3') })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(FAR1) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + FAR_EXTENT }] } },
   [FAKE.keyOf('op', { frame: heldIn(FAR1) })]: holdsHeld(FAR1),
   [FAKE.keyOf('op', { frame: heldIn(FAR2) })]: holdsHeld(FAR2),
 };
+/** FAR's third member, past its chain's end: never registered, the board not answering it while `chainOutage` stands */
+let chainOutage = false;
+Object.defineProperty(script, FAKE.keyOf('op', { frame: F.docMetadata(FAR + '.3') }), {
+  enumerable: true,
+  get: () => (chainOutage ? { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } } : { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } }),
+});
 /** UNANSWERED's compare against FAR: the board not answering while `outage` stands, then FAR holding it at 20 */
 Object.defineProperty(script, FAKE.keyOf('op', { frame: carried(UNANSWERED, FAR, FAR_EXTENT) }), {
   enumerable: true,
@@ -654,6 +660,23 @@ test('a follow of a far end the far document\'s text holds in two runs apart out
   assert.ok(!flew && same(CAM.view(), at), 'a version move (issue #154): no flight, the camera where it stood');
   await run(GO.leapTo(D));
   assert.deepEqual([GO.landing(), GO.landingLine(), GO.landingOffers()], [null, null, { steps: false, again: false, version: false }], 'the next landing: the line gone with the outline');
+  await run(GO.leapTo(FAR));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a landing at a published document whose chain the board did not end offers no version: "the last that holds it" names the chain whole (issue #184\'s design decision: "nothing built from it claims to be the whole chain")', async () => {
+  REC.invalidate(FAR); // read anew by the follow, its members uncounted: the offer probes its chain
+  REC.invalidate(FAR1); // its first member's bytes read as the offer asks them, which hold the passage whole
+  chainOutage = true;
+  try {
+    takeSplit();
+    await run(GO.follow(drawn(SPLIT)));
+    const third = FAKE.keyOf('op', { frame: F.docMetadata(FAR + '.3') });
+    for (let i = 0; i < 50 && !fake.asked.includes(third); i++) await new Promise((r) => setTimeout(r, 0));
+    for (let i = 0; i < 50; i++) await new Promise((r) => setTimeout(r, 0));
+    assert.ok(fake.asked.includes(third), 'the chain probed past its second member');
+    assert.deepEqual([GO.landing()?.current, GO.landing()?.version, GO.landingOffers().version, REC.doc(FAR).members], [0, null, false, null], 'its third not answered: no version offered, though its first holds the passage whole; no count recorded');
+  } finally { chainOutage = false; }
   await run(GO.leapTo(FAR));
   assert.deepEqual(fake.unanswered, []);
 });

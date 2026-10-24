@@ -79,7 +79,7 @@
 // the index's). Rules: FP-1, FP-2, FP-6, FP-7, FP-10, FP-14 (no token held),
 // FP-29 (the cover).
 
-import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder } from './address.js';
+import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder, isTrunkMember } from './address.js';
 import { byteOffsets } from '../util.js';
 
 /** @typedef {import('./frames.js').Run} Run */
@@ -171,6 +171,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {Set<string>} links the addresses of the links touching this document, as `find_links_v` delivered them
  * @property {boolean} linksRead
  * @property {number | null} members the chain's member count where probed, else null
+ * @property {boolean} ended `members` is the whole chain: the board answered that no member follows `D.members` (M-PUMP's `probeChain`); false where the probe stopped short of an end, or none was recorded
  * @property {number | null} whole the content extent the whole document holds, where the span set said
  * @property {number} rev bumped on every change to this document
  * @property {'unregistered' | 'withheld' | null} refused what a read of this document answered, where one refused
@@ -251,7 +252,7 @@ const state = {
   owners: new Map(),
   /** @type {Map<string, {enrolled: Array<{fingerprint: string, anchor: boolean}>, retired: Array<{fingerprint: string}>}>} */
   keySets: new Map(),
-  /** @type {Array<{position: number, op: string | null, docs: string[], cls: string}>} the feed's rows as they arrived (the newest last) */
+  /** @type {Array<{position: number, op: string | null, docs: string[], cls: string, time: number | null}>} the feed's rows as they arrived (the newest last), each with its commit's wall-clock unix milliseconds where the row carries them (wire.md §The change feed, `time`) */
   feed: [],
   rev: 0,
   /** @type {Array<() => void>} */
@@ -498,7 +499,7 @@ export function doc(addr) {
     d = {
       addr, account: accountOf(addr), kind: p ? p.kind : 'unknown', label: p ? p.label : null, standing: p ? p.standing : null,
       system: isUnder(SYSTEM_ACCOUNT, addr), extent: null, linkPositions: null, meta: null, runs: [], from: -1, to: -1, blocks: [],
-      image: [], origins: [], imageFor: null, links: new Set(), linksRead: false, members: null, whole: null, rev: 0, refused: null,
+      image: [], origins: [], imageFor: null, links: new Set(), linksRead: false, members: null, ended: false, whole: null, rev: 0, refused: null,
     };
     state.docs.set(addr, d);
   }
@@ -847,8 +848,14 @@ export function holdsEnd(addr, e) {
   return !e.whole && e.ordinal != null && (e.doc === addr || placed(addr, e).length > 0);
 }
 
-/** the members probed: the chain holds n members (`D.1 … D.n`) */
-export function takeMembers(/** @type {string} */ addr, /** @type {number} */ n) { const d = doc(addr); d.members = n; d.rev++; bump(); }
+/**
+ * The members probed: the chain holds at least n members (`D.1 … D.n`), and
+ * exactly n where `ended` — the board answered that none follows `D.n`.
+ * @param {string} addr
+ * @param {number} n
+ * @param {boolean} [ended]
+ */
+export function takeMembers(addr, n, ended = true) { const d = doc(addr); d.members = n; d.ended = ended; d.rev++; bump(); }
 
 /** drop a document's delivered state (a feed row named it; the viewport asks again), and where every link's slot projects into it, whether or not the page holds its record — the drop counted first (`dropsOf`), no record made for it; where it is an edition claim's home, each document windowing the claim's origin is made again */
 export function invalidate(/** @type {string} */ addr) {
@@ -873,7 +880,7 @@ export const dropsOf = (addr) => (state.drops.get(addr) ?? 0) + state.classDrops
 /** a document's delivered state dropped — everything its reads brought; the record stands, its runs and blocks given new empty ones as a delivery gives new ones */
 function drop(/** @type {Doc} */ d) {
   d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.extent = null; d.whole = null; d.linkPositions = null; d.meta = null; d.image = []; d.origins = []; d.imageFor = null;
-  d.links.clear(); d.linksRead = false; d.members = null; d.refused = null; d.rev++;
+  d.links.clear(); d.linksRead = false; d.members = null; d.ended = false; d.refused = null; d.rev++;
 }
 
 // ---- links ---------------------------------------------------------------------
@@ -1049,7 +1056,7 @@ export const keySetOf = (/** @type {string} */ account) => state.keySets.get(acc
  */
 export function applyFeedUpdate(u) {
   const docsNamed = Array.isArray(u.docs) ? u.docs : [];
-  state.feed.push({ position: u.position, op: u.op, docs: docsNamed, cls: u.class });
+  state.feed.push({ position: u.position, op: u.op, docs: docsNamed, cls: u.class, time: typeof u.time === 'number' ? u.time : null });
   if (state.feed.length > 2000) state.feed.shift();
   listRow(u);
   const home = typeof u.link === 'string' ? homeOf(u.link) : null;
@@ -1088,6 +1095,28 @@ function listRow(u) {
 }
 /** the feed rows held (the newest last) */
 export const feedRows = () => state.feed.slice();
+
+/**
+ * The highest member of a trunk's own chain a held feed row names — a
+ * `publish` its minted member, an owned `version` its new member, a write
+ * homed at one (wire.md §The change feed, `docs`): the chain holds at least
+ * that many members, for a member is never unminted and each `D.k+1` is
+ * minted against `D.k` (§Namespace, `doc_metadata`). Null where no row held
+ * names one.
+ * @param {string} trunk
+ * @returns {number | null}
+ */
+export function feedMember(trunk) {
+  let k = null;
+  for (const r of state.feed) for (const named of r.docs) if (isTrunkMember(named) && documentOf(named) === trunk) { const m = /** @type {number} */ (memberOf(named)); if (k == null || m > k) k = m; }
+  return k;
+}
+
+/** the commit time of the newest held feed row that carries one, in unix milliseconds: the latest moment the page's feed is known to have held; null where no row held carries a time */
+export function feedTime() {
+  for (let i = state.feed.length - 1; i >= 0; i--) { const t = state.feed[i].time; if (t != null) return t; }
+  return null;
+}
 
 /** reset everything (tests) */
 export function _reset() {

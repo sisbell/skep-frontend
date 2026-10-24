@@ -2,8 +2,12 @@
 // before it whole, blocks tiling their bytes, a document's blocks and runs
 // replaced whole and never edited in place (T-LAYER maps an article's
 // positions, and copies its bytes, through the blocks and runs it was made
-// from), the feed keeping the index and invalidating, the system account
-// held and marked, the death dropping every read held at the session's class.
+// from), the feed keeping the index and invalidating, each row's commit time
+// held and the highest member of a trunk's own chain a held row names read
+// from them (issue #184: a mutant that takes a daughter's member, or a time
+// older than the newest carried, turns red), the system account held and
+// marked, the death dropping every read held at the session's class, the
+// chain's proved end with its count.
 // THE COVER (issue #177): the death keeps which documents the class it left
 // could read — read, or listed — and a document one of them that a read at
 // the new class withholds is covered, a box the model knows; never one the
@@ -150,7 +154,7 @@ test('the death drops every read held at the session\'s class — the index, eac
   assert.deepEqual([REC.session(), REC.deathReason()], [null, { arm: 'closed' }]);
   assert.deepEqual([REC.places(), REC.accounts(), REC.indexState(), REC.countOf('1.0.1').documents], [[], [], null, 0], 'the index, its counts and its state');
   for (const d of REC.docs()) {
-    assert.deepEqual([d.from, d.runs, d.blocks, d.extent, d.whole, d.linkPositions, d.meta, d.image, d.origins, d.imageFor, [...d.links], d.linksRead, d.members, d.refused], [-1, [], [], null, null, null, null, [], [], null, [], false, null, null], d.addr + '\'s delivered state');
+    assert.deepEqual([d.from, d.runs, d.blocks, d.extent, d.whole, d.linkPositions, d.meta, d.image, d.origins, d.imageFor, [...d.links], d.linksRead, d.members, d.ended, d.refused], [-1, [], [], null, null, null, null, [], [], null, [], false, null, false, null], d.addr + '\'s delivered state');
     assert.deepEqual(rowOf(d.addr), ['unknown', null, null], d.addr + '\'s row');
   }
   assert.deepEqual([REC.links(), REC.projection('1.0.1.0.2.0.2.1', 2, '1.0.1.0.4'), REC.ownerOf('1.0.1.1'), REC.keySetOf('1.0.1')], [[], undefined, undefined, undefined], 'the links and where they project, the owners and the key sets');
@@ -411,6 +415,16 @@ test('a feed row names a document: the place is kept, what was held is dropped; 
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 12325, at: 12325, op: 'publish', docs: ['1.1.0.1.0.2.9'], class: 'published', key: 'system' }));
   assert.ok(REC.place('1.1.0.1.0.2')?.system);
   assert.equal(REC.feedRows().length, 3);
+});
+
+test('the feed\'s rows keep their commit times and name the members of a trunk\'s own chain: the highest member a held row names — a publish\'s, a write homed at one — never a daughter\'s, nor another trunk\'s; the newest time a row carries (issue #184)', () => {
+  const D = '1.0.1.0.3';
+  assert.deepEqual([REC.feedMember(D), REC.feedTime()], [null, null], 'no row held');
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 1, at: 1, op: 'publish', docs: [D + '.2'], class: 'published', time: 1792683856000 }));
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 2, at: 2, op: 'version', docs: [D + '.4.1'], class: 'published', time: 1792683857000 }));
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 3, at: 3, op: 'publish', docs: ['1.0.1.0.4.7'], class: 'published', time: null }));
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 4, at: 4, op: 'make_link', docs: [D + '.3'], class: 'published', link: D + '.3.0.2.1' }));
+  assert.deepEqual([REC.feedMember(D), REC.feedMember('1.0.1.0.4'), REC.feedTime()], [3, 7, 1792683857000], 'D.3, the home of a link, past D.2; D.4.1 a daughter of D.4, no member of D\'s own chain; the second row\'s time, the newest carried');
 });
 
 test('the key store is read for this board: a key is present only where a binding names its origin whole, and the reader keeps it through a session\'s death', () => {
