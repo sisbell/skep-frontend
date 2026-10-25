@@ -1946,10 +1946,10 @@ export async function projectEnd(linkAddr, slot, doc) {
 
 /**
  * Where a link's slot projects into a document now, read for an act and
- * kept nowhere (`project`): a version member's, for the offer of a landing's
- * line (N-GO), whose box shows another version, so no beam or
- * symbol reads it. Its runs in the text's order; the refusal met where the
- * board declines the read.
+ * kept nowhere (`project`): a version member's, for a landing's version
+ * offer (N-GO), whose box shows another version, so no beam or symbol reads
+ * it. Its runs in the text's order; the refusal met where the board declines
+ * the read.
  * @param {string} linkAddr
  * @param {1 | 2} slot
  * @param {string} doc

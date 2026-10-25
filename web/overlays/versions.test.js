@@ -13,8 +13,8 @@
 // saying how far it read, "try again" going on from there, the version being
 // read and the members a feed row names listed "not read", a chain of ten
 // listed to its end, a board that answers nothing leaving no member; and the
-// list standing at the act's site — a floating end's face's place, or the
-// corner's statement and the document's box beside it.
+// list standing at the act's site — the corner's statement and the
+// document's box beside it.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -26,7 +26,6 @@ import * as CAM from '../plane/camera.js';
 import * as GO from '../nav/go.js';
 import { docBox } from '../plane/projection.js';
 import * as HOST from './host.js';
-import * as FACES from './faces.js';
 import * as VERSIONS from './versions.js';
 import { memberOf } from '../model/address.js';
 import { t } from '../strings.js';
@@ -332,21 +331,6 @@ async function opened() {
   for (let i = 0; i < 200 && HOST.pending(); i++) await new Promise((r) => setTimeout(r, 0));
   assert.equal(HOST.pending(), false, 'the list\'s reads answered');
 }
-
-test('opened from a floating end\'s face, the list stands where the face stood — the head landed on — never at the viewport\'s corner', async () => {
-  /** the head a follow of a floating end landed on in U, as N-GO hands it to the face */
-  const head = { span: { addr: U, pos: 1 } };
-  FACES.floating(U, head);
-  const face = HOST.currentState();
-  assert.deepEqual([face?.id, face?.anchor], ['face:floating', head], 'the face at the head');
-  const act = face && face.acts ? face.acts['a0'] : null;
-  assert.ok(act, 'the face offers its act');
-  act(/** @type {any} */ (hostEl), false);
-  await opened();
-  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['versions:' + U, head], 'the list in the face\'s place, at the head');
-  HOST.dismiss();
-  assert.deepEqual(fake.unanswered, []);
-});
 
 test('opened by the corner\'s act at its version statement, the list stands at it, the document\'s box beside it — its top-left, the side the corner stands on — where it stands once the corner is rewritten or taken down', async () => {
   /** the statement in the corner's element, out of the page once the corner is rewritten */

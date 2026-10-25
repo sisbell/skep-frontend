@@ -5,11 +5,12 @@
 // Esc's one order, its reads told it no longer stands, and pending no more
 // where it gives up or throws; a walk's moment raised while one reads opening
 // folded (FP-28); an overlay's end running while its element still holds
-// what it wrote; an overlay's own completion no act on the chrome; no module
-// of the page loading another by `import()` (S-22 (a)); the anchor — beneath
-// its element while that stands, at the span beside it once the text layer
-// takes the element away, an element redrawn from state found again by its
-// id; a face said through the status region save a told one, and a face that
+// what it wrote; an overlay's own completion, and its owner drawing it again
+// in its place, no act on the chrome; no module of the page loading another
+// by `import()` (S-22 (a)); the anchor — beneath its element while that
+// stands, at the span beside it once the text layer takes the element away,
+// an element redrawn from state found again by its id; a face said through
+// the status region save a told one, and a face that
 // answers an act named by the act's caption and described by its words; a
 // jump's face hidden exactly while its document is out of the visible view,
 // the one line carrying its words (FP-25); a face shown while the standing
@@ -56,9 +57,9 @@ const standing = () => HOST.currentState()?.id ?? null;
 test('a face is said through the one status region, save one whose words the landing that met it says where the focus lands (`told`: issue #153), heard there once', () => {
   let said = 0;
   FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() { said++; }, textContent: '' }) });
-  FACES.floating('1.0.1.0.127', null, false);
+  FACES.floating('1.0.1.0.127', null, null);
   assert.deepEqual([standing(), said], ['face:floating', 1], 'a face shown: said');
-  FACES.floating('1.0.1.0.127', null, false, true);
+  FACES.floating('1.0.1.0.127', null, null, true);
   assert.deepEqual([standing(), said], ['face:floating', 1], 'told by the landing\'s description: the status region not written again');
   HOST.dismiss();
 });
@@ -260,7 +261,7 @@ test('a face shown while the standing overlay\'s field holds the caret takes not
     globalThis.document.activeElement = /** @type {any} */ (field);
     assert.equal(HOST.typing(), true, 'the moment holds the caret');
     FACES.reading('1.0.1.0.3', null);
-    FACES.floating('1.0.1.0.127', null, false, true);
+    FACES.floating('1.0.1.0.127', null, null, true);
     assert.deepEqual([standing(), globalThis.document.activeElement], ['moment:m-171', /** @type {any} */ (field)], 'the moment stands, its field holding the focus');
     assert.deepEqual(said, [t('L.reading', { address: '1.0.1.0.3' }), t('F.floating', { D: '1.0.1.0.127' })], 'each face said, the one its landing would tell too: no focus moves to tell it');
     globalThis.document.activeElement = /** @type {any} */ ({ id: 'the answer button' });
@@ -290,6 +291,28 @@ test('an overlay\'s own completion is no act on the chrome: the reading face tak
   again.answer('its users');
   await ended;
   assert.equal(standing(), null, 'a dismissal is an act on the chrome: the card still reading ends with it');
+});
+
+test('an overlay drawn again in its place by the module that showed it is no act on the chrome: the dead end\'s face taking its version offer while a card reads leaves the card\'s opening standing, whose answer shows; a face no longer standing is never drawn again (issue #57)', async () => {
+  const FAR = '1.0.1.0.127', at = { span: { addr: FAR, pos: 1 }, sign: FAR }, offer = { k: 1, go: () => {} };
+  const was = globalThis.HTMLElement;
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  try {
+    FACES.floating(FAR, at, null, true);
+    const r = slow();
+    const o = HOST.opening(() => r.read, card('provenance:wrote'));
+    FACES.offered(FAR, offer);
+    assert.deepEqual([standing(), Object.keys(HOST.currentState()?.acts || {}), HOST.pending()], ['face:floating', ['a0'], true], 'the face drawn again with its act, the card still reading');
+    r.answer('its origin');
+    await o;
+    assert.equal(standing(), 'provenance:wrote', 'the card asked shows its answer');
+    HOST.dismiss();
+    FACES.offered(FAR, offer);
+    assert.equal(standing(), null, 'no face standing: none drawn again');
+  } finally {
+    globalThis.HTMLElement = was;
+    HOST.dismiss();
+  }
 });
 
 test('an opening begins in the act that asks for it: no module of the page loads another by `import()`, the app alone loading its gate\'s so (S-22 (a))', () => {

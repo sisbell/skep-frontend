@@ -233,10 +233,13 @@ const script = {
   [FAKE.keyOf('op', { frame: F.outClaims(DEAD, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
   ...reads(FAR2, FAR_TEXT, []), ...reads(FAR1, FAR_TEXT, []),
   // the version offers' reads: the cut citation's slot projected into FAR's first member, whole there at 3, and that
-  // run's bytes; the moved passage's compare against the first member, whole at 2; PARTIAL's against FAR, its first five positions at
-  // 25, and against the first member, none of it
+  // run's bytes; the floating citation's, whole there at 8, its stored span, and that run's bytes; the moved passage's compare
+  // against the first member, whole at 2; PARTIAL's against FAR, its first five positions at 25, and against the first member,
+  // none of it
   [FAKE.keyOf('op', { frame: F.project(SPLIT, 2, FAR1) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.3', width: '0.22' }] } },
   [FAKE.keyOf('op', { frame: F.image(FAR1, 3, 22) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: FAR + '.0.1.3', width: '22' }] } },
+  [FAKE.keyOf('op', { frame: F.project(FLOAT, 2, FAR1) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.8', width: '0.4' }] } },
+  [FAKE.keyOf('op', { frame: F.image(FAR1, 8, 4) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: FAR + '.0.1.8', width: '4' }] } },
   [FAKE.keyOf('op', { frame: carried(MOVED, FAR1, FAR_EXTENT) })]: pairsOf(FAR1, [[1, 2, 10]]),
   [FAKE.keyOf('op', { frame: carried(PARTIAL, FAR, FAR_EXTENT) })]: pairsOf(FAR, [[1, 25, 5]]),
   [FAKE.keyOf('op', { frame: carried(PARTIAL, FAR1, FAR_EXTENT) })]: pairsOf(FAR1, []),
@@ -335,6 +338,29 @@ before(async () => {
 const marks = () => [GO.arrivalMark(), GO.litLinks()];
 /** the entry behind the cursor's: the one the last push departed, holding the step it took */
 const departed = () => TRAIL.all()[TRAIL.cursorIndex() - 1];
+/** FAR's first member as the page holds it before a version offer asks it: unread, so the offer reads its bytes, which hold each passage the script places there whole */
+const memberUnread = () => REC.invalidate(FAR1);
+
+/**
+ * A follow of a link drawn at the first edition while the board does not
+ * answer FAR's third member, run until the version offer's probe has asked
+ * it and the reads it set going have answered: FAR read anew by the follow,
+ * its members uncounted, so the offer probes its chain, which the board then
+ * does not end; FAR's first member unread (`memberUnread`).
+ * @param {string} link
+ */
+async function followUnended(link) {
+  REC.invalidate(FAR);
+  memberUnread();
+  chainOutage = true;
+  try {
+    const from = fake.asked.length, third = FAKE.keyOf('op', { frame: F.docMetadata(FAR + '.3') });
+    await run(GO.follow(drawn(link)));
+    for (let i = 0; i < 50 && !fake.asked.slice(from).includes(third); i++) await new Promise((r) => setTimeout(r, 0));
+    for (let i = 0; i < 50; i++) await new Promise((r) => setTimeout(r, 0));
+    assert.ok(fake.asked.slice(from).includes(third), 'the chain probed past its second member');
+  } finally { chainOutage = false; }
+}
 
 test('a follow outlines the span its link\'s far end projects to — its first position and its positions — and lights the link followed', async () => {
   await run(GO.follow(drawn(PASSAGE)));
@@ -376,18 +402,9 @@ test('a follow of a far end the far document\'s text holds in two runs apart out
 });
 
 test('a landing at a published document whose chain the board did not end offers no version: "the last that holds it" names the chain whole (issue #184\'s design decision: "nothing built from it claims to be the whole chain")', async () => {
-  REC.invalidate(FAR); // read anew by the follow, its members uncounted: the offer probes its chain
-  REC.invalidate(FAR1); // its first member's bytes read as the offer asks them, which hold the passage whole
-  chainOutage = true;
-  try {
-    takeSplit();
-    await run(GO.follow(drawn(SPLIT)));
-    const third = FAKE.keyOf('op', { frame: F.docMetadata(FAR + '.3') });
-    for (let i = 0; i < 50 && !fake.asked.includes(third); i++) await new Promise((r) => setTimeout(r, 0));
-    for (let i = 0; i < 50; i++) await new Promise((r) => setTimeout(r, 0));
-    assert.ok(fake.asked.includes(third), 'the chain probed past its second member');
-    assert.deepEqual([GO.landing()?.current, GO.landing()?.version, GO.landingOffers().version, REC.doc(FAR).members], [0, null, false, null], 'its third not answered: no version offered, though its first holds the passage whole; no count recorded');
-  } finally { chainOutage = false; }
+  takeSplit();
+  await followUnended(SPLIT);
+  assert.deepEqual([GO.landing()?.current, GO.landing()?.version, GO.landingOffers().version, REC.doc(FAR).members], [0, null, false, null], 'its third not answered: no version offered, though its first holds the passage whole; no count recorded');
   await run(GO.leapTo(FAR));
   assert.deepEqual(fake.unanswered, []);
 });
@@ -452,10 +469,12 @@ test('Back across a follow made at a link\'s end drawn at a withheld run marks t
   }
 });
 
-test('a follow of a far end the far document\'s text no longer holds lands at that document\'s head, faced there, the link lit and nothing outlined; Back returns to it, the face shown there again and nothing lit, the link lit again only where Back crosses the follow', async () => {
+test('a follow of a far end the far document\'s text no longer holds lands at that document\'s head, faced there, the link lit and nothing outlined, the face offering no act while its reads seek the latest member holding the passage whole and, once they find it, "read version ⟨k⟩, the last that holds it", its number filled; Back returns to it, the face shown there again offering nothing — an offer that read is not restored — and nothing lit, the link lit again only where Back crosses the follow (issue #57)', async () => {
   takeFloat();
+  memberUnread();
   await run(GO.leapTo(D));
   const n = TRAIL.length();
+  const seeking = fake.hold('op', { frame: F.project(FLOAT, 2, FAR1) });
   await run(GO.follow(drawn(FLOAT)));
   assert.equal(REC.doc(FAR).blocks[0].pos, FAR_HEAD, 'FAR\'s head: its first paragraph');
   assert.deepEqual(marks(), [null, [FLOAT]], 'the link followed lit; no span outlined, for the text holds none of it');
@@ -467,17 +486,47 @@ test('a follow of a far end the far document\'s text no longer holds lands at th
   assert.deepEqual(walkAt(), ['block', FAR, FAR_HEAD], 'the walk on the head');
   const f = faceShown();
   assert.ok(f && f.id === 'face:floating' && f.html.includes('data-string="F.floating"') && f.html.includes(addressedHTML(t('F.floating', { D: FAR }))), `the dead end's words: ${f && f.html}`);
-  assert.equal(f && f.acts, true, 'offering its act');
+  assert.deepEqual([f && f.acts, GO.landing()?.version], [false, null], 'no act while its reads seek the member: never a number it does not have');
   assert.deepEqual(HOST.currentState()?.anchor, { span: { addr: FAR, pos: FAR_HEAD }, sign: FAR }, 'standing at the head landed on, never at the act\'s site');
+  seeking();
+  for (let i = 0; i < 50 && GO.landing()?.version == null; i++) await new Promise((r) => setTimeout(r, 0));
+  const offered = faceShown();
+  assert.deepEqual([GO.landing()?.version, GO.landingOffers().version, offered?.id, HOST.currentState()?.anchor, HOST.currentState()?.told], [1, true, 'face:floating', { span: { addr: FAR, pos: FAR_HEAD }, sign: FAR }, true],
+    'FAR published, its first member holding the passage whole: offered, the face drawn again where it stood, still told by the landing');
+  assert.ok(offered && offered.html.includes(`<button data-run="a0" class="">${esc(t('F.floating.read', { k: 1 }))}</button>`) && !offered.html.includes('⟨'), `its act "read version 1, the last that holds it", its number filled and no token left: ${offered && offered.html}`);
   await run(GO.leapTo(D));
   assert.equal(faceShown(), null, 'the next landing dismisses it');
   await run(GO.back());
   assert.deepEqual([walkAt(), marks()], [['block', FAR, FAR_HEAD], [null, []]], 'Back lands at the head, lighting nothing: the step it crossed, a LEAP, carried nothing — the notice\'s link not relit, nor any arrival (issue #152)');
   const again = faceShown();
-  assert.ok(again && again.id === 'face:floating' && again.html.includes(addressedHTML(t('F.floating', { D: FAR }))) && again.acts, 'the dead end\'s face shown there again, its act offered');
+  assert.ok(again && again.id === 'face:floating' && again.html.includes(addressedHTML(t('F.floating', { D: FAR }))) && !again.acts, 'the dead end\'s face shown there again, offering nothing: an offer that read is not restored');
   assert.deepEqual(HOST.currentState()?.anchor, { span: { addr: FAR, pos: FAR_HEAD }, sign: FAR }, 'at the head');
   await run(GO.back());
   assert.deepEqual(marks(), [null, [FLOAT]], 'Back to the follow\'s departure lights the link there');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the dead end\'s face\'s act is the version move to the latest member holding the followed passage whole, made as a follow lands there: in place, never flying and never opening the versions list, the box taking the member, the passage outlined there and its link lit; where the board did not end the chain, the face offers no act (issue #57)', async () => {
+  takeFloat();
+  memberUnread();
+  await run(GO.leapTo(D));
+  await run(GO.follow(drawn(FLOAT)));
+  for (let i = 0; i < 50 && GO.landing()?.version == null; i++) await new Promise((r) => setTimeout(r, 0));
+  const act = HOST.currentState()?.acts?.a0;
+  assert.ok(act && HOST.currentIs('face:floating'), 'the face offers its act');
+  const at = CAM.view(), n = TRAIL.length();
+  act(/** @type {any} */ (hostEl), false);
+  let flew = false;
+  for (let i = 0; i < 200 && GO.arrivalMark()?.addr !== FAR1; i++) { await new Promise((r) => setTimeout(r, 0)); flew = flew || CAM.flying(); if (CAM.flying()) CAM.step(Infinity); }
+  assert.deepEqual([GO.arrivalMark(), GO.litLinks(), GO.shownIn(FAR)], [{ addr: FAR1, pos: 8, runs: [{ pos: 8, width: 4 }], link: FLOAT }, [FLOAT], FAR1], 'the passage the slot stores outlined in the member, its link lit, the box taking the member');
+  assert.ok(!flew && same(CAM.view(), at), 'a version move: no flight, the camera where it stood');
+  assert.deepEqual([HOST.currentState()?.id ?? null, TRAIL.length(), TRAIL.current()?.addr, departed()?.step?.kind], [null, n + 1, FAR1, 'carry'], 'no versions list: one entry pushed at the member, the entry departed recording the passage carried');
+  await run(GO.leapTo(FAR));
+  await run(GO.leapTo(D));
+  await followUnended(FLOAT);
+  const f = faceShown();
+  assert.deepEqual([GO.landing()?.version, GO.landingOffers().version, f?.id, f?.acts], [null, false, 'face:floating', false], 'its third not answered: no version offered, though its first holds the passage whole, and the face offering no act');
+  await run(GO.leapTo(FAR));
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -1255,7 +1304,7 @@ test('a follow whose far document the board withholds from the reader lands at t
     assert.equal(await landing, true, `${what}: the jump landed`);
     const e = TRAIL.current(), place = { span: { addr: far, pos: 1 } };
     assert.deepEqual([addrs(), TRAIL.cursorIndex()], [[...trail.slice(0, cursor + 1), far], cursor + 1], `${what}: its entry after D's, FAR's ahead of the cursor dropped as any push drops it`);
-    assert.deepEqual(e && [e.pos, e.notice], [null, { face: 'withheld', addr: far, refusal: null, site: place, offer: false }], `${what}: the entry at the document whole, holding its own withheld words at its place`);
+    assert.deepEqual(e && [e.pos, e.notice], [null, { face: 'withheld', addr: far, refusal: null, site: place }], `${what}: the entry at the document whole, holding its own withheld words at its place`);
     assert.deepEqual([marks(), walkAt()], [[null, [link]], ['document', far, null]], `${what}: the link lit, nothing outlined, the walk on the document`);
     const o = HOST.currentState(), f = faceShown(), arm = entitlementArm({ account: '1.0.1', keyPresent: false }, owner);
     assert.deepEqual([o?.id, o?.anchor, o?.told], ['face:withheld', place, true], `${what}: its face at the document's place, no sign hiding it, told by the landing`);

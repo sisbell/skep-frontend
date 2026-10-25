@@ -149,7 +149,6 @@
  * @property {string} addr the document the face names
  * @property {import('../bridge/shapes').Refusal | null} refusal the refusal a `refused` face names; null for every other face
  * @property {Site | null} site where the face stands: the place the camera went — the document the jump named, at the position it named, else its head — or the head a floating end landed on
- * @property {boolean} offer the face offers its act: a floating end's versions list
  */
 
 /**

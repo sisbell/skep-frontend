@@ -11,7 +11,8 @@
 // (FP-33); a withheld run's face whole as its placeholder's record, at the
 // run's positions, taking no focus; "who wrote this?" and "who uses this?"
 // refused `withheld` showing that face; a jump reading and a jump reaching
-// (FP-25); a death's face saying its arm's words, "signed out" the page's own
+// (FP-25); the dead end's face and the version offer it takes as it is found
+// (FP-21); a death's face saying its arm's words, "signed out" the page's own
 // close's alone (FP-28); the withheld face at a covered document while the
 // ending stands saying the ending's words and offering sign-in (FP-29); a
 // walk's moment as the walk's state (FP-28) — folded by every way the page
@@ -368,6 +369,32 @@ test('a jump reaching says so in its own words at the act\'s site, heard as a fa
   FACES.reaching(D, at, () => { abandoned++; });
   HOST.dismiss();
   assert.deepEqual([HOST.currentState(), abandoned], [null, 1], 'dismissed — Esc\'s innermost thing — it abandons the jump');
+});
+
+test('the dead end\'s face offers the version offer handed in — "read version ⟨k⟩, the last that holds it", its number filled and no token left, its act the version move — and no act where none is; drawn again in its place as the offer is found, still told by its landing, the act\'s words said once and the face\'s own not again; a face no longer standing at that document never drawn again (issue #57)', () => {
+  const FAR = '1.0.1.0.127', at = { span: { addr: FAR, pos: 1 }, sign: FAR }, words = t('F.floating', { D: FAR }), label = t('F.floating.read', { k: 3 });
+  /** @type {boolean[]} the version moves the act asked for: whether a key made each */
+  const moves = [];
+  const offer = { k: 3, go: (/** @type {boolean} */ byKey) => { moves.push(byKey); } };
+  FACES.floating(FAR, at, null, true);
+  assert.deepEqual([faceShown()?.id, faceShown()?.words, faceShown()?.acts], ['face:floating', ['F.floating', words], []], 'none handed in: the dead end\'s words, and no act');
+  live.textContent = '';
+  FACES.offered(FAR, offer);
+  const f = faceShown(), o = HOST.currentState();
+  assert.deepEqual([f?.id, f?.words, f?.acts, o?.anchor, o?.told], ['face:floating', ['F.floating', words], ['a0'], at, true], 'drawn again in its place with its act, still told by its landing');
+  assert.ok(f && f.html.includes(`<button data-run="a0" class="">${esc(label)}</button>`) && !f.html.includes('⟨'), `the act in its own words, its number filled, no token left: ${f && f.html}`);
+  assert.equal(live.textContent, label, 'the act\'s words said through the status region, the face\'s own not again');
+  o?.acts?.a0(/** @type {any} */ ({}), true);
+  assert.deepEqual(moves, [true], 'its act the version move handed in, told a key made it');
+  FACES.offered('1.0.1.0.128', offer);
+  assert.equal(HOST.currentState(), o, 'an offer for another document draws nothing over it');
+  HOST.dismiss();
+  FACES.floating(FAR, at, offer);
+  assert.ok(faceShown()?.html.includes(esc(label)), 'shown with an offer standing: the act in its first frame');
+  HOST.dismiss();
+  live.textContent = '';
+  FACES.offered(FAR, offer);
+  assert.deepEqual([HOST.currentState(), live.textContent], [null, ''], 'a face the reader dismissed is never brought back, and nothing is said');
 });
 
 test('at the line\'s sign-in act a death\'s face says its arm\'s words — the mode arm\'s, the self-retirement\'s, the sign-out marker\'s for the page\'s own close alone — the words the line\'s death arm says; an arm whose words this page does not hold shows none, and no refusal of a session the shell no longer holds reads "signed out" (C-137; issue #175: "\'signed out\' stays on the sign-out path alone")', () => {

@@ -57,16 +57,14 @@
 // It stands at the act's site, which the act that opens it hands in (O-HOST's
 // anchor; foundations §3.1): opened by the corner's act, beneath the version
 // statement, and at the document's box, on the left where the corner stands,
-// once T-LAYER rewrites the corner or takes it down; opened by a floating
-// end's face (O-FACES' `floating`), where the face stood, at the head landed
-// on, and following it as the camera moves. The list takes the focus where a
-// key made the act — Enter at the corner — on its current member's read act,
-// and never where a click on the statement did (D5 §4 rule 4; the focus
-// record's rules 13 and 16); shown again by its own "try again", the focus
-// stays on the control bearing the same act, else goes to its first (rule
-// 11). It opens on its reads (O-HOST's `opening`): where an act was made on
-// the chrome while they read, nothing shows, and no member is asked about
-// after it.
+// once T-LAYER rewrites the corner or takes it down. The list takes the
+// focus where a key made the act — Enter at the corner — on its current
+// member's read act, and never where a click on the statement did (D5 §4
+// rule 4; the focus record's rules 13 and 16); shown again by its own "try
+// again", the focus stays on the control bearing the same act, else goes to
+// its first (rule 11). It opens on its reads (O-HOST's `opening`): where an
+// act was made on the chrome while they read, nothing shows, and no member
+// is asked about after it.
 // Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-22, FP-34.
 
 import * as HOST from './host.js';
@@ -300,7 +298,7 @@ function showList(l, anchor, pos, width, byKey) {
  * named (see the head).
  * @param {string} addr the version the list holds the passage in: the plain address, or a pinned version's
  * @param {number | null} pos the held passage's first position in it, or null for its first block
- * @param {Anchor | null} anchor where the list stands, the act's site (O-HOST's anchor): the corner's version statement, the document's box beside it (`fromCorner`); a floating end's face's place, the head landed on (O-FACES' `floating`); null where the act was made at no place
+ * @param {Anchor | null} anchor where the list stands, the act's site (O-HOST's anchor): the corner's version statement, the document's box beside it (`fromCorner`); null where the act was made at no place
  * @param {number | null} [width] the held passage's positions; null holds the block at `pos` whole
  * @param {boolean} [byKey] a key made the act: the list takes the focus on its current member
  * @returns {Promise<void>} settled once the list shows, or nothing will

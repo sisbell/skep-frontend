@@ -18,12 +18,16 @@
 // an opening they cannot. An overlay's own completion is no act on the chrome
 // (`complete`): a jump's reading face taken down as its read answers ends no
 // opening asked while it stood, whose answer then shows where the camera is
-// (FP-25). Until it shows or ends it is `pending`; its reads may ask whether
-// it `stands`, so one that has ended asks no more. An opening begins in the
-// act that asks for it, nothing awaited first: the page imports every module
-// it acts through as it loads, the app alone loading its gate's by
-// `import()` (S-22 (a)), for an act made while a module loaded would end no
-// opening, and the chrome would open over the place that act reached.
+// (FP-25). Nor is an overlay drawn again in its place by the module that
+// showed it, from what its reads found since (`redraw`): the dead end's face
+// taking its version offer (O-FACES') ends no opening, and what it changed is
+// its owner's to say. Until it shows or ends it is `pending`; its reads may
+// ask whether it `stands`, so one that has ended asks no more. An opening
+// begins in the act that asks for it, nothing awaited first: the page
+// imports every module it acts through as it loads, the app alone loading
+// its gate's by `import()` (S-22 (a)), for an act made while a module loaded
+// would end no opening, and the chrome would open over the place that act
+// reached.
 // The focus is N-FOCUS's (FP-20; D5 §4 rule 4): an overlay takes the focus
 // only where a key made the act that opened it — `takeFocus` is that act's
 // `byKey` and nothing else decides it — and takes it on its first act, never
@@ -33,25 +37,25 @@
 // its first words as it is unfolded (O-FACES'). The dismiss is a native
 // button placed after the content, reached by Tab and pressed by Enter or
 // Space (rule 14), its title drawn for the platform (rule 19). An overlay
-// rebuilt by its own act (`show` with the same id) keeps the focus on the
-// control bearing the same `data-run` (rule 11); one replacing another whose
-// control held the focus takes it on its first act, and a face replacing it
-// never takes it — the focus returns to the replaced overlay's opener with
-// the face standing (rule 11). The opener is the controller's one memory: the
-// element the focus stood on as the first overlay of a chain opened, read
-// before the markup written here removes a control of this host that held
-// it; the dismissal hands the focus back through the controller — to that
-// element, or to the walk's element where it no longer takes the focus (rule
-// 16). An overlay's end (`onDismiss`) runs while the element still holds
-// what it wrote — a dismissal's before the element is emptied, a
-// replacement's before the next is written — so an end that reads it reads
-// it there: a walk's moment folds with the text typed in its field
-// (O-FACES'). A field holding the caret (FP-20): while the overlay's own
-// field holds the platform's focus — a moment's answer being typed
-// (`typing`) — no face takes its place: a face shown then is said through the
-// status region, a told one too, for no focus moves to tell it, and the
-// overlay stands with its text and its caret, as N-GO's departure leaves it
-// standing.
+// rebuilt — by its own act (`show` with the same id), or by its owner
+// (`redraw`) — keeps the focus on the control bearing the same `data-run`
+// (rule 11); one replacing another whose control held the focus takes it on
+// its first act, and a face replacing it never takes it — the focus returns
+// to the replaced overlay's opener with the face standing (rule 11). The
+// opener is the controller's one memory: the element the focus stood on as
+// the first overlay of a chain opened, read before the markup written here
+// removes a control of this host that held it; the dismissal hands the focus
+// back through the controller — to that element, or to the walk's element
+// where it no longer takes the focus (rule 16). An overlay's end
+// (`onDismiss`) runs while the element still holds what it wrote — a
+// dismissal's before the element is emptied, a replacement's before the next
+// is written — so an end that reads it reads it there: a walk's moment folds
+// with the text typed in its field (O-FACES'). A field holding the caret
+// (FP-20): while the overlay's own field holds the platform's focus — a
+// moment's answer being typed (`typing`) — no face takes its place: a face
+// shown then is said through the status region, a told one too, for no focus
+// moves to tell it, and the overlay stands with its text and its caret, as
+// N-GO's departure leaves it standing.
 // The dialog's name (D5): each overlay's own caption — its `.label`, a face's
 // own words — by `aria-labelledby`; a string per kind from ST where no
 // caption stands. A face that answers an act, captioned by the act's own
@@ -201,6 +205,14 @@ function wordsOf(/** @type {string} */ html) {
   return faceWords(scratch.content);
 }
 
+/** an overlay written into the host's element: its kind, the name the gate reads, its markup with the dismiss after it, and the dialog's name */
+function writeInto(/** @type {HTMLElement} */ host, /** @type {Overlay} */ o) {
+  host.className = 'on ' + o.kind;
+  host.setAttribute('data-id', o.id || o.kind);
+  host.innerHTML = o.html + dismissButton();
+  name(host, o);
+}
+
 /**
  * Does the standing overlay hold the caret (see the head; FP-20): the
  * platform's focus in a field of its own — an answer the reader is typing
@@ -232,12 +244,7 @@ export function show(o) {
   const replacing = !!current && !rebuild;
   if (replacing) { /* the previous overlay's end runs, told so */ const prev = /** @type {Overlay} */ (current); current = null; if (prev.onDismiss) prev.onDismiss(true); }
   current = o;
-  const write = () => {
-    host.className = 'on ' + o.kind;
-    host.setAttribute('data-id', o.id || o.kind);
-    host.innerHTML = o.html + dismissButton();
-    name(host, o);
-  };
+  const write = () => writeInto(host, o);
   if (rebuild) {
     const kept = FOCUS.keep(host, keyOf, write);
     if (!kept && o.takeFocus) FOCUS.open('overlay', { el: host, from, byKey: true, first: firstControl(host, o.first) });
@@ -249,6 +256,26 @@ export function show(o) {
   place();
   if (o.kind === 'face' && !o.takeFocus && !o.told) FOCUS.say(faceWords(host));
   markDirty();
+}
+
+/**
+ * The standing overlay drawn again in its place by the module that showed
+ * it, from what its reads found since (see the head): no act on the chrome,
+ * so an opening still reading shows its answer; a rebuild, the focus kept on
+ * the control bearing the same key; nothing said, its owner saying what it
+ * changed. Nothing where another overlay stands, or none — one the reader
+ * dismissed, or an act took the place of, stays gone.
+ * @param {Overlay} o the overlay, under the id it stands as
+ * @returns {boolean} it stood, and stands drawn again
+ */
+export function redraw(o) {
+  if (!el || !current || current.id !== o.id) return false;
+  const host = el;
+  current = o;
+  FOCUS.keep(host, keyOf, () => writeInto(host, o));
+  place();
+  markDirty();
+  return true;
 }
 
 /**

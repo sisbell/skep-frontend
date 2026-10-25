@@ -32,7 +32,7 @@ const away = (/** @type {number} */ n) => ({ view: v(n), reading: readOf(n), sto
 /** what an entry keeps of the departure from it: its view's x, what that view reads, where the walk stood */
 const kept = (/** @type {Entry} */ x) => [x.view.x, x.reading && x.reading.pos, x.stood && x.stood.pos];
 /** @type {Notice} a jump's reading notice, as its claim holds it while its read is out */
-const reading = { face: 'reading', addr: 'x', refusal: null, site: { span: { addr: 'x', pos: 1 }, sign: 'x' }, offer: false };
+const reading = { face: 'reading', addr: 'x', refusal: null, site: { span: { addr: 'x', pos: 1 }, sign: 'x' } };
 /** @type {Notice} what its read brought where it brought no place: the fifth cell */
 const faced = { ...reading, face: 'unregistered' };
 

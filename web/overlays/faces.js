@@ -54,18 +54,22 @@
 // never a restart's (FP-28); a withheld run's face whole, Enter's act at the
 // run (D5 K-7), made from the run's placeholder record (T-ARTICLE's
 // `placeholderOf`) once its clause's reads answer, C-67's pointer its offered
-// act; a jump reading and a jump reaching (FP-25), their overlays named
+// act; the dead end's face at the head a landing stands at (`floating`;
+// FP-21), its act, where N-GO hands one in, the version move its reads found
+// to the last member that holds the passage whole, the face standing drawn
+// again with it, no act on the chrome, as those reads answer (`offered`); a
+// jump reading and a jump reaching (FP-25), their overlays named
 // `reading:⟨address⟩` and `reaching:⟨address⟩` and never `face:…`, the
 // prefix a notice's face carries — each anchored, as every face N-GO shows
 // for a jump is, with the document it stands at, out of the visible view of
-// which the one line carries its words (O-HOST's `sign`). A face never takes
-// the focus (D5 §4 rule 4; K-58): it is heard through the one status region
-// (D4, O-HOST's), and a face offered by a key's act takes none either; a
-// walk's moment alone takes it. A refusal's face that answers an act carries
-// the act's own caption, the words its card names itself by (`caption`), so
-// O-HOST names it as the act's answer and says the caption before its words;
-// a landing's face is tied by the item's description where the focus lands
-// instead (`told`).
+// which the one line carries its words (O-HOST's `sign`). A face
+// never takes the focus (D5 §4 rule 4; K-58): it is heard through the one
+// status region (D4, O-HOST's), and a face offered by a key's act takes none
+// either; a walk's moment alone takes it. A refusal's face that answers an
+// act carries the act's own caption, the words its card names itself by
+// (`caption`), so O-HOST names it as the act's answer and says the caption
+// before its words; a landing's face is tied by the item's description where
+// the focus lands instead (`told`).
 // A walk's moment is the walk's state (FP-28): a public `moment` is drawn by
 // its kind — a label box its title, its statements, its field and the default
 // it offers; a question its words and its field; a yes-or-no question its
@@ -104,11 +108,10 @@
 // (`noBoard`), and "try again" reads the list again (`tryBoardsAgain`;
 // M-PUMP's `retryBoards`): a board found, the page launches there and the
 // face goes; a refusal again said, so no press is silent.
-// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-25, FP-26, FP-28, FP-29, FP-33,
-// FP-35.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-25, FP-26, FP-28, FP-29,
+// FP-33, FP-35.
 
 import * as HOST from './host.js';
-import * as VERSIONS from './versions.js';
 import * as PORT from '../bridge/port.js';
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -577,28 +580,63 @@ export function floatingWords(far) {
 }
 
 /**
+ * @typedef {Object} Offer — a landing's version offer, as N-GO's reads found it (see the head; `floating`)
+ * @property {number} k the latest member whose text holds the passage whole
+ * @property {(byKey: boolean) => void} go the version move to it, which lands in place; `byKey` a key made the act
+ */
+
+/**
+ * The dead end's face as an overlay (`floating`): its words, and the version
+ * offer's act in its own words, its member named, where an offer stands.
+ * @param {string} far
+ * @param {Anchor | null} at
+ * @param {Offer | null} offer
+ * @param {boolean} told
+ * @returns {import('./host.js').Overlay}
+ */
+function floatingFace(far, at, offer, told) {
+  return {
+    kind: 'face', id: 'face:floating', anchor: at, told, acts: offer ? { a0: (_el, byKey) => offer.go(byKey) } : {},
+    html: faceHTML({ ...floatingWords(far), acts: offer ? [{ label: t('F.floating.read', { k: offer.k }) }] : [] }),
+  };
+}
+
+/**
  * A floating end: the passage a document's text no longer arranges
- * (foundations §2.3), in the dead end's words (`floatingWords`) — met
- * at the landing N-GO makes at the document's head, whether a followed
- * link's end or a carried passage brought the reader there (the carry rule's
- * empty case, P43). Where `offer` stands, the act opens the versions list to
- * read the last member that holds it, the list taking the face's place where
- * the face stood — the head landed on — and following it as the camera moves
- * (foundations §3.1: at the act's site); a carried passage's landing offers
- * none, for the list holds a passage of its own document and the carried one
- * is another's. Shown at the landing that met it, its words are that
+ * (foundations §2.3), in the dead end's words (`floatingWords`) — met at the
+ * landing N-GO makes at the document's head, whether a followed link's end
+ * or a carried passage brought the reader there (the carry rule's empty
+ * case, P43). Where an offer stands, its act is the version move to the last
+ * member that holds the passage whole, which N-GO's reads found and N-GO
+ * hands in — at a followed end's landing, the face taking it in its place
+ * once those reads answer (`offered`); no offer stands at a carried
+ * passage's landing. Shown at the landing that met it, its words are that
  * landing's description, said where the focus lands (`told`; N-WALK), and
  * the status region does not repeat them (D4: a landing is told by the focus
  * move); shown again at a cursor move, they are said there.
  * @param {string} far the document whose text holds none of the passage
- * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the head landed on: where the face stands, and the list its act opens
- * @param {boolean} [offer] the face offers the versions list
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the head landed on: where the face stands
+ * @param {Offer | null} [offer] the version offer the landing's reads found; null where none stands
  * @param {boolean} [told] the landing's description says its words
  */
-export function floating(far, anchor, offer = true, told = false) {
-  const at = toAnchor(anchor);
-  HOST.show({ kind: 'face', id: 'face:floating', anchor: at, told, acts: offer ? { a0: (_el, byKey) => VERSIONS.open(far, null, at, null, byKey) } : {},
-    html: faceHTML({ ...floatingWords(far), acts: offer ? [{ label: t('F.versions.read', { k: '⟨k⟩' }) }] : [] }) });
+export function floating(far, anchor, offer = null, told = false) {
+  HOST.show(floatingFace(far, toAnchor(anchor), offer, told));
+}
+
+/**
+ * The dead end's face standing at `far` takes the version offer its
+ * landing's reads found (see the head): drawn again in its place with the
+ * offer's act, no act on the chrome (O-HOST's `redraw`), its words not said
+ * again and the act's said through the status region (FP-28). Nothing where
+ * that face no longer stands — one the reader dismissed, or an act took the
+ * place of, stays gone.
+ * @param {string} far the document the face names
+ * @param {Offer} offer
+ */
+export function offered(far, offer) {
+  const o = HOST.currentState();
+  if (!o || o.id !== 'face:floating' || !o.anchor || !o.anchor.span || o.anchor.span.addr !== far) return;
+  if (HOST.redraw(floatingFace(far, o.anchor, offer, !!o.told))) FOCUS.say(t('F.floating.read', { k: offer.k }));
 }
 
 /**
