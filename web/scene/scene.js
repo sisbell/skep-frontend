@@ -1,183 +1,145 @@
-// SC — THE READING SCENE (the structure record §3.2 "SC"; B1-S9; foundations
-// §2.5; law 12: chrome). Layer 2. ENGINE-BOUND. State: VIEW — the pair, the
-// two ends it sets level, the bands' and lines' ends as measured in the panes,
+// SC — the reading scene (the structure record §3.2; B1-S9; foundations
+// §2.5; law 12). Layer 2. ENGINE-BOUND. State (FP-10): the pair, the two
+// ends it sets level, the bands' and lines' ends as measured in the panes,
 // the panes' scrolls, each pane's text — the record it was made from, the
 // version it reads and the address it names, the links and far ends it was
-// set with — and the element it was opened from (the one owner).
+// set with — the settings reading and the acts waiting on them, and the
+// element it was opened from; view state, never written (FP-7).
 // Two documents at reading scale side by side over the plane, each pane
 // scrolling on its own (R3); the places unmoved, nothing written; the dialog
-// named as it attaches by ST's `L.scene-label`. It sets the two ends LEVEL,
-// "so position carries the match and the beam confirms it" (§2.5): the
-// passage the opener holds — a link's span, a selection, the
+// named as it attaches by ST's `L.scene-label`. It sets the two ends level
+// (§2.5): the passage the opener holds — a link's span, a selection, the
 // versions list's held passage, provenance's span — at its first stretch of
 // shared identity, and its counterpart in the other document, or the far end
-// a link names (`levels`); each pane's matched line brought to one height, and
-// each article given a pane's height of room below its end so a passage near
-// the end can be brought there too; a re-level act (K-62) restores that.
-// Between the panes LINKS are drawn as LINES from the set LK gave at either
-// pane's document as the pane was set (the seam at the link-beam source;
-// §2.5: "a link's line drawn where either pane's default composition draws
-// that link"), each link once per pair of its ends (`linesBetween`; P44:
-// "never a stack, never accumulated tint"), each end where the link's bytes
-// stood in its pane's text as the pane was set — the near end at the stretch
-// LK placed it in, the far end where `project` answered its passage sits in
-// the pane's own text, whichever version of the far document's box the pane
-// holds and whatever version the plane's box shows (issue #154's design
-// decision: the box shows one version; `farEndIn`), whose reads each setting
-// of a pane asks for the links that cross between the panes, a far
-// end that floats at its pane's head, where its follow lands, and never at
-// the position the link stores — each END in the mark its pane's document
-// gives the link, the one the link's symbol takes in that pane (issue #166's
-// design decision: "Lines between the side-by-side view's panes follow the
-// same rule, changing at the middle of the gap"), inked as BM inks a beam's
-// ends — its linker's hue there, dashed only for another's — and where the two
-// differ the line changing colour once, at the middle of the gap (`drawTie`),
-// so opening the scene never recolours the link it opened on — and
-// SHARED IDENTITY as BANDS from `compare`'s pairs, each run
-// of contiguous pairs one band (`merged`; no link); each leaves its pane at
-// its passage's first line — measured, through T-LAYER's byte-span mapping
-// over the pane's article and the blocks it was made from, when the scene is
-// set level, a pane is set again or the panes change size, and moved with
-// each pane's scroll — and one whose end has left its pane is clipped at the
-// pane's edge with the stub's triangle, in that end's hue. Every tie is
-// measured from what its panes were set with, never the model's now: a read
-// that drops a pane's document moves no tie off its text (`measure`).
-// A PANE IS KEPT FRESH BY ITS KIND (FP-23; issue #160's design decision: "each
-// pane behaves as its document does on the plane, by kind"): each feed row
-// M-PUMP takes reaches the panes after it drops what it named (`dropped`, its
-// `onDrop`), a pane reached where the row named its document's box, and none
-// offers a reload. A DRAFT — any text no publication fixes — is read again
-// whole and set in its place, the first span in view holding still and the
-// platform's selection put back on the same words. An EDITION READ AT ITS
-// BARE ADDRESS keeps the version it opened on: its acts name the member its
-// text is (`D.k`, the chain probed as it opens), and a row naming a newer
-// member pins it at once — its head, the bar and its corner naming `D.k`,
-// "version ⟨k⟩ of ⟨n⟩", never "the latest", the arrival said once, politely,
-// in the status region (N-FOCUS's `say`), the corner offering the newest
-// (`pin`) — then `D.k` is read whole and the pane set again, its marks and
-// lines with it; where no member held its text before (k = 0) there is no
-// version to keep, and it is read again in place as the plane's box is (N-GO's
-// `arrived`). A pane on a VERSION only counts the chain again: its "of ⟨n⟩"
-// (`count`). A row whose op the journal could not name is taken as any it
-// could be: a newer member named pins, else the pane is read again. A REFRESH
-// — M-PUMP's, after rows naming nothing (issue #212's design decision: "each
-// held document and link then gets exactly what a row naming it gets") —
-// reaches every pane once the model's documents are set again (`refreshed`):
-// an edition at its bare address whose chain the refresh counted past the
-// member its text is pinned at once from what it kept, one whose member is
-// not known left as it shows, and every other pane read again in its place,
-// a version's count taken first. A link
-// row reaching a pane's text reads it again, its marks, counts and lines with
-// it, formatting setting its type again as a draft's update does. THE
-// CORNER'S ACT (`act`; "read version 4") reads the version it offers in that
+// a link names (`levels`); each pane's matched line brought to one height,
+// LEVEL_AT px below the panes' tops or higher where one stands above it,
+// and each article given a pane's height of room below its end so a passage
+// near the end can be brought there too (`level`); the re-level act (K-62)
+// restores that.
+// Between the panes links are drawn as lines from the set LK gave at either
+// pane's document as the pane was set (§2.5; `linesBetween`), each link once
+// per pair of its ends (P44), each end where the link's bytes stood in its
+// pane's text as the pane was set — the near end at the stretch LK placed it
+// in, the far end where `project` answered its passage sits in the pane's
+// own text, whichever version of the far document's box the pane holds and
+// whatever version the plane's box shows (`farEndIn`; FP-22), whose reads
+// each setting of a pane asks for the links that cross between the panes
+// (`unplaced`), a far end that floats at its pane's head, where its follow
+// lands, and never at the position the link stores — each end in the mark
+// its pane's document gives the link, the one the link's symbol takes in
+// that pane (FP-30), inked as BM inks a beam's ends, and where the two
+// differ the line changing colour once, at the middle of the gap
+// (`drawTie`), so opening the scene never recolours the link it opened on —
+// and shared identity as bands from `compare`'s pairs, each run of
+// contiguous pairs one band (`merged`). Each tie leaves its pane at its
+// passage's first line — measured through T-LAYER's byte-span mapping over
+// the pane's article and the blocks it was made from when the scene is set
+// level, a pane is set again or the panes change size (`measure`), and moved
+// with each pane's scroll (`draw`) — and one whose end has left its pane is
+// clipped at the pane's edge with the stub's triangle, in that end's hue.
+// Every tie is measured from what its panes were set with, never the
+// model's now: a read that drops a pane's document moves no tie off its text.
+// A pane is kept fresh by its kind (FP-23): each feed row M-PUMP takes
+// reaches the panes after it drops what it named (`dropped`, its `onDrop`),
+// a pane reached where the row named its document's box, and none offers a
+// reload. A draft — any text no publication fixes — is read again whole and
+// set in its place, the first span in view holding still and the platform's
+// selection put back on the same words. An edition read at its bare address
+// keeps the version it opened on: its acts name the member its text is
+// (`D.k`, the chain probed as it opens), and a row naming a newer member —
+// by the documents it names or the home of the link it deposited
+// (`newest`), whatever its op — pins it at once to `D.k`, or to the member
+// before the one named where its chain was not known as it opened: its head,
+// the bar and its corner naming the member, never the latest, the arrival
+// said once, politely, in the status region (N-FOCUS's `say`), the corner
+// offering the newest (`pin`) — then `D.k` is read whole and the pane set
+// again, its marks and lines with it; where no member held its text before,
+// it is read again in place. A pane on a version only counts the chain again
+// (`count`), save where a row names its own address, which reads it again.
+// A refresh (M-PUMP's, after rows naming nothing) reaches every pane once
+// the model's documents are set again (`refreshed`): an edition at its bare
+// address whose chain the refresh counted past the member its text is
+// pinned at once from what it kept, one whose member is not known left as it
+// shows, and every other pane read again in its place, a version's count
+// taken first. The corner's act (`act`) reads the version it offers in that
 // pane's place: the selection, else the first span in view, carried into it
-// by `compare` and kept on its line, the corner saying so where the version
-// lacks it (F.floating.member), and the version left one act away — the
-// pane's own state, never a box's: N-GO's pins are never touched (FP-22).
-// THE PAGE'S OWN DEATH reaches every pane at once, as does every other change
-// of its class — a session a restart lost and the acquire did not get back
-// among them (M-PUMP's `classChanged`): each is taken down to what the drop
-// left of its record — nothing of the session's text or links, the ties with
-// them — and read again at the class the page reads at then, a document
-// withheld from a guest standing as its head alone (records.js's
-// `dropClass`: "no frame after it draws … what the class could read and the
-// next cannot"): A PANE ON A COVERED DRAFT STAYS OPEN (issue #177's design
-// decision; FP-29), its head's "withheld · ⟨owner⟩" its cover, the bands of
-// shared identity gone with its text, and every line homed in the readable
-// pane whose far end lies in it ending at the cover (`farEndIn`, `coverIn`),
-// clipped and stubbed as any end whose line has left its pane.
-// EVERY SETTING IS ONE STEP (`setPanes`; "no tie is ever drawn
-// over text it was not measured on"): the reads first — the text whole, the
-// two texts' `compare`, where each far end crossing between them stands — then,
-// where the scene still stands and no later setting was asked of the pane,
-// with nothing awaited: the new article made and swapped in, the reader's
-// place, the selection and the ends set level carried by their bytes'
-// identity through the images the two articles were made from, the ties
-// measured anew and drawn. While a pane is being set again its own keys, the
-// re-level and the corner's act wait for it (`whenSet`); ending the scene
-// never waits, so a board that does not answer holds no scene open, and a
-// pane whose read the board did not answer keeps what it shows.
-// It opens on its reads, both documents whole and their
-// `compare` (O-HOST's `opening`, the rule the cards share): an act made on
-// the chrome while they read — a navigation act, Esc, an empty click, the
-// LEAP box opened, the next card asked or shown — ends the opening, and
-// their answer opens nothing, the plane left in the page's order and the
-// focus where it stands, and no `compare` asked after it. Whatever ends it —
-// zoom-out, Esc, ←, the bar's ×, or a navigation act (a teleport, Back,
-// Forward, a trail jump), which ends it first, "a teleport dismissing the
-// scene first" (§2.5) — leaves the plane as it was and the trail as it found
-// it (`close`): the scene never moves the camera, so an entry pushed for the
-// plane as it was would hold the view of the entry it departs, a Back from it
-// moving nothing, and its push would drop the entries ahead of the cursor.
-// §2.5 pairs that push with the scene recorded as the departure — its pair
-// and both panes' positions — so Back restores it; N-TRAIL's entry holds an
-// address and a view and no scene, and whether Back restores a scene is the
-// design's open question — once it does, the decision binds it to keep each
-// pane's version. THE FOCUS (D5 §4 rules 5 and 8; K-61, K-63; the
-// focus record's rule 17; FP-20): opened, the scene puts the focus in the far
-// end's pane and takes the plane it stands over out of the page's order and
-// the accessibility tree, each region by its owner (N-WALK's tree, T-LAYER's
-// corners: `cover`), so the one ring runs the line → pane, its corner, pane,
-// its corner, the bar's acts → the standing overlay → the line, in the place
-// of the plane's stop and its corner, and reaches nothing the scene covers;
-// the one line is never covered, and the LEAP box stands over the scene.
-// Whatever ends it puts the plane back first and hands the focus back through
-// N-FOCUS, the focus's owner, which takes a focus the scene held off it and
-// returns one standing on nothing to the element the scene was opened from —
-// read as it opens, once the overlay it dismisses has returned the focus that
-// overlay held, and kept by the controller's one memory where a scene opens
-// over a standing one — or to the walk's element where that no longer takes
-// it; a navigation act's landing then carries it on (rule 8), and a focus the
-// person moved out of the scene stays where it is. EACH PANE IS A NAMED
-// REGION (SC9): named by its own document's address, the head of the article
-// it holds, and ↓ and ↑ in it move by BLOCK — the next block's top brought to
-// the pane's top (K-60; D1's first stage) — PageDown and PageUp by most of a
-// pane, Home and End to its ends. The panes BORROW the one reconciler's mount
-// (FP-12; the structure record §3.4 (vii): `T-LAYER.sceneArticle` makes each
-// pane's article from the record and the view the scene keeps and keeps what
-// it was made from, `T-LAYER.rangeIn` finds a passage in it through those
-// blocks, and a drag in it selects as it does on the plane — an item that
-// holds no text taken whole and drawn so — its copy carrying the passage's
-// board and the address the pane's acts name beside the plain text, the
-// span's items in order with a stand-in in each item's place, as T-LAYER's
-// copy event does for any article — §2.4, §2.5; FP-24; the scene keeps no DOM
-// text of its own). Each pane carries
-// its own document's corner (ux-T2: "each pane its own"; `T-LAYER.sceneCorner`
-// makes its items) on its OUTER side — pane A's left, pane B's right — held
-// to the top of the pane's scroll, so the bands and lines leave the inner
-// edges clear of it (foundations §3.1); the corner is the pane's one Tab stop
-// after the pane itself, a group named by its own words, which say what the
-// pane shows (D5 K-57, as the plane's corner), and its Enter, or a click on
-// the act, takes its act — a press on the act leaving the selection standing
-// in the pane, the passage the act carries.
-// Each pane's text is ONE COLUMN AT THE
-// PLANE'S MEASURE (issue #15: "side-by-side panes stay one column each, at
-// the same line length"): P-LAY's MEASURE_CPL characters of its own face (the
-// style's `--measure`), at the largest size up to PANE_FS at which that
-// column fits beside the pane's corner (`fitMeasure`, as the scene opens, as
-// a pane is set again and as its panes change size), so the panes break the
-// lines the plane breaks; against the pane's inner edge with its corner beside
-// it, its column's edge between it and that inner edge — its counts and its
-// withheld runs' marks there, the bands leaving the pane beyond them
-// (foundations §3.1; issue #151's design decision): a window wider than the
-// measure needs widens the outer margins, never the line, and the text keeps
-// its place beside the bands at every width.
-// THE PANES ARE READ, NOT ACTED ON (B1-S9: "read both…; scroll each"): nothing
-// in a pane's article takes a pointer — its blocks, hairlines, symbols and
-// presence ⟡ and its corner's version statement carry none of the plane's
-// click cues and are no controls (T-ARTICLE's scene-mode variant) — and the
-// keys a pane takes move that pane alone (`key`), N-KEYS handing none to what
-// the scene covers. The scene's ACTS are its bar's buttons — re-level (K-62,
-// its chord drawn for the platform, rule 19) and the dismissal — each pressed
-// by a click anywhere on it, by Enter or by Space, and a pane's corner's act
-// (see above). A roving stop inside a pane and what a click
-// or a key at a mark would act on — a beam followed into the other pane
-// (B1-S9), each pane's own selection (§2.5, PROPOSED; #94) — are D1's second
-// stage, after each pane has its selection. Companionate scrolling over the
-// bands is UNTESTED (S27) and not built. Carries: the wireframe's §19 whole
-// (its beams over `compare`'s pairs instead of the hand data's windows).
-// Rules: FP-1, FP-2, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24, FP-29,
-// FP-34.
+// by `compare` and kept on its line (`carryInto`, `carriedTo`), the corner
+// saying so where the version lacks it, and the version left one act away —
+// the pane's own state, never a box's: N-GO's pins are never touched
+// (FP-22). The page's own death reaches every pane at once, as does every
+// other change of its class (M-PUMP's `classChanged`): each is taken down to
+// what the drop left of its record — nothing of the session's text or links,
+// the ties with them — and read again at the class the page reads at then,
+// a document withheld from a guest standing as its head alone; a pane on a
+// covered draft stays open (FP-29), its head's withheld statement its cover,
+// the bands of shared identity gone with its text, and every line homed in
+// the readable pane whose far end lies in it ending at the cover
+// (`farEndIn`, `coverIn`), clipped and stubbed as any end whose line has
+// left its pane.
+// Every setting is one step (`setPanes`; FP-23): the reads first — the text
+// whole, the two texts' `compare`, where each far end crossing between them
+// stands (`readPane`, `readBetween`) — then, where the scene still stands
+// and no later setting was asked of the pane, with nothing awaited: the new
+// article made and swapped in, the reader's place, the selection and the
+// ends set level carried by their bytes' identity through the images the two
+// articles were made from, the ties measured anew and drawn. While a pane is
+// being set again its own keys, the re-level and the corner's act wait for
+// it (`whenSet`); ending the scene never waits, so a board that does not
+// answer holds no scene open, and a pane whose read the board did not answer
+// keeps what it shows.
+// It opens through O-HOST's `opening` on its reads, both documents whole and
+// their `compare`: an act that ends the opening while they read leaves their
+// answer opening nothing, and no `compare` is asked after it. Whatever ends
+// it — zoom-out, Esc, ←, the bar's ×, or a navigation act, which ends it
+// first (§2.5) — leaves the plane as it was and the trail as it found it
+// (`close`): the scene never moves the camera, so an entry pushed for it
+// would hold the view of the entry it departs and drop the entries ahead of
+// the cursor.
+// The focus (D5 §4 rules 5 and 8; K-61, K-63; the focus record's rule 17;
+// FP-20): opened, the scene puts the focus in the far end's pane and takes
+// the plane it stands over out of the page's order and the accessibility
+// tree, each region by its owner (`coverPlane`: N-WALK's and T-LAYER's
+// `cover`); the one line is never covered, and the LEAP box stands over the
+// scene. Whatever ends it puts the plane back first — the element the scene
+// was opened from takes no focus while covered — and hands the focus back
+// through N-FOCUS's `close`; the opener is read as the scene opens, after
+// the dismissal and before the reads (`from`).
+// Each pane is a named region (SC9), named by its own document's address,
+// the head of the article it holds (`namePane`), and ↓ and ↑ in it move by
+// block — the next block's top brought to the pane's top (K-60) — PageDown
+// and PageUp by most of a pane, Home and End to its ends (`move`). The panes
+// borrow T-LAYER's mount (FP-12; the structure record §3.4 (vii)):
+// `sceneArticle` makes each pane's article from the record and the view the
+// scene keeps, `madeOf` and `rangeIn` map a position through the blocks it
+// was made from, `selectionIn` and `selectIn` read and set the selection,
+// and T-LAYER's copy event serves the panes (FP-24); the scene keeps no DOM
+// text of its own. Each pane carries its own document's corner (ux-T2;
+// T-LAYER's `sceneCorner` makes its items) on its outer side — pane A's left,
+// pane B's right — held to the top of the pane's scroll, so the bands and
+// lines leave the inner edges clear of it (foundations §3.1); the corner is
+// the pane's one Tab stop after the pane itself, a group named by its own
+// words (D5 K-57), and its Enter, or a click on the act, takes its act — a
+// press on the act leaving the selection standing in the pane, the passage
+// the act carries. Each pane's text is one column at the plane's measure
+// (FP-12): the style's `--measure` characters of its own face, at the
+// largest size up to PANE_FS at which that column fits beside the pane's
+// corner (`fitMeasure`), so the panes break the lines the plane breaks;
+// against the pane's inner edge with its corner beside it, its column's edge
+// between it and that inner edge — its counts and its withheld runs' marks
+// there, the bands leaving the pane beyond them (foundations §3.1; FP-26): a
+// window wider than the measure needs widens the outer margins, never the
+// line. The panes are read, not acted on (B1-S9): nothing in a pane's
+// article is a control (T-ARTICLE's scene-mode variant), and the keys a pane
+// takes move that pane alone (`key`). The scene's acts are its bar's
+// buttons — re-level (K-62, its chord drawn for the platform, rule 19) and
+// the dismissal — each pressed by a click anywhere on it, by Enter or by
+// Space, and a pane's corner's act.
+// Figures: the ends level LEVEL_AT px below the panes' tops; a pane's text
+// PANE_FS px where its room holds the measure; MAX_BANDS bands drawn at
+// most; a band 6 px wide at 0.7 alpha, a line 1.6 px at the link's value; a
+// stub's triangle 8 by 4 px, 6 px inside the pane's edge.
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24,
+// FP-28, FP-29, FP-30, FP-34.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -250,7 +212,7 @@ import { esc } from '../util.js';
  * @property {Shown[]} shown the links LK showed at that record as the pane was set (`LK.shown`)
  * @property {Block[]} blocks the blocks its article was made from, where a far end naming the document whole stands
  * @property {Map<string, Stretch[] | Declined>} [placed] where the far ends of the links crossing into it stood in its text as the pane was set (`project`'s answers), by `⟨link⟩ ⟨slot⟩`
- * @property {boolean} [cover] it shows a cover: its record a read answered `withheld` as it was set — a covered draft's pane its head alone (issue #177) — where every far end crossing into it ends
+ * @property {boolean} [cover] it shows a cover: its record a read answered `withheld` as it was set — a covered draft's pane its head alone (FP-29) — where every far end crossing into it ends
  */
 
 /** @typedef {{pos: number, width: number, cover?: boolean}} Passage one end of a line between the panes, as a passage of its pane's document: its first position and its positions; `cover` where it ends at its pane's cover, its head's withheld statement, which holds no position */
@@ -356,7 +318,7 @@ function coverPlane(/** @type {boolean} */ on) { WALK.cover(on); LAYER.cover(on)
 
 /**
  * A pane named as a region by its own document's address — the head of the
- * article it holds (SC9; the focus record's D5: a caption of its own).
+ * article it holds (SC9; the focus record's D5).
  * @param {HTMLElement} pane
  * @param {string} id the id the head's address takes, for the reference
  */
@@ -407,8 +369,7 @@ export function panes() {
 
 /**
  * `compare`'s pairs with each run of contiguous pairs — adjoining in both
- * documents — one pair, in the first document's order (§2.5: one band per
- * shared run).
+ * documents — one pair, in the first document's order (§2.5).
  * @param {ComparePair[]} raw
  * @returns {ComparePair[]}
  */
@@ -429,8 +390,7 @@ export function merged(raw) {
  * stretch (`merged`) — clipped to the passage, in the first document's
  * order, each its first position in each document and its positions; none
  * where the passage shares nothing. What a carried passage is re-projected
- * at a landing as, every one marked there (N-GO; foundations §2.3: "what of
- * it the landing's text holds marked there"; P43).
+ * at a landing as, every one marked there (N-GO; foundations §2.3; P43).
  * @param {ComparePair[]} pairs `compare`'s pairs, `u1` in the first document
  * @param {number} pos the passage's first position
  * @param {number} width its positions
@@ -461,9 +421,8 @@ export function counterpart(pairs, pos, width) {
 
 /**
  * The position two documents share nearest a passage of the first that the
- * second holds none of (issue #154's design decision: "If the new version
- * lacks the passage, the nearest passage the two versions share keeps the
- * line instead"): of the stretches of shared identity (`merged`), the last
+ * second holds none of (FP-22): of the stretches of shared identity
+ * (`merged`), the last
  * position of one ending before the passage's first position, or the first
  * position of one beginning after it, whichever lies nearer that first
  * position — the one before where both lie as near — with its counterpart in
@@ -486,8 +445,8 @@ export function nearest(pairs, pos) {
 }
 
 /**
- * The two ends the scene sets level (§2.5: "position carries the match"):
- * where the opener names a position in the second document — a link's far
+ * The two ends the scene sets level (§2.5): where the opener names a
+ * position in the second document — a link's far
  * end — the held position and that one; else the passage held set level with
  * its `counterpart`, the second at its top where the held passage shares
  * none; with nothing held, the first pair's two ends.
@@ -514,13 +473,12 @@ function restIn(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
  * names, and the key it is told apart by (LK's `endKey`): the first stretch
  * `project` placed its passage in in the pane's own text as the pane was set
  * (`placed`) — else LK's `farRuns` where LK placed it in that document
- * (`farAt`), whatever version of the box the plane shows (issue #154's design
- * decision); where it names the document whole, or floats — the pane's text
- * holding none of it, where its follow lands at the head — the pane's first
- * block to the block's end; at a pane that shows a cover, at the cover, its
- * head's withheld statement (issue #177's design decision: "Link lines homed
- * in the readable pane stay, ending at the cover"); null where nothing places
- * it, its projection not read or refused.
+ * (`farAt`; FP-22), whatever version of the box the plane shows; where it
+ * names the document whole, or floats — the pane's text holding none of it,
+ * where its follow lands at the head — the pane's first block to the block's
+ * end; at a pane that shows a cover, at the cover, its head's withheld
+ * statement (FP-29); null where nothing places it, its projection not read
+ * or refused.
  * @param {Shown} s the link as LK showed it at the other pane's document
  * @param {PaneLinks} pane the pane its far end is sought in
  * @returns {{key: string} & Passage | null}
@@ -540,15 +498,14 @@ function farEndIn(s, pane) {
 const passage = (/** @type {Passage} */ e) => (e.cover ? { pos: e.pos, width: e.width, cover: true } : { pos: e.pos, width: e.width });
 
 /**
- * The links drawn as lines between the panes (§2.5: "a link's line drawn
- * where either pane's default composition draws that link"): every end LK
- * showed at either pane's document as it was set whose far end names the
- * other's box — that document, or another version sharing its box
- * (`oneBox`) — each resolved to its end in pane A and its end in pane B — the
- * near end at the first stretch LK placed it in, the far end where
- * `farEndIn` places it, at the cover where its pane shows one, none where
- * nothing does — and each link ONCE per
- * pair of ends, in the order met, pane A's ends first. A link both panes show
+ * The links drawn as lines between the panes (§2.5): every end LK showed at
+ * either pane's document as it was set whose far end names the other's box —
+ * that document, or another version sharing its box (`oneBox`) — each
+ * resolved to its end in pane A and its end in pane B — the near end at the
+ * first stretch LK placed it in, the far end where `farEndIn` places it, at
+ * the cover where its pane shows one, none where nothing does — and each
+ * link once per pair of ends, in the order met, pane A's ends first. A link
+ * both panes show
  * is met from each; a document in both panes meets a link inside it from each
  * end in each pane, and draws it once for each way its two ends stand across
  * the panes. Ends are told apart by their pane and the span the link stores
@@ -556,13 +513,11 @@ const passage = (/** @type {Passage} */ e) => (e.cover ? { pos: e.pos, width: e.
  * those two ways into one line and leave the pair the scene sets level
  * without the line that confirms it, and never by where they stand now, which
  * the two panes read from two answers.
- * Each END of a line is drawn in the mark its pane's document gives the link
+ * Each end of a line is drawn in the mark its pane's document gives the link
  * — the one the link's symbol takes in that pane (`LK.markOf` at that
- * document; issue #166's design decision: "Lines between the side-by-side
- * view's panes follow the same rule"): its hue there, dashed only for
- * another's, as BM inks a beam's ends (`inkOf`), whichever pane meets it, so
- * opening the scene never recolours the link it opened on; its value the
- * link's own (P44: "never a stack, never accumulated tint").
+ * document; FP-30): its hue there, dashed only for another's, as BM inks a
+ * beam's ends (`inkOf`), whichever pane meets it, so opening the scene never
+ * recolours the link it opened on; its value the link's own (P44).
  * @param {PaneLinks} A pane A's
  * @param {PaneLinks} B pane B's
  * @returns {Line[]}
@@ -641,8 +596,7 @@ function placedInto(src, shown) {
  * count where the board ended the chain there —
  * held, or, at an edition at its bare address, read to its end (`probeChain`):
  * the member its text is, which its acts name. A count the board did not end
- * the chain at is no count: the head is not known there (issue #184's design
- * decision: "nothing built from it claims to be the whole chain"). Null where
+ * the chain at is no count: the head is not known there. Null where
  * the board did not answer, which leaves a pane as it shows; `whole` false
  * where the board refused the text for what it says of the document —
  * withheld from the reader, or nothing it will say of the address — the
@@ -894,7 +848,7 @@ const sizeOf = (/** @type {NonNullable<typeof els>} */ E) => `${E.paneA.clientWi
 const linksOf = (/** @type {Pane} */ P) => ({ addr: P.src, shown: P.view.marks, blocks: P.d.blocks, placed: P.placed, cover: P.d.refused === 'withheld' });
 
 /**
- * Where a pane's cover stands (issue #177): its article's head's withheld
+ * Where a pane's cover stands (FP-29): its article's head's withheld
  * statement — "withheld · ⟨owner⟩" — the line every far end crossing into
  * the pane ends at, in px below the pane's content top; null where the pane
  * holds no article.
@@ -939,7 +893,7 @@ function measure() {
 }
 
 /**
- * Panes set again in ONE STEP (see the head) — every read made before it,
+ * Panes set again in one step (see the head) — every read made before it,
  * nothing awaited in it: each one's reader's place, the platform's selection
  * there and the end set level in it read from the article it shows; its new
  * article made and swapped in, its corner and the bar naming what it shows
@@ -1012,8 +966,7 @@ function setPanes(S, sets, pairs, opts = {}) {
 
 /**
  * An act on the panes made while one is being set again waits for it (see
- * the head; issue #160's design decision: "An act taken mid-update waits for
- * the update to finish"): run now where no setting reads, else once the last
+ * the head; FP-23): run now where no setting reads, else once the last
  * lands, in the order the acts were made. Ending the scene never waits.
  * @param {() => void} fn
  */
@@ -1121,10 +1074,8 @@ export function carriedTo(pairs, c, head) {
 
 /**
  * A newer member's arrival at an edition read at its bare address (see the
- * head; foundations §3.2's "the board moves": "a published document read at
- * its bare address keeps the member being read … the address display then
- * pinned to the member being read … so the chrome never says 'the latest'
- * over text that is not"): the pane pinned at once to the member its text is
+ * head; foundations §3.2; FP-23): the pane pinned at once to the member its
+ * text is
  * — its head, its corner and the bar naming `D.k`, "version ⟨k⟩ of ⟨n⟩", its
  * corner offering to read the newest — set from what it kept, with no read;
  * the arrival said once, politely; then `D.k` read whole and the pane set
@@ -1142,9 +1093,9 @@ function pin(S, side, k, m) {
 }
 
 /**
- * A newer member named at a pane on a version (see the head: "A pane on a
- * pinned version only updates its 'of n'"): its corner's count, and its act,
- * where it offers the newest, naming the newest; nothing of its text.
+ * A newer member named at a pane on a version (see the head; FP-23): its
+ * corner's count, and its act, where it offers the newest, naming the
+ * newest; nothing of its text.
  * @param {Scene} S
  * @param {'a' | 'b'} side
  * @param {number} m
@@ -1327,9 +1278,8 @@ const GAP_MIDDLE = 0.5;
  * context: BM's curve from its end at pane A's inner edge to its end at pane
  * B's, each end in its own pane's ink, a line whose two differ changing
  * colour once at the middle of the gap, one stroke with no dot or break at
- * the change (issue #166's design decision: "changing at the middle of the
- * gap"; BM's `strokeIn`); an end whose line has left its pane clipped at the
- * pane's edge with the stub's triangle, in its own end's hue.
+ * the change (FP-30; BM's `strokeIn`); an end whose line has left its pane
+ * clipped at the pane's edge with the stub's triangle, in its own end's hue.
  * @param {CanvasRenderingContext2D} ctx
  * @param {{x: number, y: number, clipped: boolean, above: boolean}} a its end at pane A's inner edge, on the canvas
  * @param {{x: number, y: number, clipped: boolean, above: boolean}} b its end at pane B's

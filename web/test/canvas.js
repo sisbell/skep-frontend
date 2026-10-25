@@ -1,4 +1,4 @@
-// A RECORDING CONTEXT — a stand-in for a canvas's 2D context under
+// A recording context — a stand-in for a canvas's 2D context under
 // `web/test/`, never imported by the page, for the pure tests of the modules
 // that stroke the page's curves (BM's beams, SC's lines between the panes)
 // and draw the plane's frame (P-RENDER): it keeps each stroke as it was made

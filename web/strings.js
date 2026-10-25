@@ -1,17 +1,13 @@
 // ST — the copy: every person-facing string the page shows (the structure
-// record §3.2 "ST"; S-26 (a) one module). Layer: a leaf. PURE.
+// record §3.2; S-26 (a)). Layer: a leaf. PURE.
 // Each entry is PINNED — ruled wording, verbatim from its authority, cited
 // by its `ux/copy.md` id (`C-n`) or by the requirement that pins it — or
-// DRAFT, a string a design document drafted (its source and the screen
-// named), or a string THIS LANE NEEDED and the inventory lacks (`lane:
-// true`, reported). The page invents no wording: a `lane` string is a
-// placeholder for the copy refresh (rl-5) and is listed in the report.
-// Carries: the wireframe's §3 constants (`R56_KEY_ABSENT_ARM`,
-// `C67_POINTER`, `CHIP_FLAG_ON` — the last superseded by C-28's form) and
-// the literals of its §15, §16, §18.
-// Rules: FP-1, FP-2, FP-13 (controls read their words here, never inline).
-// The gate's `cases/text.py` compares every PINNED entry to its source at
-// the design repository's HEAD.
+// DRAFT, a string a design document drafted, its source and the screen named,
+// or one no design document carries (`lane: true`), which `lacking` lists.
+// The page invents no wording. `t` fills an entry's ⟨tokens⟩ (U's `fill`);
+// `pinned` lists the pinned entries for the gate's text case, which holds
+// each to its source.
+// Rules: FP-1, FP-2, FP-13, FP-32.
 
 import { fill } from './util.js';
 import { commonsType } from './model/address.js';
@@ -22,7 +18,7 @@ import { commonsType } from './model/address.js';
  * @property {'PINNED' | 'DRAFT'} cls
  * @property {string} source the design file that carries it (`ux/copy.md`, `requirements.md`, `designs/foundations.md`, `designs/B1-reader.md`, `designs/D5-keys.md`), or `''` where none does
  * @property {string} [screen] the screen that needed it (DRAFT)
- * @property {boolean} [lane] true where no design document carries the string — the lane's placeholder, reported
+ * @property {boolean} [lane] true where no design document carries the string
  */
 
 /** @type {Record<string, StringEntry>} */
@@ -125,7 +121,7 @@ export const STRINGS = {
   'F.whole-links': { text: '⟨n⟩ links to this document as a whole', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.whole-links.1': { text: '1 link to this document as a whole', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.arrival': { text: 'you are reading version ⟨k⟩ — a newer version has arrived — read version ⟨n⟩ · show what changed', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
-  // the arrival said once in the status region where a reading scene's pane pins to the version it shows (issue #160):
+  // the arrival said once in the status region where a reading scene's pane pins to the version it shows (FP-23):
   // F.arrival's first two clauses, its act the pane's corner's "read version ⟨n⟩" (F.versions.read) and no "show what changed"
   'F.arrival.pane': { text: 'you are reading version ⟨k⟩ — a newer version has arrived', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S9' },
   'F.floating': { text: 'its passage is not in ⟨D⟩\'s current text', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6, B1-S4' },
@@ -145,7 +141,7 @@ export const STRINGS = {
   'F.home-record.yours': { text: 'your home document — published here from birth, kept at this address; it holds your key record', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
   'F.home-record.other': { text: '⟨owner⟩\'s home document — it holds their key record', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
   'F.key-record.other': { text: 'this page holds ⟨owner⟩\'s key record', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
-  // issue #215's design decision words it so it is true where no board exists: the guest line's place at an empty board list
+  // true where no board exists (FP-35): the guest line's place at an empty board list
   'F.unclaimed': { text: 'no board on this machine is yours until you claim one', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line; the ARIA mirror; an act that needs a board' },
   'F.keyless-limit': { text: 'this version of the client offers neither act — enrolling this device and importing a paper come with the key ceremonies', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 3' },
   'F.flip': { text: 'local trust is now on — anything running on this machine can write as you here and read every draft you have written, with no key', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line, state 6' },
@@ -192,8 +188,7 @@ export const STRINGS = {
   'F.versions.whole': { text: 'holds the passage whole', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the versions list' },
   'F.versions.part': { text: 'holds the passage in part', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the versions list' },
   'F.versions.none': { text: 'does not hold the passage', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the versions list' },
-  // a byline's slots where no key can be named (FP-34; issue #208's design decision, whose own words these are, as
-  // foundations §3.2 names a hand): no key made the writes; the board lost it
+  // a byline's slots where no key can be named (FP-34; foundations §3.2): no key made the writes; the board lost it
   'F.slot.unsigned': { text: 'unsigned', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the byline' },
   'F.slot.not-recorded': { text: 'not recorded', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the byline' },
   'F.leap.arriving': { text: 'the index is still building — what is listed here is what has arrived', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
@@ -206,10 +201,10 @@ export const STRINGS = {
   'D5.quote': { text: 'quote', cls: 'DRAFT', source: 'designs/D5-keys.md', screen: 'the selection' },
   'D5.link-to': { text: 'link to…', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the selection' },
 
-  // ---- strings THIS LANE NEEDED that the inventory lacks (reported) -----------
+  // ---- DRAFT: strings no design document carries (`lane: true`) -------------
   'L.no-adapter': { text: 'no shell and no provider — this page reaches nothing', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
-  // WHERE NO BOARD IS HELD (issue #215's design decision, whose own words these are): the board list refused, in the guest
-  // line's place; the address display's one segment; the empty list's statement answered while the doors are unbuilt
+  // where no board is held (FP-35): the board list refused, in the guest line's place; the address display's one segment;
+  // the empty list's statement
   'L.boards-unread': { text: 'the boards on this machine could not be read — that does not mean there are none', cls: 'DRAFT', source: '', screen: 'the one line; the ARIA mirror; an act that needs a board', lane: true },
   'L.go-to-address': { text: 'go to an address', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.no-notebook-yet': { text: 'beginning a notebook isn\'t built yet', cls: 'DRAFT', source: '', screen: 'the one line; an act that needs a board', lane: true },
@@ -221,22 +216,21 @@ export const STRINGS = {
   'L.lower-bound': { text: '≥ ⟨n⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'L.whole-board': { text: 'WHOLE BOARD', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
   'L.board-label': { text: 'board ⟨node⟩ · ⟨origin⟩ · ⟨venue⟩ · claimed by ⟨claimant⟩', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S3' },
-  // the board's statement while the shell's index reports changes it could not place (issue #212's design decision, whose own
-  // words these are): a change a row naming no document carried, whose new place the page cannot find
+  // the board's statement while the shell's index reports changes it could not place (FP-23): a change a row naming no
+  // document carried, whose new place the page cannot find
   'L.board-unplaced': { text: 'some changes here could not be traced to their documents; a document such a change created is not shown until it changes again', cls: 'DRAFT', source: '', screen: 'B1-S3', lane: true },
   'L.session-refused': { text: 'no session — the provider refused: ⟨name⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
-  // a session a restart lost (issue #175's design decision, whose own words these are): the boot's own call made again and
-  // not back within a second, said in the acting-as segment's place; refused, leading the guest state boot shows for that
-  // refusal — "signed out" never said of either, for it is the person's own sign-out's alone (C-137)
+  // a session a restart lost (FP-28): the boot's own call made again and not back within a second, said in the acting-as
+  // segment's place; refused, leading the guest state boot shows for that refusal — "signed out" never said of either, for
+  // it is the person's own sign-out's alone (C-137)
   'L.reconnecting': { text: 'reconnecting as ⟨account⟩ after a restart', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.reconnect-refused': { text: 'could not reconnect as ⟨account⟩ after a restart', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
-  // the one status message at a session's ending (issue #177's design decision, whose own words are "One status message says
-  // the session ended and what is covered"): the ending's words — the one line's — then the documents the view stood on that
-  // the reader can no longer read, each now its withheld box, "withheld · ⟨owner⟩"
+  // the one status message at a session's ending (FP-29): the ending's words — the one line's — then the documents the
+  // view stood on that the reader can no longer read, each now its withheld box, "withheld · ⟨owner⟩"
   'L.covered': { text: '⟨ending⟩ — withheld from you now: ⟨documents⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
-  // A WALK'S MOMENT (issue #182's design decision, whose own words "waits on you" are): its face's caption by its kind, its
-  // answers, its cancel named by its walk and beside it that what cancelling leaves behind is not told to the page, a label
-  // box's default and its empty field flagged, a moment the shell no longer holds; and the walk's segment of the one line
+  // a walk's moment (FP-28): its face's caption by its kind, its answers, its cancel named by its walk and beside it that
+  // what cancelling leaves behind is not told to the page, a label box's default and its empty field flagged, a moment the
+  // shell no longer holds; and the walk's segment of the one line
   'L.moment.label': { text: 'the shell asks for a name', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
   'L.moment.ask': { text: 'the shell asks', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
   'L.moment.yes_no': { text: 'the shell asks yes or no', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
@@ -251,9 +245,9 @@ export const STRINGS = {
   'L.moment.gone': { text: 'this moment no longer waits — the shell has ended it', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
   'L.walk.waits': { text: '⟨walk⟩ · ⟨step⟩ — waits on you', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.at-position': { text: 'at position ⟨p⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
-  // the anatomy card's lineage by its claims' authority (issue #143's design decision): a claimant the owner row does not
-  // name, after its claim on a row; the line the claims without authority stand behind; each of them listed as an
-  // assertion — its `.you` form where the reader is the claimant, the verb agreeing — with what the claimant is to the links
+  // the anatomy card's lineage by its claims' authority: a claimant the owner row does not name, after its claim on a
+  // row; the line the claims without authority stand behind; each of them listed as an assertion — its `.you` form
+  // where the reader is the claimant, the verb agreeing — with what the claimant is to the links
   'L.card.by-owner': { text: '— by its owner, ⟨claimant⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   'L.card.you': { text: 'you', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   'L.card.others': { text: 'other accounts\' claims — show them', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
@@ -283,36 +277,34 @@ export const STRINGS = {
   'L.mirror.same': { text: ' (the same material as ⟨origin⟩)', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // ⟨kind⟩ a withheld run's kind (L.item.withheld) and ⟨length⟩ its positions (L.item.positions), as a copy's stand-in names them
   'L.mirror.withheld': { text: '⟨kind⟩ in ⟨document⟩: ⟨length⟩, owner ⟨owner⟩, origin ⟨origin⟩. ⟨arm⟩.⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // a block that holds no text, a withheld run apart (issue #161): its kind (L.item.*), where it stands, then what the plane
+  // a block that holds no text, a withheld run apart (FP-24): its kind (L.item.*), where it stands, then what the plane
   // shows of it — a record's words and keys, an item this client cannot show's length — never its raw value
   'L.mirror.no-text': { text: '⟨kind⟩ at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩⟨shown⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.shows': { text: ': ⟨shown⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // C-67's clause after a withheld run's arm, where the origin's edition claims decide one (PUB-5.124); the empty place says nothing
   'L.mirror.clause': { text: ' ⟨clause⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // after a withheld run's face, the links drawn at the run, its item's children (issue #202): ⟨links⟩ their count (F.label.links)
+  // after a withheld run's face, the links drawn at the run, its item's children (FP-30): ⟨links⟩ their count (F.label.links)
   'L.mirror.run-links': { text: ' ⟨links⟩ ending in it.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // C-67's place where a read of the edition claims failed, in the words of issue #186's design decision: "a face whose read
-  // failed says 'edition claims not read'. A blank there would read as 'no claim'"
+  // C-67's place where a read of the edition claims failed (FP-33): a blank there would read as no claim
   'L.clause.unread': { text: 'edition claims not read', cls: 'DRAFT', source: '', screen: 'B1-S7; the document-level withheld face; the ARIA mirror', lane: true },
   // ⟨far⟩ the far end's label (LK's `farLabel`), the words its tail, its card and its list rows carry
   'L.mirror.link': { text: 'link ⟨link⟩, type ⟨type⟩, ⟨direction⟩ ⟨far⟩⟨floating⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.untyped': { text: 'untyped', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // a link's far end in words, after its address (LK's `farWords`; issue #132's design decision): a board's `doc_not_registered`, and the
-  // same in the reader's own account where the index, known complete, lists no document at the address
+  // a link's far end in words, after its address (LK's `farWords`): a board's `doc_not_registered`, and the same in the
+  // reader's own account where the index, known complete, lists no document at the address
   'L.far.unregistered': { text: 'nothing this board will say about this address', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, B1-S5, the ARIA mirror', lane: true },
   'L.far.empty': { text: 'no document here yet', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its tail, B1-S5, the ARIA mirror', lane: true },
   // a link whose far end's text holds none of its passage, part of it or all of it in pieces, or the board would not tell:
   // those words (BM-HELD's `farSays` — F.floating's, or its line), as its symbol and its stub say them
   'L.mirror.floating': { text: ' — ⟨sentence⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // a jump reading, said where the camera is until its read answers; a jump reaching, said at the act's site while only a read
-  // can place its destination, the camera still (FP-25; issue #137's design decision, whose own word is "reaching")
+  // can place its destination, the camera still (FP-25)
   'L.reading': { text: 'reading ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reading: where the camera is, else the one line', lane: true },
   'L.reaching': { text: 'reaching ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reaching: at the act\'s site, else the one line', lane: true },
-  // a landing's line (issue #153's design decision, whose own words are the part line's, "only part of what you selected is
-  // in version 3", and the subject "the text you were reading"): what of the passage carried or followed the text landed in
-  // holds, where it stands in one run and that is not all of it, or where no answer told — the passage named by what it was
-  // to the reader, the text by F.floating's two forms, the withheld text after it; the same words at a drawn link's far end
-  // before departure, the places it stands in counted there alone (BM-HELD's `lineOf`)
+  // a landing's line (FP-21): what of the passage carried or followed the text landed in holds, where it stands in one run
+  // and that is not all of it, or where no answer told — the passage named by what it was to the reader, the text by
+  // F.floating's two forms, the withheld text after it; the same words at a drawn link's far end before departure, the
+  // places it stands in counted there alone (BM-HELD's `lineOf`)
   'L.held.part': { text: 'only part of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
   'L.held.pieces': { text: 'all of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
   'L.held.places': { text: ' — in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
@@ -329,10 +321,9 @@ export const STRINGS = {
   'L.held.why.withheld': { text: 'some of it is withheld from you', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
   'L.held.why.unread': { text: 'its text could not be read', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
   'L.held.why.other': { text: 'the board did not say', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row; a link\'s far end', lane: true },
-  // THE RUNS' LABELS (issue #158's design decision, whose own words are these — its first decision's "part 2 of 3" and "parts
-  // 1–4 of 9" with its word made "piece"): an arrival in several runs labels each at the text's edge — its piece in the
-  // passage's own order, a repeat's word, and at the run the landing stands at how much of the passage the runs hold and
-  // whether the text holds it in another order (BM-HELD's `labelOf`, `mergedLabel`); the landing's line steps among them
+  // the runs' labels (FP-21): an arrival in several runs labels each at the text's edge — its piece in the passage's own
+  // order, a repeat's word, and at the run the landing stands at how much of the passage the runs hold and whether the
+  // text holds it in another order (BM-HELD's `labelOf`, `mergedLabel`); the landing's line steps among them
   'L.piece': { text: 'piece ⟨k⟩ of ⟨n⟩', cls: 'DRAFT', source: '', screen: 'an arrival\'s run labels; a landing\'s line; the ARIA mirror', lane: true },
   'L.pieces': { text: 'pieces ⟨list⟩ of ⟨n⟩', cls: 'DRAFT', source: '', screen: 'an arrival\'s run labels; a landing\'s line', lane: true },
   'L.piece.again': { text: 'again', cls: 'DRAFT', source: '', screen: 'an arrival\'s run labels; a landing\'s line; the ARIA mirror', lane: true },
@@ -342,14 +333,14 @@ export const STRINGS = {
   'L.piece.order': { text: 'in another order', cls: 'DRAFT', source: '', screen: 'a landing\'s line; the ARIA mirror', lane: true },
   'L.piece.next': { text: 'next piece', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
   'L.piece.previous': { text: 'previous piece', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
-  // a versions row's strip for the two states F.versions' three do not name (issue #153's design decision)
+  // a versions row's strip for the two states F.versions' three do not name (FP-21)
   'L.versions.pieces': { text: 'holds all of the passage, in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.unknown': { text: 'couldn\'t tell whether it holds the passage: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
-  // THE LIST'S OPEN END (issue #184's design decision, whose own words the cut lines, "not read" and the date are): where the
-  // board did not end the chain at the last member read, a line saying how far the list was read and that it is not known
-  // to be complete — "then the board stopped answering" where the board did not answer, the clause dropped where it stopped
-  // short at another refusal — a row past the members read, and the date of the members the feed named past them; where it
-  // did end the chain there, the mark the head's row takes, a shape, and its name
+  // the list's open end: where the board did not end the chain at the last member read, a line saying how far the list
+  // was read and that it is not known to be complete — "then the board stopped answering" where the board did not answer,
+  // the clause dropped where it stopped short at another refusal — a row past the members read, and the date of the
+  // members the feed named past them; where it did end the chain there, the mark the head's row takes, a shape, and its
+  // name
   'L.versions.cut': { text: 'read to version ⟨k⟩, then the board stopped answering — this list is not known to be complete', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.cut.none': { text: 'the board did not answer — no version could be read', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.open': { text: 'read to version ⟨k⟩ — this list is not known to be complete', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
@@ -366,36 +357,33 @@ export const STRINGS = {
   'L.dialog.list': { text: 'a list', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   'L.dialog.face': { text: 'a face', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   'L.dialog.moment': { text: 'a moment', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
-  // THE ITEMS THAT HOLD NO TEXT, each kind in the words of issue #161's design decision: one entry the ARIA mirror announces at
-  // the item (N-WALK's `nameOf`) and a copy's stand-in names it by in its place (T-ARTICLE's `copyText`), so the two never part;
-  // and an item's length
+  // the items that hold no text, each kind (FP-24): one entry the ARIA mirror announces at the item (N-WALK's `nameOf`)
+  // and a copy's stand-in names it by in its place (T-ARTICLE's `copyText`), so the two never part; and an item's length
   'L.item.record': { text: 'a record', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
   'L.item.reference': { text: 'a reference', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
   'L.item.withheld': { text: 'a withheld run', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
   'L.item.unshown': { text: 'an item this client cannot show', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
   'L.item.positions': { text: '⟨n⟩ positions', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
   'L.item.positions.1': { text: '1 position', cls: 'DRAFT', source: '', screen: 'the ARIA mirror; a copy\'s plain text', lane: true },
-  // a copy's stand-in for an item, in square brackets in its place (issue #161): its kind; a withheld run's owner and length; an
+  // a copy's stand-in for an item, in square brackets in its place (FP-24): its kind; a withheld run's owner and length; an
   // item this client cannot show's length; a record's own plain contents — the key record's key labels and their fingerprints
   'L.copy.item': { text: '[⟨kind⟩]', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
   'L.copy.item.sized': { text: '[⟨kind⟩, ⟨length⟩]', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
   'L.copy.item.owned': { text: '[⟨kind⟩, owner ⟨owner⟩, ⟨length⟩]', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
   'L.copy.item.contents': { text: '[⟨kind⟩: ⟨contents⟩]', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
   'L.copy.key': { text: '⟨label⟩ ⟨fingerprint⟩', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
-  // THE COMPACT SIGNS (FP-26; issue #151's design decision): the mark keyed to a run's origin — a hairline's compact label, and a
-  // withheld run's gap too short to carry its owner; a withheld run's face compact in its column's edge, "⟨owner⟩ with a mark that
-  // opens it whole" (foundations §2.1); the corner's usual states as glyphs — an edition's its version marker, unlit at the bare
-  // address and lit at a pinned version (foundations §3.1's ○), a draft's chip
+  // the compact signs (FP-26): the mark keyed to a run's origin — a hairline's compact label, and a withheld run's gap too
+  // short to carry its owner; a withheld run's face compact in its column's edge, its owner with a mark that opens it whole
+  // (foundations §2.1); the corner's usual states as glyphs — an edition's its version marker, unlit at the bare address and
+  // lit at a pinned version (foundations §3.1's ○), a draft's chip
   'L.origin-mark': { text: '≡', cls: 'DRAFT', source: '', screen: 'a run\'s hairline; a withheld run\'s gap', lane: true },
   'L.withheld.mark': { text: '⟨owner⟩ ▸', cls: 'DRAFT', source: '', screen: 'B1-S7, a column\'s edge', lane: true },
   'L.corner.bare': { text: '○', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner, compact' },
   'L.corner.pinned': { text: '●', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },
   'L.corner.draft': { text: '◌', cls: 'DRAFT', source: '', screen: 'the corner, compact', lane: true },
-  // THE SLOTS (FP-34; issue #208's design decision: "Each slot's accessible name gives its role and what it shows, including
-  // while it is pending"; "Causes that have no words yet get their own in the copy refresh"): a slot's accessible name, its
-  // roles, what a slot being read shows; the causes the decision does not word — an account whose writes are signed with
-  // the keys of one above it (R42's term), a genesis entry with no label, a read refused for another reason — and the one
-  // line's own: the device's key store not read, the session's key not named among several (skep #579)
+  // the slots (FP-34): a slot's accessible name, its roles, what a slot being read shows; the causes — an account whose
+  // writes are signed with the keys of one above it (R42's term), a genesis entry with no label, a read refused for another
+  // reason — and the one line's own: the device's key store not read, the session's key not named among several
   'L.slot.named': { text: '⟨role⟩: ⟨shows⟩', cls: 'DRAFT', source: '', screen: 'the byline; the one line', lane: true },
   'L.slot.device-label': { text: 'device label', cls: 'DRAFT', source: '', screen: 'the byline; the one line', lane: true },
   'L.slot.fingerprint': { text: 'fingerprint', cls: 'DRAFT', source: '', screen: 'the byline', lane: true },
@@ -433,7 +421,7 @@ export function pinned() {
 }
 
 /**
- * The strings the lane needed and no design document carries.
+ * The entries no design document carries (`lane`).
  * @returns {Array<{id: string, text: string, screen: string}>}
  */
 export function lacking() {
@@ -444,8 +432,8 @@ export function lacking() {
 
 /**
  * A link type's name as the page shows it: on a notebook with no commons
- * registry document seeded every type reads R5's form, "link of type ⟨T⟩ —
- * undocumented here", ⟨T⟩ the commons path's tail.
+ * registry document seeded every type reads R5's form (`R5.undocumented`),
+ * ⟨T⟩ the commons path's tail.
  * @param {string | null} ty
  */
 export function typeName(ty) {

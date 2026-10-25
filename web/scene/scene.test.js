@@ -1,113 +1,30 @@
-// SC's test: the two ends the scene sets level (foundations §2.5: "position
-// carries the match") — the held passage's first stretch of shared identity
-// and its counterpart, never the first pair where the held passage lies past
-// it (a mutant that levels the second pane at `compare`'s first pair turns
-// red); a far end the opener names, as given; with nothing held, the first
-// pair; with nothing shared, the second pane at its top — and the runs the
-// bands are drawn from, contiguous pairs one run. A passage's counterpart,
-// where a carried passage's landing stands (N-GO; P43): its first shared
-// stretch clipped to the passage at both ends, in the second document's
-// positions (a mutant that keeps the stretch's own width, or its own start,
-// turns red), contiguous pairs one stretch (a mutant that takes the first
-// raw pair alone turns red), none where nothing is shared; and its
-// counterparts, what the landing marks: every shared stretch inside it, each
-// clipped so, in the first document's order whatever order `compare` names
-// them in (a mutant that keeps the first alone, or the pairs' order, turns
-// red), the first of them its counterpart.
-// The lines between the panes (§2.5: "a link's line drawn where either
-// pane's default composition draws that link"; P44): a link both panes show
-// is one line, whichever pane meets it — a followed one at its own lighter
-// value, two links between the same ends a line each (a mutant that draws a
-// line per meeting turns red); each END drawn in the mark its pane's document
-// gives the link, the one its symbol takes in that pane (issue #166's design
-// decision): the owner's solid at the pane of the document its maker owns and
-// another's dashed at the other — whichever pane is A, whether the other pane
-// shows it at its span or not at all, and whichever pane alone shows it (a
-// mutant that marks the line by the owner of either document, or both ends by
-// one pane's mark, turns red) — and a third party's dashed in theirs at both;
-// a line whose ends differ changing colour once, at the middle of the gap,
-// each stretch from there in its own end's ink, a clipped end's triangle in
-// its own end's hue (a mutant changing it elsewhere, or filling a triangle in
-// the other end's hue, turns red); a far end naming a document whole at that
-// pane's first block; one document in both panes drawing a link inside it
-// once for each way its ends stand across them (a mutant that tells ends
-// apart by their document alone, folding the two into one, turns red); no
-// line to a document neither pane holds; a line homed in the readable pane
-// whose far end lies in a pane showing a cover — a covered draft's head
-// alone, its projection refused — ending at the cover, in either pane (issue
-// #177: a mutant that drops it, as a refused projection's end, turns red).
-// Each end where the link's bytes
-// stand now: the far end where `project` places it (a mutant drawing to the
-// stored position turns red), at its pane's first block where it floats, no
-// line where nothing places it; a link met from both panes one line however
-// its ends moved, told apart by the spans the link stores (a mutant keying
-// the near end by where it stands draws two and turns red); and the opening
-// asking each crossing link's far end once, none it holds already. A pane
-// holding another version of the box a far end names takes the line at the
-// far end where `project` places it in that version's own text (issue #154:
-// a mutant that matches the pane by the address the link names draws no
-// line, and one reading LK's placement there draws it at the plane's).
-// And the position two versions share nearest a passage the second holds
-// none of, where a version move keeps the passage's line (issue #154): the
-// last of a stretch before it or the first of one after it, the nearer, the
-// one before at a tie (a mutant that takes the first stretch, or the one
-// after at a tie, turns red), none where they share nothing.
-// Then the scene's focus, against the FAKE PORT and a page of stand-ins whose
-// focus lands only where the platform's does (D5 §4 rules 5 and 8; K-63;
-// the focus's owner N-FOCUS, whose own cases are `nav/focus.test.js` — these
-// stay beside it, for they hold the scene's order of cover, uncover and
-// return): while the scene stands the plane under it is out of the page's
-// order — the walk's tree and the corner layer inert — and its end puts the
-// plane back before it returns the focus to the element the scene was
-// opened from. A corner the focus is returned to while the plane is still
-// covered takes none, so a mutant that returns first turns red; one that
-// leaves a focus the scene held on its hidden pane turns red, as does one
-// that takes back a focus the person moved out of the scene; a scene opened
-// over a standing one returns it to the first one's opener — a mutant that
-// reads the opener again turns red; one opened with the focus on nothing
-// returns it to the walk's element, never to the top — a mutant that leaves
-// it on nothing turns red.
-// And each pane's article, T-LAYER's mount (FP-12): made from the blocks and
-// runs the scene read and kept beside it, pane A's after its corner and pane
-// B's before it, so each corner stands on its pane's outer side (a mutant
-// that makes a pane's article itself, or sets both after their corners,
-// turns red); its byline set with its owner's facts, read before the pane is
-// set (FP-34: a mutant that sets the pane before they are read leaves an
-// empty box a pane set from its kept view shows again, and turns red).
-// And THE OPENING (O-HOST's): the dismissal a navigation act makes first,
-// Esc, or an overlay shown — a follow's face — made while the scene reads
-// ends its opening — made while it reads its documents, no `compare` is
-// asked after it (a mutant that asks it turns red); made while it reads their
-// `compare`, nothing opens once it answers: the plane in the page's order,
-// the focus where it stood, no region holding it but the overlay shown (a
-// mutant that opens the scene without the host's opening, whose Esc leaves
-// an opening reading, or whose show does not count itself, turns red).
-// And A PANE KEPT FRESH BY ITS KIND (issue #160's design decision), against
-// the fake port: an edition read at its bare address made as the member its
-// text is (a mutant naming the bare address turns red); an edit row naming a
-// draft pane's document reads it again and sets it in its place, the other
-// pane untouched; a row naming a newer member pins an edition read at its bare
-// address at once — the member named in its head, the bar and its corner,
-// "version 2 of 3", the newest offered, the arrival said once (a mutant that
-// reads it again as a draft, or says nothing, turns red) — then sets it again
-// from that member; its corner's act reads the newer version in the pane's
-// place, the passage held kept at the nearest shared position and the
-// version said to lack it, the plane's box untouched, the version left one
-// act away; a pane
-// on a version counts the chain alone, reading nothing (a mutant that reads it
-// again turns red); a link row reaching a pane's text marks the link it reads
-// now; the re-level and a pane's key made while a pane reads wait for it, in
-// the order made (a mutant that acts at once turns red); the page's own death
-// takes every pane down at once, no tie standing, and reads each again as a
-// guest, a draft withheld standing as its head alone (a mutant that keeps the
-// dead session's text turns red); a refresh after a row naming nothing (issue
-// #212) pins an edition at its bare address whose chain it counted past the
-// member its text is at once, reading nothing at the bare address, and reads
-// the draft beside it again (a mutant that takes the refresh for a row naming
-// no pane's document turns red). A passage the corner's act carries placed by
-// the one rule: its first shared stretch's counterpart, else the nearest
-// shared position's, else the version's head; a far end the lines read where
-// the pane was set, never the model's now.
+// SC's test: the two ends the scene sets level — the held passage's first
+// shared stretch and its counterpart, a far end as the opener names it, the
+// first pair with nothing held, the second pane at its top with nothing
+// shared — and the runs the bands are drawn from; a passage's counterpart
+// and counterparts, clipped to the passage in the first document's order,
+// and the position two versions share nearest a passage the second holds
+// none of (FP-22); the lines between the panes — one per link and pair of
+// ends however the ends stand or moved, each end in the mark its pane's
+// document gives the link, changing colour once at the middle of the gap, a
+// whole-work end at the pane's first block, a far end where `project`
+// places it in the version the pane holds, a line ending at a covered pane's
+// cover (FP-29, FP-30) — and the opening asking each crossing far end once.
+// Then, against the fake port and a page of stand-ins: the scene's focus —
+// the plane covered while it stands, uncovered before the focus returns to
+// the opener, the first opener kept across a scene opened over another, a
+// focus moved out of the scene left alone (FP-20); each pane's article
+// T-LAYER's mount on the inner side of its corner, its byline's facts read
+// before the pane is set (FP-12, FP-34); the opening ended by a navigation
+// act's dismissal, Esc or an overlay shown, asking no `compare` after it and
+// opening nothing; and a pane kept fresh by its kind (FP-23) — a draft read
+// again in place, an edition at its bare address pinned at once to the
+// member its text is and set again from it, its corner's act reading
+// another version in the pane's place with the passage held, a version
+// counting its chain alone, a link row re-reading the text, acts made while
+// a pane reads waiting in order, the page's death taking every pane down and
+// reading each again as a guest, and a refresh pinning an edition whose
+// chain it counted past the member shown.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -602,7 +519,7 @@ test('the opening asks where the far end of each link crossing between the panes
   assert.deepEqual(fake.unanswered, []);
 }));
 
-// ---- a pane kept fresh by its kind (issue #160's design decision) -----------------------------------------------------
+// ---- a pane kept fresh by its kind (FP-23) ----------------------------------------------------------------------------
 
 // an edition of two members read at its bare address, its third member published later; a draft edited between two reads;
 // a version opened at its member's address

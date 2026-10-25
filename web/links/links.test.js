@@ -1,81 +1,21 @@
-// LK's test — the rule over a hand-built model: the owner's links marked,
-// the person's own in their hue, the others' counted and not shown, the
-// lenses filtering, each drawn link naming the document it is drawn at, a
-// visited link lighter, each link lit at an arrival heavier and every other at
-// the drawer's own weight, as the reader the app hands in names them — two
-// lit at once both heavier (a mutant that weights by anything but the reader,
-// or by its first link alone, turns red), the records and
-// account-named ends never counted, the badge arriving until read and
-// counting what is homed in a document's version members with its own, a
-// member's own alone (a mutant that matches a home by equality, or by its
-// trunk, turns red), the mid connections one per pair of places drawn, each
-// holding once every link that joins their documents and that either
-// document draws — the other document's owner's links into a drawn document
-// among them, the passage link and the one naming it whole, whether that
-// document is out of view, inside a mark nobody read or drawn with its links
-// read (a mutant that decides a link at the drawn document alone, or keeps to
-// the ends drawn there, turns red) — each link marked once from itself and
-// its two documents, the owner of either document's link in the owner's hue
-// whichever document comes first and whatever either's toggle (a mutant that
-// merges the marks of a link's two ends turns red), and each connection
-// marked with what its links share — neutral in the hue where their linkers
-// differ, lighter only where every one was followed, heavier only where every
-// one is lit (a mutant that keeps the first link's mark, or counts ends,
-// turns red); a link's far end a connection's end whether the plane draws it
-// or not — out of view, at the place it would stand at, carrying the count
-// and the mark it carries in view — and no end where the plane draws its
-// document nowhere; a far end naming a version member whole at its
-// document's place; the most a reveal can set in a document's text, which no
-// stage, toggle or lens moves or exceeds. Each end drawn where its bytes
-// stand now, through the held image, never at the position its slot stores
-// — marks, symbols, the others' count and the size's bound moved with an
-// edit (a mutant that draws at the stored ordinal, or counts by it, turns
-// red), each carrying its key, the span its slot stores, so a link's two
-// ends at one document are told apart and keep their keys through an edit
-// (a mutant keying an end by where it stands turns red); an end the text
-// holds in two stretches one drawn end standing in both, met at a span by
-// either (a mutant that keeps the first stretch alone turns red); none
-// drawn where no image is held, the badge and the toggle's
-// count reading no position; and each far end where `project` answers it
-// sits now — elsewhere than stored, floating where the text holds none of
-// it, placed nowhere where no answer is held or it was refused, never for a
-// document named whole. An end drawn at every document whose text holds its
-// bytes, whichever document minted them: a passage a document transcludes
-// marked there, counted at its paragraph, in the toggle's count and in the
-// size's bound, its box drawing no connection for it (a mutant joining a
-// document by the ends its text holds turns red), and the bytes a member
-// shares with its trunk drawn at the member where they stand in its text (a
-// mutant that draws an end at the document that minted its bytes alone
-// turns red); the minting document holding its own before any image is read
-// (a mutant that holds an end by the held text alone turns the connections
-// and the toggle's count above red). A LINK WHOSE FAR DOCUMENT THE PLANE
-// DRAWS NOWHERE (issue #132) stays in the set — marked, its symbol set,
-// counted — and is tailed: no beam, until its far document is drawn (a
-// mutant that drops it from the set, or keeps its beam, turns red); the
-// tails one per place a drawn document stands at, each link joining it to a
-// document drawn nowhere once, with its far end, merged in one mark, a link
-// with a drawn far document a connection and never a tail (a mutant that
-// draws such a link nowhere, or as both, turns red); a far end named by its
-// address and what the page holds of its document — nothing answered, the
-// address alone, never a guess from the index's silence (a mutant that says
-// "no document here yet" from the index alone turns red); the board saying
-// nothing of it, "nothing this board will say about this address", or "no
-// document here yet" in the reader's own account under a complete index
-// listing none there; withheld, "withheld · ⟨owner⟩" by the owner rule
-// handed in; readable, its first line where the page holds one.
-// A document's reveal is its box's, which its versions share (issue #154:
-// lenses and link sets stay as they were); a far end stands in the version
-// its far box shows, placed by the projection into that version (`farAt`),
-// the link still naming its own far document. A drawn end carries the mark
-// its far document gives the link beside its own, each decided at its own
-// document (issue #166: a mutant marking the far end as the near, or both
-// from the two documents together, turns red). WHERE AN END IS DRAWN is one
-// rule (issue #202): on its stretches outside every withheld run, each cut
-// where one stands, else at the start of the withheld run holding its last
-// position, the run's whole extent its one stretch; an end on the bytes of a
-// run a document windows drawn at the run, another's there counted at the
-// run's block, and drawn on its words once the run is read (a mutant that
-// draws every stretch as it is placed turns red).
+// LK's test, on a hand-built model: which links a document shows and how
+// each is marked — the owner's and the person's own at their spans, others'
+// counted and shown by the toggle or a lens, a followed link lighter, a link
+// lit at an arrival heavier as the reader handed in names it, records,
+// account-named ends and the social types never counted, the badge counting
+// what is homed in a document and its members; each end drawn where its
+// bytes stand now, carrying its stored span's key, at every document whose
+// text holds them, and nowhere until an image is read; the reveal kept per
+// box, which a document's versions share, and a far end placed in the
+// version its far box shows with the mark that version gives the link
+// (FP-22, FP-30); where an end is drawn — its readable stretches, else the
+// start of the withheld run holding it (FP-30); the mid connections, one per
+// pair of places, each link once, marked from the link and its two documents
+// and merged by what they share (P44), a far end out of view or inside a
+// mark still an end; a far document the plane draws nowhere tailed, never a
+// connection, and a far end named by its address and what the page holds of
+// its document, never the index's silence; and the most a reveal can set in
+// a text, which no stage, toggle or lens moves (FP-12).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';

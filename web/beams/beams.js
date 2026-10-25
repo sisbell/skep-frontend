@@ -1,98 +1,62 @@
-// BM — span-anchored beams over true text geometry (the structure record
-// §3.2 "BM"; S-6 (a) a module beside the text layer). Layer 2. ENGINE-BOUND
-// (its own canvas). State: VIEW — the last frame's bundles and the labels it
-// set at their ends.
-// It decides nothing of which links, nor how each is marked: it draws
-// `LK.beams(addr)` for every mounted document at stage 3 — a link whose far
-// document the plane draws nowhere none: LK leaves it out, and P-RENDER's
-// tail stands for it (issue #132's design decision) — each END of a beam in
-// the mark LK gives the link at the document that end touches, the one the
-// link's symbol takes there (the drawn end's `mark` at its near end, its
-// `farMark` at its far end), whichever document drew it (issue #166's design
-// decision: "Colour each end of a beam by the document it touches, never by
-// which side drew it") — its hue, its value, and its weight, a link lit at an
-// arrival, or by a one-step move along the trail that crossed its follow
-// (issue #152's design decision), stroked heavier (foundations §2.1's
-// register: "the followed link drawn heavier"), dashed for another's
-// (`inkOf`). Where its two ends' marks differ — the maker owning one end's
-// document alone — the stroke changes colour ONCE, at the first point along
-// it as far from the far document's box as from the near one's, on the open
-// ground between the two and inside neither (`changeAt`): one stroke of one
-// width, with no dot or break at the change (`strokeIn`); a beam whose far
-// end is off screen keeps its near end's colour all the way to the stub.
-// Both its ends stand where the link's bytes stand NOW, never
-// where its slot stores them (the slot names the bytes' permanent I-spans):
-// each beam leaves the text at its span's own line, from the place's edge
-// (foundations §2.1; S1 Q1): it starts at the right edge of the block
-// holding the stretch it leaves from — of the part of it that holds the line,
-// where the block is parted across columns (issue #15's fold), past the sign
-// the column's edge holds level with that line, so it is routed outside the
-// counts and the withheld marks (foundations §3.1; issue #151) — level with
-// the middle of the line-rect nearest the far end of every stretch LK says
-// its end stands in (LK's
-// `runs`; `spanRects` with each stretch's width — its rects line by line, so
-// at a wrap the line nearest the far end; `leaveAt`, the rule P-RENDER's
-// tails leave a passage by too, so a tail and a beam leave it at one point).
-// Its far end is where `project`
-// says the far passage sits in the far document's current text (LK's
-// `farRuns`; A-53: "the beam lands at the passage's current place
-// (version-proof)"): that document mounted and laid out, the beam ends at
-// the left edge of the block holding the far stretch nearest the start,
-// level with that stretch's own line nearest it — a whole-work end, and a
-// far end that FLOATS (LK's `floats`: that text holds none of it), at the far
-// article's first block, where its follow lands (foundations §2.3); a far
-// end not laid out — its document unmounted, or nothing placing it, its
-// projection not read or refused — stands at its document's box's centre,
-// never at the stored position. Where the far end stands in the visible view
-// — the viewport below the one line — the beam ends there, mounted or not;
-// off screen, outside that view, and only there → THE EDGE STUB (foundations
-// §2.1: "the edge stub where the far end is off screen"): the beam clipped
-// at the view's border — the cut P-CAM's `edgeStub` that P-RENDER's mid
-// connections share — with a triangle on the true bearing and the far
-// document's label at the stub (S1 Q3, load-bearing). A mounted article's
-// line stands wherever its box reaches, under the one line or past the
-// viewport — as text where T-LAYER stands it, the lines meeting the viewport,
-// padded, and else where its fold sets it (T-LAYER's `lineBoxes`: issue #122,
-// a document stands by line) — so an end laid out is off screen where it
-// stands outside that view, as a box's centre is; `beamTo` reads both the stub
-// and where its stroke ends from that one test. A link met from both its ends, or twice
-// inside one document, is one beam, counted once — its two ends told apart by
-// the document each is drawn at, a far end's the version its far box shows,
-// and the span the link stores for it, wherever they stand now — the first
-// met kept, each end in its own document's mark, so it looks the same
-// whichever side drew it and whether both did (`bundlesOf`; P44: "never a
-// stack, never accumulated tint"); one stored end drawn at two documents —
-// the one that minted its bytes and one whose text transcludes them — stands
-// at two sites, a beam from each.
-// The beams are bundled by the document they leave and their far document —
-// one bundle per destination, marked at each end with what its beams' marks
-// share there, neutral only where its links take different colours at that
-// end and a single link's never (issue #166's design decision: "Neutral keeps
-// one meaning"), its far document's label and its count at its
-// end (§2.1), and, where every beam it holds says one state of what its far
-// end's text holds, those words — "its passage is not in ⟨D⟩'s current text"
-// where it floats, BM-HELD's line where that text holds part of it, all of it
-// in pieces, or the board would not tell (BM-HELD's `farSays`; issue #153) — the
-// stub saying so before anyone follows it (foundations §2.3; `labelText`) —
-// above the end, or below it where above
-// would reach past the visible view's top, and none where it would not stand
-// whole inside that view (`labelPlace`: a beam cut at its start, under the
-// one line or past the viewport, sets no label there) — each member stroked
-// from its own line, the alpha thinned as the beams drawn grow (S1 Q4:
-// opacity alone fails near ten co-located beams). Not built, the design's to
-// settle (issue #9): the bundle's one stroke and where it leaves the edge, the
-// route to a far end on the far side of the text, the saturation past which
-// the bundles are counted and the card's list chooses the beams drawn, and
-// what stands where stubs bound for different documents land so near that
-// their labels meet.
-// Carries: the wireframe's §17 (`drawBeams`, `pickRect` — here `pickLine`,
-// over every stretch an end stands in; its `edgeStub` P-CAM's, the cut both
-// stubs share; its stub at every far end unmounted, and its cut of every
-// stroke not laid out at the view's edge, DROPPED — foundations §2.1 stubs
-// the far end off screen alone), S1's `buildBeams` canvas arm (the SVG arm
-// DROPPED — S1's verdict).
-// Rules: FP-1, FP-2, FP-8 (redrawn whole), FP-10 (reads LK, T-LAYER and
-// L-LINE through their exports), FP-21.
+// BM — the beams over the mounted articles' text (the structure record
+// §3.2; S-6 (a)). Layer 2. ENGINE-BOUND: its own canvas. State: the last
+// frame's bundles (`built`) and the labels it set at their ends
+// (`labelsSet`), view state alone.
+// It decides nothing of which links show, nor how each is marked: each
+// frame it lays out LK's `beams` of every mounted document (`build`) and
+// draws them whole (`draw`; FP-8). Each end of a beam is drawn in the mark
+// LK gives the link at the document that end touches — the drawn end's
+// `mark` at its near end, its `farMark` at its far end — whichever document
+// drew it (FP-30): its hue, its value and its weight, a link lit at an
+// arrival heavier (FP-21), dashed for another's (`inkOf`). Where the two
+// ends' marks differ, the stroke changes colour once, at the first point
+// along it as far from the far document's box as from the near one's — on
+// the open ground between the two, inside neither (`changeAt`) — one stroke
+// of one width with no dot or break at the change (`strokeIn`); a stub keeps
+// its near end's colour to the border.
+// Both ends stand where the link's bytes stand now, never where its slot
+// stores them. A beam leaves the text at its span's own line, from the
+// right edge of the part of the block holding that line, past the sign the
+// column's edge holds level with it (`leaveAt`, `pastSigns`; foundations
+// §2.1, §3.1; S1 Q1) — of the stretches LK's `runs` name, the line nearest
+// the far end — and P-RENDER's tails leave a passage by the same rule. Its
+// far end is where LK's `farRuns` place the far passage in the far
+// document's current text (A-53): that document mounted, at the left edge
+// of the block holding the far stretch nearest the start, level with that
+// stretch's line; a whole-work end, and one that floats (LK's `floats`), at
+// the far article's first block, where its follow lands (foundations §2.3);
+// a far end not laid out — its document unmounted, or nothing placing it —
+// at its document's box's centre. Where the far end stands in the visible
+// view, the viewport below the one line, the beam ends there, mounted or
+// not; outside it the beam is a stub, its stroke cut at the view's border
+// on the true bearing (P-CAM's `edgeStub`, the cut P-RENDER's mid
+// connections share) with a triangle and the bundle's label at the cut
+// (foundations §2.1; S1 Q3); `beamTo` reads both from that one test. A link
+// met from both its ends, or twice inside one document, is one beam,
+// counted once, the first met kept (`endsOf`, `bundlesOf`; P44): its ends
+// told apart by the document each is drawn at — a far end's the version
+// its far box shows — and the span the link stores for it; one stored end
+// drawn at two documents, the one that minted its bytes and one whose text
+// transcludes them, is a beam from each.
+// The beams are bundled by the document they leave and their far document,
+// one bundle a destination (§2.1), each bundle marked at each end with what
+// its beams' marks share there (LK's `mergedMark`): neutral only where its
+// links take different colours at that end, a single link's never. Its
+// label (`labelText`) is the far document's address, its index label cut to
+// 32 characters, its count where it holds two beams or more, and, where
+// every beam it holds says one state of what its far end's text holds
+// (BM-HELD's `farSays`), those words, so the stub says it before anyone
+// follows it; it is set above the end, or below it where above would reach
+// past the visible view's top, and nowhere it would not stand whole inside
+// that view (`labelPlace`). Figures: at most twenty beams a bundle are
+// stroked; their alpha is 24 over the beams built, held between 0.25 and
+// 0.85, times each mark's value; a stroke is 1.6 px times its mark's weight;
+// labels are set in LABEL_FACE.
+// The geometry it lays beams out from (`pageGeometry`) is T-LAYER's rects
+// of the mounted articles — `spanRects`, else `lineBoxes` where a line
+// stands in no part — the camera's projection of the boxes and the visible
+// view below L-LINE, handed in so the rule is tested apart from the page.
+// Rules: FP-1, FP-2, FP-8, FP-10, FP-21, FP-30.
 
 import * as LK from '../links/links.js';
 import * as LAYER from '../text/layer.js';
@@ -189,7 +153,7 @@ function pickLine(/** @type {Anchor[]} */ anchors, /** @type {Point} */ p) {
  * (`pastSigns`) — toward a point, the line of its stretches nearest it (a
  * beam's, toward its far end); toward none, the last line of its last
  * stretch, where its symbol stands (a tail's, which has no far end on the
- * plane — issue #132). Null where none of its stretches has a line laid out.
+ * plane). Null where none of its stretches has a line laid out.
  * @param {Geometry} g
  * @param {string} addr the document it is drawn at
  * @param {Array<{pos: number, width: number}>} runs the stretches it stands in (LK's `runs`)
@@ -203,12 +167,11 @@ export function leaveAt(g, addr, runs, toward = null) {
   return { line: a.line, from: { x: pastSigns(a), y: a.line.y + a.line.h / 2 } };
 }
 /**
- * Where a stroke leaving a line of a block starts across (foundations §3.1:
- * the place's own edge holds the blocks' counts and the withheld faces, "the
- * beams routed outside them"): the right edge of the part of the block
- * holding the line, else, where a sign its column's edge holds stands level
- * with the line, as far past that sign as the sign stands past the text, so
- * no stroke crosses a count or a withheld run's mark.
+ * Where a stroke leaving a line of a block starts across (foundations §3.1):
+ * the right edge of the part of the block holding the line, else, where a
+ * sign its column's edge holds stands level with the line, as far past that
+ * sign as the sign stands past the text, so no stroke crosses a count or a
+ * withheld run's mark.
  * @param {Anchor} a
  * @returns {number}
  */
@@ -237,8 +200,8 @@ const holds = (/** @type {Rect} */ r, /** @type {Point} */ p) => p.x >= r.x && p
 /** does a rect hold another whole? */
 const holdsWhole = (/** @type {Rect} */ r, /** @type {Rect} */ q) => q.x >= r.x && q.y >= r.y && q.x + q.w <= r.x + r.w && q.y + q.h <= r.y + r.h;
 /**
- * Where a bundle's label is set beside its end: toward the view's middle,
- * its baseline 6 px above the end — or, where that would reach past the
+ * Where a bundle's label is set beside its end: 14 px toward the view's
+ * middle, its baseline 6 px above the end — or, where that would reach past the
  * visible view's top (a stub on the top border, the one line over it), its
  * top 6 px below the end. Null where even so it would not stand whole inside
  * the visible view — an end cut at its beam's start, under the one line or
@@ -260,8 +223,8 @@ const mid = (/** @type {Rect} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
 
 /**
  * A link's mark as a stroke takes it (see the head): its hue, dashed for
- * another's (B1-S4's dashed overlay beam) — at each end of a beam, and of a
- * reading scene's line between its panes (SC). Its value and its weight are
+ * another's (B1-S4) — at each end of a beam, and of a reading scene's line
+ * between its panes (SC). Its value and its weight are
  * the link's own, alike at every mark of it, and set on the stroke whole.
  * @param {Mark} m
  * @returns {Ink}
@@ -271,8 +234,8 @@ export const inkOf = (m) => ({ hue: m.hue, dash: m.linker === 'others' ? [5, 4] 
 const alike = (/** @type {Ink} */ a, /** @type {Ink} */ b) => a.hue === b.hue && a.dash.join() === b.dash.join();
 
 /**
- * A beam's stroke from where it leaves to where it ends (S1's `buildBeams`):
- * leaving level and arriving level, its two control points level with its two
+ * A beam's stroke from where it leaves to where it ends: leaving level and
+ * arriving level, its two control points level with its two
  * ends at the middle of the run across — so the point at the half of its
  * parameter stands at that middle, midway between its two ends.
  * @param {Point} from
@@ -317,9 +280,7 @@ const CHANGE_SAMPLES = 64;
 const CHANGE_HALVINGS = 40;
 
 /**
- * Where along a stroke joining two documents its colour changes (issue
- * #166's design decision: "the stroke changes colour once, midway between the
- * two documents' edges, never inside either document's margin"): the
+ * Where along a stroke joining two documents its colour changes (FP-30): the
  * parameter of the first point along it as far from the far document's box as
  * from the near one's — on the open ground between the two, inside neither,
  * for two documents that mark a link apart lie in two accounts' cells, each
@@ -347,8 +308,8 @@ export function changeAt(c, near, far) {
 /**
  * Stroke a curve in its near end's ink, or, cut where its colour changes
  * (`t`; `cutAt`), the stretch before in the near ink and the stretch after in
- * the far — one stroke of one width, with no dot or break at the change
- * (issue #166's design decision): each stretch butt-capped at the one point,
+ * the far — one stroke of one width, with no dot or break at the change:
+ * each stretch butt-capped at the one point,
  * so the two meet there and never overlap, which at a stroke's alpha would
  * set a dot, and each drawn from that point, so a dashed one begins in ink
  * where the other ends. Inks alike, or no change, it is stroked whole in the
@@ -393,8 +354,8 @@ function farAnchors(s, g) {
 
 /**
  * A beam from `from` to its far end `to`, by where `to` stands (foundations
- * §2.1: "the edge stub where the far end is off screen"): inside the visible
- * view, its stroke ends at `to`, mounted or not; outside it, the beam is a
+ * §2.1): inside the visible view, its stroke ends at `to`, mounted or not;
+ * outside it, the beam is a
  * stub, its stroke cut at the view's border on the bearing to `to` (P-CAM's
  * `edgeStub`). Every beam `beamOf` lays out is made here, so its stub and
  * where its stroke ends — and its bundle's label with it — are read from the
@@ -415,8 +376,9 @@ function beamTo(s, line, from, to, g) {
 }
 
 /**
- * A shown link's beam, by the head's rule; null where none of the stretches
- * its near end stands in has a line laid out in its mounted article.
+ * A shown link's beam, by the head's rule; null where its far end names no
+ * document, or where none of the stretches its near end stands in has a line
+ * laid out in its mounted article.
  * @param {Shown} s
  * @param {Geometry} g
  * @returns {Beam | null}
@@ -443,12 +405,12 @@ function endsOf(/** @type {Shown} */ s) {
 
 /**
  * The beams in their bundles, in the order met: one bundle per document the
- * beams leave and far document they reach (§2.1: one bundle per
- * destination), and each beam once — a link met from both its ends, or from
- * both inside one document, is one beam between the same two ends (`endsOf`:
- * each end's document and stored span), counted once, the first met kept as
- * it was met, for each end's mark is its own document's whichever end drew
- * it (LK's `mark` and `farMark`; issue #166's design decision); a link whose
+ * beams leave and far document they reach (§2.1), and each beam once — a
+ * link met from both its ends, or from both inside one document, is one
+ * beam between the same two ends (`endsOf`: each end's document and stored
+ * span), counted once, the first met kept as it was met, for each end's mark
+ * is its own document's whichever end drew it (LK's `mark` and `farMark`;
+ * FP-30); a link whose
  * endset holds two spans in one document keeps a beam from each, and so does
  * one stored end drawn at two documents, the one that minted its bytes and
  * one transcluding them. Each bundle is marked at each end with what its
@@ -486,11 +448,10 @@ function shared(/** @type {[{s: Shown}, ...Array<{s: Shown}>]} */ members, /** @
  * holds (BM-HELD's `farSays`), those words: "its passage is not in ⟨D⟩'s current
  * text" where every one floats, BM-HELD's line where every one's text holds
  * only part of it, or all of it in pieces, or the board would not tell
- * (issue #153), the stub saying so before anyone follows it (foundations
- * §2.3; P44: what its members share, so a bundle holding a beam that floats
+ * (FP-21), the stub saying so before anyone follows it (foundations §2.3;
+ * P44: what its members share, so a bundle holding a beam that floats
  * beside one that lands says neither). A far document the board will say
- * nothing of is drawn nowhere, so no beam reaches it: its tail names it
- * (issue #132).
+ * nothing of is drawn nowhere, so no beam reaches it: its tail names it.
  * @param {Bundle<{s: Shown}>} b
  * @returns {string}
  */
@@ -584,11 +545,11 @@ export function draw() {
   ctx.globalAlpha = 1;
 }
 
-/** the beam endpoints, each with the line it leaves at, its near document and its span's position (the gate's layout case holds each endpoint to its span's own line, at the article's edge) */
+/** the beam endpoints, each with the line it leaves at, its near document and its span's position, for the gate */
 export function anchors() {
   return built.flatMap((b) => b.members).map((bm) => ({ link: bm.s.link.addr, near: bm.s.near, pos: bm.s.pos, x: bm.from.x, y: bm.from.y, rect: bm.line, stub: bm.stub, far: bm.s.far }));
 }
-/** the labels the last frame set, one per bundle whose label stands whole in the visible view (the gate's layout case holds the stubs to theirs) */
+/** the labels the last frame set, one per bundle whose label stands whole in the visible view, for the gate */
 export const labels = () => labelsSet.slice();
 /** the built set's size: the beams its bundles hold */
 export const count = () => built.reduce((n, b) => n + b.members.length, 0);

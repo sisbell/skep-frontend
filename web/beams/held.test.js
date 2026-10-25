@@ -1,42 +1,14 @@
-// BM-HELD's test — the four states and the line (issue #153's design
-// decision): all where one stretch holds every position of the passage,
-// pieces where the stretches together do and none alone, part where they
-// hold less, none where there are none (a mutant that sums the stretches'
-// widths — a half held twice reading whole — or that calls a passage held in
-// two stretches all of it, turns red); a passage named by identity read
-// through each run's bytes, bytes that follow on in the text and the passage
-// one piece, each run holding any of it one place, and bytes of another
-// I-space none of it; the line in the decision's own words — "only part of
-// what you selected is in version 3 — in 2 places", "the text you were
-// reading" — no places named at one place, the withheld text's clause on a
-// part alone, and never "missing", "removed", "deleted" or "compare"; the
-// reason a line could not tell by keyed on the refusal's name and kind,
-// never its token, a session the shell no longer held the text that could
-// not be read and never "signed out" (issue #175), and "try again" offered
-// only where a retry can change the answer (a mutant that offers it for a
-// budget or a verdict of the board's turns red). A drawn link's far end says
-// before departure what its text holds of its passage, by the rule its
-// landing reads: part, all of it in pieces, couldn't tell by the refusal's
-// name, nothing for all of it, for
-// a refusal for its size or for an image that does not cover its runs beyond
-// what the projection's widths prove (a mutant that reads the positions the
-// text holds in place of its bytes' identity turns red).
-// A far end's state is read through the version its far box shows, its line
-// naming the version and the dead end's words its own: "its passage is not in
-// version ⟨k⟩" (issue #154).
-// THE RUNS' LABELS (issue #158's design decision; FP-21): a text's runs cut
-// where their bytes break the passage's order, one stretch where they follow
-// on in both (a mutant joining them by the text alone turns red); runs of
-// different material numbered in the passage's own order, never the text's
-// (a mutant numbering by the text turns red), a repeat "again" and the first
-// of its material "again later", none numbered where every run holds the
-// same material; the run the landing stands at adding "all of the passage" or
-// "only part of the passage" — the withheld text's clause after a part — and
-// "in another order" where the text sets the pieces out of the passage's
-// order; labels that would stack merged into the pieces they hold, a range
-// for consecutive numbers; the step in the passage's order, a repeat after
-// the first of its material, wrapping (a mutant stepping in the text's order,
-// or stopping at the ends, turns red); and no label counts "places".
+// BM-HELD's test: the four states a text holds a passage in, read by
+// position and by the identity of each run's bytes; the line's words by
+// subject and by the text's address, the places counted at a far end alone;
+// why a line could not tell, keyed on the refusal's name and kind, never its
+// token, a lost session the text that could not be read (FP-28), and "try
+// again" only where a retry can change the answer; a drawn link's far end's
+// state before departure, read through the version its far box shows
+// (FP-22); and the runs' labels — stretches cut where their bytes break the
+// passage's order, pieces numbered in the passage's order, repeats, the
+// amount and the order at the landing's run, merged labels and the wrapping
+// step (FP-21).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -92,7 +64,7 @@ test('couldn\'t tell says why, keyed on the refusal\'s name and kind, never its 
   /** @type {Array<[{kind: string, name: string} | null, string, boolean]>} each refusal, its reason's words and whether a retry may tell */
   const rows = [
     [{ kind: 'unreachable', name: 'unreachable' }, 'F.daemon.unreachable', true],
-    // a session the shell no longer held: the text that could not be read, never the sign-out's "signed out" (issue #175)
+    // a session the shell no longer held: the text that could not be read, never the sign-out's "signed out" (FP-28)
     [{ kind: 'shell', name: 'session_ended' }, 'L.held.why.unread', true],
     [{ kind: 'shell', name: 'session_died' }, 'L.held.why.unread', true],
     [{ kind: 'refused', name: 'scan_busy' }, 'L.held.why.busy', true],

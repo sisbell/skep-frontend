@@ -1,17 +1,14 @@
-// THE FAKE PORT — a third adapter under `web/test/`, never imported by the
-// page, for FP-15's proof (the structure record §4.5 (2)): the pure tests of
-// M-REC and M-PUMP run against it and against the bridge client with the
-// provider, and the model's state after the same sequence of answers and
-// events is deep-equal — nothing above the port can tell which adapter is
-// beneath it.
-// It answers each call from a SCRIPT: a map from a call key (`name` + the
-// argument object's canonical JSON, or `op:` + the frame's canonical JSON)
-// to the Outcome the provider would answer; it fires events on demand; and
-// it HOLDS a call on demand (`hold`): every call of that key waits for its
-// answer until the test releases it, so a test can make acts while a read is
-// in flight and answer it when it chooses — a slow board's order of answers;
-// and it keeps the key of every call as it is made (`asked`), so a test can
-// hold a page to what it asks and what it no longer asks.
+// The fake port — a third adapter under `web/test/`, never imported by the
+// page, standing in for the port's adapter in the pure tests of the model and
+// the modules above it (FP-15; the structure record §4.5 (2)): nothing above
+// the port can tell which adapter is beneath it. It answers each call from a
+// script: a map from a call key (`name` + the argument object's canonical
+// JSON, or `op:` + the frame's canonical JSON) to the Outcome the provider
+// would answer; it fires events on demand (`fire`); it holds a call on demand
+// (`hold`): every call of that key waits for its answer until the test
+// releases it, so a test can make acts while a read is in flight and answer
+// it when it chooses; and it keeps the key of every call as it is made
+// (`asked`) and of every call the script did not answer (`unanswered`).
 
 /** @typedef {import('../bridge/port.js').Adapter} Adapter */
 /** @typedef {import('../bridge/shapes').EventName} EventName */

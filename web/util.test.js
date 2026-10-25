@@ -1,13 +1,9 @@
-// U's test: the digest and the key fingerprint a copy of a key record carries
-// (issue #161). SHA-256 equals the platform's own over the lengths its padding
-// turns on — empty, one block's room for the length and past it (55, 56, 63,
-// 64, 119, 120 bytes) — and a hybrid key's 1,984 raw bytes (a mutant that
-// writes the length's bits as bytes, or drops the second block, turns red).
-// A key's fingerprint is SHA-256 over AUTH-1.12's framing of its alg token and
-// its raw bytes under `skep-key-v1`, built here apart from the page's (AUTH-1.8)
-// — the hex read case-insensitively, as its bytes, and a value that is no hex
-// deriving none (a mutant that hashes the hex as text, or frames no lengths,
-// turns red).
+// U's test: SHA-256 equals the platform's own over the lengths its padding
+// turns on and over a hybrid key's 1,984 raw bytes, and a key's fingerprint
+// is SHA-256 over AUTH-1.12's framing of its alg token and its raw bytes
+// under `skep-key-v1` (AUTH-1.8), the hex read case-insensitively and a
+// value that is no hex deriving none — the digest and fingerprint a copy of
+// a key record carries (FP-24).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';

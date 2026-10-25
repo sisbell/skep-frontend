@@ -1,9 +1,6 @@
-// U — pure helpers every layer may import (the structure record §3.2 "U").
+// U — pure helpers every layer may import (the structure record §3.2).
 // Layer: a leaf below every layer. PURE.
-// Carries: the wireframe's §1 tail (`pct`, `r2`, `kb`, `esc`); the
-// deterministic primitives of §1 (`hash32`, `mix`, `rngFrom`, `shuffled`)
-// are DROPPED with the permutation (foundations §2.1).
-// Rules: FP-1 (plain JavaScript), FP-2 (every shape in JSDoc).
+// Rules: FP-1, FP-2.
 
 /**
  * The p-th percentile of a list of numbers (nearest rank).
@@ -95,8 +92,7 @@ export const sliceBytes = (s, b0, b1) => {
 /**
  * Fingerprint cue: the leading groups of a hex fingerprint in AUTH-5.1's
  * one convention (groups of four), the count the auth round's — four
- * groups here (foundations §2.1's account row: "the fingerprint's leading
- * groups").
+ * groups here (foundations §2.1's account row).
  * @param {string} fp 64 lowercase hex
  * @param {number} [groups]
  * @returns {string}

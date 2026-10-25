@@ -1,180 +1,145 @@
-// LK — THE LINK SEAM (the structure record §3.2 "LK"; the three-gaps note;
-// the gate ruling: what still moves is built behind ONE SEAM). Layer 2
-// (S-31 (a)), `web/links/`. State: VIEW — the reveal chain's stage and
-// lenses PER DOCUMENT for the session (S-29 (b); D-2 RULED PER DOCUMENT) —
-// per document's BOX, which its versions share, so the stage, the others'
-// toggle and the lenses stand as they were when the box shows another
-// version (issue #154's design decision: "Lenses, link sets and the box's
-// mid and far counts stay as they were") — and THE VISITED-LINK SET (S-32
-// (a); D-3) — THE ONE OWNER of both (FP-10).
-// Imports: M-REC (the raw links, each link's type, the index), P-REG (the
-// values) and ST (the words a far end is named in) alone; M-ADDR's
-// arithmetic beneath. N-GO's links lit at an arrival and the version each
-// box shows, P-RENDER's test of which documents the plane draws and
-// T-LAYER's owner rule are read through the readers the app hands in
-// (`readers`), never imported — each of them imports LK — and never kept
-// here.
-//
-// WHICH LINKS SHOW at a document and at a span, and HOW each is marked —
-// ITS RULE TODAY IS THE RULED DESIGNS' AND NOTHING MORE (foundations §2.1's
-// link row; R60's default composition; the counts' three rules (i)–(iii),
-// E11 (c), E12 (i), E13 (a), E15 (a), E17 (a); D-2; D-3; B1-S4):
+// LK — the link seam (the structure record §3.2; S-31 (a)). Layer 2,
+// `web/links/`. State (FP-10): the reveal chain's stage, the others' toggle
+// and the lenses per document's box, which its versions share, for the
+// session (S-29 (b); D-2; FP-22), and the visited-link set (S-32 (a); D-3)
+// — view state, never written (FP-7). It imports M-REC (the raw links, each
+// link's type, the index), P-REG (the values) and ST (the words a far end is
+// named in) alone, with M-ADDR's arithmetic beneath (FP-11); N-GO's links
+// lit and the version each box shows, P-RENDER's test of which documents
+// the plane draws and T-LAYER's owner rule are read through the readers the
+// app hands in (`readers`), for each of them imports LK.
+// Which links show at a document and at a span, and how each is marked
+// (foundations §2.1's link row; R60's default composition; the counts'
+// rules (i)–(iii), E11 (c), E12 (i), E13 (a), E15 (a), E17 (a); D-2; D-3;
+// B1-S4):
 //   - the document owner's links are marked at their spans with no act, and
-//     the person's own in their own hue (R60's default composition);
-//   - every other party's link is an OVERLAY, off by default, present as the
-//     "+⟨n⟩ others" count per block; shown where the card's toggle is on or a
-//     lens admits it, attributed in its linker's hue;
-//   - rule (i): a link whose end is a WHOLE WORK counts ONCE, at the corner,
-//     never at a passage; an ACCOUNT-named end counts NOWHERE as a number;
-//     a RECORD (a credential, the claim, `replaces`, an edition claim, a
-//     registry record, a succession pair) never counts and is never a mark;
-//     the SOCIAL types stand as ONE UNNUMBERED MARK;
-//   - rule (iii): the registry's STRUCTURAL family is formatting — rendered by
-//     T-ARTICLE, never counted, never marked;
-//   - every count is a fold of `find_links_v`'s answer, the type learned once
-//     (`count_v` no longer used — E17 (a)); a document whose links are not
-//     yet read shows its count ARRIVING (#465, needs-design: a lower bound);
-//   - an end stands WHERE ITS BYTES STAND NOW, at every document whose text
+//     the person's own in their own hue (R60);
+//   - every other party's link is an overlay, off by default, present as the
+//     "+⟨n⟩ others" count per block (`countAt`); shown where the card's
+//     toggle is on or a lens admits it, attributed in its linker's hue
+//     (`setOthers`, `lens`, `othersLet`);
+//   - rule (i): a link whose end is a whole work counts once, at the corner,
+//     never at a passage (`wholeLinks`); an account-named end counts nowhere
+//     as a number; a record (a credential, the claim, `replaces`, an edition
+//     claim, a registry record, a succession pair) never counts and is never
+//     a mark; the social types stand as one unnumbered mark (`classify`);
+//   - rule (iii): the registry's structural family is formatting, rendered
+//     by T-ARTICLE, never counted, never marked;
+//   - every count is a fold of `find_links_v`'s answer (E17 (a)); a document
+//     whose links are not yet read shows its count arriving (`countDoc`);
+//   - an end stands where its bytes stand now, at every document whose text
 //     holds them: a link's slot stores the permanent I-spans of the bytes it
-//     named, never a place (wire.md §Links, `make_link`), and `find_links_v`
-//     answers every link on every byte of a document's image, so a document
-//     holds an end where it is the trunk the span's address lies under, or
-//     where its held text places the span — a passage it transcludes from
-//     another document, a version member's bytes (M-REC's `holdsEnd`;
-//     foundations §1.1: "THE SAME MATERIAL in both places"); each end drawn
-//     at a document is its stored span read back to the document's held
-//     text through the V→I image (M-REC's `placed`) — every stretch it
-//     stands in, a passage an edit cut in two at both, its marks, symbol and
-//     counts there and never at the stored ordinal — and an end the held
-//     text places nowhere (its image not read, or the text holding none of
-//     it) is not drawn; the end is told apart by its stored span (`nearEnd`;
-//     its key, `endKey`) wherever it stands, and every mark and symbol drawn
-//     for it carries that key, so a click opens the card of the end clicked,
-//     never another of the link's ends in the same text (B1-S5);
-//   - WHERE AN END IS DRAWN is ONE RULE (`drawnIn`; issue #202's design
-//     decision: "One rule decides where every link end is drawn"): on the
-//     stretches of it the reader can read, cut where a withheld run stands;
-//     an end lying wholly inside withheld text at the START of the withheld
-//     run holding its last stretch (`Shown.run`), the run's whole extent its
-//     one stretch — never at an offset inside the gap, never a tint over it —
-//     so the article's marks and symbols (T-ARTICLE), the presence count and
-//     the ARIA mirror (N-WALK), all reading `shown`, and the others' count
-//     (`countAt`) name the same ends;
-//   - its FAR end stands where `project` answers it sits in the far
-//     document's current text now (A-53: "the beam lands at the passage's
-//     current place (version-proof)"; M-REC's projection, `farRuns`) — in
-//     the text of the version the far document's box shows (`farAt`; issue
-//     #154's design decision: "Beams, link marks and per-passage counts
-//     follow the version shown"), the box a member and its document share,
-//     though a follow lands at the address the link names; a far
-//     end that text holds none of FLOATS (`floats`), and its symbol, its stub
-//     and its mirror item say "its passage is not in ⟨D⟩'s current text"
-//     before anyone follows it (foundations §2.3: "the projection the beam
-//     already makes says so before the departure"); what that text holds of
-//     a far end that does not float — part of it, all of it in pieces, or
-//     nothing the board would tell — is BM-HELD's to read from the drawn end
-//     and its projection, by the rule its landing reads (`farHolds`,
-//     `farSays`; issue #153's design decision);
-//   - a link whose FAR DOCUMENT THE PLANE DRAWS NOWHERE — no index row, no
-//     text or metadata read, no withheld box of its own (P-RENDER's
-//     `drawsDoc`, the reader `drawn`) — stays in the set, counted, marked and
-//     reached by the keyboard and the mirror as any link is, and is TAILED
-//     (issue #132's design decision; `tailed`): never a beam, a connection or
-//     a stub, which would point at the address's place on the plane — a place
-//     that can lie inside a continuation's mark naming another document — but
-//     a short tail leaving its near end (`tails`, which P-RENDER draws), its
-//     far end named in words at its end; once the far document is drawn, the
-//     link draws normally;
-//   - a far end is NAMED (`farLabel`) by its full address, then the words the
+//     named, never a place (wire.md §Links), and `find_links_v` answers every
+//     link on every byte of a document's image, so a document holds an end
+//     where it is the trunk the span's address lies under, or where its held
+//     text places the span — a passage it transcludes from another document,
+//     a version member's bytes (M-REC's `holdsEnd`; foundations §1.1); each
+//     end drawn at a document is its stored span read back to the document's
+//     held text through the V→I image (M-REC's `placed`) — every stretch it
+//     stands in, its marks, symbol and counts there and never at the stored
+//     ordinal — and an end the held text places nowhere is not drawn; the end
+//     is told apart by its stored span (`nearEnd`; its key, `endKey`)
+//     wherever it stands, and every mark and symbol drawn for it carries that
+//     key, so a click opens the card of the end clicked, never another of
+//     the link's ends in the same text (B1-S5);
+//   - where an end is drawn is one rule (`drawnIn`; FP-30): on the stretches
+//     of it the reader can read, cut where a withheld run stands; an end
+//     lying wholly inside withheld text at the start of the withheld run
+//     holding its last stretch (`Shown.run`), the run's whole extent its one
+//     stretch — never at an offset inside the gap — so the article's marks
+//     and symbols (T-ARTICLE), the presence count and the ARIA mirror
+//     (N-WALK), all reading `shown`, and the others' count (`countAt`) name
+//     the same ends;
+//   - its far end stands where `project` answers it sits in the far
+//     document's current text (A-53; M-REC's projection, `farRuns`) — in the
+//     text of the version the far document's box shows (`farAt`; FP-22), the
+//     box a member and its document share, though a follow lands at the
+//     address the link names; a far end that text holds none of floats
+//     (`floats`), and its symbol, its stub and its mirror item say so before
+//     anyone follows it (foundations §2.3); what that text holds of a far end
+//     that does not float is BM-HELD's to read from the drawn end and its
+//     projection (`farHolds`, `farSays`; FP-21);
+//   - a link whose far document the plane draws nowhere — no index row, no
+//     text or metadata read, no withheld box of its own (the reader `drawn`)
+//     — stays in the set, counted, marked and reached by the keyboard and the
+//     mirror as any link is, and is tailed (`tailed`): never a beam, a
+//     connection or a stub, which would point at the address's place on the
+//     plane, but a short tail leaving its near end (`tails`, which P-RENDER
+//     draws), its far end named in words at its end; once the far document
+//     is drawn, the link draws normally;
+//   - a far end is named (`farLabel`) by its full address, then the words the
 //     answers the page holds of its document give (`farWords`) — the read the
 //     plane makes for it (`project`) and any read of the document itself,
-//     never a guess, never the index's silence alone: "nothing this board
-//     will say about this address" where the board answered
-//     `doc_not_registered` — "no document here yet" in the reader's own
-//     account, where the index, known complete, lists no document at the
-//     address — "withheld · ⟨owner⟩" where it is withheld from the reader,
-//     the owner by the one owner rule (T-LAYER's, the reader `owner`), its
-//     first line where it is readable and the page holds one, and nothing
-//     where nothing was answered; its tail, its card, its mirror item and
-//     every list that names it carry those words, so the reader knows what a
-//     follow will meet before making it;
-//   - a link shows as a SYMBOL at its span where the reveal has reached stage
-//     2 and as a BEAM where it has reached stage 3; the lenses by owner, type
-//     and endorsement filter the set per document for the session;
+//     never a guess, never the index's silence alone: that the board will say
+//     nothing of the address where it answered `doc_not_registered`, or that
+//     there is no document here yet in the reader's own account where the
+//     index, known complete, lists none at the address; withheld, with its
+//     owner by the one owner rule (the reader `owner`); its first line where
+//     it is readable and the page holds one; and nothing where nothing was
+//     answered; its tail, its card, its mirror item and every list that
+//     names it carry those words;
+//   - a link shows as a symbol at its span where the reveal has reached stage
+//     2 (`symbols`) and as a beam where it has reached stage 3 (`beams`); the
+//     lenses by owner, type and endorsement filter the set per document for
+//     the session;
 //   - the most any reveal can set in a document's text — a symbol at every
 //     passage end — is what the plane's size is folded for (`utmost`;
-//     T-LAYER's fold, issue #15), so moving the chain, the toggle or a lens
-//     sets no document at another size and runs no column past its room; a
-//     block's count stands in its column's edge and sets no line (A-254;
-//     issue #151's design decision);
-//   - a link the person has FOLLOWED this session is drawn lighter (D-3:
-//     VALUE, the hue kept), the set client-side, never written;
-//   - a link LIT AT AN ARRIVAL — the one a landing followed, or the one a
-//     one-step move along the trail crossed the follow of (N-GO's
-//     `litLinks`; issue #152's design decision) — is drawn heavier while the
-//     arrival stands (FP-21; foundations §2.1's register: "the arrival an outline around
-//     its span with the followed link drawn heavier": WEIGHT), its beams by
-//     `markOf`'s weight and its symbols in a standing article by the links
-//     lit (`lit`, which T-LAYER marks them by in place);
-//   - a link at a mark JOINING TWO DOCUMENTS — a mid connection, a scene's
-//     line — stands there where EITHER document's composition draws it
-//     (`draws`; §2.5: "drawn where either pane's default composition draws
-//     that link"); at a mid connection it is marked ONCE, from the link and
-//     the two documents, never at each end apart: its linker you, else the
-//     document's owner where its owner owns EITHER of the two (foundations
-//     §2.1's register: "the document's owner the owner of either"), else
-//     everyone else (`markOf` given both);
-//   - a BEAM and a scene's LINE are marked BY END: each end in the mark the
+//     T-LAYER's fold; FP-12), so moving the chain, the toggle or a lens sets
+//     no document at another size; a block's count stands in its column's
+//     edge and sets no line (A-254; FP-26);
+//   - a link the person has followed this session is drawn lighter (D-3:
+//     value, the hue kept), the set client-side, never written (`follow`,
+//     `visited`);
+//   - a link lit at an arrival (N-GO's `litLinks`, the reader `lit`) is
+//     drawn heavier while the arrival stands (FP-21; foundations §2.1's
+//     register), its beams by `markOf`'s weight and its symbols in a standing
+//     article by the links lit (`lit`, which T-LAYER marks them by in place);
+//   - a link at a mark joining two documents — a mid connection, a scene's
+//     line — stands there where either document's composition draws it
+//     (`draws`; §2.5); at a mid connection it is marked once, from the link
+//     and the two documents, never at each end apart: its linker you, else
+//     the document's owner where its owner owns either of the two
+//     (foundations §2.1's register), else everyone else (`markOf` given
+//     both);
+//   - a beam and a scene's line are marked by end: each end in the mark the
 //     document it touches gives the link, the one the link's symbol takes
-//     there (`markOf` at that document: a drawn end's `mark` at its near
-//     end, its `farMark` at the version its far box shows), never by which
-//     document drew it (issue #166's design decision: "Colour each end of a
-//     beam by the document it touches, never by which side drew it");
-//   - links drawn at ONE SITE — a stretch of text several mark, a mid
+//     there (`markOf` at that document: a drawn end's `mark` at its near end,
+//     its `farMark` at the version its far box shows), never by which
+//     document drew it (FP-30);
+//   - links drawn at one site — a stretch of text several mark, a mid
 //     connection holding several, a bundle's end holding several beams — are
-//     ONE MARK carrying what they share (P44; its Use at §2.1's register:
-//     "neutral in any variable its members do not share — hue where their
-//     linkers differ"): the linker's hue where every one's linker is one,
-//     else the neutral hue; lighter only where every one was followed;
-//     heavier only where every one is lit; the form the link kind's, which
-//     every mark here carries (`mergedMark`);
-//   - the mid connections: one per pair of places the plane draws the
-//     documents at — a document's own box, or the mark of the continuation
-//     holding it (P44) — holding once each link that joins a document at one
-//     to a document at the other, however many of its ends lie there, so its
-//     count and its mark are the same whether the other document is drawn,
-//     held by a mark or out of view; a link joins the document a passage end
-//     of it was minted under to each document its other slot names, never
-//     one whose text holds that end by transcluding its bytes, whose box
-//     draws no connection for it; a link whose two documents stand at one
-//     place draws none; a drawn document's links run to the place of each
-//     document they join it to, drawn there this frame or out of view, where
-//     the plane ends them at the view's edge (foundations §2.1: "one whose far
-//     end is out of view ending at the view's edge as §2.5's stub does"), and
-//     to no place where the plane draws that document nowhere: such a link
-//     is a TAIL at the drawn document's place instead (`tails`), one per
-//     place, holding once each link a document at that place is joined by to
-//     a document the plane draws nowhere, its links merged in one mark as a
-//     connection's are, so a place's tail and its connections are joined by
-//     one rule and part every link between them; the scene's
-//     pane-to-pane lines are drawn from the shown set at both panes'
-//     documents, each link once per pair of its ends, each end in the mark
-//     its pane's document gives the link.
-// WHAT REPLACES THIS RULE LATER: link sets (`_designs/LINK-SETS/…` §4, in
-// review) — at a version `E.k` the default view is `E`'s OWN SET plus the sets
-// its author has `E.k` read with plus the reader's own links; everything else
-// an overlay; the card lists SETS; the anatomy card gains a SET line. A
-// DIFFERENT RULE FOR WHICH LINKS SHOW, THE SAME MARKS AND THE SAME DRAWING:
-// when it lands, THIS FILE's rule and its state change; NO DRAWING MODULE
-// CHANGES (BM, T-LAYER, P-RENDER, SC, the cards draw what `shown`, `shownAt`,
-// `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`, `markOf`,
-// `mergedMark`, `lit`, `floats`, `farPos`, `farWords`, `farLabel`, `drawnIn`
-// and `endKey` give them, and T-LAYER sets each document at the size the
-// fold of what `utmost` gives takes).
-// Carries: the wireframe's §16 `.sym`/`.lip` selection and the owner-link
-// marking in `articleHTML`, §17's wanted set, §18 `revealLinks`'s lens
-// filters, §10's by-linker colouring and mid lines, S1's `buildBeams`.
-// Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-22, FP-30.
+//     one mark carrying what they share (P44; §2.1's register): the linker's
+//     hue where every one's linker is one, else the neutral hue; lighter only
+//     where every one was followed; heavier only where every one is lit; the
+//     form the link kind's, which every mark here carries (`mergedMark`);
+//   - the mid connections (`connections`): one per pair of places the plane
+//     draws the documents at — a document's own box, or the mark of the
+//     continuation holding it (P44) — holding once each link that joins a
+//     document at one to a document at the other, however many of its ends
+//     lie there, so its count and its mark are the same whether the other
+//     document is drawn, held by a mark or out of view; a link joins the
+//     document a passage end of it was minted under to each document its
+//     other slot names, never one whose text holds that end by transcluding
+//     its bytes, whose box draws no connection for it; a link whose two
+//     documents stand at one place draws none; a drawn document's links run
+//     to the place of each document they join it to, drawn there this frame
+//     or out of view, where the plane ends them at the view's edge
+//     (foundations §2.1), and to no place where the plane draws that document
+//     nowhere: such a link is a tail at the drawn document's place instead
+//     (`tails`), one per place, holding once each link a document at that
+//     place is joined by to a document the plane draws nowhere, its links
+//     merged in one mark as a connection's are, so a place's tail and its
+//     connections are joined by one rule and part every link between them;
+//     the scene's pane-to-pane lines are drawn from the shown set at both
+//     panes' documents, each link once per pair of its ends, each end in the
+//     mark its pane's document gives the link.
+// The seam: which links show, and its state, is decided here alone; the
+// drawing modules — BM, T-LAYER, P-RENDER, SC, the cards — draw what `shown`,
+// `shownAt`, `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`,
+// `markOf`, `mergedMark`, `lit`, `floats`, `farPos`, `farWords`, `farLabel`,
+// `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
+// size the fold of what `utmost` gives takes.
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-21, FP-22, FP-30.
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
@@ -231,7 +196,7 @@ import { t } from '../strings.js';
  * @property {1 | 2} farSlot the slot the far end lies in: 2 where this end is the link's from, 1 where it is its to
  * @property {boolean} farWhole
  * @property {string} farAt the version of the far document's box the far end is placed in: the one the box shows (the reader `shown`) — the document `far` names, or another version sharing its box; '' where the far end names no document
- * @property {Mark} farMark the mark the far document gives the link (`markOf` at `farAt`, else at the address `far` names): the one its symbol takes there, and a beam's colour at its far end (issue #166's design decision)
+ * @property {Mark} farMark the mark the far document gives the link (`markOf` at `farAt`, else at the address `far` names): the one its symbol takes there, and a beam's colour at its far end (FP-30)
  * @property {Stretch[] | null} farRuns where the far end's passage stands in `farAt`'s current text now (`project`'s answer, M-REC's projection), in the text's order; none where it floats — that text holds none of it; null where nothing places it: its projection not read or refused, or the far end naming a document whole, an account or nothing
  */
 /**
@@ -258,18 +223,18 @@ import { t } from '../strings.js';
  * @property {boolean} farWhole it names its document whole
  */
 /**
- * @typedef {Object} Tail — the links a place sends to documents the plane draws nowhere (issue #132's design decision): drawn as one short tail at the place, never pointed at their far ends
+ * @typedef {Object} Tail — the links a place sends to documents the plane draws nowhere: drawn as one short tail at the place, never pointed at their far ends
  * @property {string} at the place they leave: the drawn document's own address, or the mark `placeOf` names
  * @property {string[]} docs the drawn documents at that place they leave, each once, in the order met
  * @property {Array<FarEnd & {mark: Mark}>} ends each link once, in the order met, with its far end the plane draws nowhere and its mark there, as a mark joining its two documents marks it (`markOf`)
  * @property {Mark} mark the one mark they merge into (`mergedMark`)
  */
 
-/** the commons rows: the credential classes, `replaces`, the edition claim, the registry's five, succession — RECORDS (rule (i)'s test) */
+/** the commons rows: the credential classes, `replaces`, the edition claim, the registry's five, succession — records (rule (i)) */
 const RECORD_ORDINALS = new Set([1, 2, 3, 12, 14, 55, 56, 57, 58, 59]);
 /** the social types — one unnumbered mark (E11 (c)): endorse 3.42, bookmark 3.44 */
 const SOCIAL_ORDINALS = new Set([42, 44]);
-/** the structural family — formatting, never counted (rule (iii)); the commons map's 3.22–3.29 (the registry file `link-types-structural.md` numbers them 2.20–2.22 — the discrepancy is reported) */
+/** the structural family — formatting, never counted (rule (iii)); the commons map's 3.22–3.29 */
 const STRUCTURAL_ORDINALS = new Set([22, 23, 24, 25, 26, 27, 28, 29]);
 
 /** @type {Map<string, Reveal>} each box's reveal, by its document (`boxOf`) */
@@ -302,7 +267,7 @@ export function state(/** @type {string} */ addr) {
 }
 /** set the chain's stage at a document (the card's setter) */
 export function reveal(/** @type {string} */ addr, /** @type {1 | 2 | 3} */ stage) { state(addr).stage = stage; }
-/** the overlay toggle (R60): others' links on or off at a document */
+/** the overlay toggle (R60): others' links on or off at a document; on, it raises a hidden chain to symbols */
 export function setOthers(/** @type {string} */ addr, /** @type {boolean} */ on) { const r = state(addr); r.others = on; if (on && r.stage < 2) r.stage = 2; }
 /** set a lens at a document — stands for the session, client-side (D-2) */
 export function lens(/** @type {string} */ addr, /** @type {Partial<Lens>} */ l) { Object.assign(state(addr).lens, l); }
@@ -310,7 +275,7 @@ export function clearLens(/** @type {string} */ addr) { state(addr).lens = hidde
 /** dismissing the card returns the chain to hidden; a standing lens keeps the links it admits marked */
 export function hide(/** @type {string} */ addr) { const r = state(addr); r.stage = 1; }
 
-/** `follow` reports the link followed (N-GO → here, S-32 (a)) */
+/** the link followed, reported by N-GO (S-32 (a)) */
 export function follow(/** @type {Link | string} */ l) { visitedSet.add(typeof l === 'string' ? l : l.addr); }
 /** has the link been followed this session? */
 export const visited = (/** @type {Link | string} */ l) => visitedSet.has(typeof l === 'string' ? l : l.addr);
@@ -338,8 +303,7 @@ export function classify(l) {
  * The linker of a link at a mark: you, where the person made it; else the
  * document's owner, where its owner owns the document the mark stands at —
  * at a mark joining two documents, a mid connection or a tail marked as one,
- * either of them (foundations §2.1's register: "the document's owner the
- * owner of either"); else everyone else as one.
+ * either of them (foundations §2.1's register); else everyone else as one.
  * @param {Link} l
  * @param {string} at the document the mark stands at, or one of the two it joins
  * @param {string} [other] the other document a mark joining two joins
@@ -373,9 +337,8 @@ export const lit = () => read.lit();
 /**
  * The one mark links drawn at one site merge into — a stretch of text
  * several mark, a mid connection holding several, a bundle's end holding
- * several beams — carrying what they share and nothing they do not (P44; its
- * Use at §2.1's register: "neutral in any variable its members do not share —
- * hue where their linkers differ"): the linker and its hue where every member's
+ * several beams — carrying what they share and nothing they do not (P44;
+ * §2.1's register): the linker and its hue where every member's
  * is one, else none and NEUTRAL_HUE; lighter only where every member was
  * followed (D-3), else full — value carries the followed mark alone, so a
  * site followed in part has no value of its own; heavier only where every
@@ -407,10 +370,9 @@ function admitted(/** @type {Reveal} */ r, /** @type {Link} */ l) {
 }
 
 /**
- * Is another's link let onto the article? Only by the toggle (R60 — others'
- * content shown on request) or by a lens that NAMES its owner (an explicit
- * ask for that person's links); a lens by type alone filters what is shown
- * and reveals no one new.
+ * Is another's link let onto the article? Only by the toggle (R60) or by a
+ * lens that names its owner (an explicit ask for that person's links); a
+ * lens by type alone filters what is shown and reveals no one new.
  */
 function othersLet(/** @type {Reveal} */ r, /** @type {Link} */ l) {
   return r.others || !!(r.lens.owners && l.owner && r.lens.owners.has(l.owner));
@@ -470,10 +432,10 @@ export function draws(l, addr) {
 }
 
 /**
- * WHERE AN END IS DRAWN in a text (see the head; issue #202's design
- * decision): on every stretch of it the text holds outside its withheld runs,
+ * Where an end is drawn in a text (see the head; FP-30): on every stretch of
+ * it the text holds outside its withheld runs,
  * each stretch cut where a withheld run stands; else, where the text holds it
- * wholly inside withheld text, AT THE START of the withheld run holding its
+ * wholly inside withheld text, at the start of the withheld run holding its
  * last stretch, the run's whole extent its one stretch — never at an offset
  * inside the gap; none where the text places none of it. The one rule every
  * surface reads a drawn end's place by, through `shown` and the others' count
@@ -572,7 +534,7 @@ export const floats = (/** @type {Shown} */ s) => !!s.farRuns && s.farRuns.lengt
 export const farPos = (/** @type {Shown} */ s) => (s.farRuns && s.farRuns.length ? s.farRuns[0].pos : null);
 
 /**
- * Is a drawn end TAILED (see the head): its far end names a document the
+ * Is a drawn end tailed (see the head): its far end names a document the
  * plane draws nowhere (the reader `drawn`), so it leaves its near end by a
  * tail, its far end named in words (`farLabel`), and draws no beam?
  * @param {Shown} s
@@ -643,11 +605,10 @@ export function countAt(addr, block) { return countUnder(state(addr), addr, bloc
  * passage end at the document, as `shown` gives the reveal that shows them
  * all — stage 2 and on, others' links on, no lens. An article set with all of
  * it is at least as long as at any stage, toggle and lens, so the size
- * T-LAYER folds it at for this — the step its columns take (issue #15) —
+ * T-LAYER folds it at for this — the step its columns take (FP-12) —
  * holds the article in its room at each, and moving the reveal sets it at no
  * other size. The "+⟨n⟩ others" count is none of it: it stands in its
- * column's edge and sets no line, "so a link's arrival breaks no line"
- * (A-254; issue #151's design decision).
+ * column's edge and sets no line (A-254; FP-26).
  * @param {string} addr
  * @returns {{shown: Shown[]}}
  */
@@ -687,8 +648,8 @@ export function wholeLinks(/** @type {string} */ addr) {
 }
 
 /**
- * The badge: the links a document HOLDS (homed in it — foundations §2.1: "a
- * link counted where it is homed"), two-ended, records and the structural
+ * The badge: the links a document holds (homed in it; foundations §2.1),
+ * two-ended, records and the structural
  * family left out, the social types as one mark; `arriving` where the
  * document's links are not yet read (the count then a lower bound). A link
  * is homed in a document where its home lies under the document's address —
@@ -747,14 +708,14 @@ function joined(l) {
 
 /**
  * The mid connections from the documents the plane draws: one per pair of
- * PLACES (P44: one per document pair, with its count) — `placeOf` names the
+ * places (P44) — `placeOf` names the
  * place a document stands at, its own box or the mark of the continuation
  * that holds it. Every passage link among a drawn document's links
  * (`find_links_v`'s answer) pairs it with each document the link joins it to
  * — a passage end minted under one, its other slot naming the other
  * (`joined`): a document whose text holds an end only by transcluding its
  * bytes, or a member's by sharing them, marks that end in its text and draws
- * no connection for it. A link stands at such a pair where EITHER of its two
+ * no connection for it. A link stands at such a pair where either of its two
  * documents draws it (`draws`) — the owner's and the person's own by
  * default, another's where a document's toggle or a lens naming its owner
  * lets it in — decided from the link and the two documents alone, each

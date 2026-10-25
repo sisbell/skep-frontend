@@ -1,8 +1,8 @@
 // ST's test: every entry is PINNED with a source or DRAFT with a screen; the
-// pinned strings are verbatim (a token filled leaves the rest); the lane's
-// own are marked; every accessible name the page sets is read from ST — none
-// stands in the markup, and none is written as a literal in a module (a label
-// put back in index.html, or a region's name written inline, turns it red).
+// pinned strings are verbatim and a token filled leaves the rest; the entries
+// no design document carries are listed; and every accessible name the page
+// sets is read from ST — none stands in the markup, and none is written as a
+// literal in a module.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -37,7 +37,7 @@ test('the lane\'s own strings are listed for the report', () => {
 });
 
 const WEB = new URL('./', import.meta.url);
-/** the page's own modules: every module under web/ but the tests, the fake port and the gate's hooks */
+/** the page's own modules: every module under web/ but the tests, `test/` and `gate/` */
 const modules = readdirSync(WEB, { recursive: true })
   .map((f) => String(f).split(sep).join('/'))
   .filter((f) => f.endsWith('.js') && !f.endsWith('.test.js') && !f.startsWith('test/') && !f.startsWith('gate/'));

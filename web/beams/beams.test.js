@@ -1,65 +1,20 @@
-// BM's test — the bundles over LK's rule on a hand-built model: one per
-// document a beam leaves and far document it reaches, whatever document the
-// links are homed in (a mutant keying them by the link's home turns red);
-// each beam once, counted once, a link met from both its ends or from both
-// inside one document drawn once (a mutant without the once-rule turns red),
-// and so is one met from both its ends while its far box shows another
-// version of its document (a mutant keying the far end by the document the
-// link names draws it twice and turns red), and a link
-// whose endset holds two spans keeping a beam from each (a mutant keying the
-// rule by the link alone turns red), as one stored end drawn at two
-// documents — the one that minted its bytes and one transcluding them — does,
-// each beam in its own document's mark (a mutant keying a beam by its stored
-// spans alone folds the two into one and turns red). Each END of a beam in
-// the mark the document it touches gives the link, the one the link's symbol
-// takes there, whether one side drew it or both and whichever met it first,
-// never neutral (issue #166's design decision: a mutant that merges its
-// meetings' marks, that marks its far end as its near, or that marks both by
-// the owner of either turns red); where the two differ the stroke changing
-// colour once, at the first point along it as far from the far document's box
-// as from the near one's, outside both (a mutant cutting it at its curve's
-// middle, inside the near document's box, turns red), cut there into two
-// stretches of the one curve meeting at that point, each butt-capped and
-// drawn from it in its own end's ink; a stub, and a beam whose ends' marks
-// agree, one stroke in its near end's ink; a bundle marked at each end with
-// what its beams' marks share there — neutral only where its links take
-// different colours at that end, a single link never (a mutant that marks a
-// bundle by its first beam turns red). Then a beam's ends
-// over a laid-out geometry: it leaves the near block's right edge level
-// with the span's own line nearest the far end, never the block's middle — a
-// block parted across two columns the right edge of the part holding that
-// line (a mutant taking the two parts' bounds turns red), and past a sign its
-// column's edge holds level with that line, never across it (issue #151: a
-// mutant that leaves from the text's edge whatever stands there turns red); a
-// mounted far end in view takes the far span's own line nearest the start, at
-// the far block's left edge, where its stroke ends; a whole-work end, the far
-// article's first block; a mounted far end outside the visible view — its
-// line under the one line, or past the view's border — is off screen: the
-// beam is aimed at it and its stroke cut at the border, a stub, its label set
-// in the view (a mutant that ends a mounted end's beam at the end wherever it
-// stands turns red); a far end not laid out stands at its document's box's
-// centre — in the visible view, mounted or not, the beam ends there, no
-// stub, its stroke never cut at the border past it (a mutant that stubs an
-// unmounted end in view, or cuts every stroke at the border, turns red), and
-// outside the view, above it or under the one line, the beam is a stub, its
-// stroke cut at the border (a mutant that never cuts turns red). A bundle's
-// label stands above its end, or below it where above would reach past the
-// visible view's top — a stub on the top border sets its label under the
-// line, shown to no one, without the rule — and nowhere it would not stand
-// whole in that view: a beam cut at its start just under the line, bound
-// upward, sets none there, where it would straddle the line's edge (a mutant
-// that sets it wherever it falls turns red). Both ends where the link's
-// bytes stand now: a beam met from both its ends one beam, its ends told
-// apart by the documents they are drawn at and the spans the link stores (a
-// mutant keying them by the stretches they stand in draws two and turns
-// red); a far end at the stretch `project` places it in (a mutant ending it
-// at the stored position's line turns red), at the far article's first block
-// where it floats, at its box's centre where no projection is held; a bundle
-// whose every beam floats saying so at its end, and one whose every beam's
-// far text holds only part of its passage saying the line its landing says
-// (issue #153), one whose beams part saying nothing of it.
-// A far end in the version its far box shows ends at that version's mounted
-// article, never at the box's centre (issue #154).
+// BM's test, on a hand-built model and a laid-out geometry: the bundles,
+// one per document a beam leaves and far document it reaches, whatever
+// document the links are homed in, each beam once — a link met from both its
+// ends, from both inside one document, or while its far box shows another
+// version — and a beam from each span of a link's endset and from each
+// document one stored end is drawn at; each end of a beam in the mark the
+// document it touches gives the link, never neutral, a bundle neutral only
+// at an end where its links' colours differ, and a stroke whose ends differ
+// changing colour once, outside both documents, its two stretches one curve
+// (FP-30); where a beam leaves its text — the part of the block holding its
+// span's line, past the sign level with it (FP-26) — and where it ends: a
+// mounted far end's line, a whole-work end's first block, an end not laid
+// out at its box's centre, a stub where the end stands outside the visible
+// view and nowhere else, a far end placed by `project` in the version its
+// far box shows (FP-22); and a bundle's label, placed above or below its end
+// inside the visible view, saying what its beams' far texts hold where they
+// agree (FP-21).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';

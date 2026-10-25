@@ -1,103 +1,58 @@
-// G-HOOKS — the gate's read-only hooks (the structure record §3.2 "G-HOOKS",
-// §6.3; S-22 (a): loaded by `import()` under `?gate=` alone). ENGINE-BOUND.
-// `window.__skep`: the model's held records, the mounted articles' text, the
-// mirror's items, the camera and the focus, the focus ring the canvas drew
-// (`view.ring`: the box on screen it outlined, null where it drew none) and
-// the bounds it is clamped to (`view.ringBounds`: the visible view, inset by
-// the ring's reach — issue #141),
-// S1's `driftSample` and `overlapCheck` (the measuring code moved into the
-// page), the visibility oracle `visible`, the beams' anchors beside their
-// spans' own rects and the labels the beams set at their bundles' ends
-// (`beamLabels`), the arrival mark's outline beside its link's marked words
-// and its article — a landing's, or a one-step move's light along the trail
-// (issue #152) — each rect with the run it outlines (`arrivalAnchors`; the
-// `go.leapTo` door lands as a follow does where it names a link, its
-// departure recording no step, for it names no end of the link, its runs read
-// against the passage it names by identity, where it names one, as a follow's
-// are — labelled where they are two or more (issue #158) — and as a move to
-// another arrangement of the same material does where it carries a passage,
-// its departure recording the carry), the bytes of a stretch of a held text
-// by identity (`model.identity`, the door's passage), what a landing says of
-// the passage it carried or followed — its state, its runs' labels and the
-// run it stands at, its offers, the mirror's descriptions of its items
-// (`go.landing`, `go.described`) — the step among its runs (`go.step`,
-// `go.stepTo`), and its line as it stands, its words, its acts, its rect and
-// the labels set for its other runs (`landingLine`; issues #153, #158), the handoff
-// (`barsOf`: the canvas's own bars for a document beside its mounted
-// article's blocks), the reading scene's runs and the ends it set level
-// (`scene.pairs`), a passage's line in one of its panes (`scene.at`) and its
-// bands and lines beside their passages' lines (`scene.ties`), the
-// continuations' marks the canvas drew (`residues`:
-// each one's count, newest member, members, the lines set on it and its
-// screen rect), the mid connections it drew between places, each with its
-// count and the count set on its stroke, each one bound for a place out of
-// view with its stub at the view's border (`connections`), the tails it drew
-// for links whose far document the plane draws nowhere (issue #132), each with
-// its links and the label set at its end (`tails`), each one leaving a
-// passage's line beside its links' marked words and where a stroke leaves
-// that line — the edge of the part of its block holding it, past the sign its
-// column's edge holds there (`tailAnchors`, `leaveEdge`), a document's fold
-// — its size, its step, its measure and its columns on the plane, each with
-// its edge — where a position stands in it and which position stands under a
-// point of the plane (`fold`, `centreOf`, `posAt`), the measure in force
-// (`measure`; issue #151's design decisions: the full measure wherever the
-// view holds it, the corner compacted first), a document's corner as placed
-// — the column it stands beside and its form (`corner`) — its label held
-// below the one line over its mounted article (`heldLabel`; issue #169), the
-// places the line names (`named`), and where a
-// reading view frames a column with its corner and its edge (`frameOf`), the
-// labels it set
-// (`labels`: each one's kind, place, lines — their text, size and screen
-// rect — the room its place gave it, and whether it stands held below the one
-// line, the connections' counts and the
-// trail's pip numbers among them) and the parts of labels it left out with
-// the rule that left each out (`labelsLeftOut`), S3's camera paths
-// (`runPath`) and the frame buffer —
-// each frame's count of documents drawn as bars or a label over their own
-// standing text, and yielded to text that does not stand, line by line, its
-// bars drawn at the readable em (`barred`), and what the text layer stood:
-// its new mounts, its articles in the mount band and their lines — what
-// stands of a document's article, part by part (`mountedLines`), the bridge
-// client's own call
-// log, the settle signal — the view's reads, the camera, a jump in the air or
-// reaching and the keys held for its landing (FP-25), chrome opening on its
-// reads (issue #186) — whether the camera
-// flies (`view.flying`), whether a jump is in the air (`go.inAir`) and the
-// version each document's box shows (`go.shownIn`; issue #154), the trail,
-// the line's and the overlay's text, a walk's moment raised as the shell's
-// event raises one and the folded moments the line's walks' segments are
-// (`moments`; issue #182), the
-// selection's span beside the platform's own and the way the platform's runs,
-// the copy door (the copy event
-// run against a stub clipboard, its flavors read back), the invalidation door
-// (`model.invalidate`: what a feed row naming a document does to the model
-// alone — its delivered state dropped, its reads asked again, reads alone,
-// told to no reader), the feed door (`model.feed`: a feed row taken as the
-// feed would hand it, M-PUMP's own `takeRow` — the model, the view and a
-// reading scene's panes keeping fresh from it, reads alone; issue #160), each
-// pane of the reading scene as it stands — the address it names and the one
-// it shows, its kind, its version and its corner's act, the blocks its
-// article was made from — and whether one is being set again (`scene.panes`,
-// `scene.updating`), a version read in a pane's place as its corner's act
-// reads one (`scene.read`, reads alone), the strings. The app
-// installs it with its loop's frame buffer. Nothing here is shipped chrome;
-// nothing posts anywhere.
-// THE ORACLES MEASURE WHAT A PERSON MEETS, never what the page set: the
+// G-HOOKS — the gate's read-only hooks (the structure record §3.2, §6.3;
+// S-22 (a): loaded by `import()` under `?gate=` alone). ENGINE-BOUND. The
+// app installs them on `window.__skep` with its loop's frame buffer
+// (`install`); nothing here is shipped chrome, and nothing posts anywhere.
+// What they expose, for the harness's cases: the model's held records, a
+// stretch of a held text by identity (`model.identity`), what a feed row
+// naming a document does to the model alone (`model.invalidate`) and a row
+// taken as the feed hands one (`model.feed`); the mounted articles' text and
+// what stands of each by line (`mountedLines`); the mirror's items; the
+// camera, the focus and its owner's state, the focus ring the canvas drew
+// (`view.ring`) and the bounds it is clamped to (`view.ringBounds`); the
+// registration drift of each mounted box (`driftSample`), the containment of
+// each article's rows and its corner (`overlapCheck`) and the visibility
+// oracle (`visible`), for the layout checks; the beams' anchors beside their
+// spans' own rects and the edge a stroke leaves at (`beamAnchors`), the
+// labels the beams set at their bundles' ends (`beamLabels`), the tails the
+// canvas drew and where each leaves a passage's line (`tails`,
+// `tailAnchors`), the arrival mark's outline beside its link's marked words
+// and its article (`arrivalAnchors`), and the handoff — the canvas's own
+// bars for a document beside its mounted article's blocks (`barsOf`); a
+// document's fold on the plane, where a position stands in it and which
+// position stands under a point (`fold`, `centreOf`, `posAt`), the measure in
+// force (`measure`), a document's corner as placed (`corner`), its label held
+// below the one line (`heldLabel`), the places the line names (`named`) and
+// where a reading view frames a column (`frameOf`); the continuations' marks
+// (`residues`), the mid connections with their counts and stubs
+// (`connections`), the labels the canvas set and the parts it left out
+// (`labels`, `labelsLeftOut`); the teleports and the landing — the version
+// each box shows (`go.shownIn`), the arrival, what a landing says and the
+// mirror's descriptions (`go.landing`, `go.described`), the step among its
+// runs (`go.step`, `go.stepTo`) and its line as it stands (`landingLine`) —
+// for the navigation checks; the camera paths (`runPath`) and the frame
+// buffer, each frame's counts (`Frame`), for the frame-cost checks; the
+// bridge client's call log, the pump's counts and the settle signal
+// (`settled`, `settle`); the trail, the one line's and the overlay's text, a
+// walk's moment raised and the folded moments (`moments`); the selection
+// beside the platform's own (`platformSelection`) and the copy door (`copy`);
+// the reveal's state and setters (`reveal`, `links`), each end `links.shown`
+// lists carrying its key and the withheld run it is drawn at, for the marks
+// and mirror checks; the reading scene — its pairs, a passage's line in a
+// pane (`scene.at`), its ties beside their passages' lines (`scene.ties`),
+// each pane as it stands and whether one is being set again (`scene.panes`,
+// `scene.updating`), a version read in a pane's place (`scene.read`); and the
+// strings.
+// The oracles measure what a person meets, never what the page set: the
 // containment check holds an article's content to the column that holds it,
 // to the clip the page draws and to its document's box, and each corner to
-// the room beside it, `visible`
-// says whether an element the DOM holds is shown (inside its clip and the
-// viewport), and a beam's endpoint and the arrival mark's outline are held to
-// the client rects of their link's marked words, read from the article apart
-// from the beams' and the canvas's own sets.
-// The doors that move the reveal chain redraw the links card where it stands
-// open, as the card's own acts do, so a shot after a door shows the state it
-// set. Each end `links.shown` lists carries its key (LK's `endKey`) and the
-// withheld run it is drawn at, where it lies wholly inside one (LK's
-// `Shown.run`; issue #202), so a case holds the article's marks and the
-// mirror's items to the ends LK draws. Carries: S1's `driftSample`, `overlapCheck`, `canvasSpanRect`/
-// `domSpanRects`; S3's §17 `runPath`/`summarize`/`settle` and its
-// `THRESHOLDS`; the wireframe's §15 diagnostics.
+// the room beside it; `visible` says whether an element the DOM holds is
+// shown, inside its clip and the viewport; a beam's endpoint and the
+// arrival mark's outline are held to the client rects of their link's marked
+// words, read from the article apart from the beams' and the canvas's own
+// sets. The doors that move the reveal chain redraw the links card where it
+// stands open, as the card's own acts do, so a shot after a door shows the
+// state it set.
+// Rules: FP-1, FP-2, FP-5, FP-17, FP-18.
 
 import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
@@ -140,7 +95,7 @@ import { pct, r2 } from '../util.js';
  * @property {number} docs
  * @property {number} both the documents whose label the canvas set while their article stands in the mount band, or that it drew a bar for on a line standing as text at the frame's end: text over its own bars
  * @property {number} neither the documents the canvas yielded a line, or the whole, of to text that does not stand at the frame's end: an empty place
- * @property {number} barred the bars the canvas drew for documents at the readable em or above: none, by issue #122's rule
+ * @property {number} barred the bars the canvas drew for documents at the readable em or above: none, by FP-12
  * @property {number} mounted the documents T-LAYER mounted afresh in the frame, a rebuild apart
  * @property {number} standing the articles standing in the mount band after it
  * @property {number} lines the lines standing as text after it, every article's
@@ -169,13 +124,13 @@ function clipOf(/** @type {Element} */ e) {
   return null;
 }
 
-/** S3's threshold set: a shot at each LOD threshold (the seats' material) */
+/** the LOD thresholds, a shot at each (S3) */
 export const THRESHOLDS = [
   ['far-clusters', 5, 'doc'], ['far-mid-lower', LOD_FAR_LO, 'doc'], ['far-mid-upper', LOD_FAR_HI, 'doc'], ['mid-extents', 90, 'doc'], ['mid-outline', 260, 'doc'],
   ['mount', MOUNT_EM, 'em'], ['mid-near-lower', LOD_TXT_LO, 'em'], ['mid-near-upper', LOD_TXT_HI, 'em'], ['near-readable', 14, 'em'],
 ];
 
-/** S3's `summarize` over a frame window */
+/** the frame figures over a window of frames (S3) */
 export function summarize(/** @type {Frame[]} */ rows) {
   const iv = rows.map((f) => f.interval), dr = rows.map((f) => f.drawMs);
   let over = 0, run = 0, worstRun = 0;
@@ -216,7 +171,7 @@ export function install(deps) {
    * article's own rect is its box by construction (the mount sets it from the
    * box); its content is not — every row it lays out (its head, each block's
    * part, the chrome after them: the scene-offer) is measured against the
-   * column that holds it (issue #15: the measure, its own length), against
+   * column that holds it (FP-12), against
    * the nearest clip and against its document's box on screen, the room the
    * plane gives it, which no clip's absence widens, and a row reaching past
    * any is named — by its block's first position, null for the head and the
@@ -308,10 +263,10 @@ export function install(deps) {
    * Where a stroke leaving a line of a mounted article leaves it, read from
    * the article apart from the beams' and the canvas's own sets: the right
    * edge of the part of the block holding the line — the column's, where the
-   * block is split across columns (issue #15) — or, where a sign the column's
+   * block is split across columns (FP-12) — or, where a sign the column's
    * edge holds beside that block stands level with the line, as far past the
-   * sign as the sign stands past the text (foundations §3.1: "the beams
-   * routed outside them"; issue #151); null where no part holds the line.
+   * sign as the sign stands past the text (foundations §3.1; FP-26); null
+   * where no part holds the line.
    * @param {HTMLElement} art
    * @param {Rect} line
    */
@@ -340,9 +295,8 @@ export function install(deps) {
     });
   }
   /**
-   * The tails leaving a passage's line (issue #132's design decision: "at
-   * reading scale it leaves the document's edge at its passage's line"), each
-   * beside an oracle read apart from the canvas's own set, as `beamAnchors`
+   * The tails leaving a passage's line, each beside an oracle read apart
+   * from the canvas's own set, as `beamAnchors`
    * reads a beam's: the client rects of its links' marked words in its
    * document's mounted article and where a stroke leaves the line it leaves at
    * (`leaveEdge`).
@@ -356,8 +310,8 @@ export function install(deps) {
   }
   /**
    * The arrival mark — a landing's, or a one-step move's light along the
-   * trail, placed where its text holds its passage now (issue #152) — its
-   * runs — and its outline as the last frame drew it
+   * trail, placed where its text holds its passage now — its runs — and its
+   * outline as the last frame drew it
    * (`outline`, the rects it stroked around, run by run), beside an oracle
    * read apart from the canvas's own set: the client rects of the followed
    * link's marked words in the landing's mounted article (every line they
@@ -379,12 +333,10 @@ export function install(deps) {
     return { ...a, outline: RENDER.stats.arrival.slice(), words, block: block ? rectOf(block) : null, article: rec ? rectOf(rec.el) : null };
   }
   /**
-   * The handoff (foundations §2.4: the bars become text and no line moves;
-   * S1 Q7; issue #15: mid scale greeks the columns the mount sets): the
-   * canvas's own bars for a document — the fold P-RENDER draws below the
-   * mount, at the camera as it stands — block by block within each run of
-   * lines it groups them in: each part of its article standing, where its
-   * article stands in that fold (issue #122: a document stands by line), else
+   * The handoff (foundations §2.4; S1 Q7; FP-12): the canvas's own bars for
+   * a document — the fold P-RENDER draws below the mount, at the camera as it
+   * stands — block by block within each run of lines it groups them in: each
+   * part of its article standing, where its article stands in that fold, else
    * each column — each group its column, the first line of its run (`part`),
    * its first line's top on screen, its height and its count of lines; beside
    * the mounted article's block parts as the person meets them: each one's
@@ -429,7 +381,7 @@ export function install(deps) {
     return { addr, line_px: r2(f.fs * LINE_H * s), columns: f.columns.length, head_lines: f.lines.filter((l) => l.kind === 'head').length, bars, text };
   }
   /**
-   * A document's fold as the plane sets it (issue #15): its size, its step,
+   * A document's fold as the plane sets it (FP-12): its size, its step,
    * its columns across, its room on the plane, its outline — its bounds, the
    * disjoint rects that make it up and its first row, where its label stands —
    * and each column — its text box in world units, its count of lines,
@@ -525,11 +477,9 @@ export function install(deps) {
   }
   /**
    * Settled: the view's needs met, nothing read for it, the camera still, no
-   * jump in the air or reaching (FP-25: an act's own reads escape the pump's
-   * count, and a jump made by a chord goes on once they answer), no chrome
-   * opening on its reads (O-HOST's `pending`: a card, or a face reading its
-   * clause before it shows — issue #186), and no key held for a landing or
-   * being made there.
+   * jump in the air or reaching (FP-25), no chrome opening on its reads
+   * (O-HOST's `pending`: a card, or a face reading its clause before it
+   * shows; FP-33), and no key held for a landing or being made there.
    */
   const settled = () => PUMP.inflightCount() === 0 && PUMP.pump() === 0 && !CAM.flying() && !GO.inAir() && !GO.isReaching() && !HOST.pending() && KEYS.holding() === 0;
   /** wait until the view's needs are met */
@@ -560,7 +510,7 @@ export function install(deps) {
     },
     mounted: (/** @type {string} */ addr) => { const rec = LAYER.mountedSet().get(addr); if (!rec) return null; const r = rec.el.getBoundingClientRect(); return { text: LAYER.mountedText(addr), rect: { x: r.left, y: r.top, w: r.width, h: r.height }, fs: rec.fs, lay: rec.lay }; },
     mountedAddrs: () => LAYER.mountedAddrs(),
-    /** what stands of a document's article (issue #122: a document stands by line): its parts, each a column and the run of its fold's lines [first, end) it holds, in their lines' order — the parts' boxes, by the same column and first line (`data-column`, `data-first`); null where no article of it stands */
+    /** what stands of a document's article (FP-12): its parts, each a column and the run of its fold's lines [first, end) it holds, in their lines' order — the parts' boxes, by the same column and first line (`data-column`, `data-first`); null where no article of it stands */
     mountedLines: (/** @type {string} */ addr) => LAYER.mountedLines(addr),
     spanRects: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number | null} */ width = null) => LAYER.spanRects(addr, pos, width),
     mirror: { item: (/** @type {number} */ i) => WALK.mirrorItem(i), size: () => WALK.mirrorSize(), index: () => WALK.mirrorIndex(), siblings: () => WALK.siblingsNow().map((n) => ({ kind: n.kind, addr: n.addr, pos: n.pos })) },
@@ -581,7 +531,7 @@ export function install(deps) {
     residues: () => RENDER.stats.residueMarks.slice(),
     /** the mid connections the last frame drew, each between two places — a document, or a mark's `key` — with its count and the count the label pass set on its stroke (`label`, null where it set none), and where one place stands out of the visible view its stub: the place it is bound for, the centre it leaves, its cut, its triangle, its hue and alpha */
     connections: () => RENDER.stats.connections.slice(),
-    /** the tails the last frame drew (issue #132): each one's site, its form — leaving a box or a mark, or a passage's line — the place and the documents it leaves, its links and their far documents, where its stroke leaves and ends, the line it leaves at, and the lines the label pass set at its end */
+    /** the tails the last frame drew: each one's site, its form — leaving a box or a mark, or a passage's line — the place and the documents it leaves, its links and their far documents, where its stroke leaves and ends, the line it leaves at, and the lines the label pass set at its end */
     tails: () => RENDER.stats.tails.map((tl) => ({ ...tl })),
     /** the labels the last frame set, in the order they were set — a connection's count under its two places, `a|b` sorted — the trail's pip numbers last */
     labels: () => RENDER.stats.labels.slice(),
@@ -596,7 +546,7 @@ export function install(deps) {
     trail: () => ({ entries: TRAIL.all(), cursor: TRAIL.cursorIndex(), numbered: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, pos: r.entry.pos, current: r.current })) }),
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay() }),
     overlay: () => ({ id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text() }),
-    /** a walk's moment raised as the shell's `moment` event raises one (O-FACES' `moment`; issue #182), and the folded moments the one line's walks' segments are, each its walk and its words (`folded`) */
+    /** a walk's moment raised as the shell's `moment` event raises one (O-FACES' `moment`; FP-28), and the folded moments the one line's walks' segments are, each its walk and its words (`folded`) */
     moments: { raise: (/** @type {import('../bridge/shapes').MomentEvent} */ m) => { FACES.moment(m); return true; }, folded: () => FACES.folded() },
     selection: () => SEL.selected(),
     /** the platform's own selection: whether it is collapsed, whether it runs backward (its focus point before its anchor, read from the platform, never from the page), and the span it covers in a mounted article (null outside one) */
@@ -637,9 +587,9 @@ export function install(deps) {
     esc: () => KEYS.esc(),
     mounts: () => LAYER.mounts(),
     beams: () => BM.count(),
-    /** the teleports; `leapTo`'s third argument names the runs of the span landed on — every run a far end projects to, `pos` at one of them — the link followed to it and the passage they hold by identity, the landing then marked and its runs labelled as a follow's are, or the passage the LEAP carries, re-projected and marked at the landing; `shownIn` the version a document's box shows (issue #154); `step` and `stepTo` the step among an arrival's runs (issue #158) */
+    /** the teleports; `leapTo`'s third argument names the runs of the span landed on — every run a far end projects to, `pos` at one of them — the link followed to it and the passage they hold by identity, the landing then marked and its runs labelled as a follow's are, or the passage the LEAP carries, re-projected and marked at the landing; `shownIn` the version a document's box shows (FP-22); `step` and `stepTo` the step among an arrival's runs (FP-21) */
     go: { leapTo: (/** @type {string} */ a, /** @type {number | null} */ pos, /** @type {{runs?: import('../nav/go.js').Run[] | null, link?: string | null, passage?: import('../model/records.js').ISpan | null, carry?: import('../nav/go.js').Carry | null}} */ o = {}) => GO.leapTo(a, { pos: pos ?? null, runs: o.runs ?? null, link: o.link ?? null, passage: o.passage ?? null, carry: o.carry ?? null, how: 'leap' }).then(() => true), follow: (/** @type {string} */ addr, /** @type {string} */ link) => { const s = LK.shown(addr).find((x) => x.link.addr === link); return s ? GO.follow(s).then(() => true) : Promise.resolve(false); }, home: () => GO.home(), wholeBoard: () => GO.wholeBoard(), back: () => GO.back(), forward: () => GO.forward(), toTrailEntry: (/** @type {number} */ n) => GO.toTrailEntry(n), shownIn: (/** @type {string} */ a) => GO.shownIn(a), inAir: () => GO.inAir(), arrival: () => GO.arrivalMark(), landing: () => GO.landing(), described: () => GO.described(), landingAct: (/** @type {'beside' | 'version' | 'again' | 'next' | 'previous'} */ which) => { GO.landingAct(which); return true; }, steps: () => GO.steps(), step: (/** @type {1 | -1} */ dir) => GO.step(dir), stepTo: (/** @type {number} */ i) => GO.stepTo(i), endArrival: () => GO.endArrival() },
-    /** a landing's line as it stands (issue #153): its words, its acts, its rect on screen, whether the scene covers it, and the labels set for its other runs (issue #158); null where none stands */
+    /** a landing's line as it stands (FP-21): its words, its acts, its rect on screen, whether the scene covers it, and the labels set for its other runs; null where none stands */
     landingLine: () => LANDING.shown(),
     leap: { open: () => LEAP.open(), close: () => LEAP.close(), rows: () => LEAP.currentRows(), isOpen: () => LEAP.isOpen() },
     cards: {
@@ -655,7 +605,7 @@ export function install(deps) {
       /** its runs of shared identity, contiguous pairs merged, and the two ends it set level */
       pairs: () => SCENE.pairs(),
       at: sceneAt, ties: sceneTies,
-      /** each pane as it stands (issue #160): the address it was opened on, the record its text was made from, the address its acts name and the one it shows, its kind, its version, the chain's count, its corner's act, what its corner says it lacks, and the blocks its article was made from */
+      /** each pane as it stands (FP-23): the address it was opened on, the record its text was made from, the address its acts name and the one it shows, its kind, its version, the chain's count, its corner's act, what its corner says it lacks, and the blocks its article was made from */
       panes: () => SCENE.panes(),
       /** is a pane being set again: an act on the panes waits for it */
       updating: () => SCENE.updating(),
@@ -669,13 +619,13 @@ export function install(deps) {
     scaleFor: (/** @type {string} */ addr, /** @type {'em' | 'doc'} */ kind, /** @type {number} */ v) => (kind === 'doc' ? v / docBox(addr).w : v / LAYER.foldOf(REC.doc(addr)).fs),
     boxOf: (/** @type {string} */ addr) => docBox(addr), accountCell: (/** @type {string} */ a) => accountCell(a), boardCell: (/** @type {string} */ b) => boardCell(b), boardLabelCell: (/** @type {string} */ b) => boardLabelCell(b), depthOf: (/** @type {string} */ a) => depthOfDoc(a),
     constants: { DOC_W, STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, EDGE, EDGE_GAP, READING_PX: CAM.READING_PX, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME },
-    /** the measure in force (P-CAM's fit; issue #151's design decision): the characters every document's line is set at, and whether a column at the reading size stands beside its corner compact */
+    /** the measure in force (P-CAM's fit; FP-26): the characters every document's line is set at, and whether a column at the reading size stands beside its corner compact */
     measure: () => ({ ...CAM.fit() }),
     /** a document's corner as T-LAYER placed it: the column it stands beside and whether it stands compact; null where none stands */
     corner: (/** @type {string} */ addr) => LAYER.cornerAt(addr),
-    /** a document's label T-LAYER held below the one line over its mounted article (issue #169): its parts' words, its rect on screen and whether it takes the pointer; null where none stands */
+    /** a document's label T-LAYER held below the one line over its mounted article (FP-26): its parts' words, its rect on screen and whether it takes the pointer; null where none stands */
     heldLabel: (/** @type {string} */ addr) => LAYER.heldOf(addr),
-    /** the places the one line names (L-LINE's `named`; issue #169's "Named once"): its board, its account and its document by its box */
+    /** the places the one line names (L-LINE's `named`; FP-26): its board, its account and its document by its box */
     named: () => LINE.named(),
     /** where a reading view of a document at a position centres, framing the column with its corner and its edge (T-LAYER's `frameOf`) */
     frameOf: (/** @type {string} */ addr, /** @type {number | null} */ pos = null) => LAYER.frameOf(addr, pos),

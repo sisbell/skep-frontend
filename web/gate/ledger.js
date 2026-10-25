@@ -1,15 +1,16 @@
-// G-LEDGER — the write ledger (the structure record §3.2 "G-LEDGER"; W §14,
-// S3 §14 — "the no-write proof"; S-22 (a): loaded by `import()` under
-// `?gate=` alone, never in the installed app). ENGINE-BOUND.
-// Every persistence surface a page has is wrapped and counted at load —
-// before the bridge client's first call, so the `fetch` count equals the
-// client's own call log: `localStorage`/`sessionStorage` (`Storage`),
-// `document.cookie`, `indexedDB.open`, `fetch`, `XMLHttpRequest.open`,
-// `navigator.sendBeacon`, `history.pushState`/`replaceState`, and the
-// `EventSource` constructor as its own surface (one entry, never a call).
-// The camera never writes (law 1; FP-7): after a camera-only window every
-// surface but `fetch` and `eventsource` reads 0, and `fetch` equals the
-// bridge client's calls. Carries: the wireframe's §14 `writeLedger`.
+// G-LEDGER — the write ledger (the structure record §3.2; W §14; S3 §14;
+// S-22 (a): loaded by `import()` under `?gate=` alone, never in the installed
+// app). ENGINE-BOUND. Every persistence surface a page has is wrapped and
+// counted at load — before the bridge client's first call, so the `fetch`
+// count equals the client's own call log: `localStorage`/`sessionStorage`
+// (`Storage`), `document.cookie`, `indexedDB.open`, `fetch`,
+// `XMLHttpRequest.open`, `navigator.sendBeacon`,
+// `history.pushState`/`replaceState`, and the `EventSource` constructor as
+// its own surface (one entry, never a call). For the no-write check (law 1;
+// FP-7): after a camera-only window every surface but `fetch` and
+// `eventsource` reads 0, and `fetch` equals the bridge client's calls; the
+// driver reads the counts off `window.__skepLedger` (`snapshot`).
+// Rules: FP-1, FP-2, FP-5, FP-7, FP-17.
 
 /** @type {Record<string, number>} */
 export const ledger = { localStorage: 0, sessionStorage: 0, cookie: 0, indexedDB: 0, fetch: 0, xhr: 0, beacon: 0, history: 0, eventsource: 0 };

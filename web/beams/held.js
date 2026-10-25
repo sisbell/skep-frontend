@@ -1,59 +1,47 @@
-// BM-HELD — WHAT A TEXT HOLDS OF A PASSAGE, and the words that say it
-// (issue #153's design decision: "Mark what's held and say the rest in a
-// line"; issue #158's: each run labelled). Layer 2, beside BM in
-// `web/beams/`. PURE: no DOM and no state of its own; a far end's state read
-// from what M-REC holds.
+// BM-HELD — what a text holds of a passage, and the words that say it
+// (FP-21). Layer 2, beside BM. PURE: no DOM and no state of its own; a far
+// end's state is read from what M-REC holds.
 // A carried or a followed passage lands in one of four states, read here
 // from the stretches of the landing's text that hold it, each named by where
-// its stretch of the passage lies in the passage (`heldOf`): ALL, one
-// stretch holding every position of it — the outline alone says it; PIECES,
+// its stretch of the passage lies in the passage (`heldOf`): all, one
+// stretch holding every position of it — the outline alone says it; pieces,
 // the stretches together holding every position, none of them all of it;
-// PART, the stretches together holding less; NONE, no stretch — the dead
+// part, the stretches together holding less; none, no stretch — the dead
 // end's face says it (foundations §2.3). A passage named by identity — a
 // followed far end, its slot's stored span — is read through the identity of
 // the bytes of each run its text holds it in (`piecesOf`), each run cut where
 // its bytes break the passage's order into the stretches an arrival
-// outlines (`stretchesOf`). Where no answer
-// tells — a read the board refused for any reason but its size, which is
-// asked again in parts first (M-PUMP's `compareParts`, `imageParts`), or one
-// still refused past SPLIT_READS parts — the state is COULDN'T TELL, its
+// outlines (`stretchesOf`). Where no answer told — a read refused by any
+// name but a size's, or still refused for its size once asked in parts
+// (M-PUMP's `compareParts`, `imageParts`) — the state is couldn't tell, its
 // reason keyed on the refusal's name and kind, never its token (`whyOf`),
 // "try again" offered only where a retry can change the answer (`retries`).
-// THE RUNS' LABELS (FP-21: "in several runs, each run labelled"; issue
-// #158's design decision), where two stretches of the text or more hold the
-// passage (`piecesIn`): stretches of different material are PIECES, each
-// numbered in the passage's own order, "piece ⟨k⟩ of ⟨n⟩", and none numbered
-// where every stretch holds the same; a stretch holding the material of one
-// before it in the text says "again", and the first of such stretches "again
-// later"; the run the landing stands at adds how much of the passage the
-// runs hold — "all of the passage", or "only part of the passage" and, where
-// the text shows withheld text, that the rest may be under it — and "in
-// another order" where the text holds the pieces out of the passage's own
-// (`labelOf`); labels that would stack merge into one naming the pieces they
-// hold, "pieces 1–4 of 9" (`mergedLabel`). "Part" names an amount alone, and
-// no label counts "places". A step takes the runs in the passage's order,
-// each repeat after the first of its material, wrapping (`stepFrom`); the
-// landing stands at the first (`Pieces.order`).
-// THE LINE (`lineOf`), for part, pieces and couldn't tell, names the passage
-// by what it was to the reader — "what you selected", "the text you were
-// reading", a followed link's "its passage" — and the text by F.floating's
-// two forms, "version ⟨k⟩" at a member, "⟨D⟩'s current text" at a bare
-// address (`whereOf`); it never says "missing", "removed", "deleted" or
-// "compare", and where the landing shows withheld text a part's line says
-// the rest may be under it. A landing in one run says it so (N-GO's
-// `landing`, O-LAND's line, N-WALK's description), counting no runs; a
-// landing in several says its runs' labels in its place, the label of the
-// run it stands at its line. Every surface that knows the
-// state before departure says it, each by this one rule (the decision: "Where a read
-// knows the state before departure — a drawn link's far end, the version
-// list — say it there too"): a versions row (O-VERSIONS, through N-GO's
+// The runs' labels (FP-21), where two stretches of the text or more hold the
+// passage (`piecesIn`): stretches of different material are pieces, each
+// numbered in the passage's own order, and none numbered where every stretch
+// holds the same; a stretch holding the material of one before it in the
+// text says "again", and the first of such stretches "again later"; the run
+// the landing stands at adds how much of the passage the runs hold — all of
+// it, or only part and, where the text shows withheld text, that the rest
+// may be under it — and that the text holds the pieces out of the passage's
+// order where it does (`labelOf`); labels that would stack merge into one
+// naming the pieces they hold (`mergedLabel`). A step takes the runs in the
+// passage's order, each repeat after the first of its material, wrapping
+// (`stepFrom`); the landing stands at the first (`Pieces.order`).
+// The line (`lineOf`), for part, pieces and couldn't tell, names the passage
+// by what it was to the reader — the selection, the text they were reading,
+// a followed link's passage — and the text by F.floating's two forms, a
+// member or a bare address's current text (`whereOf`); where the landing
+// shows withheld text a part's line says the rest may be under it. A landing
+// in one run says it so (N-GO's `landing`), counting no runs; a landing in
+// several says its runs' labels in its place, the label of the run it stands
+// at its line. Every surface that knows the state before departure says it
+// by this one rule (FP-21): a versions row (O-VERSIONS, through N-GO's
 // `heldIn`), and a drawn link's far end (`farHolds`, `farSays`), read from
 // the end LK draws and what M-REC holds of its far document — its
 // projection, and the bytes of each run it names through that document's
-// held image — which its stub, its symbol's title, its mirror item and its
-// card say, the line counting the runs that hold it there (issue #242 holds
-// those words).
-// Rules: FP-1, FP-2, FP-21 (the one reading of what a landing's text holds).
+// held image — the line counting the runs that hold it there.
+// Rules: FP-1, FP-2, FP-21, FP-22.
 
 import * as REC from '../model/records.js';
 import { lostSession } from '../bridge/port.js';
@@ -281,9 +269,8 @@ function rangesOf(/** @type {number[]} */ ns) {
 }
 
 /**
- * The label standing for runs whose labels would stack (issue #158's design
- * decision: "Labels that would stack merge into one"): the pieces they hold —
- * "pieces 1–4 of 9", consecutive numbers a range — then "again" where any of
+ * The label standing for runs whose labels would stack: the pieces they hold
+ * — "pieces 1–4 of 9", consecutive numbers a range — then "again" where any of
  * them holds the material of a run before it, else "again later" where one is
  * the first of such runs; where the landing stands at one of them, how much of
  * the passage the runs hold after. One run's own label where they are one.
@@ -307,10 +294,9 @@ export function mergedLabel(p, members, current = -1) {
 }
 
 /**
- * The run a step takes the landing to from run `i` (FP-21: "Stepping the
- * pieces follows find's concept, in passage order, wrapping"): the next in
- * the step's order, or the one before it, round to the first from the last
- * and to the last from the first.
+ * The run a step takes the landing to from run `i` (FP-21): the next in the
+ * step's order, or the one before it, round to the first from the last and
+ * to the last from the first.
  * @param {Pieces} p
  * @param {number} i the run the landing stands at, an index into `p.runs`
  * @param {1 | -1} dir
@@ -331,8 +317,7 @@ const BUSY = new Set(['busy', 'scan_busy', 'history_busy']);
  * read still too large in parts, the passage's range no longer where it was,
  * a text withheld from the reader, no such link — every other refusal the
  * board's silence; where none was met, or a session the shell no longer held
- * was (B-PORT's `lostSession` — a read M-PUMP asks again under the session it
- * gets back, never the person's sign-out), the text that could not be read.
+ * was (B-PORT's `lostSession`; FP-28), the text that could not be read.
  * @param {Met | null} r
  * @returns {string}
  */
@@ -348,10 +333,9 @@ export function whyOf(r) {
 }
 
 /**
- * Can a retry change the answer (the decision's "'try again' where that
- * helps")? The board out, the session lost, the board busy, the text that
- * could not be read: each read again may answer. Every budget and verdict of
- * the board's is permanent (wire.md §Errors: "no retry shrinks the request").
+ * Can a retry change the answer? The board out, the session lost, the board
+ * busy, the text that could not be read: each read again may answer. Every
+ * budget and verdict of the board's is permanent (wire.md §Errors).
  * @param {Met | null} r
  * @returns {boolean}
  */
@@ -398,7 +382,7 @@ export function unknownOf(r, subject, addr) {
  * where the line counts them; couldn't tell, "couldn't tell whether ⟨where⟩
  * holds ⟨subject⟩: ⟨reason⟩".
  * @param {Said} s
- * @param {boolean} [counts] the line counts the runs holding the passage — a drawn link's far end's, before departure; a landing's never, its outline showing them (FP-21: "nothing counts 'places'")
+ * @param {boolean} [counts] the line counts the runs holding the passage — a drawn link's far end's, before departure; a landing's never, its outline showing them (FP-21)
  * @returns {string}
  */
 export function lineOf(s, counts = true) {
@@ -412,7 +396,7 @@ export function lineOf(s, counts = true) {
 /**
  * What a drawn link's far end's text holds of its passage, before departure
  * (see the head), by the rule its landing reads — the text of the version its
- * far box shows (LK's `farAt`; issue #154's design decision): its projection
+ * far box shows (LK's `farAt`; FP-22): its projection
  * (LK's `farRuns`, M-REC's held answer), each run's bytes read by identity
  * through that version's held image (M-REC's `identityOf`) against the span
  * the slot stores (`farEnd`) — and where that image does not cover every
