@@ -42,9 +42,12 @@
 // one bundle a destination (§2.1), each bundle marked at each end with what
 // its beams' marks share there (LK's `mergedMark`): neutral only where its
 // links take different colours at that end, a single link's never. Its
-// label (`labelText`) is the far document's address, in the identifier's
-// face, its index label cut to 32 characters, the document's words in the
-// reading face, its count where it holds two beams or more, and, where
+// label (`labelText`) is the far document's address, whole, in the
+// identifier's face, its far end's words as its tail names them (LK's
+// `farFaced`) cut on a word to WORDS_CH characters, the document's words in
+// the reading face — the frame's labels whose words read alike once cut cut
+// again to show where they differ (`bundleLabels`) — its count where it holds
+// two beams or more, and, where
 // every beam it holds says one state of what its far end's text holds
 // (BM-HELD's `farSays`), those words, so the stub says it before anyone
 // follows it; it is set above the end, or below it where above would reach
@@ -53,7 +56,8 @@
 // stroked; their alpha is 24 over the beams built, held between 0.25 and
 // 0.85, times each mark's value; a stroke is 1.6 px times its mark's weight;
 // labels are set at LABEL_PX, each run in its face (`labelRuns`; P-LABEL's
-// `drawRun`), the client's figures tabular.
+// `drawRun`), the client's figures tabular; a far end's words 32 characters
+// at the most.
 // The geometry it lays beams out from (`pageGeometry`) is T-LAYER's rects
 // of the mounted articles — `spanRects`, else `lineBoxes` where a line
 // stands in no part — the camera's projection of the boxes and the visible
@@ -66,8 +70,9 @@ import * as LINE from '../line/line.js';
 import { sx, sy, viewport, visibleView, edgeStub, stubTriangle } from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 import { COL } from '../plane/register.js';
-import { drawRun, runWidth, face } from '../plane/labels.js';
-import { doc, blockAt, place } from '../model/records.js';
+import { drawRun, runWidth, face, inFace, plain, runsOf, cutWords, apartTexts, LEAD_WORDS } from '../plane/labels.js';
+import { doc, blockAt } from '../model/records.js';
+import { CLIENT_CLOSE } from '../strings.js';
 import { farSays } from './held.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -445,10 +450,12 @@ function shared(/** @type {[{s: Shown}, ...Array<{s: Shown}>]} */ members, /** @
 }
 
 /**
- * A bundle's label (§2.1): its far document's address, its label from the
- * index cut to 32 characters, its count where it holds two beams or more —
- * and, where every beam it holds says the same of what its far end's text
- * holds (BM-HELD's `farSays`), those words: "its passage is not in ⟨D⟩'s current
+ * A bundle's label (§2.1): its far document's address, whole, then its far
+ * end's words as its tail would name them (LK's `farFaced`: its first line,
+ * or the client's words in its place, bracketed) cut on a word to WORDS_CH
+ * characters (P-LABEL's `cutWords`), its count where it holds two beams or
+ * more — and, where every beam it holds says the same of what its far end's
+ * text holds (BM-HELD's `farSays`), those words: "its passage is not in ⟨D⟩'s current
  * text" where every one floats, BM-HELD's line where every one's text holds
  * only part of it, or all of it in pieces, or the board would not tell
  * (FP-21), the stub saying so before anyone follows it (foundations §2.3;
@@ -460,22 +467,58 @@ function shared(/** @type {[{s: Shown}, ...Array<{s: Shown}>]} */ members, /** @
  */
 export function labelText(b) { return labelRuns(b).map((r) => r.text).join(''); }
 
+/** the characters of a far end's words a bundle's label sets at the most, cut on a word */
+export const WORDS_CH = 32;
+
+/**
+ * A bundle's far end's words, whole and as its label sets them (see
+ * `labelText`): each stretch marked in its face (P-LABEL's `inFace`), cut on
+ * a word to WORDS_CH characters, LEAD_WORDS of them kept at the least; none
+ * set where they hold none or not even that many fit.
+ * @param {Bundle<{s: Shown}>} b
+ * @returns {{full: string, shown: string | null, close: string, fits: (s: string) => boolean}}
+ */
+function farOf(b) {
+  const runs = LK.farFaced(b.members[0].s), last = runs[runs.length - 1];
+  const full = runs.map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('');
+  const close = last && last.face === 'client' && last.text === CLIENT_CLOSE ? CLIENT_CLOSE : '';
+  const fits = (/** @type {string} */ s) => [...plain(s)].length <= WORDS_CH;
+  return { full, close, fits, shown: !full ? null : fits(full) ? full : cutWords(full, fits, close, LEAD_WORDS) };
+}
+
 /**
  * A bundle's label (`labelText`) as runs in their faces (P-REG's FACE): the
- * far document's address the identifier's, its index label — its words — the
- * reading face's, the rest the client's.
+ * far document's address the identifier's, its words in theirs — the
+ * document's words the reading face's — the rest the client's.
  * @param {Bundle<{s: Shown}>} b
+ * @param {string | null} [words] its far end's words as set, where the frame's labels set them apart (`bundleLabels`); absent, its own cut (`farOf`)
  * @returns {import('../plane/labels.js').Run[]}
  */
-export function labelRuns(b) {
-  const p = place(b.far);
+export function labelRuns(b, words = farOf(b).shown) {
   const says = b.members.map((m) => farSays(m.s));
   const rest = (b.members.length > 1 ? ` · ${b.members.length}` : '') + (says[0] && says.every((w) => w === says[0]) ? ' · ' + says[0] : '');
   /** @type {import('../plane/labels.js').Run[]} */
   const out = [{ text: b.far, face: 'ident' }];
-  if (p && p.label) out.push({ text: ' · ', face: 'client' }, { text: p.label.slice(0, 32), face: 'reading' });
+  if (words) out.push({ text: ' · ', face: 'client' }, ...runsOf(words, 'client'));
   if (rest) out.push({ text: rest, face: 'client' });
   return out;
+}
+
+/**
+ * The frame's bundles' labels (`labelRuns`), their far ends' words that read
+ * alike once cut cut again to show where they differ (P-LABEL's
+ * `apartTexts`), each within WORDS_CH characters.
+ * @param {Array<Bundle<{s: Shown}>>} bs
+ * @returns {import('../plane/labels.js').Run[][]} in their order
+ */
+export function bundleLabels(bs) {
+  const far = bs.map(farOf);
+  const cut = far.map((f, i) => ({ f, i })).filter(({ f }) => f.shown && f.shown !== f.full);
+  const now = apartTexts(cut.map(({ f }) => ({ shown: /** @type {string} */ (f.shown), full: f.full, close: f.close, fits: f.fits })));
+  /** @type {Array<string | null>} */
+  const words = far.map((f) => f.shown);
+  cut.forEach(({ i }, k) => { words[i] = now[k]; });
+  return bs.map((b, i) => labelRuns(b, words[i]));
 }
 
 /** the visible view now: the viewport below the one line */
@@ -536,7 +579,8 @@ export function draw() {
   const n = count();
   if (!n) return;
   const alpha = Math.max(0.25, Math.min(0.85, 24 / n));
-  for (const b of set) {
+  const labels = bundleLabels(set);
+  for (const [k, b] of set.entries()) {
     for (const bm of b.members.slice(0, 20)) {
       const { mark, farMark } = bm.s;
       ctx.globalAlpha = alpha * mark.value; ctx.lineWidth = 1.6 * mark.weight;
@@ -548,7 +592,7 @@ export function draw() {
     }
     // the bundle's label at its end
     const first = b.members[0];
-    const runs = labelRuns(b), text = runs.map((r) => r.text).join('');
+    const runs = labels[k], text = runs.map((r) => r.text).join('');
     ctx.globalAlpha = 1; ctx.fillStyle = COL.text;
     // its width run by run, and the tallest of its faces above and below its baseline
     let w = 0, ascent = 0, descent = 0;

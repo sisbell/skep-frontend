@@ -150,7 +150,7 @@ test('a change of the page\'s class computes the rows standing in the box again 
     REC.takeRefused(DRAFT.doc, 'withheld');
     REC.takeIndex(listing([EDITION]));
     LEAP.takeIndex();
-    assert.equal(trailRow(), t('F.corner.withheld', { owner: '1.0.1' }), 'the guest\'s read withholds it: the cover\'s words');
+    assert.equal(trailRow(), t('L.client-words', { words: t('F.corner.withheld', { owner: '1.0.1' }) }), 'the guest\'s read withholds it: the cover\'s words, bracketed');
     LEAP.close();
     // typed in
     signedIn();

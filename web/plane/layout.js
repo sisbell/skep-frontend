@@ -71,7 +71,8 @@
 // character the face sets wider or narrower than its average are counted one
 // advance each, and T-LAYER's measure of the lines as rendered takes the
 // place of these wherever the platform sets the article.
-// Positions map to places and back (`placeOf`, `posAt`), a view reads as the
+// Positions map to places and back (`placeOf`, `posAt`), a document's first
+// line is placed where its label sets it (`leadOf`), a view reads as the
 // positions it shows and the ends it has run past (`windowIn`), the paging key
 // continues at the next column's top (`pageTarget`), and a document re-set in
 // view hands the place its passage stands at now to the camera (`holdOf`).
@@ -951,6 +952,28 @@ export function placeOf(f, pos) {
   if (at < 0) { const c = f.columns[0]; return { column: 0, line: null, x: c.x, y: c.y, w: c.w, h: lh }; }
   const ci = Math.max(0, columnOfLine(f, at)), c = f.columns[ci], l = f.lines[at];
   return { column: ci, line: at, x: c.x, y: c.y + (l.top - c.top) * f.fs, w: c.w, h: l.h * f.fs };
+}
+
+/**
+ * Where a document's first line stands in a fold (see the head), in world
+ * units relative to the room: the first line past its head — its first
+ * block's first line — from where its ink begins; else, where the fold holds
+ * no line for its first position, that position's estimated line from a
+ * typed line's indent, as a document's first typed line opens. A document's
+ * label sets its first line there, so its text mounting moves no word of it
+ * (FP-26).
+ * @param {Fold} f
+ * @returns {{column: number, x: number, y: number, h: number}} its column, where its ink begins, its top and its height
+ */
+export function leadOf(f) {
+  const unheld = f.unheld.some((u) => u.from <= 1 && 1 < u.to);
+  const i = unheld ? -1 : f.lines.findIndex((l) => l.kind !== 'head');
+  if (i < 0) {
+    const p = placeOf(f, 1), c = f.columns[p.column];
+    return { column: p.column, x: c.x + MEASURE.indent * f.fs, y: p.y, h: p.h };
+  }
+  const ci = Math.max(0, columnOfLine(f, i)), c = f.columns[ci], l = f.lines[i];
+  return { column: ci, x: c.x + l.ink * CHAR_W * f.fs, y: c.y + (l.top - c.top) * f.fs, h: l.h * f.fs };
 }
 
 /**

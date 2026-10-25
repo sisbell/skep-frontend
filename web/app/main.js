@@ -34,9 +34,12 @@
 // What a module reads of an owner above it is handed in once as the page
 // boots (FP-10, FP-11): T-LAYER's readers (the selection, the walk's focus,
 // the line's bottom, the trail's current entry, the version each box shows
-// — N-GO's `shownIn`, FP-22 — and the document the line names — L-LINE's
-// `named`, FP-26); LK's (the links lit, P-RENDER's `drawsDoc`, T-LAYER's
-// owner rule, `shownIn`); N-WALK's (Back's light, what a landing says,
+// — N-GO's `shownIn`, FP-22 — the document the line names — L-LINE's
+// `named`, FP-26 — and whether an account is named in view: the line names
+// it, or the canvas's last frame set its label, P-RENDER's `regionNamed`);
+// LK's (the links lit, P-RENDER's `drawsDoc`, T-LAYER's
+// owner rule, `shownIn`, and a far document's first line, T-LAYER's
+// `firstOfFar` by T-ARTICLE's one rule); N-WALK's (Back's light, what a landing says,
 // `shownIn`, why no board is held); L-LINE's acts and readers (the LEAP box,
 // Back, Forward, the trail's list, sign-in, the board list's retry, a
 // jump's face out of view — O-HOST's `aside`, FP-25 — the runs of an arrival
@@ -259,8 +262,8 @@ async function boot() {
   SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
   LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey) });
-  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc });
-  LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn });
+  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a) });
+  LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords() });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
   window.addEventListener('resize', resize); resize();

@@ -122,6 +122,14 @@
 // item's length, a record's own plain contents (`recordContents`) — never
 // what the plane renders for whoever is looking, so a paste never joins text
 // across an item.
+// The first-line rule (`firstLineOf`): the one rule a document's first line
+// is read by wherever the page names the document — its label on the plane,
+// a far end's words, a bundle's, a list row's, the one line's, the ARIA
+// mirror's — the version's own text from its first position where the model
+// holds it, else the index's first line at its bare address; and words the
+// client supplies in its place — a record's rendering, a withheld box's
+// statement — bracketed (ST's `bracketed`), so none reads as the document's
+// own.
 // Figures: the device label's slot is LABEL_CH (24) figures of the client's
 // face wide, the fingerprint cue's the cue's own CUE_CH characters of the
 // identifier's.
@@ -129,9 +137,9 @@
 // FP-30, FP-33, FP-34.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
-import { t, tHTML, plural } from '../strings.js';
+import { t, tHTML, plural, bracketed, withheldLine } from '../strings.js';
 import { textOf, recordValue } from '../model/records.js';
-import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType } from '../model/address.js';
+import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType, isAddress } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
 import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm, breakBetween, isSpace, gapOf, layoutOf, heightOf, wrap } from '../plane/layout.js';
 
@@ -617,6 +625,42 @@ export function recordContents(b) {
     if (fingerprint) return [fingerprint];
     return label ? [label] : [];
   });
+}
+
+/** the client's words as stretches in their faces: each address M-ADDR reads in them the identifier's, save one a slash leads, the rest the client's (ST's `addressedHTML`, as stretches) */
+const addressed = (/** @type {string} */ text) => /** @type {Faced[]} */ (text.split(/(\d+(?:\.\d+)+)/).map((x, i, all) => ({ text: x, face: i % 2 && isAddress(x) && !all[i - 1].endsWith('/') ? 'ident' : 'client' })).filter((r) => r.text));
+
+/**
+ * A document's first line, the one rule every surface naming a document
+ * reads — its label on the plane and held over its text, a far end's words,
+ * a bundle's, a list row's, the one line's, the ARIA mirror's — as stretches
+ * of words in their faces: withheld from the reader, its withheld box's words,
+ * "withheld · ⟨owner⟩", bracketed (ST's `withheldLine`), the owner the identifier's;
+ * else, along the text the model holds from its first position — its typed
+ * lines of white space alone and its items that are no record passed over, up
+ * to the first position it does not hold — a record's words by the record
+ * rule (`recordOf`), bracketed, or the first typed line's characters as
+ * typed, the reading face's; else, at its bare address, the index's first
+ * line, the reading face's; none where none of these is known.
+ * @param {Doc | null} d the version a box shows, or a link's far document; null where the model holds no record of it
+ * @param {{label: string | null, reader: Reader, owner: string}} at the index's first line at its bare address, null where it lists none or the address is a version's; who reads; its owner, by the one owner rule
+ * @returns {Faced[]}
+ */
+export function firstLineOf(d, at) {
+  if (d && d.refused === 'withheld') return withheldLine(at.owner);
+  let end = 1;
+  for (const b of d ? d.blocks : []) {
+    if (b.pos !== end) break;
+    end = b.pos + b.width;
+    if (b.kind === 'para') {
+      const line = b.text.trim().split('\n')[0];
+      if (line) return [{ text: line, face: 'reading' }];
+      continue;
+    }
+    if (d && itemOf(b) === 'record') return bracketed(addressed(recordOf(b, d, at.reader).words));
+  }
+  const label = at.label ? at.label.trim() : '';
+  return label ? [{ text: label, face: 'reading' }] : [];
 }
 
 /**

@@ -22,6 +22,7 @@ import * as REC from '../model/records.js';
 import * as LK from './links.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
 import { t } from '../strings.js';
+import { firstLineOf } from '../text/article.js';
 
 const CITE = '1.1.0.1.0.1.0.3.13', ENROLL = '1.1.0.1.0.1.0.3.1', CLAIM = '1.1.0.1.0.1.0.3.3', ENDORSE = '1.1.0.1.0.1.0.3.42';
 const D = '1.0.1.0.3', OTHER_HOME = '1.0.2.0.5';
@@ -444,7 +445,7 @@ test('the tails: one per place a drawn document stands at, holding once each lin
   assert.deepEqual(LK.tails([D, E], mark).map((x) => [x.at, x.docs, x.ends.map((e) => e.link.addr)]), [['1.0.1:1', [D, E], [D + '.0.2.1', E + '.0.2.1']]], 'one tail at the mark, its documents and their links');
 });
 
-test('a far end is named by its address, then what the page holds of its document: nothing answered, the address alone; readable, its first line; withheld, "withheld · ⟨owner⟩" by the owner rule handed in; the board saying nothing of it, "nothing this board will say about this address" — "no document here yet" in the reader\'s own account under a complete index listing none there — never from the index\'s silence alone (issue #132)', () => {
+test('a far end is named by its address, then what the page holds of its document: nothing answered, the address alone; readable, its first line; withheld, "withheld · ⟨owner⟩" by the owner rule handed in; the board saying nothing of it, "nothing this board will say about this address" — "no document here yet" in the reader\'s own account under a complete index listing none there — never from the index\'s silence alone; each of the client\'s words bracketed in the first line\'s place (issues #132, #23)', () => {
   const GHOST = '1.0.1.0.1049578', HIDDEN = '1.0.2.0.7', THEIR_GHOST = '1.0.2.0.99';
   const [TO_GHOST, TO_HIDDEN, TO_THEIRS] = [20, 21, 22].map((k) => `${D}.0.2.${k}`);
   REC.takeLinks(D, [TO_GHOST, TO_HIDDEN, TO_THEIRS]);
@@ -458,20 +459,24 @@ test('a far end is named by its address, then what the page holds of its documen
   assert.deepEqual([named(TO_GHOST), named(TO_HIDDEN), named(D + '.0.2.1')], [GHOST, HIDDEN, '1.0.1.0.127'], 'nothing answered: the address alone, never a guess from the index\'s silence');
   // the board says nothing of the ghost's address: in the reader's own account, the index complete and listing none there
   REC.takeRefused(GHOST, 'unregistered');
-  assert.equal(named(TO_GHOST), `${GHOST} · ${t('L.far.empty')}`);
+  /** the client's words in a first line's place, bracketed */
+  const bracket = (/** @type {string} */ words) => t('L.client-words', { words });
+  assert.equal(named(TO_GHOST), `${GHOST} · ${bracket(t('L.far.empty'))}`);
   REC.setIndexState({ arm: 'at_the_floor', floor: 9 });
-  assert.equal(named(TO_GHOST), `${GHOST} · ${t('L.far.unregistered')}`, 'the index from a floor: nothing this board will say');
+  assert.equal(named(TO_GHOST), `${GHOST} · ${bracket(t('L.far.unregistered'))}`, 'the index from a floor: nothing this board will say');
   REC.setIndexState({ arm: 'complete' });
   REC.setSession({ session: 's-2', principal: 2, account: '1.0.9' });
-  assert.equal(named(TO_GHOST), `${GHOST} · ${t('L.far.unregistered')}`, 'another reader\'s account: nothing this board will say');
+  assert.equal(named(TO_GHOST), `${GHOST} · ${bracket(t('L.far.unregistered'))}`, 'another reader\'s account: nothing this board will say');
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   // the projection the plane makes says the same: the other account's ghost, the draft withheld
   REC.takeProjection(TO_THEIRS, 2, THEIR_GHOST, 'unregistered');
   REC.takeProjection(TO_HIDDEN, 2, HIDDEN, 'withheld');
-  assert.equal(named(TO_THEIRS), `${THEIR_GHOST} · ${t('L.far.unregistered')}`, 'another account\'s address, its projection refused doc_not_registered');
-  assert.equal(named(TO_HIDDEN), `${HIDDEN} · ${t('F.corner.withheld', { owner: '1.0.2' })}`, 'withheld: its owner by its account, where no owner rule is handed in');
-  LK.readers({ owner: (a) => (a === HIDDEN ? '1.0.4' : '') });
-  assert.equal(named(TO_HIDDEN), `${HIDDEN} · ${t('F.corner.withheld', { owner: '1.0.4' })}`, 'its owner by the owner rule handed in');
+  assert.equal(named(TO_THEIRS), `${THEIR_GHOST} · ${bracket(t('L.far.unregistered'))}`, 'another account\'s address, its projection refused doc_not_registered');
+  assert.equal(named(TO_HIDDEN), `${HIDDEN} · ${bracket(t('F.corner.withheld', { owner: '1.0.2' }))}`, 'withheld: its owner by its account, where no owner rule is handed in');
+  assert.deepEqual(LK.farFaced(end(TO_HIDDEN)), [{ text: '[', face: 'client' }, { text: 'withheld · ', face: 'client' }, { text: '1.0.2', face: 'ident' }, { text: ']', face: 'client' }], 'the brackets and the statement the client\'s, its owner the identifier\'s');
+  // the readers the app hands in: the owner rule, and the first-line rule a box's label reads (T-ARTICLE's)
+  LK.readers({ owner: (a) => (a === HIDDEN ? '1.0.4' : ''), first: (d, label) => firstLineOf(d, { label, reader: REC.reader(), owner: '' }) });
+  assert.equal(named(TO_HIDDEN), `${HIDDEN} · ${bracket(t('F.corner.withheld', { owner: '1.0.4' }))}`, 'its owner by the owner rule handed in');
   // a refusal that says nothing of the document: the address alone
   REC.takeProjection(TO_HIDDEN, 2, HIDDEN, { refused: 'not_a_link' });
   assert.equal(named(TO_HIDDEN), HIDDEN, 'refused for another reason: nothing said of the document');

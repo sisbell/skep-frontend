@@ -8,8 +8,10 @@
 // LABEL_MIN_PX, and
 // one its place cannot hold at that size is left out — never cut through an
 // address or a count, which a cut turns into another document or another
-// number; a first line alone is cut, to its place's width, ending in its
-// ellipsis (F-9). P-RENDER hands the pass every label once every place's
+// number; a first line alone is cut, to its place's width, on a whole word,
+// ending in its ellipsis and keeping after it the bracket its words close with
+// (`cutWords`), and set only where LEAD_WORDS of its words fit so or the whole
+// of a shorter one (F-9). P-RENDER hands the pass every label once every place's
 // shapes are drawn, in the order the places were drawn — the board, the
 // clusters, the account frames, the continuations' marks, the documents —
 // then each mid connection's count, and the pass sets each one only where,
@@ -21,6 +23,18 @@
 // before it. Through a crossfade a place drawn the weaker — an alpha below a
 // half — sets no label and blocks none, as the click takes the stronger
 // (P-LOD's `residueDepth`).
+// The contents line (FP-26): a document's label is one row (`Contents`) —
+// its first line from where its words stand, cut on a word to the room before
+// its address, and its address at a fixed size at the row's end, so words
+// arriving beside it never move it; the address is the label's head, set
+// whole or the label left out whole, and where no first line is known or too
+// few of its words fit, the address stands alone at that end. Its other parts
+// stand beneath the row. A label's addresses drop their region's prefix only
+// where that region is named in view (`Label.region`): its own label set
+// before it in the pass, or the one line naming it; elsewhere each part names
+// them whole (`Part.whole`). First lines that read alike once cut are cut
+// again to show where they differ (`apart`): the first word, an ellipsis, then
+// the words from the first that differs, in the width the cut was set at.
 // The hold (FP-26): a label naming a place the one line does not name is
 // handed its place's shape on screen (`Hold`), and where its first line
 // would stand above P-REG's HOLD gap below the line it stands held there
@@ -28,8 +42,10 @@
 // top-left of its place's visible part, on one line of its type across that
 // part, on its place's ground (`heldLine`) — its head, an address or a
 // count, whole or no label at all; a badge kept whole beside it or dropped;
-// a first line cut to the room the two leave, ending in its ellipsis, or
-// dropped; never wrapped — the room across its line read from its place's
+// a first line cut on a word to the room the two leave, or dropped; a
+// contents line its first line from the line's start and its address at the
+// line's end, a badge just before it (`heldContents`); never wrapped — the
+// room across its line read from its place's
 // shape at the line's foot (`across`), the narrowest row it meets, so it
 // never leaves its place. Its place's foot rising pushes it up under the
 // line, a held label standing while its bottom is in view; a held label
@@ -41,8 +57,10 @@
 // reading face's — and a part's words may carry a stretch in another face
 // (`inFace`): an address inside the client's words, a first line before the
 // client's mark after it. The pass measures and sets a part run by run
-// (`runsOf`), each run in its face; a cut never falls inside an address, and
-// a part wrapped at its spaces keeps each word's runs. The client's figures
+// (`runsOf`), each run in its face; a cut falls only between words, so never
+// inside an address, and a part wrapped at its spaces keeps each word's runs.
+// An address is never greyed: P-RENDER sets every run in the identifier's face
+// in the title's ink. The client's figures
 // are tabular: the canvas sets each in a cell as wide as the face's widest
 // figure (`figuresOf`), as the page's style sets them.
 // A connection's count (foundations §2.1's register; P44) names a pair of
@@ -55,7 +73,8 @@
 // meet, else to the visible view's edge (`roomRight`), and the tail's stroke
 // is held short of any other place's shape the same way.
 // Figures: a line box 1.2 em; the stronger side of a crossfade at alpha 0.5
-// and above; a meeting more than half a px each way.
+// and above; a meeting more than half a px each way; a first line set where
+// two of its words fit (LEAD_WORDS).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-26.
 
 import { LABEL_MIN_PX, HOLD, FACE } from './register.js';
@@ -68,6 +87,8 @@ import { LABEL_MIN_PX, HOLD, FACE } from './register.js';
 export const LINE_BOX = 1.2;
 /** the alpha at and above which a place drawn through a crossfade is the stronger */
 export const STRONGER = 0.5;
+/** the whole words a first line's cut keeps at the least, else the first line is left out — the whole of a shorter one set where it fits (see the head) */
+export const LEAD_WORDS = 2;
 const ELLIPSIS = '…';
 
 /** the marks opening a stretch of a part's words set in a face of its own, and the one closing it (see the head): private-use characters, which no label's words hold */
@@ -209,18 +230,30 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
  * @typedef {'one' | 'wrap' | 'cut' | 'fill'} Fit how a part meets its place's width:
  * 'one' — one line, never cut (an address, a frame's label);
  * 'wrap' — wrapped at its spaces, never cut (a count, a statement);
- * 'cut' — one line, cut to the width ending in its ellipsis (a first line);
- * 'fill' — wrapped at its spaces down to its place's bottom, a word wider than the place and the last line kept ending in the ellipsis (a first line given room for several)
+ * 'cut' — one line, cut on a word to the width ending in its ellipsis, LEAD_WORDS of its words kept at the least or the whole of a shorter one, else none (a first line: `cutWords`);
+ * 'fill' — its whole words wrapped at its spaces down to its place's bottom, the last line kept — and the line before a word wider than the place — cut on a word ending in the ellipsis (a first line given room for several)
  */
 
 /**
  * @typedef {Object} Part — a stretch of a label in one size and ink
- * @property {string} text its white space collapsed as it is set, a stretch of it in another face marked (`inFace`); an empty part sets nothing and is no part
+ * @property {string} text its white space collapsed as it is set, a stretch of it in another face marked (`inFace`); an empty part sets nothing and is no part; where it names an address in its region, that address past the region's prefix
+ * @property {string} [whole] its words with every address in them whole, set in place of `text` where its label's region is not named in view (`Label.region`); absent, `text` wherever it stands
+ * @property {string} [close] what its words close with — the bracket around the client's words in a first line's place — which a cut keeps after its ellipsis (`cutWords`); absent, nothing
  * @property {number} px the size its rule asks for; set at `sizeOf(px)`
  * @property {string} ink
  * @property {Fit} fit
  * @property {string} [weight] its face's weight; the regular where absent
  * @property {Face} [face] the face its words are set in, but a stretch marked in another; the client's where absent
+ */
+
+/**
+ * @typedef {Object} Contents — a document's contents line (see the head), set on its label's first row, which stands at the label's `y`, its parts beneath it
+ * @property {Part | null} lead its first line, from `from`, cut on a word to the room before `to` and its address; null where none is known
+ * @property {number} px the size its first line is set at, known or not: its row is one line box of it or of its address, the larger, so the address stands where it stood whatever arrives beside it
+ * @property {Part} address the label's head, never cut: its right edge at `end`, the row's end; set whole or the label left out whole
+ * @property {number} from where the lead's first word starts, on screen
+ * @property {number} to where the lead's room ends, on screen
+ * @property {number} end the row's end, on screen
  */
 
 /** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'doc' | 'connection' | 'tail' | 'pip'} LabelKind the place a label names; 'connection' a mid connection's count; 'tail' a tail's far end in words, or its count; 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
@@ -235,8 +268,10 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
  * @property {'left' | 'center'} align
  * @property {number} alpha the alpha its place is drawn at
  * @property {string | null} plate the ink of its place's ground, laid across its room behind each line over what the place draws beneath it; null for none
- * @property {Part[]} parts in order down from its first line, each set below the one before; a part left out takes every part after it out with it, so the first, its head, set or the label left out whole
+ * @property {Part[]} parts in order down from its first line, each set below the one before; a part left out takes every part after it out with it, so the first, its head, set or the label left out whole — a contents label's, beneath its row, at `x`
  * @property {Hold | null} hold where it stands held below the one line once its first line would rise above the hold (see the head); null for a label never held — the board's, a place the line names, a label naming no place
+ * @property {Contents | null} [contents] its first row a document's contents line (see the head); absent or null for every other label
+ * @property {string | null} [region] the region whose label, set before it in the pass or named by the one line, lets its addresses drop the region's prefix (see the head); absent or null where they stand as its parts give them
  */
 
 /**
@@ -315,28 +350,36 @@ function past(r, room) {
   return null;
 }
 
+/** does a word of a first line hold a letter or a figure — a word a cut counts, and may end on; a separator ("·", "—") is none */
+const isWord = (/** @type {string} */ w) => /[\p{L}\p{N}]/u.test(plain(w));
+
 /**
- * The longest start of a text that fits with its ellipsis, or null where not
- * even its first character does — never ending inside an address, which a
- * cut turns into another (F-9).
- * @param {string} text
+ * A first line cut on a word (see the head; F-9): the longest start of its
+ * whole words that fits with its ellipsis after it, a separator ending that
+ * start dropped and `close` — the bracket its words close with — kept after
+ * the ellipsis; never ending inside a word, so never inside an address, which
+ * a cut turns into another; null where fewer than `least` of its words fit so.
+ * The words whole are the caller's to try first: no start here holds them all.
+ * @param {string} text its words, a stretch of them in another face marked (`inFace`)
  * @param {(s: string) => boolean} fits
+ * @param {string} [close]
+ * @param {number} [least] the words a start keeps at the least
+ * @returns {string | null}
  */
-function cutTo(text, fits) {
-  const ch = [...text];
-  /** @type {number[]} the lengths a start may take: each after a character of the words, or after an address's close, never inside an address */
-  const ends = [];
-  let inIdent = false, words = false;
-  ch.forEach((c, i) => {
-    if (c === OPEN.ident) inIdent = true;
-    else if (c === CLOSE) inIdent = false;
-    if (!isMark(c)) words = true;
-    if (words && !inIdent && (!isMark(c) || c === CLOSE)) ends.push(i + 1);
-  });
-  const at = (/** @type {number} */ n) => ch.slice(0, n).join('').trimEnd() + ELLIPSIS;
-  let lo = -1, hi = ends.length - 1;
-  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (fits(at(ends[mid]))) lo = mid; else hi = mid - 1; }
-  return lo >= 0 ? at(ends[lo]) : null;
+export function cutWords(text, fits, close = '', least = 1) {
+  const words = wordsOf(text.trim().replace(/\s+/g, ' '));
+  /** each start's words: the first n, a separator ending them dropped, and how many of them are words a cut counts */
+  const start = (/** @type {number} */ n) => {
+    let k = n;
+    while (k > 0 && !isWord(words[k - 1])) k--;
+    return { k, counted: words.slice(0, k).filter(isWord).length };
+  };
+  const at = (/** @type {number} */ k) => words.slice(0, k).join(' ') + ELLIPSIS + close;
+  // the more words a start keeps the wider it is set, so the longest that fits is found by halving
+  let lo = 0, hi = words.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; const s = start(mid); if (s.k && fits(at(s.k))) lo = mid; else hi = mid - 1; }
+  const best = start(lo);
+  return best.k && best.counted >= least && fits(at(best.k)) ? at(best.k) : null;
 }
 
 /** a part's words at their spaces, each word keeping its runs' faces (see the head) */
@@ -377,19 +420,25 @@ function wrapWords(/** @type {string[]} */ words, /** @type {(s: string) => bool
  * @returns {string[] | null}
  */
 function linesOf(p, rows, fits) {
-  const text = p.text.trim().replace(/\s+/g, ' ');
+  const text = p.text.trim().replace(/\s+/g, ' '), close = p.close || '';
   if (p.fit === 'one') return fits(text) ? [text] : null;
-  if (p.fit === 'cut') { const c = fits(text) ? text : cutTo(text, fits); return c ? [c] : null; }
+  if (p.fit === 'cut') { const c = fits(text) ? text : cutWords(text, fits, close, LEAD_WORDS); return c ? [c] : null; }
   const words = wordsOf(text);
   if (p.fit === 'wrap') return words.every(fits) ? wrapWords(words, fits) : null;
+  // a first line given room for several: its whole words, up to the first wider than the place, wrapped
+  const over = words.findIndex((w) => !fits(w)), shown = over < 0 ? words : words.slice(0, over);
+  const lines = wrapWords(shown, fits);
+  if (over < 0 && lines.length <= rows) return lines;
   /** @type {string[]} */
-  const fitted = [];
-  for (const w of words) { const c = fits(w) ? w : cutTo(w, fits); if (!c) return null; fitted.push(c); }
-  const lines = wrapWords(fitted, fits);
-  if (lines.length <= rows) return lines;
-  const kept = lines.slice(0, rows), last = kept[rows - 1];
-  if (!last.endsWith(ELLIPSIS)) kept[rows - 1] = fits(last + ELLIPSIS) ? last + ELLIPSIS : cutTo(last, fits) || last;
-  return kept;
+  const kept = lines.slice(0, rows);
+  // the last line kept ends in the ellipsis, cut on a word to fit beside it; a line too short for even its first word with it goes, the line before taking it
+  while (kept.length) {
+    const last = kept[kept.length - 1], ended = last + ELLIPSIS + close;
+    const cut = fits(ended) ? ended : cutWords(last, fits, close);
+    if (cut) { kept[kept.length - 1] = cut; return kept; }
+    kept.pop();
+  }
+  return null;
 }
 
 /**
@@ -435,26 +484,48 @@ export function across(rects, y, h, pad) {
  * @property {number} w its width
  */
 
+/** a part as a held line sets it: its words, its white space collapsed, at its size, weight and face */
+const heldPart = (/** @type {Part} */ p) => ({ p, text: p.text.trim().replace(/\s+/g, ' '), px: sizeOf(p.px), weight: p.weight || 'normal', face: p.face || /** @type {Face} */ ('client') });
+/** @typedef {ReturnType<typeof heldPart>} Held a part as a held line sets it */
+
+/**
+ * A first line on a held line (see the head): its words whole where the room
+ * holds them, else cut on a word (`cutWords`), LEAD_WORDS kept at the least;
+ * null where neither fits.
+ * @param {Held} x
+ * @param {number} room
+ * @param {Measure} measure
+ */
+function heldFirst(x, room, measure) {
+  const fits = (/** @type {string} */ s) => wideOf(measure, s, x.px, x.weight, x.face) <= room + 1e-6;
+  return room <= 0 ? null : fits(x.text) ? x.text : cutWords(x.text, fits, x.p.close || '', LEAD_WORDS);
+}
+
+/** the held line's parts as set: each at its left edge, its words as a person reads them and run by run, at its width */
+function setHeld(/** @type {Array<{x: Held, s: string, at: number}>} */ kept, /** @type {Measure} */ measure) {
+  return kept.map(({ x, s, at }) => ({ part: x.p, text: plain(s), runs: runsOf(s, x.face), px: x.px, weight: x.weight, x: at, w: wideOf(measure, s, x.px, x.weight, x.face) }));
+}
+
 /**
  * A label's held form (see the head): its parts on one line `width` px wide,
  * in their order, each at its size, a space at its size before each after the
  * first — its head whole, else none; each later part never cut (a badge, a
  * count) kept whole where it fits beside the head and the others kept, else
- * dropped; each first line cut to the room those leave, ending in its
- * ellipsis, else dropped.
+ * dropped; each first line cut on a word to the room those leave, else
+ * dropped.
  * @param {Part[]} parts
  * @param {number} width
  * @param {Measure} measure
  * @returns {HeldPart[] | null} null where the head does not fit whole
  */
 export function heldLine(parts, width, measure) {
-  const ps = parts.map((p) => ({ p, text: p.text.trim().replace(/\s+/g, ' '), px: sizeOf(p.px), weight: p.weight || 'normal', face: p.face || /** @type {Face} */ ('client') })).filter((x) => plain(x.text));
+  const ps = parts.map(heldPart).filter((x) => plain(x.text));
   if (!ps.length) return null;
-  const wide = (/** @type {typeof ps[number]} */ x, /** @type {string} */ s) => wideOf(measure, s, x.px, x.weight, x.face);
-  const gap = (/** @type {typeof ps[number]} */ x) => wide(x, ' ');
+  const wide = (/** @type {Held} */ x, /** @type {string} */ s) => wideOf(measure, s, x.px, x.weight, x.face);
+  const gap = (/** @type {Held} */ x) => wide(x, ' ');
   let used = wide(ps[0], ps[0].text);
   if (used > width + 1e-6) return null;
-  /** @type {Map<typeof ps[number], string>} what each part kept sets */
+  /** @type {Map<Held, string>} what each part kept sets */
   const kept = new Map([[ps[0], ps[0].text]]);
   for (const x of ps.slice(1)) {
     if (x.p.fit === 'cut' || x.p.fit === 'fill') continue;
@@ -463,52 +534,150 @@ export function heldLine(parts, width, measure) {
   }
   for (const x of ps.slice(1)) {
     if (x.p.fit !== 'cut' && x.p.fit !== 'fill') continue;
-    const room = width - used - gap(x), fits = (/** @type {string} */ s) => wide(x, s) <= room + 1e-6;
-    const s = fits(x.text) ? x.text : cutTo(x.text, fits);
+    const s = heldFirst(x, width - used - gap(x), measure);
     if (s) { kept.set(x, s); used += gap(x) + wide(x, s); }
   }
   let at = 0;
-  return ps.filter((x) => kept.has(x)).map((x, i) => {
-    const text = /** @type {string} */ (kept.get(x)), w = wide(x, text);
+  return setHeld(ps.filter((x) => kept.has(x)).map((x, i) => {
+    const s = /** @type {string} */ (kept.get(x));
     if (i) at += gap(x);
-    const out = { part: x.p, text: plain(text), runs: runsOf(text, x.face), px: x.px, weight: x.weight, x: at, w };
-    at += w;
+    const out = { x, s, at };
+    at += wide(x, s);
     return out;
-  });
+  }), measure);
 }
+
+/**
+ * A contents line's held form (see the head): on one line `width` px wide,
+ * its address at the line's end, whole, else no line; each part after it — a
+ * badge — whole just before the address, a space at its size apart, where it
+ * fits beside those kept, else dropped; its lead from the line's start, cut on
+ * a word to the room those leave a space short of them, else dropped.
+ * @param {{lead: Part | null, address: Part}} c
+ * @param {Part[]} parts
+ * @param {number} width
+ * @param {Measure} measure
+ * @returns {HeldPart[] | null} left to right; null where the address does not fit whole
+ */
+export function heldContents(c, parts, width, measure) {
+  const a = heldPart(c.address);
+  const wide = (/** @type {Held} */ x, /** @type {string} */ s) => wideOf(measure, s, x.px, x.weight, x.face);
+  const gap = (/** @type {Held} */ x) => wide(x, ' ');
+  const aw = wide(a, a.text);
+  if (!plain(a.text) || aw > width + 1e-6) return null;
+  /** @type {Array<{x: Held, s: string, at: number}>} */
+  const tail = [{ x: a, s: a.text, at: width - aw }];
+  let left = width - aw;
+  for (const x of parts.map(heldPart).filter((y) => plain(y.text)).reverse()) {
+    const w = wide(x, x.text), need = w + gap(x);
+    if (need > left + 1e-6) continue;
+    left -= need;
+    tail.unshift({ x, s: x.text, at: left });
+  }
+  const l = c.lead ? heldPart(c.lead) : null;
+  const s = l && plain(l.text) ? heldFirst(l, left - gap(l), measure) : null;
+  return setHeld(l && s ? [{ x: l, s, at: 0 }, ...tail] : tail, measure);
+}
+
+/**
+ * A label's parts as its region's naming sets them (see the head): each
+ * part's words as given where its region is named in view — or it names no
+ * region — else each with every address whole (`Part.whole`).
+ * @param {Label} l
+ * @param {boolean} named its region is named in view
+ * @returns {Label}
+ */
+function inRegion(l, named) {
+  if (!l.region || named) return l;
+  const whole = (/** @type {Part} */ p) => (p.whole != null ? { ...p, text: p.whole } : p);
+  return { ...l, parts: l.parts.map(whole), contents: l.contents ? { ...l.contents, address: whole(l.contents.address) } : null };
+}
+
+/**
+ * @typedef {Object} Cut — a first line the pass cut, as it set it: what `apart` cuts again
+ * @property {SetLine} line
+ * @property {string} full its words whole, a stretch of them in another face marked
+ * @property {Face} base its part's face
+ * @property {string} close what its words close with (`Part.close`)
+ */
 
 /**
  * The pass: each label set in order where its place holds it, or held below
  * the one line (see the head), the parts it could not set left out with the
- * rule that left each out.
+ * rule that left each out; then the first lines it cut that read alike cut
+ * again to show where they differ (`apart`).
  * @param {Label[]} labels in the order their places were drawn
  * @param {Shape[]} shapes every place's shape the frame drew
  * @param {Rect} view the visible view (P-CAM's `visibleView`): the viewport below the one line
  * @param {Measure} measure
+ * @param {ReadonlySet<string>} [named] the places the one line names (L-LINE's `named`): a label's region among them is named in view
  * @returns {{set: SetLabel[], out: LeftOut[]}}
  */
-export function setLabels(labels, shapes, view, measure) {
+export function setLabels(labels, shapes, view, measure, named = new Set()) {
   /** @type {SetLabel[]} */
   const set = [];
   /** @type {LeftOut[]} */
   const out = [];
   /** @type {Rect[]} the lines set so far — a held label's, its line across its place */
   const taken = [];
+  /** @type {Cut[]} the first lines cut so far */
+  const cuts = [];
   const strong = shapes.filter((s) => s.alpha >= STRONGER);
   const top = view.y + HOLD.gap;
-  for (const l of labels) {
+  /** does a rect meet another place's shape drawn the stronger, or a line set before it */
+  const blocked = (/** @type {Rect} */ r, /** @type {string} */ place) => strong.some((s) => s.place !== place && meets(r, s.rect)) || taken.some((q) => meets(r, q));
+  /** the rule a line set at a rect breaks: past its place's room, past the visible view, or meeting what it may not; null where none */
+  const breaks = (/** @type {Rect} */ r, /** @type {Label} */ l) => past(r, l.within) || (past(r, view) ? 'view' : blocked(r, l.place) ? 'meets' : null);
+  /** each part named left out, the first for the rule that left it out and every one after it with it */
+  const leave = (/** @type {Label} */ l, /** @type {Part[]} */ ps, /** @type {Reason | null} */ why) => ps.forEach((p, j) => out.push({ kind: l.kind, place: l.place, text: plain(p.text), reason: j || !why ? 'after' : why }));
+  for (const raw of labels) {
+    const l = inRegion(raw, !!raw.region && (named.has(raw.region) || set.some((s) => (s.kind === 'frame' || s.kind === 'cluster') && s.place === raw.region)));
     const parts = l.parts.filter((p) => plain(p.text).trim());
-    if (l.hold && parts.length && l.y < top - 1e-6) {
-      const r = held(l, l.hold, parts);
+    const c = l.contents && plain(l.contents.address.text).trim() ? l.contents : null;
+    if (l.hold && (c || parts.length) && l.y < top - 1e-6) {
+      const r = held(l, l.hold, parts, c);
       if (r.label) { set.push(r.label); taken.push(r.label.within); }
       out.push(...r.out);
       continue;
     }
     /** @type {SetLine[]} */
     const lines = [];
+    let y = l.y;
+    if (c) {
+      const row = contentsRow(l, c);
+      if (!row.lines.length) { out.push(...row.out); leave(l, parts, null); continue; }
+      out.push(...row.out);
+      lines.push(...row.lines);
+      for (const m of row.lines) taken.push(m.rect);
+      y = row.foot;
+    }
+    const st = stack(l, parts, y);
+    lines.push(...st.lines);
+    if (lines.length) {
+      set.push({ kind: l.kind, place: l.place, within: l.within, alpha: l.alpha, plate: l.plate, lines, held: false });
+      for (const m of st.lines) taken.push(m.rect);
+    }
+    leave(l, parts.slice(st.i), st.why);
+  }
+  apart(cuts, measure);
+  return { set, out };
+
+  /**
+   * A label's parts stacked down from `y` (see the head): each wrapped to its
+   * place's width by its fit, set where it lies whole inside its place and the
+   * visible view and meets nothing it may not; the first it cannot set, and
+   * every one after it, left.
+   * @param {Label} l
+   * @param {Part[]} parts
+   * @param {number} y
+   * @returns {{lines: SetLine[], i: number, why: Reason | null}} the lines set, the first part left, and the rule that left it
+   */
+  function stack(l, parts, y) {
+    /** @type {SetLine[]} */
+    const lines = [];
     /** @type {Reason | null} */
     let why = l.alpha < STRONGER ? 'faint' : null;
-    let y = l.y, i = 0;
+    let i = 0;
     for (; i < parts.length && !why; i++) {
       const p = parts[i];
       const px = sizeOf(p.px), weight = p.weight || 'normal', lh = px * LINE_BOX, base = p.face || 'client';
@@ -524,38 +693,82 @@ export function setLabels(labels, shapes, view, measure) {
         const w = wideOf(measure, s, px, weight, base);
         return { text: plain(s), runs: runsOf(s, base), px, ink: p.ink, weight, rect: { x: l.align === 'center' ? l.x - w / 2 : l.x, y: y + k * lh, w, h: lh } };
       });
-      for (const m of mine) {
-        why = why || past(m.rect, l.within) || (past(m.rect, view) ? 'view' : null);
-        if (!why && (strong.some((s) => s.place !== l.place && meets(m.rect, s.rect)) || taken.some((r) => meets(m.rect, r)))) why = 'meets';
-      }
+      for (const m of mine) why = why || breaks(m.rect, l);
       if (why) break;
       lines.push(...mine);
+      const full = p.text.trim().replace(/\s+/g, ' ');
+      if (p.fit === 'cut' && texts[0] !== full) cuts.push({ line: mine[0], full, base, close: p.close || '' });
       y += texts.length * lh;
     }
-    if (lines.length) {
-      set.push({ kind: l.kind, place: l.place, within: l.within, alpha: l.alpha, plate: l.plate, lines, held: false });
-      for (const m of lines) taken.push(m.rect);
-    }
-    parts.slice(i).forEach((p, j) => out.push({ kind: l.kind, place: l.place, text: plain(p.text), reason: j || !why ? 'after' : why }));
+    return { lines, i, why };
   }
-  return { set, out };
+
+  /**
+   * A contents line set on its label's first row (see the head): its address,
+   * the head, at the row's end, whole, else the whole label left out by the
+   * rule that left it; its lead from where its words stand, cut on a word to
+   * the room before the row's room ends and a space short of its address, set
+   * where it lies inside its place and the visible view and meets nothing it
+   * may not, else named left out. The row is one line box of the larger of
+   * its first line's size and its address's, known or not, each centred on it.
+   * @param {Label} l
+   * @param {Contents} c
+   * @returns {{lines: SetLine[], out: LeftOut[], foot: number}} its lines set, lead first; its parts left out; the row's foot
+   */
+  function contentsRow(l, c) {
+    const a = c.address, apx = sizeOf(a.px), aweight = a.weight || 'normal', abase = a.face || 'client', atext = a.text.trim().replace(/\s+/g, ' ');
+    const lead = c.lead && plain(c.lead.text).trim() ? c.lead : null;
+    const lpx = lead ? sizeOf(lead.px) : apx, lh = Math.max(apx, sizeOf(c.px), lpx) * LINE_BOX;
+    const aw = wideOf(measure, atext, apx, aweight, abase);
+    const arect = { x: c.end - aw, y: l.y + (lh - apx * LINE_BOX) / 2, w: aw, h: apx * LINE_BOX };
+    const why = l.alpha < STRONGER ? 'faint' : breaks(arect, l);
+    /** @type {LeftOut[]} */
+    const left = [];
+    if (why) {
+      left.push({ kind: l.kind, place: l.place, text: plain(atext), reason: why });
+      if (lead) left.push({ kind: l.kind, place: l.place, text: plain(lead.text), reason: 'after' });
+      return { lines: [], out: left, foot: l.y + lh };
+    }
+    /** @type {SetLine} */
+    const address = { text: plain(atext), runs: runsOf(atext, abase), px: apx, ink: a.ink, weight: aweight, rect: arect };
+    if (!lead) return { lines: [address], out: left, foot: l.y + lh };
+    const lweight = lead.weight || 'normal', lbase = lead.face || 'client', full = lead.text.trim().replace(/\s+/g, ' ');
+    const wide = (/** @type {string} */ s) => wideOf(measure, s, lpx, lweight, lbase);
+    const room = Math.min(c.to, arect.x - wide(' ')) - c.from;
+    const fits = (/** @type {string} */ s) => wide(s) <= room + 1e-6;
+    const s = room <= 0 ? null : fits(full) ? full : cutWords(full, fits, lead.close || '', LEAD_WORDS);
+    /** @type {Reason | null} */
+    let lwhy = s ? null : 'width';
+    const rect = { x: c.from, y: l.y + (lh - lpx * LINE_BOX) / 2, w: s ? wide(s) : 0, h: lpx * LINE_BOX };
+    if (s) lwhy = breaks(rect, l);
+    if (!s || lwhy) {
+      left.push({ kind: l.kind, place: l.place, text: plain(lead.text), reason: /** @type {Reason} */ (lwhy) });
+      return { lines: [address], out: left, foot: l.y + lh };
+    }
+    /** @type {SetLine} */
+    const first = { text: plain(s), runs: runsOf(s, lbase), px: lpx, ink: lead.ink, weight: lweight, rect };
+    if (s !== full) cuts.push({ line: first, full, base: lbase, close: lead.close || '' });
+    return { lines: [first, address], out: left, foot: l.y + lh };
+  }
 
   /**
    * A label held below the one line (see the head): its line `holdTop` places
    * — one line box of its largest part — moved below each line set before it
    * that it would meet, across its place at the line's foot (`across`) inside
-   * the visible view, its parts set on it (`heldLine`); left out where its
-   * place is drawn the weaker, it has no room above its place's foot below
-   * those lines, its head does not fit, it stands wholly under the one line, or
-   * it meets another place's shape; each part its line drops left out for its
-   * width.
+   * the visible view, its parts set on it (`heldLine`; a contents line's,
+   * `heldContents`); left out where its place is drawn the weaker, it has no
+   * room above its place's foot below those lines, its head does not fit, it
+   * stands wholly under the one line, or it meets another place's shape; each
+   * part its line drops left out for its width.
    * @param {Label} l
    * @param {Hold} hold
    * @param {Part[]} parts its parts with words
+   * @param {Contents | null} c its contents line, where it has one
    * @returns {{label: SetLabel | null, out: LeftOut[]}}
    */
-  function held(l, hold, parts) {
-    const lh = Math.max(...parts.map((p) => lineHeight(p.px))), foot = Math.max(...hold.rects.map((r) => r.y + r.h)) - hold.pad;
+  function held(l, hold, parts, c) {
+    const all = c ? [...(c.lead && plain(c.lead.text).trim() ? [c.lead] : []), c.address, ...parts] : parts;
+    const lh = Math.max(c ? lineHeight(c.px) : 0, ...all.map((p) => lineHeight(p.px))), foot = Math.max(...hold.rects.map((r) => r.y + r.h)) - hold.pad;
     let y = holdTop(l.y, top, foot, lh), x0 = 0, x1 = 0;
     /** @type {Reason | null} */
     let why = l.alpha < STRONGER ? 'faint' : null;
@@ -567,16 +780,78 @@ export function setLabels(labels, shapes, view, measure) {
       if (!over.length) break;
       y = Math.max(...over.map((r) => r.y + r.h));
     }
-    const line = why ? null : heldLine(parts, x1 - x0, measure);
+    const line = why ? null : c ? heldContents(c, parts, x1 - x0, measure) : heldLine(parts, x1 - x0, measure);
     if (!why && !line) why = 'width';
     if (!why && y + lh <= view.y + 0.5) why = 'view';
     /** @type {SetLine[]} */
     const lines = (line || []).map((m) => ({ text: m.text, runs: m.runs, px: m.px, ink: m.part.ink, weight: m.weight, rect: { x: x0 + m.x, y, w: m.w, h: lh } }));
     if (!why && lines.some((m) => strong.some((s) => s.place !== l.place && meets(m.rect, s.rect)))) why = 'meets';
-    if (why || !line) return { label: null, out: parts.map((p, j) => ({ kind: l.kind, place: l.place, text: plain(p.text), reason: j ? 'after' : /** @type {Reason} */ (why) })) };
-    const dropped = parts.filter((p) => !line.some((m) => m.part === p)).map((p) => ({ kind: l.kind, place: l.place, text: plain(p.text), reason: /** @type {Reason} */ ('width') }));
+    const order = c ? [c.address, ...(c.lead && plain(c.lead.text).trim() ? [c.lead] : []), ...parts] : all;
+    if (why || !line) return { label: null, out: order.map((p, j) => ({ kind: l.kind, place: l.place, text: plain(p.text), reason: j ? 'after' : /** @type {Reason} */ (why) })) };
+    const dropped = order.filter((p) => !line.some((m) => m.part === p)).map((p) => ({ kind: l.kind, place: l.place, text: plain(p.text), reason: /** @type {Reason} */ ('width') }));
+    line.forEach((m, k) => {
+      if (m.part.fit !== 'cut') return;
+      const full = m.part.text.trim().replace(/\s+/g, ' ');
+      if (m.text !== plain(full)) cuts.push({ line: lines[k], full, base: m.part.face || 'client', close: m.part.close || '' });
+    });
     return { label: { kind: l.kind, place: l.place, within: { x: x0, y, w: x1 - x0, h: lh }, alpha: l.alpha, plate: hold.plate, lines, held: true }, out: dropped };
   }
+}
+
+/**
+ * First lines that read alike once cut, cut again to show where they differ
+ * (see the head): of the texts given, each whose words as shown read as
+ * another's while its words whole do not is set as its first word, an
+ * ellipsis, then its words from the first where it differs from any of those,
+ * cut on a word ending in its ellipsis and its close — the longest such that
+ * fits; left as shown where none fits, or where they differ before its second
+ * word.
+ * @param {Array<{shown: string, full: string, fits: (s: string) => boolean, close: string}>} texts each as shown, whole, the room it may take, what its words close with
+ * @returns {string[]} each as it is set now, in their order
+ */
+export function apartTexts(texts) {
+  const now = texts.map((e) => e.shown);
+  /** @type {Map<string, number[]>} */
+  const alike = new Map();
+  texts.forEach((e, i) => { const k = plain(e.shown); const g = alike.get(k); if (g) g.push(i); else alike.set(k, [i]); });
+  for (const group of alike.values()) {
+    if (group.length < 2) continue;
+    const words = group.map((i) => wordsOf(texts[i].full));
+    group.forEach((i, k) => {
+      const mine = words[k], e = texts[i];
+      let first = Infinity;
+      group.forEach((j, m) => {
+        if (plain(texts[j].full) === plain(e.full)) return;
+        let d = 0;
+        while (d < mine.length && d < words[m].length && plain(mine[d]) === plain(words[m][d])) d++;
+        first = Math.min(first, d);
+      });
+      if (!(first >= 2 && first < mine.length)) return;
+      for (let n = mine.length - first; n >= 1; n--) {
+        const end = first + n === mine.length;
+        const s = `${mine[0]} ${ELLIPSIS} ${mine.slice(first, first + n).join(' ')}${end ? '' : ELLIPSIS + e.close}`;
+        if (e.fits(s)) { now[i] = s; return; }
+      }
+    });
+  }
+  return now;
+}
+
+/**
+ * The pass's first lines cut that read alike cut again to show where they
+ * differ (`apartTexts`), each in the width it was set at, so it meets nothing
+ * it did not: its words, its runs and its width set again in place.
+ * @param {Cut[]} cuts
+ * @param {Measure} measure
+ */
+function apart(cuts, measure) {
+  if (cuts.length < 2) return;
+  const wide = (/** @type {Cut} */ c, /** @type {string} */ s) => wideOf(measure, s, c.line.px, c.line.weight, c.base);
+  const now = apartTexts(cuts.map((c) => ({ shown: c.line.text, full: c.full, close: c.close, fits: (s) => wide(c, s) <= c.line.rect.w + 1e-6 })));
+  cuts.forEach((c, i) => {
+    if (now[i] === c.line.text) return;
+    c.line.text = plain(now[i]); c.line.runs = runsOf(now[i], c.base); c.line.rect.w = wide(c, now[i]);
+  });
 }
 
 /**

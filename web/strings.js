@@ -10,10 +10,12 @@
 // reading face's — and every address in the rest in the identifier's face;
 // words made elsewhere are set as markup by their faces
 // (`facedHTML`), or with every address M-ADDR reads in them in the
-// identifier's face (`addressedHTML`); when a thing was made is said by
-// `dated`, from the board's own testimony and never from the reader's clock,
-// in one form of a date on every surface; `pinned` lists the pinned entries
-// for the gate's text case, which holds each to its source.
+// identifier's face (`addressedHTML`); the client's words standing in a
+// document's first line's place are bracketed (`bracketed`, `withheldLine`);
+// when a thing was made is said by `dated`, from the board's own testimony and
+// never from the reader's clock, in one form of a date on every surface;
+// `pinned` lists the pinned entries for the gate's text case, which holds each
+// to its source.
 // Rules: FP-1, FP-2, FP-13, FP-32, FP-34.
 
 import { fill, esc, dayOf } from './util.js';
@@ -270,6 +272,10 @@ export const STRINGS = {
   'L.card.made': { text: 'made', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   'L.time.on-or-before': { text: 'on or before ⟨date⟩', cls: 'DRAFT', source: '', screen: 'B1-S5; the versions list', lane: true },
   'L.the-line': { text: 'the one line', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  // the address segment's accessible name: its fields in their order, the document's label whole after its field, the
+  // position, the version pinned, then the document's state in the ARIA mirror's words — each after its own separator,
+  // none where it is empty
+  'L.address.name': { text: '⟨place⟩⟨label⟩⟨position⟩⟨version⟩⟨state⟩', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.leap-label': { text: 'LEAP — an address, or a document\'s first line', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S11' },
   'L.leap-rows-label': { text: 'LEAP', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
   'L.scene-label': { text: 'the reading scene: two places side by side', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S9' },
@@ -383,6 +389,9 @@ export const STRINGS = {
   'L.copy.item.owned': { text: '[⟨kind⟩, owner ⟨owner⟩, ⟨length⟩]', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
   'L.copy.item.contents': { text: '[⟨kind⟩: ⟨contents⟩]', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
   'L.copy.key': { text: '⟨label⟩ ⟨fingerprint⟩', cls: 'DRAFT', source: '', screen: 'a copy\'s plain text', lane: true },
+  // the client's words standing in a document's first line's place — a record's rendering, a withheld box's statement, what
+  // a board will say of a far end — bracketed wherever the first line is named, so none reads as the document's own words
+  'L.client-words': { text: '[⟨words⟩]', cls: 'DRAFT', source: '', screen: 'a document\'s label: the plane, a tail, a bundle\'s end, a list row, the one line, the ARIA mirror', lane: true },
   // the compact signs (FP-26): the mark keyed to a run's origin — a hairline's compact label, and a withheld run's gap too
   // short to carry its owner; a withheld run's face compact in its column's edge, its owner with a mark that opens it whole
   // (foundations §2.1); the corner's usual states as glyphs — an edition's its version marker, unlit at the bare address and
@@ -421,16 +430,18 @@ export function t(id, values) {
 /**
  * The string for an id as markup: its words escaped, each ⟨token⟩ filled
  * with its value escaped, a value whose token `wrap` names set in a span of
- * that class, and every other value the client's words, each address in them
- * the identifier's (`addressedHTML`) — the words read the same as `t`'s.
+ * that class, a value given as stretches each in its face (`facedHTML`), and
+ * every other value the client's words, each address in them the
+ * identifier's (`addressedHTML`) — the words read the same as `t`'s, given
+ * each stretched value's words joined.
  * @param {string} id
- * @param {Record<string, string | number>} values
+ * @param {Record<string, string | number | Array<{text: string, face: import('./plane/register.js').Face}>>} values
  * @param {Record<string, string>} [wrap] the class each token's value stands in, by token
  * @returns {string}
  */
 export function tHTML(id, values, wrap = {}) {
   const html = /** @type {Record<string, string>} */ ({});
-  for (const [k, v] of Object.entries(values)) html[k] = wrap[k] ? `<span class="${wrap[k]}">${esc(v)}</span>` : addressedHTML(String(v));
+  for (const [k, v] of Object.entries(values)) html[k] = Array.isArray(v) ? facedHTML(v) : wrap[k] ? `<span class="${wrap[k]}">${esc(v)}</span>` : addressedHTML(String(v));
   return fill(esc(t(id)), html);
 }
 
@@ -455,6 +466,40 @@ export const addressedHTML = (text) => text.split(/(\d+(?:\.\d+)+)/).map((x, i, 
  * @returns {string}
  */
 export const facedHTML = (runs) => runs.map((r) => (r.face === 'ident' ? `<span class="id">${esc(r.text)}</span>` : r.face === 'reading' ? `<span class="reading">${esc(r.text)}</span>` : addressedHTML(r.text))).join('');
+
+/** the brackets around the client's words in a document's first line's place (`L.client-words`): what opens them, and what closes them */
+const [CLIENT_OPEN, CLIENT_SHUT] = STRINGS['L.client-words'].text.split('⟨words⟩');
+/** what closes the client's words in a first line's place: the bracket a cut of them keeps after its ellipsis (P-LABEL's `cutWords`) */
+export const CLIENT_CLOSE = CLIENT_SHUT || '';
+
+/**
+ * Words the client supplies in a document's first line's place — a record's
+ * rendering, a withheld box's statement, what a board will say of a far end
+ * (T-ARTICLE's first-line rule) — bracketed (`L.client-words`), so none reads
+ * as the document's own: the stretches given, between the brackets in the
+ * client's face.
+ * @param {Array<{text: string, face: import('./plane/register.js').Face}>} runs
+ * @returns {Array<{text: string, face: import('./plane/register.js').Face}>}
+ */
+export function bracketed(runs) {
+  /** @type {Array<{text: string, face: import('./plane/register.js').Face}>} */
+  const out = [];
+  if (CLIENT_OPEN) out.push({ text: CLIENT_OPEN, face: 'client' });
+  out.push(...runs);
+  if (CLIENT_SHUT) out.push({ text: CLIENT_SHUT, face: 'client' });
+  return out;
+}
+
+/**
+ * A withheld document's words in its first line's place: its withheld box's,
+ * "withheld · ⟨owner⟩", bracketed (`bracketed`), the owner the identifier's.
+ * @param {string} owner its owner, by the one owner rule
+ * @returns {Array<{text: string, face: import('./plane/register.js').Face}>}
+ */
+export function withheldLine(owner) {
+  const [before, after] = t('F.corner.withheld').split('⟨owner⟩');
+  return bracketed(/** @type {Array<{text: string, face: import('./plane/register.js').Face}>} */ ([{ text: before, face: 'client' }, { text: owner, face: 'ident' }, { text: after ?? '', face: 'client' }]).filter((r) => r.text));
+}
 
 /** @param {string} id @returns {boolean} */
 export const isPinned = (id) => STRINGS[id]?.cls === 'PINNED';

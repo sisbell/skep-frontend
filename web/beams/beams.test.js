@@ -12,14 +12,15 @@
 // mounted far end's line, a whole-work end's first block, an end not laid
 // out at its box's centre, a stub where the end stands outside the visible
 // view and nowhere else, a far end placed by `project` in the version its
-// far box shows (FP-22); and a bundle's label, placed above or below its end
-// inside the visible view, saying what its beams' far texts hold where they
-// agree (FP-21).
+// far box shows (FP-22); and a bundle's label — its far end's words cut on a
+// word, alike ones cut apart — placed above or below its end inside the
+// visible view, saying what its beams' far texts hold where they agree
+// (FP-21).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { bundlesOf, beamOf, labelPlace, labelText, labelRuns, pastSigns, inkOf, strokeOf, pointOn, strokeIn } from './beams.js';
+import { bundlesOf, beamOf, labelPlace, labelText, labelRuns, bundleLabels, pastSigns, inkOf, strokeOf, pointOn, strokeIn, WORDS_CH } from './beams.js';
 import { edgeStub } from '../plane/camera.js';
 import { HUE, NEUTRAL_HUE, STUB } from '../plane/register.js';
 import { t } from '../strings.js';
@@ -401,4 +402,23 @@ test('a bundle whose every beam\'s far text holds only part of its passage says 
   assert.ok(label().startsWith(H + ' · 2') && label().endsWith(words), label());
   REC.takeProjection(THIRD, 2, H, [{ pos: 9, width: 3 }]);
   assert.equal(label(), H + ' · 2', 'the third party\'s whole: they part, and nothing is said');
+});
+
+test('a bundle\'s label names its far end\'s words as its tail would, cut on a word to WORDS_CH characters; the frame\'s labels whose words read alike once cut are cut apart where they differ (issue #23)', () => {
+  const K = '1.0.2.0.6', TO_K = D + '.0.2.4';
+  build([OWN]);
+  REC.takeLink({ addr: TO_K, from: [span(D, 40, 3)], to: [span(K, 1, 3)], type: CITE });
+  REC.takeLinks(D, [OWN, TO_K]);
+  REC.takeImage(K, 1, [{ iStart: K + '.0.1.1', width: 20 }]);
+  REC.takeProjection(TO_K, 2, K, [{ pos: 1, width: 3 }]);
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: H, kind: 'edition', label: 'Notes on the meeting of the third quarter', standing: 'public' }, { doc: K, kind: 'edition', label: 'Notes on the meeting of the ninth quarter', standing: 'public' }], counts: [], state: { arm: 'complete' } }));
+  const bs = bundlesOf(met([D]));
+  assert.deepEqual(bs.map((b) => b.far), [H, K], 'one bundle a far document');
+  const alone = bs.map((b) => labelText(b));
+  assert.deepEqual(alone, [`${H} · Notes on the meeting of the…`, `${K} · Notes on the meeting of the…`], 'each cut on a word, its words no longer than WORDS_CH');
+  assert.ok(alone.every((s) => [...s.split(' · ')[1]].length <= WORDS_CH));
+  const together = bundleLabels(bs).map((runs) => runs.map((r) => r.text).join(''));
+  assert.deepEqual(together, [`${H} · Notes … third quarter`, `${K} · Notes … ninth quarter`], 'read alike once cut: apart where they differ');
+  REC.takeRefused(K, 'withheld');
+  assert.equal(labelText(/** @type {typeof bs[number]} */ (bundlesOf(met([D])).find((b) => b.far === K))), `${K} · ${t('L.client-words', { words: t('F.corner.withheld', { owner: '1.0.2' }) })}`, 'withheld: the client\'s words in its first line\'s place, bracketed');
 });

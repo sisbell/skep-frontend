@@ -25,16 +25,17 @@
 // a withheld run as one symbol with its count, the plan unmoved; a symbol
 // lit where every link it stands for is lit; and the byline's slots, never a
 // placeholder, each box its face's width, cut on a word's end by its width
-// as set and whole on their act (FP-12, FP-21, FP-22, FP-23, FP-24, FP-26,
-// FP-30, FP-33, FP-34).
+// as set and whole on their act; and the first-line rule, the client's words
+// in a first line's place bracketed (FP-12, FP-21, FP-22, FP-23, FP-24,
+// FP-26, FP-30, FP-33, FP-34).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, LABEL_CH, CUE_CH } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
-import { t, tHTML } from '../strings.js';
+import { t, tHTML, bracketed, CLIENT_CLOSE } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { accountOf, homeOf, resolveSpan } from '../model/address.js';
 import { deriveBlocks, textOf } from '../model/records.js';
@@ -904,4 +905,19 @@ test('a symbol is lit where every link it stands for is lit — one rule, T-LAYE
   const atRun = { ...lit, link: { addr: 'R', type: null }, key: 'k', run: { pos: 14, width: 240, origin: '1.0.1.0.1003' }, runs: [{ pos: 14, width: 240 }] };
   const html = articleHTML(d, view({ marks: [lit, atRun], symbols: [lit] }), '1.0.1');
   assert.ok(symsIn(html).length === 1 && html.includes('sym at-run') && !html.includes('heavier'), 'made with nothing lit, whatever the weight its links\' marks carry');
+});
+
+test('a document\'s first line is one rule: withheld, its box\'s words bracketed, its owner the identifier\'s; along its text from its first position — white space alone and items that are no record passed over, up to a position not held — a record\'s words by the record rule, bracketed, else its first typed line, as typed; else the index\'s first line at its bare address; none where none is known (issue #23)', () => {
+  const para = (/** @type {number} */ pos, /** @type {string} */ text, width = text.length + 2) => /** @type {import('../model/records.js').Block} */ ({ pos, width, kind: 'para', text, origin: null });
+  const at = (/** @type {Partial<import('../model/records.js').Doc>} */ o, label = /** @type {string | null} */ ('the index\'s line')) => firstLineOf(doc(o), { label, reader: SIGNED, owner: '1.0.2' });
+  assert.deepEqual(at({ refused: 'withheld' }), bracketed([{ text: 'withheld · ', face: 'client' }, { text: '1.0.2', face: 'ident' }]), 'withheld: its box\'s words, bracketed');
+  assert.deepEqual(bracketed([{ text: 'x', face: 'client' }]).map((r) => r.text).join(''), t('L.client-words', { words: 'x' }), 'the brackets the strings table\'s');
+  assert.deepEqual(at({ blocks: [para(1, '   '), runOf(4, 6), para(10, '# Its first line')] }), [{ text: '# Its first line', face: 'reading' }], 'white space and a withheld run passed over: its first typed line, as typed');
+  assert.deepEqual(at({ blocks: [para(1, ''), para(50, 'Past a gap')] }), [{ text: 'the index\'s line', face: 'reading' }], 'a position not held before any line: the index\'s first line');
+  assert.deepEqual(at({ blocks: [] }, null), [], 'nothing held, nothing listed: none');
+  const enroll = /** @type {import('../model/records.js').Block} */ ({ pos: 1, width: 1, kind: 'atom', text: JSON.stringify({ type: 'skep-enroll', keys: [{ label: 'dev', alg: 'ed25519', key: '00' }] }), origin: null });
+  assert.deepEqual(at({ blocks: [enroll, para(2, 'After the record')] }).map((r) => r.text).join(''), t('L.client-words', { words: t('F.home-record.yours') }), 'opening with a record: the record rule\'s words, bracketed, never its raw value');
+  const theirs = firstLineOf(doc({ account: '1.0.2', blocks: [enroll] }), { label: null, reader: SIGNED, owner: '1.0.2' });
+  assert.deepEqual(theirs.filter((r) => r.face === 'ident').map((r) => r.text), ['1.0.2'], 'another\'s home record: the owner it names in the identifier\'s face');
+  assert.equal(CLIENT_CLOSE, ']', 'what closes the client\'s words: the bracket a cut keeps');
 });

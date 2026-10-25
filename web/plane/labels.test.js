@@ -1,7 +1,13 @@
 // P-LABEL's test: every label set at its rule's size and never below the
-// floor; an address or a count never cut, a first line cut or wrapped down
-// to its place's bottom, a part past the bottom left out with every part
-// after it; no label meeting another place's shape or a label set before it,
+// floor; an address or a count never cut, a first line cut on a whole word —
+// two of its words kept at the least, its close kept after the ellipsis — or
+// wrapped down to its place's bottom, a part past the bottom left out with
+// every part after it; a document's contents line — its first line from
+// where its words stand, its address whole at the row's end, standing alone
+// there where no first line fits, the label left out whole where the address
+// does not, its row the same height known or not — its address past its
+// region's prefix only where the region is named in view, held or not; first
+// lines that read alike once cut cut apart where they differ; no label meeting another place's shape or a label set before it,
 // the weaker side of a crossfade setting and blocking nothing; a connection's
 // count named alike from either end and standing on its stroke in the clear
 // stretch nearest the middle, between the ends and inside the visible view;
@@ -19,7 +25,7 @@
 // shape and no other line.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, holdTop, heldLine, across, inFace, plain, runsOf, figuresOf, face, LINE_BOX } from './labels.js';
+import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, holdTop, heldLine, heldContents, apartTexts, cutWords, across, inFace, plain, runsOf, figuresOf, face, LINE_BOX, LEAD_WORDS } from './labels.js';
 import { LABEL_MIN_PX, HOLD, FACE } from './register.js';
 
 /** @typedef {import('./labels.js').Label} Label */
@@ -68,10 +74,28 @@ test('a count wraps at its spaces and is never cut inside a word', () => {
   assert.equal(narrow.out[0].reason, 'width');
 });
 
-test('a first line alone is cut, to its place\'s width, ending in its ellipsis', () => {
-  const r = run([label([part('.0.4'), part('The artifact chain', 'cut')], { within: { x: 10, y: 10, w: 60, h: 200 } })]);
-  assert.deepEqual(texts(r), ['.0.4', 'The artifa…']);
-  for (const l of r.set[0].lines) assert.ok(l.rect.w <= 60, `${l.text} is ${l.rect.w} px`);
+test('a first line alone is cut, to its place\'s width, on a whole word ending in its ellipsis — a separator ending the cut dropped, the bracket its words close with kept after it — and where fewer than two of its words fit so it is left out, the whole of a shorter one set where it fits (issue #23)', () => {
+  const at = (/** @type {number} */ w, /** @type {Part} */ first) => run([label([part('.0.4'), first], { within: { x: 10, y: 10, w, h: 200 } })]);
+  // 5.4 px a character at 9 px: "The artifact…" is 70.2 px
+  const r = at(80, part('The artifact chain', 'cut'));
+  assert.deepEqual(texts(r), ['.0.4', 'The artifact…'], 'cut after its second word, never inside its third');
+  for (const l of r.set[0].lines) assert.ok(l.rect.w <= 80, `${l.text} is ${l.rect.w} px`);
+  const one = at(60, part('The artifact chain', 'cut'));
+  assert.deepEqual([texts(one), one.out.map((o) => [o.text, o.reason])], [['.0.4'], [['The artifact chain', 'width']]], 'room for one word alone: the first line left out, its address set');
+  assert.deepEqual(texts(at(60, part('Tumbler.', 'cut'))), ['.0.4', 'Tumbler.'], 'a first line of one word, whole where it fits');
+  assert.deepEqual(texts(at(110, part('The artifact · chain of custody', 'cut'))), ['.0.4', 'The artifact…'], 'a separator ending the cut is dropped');
+  const bracketed = at(140, { ...part('[your home document — published here from birth]', 'cut'), close: ']' });
+  assert.deepEqual(texts(bracketed), ['.0.4', '[your home document…]'], 'the client\'s words cut inside their brackets, the closing one kept after the ellipsis');
+});
+
+test('a word cut never ends inside a word, so never inside an address, and keeps at the least the words it is asked to (issue #23)', () => {
+  const fits = (/** @type {number} */ n) => (/** @type {string} */ s) => [...plain(s)].length <= n;
+  assert.equal(cutWords('alpha beta gamma delta', fits(17)), 'alpha beta gamma…');
+  assert.equal(cutWords('alpha beta gamma delta', fits(16)), 'alpha beta…');
+  assert.equal(cutWords('alpha beta', fits(6), '', 2), null, 'one word fits: fewer than the two asked');
+  assert.equal(cutWords(`see ${inFace('ident', '1.0.123456')} today`, fits(12)), 'see…', 'an address never cut: the words before it');
+  assert.equal(cutWords(`see ${inFace('ident', '1.0.123456')} today`, fits(16)), `see ${inFace('ident', '1.0.123456')}…`, 'or the address whole');
+  assert.equal(cutWords('anextraordinarilylongword and more', fits(10)), null, 'its first word wider than the room: none');
 });
 
 test('a part past its place\'s bottom is left out with every part after it, the parts above it set', () => {
@@ -308,16 +332,17 @@ test('a sign held below the one line stands at its place\'s top while that stand
   assert.equal(holdTop(10, 38, 20, 20), 10, 'a place shorter than it: at its own top');
 });
 
-test('a held label\'s one line: its head whole, else none; a badge kept whole beside it, else dropped; a first line cut to the room the two leave, ending in its ellipsis, else dropped (issue #169: "dropping words before address", "Its link badge holds with it")', () => {
+test('a held label\'s one line: its head whole, else none; a badge kept whole beside it, else dropped; a first line cut on a word to the room the two leave, ending in its ellipsis, else dropped (issue #169: "dropping words before address", "Its link badge holds with it"; issue #23)', () => {
   const parts = [part('.0.3'), part('The artifact chain', 'cut'), part('6 links', 'wrap')];
   const at = (/** @type {number} */ w) => (heldLine(parts, w, measure) || []).map((m) => [m.text, +m.x.toFixed(2)]);
   assert.deepEqual(at(200), [['.0.3', 0], ['The artifact chain', 27], ['6 links', 129.6]], 'room for all three, in their order, a space at their size between');
-  assert.deepEqual(at(100).map(([s]) => s), ['.0.3', 'The…', '6 links'], 'the words cut to what the address and the badge leave');
-  assert.deepEqual(at(60).map(([s]) => s), ['.0.3', 'The a…'], 'the badge dropped where it does not fit beside the address, the words cut to the rest');
-  assert.deepEqual(at(30).map(([s]) => s), ['.0.3'], 'no room for a character and its ellipsis: the words dropped');
+  assert.deepEqual(at(150).map(([s]) => s), ['.0.3', 'The artifact…', '6 links'], 'the words cut on a word to what the address and the badge leave');
+  assert.deepEqual(at(100).map(([s]) => s), ['.0.3', '6 links'], 'room for one word of them alone: the words dropped');
+  assert.deepEqual(at(60).map(([s]) => s), ['.0.3'], 'the badge dropped where it does not fit beside the address');
   assert.equal(heldLine(parts, 20, measure), null, 'the address wider than the room: no label, never an address cut');
   const mark = [part('+≥ 470 more — newest .0.1012', 'wrap'), part('RES-5 — any user', 'fill')];
-  assert.deepEqual(heldLine(mark, 200, measure)?.map((m) => m.text), ['+≥ 470 more — newest .0.1012', 'RES-5 —…'], 'a mark\'s count its head, set whole on its one line, its newest\'s first line cut beside it');
+  assert.deepEqual(heldLine(mark, 260, measure)?.map((m) => m.text), ['+≥ 470 more — newest .0.1012', 'RES-5 — any user'], 'a mark\'s count its head, set whole on its one line, its newest\'s first line beside it');
+  assert.deepEqual(heldLine(mark, 200, measure)?.map((m) => m.text), ['+≥ 470 more — newest .0.1012'], 'room for one word of the first line: it is dropped');
   assert.equal(heldLine(mark, 120, measure), null, 'the count wider than the room: no label, never the count wrapped or cut');
 });
 
@@ -447,4 +472,129 @@ test('a held label\'s parts carry their runs: its address in the identifier\'s f
   const line = /** @type {NonNullable<ReturnType<typeof heldLine>>} */ (heldLine([{ text: '.0.3', px: 10, ink: '#fff', fit: 'one', face: 'ident' }, { text: 'The artifact chain', px: 10, ink: '#fff', fit: 'cut', face: 'reading' }], 400, byFace));
   assert.deepEqual(line.map((m) => [m.text, m.runs]), [['.0.3', [{ text: '.0.3', face: 'ident' }]], ['The artifact chain', [{ text: 'The artifact chain', face: 'reading' }]]]);
   assert.equal(line[1].x, 4 * 10 * 0.6 + 10 * 0.45, 'the first line one space of its own face past the address, set at its width');
+});
+
+// ---- the contents line, the region, the cut apart (issue #23) ---------------------------------------------------------
+
+/** a document's label as P-RENDER hands one over: its contents line on the row at `y`, its lead from `from` to `to`, its address ending at `end`, its badge beneath */
+const contents = (/** @type {{lead?: string | null, from?: number, to?: number, end?: number, address?: string, whole?: string, region?: string | null, y?: number, badge?: string}} */ o = {}) => label(o.badge ? [part(o.badge, 'wrap')] : [], {
+  within: { x: 10, y: 10, w: 300, h: 200 }, x: 10, y: o.y ?? 40, region: o.region ?? null,
+  contents: { lead: o.lead === null ? null : part(o.lead ?? 'The artifact chain of custody', 'cut', 12), px: 12, address: { ...part(o.address ?? '.0.3'), whole: o.whole ?? '1.0.1.0.3', face: 'ident' }, from: o.from ?? 20, to: o.to ?? 200, end: o.end ?? 300 },
+});
+/** the line of a set label whose runs are all in the identifier's face: its address */
+const addressOf = (/** @type {import('./labels.js').SetLabel} */ l) => l.lines.find((x) => x.runs.every((q) => q.face === 'ident'));
+
+test('a contents line sets its first line from where its words stand, cut on a word to the room before its column\'s end and a space short of its address, and its address whole at the row\'s end; its row one line box of the larger, each centred on it (issue #23)', () => {
+  // the address ".0.3" 21.6 px at 9 px, ending at 300; the first line at 12 px, 7.2 px a character, from 20 to its column's end at 200
+  const r = run([contents()]);
+  const l = r.set[0], a = /** @type {import('./labels.js').SetLine} */ (addressOf(l)), first = l.lines[0], lh = 12 * LINE_BOX;
+  assert.deepEqual(l.lines.map((x) => x.text), ['The artifact chain of…', '.0.3'], 'its first line, cut on a word, then its address');
+  assert.ok(Math.abs(a.rect.x + a.rect.w - 300) < 1e-9 && Math.abs(a.rect.w - 4 * 9 * 0.6) < 1e-9, `the address ends at the row's end: ${JSON.stringify(a.rect)}`);
+  assert.ok(first.rect.x === 20 && first.rect.x + first.rect.w <= 200 + 1e-9, `the first line from where its words stand, inside its column: ${JSON.stringify(first.rect)}`);
+  const close = run([contents({ to: 300 })]).set[0].lines[0];
+  assert.ok(close.rect.x + close.rect.w <= 300 - 21.6 - 7.2 + 1e-9, `a column reaching the address: the first line a space short of it: ${JSON.stringify(close.rect)}`);
+  assert.ok(Math.abs(first.rect.y + first.rect.h / 2 - (40 + lh / 2)) < 1e-9 && Math.abs(a.rect.y + a.rect.h / 2 - (40 + lh / 2)) < 1e-9, 'each centred on the row');
+});
+
+test('where no first line is known, or too few of its words fit before the address, the address stands alone at the same end, so words arriving later never move it; where the address does not fit whole, the label is left out whole (issue #23)', () => {
+  const address = (/** @type {Parameters<typeof contents>[0]} */ o) => { const r = run([contents(o)]); return { r, a: r.set[0] ? addressOf(r.set[0]) : null }; };
+  const known = address({ lead: 'The artifact chain of custody' }), unknown = address({ lead: null }), narrow = address({ to: 40 });
+  assert.ok(known.a && unknown.a && narrow.a, 'an address set in each');
+  assert.deepEqual([unknown.a?.rect, narrow.a?.rect], [known.a?.rect, known.a?.rect], 'the address where it stood with its first line beside it');
+  assert.deepEqual([unknown.r.set[0].lines.length, narrow.r.set[0].lines.length, narrow.r.out.map((o) => o.reason)], [1, 1, ['width']], 'the address alone; the first line too wide for two of its words named left out for its width');
+  const empty = address({ lead: '   ' });
+  assert.equal(empty.r.set[0].lines.length, 1, 'an empty document\'s: the address alone');
+  const none = run([{ ...contents({ end: 300 }), within: { x: 10, y: 10, w: 290, h: 200 } }].map((l) => ({ ...l, contents: l.contents && { ...l.contents, end: 315 } })));
+  assert.deepEqual([none.set.length, none.out.map((o) => o.reason)], [0, ['width', 'after']], 'the address past its room: no label at all, never the first line alone');
+});
+
+test('a contents label\'s badge stands beneath its row, from its column\'s left (issue #23)', () => {
+  const r = run([contents({ badge: '6 links' })]);
+  const badge = r.set[0].lines.find((x) => x.text === '6 links');
+  assert.ok(badge && badge.rect.x === 10 && badge.rect.y >= 40 + 12 * LINE_BOX - 1e-9, `beneath the row: ${JSON.stringify(badge)}`);
+});
+
+test('a label\'s address drops its region\'s prefix only where that region is named in view — its own label set before it in the pass, or the one line naming it — and is whole elsewhere, the held form too (issue #23; foundations F-9)', () => {
+  const doc = () => contents({ region: '1.0.1' });
+  const frame = label([part('1.0.1 · 3 documents')], { kind: 'frame', place: '1.0.1', within: { x: 400, y: 10, w: 300, h: 40 }, x: 400, y: 10 });
+  const addr = (/** @type {ReturnType<typeof run>} */ r) => addressOf(/** @type {import('./labels.js').SetLabel} */ (r.set.find((l) => l.kind === 'doc')))?.text;
+  assert.equal(addr(run([doc()])), '1.0.1.0.3', 'nothing in view names its region: its whole address');
+  assert.equal(addr(run([frame, doc()])), '.0.3', 'its region\'s label set before it: the fields past the prefix');
+  const blocked = label([part('1.0.1 · 3 documents')], { kind: 'frame', place: '1.0.1', within: { x: 400, y: 10, w: 30, h: 40 }, x: 400, y: 10 });
+  assert.equal(addr(run([blocked, doc()])), '1.0.1.0.3', 'its region\'s label left out: whole');
+  assert.equal(addr(setLabels([doc()], [], VIEW, measure, new Set(['1.0.1']))), '.0.3', 'the one line naming its region: the fields past the prefix');
+  // held below the line: its region's held label above it, or none
+  const held = { ...doc(), y: -60, hold: { rects: [{ x: 0, y: -100, w: 400, h: 400 }], pad: 10, plate: null } };
+  const regionHeld = label([part('1.0.1 · 3 documents')], { kind: 'frame', place: '1.0.1', within: { x: 0, y: -200, w: 1000, h: 12 }, x: 0, y: -200, hold: { rects: [{ x: 0, y: -300, w: 1000, h: 1200 }], pad: 0, plate: null } });
+  const heldAddr = (/** @type {Label[]} */ ls) => { const r = setLabels(ls, [], SEEN, measure); const l = r.set.find((x) => x.kind === 'doc'); return l && { held: l.held, addr: addressOf(l)?.text }; };
+  assert.deepEqual(heldAddr([held]), { held: true, addr: '1.0.1.0.3' }, 'held, its region named nowhere: whole');
+  assert.deepEqual(heldAddr([regionHeld, held]), { held: true, addr: '.0.3' }, 'held beneath its region\'s held label: the fields past the prefix');
+});
+
+test('a contents line held: its address at the line\'s end, whole, else no line; a badge whole just before it; its first line from the line\'s start, cut on a word to the room those leave, else dropped (issue #23; issue #169)', () => {
+  const c = { lead: part('The artifact chain', 'cut'), address: part('.0.3') }, badge = [part('6 links', 'wrap')];
+  const at = (/** @type {number} */ w, /** @type {Part[]} */ ps = badge) => (heldContents(c, ps, w, measure) || []).map((m) => [m.text, +m.x.toFixed(2)]);
+  // ".0.3" 21.6, "6 links" 37.8, a space 5.4, "The artifact chain" 97.2, "The artifact…" 70.2
+  assert.deepEqual(at(200), [['The artifact chain', 0], ['6 links', 200 - 21.6 - 5.4 - 37.8], ['.0.3', 200 - 21.6]], 'room for all: the first line at the start, the address at the end, the badge before it');
+  assert.deepEqual(at(150).map(([s]) => s), ['The artifact…', '6 links', '.0.3'], 'the first line cut on a word to the room left');
+  assert.deepEqual(at(100).map(([s]) => s), ['6 links', '.0.3'], 'room for one word of it: dropped');
+  assert.deepEqual(at(50).map(([s]) => s), ['.0.3'], 'the badge dropped where it does not fit');
+  assert.ok(Math.abs((heldContents(c, badge, 50, measure) || [])[0].x - (50 - 21.6)) < 1e-9, 'the address alone at the line\'s end');
+  assert.equal(heldContents(c, badge, 20, measure), null, 'the address wider than the line: none');
+});
+
+test('first lines that read alike once cut are cut again to show where they differ: the first word, an ellipsis, then the words from the first that differs, in the room each was set in; texts that differ before their second word, or are the same, are left as shown (issue #23)', () => {
+  const room = (/** @type {number} */ n) => (/** @type {string} */ s) => [...plain(s)].length <= n;
+  const a = 'Notes on the meeting of the third', b = 'Notes on the meeting of the ninth', same = 'Notes on the meeting of the third';
+  const cut = (/** @type {string} */ s) => /** @type {string} */ (cutWords(s, room(22), '', LEAD_WORDS));
+  assert.equal(cut(a), cut(b), 'they read alike once cut');
+  const now = apartTexts([a, b, same].map((full) => ({ shown: cut(full), full, close: '', fits: room(22) })));
+  assert.deepEqual(now, ['Notes … third', 'Notes … ninth', 'Notes … third'], 'each from the word where it differs from another; the same words as another its alike, both shown apart from the one they differ from');
+  assert.deepEqual(apartTexts([{ shown: 'Alpha…', full: 'Alpha beta', close: '', fits: room(6) }, { shown: 'Alpha…', full: 'Alpha gamma', close: '', fits: room(6) }]), ['Alpha…', 'Alpha…'], 'differing at their second word: left as shown');
+  assert.deepEqual(apartTexts([{ shown: 'Notes on…', full: 'Notes on the long meeting of the third', close: '', fits: room(9) }, { shown: 'Notes on…', full: 'Notes on the long meeting of the ninth', close: '', fits: room(9) }]), ['Notes on…', 'Notes on…'], 'no room for the first word and the words that differ: left as shown');
+  const ends = apartTexts([{ shown: '[x y…]', full: '[x y zeta omega]', close: ']', fits: room(14) }, { shown: '[x y…]', full: '[x y zeta delta]', close: ']', fits: room(14) }]);
+  assert.deepEqual(ends, ['[x … omega]', '[x … delta]'], 'a bracketed first line keeps its close');
+});
+
+test('the pass cuts its first lines that read alike apart, each within the width it was set at (issue #23)', () => {
+  const doc = (/** @type {string} */ place, /** @type {number} */ x, /** @type {string} */ lead) => ({ ...label([], { place, within: { x, y: 10, w: 200, h: 100 }, x, y: 20 }), contents: { lead: part(lead, 'cut'), px: 9, address: part('.0.' + place), from: x, to: x + 140, end: x + 200 } });
+  const r = run([doc('3', 10, 'Notes on the meeting of the third'), doc('4', 400, 'Notes on the meeting of the ninth')]);
+  const leads = r.set.map((l) => l.lines[0]);
+  assert.deepEqual(leads.map((x) => x.text), ['Notes … third', 'Notes … ninth'], 'apart where they differ');
+  for (const x of leads) assert.ok(x.rect.w <= 140 + 1e-9 && x.rect.w === measure(x.text, 9), `inside its room, its width its words': ${JSON.stringify(x.rect)}`);
+});
+
+test('over many random frames every contents line\'s lines stand inside their place and the view, the address whole at the row\'s end or the label left out whole, meeting no other place\'s shape and no other line (issue #23)', () => {
+  let seed = 31;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const words = ['The', 'artifact', 'chain', 'of', 'custody', 'notes', 'on', 'a', 'meeting', 'Tumbler.'];
+  let rows = 0;
+  for (let frame = 0; frame < 300; frame++) {
+    /** @type {Shape[]} */
+    const shapes = [];
+    /** @type {Label[]} */
+    const labels = [];
+    for (let i = 0; i < 10; i++) {
+      const w = 30 + rnd() * 250, h = 20 + rnd() * 150, x = -60 + rnd() * 1000, y = -60 + rnd() * 800, place = 'p' + i, alpha = rnd() < 0.85 ? 1 : 0.3;
+      shapes.push({ place, rect: { x, y, w, h }, alpha });
+      const px = 9 + rnd() * 8, lead = rnd() < 0.2 ? null : part(Array.from({ length: 1 + Math.floor(rnd() * 6) }, () => words[Math.floor(rnd() * words.length)]).join(' '), 'cut', px);
+      const end = x + w * (0.6 + 0.4 * rnd()), to = x + (end - x) * (0.4 + 0.5 * rnd());
+      labels.push({ ...label(rnd() < 0.5 ? [part('6 links', 'wrap')] : [], { place, alpha, within: { x, y, w, h }, x, y: y + rnd() * 20 }),
+        contents: { lead, px, address: { ...part('.0.' + Math.floor(rnd() * 999)), face: 'ident' }, from: x + rnd() * 10, to, end } });
+    }
+    const r = run(labels, shapes);
+    const lines = r.set.flatMap((l) => l.lines.map((line) => ({ place: l.place, within: l.within, ...line })));
+    for (const l of r.set) {
+      const c = /** @type {import('./labels.js').Contents} */ (/** @type {Label} */ (labels.find((x) => x.place === l.place)).contents);
+      const a = addressOf(l);
+      assert.ok(a && Math.abs(a.rect.x + a.rect.w - c.end) < 1e-9, `${l.place}: its address set, ending at its row's end`);
+      rows++;
+    }
+    for (const l of lines) {
+      assert.ok(inside(l.rect, l.within) && inside(l.rect, VIEW), JSON.stringify(l));
+      for (const s of shapes) if (s.alpha >= 0.5 && s.place !== l.place) assert.ok(!meets(l.rect, s.rect), `${l.text} meets ${s.place}'s shape`);
+    }
+    for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++) assert.ok(!meets(lines[i].rect, lines[j].rect), `${lines[i].text} meets ${lines[j].text}`);
+  }
+  assert.ok(rows > 100, `contents lines set (${rows}): the invariants held over rows set, not over none`);
 });

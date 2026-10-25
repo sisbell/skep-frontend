@@ -68,20 +68,27 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line .aside { color:#ffe2b8; }
 #line button { padding:0 5px; }
 /* the address segment is a native button (K-22; rule 14), drawn as the segment it is, not as a key — one width at every
-   scale and focus (issue #141): the widest words it names, which the line sets on it (`--words`, in characters of its
+   scale and focus: the widest words it names, which the line sets on it (`--words`, in characters of its
    face — the identifier's, every one the same width, which the addresses it names are set in and the position's words
    never pass), then the strip's room (its 64px and 6px either side) and the marker's 2ch, its content clipped past it,
-   so nothing after it on the line moves; set at the line's top, as an inline-block clipping its content has no baseline
-   of its text's */
-#line button.address { display:inline-block; width:calc(var(--words) * 1ch + 76px + 2ch); overflow:hidden; text-align:left; background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; font-family:var(--face-ident); font-size:11px; line-height:inherit; cursor:pointer; vertical-align:top; }
+   so nothing after it on the line moves; set at the line's top. Its fields stand at their own widths and the document's
+   label after its field takes the room they leave (`flex`, from none), its words wrapping onto a line it hides, so
+   short of room it gives way a whole word at a time — its first word too, after the empty lead-in it opens with, which
+   a line may break after and which gives an empty label its line, so it stands on the segment's baseline; the segment
+   shrinks no narrower than its fields (`overflow:clip` keeps its content's least width its least) */
+#line button.address { display:inline-flex; align-items:baseline; width:calc(var(--words) * 1ch + 76px + 2ch); overflow:clip; text-align:left; background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; font-family:var(--face-ident); font-size:11px; line-height:inherit; cursor:pointer; vertical-align:top; }
+#line button.address > * { flex:none; }
+#line button.address > .label { flex:1 1 0; width:0; min-width:0; height:1lh; margin:0 .25em; overflow:hidden; white-space:normal; overflow-wrap:normal; font-family:var(--face-reading); color:var(--ink); }
+#line button.address > .label > .lead-in { display:inline-block; width:0; }
 #line button.address .pos { font-family:var(--face-client); }
 /* the line is one row of its acts and its segments, set on their text's baseline: short of room the segments are cut — the
-   acting-as segment and every one after it first, then the address's — and a walk's folded moment never (issue #182's
-   design decision: "It never yields when the line runs short"); with room, the address segment stands at its one width */
+   acting-as segment and every one after it first, then the address's document label, a word at a time, its fields never —
+   and a walk's folded moment never (issue #182's design decision: "It never yields when the line runs short"); with
+   room, the address segment stands at its one width */
 #line { display:flex; align-items:baseline; }
 #line > * { flex:none; }
 #line > .seg { flex:0 1000 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; }
-#line > button.address { flex:0 1 auto; min-width:0; }
+#line > button.address { flex:0 1 auto; }
 #line > .seg.walk { flex:none; overflow:visible; color:var(--warn); }
 
 /* LEAP — the address segment opened (K-30); above the reading scene, which it may open over (#118) */
@@ -92,10 +99,13 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #leapnote { margin-top:6px; color:var(--dim); font-size:11px; }
 /* the rows share three columns, so every row's title starts at one x: the address, as wide as the widest (up to 40% of
    the box); the title, the room the others leave; the address or label the row names, as wide as the widest (up to 30%
-   of the box) — a cell longer than its column (a document's first line, a typed URL) wraps inside it */
+   of the box) — a cell longer than its column (a document's first line, a typed URL) wraps inside it, an address in it
+   whole */
 #leaphits { max-height:340px; overflow:auto; margin-top:6px; display:grid; grid-template-columns:fit-content(40%) minmax(0, 1fr) fit-content(30%); column-gap:8px; align-content:start; }
 .hit { grid-column:1 / -1; display:grid; grid-template-columns:subgrid; padding:3px 6px; border-radius:3px; cursor:pointer; overflow-wrap:anywhere; }
 .hit .a { color:var(--dim); }
+/* an address in a row is exact: never greyed and never broken across lines (FP-26) */
+.hit .id { color:var(--ink); white-space:nowrap; overflow-wrap:normal; }
 .hit.sel, .hit:hover { background:#1e2530; }
 
 /* the ARIA mirror (S3 Q6; law 7) — the one accessible rendering, off the visible plane; shown while the focus ring is

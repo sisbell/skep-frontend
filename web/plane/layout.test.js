@@ -22,15 +22,16 @@
 // columns left to right then row by row, the standard size then steps each at
 // least doubling the capacity, the outline one edge, the estimate never more
 // columns than the text; positions placed and read back, unheld positions
-// estimated, the view's window over a fold, the paging key's next column, and
-// a passage held across two folds — a version's by the pair of positions a
-// version move names (FP-22).
+// estimated, the view's window over a fold, the paging key's next column, a
+// document's first line where its label sets it, and a passage held across
+// two folds — a version's by the pair of positions a version move names
+// (FP-22).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as LAY from './layout.js';
 import {
   layoutOf, heightOf, wrap, breakBetween, cssMeasures, lineBox, columnsOf, fold, estimate, estimatedSpan, slot, outline, outlineRects, boundsOf, firstRow, padded,
-  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, standardFs, stepAt, stepFor, gapOf, edgeOf, fitFor, columnW, advanceOf, setAdvance,
+  bars, placeOf, posAt, columnAt, pageTarget, windowIn, holdOf, leadOf, standardFs, stepAt, stepFor, gapOf, edgeOf, fitFor, columnW, advanceOf, setAdvance,
   MEASURE, BORDER, LINE_H, LAY_FS, CHAR_W, MEASURE_CPL, COLUMN_LINES, COLUMN_H, COLUMN_W, GUTTER, EDGE, EDGE_GAP, STANDARD_GRID, STANDARD_FS, ADVANCE_WEIGHTS,
 } from './layout.js';
 import { DOC_W, DOC_H } from './projection.js';
@@ -547,4 +548,15 @@ test('the measurements the CSS reads are P-LAY\'s, one source: the fold\'s measu
   assert.ok(Number.isInteger(LINE_H * LAY_FS * 64), 'a line box on the 1/64 px grid at the layout size');
   assert.equal(heightOf({ lines: [], blocks: new Map() }), 0);
   assert.equal(columnsOf([]).length, 0);
+});
+
+test('a document\'s first line stands in its fold at its first block\'s first line, from where its ink begins — past a typed line\'s indent — and, where its fold holds no line for its first position, at that position\'s estimated line past the head, on a typed line\'s indent (issue #23)', () => {
+  const { rows } = article([words(30, 1), words(12, 2)]);
+  const f = fold(layoutOf(rows).lines, ROOM), l = leadOf(f), first = f.lines.findIndex((x) => x.kind !== 'head'), c = f.columns[0];
+  assert.equal(f.lines[first].pos, 1, 'the first line past the head is the first block\'s');
+  assert.deepEqual(l, { column: 0, x: c.x + f.lines[first].ink * CHAR_W * f.fs, y: c.y + (f.lines[first].top - c.top) * f.fs, h: f.lines[first].h * f.fs }, 'that line, from its ink');
+  assert.ok(close(l.x - c.x, MEASURE.indent * f.fs), 'a typed line opening the document: past its indent');
+  const e = estimate(600, ROOM), le = leadOf(e), p = placeOf(e, 1);
+  assert.deepEqual(le, { column: 0, x: e.columns[0].x + MEASURE.indent * e.fs, y: p.y, h: p.h }, 'its text unread: its first position\'s estimated line past the head, on the indent');
+  assert.ok(close(le.y - e.columns[0].y, LINE_H * e.fs + 2 * lineBox(MEASURE.head) * e.fs), 'below the head\'s three lines');
 });

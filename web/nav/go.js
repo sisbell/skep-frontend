@@ -879,10 +879,11 @@ export function viewFor(addr, pos) {
 /**
  * An entry's words as the trail list and the LEAP box show it (see the head):
  * its act's name where HOME or WHOLE BOARD pushed it; at a document, the
- * words its box's first line says now (T-LAYER's `firstLine`) — the index's
- * first line where the index lists it, "withheld · ⟨owner⟩" where a read
- * answered `withheld`, nothing where nothing has answered — read from the
- * model as it is shown, never kept in the entry; nothing for any other place.
+ * words its box's label leads with now (T-LAYER's `firstLine`) — its first
+ * line by the one rule, the client's words in its place bracketed, "[withheld
+ * · ⟨owner⟩]" where a read answered `withheld`, nothing where nothing has
+ * answered — read from the model as it is shown, never kept in the entry;
+ * nothing for any other place.
  * @param {Entry} e
  * @returns {string}
  */
@@ -894,7 +895,7 @@ export function wordsOf(e) {
 /**
  * An entry's words as markup (`wordsOf`), each in its face (P-REG's FACE):
  * an act's name the client's; a document's first line its words in the
- * reading face, an owner a withheld statement names the identifier's
+ * reading face, an address the client's words name the identifier's
  * (T-LAYER's `firstLineHTML`).
  * @param {Entry} e
  * @returns {string}

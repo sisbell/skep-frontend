@@ -31,9 +31,9 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     every draft of the claimant's on this board lies past the sound depth,
     its box the account's residue cell, where the continuation's one mark
     stands; and a LEAP to a withheld document with a box of its own (the
-    second account's draft) drawing its withheld box, its label the address
-    and its words, "withheld · ⟨owner⟩", alone (existence and owner, never
-    bytes; B1-S2) — the one
+    second account's draft) drawing its withheld box, its label its words,
+    "withheld · ⟨owner⟩", bracketed in its first line's place, and its
+    address alone (existence and owner, never bytes; B1-S2) — the one
     line naming that landing is marked, waiting on the walk's focus at a
     document the index does not list; at both landings the mirror's current
     item naming the document in its withheld box's words, never published;
@@ -103,7 +103,7 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     down; the draft it read holding no text, nothing
     mounted for it — the draft the trail names, and each in view, read again
     at the guest's class and COVERED (issue #177's design decision), said once with the
-    ending, its trail row the cover's words, "withheld · ⟨owner⟩", never its
+    ending, its trail row the cover's words, "[withheld · ⟨owner⟩]", never its
     first line, Back to it its withheld face with the ending's words and the
     sign-in its act, the walk on it; no label or mark drawing a draft at HOME
     but that cover, counted in its continuation's mark; the window run
@@ -676,9 +676,10 @@ def run(ctx):
     w = ctx.js('window.__skep.model.doc(%s)' % json.dumps(WITHHELD))
     at_box = [[x['text'] for x in l['lines']] for l in ctx.js('window.__skep.labels()') if l['kind'] == 'doc' and l['place'] == WITHHELD]
     want = [WITHHELD[len(SECOND_ACCOUNT):], t(ctx, 'F.corner.withheld', {'owner': SECOND_ACCOUNT})]
-    r.check(w['refused'] == 'withheld' and w['from'] == -1 and at_box == [want],
-            '(d) a LEAP to a withheld document with a box of its own draws its withheld box, its label the address and "%s" alone: existence and owner, never bytes (B1-S2)' % want[1],
-            {'refused': w['refused'], 'labels_at_the_box': at_box, 'want': want})
+    label = [t(ctx, 'L.client-words', {'words': want[1]}), want[0]]
+    r.check(w['refused'] == 'withheld' and w['from'] == -1 and at_box == [label],
+            '(d) a LEAP to a withheld document with a box of its own draws its withheld box, its label "%s", bracketed in its first line\'s place, and its address alone: existence and owner, never bytes (B1-S2; issue #23)' % want[1],
+            {'refused': w['refused'], 'labels_at_the_box': at_box, 'want': label})
     named_at = ctx.js('window.__skep.line().address')
     r.check(named_at['text'].split(' › ')[1:3] == [SECOND_ACCOUNT, WITHHELD], '(d) the one line names the landing: board › its account › the withheld document — a landing the index does not list stands on its own node (rule 12, #97)', named_at)
     withheld_item = ctx.js('window.__skep.mirror.item(window.__skep.mirror.index())') or ''
@@ -785,8 +786,9 @@ def run(ctx):
     ctx.esc()
     row = next((x for x in rows if WINDOW[2] in x['text']), None)
     first_line = plain(next((p['label'] for p in owner_places if p['doc'] == WINDOW[2]), '') or '')
-    r.check(bool(row) and row['words'] == cover_words and (not first_line or first_line not in row['text']),
-            '(g) the draft\'s trail row keeps its number and its address and says "%s", never its first line (issue #177)' % cover_words, {'row': row, 'first_line': first_line})
+    row_words = t(ctx, 'L.client-words', {'words': cover_words})
+    r.check(bool(row) and row['words'] == row_words and (not first_line or first_line not in row['text']),
+            '(g) the draft\'s trail row keeps its number and its address and says "%s", the client\'s words bracketed in its first line\'s place, never its first line (issues #177, #23)' % row_words, {'row': row, 'first_line': first_line})
     ctx.js('window.__skep.go.back()'); ctx.settle(); ctx.frames(2)
     back = ctx.js('''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm'), b = o.querySelector('[data-run]'), T = window.__skep.trail();
       return {id: window.__skep.overlay().id, words: w ? w.textContent : null, arm: a ? a.dataset.string : null, act: b ? b.textContent : null, focus: window.__skep.view.focus(), entry: T.entries[T.cursor].addr}; })()''')

@@ -1,12 +1,13 @@
 // P-REG's test: each datum one variable (ux-T1 (a)) — the three linkers take
 // three hues; the visited value is lighter; the label floor stands above the
-// readable em; the tail shorter than a gutter at the smallest em an article
+// readable em, a document's address set at one size, never below it; the
+// tail shorter than a gutter at the smallest em an article
 // stands at; the corner narrower compact than whole, holding a kept word
 // whole; the three faces each their job's, the shipped two waited on in
 // every style the style declares; the CSS variables carry the same values.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, TAIL, CORNER, FACE, SHIPPED, cornerWidth, cssVariables } from './register.js';
+import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, ADDRESS, TAIL, CORNER, FACE, SHIPPED, cornerWidth, cssVariables } from './register.js';
 import { LOD_TXT_LO, UNMOUNT_EM } from './lod.js';
 import { GUTTER } from './layout.js';
 
@@ -18,6 +19,10 @@ test('the visited value is lighter than full and above the legibility floor', ()
 });
 test('the label floor stands above the canvas\'s readable em (P-LOD\'s LOD_TXT_LO)', () => {
   assert.ok(LABEL_MIN_PX > LOD_TXT_LO);
+});
+test('a document\'s address in its label is set at one size, never below the label floor (issue #23)', () => {
+  assert.ok(ADDRESS.px >= LABEL_MIN_PX && Number.isFinite(ADDRESS.px));
+  assert.equal(typeof ADDRESS.weight, 'string');
 });
 test('a tail leaving a column\'s line ends in the gutter, short of the next column\'s text, at the smallest em an article stands at (issue #132)', () => {
   assert.ok(TAIL.length > 0 && TAIL.length < GUTTER * UNMOUNT_EM, `${TAIL.length} px against a gutter of ${GUTTER * UNMOUNT_EM} px`);

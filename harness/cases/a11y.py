@@ -895,7 +895,8 @@ def run(ctx):
         ctx.frames(1)
     # ---- the mirror names a box once, by the version it shows (issue #154's design decision: "The box shows one version"):
     # a LEAP to version 1's address pins the box there; zoomed out to mid over it, the mirror's documents list the box once,
-    # its current item, named by the version's address and its document's first line
+    # its current item, named by the version's address and the version's own first line (issue #23: the label's first line
+    # is "a pinned version's own")
     member = VERSIONED + '.1'
     ctx.leap(member)
     zooms = 0
@@ -907,9 +908,9 @@ def run(ctx):
     ctx.frames(2)
     listed = ctx.js('''((a) => [...document.querySelectorAll('#mirror [role=treeitem]')].map((li) => ({text: li.textContent, current: li.getAttribute('aria-selected') === 'true'}))
       .filter((i) => i.text.startsWith('document ' + a + ',') || i.text.startsWith('document ' + a + '.')))(%s)''' % json.dumps(VERSIONED))
-    label = ctx.js('(window.__skep.model.places().find((p) => p.doc === %s) || {}).label' % json.dumps(VERSIONED))
-    r.check(len(listed) == 1 and listed[0]['current'] and listed[0]['text'].startswith('document %s, "%s"' % (member, label)),
-            'at mid over a box pinned to version 1 the mirror lists the box once, its current item, named by the version\'s address and its document\'s first line (issue #154)',
+    label = ctx.js('window.__skep.firstLine(%s).first' % json.dumps(member))
+    r.check(len(listed) == 1 and listed[0]['current'] and listed[0]['text'].startswith('document %s, %s,' % (member, '"%s"' % label if label else '')),
+            'at mid over a box pinned to version 1 the mirror lists the box once, its current item, named by the version\'s address and that version\'s own first line, as its box\'s label names it (issues #154, #23)',
             {'listed': [dict(i, text=i['text'][:120]) for i in listed], 'zooms': zooms, 'label': label})
     r.figures['pinned_box'] = {'zooms': zooms, 'listed': [i['text'][:120] for i in listed]}
     ctx.leap(VERSIONED, None)

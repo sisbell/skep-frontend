@@ -26,7 +26,7 @@ import * as LK from '../links/links.js';
 import * as LAYER from './layer.js';
 import * as CAM from '../plane/camera.js';
 import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, CHAR_W, LINE_H } from '../plane/layout.js';
-import { CORNER, cornerWidth } from '../plane/register.js';
+import { CORNER, ADDRESS, COL, cornerWidth } from '../plane/register.js';
 import { holdTop, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
@@ -985,17 +985,35 @@ test('a face arriving after the first layout is a re-set: the type measured agai
   } finally { setAdvance(before); LAYER.refaced(); }
 }, 1440, 900));
 
-test('a box\'s label sets its address in the identifier\'s face and its first line\'s words, as typed, in the reading face, its draft mark the client\'s; a withheld box\'s statement the client\'s, the owner it names the identifier\'s — on the canvas and in the chrome alike (issue #16)', () => {
+test('a box\'s label is its contents line: its first line leading, at its em, its words as typed in the reading face, its draft mark the client\'s, cut on a word; its address at P-REG\'s one size and weight in the identifier\'s face, past its region\'s prefix and whole beside it for where its region is not named, in the title\'s ink; a withheld box\'s statement bracketed, the owner it names the identifier\'s — on the canvas and in the chrome alike (issues #16, #23)', () => {
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: '# The artifact chain', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
-  const d = REC.doc(D), [addr, first] = LAYER.docLabel(d, 300, 12);
-  assert.deepEqual([addr.text, addr.face], [LAYER.shortAddr(d), 'ident'], 'the address past its region\'s prefix, in the identifier\'s face');
+  const d = REC.doc(D), l = LAYER.docLabel(d, 12), first = /** @type {import('../plane/labels.js').Part} */ (l.lead);
+  assert.deepEqual([l.address.text, l.address.whole, l.address.face, l.address.px, l.address.weight, l.address.ink, l.region], [LAYER.shortAddr(d), D, 'ident', ADDRESS.px, ADDRESS.weight, COL.title, '1.0.1'], 'the address past its region\'s prefix, whole beside it, at one size, never greyed');
+  assert.deepEqual([first.px, first.fit, first.close], [12, 'cut', ''], 'the first line at the box\'s em, cut on a word');
   assert.deepEqual(runsOf(first.text, first.face || 'client'), [{ text: '# The artifact chain', face: 'reading' }, { text: ' · ' + t('F.label.draft'), face: 'client' }], 'the first line\'s words the reading face\'s, its characters as typed, "#" among them; the draft mark the client\'s');
   assert.equal(LAYER.firstLineHTML(d), `<span class="reading"># The artifact chain</span>${esc(' · ' + t('F.label.draft'))}`, 'in the chrome: the words in the reading face');
   assert.equal(LAYER.firstLine(d), '# The artifact chain · ' + t('F.label.draft'), 'as words, the same');
   REC.takeRefused(D, 'withheld');
-  const held = LAYER.docLabel(REC.doc(D), 300, 12)[1];
-  assert.deepEqual(runsOf(held.text, held.face || 'client'), [{ text: 'withheld · ', face: 'client' }, { text: '1.0.1', face: 'ident' }], 'withheld: the statement the client\'s, its owner the identifier\'s');
-  assert.equal(LAYER.firstLineHTML(REC.doc(D)), tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' }));
+  const held = /** @type {import('../plane/labels.js').Part} */ (LAYER.docLabel(REC.doc(D), 12).lead);
+  assert.deepEqual(runsOf(held.text, held.face || 'client'), [{ text: '[withheld · ', face: 'client' }, { text: '1.0.1', face: 'ident' }, { text: ']', face: 'client' }], 'withheld: the statement the client\'s, bracketed, its owner the identifier\'s');
+  assert.equal(held.close, ']', 'a cut keeps its closing bracket');
+  assert.deepEqual(LAYER.docLabel(REC.doc(D), 12).parts, [], 'no badge at a withheld box');
+  assert.equal(LAYER.firstLineHTML(REC.doc(D)), `[${tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })}]`);
+});
+
+test('a box\'s first line is read by one rule: its own text from its first position where the model holds it — a record\'s words by the record rule, bracketed, else its first typed line holding more than white space — else the index\'s first line at its bare address; none where none is known, and none at a version the model holds no text of (issue #23)', () => {
+  const at = (/** @type {string} */ addr) => LAYER.firstOf(REC.doc(addr)).map((r) => [r.text, r.face]);
+  const U = '1.0.1.0.17', H = '1.0.1.0.1', V = D + '.3';
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'the index\'s words', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  assert.deepEqual(at(D), [['the index\'s words', 'reading']], 'listed, no text held: the index\'s first line');
+  assert.deepEqual(at(U), [], 'unlisted, nothing held: none');
+  REC.takeDelivery(U, [{ pos: 1, width: 24, kind: 'content', text: '   \n\nAn unlisted document.', ref: null, origin: null }]);
+  assert.deepEqual(at(U), [['An unlisted document.', 'reading']], 'unlisted, its text held: its first typed line holding more than white space');
+  REC.takeDelivery(D, [{ pos: 1, width: 20, kind: 'content', text: 'Its own first line.\n', ref: null, origin: null }]);
+  assert.deepEqual(at(D), [['Its own first line.', 'reading']], 'its text held from its first position: its own first line, the words that stand when it mounts');
+  REC.takeDelivery(H, [{ pos: 1, width: 1, kind: 'atom', text: JSON.stringify({ type: 'skep-enroll', keys: [{ label: 'dev', alg: 'ed25519', key: '00' }] }), ref: null, origin: null }]);
+  assert.deepEqual(LAYER.firstOf(REC.doc(H)).map((r) => r.text).join(''), t('L.client-words', { words: t('F.home-record.yours') }), 'opening with a record: the record rule\'s words, bracketed, never its raw value');
+  assert.deepEqual(at(V), [], 'a version, its text unread: none, never its trunk\'s index line');
 });
 
 test('where the platform sets no words — the node tests — the article\'s measure counts every character one advance of the reading face, whatever its face, as the plan does (issue #16)', () => {

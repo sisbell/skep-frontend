@@ -9,7 +9,8 @@
 // kept — D-3); a link lit at an arrival its stroke's weight (foundations
 // §2.1); a connection's kind its line's form; a box's publication state its
 // edge's weight; a label's size its floor, below which no label on the plane
-// is set (P-LABEL); the edge stub its inset from the view's border and its
+// is set (P-LABEL), and a document's address in its label its one size and
+// weight (`ADDRESS`); the edge stub its inset from the view's border and its
 // triangle's size, the one stub BM's beams and P-RENDER's mid connections
 // draw (P-CAM's `edgeStub`); the tail its length and the gap before its
 // label, the short stroke P-RENDER draws for a link whose far document the
@@ -141,6 +142,15 @@ export const cornerWidth = (/** @type {boolean} */ compact) => (compact ? CORNER
  * size, above P-LOD's readable em (foundations §2.1; S3 Q4).
  */
 export const LABEL_MIN_PX = 9;
+
+/**
+ * A document's address in its label on the plane and held over its text
+ * (FP-26): set at one size, the label floor, at `weight`, in the identifier's
+ * face, at its row's end, so words arriving beside it never move it — the
+ * size at which the harness measures its dots standing apart in the shipped
+ * face (FP-18).
+ */
+export const ADDRESS = Object.freeze({ px: LABEL_MIN_PX, weight: '600' });
 
 /** the canvas palette */
 export const COL = Object.freeze({

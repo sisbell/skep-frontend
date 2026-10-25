@@ -6,8 +6,9 @@
 // link's type, the index), P-REG (the values) and ST (the words a far end is
 // named in) alone, with M-ADDR's arithmetic beneath (FP-11); N-GO's links
 // lit and the version each box shows, P-RENDER's test of which documents
-// the plane draws and T-LAYER's owner rule are read through the readers the
-// app hands in (`readers`), for each of them imports LK.
+// the plane draws, T-LAYER's owner rule and T-ARTICLE's first-line rule are
+// read through the readers the app hands in (`readers`), the seam importing
+// nothing of their layer.
 // Which links show at a document and at a span, and how each is marked
 // (foundations §2.1's link row; R60's default composition; the counts'
 // rules (i)–(iii), E11 (c), E12 (i), E13 (a), E15 (a), E17 (a); D-2; D-3;
@@ -74,8 +75,11 @@
 //     nothing of the address where it answered `doc_not_registered`, or that
 //     there is no document here yet in the reader's own account where the
 //     index, known complete, lists none at the address; withheld, with its
-//     owner by the one owner rule (the reader `owner`); its first line where
-//     it is readable and the page holds one; and nothing where nothing was
+//     owner by the one owner rule (the reader `owner`) — each of these the
+//     client's words in its first line's place, bracketed (ST's
+//     `bracketed`); its first line by the one rule a box's label reads (the
+//     reader `first`, T-ARTICLE's `firstLineOf`) where it is readable and the
+//     page holds one; and nothing where nothing was
 //     answered; its tail, its card, its mirror item and every list that
 //     names it carry those words, each stretch in its face (`farFaced`) — the
 //     address the identifier's, the document's words the reading face's, a
@@ -146,7 +150,7 @@
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
 import { commonsType, documentOf, accountOf, isUnder } from '../model/address.js';
-import { t, facedHTML } from '../strings.js';
+import { t, facedHTML, bracketed, withheldLine } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -207,6 +211,7 @@ import { t, facedHTML } from '../strings.js';
  * @property {(addr: string) => boolean} drawn does the plane draw a document somewhere — at its box, or in the continuation's mark holding it, a version member at its document's (P-RENDER's `drawsDoc`)
  * @property {(addr: string) => string} owner the owner account of a document, by the one owner rule (T-LAYER's `originOwner`)
  * @property {(addr: string) => string} shown the version a document's box shows: the plain address, or the version pinned there (N-GO's `shownIn`)
+ * @property {(d: import('../model/records.js').Doc | null, label: string | null) => Array<{text: string, face: import('../plane/register.js').Face}>} first a readable document's first line by the one rule a box's label reads (T-ARTICLE's `firstLineOf`): its record as the model holds it, or none; the index's first line at its bare address, or null
  */
 /**
  * @typedef {Object} Connection — a mid connection between two places the plane draws documents at
@@ -243,8 +248,8 @@ const STRUCTURAL_ORDINALS = new Set([22, 23, 24, 25, 26, 27, 28, 29]);
 const reveals = new Map();
 /** @type {Set<string>} the followed links, the session's (D-3) */
 const visitedSet = new Set();
-/** the readers until the app hands its owners' in: no link lit, every document drawn, a document's owner its account, every box showing the version named */
-const noReaders = () => /** @type {Readers} */ ({ lit: () => [], drawn: () => true, owner: (addr) => accountOf(addr) || '', shown: (addr) => addr });
+/** the readers until the app hands its owners' in: no link lit, every document drawn, a document's owner its account, every box showing the version named, a document's first line the index's alone */
+const noReaders = () => /** @type {Readers} */ ({ lit: () => [], drawn: () => true, owner: (addr) => accountOf(addr) || '', shown: (addr) => addr, first: (_d, label) => (label ? [{ text: label, face: 'reading' }] : []) });
 /** @type {Readers} */
 let read = noReaders();
 
@@ -561,13 +566,14 @@ export function farWords(s) { return farFaced(s).map((r) => r.text).join(''); }
  * account where the index, known complete, lists no document at the address,
  * else "nothing this board will say about this address"; where it is withheld
  * from the reader — the projection or a read of the document refused
- * `withheld` — "withheld · ⟨owner⟩"; where it is readable — the projection
- * answered, the document's span set, text or metadata read, or the index
- * listing it — its first line, its characters as typed, as the plane's box
- * names it, where the page holds one; else nothing: nothing answered, or no
- * first line held, and never a guess. The first line is the reading
- * face's, the owner a withheld statement names the identifier's, every other
- * word the client's.
+ * `withheld` — "withheld · ⟨owner⟩"; each of these the client's words in its
+ * first line's place, bracketed (ST's `bracketed`); where it is
+ * readable — the projection answered, the document's span set, text or
+ * metadata read, or the index listing it — its first line by the one rule a
+ * box's label reads (the reader `first`), where the page holds one;
+ * else nothing: nothing answered, or no first line held, and never a guess.
+ * The document's words are the reading face's, the owner a withheld
+ * statement names the identifier's, every other word the client's.
  * @param {FarEnd} s a drawn end (`Shown`), or a tail's far end (`Tail.ends`)
  * @returns {Array<{text: string, face: import('../plane/register.js').Face}>} none where it has no words
  */
@@ -578,16 +584,11 @@ export function farFaced(s) {
   const place = REC.place(s.far);
   if ((d && d.refused === 'unregistered') || projected === 'unregistered') {
     const me = REC.session();
-    return [{ text: t(me && me.account && accountOf(s.far) === me.account && REC.countsExact() && !place ? 'L.far.empty' : 'L.far.unregistered'), face: 'client' }];
+    return bracketed([{ text: t(me && me.account && accountOf(s.far) === me.account && REC.countsExact() && !place ? 'L.far.empty' : 'L.far.unregistered'), face: 'client' }]);
   }
-  if ((d && d.refused === 'withheld') || projected === 'withheld') {
-    const owner = read.owner(s.far), [before, after] = t('F.corner.withheld').split('⟨owner⟩');
-    return [{ text: before, face: /** @type {const} */ ('client') }, { text: owner, face: /** @type {const} */ ('ident') }, { text: after ?? '', face: /** @type {const} */ ('client') }].filter((r) => r.text);
-  }
+  if ((d && d.refused === 'withheld') || projected === 'withheld') return withheldLine(read.owner(s.far));
   if (!(Array.isArray(projected) || place || (d && (d.from >= 0 || d.meta || d.extent != null)))) return [];
-  const first = place && place.label ? place.label : (d && d.blocks.find((b) => b.kind === 'para' && b.text.trim()))?.text.trim().split('\n')[0] || '';
-  const words = first.trim();
-  return words ? [{ text: words, face: 'reading' }] : [];
+  return read.first(d, place ? place.label : null);
 }
 
 /**

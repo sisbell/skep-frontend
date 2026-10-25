@@ -2,8 +2,9 @@
 // S-9 (a)). Layer 2. Engine-bound. A control rebuilt from state (FP-13).
 // State: the transient segment and its expiry (the next act), the act
 // holding the line's one Tab stop (`stop`), the last render's words that are
-// said once as they arrive, and when the page's class last changed with its
-// message not yet said (`changedAt`).
+// said once as they arrive, when the page's class last changed with its
+// message not yet said (`changedAt`), and the canvas its words are measured
+// by (`ruler`).
 // The line is the page's toolbar, named as it attaches (`L.the-line`), and
 // one Tab stop (D5 §1.3, K-22; §4 rule 5): its acts hold a roving stop — the
 // act last stood on, else the first that takes the focus — ← and → move
@@ -18,7 +19,16 @@
 // its box shows, its marker lit at a pinned version (FP-22; foundations
 // §3.2) — or, where the walk stands on an account or the board, that place
 // as mid scale names it, the document's fields blank; where no board is held
-// `L.go-to-address` alone, at every scale (FP-35). The places it names are
+// `L.go-to-address` alone, at every scale (FP-35). Its exact fields come
+// first, each followed by its label: the document's its box's lead, as its
+// label on the plane sets it (T-LAYER's `leadRuns`), in the reading face, cut
+// on a word to the room the segment's one width leaves past its fields, each
+// measured at the line's size (`labelHTML`, `lineWidth`), and giving way word
+// by word before any field as the line
+// runs short (the style's); the board and an account carry none, the page
+// holding no name for either. Its accessible name is its fields in their
+// order, the document's label whole after its field and the document's state
+// in the ARIA mirror's words (`addressName`). The places it names are
 // the plane's running head (`named`; FP-26): the plane's labels and T-LAYER's
 // held labels read them through the reader the app hands in, so none of them
 // holds a label below the line. The address segment is one width at every
@@ -116,7 +126,8 @@ import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
 import { boardCell, accountAt, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
 import { memberOf, boardOf, accountOf, documentOf } from '../model/address.js';
-import { t, tHTML, addressedHTML } from '../strings.js';
+import { inFace, runsOf, runWidth, cutWords, LEAD_WORDS } from '../plane/labels.js';
+import { t, tHTML, addressedHTML, facedHTML, CLIENT_CLOSE } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @type {HTMLElement | null} */
@@ -230,8 +241,9 @@ function endingSaid(ending) {
 
 /**
  * @typedef {Object} AddressDisplay — what the address segment names at the camera's scale (foundations §2.2)
- * @property {string} text the segment's words: the place, then the position where one is named
+ * @property {string} text the segment's fields: the place, then the position where one is named
  * @property {string} place the place's words — the board, the account, or board › account › document — before the position's slot
+ * @property {import('../text/article.js').Faced[]} label the label after the document's field: its box's lead as its label on the plane sets it (T-LAYER's `leadRuns`), whole; none where no document is named or no first line is known
  * @property {number} slot the position's slot, in characters: as many as the document's widest position takes in its words, standing empty below the document's reading scale; 0 where no document is named
  * @property {string} addr the address named — the board, the account under the camera at mid, nearer the account or the board the walk stands on, or the document the walk stands in (its member where one is pinned): the LEAP box's prefill; '' where no board is held
  * @property {string | null} doc the document named, nearer than mid
@@ -294,12 +306,12 @@ const WORDS_CH = (() => {
  * @returns {AddressDisplay}
  */
 export function addressDisplay() {
-  if (!REC.board()) { const text = t('L.go-to-address'); return { text, place: text, slot: 0, addr: '', doc: null, pos: null, member: null, whole: false, window: null }; }
+  if (!REC.board()) { const text = t('L.go-to-address'); return { text, place: text, label: [], slot: 0, addr: '', doc: null, pos: null, member: null, whole: false, window: null }; }
   const lod = lodOf(cam.scale);
   if (lod.name === 'far' || lod.name === 'far~mid') {
     const whole = cam.scale <= viewForCell(boardCell('1'), 0.92).scale * 1.02;
     const text = '1' + (whole ? ' · ' + t('B1.clamp') : '');
-    return { text, place: text, slot: 0, addr: '1', doc: null, pos: null, member: null, whole, window: null };
+    return { text, place: text, label: [], slot: 0, addr: '1', doc: null, pos: null, member: null, whole, window: null };
   }
   const f = WALK.current(), nearer = lod.name === 'near' || lod.name === 'mid~near';
   if (f && nearer && (f.kind === 'block' || f.kind === 'document' || f.kind === 'link')) {
@@ -308,12 +320,12 @@ export function addressDisplay() {
     const pos = !REC.doc(f.addr).refused && LAYER.atReadingScale(f.addr) ? WALK.landedAt() ?? f.pos ?? 1 : null;
     const widest = Math.max(1, REC.doc(f.addr).extent || 0, pos || 0);
     const win = pos != null && WALK.kept() ? LAYER.windowIn(f.addr) : null;
-    return { text: place + positionWords(pos), place, slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, window: win };
+    return { text: place + positionWords(pos), place, label: LAYER.leadRuns(REC.doc(f.addr)), slot: positionWords(widest).length, addr: f.addr, doc: f.addr, pos, member: memberOf(f.addr), whole: false, window: win };
   }
   // nearer than mid the account or the board the walk stands on; at mid, or where it stands nowhere, the account under the camera
   const acct = f && nearer && (f.kind === 'account' || f.kind === 'board') ? (f.kind === 'account' ? f.addr : null) : accountAt(cam.x, cam.y, '1');
   const text = acct ? `1 › ${acct}` : '1';
-  return { text, place: text, slot: 0, addr: acct || '1', doc: null, pos: null, member: null, whole: false, window: null };
+  return { text, place: text, label: [], slot: 0, addr: acct || '1', doc: null, pos: null, member: null, whole: false, window: null };
 }
 
 /** the sign-in act, the guest's and the death arm's: its id names it across the line's rebuilds, as Back's does, so the session's face standing at it finds it again (O-HOST's anchor) */
@@ -451,6 +463,73 @@ function modeLine() {
   lastTrust = trust; lastMode = mode;
 }
 
+/** the line's type size, in px — the style's (`#line`): what the room the address segment leaves its label is counted at */
+const LINE_PX = 11;
+
+/** @type {CanvasRenderingContext2D | null | undefined} the context the line's words are measured by at its size, made at its first use; null where the platform gives none (the node tests) */
+let ruler;
+/**
+ * A run's width on the line, in px (see the head): the canvas's at the
+ * line's size in its face, a client figure in a cell as wide as its face's
+ * widest (P-LABEL's `runWidth`); where the platform gives no canvas, T-LAYER's
+ * measure of it scaled to the line's size.
+ * @param {string} text
+ * @param {import('../plane/register.js').Face} f
+ */
+function lineWidth(text, f) {
+  if (ruler === undefined) {
+    const c = typeof document !== 'undefined' && typeof document.createElement === 'function' ? document.createElement('canvas') : null;
+    ruler = c && typeof c.getContext === 'function' ? c.getContext('2d') : null;
+  }
+  return ruler ? runWidth(ruler, { text, face: f }, LINE_PX, 'normal') : LAYER.widthOf(text, f) * LINE_PX;
+}
+
+/**
+ * The room the address segment's one width leaves the document's label past
+ * its fields (see the head), in px: the widest words it names (`WORDS_CH`) in
+ * the identifier's face, less the place's — every character of it one width —
+ * the position's slot in the client's figures, and a space of the label's
+ * face either side of it; the strip's and the marker's room the same in both.
+ * @param {AddressDisplay} a
+ */
+function labelRoom(a) {
+  return (WORDS_CH - [...a.place].length) * lineWidth('0', 'ident') - a.slot * lineWidth('0', 'client') - 2 * lineWidth(' ', 'reading');
+}
+
+/**
+ * The document's label after its field (see the head): its box's lead,
+ * whole where the room the segment leaves past its fields holds it (`labelRoom`),
+ * else cut on a word, LEAD_WORDS of it kept at the least (P-LABEL's
+ * `cutWords`), else none — each stretch in its face (ST's `facedHTML`); the
+ * style gives it the room left and lets it give way further, word by word,
+ * before any field, as the line runs short, its first word too, after the
+ * empty lead-in it opens with, which gives it a line, and so the line's
+ * baseline, with no word in it. Its element stands, holding only its lead-in,
+ * where no document is named.
+ * @param {AddressDisplay} a
+ */
+function labelHTML(a) {
+  const words = a.label.map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join(''), last = a.label[a.label.length - 1];
+  if (!words) return '<span class="label"><span class="lead-in"></span></span>';
+  const room = labelRoom(a), fits = (/** @type {string} */ s) => runsOf(s, 'client').reduce((w, r) => w + lineWidth(r.text, r.face), 0) <= room + 1e-6;
+  const shown = fits(words) ? words : cutWords(words, fits, last.face === 'client' && last.text === CLIENT_CLOSE ? CLIENT_CLOSE : '', LEAD_WORDS);
+  return `<span class="label"><span class="lead-in"></span>${shown ? facedHTML(runsOf(shown, 'client')) : ''}</span>`;
+}
+
+/**
+ * The address segment's accessible name's words (see the head;
+ * `L.address.name`): its fields in their order, the document's label after
+ * its field whole, the position, the version pinned, then the document's
+ * state in the ARIA mirror's words (T-LAYER's `stateWords`), each after its
+ * own separator, none where it is empty.
+ * @param {AddressDisplay} a
+ * @returns {Record<string, string>}
+ */
+function addressName(a) {
+  const label = a.label.map((r) => r.text).join(''), state = a.doc ? LAYER.stateWords(REC.doc(a.doc)) : '';
+  return { place: a.place, label: label ? ' ' + label : '', position: positionWords(a.pos), version: a.member ? ', ' + t('L.version', { k: a.member }) : '', state: state ? ', ' + state : '' };
+}
+
 /**
  * The position's slot: the position's words, as wide as the document's
  * widest position, then its strip — standing empty below the document's
@@ -505,7 +584,7 @@ export function render(force = false) {
   lastAlarm = acting.alarm ? acting.words : ''; lastHalted = daemon.halted;
   const html =
     `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord('Mod+Y'))}">${esc(t('F.trail-list'))}</button></span>` +
-    `<span class="sep">│</span><button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}" style="--words:${WORDS_CH}"><b>${esc(a.place)}</b>${slot(a)}<span class="marker${a.member ? ' lit' : ''}${a.doc ? '' : ' none'}" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></button>` +
+    `<span class="sep">│</span><button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}" aria-label="${esc(t('L.address.name', addressName(a)))}" style="--words:${WORDS_CH}"><b>${esc(a.place)}</b>${labelHTML(a)}${slot(a)}<span class="marker${a.member ? ' lit' : ''}${a.doc ? '' : ' none'}" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></button>` +
     `<span class="sep">│</span><span class="seg acting" data-state="${acting.state}">${acting.html}</span>` +
     walkSegments() +
     (daemon.html ? `<span class="sep">│</span><span class="seg daemon">${daemon.html}</span>` : '') +

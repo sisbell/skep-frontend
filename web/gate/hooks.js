@@ -21,7 +21,9 @@
 // document's fold on the plane, where a position stands in it and which
 // position stands under a point (`fold`, `centreOf`, `posAt`), the measure in
 // force (`measure`), a document's corner as placed (`corner`), its label held
-// below the one line (`heldLabel`), the places the line names (`named`) and
+// below the one line (`heldLabel`), its first line and the lead its label
+// sets (`firstLine`), the size an address is set at in a label (`address`),
+// the places the line names (`named`) and
 // where a reading view frames a column (`frameOf`); the continuations' marks
 // (`residues`), the mid connections with their counts and stubs
 // (`connections`), the labels the canvas set and the parts it left out
@@ -80,9 +82,9 @@ import * as KEYS from '../nav/keys.js';
 import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
 import { docBox, accountCell, boardCell, boardLabelCell, DOC_W, depthOfDoc } from '../plane/projection.js';
-import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, EDGE, EDGE_GAP, LINE_H, boundsOf, outlineRects, firstRow, edgeOf } from '../plane/layout.js';
+import { STANDARD_FS, MEASURE_CPL, COLUMN_LINES, GUTTER, EDGE, EDGE_GAP, LINE_H, boundsOf, outlineRects, firstRow, edgeOf, leadOf } from '../plane/layout.js';
 import { lodOf, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME } from '../plane/lod.js';
-import { RING } from '../plane/register.js';
+import { RING, ADDRESS } from '../plane/register.js';
 import { pinned, lacking } from '../strings.js';
 import { pct, r2 } from '../util.js';
 
@@ -383,17 +385,18 @@ export function install(deps) {
   /**
    * A document's fold as the plane sets it (FP-12): its size, its step,
    * its columns across, its room on the plane, its outline — its bounds, the
-   * disjoint rects that make it up and its first row, where its label stands —
-   * and each column — its text box in world units, its count of lines,
-   * whether it is estimated.
+   * disjoint rects that make it up and its first row — where its first line
+   * stands, which its label sets its first line at (P-LAY's `leadOf`) — and
+   * each column — its text box in world units, its count of lines, whether it
+   * is estimated.
    * @param {string} addr
    */
   function foldView(addr) {
-    const f = LAYER.foldOf(REC.doc(addr)), box = docBox(addr), b = boundsOf(f), r0 = firstRow(f);
+    const f = LAYER.foldOf(REC.doc(addr)), box = docBox(addr), b = boundsOf(f), r0 = firstRow(f), l = leadOf(f);
     const at = (/** @type {{x: number, y: number, w: number, h: number}} */ r) => ({ x: box.x + r.x, y: box.y + r.y, w: r.w, h: r.h });
     return {
       addr, fs: f.fs, step: f.step, across: f.across, lines: f.lines.length, cpl: f.cpl,
-      room: { x: box.x, y: box.y, w: box.w, h: box.h }, outline: at(b), rects: outlineRects(f).map(at), row: at(r0),
+      room: { x: box.x, y: box.y, w: box.w, h: box.h }, outline: at(b), rects: outlineRects(f).map(at), row: at(r0), lead: { column: l.column, x: box.x + l.x, y: box.y + l.y, h: l.h },
       columns: f.columns.map((c) => ({ x: box.x + c.x, y: box.y + c.y, w: c.w, h: c.h, n: c.n, estimated: c.estimated, edge: at(edgeOf(f, c)) })),
     };
   }
@@ -627,6 +630,10 @@ export function install(deps) {
     heldLabel: (/** @type {string} */ addr) => LAYER.heldOf(addr),
     /** the places the one line names (L-LINE's `named`; FP-26): its board, its account and its document by its box */
     named: () => LINE.named(),
+    /** a document's first line as every surface naming it reads it (T-LAYER's `firstOf`, by T-ARTICLE's one rule), the client's words in its place bracketed, and the lead its label sets before its address (T-LAYER's `firstLine`): its first line with a draft's mark; '' where none is known */
+    firstLine: (/** @type {string} */ addr) => ({ first: LAYER.firstOf(REC.doc(addr)).map((r) => r.text).join(''), lead: LAYER.firstLine(REC.doc(addr)) }),
+    /** P-REG's address size and weight, at which the harness measures an address's dots apart (FP-18) */
+    address: () => ({ ...ADDRESS }),
     /** where a reading view of a document at a position centres, framing the column with its corner and its edge (T-LAYER's `frameOf`) */
     frameOf: (/** @type {string} */ addr, /** @type {number | null} */ pos = null) => LAYER.frameOf(addr, pos),
     refresh: async () => { const ts = /** @type {number[]} */ ([]); await new Promise((res) => { const step = (/** @type {number} */ t) => { ts.push(t); if (ts.length < 60) requestAnimationFrame(step); else res(undefined); }; requestAnimationFrame(step); }); const iv = []; for (let i = 1; i < ts.length; i++) iv.push(ts[i] - ts[i - 1]); return r2(1000 / Math.max(0.1, pct(iv, 50))); },

@@ -73,8 +73,8 @@
 // FACE) at LAY_FS as the platform's canvas sets them, a client figure in a
 // cell as wide as its face's widest (P-LABEL's `runWidth`) — what T-ARTICLE
 // fits a withheld run's face, a cut label and a byline's slots by (the view's
-// `measure`), and what a held label's line is set by (P-LABEL's `heldLine`,
-// `runHTML`); where the platform gives no canvas, every character one advance
+// `measure`), and what a held label's line is set by (P-LABEL's
+// `heldContents`, `runHTML`); where the platform gives no canvas, every character one advance
 // of the reading face. A face that arrives after the articles were set is a
 // re-set (`refaced`): the widths, the lines the platform set and the folds
 // made of them dropped, so every standing article goes stale and is set again
@@ -198,13 +198,16 @@
 // outline's first row rises above the hold, and while the one line does not
 // name it (the reader `named`), its label stands held below the line as an
 // element of the corner layer over its text — the canvas's words for its
-// box, read here (`docLabel`), so the two never part, its address in the
-// identifier's face and the document's words in the reading face's, each
-// stretch measured and set in its own (`labelLine`, `runHTML`), on one line across its
-// outline's visible part, on its box's ground, pushed up under the line by
-// its outline's foot, beside its corner and never over it (`besideCorner`),
-// drawn and never announced, taking the pointer where its article does
-// (`placeHeld`).
+// box, read here (`docLabel`), so the two never part: its first line from
+// the line's start, the box's lead (`leadRuns`, by T-ARTICLE's first-line
+// rule), and its address at the line's end, past its region's prefix where
+// that region is named in view (the reader `region`), else whole, its
+// address in the identifier's face and the document's words in the reading
+// face's, each stretch measured and set in its own (`runHTML`), on one line
+// across its outline's visible part, on its box's ground, pushed up under the
+// line by its outline's foot, beside its corner and never over it
+// (`besideCorner`), drawn and never announced, taking the pointer where its
+// article does (`placeHeld`).
 // The press rule's text half (foundations §2.4): an article takes the
 // pointer at reading scale alone — its em at the readable threshold and
 // above, the `legible` class the style gives its columns' pointer
@@ -275,14 +278,14 @@ import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor,
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE, GUTTER, CHAR_W } from '../plane/layout.js';
-import { CORNER, HOLD, COL, cornerWidth } from '../plane/register.js';
-import { holdTop, heldLine, across, lineHeight, face, inFace, figuresOf, figureCell, runWidth } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, blockMarks, symbolLit, editionClause, copyText } from './article.js';
+import { CORNER, HOLD, COL, ADDRESS, cornerWidth } from '../plane/register.js';
+import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth } from '../plane/labels.js';
+import { articleHTML, articlePlan, cornerHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf } from './article.js';
 import { farSays } from '../beams/held.js';
 import { homeOf, documentOf, memberOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { esc } from '../util.js';
-import { t, tHTML } from '../strings.js';
+import { t, facedHTML, CLIENT_CLOSE } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -443,6 +446,7 @@ import { t, tHTML } from '../strings.js';
  * @property {() => (string | null)} navigated the place just navigated to: the trail's current entry's (N-TRAIL's), first in the limit's order where it is a document
  * @property {(addr: string) => string} shown the version a document's box shows (N-GO's `shownIn`): the one version whose article stands there
  * @property {() => (string | null)} named the document the one line names, by its box (L-LINE's `named`): the one whose label is never held over its text; null where it names none
+ * @property {(account: string) => boolean} region is an account named in view: the one line names it, or the canvas's last frame set its label (P-RENDER's `regionNamed`) — a held label's address drops its prefix there alone (P-LABEL's region rule)
  */
 
 /** the corner's distance from the text column, and from the edge of the room it stands in (px): P-REG's */
@@ -497,8 +501,8 @@ let owed = null;
 let hold = null;
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
-/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document named */
-const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null });
+/** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document and no account named */
+const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false });
 /** @type {Readers} */
 let read = noReaders();
 /** is a version the one its box shows (see the head)? */
@@ -617,11 +621,11 @@ function measureRun(text, px, weight, f) {
  */
 export const widthOf = (text, f) => measureRun(text, LAY_FS, 'normal', f) / LAY_FS;
 
-/** a held label's run as markup, in its face as the canvas sets it: the client's figures each centred in its cell (`cellAt`), so its width is the one measured */
+/** a held label's run as markup, in its face as the canvas sets it: the client's figures each centred in its cell (`cellAt`), so its width is the one measured; an address in the title's ink, never greyed (P-LABEL's head) */
 function runHTML(/** @type {import('../plane/labels.js').Run} */ r, /** @type {number} */ px, /** @type {string} */ weight) {
   const c = measuring();
   const body = r.face === 'client' && c ? figuresOf(r.text).map((x) => (x.figures ? [...x.text].map((d) => `<span style="display:inline-block;width:${cellAt(c, px, weight)}px;text-align:center">${d}</span>`).join('') : esc(x.text))).join('') : esc(r.text);
-  return `<span style="font:${face(px, weight, r.face)}">${body}</span>`;
+  return `<span style="font:${face(px, weight, r.face)}${r.face === 'ident' ? `;color:${COL.title}` : ''}">${body}</span>`;
 }
 
 /**
@@ -1627,55 +1631,117 @@ export function clauseOf(origin) {
  * A document a read answered `withheld`, as the plane names it — B1-S2's
  * withheld box: existence and owner, never bytes — in the corner's own words,
  * "withheld · ⟨owner⟩" (foundations §3.1; FP-29), its owner by the
- * one owner rule (M-REC's `ownerAccount`). The box's first line (P-RENDER), the ARIA
- * mirror's item at the document (N-WALK), a trail entry's words (N-GO's
- * `wordsOf`) and the face a refused read of it conjures (O-FACES's
- * `withheld`) all read it, so what a sighted reader sees and what a screen
- * reader hears never part (R94).
+ * one owner rule (M-REC's `ownerAccount`). The document's state in the ARIA
+ * mirror's item and the one line's name (`stateWords`) and the face a refused
+ * read of it conjures (O-FACES's `withheld`) read it, and its first line names
+ * it in the same words, bracketed (T-ARTICLE's `firstLineOf`) — the box's
+ * label, a trail entry's words — so what a sighted reader sees and what a
+ * screen reader hears never part (R94).
  * @param {Doc} d
  */
 export function withheldBox(d) { return t('F.corner.withheld', { owner: REC.ownerAccount(d) }); }
 
-/** a box's address as its label sets it: the address of the version it shows past its region's prefix, led by the separator after the prefix — ".0.9", a pinned version's ".0.9.2", as the address display spells a field past a prefix (F-9; foundations §3.1) */
+/** a box's address as its label sets it where its region is named in view: the address of the version it shows past its region's prefix, led by the separator after the prefix — ".0.9", a pinned version's ".0.9.2", as the address display spells a field past a prefix (F-9; foundations §3.1) */
 export const shortAddr = (/** @type {Doc} */ d) => (d.account ? d.addr.slice(d.account.length) : d.addr);
 /** a draft, by the index's kind or by its metadata where read */
 export const isDraft = (/** @type {Doc} */ d) => d.kind === 'draft' || (d.meta ? !d.meta.published : false);
-/** a document's first line, its characters as typed: the index's; at a version, which the index lists none of, the first of its own typed lines that holds more than white space, where the model holds it */
-const firstWords = (/** @type {Doc} */ d) => d.label ?? (memberOf(d.addr) != null ? (d.blocks.find((b) => b.kind === 'para' && b.text.trim()) || { text: '' }).text.trim().split('\n')[0] : '');
-/** a box's first line: the withheld statement (`withheldBox`, which the ARIA mirror reads too), or the document's first line with its draft mark (a DRAFT convention, F-9) */
-export const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? withheldBox(d) : `${firstWords(d)}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
-/** a box's first line as a label on the plane sets it (`firstLine`), each stretch in its face (P-LABEL's `inFace`): the document's words the reading face's, the draft mark and the withheld statement the client's, the owner it names the identifier's */
-export const labelLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? t('F.corner.withheld', { owner: inFace('ident', REC.ownerAccount(d)) }) : `${inFace('reading', firstWords(d))}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
-/** a box's first line as markup (`firstLine`), wherever the page's chrome shows it: the document's words in the reading face (`.reading`), the owner a withheld statement names in the identifier's (`.id`) */
-export const firstLineHTML = (/** @type {Doc} */ d) => {
-  if (d.refused === 'withheld') return tHTML('F.corner.withheld', { owner: REC.ownerAccount(d) }, { owner: 'id' });
-  const words = firstWords(d);
-  return (words ? `<span class="reading">${esc(words)}</span>` : '') + (isDraft(d) ? esc(' · ' + t('F.label.draft')) : '');
-};
 
 /**
- * A document's label on the plane — P-RENDER's on its box, and its held form
- * over its mounted article (see the head) — read here, so the two never part:
- * the address of the version its box shows (`shortAddr`) at 1.25 of its em,
- * in the identifier's face, no larger than its outline's first row holds;
- * where that row is wider than 90 px, its first line (`labelLine`) at 0.72 of
- * that, the document's words in the reading face; past 110 px, its links'
- * badge, none at a withheld box, whose links no read brings.
- * @param {Doc} d the version its box shows
- * @param {number} w its outline's first row's text width on screen, in px
- * @param {number} fsPx its em on screen, in px
- * @returns {import('../plane/labels.js').Part[]}
+ * A box's first line (T-ARTICLE's `firstLineOf`), read from what the model
+ * holds of the version it shows — its own text from its first position, else
+ * the index's first line at its bare address — its withheld box's words and a
+ * record's bracketed, the owner a withheld box names by the one owner rule
+ * (M-REC's `ownerAccount`), as stretches in their faces.
+ * @param {Doc} d the version a box shows
+ * @returns {import('./article.js').Faced[]}
  */
-export function docLabel(d, w, fsPx) {
-  const tf = Math.min(w * 0.085, fsPx * 1.25), sub = tf * 0.72;
+export const firstOf = (d) => firstLineOf(d, { label: memberOf(d.addr) == null ? d.label : null, reader: REC.reader(), owner: REC.ownerAccount(d) });
+
+/**
+ * A link's far document's first line by the same rule (T-ARTICLE's
+ * `firstLineOf`; LK's reader `first`): what the model holds of it, if
+ * anything, and the index's first line at the address the link names.
+ * @param {Doc | null} d its record as the model holds it; null where it holds none
+ * @param {string | null} label the index's first line at its address, or null
+ * @returns {import('./article.js').Faced[]}
+ */
+export const firstOfFar = (d, label) => firstLineOf(d, { label, reader: REC.reader(), owner: d ? REC.ownerAccount(d) : '' });
+
+/**
+ * A box's lead, the words its label sets before its address (see the head):
+ * its first line (`firstOf`) with a draft's mark after it, the client's (a
+ * DRAFT convention, F-9), as stretches in their faces; none where no first
+ * line is known. Its label on the plane, the one line after its field and a
+ * trail entry's words all read it.
+ * @param {Doc} d the version a box shows
+ * @returns {import('./article.js').Faced[]}
+ */
+export function leadRuns(d) {
+  const first = firstOf(d);
+  return first.length && d.refused !== 'withheld' && isDraft(d) ? [...first, { text: ' · ' + t('F.label.draft'), face: 'client' }] : first;
+}
+/** a box's lead as words (`leadRuns`) */
+export const firstLine = (/** @type {Doc} */ d) => leadRuns(d).map((r) => r.text).join('');
+/** a box's lead as a label on the plane sets it (`leadRuns`), each stretch in its face (P-LABEL's `inFace`) */
+export const labelLine = (/** @type {Doc} */ d) => leadRuns(d).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('');
+/** a box's lead as markup (`leadRuns`; ST's `facedHTML`), wherever the page's chrome shows it: the document's words in the reading face (`.reading`), an address the identifier's (`.id`) */
+export const firstLineHTML = (/** @type {Doc} */ d) => facedHTML(leadRuns(d));
+
+/**
+ * A box's lead as a label's part sets it (`leadRuns`): at `px` in the
+ * reading face's words, in the ink of the text it stands for, cut on a word,
+ * the bracket its client's words close with kept after a cut's ellipsis
+ * (P-LABEL's `cutWords`); null where no first line is known.
+ * @param {Doc} d the version a box shows
+ * @param {number} px
+ * @returns {import('../plane/labels.js').Part | null}
+ */
+export function leadPart(d, px) {
+  const runs = leadRuns(d), last = runs[runs.length - 1];
+  if (!last) return null;
+  return { text: labelLine(d), px, ink: COL.text, fit: 'cut', close: last.face === 'client' && last.text === CLIENT_CLOSE ? CLIENT_CLOSE : '' };
+}
+
+/**
+ * A document's state in the ARIA mirror's words (the walk's item, the one
+ * line's accessible name; R94): withheld, its withheld box's words; nothing
+ * the board will say of it, a far end's words for that; a draft; published;
+ * none where nothing has told it yet — its kind the index's place's for its
+ * box, else its own record's, else its metadata's.
+ * @param {Doc} d the version a box shows
+ * @returns {string}
+ */
+export function stateWords(d) {
+  const p = REC.place(boxOf(d.addr));
+  const kind = p ? p.kind : d.kind !== 'unknown' ? d.kind : d.meta ? (d.meta.published ? 'edition' : 'draft') : null;
+  return d.refused === 'withheld' ? withheldBox(d) : d.refused === 'unregistered' ? t('L.far.unregistered') : kind === 'draft' ? t('L.mirror.draft') : kind === 'edition' ? t('F.published') : '';
+}
+
+/**
+ * @typedef {Object} DocLabel — a document's label on the plane (`docLabel`): its contents line and its parts beneath it
+ * @property {import('../plane/labels.js').Part | null} lead its first line (`leadPart`); null where none is known
+ * @property {import('../plane/labels.js').Part} address the address of the version its box shows, its fields past its region's prefix, whole where the region is not named in view (`Part.whole`)
+ * @property {import('../plane/labels.js').Part[]} parts its links' badge; none at a withheld box
+ * @property {string | null} region its account, whose label in view carries the prefix
+ */
+
+/**
+ * A document's label on the plane — P-RENDER's contents line on its box, and
+ * its held form over its mounted article (see the head) — read here, so the
+ * two never part: its lead at its em (`leadPart`); the address of the
+ * version its box shows at P-REG's ADDRESS size and weight in the
+ * identifier's face, past its region's prefix (`shortAddr`) where its region
+ * is named in view, else whole; and its links' badge at that size, none at a
+ * withheld box, whose links no read brings.
+ * @param {Doc} d the version its box shows
+ * @param {number} fsPx its em on screen, in px
+ * @returns {DocLabel}
+ */
+export function docLabel(d, fsPx) {
+  const c = LK.countDoc(boxOf(d.addr));
   /** @type {import('../plane/labels.js').Part[]} */
-  const parts = [{ text: shortAddr(d), px: tf, ink: COL.title, weight: '600', fit: 'one', face: 'ident' }];
-  if (w > 90) {
-    parts.push({ text: labelLine(d), px: sub, ink: COL.greek, fit: 'cut' });
-    const c = LK.countDoc(boxOf(d.addr));
-    if (w > 110 && d.refused !== 'withheld' && (c.n || c.arriving)) parts.push({ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : c.n === 1 ? t('F.label.links.1') : t('F.label.links', { n: c.n }), px: sub, ink: COL.greek, fit: 'wrap' });
-  }
-  return parts;
+  const parts = d.refused !== 'withheld' && (c.n || c.arriving) ? [{ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : c.n === 1 ? t('F.label.links.1') : t('F.label.links', { n: c.n }), px: ADDRESS.px, ink: COL.greek, fit: 'wrap' }] : [];
+  return { lead: leadPart(d, fsPx), address: { text: shortAddr(d), whole: d.addr, px: ADDRESS.px, ink: COL.title, weight: ADDRESS.weight, fit: 'one', face: 'ident' }, parts, region: d.account };
 }
 
 /** take a mounted article down; where the platform's selection stands in it, it is kept (`kept`) for the frame that puts it back */
@@ -2338,30 +2404,37 @@ export function besideCorner(line, band, corner) {
  * whose article stands in the mount band — where the canvas sets no label of
  * it — whose outline's first row has risen above the hold below the one line
  * and which the line does not name carries its label held there: the canvas's
- * words for its box (`docLabel`), each run in its face as the canvas sets
- * it (`runHTML`), on one line across its outline's visible
- * part at that height (P-LABEL's `holdTop`, `across`, `heldLine`), its box's
- * edge pushing it up under the line, on its box's ground, over the text it
- * covers; where its corner's box meets that line, in the stretch left of the
- * corner, else the stretch right of it (`besideCorner`), none where neither
- * holds its address. It takes the pointer where its article does
- * (`legible`), so a press on it reaches none of the lines it covers, and
- * below that a press on it falls to the canvas, as one on the box does. Its
- * element is rewritten only where what it shows changed; the rest are removed.
+ * words for its box (`docLabel`), its address past its region's prefix where
+ * that region is named in view (the reader `region`), else whole, each run in
+ * its face as the canvas sets it (`runHTML`), an address in the title's ink,
+ * on one line across its outline's visible part at that height (P-LABEL's
+ * `holdTop`, `across`, `heldContents`) — its first line from the line's
+ * start, its address at the line's end — its box's edge pushing it up under
+ * the line, on its box's ground, over the text it covers; where its corner's
+ * box meets that line, in the stretch left of the corner, else the stretch
+ * right of it (`besideCorner`), none where neither holds its address. The
+ * first lines the frame's held labels cut that read alike are cut again to
+ * show where they differ (P-LABEL's `apartTexts`). It takes the pointer where
+ * its article does (`legible`), so a press on it reaches none of the lines it
+ * covers, and below that a press on it falls to the canvas, as one on the box
+ * does. Its element is rewritten only where what it shows changed; the rest
+ * are removed.
  */
 function placeHeld() {
   if (!cornerLayer) return;
   const seen = visibleView(read.top()), top = seen.y + HOLD.gap, named = read.named(), scale = cam.scale;
-  /** @type {Set<string>} */
-  const here = new Set();
+  /** @type {Array<{rec: Mounted, line: import('../plane/labels.js').HeldPart[], room: {x: number, w: number}, y: number, lh: number}>} each label held, where its line stands */
+  const placed = [];
   for (const rec of mounted.values()) {
     const addr = rec.d.addr;
     if (!rec.banded || boxOf(addr) === named) continue;
     const f = rec.fold, box = docBox(addr), row = firstRow(f), g = (GUTTER / 2) * f.fs, at = sy(box.y + row.y + g);
     if (at >= top) continue;
     const rects = outlineRects(f).map((r) => ({ x: sx(box.x + r.x), y: sy(box.y + r.y), w: r.w * scale, h: r.h * scale }));
-    const parts = docLabel(rec.d, (row.w - 2 * g) * scale, f.fs * scale), pad = g * scale;
-    const lh = Math.max(...parts.map((p) => lineHeight(p.px))), foot = Math.max(...rects.map((r) => r.y + r.h)) - pad;
+    const label = docLabel(rec.d, f.fs * scale), pad = g * scale;
+    const address = label.region && !read.region(label.region) && label.address.whole ? { ...label.address, text: label.address.whole } : label.address;
+    // one line box of its first line's size, known or not, or of its largest part: the address stands where it stood whatever arrives beside it
+    const lh = Math.max(lineHeight(f.fs * scale), ...[label.lead, address, ...label.parts].map((p) => (p ? lineHeight(p.px) : 0))), foot = Math.max(...rects.map((r) => r.y + r.h)) - pad;
     const y = Math.round(holdTop(at, top, foot, lh)), a = across(rects, y, lh, pad);
     if (!a || y + lh <= seen.y + 0.5) continue;
     const x0 = Math.max(a.x, seen.x), c = corners.get(addr);
@@ -2369,12 +2442,18 @@ function placeHeld() {
     for (const s of besideCorner({ x: x0, w: Math.min(a.x + a.w, seen.x + seen.w) - x0 }, { y, h: lh }, c ? { x: c.x, y: c.y, w: c.w, h: c.h } : null)) {
       // on whole px, never past the stretch's right end
       const x = Math.round(s.x), w = Math.floor(s.x + s.w) - x;
-      line = heldLine(parts, w, measureRun);
+      line = heldContents({ lead: label.lead, address }, label.parts, w, measureRun);
       if (line) { room = { x, w }; break; }
     }
-    if (!line) continue;
+    if (line) placed.push({ rec, line, room, y, lh });
+  }
+  apartHeld(placed.flatMap((p) => p.line));
+  /** @type {Set<string>} */
+  const here = new Set();
+  for (const { rec, line, room, y, lh } of placed) {
+    const addr = rec.d.addr;
     here.add(addr);
-    const h = helds.get(addr) || makeHeld(cornerLayer, addr);
+    const h = helds.get(addr) || makeHeld(/** @type {HTMLElement} */ (cornerLayer), addr);
     const html = line.map((m) => `<span style="left:${m.x}px;line-height:${lh}px;color:${m.part.ink}">${m.runs.map((r) => runHTML(r, m.px, m.weight)).join('')}</span>`).join('');
     if (h.html !== html) { h.el.innerHTML = html; h.html = html; }
     const ground = rec.d.refused === 'withheld' ? COL.withheld : COL.doc, place = `${room.x}|${y}|${room.w}|${lh}|${ground}`;
@@ -2382,6 +2461,21 @@ function placeHeld() {
     h.el.classList.toggle('legible', rec.legible);
   }
   for (const [addr, h] of [...helds]) if (!here.has(addr)) { h.el.remove(); helds.delete(addr); }
+}
+
+/**
+ * The first lines the held labels cut that read alike, cut again to show
+ * where they differ (P-LABEL's `apartTexts`), each in the width it was set
+ * at: its words and its runs set again in place.
+ * @param {import('../plane/labels.js').HeldPart[]} parts every held label's parts this frame
+ */
+function apartHeld(parts) {
+  const full = (/** @type {import('../plane/labels.js').HeldPart} */ m) => m.part.text.trim().replace(/\s+/g, ' ');
+  const cut = parts.filter((m) => m.part.fit === 'cut' && m.text !== plain(full(m)));
+  if (cut.length < 2) return;
+  const wide = (/** @type {import('../plane/labels.js').HeldPart} */ m, /** @type {string} */ s) => runsOf(s, m.part.face || 'client').reduce((w, r) => w + measureRun(r.text, m.px, m.weight, r.face), 0);
+  const now = apartTexts(cut.map((m) => ({ shown: m.text, full: full(m), close: m.part.close || '', fits: (s) => wide(m, s) <= m.w + 1e-6 })));
+  cut.forEach((m, i) => { if (now[i] !== m.text) { m.text = plain(now[i]); m.runs = runsOf(now[i], m.part.face || 'client'); m.w = wide(m, now[i]); } });
 }
 
 /**

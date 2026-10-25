@@ -33,8 +33,9 @@ bottom rises; THE HELD LABEL beside it (issue #169's design decision: "Held
 below the line"): landed in, and while the walk stands in it, the first
 edition, which the line names, holds no label over its text, its first
 column's top risen past the line; with the walk stepped out to its account,
-its label stands held below the line over its text — its address first, at
-its first column's text left, level with its corner and apart from it,
+its label stands held below the line over its text — from its first
+column's text left, its first line, where set, cut on a word, and its
+address at the line's end — level with its corner and apart from it,
 inside its outline, hidden from assistive technology and taking the pointer
 — and with its outline's foot risen near the line, pushed up by it, its
 bottom on that foot inside the half gutter; and following the column nearest the view's centre — issue
@@ -152,7 +153,8 @@ the continuation's mark, at WHOLE BOARD the
 board and the acting account's cluster — while a box risen under the one
 line, which names its account and not it, holds its label below the line
 (issue #169's design decision: "Held below the line"): the first edition's,
-one line, its address first, its top HOLD_GAP_PX below the line's bottom
+one line, its first line, where set, at its start and its address at its
+end, its top HOLD_GAP_PX below the line's bottom
 or, its outline's foot risen near the line, its bottom on that foot inside
 the half gutter, at its first column's text left, inside its outline, on
 its ground, its bottom in view, the labels of the documents below the line
@@ -298,6 +300,17 @@ screen) — every part of it standing meets the view, fewer of its lines stand
 than it holds, each part's blocks are their text over the characters they
 hold, and each part stands on its bars; at its own em 4, below the mount, its
 article down and each block part's bars inside the column that holds it.
+THE CONTENTS LINE (issue #23's design decision: names first): at every
+view every document's label carries its address whole, past its region's
+prefix only where the region's label is set or the one line names it, and
+one set in its place stands on one row, its address at its outline's first
+row's end and its first line, where set, its lead cut on a whole word from
+where those words stand in its fold; below the mount that first line's first
+word starts where the article mounted above it sets that word; an address
+at a label's size keeps its dots apart; the LEAP box's addresses stand at
+the full ink, unbroken; and the one line's document label follows its field
+and, in a window LINE_NARROW_PX wide, gives way a whole word at a time before
+any field.
 A WALK'S FOLDED MOMENT (issue #182's design decision: "It never yields when
 the line runs short"): a moment raised through the gate's door and folded by
 Esc stands as its segment of the one line, whole inside the line in a window
@@ -378,6 +391,17 @@ MEASURE_TOL_PX = 0.5
 CORNER = '#corners [data-corner="%s"]' % DOC
 # the case's own floor for a label, held apart from the page's constant so that lowering the page's cannot pass here
 MIN_LABEL_PX = 9
+# the whole words a first line's cut keeps at the least (issue #23) — the case's own, held apart from the page's LEAD_WORDS — and
+# the blank columns, in px, an address's dot stands apart from the digits either side by at the size a label sets it at
+LEAD_WORDS, DOT_GAP_PX = 2, 1
+# a document's links' badge, in a label's words: its count, or its links arriving
+BADGE = re.compile(r'^(\d+ links?|(\d+ · )?arriving)$')
+# a document's em on either side of the mount (P-LOD's MOUNT_EM, 6.5): where its label's first line stands, and where its
+# article sets that line — the case's own, held apart from the page's
+BELOW_MOUNT_EM, ABOVE_MOUNT_EM = 6.0, 7.0
+# the window the one line's document label is read giving way in: too narrow for the line's acts and its address segment at
+# its one width, wide enough for its acts and the segment's fields
+LINE_NARROW_PX = 600
 LABEL_TOL_PX = 0.5
 # how far above the one line's bottom the first edition's box's top stands at S3's mid-extents: its address's line, set at
 # the floor half a gutter below the top of its outline's first row, wholly under the line, then across the line's bottom edge
@@ -421,15 +445,15 @@ PART_LEAD = 8
 def held_label(ctx):
     """the first edition's label T-LAYER holds below the one line over its mounted article (issue #169) as the page shows it — its
     words, its rect, whether a press at its start meets it, what assistive technology is told of it, whether it reads as a corner —
-    beside its corner, its outline's rects, its first column's text left, its outline's bottom and the half gutter on screen, the
-    one line's bottom and the places the line names"""
+    beside the lead the page's first-line rule gives it (issue #23), its corner, its outline's rects, its first column's text left,
+    its outline's bottom and the half gutter on screen, the one line's bottom and the places the line names"""
     return ctx.js('''(() => { const S = window.__skep, h = S.heldLabel(%s), f = S.fold(%s), c = S.view.camera(), p = S.view.viewport();
       const scr = (b) => ({x: (b.x - c.x) * c.scale + p.VW / 2, y: (b.y - c.y) * c.scale + p.VH / 2, w: b.w * c.scale, h: b.h * c.scale});
       const el = document.querySelector(%s), v = S.visible(%s), o = scr(f.outline);
       const hit = h ? document.elementFromPoint(h.rect.x + Math.min(4, h.rect.w / 2), h.rect.y + h.rect.h / 2) : null;
-      return {label: h, hidden: el ? el.getAttribute('aria-hidden') : null, cornerLike: el ? el.matches('.corner, [data-corner]') : null, takes: !!hit && !!el && el.contains(hit),
+      return {label: h, lead: S.firstLine(%s).lead, hidden: el ? el.getAttribute('aria-hidden') : null, cornerLike: el ? el.matches('.corner, [data-corner]') : null, takes: !!hit && !!el && el.contains(hit),
               corner: v.length === 1 ? v[0].rect : null, rects: f.rects.map(scr), left: scr(f.columns[0]).x, bottom: o.y + o.h, gutter: %s / 2 * f.fs * c.scale,
-              line: document.getElementById('line').getBoundingClientRect().bottom, named: S.named()}; })()''' % (json.dumps(DOC), json.dumps(DOC), json.dumps('#corners [data-held="%s"]' % DOC), json.dumps(CORNER), GUTTER_EM))
+              line: document.getElementById('line').getBoundingClientRect().bottom, named: S.named()}; })()''' % (json.dumps(DOC), json.dumps(DOC), json.dumps('#corners [data-held="%s"]' % DOC), json.dumps(CORNER), json.dumps(DOC), GUTTER_EM))
 
 
 def corner_of(ctx):
@@ -611,7 +635,8 @@ def label_view(ctx):
     the count set on it, and its places' centres, a document's its outline's, a mark's the centre of its continuation's
     cell — and each tail drawn: its site, its links and their far documents, where its stroke leaves and ends; the shape of
     each held label's place (issue #169), by its kind and place — a document's outline's rects, a mark's cell, an
-    account's cell — and the places the one line names"""
+    account's cell — the places the one line names, and for each document labelled the lead its label sets (the page's
+    first-line rule) and where its first line stands in its fold (issue #23)"""
     return ctx.js('''(async () => {
       const P = await import('./plane/projection.js');
       const S = window.__skep, c = S.view.camera(), p = S.view.viewport(), lod = S.view.lod();
@@ -635,7 +660,9 @@ def label_view(ctx):
       const rows = Object.fromEntries(boxesDrawn ? places.filter((q) => !held.has(q.doc) && crosses(scr(S.boxOf(q.doc)), view)).map((q) => [q.doc, inner(S.fold(q.doc))]) : []);
       // the shape of each held label's place: a document's outline's rects, a mark's cell, an account's cell
       const shapeOf = (l) => l.kind === 'doc' ? S.fold(l.place).rects.map(scr) : l.kind === 'mark' ? [cell(l.place)] : [scr(S.accountCell(l.place))];
-      return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})),
+      // each document labelled: the lead the page's first-line rule gives it and where its first line stands in its fold, on screen
+      const leads = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => { const at = S.fold(l.place).lead; return [l.place, {words: S.firstLine(l.place).lead, at: scr({x: at.x, y: at.y, w: 0, h: at.h})}]; }));
+      return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})), leads,
               boxes, rows, accounts, board: scr({x: b.x, y: b.y, w: b.w / 3, h: b.h / 3}), docs, connections, mounted: S.mountedAddrs(),
               tails: S.tails().map((t) => ({key: t.key, links: t.links, far: t.far, from: t.from, to: t.to})),
               held: Object.fromEntries(labels.filter((l) => l.held).map((l) => [l.kind + ' ' + l.place, shapeOf(l)])), named: S.named()};
@@ -707,6 +734,36 @@ def in_held(v, label, line):
             and q['y'] + q['h'] > seen['y'] + LABEL_TOL_PX and q['x'] >= seen['x'] - LABEL_TOL_PX and q['x'] + q['w'] <= seen['x'] + seen['w'] + LABEL_TOL_PX)
 
 
+def address_line(label):
+    """the line of a label the canvas set whose every run is in the identifier's face: a document's address (issue #23)"""
+    return next((x for x in label['lines'] if x.get('runs') and all(q['face'] == 'ident' for q in x['runs'])), None)
+
+
+def word_cut(text, words):
+    """is `text` a document's lead `words` as a label sets it (issue #23's design decision: "cut on a word"): whole; or a start of
+    its whole words — a separator ending the start dropped — with LEAD_WORDS words kept at the least, ending in an ellipsis and the
+    bracket its words close with; or, cut apart from a lead that reads alike, its first word, an ellipsis, then a run of its words?"""
+    if text == words:
+        return True
+    close = ']' if words.endswith(']') and words.startswith('[') else ''
+    ws = words.split(' ')
+    if ' … ' in text:
+        head, rest = text.split(' … ', 1)
+        for suffix in ('…' + close, ''):
+            if suffix and not rest.endswith(suffix):
+                continue
+            tail = (rest[:-len(suffix)] if suffix else rest).split(' ')
+            if head == ws[0] and any(ws[i:i + len(tail)] == tail and (suffix or i + len(tail) == len(ws)) for i in range(2, len(ws))):
+                return True
+        return False
+    end = '…' + close
+    if not text.endswith(end):
+        return False
+    start = text[:-len(end)].split(' ')
+    real = [w for w in start if re.search(r'\w', w)]
+    return len(start) < len(ws) and ws[:len(start)] == start and len(real) >= LEAD_WORDS and bool(re.search(r'\w', start[-1]))
+
+
 def labels_hold(r, name, v):
     """THE LABELS' checks at one view; its figures: the labels set by kind, the parts left out by rule, the
     connections' counts set and left out"""
@@ -731,9 +788,40 @@ def labels_hold(r, name, v):
             others += [('account', o) for o in v['accounts'] if p is None or not inside(p, o['rect'])]
         met += [{'kind': l['kind'], 'place': l['place'], 'text': x['text'], 'meets': [what, o['place']]} for what, o in others if meets(x['rect'], o['rect'])]
     r.check(not met, f'{name}: (iv) no label meets another place: the box of a document in view that no mark drawn the stronger holds, a continuation\'s mark, an account\'s cell that does not hold its place — a connection\'s count and a tail\'s label, no one account\'s, meeting no box and no mark, the tail\'s own document\'s among them', met[:6])
-    if name in ('mid-extents', 'home'):
-        bare = [{'place': l['place'], 'label': l['lines'][0]['text']} for l in labels if l['kind'] == 'doc' and not (l['lines'][0]['text'] == l['place'] or (l['lines'][0]['text'].startswith('.') and l['place'].endswith(l['lines'][0]['text'])))]
-        r.check(not bare, f'{name}: (v) a document\'s label is its address past its region\'s prefix led by the separator (".0.3"), or its whole address — never a bare field that reads as a number', bare[:6])
+    # (v) the address (issue #23's design decision: "Show only the fields past the region's prefix while that region's label is in
+    # view"; foundations F-9): every document's label carries its address whole in the identifier's face, past its region's prefix
+    # only where the region's label is set in this frame or the one line names the region
+    regions = {l['place'] for l in labels if l['kind'] in ('frame', 'cluster')} | ({v['named']['account']} if v['named']['account'] else set())
+    unnamed = []
+    for l in labels:
+        if l['kind'] != 'doc':
+            continue
+        acct, a = account_of(l['place']) or '', address_line(l)
+        want = l['place'][len(acct):] if acct in regions else l['place']
+        if a is None or a['text'] != want:
+            unnamed.append({'place': l['place'], 'address': a and a['text'], 'want': want, 'region_named': acct in regions})
+    r.check(not unnamed, f'{name}: (v) every document\'s label carries its address whole in the identifier\'s face — its fields past its region\'s prefix (".0.3") only where its region\'s label is set in view or the one line names the region, its whole address elsewhere (issue #23)', unnamed[:6])
+    # (v-b) the contents line (issue #23's design decision: "Set it at the head of the first column, where those words will stand when
+    # the text mounts ... at the end of that row, like a page number"): a document's label set in its place stands on one row — its
+    # address ending at the end of its outline's first row; its first line, where set, the page's lead cut on a whole word, LEAD_WORDS
+    # kept at the least, starting where those words stand in its fold and centred on that line, unless its row is held to its first row's top
+    astray = []
+    for l in labels:
+        if l['kind'] != 'doc' or l.get('held') or l['place'] not in v['rows']:
+            continue
+        a, row, lead = address_line(l), v['rows'][l['place']], v['leads'].get(l['place'])
+        if a is None:
+            continue
+        mid = a['rect']['y'] + a['rect']['h'] / 2
+        on_row = [x for x in l['lines'] if x is not a and abs(x['rect']['y'] + x['rect']['h'] / 2 - mid) <= LABEL_TOL_PX]
+        row_top = mid - max([a['rect']['h']] + [x['rect']['h'] for x in on_row]) / 2
+        end_ok = abs(a['rect']['x'] + a['rect']['w'] - (row['x'] + row['w'])) <= LABEL_TOL_PX
+        lead_mid = lead and lead['at']['y'] + lead['at']['h'] / 2
+        firsts_ok = len(on_row) <= 1 and all(lead and word_cut(x['text'], lead['words']) and abs(x['rect']['x'] - lead['at']['x']) <= LABEL_TOL_PX
+                                             and (abs(mid - lead_mid) <= LABEL_TOL_PX or abs(row_top - row['y']) <= LABEL_TOL_PX) for x in on_row)
+        if not (end_ok and firsts_ok):
+            astray.append({'place': l['place'], 'address': a['rect'], 'row': row, 'first': [[x['text'], x['rect']] for x in on_row], 'lead': lead})
+    r.check(not astray, f'{name}: (v-b) every document\'s label set in its place is one contents line — its address ending at its outline\'s first row\'s end; its first line, where set, its lead cut on a whole word with {LEAD_WORDS} words kept at the least, starting where those words stand in its fold and level with that line — {LABEL_TOL_PX} px either way (issue #23)', astray[:6])
     # the connections' counts (foundations §2.1's register: "one connection drawn per document pair with its count"; P44 forbids a merged mark
     # that hides it): the numeral of its links on each holding two or more, else the rule that left it out named; none on one holding one
     conns = v['connections']
@@ -763,15 +851,15 @@ def labels_hold(r, name, v):
                 {'hidden': hidden, 'connections': [[c['place'], c['count'], c['label']] for c in conns][:12]})
     if name == 'home':
         # the label rule (F-9; foundations §2.1: drawn only where its place holds it): a document's label stands in its
-        # outline's first row (issue #15), so it is set wherever that row holds its address at the floor — set in the
-        # identifier face, Atkinson Hyperlegible Mono, 0.632 em a character (issue #16), the case's own bound, and a line
-        # box tall — and named left out wherever it does not
+        # outline's first row (issue #15), so it is set wherever that row holds its address at the floor — past its region's
+        # prefix where (v) has it so, set in the identifier face, Atkinson Hyperlegible Mono, 0.632 em a character (issue #16),
+        # the case's own bound, and a line box tall — and named left out wherever it does not
         labelled = {l['place'] for l in labels if l['kind'] == 'doc'}
         named = {o['place'] for o in v['out'] if o['kind'] == 'doc'}
         shown = {o['place'] for o in v['boxes'] if o['place'] not in v['mounted']}
         whole = sorted(q for q in shown if all(inside(o['rect'], v['seen']) for o in v['boxes'] if o['place'] == q))
-        short = lambda q: q[len(account_of(q) or ''):]
-        holds = lambda q: v['rows'][q]['w'] >= len(short(q)) * MIN_LABEL_PX * 0.632 + 1 and v['rows'][q]['h'] >= MIN_LABEL_PX * 1.2 + 1
+        addr_of = lambda q: q[len(account_of(q) or ''):] if (account_of(q) or '') in regions else q
+        holds = lambda q: v['rows'][q]['w'] >= len(addr_of(q)) * MIN_LABEL_PX * 0.632 + 1 and v['rows'][q]['h'] >= MIN_LABEL_PX * 1.2 + 1
         must = [q for q in whole if holds(q)]
         r.check(bool(must) and set(must) <= labelled and set(whole) <= labelled | named,
                 'home: every document standing whole in the visible view whose outline\'s first row holds its address at the label floor carries its label, and every other is named left out by the rule that left it out',
@@ -1890,7 +1978,7 @@ def version_holds(ctx, r):
     r.check(mid['lod'] == 'mid' and mid['shown'] == m1 and mid['trail']['cursor'] == at1['trail']['cursor'] and len(mid['trail']['entries']) == len(at1['trail']['entries']),
             'Mod+- until mid scale, the box drawn on the canvas: it still shows version 1, and the trail does not move — a zoom changes no box\'s version (issue #154)', {'presses': out, 'lod': mid['lod'], 'shown': mid['shown'], 'mounted': mid['mounted']})
     short = m1[len('1.0.1'):]
-    r.check(([l['place'] for l in labels] == [m1] and labels[0]['lines'][0]['text'] == short) or (not labels and {o['place'] for o in left} == {m1}),
+    r.check(([l['place'] for l in labels] == [m1] and (address_line(labels[0]) or {}).get('text') == short) or (not labels and {o['place'] for o in left} == {m1}),
             'at mid the box carries one label, its version\'s address past the region\'s prefix, "%s": it marks the version the box holds (issue #154)' % short,
             {'labels': [[l['place'], [x['text'] for x in l['lines']]] for l in labels], 'left_out': [[o['place'], o['reason']] for o in left]})
     r.check(sibs == [m1] and bool(mid['focus']) and mid['focus']['addr'] == m1, 'at mid the walk stands on the box by the version it shows, and the mirror lists the box once, by that version (issue #154)',
@@ -1992,6 +2080,13 @@ def chrome_holds(ctx, r):
     narrow = [[i, round(row[1]['w'], 1), round(row[1]['row'], 1)] for i, row in enumerate(cells) if whole and row[1]['w'] < row[1]['row'] / 4]
     r.check(whole and longest >= 100 and not over and not narrow, 'the LEAP box: no cell\'s text runs past its column, and the title\'s column keeps a quarter of the row or more — a label of a hundred characters or more among the rows',
             {'longest_cell_chars': longest, 'overflowing': over[:6], 'narrow_titles': narrow[:6]})
+    # an address in a row is exact (issue #23's design decision: "The address is never truncated or greyed"): at the full ink, on one line
+    ids = ctx.js('''(() => { const ink = getComputedStyle(document.body).color;
+      return [...document.querySelectorAll('#leaphits .id')].map((e) => ({text: e.textContent, ink: getComputedStyle(e).color, full: ink, lines: e.getClientRects().length})); })()''')
+    grey = [x for x in ids if x['ink'] != x['full']]
+    broken = [x for x in ids if x['lines'] != 1]
+    r.check(bool(ids) and not grey and not broken, 'the LEAP box: every address in its rows stands at the full ink, never greyed, on one line, never broken (issue #23)',
+            {'addresses': len(ids), 'greyed': grey[:4], 'broken': broken[:4]})
     ctx.js('window.__skep.leap.close()')
     ctx.frames(1)
     alpha = ctx.js(r'''(() => { const a = (sel) => { const e = document.querySelector(sel); if (!e) return null;
@@ -2002,6 +2097,150 @@ def chrome_holds(ctx, r):
     r.check(not thin, 'the chrome over the plane is opaque — the LEAP box, the scene, the one line, the mirror and a corner: no text the plane holds shows through', alpha)
     return {'leap_rows': len(cells), 'leap_columns': [round(c['w'], 1) for c in cells[0]] if cells else None, 'alpha': alpha}
 
+
+def lead_handoff(ctx, r):
+    """THE CONTENTS LINE'S HAND-OFF (issue #23's design decision: "Set it at the head of the first column, where those words will
+    stand when the text mounts ... Mounting then moves no word"): the camera over the first edition's first column, brought in
+    from far out to BELOW_MOUNT_EM, where its article stands nowhere and its label is the canvas's — its first line's first word
+    starts, and its line is centred, where its article mounted at ABOVE_MOUNT_EM sets that word: the first character of its first
+    typed line, in world units, HANDOFF_TOL_PX on screen either way; its figures"""
+    first = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(DOC))
+    lo = ctx.js('window.__skep.scaleFor(%s, "em", %s)' % (json.dumps(DOC), BELOW_MOUNT_EM))
+    hi = ctx.js('window.__skep.scaleFor(%s, "em", %s)' % (json.dumps(DOC), ABOVE_MOUNT_EM))
+    ctx.set_view(first['x'], first['y'], lo / 4)
+    ctx.frames(2)
+    ctx.set_view(first['x'], first['y'], lo)
+    ctx.settle()
+    ctx.frames(3)
+    WORLD = '''((r) => { const c = window.__skep.view.camera(), p = window.__skep.view.viewport();
+      return r && {x: (r.x - p.VW / 2) / c.scale + c.x, y: (r.y + r.h / 2 - p.VH / 2) / c.scale + c.y}; })'''
+    below = ctx.js('''((doc) => { const l = window.__skep.labels().find((x) => x.kind === 'doc' && x.place === doc && !x.held);
+      const first = l && l.lines.find((x) => !x.runs.every((q) => q.face === 'ident'));
+      return {mounted: window.__skep.mountedAddrs().includes(doc), text: first ? first.text : null, at: first ? %s(first.rect) : null}; })(%s)''' % (WORLD, json.dumps(DOC)))
+    ctx.set_view(first['x'], first['y'], hi)
+    ctx.settle()
+    ctx.frames(3)
+    above = ctx.js('''((doc) => { const art = document.querySelector(`#domlayer article.dtext[data-addr="${doc}"]`);
+      const b = art && art.querySelector('.sp.blk-para'), w = b && document.createTreeWalker(b, NodeFilter.SHOW_TEXT);
+      for (let n = w && w.nextNode(); n; n = w.nextNode()) { const i = n.data.search(/\\S/); if (i < 0) continue;
+        const q = document.createRange(); q.setStart(n, i); q.setEnd(n, i + 1); const x = q.getBoundingClientRect();
+        return {mounted: true, char: n.data[i], at: %s({x: x.left, y: x.top, w: x.width, h: x.height})}; }
+      return {mounted: !!art, char: null, at: null}; })(%s)''' % (WORLD, json.dumps(DOC)))
+    ok = bool(below['at'] and above['at']) and not below['mounted'] and above['mounted']
+    dx = abs(below['at']['x'] - above['at']['x']) * hi if ok else None
+    dy = abs(below['at']['y'] - above['at']['y']) * hi if ok else None
+    r.check(ok and dx <= HANDOFF_TOL_PX and dy <= HANDOFF_TOL_PX and bool(below['text']) and below['text'][0] == above['char'],
+            f'the hand-off: below the mount, the first edition\'s label\'s first line starts with the first word its article, mounted above it, sets there — where that word starts and level with its line, {HANDOFF_TOL_PX} px either way on screen (issue #23)',
+            {'below': below, 'above': above, 'dx_px': dx, 'dy_px': dy})
+    return {'below': below, 'above': above, 'dx_px': dx, 'dy_px': dy}
+
+
+def address_dots(ctx, r):
+    """AN ADDRESS'S DOTS STAND APART (issue #23's design decision: "never set below the size at which its dots stay distinct"):
+    a long address set as a label sets it — at the page's address size and weight, in the identifier's face as shipped — drawn on
+    a canvas of the case's own: every dot one island of ink inside its own character's cell, touching no digit, and DOT_GAP_PX or
+    more blank columns between it and the characters either side; its figures"""
+    text = '1.0.1.0.1049578.12'
+    v = ctx.js('''(async (text) => {
+      const A = window.__skep.address(), font = `${A.weight} ${A.px}px "Atkinson Hyperlegible Mono"`;
+      await document.fonts.load(font);
+      const c = document.createElement('canvas'); c.width = 400; c.height = 40;
+      const g = c.getContext('2d'); g.font = font; g.textBaseline = 'middle'; g.fillStyle = '#000'; g.fillText(text, 10, 20);
+      const d = g.getImageData(0, 0, c.width, c.height).data, ink = [];
+      for (let x = 0; x < c.width; x++) { let a = 0; for (let y = 0; y < c.height; y++) a = Math.max(a, d[(y * c.width + x) * 4 + 3]); ink.push(a > 64); }
+      const islands = []; let s = -1;
+      ink.forEach((on, x) => { if (on && s < 0) s = x; if (!on && s >= 0) { islands.push([s, x]); s = -1; } });
+      // each character's cell along the run: the face's one advance from where the run starts
+      const adv = g.measureText(text).width / text.length;
+      return {px: A.px, weight: A.weight, islands, adv, x0: 10, loaded: document.fonts.check(font)};
+    })(%s)''' % json.dumps(text))
+    dots = []
+    for i, ch in enumerate(text):
+        if ch != '.':
+            continue
+        left, right = v['x0'] + i * v['adv'], v['x0'] + (i + 1) * v['adv']
+        k = next((j for j, (a, b) in enumerate(v['islands']) if left <= (a + b) / 2 < right), None)
+        own = k is not None and v['islands'][k][0] >= left - 1 and v['islands'][k][1] <= right + 1
+        gaps = [v['islands'][k][0] - v['islands'][k - 1][1] if k else None, v['islands'][k + 1][0] - v['islands'][k][1] if k is not None and k + 1 < len(v['islands']) else None] if k is not None else [None, None]
+        dots.append({'at': i, 'own': own, 'gaps': gaps})
+    apart = [x for x in dots if not (x['own'] and all(g is not None and g >= DOT_GAP_PX for g in x['gaps']))]
+    r.check(v['loaded'] and v['px'] >= MIN_LABEL_PX and bool(dots) and not apart,
+            f'an address at the size and weight a label sets it at — {v["px"]} px, {v["weight"]}, in the shipped identifier face — keeps every dot apart: each of its {len(dots)} dots an island of ink inside its own character\'s cell, {DOT_GAP_PX} px or more of blank between it and the characters either side (issue #23)',
+            {'px': v['px'], 'weight': v['weight'], 'dots': dots, 'loaded': v['loaded']})
+    return {'px': v['px'], 'weight': v['weight'], 'dots': len(dots), 'min_gap_px': min((g for x in dots for g in x['gaps'] if g is not None), default=None)}
+
+
+LINE_LABEL_JS = '''((probes) => { const b = document.querySelector('#line button.address'), lab = b && b.querySelector('.label');
+  if (!b || !lab) return null;
+  const q = (e) => { const x = e.getBoundingClientRect(); return {x: x.left, y: x.top, w: x.width, h: x.height}; }, box = lab.getBoundingClientRect(), words = [];
+  const w = document.createTreeWalker(lab, NodeFilter.SHOW_TEXT), range = document.createRange();
+  for (let n = w.nextNode(); n; n = w.nextNode()) for (const m of n.data.matchAll(/\\S+/g)) {
+    range.setStart(n, m.index); range.setEnd(n, m.index + m[0].length); const rs = [...range.getClientRects()];
+    if (rs.length) words.push({word: m[0], top: rs[0].top, right: Math.max(...rs.map((x) => x.right)), lines: rs.length}); }
+  // the widths the label's words would take, in its face at its size, set apart from it
+  const widths = probes.map((t) => { const e = document.createElement('span'); e.textContent = t; e.style.cssText = 'position:absolute;visibility:hidden;white-space:pre';
+    e.style.font = getComputedStyle(lab).font; document.body.appendChild(e); const x = e.getBoundingClientRect().width; e.remove(); return x; });
+  return {button: q(b), label: q(lab), text: lab.textContent, words, place: q(b.querySelector('b')), slot: q(b.querySelector('.slot')), marker: q(b.querySelector('.marker')),
+          vw: window.innerWidth, address: window.__skep.line().address, widths}; })'''
+
+
+def two_words(lead):
+    """the shortest cut of a lead a label may set (issue #23): its words up to its LEAD_WORDS-th word holding a letter or a figure,
+    and the ellipsis; None where it holds fewer"""
+    ws, n = lead.split(' '), 0
+    for i, w in enumerate(ws):
+        n += 1 if re.search(r'\w', w) else 0
+        if n == LEAD_WORDS:
+            return ' '.join(ws[:i + 1]) + '…' if i + 1 < len(ws) else None
+    return None
+
+
+def line_label_holds(ctx, r):
+    """THE ONE LINE'S LABEL (issue #23's design decision: "exact fields first, each followed by its label. When room runs short,
+    labels give way before fields"): landed at the reading size in an edition of the claimant's whose first line's two first words
+    fit the room the address segment leaves its label, the segment's document field is followed by its label — the page's lead for
+    it, whole or cut on a word — then its position; in a window LINE_NARROW_PX wide the label gives way a whole word at a time —
+    every word it shows whole inside it — while every field stands whole inside the segment and the window; its figures"""
+    places = ctx.js('window.__skep.model.places()')
+    tried, chosen, wide, lead = [], None, None, ''
+    for doc in [DOC] + [p['doc'] for p in places if p['account'] == account_of(DOC) and not p.get('system') and p['kind'] == 'edition' and len((p['label'] or '').split()) >= 3][:10]:
+        ctx.leap(doc, None)
+        ctx.js('new Promise((r) => setTimeout(r, 300))')
+        lead = ctx.js('window.__skep.firstLine(%s).lead' % json.dumps(doc))
+        two = two_words(lead or '')
+        v = ctx.js('%s(%s)' % (LINE_LABEL_JS, json.dumps([lead or '', two or ''])))
+        tried.append({'doc': doc, 'lead': lead, 'shown': v and v['text'], 'room': v and v['label']['w'], 'whole': v and v['widths'][0], 'two': two and v and v['widths'][1]})
+        # the label as the rule asks for it: none where neither the lead whole nor its two first words fit its room
+        if v and not v['text'] and v['widths'][0] > v['label']['w'] and (not two or v['widths'][1] > v['label']['w']):
+            continue
+        chosen, wide = doc, v
+        break
+    shown = wide and wide['text']
+    r.check(bool(chosen) and bool(shown) and word_cut(shown, lead) and wide['place']['x'] + wide['place']['w'] <= wide['label']['x'] + LABEL_TOL_PX
+            and wide['label']['x'] + wide['label']['w'] <= wide['slot']['x'] + LABEL_TOL_PX,
+            'the one line: the document\'s field followed by its label — its lead, whole or cut on a word — then its position; where its two first words do not fit the room its segment leaves it, none (issue #23)',
+            {'chosen': chosen, 'tried': tried, 'line': wide and {k: wide[k] for k in ('label', 'place', 'slot', 'text')}})
+    if not chosen:
+        return {'tried': tried}
+    was = ctx.resize(LINE_NARROW_PX, 900)
+    try:
+        ctx.settle()
+        ctx.leap(chosen, None)
+        ctx.js('new Promise((r) => setTimeout(r, 300))')
+        narrow = ctx.js('%s([])' % LINE_LABEL_JS)
+    finally:
+        ctx.resize(*was)
+    ctx.settle()
+    within = lambda a, b: a['x'] >= b['x'] - LABEL_TOL_PX and a['x'] + a['w'] <= b['x'] + b['w'] + LABEL_TOL_PX
+    fields = bool(narrow) and all(within(narrow[k], narrow['button']) and narrow[k]['x'] + narrow[k]['w'] <= narrow['vw'] + LABEL_TOL_PX for k in ('place', 'slot', 'marker'))
+    top = narrow['label']['y'] if narrow else 0
+    on = [x for x in (narrow or {}).get('words', []) if abs(x['top'] - top) <= 2]
+    cut = [x for x in on if x['lines'] > 1 or x['right'] > narrow['label']['x'] + narrow['label']['w'] + LABEL_TOL_PX]
+    gave = bool(narrow) and narrow['label']['w'] < wide['label']['w'] - LABEL_TOL_PX
+    r.check(fields and not cut and gave,
+            f'a {LINE_NARROW_PX} px window: the line\'s document label gives way first, a whole word at a time — every word it shows whole inside it — and every field stands whole inside the segment and the window (issue #23)',
+            {'wide_label_w': wide['label']['w'], 'narrow': narrow and {k: narrow[k] for k in ('button', 'label', 'place', 'slot', 'marker', 'vw')}, 'shown': [x['word'] for x in on], 'cut': cut})
+    return {'chosen': chosen, 'lead': lead, 'shown': shown, 'narrow_shown': [x['word'] for x in on], 'narrow_label_w': narrow and narrow['label']['w'], 'tried': tried}
 
 def walk_holds(ctx, r):
     """A WALK'S FOLDED MOMENT (issue #182's design decision: "Dismissing it changes how much room it takes, never whether it
@@ -2630,10 +2869,13 @@ def run(ctx):
     ctx.set_view(c0['x'] + c0['w'] / 2, c0['y'] + (vp['VH'] / 2 - (line - 100)) / s14, s14)
     hl = held_label(ctx)
     q, cq = (hl['label'] or {}).get('rect'), hl['corner']
-    r.check(hl['named']['doc'] is None and hl['named']['account'] == account_of(DOC) and bool(q) and hl['label']['text'][:1] == [DOC[len(account_of(DOC)):]]
+    words = (hl['label'] and hl['label']['text']) or []
+    rest = words[:-1]
+    r.check(hl['named']['doc'] is None and hl['named']['account'] == account_of(DOC) and bool(q) and words[-1:] == [DOC[len(account_of(DOC)):]]
+            and all(BADGE.match(x) for x in (rest[1:] if rest and word_cut(rest[0], hl['lead']) else rest))
             and abs(q['y'] - (hl['line'] + HOLD_GAP_PX)) <= 1 and abs(q['x'] - hl['left']) <= 1 and in_shape(q, hl['rects']),
-            f'the walk stepped out to the first edition\'s account, which the line names: its label held over its text, {HOLD_GAP_PX} px below the line, at its first column\'s text left, inside its outline, its address first',
-            {'named': hl['named'], 'label': hl['label'], 'line': hl['line'], 'left': hl['left'], 'outline': hl['rects']})
+            f'the walk stepped out to the first edition\'s account, which the line names: its label held over its text, {HOLD_GAP_PX} px below the line, from its first column\'s text left, inside its outline — its first line, where set, cut on a word, its badge, then its address past its region\'s prefix at the line\'s end',
+            {'named': hl['named'], 'label': hl['label'], 'lead': hl['lead'], 'line': hl['line'], 'left': hl['left'], 'outline': hl['rects']})
     r.check(bool(q and cq) and abs(q['y'] - cq['y']) <= 1 and not meets(q, cq),
             'the held label and the corner stand level below the line, and never overlap (issue #169: "The corner keeps its side, outside the text, level with the label")', {'label': q, 'corner': cq})
     r.check(bool(q) and hl['hidden'] == 'true' and hl['cornerLike'] is False and hl['takes'] and hl['label']['legible'],
@@ -2870,13 +3112,18 @@ def run(ctx):
         v, o, mine, g = risen(name, top - under)
         line = v['seen']['y']
         below = sorted(l['place'] for l in v['labels'] if l['kind'] == 'doc' and l['place'] != DOC and all(x['rect']['y'] >= line - LABEL_TOL_PX for x in l['lines']))
-        q = mine['lines'][0]['rect'] if mine else None
+        a = address_line(mine) if mine else None
+        q = a['rect'] if a else None
+        first = mine['lines'][0] if mine and mine['lines'][0] is not a else None
         at_hold = bool(q) and abs(q['y'] - (line + HOLD_GAP_PX)) <= LABEL_TOL_PX
         on_foot = bool(q) and abs(q['y'] + q['h'] - (o['bottom'] - g)) <= LABEL_TOL_PX
-        r.check(abs(line - o['top'] - under) <= LABEL_TOL_PX and v['named']['doc'] is None and bool(mine) and mine.get('held') and mine['lines'][0]['text'] == short and mine.get('plate') is not None
-                and abs(q['x'] - (o['left'] + g)) <= LABEL_TOL_PX and q['y'] <= line + HOLD_GAP_PX + LABEL_TOL_PX and q['y'] + q['h'] <= o['bottom'] - g + LABEL_TOL_PX and (at_hold or on_foot) and bool(below),
-                f'{name}: the first edition\'s box\'s top {under} px above the one line\'s bottom, the line naming its account and not it: its label held below the line — one line, its address first, on its ground, at its first column\'s text left, its top {HOLD_GAP_PX} px below the line or its bottom on its outline\'s foot inside the half gutter — and the labels of the documents below the line set',
-                {'line': line, 'outline': o, 'gutter': g, 'named': v['named'], 'held': mine and {'lines': [[x['text'], x['rect']] for x in mine['lines']], 'plate': mine.get('plate'), 'held': mine.get('held')},
+        lead = v['leads'].get(DOC, {}).get('words') or ''
+        r.check(abs(line - o['top'] - under) <= LABEL_TOL_PX and v['named']['doc'] is None and bool(mine) and mine.get('held') and bool(a) and a['text'] == short and mine.get('plate') is not None
+                and abs(q['x'] + q['w'] - (mine['within']['x'] + mine['within']['w'])) <= LABEL_TOL_PX and abs(mine['within']['x'] - (o['left'] + g)) <= LABEL_TOL_PX
+                and (first is None or (abs(first['rect']['x'] - (o['left'] + g)) <= LABEL_TOL_PX and word_cut(first['text'], lead)))
+                and q['y'] <= line + HOLD_GAP_PX + LABEL_TOL_PX and q['y'] + q['h'] <= o['bottom'] - g + LABEL_TOL_PX and (at_hold or on_foot) and bool(below),
+                f'{name}: the first edition\'s box\'s top {under} px above the one line\'s bottom, the line naming its account and not it: its label held below the line — one line from its first column\'s text left, on its ground, its first line, where set, at that left cut on a word and its address at the line\'s end, its top {HOLD_GAP_PX} px below the line or its bottom on its outline\'s foot inside the half gutter — and the labels of the documents below the line set',
+                {'line': line, 'outline': o, 'gutter': g, 'named': v['named'], 'held': mine and {'lines': [[x['text'], x['rect']] for x in mine['lines']], 'plate': mine.get('plate'), 'held': mine.get('held'), 'within': mine.get('within')},
                  'left_out': [[x['text'], x['reason']] for x in v['out'] if x['kind'] == 'doc' and x['place'] == DOC], 'set_below': below[:8]})
         if q:
             lh = q['h']
@@ -2886,7 +3133,7 @@ def run(ctx):
     top = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
     h90 = f90['outline']['h'] * s90
     v, o, mine, g = risen('under-the-line-foot', top + g + 0.75 * lh - h90)
-    q = mine['lines'][0]['rect'] if mine else None
+    q = (address_line(mine) or mine['lines'][0])['rect'] if mine else None
     r.check(bool(q) and mine.get('held') and abs(q['y'] + q['h'] - (o['bottom'] - g)) <= LABEL_TOL_PX and q['y'] < v['seen']['y'] and q['y'] + q['h'] > v['seen']['y'],
             'under-the-line-foot: the first edition\'s outline\'s foot risen near the one line pushes its held label up under the line, its bottom on the foot inside the half gutter, still in view',
             {'line': v['seen']['y'], 'outline': o, 'gutter': g, 'held': mine and [[x['text'], x['rect']] for x in mine['lines']]})
@@ -2900,6 +3147,8 @@ def run(ctx):
         ctx.frames(2)
         seen[name] = labels_hold(r, name, label_view(ctx))
     r.figures['labels'] = seen
+    r.figures['contents_handoff'] = lead_handoff(ctx, r)
+    r.figures['address_dots'] = address_dots(ctx, r)
     # THE TYPE, THE READING SCENE, THE CARRY, THE VERSION MOVE, THE CHROME, THE TRAIL
     r.figures['type'] = type_holds(ctx, r)
     r.figures['scene'] = scene_holds(ctx, r)
@@ -2908,6 +3157,7 @@ def run(ctx):
     r.figures['pieces'] = pieces_hold(ctx, r)
     r.figures['versions'] = version_holds(ctx, r)
     r.figures['chrome'] = chrome_holds(ctx, r)
+    r.figures['line_label'] = line_label_holds(ctx, r)
     r.figures['trail'] = trail_holds(ctx, r)
     r.figures['stub'] = stub_holds(ctx, r)
     r.figures['hold'] = hold_holds(ctx, r)

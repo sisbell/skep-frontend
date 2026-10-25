@@ -555,10 +555,10 @@ test('the mirror\'s item at a link names its far end as its tail and its card do
   const item = () => { const s = LK.shown(D).find((x) => x.link.addr === L); return s ? WALK.nameOf({ kind: 'link', addr: D, pos: s.pos, link: s }, 0, 1) : ''; };
   assert.equal(item(), t('L.mirror.link', { link: L, type: '1.1.0.1.0.1.0.3.13', direction: t('F.card.to'), far: GHOST, floating: '' }) + ' ' + t('L.mirror.item', { i: 1, n: 1 }), 'nothing answered: the address alone');
   REC.takeProjection(L, 2, GHOST, 'unregistered');
-  assert.ok(item().includes(`${t('F.card.to')} ${GHOST} · ${t('L.far.empty')}`), `the board saying nothing of an address of the reader's own account the complete index lists nothing at: ${item()}`);
+  assert.ok(item().includes(`${t('F.card.to')} ${GHOST} · ${t('L.client-words', { words: t('L.far.empty') })}`), `the board saying nothing of an address of the reader's own account the complete index lists nothing at, the client's words bracketed: ${item()}`);
   REC.takeLink({ addr: L, from: [span(D, 12, 3)], to: [span(THEIRS, 1, 4)], type: '1.1.0.1.0.1.0.3.13' });
   REC.takeProjection(L, 2, THEIRS, 'unregistered');
-  assert.ok(item().includes(`${t('F.card.to')} ${THEIRS} · ${t('L.far.unregistered')}`), `another account's: ${item()}`);
+  assert.ok(item().includes(`${t('F.card.to')} ${THEIRS} · ${t('L.client-words', { words: t('L.far.unregistered') })}`), `another account's: ${item()}`);
   REC.invalidate(THEIRS); REC.invalidate(GHOST);
 });
 
@@ -839,7 +839,7 @@ test('the walk keeps the document it stands in while that document\'s region mee
   }
 });
 
-test('the walk takes each box as the version it shows (issue #154): an account\'s documents list the version its box shows, a landing at the document stands on that version\'s span, and a re-take over its box stands there', async () => {
+test('the walk takes each box as the version it shows (issues #154, #23): an account\'s documents list the version its box shows, named by that version\'s own first line, a landing at the document stands on that version\'s span, and a re-take over its box stands there', async () => {
   const D2 = D + '.2', TEXT2 = 'Tumbler.\n\nThe second version.';
   Object.assign(script, reads(D2, [{ content: TEXT2 }], TEXT2.length, [{ i_start: D2 + '.0.1.1', width: String(TEXT2.length) }]));
   await PUMP.loadWhole(D2);
@@ -847,8 +847,8 @@ test('the walk takes each box as the version it shows (issue #154): an account\'
   try {
     const kids = await WALK.childrenOf({ kind: 'account', addr: '1.0.1', pos: null, link: null });
     assert.deepEqual(kids.map((n) => n.addr).filter((a) => [D, D2, E].includes(a)), [D2, E], 'the account lists the version D\'s box shows, in D\'s place, never D');
-    const named = WALK.nameOf(kids[0], 0, kids.length), place = /** @type {NonNullable<ReturnType<typeof REC.place>>} */ (REC.place(D));
-    assert.ok(named.startsWith(t('L.mirror.document', { document: D2, label: '"' + place.label + '"', state: t('F.published'), extent: t('L.mirror.positions', { n: TEXT2.length }) })), 'the mirror names the version by its box\'s document\'s first line and state: ' + named);
+    const named = WALK.nameOf(kids[0], 0, kids.length);
+    assert.ok(named.startsWith(t('L.mirror.document', { document: D2, label: '"Tumbler."', state: t('F.published'), extent: t('L.mirror.positions', { n: TEXT2.length }) })), 'the mirror names the version by its own first line, as its box\'s label names it, and its box\'s document\'s state: ' + named);
     await WALK.focusTo(D, 12);
     assert.deepEqual([walkAt(), WALK.siblingsNow().map((n) => n.pos)], [['block', D2, 11], [1, 11]], 'a landing at D stands on the version\'s span, its siblings the version\'s');
     await WALK.focusTo(E, 3);
