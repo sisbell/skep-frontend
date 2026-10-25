@@ -15,7 +15,10 @@
 // the others' count in the column's edge, setting no line, and a withheld
 // run's below its mark by the lines the mark's words take as measured; the corner's
 // items, whole and compact, outside the article, a pane's with its read act
-// and its lacking line; the record rule and headings; the plan the bars are
+// and its lacking line; the record rule; a typed line set as typed in the
+// body's type, a heading's marks its own characters, on its indent where it
+// opens a typed line, the empty lines typed after it whole line boxes below
+// it and no other room between blocks; the plan the bars are
 // laid out from, the same blocks as the HTML; the scene-mode variant with no
 // offer and no control; each withheld run naming its own origin's owner; the
 // item rule and the copy's plain text with its stand-ins; the ends drawn at
@@ -27,7 +30,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, headingLevel, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, LABEL_CH, CUE_CH } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, LABEL_CH, CUE_CH } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -304,7 +307,7 @@ test('the selected span marks every block it touches and no other', () => {
   const blocks = [{ pos: 1, width: 10, kind: /** @type {const} */ ('para'), text: 'aaaaaaaa', origin: null }, { pos: 11, width: 10, kind: /** @type {const} */ ('para'), text: 'bbbbbbbb', origin: null }, { pos: 21, width: 10, kind: /** @type {const} */ ('para'), text: 'cccccccc', origin: null }];
   const d = doc({ blocks });
   const inside = articleHTML(d, view({ selected: { addr: d.addr, pos: 14, width: 3 } }), '1.0.1');
-  assert.ok(inside.includes('class="sp blk-para sel" data-addr="1.0.1.0.3" data-pos="11"'), 'the block holding the span is marked');
+  assert.ok(inside.includes('class="sp blk-para indent sel" data-addr="1.0.1.0.3" data-pos="11"'), 'the block holding the span is marked');
   assert.ok(!inside.includes('sel" data-addr="1.0.1.0.3" data-pos="1"') && !inside.includes('sel" data-addr="1.0.1.0.3" data-pos="21"'), 'no other block is');
   const across = articleHTML(d, view({ selected: { addr: d.addr, pos: 8, width: 6 } }), '1.0.1');
   assert.ok(across.includes('sel" data-addr="1.0.1.0.3" data-pos="1"') && across.includes('sel" data-addr="1.0.1.0.3" data-pos="11"') && !across.includes('sel" data-addr="1.0.1.0.3" data-pos="21"'), 'a span across two blocks marks both');
@@ -378,13 +381,18 @@ test('the article holds no corner: its items stand beside it, outside the box th
   assert.ok(!draft.includes(t('C-28.flag-on')) && !draft.includes(t('C-28')), 'a draft\'s chip is its corner\'s, never its article\'s');
 });
 
-test('a record atom renders as the record it is; a heading as formatting', () => {
+test('a record atom renders as the record it is; a typed line its bytes open with "#" is a typed line like any other — a `p` in the body\'s type, its marks its own characters — on the plane, in a pane and in the plan, never a heading (FP-12)', () => {
   const d = doc({ addr: '1.0.1.0.1', blocks: [{ pos: 1, width: 1, kind: 'atom', text: JSON.stringify({ type: 'skep-enroll', keys: [{ label: 'dev-notebook', anchor: false }] }), origin: null }] });
   const html = articleHTML(d, view(), '1.0.1');
   assert.ok(html.includes(t('F.home-record.yours')) && html.includes('dev-notebook'));
-  assert.equal(headingLevel('## The artifact chain'), 2);
-  const h = articleHTML(doc({ blocks: [{ pos: 1, width: 10, kind: 'para', text: '## Title', origin: null }] }), view(), '1.0.1');
-  assert.ok(h.includes('<h3 class="sp blk-para"'));
+  const typed = doc({ blocks: [{ pos: 1, width: 10, kind: 'para', text: '## Title', origin: null }, { pos: 11, width: 6, kind: 'para', text: '# Part', origin: null }] });
+  for (const scene of [false, true]) {
+    const h = articleHTML(typed, view({ scene }), '1.0.1');
+    assert.ok(!/<h\d/.test(h), `${scene ? 'in a pane' : 'on the plane'}: no heading element`);
+    assert.ok(h.includes('<p class="sp blk-para indent" data-addr="1.0.1.0.3" data-pos="1" data-width="10" style="--blank:1">## Title</p>') && h.includes('<p class="sp blk-para indent" data-addr="1.0.1.0.3" data-pos="11" data-width="6"># Part</p>'), `${scene ? 'in a pane' : 'on the plane'}: each a typed line, its "#" its own: ${h}`);
+  }
+  const rows = articlePlan(typed, view(), '1.0.1').filter((r) => r.pos != null);
+  assert.deepEqual(rows.map((r) => [r.size, r.before, r.keep, r.pre, r.pieces.map((x) => [x.text, x.size])]), [[1, 0, 'lines', true, [['## Title', 1]]], [1, 0, 'lines', true, [['# Part', 1]]]], 'in the plan at the body\'s size, with no room above it, broken between its lines as any typed line');
 });
 
 /** a link marked at a span of the first edition, as LK hands it in, its end's key the span's */
@@ -406,8 +414,8 @@ test('a block\'s plan carries its hairline\'s label, C-33\'s mark and its symbol
   const d = doc({ blocks: [{ pos: 1, width: 13, kind: 'para', text: '# abcdefgh ij', origin: null }], origins: [{ pos: 5, width: 4, doc: '1.0.1.0.1003' }] });
   const v = view({ originKinds: new Map([['1.0.1.0.1003', 'draft']]), marks: [shown(9, 2)], symbols: [shown(9, 2)], countAt: () => ({ n: 3, social: false }) });
   const r = /** @type {import('../plane/layout.js').Row} */ (articlePlan(d, v, '1.0.1').find((x) => x.pos === 1));
-  const k = MEASURE.h2;
-  assert.equal(r.size, k, 'the heading\'s box at its own size: its lines its size\'s line boxes');
+  const k = 1;
+  assert.equal(r.size, k, 'the typed line\'s box at the body\'s size, its "#" among its own characters');
   const label = r.pieces.find((p) => p.text === '≡ 1.0.1.0.1003');
   assert.ok(label && label.size === MEASURE.label * k && label.lead > 0, 'the hairline\'s label whole, at its size, led by the sameness boundary');
   const mark = r.pieces.find((p) => p.text === t('C-33'));
@@ -430,8 +438,8 @@ test('the others\' count stands in its column\'s edge — the block\'s first chi
   // its place in its own em, from P-LAY's body em: EDGE_GAP past the text, the rest of the edge wide, its first line the block's
   const own = (/** @type {string} */ style, /** @type {string} */ k) => Number((new RegExp(`${k}:([\\d.]+)`).exec(style) || [])[1]);
   const size = (/** @type {number} */ k) => MEASURE.count * k;
-  assert.ok(Math.abs(own(style1, '--edge-in') * size(MEASURE.h2) - 0.5) < 1e-9 && Math.abs(own(style2, '--edge-in') * size(1) - 0.5) < 1e-9, 'EDGE_GAP past the text, in the body\'s em, at a heading\'s size and the body\'s');
-  assert.ok(Math.abs(own(style2, 'line-height') * size(1) - LINE_H) < 1e-9 && Math.abs(own(style1, 'line-height') * size(MEASURE.h2) - MEASURE.h2 * LINE_H) < 1e-9, 'its first line as tall as its block\'s first line');
+  assert.ok([style1, style2].every((st) => Math.abs(own(st, '--edge-in') * size(1) - 0.5) < 1e-9), 'EDGE_GAP past the text, in the body\'s em');
+  assert.ok([style1, style2].every((st) => Math.abs(own(st, 'line-height') * size(1) - LINE_H) < 1e-9), 'its first line as tall as its block\'s first line');
 });
 
 test('the corner compact: a usual state its glyph, named whole by its words, a number and an exception keeping theirs (FP-26; issue #151)', () => {
@@ -539,16 +547,31 @@ test('a symbol is titled with its type and what its far end\'s text holds of its
   assert.equal(title(''), '1.1.0.1.0.1.0.3.13');
 });
 
-test('a heading\'s plan stands it nearer the block it heads: its room above at its own size, the smaller room below; a paragraph\'s gap after it alone', () => {
-  const d = doc({ blocks: [{ pos: 1, width: 10, kind: 'para', text: 'aaaaaaaa', origin: null }, { pos: 11, width: 10, kind: 'para', text: '## Part', origin: null }, { pos: 21, width: 10, kind: 'para', text: 'bbbbbbbb', origin: null }] });
-  const plan = articlePlan(d, view(), '1.0.1');
-  const at = (/** @type {number} */ pos) => /** @type {import('../plane/layout.js').Row} */ (plan.find((x) => x.pos === pos));
-  const k = MEASURE.h3;
-  assert.deepEqual([at(11).size, at(11).before, at(11).after], [k, MEASURE.headingBefore * k, MEASURE.headingAfter * k], 'the heading: its size, its room above, its room below');
-  assert.ok(at(11).before > at(11).after && at(11).before > MEASURE.gap, 'more room above it than below it, and more than a paragraph\'s gap');
-  assert.deepEqual([at(1).size, at(1).before, at(1).after], [1, 0, MEASURE.gap], 'a paragraph: the body\'s size, its gap after it alone');
-  const head = plan.filter((r) => r.kind === 'head').map((r) => r.size);
+test('a typed line is set at the body\'s size, kept as typed: on its indent where it opens a typed line — the document\'s first, one after a newline — and on none where it continues the line an item or positions not held began; the empty lines typed after it whole body line boxes below it, the newlines leading a run after an item less the one that ends the item\'s line; no other room between blocks, every line on the grid (FP-12)', () => {
+  const content = (/** @type {number} */ pos, /** @type {string} */ text) => ({ pos, width: byteLength(text), kind: /** @type {const} */ ('content'), text, ref: null, origin: null });
+  const runs = [content(1, 'aaaa\n\n  bbbb\ncccc\n\n\n'), { pos: 21, width: 5, kind: /** @type {const} */ ('withheld'), text: '', ref: null, origin: '1.0.1.0.1003' }, content(26, '\ndddd\n\neeee'),
+    { pos: 37, width: 1, kind: /** @type {const} */ ('atom'), text: '{}', ref: null, origin: null }, content(38, 'gggg\n'), content(100, 'ffff')];
+  const d = doc({ runs, blocks: deriveBlocks(runs), to: 104 });
+  const plan = articlePlan(d, view(), '1.0.1').filter((r) => r.pos != null);
+  const I = MEASURE.indent;
+  assert.deepEqual(plan.map((r) => [r.pos, r.kind, r.size, r.before, r.after / LINE_H, r.indent, r.pre]), [
+    [1, 'text', 1, 0, 1, I, true], [7, 'text', 1, 0, 0, I, true], [14, 'text', 1, 0, 2, I, true], [21, 'gap', 1, 0, 0, 0, false],
+    [26, 'text', 1, 0, 0, 0, true], [27, 'text', 1, 0, 1, I, true], [33, 'text', 1, 0, 0, I, true], [37, 'gap', 1, 0, 0, 0, false],
+    [38, 'text', 1, 0, 0, 0, true], [100, 'text', 1, 0, 0, 0, true],
+  ], 'each block: its size, no room above it, the empty lines after it, its indent, its white space kept');
+  const html = articleHTML(d, view(), '1.0.1');
+  const blocks = [...html.matchAll(/<p class="([^"]*)" data-addr="[^"]*" data-pos="(\d+)" data-width="\d+"(?: style="--blank:(\d+)")?>/g)].map((m) => [Number(m[2]), m[1], Number(m[3] || 0)]);
+  assert.deepEqual(blocks, [[1, 'sp blk-para indent', 1], [7, 'sp blk-para indent', 0], [14, 'sp blk-para indent', 2], [26, 'sp blk-para', 0], [27, 'sp blk-para indent', 1], [33, 'sp blk-para indent', 0], [38, 'sp blk-para', 0], [100, 'sp blk-para', 0]], 'the HTML decides each the same: its indent, and its empty lines its room below it');
+  assert.ok(html.includes('>  bbbb</p>'), 'its leading spaces its own, kept');
+  const lines = layoutOf(articlePlan(d, view(), '1.0.1')).lines.filter((l) => l.kind !== 'head'), top = lines[0].top;
+  assert.ok(lines.every((l) => Math.abs((l.top - top) / LINE_H - Math.round((l.top - top) / LINE_H)) < 1e-9), 'every line a whole count of body line boxes below the first: the column\'s grid kept');
+  const head = articlePlan(d, view(), '1.0.1').filter((r) => r.kind === 'head').map((r) => r.size);
   assert.deepEqual(head, [1, MEASURE.head, MEASURE.head], 'the head\'s address at the body\'s size, its state line and byline at the head\'s');
+});
+
+test('a carriage return typed in a line is kept as the character typed, never written where the parser reads it as a line\'s end', () => {
+  const html = articleHTML(doc({ blocks: [{ pos: 1, width: 4, kind: 'para', text: 'a\rb\r', origin: null }] }), view(), '1.0.1');
+  assert.ok(html.includes('>a&#13;b&#13;</p>') && !html.includes('\r'), html);
 });
 
 test('the plan and the HTML decide the same blocks, in the same order', () => {
@@ -717,7 +740,7 @@ test('an item this client cannot show is a gap of its positions, each one advanc
 test('every address the article sets stands in the identifier\'s face, inside a sentence as well: the head\'s address, the byline\'s owner, a withheld document\'s state line, an unregistered one\'s address, another\'s home record (issue #16)', () => {
   const head = articleHTML(doc({ blocks: [{ pos: 1, width: 8, kind: 'para', text: 'Tumbler.', origin: null }] }), view(), '1.0.1');
   assert.ok(head.startsWith(`<div class="hd"><span class="addr id">1.0.1.0.3</span>`) && head.includes(`<span class="by">${idOf('1.0.1')} · `), 'the head\'s address and the byline\'s owner');
-  assert.ok(head.includes('<p class="sp blk-para" data-addr="1.0.1.0.3" data-pos="1" data-width="8">Tumbler.</p>'), 'the document\'s own words carry no face of the client\'s');
+  assert.ok(head.includes('<p class="sp blk-para indent" data-addr="1.0.1.0.3" data-pos="1" data-width="8">Tumbler.</p>'), 'the document\'s own words carry no face of the client\'s');
   const st = (/** @type {Partial<import('../model/records.js').Doc>} */ o) => (/<span class="st">(.*?)<\/span><span class="by">/.exec(articleHTML(doc(o), view(), '1.0.1')) || [])[1];
   assert.equal(st({ refused: 'withheld' }), tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' }), 'a withheld document\'s state line');
   assert.equal(st({ refused: 'unregistered' }), tHTML('B1.doc_not_registered', { address: '1.0.1.0.3' }, { address: 'id' }), 'an unregistered address');

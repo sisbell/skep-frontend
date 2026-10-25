@@ -6,33 +6,38 @@
 // it, so the handoff swaps bars for text and no line moves (law 8;
 // foundations §2.4; S1 Q7).
 // The bars are a layout of the article's own lines: T-ARTICLE's plan of the
-// article — the head's lines, then each block's text at its size with the
-// inline pieces it carries — is wrapped here the way the article's CSS wraps
-// it: a column the measure's count of the reading face's advance wide (the
-// style sets it so, `--measure` times `--char-w`), every character counted
-// one advance at its size; a unit
-// placed on a line where its characters fit, the space after it hanging past
-// the column; a line broken at a space, after a hyphen, a dash, an ellipsis or
-// a question mark inside a word (never before closing or infix punctuation),
-// and on either side of an inline-block, which is set whole; every line box
-// its block's line height at the block's own size (`lineBox`: the article's
-// one unitless line height, `LINE_H`, which each element applies to its own em
-// — the article's chrome is held inside it); the margins around each block at
-// the block's own size, a heading's nearer the block below it than the block
-// above, adjoining margins collapsing to the larger. Each line carries where a
-// column may break before it, by its row's keep (`Row.keep`), and where in the
-// document's bytes it starts. No sign of the page's sets a line: a block's
-// others' count and a withheld run's mark stand in the column's edge.
+// article — the head's lines, then each block's text with the inline pieces
+// it carries — is wrapped here the way the article's CSS wraps it: a column
+// the measure's count of the reading face's advance wide (the style sets it
+// so, `--measure` times `--char-w`), every character counted one advance at
+// its size; a unit placed on a line where its characters fit, the white space
+// after it hanging past the column; a line broken after white space, after a
+// hyphen, a dash, an ellipsis or a question mark inside a word (never before
+// closing or infix punctuation), and on either side of an inline-block, which
+// is set whole. A typed line (`Row.pre`) is set as its bytes are typed, as
+// the style's `pre-wrap` sets it: every space its own advance and a tab to
+// its next tab stop, its leading white space on its first line, which opens
+// on its indent (`Row.indent`, MEASURE.indent) where it opens a typed line;
+// every other row's white space collapses, none leading or trailing it. Every
+// line box is its block's line height at the block's own size (`lineBox`: the
+// article's one unitless line height, `LINE_H`, which each element applies to
+// its own em — the article's chrome is held inside it); the room below a
+// block its own (`Row.after`) — a typed line's, the whole line boxes of the
+// empty lines typed after it — adjoining margins collapsing to the larger.
+// Each line carries where a column may break before it, by its row's keep
+// (`Row.keep`), where in the document's bytes it starts, and where its ink
+// begins and ends. No sign of the page's sets a line: a block's others' count
+// and a withheld run's mark stand in the column's edge.
 // The fold (FP-12): every document is set at one line length — the measure,
 // MEASURE_CPL characters wherever the view holds them (the fit below) — and
 // one line height, in equal columns of COLUMN_LINES
 // body line boxes (`columnsOf`) — a column filled to its depth from its first
-// line's top, the margin above a column's head dropped; a heading kept with
-// the first two lines after it; no paragraph line alone at a column's head or
-// foot (a paragraph of three lines or fewer moves whole); the head, a record,
-// a withheld run, a reference, an item not rendered and the chrome never
-// split; a kept unit deeper than a column broken at a line anyway, so no text
-// is dropped. The columns stand inside the document's room (P-PROJ's box) left
+// line's top, the margin above a column's head dropped; no line of a typed
+// line alone at a column's head or foot (one of three lines or fewer moves
+// whole); the head, a record, a withheld run, a reference, an item not
+// rendered and the chrome never split; a kept unit deeper than a column
+// broken at a line anyway, so no text is dropped. The columns stand inside
+// the document's room (P-PROJ's box) left
 // to right, then row by row (`fold`), each followed by its edge and a gutter
 // apart: the edge (FP-26) is the room right of a column's text, EDGE em
 // wide, where the column's signs stand
@@ -84,10 +89,11 @@
 // only where they fit, so the gap keeps encoding the width and no face
 // reflows the text.
 // Figures: the measure 66 characters, a column 36 body line boxes, a gutter 2
-// em, an edge 6 em with its signs 0.5 em past the text, the standard grid 3
-// columns across by 4 down, the layout size 16 px and its line height 1.45
-// cut to the 1/64 px grid; the advance 0.438886 em where the face as rendered
-// has not been measured — Charter Regular's, by its own advances.
+// em, an edge 6 em with its signs 0.5 em past the text, a typed line's indent
+// 1 em and its tab stops every 8 advances, the standard grid 3 columns across
+// by 4 down, the layout size 16 px and its line height 1.45 cut to the 1/64 px
+// grid; the advance 0.438886 em where the face as rendered has not been
+// measured — Charter Regular's, by its own advances.
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-26.
 
 import { DOC_W, DOC_H } from './projection.js';
@@ -95,7 +101,7 @@ import { byteLength } from '../util.js';
 
 /**
  * @typedef {Object} Piece — a stretch of a row's inline content in one style
- * @property {string} text the characters it sets (white space collapses as the CSS collapses it)
+ * @property {string} text the characters it sets (white space kept in a typed line, else collapsed, as the CSS sets it)
  * @property {number} size its font size in the body's em
  * @property {number} lead the room before its first character, in the body's em: a margin, a padding, a border
  * @property {number} trail the room after its last character, in the body's em
@@ -104,10 +110,9 @@ import { byteLength } from '../util.js';
  */
 
 /**
- * @typedef {'lines' | 'whole' | 'heading' | 'joined'} Keep how a column may break at a row:
- * 'lines' — between its lines, two at least on either side (a paragraph);
+ * @typedef {'lines' | 'whole' | 'joined'} Keep how a column may break at a row:
+ * 'lines' — between its lines, two at least on either side (a typed line);
  * 'whole' — never among its lines;
- * 'heading' — never among its lines, nor before the first two lines after it;
  * 'joined' — never among its lines, nor between it and the row before it (a record's keys, the head's lines after its first)
  */
 
@@ -121,19 +126,22 @@ import { byteLength } from '../util.js';
  * @property {number} after the margin below it, in the body's em
  * @property {number} width a gap's positions (its bars); 0 on every other row
  * @property {Keep} keep where a column may break at it
+ * @property {boolean} [pre] a typed line of the document, its white space kept as the style's `pre-wrap` keeps it; absent, its white space collapses
+ * @property {number} [indent] the room before its first line's first character, in the body's em: a typed line's indent where it opens a typed line; absent, none
  */
 
 /**
  * @typedef {Object} Line — one line box of the article
  * @property {number} top its top, in the body's em below the article's first line's top
  * @property {number} h its height, in the body's em: its row's line box
- * @property {number} w the width its content takes, in characters of the body's face
+ * @property {number} w where its content's ink ends, in characters of the body's face from its column's left; 0 on a line that holds no ink
+ * @property {number} ink where its content's ink begins, in characters of the body's face from its column's left: past a typed line's indent and leading white space; 0 on a line that holds no ink
  * @property {number} size the largest font size on it, in the body's em
  * @property {Row['kind']} kind the kind of the row it belongs to
  * @property {number | null} pos the block it belongs to, by its first position; null in the head and the chrome
  * @property {number} nth its index among its block's lines (the head's and the chrome's among their row's)
  * @property {boolean} brk a column may break before it (`Row.keep`)
- * @property {number | null} at the document's position its first own character stands at — a record's lines their block's, a gap's bars each a line of its positions on — null in the head and the chrome
+ * @property {number | null} at the document's position it opens at — a block's first line its block's first, its indentation with it; a later line its first own character's; a record's lines their block's, a gap's bars each a line of its positions on — null in the head and the chrome
  * @property {number} [gap] the positions before its block the article does not hold (T-LAYER marks them): a column breaks before it, those positions estimated in columns of their own
  */
 
@@ -242,9 +250,9 @@ const GRID = 64;
  * `LINE_H` of that size, as the engine lays it out at LAY_FS — the font size
  * taken onto the 1/64 px grid, rounded, then the line height on it, floored.
  * The rule is Chrome's, measured on the gate's machine (Chrome 155, Charter:
- * 0.8 em a line box of 18.546875 px, 0.72 em 16.6875, 1.25 em 29, 1.1 em
- * 25.5); the layout case holds it to the line boxes the mounted article
- * stands on, and the shipping engine's are the owner's to look at (FP-19).
+ * 0.8 em a line box of 18.546875 px, 0.72 em 16.6875); the layout case holds
+ * it to the line boxes the mounted article stands on, and the shipping
+ * engine's are the owner's to look at (FP-19).
  * `lineBox(1)` is `LINE_H`.
  * @param {number} size
  * @returns {number}
@@ -259,14 +267,10 @@ export function lineBox(size) {
  * element it sizes — the values the CSS reads as custom properties.
  */
 export const MEASURE = Object.freeze({
-  /** the gap after each block */
-  gap: 0.55,
-  /** a heading's margins: the room above it and the room below it, so it stands nearer the block it heads */
-  headingBefore: 1, headingAfter: 0.25,
+  /** the room before a typed line's first character */
+  indent: 1,
   /** the head's state line, byline and presence line */
   head: 0.8,
-  /** a heading: `#` is set as h2, `##` as h3; deeper ones at the body's size */
-  h2: 1.25, h3: 1.1,
   /** the scene-offer and the gap on either side of it */
   offer: 0.8, offerGap: 0.6,
   /** the sameness hairline's label and the room after it */
@@ -313,8 +317,8 @@ const perColumn = (/** @type {number} */ cpl) => COLUMN_LINES * cpl;
 /** the slack a fit is judged with, in the body's em: a twentieth of a 1/64 px at the layout size */
 const EPS = 1e-3 / LAY_FS;
 
-/** the size a markdown heading of a level is set at, in the body's em */
-export const headingSize = (/** @type {number} */ level) => (level === 1 ? MEASURE.h2 : level === 2 ? MEASURE.h3 : 1);
+/** a typed line's tab stops, in advances of a tab's size from its block's start: the style's default `tab-size` */
+const TAB = 8;
 
 /** a border's width in the body's em */
 export const borderEm = (/** @type {number} */ px) => px / LAY_FS;
@@ -330,8 +334,7 @@ export function cssMeasures() {
   const em = (/** @type {number} */ v) => v + 'em', px = (/** @type {number} */ v) => v + 'px';
   const M = MEASURE;
   return {
-    '--gap': em(M.gap), '--heading-before': em(M.headingBefore), '--heading-after': em(M.headingAfter),
-    '--head': em(M.head), '--h2': em(M.h2), '--h3': em(M.h3),
+    '--indent': em(M.indent), '--head': em(M.head),
     '--offer': em(M.offer), '--offer-gap': em(M.offerGap), '--label': em(M.label), '--label-gap': em(M.labelGap),
     '--mark': em(M.mark), '--mark-pad': em(M.markPad), '--mark-gap': em(M.markGap),
     '--sym': em(M.sym), '--sym-pad': em(M.symPad), '--sym-gap': em(M.symGap),
@@ -471,7 +474,7 @@ export function stepFor(room, n, from = 0, cpl = MEASURE_CPL) {
 
 // ---- the lines --------------------------------------------------------------------------------------------------
 
-/** collapsible white space (CSS Text §4.1): the space, the tab, a segment break — a line breaks at it */
+/** white space (CSS Text §4.1): the space, the tab, a segment break, a carriage return — a line breaks after it, a typed line keeping it and every other row collapsing it */
 export const isSpace = (/** @type {number} */ c) => c === 32 || c === 9 || c === 10 || c === 13;
 const codes = (/** @type {string} */ s) => new Set([...s].map((c) => /** @type {number} */ (c.codePointAt(0))));
 const HY = 0x2d, EN = 0x2013, EM = 0x2014, ELLIPSIS = 0x2026, QUESTION = 0x3f;
@@ -515,40 +518,69 @@ export function breakBetween(a, b, initial) {
 
 /**
  * @typedef {Object} Wrapped — one line of a row as `wrap` sets it
- * @property {number} w the width its content takes, in characters of the body's face
+ * @property {number} w where its content's ink ends, in characters of the body's face from the column's left; 0 where it holds no ink
+ * @property {number} ink where its content's ink begins, in characters of the body's face from the column's left; 0 where it holds no ink
  * @property {number} size the largest font size on it
  * @property {number} h its line box
- * @property {number} bytes the bytes of the row's own characters before its first unit
+ * @property {number} bytes the bytes of the row's own characters before it: 0 on its first line, else before its first unit
  */
+
+/**
+ * Where a tab at `x` takes a typed line, in characters of the body's face
+ * from its block's start: the next of its tab stops (TAB advances of its size
+ * apart), or the one after that where the next is nearer than half an
+ * advance (CSS Text §4.2).
+ * @param {number} x
+ * @param {number} size the tab's size, in the body's em
+ * @returns {number}
+ */
+function tabStop(x, size) {
+  const stop = TAB * size;
+  const next = (Math.floor(x / stop + 1e-9) + 1) * stop;
+  return next - x < 0.5 * size - 1e-9 ? next + stop : next;
+}
 
 /**
  * A row's lines: its pieces wrapped in a column of `cpl` characters, every
  * width in characters of the body's face; each line as tall as the row's line
- * box; each line naming the bytes of the row's own characters before its
- * first unit, where in the block's text it starts.
+ * box; each line naming the bytes of the row's own characters before it,
+ * where in the block's text it starts, and where its ink begins and ends. A
+ * typed line (`Row.pre`) keeps its white space — every space its own
+ * advance, a tab to its next tab stop (`tabStop`), the white space before a
+ * line's break hanging past the column — its first line opening on its
+ * indent and holding its leading white space, so a typed line of white space
+ * alone sets one line, which holds no ink; every other row's white space
+ * collapses to one space between its units, none leading it.
  * @param {Row} row
  * @param {number} cpl
  * @returns {Wrapped[]}
  */
 export function wrap(row, cpl) {
   const cap = cpl + 1e-6;
-  const lh = lineBox(row.size);
+  const lh = lineBox(row.size), pre = !!row.pre;
   /** @type {Wrapped[]} */
   const out = [];
-  // the line being filled: the width of its content, its largest size, whether it holds a unit, the own bytes before it
-  let used = 0, size = 0, has = false, lineBytes = 0;
-  // the unit being gathered — no break inside it — the own bytes before it, and the collapsed space before it, counted only beside a unit on its line
-  let unitW = 0, unitSize = 0, unit = false, unitBytes = 0, hang = 0;
+  // the line being filled: where its content reaches, where its ink begins (-1 before any), its largest size, whether it
+  // holds a unit — or a typed line's leading white space — and the own bytes before it
+  let used = (row.indent || 0) / CHAR_W, ink = -1, size = 0, has = false, lineBytes = 0;
+  // the unit being gathered — no break inside it — and the own bytes before it
+  let unitW = 0, unitSize = 0, unit = false, unitBytes = 0;
+  /** @type {Array<{tab: boolean, size: number}>} the white space before the unit, counted only beside a unit on its line */
+  let space = [];
   // the row's own bytes gathered so far
   let bytes = 0;
   // the last two characters gathered: a space is 32, the row's start -1, an inline-block -2
   let prev = -1, before = -1;
+  /** where the white space before the unit takes the line from `x` to */
+  const past = (/** @type {number} */ x) => { for (const s of space) x = s.tab ? tabStop(x, s.size) : x + s.size; return x; };
+  const line = () => (ink < 0 ? { w: 0, ink: 0, size, h: lh, bytes: lineBytes } : { w: used, ink, size, h: lh, bytes: lineBytes });
   const begin = () => { if (!unit) { unit = true; unitBytes = bytes; } };
   const place = () => {
     if (!unit) return;
-    if (has && used + hang + unitW > cap) { out.push({ w: used, size, h: lh, bytes: lineBytes }); used = unitW; size = unitSize; lineBytes = unitBytes; }
-    else { if (!has) lineBytes = unitBytes; used += hang + unitW; size = Math.max(size, unitSize); has = true; }
-    unitW = 0; unitSize = 0; unit = false; hang = 0;
+    const at = past(used);
+    if (has && at + unitW > cap) { out.push(line()); used = unitW; ink = 0; size = unitSize; lineBytes = unitBytes; }
+    else { if (!has && !pre) lineBytes = unitBytes; if (ink < 0) ink = at; used = at + unitW; size = Math.max(size, unitSize); has = true; }
+    unitW = 0; unitSize = 0; unit = false; space = [];
   };
   for (const p of row.pieces) {
     if (p.box) {
@@ -565,9 +597,16 @@ export function wrap(row, cpl) {
       const c = /** @type {number} */ (ch.codePointAt(0));
       if (isSpace(c)) {
         if (p.own) bytes += 1;
+        if (pre) {
+          place();
+          // the row's leading white space: its first line holds it
+          if (!has) { has = true; size = Math.max(size, p.size); }
+          space.push({ tab: c === 9, size: p.size }); prev = before = 32;
+          continue;
+        }
         if (prev === 32 || (!has && !unit)) continue; // collapsed into the space before it, or leading the row
         place();
-        hang = p.size; prev = before = 32;
+        space = [{ tab: false, size: p.size }]; prev = before = 32;
         continue;
       }
       if (prev > 0 && prev !== 32 && breakBetween(prev, c, before < 0 || before === 32)) place();
@@ -578,7 +617,7 @@ export function wrap(row, cpl) {
     if (p.trail) { begin(); unitW += p.trail / CHAR_W; }
   }
   place();
-  if (has) out.push({ w: used, size, h: lh, bytes: lineBytes });
+  if (has) out.push(line());
   return out;
 }
 
@@ -601,9 +640,9 @@ export function gapOf(width, cpl) {
  * The article's lines: its rows wrapped at the measure and stacked from its
  * first line's top, each line box as tall as `wrap` gives it, the margins
  * between rows collapsing to the larger; a gap's rows its lines (`gapOf`);
- * each line marked where a column may break before it, by the keep
- * of its row and of the heading before it (`Row.keep`), and where in the
- * document's bytes it starts.
+ * each line marked where a column may break before it, by its row's keep
+ * (`Row.keep`), where in the document's bytes it starts, and where its ink
+ * begins and ends.
  * @param {Row[]} rows the article's plan (T-ARTICLE's `articlePlan`)
  * @param {number} [cpl] the column, in characters of the body's face
  * @returns {Layout}
@@ -617,14 +656,12 @@ export function layoutOf(rows, cpl = MEASURE_CPL) {
   let y = 0, margin = 0;
   /** @type {number | null} */
   let pos = null;
-  // the lines still owed to the heading before them: no column breaks before them
-  let owed = 0;
   for (const r of rows) {
     if (r.pos != null) { pos = r.pos; blocks.set(pos, { first: lines.length, n: 0 }); }
     else if (r.kind === 'head' || r.kind === 'chrome') pos = null;
     /** @type {Wrapped[]} */
     const set = r.kind === 'gap'
-      ? gapOf(r.width, cpl).map((w, i) => ({ w, size: r.size, h: lineBox(r.size), bytes: i * cpl }))
+      ? gapOf(r.width, cpl).map((w, i) => ({ w, ink: 0, size: r.size, h: lineBox(r.size), bytes: i * cpl }))
       : wrap(r, cpl);
     margin = Math.max(margin, r.before);
     if (!set.length) { margin = Math.max(margin, r.after); continue; }
@@ -632,12 +669,10 @@ export function layoutOf(rows, cpl = MEASURE_CPL) {
     const b = pos != null ? blocks.get(pos) : undefined;
     const nth0 = b ? b.n : 0;
     set.forEach((l, i) => {
-      let brk = i === 0 ? lines.length > 0 && r.keep !== 'joined' : r.keep === 'lines' && i >= 2 && set.length - i >= 2;
-      if (owed > 0) { brk = false; owed--; }
-      lines.push({ top: y, h: l.h, w: l.w, size: l.size, kind: r.kind, pos, nth: nth0 + i, brk, at: r.pos != null ? r.pos + l.bytes : r.kind === 'text' && pos != null ? pos : null });
+      const brk = i === 0 ? lines.length > 0 && r.keep !== 'joined' : r.keep === 'lines' && i >= 2 && set.length - i >= 2;
+      lines.push({ top: y, h: l.h, w: l.w, ink: l.ink, size: l.size, kind: r.kind, pos, nth: nth0 + i, brk, at: r.pos != null ? r.pos + l.bytes : r.kind === 'text' && pos != null ? pos : null });
       y += l.h;
     });
-    if (r.keep === 'heading') owed = 2;
     if (b) b.n += set.length;
     margin = r.after;
   }
@@ -861,10 +896,12 @@ export function firstRow(f) {
 
 /**
  * The bars the canvas draws for a fold, column by column: one per line of the
- * document's blocks (the head and the chrome are not the document's lines),
- * across the width its content takes, at the height its glyphs stand inside
- * its line box, in the column that holds the line, naming the line; none in a
- * column that holds no line.
+ * document's blocks that holds ink (the head and the chrome are not the
+ * document's lines), from where its ink begins to where it ends — a typed
+ * line's indent and leading white space before it, its line of white space
+ * alone or an empty line typed after it no bar — at the height its glyphs
+ * stand inside its line box, in the column that holds the line, naming the
+ * line; none in a column that holds no line.
  * @param {Fold} f
  * @returns {Bar[][]} by column, each column's top to bottom
  */
@@ -874,8 +911,8 @@ export function bars(f) {
     const out = [];
     for (let i = c.first; i < c.first + c.n; i++) {
       const l = f.lines[i];
-      if (l.kind === 'head' || l.kind === 'chrome' || l.w <= 0) continue;
-      out.push({ x: c.x, y: c.y + (l.top - c.top + l.h / 2 - 0.2 * l.size) * f.fs, w: l.w * CHAR_W * f.fs, h: 0.5 * l.size * f.fs, gap: l.kind === 'gap', line: i });
+      if (l.kind === 'head' || l.kind === 'chrome' || l.w - l.ink <= 0) continue;
+      out.push({ x: c.x + l.ink * CHAR_W * f.fs, y: c.y + (l.top - c.top + l.h / 2 - 0.2 * l.size) * f.fs, w: (l.w - l.ink) * CHAR_W * f.fs, h: 0.5 * l.size * f.fs, gap: l.kind === 'gap', line: i });
     }
     return out;
   });

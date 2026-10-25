@@ -163,7 +163,8 @@ def num(addr):
 
 
 def plain(text):
-    """a first line as a label draws it: its heading marks and a cut's ellipsis set aside"""
+    """a first line's words, the "#" it may open with and a cut's ellipsis set aside: what a label's line and a first line
+    are compared by, whichever of them carries the marks"""
     return re.sub(r'^#+\s*', '', (text or '').strip()).rstrip('…').strip()
 
 

@@ -479,10 +479,10 @@ test('a far end is named by its address, then what the page holds of its documen
   REC.takeProjection(TO_HIDDEN, 2, HIDDEN, [{ pos: 2, width: 3 }]);
   assert.equal(named(TO_HIDDEN), HIDDEN, 'answered, no first line held: the address alone');
   REC.takeDelivery(HIDDEN, [{ pos: 1, width: 30, kind: 'content', text: '## A heading line\nand more\n\nnext', ref: null, origin: null }]);
-  assert.equal(named(TO_HIDDEN), `${HIDDEN} · A heading line`, 'its text read: its first line, its heading\'s marks dropped');
+  assert.equal(named(TO_HIDDEN), `${HIDDEN} · ## A heading line`, 'its text read: its first line, its characters as typed, "##" among them');
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: '1.0.1.0.127', kind: 'edition', label: '# The far edition', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
-  assert.equal(named(D + '.0.2.1'), '1.0.1.0.127 · The far edition', 'the index listing it: the index\'s first line');
-  assert.equal(LK.farWords(end(D + '.0.2.1')), 'The far edition', 'the words alone, which a tail\'s label sets beneath its address');
+  assert.equal(named(D + '.0.2.1'), '1.0.1.0.127 · # The far edition', 'the index listing it: the index\'s first line, as listed');
+  assert.equal(LK.farWords(end(D + '.0.2.1')), '# The far edition', 'the words alone, which a tail\'s label sets beneath its address');
 });
 
 test('where an end is drawn is one rule (`drawnIn`; issue #202): on the stretches of it outside every withheld run, each cut where one stands; wholly inside withheld text, at the start of the run holding its last position, the run\'s whole extent its one stretch; none where the text places none of it', () => {

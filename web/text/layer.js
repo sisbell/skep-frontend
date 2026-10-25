@@ -45,7 +45,7 @@
 // part none of whose lines is in view goes; no standing part is rebuilt to
 // take a line. The head, a record, a withheld face, a reference, an item not
 // rendered and a scene-offer stand whole, cut only where the fold's columns
-// cut them; a paragraph or a heading is cut at any line. The lines that hold
+// cut them; a typed line is cut at any of its lines. The lines that hold
 // the selection or the focus stay for as long as they hold them, out of view
 // and below 5.5 as well (`heldParts`): those the platform's selection meets
 // — a press's, even collapsed, the drag being made — the one the platform's
@@ -327,7 +327,7 @@ import { t, tHTML } from '../strings.js';
  * @property {Line['kind']} kind its lines' kind
  * @property {number | null} pos the block it is, by its first position; null for the head and a scene-offer
  * @property {number} k a scene-offer's index among the article's scene-offers; 0 for any other unit
- * @property {boolean} text a paragraph or a heading, which a part may cut at any of its lines; any other unit is cut where the fold's columns cut it alone
+ * @property {boolean} text a typed line, which a part may cut at any of its lines; any other unit is cut where the fold's columns cut it alone
  */
 
 /**
@@ -419,7 +419,7 @@ import { t, tHTML } from '../strings.js';
  * @property {Fold} fold the fold it stood in
  * @property {{x: number, y: number}} p where it stood, in world units relative to the room
  * @property {{from: number, to: number} | null} pair the position of `fold` whose line it stood on and the position of `addr`'s that takes that line (a version move); null where its bytes' identity names it (`ids`), else the same position (P-LAY's `holdOf`)
- * @property {number | null} pos the position the line it stood on opens at (P-LAY's `posAt`): the one `ids` is read from
+ * @property {number | null} pos the position whose line it stood on: the one that line opens at (P-LAY's `posAt`), or, carried from a re-set by position, the one whose line that re-set placed (`still`) — the one `ids` is read from
  * @property {ISpan[]} ids the byte `pos` names, by identity, read through the image the article was made from (M-REC's `identityIn`): where the text set again holds it now is the line that takes the passage's (FP-8, FP-23) — none where that image did not cover it
  * @property {{x: number, y: number, scale: number} | null} left the camera as a re-set whose text came before its image left it, by position: `ids` kept for the re-set the image's arrival makes, while the camera stands there (`still`); null where it is no such hold
  */
@@ -967,23 +967,23 @@ function articleEl(/** @type {Doc} */ d, /** @type {string} */ html) {
   return { el, col };
 }
 
-/** the paragraph elements a column breaks inside, as P-LAY's 'lines' keep does: no heading, no empty document's line */
+/** the typed lines' elements a column breaks inside, as P-LAY's 'lines' keep does: no empty document's line */
 const PARAGRAPH = 'p.sp:not(.empty)';
-/** a text block's elements: the paragraphs, the headings, the empty document's line */
-const TEXT_BLOCK = 'p.sp, h2.sp, h3.sp, h4.sp, h5.sp, h6.sp';
+/** a text block's elements: the typed lines, the empty document's line */
+const TEXT_BLOCK = 'p.sp';
 
 /**
  * An article's lines as the platform set them in one column at the measure
  * (see the head): each row's element — the head, each block, each
  * scene-offer — read for its top and its height. A text block's lines are
  * the ones it sets: as many as its height holds at its own pitch, each read
- * where it begins and how wide it stands (`setIn`), the room left below them
- * a line of no ink; any other unit's are the lines the plan sets in it
- * (P-LAY's `layoutOf`), standing where the element stands — those that fit,
- * where it is set shorter, and where it is set taller the room left a line of
- * no ink. A line of no ink names no position. Every line keeps where a column
- * may break before it, a paragraph broken two lines in from either end and
- * no heading broken.
+ * where it begins and where its ink begins and ends (`setIn`), the room left
+ * below them a line of no ink; any other unit's are the lines the plan sets
+ * in it (P-LAY's `layoutOf`), standing where the element stands — those that
+ * fit, where it is set shorter, and where it is set taller the room left a
+ * line of no ink. A line of no ink names no position, a typed line's first
+ * line apart, which names its block's first. Every line keeps where a column
+ * may break before it, a typed line broken two lines in from either end.
  * @param {HTMLElement} col the column, laid out
  * @param {Row[]} rows the plan its article was made from
  * @param {Block[]} blocks the blocks it was made from
@@ -1018,7 +1018,7 @@ function measureLines(col, rows, blocks, cpl) {
       // the plan's lines, standing at the element's top — those that fit it; a unit set taller keeps the room left as a line of no ink
       for (const l of L) if (l === L[0] || l.top - p0 + l.h <= h + half) out.push({ ...l, top: top + (l.top - p0) });
       const end = out[out.length - 1], deep = end.top + end.h - top;
-      if (h - deep > half) out.push({ ...end, top: top + deep, h: h - deep, w: 0, nth: end.nth + 1, brk: false, at: null });
+      if (h - deep > half) out.push({ ...end, top: top + deep, h: h - deep, w: 0, ink: 0, nth: end.nth + 1, brk: false, at: null });
       continue;
     }
     // the lines the element sets: as many as its height holds at its own pitch, each where it begins, the room left below them a line of no ink
@@ -1028,29 +1028,32 @@ function measureLines(col, rows, blocks, cpl) {
     const set = b ? setIn(g.el, b, m, r.top, pitch * LAY_FS, box.left) : null;
     for (let k = 0; k < m; k++) {
       const brk = k === 0 ? L[0].brk : inner && k >= 2 && m - k >= 2;
-      out.push({ ...L[0], top: top + k * pitch, h: pitch, w: set ? set[k].w : cpl, nth: k, brk, at: set ? set[k].at : L[0].at });
+      out.push({ ...L[0], top: top + k * pitch, h: pitch, w: set ? set[k].w : cpl, ink: set ? set[k].ink : 0, nth: k, brk, at: set ? set[k].at : L[0].at });
     }
-    if (extra > half) out.push({ ...L[0], top: top + m * pitch, h: extra, w: 0, nth: m, brk: false, at: null });
+    if (extra > half) out.push({ ...L[0], top: top + m * pitch, h: extra, w: 0, ink: 0, nth: m, brk: false, at: null });
   }
   return out;
 }
 
 /**
- * Where each of the `m` lines a text block's element sets begins, and how
- * wide it stands (`measureLines`): the first of the block's own characters,
- * spaces and chrome apart, whose box's middle lies below the line's top,
- * carried to its byte position (T-SPAN's `posOfChar`), and the right edge of
- * the last before the next line's first, from the column's left, in
- * characters of the body's face; a line holding none of the block's own
- * characters names no position and stands no width. The block's characters
- * are gathered once, and each line's first found by halving.
+ * Where each of the `m` lines a text block's element sets begins, and where
+ * its ink begins and ends (`measureLines`): its first line at the block's
+ * first position, its indentation with it, and each later one at the first of
+ * the block's own characters, spaces and chrome apart, whose box's middle
+ * lies below the line's top, carried to its byte position (T-SPAN's
+ * `posOfChar`); its ink from the left edge of the first of them on the line
+ * to the right edge of the last before the next line's first, from the
+ * column's left, in characters of the body's face. A line holding none of the
+ * block's own characters stands no ink, and names no position but where it is
+ * the first. The block's characters are gathered once, and each line's first
+ * found by halving.
  * @param {HTMLElement} el the block's element, laid out whole
  * @param {Block} b the block it shows
  * @param {number} m the lines it sets
  * @param {number} top its top, in client px
  * @param {number} pitch its line box, in client px
  * @param {number} left the column's left edge, in client px
- * @returns {Array<{at: number | null, w: number}>}
+ * @returns {Array<{at: number | null, w: number, ink: number}>}
  */
 function setIn(el, b, m, top, pitch, left) {
   /** @type {Array<{node: Text, offset: number, len: number, char: number}>} */
@@ -1072,13 +1075,14 @@ function setIn(el, b, m, top, pitch, left) {
     while (lo < hi) { const mid = (lo + hi) >> 1, q = rect(atoms[mid]); if (q.top + q.height / 2 > y) hi = mid; else lo = mid + 1; }
     firsts.push(lo);
   }
+  const em = (/** @type {number} */ x) => (x - left) / LAY_FS / CHAR_W;
   return firsts.map((a, k) => {
     const z = k + 1 < m ? firsts[k + 1] : atoms.length;
-    if (a >= z) return { at: null, w: 0 };
-    return { at: posOfChar(b, atoms[a].char), w: (rect(atoms[z - 1]).right - left) / LAY_FS / CHAR_W };
+    if (a >= z) return { at: k === 0 ? b.pos : null, w: 0, ink: 0 };
+    return { at: k === 0 ? b.pos : posOfChar(b, atoms[a].char), w: em(rect(atoms[z - 1]).right), ink: em(rect(atoms[a]).left) };
   });
 }
-/** is a character a collapsible space (P-LAY's `isSpace`), which opens no line */
+/** is a character white space (P-LAY's `isSpace`), which opens no wrapped line and holds no ink */
 const spaceAt = (/** @type {string} */ s, /** @type {number} */ i) => isSpace(/** @type {number} */ (s.codePointAt(i)));
 
 /**
@@ -1127,7 +1131,7 @@ const ownLength = (/** @type {HTMLElement} */ el) => textNodes(el).reduce((n, tn
 /**
  * A fold's lines by the row elements that set them (`Unit`): the head's lines
  * one unit, each block's another, each scene-offer one of its own; a
- * paragraph or a heading a unit a part may cut at any of its lines.
+ * typed line a unit a part may cut at any of its lines.
  * @param {Line[]} lines
  * @param {Block[]} blocks the blocks the article was made from
  * @returns {Unit[]}
@@ -1236,7 +1240,7 @@ function cutsAt(/** @type {Mounted} */ rec, /** @type {number} */ i) {
 
 /**
  * A run of a column's lines widened to whole units where it would cut a unit
- * a part may not cut there — anything but a paragraph or a heading, where the
+ * a part may not cut there — anything but a typed line, where the
  * fold's column does not cut it — within its column.
  * @param {Mounted} rec
  * @param {{column: number, first: number, end: number}} r
@@ -1636,16 +1640,16 @@ export function withheldBox(d) { return t('F.corner.withheld', { owner: REC.owne
 export const shortAddr = (/** @type {Doc} */ d) => (d.account ? d.addr.slice(d.account.length) : d.addr);
 /** a draft, by the index's kind or by its metadata where read */
 export const isDraft = (/** @type {Doc} */ d) => d.kind === 'draft' || (d.meta ? !d.meta.published : false);
-/** a document's first line: the index's; at a version, which the index lists none of, its own text's first paragraph's first line where the model holds it */
+/** a document's first line, its characters as typed: the index's; at a version, which the index lists none of, the first of its own typed lines that holds more than white space, where the model holds it */
 const firstWords = (/** @type {Doc} */ d) => d.label ?? (memberOf(d.addr) != null ? (d.blocks.find((b) => b.kind === 'para' && b.text.trim()) || { text: '' }).text.trim().split('\n')[0] : '');
 /** a box's first line: the withheld statement (`withheldBox`, which the ARIA mirror reads too), or the document's first line with its draft mark (a DRAFT convention, F-9) */
-export const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? withheldBox(d) : `${firstWords(d).replace(/^#+\s*/, '')}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
+export const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? withheldBox(d) : `${firstWords(d)}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
 /** a box's first line as a label on the plane sets it (`firstLine`), each stretch in its face (P-LABEL's `inFace`): the document's words the reading face's, the draft mark and the withheld statement the client's, the owner it names the identifier's */
-export const labelLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? t('F.corner.withheld', { owner: inFace('ident', REC.ownerAccount(d)) }) : `${inFace('reading', firstWords(d).replace(/^#+\s*/, ''))}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
+export const labelLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? t('F.corner.withheld', { owner: inFace('ident', REC.ownerAccount(d)) }) : `${inFace('reading', firstWords(d))}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
 /** a box's first line as markup (`firstLine`), wherever the page's chrome shows it: the document's words in the reading face (`.reading`), the owner a withheld statement names in the identifier's (`.id`) */
 export const firstLineHTML = (/** @type {Doc} */ d) => {
   if (d.refused === 'withheld') return tHTML('F.corner.withheld', { owner: REC.ownerAccount(d) }, { owner: 'id' });
-  const words = firstWords(d).replace(/^#+\s*/, '');
+  const words = firstWords(d);
   return (words ? `<span class="reading">${esc(words)}</span>` : '') + (isDraft(d) ? esc(' · ' + t('F.label.draft')) : '');
 };
 
@@ -1920,17 +1924,19 @@ const camNow = () => ({ x: cam.x, y: cam.y, scale: cam.scale });
 const leftThere = (/** @type {{x: number, y: number, scale: number} | null} */ at) => !!at && at.x === cam.x && at.y === cam.y && at.scale === cam.scale;
 
 /**
- * The hold a re-set of a document takes (see the head): the passage being
- * read now, carrying the bytes a re-set of the same document whose text came
- * before its image kept (`Hold.left`), where the camera stands as that re-set
- * left it — so the re-set the image's arrival makes stands those bytes' line
- * where the passage's stood; else the passage being read now alone.
+ * The hold a re-set of a document takes (see the head): where the camera
+ * stands as a re-set of the same document whose text came before its image
+ * left it (`Hold.left`), the passage that re-set placed by position — the
+ * position whose line it placed, in the fold standing now, and the bytes it
+ * kept — so the re-set the image's arrival makes stands those bytes' line
+ * where that line stood, wherever the view's centre falls about it, an empty
+ * line typed below it among them; else the passage being read now.
  * @param {Hold | null} h the hold standing
  * @param {Hold} reading
  * @returns {Hold}
  */
 function still(h, reading) {
-  return h && h.left && h.addr === reading.addr && h.ids.length && leftThere(h.left) ? { ...reading, ids: h.ids } : reading;
+  return h && h.left && h.addr === reading.addr && h.ids.length && leftThere(h.left) ? { ...reading, pos: h.pos, ids: h.ids } : reading;
 }
 
 /**
@@ -2515,7 +2521,7 @@ export function standingRects(addr, pos, width) {
 
 /**
  * The stretch of a span an article's standing parts hold: from the first
- * position of it a part standing holds to the last — a paragraph's part
+ * position of it a part standing holds to the last — a typed line's part
  * holding the positions of its own characters, any other block's part the
  * whole block; null where no part standing holds any of it.
  * @param {Block[]} blocks the blocks the article was made from

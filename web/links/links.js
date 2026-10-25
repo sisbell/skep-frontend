@@ -563,8 +563,8 @@ export function farWords(s) { return farFaced(s).map((r) => r.text).join(''); }
  * from the reader — the projection or a read of the document refused
  * `withheld` — "withheld · ⟨owner⟩"; where it is readable — the projection
  * answered, the document's span set, text or metadata read, or the index
- * listing it — its first line, its heading's marks dropped as the plane's box
- * drops them, where the page holds one; else nothing: nothing answered, or no
+ * listing it — its first line, its characters as typed, as the plane's box
+ * names it, where the page holds one; else nothing: nothing answered, or no
  * first line held, and never a guess. The first line is the reading
  * face's, the owner a withheld statement names the identifier's, every other
  * word the client's.
@@ -586,7 +586,7 @@ export function farFaced(s) {
   }
   if (!(Array.isArray(projected) || place || (d && (d.from >= 0 || d.meta || d.extent != null)))) return [];
   const first = place && place.label ? place.label : (d && d.blocks.find((b) => b.kind === 'para' && b.text.trim()))?.text.trim().split('\n')[0] || '';
-  const words = first.replace(/^#+\s*/, '').trim();
+  const words = first.trim();
   return words ? [{ text: words, face: 'reading' }] : [];
 }
 

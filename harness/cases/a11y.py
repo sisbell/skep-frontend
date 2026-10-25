@@ -48,11 +48,11 @@ decision) — a passage the draft holds part of, carried into it, the focus on
 the item at its first held piece, described by the line's words, the one
 item described, none once the next landing takes the line down; a landing
 in several runs (issue #158's design decision: "Each run's accessible item
-carries its label from the moment of landing") — two paragraphs of the first
-edition landed in through the gate's door naming the passage they hold —
-the focus on piece 1's item, described by the line's words, piece 2's item
-by its own label, and Mod+G moving the focus to piece 2's item, described by
-the line's words then, piece 1's by its label; the links
+carries its label from the moment of landing") — two typed lines of the first
+edition apart in one column, landed in through the gate's door naming the
+passage they hold — the focus on piece 1's item, described by the line's
+words, piece 2's item by its own label, and Mod+G moving the focus to piece
+2's item, described by the line's words then, piece 1's by its label; the links
 card's overlay toggle a switch in the AX tree (R60; WAI-ARIA's switch) —
 named by B1-S4's words before its state and described by the count after
 it, a press changing its checked state and neither its name nor its
@@ -68,6 +68,11 @@ import json
 import re
 
 from . import DOC, FAR_LEAP, HOME, NO_MATCH, VERSIONED, WINDOW, Result, item_words
+
+# how far apart the first lines of a landing's two runs stand, in body line boxes — the article's line height 1.45 of
+# its size, the case's own — so the label beside the second never stacks with the line beside the first (O-LAND's
+# `stacks`): each run's item carries its own label
+RUNS_APART_LINES, LINE_RATIO = 4, 1.45
 
 
 def run(ctx):
@@ -850,15 +855,19 @@ def run(ctx):
     r.check(not gone['items'] and gone['said'] is None, 'the next landing takes the description down with the line', gone)
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
-    # ---- each run's item carries its label (issue #158): two paragraphs of the first edition's own bytes, landed in through the
-    # gate's door naming the runs and the passage they hold by identity; the focus on piece 1's item, its description the line's
-    # words, piece 2's item described by its own label; Mod+G: the focus on piece 2's item, the line's words its description then
+    # ---- each run's item carries its label (issue #158): two typed lines of the first edition's own bytes, their first lines in
+    # one column RUNS_APART_LINES body lines apart or more, landed in through the gate's door naming the runs and the passage
+    # they hold by identity; the focus on piece 1's item, its description the line's words, piece 2's item described by its own
+    # label; Mod+G: the focus on piece 2's item, the line's words its description then
     paras = [b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if b['kind'] == 'para' and b['width'] > 24 and b['pos'] + 12 < WINDOW[0]]
-    runs = [{'pos': paras[0]['pos'], 'width': 12}, {'pos': paras[1]['pos'], 'width': 12}] if len(paras) > 1 else []
+    fs = ctx.js('window.__skep.fold(%s).fs' % json.dumps(DOC))
+    lined = [(b, ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), b['pos']))) for b in paras]
+    apart = next((b for b, c in lined[1:] if abs(c['x'] - lined[0][1]['x']) < 1e-6 and c['y'] - lined[0][1]['y'] >= RUNS_APART_LINES * LINE_RATIO * fs), None) if lined else None
+    runs = [{'pos': paras[0]['pos'], 'width': 12}, {'pos': apart['pos'], 'width': 12}] if apart else []
     ids = [ctx.js('window.__skep.model.identity(%s, %d, %d)' % (json.dumps(DOC), x['pos'], x['width'])) or [] for x in runs]
     one = bool(runs) and all(ids) and len({i['prefix'] for xs in ids for i in xs}) == 1
     passage = {'prefix': ids[0][0]['prefix'], 'ordinal': ids[0][0]['ordinal'], 'width': ids[1][-1]['ordinal'] + ids[1][-1]['width'] - ids[0][0]['ordinal']} if one else None
-    r.check(passage is not None, 'two paragraphs of the first edition\'s own bytes, by identity', {'runs': runs})
+    r.check(passage is not None, 'two typed lines of the first edition\'s own bytes, their first lines apart in one column, by identity', {'runs': runs})
     if passage is not None:
         ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), runs[0]['pos'], json.dumps({'runs': runs, 'passage': passage})))
         ctx.settle()

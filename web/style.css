@@ -116,15 +116,18 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    layer, times the reading face's advance as rendered, `--char-w` em — placed at its first line's top; a part's flow its
    own `.run`, the margin above its first block dropped; nothing clipped, for nothing stands past the room). The parts
    take the pointer, the room between them never, so a press in a gutter falls to the canvas. A document's words are
-   Charter, only the owner's formatting changing their letterforms; the client's words inside the article — its head, a
-   hairline's label, C-33's mark, a symbol, a sign in the edge, a record, a withheld run, an item not rendered, the
-   scene-offer — the client's face, an address in them the identifier's (P-REG's FACE). Every element's line box is the
+   Charter, in the body's type, set as typed (FP-12): each typed line a block, its white space kept (`pre-wrap`), on a
+   one-em indent where it opens a typed line (`indent`) and on none in a part that continues it (`data-char`), the empty
+   lines typed after it whole line boxes below it (`--blank`), no other room between blocks and none below a part's last
+   block; the client's words inside the article — its head, a hairline's label, C-33's mark, a symbol, a sign in the
+   edge, a record, a withheld run, an item not rendered, the scene-offer — the client's face, an address in them the
+   identifier's (P-REG's FACE), no indent and no kept white space reaching a sign. Every element's line box is the
    article's one unitless line height (P-LAY's LINE_H, set on the article by T-LAYER) of its own size — the chrome inside
    a line (the hairline's label, C-33's mark, a symbol) is set at a line height of 1, so it never deepens its line; a
-   symbol's box is its count of advances wide whatever face sets its ⟡ — a heading stands nearer the block it heads than
-   the block above it; every block is a plain block, so the margins about one that sets no line (a separator alone)
-   collapse into one, as P-LAY collapses an empty row's: the lines P-LAY lays the bars out on (foundations §2.4: the
-   handoff moves no line). THE EDGE (issue #151's design decision): a block's others' count, a withheld run's mark and
+   symbol's box is its count of advances wide whatever face sets its ⟡ — and every block is a plain block, so the
+   margins about one that sets no line (the newlines before a run's first typed line) collapse into one, as P-LAY
+   collapses an empty row's: the lines P-LAY lays the bars out on (foundations §2.4: the handoff moves no line). THE
+   EDGE (issue #151's design decision): a block's others' count, a withheld run's mark and
    an item's words where its gap holds them not stand in their column's edge, placed out of the flow beside the block's
    first line, `--edge-in` past the text and `--edge-w` wide in their own em (T-ARTICLE's `edgeStyle`), so no sign sets
    a line. A run of positions with no glyphs — a withheld run, an item not rendered — is a gap as tall as its bars, the
@@ -156,9 +159,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .hd .slot.open .whole { display:block; }
 .dtext .hd .slots.once .slot-sep { visibility:hidden; }
 .dtext .run { display:block; }
-.dtext .sp { display:block; position:relative; margin:0 0 var(--gap); border-radius:2px; font-weight:400; }
-.dtext h2.sp, .dtext h3.sp, .dtext h4.sp, .dtext h5.sp, .dtext h6.sp, .dtext h7.sp { font-size:1em; font-weight:600; color:#cfd6df; margin:var(--heading-before) 0 var(--heading-after); }
-.dtext h2.sp { font-size:var(--h2); } .dtext h3.sp { font-size:var(--h3); }
+.dtext .sp { display:block; position:relative; margin:0 0 calc(var(--blank, 0) * var(--line-box)); border-radius:2px; font-weight:400; }
+.dtext .sp.blk-para { white-space:pre-wrap; }
+.dtext .sp.blk-para.indent:not([data-char]) { text-indent:var(--indent); }
+.dtext .col > .run > :last-child { margin-bottom:0; }
 /* the selection's bytes are the platform's own highlight; a block it touches carries the outline as its cue */
 .dtext .sp.sel { box-shadow:0 0 0 1px rgba(232,230,225,.5); }
 .dtext .sp.lit { box-shadow:0 0 0 1px var(--ok); }
@@ -175,9 +179,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .same.opens { border-left:var(--border-same) solid var(--same-boundary); padding-left:var(--same-pad); }
 .dtext .hairline { color:var(--same-boundary); font-size:var(--label); line-height:1; margin-right:var(--label-gap); vertical-align:baseline; }
 .dtext .hairline.compact { opacity:.7; }
-.dtext .pubmark { display:inline-block; font-size:var(--mark); line-height:1; color:#cfd6df; border:var(--border-box) solid #4a5260; padding:0 var(--mark-pad); margin-right:var(--mark-gap); }
+.dtext .pubmark { display:inline-block; font-size:var(--mark); line-height:1; color:#cfd6df; border:var(--border-box) solid #4a5260; padding:0 var(--mark-pad); margin-right:var(--mark-gap); text-indent:0; }
 .dtext .sym { display:inline-block; border:var(--border-box) solid var(--mark-hue, #8b8f96); color:var(--mark-hue, #e8e6e1); padding:0 var(--sym-pad); font-size:var(--sym); line-height:1; margin-left:var(--sym-gap); vertical-align:baseline; opacity:var(--mark-value, 1);
-  width:calc(var(--sym-chars, 1) * var(--char-w) * 1em + 2 * var(--sym-pad) + 2 * var(--border-box)); text-align:center; }
+  width:calc(var(--sym-chars, 1) * var(--char-w) * 1em + 2 * var(--sym-pad) + 2 * var(--border-box)); text-align:center; text-indent:0; }
 .dtext .sym.other { border-style:dashed; }
 /* the one symbol the ends drawn at a withheld run merge into (issue #202): first in its gap's first line, the room after it,
    `--sym-chars` its ⟡ and its count; and a symbol lit at an arrival, heavier by a ring that takes no room, so no line moves */
@@ -185,9 +189,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .sym.heavier { box-shadow:0 0 0 var(--border-box) var(--mark-hue, #8b8f96); }
 /* a sign in its column's edge, beside its block's first line (see the head): the others' count, a withheld run's mark, an
    item's words its gap does not hold — a run's count stacked below its mark by the `top` T-ARTICLE sets */
-.dtext .edge { position:absolute; top:0; left:calc(100% + var(--edge-in)); width:var(--edge-w); font-size:var(--count); font-weight:400; color:var(--dim); }
+.dtext .edge { position:absolute; top:0; left:calc(100% + var(--edge-in)); width:var(--edge-w); font-size:var(--count); font-weight:400; color:var(--dim); white-space:normal; text-indent:0; }
 .dtext .wh-mark { color:#cfd6df; }
-.dtext .withheld { display:block; position:relative; isolation:isolate; margin:0 0 var(--gap); color:#cfd6df; }
+.dtext .withheld { display:block; position:relative; isolation:isolate; margin:0; color:#cfd6df; }
 .dtext .withheld::before { content:''; position:absolute; inset:0; z-index:-1;
   background: repeating-linear-gradient(45deg, #1b1f25, #1b1f25 6px, #22272f 6px, #22272f 12px);
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--line-box)), calc(var(--wh-last) * var(--char-w) * 1em) calc(100% - var(--line-box)), calc(var(--wh-last) * var(--char-w) * 1em) 100%, 0 100%); }

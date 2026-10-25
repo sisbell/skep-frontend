@@ -157,11 +157,15 @@ or, its outline's foot risen near the line, its bottom on that foot inside
 the half gutter, at its first column's text left, inside its outline, on
 its ground, its bottom in view, the labels of the documents below the line
 set as ever; its outline risen wholly under the line, none. THE TYPE (the typography review's findings 10 and
-17; issue #16's design decision): every element of the first edition that sets text in its lines spaces them at
-LINE_RATIO of its own size, a sign in a column's edge apart; the head's lines and the headings stand on P-LAY's
-line box for their size, as the engine lays it out (the rounding `lineBox`
-models, held here to the engine); each heading stands nearer the block it
-heads than the block above it; each voice stands in its face — the
+17; issue #16's design decision; issue #17's design decision: "The page sets the bytes exactly as typed"): every
+element of the first edition that sets text in its lines spaces them at LINE_RATIO of its own size, a sign in a
+column's edge apart; the head's lines stand on P-LAY's line box for their size, as the engine lays it out (the
+rounding `lineBox` models, held here to the engine); no element of its article is a heading — every typed line a
+`p` at the body's size and weight, those its bytes open with "#" among them — each keeping its white space
+(`pre-wrap`), standing on a one-em indent where it opens a typed line — the first position, or the byte before it a
+newline, as the bytes delivered hold them — and in a part that starts at its first character, on none otherwise;
+each block in a part a whole count of body line boxes below the block before it, so a column keeps its grid of
+lines; each voice stands in its face — the
 document's words in Charter, the client's in the system face, an address in
 Atkinson Hyperlegible Mono, the two shipped set as shipped, their rendered
 advances their files' own — every face the page ships standing loaded in
@@ -169,7 +173,7 @@ the platform's font set, which holds no face of the platform's own by the
 same name, and loaded as boot set the type and as the first frame laid
 anything out, the advance the page set the one the case probes, and the
 reading size READING_PX at the root's 16 px;
-and every line a paragraph of the first edition sets, as T-LAYER reads it,
+and every line a typed line of the first edition sets, as T-LAYER reads it,
 begins where its first character stands on screen — that character on the
 line, the last one before it, spaces apart, on the line before it. THE READING SCENE (foundations §2.5: "the two ends level, so
 position carries the match and the beam confirms it"): opened on the first
@@ -343,7 +347,7 @@ ADVANCE_SAMPLE = {'a': 64, 'b': 14, 'c': 27, 'd': 35, 'e': 100, 'f': 20, 'g': 14
                   'n': 56, 'o': 56, 'p': 17, 'q': 4, 'r': 49, 's': 56, 't': 71, 'u': 31, 'v': 10, 'w': 18, 'x': 3, 'y': 18, 'z': 2, ' ': 166}
 ADVANCE_JS = '''((el, scale) => { const probe = document.createElement('span');
   probe.textContent = %s;
-  Object.assign(probe.style, {whiteSpace: 'pre', position: 'absolute', visibility: 'hidden', fontKerning: 'none', fontVariantLigatures: 'none'});
+  Object.assign(probe.style, {whiteSpace: 'pre', textIndent: '0', position: 'absolute', visibility: 'hidden', fontKerning: 'none', fontVariantLigatures: 'none'});
   el.appendChild(probe);
   try { return probe.getBoundingClientRect().width / %d / scale; } finally { probe.remove(); } })''' % (
     json.dumps(''.join(c * n for c, n in ADVANCE_SAMPLE.items())), sum(ADVANCE_SAMPLE.values()))
@@ -886,10 +890,13 @@ def beams_hold(ctx, r):
 
 def type_view(ctx):
     """the first edition's mounted article as the person meets it, in px at the layout size: each element that sets
-    text in its lines — a sign in a column's edge apart — with its font size and its line height; the head's lines and the headings, each with its height beside
-    P-LAY's line box for its size; each heading's room above it and below it, between it and the blocks beside it; the
-    first family the computed face of each voice names — a paragraph's, the head's state line's, the head's address's —
-    and the platform's font set asked of each face the page ships; the advance of a weighed sample set in a paragraph"""
+    text in its lines — a sign in a column's edge apart — with its font size and its line height; the head's lines, each
+    with its height beside P-LAY's line box for its size; every heading element it holds; each typed line's element —
+    its block, the character its part starts at, its white space, its indent, its size and its weight, and the
+    character the bytes delivered hold before its block; each block that sets a line, in each part, its top below the
+    block before it there; the body's size; the first family the computed face of each voice names — a typed line's,
+    the head's state line's, the head's address's — and the platform's font set asked of each face the page ships; the
+    advance of a weighed sample set in a typed line"""
     art = json.dumps('#domlayer article.dtext[data-addr="%s"]' % DOC)
     return ctx.js('''(async () => {
       const L = await import('./plane/layout.js');
@@ -899,25 +906,27 @@ def type_view(ctx):
       const name = (e) => e.tagName.toLowerCase() + (e.className ? '.' + String(e.className).split(' ').join('.') : '');
       const sized = [...art.querySelectorAll('.hd > *, .run > *, .rec .derived, .withheld .arm, .withheld .clause')].map((e) => {
         const cs = getComputedStyle(e); return {el: name(e), pos: e.dataset.pos || null, font: parseFloat(cs.fontSize), line: parseFloat(cs.lineHeight)}; });
-      const heads = '.run > h2.sp, .run > h3.sp, .run > h4.sp, .run > h5.sp, .run > h6.sp';
-      const boxes = [...art.querySelectorAll('.hd .st, .hd .by, .hd .pres, ' + heads)].map((e) => {
+      const boxes = [...art.querySelectorAll('.hd .st, .hd .by, .hd .pres')].map((e) => {
         const font = parseFloat(getComputedStyle(e).fontSize); return {el: name(e), pos: e.dataset.pos || null, height: e.getBoundingClientRect().height / s, line_box: L.lineBox(font / L.LAY_FS) * L.LAY_FS}; });
-      const block = (e) => (e && e.matches('.sp, .withheld') ? e : null);
-      const headings = [...art.querySelectorAll(heads)].map((h) => {
-        const prev = block(h.previousElementSibling), next = block(h.nextElementSibling), r = h.getBoundingClientRect();
-        return {pos: Number(h.dataset.pos), el: name(h), above: prev ? (r.top - prev.getBoundingClientRect().bottom) / s : null, below: next ? (next.getBoundingClientRect().top - r.bottom) / s : null}; });
+      const headings = [...art.querySelectorAll('h1, h2, h3, h4, h5, h6')].map(name);
+      const typed = [...art.querySelectorAll('.run > p.sp')].filter((e) => !e.matches('.empty')).map((e) => { const cs = getComputedStyle(e), pos = Number(e.dataset.pos);
+        return {pos, char: Number(e.dataset.char || 0), el: name(e), tag: e.tagName.toLowerCase(), white: cs.whiteSpace, collapse: cs.whiteSpaceCollapse || null, wrap: cs.textWrapMode || null,
+                indent: parseFloat(cs.textIndent), font: parseFloat(cs.fontSize), weight: cs.fontWeight, text: (S.model.text(%s, pos, pos + 24) || ''), before: pos > 1 ? S.model.text(%s, pos - 1, pos) : null}; });
+      // each block that sets a line, in each part, below the block before it there that sets one
+      const steps = [...art.querySelectorAll('.col')].flatMap((col) => { const bs = [...col.querySelectorAll(':scope > .run > .sp, :scope > .run > .withheld')].filter((e) => e.getBoundingClientRect().height > 0);
+        return bs.slice(1).map((e, i) => ({pos: Number(e.dataset.pos), after: Number(bs[i].dataset.pos), px: (e.getBoundingClientRect().top - bs[i].getBoundingClientRect().top) / s})); });
       const family = (sel) => { const e = art.querySelector(sel); return e ? getComputedStyle(e).fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, '') : null; };
-      const para = art.querySelector('.run > p.sp'), addr = art.querySelector('.hd .addr');
+      const para = art.querySelector('.run > p.sp.blk-para:not(:empty)'), addr = art.querySelector('.hd .addr');
       // the address's advance a character, in em of its own size: its run's width over its characters
       const ident = addr && addr.textContent ? addr.getBoundingClientRect().width / s / [...addr.textContent].length / parseFloat(getComputedStyle(addr).fontSize) : null;
-      return {sized, boxes, headings, faces: {reading: family('.run > p.sp'), client: family('.hd .st'), ident: family('.hd .addr')},
+      return {sized, boxes, headings, typed, steps, body: parseFloat(getComputedStyle(art).fontSize), line_box: L.lineBox(1) * L.LAY_FS, faces: {reading: family('.run > p.sp'), client: family('.hd .st'), ident: family('.hd .addr')},
               loaded: %s.map((f) => [f, document.fonts.check(f)]), set: [...document.fonts].map((f) => ({family: f.family.replace(/^["']|["']$/g, ''), style: f.style, weight: f.weight, status: f.status})),
               advance: para ? %s(para, s) / L.LAY_FS : null, ident_advance: ident, page_advance: L.CHAR_W};
-    })()''' % (json.dumps(DOC), art, json.dumps(SHIPPED_FACES), ADVANCE_JS))
+    })()''' % (json.dumps(DOC), art, json.dumps(DOC), json.dumps(DOC), json.dumps(SHIPPED_FACES), ADVANCE_JS))
 
 
 def starts_view(ctx):
-    """each line of a paragraph of the first edition's fold that stands as text after a standing line of its paragraph,
+    """each line of a typed line of the first edition's fold that stands as text after a standing line of its own,
     as T-LAYER reads it — the position it opens at — beside where its characters stand on screen: its line box and the
     line box before it, each across its column, and the middle of the character at that position and of the last
     character before it, spaces apart, each read through T-LAYER's byte-span mapping over the standing parts
@@ -965,19 +974,38 @@ def type_holds(ctx, r):
     if v is None:
         return None
     off = [x for x in v['sized'] if not x['font'] or abs(x['line'] / x['font'] - LINE_RATIO) > LINE_RATIO_TOL]
-    r.check(bool(v['sized']) and not off, f'the type: every element of the first edition that sets text spaces its lines at {LINE_RATIO} of its own size, {LINE_RATIO_TOL} either way — the head\'s lines, the headings, the blocks, a record\'s keys, a withheld run\'s face, the offer; a sign in a column\'s edge stands on its block\'s first line instead, which the stand-in holds',
+    r.check(bool(v['sized']) and not off, f'the type: every element of the first edition that sets text spaces its lines at {LINE_RATIO} of its own size, {LINE_RATIO_TOL} either way — the head\'s lines, the blocks, a record\'s keys, a withheld run\'s face, the offer; a sign in a column\'s edge stands on its block\'s first line instead, which the stand-in holds',
             [dict(x, ratio=round(x['line'] / x['font'], 3) if x['font'] else None) for x in off[:8]])
     unlike = []
     for b in v['boxes']:
         n = round(b['height'] / b['line_box'])
         if n < 1 or abs(b['height'] - n * b['line_box']) > LINE_BOX_TOL_PX:
             unlike.append(b)
-    r.check(bool(v['boxes']) and not unlike, f'the type: the head\'s lines and the headings stand on P-LAY\'s line box for their size, as the engine lays it out ({LINE_BOX_TOL_PX:.4f} px at the layout size)', unlike[:6])
-    compared = [h for h in v['headings'] if h['above'] is not None and h['below'] is not None]
-    far = [h for h in compared if not h['below'] < h['above']]
-    r.check(bool(compared) and not far, 'the type: each heading with a block above and below it stands nearer the block it heads than the block above it', {'compared': compared, 'far': far})
+    r.check(bool(v['boxes']) and not unlike, f'the type: the head\'s lines stand on P-LAY\'s line box for their size, as the engine lays it out ({LINE_BOX_TOL_PX:.4f} px at the layout size)', unlike[:6])
+    lines = v['typed']
+    marked = [x for x in lines if x['text'].startswith('#') and x['char'] == 0]
+    unlike_body = [x for x in lines if x['tag'] != 'p' or abs(x['font'] - v['body']) > 1e-6 or x['weight'] != '400']
+    r.check(bool(marked) and not v['headings'] and not unlike_body,
+            'the type: no element of the first edition\'s article is a heading — every typed line a `p` at the body\'s size and weight, those its bytes open with "#" among them (issue #17\'s design decision: "`##` at the start of a line is text, set in body type like the rest")',
+            {'headings': v['headings'][:6], 'opening_with_hash': [x['text'][:24] for x in marked[:6]], 'unlike_body': unlike_body[:6], 'body_px': v['body']})
+    kept = [x for x in lines if not (x['white'] == 'pre-wrap' or (x['collapse'] == 'preserve' and x['wrap'] == 'wrap'))]
+    r.check(bool(lines) and not kept, 'the type: every typed line of the first edition keeps its white space, set `pre-wrap` — every character in its place, spaces and indentation included (issue #17\'s design decision)',
+            {'typed': len(lines), 'collapsing': kept[:6]})
+    # a typed line's own block — its bytes open with a character, never with the newlines a run may lead with — and whether it
+    # opens a typed line, by the bytes delivered
+    own = [x for x in lines if x['text'] and not x['text'].startswith('\n')]
+    opens = lambda x: x['pos'] == 1 or x['before'] == '\n'
+    astray = [dict(x, opens=opens(x)) for x in own if abs(x['indent'] - (x['font'] if opens(x) and x['char'] == 0 else 0)) > 1e-6]
+    indented = [x for x in own if opens(x) and x['char'] == 0]
+    r.check(bool(indented) and not astray,
+            'the type: a typed line stands on a one-em indent where it opens a typed line — the first position, or the byte before it a newline — in the part that starts at its first character, and on none elsewhere (issue #17\'s design decision: "Every typed line starts with a one-em indent")',
+            {'indented': len(indented), 'astray': astray[:6]})
+    off_grid = [x for x in v['steps'] if x['px'] < v['line_box'] - LINE_BOX_TOL_PX or abs(x['px'] / v['line_box'] - round(x['px'] / v['line_box'])) * v['line_box'] > LINE_BOX_TOL_PX]
+    r.check(bool(v['steps']) and not off_grid,
+            f'the type: each block of the first edition a whole count of body line boxes below the block before it in its part — an empty line typed between them one line box, no other room — so a column keeps its grid of lines ({LINE_BOX_TOL_PX:.4f} px at the layout size; issue #17\'s design decision: "No space is added between blocks")',
+            {'steps': len(v['steps']), 'line_box': v['line_box'], 'off_grid': off_grid[:6]})
     shipped = v['advance'] is not None and v['ident_advance'] is not None and abs(v['advance'] - SHIPPED_ADVANCE['reading']) <= ADVANCE_TOL and abs(v['ident_advance'] - SHIPPED_ADVANCE['ident']) <= ADVANCE_TOL
-    r.check(v['faces'] == FACE_FAMILIES and shipped, f'the type: each voice stands in its face — a paragraph, the document\'s words, in Charter; the head\'s state line, the client\'s, in the system face; the head\'s address in Atkinson Hyperlegible Mono — the reading and identifier faces set as shipped, their rendered advances their files\' own, {ADVANCE_TOL} em either way (issue #16\'s design decision)',
+    r.check(v['faces'] == FACE_FAMILIES and shipped, f'the type: each voice stands in its face — a typed line, the document\'s words, in Charter; the head\'s state line, the client\'s, in the system face; the head\'s address in Atkinson Hyperlegible Mono — the reading and identifier faces set as shipped, their rendered advances their files\' own, {ADVANCE_TOL} em either way (issue #16\'s design decision)',
             {'faces': v['faces'], 'want': FACE_FAMILIES, 'advance': {'reading': v['advance'], 'ident': v['ident_advance'], 'shipped': SHIPPED_ADVANCE}})
     boot = ctx.js('window.__skep.boot') or {}
     typed = boot.get('type') or {}
@@ -988,7 +1016,7 @@ def type_holds(ctx, r):
             'the type: every face the page ships — Charter in its four styles, Atkinson Hyperlegible Mono — stands in the platform\'s font set, loaded, and was loaded as boot set the type and as the first frame laid anything out (issue #16\'s design decision: the first layout waits for the faces)',
             dict(unloaded, faces=sorted(in_set)))
     r.check(v['advance'] is not None and abs(v['advance'] - v['page_advance']) <= ADVANCE_TOL and typed.get('advance') == v['page_advance'],
-            f'the type: the advance the page set — the reading face\'s average, as boot measured it — is the one the case probes in a paragraph as rendered, {ADVANCE_TOL} em either way',
+            f'the type: the advance the page set — the reading face\'s average, as boot measured it — is the one the case probes in a typed line as rendered, {ADVANCE_TOL} em either way',
             {'probed': v['advance'], 'page': v['page_advance'], 'boot': typed.get('advance')})
     r.check(typed.get('root') == '16px' and typed.get('readingPx') == READING_PX,
             f'the type: at the root\'s 16 px the reading size is {READING_PX} px — 1.0625 of the root, as the reader\'s own settings render it',
@@ -996,9 +1024,9 @@ def type_holds(ctx, r):
     starts = starts_view(ctx) or []
     astray = [x for x in starts if not starts_on_line(x)]
     r.check(bool(starts) and not astray,
-            f'the type: every line a paragraph of the first edition sets past its first, as T-LAYER reads it, begins where its first character stands — the character at the position it opens at on the line, the last one before it, spaces apart, on the line before it, {ANCHOR_TOL_PX} px either way',
+            f'the type: every line a typed line of the first edition sets past its first, as T-LAYER reads it, begins where its first character stands — the character at the position it opens at on the line, the last one before it, spaces apart, on the line before it, {ANCHOR_TOL_PX} px either way',
             {'lines': len(starts), 'astray': astray[:6]})
-    return {'elements': len(v['sized']), 'boxes': [[b['el'], round(b['height'], 4), b['line_box']] for b in v['boxes']], 'headings': compared,
+    return {'elements': len(v['sized']), 'boxes': [[b['el'], round(b['height'], 4), b['line_box']] for b in v['boxes']], 'typed': len(lines), 'indented': len(indented), 'steps': len(v['steps']),
             'faces': v['faces'], 'advance': {'reading': v['advance'], 'ident': v['ident_advance']}, 'reading_px': typed.get('readingPx'), 'line_starts': len(starts)}
 
 
@@ -1151,7 +1179,7 @@ def pane_columns(ctx):
     """each scene pane's text column as a person meets it, by side: the pane's content box, its article's box and its
     text column inside it — the article's content box, its padding the column's edge on the pane's inner side (issue
     #151) — its face's size, and its corner's, the flex gap between them, and its face's average advance at the body's
-    size as the case probes it in one of its paragraphs (`ADVANCE_JS`); the window's size beside them"""
+    size as the case probes it in one of its typed lines (`ADVANCE_JS`); the window's size beside them"""
     return ctx.js('''(() => { const advance = %s; const side = (id) => {
         const pane = document.getElementById(id), art = pane && pane.querySelector(':scope > article.dtext'), corner = pane && pane.querySelector(':scope > .corner');
         if (!art || !corner) return null;
@@ -1487,10 +1515,12 @@ def carried_holds(ctx, r):
     # span in view (§2.3: "the selection, else the first span in view"), never the document's first block. The act is
     # taken by Enter at the corner (K-57), the one a click on the version statement takes
     ctx.leap(VERSIONED, None)
-    rects = ctx.js('''[...document.querySelectorAll(%s)].map((e) => ({pos: Number(e.dataset.pos), bottom: e.getBoundingClientRect().bottom}))''' % json.dumps('#domlayer article[data-addr="%s"] .run > .sp' % VERSIONED))
+    rects = ctx.js('''[...document.querySelectorAll(%s)].map((e) => { const q = e.getBoundingClientRect(); return {pos: Number(e.dataset.pos), bottom: q.bottom, left: q.left}; })''' % json.dumps('#domlayer article[data-addr="%s"] .run > .sp' % VERSIONED))
     line = ctx.js("document.getElementById('line').getBoundingClientRect().bottom")
-    last = rects[-1]['pos'] if rects else None
-    above = [x for x in rects if x['pos'] < (last or 0)]
+    # the blocks standing in the article's first column, down it: the ones the view rises past
+    col = [x for x in rects if abs(x['left'] - rects[0]['left']) <= 0.5] if rects else []
+    last = col[-1]['pos'] if col else None
+    above = [x for x in col if x['pos'] < (last or 0)]
     cam = ctx.camera()
     if above:
         ctx.set_view(cam['x'], cam['y'] + (above[-1]['bottom'] - line + 12) / cam['scale'], cam['scale'])
@@ -1661,12 +1691,17 @@ def pieces_hold(ctx, r):
                 f'the runs, {name}: Mod+] restores the arrival as the reader left it — both runs outlined, the landing at piece 2, its label the line\'s', {'landing': fw['landing'], 'line': (fw['line'] or {}).get('words')})
         seen[name] = {'doc': longest, 'runs': runs, 'stepped_em': round(s['em'], 3), 'framed_em': round(far['em'], 3)}
         ctx.resize(*was)
-    # two runs both in view, in the first edition's own bytes before its window run: the other run's label at the text's edge
+    # two runs both in view, in the first edition's own bytes before its window run, their first lines in one column four body
+    # lines apart or more, so the label beside the second never stacks with the line beside the first (O-LAND's `stacks`):
+    # the other run's label at the text's edge
     ctx.leap(DOC, None)
     paras = [b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if b['kind'] == 'para' and b['width'] > 24 and b['pos'] + 12 < WINDOW[0]]
-    runs = [{'pos': paras[0]['pos'], 'width': 12}, {'pos': paras[1]['pos'], 'width': 12}] if len(paras) > 1 else []
+    fs = ctx.js('window.__skep.fold(%s).fs' % json.dumps(DOC))
+    lined = [(b, ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), b['pos']))) for b in paras]
+    apart = next((b for b, c in lined[1:] if abs(c['x'] - lined[0][1]['x']) < 1e-6 and c['y'] - lined[0][1]['y'] >= 4 * LINE_RATIO * fs), None) if lined else None
+    runs = [{'pos': paras[0]['pos'], 'width': 12}, {'pos': apart['pos'], 'width': 12}] if apart else []
     passage = passage_of(ctx, DOC, runs) if runs else None
-    r.check(passage is not None, 'the runs in view: two paragraphs of the first edition\'s own bytes', {'runs': runs})
+    r.check(passage is not None, 'the runs in view: two typed lines of the first edition\'s own bytes, their first lines in one column four body lines apart or more', {'runs': runs})
     if passage is not None:
         ctx.js('window.__skep.go.leapTo(%s, %d, %s)' % (json.dumps(DOC), runs[0]['pos'], json.dumps({'runs': runs, 'passage': passage})))
         ctx.settle()

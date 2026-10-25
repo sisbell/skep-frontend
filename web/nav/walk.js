@@ -227,7 +227,7 @@ export function focusedSpan() { return focus && focus.kind === 'block' && focus.
 /** is the ring drawn — the focus's owner's rule (rule 10): the plane holds the focus and a key moved it */
 export const ringShown = () => FOCUS.ringShown();
 
-/** is a block an element of the walk (rule 20): any but a paragraph of white space alone */
+/** is a block an element of the walk (rule 20): any but a typed line of white space alone, or the newlines before a run's first typed line */
 export const isElement = (/** @type {Block} */ b) => b.kind !== 'para' || b.text.trim() !== '';
 
 /** is a document below its reading scale at the view the camera is bound for (see the head; T-LAYER's one test) */

@@ -845,7 +845,7 @@ def held_press(ctx, r):
 
 
 def pane_phrase(ctx, side):
-    """a phrase of fifteen characters of a paragraph's own text — no heading's — that a reading scene's pane SHOWS:
+    """a phrase of fifteen characters of a typed line's own text that a reading scene's pane SHOWS:
     printable ASCII on one line inside the pane's visible rect and PANE_EDGE_PX clear of its top and its bottom, where a
     drag does not scroll the pane (the platform scrolls a scroller a selection is dragged at the edge of), the pane's
     article under the pointer half a pixel inside its first character and its last, where a drag over it presses and
@@ -857,7 +857,7 @@ def pane_phrase(ctx, side):
       const inside = (q, v) => q.x >= v.x && q.y >= v.y + edge && q.x + q.w <= v.x + v.w && q.y + q.h <= v.y + v.h - edge;
       const under = ([x, y]) => { const e = document.elementFromPoint(x, y), a = e && e.closest('article.dtext'); return !!a && pane.contains(a); };
       for (const b of P.blocks) {
-        if (b.kind !== 'para' || b.text.startsWith('#')) continue;
+        if (b.kind !== 'para') continue;
         for (let k = 0; k + 15 <= b.text.length; k += 5) {
           const text = b.text.slice(k, k + 15);
           if (!/^[!-~][ -~]{13}[!-~]$/.test(text)) continue;

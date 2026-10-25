@@ -1,10 +1,15 @@
 // P-LAY's test: the article's lines as its CSS sets them — each line box its
 // block's own size's on the 1/64 px grid at the line height 1.45 (the figures
-// measured on the gate's machine), the head's lines first, a heading's margins and the gap after
-// every other block, a block that sets no line taking no room, a line holding
-// exactly `cpl` characters, a heading wrapped at its own size, the breaks a
-// word allows, an inline-block set whole, a withheld run's gap its bars, each
-// line naming its first own position, and the measurements the CSS reads
+// measured on the gate's machine), the head's lines first, the empty lines
+// typed after a typed line whole line boxes below it and no other room between
+// blocks, a block that sets no line taking no room, a line holding exactly
+// `cpl` characters, a typed line's white space kept — every space an advance,
+// a tab to its stop, its leading white space on its first line — and every
+// other row's collapsed, the indent on a typed line's first line alone, a row
+// wrapped at its own size, the breaks a word allows, an inline-block set
+// whole, a withheld run's gap its bars, each line naming where it opens and
+// where its ink begins and ends, a bar drawn from where its line's ink begins,
+// and the measurements the CSS reads
 // from one source; the reading face's advance, the weighted mean of its
 // letters and the space, and every size that moves with it as it is set; the
 // edge each column is followed by (FP-26); the fit — the full measure
@@ -38,9 +43,8 @@ import { DOC_W, DOC_H } from './projection.js';
 const piece = (/** @type {string} */ text, size = 1, o = {}) => ({ text, size, lead: 0, trail: 0, box: false, own: true, ...o });
 /** @returns {Row} */
 const row = (/** @type {Row['kind']} */ kind, /** @type {number | null} */ pos, /** @type {Piece[]} */ pieces, o = {}) => ({ kind, pos, size: 1, pieces, before: 0, after: 0, width: 0, keep: /** @type {const} */ ('lines'), ...o });
-const para = (/** @type {number} */ pos, /** @type {string} */ text, size = 1) => row('text', pos, [piece(text, size)], { size, after: MEASURE.gap * size });
-/** a heading's row as T-ARTICLE plans it: its margins at its own size */
-const heading = (/** @type {number} */ pos, /** @type {string} */ text, size = MEASURE.h2) => row('text', pos, [piece(text, size)], { size, before: MEASURE.headingBefore * size, after: MEASURE.headingAfter * size, keep: /** @type {const} */ ('heading') });
+/** a typed line's row as T-ARTICLE plans it: its white space kept, `blank` empty lines typed after it, on its indent where `opens` — it opens a typed line */
+const para = (/** @type {number} */ pos, /** @type {string} */ text, blank = 0, opens = false) => row('text', pos, [piece(text)], { pre: true, after: blank * LINE_H, indent: opens ? MEASURE.indent : 0 });
 const close = (/** @type {number} */ a, /** @type {number} */ b) => Math.abs(a - b) < 1e-9;
 /** the widths of a row's lines at a column */
 const widths = (/** @type {Row} */ r, /** @type {number} */ cpl) => wrap(r, cpl).map((l) => +l.w.toFixed(4));
@@ -50,10 +54,10 @@ const ROOM = { w: DOC_W, h: DOC_H };
 const HEAD = [row('head', null, [piece('1.0.1.0.3', 1, { own: false })], { keep: 'whole' }), row('head', null, [piece('published', MEASURE.head, { own: false })], { size: MEASURE.head, keep: 'joined' }), row('head', null, [piece('1.0.1 · dev', MEASURE.head, { own: false })], { size: MEASURE.head, keep: 'joined' })];
 /** a paragraph of `n` words of two to nine characters, varied by `seed` */
 const words = (/** @type {number} */ n, /** @type {number} */ seed) => Array.from({ length: n }, (_, i) => 'abcdefghij'.slice(0, 2 + ((i * 7 + seed) % 8))).join(' ');
-/** an article's plan: the head's rows and a paragraph per text, each its text's positions and a separator apart */
+/** an article's plan: the head's rows and a typed line per text, each opening a typed line, its text's positions and two newlines — one empty line — apart */
 function article(/** @type {string[]} */ texts) {
   let pos = 1;
-  const rows = [...HEAD, ...texts.map((s) => { const r = para(pos, s); pos += s.length + 2; return r; })];
+  const rows = [...HEAD, ...texts.map((s) => { const r = para(pos, s, 1, true); pos += s.length + 2; return r; })];
   return { rows, positions: pos - 1 };
 }
 /** the place of a line in its fold, in world units relative to the room */
@@ -65,7 +69,7 @@ const lineBox_ = (/** @type {import('./layout.js').Fold} */ f, /** @type {number
 };
 
 test('the layout wraps words at the column and keys lines by block position; a withheld run is bars of its width', () => {
-  const L = layoutOf([para(1, 'one two three four five'), row('gap', 25, [], { width: 25, after: MEASURE.gap, keep: 'whole' })], 10);
+  const L = layoutOf([para(1, 'one two three four five'), row('gap', 25, [], { width: 25, keep: 'whole' })], 10);
   assert.ok(L.lines.length >= 3);
   assert.deepEqual(L.blocks.get(1), { first: 0, n: 3 }, '"one two" · "three four" · "five"');
   const wh = L.lines.filter((l) => l.kind === 'gap');
@@ -75,7 +79,7 @@ test('the layout wraps words at the column and keys lines by block position; a w
   for (const line of L.lines) assert.ok(line.w <= 10, `${line.w} past the column`);
 });
 
-test('every line names the position its first own character stands at: a paragraph\'s by its bytes, a withheld run\'s bars a column of positions on, the head none', () => {
+test('every line names the position it opens at: a typed line\'s by its bytes, a withheld run\'s bars a column of positions on, the head none', () => {
   const L = layoutOf([...HEAD, para(1, 'one two — three four'), row('gap', 30, [], { width: 25, keep: 'whole' })], 10);
   const text = L.lines.filter((l) => l.pos === 1);
   // "one two —" · "three four": the em dash is three bytes
@@ -92,10 +96,10 @@ test('the article\'s line height is 1.45 of each element\'s own size, cut to the
 test('a line box is its own size\'s: the engine\'s font size on the 1/64 px grid, rounded, and the line height on it, floored', () => {
   assert.equal(lineBox(1), LINE_H, 'the body\'s line box is LINE_H');
   // Chrome 155 on the gate's machine, a single line of each size at LAY_FS in Charter with the article's unitless line height
-  const measured = [[MEASURE.head, 18.546875], [MEASURE.count, 16.6875], [MEASURE.h2, 29], [MEASURE.h3, 25.5], [MEASURE.label, 16.234375], [MEASURE.sym, 17.390625]];
+  const measured = [[MEASURE.head, 18.546875], [MEASURE.count, 16.6875], [MEASURE.label, 16.234375], [MEASURE.sym, 17.390625]];
   for (const [size, px] of measured) assert.equal(lineBox(size) * LAY_FS, px, `${size} em: a line box of ${px} px`);
   for (const [size] of measured) assert.ok(Number.isInteger(lineBox(size) * LAY_FS * 64), `${size} em: on the 1/64 px grid`);
-  assert.ok(Math.abs(lineBox(MEASURE.head) / MEASURE.head - LINE_H) < 0.01 && Math.abs(lineBox(MEASURE.h2) / MEASURE.h2 - LINE_H) < 0.01, 'each its own size\'s LINE_H, within the grid');
+  assert.ok(Math.abs(lineBox(MEASURE.head) / MEASURE.head - LINE_H) < 0.01, 'its own size\'s LINE_H, within the grid');
 });
 
 test('the head\'s lines stand before the first block, each its own size\'s line box', () => {
@@ -107,51 +111,70 @@ test('the head\'s lines stand before the first block, each its own size\'s line 
   assert.deepEqual(L.lines.slice(0, 3).map((l) => l.h), [LINE_H, lineBox(MEASURE.head), lineBox(MEASURE.head)]);
 });
 
-test('a heading stands nearer the block it heads than the block above it; the gap after every other block is its own; adjoining margins collapse to the larger', () => {
+test('the empty lines typed after a typed line stand below it as whole body line boxes, and no other room stands between blocks — an item\'s neither — adjoining margins collapsing to the larger', () => {
   const offer = row('chrome', null, [piece('this document windows 1.0.1.0.1003', MEASURE.offer, { own: false })], { size: MEASURE.offer, before: MEASURE.offerGap * MEASURE.offer, after: MEASURE.offerGap * MEASURE.offer, keep: 'whole' });
-  const L = layoutOf([para(1, 'aaaa'), heading(10, '# Title'), para(20, 'bbbb'), offer], 52);
+  const record = row('text', 18, [piece('skep-enroll', 1, { own: false })], { keep: 'whole' });
+  const L = layoutOf([para(1, 'aaaa'), para(6, 'bbbb', 2), para(13, 'cccc'), record, para(19, 'dddd'), row('gap', 24, [], { width: 5, keep: 'whole' }), para(29, 'eeee'), offer], 52);
   const top = (/** @type {number} */ pos) => L.lines[/** @type {{first: number}} */ (L.blocks.get(pos)).first].top;
-  const above = top(10) - LINE_H, below = top(20) - (top(10) + lineBox(MEASURE.h2));
-  assert.ok(close(above, Math.max(MEASURE.gap, MEASURE.headingBefore * MEASURE.h2)), 'above the heading: its room, collapsed with the paragraph\'s gap');
-  assert.ok(close(below, MEASURE.headingAfter * MEASURE.h2), 'below it: its own smaller room');
-  assert.ok(below < above, `nearer the block it heads (${below} em) than the block above it (${above} em)`);
+  assert.ok(close(top(6) - top(1), LINE_H), 'a typed line straight after the one before it: no room between them');
+  assert.ok(close(top(13) - top(6), 3 * LINE_H), 'two empty lines typed after it: its line and two whole line boxes');
+  assert.ok(close(top(18) - top(13), LINE_H) && close(top(19) - top(18), LINE_H), 'a record: no room before it or after it');
+  assert.ok(close(top(24) - top(19), LINE_H) && close(top(29) - top(24), LINE_H), 'a gap: none either');
+  assert.ok(L.lines.filter((l) => l.kind !== 'chrome').every((l) => close(l.top / LINE_H, Math.round(l.top / LINE_H))), 'every line of the document\'s on the grid of body line boxes');
   const last = L.lines[L.lines.length - 1];
-  assert.ok(close(last.top, top(20) + LINE_H + Math.max(MEASURE.gap, MEASURE.offerGap * MEASURE.offer)), 'the offer\'s margin collapses with the block\'s');
+  assert.ok(close(last.top, top(29) + LINE_H + MEASURE.offerGap * MEASURE.offer), 'the offer\'s room above it its own, the block before it holding none');
   assert.equal(last.pos, null, 'the offer is chrome, no block\'s line');
-  const two = layoutOf([heading(10, '# Title'), heading(20, '## Part', MEASURE.h3)], 52);
-  const t2 = (/** @type {number} */ pos) => two.lines[/** @type {{first: number}} */ (two.blocks.get(pos)).first].top;
-  assert.ok(close(t2(20) - t2(10) - lineBox(MEASURE.h2), MEASURE.headingBefore * MEASURE.h3), 'a heading under a heading: the larger room, the lower one\'s above it');
+  const deep = layoutOf([para(1, 'aaaa', 1), offer], 52);
+  assert.ok(close(deep.lines[deep.lines.length - 1].top - LINE_H, Math.max(LINE_H, MEASURE.offerGap * MEASURE.offer)), 'an empty line typed before the offer and the offer\'s room collapse to the larger');
 });
 
 test('a block that sets no line takes no room: its margins collapse with its neighbours\', the block after it the larger of their margins below the block before', () => {
   const top = (/** @type {import('./layout.js').Layout} */ L, /** @type {number} */ pos) => L.lines[/** @type {{first: number}} */ (L.blocks.get(pos)).first].top;
   const bare = layoutOf([para(1, 'aaaa'), para(10, 'bbbb')], 52);
   const sep = layoutOf([para(1, 'aaaa'), para(6, ''), para(10, 'bbbb')], 52);
-  assert.deepEqual(sep.blocks.get(6), { first: 1, n: 0 }, 'a separator alone sets no line');
-  assert.ok(close(top(sep, 10), top(bare, 10)) && close(top(sep, 10) - LINE_H, MEASURE.gap), 'the paragraph after it one gap below the paragraph before, as with no block between them');
-  const head = layoutOf([para(1, 'aaaa'), para(6, ''), heading(10, '## Part', MEASURE.h3)], 52);
-  assert.ok(close(top(head, 10) - LINE_H, MEASURE.headingBefore * MEASURE.h3), 'a heading after it: its own room above it, the larger, alone');
+  assert.deepEqual(sep.blocks.get(6), { first: 1, n: 0 }, 'the newlines before a run\'s first typed line set no line');
+  assert.ok(close(top(sep, 10), top(bare, 10)) && close(top(sep, 10) - LINE_H, 0), 'the typed line after it straight below the one before, as with no block between them');
+  const blank = layoutOf([row('gap', 1, [], { width: 4, keep: 'whole' }), para(5, '', 2), para(7, 'bbbb')], 52);
+  assert.ok(close(top(blank, 7) - LINE_H, 2 * LINE_H), 'their empty lines its room: two whole line boxes below the item before them');
 });
 
-test('a heading\'s lines are its own size\'s line boxes', () => {
-  const L = layoutOf([heading(1, 'aaaaaaa bbbbbbbbb'), para(30, 'cc')], 20);
-  const b = /** @type {{first: number, n: number}} */ (L.blocks.get(1));
-  assert.equal(b.n, 2, 'seventeen characters at 1.25 wrap in twenty');
-  assert.ok(close(L.lines[b.first + 1].top - L.lines[b.first].top, lineBox(MEASURE.h2)), 'the second line one heading line box below the first');
-  assert.ok(close(L.lines[/** @type {{first: number}} */ (L.blocks.get(30)).first].top - L.lines[b.first].top, 2 * lineBox(MEASURE.h2) + MEASURE.headingAfter * MEASURE.h2), 'two heading line boxes, then its room below');
-});
-
-test('a line holds exactly its column\'s characters: the space after its last word hangs', () => {
+test('a line holds exactly its column\'s characters: the white space after its last word hangs', () => {
   assert.deepEqual(widths(para(1, 'abcd efghi'), 10), [10], 'ten characters fill a ten-character column on one line');
   assert.deepEqual(widths(para(1, 'abcdefghij klmn'), 10), [10, 4]);
   assert.deepEqual(widths(para(1, 'abcdefghi jklmn'), 10), [9, 5]);
-  assert.deepEqual(widths(para(1, '  a   b  '), 10), [3], 'white space collapses, and none leads or trails the row');
+  assert.deepEqual(widths(para(1, 'abcdefghi      jklmn'), 10), [9, 5], 'every space hanging past the column where the line breaks after them');
 });
 
-test('a heading is wrapped at its own size: the column holds cpl / 1.25 of its characters', () => {
-  assert.deepEqual(widths(para(1, 'aaaaaaa bbbbbbbb', MEASURE.h2), 20), [20], 'sixteen characters at 1.25 fill twenty');
-  assert.equal(wrap(para(1, 'aaaaaaa bbbbbbbbb', MEASURE.h2), 20).length, 2, 'seventeen do not');
-  assert.equal(wrap(para(1, 'aaaaaaa bbbbbbbbb'), 20).length, 1, 'at the body\'s size they do');
+test('a typed line keeps its white space: every space an advance, a tab to its next tab stop, its leading white space on its first line — a line of white space alone one line of no ink, its first line naming its start — and every other row\'s white space collapses, none leading it', () => {
+  const lines = (/** @type {Row} */ r, cpl = 66) => wrap(r, cpl).map((l) => [+l.ink.toFixed(4), +l.w.toFixed(4), l.bytes]);
+  assert.deepEqual(lines(para(1, '  a   b  '), 10), [[2, 7, 0]], 'its leading spaces before its ink, each space between its words its own advance, its trailing ones hanging');
+  assert.deepEqual(lines(row('text', 1, [piece('  a   b  ')])), [[0, 3, 2]], 'a row that is no typed line: its white space collapsed, none leading it');
+  assert.deepEqual(lines(para(1, '\tx')), [[8, 9, 0]], 'a tab to the first stop, eight advances in');
+  assert.deepEqual(lines(para(1, 'abcdefg\tx')), [[0, 9, 0]], 'a tab from seven advances: the stop at eight');
+  assert.deepEqual(lines(para(1, 'abcdefgh\tx')), [[0, 17, 0]], 'a tab at a stop: the next one');
+  assert.deepEqual(lines(para(1, 'ab\t\tc')), [[0, 17, 0]], 'two tabs, two stops');
+  assert.deepEqual(lines(para(1, '    '), 10), [[0, 0, 0]], 'white space alone: one line, of no ink');
+  assert.deepEqual(lines(para(1, ' '.repeat(8) + 'abcdef'), 10), [[0, 0, 0], [0, 6, 8]], 'leading spaces the first word does not fit after: the word on the next line, the spaces hanging on the first');
+  assert.deepEqual(layoutOf([para(5, '  a b')], 10).lines.map((l) => l.at), [5], 'its first line opens at its start, its indentation with it');
+  assert.deepEqual(layoutOf([para(5, '    ')], 10).lines.map((l) => [l.at, l.w, l.ink]), [[5, 0, 0]], 'a line of white space alone names its start');
+});
+
+test('a typed line that opens a typed line stands on its indent, its first line alone: the indent takes room on that line, a tab\'s stops counted from the block\'s start', () => {
+  const indent = MEASURE.indent / CHAR_W;
+  assert.ok(indent > 2 && indent < 3, `a one-em indent is ${indent} advances`);
+  assert.deepEqual(widths(para(1, 'aaaa bbbb cccc'), 10), [9, 4], 'no indent: two words on the first line');
+  assert.deepEqual(widths(para(1, 'aaaa bbbb cccc', 0, true), 10), [+(indent + 4).toFixed(4), 9], 'on its indent: one word on the first line, its next line from the column\'s left');
+  const [first, next] = wrap(para(1, 'aaaa bbbb cccc', 0, true), 10);
+  assert.ok(close(first.ink, indent) && next.ink === 0, 'its ink begins at the indent on its first line alone');
+  assert.deepEqual(wrap(para(1, '\tx', 0, true), 66).map((l) => [l.ink, l.w]), [[8, 9]], 'a tab past the indent: to the stop eight advances from the block\'s start');
+  assert.equal(wrap(row('text', 1, []), 20).length + wrap(para(1, ''), 20).length, 0, 'an empty row takes no line, a typed one too');
+});
+
+test('a row is wrapped at its own size: the column holds cpl / 1.25 of a 1.25 em row\'s characters', () => {
+  const sized = (/** @type {string} */ text, /** @type {number} */ size) => row('text', 1, [piece(text, size)], { size });
+  assert.deepEqual(widths(sized('aaaaaaa bbbbbbbb', 1.25), 20), [20], 'sixteen characters at 1.25 fill twenty');
+  assert.equal(wrap(sized('aaaaaaa bbbbbbbbb', 1.25), 20).length, 2, 'seventeen do not');
+  assert.equal(wrap(sized('aaaaaaa bbbbbbbbb', 1), 20).length, 1, 'at the body\'s size they do');
 });
 
 test('a line breaks after a hyphen inside a word, and never after a slash', () => {
@@ -211,6 +234,16 @@ test('every line of a long article stands in a column inside the room, none cut:
   for (const [ci, cb] of bars(f).entries()) for (const b of cb) assert.ok(b.y >= f.columns[ci].y - 1e-6 && b.y + b.h <= f.columns[ci].y + f.columns[ci].h + 1e-6, 'no bar past its column');
 });
 
+test('a bar stands from where its line\'s ink begins to where it ends: a typed line\'s first line from past its indent and its leading white space, its next lines from the column\'s left; a line of white space alone, and an empty line typed after a typed line, none', () => {
+  const f = fold(layoutOf([...HEAD, para(1, 'aaaa bbbb cccc', 0, true), para(16, '   dd', 2, true), para(24, '    ', 0, true)], 10).lines, ROOM, { cpl: 10 });
+  const c = f.columns[0], adv = CHAR_W * f.fs, indent = MEASURE.indent / CHAR_W;
+  const drawn = bars(f).flat().map((b) => ({ pos: f.lines[b.line].pos, x: (b.x - c.x) / adv, w: b.w / adv }));
+  const near = (/** @type {{x: number, w: number}} */ b, /** @type {number} */ x, /** @type {number} */ w) => Math.abs(b.x - x) < 1e-9 && Math.abs(b.w - w) < 1e-9;
+  assert.deepEqual(drawn.map((b) => b.pos), [1, 1, 16], 'two bars for the wrapped typed line, one for the indented one, none for white space alone or the empty lines');
+  assert.ok(near(drawn[0], indent, 4) && near(drawn[1], 0, 9), `the first line's bar past its indent, its next from the column's left: ${JSON.stringify(drawn)}`);
+  assert.ok(near(drawn[2], indent + 3, 2), 'past its indent and its three leading spaces');
+});
+
 test('the standard size holds until the columns fill the room; each step after it at least doubles the room\'s capacity', () => {
   const s0 = stepAt(ROOM, 0);
   assert.ok(close(s0.fs, standardFs(ROOM)) && close(STANDARD_FS, s0.fs), 'step 0 is the standard size');
@@ -251,39 +284,35 @@ test('columns stand left to right, then row by row, each followed by its edge an
   }
 });
 
-test('a heading stays with the first two lines after it; no paragraph line stands alone at a column\'s head or foot; a short paragraph moves whole', () => {
+test('no line of a typed line stands alone at a column\'s head or foot; one of three lines or fewer moves whole', () => {
   // a filler that leaves `left` body lines in the first column, then what is kept
-  const filler = (/** @type {number} */ left) => Array.from({ length: COLUMN_LINES - left }, (_, i) => ({ ...para(1 + i * 20, 'x'.repeat(10)), after: 0 }));
+  const filler = (/** @type {number} */ left) => Array.from({ length: COLUMN_LINES - left }, (_, i) => para(1 + i * 20, 'x'.repeat(10)));
   const at = (/** @type {Row[]} */ rows, /** @type {number} */ pos) => { const f = fold(layoutOf(rows, MEASURE_CPL).lines, ROOM); return f.columns.findIndex((c) => f.lines.slice(c.first, c.first + c.n).some((l) => l.pos === pos)); };
-  // a paragraph of `n` full lines: six words of ten characters a line, the space after the sixth hanging
-  const long = (/** @type {number} */ pos, /** @type {number} */ n) => ({ ...para(pos, Array.from({ length: 6 * n }, () => 'y'.repeat(10)).join(' ')), after: 0 });
-  // two lines left: a heading and one line of the paragraph after it would fit; the heading goes to the next column with it
-  const h = { ...heading(5000, '## Part', 1), before: 0, after: 0 };
-  assert.equal(layoutOf([long(1, 5)], MEASURE_CPL).lines.length, 5, 'the paragraph sets five lines');
-  assert.equal(at([...filler(2), h, long(6000, 5)], 5000), 1, 'the heading moves to the next column with its text');
-  assert.equal(at([...filler(3), h, long(6000, 5)], 5000), 0, 'three lines left: the heading and its first two lines stand at the foot');
-  // two lines left before a five-line paragraph: two at the foot, three at the head
+  // a typed line of `n` full lines: six words of ten characters a line, the space after the sixth hanging
+  const long = (/** @type {number} */ pos, /** @type {number} */ n) => para(pos, Array.from({ length: 6 * n }, () => 'y'.repeat(10)).join(' '));
+  assert.equal(layoutOf([long(1, 5)], MEASURE_CPL).lines.length, 5, 'the typed line sets five lines');
+  // two lines left before a five-line typed line: two at the foot, three at the head
   const two = fold(layoutOf([...filler(2), long(6000, 5)], MEASURE_CPL).lines, ROOM);
   assert.deepEqual(two.columns.map((c) => two.lines.slice(c.first, c.first + c.n).filter((l) => l.pos === 6000).length), [2, 3], 'two lines at the foot, three at the head');
-  // one line left: no orphan at the foot — the paragraph moves whole
+  // one line left: no orphan at the foot — the typed line moves whole
   assert.equal(at([...filler(1), long(6000, 5)], 6000), 1);
   const one = fold(layoutOf([...filler(1), long(6000, 5)], MEASURE_CPL).lines, ROOM);
   assert.equal(one.lines.filter((l, i) => l.pos === 6000 && i < one.columns[0].first + one.columns[0].n).length, 0, 'no lone line at the foot');
-  // four lines left before a five-line paragraph: three at the foot leave a widow; the break moves one line up
+  // four lines left before a five-line typed line: three at the foot leave a widow; the break moves one line up
   const four = fold(layoutOf([...filler(4), long(6000, 5)], MEASURE_CPL).lines, ROOM);
   assert.deepEqual(four.columns.map((c) => four.lines.slice(c.first, c.first + c.n).filter((l) => l.pos === 6000).length), [3, 2], 'never a lone line at the head');
-  // a three-line paragraph two lines from the foot moves whole
+  // a three-line typed line two lines from the foot moves whole
   const t = fold(layoutOf([...filler(2), long(6000, 3)], MEASURE_CPL).lines, ROOM);
-  assert.deepEqual(t.columns.map((c) => t.lines.slice(c.first, c.first + c.n).filter((l) => l.pos === 6000).length), [0, 3], 'a paragraph of three lines or fewer moves whole');
+  assert.deepEqual(t.columns.map((c) => t.lines.slice(c.first, c.first + c.n).filter((l) => l.pos === 6000).length), [0, 3], 'a typed line of three lines or fewer moves whole');
 });
 
 test('the head, a record and a withheld run are never split; a kept unit deeper than a column is broken at a line anyway, so no text is dropped', () => {
-  const filler = Array.from({ length: COLUMN_LINES - 2 }, (_, i) => ({ ...para(1 + i * 20, 'x'.repeat(10)), after: 0 }));
+  const filler = Array.from({ length: COLUMN_LINES - 2 }, (_, i) => para(1 + i * 20, 'x'.repeat(10)));
   const withheld = row('gap', 9000, [], { width: MEASURE_CPL * 4, keep: 'whole' });
   const f = fold(layoutOf([...filler, withheld], MEASURE_CPL).lines, ROOM);
   assert.deepEqual(f.columns.map((c) => f.lines.slice(c.first, c.first + c.n).filter((l) => l.pos === 9000).length), [0, 4], 'the withheld run moves whole');
   const record = [row('text', 9000, [piece('skep-enroll', 1, { own: false })], { keep: 'whole' }), row('text', null, [piece('dev · device', 1, { own: false })], { keep: 'joined' })];
-  const fr = fold(layoutOf([...Array.from({ length: COLUMN_LINES - 1 }, (_, i) => ({ ...para(1 + i * 20, 'x'), after: 0 })), ...record], MEASURE_CPL).lines, ROOM);
+  const fr = fold(layoutOf([...Array.from({ length: COLUMN_LINES - 1 }, (_, i) => para(1 + i * 20, 'x')), ...record], MEASURE_CPL).lines, ROOM);
   assert.ok(fr.columns.length === 2 && fr.lines.slice(fr.columns[1].first).every((l) => l.pos === 9000), 'a record\'s words and keys stand together');
   const deep = fold(layoutOf([row('gap', 1, [], { width: MEASURE_CPL * COLUMN_LINES * 2, keep: 'whole' })], MEASURE_CPL).lines, ROOM);
   assert.equal(deep.columns.length, 2, 'a withheld run two columns deep takes two columns');
@@ -507,8 +536,7 @@ test('a passage held across two versions\' folds by the pair of positions its mo
 
 test('the measurements the CSS reads are P-LAY\'s, one source: the fold\'s measure as a count the style multiplies by the advance, a bare count of em', () => {
   const v = cssMeasures();
-  assert.equal(v['--gap'], MEASURE.gap + 'em');
-  assert.equal(v['--h2'], MEASURE.h2 + 'em');
+  assert.equal(v['--indent'], MEASURE.indent + 'em');
   assert.equal(v['--head'], MEASURE.head + 'em');
   assert.equal(v['--measure'], String(MEASURE_CPL));
   assert.deepEqual([v['--char-w'], v['--line-h']], [String(CHAR_W), String(LINE_H)], 'the advance and the line height, bare');

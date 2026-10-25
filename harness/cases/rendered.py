@@ -206,22 +206,24 @@ def run(ctx):
     marks_vis = ctx.js('window.__skep.visible(%s)' % json.dumps('#domlayer .sp[data-addr="%s"] .pubmark[data-mark="C-33"]' % DOC))
     r.check(bool(marks_vis) and all(m['inClip'] for m in marks_vis), 'C-33\'s mark on the window run lies inside the article\'s clip (shown, not merely held)', [m for m in marks_vis if not m['inClip']])
     r.figures['shown'] = {'blocks': len(blocks_vis), 'blocks_past_clip': len(hidden), 'c33_marks': len(marks_vis), 'c33_marks_past_clip': sum(1 for m in marks_vis if not m['inClip'])}
-    # (iii) the mirror
+    # (iii) the mirror: an item for each element of the walk — every block but a typed line of white space alone and the
+    # newlines before a run's first typed line (rule 20) — and each link drawn
     size = ctx.js('window.__skep.mirror.size()')
     shown = ctx.js('window.__skep.links.shown(%s)' % json.dumps(DOC))
-    r.check(size == len(doc['blocks']) + len(shown), 'the mirror lists the document\'s blocks and the links drawn', {'mirror': size, 'blocks': len(doc['blocks']), 'links': len(shown)})
+    elements = [b for b in doc['blocks'] if b['kind'] != 'para' or (b['text'] or '').strip() != '']
+    r.check(size == len(elements) + len(shown), 'the mirror lists the document\'s elements — each typed line holding more than white space, each item — and the links drawn', {'mirror': size, 'elements': len(elements), 'blocks': len(doc['blocks']), 'links': len(shown)})
     mirror_miss = []
-    for i, b in enumerate(doc['blocks']):
+    for i, b in enumerate(elements):
         item = ctx.js('window.__skep.mirror.item(%d)' % i) or ''
         if b['kind'] == 'para' and squash(b['text']) not in squash(item):
             mirror_miss.append({'i': i, 'pos': b['pos'], 'item': item[:100]})
         if 'Item %d of %d.' % (i + 1, size) not in item:
             mirror_miss.append({'i': i, 'posinset': item[-40:]})
-    r.check(not mirror_miss, '(iii) every block\'s mirror item quotes its text and its place in the set', mirror_miss)
+    r.check(not mirror_miss, '(iii) every element\'s mirror item quotes its text and its place in the set', mirror_miss)
     focus = ctx.js('window.__skep.view.focus()')
     r.check(focus and focus['kind'] == 'block' and window_block and focus['pos'] == window_block['pos'], 'the focus landed on the block holding position 1467', focus)
     r.check(ctx.js('window.__skep.view.lod()')['name'] == 'near', 'the landing is at reading scale')
-    r.figures['first_edition'] = {'extent': doc['extent'], 'blocks': len(doc['blocks']), 'links_drawn': len(shown), 'links_named': len(doc['links']), 'mirror': size}
+    r.figures['first_edition'] = {'extent': doc['extent'], 'blocks': len(doc['blocks']), 'elements': len(elements), 'links_drawn': len(shown), 'links_named': len(doc['links']), 'mirror': size}
     # the owner's links in place (B1-S1): each drawn link's span lies in the oracle's text and its mark is the person's hue
     r.check(len(shown) >= 1 and all(s['linker'] == 'you' for s in shown), 'the owner\'s citations are drawn in the person\'s hue (the owner is the person)', [s['linker'] for s in shown][:5])
     # ---- S3: the far scale — counts against the census fold --------------------

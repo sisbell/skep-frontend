@@ -8,7 +8,8 @@
 // resize re-setting the article being read with the passage held; a
 // document's region and the view's window over it; the passage in view
 // keeping its place through a reveal, a feed row's take-down, a version move
-// and an edit above the view, by its bytes' identity; what stands — every
+// and an edit above the view, by its bytes' identity, the view's centre on an
+// empty line typed below it as well; what stands — every
 // readable document in the one frame, the limit's order below it, by line,
 // the selection's and the focus's lines held, hysteresis, stale articles set
 // again and a press holding them; the owner a withheld run names; C-67's
@@ -24,7 +25,7 @@ import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as LAYER from './layer.js';
 import * as CAM from '../plane/camera.js';
-import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, CHAR_W } from '../plane/layout.js';
+import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, CHAR_W, LINE_H } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
 import { holdTop, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
@@ -41,8 +42,8 @@ const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {n
 const whole = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: doc.split('.').slice(0, 3).join('.'), whole: true, subspace: null, ordinal: null, positions: null });
 /** a paragraph of `n` words of two to nine characters, varied by `seed` */
 const words = (/** @type {number} */ n, /** @type {number} */ seed) => Array.from({ length: n }, (_, i) => 'abcdefghij'.slice(0, 2 + ((i * 7 + seed) % 8))).join(' ');
-/** ninety-six paragraphs: eleven columns hidden, past the standard grid's twelve with its links' symbols */
-const TEXT = Array.from({ length: 96 }, (_, i) => words(30, i)).join('\n\n');
+/** eighty-four typed lines, an empty line after each: eleven columns hidden, past the standard grid's twelve with its links' symbols */
+const TEXT = Array.from({ length: 84 }, (_, i) => words(30, i)).join('\n\n');
 const EXTENT = new TextEncoder().encode(TEXT).length;
 /** a model move that changes nothing the article shows: the model's revision moves, so no fold is read from before it */
 const moveModel = () => REC.setDaemon(REC.daemon() === 'running' ? 'stopped' : 'running');
@@ -311,7 +312,10 @@ test('the measure in force: every document folded at what the view holds — the
   const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D));
   assert.equal(f0.cpl, MEASURE_CPL, '1440 px: the full measure');
   const c = f0.columns[4];
-  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h * 0.4, scale: 12 / f0.fs });
+  // the view's centre on the first line of a typed line two-fifths down the column: it opens at its block's start at every measure
+  const top = (/** @type {import('../plane/layout.js').Line} */ l) => c.y + (l.top - c.top) * f0.fs, mid = c.y + c.h * 0.4;
+  const first = f0.lines.slice(c.first, c.first + c.n).filter((l) => l.kind === 'text' && l.nth === 0).reduce((a, l) => (Math.abs(top(l) - mid) < Math.abs(top(a) - mid) ? l : a));
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + top(first) + (first.h / 2) * f0.fs, scale: 12 / f0.fs });
   LAYER.frame();
   assert.ok(LAYER.isMounted(D), 'read at em 12');
   const pos = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y));
@@ -578,6 +582,31 @@ test('where the edited text comes before its image, the line is held by its posi
   REC.takeImage(D, 1, [{ iStart: `${D}.0.1.${EXTENT + SHIFT + 1}`, width: more }, ...EDITED_IMAGE]);
   LAYER.frame();
   assert.deepEqual(CAM.view(), panned, 'the reader moved the camera before the image arrived: it stands where they left it, never pulled back to the words');
+}, 1440, 900));
+
+test('read with the view\'s centre on the empty line typed below a line, a document edited above the view whose text comes before its image keeps that line\'s words where they stood: the re-set by position and the one the image makes hold the one line (FP-8, FP-23)', () => onLayer(() => {
+  deliver();
+  const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[6], lh = LINE_H * f0.fs;
+  const top = (/** @type {import('../plane/layout.js').Line} */ l) => c.y + (l.top - c.top) * f0.fs;
+  // a typed line's last line in the column, an empty line typed below it before the next typed line
+  const lines = f0.lines.slice(c.first, c.first + c.n);
+  const k = lines.findIndex((l, i) => i > lines.length / 3 && i + 1 < lines.length && lines[i + 1].pos !== l.pos && top(lines[i + 1]) - (top(l) + l.h * f0.fs) > 0.9 * lh);
+  assert.ok(k > 0, 'a line with an empty line typed below it');
+  const l = lines[k];
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + top(l) + l.h * f0.fs + 0.4 * lh, scale: 12 / f0.fs });
+  LAYER.frame();
+  const pos = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y));
+  assert.equal(pos, l.at, 'the view\'s centre on the empty line: the line above it read');
+  const screen = (/** @type {number} */ at) => { const p = placeOf(LAYER.foldOf(REC.doc(D)), at); return { x: CAM.sx(box.x + p.x), y: CAM.sy(box.y + p.y) }; };
+  const was = screen(pos);
+  REC.invalidate(D);
+  LAYER.frame();
+  deliverEdited(false);
+  LAYER.frame();
+  assert.ok(together(screen(pos), was), 'set again from its text alone: the line by position where it stood');
+  REC.takeImage(D, 1, EDITED_IMAGE);
+  LAYER.frame();
+  assert.ok(together(screen(pos + SHIFT), was), `the image arrived: the same words' line where it stood, never the line the view's centre fell on — ${JSON.stringify(was)} → ${JSON.stringify(screen(pos + SHIFT))}`);
 }, 1440, 900));
 
 test('every document in view at the readable em stands in the frame it gets there, however many: no count holds one back', () => onLayer((held) => {
@@ -956,13 +985,13 @@ test('a face arriving after the first layout is a re-set: the type measured agai
   } finally { setAdvance(before); LAYER.refaced(); }
 }, 1440, 900));
 
-test('a box\'s label sets its address in the identifier\'s face and its first line\'s words in the reading face, its draft mark the client\'s; a withheld box\'s statement the client\'s, the owner it names the identifier\'s — on the canvas and in the chrome alike (issue #16)', () => {
+test('a box\'s label sets its address in the identifier\'s face and its first line\'s words, as typed, in the reading face, its draft mark the client\'s; a withheld box\'s statement the client\'s, the owner it names the identifier\'s — on the canvas and in the chrome alike (issue #16)', () => {
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: '# The artifact chain', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
   const d = REC.doc(D), [addr, first] = LAYER.docLabel(d, 300, 12);
   assert.deepEqual([addr.text, addr.face], [LAYER.shortAddr(d), 'ident'], 'the address past its region\'s prefix, in the identifier\'s face');
-  assert.deepEqual(runsOf(first.text, first.face || 'client'), [{ text: 'The artifact chain', face: 'reading' }, { text: ' · ' + t('F.label.draft'), face: 'client' }], 'the first line\'s words the reading face\'s, its heading marks dropped; the draft mark the client\'s');
-  assert.equal(LAYER.firstLineHTML(d), `<span class="reading">The artifact chain</span>${esc(' · ' + t('F.label.draft'))}`, 'in the chrome: the words in the reading face');
-  assert.equal(LAYER.firstLine(d), 'The artifact chain · ' + t('F.label.draft'), 'as words, the same');
+  assert.deepEqual(runsOf(first.text, first.face || 'client'), [{ text: '# The artifact chain', face: 'reading' }, { text: ' · ' + t('F.label.draft'), face: 'client' }], 'the first line\'s words the reading face\'s, its characters as typed, "#" among them; the draft mark the client\'s');
+  assert.equal(LAYER.firstLineHTML(d), `<span class="reading"># The artifact chain</span>${esc(' · ' + t('F.label.draft'))}`, 'in the chrome: the words in the reading face');
+  assert.equal(LAYER.firstLine(d), '# The artifact chain · ' + t('F.label.draft'), 'as words, the same');
   REC.takeRefused(D, 'withheld');
   const held = LAYER.docLabel(REC.doc(D), 300, 12)[1];
   assert.deepEqual(runsOf(held.text, held.face || 'client'), [{ text: 'withheld · ', face: 'client' }, { text: '1.0.1', face: 'ident' }], 'withheld: the statement the client\'s, its owner the identifier\'s');

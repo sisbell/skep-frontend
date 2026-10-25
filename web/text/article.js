@@ -37,7 +37,7 @@
 // and never inside the text, so it sets no line (`edgeStyle`; A-254;
 // FP-26); and the symbols the reveal asked for, each at its span
 // (foundations §2.1; B1-S4): right after the last word its span touches, in
-// the last paragraph its drawn stretches touch (`standOf`). Every link is
+// the last typed line its drawn stretches touch (`standOf`). Every link is
 // marked, and its symbol set, at the stretches LK says its end is drawn on
 // (the view's `marks`, `symbols`), never at the position its slot stores,
 // each mark and symbol carrying the ends it draws by their links and their
@@ -102,10 +102,14 @@
 // bars the canvas draws below reading scale, so the hand-off swaps bars for
 // text and no line moves (FP-8; law 8; S1 Q7). The HTML and the plan are
 // made from one walk of the document (`walk`), so the two can never decide a
-// block differently; every size and gap the plan carries is P-LAY's shared
-// measurement, which the CSS reads too. A markdown heading is set as a
-// heading, the owner's formatting rendered as formatting and never marked
-// (rule (iii)).
+// block differently; every size and room the plan carries is P-LAY's shared
+// measurement, which the CSS reads too. A typed line is set as its bytes are
+// typed, in the body's type (FP-12): every character in its place, its white
+// space kept, none dropped, and nothing the bytes alone suggest — a heading,
+// emphasis, a list, a table — drawn as structure; it opens on an indent where
+// it opens a typed line (`Part.opens`), the empty lines typed after it stand
+// as whole line boxes below it (`Part.blank`), and no other room stands
+// between blocks, so a column keeps its grid of lines.
 // The item rule (`itemOf`; FP-24): every block that holds no text is an
 // item of one kind — a record the record rule renders, a reference, a
 // withheld run, or an item this client cannot show (hex, an atom of any
@@ -129,7 +133,7 @@ import { t, tHTML, plural } from '../strings.js';
 import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
-import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm, headingSize, breakBetween, isSpace, gapOf, layoutOf, heightOf, wrap } from '../plane/layout.js';
+import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm, breakBetween, isSpace, gapOf, layoutOf, heightOf, wrap } from '../plane/layout.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -463,11 +467,12 @@ export const symbolLit = (links, lit) => links.length > 0 && links.every((l) => 
 /**
  * @typedef {Object} Part — one block of the article as the walk decided it
  * @property {Block} b
- * @property {'withheld' | 'record' | 'ref' | 'unshown' | 'para'} kind a withheld run; a record the record rule renders; a reference; an item this client cannot show (`itemOf`); a paragraph
- * @property {number} level a paragraph's heading level, 0 for a paragraph
- * @property {Seg[]} segs a paragraph's stretches, the symbols standing in it among them
+ * @property {'withheld' | 'record' | 'ref' | 'unshown' | 'para'} kind a withheld run; a record the record rule renders; a reference; an item this client cannot show (`itemOf`); a typed line
+ * @property {boolean} opens a typed line's: it opens a typed line — it holds a character and begins the document or follows a newline — and so stands on the indent; false where it continues the line an item or positions not held began, and on every other block
+ * @property {number} blank a typed line's: the empty lines typed after it, each a body line box below it (`blankOf`); 0 on every other block
+ * @property {Seg[]} segs a typed line's stretches, the symbols standing in it among them
  * @property {Shown[]} ends a withheld run's: the ends drawn at it (LK's `Shown.run`), in the order LK drew them, which the one symbol at the start of its gap stands for
- * @property {{n: number, social: boolean}} count the others' count at a paragraph or a withheld run
+ * @property {{n: number, social: boolean}} count the others' count at a typed line or a withheld run
  * @property {Rec | null} rec a record atom's record
  */
 
@@ -479,12 +484,39 @@ export const symbolLit = (links, lit) => links.length > 0 && links.every((l) => 
  * @property {string[]} offers the documents this one windows (the scene-offers), none in the scene
  */
 
+/** the newlines a typed line's block holds after its characters: its width past their bytes, each newline one byte (M-REC's `deriveBlocks`) */
+const newlinesOf = (/** @type {Block} */ b) => b.width - byteLength(b.text);
+
 /**
- * A heading's level where a paragraph is a markdown heading, else 0 (the
- * structural family rendered as formatting, never marked).
- * @param {string} text
+ * The empty lines typed after a typed line's block (`Part.blank`): the
+ * newlines it holds after its characters but the one that ends its own line;
+ * where it holds none — the newlines before a run's first typed line — every
+ * newline it holds but the one that ends the line of an item standing right
+ * before it.
+ * @param {Block} b
+ * @param {Block | undefined} prev the block before it, in the document's order
+ * @returns {number}
  */
-export const headingLevel = (text) => { const m = /^(#{1,6})\s/.exec(text); return m ? m[1].length : 0; };
+function blankOf(b, prev) {
+  const n = newlinesOf(b);
+  if (b.text) return Math.max(0, n - 1);
+  return Math.max(0, n - (prev && prev.kind !== 'para' && prev.pos + prev.width === b.pos ? 1 : 0));
+}
+
+/**
+ * Does a typed line's block open a typed line (`Part.opens`): it holds a
+ * character and begins the document, or stands right after a block whose
+ * newline ends the line before it — never after an item or positions not
+ * held, whose line it continues.
+ * @param {Block} b
+ * @param {Block | undefined} prev the block before it, in the document's order
+ * @returns {boolean}
+ */
+function opensLine(b, prev) {
+  if (!b.text) return false;
+  if (b.pos === 1) return true;
+  return !!prev && prev.kind === 'para' && prev.pos + prev.width === b.pos && newlinesOf(prev) > 0;
+}
 
 /**
  * The record rule: a record atom that names its type renders as the record
@@ -544,7 +576,7 @@ const ITEM_WORDS = /** @type {const} */ ({ record: 'L.item.record', reference: '
  * that holds no text — a record, an atom whose value the record rule renders
  * as one (`recordOf`); a reference, a link position's item; a withheld run;
  * else an item this client cannot show, hex or an atom of any other value —
- * and null for a paragraph, whose text is the document's own. The ARIA
+ * and null for a typed line, whose text is the document's own. The ARIA
  * mirror's item at the block (N-WALK) and a copy's stand-in in its place
  * (`copyText`) both read it, so what is announced and what is pasted never
  * part; its record is the one the plane renders as a record (M-REC's
@@ -947,9 +979,9 @@ export function cornerHTML(d, v, compact = false) {
 const isLow = (/** @type {number} */ u) => u >= 0xdc00 && u <= 0xdfff;
 
 /**
- * Where a link's symbol stands in a paragraph's text: right after the last
+ * Where a link's symbol stands in a typed line's text: right after the last
  * word its span touches — the first point at or after the span's last
- * character that is not a space where P-LAY may break the paragraph's line
+ * character that is not a space where P-LAY may break its line
  * with no symbol in it: before a space, between a pair `breakBetween` allows,
  * beside an inline-block, at the text's end. Set there, a symbol adds room
  * to a line and no place to break it, so the article without its symbols is
@@ -960,10 +992,10 @@ const isLow = (/** @type {number} */ u) => u >= 0xdc00 && u <= 0xdfff;
  * falls between them: a word that runs into a hairline so takes its symbol
  * after the run's chrome, never inside it. A span of spaces alone takes its
  * symbol where it ends.
- * @param {string} text the paragraph's text
+ * @param {string} text the typed line's text
  * @param {number} c0 the span's first character in it
  * @param {number} c1 one past the span's last character in it
- * @param {(i: number) => (Chrome | null)} chromeAt the chrome of the run whose first stretch in the paragraph starts at character `i`
+ * @param {(i: number) => (Chrome | null)} chromeAt the chrome of the run whose first stretch in the typed line starts at character `i`
  * @returns {{at: number, after: boolean}} the character the symbol stands before (the text's length at its end), and whether it stands after the chrome there
  */
 export function standOf(text, c0, c1, chromeAt) {
@@ -1009,7 +1041,7 @@ export function standOf(text, c0, c1, chromeAt) {
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {Set<string>} labelled the origins already labelled whole in this article
- * @param {Array<{s: Shown, r: Stretch}>} standing the symbols standing in this block, each with the stretch it stands after: its last drawn stretch a paragraph holds, which ends in this one
+ * @param {Array<{s: Shown, r: Stretch}>} standing the symbols standing in this block, each with the stretch it stands after: its last drawn stretch a typed line holds, which ends in this one
  * @returns {Seg[]}
  */
 function segmentsOf(b, d, v, labelled, standing) {
@@ -1087,14 +1119,14 @@ function headOf(d, v, owner) {
 /**
  * The one walk of a document both renderings are made from: the head, then
  * each block decided once — withheld, with the ends drawn at it and its
- * others' count, a record, a reference, an item not rendered, or a paragraph
- * with its heading level, its stretches with the symbols standing at them,
- * and its others' count — then the empty document's line and the
- * scene-offers. A symbol stands in the last paragraph its drawn stretches
- * touch — the paragraph the last of them a paragraph holds ends in — once
- * however many it crosses; an end LK draws at a withheld run (`Shown.run`)
- * stands in that run's gap at every stage, the gap having no text to mark
- * (FP-30).
+ * others' count, a record, a reference, an item not rendered, or a typed
+ * line, whether it opens a typed line (`opensLine`), the empty lines typed
+ * after it (`blankOf`), its stretches with the symbols standing at them and
+ * its others' count — then the empty document's line and the scene-offers. A
+ * symbol stands in the last typed line its drawn stretches touch — the one
+ * the last of them a typed line holds ends in — once however many it
+ * crosses; an end LK draws at a withheld run (`Shown.run`) stands in that
+ * run's gap at every stage, the gap having no text to mark (FP-30).
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -1106,7 +1138,7 @@ function walk(d, v, ownerAccount) {
   if (d.refused) return { head, parts: null, empty: false, offers: [] };
   /** @type {Set<string>} */
   const labelled = new Set();
-  // the symbols standing in each paragraph, by its first position: the paragraph the last of each one's drawn stretches a paragraph holds ends in
+  // the symbols standing in each typed line, by its first position: the typed line the last of each one's drawn stretches a typed line holds ends in
   /** @type {Map<number, Array<{s: Shown, r: Stretch}>>} */
   const standing = new Map();
   for (const s of v.symbols) {
@@ -1122,15 +1154,16 @@ function walk(d, v, ownerAccount) {
   }
   const none = { n: 0, social: false };
   /** @type {Part[]} */
-  const parts = d.blocks.map((b) => {
+  const parts = d.blocks.map((b, i) => {
     /** @type {Part} */
-    const p = { b, kind: 'para', level: 0, segs: [], ends: [], count: none, rec: null };
+    const p = { b, kind: 'para', opens: false, blank: 0, segs: [], ends: [], count: none, rec: null };
     if (b.kind === 'withheld') { p.kind = 'withheld'; p.ends = v.marks.filter((s) => !!s.run && s.run.pos === b.pos); p.count = v.countAt(b); }
     else if (b.kind === 'ref') p.kind = 'ref';
     else if (itemOf(b) === 'unshown') p.kind = 'unshown';
     else if (b.kind === 'atom') { p.kind = 'record'; p.rec = recordOf(b, d, v.reader); }
     else {
-      p.level = headingLevel(b.text);
+      p.opens = opensLine(b, d.blocks[i - 1]);
+      p.blank = blankOf(b, d.blocks[i - 1]);
       p.segs = segmentsOf(b, d, v, labelled, standing.get(b.pos) || []);
       p.count = v.countAt(b);
     }
@@ -1190,7 +1223,15 @@ function runSymHTML(ends, v) {
 }
 
 /**
- * A stretch of a paragraph's text as HTML: its links marked by their depth
+ * A document's characters as markup, every one kept: escaped, a carriage
+ * return written as its character reference, which the parser keeps as the
+ * character typed where it would read the character itself as a line's end.
+ * @param {string} text
+ */
+const typedHTML = (text) => esc(text).replace(/\r/g, '&#13;');
+
+/**
+ * A stretch of a typed line's text as HTML: its links marked by their depth
  * in the one mark they merge into — its hue, its value, `visited` where it is
  * drawn lighter — carrying the ends marking it, their links and their keys
  * (LK's `endKey`) in one order, the first the end whose card a click on it
@@ -1198,7 +1239,7 @@ function runSymHTML(ends, v) {
  * boundary, hairline and C-33's mark — the hairline naming the run's origin,
  * in the identifier's face, and carrying the run's own positions in this document, the passage its
  * gesture to the source carries (foundations §2.1, §2.3) — then
- * the symbols standing at it — the text's own characters untouched.
+ * the symbols standing at it — the text's own characters untouched (`typedHTML`).
  * @param {Seg} s
  * @param {ArticleView} v the view: in its scene-mode variant the symbols no controls
  */
@@ -1218,15 +1259,18 @@ function segHTML(s, v) {
     attrs.push(`data-origin="${esc(o)}"`);
     const chrome = !at ? '' : `<span class="hairline ${at.whole ? 'whole' : 'compact'}" data-src="${esc(o)}" data-pos="${s.origin.pos}" data-width="${s.origin.width}" title="${esc(o)}">${labelHTML(s.origin, at)}</span>` +
       (at.c33 ? `<span class="pubmark" data-mark="C-33">${esc(t('C-33'))}</span>` : '');
-    return `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${chrome}${s.chromeSyms.map((x) => symHTML(x, v)).join('')}${esc(s.text)}</span>${syms}`;
+    return `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${chrome}${s.chromeSyms.map((x) => symHTML(x, v)).join('')}${typedHTML(s.text)}</span>${syms}`;
   }
-  return (cls.length > 1 ? `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${esc(s.text)}</span>` : esc(s.text)) + syms;
+  return (cls.length > 1 ? `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${typedHTML(s.text)}</span>` : typedHTML(s.text)) + syms;
 }
 
 /**
  * The article: the head and the blocks (each a span the walk and the mirror
- * key by its first position, and a click on the plane selects whole); its
- * corner stands beside it (`cornerHTML`).
+ * key by its first position, and a click on the plane selects whole) — a
+ * typed line a `p` in the body's type, on the indent where it opens a typed
+ * line (`indent`), the empty lines typed after it its room below it
+ * (`--blank`, in body line boxes); its corner stands beside it
+ * (`cornerHTML`).
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} ownerAccount the owner by `effective_owner`, or the document's account
@@ -1245,14 +1289,14 @@ export function articleHTML(d, v, ownerAccount) {
     if (p.kind === 'withheld') { run += withheldBlockHTML(b, d, v, { ends: p.ends, count: p.count }); continue; }
     const mark = blockMarks(d.addr, b, v.selected, v.focus);
     const cls = ['sp', 'blk-' + b.kind];
+    if (p.opens) cls.push('indent');
     if (mark.sel) cls.push('sel');
     if (mark.lit) cls.push('lit');
     const at = `data-addr="${esc(d.addr)}" data-pos="${b.pos}" data-width="${b.width}"`;
     if (p.kind === 'record') { run += `<span class="${cls.join(' ')}" ${at}>${recordHTML(b, d, v)}</span>`; continue; }
     if (p.kind === 'ref') { run += `<span class="${cls.join(' ')} ref" ${at}>⟡</span>`; continue; }
     if (p.kind === 'unshown') { run += unshownHTML(b, v, cls.join(' '), at); continue; }
-    const tag = p.level ? 'h' + Math.min(6, p.level + 1) : 'p';
-    run += `<${tag} class="${cls.join(' ')}" ${at}>${countHTML(p.count, headingSize(p.level))}${p.segs.map((s) => segHTML(s, v)).join('')}</${tag}>`;
+    run += `<p class="${cls.join(' ')}" ${at}${p.blank ? ` style="--blank:${p.blank}"` : ''}>${countHTML(p.count, 1)}${p.segs.map((s) => segHTML(s, v)).join('')}</p>`;
   }
   if (w.empty) run += `<p class="sp empty" data-addr="${esc(d.addr)}" data-pos="1" data-width="0">${esc(t('B1.empty_subspace'))}</p>`;
   for (const o of w.offers) run += `<span class="offer" data-scene="${esc(d.addr)}|${esc(o)}" role="button" tabindex="-1">${htmlIn('B1.scene-offer', { D: o }, { D: 'ident' })}</span>`;
@@ -1316,18 +1360,18 @@ const bylinePieces = (by, k) => [piece(by.owner + BY_SEP, k), { text: '', size: 
  * @param {number | null} pos the block it opens
  * @param {number} size the size its box is set at, in the body's em
  * @param {Piece[]} pieces
- * @param {{after?: number, before?: number, width?: number, keep?: Keep}} [o] its margins in the body's em, a withheld run's width, where a column may break at it (P-LAY's `Keep`; none inside it where none is said)
+ * @param {{after?: number, before?: number, width?: number, keep?: Keep, pre?: boolean, indent?: number}} [o] its margins in the body's em, a withheld run's width, where a column may break at it (P-LAY's `Keep`; none inside it where none is said), whether it is a typed line, its white space kept, and its first line's indent in the body's em
  * @returns {Row}
  */
-const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0, keep: o.keep ?? 'whole' });
+const row = (kind, pos, size, pieces, o = {}) => ({ kind, pos, size, pieces, before: o.before ?? 0, after: o.after ?? 0, width: o.width ?? 0, keep: o.keep ?? 'whole', pre: o.pre ?? false, indent: o.indent ?? 0 });
 
 /**
- * A paragraph's inline pieces at its size, as `segHTML` sets them: each
+ * A typed line's inline pieces at its size, as `segHTML` sets them: each
  * stretch of its text — the one that opens a run led by the run's sameness
  * boundary, its hairline's label and C-33's mark where it carries one, and
  * the symbols standing after them — then the symbols standing after it.
  * @param {Part} p
- * @param {number} k the paragraph's size, in the body's em
+ * @param {number} k the typed line's size, in the body's em
  * @returns {Piece[]}
  */
 function paraPieces(p, k) {
@@ -1345,12 +1389,12 @@ function paraPieces(p, k) {
 }
 
 /**
- * The article as P-LAY's plan: the head's lines, each block's rows at its
- * size with its margins — a heading's room above it and the smaller room
- * below, every other block's gap after it — the empty document's line, the
+ * The article as P-LAY's plan: the head's lines, each block's rows at the
+ * body's size — a typed line kept as typed, on the indent where it opens a
+ * typed line, the empty lines typed after it whole body line boxes below it,
+ * and no other room between blocks — the empty document's line, the
  * scene-offers — from the same walk the HTML is made from; each row's keep,
- * where a column may break at it (FP-12): a paragraph
- * between its lines, a heading kept with the first two lines after it, the
+ * where a column may break at it (FP-12): a typed line between its lines, the
  * head, a record, a withheld run, a reference, an item not rendered and the
  * chrome whole.
  * @param {Doc} d
@@ -1360,7 +1404,7 @@ function paraPieces(p, k) {
  */
 export function articlePlan(d, v, ownerAccount) {
   const w = walk(d, v, ownerAccount);
-  const H = MEASURE.head, gap = MEASURE.gap;
+  const H = MEASURE.head;
   const joined = /** @type {const} */ ({ keep: 'joined' });
   /** @type {Row[]} */
   const rows = [row('head', null, 1, [piece(w.head.addr, 1)]), row('head', null, H, [piece(w.head.state, H)], joined), row('head', null, H, bylinePieces(w.head.byline, H), joined)];
@@ -1368,18 +1412,14 @@ export function articlePlan(d, v, ownerAccount) {
   if (!w.parts) return rows;
   for (const p of w.parts) {
     const b = p.b;
-    if (p.kind === 'withheld' || p.kind === 'unshown') rows.push(row('gap', b.pos, 1, [], { after: gap, width: b.width }));
+    if (p.kind === 'withheld' || p.kind === 'unshown') rows.push(row('gap', b.pos, 1, [], { width: b.width }));
     else if (p.kind === 'record' && p.rec) {
-      if (p.rec.keys) rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)]), row('text', null, 1, [piece(p.rec.keys, 1)], { after: gap, ...joined }));
-      else rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)], { after: gap }));
-    } else if (p.kind === 'ref') rows.push(row('text', b.pos, 1, [piece('⟡', 1)], { after: gap }));
-    else {
-      const k = headingSize(p.level);
-      const margins = p.level ? { before: MEASURE.headingBefore * k, after: MEASURE.headingAfter * k, keep: /** @type {const} */ ('heading') } : { after: gap * k, keep: /** @type {const} */ ('lines') };
-      rows.push(row('text', b.pos, k, paraPieces(p, k), margins));
-    }
+      if (p.rec.keys) rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)]), row('text', null, 1, [piece(p.rec.keys, 1)], joined));
+      else rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)]));
+    } else if (p.kind === 'ref') rows.push(row('text', b.pos, 1, [piece('⟡', 1)]));
+    else rows.push(row('text', b.pos, 1, paraPieces(p, 1), { after: p.blank * LINE_H, keep: 'lines', pre: true, indent: p.opens ? MEASURE.indent : 0 }));
   }
-  if (w.empty) rows.push(row('text', 1, 1, [piece(t('B1.empty_subspace'), 1)], { after: gap }));
+  if (w.empty) rows.push(row('text', 1, 1, [piece(t('B1.empty_subspace'), 1)]));
   const O = MEASURE.offer;
   for (const o of w.offers) rows.push(row('chrome', null, O, [piece(t('B1.scene-offer', { D: o }), O)], { before: MEASURE.offerGap * O, after: MEASURE.offerGap * O }));
   return rows;

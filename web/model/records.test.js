@@ -1,7 +1,7 @@
 // M-REC's test: the index built from `places` and kept by the feed, each
 // listing replacing the last whole with the rows taken meanwhile laid over
-// it; deliveries into blocks that tile their bytes, runs and blocks replaced
-// whole and never edited in place; a link's stored span placed through the
+// it; deliveries into blocks that tile their bytes, each typed line one, runs
+// and blocks replaced whole and never edited in place; a link's stored span placed through the
 // held V→I image, and an end held by the trunk its address lies under or by
 // the text that places it; a stretch named by identity and placed back
 // through any image; projections, edition claims and failed reads held until
@@ -138,6 +138,15 @@ test('a delivery becomes blocks that tile the run in bytes; adjacent runs merge'
   assert.equal(REC.textBetween('1.0.1.0.3', 1, 8), 'Tumbler');
   assert.equal(REC.textBetween('1.0.1.0.3', 11, 13), 'é', 'a two-byte character cut at byte positions');
   assert.equal(d.from, 1); assert.equal(d.to, 21);
+});
+
+test('a content run splits at every newline: each typed line that holds a character one block — a line of spaces among them — its width through its newline and the empty lines typed after it; the newlines before its first typed line one block of no text; the blocks tiling the run', () => {
+  const run = (/** @type {number} */ pos, /** @type {string} */ text) => ({ pos, width: new TextEncoder().encode(text).length, kind: /** @type {const} */ ('content'), text, ref: null, origin: null });
+  const typed = REC.deriveBlocks([run(1, '## Title\nline one\n   \n\nnext')]);
+  assert.deepEqual(typed.map((b) => [b.pos, b.text, b.width]), [[1, '## Title', 9], [10, 'line one', 9], [19, '   ', 5], [24, 'next', 4]], 'a heading\'s marks its own characters, each typed line its block, the empty line in the width of the line of spaces before it');
+  const lead = REC.deriveBlocks([run(7, '\n\nabc\né\n')]);
+  assert.deepEqual(lead.map((b) => [b.pos, b.text, b.width]), [[7, '', 2], [9, 'abc', 4], [13, 'é', 3]], 'the newlines leading the run one block of no text; a typed line\'s bytes, a two-byte character among them');
+  for (const blocks of [typed, lead]) for (let i = 1; i < blocks.length; i++) assert.equal(blocks[i].pos, blocks[i - 1].pos + blocks[i - 1].width, 'the blocks tile the run');
 });
 
 test('a document\'s blocks and runs are replaced whole, never edited in place: the ones a reader took stand as they were', () => {

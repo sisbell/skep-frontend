@@ -109,11 +109,11 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  */
 
 /**
- * @typedef {Object} Block — a paragraph of delivered text, the span grain the walk and the mirror use (the selection is a byte span, which a click takes as the whole block)
+ * @typedef {Object} Block — a typed line of delivered text, or an item, the span grain the walk and the mirror use (the selection is a byte span, which a click takes as the whole block)
  * @property {number} pos the first V-position (1-based) — the block's stable key
- * @property {number} width positions (bytes), the separator after it included
+ * @property {number} width positions (bytes), its newline and the empty lines after it included
  * @property {'para' | 'withheld' | 'atom' | 'ref' | 'hex'} kind
- * @property {string} text the paragraph's text (the separator trimmed), the atom's JSON, or ''
+ * @property {string} text the typed line's characters (its newlines apart), the atom's JSON, or ''
  * @property {string | null} origin a withheld run's origin document
  */
 
@@ -698,9 +698,12 @@ function deliverInto(/** @type {Doc} */ d, /** @type {Run[]} */ runs, /** @type 
 const overlaps = (a, b) => a.pos < b.pos + b.width && b.pos < a.pos + a.width;
 
 /**
- * The blocks of a document's runs: a content run splits at paragraph
- * boundaries (a blank line), each block tiling its positions in bytes; a
- * withheld, atom, ref or hex run is a block of its own.
+ * The blocks of a document's runs: a content run splits at every newline,
+ * each typed line that holds a character — a line of spaces among them — one
+ * block of its characters, its width running through its newline and the
+ * newline of each empty line after it; the newlines before a run's first
+ * typed line one block of no text; a withheld, atom, ref or hex run a block
+ * of its own. The blocks tile the run's positions in bytes.
  * @param {Run[]} runs
  * @returns {Block[]}
  */
@@ -709,17 +712,17 @@ export function deriveBlocks(runs) {
   const out = [];
   for (const r of runs) {
     if (r.kind !== 'content') { out.push({ pos: r.pos, width: r.width, kind: r.kind === 'withheld' ? 'withheld' : r.kind === 'ref' ? 'ref' : r.kind === 'hex' ? 'hex' : 'atom', text: r.text, origin: r.origin }); continue; }
-    const offs = byteOffsets(r.text);
-    const re = /\n[ \t]*\n+/g;
-    let cut = 0;
-    let m;
-    while ((m = re.exec(r.text))) {
-      const end = m.index + m[0].length;
-      const text = r.text.slice(cut, m.index);
-      out.push({ pos: r.pos + offs[cut], width: offs[end] - offs[cut], kind: 'para', text, origin: null });
-      cut = end;
+    const offs = byteOffsets(r.text), s = r.text;
+    const block = (/** @type {number} */ from, /** @type {number} */ to, /** @type {string} */ text) => out.push({ pos: r.pos + offs[from], width: offs[to] - offs[from], kind: 'para', text, origin: null });
+    /** past the newlines from `i` on */
+    const past = (/** @type {number} */ i) => { while (i < s.length && s[i] === '\n') i++; return i; };
+    let at = past(0);
+    if (at > 0) block(0, at, '');
+    while (at < s.length) {
+      const nl = s.indexOf('\n', at), end = nl < 0 ? s.length : nl, next = past(end);
+      block(at, next, s.slice(at, end));
+      at = next;
     }
-    if (cut < r.text.length) out.push({ pos: r.pos + offs[cut], width: offs[r.text.length] - offs[cut], kind: 'para', text: r.text.slice(cut), origin: null });
   }
   return out;
 }

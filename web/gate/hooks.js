@@ -343,10 +343,9 @@ export function install(deps) {
    * the mounted article's block parts as the person meets them: each one's
    * column and the first line of the part it stands in, the character it
    * starts at, its top on screen, its height, and its height in its own line
-   * boxes (its computed line height at the article's scale — a heading's
-   * lines are a heading's, not the body's). A part the article draws as a
-   * withheld run's face is named so. Null where the document's text has not
-   * arrived.
+   * boxes (its computed line height at the article's scale). A part the
+   * article draws as a withheld run's face is named so. Null where the
+   * document's text has not arrived.
    * @param {string} addr
    */
   function barsOf(addr) {
