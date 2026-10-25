@@ -253,6 +253,7 @@ export const STRINGS = {
   'L.moment.empty': { text: 'a name is needed — this box offers none of its own', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
   'L.moment.gone': { text: 'this moment no longer waits — the shell has ended it', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
   'L.walk.waits': { text: '⟨walk⟩ · ⟨step⟩ — waits on you', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
+  'L.scene.closed': { text: 'side by side closed — forward › reopens it', cls: 'DRAFT', source: '', screen: 'the one line; forward ›', lane: true },
   'L.at-position': { text: 'at position ⟨p⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   // a continuation's mark (`markCount`): its count in what it counts — the words of the target that opens its list, its stop's
   // in the ARIA mirror and its list's caption; and the name and place of the member the walk's ring stands on, on the mark

@@ -25,8 +25,8 @@
 // dispatched while an input method's composition is open (the IME guard).
 // Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
 // box, a card or scene still reading, the overlay, a jump reaching, the
-// scene, the selection, and after them all the arrival (FP-21; N-GO's
-// `endArrival`). Mod+L and Mod+K open the LEAP box (K-30), Mod+Y the trail's
+// scene — its close a Back from its entry (N-GO's `closeScene`) — the
+// selection, and after them all the arrival (FP-21; N-GO's `endArrival`). Mod+L and Mod+K open the LEAP box (K-30), Mod+Y the trail's
 // list (K-41), Mod+= and Mod+- zoom the camera by 1.25 about the view's
 // centre and re-take the focus (K-11), Mod+Shift+P shows the one line's strip
 // (K-23), and the selection's slot chords (K-47 … K-52) and K-8's
@@ -317,12 +317,13 @@ async function replay() {
  * A key while the reading scene stands (D5 M-4; K-60 … K-64). The scene
  * covers the plane, and nothing it covers takes a key: the walk, the
  * selection and the corner stand under it as they were. Wherever the focus
- * is, Mod+R re-levels (K-62), Mod+= is swallowed (K-64), Mod+- ends the
- * scene (K-63) and Mod+Shift+P shows the one line's strip (K-23); the
+ * is, Mod+R re-levels (K-62), Mod+= is swallowed (K-64), Mod+- closes the
+ * scene (K-63) — a Back from its entry (N-GO's `closeScene`) — and
+ * Mod+Shift+P shows the one line's strip (K-23); the
  * selection's slot chords, which have nothing to act on in the scene, are
  * taken and do nothing, so the browser's own meanings never run (Mod+Shift+R
  * would reload), as F5 is (K-94). On the one line or a standing overlay every
- * other key is that control's own. Elsewhere ← ends the scene (K-63); a
+ * other key is that control's own. Elsewhere ← closes the scene so (K-63); a
  * pane's own keys moved that pane, and Enter at a pane's corner took the
  * corner's act, before the dispatch (SC's `key`, K-60), and → and Enter
  * elsewhere in a pane, and Shift with the
@@ -337,11 +338,11 @@ async function replay() {
 function sceneKey(e, chord, ctx) {
   if (chord === 'Mod+R') return () => { SCENE.relevel(); return true; };
   if (chord === 'Mod+=') return () => true; // swallowed: nothing is nearer than the scene's reading scale
-  if (chord === 'Mod+-') return () => { SCENE.close(); CAM.markDirty(); return true; };
+  if (chord === 'Mod+-') return () => { GO.closeScene(ctx.byKey); return true; };
   if (SLOT_CHORDS.has(chord) || e.key === 'F5') return () => true;
   if (chord === 'Mod+Shift+P') return () => { LINE.stripAct(); return true; };
   if (ctx.where === 'overlay' || ctx.where === 'line') return null; // the overlay's or the line's own keys
-  if (chord === '←') return () => { SCENE.close(); CAM.markDirty(); return true; };
+  if (chord === '←') return () => { GO.closeScene(ctx.byKey); return true; };
   if (ctx.where === 'scene-acts') return null; // the button's own keys
   if (printable(e)) return () => { swallow(e); return true; };
   return null;
@@ -358,16 +359,17 @@ function swallow(/** @type {KeyboardEvent} */ e) {
  * the overlay standing under it stands), the overlay — a jump's reaching
  * face among them, whose dismissal abandons the jump — then a jump reaching
  * whose face another overlay took the place of (FP-25; N-GO's `abandon`),
- * the scene, then the selection, which a scene
- * stands over and which outlives it, then the arrival — its outline, its
- * labels and its line (FP-21; N-GO's `endArrival`); on the bare plane nothing.
+ * the scene — its close a Back from its entry (N-GO's `closeScene`) — then
+ * the selection, which a scene stands over and which outlives it, then the
+ * arrival — its outline, its labels and its line (FP-21; N-GO's
+ * `endArrival`); on the bare plane nothing.
  */
 export function esc() {
   if (LEAP.isOpen()) { LEAP.close(); return; }
   if (HOST.pending()) { HOST.endOpening(); return; }
   if (HOST.current()) { HOST.dismiss(); return; }
   if (GO.abandon()) return;
-  if (SCENE.isOpen()) { SCENE.close(); CAM.markDirty(); return; }
+  if (SCENE.isOpen()) { GO.closeScene(true); return; }
   if (SEL.selected()) { SEL.clear(); return; }
   GO.endArrival();
 }

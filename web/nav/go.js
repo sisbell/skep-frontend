@@ -36,13 +36,14 @@
 // (P-CAM's `destination`) — so a departure made during a flight re-takes the
 // flight's destination, never a point it was passing (foundations §2.3) —
 // with what that view reads (T-LAYER's `readAt`), where the walk stands in
-// the document it reads (`stoodIn`), and the version the entry's box shows.
+// the document it reads (`stoodIn`), the version the entry's box shows, and
+// a reading scene standing over it as the reader leaves it (SC's `asLeft`).
 // As its camera leaves, an act ends the chrome of the place it leaves
 // (`dismissChrome`; FP-25): the arrival, kept by value in the entry left for
 // a return (`leaveHere`; N-TRAIL's `keep`), the standing overlay — save one
 // whose field holds the caret, which stands through the jump (FP-20; O-HOST's
-// `typing`) — and the scene, whose end moves no entry. The camera is flown
-// (P-CAM's `fly`) and the walk moved to the landing (N-WALK's `focusTo`), the
+// `typing`) — and the scene, which its departure has recorded. The camera is
+// flown (P-CAM's `fly`) and the walk moved to the landing (N-WALK's `focusTo`), the
 // ring drawn there where a key made the act, which only the caller knows, so
 // every act takes `byKey` from it (D5 §4 rules 2 and 8); a LEAP and a follow
 // land at the reading size, framing the passage's column (`viewFor`).
@@ -117,6 +118,26 @@
 // (`landAtCursor`): its outline and its labels as the reader left them, the
 // run it stood at, the link lit the one the move crossed, and none of its
 // offers that read.
+// The reading scene is a step on the trail (`toScene`; FP-25): its opening
+// pushes one entry at the act, the entries ahead of the cursor dropped, its
+// address the document opened beside the reader's, holding the pair it opens
+// on and the passage held (N-TRAIL's `Opened`), the entry it departs
+// recording the step it is opened from — a link's end, or a passage by
+// identity (`sceneStep`; N-TRAIL's `SceneStep`). It reaches as a jump only a
+// read can place does: the camera still while SC's reads are out, Esc, Back
+// and every later act abandoning it, its entry given back, a refusal its
+// reads met faced at the act's site, the entry given back too; the chrome of
+// the place it leaves ends only as it shows (SC's `leaving`). It stands
+// exactly while the cursor stands on its entry: its own end — Esc, the bar's
+// ×, zoom-out, ← — is Back (`closeScene`), as Mod+[ in it is, lighting the
+// step it was opened from where Back lands (`lightOf`), and each close is
+// counted (`closed`), which the one line says. A cursor move back onto its
+// entry — Forward after a close, Back after a teleport out, a jump — reopens
+// it as the reader left it (`sceneAt`; SC's `reopen`): the camera to the
+// view under it and the walk re-taken there without the platform's focus,
+// which the scene takes; a reopen the board refused is faced at the
+// viewport's corner, the entry standing. A scene's entry changes no box's
+// version, and its place is never re-taken (FP-22).
 // HOME (the acting account's region), WHOLE BOARD (the board at the clamp)
 // and an account's region push too (foundations §2.2), and so does a walk's
 // moment unfolded where the camera stands away from the view its walk showed
@@ -177,10 +198,11 @@
 // entry still reading, it shows that entry's reading face and goes on once
 // the read answers, where no act was made and the reader took nothing over.
 // The cover (FP-29): a trail entry holds no document's words — HOME and WHOLE
-// BOARD push their act's name, the strings table's, and every other entry's
-// words are read from the model as they are shown (`wordsOf`, and as markup
-// in their faces, `wordsHTML`: the words its box's first line says, nothing
-// while nothing has answered). A change of the
+// BOARD push their act's name, the strings table's, a reading scene's entry
+// is named by its act's and its two documents' addresses (`scenePair`), and
+// every other entry's words are read from the model as they are shown
+// (`wordsOf`, and as markup in their faces, `wordsHTML`: the words its box's
+// first line says, nothing while nothing has answered). A change of the
 // page's class (`classChanged`) puts the arrival out, nothing the dead class
 // measured surviving, and drops what the entries kept (N-TRAIL's); a cursor
 // move reaching an entry whose document is covered (M-REC's `covered`) lands
@@ -316,7 +338,7 @@ const pins = new Map();
  */
 
 /**
- * @typedef {Object} Reach — a jump reaching (see the head): the camera still until a read places its destination
+ * @typedef {Object} Reach — a jump reaching, or a reading scene opening (see the head): the camera still until a read places its destination, or the scene shows
  * @property {number} act the jump's act
  * @property {string} addr the place it names
  * @property {Entry | null} entry its trail entry, given back where it is abandoned
@@ -330,8 +352,10 @@ let leftAt = -Infinity;
 let takenAt = 0;
 /** @type {WeakSet<Entry>} the entries the reader took the camera over at: a read answering there writes them no view */
 const takenOver = new WeakSet();
-/** @type {Reach | null} the jump reaching */
+/** @type {Reach | null} the jump reaching, or the reading scene opening (`toScene`) */
 let reach = null;
+/** the reading scenes closed — a cursor move one entry back from the entry a scene was opened as while it stands — each counted as it is made */
+let closes = 0;
 /** a second leg's length, in ms, where the first has landed (unmeasured) */
 const SECOND_LEG_MS = 300;
 
@@ -362,18 +386,28 @@ function pinTo(addr) {
 
 /**
  * A departure (see the head): what the departed entry re-takes — the view
- * the camera is bound for (P-CAM's `destination`), what it reads and where
- * the walk stands (`leaving`) — and the entry's place re-taken where the box
- * it names shows another version as it is left — a newer version's arrival
- * pinned it on the member being read (`arrived`; N-TRAIL's `retakePlace`).
- * Every navigation act departs through it.
+ * the camera is bound for (P-CAM's `destination`), what it reads, where the
+ * walk stands and a reading scene standing over it (`leavingNow`) — and the
+ * entry's place re-taken where the box it names shows another version as it
+ * is left — a newer version's arrival pinned it on the member being read
+ * (`arrived`; N-TRAIL's `retakePlace`). Every navigation act departs through
+ * it.
  * @returns {Departure}
  */
 function departure() {
   const e = TRAIL.current();
   if (e && kindOf(e.addr) === 'document' && shownIn(e.addr) !== e.addr) TRAIL.retakePlace(shownIn(e.addr));
-  return leaving(CAM.destination());
+  return leavingNow();
 }
+
+/**
+ * What the entry the reader stands at re-takes as they leave it now (see the
+ * head): the view the camera is bound for, what it reads and where the walk
+ * stands in it (`leaving`), and the reading scene standing over it as they
+ * leave it (SC's `asLeft`), which an entry a scene was opened as records.
+ * @returns {Departure}
+ */
+function leavingNow() { return { ...leaving(CAM.destination()), scene: SCENE.asLeft() }; }
 
 /**
  * What an entry left at a view re-takes (see the head; N-TRAIL's
@@ -528,8 +562,10 @@ export const inAir = () => air !== null;
 export const airSince = () => leftAt;
 /** the landing of the jump in the air (see the head): true as it lands, false where it ends without landing; true at once where none is in the air — what the keys it holds wait on (N-KEYS) */
 export const aground = () => (air ? air.landed : Promise.resolve(true));
-/** is a jump reaching for a place only its read can place (see the head)? */
+/** is a jump reaching for a place only its read can place, or a reading scene opening (see the head)? */
 export const isReaching = () => reach !== null;
+/** the reading scenes closed so far (see the head): what the one line says after a close reads (L-LINE's reader, the app's to hand in) */
+export const closed = () => closes;
 
 /**
  * The reader takes the camera over (FP-25; APP-INPUT's): the jump in the air
@@ -567,7 +603,8 @@ function endAir(/** @type {number} */ act, /** @type {boolean} */ ok) {
 /**
  * A jump reaching abandoned (see the head) — by Esc, its face's dismissal,
  * by Back, or by any later act: its entry given back (N-TRAIL's `giveBack`),
- * its face ended where it still stands. Nothing where none reaches.
+ * its face ended where it still stands; a reading scene opening so, its
+ * opening ended by the act (O-HOST's). Nothing where none reaches.
  */
 function giveUp() {
   const r = reach;
@@ -628,17 +665,18 @@ export function described() {
 
 /**
  * One of the landing's line's acts (O-LAND's buttons): `beside`, the reading
- * scene with where the passage came from, the passage held there set level
- * with its counterpart here (SC); `version`, the version move to the latest
- * member holding the passage whole; `again`, the landing's read made again;
- * `next` and `previous`, the step (`step`). Each acts only while the
- * landing's line stands.
+ * scene with where the passage came from (`toScene`), the passage held there
+ * set level with its counterpart here (SC), the document it came from the
+ * one opened beside; `version`, the version move to the latest member holding
+ * the passage whole; `again`, the landing's read made again; `next` and
+ * `previous`, the step (`step`). Each acts only while the landing's line
+ * stands.
  * @param {'beside' | 'version' | 'again' | 'next' | 'previous'} which
  * @param {boolean} [byKey] a key made the act
  */
 export function landingAct(which, byKey = false) {
   if (!landed) return;
-  if (which === 'beside' && landed.beside) { const b = landed.beside; void SCENE.open(b.a, b.b, b.held); }
+  if (which === 'beside' && landed.beside) { const b = landed.beside; void toScene(b.a, b.b, b.held, { beside: 'a', site: { span: { addr: landed.addr, pos: landed.pos } } }); }
   else if (which === 'version' && versionOffer) versionOffer(byKey);
   else if (which === 'again' && retry) void retry(byKey);
   else if (which === 'next' || which === 'previous') step(which === 'next' ? 1 : -1, byKey);
@@ -693,8 +731,9 @@ export function stepTo(i, byKey = false) {
  * the standing overlay — save one whose field holds the caret, an answer the
  * reader is typing, which stands through the jump (FP-20; O-HOST's `typing`)
  * — and a card or scene still reading, which
- * then opens nothing (O-HOST's opening); and the scene, whose end moves no
- * trail entry — so the act's own trail move is its one.
+ * then opens nothing (O-HOST's opening); and the scene, which the act's
+ * departure recorded in its entry and whose end moves no trail entry of its
+ * own — so the act's own trail move is its one.
  * @param {Entry | null} to the entry the act moves to; null where it takes none
  */
 function dismissChrome(to) { leaveHere(); here = to; if (HOST.typing()) HOST.endOpening(); else HOST.dismiss(); SCENE.close(); }
@@ -878,8 +917,10 @@ export function viewFor(addr, pos) {
 
 /**
  * An entry's words as the trail list and the LEAP box show it (see the head):
- * its act's name where HOME or WHOLE BOARD pushed it; at a document, the
- * words its box's label leads with now (T-LAYER's `firstLine`) — its first
+ * its act's name where HOME or WHOLE BOARD pushed it, or a reading scene's
+ * opening did — "read side by side", its documents named by their addresses
+ * beside it (`scenePair`); at a document, the words its box's label leads
+ * with now (T-LAYER's `firstLine`) — its first
  * line by the one rule, the client's words in its place bracketed, "[withheld
  * · ⟨owner⟩]" where a read answered `withheld`, nothing where nothing has
  * answered — read from the model as it is shown, never kept in the entry;
@@ -889,6 +930,7 @@ export function viewFor(addr, pos) {
  */
 export function wordsOf(e) {
   if (e.label != null) return e.label;
+  if (e.scene) return t('B1.side-by-side');
   return kindOf(e.addr) === 'document' && REC.has(e.addr) ? LAYER.firstLine(REC.doc(e.addr)) : '';
 }
 
@@ -902,7 +944,23 @@ export function wordsOf(e) {
  */
 export function wordsHTML(e) {
   if (e.label != null) return esc(e.label);
+  if (e.scene) return esc(t('B1.side-by-side'));
   return kindOf(e.addr) === 'document' && REC.has(e.addr) ? LAYER.firstLineHTML(REC.doc(e.addr)) : '';
+}
+
+/**
+ * The documents an entry a reading scene was opened as names, in its panes'
+ * order (see the head): those its panes showed as the reader last left it,
+ * else those it opened on — the addresses the trail's list names it by, and
+ * the documents a change of the page's class reads again (the app's); null
+ * for every other entry.
+ * @param {Entry} e
+ * @returns {[string, string] | null}
+ */
+export function scenePair(e) {
+  const o = e.scene;
+  if (!o) return null;
+  return o.left ? [o.left.panes.a.shows, o.left.panes.b.shows] : [o.a, o.b];
 }
 
 /**
@@ -1406,7 +1464,7 @@ export async function leapTo(addr, opts = {}) {
     const read = await reachFor(act, addr, entry, site);
     if (!read) return null;
     met = read.refused; d = REC.doc(addr); unread = false;
-    if (entry) TRAIL.leaveFrom(entry, leaving(CAM.destination()));
+    if (entry) TRAIL.leaveFrom(entry, leavingNow());
   }
   dismissChrome(entry);
   const v0 = viewFor(addr, pos);
@@ -1722,7 +1780,7 @@ export async function follow(s, byKey = false) {
   const entry = TRAIL.push({ addr: far, pos: null, width: null, view: viewFor(far, null), label: null, notice: waiting }, departure(), true, step);
   if (!placeable(far)) {
     if (!(await reachFor(act, far, entry, site))) return;
-    TRAIL.leaveFrom(entry, leaving(CAM.destination()));
+    TRAIL.leaveFrom(entry, leavingNow());
   }
   dismissChrome(entry);
   LK.follow(l);
@@ -1745,6 +1803,68 @@ export async function follow(s, byKey = false) {
   if (REC.doc(far).refused === 'unregistered') { faced({ ...waiting, face: 'unregistered' }); return; }
   if (REC.doc(far).refused === 'withheld') { await landWithheld(act, s, entry, byKey, first); return; }
   await landFollowed(act, s, entry, await followed(s, proj), byKey, first);
+}
+
+/**
+ * The step a reading scene is opened from, as the entry it departs records it
+ * (see the head; N-TRAIL's `SceneStep`): a link's end, at the document the
+ * link is drawn at; or a passage, by the permanent addresses of its bytes as
+ * the held image names them as the act is made — none where the image does
+ * not cover it, and none where the scene is opened from neither.
+ * @param {{shown: Shown} | {passage: Span} | null} from
+ * @returns {Step | null}
+ */
+function sceneStep(from) {
+  if (!from) return null;
+  if ('shown' in from) return { kind: 'scene', near: from.shown.near, link: from.shown.link.addr, key: from.shown.key, spans: null };
+  const p = from.passage, spans = REC.identityOf(p.addr, p.pos, Math.max(1, p.width));
+  return spans.length ? { kind: 'scene', near: p.addr, link: null, key: null, spans } : null;
+}
+
+/**
+ * A reading scene opened beside the place the reader stands at (see the
+ * head; FP-25): the next act, its entry pushed as the act is made — the
+ * departure from the cursor's entry re-taken there with the step the scene is
+ * opened from, the entries ahead dropped — reaching while SC's reads are out,
+ * the camera still; as the scene shows, the chrome of the place it leaves
+ * ended (`dismissChrome`), the entry the one the reader stands at from now.
+ * Where a later act took its place or its opening ended, its entry is given
+ * back; where its reads were refused, given back too, the refusal faced at
+ * the act's site. Where no board is held, the act answered where it was made
+ * (FP-35).
+ * @param {string} a the document its first pane opens on: the reader's, save at a landing's line, the source of the passage landed
+ * @param {string} b the one its second pane opens on
+ * @param {import('../scene/scene.js').Held} [held] the passage the opener holds, which the scene sets level
+ * @param {{beside?: 'a' | 'b', from?: {shown: Shown} | {passage: Span} | null, site?: Site | null}} [opts] `beside` the pane holding the document opened beside the reader's, the entry's address — the second where none is named; `from` the link's end or the passage the scene is opened from, which Back lights (`sceneStep`); `site` where the act was made. The scene takes the focus however the act was made (SC's)
+ * @returns {Promise<boolean>} the scene shows
+ */
+export async function toScene(a, b, held = {}, opts = {}) {
+  const act = nextAct();
+  if (!REC.board()) { FACES.noBoard(opts.site ?? null); return false; }
+  const departed = departure(), addr = opts.beside === 'a' ? a : b;
+  const entry = TRAIL.push({ addr, pos: null, width: null, view: departed.view, label: null, notice: null, scene: { a, b, held, left: null } }, departed, false, sceneStep(opts.from ?? null));
+  reach = { act, addr, entry };
+  const out = await SCENE.open(a, b, held, { leaving: () => { reach = null; dismissChrome(entry); } });
+  if (out.shown) return true;
+  if (!reach || reach.act !== act) return false;
+  reach = null;
+  TRAIL.giveBack(entry);
+  if (out.refused) FACES.showRefusal(signed(opts.site ?? null), out.refused, addr);
+  return false;
+}
+
+/**
+ * The reading scene's own end (see the head) — Esc, the bar's ×, zoom-out, ←
+ * (N-KEYS', SC's): Back, from the entry the scene was opened as; where the
+ * cursor stands on no such entry, or on none behind it, the scene ended where
+ * it stands with no trail move.
+ * @param {boolean} [byKey] a key made the act
+ */
+export function closeScene(byKey = false) {
+  const e = TRAIL.current();
+  if (SCENE.isOpen() && e && e.scene && TRAIL.canBack()) { void back(byKey); return; }
+  SCENE.close();
+  CAM.markDirty();
 }
 
 /** HOME's place and view: the acting account's region at mid scale; a guest's the board's extent (R92 rider (c)) */
@@ -1856,9 +1976,11 @@ function nodeOf(/** @type {string} */ _origin) { return '1'; }
 /**
  * The light a cursor move makes, from the entry it left to the one it
  * reached (see the head): one entry back, Back's — where the step the entry
- * reached records began; one entry ahead, Forward's — what the step the
- * entry left records marked on arrival; none for a move across two entries
- * or more, nor across an entry that records no step.
+ * reached records began, a reading scene's the link's end or the passage it
+ * was opened from; one entry ahead, Forward's — what the step the entry left
+ * records marked on arrival, a reading scene's nothing, the scene reopening
+ * there; none for a move across two entries or more, nor across an entry
+ * that records no step.
  * @param {Entry | null} left the entry the move left
  * @param {Entry} e the entry it reached
  * @param {number} by the entries it moved, newer counted ahead
@@ -1869,6 +1991,11 @@ function lightOf(left, e, by) {
   if (!step) return null;
   const back = by === -1;
   if (step.kind === 'carry') return { back, link: null, end: null, passage: { addr: back ? step.from : step.to, spans: step.spans } };
+  if (step.kind === 'scene') {
+    if (!back) return null;
+    if (step.link && step.key) return { back, link: step.link, end: { addr: step.near, link: step.link, key: step.key }, passage: null };
+    return step.spans ? { back, link: null, end: null, passage: { addr: step.near, spans: step.spans } } : null;
+  }
   return { back, link: step.link, end: back ? { addr: step.near, link: step.link, key: step.key } : null, passage: back ? null : { addr: step.far, spans: step.spans } };
 }
 
@@ -1915,13 +2042,15 @@ function returnTo(l, view) {
  * covered box framed whole, its withheld face standing there (see the head;
  * `coverOf`), the read that tells it made first beside the flight where the
  * page holds nothing yet of a document the class it left could read
- * (`coverRead`).
+ * (`coverRead`). An entry a reading scene was opened as reopens the scene
+ * (`sceneAt`).
  * @param {Entry} e the entry the move reached
  * @param {number} act the move's count
  * @param {boolean} byKey a key made the move
  * @param {Light | null} l the move's light
  */
 async function landAtCursor(e, act, byKey, l) {
+  if (e.scene) { await sceneAt(e, act, byKey); return; }
   const answer = TRAIL.pending(e);
   arrival = e.kept ? e.kept.arrival : null; landed = e.kept ? e.kept.landed : null;
   light = l; lit = l && l.link ? [l.link] : [];
@@ -1949,6 +2078,30 @@ async function landAtCursor(e, act, byKey, l) {
   const flight = goOn(act, first, { ...walkOf(e, then), view: then ? then.view : e.view }, byKey, 500);
   if (n) showNotice(n);
   await flight;
+}
+
+/**
+ * A cursor move reaching the entry a reading scene was opened as (see the
+ * head): nothing marked or lit, no box's version changed (FP-22); the camera
+ * leaving at once for the view under the scene, placed again where the
+ * document it read was set since (`returning`), the walk re-taken where it
+ * stood without the platform's focus; and the scene reopened as the reader
+ * left it beside the flight (SC's `reopen`), which takes the focus — save
+ * where an act was made after the move, which ends it there; a refusal its
+ * reads met faced at the viewport's corner, the entry standing.
+ * @param {Entry} e the entry the move reached
+ * @param {number} act the move's count
+ * @param {boolean} byKey a key made the move
+ */
+async function sceneAt(e, act, byKey) {
+  const o = /** @type {import('./trail.js').Opened} */ (e.scene);
+  arrival = null; landed = null; light = null; lit = [];
+  const at = returning(e), view = at ? at.view : e.view;
+  const first = leave(act, e, { ...walkOf(e, at), view, take: false }, byKey, 500);
+  const out = await SCENE.reopen(o);
+  if (act !== made) return;
+  if (!out.shown && out.refused) FACES.showRefusal(null, out.refused, e.addr);
+  endAir(act, await first);
 }
 
 /** @typedef {{addr: string, pos: number | null, end: End | null}} WalkTo where a cursor move puts the walk: a place, the position in it, and the link's end there */
@@ -2076,7 +2229,9 @@ async function coverRead(act, e, first, byKey) {
  * view left, the move's light lit where it crosses one step (`lightOf`). A
  * jump reaching gives its entry back before the move reads the trail, and
  * Back abandons it and does nothing more: the camera never left the entry it
- * was made from (see the head).
+ * was made from (see the head). A move one entry back from the entry a
+ * reading scene was opened as, the scene standing, is its close, counted
+ * (`closed`).
  * @param {(departed: Departure) => (Entry | null)} move N-TRAIL's move
  * @param {boolean} byKey a key made the act
  * @param {boolean} [abandons] the move is Back, which abandons a jump reaching
@@ -2084,10 +2239,11 @@ async function coverRead(act, e, first, byKey) {
  */
 async function moveCursor(move, byKey, abandons = false) {
   if (reach) { giveUp(); if (abandons) { nextAct(); return true; } }
-  const left = TRAIL.current(), from = TRAIL.cursorIndex();
+  const left = TRAIL.current(), from = TRAIL.cursorIndex(), standing = SCENE.isOpen() && !!left && !!left.scene;
   const e = move(departure());
   if (!e) return false;
   const act = nextAct();
+  if (standing && TRAIL.cursorIndex() === from - 1) closes++;
   dismissChrome(e);
   await landAtCursor(e, act, byKey, lightOf(left, e, TRAIL.cursorIndex() - from));
   return true;

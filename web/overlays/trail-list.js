@@ -10,7 +10,9 @@
 // focus record's rule 13); opened by a click on the line's act it takes none
 // (rule 16). Each row's words are read from the model as the list is made
 // (N-GO's `wordsHTML`; FP-29), never kept in an entry: its address in the
-// identifier's face, a document's first line in the reading face.
+// identifier's face, a document's first line in the reading face; a reading
+// scene's entry names both its documents, in its panes' order, as the
+// scene's bar names them (N-GO's `scenePair`).
 // Rules: FP-1, FP-2, FP-13, FP-20, FP-29.
 
 import * as HOST from './host.js';
@@ -25,9 +27,15 @@ import { esc } from '../util.js';
  */
 export function open(byKey = false) {
   const rows = TRAIL.numbered();
+  /** where an entry stands: a reading scene's two documents, else its address and the position landed on */
+  const where = (/** @type {import('../nav/trail.js').Entry} */ e) => {
+    const pair = GO.scenePair(e);
+    if (pair) return pair.map((a) => `<span class="id">${esc(a)}</span>`).join(' │ ');
+    return `<span class="id">${esc(e.addr)}</span>${e.pos != null ? ` · ${esc(t('F.position', { p: e.pos }))}` : ''}`;
+  };
   const html = `<span class="label">${esc(t('F.trail-list'))}</span>` +
     (rows.length
-      ? `<ul class="rows">${rows.map((r) => `<li><button data-run="j${r.n}" aria-current="${r.current}"><span class="k">${r.n <= 9 ? r.n : '·'}</span> <span class="id">${esc(r.entry.addr)}</span>${r.entry.pos != null ? ` · ${esc(t('F.position', { p: r.entry.pos }))}` : ''} <span class="dim">${GO.wordsHTML(r.entry)}</span></button></li>`).join('')}</ul>`
+      ? `<ul class="rows">${rows.map((r) => `<li><button data-run="j${r.n}" aria-current="${r.current}"><span class="k">${r.n <= 9 ? r.n : '·'}</span> ${where(r.entry)} <span class="dim">${GO.wordsHTML(r.entry)}</span></button></li>`).join('')}</ul>`
       : `<div class="dim">—</div>`);
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};

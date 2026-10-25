@@ -3,8 +3,10 @@
 // State: the transient segment and its expiry (the next act), the act
 // holding the line's one Tab stop (`stop`), the last render's words that are
 // said once as they arrive, when the page's class last changed with its
-// message not yet said (`changedAt`), and the canvas its words are measured
-// by (`ruler`).
+// message not yet said (`changedAt`), the reading scenes' closes it last
+// took, whether one was said whole in the page's session and whether
+// forward ›'s label carries one (`closedSaid`), and the canvas its words are
+// measured by (`ruler`).
 // The line is the page's toolbar, named as it attaches (`L.the-line`), and
 // one Tab stop (D5 §1.3, K-22; §4 rule 5): its acts hold a roving stop — the
 // act last stood on, else the first that takes the focus — ← and → move
@@ -91,8 +93,12 @@
 // `unfold`); short of room every other segment is cut first, the address's
 // last, and the walk's never (the style's). The transient segments (the
 // swallow line K-9; the mode line C-31 where the pair flipped) stand until
-// the next act (`act`), or a change of the page's class, which takes one
-// quoting what the class it left read down with it (`classChanged`).
+// the next act (`act`) — a press of one of the line's own acts among them —
+// or a change of the page's class, which takes one quoting what the class it
+// left read down with it (`classChanged`). A reading scene's close (N-GO's
+// `closed`, through the reader the app hands in) is said after it until the
+// next act: the first in the page's session whole, a transient segment; each
+// after it as forward ›'s label (`closedSaid`).
 // The rebuild keeps the focus (rule 11; `render`): the line is rebuilt
 // whenever its words change — every frame of a flight — and the act that held
 // the focus has it back by its `data-act`, through the focus's owner; an
@@ -147,6 +153,12 @@ let changedAt = /** @type {number | null} */ (null);
 const COVERED_NAMED = 5;
 /** the act holding the line's one Tab stop (K-22), by its `data-act` */
 let stop = 'back';
+/** the reading scenes closed as the line last took them (`closedSaid`, `act`) */
+let closesTaken = 0;
+/** a close has been said whole in the page's session (`closedSaid`) */
+let closedWhole = false;
+/** forward ›'s label carries the close's words, until the next act (`closedSaid`) */
+let forwardSays = false;
 /**
  * @typedef {Object} Acts — the line's acts, and what it reads of the owners that import it, handed in once by the app (FP-10, FP-11)
  * @property {(byKey: boolean) => void} open the address segment's act: the LEAP box
@@ -159,6 +171,7 @@ let stop = 'back';
  * @property {() => (Pieces | null)} [pieces] the runs of an arrival in several, in the document landed in (N-GO's landing); null where none stands
  * @property {() => Array<{key: string, words: string}>} [walks] the walks' folded moments, each its walk and its segment's words (O-FACES' `folded`)
  * @property {(key: string, byKey: boolean) => void} [walk] a walk's segment's act: its moment unfolded (O-FACES' `unfold`)
+ * @property {() => number} [closed] the reading scenes closed so far (N-GO's `closed`): a new one is said after the close (`closedSaid`)
  */
 
 /** @typedef {{addr: string, runs: Array<{pos: number, width: number}>, current: number}} Pieces the runs of an arrival in several, the one the landing stands at by index */
@@ -173,6 +186,8 @@ export function attach(e, a) {
     const b = /** @type {HTMLElement} */ (ev.target).closest('button[data-act]'); if (!b || !acts) return;
     const which = /** @type {HTMLElement} */ (b).dataset.act;
     const byKey = FOCUS.byKey(ev);
+    // a press on one of the line's acts is the person's next act: what stood until it goes first
+    act();
     if (which === 'back') acts.back(byKey); else if (which === 'forward') acts.forward(byKey); else if (which === 'address') acts.open(byKey); else if (which === 'trail') acts.trailList(byKey); else if (which === 'signin') acts.signIn(/** @type {HTMLElement} */ (b));
     else if (which === 'unclaimed') transient(t('L.no-notebook-yet'), 'L.no-notebook-yet');
     else if (which === 'again') { if (acts.again) acts.again(); }
@@ -215,15 +230,40 @@ export function step(dir) {
 
 /** a transient segment until the person's next act, said through the one status region */
 export function transient(/** @type {string} */ text, id = 'transient') { transientSeg = { html: addressedHTML(text), id }; FOCUS.say(text); render(true); }
-/** the next act clears the transient segment */
-export function act() { if (transientSeg) { transientSeg = null; render(true); } }
+/** the next act clears the transient segment and forward ›'s close label, the closes made before it taken (`closedSaid`) */
+export function act() {
+  if (acts && acts.closed) closesTaken = acts.closed();
+  if (transientSeg || forwardSays) { transientSeg = null; forwardSays = false; render(true); }
+}
+
+/**
+ * A reading scene's close said after it (see the head), where the scenes
+ * closed (N-GO's `closed`) count one past those the line last took: the
+ * first in the page's session whole, a transient segment said through the
+ * status region; each after it as forward ›'s label — its title and its
+ * accessible name, the visible label among its words; either until the next
+ * act (`act`).
+ */
+function closedSaid() {
+  const n = acts && acts.closed ? acts.closed() : 0;
+  if (n <= closesTaken) return;
+  closesTaken = n;
+  if (closedWhole) { forwardSays = true; return; }
+  closedWhole = true;
+  const words = t('L.scene.closed');
+  transientSeg = { html: addressedHTML(words), id: 'L.scene.closed' };
+  FOCUS.say(words);
+}
+
 /**
  * A change of the page's class (see the head; FP-23, FP-29), told by the app
- * as M-PUMP tells the drop of every record: the transient segment taken down
- * — the strip's act quotes the text it was made at — and the change's one
- * message held until the reads it asked answer (`render`).
+ * as M-PUMP tells the drop of every record: the transient segment and
+ * forward ›'s close label taken down — the strip's act quotes the text it was
+ * made at — a scene's next close said whole again, the page's session being
+ * a new one, and the change's one message held until the reads it asked
+ * answer (`render`).
  */
-export function classChanged() { transientSeg = null; changedAt = performance.now(); render(true); }
+export function classChanged() { transientSeg = null; forwardSays = false; closedWhole = false; changedAt = performance.now(); render(true); }
 
 /**
  * The change's one message (see the head): the ending's words, then the
@@ -572,6 +612,7 @@ function strip(a) {
 export function render(force = false) {
   if (!el) return;
   modeLine();
+  closedSaid();
   const a = addressDisplay();
   const acting = actingSegment();
   const daemon = daemonSegment();
@@ -583,7 +624,7 @@ export function render(force = false) {
   if (daemon.halted && !lastHalted) FOCUS.say(daemon.words, true);
   lastAlarm = acting.alarm ? acting.words : ''; lastHalted = daemon.halted;
   const html =
-    `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord('Mod+Y'))}">${esc(t('F.trail-list'))}</button></span>` +
+    `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}${forwardSays ? ` title="${esc(t('L.scene.closed'))}" aria-label="${esc(t('L.scene.closed'))}"` : ''}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord('Mod+Y'))}">${esc(t('F.trail-list'))}</button></span>` +
     `<span class="sep">│</span><button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}" aria-label="${esc(t('L.address.name', addressName(a)))}" style="--words:${WORDS_CH}"><b>${esc(a.place)}</b>${labelHTML(a)}${slot(a)}<span class="marker${a.member ? ' lit' : ''}${a.doc ? '' : ' none'}" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></button>` +
     `<span class="sep">│</span><span class="seg acting" data-state="${acting.state}">${acting.html}</span>` +
     walkSegments() +

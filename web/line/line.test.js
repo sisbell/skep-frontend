@@ -15,7 +15,9 @@
 // its causes, the guest line with the board's origin and its sign-in act's
 // id, and where no board is held why in the guest line's place and "go to an
 // address" alone; a jump's face out of view and a walk's folded moment as
-// segments; the places the line names; and the cover — no position at a
+// segments; a reading scene's close said after it until the next act, whole
+// once a session and as forward ›'s label after; the places the line names;
+// and the cover — no position at a
 // refused document, the transient taken down and the class change said once
 // with what it covered (FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28,
 // FP-29, FP-34, FP-35).
@@ -542,6 +544,39 @@ test('each walk\'s folded moment stands as a segment of the one line after the a
 
 /** the one status region's stand-in: what the line says through it, and how */
 const live = { textContent: '', live: '', setAttribute(/** @type {string} */ k, /** @type {string} */ v) { if (k === 'aria-live') live.live = v; } };
+
+test('a reading scene\'s close is said after it until the next act (issue #50\'s design decision: "After a close, the one line says \'side by side closed — forward › reopens it\' until the next act. It shows in full once a session, and after that as forward ›\'s label"): the first close of the page\'s session whole, a transient segment said through the status region; each after it as forward ›\'s title and accessible name, its visible words unchanged, nothing said; each gone at the next act — a press of one of the line\'s own acts among them, which is made; and whole again after a change of the page\'s class', () => {
+  /** the closes N-GO has counted, as the reader the app hands in answers them */
+  let closes = 0, forwarded = 0;
+  /** @type {{click: ((ev: any) => void) | null}} the line's click listener, as it attaches */
+  const on = { click: null };
+  const el = { innerHTML: '', setAttribute() {}, addEventListener(/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) { if (type === 'click') on.click = fn; }, querySelectorAll: () => [], contains: () => false };
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (el), { open() {}, back() {}, forward() { forwarded++; }, trailList() {}, signIn() {}, closed: () => closes });
+  const words = t('L.scene.closed'), seg = `<span class="seg transient" data-string="L.scene.closed">${addressedHTML(words)}</span>`;
+  const forward = (/** @type {boolean} */ says) => `<button data-act="forward" disabled${says ? ` title="${esc(words)}" aria-label="${esc(words)}"` : ''}>${esc(t('F.forward'))}</button>`;
+  LINE.render(true);
+  assert.ok(!el.innerHTML.includes('L.scene.closed') && el.innerHTML.includes(forward(false)), 'no close: nothing said');
+  live.textContent = '';
+  closes = 1; LINE.render();
+  assert.ok(el.innerHTML.includes(seg) && el.innerHTML.includes(forward(false)), `the first close of the session: whole, in a segment of its own: ${el.innerHTML}`);
+  assert.equal(live.textContent, words, 'said through the status region');
+  LINE.act();
+  assert.ok(!el.innerHTML.includes('L.scene.closed'), 'the next act takes it down');
+  live.textContent = '';
+  closes = 2; LINE.render();
+  assert.ok(el.innerHTML.includes(forward(true)) && !el.innerHTML.includes(seg), `the next close: forward ›'s label, its visible words unchanged: ${el.innerHTML}`);
+  assert.equal(live.textContent, '', 'nothing said');
+  on.click?.({ type: 'click', detail: 1, target: { closest: () => ({ dataset: { act: 'forward' } }) }, stopPropagation() {} });
+  assert.deepEqual([el.innerHTML.includes(forward(false)), forwarded], [true, 1], 'a press on forward › is the next act: the label taken down, the act made');
+  closes = 3; LINE.render();
+  assert.ok(el.innerHTML.includes(forward(true)), 'a close after it: the label again');
+  LINE.classChanged();
+  assert.ok(el.innerHTML.includes(forward(false)), 'a change of the page\'s class takes the label down');
+  closes = 4; LINE.render();
+  assert.ok(el.innerHTML.includes(seg) && el.innerHTML.includes(forward(false)), 'the first close of the new session: whole again');
+  LINE.act();
+});
 
 test('a restart that re-opened none leaves the acting-as segment as it stood for the first second, then reads "reconnecting as ⟨account⟩ after a restart" in its place, the session\'s state kept, and stands as it stood again once the session is back as the same account — never the signed-out words, nothing said (issue #175)', async (ctx) => {
   ctx.mock.timers.enable({ apis: ['setTimeout'] });

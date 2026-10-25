@@ -50,8 +50,9 @@
 // date of the commit that minted it, from the age `read_link` answered with
 // the link (ST's `dated`), "not recorded" where the board holds no reading of
 // it, and never a log position.
-// Its acts follow either end and open the scene. The link's mark comes from
-// LK's `markOf`, so the card and the symbol agree.
+// Its acts follow either end and open the scene, a step on the trail from
+// the link's end, made at the link's own bytes (N-GO's `toScene`). The link's
+// mark comes from LK's `markOf`, so the card and the symbol agree.
 // The card takes the focus on its first act — follow, the line standing
 // before it — where a key opened it (Enter at the link's element, K-55; a
 // links-card row's Enter) and never where a click did (D5 §4 rule 4; the
@@ -73,7 +74,6 @@ import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as GO from '../nav/go.js';
-import * as SCENE from '../scene/scene.js';
 import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import { lineOf, farHolds, floatingOf } from '../beams/held.js';
@@ -335,7 +335,7 @@ function showCard(s, read, anchorEl, byKey, others = false) {
     kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl, span: bytes } : { span: bytes }, html, takeFocus: byKey, first: '[data-run="follow"]',
     acts: {
       follow: (_el, byKey) => GO.follow(s, byKey),
-      beside: () => { if (far && !dead) SCENE.open(near, s.farAt || far, { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null }); },
+      beside: () => { if (far && !dead) void GO.toScene(near, s.farAt || far, { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null }, { from: { shown: s }, site: { span: bytes } }); },
       claims: () => showCard(s, read, anchorEl, false, true),
     },
   });

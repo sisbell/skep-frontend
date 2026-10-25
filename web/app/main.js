@@ -43,12 +43,15 @@
 // `shownIn`, why no board is held); L-LINE's acts and readers (the LEAP box,
 // Back, Forward, the trail's list, sign-in, the board list's retry, a
 // jump's face out of view — O-HOST's `aside`, FP-25 — the runs of an arrival
-// in several, and the walks' folded moments with the act that unfolds each —
-// O-FACES' `folded`, `unfold`); O-LAND's hand-off and its pieces' element;
+// in several, the walks' folded moments with the act that unfolds each —
+// O-FACES' `folded`, `unfold` — and the reading scenes closed, N-GO's
+// `closed`); SC's own end, a Back from its entry (N-GO's `closeScene`);
+// O-LAND's hand-off and its pieces' element;
 // and M-PUMP's (`shownIn`, N-GO's `arrived` for each feed row publishing a
 // trunk's next member, `dropped` for what each row and each change of the
-// page's class dropped, and the places the trail's entries name, which a
-// change reads again beside the view's — FP-23, FP-29).
+// page's class dropped, and the places the trail's entries name — a reading
+// scene's entry its two documents (N-GO's `scenePair`) — which a change reads
+// again beside the view's — FP-23, FP-29).
 // The loop (`loop`, on `requestAnimationFrame`): step the camera's flight,
 // pump every 90 ms, and on a dirty frame — the mark, a camera move, a model
 // or layer revision, a flight, an overlay standing, a phase — run T-LAYER's
@@ -259,9 +262,9 @@ async function boot() {
   FOCUS.attach({ live: el('live') });
   WALK.attach(el('mirror'));
   LANDING.attach(el('landing'), { handOff: () => WALK.focusItem(), pieces: el('pieces') });
-  SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) });
+  SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) }, { end: (byKey) => GO.closeScene(byKey) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
-  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey) });
+  LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed() });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a) });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords() });
@@ -283,7 +286,7 @@ async function boot() {
   // the adapter: the bridge client where the flag stands; nothing otherwise
   const adapter = SECRET ? DEV.create({ provider: DEV.DEFAULT_PROVIDER, secret: SECRET, record: !!GATE }) : null;
   PORT.boot(adapter);
-  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().map((e) => e.addr), onOpen: () => { void launch(); } });
+  PUMP.start({ onDirty: CAM.markDirty, shown: GO.shownIn, onPublish: GO.arrived, onDrop: dropped, stands: () => TRAIL.all().flatMap((e) => [e.addr, ...(GO.scenePair(e) || [])]), onOpen: () => { void launch(); } });
   PORT.on('moment', (d) => FACES.moment(/** @type {import('../bridge/shapes').MomentEvent} */ (d)));
   const heldSeen = /** @type {unknown[]} */ ([]);
   PORT.on('held', (d) => { heldSeen.push(d); console.log('held event (not acted on — the editor\'s lane\'s)', d); });

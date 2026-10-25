@@ -8,8 +8,11 @@
 // and its number either way; the step a push writes on the entry it departs
 // and a cursor move writes nowhere; a jump whose camera never left giving its
 // entry back; the place of the cursor's entry re-taken and never a claim's;
-// a change of the page's class dropping what each entry's view read; and a
-// reset waking every move waiting on a claim (FP-22, FP-25, FP-29).
+// a change of the page's class dropping what each entry's view read; an
+// entry a reading scene was opened as re-taking the scene as the reader
+// leaves it, its place never re-taken, and a change of class dropping where
+// they stood in it; and a reset waking every move waiting on a claim (FP-22,
+// FP-25, FP-29).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from './trail.js';
@@ -197,6 +200,37 @@ test('a change of the page\'s class drops what each entry\'s view read and where
   T.push(e('a', 1), null); T.push(e('b', 2), away(10)); T.back(away(20));
   T.classChanged();
   assert.deepEqual([addrs(), T.all().map(kept)], [['a', 'b'], [[10, null, null], [20, null, null]]]);
+});
+
+/** a pane's text as SC records it, its record the address given */
+const version = (/** @type {string} */ src) => ({ doc: src, src, names: src, shows: src, kind: /** @type {const} */ ('draft'), k: null, n: null, read: null });
+/** where the reader stood in a pane, by identity, as SC records it: its place's byte at `pos` */
+const spot = (/** @type {number} */ pos) => ({ place: { pos, ids: [{ prefix: 'd.0.1', ordinal: pos, width: 1 }], at: 40 }, sel: null, level: { pos, ids: [{ prefix: 'd.0.1', ordinal: pos, width: 1 }] }, lacks: null });
+/** a reading scene as SC records it as the reader leaves it (`Left`): its panes on d and f, where they stood at `pos`, the focus on a stop */
+const leftAt = (/** @type {number} */ pos, /** @type {import('../scene/scene.js').Stop | null} */ stop = 'b') => ({ panes: { a: version('d'), b: version('f') }, spots: { a: spot(pos), b: spot(pos) }, stop });
+
+test('an entry a reading scene was opened as holds the pair it opened on, and re-takes the scene as the reader leaves it with every departure that carries one, beside its view; a departure carrying none leaves it as recorded, none writes a scene on any other entry, and its place is never re-taken (issue #50; FP-22)', () => {
+  const opened = { a: 'd', b: 'f', held: { posA: 3, widthA: 2 }, left: null };
+  T.push(e('d', 1), null);
+  const s = T.push({ ...e('f', 2), scene: opened }, at(10));
+  assert.deepEqual([T.all()[0].scene, s.scene], [null, opened], 'pushed: the scene\'s entry holds the pair it opened on, the entry it departed none');
+  T.back({ ...at(20), scene: leftAt(5) });
+  assert.deepEqual([s.view.x, s.scene], [20, { ...opened, left: leftAt(5) }], 'departed, the scene standing: the scene as the reader left it, beside the view');
+  T.forward({ ...at(30), scene: leftAt(7) });
+  assert.equal(T.all()[0].scene, null, 'a departure from an entry no scene was opened as writes no scene there');
+  T.back(at(40));
+  assert.deepEqual(s.scene?.left, leftAt(5), 'a departure carrying no scene — none standing — leaves the scene as recorded');
+  T.forward(at(50));
+  T.retakePlace('f.2');
+  assert.equal(s.addr, 'f', 'its place never re-taken: the document opened beside, never a box\'s version');
+});
+
+test('a change of the page\'s class drops where the reader stood in each pane of a reading scene\'s entry, and keeps the pair it opened on, its panes\' texts and the stop the focus stood on (issue #50; FP-29)', () => {
+  T.push(e('d', 1), null);
+  const s = T.push({ ...e('f', 2), scene: { a: 'd', b: 'f', held: {}, left: null } }, at(10));
+  T.back({ ...at(20), scene: leftAt(5, 'a:corner') });
+  T.classChanged();
+  assert.deepEqual(s.scene, { a: 'd', b: 'f', held: {}, left: { panes: { a: version('d'), b: version('f') }, spots: null, stop: 'a:corner' } });
 });
 
 test('a reset wakes every move waiting on a claim', async () => {

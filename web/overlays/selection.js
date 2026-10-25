@@ -19,8 +19,9 @@
 // made it. The acts take the span exactly: "who wrote this?" and "who uses
 // this?" ask over its bytes; "follow" and "read side by side" count only the
 // links drawn at the span (LK's `shownAt`), inert where none, asking which
-// only at two or more and naming the far document at one, every address the
-// card and the list set in the identifier's face (P-REG's FACE). The slots, in this
+// only at two or more and naming the far document at one, the scene opened
+// as a step on the trail from the link's end chosen (N-GO's `toScene`), every
+// address the card and the list set in the identifier's face (P-REG's FACE). The slots, in this
 // order and never moved: annotate · quote · who wrote this? · who uses this?
 // · see the links · follow · read side by side · link to… — each showing its
 // chord (D5-F8); annotate, quote and "link to…" are inert, each with its
@@ -42,7 +43,6 @@ import * as REC from '../model/records.js';
 import * as LAYER from '../text/layer.js';
 import * as LK from '../links/links.js';
 import * as GO from '../nav/go.js';
-import * as SCENE from '../scene/scene.js';
 import * as PROV from './provenance.js';
 import * as LINKS from './links-card.js';
 import * as WALK from '../nav/walk.js';
@@ -188,7 +188,7 @@ export function act(which, byKey = false) {
   if (which === 'links') { LINKS.show(addr, byKey); return; }
   const drawn = LK.shownAt(addr, span);
   if (which === 'follow') { if (drawn.length === 1) GO.follow(drawn[0], byKey); else if (drawn.length > 1) which_(drawn, 'follow', byKey); return; }
-  if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) SCENE.open(addr, drawn[0].farAt || drawn[0].far, { posA: pos, widthA: width, posB: LK.farPos(drawn[0]) }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
+  if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) void GO.toScene(addr, drawn[0].farAt || drawn[0].far, { posA: pos, widthA: width, posB: LK.farPos(drawn[0]) }, { from: { shown: drawn[0] }, site: { span } }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
 }
 
 /** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3), named as its tail and its mirror item name it, each address in the identifier's face (LK's `farLabelHTML`); it takes the focus on its first row where a key asked */
@@ -196,6 +196,6 @@ function which_(/** @type {import('../links/links.js').Shown[]} */ drawn, /** @t
   const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · <span class="id">${esc(s.link.owner || '')}</span> · ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  drawn.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else if (s.far && sel) SCENE.open(sel.addr, s.farAt || s.far, { posA: sel.pos, widthA: sel.width, posB: LK.farPos(s) }); }; });
+  drawn.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else if (s.far && sel) void GO.toScene(sel.addr, s.farAt || s.far, { posA: sel.pos, widthA: sel.width, posB: LK.farPos(s) }, { from: { shown: s }, site: { span: sel } }); }; });
   HOST.show({ kind: 'list', id: 'which', anchor: sel ? { span: sel } : null, html, acts, takeFocus: byKey });
 }

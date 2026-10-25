@@ -39,8 +39,9 @@
 // beside the platform's own (`platformSelection`) and the copy door (`copy`);
 // the reveal's state and setters (`reveal`, `links`), each end `links.shown`
 // lists carrying its key and the withheld run it is drawn at, for the marks
-// and mirror checks; the reading scene — its pairs, a passage's line in a
-// pane (`scene.at`), its ties beside their passages' lines (`scene.ties`),
+// and mirror checks; the reading scene — opened as a step on the trail and
+// closed by its own end, a Back (`scene.open`, `scene.close`), its pairs, a
+// passage's line in a pane (`scene.at`), its ties beside their passages' lines (`scene.ties`),
 // each pane as it stands and whether one is being set again (`scene.panes`,
 // `scene.updating`), a version read in a pane's place (`scene.read`); and the
 // strings.
@@ -604,7 +605,8 @@ export function install(deps) {
       trailList: () => { TRAILLIST.open(false); return true; },
     },
     scene: {
-      open: (/** @type {string} */ a, /** @type {string} */ b) => SCENE.open(a, b), close: () => SCENE.close(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair(),
+      /** the scene opened on two documents as a step on the trail, the second the one opened beside (N-GO's `toScene`), and its own end, a Back from its entry (N-GO's `closeScene`) */
+      open: (/** @type {string} */ a, /** @type {string} */ b) => GO.toScene(a, b), close: () => GO.closeScene(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair(),
       /** its runs of shared identity, contiguous pairs merged, and the two ends it set level */
       pairs: () => SCENE.pairs(),
       at: sceneAt, ties: sceneTies,

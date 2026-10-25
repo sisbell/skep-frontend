@@ -69,7 +69,8 @@
 // run; the presence indicator's ⟡ asks to see the links; a byline's cut
 // label opens whole, and the act again closes it (T-LAYER's `openLabel`;
 // FP-34); a run's hairline label goes to its source carrying the run
-// (foundations §2.3; P43); the scene-offer opens the scene; C-67's pointer
+// (foundations §2.3; P43); the scene-offer opens the scene, a step on the
+// trail (N-GO's `toScene`); C-67's pointer
 // beneath a withheld run's arm is a LEAP to the claim's home, the edition,
 // landed in whole (B1-S7 → S6) — it carries no passage, for an edition's
 // bytes are fresh identity and no span of it resolves to the origin
@@ -105,7 +106,6 @@ import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as MARKLIST from '../overlays/mark-list.js';
 import * as LINE from '../line/line.js';
 import * as LK from '../links/links.js';
-import * as SCENE from '../scene/scene.js';
 import * as REC from '../model/records.js';
 import * as FACES from '../overlays/faces.js';
 import * as VERSIONS from '../overlays/versions.js';
@@ -323,7 +323,7 @@ function clickText(target) {
   const hair = target.closest('.hairline');
   if (hair) { const h = /** @type {HTMLElement} */ (hair), run = runOf(h); if (h.dataset.src) GO.leapTo(h.dataset.src, { how: 'leap', carry: run, site: run ? { span: run } : null }); return true; }
   const offer = target.closest('.offer');
-  if (offer) { const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) SCENE.open(a, b); return true; }
+  if (offer) { const [a, b] = (/** @type {HTMLElement} */ (offer).dataset.scene || '').split('|'); if (a && b) void GO.toScene(a, b); return true; }
   // a byline's cut label opens whole on its act, and closes on it again (FP-34)
   const label = target.closest('.slot[data-cut]');
   if (label) { const art = /** @type {HTMLElement | null} */ (label.closest('article')), addr = art ? art.dataset.addr || '' : ''; if (addr) LAYER.openLabel(addr); return true; }

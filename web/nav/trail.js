@@ -18,21 +18,26 @@
 // `landAtCursor`). An entry records the step that left it for the entry
 // after it (`Step`), written as a push departs it: the link followed for a
 // follow, the passage carried for a carrying LEAP or a version move — by
-// identity, the permanent addresses of its bytes, never its positions — and
-// none for any other move; a cursor move writes none. It keeps the arrival
-// standing at it as the reader leaves it — its outline, what its landing
-// said, its runs' labels and the run it stood at — written on it by value
-// (`keep`; N-GO's), which a return restores (FP-25, FP-21).
+// identity, the permanent addresses of its bytes, never its positions — the
+// link's end or the passage a reading scene was opened from, and none for
+// any other move; a cursor move writes none. It keeps the arrival standing
+// at it as the reader leaves it — its outline, what its landing said, its
+// runs' labels and the run it stood at — written on it by value (`keep`;
+// N-GO's), which a return restores (FP-25, FP-21). An entry a reading scene
+// was opened as holds the pair it opened on and the passage held, and the
+// scene as the reader last left the entry (`Opened`; SC's `Left`), by value,
+// re-taken with every departure from it while the scene stands, which a
+// return reopens.
 // The launch frame is the first entry (W-01); after it an entry is pushed by
 // a fresh teleport — LEAP, follow, a click on a place, Enter, HOME, WHOLE
 // BOARD, an account's region, a walk's moment unfolded over a view the
-// camera stands away from — or by a version move, one push per act, made as
-// the act is made (FP-25), never by panning or zooming, and never by a
-// reading scene's end. Back, Forward and a jump move the cursor and discard
-// nothing, and a jump never pushes. A fresh teleport made with the cursor
-// behind the newest entry writes its step on the cursor's entry in the place
-// of the one it held and drops the entries ahead of it before it pushes (a
-// browser's history rule).
+// camera stands away from — by a version move, or by a reading scene's
+// opening, one push per act, made as the act is made (FP-25), never by
+// panning or zooming. Back, Forward and a jump move the cursor and discard
+// nothing, and a jump never pushes; a reading scene's own end is a Back. A
+// fresh teleport made with the cursor behind the newest entry writes its
+// step on the cursor's entry in the place of the one it held and drops the
+// entries ahead of it before it pushes (a browser's history rule).
 // The claim (FP-25): a teleport whose landing waits on a read pushes its
 // entry as a claim as it is made, numbered then and never handed back once
 // its camera leaves, so the trail holds every act's move in the order the
@@ -56,13 +61,15 @@
 // step it wrote standing again (FP-25).
 // An entry holds no document's words (FP-29): its address, its positions,
 // its view, what that view reads and where the walk stood — each by
-// positions and identity — its step, the step's passage by identity, and an
-// act's name where HOME or WHOLE BOARD pushed it; whoever shows an entry
-// reads what its document says from the model as it shows it (N-GO's
-// `wordsOf`). A change of the page's class keeps every entry, its number and
-// its address, and drops what the class it left read there: its notice, save
-// a claim's still reading, the arrival it kept, what its view read and where
-// the walk stood (`classChanged`).
+// positions and identity — its step, the step's passage by identity, a
+// reading scene's pair, its panes' versions and where the reader stood in
+// each, and an act's name where HOME or WHOLE BOARD pushed it; whoever shows
+// an entry reads what its document says from the model as it shows it
+// (N-GO's `wordsOf`). A change of the page's class keeps every entry, its
+// number and its address, and drops what the class it left read there: its
+// notice, save a claim's still reading, the arrival it kept, what its view
+// read, where the walk stood, and where the reader stood in a reading scene
+// it holds (`classChanged`).
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-22, FP-25, FP-29.
 
 /** @typedef {{x: number, y: number, scale: number}} View */
@@ -82,6 +89,15 @@
  * @property {View} view the view the camera is bound for
  * @property {Reading | null} reading what that view reads (T-LAYER's `readAt`); null where it reads no passage
  * @property {Stood | null} stood where the walk stands in the document that view reads; null where it stands outside it, or the view reads none
+ * @property {import('../scene/scene.js').Left | null} [scene] the reading scene standing over the view, as the reader leaves it (SC's `asLeft`): re-taken on an entry a scene was opened as; null where none stands
+ */
+
+/**
+ * @typedef {Object} Opened — the reading scene an entry was opened as (see the head)
+ * @property {string} a the document the scene opened its first pane on
+ * @property {string} b the one it opened its second on
+ * @property {import('../scene/scene.js').Held} held the passage its opener held, which the scene sets level
+ * @property {import('../scene/scene.js').Left | null} left the scene as the reader last left the entry, which a return reopens; null until they leave it
  */
 
 /**
@@ -102,7 +118,16 @@
  * @property {ISpan[]} spans the passage by identity (M-REC's `identityOf`), never empty: a passage the page cannot name so is carried by a LEAP that records no step
  */
 
-/** @typedef {FollowStep | CarryStep} Step the step that left an entry for the one after it: a follow, or a LEAP carrying a passage — any other move leaves none */
+/**
+ * @typedef {Object} SceneStep — a reading scene opened from a link's end or a passage, as the entry it left records it
+ * @property {'scene'} kind
+ * @property {string} near the document the scene was opened from: Back lights the step there
+ * @property {string | null} link the link the scene was opened on, lit by Back at its end there; null where it was opened on a passage
+ * @property {string | null} key that end's key (LK's `endKey`): Back returns the focus to its item there; null with no link
+ * @property {ISpan[] | null} spans the passage the scene was opened on, by identity, which Back outlines there; null with a link
+ */
+
+/** @typedef {FollowStep | CarryStep | SceneStep} Step the step that left an entry for the one after it: a follow, a LEAP carrying a passage, or a reading scene opened from a link's end or a passage — any other move leaves none */
 
 /**
  * @typedef {Object} Kept — the arrival as the reader left an entry (see the head): N-GO's, by value
@@ -128,7 +153,7 @@
 
 /**
  * @typedef {Object} Entry
- * @property {string} addr the place teleported to — the place a jump named, whatever its read brought; at a document, the version its box showed as the entry was last departed (`retakePlace`)
+ * @property {string} addr the place teleported to — the place a jump named, whatever its read brought; at a document, the version its box showed as the entry was last departed (`retakePlace`); at a reading scene's, the document opened beside the reader's
  * @property {number | null} pos the position landed on, where one was
  * @property {number | null} width the positions of the run landed on from `pos`, where the landing named a span: the first run in the text of a follow's projected far end, or a carried passage's counterpart — one of the runs its landing outlined
  * @property {View} view the view at the entry — the landing's, re-taken at departure; where the camera went, where its read brought no place
@@ -138,6 +163,7 @@
  * @property {string | null} label the act's name where HOME or WHOLE BOARD pushed the entry, the strings table's; null for every other entry, whose document's words are read from the model as it is shown (see the head)
  * @property {Notice | null} notice the face the entry shows: its jump's reading face while the read is out, then the face the read brought; null where it shows none
  * @property {Kept | null} kept the arrival as the reader last left the entry, which a return to it restores (see the head); null where none stood
+ * @property {Opened | null} scene the reading scene the entry was opened as, its address the document opened beside the reader's; null for every other entry
  */
 
 /**
@@ -162,8 +188,11 @@ const claims = new Map();
 /** @type {Pushed | null} the last push, until the next */
 let last = null;
 
-/** an entry re-takes a departure from it (see the head): the view, what it reads and where the walk stood, by value */
-function taken(/** @type {Entry} */ e, /** @type {Departure} */ d) { e.view = { ...d.view }; e.reading = d.reading; e.stood = d.stood; }
+/** an entry re-takes a departure from it (see the head): the view, what it reads and where the walk stood, by value, and on an entry a reading scene was opened as the scene standing over it as the reader leaves it */
+function taken(/** @type {Entry} */ e, /** @type {Departure} */ d) {
+  e.view = { ...d.view }; e.reading = d.reading; e.stood = d.stood;
+  if (d.scene && e.scene) e.scene = { ...e.scene, left: d.scene };
+}
 
 /** the cursor's entry re-takes the departure from it: a claim's too, the place its camera left for */
 function retake(/** @type {Departure | null} */ departed) {
@@ -174,11 +203,13 @@ function retake(/** @type {Departure | null} */ departed) {
  * The cursor's entry's place re-taken as it is departed (see the head): the
  * version its box shows then, where that is another than the one the entry
  * names — a claim's never, which keeps the address its jump named while its
- * read is out. N-GO calls it before every move that departs the entry.
+ * read is out, nor a reading scene's, whose address is the document opened
+ * beside, never a box's version (FP-22). N-GO calls it before every move
+ * that departs the entry.
  * @param {string} addr the version the box shows
  */
 export function retakePlace(addr) {
-  if (cursor >= 0 && !claims.has(entries[cursor])) entries[cursor].addr = addr;
+  if (cursor >= 0 && !claims.has(entries[cursor]) && !entries[cursor].scene) entries[cursor].addr = addr;
 }
 
 /**
@@ -186,17 +217,17 @@ export function retakePlace(addr) {
  * re-taken there first and the step leaving it written on it, in the place
  * of any it held, and the entries ahead of the cursor dropped. The entry
  * pushed reads nothing and holds no walk until a departure or a landing
- * writes them.
- * @param {Omit<Entry, 'step' | 'kept' | 'reading' | 'stood'>} e
+ * writes them; it is a reading scene's only where `scene` names one.
+ * @param {Omit<Entry, 'step' | 'kept' | 'reading' | 'stood' | 'scene'> & {scene?: Opened | null}} e
  * @param {Departure | null} departed the departure from the cursor's entry as the teleport left
  * @param {boolean} [claim] the landing waits on a read: the entry stands as a claim until `settle` answers it
- * @param {Step | null} [step] the step the teleport takes from the departed entry: a follow's, a carrying LEAP's; none for any other move
+ * @param {Step | null} [step] the step the teleport takes from the departed entry: a follow's, a carrying LEAP's, a reading scene's; none for any other move
  * @returns {Entry} the entry as the trail holds it
  */
 export function push(e, departed, claim = false, step = null) {
   retake(departed);
   /** @type {Entry} */
-  const held = { ...e, view: { ...e.view }, reading: null, stood: null, step: null, kept: null };
+  const held = { ...e, view: { ...e.view }, reading: null, stood: null, step: null, kept: null, scene: e.scene ?? null };
   last = { entry: held, step: cursor >= 0 ? entries[cursor].step : null, dropped: entries.slice(cursor + 1) };
   if (cursor >= 0) entries[cursor].step = step;
   entries = entries.slice(0, cursor + 1);
@@ -250,10 +281,16 @@ export function keep(e, kept) { e.kept = kept; }
  * keeps its place, its number, its address, its positions, its view and its
  * step, and drops the notice the class it left met there — save a claim's,
  * its read still out, which the new class answers — the arrival it kept,
- * what its view read and where the walk stood.
+ * what its view read and where the walk stood; a reading scene's keeps its
+ * pair and its panes' versions, and drops where the reader stood in each
+ * pane (SC's `Left.spots`).
  */
 export function classChanged() {
-  for (const e of entries) { e.kept = null; e.reading = null; e.stood = null; if (!claims.has(e)) e.notice = null; }
+  for (const e of entries) {
+    e.kept = null; e.reading = null; e.stood = null;
+    if (!claims.has(e)) e.notice = null;
+    if (e.scene && e.scene.left) e.scene = { ...e.scene, left: { ...e.scene.left, spots: null } };
+  }
 }
 
 /**

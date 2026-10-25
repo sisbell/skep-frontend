@@ -13,7 +13,12 @@
 // Then, against the fake port and a page of stand-ins: the scene's focus —
 // the plane covered while it stands, uncovered before the focus returns to
 // the opener, the first opener kept across a scene opened over another, a
-// focus moved out of the scene left alone (FP-20); each pane's article
+// focus moved out of the scene left alone (FP-20); the scene a step on the
+// trail through N-GO — its opening one entry at the act, its own close a
+// Back lighting the passage it was opened from, the scene recorded as left
+// and reopened so by Forward and by Back after a teleport out, the focus on
+// the stop it stood on, an opening abandoned or refused giving its entry
+// back (FP-25); each pane's article
 // T-LAYER's mount on the inner side of its corner, its byline's facts read
 // before the pane is set (FP-12, FP-34); the opening ended by a navigation
 // act's dismissal, Esc or an overlay shown, asking no `compare` after it and
@@ -41,6 +46,8 @@ import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
 import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo } from './scene.js';
 import * as GO from '../nav/go.js';
+import * as TRAIL from '../nav/trail.js';
+import * as CAM from '../plane/camera.js';
 import { t, tHTML } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
@@ -313,6 +320,8 @@ const script = { ...reads(A, A_TEXT), ...reads(B, B_TEXT), ...compared(A, A_TEXT
 let fake;
 before(() => {
   REC._reset();
+  // the platform's element class, which an overlay's anchor is told apart from (O-HOST's): none of the stand-ins is one
+  globalThis.HTMLElement = /** @type {any} */ (class {});
   fake = FAKE.create(script);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {}, onDrop: SCENE.dropped });
@@ -353,7 +362,10 @@ function page() {
   const classes = new Set();
   const shown = () => classes.has('on');
   const root = Object.assign(element('the scene'), { classList: { add: (/** @type {string} */ c) => { classes.add(c); }, remove: (/** @type {string} */ c) => { classes.delete(c); }, toggle() {} } });
-  const bar = element('the scene\'s bar', shown), paneA = element('pane A', shown), paneB = element('pane B', shown);
+  /** @type {Record<string, (ev: any) => void>} the bar's listeners, as the scene attaches them */
+  const barOn = {};
+  const bar = Object.assign(element('the scene\'s bar', shown), { addEventListener: (/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) => { barOn[type] = fn; } });
+  const paneA = element('pane A', shown), paneB = element('pane B', shown);
   const cornerA = element('pane A\'s corner', shown), cornerB = element('pane B\'s corner', shown);
   paneA.querySelector = (s) => (s === ':scope > .corner' ? cornerA : null);
   paneB.querySelector = (s) => (s === ':scope > .corner' ? cornerB : null);
@@ -364,7 +376,9 @@ function page() {
   const live = element('the status region');
   Object.defineProperty(live, 'textContent', { get: () => said[said.length - 1] ?? '', set: (/** @type {string} */ v) => { said.push(v); } });
   FOCUS.attach({ live: /** @type {any} */ (live) });
-  root.contains = (x) => [root, bar, paneA, paneB].includes(/** @type {any} */ (x));
+  root.contains = (x) => [root, bar, paneA, paneB, cornerA, cornerB].includes(/** @type {any} */ (x));
+  paneA.contains = (x) => x === paneA || x === cornerA;
+  paneB.contains = (x) => x === paneB || x === cornerB;
   const mirror = element('the tree', () => !mirror.inert);
   const item = element('the walk\'s current item', () => !mirror.inert);
   mirror.contains = (x) => x === item;
@@ -376,13 +390,15 @@ function page() {
   globalThis.document = /** @type {any} */ (doc);
   WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ (element('the live region')));
   LAYER.attach(/** @type {any} */ (element('the text layer')), /** @type {any} */ (corners));
-  SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas: element('the scene\'s canvas') }));
+  SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas: element('the scene\'s canvas') }), { end: (byKey) => GO.closeScene(byKey) });
   HOST.attach(/** @type {any} */ (overlay));
   /** where the platform's focus stands */
   const at = () => doc.activeElement.id;
   /** the plane's two regions: is each inert? */
   const covered = () => [mirror.inert, corners.inert];
-  return { doc, item, corner, line, paneA, paneB, cornerA, cornerB, names, said, at, covered };
+  /** a pointer's press on the bar's act a selector names, as the platform hands its click to the bar */
+  const press = (/** @type {string} */ sel) => { if (barOn.click) barOn.click({ type: 'click', detail: 1, target: { closest: (/** @type {string} */ s) => (s === sel ? {} : null) } }); };
+  return { doc, item, corner, line, paneA, paneB, cornerA, cornerB, names, said, at, covered, press };
 }
 
 /** the test run on a page of stand-ins, the platform's `document` put back after it */
@@ -432,6 +448,105 @@ test('a focus the person moved out of the scene stays where they put it; one ope
   assert.equal(p.at(), 'pane B');
   SCENE.close();
   assert.equal(p.at(), 'the walk\'s current item', 'a scene opened with the focus on nothing — the scene-offer\'s click — returns it to the walk\'s element: never lost, never to the top');
+}));
+
+// ---- the scene, a step on the trail (N-GO's `toScene`, `closeScene`) -------------------------------------------------
+
+/** an address the board says nothing of: a scene opened on it is refused */
+const GONE = '1.0.1.0.29';
+Object.assign(script, { [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(GONE) })]: NOT_REGISTERED });
+/** the two first editions' `compare` whole: the read a scene on them makes last before it shows */
+const BOTH = F.compare([{ doc: A, spans: [{ ordinal: 1, positions: A_TEXT.length }] }], [{ doc: B, spans: [{ ordinal: 1, positions: B_TEXT.length }] }]);
+/** every flight a move started stepped to its end, and the reads, the walk's moves and the scene's opening it set going let answer */
+async function flown() {
+  for (let i = 0; i < 80; i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
+  assert.deepEqual([CAM.flying(), GO.inAir(), GO.isReaching(), HOST.pending()], [false, false, false, false], 'every flight landed, every opening shown or ended');
+}
+/** a key as the platform delivers it, with the platform's command modifier where `mod` is asked (D5 §0) */
+const keyOf = (/** @type {string} */ key, mod = false) => /** @type {any} */ ({ type: 'keydown', key, keyCode: 0, isComposing: false, metaKey: mod && KEYS.MAC, ctrlKey: mod && !KEYS.MAC, shiftKey: false, altKey: false, preventDefault() {} });
+/** the trail's places, oldest first, and its cursor */
+const trailNow = () => ({ addrs: TRAIL.all().map((e) => e.addr), cursor: TRAIL.cursorIndex() });
+/** the walk's element: its kind, its place, its position */
+const walkAt = () => { const f = WALK.current(); return f && [f.kind, f.addr, f.pos]; };
+/** the trail started afresh on the page of stand-ins — the launch frame, HOME, then a LEAP to the first edition's first span, the entry the scenes below open over — the focus on the walk's item */
+async function onTrail(/** @type {ReturnType<typeof page>} */ p) {
+  CAM.setViewport(1440, 900);
+  TRAIL._reset();
+  await PUMP.loadWhole(A); await PUMP.loadWhole(B);
+  await GO.launch();
+  const leap = GO.leapTo(A, { pos: 1 }); await flown(); await leap;
+  p.item.focus();
+}
+
+test('a reading scene opened through N-GO is a step on the trail (issue #50\'s design decision: "Opening a scene pushes one entry, the scene, the way a follow does"): one entry pushed as the act is made, its address the document opened beside, the entry ahead of the cursor dropped, the passage it was opened from recorded by identity on the entry it departs; its own close — Esc, the bar\'s ×, Mod+-, ← in a pane, Mod+[ — is Back: the cursor on the entry it opened over, nothing pushed or dropped, that passage lit there and the walk on it, each close counted; leaving, the entry records the scene as left, and Forward reopens it, the focus in the pane it stood in', () => onPage(async (p) => {
+  await onTrail(p);
+  const board = GO.wholeBoard(); await flown(); await board;
+  const back = GO.back(); await flown(); await back;
+  const home = TRAIL.all()[0].addr;
+  assert.deepEqual(trailNow(), { addrs: [home, A, '1'], cursor: 1 }, 'the cursor on the first edition, WHOLE BOARD ahead of it');
+  const opening = GO.toScene(A, B, { posA: 1, widthA: 3 }, { from: { passage: { addr: A, pos: 1, width: 3 } } });
+  assert.deepEqual([trailNow(), GO.isReaching()], [{ addrs: [home, A, B], cursor: 2 }, true], 'its entry taken at the act, the document opened beside its address, the entry ahead dropped; reaching while it reads');
+  assert.equal(await opening, true, 'the scene shows');
+  assert.deepEqual([SCENE.isOpen(), p.at(), TRAIL.current()?.scene], [true, 'pane B', { a: A, b: B, held: { posA: 1, widthA: 3 }, left: null }], 'shown, the focus in the far end\'s pane, its entry holding the pair it opened on');
+  assert.deepEqual(TRAIL.all()[1].step, { kind: 'scene', near: A, link: null, key: null, spans: [{ prefix: A + '.0.1', ordinal: 1, width: 3 }] }, 'the entry it departed records the passage it was opened from, by identity');
+  const n = GO.closed();
+  /** @type {Array<[string, () => unknown]>} each of the scene's own closes */
+  const closes = [
+    ['Esc', () => KEYS.esc()],
+    ['the bar\'s ×, pressed', () => p.press('[data-x]')],
+    ['Mod+-', () => KEYS.dispatch(keyOf('-', true), { where: 'scene', byKey: true })],
+    ['← in a pane', () => KEYS.dispatch(keyOf('ArrowLeft'), { where: 'scene', byKey: true })],
+    ['Mod+[', () => KEYS.dispatch(keyOf('[', true), { where: 'scene', byKey: true })],
+  ];
+  for (const [i, [what, close]] of closes.entries()) {
+    await close(); await flown();
+    assert.deepEqual([SCENE.isOpen(), trailNow()], [false, { addrs: [home, A, B], cursor: 1 }], `${what}: Back — the scene ended, the cursor on the entry it opened over, nothing pushed or dropped`);
+    assert.deepEqual([GO.arrivalMark(), walkAt(), GO.closed()], [{ addr: A, pos: 1, runs: [{ pos: 1, width: 3 }], link: null }, ['block', A, 1], n + i + 1], `${what}: the passage it was opened from lit there, the walk on it, the close counted`);
+    const left = TRAIL.all()[2].scene?.left;
+    assert.deepEqual([left?.panes.a.src, left?.panes.b.src, left?.stop, !!left?.spots], [A, B, 'b', true], `${what}: the scene's entry records it as left — each pane's text, where the reader stood, the stop the focus stood on`);
+    const forward = GO.forward(); await flown(); await forward;
+    assert.deepEqual([SCENE.isOpen(), trailNow().cursor, p.at(), GO.arrivalMark()], [true, 2, 'pane B', null], `${what}: Forward reopens it, the focus in the pane it stood in, nothing lit under it`);
+  }
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('leaving a scene\'s entry by a teleport records the scene, and Back onto the entry reopens it as left (issue #50\'s design decision: "Back after a teleport out, reopens the scene as recorded … Focus lands inside the scene through the focus controller, and the status region names the reopened pair"): WHOLE BOARD from the scene pushes its own entry after the scene\'s, and Back reopens it, the focus on the stop it stood on, the pair named in the status region', () => onPage(async (p) => {
+  await onTrail(p);
+  assert.equal(await GO.toScene(A, B), true);
+  const home = TRAIL.all()[0].addr;
+  p.cornerA.focus();
+  assert.equal(p.at(), 'pane A\'s corner', 'the focus on pane A\'s corner');
+  const board = GO.wholeBoard(); await flown(); await board;
+  assert.deepEqual([SCENE.isOpen(), trailNow()], [false, { addrs: [home, A, B, '1'], cursor: 3 }], 'WHOLE BOARD from the scene: the scene ended, its own entry pushed after the scene\'s');
+  assert.equal(TRAIL.all()[2].scene?.left?.stop, 'a:corner', 'the scene\'s entry recorded the stop the focus stood on');
+  const told = p.said.length;
+  const back = GO.back(); await flown(); await back;
+  assert.deepEqual([SCENE.isOpen(), trailNow().cursor, p.at()], [true, 2, 'pane A\'s corner'], 'Back reopens it, the focus on the stop it stood on (FP-20)');
+  assert.ok(p.said.slice(told).includes(`${t('L.scene-label')} · ${A} │ ${B}`), `the status region names the reopened pair: ${JSON.stringify(p.said.slice(told))}`);
+  assert.deepEqual([GO.shownIn(A), GO.shownIn(B)], [A, B], 'no box\'s version changed (FP-22)');
+  assert.deepEqual(fake.unanswered, []);
+}));
+
+test('a reading scene\'s opening reaches as a jump only a read can place does (FP-25): Esc and Back made while its reads are out abandon it, its entry given back — the trail as it stood, nothing opened, the camera still; a read refused gives its entry back too, the refusal faced at the act\'s site', () => onPage(async (p) => {
+  await onTrail(p);
+  const before = trailNow(), view = CAM.view();
+  /** @type {Array<[string, () => unknown]>} each act that abandons the opening */
+  const acts = [['Esc', () => KEYS.esc()], ['Back', () => GO.back()]];
+  for (const [what, abandon] of acts) {
+    const release = fake.hold('op', { frame: BOTH });
+    const opening = GO.toScene(A, B);
+    assert.deepEqual([trailNow().addrs.length, GO.isReaching()], [before.addrs.length + 1, true], `${what}: its entry taken at the act, reaching`);
+    await abandon();
+    release();
+    assert.equal(await opening, false, `${what}: nothing shows`);
+    await flown();
+    assert.deepEqual([SCENE.isOpen(), trailNow(), CAM.view()], [false, before, view], `${what}: abandoned — its entry given back, the camera where it stood`);
+  }
+  const site = { span: { addr: A, pos: 1, width: 3 } };
+  assert.equal(await GO.toScene(A, GONE, {}, { site }), false);
+  assert.deepEqual([SCENE.isOpen(), trailNow(), HOST.currentState()?.id, HOST.currentState()?.anchor], [false, before, 'face:doc_not_registered', { ...site, sign: A }], 'refused: its entry given back, the fifth cell faced at the act\'s site');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
 }));
 
 // ---- the panes' articles: T-LAYER's mount ------------------------------------------------------------------------------

@@ -37,8 +37,8 @@ corner's, pane, its corner, pane, its corner, the scene's acts (K-61; issue
 article a control or a stop in the AX tree (SC: the panes are read, never
 pressed), each pane's corner a group there named by its own words, which say
 what the pane shows, and Shift+Tab walking it back to the
-line, Esc ending it with the focus on the item it was opened from (K-63) and
-Mod+[ from a pane with the focus on the landing's item (rule 8); Back's light
+line, Esc and Mod+[ from a pane each its Back (issue #50), ending it on the
+entry it opened over with the focus on the landing's item (K-63; rule 8); Back's light
 exposed (issue #152's design decision) — Mod+[ from a carried passage's
 landing returns the focus to the span holding the passage's start where the
 carry was made, every span item holding a stretch of it marked
@@ -564,6 +564,8 @@ def run(ctx):
     ctx.frames(1)
     # the scene opened from the mirror's current item: Tab once round the ring from the far end's pane
     opened = from_item()
+    # the trail as the scene opens over its landing: the scene's own end is a Back onto it (issue #50)
+    opened_over = ctx.js('(() => { const t = window.__skep.trail(); return {cursor: t.cursor, entries: t.entries.length}; })()')
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
     ctx.settle()
     ctx.frames(2)
@@ -627,12 +629,17 @@ def run(ctx):
     r.figures['ring']['scene_back_from_pane_b'] = ring
     ctx.js('document.getElementById("sceneB").focus({preventScroll: true})')
     ctx.frames(1)
+    # the block holding the window run's first position: the landing the scenes below are opened over, where their Back lands
+    blocks = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))
+    held = next((b['pos'] for b in blocks if b['pos'] <= WINDOW[0] < b['pos'] + b['width']), None)
     press('Escape')
-    f = returned()
-    r.check(not ctx.js('window.__skep.scene.isOpen()') and f['opener'] and f['item'], 'Esc ends the scene, and the focus stands on the mirror\'s item the scene was opened from (K-63) — never lost, never to the top', f)
-    # a navigation act from the scene: Back from a pane lands at the entry behind, and the focus stands on the landing's item
-    ctx.leap(DOC, 1)
+    f, landed, now = returned(), ctx.js('window.__skep.view.focus()'), ctx.js('(() => { const t = window.__skep.trail(); return {cursor: t.cursor, entries: t.entries.length}; })()')
+    r.check(not ctx.js('window.__skep.scene.isOpen()') and now == {'cursor': opened_over['cursor'], 'entries': opened_over['entries'] + 1} and f['item'] and bool(landed) and (landed['addr'], landed['pos']) == (DOC, held),
+            'Esc ends the scene, a Back onto the entry it opened over, the scene\'s own entry standing ahead (issue #50), and the focus stands on the walk\'s item there in the rebuilt tree (K-63) — never lost, never to the top',
+            dict(f, landed=landed, trail={'opened_over': opened_over, 'after': now}))
+    # Mod+[ from a pane is the scene's Back too: it ends the scene on the entry it opened over, the focus on the landing's item
     opened = from_item()
+    opened_over = ctx.js('(() => { const t = window.__skep.trail(); return {cursor: t.cursor, entries: t.entries.length}; })()')
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
     ctx.settle()
     ctx.frames(2)
@@ -640,9 +647,10 @@ def run(ctx):
     ctx.drv.key('[', code='BracketLeft', mods=('Meta',))
     ctx.settle()
     ctx.frames(2)
-    f, landed = returned(), ctx.js('window.__skep.view.focus()')
-    r.check(opened and in_pane and not ctx.js('window.__skep.scene.isOpen()') and bool(landed) and (landed['addr'], landed['pos']) == (DOC, 1) and f['item'],
-            'Mod+[ from the scene\'s pane ends it and goes back, and the focus stands on the landing\'s item in the rebuilt tree (rule 8)', dict(f, landed=landed, in_pane=in_pane))
+    f, landed, now = returned(), ctx.js('window.__skep.view.focus()'), ctx.js('(() => { const t = window.__skep.trail(); return {cursor: t.cursor, entries: t.entries.length}; })()')
+    r.check(opened and in_pane and not ctx.js('window.__skep.scene.isOpen()') and now == {'cursor': opened_over['cursor'], 'entries': opened_over['entries'] + 1} and bool(landed) and (landed['addr'], landed['pos']) == (DOC, held) and f['item'],
+            'Mod+[ from the scene\'s pane is its Back (issue #50): it ends the scene on the entry it opened over, the scene\'s own entry standing ahead, and the focus stands on the landing\'s item in the rebuilt tree (rule 8)',
+            dict(f, landed=landed, in_pane=in_pane, trail={'opened_over': opened_over, 'after': now}))
     ctx.js('(() => { const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     ctx.frames(1)
     # ---- the links card's overlay toggle: one switch (R60; B1-S4; WAI-ARIA's switch) --------------------------------

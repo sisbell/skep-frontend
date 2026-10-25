@@ -19,7 +19,8 @@
 // in part, not at all, or couldn't tell, by the refusal met — its landing
 // naming the passage as the selection where it is one — and each offering
 // "read side by side", the scene opened on the held passage, which SC sets
-// level with what the member holds of it. Each member is one row: its acts,
+// level with what the member holds of it — a step on the trail from that
+// passage, at the list's place (N-GO's `toScene`). Each member is one row: its acts,
 // its date and its mark in columns the rows share. A row's date is the day
 // its member was published, the commit that minted it, from the age a
 // `doc_metadata` of the member answered — held where a read of the member
@@ -72,7 +73,6 @@ import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
 import * as GO from '../nav/go.js';
-import * as SCENE from '../scene/scene.js';
 import * as LAYER from '../text/layer.js';
 import * as LINE from '../line/line.js';
 import { whyOf, retries } from '../beams/held.js';
@@ -288,7 +288,7 @@ function showList(l, anchor, pos, width, byKey) {
   const selected = pos != null && width != null && width > 0;
   for (const r of rows) {
     acts['read' + r.k] = (_el, byKey) => GO.toVersion(versionAddress(trunk, r.k), { carry: held ? { addr, pos: held.pos, width: held.width, selected } : null, byKey, site });
-    acts['beside' + r.k] = () => SCENE.open(addr, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null });
+    acts['beside' + r.k] = () => GO.toScene(addr, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null }, { from: held ? { passage: { addr, pos: held.pos, width: held.width } } : null, site });
   }
   if (end && end.again) acts.again = (_el, byKey) => { void HOST.opening((stands) => listed(addr, pos, width, stands, l), (next) => showList(next, anchor, pos, width, byKey)); };
   HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });

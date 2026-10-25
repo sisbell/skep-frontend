@@ -12,7 +12,9 @@
 // is a LEAP that carries the span asked over, re-projected and marked at the
 // landing (N-GO; foundations §2.3; P43), whose line names it as what the
 // reader selected where it is the selection's bytes, else as the text they
-// were reading (FP-21). Each card takes the focus on its first act where a
+// were reading (FP-21); an origin read side by side with the span's document
+// is a step on the trail from the span asked over, by identity (N-GO's
+// `toScene`). Each card takes the focus on its first act where a
 // key made the act that asked — the slot's chord, Enter on its button — and
 // never otherwise (D5 §4 rule 4; the focus record's rule 16). Each opens on
 // its read (O-HOST's `opening`): where an act was made on the chrome while it
@@ -29,7 +31,6 @@ import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
 import * as F from '../model/frames.js';
 import * as GO from '../nav/go.js';
-import * as SCENE from '../scene/scene.js';
 import * as FACES from './faces.js';
 import { t, tHTML, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
@@ -114,7 +115,7 @@ export function wrote(addr, pos, width = null, byKey = false) {
       rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${r.html}${r.same ? ` <button class="id" data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
-    rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => carried(r.o, addr, sp, isSelection(width), byKey); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
+    rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => carried(r.o, addr, sp, isSelection(width), byKey); acts['beside' + i] = () => GO.toScene(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }, { from: { passage: { addr, pos: sp.ordinal, width: sp.positions } }, site: anchor }); });
     HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts, takeFocus: byKey });
   });
 }

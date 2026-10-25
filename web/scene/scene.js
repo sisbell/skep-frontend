@@ -3,8 +3,9 @@
 // ends it sets level, the bands' and lines' ends as measured in the panes,
 // the panes' scrolls, each pane's text — the record it was made from, the
 // version it reads and the address it names, the links and far ends it was
-// set with — the settings reading and the acts waiting on them, and the
-// element it was opened from; view state, never written (FP-7).
+// set with — the settings reading and the acts waiting on them, the element
+// it was opened from, and its own end, the app's to hand in; view state,
+// never written (FP-7).
 // Two documents at reading scale side by side over the plane, each pane
 // scrolling on its own (R3); the places unmoved, nothing written; the dialog
 // named as it attaches by ST's `L.scene-label`. It sets the two ends level
@@ -88,22 +89,36 @@
 // answer holds no scene open, and a pane whose read the board did not answer
 // keeps what it shows.
 // It opens through O-HOST's `opening` on its reads, both documents whole and
-// their `compare`: an act that ends the opening while they read leaves their
-// answer opening nothing, and no `compare` is asked after it. Whatever ends
-// it — zoom-out, Esc, ←, the bar's ×, or a navigation act, which ends it
-// first (§2.5) — leaves the plane as it was and the trail as it found it
-// (`close`): the scene never moves the camera, so an entry pushed for it
-// would hold the view of the entry it departs and drop the entries ahead of
-// the cursor.
+// their `compare` (`open`): an act that ends the opening while they read
+// leaves their answer opening nothing, and no `compare` is asked after it;
+// as it shows, the act that asked for it ends the chrome of the place it
+// leaves (`Showing`'s `leaving`), and it answers whether it showed and the
+// refusal its reads met where it did not (`Opening`). The scene is a step on
+// the trail, which N-GO keeps (`toScene`, `closeScene`): its own end —
+// zoom-out, Esc, ←, the bar's × — is a Back from its entry, the bar's handed
+// in by the app (`attach`), and `close` ends it as a navigation act's
+// departure does, leaving the plane as it was: the scene never moves the
+// camera. As the reader leaves its entry, N-GO records the scene as they
+// left it (`asLeft`): each pane's version; where the reader stood in it, its
+// selection and the end set level in it, each by its bytes' identity
+// through the image its article was made from, never a scroll offset; and
+// the stop the platform's focus stood on. A cursor move back onto the entry
+// reopens it so (`reopen`): each pane's record read again — an edition read
+// at its bare address whose chain went past the member its text was, pinned
+// to that member (FP-23) — the two ends set level, each pane whose text
+// holds its place's bytes brought back to them, any other left where the
+// re-level set it, its selection put back on the same bytes, the focus on
+// the stop it stood on and the pair named in the status region.
 // The focus (D5 §4 rules 5 and 8; K-61, K-63; the focus record's rule 17;
-// FP-20): opened, the scene puts the focus in the far end's pane and takes
-// the plane it stands over out of the page's order and the accessibility
-// tree, each region by its owner (`coverPlane`: N-WALK's and T-LAYER's
-// `cover`); the one line is never covered, and the LEAP box stands over the
-// scene. Whatever ends it puts the plane back first — the element the scene
-// was opened from takes no focus while covered — and hands the focus back
-// through N-FOCUS's `close`; the opener is read as the scene opens, after
-// the dismissal and before the reads (`from`).
+// FP-20): shown, the scene puts the focus in the far end's pane — reopened,
+// on the stop it stood on — and takes the plane it stands over out of the
+// page's order and the accessibility tree, each region by its owner
+// (`coverPlane`: N-WALK's and T-LAYER's `cover`); the one line is never
+// covered, and the LEAP box stands over the scene. Whatever ends it puts the
+// plane back first — the element the scene was opened from takes no focus
+// while covered — and hands the focus back through N-FOCUS's `close`; the
+// opener is read as the scene shows, after the chrome it leaves is ended
+// (`from`).
 // Each pane is a named region (SC9), named by its own document's address,
 // the head of the article it holds (`namePane`), and ↓ and ↑ in it move by
 // block — the next block's top brought to the pane's top (K-60) — PageDown
@@ -134,8 +149,8 @@
 // takes move that pane alone (`key`). The bar names each pane by the address
 // it shows, in the identifier's face (P-REG's FACE). The scene's acts are its bar's
 // buttons — re-level (K-62, its chord drawn for the platform, rule 19) and
-// the dismissal — each pressed by a click anywhere on it, by Enter or by
-// Space, and a pane's corner's act.
+// the dismissal, the scene's own end — each pressed by a click anywhere on
+// it, by Enter or by Space, and a pane's corner's act.
 // A face that arrives once the panes are set refits them and measures their
 // ties again (`refaced`).
 // Figures: the ends level LEVEL_AT px below the panes' tops; MAX_BANDS bands drawn at
@@ -171,6 +186,7 @@ import { esc } from '../util.js';
 /** @typedef {import('../beams/beams.js').Ink} Ink */
 /** @typedef {import('../text/article.js').ArticleView} ArticleView */
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
+/** @typedef {import('../bridge/shapes').Refusal} Refusal */
 
 /**
  * @typedef {Object} Level — the two ends the scene sets level, a position in each pane's document; null where that pane stands at its top
@@ -284,6 +300,36 @@ import { esc } from '../util.js';
  * @property {Array<() => void>} waiting the acts made while one reads, in the order made (`whenSet`)
  */
 
+/**
+ * @typedef {Object} Opening — what an opening of the scene came to (`open`, `reopen`)
+ * @property {boolean} shown the scene shows
+ * @property {Refusal | null} refused where it does not, the refusal a read it needed met; null where none did — an act made on the chrome while it read ended it
+ */
+
+/**
+ * @typedef {Object} Showing — what the act that opens the scene hands it (`open`, `reopen`)
+ * @property {() => void} [leaving] run as the scene shows, before anything of it is set: the chrome of the place it leaves ended (N-GO's)
+ */
+
+/** @typedef {Pick<Pane, 'doc' | 'src' | 'names' | 'shows' | 'kind' | 'k' | 'n' | 'read'>} Version a pane's text as the reader left it (`Left`): the record it was made from and the addresses it names and shows, as the pane holds them */
+
+/**
+ * @typedef {Object} Spot — where the reader stood in a pane as they left it (`Left`), each by its bytes' identity
+ * @property {Place | null} place the passage first in view and how far below the pane's visible top its line stood; null where the pane held no line in view
+ * @property {{ids: ISpan[], backward: boolean} | null} sel the platform's selection in the pane, and whether it ran backward; null where none stood there
+ * @property {{pos: number, ids: ISpan[]} | null} level the end set level in the pane; null where the pane stood at its top
+ * @property {number | null} lacks what the pane's corner said the version it read lacks (`Pane.lacks`)
+ */
+
+/** @typedef {'a' | 'b' | 'a:corner' | 'b:corner' | 'relevel' | 'x'} Stop a stop of the scene's the platform's focus stands on: a pane, a pane's corner, or one of the bar's acts */
+
+/**
+ * @typedef {Object} Left — the scene as the reader left it (`asLeft`; see the head): what its trail entry records, by value, and what reopens it (`reopen`)
+ * @property {{a: Version, b: Version}} panes each pane's text
+ * @property {{a: Spot, b: Spot} | null} spots where the reader stood in each pane; null where none is kept — a change of the page's class drops them (N-TRAIL's)
+ * @property {Stop | null} stop the stop the platform's focus stood on; null where it stood outside the scene
+ */
+
 /** how far below the panes' tops the two ends are set level (px), where both can stand there */
 const LEVEL_AT = 40;
 /** the bands drawn at most */
@@ -300,6 +346,8 @@ let scene = null;
 let els = null;
 /** @type {Drawn[]} what the last draw drew */
 let drawnTies = [];
+/** the scene's own end — a Back from its entry, the app's to hand in (`attach`); until it does, the scene ended where it stands */
+let ending = (/** @type {boolean} */ _byKey) => close();
 
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
@@ -329,9 +377,16 @@ function namePane(pane, id) {
   if (addr) { addr.id = id; pane.setAttribute('aria-labelledby', id); }
 }
 
-/** @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement}} e */
-export function attach(e) {
+/**
+ * Attach the scene's elements, and the act its own end runs (see the head):
+ * the bar's ×, told whether a key pressed it by the focus owner's one
+ * reading (FP-20).
+ * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement}} e
+ * @param {{end?: (byKey: boolean) => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it
+ */
+export function attach(e, acts = {}) {
   els = e;
+  if (acts.end) ending = acts.end;
   e.root.setAttribute('aria-label', t('L.scene-label'));
   /** is an event's target a pane's corner's act? */
   const onAct = (/** @type {Event} */ ev) => { const tg = /** @type {HTMLElement | null} */ (ev.target); return !!tg && !!tg.closest && !!tg.closest('.corner [data-read]'); };
@@ -343,7 +398,7 @@ export function attach(e) {
     p.addEventListener('click', (ev) => { if (onAct(ev)) act(p === e.paneB ? 'b' : 'a'); });
   }
   // a click on an act is its button's wherever on the button it lands — the re-level's chord mark among them
-  e.bar.addEventListener('click', (ev) => { const tg = /** @type {HTMLElement} */ (ev.target); if (tg.closest('[data-x]')) close(); else if (tg.closest('[data-relevel]')) relevel(); });
+  e.bar.addEventListener('click', (ev) => { const tg = /** @type {HTMLElement} */ (ev.target); if (tg.closest('[data-x]')) ending(FOCUS.byKey(ev)); else if (tg.closest('[data-relevel]')) relevel(); });
 }
 export const isOpen = () => scene !== null;
 /** the addresses the two panes' acts name and their positions are measured against (`Pane.names`) */
@@ -597,24 +652,25 @@ function placedInto(src, shown) {
  * count where the board ended the chain there —
  * held, or, at an edition at its bare address, read to its end (`probeChain`):
  * the member its text is, which its acts name. A count the board did not end
- * the chain at is no count: the head is not known there. Null where
- * the board did not answer, which leaves a pane as it shows; `whole` false
- * where the board refused the text for what it says of the document —
- * withheld from the reader, or nothing it will say of the address — the
- * record then standing as that refusal (a pane read again at the death; a
- * scene opens on two texts read whole alone).
+ * the chain at is no count: the head is not known there. `d` null where the
+ * board did not answer, which leaves a pane as it shows; `whole` false where
+ * the board refused the text for what it says of the document — withheld
+ * from the reader, or nothing it will say of the address — the record then
+ * standing as that refusal (a pane read again at the death, or reopened; a
+ * scene opens on two texts read whole alone); `refused` the refusal the
+ * whole read met, none where it met none.
  * @param {string} src
  * @param {() => boolean} [stands] the opening the read is made for still stands: a probe asks no more once it ends
- * @returns {Promise<{d: Doc, n: number | null, whole: boolean} | null>}
+ * @returns {Promise<{d: Doc | null, n: number | null, whole: boolean, refused: Refusal | null}>}
  */
 async function readPane(src, stands = () => true) {
   const w = await PUMP.wholeOf(src);
-  if (!w.doc && !REC.doc(src).refused) return null;
+  if (!w.doc && !REC.doc(src).refused) return { d: null, n: null, whole: false, refused: w.refused };
   await PUMP.readAccount(REC.ownerAccount(REC.doc(src)));
   const box = REC.has(boxOf(src)) ? REC.doc(boxOf(src)) : null;
   let n = box && box.ended ? box.members : null;
   if (w.doc && kindAt(src, w.doc) === 'bare' && n == null && stands()) { const p = await PUMP.probeChain(src, stands); n = p && p.ended ? p.n : null; }
-  return { d: REC.doc(src), n, whole: !!w.doc };
+  return { d: REC.doc(src), n, whole: !!w.doc, refused: w.refused };
 }
 
 /**
@@ -689,57 +745,218 @@ function swap(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P, /
 }
 
 /**
- * Open the scene on two documents, once its reads answer where no act was
- * made on the chrome meanwhile (O-HOST's opening) — both documents whole,
- * the chain of each edition read at its bare address, their `compare`, and
- * where the far end of each link crossing between them stands now
- * (`readBetween`) — the passage held set level with its counterpart
- * (`levels`); the focus in the far end's pane, the plane under the scene out
- * of the page's order (see the head).
+ * Open the scene on two documents (see the head), once its reads answer
+ * where no act was made on the chrome meanwhile (O-HOST's opening) — both
+ * documents whole, the chain of each edition read at its bare address, their
+ * `compare`, and where the far end of each link crossing between them stands
+ * now (`readBetween`) — the passage held set level with its counterpart
+ * (`levels`); as it shows, the act's `leaving` first, then the focus in the
+ * far end's pane, the plane under the scene out of the page's order.
  * @param {string} a
  * @param {string} b
  * @param {Held} [held]
- * @returns {Promise<void>} settled once the scene opens, or nothing will
+ * @param {Showing} [as]
+ * @returns {Promise<Opening>} once the scene shows, or nothing will
  */
-export async function open(a, b, held = {}) {
-  if (!els) return;
-  HOST.dismiss();
-  // where the act found the focus — read after the dismissal, which hands back a focus the overlay held, and before the
-  // reads, in which the person may move it; a scene opened over one standing keeps that one's (the controller's one memory)
-  const from = document.activeElement;
+export async function open(a, b, held = {}, as = {}) {
+  /** @type {Opening} */
+  const out = { shown: false, refused: null };
+  if (!els) return out;
   await HOST.opening(async (stands) => {
     const [ra, rb] = await Promise.all([readPane(a, stands), readPane(b, stands)]);
-    if (!ra || !rb || !ra.whole || !rb.whole || !stands()) return null;
-    const between = await readBetween({ src: a, d: ra.d, shown: LK.shown(a) }, { src: b, d: rb.d, shown: LK.shown(b) });
-    return { ra, rb, between };
-  }, ({ ra, rb, between }) => {
+    const da = ra.d, db = rb.d;
+    if (!da || !db || !ra.whole || !rb.whole) { if (stands()) out.refused = (!da || !ra.whole ? ra.refused : null) || rb.refused; return null; }
+    if (!stands()) return null;
+    const between = await readBetween({ src: a, d: da, shown: LK.shown(a) }, { src: b, d: db, shown: LK.shown(b) });
+    return { pa: paneAt('a', a, { d: da, n: ra.n }), pb: paneAt('b', b, { d: db, n: rb.n }), between };
+  }, ({ pa, pb, between }) => {
     const E = els;
     if (!E) return;
-    if (between.refused) E.bar.dataset.face = between.refused; else delete E.bar.dataset.face;
-    /** @type {Scene} */
-    const S = { a: paneAt('a', a, ra), b: paneAt('b', b, rb), pairs: between.pairs, level: levels(between.pairs, held), ties: [], size: '', updating: 0, waiting: [] };
-    scene = S;
-    S.a.placed = placedInto(a, [...S.b.view.marks, ...S.a.view.marks]);
-    S.b.placed = placedInto(b, [...S.a.view.marks, ...S.b.view.marks]);
-    coverPlane(true);
-    E.root.classList.add('on');
-    const face = E.bar.dataset.face;
-    E.bar.innerHTML = `<b class="id" data-name="a">${esc(S.a.shows)}</b> │ <b class="id" data-name="b">${esc(S.b.shows)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
-      (face ? ` <span class="face-text">${esc(t(face === 'too_many_pairs' ? 'B1.too_many_pairs' : face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: face }))}</span>` : '') +
-      ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
-    // each pane's article T-LAYER's mount, its corner on the pane's outer side: pane A's before the article, pane B's after
-    for (const side of SIDES) {
-      const P = S[side], pane = paneEl(E, side);
-      pane.innerHTML = cornerMarkup(P);
-      swap(E, P, LAYER.sceneArticle(P.d, { names: P.names, shows: P.shows, view: P.view }));
-      namePane(pane, side === 'a' ? 'sceneA-name' : 'sceneB-name');
-      pane.setAttribute('tabindex', '0');
-    }
-    fitMeasure(E);
+    if (as.leaving) as.leaving();
+    // where the focus stands as the scene shows — the chrome it leaves ended, which hands back a focus an overlay held; a
+    // scene shown over one standing keeps that one's (the controller's one memory)
+    const from = document.activeElement;
+    stand(E, { a: pa, b: pb, pairs: between.pairs, level: levels(between.pairs, held), ties: [], size: '', updating: 0, waiting: [] }, between.refused);
     relevel();
     FOCUS.open('scene', { el: E.root, from, byKey: true, first: E.paneB });
+    out.shown = true;
     markDirty();
   });
+  return out;
+}
+
+/**
+ * The scene stood over the plane (`open`, `reopen`): the plane under it out
+ * of the page's order; the bar naming each pane by the address it shows, and
+ * the refusal the panes' `compare` met; each pane's article T-LAYER's mount,
+ * its corner on the pane's outer side — pane A's before the article, pane B's
+ * after — and the panes fitted to the measure.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {string | null} face the refusal the `compare` met, by its name
+ */
+function stand(E, S, face) {
+  scene = S;
+  S.a.placed = placedInto(S.a.src, [...S.b.view.marks, ...S.a.view.marks]);
+  S.b.placed = placedInto(S.b.src, [...S.a.view.marks, ...S.b.view.marks]);
+  coverPlane(true);
+  E.root.classList.add('on');
+  if (face) E.bar.dataset.face = face; else delete E.bar.dataset.face;
+  E.bar.innerHTML = `<b class="id" data-name="a">${esc(S.a.shows)}</b> │ <b class="id" data-name="b">${esc(S.b.shows)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
+    (face ? ` <span class="face-text">${esc(t(face === 'too_many_pairs' ? 'B1.too_many_pairs' : face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: face }))}</span>` : '') +
+    ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
+  for (const side of SIDES) {
+    const P = S[side], pane = paneEl(E, side);
+    pane.innerHTML = cornerMarkup(P);
+    swap(E, P, LAYER.sceneArticle(P.d, { names: P.names, shows: P.shows, view: P.view }));
+    namePane(pane, side === 'a' ? 'sceneA-name' : 'sceneB-name');
+    pane.setAttribute('tabindex', '0');
+  }
+  fitMeasure(E);
+}
+
+/**
+ * The scene reopened as the reader left it (see the head), once its reads
+ * answer where no act was made on the chrome meanwhile (O-HOST's opening):
+ * each pane's text read again (`paneAgain`) and the reads between the panes;
+ * as it shows, the act's `leaving` first; the ends set level where their
+ * bytes stand now, else where the panes' `compare` sets the passage held;
+ * each pane brought back to its place and its selection (`placeAgain`); the
+ * focus on the stop it stood on, else in the far end's pane, and the pair
+ * named in the status region. A pane the board refused the text of for what
+ * it says of the document stands as that refusal, its head alone — a cover
+ * (FP-29). Opened anew where the reader never left it.
+ * @param {import('../nav/trail.js').Opened} o the scene's trail entry's own: the pair it opened on, the passage held, the scene as the reader left it
+ * @param {Showing} [as]
+ * @returns {Promise<Opening>} once the scene shows, or nothing will
+ */
+export async function reopen(o, as = {}) {
+  const was = o.left;
+  if (!was) return open(o.a, o.b, o.held, as);
+  /** @type {Opening} */
+  const out = { shown: false, refused: null };
+  if (!els) return out;
+  await HOST.opening(async (stands) => {
+    const [ra, rb] = await Promise.all([paneAgain('a', was.panes.a, stands), paneAgain('b', was.panes.b, stands)]);
+    const pa = ra.pane, pb = rb.pane;
+    if (!pa || !pb) { if (stands()) out.refused = ra.refused || rb.refused; return null; }
+    if (!stands()) return null;
+    const between = await readBetween({ src: pa.src, d: pa.d, shown: LK.shown(pa.src) }, { src: pb.src, d: pb.d, shown: LK.shown(pb.src) });
+    return { pa, pb, between };
+  }, ({ pa, pb, between }) => {
+    const E = els;
+    if (!E) return;
+    if (as.leaving) as.leaving();
+    const from = document.activeElement, spots = was.spots;
+    for (const P of [pa, pb]) P.lacks = spots && P.src === was.panes[P.side].src ? spots[P.side].lacks : null;
+    /** @type {Scene} */
+    const S = { a: pa, b: pb, pairs: between.pairs, level: levels(between.pairs, o.held), ties: [], size: '', updating: 0, waiting: [] };
+    stand(E, S, between.refused);
+    if (spots) {
+      for (const side of SIDES) {
+        const lv = spots[side].level, at = lv ? REC.placedIn(S[side].d.image, lv.ids) : [];
+        S.level[side] = !lv ? null : at.length ? at[0].pos : S.level[side];
+      }
+    }
+    level();
+    if (spots) placeAgain(E, S, spots);
+    FOCUS.open('scene', { el: E.root, from, byKey: true, first: stopIn(E, was.stop) || E.paneB });
+    FOCUS.say(`${t('L.scene-label')} · ${S.a.shows} │ ${S.b.shows}`);
+    out.shown = true;
+    markDirty();
+  });
+  return out;
+}
+
+/**
+ * A pane as the reader left it, read again (`reopen`): its record whole
+ * (`readPane`), the version it read and its corner's act as it left them; an
+ * edition read at its bare address whose chain the read finds past the
+ * member its text was, that member read whole in its place, the pane pinned
+ * to it and its corner offering the newest (FP-23). No pane where the board
+ * did not answer, with the refusal met.
+ * @param {'a' | 'b'} side
+ * @param {Version} v
+ * @param {() => boolean} stands
+ * @returns {Promise<{pane: Pane | null, refused: Refusal | null}>}
+ */
+async function paneAgain(side, v, stands) {
+  const r = await readPane(v.src, stands), d = r.d;
+  if (!d) return { pane: null, refused: r.refused };
+  if (v.kind === 'bare' && v.k != null && r.n != null && r.n > v.k) {
+    const src = versionAddress(boxOf(v.src), v.k), m = await readPane(src, stands), md = m.d;
+    if (!md) return { pane: null, refused: m.refused };
+    return { pane: { ...paneAt(side, src, { d: md, n: r.n }), doc: v.doc, read: r.n }, refused: null };
+  }
+  const P = paneAt(side, v.src, { d, n: r.n });
+  return { pane: { ...P, doc: v.doc, read: v.read, n: P.kind === 'draft' ? null : Math.max(P.n ?? 0, v.n ?? 0, P.k ?? 0) || null }, refused: null };
+}
+
+/**
+ * Each pane brought back to where the reader stood in it (`reopen`): its
+ * place's line, where its text holds that byte, at the height it stood below
+ * the pane's visible top — any other pane left where the re-level set it —
+ * and its selection put back on the same bytes; then the ties drawn at the
+ * panes' scrolls.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {{a: Spot, b: Spot}} spots
+ */
+function placeAgain(E, S, spots) {
+  for (const side of SIDES) {
+    const P = S[side], pane = paneEl(E, side), s = spots[side], image = P.d.image;
+    const at = s.place ? REC.placedIn(image, s.place.ids) : [];
+    if (s.place && at.length) { const line = lineAt(pane, P.names, at[0].pos); if (line) pane.scrollTop = line.top - s.place.at; }
+    const sel = s.sel ? REC.placedIn(image, s.sel.ids) : [], z = sel[sel.length - 1];
+    if (s.sel && z && P.el) LAYER.selectIn(P.el, { addr: P.names, pos: sel[0].pos, width: z.pos + z.width - sel[0].pos }, s.sel.backward);
+  }
+  draw();
+}
+
+/**
+ * The scene as the reader leaves it (see the head), by value: each pane's
+ * text; where they stood in it, its selection and the end set level in it,
+ * each by its bytes' identity through the image its article was made from;
+ * and the stop the platform's focus stands on. What N-GO records in the
+ * scene's trail entry as the reader leaves it; null where the scene does not
+ * stand.
+ * @returns {Left | null}
+ */
+export function asLeft() {
+  const S = scene, E = els;
+  if (!S || !E) return null;
+  /** @type {(P: Pane) => Version} */
+  const version = (P) => ({ doc: P.doc, src: P.src, names: P.names, shows: P.shows, kind: P.kind, k: P.k, n: P.n, read: P.read });
+  /** @type {(P: Pane) => Spot} */
+  const spot = (P) => {
+    const made = P.el ? LAYER.madeOf(P.el) : null, image = made ? made.image : [], sel = P.el ? LAYER.selectionIn(P.el) : null, lv = S.level[P.side];
+    return {
+      place: P.place || placeAt(P, firstInView(paneEl(E, P.side))),
+      sel: sel ? { ids: REC.identityIn(image, sel.span.pos, sel.span.width), backward: sel.backward } : null,
+      level: lv != null ? { pos: lv, ids: REC.identityIn(image, lv, 1) } : null,
+      lacks: P.lacks,
+    };
+  };
+  return { panes: { a: version(S.a), b: version(S.b) }, spots: { a: spot(S.a), b: spot(S.b) }, stop: stopOf(E) };
+}
+
+/** the scene's stop the platform's focus stands on (`Stop`); null where it stands outside the scene */
+function stopOf(/** @type {NonNullable<typeof els>} */ E) {
+  const at = typeof document !== 'undefined' ? document.activeElement : null;
+  if (!at) return null;
+  for (const side of SIDES) {
+    const pane = paneEl(E, side), corner = pane.querySelector(':scope > .corner');
+    if (corner && corner.contains(at)) return /** @type {Stop} */ (side + ':corner');
+    if (pane.contains(at)) return side;
+  }
+  return at === E.bar.querySelector('[data-relevel]') ? 'relevel' : at === E.bar.querySelector('[data-x]') ? 'x' : null;
+}
+
+/** the element a stop names (`Stop`) as the scene stands now; null where it names none */
+function stopIn(/** @type {NonNullable<typeof els>} */ E, /** @type {Stop | null} */ stop) {
+  if (stop === 'a' || stop === 'b') return paneEl(E, stop);
+  if (stop === 'a:corner' || stop === 'b:corner') return paneEl(E, stop === 'a:corner' ? 'a' : 'b').querySelector(':scope > .corner');
+  return stop === 'relevel' ? E.bar.querySelector('[data-relevel]') : stop === 'x' ? E.bar.querySelector('[data-x]') : null;
 }
 
 /**
@@ -1007,11 +1224,11 @@ async function update(side, how = {}) {
   S.updating++;
   try {
     const src = how.src ?? P.src;
-    const r = await readPane(src);
+    const r = await readPane(src), d = r.d;
     // a version the corner's act could not read whole leaves the pane as it shows
-    if (stale() || !r || (how.src && !r.whole)) return;
+    if (stale() || !d || (how.src && !r.whole)) return;
     if (P.kind === 'bare' && !how.src && P.k != null && r.n != null && r.n > P.k) { pin(S, side, P.k, r.n); return; }
-    const kind = how.src ? 'pinned' : P.kind === 'pinned' ? 'pinned' : kindAt(src, r.d);
+    const kind = how.src ? 'pinned' : P.kind === 'pinned' ? 'pinned' : kindAt(src, d);
     const k = kind === 'pinned' ? memberOf(src) : kind === 'bare' ? r.n : null;
     const names = kind === 'bare' && r.n ? versionAddress(src, r.n) : src;
     const n = kind === 'draft' ? null : Math.max(r.n ?? 0, P.n ?? 0, k ?? 0) || null;
@@ -1020,19 +1237,19 @@ async function update(side, how = {}) {
     /** @type {number | null} what the corner says the version it reads lacks: the act's, else as it said */
     let lacks = how.src ? null : P.lacks;
     if (how.carry) {
-      const into = await carryInto(P, how.carry, r.d);
+      const into = await carryInto(P, how.carry, d);
       if (stale()) return;
       hold = { from: into.from, to: into.to };
       lacks = into.none ? k : null;
     }
     for (;;) {
       const seen = Q.sets;
-      const mine = { src, d: r.d, shown: LK.shown(src) }, theirs = { src: Q.src, d: Q.d, shown: Q.view.marks };
+      const mine = { src, d, shown: LK.shown(src) }, theirs = { src: Q.src, d: Q.d, shown: Q.view.marks };
       const between = await readBetween(side === 'a' ? mine : theirs, side === 'a' ? theirs : mine);
       if (stale()) return;
       if (Q.sets !== seen) continue;
       const read = how.read !== undefined ? how.read : P.read;
-      setPanes(S, [{ side, next: { d: r.d, kind, src, names, shows: kind === 'bare' ? src : names, k, n, read, lacks, hold } }], between.pairs);
+      setPanes(S, [{ side, next: { d, kind, src, names, shows: kind === 'bare' ? src : names, k, n, read, lacks, hold } }], between.pairs);
       return;
     }
   } finally {
@@ -1306,14 +1523,14 @@ function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */
 }
 
 /**
- * End the scene, whatever ends it — Esc, zoom-out, ←, the bar's ×, or a
- * navigation act, which ends it first (§2.5): the plane as it was, and the
- * trail untouched, a navigation act's own push or cursor move the one trail
- * move it makes (see the head); a pane being set again sets nothing once it
- * ends, and an act waiting on it is dropped. The plane is put back in the
- * page's order before the focus returns, for the element the scene was opened
- * from — the walk's item, a corner — takes no focus while the scene covers
- * it; the focus's owner takes a focus the scene held off it and returns it.
+ * End the scene where it stands, as a navigation act's departure ends it —
+ * its own end, a Back from its entry, among them (§2.5; see the head): the
+ * plane as it was, and no trail move of its own; a pane being set again sets
+ * nothing once it ends, and an act waiting on it is dropped. The plane is put
+ * back in the page's order before the focus returns, for the element the
+ * scene was opened from — the walk's item, a corner — takes no focus while
+ * the scene covers it; the focus's owner takes a focus the scene held off it
+ * and returns it.
  */
 export function close() {
   if (!scene || !els) return;
