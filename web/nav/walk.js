@@ -65,7 +65,9 @@
 // current one, `aria-level`/`aria-posinset`/`aria-setsize`) is the one
 // accessible rendering at span grain (S1 Q7; R94), the tree named as it
 // attaches by ST's `L.mirror-label`, each level's group by `L.mirror-level`
-// and each item by ST's `L.mirror.*` entries (`nameOf`); what a screen reader
+// and each item by ST's `L.mirror.*` entries (`nameOf`), shown in the same
+// words, each address in the identifier's face and a document's words in the
+// reading face (`named`; P-REG's FACE); what a screen reader
 // hears is the focus moving onto the item (rule 12), and no live region
 // repeats it (D4). Every block that holds no text is announced by its kind,
 // the item rule's (T-ARTICLE's `itemOf`; FP-24), in the strings table's
@@ -118,7 +120,7 @@ import { lodOf } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
 import { touches } from '../text/span.js';
 import { esc } from '../util.js';
-import { t } from '../strings.js';
+import { t, tHTML, addressedHTML } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Block} Block */
 /** @typedef {import('../links/links.js').Shown} Shown */
@@ -263,20 +265,38 @@ export async function childrenOf(node) {
 /** the ends LK draws at the withheld run a document's block at `pos` is, in the order it draws them; none for any other block */
 const runEnds = (/** @type {string} */ addr, /** @type {number} */ pos) => LK.shown(addr).filter((s) => !!s.run && s.run.pos === pos);
 
-/** the accessible name of a node (what the mirror's item says), from ST's entries */
-export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type {number} */ total) {
-  const pos = ' ' + t('L.mirror.item', { i: i + 1, n: total });
+/** the accessible name of a node (what the mirror's item says), from ST's entries (`named`) */
+export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type {number} */ total) { return named(n, i, total).text; }
+
+/** a string's words and its markup, each token `faces` names set in its class — an address the identifier's (`id`), a document's words the reading face's (`reading`) — and every address in the other values the identifier's (ST's `tHTML`) */
+const said = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values, /** @type {Record<string, string>} */ faces = {}) => ({ text: t(id, values), html: tHTML(id, values, faces) });
+/** the client's words, as text and markup, each address in them the identifier's (ST's `addressedHTML`) */
+const plainly = (/** @type {string} */ words) => ({ text: words, html: addressedHTML(words) });
+
+/**
+ * What the mirror's item says of a node (`nameOf`), its words and its markup:
+ * the markup the same words, each address in the identifier's face and a
+ * document's words in the reading face (P-REG's FACE), so what is shown and
+ * what is announced never part.
+ * @param {Node} n
+ * @param {number} i
+ * @param {number} total
+ * @returns {{text: string, html: string}}
+ */
+function named(n, i, total) {
+  const at = plainly(' ' + t('L.mirror.item', { i: i + 1, n: total }));
+  const then = (/** @type {{text: string, html: string}} */ x, /** @type {{text: string, html: string}} */ y = at) => ({ text: x.text + y.text, html: x.html + y.html });
   if (n.kind === 'board') {
     // where no board is held the root names none: it says why, as the one line does (FP-35)
     const b = REC.board();
-    if (!b) { const why = read.noBoard(); return why ? why.text + pos : pos.trim(); }
-    return t('L.mirror.board', { node: n.addr, origin: b.origin, n: REC.accounts().filter((a) => !a.system).length }) + pos;
+    if (!b) { const why = read.noBoard(); return why ? then(plainly(why.text)) : plainly(at.text.trim()); }
+    return then(said('L.mirror.board', { node: n.addr, origin: b.origin, n: REC.accounts().filter((a) => !a.system).length }, { node: 'id' }));
   }
   if (n.kind === 'account') {
     const c = REC.countOf(n.addr); const lk = LK.countAccount(n.addr);
     const documents = c.exact ? String(c.documents) : t('L.mirror.at-least', { n: c.documents });
     const links = lk.arriving ? t('L.mirror.at-least', { n: lk.n }) : String(lk.n);
-    return t('L.mirror.account', { account: n.addr, documents, links, empty: c.documents ? '' : ' — ' + t('B1.empty_subspace') }) + pos;
+    return then(said('L.mirror.account', { account: n.addr, documents, links, empty: c.documents ? '' : ' — ' + t('B1.empty_subspace') }, { account: 'id' }));
   }
   if (n.kind === 'document') {
     // a version named by its box's document's place, the one the index lists (FP-22); its state as the board answered it —
@@ -284,16 +304,16 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
     const d = REC.doc(n.addr); const p = REC.place(documentOf(n.addr) || n.addr);
     const kind = p ? p.kind : d.kind !== 'unknown' ? d.kind : d.meta ? (d.meta.published ? 'edition' : 'draft') : null;
     const state = d.refused === 'withheld' ? LAYER.withheldBox(d) : d.refused === 'unregistered' ? t('L.far.unregistered') : kind === 'draft' ? t('L.mirror.draft') : kind === 'edition' ? t('F.published') : '';
-    return t('L.mirror.document', { document: n.addr, label: p && p.label ? '"' + p.label + '"' : '', state, extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' }) + pos;
+    return then(said('L.mirror.document', { document: n.addr, label: p && p.label ? '"' + p.label + '"' : '', state, extent: d.extent != null ? t('L.mirror.positions', { n: d.extent }) : '' }, { document: 'id', label: 'reading' }));
   }
   if (n.kind === 'block') {
     const d = REC.doc(n.addr); const b = d.blocks.find((x) => x.pos === n.pos);
-    if (!b) return t('L.mirror.span.bare', { p: n.pos ?? '', document: n.addr }) + pos;
+    if (!b) return then(said('L.mirror.span.bare', { p: n.pos ?? '', document: n.addr }, { document: 'id' }));
     const kind = itemOf(b);
     if (kind === 'withheld') {
       const w = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), ends = runEnds(n.addr, b.pos).length;
       const links = ends ? t('L.mirror.run-links', { links: ends === 1 ? t('F.label.links.1') : t('F.label.links', { n: ends }) }) : '';
-      return t('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), owner: w.owner, origin: b.origin || '', arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }) + links + pos;
+      return then(then(said('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), owner: w.owner, origin: b.origin || '', arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }, { document: 'id', owner: 'id', origin: 'id' }), plainly(links)));
     }
     const org = d.origins.find((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);
     const same = org ? t('L.mirror.same', { origin: org.doc }) : '';
@@ -301,18 +321,18 @@ export function nameOf(/** @type {Node} */ n, /** @type {number} */ i, /** @type
       // what the plane shows of the item after its kind: a record's words and keys, an unshown item's length — never its raw value
       const rec = kind === 'record' ? recordOf(b, d, REC.reader()) : null;
       const shown = rec ? [rec.words, rec.keys].filter(Boolean).join(' · ') : kind === 'unshown' ? itemLength(b.width) : '';
-      return t('L.mirror.no-text', { kind: itemWords(kind), p: b.pos, extent: d.extent ?? '?', document: n.addr, same, shown: shown ? t('L.mirror.shows', { shown }) : '' }) + pos;
+      return then(said('L.mirror.no-text', { kind: itemWords(kind), p: b.pos, extent: d.extent ?? '?', document: n.addr, same, shown: shown ? t('L.mirror.shows', { shown }) : '' }, { document: 'id' }));
     }
-    return t('L.mirror.span', { p: b.pos, extent: d.extent ?? '?', document: n.addr, same, text: b.text }) + pos;
+    return then(said('L.mirror.span', { p: b.pos, extent: d.extent ?? '?', document: n.addr, same, text: b.text }, { document: 'id', text: 'reading' }));
   }
   if (n.kind === 'link' && n.link) {
     const l = n.link, says = farSays(l);
-    return t('L.mirror.link', {
+    return then(said('L.mirror.link', {
       link: l.link.addr, type: l.link.type || t('L.mirror.untyped'), direction: l.end === 'from' ? t('F.card.to') : t('F.card.from'), far: LK.farLabel(l),
       floating: says ? t('L.mirror.floating', { sentence: says }) : '',
-    }) + pos;
+    }, { link: 'id' }));
   }
-  return '';
+  return plainly('');
 }
 
 /** a node's level in the tree: board › account › document › span | link, a withheld run's links a level below the run (see the head) */
@@ -378,7 +398,7 @@ export function render() {
     const located = isLocated(n, at) ? ' aria-current="location"' : '';
     const by = describedBy(n, i, said);
     const described = by ? ` aria-describedby="${by}"` : '';
-    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${esc(nameOf(n, i, total))}</li>`;
+    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${named(n, i, total).html}</li>`;
     if (holdsRuns(n, said)) pieces += `<div id="${pieceId(i)}" hidden>${esc(otherRuns(n, said))}</div>`;
   }
   html += `</ul><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div>${pieces}`;
@@ -546,8 +566,8 @@ function moved() {
 /**
  * The camera follows the focus: fly to the element at its level's scale — a
  * document's outline framed, no nearer than the reading size; a span's line,
- * its column framed with both its margins, at the reading size (T-LAYER's
- * `frameOf`; P-CAM's READING_PX) — nowhere where the document's extent is
+ * its column framed with both its margins, at the landing's em (T-LAYER's
+ * `frameOf`; P-CAM's `landingPx`) — nowhere where the document's extent is
  * read first and a later move overtook this one meanwhile.
  * @param {number} move the move's count
  */
@@ -560,7 +580,7 @@ async function flyToFocus(move) {
     if (move !== moves) return;
     // its outline framed, no nearer than the reading size
     const v = CAM.viewForCell(LAYER.shapeOf(focus.addr), 0.9);
-    await CAM.fly({ ...v, scale: Math.min(v.scale, CAM.READING_PX / LAYER.foldOf(REC.doc(focus.addr)).fs) }, 300);
+    await CAM.fly({ ...v, scale: Math.min(v.scale, CAM.landingPx() / LAYER.foldOf(REC.doc(focus.addr)).fs) }, 300);
   } else {
     const d = REC.doc(focus.addr);
     await CAM.fly(CAM.viewAt(LAYER.frameOf(focus.addr, focus.pos), LAYER.foldOf(d).fs), 260);

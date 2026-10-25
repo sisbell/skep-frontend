@@ -5,7 +5,7 @@
 // — its stroke style, its dash, its cap, where its path began and the cubic
 // it drew from there — each fill's style, and each string set on it, and
 // draws nothing; a string is measured at 0.6 em a character of the size its
-// font names, the monospace face the page sets its labels in. Its cap starts
+// font names, whatever face it names. Its cap starts
 // round, as a context another drawer left so would, so a stroke that holds to
 // a cap sets it.
 

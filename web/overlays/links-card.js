@@ -10,7 +10,8 @@
 // holds (R60; WAI-ARIA's switch, whose label does not change with its state)
 // — the lenses by owner, type and endorsement (R9; D-2 per document for the
 // session), the links, each row naming its far end as its tail and its
-// mirror item do (LK's `farLabel`) and opening its link's anatomy card at the
+// mirror item do, its address in the identifier's face (LK's
+// `farLabelHTML`; an owner lens's too), and opening its link's anatomy card at the
 // link's own bytes, "show more" (the windowed list, the end marked, no page
 // ever expires — A-287), the blind-spot clause (R4's cross-board disclosure,
 // E3 (a)). The card's dismissal returns the chain to hidden; an act's card
@@ -84,16 +85,16 @@ export function render(byKey = false) {
   const listed = shown.slice(0, open.page * PAGE);
   const more = shown.length > listed.length;
   const html =
-    `<span class="label">${esc(t('B1.see-links'))} · ${esc(addr)}</span>` +
+    `<span class="label">${esc(t('B1.see-links'))} · <span class="id">${esc(addr)}</span></span>` +
     `<div class="stage">${r.stage >= 3 ? `<button data-run="stage2">◦ symbols</button>` : `<button data-run="stage3">— content</button>`}</div>` +
     `<div class="toggle">${othersSwitch(r.others, others.length)}</div>` +
     `<div class="lenses">` +
-      `<span class="lens-label">${esc(t('F.lens.owner'))}</span>${rows.owners.map((o) => `<button data-run="owner:${esc(o)}" aria-pressed="${r.lens.owners ? r.lens.owners.has(o) : false}">${esc(o)}</button>`).join('') || '—'}` +
+      `<span class="lens-label">${esc(t('F.lens.owner'))}</span>${rows.owners.map((o) => `<button class="id" data-run="owner:${esc(o)}" aria-pressed="${r.lens.owners ? r.lens.owners.has(o) : false}">${esc(o)}</button>`).join('') || '—'}` +
       `<span class="lens-label">${esc(t('F.lens.type'))}</span>${rows.types.map((ty) => `<button data-run="type:${esc(ty)}" aria-pressed="${r.lens.types ? r.lens.types.has(ty) : false}">${esc(typeName(ty))}</button>`).join('') || '—'}` +
       `<span class="lens-label">${esc(t('F.lens.endorsement'))}</span><button data-run="endorsed" aria-pressed="${r.lens.endorsed}">${esc(t('F.lens.endorsed'))}</button>` +
       `${r.lens.owners || r.lens.types || r.lens.endorsed ? `<button data-run="clear">×</button>` : ''}` +
     `</div>` +
-    `<ul class="rows">${listed.map((s, i) => `<li><button data-run="row:${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${esc(LK.farLabel(s) || '—')}</button></li>`).join('')}</ul>` +
+    `<ul class="rows">${listed.map((s, i) => `<li><button data-run="row:${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${LK.farLabelHTML(s) || '—'}</button></li>`).join('')}</ul>` +
     (more ? `<button data-run="more">${esc(t('B1.show-more'))}</button>` : shown.length ? `<span class="end">·</span>` : '') +
     `<div class="clause" data-string="F.card-clause">${esc(t('F.card-clause'))}</div>`;
   /** @type {Record<string, import('./host.js').Act>} */

@@ -2,10 +2,11 @@
 // three hues; the visited value is lighter; the label floor stands above the
 // readable em; the tail shorter than a gutter at the smallest em an article
 // stands at; the corner narrower compact than whole, holding a kept word
-// whole; the CSS variables carry the same values.
+// whole; the three faces each their job's, the shipped two waited on in
+// every style the style declares; the CSS variables carry the same values.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, TAIL, CORNER, cornerWidth, cssVariables } from './register.js';
+import { HUE, VISITED_ALPHA, KIND_FORM, EDGE, LABEL_MIN_PX, TAIL, CORNER, FACE, SHIPPED, cornerWidth, cssVariables } from './register.js';
 import { LOD_TXT_LO, UNMOUNT_EM } from './lod.js';
 import { GUTTER } from './layout.js';
 
@@ -30,6 +31,12 @@ test('the CSS variables carry the register\'s values', () => {
   assert.equal(v['--hue-you'], HUE.you);
   assert.equal(v['--visited-alpha'], String(VISITED_ALPHA));
   assert.deepEqual([v['--corner-px'], v['--corner-w'], v['--corner-compact-w'], v['--corner-pad']], [CORNER.px + 'px', CORNER.whole + 'em', CORNER.compact + 'em', CORNER.pad + 'px'], 'the corner\'s sizes, which the style sets it by');
+  assert.deepEqual([v['--face-reading'], v['--face-client'], v['--face-ident']], [FACE.reading, FACE.client, FACE.ident], 'the three faces\' stacks');
+});
+test('a document\'s words are set in Charter, the client\'s in the system\'s face, addresses and fingerprints in Atkinson Hyperlegible Mono, each falling back to its generic family; the shipped two waited on in Charter\'s four styles and the mono\'s one (issue #16)', () => {
+  assert.deepEqual(FACE, { reading: 'Charter, serif', client: 'system-ui, sans-serif', ident: '"Atkinson Hyperlegible Mono", monospace' });
+  assert.deepEqual(SHIPPED.filter((s) => s.endsWith('Charter')).map((s) => s.replace(/16px Charter$/, '').trim()), ['', 'italic', 'bold', 'italic bold'], 'Charter in all four styles');
+  assert.equal(SHIPPED.filter((s) => s.endsWith('"Atkinson Hyperlegible Mono"')).length, 1, 'the mono\'s one file, every weight in it');
 });
 test('the corner compact is narrower than whole, its padding inside its width, and holds a kept word whole: "document", at its size (issue #151; FP-26: never cut mid-word)', () => {
   assert.deepEqual([cornerWidth(false), cornerWidth(true)], [CORNER.whole * CORNER.px, CORNER.compact * CORNER.px], 'its em at its size, the padding inside it');

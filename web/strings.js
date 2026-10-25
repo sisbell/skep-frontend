@@ -4,13 +4,18 @@
 // by its `ux/copy.md` id (`C-n`) or by the requirement that pins it — or
 // DRAFT, a string a design document drafted, its source and the screen named,
 // or one no design document carries (`lane: true`), which `lacking` lists.
-// The page invents no wording. `t` fills an entry's ⟨tokens⟩ (U's `fill`);
-// `pinned` lists the pinned entries for the gate's text case, which holds
-// each to its source.
+// The page invents no wording. `t` fills an entry's ⟨tokens⟩ (U's `fill`),
+// and `tHTML` fills them as markup, each value escaped, those it is asked
+// to wrap set in an element of their own class — a document's words in the
+// reading face's — and every address in the rest in the identifier's face;
+// words made elsewhere are set as markup by their faces
+// (`facedHTML`), or with every address M-ADDR reads in them in the
+// identifier's face (`addressedHTML`); `pinned` lists the pinned entries for
+// the gate's text case, which holds each to its source.
 // Rules: FP-1, FP-2, FP-13, FP-32.
 
-import { fill } from './util.js';
-import { commonsType } from './model/address.js';
+import { fill, esc } from './util.js';
+import { commonsType, isAddress } from './model/address.js';
 
 /**
  * @typedef {Object} StringEntry
@@ -406,6 +411,44 @@ export function t(id, values) {
   if (!e) throw new Error('no string ' + id);
   return values ? fill(e.text, values) : e.text;
 }
+
+/**
+ * The string for an id as markup: its words escaped, each ⟨token⟩ filled
+ * with its value escaped, a value whose token `wrap` names set in a span of
+ * that class, and every other value the client's words, each address in them
+ * the identifier's (`addressedHTML`) — the words read the same as `t`'s.
+ * @param {string} id
+ * @param {Record<string, string | number>} values
+ * @param {Record<string, string>} [wrap] the class each token's value stands in, by token
+ * @returns {string}
+ */
+export function tHTML(id, values, wrap = {}) {
+  const html = /** @type {Record<string, string>} */ ({});
+  for (const [k, v] of Object.entries(values)) html[k] = wrap[k] ? `<span class="${wrap[k]}">${esc(v)}</span>` : addressedHTML(String(v));
+  return fill(esc(t(id)), html);
+}
+
+/**
+ * Words as markup, each address in them set in the identifier's face: every
+ * run of digits joined by dots M-ADDR reads as an address (`isAddress`) in a
+ * span of `.id`, save one a slash leads — a URL's host, which is no address
+ * — the rest escaped as it stands; for the client's words another module
+ * made whole, a sentence whose tokens are no longer apart, and never for a
+ * document's own words, whose letterforms are the reading face's.
+ * @param {string} text
+ * @returns {string}
+ */
+export const addressedHTML = (text) => text.split(/(\d+(?:\.\d+)+)/).map((x, i, all) => (i % 2 && isAddress(x) && !all[i - 1].endsWith('/') ? `<span class="id">${esc(x)}</span>` : esc(x))).join('');
+
+/**
+ * Stretches of words as markup, each in its face (P-REG's FACE): the
+ * identifier's in a span of `.id`, the reading face's in a span of `.reading`,
+ * the client's as they stand with each address in them the identifier's
+ * (`addressedHTML`), every stretch escaped.
+ * @param {Array<{text: string, face: import('./plane/register.js').Face}>} runs
+ * @returns {string}
+ */
+export const facedHTML = (runs) => runs.map((r) => (r.face === 'ident' ? `<span class="id">${esc(r.text)}</span>` : r.face === 'reading' ? `<span class="reading">${esc(r.text)}</span>` : addressedHTML(r.text))).join('');
 
 /** @param {string} id @returns {boolean} */
 export const isPinned = (id) => STRINGS[id]?.cls === 'PINNED';

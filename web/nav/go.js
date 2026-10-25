@@ -178,8 +178,9 @@
 // the read answers, where no act was made and the reader took nothing over.
 // The cover (FP-29): a trail entry holds no document's words — HOME and WHOLE
 // BOARD push their act's name, the strings table's, and every other entry's
-// words are read from the model as they are shown (`wordsOf`: the words its
-// box's first line says, nothing while nothing has answered). A change of the
+// words are read from the model as they are shown (`wordsOf`, and as markup
+// in their faces, `wordsHTML`: the words its box's first line says, nothing
+// while nothing has answered). A change of the
 // page's class (`classChanged`) puts the arrival out, nothing the dead class
 // measured surviving, and drops what the entries kept (N-TRAIL's); a cursor
 // move reaching an entry whose document is covered (M-REC's `covered`) lands
@@ -206,6 +207,7 @@ import * as SEL from '../overlays/selection.js';
 import { accountCell, boardCell } from '../plane/projection.js';
 import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf } from '../model/address.js';
 import { t } from '../strings.js';
+import { esc } from '../util.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/records.js').Link} Link */
@@ -862,15 +864,16 @@ function failed(act, entry, n, byKey) {
 
 /**
  * The view that reads a document at a position: its size (T-LAYER's fold) at
- * the reading size (P-CAM's READING_PX), on the line holding the position,
- * framing its column with both its margins — the corner on its left, the edge
- * on its right (T-LAYER's `frameOf`; FP-26) — the first column where none is
- * named.
+ * the landing's em — the reading size, smaller only where even a column of
+ * one character is wider than the view (P-CAM's `landingPx`) — on the line
+ * holding the position, framing its column with both its margins — the
+ * corner on its left, the edge on its right (T-LAYER's `frameOf`; FP-26) —
+ * the first column where none is named.
  * @param {string} addr
  * @param {number | null} pos
  */
 export function viewFor(addr, pos) {
-  return CAM.viewAt(LAYER.frameOf(addr, pos), LAYER.foldOf(REC.doc(addr)).fs, CAM.READING_PX);
+  return CAM.viewAt(LAYER.frameOf(addr, pos), LAYER.foldOf(REC.doc(addr)).fs, CAM.landingPx());
 }
 
 /**
@@ -886,6 +889,19 @@ export function viewFor(addr, pos) {
 export function wordsOf(e) {
   if (e.label != null) return e.label;
   return kindOf(e.addr) === 'document' && REC.has(e.addr) ? LAYER.firstLine(REC.doc(e.addr)) : '';
+}
+
+/**
+ * An entry's words as markup (`wordsOf`), each in its face (P-REG's FACE):
+ * an act's name the client's; a document's first line its words in the
+ * reading face, an owner a withheld statement names the identifier's
+ * (T-LAYER's `firstLineHTML`).
+ * @param {Entry} e
+ * @returns {string}
+ */
+export function wordsHTML(e) {
+  if (e.label != null) return esc(e.label);
+  return kindOf(e.addr) === 'document' && REC.has(e.addr) ? LAYER.firstLineHTML(REC.doc(e.addr)) : '';
 }
 
 /**

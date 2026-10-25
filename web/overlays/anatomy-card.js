@@ -21,7 +21,11 @@
 // draws at a withheld run (`Shown.run`) with no read, and any stretch a read
 // answers as withheld in those words, never its bytes (`fragment`); the far
 // end it leads to is the document that minted its bytes, named as any far
-// end is. Then its anatomy — type (R5's form), from, to, home (published →
+// end is. Each end's words stand in their faces (P-REG's FACE; `quoteHTML`):
+// the document's own the reading face's, the client's words the interface
+// face's, every address — an end's document, the link, its owner, a
+// claimant, a far end a row names (LK's `farLabelHTML`) — the identifier's.
+// Then its anatomy — type (R5's form), from, to, home (published →
 // the link is public; a draft → hidden with its home), owner (never a name
 // alone), then its lineage (A-56, A-57, A-82), read under the audit view
 // (M-PUMP's `lineage`), so a retracted claim stands, marked retracted,
@@ -72,14 +76,15 @@ import * as SCENE from '../scene/scene.js';
 import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import { lineOf, farHolds, floatingOf } from '../beams/held.js';
-import { t, typeName } from '../strings.js';
+import { t, typeName, facedHTML } from '../strings.js';
 import { esc, fill } from '../util.js';
+import { inFace, runsOf } from '../plane/labels.js';
 import { accountOf, isUnder } from '../model/address.js';
 
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/pump.js').Lineage} Lineage */
 /** @typedef {import('../model/frames.js').Claim} Claim */
-/** @typedef {[string | null, {runs: Array<{pos: number, width: number}> | null, words: string | null}, Lineage]} Read what the card is made from: the near end's words, where the far end's passage stands and its words, the link's lineage */
+/** @typedef {[string | null, {runs: Array<{pos: number, width: number}> | null, words: string | null}, Lineage]} Read what the card is made from: the near end's words, where the far end's passage stands and its words — each stretch of words marked with its face (P-LABEL's `inFace`) — the link's lineage */
 
 /**
  * @typedef {Object} Who — the accounts the lineage's claims are named against
@@ -87,20 +92,23 @@ import { accountOf, isUnder } from '../model/address.js';
  * @property {string | null} reader the reader's account, named "you" wherever it is a claimant; null for a guest
  */
 
-/** a passage in withheld text in words (see the head): "withheld · ⟨owner⟩", the owner of the run's origin by the one owner rule its placeholder names */
-const withheldWords = (/** @type {string | null} */ origin) => t('F.corner.withheld', { owner: origin ? LAYER.originOwner(origin) : '' });
+/** a passage in withheld text in words (see the head): "withheld · ⟨owner⟩", the owner of the run's origin by the one owner rule its placeholder names — the client's words, the owner marked the identifier's (P-LABEL's `inFace`) */
+const withheldWords = (/** @type {string | null} */ origin) => t('F.corner.withheld', { owner: origin ? inFace('ident', LAYER.originOwner(origin)) : '' });
 
-/** the first words of a passage: from the model where delivered, else one read, each stretch it answers withheld in a withheld run's words (see the head) */
+/** the first words of a passage, the document's own marked the reading face's (P-LABEL's `inFace`): from the model where delivered, else one read, each stretch it answers withheld in a withheld run's words (see the head) */
 async function fragment(/** @type {string} */ addr, /** @type {number | null} */ pos, /** @type {number} */ width) {
   if (REC.doc(addr).refused === 'unregistered') return null;
-  if (pos == null) { const p = REC.place(addr); return p && p.label ? p.label : REC.textBetween(addr, 1, 80) || null; }
+  if (pos == null) { const p = REC.place(addr), first = p && p.label ? p.label : REC.textBetween(addr, 1, 80); return first ? inFace('reading', first) : null; }
   const held = REC.textBetween(addr, pos, pos + Math.min(width, 120));
-  if (held) return held;
+  if (held) return inFace('reading', held);
   const out = await PUMP.read(F.retrieveV(addr, pos, Math.min(width, 120)));
   if ('refused' in out) return null;
   const runs = F.decodeDelivery(out.answer, pos);
-  return runs.map((r) => (r.kind === 'content' ? r.text : r.kind === 'withheld' ? withheldWords(r.origin) : '')).join('');
+  return runs.map((r) => (r.kind === 'content' ? inFace('reading', r.text) : r.kind === 'withheld' ? withheldWords(r.origin) : '')).join('');
 }
+
+/** an end's words as the card sets them, each stretch in the face its marks name (P-LABEL's `runsOf`; ST's `facedHTML`): the document's own the reading face's, the client's words with each address in them the identifier's */
+const quoteHTML = (/** @type {string} */ words) => facedHTML(runsOf(words, 'client'));
 
 /** the account that made a supersession claim: the account of its home, the document the claim resides in, whose owner alone may deposit it there (wire.md §Links (writes)) — the home as given where its address names no account */
 const claimantOf = (/** @type {Claim} */ c) => accountOf(c.home) || c.home;
@@ -164,7 +172,7 @@ function lineageRow(side, who) {
   const byWhom = held.map((c) => (claimantOf(c) === who.owner ? null : claimantOf(c)));
   const items = held.map((c, i) => {
     const by = byWhom[i];
-    return `<span class="code">${esc(side.named(c))}</span>${by == null ? '' : ` <span data-string="L.card.by-owner">${words('L.card.by-owner', { claimant: claimantHTML(by, who) })}</span>`}${retracted(c)}`;
+    return `<span class="code id">${esc(side.named(c))}</span>${by == null ? '' : ` <span data-string="L.card.by-owner">${words('L.card.by-owner', { claimant: claimantHTML(by, who) })}</span>`}${retracted(c)}`;
   });
   const value = items.length ? items.join(byWhom.some((by) => by != null) ? '; ' : ', ') : `<span data-string="F.card.none">${esc(t('F.card.none'))}</span>`;
   return `<div class="kv lineage"><b>${esc(t(side.row))}</b> ${value}</div>`;
@@ -192,7 +200,7 @@ function othersList(stray, who) {
     if (owner && isUnder(by, owner)) relations.push('L.card.above');
     else if (owner && isUnder(owner, by)) relations.push('L.card.under');
     const id = by === who.reader ? side.says + '.you' : side.says;
-    return `<li data-string="${id}">${words(id, { claimant: claimantHTML(by, who, relations), link: `<span class="code">${esc(side.named(c))}</span>` })}${retracted(c)}</li>`;
+    return `<li data-string="${id}">${words(id, { claimant: claimantHTML(by, who, relations), link: `<span class="code id">${esc(side.named(c))}</span>` })}${retracted(c)}</li>`;
   }).join('')}</ul>`;
 }
 
@@ -205,7 +213,7 @@ function othersList(stray, who) {
  * @param {string[]} [relations] the strings of what the claimant is to the links
  */
 function claimantHTML(account, who, relations = []) {
-  const name = account === who.reader ? esc(t('L.card.you')) : `<span class="code">${esc(account)}</span>`;
+  const name = account === who.reader ? esc(t('L.card.you')) : `<span class="code id">${esc(account)}</span>`;
   return relations.length ? `${name} (${relations.map((id) => esc(t(id))).join(', ')})` : name;
 }
 
@@ -302,7 +310,7 @@ function showCard(s, read, anchorEl, byKey, others = false) {
   const homeDoc = REC.doc(l.home);
   const homePublished = homeDoc.meta ? homeDoc.meta.published : homePlace ? homePlace.kind === 'edition' : true;
   const dead = far && REC.doc(far).refused === 'unregistered';
-  const farQuote = far ? farText ?? (LK.farWords(s) || '…') : t('B1.invalid');
+  const farQuote = far ? farText ?? (LK.farFaced(s).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('') || '…') : t('B1.invalid');
   const held = far ? farHolds(s) : null;
   const farHeld = held ? `<div class="note" data-string="L.held.${held.state}">${esc(lineOf(held))}</div>` : '';
   const nearQuote = nearText ?? '…';
@@ -311,16 +319,16 @@ function showCard(s, read, anchorEl, byKey, others = false) {
   /** @type {Who} */
   const who = { owner: l.owner, reader: REC.reader().account };
   const html =
-    `<span class="label" style="--mark-hue:${mark.hue}"><span class="sym-mark">⟡</span> ${esc(l.addr)}</span>` +
-    `<div class="ends"><div class="end far"><span class="k">${esc(s.end === 'from' ? t('F.card.to') : t('F.card.from'))}</span> <span class="code">${esc(far || '—')}</span><div class="quoted">${esc(farQuote)}</div>${farHeld}</div>` +
-    `<div class="end near"><span class="k">${esc(s.end === 'from' ? t('F.card.from') : t('F.card.to'))}</span> <span class="code">${esc(near)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${esc(nearQuote)}</div></div></div>` +
+    `<span class="label" style="--mark-hue:${mark.hue}"><span class="sym-mark">⟡</span> <span class="id">${esc(l.addr)}</span></span>` +
+    `<div class="ends"><div class="end far"><span class="k">${esc(s.end === 'from' ? t('F.card.to') : t('F.card.from'))}</span> <span class="code id">${esc(far || '—')}</span><div class="quoted">${quoteHTML(farQuote)}</div>${farHeld}</div>` +
+    `<div class="end near"><span class="k">${esc(s.end === 'from' ? t('F.card.from') : t('F.card.to'))}</span> <span class="code id">${esc(near)}</span>${nearPos != null ? ` <span class="dim">${esc(t('L.at-position', { p: nearPos }))}</span>` : ''}<div class="quoted">${quoteHTML(nearQuote)}</div></div></div>` +
     `<div class="kv"><b>${esc(t('F.card.type'))}</b> <span data-string="R5.undocumented">${esc(typeName(l.type))}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.from'))}</b> <span class="code">${esc(fromDoc)}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code">${esc(toDoc)}</span></div>` +
-    `<div class="kv"><b>${esc(t('F.card.home'))}</b> <span class="code">${esc(l.home)}</span> — ${esc(homePublished ? t('F.card.public') : t('F.card.hidden'))}</div>` +
-    `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${esc(l.owner || '—')}</div>` +
+    `<div class="kv"><b>${esc(t('F.card.from'))}</b> <span class="code id">${esc(fromDoc)}</span></div>` +
+    `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code id">${esc(toDoc)}</span></div>` +
+    `<div class="kv"><b>${esc(t('F.card.home'))}</b> <span class="code id">${esc(l.home)}</span> — ${esc(homePublished ? t('F.card.public') : t('F.card.hidden'))}</div>` +
+    `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${l.owner ? `<span class="code id">${esc(l.owner)}</span>` : '—'}</div>` +
     supersessionRows(lineage, who, others) +
-    `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${esc(far || '')}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
+    `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${far ? `<span class="id">${esc(far)}</span>` : ''}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
   HOST.show({
     kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl, span: bytes } : { span: bytes }, html, takeFocus: byKey, first: '[data-run="follow"]',
     acts: {
@@ -384,9 +392,9 @@ export function fromSymbol(ends, el, byKey = false) {
  * @param {boolean} byKey
  */
 function listEnds(ends, anchor, id, byKey) {
-  const near = [...new Set(ends.map((s) => s.near))].join(', ');
-  const html = `<span class="label">${esc(t('B1.see-links'))} · ${esc(near)}</span><ul class="rows">${ends.map((s, i) =>
-    `<li><button data-run="t${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${esc(LK.farLabel(s))}</button></li>`).join('')}</ul>`;
+  const near = [...new Set(ends.map((s) => s.near))].map((a) => `<span class="id">${esc(a)}</span>`).join(', ');
+  const html = `<span class="label">${esc(t('B1.see-links'))} · ${near}</span><ul class="rows">${ends.map((s, i) =>
+    `<li><button data-run="t${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   ends.forEach((s, i) => { acts['t' + i] = (_el, byKey) => open(s, null, byKey); });

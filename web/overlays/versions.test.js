@@ -108,8 +108,10 @@ const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, rem
 const rows = () => [...hostEl.innerHTML.matchAll(/data-run="read(\d+)"[^>]*>(?:(?!<\/button>).)*<\/button> <span class="strip" data-holds="([a-z]*)"/g)].map((m) => [Number(m[1]), m[2]]);
 /** HTML text as a person reads it: the escapes `esc` writes undone */
 const unesc = (/** @type {string} */ s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+/** the list's caption as markup, up to the rows */
+const captionHTML = () => { const m = hostEl.innerHTML.match(/<span class="label">(.*?)<\/span><ul class="rows/); return m ? m[1] : null; };
 /** the list's caption, as a person reads it */
-const caption = () => { const m = hostEl.innerHTML.match(/<span class="label">([^<]*)<\/span>/); return m ? unesc(m[1]) : null; };
+const caption = () => { const h = captionHTML(); return h == null ? null : unesc(h.replace(/<[^>]*>/g, '')); };
 /** the members whose read act carries the latest version's mark */
 const marked = () => [...hostEl.innerHTML.matchAll(/data-run="read(\d+)"[^>]*>(?:(?!<\/button>).)*class="latest"/g)].map((m) => Number(m[1]));
 /** the members whose read act is the current one */
@@ -200,6 +202,7 @@ test('the list opened at the version its box shows holds the passage in that ver
 test('the head\'s row carries the latest version\'s mark, and the caption counts the chain, only where the board ended the chain there: a count held as read so far is read on from, its next member asked first, to the end the board answers (issue #184\'s design decision: "End proved")', async () => {
   await VERSIONS.open(T, HELD.pos, null);
   assert.deepEqual([caption(), marked(), openEnd()], [`${T} · ${t('F.version-of', { k: 2, n: 2 })}`, [2], null], 'the end held: the head marked, the chain counted, no line');
+  assert.ok((captionHTML() || '').startsWith(`<span class="id">${T}</span>`), `the caption's address in the identifier's face (issue #16): ${captionHTML()}`);
   assert.ok(hostEl.innerHTML.includes(`<span class="latest" role="img" aria-label="${esc(t('L.versions.latest'))}" data-string="L.versions.latest-mark">${esc(t('L.versions.latest-mark'))}</span>`), 'the mark a shape, named in words');
   HOST.dismiss();
   REC.takeMembers(T, 2, false);

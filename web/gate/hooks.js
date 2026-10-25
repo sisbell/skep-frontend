@@ -247,7 +247,8 @@ export function install(deps) {
   /**
    * The column of a mounted article a part stands in, as a person meets it:
    * across, the part's box as the engine lays it out — the measure wide, in
-   * the `ch` of the face the platform sets it in — and down, the column's
+   * the reading face's average advance the style sets it in (`--char-w`) —
+   * and down, the column's
    * text from its top to the depth its lines were broken at, as the fold
    * places it: its flow, never clipped.
    * @param {import('../text/layer.js').Mounted} rec

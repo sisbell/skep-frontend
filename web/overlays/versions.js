@@ -70,7 +70,7 @@ import { whyOf, retries } from '../beams/held.js';
 import { visibleView } from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 import { versionAddress, memberOf, documentOf } from '../model/address.js';
-import { t } from '../strings.js';
+import { t, addressedHTML } from '../strings.js';
 import { esc, timeOf } from '../util.js';
 
 /** @typedef {import('./host.js').Anchor} Anchor */
@@ -216,8 +216,9 @@ function captionOf(l) {
 
 /**
  * The list shown from its reads (see the head), at its anchor, under its
- * document's id — so its own "try again" shows it again in its place: each
- * row its read act, the head's carrying the latest version's mark where the
+ * document's id — so its own "try again" shows it again in its place: its
+ * caption, the document's address in the identifier's face (ST's
+ * `addressedHTML`); each row its read act, the head's carrying the latest version's mark where the
  * board ended the chain there, its strip and its side-by-side act; the open
  * end's line beneath, where the chain was not ended.
  * @param {Listing} l
@@ -230,7 +231,7 @@ function showList(l, anchor, pos, width, byKey) {
   const { trunk, addr, held, chain, rows } = l;
   const cur = memberOf(addr), end = openEnd(l);
   const latest = `<span class="latest" role="img" aria-label="${esc(t('L.versions.latest'))}" data-string="L.versions.latest-mark">${esc(t('L.versions.latest-mark'))}</span>`;
-  const html = `<span class="label">${esc(captionOf(l))}</span>` +
+  const html = `<span class="label">${addressedHTML(captionOf(l))}</span>` +
     `<ul class="rows versions">${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}${chain.ended && r.k === chain.n ? ' ' + latest : ''}</button> <span class="strip" data-holds="${r.holds === 'all' ? 'whole' : r.holds || ''}">${esc(stripOf(r))}</span> <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>` +
     (end ? `<div class="open-end"><span data-string="${esc(end.id)}">${esc(end.text)}</span>${end.asOf ? ` · <span data-string="L.versions.as-of">${esc(end.asOf)}</span>` : ''}${end.again ? ` · <button data-run="again">${esc(t('B1.try-again'))}</button>` : ''}</div>` : '');
   /** @type {Record<string, import('./host.js').Act>} */

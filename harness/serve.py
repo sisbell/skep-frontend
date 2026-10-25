@@ -5,7 +5,8 @@ admits ONE page origin exactly, `http://127.0.0.1:8731`).
 
     serve.py [port] [--web <dir>] [--results <dir>] [--shots <dir>]
 
-Serves `web/` with `Cache-Control: no-store`; collects `POST /results` into
+Serves `web/` with `Cache-Control: no-store`, the shipped faces under
+`web/fonts/` as `font/woff2`; collects `POST /results` into
 `results/<label>.json` and `POST /shot` into `shots/`. Grown from
 spikes/s3/serve.py (the byte-range branch kept for a later media lane).
 The harness is not the product (FP-5): nothing in web/ imports this."""
@@ -60,6 +61,8 @@ def main():
                 return 'text/javascript; charset=utf-8'
             if path.endswith('.d.ts'):
                 return 'text/plain; charset=utf-8'
+            if path.endswith('.woff2'):
+                return 'font/woff2'
             return super().guess_type(path)
 
         def end_headers(self):

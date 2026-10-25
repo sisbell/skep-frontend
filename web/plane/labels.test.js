@@ -11,21 +11,26 @@
 // top-left of its place's visible part, its address first, its badge whole
 // or dropped and its words cut then dropped, one inside a region's held label
 // just below it, a label with no hold left out under the line, its room the
-// narrowest row its line meets; and, over many random frames, every line and
+// narrowest row its line meets; each part measured and set run by run in
+// its face, an address inside the client's words in the identifier's, a cut
+// never inside an address and a wrapped word keeping its face, the client's
+// figures apart from its words; and, over many random frames, every line and
 // every held line inside its place and the view, meeting no other place's
 // shape and no other line.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, holdTop, heldLine, across, LINE_BOX } from './labels.js';
-import { LABEL_MIN_PX, HOLD } from './register.js';
+import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, holdTop, heldLine, across, inFace, plain, runsOf, figuresOf, face, LINE_BOX } from './labels.js';
+import { LABEL_MIN_PX, HOLD, FACE } from './register.js';
 
 /** @typedef {import('./labels.js').Label} Label */
 /** @typedef {import('./labels.js').Part} Part */
 /** @typedef {import('./labels.js').Shape} Shape */
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect */
 
-/** a monospace measure: 0.6 em a character */
+/** a measure of one width a character in every face: 0.6 em */
 const measure = (/** @type {string} */ s, /** @type {number} */ px) => [...s].length * px * 0.6;
+/** a measure each face sets at a width of its own a character: the client's 0.5 em, the identifier's 0.6, the reading face's 0.45 */
+const byFace = (/** @type {string} */ s, /** @type {number} */ px, /** @type {string} */ _w, /** @type {import('./register.js').Face} */ f) => [...s].length * px * { client: 0.5, ident: 0.6, reading: 0.45 }[f];
 const VIEW = { x: 0, y: 0, w: 1000, h: 800 };
 const LH = LABEL_MIN_PX * LINE_BOX;
 /** @returns {Part} */
@@ -404,4 +409,42 @@ test('over many random frames every held line stands inside its place — betwee
     for (let i = 0; i < lines.length; i++) for (let j = i + 1; j < lines.length; j++) assert.ok(!meets(lines[i].rect, lines[j].rect), `${lines[i].text} meets ${lines[j].text}`);
   }
   assert.ok(heldSet > 150 && pushedUp > 10, `labels held (${heldSet}), of them pushed up by their place's foot (${pushedUp}): the rule held over labels held, not over none`);
+});
+
+test('a part is set in its face, a stretch of it marked in another set in that one: each line\'s runs in their faces, its width their widths, its words as a person reads them (issue #16)', () => {
+  const words = `${inFace('ident', '1.0.4')} · 3 documents`;
+  assert.deepEqual(runsOf(words, 'client'), [{ text: '1.0.4', face: 'ident' }, { text: ' · 3 documents', face: 'client' }]);
+  assert.equal(plain(words), '1.0.4 · 3 documents');
+  const r = setLabels([label([{ text: words, px: 10, ink: '#fff', fit: 'one' }, { text: 'A first line', px: 10, ink: '#fff', fit: 'cut', face: 'reading' }])], [], VIEW, byFace);
+  const [line, first] = r.set[0].lines;
+  assert.deepEqual([line.text, line.runs, line.rect.w], ['1.0.4 · 3 documents', runsOf(words, 'client'), 5 * 10 * 0.6 + 14 * 10 * 0.5], 'the address in the identifier\'s face, the counts in the client\'s');
+  assert.deepEqual([first.text, first.runs, first.rect.w], ['A first line', [{ text: 'A first line', face: 'reading' }], 12 * 10 * 0.45], 'a first line in the reading face');
+  assert.equal(face(10, '600', 'ident'), `600 10px ${FACE.ident}`, 'each run\'s font its face\'s stack');
+  assert.equal(face(9), `9px ${FACE.client}`, 'the client\'s where none is named');
+});
+
+test('a cut never falls inside an address: it ends before the address or after it, and a part wrapped at its spaces keeps each word\'s face (F-9; issue #16)', () => {
+  const text = `withheld · ${inFace('ident', '1.0.123456')} · more words here`;
+  for (const w of [60, 72, 90, 110, 130, 150]) {
+    const r = setLabels([label([{ text, px: 10, ink: '#fff', fit: 'cut' }], { within: { x: 10, y: 10, w, h: 200 } })], [], VIEW, byFace);
+    const line = r.set.length ? r.set[0].lines[0] : null;
+    if (!line) continue;
+    const id = line.runs.filter((x) => x.face === 'ident').map((x) => x.text).join('');
+    assert.ok(id === '' || id === '1.0.123456', `${w} px: the address whole or not at all — ${JSON.stringify(line.runs)}`);
+    assert.ok(line.rect.w <= w + 1e-6, `${w} px: within its place`);
+  }
+  const wrapped = setLabels([label([{ text: `newest ${inFace('reading', 'The artifact chain')}`, px: 10, ink: '#fff', fit: 'wrap' }], { within: { x: 10, y: 10, w: 60, h: 200 } })], [], VIEW, byFace);
+  assert.deepEqual(wrapped.set[0].lines.map((l) => l.runs), [[{ text: 'newest ', face: 'client' }, { text: 'The', face: 'reading' }], [{ text: 'artifact', face: 'reading' }], [{ text: 'chain', face: 'reading' }]], 'each word of the first line in the reading face, on whatever line it falls, the space between two words the part\'s own');
+});
+
+test('the client\'s figures stand apart from its words, for the canvas sets each in a cell as wide as the face\'s widest (issue #16)', () => {
+  assert.deepEqual(figuresOf('≥ 503 documents · 12 links'), [{ text: '≥ ', figures: false }, { text: '503', figures: true }, { text: ' documents · ', figures: false }, { text: '12', figures: true }, { text: ' links', figures: false }]);
+  assert.deepEqual(figuresOf('links'), [{ text: 'links', figures: false }]);
+  assert.deepEqual(figuresOf('7'), [{ text: '7', figures: true }]);
+});
+
+test('a held label\'s parts carry their runs: its address in the identifier\'s face, its first line in the reading face\'s (issue #16)', () => {
+  const line = /** @type {NonNullable<ReturnType<typeof heldLine>>} */ (heldLine([{ text: '.0.3', px: 10, ink: '#fff', fit: 'one', face: 'ident' }, { text: 'The artifact chain', px: 10, ink: '#fff', fit: 'cut', face: 'reading' }], 400, byFace));
+  assert.deepEqual(line.map((m) => [m.text, m.runs]), [['.0.3', [{ text: '.0.3', face: 'ident' }]], ['The artifact chain', [{ text: 'The artifact chain', face: 'reading' }]]]);
+  assert.equal(line[1].x, 4 * 10 * 0.6 + 10 * 0.45, 'the first line one space of its own face past the address, set at its width');
 });

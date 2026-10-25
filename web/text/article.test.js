@@ -1,14 +1,19 @@
 // T-ARTICLE's test: the article made from a record — a withheld run's gap as
 // tall as its bars, holding its face, its head, its owner or the origin's
-// mark by what its full lines hold, the face compact in the column's edge
-// otherwise and a control on the plane alone; the entitlement arm by the
+// mark by what its full lines hold as its words are measured in their faces,
+// never counted, the face compact in the column's edge otherwise and a
+// control on the plane alone; an item not rendered a gap of its positions,
+// its words in it or in the edge; every address the article sets in the
+// identifier's face, a record's keys and a face's arm and clause at the
+// run's size; the entitlement arm by the
 // reader; C-67's clause decided over the origin's whole admitted-claim set,
 // the pointer a control on the plane and a line in a pane; links marked at
 // their spans in the one mark they merge into; the selection's and the
 // focus's marks by the one rule; a run's hairline and C-33's mark once per
 // run; each symbol at its span, after its last word and after a run's chrome,
 // titled with what its far end holds; each mark carrying the ends it draws;
-// the others' count in the column's edge, setting no line; the corner's
+// the others' count in the column's edge, setting no line, and a withheld
+// run's below its mark by the lines the mark's words take as measured; the corner's
 // items, whole and compact, outside the article, a pane's with its read act
 // and its lacking line; the record rule and headings; the plan the bars are
 // laid out from, the same blocks as the HTML; the scene-mode variant with no
@@ -16,16 +21,17 @@
 // item rule and the copy's plain text with its stand-ins; the ends drawn at
 // a withheld run as one symbol with its count, the plan unmoved; a symbol
 // lit where every link it stands for is lit; and the byline's slots, never a
-// placeholder, cut on a word's end and whole on their act (FP-12, FP-21,
-// FP-22, FP-23, FP-24, FP-26, FP-30, FP-33, FP-34).
+// placeholder, each box its face's width, cut on a word's end by its width
+// as set and whole on their act (FP-12, FP-21, FP-22, FP-23, FP-24, FP-26,
+// FP-30, FP-33, FP-34).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, headingLevel, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, LABEL_CH, CUE_CH } from './article.js';
-import { MEASURE, MEASURE_CPL, LINE_H, layoutOf } from '../plane/layout.js';
+import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
-import { t } from '../strings.js';
+import { t, tHTML } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { accountOf, homeOf, resolveSpan } from '../model/address.js';
 import { deriveBlocks, textOf } from '../model/records.js';
@@ -38,11 +44,13 @@ const KEYED = /** @type {Reader} */ ({ account: null, keyPresent: true }), KEYLE
 /** the byline's facts of 1.0.1, the owner of the documents the tests read, as the page holds them read */
 const OWN_FACTS = /** @type {import('../model/records.js').AccountFacts} */ ({ label: 'dev-notebook', fingerprint: 'e4272902a11439e5' + '0'.repeat(48) });
 
+/** a measure of every character one advance of the reading face, whatever its face: T-LAYER's where the platform sets no words */
+const advances = (/** @type {string} */ s) => [...s].length * CHAR_W;
 /** @returns {import('./article.js').ArticleView} */
 const view = (/** @type {Partial<import('./article.js').ArticleView>} */ o = {}) => ({
   selected: null, focus: null, marks: [], mergedMark, symbols: [], says: () => '', countAt: () => ({ n: 0, social: false }), wholeLinks: 0,
   reader: SIGNED, localTrust: true, notebook: true, scene: false, originKinds: new Map(), originOwner: (a) => accountOf(a) || '', clauseOf: () => null,
-  keyOf: (a) => (a === '1.0.1' ? OWN_FACTS : undefined), ...o,
+  keyOf: (a) => (a === '1.0.1' ? OWN_FACTS : undefined), measure: advances, ...o,
 });
 /** @returns {import('../model/records.js').Doc} */
 const doc = (/** @type {Partial<import('../model/records.js').Doc>} */ o = {}) => ({
@@ -55,6 +63,14 @@ const doc = (/** @type {Partial<import('../model/records.js').Doc>} */ o = {}) =
 const runOf = (/** @type {number} */ width, pos = 1) => /** @type {import('../model/records.js').Block} */ ({ pos, width, kind: 'withheld', text: '', origin: '1.0.1.0.1003' });
 /** a run twelve full lines deep at the measure: every face a reader meets fits in it */
 const WIDE = 12 * MEASURE_CPL;
+/** the markup a sign holds: its words, an address in them in the identifier's span */
+const INNER = '((?:[^<]|<span class="id">[^<]*</span>)*)';
+/** an address in the identifier's face, as the article sets it */
+const idOf = (/** @type {string} */ a) => `<span class="id">${esc(a)}</span>`;
+/** B1-S7's head at a run, as the article sets it: its owner, its account and its origin in the identifier's face */
+const headOf = (/** @type {string} */ owner, /** @type {number} */ width, origin = '1.0.1.0.1003') => tHTML('B1.withheld-run', { owner, account: owner, width, origin }, { owner: 'id', account: 'id', origin: 'id' });
+/** a withheld run's mark in its column's edge, as the article sets it */
+const markOf = (/** @type {string} */ owner) => tHTML('L.withheld.mark', { owner }, { owner: 'id' });
 /**
  * A withheld run's gap as the HTML sets it, read apart from the page's code: its attributes, its height in the body's
  * em and its last line's width, what it holds — its head, its arm, its clause, its owner alone, the origin's mark — and
@@ -66,8 +82,8 @@ const gapAt = (html, pos = 1) => {
   const m = new RegExp(`<span class="withheld" data-pos="${pos}"([^>]*)>(.*?)</span>(?=<span class="withheld"|<p|<h|</div>|$)`).exec(html);
   if (!m) return null;
   const at = (/** @type {string} */ k) => (new RegExp(` ${k}="([^"]*)"`).exec(m[1]) || [])[1] ?? null;
-  const inner = (/** @type {string} */ cls) => (new RegExp(`<span class="${cls}"[^>]*>([^<]*)</span>`).exec(m[2]) || [])[1] ?? null;
-  const mark = /<span class="wh-mark edge" data-mark="withheld"([^>]*?) style="[^"]*">([^<]*)<\/span>/.exec(m[2]);
+  const inner = (/** @type {string} */ cls) => (new RegExp(`<span class="${cls}"[^>]*>${INNER}</span>`).exec(m[2]) || [])[1] ?? null;
+  const mark = new RegExp(`<span class="wh-mark edge" data-mark="withheld"([^>]*?) style="[^"]*">${INNER}</span>`).exec(m[2]);
   const style = at('style') || '';
   return {
     owner: at('data-owner'), holds: at('data-holds'), width: Number(at('data-width')), height: Number((/height:([\d.]+)em/.exec(style) || [])[1]), last: Number((/--wh-last:(\d+)/.exec(style) || [])[1]),
@@ -76,12 +92,12 @@ const gapAt = (html, pos = 1) => {
   };
 };
 
-test('a withheld run is a gap as tall as its bars — its last line its remainder — never its text: its face whole where its full lines hold it, else its head, else its origin\'s owner, else the origin\'s mark, the face compact in its column\'s edge then (issue #151)', () => {
-  const owner = '1.0.1', head = (/** @type {number} */ w) => esc(t('B1.withheld-run', { owner, account: owner, width: w, origin: '1.0.1.0.1003' }));
-  const mark = { text: esc(t('L.withheld.mark', { owner })), control: true };
+test('a withheld run is a gap as tall as its bars — its last line its remainder — never its text: its face whole where its full lines hold it, else its head, else its origin\'s owner, else the origin\'s mark, the face compact in its column\'s edge then, every address in it the identifier\'s (issue #151; issue #16)', () => {
+  const owner = '1.0.1', head = (/** @type {number} */ w) => headOf(owner, w);
+  const mark = { text: markOf(owner), control: true };
   // twelve full lines: the face whole, the head, the arm and nothing in the clause's place, no mark at the edge
   const wide = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(WIDE), doc(), view({ reader: KEYLESS }))));
-  assert.deepEqual({ ...wide, height: Math.round(wide.height / LINE_H * 1e9) / 1e9 }, { owner, holds: 'face', width: WIDE, height: 12, last: MEASURE_CPL, head: head(WIDE), arm: esc(t('R56.key-absent', { owner })), clause: null, alone: null, origin: null, mark: null }, 'twelve full lines: the face in place, R56\'s arm and all');
+  assert.deepEqual({ ...wide, height: Math.round(wide.height / LINE_H * 1e9) / 1e9 }, { owner, holds: 'face', width: WIDE, height: 12, last: MEASURE_CPL, head: head(WIDE), arm: tHTML('R56.key-absent', { owner }, { owner: 'id' }), clause: null, alone: null, origin: null, mark: null }, 'twelve full lines: the face in place, R56\'s arm and all');
   // 240 positions — three full lines and 42 — under R56's arm: the head alone, the face compact at the edge
   const run = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(240), doc(), view({ reader: KEYLESS }))));
   assert.deepEqual([run.holds, run.head, run.arm, run.mark, run.last], ['head', head(240), null, mark, 240 - 3 * MEASURE_CPL], '240 positions: the head in its gap, the face compact at the edge');
@@ -89,21 +105,40 @@ test('a withheld run is a gap as tall as its bars — its last line its remainde
   // one full line: the head still; five positions: the owner's address alone; four: the origin's mark
   assert.equal((gapAt(withheldBlockHTML(runOf(MEASURE_CPL), doc(), view({ reader: KEYLESS }))) || {}).holds, 'head', 'one full line holds the head');
   const five = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(5), doc(), view())));
-  assert.deepEqual([five.holds, five.alone, five.mark], ['owner', owner, mark], 'five positions: its origin\'s owner, the face at the edge');
+  assert.deepEqual([five.holds, five.alone, five.mark], ['owner', idOf(owner), mark], 'five positions: its origin\'s owner, the face at the edge');
   const four = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(withheldBlockHTML(runOf(4), doc(), view())));
   assert.deepEqual([four.holds, four.origin, four.mark], ['mark', esc(t('L.origin-mark')), mark], 'four: the origin\'s mark, the face at the edge');
   // in a reading scene's pane, where nothing is acted on, the edge's mark is no control
   assert.equal((gapAt(withheldBlockHTML(runOf(4), doc(), view({ scene: true }))) || { mark: null }).mark?.control, false, 'in a pane the mark is a line');
-  // the rule over the face itself: the gap holds it where P-LAY's lines of it fit its full lines, at a narrower measure too
+  // the rule over the face itself: the gap holds it where its lines — the arm at the run's size — fit its full lines, at a narrower measure too
   const p = placeholderOf(runOf(240), SIGNED, (a) => accountOf(a) || '', () => null);
   const face = layoutOf([{ kind: 'text', pos: null, size: 1, pieces: [{ text: p.head, size: 1, lead: 0, trail: 0, box: false, own: false }], before: 0, after: 0, width: 0, keep: 'whole' },
-    { kind: 'text', pos: null, size: MEASURE.face, pieces: [{ text: p.arm.text, size: MEASURE.face, lead: 0, trail: 0, box: false, own: false }], before: MEASURE.faceGap * MEASURE.face, after: 0, width: 0, keep: 'whole' }]).lines;
+    { kind: 'text', pos: null, size: 1, pieces: [{ text: p.arm.text, size: 1, lead: 0, trail: 0, box: false, own: false }], before: MEASURE.faceGap, after: 0, width: 0, keep: 'whole' }]).lines;
   const deep = face[face.length - 1].top + face[face.length - 1].h;
-  assert.ok(deep <= 2 * LINE_H && deep > LINE_H, `the owner-grant face takes ${deep} em: more than one full line, within two`);
-  assert.deepEqual([gapHolds(p, 2 * MEASURE_CPL, MEASURE_CPL), gapHolds(p, MEASURE_CPL + 65, MEASURE_CPL)], ['face', 'head'], 'two full lines hold it; one and a remainder do not');
-  assert.equal(gapHolds(p, 3 * 30, 30), 'head', 'at a measure of thirty, where its head and its arm each take more lines, three full lines hold its head alone');
+  assert.ok(deep <= 3 * LINE_H && deep > 2 * LINE_H, `the owner-grant face takes ${deep} em: more than two full lines, within three`);
+  assert.deepEqual([gapHolds(p, 3 * MEASURE_CPL, MEASURE_CPL, advances), gapHolds(p, 2 * MEASURE_CPL + 65, MEASURE_CPL, advances)], ['face', 'head'], 'three full lines hold it; two and a remainder do not');
+  assert.equal(gapHolds(p, 3 * 30, 30, advances), 'head', 'at a measure of thirty, where its head and its arm each take more lines, three full lines hold its head alone');
   const html = withheldBlockHTML(runOf(WIDE), doc(), view());
   assert.ok(!html.includes('class="clause"') && !html.includes(t('C-67.pointer')), 'no clause its origin\'s edition claims decide: nothing renders in its place');
+});
+
+test('what a gap holds is read from its words as the platform sets them in their faces, never counted: where the client\'s words set wider than the reading face\'s advance, three full lines hold the owner-grant face no longer, nor five positions the owner\'s address where the identifier\'s face sets it wider (issue #16)', () => {
+  const p = placeholderOf(runOf(240), SIGNED, (a) => accountOf(a) || '', () => null);
+  const wider = (/** @type {string} */ x, /** @type {import('../plane/register.js').Face} */ f) => [...x].length * CHAR_W * (f === 'reading' ? 1 : 1.3);
+  assert.deepEqual([gapHolds(p, 3 * MEASURE_CPL, MEASURE_CPL, advances), gapHolds(p, 3 * MEASURE_CPL, MEASURE_CPL, wider)], ['face', 'head'], 'counted at the advance it fits; set wider, its head alone');
+  const q = placeholderOf(runOf(5), SIGNED, (a) => accountOf(a) || '', () => null), ident = (/** @type {string} */ x, /** @type {import('../plane/register.js').Face} */ f) => [...x].length * CHAR_W * (f === 'ident' ? 1.44 : 1);
+  assert.deepEqual([gapHolds(q, 5, MEASURE_CPL, advances), gapHolds(q, 5, MEASURE_CPL, ident)], ['owner', 'mark'], 'five positions hold "1.0.1" at the advance; in a face that sets it wider, the origin\'s mark');
+});
+
+test('a withheld run\'s count stands below its mark in its column\'s edge by the lines the mark\'s words take as their faces set them: one at the advance, two where the identifier\'s face sets its owner wide enough to wrap it (FP-26; issue #16)', () => {
+  const wide = (/** @type {string} */ x, /** @type {import('../plane/register.js').Face} */ f) => [...x].length * CHAR_W * (f === 'reading' ? 1 : 3);
+  const at = { ends: [], count: { n: 2, social: false } };
+  /** the count's top below the run's first line, in the edge's lines */
+  const below = (/** @type {import('./article.js').ArticleView} */ v) => {
+    const html = withheldBlockHTML(runOf(240), doc(), v, at), m = /<span class="others edge" data-count="2" style="[^"]*;top:([\d.]+)em">/.exec(html);
+    return m && html.includes('class="wh-mark edge"') ? Math.round(Number(m[1]) / (LINE_H / MEASURE.count) * 1e9) / 1e9 : null;
+  };
+  assert.deepEqual([below(view({ reader: KEYLESS })), below(view({ reader: KEYLESS, measure: wide }))], [1, 2], 'under R56\'s arm, which no three lines hold: the mark on one edge line at the advance, on two set wide, the count stacked below it each time');
 });
 
 test('the entitlement arm is one rule, by the reader, and the gap holding the face carries what it answers', () => {
@@ -114,7 +149,7 @@ test('the entitlement arm is one rule, by the reader, and the gap holding the fa
   assert.deepEqual(entitlementArm(KEYLESS, '1.0.2'), { id: 'R56.key-absent', text: t('R56.key-absent', { owner: '1.0.2' }) }, 'a guest with no key: R56\'s key-absent default, naming the owner');
   for (const reader of [SIGNED, BARE, KEYED, KEYLESS]) {
     const html = withheldBlockHTML(runOf(WIDE), doc(), view({ reader }));
-    assert.ok(html.includes(`<span class="arm">${esc(entitlementArm(reader, '1.0.1').text)}</span>`), `the gap's arm is the rule's for ${JSON.stringify(reader)}`);
+    assert.ok(html.includes(`<span class="arm">${tHTML(entitlementArm(reader, '1.0.1').id, { owner: '1.0.1' }, { owner: 'id' })}</span>`), `the gap's arm is the rule's for ${JSON.stringify(reader)}, the owner it names in the identifier's face`);
   }
   const keyed = withheldBlockHTML(runOf(WIDE), doc(), view({ reader: KEYED }));
   assert.ok(keyed.includes(esc(t('C-36.guest.key'))) && !keyed.includes('no key on this device'), 'a guest whose device holds a key for this board meets C-36\'s key-present arm, and is never told it holds none');
@@ -142,7 +177,9 @@ const claim = (addr, o = {}) => {
 };
 /** C-67's pointer following a claim, the LEAP to that claim's home its act */
 const pointer = (/** @type {string} */ followed) => ({ id: 'C-67.pointer', text: t('C-67.pointer'), claim: followed, home: homeOf(followed) });
-const quoting = (/** @type {string} */ claimant) => ({ id: 'C-67.quoting', text: t('C-67.quoting', { claimant }) });
+const quoting = (/** @type {string} */ claimant) => ({ id: 'C-67.quoting', text: t('C-67.quoting', { claimant }), claimant });
+/** C-67's QUOTING sibling as the article sets it: its claimant in the identifier's face */
+const quotingHTML = (/** @type {string} */ claimant) => tHTML('C-67.quoting', { claimant }, { claimant: 'id' });
 /** C-67's unread place: a read the clause is decided from failed */
 const unread = () => ({ id: 'L.clause.unread', text: t('L.clause.unread') });
 
@@ -223,10 +260,10 @@ test('on the plane the pointer is a control carrying the claim it follows and th
   const passes = () => editionClause(ORIGIN, OWNER, [claim('1.0.1.1.0.4.0.2.1'), claim(own)]);
   const quotes = () => editionClause(ORIGIN, OWNER, [claim(own, { from: [] })]);
   /** the clause beneath the arm as the placeholder holds it: its attributes and its words */
-  const clauseIn = (/** @type {import('./article.js').ArticleView} */ v) => (/<span class="arm">[^<]*<\/span><span class="clause"([^>]*)>([^<]*)<\/span><\/span>$/.exec(withheldBlockHTML(run, doc(), v)) || []).slice(1);
+  const clauseIn = (/** @type {import('./article.js').ArticleView} */ v) => (new RegExp(`<span class="arm">[^<]*</span><span class="clause"([^>]*)>${INNER}</span></span>$`).exec(withheldBlockHTML(run, doc(), v)) || []).slice(1);
   assert.deepEqual(clauseIn(view({ clauseOf: passes })), [` data-claim="${own}" data-home="1.0.1.0.9" role="button" tabindex="-1"`, esc(t('C-67.pointer'))], 'on the plane: a button carrying the owner\'s claim and its home, the edition');
   assert.deepEqual(clauseIn(view({ clauseOf: passes, scene: true })), ['', esc(t('C-67.pointer'))], 'in a pane: a line, nothing in a pane acting on a mark (SC)');
-  for (const scene of [false, true]) assert.deepEqual(clauseIn(view({ clauseOf: quotes, scene })), ['', esc(t('C-67.quoting', { claimant: OWNER }))], `${scene ? 'in a pane' : 'on the plane'}: the QUOTING sibling follows nothing`);
+  for (const scene of [false, true]) assert.deepEqual(clauseIn(view({ clauseOf: quotes, scene })), ['', quotingHTML(OWNER)], `${scene ? 'in a pane' : 'on the plane'}: the QUOTING sibling follows nothing, its claimant in the identifier's face`);
   for (const scene of [false, true]) assert.deepEqual(clauseIn(view({ clauseOf: () => editionClause(ORIGIN, OWNER, 'unread'), scene })), ['', esc(t('L.clause.unread'))], `${scene ? 'in a pane' : 'on the plane'}: "edition claims not read" follows nothing`);
 });
 
@@ -237,7 +274,7 @@ test('the placeholder\'s clause is the one its origin\'s claims decide; where th
   const clauseOf = (/** @type {string} */ o) => editionClause(o, OWNER, held[o] ?? null);
   assert.deepEqual(placeholderOf(run, SIGNED, (a) => accountOf(a) || '', clauseOf).clause, quoting(OWNER));
   const html = withheldBlockHTML(run, doc(), view({ clauseOf }));
-  assert.ok(html.includes(`<span class="arm">${esc(t('C-36.owner-grant.arm'))}</span><span class="clause">${esc(t('C-67.quoting', { claimant: OWNER }))}</span>`), html);
+  assert.ok(html.includes(`<span class="arm">${esc(t('C-36.owner-grant.arm'))}</span><span class="clause">${quotingHTML(OWNER)}</span>`), html);
   held[ORIGIN] = [];
   const empty = withheldBlockHTML(run, doc(), view({ clauseOf }));
   assert.ok(empty.includes(`<span class="arm">${esc(t('C-36.owner-grant.arm'))}</span></span>`) && !empty.includes('class="clause"'), `no claim: the arm's own copy alone, nothing in the clause's place: ${empty}`);
@@ -290,9 +327,9 @@ test('a block\'s marks are one rule, the article\'s and a standing article\'s al
 test('a transcluded run from a draft carries the hairline and C-33\'s mark in a published document', () => {
   const d = doc({ blocks: [{ pos: 1, width: 12, kind: 'para', text: 'abcdefghijkl', origin: null }], origins: [{ pos: 5, width: 4, doc: '1.0.1.0.1003' }] });
   const html = articleHTML(d, view({ originKinds: new Map([['1.0.1.0.1003', 'draft']]) }), '1.0.1');
-  assert.ok(html.includes('class="hairline whole"') && html.includes('≡ 1.0.1.0.1003'));
+  assert.ok(html.includes('class="hairline whole"') && html.includes(`≡ ${idOf('1.0.1.0.1003')}`), 'the hairline\'s origin in the identifier\'s face');
   assert.ok(html.includes(t('C-33')));
-  assert.ok(html.includes('this document windows 1.0.1.0.1003'), 'the scene-offer at a windowing document');
+  assert.ok(html.includes(`this document windows ${idOf('1.0.1.0.1003')}`), 'the scene-offer at a windowing document, its address the identifier\'s');
 });
 
 test('each hairline of a run carries the run\'s own positions in the document windowing it, the passage its gesture to the source carries', () => {
@@ -356,8 +393,8 @@ const shown = (/** @type {number} */ pos, /** @type {number} */ width) => /** @t
 test('the plan\'s head is the article\'s: three lines, a fourth where links touch the document', () => {
   const d = doc({ blocks: [{ pos: 1, width: 20, kind: 'para', text: 'abcdefghijklmnopqrst', origin: null }] });
   const bare = articlePlan(d, view(), '1.0.1').filter((r) => r.kind === 'head');
-  assert.deepEqual(bare.map((r) => r.pieces.map((p) => p.text).join('')), ['1.0.1.0.3', t('B1.state-line'), '1.0.1 · ' + ' '.repeat(LABEL_CH)], 'the byline: its owner, then the box its one slot takes on the reader\'s own byline, whatever it shows (FP-34)');
-  assert.equal(bare[2].pieces[1].box, true, 'the slots one inline-block, which no line breaks inside');
+  assert.deepEqual(bare.map((r) => r.pieces.map((p) => p.text).join('')), ['1.0.1.0.3', t('B1.state-line'), '1.0.1 · '], 'the byline: its owner, then the box its slots take, no characters of its own');
+  assert.deepEqual([bare[2].pieces[1].box, bare[2].pieces[1].lead], [true, LABEL_CH * advances('0') * MEASURE.head], 'the slots one inline-block, which no line breaks inside, as wide as the one slot the reader\'s own byline takes, measured in its face, whatever it shows (FP-34)');
   assert.deepEqual(bare.map((r) => r.pieces[0].size), [1, MEASURE.head, MEASURE.head], 'the address at the body\'s size, the state line and the byline at the head\'s');
   const marked = articlePlan(d, view({ marks: [shown(5, 4)] }), '1.0.1').filter((r) => r.kind === 'head');
   assert.equal(marked.length, 4);
@@ -406,7 +443,7 @@ test('the corner compact: a usual state its glyph, named whole by its words, a n
   const draft = cornerHTML(doc({ kind: 'draft', meta: null }), view(), true);
   assert.ok(draft.includes(`<span class="chip glyph" data-chip="1" role="img" aria-label="${esc(t('C-28.flag-on'))}">${esc(t('L.corner.draft'))}</span>`), `a draft's chip its glyph, named by C-28's words: ${draft}`);
   const counted = cornerHTML(doc(), view({ wholeLinks: 4 }), true), withheld = cornerHTML(doc({ refused: 'withheld' }), view(), true);
-  assert.ok(counted.includes(esc(t('F.whole-links', { n: 4 }))) && withheld.includes(esc(t('F.corner.withheld', { owner: '1.0.1' }))) && !withheld.includes('glyph'), 'the whole-document count and a withheld document\'s state keep their words');
+  assert.ok(counted.includes(esc(t('F.whole-links', { n: 4 }))) && withheld.includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })) && !withheld.includes('glyph'), 'the whole-document count and a withheld document\'s state keep their words, its owner in the identifier\'s face');
   assert.ok(!cornerHTML(doc(), view()).includes('glyph'), 'whole: no glyph');
 });
 
@@ -532,8 +569,8 @@ test('the plan and the HTML decide the same blocks, in the same order', () => {
   assert.deepEqual(plan.filter((r) => r.pos != null).map((r) => r.pos), inHTML);
   assert.deepEqual(inHTML, [1, 2, 12, 252, 253, 257]);
   const at = plan.findIndex((r) => r.pos === 1);
-  assert.deepEqual(plan.slice(at, at + 2).map((r) => [r.pos, r.pieces[0].text]), [[1, t('F.home-record.yours')], [null, 'dev-notebook · device']], 'a record\'s words, then its keys on a row of their own');
-  assert.equal((plan.find((r) => r.kind === 'withheld') || { width: 0 }).width, 240, 'a withheld run carries its width');
+  assert.deepEqual(plan.slice(at, at + 2).map((r) => [r.pos, r.pieces[0].text, r.size]), [[1, t('F.home-record.yours'), 1], [null, 'dev-notebook · device', 1]], 'a record\'s words, then its keys on a row of their own, at the run\'s size');
+  assert.deepEqual(plan.filter((r) => r.kind === 'gap').map((r) => [r.pos, r.width]), [[12, 240], [253, 4]], 'a withheld run and an item not rendered each a gap carrying its width');
   assert.equal(plan.filter((r) => r.kind === 'chrome').length, 1, 'the scene-offer: the page\'s chrome after the blocks');
   assert.equal(articlePlan(doc({ refused: 'withheld' }), view(), '1.0.1').length, 3, 'a refused document is its head alone');
 });
@@ -552,34 +589,40 @@ test('the scene-mode variant, a pane\'s article: no scene-offer and no row for o
 
 // ---- the byline (FP-34) -----------------------------------------------------------------------------------------------
 
-/** a byline's slots as the HTML sets them: each its role, its classes, its width, the words it shows, its whole, its cause's string and its name */
+/** a byline's slots as the HTML sets them: its owner, in the identifier's face, then each slot's role, its classes, its width in em, the words it shows, its whole, its cause's string and its name */
 const slotsIn = (/** @type {string} */ html) => {
-  const box = /<span class="by">([^<]*)<span class="(slots[^"]*)" style="width:(\d+)ch">(.*?)<\/span><\/span><(?:span class="pres"|\/div)/.exec(html);
+  const box = /<span class="by"><span class="id">([^<]*)<\/span>([^<]*)<span class="(slots[^"]*)" style="width:([\d.]+)em">(.*?)<\/span><\/span><(?:span class="pres"|\/div)/.exec(html);
   if (!box) return null;
-  const slots = [...box[4].matchAll(/<span class="(slot[^"]*)" data-slot="(\w+)"((?: data-string="[^"]*")?)((?: data-cut="1" title="[^"]*")?) role="img" aria-label="([^"]*)" style="width:(\d+)ch">([^<]*)(?:<span class="whole">([^<]*)<\/span>)?<\/span>/g)].map((m) => ({
-    cls: m[1], role: m[2], cause: (/data-string="([^"]*)"/.exec(m[3]) || [])[1] ?? null, title: (/title="([^"]*)"/.exec(m[4]) || [])[1] ?? null, name: m[5], ch: Number(m[6]), shows: m[7], whole: m[8] ?? null,
+  const slots = [...box[5].matchAll(/<span class="(slot[^"]*)" data-slot="(\w+)"((?: data-string="[^"]*")?)((?: data-cut="1" title="[^"]*")?) role="img" aria-label="([^"]*)" style="width:([\d.]+)em">([^<]*)(?:<span class="whole">([^<]*)<\/span>)?<\/span>/g)].map((m) => ({
+    cls: m[1], role: m[2], cause: (/data-string="([^"]*)"/.exec(m[3]) || [])[1] ?? null, title: (/title="([^"]*)"/.exec(m[4]) || [])[1] ?? null, name: m[5], em: Number(m[6]), shows: m[7], whole: m[8] ?? null,
   }));
-  return { owner: box[1], cls: box[2], ch: Number(box[3]), slots };
+  return { owner: box[1] + box[2], cls: box[3], em: Number(box[4]), slots };
 };
 /** a slot's accessible name, in the strings table's words */
 const named = (/** @type {'label' | 'fingerprint'} */ role, /** @type {string} */ shows) => esc(t('L.slot.named', { role: t(role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows }));
 /** the byline row of an article's plan: its pieces' text */
 const bylineRow = (/** @type {import('../model/records.js').Doc} */ d, /** @type {import('./article.js').ArticleView} */ v) => JSON.stringify(articlePlan(d, v, d.account || '').filter((r) => r.kind === 'head')[2]);
+/** the device label's box and the fingerprint cue's, in em, as the view's measure sets their faces: LABEL_CH figures, and the cue's own characters */
+const LABEL_EM = LABEL_CH * advances('0'), CUE_EM = advances('0000 0000 0000 0000');
 
-test('a byline names its owner, then its slots: on another\'s, the device label and the fingerprint cue the owner\'s genesis entry holds; on the reader\'s own, the label alone — each a box of its own width, named by its role and what it shows (FP-34; issue #208)', () => {
+test('a byline names its owner, in the identifier\'s face, then its slots: on another\'s, the device label and the fingerprint cue the owner\'s genesis entry holds, the cue in the identifier\'s face; on the reader\'s own, the label alone — each a box of its own width as its face is measured, named by its role and what it shows (FP-34; issue #208; issue #16)', () => {
   const OTHER = '1.0.2', d = doc({ addr: '1.0.2.0.5', account: OTHER, meta: null });
   const facts = /** @type {import('../model/records.js').AccountFacts} */ ({ label: 'agent-runner', fingerprint: '9a0c33f1b2d4e6a8' + '1'.repeat(48) });
   const other = slotsIn(articleHTML(d, view({ keyOf: (a) => (a === OTHER ? facts : undefined) }), OTHER));
+  assert.equal(CUE_CH, 19);
   assert.deepEqual(other, {
-    owner: OTHER + ' · ', cls: 'slots', ch: LABEL_CH + 3 + CUE_CH, slots: [
-      { cls: 'slot', role: 'label', cause: null, title: null, name: named('label', 'agent-runner'), ch: LABEL_CH, shows: 'agent-runner', whole: null },
-      { cls: 'slot', role: 'fingerprint', cause: null, title: null, name: named('fingerprint', '9a0c 33f1 b2d4 e6a8'), ch: CUE_CH, shows: '9a0c 33f1 b2d4 e6a8', whole: null },
+    owner: OTHER + ' · ', cls: 'slots', em: LABEL_EM + CUE_EM + advances(' · '), slots: [
+      { cls: 'slot', role: 'label', cause: null, title: null, name: named('label', 'agent-runner'), em: LABEL_EM, shows: 'agent-runner', whole: null },
+      { cls: 'slot id', role: 'fingerprint', cause: null, title: null, name: named('fingerprint', '9a0c 33f1 b2d4 e6a8'), em: CUE_EM, shows: '9a0c 33f1 b2d4 e6a8', whole: null },
     ],
   }, 'another\'s byline: the label and the cue, each in its box');
   const own = slotsIn(articleHTML(doc(), view(), '1.0.1'));
-  assert.deepEqual(own && [own.ch, own.slots.map((s) => [s.role, s.shows, s.name])], [LABEL_CH, [['label', 'dev-notebook', named('label', 'dev-notebook')]]], 'the reader\'s own byline: its label alone, no cue (foundations §2.1)');
+  assert.deepEqual(own && [own.em, own.slots.map((s) => [s.role, s.shows, s.name])], [LABEL_EM, [['label', 'dev-notebook', named('label', 'dev-notebook')]]], 'the reader\'s own byline: its label alone, no cue (foundations §2.1)');
   const guest = slotsIn(articleHTML(doc(), view({ reader: KEYLESS }), '1.0.1'));
   assert.deepEqual(guest && guest.slots.map((s) => s.shows), ['dev-notebook', 'e427 2902 a114 39e5'], 'a guest meets the owner\'s label and cue');
+  const faced = (/** @type {string} */ x, /** @type {import('../plane/register.js').Face} */ f) => [...x].length * (f === 'ident' ? 0.6 : 0.5);
+  const sized = slotsIn(articleHTML(d, view({ keyOf: (a) => (a === OTHER ? facts : undefined), measure: faced }), OTHER));
+  assert.deepEqual(sized && [sized.slots.map((x) => x.em), sized.em], [[LABEL_CH * 0.5, CUE_CH * 0.6], LABEL_CH * 0.5 + CUE_CH * 0.6 + 3 * 0.5], 'each box its own face\'s width: the label\'s figures in the client\'s, the cue in the identifier\'s, the separator in the client\'s');
 });
 
 test('a byline never shows a placeholder: while its facts are read its boxes stand empty, named as being read; where none can be named its cause says why, once where one cause empties both slots; a genesis entry with no label says so — and the plan\'s line is the same in every state (FP-34; issue #208: "A slot never shows its template placeholder")', () => {
@@ -603,7 +646,7 @@ test('a byline never shows a placeholder: while its facts are read its boxes sta
     assert.ok(by, `${state}: the byline stands`);
     assert.ok(!/⟨[^⟩]*⟩/.test(html) && !/⟨[^⟩]*⟩/.test(bylineRow(d, v)), `${state}: no ⟨token⟩ in the article or its plan`);
     assert.deepEqual(by.slots.map((s) => s.shows), shows.map(esc), `${state}: the slots show ${JSON.stringify(shows)}`);
-    assert.deepEqual(by.slots.map((s) => s.ch), [LABEL_CH, CUE_CH], `${state}: each slot its own width`);
+    assert.deepEqual(by.slots.map((s) => s.em), [LABEL_EM, CUE_EM], `${state}: each slot its own width`);
     assert.equal(by.slots[0].cause, cause, `${state}: the cause\'s string carried`);
     const once = !!facts && 'cause' in facts;
     assert.equal(by.cls, once ? 'slots once' : 'slots', `${state}: one cause said once`);
@@ -616,12 +659,14 @@ test('a byline never shows a placeholder: while its facts are read its boxes sta
   assert.equal(rows.size, 1, 'the plan\'s byline line the same in every state: what the slots show moves nothing beside them');
 });
 
-test('a device label its box does not hold is cut on a word\'s end with an ellipsis, carries itself whole for its act and its title, and is named whole (FP-26; FP-34; issue #208: "A label too long for the box is cut and shown whole on its act")', () => {
-  assert.equal(cutTo('dev-notebook', LABEL_CH), 'dev-notebook', 'a label the box holds: whole');
-  assert.equal(cutTo('Shane’s MacBook Pro (work, 2024)', LABEL_CH), 'Shane’s MacBook Pro…', 'cut before a space');
-  assert.equal(cutTo('build-agent-ci-runner-internal', LABEL_CH), 'build-agent-ci-runner-…', 'cut after a hyphen, where a line may break');
-  assert.equal(cutTo('abcdefghijklmnopqrstuvwxyz0123', LABEL_CH), 'abcdefghijklmnopqrstuvw…', 'one word longer than the box: as many of its characters as the box holds');
-  for (const label of ['Shane’s MacBook Pro (work, 2024)', 'build-agent-ci-runner-internal', 'abcdefghijklmnopqrstuvwxyz0123']) assert.ok([...cutTo(label, LABEL_CH)].length <= LABEL_CH, `${label}: within the box`);
+test('a device label its box does not hold is cut on a word\'s end with an ellipsis, by its width as its face sets it and never its count, carries itself whole for its act and its title, and is named whole (FP-26; FP-34; issue #208: "A label too long for the box is cut and shown whole on its act"; issue #16)', () => {
+  assert.equal(cutTo('dev-notebook', LABEL_EM, advances), 'dev-notebook', 'a label the box holds: whole');
+  assert.equal(cutTo('Shane’s MacBook Pro (work, 2024)', LABEL_EM, advances), 'Shane’s MacBook Pro…', 'cut before a space');
+  assert.equal(cutTo('build-agent-ci-runner-internal', LABEL_EM, advances), 'build-agent-ci-runner-…', 'cut after a hyphen, where a line may break');
+  assert.equal(cutTo('abcdefghijklmnopqrstuvwxyz0123', LABEL_EM, advances), 'abcdefghijklmnopqrstuvw…', 'one word longer than the box: as many of its characters as the box holds');
+  for (const label of ['Shane’s MacBook Pro (work, 2024)', 'build-agent-ci-runner-internal', 'abcdefghijklmnopqrstuvwxyz0123']) assert.ok(advances(cutTo(label, LABEL_EM, advances)) <= LABEL_EM + 1e-9, `${label}: within the box`);
+  const wide = (/** @type {string} */ x) => [...x].reduce((n, c) => n + (c === 'W' ? 2 : 1) * CHAR_W, 0);
+  assert.deepEqual([cutTo('WWWW WWWW WWWW WWWW', LABEL_EM, advances), cutTo('WWWW WWWW WWWW WWWW', LABEL_EM, wide)], ['WWWW WWWW WWWW WWWW', 'WWWW WWWW…'], 'nineteen characters of a face whose letters set two advances wide: cut by their width, where a count would keep them whole');
   const long = 'Shane’s MacBook Pro (work, 2024)';
   const by = slotsIn(articleHTML(doc({ addr: '1.0.2.0.5', account: '1.0.2', meta: null }), view({ reader: KEYLESS, keyOf: () => ({ label: long, fingerprint: 'ab'.repeat(32) }) }), '1.0.2'));
   assert.deepEqual(by && { cls: by.slots[0].cls, shows: by.slots[0].shows, whole: by.slots[0].whole, title: by.slots[0].title, name: by.slots[0].name }, { cls: 'slot cut', shows: esc('Shane’s MacBook Pro…'), whole: esc(long), title: esc(long), name: named('label', long) }, 'cut in its box, whole beside it for its act, in its title and in its name');
@@ -642,12 +687,44 @@ test('each withheld run names its own origin\'s owner — in its head, its arm, 
     for (const r of runs) {
       const g = /** @type {NonNullable<ReturnType<typeof gapAt>>} */ (gapAt(html, r.pos)), what = `${JSON.stringify(reader)}: the run from ${r.origin}, in ${d.addr}, which 1.0.1 owns`;
       assert.equal(g.owner, r.owner, `${what}: carries ${r.owner}`);
-      if (g.head != null) assert.equal(g.head, esc(t('B1.withheld-run', { owner: r.owner, account: r.owner, width: r.width, origin: r.origin })), `${what}: its head names ${r.owner}`);
-      if (g.arm != null) assert.equal(g.arm, esc(entitlementArm(reader, r.owner).text), `${what}: its arm the one for ${r.owner}`);
-      assert.ok(g.holds === 'face' ? g.mark === null && g.arm != null : g.mark?.text === esc(t('L.withheld.mark', { owner: r.owner })), `${what}: the face in its gap, else its edge's mark naming ${r.owner}`);
+      if (g.head != null) assert.equal(g.head, headOf(r.owner, r.width, r.origin), `${what}: its head names ${r.owner}, in the identifier's face`);
+      if (g.arm != null) assert.equal(g.arm, tHTML(entitlementArm(reader, r.owner).id, { owner: r.owner }, { owner: 'id' }), `${what}: its arm the one for ${r.owner}, in the identifier's face`);
+      assert.ok(g.holds === 'face' ? g.mark === null && g.arm != null : g.mark?.text === markOf(r.owner), `${what}: the face in its gap, else its edge's mark naming ${r.owner}`);
     }
     assert.equal((gapAt(html, 11) || {}).holds, 'face', 'twelve full lines hold every reader\'s face');
   }
+});
+
+test('an item this client cannot show is a gap of its positions, each one advance: its row the gap\'s lines, its element as tall and its last line its remainder, its words in it where its full lines hold them, else in its column\'s edge level with its first line, its marks the block\'s (issue #16)', () => {
+  const hex = (/** @type {number} */ pos, /** @type {number} */ width) => /** @type {import('../model/records.js').Block} */ ({ pos, width, kind: 'hex', text: 'ab'.repeat(width), origin: null });
+  const atom = /** @type {import('../model/records.js').Block} */ ({ pos: 205, width: 1, kind: 'atom', text: '{"type":"skep-retire","fingerprints":[]}', origin: null });
+  const d = doc({ blocks: [hex(1, 4), hex(5, 3 * MEASURE_CPL), { pos: 203, width: 2, kind: 'para', text: 'ok', origin: null }, atom] });
+  const html = articleHTML(d, view({ selected: { addr: d.addr, pos: 6, width: 2 } }), '1.0.1');
+  /** the gap of the block at a position: its classes, its height in line boxes, its last line, and its words in it or in its edge */
+  const gap = (/** @type {number} */ pos) => {
+    const m = new RegExp(`<span class="([^"]*) gap" data-addr="[^"]*" data-pos="${pos}" data-width="\\d+" style="height:([\\d.]+)em;--wh-last:(\\d+)">(<span class="unshown( edge)?"[^>]*>([^<]*)</span>)</span>`).exec(html);
+    return m && { cls: m[1], lines: Math.round((Number(m[2]) / LINE_H) * 1e9) / 1e9, last: Number(m[3]), edge: !!m[5], words: m[6] };
+  };
+  assert.deepEqual(gap(1), { cls: 'sp blk-hex', lines: 1, last: 4, edge: true, words: esc(t('F.not-rendered', { width: 4 })) }, 'four positions: one line four advances long, its words in the edge');
+  assert.deepEqual(gap(5), { cls: 'sp blk-hex sel', lines: 3, last: MEASURE_CPL, edge: false, words: esc(t('F.not-rendered', { width: 3 * MEASURE_CPL })) }, 'three full lines: its words in it; the selection touching it marks it');
+  assert.deepEqual(gap(205), { cls: 'sp blk-atom', lines: 1, last: 1, edge: true, words: esc(t('F.not-rendered', { width: 1 })) }, 'an atom of no record\'s value: one position, its words in the edge');
+  assert.ok(new RegExp(`<span class="unshown edge" style="${esc('--edge-in')}`).test(html), 'the edge\'s words placed as every sign there is');
+  const plan = articlePlan(d, view(), '1.0.1');
+  assert.deepEqual(plan.filter((r) => r.pos != null).map((r) => [r.pos, r.kind, r.width]), [[1, 'gap', 4], [5, 'gap', 3 * MEASURE_CPL], [203, 'text', 0], [205, 'gap', 1]], 'each item\'s row its gap, carrying its width');
+  assert.deepEqual(layoutOf(plan).lines.filter((l) => l.pos === 5).map((l) => [l.w, l.at]), [[MEASURE_CPL, 5], [MEASURE_CPL, 5 + MEASURE_CPL], [MEASURE_CPL, 5 + 2 * MEASURE_CPL]], 'its bars a line of its positions each');
+});
+
+test('every address the article sets stands in the identifier\'s face, inside a sentence as well: the head\'s address, the byline\'s owner, a withheld document\'s state line, an unregistered one\'s address, another\'s home record (issue #16)', () => {
+  const head = articleHTML(doc({ blocks: [{ pos: 1, width: 8, kind: 'para', text: 'Tumbler.', origin: null }] }), view(), '1.0.1');
+  assert.ok(head.startsWith(`<div class="hd"><span class="addr id">1.0.1.0.3</span>`) && head.includes(`<span class="by">${idOf('1.0.1')} · `), 'the head\'s address and the byline\'s owner');
+  assert.ok(head.includes('<p class="sp blk-para" data-addr="1.0.1.0.3" data-pos="1" data-width="8">Tumbler.</p>'), 'the document\'s own words carry no face of the client\'s');
+  const st = (/** @type {Partial<import('../model/records.js').Doc>} */ o) => (/<span class="st">(.*?)<\/span><span class="by">/.exec(articleHTML(doc(o), view(), '1.0.1')) || [])[1];
+  assert.equal(st({ refused: 'withheld' }), tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' }), 'a withheld document\'s state line');
+  assert.equal(st({ refused: 'unregistered' }), tHTML('B1.doc_not_registered', { address: '1.0.1.0.3' }, { address: 'id' }), 'an unregistered address');
+  assert.equal(st({}), esc(t('B1.state-line')), 'a state line naming no address: the client\'s words alone');
+  const enroll = { pos: 1, width: 1, kind: /** @type {const} */ ('atom'), text: JSON.stringify({ type: 'skep-enroll', keys: [{ label: 'dev-notebook', anchor: false }] }), origin: null };
+  const other = articleHTML(doc({ addr: '1.0.2.0.1', account: '1.0.2', blocks: [enroll] }), view(), '1.0.2');
+  assert.ok(other.includes(`<span class="rec-words">${tHTML('F.home-record.other', { owner: '1.0.2' }, { owner: 'id' })}</span>`), 'another\'s home record names its owner in the identifier\'s face');
 });
 
 // ---- the item rule and the copy's plain text (FP-24) --------------------------------------------------------------
@@ -773,7 +850,7 @@ test('the ends drawn at a withheld run stand as ONE symbol at the start of its g
   const syms = [...gap.matchAll(/<span class="sym at-run [^"]*" data-links="([^"]*)" data-ends="([^"]*)" style="([^"]*)" role="button" tabindex="-1" title="[^"]*">([^<]*)<\/span>/g)].map((m) => m.slice(1));
   assert.deepEqual(syms.map((m) => [m[0], m[1], m[3]]), [['R1 R2', 'k1 k2', '⟡2']], `one symbol at the run, carrying both ends and their count, a control on the plane, at stage 1: ${gap}`);
   assert.ok(syms[0][2].includes(`--mark-hue:${HUE.you}`) && syms[0][2].includes('--sym-chars:2'), 'in the mark its links merge into, its width its ⟡ and its count');
-  assert.ok(/^<span class="wh-mark edge"[^>]*>[^<]*<\/span><span class="others edge"[^>]*>[^<]*<\/span><span class="wh-head"><span class="sym at-run /.test(gap), `first in the gap's first line, before the notice's words, after the edge's signs: ${gap}`);
+  assert.ok(new RegExp(`^<span class="wh-mark edge"[^>]*>${INNER}</span><span class="others edge"[^>]*>[^<]*</span><span class="wh-head"><span class="sym at-run `).test(gap), `first in the gap's first line, before the notice's words, after the edge's signs: ${gap}`);
   assert.ok(!/class="[^"]*\blip\b/.test(gap) && !gap.includes('depth'), 'no stretch of the gap marked: it still reads as empty');
   const count = /<span class="others edge" data-count="(\d+)" style="([^"]*)">([^<]*)<\/span>/.exec(gap);
   assert.deepEqual(count && [count[1], count[3]], ['1', esc(t('F.others-count', { n: 1 }))], 'another\'s end there counted in the edge');
@@ -785,7 +862,7 @@ test('the ends drawn at a withheld run stand as ONE symbol at the start of its g
   assert.equal(rows(v), rows(view({ reader: KEYLESS, marks: [inText] })), 'no row moved: the gap stands on its bars');
   // what the gap holds is measured with the symbol first in its first line: it steps the notice to a smaller form, never drops the symbol (FP-26)
   const p = placeholderOf(runOf(5), SIGNED, (x) => accountOf(x) || '', () => null);
-  assert.deepEqual([gapHolds(p, 5, MEASURE_CPL), gapHolds(p, 5, MEASURE_CPL, 2)], ['owner', 'mark'], 'five positions hold the owner\'s address alone; with the symbol before it, the origin\'s mark');
+  assert.deepEqual([gapHolds(p, 5, MEASURE_CPL, advances), gapHolds(p, 5, MEASURE_CPL, advances, 2)], ['owner', 'mark'], 'five positions hold the owner\'s address alone; with the symbol before it, the origin\'s mark');
   const five = withheldBlockHTML(runOf(5), d, view(), { ends: [a, b], count: { n: 0, social: false } });
   assert.ok(five.includes('data-holds="mark"') && five.includes('>⟡2</span>' + esc(t('L.origin-mark')) + '</span>'), `the symbol stands, before the origin's mark: ${five}`);
 });

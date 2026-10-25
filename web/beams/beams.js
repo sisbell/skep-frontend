@@ -42,8 +42,9 @@
 // one bundle a destination (§2.1), each bundle marked at each end with what
 // its beams' marks share there (LK's `mergedMark`): neutral only where its
 // links take different colours at that end, a single link's never. Its
-// label (`labelText`) is the far document's address, its index label cut to
-// 32 characters, its count where it holds two beams or more, and, where
+// label (`labelText`) is the far document's address, in the identifier's
+// face, its index label cut to 32 characters, the document's words in the
+// reading face, its count where it holds two beams or more, and, where
 // every beam it holds says one state of what its far end's text holds
 // (BM-HELD's `farSays`), those words, so the stub says it before anyone
 // follows it; it is set above the end, or below it where above would reach
@@ -51,7 +52,8 @@
 // that view (`labelPlace`). Figures: at most twenty beams a bundle are
 // stroked; their alpha is 24 over the beams built, held between 0.25 and
 // 0.85, times each mark's value; a stroke is 1.6 px times its mark's weight;
-// labels are set in LABEL_FACE.
+// labels are set at LABEL_PX, each run in its face (`labelRuns`; P-LABEL's
+// `drawRun`), the client's figures tabular.
 // The geometry it lays beams out from (`pageGeometry`) is T-LAYER's rects
 // of the mounted articles — `spanRects`, else `lineBoxes` where a line
 // stands in no part — the camera's projection of the boxes and the visible
@@ -64,6 +66,7 @@ import * as LINE from '../line/line.js';
 import { sx, sy, viewport, visibleView, edgeStub, stubTriangle } from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 import { COL } from '../plane/register.js';
+import { drawRun, runWidth, face } from '../plane/labels.js';
 import { doc, blockAt, place } from '../model/records.js';
 import { farSays } from './held.js';
 
@@ -115,8 +118,8 @@ import { farSays } from './held.js';
  * @property {Rect} view the visible view (P-CAM's `visibleView`)
  */
 
-/** the bundles' labels' face */
-const LABEL_FACE = '10px ui-monospace, Menlo, monospace';
+/** the bundles' labels' size, in px */
+const LABEL_PX = 10;
 
 /** @type {HTMLCanvasElement | null} */
 let canvas = null;
@@ -455,11 +458,24 @@ function shared(/** @type {[{s: Shown}, ...Array<{s: Shown}>]} */ members, /** @
  * @param {Bundle<{s: Shown}>} b
  * @returns {string}
  */
-export function labelText(b) {
+export function labelText(b) { return labelRuns(b).map((r) => r.text).join(''); }
+
+/**
+ * A bundle's label (`labelText`) as runs in their faces (P-REG's FACE): the
+ * far document's address the identifier's, its index label — its words — the
+ * reading face's, the rest the client's.
+ * @param {Bundle<{s: Shown}>} b
+ * @returns {import('../plane/labels.js').Run[]}
+ */
+export function labelRuns(b) {
   const p = place(b.far);
   const says = b.members.map((m) => farSays(m.s));
-  return b.far + (p && p.label ? ' · ' + p.label.slice(0, 32) : '') + (b.members.length > 1 ? ` · ${b.members.length}` : '') +
-    (says[0] && says.every((w) => w === says[0]) ? ' · ' + says[0] : '');
+  const rest = (b.members.length > 1 ? ` · ${b.members.length}` : '') + (says[0] && says.every((w) => w === says[0]) ? ' · ' + says[0] : '');
+  /** @type {import('../plane/labels.js').Run[]} */
+  const out = [{ text: b.far, face: 'ident' }];
+  if (p && p.label) out.push({ text: ' · ', face: 'client' }, { text: p.label.slice(0, 32), face: 'reading' });
+  if (rest) out.push({ text: rest, face: 'client' });
+  return out;
 }
 
 /** the visible view now: the viewport below the one line */
@@ -532,15 +548,21 @@ export function draw() {
     }
     // the bundle's label at its end
     const first = b.members[0];
-    const text = labelText(b);
-    ctx.globalAlpha = 1; ctx.fillStyle = COL.text; ctx.font = LABEL_FACE;
-    const m = ctx.measureText(text);
-    const at = labelPlace(first.end, { w: m.width, ascent: m.fontBoundingBoxAscent, descent: m.fontBoundingBoxDescent }, seen);
+    const runs = labelRuns(b), text = runs.map((r) => r.text).join('');
+    ctx.globalAlpha = 1; ctx.fillStyle = COL.text;
+    // its width run by run, and the tallest of its faces above and below its baseline
+    let w = 0, ascent = 0, descent = 0;
+    for (const r of runs) {
+      w += runWidth(ctx, r, LABEL_PX, 'normal');
+      ctx.font = face(LABEL_PX, 'normal', r.face);
+      const m = ctx.measureText(r.text);
+      ascent = Math.max(ascent, m.fontBoundingBoxAscent || 0); descent = Math.max(descent, m.fontBoundingBoxDescent || 0);
+    }
+    const at = labelPlace(first.end, { w, ascent, descent }, seen);
     if (!at) continue;
-    ctx.textAlign = at.align;
-    ctx.fillText(text, at.x, at.y);
+    let x = at.rect.x;
+    for (const r of runs) x += drawRun(ctx, r, x, at.y, LABEL_PX, 'normal');
     labelsSet.push({ near: b.near, far: b.far, text, stub: first.stub, rect: at.rect });
-    ctx.textAlign = 'left';
   }
   ctx.globalAlpha = 1;
 }

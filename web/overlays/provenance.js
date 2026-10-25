@@ -5,7 +5,8 @@
 // "who uses this?" — `find_docs_containing` over the same bytes names the
 // documents whose arrangement holds the passage, short by a stated copy and
 // by any document the reader may not read, which the blind-spot line says
-// (C-72). Each act takes the span exactly as selected (R11); asked by a
+// (C-72), every address either names in the identifier's face (P-REG's
+// FACE). Each act takes the span exactly as selected (R11); asked by a
 // position alone, it takes the block holding it, whole. An origin and a
 // container are each another arrangement of the passage's material, so each
 // is a LEAP that carries the span asked over, re-projected and marked at the
@@ -30,7 +31,7 @@ import * as F from '../model/frames.js';
 import * as GO from '../nav/go.js';
 import * as SCENE from '../scene/scene.js';
 import * as FACES from './faces.js';
-import { t } from '../strings.js';
+import { t, tHTML, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 import { accountOf } from '../model/address.js';
 
@@ -106,11 +107,11 @@ export function wrote(addr, pos, width = null, byKey = false) {
     const rows = origins.map((o) => {
       const owner = REC.doc(o).meta ? REC.doc(o).meta?.owner : accountOf(o);
       const same = o !== addr;
-      const text = same ? t('B1.wrote', { owner: owner || '', account: owner || '', origin: o }) : t('B1.wrote.here', { owner: owner || '', account: owner || '', origin: o });
-      return { o, same, text };
+      const named = { owner: owner || '', account: owner || '', origin: o }, ids = { owner: 'id', account: 'id', origin: 'id' };
+      return { o, same, html: tHTML(same ? 'B1.wrote' : 'B1.wrote.here', named, ids) };
     });
-    const html = `<span class="label">${esc(caption)}</span>` +
-      rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${esc(r.text)}${r.same ? ` <button data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
+    const html = `<span class="label">${addressedHTML(caption)}</span>` +
+      rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${r.html}${r.same ? ` <button class="id" data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
     rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => carried(r.o, addr, sp, isSelection(width), byKey); acts['beside' + i] = () => SCENE.open(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }); });
@@ -134,9 +135,9 @@ export function uses(addr, pos, width = null, byKey = false) {
     if ('refused' in out) { FACES.showRefusal(anchor, out.refused, addr, answering(caption, anchor)); return; }
     const users = F.decodeAddrs(out.answer).filter((u) => u !== addr);
     const answer = users.length ? t('B1.uses', { documents: users.join(', ') }) : t('B1.uses.none');
-    const html = `<span class="label">${esc(caption)}</span>` +
-      `<div class="answer" data-string="${users.length ? 'B1.uses' : 'B1.uses.none'}">${esc(answer)}</div>` +
-      (users.length ? `<div class="acts">${users.map((u, i) => `<button data-run="u${i}">${esc(u)}</button>`).join('')}</div>` : '') +
+    const html = `<span class="label">${addressedHTML(caption)}</span>` +
+      `<div class="answer" data-string="${users.length ? 'B1.uses' : 'B1.uses.none'}">${addressedHTML(answer)}</div>` +
+      (users.length ? `<div class="acts">${users.map((u, i) => `<button class="id" data-run="u${i}">${esc(u)}</button>`).join('')}</div>` : '') +
       `<div class="clause" data-string="B1.C-72">${esc(t('B1.C-72'))}</div>`;
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};

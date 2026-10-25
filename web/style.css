@@ -4,12 +4,29 @@
    and the article's sizes and gaps from plane/layout.js's MEASURE and
    BORDER, which P-LAY lays the canvas's bars out with: the text layer reads
    them here and sets no size of its own.
+   THE TYPE: three faces, each one job (P-REG's FACE) — a document's words
+   in Charter, wherever the page shows them (`.dtext`, `.reading`); the
+   client's words in the system's face, its figures tabular, at the
+   interface's own sizes, and at the size of the text around them inside a
+   run; an address or a fingerprint in Atkinson Hyperlegible Mono (`.id`).
+   The two shipped faces are files under fonts/, never `local()`; the root
+   sets no size, so the reading size follows the reader's own (P-CAM's).
    Carries the wireframe's plane.html styles, re-cut: the one line, the LEAP
    box, the overlay, the scene, the mirror, the text layer, the corners. */
+@font-face { font-family:Charter; font-style:normal; font-weight:400; font-display:block; src:url(fonts/charter-regular.woff2) format('woff2'); }
+@font-face { font-family:Charter; font-style:italic; font-weight:400; font-display:block; src:url(fonts/charter-italic.woff2) format('woff2'); }
+@font-face { font-family:Charter; font-style:normal; font-weight:700; font-display:block; src:url(fonts/charter-bold.woff2) format('woff2'); }
+@font-face { font-family:Charter; font-style:italic; font-weight:700; font-display:block; src:url(fonts/charter-bold-italic.woff2) format('woff2'); }
+@font-face { font-family:"Atkinson Hyperlegible Mono"; font-style:normal; font-weight:200 800; font-display:block; src:url(fonts/atkinson-hyperlegible-mono.woff2) format('woff2'); }
 :root { --bg:#0e1013; --ink:#e8e6e1; --dim:#8b8f96; --line:#2a2f36; --box:#1b1f25; --accent:#7fb2ff; --warn:#ffb454; --ok:#7ddc9a; --bad:#ff6b6b;
-        --hue-you:#7fb2ff; --hue-owner:#a3d977; --hue-others:#9aa5b4; --same-boundary:#7ddc9a; --same-texture:rgba(125,220,154,0.07); --visited-alpha:0.45; }
+        --hue-you:#7fb2ff; --hue-owner:#a3d977; --hue-others:#9aa5b4; --same-boundary:#7ddc9a; --same-texture:rgba(125,220,154,0.07); --visited-alpha:0.45;
+        --face-reading:Charter, serif; --face-client:system-ui, sans-serif; --face-ident:"Atkinson Hyperlegible Mono", monospace; }
 * { box-sizing: border-box; }
-html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; overflow:hidden; }
+html, body { margin:0; height:100%; background:var(--bg); color:var(--ink); overflow:hidden; }
+body { font: 12px/1.45 var(--face-client); font-variant-numeric: tabular-nums; }
+/* a document's words outside its article (a quoted passage, a label's first line, a snippet) and an address or a fingerprint, wherever the client sets them */
+.reading { font-family:var(--face-reading); font-synthesis:none; font-variant-numeric:normal; }
+.id { font-family:var(--face-ident); }
 #plane { position:fixed; inset:0; width:100vw; height:100vh; display:block; touch-action:none; cursor:default; }
 #plane.dragging { cursor:grabbing; }
 button, .aff { font:inherit; font-size:11px; color:var(--ink); background:#14181d; border:1px solid #4a5260; border-radius:3px; padding:1px 6px; cursor:pointer; margin:1px 2px 1px 0; white-space:nowrap; }
@@ -52,10 +69,12 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line button { padding:0 5px; }
 /* the address segment is a native button (K-22; rule 14), drawn as the segment it is, not as a key — one width at every
    scale and focus (issue #141): the widest words it names, which the line sets on it (`--words`, in characters of its
-   face), then the strip's room (its 64px and 6px either side) and the marker's 2ch, its content clipped past it, so
-   nothing after it on the line moves; set at the line's top, as an inline-block clipping its content has no baseline of
-   its text's */
-#line button.address { display:inline-block; width:calc(var(--words) * 1ch + 76px + 2ch); overflow:hidden; text-align:left; background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; font-size:11px; line-height:inherit; cursor:pointer; vertical-align:top; }
+   face — the identifier's, every one the same width, which the addresses it names are set in and the position's words
+   never pass), then the strip's room (its 64px and 6px either side) and the marker's 2ch, its content clipped past it,
+   so nothing after it on the line moves; set at the line's top, as an inline-block clipping its content has no baseline
+   of its text's */
+#line button.address { display:inline-block; width:calc(var(--words) * 1ch + 76px + 2ch); overflow:hidden; text-align:left; background:none; border:0; border-radius:0; padding:0; margin:0; color:inherit; font:inherit; font-family:var(--face-ident); font-size:11px; line-height:inherit; cursor:pointer; vertical-align:top; }
+#line button.address .pos { font-family:var(--face-client); }
 /* the line is one row of its acts and its segments, set on their text's baseline: short of room the segments are cut — the
    acting-as segment and every one after it first, then the address's — and a walk's folded moment never (issue #182's
    design decision: "It never yields when the line runs short"); with room, the address segment stands at its one width */
@@ -93,26 +112,32 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 
 /* THE TEXT LAYER (S1 Q7): laid out once at 16 px, moved by transform; the article stands on its document's room, its
    parts placed in it (issue #15's fold; issue #122: a document stands by line, each part a `.col` holding a run of one
-   column's lines, the measure wide, `--measure` characters of its face — the measure in force, which T-LAYER sets on the
-   layer — placed at its first line's top; a part's flow its own `.run`, the margin above its first block dropped;
-   nothing clipped, for nothing stands past the room). The parts take the pointer, the room between them never, so a
-   press in a gutter falls to the canvas. Every element's line box is the article's one unitless line height (P-LAY's
-   LINE_H, set on the article by T-LAYER) of its own size — the chrome inside a line (the hairline's label, C-33's mark,
-   a symbol) is set at a line height of 1, so it never deepens its line; a symbol's box is one character wide whatever
-   face sets its ⟡ — a heading stands nearer the block it heads than the block above it; every block is a plain block,
-   so the margins about one that sets no line (a separator alone) collapse into one, as P-LAY collapses an empty row's:
-   the lines P-LAY lays the bars out on (foundations §2.4: the handoff moves no line). THE EDGE (issue #151's design
-   decision): a block's others' count and a withheld run's mark stand in their column's edge, placed out of the flow
-   beside the block's first line, `--edge-in` past the text and `--edge-w` wide in their own em (T-ARTICLE's
-   `edgeStyle`), so no sign sets a line. A withheld run is a gap as tall as its bars, its ground drawn on the run's own
-   lines — the last `--wh-last` characters wide — holding what its gap holds. An article on the plane takes the pointer
-   at reading scale alone, the `legible` class T-LAYER sets at the readable em 8 and above; below it the layer's `none`
-   holds, and a press on its text falls to the canvas as one on its bars does (foundations §2.4: "bars or mounted text
-   alike"). */
+   column's lines, the measure wide, `--measure` advances of its face — the measure in force, which T-LAYER sets on the
+   layer, times the reading face's advance as rendered, `--char-w` em — placed at its first line's top; a part's flow its
+   own `.run`, the margin above its first block dropped; nothing clipped, for nothing stands past the room). The parts
+   take the pointer, the room between them never, so a press in a gutter falls to the canvas. A document's words are
+   Charter, only the owner's formatting changing their letterforms; the client's words inside the article — its head, a
+   hairline's label, C-33's mark, a symbol, a sign in the edge, a record, a withheld run, an item not rendered, the
+   scene-offer — the client's face, an address in them the identifier's (P-REG's FACE). Every element's line box is the
+   article's one unitless line height (P-LAY's LINE_H, set on the article by T-LAYER) of its own size — the chrome inside
+   a line (the hairline's label, C-33's mark, a symbol) is set at a line height of 1, so it never deepens its line; a
+   symbol's box is its count of advances wide whatever face sets its ⟡ — a heading stands nearer the block it heads than
+   the block above it; every block is a plain block, so the margins about one that sets no line (a separator alone)
+   collapse into one, as P-LAY collapses an empty row's: the lines P-LAY lays the bars out on (foundations §2.4: the
+   handoff moves no line). THE EDGE (issue #151's design decision): a block's others' count, a withheld run's mark and
+   an item's words where its gap holds them not stand in their column's edge, placed out of the flow beside the block's
+   first line, `--edge-in` past the text and `--edge-w` wide in their own em (T-ARTICLE's `edgeStyle`), so no sign sets
+   a line. A run of positions with no glyphs — a withheld run, an item not rendered — is a gap as tall as its bars, the
+   last of its lines `--wh-last` advances wide, holding what its gap holds; a withheld run's ground is drawn on those
+   lines. An article on the plane takes the pointer at reading scale alone, the `legible` class T-LAYER sets at the
+   readable em 8 and above; below it the layer's `none` holds, and a press on its text falls to the canvas as one on its
+   bars does (foundations §2.4: "bars or mounted text alike"). */
 #domlayer { position:fixed; inset:0; overflow:hidden; pointer-events:none; contain:strict; z-index:3; }
 .dtext { position:absolute; top:0; left:0; transform-origin:0 0; will-change:transform; box-sizing:content-box;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color:#b9c1cb; -webkit-font-smoothing:antialiased; cursor:text; user-select:text; }
-.dtext .col { position:absolute; top:0; left:0; width:calc(var(--measure) * 1ch); }
+  font-family:var(--face-reading); font-synthesis:none; font-variant-numeric:normal; color:#b9c1cb; -webkit-font-smoothing:antialiased; cursor:text; user-select:text; }
+.dtext .hd, .dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .edge, .dtext .withheld, .dtext .rec, .dtext .sp.gap, .dtext .sp.blk-ref, .dtext .sp.empty, .dtext .offer {
+  font-family:var(--face-client); font-synthesis:initial; font-variant-numeric:tabular-nums; }
+.dtext .col { position:absolute; top:0; left:0; width:calc(var(--measure) * var(--char-w) * 1em); }
 .dtext .col > .run:first-child > :first-child { margin-top:0; }
 #domlayer .dtext.legible .col { pointer-events:auto; }
 .dtext .hd { color:#cfd6df; }
@@ -120,7 +145,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .hd .st, .dtext .hd .by, .dtext .hd .pres { color:#8b8f96; font-size:var(--head); display:block; }
 .dtext .hd .pres { color:#b9c1cb; }
 /* THE BYLINE'S SLOTS (FP-34; issue #208's design decision: "the slot keeps its place as an empty box of its own width"): a
-   box as wide as its slots, each slot a box of its own width (`ch` T-ARTICLE sets) whatever it shows, set at its line's top
+   box as wide as its slots, each slot a box of its own width (in em, T-ARTICLE's) whatever it shows, set at its line's top
    and one line box tall, so the line is P-LAY's whatever the slots hold; one being read an empty box on a faint ground; a
    cut label's whole, over what is beside it on its act (T-LAYER's `openLabel`), on the document's ground, its box unmoved;
    one cause emptying both slots said once in the first, the separator after it unseen */
@@ -152,22 +177,24 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .dtext .hairline.compact { opacity:.7; }
 .dtext .pubmark { display:inline-block; font-size:var(--mark); line-height:1; color:#cfd6df; border:var(--border-box) solid #4a5260; padding:0 var(--mark-pad); margin-right:var(--mark-gap); }
 .dtext .sym { display:inline-block; border:var(--border-box) solid var(--mark-hue, #8b8f96); color:var(--mark-hue, #e8e6e1); padding:0 var(--sym-pad); font-size:var(--sym); line-height:1; margin-left:var(--sym-gap); vertical-align:baseline; opacity:var(--mark-value, 1);
-  width:calc(var(--sym-chars, 1) * 1ch + 2 * var(--sym-pad) + 2 * var(--border-box)); text-align:center; }
+  width:calc(var(--sym-chars, 1) * var(--char-w) * 1em + 2 * var(--sym-pad) + 2 * var(--border-box)); text-align:center; }
 .dtext .sym.other { border-style:dashed; }
 /* the one symbol the ends drawn at a withheld run merge into (issue #202): first in its gap's first line, the room after it,
    `--sym-chars` its ⟡ and its count; and a symbol lit at an arrival, heavier by a ring that takes no room, so no line moves */
 .dtext .withheld .sym { margin-left:0; margin-right:var(--sym-gap); }
 .dtext .sym.heavier { box-shadow:0 0 0 var(--border-box) var(--mark-hue, #8b8f96); }
-/* a sign in its column's edge, beside its block's first line (see the head): the others' count, a withheld run's mark — a
-   run's count stacked below its mark by the `top` T-ARTICLE sets */
+/* a sign in its column's edge, beside its block's first line (see the head): the others' count, a withheld run's mark, an
+   item's words its gap does not hold — a run's count stacked below its mark by the `top` T-ARTICLE sets */
 .dtext .edge { position:absolute; top:0; left:calc(100% + var(--edge-in)); width:var(--edge-w); font-size:var(--count); font-weight:400; color:var(--dim); }
 .dtext .wh-mark { color:#cfd6df; }
 .dtext .withheld { display:block; position:relative; isolation:isolate; margin:0 0 var(--gap); color:#cfd6df; }
 .dtext .withheld::before { content:''; position:absolute; inset:0; z-index:-1;
   background: repeating-linear-gradient(45deg, #1b1f25, #1b1f25 6px, #22272f 6px, #22272f 12px);
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--line-box)), calc(var(--wh-last) * 1ch) calc(100% - var(--line-box)), calc(var(--wh-last) * 1ch) 100%, 0 100%); }
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--line-box)), calc(var(--wh-last) * var(--char-w) * 1em) calc(100% - var(--line-box)), calc(var(--wh-last) * var(--char-w) * 1em) 100%, 0 100%); }
 .dtext .withheld .wh-head, .dtext .withheld .wh-owner, .dtext .withheld .wh-origin { display:block; }
-.dtext .withheld .arm, .dtext .withheld .clause { display:block; font-size:var(--face); color:#b9c1cb; margin-top:var(--face-gap); }
+.dtext .withheld .arm, .dtext .withheld .clause { display:block; color:#b9c1cb; margin-top:var(--face-gap); }
+/* an item not rendered: the room its positions take, its words in it where its gap holds them */
+.dtext .sp.gap { color:#4b5563; }
 /* the chrome inside a block is never the document's bytes: a drag crosses it unselected, the copy never carries it */
 .dtext .hairline, .dtext .pubmark, .dtext .sym, .dtext .edge { user-select:none; -webkit-user-select:none; }
 /* an item that holds no text — a record, a reference, an item this client cannot show, a withheld run's face — is selected
@@ -175,8 +202,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    (FP-24; issue #161). On the plane a press on a withheld run's face starts no selection: its click is its act's (APP-INPUT) */
 .dtext .sp.blk-atom, .dtext .sp.blk-ref, .dtext .sp.blk-hex, .dtext .withheld { user-select:all; -webkit-user-select:all; }
 .dtext .rec { display:block; color:#cfd6df; }
-.dtext .rec .derived { display:block; color:#8b8f96; font-size:var(--derived); }
-.dtext .rec.not-rendered { color:#4b5563; font-style:italic; }
+.dtext .rec .derived { display:block; color:#8b8f96; }
 .dtext .offer { display:block; margin:var(--offer-gap) 0; color:#8b8f96; font-size:var(--offer); cursor:pointer; text-decoration:underline dotted; }
 /* the click cues stand where a click acts: APP-INPUT takes the clicks on the plane's text layer — a legible article's,
    the only one the pointer reaches — and its corners, and on nothing a reading scene's pane holds — a pane's blocks,
@@ -209,11 +235,11 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .whole-links { display:block; margin-top:.3em; }
 /* A LABEL HELD BELOW THE ONE LINE over a mounted article's text (issue #169's design decision: "Held below the line"): one line
    of its type across the box's visible part, on the box's ground T-LAYER sets, with no rule, shadow, tint or border, so the box
-   reads as continuing above; each part where P-LABEL's held line sets it, in the labels' face. It takes the pointer where its
+   reads as continuing above; each part where P-LABEL's held line sets it, each run of it in its face. It takes the pointer where its
    article does (`legible`), so a press on it reaches none of the lines it covers, and below that falls to the canvas */
 #corners .held { position:absolute; top:0; left:0; overflow:hidden; pointer-events:none; will-change:transform; user-select:none; -webkit-user-select:none; }
 #corners .held.legible { pointer-events:auto; }
-#corners .held span { position:absolute; top:0; white-space:pre; }
+#corners .held > span { position:absolute; top:0; white-space:pre; }
 
 /* A LANDING'S LINE (issue #153's design decision): at the text's edge beside the landing (O-LAND places it), over the
    beams and the corners, under the reading scene, the LEAP box and the overlay; opaque, as all chrome over the plane is,
@@ -280,9 +306,10 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* THE READING SCENE (law 12): chrome over the plane; places unmoved. Its panes' articles are read and scrolled, never
    clicked, so they carry none of the plane's click cues; its acts are its bar's buttons, the dismissal drawn as a bare ×,
    and a pane's corner's act, which reads another version in the pane's place (issue #160). Each
-   pane's text is one column at the plane's measure, `--measure` characters of its own face (issue #15: "side-by-side
-   panes stay one column each, at the same line length"), at the largest size up to 14 px that fits beside its corner
-   (SC sets it); it stands against the pane's inner edge, its column's edge between them, where the bands and lines leave
+   pane's text is one column at the plane's measure, `--measure` advances of its face (issue #15: "side-by-side panes
+   stay one column each, at the same line length"), both panes at one size — the reading size, smaller only where a
+   pane's column would be wider than its room beside its corner (SC sets it); it stands against the pane's inner edge,
+   its column's edge between them, where the bands and lines leave
    the pane (foundations §2.5), its corner beside it on the outer side, so the room a wide window adds falls outside both —
    before pane A's corner, after pane B's — and the text keeps its place beside the bands at every width. An auto margin
    takes that room */
@@ -293,7 +320,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #scenebar .x { float:right; color:var(--ink); background:none; border:0; padding:0; margin:0; }
 .pane { position:absolute; top:26px; bottom:0; width:calc(50% - 70px); overflow:auto; padding:14px 18px; display:flex; align-items:flex-start; gap:14px; }
 #sceneA { left:0; } #sceneB { right:0; }
-.pane .dtext { position:static; transform:none; font-size:14px; line-height:1.5; flex:none; width:calc(var(--measure) * 1ch); height:auto; cursor:text; }
+.pane .dtext { position:static; transform:none; line-height:var(--line-h); flex:none; width:calc(var(--measure) * var(--char-w) * 1em); height:auto; cursor:text; }
 /* a pane's column's edge stands on its inner side, the bands leaving the pane beyond its signs (foundations §3.1): pane A's on
    the right of its text, pane B's on the left, the article's box taking the edge's room */
 #sceneA .dtext { padding-right:var(--edge); }

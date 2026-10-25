@@ -25,6 +25,7 @@ import { parseAddress, accountOf, documentOf, boardOf, cmpAddr } from '../model/
  * @property {string} title
  * @property {string} sub
  * @property {boolean} exact
+ * @property {number} [n] a trail entry's row: the entry, numbered newest-first
  */
 
 /** a share form of the address (deployment §3) */
@@ -72,7 +73,7 @@ export function levels(/** @type {Parameters<typeof matches>[1]} */ ctx) {
     if (doc) out.push({ kind: 'document', addr: doc, title: ctx.levelWords.document, sub: doc, exact: false });
   }
   for (const l of ctx.landmarks) out.push({ kind: 'landmark', addr: l.doc, title: l.label || l.doc, sub: l.doc, exact: false });
-  for (const tr of ctx.trail) out.push({ kind: 'trail', addr: tr.addr, title: `${tr.n} · ${tr.addr}`, sub: tr.label || '', exact: false });
+  for (const tr of ctx.trail) out.push({ kind: 'trail', addr: tr.addr, title: `${tr.n} · ${tr.addr}`, sub: tr.label || '', exact: false, n: tr.n });
   void boardOf;
   return out;
 }

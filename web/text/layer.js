@@ -11,8 +11,8 @@
 // stands on the layer, the platform's selection as it stood over an article
 // taken down (`kept`), the page's selection while it is owed its range
 // (`owed`), the span the platform's selection was last placed over, the
-// measure the layer's style holds, the view revision, and the mount log and
-// frame counts the gate reads.
+// measure the layer's style holds, the widths its measure took (`widths`),
+// the view revision, and the mount log and frame counts the gate reads.
 // One article a box (FP-22): a document's versions share its box, and the
 // one standing there is the version the box shows (the reader `shown`,
 // N-GO's `shownIn`) — every other version's article taken down, and none
@@ -65,17 +65,30 @@
 // after the press does what was held.
 // An article is laid out once at P-LAY's LAY_FS (16 px) and its unitless
 // LINE_H, so each element's line box is its own size's, each column exactly
-// the measure in force's characters of its own face (P-CAM's `measure`,
-// MEASURE_CPL wherever the view holds it; the style's `--measure`, which
-// this module sets on its layer: `setMeasure`), and placed by transform from
-// the same camera arithmetic (S1). A resize that moves the measure folds
+// the measure in force's count of the reading face's average advance (P-CAM's
+// `measure`, MEASURE_CPL wherever the view holds it, at P-LAY's CHAR_W; the
+// style's `--measure`, which this module sets on its layer — `setMeasure` —
+// and `--char-w`), and placed by transform from the same camera arithmetic
+// (S1). The measure (`widthOf`): words set in each voice's face (P-REG's
+// FACE) at LAY_FS as the platform's canvas sets them, a client figure in a
+// cell as wide as its face's widest (P-LABEL's `runWidth`) — what T-ARTICLE
+// fits a withheld run's face, a cut label and a byline's slots by (the view's
+// `measure`), and what a held label's line is set by (P-LABEL's `heldLine`,
+// `runHTML`); where the platform gives no canvas, every character one advance
+// of the reading face. A face that arrives after the articles were set is a
+// re-set (`refaced`): the widths, the lines the platform set and the folds
+// made of them dropped, so every standing article goes stale and is set again
+// in its place, the passage being read held (FP-8). A resize that moves the measure folds
 // every document again at it, and the article being read is set again in
 // its place, the passage held; a zoom never moves it. The fold (`foldOf`;
 // FP-12, FP-8): every document is set at one line length and one line height
 // in P-LAY's equal columns inside its room, broken at the lines as rendered,
 // after the reader's font and spacing settings apply: an article is laid out
 // once in one column (`measureLines`), each row's element read for its top
-// and its height, kept by the article without its marks, its counts and its
+// and its height, each line of a text block where it begins and how far it
+// reaches, read from the characters the platform set on it (`setIn`) — the
+// face is proportional, so no count of characters places a line — kept by
+// the article without its marks, its counts and its
 // byline's facts, which set no line (`layoutKey`; A-254; FP-34), and those
 // lines broken into columns by P-LAY's keep rules; a mounted article's parts
 // are cut from that one column, kept out of the page (its template), each
@@ -170,7 +183,9 @@
 // translate alone from the same camera arithmetic: P-LABEL's one hold
 // (`holdTop`), P-REG's HOLD gap below the line, so it stands level with a
 // label held there. A reading view frames the column it reads with the
-// corner and the edge beside it (`frameOf`). The element outlives its
+// corner and the edge beside it, at the landing's em (`frameOf`; P-CAM's
+// `landingPx`) — a document read whole, its first column where the visible
+// view holds it, else its head at the top of the visible view (FP-29). The element outlives its
 // article's remounts and its items are rewritten only where they change, so
 // a focus on it survives them; the focused document's corner is the plane's
 // next Tab stop, named by its own words, and every other is out of the order
@@ -183,7 +198,9 @@
 // outline's first row rises above the hold, and while the one line does not
 // name it (the reader `named`), its label stands held below the line as an
 // element of the corner layer over its text — the canvas's words for its
-// box, read here (`docLabel`), so the two never part, on one line across its
+// box, read here (`docLabel`), so the two never part, its address in the
+// identifier's face and the document's words in the reading face's, each
+// stretch measured and set in its own (`labelLine`, `runHTML`), on one line across its
 // outline's visible part, on its box's ground, pushed up under the line by
 // its outline's foot, beside its corner and never over it (`besideCorner`),
 // drawn and never announced, taking the pointer where its article does
@@ -249,23 +266,23 @@
 // the mount log (`mountedSet`, `mounts`); APP records each frame's counts
 // (`frameStats`).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-24,
-// FP-26, FP-30, FP-34.
+// FP-26, FP-29, FP-30, FP-34.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
-import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, READING_PX } from '../plane/camera.js';
+import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, landingPx } from '../plane/camera.js';
 import { MOUNT_EM, UNMOUNT_EM, MOUNTS_PER_FRAME, LOD_TXT_LO } from '../plane/lod.js';
 import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
-import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE, GUTTER } from '../plane/layout.js';
+import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, cornerWidth } from '../plane/register.js';
-import { holdTop, heldLine, across, lineHeight, face } from '../plane/labels.js';
+import { holdTop, heldLine, across, lineHeight, face, inFace, figuresOf, figureCell, runWidth } from '../plane/labels.js';
 import { articleHTML, articlePlan, cornerHTML, blockMarks, symbolLit, editionClause, copyText } from './article.js';
 import { farSays } from '../beams/held.js';
 import { homeOf, documentOf, memberOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { esc } from '../util.js';
-import { t } from '../strings.js';
+import { t, tHTML } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -545,7 +562,77 @@ export const lineStands = (/** @type {string} */ addr, /** @type {number} */ i) 
  */
 export function mountedLines(addr) { const rec = mounted.get(addr); return rec ? rec.parts.map((p) => ({ column: p.column, first: p.first, end: p.end })) : null; }
 
-/** the article's view state, from the owners' readers and LK: a byline's facts the model's for its owner's account (M-REC's `accountKey`), never this device's key */
+/** @type {CanvasRenderingContext2D | null | undefined} the context words are measured by as the platform sets them, made at its first use; null where the platform gives none (the node tests) */
+let measurer;
+/** @type {Map<string, number>} the widths measured, by face, weight, size and words, and each size's figure cell — dropped as a face arrives (`refaced`) */
+const widths = new Map();
+
+/** the measuring context (`measurer`) */
+function measuring() {
+  if (measurer === undefined) {
+    const c = typeof document !== 'undefined' && typeof document.createElement === 'function' ? document.createElement('canvas') : null;
+    measurer = c && typeof c.getContext === 'function' ? c.getContext('2d') : null;
+  }
+  return measurer;
+}
+
+/** the client's widest figure at a size and weight, in px: the cell each of its figures stands in, on the canvas and in a held label (P-LABEL's `figureCell`) */
+function cellAt(/** @type {CanvasRenderingContext2D} */ c, /** @type {number} */ px, /** @type {string} */ weight) {
+  const key = `cell|${weight}|${px}`;
+  let w = widths.get(key);
+  if (w === undefined) { w = figureCell(c, px, weight); widths.set(key, w); }
+  return w;
+}
+
+/**
+ * A run's width set at a size and weight in a face, in px, as the platform
+ * sets it (P-LABEL's `Measure`): the canvas's measure in the face's stack
+ * (P-REG's FACE), the client's figures each in a cell as wide as its widest
+ * (P-LABEL's `runWidth`); where the page has no canvas, every character one
+ * advance of the reading face (P-LAY's `CHAR_W`), as the plan counts it.
+ * @param {string} text
+ * @param {number} px
+ * @param {string} weight
+ * @param {import('../plane/register.js').Face} f
+ * @returns {number}
+ */
+function measureRun(text, px, weight, f) {
+  const c = measuring();
+  if (!c) return [...text].length * CHAR_W * px;
+  const key = `${f}|${weight}|${px}|${text}`;
+  let w = widths.get(key);
+  if (w === undefined) {
+    if (widths.size >= 20000) widths.clear();
+    w = runWidth(c, { text, face: f }, px, weight);
+    widths.set(key, w);
+  }
+  return w;
+}
+
+/**
+ * A string's width set in a face at 1 em, in em, as the platform sets it
+ * (T-ARTICLE's `Measure`): the article's every fit reads it.
+ * @param {string} text
+ * @param {import('../plane/register.js').Face} f
+ */
+export const widthOf = (text, f) => measureRun(text, LAY_FS, 'normal', f) / LAY_FS;
+
+/** a held label's run as markup, in its face as the canvas sets it: the client's figures each centred in its cell (`cellAt`), so its width is the one measured */
+function runHTML(/** @type {import('../plane/labels.js').Run} */ r, /** @type {number} */ px, /** @type {string} */ weight) {
+  const c = measuring();
+  const body = r.face === 'client' && c ? figuresOf(r.text).map((x) => (x.figures ? [...x.text].map((d) => `<span style="display:inline-block;width:${cellAt(c, px, weight)}px;text-align:center">${d}</span>`).join('') : esc(x.text))).join('') : esc(r.text);
+  return `<span style="font:${face(px, weight, r.face)}">${body}</span>`;
+}
+
+/**
+ * Every face arrived since the articles were set, a re-set (FP-8, FP-12;
+ * APP's, as a face loads late): the widths measured, the lines the platform
+ * set and the folds made of them dropped, so every standing article goes
+ * stale and is set again in its place, the passage being read held (`frame`).
+ */
+export function refaced() { widths.clear(); measured.clear(); folds.clear(); markDirty(); }
+
+/** the article's view state, from the owners' readers and LK: a byline's facts the model's for its owner's account (M-REC's `accountKey`), never this device's key; every fit it judges measured as the platform sets the words (`widthOf`) */
 export function viewFor(/** @type {Doc} */ d, scene = false) {
   const h = REC.health();
   /** @type {Map<string, 'edition' | 'draft' | 'unknown'>} */
@@ -563,6 +650,7 @@ export function viewFor(/** @type {Doc} */ d, scene = false) {
     originOwner, clauseOf, keyOf: REC.accountKey,
     members: REC.has(boxOf(d.addr)) ? REC.doc(boxOf(d.addr)).members : null,
     cpl: scene ? MEASURE_CPL : measure(),
+    measure: widthOf,
   };
   return v;
 }
@@ -775,19 +863,25 @@ export function centreOf(addr, pos) {
  * moved across so the column's text, the corner beside it on its left in the
  * form its room and the view's fit hold at that size (`roomBeside`,
  * `formFor`; none where the corner stands by its row's first column instead)
- * and its edge on its right stand centred together. N-GO's landing and N-WALK's flight to a span read
- * it; the measure in force is one the view holds them at, at the reading size
- * (P-LAY's `fitFor`).
+ * and its edge on its right stand centred together; where none is named and
+ * the visible view below the one line holds less than the first column's
+ * depth, moved down so the column's outline tops the visible view and the
+ * document's head stands in it, never under the line (FP-29). N-GO's landing
+ * and N-WALK's flight to a span read it; the measure in force is one the view
+ * holds them at, at the landing's em (P-LAY's `fitFor`, P-CAM's `landingPx`).
  * @param {string} addr
  * @param {number | null} pos
- * @param {number} [fsPx] the em the view reads the document at, in px: the reading size where none is given
+ * @param {number} [fsPx] the em the view reads the document at, in px: the landing's where none is given
  * @returns {{x: number, y: number}}
  */
-export function frameOf(addr, pos, fsPx = READING_PX) {
+export function frameOf(addr, pos, fsPx = landingPx()) {
   const f = foldOf(REC.doc(addr)), c = centreOf(addr, pos), scale = fsPx / f.fs;
   const at = roomBeside(f, clearLeftOf(addr), pos == null ? 0 : Math.max(0, placeIn(f, pos).column), scale);
   const corner = at.first || at.room >= cornerWidth(true) ? cornerWidth(formFor(at.room, false, fit().compact) === 'compact') + CORNER_GAP : 0;
-  return { x: c.x + (EDGE * fsPx - corner) / 2 / scale, y: c.y };
+  const x = c.x + (EDGE * fsPx - corner) / 2 / scale, seen = visibleView(read.top()), first = f.columns[0];
+  if (pos != null || first.h * scale <= seen.h) return { x, y: c.y };
+  const { VH } = viewport();
+  return { x, y: docBox(addr).y + first.y - (GUTTER / 2) * f.fs + (VH / 2 - seen.y) / scale };
 }
 
 /**
@@ -881,15 +975,15 @@ const TEXT_BLOCK = 'p.sp, h2.sp, h3.sp, h4.sp, h5.sp, h6.sp';
 /**
  * An article's lines as the platform set them in one column at the measure
  * (see the head): each row's element — the head, each block, each
- * scene-offer — read for its top and its height, and the lines the plan sets
- * in it (P-LAY's `layoutOf`) standing where the element stands; where a text
- * block's element is set taller or shorter than its lines, the lines it sets
- * — as many as its height holds at its own pitch, full but the last, their
- * positions spread over the block, the room left below them a line of no ink
- * — and where a block of another kind is set taller, the room left a line of
- * no ink, shorter, the lines that fit. Every line keeps where a column may
- * break before it, a paragraph broken two lines in from either end and no
- * heading broken.
+ * scene-offer — read for its top and its height. A text block's lines are
+ * the ones it sets: as many as its height holds at its own pitch, each read
+ * where it begins and how wide it stands (`setIn`), the room left below them
+ * a line of no ink; any other unit's are the lines the plan sets in it
+ * (P-LAY's `layoutOf`), standing where the element stands — those that fit,
+ * where it is set shorter, and where it is set taller the room left a line of
+ * no ink. A line of no ink names no position. Every line keeps where a column
+ * may break before it, a paragraph broken two lines in from either end and
+ * no heading broken.
  * @param {HTMLElement} col the column, laid out
  * @param {Row[]} rows the plan its article was made from
  * @param {Block[]} blocks the blocks it was made from
@@ -898,7 +992,7 @@ const TEXT_BLOCK = 'p.sp, h2.sp, h3.sp, h4.sp, h5.sp, h6.sp';
  */
 function measureLines(col, rows, blocks, cpl) {
   const P = layoutOf(rows, cpl).lines;
-  const top0 = col.getBoundingClientRect().top;
+  const box = col.getBoundingClientRect(), top0 = box.top;
   /** @type {Array<{el: HTMLElement, lines: Line[]}>} each row element and the lines the plan sets in it */
   const groups = [];
   let i = 0;
@@ -919,30 +1013,71 @@ function measureLines(col, rows, blocks, cpl) {
     const r = g.el.getBoundingClientRect(), top = (r.top - top0) / LAY_FS, h = r.height / LAY_FS;
     const L = g.lines;
     if (!L.length) continue;
-    const p0 = L[0].top, last = L[L.length - 1], ph = last.top + last.h - p0;
-    const text = g.el.matches(TEXT_BLOCK);
-    if (!text || Math.abs(h - ph) <= half) {
+    const p0 = L[0].top;
+    if (!g.el.matches(TEXT_BLOCK)) {
       // the plan's lines, standing at the element's top — those that fit it; a unit set taller keeps the room left as a line of no ink
       for (const l of L) if (l === L[0] || l.top - p0 + l.h <= h + half) out.push({ ...l, top: top + (l.top - p0) });
       const end = out[out.length - 1], deep = end.top + end.h - top;
-      if (h - deep > half) out.push({ ...end, top: top + deep, h: h - deep, w: 0, nth: end.nth + 1, brk: false });
-    } else {
-      // the lines the element sets: as many as its height holds at its own pitch, the room left below them a line of no ink
-      const pitch = parseFloat(getComputedStyle(g.el).lineHeight) / LAY_FS || L[0].h;
-      const m = Math.max(1, Math.floor(h / pitch + 1e-3)), extra = h - m * pitch;
-      const inner = g.el.matches(PARAGRAPH), b = blocks.find((x) => x.pos === L[0].pos);
-      const a0 = L[0].at, a1 = b ? b.pos + b.width : null;
-      for (let k = 0; k < m; k++) {
-        const at = m === L.length ? L[k].at : a0 != null && a1 != null ? a0 + Math.floor((k * (a1 - a0)) / m) : a0;
-        const brk = k === 0 ? L[0].brk : inner && k >= 2 && m - k >= 2 && (k >= L.length || L[k].brk || L.length < m);
-        out.push({ ...L[0], top: top + k * pitch, h: pitch, w: k < m - 1 ? cpl : last.w || cpl, nth: k, brk, at });
-      }
-      if (extra > half) out.push({ ...L[0], top: top + m * pitch, h: extra, w: 0, nth: m, brk: false, at: a0 });
+      if (h - deep > half) out.push({ ...end, top: top + deep, h: h - deep, w: 0, nth: end.nth + 1, brk: false, at: null });
+      continue;
     }
+    // the lines the element sets: as many as its height holds at its own pitch, each where it begins, the room left below them a line of no ink
+    const pitch = parseFloat(getComputedStyle(g.el).lineHeight) / LAY_FS || L[0].h;
+    const m = Math.max(1, Math.floor(h / pitch + 1e-3)), extra = h - m * pitch;
+    const inner = g.el.matches(PARAGRAPH), b = blocks.find((x) => x.pos === L[0].pos);
+    const set = b ? setIn(g.el, b, m, r.top, pitch * LAY_FS, box.left) : null;
+    for (let k = 0; k < m; k++) {
+      const brk = k === 0 ? L[0].brk : inner && k >= 2 && m - k >= 2;
+      out.push({ ...L[0], top: top + k * pitch, h: pitch, w: set ? set[k].w : cpl, nth: k, brk, at: set ? set[k].at : L[0].at });
+    }
+    if (extra > half) out.push({ ...L[0], top: top + m * pitch, h: extra, w: 0, nth: m, brk: false, at: null });
   }
   return out;
 }
 
+/**
+ * Where each of the `m` lines a text block's element sets begins, and how
+ * wide it stands (`measureLines`): the first of the block's own characters,
+ * spaces and chrome apart, whose box's middle lies below the line's top,
+ * carried to its byte position (T-SPAN's `posOfChar`), and the right edge of
+ * the last before the next line's first, from the column's left, in
+ * characters of the body's face; a line holding none of the block's own
+ * characters names no position and stands no width. The block's characters
+ * are gathered once, and each line's first found by halving.
+ * @param {HTMLElement} el the block's element, laid out whole
+ * @param {Block} b the block it shows
+ * @param {number} m the lines it sets
+ * @param {number} top its top, in client px
+ * @param {number} pitch its line box, in client px
+ * @param {number} left the column's left edge, in client px
+ * @returns {Array<{at: number | null, w: number}>}
+ */
+function setIn(el, b, m, top, pitch, left) {
+  /** @type {Array<{node: Text, offset: number, len: number, char: number}>} */
+  const atoms = [];
+  let n = 0;
+  for (const tn of textNodes(el)) {
+    const s = tn.data;
+    for (let i = 0; i < s.length;) { const len = /** @type {number} */ (s.codePointAt(i)) > 0xffff ? 2 : 1; if (!spaceAt(s, i)) atoms.push({ node: tn, offset: i, len, char: n + i }); i += len; }
+    n += s.length;
+  }
+  const range = document.createRange();
+  const rect = (/** @type {typeof atoms[number]} */ a) => { range.setStart(a.node, a.offset); range.setEnd(a.node, a.offset + a.len); return range.getBoundingClientRect(); };
+  /** @type {number[]} each line's first character, an index into the atoms; their count where the line holds none */
+  const firsts = [];
+  let lo = 0;
+  for (let k = 0; k < m; k++) {
+    const y = top + k * pitch;
+    let hi = atoms.length;
+    while (lo < hi) { const mid = (lo + hi) >> 1, q = rect(atoms[mid]); if (q.top + q.height / 2 > y) hi = mid; else lo = mid + 1; }
+    firsts.push(lo);
+  }
+  return firsts.map((a, k) => {
+    const z = k + 1 < m ? firsts[k + 1] : atoms.length;
+    if (a >= z) return { at: null, w: 0 };
+    return { at: posOfChar(b, atoms[a].char), w: (rect(atoms[z - 1]).right - left) / LAY_FS / CHAR_W };
+  });
+}
 /** is a character a collapsible space (P-LAY's `isSpace`), which opens no line */
 const spaceAt = (/** @type {string} */ s, /** @type {number} */ i) => isSpace(/** @type {number} */ (s.codePointAt(i)));
 
@@ -1505,13 +1640,22 @@ export const isDraft = (/** @type {Doc} */ d) => d.kind === 'draft' || (d.meta ?
 const firstWords = (/** @type {Doc} */ d) => d.label ?? (memberOf(d.addr) != null ? (d.blocks.find((b) => b.kind === 'para' && b.text.trim()) || { text: '' }).text.trim().split('\n')[0] : '');
 /** a box's first line: the withheld statement (`withheldBox`, which the ARIA mirror reads too), or the document's first line with its draft mark (a DRAFT convention, F-9) */
 export const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? withheldBox(d) : `${firstWords(d).replace(/^#+\s*/, '')}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
+/** a box's first line as a label on the plane sets it (`firstLine`), each stretch in its face (P-LABEL's `inFace`): the document's words the reading face's, the draft mark and the withheld statement the client's, the owner it names the identifier's */
+export const labelLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? t('F.corner.withheld', { owner: inFace('ident', REC.ownerAccount(d)) }) : `${inFace('reading', firstWords(d).replace(/^#+\s*/, ''))}${isDraft(d) ? ' · ' + t('F.label.draft') : ''}`);
+/** a box's first line as markup (`firstLine`), wherever the page's chrome shows it: the document's words in the reading face (`.reading`), the owner a withheld statement names in the identifier's (`.id`) */
+export const firstLineHTML = (/** @type {Doc} */ d) => {
+  if (d.refused === 'withheld') return tHTML('F.corner.withheld', { owner: REC.ownerAccount(d) }, { owner: 'id' });
+  const words = firstWords(d).replace(/^#+\s*/, '');
+  return (words ? `<span class="reading">${esc(words)}</span>` : '') + (isDraft(d) ? esc(' · ' + t('F.label.draft')) : '');
+};
 
 /**
  * A document's label on the plane — P-RENDER's on its box, and its held form
  * over its mounted article (see the head) — read here, so the two never part:
  * the address of the version its box shows (`shortAddr`) at 1.25 of its em,
- * no larger than its outline's first row holds; where that row is wider than
- * 90 px, its first line (`firstLine`) at 0.72 of that; past 110 px, its links'
+ * in the identifier's face, no larger than its outline's first row holds;
+ * where that row is wider than 90 px, its first line (`labelLine`) at 0.72 of
+ * that, the document's words in the reading face; past 110 px, its links'
  * badge, none at a withheld box, whose links no read brings.
  * @param {Doc} d the version its box shows
  * @param {number} w its outline's first row's text width on screen, in px
@@ -1521,9 +1665,9 @@ export const firstLine = (/** @type {Doc} */ d) => (d.refused === 'withheld' ? w
 export function docLabel(d, w, fsPx) {
   const tf = Math.min(w * 0.085, fsPx * 1.25), sub = tf * 0.72;
   /** @type {import('../plane/labels.js').Part[]} */
-  const parts = [{ text: shortAddr(d), px: tf, ink: COL.title, weight: '600', fit: 'one' }];
+  const parts = [{ text: shortAddr(d), px: tf, ink: COL.title, weight: '600', fit: 'one', face: 'ident' }];
   if (w > 90) {
-    parts.push({ text: firstLine(d), px: sub, ink: COL.greek, fit: 'cut' });
+    parts.push({ text: labelLine(d), px: sub, ink: COL.greek, fit: 'cut' });
     const c = LK.countDoc(boxOf(d.addr));
     if (w > 110 && d.refused !== 'withheld' && (c.n || c.arriving)) parts.push({ text: c.arriving ? `${c.n ? c.n + ' · ' : ''}${t('L.arriving')}` : c.n === 1 ? t('F.label.links.1') : t('F.label.links', { n: c.n }), px: sub, ink: COL.greek, fit: 'wrap' });
   }
@@ -2183,22 +2327,13 @@ export function besideCorner(line, band, corner) {
   return [{ x: line.x, w: corner.x - CORNER_GAP - line.x }, { x: from, w: end - from }].filter((s) => s.w > 0);
 }
 
-/** @type {CanvasRenderingContext2D | null} the context the held labels' words are measured by */
-let measurer = null;
-/** a string's width set at a size and weight in the labels' face (P-LABEL's `face`), which the held label's words are set in: P-LABEL's measure */
-function measureWords(/** @type {string} */ s, /** @type {number} */ px, /** @type {string} */ weight) {
-  if (!measurer) measurer = document.createElement('canvas').getContext('2d');
-  if (!measurer) return Infinity;
-  measurer.font = face(px, weight);
-  return measurer.measureText(s).width;
-}
-
 /**
  * The held label's pass (see the head), after the corners: each document
  * whose article stands in the mount band — where the canvas sets no label of
  * it — whose outline's first row has risen above the hold below the one line
  * and which the line does not name carries its label held there: the canvas's
- * words for its box (`docLabel`), on one line across its outline's visible
+ * words for its box (`docLabel`), each run in its face as the canvas sets
+ * it (`runHTML`), on one line across its outline's visible
  * part at that height (P-LABEL's `holdTop`, `across`, `heldLine`), its box's
  * edge pushing it up under the line, on its box's ground, over the text it
  * covers; where its corner's box meets that line, in the stretch left of the
@@ -2228,13 +2363,13 @@ function placeHeld() {
     for (const s of besideCorner({ x: x0, w: Math.min(a.x + a.w, seen.x + seen.w) - x0 }, { y, h: lh }, c ? { x: c.x, y: c.y, w: c.w, h: c.h } : null)) {
       // on whole px, never past the stretch's right end
       const x = Math.round(s.x), w = Math.floor(s.x + s.w) - x;
-      line = heldLine(parts, w, measureWords);
+      line = heldLine(parts, w, measureRun);
       if (line) { room = { x, w }; break; }
     }
     if (!line) continue;
     here.add(addr);
     const h = helds.get(addr) || makeHeld(cornerLayer, addr);
-    const html = line.map((m) => `<span style="left:${m.x}px;font:${face(m.px, m.weight)};line-height:${lh}px;color:${m.part.ink}">${esc(m.text)}</span>`).join('');
+    const html = line.map((m) => `<span style="left:${m.x}px;line-height:${lh}px;color:${m.part.ink}">${m.runs.map((r) => runHTML(r, m.px, m.weight)).join('')}</span>`).join('');
     if (h.html !== html) { h.el.innerHTML = html; h.html = html; }
     const ground = rec.d.refused === 'withheld' ? COL.withheld : COL.doc, place = `${room.x}|${y}|${room.w}|${lh}|${ground}`;
     if (h.place !== place) { Object.assign(h.el.style, { transform: `translate(${room.x}px, ${y}px)`, width: room.w + 'px', height: lh + 'px', background: ground }); h.place = place; }

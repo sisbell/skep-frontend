@@ -18,10 +18,29 @@
 // the hold its gap below the one line, where a label and a corner whose
 // place has risen under the line stand level (FP-26); the corner its size
 // whole and compact, its padding and its gap from the text, which T-LAYER
-// places it by and P-LAY's fit holds a column beside (FP-26). LK reads this
-// module to put a value on each link's mark; no drawing module reads it for
-// a link.
+// places it by and P-LAY's fit holds a column beside (FP-26). The type takes
+// three faces, each one job (`FACE`): a document's own words wherever the
+// page shows them, the client's words, and an address or a fingerprint; the
+// two shipped faces' styles are the ones APP waits on before the first
+// layout (`SHIPPED`). LK reads this module to put a value on each link's
+// mark; no drawing module reads it for a link.
 // Rules: FP-1, FP-2, FP-10, FP-26.
+
+/** @typedef {'reading' | 'client' | 'ident'} Face a face's one job (`FACE`): a document's words; the client's words; an address or a fingerprint */
+
+/**
+ * The three faces' stacks, each its job's (`Face`): a document's words,
+ * Charter, shipped in its four styles; the client's words, the system's face;
+ * addresses and fingerprints, Atkinson Hyperlegible Mono, shipped. The
+ * style's `@font-face` rules name the shipped families from files under
+ * `web/fonts/`, never `local()`; the stylesheet reads the stacks as custom
+ * properties (`cssVariables`), and every canvas that sets text reads them
+ * here.
+ */
+export const FACE = Object.freeze({ reading: 'Charter, serif', client: 'system-ui, sans-serif', ident: '"Atkinson Hyperlegible Mono", monospace' });
+
+/** the shipped faces' styles, each one of the style's `@font-face` rules, as the font shorthand APP waits on before the first layout */
+export const SHIPPED = Object.freeze(['16px Charter', 'italic 16px Charter', 'bold 16px Charter', 'italic bold 16px Charter', '16px "Atkinson Hyperlegible Mono"']);
 
 /** the linker's hue — R60's palette */
 export const HUE = Object.freeze({
@@ -152,5 +171,6 @@ export function cssVariables() {
     '--visited-alpha': String(VISITED_ALPHA),
     '--col-bg': COL.bg, '--col-doc': COL.doc, '--col-text': COL.text, '--col-title': COL.title, '--col-dim': COL.greek, '--col-land': COL.land, '--col-focus': COL.focus,
     '--corner-px': CORNER.px + 'px', '--corner-w': CORNER.whole + 'em', '--corner-compact-w': CORNER.compact + 'em', '--corner-pad': CORNER.pad + 'px',
+    '--face-reading': FACE.reading, '--face-client': FACE.client, '--face-ident': FACE.ident,
   };
 }

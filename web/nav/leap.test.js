@@ -6,9 +6,10 @@
 // the focus to the walk's element; a change of the page's class computes the
 // rows standing in the box again from the model, at once and as the new
 // class's index answers, its text, its caret and its focus as they stood;
-// and where no board is held the box lists no board's level, says why, and
-// Enter closes it onto the no-board face with no LEAP made (FP-20, FP-29,
-// FP-35).
+// each row's cells set in their faces — an address the identifier's, a
+// document's words the reading face's; and where no board is held the box
+// lists no board's level, says why, and Enter closes it onto the no-board
+// face with no LEAP made (FP-20, FP-29, FP-35).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as LEAP from './leap.js';
@@ -83,6 +84,20 @@ test('the box as opened holds the current address, selected, its levels beneath 
   line = '1.0.2.0.9';
   LEAP.takeAddress();
   assert.deepEqual(shown(), { open: true, value: '1.0.2.0.9', selected: true, rows: ['1', '1.0.2', '1.0.2.0.9'] }, 'the new address, selected, its own levels beneath it');
+});
+
+test('each row\'s cells stand in their faces: its address the identifier\'s, a document\'s label the reading face\'s, a level\'s words the client\'s, a trail entry\'s number then its address, and its words its first line\'s (issue #16)', () => {
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: '1.0.1.0.3', kind: 'draft', label: 'notes on tumblers', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  TRAIL.push({ addr: '1.0.1.0.3', pos: null, width: null, view: { x: 0, y: 0, scale: 1 }, label: null, notice: null }, null);
+  LEAP.open();
+  const html = String(rows.innerHTML);
+  assert.ok(/<span class="a"><span class="id">1\.0\.1\.0\.3<\/span><\/span><span>[^<]+<\/span><span class="a"><span class="id">1\.0\.1\.0\.3<\/span><\/span>/.test(html), `the document's level: its words the client's, its address the identifier's in both its cells: ${html}`);
+  assert.ok(html.includes(`<span>1 · <span class="id">1.0.1.0.3</span></span><span class="a"><span class="reading">notes on tumblers</span>${esc(' · ' + t('F.label.draft'))}</span>`), `the trail entry: its number, its address, its first line's words: ${html}`);
+  input.value = 'tumblers';
+  input.fire('input');
+  const typed = String(rows.innerHTML);
+  assert.ok(typed.includes(`<span class="reading">notes on tumblers</span></span><span class="a"><span class="id">1.0.1.0.3</span>${esc(' · draft')}</span>`), `a label row: the label's words, then its address and the draft mark: ${typed}`);
+  LEAP.close();
 });
 
 test('a box typed in, or with a row chosen, keeps its text and its rows as the address changes; a closed box is written nothing', () => {

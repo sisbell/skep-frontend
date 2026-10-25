@@ -69,7 +69,9 @@ def tiled(ctx, r):
     ctx.set_view(box['x'] + box['w'] / 2, box['y'] + box['h'] / 2, k['LOD_FAR_LO'] / 2 / k['DOC_W'])
     was = ctx.resize(*TILED_WINDOW)
     try:
-        scale = lambda em: em / k['STANDARD_FS']
+        # a hair over the em asked for, so a document at the standard size stands at it by the page's own test, the product of
+        # the em and its inverse never a float's width under it
+        scale = lambda em: em / k['STANDARD_FS'] * (1 + 1e-12)
         # centred across on the middle document's first column, its row's outlines TILED_TOP_PX below the view's top at the
         # readable em, so the row after it stands in view too
         first, outline = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(TILED_CENTRE)), ctx.js('window.__skep.fold(%s).outline' % json.dumps(TILED_CENTRE))

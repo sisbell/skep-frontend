@@ -131,6 +131,10 @@ def run(ctx):
     ctx.view_at(DOC, last['pos'])
     step(ctx, r, 'W-05', 2, 'read: the scene offer', 'W-05 step 2: the scene offer stands at the article\'s end, below its last block in its last column: "this document windows 1.0.1.0.1003".', 'scene-offer',
          claims=[(SCENE_OFFER, 'the scene offer', None)])
+    # the links card asked at a cited passage, its citations' line in the visible view at the reading size, where the content
+    # stage draws their tails
+    if shown:
+        ctx.view_at(DOC, shown[0]['pos'])
     ctx.js('window.__skep.cards.links(%s)' % json.dumps(DOC))
     ctx.frames(2)
     s = card_state(ctx)

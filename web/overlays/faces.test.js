@@ -39,7 +39,7 @@ import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
 import { entitlementArm } from '../text/article.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
-import { STRINGS, t } from '../strings.js';
+import { STRINGS, t, addressedHTML } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -87,9 +87,11 @@ function faceShown() {
   const o = HOST.currentState();
   if (!o) return null;
   const html = hostEl.innerHTML;
-  const words = /<(div|button) class="face-text" data-string="([^"]*)"[^>]*>([^<]*)<\/\1>/.exec(html), arm = /<div class="arm" data-string="([^"]*)">([^<]*)<\/div>/.exec(html);
+  const words = /<(div|button) class="face-text" data-string="([^"]*)"[^>]*>((?:[^<]|<\/?span[^>]*>)*)<\/\1>/.exec(html), arm = /<div class="arm" data-string="([^"]*)">((?:[^<]|<\/?span[^>]*>)*)<\/div>/.exec(html);
   const open = /class="face-text"[^>]* aria-expanded="(true|false)"/.exec(html);
-  return { id: o.id, words: words && [words[2], text(words[3])], arm: arm && [arm[1], text(arm[2])], acts: [...html.matchAll(/data-run="([^"]*)"/g)].map((m) => m[1]), open: open ? open[1] === 'true' : null, html };
+  /** an element's words as a person reads them: its markup's text, each address's span apart */
+  const read = (/** @type {string} */ markup) => text(markup.replace(/<[^>]*>/g, ''));
+  return { id: o.id, words: words && [words[2], read(words[3])], arm: arm && [arm[1], read(arm[2])], acts: [...html.matchAll(/data-run="([^"]*)"/g)].map((m) => m[1]), open: open ? open[1] === 'true' : null, html };
 }
 
 /** C-39's words past its owner: what it says of a link address, which no document-level face says */
@@ -122,7 +124,7 @@ function heldToTheFace(reader, what, form) {
   assert.equal(f?.id, 'face:withheld', `${what}, ${who}: the document-level withheld face`);
   assert.deepEqual(f.words, ['F.corner.withheld', t('F.corner.withheld', { owner: OWNER })], `${what}, ${who}: the withheld box's words, "withheld · ⟨owner⟩", naming ${OWNER}, the seat above the sub-account — never 1.0.2.1`);
   assert.equal(f.words[1], LAYER.withheldBox(REC.doc(X)), `${what}, ${who}: the words the plane's withheld box says`);
-  const lead = (caption ? `<span class="label">${esc(caption)}</span>` : '') + (away ? `<div class="face-addr code">${X}</div>` : '') + '<button class="face-text"';
+  const lead = (caption ? `<span class="label">${esc(caption)}</span>` : '') + (away ? `<div class="face-addr code id">${X}</div>` : '') + '<button class="face-text"';
   assert.ok(f.html.startsWith(lead), `${what}, ${who}: ${caption ? 'named by the act\'s caption, ' : ''}${away ? 'the document\'s full address before its words, the face standing away from its place' : 'no address, the face standing at the document\'s own bytes'}: ${f.html}`);
   assert.deepEqual([f.open, f.arm], whole ? [true, [arm.id, arm.text]] : [false, null], `${what}, ${who}: ${whole ? 'whole — the entitlement arm for ' + OWNER + ' and this reader beneath them' : 'compact — the arm one act away'}`);
   assert.equal(live.textContent, [...(caption ? [caption] : []), ...(away ? [X] : []), t('F.corner.withheld', { owner: OWNER }), ...(whole ? [arm.text] : [])].join(' '), `${what}, ${who}: said through the status region as it stands, the act's caption first`);
@@ -154,7 +156,7 @@ test('the face of a `withheld` refusal is the document the board names in the re
   readAs(READERS[0]);
   FACES.showRefusal({ span: { addr: X, pos: 1, width: 1 } }, { ...refusal('show_origin'), body: { code: 'withheld', disposition: 'reorder', op: 'show_origin', resp: 'rejected', site: { addr: Y } } }, X, { caption });
   const f = faceShown();
-  assert.ok(f && f.html.startsWith(`<span class="label">${esc(caption)}</span><div class="face-addr code">${Y}</div>`), `the act's caption, then the document the board named — never ${X}, the face standing at ${X}'s own bytes: ${f && f.html}`);
+  assert.ok(f && f.html.startsWith(`<span class="label">${esc(caption)}</span><div class="face-addr code id">${Y}</div>`), `the act's caption, then the document the board named — never ${X}, the face standing at ${X}'s own bytes: ${f && f.html}`);
   assert.deepEqual(f && f.words, ['F.corner.withheld', t('F.corner.withheld', { owner: '1.0.3' })], 'its words naming the owner of the document the board named');
   assert.ok(live.textContent.startsWith(caption + ' ' + Y + ' '), `said as the act's answer, its caption first: ${live.textContent}`);
   assert.equal(FACES.refusedDocument(refusal('show_origin'), X), X, 'a rejection naming no document: the one the act named');
@@ -177,7 +179,7 @@ test('a withheld run\'s face whole is its placeholder\'s record: the head, the a
   /** @type {Array<[string, string[], string, string[]]>} each state of X's claims the page holds, the clause beneath the arm it decides, and the clause's words */
   const states = [
     ['no claim on the origin', [], '', []],
-    ['an edition quoting the draft alone', [QUOTES], `<div class="clause" data-string="C-67.quoting">${esc(t('C-67.quoting', { claimant: OWNER }))}</div>`, [t('C-67.quoting', { claimant: OWNER })]],
+    ['an edition quoting the draft alone', [QUOTES], `<div class="clause" data-string="C-67.quoting">${addressedHTML(t('C-67.quoting', { claimant: OWNER }))}</div>`, [t('C-67.quoting', { claimant: OWNER })]],
     ['1.0.2\'s edition over its own bytes', [QUOTES, OWN], `<div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${OWN}" data-home="${EDITION}">${esc(t('C-67.pointer'))}</button></div>`, [t('C-67.pointer')]],
   ];
   try {
@@ -194,7 +196,7 @@ test('a withheld run\'s face whole is its placeholder\'s record: the head, the a
         assert.equal(f?.id, 'face:withheld-run', `${what}: the run's face`);
         assert.deepEqual(f.words, ['B1.withheld-run', head], `${what}: the placeholder's head, naming ${OWNER}, the owner of the run's origin`);
         assert.equal(live.textContent, [head, arm.text, ...said].join(' '), `${what}: the status region says the face whole — its head, its arm and its clause`);
-        assert.ok(o?.html.endsWith(`<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>${clause}`), `${what}: the arm for ${OWNER} and this reader, then the clause the claims decide, and nothing after it: ${o?.html}`);
+        assert.ok(o?.html.endsWith(`<div class="arm" data-string="${arm.id}">${addressedHTML(arm.text)}</div>${clause}`), `${what}: the arm for ${OWNER} and this reader, each address it names in the identifier's face, then the clause the claims decide, and nothing after it: ${o?.html}`);
         assert.ok(!f.html.includes('⟨') && !f.html.includes(C39), `${what}: no token left unfilled, and none of C-39's words`);
         assert.deepEqual(o?.anchor, { span: { addr: W, pos: run.pos, width: 240 } }, `${what}: at the run's own positions`);
         assert.ok(!o?.takeFocus, `${what}: it takes no focus (K-58)`);
@@ -250,7 +252,7 @@ test('a withheld document\'s own words carry C-67\'s pointer where the edition c
   release();
   for (let i = 0; i < 50 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
   const f = faceShown(), arm = entitlementArm(REC.reader(), OWNER);
-  assert.ok(f && f.id === 'face:withheld' && f.open && f.html.includes(`<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>${pointer}<button class="x"`), `shown once the claims answer, whole, the pointer beneath the arm in its first frame, the last before the dismiss: ${f && f.html}`);
+  assert.ok(f && f.id === 'face:withheld' && f.open && f.html.includes(`<div class="arm" data-string="${arm.id}">${addressedHTML(arm.text)}</div>${pointer}<button class="x"`), `shown once the claims answer, whole, the pointer beneath the arm in its first frame, the last before the dismiss: ${f && f.html}`);
   HOST.currentState()?.acts?.follow(/** @type {any} */ ({}), true);
   assert.deepEqual(leaps, [[E2, true]], 'its act the LEAP to the edition the claim names');
   HOST.dismiss();
@@ -281,7 +283,7 @@ test('every face stating a withheld origin carries C-67\'s clause in the same wo
   });
   PORT.boot(fake);
   readAs(READERS[0]);
-  const arm = entitlementArm(REC.reader(), OWNER), armLine = `<div class="arm" data-string="${arm.id}">${esc(arm.text)}</div>`;
+  const arm = entitlementArm(REC.reader(), OWNER), armLine = `<div class="arm" data-string="${arm.id}">${addressedHTML(arm.text)}</div>`;
   /** @type {Array<[string, string, string | null]>} each origin, what its lookup answered, and the clause every face stating it carries: its string, or none */
   const cases = [
     [QUOTED, 'an edition quoting the draft alone', 'C-67.quoting'],
@@ -292,7 +294,7 @@ test('every face stating a withheld origin carries C-67\'s clause in the same wo
   for (const [origin, what, id] of cases) {
     REC.takeRefused(origin, 'withheld');
     FACES.classChanged();
-    const words = id ? t(id, { claimant: OWNER }) : null, clause = id ? `<div class="clause" data-string="${id}">${esc(words || '')}</div>` : '';
+    const words = id ? t(id, { claimant: OWNER }) : null, clause = id ? `<div class="clause" data-string="${id}">${addressedHTML(words || '')}</div>` : '';
     // the document's own words, no LEAP handed in: nothing stands until the lookup answers, then the clause in its first frame
     FACES.withheld(origin, null, {});
     assert.equal(HOST.currentState(), null, `${what}: the document's face opens on its reads`);

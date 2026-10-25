@@ -77,7 +77,9 @@
 //     owner by the one owner rule (the reader `owner`); its first line where
 //     it is readable and the page holds one; and nothing where nothing was
 //     answered; its tail, its card, its mirror item and every list that
-//     names it carry those words;
+//     names it carry those words, each stretch in its face (`farFaced`) — the
+//     address the identifier's, the document's words the reading face's, a
+//     list row's markup made so (`farLabelHTML`);
 //   - a link shows as a symbol at its span where the reveal has reached stage
 //     2 (`symbols`) and as a beam where it has reached stage 3 (`beams`); the
 //     lenses by owner, type and endorsement filter the set per document for
@@ -136,15 +138,15 @@
 // The seam: which links show, and its state, is decided here alone; the
 // drawing modules — BM, T-LAYER, P-RENDER, SC, the cards — draw what `shown`,
 // `shownAt`, `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`,
-// `markOf`, `mergedMark`, `lit`, `floats`, `farPos`, `farWords`, `farLabel`,
-// `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
+// `markOf`, `mergedMark`, `lit`, `floats`, `farPos`, `farWords`, `farFaced`,
+// `farLabel`, `farLabelHTML`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
 // size the fold of what `utmost` gives takes.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-21, FP-22, FP-30.
 
 import * as REC from '../model/records.js';
 import { HUE, NEUTRAL_HUE, KIND_FORM, VISITED_ALPHA, ARRIVAL_WEIGHT } from '../plane/register.js';
 import { commonsType, documentOf, accountOf, isUnder } from '../model/address.js';
-import { t } from '../strings.js';
+import { t, facedHTML } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Link} Link */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -543,7 +545,16 @@ export const farPos = (/** @type {Shown} */ s) => (s.farRuns && s.farRuns.length
 export const tailed = (s) => !!s.far && !read.drawn(s.far);
 
 /**
- * A drawn end's far end in words (see the head), from the answers the page
+ * A drawn end's far end in words (see the head): its stretches' words,
+ * joined (`farFaced`).
+ * @param {FarEnd} s
+ * @returns {string} '' where it has none
+ */
+export function farWords(s) { return farFaced(s).map((r) => r.text).join(''); }
+
+/**
+ * A drawn end's far end in words (see the head), each stretch with its face
+ * (P-REG's FACE), from the answers the page
  * holds of its document, read as they stand now: where the board will say
  * nothing of the address — its `project` refused `doc_not_registered`, or a
  * read of the document itself — "no document here yet" in the reader's own
@@ -554,23 +565,29 @@ export const tailed = (s) => !!s.far && !read.drawn(s.far);
  * answered, the document's span set, text or metadata read, or the index
  * listing it — its first line, its heading's marks dropped as the plane's box
  * drops them, where the page holds one; else nothing: nothing answered, or no
- * first line held, and never a guess.
+ * first line held, and never a guess. The first line is the reading
+ * face's, the owner a withheld statement names the identifier's, every other
+ * word the client's.
  * @param {FarEnd} s a drawn end (`Shown`), or a tail's far end (`Tail.ends`)
- * @returns {string} '' where it has none
+ * @returns {Array<{text: string, face: import('../plane/register.js').Face}>} none where it has no words
  */
-export function farWords(s) {
-  if (!s.far) return '';
+export function farFaced(s) {
+  if (!s.far) return [];
   const d = REC.has(s.far) ? REC.doc(s.far) : null;
   const projected = s.farEnd && !s.farWhole && s.farEnd.ordinal != null ? REC.projection(s.link.addr, s.farSlot, s.far) : undefined;
   const place = REC.place(s.far);
   if ((d && d.refused === 'unregistered') || projected === 'unregistered') {
     const me = REC.session();
-    return t(me && me.account && accountOf(s.far) === me.account && REC.countsExact() && !place ? 'L.far.empty' : 'L.far.unregistered');
+    return [{ text: t(me && me.account && accountOf(s.far) === me.account && REC.countsExact() && !place ? 'L.far.empty' : 'L.far.unregistered'), face: 'client' }];
   }
-  if ((d && d.refused === 'withheld') || projected === 'withheld') return t('F.corner.withheld', { owner: read.owner(s.far) });
-  if (!(Array.isArray(projected) || place || (d && (d.from >= 0 || d.meta || d.extent != null)))) return '';
+  if ((d && d.refused === 'withheld') || projected === 'withheld') {
+    const owner = read.owner(s.far), [before, after] = t('F.corner.withheld').split('⟨owner⟩');
+    return [{ text: before, face: /** @type {const} */ ('client') }, { text: owner, face: /** @type {const} */ ('ident') }, { text: after ?? '', face: /** @type {const} */ ('client') }].filter((r) => r.text);
+  }
+  if (!(Array.isArray(projected) || place || (d && (d.from >= 0 || d.meta || d.extent != null)))) return [];
   const first = place && place.label ? place.label : (d && d.blocks.find((b) => b.kind === 'para' && b.text.trim()))?.text.trim().split('\n')[0] || '';
-  return first.replace(/^#+\s*/, '').trim();
+  const words = first.replace(/^#+\s*/, '').trim();
+  return words ? [{ text: words, face: 'reading' }] : [];
 }
 
 /**
@@ -584,6 +601,20 @@ export function farLabel(s) {
   if (!s.far) return '';
   const words = farWords(s);
   return words ? `${s.far} · ${words}` : s.far;
+}
+
+/**
+ * A drawn end's far end named as `farLabel` names it, as markup, each stretch
+ * in its face (ST's `facedHTML`): its address the identifier's, its words in
+ * the faces `farFaced` gives them — what every list row naming it sets; ''
+ * where it names no document.
+ * @param {FarEnd} s
+ * @returns {string}
+ */
+export function farLabelHTML(s) {
+  if (!s.far) return '';
+  const words = farFaced(s);
+  return facedHTML([{ text: s.far, face: 'ident' }, ...(words.length ? [{ text: ' · ', face: /** @type {const} */ ('client') }, ...words] : [])]);
 }
 
 /** the symbols: stage 2 and above — the shown set at its spans */

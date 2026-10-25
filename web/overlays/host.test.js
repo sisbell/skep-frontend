@@ -242,7 +242,7 @@ test('the LEAP box opened while an opening reads ends it, the card standing unde
 /** the parts of a face's markup the host reads its words from — its words, its arm, its clause, its note — each as an element bearing its text */
 const faceParts = (/** @type {string} */ html, /** @type {string} */ sel) => {
   const classes = sel.split(',').map((s) => s.trim().replace(/^\./, ''));
-  return [...html.matchAll(/<div class="([\w-]+)"(?: data-string="([^"]*)")?>([^<]*)<\/div>/g)].filter((m) => classes.includes(m[1])).map((m) => ({ id: '', dataset: { string: m[2] }, textContent: m[3] }));
+  return [...html.matchAll(/<div class="([\w-]+)"(?: data-string="([^"]*)")?>((?:[^<]|<\/?span[^>]*>)*)<\/div>/g)].filter((m) => classes.includes(m[1])).map((m) => ({ id: '', dataset: { string: m[2] }, textContent: m[3].replace(/<[^>]*>/g, '') }));
 };
 
 test('a face shown while the standing overlay\'s field holds the caret takes nothing\'s place: the overlay stands with its caret, and the face\'s words — a told face\'s too — are said through the status region; with the caret elsewhere, the face takes its place (#171\'s rule 2)', () => {
@@ -333,7 +333,7 @@ test('a jump\'s face is hidden on the plane exactly while the document it stands
   /** the face's parts the host reads its words from, read from the markup it wrote: its words, its arm, its clause, its note */
   const parts = (/** @type {string} */ sel) => {
     const classes = sel.split(',').map((s) => s.trim().replace(/^\./, ''));
-    return [...hostEl.innerHTML.matchAll(/<div class="([\w-]+)"(?: data-string="([^"]*)")?>([^<]*)<\/div>/g)].filter((m) => classes.includes(m[1])).map((m) => ({ id: '', dataset: { string: m[2] }, textContent: m[3] }));
+    return [...hostEl.innerHTML.matchAll(/<div class="([\w-]+)"(?: data-string="([^"]*)")?>((?:[^<]|<\/?span[^>]*>)*)<\/div>/g)].filter((m) => classes.includes(m[1])).map((m) => ({ id: '', dataset: { string: m[2] }, textContent: m[3].replace(/<[^>]*>/g, '') }));
   };
   const was = { one: hostEl.querySelector, all: hostEl.querySelectorAll, HTMLElement: globalThis.HTMLElement };
   Object.assign(hostEl, { querySelector: (/** @type {string} */ sel) => parts(sel)[0] || null, querySelectorAll: parts });

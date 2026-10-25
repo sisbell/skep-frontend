@@ -121,21 +121,24 @@
 // words (D5 K-57), and its Enter, or a click on the act, takes its act — a
 // press on the act leaving the selection standing in the pane, the passage
 // the act carries. Each pane's text is one column at the plane's measure
-// (FP-12): the style's `--measure` characters of its own face, at the
-// largest size up to PANE_FS at which that column fits beside the pane's
-// corner (`fitMeasure`), so the panes break the lines the plane breaks;
+// (FP-12): the style's `--measure` advances of its face, both panes at one
+// size — the reading size (P-CAM's), smaller only where a pane's column is
+// wider than its room beside its corner, then at the size the narrower room
+// holds (`fitMeasure`) — so the panes break the lines the plane breaks;
 // against the pane's inner edge with its corner beside it, its column's edge
 // between it and that inner edge — its counts and its withheld runs' marks
 // there, the bands leaving the pane beyond them (foundations §3.1; FP-26): a
 // window wider than the measure needs widens the outer margins, never the
 // line. The panes are read, not acted on (B1-S9): nothing in a pane's
 // article is a control (T-ARTICLE's scene-mode variant), and the keys a pane
-// takes move that pane alone (`key`). The scene's acts are its bar's
+// takes move that pane alone (`key`). The bar names each pane by the address
+// it shows, in the identifier's face (P-REG's FACE). The scene's acts are its bar's
 // buttons — re-level (K-62, its chord drawn for the platform, rule 19) and
 // the dismissal — each pressed by a click anywhere on it, by Enter or by
 // Space, and a pane's corner's act.
-// Figures: the ends level LEVEL_AT px below the panes' tops; a pane's text
-// PANE_FS px where its room holds the measure; MAX_BANDS bands drawn at
+// A face that arrives once the panes are set refits them and measures their
+// ties again (`refaced`).
+// Figures: the ends level LEVEL_AT px below the panes' tops; MAX_BANDS bands drawn at
 // most; a band 6 px wide at 0.7 alpha, a line 1.6 px at the link's value; a
 // stub's triangle 8 by 4 px, 6 px inside the pane's edge.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24,
@@ -152,7 +155,7 @@ import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
 import { inkOf, strokeOf, strokeIn } from '../beams/beams.js';
 import { SAMENESS } from '../plane/register.js';
-import { markDirty } from '../plane/camera.js';
+import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
 import { t } from '../strings.js';
 import { esc } from '../util.js';
@@ -283,8 +286,6 @@ import { esc } from '../util.js';
 
 /** how far below the panes' tops the two ends are set level (px), where both can stand there */
 const LEVEL_AT = 40;
-/** the size a pane's text is set at where its pane holds the measure at it (px); a narrower pane sets it smaller */
-const PANE_FS = 14;
 /** the bands drawn at most */
 const MAX_BANDS = 400;
 /** @type {Ink} a band's ink at both its ends: sameness's boundary, never a linker's hue (P-REG) */
@@ -723,7 +724,7 @@ export async function open(a, b, held = {}) {
     coverPlane(true);
     E.root.classList.add('on');
     const face = E.bar.dataset.face;
-    E.bar.innerHTML = `<b data-name="a">${esc(S.a.shows)}</b> │ <b data-name="b">${esc(S.b.shows)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
+    E.bar.innerHTML = `<b class="id" data-name="a">${esc(S.a.shows)}</b> │ <b class="id" data-name="b">${esc(S.b.shows)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
       (face ? ` <span class="face-text">${esc(t(face === 'too_many_pairs' ? 'B1.too_many_pairs' : face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: face }))}</span>` : '') +
       ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
     // each pane's article T-LAYER's mount, its corner on the pane's outer side: pane A's before the article, pane B's after
@@ -819,22 +820,30 @@ function placeAt(P, pos) {
 }
 
 /**
- * Each pane's text at the plane's measure (see the head): its article, the
- * style's `--measure` characters of its face wide, set at PANE_FS, or where
- * its pane's content beside the corner and the gap holds less, at the size
- * whose column that room holds.
+ * The panes' text at the plane's measure, both at one size (see the head):
+ * each article, the style's `--measure` advances of its face and its column's
+ * edge wide — every width of it in its own em — set at the reading size
+ * (P-CAM's), or where a pane's content beside its corner and the gap holds
+ * less, at the size whose column the narrower room holds.
  * @param {NonNullable<typeof els>} E
  */
 function fitMeasure(E) {
+  /** @type {Array<{art: HTMLElement, room: number}>} */
+  const set = [];
   for (const pane of [E.paneA, E.paneB]) {
     const art = /** @type {HTMLElement | null} */ (pane.querySelector(':scope > article.dtext'));
     if (!art) continue;
     const corner = pane.querySelector(':scope > .corner'), cs = getComputedStyle(pane);
-    const room = pane.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (corner ? corner.getBoundingClientRect().width + (parseFloat(cs.columnGap) || 0) : 0);
-    art.style.fontSize = PANE_FS + 'px';
-    for (let i = 0, w = art.getBoundingClientRect().width; i < 3 && room > 0 && w > room; i++, w = art.getBoundingClientRect().width) art.style.fontSize = parseFloat(art.style.fontSize) * (room / w) + 'px';
+    set.push({ art, room: pane.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (corner ? corner.getBoundingClientRect().width + (parseFloat(cs.columnGap) || 0) : 0) });
   }
+  for (const x of set) x.art.style.fontSize = READING_PX + 'px';
+  // an article's width grows with its size alone, so the size a room holds it at is read off its width at the reading size
+  const fs = set.reduce((k, x) => { const w = x.art.getBoundingClientRect().width; return x.room > 0 && w > x.room ? Math.min(k, READING_PX * (x.room / w)) : k; }, READING_PX);
+  for (const x of set) x.art.style.fontSize = fs + 'px';
 }
+
+/** a face arrived once the panes were set (APP's, as a face loads late): the next frame refits the panes and measures their ties again (`draw`) */
+export function refaced() { if (scene) { scene.size = ''; markDirty(); } }
 
 /** each pane's article given a pane's height of room below its end, so any of its lines can be scrolled to the pane's top */
 function roomBelow(/** @type {NonNullable<typeof els>} */ E) {

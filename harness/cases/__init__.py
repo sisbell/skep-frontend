@@ -219,7 +219,9 @@ def byline_expected(ctx, facts, own):
 # its box shows, its own text apart from the whole a cut label carries for its act, the whole, and its accessible name
 BYLINE_SHOWN = '''((sel) => { const by = document.querySelector(sel + ' .hd .by'); if (!by) return null;
   const own = (e) => { const c = e.cloneNode(true); c.querySelectorAll('.whole').forEach((w) => w.remove()); return c.textContent; };
-  return {owner: by.firstChild && by.firstChild.nodeType === 3 ? by.firstChild.data : null,
+  // its owner: the words before its slots' box — the owner's address, in its own element, and the separator after it
+  const before = [...by.childNodes].filter((n) => !(n.nodeType === 1 && n.classList.contains('slots')));
+  return {owner: before.length ? before.map((n) => n.textContent).join('') : null,
           slots: [...by.querySelectorAll('.slot')].map((s) => ({role: s.dataset.slot, shows: own(s), whole: (s.querySelector('.whole') || {}).textContent || null,
                                                                name: s.getAttribute('aria-label'), pending: s.classList.contains('pending')}))}; })(%s)'''
 

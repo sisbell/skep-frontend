@@ -28,7 +28,7 @@ import * as LAYER from '../text/layer.js';
 import { docBox, accountCell, boardCell, depthOfDoc, DOC_W } from '../plane/projection.js';
 import { STANDARD_FS } from '../plane/layout.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
-import { t } from '../strings.js';
+import { t, tHTML, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
@@ -40,7 +40,7 @@ const C1 = '1.0.1.0.49';
 const C1_TEXT = 'Tumbler.\n\nThe first field.';
 /** a depth-0 document of more columns than its room holds at the standard size: set a step smaller than its neighbours */
 const LONG = '1.0.1.0.40';
-const LONG_TEXT = Array.from({ length: 300 }, (_, i) => `Item ${i + 1} of an edition longer than its room's twelve columns.`).join('\n\n');
+const LONG_TEXT = Array.from({ length: 340 }, (_, i) => `Item ${i + 1} of an edition longer than its room's twelve columns.`).join('\n\n');
 /** the reads of a document read whole, all its text one run of its own: its extent, its metadata, its text, its image, its links (none) */
 const reads = (/** @type {string} */ doc, /** @type {string} */ text) => ({
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } },
@@ -277,7 +277,7 @@ test('while the walk keeps its document in view off the view\'s centre, the stri
   /** @type {Array<[string, string, number, (s: {x: number, y: number, w: number, h: number}, fs: number) => {x: number, y: number}, {start: boolean, end: boolean}]>} each document, the span the walk stands on, where the view's centre stands off its region, the ends run past */
   const cases = [
     ['past the first edition\'s last line, its one short column whole in view', D, 15, (s, fs) => ({ x: s.x + s.w / 2, y: s.y + s.h + 10 * fs }), { start: true, end: true }],
-    ['above the long edition\'s first line, its first row\'s top in view', LONG, 1, (s, fs) => ({ x: s.x + s.w / 2, y: s.y - 10 * fs }), { start: true, end: false }],
+    ['above the long edition\'s first line, its first column\'s top in view', LONG, 1, (s, fs) => ({ x: LAYER.centreOf(LONG, null).x, y: s.y - 10 * fs }), { start: true, end: false }],
   ];
   for (const [where, doc, pos, off, ends] of cases) {
     const fs = LAYER.foldOf(REC.doc(doc)).fs, s = LAYER.shapeOf(doc), reading = 12.5 / fs;
@@ -484,7 +484,7 @@ test('a jump\'s face standing out of the visible view is carried by the line in 
   assert.ok(!el.innerHTML.includes('seg aside'), 'none out of view: no segment');
   aside = { id: 'L.reading', text: t('L.reading', { address: D }) };
   LINE.render();
-  assert.ok(el.innerHTML.includes(`<span class="seg aside" data-string="L.reading">${esc(aside.text)}</span>`), `the face's words in a segment of their own: ${el.innerHTML}`);
+  assert.ok(el.innerHTML.includes(`<span class="seg aside" data-string="L.reading">${addressedHTML(aside.text)}</span>`) && el.innerHTML.includes(`<span class="id">${D}</span>`), `the face's words in a segment of their own, the address in the identifier's face: ${el.innerHTML}`);
   aside = null;
   LINE.render();
   assert.ok(!el.innerHTML.includes('seg aside'), 'back in view: the segment gone');
@@ -559,7 +559,7 @@ test('a restart whose call again is refused leaves the page in the guest state b
     await flush();
     const seg = LINE.actingSegment(), lead = t('L.reconnect-refused', { account: '1.0.1' });
     assert.deepEqual([REC.session(), seg.state, seg.words, seg.alarm], [null, 3, lead, true], 'a guest, in the keyless cell boot shows for no_key, led by the words');
-    assert.ok(seg.html.startsWith(`<span data-string="L.reconnect-refused">${esc(lead)}</span> · <span data-string="B1.guest-line">`) && seg.html.includes('data-string="L.session-refused"') && seg.html.includes('data-act="signin"'), `boot's guest segment for the refusal, its sign-in among it, after the words: ${seg.html}`);
+    assert.ok(seg.html.startsWith(`<span data-string="L.reconnect-refused">${tHTML('L.reconnect-refused', { account: '1.0.1' }, { account: 'id' })}</span> · <span data-string="B1.guest-line">`) && seg.html.includes('data-string="L.session-refused"') && seg.html.includes('data-act="signin"'), `boot's guest segment for the refusal, its sign-in among it, after the words, the account in the identifier's face: ${seg.html}`);
     assert.ok(!seg.html.includes('C-137'), 'never the signed-out words');
     LINE.render();
     assert.deepEqual([live.textContent, live.live], [lead, 'assertive'], 'said assertively as it arrives');

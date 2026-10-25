@@ -55,7 +55,7 @@ import { mergedLabel } from '../beams/held.js';
 import { drawChord } from '../nav/keys.js';
 import { sx, sy, visibleView } from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
-import { t } from '../strings.js';
+import { t, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../beams/held.js').Pieces} Pieces */
@@ -162,9 +162,9 @@ export function stateNow(group) {
   return { id: 'L.held.' + /** @type {NonNullable<typeof l.said>} */ (l.said).state, words: line, acts };
 }
 
-/** the line's markup: its words, then its acts, each showing its chord where it has one */
+/** the line's markup: its words, each address in them in the identifier's face (ST's `addressedHTML`), then its acts, each showing its chord where it has one */
 const markup = (/** @type {LineState} */ s) =>
-  `<span class="words" data-string="${esc(s.id)}">${esc(s.words)}</span>` +
+  `<span class="words" data-string="${esc(s.id)}">${addressedHTML(s.words)}</span>` +
   (s.acts.length ? `<span class="acts">${s.acts.map((a) => `<button data-act="${a.act}">${esc(a.label)}${a.chord ? `<kbd>${esc(a.chord)}</kbd>` : ''}</button>`).join('')}</span>` : '');
 
 /**
@@ -326,7 +326,7 @@ function setLabels(groups, anchors, p, seen) {
   const key = JSON.stringify(out);
   if (key === labelled) return;
   labelled = key;
-  layer.innerHTML = out.map((x) => `<span class="piece" data-runs="${x.runs.join(' ')}" style="left:${x.rect.x}px;top:${x.rect.y}px;max-width:${x.rect.w}px">${esc(x.words)}</span>`).join('');
+  layer.innerHTML = out.map((x) => `<span class="piece" data-runs="${x.runs.join(' ')}" style="left:${x.rect.x}px;top:${x.rect.y}px;max-width:${x.rect.w}px">${addressedHTML(x.words)}</span>`).join('');
 }
 
 /** the line as it stands (the gate reads it): its words, its acts' keys, its rect on screen, whether the scene covers it, and the labels the layer set for the other runs — each its runs, its words and its rect; null where no line stands */

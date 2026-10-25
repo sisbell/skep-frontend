@@ -19,7 +19,8 @@
 // made it. The acts take the span exactly: "who wrote this?" and "who uses
 // this?" ask over its bytes; "follow" and "read side by side" count only the
 // links drawn at the span (LK's `shownAt`), inert where none, asking which
-// only at two or more and naming the far document at one. The slots, in this
+// only at two or more and naming the far document at one, every address the
+// card and the list set in the identifier's face (P-REG's FACE). The slots, in this
 // order and never moved: annotate · quote · who wrote this? · who uses this?
 // · see the links · follow · read side by side · link to… — each showing its
 // chord (D5-F8); annotate, quote and "link to…" are inert, each with its
@@ -144,14 +145,15 @@ export function render() {
   const { addr, pos } = span;
   const drawn = LK.shownAt(addr, span);
   const n = drawn.length;
-  const farLabel = n === 1 ? ` ${drawn[0].far}` : n > 1 ? ` ${n}` : '';
+  // the far end the follow and the scene name: its address, in the identifier's face, or the count of several
+  const farLabel = n === 1 && drawn[0].far ? ` <span class="id">${esc(drawn[0].far)}</span>` : n > 1 ? ` ${n}` : '';
   const buttons = SLOTS.map(([id, strId, chord]) => {
     const inert = id === 'annotate' || id === 'quote' || id === 'linkto' || ((id === 'follow' || id === 'scene') && n === 0);
-    const label = t(strId) + ((id === 'follow' || id === 'scene') ? farLabel : '');
+    const label = esc(t(strId)) + ((id === 'follow' || id === 'scene') ? farLabel : '');
     const reason = inert && id in INERT_REASON ? t(INERT_REASON[id]) : '';
-    return `<button data-run="${id}" class="${inert ? 'inert' : ''}" ${reason ? `title="${esc(reason)}"` : ''}>${esc(label)}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
+    return `<button data-run="${id}" class="${inert ? 'inert' : ''}" ${reason ? `title="${esc(reason)}"` : ''}>${label}${chord ? ` <kbd>${esc(drawChord(chord))}</kbd>` : ''}</button>`;
   }).join('');
-  const html = `<div class="selection-card"><span class="label">${esc(addr)} · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div><div class="note reason" hidden></div></div>`;
+  const html = `<div class="selection-card"><span class="label"><span class="id">${esc(addr)}</span> · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div><div class="note reason" hidden></div></div>`;
   HOST.show({
     kind: 'card', id: 'selection', anchor: { span }, html, takeFocus: false,
     acts: {
@@ -187,9 +189,9 @@ export function act(which, byKey = false) {
   if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) SCENE.open(addr, drawn[0].farAt || drawn[0].far, { posA: pos, widthA: width, posB: LK.farPos(drawn[0]) }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
 }
 
-/** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3), named as its tail and its mirror item name it (LK's `farLabel`); it takes the focus on its first row where a key asked */
+/** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3), named as its tail and its mirror item name it, each address in the identifier's face (LK's `farLabelHTML`); it takes the focus on its first row where a key asked */
 function which_(/** @type {import('../links/links.js').Shown[]} */ drawn, /** @type {'follow' | 'scene'} */ what, /** @type {boolean} */ byKey) {
-  const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.link.owner || '')} · ${esc(LK.farLabel(s))}</button></li>`).join('')}</ul>`;
+  const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · <span class="id">${esc(s.link.owner || '')}</span> · ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   drawn.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else if (s.far && sel) SCENE.open(sel.addr, s.farAt || s.far, { posA: sel.pos, widthA: sel.width, posB: LK.farPos(s) }); }; });

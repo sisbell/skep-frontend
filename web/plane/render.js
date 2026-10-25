@@ -1,6 +1,7 @@
 // P-RENDER — the canvas (the structure record §3.2). Layer 2. ENGINE-BOUND.
-// State: none of the model's or the view's — the canvas and the per-frame
-// `stats` alone; the canvas is repainted whole on a dirty frame (FP-8).
+// State: none of the model's or the view's — the canvas, the per-frame
+// `stats` and the widths its labels' words were measured at (`measure`)
+// alone; the canvas is repainted whole on a dirty frame (FP-8).
 // The frame (`draw`), in order: the board's region with its label and its
 // statements (`boardStatements`; FP-23) in the cell of its user grid no
 // account takes — where no board is held none of it, nor an account's frame
@@ -56,7 +57,13 @@
 // ground, but the board's and those of the places the line names (L-LINE's
 // `named`), whose labels keep the rule above; a document whose article
 // stands in the mount band has its label held over its text by T-LAYER
-// instead. Then the stubs' triangles and the tails' strokes, over the places
+// instead. Every label is set by role (P-REG's FACE): a place's address and
+// a withheld box's owner in the identifier's face, a document's own words in
+// the reading face, every other word and every count in the client's, its
+// figures each in a cell as wide as the face's widest, so a count that
+// changes moves nothing beside it (P-LABEL's `drawRun`); each stretch is
+// measured in the face it is set in (`measure`, its widths dropped as a face
+// arrives: `refaced`). Then the stubs' triangles and the tails' strokes, over the places
 // and their labels, for the stubs' strokes run behind the boxes, which at
 // mid scale stand along most of the view's border and would hide a triangle
 // drawn with its stroke, and a tail leaving a passage's line starts inside
@@ -97,7 +104,7 @@ import { cam, sx, sy, wx, wy, viewport, viewportWorld, visibleView, edgeStub, st
 import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
 import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt } from './projection.js';
 import { bars, outline, outlineRects, firstRow, GUTTER } from './layout.js';
-import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, face, LINE_BOX } from './labels.js';
+import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, inFace, runWidth, drawRun, LINE_BOX } from './labels.js';
 import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL } from './register.js';
 import { documentOf, accountOf, cmpAddr } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
@@ -229,28 +236,32 @@ function rrect(/** @type {CanvasRenderingContext2D} */ c, /** @type {number} */ 
 }
 const plural = (/** @type {number} */ n, /** @type {string} */ one, /** @type {string} */ many) => (n === 1 ? t(one) : t(many, { n }));
 
-/** @type {Map<string, number>} the widths the canvas measured, by weight, size and string */
+/** @type {Map<string, number>} the widths the canvas measured, by face, weight, size and string */
 const widths = new Map();
 /**
- * A string's width set at a size and weight, by the canvas's own measure —
- * the label pass's measure.
+ * A run's width set at a size and weight in its face, by the canvas's own
+ * measure — the label pass's measure: the client's figures each in a cell as
+ * wide as the face's widest, as they are drawn (P-LABEL's `runWidth`,
+ * `drawRun`).
  * @param {string} text
  * @param {number} px
  * @param {string} weight
+ * @param {import('./register.js').Face} [f]
  * @returns {number}
  */
-function measure(text, px, weight) {
-  const key = `${weight}|${px}|${text}`;
+function measure(text, px, weight, f = 'client') {
+  const key = `${f}|${weight}|${px}|${text}`;
   let w = widths.get(key);
   if (w === undefined) {
     if (!ctx) return Infinity;
     if (widths.size >= 20000) widths.clear();
-    ctx.font = face(px, weight);
-    w = ctx.measureText(text).width;
+    w = runWidth(ctx, { text, face: f }, px, weight);
     widths.set(key, w);
   }
   return w;
 }
+/** the widths measured dropped, for a face arrived since they were measured (APP's, as a face loads late) */
+export function refaced() { widths.clear(); }
 
 /**
  * The board's statements beneath its label (see the head): at the floor, the
@@ -280,9 +291,9 @@ function drawBoard(/** @type {Pass} */ pass) {
   ctx.strokeStyle = COL.boardEdge; ctx.lineWidth = 1; ctx.setLineDash([6, 6]); ctx.strokeRect(X + 2, Y + 2, W - 4, H - 4); ctx.setLineDash([]);
   const room = boardLabelCell('1');
   const RX = sx(room.x) + 8, RY = sy(room.y) + 6;
-  const claimant = h && h.auth && h.auth.claimant ? h.auth.claimant : '—';
+  const claimant = h && h.auth && h.auth.claimant ? inFace('ident', h.auth.claimant) : '—';
   /** @type {Part[]} */
-  const parts = [{ text: t('L.board-label', { node: '1', origin: b.origin, venue: t('F.venue.notebook'), claimant }), px: Math.max(10, Math.min(13, W * 0.03)), ink: COL.title, fit: 'wrap' }];
+  const parts = [{ text: t('L.board-label', { node: inFace('ident', '1'), origin: b.origin, venue: t('F.venue.notebook'), claimant }), px: Math.max(10, Math.min(13, W * 0.03)), ink: COL.title, fit: 'wrap' }];
   for (const text of boardStatements()) parts.push({ text, px: 10, ink: COL.greek, fit: 'wrap' });
   // the line names the board at every scale: its label is never held
   pass.labels.push({ kind: 'board', place: '1', within: { x: RX, y: RY, w: room.w * cam.scale - 16, h: room.h * cam.scale - 12 }, x: RX, y: RY, align: 'left', alpha: 1, plate: null, parts, hold: null });
@@ -319,7 +330,7 @@ function drawClusters(/** @type {number} */ alpha, /** @type {Pass} */ pass) {
     const outer = rad + 1;
     const ax = Math.min(15, W * 0.09), cpx = Math.min(12, W * 0.075);
     pass.labels.push({ kind: 'cluster', place: a.account, within: { x: mark.x + 3, y: mark.y, w: mark.w - 6, h: cy - outer - mark.y }, x: cx, y: cy - outer - lineHeight(ax), align: 'center', alpha, plate: null,
-      parts: [{ text: a.account, px: ax, ink: COL.title, fit: 'one' }], hold: { rects: [mark], pad: 3, plate: COL.cluster } });
+      parts: [{ text: a.account, px: ax, ink: COL.title, fit: 'one', face: 'ident' }], hold: { rects: [mark], pad: 3, plate: COL.cluster } });
     /** @type {Part[]} */
     const counts = [
       { text: `${count.exact ? count.documents : t('L.lower-bound', { n: count.documents })} ${t('F.count.documents')}`, px: cpx, ink: COL.text, fit: 'wrap' },
@@ -351,7 +362,7 @@ function drawAccountFrames(/** @type {number} */ alpha, /** @type {Pass} */ pass
     const px = Math.max(10, Math.min(13, W * 0.025));
     const within = { x: X + 8, y: Y + 4, w: W - 16, h: H - 8 };
     pass.labels.push({ kind: 'frame', place: acct, within, x: X + 8, y: Y + H - 4 - lineHeight(px), align: 'left', alpha, plate: null,
-      parts: [{ text: `${acct} · ${count.exact ? docs : t('L.lower-bound', { n: docs })} · ${links.arriving ? t('L.arriving') + ' ' : ''}${plural(links.n, 'F.label.links.1', 'F.label.links')}`, px, ink: COL.greek, fit: 'one' }],
+      parts: [{ text: `${inFace('ident', acct)} · ${count.exact ? docs : t('L.lower-bound', { n: docs })} · ${links.arriving ? t('L.arriving') + ' ' : ''}${plural(links.n, 'F.label.links.1', 'F.label.links')}`, px, ink: COL.greek, fit: 'one' }],
       hold: named.account === acct ? null : { rects: [within], pad: 0, plate: null } });
     if (!count.documents) pass.labels.push({ kind: 'frame', place: acct, within, x: X + W / 2, y: Y + H / 2 - lineHeight(14) / 2, align: 'center', alpha, plate: null, parts: [{ text: t('B1.empty_subspace'), px: 14, ink: COL.text, fit: 'wrap' }], hold: null });
   }
@@ -460,8 +471,8 @@ function drawMark(m, pass) {
   pass.shapes.push({ place: m.key, rect, alpha: m.alpha });
   pass.labels.push({ kind: 'mark', place: m.key, within: { x: X + pad, y: Y + pad, w: W - 2 * pad, h: H - 2 * pad }, x: X + pad, y: Y + pad, align: 'left', alpha: m.alpha, plate: null,
     parts: [
-      { text: t('F.residue.newest', { n: exact ? n : t('L.lower-bound', { n }), label: LAYER.shortAddr(newest) }), px: f, ink: COL.title, fit: 'wrap' },
-      { text: LAYER.firstLine(newest), px: f, ink: COL.greek, fit: 'fill' },
+      { text: t('F.residue.newest', { n: exact ? n : t('L.lower-bound', { n }), label: inFace('ident', LAYER.shortAddr(newest)) }), px: f, ink: COL.title, fit: 'wrap' },
+      { text: LAYER.labelLine(newest), px: f, ink: COL.greek, fit: 'fill' },
     ], hold: { rects: [rect], pad, plate: COL.residue } });
   return { key: m.key, account: m.account, k: m.k, n, exact, newest: newest.addr, members: m.members, alpha: m.alpha, lines: [], rect };
 }
@@ -588,7 +599,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
       for (let i = firstBar(cb, wy(-fsPx) - box.y); i < cb.length && cb[i].y < below; i++) {
         const b = cb[i];
         if (stand && stand.lines.has(b.line)) { stats.yieldedLines.push([d.addr, b.line]); continue; }
-        ctx.fillStyle = COL.greek; ctx.globalAlpha = a * (b.withheld ? 0.25 : 0.55);
+        ctx.fillStyle = COL.greek; ctx.globalAlpha = a * (b.gap ? 0.25 : 0.55);
         ctx.fillRect(sx(box.x + b.x), sy(box.y + b.y), b.w * cam.scale, Math.max(1, b.h * cam.scale));
         stats.linesDrawn++; set++;
         stats.bars.push([d.addr, b.line]);
@@ -688,9 +699,9 @@ function tailsOf(docsDrawn, placeOf, alpha, pass, seen) {
   }
   const lh = lineHeight(LABEL_MIN_PX);
   return laid.map(({ key, site, to, mark }) => {
-    const one = site.ends.length === 1 ? site.ends[0] : null, words = one ? LK.farWords(one) : '';
+    const one = site.ends.length === 1 ? site.ends[0] : null, words = one ? LK.farFaced(one).map((r) => (r.face === 'client' ? r.text : inFace(r.face, r.text))).join('') : '';
     /** @type {Part[]} */
-    const parts = one ? [{ text: one.far, px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }, { text: words, px: LABEL_MIN_PX, ink: COL.greek, fit: 'cut' }]
+    const parts = one ? [{ text: one.far, px: LABEL_MIN_PX, ink: COL.text, fit: 'one', face: 'ident' }, { text: words, px: LABEL_MIN_PX, ink: COL.greek, fit: 'cut' }]
       : [{ text: String(site.ends.length), px: LABEL_MIN_PX, ink: COL.text, fit: 'one' }];
     const x = to.x + TAIL.gap, y = site.from.y - lh / 2, h = (words ? 2 : 1) * lh;
     pass.labels.push({ kind: 'tail', place: key, within: { x, y, w: roomRight({ x, y }, h, pass.shapes, seen, key), h }, x, y, align: 'left', alpha, plate: COL.bg, parts, hold: null });
@@ -726,8 +737,9 @@ function drawLabels(pass, seen) {
     if (l.plate) { c.fillStyle = l.plate; for (const r of l.held ? [l.within] : l.lines.map((x) => x.rect)) c.fillRect(l.within.x, r.y, l.within.w, r.h); }
     for (const line of l.lines) {
       const r = line.rect;
-      c.font = face(line.px, line.weight); c.fillStyle = line.ink;
-      c.fillText(line.text, r.x, r.y + r.h / 2);
+      c.fillStyle = line.ink;
+      let x = r.x;
+      for (const run of line.runs) x += drawRun(c, run, x, r.y + r.h / 2, line.px, line.weight);
     }
   }
   c.globalAlpha = 1; c.textBaseline = 'alphabetic';
@@ -779,7 +791,7 @@ function drawTrail() {
   c.save();
   // a pip holds its number at the floor: its radius three quarters of the number's size
   const px = sizeOf(8), r9 = Math.ceil(px * 0.75), lh = px * LINE_BOX;
-  c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = face(px);
+  c.textAlign = 'left'; c.textBaseline = 'middle';
   for (const r of rows) {
     const e = r.entry;
     const X = sx(e.view.x), Y = sy(e.view.y);
@@ -787,9 +799,9 @@ function drawTrail() {
     c.beginPath(); c.arc(X, Y, r.n <= 9 ? r9 : 3, 0, 6.284); c.fill();
     if (r.current) { c.strokeStyle = COL.trail; c.lineWidth = 1.5; c.beginPath(); c.arc(X, Y, r9 + 3, 0, 6.284); c.stroke(); }
     if (r.n > 9) continue;
-    const text = String(r.n), w = measure(text, px, 'normal');
-    c.font = face(px); c.fillStyle = COL.bg; c.fillText(text, X - w / 2, Y);
-    stats.labels.push({ kind: 'pip', place: e.addr, within: { x: X - r9, y: Y - r9, w: 2 * r9, h: 2 * r9 }, alpha: 1, plate: null, lines: [{ text, px, ink: COL.bg, weight: 'normal', rect: { x: X - w / 2, y: Y - lh / 2, w, h: lh } }], held: false });
+    const text = String(r.n), w = measure(text, px, 'normal'), run = /** @type {import('./labels.js').Run} */ ({ text, face: 'client' });
+    c.fillStyle = COL.bg; drawRun(c, run, X - w / 2, Y, px, 'normal');
+    stats.labels.push({ kind: 'pip', place: e.addr, within: { x: X - r9, y: Y - r9, w: 2 * r9, h: 2 * r9 }, alpha: 1, plate: null, lines: [{ text, runs: [run], px, ink: COL.bg, weight: 'normal', rect: { x: X - w / 2, y: Y - lh / 2, w, h: lh } }], held: false });
   }
   c.globalAlpha = 1; c.restore();
 }

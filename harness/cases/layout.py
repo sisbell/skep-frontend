@@ -10,8 +10,11 @@ document folded inside its cell), and again at em 12.5 with the reveal at
 stage 3 and others' links on, the model moved by a read between them, the
 first edition at the size it was mounted at hidden, so no reveal sets it at
 another size; THE MEASURE (issue #15: every document set at one line length):
-at each level every column of every mounted article a whole count of
-characters of its face, in the design's 60–66, one count for every column;
+at each level every column of every mounted article a whole count of its
+face's average advance as the case probes it — the sample's characters
+weighed as the OS/2 average width weighs them (issue #16's design decision:
+the reading face's average advance, measured as rendered) — in the design's
+60–66, one count for every column;
 and in a window NARROW_PX wide (issue #151's design decisions: the measure
 narrows to what the view holds, the margins compacted first, never on a
 zoom) every column a whole count fewer than the full measure, the page's
@@ -103,12 +106,15 @@ its lines in that part: its top and its height within HANDOFF_TOL_PX of its bars
 many lines, a withheld run's gap among them, as tall as its bars whatever it
 holds (F2.1-i; issue #151: no face reflows the text). And over a stand-in
 article no document on the board shows the gate — a paragraph with its others'
-count, a separator alone, a paragraph after them — set at the measure on the
-text layer as T-LAYER lays an article's column out, and taken down in the one
-evaluation that measures it: every block stands on P-LAY's lines for it, the
-count setting none, the empty one's margins collapsing into one, and the
-count stands in its column's edge, EDGE_GAP_EM past its block's text, level
-with the block's first line (issue #151's design decision). THE FRAME
+count, a separator alone, a paragraph after them — set on the text layer as
+T-LAYER lays an article's column out, the measure STAND_IN_CPL of its face's
+average advance wide, once with its count and once without, and taken down in
+the one evaluation that measures it: each block stands on the same lines
+either way and P-LAY's plan is the same either way, the count setting none
+(A-254), the separator alone on no line, its margins collapsing into one as
+P-LAY collapses them, and the count stands in its column's edge, EDGE_GAP_EM
+past its block's text, level with the block's first line (issue #151's design
+decision). THE FRAME
 ORDER (law 13): the frames each step across the mount threshold draws show
 no document both as bars under its own mounted text and none yielded to
 text that is not mounted. THE LABELS (F-9 and foundations §2.1: each label
@@ -151,11 +157,21 @@ or, its outline's foot risen near the line, its bottom on that foot inside
 the half gutter, at its first column's text left, inside its outline, on
 its ground, its bottom in view, the labels of the documents below the line
 set as ever; its outline risen wholly under the line, none. THE TYPE (the typography review's findings 10 and
-17): every element of the first edition that sets text in its lines spaces them at
-1.35 of its own size, a sign in a column's edge apart; the head's lines and the headings stand on P-LAY's
+17; issue #16's design decision): every element of the first edition that sets text in its lines spaces them at
+LINE_RATIO of its own size, a sign in a column's edge apart; the head's lines and the headings stand on P-LAY's
 line box for their size, as the engine lays it out (the rounding `lineBox`
 models, held here to the engine); each heading stands nearer the block it
-heads than the block above it. THE READING SCENE (foundations §2.5: "the two ends level, so
+heads than the block above it; each voice stands in its face — the
+document's words in Charter, the client's in the system face, an address in
+Atkinson Hyperlegible Mono, the two shipped set as shipped, their rendered
+advances their files' own — every face the page ships standing loaded in
+the platform's font set, which holds no face of the platform's own by the
+same name, and loaded as boot set the type and as the first frame laid
+anything out, the advance the page set the one the case probes, and the
+reading size READING_PX at the root's 16 px;
+and every line a paragraph of the first edition sets, as T-LAYER reads it,
+begins where its first character stands on screen — that character on the
+line, the last one before it, spaces apart, on the line before it. THE READING SCENE (foundations §2.5: "the two ends level, so
 position carries the match and the beam confirms it"): opened on the first
 edition and the draft it windows, and from the versions list of an edition
 with two members, a paragraph past its first held, the two ends' matched
@@ -168,11 +184,13 @@ corner's version statement, takes the click cues the plane's keep, no block
 there takes the hover ground, and a click on any of them leaves the scene
 standing over the page as it found it; each pane is one column at the
 plane's measure (issue #15: "side-by-side panes stay one column each, at the
-same line length"; the typography review's findings 7 and 16) — at the run's
-window the text fills its pane beside its corner, its face set smaller to
-hold the measure there, and there and at a window SCENE_WIDE_PX wide its line
-holds a whole count of characters of its face, in 60–66, the same at both
-windows and in both panes, at the wide one against the pane's inner edge,
+same line length"; the typography review's findings 7 and 16) — both panes
+at one size (issue #16's design decision), the reading size READING_PX at a
+window SCENE_WIDE_PX wide; at the run's window the text fills its pane beside
+its corner, its face set smaller to hold the measure there, and there and at
+the wide one its line holds a whole count of its face's average advance, in
+60–66, the same at both windows and in both panes, at the wide one against
+the pane's inner edge,
 its column's edge between them, where the bands leave it, its corner one gap
 beside it on the outer side,
 the plane under the scene parked meanwhile at the far band,
@@ -289,7 +307,9 @@ places, which the projection gives here, the symbols', which reads the
 article's order here, the click cues', which read the computed style here,
 the stand-in's, which sets its article and reads its blocks here, the
 measure's and the scene's columns, which read the columns' and the panes'
-boxes and a hundred characters of their text here, the longest edition,
+boxes and the advance of a weighed sample of their text here, the type's,
+which reads the computed faces, the platform's font set and the characters
+each line begins at here, the longest edition,
 which the case finds by its own reads, and the first span in view, which
 reads the article's blocks here, and the stretch a version lacks, which the
 harness's own reads of the board decide here; the thresholds are here. The
@@ -308,19 +328,44 @@ STAND_PAD_PX = 41
 DRIFT_TOL_PX = 0.5
 ANCHOR_TOL_PX = 0.5
 HANDOFF_TOL_PX = 1.0
-# the stand-in article's column, in characters of its face: the measure (issue #15's fold), held apart from the page's
+# the stand-in article's column, in its face's average advance: the measure (issue #15's fold), held apart from the page's
 STAND_IN_CPL = 66
-# the measure every column is set at, in characters of its face — the design decision's 60–66 (issue #15), held apart
-# from the page's value — and how far a column's measured line may stand from a whole count of characters
+# the measure every column is set at, in its face's average advance — the design decision's 60–66 (issue #15), held apart
+# from the page's value — and how far a column's measured line may stand from a whole count of advances
 MEASURE_CH, MEASURE_CH_TOL = (60, 66), 0.05
-# the article's one line height, a ratio of each element's own size, and how far a measured one may stand from it
-LINE_RATIO, LINE_RATIO_TOL = 1.35, 0.01
+# the article's one line height, a ratio of each element's own size (issue #16's design decision), and how far a measured
+# one may stand from it
+LINE_RATIO, LINE_RATIO_TOL = 1.45, 0.01
+# the sample a face's average advance is probed over: each character weighed by its share of a thousand, as the OS/2
+# average width weighs the lowercase letters and the space — the case's own, held apart from the page's ADVANCE_WEIGHTS —
+# set in one run with no kerning and no ligature, laid out and taken down in the one evaluation that reads it
+ADVANCE_SAMPLE = {'a': 64, 'b': 14, 'c': 27, 'd': 35, 'e': 100, 'f': 20, 'g': 14, 'h': 42, 'i': 63, 'j': 3, 'k': 6, 'l': 35, 'm': 20,
+                  'n': 56, 'o': 56, 'p': 17, 'q': 4, 'r': 49, 's': 56, 't': 71, 'u': 31, 'v': 10, 'w': 18, 'x': 3, 'y': 18, 'z': 2, ' ': 166}
+ADVANCE_JS = '''((el, scale) => { const probe = document.createElement('span');
+  probe.textContent = %s;
+  Object.assign(probe.style, {whiteSpace: 'pre', position: 'absolute', visibility: 'hidden', fontKerning: 'none', fontVariantLigatures: 'none'});
+  el.appendChild(probe);
+  try { return probe.getBoundingClientRect().width / %d / scale; } finally { probe.remove(); } })''' % (
+    json.dumps(''.join(c * n for c, n in ADVANCE_SAMPLE.items())), sum(ADVANCE_SAMPLE.values()))
+# the faces each voice is set in (issue #16's design decision), by the first family its computed stack names — the case's
+# own, held apart from the page's FACE — and the faces the page ships, as the platform's font set is asked of them
+FACE_FAMILIES = {'reading': 'Charter', 'client': 'system-ui', 'ident': 'Atkinson Hyperlegible Mono'}
+SHIPPED_FACES = ['16px Charter', 'italic 16px Charter', 'bold 16px Charter', 'italic bold 16px Charter', '16px "Atkinson Hyperlegible Mono"']
+# the faces the page ships as the platform's font set holds them, by family, style and weight: a face of the platform's
+# own by the same name — this machine's Charter — is in no such set, and the shipped one shadows it there
+SHIPPED_SET = {('Charter', 'normal', '400'), ('Charter', 'italic', '400'), ('Charter', 'normal', '700'), ('Charter', 'italic', '700'),
+               ('Atkinson Hyperlegible Mono', 'normal', '200 800')}
+# the shipped faces' own advances, in em, as their files' metrics give them — the reading face's weighed over the sample,
+# the identifier face's one advance — which a face the platform fell back to does not set; and how far a rendered
+# advance, or the page's, may stand from the one it is held to, in em per character
+SHIPPED_ADVANCE = {'reading': 0.438886, 'ident': 0.632}
+ADVANCE_TOL = 1e-3
 # a line box measured against P-LAY's for its size, in px at the layout size: a quarter of the engine's 1/64 px grid
 LINE_BOX_TOL_PX = 1 / 256
 # the scene's two matched lines, and a band's or a line's end against its passage's line
 LEVEL_TOL_PX = 1.0
 TIE_TOL_PX = 0.5
-# the scene's measure: a pane's line in characters of its face — the plane's measure (issue #15: "side-by-side panes stay
+# the scene's measure: a pane's line in its face's average advance — the plane's measure (issue #15: "side-by-side panes stay
 # one column each, at the same line length"), MEASURE_CH — the window wider than the measure needs that it is held at,
 # and how far a column's edge, or its width, may stand from where it is held
 SCENE_WIDE_PX = 2560
@@ -341,8 +386,9 @@ HOLD_GAP_PX = 8
 # widens into its column's edge") — the case's own, held apart from the page's EDGE and EDGE_GAP — and the gutter between two
 # columns, each column padded by half of it, held apart from the page's GUTTER
 EDGE_EM, EDGE_GAP_EM, GUTTER_EM = 6, 0.5, 2
-# the reading size, the em a landing sets a document at, in px: the case's own, held apart from the page's READING_PX
-READING_PX = 12.5
+# the reading size, the em a landing sets a document at, in px at the root's 16 px — 1.0625 of it (issue #16's design
+# decision): the case's own, held apart from the page's READING_PX
+READING_PX = 17
 # the window the narrow view is held at (issue #151's design decision: "a narrow window ... the measure narrows to what the view
 # holds") — and the passage LEAPt to there: the first edition's paragraph that holds the window run, its longest
 NARROW_PX, PASSAGE = 480, 541
@@ -471,12 +517,13 @@ def stand_in_view(ctx):
     """THE HANDOFF over a stand-in article, what no document on the board shows the gate — no other party's link touches
     a document the gate mounts, so no count stands in one: T-ARTICLE's article of three paragraphs, the first two full
     lines of its column with its others' count, the second a separator alone, the third three lines, set on the text
-    layer as T-LAYER sets an article's column — at LAY_FS, the measure STAND_IN_CPL characters of its face — measured and
-    taken down in the one evaluation, so no frame draws it; beside P-LAY's layout of the same article's plan and of the
-    plan with no count. Each block's top below the article's first line, its height and its count of lines, in px at the
-    layout size, on either side; the count's rect beside its block's and its block's first line's box"""
+    layer as T-LAYER sets an article's column — at LAY_FS, the measure STAND_IN_CPL of its face's average advance wide, its
+    fits measured by T-LAYER's measure — once with its count and once with none, both measured and taken down in the one
+    evaluation, so no frame draws them; beside P-LAY's layout of the same article's plan and of the plan with no count.
+    Each block's top below the article's first line, its height and its count of lines, in px at the layout size, on
+    either side; the count's rect beside its block's and its block's first line's box"""
     return ctx.js('''(async () => {
-      const A = await import('./text/article.js'), L = await import('./plane/layout.js');
+      const A = await import('./text/article.js'), L = await import('./plane/layout.js'), T = await import('./text/layer.js');
       const cpl = %d, account = '1.0.1', addr = '1.0.1.0.999999', word = 'aaaaaaaaa', enc = new TextEncoder();
       let pos = 1;
       const blocks = [12, 0, 15].map((n) => { const text = Array(n).fill(word).join(' '), b = {pos, width: enc.encode(text).length + 2, kind: 'para', text, origin: null}; pos += b.width; return b; });
@@ -484,47 +531,61 @@ def stand_in_view(ctx):
                  blocks, image: [], origins: [], imageFor: null, links: new Set(), linksRead: true, members: 1, whole: pos - 1, rev: 0, refused: null};
       const v = {selected: null, focus: null, marks: [], symbols: [], countAt: (b) => ({n: b.pos === blocks[0].pos ? 3 : 0, social: false}), wholeLinks: 0,
                  reader: {account, keyPresent: true}, localTrust: true, notebook: true, scene: false, originKinds: new Map(),
-                 keyOf: () => ({label: 'dev-notebook', fingerprint: 'e4272902a11439e5' + '0'.repeat(48)})};
-      const lay = L.layoutOf(A.articlePlan(d, v, account), cpl), bare = L.layoutOf(A.articlePlan(d, {...v, countAt: () => ({n: 0, social: false})}, account), cpl);
+                 keyOf: () => ({label: 'dev-notebook', fingerprint: 'e4272902a11439e5' + '0'.repeat(48)}), measure: T.widthOf};
+      const bare = {...v, countAt: () => ({n: 0, social: false})};
+      const lay = L.layoutOf(A.articlePlan(d, v, account), cpl), plain = L.layoutOf(A.articlePlan(d, bare, account), cpl);
       const plan = blocks.map((b) => { const x = lay.blocks.get(b.pos), first = lay.lines[x.first], last = lay.lines[x.first + x.n - 1];
         return {pos: b.pos, lines: x.n, top: x.n ? first.top * L.LAY_FS : null, height: x.n ? (last.top + last.h - first.top) * L.LAY_FS : 0}; });
-      const same = JSON.stringify(lay.lines) === JSON.stringify(bare.lines);
-      const art = document.createElement('article');
-      art.className = 'dtext';
-      Object.assign(art.style, {width: cpl + 'ch', fontSize: L.LAY_FS + 'px', lineHeight: String(L.LINE_H)});
-      art.innerHTML = A.articleHTML(d, v, account);
-      document.getElementById('domlayer').appendChild(art);
+      const same = JSON.stringify(lay.lines) === JSON.stringify(plain.lines);
+      const set = (view) => {
+        const art = document.createElement('article');
+        art.className = 'dtext';
+        Object.assign(art.style, {width: cpl * L.CHAR_W + 'em', fontSize: L.LAY_FS + 'px', lineHeight: String(L.LINE_H)});
+        art.innerHTML = A.articleHTML(d, view, account);
+        document.getElementById('domlayer').appendChild(art);
+        return art;
+      };
+      const counted = set(v), uncounted = set(bare);
       try {
-        const top = art.getBoundingClientRect().top, q = (e) => { const r = e.getBoundingClientRect(); return {x: r.left, y: r.top - top, w: r.width, h: r.height}; };
-        const text = blocks.map((b) => { const e = art.querySelector(`.run > .sp[data-pos="${b.pos}"]`); if (!e) return {pos: b.pos, top: null, height: null, lines: null};
-          const r = q(e); return {pos: b.pos, top: r.y, height: r.h, lines: Math.round(r.h / parseFloat(getComputedStyle(e).lineHeight))}; });
-        const c = art.querySelector('.others'), host = c && c.closest('.sp');
+        const rects = (art) => { const top = art.getBoundingClientRect().top; return (e) => { const r = e.getBoundingClientRect(); return {x: r.left, y: r.top - top, w: r.width, h: r.height}; }; };
+        const read = (art) => { const q = rects(art); return blocks.map((b) => { const e = art.querySelector(`.run > .sp[data-pos="${b.pos}"]`); if (!e) return {pos: b.pos, top: null, height: null, lines: null};
+          const r = q(e); return {pos: b.pos, top: r.y, height: r.h, lines: Math.round(r.h / parseFloat(getComputedStyle(e).lineHeight))}; }); };
+        const q = rects(counted), top = counted.getBoundingClientRect().top;
+        const c = counted.querySelector('.others'), host = c && c.closest('.sp');
         // the block's first line: the client rect of its first text's first character
         const firstLine = (e) => { const w = document.createTreeWalker(e, NodeFilter.SHOW_TEXT); for (let n = w.nextNode(); n; n = w.nextNode()) { if (n.parentElement.closest('.others') || !n.data.trim()) continue; const r = document.createRange(); r.setStart(n, 0); r.setEnd(n, 1); const x = r.getClientRects()[0]; return x ? {x: x.left, y: x.top - top, w: x.width, h: x.height} : null; } return null; };
-        return {plan, text, same, lay_fs: L.LAY_FS,
+        return {plan, text: read(counted), without: read(uncounted), same, lay_fs: L.LAY_FS, width: counted.getBoundingClientRect().width, advance: L.CHAR_W,
                 count: c ? {pos: host ? Number(host.dataset.pos) : null, rect: q(c), block: host ? q(host) : null, line: host ? firstLine(host) : null, text: c.textContent} : null};
-      } finally { art.remove(); }
+      } finally { counted.remove(); uncounted.remove(); }
     })()''' % STAND_IN_CPL)
 
 
-def on_lines(t, p):
-    """does a block as the DOM sets it stand on P-LAY's lines for it: as many lines, its height and — where P-LAY sets it a
-    line — its top within HANDOFF_TOL_PX?"""
-    if p is None or t['lines'] is None:
+def same_lines(t, w):
+    """do a block as the DOM sets it with its count and without stand on the same lines: as many, at its top and its
+    height within HANDOFF_TOL_PX?"""
+    if t['lines'] is None or w['lines'] is None:
         return False
-    return t['lines'] == p['lines'] and abs(t['height'] - p['height']) <= HANDOFF_TOL_PX and (p['top'] is None or abs(t['top'] - p['top']) <= HANDOFF_TOL_PX)
+    return t['lines'] == w['lines'] and abs(t['top'] - w['top']) <= HANDOFF_TOL_PX and abs(t['height'] - w['height']) <= HANDOFF_TOL_PX
 
 
 def stand_in_holds(ctx, r):
     """THE HANDOFF's checks over the stand-in article (issue #151's design decision: the count stands in its column's
-    edge and sets no line); its figures"""
+    edge and sets no line — A-254); its figures"""
     v = stand_in_view(ctx)
     a, b, c = v['plan']
     staged = a['lines'] == 2 and b['lines'] == 0 and c['lines'] >= 2
     r.check(staged and v['same'], 'the stand-in: P-LAY sets its first block on its own two lines, the count setting none — its lines the same as with no count — its second block, a separator alone, on no line, its third on two lines or more', {'plan': v['plan'], 'same_as_with_no_count': v['same']})
-    plan = {p['pos']: p for p in v['plan']}
-    off = [dict(t, plan=plan.get(t['pos'])) for t in v['text'] if not on_lines(t, plan.get(t['pos']))]
-    r.check(staged and not off, f'the stand-in: each block — the count\'s, the empty one, the one after them — stands on P-LAY\'s lines for it: its top and its height within {HANDOFF_TOL_PX} px, and as many lines', off)
+    moved = [dict(t, without=w) for t, w in zip(v['text'], v['without']) if not same_lines(t, w)]
+    lines = [t['lines'] for t in v['text']]
+    r.check(all(n is not None for n in lines) and lines[0] >= 1 and lines[1] == 0 and lines[2] >= 1 and not moved,
+            f'the stand-in, set {STAND_IN_CPL} of its face\'s average advance wide: each block — the count\'s, the separator alone, the one after them — stands on the same lines with its count as with none, its top and its height within {HANDOFF_TOL_PX} px and as many lines (A-254); the separator alone on no line',
+            {'with': v['text'], 'moved': moved, 'width_px': v['width'], 'advance': v['advance']})
+    t0, t2 = v['text'][0], v['text'][2]
+    dom = t2['top'] - (t0['top'] + t0['height']) if t0['top'] is not None and t2['top'] is not None else None
+    planned = c['top'] - (a['top'] + a['height']) if a['top'] is not None and c['top'] is not None else None
+    r.check(dom is not None and planned is not None and abs(dom - planned) <= HANDOFF_TOL_PX,
+            f'the stand-in: the separator alone\'s margins collapse into one as P-LAY collapses them — the block after it stands as far below the block before it as P-LAY sets it, {HANDOFF_TOL_PX} px either way',
+            {'dom_px': dom, 'plan_px': planned})
     n, gap, edge = v['count'], EDGE_GAP_EM * v['lay_fs'], EDGE_EM * v['lay_fs']
     in_edge = bool(n) and n['block'] is not None and n['line'] is not None and n['pos'] == a['pos']
     if in_edge:
@@ -697,14 +758,15 @@ def labels_hold(r, name, v):
                 {'hidden': hidden, 'connections': [[c['place'], c['count'], c['label']] for c in conns][:12]})
     if name == 'home':
         # the label rule (F-9; foundations §2.1: drawn only where its place holds it): a document's label stands in its
-        # outline's first row (issue #15), so it is set wherever that row holds its address at the floor — a monospace
-        # face's 0.62 em a character, the case's own bound, and a line box tall — and named left out wherever it does not
+        # outline's first row (issue #15), so it is set wherever that row holds its address at the floor — set in the
+        # identifier face, Atkinson Hyperlegible Mono, 0.632 em a character (issue #16), the case's own bound, and a line
+        # box tall — and named left out wherever it does not
         labelled = {l['place'] for l in labels if l['kind'] == 'doc'}
         named = {o['place'] for o in v['out'] if o['kind'] == 'doc'}
         shown = {o['place'] for o in v['boxes'] if o['place'] not in v['mounted']}
         whole = sorted(q for q in shown if all(inside(o['rect'], v['seen']) for o in v['boxes'] if o['place'] == q))
         short = lambda q: q[len(account_of(q) or ''):]
-        holds = lambda q: v['rows'][q]['w'] >= len(short(q)) * MIN_LABEL_PX * 0.62 + 1 and v['rows'][q]['h'] >= MIN_LABEL_PX * 1.2 + 1
+        holds = lambda q: v['rows'][q]['w'] >= len(short(q)) * MIN_LABEL_PX * 0.632 + 1 and v['rows'][q]['h'] >= MIN_LABEL_PX * 1.2 + 1
         must = [q for q in whole if holds(q)]
         r.check(bool(must) and set(must) <= labelled and set(whole) <= labelled | named,
                 'home: every document standing whole in the visible view whose outline\'s first row holds its address at the label floor carries its label, and every other is named left out by the rule that left it out',
@@ -825,7 +887,9 @@ def beams_hold(ctx, r):
 def type_view(ctx):
     """the first edition's mounted article as the person meets it, in px at the layout size: each element that sets
     text in its lines — a sign in a column's edge apart — with its font size and its line height; the head's lines and the headings, each with its height beside
-    P-LAY's line box for its size; each heading's room above it and below it, between it and the blocks beside it"""
+    P-LAY's line box for its size; each heading's room above it and below it, between it and the blocks beside it; the
+    first family the computed face of each voice names — a paragraph's, the head's state line's, the head's address's —
+    and the platform's font set asked of each face the page ships; the advance of a weighed sample set in a paragraph"""
     art = json.dumps('#domlayer article.dtext[data-addr="%s"]' % DOC)
     return ctx.js('''(async () => {
       const L = await import('./plane/layout.js');
@@ -842,8 +906,55 @@ def type_view(ctx):
       const headings = [...art.querySelectorAll(heads)].map((h) => {
         const prev = block(h.previousElementSibling), next = block(h.nextElementSibling), r = h.getBoundingClientRect();
         return {pos: Number(h.dataset.pos), el: name(h), above: prev ? (r.top - prev.getBoundingClientRect().bottom) / s : null, below: next ? (next.getBoundingClientRect().top - r.bottom) / s : null}; });
-      return {sized, boxes, headings};
-    })()''' % (json.dumps(DOC), art))
+      const family = (sel) => { const e = art.querySelector(sel); return e ? getComputedStyle(e).fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, '') : null; };
+      const para = art.querySelector('.run > p.sp'), addr = art.querySelector('.hd .addr');
+      // the address's advance a character, in em of its own size: its run's width over its characters
+      const ident = addr && addr.textContent ? addr.getBoundingClientRect().width / s / [...addr.textContent].length / parseFloat(getComputedStyle(addr).fontSize) : null;
+      return {sized, boxes, headings, faces: {reading: family('.run > p.sp'), client: family('.hd .st'), ident: family('.hd .addr')},
+              loaded: %s.map((f) => [f, document.fonts.check(f)]), set: [...document.fonts].map((f) => ({family: f.family.replace(/^["']|["']$/g, ''), style: f.style, weight: f.weight, status: f.status})),
+              advance: para ? %s(para, s) / L.LAY_FS : null, ident_advance: ident, page_advance: L.CHAR_W};
+    })()''' % (json.dumps(DOC), art, json.dumps(SHIPPED_FACES), ADVANCE_JS))
+
+
+def starts_view(ctx):
+    """each line of a paragraph of the first edition's fold that stands as text after a standing line of its paragraph,
+    as T-LAYER reads it — the position it opens at — beside where its characters stand on screen: its line box and the
+    line box before it, each across its column, and the middle of the character at that position and of the last
+    character before it, spaces apart, each read through T-LAYER's byte-span mapping over the standing parts
+    (`spanRects`)"""
+    return ctx.js('''(async (doc) => {
+      const T = await import('./text/layer.js'), P = await import('./plane/projection.js'), C = await import('./plane/camera.js');
+      const rec = T.mountedSet().get(doc);
+      if (!rec) return null;
+      const f = rec.fold, box = P.docBox(doc), enc = new TextEncoder(), out = [];
+      const byPos = new Map(rec.made.blocks.map((b) => [b.pos, b]));
+      const mid = (rs) => { const q = (rs || []).find((x) => x.w > 0 && x.h > 0); return q ? {x: q.x + q.w / 2, y: q.y + q.h / 2} : null; };
+      // a line's box on screen, across the column that holds it
+      const lineBox = (i) => { const c = f.columns.find((k) => i >= k.first && i < k.first + k.n); if (!c) return null; const l = f.lines[i], y = C.sy(box.y + c.y + (l.top - c.top) * f.fs);
+        return {top: y, bottom: y + l.h * f.fs * C.cam.scale, left: C.sx(box.x + c.x), right: C.sx(box.x + c.x + c.w)}; };
+      for (const i of [...rec.lines].sort((x, y) => x - y)) {
+        const l = f.lines[i], b = l.pos != null ? byPos.get(l.pos) : null;
+        if (!b || b.kind !== 'para' || l.kind !== 'text' || l.at == null || l.nth === 0 || !rec.lines.has(i - 1) || f.lines[i - 1].pos !== l.pos || f.lines[i - 1].at == null) continue;
+        // the character the line opens at, and the last before it that is not a space, by their byte positions in the block
+        let bytes = l.at - b.pos, at = 0;
+        for (const ch of b.text) { if (bytes <= 0) break; bytes -= enc.encode(ch).length; at += ch.length; }
+        let k = at - 1;
+        while (k >= 0 && /\\s/.test(b.text[k])) k--;
+        if (k < 0) continue;
+        if (k > 0 && b.text.charCodeAt(k) >= 0xdc00 && b.text.charCodeAt(k) <= 0xdfff) k--;
+        const before = b.pos + enc.encode(b.text.slice(0, k)).length;
+        out.push({line: i, at: l.at, before, box: lineBox(i), prev: lineBox(i - 1), first: mid(T.spanRects(doc, l.at, 1)), last: mid(T.spanRects(doc, before, 1)), text: b.text.slice(at, at + 16)});
+      }
+      return out;
+    })(%s)''' % json.dumps(DOC))
+
+
+def starts_on_line(x):
+    """does a line T-LAYER read begin where its first character stands: the character at the position it opens at on
+    the line, and the last one before it, spaces apart, on the line before it?"""
+    tol = ANCHOR_TOL_PX
+    within = lambda p, q: bool(p and q) and q['top'] - tol <= p['y'] <= q['bottom'] + tol and q['left'] - tol <= p['x'] <= q['right'] + tol
+    return within(x['first'], x['box']) and within(x['last'], x['prev'])
 
 
 def type_holds(ctx, r):
@@ -865,7 +976,30 @@ def type_holds(ctx, r):
     compared = [h for h in v['headings'] if h['above'] is not None and h['below'] is not None]
     far = [h for h in compared if not h['below'] < h['above']]
     r.check(bool(compared) and not far, 'the type: each heading with a block above and below it stands nearer the block it heads than the block above it', {'compared': compared, 'far': far})
-    return {'elements': len(v['sized']), 'boxes': [[b['el'], round(b['height'], 4), b['line_box']] for b in v['boxes']], 'headings': compared}
+    shipped = v['advance'] is not None and v['ident_advance'] is not None and abs(v['advance'] - SHIPPED_ADVANCE['reading']) <= ADVANCE_TOL and abs(v['ident_advance'] - SHIPPED_ADVANCE['ident']) <= ADVANCE_TOL
+    r.check(v['faces'] == FACE_FAMILIES and shipped, f'the type: each voice stands in its face — a paragraph, the document\'s words, in Charter; the head\'s state line, the client\'s, in the system face; the head\'s address in Atkinson Hyperlegible Mono — the reading and identifier faces set as shipped, their rendered advances their files\' own, {ADVANCE_TOL} em either way (issue #16\'s design decision)',
+            {'faces': v['faces'], 'want': FACE_FAMILIES, 'advance': {'reading': v['advance'], 'ident': v['ident_advance'], 'shipped': SHIPPED_ADVANCE}})
+    boot = ctx.js('window.__skep.boot') or {}
+    typed = boot.get('type') or {}
+    at_boot, at_frame = dict(typed.get('faces') or []), dict(boot.get('firstFrame') or [])
+    in_set = {(f['family'], f['style'], f['weight']) for f in v['set'] if f['status'] == 'loaded'}
+    unloaded = {'set': sorted(SHIPPED_SET - in_set), 'now': [f for f, ok in v['loaded'] if not ok], 'boot': [f for f in SHIPPED_FACES if not at_boot.get(f)], 'first_frame': [f for f in SHIPPED_FACES if not at_frame.get(f)]}
+    r.check(len(v['loaded']) == len(SHIPPED_FACES) and not any(unloaded.values()),
+            'the type: every face the page ships — Charter in its four styles, Atkinson Hyperlegible Mono — stands in the platform\'s font set, loaded, and was loaded as boot set the type and as the first frame laid anything out (issue #16\'s design decision: the first layout waits for the faces)',
+            dict(unloaded, faces=sorted(in_set)))
+    r.check(v['advance'] is not None and abs(v['advance'] - v['page_advance']) <= ADVANCE_TOL and typed.get('advance') == v['page_advance'],
+            f'the type: the advance the page set — the reading face\'s average, as boot measured it — is the one the case probes in a paragraph as rendered, {ADVANCE_TOL} em either way',
+            {'probed': v['advance'], 'page': v['page_advance'], 'boot': typed.get('advance')})
+    r.check(typed.get('root') == '16px' and typed.get('readingPx') == READING_PX,
+            f'the type: at the root\'s 16 px the reading size is {READING_PX} px — 1.0625 of the root, as the reader\'s own settings render it',
+            {'root': typed.get('root'), 'reading_px': typed.get('readingPx')})
+    starts = starts_view(ctx) or []
+    astray = [x for x in starts if not starts_on_line(x)]
+    r.check(bool(starts) and not astray,
+            f'the type: every line a paragraph of the first edition sets past its first, as T-LAYER reads it, begins where its first character stands — the character at the position it opens at on the line, the last one before it, spaces apart, on the line before it, {ANCHOR_TOL_PX} px either way',
+            {'lines': len(starts), 'astray': astray[:6]})
+    return {'elements': len(v['sized']), 'boxes': [[b['el'], round(b['height'], 4), b['line_box']] for b in v['boxes']], 'headings': compared,
+            'faces': v['faces'], 'advance': {'reading': v['advance'], 'ident': v['ident_advance']}, 'reading_px': typed.get('readingPx'), 'line_starts': len(starts)}
 
 
 def scene_level(ctx):
@@ -1016,36 +1150,30 @@ def scene_marks_hold(ctx, r):
 def pane_columns(ctx):
     """each scene pane's text column as a person meets it, by side: the pane's content box, its article's box and its
     text column inside it — the article's content box, its padding the column's edge on the pane's inner side (issue
-    #151) — and its corner's, the flex gap between them, and the advance of a character of its face at the body's size:
-    a hundred of them set in one of its paragraphs, a probe laid out and taken down in the one evaluation; the window's
-    size beside them"""
-    return ctx.js('''(() => { const side = (id) => {
+    #151) — its face's size, and its corner's, the flex gap between them, and its face's average advance at the body's
+    size as the case probes it in one of its paragraphs (`ADVANCE_JS`); the window's size beside them"""
+    return ctx.js('''(() => { const advance = %s; const side = (id) => {
         const pane = document.getElementById(id), art = pane && pane.querySelector(':scope > article.dtext'), corner = pane && pane.querySelector(':scope > .corner');
         if (!art || !corner) return null;
         const p = pane.getBoundingClientRect(), s = getComputedStyle(pane), x0 = p.left + pane.clientLeft, b = art.getBoundingClientRect(), c = corner.getBoundingClientRect(), as = getComputedStyle(art);
         const pl = parseFloat(as.paddingLeft) + parseFloat(as.borderLeftWidth), pr = parseFloat(as.paddingRight) + parseFloat(as.borderRightWidth);
         const a = {left: b.left + pl, right: b.right - pr, width: b.width - pl - pr};
-        let ch = null;
-        const para = art.querySelector('.run > p.sp');
-        if (para) {
-          const probe = document.createElement('span');
-          probe.textContent = 'abcdefghij'.repeat(10); probe.style.whiteSpace = 'pre'; probe.style.position = 'absolute'; probe.style.visibility = 'hidden';
-          para.appendChild(probe);
-          try { ch = probe.getBoundingClientRect().width / 100; } finally { probe.remove(); }
-        }
+        const para = art.querySelector('.run > p.sp'), ch = para ? advance(para, 1) : null;
         return {content: {left: x0 + parseFloat(s.paddingLeft), right: x0 + pane.clientWidth - parseFloat(s.paddingRight)},
                 box: {left: b.left, right: b.right, w: b.width}, text: {left: a.left, right: a.right, w: a.width}, edge: {left: pl, right: pr, font: parseFloat(as.fontSize)},
                 corner: {left: c.left, right: c.right, w: c.width}, gap: parseFloat(s.columnGap), ch};
       };
-      return {vw: window.innerWidth, vh: window.innerHeight, a: side('sceneA'), b: side('sceneB')}; })()''')
+      return {vw: window.innerWidth, vh: window.innerHeight, a: side('sceneA'), b: side('sceneB')}; })()''' % ADVANCE_JS)
 
 
 def scene_measure_holds(ctx, r):
     """THE SCENE'S MEASURE (issue #15's design decision: "side-by-side panes stay one column each, at the same line
-    length"; the typography review's findings 7 and 16): the scene on the first edition and the draft it windows. At the
+    length"; the typography review's findings 7 and 16; issue #16's design decision: both panes take one size, by the
+    landing's rule): the scene on the first edition and the draft it windows. Both panes at one size at either window,
+    the reading size READING_PX at one SCENE_WIDE_PX wide. At the
     run's window each pane's text fills its pane beside its corner, its face set smaller to hold the measure there; at
-    the run's window and at one SCENE_WIDE_PX wide, where a pane holds more room than the measure, each pane's line
-    holds the plane's measure — a whole count of characters of its face, MEASURE_CH, the same at both windows and in
+    the run's window and at the wide one, where a pane holds more room than the measure, each pane's line
+    holds the plane's measure — a whole count of its face's average advance, MEASURE_CH, the same at both windows and in
     both panes; at the wide one room left past it, the column against its pane's inner edge, its column's edge between
     them — where the bands and lines leave the pane beyond its signs (foundations §2.5, §3.1; issue #151) — and its
     corner one gap beside it on the outer side. While the window is wide the
@@ -1077,7 +1205,7 @@ def scene_measure_holds(ctx, r):
     both = lambda v: bool(v['a'] and v['b'])
 
     def cpl(c):
-        """a column's line in characters of its face"""
+        """a column's line in its face's average advance"""
         return c['text']['w'] / c['ch'] if c and c['ch'] else None
 
     def room(c):
@@ -1087,6 +1215,10 @@ def scene_measure_holds(ctx, r):
     def alike(v):
         return both(v) and abs(v['a']['text']['w'] - v['b']['text']['w']) <= MEASURE_TOL_PX
 
+    sizes = {'run': [run[s] and run[s]['edge']['font'] for s, _ in sides], 'wide': [wide[s] and wide[s]['edge']['font'] for s, _ in sides]}
+    r.check(both(run) and both(wide) and all(abs(v[0] - v[1]) <= 1e-6 for v in sizes.values()) and abs(sizes['wide'][0] - READING_PX) <= 1e-6 and sizes['run'][0] <= READING_PX + 1e-6,
+            f'the scene: both panes take one size at the run\'s {run["vw"]} px window and at a {SCENE_WIDE_PX} px one, the reading size, {READING_PX} px, at the wide one, and no larger at the run\'s (issue #16\'s design decision)',
+            sizes)
     fills = {name: run[s] and round(room(run[s]) - run[s]['box']['w'], 3) for s, name in sides}
     r.check(both(run) and all(abs(f) <= MEASURE_TOL_PX for f in fills.values()) and alike(run),
             f'the scene at the run\'s {run["vw"]} px window: each pane\'s text and its column\'s edge fill its pane beside its corner and one gap, {MEASURE_TOL_PX} px either way, the two columns alike',
@@ -1099,7 +1231,7 @@ def scene_measure_holds(ctx, r):
     narrow = {name: cpl(run[s]) for s, name in sides}
     every = [w for w in [*widths.values(), *narrow.values()]]
     r.check(both(wide) and both(run) and all(w is not None and lo - MEASURE_CH_TOL <= w <= hi + MEASURE_CH_TOL and abs(w - round(w)) <= MEASURE_CH_TOL for w in every) and max(every) - min(every) <= 2 * MEASURE_CH_TOL,
-            f'the scene: each pane\'s line holds the plane\'s measure — a whole count of characters of its face, {lo}–{hi} — at the run\'s {run["vw"]} px window and at a {SCENE_WIDE_PX} px one alike, never the window\'s width, the two panes alike',
+            f'the scene: each pane\'s line holds the plane\'s measure — a whole count of its face\'s average advance, {lo}–{hi} — at the run\'s {run["vw"]} px window and at a {SCENE_WIDE_PX} px one alike, never the window\'s width, the two panes alike',
             {'characters': {'run': {k: v and round(v, 3) for k, v in narrow.items()}, 'wide': {k: v and round(v, 3) for k, v in widths.items()}}, 'columns': [wide[s] and wide[s]['text']['w'] for s, _ in sides]})
     r.check(both(wide) and all(room(wide[s]) > wide[s]['box']['w'] + MEASURE_TOL_PX for s, _ in sides),
             f'at a {SCENE_WIDE_PX} px window each pane holds more room than its column and its edge take: the measure, not the pane, sets the line',
@@ -1116,7 +1248,7 @@ def scene_measure_holds(ctx, r):
             {name: wide[s] and {'content': wide[s]['content'], 'text': wide[s]['text'], 'corner': wide[s]['corner'], 'gap': wide[s]['gap']} for s, name in sides})
     return {'window': {'run': [run['vw'], run['vh']], 'wide': [wide['vw'], wide['vh']]},
             'characters': {'run': {name: cpl(run[s]) and round(cpl(run[s]), 2) for s, name in sides}, 'wide': {k: v and round(v, 2) for k, v in widths.items()}},
-            'character_px': run['a'] and run['a']['ch'], 'band_while_wide': band, 'reads_while_wide': reads}
+            'character_px': run['a'] and run['a']['ch'], 'pane_px': sizes, 'band_while_wide': band, 'reads_while_wide': reads}
 
 
 def scene_holds(ctx, r):
@@ -2024,34 +2156,27 @@ def stub_holds(ctx, r):
 
 def measure_view(ctx):
     """THE MEASURE as a person meets it (issue #15: every document set at one line length): each mounted article's
-    columns, each one's width in characters of the article's own face — the advance of a hundred characters set in one
-    of its paragraphs, a probe laid out and taken down in the one evaluation (a single glyph's box rounds to the engine's
-    grid; a run of them does not) — at the layout size"""
-    return ctx.js('''(() => { const S = window.__skep, out = [];
+    columns, each one's width in its face's average advance as the case probes it in one of its paragraphs
+    (`ADVANCE_JS`: a run of the weighed sample, whose box rounds to the engine's grid no more than a single glyph's
+    does) — at the layout size"""
+    return ctx.js('''(() => { const S = window.__skep, out = [], advance = %s;
       for (const a of S.mountedAddrs()) {
         const m = S.mounted(a), art = document.querySelector(`#domlayer article.dtext[data-addr="${a}"]`);
         if (!m || !art) continue;
-        const s = S.view.camera().scale / m.lay, para = art.querySelector('.run > p.sp');
-        let ch = null;
-        if (para) {
-          const probe = document.createElement('span');
-          probe.textContent = 'abcdefghij'.repeat(10); probe.style.whiteSpace = 'pre'; probe.style.position = 'absolute'; probe.style.visibility = 'hidden';
-          para.appendChild(probe);
-          try { ch = probe.getBoundingClientRect().width / 100 / s; } finally { probe.remove(); }
-        }
+        const s = S.view.camera().scale / m.lay, para = art.querySelector('.run > p.sp'), ch = para ? advance(para, s) : null;
         const cols = [...art.querySelectorAll('.col')].map((c) => c.getBoundingClientRect().width / s);
         out.push({addr: a, ch, columns: cols.length, cpl: ch ? cols.map((w) => Math.round((w / ch) * 1000) / 1000) : null});
       }
-      return out; })()''')
+      return out; })()''' % ADVANCE_JS)
 
 
 def measure_holds(r, name, v):
-    """every mounted column at the measure: a whole count of characters of its face, in the design's 60–66, one for every
-    column of every article"""
+    """every mounted column at the measure: a whole count of its face's average advance, in the design's 60–66, one for
+    every column of every article"""
     cpl = [c for a in v for c in (a['cpl'] or [])]
     off = [a for a in v if not a['cpl'] or any(not (MEASURE_CH[0] - MEASURE_CH_TOL <= c <= MEASURE_CH[1] + MEASURE_CH_TOL) or abs(c - round(c)) > MEASURE_CH_TOL for c in a['cpl'])]
     r.check(bool(cpl) and not off and max(cpl) - min(cpl) <= 2 * MEASURE_CH_TOL,
-            f'{name}: every mounted column sets the measure — {MEASURE_CH[0]}–{MEASURE_CH[1]} characters of its face, a whole count, one measure for every column of every article',
+            f'{name}: every mounted column sets the measure — {MEASURE_CH[0]}–{MEASURE_CH[1]} of its face\'s average advance as the case probes it, a whole count, one measure for every column of every article',
             {'articles': v[:8], 'off': off[:4]})
     return {'articles': len(v), 'columns': len(cpl), 'cpl': sorted(set(round(c, 3) for c in cpl))}
 
@@ -2311,7 +2436,7 @@ def line_from(ctx, pos, mid):
 def measure_narrows(ctx, r):
     """THE MEASURE NARROWS TO WHAT THE VIEW HOLDS (issue #151's design decisions; FP-26: "margins compact first, then the
     measure narrows in characters ... zoom never changes the measure"): the window set NARROW_PX wide and the first
-    edition LEAPt to a passage — every mounted column a whole count of characters of its face fewer than the full
+    edition LEAPt to a passage — every mounted column a whole count of its face's average advance fewer than the full
     measure, one for every column, the page's measure in force; the landed line's column, the corner beside it and the
     column's edge, EDGE_EM em at the reading size, inside the visible view at the reading size, the corner compact; a
     zoom changing no count; and the window put back — every column at the full measure again, the line under the view's
@@ -2327,7 +2452,7 @@ def measure_narrows(ctx, r):
         cpl = [c for a in cols for c in (a['cpl'] or [])]
         whole = bool(cpl) and all(abs(c - round(c)) <= MEASURE_CH_TOL and abs(c - cpl[0]) <= 2 * MEASURE_CH_TOL for c in cpl)
         r.check(whole and round(cpl[0]) < MEASURE_CH[1] and abs(round(cpl[0]) - fit['cpl']) <= 0 and fit['compact'],
-                f'a {NARROW_PX} px window: every mounted column a whole count of characters of its face fewer than the full measure, one count for every column — the page\'s measure in force, its corner compacted first',
+                f'a {NARROW_PX} px window: every mounted column a whole count of its face\'s average advance fewer than the full measure, one count for every column — the page\'s measure in force, its corner compacted first',
                 {'cpl': sorted(set(round(c, 3) for c in cpl)), 'fit': fit})
         v, at = corner_rect(ctx), ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), pos))
         cam, vp = ctx.camera(), v['view']
@@ -2387,7 +2512,7 @@ def back_after_resize(ctx, r):
     # the view left, in the window put back: the line holding the position, from that view's visible centre, on screen
     stale = ctx.js('''((v) => { const S = window.__skep, p = S.view.viewport(), top = document.getElementById('line').getBoundingClientRect().bottom, at = S.centreOf(%s, %s);
       return (at.y - v.y) * v.scale + p.VH / 2 - (top + p.VH) / 2; })(%s)''' % (json.dumps(DOC), json.dumps(under), json.dumps(left)))
-    line_px = ctx.js('window.__skep.fold(%s).fs' % json.dumps(DOC)) * left['scale'] * 1.35
+    line_px = ctx.js('window.__skep.fold(%s).fs' % json.dumps(DOC)) * left['scale'] * LINE_RATIO
     r.check(stale is not None and abs(stale - before['dy']) > line_px,
             f'the window put back from {NARROW_PX} px: the first edition folded again at the full measure, the line holding the passage left no longer where it stood from the visible centre of the view left',
             {'under': under, 'dy_before': before['dy'], 'dy_from_the_view_left': stale, 'line_px': line_px})

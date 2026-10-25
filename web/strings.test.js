@@ -1,13 +1,16 @@
 // ST's test: every entry is PINNED with a source or DRAFT with a screen; the
-// pinned strings are verbatim and a token filled leaves the rest; the entries
-// no design document carries are listed; and every accessible name the page
+// pinned strings are verbatim and a token filled leaves the rest, as words
+// or as markup reading the same words, a value asked for set in its class;
+// words made elsewhere set as markup in their faces, each address M-ADDR
+// reads in them the identifier's and nothing else;
+// the entries no design document carries are listed; and every accessible name the page
 // sets is read from ST — none stands in the markup, and none is written as a
 // literal in a module.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, pinned, lacking, isPinned } from './strings.js';
+import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned } from './strings.js';
 
 test('every entry is classed and sourced', () => {
   for (const [id, e] of Object.entries(STRINGS)) {
@@ -28,6 +31,22 @@ test('the pinned strings are verbatim and their count is what the inventory give
 
 test('a token left unfilled stays as the design writes it', () => {
   assert.equal(t('F.version-of', { k: 2 }), 'version 2 of ⟨n⟩');
+});
+
+test('a string as markup reads the same words, every value escaped, a value asked for set in a span of its class, and every address in the rest in the identifier\'s face (issue #16)', () => {
+  const vals = { owner: '1.0.<2>', account: '1.0.2', width: 240, origin: '1.0.1.0.1003' };
+  const html = tHTML('B1.withheld-run', vals, { owner: 'reading', origin: 'id' });
+  assert.equal(html, 'withheld · <span class="reading">1.0.&lt;2&gt;</span> (<span class="id">1.0.2</span>) · 240 positions · origin <span class="id">1.0.1.0.1003</span>');
+  assert.equal(html.replace(/<[^>]*>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>'), t('B1.withheld-run', vals), 'the words t gives');
+});
+
+test('words made elsewhere as markup: each address M-ADDR reads in them in the identifier\'s face, escaped, and nothing else — not a loopback origin\'s host, a decimal or a bare count; runs in their faces, the client\'s words with their addresses so too (issue #16)', () => {
+  assert.equal(addressedHTML('its passage is not in 1.0.1.0.127\'s current text'), 'its passage is not in <span class="id">1.0.1.0.127</span>\'s current text');
+  assert.equal(addressedHTML('1.0.2 quotes 1.0.2.1.0.6, <b>'), '<span class="id">1.0.2</span> quotes <span class="id">1.0.2.1.0.6</span>, &lt;b&gt;', 'every address, the rest escaped');
+  for (const plain of ['http://127.0.0.1:8742', 'http://192.168.1.20:8642', 'at 1.0625 of the root', 'position 529 of 240 positions', 'version 2 of 3']) assert.equal(addressedHTML(plain), plain, `${plain}: no address in it — a URL's host none`);
+  assert.equal(facedHTML([{ text: 'withheld · ', face: 'client' }, { text: '1.0.2', face: 'ident' }, { text: ' · ', face: 'client' }, { text: 'Notes <1>', face: 'reading' }, { text: ' in 1.0.1.0.3', face: 'client' }]),
+    'withheld · <span class="id">1.0.2</span> · <span class="reading">Notes &lt;1&gt;</span> in <span class="id">1.0.1.0.3</span>', 'each run in its face, a document\'s words the reading face\'s and never searched for addresses');
+  assert.equal(facedHTML([{ text: 'see 1.0.1.0.3', face: 'reading' }]), '<span class="reading">see 1.0.1.0.3</span>', 'a document\'s own words keep their letterforms, an address in them too');
 });
 
 test('the lane\'s own strings are listed for the report', () => {

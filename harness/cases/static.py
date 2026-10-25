@@ -12,7 +12,11 @@
     read LK and never the links card; the reveal's setters are called by the
     card alone (`follow` by N-GO, S-32 (a); the gate's door excepted);
 (iv) the layers of the structure record §3.1: no module imports one above it;
-(v) `index.html` loads one module script and nothing outside `web/` (FP-5).
+(v) `index.html` loads one module script and nothing outside `web/` (FP-5);
+(vi) the shipped faces (issue #16): every `@font-face` in `style.css` loads a
+    WOFF2 file under `web/fonts/` that is there — Charter in its four styles
+    and Atkinson Hyperlegible Mono — never `local()`, each face beside its
+    licence.
 No page is needed: this case reads the tree."""
 import os
 import re
@@ -145,5 +149,20 @@ def run(ctx):
     links = re.findall(r'<link[^>]*href="([^"]+)"', html)
     r.check(scripts == ['app/main.js'], 'index.html loads app/main.js as its one script', scripts)
     r.check(all(not re.match(r'^(https?:)?//', x) for x in scripts + links), 'nothing outside web/ is loaded (FP-5)', scripts + links)
+    # (vi) the shipped faces: files under web/fonts/, never local(), each beside its licence
+    css = open(os.path.join(WEB, 'style.css'), encoding='utf8').read()
+    faces = re.findall(r'@font-face\s*\{([^}]*)\}', css)
+    srcs = [u.strip('\'"') for f in faces for u in re.findall(r'url\(([^)]+)\)', f)]
+    families = {re.search(r'font-family:\s*"?([^";]+)"?', f).group(1).strip() for f in faces if re.search(r'font-family:', f)}
+    charter = [f for f in faces if 'Charter' in f]
+    styles = sorted((re.search(r'font-style:\s*(\w+)', f).group(1), re.search(r'font-weight:\s*([\d ]+)', f).group(1).strip()) for f in charter)
+    missing = [u for u in srcs if not os.path.isfile(os.path.join(WEB, u))]
+    r.check(bool(faces) and len(srcs) == len(faces) and all(re.match(r'^fonts/[^/]+\.woff2$', u) for u in srcs) and not missing and not any('local(' in f for f in faces),
+            'every @font-face loads a WOFF2 file under web/fonts/ that is there, never local() (issue #16)', {'srcs': srcs, 'missing': missing})
+    r.check(families == {'Charter', 'Atkinson Hyperlegible Mono'} and styles == [('italic', '400'), ('italic', '700'), ('normal', '400'), ('normal', '700')],
+            'the two shipped faces: Charter in its four styles, Atkinson Hyperlegible Mono (issue #16)', {'families': sorted(families), 'charter': styles})
+    licences = [n for n in ('charter-license.txt', 'atkinson-hyperlegible-mono-OFL.txt') if not os.path.isfile(os.path.join(WEB, 'fonts', n))]
+    r.check(not licences, 'each shipped face beside its licence (issue #16)', licences)
+    r.figures['faces'] = srcs
     r.figures['files'] = len(allf)
     return r.out()

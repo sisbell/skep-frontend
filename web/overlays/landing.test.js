@@ -22,7 +22,7 @@ import * as GO from '../nav/go.js';
 import * as HOST from './host.js';
 import * as LANDING from './landing.js';
 import { drawChord } from '../nav/keys.js';
-import { t } from '../strings.js';
+import { t, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 
 const D = '1.0.1.0.3', FAR = '1.0.1.0.127';
@@ -121,7 +121,7 @@ test('a landing whose text holds only part of the passage stands its line — it
   assert.ok(words, 'the landing says part of it');
   const s = LANDING.stateNow();
   assert.deepEqual(s && [s.id, s.words, s.acts.map((a) => a.act)], ['L.held.part', words, ['beside']], 'its words, and the one act it offers: the first edition beside it');
-  assert.ok(el.classList.contains('on') && el.innerHTML.includes('data-string="L.held.part"') && el.innerHTML.includes(esc(words)), el.innerHTML);
+  assert.ok(el.classList.contains('on') && el.innerHTML.includes('data-string="L.held.part"') && el.innerHTML.includes(addressedHTML(words)) && el.innerHTML.includes(`<span class="id">${FAR}</span>`), `its words, the far document's address in the identifier's face: ${el.innerHTML}`);
   assert.deepEqual(el.acts(), ['beside'], 'a native button for each act');
   // the act held the focus as the next landing came: the line gone, the focus handed to the walk's element
   /** @type {any} */ (el.act('beside')).focus();

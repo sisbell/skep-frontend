@@ -3,16 +3,27 @@
 // Pure: a function of values (FP-8); no DOM, no state.
 // The article: the head — the address, the state line, the byline (never a
 // name alone, R44) and the presence line with its ⟡ where links touch; then
-// the blocks with their marks. The byline (`bylineOf`; foundations §2.1;
-// FP-34): its owner's address, then its slots, each a box of its own width
-// whatever it shows — the device label's, and on a byline not the reader's
-// own the fingerprint cue's — filled from the owner's facts as the page
-// holds them (the view's `keyOf`): the device-flagged genesis entry's label,
-// cut to its box on a word's end (`cutTo`) and whole on its act, in its title
-// and in its accessible name, and its fingerprint's cue; an empty box while
-// they are read; else the cause's words, said once where one cause empties
-// both slots; each slot named by its role and what it shows; the plan's line
-// the same whatever they show, so nothing beside them moves. A block's
+// the blocks with their marks. The faces (P-REG's FACE): the document's own
+// characters are the reading face's, and every word the article sets of its
+// own the client's — the head, a hairline's label, C-33's mark, a symbol, a
+// sign in the edge, a record's rendering, a withheld run's face, an item not
+// rendered, the scene-offer — save an address or a fingerprint, in the
+// identifier's face wherever it stands, inside a sentence as well (`.id`;
+// ST's `tHTML`); inside a run the client's words take the run's size. Where
+// a fit is judged — what a gap holds, how many lines a sign takes in the
+// edge, where a label is cut — the words are measured in their faces as the
+// view measures them (`measure`), never counted. The byline (`bylineOf`;
+// foundations §2.1; FP-34): its owner's address, then its slots, each a box
+// of its own width whatever it shows — the device label's, LABEL_CH figures
+// of the client's face, and on a byline not the reader's own the fingerprint
+// cue's, the cue's own width in the identifier's — filled from the owner's
+// facts as the page holds them (the view's `keyOf`): the device-flagged
+// genesis entry's label, cut to its box on a word's end (`cutTo`) and whole
+// on its act, in its title and in its accessible name, and its fingerprint's
+// cue; an empty box while they are read; else the cause's words, said once
+// where one cause empties both slots; each slot named by its role and what it
+// shows; the plan's line the same whatever they show, so nothing beside them
+// moves. A block's
 // marks: the selection (a byte span: every block it touches is marked, the
 // platform's highlight showing the bytes themselves) and the focus (a
 // block), each by `blockMarks`, the one rule T-LAYER marks a standing
@@ -43,11 +54,14 @@
 // titled with its type and with what its far end's text holds of its
 // passage where that is not all of it in one piece (the view's `says`;
 // foundations §2.3; FP-21).
-// The withheld run is a gap occupying its positions, as tall as its bars
-// (F2.1-i), naming the owner of its run's origin, whoever owns the document
-// windowing it (R56; B1-S7) — its face in it where the gap holds it, else
-// compact in its column's edge, so no face reflows the text (`gapHolds`;
-// foundations §2.1; FP-26). The face: the entitlement arm for that owner and
+// The withheld run is a gap occupying its positions, as tall as its bars,
+// each position one advance (F2.1-i), naming the owner of its run's origin,
+// whoever owns the document windowing it (R56; B1-S7) — its face in it where
+// the gap holds it as measured, else compact in its column's edge, so no face
+// reflows the text (`gapHolds`; foundations §2.1; FP-26). An item this client
+// cannot show is a gap of its positions too, its words in it where the gap
+// holds them, else in its column's edge (`unshownHTML`; FP-26). The face: the
+// entitlement arm for that owner and
 // this reader (`entitlementArm`; PUB-5.121, PUB-5.97) and C-67's clause
 // beneath, decided over the origin's whole admitted-claim set
 // (`editionClause`; PUB-5.124, RES-164): the pointer where an admitted
@@ -62,8 +76,7 @@
 // is one record (`placeholderOf`), which the ARIA mirror's item at the run
 // (N-WALK) and the run's face whole (O-FACES's `withheldRun`) read too, so
 // the run a sighted reader sees and the one a screen reader hears never part
-// (R94). A record atom renders as the record it is (`recordOf`; D13); any
-// other item this client cannot show as "not rendered" with its width. The
+// (R94). A record atom renders as the record it is (`recordOf`; D13). The
 // scene-mode variant (the view's `scene`), a reading scene's pane's article:
 // no scene-offer, and its symbols and presence ⟡ marks alone, never the
 // controls the plane's are (`control`).
@@ -80,8 +93,8 @@
 // The plan (`articlePlan`): the same article as P-LAY's rows — the head's
 // lines, each block's text at its size with the inline pieces it carries
 // (the hairline's label, C-33's mark, the symbols), a record's words and
-// keys, the line a reference, an item not rendered or an empty document
-// takes, a withheld run's width, the scene-offers, and none of the signs a
+// keys, the line a reference or an empty document takes, the gap of a
+// withheld run and of an item not rendered, its width, the scene-offers, and none of the signs a
 // column's edge holds, which set no line — each row carrying where a column
 // may break at it and each piece whether its characters are the document's
 // own, so P-LAY folds the lines into the columns of the document's room and
@@ -105,13 +118,14 @@
 // item's length, a record's own plain contents (`recordContents`) — never
 // what the plane renders for whoever is looking, so a paste never joins text
 // across an item.
-// Figures: the device label's slot is LABEL_CH (24) characters wide, the
-// fingerprint cue's CUE_CH, the cue's own width.
+// Figures: the device label's slot is LABEL_CH (24) figures of the client's
+// face wide, the fingerprint cue's the cue's own CUE_CH characters of the
+// identifier's.
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-21, FP-22, FP-23, FP-24, FP-26,
 // FP-30, FP-33, FP-34.
 
 import { esc, fingerprintCue, sliceBytes, byteLength, keyFingerprint } from '../util.js';
-import { t, plural } from '../strings.js';
+import { t, tHTML, plural } from '../strings.js';
 import { textOf, recordValue } from '../model/records.js';
 import { memberOf, documentOf, homeOf, isUnder, cmpAddr, commonsType } from '../model/address.js';
 import { touches, posOfChar, charOfPos } from './span.js';
@@ -130,6 +144,9 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
 /** @typedef {import('../plane/layout.js').Row} Row */
 /** @typedef {import('../plane/layout.js').Piece} Piece */
 /** @typedef {import('../plane/layout.js').Keep} Keep */
+/** @typedef {import('../plane/register.js').Face} Face */
+/** @typedef {(text: string, face: Face) => number} Measure a string's width set in a face at 1 em, in em (T-LAYER's `widthOf`) */
+/** @typedef {{text: string, face: Face}} Faced a stretch of words in one face */
 
 /**
  * @typedef {Object} ArticleView — the view state the article renders, handed in as values
@@ -153,12 +170,14 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {number | null} [read] a reading scene's pane's corner act, the one its Enter takes: the version it reads in the pane's place (SC; FP-23) — the newer one arrived, or the one the act left; absent or null, none
  * @property {number | null} [lacks] the version a pane's corner says holds none of the passage its act carried (SC; FP-23); absent or null, none
  * @property {number} [cpl] the measure the article's column is set at, in characters of its face (P-CAM's measure in force on the plane, the full measure in a pane): what a withheld run's gap holds is read at it (`gapHolds`); absent, the full measure
+ * @property {Measure} measure a string's width in a face as the platform sets it (T-LAYER's `widthOf`): every fit the article judges — what a gap holds, a sign's lines in the edge, a label's cut, a slot's box — reads it
  */
 
 /**
  * @typedef {Object} Head — the head's lines
  * @property {string} addr
  * @property {string} state the state line
+ * @property {string} stateHTML the state line as markup, an address in it the identifier's
  * @property {Byline} byline the byline
  * @property {string} presence the presence line, '' where no link touches
  */
@@ -167,7 +186,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @typedef {Object} Slot — one slot of a byline (FP-34): a box of its own width, what it shows in it, and its accessible
  * name
  * @property {'label' | 'fingerprint'} role the device label's slot, or the fingerprint cue's
- * @property {number} ch its box's width, in characters of the head's face
+ * @property {number} em its box's width, in em of the byline's size: LABEL_CH figures of the client's face, or the cue's own width in the identifier's
  * @property {'value' | 'pending' | 'cause'} state it shows its value; it is read, an empty box; it says why it can show none
  * @property {string} shows the words its box shows: its value — a label cut to its box — or the cause's; none while it is read, or where a slot beside it says its cause (`Byline.once`)
  * @property {string} whole its value whole where `shows` cuts it, else `shows` — the cause's words where it says why
@@ -180,14 +199,17 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {string} owner the owner's address
  * @property {Slot[]} slots the device label's slot, then — on a byline not the reader's own — the fingerprint cue's
  * @property {boolean} once one cause empties both slots: it is said once, in the first
+ * @property {number} em its slots' box: each slot's and the separators between them, in em of the byline's size, whatever they show
  */
 
-/** the device label's slot, in characters of the head's face (FP-34): a label the box does not hold is cut to it */
+/** the device label's slot, in figures of the client's face (FP-34): a label the box does not hold is cut to it */
 export const LABEL_CH = 24;
-/** the fingerprint cue's slot, in characters of the head's face: the cue's own width (`fingerprintCue`) */
+/** the fingerprint cue's slot, in characters of the identifier's face: the cue's own (`fingerprintCue`), every one of them one width */
 export const CUE_CH = fingerprintCue('0'.repeat(64)).length;
 /** the separator between a byline's owner and its slots, and between its slots */
 const BY_SEP = ' · ';
+/** the class an address stands in, in the identifier's face (P-REG's FACE) */
+const ID = 'id';
 
 /** each cause's words in the strings table (FP-34) */
 const CAUSE_WORDS = /** @type {const} */ ({
@@ -196,20 +218,25 @@ const CAUSE_WORDS = /** @type {const} */ ({
 });
 
 /**
- * A label cut to a slot's box (FP-26, FP-34): the label whole where the box holds it; else the longest run of it the box
- * holds with an ellipsis after it, ending at a word's end — before a space, or after a hyphen, an underscore or a period;
- * where its first word alone overruns the box, as many of its characters as the box holds with the ellipsis.
+ * A label cut to a slot's box (FP-26, FP-34), by its width as set: the label
+ * whole where the box holds it; else the longest run of it the box holds with
+ * an ellipsis after it, ending at a word's end — before a space, or after a
+ * hyphen, an underscore or a period; where its first word alone overruns the
+ * box, as many of its characters as the box holds with the ellipsis.
  * @param {string} label
- * @param {number} ch the box's width, in characters
+ * @param {number} room the box's width, in em
+ * @param {(s: string) => number} wide a string's width as it is set, in em
  * @returns {string}
  */
-export function cutTo(label, ch) {
+export function cutTo(label, room, wide) {
+  if (wide(label) <= room + 1e-9) return label;
   const chars = [...label];
-  if (chars.length <= ch) return label;
-  const room = ch - 1;
-  let end = 0;
-  for (let i = 1; i <= room; i++) if (chars[i] === ' ' || '-_.'.includes(chars[i - 1])) end = i;
-  return chars.slice(0, end || room).join('').trimEnd() + '…';
+  const at = (/** @type {number} */ n) => chars.slice(0, n).join('').trimEnd() + '…';
+  /** the longest of `ends` whose start with the ellipsis the box holds; 0 where none */
+  const longest = (/** @type {number[]} */ ends) => { let best = 0; for (const n of ends) if (wide(at(n)) <= room + 1e-9) best = Math.max(best, n); return best; };
+  const words = [];
+  for (let i = 1; i < chars.length; i++) if (chars[i] === ' ' || '-_.'.includes(chars[i - 1])) words.push(i);
+  return at(longest(words) || longest(chars.map((_, i) => i + 1)) || 1);
 }
 
 /**
@@ -218,50 +245,51 @@ export function cutTo(label, ch) {
  * owner's facts as the view holds them (`keyOf`): its value — the label cut to its box (`cutTo`), `L.slot.unlabelled`
  * where the genesis entry carries none, the fingerprint's cue (`fingerprintCue`); an empty box while they are read; else the
  * cause's words (`CAUSE_WORDS`), a withheld read naming its owner, said once where it empties both slots. Each slot's
- * accessible name gives its role and what it shows — that it is being read, while it is (`told`).
+ * accessible name gives its role and what it shows — that it is being read, while it is (`told`). Each box's width is
+ * measured in its face (the view's `measure`): LABEL_CH figures of the client's for the label, the cue's own in the
+ * identifier's.
  * @param {string} owner
  * @param {ArticleView} v
  * @returns {Byline}
  */
 export function bylineOf(owner, v) {
   const facts = owner ? v.keyOf(owner) : undefined;
+  const labelEm = LABEL_CH * v.measure('0', 'client'), cueEm = v.measure(fingerprintCue('0'.repeat(64)), 'ident');
   /** @returns {Slot} */
   const slot = (/** @type {'label' | 'fingerprint'} */ role) => {
-    const ch = role === 'label' ? LABEL_CH : CUE_CH;
-    if (facts === undefined) return { role, ch, state: 'pending', shows: '', whole: '', cause: '', told: t('L.slot.reading') };
+    const em = role === 'label' ? labelEm : cueEm;
+    if (facts === undefined) return { role, em, state: 'pending', shows: '', whole: '', cause: '', told: t('L.slot.reading') };
     if ('cause' in facts) {
       const id = CAUSE_WORDS[facts.cause], words = t(id, { owner: facts.owner || owner });
-      return { role, ch, state: 'cause', shows: words, whole: words, cause: id, told: words };
+      return { role, em, state: 'cause', shows: words, whole: words, cause: id, told: words };
     }
-    if (role === 'fingerprint') { const cue = fingerprintCue(facts.fingerprint); return { role, ch, state: 'value', shows: cue, whole: cue, cause: '', told: cue }; }
-    if (facts.label === null) { const words = t('L.slot.unlabelled'); return { role, ch, state: 'cause', shows: words, whole: words, cause: 'L.slot.unlabelled', told: words }; }
-    return { role, ch, state: 'value', shows: cutTo(facts.label, ch), whole: facts.label, cause: '', told: facts.label };
+    if (role === 'fingerprint') { const cue = fingerprintCue(facts.fingerprint); return { role, em, state: 'value', shows: cue, whole: cue, cause: '', told: cue }; }
+    if (facts.label === null) { const words = t('L.slot.unlabelled'); return { role, em, state: 'cause', shows: words, whole: words, cause: 'L.slot.unlabelled', told: words }; }
+    return { role, em, state: 'value', shows: cutTo(facts.label, em, (x) => v.measure(x, 'client')), whole: facts.label, cause: '', told: facts.label };
   };
   const own = !!v.reader.account && v.reader.account === owner;
   const slots = own ? [slot('label')] : [slot('label'), slot('fingerprint')];
   const once = slots.length === 2 && facts !== undefined && 'cause' in facts;
   if (once) slots[1] = { ...slots[1], shows: '' };
-  return { owner, slots, once };
+  const em = slots.reduce((n, x) => n + x.em, 0) + v.measure(BY_SEP, 'client') * (slots.length - 1);
+  return { owner, slots, once, em };
 }
 
-/** the room a byline's slots take, in characters of the head's face: each slot's box and the separators between them, whatever they show */
-const slotsCh = (/** @type {Byline} */ by) => by.slots.reduce((n, s) => n + s.ch, 0) + BY_SEP.length * (by.slots.length - 1);
-
 /**
- * A byline as HTML (`bylineOf`): its owner, then its slots in a box of their own width, each a box of its own — a
- * pending one empty, a cut label carrying its whole, which its act shows over what is beside it (on the plane: T-LAYER's
- * `openLabel`), and its title — each named by its role and what it shows; the separator between them unseen where one
- * cause empties both.
+ * A byline as HTML (`bylineOf`): its owner, in the identifier's face, then its slots in a box of their own width, each a
+ * box of its own — a pending one empty, a cut label carrying its whole, which its act shows over what is beside it (on
+ * the plane: T-LAYER's `openLabel`), and its title, the cue in the identifier's face — each named by its role and what
+ * it shows; the separator between them unseen where one cause empties both.
  * @param {Byline} by
  */
 function bylineHTML(by) {
   const slots = by.slots.map((s) => {
     const cut = s.state === 'value' && s.shows !== s.whole;
-    const cls = ['slot', s.state === 'pending' ? 'pending' : '', cut ? 'cut' : ''].filter(Boolean).join(' ');
-    const attrs = `data-slot="${s.role}"${s.cause ? ` data-string="${s.cause}"` : ''}${cut ? ` data-cut="1" title="${esc(s.whole)}"` : ''} role="img" aria-label="${esc(t('L.slot.named', { role: t(s.role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows: s.told }))}" style="width:${s.ch}ch"`;
+    const cls = ['slot', s.state === 'pending' ? 'pending' : '', cut ? 'cut' : '', s.role === 'fingerprint' && s.state === 'value' ? ID : ''].filter(Boolean).join(' ');
+    const attrs = `data-slot="${s.role}"${s.cause ? ` data-string="${s.cause}"` : ''}${cut ? ` data-cut="1" title="${esc(s.whole)}"` : ''} role="img" aria-label="${esc(t('L.slot.named', { role: t(s.role === 'label' ? 'L.slot.device-label' : 'L.slot.fingerprint'), shows: s.told }))}" style="width:${s.em}em"`;
     return `<span class="${cls}" ${attrs}>${esc(s.shows)}${cut ? `<span class="whole">${esc(s.whole)}</span>` : ''}</span>`;
   }).join(`<span class="slot-sep">${esc(BY_SEP)}</span>`);
-  return `<span class="by">${esc(by.owner + BY_SEP)}<span class="slots${by.once ? ' once' : ''}" style="width:${slotsCh(by)}ch">${slots}</span></span>`;
+  return `<span class="by"><span class="${ID}">${esc(by.owner)}</span>${esc(BY_SEP)}<span class="slots${by.once ? ' once' : ''}" style="width:${by.em}em">${slots}</span></span>`;
 }
 
 /**
@@ -289,6 +317,66 @@ function bylineHTML(by) {
 
 /** a run's hairline label: its origin's address after the origin's mark where the label is whole, the bare mark after */
 const labelOf = (/** @type {Origin} */ o, /** @type {Opening} */ at) => (at.whole ? t('L.origin-mark') + ' ' + o.doc : t('L.origin-mark'));
+/** a run's hairline label as markup (`labelOf`): its origin's address in the identifier's face */
+const labelHTML = (/** @type {Origin} */ o, /** @type {Opening} */ at) => esc(t('L.origin-mark')) + (at.whole ? ` <span class="${ID}">${esc(o.doc)}</span>` : '');
+
+/**
+ * A string's words as runs of one face each (P-REG's FACE): the value of
+ * each token `faces` names in that face, the rest the client's.
+ * @param {string} id
+ * @param {Record<string, string | number>} values
+ * @param {Record<string, Face>} faces
+ * @returns {Faced[]}
+ */
+function facedIn(id, values, faces) {
+  const text = t(id);
+  /** @type {Faced[]} */
+  const out = [];
+  let at = 0;
+  for (const m of text.matchAll(/⟨([^⟩]+)⟩/g)) {
+    const i = /** @type {number} */ (m.index);
+    if (i > at) out.push({ text: text.slice(at, i), face: 'client' });
+    out.push({ text: m[1] in values ? String(values[m[1]]) : m[0], face: faces[m[1]] || 'client' });
+    at = i + m[0].length;
+  }
+  if (at < text.length) out.push({ text: text.slice(at), face: 'client' });
+  return out;
+}
+
+/** a string's words as markup (ST's `tHTML`), each token `faces` sets in the identifier's face in its class */
+const htmlIn = (/** @type {string} */ id, /** @type {Record<string, string | number>} */ values, /** @type {Record<string, Face>} */ faces) =>
+  tHTML(id, values, Object.fromEntries(Object.entries(faces).filter(([, f]) => f === 'ident').map(([k]) => [k, ID])));
+
+/**
+ * The lines words take across a width (FP-26): wrapped at their spaces, each
+ * word as wide as its runs set in their faces (`measure`), a box before them
+ * — a symbol — taking `lead` of the first line, a line free to break after
+ * it; never fewer lines than the platform sets them on, which breaks at a
+ * space at the least.
+ * @param {Faced[]} runs
+ * @param {number} width the room across, in em of the words' size
+ * @param {Measure} measure
+ * @param {number} [lead] the box before the words, in em of their size
+ * @returns {number}
+ */
+function linesAt(runs, width, measure, lead = 0) {
+  /** @type {Faced[][]} */
+  const words = [];
+  let word = /** @type {Faced[]} */ ([]);
+  for (const r of runs) for (const bit of r.text.split(/(\s+)/)) {
+    if (!bit) continue;
+    if (/^\s+$/.test(bit)) { if (word.length) words.push(word); word = []; } else word.push({ text: bit, face: r.face });
+  }
+  if (word.length) words.push(word);
+  const space = measure(' ', 'client');
+  let lines = 0, used = 0;
+  const place = (/** @type {number} */ w, /** @type {number} */ gap) => {
+    if (!lines) { lines = 1; used = w; } else if (used + gap + w <= width + 1e-9) used += gap + w; else { lines++; used = w; }
+  };
+  if (lead > 0) place(lead, 0);
+  words.forEach((w, i) => place(w.reduce((n, x) => n + measure(x.text, x.face), 0), lead > 0 && i === 0 ? 0 : space));
+  return lines;
+}
 
 /**
  * A sign's place in its column's edge (P-LAY's EDGE; FP-26): beside the
@@ -312,12 +400,13 @@ function edgeStyle(k, below = 0) {
 
 /**
  * The lines a sign's words take in its column's edge, at the size of the
- * block it stands beside (`edgeStyle`), as P-LAY wraps them across the edge's
- * width.
- * @param {string} words
+ * block it stands beside (`edgeStyle`), wrapped across the edge's width as
+ * measured in their faces (`linesAt`).
+ * @param {Faced[]} runs
  * @param {number} k the size of the block it stands beside, in the body's em
+ * @param {Measure} measure
  */
-const edgeLines = (words, k) => wrap(row('text', null, MEASURE.count * k, [piece(words, MEASURE.count * k)]), (EDGE - EDGE_GAP) / CHAR_W).length;
+const edgeLines = (runs, k, measure) => linesAt(runs, (EDGE - EDGE_GAP) / (MEASURE.count * k), measure);
 
 /**
  * The others' count in a block's column's edge: "+⟨n⟩ others", or the social
@@ -374,7 +463,7 @@ export const symbolLit = (links, lit) => links.length > 0 && links.every((l) => 
 /**
  * @typedef {Object} Part — one block of the article as the walk decided it
  * @property {Block} b
- * @property {'withheld' | 'record' | 'ref' | 'hex' | 'para'} kind
+ * @property {'withheld' | 'record' | 'ref' | 'unshown' | 'para'} kind a withheld run; a record the record rule renders; a reference; an item this client cannot show (`itemOf`); a paragraph
  * @property {number} level a paragraph's heading level, 0 for a paragraph
  * @property {Seg[]} segs a paragraph's stretches, the symbols standing in it among them
  * @property {Shown[]} ends a withheld run's: the ends drawn at it (LK's `Shown.run`), in the order LK drew them, which the one symbol at the start of its gap stands for
@@ -425,16 +514,20 @@ export function recordOf(b, d, reader) {
 }
 
 /**
- * The record rule's HTML (`recordOf`).
+ * The record rule's HTML (`recordOf`), the other owner its genesis record
+ * names in the identifier's face.
  * @param {Block} b
  * @param {Doc} d
  * @param {ArticleView} v
  */
 export function recordHTML(b, d, v) {
   const r = recordOf(b, d, v.reader);
-  if (r.type === 'skep-enroll') return `<span class="rec" data-rec="skep-enroll"><span class="rec-words">${esc(r.words)}</span><span class="derived">${esc(r.keys)}</span></span>`;
+  if (r.type === 'skep-enroll') {
+    const words = v.reader.account && d.account === v.reader.account ? esc(r.words) : htmlIn('F.home-record.other', { owner: d.account || '' }, { owner: 'ident' });
+    return `<span class="rec" data-rec="skep-enroll"><span class="rec-words">${words}</span><span class="derived">${esc(r.keys)}</span></span>`;
+  }
   if (r.type === 'skep-head') return `<span class="rec" data-rec="skep-head"><span class="k">skep-head</span> position ${esc(r.position)} · chain ${esc(r.chain)}…</span>`;
-  return `<span class="rec not-rendered">${esc(r.words)}</span>`;
+  return `<span class="rec">${esc(r.words)}</span>`;
 }
 
 /**
@@ -531,6 +624,7 @@ export function entitlementArm(reader, owner) {
  * @typedef {Object} Quoting — C-67's QUOTING sibling: every admitted claim quotes the draft, so nothing published carries its bytes and nothing is followed
  * @property {'C-67.quoting'} id its string
  * @property {string} text its words, naming the lowest-addressed claimant
+ * @property {string} claimant that claimant, whose address its words name
  */
 
 /**
@@ -636,7 +730,8 @@ export function editionClause(origin, owner, claims) {
   if (waiting) return null;
   if (failed) return unread();
   if (!quoting.length) return null;
-  return { id: 'C-67.quoting', text: t('C-67.quoting', { claimant: quoting.sort(cmpAddr)[0] }) };
+  const claimant = quoting.sort(cmpAddr)[0];
+  return { id: 'C-67.quoting', text: t('C-67.quoting', { claimant }), claimant };
 }
 
 /** C-67's unread place, in its words (`Unread`) */
@@ -646,9 +741,23 @@ const unread = () => /** @type {Unread} */ ({ id: 'L.clause.unread', text: t('L.
  * @typedef {Object} Placeholder — what R56's placeholder at a withheld run shows a reader: existence and owner, never bytes (B1-S7)
  * @property {string} owner the owner of the run's origin, whoever owns the document windowing the run
  * @property {string} head B1-S7's head: that owner, the run's width and its origin
+ * @property {Record<string, string | number>} vals the values B1-S7's head is filled with, by token: what its words and its markup are made of (`headHTML`, `headRuns`)
  * @property {{id: string, text: string}} arm the entitlement arm for that owner and this reader (`entitlementArm`)
  * @property {Clause | null} clause C-67's clause beneath the arm (`editionClause`), the pointer naming the claim it follows; null where nothing renders in its place
  */
+
+/** the faces of B1-S7's head's tokens: the owner, the account and the origin addresses */
+const HEAD_FACES = /** @type {Record<string, Face>} */ ({ owner: 'ident', account: 'ident', origin: 'ident' });
+/** a placeholder's head as markup: its addresses in the identifier's face */
+const headHTML = (/** @type {Placeholder} */ p) => htmlIn('B1.withheld-run', p.vals, HEAD_FACES);
+/** a placeholder's head as runs in their faces, as it is measured */
+const headRuns = (/** @type {Placeholder} */ p) => facedIn('B1.withheld-run', p.vals, HEAD_FACES);
+/** an arm's words as runs in their faces, as it is measured: the owner R56's arm names in the identifier's */
+const armRuns = (/** @type {Placeholder} */ p) => facedIn(p.arm.id, { owner: p.owner }, { owner: 'ident' });
+/** an arm's words as markup: the owner R56's arm names in the identifier's face */
+const armHTML = (/** @type {Placeholder} */ p) => htmlIn(p.arm.id, { owner: p.owner }, { owner: 'ident' });
+/** a clause's words as runs in their faces: the claimant QUOTING names in the identifier's */
+const clauseRuns = (/** @type {Clause} */ c) => (c.id === 'C-67.quoting' ? facedIn(c.id, { claimant: c.claimant }, { claimant: 'ident' }) : [{ text: c.text, face: /** @type {Face} */ ('client') }]);
 
 /**
  * The R56 placeholder at a withheld run, as one record: existence and owner,
@@ -669,9 +778,11 @@ const unread = () => /** @type {Unread} */ ({ id: 'L.clause.unread', text: t('L.
  */
 export function placeholderOf(b, reader, originOwner, clauseOf) {
   const owner = b.origin ? originOwner(b.origin) : '';
+  const vals = { owner, account: owner, width: b.width, origin: b.origin || '' };
   return {
     owner,
-    head: t('B1.withheld-run', { owner, account: owner, width: b.width, origin: b.origin || '' }),
+    head: t('B1.withheld-run', vals),
+    vals,
     arm: entitlementArm(reader, owner),
     clause: b.origin ? clauseOf(b.origin) : null,
   };
@@ -684,29 +795,32 @@ export function placeholderOf(b, reader, originOwner, clauseOf) {
 /**
  * What a withheld run's gap holds at a measure (foundations §2.1; FP-26), so
  * the gap keeps encoding the width and no face reflows the text: the run's
- * face whole — its head at the body's size, the arm and the clause beneath
- * at the face's — where the gap's full lines (P-LAY's `gapOf`) hold it as
- * P-LAY wraps it; else its head where they hold that; else its origin's
- * owner, where a line of the gap holds the address; else the origin's mark —
- * each measured with the symbol the ends drawn at the run merge into
- * standing first in its first line (`runSymbol`; FP-30), so a symbol there
- * steps the notice to a smaller form and is never dropped. Whatever it
- * holds, the gap stands on the run's bars, and where its face is not in it
- * the face stands compact in the column's edge (`withheldBlockHTML`).
+ * face whole — its head, the arm and the clause beneath it, each at the run's
+ * size, the room above the arm and the clause — where the gap's full lines
+ * (P-LAY's `gapOf`) hold it, its words wrapped across the measure as they are
+ * set in their faces (`linesAt`); else its head where they hold that; else
+ * its origin's owner, where a line of the gap holds the address; else the
+ * origin's mark — each measured with the symbol the ends drawn at the run
+ * merge into standing first in its first line (`runSymbol`; FP-30), so a
+ * symbol there steps the notice to a smaller form and is never dropped.
+ * Whatever it holds, the gap stands on the run's bars, and where its face is
+ * not in it the face stands compact in the column's edge
+ * (`withheldBlockHTML`).
  * @param {Placeholder} p
  * @param {number} width the run's positions
  * @param {number} cpl the measure
+ * @param {Measure} measure the words' widths in their faces (the view's)
  * @param {number} [ends] the ends drawn at the run, which its one symbol stands for; none, no symbol
  * @returns {GapHolds}
  */
-export function gapHolds(p, width, cpl, ends = 0) {
-  const gap = gapOf(width, cpl), full = gap.filter((w) => w >= cpl).length;
-  const F = MEASURE.face, before = MEASURE.faceGap * F;
-  const sym = ends ? [runSymbol(1, ends)] : [];
-  const face = [row('text', null, 1, [...sym, piece(p.head, 1)]), row('text', null, F, [piece(p.arm.text, F)], { before }), ...(p.clause ? [row('text', null, F, [piece(p.clause.text, F)], { before })] : [])];
-  if (heightOf(layoutOf(face, cpl)) <= full * LINE_H + 1e-9) return 'face';
-  if (wrap(face[0], cpl).length <= full) return 'head';
-  if ([...p.owner].length + sym.reduce((w, x) => w + boxWidth(x), 0) <= (full ? cpl : gap[0])) return 'owner';
+export function gapHolds(p, width, cpl, measure, ends = 0) {
+  const gap = gapOf(width, cpl), full = gap.filter((w) => w >= cpl).length, room = cpl * CHAR_W;
+  const lead = ends ? boxWidth(runSymbol(1, ends)) * CHAR_W : 0, head = linesAt(headRuns(p), room, measure, lead);
+  const below = (/** @type {Faced[]} */ words) => MEASURE.faceGap + linesAt(words, room, measure) * LINE_H;
+  const deep = head * LINE_H + below(armRuns(p)) + (p.clause ? below(clauseRuns(p.clause)) : 0);
+  if (deep <= full * LINE_H + 1e-9) return 'face';
+  if (head <= full) return 'head';
+  if (lead + measure(p.owner, 'ident') <= (full ? cpl : gap[0]) * CHAR_W + 1e-9) return 'owner';
   return 'mark';
 }
 
@@ -719,11 +833,13 @@ export function gapHolds(p, width, cpl, ends = 0) {
  * level with the run's first line — the owner with a mark that opens it
  * whole (foundations §2.1), its act the run's face whole on the plane
  * (APP-INPUT; O-FACES's `withheldRun`), a line in a reading scene's pane,
- * where nothing is acted on (SC). The ends drawn at the run (`Part.ends`;
+ * where nothing is acted on (SC). Every address it names is set in the
+ * identifier's face. The ends drawn at the run (`Part.ends`;
  * FP-30) stand as the one symbol they merge into, first in the gap's first
  * line, before whatever it holds (`runSymHTML`), and the others' links drawn
  * there are counted in the column's edge, below the face's compact mark where
- * that stands there (`countHTML`). The owner it names is carried
+ * that stands there, as many of the edge's lines down as the mark's words
+ * take, measured (`countHTML`, `edgeLines`). The owner it names is carried
  * (`data-owner`) for C-39's face at the run, which names the same.
  * @param {Block} b the withheld run
  * @param {Doc} d
@@ -732,18 +848,38 @@ export function gapHolds(p, width, cpl, ends = 0) {
  */
 export function withheldBlockHTML(b, d, v, at = { ends: [], count: { n: 0, social: false } }) {
   const p = placeholderOf(b, v.reader, v.originOwner, v.clauseOf);
-  const cpl = v.cpl ?? MEASURE_CPL, gap = gapOf(b.width, cpl), holds = gapHolds(p, b.width, cpl, at.ends.length);
+  const cpl = v.cpl ?? MEASURE_CPL, gap = gapOf(b.width, cpl), holds = gapHolds(p, b.width, cpl, v.measure, at.ends.length);
   const [one, ...more] = at.ends;
   const sym = one ? runSymHTML([one, ...more], v) : '';
-  const inside = holds === 'face' ? `<span class="wh-head">${sym}${esc(p.head)}</span><span class="arm">${esc(p.arm.text)}</span>${clauseHTML(p.clause, v.scene)}`
-    : holds === 'head' ? `<span class="wh-head">${sym}${esc(p.head)}</span>`
-    : holds === 'owner' ? `<span class="wh-owner">${sym}${esc(p.owner)}</span>`
+  const inside = holds === 'face' ? `<span class="wh-head">${sym}${headHTML(p)}</span><span class="arm">${armHTML(p)}</span>${clauseHTML(p.clause, v.scene)}`
+    : holds === 'head' ? `<span class="wh-head">${sym}${headHTML(p)}</span>`
+    : holds === 'owner' ? `<span class="wh-owner">${sym}<span class="${ID}">${esc(p.owner)}</span></span>`
     : `<span class="wh-origin">${sym}${esc(t('L.origin-mark'))}</span>`;
-  const words = t('L.withheld.mark', { owner: p.owner });
-  const mark = holds === 'face' ? '' : `<span class="wh-mark edge" data-mark="withheld"${control(v.scene)} style="${edgeStyle(1)}">${esc(words)}</span>`;
-  const count = countHTML(at.count, 1, mark ? edgeLines(words, 1) : 0);
+  const marked = /** @type {Record<string, Face>} */ ({ owner: 'ident' });
+  const mark = holds === 'face' ? '' : `<span class="wh-mark edge" data-mark="withheld"${control(v.scene)} style="${edgeStyle(1)}">${htmlIn('L.withheld.mark', { owner: p.owner }, marked)}</span>`;
+  const count = countHTML(at.count, 1, mark ? edgeLines(facedIn('L.withheld.mark', { owner: p.owner }, marked), 1, v.measure) : 0);
   return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}" data-holds="${holds}" style="height:${gap.length * LINE_H}em;--wh-last:${gap[gap.length - 1]}">` +
     `${mark}${count}${inside}</span>`;
+}
+
+/**
+ * The gap occupying an item this client cannot show (`itemOf`'s 'unshown';
+ * FP-26): as tall as its bars — each of its positions one advance, the last
+ * of its lines its remainder (`--wh-last`) — its words, "not rendered" with
+ * its width, in it where its full lines hold them as measured (`linesAt`),
+ * else in its column's edge level with its first line; it carries the
+ * block's marks (`blockMarks`), as every block does.
+ * @param {Block} b
+ * @param {ArticleView} v
+ * @param {string} cls the block's classes
+ * @param {string} at the block's attributes
+ */
+function unshownHTML(b, v, cls, at) {
+  const cpl = v.cpl ?? MEASURE_CPL, gap = gapOf(b.width, cpl), full = gap.filter((w) => w >= cpl).length;
+  const words = t('F.not-rendered', { width: b.width });
+  const inside = full > 0 && linesAt([{ text: words, face: 'client' }], cpl * CHAR_W, v.measure) <= full;
+  const said = inside ? `<span class="unshown">${esc(words)}</span>` : `<span class="unshown edge" style="${edgeStyle(1)}">${esc(words)}</span>`;
+  return `<span class="${cls} gap" ${at} style="height:${gap.length * LINE_H}em;--wh-last:${gap[gap.length - 1]}">${said}</span>`;
 }
 
 /**
@@ -751,15 +887,17 @@ export function withheldBlockHTML(b, d, v, at = { ends: [], count: { n: 0, socia
  * the pointer is a control (`control`) carrying the claim it follows and that
  * claim's home (`data-claim`, `data-home`): its act is the LEAP to the home,
  * the edition, that APP-INPUT makes (B1-S7 → S6). In a reading scene's pane,
- * where nothing acts on a mark (SC), it is a line; the QUOTING sibling and
- * the unread place are lines everywhere, for they follow nothing.
+ * where nothing acts on a mark (SC), it is a line; the QUOTING sibling, its
+ * claimant in the identifier's face, and the unread place are lines
+ * everywhere, for they follow nothing.
  * @param {Clause | null} c
  * @param {boolean} scene the scene-mode variant
  */
 function clauseHTML(c, scene) {
   if (!c) return '';
   const follows = c.id === 'C-67.pointer' && !scene ? ` data-claim="${esc(c.claim)}" data-home="${esc(c.home)}"${control(scene)}` : '';
-  return `<span class="clause"${follows}>${esc(c.text)}</span>`;
+  const words = c.id === 'C-67.quoting' ? htmlIn(c.id, { claimant: c.claimant }, { claimant: 'ident' }) : esc(c.text);
+  return `<span class="clause"${follows}>${words}</span>`;
 }
 
 /**
@@ -776,7 +914,7 @@ function clauseHTML(c, scene) {
  * glyph, each named by its whole words, which assistive technology reads and
  * its act opens whole;
  * "version ⟨k⟩ of ⟨n⟩", the whole-document count and a withheld document's
- * state keep their words. The holder makes the element they stand in
+ * state keep their words, its owner in the identifier's face. The holder makes the element they stand in
  * (`data-corner` naming the document), which is the corner's one stop: no
  * item takes a focus of its own (D5 K-57).
  * @param {Doc} d
@@ -790,7 +928,7 @@ export function cornerHTML(d, v, compact = false) {
   /** a usual state: its words (a string's id and its values), or compact its glyph named by them */
   const usual = (/** @type {string} */ cls, /** @type {string} */ id, /** @type {Record<string, string | number>} */ vals, /** @type {string} */ glyph, extra = '') =>
     compact ? `<span class="${cls} glyph"${extra} role="img" aria-label="${esc(t(id, vals))}">${esc(t(glyph))}</span>` : `<span class="${cls}"${extra}>${esc(t(id, vals))}</span>`;
-  if (d.refused === 'withheld') parts.push(`<span class="st">${esc(t('F.corner.withheld', { owner: d.account || '' }))}</span>`);
+  if (d.refused === 'withheld') parts.push(`<span class="st">${htmlIn('F.corner.withheld', { owner: d.account || '' }, { owner: 'ident' })}</span>`);
   else if (published) {
     const first = v.notebook ? t('F.published.notebook') : t('F.published');
     const n = v.members !== undefined ? v.members : d.members;
@@ -927,8 +1065,9 @@ function segmentsOf(b, d, v, labelled, standing) {
 }
 
 /**
- * The head's lines: the address, the state line, the byline (`bylineOf`),
- * and the presence line where links touch.
+ * The head's lines: the address, the state line — an address it names in
+ * the identifier's face — the byline (`bylineOf`), and the presence line
+ * where links touch.
  * @param {Doc} d
  * @param {ArticleView} v
  * @param {string} owner
@@ -936,12 +1075,13 @@ function segmentsOf(b, d, v, labelled, standing) {
  */
 function headOf(d, v, owner) {
   const published = d.meta ? d.meta.published : d.kind === 'edition';
-  const state = d.refused === 'withheld' ? t('F.corner.withheld', { owner })
-    : d.refused === 'unregistered' ? t('B1.doc_not_registered', { address: d.addr })
-    : published ? t('B1.state-line') : t('F.label.draft');
+  /** @type {[string, Record<string, string>, Record<string, Face>]} the state line's string, its values and its tokens' faces */
+  const [id, vals, faces] = d.refused === 'withheld' ? ['F.corner.withheld', { owner }, { owner: 'ident' }]
+    : d.refused === 'unregistered' ? ['B1.doc_not_registered', { address: d.addr }, { address: 'ident' }]
+    : [published ? 'B1.state-line' : 'F.label.draft', {}, {}];
   const touching = v.marks.length;
   const presence = touching ? (touching === 1 ? t('B1.presence.1') : t('B1.presence', { n: touching })) : '';
-  return { addr: d.addr, state, byline: bylineOf(owner, v), presence };
+  return { addr: d.addr, state: t(id, vals), stateHTML: htmlIn(id, vals, faces), byline: bylineOf(owner, v), presence };
 }
 
 /**
@@ -986,8 +1126,9 @@ function walk(d, v, ownerAccount) {
     /** @type {Part} */
     const p = { b, kind: 'para', level: 0, segs: [], ends: [], count: none, rec: null };
     if (b.kind === 'withheld') { p.kind = 'withheld'; p.ends = v.marks.filter((s) => !!s.run && s.run.pos === b.pos); p.count = v.countAt(b); }
+    else if (b.kind === 'ref') p.kind = 'ref';
+    else if (itemOf(b) === 'unshown') p.kind = 'unshown';
     else if (b.kind === 'atom') { p.kind = 'record'; p.rec = recordOf(b, d, v.reader); }
-    else if (b.kind === 'ref' || b.kind === 'hex') p.kind = b.kind;
     else {
       p.level = headingLevel(b.text);
       p.segs = segmentsOf(b, d, v, labelled, standing.get(b.pos) || []);
@@ -1054,8 +1195,8 @@ function runSymHTML(ends, v) {
  * drawn lighter — carrying the ends marking it, their links and their keys
  * (LK's `endKey`) in one order, the first the end whose card a click on it
  * opens (APP-INPUT); its run's ground and, where it opens its run, the run's
- * boundary, hairline and C-33's mark — the hairline naming the run's origin
- * and carrying the run's own positions in this document, the passage its
+ * boundary, hairline and C-33's mark — the hairline naming the run's origin,
+ * in the identifier's face, and carrying the run's own positions in this document, the passage its
  * gesture to the source carries (foundations §2.1, §2.3) — then
  * the symbols standing at it — the text's own characters untouched.
  * @param {Seg} s
@@ -1075,7 +1216,7 @@ function segHTML(s, v) {
     cls.push('same');
     if (at) cls.push('opens');
     attrs.push(`data-origin="${esc(o)}"`);
-    const chrome = !at ? '' : `<span class="hairline ${at.whole ? 'whole' : 'compact'}" data-src="${esc(o)}" data-pos="${s.origin.pos}" data-width="${s.origin.width}" title="${esc(o)}">${esc(labelOf(s.origin, at))}</span>` +
+    const chrome = !at ? '' : `<span class="hairline ${at.whole ? 'whole' : 'compact'}" data-src="${esc(o)}" data-pos="${s.origin.pos}" data-width="${s.origin.width}" title="${esc(o)}">${labelHTML(s.origin, at)}</span>` +
       (at.c33 ? `<span class="pubmark" data-mark="C-33">${esc(t('C-33'))}</span>` : '');
     return `<span class="${cls.join(' ')}" ${attrs.join(' ')}>${chrome}${s.chromeSyms.map((x) => symHTML(x, v)).join('')}${esc(s.text)}</span>${syms}`;
   }
@@ -1094,7 +1235,7 @@ function segHTML(s, v) {
 export function articleHTML(d, v, ownerAccount) {
   const w = walk(d, v, ownerAccount);
   const hd = w.head;
-  let h = `<div class="hd"><span class="addr">${esc(hd.addr)}</span><span class="st">${esc(hd.state)}</span>${bylineHTML(hd.byline)}`;
+  let h = `<div class="hd"><span class="addr ${ID}">${esc(hd.addr)}</span><span class="st">${hd.stateHTML}</span>${bylineHTML(hd.byline)}`;
   if (hd.presence) h += `<span class="pres"><span class="sym reveal" data-reveal="${esc(d.addr)}"${control(v.scene)}>⟡</span> ${esc(hd.presence)}</span>`;
   h += `</div>`;
   if (!w.parts) return h;
@@ -1109,12 +1250,12 @@ export function articleHTML(d, v, ownerAccount) {
     const at = `data-addr="${esc(d.addr)}" data-pos="${b.pos}" data-width="${b.width}"`;
     if (p.kind === 'record') { run += `<span class="${cls.join(' ')}" ${at}>${recordHTML(b, d, v)}</span>`; continue; }
     if (p.kind === 'ref') { run += `<span class="${cls.join(' ')} ref" ${at}>⟡</span>`; continue; }
-    if (p.kind === 'hex') { run += `<span class="${cls.join(' ')}" ${at}>${esc(t('F.not-rendered', { width: b.width }))}</span>`; continue; }
+    if (p.kind === 'unshown') { run += unshownHTML(b, v, cls.join(' '), at); continue; }
     const tag = p.level ? 'h' + Math.min(6, p.level + 1) : 'p';
     run += `<${tag} class="${cls.join(' ')}" ${at}>${countHTML(p.count, headingSize(p.level))}${p.segs.map((s) => segHTML(s, v)).join('')}</${tag}>`;
   }
   if (w.empty) run += `<p class="sp empty" data-addr="${esc(d.addr)}" data-pos="1" data-width="0">${esc(t('B1.empty_subspace'))}</p>`;
-  for (const o of w.offers) run += `<span class="offer" data-scene="${esc(d.addr)}|${esc(o)}" role="button" tabindex="-1">${esc(t('B1.scene-offer', { D: o }))}</span>`;
+  for (const o of w.offers) run += `<span class="offer" data-scene="${esc(d.addr)}|${esc(o)}" role="button" tabindex="-1">${htmlIn('B1.scene-offer', { D: o }, { D: 'ident' })}</span>`;
   return h + `<div class="run">${run}</div>`;
 }
 
@@ -1162,13 +1303,13 @@ const runSymbol = (k, n) => {
 const boxWidth = (/** @type {Piece} */ p) => (p.lead + p.trail) / CHAR_W + [...p.text].length * p.size;
 /**
  * A byline's pieces (`bylineHTML`): its owner and the separator, then its slots' box, one inline-block as wide as every
- * slot and separator in it — its characters no-break spaces, for it sets its width alone — so its line is the same whatever the
- * slots show, read or not (FP-34).
+ * slot and separator in it — no characters, for it sets its width alone — so its line is the same whatever the slots show,
+ * read or not (FP-34).
  * @param {Byline} by
  * @param {number} k the head's size, in the body's em
  * @returns {Piece[]}
  */
-const bylinePieces = (by, k) => [piece(by.owner + BY_SEP, k), { text: ' '.repeat(slotsCh(by)), size: k, lead: 0, trail: 0, box: true, own: false }];
+const bylinePieces = (by, k) => [piece(by.owner + BY_SEP, k), { text: '', size: k, lead: by.em * k, trail: 0, box: true, own: false }];
 /**
  * A row of the plan.
  * @param {Row['kind']} kind
@@ -1227,12 +1368,11 @@ export function articlePlan(d, v, ownerAccount) {
   if (!w.parts) return rows;
   for (const p of w.parts) {
     const b = p.b;
-    if (p.kind === 'withheld') rows.push(row('withheld', b.pos, 1, [], { after: gap, width: b.width }));
+    if (p.kind === 'withheld' || p.kind === 'unshown') rows.push(row('gap', b.pos, 1, [], { after: gap, width: b.width }));
     else if (p.kind === 'record' && p.rec) {
-      if (p.rec.keys) rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)]), row('text', null, MEASURE.derived, [piece(p.rec.keys, MEASURE.derived)], { after: gap, ...joined }));
+      if (p.rec.keys) rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)]), row('text', null, 1, [piece(p.rec.keys, 1)], { after: gap, ...joined }));
       else rows.push(row('text', b.pos, 1, [piece(p.rec.words, 1)], { after: gap }));
     } else if (p.kind === 'ref') rows.push(row('text', b.pos, 1, [piece('⟡', 1)], { after: gap }));
-    else if (p.kind === 'hex') rows.push(row('text', b.pos, 1, [piece(t('F.not-rendered', { width: b.width }), 1)], { after: gap }));
     else {
       const k = headingSize(p.level);
       const margins = p.level ? { before: MEASURE.headingBefore * k, after: MEASURE.headingAfter * k, keep: /** @type {const} */ ('heading') } : { after: gap * k, keep: /** @type {const} */ ('lines') };

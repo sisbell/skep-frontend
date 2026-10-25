@@ -15,7 +15,7 @@ test('the bands by document extent and em', () => {
   assert.equal(lodOf((LOD_FAR_HI + 1) / DOC_W).name, 'mid');
   assert.equal(lodOf((LOD_TXT_LO + 1) / STANDARD_FS).name, 'mid~near');
   assert.equal(lodOf((LOD_TXT_HI + 1) / STANDARD_FS).name, 'near');
-  assert.equal(lodOf(12.5 / STANDARD_FS).name, 'near', 'a standard document read at the landing\'s 12.5 px an em: near');
+  assert.equal(lodOf(CAM.READING_PX / STANDARD_FS).name, 'near', 'a standard document read at the landing\'s reading size: near');
 });
 
 test('a crossfade reports its fade', () => {

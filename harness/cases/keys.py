@@ -33,7 +33,8 @@ width, the acting segment at one x at WHOLE BOARD, HOME, the board and the
 account so re-taken, below a document's reading scale and at a position (issue
 #141); a document below its own reading scale with the camera's
 band nearer than mid (issue #140's design decision) — the far edition, a
-continuation document, zoomed out by Mod+- to em 6.4 — the walk on it whole,
+continuation document, zoomed out by Mod+- OUT_STEPS times from its landing to
+an em under 8 — the walk on it whole,
 the one line naming it alone with its position's slot standing empty,
 nothing after it moved, its mirror item collapsed, and → there Enter's act,
 a teleport to its reading scale with its trail entry, the item expanded, →
@@ -142,6 +143,14 @@ from .layout import click_on, inside, lacking_of, level_holds, scene_level, ties
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
 GUTTER_EM = 2
+# the reading size every arrival at reading scale sets a document's em at, in px: 1.0625 of the headless page's 16 px root
+# (issue #16) — the case's own, held apart from the page's READING_PX
+READING_PX = 17
+# how far above the view's bottom the paging check stands a column's foot before it pages on
+FOOT_INSET_PX = 12
+# the Mod+- presses that take a document landed at the reading size below the readable em of 8, each zooming out by 1.25:
+# READING_PX / 1.25 ** OUT_STEPS under 8, one press fewer not
+OUT_STEPS = 4
 # how far inside a scene pane's top and bottom a phrase dragged over stands: clear of the strip the platform scrolls a
 # scroller in while a selection is dragged at its edge
 PANE_EDGE_PX = 40
@@ -308,9 +317,10 @@ NOW = '({sel: window.__skep.selection(), platform: window.__skep.platformSelecti
 
 
 def marks(ctx, cls):
-    """the first positions of the first edition's blocks that carry a mark — `sel`, `lit` — in its article on the plane;
-    None where the article is not mounted"""
-    return ctx.js('(() => { const a = %s; return a ? [...a.querySelectorAll(".sp.%s")].map((e) => Number(e.dataset.pos)) : null; })()' % (article(DOC), cls))
+    """the first positions of the first edition's blocks that carry a mark — `sel`, `lit` — in its article on the plane,
+    each block once however many parts of it stand (FP-12: a block a column or the view cuts stands in a part for each
+    run of its lines, every part carrying its marks); None where the article is not mounted"""
+    return ctx.js('(() => { const a = %s; return a ? [...new Set([...a.querySelectorAll(".sp.%s")].map((e) => Number(e.dataset.pos)))] : null; })()' % (article(DOC), cls))
 
 
 def focus_at(ctx):
@@ -594,9 +604,10 @@ def plain_char(ctx, addr):
 
 def paging_holds(ctx, r):
     """THE PAGING KEY AT READING SCALE (issue #15's design decision: "at reading scale the paging keys continue at the
-    next column's top"; K-6): the longest edition the claimant's index lists LEAPt to, the view over its first column —
-    its foot in view — PageDown brings the second column's text top half a gutter below the one line, centred across it;
-    PageUp from there brings the first column's top back the same way; its figures"""
+    next column's top"; K-6): the longest edition the claimant's index lists LEAPt to — its head in view — and the view
+    moved down its first column, at the landing's scale, until that column's foot stands FOOT_INSET_PX above the view's
+    bottom; PageDown brings the second column's text top half a gutter below the one line, centred across it; PageUp from
+    there brings the first column's top back the same way; its figures"""
     longest, _, _ = ctx.longest_edition()
     if longest is None:
         r.check(False, 'the paging key at reading scale: an edition with two columns or more to page across', None)
@@ -611,8 +622,14 @@ def paging_holds(ctx, r):
         c, cam = f['columns'][col], v['cam']
         return {'top': (c['y'] - cam['y']) * cam['scale'] + v['VH'] / 2, 'centre': (c['x'] + c['w'] / 2 - cam['x']) * cam['scale'] + v['VW'] / 2, 'line': v['line'], 'mid': v['VW'] / 2,
                 'gap': GUTTER_EM / 2 * f['fs'] * cam['scale'], 'scale': cam['scale']}
+    # the view down the first column to its foot: the landing frames the document's head, which a column deeper than the
+    # visible view leaves the foot below
+    v0 = seen()
+    c0 = f['columns'][0]
+    ctx.set_view(v0['cam']['x'], c0['y'] + c0['h'] - (v0['VH'] / 2 - FOOT_INSET_PX) / v0['cam']['scale'], v0['cam']['scale'])
+    ctx.frames(2)
     start = at(0)
-    foot = (f['columns'][0]['y'] + f['columns'][0]['h'] - seen()['cam']['y']) * start['scale'] + seen()['VH'] / 2
+    foot = (c0['y'] + c0['h'] - seen()['cam']['y']) * start['scale'] + seen()['VH'] / 2
     chord(ctx, 'PageDown')
     ctx.settle()
     down = at(1) if len(f['columns']) > 1 else None
@@ -636,12 +653,12 @@ def below_reading(ctx, r):
     mounted text alike, it is a drag off text and selects nothing"). At em 6 — the em §2.4 names, where whether text is
     mounted depends on the direction the person zoomed from — a click on a paragraph's first plain character of the first
     edition's mounted article teleports to the document: one trail entry pushed, its own, the focus on it, the landing at
-    reading scale (em 12.5), nothing selected; a click at the same point on its bars, zoomed to em 6 from below so nothing
-    mounts, does the same; and a drag along that line of the mounted text selects nothing and moves neither the camera nor
-    the trail. At em 9 a click on such a character selects its block whole and pushes no entry. And a drag begun on
-    legible text keeps the article it is anchored in through a zoom below the threshold with the button down — the release
-    takes the whole phrase — and the frame after the press takes the pointer from the article there. The selection is
-    cleared after each, and the step ends at the landing"""
+    reading scale (the reading size, em 17), nothing selected; a click at the same point on its bars, zoomed to em 6
+    from below so nothing mounts, does the same; and a drag along that line of the mounted text selects nothing and moves
+    neither the camera nor the trail. At em 9 a click on such a character selects its block whole and pushes no entry. And
+    a drag begun on legible text keeps the article it is anchored in through a zoom below the threshold with the button
+    down — the release takes the whole phrase — and the frame after the press takes the pointer from the article there.
+    The selection is cleared after each, and the step ends at the landing"""
     figures = {}
     art = article(DOC)
     ctx.js('''window.__gateHit = (x, y) => { const e = document.elementFromPoint(x, y), a = e && e.closest("#domlayer article.dtext");
@@ -649,7 +666,7 @@ def below_reading(ctx, r):
     seen = lambda: ctx.js('({cam: window.__skep.view.camera(), focus: window.__skep.view.focus(), trail: window.__skep.trail(), sel: window.__skep.selection(), '
                           'platform: window.__skep.platformSelection(), mounted: window.__skep.mountedAddrs().includes(%s), '
                           'pointer: (() => { const a = %s; return a ? getComputedStyle(a).pointerEvents : null; })()})' % (json.dumps(DOC), art))
-    landing = ctx.js('window.__skep.scaleFor(%s, "em", 12.5)' % json.dumps(DOC))
+    landing = ctx.js('window.__skep.scaleFor(%s, "em", %s)' % (json.dumps(DOC), READING_PX))
     alike = ('the plane', 'the article of ' + DOC)
 
     def place_click(at, what):
@@ -663,10 +680,10 @@ def below_reading(ctx, r):
         newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
         r.check(t1['cursor'] == t0['cursor'] + 1 and len(t1['entries']) == t1['cursor'] + 1 and bool(newest) and newest['addr'] == DOC
                 and bool(f) and f['addr'] == DOC and abs(after['cam']['scale'] / landing - 1) < 1e-6 and after['sel'] is None,
-                '%s at em 6 is a click on a place: the first edition\'s entry pushed, the focus on it, the landing at reading scale (em 12.5), nothing selected' % what,
+                '%s at em 6 is a click on a place: the first edition\'s entry pushed, the focus on it, the landing at reading scale (the reading size, em %s), nothing selected' % (what, READING_PX),
                 {'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])], 'newest': newest and newest['addr'],
                  'focus': f and {'kind': f['kind'], 'addr': f['addr']}, 'scale': [after['cam']['scale'], landing], 'sel': after['sel']})
-        return {'cursor': [t0['cursor'], t1['cursor']], 'focus': f and f['addr'], 'em': after['cam']['scale'] / landing * 12.5, 'sel': after['sel']}
+        return {'cursor': [t0['cursor'], t1['cursor']], 'focus': f and f['addr'], 'em': after['cam']['scale'] / landing * READING_PX, 'sel': after['sel']}
 
     # (a) mounted text at em 6, zoomed to from reading scale: the article stands, and a click on its text is the place's
     ctx.leap(DOC, WINDOW[0])
@@ -1382,7 +1399,7 @@ def ax_expanded(ctx, name):
 
 def collapsed_document(ctx, r):
     """a document below its own reading scale (issue #140's design decision): the far edition, a continuation document
-    whose room is a 49th of a depth-0 document's across, LEAPed to and zoomed out by Mod+- three times, to an em of 6.4 —
+    whose room is a 49th of a depth-0 document's across, LEAPed to and zoomed out by Mod+- OUT_STEPS times, to an em under 8 —
     the camera's band still nearer than mid, the standard type 49 times that — where a click teleports. The re-take
     stands the walk on the document whole; the one line names it alone, no position, its position's slot standing
     empty, so the acting segment stands where it stood at the landing; the mirror's current item, holding the focus, is
@@ -1402,13 +1419,13 @@ def collapsed_document(ctx, r):
     landing = seen()
     r.check(landing['address']['doc'] == FAR_LEAP and landing['address']['pos'] is not None and landing['acting'] is not None,
             'the far edition\'s landing, at its reading scale: the one line names the document and a position', {'address': landing['address'], 'em': em(landing)})
-    for _ in range(3):
+    for _ in range(OUT_STEPS):
         chord(ctx, '-', mods=('Meta',))
     ctx.frames(3)
     out = seen()
     t0 = out['trail']
-    r.check(out['lod'] in ('near', 'mid~near') and em(out) < 8,
-            'Mod+- three times from the far edition\'s landing: its own em below the readable threshold of 8, where a click teleports, the camera\'s band still nearer than mid',
+    r.check(out['lod'] in ('near', 'mid~near') and em(out) < 8 <= em(out) * 1.25,
+            'Mod+- %d times from the far edition\'s landing: its own em below the readable threshold of 8, one press fewer not, where a click teleports, the camera\'s band still nearer than mid' % OUT_STEPS,
             {'lod': out['lod'], 'em': em(out)})
     r.check(bool(out['focus']) and out['focus']['kind'] == 'document' and out['focus']['addr'] == FAR_LEAP,
             'the re-take below the far edition\'s reading scale stands the walk on the document whole, never on a span (issue #140)', out['focus'])
@@ -1430,8 +1447,8 @@ def collapsed_document(ctx, r):
     t1 = into['trail']
     newest = t1['entries'][t1['cursor']] if 0 <= t1['cursor'] < len(t1['entries']) else None
     r.check(t1['cursor'] == t0['cursor'] + 1 and len(t1['entries']) == t1['cursor'] + 1 and bool(newest) and newest['addr'] == FAR_LEAP
-            and abs(em(into) - 12.5) < 1e-6 and bool(into['focus']) and into['focus']['kind'] == 'document' and into['focus']['addr'] == FAR_LEAP,
-            '→ at the collapsed document is Enter\'s act: a teleport to its reading scale (em 12.5), its trail entry pushed, the walk on the document (issue #140; foundations §2.2)',
+            and abs(em(into) - READING_PX) < 1e-6 and bool(into['focus']) and into['focus']['kind'] == 'document' and into['focus']['addr'] == FAR_LEAP,
+            '→ at the collapsed document is Enter\'s act: a teleport to its reading scale (the reading size, em %s), its trail entry pushed, the walk on the document (issue #140; foundations §2.2)' % READING_PX,
             {'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])], 'newest': newest and newest['addr'], 'em': em(into), 'focus': into['focus']})
     r.check(into['on_item'] and into['expanded'] == 'true', 'at its reading scale the far edition\'s item, holding the focus, is expanded: aria-expanded true', {'on_item': into['on_item'], 'expanded': into['expanded']})
     chord(ctx, 'ArrowRight')
@@ -1541,7 +1558,7 @@ def retake_holds(ctx, r):
                 {'ring': a, 'want': at, 'element': g['element']})
         rings[where] = a
     ctx.leap(FAR_LEAP)
-    for _ in range(3):
+    for _ in range(OUT_STEPS):
         chord(ctx, '-', mods=('Meta',))
     states['the far edition below its reading scale'] = seen()
     ctx.leap(DOC, WINDOW[0])

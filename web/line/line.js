@@ -96,7 +96,10 @@
 // (M-PUMP's `rereading`), UNREACHED_MS at the most after it: the ending's
 // words, then the documents it covered (M-REC's `coveredDocs`), the first
 // COVERED_NAMED by address and the rest counted — never the ending alone
-// first. The chip is no segment (ux-T2: the document's corner).
+// first. Every address the line sets stands in the identifier's face — the
+// address segment's, the account its session words name, one in the words
+// another module hands it (ST's `addressedHTML`) — and its other words in
+// the interface face (P-REG's FACE). The chip is no segment (ux-T2: the document's corner).
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28,
 // FP-29, FP-34, FP-35.
 
@@ -113,7 +116,7 @@ import { cam, viewForCell } from '../plane/camera.js';
 import { lodOf } from '../plane/lod.js';
 import { boardCell, accountAt, G, LEAF, DEPTH_SOUND } from '../plane/projection.js';
 import { memberOf, boardOf, accountOf, documentOf } from '../model/address.js';
-import { t } from '../strings.js';
+import { t, tHTML, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @type {HTMLElement | null} */
@@ -200,7 +203,7 @@ export function step(dir) {
 }
 
 /** a transient segment until the person's next act, said through the one status region */
-export function transient(/** @type {string} */ text, id = 'transient') { transientSeg = { html: esc(text), id }; FOCUS.say(text); render(true); }
+export function transient(/** @type {string} */ text, id = 'transient') { transientSeg = { html: addressedHTML(text), id }; FOCUS.say(text); render(true); }
 /** the next act clears the transient segment */
 export function act() { if (transientSeg) { transientSeg = null; render(true); } }
 /**
@@ -325,11 +328,14 @@ function walkSegments() {
   return folded.map((w) => `<span class="sep">│</span><button class="seg walk" data-act="${esc(WALK_ACT + w.key)}" data-string="L.walk.waits">${esc(w.words)}</button>`).join('');
 }
 
+/** the account a session's words name, set in the identifier's face (P-REG's FACE; ST's `tHTML`) */
+const ACCOUNT = /** @type {const} */ ({ account: 'id' });
+
 /**
  * A string's words on either side of one of its tokens left unfilled — the
  * place a slot stands in the line (FP-34), so the token itself never reaches
  * the page; null where the string holds no such token.
- * @param {string} text the string, every other token filled
+ * @param {string} text the string, every other token filled — or its markup (ST's `tHTML`)
  * @param {string} token the token's name, without its brackets
  * @returns {[string, string] | null}
  */
@@ -402,26 +408,27 @@ export function actingSegment() {
   const origin = b.origin;
   if (s && lost && !lost.refused) {
     const words = t('L.reconnecting', { account: lost.as || '' });
-    return { html: `<span data-string="L.reconnecting">${esc(words)}</span>`, state: s.writes ? 2 : 3, words, alarm: false };
+    return { html: `<span data-string="L.reconnecting">${tHTML('L.reconnecting', { account: lost.as || '' }, ACCOUNT)}</span>`, state: s.writes ? 2 : 3, words, alarm: false };
   }
   if (s && !s.writes) {
     const words = t('F.keyless-session', { account: s.account || '', origin });
-    return { html: `<span data-string="F.keyless-session">${esc(words)}</span>`, state: 3, words, alarm: false };
+    return { html: `<span data-string="F.keyless-session">${tHTML('F.keyless-session', { account: s.account || '', origin }, ACCOUNT)}</span>`, state: 3, words, alarm: false };
   }
   if (s) {
     // F.acting-as's every token filled but its device label, whose slot stands in its place
-    const text = t('F.acting-as', { account: s.account || '', N: s.principal, origin }), parts = aroundToken(text, 'device label'), slot = deviceSlot(dev);
+    const values = { account: s.account || '', N: s.principal, origin }, text = t('F.acting-as', values), parts = aroundToken(text, 'device label'), slot = deviceSlot(dev);
+    const markup = tHTML('F.acting-as', values, ACCOUNT), around = aroundToken(markup, 'device label');
     const words = parts ? parts[0] + slot.shows + parts[1] : text;
-    return { html: `<span data-string="F.acting-as">${parts ? esc(parts[0]) + slot.html + esc(parts[1]) : esc(text)}</span>`, state: 2, words, alarm: false };
+    return { html: `<span data-string="F.acting-as">${around ? around[0] + slot.html + around[1] : markup}</span>`, state: 2, words, alarm: false };
   }
   const guest = `<span data-string="B1.guest-line">${esc(t('B1.guest-line'))}</span>${origin ? ` · ${esc(origin)}` : ''} · <span data-string="F.venue.notebook">${esc(t('F.venue.notebook'))}</span> ${SIGN_IN}`;
   if (dead) {
     // C-137's words for the arm; an arm whose words this page does not hold reads as the guest the page now is
     const w = deathWords(dead);
-    return w ? { html: `<span data-string="${w.id}">${esc(w.text)}</span> ${SIGN_IN}`, state: 5, words: w.text, alarm: true } : { html: guest, state: 5, words: t('B1.guest-line'), alarm: true };
+    return w ? { html: `<span data-string="${w.id}">${addressedHTML(w.text)}</span> ${SIGN_IN}`, state: 5, words: w.text, alarm: true } : { html: guest, state: 5, words: t('B1.guest-line'), alarm: true };
   }
   const lead = lost && lost.refused ? t('L.reconnect-refused', { account: lost.as || '' }) : '';
-  const html = (lead ? `<span data-string="L.reconnect-refused">${esc(lead)}</span> · ` : '') + guest + (refused ? ` <span class="dim" data-string="L.session-refused">${esc(t('L.session-refused', { name: refused.name }))}</span>` : '');
+  const html = (lead ? `<span data-string="L.reconnect-refused">${tHTML('L.reconnect-refused', { account: lost && lost.as ? lost.as : '' }, ACCOUNT)}</span> · ` : '') + guest + (refused ? ` <span class="dim" data-string="L.session-refused">${esc(t('L.session-refused', { name: refused.name }))}</span>` : '');
   return { html, state: refused && refused.name === 'no_key' ? 3 : 1, words: lead || t('B1.guest-line'), alarm: !!lead };
 }
 
@@ -502,7 +509,7 @@ export function render(force = false) {
     `<span class="sep">│</span><span class="seg acting" data-state="${acting.state}">${acting.html}</span>` +
     walkSegments() +
     (daemon.html ? `<span class="sep">│</span><span class="seg daemon">${daemon.html}</span>` : '') +
-    (aside ? `<span class="sep">│</span><span class="seg aside" data-string="${esc(aside.id)}">${esc(aside.text)}</span>` : '') +
+    (aside ? `<span class="sep">│</span><span class="seg aside" data-string="${esc(aside.id)}">${addressedHTML(aside.text)}</span>` : '') +
     (transientSeg ? `<span class="sep">│</span><span class="seg transient" data-string="${esc(transientSeg.id)}">${transientSeg.html}</span>` : '');
   if (!force && html === lastHTML) return;
   lastHTML = html;

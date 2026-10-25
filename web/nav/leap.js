@@ -41,7 +41,9 @@
 // thing (N-KEYS').
 // Its rows are the model's (FP-29): each row's words are read from the index
 // and the model as the rows are computed — a trail entry's by N-GO's
-// `wordsOf`, never a copy the entry keeps — and a change of the page's class
+// `wordsOf`, never a copy the entry keeps — each set in its face as the rows
+// are drawn (`cellsOf`; P-REG's FACE): an address the identifier's, a
+// document's words the reading face's, the rest the client's; and a change of the page's class
 // computes the rows standing in the box again at once (`classChanged`) and
 // once more as the index the new class reads answers (`takeIndex`), its
 // text, its caret and its focus left as they stand (FP-20). Where no board
@@ -224,6 +226,26 @@ export function takeIndex() {
   relist();
 }
 
+/**
+ * A row's three cells as markup, each word in its face (see the head): its
+ * address the identifier's; its title an address where it names one, a
+ * document's words where it is a document's label, a trail entry's number
+ * then its address, else the client's words; its last cell its address and
+ * the client's mark after it, or a trail entry's words (N-GO's `wordsHTML`).
+ * @param {import('./match.js').Row} r
+ * @returns {[string, string, string]}
+ */
+function cellsOf(r) {
+  const id = (/** @type {string} */ a) => (a ? `<span class="id">${esc(a)}</span>` : '');
+  const title = r.kind === 'address' || (r.addr && r.title === r.addr) ? id(r.title)
+    : r.kind === 'label' || r.kind === 'landmark' ? `<span class="reading">${esc(r.title)}</span>`
+    : r.kind === 'trail' && r.addr && r.title.endsWith(r.addr) ? esc(r.title.slice(0, -r.addr.length)) + id(r.addr)
+    : esc(r.title);
+  const entry = r.kind === 'trail' && r.n != null ? TRAIL.numbered().find((x) => x.n === r.n) : undefined;
+  const sub = entry ? GO.wordsHTML(entry.entry) : r.addr && r.sub.startsWith(r.addr) ? id(r.addr) + esc(r.sub.slice(r.addr.length)) : esc(r.sub);
+  return [id(r.addr), title, sub];
+}
+
 /** close the box: the focus back through the focus's owner — to the opener, else the walk's element, the walk's element alone where a landing passed over the box; one that left the box already stays where it went */
 export function close() {
   if (!els || !openState) return;
@@ -239,7 +261,7 @@ export function render() {
   const st = REC.indexState();
   const floor = REC.floor();
   const typed = els.input.value.trim();
-  els.rows.innerHTML = rows.map((r, i) => `<div class="hit ${i === sel ? 'sel' : ''}" id="${rowId(i)}" data-i="${i}" role="option" aria-selected="${i === sel}"><span class="a">${esc(r.addr)}</span><span>${esc(r.title)}</span><span class="a">${esc(r.sub)}${r.kind === 'landmark' ? ' ' + esc(t('F.landmark')) : ''}</span></div>`).join('');
+  els.rows.innerHTML = rows.map((r, i) => { const [addr, title, sub] = cellsOf(r); return `<div class="hit ${i === sel ? 'sel' : ''}" id="${rowId(i)}" data-i="${i}" role="option" aria-selected="${i === sel}"><span class="a">${addr}</span><span>${title}</span><span class="a">${sub}${r.kind === 'landmark' ? ' ' + esc(t('F.landmark')) : ''}</span></div>`; }).join('');
   comboState();
   const why = FACES.noBoardWords();
   const answer = why ? `<span data-string="${esc(why.id)}">${esc(why.text)}</span>` : !rows.length && typed ? `<span data-string="F.leap.none">${esc(t('F.leap.none'))}</span>` : '';

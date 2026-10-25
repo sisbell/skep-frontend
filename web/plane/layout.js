@@ -1,14 +1,16 @@
 // P-LAY — the article's lines and the columns they fold into, in world units
-// (the structure record §3.2). Layer 2, pure. State: none but a cache of a
-// pure function (`steps`). The bars the canvas draws for a document below
+// (the structure record §3.2). Layer 2, pure but for one input. State: the
+// reading face's advance as the face is rendered, set from outside
+// (`setAdvance`), and a cache of a pure function (`steps`). The bars the canvas draws for a document below
 // reading scale stand where its article's glyphs stand once T-LAYER mounts
 // it, so the handoff swaps bars for text and no line moves (law 8;
 // foundations §2.4; S1 Q7).
-// The bars are a layout of the article's own lines, never a guess at them:
-// T-ARTICLE's plan of the article — the head's lines, then each block's text
-// at its size with the inline pieces it carries — is wrapped here the way the
-// article's CSS wraps it: a column of exactly the measure's characters of the
-// article's monospace face (the style sets it in `ch`, `--measure`); a unit
+// The bars are a layout of the article's own lines: T-ARTICLE's plan of the
+// article — the head's lines, then each block's text at its size with the
+// inline pieces it carries — is wrapped here the way the article's CSS wraps
+// it: a column the measure's count of the reading face's advance wide (the
+// style sets it so, `--measure` times `--char-w`), every character counted
+// one advance at its size; a unit
 // placed on a line where its characters fit, the space after it hanging past
 // the column; a line broken at a space, after a hyphen, a dash, an ellipsis or
 // a question mark inside a word (never before closing or infix punctuation),
@@ -50,8 +52,20 @@
 // (`fitFor`) — MEASURE_CPL wherever the view holds a column at
 // the reading size with both its margins beside it, the corner on its left,
 // whole, else compact, and the edge on its right; else, the corner compact,
-// the most characters the view holds beside them. It reads the view's width
-// and the reading size alone, so zoom never changes it.
+// the most characters the view holds beside them — and the em a reading view
+// sets the text at: the reading size, smaller only where even a column of one
+// character is wider than the view beside its margins. It reads the view's
+// width and the reading size alone, so zoom never changes it.
+// The advance (`CHAR_W`): the reading face's average advance, the mean of its
+// lowercase letters and the space by the weights of the OS/2 table's average
+// character width (`ADVANCE_WEIGHTS`, `advanceOf`), measured from the face as
+// rendered and set from outside (`setAdvance`), every size derived from it —
+// a column's width, the standard size, the steps — moving with it. The face
+// is proportional, so a line wrapped here is a prediction: the client's words
+// and the identifiers a line carries, set in faces of their own, and every
+// character the face sets wider or narrower than its average are counted one
+// advance each, and T-LAYER's measure of the lines as rendered takes the
+// place of these wherever the platform sets the article.
 // Positions map to places and back (`placeOf`, `posAt`), a view reads as the
 // positions it shows and the ends it has run past (`windowIn`), the paging key
 // continues at the next column's top (`pageTarget`), and a document re-set in
@@ -61,19 +75,19 @@
 // never smaller than the one its text is set at; one whose extent is unread is
 // its first column slot (`slot`).
 // The measurements the article and this layout share are declared once here —
-// `MEASURE`, `BORDER` and the fold's measure, gutter and edge set as custom
-// properties at boot (`cssMeasures`), `LAY_FS` and `LINE_H` set on the article
-// by T-LAYER — so neither side can drift from the other. A withheld run is
-// bars of its true width (F2.1-i), and at reading scale a gap of the bars' own
-// size (`gapOf`): its face stands in it only where it fits, so the gap keeps
-// encoding the width and no face reflows the text.
-// Characters outside the monospace face (an ideograph, a fallback symbol)
-// are counted as one character each; the face sets them wider, and T-LAYER's
-// measure of the lines as rendered takes the place of these where they part.
+// `MEASURE`, `BORDER`, the advance and the fold's measure, gutter and edge set
+// as custom properties at boot (`cssMeasures`), `LAY_FS` and `LINE_H` set on
+// the article by T-LAYER — so neither side can drift from the other. A run of
+// positions with no glyphs — a withheld run, an item this client cannot show
+// — is bars of its true width, each position one advance (F2.1-i), and at
+// reading scale a gap of the bars' own size (`gapOf`): its words stand in it
+// only where they fit, so the gap keeps encoding the width and no face
+// reflows the text.
 // Figures: the measure 66 characters, a column 36 body line boxes, a gutter 2
 // em, an edge 6 em with its signs 0.5 em past the text, the standard grid 3
-// columns across by 4 down, the layout size 16 px and its line height 1.35
-// cut to the 1/64 px grid.
+// columns across by 4 down, the layout size 16 px and its line height 1.45
+// cut to the 1/64 px grid; the advance 0.438886 em where the face as rendered
+// has not been measured — Charter Regular's, by its own advances.
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-26.
 
 import { DOC_W, DOC_H } from './projection.js';
@@ -99,13 +113,13 @@ import { byteLength } from '../util.js';
 
 /**
  * @typedef {Object} Row — a block box of the article, holding lines of inline content
- * @property {'head' | 'text' | 'withheld' | 'chrome'} kind the head's lines; a block of the document (its text, a record's words, a reference, an item not rendered); a withheld run; the page's chrome after the blocks
+ * @property {'head' | 'text' | 'gap' | 'chrome'} kind the head's lines; a block of the document (its text, a record's words, a reference); a gap, positions with no glyphs — a withheld run, an item this client cannot show; the page's chrome after the blocks
  * @property {number | null} pos the first position of the block the row opens; null on a row that opens none
  * @property {number} size the size its box is set at, in the body's em: each of its lines is that size's line box (`lineBox`)
  * @property {Piece[]} pieces
  * @property {number} before the margin above it, in the body's em
  * @property {number} after the margin below it, in the body's em
- * @property {number} width a withheld run's positions (its bars); 0 on every other row
+ * @property {number} width a gap's positions (its bars); 0 on every other row
  * @property {Keep} keep where a column may break at it
  */
 
@@ -119,7 +133,7 @@ import { byteLength } from '../util.js';
  * @property {number | null} pos the block it belongs to, by its first position; null in the head and the chrome
  * @property {number} nth its index among its block's lines (the head's and the chrome's among their row's)
  * @property {boolean} brk a column may break before it (`Row.keep`)
- * @property {number | null} at the document's position its first own character stands at — a record's and a withheld run's lines their block's, a withheld run's bars each a line of its positions on — null in the head and the chrome
+ * @property {number | null} at the document's position its first own character stands at — a record's lines their block's, a gap's bars each a line of its positions on — null in the head and the chrome
  * @property {number} [gap] the positions before its block the article does not hold (T-LAYER marks them): a column breaks before it, those positions estimated in columns of their own
  */
 
@@ -179,23 +193,46 @@ import { byteLength } from '../util.js';
  * @property {number} y
  * @property {number} w
  * @property {number} h
- * @property {boolean} withheld
+ * @property {boolean} gap it stands for positions with no glyphs — a withheld run, an item this client cannot show — which the canvas draws the lighter
  * @property {number} line the line it stands for, an index into the fold's lines: no bar is drawn for a line that stands as text
  */
 
-/** the characters per em of the monospace face the layout assumes */
-export const CHAR_W = 0.6;
+/**
+ * The weights of the OS/2 table's average character width (TrueType's
+ * `xAvgCharWidth` before its version 3): each lowercase letter and the space
+ * by its share of English text, a thousand in all — the sample a face's
+ * average advance is the mean of (`advanceOf`).
+ */
+export const ADVANCE_WEIGHTS = Object.freeze({
+  a: 64, b: 14, c: 27, d: 35, e: 100, f: 20, g: 14, h: 42, i: 63, j: 3, k: 6, l: 35, m: 20,
+  n: 56, o: 56, p: 17, q: 4, r: 49, s: 56, t: 71, u: 31, v: 10, w: 18, x: 3, y: 18, z: 2, ' ': 166,
+});
+
+/**
+ * A face's average advance (see the head): each sample character's advance
+ * by its weight (`ADVANCE_WEIGHTS`), over the weights' sum.
+ * @param {(ch: string) => number} advance a character's advance in the face, in em
+ * @returns {number} em per character
+ */
+export function advanceOf(advance) {
+  let sum = 0, n = 0;
+  for (const [c, w] of Object.entries(ADVANCE_WEIGHTS)) { sum += advance(c) * w; n += w; }
+  return sum / n;
+}
+
+/** the reading face's average advance, in em per character (see the head): Charter Regular's by its own advances until the face as rendered is measured (`setAdvance`) */
+export let CHAR_W = 0.438886;
 /** the size the article is laid out at, in px (S1): T-LAYER's layout, where a border's px stands against the em */
 export const LAY_FS = 16;
 /**
- * The article's line height, a ratio of each element's own size: 1.35, cut
+ * The article's line height, a ratio of each element's own size: 1.45, cut
  * so that the body's line box at LAY_FS stands on the 1/64 px grid the
  * engines lay out on. T-LAYER sets it unitless on the article, so every
  * element spaces its lines in proportion to its own size (`lineBox`), and
  * the body's lines and the bars' keep one pitch however many lines down a
  * block stands.
  */
-export const LINE_H = Math.round(1.35 * LAY_FS * 64) / 64 / LAY_FS;
+export const LINE_H = Math.round(1.45 * LAY_FS * 64) / 64 / LAY_FS;
 
 /** the layout unit the engines place boxes on, in px: 1/64 */
 const GRID = 64;
@@ -204,9 +241,9 @@ const GRID = 64;
  * The height of a line box whose strut is set at `size`, in the body's em:
  * `LINE_H` of that size, as the engine lays it out at LAY_FS — the font size
  * taken onto the 1/64 px grid, rounded, then the line height on it, floored.
- * The rule is Chrome's, measured on the gate's machine (Chrome 155: 0.8 em a
- * line box of 17.265625 px, 0.72 em 15.53125, 1.25 em 26.984375, 1.1 em
- * 23.734375); the layout case holds it to the line boxes the mounted article
+ * The rule is Chrome's, measured on the gate's machine (Chrome 155, Charter:
+ * 0.8 em a line box of 18.546875 px, 0.72 em 16.6875, 1.25 em 29, 1.1 em
+ * 25.5); the layout case holds it to the line boxes the mounted article
  * stands on, and the shipping engine's are the owner's to look at (FP-19).
  * `lineBox(1)` is `LINE_H`.
  * @param {number} size
@@ -230,8 +267,6 @@ export const MEASURE = Object.freeze({
   head: 0.8,
   /** a heading: `#` is set as h2, `##` as h3; deeper ones at the body's size */
   h2: 1.25, h3: 1.1,
-  /** a record's keys */
-  derived: 0.85,
   /** the scene-offer and the gap on either side of it */
   offer: 0.8, offerGap: 0.6,
   /** the sameness hairline's label and the room after it */
@@ -242,8 +277,8 @@ export const MEASURE = Object.freeze({
   sym: 0.75, symPad: 0.3, symGap: 0.3,
   /** a sign in a column's edge: the others' count, a withheld run's mark */
   count: 0.72,
-  /** a withheld run's arm and clause in its gap, and the room above each */
-  face: 0.8, faceGap: 0.3,
+  /** the room above a withheld run's arm and above its clause, in its gap */
+  faceGap: 0.3,
   /** the sameness boundary's padding */
   samePad: 0.25,
 });
@@ -265,8 +300,8 @@ export const EDGE_GAP = 0.5;
 export const STANDARD_GRID = Object.freeze(/** @type {[number, number]} */ ([3, 4]));
 /** a column's text width at a measure, in the body's em */
 export const columnW = (cpl = MEASURE_CPL) => cpl * CHAR_W;
-/** a column's text width at the full measure, in the body's em */
-export const COLUMN_W = columnW();
+/** a column's text width at the full measure, in the body's em: the advance's (`setAdvance`) */
+export let COLUMN_W = columnW();
 /** a column's depth, in the body's em */
 export const COLUMN_H = COLUMN_LINES * LINE_H;
 /** the pitch of the column slots across at a measure, in the body's em: a column's text, its edge and a gutter */
@@ -286,8 +321,9 @@ export const borderEm = (/** @type {number} */ px) => px / LAY_FS;
 
 /**
  * The custom properties the article's CSS reads, one per shared value: the
- * full measure as a bare count, which the style multiplies by `1ch` — the
- * text layer sets the measure in force over it (`fitFor`).
+ * full measure as a bare count and the advance as a bare count of em, which
+ * the style multiplies — the text layer sets the measure in force over the
+ * first (`fitFor`), and APP sets the advance again once it is measured.
  * @returns {Record<string, string>}
  */
 export function cssMeasures() {
@@ -295,13 +331,14 @@ export function cssMeasures() {
   const M = MEASURE;
   return {
     '--gap': em(M.gap), '--heading-before': em(M.headingBefore), '--heading-after': em(M.headingAfter),
-    '--head': em(M.head), '--h2': em(M.h2), '--h3': em(M.h3), '--derived': em(M.derived),
+    '--head': em(M.head), '--h2': em(M.h2), '--h3': em(M.h3),
     '--offer': em(M.offer), '--offer-gap': em(M.offerGap), '--label': em(M.label), '--label-gap': em(M.labelGap),
     '--mark': em(M.mark), '--mark-pad': em(M.markPad), '--mark-gap': em(M.markGap),
     '--sym': em(M.sym), '--sym-pad': em(M.symPad), '--sym-gap': em(M.symGap),
-    '--count': em(M.count), '--face': em(M.face), '--face-gap': em(M.faceGap), '--same-pad': em(M.samePad),
+    '--count': em(M.count), '--face-gap': em(M.faceGap), '--same-pad': em(M.samePad),
     '--border-box': px(BORDER.box), '--border-same': px(BORDER.same),
-    '--measure': String(MEASURE_CPL), '--gutter': em(GUTTER), '--edge': em(EDGE), '--edge-gap': em(EDGE_GAP), '--line-box': em(LINE_H),
+    '--measure': String(MEASURE_CPL), '--char-w': String(CHAR_W), '--line-h': String(LINE_H),
+    '--gutter': em(GUTTER), '--edge': em(EDGE), '--edge-gap': em(EDGE_GAP), '--line-box': em(LINE_H),
   };
 }
 
@@ -315,9 +352,10 @@ export function cssMeasures() {
  */
 
 /**
- * @typedef {Object} Fit — the measure a view sets every document's line at (see the head), and the corner's form it holds a column with at the reading size
+ * @typedef {Object} Fit — the measure a view sets every document's line at (see the head), the corner's form it holds a column with at the reading size, and the em a reading view sets the text at
  * @property {number} cpl the measure, in characters of a document's face
  * @property {boolean} compact the corner stands compact beside it: the view holds the full measure with the corner compact alone, or narrows it
+ * @property {number} px the em a reading view sets a document's text at, in px: the reading size, smaller only where even a column of one character is wider than the view beside its margins, and never below 1
  */
 
 /**
@@ -326,17 +364,22 @@ export function cssMeasures() {
  * margins beside it: on its left the corner and its gap, on its right the
  * column's edge, and a gutter's room between them and the view's sides; the
  * corner whole, else compact; else, the corner compact, the most whole
- * characters the view holds beside them, one at the least. It reads the
- * view's width and the reading size alone: zoom never changes it.
+ * characters the view holds beside them, one at the least — and the em a
+ * reading view sets the text at: the reading size where the view holds a
+ * character beside the compact corner and the column's margins, else the em
+ * at which it holds that one. It reads the view's width and the reading size
+ * alone: zoom never changes it.
  * @param {number} vw the view's width, in px
- * @param {number} readPx the reading size: the em a reading view sets a document's text at, in px
+ * @param {number} readPx the reading size: the em a reading view sets a document's text at where the view holds it, in px
  * @param {CornerSize} corner
  * @returns {Fit}
  */
 export function fitFor(vw, readPx, corner) {
   const holds = (/** @type {number} */ cw) => Math.floor((vw - cw - corner.gap - (EDGE + GUTTER) * readPx) / (CHAR_W * readPx) + 1e-9);
-  if (holds(corner.whole) >= MEASURE_CPL) return { cpl: MEASURE_CPL, compact: false };
-  return { cpl: Math.max(1, Math.min(MEASURE_CPL, holds(corner.compact))), compact: true };
+  if (holds(corner.whole) >= MEASURE_CPL) return { cpl: MEASURE_CPL, compact: false, px: readPx };
+  const cpl = holds(corner.compact);
+  const px = cpl >= 1 ? readPx : Math.max(1, Math.min(readPx, (vw - corner.compact - corner.gap) / (CHAR_W + EDGE + GUTTER)));
+  return { cpl: Math.max(1, Math.min(MEASURE_CPL, cpl)), compact: true, px };
 }
 
 // ---- the steps --------------------------------------------------------------------------------------------------
@@ -359,11 +402,28 @@ export function standardFs(room, cpl = MEASURE_CPL) {
   return Math.min(room.w / (a * pitchW(cpl)), room.h / (d * PITCH_H));
 }
 
-/** the standard size of a depth-0 document's room (P-PROJ's box) at the full measure: the plane's standard type, a place's representative em */
-export const STANDARD_FS = standardFs({ w: DOC_W, h: DOC_H });
+/** the standard size of a depth-0 document's room (P-PROJ's box) at the full measure: the plane's standard type, a place's representative em — the advance's (`setAdvance`) */
+export let STANDARD_FS = standardFs({ w: DOC_W, h: DOC_H });
 
-/** @type {Map<string, Step>} the steps worked out, by room, step and measure: a cache of a pure function */
+/** @type {Map<string, Step>} the steps worked out, by room, step and measure: a cache of a pure function of them and the advance */
 const steps = new Map();
+
+/**
+ * The reading face's advance as the face is rendered (see the head; APP
+ * measures it at boot, and again as a face arrives late): the column's width,
+ * the standard size and the steps move with it. A value that is no positive
+ * number, or the advance standing, changes nothing.
+ * @param {number} w em per character
+ * @returns {boolean} the advance moved
+ */
+export function setAdvance(w) {
+  if (!(w > 0) || w === CHAR_W) return false;
+  CHAR_W = w;
+  COLUMN_W = columnW();
+  STANDARD_FS = standardFs({ w: DOC_W, h: DOC_H });
+  steps.clear();
+  return true;
+}
 
 /**
  * A room's step k at a measure: 0 the standard size; each step after it the
@@ -523,11 +583,12 @@ export function wrap(row, cpl) {
 }
 
 /**
- * A withheld run's gap (see the head; F2.1-i): the width of each of its
- * lines, in characters of the body's face — one line
- * for each measure's count of its positions, the last its remainder, one line
- * of one position at the least. Its bars, and at reading scale its gap, which
- * holds the run's face only where the face fits (T-ARTICLE's).
+ * A gap's lines (see the head; F2.1-i): positions with no glyphs — a
+ * withheld run, an item this client cannot show — each one advance, the width
+ * of each of its lines in characters of the body's face: one line for each
+ * measure's count of its positions, the last its remainder, one line of one
+ * position at the least. Its bars, and at reading scale the room it takes,
+ * which holds its words only where they fit (T-ARTICLE's).
  * @param {number} width the run's positions
  * @param {number} cpl the measure
  * @returns {number[]}
@@ -539,8 +600,8 @@ export function gapOf(width, cpl) {
 /**
  * The article's lines: its rows wrapped at the measure and stacked from its
  * first line's top, each line box as tall as `wrap` gives it, the margins
- * between rows collapsing to the larger; a withheld run's rows its gap's lines
- * (`gapOf`); each line marked where a column may break before it, by the keep
+ * between rows collapsing to the larger; a gap's rows its lines (`gapOf`);
+ * each line marked where a column may break before it, by the keep
  * of its row and of the heading before it (`Row.keep`), and where in the
  * document's bytes it starts.
  * @param {Row[]} rows the article's plan (T-ARTICLE's `articlePlan`)
@@ -562,7 +623,7 @@ export function layoutOf(rows, cpl = MEASURE_CPL) {
     if (r.pos != null) { pos = r.pos; blocks.set(pos, { first: lines.length, n: 0 }); }
     else if (r.kind === 'head' || r.kind === 'chrome') pos = null;
     /** @type {Wrapped[]} */
-    const set = r.kind === 'withheld'
+    const set = r.kind === 'gap'
       ? gapOf(r.width, cpl).map((w, i) => ({ w, size: r.size, h: lineBox(r.size), bytes: i * cpl }))
       : wrap(r, cpl);
     margin = Math.max(margin, r.before);
@@ -814,7 +875,7 @@ export function bars(f) {
     for (let i = c.first; i < c.first + c.n; i++) {
       const l = f.lines[i];
       if (l.kind === 'head' || l.kind === 'chrome' || l.w <= 0) continue;
-      out.push({ x: c.x, y: c.y + (l.top - c.top + l.h / 2 - 0.2 * l.size) * f.fs, w: l.w * CHAR_W * f.fs, h: 0.5 * l.size * f.fs, withheld: l.kind === 'withheld', line: i });
+      out.push({ x: c.x, y: c.y + (l.top - c.top + l.h / 2 - 0.2 * l.size) * f.fs, w: l.w * CHAR_W * f.fs, h: 0.5 * l.size * f.fs, gap: l.kind === 'gap', line: i });
     }
     return out;
   });

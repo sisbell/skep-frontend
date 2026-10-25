@@ -299,9 +299,10 @@ test('an end LK draws at a withheld run: its card says the end is withheld and w
   const end = (/** @type {string} */ l) => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === l));
   assert.deepEqual([end(A).pos, end(A).width, end(A).run?.origin], [n + 1, 8, O], 'drawn at the run\'s start, the run\'s whole extent');
   /** a card's two ends as a person reads them, far first: which end, its document, its words */
-  const ends = () => [...p.host.innerHTML.matchAll(/<div class="end (far|near)"><span class="k">[^<]*<\/span> <span class="code">([^<]*)<\/span>.*?<div class="quoted">([^<]*)<\/div>/g)].map((m) => [m[1], m[2], text(m[3])]);
+  const ends = () => [...p.host.innerHTML.matchAll(/<div class="end (far|near)"><span class="k">[^<]*<\/span> <span class="code id">([^<]*)<\/span>.*?<div class="quoted">((?:[^<]|<\/?span[^>]*>)*)<\/div>/g)].map((m) => [m[1], m[2], text(m[3].replace(/<[^>]*>/g, ''))]);
   await ANATOMY.open(end(A), null);
   assert.deepEqual(ends(), [['far', FAR, '…'], ['near', D, t('F.corner.withheld', { owner: '1.0.2' })]], 'the other end shown; this end withheld, by the owner of the run\'s origin — never D\'s');
+  assert.ok(p.host.innerHTML.includes(`<div class="quoted">withheld · <span class="id">1.0.2</span></div>`), `the end's words in their faces: the client's, its owner the identifier's (issue #16): ${p.host.innerHTML}`);
   assert.ok(!fake.asked.some((k) => k.includes('"retrieve_v"')), `no read of the withheld bytes: ${fake.asked}`);
   HOST.dismiss();
   // the run's one symbol, standing for both, pressed: both listed at it, each row its own end's card
@@ -310,7 +311,7 @@ test('an end LK draws at a withheld run: its card says the end is withheld and w
   const list = HOST.currentState();
   assert.deepEqual([list?.id, list?.kind, list?.anchor], [`ends:${D}:${n + 1}`, 'list', { el, span: { addr: D, pos: n + 1, width: 8 } }], 'a list at the symbol, at the run\'s positions where the symbol is taken down');
   assert.deepEqual(p.controls(), ['t0', 't1', 'x'], 'a row for each end');
-  assert.ok(p.host.innerHTML.includes(`→ ${FAR}</button>`), 'each row naming its far end as its tail would');
+  assert.ok(p.host.innerHTML.includes(`→ <span class="id">${FAR}</span></button>`), 'each row naming its far end as its tail would, its address in the identifier\'s face');
   const act = list?.acts?.t1;
   assert.ok(act);
   await act(/** @type {any} */ (p.kid('t1')), false);

@@ -19,7 +19,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
-import { bundlesOf, beamOf, labelPlace, labelText, pastSigns, inkOf, strokeOf, pointOn, strokeIn } from './beams.js';
+import { bundlesOf, beamOf, labelPlace, labelText, labelRuns, pastSigns, inkOf, strokeOf, pointOn, strokeIn } from './beams.js';
 import { edgeStub } from '../plane/camera.js';
 import { HUE, NEUTRAL_HUE, STUB } from '../plane/register.js';
 import { t } from '../strings.js';
@@ -381,6 +381,15 @@ test('a bundle whose every beam floats says so at its end, "its passage is not i
   assert.ok(label().startsWith(H + ' · 2') && label().endsWith(words), label());
   REC.takeProjection(THIRD, 2, H, [{ pos: 9, width: 3 }]);
   assert.equal(label(), H + ' · 2', 'one lands: no word of floating');
+});
+
+test('a bundle\'s label is set run by run in its faces: the far document\'s address the identifier\'s, its index label the reading face\'s, its count the client\'s (issue #16)', () => {
+  build([OWN, THIRD]);
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: H, kind: 'edition', label: 'The far document', standing: 'public' }], counts: [], state: { arm: 'complete' } }));
+  REC.takeProjection(OWN, 2, H, [{ pos: 1, width: 5 }]); REC.takeProjection(THIRD, 2, H, [{ pos: 9, width: 3 }]);
+  const b = bundlesOf(met([D]))[0];
+  assert.deepEqual(labelRuns(b), [{ text: H, face: 'ident' }, { text: ' · ', face: 'client' }, { text: 'The far document', face: 'reading' }, { text: ' · 2', face: 'client' }]);
+  assert.equal(labelText(b), `${H} · The far document · 2`, 'its words the runs\' words');
 });
 
 test('a bundle whose every beam\'s far text holds only part of its passage says so at its end in the line its landing says; one whose beams part says nothing of it (issue #153; P44)', () => {

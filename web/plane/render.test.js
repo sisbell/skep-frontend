@@ -37,7 +37,7 @@ test('where no board is held the plane names none — no board\'s outline, label
     CAM.set(v);
     RENDER.draw();
     const s = RENDER.stats;
-    return { labels: [...new Set([...s.labels, ...s.labelsLeftOut].map((l) => l.kind + ' ' + l.place))], texts: texts.slice(), ring: s.ring };
+    return { labels: [...new Set([...s.labels, ...s.labelsLeftOut].map((l) => l.kind + ' ' + l.place))], texts: texts.slice(), lines: s.labels.flatMap((l) => l.lines.map((x) => x.text)), ring: s.ring };
   };
   /** the launch's view, the board's extent; and an account's cell at mid scale */
   const whole = CAM.viewForCell(boardCell('1'), 0.92), mid = CAM.viewForCell(accountCell('1.0.1'), 0.85);
@@ -52,7 +52,7 @@ test('where no board is held the plane names none — no board\'s outline, label
     }
     REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
     const atWhole = frame(whole), atMid = frame(mid);
-    assert.ok(atWhole.labels.includes('board 1') && atWhole.texts.some((s) => s.includes('http://127.0.0.1:8642')) && atWhole.ring != null, `the board held: its label, its origin set, the ring at the root: ${JSON.stringify(atWhole)}`);
+    assert.ok(atWhole.labels.includes('board 1') && atWhole.lines.some((s) => s.includes('http://127.0.0.1:8642')) && atWhole.texts.length > 0 && atWhole.ring != null, `the board held: its label, its origin set, the ring at the root: ${JSON.stringify(atWhole)}`);
     assert.ok(atMid.labels.includes('frame 1.0.1'), `and the frame of the account under the view: ${JSON.stringify(atMid.labels)}`);
   } finally { REC._reset(); }
 });

@@ -1,7 +1,8 @@
 // P-LABEL — the plane's labels, set in one pass (the structure record §3.2;
 // P-RENDER's labels, their placement kept pure so it is tested apart from
-// the canvas). Layer 1, pure: the canvas's own measure is an input. State:
-// none.
+// the canvas). Layer 1, pure: the canvas's own measure is an input, and the
+// canvas a run is measured and drawn on is handed to the two helpers that do
+// it (`runWidth`, `drawRun`), P-RENDER's and BM's alike. State: none.
 // Each label is drawn only where its place holds it (foundations §2.1;
 // F-9): a label is set at its rule's size and never below P-REG's
 // LABEL_MIN_PX, and
@@ -35,6 +36,15 @@
 // meeting one set before it — the held label of the region holding its place
 // — stands just below it. A label with no hold — the board's, a place the
 // line names, a count — keeps the rule above.
+// The faces (P-REG's FACE): each part is set in its face — the client's
+// where it names none, an address its own the identifier's, a first line the
+// reading face's — and a part's words may carry a stretch in another face
+// (`inFace`): an address inside the client's words, a first line before the
+// client's mark after it. The pass measures and sets a part run by run
+// (`runsOf`), each run in its face; a cut never falls inside an address, and
+// a part wrapped at its spaces keeps each word's runs. The client's figures
+// are tabular: the canvas sets each in a cell as wide as the face's widest
+// figure (`figuresOf`), as the page's style sets them.
 // A connection's count (foundations §2.1's register; P44) names a pair of
 // places and no shape, so every place's shape blocks it; it stands on its
 // stroke where its room meets none of them (`onStroke`): the clear stretch
@@ -48,10 +58,11 @@
 // and above; a meeting more than half a px each way.
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-26.
 
-import { LABEL_MIN_PX, HOLD } from './register.js';
+import { LABEL_MIN_PX, HOLD, FACE } from './register.js';
 
 /** @typedef {{x: number, y: number, w: number, h: number}} Rect a screen rect */
 /** @typedef {{x: number, y: number}} Point a screen point */
+/** @typedef {import('./register.js').Face} Face */
 
 /** a label's line box, in its size's em */
 export const LINE_BOX = 1.2;
@@ -59,8 +70,131 @@ export const LINE_BOX = 1.2;
 export const STRONGER = 0.5;
 const ELLIPSIS = '…';
 
-/** the face a label is set in, at a size and weight: the canvas's, and the held label's over a mounted article (T-LAYER's), so the pass's measure and the text set agree */
-export const face = (/** @type {number} */ px, weight = 'normal') => `${weight === 'normal' ? '' : weight + ' '}${px}px ui-monospace, Menlo, monospace`;
+/** the marks opening a stretch of a part's words set in a face of its own, and the one closing it (see the head): private-use characters, which no label's words hold */
+const OPEN = Object.freeze({ reading: '\uE002', ident: '\uE001' });
+const CLOSE = '\uE000';
+/** is a character one of the faces' marks */
+const isMark = (/** @type {string} */ c) => c === OPEN.reading || c === OPEN.ident || c === CLOSE;
+
+/**
+ * A stretch of a part's words set in a face of its own (see the head): an
+ * address or a fingerprint in the identifier's, a document's words in the
+ * reading face's; nothing where the words are empty.
+ * @param {'reading' | 'ident'} f
+ * @param {string} text
+ */
+export const inFace = (f, text) => (text ? OPEN[f] + text + CLOSE : '');
+
+/** a part's words without their faces' marks: what a person reads */
+export const plain = (/** @type {string} */ text) => [...text].filter((c) => !isMark(c)).join('');
+
+/**
+ * @typedef {Object} Run — a stretch of a label's words in one face
+ * @property {string} text
+ * @property {Face} face
+ */
+
+/**
+ * A part's words as runs of one face each (see the head): each marked
+ * stretch in the face its mark names — one opened and never closed running
+ * to the words' end — and the rest in `base`, the part's own.
+ * @param {string} text
+ * @param {Face} base
+ * @returns {Run[]}
+ */
+export function runsOf(text, base) {
+  /** @type {Run[]} */
+  const out = [];
+  /** @type {Face} */
+  let f = base;
+  let at = '';
+  const flush = () => { if (at) out.push({ text: at, face: f }); at = ''; };
+  for (const c of text) {
+    if (c === OPEN.ident || c === OPEN.reading) { flush(); f = c === OPEN.ident ? 'ident' : 'reading'; }
+    else if (c === CLOSE) { flush(); f = base; }
+    else at += c;
+  }
+  flush();
+  return out;
+}
+
+/** the figures, which the client's face sets tabular (see the head) */
+const FIGURE = /[0-9]+/g;
+
+/**
+ * A run of the client's words as the canvas sets it with tabular figures
+ * (see the head): its stretches of figures apart from the rest, in order;
+ * each figure stands in a cell as wide as the face's widest.
+ * @param {string} text
+ * @returns {Array<{text: string, figures: boolean}>}
+ */
+export function figuresOf(text) {
+  /** @type {Array<{text: string, figures: boolean}>} */
+  const out = [];
+  let at = 0;
+  for (const m of text.matchAll(FIGURE)) {
+    const i = /** @type {number} */ (m.index);
+    if (i > at) out.push({ text: text.slice(at, i), figures: false });
+    out.push({ text: m[0], figures: true });
+    at = i + m[0].length;
+  }
+  if (at < text.length) out.push({ text: text.slice(at), figures: false });
+  return out;
+}
+
+/** the font a label's run is set in, at a size, a weight and its face (P-REG's FACE): the canvas's, and the held label's over a mounted article (T-LAYER's), so the pass's measure and the text set agree */
+export const face = (/** @type {number} */ px, weight = 'normal', /** @type {Face} */ f = 'client') => `${weight === 'normal' ? '' : weight + ' '}${px}px ${FACE[f]}`;
+
+/** the client's widest figure on a canvas at a size and weight: the cell each of its figures stands in (see the head) */
+export function figureCell(/** @type {CanvasRenderingContext2D} */ c, /** @type {number} */ px, /** @type {string} */ weight) {
+  c.font = face(px, weight, 'client');
+  return Math.max(...'0123456789'.split('').map((d) => c.measureText(d).width));
+}
+
+/**
+ * A run's width on a canvas at a size and weight in its face (see the head):
+ * the client's figures each in a cell as wide as its widest (`figureCell`).
+ * @param {CanvasRenderingContext2D} c
+ * @param {Run} run
+ * @param {number} px
+ * @param {string} weight
+ * @returns {number}
+ */
+export function runWidth(c, run, px, weight) {
+  if (run.face !== 'client') { c.font = face(px, weight, run.face); return c.measureText(run.text).width; }
+  const cell = figureCell(c, px, weight);
+  c.font = face(px, weight, 'client');
+  return figuresOf(run.text).reduce((n, x) => n + (x.figures ? x.text.length * cell : c.measureText(x.text).width), 0);
+}
+
+/**
+ * A run drawn on a canvas at a size and weight in its face, its left edge at
+ * `x` on the line the context's baseline names at `y` — the client's figures
+ * each centred in its cell, as it is measured (`runWidth`).
+ * @param {CanvasRenderingContext2D} c
+ * @param {Run} run
+ * @param {number} x
+ * @param {number} y
+ * @param {number} px
+ * @param {string} weight
+ * @returns {number} its width
+ */
+export function drawRun(c, run, x, y, px, weight) {
+  const align = c.textAlign;
+  c.textAlign = 'left';
+  let at = x;
+  if (run.face !== 'client') { c.font = face(px, weight, run.face); c.fillText(run.text, x, y); at += c.measureText(run.text).width; }
+  else {
+    const cell = figureCell(c, px, weight);
+    c.font = face(px, weight, 'client');
+    for (const s of figuresOf(run.text)) {
+      if (!s.figures) { c.fillText(s.text, at, y); at += c.measureText(s.text).width; continue; }
+      for (const d of s.text) { c.fillText(d, at + (cell - c.measureText(d).width) / 2, y); at += cell; }
+    }
+  }
+  c.textAlign = align;
+  return at - x;
+}
 
 /**
  * The size a label is set at: its rule's size on the half-px grid, never
@@ -81,11 +215,12 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
 
 /**
  * @typedef {Object} Part — a stretch of a label in one size and ink
- * @property {string} text its white space collapsed as it is set; an empty part sets nothing and is no part
+ * @property {string} text its white space collapsed as it is set, a stretch of it in another face marked (`inFace`); an empty part sets nothing and is no part
  * @property {number} px the size its rule asks for; set at `sizeOf(px)`
  * @property {string} ink
  * @property {Fit} fit
  * @property {string} [weight] its face's weight; the regular where absent
+ * @property {Face} [face] the face its words are set in, but a stretch marked in another; the client's where absent
  */
 
 /** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'doc' | 'connection' | 'tail' | 'pip'} LabelKind the place a label names; 'connection' a mid connection's count; 'tail' a tail's far end in words, or its count; 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
@@ -120,7 +255,8 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
 
 /**
  * @typedef {Object} SetLine — one line the pass set
- * @property {string} text
+ * @property {string} text its words, as a person reads them
+ * @property {Run[]} runs its words run by run, each in its face, as they are set
  * @property {number} px the size it is set at
  * @property {string} ink
  * @property {string} weight
@@ -151,7 +287,17 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
  * @property {Reason} reason
  */
 
-/** @typedef {(text: string, px: number, weight: string) => number} Measure a string's width set at a size and weight, in px */
+/** @typedef {(text: string, px: number, weight: string, face: Face) => number} Measure a run's width set at a size and weight in a face, in px — the client's figures each in a cell as wide as the face's widest (`figuresOf`) */
+
+/**
+ * A part's words' width, run by run (`runsOf`), each run in its face.
+ * @param {Measure} measure
+ * @param {string} text
+ * @param {number} px
+ * @param {string} weight
+ * @param {Face} base the part's face
+ */
+const wideOf = (measure, text, px, weight, base) => runsOf(text, base).reduce((w, r) => w + measure(r.text, px, weight, r.face), 0);
 
 /** do two rects overlap by more than half a px each way? */
 const meets = (/** @type {Rect} */ a, /** @type {Rect} */ b) =>
@@ -171,16 +317,43 @@ function past(r, room) {
 
 /**
  * The longest start of a text that fits with its ellipsis, or null where not
- * even its first character does.
+ * even its first character does — never ending inside an address, which a
+ * cut turns into another (F-9).
  * @param {string} text
  * @param {(s: string) => boolean} fits
  */
 function cutTo(text, fits) {
   const ch = [...text];
+  /** @type {number[]} the lengths a start may take: each after a character of the words, or after an address's close, never inside an address */
+  const ends = [];
+  let inIdent = false, words = false;
+  ch.forEach((c, i) => {
+    if (c === OPEN.ident) inIdent = true;
+    else if (c === CLOSE) inIdent = false;
+    if (!isMark(c)) words = true;
+    if (words && !inIdent && (!isMark(c) || c === CLOSE)) ends.push(i + 1);
+  });
   const at = (/** @type {number} */ n) => ch.slice(0, n).join('').trimEnd() + ELLIPSIS;
-  let lo = 0, hi = ch.length;
-  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (fits(at(mid))) lo = mid; else hi = mid - 1; }
-  return lo ? at(lo) : null;
+  let lo = -1, hi = ends.length - 1;
+  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (fits(at(ends[mid]))) lo = mid; else hi = mid - 1; }
+  return lo >= 0 ? at(ends[lo]) : null;
+}
+
+/** a part's words at their spaces, each word keeping its runs' faces (see the head) */
+function wordsOf(/** @type {string} */ text) {
+  /** @type {string[]} */
+  const out = [];
+  // the mark of the stretch the walk stands in, '' in the part's own face; the word's, as its last character was set
+  let open = '', inWord = '', word = '';
+  for (const c of text) {
+    if (c === OPEN.ident || c === OPEN.reading) { open = c; continue; }
+    if (c === CLOSE) { open = ''; continue; }
+    if (c === ' ') { if (word) out.push(word + (inWord ? CLOSE : '')); word = ''; inWord = ''; continue; }
+    if (open !== inWord) { word += (inWord ? CLOSE : '') + open; inWord = open; }
+    word += c;
+  }
+  if (word) out.push(word + (inWord ? CLOSE : ''));
+  return out;
 }
 
 /** words set at their spaces, each line holding as many as fit */
@@ -207,7 +380,7 @@ function linesOf(p, rows, fits) {
   const text = p.text.trim().replace(/\s+/g, ' ');
   if (p.fit === 'one') return fits(text) ? [text] : null;
   if (p.fit === 'cut') { const c = fits(text) ? text : cutTo(text, fits); return c ? [c] : null; }
-  const words = text.split(' ');
+  const words = wordsOf(text);
   if (p.fit === 'wrap') return words.every(fits) ? wrapWords(words, fits) : null;
   /** @type {string[]} */
   const fitted = [];
@@ -254,7 +427,8 @@ export function across(rects, y, h, pad) {
 /**
  * @typedef {Object} HeldPart — a part a held label sets on its one line
  * @property {Part} part
- * @property {string} text what it sets: its own words, or a first line cut, ending in its ellipsis
+ * @property {string} text what it sets, as a person reads it: its own words, or a first line cut, ending in its ellipsis
+ * @property {Run[]} runs what it sets, run by run, each in its face
  * @property {number} px the size it is set at
  * @property {string} weight
  * @property {number} x its left edge, in px from the line's start
@@ -274,9 +448,9 @@ export function across(rects, y, h, pad) {
  * @returns {HeldPart[] | null} null where the head does not fit whole
  */
 export function heldLine(parts, width, measure) {
-  const ps = parts.map((p) => ({ p, text: p.text.trim().replace(/\s+/g, ' '), px: sizeOf(p.px), weight: p.weight || 'normal' })).filter((x) => x.text);
+  const ps = parts.map((p) => ({ p, text: p.text.trim().replace(/\s+/g, ' '), px: sizeOf(p.px), weight: p.weight || 'normal', face: p.face || /** @type {Face} */ ('client') })).filter((x) => plain(x.text));
   if (!ps.length) return null;
-  const wide = (/** @type {typeof ps[number]} */ x, /** @type {string} */ s) => measure(s, x.px, x.weight);
+  const wide = (/** @type {typeof ps[number]} */ x, /** @type {string} */ s) => wideOf(measure, s, x.px, x.weight, x.face);
   const gap = (/** @type {typeof ps[number]} */ x) => wide(x, ' ');
   let used = wide(ps[0], ps[0].text);
   if (used > width + 1e-6) return null;
@@ -297,7 +471,7 @@ export function heldLine(parts, width, measure) {
   return ps.filter((x) => kept.has(x)).map((x, i) => {
     const text = /** @type {string} */ (kept.get(x)), w = wide(x, text);
     if (i) at += gap(x);
-    const out = { part: x.p, text, px: x.px, weight: x.weight, x: at, w };
+    const out = { part: x.p, text: plain(text), runs: runsOf(text, x.face), px: x.px, weight: x.weight, x: at, w };
     at += w;
     return out;
   });
@@ -323,7 +497,7 @@ export function setLabels(labels, shapes, view, measure) {
   const strong = shapes.filter((s) => s.alpha >= STRONGER);
   const top = view.y + HOLD.gap;
   for (const l of labels) {
-    const parts = l.parts.filter((p) => p.text.trim());
+    const parts = l.parts.filter((p) => plain(p.text).trim());
     if (l.hold && parts.length && l.y < top - 1e-6) {
       const r = held(l, l.hold, parts);
       if (r.label) { set.push(r.label); taken.push(r.label.within); }
@@ -337,9 +511,9 @@ export function setLabels(labels, shapes, view, measure) {
     let y = l.y, i = 0;
     for (; i < parts.length && !why; i++) {
       const p = parts[i];
-      const px = sizeOf(p.px), weight = p.weight || 'normal', lh = px * LINE_BOX;
+      const px = sizeOf(p.px), weight = p.weight || 'normal', lh = px * LINE_BOX, base = p.face || 'client';
       const width = l.align === 'center' ? 2 * Math.min(l.x - l.within.x, l.within.x + l.within.w - l.x) : l.within.x + l.within.w - l.x;
-      const fits = (/** @type {string} */ s) => measure(s, px, weight) <= width + 1e-6;
+      const fits = (/** @type {string} */ s) => wideOf(measure, s, px, weight, base) <= width + 1e-6;
       const rows = Math.floor((l.within.y + l.within.h - y) / lh + 1e-6);
       const texts = rows < 1 ? null : linesOf(p, rows, fits);
       if (rows < 1) why = 'height';
@@ -347,8 +521,8 @@ export function setLabels(labels, shapes, view, measure) {
       else if (texts.length > rows) why = 'height';
       if (!texts || why) break;
       const mine = texts.map((s, k) => {
-        const w = measure(s, px, weight);
-        return { text: s, px, ink: p.ink, weight, rect: { x: l.align === 'center' ? l.x - w / 2 : l.x, y: y + k * lh, w, h: lh } };
+        const w = wideOf(measure, s, px, weight, base);
+        return { text: plain(s), runs: runsOf(s, base), px, ink: p.ink, weight, rect: { x: l.align === 'center' ? l.x - w / 2 : l.x, y: y + k * lh, w, h: lh } };
       });
       for (const m of mine) {
         why = why || past(m.rect, l.within) || (past(m.rect, view) ? 'view' : null);
@@ -362,7 +536,7 @@ export function setLabels(labels, shapes, view, measure) {
       set.push({ kind: l.kind, place: l.place, within: l.within, alpha: l.alpha, plate: l.plate, lines, held: false });
       for (const m of lines) taken.push(m.rect);
     }
-    parts.slice(i).forEach((p, j) => out.push({ kind: l.kind, place: l.place, text: p.text, reason: j || !why ? 'after' : why }));
+    parts.slice(i).forEach((p, j) => out.push({ kind: l.kind, place: l.place, text: plain(p.text), reason: j || !why ? 'after' : why }));
   }
   return { set, out };
 
@@ -397,10 +571,10 @@ export function setLabels(labels, shapes, view, measure) {
     if (!why && !line) why = 'width';
     if (!why && y + lh <= view.y + 0.5) why = 'view';
     /** @type {SetLine[]} */
-    const lines = (line || []).map((m) => ({ text: m.text, px: m.px, ink: m.part.ink, weight: m.weight, rect: { x: x0 + m.x, y, w: m.w, h: lh } }));
+    const lines = (line || []).map((m) => ({ text: m.text, runs: m.runs, px: m.px, ink: m.part.ink, weight: m.weight, rect: { x: x0 + m.x, y, w: m.w, h: lh } }));
     if (!why && lines.some((m) => strong.some((s) => s.place !== l.place && meets(m.rect, s.rect)))) why = 'meets';
-    if (why || !line) return { label: null, out: parts.map((p, j) => ({ kind: l.kind, place: l.place, text: p.text, reason: j ? 'after' : /** @type {Reason} */ (why) })) };
-    const dropped = parts.filter((p) => !line.some((m) => m.part === p)).map((p) => ({ kind: l.kind, place: l.place, text: p.text, reason: /** @type {Reason} */ ('width') }));
+    if (why || !line) return { label: null, out: parts.map((p, j) => ({ kind: l.kind, place: l.place, text: plain(p.text), reason: j ? 'after' : /** @type {Reason} */ (why) })) };
+    const dropped = parts.filter((p) => !line.some((m) => m.part === p)).map((p) => ({ kind: l.kind, place: l.place, text: plain(p.text), reason: /** @type {Reason} */ ('width') }));
     return { label: { kind: l.kind, place: l.place, within: { x: x0, y, w: x1 - x0, h: lh }, alpha: l.alpha, plate: hold.plate, lines, held: true }, out: dropped };
   }
 }

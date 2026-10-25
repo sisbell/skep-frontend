@@ -2,7 +2,8 @@
 // structure record §3.2; FP-11's top). Layer 3. Engine-bound. State: the
 // loop's cadences and its last readings of the model, the layer and the
 // camera, the gate's phase, the frame buffer the gate reads (`frames`, at
-// most FRAME_CAP of them) and what boot found (`bootInfo`).
+// most FRAME_CAP of them) and what boot found (`bootInfo`), the shipped faces
+// as the first frame found them among it.
 // Boot (`boot`): the URL's two flags — `?provider=<secret>` selects the
 // bridge client over `skep-dev serve` (S-14 (b), S-36 (a): the one flag, the
 // port the verb's default, the secret handed to B-DEV alone; FP-15), and
@@ -18,7 +19,15 @@
 // the session kept as the shell opened it, its reference and never a token;
 // `close(session)` at `pagehide`), its health, its daemon and the model's
 // index (`places` at the page's class); where the list held no board, none
-// is launched at or named (FP-35). Then the launch (`launch`): the launch
+// is launched at or named (FP-35). The type, beside them: the shipped faces
+// (P-REG's SHIPPED) loaded before the first layout, one that fails leaving
+// the page in its fallback; then measured as rendered (`typeSet`) — the
+// reading face's average advance (P-LAY's `setAdvance`, the style's
+// `--char-w`), the root's size as the reader's own settings render it, the
+// reading size 1.0625 of it (P-CAM's `setRoot`) — and the viewport fit again;
+// a face that arrives later is a re-set (FP-8, FP-12): the type measured
+// again, and T-LAYER, P-RENDER and the scene set again from it
+// (`refaced`). Then the launch (`launch`): the launch
 // frame HOME, the trail's first entry (foundations §2.2; W-01; N-GO's
 // `launch`), or with no board the walk's root, saying why, and no entry; a
 // board the list read again finds launches the same way (M-PUMP's `onOpen`).
@@ -94,8 +103,8 @@ import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as SCENE from '../scene/scene.js';
 import * as INPUT from './input.js';
-import { cssVariables } from '../plane/register.js';
-import { cssMeasures } from '../plane/layout.js';
+import { cssVariables, FACE, SHIPPED } from '../plane/register.js';
+import { cssMeasures, setAdvance, advanceOf, LAY_FS, CHAR_W } from '../plane/layout.js';
 import { depthOfDoc } from '../plane/projection.js';
 import { lodOf } from '../plane/lod.js';
 
@@ -135,6 +144,26 @@ function resize() {
   RENDER.resize(); BM.resize(); CAM.markDirty();
 }
 
+/** the shipped faces loaded (P-REG's SHIPPED): each style asked of the platform's font set, one that fails to load leaving the page in its fallback */
+const facesLoaded = () => Promise.all(SHIPPED.map((f) => document.fonts.load(f).catch(() => []))).then(() => undefined);
+
+/**
+ * The type as the platform renders it (see the head): the reading face's
+ * average advance measured by the canvas at P-LAY's layout size (`advanceOf`)
+ * and set, the style's advance with it; the root's size as the reader's own
+ * settings render it, the reading size read from it; the viewport fit again.
+ */
+function typeSet() {
+  const c = document.createElement('canvas').getContext('2d');
+  if (c) { c.font = `${LAY_FS}px ${FACE.reading}`; setAdvance(advanceOf((ch) => c.measureText(ch).width / LAY_FS)); }
+  document.documentElement.style.setProperty('--char-w', String(CHAR_W));
+  CAM.setRoot(parseFloat(getComputedStyle(document.documentElement).fontSize));
+  resize();
+}
+
+/** a face that arrived after the first layout (see the head): the type measured again, and every surface that measured words set again from it */
+function refaced() { typeSet(); LAYER.refaced(); RENDER.refaced(); SCENE.refaced(); }
+
 function loop(/** @type {number} */ now) {
   requestAnimationFrame(loop);
   const anim = CAM.step(now);
@@ -144,6 +173,7 @@ function loop(/** @type {number} */ now) {
   const dirty = CAM.takeDirty() || camMoved || rev !== lastRev || lrev !== lastLayerRev || anim || HOST.hasCurrent() || phase.name;
   if (dirty) {
     const t0 = performance.now();
+    if (!bootInfo.firstFrame) bootInfo.firstFrame = SHIPPED.map((f) => [f, document.fonts.check(f)]);
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
     WALK.markExpanded();
     WALK.markLocated();
@@ -218,6 +248,8 @@ async function boot() {
   let ledger = null;
   if (GATE) ledger = await import('../gate/ledger.js'); // FIRST: every surface counted before the first call
   for (const [k, v] of Object.entries({ ...cssVariables(), ...cssMeasures() })) document.documentElement.style.setProperty(k, v);
+  // the shipped faces, asked first so they load beside the board's reads: the first layout waits for them
+  const faces = facesLoaded();
   const plane = /** @type {HTMLCanvasElement} */ (el('plane'));
   RENDER.attach(plane); LAYER.attach(el('domlayer'), el('corners'), { measure: true }); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
   HOST.attach(el('overlay'));
@@ -264,6 +296,10 @@ async function boot() {
   bootInfo.coldOpenMs = Math.round(performance.now() - t0);
   bootInfo.coldOpenCalls = PORT.callLog().map((c) => c.name);
   bootInfo.coldOpenBytes = PORT.callLog().reduce((a, c) => a + c.bytesIn + c.bytesOut, 0);
+  await faces;
+  typeSet();
+  bootInfo.type = { faces: SHIPPED.map((f) => [f, document.fonts.check(f)]), advance: CHAR_W, readingPx: CAM.READING_PX, root: getComputedStyle(document.documentElement).fontSize };
+  document.fonts.addEventListener('loadingdone', refaced);
   await launch();
   if (GATE) {
     const hooks = await import('../gate/hooks.js');

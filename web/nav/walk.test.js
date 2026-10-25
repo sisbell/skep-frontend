@@ -32,7 +32,7 @@ import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, DOC_W } fr
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
 import { placeOf, STANDARD_FS, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
-import { STRINGS, t } from '../strings.js';
+import { STRINGS, t, tHTML } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
 import * as WALK from './walk.js';
@@ -316,9 +316,10 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
         // the owner's passing claim; where it holds less, the face compact in its column's edge, naming the same owner
         const html = withheldBlockHTML(run, d, LAYER.viewFor(d)), inGap = html.includes(' data-holds="face"');
         forms.add(inGap);
+        const clauseHTML = clause === t('C-67.pointer') ? esc(clause) : tHTML('C-67.quoting', { claimant: owner }, { claimant: 'id' });
         assert.ok(html.includes(` data-owner="${owner}"`) && (inGap
-          ? html.includes(`<span class="arm">${esc(arm)}</span>`) && (clause ? html.includes(`<span class="clause"${follows}>${esc(clause)}</span>`) : !html.includes('class="clause"'))
-          : !html.includes('class="arm"') && html.includes(`>${esc(t('L.withheld.mark', { owner }))}</span>`)),
+          ? html.includes(`<span class="arm">${esc(arm)}</span>`) && (clause ? html.includes(`<span class="clause"${follows}>${clauseHTML}</span>`) : !html.includes('class="clause"'))
+          : !html.includes('class="arm"') && html.includes(`>${tHTML('L.withheld.mark', { owner }, { owner: 'id' })}</span>`)),
           `${who}, ${state}: the plane's gap shows the same owner, and the same arm and clause where it holds the face, else the face compact at its column's edge: ${html}`);
       }
     }
@@ -344,7 +345,7 @@ test('the mirror announces every block that holds no text by its kind, in the wo
   const d = REC.doc(H), made = { addr: H, runs: d.runs, blocks: d.blocks, image: d.image };
   // what the plane shows of the record: its words and its keys line, read from the article T-ARTICLE makes
   const html = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d));
-  const shows = (/** @type {string} */ cls) => ((new RegExp(`<span class="${cls}">([^<]*)</span>`).exec(html) || [])[1] || '').replace(/&amp;/g, '&');
+  const shows = (/** @type {string} */ cls) => ((new RegExp(`<span class="${cls}">((?:[^<]|<span class="id">[^<]*</span>)*)</span>`).exec(html) || [])[1] || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&');
   const plane = [shows('rec-words'), shows('derived')];
   assert.ok(plane.every(Boolean), `the plane shows the record's words and keys: ${html}`);
   /** @type {Array<[number, string, string]>} each block: its first position, its kind's words, what the plane shows after them */
@@ -409,6 +410,22 @@ test('the plane is one Tab stop: the current item while it stands, the tree out 
     assert.deepEqual(itemStops(mirror.innerHTML), ['walk-0']);
     assert.equal(mirror.tabIndex, -1, 'the item is the stop, the tree out of the order');
     assert.ok(mirror.innerHTML.includes('1.0.9.0.1'), 'the mirror names the place landed on');
+  } finally {
+    globalThis.document = platform;
+  }
+});
+
+test('the mirror\'s item shows what it says, each address in the identifier\'s face and a span\'s words in the reading face — its words its accessible name, unchanged (issue #16)', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
+  WALK.attach(/** @type {any} */ (mirror));
+  try {
+    await WALK.focusTo(D, 15);
+    const i = WALK.mirrorIndex(), li = (new RegExp(`<li[^>]*id="walk-${i}"[^>]*>(.*?)</li>`).exec(mirror.innerHTML) || [])[1] || '';
+    const b = /** @type {import('../model/records.js').Block} */ (REC.doc(D).blocks.find((x) => x.pos === WALK.current()?.pos));
+    assert.ok(li.includes(`<span class="id">${D}</span>`) && li.includes(`<span class="reading">${esc(b.text)}</span>`), `the document's address the identifier's, the span's words the reading face's: ${li}`);
+    assert.equal(li.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&'), WALK.mirrorItem(i), 'its words the item\'s accessible name');
   } finally {
     globalThis.document = platform;
   }
@@ -728,16 +745,17 @@ test('in a document folded into columns the camera follows the walk to a span\'s
     assert.deepEqual(walkAt(), ['block', H, at.pos], '↓ steps onto the span heading the next column');
     const line = placeOf(f, at.pos);
     // the column the first of its row: the strip beside it holds the corner whole and its gap, its edge EDGE em on its right
-    near(CAM.view(), { x: box.x + c.x + c.w / 2 + (EDGE * 12.5 - (cornerWidth(false) + CORNER.gap)) / 2 / (12.5 / f.fs), y: box.y + line.y + line.h / 2, scale: 12.5 / f.fs }, 'the camera on its line, its column framed with its corner and its edge, at reading size');
+    const read = CAM.READING_PX;
+    near(CAM.view(), { x: box.x + c.x + c.w / 2 + (EDGE * read - (cornerWidth(false) + CORNER.gap)) / 2 / (read / f.fs), y: box.y + line.y + line.h / 2, scale: read / f.fs }, 'the camera on its line, its column framed with its corner and its edge, at the reading size');
     await run(WALK.key('out'));
     assert.deepEqual(walkAt(), ['document', H, null]);
     const s = LAYER.shapeOf(H), framed = CAM.viewForCell(s, 0.9);
-    assert.ok(s.h < box.h * 0.75 && framed.scale < 12.5 / f.fs, 'its outline two rows of its room\'s, framed below reading size');
+    assert.ok(s.h < box.h * 0.75 && framed.scale < read / f.fs, 'its outline two rows of its room\'s, framed below reading size');
     near(CAM.view(), framed, '← to the document: its outline framed, never its room');
     // a document of one short column, framed whole, would be read far past reading size
     await WALK.focusTo(D, 11, true);
     await run(WALK.key('out'));
-    near(CAM.view(), { ...CAM.viewForCell(LAYER.shapeOf(D), 0.9), scale: 12.5 / LAYER.foldOf(REC.doc(D)).fs }, '← to a document of one short column: its outline at reading size, no nearer');
+    near(CAM.view(), { ...CAM.viewForCell(LAYER.shapeOf(D), 0.9), scale: read / LAYER.foldOf(REC.doc(D)).fs }, '← to a document of one short column: its outline at the reading size, no nearer');
     // the camera over a span part way down the second row's second column, at reading scale
     const c2 = f.columns[f.across + 1], later = d.blocks.find((b) => columnOf(b.pos) === f.across + 1 && placeOf(f, b.pos).y > c2.y + c2.h / 3);
     assert.ok(later, 'a span a third of the way down the column');

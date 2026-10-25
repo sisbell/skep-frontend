@@ -14,20 +14,22 @@
 // again and a press holding them; the owner a withheld run names; C-67's
 // clause from the model; what an article was made from; the zoom-in bound;
 // symbols marked heavier in place and a span inside a withheld run at the
-// run's boxes; and a byline's facts arriving and its cut label opening in
-// place (FP-8, FP-12, FP-20, FP-22, FP-23, FP-26, FP-30, FP-34).
+// run's boxes; a byline's facts arriving and its cut label opening in
+// place; a face arriving after the first layout setting every standing
+// article again, the passage held; and a box's label and first line in their
+// faces (FP-8, FP-12, FP-20, FP-22, FP-23, FP-26, FP-30, FP-34).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
 import * as LAYER from './layer.js';
 import * as CAM from '../plane/camera.js';
-import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE } from '../plane/layout.js';
+import { layoutOf, fold, placeOf, padded, windowIn, standardFs, columnW, columnOfLine, setAdvance, STANDARD_GRID, MEASURE_CPL, COLUMN_W, GUTTER, EDGE, CHAR_W } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
-import { holdTop } from '../plane/labels.js';
+import { holdTop, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
-import { t } from '../strings.js';
+import { t, tHTML } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../plane/layout.js').Fold} Fold */
@@ -272,17 +274,39 @@ test('a reading view frames its column with both its margins: the corner on its 
     assert.ok(inThird, 'a block opening in the third column');
     /** @type {Array<[number | null, number, number, string]>} a position, its column, the corner's width beside it, what stands there */
     const cases = [[null, 0, cornerWidth(false), 'no position: the first column, the strip holding the corner whole'], [/** @type {NonNullable<typeof inThird>} */ (inThird).pos, 2, cornerWidth(true), 'the third column: the gutter holding the corner compact']];
+    const read = CAM.READING_PX;
     for (const [pos, i, corner, what] of cases) {
       CAM.set(CAM.viewAt(LAYER.frameOf(D, pos), fs));
-      const c = f.columns[i], left = CAM.sx(box.x + c.x) - CORNER.gap - corner, right = CAM.sx(box.x + c.x + c.w) + EDGE * 12.5;
+      const c = f.columns[i], left = CAM.sx(box.x + c.x) - CORNER.gap - corner, right = CAM.sx(box.x + c.x + c.w) + EDGE * read;
       assert.ok(Math.abs((left + right) / 2 - 720) < 1e-6, `${what}: the corner, the column and its edge centred together — ${left} … ${right}`);
-      assert.ok(left >= 0 && right <= 1440 && Math.abs(CAM.cam.scale * fs - 12.5) < 1e-9, `${what}: all in view, at the reading size`);
+      assert.ok(left >= 0 && right <= 1440 && Math.abs(CAM.cam.scale * fs - read) < 1e-9, `${what}: all in view, at the reading size, ${read} px an em`);
       assert.equal(LAYER.frameOf(D, pos).y, LAYER.centreOf(D, pos).y, `${what}: on the line holding it`);
     }
   } finally { CAM._reset(); }
 });
 
-test('the measure in force: every document folded at what the view holds — the full measure at 1440 px, 39 characters at 480 — and a resize that moves it sets again the article being read, the line under the view\'s centre kept where it stood in the view, at its size; never a zoom (issue #151; FP-26)', () => onLayer(() => {
+test('a document read whole whose first column the visible view below the one line holds is framed on that column\'s middle; one it does not hold, on its head: the column\'s outline at the top of the visible view, never under the line (FP-29; issue #16)', () => {
+  deliver();
+  CAM._reset(); CAM.setViewport(1440, 900);
+  const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0], g = (GUTTER / 2) * f.fs;
+  /** the first column's depth on screen at the reading size, and where its outline's top stands with the camera at the frame */
+  const deep = c.h * (CAM.READING_PX / f.fs);
+  const topAt = () => { CAM.set(CAM.viewAt(LAYER.frameOf(D, null), f.fs)); return CAM.sy(box.y + c.y - g); };
+  try {
+    for (const [line, held] of /** @type {Array<[number, boolean]>} */ ([[0, deep <= 900], [30, deep <= 870], [120, deep <= 780]])) {
+      LAYER.readers({ selection: () => null, focus: () => null, top: () => line, handOff: () => {}, navigated: () => null });
+      const at = LAYER.frameOf(D, null), top = topAt();
+      if (held) assert.equal(at.y, LAYER.centreOf(D, null).y, `the line at ${line} px, the visible view ${900 - line} px tall, the column ${deep} px deep: on its middle`);
+      else assert.ok(Math.abs(top - line) < 1e-6, `the line at ${line} px, the column ${deep} px deep: its outline's top at the visible view's top, ${top} px`);
+    }
+    assert.ok(deep > 780 && deep <= 900, `the case holds both: a column ${deep} px deep at ${CAM.READING_PX} px an em`);
+  } finally {
+    LAYER.readers({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null });
+    CAM._reset();
+  }
+});
+
+test('the measure in force: every document folded at what the view holds — the full measure at 1440 px, fewer characters at 480 — and a resize that moves it sets again the article being read, the line under the view\'s centre kept where it stood in the view, at its size; never a zoom (issue #151; FP-26)', () => onLayer(() => {
   deliver();
   const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D));
   assert.equal(f0.cpl, MEASURE_CPL, '1440 px: the full measure');
@@ -294,8 +318,10 @@ test('the measure in force: every document folded at what the view holds — the
   /** where the line holding `pos` stands on screen, from the view's centre, in the fold the document is set in now */
   const fromCentre = () => { const p = placeOf(LAYER.foldOf(REC.doc(D)), pos), { VW, VH } = CAM.viewport(); return { x: CAM.sx(box.x + p.x) - VW / 2, y: CAM.sy(box.y + p.y) - VH / 2 }; };
   const was = fromCentre(), em = CAM.cam.scale * f0.fs;
-  for (const [w, cpl] of /** @type {Array<[number, number]>} */ ([[480, 39], [1440, MEASURE_CPL]])) {
+  for (const w of [480, 1440]) {
     CAM.setViewport(w, 900);
+    const cpl = CAM.measure();
+    assert.ok(w === 480 ? cpl < MEASURE_CPL : cpl === MEASURE_CPL, `${w} px: the measure in force ${cpl}`);
     LAYER.frame();
     const f = LAYER.foldOf(REC.doc(D)), now = fromCentre();
     assert.ok(f.cpl === cpl && f.columns.every((k) => Math.abs(k.w - columnW(cpl) * f.fs) < 1e-6) && f.lines.every((l) => l.w <= cpl + 1e-9), `${w} px: every column and line at ${cpl} characters`);
@@ -761,8 +787,8 @@ test('a guest meets a withheld run named for its origin\'s owner, whoever owns t
   LAYER.frame();
   const rec = LAYER.mountedSet().get(D);
   assert.ok(rec, 'at em 12 its article stands on the plane');
-  const head = esc(t('B1.withheld-run', { owner: '1.0.2', account: '1.0.2', width, origin: O }));
-  const arm = (/** @type {string} */ owner) => esc(t('R56.key-absent', { owner }));
+  const head = tHTML('B1.withheld-run', { owner: '1.0.2', account: '1.0.2', width, origin: O }, { owner: 'id', account: 'id', origin: 'id' });
+  const arm = (/** @type {string} */ owner) => tHTML('R56.key-absent', { owner }, { owner: 'id' });
   /** @type {Array<[string, string]>} */
   const met = [['on the plane', String(/** @type {any} */ (rec.el).children[0].innerHTML)], ['in a pane', String(LAYER.sceneArticle(d).innerHTML)]];
   for (const [where, html] of met) {
@@ -908,4 +934,43 @@ test('an owner\'s byline facts arriving set a standing article again, its byline
     assert.deepEqual([LAYER.labelOpened(D), opened.at(-1)], [false, false], 'the act again closes it');
     assert.equal(standing(), filled, 'each mark made in place, the article standing on its element');
   }, 1440, 900, new Map([['.slot.cut', [label]]]));
+});
+
+test('a face arriving after the first layout is a re-set: the type measured again, every standing article set again in the fold its words now take, the line under the view\'s centre kept where it stood on screen, at its size (issue #16; FP-8, FP-12)', () => onLayer(() => {
+  deliver();
+  const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[3];
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h * 0.4, scale: 12 / f0.fs });
+  LAYER.frame();
+  const el = LAYER.mountedSet().get(D)?.el, pos = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y));
+  const screen = () => { const p = placeOf(LAYER.foldOf(REC.doc(D)), pos); return { x: CAM.sx(box.x + p.x), y: CAM.sy(box.y + p.y) }; };
+  const was = screen(), em = CAM.cam.scale * f0.fs, before = CHAR_W;
+  try {
+    // the face as rendered sets a wider advance: APP measures it again, refits the viewport and tells the layer
+    setAdvance(0.5); CAM.setViewport(1440, 900); LAYER.refaced();
+    LAYER.frame();
+    const f = LAYER.foldOf(REC.doc(D)), now = screen();
+    assert.ok(f !== f0 && f.fs !== f0.fs, `folded again at the new advance: ${f0.fs} → ${f.fs}`);
+    assert.ok(LAYER.mountedSet().get(D)?.el !== el, 'the standing article set again on an element of its own');
+    assert.ok(Math.abs(now.x - was.x) < 1e-6 && Math.abs(now.y - was.y) < 1e-6, `the line where it stood: ${JSON.stringify(was)} → ${JSON.stringify(now)}`);
+    assert.ok(Math.abs(CAM.cam.scale * f.fs - em) < 1e-9, 'at its size on screen');
+  } finally { setAdvance(before); LAYER.refaced(); }
+}, 1440, 900));
+
+test('a box\'s label sets its address in the identifier\'s face and its first line\'s words in the reading face, its draft mark the client\'s; a withheld box\'s statement the client\'s, the owner it names the identifier\'s — on the canvas and in the chrome alike (issue #16)', () => {
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'draft', label: '# The artifact chain', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } }));
+  const d = REC.doc(D), [addr, first] = LAYER.docLabel(d, 300, 12);
+  assert.deepEqual([addr.text, addr.face], [LAYER.shortAddr(d), 'ident'], 'the address past its region\'s prefix, in the identifier\'s face');
+  assert.deepEqual(runsOf(first.text, first.face || 'client'), [{ text: 'The artifact chain', face: 'reading' }, { text: ' · ' + t('F.label.draft'), face: 'client' }], 'the first line\'s words the reading face\'s, its heading marks dropped; the draft mark the client\'s');
+  assert.equal(LAYER.firstLineHTML(d), `<span class="reading">The artifact chain</span>${esc(' · ' + t('F.label.draft'))}`, 'in the chrome: the words in the reading face');
+  assert.equal(LAYER.firstLine(d), 'The artifact chain · ' + t('F.label.draft'), 'as words, the same');
+  REC.takeRefused(D, 'withheld');
+  const held = LAYER.docLabel(REC.doc(D), 300, 12)[1];
+  assert.deepEqual(runsOf(held.text, held.face || 'client'), [{ text: 'withheld · ', face: 'client' }, { text: '1.0.1', face: 'ident' }], 'withheld: the statement the client\'s, its owner the identifier\'s');
+  assert.equal(LAYER.firstLineHTML(REC.doc(D)), tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' }));
+});
+
+test('where the platform sets no words — the node tests — the article\'s measure counts every character one advance of the reading face, whatever its face, as the plan does (issue #16)', () => {
+  assert.equal(LAYER.widthOf('1.0.1.0.3', 'ident'), 9 * CHAR_W);
+  assert.equal(LAYER.widthOf('not rendered', 'client'), 12 * CHAR_W);
+  assert.equal(LAYER.viewFor(REC.doc(D)).measure, LAYER.widthOf, 'the article\'s view measures by it');
 });

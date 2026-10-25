@@ -1,11 +1,15 @@
 // P-CAM — the camera (the structure record §3.2). Layer 2, pure view
 // arithmetic beside the model (FP-11): the viewport size is an input the app
 // sets on resize, and `step(now)` takes the clock.
-// State (FP-10): x, y, scale, the flight in progress, the zoom-in bound, and
-// the viewport with the measure in force it sets — P-LAY's fit of the
-// viewport's width at the reading size (`READING_PX`, the em a reading view
-// sets a document's text at), so a resize alone moves the measure, never a
-// zoom (FP-26). View state, never serialized or sent (FP-7).
+// State (FP-10): x, y, scale, the flight in progress, the zoom-in bound, the
+// reading size — READING_REM of the root's size as the reader's own settings
+// render it (`setRoot`), the em every arrival at reading scale sets a
+// document's text at — and the viewport with the measure in force it sets:
+// P-LAY's fit of the viewport's width at the reading size, so a resize or the
+// reader's own size alone moves the measure, never a zoom (FP-26), and with
+// it the landing's em, the reading size but where even a column of one
+// character is wider than the view (`landingPx`). View state, never
+// serialized or sent (FP-7).
 // Where the camera is bound is the flight's destination while one runs
 // (`destination`): what a departure re-takes, so input made during a flight
 // lands at its destination, never at a point the flight was passing
@@ -33,9 +37,10 @@
 // the chrome across the viewport's top (`visibleView`), the cut on the true
 // bearing inside it (`edgeStub`) and the triangle at the cut
 // (`stubTriangle`), sized by P-REG's STUB.
-// Figures: the reading size 12.5 px an em; the bound's floor 40 (S3's); the
-// clamp's margin 0.6 of the world's width; a flight 620 ms where none is
-// given, dipping out where its distance exceeds 1.5 viewports.
+// Figures: the reading size 1.0625 of the root's, 17 px an em at a 16 px
+// root; the bound's floor 40 (S3's); the clamp's margin 0.6 of the world's
+// width; a flight 620 ms where none is given, dipping out where its distance
+// exceeds 1.5 viewports.
 // Rules: FP-1, FP-2, FP-7, FP-8, FP-9, FP-10, FP-11, FP-26.
 
 import { WORLD_W, WORLD_H, DEPTH_SOUND, G, LEAF } from './projection.js';
@@ -66,29 +71,52 @@ import { STUB, CORNER, cornerWidth } from './register.js';
 /** @type {View & {anim: Flight | null}} */
 export const cam = { x: WORLD_W / 2, y: WORLD_H / 2, scale: 1, anim: null };
 
-/** the reading size (see the head): the em, in px, a reading view sets a document's text at */
-export const READING_PX = 12.5;
+/** the reading size as a share of the root's (see the head): 1.0625 rem */
+export const READING_REM = 1.0625;
+/** the reading size (see the head): the em, in px, every arrival at reading scale sets a document's text at — READING_REM of a 16 px root until the root as rendered is read (`setRoot`) */
+export let READING_PX = READING_REM * 16;
 
 /** the viewport, set on resize */
 let VW = 1, VH = 1;
-/** the measure in force (see the head): the full measure until a viewport is set */
-let fitNow = /** @type {import('./layout.js').Fit} */ ({ cpl: MEASURE_CPL, compact: false });
+/** has a viewport been set: the fit is the viewport's from then on */
+let sized = false;
+/** the measure in force (see the head): the full measure, and the landing at the reading size, until a viewport is set */
+let fitNow = /** @type {import('./layout.js').Fit} */ ({ cpl: MEASURE_CPL, compact: false, px: READING_PX });
 /** S3's constant zoom-in bound, the bound's floor */
 const S3_MAX = 40;
 /** the zoom-in bound: S3's, raised per E18 (a) by `reach`, never lowered */
 let maxS = S3_MAX;
 
-/** @param {number} vw @param {number} vh */
+/** the fit of the viewport at the reading size (see the head): the full measure, and the landing at the reading size, until a viewport is set */
+function refit() {
+  fitNow = sized ? fitFor(VW, READING_PX, { whole: cornerWidth(false), compact: cornerWidth(true), gap: CORNER.gap }) : { cpl: MEASURE_CPL, compact: false, px: READING_PX };
+}
+
+/** the viewport, set on resize, and the measure in force it holds; set again where the reading face's advance moved (P-LAY's `setAdvance`) @param {number} vw @param {number} vh */
 export function setViewport(vw, vh) {
-  VW = Math.max(1, vw); VH = Math.max(1, vh);
-  fitNow = fitFor(VW, READING_PX, { whole: cornerWidth(false), compact: cornerWidth(true), gap: CORNER.gap });
+  VW = Math.max(1, vw); VH = Math.max(1, vh); sized = true;
+  refit();
 }
 export function viewport() { return { VW, VH }; }
 
-/** the measure in force (see the head): its count of characters, and whether a column at the reading size stands beside its corner compact */
+/**
+ * The root's size as the reader's own settings render it (see the head):
+ * the reading size READING_REM of it, and the measure in force refit at that
+ * size. A value that is no positive number changes nothing.
+ * @param {number} px the root element's font size, in px
+ */
+export function setRoot(px) {
+  if (!(px > 0)) return;
+  READING_PX = READING_REM * px;
+  refit();
+}
+
+/** the measure in force (see the head): its count of characters, whether a column at the reading size stands beside its corner compact, and the landing's em */
 export const fit = () => fitNow;
 /** the measure in force, in characters of a document's face */
 export const measure = () => fitNow.cpl;
+/** the em every arrival at reading scale sets a document's text at, in px (see the head): the reading size, smaller only where even a column of one character is wider than the view */
+export const landingPx = () => fitNow.px;
 
 /** @param {number} wx @returns {number} */
 export const sx = (wx) => (wx - cam.x) * cam.scale + VW / 2;
@@ -159,14 +187,15 @@ export function viewForCell(c, fit = 0.92) {
 
 /**
  * The view that reads a document at a place: its em at `fsPx` screen px, the
- * reading size where none is given, centred on the point — the frame of a
- * line's column with its margins (T-LAYER's `frameOf`), or a column's centre.
+ * landing's (`landingPx`) where none is given, centred on the point — the
+ * frame of a line's column with its margins (T-LAYER's `frameOf`), or a
+ * column's centre.
  * @param {{x: number, y: number}} at the world point to centre
  * @param {number} fs the document's em in world units
  * @param {number} [fsPx]
  * @returns {View}
  */
-export function viewAt(at, fs, fsPx = READING_PX) {
+export function viewAt(at, fs, fsPx = fitNow.px) {
   return { x: at.x, y: at.y, scale: fsPx / fs };
 }
 
@@ -329,8 +358,8 @@ let dirtyFlag = true;
 export function markDirty() { dirtyFlag = true; }
 export function takeDirty() { const d = dirtyFlag; dirtyFlag = false; return d; }
 
-/** reset everything (tests): the view, any flight cut short, the viewport and the full measure, the zoom-in bound at S3's, the dirty mark */
+/** reset everything (tests): the view, any flight cut short, the viewport, the reading size at a 16 px root and the full measure, the zoom-in bound at S3's, the dirty mark */
 export function _reset() {
   cut(); cam.x = WORLD_W / 2; cam.y = WORLD_H / 2; cam.scale = 1;
-  VW = 1; VH = 1; fitNow = { cpl: MEASURE_CPL, compact: false }; maxS = S3_MAX; dirtyFlag = true;
+  VW = 1; VH = 1; sized = false; READING_PX = READING_REM * 16; refit(); maxS = S3_MAX; dirtyFlag = true;
 }

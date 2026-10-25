@@ -41,7 +41,7 @@ import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
 import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo } from './scene.js';
 import * as GO from '../nav/go.js';
-import { t } from '../strings.js';
+import { t, tHTML } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
@@ -582,7 +582,7 @@ test('a row naming a newer member pins an edition read at its bare address at on
   assert.ok(corner.includes(esc(t('F.corner.pinned', { published: t('F.published.notebook'), k: 2 }))) && corner.includes(esc(t('F.version-of', { k: 2, n: 3 }))), `its corner reads version 2 of 3, never the latest: ${corner}`);
   assert.ok(!corner.includes(esc(t('F.corner.latest', { published: t('F.published.notebook') }))), 'never "the latest"');
   assert.ok(corner.includes(`data-read="3"`) && corner.includes(esc(t('F.versions.read', { k: 3 }))), 'its corner\'s act: read version 3');
-  assert.ok(String(shownIn(p.paneA, 'a').innerHTML).includes(`<span class="addr">${ED2}</span>`) && p.names.a.textContent === ED2, 'its head and the bar name the member');
+  assert.ok(String(shownIn(p.paneA, 'a').innerHTML).includes(`<span class="addr id">${ED2}</span>`) && p.names.a.textContent === ED2, 'its head and the bar name the member');
   assert.deepEqual(p.said.slice(told), [arrived], 'the arrival said once, politely');
   await landed();
   const two = REC.doc(ED2);
@@ -662,7 +662,7 @@ test('the page\'s own death takes every pane down at once — nothing of the dea
     await landed();
     const b = shownIn(p.paneB, 'b'), a = shownIn(p.paneA, 'a');
     assert.deepEqual(LAYER.madeOf(b)?.blocks, [], 'the draft, withheld from the guest, holds no text');
-    assert.ok(String(b.innerHTML).includes(esc(t('F.corner.withheld', { owner: '1.0.1' }))), `its head alone, withheld: ${b.innerHTML}`);
+    assert.ok(String(b.innerHTML).includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })), `its head alone, withheld: ${b.innerHTML}`);
     assert.deepEqual(LAYER.madeOf(a)?.blocks.map((x) => x.text), ['A version.', 'Its words.'], 'the version read again as the guest reads it');
     assert.deepEqual(fake.unanswered, []);
   } finally { REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' }); }

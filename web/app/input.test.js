@@ -36,7 +36,7 @@ import { lodOf } from '../plane/lod.js';
 import { articleHTML, entitlementArm } from '../text/article.js';
 import { resolveSpan, unitSpan } from '../model/address.js';
 import { accountCell, boardCell } from '../plane/projection.js';
-import { t } from '../strings.js';
+import { t, tHTML, addressedHTML } from '../strings.js';
 import { MAC } from '../nav/keys.js';
 import { esc, byteLength } from '../util.js';
 
@@ -63,8 +63,8 @@ test('the act at a withheld run conjures C-39\'s face naming the owner its gap n
     REC.setSession(null);
     REC.takeOwner('1.0.1.1', { prefix: owner, principal: 900 });
     const text = 'Tumbler.\n\n', n = new TextEncoder().encode(text).length;
-    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + 240 }]);
-    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 240, kind: 'withheld', text: '', ref: null, origin: O }]);
+    REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + 300 }]);
+    REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 300, kind: 'withheld', text: '', ref: null, origin: O }]);
     // the edition claims on the origin read, none listed: every read the run's face waits on answered, so it shows at once
     REC.takeEditionClaims(O, []);
     const d = REC.doc(D);
@@ -82,8 +82,8 @@ test('the act at a withheld run conjures C-39\'s face naming the owner its gap n
       // the placeholder as the plane's article holds it: T-LAYER mounts T-ARTICLE's HTML from its view
       const article = articleHTML(d, LAYER.viewFor(d), REC.ownerAccount(d));
       const tag = (/<span class="withheld"[^>]*>/.exec(article) || [''])[0], arm = esc(entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text);
-      // the face whole in its gap where 240 positions hold it — the key-present arm's — else compact in its column's edge: R56's arm is too deep for them
-      const inGap = (/<span class="arm">([^<]*)<\/span>/.exec(article) || [])[1] ?? null, marked = article.includes(`>${esc(t('L.withheld.mark', { owner }))}</span>`);
+      // the face whole in its gap where 300 positions hold it — the key-present arm's — else compact in its column's edge: R56's arm is too deep for them
+      const inGap = (/<span class="arm">([^<]*)<\/span>/.exec(article) || [])[1] ?? null, marked = article.includes(`>${tHTML('L.withheld.mark', { owner }, { owner: 'id' })}</span>`);
       assert.ok(id === 'R56.key-absent' ? inGap === null && marked : inGap === arm && !marked, `${who}: ${id === 'R56.key-absent' ? 'no arm in its gap, the face compact in its column\'s edge naming ' + owner : 'the face whole in its gap, the rule\'s arm'}`);
       const run = Object.assign(new globalThis.HTMLElement(), { dataset: datasetOf(tag), isConnected: false });
       const holder = { dataset: { addr: D } };
@@ -92,10 +92,10 @@ test('the act at a withheld run conjures C-39\'s face naming the owner its gap n
       click({ target: run, clientX: 0, clientY: 0, stopPropagation() {} });
       const face = HOST.currentOverlay();
       assert.equal(face && face.id, 'face:C-39', `${who}: the act at the run conjures C-39's face`);
-      assert.deepEqual(face && face.anchor, { el: run, span: { addr: D, pos: n + 1, width: 240 } }, `${who}: the face stands at the placeholder, the run's own positions beside it, where it stands once the text layer rebuilds or takes the placeholder down`);
+      assert.deepEqual(face && face.anchor, { el: run, span: { addr: D, pos: n + 1, width: 300 } }, `${who}: the face stands at the placeholder, the run's own positions beside it, where it stands once the text layer rebuilds or takes the placeholder down`);
       const html = face ? face.html : '';
-      assert.ok(html.includes(`>${esc(t('C-39', { owner }))}</div>`), `${who}: the face names ${owner}, the owner the placeholder names — never the origin's account, 1.0.1.1`);
-      assert.ok(html.includes(`<div class="arm" data-string="${id}">${arm}</div>`), `${who}: the arm beneath it is the rule's for the run's origin's owner and this reader, ${id}: ${html}`);
+      assert.ok(html.includes(`>${addressedHTML(t('C-39', { owner }))}</div>`) && html.includes(`<span class="id">${owner}</span>`), `${who}: the face names ${owner}, in the identifier's face, the owner the placeholder names — never the origin's account, 1.0.1.1`);
+      assert.ok(html.includes(`<div class="arm" data-string="${id}">${addressedHTML(entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text)}</div>`), `${who}: the arm beneath it is the rule's for the run's origin's owner and this reader, ${id}: ${html}`);
       HOST.dismiss();
       // the run's face compact in its column's edge: its act opens the face whole, as Enter at the run does (D5 K-7)
       if (!marked) continue;
@@ -104,7 +104,7 @@ test('the act at a withheld run conjures C-39\'s face naming the owner its gap n
       click({ target: mark, clientX: 0, clientY: 0, stopPropagation() {} });
       const whole = HOST.currentOverlay();
       assert.equal(whole && whole.id, 'face:withheld-run', `${who}: the act at the edge's mark opens the run's face whole`);
-      assert.ok(!!whole && whole.html.includes(arm) && whole.html.includes(esc(t('B1.withheld-run', { owner, account: owner, width: 240, origin: O }))), `${who}: its head and the arm the rule gives, whole`);
+      assert.ok(!!whole && whole.html.includes(addressedHTML(entitlementArm({ account: null, keyPresent: keys.length > 0 }, owner).text)) && whole.html.includes(addressedHTML(t('B1.withheld-run', { owner, account: owner, width: 300, origin: O }))), `${who}: its head and the arm the rule gives, whole, each address in the identifier's face`);
       HOST.dismiss();
     }
   } finally {
@@ -278,7 +278,7 @@ test('a click on a link\'s symbol, or on a stretch it marks, opens the card of t
         const card = HOST.currentOverlay(), { bytes, lines } = ends[i];
         assert.equal(card && card.id, 'anatomy:' + L, `${cls} at ${bytes.pos}: the citation's anatomy card`);
         assert.deepEqual(card && card.anchor, { el, span: bytes }, `${cls} at ${bytes.pos}: the card stands at the mark clicked, its own end's bytes beside it`);
-        const read = [...(card ? card.html : '').matchAll(/<div class="end (far|near)"><span class="k">([^<]*)<\/span> <span class="code">([^<]*)<\/span>.*?<div class="quoted">([^<]*)<\/div>/g)].map((m) => m.slice(1));
+        const read = [...(card ? card.html : '').matchAll(/<div class="end (far|near)"><span class="k">([^<]*)<\/span> <span class="code id">([^<]*)<\/span>.*?<div class="quoted">((?:[^<]|<\/?span[^>]*>)*)<\/div>/g)].map((m) => [m[1], m[2], m[3], m[4].replace(/<[^>]*>/g, '')]);
         assert.deepEqual(read, lines.map(([at, k, addr, words]) => [at, esc(k), addr, words]), `${cls} at ${bytes.pos}: the near end the one clicked, the far end the other`);
         HOST.dismiss();
       }

@@ -11,7 +11,8 @@
 // the disposition shapes the offered act. The name keys the face and names
 // the overlay (`face:⟨name⟩`, the gate's reading); a person meets the words
 // alone, never the token, which reads as a claim the words may refuse to
-// make. The read path's faces: `doc_not_registered` → the fifth cell (B1-S8:
+// make; every address a face's words, arm or clause name stands in the
+// identifier's face (ST's `addressedHTML`; P-REG's FACE). The read path's faces: `doc_not_registered` → the fifth cell (B1-S8:
 // where this client holds no record of its own that the board answered for
 // the document, the unregistered-or-unreachable face, C-42's content; it
 // offers no act, for B1-S8's one act, "try again", is the unreachable node's,
@@ -120,7 +121,7 @@ import * as CAM from '../plane/camera.js';
 import { entitlementArm, placeholderOf } from '../text/article.js';
 import { retries } from '../beams/held.js';
 import { memberOf } from '../model/address.js';
-import { t } from '../strings.js';
+import { t, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -256,7 +257,7 @@ const captionHTML = (/** @type {string | null | undefined} */ caption) => (capti
 function clauseFace(c, follow) {
   if (!c) return { html: '', follow: null };
   const line = (/** @type {string} */ inner) => `<div class="clause" data-string="${esc(c.id)}">${inner}</div>`;
-  if (c.id !== 'C-67.pointer') return { html: line(esc(c.text)), follow: null };
+  if (c.id !== 'C-67.pointer') return { html: line(addressedHTML(c.text)), follow: null };
   if (!follow) return { html: '', follow: null };
   const home = c.home;
   return { html: line(`<button data-run="follow" data-claim="${esc(c.claim)}" data-home="${esc(home)}">${esc(c.text)}</button>`), follow: (_el, byKey) => follow(home, byKey) };
@@ -291,14 +292,14 @@ export function wordsFor(r, ctx = {}) {
   }
 }
 
-/** the face's HTML: its words, what stands beneath them, its acts — and no token */
+/** the face's HTML: its words, each address in them in the identifier's face (ST's `addressedHTML`), what stands beneath them, its acts — and no token */
 function faceHTML(/** @type {Face} */ face, extra = '') {
-  return `<div class="face-text" data-string="${esc(face.id)}">${esc(face.text)}</div>` + (extra || '') +
+  return `<div class="face-text" data-string="${esc(face.id)}">${addressedHTML(face.text)}</div>` + (extra || '') +
     (face.acts.length ? `<div class="acts">${face.acts.map((a, i) => `<button data-run="a${i}" class="${a.inert ? 'inert' : ''}">${esc(a.label)}</button>`).join('')}</div>` : '');
 }
 
 /** the entitlement arm beneath a face's words (T-ARTICLE's `entitlementArm`), named by its string */
-const armHTML = (/** @type {{id: string, text: string}} */ arm) => `<div class="arm" data-string="${esc(arm.id)}">${esc(arm.text)}</div>`;
+const armHTML = (/** @type {{id: string, text: string}} */ arm) => `<div class="arm" data-string="${esc(arm.id)}">${addressedHTML(arm.text)}</div>`;
 
 /**
  * Show a refusal's face at an anchor: a `withheld` refusal as the
@@ -413,8 +414,8 @@ function ownWords(addr, at) {
  * @param {string} clause the clause as the face writes it
  */
 function ownHTML(w, open, clause) {
-  return (w.addr ? `<div class="face-addr code">${esc(w.addr)}</div>` : '') +
-    `<button class="face-text" data-string="${esc(w.head.id)}" data-run="head" aria-expanded="${open}">${esc(w.head.text)}</button>` +
+  return (w.addr ? `<div class="face-addr code id">${esc(w.addr)}</div>` : '') +
+    `<button class="face-text" data-string="${esc(w.head.id)}" data-run="head" aria-expanded="${open}">${addressedHTML(w.head.text)}</button>` +
     (open ? armHTML(w.arm) + clause : '');
 }
 
@@ -793,7 +794,7 @@ function momentHTML(w) {
     : m.answerable ? `<button data-run="answer">${esc(t('L.answer'))}</button>` : '';
   const cancel = m.answerable ? `<button data-run="cancel" data-string="L.moment.cancel">${esc(t('L.moment.cancel', { walk: m.walk }))}</button>` : '';
   return `<span class="label"><span class="code">${esc(m.walk)}</span> · <span data-string="${esc(caption)}">${esc(t(caption))}</span></span>` +
-    `<div class="face-text moment-words" tabindex="-1">${esc(d.words)}</div>${d.statements.map((s) => `<div class="note">${esc(s)}</div>`).join('')}${field}${fallback}${note}` +
+    `<div class="face-text moment-words" tabindex="-1">${addressedHTML(d.words)}</div>${d.statements.map((s) => `<div class="note">${addressedHTML(s)}</div>`).join('')}${field}${fallback}${note}` +
     (answers || cancel ? `<div class="acts">${answers}${cancel}</div>` : '') +
     (m.answerable ? `<div class="note" data-string="L.moment.leaves">${esc(t('L.moment.leaves'))}</div>` : '');
 }
