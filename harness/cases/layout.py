@@ -268,7 +268,8 @@ cell's text running past its column and the title's keeping a quarter of the
 row; the versions list sets each member on one line, the board having
 ended the chain at its head, the head's read act alone carrying the latest
 version's mark, named in words, and no line standing at the list's open end
-(issue #184); the chrome over the
+(issue #184), each row dated the day the board's own read of its member
+dates it and "published" said once, at the list's head (issue #22); the chrome over the
 plane — the LEAP box, the scene, the one line, the mirror, a corner — is
 opaque. THE TRAIL (foundations §2.2: the entries render as pips): along the
 segment between two consecutive entries in the first edition, inside its box
@@ -1305,10 +1306,20 @@ def scene_holds(ctx, r):
     ctx.js('window.__skep.cards.versions(%s, %d)' % (json.dumps(VERSIONED), para['pos']))
     ctx.settle()
     ctx.frames(2)
-    rows = ctx.js('''[...document.querySelectorAll('#overlay .rows li')].map((li) => [...li.children].map((e) => { const q = e.getBoundingClientRect(); return {item: e.dataset.run || e.className, y: q.top, h: q.height}; }))''')
+    rows = ctx.js('''[...document.querySelectorAll('#overlay .rows li:not(.head)')].map((li) => [...li.children].map((e) => { const q = e.getBoundingClientRect(); return {item: e.dataset.run || e.className, y: q.top, h: q.height}; }))''')
     split = [row for row in rows if len(row) < 3 or max(c['y'] for c in row) >= min(c['y'] + c['h'] for c in row)]
-    r.check(len(rows) == doc['members'] and not split, 'the versions list: each member one row — its read act, what it holds of the passage and its side-by-side act share one line', {'rows': rows, 'members': doc['members']})
+    r.check(len(rows) == doc['members'] and not split, 'the versions list: each member one row — its read act, its date, what it holds of the passage and its side-by-side act share one line', {'rows': rows, 'members': doc['members']})
     seen['versions_rows'] = [[round(c['y'], 1) for c in row] for row in rows]
+    # each row's date (issue #22's design decision: "show each version's publish date on its row. Say 'published' once, at
+    # the list's head"): the day the board's own `doc_metadata` of the member dates it, in the page's one form of a date
+    ages = [ctx.daemon_op({'op': 'doc_metadata', 'doc': '%s.%d' % (VERSIONED, k)}) for k in range(1, (doc['members'] or 0) + 1)]
+    dates = ctx.js('''(async (ages) => { const {dated, t} = await import("./strings.js");
+      return {shown: [...document.querySelectorAll('#overlay .rows.versions li:not(.head)')].map((li) => { const d = li.querySelector('.date'); return d ? d.textContent : null; }),
+              want: ages.map(dated), heads: [...document.querySelectorAll('#overlay .rows.versions li.head')].map((h) => h.textContent), published: t('F.published')}; })(%s)''' % json.dumps([{'at': a.get('at'), 'time': a.get('time'), 'from': a.get('time_from')} for a in ages]))
+    r.check(bool(dates['shown']) and dates['shown'] == dates['want'] and dates['heads'] == [dates['published']],
+            'the versions list: each row carries the day the board\'s own read of its member dates it, and "published" stands once, at the list\'s head (issue #22)',
+            dict(dates, members=doc['members'], board=[{k: a.get(k) for k in ('at', 'time', 'time_from')} for a in ages]))
+    seen['versions_dates'] = {'shown': dates['shown'], 'board': [a.get('time') for a in ages]}
     # the board ends this chain at its head (issue #184's design decision: "End proved"): the head's read act alone carries the
     # latest version's mark, a shape named in words, and no line stands at the list's open end
     head = ctx.js('''(async () => { const {t} = await import("./strings.js");

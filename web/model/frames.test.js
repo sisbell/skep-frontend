@@ -2,7 +2,8 @@
 // request examples spell it (FP-16), the edition-claim and enrollment
 // lookups take `find_links_ftt`'s two-slot shape and never the audit view's
 // `edition_claims`, no write composer exists, and every decoder reads the
-// wire's example answers, `doc_metadata`'s mint position among them.
+// wire's example answers, the age a link value and `doc_metadata` carry among
+// them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as F from './frames.js';
@@ -30,6 +31,15 @@ const EXAMPLES = {
   in_claims: '{"op":"in_claims","view":"active","y":"1.0.1.0.1.0.2.1"}',
   out_claims: '{"op":"out_claims","view":"audit","x":"1.0.1.0.1.0.2.2"}',
   op_at: '{"at":9,"frame":{"op":"retrieve_v","specs":[{"doc":"1.0.1.0.1","span":{"start":"1.1","width":"0.5"}}]}}',
+};
+
+// the wire's own example answers, byte-exact as docs/wire.md carries them (§The response envelope)
+const WIRE = {
+  link_value: '{"as_of":9,"at":7,"link":{"slots":[[{"start":"1.0.1.0.1.0.1.1","width":"0.0.0.0.0.0.0.5"}],[{"start":"1.0.1.0.2.0.1.1","width":"0.0.0.0.0.0.0.6"}],[{"start":"1.0.1.0.3.0.1.1","width":"0.0.0.0.0.0.0.1"}]]},"resp":"link_value","time":1786838400047,"time_from":"feed"}',
+  link_value_null: '{"as_of":9,"at":null,"link":null,"resp":"link_value","time":null,"time_from":null}',
+  doc_metadata: '{"as_of":9,"at":7,"base_extent":"3","birth":"1.0.1.0.1.1","birth_extent":"5","doc":"1.0.1.0.1","owner":"1.0.1","placed":"5","published":true,"resp":"doc_metadata","source":null,"time":1786838400047,"time_from":"feed"}',
+  doc_metadata_unborn: '{"as_of":9,"at":8,"base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.1.0.2","owner":"1.0.1","placed":null,"published":false,"resp":"doc_metadata","source":null,"time":1786838400052,"time_from":"anchor"}',
+  doc_metadata_fork: '{"as_of":9,"at":null,"base_extent":null,"birth":null,"birth_extent":null,"doc":"1.0.2.0.1","owner":"1.0.2","placed":null,"published":false,"resp":"doc_metadata","source":"1.0.1.0.1.1","time":null,"time_from":null}',
 };
 
 test('the read composers spell the wire examples exactly', () => {
@@ -94,15 +104,27 @@ test('the answers decode as the wire gives them', () => {
   assert.deepEqual(F.decodeCompare({ as_of: 9, pairs: [{ d1: '1.0.1.0.1', d2: '1.0.1.0.2', u1: { ordinal: '1', subspace: '1' }, u2: { ordinal: '3', subspace: '1' }, width: '5' }], resp: 'compare' }), [{ d1: '1.0.1.0.1', d2: '1.0.1.0.2', u1: 1, u2: 3, width: 5 }]);
   const m = F.decodeDocMetadata({ as_of: 9, base_extent: '3', birth: '1.0.1.0.1.1', birth_extent: '5', doc: '1.0.1.0.1', owner: '1.0.1', placed: '5', published: true, resp: 'doc_metadata', source: null });
   assert.ok(m); assert.equal(m.birthExtent, 5); assert.equal(m.published, true); assert.equal(m.source, null);
-  assert.equal(m.at, null, 'a board before it kept mint positions answers none');
+  assert.deepEqual(m.age, { at: null, time: null, from: null }, 'a board before it kept mint positions answers none');
   // wire.md's own, asked of the birth version `1.0.1.0.1.1`, minted at 7 (§Namespace, `doc_metadata`)
-  const minted = F.decodeDocMetadata(JSON.parse('{"as_of":9,"at":7,"base_extent":"3","birth":"1.0.1.0.1.1","birth_extent":"5","doc":"1.0.1.0.1","owner":"1.0.1","placed":"5","published":true,"resp":"doc_metadata","source":null,"time":1786838400047,"time_from":"feed"}'));
-  assert.equal(minted?.at, 7, 'the position that minted the address asked: what tells the member a bare address\'s text is (issue #212)');
+  const minted = F.decodeDocMetadata(JSON.parse(WIRE.doc_metadata));
+  assert.equal(minted?.age.at, 7, 'the position that minted the address asked: what tells the member a bare address\'s text is (issue #212)');
   assert.deepEqual(F.decodeEffectiveOwner({ as_of: 9, prefix: '1.0.1', principal: 900, resp: 'effective_owner' }), { prefix: '1.0.1', principal: 900 });
   assert.equal(F.decodeMaybeAddr({ addr: null, as_of: 9, resp: 'maybe_addr' }), null);
   const rej = F.rejected({ code: 'unauthenticated', disposition: 'permanent', op: 'insert', resp: 'rejected' });
   assert.ok(rej); assert.equal(rej.code, 'unauthenticated');
   assert.equal(F.rejected({ resp: 'delivery' }), null);
+});
+
+test('a link value and `doc_metadata` carry the age of the address asked as wire.md\'s examples give it — the feed\'s exact time, the hour\'s anchor, no reading — a time standing only with a source the wire names, and a source only with a time (issue #22)', () => {
+  const link = F.decodeLinkValue('1.0.1.0.1.0.2.1', JSON.parse(WIRE.link_value));
+  assert.deepEqual(link?.age, { at: 7, time: 1786838400047, from: 'feed' }, 'the link minted at 7, its row in the feed');
+  assert.equal(F.decodeLinkValue('1.0.1.0.1.0.2.9', JSON.parse(WIRE.link_value_null)), null, 'no link resides there: no value, no age');
+  assert.deepEqual(F.decodeDocMetadata(JSON.parse(WIRE.doc_metadata))?.age, { at: 7, time: 1786838400047, from: 'feed' }, 'the birth version, minted at 7');
+  assert.deepEqual(F.decodeDocMetadata(JSON.parse(WIRE.doc_metadata_unborn))?.age, { at: 8, time: 1786838400052, from: 'anchor' }, 'a draft whose feed line is gone, dated by the hour\'s anchor');
+  assert.deepEqual(F.decodeDocMetadata(JSON.parse(WIRE.doc_metadata_fork))?.age, { at: null, time: null, from: null }, 'a fork a build before the position map minted: no age');
+  const odd = (/** @type {object} */ members) => F.decodeLinkValue('1.0.1.0.1.0.2.1', { ...JSON.parse(WIRE.link_value), ...members })?.age;
+  assert.deepEqual(odd({ time_from: 'clock' }), { at: 7, time: null, from: null }, 'a source the wire does not name: no time');
+  assert.deepEqual(odd({ time: null }), { at: 7, time: null, from: null }, 'a source with no time: neither');
 });
 
 test('the lineage\'s claims decode as the wire gives them; any other answer is null, never no claim', () => {

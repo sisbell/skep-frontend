@@ -29,7 +29,9 @@ version marker lit, and the plain address taking the box back to the trunk
 head, the marker unlit (issue #154); a face's words
 alone — the fifth cell's at a typed ghost address, with no wire token above
 them and no act beneath (B1-S8; C-42); the anatomy card's rows, each a value
-the page holds (a bare dash reads as B1-S5's "none"), its two lineage rows
+the page holds (a bare dash reads as B1-S5's "none"), the row after the owner's
+saying when the link was made — the day the board's own `read_link` dates it,
+in the page's one form of a date, and no "age" row (issue #22) — its two lineage rows
 among them — `in_claims` and `out_claims` asked for its link under the audit
 view, and "superseded by" and "supersedes" each reading the claims with
 authority its read answered, the authority recomputed here from the tumblers
@@ -204,6 +206,18 @@ def run(ctx):
           return {labels: [...k.querySelectorAll('b')].map((b) => b.textContent), value: v.textContent}; })''')
         blank = [x for x in rows if BLANK.fullmatch(x['value'])]
         r.check(ctx.js('window.__skep.overlay().id') == 'anatomy:' + link and bool(rows) and not blank, 'every row of the anatomy card carries a value: none stands as a bare dash, which B1-S5 draws as "none"', {'blank': blank, 'rows': [x['labels'] for x in rows]})
+        # when the link was made (issue #22's design decision: "The row reads 'made 12 March 2026'"): the day the board's own
+        # `read_link` dates the link, in the page's one form of a date, the row right after the owner's — no age, no position
+        board = ctx.daemon_op({'op': 'read_link', 'a': link})
+        made = ctx.js('''(async (age) => { const {dated, t} = await import("./strings.js");
+          return {label: t("L.card.made"), owner: t("F.card.owner"), want: dated(age)}; })(%s)''' % json.dumps({'at': board.get('at'), 'time': board.get('time'), 'from': board.get('time_from')}))
+        labels = [x['labels'] for x in rows]
+        made_row = [x['value'] for x in rows if x['labels'] == [made['label']]]
+        after_owner = [made['owner']] in labels and labels.index([made['owner']]) + 1 < len(labels) and labels[labels.index([made['owner']]) + 1] == [made['label']]
+        r.check(board.get('link') is not None and len(made_row) == 1 and norm(made_row[0]) == norm(made['want']) and after_owner and ['age'] not in labels,
+                'the anatomy card says when its link was made: "%s", the day the board\'s own read of the link dates it, the row right after the owner\'s, and no "age" row (issue #22)' % made['label'],
+                {'row': made_row, 'want': made['want'], 'board': {k: board.get(k) for k in ('at', 'time', 'time_from')}, 'labels': labels})
+        r.figures['anatomy_made'] = {'row': made_row, 'board': {k: board.get(k) for k in ('at', 'time', 'time_from')}}
         marks = wording_marks(ctx, '#overlay')
         r.check('R5.undocumented' in marks['shown'] and not marks['marked'], 'the anatomy card\'s strings — R5\'s type among them — are set apart by no class of theirs in the inventory', marks)
         r.figures['anatomy_rows'] = rows

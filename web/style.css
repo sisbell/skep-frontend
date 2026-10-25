@@ -285,11 +285,15 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #overlay .rows { list-style:none; margin:4px 0; padding:0; max-height:300px; overflow:auto; }
 #overlay .rows li { padding:1px 0; }
 #overlay .rows button { width:100%; text-align:left; }
-/* the versions list: each member one row — its read act, what it holds of the passage, its side-by-side act — in
-   columns the rows share */
-#overlay .rows.versions { display:grid; grid-template-columns:max-content minmax(0, 1fr) max-content; column-gap:6px; align-items:baseline; }
+/* the versions list: each member one row — its read act, its date, what it holds of the passage, its side-by-side act —
+   in columns the rows share; "published" over the dates; one cell across the date and the strip where one cause left
+   both empty */
+#overlay .rows.versions { display:grid; grid-template-columns:max-content max-content minmax(0, 1fr) max-content; column-gap:6px; align-items:baseline; }
 #overlay .rows.versions li { grid-column:1 / -1; display:grid; grid-template-columns:subgrid; align-items:baseline; }
 #overlay .rows.versions button { width:auto; }
+#overlay .rows.versions .head span { grid-column:2; color:var(--dim); font-size:.9em; }
+#overlay .rows.versions .date { white-space:nowrap; }
+#overlay .rows.versions .across { grid-column:span 2; }
 /* the head's mark where the board ended the chain there (issue #184): a shape beside its read act's words; the line at an
    open end stands in the list's own type, with no icon, colour or box */
 #overlay .rows.versions .latest { margin-left:.35em; }

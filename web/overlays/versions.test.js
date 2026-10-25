@@ -1,5 +1,8 @@
 // O-VERSIONS' test against the fake port, the overlay host on a stand-in
-// element: each member's row marks what its text holds of the passage held,
+// element: each member's row carries the day it was published as its
+// metadata answered — "not recorded" where the board holds no reading, the
+// board not answering said once across the row — under "published" said
+// once at the list's head; each member's row marks what its text holds of the passage held,
 // by `compare` over the member's own extent and by the rule a landing reads
 // (FP-21) — whole, part, all of it in pieces, couldn't tell by the refusal
 // met; each read act a version move carrying the passage held and landing in
@@ -25,8 +28,9 @@ import { docBox } from '../plane/projection.js';
 import * as HOST from './host.js';
 import * as FACES from './faces.js';
 import * as VERSIONS from './versions.js';
+import { memberOf } from '../model/address.js';
 import { t } from '../strings.js';
-import { esc, timeOf } from '../util.js';
+import { esc } from '../util.js';
 
 const T = '1.0.1.0.43', T1 = T + '.1', T2 = T + '.2';
 // the edition and its first member: two paragraphs; its second member: a prologue set before them, which stands the second paragraph 24 positions later
@@ -34,10 +38,14 @@ const TEXT = 'First.\n\nSecond paragraph.', PROLOGUE = 'Prologue added before.\n
 /** the second paragraph, the passage held: its first position and its positions, in the edition */
 const HELD = { pos: TEXT.indexOf('Second') + 1, width: 'Second paragraph.'.length };
 
-/** the reads of a document of `trunk`'s chain read whole: its extent, its metadata, its text, its image, its links (none) */
+/** the day the board says a member `D.k` was published: noon on the 10+k-th of March 2026, in this machine's own time zone, its feed row standing; a trunk the 1st's */
+const publishedAt = (/** @type {string} */ doc) => new Date(2026, 2, 10 + (memberOf(doc) ?? -9), 12).getTime();
+/** that day, as the page names it */
+const dayNamed = (/** @type {string} */ doc) => `${10 + (memberOf(doc) ?? -9)} March 2026`;
+/** the reads of a document of `trunk`'s chain read whole: its extent, its metadata with its age, its text, its image, its links (none) */
 const reads = (/** @type {string} */ doc, /** @type {string} */ text, trunk = T) => ({
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(doc) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + text.length }] } },
-  [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: trunk + '.1', birth_extent: String(TEXT.length), placed: null, base_extent: null, source: null } },
+  [FAKE.keyOf('op', { frame: F.docMetadata(doc) })]: { result: { as_of: 1, resp: 'doc_metadata', doc, published: true, owner: '1.0.1', birth: trunk + '.1', birth_extent: String(TEXT.length), placed: null, base_extent: null, source: null, at: 100 + (memberOf(doc) ?? 0), time: publishedAt(doc), time_from: 'feed' } },
   [FAKE.keyOf('op', { frame: F.retrieveV(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: text }] } },
   [FAKE.keyOf('op', { frame: F.image(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: trunk + '.0.1.1', width: String(text.length) }] } },
   [FAKE.keyOf('op', { frame: F.findLinksV(doc, 1, text.length) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
@@ -59,6 +67,14 @@ const V = '1.0.1.0.45', V1 = V + '.1', V2 = V + '.2', V3 = V + '.3', V4 = V + '.
 // stands; Z, which the board does not answer at all
 const X = '1.0.1.0.46', X1 = X + '.1', X2 = X + '.2', X3 = X + '.3', X4 = X + '.4';
 const Y = '1.0.1.0.47', Z = '1.0.1.0.48';
+// W, of three members, each holding its first paragraph: the board keeping no reading of its second's time, and not
+// answering its third's metadata
+const W = '1.0.1.0.49', W1 = W + '.1', W2 = W + '.2', W3 = W + '.3';
+/** a member's metadata as `reads` answers it, its time as the board answers it where it holds no reading */
+const untimed = (/** @type {string} */ doc, /** @type {string} */ trunk) => {
+  const answer = /** @type {{result: Record<string, unknown>}} */ (reads(doc, TEXT, trunk)[FAKE.keyOf('op', { frame: F.docMetadata(doc) })]);
+  return { result: { ...answer.result, time: null, time_from: null } };
+};
 const UNREACHABLE = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
 const NOT_REGISTERED = { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } };
 /** Y's k-th member */
@@ -77,6 +93,7 @@ const script = {
   ...compared(V1, TEXT.length, [[HELD.pos, HELD.pos, HELD.width]], V),
   ...compared(V2, TEXT.length, [[HELD.pos, 1, 9], [HELD.pos, 12, 8]], V),
   ...compared(V3, TEXT.length, [[HELD.pos + 8, 1, HELD.width - 8], [HELD.pos, 15, 8]], V),
+  [FAKE.keyOf('op', { frame: F.docMetadata(V4) })]: reads(V4, TEXT, V)[FAKE.keyOf('op', { frame: F.docMetadata(V4) })],
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(V4) })]: { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } },
   // X's members, the passage held its second paragraph at its bare address, its third's first block at its third member
   ...reads(X, TEXT, X), ...reads(X1, TEXT, X), ...reads(X2, TEXT, X), ...reads(X3, TEXT, X),
@@ -88,6 +105,10 @@ const script = {
   ...Object.assign({}, ...Array.from({ length: 10 }, (_, i) => ({ ...reads(y(i + 1), TEXT, Y), ...compared(y(i + 1), TEXT.length, [[HELD.pos, HELD.pos, HELD.width]], Y) }))),
   [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(Z) })]: UNREACHABLE,
   [FAKE.keyOf('op', { frame: F.docMetadata(Z + '.1') })]: UNREACHABLE,
+  ...reads(W, TEXT, W), ...reads(W1, TEXT, W), ...reads(W2, TEXT, W),
+  [FAKE.keyOf('op', { frame: F.docMetadata(W2) })]: untimed(W2, W),
+  [FAKE.keyOf('op', { frame: F.docMetadata(W3) })]: UNREACHABLE,
+  ...compared(W1, TEXT.length, [[1, 1, FIRST.width]], W, FIRST), ...compared(W2, TEXT.length, [[1, 1, FIRST.width]], W, FIRST),
 };
 /** the board out while Y's chain is first probed past its tenth member */
 let beyond = true;
@@ -105,7 +126,12 @@ let fake;
 /** the overlay host's stand-in element: what the host writes into it is what a person meets */
 const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
 /** the list's rows: each member's number and what its strip marks */
-const rows = () => [...hostEl.innerHTML.matchAll(/data-run="read(\d+)"[^>]*>(?:(?!<\/button>).)*<\/button> <span class="strip" data-holds="([a-z]*)"/g)].map((m) => [Number(m[1]), m[2]]);
+const rows = () => [...hostEl.innerHTML.matchAll(/data-run="read(\d+)"[^>]*>(?:(?!<\/button>).)*<\/button> (?:<span class="date">[^<]*<\/span> )?<span class="strip[^"]*" data-holds="([a-z]*)"/g)].map((m) => [Number(m[1]), m[2]]);
+/** the list's rows as a person reads them: each member's number, its date's words, and its strip's — one cell's words alone where one stands across both */
+const cells = () => [...hostEl.innerHTML.matchAll(/data-run="read(\d+)"[^>]*>(?:(?!<\/button>).)*<\/button> (?:<span class="date">([^<]*)<\/span> <span class="strip" data-holds="[a-z]*">([^<]*)<\/span>|<span class="strip across" data-holds="[a-z]*">([^<]*)<\/span>)/g)]
+  .map((m) => (m[4] != null ? [Number(m[1]), unesc(m[4])] : [Number(m[1]), unesc(m[2]), unesc(m[3])]));
+/** the words "published" stands in at the list's head, each time it stands there */
+const heads = () => [...hostEl.innerHTML.matchAll(/<li class="head"><span data-string="F\.published">([^<]*)<\/span><\/li>/g)].map((m) => unesc(m[1]));
 /** HTML text as a person reads it: the escapes `esc` writes undone */
 const unesc = (/** @type {string} */ s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
 /** the list's caption as markup, up to the rows */
@@ -152,6 +178,29 @@ before(async () => {
 test('each member\'s row marks the passage held by `compare` over the member\'s own extent: a member longer than its document holds it whole past the document\'s length', async () => {
   await VERSIONS.open(T, HELD.pos, null);
   assert.deepEqual(rows(), [[1, 'whole'], [2, 'whole']], hostEl.innerHTML);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('each row carries the day its member was published, as the board answered its metadata, beside its read act — and "published" stands once, over the dates, at the list\'s head (issue #22\'s design decision: "show each version\'s publish date on its row. Say \'published\' once, at the list\'s head")', async () => {
+  await VERSIONS.open(T, HELD.pos, null);
+  assert.deepEqual(cells(), [[1, dayNamed(T1), t('F.versions.whole')], [2, dayNamed(T2), t('F.versions.whole')]], 'version 1 the 11th of March, version 2 the 12th');
+  assert.deepEqual(heads(), [t('F.published')], 'said once');
+  assert.ok(hostEl.innerHTML.indexOf('<li class="head">') < hostEl.innerHTML.indexOf('data-run="read1"'), 'at the list\'s head, before its first row');
+  assert.ok(!/\d+ (days?|hours?|minutes?) ago/.test(hostEl.innerHTML), 'never a relative age');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a member the board holds no reading of the time of reads "not recorded"; one whose metadata the board does not answer reads "board unreachable" once across its date and what it holds, the member asked nothing more (issue #22; FP-34)', async () => {
+  await PUMP.loadWhole(W);
+  REC.takeMembers(W, 3);
+  const from = fake.asked.length;
+  await VERSIONS.open(W, null, null);
+  assert.deepEqual(cells(), [[1, dayNamed(W1), t('F.versions.whole')], [2, t('F.slot.not-recorded'), t('F.versions.whole')], [3, t('F.daemon.unreachable')]]);
+  assert.deepEqual(rows(), [[1, 'whole'], [2, 'whole'], [3, 'unknown']], 'the third could not tell what it holds');
+  assert.ok(!askedSince(from).includes(key(F.retrieveDocVSpanSet(W3))), 'the third asked nothing after its metadata went unanswered');
+  assert.deepEqual(heads(), [t('F.published')]);
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -228,21 +277,22 @@ test('a list whose probe the board stopped answering keeps every member it read 
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('the version being read is listed where the probe stopped short of it: current, and "not read" where a row says what it holds of the passage, the caption naming it alone (issue #184: "The version being read is always listed")', async () => {
+test('the version being read is listed where the probe stopped short of it: current, and "not read" once across its date and what it holds of the passage, the caption naming it alone (issue #184: "The version being read is always listed"; FP-34)', async () => {
   await VERSIONS.open(X3, null, null);
   assert.deepEqual([rows(), current(), caption(), marked(), REC.doc(X).members], [[[1, 'whole'], [2, 'whole'], [3, 'unread']], [3], `${X} · ${t('L.version', { k: 3 })}`, [], null]);
-  assert.ok(hostEl.innerHTML.includes(`<span class="strip" data-holds="unread">${esc(t('L.versions.not-read'))}</span>`), 'never a blank strip, which would read as "no"');
+  assert.ok(hostEl.innerHTML.includes(`<span class="strip across" data-holds="unread">${esc(t('L.versions.not-read'))}</span>`), 'never a blank strip, which would read as "no"');
+  assert.deepEqual(cells(), [[1, dayNamed(X1), t('F.versions.whole')], [2, dayNamed(X2), t('F.versions.whole')], [3, t('L.versions.not-read')]], 'the members read dated; the one past them "not read", said once for its date and its strip');
   assert.deepEqual(openEnd(), { id: 'L.versions.cut', words: t('L.versions.cut', { k: 2 }), asOf: null, again: true });
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('the members a held feed row names past where the probe stopped are listed, each not read, and the line dates them by the newest row\'s commit time (issue #184: "as last read ⟨when⟩")', async () => {
-  const WHEN = 1792683856911;
+test('the members a held feed row names past where the probe stopped are listed, each not read, and the line dates them by the newest row\'s commit time, in the form every date of the list takes (issue #184: "as last read ⟨when⟩"; issue #22)', async () => {
+  const WHEN = new Date(2026, 9, 22, 9, 4).getTime();
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 12654, at: 12654, op: 'publish', docs: [X4], class: 'published', time: WHEN }));
   await VERSIONS.open(X, HELD.pos, null);
   assert.deepEqual([rows(), current(), caption(), marked()], [[[1, 'whole'], [2, 'whole'], [3, 'unread'], [4, 'unread']], [], X, []], 'every member up to the fourth the row names, the third between them among them');
-  assert.deepEqual(openEnd(), { id: 'L.versions.cut', words: t('L.versions.cut', { k: 2 }), asOf: t('L.versions.as-of', { when: timeOf(WHEN) }), again: true });
+  assert.deepEqual(openEnd(), { id: 'L.versions.cut', words: t('L.versions.cut', { k: 2 }), asOf: t('L.versions.as-of', { when: '22 October 2026' }), again: true }, 'the day, the month in words and the year, as the rows\' dates: no time of day');
   HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });

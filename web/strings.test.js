@@ -2,7 +2,9 @@
 // pinned strings are verbatim and a token filled leaves the rest, as words
 // or as markup reading the same words, a value asked for set in its class;
 // words made elsewhere set as markup in their faces, each address M-ADDR
-// reads in them the identifier's and nothing else;
+// reads in them the identifier's and nothing else; a time said in the one
+// form of a date, "not recorded" or "on or before" where the board's
+// testimony leaves it so;
 // the entries no design document carries are listed; and every accessible name the page
 // sets is read from ST — none stands in the markup, and none is written as a
 // literal in a module.
@@ -10,7 +12,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned } from './strings.js';
+import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated } from './strings.js';
 
 test('every entry is classed and sourced', () => {
   for (const [id, e] of Object.entries(STRINGS)) {
@@ -47,6 +49,17 @@ test('words made elsewhere as markup: each address M-ADDR reads in them in the i
   assert.equal(facedHTML([{ text: 'withheld · ', face: 'client' }, { text: '1.0.2', face: 'ident' }, { text: ' · ', face: 'client' }, { text: 'Notes <1>', face: 'reading' }, { text: ' in 1.0.1.0.3', face: 'client' }]),
     'withheld · <span class="id">1.0.2</span> · <span class="reading">Notes &lt;1&gt;</span> in <span class="id">1.0.1.0.3</span>', 'each run in its face, a document\'s words the reading face\'s and never searched for addresses');
   assert.equal(facedHTML([{ text: 'see 1.0.1.0.3', face: 'reading' }]), '<span class="reading">see 1.0.1.0.3</span>', 'a document\'s own words keep their letterforms, an address in them too');
+});
+
+test('a time is said in one form of a date — the day, the month in words, the year — from the board\'s testimony: the feed\'s row its own day; an hour\'s anchor its day while the hour after it stays inside that day, else "on or before" the day the hour ends in; "not recorded" where the board holds no reading (issue #22)', () => {
+  // in this machine's own time zone: noon, two minutes before eleven at night, and half past eleven, on the 12th of March 2026
+  const noon = new Date(2026, 2, 12, 12).getTime(), before = new Date(2026, 2, 12, 22, 58).getTime(), late = new Date(2026, 2, 12, 23, 30).getTime();
+  assert.equal(dated({ at: 7, time: noon, from: 'feed' }), '12 March 2026');
+  assert.equal(dated({ at: 7, time: late, from: 'feed' }), '12 March 2026', 'the feed\'s row is exact: its own day, however late');
+  assert.equal(dated({ at: 8, time: before, from: 'anchor' }), '12 March 2026', 'the hour after 22:58 ends inside the day');
+  assert.equal(dated({ at: 8, time: late, from: 'anchor' }), t('L.time.on-or-before', { date: '13 March 2026' }), 'the hour after 23:30 ends on the 13th');
+  assert.equal(dated({ at: 9, time: null, from: null }), t('F.slot.not-recorded'));
+  assert.equal(dated({ at: null, time: null, from: null }), 'not recorded');
 });
 
 test('the lane\'s own strings are listed for the report', () => {

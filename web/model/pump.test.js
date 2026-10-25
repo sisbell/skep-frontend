@@ -1,7 +1,8 @@
 // M-PUMP's test against the fake port (FP-15): the model built from scripted
 // answers and events with no write composed; the view's reads and probes —
 // each box read as it is drawn, far ends projected into the version the far
-// box shows, the edition claims and the byline's facts read once — and what
+// box shows, the edition claims and the byline's facts read once, a chain's
+// members' ages kept as its probe reads them — and what
 // a read the board did not answer, a drop that overtook a read, a size
 // refusal or a `scan_busy` does to each; the acquire, a session's end and the
 // page's own death, every read asked again at the page's class; a listing,
@@ -1194,6 +1195,27 @@ test('an act\'s probe goes on past the members a probe before it read, asking th
   assert.deepEqual([out?.n, out?.ended, out && out.met && out.met.kind, out && out.met && out.met.name], [4, false, 'refused', 'withheld'], 'three read before: the fourth answers, the fifth is refused');
   assert.deepEqual(metadataAsked(fake, from), [D + '.4', D + '.5'], 'the fourth asked first');
   assert.deepEqual([REC.doc(D).members, REC.doc(D).ended], [4, false], 'recorded as read so far, never as the chain');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a probe of a chain keeps each member\'s age as its metadata answered it — a feed row naming the trunk dropping none, a change of the page\'s class every one — and an act\'s read of a member the probe never asked, its birth, keeps that one\'s too (issue #22)', async () => {
+  const meta = script[FAKE.keyOf('op', { frame: F.docMetadata(D) })];
+  /** member k's metadata as the board answers it: minted at 100 + k, the feed's row for it standing */
+  const aged = (/** @type {number} */ k) => ({ result: { ...meta.result, at: 100 + k, time: 1792000000000 + k, time_from: 'feed' } });
+  const age = (/** @type {number} */ k) => ({ at: 100 + k, time: 1792000000000 + k, from: 'feed' });
+  const s = { ...script, [FAKE.keyOf('op', { frame: F.docMetadata(D + '.4') })]: NOT_REGISTERED };
+  for (const k of [1, 2, 3]) s[FAKE.keyOf('op', { frame: F.docMetadata(D + '.' + k) })] = aged(k);
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  REC.setBoard({ board: 'b-1', name: '', origin: '' });
+  await PUMP.loadWhole(D);
+  assert.deepEqual(await PUMP.probeChain(D), { n: 3, ended: true, met: null });
+  assert.deepEqual([1, 2, 3].map((k) => REC.memberAge(D + '.' + k)), [undefined, age(2), age(3)], 'the second and third as their metadata answered; the first, the birth the trunk names, never asked');
+  assert.deepEqual([await PUMP.ageOf(D + '.1'), REC.memberAge(D + '.1')], [{ age: age(1) }, age(1)], 'an act\'s read of the first, kept');
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 5, at: 5, op: 'insert', docs: [D], class: 'published' }));
+  assert.deepEqual(REC.memberAge(D + '.2'), age(2), 'a feed row naming the trunk drops no member\'s age: a mint\'s age never changes');
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual([1, 2, 3].map((k) => REC.memberAge(D + '.' + k)), [undefined, undefined, undefined], 'a change of the page\'s class drops every one');
   assert.deepEqual(fake.unanswered, []);
 });
 

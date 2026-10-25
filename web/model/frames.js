@@ -14,10 +14,12 @@
 // not composed (E17 (a)).
 // The answers decoded: the delivery's items (`content`, `hex`, `atom`,
 // `atom_hex`, `ref`, `withheld`), a span set, an `addrs` list, a link value,
-// a follow, the V→I runs, a compare report, `doc_metadata` — its `at`, the
-// position that minted the address asked, null where the board keeps none —
+// a follow, the V→I runs, a compare report, `doc_metadata`,
 // `effective_owner`'s pair, `maybe_addr`, `key_set`, the lineage's `claims`
-// (A-82), and a `rejected` document.
+// (A-82), and a `rejected` document. A link value and `doc_metadata` each
+// carry the age of the address asked (`Age`): the position of the commit
+// that minted it and the board's testimony of when that commit was made,
+// the testimony's time and its source taken together or not at all.
 // Rules: FP-1, FP-2, FP-6, FP-16 (this module's test pins every frame to the
 // wire document's examples).
 
@@ -61,6 +63,15 @@ export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs',
  */
 
 /**
+ * @typedef {Object} Age — when an address was minted, as a `read_link` or `doc_metadata` answer gives it (wire.md
+ * §The response envelope, `link_value`): made by `ageIn` alone, so `time` and `from` are null together
+ * @property {number | null} at the position of the commit that minted it; null where the board keeps none for it
+ * @property {number | null} time that commit's unix milliseconds; null where neither testimony holds a reading
+ * @property {'feed' | 'anchor' | null} from the testimony: `feed` the change feed's own row for `at`, exact; `anchor`
+ * the newest hourly time record at or below `at`, the commit made within the hour after it; null with `time`
+ */
+
+/**
  * @typedef {Object} DocMeta
  * @property {string} doc
  * @property {boolean} published
@@ -70,8 +81,8 @@ export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs',
  * @property {number | null} placed
  * @property {number | null} baseExtent
  * @property {string | null} source
- * @property {number | null} at the position of the commit that minted the address asked — a version member its own mint,
- * the trunk its creation (wire.md §Namespace, `doc_metadata`) — null where the board keeps none for it
+ * @property {Age} age the age of the address asked — a version member its own mint, the trunk its creation (wire.md
+ * §Namespace, `doc_metadata`)
  * @property {number} asOf
  */
 
@@ -81,6 +92,7 @@ export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs',
  * @property {EndRef[]} from slot 1
  * @property {EndRef[]} to slot 2
  * @property {string | null} type the type slot's first address
+ * @property {Age} age when the link was made: the commit that minted it
  */
 
 /**
@@ -272,13 +284,26 @@ export function decodeAddrs(/** @type {unknown} */ answer) {
   return a.resp === 'addrs' && Array.isArray(a.addrs) ? a.addrs.map(String) : [];
 }
 
-/** `link_value` → the link's slots resolved; null where no link resides there */
+/**
+ * An answer's age members — `at`, `time`, `time_from` — as one `Age`: a
+ * `time` stands only with a source the wire names, and a source only with a
+ * time.
+ * @param {Record<string, unknown>} a
+ * @returns {Age}
+ */
+function ageIn(a) {
+  const from = a.time_from === 'feed' || a.time_from === 'anchor' ? a.time_from : null;
+  const time = from && typeof a.time === 'number' ? a.time : null;
+  return { at: a.at == null ? null : Number(a.at), time, from: time == null ? null : from };
+}
+
+/** `link_value` → the link's slots resolved and its age; null where no link resides there */
 export function decodeLinkValue(/** @type {string} */ addr, /** @type {unknown} */ answer) {
   const a = /** @type {{resp?: string, link?: {slots?: Array<Array<{start: string, width: string}>>} | null}} */ (answer || {});
   if (a.resp !== 'link_value' || !a.link || !Array.isArray(a.link.slots)) return null;
   const [from = [], to = [], ty = []] = a.link.slots;
   /** @type {LinkValue} */
-  const v = { addr, from: from.map(resolveSpan), to: to.map(resolveSpan), type: ty.length ? ty[0].start : null };
+  const v = { addr, from: from.map(resolveSpan), to: to.map(resolveSpan), type: ty.length ? ty[0].start : null, age: ageIn(/** @type {Record<string, unknown>} */ (a)) };
   return v;
 }
 
@@ -313,7 +338,7 @@ export function decodeDocMetadata(/** @type {unknown} */ answer) {
   const m = {
     doc: String(a.doc), published: !!a.published, owner: String(a.owner),
     birth: a.birth == null ? null : String(a.birth), birthExtent: num(a.birth_extent), placed: num(a.placed), baseExtent: num(a.base_extent),
-    source: a.source == null ? null : String(a.source), at: num(a.at), asOf: Number(a.as_of),
+    source: a.source == null ? null : String(a.source), age: ageIn(a), asOf: Number(a.as_of),
   };
   return m;
 }

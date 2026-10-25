@@ -10,11 +10,13 @@
 // reading face's — and every address in the rest in the identifier's face;
 // words made elsewhere are set as markup by their faces
 // (`facedHTML`), or with every address M-ADDR reads in them in the
-// identifier's face (`addressedHTML`); `pinned` lists the pinned entries for
-// the gate's text case, which holds each to its source.
-// Rules: FP-1, FP-2, FP-13, FP-32.
+// identifier's face (`addressedHTML`); when a thing was made is said by
+// `dated`, from the board's own testimony and never from the reader's clock,
+// in one form of a date on every surface; `pinned` lists the pinned entries
+// for the gate's text case, which holds each to its source.
+// Rules: FP-1, FP-2, FP-13, FP-32, FP-34.
 
-import { fill, esc } from './util.js';
+import { fill, esc, dayOf } from './util.js';
 import { commonsType, isAddress } from './model/address.js';
 
 /**
@@ -119,7 +121,7 @@ export const STRINGS = {
   'F.corner.no-versions': { text: '⟨published⟩ · no versions yet — its first is made when you publish new text for it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.corner.withheld': { text: 'withheld · ⟨owner⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.published.notebook': { text: 'published here — readable by anyone who can reach this notebook: anything on this machine, and nothing beyond it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
-  'F.published': { text: 'published', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
+  'F.published': { text: 'published', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner; the versions list' },
   'F.version-of': { text: 'version ⟨k⟩ of ⟨n⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.alternatives': { text: '· ⟨m⟩ alternatives', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
   'F.alternatives.1': { text: '· 1 alternative', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the corner' },
@@ -182,7 +184,6 @@ export const STRINGS = {
   'F.card.to': { text: 'to', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.home': { text: 'home', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.owner': { text: 'owner', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
-  'F.card.age': { text: 'age', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.superseded-by': { text: 'superseded by', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.supersedes': { text: 'supersedes', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
   'F.card.none': { text: 'none', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S5' },
@@ -193,9 +194,10 @@ export const STRINGS = {
   'F.versions.whole': { text: 'holds the passage whole', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the versions list' },
   'F.versions.part': { text: 'holds the passage in part', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the versions list' },
   'F.versions.none': { text: 'does not hold the passage', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the versions list' },
-  // a byline's slots where no key can be named (FP-34; foundations §3.2): no key made the writes; the board lost it
+  // a byline's slots where no key can be named (FP-34; foundations §3.2): no key made the writes; the board lost it — the
+  // words too for a time the board holds no reading of
   'F.slot.unsigned': { text: 'unsigned', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the byline' },
-  'F.slot.not-recorded': { text: 'not recorded', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the byline' },
+  'F.slot.not-recorded': { text: 'not recorded', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the byline; B1-S5; the versions list' },
   'F.leap.arriving': { text: 'the index is still building — what is listed here is what has arrived', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
   'F.index.state': { text: 'index: ⟨arm⟩', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
 
@@ -263,6 +265,10 @@ export const STRINGS = {
   'L.card.this-owner': { text: 'this link\'s owner', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   'L.card.above': { text: 'an account above the superseded link\'s owner', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   'L.card.under': { text: 'an account under the superseded link\'s owner', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  // when a thing was made, said as its date after the word for its event (`dated`): a link's; and where only an hourly
+  // time record testifies to the time, the latest day it can have fallen on
+  'L.card.made': { text: 'made', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  'L.time.on-or-before': { text: 'on or before ⟨date⟩', cls: 'DRAFT', source: '', screen: 'B1-S5; the versions list', lane: true },
   'L.the-line': { text: 'the one line', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.leap-label': { text: 'LEAP — an address, or a document\'s first line', cls: 'DRAFT', source: 'designs/plane.html', screen: 'B1-S11' },
   'L.leap-rows-label': { text: 'LEAP', cls: 'DRAFT', source: '', screen: 'B1-S11', lane: true },
@@ -487,3 +493,23 @@ export function typeName(ty) {
 /** a count noun: `one` where n is 1, else `many` with ⟨n⟩ filled */
 export const plural = (/** @type {number} */ n, /** @type {string} */ one, /** @type {string} */ many) =>
   n === 1 ? t(one) : t(many, { n });
+
+/** the hour an hourly time record's testimony leaves open, in milliseconds: the commit fell within it, after the record's time */
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * When a thing was made, in the page's one form of a date (U's `dayOf`): the
+ * day its commit fell on, where the change feed's own row testifies to it;
+ * where only an hourly time record does, that day while the hour after the
+ * record stays inside it, else "on or before" the day the hour ends in;
+ * "not recorded" where the board holds no reading.
+ * @param {import('./model/frames.js').Age} age
+ * @returns {string}
+ */
+export function dated(age) {
+  if (age.time == null) return t('F.slot.not-recorded');
+  const day = dayOf(age.time);
+  if (age.from !== 'anchor') return day;
+  const latest = dayOf(age.time + HOUR_MS - 1);
+  return latest === day ? day : t('L.time.on-or-before', { date: latest });
+}

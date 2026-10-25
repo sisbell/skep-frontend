@@ -46,11 +46,12 @@
 // its claimant — "you" for the reader — and, in words, what the claimant is
 // to the links: this link's owner, an account above or under the superseded
 // link's owner. Position and wording carry authority, never colour alone.
-// Its acts follow either end and open the scene. B1-S5's age row is not
-// drawn: the age is not held for a link older than this page's feed, which
-// starts at the head, and a row standing with no value would read as
-// B1-S5's "none". The link's mark comes from LK's `markOf`, so the card and
-// the symbol agree.
+// Between the owner row and the lineage stands when the link was made: the
+// date of the commit that minted it, from the age `read_link` answered with
+// the link (ST's `dated`), "not recorded" where the board holds no reading of
+// it, and never a log position.
+// Its acts follow either end and open the scene. The link's mark comes from
+// LK's `markOf`, so the card and the symbol agree.
 // The card takes the focus on its first act — follow, the line standing
 // before it — where a key opened it (Enter at the link's element, K-55; a
 // links-card row's Enter) and never where a click did (D5 §4 rule 4; the
@@ -65,7 +66,7 @@
 // listed, each row naming its link by its type and its far end (LK's
 // `farLabel`) and opening that link's card; the one symbol a withheld run's
 // ends merge into, pressed, lists them so at the symbol (`fromSymbol`; P44).
-// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-30, FP-33.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-30, FP-33, FP-34.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -76,7 +77,7 @@ import * as SCENE from '../scene/scene.js';
 import * as F from '../model/frames.js';
 import * as LAYER from '../text/layer.js';
 import { lineOf, farHolds, floatingOf } from '../beams/held.js';
-import { t, typeName, facedHTML } from '../strings.js';
+import { t, typeName, facedHTML, dated } from '../strings.js';
 import { esc, fill } from '../util.js';
 import { inFace, runsOf } from '../plane/labels.js';
 import { accountOf, isUnder } from '../model/address.js';
@@ -327,6 +328,7 @@ function showCard(s, read, anchorEl, byKey, others = false) {
     `<div class="kv"><b>${esc(t('F.card.to'))}</b> <span class="code id">${esc(toDoc)}</span></div>` +
     `<div class="kv"><b>${esc(t('F.card.home'))}</b> <span class="code id">${esc(l.home)}</span> — ${esc(homePublished ? t('F.card.public') : t('F.card.hidden'))}</div>` +
     `<div class="kv"><b>${esc(t('F.card.owner'))}</b> ${l.owner ? `<span class="code id">${esc(l.owner)}</span>` : '—'}</div>` +
+    `<div class="kv made"><b>${esc(t('L.card.made'))}</b> ${esc(dated(l.age))}</div>` +
     supersessionRows(lineage, who, others) +
     `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${far ? `<span class="id">${esc(far)}</span>` : ''}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
   HOST.show({

@@ -17,7 +17,8 @@
 // the transclusion origins it shows, the raw set of links touching them,
 // their chain's count and whether the board ended it there, the position
 // their text was read at (`Doc.readAt`), and a refusal a read of them met;
-// links as delivered, the type learned once (E17 (a)); where a link's slot
+// each version member's age, which no feed row drops (`memberAge`); links as
+// delivered with their age, the type learned once (E17 (a)); where a link's slot
 // projects into a document's current text as `project` answered it, or what
 // its refusal said of that document (`Declined`; A-53), held until that
 // document's delivered state is dropped; the edition claims the active view
@@ -75,6 +76,7 @@ import { byteOffsets } from '../util.js';
 /** @typedef {import('./frames.js').Run} Run */
 /** @typedef {import('./frames.js').DocMeta} DocMeta */
 /** @typedef {import('./frames.js').LinkValue} LinkValue */
+/** @typedef {import('./frames.js').Age} Age */
 /** @typedef {import('./address.js').EndRef} EndRef */
 /** @typedef {import('../bridge/shapes').Place} ShapePlace */
 /** @typedef {import('../bridge/shapes').PlacesAnswer} PlacesAnswer */
@@ -184,6 +186,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @property {string | null} type the type slot's address
  * @property {EndRef[]} from
  * @property {EndRef[]} to
+ * @property {Age} age when the link was made, as `read_link` answered it
  */
 
 /**
@@ -286,6 +289,8 @@ const state = {
   bare: false,
   /** @type {Map<string, Doc>} */
   docs: new Map(),
+  /** @type {Map<string, Age>} each version member's age as a `doc_metadata` of it answered, by the member's address (`takeMemberAge`) */
+  memberAges: new Map(),
   /** @type {Map<string, Link>} */
   links: new Map(),
   /** @type {Map<string, Map<string, Stretch[] | Declined>>} `project`'s answers, by the document projected into, then by `⟨link⟩ ⟨slot⟩` */
@@ -369,7 +374,7 @@ function dropClass() {
   state.readBefore = new Set([...state.index.keys(), ...[...state.docs.values()].filter((d) => !d.refused && (d.from >= 0 || d.meta || d.extent != null)).map((d) => d.addr)]);
   state.index.clear(); state.counts.clear(); state.indexState = null;
   for (const d of state.docs.values()) { drop(d); unlist(d); }
-  state.links.clear(); state.projections.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.owners.clear(); state.keySets.clear();
+  state.links.clear(); state.memberAges.clear(); state.projections.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.owners.clear(); state.keySets.clear();
   dropKeyCauses();
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
 }
@@ -644,10 +649,11 @@ export function takeMetadata(/** @type {string} */ addr, /** @type {DocMeta} */ 
   d.rev++; reclause(claiming((c) => homeOf(c) === addr)); bump();
 }
 
-/** metadata into a record, its kind with it where no index row and no member's address names one, a failed read of it answered (`takeMetadata`, `setAgain`) */
+/** metadata into a record, its kind with it where no index row and no member's address names one, a version member's age with it (`takeMemberAge`), a failed read of it answered (`takeMetadata`, `setAgain`) */
 function metaInto(/** @type {Doc} */ d, /** @type {DocMeta} */ meta) {
   d.meta = meta;
   if (!state.index.has(d.addr) && !memberOf(d.addr)) d.kind = meta.published ? 'edition' : 'draft';
+  if (isTrunkMember(d.addr)) state.memberAges.set(d.addr, meta.age);
   state.failedReads.delete(d.addr);
 }
 
@@ -984,6 +990,17 @@ export function holdsEnd(addr, e) {
  */
 export function takeMembers(addr, n, ended = true) { const d = doc(addr); d.members = n; d.ended = ended; d.rev++; bump(); }
 
+/**
+ * A version member's age, as a `doc_metadata` of it answered — the commit
+ * that published it. The board keeps a mint's position and time for good, so
+ * no feed row drops it; a change of the page's class does (`dropClass`).
+ * @param {string} member a trunk member's address, `D.k`
+ * @param {Age} age
+ */
+export function takeMemberAge(member, age) { state.memberAges.set(member, age); bump(); }
+/** a version member's age as held (`takeMemberAge`); undefined where no read of it answered at the page's class */
+export const memberAge = (/** @type {string} */ member) => state.memberAges.get(member);
+
 /** drop a document's delivered state (a feed row named it; the viewport asks again), and where every link's slot projects into it, whether or not the page holds its record — the drop counted first (`dropsOf`), no record made for it — and a failed read of it or of a link homed in it (`takeFailedRead`), which is asked again; where it is an edition claim's home, each document windowing the claim's origin is made again */
 export function invalidate(/** @type {string} */ addr) {
   counted(addr);
@@ -1026,10 +1043,10 @@ export function takeLinks(/** @type {string} */ addr, /** @type {string[]} */ ad
   for (const a of addrs) d.links.add(a);
   d.linksRead = true; d.rev++; bump();
 }
-/** `read_link`'s answer: the link's slots, its type learned once, its home read from its address whole — the version member it is homed at, where it is one (`homeOf`) — a failed read of it before answered (`takeFailedRead`); where it is an edition claim, each document windowing the claim's origin is made again */
+/** `read_link`'s answer: the link's slots and its age, its type learned once, its home read from its address whole — the version member it is homed at, where it is one (`homeOf`) — a failed read of it before answered (`takeFailedRead`); where it is an edition claim, each document windowing the claim's origin is made again */
 export function takeLink(/** @type {LinkValue} */ v) {
   const home = homeOf(v.addr) || v.addr;
-  state.links.set(v.addr, { addr: v.addr, home, owner: accountOf(home), type: v.type, from: v.from, to: v.to });
+  state.links.set(v.addr, { addr: v.addr, home, owner: accountOf(home), type: v.type, from: v.from, to: v.to, age: v.age });
   state.failedReads.delete(v.addr);
   reclause(claiming((c) => c === v.addr));
   bump();
@@ -1510,7 +1527,7 @@ export function setAgain(addr, fresh) {
 /** reset everything (tests) */
 export function _reset() {
   state.board = null; state.noBoard = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
-  state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear();
+  state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops = 0;
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.rev = 0;
 }

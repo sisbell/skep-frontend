@@ -60,12 +60,14 @@ const CONT = '1.0.1.0.49', CONT_TEXT = 'A continuation note.\n\nIts second parag
 const NEAR_EXTENT = NEAR_TEXT.length, FAR_EXTENT = FAR_TEXT.length;
 const span = (/** @type {string} */ doc, /** @type {number} */ ord, /** @type {number} */ w) => ({ start: `${doc}.0.1.${ord}`, width: '0.0.0.0.0.0.0.' + w, doc, account: '1.0.1', whole: false, subspace: 1, ordinal: ord, positions: w });
 const whole = (/** @type {string} */ doc) => ({ start: doc, width: '0.0.0.0.1', doc, account: '1.0.1', whole: true, subspace: null, ordinal: null, positions: null });
+/** the age of a link the board keeps no reading of (M-FRAMES's `Age`): what the anatomy card says of the links it is opened on here */
+const UNDATED = { at: null, time: null, from: null };
 // the person's citations from the first edition: one of a passage of FAR, one of FAR whole
 const PASSAGE = D + '.0.2.1', WHOLE = D + '.0.2.2';
 // a citation from the first edition whose far end names GONE: a dead reference
 const DEAD = D + '.0.2.3';
 /** the dead reference taken into the model, drawn at the first edition */
-const takeDead = () => { REC.takeLinks(D, [DEAD]); REC.takeLink({ addr: DEAD, from: [span(D, 23, 3)], to: [span(GONE, 1, 3)], type: CITE }); };
+const takeDead = () => { REC.takeLinks(D, [DEAD]); REC.takeLink({ addr: DEAD, from: [span(D, 23, 3)], to: [span(GONE, 1, 3)], type: CITE, age: UNDATED }); };
 // a second dead reference from the first edition, into GONE: one no test follows before the page knows GONE says nothing
 const UNFOLLOWED = D + '.0.2.15';
 /** the second dead reference taken into the model, drawn at the first edition */
@@ -79,7 +81,7 @@ const takeSplit = () => { REC.takeLinks(D, [SPLIT]); REC.takeLink({ addr: SPLIT,
 // projects to nothing there
 const FLOAT = D + '.0.2.5';
 /** the floating citation taken into the model, drawn at the first edition */
-const takeFloat = () => { REC.takeLinks(D, [FLOAT]); REC.takeLink({ addr: FLOAT, from: [span(D, 4, 3)], to: [span(FAR, 8, 4)], type: CITE }); };
+const takeFloat = () => { REC.takeLinks(D, [FLOAT]); REC.takeLink({ addr: FLOAT, from: [span(D, 4, 3)], to: [span(FAR, 8, 4)], type: CITE, age: UNDATED }); };
 // a citation from the first edition of a passage of PRIVATE, a draft in 1.0.2's sub-account 1.0.2.1 the board withholds from the reader:
 // every read naming PRIVATE refused `withheld`, its span set and the citation's projection into it among them
 const PRIVATE = '1.0.2.1.0.2', PRIVATE_OWNER = '1.0.2', LOCKED = D + '.0.2.6';
@@ -92,7 +94,7 @@ const takeLocked = () => {
 // FAR's 20 now
 const SHIFTED = D + '.0.2.10';
 /** the moved citation taken into the model, drawn at the first edition */
-const takeShifted = () => { REC.takeLinks(D, [SHIFTED]); REC.takeLink({ addr: SHIFTED, from: [span(D, 21, 2)], to: [span(FAR, 8, 5)], type: CITE }); };
+const takeShifted = () => { REC.takeLinks(D, [SHIFTED]); REC.takeLink({ addr: SHIFTED, from: [span(D, 21, 2)], to: [span(FAR, 8, 5)], type: CITE, age: UNDATED }); };
 // a citation from the first edition of a passage of FAR whose projection the board declines: `not_a_link`, no such slot (A-53)
 const DECLINED = D + '.0.2.7';
 /** the declined citation taken into the model, drawn at the first edition */
@@ -321,8 +323,8 @@ before(async () => {
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: FAR, kind: 'edition', label: 'far', standing: 'public' }], counts: [{ account: '1.0.1', documents: 2 }], state: { arm: 'complete' } }));
   CAM.setViewport(1440, 900);
   CAM.setDeepest(Math.max(...REC.places().map((p) => depthOfDoc(p.doc)))); // the bound the app's boot sets over the index
-  REC.takeLink({ addr: PASSAGE, from: [span(D, 11, 5)], to: [span(FAR, 20, 5)], type: CITE });
-  REC.takeLink({ addr: WHOLE, from: [span(D, 17, 5)], to: [whole(FAR)], type: CITE });
+  REC.takeLink({ addr: PASSAGE, from: [span(D, 11, 5)], to: [span(FAR, 20, 5)], type: CITE, age: UNDATED });
+  REC.takeLink({ addr: WHOLE, from: [span(D, 17, 5)], to: [whole(FAR)], type: CITE, age: UNDATED });
   await PUMP.loadWhole(D);
   assert.deepEqual(LK.shown(D).map((s) => [s.link.addr, s.farWhole]), [[PASSAGE, false], [WHOLE, true]]);
   await GO.launch();

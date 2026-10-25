@@ -43,7 +43,8 @@
 // asking nothing while it is out); a whole document (`loadWhole`, `wholeOf`);
 // the reads a face stating a withheld origin needs before it shows
 // (`claimsToRead`, `readClaims`); where a link's end projects (`projectEnd`,
-// `projectedIn`); a member's extent (`extentOf`); a link's lineage
+// `projectedIn`); a member's extent (`extentOf`) and its age (`ageOf`),
+// which every `doc_metadata` answered of a member keeps; a link's lineage
 // (`lineage`: `in_claims` and `out_claims` under the audit view; A-56,
 // A-57); the chain to its end (`probeChain`); and where a passage's bytes
 // stand in a text (`compareParts`) and a text's image over a region
@@ -1264,7 +1265,8 @@ function probeMembers(d) {
  * holds no metadata; then each `D.k` is asked until the board answers one
  * `doc_not_registered`, the chain's end (the members of a published chain
  * are all published, so none is withheld from a reader of it), or the pass
- * reaches `cap` members or meets another refusal. The count is recorded
+ * reaches `cap` members or meets another refusal, each member's age it
+ * answers kept (M-REC's `takeMemberAge`). The count is recorded
  * (M-REC's `takeMembers`) where the board answered every read the pass made
  * and it read a member or met the end — `ended` where it met the end — so a
  * chain cut short where the board did not answer stands unrecorded and is
@@ -1287,12 +1289,15 @@ async function probePass(trunk, stands, from, cap) {
   let met = null;
   for (let k = n + 1; !ended && k <= cap; k++) {
     if (!stands()) return null;
-    const out = await read(F.docMetadata(versionAddress(trunk, k)));
+    const member = versionAddress(trunk, k);
+    const out = await read(F.docMetadata(member));
     if ('refused' in out) {
       if (out.refused.kind === 'refused' && out.refused.name === 'doc_not_registered') ended = true;
       else met = out.refused;
       break;
     }
+    const m = F.decodeDocMetadata(out.answer);
+    if (m) REC.takeMemberAge(member, m.age);
     n = k;
   }
   if (dropped()) return { n, ended: false, met: null, dropped: true };
@@ -1579,7 +1584,8 @@ const atBare = (/** @type {Doc} */ d) => d.from >= 0 && !d.system && plain(d.add
  * from the end the record holds, read again, else the first; then, where
  * `down` and the first member asked was minted after the text the record holds
  * was read, the members below it, down to one minted before it; each member's
- * mint position kept (M-FRAMES's `DocMeta.at`). The refusal it stopped at
+ * mint position kept for the count (M-FRAMES's `Age.at`), and its age in the
+ * model (M-REC's `takeMemberAge`). The refusal it stopped at
  * where a read met another, the board not answering among them.
  * @param {Doc} d
  * @param {boolean} down whether the member the record's text is is wanted (`memberShown`)
@@ -1590,8 +1596,14 @@ async function countChain(d, down) {
   const at = new Map();
   /** member `k` asked: 'member' where the board answers it, 'end' past the chain's end, else the refusal met */
   const ask = async (/** @type {number} */ k) => {
-    const out = await read(F.docMetadata(versionAddress(d.addr, k)));
-    if (!('refused' in out)) { const m = F.decodeDocMetadata(out.answer); at.set(k, m ? m.at : null); return /** @type {const} */ ('member'); }
+    const member = versionAddress(d.addr, k);
+    const out = await read(F.docMetadata(member));
+    if (!('refused' in out)) {
+      const m = F.decodeDocMetadata(out.answer);
+      at.set(k, m ? m.age.at : null);
+      if (m) REC.takeMemberAge(member, m.age);
+      return /** @type {const} */ ('member');
+    }
     return out.refused.kind === 'refused' && out.refused.name === 'doc_not_registered' ? /** @type {const} */ ('end') : out.refused;
   };
   const from = Math.max(1, d.members ?? 1);
@@ -1962,6 +1974,22 @@ export async function extentOf(addr) {
   if ('refused' in out) return out;
   const c = F.decodeSpanSet(out.answer).find((s) => s.subspace === 1);
   return { extent: c ? c.positions : 0 };
+}
+
+/**
+ * A version member's age read for an act — its row in the versions list,
+ * where the model holds none (M-REC's `memberAge`): `doc_metadata` asked of
+ * the member, and the age it answers kept.
+ * @param {string} member a trunk member's address, `D.k`
+ * @returns {Promise<{age: import('./frames.js').Age} | {refused: Refusal | null}>} the refusal met where the board declines the read; null where its answer tells no age
+ */
+export async function ageOf(member) {
+  const out = await read(F.docMetadata(member));
+  if ('refused' in out) return out;
+  const m = F.decodeDocMetadata(out.answer);
+  if (!m) return { refused: null };
+  REC.takeMemberAge(member, m.age);
+  return { age: m.age };
 }
 
 /**

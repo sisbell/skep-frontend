@@ -247,7 +247,7 @@ test('a click on a link\'s symbol, or on a stretch it marks, opens the card of t
     REC.takeDelivery(D, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
     REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 26 }, { iStart: O + '.0.1.16', width: 6 }]);
     REC.takeLinks(D, [L]);
-    REC.takeLink({ addr: L, from: [span(D, 1, 7)], to: [span(O, 16, 6)], type: CITE });
+    REC.takeLink({ addr: L, from: [span(D, 1, 7)], to: [span(O, 16, 6)], type: CITE, age: { at: null, time: null, from: null } });
     LK.reveal(D, 2);
     const d = REC.doc(D);
     assert.deepEqual(LK.shown(D).map((s) => [s.link.addr, s.end, s.pos, s.width]), [[L, 'from', 1, 7], [L, 'to', 27, 6]], 'both its ends drawn in D');
@@ -316,7 +316,7 @@ test('a click on the one symbol a withheld run\'s ends merge into opens its one 
     REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width: 8, kind: 'withheld', text: '', ref: null, origin: O }]);
     REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }, { iStart: O + '.0.1.1', width: 8 }]);
     REC.takeLinks(D, [A, B]);
-    for (const [l, at] of /** @type {Array<[string, number]>} */ ([[A, 2], [B, 6]])) REC.takeLink({ addr: l, from: [resolveSpan({ start: `${O}.0.1.${at}`, width: '0.0.0.0.0.0.0.2' })], to: [resolveSpan(unitSpan(FAR))], type: CITE });
+    for (const [l, at] of /** @type {Array<[string, number]>} */ ([[A, 2], [B, 6]])) REC.takeLink({ addr: l, from: [resolveSpan({ start: `${O}.0.1.${at}`, width: '0.0.0.0.0.0.0.2' })], to: [resolveSpan(unitSpan(FAR))], type: CITE, age: { at: null, time: null, from: null } });
     HOST.attach(/** @type {any} */ ({
       ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
       querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),

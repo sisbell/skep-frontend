@@ -8,7 +8,10 @@
 // claimant and what it is to the links. The card itself, against the fake
 // port on a stand-in of the host's element: a key opens it on follow, the
 // line standing before follow, and the line's act shows it again under its
-// id; beneath its far end's words the line its landing says where that end's
+// id; the day its link was made, as its read answered, between its owner and
+// its lineage — "not recorded" where the board holds no reading, "on or
+// before" where only an hour's anchor dates it across midnight (FP-34);
+// beneath its far end's words the line its landing says where that end's
 // text holds only part of its passage (FP-21); and an end drawn at a withheld
 // run says it is withheld and whose, with no read of its bytes, the run's one
 // symbol listing its several ends (FP-30).
@@ -31,6 +34,8 @@ const { supersessionRows, hasAuthority } = ANATOMY;
 const L = '1.0.1.0.3.0.2.1';
 /** the card's link is 1.0.1's, read by a guest */
 const OWNED = { owner: '1.0.1', reader: null };
+/** the age of a link the board keeps no reading of (M-FRAMES's `Age`) */
+const UNDATED = { at: null, time: null, from: null };
 
 /** a claim naming the card's link on both sides, homed in 1.0.1's document, unless told otherwise @param {Partial<Claim>} c @returns {Claim} */
 const claim = (c) => ({ claim: '1.0.1.0.3.0.2.9', home: '1.0.1.0.3', old: L, new: L, active: true, ...c });
@@ -225,7 +230,7 @@ test('the card: a key opens it on follow, the line standing before follow; the l
   REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
   REC.takeLinks(D, [L]);
-  REC.takeLink({ addr: L, from: [resolveSpan({ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: '1.1.0.1.0.1.0.3.13' });
+  REC.takeLink({ addr: L, from: [resolveSpan({ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
   const stranger = { active: true, claim: '1.0.2.0.5.0.2.1', home: '1.0.2.0.5', new: '1.0.2.0.5.0.2.2', old: L };
   const fake = FAKE.create({
     [FAKE.keyOf('op', { frame: F.inClaims(L, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [stranger] } },
@@ -250,6 +255,46 @@ test('the card: a key opens it on follow, the line standing before follow; the l
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('the card says when its link was made: "made" and the day of the commit that minted it, as its read answered, between the owner row and the lineage — "not recorded" where the board holds no reading of the time, "on or before" the later day where only an hour\'s anchor dates it and that hour crosses midnight — and never an age or a log position (issue #22\'s design decision: "The row reads \'made 12 March 2026\'. Drop the \'age\' label and any log position")', async () => {
+  const p = cardPage();
+  HOST.attach(/** @type {any} */ (p.host));
+  const D = '1.0.1.0.3', FAR = '1.0.1.0.127', TEXT = 'Tumbler.\n\nThe first field.';
+  REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
+  // noon and half past eleven at night on the 12th of March 2026, in this machine's own time zone
+  const noon = new Date(2026, 2, 12, 12).getTime(), late = new Date(2026, 2, 12, 23, 30).getTime();
+  /** @type {Array<[string, {at: number, time: number | null, time_from: string | null}, string]>} each citation of FAR from the first edition's own bytes, its age as `read_link` answers it, and the day its card says it was made */
+  const made = [
+    [D + '.0.2.11', { at: 7, time: noon, time_from: 'feed' }, '12 March 2026'],
+    [D + '.0.2.12', { at: 8, time: late, time_from: 'feed' }, '12 March 2026'],
+    [D + '.0.2.13', { at: 9, time: noon, time_from: 'anchor' }, '12 March 2026'],
+    [D + '.0.2.14', { at: 10, time: late, time_from: 'anchor' }, t('L.time.on-or-before', { date: '13 March 2026' })],
+    [D + '.0.2.15', { at: 11, time: null, time_from: null }, t('F.slot.not-recorded')],
+  ];
+  REC.takeLinks(D, made.map(([l]) => l));
+  for (const [l, age] of made) {
+    const v = F.decodeLinkValue(l, { as_of: 12, resp: 'link_value', link: { slots: [[{ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' }], [{ start: FAR, width: '0.0.0.0.1' }], [{ start: '1.1.0.1.0.1.0.3.13', width: '0.0.0.0.0.0.0.0.1' }]] }, ...age });
+    assert.ok(v, `${l} decodes`);
+    REC.takeLink(v);
+  }
+  const fake = FAKE.create(Object.fromEntries(made.flatMap(([l]) => [
+    [FAKE.keyOf('op', { frame: F.inClaims(l, 'audit') }), { result: { as_of: 12, resp: 'claims', claims: [] } }],
+    [FAKE.keyOf('op', { frame: F.outClaims(l, 'audit') }), { result: { as_of: 12, resp: 'claims', claims: [] } }],
+  ])));
+  PORT.boot(fake);
+  const labels = [t('F.card.type'), t('F.card.from'), t('F.card.to'), t('F.card.home'), t('F.card.owner'), t('L.card.made'), t('F.card.superseded-by'), t('F.card.supersedes')];
+  for (const [l, age, day] of made) {
+    const s = LK.shown(D).find((x) => x.link.addr === l);
+    assert.ok(s, `${l} drawn at the first edition`);
+    await ANATOMY.open(s, null);
+    const kv = rows(p.host.innerHTML);
+    assert.deepEqual(kv.map((r) => r.label), labels, `${l}: when it was made stands between the owner row and the lineage, and no row says "age"`);
+    assert.equal(kv[5].value, day, `${l}, minted at ${age.at}: made ${day}, the day alone — no position`);
+    HOST.dismiss();
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
 test('the card says beneath its far end\'s words what that end\'s text holds of its passage where it is not all of it in one piece — the line its landing says — and nothing where it is (issue #153)', async () => {
   const p = cardPage();
   HOST.attach(/** @type {any} */ (p.host));
@@ -261,7 +306,7 @@ test('the card says beneath its far end\'s words what that end\'s text holds of 
   REC.takeDelivery(FAR, [{ pos: 1, width: FAR_TEXT.length, kind: 'content', text: FAR_TEXT, ref: null, origin: null }]);
   REC.takeImage(FAR, 1, [{ iStart: FAR + '.0.1.1', width: FAR_TEXT.length }]);
   REC.takeLinks(D, [CUT]);
-  REC.takeLink({ addr: CUT, from: [resolveSpan({ start: D + '.0.1.1', width: '0.0.0.0.0.0.0.3' })], to: [resolveSpan({ start: FAR + '.0.1.3', width: '0.0.0.0.0.0.0.22' })], type: '1.1.0.1.0.1.0.3.13' });
+  REC.takeLink({ addr: CUT, from: [resolveSpan({ start: D + '.0.1.1', width: '0.0.0.0.0.0.0.3' })], to: [resolveSpan({ start: FAR + '.0.1.3', width: '0.0.0.0.0.0.0.22' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
   REC.takeProjection(CUT, 2, FAR, [{ pos: 3, width: 4 }, { pos: 20, width: 5 }]);
   const fake = FAKE.create({
     [FAKE.keyOf('op', { frame: F.inClaims(CUT, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
@@ -290,7 +335,7 @@ test('an end LK draws at a withheld run: its card says the end is withheld and w
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: n }, { iStart: O + '.0.1.1', width: 8 }]);
   const [A, B] = [D + '.0.2.1', D + '.0.2.2'];
   REC.takeLinks(D, [A, B]);
-  for (const [l, at] of /** @type {Array<[string, number]>} */ ([[A, 2], [B, 6]])) REC.takeLink({ addr: l, from: [resolveSpan({ start: `${O}.0.1.${at}`, width: '0.0.0.0.0.0.0.2' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: CITE });
+  for (const [l, at] of /** @type {Array<[string, number]>} */ ([[A, 2], [B, 6]])) REC.takeLink({ addr: l, from: [resolveSpan({ start: `${O}.0.1.${at}`, width: '0.0.0.0.0.0.0.2' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: CITE, age: UNDATED });
   const fake = FAKE.create(Object.fromEntries([A, B].flatMap((l) => [
     [FAKE.keyOf('op', { frame: F.inClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],
     [FAKE.keyOf('op', { frame: F.outClaims(l, 'audit') }), { result: { as_of: 1, resp: 'claims', claims: [] } }],

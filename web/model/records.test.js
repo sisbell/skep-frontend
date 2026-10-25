@@ -427,7 +427,7 @@ test('a newer member\'s arrival hands the trunk\'s text to the member it is — 
 test('a refresh\'s drop keeps the documents shown and what they read through — their links\' values and where those project, the edition claims on their withheld runs\' origins and the claims\' homes, their owners\' byline causes — and drops the rest as a row naming each would, each drop counted; the index, its counts and the feed\'s rows stand (issue #212)', () => {
   const A = '1.0.1.0.3', B = '1.0.2.0.5', FAR = '1.0.1.0.127', O = '1.0.1.0.1003', O2 = '1.0.2.0.9', H = '1.0.1.0.30', C = H + '.0.2.1';
   const L1 = A + '.0.2.1', L2 = B + '.0.2.1';
-  const meta = (/** @type {string} */ doc, /** @type {string} */ owner) => ({ doc, published: true, owner, birth: doc + '.1', birthExtent: 5, placed: null, baseExtent: null, source: null, at: 3, asOf: 9 });
+  const meta = (/** @type {string} */ doc, /** @type {string} */ owner) => ({ doc, published: true, owner, birth: doc + '.1', birthExtent: 5, placed: null, baseExtent: null, source: null, age: { at: 3, time: null, from: null }, asOf: 9 });
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 1, at: 1, op: 'insert', docs: ['1.0.1.0.4'], class: 'published' }));
   REC.takeDelivery(A, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }, { pos: 6, width: 4, kind: 'withheld', text: '', ref: null, origin: O }]);
@@ -454,7 +454,7 @@ test('a refresh\'s drop keeps the documents shown and what they read through —
 test('a shown document set again from a refresh\'s reads in one step: each part they carried replacing what it held — its text and image whole over the window read, never merged, given new arrays — each part they did not carry standing, one revision, the drop counted; refused, dropped whole holding the refusal (issue #212)', () => {
   const D = '1.0.1.0.3', L1 = D + '.0.2.1', L2 = D + '.0.2.2';
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 15 }]);
-  REC.takeMetadata(D, { doc: D, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, at: 2, asOf: 5 });
+  REC.takeMetadata(D, { doc: D, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, age: { at: 2, time: null, from: null }, asOf: 5 });
   REC.takeDelivery(D, [{ pos: 1, width: 10, kind: 'content', text: 'old words.', ref: null, origin: null }, { pos: 11, width: 5, kind: 'withheld', text: '', ref: null, origin: '1.0.1.0.1003' }], 5);
   REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 10 }, { iStart: '1.0.1.0.1003.0.1.1', width: 5 }]);
   REC.takeLinks(D, [L1]); REC.takeLink({ addr: L1, from: [], to: [], type: null });

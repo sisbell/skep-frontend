@@ -19,8 +19,17 @@
 // in part, not at all, or couldn't tell, by the refusal met — its landing
 // naming the passage as the selection where it is one — and each offering
 // "read side by side", the scene opened on the held passage, which SC sets
-// level with what the member holds of it. Each member is one row: its acts
-// and its mark in columns the rows share.
+// level with what the member holds of it. Each member is one row: its acts,
+// its date and its mark in columns the rows share. A row's date is the day
+// its member was published, the commit that minted it, from the age a
+// `doc_metadata` of the member answered — held where a read of the member
+// answered it, a probe of the chain among them (M-REC's `memberAge`), else
+// asked in the list's own reads (M-PUMP's `ageOf`) — in the page's one form
+// of a date (ST's `dated`): "not recorded" where the board
+// holds no reading, "board unreachable" where the board did not answer that
+// read, the row asking the member nothing more and that one cause said once
+// across its date and its mark, and "not read" where the board refused it.
+// "Published" is said once, over the dates, at the list's head.
 // The open end says whether the board ended the chain there. Where the board
 // answered that no member follows the last read, the head's row carries the
 // latest version's mark — a shape, named in words for assistive technology —
@@ -29,8 +38,8 @@
 // caption — the version a pinned box shows named alone, the bare address
 // read without a number, for its text is the head and the head is not known —
 // and no mark; past the members read stand the members the page knows exist
-// all the same, each "not read" where a row says what it holds of the
-// passage, for a blank there would read as "no": every member up to the
+// all the same, each "not read" once across its date and what it holds of
+// the passage, for a blank there would read as "no": every member up to the
 // version being read, and up to the highest a held feed row names (M-REC's
 // `feedMember`), for each `D.k+1` is minted against `D.k`; and one line
 // stands at the open end, in the list's own type: how far the probe read and
@@ -57,7 +66,7 @@
 // 11). It opens on its reads (O-HOST's `opening`): where an act was made on
 // the chrome while they read, nothing shows, and no member is asked about
 // after it.
-// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-22.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-22, FP-34.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -70,20 +79,21 @@ import { whyOf, retries } from '../beams/held.js';
 import { visibleView } from '../plane/camera.js';
 import { docBox } from '../plane/projection.js';
 import { versionAddress, memberOf, documentOf } from '../model/address.js';
-import { t, addressedHTML } from '../strings.js';
-import { esc, timeOf } from '../util.js';
+import { t, addressedHTML, dated } from '../strings.js';
+import { esc, dayOf } from '../util.js';
 
 /** @typedef {import('./host.js').Anchor} Anchor */
 /** @typedef {import('../model/pump.js').Chain} Chain */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
 
 /**
- * @typedef {Object} Row — a member's row: what its text holds of the passage held
+ * @typedef {Object} Row — a member's row: when it was published, and what its text holds of the passage held
  * @property {number} k the member
+ * @property {{age: import('../model/frames.js').Age} | {refused: Refusal | null} | null} date its age as the board answered it (M-PUMP's `ageOf`), or the refusal its read met — null where the answer told none; null itself where it was not read, a member past the ones the probe read
  * @property {import('../beams/held.js').Holds | 'unknown' | 'unread' | null} holds all of it in one piece, in pieces, part, none; couldn't tell; not read — a member past the ones the probe read; null where no passage is held
  * @property {number} places the stretches of its text holding it
  * @property {string | null} why couldn't tell: the id of its reason's words (BM-HELD's `whyOf`)
- * @property {boolean} again couldn't tell by a refusal a retry may answer otherwise (BM-HELD's `retries`): read again at "try again"
+ * @property {boolean} again a read of the row met a refusal a retry may answer otherwise (BM-HELD's `retries`): read again at "try again"
  */
 
 /**
@@ -95,31 +105,43 @@ import { esc, timeOf } from '../util.js';
  * @property {Row[]} rows each member read, in order, then each one known past them, not read
  */
 
-/** a row that could not tell, by the refusal met */
-const unknownRow = (/** @type {number} */ k, /** @type {Refusal} */ r) => /** @type {Row} */ ({ k, holds: 'unknown', places: 0, why: whyOf(r), again: retries(r) });
+/** a row that could not tell what its text holds, by the refusal met: read again at "try again" where that refusal, or its date's, may answer otherwise */
+const unknownRow = (/** @type {Row} */ row, /** @type {Refusal} */ r) => /** @type {Row} */ ({ ...row, holds: 'unknown', places: 0, why: whyOf(r), again: row.again || retries(r) });
+
+/** did the board not answer a row's date's read (see the head)? */
+const dateUnanswered = (/** @type {Row['date']} */ date) => !!date && 'refused' in date && !!date.refused && date.refused.kind === 'unreachable';
 
 /**
- * What a member's text holds of the passage held, for its row (see the
- * head): its own content extent read for the row and kept nowhere (M-PUMP's
+ * A member's row (see the head): its age, the one the model holds (M-REC's
+ * `memberAge`) taken at once, so a row's reads begin in the act, else read
+ * (M-PUMP's `ageOf`); then, where a passage is held, what its text holds of
+ * it — its own content extent read for the row and kept nowhere (M-PUMP's
  * `extentOf`), then the passage `compare`d into it by the one rule a landing
- * reads (N-GO's `heldIn`), in parts where the board refuses it for its size;
- * couldn't tell, by the refusal met, where no answer told; null, asking no
- * more, where the opening no longer stands.
+ * reads (N-GO's `heldIn`), in parts where the board refuses it for its size —
+ * couldn't tell, by the refusal met, where no answer told, and by the board
+ * not answering, asking nothing, where it did not answer the age; null,
+ * asking no more, where the opening no longer stands.
  * @param {string} trunk
  * @param {string} at the version the passage is held in
- * @param {{pos: number, width: number}} held
+ * @param {{pos: number, width: number} | null} held
  * @param {number} k
  * @param {() => boolean} stands
  * @returns {Promise<Row | null>}
  */
 async function rowOf(trunk, at, held, k, stands) {
-  const member = versionAddress(trunk, k);
+  const member = versionAddress(trunk, k), known = REC.memberAge(member);
+  const date = known ? { age: known } : await PUMP.ageOf(member);
+  if (!stands()) return null;
+  /** @type {Row} */
+  const row = { k, date, holds: null, places: 0, why: null, again: 'refused' in date && retries(date.refused) };
+  if (!held) return row;
+  if ('refused' in date && dateUnanswered(date)) return unknownRow(row, /** @type {Refusal} */ (date.refused));
   const e = await PUMP.extentOf(member);
   if (!stands()) return null;
-  if (!('extent' in e)) return unknownRow(k, e.refused);
+  if (!('extent' in e)) return unknownRow(row, e.refused);
   const h = await GO.heldIn({ addr: at, pos: held.pos, width: held.width }, member, e.extent);
-  if (!('held' in h)) return unknownRow(k, h.refused);
-  return { k, holds: h.held.holds, places: h.held.places, why: null, again: false };
+  if (!('held' in h)) return unknownRow(row, h.refused);
+  return { ...row, holds: h.held.holds, places: h.held.places };
 }
 
 /** a row's strip, in words: whole, all of it in pieces, in part, not at all, couldn't tell, not read; nothing where no passage is held */
@@ -133,6 +155,26 @@ function stripOf(/** @type {Row} */ r) {
   return '';
 }
 
+/** a row's date, in words (see the head): the day its member was published (ST's `dated`); "board unreachable" where the board did not answer its read, else "not read" */
+function dateOf(/** @type {Row} */ r) {
+  if (r.date && 'age' in r.date) return dated(r.date.age);
+  return t(dateUnanswered(r.date) ? 'F.daemon.unreachable' : 'L.versions.not-read');
+}
+
+/**
+ * A row's date and its mark of what it holds, as the list sets them (see the
+ * head): one cell across both where one cause left both empty — a member past
+ * the ones read, "not read"; the board not answering its date's read,
+ * "board unreachable" — else each in its own column.
+ * @param {Row} r
+ * @returns {string}
+ */
+function cellsOf(r) {
+  if (r.holds === 'unread') return `<span class="strip across" data-holds="unread">${esc(t('L.versions.not-read'))}</span>`;
+  if (r.holds === 'unknown' && dateUnanswered(r.date)) return `<span class="strip across" data-holds="unknown">${esc(t('F.daemon.unreachable'))}</span>`;
+  return `<span class="date">${esc(dateOf(r))}</span> <span class="strip" data-holds="${r.holds === 'all' ? 'whole' : r.holds || ''}">${esc(stripOf(r))}</span>`;
+}
+
 /** the two passages held the same: a row read for one tells of the other */
 const sameHeld = (/** @type {{pos: number, width: number} | null} */ a, /** @type {{pos: number, width: number} | null} */ b) => (a && b ? a.pos === b.pos && a.width === b.width : a === b);
 
@@ -143,11 +185,12 @@ const sameHeld = (/** @type {{pos: number, width: number} | null} */ a, /** @typ
  * read at once (`heldChain`), so the rows' reads begin in the act, else the
  * chain probed (`probeChain`), past the members the listing before it read,
  * where one is handed in; the passage held in the version named; each
- * member's row — the row the listing before it told, for the same passage,
- * where it told one, else read; then, where the board did not end the chain
- * there, every member known past the ones read: up to the version being
- * read, and up to the highest a held feed row names, each not read. Null,
- * asking no more, where the opening no longer stands.
+ * member's row, its date and what it holds — the row the listing before it
+ * told, for the same passage, where it told one, else read (`rowOf`); then,
+ * where the board did not end the chain there, every member known past the
+ * ones read: up to the version being read, and up to the highest a held feed
+ * row names, each not read. Null, asking no more, where the opening no
+ * longer stands.
  * @param {string} addr the version the list holds the passage in
  * @param {number | null} pos the held passage's first position in it, or null for its first block
  * @param {number | null} width the held passage's positions; null holds the block at `pos` whole
@@ -171,13 +214,13 @@ async function listed(addr, pos, width, stands, last) {
   const rows = [];
   for (let k = 1; k <= chain.n; k++) {
     if (!stands()) return null;
-    const row = told.find((r) => r.k === k) || (held ? await rowOf(trunk, addr, held, k, stands) : { k, holds: null, places: 0, why: null, again: false });
+    const row = told.find((r) => r.k === k) || await rowOf(trunk, addr, held, k, stands);
     if (!row) return null;
     rows.push(row);
   }
   if (!chain.ended) {
     const known = Math.max(memberOf(addr) ?? 0, REC.feedMember(trunk) ?? 0);
-    for (let k = chain.n + 1; k <= known; k++) rows.push({ k, holds: 'unread', places: 0, why: null, again: false });
+    for (let k = chain.n + 1; k <= known; k++) rows.push({ k, date: null, holds: 'unread', places: 0, why: null, again: false });
   }
   return { trunk, addr, held, chain, rows };
 }
@@ -198,7 +241,7 @@ function openEnd(l) {
   const silent = !!c.met && c.met.kind === 'unreachable';
   const id = silent ? (c.n ? 'L.versions.cut' : 'L.versions.cut.none') : c.n ? 'L.versions.open' : 'L.versions.open.none';
   const named = REC.feedMember(l.trunk), when = REC.feedTime();
-  const asOf = named != null && named > c.n && when != null ? t('L.versions.as-of', { when: timeOf(when) }) : null;
+  const asOf = named != null && named > c.n && when != null ? t('L.versions.as-of', { when: dayOf(when) }) : null;
   return { id, text: t(id, { k: c.n }), asOf, again: retries(c.met) };
 }
 
@@ -218,9 +261,10 @@ function captionOf(l) {
  * The list shown from its reads (see the head), at its anchor, under its
  * document's id — so its own "try again" shows it again in its place: its
  * caption, the document's address in the identifier's face (ST's
- * `addressedHTML`); each row its read act, the head's carrying the latest version's mark where the
- * board ended the chain there, its strip and its side-by-side act; the open
- * end's line beneath, where the chain was not ended.
+ * `addressedHTML`); "published" over the dates; each row its read act, the
+ * head's carrying the latest version's mark where the board ended the chain
+ * there, its date and its strip (`cellsOf`) and its side-by-side act; the
+ * open end's line beneath, where the chain was not ended.
  * @param {Listing} l
  * @param {Anchor | null} anchor
  * @param {number | null} pos
@@ -231,8 +275,10 @@ function showList(l, anchor, pos, width, byKey) {
   const { trunk, addr, held, chain, rows } = l;
   const cur = memberOf(addr), end = openEnd(l);
   const latest = `<span class="latest" role="img" aria-label="${esc(t('L.versions.latest'))}" data-string="L.versions.latest-mark">${esc(t('L.versions.latest-mark'))}</span>`;
+  /** "published" once, over the dates, at the list's head */
+  const head = rows.length ? `<li class="head"><span data-string="F.published">${esc(t('F.published'))}</span></li>` : '';
   const html = `<span class="label">${addressedHTML(captionOf(l))}</span>` +
-    `<ul class="rows versions">${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}${chain.ended && r.k === chain.n ? ' ' + latest : ''}</button> <span class="strip" data-holds="${r.holds === 'all' ? 'whole' : r.holds || ''}">${esc(stripOf(r))}</span> <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>` +
+    `<ul class="rows versions">${head}${rows.map((r) => `<li><button data-run="read${r.k}" aria-current="${cur === r.k}">${esc(t('F.versions.read', { k: r.k }))}${chain.ended && r.k === chain.n ? ' ' + latest : ''}</button> ${cellsOf(r)} <button data-run="beside${r.k}">${esc(t('B1.side-by-side'))}</button></li>`).join('')}</ul>` +
     (end ? `<div class="open-end"><span data-string="${esc(end.id)}">${esc(end.text)}</span>${end.asOf ? ` · <span data-string="L.versions.as-of">${esc(end.asOf)}</span>` : ''}${end.again ? ` · <button data-run="again">${esc(t('B1.try-again'))}</button>` : ''}</div>` : '');
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
