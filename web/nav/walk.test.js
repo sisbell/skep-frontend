@@ -11,8 +11,9 @@
 // inert mark kept through a rebuild; a move whose reads a later move overtook
 // sets nothing and flies nowhere; in a document folded into columns the
 // camera follows the walk to a span's line in its column and to the outline
-// framed no nearer than reading size; the grain below a document is the
-// document's own and the re-take's order holds at every band; a
+// framed no nearer than reading size, and a step made below a document's
+// reading scale frames it short of that scale; the grain below a document is
+// the document's own and the re-take's order holds at every band; a
 // continuation the plane draws as one mark is one stop before its members,
 // named by its count, the camera flown to the mark for each of them, and a
 // re-take over it takes the mark or keeps a member, never the member under
@@ -270,6 +271,30 @@ test('nearer than mid the walk takes a span only inside a document at its own re
   } finally {
     index([D, E]);
   }
+});
+
+test('a walk step onto a document from below its reading scale frames it just short of that scale, one stop, collapsed, however near its outline would frame it; from its reading scale a step frames it no nearer than the reading size (issue #55)', async () => {
+  const fs = LAYER.foldOf(REC.doc(D)).fs, reading = CAM.landingPx();
+  /** the em, in px, at which the camera reads a document where it stands */
+  const em = (/** @type {string} */ addr) => CAM.view().scale * LAYER.foldOf(REC.doc(addr)).fs;
+  assert.equal(LAYER.foldOf(REC.doc(E)).fs, fs, 'D and E are set at one size');
+  assert.ok([D, E].every((a) => CAM.viewForCell(LAYER.shapeOf(a), 0.9).scale * fs >= reading), 'each, framed whole, would read past the reading size');
+  CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  await WALK.focusTo('1.0.1', null);
+  assert.equal(LAYER.atReadingScale(D), false, 'over the account\'s region D stands below its reading scale');
+  await run(WALK.key('in'));
+  const s = LAYER.shapeOf(D), v = CAM.view();
+  assert.deepEqual([walkAt(), WALK.collapsed()], [['document', D, null], true], '→ at the account: D one stop, collapsed');
+  assert.ok(em(D) < LOD_TXT_LO && em(D) > LOD_TXT_LO * 0.999, `D framed just short of its reading scale: em ${em(D)}`);
+  assert.ok(Math.abs(v.x - (s.x + s.w / 2)) <= 1e-9 * Math.abs(v.x) && Math.abs(v.y - (s.y + s.h / 2)) <= 1e-9 * Math.abs(v.y), 'its outline centred');
+  await run(WALK.key('down'));
+  assert.deepEqual([walkAt(), WALK.collapsed()], [['document', E, null], true], '↓ to E: one stop, collapsed');
+  assert.ok(em(E) < LOD_TXT_LO && em(E) > LOD_TXT_LO * 0.999, `E framed just short of its reading scale: em ${em(E)}`);
+  CAM.set(CAM.viewAt(LAYER.centreOf(D, null), fs));
+  await WALK.focusTo(D, null);
+  await run(WALK.key('down'));
+  assert.deepEqual([walkAt(), WALK.collapsed()], [['document', E, null], false], 'from D at its reading size, ↓ to E: expanded');
+  assert.ok(Math.abs(em(E) - reading) < 1e-6, `E at the reading size, ${reading} px an em: ${em(E)}`);
 });
 
 test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin\'s owner, the entitlement arm for the reader and C-67\'s clause where the origin\'s edition claims decide one, as the plane\'s placeholder shows them (R56; R94; PUB-5.124)', () => {
@@ -756,7 +781,8 @@ test('in a document folded into columns the camera follows the walk to a span\'s
     const s = LAYER.shapeOf(H), framed = CAM.viewForCell(s, 0.9);
     assert.ok(s.h < box.h * 0.75 && framed.scale < read / f.fs, 'its outline two rows of its room\'s, framed below reading size');
     near(CAM.view(), framed, '← to the document: its outline framed, never its room');
-    // a document of one short column, framed whole, would be read far past reading size
+    // a document of one short column, framed whole, would be read far past reading size: ← from its span, at its reading size
+    CAM.set(CAM.viewAt(LAYER.centreOf(D, 11), LAYER.foldOf(REC.doc(D)).fs));
     await WALK.focusTo(D, 11, true);
     await run(WALK.key('out'));
     near(CAM.view(), { ...CAM.viewForCell(LAYER.shapeOf(D), 0.9), scale: read / LAYER.foldOf(REC.doc(D)).fs }, '← to a document of one short column: its outline at the reading size, no nearer');

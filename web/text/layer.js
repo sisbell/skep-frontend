@@ -105,11 +105,13 @@
 // stands at the readable threshold or above (`atReadingScale`): the one test
 // the mount, the corner, the pointer and the paging here read, and APP-INPUT,
 // L-LINE and N-WALK with them — never the camera's band, which reads a
-// depth-0 document's standard size. Every size read here raises P-CAM's
-// zoom-in bound to read it (`reach`; E18 (a)), so the camera never stops
-// short of the reading scale of the text this module sets. The
-// canvas's bars below the mount are the same fold's lines, measured where
-// the document's text has been set in view (`measureInView`: a frame's
+// depth-0 document's standard size. The nearest scale at which that test
+// fails, just short of the reading scale, is read here too
+// (`scaleBelowReading`). Every size read here raises P-CAM's zoom-in bound to
+// read it (`reach`; E18 (a)), so the camera never stops short of the reading
+// scale of the text this module sets. The canvas's bars below the mount are
+// the same fold's lines, measured where the document's text has been set in
+// view (`measureInView`: a frame's
 // budget of MEASURE_BUDGET_MS, nearest the view's centre first, no document
 // below BARS_EM), so mid scale greeks the columns the mount sets and no word
 // moves at the hand-off; the loop runs `frame` before P-RENDER draws, so the
@@ -701,6 +703,16 @@ const readsAt = (/** @type {number} */ fs, scale = cam.scale) => fs * scale >= L
 export function atReadingScale(addr, scale = cam.scale) { return readsAt(foldOf(REC.doc(addr)).fs, scale); }
 
 /**
+ * The nearest scale at which a document is below its reading scale (see the
+ * head): its own em a millionth under P-LOD's readable threshold, so
+ * `atReadingScale` answers false there with room to spare for the camera's
+ * arithmetic.
+ * @param {string} addr
+ * @returns {number}
+ */
+export function scaleBelowReading(addr) { return (LOD_TXT_LO / foldOf(REC.doc(addr)).fs) * (1 - 1e-6); }
+
+/**
  * The fold `foldOf` answers (see there).
  * @param {Doc} d
  * @returns {Fold}
@@ -823,8 +835,9 @@ function centreAt(/** @type {{x: number, y: number, scale: number}} */ at) {
  * the viewport below the one line, unpadded — any of its text or box, or the
  * strip its corner stands in.
  * @param {string} addr
+ * @param {{x: number, y: number, scale: number} | null} [view] the view it is read at: the camera's where none is given — a departure's, bound for a flight's destination, where the view is bound elsewhere
  */
-export function inView(addr) { return intersects(regionOf(addr), seenWorld()); }
+export function inView(addr, view = null) { return intersects(regionOf(addr), seenWorld(view)); }
 
 /**
  * The visible view's window over a document (P-LAY's `windowIn`): the

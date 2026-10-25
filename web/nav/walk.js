@@ -50,8 +50,12 @@
 // move flies to the element at its level's scale (`flyToFocus`): the mark's
 // stop, and a member the walk lists after it, to the mark centred at the
 // scale nearest the camera's that draws it (P-LOD's `markScale`), the member
-// never framed, so its ring stands on the mark (P-RENDER's) — and the focus
-// follows the camera: any other move re-takes it at the scale's grain
+// never framed, so its ring stands on the mark (P-RENDER's); any other
+// document to its outline framed, no nearer than its reading size where the
+// scale the move was made at reads it at its reading scale, else no nearer
+// than just short of that (T-LAYER's `scaleBelowReading`), so no step takes a
+// document to its reading scale from below it — and the focus follows the
+// camera: any other move re-takes it at the scale's grain
 // (`retakeFromView`). The re-take's order, so the walk never stands on a
 // place out of view nor on one the plane does not draw: a continuation's mark
 // whose cell holds the view's centre — the walk's focus kept where it stands
@@ -68,8 +72,9 @@
 // goes, down to the document; it steps by span only inside a document at its
 // reading scale (T-LAYER's `atReadingScale`), and any other document is one
 // stop, focused whole, its mirror item collapsed (`collapsed`); entering it
-// from the keyboard is Enter's act (N-KEYS'), which expands it, and there →
-// enters its spans. Collapsed or expanded is read at the view the camera is
+// from the keyboard is Enter's act (N-KEYS') — no walk step takes it to its
+// reading scale (`flyToFocus`) — which expands it, and there → enters its
+// spans. Collapsed or expanded is read at the view the camera is
 // bound for, so a key made during a flight acts where the flight lands (D5 §4
 // rule 8), and each dirty frame marks the items again in place
 // (`markExpanded`).
@@ -630,28 +635,33 @@ function heldBy(addr) {
  * mark's stop, and a document the mark it stands before holds (`heldBy`), the
  * mark's cell centred at the scale nearest the camera's that draws it as one
  * mark (P-LOD's `markScale`), the document never framed, its ring standing on
- * the mark; any other document's outline framed, no nearer than the reading
- * size; a span's line, its column framed with both its margins, at the
- * landing's em (T-LAYER's `frameOf`; P-CAM's `landingPx`) — nowhere where the
- * document's extent is read first and a later move overtook this one
+ * the mark; any other document's outline framed, no nearer than its reading
+ * size where the scale the camera was bound for as the move was made reads it
+ * at its reading scale, else no nearer than just short of that (T-LAYER's
+ * `scaleBelowReading`), so a step never takes a document to its reading scale
+ * from below it; a span's line, its column framed with both its margins, at
+ * the landing's em (T-LAYER's `frameOf`; P-CAM's `landingPx`) — nowhere where
+ * the document's extent is read first and a later move overtook this one
  * meanwhile.
  * @param {number} move the move's count
  */
 async function flyToFocus(move) {
   if (!focus) return;
+  const from = CAM.destination().scale;
   const mark = focus.kind === 'mark' ? continuationOf(focus.addr) : focus.kind === 'document' ? heldBy(focus.addr) : null;
   if (mark) {
     const c = continuationCell(mark.account, mark.k);
-    await CAM.fly({ x: c.x + c.w / 2, y: c.y + c.h / 2, scale: markScale(mark.k, CAM.destination().scale) }, 300);
+    await CAM.fly({ x: c.x + c.w / 2, y: c.y + c.h / 2, scale: markScale(mark.k, from) }, 300);
   } else if (focus.kind === 'mark') return;
   else if (focus.kind === 'board') await CAM.fly(CAM.viewForCell(boardCell(focus.addr), 0.92), 300);
   else if (focus.kind === 'account') await CAM.fly(CAM.viewForCell(accountCell(focus.addr), 0.85), 300);
   else if (focus.kind === 'document') {
-    const d = REC.doc(focus.addr); if (d.extent == null) await PUMP.loadWhole(focus.addr);
+    const addr = focus.addr;
+    if (REC.doc(addr).extent == null) await PUMP.loadWhole(addr);
     if (move !== moves) return;
-    // its outline framed, no nearer than the reading size
-    const v = CAM.viewForCell(LAYER.shapeOf(focus.addr), 0.9);
-    await CAM.fly({ ...v, scale: Math.min(v.scale, CAM.landingPx() / LAYER.foldOf(REC.doc(focus.addr)).fs) }, 300);
+    const v = CAM.viewForCell(LAYER.shapeOf(addr), 0.9);
+    const most = LAYER.atReadingScale(addr, from) ? CAM.landingPx() / LAYER.foldOf(REC.doc(addr)).fs : LAYER.scaleBelowReading(addr);
+    await CAM.fly({ ...v, scale: Math.min(v.scale, most) }, 300);
   } else {
     const d = REC.doc(focus.addr);
     await CAM.fly(CAM.viewAt(LAYER.frameOf(focus.addr, focus.pos), LAYER.foldOf(d).fs), 260);

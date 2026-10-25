@@ -36,8 +36,10 @@
 // (P-CAM's `destination`) — so a departure made during a flight re-takes the
 // flight's destination, never a point it was passing (foundations §2.3) —
 // with what that view reads (T-LAYER's `readAt`), where the walk stands in
-// the document it reads (`stoodIn`), the version the entry's box shows, and
-// a reading scene standing over it as the reader leaves it (SC's `asLeft`).
+// the document it reads — or, where the view reads none, the document it
+// stands on whole, standing in that view (`stoodIn`) — the version the
+// entry's box shows, and a reading scene standing over it as the reader
+// leaves it (SC's `asLeft`).
 // As its camera leaves, an act ends the chrome of the place it leaves
 // (`dismissChrome`; FP-25): the arrival, kept by value in the entry left for
 // a return (`leaveHere`; N-TRAIL's `keep`), the standing overlay — save one
@@ -412,13 +414,13 @@ function leavingNow() { return { ...leaving(CAM.destination()), scene: SCENE.asL
 /**
  * What an entry left at a view re-takes (see the head; N-TRAIL's
  * `Departure`): the view, the passage it reads (T-LAYER's `readAt`) and where
- * the walk stands in it (`stoodIn`).
+ * the walk stands (`stoodIn`).
  * @param {View} view
  * @returns {Departure}
  */
 function leaving(view) {
   const reading = LAYER.readAt(view);
-  return { view, reading, stood: stoodIn(reading) };
+  return { view, reading, stood: stoodIn(view, reading) };
 }
 
 /**
@@ -427,15 +429,21 @@ function leaving(view) {
  * or on a link's end in it — its position there, the one a landing named in
  * its span, else the span's or the link's own, none on the document whole;
  * that position's byte by identity (M-REC's `identityOf`); and the link's end
- * it stands on. Null where the view reads no document, or the walk stands
- * outside the one it reads — a jump in the air has not yet brought it to the
- * place its camera left for.
- * @param {import('../text/layer.js').Reading | null} r what the view left reads
+ * it stands on. Where the view reads no document, the document the walk
+ * stands on whole, where that document stands in the view (T-LAYER's
+ * `inView`). Null where the walk stands on no document; outside the document
+ * the view reads, or out of the view where it reads none — a jump in the air
+ * has not yet brought it to the place its camera left for; or on a span or a
+ * link's end where the view reads none.
+ * @param {View} view the view left
+ * @param {import('../text/layer.js').Reading | null} r what it reads
  * @returns {Stood | null}
  */
-function stoodIn(r) {
+function stoodIn(view, r) {
   const f = WALK.current();
-  if (!r || !f || (f.kind !== 'document' && f.kind !== 'block' && f.kind !== 'link') || boxOf(f.addr) !== boxOf(r.addr)) return null;
+  if (!f || (f.kind !== 'document' && f.kind !== 'block' && f.kind !== 'link')) return null;
+  if (!r) return f.kind === 'document' && LAYER.inView(f.addr, view) ? { addr: f.addr, pos: null, ids: [], end: null } : null;
+  if (boxOf(f.addr) !== boxOf(r.addr)) return null;
   const pos = f.kind === 'document' ? null : WALK.landedAt() ?? f.pos;
   return { addr: f.addr, pos, ids: pos != null ? REC.identityOf(f.addr, pos, 1) : [], end: f.kind === 'link' && f.link ? { link: f.link.link.addr, key: f.link.key } : null };
 }

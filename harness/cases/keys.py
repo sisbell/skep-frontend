@@ -38,8 +38,12 @@ an em under 8 — the walk on it whole,
 the one line naming it alone with its position's slot standing empty,
 nothing after it moved, its mirror item collapsed, and → there Enter's act,
 a teleport to its reading scale with its trail entry, the item expanded, →
-again its first span with no entry; the paging key (K-6) paging the view by
-0.9 of its height below reading scale and, at reading scale, continuing at the next
+again its first span with no entry; → from HOME's account onto its first
+document, a short one, framing it one stop short of its reading scale, its
+item collapsed and no entry pushed, → there Enter's act with its entry at the
+reading size, Mod+[ back to the stop's view with the walk on the document
+whole and Mod+] into it again (issue #55); the paging key (K-6) paging the
+view by 0.9 of its height below reading scale and, at reading scale, continuing at the next
 column's top — the view over a column whose foot it shows brought to the
 next column's text, half a gutter below the one line, the line naming the
 document paged and no label held over its text (issue #169's design
@@ -1545,6 +1549,62 @@ def collapsed_document(ctx, r):
     ctx.leap(DOC, WINDOW[0])
 
 
+def stepped_in(ctx, r):
+    """a walk step onto a document from below its reading scale (issue #55): Mod+Shift+H, the walk on the acting account
+    at HOME, then → onto the account's first document — one whose outline, framed whole at 0.9 of the view, would read at
+    an em of 8 or more. The step stands the walk on the document as one stop, framed short of its reading scale — its own
+    em under 8 — its mirror item collapsed, and pushes nothing; → there is Enter's act, one trail entry pushed, the
+    document at the reading size (em READING_PX); Mod+[ returns to HOME's entry at the stop's view, the walk on the
+    document whole and its item collapsed; Mod+] returns into it at the reading size. The step ends at the first edition's
+    landing"""
+    def seen():
+        """the walk, the trail, the camera and the current item as the page stands"""
+        return ctx.js('''(() => { const S = window.__skep, f = S.view.focus(), i = document.getElementById("walk-" + S.mirror.index());
+          return {focus: f && {kind: f.kind, addr: f.addr, pos: f.pos}, trail: S.trail(), cam: S.view.camera(), expanded: i ? i.getAttribute("aria-expanded") : null}; })()''')
+    chord(ctx, 'H', mods=('Meta', 'Shift'))
+    home = seen()
+    t0 = home['trail']
+    chord(ctx, 'ArrowRight')
+    stop = seen()
+    first = stop['focus']['addr'] if stop['focus'] and stop['focus']['kind'] == 'document' else None
+    whole = None
+    if first:
+        fold, vp = ctx.js('window.__skep.fold(%s)' % json.dumps(first)), ctx.js('window.__skep.view.viewport()')
+        o = fold['outline']
+        whole = min(vp['VW'] / o['w'], vp['VH'] / o['h']) * 0.9 * fold['fs']
+    r.check(bool(home['focus']) and home['focus']['kind'] == 'account' and bool(first) and whole is not None and whole >= 8,
+            '→ at HOME\'s account stands the walk on its first document, one whose outline framed whole would read at an em of 8 or more (what the step\'s checks stand on)',
+            {'home': home['focus'], 'stop': stop['focus'], 'framed_whole_em': whole})
+    if not first:
+        ctx.leap(DOC, WINDOW[0])
+        return
+    em = lambda s: s['cam']['scale'] / ctx.js('window.__skep.scaleFor(%s, "em", 1)' % json.dumps(first))
+    t1 = stop['trail']
+    r.check(em(stop) < 8 and stop['expanded'] == 'false' and t1['cursor'] == t0['cursor'] and len(t1['entries']) == len(t0['entries']),
+            '→ onto the document from below its reading scale frames it short of that scale — its own em under 8 — one stop, its item collapsed, no trail entry pushed (issue #55; #140\'s design decision)',
+            {'em': em(stop), 'expanded': stop['expanded'], 'cursor': [t0['cursor'], t1['cursor']], 'entries': [len(t0['entries']), len(t1['entries'])]})
+    chord(ctx, 'ArrowRight')
+    into = seen()
+    t2 = into['trail']
+    newest = t2['entries'][t2['cursor']] if 0 <= t2['cursor'] < len(t2['entries']) else None
+    r.check(t2['cursor'] == t1['cursor'] + 1 and len(t2['entries']) == t2['cursor'] + 1 and bool(newest) and newest['addr'] == first
+            and abs(em(into) - READING_PX) < 1e-6 and bool(into['focus']) and into['focus']['addr'] == first and into['expanded'] == 'true',
+            '→ again, at the stop, is Enter\'s act: its trail entry pushed, the document at the reading size (em %s), its item expanded (foundations §2.2)' % READING_PX,
+            {'cursor': [t1['cursor'], t2['cursor']], 'entries': [len(t1['entries']), len(t2['entries'])], 'newest': newest and newest['addr'], 'em': em(into), 'focus': into['focus'], 'expanded': into['expanded']})
+    chord(ctx, '[', mods=('Meta',))
+    back = seen()
+    r.check(back['trail']['cursor'] == t1['cursor'] and same_view(back, stop) and back['focus'] == {'kind': 'document', 'addr': first, 'pos': None} and back['expanded'] == 'false',
+            'Mod+[ returns to HOME\'s entry at the stop\'s view, the walk on the document whole, its item collapsed (issue #55)',
+            {'cursor': [t1['cursor'], back['trail']['cursor']], 'cam_same': same_view(back, stop), 'focus': back['focus'], 'expanded': back['expanded']})
+    chord(ctx, ']', mods=('Meta',))
+    again = seen()
+    r.check(again['trail']['cursor'] == t1['cursor'] + 1 and abs(em(again) - READING_PX) < 1e-6 and bool(again['focus']) and again['focus']['addr'] == first,
+            'Mod+] returns to the entry Enter\'s act pushed, into the document at the reading size', {'cursor': [t1['cursor'], again['trail']['cursor']], 'em': em(again), 'focus': again['focus']})
+    r.figures['stepped_in'] = {'addr': first, 'framed_whole_em': whole, 'em': {'stop': em(stop), 'entered': em(into), 'back': em(back), 'forward': em(again)},
+                               'expanded': [stop['expanded'], into['expanded'], back['expanded']], 'focus_back': back['focus']}
+    ctx.leap(DOC, WINDOW[0])
+
+
 def kept_holds(ctx, r):
     """THE KEPT FOCUS (issue #141's design decision: "keep the current focus … while any of its text or box is in view
     … Reading past the last line … does not leave it"): at the first edition's landing on its first block, walked onto by
@@ -2044,6 +2104,8 @@ def run(ctx):
     ring_drawn(ctx, r, 'Enter on a trail list row')
     # ---- a document below its own reading scale: named alone, collapsed, → its Enter (issue #140) ------------
     collapsed_document(ctx, r)
+    # ---- a walk step onto a document from below its reading scale stops short of it, → there its Enter (issue #55) ------
+    stepped_in(ctx, r)
     # ---- a camera move ending over no document: the place holding the centre, the ring clamped, the line still (issue #141)
     r.figures['retake'] = retake_holds(ctx, r)
     # ---- the walk (K-1 … K-8) -------------------------------------------------------------------------

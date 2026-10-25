@@ -33,6 +33,7 @@ import * as SEL from '../overlays/selection.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
 import * as INPUT from '../app/input.js';
 import { docBox, depthOfDoc, DEPTH_SOUND } from '../plane/projection.js';
+import { LOD_TXT_LO } from '../plane/lod.js';
 import { standardFs, placeOf, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
 import { entitlementArm } from '../text/article.js';
@@ -1758,6 +1759,42 @@ test('Back to an entry whose view was left below its document\'s reading scale s
   await run(GO.forward());
   await run(GO.back());
   assert.deepEqual(walkAt(), ['document', CONT, null]);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('→ from HOME onto the account\'s first document stops short of its reading scale — one stop, collapsed, nothing pushed — and → there is Enter\'s act, its entry pushed at the reading size; Back returns to the stop\'s view, the walk on the document whole, and Forward into the document (issue #55; foundations §2.2)', async () => {
+  const fs = LAYER.foldOf(REC.doc(D)).fs;
+  await run(GO.home(true));
+  assert.ok(!LAYER.atReadingScale(D) && CAM.viewForCell(LAYER.shapeOf(D), 0.9).scale * fs >= CAM.READING_PX, 'at HOME D stands below its reading scale, and framed whole it would read past the reading size');
+  const n = TRAIL.length(), cursor = TRAIL.cursorIndex();
+  await run(KEYS.dispatch(right, PLANE));
+  const stop = CAM.view();
+  assert.deepEqual([walkAt(), WALK.collapsed(), TRAIL.length(), TRAIL.cursorIndex()], [['document', D, null], true, n, cursor], '→ at the account: D one stop, collapsed, nothing pushed');
+  assert.ok(emNow(D) < LOD_TXT_LO, `short of its reading scale: em ${emNow(D)}`);
+  await run(KEYS.dispatch(right, PLANE));
+  assert.deepEqual([TRAIL.length(), TRAIL.cursorIndex(), TRAIL.current()?.addr, walkAt(), WALK.collapsed()], [n + 1, cursor + 1, D, ['document', D, null], false], '→ again is Enter\'s act: D\'s entry pushed, the walk on D, expanded');
+  assert.ok(Math.abs(emNow(D) - CAM.READING_PX) < 1e-6, `at the reading size, ${CAM.READING_PX} px an em: ${emNow(D)}`);
+  await run(GO.back());
+  assert.deepEqual([TRAIL.cursorIndex(), walkAt()], [cursor, ['document', D, null]], 'Back to HOME\'s entry: the walk on D whole');
+  assert.ok(same(CAM.view(), stop), 'at the stop\'s view');
+  await run(GO.forward());
+  assert.deepEqual([TRAIL.cursorIndex(), walkAt()], [cursor + 1, ['document', D, null]], 'Forward to D\'s entry');
+  assert.ok(Math.abs(emNow(D) - CAM.READING_PX) < 1e-6, `at the reading size: em ${emNow(D)}`);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to an entry left while the walk stood on a document whole below its reading scale, the view reading no document, stands the walk on that document again, never on the entry\'s place (issue #55)', async () => {
+  await run(GO.home(true));
+  const s = LAYER.shapeOf(D), fs = LAYER.foldOf(REC.doc(D)).fs;
+  CAM.set({ x: s.x + s.w / 2, y: s.y + s.h / 2, scale: LOD_TXT_LO / 2 / fs });
+  await WALK.retakeFromView(true);
+  const left = CAM.view();
+  assert.deepEqual([walkAt(), WALK.collapsed(), LAYER.readAt(left)], [['document', D, null], true, null], 'the re-take below D\'s reading scale: the walk on D whole, the view reading no document');
+  await run(KEYS.dispatch(right, PLANE));
+  assert.equal(TRAIL.current()?.addr, D, '→ there is Enter\'s act: D\'s entry pushed');
+  await run(GO.back());
+  assert.deepEqual([TRAIL.current()?.label, walkAt()], [t('F.level.home'), ['document', D, null]], 'Back to HOME\'s entry: the walk on D whole, where it stood as the reader left, never on the account');
+  assert.ok(same(CAM.view(), left), 'at the view left');
   assert.deepEqual(fake.unanswered, []);
 });
 
