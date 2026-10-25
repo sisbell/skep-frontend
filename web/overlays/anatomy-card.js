@@ -13,10 +13,12 @@
 // reads the dead end's words (foundations §2.3), one whose text holds only
 // part of its passage, all of it in pieces, or one the board would not tell
 // of, says so beneath its words in BM-HELD's line (BM-HELD's `farHolds`;
-// FP-21), and one no passage's words place reads the words its tail and its
-// mirror item carry (LK's `farWords`), so the reader knows what a follow will
-// meet before making it. An end in withheld text (FP-30) reads the withheld
-// box's words, naming the owner of the run's origin by the one owner rule its
+// FP-21), and one no passage's words place — a far end naming its document
+// whole among them, which no passage's words describe (FP-30) — reads the
+// words its tail and its mirror item carry, its document's first line by the
+// one rule where the page holds one (LK's `farFaced`), so the reader knows
+// what a follow will meet before making it. An end in withheld text (FP-30)
+// reads the withheld box's words, naming the owner of the run's origin by the one owner rule its
 // placeholder names (T-LAYER's `originOwner`; R56; FP-33): a near end LK
 // draws at a withheld run (`Shown.run`) with no read, and any stretch a read
 // answers as withheld in those words, never its bytes (`fragment`); the far
@@ -51,7 +53,10 @@
 // the link (ST's `dated`), "not recorded" where the board holds no reading of
 // it, and never a log position.
 // Its acts follow either end and open the scene, a step on the trail from
-// the link's end, made at the link's own bytes (N-GO's `toScene`). The link's
+// the link's end, made at the link's own bytes (N-GO's `toScene`), beside the
+// document LK names for it (`besideAt`) — where the far end names its
+// document whole, that whole document, nothing of it set level with the near
+// passage (SC's `Held.wholeB`; FP-30). The link's
 // mark comes from LK's `markOf`, so the card and the symbol agree.
 // The card takes the focus on its first act — follow, the line standing
 // before it — where a key opened it (Enter at the link's element, K-55; a
@@ -243,15 +248,15 @@ async function farPlace(s) {
 /**
  * The far end's passage in words, from the version its far box shows: a
  * passage's first words where it stands now, the dead end's words where it
- * floats (BM-HELD's `floatingOf`), the version's first words where the link
- * names its document whole; null where nothing places it.
+ * floats (BM-HELD's `floatingOf`); null where nothing places it, and where the
+ * link names its document whole, which no passage's words describe — the
+ * card says its far end's words then (LK's `farFaced`).
  * @param {Shown} s
  * @param {Array<{pos: number, width: number}> | null} runs where its passage stands now (`farPlace`)
  */
 async function farPassage(s, runs) {
   const at = s.farAt || s.far;
-  if (s.farWhole) return fragment(at, null, 80);
-  if (!runs) return null;
+  if (s.farWhole || !runs) return null;
   return runs.length ? fragment(at, runs[0].pos, runs[0].width) : floatingOf(at);
 }
 
@@ -335,7 +340,7 @@ function showCard(s, read, anchorEl, byKey, others = false) {
     kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl, span: bytes } : { span: bytes }, html, takeFocus: byKey, first: '[data-run="follow"]',
     acts: {
       follow: (_el, byKey) => GO.follow(s, byKey),
-      beside: () => { if (far && !dead) void GO.toScene(near, s.farAt || far, { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null }, { from: { shown: s }, site: { span: bytes } }); },
+      beside: () => { if (far && !dead) void GO.toScene(near, LK.besideAt(s), { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null, wholeB: s.farWhole }, { from: { shown: s }, site: { span: bytes } }); },
       claims: () => showCard(s, read, anchorEl, false, true),
     },
   });

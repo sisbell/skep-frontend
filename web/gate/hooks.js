@@ -39,10 +39,13 @@
 // beside the platform's own (`platformSelection`) and the copy door (`copy`);
 // the reveal's state and setters (`reveal`, `links`), each end `links.shown`
 // lists carrying its key and the withheld run it is drawn at, for the marks
-// and mirror checks; the reading scene — opened as a step on the trail and
-// closed by its own end, a Back (`scene.open`, `scene.close`), its pairs, a
-// passage's line in a pane (`scene.at`), its ties beside their passages' lines (`scene.ties`),
-// each pane as it stands and whether one is being set again (`scene.panes`,
+// and mirror checks; the reading scene — opened as a step on the trail, with
+// the passage its opener holds, and closed by its own end, a Back
+// (`scene.open`, `scene.close`), its pairs, a passage's line in a pane
+// (`scene.at`), its ties beside their passages' lines and their panes' facing
+// edges (`scene.ties`), the facing edges a whole document's ends meet
+// (`scene.edges`), the stop at a band's clipped end (`scene.stop`), each pane
+// as it stands and whether one is being set again (`scene.panes`,
 // `scene.updating`), a version read in a pane's place (`scene.read`); and the
 // strings.
 // The oracles measure what a person meets, never what the page set: the
@@ -432,14 +435,19 @@ export function install(deps) {
   /**
    * The reading scene's bands and lines as its last draw drew them, each end
    * beside its passage's first line read now (`sceneAt`), apart from the
-   * scene's own measure, and beside its pane's visible rect: the scene sets
-   * each end at its passage's line and moves it with its pane's scroll, and
-   * clips one whose line has left the pane at that pane's edge (foundations
-   * §2.5); the layout case holds every end to that.
+   * scene's own measure — none for an end naming its document whole — and
+   * beside its pane's visible rect and its facing edge on screen (pane A's
+   * right, pane B's left): the scene sets each end at its passage's line and
+   * moves it with its pane's scroll, clips one whose line has left the pane
+   * at that pane's edge, and stands a whole document's end at its pane's
+   * facing edge (foundations §2.5; FP-30); the layout case holds every end to
+   * that.
    */
   function sceneTies() {
-    const a = paneOf('a'), b = paneOf('b');
-    return SCENE.ties().map((d) => ({ ...d, lineA: (sceneAt('a', d.a.pos, d.a.width) || { line: null }).line, lineB: (sceneAt('b', d.b.pos, d.b.width) || { line: null }).line, paneA: a ? paneRect(a) : null, paneB: b ? paneRect(b) : null }));
+    const a = paneOf('a'), b = paneOf('b'), ra = a ? a.getBoundingClientRect() : null, rb = b ? b.getBoundingClientRect() : null;
+    /** an end's passage's first line read now; none for an end naming its document whole */
+    const lineOf = (/** @type {'a' | 'b'} */ side, /** @type {{pos: number, width: number, whole: boolean}} */ e) => (e.whole ? null : (sceneAt(side, e.pos, e.width) || { line: null }).line);
+    return SCENE.ties().map((d) => ({ ...d, lineA: lineOf('a', d.a), lineB: lineOf('b', d.b), paneA: a ? paneRect(a) : null, paneB: b ? paneRect(b) : null, faceA: ra ? ra.right : null, faceB: rb ? rb.left : null }));
   }
   /** redraw the links card where it stands open at a document, as its own acts do after a change */
   function redrawCard(/** @type {string} */ addr) { if (LINKS.isOpen(addr)) LINKS.render(); }
@@ -605,11 +613,15 @@ export function install(deps) {
       trailList: () => { TRAILLIST.open(false); return true; },
     },
     scene: {
-      /** the scene opened on two documents as a step on the trail, the second the one opened beside (N-GO's `toScene`), and its own end, a Back from its entry (N-GO's `closeScene`) */
-      open: (/** @type {string} */ a, /** @type {string} */ b) => GO.toScene(a, b), close: () => GO.closeScene(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair(),
+      /** the scene opened on two documents as a step on the trail, the second the one opened beside, with the passage its opener holds (N-GO's `toScene`; SC's `Held`), and its own end, a Back from its entry (N-GO's `closeScene`) */
+      open: (/** @type {string} */ a, /** @type {string} */ b, /** @type {import('../scene/scene.js').Held} */ held = {}) => GO.toScene(a, b, held), close: () => GO.closeScene(), isOpen: () => SCENE.isOpen(), pair: () => SCENE.pair(),
       /** its runs of shared identity, contiguous pairs merged, and the two ends it set level */
       pairs: () => SCENE.pairs(),
       at: sceneAt, ties: sceneTies,
+      /** the facing edges a whole document's ends meet, as the last draw drew them (FP-30): each its side, its links, its x and its visible top and bottom on screen, its hue and whether it is dashed */
+      edges: () => SCENE.edges(),
+      /** the stop at a band's clipped end, as the last draw placed it (FP-20): whether it stands, the shared passages it steps through, the one it goes to now and the one after, its name, its count and its rect on screen; null where no scene stands */
+      stop: () => SCENE.stop(),
       /** each pane as it stands (FP-23): the address it was opened on, the record its text was made from, the address its acts name and the one it shows, its kind, its version, the chain's count, its corner's act, what its corner says it lacks, and the blocks its article was made from */
       panes: () => SCENE.panes(),
       /** is a pane being set again: an act on the panes waits for it */

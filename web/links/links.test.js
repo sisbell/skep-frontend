@@ -139,6 +139,21 @@ test('a far end stands in the version its far box shows (issue #154: "Beams, lin
   } finally { LK.readers({}); }
 });
 
+test('the document a reading scene reads beside a drawn end: where the end names its far document whole, that document as the end names it — the version it names, else its bare address, which reads the latest — never the version its far box shows; a passage\'s, the version its far box shows, where the passage is placed (issue #59\'s design decision: "If the end names a version, that member opens; otherwise the latest does")', () => {
+  const FAR = '1.0.1.0.127', FAR2 = FAR + '.2', FAR3 = FAR + '.3', L = D + '.0.2.9', V = D + '.0.2.10';
+  REC.takeLinks(D, [L, V]);
+  REC.takeLink({ addr: L, from: [span(D, 60, 5)], to: [span(FAR, 20, 5)], type: CITE });
+  REC.takeLink({ addr: V, from: [span(D, 70, 5)], to: [whole(FAR3)], type: CITE });
+  const end = (/** @type {string} */ l) => /** @type {import('./links.js').Shown} */ (LK.shown(D).find((x) => x.link.addr === l));
+  // the box FAR and its versions share showing its second version
+  LK.readers({ shown: (a) => (a === FAR || a === FAR3 ? FAR2 : a) });
+  try {
+    assert.deepEqual([end(D + '.0.2.1').farWhole, end(D + '.0.2.1').farAt, LK.besideAt(end(D + '.0.2.1'))], [true, FAR2, FAR], 'FAR named whole at its bare address: FAR, never the second version its box shows');
+    assert.deepEqual([end(V).farWhole, end(V).farAt, LK.besideAt(end(V))], [true, FAR2, FAR3], 'its third version named whole: that version');
+    assert.deepEqual([end(L).farWhole, end(L).farAt, LK.besideAt(end(L))], [false, FAR2, FAR2], 'a passage of FAR: the version its box shows, where the passage is placed');
+  } finally { LK.readers({}); }
+});
+
 test('a drawn end carries beside its own mark the mark its far document gives the link — the one the link\'s symbol takes there, read at the version its far box shows — each decided at its own document, never from the two together (issue #166\'s design decision)', () => {
   build({ session: '1.0.9' });
   const L = D + '.0.2.9', FAR2 = OTHER_HOME + '.2';

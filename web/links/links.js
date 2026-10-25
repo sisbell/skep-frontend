@@ -60,6 +60,11 @@
 //     anyone follows it (foundations §2.3); what that text holds of a far end
 //     that does not float is BM-HELD's to read from the drawn end and its
 //     projection (`farHolds`, `farSays`; FP-21);
+//   - a reading scene opened from a drawn end reads beside its near document
+//     the version of the far box its far end is placed in (`farAt`), save
+//     where the far end names a document whole: then the address it names —
+//     the member it names, else the bare address, whose text is the latest —
+//     whatever version the far box shows (`besideAt`; FP-22, FP-30);
 //   - a link whose far document the plane draws nowhere — no index row, no
 //     text or metadata read, no withheld box of its own (the reader `drawn`)
 //     — stays in the set, counted, marked and reached by the keyboard and the
@@ -142,7 +147,7 @@
 // The seam: which links show, and its state, is decided here alone; the
 // drawing modules — BM, T-LAYER, P-RENDER, SC, the cards — draw what `shown`,
 // `shownAt`, `symbols`, `beams`, `countAt`, `connections`, `tails`, `tailed`,
-// `markOf`, `mergedMark`, `lit`, `floats`, `farPos`, `farWords`, `farFaced`,
+// `markOf`, `mergedMark`, `lit`, `floats`, `farPos`, `besideAt`, `farWords`, `farFaced`,
 // `farLabel`, `farLabelHTML`, `drawnIn` and `endKey` give them, and T-LAYER sets each document at the
 // size the fold of what `utmost` gives takes.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-11, FP-21, FP-22, FP-30.
@@ -539,6 +544,16 @@ export function shownAt(/** @type {string} */ addr, /** @type {{pos: number, wid
 export const floats = (/** @type {Shown} */ s) => !!s.farRuns && s.farRuns.length === 0;
 /** where a drawn link's far end stands first in the current text of the version its far box shows (`farAt`) — the position a scene sets level with its near end — or null where nothing places it there */
 export const farPos = (/** @type {Shown} */ s) => (s.farRuns && s.farRuns.length ? s.farRuns[0].pos : null);
+/**
+ * The document a reading scene opened from a drawn end reads beside its near
+ * one (see the head): where the far end names a document whole, the address
+ * it names — the member it names, else the bare address, whose text is the
+ * latest — whatever version the far box shows; else the version the far box
+ * shows (`farAt`), where its passage is placed; '' where it names none.
+ * @param {Shown} s
+ * @returns {string}
+ */
+export const besideAt = (s) => (s.farWhole ? s.far : s.farAt || s.far);
 
 /**
  * Is a drawn end tailed (see the head): its far end names a document the

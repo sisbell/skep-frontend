@@ -12,9 +12,10 @@
 // its lineage — "not recorded" where the board holds no reading, "on or
 // before" where only an hour's anchor dates it across midnight (FP-34);
 // beneath its far end's words the line its landing says where that end's
-// text holds only part of its passage (FP-21); and an end drawn at a withheld
+// text holds only part of its passage (FP-21); an end drawn at a withheld
 // run says it is withheld and whose, with no read of its bytes, the run's one
-// symbol listing its several ends (FP-30).
+// symbol listing its several ends; and a far end naming its document whole
+// described by that document's label alone (FP-30).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as ANATOMY from './anatomy-card.js';
@@ -24,6 +25,7 @@ import * as REC from '../model/records.js';
 import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as LK from '../links/links.js';
+import * as LAYER from '../text/layer.js';
 import { resolveSpan } from '../model/address.js';
 import { t } from '../strings.js';
 
@@ -363,5 +365,35 @@ test('an end LK draws at a withheld run: its card says the end is withheld and w
   for (let i = 0; i < 50 && HOST.currentState()?.id !== 'anatomy:' + B; i++) await new Promise((r) => setTimeout(r, 0));
   assert.equal(HOST.currentState()?.id, 'anatomy:' + B, 'the second row opens the second end\'s card');
   HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a far end naming its document whole is described by that document\'s label — its first line, as a box\'s label reads it — never by its text past that line, nor by a passage\'s words (issue #59\'s design decision: "describes the end by the document\'s label, never by a passage\'s words")', async () => {
+  const p = cardPage();
+  HOST.attach(/** @type {any} */ (p.host));
+  // the first edition's citation of 1.0.1.0.143 whole, which the index lists nowhere: its text two typed lines
+  const D = '1.0.1.0.3', FAR = '1.0.1.0.143', CITES = D + '.0.2.22';
+  const TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'Its first line.\n\nIts second line, which no label holds.';
+  REC.takeDelivery(D, [{ pos: 1, width: TEXT.length, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: TEXT.length }]);
+  REC.takeDelivery(FAR, [{ pos: 1, width: FAR_TEXT.length, kind: 'content', text: FAR_TEXT, ref: null, origin: null }]);
+  REC.takeLinks(D, [CITES]);
+  REC.takeLink({ addr: CITES, from: [resolveSpan({ start: D + '.0.1.11', width: '0.0.0.0.0.0.0.5' })], to: [resolveSpan({ start: FAR, width: '0.0.0.0.1' })], type: '1.1.0.1.0.1.0.3.13', age: UNDATED });
+  const fake = FAKE.create({
+    [FAKE.keyOf('op', { frame: F.inClaims(CITES, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+    [FAKE.keyOf('op', { frame: F.outClaims(CITES, 'audit') })]: { result: { as_of: 1, resp: 'claims', claims: [] } },
+  });
+  PORT.boot(fake);
+  // a far end's first line by the one rule a box's label reads, as the app hands it to LK
+  LK.readers({ first: LAYER.firstOfFar });
+  try {
+    const s = LK.shown(D).find((x) => x.link.addr === CITES);
+    assert.ok(s && s.farWhole && s.far === FAR, 'the citation drawn at the first edition, naming FAR whole');
+    await ANATOMY.open(s, null);
+    const quoted = (p.host.innerHTML.match(/<div class="end far">.*?<div class="quoted">(.*?)<\/div>/) || [])[1];
+    assert.equal(quoted, '<span class="reading">Its first line.</span>', 'its first line alone, in the reading face, as its label names it — never the text after it');
+    assert.equal(quoted, LK.farFaced(s).map((r) => `<span class="${r.face}">${r.text}</span>`).join(''), 'the words LK names the end by');
+    HOST.dismiss();
+  } finally { LK._reset(); }
   assert.deepEqual(fake.unanswered, []);
 });

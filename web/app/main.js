@@ -74,7 +74,8 @@
 // could read goes with it (FP-29), then each reading scene's pane and the
 // walk (FP-23).
 // The global key listener → N-KEYS, each key handed where the focus is
-// (`whereIs`; a field as N-FOCUS reads one, `isField`) and whether a key
+// (`whereIs`; a field as N-FOCUS reads one, `isField`; the scene's stop one
+// of the scene's acts, as its bar's buttons are) and whether a key
 // made it by N-FOCUS's one reading (FP-20): a chord the LEAP box closed on
 // is read at the focus the close returned (M-1); in the scene the scene's
 // keys go first (SC's `key`); ↓ and ↑ in an overlay move among its controls
@@ -228,7 +229,7 @@ function whereIs(/** @type {EventTarget | null} */ target) {
   if (t.closest('#overlay')) return /** @type {const} */ ('overlay');
   if (t.closest('#landing')) return /** @type {const} */ ('landing');
   if (t.closest('#line')) return /** @type {const} */ ('line');
-  if (t.closest('#scenebar')) return /** @type {const} */ ('scene-acts');
+  if (t.closest('#scenebar, #scenestop')) return /** @type {const} */ ('scene-acts');
   if (t.closest('#scene')) return /** @type {const} */ ('scene');
   if (t.closest('#corners')) return /** @type {const} */ ('corner');
   return /** @type {const} */ ('plane');
@@ -262,7 +263,7 @@ async function boot() {
   FOCUS.attach({ live: el('live') });
   WALK.attach(el('mirror'));
   LANDING.attach(el('landing'), { handOff: () => WALK.focusItem(), pieces: el('pieces') });
-  SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')) }, { end: (byKey) => GO.closeScene(byKey) });
+  SCENE.attach({ root: el('scene'), bar: el('scenebar'), paneA: el('sceneA'), paneB: el('sceneB'), canvas: /** @type {HTMLCanvasElement} */ (el('scenebeams')), stop: /** @type {HTMLButtonElement} */ (el('scenestop')) }, { end: (byKey) => GO.closeScene(byKey) });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
   LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed() });
   LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a) });

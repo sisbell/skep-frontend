@@ -254,6 +254,11 @@ export const STRINGS = {
   'L.moment.gone': { text: 'this moment no longer waits — the shell has ended it', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
   'L.walk.waits': { text: '⟨walk⟩ · ⟨step⟩ — waits on you', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.scene.closed': { text: 'side by side closed — forward › reopens it', cls: 'DRAFT', source: '', screen: 'the one line; forward ›', lane: true },
+  // a reading scene opened from a link whose far end names a document whole (FP-30): the words the far pane's name ends
+  // with; the stop at a band's clipped end, which reaches the passages of that document holding the near passage's material
+  'L.scene.whole-end': { text: 'the whole document is this link\'s end', cls: 'DRAFT', source: '', screen: 'B1-S9: the far pane', lane: true },
+  'L.scene.shared.1': { text: 'show where ⟨D⟩ holds the same material', cls: 'DRAFT', source: '', screen: 'B1-S9: the stop at a band\'s clipped end', lane: true },
+  'L.scene.shared': { text: 'show the next of ⟨n⟩ passages where ⟨D⟩ holds the same material', cls: 'DRAFT', source: '', screen: 'B1-S9: the stop at a band\'s clipped end', lane: true },
   'L.at-position': { text: 'at position ⟨p⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   // a continuation's mark (`markCount`): its count in what it counts — the words of the target that opens its list, its stop's
   // in the ARIA mirror and its list's caption; and the name and place of the member the walk's ring stands on, on the mark

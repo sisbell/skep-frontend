@@ -1,11 +1,13 @@
 // SC — the reading scene (the structure record §3.2; B1-S9; foundations
 // §2.5; law 12). Layer 2. ENGINE-BOUND. State (FP-10): the pair, the two
-// ends it sets level, the bands' and lines' ends as measured in the panes,
-// the panes' scrolls, each pane's text — the record it was made from, the
-// version it reads and the address it names, the links and far ends it was
-// set with — the settings reading and the acts waiting on them, the element
-// it was opened from, and its own end, the app's to hand in; view state,
-// never written (FP-7).
+// ends it sets level, whether the far end names pane B's document whole, the
+// bands' and lines' ends and the passages shared with the near one as
+// measured in the panes, the stop's next passage and whether its appearance
+// was said, the panes' scrolls, each pane's text — the record it was made
+// from, the version it reads and the address it names, the links and far
+// ends it was set with — the settings reading and the acts waiting on them,
+// the element it was opened from, and its own end, the app's to hand in;
+// view state, never written (FP-7).
 // Two documents at reading scale side by side over the plane, each pane
 // scrolling on its own (R3); the places unmoved, nothing written; the dialog
 // named as it attaches by ST's `L.scene-label`. It sets the two ends level
@@ -16,7 +18,11 @@
 // LEVEL_AT px below the panes' tops or higher where one stands above it,
 // and each article given a pane's height of room below its end so a passage
 // near the end can be brought there too (`level`); the re-level act (K-62)
-// restores that.
+// restores that. Where the far end of the link it is opened from names pane
+// B's document whole (`Held.wholeB`), nothing of that document is set level
+// with the near passage: pane B opens at its start, where its follow lands,
+// the near passage set as for any link, and the re-level returns both there
+// (FP-30).
 // Between the panes links are drawn as lines from the set LK gave at either
 // pane's document as the pane was set (§2.5; `linesBetween`), each link once
 // per pair of its ends (P44), each end where the link's bytes stood in its
@@ -38,6 +44,12 @@
 // level, a pane is set again or the panes change size (`measure`), and moved
 // with each pane's scroll (`draw`) — and one whose end has left its pane is
 // clipped at the pane's edge with the stub's triangle, in that end's hue.
+// A far end naming its pane's document whole, in either pane, is that whole
+// document (FP-30): it stands at no line, its line meeting the pane's facing
+// edge level with the line's other end, held inside the pane's visible
+// height, and that edge drawn whole, from the pane's visible top to its
+// bottom, in the end's ink — in the one mark the ends meeting it merge into
+// where several do (`wholeEdges`, `drawEdge`; LK's `mergedMark`).
 // Every tie is measured from what its panes were set with, never the
 // model's now: a read that drops a pane's document moves no tie off its text.
 // A pane is kept fresh by its kind (FP-23): each feed row M-PUMP takes
@@ -93,7 +105,13 @@
 // leaves their answer opening nothing, and no `compare` is asked after it;
 // as it shows, the act that asked for it ends the chrome of the place it
 // leaves (`Showing`'s `leaving`), and it answers whether it showed and the
-// refusal its reads met where it did not (`Opening`). The scene is a step on
+// refusal its reads met where it did not (`Opening`). Where the far end names
+// pane B's document whole, the opening waits on no `compare`: the scene shows
+// on the two texts and where the far ends crossing between them stand, the
+// `compare` asked as it shows, and its answer, where the scene stands and
+// neither pane was set again meanwhile, adds the bands and says a refusal in
+// the bar and the status region — moving no pane and no focus, and holding
+// no act (`addBands`). The scene is a step on
 // the trail, which N-GO keeps (`toScene`, `closeScene`): its own end —
 // zoom-out, Esc, ←, the bar's × — is a Back from its entry, the bar's handed
 // in by the app (`attach`), and `close` ends it as a navigation act's
@@ -120,9 +138,27 @@
 // opener is read as the scene shows, after the chrome it leaves is ended
 // (`from`).
 // Each pane is a named region (SC9), named by its own document's address,
-// the head of the article it holds (`namePane`), and ↓ and ↑ in it move by
+// the head of the article it holds (`namePane`) — pane B, where the far end
+// names its document whole, by that address and ST's `L.scene.whole-end`
+// after it, `aria-current="location"` on it, the end being the document and
+// no passage of it — and ↓ and ↑ in it move by
 // block — the next block's top brought to the pane's top (K-60) — PageDown
-// and PageUp by most of a pane, Home and End to its ends (`move`). The panes
+// and PageUp by most of a pane, Home and End to its ends (`move`).
+// Where the far end names pane B's document whole and the `compare` finds the
+// near passage there, the passages of pane B holding its material
+// (`counterparts`), in pane B's order, are reached by the stop (`#scenestop`;
+// FP-20): a native button at pane B's facing edge, over the stub's triangle
+// where the band to the next of them out of view is clipped, on its bearing —
+// the first in pane B's order, then the one after the last it went to, round
+// again (`stopFor`) — its count shown where they are two or more, named by
+// ST's `L.scene.shared` words, its appearance said once, politely, in the
+// status region (FP-28), and hidden while every one is in view. Its act
+// (`toShared`) scrolls pane B alone, the passage's first line level with the
+// near passage's where that line is in view, else LEVEL_AT px below the
+// pane's top; a stop that leaves while it holds the focus hands it to pane B,
+// and the re-level starts it at the first again. It is one of the scene's
+// stops after pane A's corner and before pane B, and its keys are a button's
+// own, as the bar's acts' are. The panes
 // borrow T-LAYER's mount (FP-12; the structure record §3.4 (vii)):
 // `sceneArticle` makes each pane's article from the record and the view the
 // scene keeps, `madeOf` and `rangeIn` map a position through the blocks it
@@ -155,7 +191,9 @@
 // ties again (`refaced`).
 // Figures: the ends level LEVEL_AT px below the panes' tops; MAX_BANDS bands drawn at
 // most; a band 6 px wide at 0.7 alpha, a line 1.6 px at the link's value; a
-// stub's triangle 8 by 4 px, 6 px inside the pane's edge.
+// stub's triangle 8 by 4 px, 6 px inside the pane's edge; a whole document's
+// edge EDGE_W px wide, in the gap against the pane, at its mark's value; the
+// stop 16 px tall over the stub's triangle, its count before it.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24,
 // FP-28, FP-29, FP-30, FP-34.
 
@@ -184,6 +222,7 @@ import { esc } from '../util.js';
 /** @typedef {import('../model/pump.js').Dropped} Dropped */
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../beams/beams.js').Ink} Ink */
+/** @typedef {import('../plane/register.js').Mark} Mark */
 /** @typedef {import('../text/article.js').ArticleView} ArticleView */
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
@@ -199,14 +238,24 @@ import { esc } from '../util.js';
  * @property {number | null} [posA] the first position of the passage held in the first document
  * @property {number | null} [widthA] its positions; absent or null, the position alone
  * @property {number | null} [posB] the position in the second document the opener names — where a link's far end stands in its text now (LK's `farPos`) — where it names one
+ * @property {boolean} [wholeB] the far end of the link the scene is opened from names the second document whole: nothing of it is set level with the passage held, and pane B opens at its start (see the head)
  */
 
 /**
  * @typedef {Object} End — one end of a band or a line: its passage, and where the passage's first line stands in its pane's scrolled content
  * @property {number} pos the passage's first position
  * @property {number} width its positions
- * @property {number} y the first line's middle, px below the pane's content top — at a cover, its head's withheld statement's
+ * @property {number} y the first line's middle, px below the pane's content top — at a cover, its head's withheld statement's; at a whole document, 0, the end standing at no line
  * @property {boolean} [cover] it ends at its pane's cover (`Passage`)
+ * @property {boolean} [whole] it is its pane's document whole (`Passage`)
+ */
+
+/**
+ * @typedef {Object} Shared — a passage of pane B's document holding the material of the passage held in pane A (`counterparts`), as measured in pane B
+ * @property {number} pos its first position in pane B's document
+ * @property {number} width its positions
+ * @property {number} top its first line's top, px below pane B's content top
+ * @property {number} y that line's middle
  */
 
 /**
@@ -221,20 +270,31 @@ import { esc } from '../util.js';
  * @typedef {Object} Drawn — a tie as the last draw drew it, its ends on screen
  * @property {'band' | 'link'} kind
  * @property {string | null} link
- * @property {{pos: number, width: number, x: number, y: number, clipped: boolean, cover: boolean}} a
- * @property {{pos: number, width: number, x: number, y: number, clipped: boolean, cover: boolean}} b
+ * @property {{pos: number, width: number, x: number, y: number, clipped: boolean, cover: boolean, whole: boolean}} a
+ * @property {{pos: number, width: number, x: number, y: number, clipped: boolean, cover: boolean, whole: boolean}} b
+ */
+
+/**
+ * @typedef {Object} Edge — a pane's facing edge as the last draw drew it, the whole-document ends meeting it, on screen
+ * @property {'a' | 'b'} side the pane
+ * @property {string[]} links the links whose ends it is
+ * @property {number} x where it is drawn, the middle of its stroke
+ * @property {number} top the pane's visible top, where it begins
+ * @property {number} bottom the pane's visible bottom, where it ends
+ * @property {string} hue its ink's hue: the mark its links merge into
+ * @property {boolean} dashed its ink is dashed — every one of its links another's there
  */
 
 /**
  * @typedef {Object} PaneLinks — what a pane gives the lines between the panes: what it was set with, never the model's now
  * @property {string} addr the record its text was made from
  * @property {Shown[]} shown the links LK showed at that record as the pane was set (`LK.shown`)
- * @property {Block[]} blocks the blocks its article was made from, where a far end naming the document whole stands
+ * @property {Block[]} blocks the blocks its article was made from, where a far end that floats stands
  * @property {Map<string, Stretch[] | Declined>} [placed] where the far ends of the links crossing into it stood in its text as the pane was set (`project`'s answers), by `⟨link⟩ ⟨slot⟩`
  * @property {boolean} [cover] it shows a cover: its record a read answered `withheld` as it was set — a covered draft's pane its head alone (FP-29) — where every far end crossing into it ends
  */
 
-/** @typedef {{pos: number, width: number, cover?: boolean}} Passage one end of a line between the panes, as a passage of its pane's document: its first position and its positions; `cover` where it ends at its pane's cover, its head's withheld statement, which holds no position */
+/** @typedef {{pos: number, width: number, cover?: boolean, whole?: boolean}} Passage one end of a line between the panes, as a passage of its pane's document: its first position and its positions; `cover` where it ends at its pane's cover, its head's withheld statement, which holds no position; `whole` where it is its pane's document whole, standing at no position of it */
 
 /**
  * @typedef {Object} Line — a link's line between the panes, its ends as passages, before they are measured
@@ -242,6 +302,7 @@ import { esc } from '../util.js';
  * @property {Passage} a its end in pane A's document
  * @property {Passage} b its end in pane B's document
  * @property {{a: Ink, b: Ink}} ink each end's: the mark its pane's document gives the link, as a stroke takes it (BM's `inkOf`)
+ * @property {{a: Mark, b: Mark}} marks each end's mark, its pane's document's (`LK.markOf`): what a whole document's edge merges (`wholeEdges`)
  * @property {number} value the link's own, alike at both its ends
  */
 
@@ -294,7 +355,13 @@ import { esc } from '../util.js';
  * @property {Pane} b
  * @property {ComparePair[]} pairs
  * @property {Level} level
- * @property {Array<Tie & {ink: {a: Ink, b: Ink}, value: number}>} ties
+ * @property {boolean} whole the far end of the link it was opened from names pane B's document whole (`Held.wholeB`)
+ * @property {number} widthA the positions of the passage held in pane A, from `level.a`: the near passage, whose material the stop finds in pane B
+ * @property {Array<Tie & {ink: {a: Ink, b: Ink}, value: number, marks?: {a: Mark, b: Mark}}>} ties
+ * @property {Shared[]} shared where the scene is whole, the passages of pane B holding the near passage's material, in pane B's order, as measured; none elsewhere
+ * @property {number} next the shared passage the stop's next act goes to first, an index into `shared`
+ * @property {number | null} at the shared passage the stop stands for as the last draw placed it, an index into `shared`; null where it stands hidden
+ * @property {boolean} told the stop's appearance was said in the status region
  * @property {string} size the panes' sizes the ties were measured at
  * @property {number} updating the settings reading
  * @property {Array<() => void>} waiting the acts made while one reads, in the order made (`whenSet`)
@@ -339,13 +406,19 @@ const BAND_INK = { hue: SAMENESS.boundary, dash: [] };
 /** the keys a pane takes, moving it alone (K-60) */
 const MOVES = ['PageDown', 'PageUp', '↓', '↑', 'Home', 'End'];
 const SIDES = /** @type {const} */ (['a', 'b']);
+/** a whole document's edge's stroke (px) */
+const EDGE_W = 3;
+/** the id of the bar's hidden words that pane B's name ends with where the far end names its document whole (`namePane`) */
+const WHOLE_ID = 'sceneB-whole';
 
 /** @type {Scene | null} */
 let scene = null;
-/** @type {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement} | null} */
+/** @type {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement} | null} */
 let els = null;
 /** @type {Drawn[]} what the last draw drew */
 let drawnTies = [];
+/** @type {Edge[]} the facing edges the last draw drew */
+let drawnEdges = [];
 /** the scene's own end — a Back from its entry, the app's to hand in (`attach`); until it does, the scene ended where it stands */
 let ending = (/** @type {boolean} */ _byKey) => close();
 
@@ -367,27 +440,39 @@ function coverPlane(/** @type {boolean} */ on) { WALK.cover(on); LAYER.cover(on)
 
 /**
  * A pane named as a region by its own document's address — the head of the
- * article it holds (SC9; the focus record's D5).
+ * article it holds (SC9; the focus record's D5) — and, where it is the whole
+ * document a link's far end names, by that address and the bar's hidden
+ * words saying so after it (`WHOLE_ID`), `aria-current="location"` on it;
+ * neither on any other pane, whatever the scene it stood in before.
  * @param {HTMLElement} pane
  * @param {string} id the id the head's address takes, for the reference
+ * @param {boolean} [whole] the pane is the whole document a link's far end names
  */
-function namePane(pane, id) {
+function namePane(pane, id, whole = false) {
   pane.setAttribute('role', 'region');
   const addr = /** @type {HTMLElement | null} */ (pane.querySelector('.hd .addr'));
-  if (addr) { addr.id = id; pane.setAttribute('aria-labelledby', id); }
+  if (addr) { addr.id = id; pane.setAttribute('aria-labelledby', whole ? `${id} ${WHOLE_ID}` : id); }
+  if (whole) pane.setAttribute('aria-current', 'location'); else pane.removeAttribute('aria-current');
+}
+
+/** both panes named (`namePane`), pane B as the whole document where the scene's far end names it so */
+function namePanes(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */ S) {
+  namePane(E.paneA, 'sceneA-name');
+  namePane(E.paneB, 'sceneB-name', S.whole);
 }
 
 /**
  * Attach the scene's elements, and the act its own end runs (see the head):
  * the bar's ×, told whether a key pressed it by the focus owner's one
- * reading (FP-20).
- * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement}} e
+ * reading (FP-20); the stop's act (`toShared`).
+ * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement}} e
  * @param {{end?: (byKey: boolean) => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it
  */
 export function attach(e, acts = {}) {
   els = e;
   if (acts.end) ending = acts.end;
   e.root.setAttribute('aria-label', t('L.scene-label'));
+  e.stop.addEventListener('click', () => toShared());
   /** is an event's target a pane's corner's act? */
   const onAct = (/** @type {Event} */ ev) => { const tg = /** @type {HTMLElement | null} */ (ev.target); return !!tg && !!tg.closest && !!tg.closest('.corner [data-read]'); };
   for (const p of [e.paneA, e.paneB]) {
@@ -407,6 +492,23 @@ export const pair = () => (scene ? { a: scene.a.names, b: scene.b.names } : null
 export const pairs = () => (scene ? { pairs: scene.pairs.map((p) => ({ ...p })), level: { ...scene.level } } : null);
 /** the bands and lines the last draw drew, their ends on screen (the gate holds each to its passage's line) */
 export const ties = () => drawnTies.map((d) => ({ ...d, a: { ...d.a }, b: { ...d.b } }));
+/** the facing edges the last draw drew for the whole-document ends meeting them, on screen (the gate holds each to its pane's visible height) */
+export const edges = () => drawnEdges.map((e) => ({ ...e, links: [...e.links] }));
+/**
+ * The stop as the last draw placed it (the gate reads it): whether it stands,
+ * the shared passages it reaches, the one it stands for and the one its next
+ * act goes to first, its name and the count it shows, and its rect on screen;
+ * null where the scene does not stand.
+ */
+export function stop() {
+  const S = scene, E = els;
+  if (!S || !E) return null;
+  const r = E.stop.getBoundingClientRect(), at = S.at != null ? S.shared[S.at] : null;
+  return {
+    shown: !E.stop.hidden, shared: S.shared.map((p) => ({ pos: p.pos, width: p.width })), at: at ? { pos: at.pos, width: at.width } : null, next: S.next,
+    name: E.stop.getAttribute('aria-label'), count: E.stop.textContent || '', rect: { x: r.left, y: r.top, w: r.width, h: r.height },
+  };
+}
 /** is a pane being set again: an act on the panes waits for it (see the head) */
 export const updating = () => !!scene && scene.updating > 0;
 /**
@@ -501,8 +603,10 @@ export function nearest(pairs, pos) {
 }
 
 /**
- * The two ends the scene sets level (§2.5): where the opener names a
- * position in the second document — a link's far
+ * The two ends the scene sets level (§2.5): where the far end of the link the
+ * scene is opened from names the second document whole (`wholeB`), the held
+ * position and the second at its top, whatever the two share (FP-30); where
+ * the opener names a position in the second document — a link's far
  * end — the held position and that one; else the passage held set level with
  * its `counterpart`, the second at its top where the held passage shares
  * none; with nothing held, the first pair's two ends.
@@ -512,6 +616,7 @@ export function nearest(pairs, pos) {
  */
 export function levels(runs, held = {}) {
   const posA = held.posA ?? null;
+  if (held.wholeB) return { a: posA, b: null };
   if (held.posB != null) return { a: posA, b: held.posB };
   if (posA == null) { const first = [...runs].sort((x, y) => x.u1 - y.u1)[0]; return first ? { a: first.u1, b: first.u2 } : { a: null, b: null }; }
   const c = counterpart(runs, posA, held.widthA ?? 1);
@@ -530,11 +635,11 @@ function restIn(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
  * `project` placed its passage in in the pane's own text as the pane was set
  * (`placed`) — else LK's `farRuns` where LK placed it in that document
  * (`farAt`; FP-22), whatever version of the box the plane shows; where it
- * names the document whole, or floats — the pane's text holding none of it,
- * where its follow lands at the head — the pane's first block to the block's
- * end; at a pane that shows a cover, at the cover, its head's withheld
- * statement (FP-29); null where nothing places it, its projection not read
- * or refused.
+ * floats — the pane's text holding none of it, where its follow lands at the
+ * head — the pane's first block to the block's end; at a pane that shows a
+ * cover, at the cover, its head's withheld statement (FP-29); where it names
+ * the document whole, the whole document, at no position of it (FP-30); null
+ * where nothing places it, its projection not read or refused.
  * @param {Shown} s the link as LK showed it at the other pane's document
  * @param {PaneLinks} pane the pane its far end is sought in
  * @returns {{key: string} & Passage | null}
@@ -543,15 +648,16 @@ function farEndIn(s, pane) {
   if (!s.farEnd) return null;
   const key = LK.endKey(s.farEnd), blocks = pane.blocks;
   if (pane.cover) return { key, pos: 0, width: 0, cover: true };
-  const held = s.farWhole || !pane.placed ? undefined : pane.placed.get(s.link.addr + ' ' + s.farSlot);
+  if (s.farWhole) return { key, pos: 0, width: 0, whole: true };
+  const held = pane.placed ? pane.placed.get(s.link.addr + ' ' + s.farSlot) : undefined;
   const runs = Array.isArray(held) ? held : (s.farAt || s.far) === pane.addr ? s.farRuns : null;
-  if (s.farWhole || (runs && !runs.length)) { const pos = (blocks[0] || { pos: 1 }).pos; return { key, pos, width: restIn(blocks, pos) }; }
+  if (runs && !runs.length) { const pos = (blocks[0] || { pos: 1 }).pos; return { key, pos, width: restIn(blocks, pos) }; }
   const r = runs && runs[0];
   return r ? { key, pos: r.pos, width: r.width } : null;
 }
 
-/** an end of a line as a passage alone (`Passage`): its first position, its positions, and whether it ends at its pane's cover */
-const passage = (/** @type {Passage} */ e) => (e.cover ? { pos: e.pos, width: e.width, cover: true } : { pos: e.pos, width: e.width });
+/** an end of a line as a passage alone (`Passage`): its first position, its positions, and whether it ends at its pane's cover or is its pane's document whole */
+const passage = (/** @type {Passage} */ e) => (e.cover ? { pos: e.pos, width: e.width, cover: true } : e.whole ? { pos: e.pos, width: e.width, whole: true } : { pos: e.pos, width: e.width });
 
 /**
  * The links drawn as lines between the panes (§2.5): every end LK showed at
@@ -559,7 +665,8 @@ const passage = (/** @type {Passage} */ e) => (e.cover ? { pos: e.pos, width: e.
  * that document, or another version sharing its box (`oneBox`) — each
  * resolved to its end in pane A and its end in pane B — the near end at the
  * first stretch LK placed it in, the far end where `farEndIn` places it, at
- * the cover where its pane shows one, none where nothing does — and each
+ * the cover where its pane shows one, the whole document where it names it
+ * so, none where nothing does — and each
  * link once per pair of ends, in the order met, pane A's ends first. A link
  * both panes show
  * is met from each; a document in both panes meets a link inside it from each
@@ -573,7 +680,9 @@ const passage = (/** @type {Passage} */ e) => (e.cover ? { pos: e.pos, width: e.
  * — the one the link's symbol takes in that pane (`LK.markOf` at that
  * document; FP-30): its hue there, dashed only for another's, as BM inks a
  * beam's ends (`inkOf`), whichever pane meets it, so opening the scene never
- * recolours the link it opened on; its value the link's own (P44).
+ * recolours the link it opened on — the mark itself kept beside its ink, for
+ * a whole document's edge merges its ends' marks (`wholeEdges`); its value
+ * the link's own (P44).
  * @param {PaneLinks} A pane A's
  * @param {PaneLinks} B pane B's
  * @returns {Line[]}
@@ -590,7 +699,7 @@ export function linesBetween(A, B) {
       const key = `${s.link.addr} ${a.key} ${b.key}`;
       if (met.has(key)) continue;
       const atA = LK.markOf(s.link, A.addr), atB = LK.markOf(s.link, B.addr);
-      met.set(key, { link: s.link.addr, a: passage(a), b: passage(b), ink: { a: inkOf(atA), b: inkOf(atB) }, value: atA.value });
+      met.set(key, { link: s.link.addr, a: passage(a), b: passage(b), ink: { a: inkOf(atA), b: inkOf(atB) }, marks: { a: atA, b: atB }, value: atA.value });
     }
   }
   return [...met.values()];
@@ -673,26 +782,41 @@ async function readPane(src, stands = () => true) {
   return { d: REC.doc(src), n, whole: !!w.doc, refused: w.refused };
 }
 
+/** @typedef {{pairs: ComparePair[], refused: string | null}} Compared the runs of shared identity between the panes (`merged`), and the refusal their `compare` met by its name, which the bar says */
+
 /**
- * The reads between the panes, made before they are set (see the head): the
- * two texts' `compare` whole — none where either holds no text — and where
- * each far end crossing between them stands (`unplaced`, M-PUMP's
- * `projectEnd`). The runs of shared identity (`merged`), and the refusal the
- * `compare` met by its name, which the bar says.
- * @param {Text} A
- * @param {Text} B
- * @returns {Promise<{pairs: ComparePair[], refused: string | null}>}
+ * The two texts' `compare` whole (see the head): the runs of shared identity,
+ * none where either holds no text, and the refusal it met by its name.
+ * @param {Pick<Text, 'src' | 'd'>} A
+ * @param {Pick<Text, 'src' | 'd'>} B
+ * @returns {Promise<Compared>}
  */
-async function readBetween(A, B) {
+async function compareBetween(A, B) {
   const holds = (/** @type {Doc} */ d) => !d.refused && d.extent != null;
-  const whole = (/** @type {Text} */ x) => [{ doc: x.src, spans: [{ ordinal: 1, positions: Math.max(1, x.d.extent || 1) }] }];
-  const [cmp] = await Promise.all([
-    holds(A.d) && holds(B.d) ? PUMP.read(F.compare(whole(A), whole(B))) : Promise.resolve(null),
-    ...unplaced(A, B).map((p) => PUMP.projectEnd(p.link, p.slot, p.far)),
-  ]);
-  if (!cmp) return { pairs: [], refused: null };
+  const whole = (/** @type {Pick<Text, 'src' | 'd'>} */ x) => [{ doc: x.src, spans: [{ ordinal: 1, positions: Math.max(1, x.d.extent || 1) }] }];
+  if (!holds(A.d) || !holds(B.d)) return { pairs: [], refused: null };
+  const cmp = await PUMP.read(F.compare(whole(A), whole(B)));
   if ('refused' in cmp) return { pairs: [], refused: cmp.refused.name };
   return { pairs: merged(F.decodeCompare(cmp.answer)), refused: null };
+}
+
+/** where each far end crossing between the panes stands, read (`unplaced`, M-PUMP's `projectEnd`) */
+const placeBetween = (/** @type {Text} */ A, /** @type {Text} */ B) => Promise.all(unplaced(A, B).map((p) => PUMP.projectEnd(p.link, p.slot, p.far)));
+
+/**
+ * The reads between the panes, made before they are set (see the head): the
+ * two texts' `compare` (`compareBetween`) and where each far end crossing
+ * between them stands (`placeBetween`), side by side; the `compare` left out,
+ * no runs and no refusal, where the far end names pane B's document whole and
+ * the scene opens on these reads (`open`, `reopen`).
+ * @param {Text} A
+ * @param {Text} B
+ * @param {boolean} [compare] the `compare` is read with them
+ * @returns {Promise<Compared>}
+ */
+async function readBetween(A, B, compare = true) {
+  const [cmp] = await Promise.all([compare ? compareBetween(A, B) : Promise.resolve({ pairs: [], refused: null }), placeBetween(A, B)]);
+  return cmp;
 }
 
 /**
@@ -751,7 +875,10 @@ function swap(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P, /
  * `compare`, and where the far end of each link crossing between them stands
  * now (`readBetween`) — the passage held set level with its counterpart
  * (`levels`); as it shows, the act's `leaving` first, then the focus in the
- * far end's pane, the plane under the scene out of the page's order.
+ * far end's pane, the plane under the scene out of the page's order. Where
+ * the far end names the second document whole (`Held.wholeB`), no `compare`
+ * is waited on: it is asked as the scene shows, and adds the bands as it
+ * answers (`addBands`).
  * @param {string} a
  * @param {string} b
  * @param {Held} [held]
@@ -767,7 +894,7 @@ export async function open(a, b, held = {}, as = {}) {
     const da = ra.d, db = rb.d;
     if (!da || !db || !ra.whole || !rb.whole) { if (stands()) out.refused = (!da || !ra.whole ? ra.refused : null) || rb.refused; return null; }
     if (!stands()) return null;
-    const between = await readBetween({ src: a, d: da, shown: LK.shown(a) }, { src: b, d: db, shown: LK.shown(b) });
+    const between = await readBetween({ src: a, d: da, shown: LK.shown(a) }, { src: b, d: db, shown: LK.shown(b) }, !held.wholeB);
     return { pa: paneAt('a', a, { d: da, n: ra.n }), pb: paneAt('b', b, { d: db, n: rb.n }), between };
   }, ({ pa, pb, between }) => {
     const E = els;
@@ -776,21 +903,80 @@ export async function open(a, b, held = {}, as = {}) {
     // where the focus stands as the scene shows — the chrome it leaves ended, which hands back a focus an overlay held; a
     // scene shown over one standing keeps that one's (the controller's one memory)
     const from = document.activeElement;
-    stand(E, { a: pa, b: pb, pairs: between.pairs, level: levels(between.pairs, held), ties: [], size: '', updating: 0, waiting: [] }, between.refused);
+    const S = sceneOf(pa, pb, between.pairs, held);
+    stand(E, S, between.refused);
     relevel();
     FOCUS.open('scene', { el: E.root, from, byKey: true, first: E.paneB });
     out.shown = true;
     markDirty();
+    if (S.whole) void addBands(S);
   });
   return out;
 }
 
 /**
+ * A scene on two panes as it opens (`open`, `reopen`): the ends `levels`
+ * sets from the runs and the passage held, whether the far end names pane B's
+ * document whole, the near passage's positions, and the stop at its first
+ * passage, none measured yet.
+ * @param {Pane} pa
+ * @param {Pane} pb
+ * @param {ComparePair[]} pairs
+ * @param {Held} held
+ * @returns {Scene}
+ */
+const sceneOf = (pa, pb, pairs, held) => ({
+  a: pa, b: pb, pairs, level: levels(pairs, held), whole: !!held.wholeB, widthA: Math.max(1, held.widthA ?? 1),
+  ties: [], shared: [], next: 0, at: null, told: false, size: '', updating: 0, waiting: [],
+});
+
+/**
+ * The bands a whole-document opening shows without (see the head): the two
+ * texts' `compare`, asked as the scene shows; its answer, where the scene
+ * still stands and neither pane was set again meanwhile — a setting reads its
+ * own — taken: the runs of shared identity measured and drawn, the passages
+ * the stop reaches with them, and a refusal said (`sayFace`); no pane
+ * scrolled, no focus moved, and no act held waiting on it.
+ * @param {Scene} S
+ * @returns {Promise<void>}
+ */
+async function addBands(S) {
+  const sets = [S.a.sets, S.b.sets];
+  const got = await compareBetween(S.a, S.b);
+  const E = els;
+  if (scene !== S || !E || S.a.sets !== sets[0] || S.b.sets !== sets[1]) return;
+  S.pairs = got.pairs;
+  if (got.refused) sayFace(E, got.refused);
+  measure();
+  draw();
+}
+
+/** the bar's words for the refusal the panes' `compare` met, by its name */
+const faceWords = (/** @type {string} */ face) => t(face === 'too_many_pairs' ? 'B1.too_many_pairs' : face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: face });
+
+/**
+ * A refusal the `compare` met after the scene showed (`addBands`), said where
+ * the bar says one, before its acts — which stand as they are, so a focus on
+ * one stays — and in the status region, for it changed away from the focus
+ * without the reader's act (FP-28).
+ * @param {NonNullable<typeof els>} E
+ * @param {string} face the refusal, by its name
+ */
+function sayFace(E, face) {
+  const words = faceWords(face), acts = E.bar.querySelector('[data-relevel]');
+  E.bar.dataset.face = face;
+  if (acts) acts.insertAdjacentHTML('beforebegin', `<span class="face-text">${esc(words)}</span> `);
+  FOCUS.say(words);
+}
+
+/**
  * The scene stood over the plane (`open`, `reopen`): the plane under it out
  * of the page's order; the bar naming each pane by the address it shows, and
- * the refusal the panes' `compare` met; each pane's article T-LAYER's mount,
- * its corner on the pane's outer side — pane A's before the article, pane B's
- * after — and the panes fitted to the measure.
+ * the refusal the panes' `compare` met — and, where pane B is the whole
+ * document a link's far end names, the hidden words pane B's name ends with
+ * (`namePane`); each pane's article T-LAYER's mount, its corner on the pane's
+ * outer side — pane A's before the article, pane B's after — and the panes
+ * fitted to the measure.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  * @param {string | null} face the refusal the `compare` met, by its name
@@ -803,15 +989,16 @@ function stand(E, S, face) {
   E.root.classList.add('on');
   if (face) E.bar.dataset.face = face; else delete E.bar.dataset.face;
   E.bar.innerHTML = `<b class="id" data-name="a">${esc(S.a.shows)}</b> │ <b class="id" data-name="b">${esc(S.b.shows)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
-    (face ? ` <span class="face-text">${esc(t(face === 'too_many_pairs' ? 'B1.too_many_pairs' : face === 'too_many_blocks' ? 'B1.too_many_blocks' : 'L.refused', { name: face }))}</span>` : '') +
+    (face ? ` <span class="face-text">${esc(faceWords(face))}</span>` : '') +
+    (S.whole ? `<span id="${WHOLE_ID}" data-string="L.scene.whole-end" hidden>${esc(t('L.scene.whole-end'))}</span>` : '') +
     ` <button data-relevel="1">${esc(t('F.scene.relevel'))} <kbd>${esc(drawChord('Mod+R'))}</kbd></button><button class="x" data-x="1">× ${esc(t('F.scene.dismiss'))}</button>`;
   for (const side of SIDES) {
     const P = S[side], pane = paneEl(E, side);
     pane.innerHTML = cornerMarkup(P);
     swap(E, P, LAYER.sceneArticle(P.d, { names: P.names, shows: P.shows, view: P.view }));
-    namePane(pane, side === 'a' ? 'sceneA-name' : 'sceneB-name');
     pane.setAttribute('tabindex', '0');
   }
+  namePanes(E, S);
   fitMeasure(E);
 }
 
@@ -825,7 +1012,9 @@ function stand(E, S, face) {
  * focus on the stop it stood on, else in the far end's pane, and the pair
  * named in the status region. A pane the board refused the text of for what
  * it says of the document stands as that refusal, its head alone — a cover
- * (FP-29). Opened anew where the reader never left it.
+ * (FP-29). Where the far end names pane B's document whole, it waits on no
+ * `compare`, as an opening does (`addBands`). Opened anew where the reader
+ * never left it.
  * @param {import('../nav/trail.js').Opened} o the scene's trail entry's own: the pair it opened on, the passage held, the scene as the reader left it
  * @param {Showing} [as]
  * @returns {Promise<Opening>} once the scene shows, or nothing will
@@ -841,7 +1030,7 @@ export async function reopen(o, as = {}) {
     const pa = ra.pane, pb = rb.pane;
     if (!pa || !pb) { if (stands()) out.refused = ra.refused || rb.refused; return null; }
     if (!stands()) return null;
-    const between = await readBetween({ src: pa.src, d: pa.d, shown: LK.shown(pa.src) }, { src: pb.src, d: pb.d, shown: LK.shown(pb.src) });
+    const between = await readBetween({ src: pa.src, d: pa.d, shown: LK.shown(pa.src) }, { src: pb.src, d: pb.d, shown: LK.shown(pb.src) }, !o.held.wholeB);
     return { pa, pb, between };
   }, ({ pa, pb, between }) => {
     const E = els;
@@ -849,8 +1038,7 @@ export async function reopen(o, as = {}) {
     if (as.leaving) as.leaving();
     const from = document.activeElement, spots = was.spots;
     for (const P of [pa, pb]) P.lacks = spots && P.src === was.panes[P.side].src ? spots[P.side].lacks : null;
-    /** @type {Scene} */
-    const S = { a: pa, b: pb, pairs: between.pairs, level: levels(between.pairs, o.held), ties: [], size: '', updating: 0, waiting: [] };
+    const S = sceneOf(pa, pb, between.pairs, o.held);
     stand(E, S, between.refused);
     if (spots) {
       for (const side of SIDES) {
@@ -864,6 +1052,7 @@ export async function reopen(o, as = {}) {
     FOCUS.say(`${t('L.scene-label')} · ${S.a.shows} │ ${S.b.shows}`);
     out.shown = true;
     markDirty();
+    if (S.whole) void addBands(S);
   });
   return out;
 }
@@ -1090,15 +1279,22 @@ function coverIn(pane) {
   return { top: r.top - origin, y: r.top + r.height / 2 - origin };
 }
 
-/** where an end of a line stands in its pane: at its passage's first line (`lineIn`), else at the pane's cover (`coverIn`) */
-const endIn = (/** @type {HTMLElement} */ pane, /** @type {string} */ names, /** @type {Passage} */ e) => (e.cover ? coverIn(pane) : lineIn(pane, names, e.pos, e.width));
+/**
+ * Where an end of a line stands in its pane: at its passage's first line
+ * (`lineIn`), else at the pane's cover (`coverIn`); a whole document at no
+ * line, its height the line's other end's as drawn (`draw`).
+ */
+const endIn = (/** @type {HTMLElement} */ pane, /** @type {string} */ names, /** @type {Passage} */ e) => (e.whole ? { top: 0, y: 0 } : e.cover ? coverIn(pane) : lineIn(pane, names, e.pos, e.width));
 
 /**
  * Measure the ties: each run of shared identity, and each link between the
  * two documents once per pair of its ends (`linesBetween`), its ends at
  * their passages' first lines in the panes' content, or at a pane's cover —
  * every one from what the panes were set with, never the model's now; a tie
- * an end of which lies in none of its pane's blocks is left out.
+ * an end of which lies in none of its pane's blocks is left out. Where the
+ * scene is whole, the passages the stop reaches with them: the near passage's
+ * `counterparts` in pane B, in pane B's order, each at its first line there,
+ * the stop's next passage the first again where it names one no more.
  */
 function measure() {
   const S = scene, E = els;
@@ -1112,9 +1308,15 @@ function measure() {
   // the link lines between the panes — the set LK gave at each pane's document as it was set (the seam)
   for (const l of linesBetween(linksOf(S.a), linksOf(S.b))) {
     const la = endIn(E.paneA, S.a.names, l.a), lb = endIn(E.paneB, S.b.names, l.b);
-    if (la && lb) out.push({ kind: 'link', link: l.link, a: { ...l.a, y: la.y }, b: { ...l.b, y: lb.y }, ink: l.ink, value: l.value });
+    if (la && lb) out.push({ kind: 'link', link: l.link, a: { ...l.a, y: la.y }, b: { ...l.b, y: lb.y }, ink: l.ink, marks: l.marks, value: l.value });
   }
   S.ties = out;
+  const near = S.level.a;
+  S.shared = !S.whole || near == null ? [] : counterparts(S.pairs, near, S.widthA).sort((p, q) => p.b - q.b).flatMap((c) => {
+    const line = lineIn(E.paneB, S.b.names, c.b, c.width);
+    return line ? [{ pos: c.b, width: c.width, top: line.top, y: line.y }] : [];
+  });
+  if (S.next >= S.shared.length) S.next = 0;
   S.size = sizeOf(E);
 }
 
@@ -1161,8 +1363,8 @@ function setPanes(S, sets, pairs, opts = {}) {
     swap(E, P, LAYER.sceneArticle(P.d, { names: P.names, shows: P.shows, view }));
     writeCorner(E, P);
     nameBar(E, P);
-    namePane(paneEl(E, side), side === 'a' ? 'sceneA-name' : 'sceneB-name');
   }
+  namePanes(E, S);
   fitMeasure(E);
   roomBelow(E);
   for (const { side, next, place, sel, level } of carried) {
@@ -1447,10 +1649,11 @@ export function readIn(side, k, passage = null) {
 /** set the two ends level — each pane's matched line at one height, the bands' and lines' ends measured anew — once no pane is being set again (`whenSet`) */
 export function relevel() { whenSet(level); }
 
-/** the two ends set level now (`relevel`) */
+/** the two ends set level now (`relevel`), the stop's next act going to its first passage again */
 function level() {
   const S = scene, E = els;
   if (!S || !E) return;
+  S.next = 0;
   roomBelow(E);
   const la = S.level.a != null ? lineIn(E.paneA, S.a.names, S.level.a, restIn(S.a.d.blocks, S.level.a)) : null;
   const lb = S.level.b != null ? lineIn(E.paneB, S.b.names, S.level.b, restIn(S.b.d.blocks, S.level.b)) : null;
@@ -1462,7 +1665,13 @@ function level() {
   draw();
 }
 
-/** draw the bands and the lines on the scene's canvas, each end where its passage's line stands at the panes' scrolls now */
+/**
+ * Draw the bands and the lines on the scene's canvas, each end where its
+ * passage's line stands at the panes' scrolls now — a whole document's at its
+ * pane's facing edge, level with the line's other end — then each facing edge
+ * whole-document ends meet (`wholeEdges`, `drawEdge`), and the stop placed
+ * (`placeStop`).
+ */
 export function draw() {
   const S = scene, E = els;
   if (!S || !E) return;
@@ -1482,18 +1691,135 @@ export function draw() {
     const y = f.origin + e.y;
     return { y: Math.max(f.top, Math.min(f.bottom, y)), clipped: y < f.top || y > f.bottom, above: y < f.top };
   };
-  const fa = frame(E.paneA), fb = frame(E.paneB);
+  /** a whole document's end on the canvas: level with the line's other end, held inside its pane's visible height */
+  const meet = (/** @type {ReturnType<typeof frame>} */ f, /** @type {{y: number} | null} */ o) => ({ y: Math.max(f.top, Math.min(f.bottom, o ? o.y : f.top)), clipped: false, above: false });
+  const fa = frame(E.paneA), fb = frame(E.paneB), x0 = fa.x1, x1 = fb.x0;
   /** @type {Drawn[]} */
   const out = [];
   for (const tie of S.ties) {
-    const ea = at(fa, tie.a), eb = at(fb, tie.b);
-    const x0 = fa.x1, x1 = fb.x0;
+    const ta = tie.a.whole ? null : at(fa, tie.a), tb = tie.b.whole ? null : at(fb, tie.b);
+    const ea = ta || meet(fa, tb), eb = tb || meet(fb, ta);
     ctx.globalAlpha = tie.value; ctx.lineWidth = tie.kind === 'band' ? 6 : 1.6;
     drawTie(ctx, { x: x0, ...ea }, { x: x1, ...eb }, tie.ink);
-    out.push({ kind: tie.kind, link: tie.link, a: { pos: tie.a.pos, width: tie.a.width, x: x0 + c.left, y: ea.y + c.top, clipped: ea.clipped, cover: !!tie.a.cover }, b: { pos: tie.b.pos, width: tie.b.width, x: x1 + c.left, y: eb.y + c.top, clipped: eb.clipped, cover: !!tie.b.cover } });
+    out.push({
+      kind: tie.kind, link: tie.link,
+      a: { pos: tie.a.pos, width: tie.a.width, x: x0 + c.left, y: ea.y + c.top, clipped: ea.clipped, cover: !!tie.a.cover, whole: !!tie.a.whole },
+      b: { pos: tie.b.pos, width: tie.b.width, x: x1 + c.left, y: eb.y + c.top, clipped: eb.clipped, cover: !!tie.b.cover, whole: !!tie.b.whole },
+    });
+  }
+  /** @type {Edge[]} */
+  const edged = [];
+  for (const e of wholeEdges(S.ties)) {
+    const f = e.side === 'a' ? fa : fb, x = e.side === 'a' ? x0 + EDGE_W / 2 : x1 - EDGE_W / 2, ink = inkOf(e.mark);
+    ctx.globalAlpha = e.mark.value; ctx.lineWidth = EDGE_W;
+    drawEdge(ctx, x, f.top, f.bottom, ink);
+    edged.push({ side: e.side, links: e.links, x: x + c.left, top: f.top + c.top, bottom: f.bottom + c.top, hue: ink.hue, dashed: ink.dash.length > 0 });
   }
   ctx.globalAlpha = 1;
   drawnTies = out;
+  drawnEdges = edged;
+  placeStop(E, S);
+}
+
+/**
+ * The facing edges whole-document ends meet (see the head): each pane a
+ * line's whole end stands in, in the panes' order, with the links those ends
+ * are of and the one mark their marks there merge into (LK's `mergedMark`).
+ * @param {Array<{link: string | null, a: {whole?: boolean}, b: {whole?: boolean}, marks?: {a: Mark, b: Mark}}>} ties
+ * @returns {Array<{side: 'a' | 'b', links: string[], mark: Mark}>}
+ */
+export function wholeEdges(ties) {
+  /** @type {Array<{side: 'a' | 'b', links: string[], mark: Mark}>} */
+  const out = [];
+  for (const side of SIDES) {
+    /** @type {Array<{link: string, mark: Mark}>} */
+    const ends = [];
+    for (const x of ties) if (x[side].whole && x.marks && x.link) ends.push({ link: x.link, mark: x.marks[side] });
+    const [first, ...rest] = ends;
+    if (first) out.push({ side, links: ends.map((e) => e.link), mark: LK.mergedMark([first.mark, ...rest.map((e) => e.mark)]) });
+  }
+  return out;
+}
+
+/**
+ * Draw a whole document's facing edge (`draw`), its width and alpha set on
+ * the context: one stroke at `x` from the pane's visible top to its visible
+ * bottom in its ink, butt-capped so it ends where the pane's view does.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x
+ * @param {number} top
+ * @param {number} bottom
+ * @param {Ink} ink
+ */
+export function drawEdge(ctx, x, top, bottom, ink) {
+  ctx.lineCap = 'butt'; ctx.strokeStyle = ink.hue; ctx.setLineDash(ink.dash);
+  ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+/**
+ * Where the stop stands (see the head): the first of the shared passages,
+ * from the one the next act goes to first and round again, whose first line
+ * stands out of pane B's visible content, and whether it stands above it;
+ * null where every one stands in view.
+ * @param {Array<{y: number}>} shared the shared passages' first lines' middles, px below pane B's content top, in pane B's order
+ * @param {number} next the passage the next act goes to first, an index into `shared`
+ * @param {{top: number, h: number}} view pane B's scroll and its visible content's height, px
+ * @returns {{i: number, above: boolean} | null}
+ */
+export function stopFor(shared, next, view) {
+  for (let k = 0; k < shared.length; k++) {
+    const i = (next + k) % shared.length, y = shared[i].y;
+    if (y < view.top || y > view.top + view.h) return { i, above: y < view.top };
+  }
+  return null;
+}
+
+/**
+ * The stop placed at the panes' scrolls now (see the head): where `stopFor`
+ * stands it, at pane B's facing edge, at the pane's visible top or bottom on
+ * the passage's bearing, over the stub's triangle, its count shown where the
+ * shared passages are two or more and its name ST's words; its first
+ * appearance in the scene said in the status region (FP-28); hidden where
+ * every one stands in view, the focus it held handed to pane B (FP-20).
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ */
+function placeStop(E, S) {
+  const pane = E.paneB, stop = E.stop, held = typeof document !== 'undefined' && document.activeElement === stop;
+  const to = stopFor(S.shared, S.next, { top: pane.scrollTop, h: pane.clientHeight });
+  S.at = to ? to.i : null;
+  if (!to) {
+    if (!stop.hidden) { stop.hidden = true; if (held) FOCUS.land(pane, {}); }
+    return;
+  }
+  const n = S.shared.length, id = n > 1 ? 'L.scene.shared' : 'L.scene.shared.1', vals = { D: S.b.shows, n };
+  const root = E.root.getBoundingClientRect(), r = pane.getBoundingClientRect(), top = r.top + pane.clientTop;
+  stop.setAttribute('aria-label', t(id, vals));
+  stop.textContent = n > 1 ? String(n) : '';
+  stop.style.left = r.left - root.left - E.root.clientLeft + 'px';
+  stop.style.top = (to.above ? top : top + pane.clientHeight) - root.top - E.root.clientTop + 'px';
+  stop.style.transform = to.above ? 'translate(-100%, 0)' : 'translate(-100%, -100%)';
+  stop.hidden = false;
+  if (!S.told) { S.told = true; FOCUS.say(t(id, vals)); }
+}
+
+/**
+ * The stop's act (see the head): pane B scrolled so the shared passage the
+ * stop stands for has its first line level with the near passage's, where
+ * that line stands in pane A's view, else LEVEL_AT px below the pane's top;
+ * the next act going to the passage after it, round again. Nothing else
+ * moves.
+ */
+function toShared() {
+  const S = scene, E = els;
+  const p = S && S.at != null ? S.shared[S.at] : null;
+  if (!S || !E || !p || S.at == null) return;
+  const la = S.level.a != null ? lineIn(E.paneA, S.a.names, S.level.a, S.widthA) : null;
+  const seen = la ? la.y - E.paneA.scrollTop : -1;
+  E.paneB.scrollTop = p.top - (la && seen >= 0 && seen <= E.paneA.clientHeight ? la.top - E.paneA.scrollTop : LEVEL_AT);
+  S.next = (S.at + 1) % S.shared.length;
+  draw();
 }
 
 /** where along a tie's stroke its ends' inks meet: the half of its parameter, where BM's curve between the panes' inner edges stands at the middle of the gap (`strokeOf`) */
@@ -1536,8 +1862,10 @@ export function close() {
   if (!scene || !els) return;
   scene = null;
   drawnTies = [];
+  drawnEdges = [];
   coverPlane(false);
   els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; delete els.bar.dataset.face;
+  els.stop.hidden = true;
   FOCUS.close('scene');
   markDirty();
 }

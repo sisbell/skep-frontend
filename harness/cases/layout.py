@@ -202,13 +202,25 @@ beside it on the outer side,
 the plane under the scene parked meanwhile at the far band,
 where the view reads nothing, so the later cases meet the page as the check
 found it; back on the plane, the box an edition shares with its members
-holds one article; and on a citer of FAR_LEAP beside FAR_LEAP, the model
-dropping what it held of both while the scene stands told nothing (the
-gate's `model.invalidate` door), the re-level act sets the ends level at once
-and draws the citation's line it drew, each end on the passage it stood on —
-the far one FAR_LEAP's first block whole, which the model no longer holds —
-at that passage's line or at its pane's edge: every tie is measured on the
-text and the links its panes were set with (issue #160). THE CARRY
+holds one article; opened on a passage beside a document a far end of it
+names whole (issue #59's design decision) — the window run beside the draft,
+then the draft's passage holding its material beside the first edition —
+pane A at the passage and pane B at its document's start, the bands its
+`compare` adds once the scene shows moving neither, pane B the focus, named
+as the link's end and the current location, and where the passage's band to
+pane B is clipped, as the scene opens or once pane B is scrolled past the
+passage it reaches, its stop at pane B's facing edge — a click on it
+bringing that passage level with the near one, the re-level putting both
+panes back — unmeasured where neither scene clips it; and on a citer of
+FAR_LEAP beside FAR_LEAP, the citation's end naming a document whole meets
+its pane's facing edge, drawn whole in the link's colour from the pane's
+visible top to its bottom as the scene stands and with that pane scrolled,
+and the model dropping what it held of both while the scene stands told
+nothing (the gate's `model.invalidate` door), the re-level act sets the ends
+level at once and draws the citation's line it drew, each end on the passage
+it stood on — the whole one its pane's facing edge still — at that passage's
+line or at its pane's edge: every tie is measured on the text and the links
+its panes were set with (issue #160). THE CARRY
 (foundations §2.3: every move from a passage to another arrangement of the
 same material carries it, re-projected at the landing and marked there;
 P43): the source act on the window paragraph's "who wrote this?" card, a
@@ -318,14 +330,15 @@ WALK_PX wide while the acting-as segment before it is cut short, its act
 unfolding it, the shell told nothing.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `tailAnchors`, `arrivalAnchors`, `spanRects`, `visible`, `barsOf`, `labels`,
-`scene.at`, `scene.ties`, the frame buffer, `beamLabels`, `connections`, `tails`,
+`scene.at`, `scene.ties`, `scene.edges`, `scene.stop`, the frame buffer, `beamLabels`, `connections`, `tails`,
 `fold`, `centreOf`, `posAt`) save the trail's, the stub's triangle's and the
 followed link's beam's, which read the canvases' pixels here, the stub's
 places, which the projection gives here, the symbols', which reads the
 article's order here, the click cues', which read the computed style here,
 the stand-in's, which sets its article and reads its blocks here, the
 measure's and the scene's columns, which read the columns' and the panes'
-boxes and the advance of a weighed sample of their text here, the type's,
+boxes and the advance of a weighed sample of their text here, the scene's
+stop's, which reads pane B's box here, the type's,
 which reads the computed faces, the platform's font set and the characters
 each line begins at here, the longest edition,
 which the case finds by its own reads, and the first span in view, which
@@ -383,6 +396,10 @@ LINE_BOX_TOL_PX = 1 / 256
 # the scene's two matched lines, and a band's or a line's end against its passage's line
 LEVEL_TOL_PX = 1.0
 TIE_TOL_PX = 0.5
+# a whole document's edge's stroke against its pane's facing edge, and how far below pane B's top the stop's act brings a
+# passage where the near passage's line stands out of pane A's view — the case's own, held apart from the page's
+EDGE_TOL_PX = 2.0
+STOP_AT_PX = 40
 # the scene's measure: a pane's line in its face's average advance — the plane's measure (issue #15: "side-by-side panes stay
 # one column each, at the same line length"), MEASURE_CH — the window wider than the measure needs that it is held at,
 # and how far a column's edge, or its width, may stand from where it is held
@@ -1139,14 +1156,24 @@ def level_holds(r, name, v):
 
 def ties_hold(r, name, ties, in_view, band=True):
     """every band and line drawn between the panes leaves each pane at its passage's own first line, or, where that
-    line has left the pane, at the pane's edge on the side it left by; `in_view` the ends that must stand in view;
-    `band` the shared identity is drawn as a band among them"""
+    line has left the pane, at the pane's edge on the side it left by; an end naming its pane's document whole stands at
+    that pane's facing edge, level with the line's other end held inside the pane's visible height, never clipped
+    (issue #59), and stands in view; `in_view` the ends that must stand in view; `band` the shared identity is drawn as a
+    band among them"""
     if band:
         r.check(any(t['kind'] == 'band' for t in ties), f'{name}: the shared identity is drawn as a band', [t['kind'] for t in ties])
     off, ends = [], 0
     for t in ties:
-        for side, line, pane in (('a', t['lineA'], t['paneA']), ('b', t['lineB'], t['paneB'])):
+        for side, line, pane, face, other in (('a', t['lineA'], t['paneA'], t.get('faceA'), 'b'), ('b', t['lineB'], t['paneB'], t.get('faceB'), 'a')):
             end = t[side]
+            if end.get('whole'):
+                there = t[other]
+                level = None if pane is None else pane['y'] if there.get('whole') else min(max(there['y'], pane['y']), pane['y'] + pane['h'])
+                if pane is None or face is None or end['clipped'] or abs(end['x'] - face) > TIE_TOL_PX or abs(end['y'] - level) > TIE_TOL_PX:
+                    off.append({'kind': t['kind'], 'link': t['link'], 'side': side, 'whole': True, 'x': end['x'], 'y': end['y'], 'face': face, 'level': level, 'clipped': end['clipped'], 'pane': pane})
+                else:
+                    ends += 1
+                continue
             if line is None or pane is None:
                 off.append({'kind': t['kind'], 'link': t['link'], 'side': side, 'pos': end['pos'], 'line': line})
                 continue
@@ -1159,9 +1186,172 @@ def ties_hold(r, name, ties, in_view, band=True):
             ends += 1
             if not (line['y'] - TIE_TOL_PX <= end['y'] <= line['y'] + line['h'] + TIE_TOL_PX):
                 off.append({'kind': t['kind'], 'link': t['link'], 'side': side, 'pos': end['pos'], 'y': end['y'], 'line': line})
-    r.check(ends >= in_view and not off, f'{name}: every band and line leaves its pane at its passage\'s own first line, {TIE_TOL_PX} px either way, or at the pane\'s edge where that line has left the pane — {in_view} end(s) or more in view',
+    r.check(ends >= in_view and not off, f'{name}: every band and line leaves its pane at its passage\'s own first line, {TIE_TOL_PX} px either way, or at the pane\'s edge where that line has left the pane, a whole document\'s end at its pane\'s facing edge level with the line\'s other end — {in_view} end(s) or more in view',
             {'ends_in_view': ends, 'off': off[:6]})
     return {'ties': len(ties), 'ends_in_view': ends, 'off': len(off)}
+
+
+def whole_edges_hold(ctx, r, name, lines):
+    """each pane a line's end naming its document whole meets (issue #59's design decision: "that whole edge is drawn in
+    the link's colour as the end. Wherever the reader scrolls, they stay inside it"): its facing edge drawn whole — the
+    stroke against that edge, EDGE_TOL_PX either way, from the pane's visible top to its visible bottom, TIE_TOL_PX
+    either way, for the links whose whole ends meet it, in the hue their marks there merge into as the page's own LK
+    marks them — and every line leaving its pane as `ties_hold` holds it, as the scene stands and again with that pane
+    scrolled by half its height; its figures"""
+    sides = sorted({s for t in lines for s in ('a', 'b') if t[s].get('whole')})
+    r.check(bool(sides), f'{name}: a line ends at a document named whole', [(t['link'], t['a'], t['b']) for t in lines])
+    seen = []
+    for at in ('as it stands', 'its pane scrolled'):
+        if at == 'its pane scrolled':
+            for s in sides:
+                ctx.js('(() => { const p = document.getElementById(%s); p.scrollTop += p.clientHeight / 2; })()' % json.dumps('scene' + s.upper()))
+            ctx.frames(2)
+        ties = ctx.js('window.__skep.scene.ties()')
+        edges = ctx.js('window.__skep.scene.edges()')
+        panes = ctx.js('window.__skep.scene.panes()') or {}
+        for s in sides:
+            links = sorted({t['link'] for t in ties if t['kind'] == 'link' and t[s].get('whole')})
+            e = next((x for x in edges if x['side'] == s), None)
+            pane, face = (ties[0]['pane' + s.upper()], ties[0]['face' + s.upper()]) if ties else (None, None)
+            hue = ctx.js('''(async (links, doc) => { const LK = await import('./links/links.js'), R = await import('./model/records.js'), BM = await import('./beams/beams.js');
+              const marks = links.map((l) => R.link(l)).filter(Boolean).map((l) => LK.markOf(l, doc));
+              return marks.length ? BM.inkOf(LK.mergedMark(marks)).hue : null; })(%s, %s)''' % (json.dumps(links), json.dumps((panes.get(s) or {}).get('src'))))
+            ok = bool(e and pane and face is not None and hue) and sorted(set(e['links'])) == links and abs(e['x'] - face) <= EDGE_TOL_PX \
+                and abs(e['top'] - pane['y']) <= TIE_TOL_PX and abs(e['bottom'] - (pane['y'] + pane['h'])) <= TIE_TOL_PX and e['hue'] == hue
+            r.check(ok, f'{name}, {at}: pane {s.upper()}\'s facing edge drawn whole as the end its whole document is — against the edge, {EDGE_TOL_PX} px either way, from the pane\'s visible top to its bottom, in the colour the links\' marks there merge into (issue #59)',
+                    {'edge': e, 'pane': pane, 'face': face, 'links': links, 'hue': hue})
+            seen.append({'at': at, 'side': s, 'links': len(links), 'edge': e and {k: round(e[k], 1) for k in ('x', 'top', 'bottom')}, 'hue': hue})
+        ties_hold(r, f'{name}, {at}', [t for t in ties if t['kind'] == 'link'], 1, band=False)
+    return seen
+
+
+# the scrolls of the reading scene's two panes, as the page reads them
+SCENE_SCROLLS = '({a: document.getElementById("sceneA").scrollTop, b: document.getElementById("sceneB").scrollTop})'
+
+
+def scene_whole_holds(ctx, r):
+    """A FAR END NAMING ITS DOCUMENT WHOLE (issue #59's design decision): the scene opened, through the gate's door as the
+    card's "read side by side" opens it at such a link, on a passage beside a document a far end of it names whole — the
+    first edition's window run beside the draft it windows, then the draft's passage holding the run's material beside
+    the first edition: pane A set at the passage, pane B at its document's start, the `compare` adding its bands once the
+    scene shows, moving no pane; pane B the focus, named by its address and the words saying the whole document is the
+    link's end, and the current location; the stop standing exactly where a passage of pane B holding the near passage's
+    material has its first line out of pane B's view — as a scene opens, else, in the last, once the reader scrolls pane
+    B past the passage — and holding (`stop_holds`) in the first scene that stands it. Unmeasured where neither does
+    (FP-18). Its figures, by pane B's document"""
+    whole = ctx.js('(async () => { const {t} = await import("./strings.js"); return t("L.scene.whole-end"); })()')
+    orders = ((DOC, WINDOW[2]), (WINDOW[2], DOC))
+    near, figures, measured = {'pos': WINDOW[0], 'width': WINDOW[1]}, {}, False
+    for k, (a, b) in enumerate(orders):
+        ctx.leap(a, near['pos'])
+        held = {'posA': near['pos'], 'widthA': near['width'], 'wholeB': True}
+        ctx.js('window.__skep.scene.open(%s, %s, %s)' % (json.dumps(a), json.dumps(b), json.dumps(held)))
+        wait_for(ctx, 'window.__skep.scene.isOpen() && window.__skep.scene.pairs().pairs.length > 0')
+        v = scene_level(ctx)
+        opened = ctx.js('''(() => { const b = document.getElementById('sceneB');
+          return {focus: document.activeElement && document.activeElement.id, current: b.getAttribute('aria-current'),
+                  named: (b.getAttribute('aria-labelledby') || '').split(' ').map((id) => { const e = document.getElementById(id); return e ? e.textContent : null; })}; })()''')
+        at_open = ctx.js(SCENE_SCROLLS)
+        shows = ((ctx.js('window.__skep.scene.panes()') or {}).get('b') or {}).get('shows')
+        r.check(bool(v) and v['level'] == {'a': near['pos'], 'b': None} and bool(v['pairs']) and at_open['b'] == 0,
+                f'{a}\'s passage at {near["pos"]} beside {b}, which a far end of it names whole: pane A at the passage, pane B at its document\'s start, the bands its `compare` added once the scene showed moving neither (issue #59)',
+                {'level': v and v['level'], 'bands': v and len(v['pairs']), 'scroll': at_open})
+        r.check(opened['focus'] == 'sceneB' and opened['current'] == 'location' and opened['named'] == [shows, whole],
+                f'{a} beside {b}: pane B takes the focus, named by its address and the words saying the whole document is the link\'s end, and is the current location (issue #59)', dict(opened, shows=shows, want=whole))
+        s = ctx.js('window.__skep.scene.stop()') or {}
+        seen = figures[b] = {'level': v and v['level'], 'bands': v and len(v['pairs']), 'shared': s.get('shared'), 'stop': s.get('shown')}
+        if not s.get('shared'):
+            r.check(False, f'{b} holds the material of {a}\'s passage at {near["pos"]}: the stop has passages to reach', s)
+            ctx.js('window.__skep.scene.close()')
+            ctx.frames(2)
+            break
+        then, at_first, away = s['shared'][0], bool(s.get('shown')), out_of_view(ctx, s['shared'])
+        r.check(at_first == bool(away), f'{a} beside {b} as the scene opens: the stop stands exactly where a passage of pane B holding the near passage\'s material has its first line out of the pane\'s view (issue #59)', {'stop': s, 'away': away})
+        if not measured and not away and k == len(orders) - 1:
+            s = scrolled_past(ctx, then)
+            away = out_of_view(ctx, s['shared'])
+            seen['scrolled'] = True
+            r.check(bool(s.get('shown')) == bool(away), f'{a} beside {b}, pane B scrolled past the passage: the stop stands exactly where a passage holding the near passage\'s material has its first line out of the pane\'s view (issue #59)', {'stop': s, 'away': away})
+        if not measured and away and s.get('shown'):
+            seen.update(stop_holds(ctx, r, near, s, at_open, shows, at_first))
+            measured = True
+        near = {'pos': then['pos'], 'width': then['width']}
+        ctx.js('window.__skep.scene.close()')
+        ctx.frames(2)
+    if not measured:
+        r.note('the stop at a band\'s clipped end: unmeasured — no scene here clipped a band to a passage holding the near passage\'s material, as it opened or scrolled past it (FP-18)')
+        figures['unmeasured'] = True
+    return figures
+
+
+def out_of_view(ctx, shared):
+    """the passages of the reading scene's pane B among `shared` whose first line — read now through the gate's `at`,
+    apart from the scene's own measure — has its middle outside the pane's visible content"""
+    out = []
+    for p in shared:
+        at = ctx.js('window.__skep.scene.at("b", %d, %d)' % (p['pos'], p['width']))
+        line, pane = at and at['line'], at and at['pane']
+        if line and not pane['y'] <= line['y'] + line['h'] / 2 <= pane['y'] + pane['h']:
+            out.append(p)
+    return out
+
+
+def scrolled_past(ctx, p):
+    """the reader's scroll of the reading scene's pane B past a passage `p` it holds — its first line a line and 4 px
+    above the pane's visible top — and the stop as the draw on that scroll placed it"""
+    at = ctx.js('window.__skep.scene.at("b", %d, %d)' % (p['pos'], p['width']))
+    line = at and at['line']
+    if line:
+        ctx.js('document.getElementById("sceneB").scrollTop += %f' % (line['y'] + line['h'] - at['pane']['y'] + 4))
+        ctx.frames(2)
+    return ctx.js('window.__skep.scene.stop()') or {}
+
+
+def stop_holds(ctx, r, near, s, at_open, shows, at_first):
+    """THE STOP AT A BAND'S CLIPPED END (issue #59's design decision), the reading scene standing with the near passage
+    `near` in pane A and the stop shown, `s` as the gate reads it: a native button at pane B's facing edge on the band's
+    bearing, at the end of the near passage's band to the passage it stands for where that band is clipped, named by
+    ST's words, its count where the passages holding the near passage's material are several; a person's click on it
+    bringing that passage into pane B, its first line level with the near passage's where that line stands in pane A's
+    view, else STOP_AT_PX below pane B's top, pane A unmoved; where it was the one passage, the stop gone and the focus
+    on pane B, else the stop gone on to the next passage; the re-level act putting both panes back where the scene
+    opened (`at_open`), the stop standing as it stood then (`at_first`), at its first passage. Its figures"""
+    n, first = len(s['shared']), s['at']
+    pane = ctx.js('(() => { const p = document.getElementById("sceneB"), q = p.getBoundingClientRect(); return {x: q.left, y: q.top + p.clientTop, h: p.clientHeight}; })()')
+    name = ctx.js('(async (n, D) => { const {t} = await import("./strings.js"); return t(n > 1 ? "L.scene.shared" : "L.scene.shared.1", {D, n}); })(%d, %s)' % (n, json.dumps(shows)))
+    rect = s['rect']
+    above = abs(rect['y'] - pane['y']) <= TIE_TOL_PX
+    below = abs(rect['y'] + rect['h'] - (pane['y'] + pane['h'])) <= TIE_TOL_PX
+    edge = pane['y'] if above else pane['y'] + pane['h'] if below else None
+    band = next((t for t in ctx.js('window.__skep.scene.ties()') if t['kind'] == 'band' and t['b']['pos'] <= first['pos'] < t['b']['pos'] + t['b']['width']), None)
+    r.check(abs(rect['x'] + rect['w'] - pane['x']) <= TIE_TOL_PX and edge is not None and bool(band) and band['b']['clipped'] and abs(band['b']['y'] - edge) <= TIE_TOL_PX
+            and s['name'] == name and s['count'] == (str(n) if n > 1 else ''),
+            'the stop stands at pane B\'s facing edge, at the end of the near passage\'s band to the passage it stands for where that band is clipped on its bearing, named by ST\'s words, its count where the passages holding its material are several (issue #59)',
+            {'stop': s, 'pane': pane, 'band': band and band['b'], 'want': name})
+    hit = click_on(ctx, '#scenestop')
+    ctx.frames(2)
+    after, moved = ctx.js('window.__skep.scene.stop()') or {}, ctx.js(SCENE_SCROLLS)
+    la = ctx.js('window.__skep.scene.at("a", %d, %d)' % (near['pos'], near['width']))
+    lb = ctx.js('window.__skep.scene.at("b", %d, %d)' % (first['pos'], first['width']))
+    in_view = bool(la and la['line']) and inside(la['line'], la['pane'])
+    want_y = la['line']['y'] if in_view else pane['y'] + STOP_AT_PX
+    brought = bool(lb and lb['line']) and inside(lb['line'], lb['pane']) and abs(lb['line']['y'] - want_y) <= LEVEL_TOL_PX
+    where = "level with the near passage's" if in_view else "%d px below the pane's top" % STOP_AT_PX
+    r.check(bool(hit) and hit['hits'] and brought and moved['a'] == at_open['a'],
+            f'a person\'s click on the stop brings the passage it stands for into pane B, its first line {where}, {LEVEL_TOL_PX} px either way, pane A unmoved (issue #59)',
+            {'hit': hit, 'a': la and la['line'], 'b': lb and lb['line'], 'want_y': want_y, 'scroll': moved})
+    focus = ctx.js('document.activeElement && document.activeElement.id')
+    if n == 1:
+        r.check(not after.get('shown') and focus == 'sceneB', 'its one passage in view: the stop leaves, the focus on pane B (FP-20)', {'stop': after, 'focus': focus})
+    else:
+        r.check(after.get('shown') and after.get('at') != first and after.get('next') == (s['shared'].index(first) + 1) % n,
+                'its passages several: the stop goes on to the next of them (issue #59)', {'before': s, 'after': after})
+    click_on(ctx, '#scenebar [data-relevel]')
+    ctx.frames(2)
+    back, again = ctx.js(SCENE_SCROLLS), ctx.js('window.__skep.scene.stop()') or {}
+    r.check(back == at_open and bool(again.get('shown')) == at_first and again.get('next') == 0 and (not at_first or again.get('at') == first),
+            'the re-level act puts both panes back where the scene opened, and the stop as it stood then, at its first passage (issue #59)', {'opened': at_open, 'back': back, 'stop': again, 'shown_at_open': at_first})
+    return {'count': n, 'bearing': 'above' if above else 'below', 'near_in_view': in_view, 'brought': lb and lb['line'] and round(lb['line']['y'], 1)}
 
 
 def untouched(ctx):
@@ -1369,9 +1559,10 @@ def scene_measure_holds(ctx, r):
 
 
 def scene_holds(ctx, r):
-    """THE READING SCENE's checks: opened on the first edition and the draft it windows, nothing held, its measure at the
-    run's window and a wide one, its panes read and never clicked; then from the versions list of an edition with two
-    members, its last paragraph held, read side by side with its latest member; its figures"""
+    """THE READING SCENE's checks: opened on the first edition and the draft it windows, nothing held, then as a far end
+    naming the draft whole, the window run held; its measure at the run's window and a wide one, its panes read and never
+    clicked; then from the versions list of an edition with two members, its last paragraph held, read side by side with
+    its latest member; its figures"""
     seen = {}
     ctx.leap(DOC, WINDOW[0])
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2])))
@@ -1384,6 +1575,7 @@ def scene_holds(ctx, r):
     seen['origin'] = {'level': v and v['level'], 'ties': ties_hold(r, 'the scene on the window and its origin', ctx.js('window.__skep.scene.ties()'), 2)}
     ctx.js('window.__skep.scene.close()')
     ctx.frames(2)
+    seen['whole'] = scene_whole_holds(ctx, r)
     seen['measure'] = scene_measure_holds(ctx, r)
     seen['marks'] = scene_marks_hold(ctx, r)
     # the versions list, a paragraph past the document's first held: "read side by side" with the latest member sets that paragraph level
@@ -1455,12 +1647,15 @@ CITERS = ['1.0.1.0.4', '1.0.1.0.14', '1.0.1.0.20', BEAMED]
 def scene_kept_holds(ctx, r):
     """A TIE IS MEASURED ON THE TEXT ITS PANES WERE SET WITH (issue #160's design decision: "no tie is ever drawn over text
     it was not measured on"): the scene on a citer of FAR_LEAP and FAR_LEAP, the citation drawn as a line between the
-    panes, its far end — FAR_LEAP named whole — at FAR_LEAP's first block; then, in one evaluation, the gate's door
+    panes, its end that names a document whole — FAR_LEAP, or the citer, whichever its slots name so — that whole
+    document: the line meeting its pane's facing edge, and that edge drawn whole in the link's colour as the end, from
+    the pane's visible top to its bottom, as the scene opens and with that pane scrolled (issue #59's design decision:
+    "Wherever the reader scrolls, they stay inside it"); then, in one evaluation, the gate's door
     `model.invalidate` drops what the model held of both documents — their text and the citer's links, telling no
     reader — and the re-level act is clicked: the scene, told nothing, sets the two ends level at once and draws every
-    line it drew, each end on the passage it stood on — the far one still the first block whole, which the model no
-    longer holds — at that passage's line in its pane or at the pane's edge where that line has left it. Both are read
-    whole again and the scene ended after; its figures"""
+    line it drew, each end on the passage it stood on — the whole one still its pane's facing edge — at that passage's
+    line in its pane or at the pane's edge where that line has left it. Both are read whole again and the scene ended
+    after; its figures"""
     tried, lines, citer = [], [], None
     for c in CITERS:
         ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(c), json.dumps(FAR_LEAP)))
@@ -1475,6 +1670,7 @@ def scene_kept_holds(ctx, r):
     r.check(citer is not None, f'a scene on a citer of {FAR_LEAP} and {FAR_LEAP} draws its citation as a line between the panes', tried)
     if citer is None:
         return {'tried': tried}
+    edged = whole_edges_hold(ctx, r, f'the scene on {citer} and {FAR_LEAP}', lines)
     torn = ctx.js('''((a, b) => { const S = window.__skep;
       S.model.invalidate(a); S.model.invalidate(b);
       document.querySelector('#scenebar [data-relevel]').click();
@@ -1484,7 +1680,7 @@ def scene_kept_holds(ctx, r):
     r.check(torn['links'] == 0 and torn['blocks'] == 0 and not torn['updating'] and ends(after) == ends(lines),
             f'the model dropping what it held of {citer} and {FAR_LEAP}, while the scene stands told nothing: the re-level, clicked, sets the ends level at once and draws every line it drew, each end on the passage it stood on — the ties measured on the text and the links the panes were set with, never the model\'s now (issue #160)',
             {'links_now': torn['links'], 'far_blocks_now': torn['blocks'], 'updating': torn['updating'], 'before': ends(lines), 'after': ends(after)})
-    figures = {'citer': citer, 'tried': tried, 'lines': ends(after), 'ties': ties_hold(r, f'the scene on {citer} and {FAR_LEAP}, the model dropping both', after, 1, band=False)}
+    figures = {'citer': citer, 'tried': tried, 'lines': ends(after), 'edges': edged, 'ties': ties_hold(r, f'the scene on {citer} and {FAR_LEAP}, the model dropping both', after, 1, band=False)}
     ctx.js('window.__skep.scene.close()')
     ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(citer))
     ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(FAR_LEAP))

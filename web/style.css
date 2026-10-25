@@ -354,3 +354,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .pane .corner .read { display:block; margin-top:.3em; color:#cfd6df; cursor:pointer; text-decoration:underline dotted; }
 .pane .corner .lacks { display:block; margin-top:.3em; color:var(--warn); }
 #scenebeams { position:absolute; inset:26px 0 0 0; width:100%; height:calc(100% - 26px); pointer-events:none; }
+/* the stop at a band's clipped end (SC's): over the stub's triangle in the gap against pane B's facing edge, above the
+   canvas, its count — where it reaches two passages or more — before the triangle; SC places it, its top or its bottom on
+   the pane's visible edge */
+#scenestop { position:absolute; z-index:1; height:16px; min-width:16px; padding:0 11px 0 3px; margin:0; border:0; border-radius:2px; background:transparent; color:var(--ink); font:11px/16px var(--face-client); cursor:pointer; }
+#scenestop:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }

@@ -20,7 +20,10 @@
 // this?" ask over its bytes; "follow" and "read side by side" count only the
 // links drawn at the span (LK's `shownAt`), inert where none, asking which
 // only at two or more and naming the far document at one, the scene opened
-// as a step on the trail from the link's end chosen (N-GO's `toScene`), every
+// as a step on the trail from the link's end chosen (N-GO's `toScene`) beside
+// the document LK names for it (`besideAt`) — where its far end names its
+// document whole, that whole document, nothing of it set level with the
+// selection (SC's `Held.wholeB`; FP-30) — every
 // address the card and the list set in the identifier's face (P-REG's FACE). The slots, in this
 // order and never moved: annotate · quote · who wrote this? · who uses this?
 // · see the links · follow · read side by side · link to… — each showing its
@@ -188,7 +191,7 @@ export function act(which, byKey = false) {
   if (which === 'links') { LINKS.show(addr, byKey); return; }
   const drawn = LK.shownAt(addr, span);
   if (which === 'follow') { if (drawn.length === 1) GO.follow(drawn[0], byKey); else if (drawn.length > 1) which_(drawn, 'follow', byKey); return; }
-  if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) void GO.toScene(addr, drawn[0].farAt || drawn[0].far, { posA: pos, widthA: width, posB: LK.farPos(drawn[0]) }, { from: { shown: drawn[0] }, site: { span } }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
+  if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) void GO.toScene(addr, LK.besideAt(drawn[0]), { posA: pos, widthA: width, posB: LK.farPos(drawn[0]), wholeB: drawn[0].farWhole }, { from: { shown: drawn[0] }, site: { span } }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
 }
 
 /** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3), named as its tail and its mirror item name it, each address in the identifier's face (LK's `farLabelHTML`); it takes the focus on its first row where a key asked */
@@ -196,6 +199,6 @@ function which_(/** @type {import('../links/links.js').Shown[]} */ drawn, /** @t
   const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · <span class="id">${esc(s.link.owner || '')}</span> · ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
-  drawn.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else if (s.far && sel) void GO.toScene(sel.addr, s.farAt || s.far, { posA: sel.pos, widthA: sel.width, posB: LK.farPos(s) }, { from: { shown: s }, site: { span: sel } }); }; });
+  drawn.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else if (s.far && sel) void GO.toScene(sel.addr, LK.besideAt(s), { posA: sel.pos, widthA: sel.width, posB: LK.farPos(s), wholeB: s.farWhole }, { from: { shown: s }, site: { span: sel } }); }; });
   HOST.show({ kind: 'list', id: 'which', anchor: sel ? { span: sel } : null, html, acts, takeFocus: byKey });
 }
