@@ -13,9 +13,11 @@
 // wheel, a pinch or the camera key's drag takes the camera over; a press on
 // an outlined run below reading scale is a step to it; a withheld run's one
 // symbol opens its ends' card or list, never C-39's face; a byline's cut
-// label opens and closes on its clicks, selecting nothing; and where no
-// board is held a click at far scale is an empty one (FP-12, FP-21, FP-24,
-// FP-25, FP-30, FP-34, FP-35).
+// label opens and closes on its clicks, selecting nothing; where no board is
+// held a click at far scale is an empty one; and a continuation's mark is two
+// targets, its newest label going to that member and the rest opening its
+// list, the pointer's shape over each its own (FP-12, FP-21, FP-24, FP-25,
+// FP-30, FP-34, FP-35).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as INPUT from './input.js';
@@ -39,6 +41,7 @@ import { accountCell, boardCell } from '../plane/projection.js';
 import { t, tHTML, addressedHTML } from '../strings.js';
 import { MAC } from '../nav/keys.js';
 import { esc, byteLength } from '../util.js';
+import { recorder } from '../test/canvas.js';
 
 /** the attributes of an element's opening tag, as the platform's `dataset` reads them */
 const datasetOf = (/** @type {string} */ tag) =>
@@ -663,6 +666,64 @@ test('where no board is held a click on the plane at far scale names no account 
   } finally {
     HOST.dismiss();
     REC.setBoard(was);
+    globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
+  }
+});
+
+test('a click on a continuation\'s mark acts by the target it falls on: its newest label goes to that member, its trail entry taken and the camera leaving; the rest of the mark opens its members\' list at the mark — no entry, no flight, the walk on the mark\'s stop — and the pointer\'s shape over each is its own (issue #42\'s design decision)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window, HTMLElement: globalThis.HTMLElement };
+  /** @type {Map<string, (e: unknown) => void>} the plane's listeners, by event */
+  const plane = new Map();
+  /** @type {Set<string>} the plane's classes */
+  const classes = new Set();
+  const listens = (/** @type {Map<string, (e: unknown) => void> | null} */ into) => ({ addEventListener: (/** @type {string} */ type, /** @type {(e: unknown) => void} */ fn) => { if (into) into.set(type, fn); } });
+  globalThis.HTMLElement = /** @type {any} */ (class {});
+  globalThis.document = /** @type {any} */ ({ ...listens(null), activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens(null), getSelection: () => null });
+  try {
+    // an account of sixty documents and nothing else: at HOME its first continuation, the twelve from the 49th, is one mark; its newest's text held, so a LEAP to it reads nothing
+    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
+    REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 60 }, (_, i) => ({ doc: `1.0.1.0.${i + 1}`, kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 60 }], state: { arm: 'complete' } }));
+    const NEWEST = '1.0.1.0.60', text = 'Notes on 60';
+    REC.takeSpanSet(NEWEST, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
+    REC.takeDelivery(NEWEST, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
+    HOST.attach(/** @type {any} */ ({
+      ...listens(null), className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {},
+      querySelector: () => null, querySelectorAll: () => [], contains: () => false, getBoundingClientRect: () => ({ width: 0, height: 0 }),
+    }));
+    INPUT.attach(/** @type {any} */ ({ plane: { ...listens(plane), classList: { add: (/** @type {string} */ c) => classes.add(c), remove: (/** @type {string} */ c) => classes.delete(c) } }, layer: listens(null), corners: listens(null) }));
+    const { ctx } = recorder();
+    RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+    CAM.setViewport(1440, 900);
+    const home = CAM.viewForCell(accountCell('1.0.1'), 0.85);
+    /** the mark as the frame at HOME draws it, and a point on each of its targets */
+    const frame = () => {
+      CAM.set(home); RENDER.draw();
+      const m = /** @type {import('../plane/render.js').ResidueMark} */ (RENDER.stats.residueMarks.find((x) => x.key === '1.0.1:1'));
+      const band = /** @type {{x: number, y: number, w: number, h: number}} */ (m.newestTarget);
+      return { label: { clientX: band.x + band.w / 2, clientY: band.y + band.h / 2 }, rest: { clientX: m.rect.x + m.rect.w / 2, clientY: m.rect.y + 4 } };
+    };
+    const click = (/** @type {{clientX: number, clientY: number}} */ at) => { plane.get('pointerdown')?.({ ...at, ctrlKey: false, metaKey: false, pointerId: 1 }); plane.get('pointerup')?.({ ...at }); };
+    const at = frame();
+    plane.get('pointermove')?.(at.label);
+    assert.deepEqual([...classes], ['to-doc'], 'over the newest label: the shape that goes to a document');
+    plane.get('pointermove')?.(at.rest);
+    assert.deepEqual([...classes], ['to-list'], 'over the rest of the mark: the shape that opens a list');
+    plane.get('pointermove')?.({ clientX: 5, clientY: 5 });
+    assert.deepEqual([...classes], [], 'off the mark: neither');
+    TRAIL._reset();
+    click(at.rest);
+    for (let i = 0; i < 200 && !HOST.currentState(); i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.kind, TRAIL.all().length, CAM.flying()], ['mark:1.0.1:1', 'list', 0, false], 'the rest: the mark\'s list, no entry, no flight');
+    assert.deepEqual([WALK.current()?.kind, WALK.current()?.addr], ['mark', '1.0.1:1'], 'the walk on the mark\'s stop, the list\'s opener');
+    HOST.dismiss();
+    click(frame().label);
+    assert.deepEqual([TRAIL.current()?.addr, CAM.flying(), HOST.currentState()], [NEWEST, true, null], 'the newest label: the newest member, its entry pushed and the camera leaving');
+    CAM.step(Infinity);
+  } finally {
+    HOST.dismiss();
+    RENDER.stats.residueMarks = [];
+    REC._reset(); REC.setBoard({ board: 'b-1', name: '', origin: '' });
     globalThis.document = platform.document; globalThis.window = platform.window; globalThis.HTMLElement = platform.HTMLElement;
   }
 });

@@ -14,11 +14,19 @@ session) C-33's mark over the same positions; a draft of the claimant's,
 read, shows C-28's chip at its corner, and the region at mid holds it — a
 box of its own, or, deep in its account's continuations, inside the
 continuation drawn as one mark; at HOME the account's first continuation is
-ONE mark (foundations §2.1; P44) carrying law 13's count of what it holds and
-its newest member's label, the mid connections into it end at it and at none
-of its members, each counting its links once and carrying that count on its
-stroke where it holds two or more, and a click on it teleports to that
-newest member; at HOME the first edition's box carries ONE TAIL (issue #132's
+ONE mark (foundations §2.1; P44) holding law 13's count of what it holds,
+the mid connections into it end at it and at none of its members, each
+counting its links once and carrying that count on its stroke where it holds
+two or more, and the mark is two targets (issue #42's design decision): the
+rest of it drawing its count in what it counts, a press there opening its
+members' list at the mark, newest first, with no trail entry and the walk on
+the mark's stop — Esc closing it with the platform's focus on the mark's
+item, Enter there opening it with the focus on its newest row, ↓ from there
+standing the walk on its first member, ringed on the mark, which names it and
+its place — and a band at its foot holding its newest member's label, a press
+there teleporting to that member, the pointer's shape over each its own; at
+HOME the first
+edition's box carries ONE TAIL (issue #132's
 design decision: a link whose far document the plane draws nowhere keeps its
 link and names its far end at its near end) holding once each of its links
 the case's own reading joins it by to a document the plane draws nowhere —
@@ -113,6 +121,68 @@ def tails_home(ctx, r):
             'pressed as a person presses it, the tail lists its links — a row for each, naming its far document — or opens its one link\'s card', {'overlay': ov['id'], 'rows': rows[:8], 'far': tail['far']})
     ctx.esc()
     return {'links': len(tail['links']), 'label': tail['label'], 'left_out': left, 'pressed': ov['id'], 'rows': len(rows)}
+
+
+def mark_acts(ctx, r, mark, band, newest):
+    """THE MARK'S ACTS at HOME, as a person makes them (issue #42's design decision): the pointer's shape over each target its own;
+    a press on the rest of the mark opens its members' list at the mark — newest first, no trail entry, the walk on the mark's
+    stop — Esc closing it with the platform's focus on the mark's item; Enter there opening it again with the focus on its newest
+    row, Esc returning the focus to the mark's item; ↓ from there standing the walk on the mark's first member, ringed on the
+    mark, which names it and its place; a press on the newest label teleporting to that member, landed at reading scale; its
+    figures"""
+    rect = mark['rect']
+    at_label = (band['x'] + band['w'] / 2, band['y'] + band['h'] / 2)
+    at_rest = (rect['x'] + rect['w'] / 2, rect['y'] + (band['y'] - rect['y']) / 2)
+    cursor = lambda x, y: (ctx.drv.mouse(x, y, kind='move'), ctx.frames(1), ctx.js('getComputedStyle(document.getElementById("plane")).cursor'))[2]
+    shapes = {'label': cursor(*at_label), 'rest': cursor(*at_rest), 'off': cursor(rect['x'] - 30, at_rest[1])}
+    r.check(shapes['label'] != shapes['rest'] and shapes['label'] != shapes['off'] and shapes['rest'] != shapes['off'],
+            'the pointer\'s shape over the mark tells its two targets apart: one over its newest label, another over the rest of it, and neither off the mark', shapes)
+    trail_before = len(ctx.js('window.__skep.trail()')['entries'])
+    # its focused item: the mark's stop where it stands on one
+    focused = 'document.activeElement && document.activeElement.dataset ? (document.activeElement.dataset.addr || document.activeElement.dataset.run || document.activeElement.id) : null'
+    ctx.drv.mouse(*at_rest)
+    ctx.settle(); ctx.frames(2)
+    ov = ctx.js('window.__skep.overlay()')
+    rows = ctx.js('[...document.querySelectorAll("#overlay .rows button")].map((b) => b.querySelector(".id").textContent)')
+    walk = ctx.js('window.__skep.view.focus()')
+    shown = ctx.js('window.__skep.go.shownIn(%s)' % json.dumps(newest))
+    listed = {'overlay': ov, 'rows': rows[:3], 'n_rows': len(rows), 'trail': len(ctx.js('window.__skep.trail()')['entries']) - trail_before, 'walk': walk and [walk['kind'], walk['addr']]}
+    r.check(ov['id'] == 'mark:' + mark['key'] and ov['kind'] == 'list' and rows and rows[0] == shown and listed['trail'] == 0 and listed['walk'] == ['mark', mark['key']],
+            'a press on the rest of the mark opens its members\' list at the mark — its newest first — with no trail entry, the walk on the mark\'s stop', listed)
+    ctx.drv.key('Escape'); ctx.frames(2)
+    after_esc = {'overlay': ctx.js('window.__skep.overlay()')['id'], 'focus': ctx.js(focused)}
+    r.check(after_esc['overlay'] is None and after_esc['focus'] == mark['key'], 'Esc closes it, the platform\'s focus on the mark\'s item', after_esc)
+    ctx.drv.key('Enter'); ctx.settle(); ctx.frames(2)
+    by_key = {'overlay': ctx.js('window.__skep.overlay()')['id'], 'focus': ctx.js(focused), 'row': ctx.js('document.activeElement && document.activeElement.querySelector && document.activeElement.querySelector(".id") ? document.activeElement.querySelector(".id").textContent : null')}
+    ctx.drv.key('Escape'); ctx.frames(2)
+    by_key['after_esc'] = ctx.js(focused)
+    r.check(by_key['overlay'] == 'mark:' + mark['key'] and by_key['focus'] == 'm0' and by_key['row'] == shown and by_key['after_esc'] == mark['key'],
+            'Enter at the mark\'s stop opens the list with the focus on its newest row; Esc returns the focus to the mark\'s item', by_key)
+    # ↓ from the mark's stop: its first member in record order, ringed on the mark, which names it and its place among its members
+    first = min(mark['members'], key=num)
+    ctx.drv.key('ArrowDown'); ctx.settle(); ctx.frames(2)
+    now = next((m for m in ctx.js('window.__skep.residues()') if m['key'] == mark['key']), None)
+    ring, walk = ctx.js('window.__skep.view.ring()'), ctx.js('window.__skep.view.focus()')
+    of = str(mark['n']) if mark['exact'] else ctx.js('(async () => (await import("./strings.js")).t("L.lower-bound", %s))()' % json.dumps({'n': mark['n']}))
+    names = [ctx.js('(async () => (await import("./strings.js")).t("L.mark.member", %s))()' % json.dumps({'name': name, 'i': 1, 'n': of})) for name in (first[len(mark['account']):], first)]
+    on_mark = bool(now and ring) and all(abs(ring[k] - now['rect'][k]) <= 1 for k in ('x', 'y', 'w', 'h'))
+    ringed = {'walk': walk and [walk['kind'], walk['addr']], 'ring': ring, 'mark': now and now['rect'], 'lines': now and now['lines'], 'want': names}
+    r.check(ringed['walk'] == ['document', first] and on_mark and ' '.join(now['lines']) in names,
+            '↓ from the mark\'s stop stands the walk on its first member, the ring on the mark and the mark naming the member and its place among its members', ringed)
+    band = (now or {}).get('newestTarget') or band
+    at_label = (band['x'] + band['w'] / 2, band['y'] + band['h'] / 2)
+    # the newest label, as a person presses it: a teleport to the newest member, landed at reading scale
+    ctx.drv.mouse(*at_label)
+    ctx.js('new Promise(res => { const t0 = performance.now(); const step = () => { const f = window.__skep.view.focus(); if ((f && f.addr === %s) || performance.now() - t0 > 10000) res(true); else setTimeout(step, 30); }; step(); })' % json.dumps(shown))
+    ctx.settle()
+    ctx.frames(2)
+    focus = ctx.js('window.__skep.view.focus()')
+    trail = ctx.js('window.__skep.trail()')['numbered']
+    landed = {'focus': focus['addr'] if focus else None, 'mounted': ctx.js('window.__skep.mounted(%s)' % json.dumps(shown)) is not None,
+              'lod': ctx.js('window.__skep.view.lod()')['name'], 'trail_newest': next((t['addr'] for t in trail if t['n'] == 1), None)}
+    r.check(landed['focus'] == shown and landed['mounted'] and landed['lod'] == 'near' and landed['trail_newest'] == shown,
+            'a press on the mark\'s newest label teleports to its newest member: the focus and the trail\'s newest entry are it, its text mounted at reading scale', landed)
+    return {'cursor': shapes, 'list': listed, 'esc': after_esc, 'enter': by_key, 'ringed': ringed, 'click': landed}
 
 
 def census(ctx, account, cap, stop_after=200):
@@ -309,7 +379,7 @@ def run(ctx):
             r.check(depth > 11, 'the draft lies past the continuation rule\'s precision floor (depth 11): its box is the account\'s RESIDUE cell, drawn with its corner at its own scale', {'depth': depth})
         r.figures['draft_shown']['residue'] = bool(dbox.get('residue'))
         r.figures['draft_shown']['mark_at_mid'] = {k: holding[0][k] for k in ('k', 'n', 'exact', 'newest', 'rect', 'lines')} if holding else None
-    # ---- S2: HOME — the account's first continuation as one mark, its act a teleport to its newest (foundations §2.1; P44) ----
+    # ---- S2: HOME — the account's first continuation as one mark, two targets: its newest's label and its list (foundations §2.1; P44; issue #42) ----
     ctx.js('window.__skep.go.home()')
     ctx.settle()
     ctx.frames(2)
@@ -324,11 +394,16 @@ def run(ctx):
                 {'n': mark['n'], 'members': len(members), 'indexed': len(deep), 'missing': sorted(set(deep) - set(members), key=num)[:10]})
         newest = max(members, key=num)
         r.check(mark['newest'] == newest, 'the mark\'s representative is its newest member, the highest-numbered', {'newest': mark['newest'], 'expected': newest})
-        text = ' '.join(mark['lines'])
-        # the label a box draws: the fields past the region's prefix, led by their separator (".0.1012", never "0.1012")
-        short = newest[len('1.0.1'):]
-        r.check(str(mark['n']) in text and short in text.split() and ('≥' in text) != mark['exact'], 'the mark draws its count — "≥" while the index runs from its floor — and its newest member\'s label, a word of its own led by the separator',
-                {'lines': mark['lines'], 'n': mark['n'], 'exact': mark['exact'], 'newest': short})
+        # the mark's two targets (issue #42's design decision): the rest of it says its count in what it counts; a band at its foot holds its
+        # newest member's label as a box's label sets it — the version its box shows, its fields past the region's prefix, led by their
+        # separator (".0.1012", never "0.1012")
+        count = ctx.js('(async () => (await import("./strings.js")).markCount(%d, %s))()' % (mark['n'], json.dumps(mark['exact'])))
+        short = ctx.js('window.__skep.go.shownIn(%s)' % json.dumps(newest))[len('1.0.1'):]
+        band = mark.get('newestTarget')
+        r.check(' '.join(mark['lines']) == count and ('≥' in count) != mark['exact'] and (mark.get('newestLines') or [None])[0] == short and band is not None
+                and band['h'] >= 24 and band['y'] - mark['rect']['y'] >= 24,
+                'the mark is two targets: the rest of it draws its count in what it counts — "≥" while the index runs from its floor — and a band at its foot, 24 px tall at the least below 24 px of the rest, its newest member\'s label, its address a word of its own led by the separator',
+                {'lines': mark['lines'], 'count': count, 'newest_lines': mark.get('newestLines'), 'newest': short, 'band': band, 'rect': mark['rect']})
         r.check(in_view(ctx, mark['rect']), 'the mark stands inside the viewport at HOME', mark['rect'])
         conns = ctx.js('window.__skep.connections()')
         at_member = [c for c in conns if c['a'] in members or c['b'] in members]
@@ -367,20 +442,10 @@ def run(ctx):
         miscarried = {d: {'links': linked.get(d), 'carries': n} for d, n in carried.items() if n != (str(linked[d]) if linked.get(d, 0) >= 2 else None)}
         r.check(any(n >= 2 for n in linked.values()) and not miscarried, 'each connection into the mark carries its count on its stroke where it holds two links or more — the numeral of those links — and none where it holds one',
                 {'miscarried': miscarried, 'carried': carried})
-        r.figures['home_mark'] = dict({k: mark[k] for k in ('k', 'n', 'exact', 'newest', 'lines', 'rect')}, connections_to_mark={'drawn': into, 'links': linked, 'carried': carried})
-        # the mark's act, as a person presses it: a teleport to the newest member, landed at reading scale
-        rect = mark['rect']
-        ctx.drv.mouse(rect['x'] + rect['w'] / 2, rect['y'] + rect['h'] / 2)
-        ctx.js('new Promise(res => { const t0 = performance.now(); const step = () => { const f = window.__skep.view.focus(); if ((f && f.addr === %s) || performance.now() - t0 > 10000) res(true); else setTimeout(step, 30); }; step(); })' % json.dumps(newest))
-        ctx.settle()
-        ctx.frames(2)
-        focus = ctx.js('window.__skep.view.focus()')
-        trail = ctx.js('window.__skep.trail()')['numbered']
-        landed = {'focus': focus['addr'] if focus else None, 'mounted': ctx.js('window.__skep.mounted(%s)' % json.dumps(newest)) is not None,
-                  'lod': ctx.js('window.__skep.view.lod()')['name'], 'trail_newest': next((t['addr'] for t in trail if t['n'] == 1), None)}
-        r.check(landed['focus'] == newest and landed['mounted'] and landed['lod'] == 'near' and landed['trail_newest'] == newest,
-                'a click on the mark teleports to its newest member: the focus and the trail\'s newest entry are it, its text mounted at reading scale', landed)
-        r.figures['home_mark']['click'] = landed
+        r.figures['home_mark'] = dict({k: mark[k] for k in ('k', 'n', 'exact', 'newest', 'lines', 'rect')}, newest_lines=mark.get('newestLines'), newest_target=band, connections_to_mark={'drawn': into, 'links': linked, 'carried': carried})
+        if band:
+            r.figures['home_mark']['acts'] = mark_acts(ctx, r, mark, band, newest)
+
     # ---- S8: a ghost address faces --------------------------------------------
     ctx.js('window.__skep.go.leapTo(%s, null)' % json.dumps(GHOST))
     ctx.settle()

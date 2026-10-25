@@ -4,24 +4,31 @@
 // count a lower bound meanwhile, and nothing when complete (FP-23); where
 // no board is held a whole frame names none — no board's label, origin
 // or count, no frame of the account under the view, no ring at the walk's
-// root — where the same frames with the board held do (FP-35); and a
+// root — where the same frames with the board held do (FP-35); a
 // document's label at mid scale its contents line — its first line where
 // those words stand, its address at the row's end, past its region's prefix
 // only where the region is named — each line on its own plate, its address
-// in the title's ink (FP-26).
+// in the title's ink (FP-26); and a continuation's mark two targets where it
+// holds two — its newest member's label, as the version its box shows, in a
+// band at its foot, and the rest of the mark, its count in what it counts —
+// one where it is too small, and a member the walk's ring stands on ringed
+// on the mark with its name and place (issue #42).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
 import * as CAM from './camera.js';
 import * as WALK from '../nav/walk.js';
+import * as GO from '../nav/go.js';
 import * as RENDER from './render.js';
 import { boardStatements } from './render.js';
 import * as LAYER from '../text/layer.js';
-import { boardCell, accountCell, docBox, accountAt } from './projection.js';
+import { boardCell, accountCell, docBox, accountAt, continuationCell } from './projection.js';
+import { markScale } from './lod.js';
 import { leadOf, firstRow, GUTTER } from './layout.js';
-import { COL } from './register.js';
+import { COL, TARGET } from './register.js';
 import { recorder } from '../test/canvas.js';
-import { t } from '../strings.js';
+import { t, markCount } from '../strings.js';
+import { byteLength } from '../util.js';
 
 /** the address a set label carries: the text of its line whose runs are all in the identifier's face */
 const addressOf = (/** @type {import('./labels.js').SetLabel} */ l) => (l.lines.find((x) => x.runs.every((r) => r.face === 'ident')) || { text: null }).text;
@@ -112,5 +119,87 @@ test('at mid scale a document\'s label is its contents line: its first line from
     const shut = RENDER.stats.labels.find((x) => x.kind === 'doc' && x.place === D);
     assert.equal(shut && shut.lines[0].text, t('L.client-words', { words: t('F.corner.withheld', { owner: '1.0.1' }) }), 'its first line\'s place: its withheld box\'s words, bracketed');
     assert.ok(inked.some((x) => x.text === '1.0.1' && x.ink === COL.title) && inked.some((x) => x.text.includes('withheld') && x.ink === COL.text), `the owner in the title's ink, the words around it in the text's: ${JSON.stringify(inked.slice(0, 8))}`);
+  } finally { REC._reset(); CAM.setViewport(1440, 900); }
+});
+
+/** an account of sixty documents the index lists, each its first line "Notes on ⟨n⟩": at HOME the first 48 stand whole and the other twelve are its first continuation's one mark */
+function sixty() {
+  REC._reset();
+  REC.setBoard({ board: 'b-1', name: '', origin: 'http://127.0.0.1:8642' });
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
+  REC.takeIndex(/** @type {any} */ ({ docs: Array.from({ length: 60 }, (_, i) => ({ doc: `1.0.1.0.${i + 1}`, kind: 'edition', label: `Notes on ${i + 1}`, standing: 'public' })), counts: [{ account: '1.0.1', documents: 60 }], state: { arm: 'complete' } }));
+  CAM.setViewport(1440, 900);
+  const { ctx } = recorder();
+  RENDER.attach(/** @type {any} */ ({ getContext: () => ctx }));
+  return CAM.viewForCell(accountCell('1.0.1'), 0.85);
+}
+/** the account's first continuation's mark as the last frame drew it */
+const firstMark = () => /** @type {import('./render.js').ResidueMark} */ (RENDER.stats.residueMarks.find((m) => m.key === '1.0.1:1'));
+const middleOf = (/** @type {{x: number, y: number, w: number, h: number}} */ r) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+/** two screen rects the same, within a millionth of a px */
+const sameRect = (/** @type {{x: number, y: number, w: number, h: number} | null} */ a, /** @type {{x: number, y: number, w: number, h: number}} */ b) => !!a && [a.x - b.x, a.y - b.y, a.w - b.w, a.h - b.h].every((d) => Math.abs(d) < 1e-6);
+
+test('a continuation\'s mark holding two targets is two: its newest member\'s label — the version its box shows, its address then its first line — in a band at its foot a target tall, which a press there goes to, and the rest of the mark, its count in what it counts, which opens the list (issue #42\'s design decision)', async () => {
+  const platform = { document: globalThis.document, window: globalThis.window };
+  const listens = { addEventListener() {} };
+  globalThis.document = /** @type {any} */ ({ ...listens, activeElement: null, body: null });
+  globalThis.window = /** @type {any} */ ({ ...listens, getSelection: () => null });
+  try {
+    const home = sixty();
+    // the newest member's box showing its second version, its text held
+    const V = '1.0.1.0.60.2', text = 'Take two.';
+    REC.takeSpanSet(V, [{ subspace: 1, ordinal: 1, positions: byteLength(text) }]);
+    REC.takeDelivery(V, [{ pos: 1, width: byteLength(text), kind: 'content', text, ref: null, origin: null }]);
+    const leap = GO.leapTo(V);
+    assert.equal(GO.shownIn('1.0.1.0.60'), V, 'the box shows its second version');
+    CAM.set(home);
+    await leap;
+    RENDER.draw();
+    const m = firstMark();
+    assert.deepEqual([m.k, m.n, m.newest, m.members.length], [1, 12, '1.0.1.0.60', 12], 'the first continuation, its twelve members, its newest the highest-numbered');
+    assert.equal(m.lines.join(' '), markCount(12, true), 'its count says what it counts');
+    assert.deepEqual(m.newestLines, ['.0.60.2', 'Take two.'], 'its newest member\'s label as a box\'s label sets it, of the version its box shows: its address past the region\'s prefix, then its first line');
+    const band = /** @type {{x: number, y: number, w: number, h: number}} */ (m.newestTarget);
+    assert.ok(band && band.h >= TARGET.min && Math.abs(band.y + band.h - (m.rect.y + m.rect.h)) < 1e-6 && Math.abs(band.w - m.rect.w) < 1e-6, `the band across the mark's foot, a target tall: ${JSON.stringify({ band, rect: m.rect })}`);
+    assert.ok(band.y - m.rect.y >= TARGET.min, 'the rest of the mark a target tall above it');
+    const label = RENDER.stats.labels.find((l) => l.kind === 'newest' && l.place === m.key);
+    assert.ok(label && label.lines.every((x) => x.rect.y >= band.y - 1e-6 && x.rect.y + x.rect.h <= band.y + band.h + 1e-6), 'the label inside its band');
+    const atLabel = middleOf(band), atRest = { x: m.rect.x + m.rect.w / 2, y: m.rect.y + (band.y - m.rect.y) / 2 };
+    assert.deepEqual(RENDER.residueAtScreen(atLabel.x, atLabel.y), { account: '1.0.1', k: 1, key: '1.0.1:1', newest: '1.0.1.0.60', target: 'newest' }, 'a press on the band: the newest member');
+    assert.equal(RENDER.residueAtScreen(atRest.x, atRest.y)?.target, 'list', 'a press on the rest: the list');
+    assert.equal(RENDER.residueAtScreen(m.rect.x - 5, atRest.y), null, 'off the mark: neither');
+  } finally {
+    REC._reset(); CAM.setViewport(1440, 900);
+    globalThis.document = platform.document; globalThis.window = platform.window;
+  }
+});
+
+test('a mark too small to hold two targets sets no newest label, and the whole mark opens the list (issue #42\'s design decision: "Where the mark is too small for two targets that are easy to hit, it draws no label and the whole mark opens the list")', () => {
+  try {
+    sixty();
+    const c = continuationCell('1.0.1', 1);
+    CAM.set({ ...middleOf(c), scale: markScale(1, 0) });
+    RENDER.draw();
+    const m = firstMark();
+    assert.ok(m && (m.rect.w < TARGET.min || m.rect.h < 2 * TARGET.min), `the mark ${JSON.stringify(m && m.rect)} too small for two targets`);
+    assert.deepEqual([m.newestTarget, m.newestLines], [null, []], 'no newest target, no newest label');
+    assert.ok(![...RENDER.stats.labels, ...RENDER.stats.labelsLeftOut].some((l) => l.kind === 'newest'), 'no newest label handed to the pass');
+    for (const p of [middleOf(m.rect), { x: m.rect.x + 1, y: m.rect.y + m.rect.h - 1 }]) assert.equal(RENDER.residueAtScreen(p.x, p.y)?.target, 'list', `at ${JSON.stringify(p)}: the list`);
+  } finally { REC._reset(); CAM.setViewport(1440, 900); }
+});
+
+test('the walk\'s ring on a member the mark holds stands on the mark, and the mark names the member and its place among its members in its count\'s place, its first stop the mark\'s own (issue #42\'s design decision: "A member\'s ring is drawn on the mark with its name and place")', async () => {
+  try {
+    const home = sixty();
+    CAM.set(home);
+    await WALK.focusTo('1.0.1.0.55', null, true);
+    assert.ok(WALK.ringShown(), 'a key put the walk there: the ring drawn');
+    RENDER.draw();
+    const m = firstMark();
+    assert.ok(sameRect(RENDER.stats.ring, m.rect), `the ring on the mark, never on the member's own outline inside it: ${JSON.stringify([RENDER.stats.ring, m.rect])}`);
+    assert.equal(m.lines.join(' '), t('L.mark.member', { name: '.0.55', i: 7, n: 12 }), 'the member\'s name and place among the mark\'s twelve, in its count\'s place');
+    await WALK.focusTo('1.0.1:1', null, true);
+    RENDER.draw();
+    assert.ok(sameRect(RENDER.stats.ring, firstMark().rect) && firstMark().lines.join(' ') === markCount(12, true), 'the mark\'s own stop: the ring on it, its count');
   } finally { REC._reset(); CAM.setViewport(1440, 900); }
 });

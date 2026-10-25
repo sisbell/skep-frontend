@@ -29,7 +29,12 @@
 // order (S3 Q6), each box once, as the version it shows (FP-22; the `shown`
 // reader): an account's documents are every box the plane draws — the
 // model's one list (M-REC's `known`), a covered one among them (FP-29) —
-// each the version its box shows, its spans and links that version's; at
+// each the version its box shows, its spans and links that version's; where
+// the plane draws a continuation of the account as its one mark at the scale
+// the camera is bound for (P-LOD's `residueDepth`), one stop for the mark
+// stands before its members, each a stop still in record order (P-PROJ's
+// `markKey`, `membersAt`), named by the mark's count in its words (ST's
+// `markCount`), Enter at it opening its members' list (N-KEYS'); at
 // reading scale the walk holds the links the reading scale draws after the
 // blocks, exactly what is drawn where it is drawn: an end LK draws at a
 // withheld run (LK's `Shown.run`) is a child of the run's item, a level
@@ -42,13 +47,20 @@
 // not list — a withheld document, one unchanged since the index's floor, its
 // account — lands on its own node, placed among the listed siblings in
 // address order (`among`; rule 12). The camera follows the focus — a walk
-// move flies to the element at its level's scale (`flyToFocus`) — and the
-// focus follows the camera: any other move re-takes it at the scale's grain
+// move flies to the element at its level's scale (`flyToFocus`): the mark's
+// stop, and a member the walk lists after it, to the mark centred at the
+// scale nearest the camera's that draws it (P-LOD's `markScale`), the member
+// never framed, so its ring stands on the mark (P-RENDER's) — and the focus
+// follows the camera: any other move re-takes it at the scale's grain
 // (`retakeFromView`). The re-take's order, so the walk never stands on a
-// place out of view: the document whose region holds the view's centre
-// (T-LAYER's `regionOf`); else the document the walk stands on, kept while
-// its region meets the visible view (T-LAYER's `inView`; `kept`); else the
-// account whose region holds the centre, else the board. At far scale the
+// place out of view nor on one the plane does not draw: a continuation's mark
+// whose cell holds the view's centre — the walk's focus kept where it stands
+// on one of the mark's members, a span or a link in one taken to the member
+// whole, else the mark's stop, never the member under the centre, and no list
+// opened; else the document whose region holds the view's centre (T-LAYER's
+// `regionOf`), none a mark holds; else the document the walk stands on, kept
+// while its region meets the visible view (T-LAYER's `inView`; `kept`); else
+// the account whose region holds the centre, else the board. At far scale the
 // grain stops at the account, and the last alone is read. Where no board is
 // held (FP-35) the root names no board: it says why, in the words the
 // `noBoard` reader gives, and the re-take stands on it alone. The grain below
@@ -58,8 +70,8 @@
 // stop, focused whole, its mirror item collapsed (`collapsed`); entering it
 // from the keyboard is Enter's act (N-KEYS'), which expands it, and there →
 // enters its spans. Collapsed or expanded is read at the view the camera is
-// bound for, so a key made during a flight acts where the flight lands (D5
-// §4 rule 8), and each dirty frame marks the items again in place
+// bound for, so a key made during a flight acts where the flight lands (D5 §4
+// rule 8), and each dirty frame marks the items again in place
 // (`markExpanded`).
 // The ARIA mirror (`role=tree`, virtualised to 24 items either side of the
 // current one, `aria-level`/`aria-posinset`/`aria-setsize`) is the one
@@ -83,8 +95,10 @@
 // one a read answered `withheld` by its withheld box's words (B1-S2), its
 // first line standing for none, one the board said nothing about by a far
 // end's words for it (`L.far.unregistered`), and one no read or listing has
-// told the state of by no state at all (FP-25); a link's item names its far
-// end as its tail does (LK's `farLabel`), and says BM-HELD's line where the
+// told the state of by no state at all (FP-25); a mark's stop by its count,
+// the words the mark shows (ST's `markCount`), its item saying a list opens
+// on it (`aria-haspopup`); a link's item names its far end as its tail does
+// (LK's `farLabel`), and says BM-HELD's line where the
 // far end floats or its text holds part of its passage (`farSays`;
 // foundations §2.3). Back's light is exposed: the items it stands on — each
 // span holding a stretch of the passage carried, or the link's end the follow
@@ -118,20 +132,20 @@ import * as LAYER from '../text/layer.js';
 import * as FOCUS from './focus.js';
 import { placeholderOf, itemOf, itemWords, itemLength, recordOf } from '../text/article.js';
 import { farSays } from '../beams/held.js';
-import { docBox, accountCell, boardCell, accountAt, clearLeftOf } from '../plane/projection.js';
-import { lodOf } from '../plane/lod.js';
+import { docBox, accountCell, boardCell, accountAt, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf } from '../plane/projection.js';
+import { lodOf, residueDepth, markScale } from '../plane/lod.js';
 import { cmpAddr, accountOf, documentOf } from '../model/address.js';
 import { touches } from '../text/span.js';
 import { esc } from '../util.js';
-import { t, tHTML, addressedHTML } from '../strings.js';
+import { t, tHTML, addressedHTML, markCount } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Block} Block */
 /** @typedef {import('../links/links.js').Shown} Shown */
 
 /**
  * @typedef {Object} Node — one element of the linearization
- * @property {'board' | 'account' | 'document' | 'block' | 'link'} kind
- * @property {string} addr the board, the account, the document
+ * @property {'board' | 'account' | 'mark' | 'document' | 'block' | 'link'} kind
+ * @property {string} addr the board, the account, the document; a mark's, the name the plane draws its continuation under (P-PROJ's `markKey`), never an address
  * @property {number | null} pos a block's first position
  * @property {Shown | null} link a drawn link
  */
@@ -244,7 +258,27 @@ const below = (/** @type {string} */ addr) => !LAYER.atReadingScale(addr, CAM.de
 export const collapsed = () => !!focus && focus.kind === 'document' && below(focus.addr);
 
 /**
- * The children of a node, in record order.
+ * The continuation the plane draws as each account's one mark at a scale, the
+ * one drawn the stronger (P-LOD's `residueDepth`); null at the far scale, which
+ * draws clusters and no document.
+ * @param {number} scale
+ * @returns {number | null}
+ */
+const markDepth = (scale) => (lodOf(scale).name === 'far' ? null : residueDepth(scale).held);
+
+/** the documents the model knows exist under an account (M-REC's `known`), in record order: the boxes the plane draws there */
+const documentsUnder = (/** @type {string} */ account) => REC.known().filter((doc) => accountOf(doc) === account).sort(cmpAddr);
+
+/** the members of the mark a stop names (P-PROJ's `membersAt`, as the plane counts them): its account's documents its continuation holds, in record order; none for any other name */
+function membersOf(/** @type {string} */ key) {
+  const c = continuationOf(key);
+  return c ? membersAt(documentsUnder(c.account), c.k).get(c.account) || [] : [];
+}
+
+/**
+ * The children of a node, in record order: an account's, its documents with
+ * the stop for its mark before the mark's members (see the head), the mark
+ * read at the scale the camera is bound for.
  * @param {Node | null} node null = the plane's root
  * @returns {Promise<Node[]>}
  */
@@ -252,7 +286,14 @@ export async function childrenOf(node) {
   if (!node) return [BOARD];
   if (node.kind === 'board') return REC.accounts().filter((a) => !a.system).map((a) => ({ kind: /** @type {const} */ ('account'), addr: a.account, pos: null, link: null }));
   // an account's documents as the plane draws them: every box the model knows of under it, a covered one among them (M-REC's `known`)
-  if (node.kind === 'account') return REC.known().filter((doc) => accountOf(doc) === node.addr).sort(cmpAddr).map((doc) => ({ kind: /** @type {const} */ ('document'), addr: read.shown(doc), pos: null, link: null }));
+  if (node.kind === 'account') {
+    const docs = documentsUnder(node.addr), k = markDepth(CAM.destination().scale);
+    /** @type {Node[]} */
+    const out = docs.map((doc) => ({ kind: /** @type {const} */ ('document'), addr: read.shown(doc), pos: null, link: null }));
+    const first = k == null ? -1 : docs.findIndex((doc) => withinContinuation(doc, k));
+    if (k != null && first >= 0) out.splice(first, 0, { kind: 'mark', addr: markKey(node.addr, k), pos: null, link: null });
+    return out;
+  }
   if (node.kind === 'document') {
     const d = await PUMP.loadWhole(node.addr); if (!d) return [];
     /** @type {Node[]} */
@@ -301,6 +342,8 @@ function named(n, i, total) {
     const links = lk.arriving ? t('L.mirror.at-least', { n: lk.n }) : String(lk.n);
     return then(said('L.mirror.account', { account: n.addr, documents, links, empty: c.documents ? '' : ' — ' + t('B1.empty_subspace') }, { account: 'id' }));
   }
+  // a mark's stop: its count, the words the mark shows (ST's `markCount`)
+  if (n.kind === 'mark') return then(plainly(markCount(membersOf(n.addr).length, REC.countsExact())));
   if (n.kind === 'document') {
     // a version named by its own first line, as its box's label names it (T-LAYER's `firstOf`; FP-22) — the document's words
     // quoted, the client's words in their place bracketed, none at a withheld box, whose state says its words — then its
@@ -340,8 +383,8 @@ function named(n, i, total) {
   return plainly('');
 }
 
-/** a node's level in the tree: board › account › document › span | link, a withheld run's links a level below the run (see the head) */
-const levelOf = (/** @type {Node} */ n) => (n.kind === 'board' ? 1 : n.kind === 'account' ? 2 : n.kind === 'document' ? 3 : n.kind === 'link' && n.link && n.link.run ? 5 : 4);
+/** a node's level in the tree: board › account › document | mark › span | link, a withheld run's links a level below the run (see the head) */
+const levelOf = (/** @type {Node} */ n) => (n.kind === 'board' ? 1 : n.kind === 'account' ? 2 : n.kind === 'document' || n.kind === 'mark' ? 3 : n.kind === 'link' && n.link && n.link.run ? 5 : 4);
 
 /**
  * Move the walk to item `i` of `sibs` — the one way it moves. A landing
@@ -400,10 +443,11 @@ export function render() {
   for (let i = lo; i < hi; i++) {
     const n = siblings[i];
     const expanded = n.kind === 'document' ? ` aria-expanded="${!below(n.addr)}"` : n.kind === 'block' && n.pos != null && runEnds(n.addr, n.pos).length ? ' aria-expanded="true"' : '';
+    const popup = n.kind === 'mark' ? ' aria-haspopup="dialog"' : '';
     const located = isLocated(n, at) ? ' aria-current="location"' : '';
     const by = describedBy(n, i, said);
     const described = by ? ` aria-describedby="${by}"` : '';
-    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${named(n, i, total).html}</li>`;
+    html += `<li role="treeitem" id="walk-${i}" tabindex="${i === idx ? 0 : -1}" aria-level="${lvl}" aria-posinset="${i + 1}" aria-setsize="${total}" aria-selected="${i === idx}"${expanded}${popup}${located}${described} data-i="${i}" data-addr="${esc(n.addr)}"${n.pos != null ? ` data-pos="${n.pos}"` : ''}>${named(n, i, total).html}</li>`;
     if (holdsRuns(n, said)) pieces += `<div id="${pieceId(i)}" hidden>${esc(otherRuns(n, said))}</div>`;
   }
   html += `</ul><div id="${DESCRIPTION}" hidden>${esc(said ? said.words : '')}</div>${pieces}`;
@@ -569,16 +613,38 @@ function moved() {
 }
 
 /**
+ * The continuation of the mark whose stop the walk's level holds, where that
+ * mark holds a document (see the head): the walk lists the document after
+ * the mark's stop; null where its level holds no mark, or the mark holds the
+ * document not.
+ * @param {string} addr
+ * @returns {{account: string, k: number} | null}
+ */
+function heldBy(addr) {
+  const stop = siblings.find((n) => n.kind === 'mark'), c = stop ? continuationOf(stop.addr) : null, doc = documentOf(addr) || addr;
+  return c && accountOf(doc) === c.account && withinContinuation(doc, c.k) ? c : null;
+}
+
+/**
  * The camera follows the focus: fly to the element at its level's scale — a
- * document's outline framed, no nearer than the reading size; a span's line,
- * its column framed with both its margins, at the landing's em (T-LAYER's
- * `frameOf`; P-CAM's `landingPx`) — nowhere where the document's extent is
- * read first and a later move overtook this one meanwhile.
+ * mark's stop, and a document the mark it stands before holds (`heldBy`), the
+ * mark's cell centred at the scale nearest the camera's that draws it as one
+ * mark (P-LOD's `markScale`), the document never framed, its ring standing on
+ * the mark; any other document's outline framed, no nearer than the reading
+ * size; a span's line, its column framed with both its margins, at the
+ * landing's em (T-LAYER's `frameOf`; P-CAM's `landingPx`) — nowhere where the
+ * document's extent is read first and a later move overtook this one
+ * meanwhile.
  * @param {number} move the move's count
  */
 async function flyToFocus(move) {
   if (!focus) return;
-  if (focus.kind === 'board') await CAM.fly(CAM.viewForCell(boardCell(focus.addr), 0.92), 300);
+  const mark = focus.kind === 'mark' ? continuationOf(focus.addr) : focus.kind === 'document' ? heldBy(focus.addr) : null;
+  if (mark) {
+    const c = continuationCell(mark.account, mark.k);
+    await CAM.fly({ x: c.x + c.w / 2, y: c.y + c.h / 2, scale: markScale(mark.k, CAM.destination().scale) }, 300);
+  } else if (focus.kind === 'mark') return;
+  else if (focus.kind === 'board') await CAM.fly(CAM.viewForCell(boardCell(focus.addr), 0.92), 300);
   else if (focus.kind === 'account') await CAM.fly(CAM.viewForCell(accountCell(focus.addr), 0.85), 300);
   else if (focus.kind === 'document') {
     const d = REC.doc(focus.addr); if (d.extent == null) await PUMP.loadWhole(focus.addr);
@@ -651,8 +717,10 @@ export async function enter() {
  * where a later move overtook it meanwhile it sets nothing. A landing may
  * name a link's end in the document (`end`: Back's return to the follow it
  * crossed): the walk stands on that link's item where the document's
- * elements list it, else on the span holding the position.
- * @param {string} addr a document, an account or a board
+ * elements list it, else on the span holding the position. A mark's name
+ * stands it on the mark's stop where the plane draws that mark at the scale
+ * the camera is bound for, else on the mark's account.
+ * @param {string} addr a document, an account or a board; a mark's name (P-PROJ's `markKey`)
  * @param {number | null} pos
  * @param {boolean} [byKey] a key made the act
  * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood (an act); false carries it only where the mirror held it (a camera's re-take)
@@ -661,8 +729,17 @@ export async function enter() {
 export async function focusTo(addr, pos, byKey = false, take = true, end = null) {
   const move = ++moves;
   const held = mirrorHolds();
-  const doc = documentOf(addr) ? read.shown(addr) : null, acct = accountOf(addr);
-  if (doc) {
+  // a mark's name is no address: read before any address is taken from it
+  const mark = continuationOf(addr);
+  const doc = !mark && documentOf(addr) ? read.shown(addr) : null, acct = mark ? mark.account : accountOf(addr);
+  if (mark) {
+    const A = among(await childrenOf(BOARD), { kind: 'account', addr: mark.account, pos: null, link: null });
+    const M = await childrenOf({ kind: 'account', addr: mark.account, pos: null, link: null });
+    if (move !== moves) return;
+    const i = M.findIndex((n) => n.kind === 'mark' && n.addr === addr);
+    stack = [{ siblings: [BOARD], idx: 0 }];
+    if (i >= 0) { stack.push({ siblings: A.sibs, idx: A.i }); setFocus(M, i); } else setFocus(A.sibs, A.i);
+  } else if (doc) {
     const d = REC.doc(doc);
     // the levels above the landing, each holding ITS OWN place in its siblings (so ← walks out to this document, this account)
     const A = among(await childrenOf(BOARD), { kind: 'account', addr: acct || '', pos: null, link: null });
@@ -700,19 +777,37 @@ const holdsPoint = (/** @type {{x: number, y: number, w: number, h: number}} */ 
 const inDocument = (/** @type {Node} */ n) => n.kind === 'document' || n.kind === 'block' || n.kind === 'link';
 
 /**
+ * The continuation's mark whose cell holds a world point at the camera's
+ * scale — the one the plane draws the stronger there — with its name and its
+ * members; null where no mark's cell holds it, or the mark holds no document
+ * (see the head).
+ * @param {number} x
+ * @param {number} y
+ * @returns {{key: string, members: string[]} | null}
+ */
+function markAt(x, y) {
+  const k = markDepth(CAM.cam.scale), acct = REC.board() ? accountAt(x, y, BOARD.addr) : null;
+  if (k == null || !acct || !holdsPoint(continuationCell(acct, k), x, y)) return null;
+  const key = markKey(acct, k), members = membersOf(key);
+  return members.length ? { key, members } : null;
+}
+
+/**
  * The document whose region holds a world point (T-LAYER's `regionOf`: its
- * outline and the strip its corner stands in), of those the index lists — as
- * the version its box shows, the region that version's (see the head); of
- * documents sharing the room past the sound depth, the first whose outline
- * holds it; null where no region does.
+ * outline and the strip its corner stands in), of those the index lists and
+ * the plane draws whole at the camera's scale — none a continuation's mark
+ * holds — as the version its box shows, the region that version's (see the
+ * head); of documents sharing the room past the sound depth, the first whose
+ * outline holds it; null where no region does.
  * @param {number} x
  * @param {number} y
  * @returns {string | null}
  */
 function documentAt(x, y) {
   let best = null, on = false;
+  const k = markDepth(CAM.cam.scale);
   for (const p of REC.places()) {
-    if (p.system) continue;
+    if (p.system || (k != null && withinContinuation(p.doc, k))) continue;
     // the room widened by the corner's strip: the region stands inside it — the region of the version the box shows
     const b = docBox(p.doc), left = clearLeftOf(p.doc), shown = read.shown(p.doc);
     if (x < b.x - left || x > b.x + b.w || y < b.y || y > b.y + b.h || !holdsPoint(LAYER.regionOf(shown), x, y)) continue;
@@ -738,7 +833,11 @@ export function kept() {
  * The focus follows the camera (rule 3): after a camera move — the wheel,
  * the camera key's drag, a zoom chord, PageDown — re-take it at the scale's
  * grain, in the re-take's order (see the head).
- * Nearer than far: the document whose region holds the view's centre, and the
+ * Nearer than far: a continuation's mark whose cell holds the view's centre
+ * (`markAt`) — the walk's own document kept where the mark holds it, a span
+ * or a link in it taken to the document whole, else the mark's stop; never
+ * the member under the centre, and no list opened. Else the document whose
+ * region holds the view's centre, and the
  * span in the column under it where that document stands at its own reading
  * scale (T-LAYER's fold and its one test); else the walk's own document, kept
  * while its region meets the visible view, a span or a link in it taken to
@@ -755,7 +854,15 @@ export async function retakeFromView(byKey = false) {
   const { x, y } = CAM.cam;
   const lod = lodOf(CAM.cam.scale);
   if (lod.name !== 'far' && lod.name !== 'far~mid') {
-    // 1. the document under the centre
+    // 1. a continuation's mark under the centre: the walk's own member kept, whole, else the mark
+    const mark = markAt(x, y);
+    if (mark) {
+      const own = focus && inDocument(focus) && mark.members.includes(documentOf(focus.addr) || focus.addr) ? focus : null;
+      if (own) { if (own.kind !== 'document') await focusTo(own.addr, null, byKey, byKey); }
+      else if (!focus || focus.addr !== mark.key) await focusTo(mark.key, null, byKey, byKey);
+      return;
+    }
+    // 2. the document under the centre
     const best = documentAt(x, y);
     if (best) {
       if (LAYER.atReadingScale(best)) {
@@ -771,13 +878,13 @@ export async function retakeFromView(byKey = false) {
       if (!focus || focus.addr !== best || focus.kind !== 'document') await focusTo(best, null, byKey, byKey);
       return;
     }
-    // 2. the walk's own document, while it is in view: below its reading scale its spans are no stops, so it stands whole
+    // 3. the walk's own document, while it is in view: below its reading scale its spans are no stops, so it stands whole
     if (focus && inDocument(focus) && LAYER.inView(focus.addr)) {
       if (focus.kind !== 'document' && !LAYER.atReadingScale(focus.addr)) await focusTo(focus.addr, null, byKey, byKey);
       return;
     }
   }
-  // 3. the place holding the centre: the account whose region holds it, else the board — the root alone where no board is held
+  // 4. the place holding the centre: the account whose region holds it, else the board — the root alone where no board is held
   const at = (REC.board() && accountAt(x, y, BOARD.addr)) || BOARD.addr;
   if (!focus || focus.addr !== at) await focusTo(at, null, byKey, byKey);
 }

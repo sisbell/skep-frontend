@@ -1,11 +1,12 @@
 // P-PROJ's test: reading order with the continuation (foundations §2.1); a
 // mint moves no place; siblings never collide; each continuation's cell
-// holds its documents and none shallower; the residue past the sound depth;
-// the clear strip left of a box; the account under a point and the board's
-// label cell.
+// holds its documents and none shallower; a mark's name read back, and its
+// members each account's documents its continuation holds; the residue past
+// the sound depth; the clear strip left of a box; the account under a point
+// and the board's label cell.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, boardLabelCell, clearLeftOf, continuationCell, withinContinuation, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
+import { slotOf, cellOf, pathOf, docBox, cellOfKey, accountAt, boardLabelCell, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf, G, DEPTH_SOUND, depthOfDoc, _reset } from './projection.js';
 
 test('the padded path: a board 3 digits, an account 5, a document 6', () => {
   assert.deepEqual(pathOf('1'), [1, 0, 0]);
@@ -60,6 +61,19 @@ test('a continuation\'s cell holds the documents at its depth and deeper, and no
     assert.ok(!inside(docBox(before)) && !withinContinuation(before, k), `document ${48 * k}, the grid's last before it, outside`);
   }
   assert.equal(continuationCell('1.0.1', 1).w, cellOfKey('1.0.1').w / G[5], 'the first continuation is a cell of the account\'s first grid');
+});
+
+test('a mark\'s name is its account and its continuation, read back whole; no address is one (issue #42)', () => {
+  assert.equal(markKey('1.0.1', 2), '1.0.1:2');
+  assert.deepEqual(continuationOf(markKey('1.0.1.1', 3)), { account: '1.0.1.1', k: 3 }, 'a sub-account\'s');
+  for (const name of ['1.0.1.0.3', '1.0.1', '1', '1.0.1:0', '1.0.1:x', ':1', '1.0.1.0.3:1']) assert.equal(continuationOf(name), null, `${name}: no mark's name`);
+});
+
+test('a mark\'s members are each account\'s documents its continuation holds, in address order, its newest last — a version member counted once, as its document — and none shallower (issue #42)', () => {
+  const docs = ['1.0.1.0.60', '1.0.1.0.3', '1.0.1.0.49', '1.0.1.0.49.2', '1.0.2.0.50', '1.0.1.0.48', '1.0.1.0.200'];
+  assert.deepEqual([...membersAt(docs, 1)], [['1.0.1', ['1.0.1.0.49', '1.0.1.0.60', '1.0.1.0.200']], ['1.0.2', ['1.0.2.0.50']]]);
+  assert.deepEqual([...membersAt(docs, 2)], [['1.0.1', ['1.0.1.0.200']]], 'continuation 2: from the 97th');
+  assert.deepEqual([...membersAt(['1.0.1.0.3', '1.0.1.0.48'], 1)], [], 'the first grid\'s documents stand whole: no member');
 });
 
 test('the continuation past the sound depth is exactly the cell its documents share', () => {

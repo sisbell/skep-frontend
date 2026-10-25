@@ -40,9 +40,10 @@
 // act's own (K-22); at a corner Enter takes the corner's act (K-57) and its
 // other keys are the platform's; in an overlay and at a landing's line every
 // key is the control's own; on the plane the walk's keys (K-1 … K-5) move
-// the walk, Enter activates the focus (K-7) and the paging keys page the
-// camera (K-6); while the scene stands its keys alone are read (`sceneKey`;
-// D5 M-4), and nothing under it takes one. Whether a key made an act is the
+// the walk, Enter activates the focus (K-7) — at a continuation's mark's stop
+// it opens the mark's list — and the paging keys page the camera (K-6);
+// while the scene stands its keys alone are read (`sceneKey`; D5 M-4), and
+// nothing under it takes one. Whether a key made an act is the
 // focus owner's one reading, handed in by the app with each key (`Ctx.byKey`;
 // FP-20), so a teleport or a re-take a key made puts the platform's focus on
 // its landing wherever the key was pressed, the ring drawn (rules 10, 12). →
@@ -70,6 +71,7 @@ import * as SEL from '../overlays/selection.js';
 import * as SCENE from '../scene/scene.js';
 import * as LINE from '../line/line.js';
 import * as TRAILLIST from '../overlays/trail-list.js';
+import * as MARKLIST from '../overlays/mark-list.js';
 import * as VERSIONS from '../overlays/versions.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
 import * as CAM from '../plane/camera.js';
@@ -373,7 +375,9 @@ export function esc() {
 /**
  * Enter activates the focus (K-7): a place goes — the board, an account or a
  * document, each a teleport pushed on the trail, a document's made at the
- * document, where the face of a failure known at the act stands (N-GO) — a withheld
+ * document, where the face of a failure known at the act stands (N-GO) — a
+ * continuation's mark opens its members' list, which takes the focus on its
+ * newest row (O-MARK-LIST); a withheld
  * run shows its face whole (§2.1), C-67's pointer its offered act, a LEAP to
  * the edition its claim names made at the run, reached by Tab (K-58); any
  * other span is selected whole (D8), a link's
@@ -387,6 +391,7 @@ async function activateFocus(byKey) {
   if (!f) { await WALK.enter(); return; }
   if (f.kind === 'account') { await GO.toAccount(f.addr, byKey); return; }
   if (f.kind === 'board') { await GO.wholeBoard(byKey); return; }
+  if (f.kind === 'mark') { await MARKLIST.open(f.addr, byKey); return; }
   if (f.kind === 'document') { await GO.leapTo(f.addr, { how: 'key', byKey, site: { span: { addr: f.addr, pos: 1 } } }); return; }
   if (f.kind === 'block' && f.pos != null) {
     const b = REC.blockByPos(f.addr, f.pos);

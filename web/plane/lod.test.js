@@ -1,10 +1,12 @@
 // P-LOD's test: S3's bands — the text bands at the plane's standard type —
 // and S1's mount thresholds below the glyph band; the continuation a scale
 // draws as one mark — at HOME the first (foundations §2.1), crossfading
-// through the far band, the one past the sound depth at any scale.
+// through the far band, the one past the sound depth at any scale — and the
+// scale nearest any other at which a continuation is that one mark at full
+// strength.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lodOf, residueDepth, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, clusterGrain } from './lod.js';
+import { lodOf, residueDepth, markScale, LOD_FAR_LO, LOD_FAR_HI, LOD_TXT_LO, LOD_TXT_HI, MOUNT_EM, UNMOUNT_EM, clusterGrain } from './lod.js';
 import { DOC_W, G, LEAF, DEPTH_SOUND, accountCell } from './projection.js';
 import { STANDARD_FS } from './layout.js';
 import * as CAM from './camera.js';
@@ -50,6 +52,19 @@ test('through the far band the mark crossfades with the boxes it holds; the clic
 
 test('at any scale the continuation past the sound depth is a mark', () => {
   assert.deepEqual(residueDepth(1e12), { k: DEPTH_SOUND + 1, fade: 0, held: DEPTH_SOUND + 1 });
+});
+
+test('each continuation is the one mark at full strength at the scale nearest any other that draws it so, the documents drawn there; a scale already drawing it so is kept (issue #42)', () => {
+  const far = 1e-6, home = (LOD_FAR_HI * 2) / DOC_W;
+  for (let k = 1; k <= DEPTH_SOUND + 1; k++) {
+    for (const s of [far, home, (LOD_FAR_LO * 7 ** k) / DOC_W, 1, 1e3, 1e12]) {
+      const at = markScale(k, s);
+      assert.deepEqual(residueDepth(at), { k, fade: 0, held: k }, `continuation ${k} from scale ${s}: the one mark at full strength at ${at}`);
+      assert.notEqual(lodOf(at).name, 'far', `continuation ${k}: the documents drawn there`);
+    }
+  }
+  assert.equal(markScale(1, home), home, 'at a scale already drawing the first as the mark: that scale');
+  assert.equal(markScale(DEPTH_SOUND + 1, 1e12), 1e12, 'the continuation past the sound depth: a mark at any nearer scale');
 });
 
 test('the cluster grain is accounts while their cell is ~18 px', () => {

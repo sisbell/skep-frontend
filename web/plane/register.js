@@ -16,6 +16,7 @@
 // label, the short stroke P-RENDER draws for a link whose far document the
 // plane draws nowhere; the focus ring its gap outside its element's box and
 // its stroke's width, which set how far inside the visible view it is held;
+// a target a pointer presses on the plane its least size each way;
 // the hold its gap below the one line, where a label and a corner whose
 // place has risen under the line stand level (FP-26); the corner its size
 // whole and compact, its padding and its gap from the text, which T-LAYER
@@ -113,6 +114,14 @@ export const TAIL = Object.freeze({ length: 10, gap: 3 });
  * out of it marked on the facing edge
  */
 export const RING = Object.freeze({ gap: 3, width: 2.5 });
+
+/**
+ * A target on the plane a pointer presses, at the least `min` px each way
+ * (WCAG 2.2 SC 2.5.8): a continuation's mark is two targets — its newest
+ * member's label, and the rest of the mark — only where it holds two of this
+ * size (P-RENDER's)
+ */
+export const TARGET = Object.freeze({ min: 24 });
 
 /**
  * The hold (FP-26): a sign whose place has risen under the one line — a

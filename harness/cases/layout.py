@@ -634,8 +634,8 @@ def label_view(ctx):
     view below the one line, and each mid connection drawn — its two places, named as a pair in sorted order, its count,
     the count set on it, and its places' centres, a document's its outline's, a mark's the centre of its continuation's
     cell — and each tail drawn: its site, its links and their far documents, where its stroke leaves and ends; the shape of
-    each held label's place (issue #169), by its kind and place — a document's outline's rects, a mark's cell, an
-    account's cell — the places the one line names, and for each document labelled the lead its label sets (the page's
+    each held label's place (issue #169), by its kind and place — a document's outline's rects, a mark's cell for each
+    of its labels (issue #42), an account's cell — the places the one line names, and for each document labelled the lead its label sets (the page's
     first-line rule) and where its first line stands in its fold (issue #23)"""
     return ctx.js('''(async () => {
       const P = await import('./plane/projection.js');
@@ -659,7 +659,7 @@ def label_view(ctx):
       const inner = (f) => { const g = S.constants.GUTTER / 2 * f.fs; return scr({x: f.row.x + g, y: f.row.y + g, w: f.row.w - 2 * g, h: f.row.h - 2 * g}); };
       const rows = Object.fromEntries(boxesDrawn ? places.filter((q) => !held.has(q.doc) && crosses(scr(S.boxOf(q.doc)), view)).map((q) => [q.doc, inner(S.fold(q.doc))]) : []);
       // the shape of each held label's place: a document's outline's rects, a mark's cell, an account's cell
-      const shapeOf = (l) => l.kind === 'doc' ? S.fold(l.place).rects.map(scr) : l.kind === 'mark' ? [cell(l.place)] : [scr(S.accountCell(l.place))];
+      const shapeOf = (l) => l.kind === 'doc' ? S.fold(l.place).rects.map(scr) : ['mark', 'newest', 'member'].includes(l.kind) ? [cell(l.place)] : [scr(S.accountCell(l.place))];
       // each document labelled: the lead the page's first-line rule gives it and where its first line stands in its fold, on screen
       const leads = Object.fromEntries(labels.filter((l) => l.kind === 'doc').map((l) => { const at = S.fold(l.place).lead; return [l.place, {words: S.firstLine(l.place).lead, at: scr({x: at.x, y: at.y, w: 0, h: at.h})}]; }));
       return {lod: lod.name, view, seen: {x: 0, y: top, w: p.VW, h: p.VH - top}, labels, out: S.labelsLeftOut(), marks: marks.map((m) => ({place: m.key, rect: m.rect, lines: m.lines})), leads,
@@ -687,7 +687,7 @@ def place_of(v, label):
         return v['board']
     if kind in ('cluster', 'frame'):
         return next((a['rect'] for a in v['accounts'] if a['place'] == place), None)
-    if kind == 'mark':
+    if kind in ('mark', 'newest', 'member'):
         return next((m['rect'] for m in v['marks'] if m['place'] == place), None)
     if kind == 'doc':
         return v['docs'].get(place)
@@ -864,7 +864,7 @@ def labels_hold(r, name, v):
         r.check(bool(must) and set(must) <= labelled and set(whole) <= labelled | named,
                 'home: every document standing whole in the visible view whose outline\'s first row holds its address at the label floor carries its label, and every other is named left out by the rule that left it out',
                 {'in_view': len(whole), 'rows_holding': len(must), 'unlabelled': sorted(set(must) - labelled)[:8], 'unnamed': sorted(set(whole) - labelled - named)[:8]})
-        r.check(any(m['lines'] for m in v['marks']), 'home: the continuation drawn as one mark carries its label', [m['lines'] for m in v['marks']])
+        r.check(any(m['lines'] for m in v['marks']), 'home: the continuation drawn as one mark carries its count', [m['lines'] for m in v['marks']])
     if name == 'whole-board':
         named = {(l['kind'], l['place']) for l in labels}
         r.check(('board', '1') in named and ('cluster', '1.0.1') in named, 'whole-board: the board and the acting account\'s cluster carry their labels', sorted(named))

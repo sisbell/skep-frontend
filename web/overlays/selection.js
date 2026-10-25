@@ -168,8 +168,10 @@ export function render() {
 
 /**
  * A slot's act (by chord or by its button); where no selection stands, the
- * walk's focused span is selected first, whole (D5 §1.6). The act's card
- * takes the focus where a key made the act (rule 16).
+ * walk's focused span is selected first, whole (D5 §1.6), and off a span
+ * "see the links" asks for the links at the walk's place — none at a
+ * continuation's mark, which is no document. The act's card takes the focus
+ * where a key made the act (rule 16).
  * @param {'wrote' | 'uses' | 'links' | 'follow' | 'scene'} which
  * @param {boolean} [byKey] a key made the act: the card takes the focus; a follow's landing draws the ring
  */
@@ -177,7 +179,7 @@ export function act(which, byKey = false) {
   if (!sel) {
     const f = WALK.current();
     if (f && f.kind === 'block' && f.pos != null) { sel = wholeBlock(f.addr, f.pos); LAYER.placeSelection(sel); markDirty(); }
-    else { if (f && which === 'links') LINKS.show(f.addr, byKey); return; }
+    else { if (f && f.kind !== 'mark' && which === 'links') LINKS.show(f.addr, byKey); return; }
   }
   const span = sel;
   const { addr, pos, width } = span;

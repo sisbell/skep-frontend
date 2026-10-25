@@ -13,7 +13,8 @@
 // identifier's face (`addressedHTML`); the client's words standing in a
 // document's first line's place are bracketed (`bracketed`, `withheldLine`);
 // when a thing was made is said by `dated`, from the board's own testimony and
-// never from the reader's clock, in one form of a date on every surface;
+// never from the reader's clock, in one form of a date on every surface; a
+// continuation's mark's count is said in what it counts by `markCount`;
 // `pinned` lists the pinned entries for the gate's text case, which holds each
 // to its source.
 // Rules: FP-1, FP-2, FP-13, FP-32, FP-34.
@@ -104,7 +105,7 @@ export const STRINGS = {
   'B1.see-links': { text: 'see the links', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4' },
   'B1.follow': { text: 'follow', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S6' },
   'B1.side-by-side': { text: 'read side by side', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S9' },
-  'B1.show-more': { text: 'show more', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4' },
+  'B1.show-more': { text: 'show more', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4; a continuation\'s mark\'s list' },
   'B1.withheld-run': { text: 'withheld · ⟨owner⟩ (⟨account⟩) · ⟨width⟩ positions · origin ⟨origin⟩', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S7' },
 
   // ---- DRAFT: designs/foundations.md ----------------------------------------
@@ -176,7 +177,6 @@ export const STRINGS = {
   'F.scene.link': { text: 'a link — a different relation, drawn differently', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S9' },
   'F.scene.relevel': { text: 're-level', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S9' },
   'F.scene.dismiss': { text: 'dismiss the scene', cls: 'DRAFT', source: 'designs/plane.js', screen: 'B1-S9' },
-  'F.residue.newest': { text: '+⟨n⟩ more — newest ⟨label⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S2' },
   'F.lens.owner': { text: 'owner', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4' },
   'F.lens.type': { text: 'type', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4' },
   'F.lens.endorsement': { text: 'endorsement', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S4' },
@@ -254,6 +254,11 @@ export const STRINGS = {
   'L.moment.gone': { text: 'this moment no longer waits — the shell has ended it', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },
   'L.walk.waits': { text: '⟨walk⟩ · ⟨step⟩ — waits on you', cls: 'DRAFT', source: '', screen: 'the one line', lane: true },
   'L.at-position': { text: 'at position ⟨p⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
+  // a continuation's mark (`markCount`): its count in what it counts — the words of the target that opens its list, its stop's
+  // in the ARIA mirror and its list's caption; and the name and place of the member the walk's ring stands on, on the mark
+  'L.mark.count': { text: '⟨n⟩ newer documents', cls: 'DRAFT', source: '', screen: 'a continuation\'s mark; its list; the ARIA mirror', lane: true },
+  'L.mark.count.1': { text: '1 newer document', cls: 'DRAFT', source: '', screen: 'a continuation\'s mark; its list; the ARIA mirror', lane: true },
+  'L.mark.member': { text: '⟨name⟩ · ⟨i⟩ of ⟨n⟩', cls: 'DRAFT', source: '', screen: 'a continuation\'s mark', lane: true },
   // the anatomy card's lineage by its claims' authority: a claimant the owner row does not name, after its claim on a
   // row; the line the claims without authority stand behind; each of them listed as an assertion — its `.you` form
   // where the reader is the claimant, the verb agreeing — with what the claimant is to the links
@@ -538,6 +543,16 @@ export function typeName(ty) {
 /** a count noun: `one` where n is 1, else `many` with ⟨n⟩ filled */
 export const plural = (/** @type {number} */ n, /** @type {string} */ one, /** @type {string} */ many) =>
   n === 1 ? t(one) : t(many, { n });
+
+/**
+ * A continuation's mark's count in what it counts (`L.mark.count`): its
+ * members, "≥ ⟨n⟩" where the counts are no more than a lower bound — the
+ * same words on the plane, at the mark's stop in the ARIA mirror and as its
+ * list's caption.
+ * @param {number} n
+ * @param {boolean} exact the index's counts are exact
+ */
+export const markCount = (n, exact) => (exact ? plural(n, 'L.mark.count.1', 'L.mark.count') : t('L.mark.count', { n: t('L.lower-bound', { n }) }));
 
 /** the hour an hourly time record's testimony leaves open, in milliseconds: the commit fell within it, after the record's time */
 const HOUR_MS = 60 * 60 * 1000;

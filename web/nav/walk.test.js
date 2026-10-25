@@ -12,7 +12,11 @@
 // sets nothing and flies nowhere; in a document folded into columns the
 // camera follows the walk to a span's line in its column and to the outline
 // framed no nearer than reading size; the grain below a document is the
-// document's own and the re-take's order holds at every band; each box is
+// document's own and the re-take's order holds at every band; a
+// continuation the plane draws as one mark is one stop before its members,
+// named by its count, the camera flown to the mark for each of them, and a
+// re-take over it takes the mark or keeps a member, never the member under
+// the centre; each box is
 // walked as the version it shows; the page's own death takes the mirror down
 // and the walk stays on a covered draft; a withheld run's ends stand a level
 // below its item, counted and marked as the symbols are; and where no board
@@ -28,11 +32,11 @@ import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import { withheldBlockHTML, entitlementArm, articleHTML, copyText } from '../text/article.js';
-import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, DOC_W } from '../plane/projection.js';
-import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
+import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, continuationCell, DOC_W } from '../plane/projection.js';
+import { lodOf, residueDepth, markScale, LOD_TXT_LO } from '../plane/lod.js';
 import { placeOf, STANDARD_FS, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
-import { STRINGS, t, tHTML } from '../strings.js';
+import { STRINGS, t, tHTML, markCount } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
 import * as WALK from './walk.js';
@@ -803,6 +807,52 @@ test('a document\'s region holds its corner\'s strip: a re-take over the strip t
   assert.ok(!LAYER.inView(D) && !LAYER.inView(E), 'neither document in view');
   await WALK.retakeFromView(true);
   assert.deepEqual(walkAt(), ['account', '1.0.1', null], 'the account: never D, whose text is out of view');
+});
+
+test('where the plane draws a continuation as one mark, the account\'s level holds one stop for the mark before its members, each a stop still in record order, the mark\'s named by its count\'s words; stepping onto it and among its members flies the camera to the mark, never framing a member, and reads none (issue #42\'s design decision: "every member stays a stop, in record order, after one stop for the mark itself")', async () => {
+  index(Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)));
+  try {
+    CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+    await WALK.focusTo('1.0.1:1', null, true);
+    const sibs = WALK.siblingsNow();
+    assert.deepEqual([walkAt(), sibs.length, sibs.findIndex((n) => n.kind === 'mark')], [['mark', '1.0.1:1', null], 61, 48], 'the mark\'s stop, after the oldest 48, before its twelve');
+    assert.deepEqual(sibs.slice(49).map((n) => [n.kind, n.addr]), Array.from({ length: 12 }, (_, i) => ['document', '1.0.1.0.' + (49 + i)]), 'its members after it, in record order');
+    assert.ok(WALK.nameOf(sibs[48], 48, sibs.length).startsWith(markCount(12, true) + ' '), `named by its count: ${WALK.nameOf(sibs[48], 48, sibs.length)}`);
+    const asked = fake.asked.length, c = continuationCell('1.0.1', 1), toMark = { x: c.x + c.w / 2, y: c.y + c.h / 2, scale: markScale(1, CAM.cam.scale) };
+    for (const step of [1, 2]) {
+      await run(WALK.key('down'));
+      assert.deepEqual(walkAt(), ['document', '1.0.1.0.' + (48 + step), null], `↓ ${step}: the member`);
+      const v = CAM.view();
+      assert.ok(Math.abs(v.x - toMark.x) < 1e-6 && Math.abs(v.y - toMark.y) < 1e-6 && Math.abs(v.scale / toMark.scale - 1) < 1e-9, `↓ ${step}: the camera on the mark at a scale drawing it, never the member framed: ${JSON.stringify(v)}`);
+      assert.deepEqual(residueDepth(v.scale), { k: 1, fade: 0, held: 1 }, `↓ ${step}: the member inside the mark drawn there`);
+    }
+    assert.equal(fake.asked.length, asked, 'no member read');
+  } finally {
+    index([D, E]);
+  }
+});
+
+test('a re-take over a continuation\'s mark keeps a focus already on one of its members — a span in one taken to the member whole — and else takes the mark, never the member under the view\'s centre (issue #42\'s design decision, changing #141 there)', async () => {
+  await PUMP.loadWhole(C1);
+  index(Array.from({ length: 60 }, (_, i) => '1.0.1.0.' + (i + 1)));
+  try {
+    const home = CAM.viewForCell(accountCell('1.0.1'), 0.85), over = (/** @type {string} */ doc) => at(middle(docBox(doc)), home.scale);
+    await WALK.focusTo(D, 15);
+    over('1.0.1.0.52');
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['mark', '1.0.1:1', null], 'the walk on another document: the mark, never the member under the centre');
+    await WALK.focusTo('1.0.1.0.55', null);
+    over('1.0.1.0.52');
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['document', '1.0.1.0.55', null], 'on a member: kept');
+    await WALK.focusTo(C1, 11);
+    assert.deepEqual(walkAt(), ['block', C1, 11]);
+    over('1.0.1.0.52');
+    await WALK.retakeFromView(true);
+    assert.deepEqual(walkAt(), ['document', C1, null], 'on a span of a member: the member whole');
+  } finally {
+    index([D, E]);
+  }
 });
 
 // placed last: it lists a document no test above meets, and lists the index back as it found it

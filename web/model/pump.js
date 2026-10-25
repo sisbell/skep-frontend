@@ -943,7 +943,8 @@ const nameOf = (/** @type {Refusal} */ r) => r.name;
  * drop has emptied it; a version the box does not show none. The mark draws
  * its members' count and its newest's label from the index, which no read
  * brings, and the band fades its depth-k boxes in below every size a read
- * serves; a member is read whole when it is the focus (`loadWhole`).
+ * serves; a member is read whole where a jump or the walk's camera frames it
+ * (`loadWhole`), and never as the walk steps among the mark's members.
  * @param {number} [pad]
  * @returns {Doc[]}
  */

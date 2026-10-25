@@ -136,7 +136,7 @@ test('a label reaching past the viewport is left out', () => {
 test('a first line given room for several wraps down to its place\'s bottom, the last line it keeps ending in its ellipsis', () => {
   const r = run([label([part('+≥ 470 more — newest .0.1012', 'wrap'), part('RES-5 — any user may create agent sub-accounts (RULED 2026-08-24)', 'fill')], { kind: 'mark', place: '1.0.1:1', within: { x: 10, y: 10, w: 61, h: 5 * LH } })]);
   const lines = texts(r);
-  assert.deepEqual(lines.slice(0, 3), ['+≥ 470 more', '— newest', '.0.1012'], 'the count set whole at its spaces, the newest member\'s address a word of its own');
+  assert.deepEqual(lines.slice(0, 3), ['+≥ 470 more', '— newest', '.0.1012'], 'a count set whole at its spaces, an address in it a word of its own');
   assert.deepEqual(lines.slice(3), ['RES-5 — any', 'user may…']);
   for (const l of r.set[0].lines) assert.ok(l.rect.w <= 61);
 });
@@ -341,7 +341,7 @@ test('a held label\'s one line: its head whole, else none; a badge kept whole be
   assert.deepEqual(at(60).map(([s]) => s), ['.0.3'], 'the badge dropped where it does not fit beside the address');
   assert.equal(heldLine(parts, 20, measure), null, 'the address wider than the room: no label, never an address cut');
   const mark = [part('+≥ 470 more — newest .0.1012', 'wrap'), part('RES-5 — any user', 'fill')];
-  assert.deepEqual(heldLine(mark, 260, measure)?.map((m) => m.text), ['+≥ 470 more — newest .0.1012', 'RES-5 — any user'], 'a mark\'s count its head, set whole on its one line, its newest\'s first line beside it');
+  assert.deepEqual(heldLine(mark, 260, measure)?.map((m) => m.text), ['+≥ 470 more — newest .0.1012', 'RES-5 — any user'], 'a count its head, set whole on its one line, a first line beside it');
   assert.deepEqual(heldLine(mark, 200, measure)?.map((m) => m.text), ['+≥ 470 more — newest .0.1012'], 'room for one word of the first line: it is dropped');
   assert.equal(heldLine(mark, 120, measure), null, 'the count wider than the room: no label, never the count wrapped or cut');
 });

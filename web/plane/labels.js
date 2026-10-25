@@ -256,7 +256,7 @@ export const lineHeight = (/** @type {number} */ px) => sizeOf(px) * LINE_BOX;
  * @property {number} end the row's end, on screen
  */
 
-/** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'doc' | 'connection' | 'tail' | 'pip'} LabelKind the place a label names; 'connection' a mid connection's count; 'tail' a tail's far end in words, or its count; 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
+/** @typedef {'board' | 'cluster' | 'frame' | 'mark' | 'newest' | 'member' | 'doc' | 'connection' | 'tail' | 'pip'} LabelKind the place a label names; 'mark' a continuation's mark's count, 'newest' its newest member's label and 'member' the name and place of the member the walk's ring stands on, each under the mark's name; 'connection' a mid connection's count; 'tail' a tail's far end in words, or its count; 'pip' a trail pip's number, which P-RENDER draws over the labels with the trail and the pass never sets */
 
 /**
  * @typedef {Object} Label — a label a drawing function hands the pass

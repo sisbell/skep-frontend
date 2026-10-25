@@ -4,7 +4,7 @@
 // words made elsewhere set as markup in their faces, each address M-ADDR
 // reads in them the identifier's and nothing else; a time said in the one
 // form of a date, "not recorded" or "on or before" where the board's
-// testimony leaves it so;
+// testimony leaves it so; a continuation's mark's count in what it counts;
 // the entries no design document carries are listed; and every accessible name the page
 // sets is read from ST — none stands in the markup, and none is written as a
 // literal in a module.
@@ -12,7 +12,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated } from './strings.js';
+import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, markCount } from './strings.js';
 
 test('every entry is classed and sourced', () => {
   for (const [id, e] of Object.entries(STRINGS)) {
@@ -60,6 +60,10 @@ test('a time is said in one form of a date — the day, the month in words, the 
   assert.equal(dated({ at: 8, time: late, from: 'anchor' }), t('L.time.on-or-before', { date: '13 March 2026' }), 'the hour after 23:30 ends on the 13th');
   assert.equal(dated({ at: 9, time: null, from: null }), t('F.slot.not-recorded'));
   assert.equal(dated({ at: null, time: null, from: null }), 'not recorded');
+});
+
+test('a continuation\'s mark\'s count says what it counts — "152 newer documents", one in its own words — and is a lower bound where the counts are (issue #42\'s design decision)', () => {
+  assert.deepEqual([markCount(152, true), markCount(1, true), markCount(152, false)], ['152 newer documents', '1 newer document', '≥ 152 newer documents']);
 });
 
 test('the lane\'s own strings are listed for the report', () => {

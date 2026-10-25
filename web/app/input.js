@@ -46,9 +46,12 @@
 // nowhere — lists its links or opens the card of its one (O-ANATOMY's
 // `fromTail`), at any scale, before any place under it acts; an outlined run
 // of an arrival in several runs, below its document's reading scale, is a
-// step to it (N-GO's `stepTo`; FP-21); a continuation's mark is a teleport
-// to its newest member (foundations §2.1); below the readable threshold a
-// document is a place wherever the pointer falls, bars or mounted text
+// step to it (N-GO's `stepTo`; FP-21); a continuation's mark is two targets
+// (P-RENDER's `residueAtScreen`): the band its newest member's label stands
+// in, a teleport to that member — the version its box shows — and the rest
+// of the mark, which opens its members' list (O-MARK-LIST), the pointer's
+// shape over each its own while it hovers there (`aim`); below the readable
+// threshold a document is a place wherever the pointer falls, bars or mounted text
 // alike — a teleport to the version its box shows, which P-RENDER's hit
 // test answers (FP-22); each LEAP a click makes is made where it fell, where
 // the face of a failure known at the act, or its reaching, stands (N-GO);
@@ -99,6 +102,7 @@ import * as HOST from '../overlays/host.js';
 import * as SEL from '../overlays/selection.js';
 import * as LINKS from '../overlays/links-card.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
+import * as MARKLIST from '../overlays/mark-list.js';
 import * as LINE from '../line/line.js';
 import * as LK from '../links/links.js';
 import * as SCENE from '../scene/scene.js';
@@ -164,7 +168,7 @@ export function attach(els) {
     drag = { px: e.clientX, py: e.clientY, moved: 0, cameraKey: false };
   });
   els.plane.addEventListener('pointermove', (e) => {
-    if (!drag) return;
+    if (!drag) { aim(els.plane, e.clientX, e.clientY); return; }
     const dx = e.clientX - drag.px, dy = e.clientY - drag.py;
     drag.px = e.clientX; drag.py = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
     if (drag.cameraKey) { GO.takeOver(); CAM.panBy(dx, dy); CAM.markDirty(); }
@@ -175,6 +179,7 @@ export function attach(els) {
     if (d.cameraKey && d.moved > 4) { WALK.retakeFromView(); return; }
     if (d.moved <= 4) clickPlane(e.clientX, e.clientY);
   });
+  els.plane.addEventListener('pointerleave', () => aim(els.plane, NaN, NaN));
   // the text layer's drag, T-LAYER's press: the platform selects while it stands; its selection becomes the page's as the
   // button is released — the press ended first, then the span read, with no frame between them, from the article the drag
   // was made in — and, while no press stands, whenever the platform's changes. A cancel or a context menu ends the press
@@ -235,6 +240,20 @@ export function attach(els) {
 
 let retakeT = 0;
 function scheduleRetake() { clearTimeout(retakeT); retakeT = window.setTimeout(() => WALK.retakeFromView(), 220); }
+
+/**
+ * The pointer's shape over the plane where no drag stands (see the head):
+ * `to-doc` over a continuation's mark's newest label, which goes to that
+ * member, `to-list` over the rest of the mark, which opens its list, neither
+ * anywhere else — the plane's own classes, which the style reads.
+ * @param {{classList: {add: (c: string) => void, remove: (c: string) => void}}} plane
+ * @param {number} px
+ * @param {number} py
+ */
+function aim(plane, px, py) {
+  const hit = RENDER.residueAtScreen(px, py), at = hit ? (hit.target === 'newest' ? 'to-doc' : 'to-list') : null;
+  for (const c of ['to-doc', 'to-list']) { if (c === at) plane.classList.add(c); else plane.classList.remove(c); }
+}
 
 /** does a node — the element or the text a selection starts at — lie in a withheld run's placeholder? */
 function inPlaceholder(/** @type {Node | null} */ n) {
@@ -387,7 +406,7 @@ function takeSelection() {
   SEL.select(span.addr, span.pos, span.width);
 }
 
-/** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark goes to its newest member; a place goes; an account at far goes to its region, where a board is held; else a card or scene still reading ends, the overlay standing under it standing, or else the overlay dismisses */
+/** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes; an account at far goes to its region, where a board is held; else a card or scene still reading ends, the overlay standing under it standing, or else the overlay dismisses */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   LINE.act();
   const tail = RENDER.tailAtScreen(px, py);
@@ -399,7 +418,7 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   const residue = RENDER.residueAtScreen(px, py);
   /** the point of the plane the click fell on: where a teleport it makes is made */
   const site = { world: { x: CAM.wx(px), y: CAM.wy(py) } };
-  if (residue) { GO.leapTo(GO.shownIn(residue.newest), { how: 'click', site }); return; }
+  if (residue) { if (residue.target === 'newest') GO.leapTo(GO.shownIn(residue.newest), { how: 'click', site }); else void MARKLIST.open(residue.key, false); return; }
   const doc = RENDER.docAtScreen(px, py);
   if (doc) {
     if (!LAYER.atReadingScale(doc)) { GO.leapTo(doc, { how: 'click', site }); return; }

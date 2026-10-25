@@ -12,16 +12,21 @@
 // empty one saying so (law 13), the mid connections behind, the
 // continuations too small to stand whole as one mark each (foundations §2.1;
 // P44; P-LOD's `residueDepth`), crossfading with the boxes they hold through
-// the far band — law 13's count of what it holds and its newest member's
-// label, its act a teleport to that member — and the documents as their
+// the far band — law 13's count of what it holds (P-PROJ's `membersAt`), its
+// members' count in what it counts (ST's `markCount`) — the mark two targets
+// where its visible part holds two of P-REG's TARGET each way: a band at its
+// foot holding its newest member's label as a box's label sets it, the target
+// that goes to that member, and the rest of the mark, its count's, the target
+// that opens its members' list; where it holds fewer, no newest label and the
+// whole mark the list's (`residueAtScreen`) — and the documents as their
 // columns, one box a document showing one version of it (FP-22; N-GO's
 // `shownIn`): the version's own text, its fold, its bars and its label, and
 // the box's document's edge, landmark, badge, history strip, connections and
-// tails, which stand as they are whichever version it shows. A document's
-// one edge traces the outside of its columns (P-LAY's `outline`), the
-// edition or draft edge its weight, so length reads as a count of columns
-// (FP-12); a document whose text has not arrived is its estimated columns,
-// one whose extent is unread its first column slot; its label, its contents
+// tails, which stand as they are whichever version it shows. A document's one
+// edge traces the outside of its columns (P-LAY's `outline`), the edition or
+// draft edge its weight, so length reads as a count of columns (FP-12); a
+// document whose text has not arrived is its estimated columns, one whose
+// extent is unread its first column slot; its label, its contents
 // line (T-LAYER's `docLabel`) — its first line where those words stand in its
 // column (P-LAY's `leadOf`), its address at the end of that row, the end of
 // the outline's first row — and the members' marks on the strip along its
@@ -77,7 +82,10 @@
 // its document's outline, whose ground would cover it; then the trail's pips
 // numbered newest-first at the label floor, and no path between them
 // (foundations §2.2); the focus ring, its box clamped inside the visible view
-// (P-REG's RING; `drawFocus`); and the arrival mark, every run of the span
+// (P-REG's RING; `drawFocus`) — at a continuation's mark's stop, and at a
+// document a mark drawn the stronger holds, on the mark, that member's name
+// and place among the mark's members set on the mark while it stands, in the
+// count's place; and the arrival mark, every run of the span
 // landed on, or of the passage a one-step move along the trail lights,
 // outlined in view or not (FP-21; `drawArrival`), a press on an outlined run
 // naming it (`arrivalAtScreen`).
@@ -95,8 +103,8 @@
 // stands is settled when a document's label and bars are drawn or yielded.
 // `stats` names what the frame drew, for the gate; the hit tests
 // (`docAtScreen`, `residueAtScreen`, `tailAtScreen`, `arrivalAtScreen`) read
-// the draw's own rule, as the last frame drew it. The system account's rows
-// are never drawn (the record §1.8).
+// the draw's own rule, as the last frame drew it — a mark's two targets among
+// it. The system account's rows are never drawn (the record §1.8).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-21, FP-22, FP-23, FP-26, FP-35.
 
 import * as REC from '../model/records.js';
@@ -109,13 +117,13 @@ import * as GO from '../nav/go.js';
 import * as LINE from '../line/line.js';
 import { cam, sx, sy, wx, wy, viewport, viewportWorld, visibleView, edgeStub, stubTriangle, markDirty } from './camera.js';
 import { lodOf, residueDepth, LOD_TXT_LO } from './lod.js';
-import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt } from './projection.js';
+import { docBox, accountCell, boardCell, boardLabelCell, intersects, continuationCell, withinContinuation, accountAt, membersAt, markKey, continuationOf } from './projection.js';
 import { bars, outline, outlineRects, firstRow, leadOf, GUTTER } from './layout.js';
 import { setLabels, sizeOf, lineHeight, onStroke, roomRight, pairOf, inFace, runWidth, drawRun, LINE_BOX } from './labels.js';
-import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL } from './register.js';
-import { documentOf, accountOf, cmpAddr } from '../model/address.js';
+import { COL, EDGE, HUE, LABEL_MIN_PX, RING, TAIL, TARGET, ADDRESS } from './register.js';
+import { documentOf, accountOf } from '../model/address.js';
 import * as FOCUS from '../nav/focus.js';
-import { t } from '../strings.js';
+import { t, markCount } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('./projection.js').Cell} Cell */
@@ -125,15 +133,17 @@ import { t } from '../strings.js';
 
 /**
  * @typedef {Object} ResidueMark — a continuation drawn as one mark (foundations §2.1; P44)
- * @property {string} key the place it draws its documents at, for the connections: `account:k`
+ * @property {string} key the place it draws its documents at, for the connections and the walk's stop: `account:k` (P-PROJ's `markKey`)
  * @property {string} account
  * @property {number} k the continuation: its cell holds the account's documents at continuation depth k and deeper
  * @property {number} n law 13's count of what it holds
  * @property {boolean} exact the count is exact, the index complete; else a lower bound, drawn so
- * @property {string} newest its newest member, the highest-numbered — the teleport's landing
+ * @property {string} newest its newest member, the highest-numbered — the document its newest label's target goes to
  * @property {string[]} members the documents it holds, in address order
  * @property {number} alpha the alpha it is drawn at: below 1 through the far bands
- * @property {string[]} lines the lines the label pass set on it, top to bottom; none where it left the mark's label out
+ * @property {string[]} lines the lines the label pass set of its count, top to bottom — of the ringed member's name and place in their place, while the walk's ring stands on a member it holds; none where it left them out
+ * @property {string[]} newestLines the lines the label pass set of its newest member's label; none where it set none
+ * @property {Rect | null} newestTarget where a press goes to its newest member, on screen: the band at its visible part's foot its newest label stands in; null where it set no newest label, and the whole mark opens the list
  * @property {Rect} rect its screen rect
  */
 
@@ -436,53 +446,65 @@ export function drawsDoc(addr) {
   return drawnDocs.docs.has(documentOf(addr) || addr);
 }
 
-/**
- * Each account's continuation k: the documents it holds among `docs`, in
- * address order — its newest last — a version member counted as its document.
- * @param {Doc[]} docs
- * @param {number} k
- * @returns {Map<string, string[]>} by account
- */
-function membersAt(docs, k) {
-  /** @type {Map<string, Set<string>>} */
-  const by = new Map();
-  for (const d of docs) {
-    if (!d.account || !withinContinuation(d.addr, k)) continue;
-    let s = by.get(d.account);
-    if (!s) by.set(d.account, (s = new Set()));
-    s.add(documentOf(d.addr) || d.addr);
-  }
-  return new Map([...by].map(([a, s]) => [a, [...s].sort(cmpAddr)]));
+/** the part of a screen rect inside another — the visible view — zero-sized where none is */
+function clipped(/** @type {Rect} */ r, /** @type {Rect} */ to) {
+  const x = Math.max(r.x, to.x), y = Math.max(r.y, to.y);
+  return { x, y, w: Math.max(0, Math.min(r.x + r.w, to.x + to.w) - x), h: Math.max(0, Math.min(r.y + r.h, to.y + to.h) - y) };
 }
 
+/** the room inside a mark its labels stand in: its pad in from each side */
+const MARK_PAD = 6;
+
 /**
- * A continuation's mark: its cell, and its label — law 13's count of what it
- * holds and its newest member's address, past the region's prefix where the
- * region is named in view, else whole (P-LABEL's region rule), with its first
- * line beneath as a box's label sets it (T-LAYER's `shortAddr`, `leadPart`),
- * as many lines as the mark has room for, cut on a word, held below the one
- * line on the mark's ground (the label pass sets it, the lines it set read
- * back into `lines`).
+ * A continuation's mark (see the head): its cell, and its labels on its
+ * ground, each held below the one line where its place rises under it — its
+ * members' count in what it counts (ST's `markCount`), the words of the
+ * target that opens its list; and where its visible part holds two targets
+ * of P-REG's TARGET each way, a band across its visible part's foot holding
+ * its newest member's label as a box's label sets it (T-LAYER's `shortAddr`,
+ * `leadPart`) — the address of the version its box shows (N-GO's `shownIn`)
+ * at P-REG's ADDRESS, past the region's prefix where the region is named in
+ * view, else whole (P-LABEL's region rule), its first line beneath cut on a
+ * word — the target that goes to that member, the count kept to the rest
+ * above it; and, while the walk's ring stands on a member it holds
+ * (`ringed`), that member's name and place among its members
+ * (`L.mark.member`), handed first so it takes the count's place. The label
+ * pass sets them, and the lines it set are read back after it (`drawLabels`),
+ * the band the mark's newest target where the pass sets its newest label.
  * @param {{key: string, account: string, k: number, members: string[], cell: Cell, alpha: number}} m
  * @param {Pass} pass
+ * @param {Rect} seen the visible view
+ * @param {string | null} ringed the member the walk's ring stands on, where this mark holds it
  * @returns {ResidueMark}
  */
-function drawMark(m, pass) {
+function drawMark(m, pass, seen, ringed) {
   const c = /** @type {CanvasRenderingContext2D} */ (ctx);
   const X = sx(m.cell.x), Y = sy(m.cell.y), W = m.cell.w * cam.scale, H = m.cell.h * cam.scale;
   const n = m.members.length, exact = REC.countsExact();
-  const newest = REC.doc(m.members[n - 1]);
+  const newest = REC.doc(GO.shownIn(m.members[n - 1]));
   c.globalAlpha = m.alpha;
   c.fillStyle = COL.residue; rrect(c, X, Y, W, H, Math.min(6, W * 0.05)); c.fill();
   c.strokeStyle = COL.clusterEdge; c.lineWidth = 1; c.setLineDash([2, 3]); c.stroke(); c.setLineDash([]);
-  const rect = { x: X, y: Y, w: W, h: H }, pad = 6, f = Math.min(12, W * 0.07), count = exact ? n : t('L.lower-bound', { n }), lead = LAYER.leadPart(newest, f);
+  const rect = { x: X, y: Y, w: W, h: H }, pad = MARK_PAD, f = Math.min(12, W * 0.07), hold = { rects: [rect], pad, plate: COL.residue };
   pass.shapes.push({ place: m.key, rect, alpha: m.alpha });
-  pass.labels.push({ kind: 'mark', place: m.key, within: { x: X + pad, y: Y + pad, w: W - 2 * pad, h: H - 2 * pad }, x: X + pad, y: Y + pad, align: 'left', alpha: m.alpha, plate: null,
-    parts: [
-      { text: t('F.residue.newest', { n: count, label: inFace('ident', LAYER.shortAddr(newest)) }), whole: t('F.residue.newest', { n: count, label: inFace('ident', newest.addr) }), px: f, ink: COL.title, fit: 'wrap' },
-      ...(lead ? [{ ...lead, ink: COL.greek, fit: /** @type {const} */ ('fill') }] : []),
-    ], region: m.account, hold: { rects: [rect], pad, plate: COL.residue } });
-  return { key: m.key, account: m.account, k: m.k, n, exact, newest: newest.addr, members: m.members, alpha: m.alpha, lines: [], rect };
+  // the newest member's label: its address, then its first line, in a band across the visible part's foot as tall as a target at the least
+  const lead = LAYER.leadPart(newest, f);
+  /** @type {Part[]} */
+  const parts = [{ text: LAYER.shortAddr(newest), whole: newest.addr, px: ADDRESS.px, ink: COL.title, weight: ADDRESS.weight, fit: 'one', face: 'ident' }, ...(lead ? [{ ...lead, ink: COL.greek }] : [])];
+  const tall = parts.reduce((h, p) => h + lineHeight(p.px), 0), vis = clipped(rect, seen), bandH = Math.max(TARGET.min, tall + pad);
+  const band = vis.w >= TARGET.min && vis.h - bandH >= TARGET.min ? { x: vis.x, y: vis.y + vis.h - bandH, w: vis.w, h: bandH } : null;
+  /** the room above the band, or the whole mark where none stands: the count's, the list's target's */
+  const rest = { x: X + pad, y: Y + pad, w: W - 2 * pad, h: (band ? band.y : Y + H - pad) - (Y + pad) };
+  /** a label of the mark's (see the head), under its name */
+  const label = (/** @type {import('./labels.js').LabelKind} */ kind, /** @type {Part[]} */ ps, /** @type {Rect} */ within, /** @type {number} */ y, /** @type {string | null} */ region) =>
+    pass.labels.push({ kind, place: m.key, within, x: within.x, y, align: 'left', alpha: m.alpha, plate: null, parts: ps, region, hold });
+  if (ringed) {
+    const d = REC.doc(GO.shownIn(ringed)), at = { i: m.members.indexOf(ringed) + 1, n: exact ? n : t('L.lower-bound', { n }) };
+    label('member', [{ text: t('L.mark.member', { ...at, name: inFace('ident', LAYER.shortAddr(d)) }), whole: t('L.mark.member', { ...at, name: inFace('ident', d.addr) }), px: f, ink: COL.title, fit: 'wrap' }], rest, rest.y, m.account);
+  }
+  label('mark', [{ text: markCount(n, exact), px: f, ink: COL.title, fit: 'wrap' }], rest, rest.y, null);
+  if (band) label('newest', parts, { x: band.x + pad, y: band.y, w: band.w - 2 * pad, h: band.h }, band.y + (band.h - tall) / 2, m.account);
+  return { key: m.key, account: m.account, k: m.k, n, exact, newest: m.members[n - 1], members: m.members, alpha: m.alpha, lines: [], newestLines: [], newestTarget: band, rect };
 }
 
 /** the documents as extents; the continuations too small to stand whole as marks; the mid connections, against the visible view `seen`; a label held below the one line but where the line names its document (`named`) */
@@ -505,9 +527,9 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   const marks = [];
   const drawnK = cont.fade > 0 ? [[cont.k, alpha * (1 - cont.fade)], [cont.k + 1, alpha * cont.fade]] : [[cont.k, alpha]];
   for (const [k, a] of drawnK) {
-    for (const [account, members] of membersAt(all, k)) {
+    for (const [account, members] of membersAt(all.map((d) => d.addr), k)) {
       const cell = continuationCell(account, k);
-      if (intersects(cell, v)) marks.push({ key: account + ':' + k, account, k, members, cell, alpha: a });
+      if (intersects(cell, v)) marks.push({ key: markKey(account, k), account, k, members, cell, alpha: a });
     }
   }
   // the mid connections behind, from LK (the seam): a document stands at its box, or at the mark of the continuation that holds it — the
@@ -520,7 +542,7 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
   const placeOf = (/** @type {string} */ addr) => {
     const doc = documentOf(addr) || addr, account = accountOf(doc);
     if (!drawsDoc(doc)) return null;
-    const key = account && withinContinuation(doc, cont.held) ? account + ':' + cont.held : doc;
+    const key = account && withinContinuation(doc, cont.held) ? markKey(account, cont.held) : doc;
     if (!cells.has(key)) cells.set(key, key === doc ? LAYER.shapeOf(GO.shownIn(doc)) : continuationCell(/** @type {string} */ (account), cont.held));
     return key;
   };
@@ -555,8 +577,10 @@ function drawDocs(/** @type {import('./lod.js').Lod} */ lod, /** @type {number} 
     }
   }
   stats.linksDrawn = drawn;
-  // the marks, then the boxes beside them: one mark per continuation, never a stack of its members (P44)
-  stats.residueMarks = marks.map((m) => drawMark(m, pass));
+  // the marks, then the boxes beside them: one mark per continuation, never a stack of its members (P44) — the one drawn the stronger holding
+  // the document the walk's ring stands on names it there
+  const walked = WALK.current(), ringOn = FOCUS.ringShown() && walked && walked.kind !== 'mark' ? documentOf(walked.addr) : null;
+  stats.residueMarks = marks.map((m) => drawMark(m, pass, seen, ringOn && m.k === cont.held && m.members.includes(ringOn) ? ringOn : null));
   for (const { d, alpha: a } of vis) {
     ctx.globalAlpha = a;
     // the version the box shows draws its text and its label; the box's document its edge, its landmark, its badge and its strip
@@ -740,7 +764,9 @@ export const regionNamed = (/** @type {string} */ account) => regionsSet.has(acc
  * out — a part of a label with no hold reaching under the one line or past
  * the viewport left out by the pass's 'view' with every part after it, so a
  * label whose head reaches there is left out whole — each mark the lines set
- * on it, each connection the count set on it, each tail the lines set at its
+ * of its count, or of the ringed member's name and place in their place, and
+ * of its newest label, its newest target standing only where that label is
+ * set, each connection the count set on it, each tail the lines set at its
  * end, and `drawn` each document whose label was set. Where the regions whose
  * label it set differ from the last frame's, the frame is marked dirty, so
  * the held labels read them on the next.
@@ -766,7 +792,12 @@ function drawLabels(pass, seen, named) {
   stats.labels = set; stats.labelsLeftOut = out;
   const regions = new Set(set.filter((l) => l.kind === 'frame' || l.kind === 'cluster').map((l) => l.place));
   if (regions.size !== regionsSet.size || [...regions].some((a) => !regionsSet.has(a))) { regionsSet = regions; markDirty(); }
-  for (const mk of stats.residueMarks) { const l = set.find((x) => x.kind === 'mark' && x.place === mk.key); mk.lines = l ? l.lines.map((x) => x.text) : []; }
+  for (const mk of stats.residueMarks) {
+    const words = set.find((x) => (x.kind === 'member' || x.kind === 'mark') && x.place === mk.key), newest = set.find((x) => x.kind === 'newest' && x.place === mk.key);
+    mk.lines = words ? words.lines.map((x) => x.text) : [];
+    mk.newestLines = newest ? newest.lines.map((x) => x.text) : [];
+    if (!newest) mk.newestTarget = null;
+  }
   const counts = new Map(set.filter((l) => l.kind === 'connection').map((l) => [l.place, l.lines[0].text]));
   for (const cn of stats.connections) cn.label = counts.get(pairOf(cn.a, cn.b)) ?? null;
   for (const tl of stats.tails) { const l = set.find((x) => x.kind === 'tail' && x.place === tl.key); tl.label = l ? l.lines.map((x) => x.text) : []; tl.rects = l ? l.lines.map((x) => x.rect) : []; }
@@ -850,11 +881,16 @@ function ringBox(b, seen) {
  * a key moved it (N-FOCUS's rule; D5 §4 rule 2) — its document's outline's
  * bounds for a document or a link (T-LAYER's `shapeOf`), the account's
  * region, the board's — none at the walk's root where no board is held,
- * whose cell names none (FP-35); a span whose article stands is marked by
- * its lit block instead, the ring's reading-scale form (D3), wherever a
- * line of it meets the visible view, so the canvas circles no document whose
- * text is laid out — and where none does (a span the re-take keeps while its
- * document stays in view, N-WALK's), at its lines (T-LAYER's `lineBoxes`).
+ * whose cell names none (FP-35); a continuation's mark at its stop, and a
+ * document the mark drawn the stronger holds — or a span or a link in one —
+ * which the frame draws nowhere but in it (`holding`), on the mark — its rect
+ * as the frame drew it, its continuation's cell where the frame drew it
+ * nowhere; a span whose article
+ * stands is marked by its lit block instead, the ring's reading-scale form
+ * (D3), wherever a line of it meets the visible view, so the canvas circles
+ * no document whose text is laid out — and where none does (a span the
+ * re-take keeps while its document stays in view, N-WALK's), at its lines
+ * (T-LAYER's `lineBoxes`).
  * Its box clamped to the visible view (`ringBox`). `stats.ring` is the box it
  * outlined.
  * @param {Rect} seen the visible view
@@ -864,7 +900,12 @@ function drawFocus(seen) {
   const f = WALK.current(); if (!f || (f.kind === 'board' && !REC.board())) return;
   /** @type {Rect} the element's box on screen */
   let b;
-  if (f.kind === 'block' && LAYER.isMounted(f.addr)) {
+  const mark = f.kind === 'mark' ? stats.residueMarks.find((m) => m.key === f.addr) : holding(f.addr);
+  const cont = f.kind === 'mark' && !mark ? continuationOf(f.addr) : null;
+  if (mark) b = mark.rect;
+  else if (cont) { const w = continuationCell(cont.account, cont.k); b = { x: sx(w.x), y: sy(w.y), w: w.w * cam.scale, h: w.h * cam.scale }; }
+  else if (f.kind === 'mark') return;
+  else if (f.kind === 'block' && LAYER.isMounted(f.addr)) {
     const blk = f.pos != null ? REC.blockByPos(f.addr, f.pos) : null;
     const lines = blk ? LAYER.lineBoxes(f.addr, blk.pos, blk.width) || [] : [];
     const meets = (/** @type {Rect} */ r) => r.x < seen.x + seen.w && r.x + r.w > seen.x && r.y < seen.y + seen.h && r.y + r.h > seen.y;
@@ -878,6 +919,12 @@ function drawFocus(seen) {
   const r = ringBox(b, seen), g = RING.gap;
   ctx.strokeStyle = COL.focus; ctx.lineWidth = RING.width; rrect(ctx, r.x - g, r.y - g, r.w + 2 * g, r.h + 2 * g, Math.min(8, r.w * 0.06)); ctx.stroke();
   stats.ring = r;
+}
+
+/** the mark the last frame drew the stronger holding the document an address lies in, which it draws nowhere else; null where none holds it, or the address names no document */
+function holding(/** @type {string} */ addr) {
+  const doc = documentOf(addr), { held } = residueDepth(cam.scale);
+  return (doc && stats.residueMarks.find((m) => m.k === held && m.members.includes(doc))) || null;
 }
 
 /**
@@ -1012,21 +1059,27 @@ export function docAtScreen(/** @type {number} */ px, /** @type {number} */ py) 
 }
 
 /**
- * The continuation mark under a screen point, wherever the documents are drawn
- * (the far scale draws clusters): its account, its continuation and its
- * newest member, the teleport's landing (foundations §2.1); null where no
- * mark holds the point.
+ * @typedef {Object} MarkHit — a continuation's mark under a screen point, and which of its two targets holds it (see the head)
+ * @property {string} account
+ * @property {number} k
+ * @property {string} key its name (P-PROJ's `markKey`): the walk's stop for it, the list's
+ * @property {string} newest its newest member, the highest-numbered
+ * @property {'newest' | 'list'} target `newest` on the band its newest label stands in, which goes to that member; `list` anywhere else on it, which opens its members' list
+ */
+
+/**
+ * The continuation's mark under a screen point, as the last frame drew it
+ * the stronger (a hit test; draws nothing) — the far scale draws clusters,
+ * and no mark — and the target the point falls on: its newest label's band,
+ * where the frame set that label, else the rest of the mark (see the head);
+ * null where no mark holds the point.
  * @param {number} px
  * @param {number} py
- * @returns {{account: string, k: number, newest: string} | null}
+ * @returns {MarkHit | null}
  */
 export function residueAtScreen(px, py) {
-  if (lodOf(cam.scale).name === 'far') return null;
   const { held } = residueDepth(cam.scale);
-  const wxp = wx(px), wyp = wy(py);
-  for (const [account, members] of membersAt(drawable(), held)) {
-    const c = continuationCell(account, held);
-    if (wxp >= c.x && wxp <= c.x + c.w && wyp >= c.y && wyp <= c.y + c.h) return { account, k: held, newest: members[members.length - 1] };
-  }
-  return null;
+  const holds = (/** @type {Rect | null} */ r) => !!r && px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+  const m = stats.residueMarks.find((x) => x.k === held && holds(x.rect));
+  return m ? { account: m.account, k: m.k, key: m.key, newest: m.newest, target: holds(m.newestTarget) ? 'newest' : 'list' } : null;
 }

@@ -21,7 +21,11 @@
 // continuation depth k and deeper (`withinContinuation`). Where the camera
 // draws a continuation's documents too small to stand whole, the plane draws
 // the continuation as one mark (foundations §2.1; P44; P-LOD's
-// `residueDepth`, P-RENDER).
+// `residueDepth`, P-RENDER), named `⟨account⟩:⟨k⟩` (`markKey`,
+// `continuationOf`) — the place its connections end at and the walk's stop
+// for it — and holding its members, the account's documents it holds, in
+// address order, its newest last (`membersAt`): the one rule the plane, the
+// walk and the mark's list read.
 //
 // The precision floor: world positions are doubles; a document at
 // continuation depth k has a cell 7^k smaller than its account's position,
@@ -36,7 +40,7 @@
 //
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-11.
 
-import { fieldsOf, accountOf, boardOf, kindOf } from '../model/address.js';
+import { fieldsOf, accountOf, boardOf, kindOf, documentOf, cmpAddr, isAddress } from '../model/address.js';
 
 /**
  * @typedef {Object} Cell
@@ -232,6 +236,46 @@ export function continuationCell(account, k) {
 export function withinContinuation(key, k) {
   const b = docBox(key);
   return b.residue || b.depth >= k;
+}
+
+/**
+ * The name an account's continuation k is drawn under as one mark (see the
+ * head): `⟨account⟩:⟨k⟩`.
+ * @param {string} account
+ * @param {number} k
+ */
+export const markKey = (account, k) => account + ':' + k;
+
+/**
+ * The account and the continuation a mark's name names (`markKey`); null for
+ * any other name — a document's or an account's address among them.
+ * @param {string} key
+ * @returns {{account: string, k: number} | null}
+ */
+export function continuationOf(key) {
+  const i = key.lastIndexOf(':'), account = key.slice(0, i), k = Number(key.slice(i + 1));
+  return i > 0 && isAddress(account) && kindOf(account) === 'account' && Number.isInteger(k) && k >= 1 ? { account, k } : null;
+}
+
+/**
+ * Each account's continuation k (see the head): the documents among `docs` it
+ * holds, each as its document — a version member as the box it shares with its
+ * document — once, in address order, its newest last.
+ * @param {string[]} docs document addresses
+ * @param {number} k 1 … DEPTH_SOUND + 1
+ * @returns {Map<string, string[]>} by account
+ */
+export function membersAt(docs, k) {
+  /** @type {Map<string, Set<string>>} */
+  const by = new Map();
+  for (const addr of docs) {
+    const doc = documentOf(addr) || addr, account = accountOf(doc);
+    if (!account || !withinContinuation(doc, k)) continue;
+    let s = by.get(account);
+    if (!s) by.set(account, (s = new Set()));
+    s.add(doc);
+  }
+  return new Map([...by].map(([a, s]) => [a, [...s].sort(cmpAddr)]));
 }
 
 /** @param {string} account @returns {Cell} */

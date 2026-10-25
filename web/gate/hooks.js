@@ -530,7 +530,7 @@ export function install(deps) {
     posAt: (/** @type {string} */ addr, /** @type {number} */ x, /** @type {number} */ y) => LAYER.posAt(addr, x, y),
     /** the labels the beams' last frame set, one per bundle whose label stands whole in the visible view: the document it leaves, its far document, its text, whether it ends in a stub, and its rect on screen */
     beamLabels: () => BM.labels(),
-    /** the continuations the last frame drew as marks */
+    /** the continuations the last frame drew as marks, each its members, the lines it set of its count — of the ringed member's name and place in their place — and of its newest member's label, and its newest target on screen, null where none stands */
     residues: () => RENDER.stats.residueMarks.slice(),
     /** the mid connections the last frame drew, each between two places — a document, or a mark's `key` — with its count and the count the label pass set on its stroke (`label`, null where it set none), and where one place stands out of the visible view its stub: the place it is bound for, the centre it leaves, its cut, its triangle, its hue and alpha */
     connections: () => RENDER.stats.connections.slice(),

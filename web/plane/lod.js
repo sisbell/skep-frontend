@@ -13,7 +13,9 @@
 // The continuations' band (foundations §2.1; P44): an account's continuation
 // whose documents the scale draws smaller than the far band's upper edge is
 // drawn as one mark, crossfading with its documents' boxes through the far
-// band as the clusters crossfade with the extents.
+// band as the clusters crossfade with the extents; each continuation is the
+// one mark at full strength through a band of scales of its own, which a
+// walk's stop on the mark flies into (`markScale`).
 // Rules: FP-1, FP-2, FP-7, FP-12.
 
 import { DOC_W, CELL, G, LEAF, DEPTH_SOUND } from './projection.js';
@@ -70,6 +72,25 @@ export function residueDepth(scale) {
     return { k, fade, held: fade < 0.5 ? k : k + 1 };
   }
   return { k: DEPTH_SOUND + 1, fade: 0, held: DEPTH_SOUND + 1 };
+}
+
+/**
+ * The scale nearest `scale` at which an account's continuation k is drawn as
+ * its one mark at full strength (`residueDepth` answering k, its fade 0): from
+ * where the documents a grid shallower stand LOD_FAR_HI px wide, so the
+ * documents are drawn and k is the shallowest mark, to short of where its own
+ * documents grow to LOD_FAR_LO px — no upper end for the continuation past the
+ * sound depth, which is always a mark. A scale inside that band is answered
+ * as it is.
+ * @param {number} k 1 … DEPTH_SOUND + 1
+ * @param {number} scale
+ * @returns {number}
+ */
+export function markScale(k, scale) {
+  // each end held a millionth inside the band, so the arithmetic of `residueDepth` reads the same continuation at it
+  const g = G[LEAF], lo = ((LOD_FAR_HI * Math.pow(g, k - 1)) / DOC_W) * (1 + 1e-6);
+  const hi = k > DEPTH_SOUND ? Infinity : ((LOD_FAR_LO * Math.pow(g, k)) / DOC_W) * (1 - 1e-6);
+  return Math.min(hi, Math.max(lo, scale));
 }
 
 /**
