@@ -123,12 +123,13 @@ the address the pane's acts name beside the document's own bytes over the
 bytes dragged, the head's words never among them — the first edition at its
 bare address naming the member its text is, by the harness's own reads of its
 chain (issue #160) — and makes no selection of the page's. A feed row naming
-the draft in a pane (the gate's feed door, reads alone) reaches the pane
-(issue #160): until its read lands the pane's copy is its own bytes though the
-model holds none of them; then the pane is set again in one step — its
-article rebuilt, the platform's selection on the same words, the first span
-in view where it stood, the bands on their lines — and a re-level clicked
-while a second row's read is out waits for it, then sets the two ends level.
+the draft in a pane, sent to the page's session (the gate's feed door, reads
+alone), reaches the pane (issue #160): until its read lands the pane's copy is
+its own bytes though the model holds none of them; then the pane is set again
+in one step — its article rebuilt, the platform's selection on the same words,
+the first span in view where it stood, the bands on their lines — and a
+re-level clicked while a second row's read is out waits for it, then sets the
+two ends level.
 A pane on an edition at its bare address reads its version 1 in its place
 through the gate's `scene.read` door — the read its corner's act makes once a
 newer version has arrived, which no gate run publishes — and the corner's
@@ -1023,11 +1024,12 @@ def scene_copy(ctx, r):
         stage (#94);
     (b) pane A at its top, a drag from the head's address into the first block: the copy starts at the first block, the
         head's words never in it;
-    (c) a drag over a phrase of pane B, then a feed row naming the draft through the gate's feed door (reads alone, as
-        the feed hands a row): in the same evaluation the pane is being set again and its copy still carries the
-        phrase's bytes as the pane shows them, though the model holds none of them now; once its read lands the pane's
-        article is rebuilt, the platform's selection on the same words in it, the first span in view at the top it
-        stood at on screen, the copy naming the same bytes, and the bands between the panes on their lines;
+    (c) a drag over a phrase of pane B, then a feed row naming the draft, sent to the page's session, through the gate's
+        feed door (reads alone, as the feed hands a row): in the same evaluation the pane is being set again and its
+        copy still carries the phrase's bytes as the pane shows them, though the model holds none of them now; once its
+        read lands the pane's article is rebuilt, the platform's selection on the same words in it, the first span in
+        view at the top it stood at on screen, the copy naming the same bytes, and the bands between the panes on their
+        lines;
     (d) pane A scrolled away, a second such row and, in the same evaluation, the re-level act clicked: it waits — pane A
         unmoved while the read is out — and once the read lands the two ends stand level.
     The draft is read whole again and the scene ended after them"""
@@ -1080,8 +1082,8 @@ def scene_copy(ctx, r):
                 '(b) a drag from pane A\'s head into its first block: the copy starts at the first block, the head\'s words never in it — the flavor names those bytes, the plain text is the document\'s own',
                 dict(c, own=mine, first=[first['pos'], end], head=head['text']))
         figures['b'] = {'span': c['span'], 'plain': c['plain'], 'head': head['text']}
-    # (c) a drag over a phrase of pane B, then a feed row naming the draft, through the gate's feed door
-    row = {'position': 0, 'at': 0, 'op': 'insert', 'docs': [B], 'class': 'drafts'}
+    # (c) a drag over a phrase of pane B, then a feed row naming the draft, sent to the page's session, through the gate's feed door
+    row = {'position': 0, 'at': 0, 'op': 'insert', 'docs': [B], 'class': 'drafts', 'session': (ctx.js('window.__skep.model.session()') or {}).get('session')}
     ph = pane_phrase(ctx, 'b')
     r.check(ph is not None, '(c) pane B shows a phrase of the draft\'s own text on one line, for a drag', ctx.js('window.__skep.scene.pairs()'))
     if ph:

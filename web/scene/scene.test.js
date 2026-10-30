@@ -715,9 +715,9 @@ const VE_TEXT = 'A version.\n\nIts words.';
 const WITHHELD = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
 Object.assign(script, reads(ED, ED_TEXT, { members: 2 }), reads(DR, DR_V1, { published: false }), compared(ED, ED_TEXT, DR, DR_V1));
 
-/** a feed row of the board's, as the shell hands it */
+/** a feed row of the board's, as the shell hands it: a `drafts` row names the session it is sent to, the page's */
 const row = (/** @type {number} */ position, /** @type {string | null} */ op, /** @type {string[] | null} */ docs, /** @type {'published' | 'drafts'} */ cls, /** @type {string} */ link = '') =>
-  ({ board: 'b-1', update: { position, at: position, op, docs, class: cls, ...(link ? { link } : {}) } });
+  ({ board: 'b-1', update: { position, at: position, op, docs, class: cls, ...(cls === 'drafts' ? { session: 's-1' } : {}), ...(link ? { link } : {}) } });
 /** every pane setting the scene asked has landed */
 async function landed() {
   for (let i = 0; i < 400 && SCENE.updating(); i++) await new Promise((r) => setTimeout(r, 0));

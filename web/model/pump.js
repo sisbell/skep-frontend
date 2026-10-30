@@ -72,9 +72,9 @@
 // no member follows; a count it stopped short at is recorded as read so far.
 // The events: a board event is taken where it names the page's board, none
 // before the board is known. A feed row the page takes (`takeRow`; a
-// `drafts` row only while it holds a session) hands a `publish` row's member
-// to the app before anything is dropped (`arrive`), then goes to M-REC's
-// index and invalidation, the view's answers for each address dropped
+// `drafts` row only where it names the page's own session) hands a `publish`
+// row's member to the app before anything is dropped (`arrive`), then goes to
+// M-REC's index and invalidation, the view's answers for each address dropped
 // forgotten, and what it dropped told after the drop (`onDrop`; FP-23). A
 // row naming no document and no link marks the board, and once the run is in
 // — no row for RUN_QUIET_MS, at the latest RUN_MAX_MS after its first bare
@@ -83,13 +83,13 @@
 // (`memberShown`), takes that member's arrival; what the view shows is read
 // again (`readFresh`) and set in one step (M-REC's `setAgain`), the rest
 // dropped (M-REC's `takeRefresh`); every reader is told. An `index` state is
-// taken where it is the face the page reads (`ofFace`). A session's end
-// (`takeEnd`) — `session-died`, a read's `session_died`, or the page's own
-// `close(session)`, its sign-out — is taken where it names the page's own
-// session: the shell's own restart is no death — the page goes on under the
-// session the reason names, or, where it re-opened none, the session is lost
-// — and every other end is M-REC's death, which drops every read at the
-// class (`classChanged`).
+// taken where it is the face the page reads, a signed-in page's named by its
+// own session (`ofFace`). A session's end (`takeEnd`) — `session-died`, a
+// read's `session_died`, or the page's own `close(session)`, its sign-out —
+// is taken where it names the page's own session: the shell's own restart is
+// no death — the page goes on under the session the reason names, or, where
+// it re-opened none, the session is lost — and every other end is M-REC's
+// death, which drops every read at the class (`classChanged`).
 // The acquire (FP-28): the page's session is opened by one routine
 // (`acquireSession`), at boot and for a session lost — one attempt per lost
 // session, a loss told while it is out joining it, made once the board
@@ -305,8 +305,8 @@ function onBoard(name, take) {
   PORT.on(name, (d) => { const ev = /** @type {BoardEvents[K] | null} */ (d); const b = REC.board(); if (ev && b && ev.board === b.board) take(ev); });
 }
 
-/** does the page take a feed row: a published row always, a `drafts` row while it holds a session — under any session's name */
-const takesRow = (/** @type {FeedUpdate} */ u) => u.class !== 'drafts' || REC.session() !== null;
+/** does the page take a feed row: a published row always, a `drafts` row where it names the page's own session */
+const takesRow = (/** @type {FeedUpdate} */ u) => { const s = REC.session(); return u.class !== 'drafts' || (!!s && u.session === s.session); };
 
 /**
  * A feed row the page takes (`takesRow`): the member a
@@ -364,14 +364,14 @@ function arm(quiet) {
 /**
  * Is an `index` event the state of the face the page reads? The guest
  * face's names no session: a page reads it with no session, or with a
- * session of no account; every other page reads a session's face, under
- * any session's name.
+ * session of no account; every other page reads its own session's face, the
+ * event naming the page's session.
  * @param {IndexEvent} ev
  * @returns {boolean}
  */
 function ofFace(ev) {
   const s = REC.session();
-  return s && s.account != null ? ev.session != null : ev.session == null;
+  return s && s.account != null ? ev.session === s.session : ev.session == null;
 }
 
 /**

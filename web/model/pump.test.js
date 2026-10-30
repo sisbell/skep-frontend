@@ -1,5 +1,7 @@
 // M-PUMP's test against the fake port (FP-15): the model built from scripted
-// answers and events with no write composed; the view's reads and probes —
+// answers and events with no write composed — a board's events taken where
+// they name the page's board, a drafts row or a session's index state where
+// it names the page's own session; the view's reads and probes —
 // each box read as it is drawn, far ends projected into the version the far
 // box shows, the edition claims and the byline's facts read once, a chain's
 // members' ages kept as its probe reads them — and what
@@ -91,7 +93,6 @@ test('a session-died ends the page\'s own session alone: a guest, or a page sign
   assert.deepEqual(REC.deathReason(), { arm: 'closed' });
 });
 
-/** the index a page reads at boot: one edition of 1.0.1's, its count, the index's state `arm` */
 /**
  * The camera over a document's first column at its reading em, by P-LAY's
  * estimate of its extent — the size the view's reads are made at, never
@@ -103,10 +104,11 @@ function readAt(addr, extent) {
   const box = docBox(addr), e = estimate(extent, box), c = e.columns[0];
   CAM.setViewport(1440, 900); CAM.reach(e.fs); CAM.set(CAM.viewAt({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h / 2 }, e.fs));
 }
+/** the index a page reads at boot: one edition of 1.0.1's, its count, the index's state `arm` */
 const indexAt = (/** @type {string} */ arm) => /** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm, floor: 8265 } });
-/** a feed row of class `cls` minting the document `doc` */
-const minting = (/** @type {string} */ doc, /** @type {'published' | 'drafts'} */ cls) => (cls === 'drafts'
-  ? { position: 3, at: 3, op: 'create_new_document', docs: [doc], class: 'drafts', session: 's-2' }
+/** a feed row of class `cls` minting the document `doc`: a `drafts` row names the session it is sent to, `s-1` unless `session` names another */
+const minting = (/** @type {string} */ doc, /** @type {'published' | 'drafts'} */ cls, session = 's-1') => (cls === 'drafts'
+  ? { position: 3, at: 3, op: 'create_new_document', docs: [doc], class: 'drafts', session }
   : { position: 3, at: 3, op: 'publish', docs: [doc + '.1'], class: 'published' });
 
 test('a page takes the events of its own board alone, and none before it knows its board', () => {
@@ -161,30 +163,38 @@ test('a guest, or a page whose session ended, takes no drafts row and no session
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.sessionDied({ arm: 'closed' });
   fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1015', 'drafts') });
-  assert.equal(REC.place('1.0.1.0.1015'), undefined, 'a page whose session ended reads as a guest: no drafts row');
+  assert.equal(REC.place('1.0.1.0.1015'), undefined, 'a page whose session ended reads as a guest: no drafts row, the ended session\'s own among them');
 });
 
-test('a page signed in takes a session\'s index state and drafts rows, never the guest face\'s state — under another session\'s name too; a session of no account reads the guest face', () => {
-  const fake = FAKE.create(script);
+test('a page signed in takes the drafts rows and the index state its own session\'s events name — never another principal\'s, nor its own principal\'s as another tab\'s session hears them, nor a row naming no session, nor the guest face\'s state — and a listing out lays none of another session\'s over its answer; a session of no account reads the guest face (issue #145)', async () => {
+  const fake = FAKE.create({ [FAKE.keyOf('places', { board: 'b-1' })]: { result: indexAt('building') } });
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeIndex(indexAt('building'));
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.2.0.1013', 'drafts', 's-2') });
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1014', 'drafts', 's-3') });
+  fake.fire('feed', { board: 'b-1', update: { position: 3, at: 3, op: 'create_new_document', docs: ['1.0.1.0.1015'], class: 'drafts' } });
+  assert.deepEqual(['1.0.2.0.1013', '1.0.1.0.1014', '1.0.1.0.1015'].map((a) => REC.place(a)), [undefined, undefined, undefined], 'another principal\'s draft, the principal\'s own as its other tab\'s session hears it, and a row naming no session: none listed');
+  assert.deepEqual([REC.countOf('1.0.2').documents, REC.countOf('1.0.1').documents], [0, 1], 'nor counted');
+  fake.fire('index', { board: 'b-1', session: 's-2', state: { arm: 'widening' } });
   fake.fire('index', { board: 'b-1', session: null, state: { arm: 'complete' } });
-  assert.equal(REC.indexState()?.arm, 'building', 'the guest face\'s complete is not the state of the drafts index the page reads');
-  assert.equal(REC.countsExact(), false, 'nor are its counts marked exact by it');
-  // the person's second tab: the shell names the principal's face by its last-opened session and reads its drafts under
-  // whichever of its sessions it reaches first, so this page's state and rows can come named under s-2
-  fake.fire('index', { board: 'b-1', session: 's-2', state: { arm: 'complete' } });
-  assert.equal(REC.countsExact(), true, 'the face\'s state named under the principal\'s other session');
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
-  assert.equal(REC.place('1.0.1.0.1013')?.kind, 'draft', 'the principal\'s drafts row read under its other session');
-  assert.equal(REC.countOf('1.0.1').documents, 2);
-  REC.setSession({ session: 's-3', principal: 2, account: null });
-  REC.setIndexState({ arm: 'building' });
+  assert.deepEqual([REC.indexState()?.arm, REC.countsExact()], ['building', false], 'neither another session\'s state nor the guest face\'s');
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1014', 'drafts') });
   fake.fire('index', { board: 'b-1', session: 's-1', state: { arm: 'complete' } });
-  assert.equal(REC.indexState()?.arm, 'building', 'a session of no account has no drafts index: a session\'s face is not its');
+  assert.deepEqual([REC.place('1.0.1.0.1014')?.kind, REC.countOf('1.0.1').documents, REC.countsExact()], ['draft', 2, true], 'its own session\'s row listed and counted, its own session\'s state taken');
+  const release = fake.hold('places', { board: 'b-1' });
+  const listing = PUMP.readIndex();
+  await new Promise((r) => setTimeout(r, 0));
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.2.0.1016', 'drafts', 's-2') });
+  fake.fire('index', { board: 'b-1', session: 's-2', state: { arm: 'complete' } });
+  release();
+  await listing;
+  assert.deepEqual([REC.place('1.0.2.0.1016'), REC.indexState()?.arm], [undefined, 'building'], 'the listing\'s answer whole: no other session\'s row laid over it, and its own state, never another session\'s');
+  REC.setSession({ session: 's-4', principal: 2, account: null });
+  fake.fire('index', { board: 'b-1', session: 's-4', state: { arm: 'complete' } });
+  assert.equal(REC.indexState()?.arm, 'building', 'a session of no account has no drafts index: a session\'s face is not its, under its own name too');
   fake.fire('index', { board: 'b-1', session: null, state: { arm: 'complete' } });
   assert.equal(REC.indexState()?.arm, 'complete', 'its face is the guest\'s, the published index alone');
 });
@@ -272,8 +282,8 @@ test('a restart the shell re-opened is no death: the page goes on under the re-o
   assert.deepEqual([listings, REC.place(D)?.kind, REC.textBetween(D, 1, 9), opens(fake)], [[], 'edition', 'Tumbler.', 0], 'it reads no index, holds what it read under the session and asks for no session');
   await PUMP.read(F.docMetadata(D));
   assert.deepEqual(sent, ['s-9'], 'the next read goes out under the re-opened session');
-  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts') });
-  assert.equal(REC.place('1.0.1.0.1013')?.kind, 'draft', 'its drafts rows still taken');
+  fake.fire('feed', { board: 'b-1', update: minting('1.0.1.0.1013', 'drafts', 's-9') });
+  assert.equal(REC.place('1.0.1.0.1013')?.kind, 'draft', 'its drafts rows still taken, named by the re-opened session');
   fake.fire('session-died', { session: 's-9', reason: UNOPENED });
   await flush();
   assert.deepEqual(REC.session(), { session: 's-10', principal: 1, account: '1.0.1', writes: true }, 'a restart that re-opened none: the session the boot\'s own call opens again');
