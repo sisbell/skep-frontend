@@ -1,15 +1,18 @@
 // A recording context — a stand-in for a canvas's 2D context under
 // `web/test/`, never imported by the page, for the pure tests of the modules
-// that stroke the page's curves (BM's beams, SC's lines between the panes)
-// and draw the plane's frame (P-RENDER): it keeps each stroke as it was made
-// — its stroke style, its dash, its cap, its width, where its path began, the
-// cubic it drew from there and where its last straight segment ended — each
-// fill's style, each rect it filled with its style,
+// that stroke the page's curves (BM's beams, SC's bands, strokes and lines
+// between the panes) and draw the plane's frame (P-RENDER): it keeps each
+// stroke as it was made — its stroke style, its dash, its cap, its width,
+// where its path began, the cubic it drew from there, where its last straight
+// segment ended, and every segment of its path in order — each fill's style,
+// and each fill with its path's segments, each rect it filled with its style,
 // and each string set on it with its fill style, and
 // draws nothing; a string is measured at 0.6 em a character of the size its
 // font names, whatever face it names. Its cap starts
 // round, as a context another drawer left so would, so a stroke that holds to
 // a cap sets it.
+
+/** @typedef {{op: 'move' | 'line' | 'curve' | 'close', at: Array<{x: number, y: number}>}} Seg one segment of a path as it was made: where it moved to, a straight segment's end, a cubic's two control points and its end, or its close */
 
 /**
  * @typedef {Object} Stroke — one stroke as it was made
@@ -20,14 +23,17 @@
  * @property {{x: number, y: number}} start where its path began
  * @property {Array<{x: number, y: number}>} curve the cubic's two control points and its end, where its path drew one; none where it drew none
  * @property {{x: number, y: number} | null} line where its last straight segment ended, where its path drew one; null where it drew none
+ * @property {Seg[]} path every segment of its path, in order
  */
 
-/** a recording context, and the strokes, fills, filled rects and strings it keeps */
+/** a recording context, and the strokes, fills, filled paths, filled rects and strings it keeps */
 export function recorder() {
   /** @type {Stroke[]} */
   const strokes = [];
   /** @type {string[]} */
   const fills = [];
+  /** @type {Array<{fill: string, path: Seg[]}>} every fill, with its style and its path's segments in order */
+  const filled = [];
   /** @type {string[]} every string set on it, in order */
   const texts = [];
   /** @type {Array<{text: string, ink: string}>} every string set on it with the fill style it was set in, in order */
@@ -41,21 +47,27 @@ export function recorder() {
   let curve = [];
   /** @type {{x: number, y: number} | null} */
   let line = null;
+  /** @type {Seg[]} */
+  let path = [];
   const none = () => {};
   const ctx = {
     strokeStyle: '', fillStyle: '', lineCap: 'round', lineWidth: 1, globalAlpha: 1, font: '10px monospace', textAlign: 'left', textBaseline: 'alphabetic',
     setLineDash: (/** @type {number[]} */ d) => { dash = [...d]; },
-    beginPath: () => { start = { x: NaN, y: NaN }; curve = []; line = null; },
-    moveTo: (/** @type {number} */ x, /** @type {number} */ y) => { start = { x, y }; },
-    bezierCurveTo: (/** @type {number} */ x1, /** @type {number} */ y1, /** @type {number} */ x2, /** @type {number} */ y2, /** @type {number} */ x, /** @type {number} */ y) => { curve = [{ x: x1, y: y1 }, { x: x2, y: y2 }, { x, y }]; },
-    lineTo: (/** @type {number} */ x, /** @type {number} */ y) => { line = { x, y }; },
-    closePath: none, save: none, restore: none, translate: none, rotate: none,
+    beginPath: () => { start = { x: NaN, y: NaN }; curve = []; line = null; path = []; },
+    moveTo: (/** @type {number} */ x, /** @type {number} */ y) => { start = { x, y }; path.push({ op: 'move', at: [{ x, y }] }); },
+    bezierCurveTo: (/** @type {number} */ x1, /** @type {number} */ y1, /** @type {number} */ x2, /** @type {number} */ y2, /** @type {number} */ x, /** @type {number} */ y) => {
+      curve = [{ x: x1, y: y1 }, { x: x2, y: y2 }, { x, y }];
+      path.push({ op: 'curve', at: curve });
+    },
+    lineTo: (/** @type {number} */ x, /** @type {number} */ y) => { line = { x, y }; path.push({ op: 'line', at: [line] }); },
+    closePath: () => { path.push({ op: 'close', at: [] }); },
+    save: none, restore: none, translate: none, rotate: none,
     setTransform: none, strokeRect: none, arc: none, arcTo: none,
     fillRect: (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ w, /** @type {number} */ h) => { rects.push({ x, y, w, h, fill: ctx.fillStyle }); },
-    stroke: () => { strokes.push({ hue: ctx.strokeStyle, dash, cap: ctx.lineCap, width: ctx.lineWidth, start, curve, line }); },
-    fill: () => { fills.push(ctx.fillStyle); },
+    stroke: () => { strokes.push({ hue: ctx.strokeStyle, dash, cap: ctx.lineCap, width: ctx.lineWidth, start, curve, line, path: [...path] }); },
+    fill: () => { fills.push(ctx.fillStyle); filled.push({ fill: ctx.fillStyle, path: [...path] }); },
     fillText: (/** @type {string} */ s) => { texts.push(s); inked.push({ text: s, ink: ctx.fillStyle }); },
     measureText: (/** @type {string} */ s) => ({ width: [...s].length * 0.6 * Number((/([\d.]+)px/.exec(ctx.font) || [0, 10])[1]) }),
   };
-  return { ctx: /** @type {CanvasRenderingContext2D} */ (/** @type {unknown} */ (ctx)), strokes, fills, texts, inked, rects };
+  return { ctx: /** @type {CanvasRenderingContext2D} */ (/** @type {unknown} */ (ctx)), strokes, fills, filled, texts, inked, rects };
 }

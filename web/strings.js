@@ -259,6 +259,13 @@ export const STRINGS = {
   'L.scene.whole-end': { text: 'the whole document is this link\'s end', cls: 'DRAFT', source: '', screen: 'B1-S9: the far pane', lane: true },
   'L.scene.shared.1': { text: 'show where ⟨D⟩ holds the same material', cls: 'DRAFT', source: '', screen: 'B1-S9: the stop at a band\'s clipped end', lane: true },
   'L.scene.shared': { text: 'show the next of ⟨n⟩ passages where ⟨D⟩ holds the same material', cls: 'DRAFT', source: '', screen: 'B1-S9: the stop at a band\'s clipped end', lane: true },
+  'L.scene.stroke.1': { text: 'one change between two shared passages', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
+  'L.scene.stroke': { text: '⟨n⟩ changes between two shared passages', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
+  'L.scene.stroke.name': { text: '⟨count⟩: ⟨changes⟩', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
+  'L.scene.change': { text: '⟨a⟩ has ⟨one⟩ where ⟨b⟩ has ⟨other⟩', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
+  'L.scene.change.text': { text: '“⟨text⟩”', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
+  'L.scene.change.none': { text: 'nothing', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
+  'L.scene.stroke.gone': { text: 'no longer drawn here — the text was set again', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke\'s list', lane: true },
   'L.at-position': { text: 'at position ⟨p⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   // a continuation's mark (`markCount`): its count in what it counts — the words of the target that opens its list, its stop's
   // in the ARIA mirror and its list's caption; and the name and place of the member the walk's ring stands on, on the mark

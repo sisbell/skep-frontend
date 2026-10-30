@@ -42,9 +42,11 @@
 // and mirror checks; the reading scene — opened as a step on the trail, with
 // the passage its opener holds, and closed by its own end, a Back
 // (`scene.open`, `scene.close`), its pairs, a passage's line in a pane
-// (`scene.at`), its ties beside their passages' lines and their panes' facing
-// edges (`scene.ties`), the facing edges a whole document's ends meet
-// (`scene.edges`), the stop at a band's clipped end (`scene.stop`), each pane
+// (`scene.at`), its bands beside their runs' lines and its lines beside their
+// passages' lines, and their panes' facing edges (`scene.ties`), the facing
+// edges a whole document's ends meet (`scene.edges`), the stop at a band's
+// clipped end (`scene.stop`), the strokes between its bands and a stretch of
+// a pane's characters read from the DOM (`scene.strokes`, `scene.text`), each pane
 // as it stands and whether one is being set again (`scene.panes`,
 // `scene.updating`), a version read in a pane's place (`scene.read`); and the
 // strings.
@@ -433,21 +435,98 @@ export function install(deps) {
     return { addr, pos, line: r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null, text: range ? range.toString().replace(/\s+/g, ' ').trim().slice(0, 60) : null, pane: paneRect(pane) };
   }
   /**
-   * The reading scene's bands and lines as its last draw drew them, each end
-   * beside its passage's first line read now (`sceneAt`), apart from the
-   * scene's own measure — none for an end naming its document whole — and
-   * beside its pane's visible rect and its facing edge on screen (pane A's
-   * right, pane B's left): the scene sets each end at its passage's line and
-   * moves it with its pane's scroll, clips one whose line has left the pane
-   * at that pane's edge, and stands a whole document's end at its pane's
-   * facing edge (foundations §2.5; FP-30); the layout case holds every end to
-   * that.
+   * The line boxes a stretch of a pane's article sets glyphs on, on screen,
+   * block by block in the text's order: each client rect of the stretch's
+   * part in a block of characters no taller than a line box and a half — a
+   * glyph's — as the line of that block's box its middle stands in, each line
+   * the block's height over the lines it holds; none where the stretch is
+   * empty or sets no glyph.
+   * @param {HTMLElement} art
+   * @param {import('../text/layer.js').Made} made what the article was made from
+   * @param {number} from
+   * @param {number} to
+   * @param {number} lh the article's computed line height, px
+   */
+  function glyphLines(art, made, from, to, lh) {
+    /** @type {Array<{top: number, mid: number, bottom: number}>} */
+    const out = [];
+    for (const b of made.blocks) {
+      const lo = Math.max(from, b.pos), hi = Math.min(to, b.pos + b.width);
+      const el = b.kind === 'para' && hi > lo ? art.querySelector(`.run > [data-pos="${b.pos}"]`) : null;
+      const range = el ? LAYER.rangeIn(art, { addr: made.addr, pos: lo, width: hi - lo }) : null;
+      const q = el ? el.getBoundingClientRect() : null;
+      if (!range || !q || q.height <= 0) continue;
+      const pitch = q.height / Math.max(1, Math.round(q.height / lh));
+      for (const r of range.getClientRects()) {
+        if (!(r.width > 0 && r.height > 0 && r.height <= lh * 1.5)) continue;
+        const top = q.top + Math.max(0, Math.floor((r.top + r.height / 2 - q.top) / pitch)) * pitch;
+        out.push({ top, mid: top + pitch / 2, bottom: top + pitch });
+      }
+    }
+    return out;
+  }
+  /**
+   * A run in a reading scene's pane as the person meets it, read now through
+   * T-LAYER's byte-span mapping over the pane's article and the blocks it was
+   * made from (`madeOf`), apart from the scene's own measure: the line boxes
+   * of its first and its last glyph, of the last glyph before it and of the
+   * first after it, within 512 positions — each null where none stands — and
+   * the article's line height. Null where the scene is not open.
+   * @param {'a' | 'b'} side
+   * @param {number} pos
+   * @param {number} width
+   */
+  function sceneRun(side, pos, width) {
+    const p = SCENE.pair(), pane = paneOf(side);
+    const art = pane ? /** @type {HTMLElement | null} */ (pane.querySelector('article.dtext')) : null, made = art ? LAYER.madeOf(art) : null;
+    if (!p || !art || !made) return null;
+    const lh = parseFloat(getComputedStyle(art).lineHeight), blocks = made.blocks;
+    const head = blocks.length ? blocks[0].pos : pos, foot = blocks.length ? blocks[blocks.length - 1].pos + blocks[blocks.length - 1].width : pos + width;
+    const inside = glyphLines(art, made, pos, pos + width, lh), before = glyphLines(art, made, Math.max(head, pos - 512), pos, lh), after = glyphLines(art, made, pos + width, Math.min(foot, pos + width + 512), lh);
+    return { first: inside[0] || null, last: inside[inside.length - 1] || null, prev: before[before.length - 1] || null, next: after[0] || null, lh };
+  }
+  /**
+   * The characters of a stretch of a reading scene's pane as the person
+   * meets them, read now from the DOM — its range's own text, the chrome
+   * inside it (T-SPAN's `CHROME`) taken out, white space kept — apart from the
+   * scene's own reading; null where the scene is not open or the stretch lies
+   * in no block.
+   * @param {'a' | 'b'} side
+   * @param {number} from
+   * @param {number} to
+   */
+  function sceneText(side, from, to) {
+    const p = SCENE.pair(), pane = paneOf(side);
+    const art = pane ? /** @type {HTMLElement | null} */ (pane.querySelector('article.dtext')) : null;
+    const range = p && art && to > from ? LAYER.rangeIn(art, { addr: side === 'a' ? p.a : p.b, pos: from, width: to - from }) : null;
+    if (!range) return null;
+    const frag = range.cloneContents();
+    for (const c of frag.querySelectorAll('.hairline, .pubmark, .sym, .edge')) c.remove();
+    return frag.textContent;
+  }
+  /**
+   * The reading scene's bands and lines as its last draw drew them, beside
+   * its panes' visible rects and facing edges on screen (pane A's right, pane
+   * B's left): each band's end beside its run read now (`sceneRun`) — the
+   * scene draws a band at its extent, from its run's first line to its last,
+   * dividing a line it shares with the band beside it at its middle, holding
+   * an end inside its pane's visible height and clipping it where it passes
+   * the pane's edge — and each line's end beside its passage's first line
+   * read now (`sceneAt`), none for an end naming its document whole — the
+   * scene sets each such end at its passage's line and moves it with its
+   * pane's scroll, clips one whose line has left the pane at that pane's
+   * edge, and stands a whole document's end at its pane's facing edge
+   * (foundations §2.5; FP-26; FP-30). Every one apart from the scene's own
+   * measure; the layout case holds every end to that.
    */
   function sceneTies() {
     const a = paneOf('a'), b = paneOf('b'), ra = a ? a.getBoundingClientRect() : null, rb = b ? b.getBoundingClientRect() : null;
+    const around = { paneA: a ? paneRect(a) : null, paneB: b ? paneRect(b) : null, faceA: ra ? ra.right : null, faceB: rb ? rb.left : null };
     /** an end's passage's first line read now; none for an end naming its document whole */
     const lineOf = (/** @type {'a' | 'b'} */ side, /** @type {{pos: number, width: number, whole: boolean}} */ e) => (e.whole ? null : (sceneAt(side, e.pos, e.width) || { line: null }).line);
-    return SCENE.ties().map((d) => ({ ...d, lineA: lineOf('a', d.a), lineB: lineOf('b', d.b), paneA: a ? paneRect(a) : null, paneB: b ? paneRect(b) : null, faceA: ra ? ra.right : null, faceB: rb ? rb.left : null }));
+    return SCENE.ties().map((d) => (d.kind === 'band'
+      ? { ...d, runA: sceneRun('a', d.a.pos, d.a.width), runB: sceneRun('b', d.b.pos, d.b.width), ...around }
+      : { ...d, lineA: lineOf('a', d.a), lineB: lineOf('b', d.b), ...around }));
   }
   /** redraw the links card where it stands open at a document, as its own acts do after a change */
   function redrawCard(/** @type {string} */ addr) { if (LINKS.isOpen(addr)) LINKS.render(); }
@@ -622,6 +701,12 @@ export function install(deps) {
       edges: () => SCENE.edges(),
       /** the stop at a band's clipped end, as the last draw placed it (FP-20): whether it stands, the shared passages it steps through, the one it goes to now and the one after, its name, its count and its rect on screen; null where no scene stands */
       stop: () => SCENE.stop(),
+      /** the strokes between the bands in view, as the last draw drew them (FP-26): each its key, its ends and halves on screen, its changes, its button's point, id, name, count and rect */
+      strokes: () => SCENE.strokes(),
+      /** a stretch of a pane's characters read from the DOM, apart from the scene's own reading (`sceneText`) */
+      text: sceneText,
+      /** the last measure's figures (FP-18): the runs it read, the bands and strokes it made of them, and its time in ms on this machine */
+      measured: () => SCENE.measured(),
       /** each pane as it stands (FP-23): the address it was opened on, the record its text was made from, the address its acts name and the one it shows, its kind, its version, the chain's count, its corner's act, what its corner says it lacks, and the blocks its article was made from */
       panes: () => SCENE.panes(),
       /** is a pane being set again: an act on the panes waits for it */

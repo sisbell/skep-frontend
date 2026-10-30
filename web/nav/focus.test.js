@@ -199,6 +199,23 @@ test('two regions stand: each close returns its own opener, whatever order they 
   assert.equal(p.at(), 'the item');
 });
 
+test('a region closing over a standing scene whose opener has left the page, the walk\'s element inert under the scene, puts the focus on the scene\'s first control — never the body', () => {
+  const p = page();
+  const item = p.element('the item'), scene = p.element('the scene'), pane = p.element('pane B'), stroke = p.element('a stroke'), overlay = p.element('the overlay'), row = p.element('the list\'s first row');
+  scene.contains = (x) => x === pane || x === stroke; overlay.contains = (x) => x === row;
+  FOCUS.attach({ home: () => /** @type {any} */ (item) });
+  item.focus();
+  FOCUS.open('scene', { el: /** @type {any} */ (scene), byKey: true, first: /** @type {any} */ (pane) });
+  item.inert = true;
+  stroke.focus();
+  FOCUS.open('overlay', { el: /** @type {any} */ (overlay), byKey: true, first: /** @type {any} */ (row) });
+  assert.equal(p.at(), 'the list\'s first row');
+  stroke.isConnected = false; // the pane scrolled it out of view: its control taken down
+  FOCUS.close('overlay');
+  assert.equal(p.at(), 'pane B', 'neither the opener nor the walk\'s element takes it: the scene\'s first control');
+  assert.deepEqual(FOCUS.standing(), ['scene']);
+});
+
 /**
  * A region of controls that rebuilds its markup: its children are made from
  * a list of keys, each a stand-in control; a rebuild replaces them, and the

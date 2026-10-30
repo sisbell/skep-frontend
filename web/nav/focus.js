@@ -19,7 +19,9 @@
 //                          region's `first` control takes the focus.
 //   close(region)          the region ends: a focus standing on nothing, or
 //                          still inside the region, returns to the opener
-//                          where that takes it, else to the walk's element —
+//                          where that takes it, else to the walk's element,
+//                          else to the first control of the innermost region
+//                          still standing — a scene the walk stands under —
 //                          never lost, never to the top (rule 4); one the
 //                          person moved elsewhere stays where they put it.
 //   keep(region, keyOf, rebuild)  a control redrawn from state while it holds
@@ -48,6 +50,7 @@
  * @property {string} region `overlay`, `box`, `scene`
  * @property {Element} el the region's element: a focus inside it is the region's
  * @property {Element | null} opener the element the focus stood on as the region opened; null where it stood on nothing, or where a move passed over a field the region holds (`land`)
+ * @property {Element | null} first the control its opening named first: where a region closing over it returns the focus when neither that region's opener nor the walk's element takes it (`close`)
  */
 
 /** @type {Element | null} the plane's stop's region: the ARIA mirror (N-WALK's), registered as it attaches */
@@ -171,15 +174,15 @@ export function land(el, opts = {}) {
  * rebuild or a scene over a scene returns where the first opening came from —
  * and its first control focused where a key made the act, never otherwise.
  * @param {string} region
- * @param {{el: Element, from?: Element | null, byKey?: boolean, first?: Element | null}} o `from` the element the act found the focus on, read by the caller before its markup replaced it (the focus now, where left out); `first` the control the focus goes to by a key
+ * @param {{el: Element, from?: Element | null, byKey?: boolean, first?: Element | null}} o `from` the element the act found the focus on, read by the caller before its markup replaced it (the focus now, where left out); `first` the control the focus goes to by a key, kept for a region closing over this one (`close`)
  */
 export function open(region, o) {
   let e = stack.find((s) => s.region === region);
   if (!e) {
     const from = o.from === undefined ? active() : o.from;
-    e = { region, el: o.el, opener: onNothing(from) ? null : from };
+    e = { region, el: o.el, opener: onNothing(from) ? null : from, first: o.first ?? null };
     stack.push(e);
-  } else e.el = o.el;
+  } else { e.el = o.el; if (o.first !== undefined) e.first = o.first; }
   if (o.byKey && o.first) focusEl(o.first);
   changed();
 }
@@ -187,9 +190,12 @@ export function open(region, o) {
 /**
  * A region ends (rule 4; rule 16): the focus returns to the opener where that
  * still takes it — an item a rebuild replaced, a corner the walk has left, do
- * not — else to the walk's element; never lost, never to the top. The return
- * runs only where the focus stands on nothing, or still inside the region
- * (taken off it first); one the person moved out stays where they put it.
+ * not — else to the walk's element, else, where a region still standing
+ * covers the walk (a scene, its plane inert), to the first control the
+ * innermost such region's opening named; never lost, never to the top. The
+ * return runs only where the focus stands on nothing, or still inside the
+ * region (taken off it first); one the person moved out stays where they put
+ * it.
  * @param {string} region
  */
 export function close(region) {
@@ -201,7 +207,10 @@ export function close(region) {
   const inside = !onNothing(at) && !!at && e.el.contains(at);
   if (!onNothing(at) && !inside) { changed(); return; }
   if (inside && at) /** @type {HTMLElement} */ (at).blur();
-  if (!(e.opener && e.opener.isConnected && focusEl(e.opener))) { const h = home(); if (h) focusEl(h); }
+  if (!(e.opener && e.opener.isConnected && focusEl(e.opener))) {
+    const h = home();
+    if (!(h && focusEl(h))) for (let k = stack.length - 1; k >= 0; k--) { const f = stack[k].first; if (f && f.isConnected && focusEl(f)) break; }
+  }
   changed();
 }
 

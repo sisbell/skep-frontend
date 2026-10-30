@@ -2,7 +2,17 @@
 // shared stretch and its counterpart, a far end as the opener names it, the
 // first pair with nothing held, the second pane at its top with nothing
 // shared, nothing of a document a far end names whole — and the runs the
-// bands are drawn from; a passage's counterpart
+// bands are drawn from, joined only where they adjoin in both documents;
+// each band at its extent on each pane's facing edge — two bands sharing a
+// line dividing it at its middle, a difference taking a whole line an
+// unbanded stretch, runs in another order crossing, an identity held twice
+// sharing nothing, every run a band — and the strokes where runs consecutive
+// in both documents meet on both sides: an in-line insertion a half stroke
+// on its side, two changes in one line one stroke counting 2, a change
+// across a line break taking no whole line a stroke at the edge between the
+// lines, each named by its changes' characters on each side through the
+// item rule; a band's ground and edges, clipped with the stub's triangle,
+// and a stroke's half as drawn (FP-26); a passage's counterpart
 // and counterparts, clipped to the passage in the first document's order,
 // and the position two versions share nearest a passage the second holds
 // none of (FP-22); the lines between the panes — one per link and pair of
@@ -50,7 +60,8 @@ import * as FACES from '../overlays/faces.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
-import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo, wholeEdges, drawEdge, stopFor } from './scene.js';
+import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo, wholeEdges, drawEdge, stopFor, banded, drawBand, drawStroke, changeWords, strokeWords } from './scene.js';
+import { byteLength } from '../util.js';
 import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
@@ -143,6 +154,123 @@ test('contiguous pairs — adjoining in both documents — are one run; a gap in
   assert.deepEqual(raw, [pair(1, 1, 10), pair(11, 11, 5)], 'the pairs handed in are left as they are');
 });
 
+// ---- the bands at their extent, and the strokes between them ---------------------------------------------------------
+
+/** a pane's line box, px: line k stands from 20k to 20k + 20 */
+const LB = 20;
+/** the documents the panes show */
+const PANE_A = '1.0.1.0.3', PANE_B = '1.0.1.0.5';
+/** line k's box */
+const ln = (/** @type {number} */ k) => ({ top: LB * k, bottom: LB * k + LB });
+/**
+ * A run as its panes set it: its pair, and the lines its first and last bytes stand on in each pane
+ * @param {[number, number, number]} at its first position in pane A, in pane B, and its positions
+ * @param {[number, number]} a the lines of its first and its last byte in pane A
+ * @param {[number, number]} b the lines of its first and its last byte in pane B
+ */
+const measuredRun = ([u1, u2, width], a, b) => ({ run: pair(u1, u2, width), a: { first: ln(a[0]), last: ln(a[1]) }, b: { first: ln(b[0]), last: ln(b[1]) } });
+/** each band's extent on each side, `[top, bottom]` */
+const extents = (/** @type {ReturnType<typeof banded>} */ d) => d.bands.map((x) => [[x.a.top, x.a.bottom], [x.b.top, x.b.bottom]]);
+/** each stroke: its heights, its halves, its changes as `[a.from, a.to, b.from, b.to]` */
+const struck = (/** @type {ReturnType<typeof banded>} */ d) => d.strokes.map((s) => ({ at: [s.a, s.b], halves: [s.halfA, s.halfB], changes: s.changes.map((c) => [c.a.from, c.a.to, c.b.from, c.b.to]) }));
+
+test('an in-line insertion draws a half stroke on its side: the two bands divide their one line at its middle on both sides, and their shared edge is a stroke in the gutter\'s half beside the pane holding the inserted characters alone (issue #331\'s design decision: "an in-line insertion draws a half stroke on its side")', () => {
+  // "abc def" beside "abc XX def": the runs "abc " and "def", every byte on line 0
+  const d = banded([measuredRun([1, 1, 4], [0, 0], [0, 0]), measuredRun([5, 8, 3], [0, 0], [0, 0])], { a: LB, b: LB });
+  assert.deepEqual(extents(d), [[[0, 10], [0, 10]], [[10, 20], [10, 20]]], 'each band half the line, meeting at its middle on both sides');
+  assert.deepEqual(struck(d), [{ at: [10, 10], halves: [false, true], changes: [[5, 5, 5, 8]] }], 'one stroke at the middle, pane B\'s half alone, the change nothing in pane A and "XX " in pane B');
+});
+
+test('an inserted line draws a gap on its side: the bands meet in the pane where nothing lies between them, leave an unbanded stretch over the whole line in the other, and stand no stroke (issue #331\'s design decision: "an inserted line draws a gap on its side")', () => {
+  // pane A: the runs on lines 0 and 1, adjoining; pane B: the same runs on lines 0 and 2, a line of its own between them
+  const d = banded([measuredRun([1, 1, 10], [0, 0], [0, 0]), measuredRun([11, 21, 10], [1, 1], [2, 2])], { a: LB, b: LB });
+  assert.deepEqual(extents(d), [[[0, 20], [0, 20]], [[20, 40], [40, 60]]], 'pane A\'s bands meet at the edge between their lines; pane B\'s line 1, 20 to 40, stands unbanded');
+  assert.deepEqual(d.strokes, [], 'the difference has a drawn height: no stroke');
+});
+
+test('two changes in one line draw one stroke counting 2: the band between them none tall, and the two strokes at one place one stroke, its changes in the documents\' order (issue #331\'s design decision: "two changes in one line draw one stroke counting 2")', () => {
+  // "a b c" beside "a X b Y c": the runs "a ", "b " and "c", every byte on line 0
+  const d = banded([measuredRun([1, 1, 2], [0, 0], [0, 0]), measuredRun([3, 5, 2], [0, 0], [0, 0]), measuredRun([5, 9, 1], [0, 0], [0, 0])], { a: LB, b: LB });
+  assert.deepEqual(extents(d), [[[0, 10], [0, 10]], [[10, 10], [10, 10]], [[10, 20], [10, 20]]], 'the middle band none tall, at the line\'s middle');
+  assert.deepEqual(struck(d), [{ at: [10, 10], halves: [false, true], changes: [[3, 3, 3, 5], [5, 5, 7, 9]] }], 'one stroke, its two changes in order');
+  assert.equal(strokeWords(d.strokes[0], { shows: PANE_A, made: null }, { shows: PANE_B, made: null }, (x) => x).count, t('L.scene.stroke', { n: 2 }), 'its count: 2');
+});
+
+test('a change across a line break taking no whole line on either side draws a stroke at the edge between the two lines, both halves; one taking a whole line on one side leaves an unbanded stretch there and no stroke', () => {
+  // the earlier run ends on line 0, the later starts on line 1; the change between ends line 0 and starts line 1 in pane A, ends line 0 in pane B
+  const d = banded([measuredRun([1, 1, 30], [0, 0], [0, 0]), measuredRun([36, 33, 10], [1, 1], [1, 1])], { a: LB, b: LB });
+  assert.deepEqual(extents(d), [[[0, 20], [0, 20]], [[20, 40], [20, 40]]], 'the bands meet at the edge between the lines on both sides');
+  assert.deepEqual(struck(d), [{ at: [20, 20], halves: [true, true], changes: [[31, 36, 31, 33]] }], 'a replacement: both halves');
+  const whole = banded([measuredRun([1, 1, 30], [0, 0], [0, 0]), measuredRun([60, 33, 10], [2, 2], [1, 1])], { a: LB, b: LB });
+  assert.deepEqual([extents(whole), whole.strokes], [[[[0, 20], [0, 20]], [[40, 60], [20, 40]]], []], 'pane A\'s change takes line 1 whole: unbanded there, no stroke');
+});
+
+test('bands sharing a line divide it at its middle; runs in another order meet in each pane and cross, with no stroke; runs holding one identity twice share nothing in the pane holding it once (issue #331\'s design decision: "Runs that come in a different order never join, and their bands cross")', () => {
+  const shared = banded([measuredRun([1, 1, 50], [0, 1], [0, 1]), measuredRun([60, 51, 50], [1, 2], [1, 2])], { a: LB, b: LB });
+  assert.deepEqual(extents(shared), [[[0, 30], [0, 30]], [[30, 60], [30, 60]]], 'the line both stand on, 20 to 40, divided at 30; each band its own lines beyond it');
+  assert.deepEqual(struck(shared), [{ at: [30, 30], halves: [true, false], changes: [[51, 60, 51, 51]] }], 'meeting on both sides: a stroke, pane A\'s half');
+  // p before q in pane A, q before p in pane B, each pair adjoining
+  const crossed = banded([measuredRun([1, 11, 10], [0, 0], [1, 1]), measuredRun([11, 1, 10], [1, 1], [0, 0])], { a: LB, b: LB });
+  assert.deepEqual([extents(crossed), crossed.strokes], [[[[0, 20], [20, 40]], [[20, 40], [0, 20]]], []], 'p from pane A\'s line 0 to pane B\'s line 1, q the other way: they cross, and no stroke stands');
+  // pane B holds the run of pane A's line 0 twice, on lines 0 and 1
+  const twice = banded([measuredRun([1, 1, 10], [0, 0], [0, 0]), measuredRun([1, 11, 10], [0, 0], [1, 1])], { a: LB, b: LB });
+  assert.deepEqual([extents(twice), twice.strokes], [[[[0, 20], [0, 20]], [[0, 20], [20, 40]]], []], 'both bands pane A\'s whole line, meeting in pane B alone: no stroke');
+});
+
+test('every run is a band at its extent, however many: none dropped past the four hundredth', () => {
+  // 401 runs adjoining in pane A, each on its own line there; in pane B each a line apart from the next
+  const runs = Array.from({ length: 401 }, (_, k) => measuredRun([1 + 10 * k, 1 + 20 * k, 10], [k, k], [2 * k, 2 * k]));
+  const d = banded(runs, { a: LB, b: LB });
+  assert.deepEqual([d.bands.length, d.strokes.length], [401, 0]);
+  assert.deepEqual(extents(d)[400], [[8000, 8020], [16000, 16020]], 'the last at its own lines');
+});
+
+test('a band is its ground between the curve joining its two ends\' tops and the one joining their bottoms, in sameness\'s texture, and those curves its edges in sameness\'s boundary; an end passing its pane\'s visible bottom is held at it with the stub\'s triangle there; a band none tall one edge', () => {
+  const { ctx, strokes, filled } = recorder();
+  drawBand(ctx, { x: 400, top: 100, bottom: 140, above: false, below: false }, { x: 520, top: 200, bottom: 260, above: false, below: false });
+  assert.deepEqual(filled.map((f) => [f.fill, f.path.map((s) => [s.op, s.at[s.at.length - 1] || null])]), [[SAMENESS.texture, [['move', { x: 400, y: 100 }], ['curve', { x: 520, y: 200 }], ['line', { x: 520, y: 260 }], ['curve', { x: 400, y: 140 }], ['close', null]]]], 'its ground, from pane A\'s top round to pane A\'s bottom');
+  assert.deepEqual(strokes.map((s) => [s.hue, s.width, s.start, s.curve[2]]), [[SAMENESS.boundary, 1, { x: 400, y: 100 }, { x: 520, y: 200 }], [SAMENESS.boundary, 1, { x: 400, y: 140 }, { x: 520, y: 260 }]], 'its two edges');
+  const held = recorder();
+  drawBand(held.ctx, { x: 400, top: 380, bottom: 400, above: false, below: true }, { x: 520, top: 300, bottom: 340, above: false, below: false });
+  assert.deepEqual(held.filled.map((f) => f.fill), [SAMENESS.texture, SAMENESS.boundary], 'its ground, then the stub\'s triangle at pane A\'s visible bottom, in the boundary\'s hue');
+  assert.deepEqual(held.strokes.map((s) => s.curve[2]), [{ x: 520, y: 300 }, { x: 520, y: 340 }], 'its edges end at pane B\'s extent');
+  const flat = recorder();
+  drawBand(flat.ctx, { x: 400, top: 110, bottom: 110, above: false, below: false }, { x: 520, top: 210, bottom: 210, above: false, below: false });
+  assert.equal(flat.strokes.length, 1, 'none tall at both ends: one edge');
+});
+
+test('a stroke is the bands\' shared edge cut at the gutter\'s middle, drawn heavier than a band\'s edge in the half beside each pane holding characters between the runs and in no other', () => {
+  const half = recorder();
+  drawStroke(half.ctx, { x: 400, y: 110 }, { x: 520, y: 130 }, { halfA: false, halfB: true });
+  assert.deepEqual(half.strokes.map((s) => [s.hue, s.width, s.start, s.curve[2]]), [[SAMENESS.boundary, 3, { x: 460, y: 120 }, { x: 520, y: 130 }]], 'pane B\'s half alone: from the gutter\'s middle to pane B\'s edge and no further');
+  const both = recorder();
+  drawStroke(both.ctx, { x: 400, y: 110 }, { x: 520, y: 130 }, { halfA: true, halfB: true });
+  assert.deepEqual(both.strokes.map((s) => [s.start, s.curve[2]]), [[{ x: 400, y: 110 }, { x: 460, y: 120 }], [{ x: 460, y: 120 }, { x: 520, y: 130 }]], 'a replacement: both halves, meeting at the middle');
+});
+
+test('a stroke\'s name gives each change\'s characters on each side, read from the text the panes were set with by the item rule — white space kept, an item by its stand-in, a side holding none "nothing" — and its list\'s rows set those characters in their own class (issue #331\'s design decision: "The stroke\'s act and the mirror name the characters of each difference on each side")', () => {
+  /** an article's made record of a document's runs, each `[kind, text]`, from position 1 */
+  const made = (/** @type {string} */ addr, /** @type {Array<[import('../model/frames.js').Run['kind'], string]>} */ items) => {
+    let pos = 1;
+    const runs = items.map(([kind, text]) => { const width = kind === 'content' ? byteLength(text) : 1, r = { pos, width, kind, text, ref: null, origin: null }; pos += width; return r; });
+    return { addr, runs, blocks: REC.deriveBlocks(runs), image: [] };
+  };
+  const owner = (/** @type {string} */ a) => a.split('.').slice(0, 3).join('.');
+  const sideA = { shows: PANE_A, made: made(PANE_A, [['content', 'abc def ghi']]) };
+  const sideB = { shows: PANE_B, made: made(PANE_B, [['content', 'abc XX def '], ['ref', ''], ['content', 'ghi']]) };
+  /** @type {import('./scene.js').Stroke} */
+  const s = { a: 10, b: 10, halfA: true, halfB: true, changes: [{ a: { from: 5, to: 5 }, b: { from: 5, to: 8 } }, { a: { from: 8, to: 9 }, b: { from: 11, to: 13 } }] };
+  const standIn = t('L.copy.item', { kind: t('L.item.reference') });
+  const words = strokeWords(s, sideA, sideB, owner);
+  assert.deepEqual(words, {
+    count: t('L.scene.stroke', { n: 2 }),
+    changes: [t('L.scene.change', { a: PANE_A, one: t('L.scene.change.none'), b: PANE_B, other: t('L.scene.change.text', { text: 'XX ' }) }), t('L.scene.change', { a: PANE_A, one: t('L.scene.change.text', { text: ' ' }), b: PANE_B, other: t('L.scene.change.text', { text: ' ' + standIn }) })].join(' · '),
+  });
+  assert.ok(t('L.scene.stroke.name', words).startsWith(t('L.scene.stroke', { n: 2 }) + ': '), 'the name: its count, then its changes');
+  const row = changeWords(s.changes[0], sideA, sideB, owner, true);
+  assert.ok(row.includes(`<span class="chars">${esc(t('L.scene.change.text', { text: 'XX ' }))}</span>`) && row.includes(`<span class="id">${PANE_A}</span>`) && !row.includes(`<span class="chars">${esc(t('L.scene.change.none'))}`), `a row: pane B's characters in their class, the addresses in the identifier's face, "nothing" the client's words: ${row}`);
+});
+
 // ---- the lines between the panes -------------------------------------------------------------------------------------
 
 // the document in pane A, the one in pane B, and a third in neither
@@ -218,7 +346,7 @@ test('a link one pane alone shows is drawn at each end in the mark that end\'s p
   assert.deepEqual(drawn(linesBetween(paneLinks(DOC_A, [endShown(owners, passage(DOC_A, 50, 10), passage(DOC_B, 1, 5))]), paneLinks(DOC_B, []))), [[owners.addr, [50, 10], [1, 5], another, owner, 1]], 'pane B\'s document\'s owner\'s, shown at pane A alone, where it is another\'s: the owner\'s still at B');
 }));
 
-test('a line whose ends\' inks differ changes colour once, at the middle of the gap: pane A\'s end\'s ink to there and pane B\'s from there, one curve, each clipped end\'s triangle in its own end\'s hue; a band, its inks alike, one stroke (issue #166\'s design decision: "changing at the middle of the gap")', () => {
+test('a line whose ends\' inks differ changes colour once, at the middle of the gap: pane A\'s end\'s ink to there and pane B\'s from there, one curve, each clipped end\'s triangle in its own end\'s hue; a line whose ends\' inks are alike, one stroke (issue #166\'s design decision: "changing at the middle of the gap")', () => {
   const ink = { a: inkOf(/** @type {any} */ ({ hue: HUE.owner, linker: 'owner' })), b: inkOf(/** @type {any} */ ({ hue: HUE.others, linker: 'others' })) };
   const { ctx, strokes, fills } = recorder();
   SCENE.drawTie(ctx, { x: 400, y: 100, clipped: true, above: true }, { x: 520, y: 300, clipped: true, above: false }, ink);
@@ -226,9 +354,9 @@ test('a line whose ends\' inks differ changes colour once, at the middle of the 
   assert.deepEqual(strokes.map((s) => s.start), [{ x: 460, y: 200 }, { x: 460, y: 200 }], 'both drawn from the middle of the gap, so the dashed one begins in ink there');
   assert.deepEqual(strokes.map((s) => s.curve[2]), [{ x: 400, y: 100 }, { x: 520, y: 300 }], 'pane A\'s back to its end at pane A\'s edge, pane B\'s on to its end at pane B\'s');
   assert.deepEqual(fills, [HUE.owner, HUE.others], 'each clipped end\'s triangle in its own end\'s hue');
-  const band = recorder(), same = { hue: SAMENESS.boundary, dash: [] };
-  SCENE.drawTie(band.ctx, { x: 400, y: 100, clipped: false, above: false }, { x: 520, y: 140, clipped: false, above: false }, { a: same, b: same });
-  assert.deepEqual(band.strokes.map((s) => [s.hue, s.start, s.curve[2]]), [[SAMENESS.boundary, { x: 400, y: 100 }, { x: 520, y: 140 }]], 'inks alike: one stroke, from pane A\'s end to pane B\'s');
+  const alike = recorder(), same = inkOf(/** @type {any} */ ({ hue: HUE.you, linker: 'you' }));
+  SCENE.drawTie(alike.ctx, { x: 400, y: 100, clipped: false, above: false }, { x: 520, y: 140, clipped: false, above: false }, { a: same, b: same });
+  assert.deepEqual(alike.strokes.map((s) => [s.hue, s.start, s.curve[2]]), [[HUE.you, { x: 400, y: 100 }, { x: 520, y: 140 }]], 'inks alike: one stroke, from pane A\'s end to pane B\'s');
 });
 
 test('a far end naming the other pane\'s document whole is that whole document, in either pane: it stands at no position of it and no block, marked whole, its mark there the one that pane\'s document gives the link; into a pane showing a cover, at the cover (issue #59\'s design decision: "The end\'s shape shows what the link points at")', () => asReader('1.0.1', () => {
@@ -432,12 +560,13 @@ function page() {
   const stop = Object.assign(element('the stop', shown), { hidden: true, addEventListener: (/** @type {string} */ type, /** @type {() => void} */ fn) => { if (type === 'click') stopOn.push(fn); } });
   const names = { a: element('the bar\'s name for pane A'), b: element('the bar\'s name for pane B') };
   bar.querySelector = (s) => (s === '[data-name="a"]' ? names.a : s === '[data-name="b"]' ? names.b : null);
+  const strokes = Object.assign(element('the strokes\' layer', shown), { children: [] });
   /** @type {string[]} what the status region was told, in order */
   const said = [];
   const live = element('the status region');
   Object.defineProperty(live, 'textContent', { get: () => said[said.length - 1] ?? '', set: (/** @type {string} */ v) => { said.push(v); } });
   FOCUS.attach({ live: /** @type {any} */ (live) });
-  root.contains = (x) => [root, bar, paneA, paneB, cornerA, cornerB, stop].includes(/** @type {any} */ (x));
+  root.contains = (x) => [root, bar, paneA, paneB, cornerA, cornerB, stop, strokes].includes(/** @type {any} */ (x));
   paneA.contains = (x) => x === paneA || x === cornerA;
   paneB.contains = (x) => x === paneB || x === cornerB;
   const mirror = element('the tree', () => !mirror.inert);
@@ -451,7 +580,7 @@ function page() {
   globalThis.document = /** @type {any} */ (doc);
   WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ (element('the live region')));
   LAYER.attach(/** @type {any} */ (element('the text layer')), /** @type {any} */ (corners));
-  SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas: element('the scene\'s canvas'), stop }), { end: (byKey) => GO.closeScene(byKey) });
+  SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas: element('the scene\'s canvas'), stop, strokes }), { end: (byKey) => GO.closeScene(byKey) });
   HOST.attach(/** @type {any} */ (overlay));
   /** where the platform's focus stands */
   const at = () => doc.activeElement.id;

@@ -182,8 +182,18 @@ position carries the match and the beam confirms it"): opened on the first
 edition and the draft it windows, and from the versions list of an edition
 with two members, a paragraph past its first held, the two ends' matched
 lines stand at one height inside both panes and hold the same material;
-every band and line leaves its pane at its passage's own first line, or at
-the pane's edge where that line has left the pane; a click on the re-level
+every band stands at its extent on each pane's facing edge, from its run's
+first line to its last, a line it shares with the band beside it divided at
+its middle and a whole line between their runs unbanded, held at the pane's
+edge where it passes it (issue #331's design decision: "Draw each band at its
+extent"), every run of the scene a band, and every line leaves its pane at
+its passage's own first line, or at the pane's edge where that line has left
+the pane; between the edition with two members' first member and its latest,
+where two bands consecutive in both documents meet on both sides, a stroke
+stands at their shared edge in the gutter's half beside each pane holding
+characters between them, its button there named by those characters on each
+side, its act a list of them that Esc closes onto the stroke — unmeasured
+where that scene stands no stroke; a click on the re-level
 act's chord mark sets the two ends level again (K-62); the panes are read,
 never clicked (SC; B1-S9) — no block, hairline or symbol in a pane, nor its
 corner's version statement, takes the click cues the plane's keep, no block
@@ -330,7 +340,7 @@ WALK_PX wide while the acting-as segment before it is cut short, its act
 unfolding it, the shell told nothing.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `tailAnchors`, `arrivalAnchors`, `spanRects`, `visible`, `barsOf`, `labels`,
-`scene.at`, `scene.ties`, `scene.edges`, `scene.stop`, the frame buffer, `beamLabels`, `connections`, `tails`,
+`scene.at`, `scene.ties`, `scene.edges`, `scene.stop`, `scene.strokes`, `scene.text`, `scene.measured`, the frame buffer, `beamLabels`, `connections`, `tails`,
 `fold`, `centreOf`, `posAt`) save the trail's, the stub's triangle's and the
 followed link's beam's, which read the canvases' pixels here, the stub's
 places, which the projection gives here, the symbols', which reads the
@@ -1154,16 +1164,95 @@ def level_holds(r, name, v):
     r.check(same, f'{name}: the lines set level hold the same material — the passage\'s first characters alike in both panes', {'a': a and a['text'], 'b': b and b['text']})
 
 
+def band_off(t, side):
+    """what is off at a band's end on one side, read against its run as the gate reads it apart from the scene's own
+    measure (`scene.ties`' `runA`, `runB`: the line boxes of its run's first and last glyphs, of the last glyph before it
+    and the first after it, and the line height): held at the pane's visible top where its extent passes it — its run's
+    first line then reaching above it — else its top inside the view, no lower than its run's first line's middle and
+    reaching into no line before its run; its bottom likewise (issue #331's design decision: "On each pane's facing edge a
+    band covers all of its run's lines"); None where nothing is, and where its run sets no glyph the gate reads — an
+    item's alone, which `glyphs_unread` counts"""
+    end, run, pane = t[side], t.get('run' + side.upper()), t.get('pane' + side.upper())
+    if run is None or pane is None or 'top' not in end:
+        return {'side': side, 'pos': end.get('pos'), 'off': ['no extent drawn, or none read'], 'end': end, 'run': run}
+    if not run['first'] or not run['last']:
+        return None
+    first, last, prev, nxt, lh = run['first'], run['last'], run['prev'], run['next'], run['lh']
+    top, bottom, bad = pane['y'], pane['y'] + pane['h'], []
+    # where the band's extent stands, held inside the visible height as the scene holds it
+    hold = lambda y: max(top, min(bottom, y))
+    if end['above']:
+        if abs(end['top'] - top) > TIE_TOL_PX or first['mid'] > top + lh:
+            bad.append('held at the visible top')
+    elif end['top'] < top - TIE_TOL_PX or end['top'] > hold(first['mid']) + TIE_TOL_PX or (prev and end['top'] < hold(min(prev['bottom'], first['top'])) - TIE_TOL_PX):
+        bad.append('its top at its run\'s first line')
+    if end['below']:
+        if abs(end['bottom'] - bottom) > TIE_TOL_PX or last['mid'] < bottom - lh:
+            bad.append('held at the visible bottom')
+    elif end['bottom'] > bottom + TIE_TOL_PX or end['bottom'] < hold(last['mid']) - TIE_TOL_PX or (nxt and end['bottom'] > hold(max(nxt['top'], last['bottom'])) + TIE_TOL_PX):
+        bad.append('its bottom at its run\'s last line')
+    return {'side': side, 'pos': end['pos'], 'width': end['width'], 'off': bad, 'top': end['top'], 'bottom': end['bottom'], 'first': first, 'last': last, 'prev': prev, 'next': nxt, 'pane': pane} if bad else None
+
+
+def bands_meet(bands):
+    """what is off where two bands consecutive on a side — their runs holding no byte of each other there — meet or
+    part, read against their runs as the gate reads them, where neither is held at the pane's edge between them: a line
+    both runs stand on divided at its middle; runs adjoining there meeting; a whole line of glyphs between their runs
+    standing unbanded, as far as the visible height holds it (issue #331's design decision: "two bands that share a line divide it at its middle. A difference
+    that takes a whole line on one side then shows on that side as an unbanded stretch"); and the junctions read, by kind"""
+    off, seen = [], {'shared': 0, 'adjoining': 0, 'apart': 0}
+    for side in ('a', 'b'):
+        key = 'run' + side.upper()
+        seq = sorted((t for t in bands if t.get(key) and t[key]['first'] and t[key]['last'] and 'top' in t[side]), key=lambda t: (t[side]['pos'], t[side]['width']))
+        for p, q in zip(seq, seq[1:]):
+            pe, qe, pr, qr = p[side], q[side], p[key], q[key]
+            if qe['pos'] < pe['pos'] + pe['width'] or pe['below'] or qe['above']:
+                continue
+            lh = pr['lh']
+            if abs(pr['last']['mid'] - qr['first']['mid']) < lh / 2:
+                seen['shared'] += 1
+                mid = (pr['last']['mid'] + qr['first']['mid']) / 2
+                if abs(pe['bottom'] - mid) > TIE_TOL_PX or abs(qe['top'] - mid) > TIE_TOL_PX:
+                    off.append({'side': side, 'junction': 'a shared line', 'at': [pe['pos'], qe['pos']], 'bottom': pe['bottom'], 'top': qe['top'], 'mid': mid})
+            elif qe['pos'] == pe['pos'] + pe['width']:
+                seen['adjoining'] += 1
+                if abs(pe['bottom'] - qe['top']) > TIE_TOL_PX:
+                    off.append({'side': side, 'junction': 'adjoining runs', 'at': [pe['pos'], qe['pos']], 'bottom': pe['bottom'], 'top': qe['top']})
+            else:
+                line, pane = pr['next'], p['pane' + side.upper()]
+                hold = lambda y: max(pane['y'], min(pane['y'] + pane['h'], y))
+                if line and line['top'] >= pr['last']['bottom'] - TIE_TOL_PX and line['bottom'] <= qr['first']['top'] + TIE_TOL_PX:
+                    seen['apart'] += 1
+                    if pe['bottom'] > hold(line['top']) + TIE_TOL_PX or qe['top'] < hold(line['bottom']) - TIE_TOL_PX:
+                        off.append({'side': side, 'junction': 'a whole line between', 'at': [pe['pos'], qe['pos']], 'bottom': pe['bottom'], 'top': qe['top'], 'line': line})
+    return off, seen
+
+
 def ties_hold(r, name, ties, in_view, band=True):
-    """every band and line drawn between the panes leaves each pane at its passage's own first line, or, where that
-    line has left the pane, at the pane's edge on the side it left by; an end naming its pane's document whole stands at
-    that pane's facing edge, level with the line's other end held inside the pane's visible height, never clipped
-    (issue #59), and stands in view; `in_view` the ends that must stand in view; `band` the shared identity is drawn as a
-    band among them"""
+    """every band drawn between the panes stands at its extent on each pane's facing edge (`band_off`, `bands_meet`;
+    issue #331's design decision), and every line leaves each pane at its passage's own first line, or, where that line
+    has left the pane, at the pane's edge on the side it left by; an end naming its pane's document whole stands at that
+    pane's facing edge, level with the line's other end held inside the pane's visible height, never clipped (issue #59),
+    and stands in view; `in_view` the ends that must stand in view, a band's where any of its extent does; `band` the
+    shared identity is drawn as a band among them"""
     if band:
         r.check(any(t['kind'] == 'band' for t in ties), f'{name}: the shared identity is drawn as a band', [t['kind'] for t in ties])
     off, ends = [], 0
+    bands = [t for t in ties if t['kind'] == 'band']
+    for t in bands:
+        for side in ('a', 'b'):
+            bad = band_off(t, side)
+            if bad:
+                off.append(dict(bad, kind='band'))
+            elif t[side]['bottom'] > t[side]['top'] or not (t[side]['above'] or t[side]['below']):
+                ends += 1
+    met, junctions = bands_meet(bands)
+    off.extend(dict(m, kind='band') for m in met)
+    # the ends whose run sets no glyph the gate reads — an item's alone — held to nothing here, and counted
+    unread = sum(1 for t in bands for s in ('A', 'B') if t.get('run' + s) and not (t['run' + s]['first'] and t['run' + s]['last']))
     for t in ties:
+        if t['kind'] == 'band':
+            continue
         for side, line, pane, face, other in (('a', t['lineA'], t['paneA'], t.get('faceA'), 'b'), ('b', t['lineB'], t['paneB'], t.get('faceB'), 'a')):
             end = t[side]
             if end.get('whole'):
@@ -1186,9 +1275,130 @@ def ties_hold(r, name, ties, in_view, band=True):
             ends += 1
             if not (line['y'] - TIE_TOL_PX <= end['y'] <= line['y'] + line['h'] + TIE_TOL_PX):
                 off.append({'kind': t['kind'], 'link': t['link'], 'side': side, 'pos': end['pos'], 'y': end['y'], 'line': line})
-    r.check(ends >= in_view and not off, f'{name}: every band and line leaves its pane at its passage\'s own first line, {TIE_TOL_PX} px either way, or at the pane\'s edge where that line has left the pane, a whole document\'s end at its pane\'s facing edge level with the line\'s other end — {in_view} end(s) or more in view',
+    r.check(ends >= in_view and not off, f'{name}: every band stands at its extent — from its run\'s first line to its last, a line it shares with the band beside it divided at its middle, a whole line between their runs unbanded, held at the pane\'s edge where it passes it — and every line leaves its pane at its passage\'s own first line, {TIE_TOL_PX} px either way, or at the pane\'s edge where that line has left the pane, a whole document\'s end at its pane\'s facing edge level with the line\'s other end — {in_view} end(s) or more in view',
             {'ends_in_view': ends, 'off': off[:6]})
-    return {'ties': len(ties), 'ends_in_view': ends, 'off': len(off)}
+    return {'ties': len(ties), 'bands': len(bands), 'ends_in_view': ends, 'off': len(off), 'junctions': junctions, 'glyphs_unread': unread}
+
+
+def every_run_banded(r, name, v, ties):
+    """every run of shared identity the scene holds (`scene.pairs`) drawn as a band, none dropped, however many (issue
+    #331's design decision: "every difference is drawn, as a gap or a stroke depending on its height, and none is
+    dropped"); the runs and bands counted"""
+    runs = sorted((p['u1'], p['u2'], p['width']) for p in ((v or {}).get('pairs') or []))
+    bands = sorted((t['a']['pos'], t['b']['pos'], t['a']['width']) for t in ties if t['kind'] == 'band')
+    r.check(bool(runs) and bands == runs, f'{name}: every run of shared identity is drawn as a band, none dropped',
+            {'runs': len(runs), 'bands': len(bands), 'missing': [x for x in runs if x not in bands][:6]})
+    return {'runs': len(runs), 'bands': len(bands)}
+
+
+def stroke_at_junction(ctx, pairs):
+    """the reading scene's panes scrolled, junction by junction, to where two runs consecutive in both documents part —
+    the earlier run's last byte's line 100 px below each pane's visible top — until the draw stands a stroke; the
+    strokes then drawn, and the junctions tried"""
+    by_a = sorted(pairs, key=lambda p: (p['u1'], p['u2']))
+    by_b = sorted(pairs, key=lambda p: (p['u2'], p['u1']))
+    after_b = {(p['u1'], p['u2']): (q['u1'], q['u2']) for p, q in zip(by_b, by_b[1:])}
+    tried = 0
+    for p, q in zip(by_a, by_a[1:]):
+        if after_b.get((p['u1'], p['u2'])) != (q['u1'], q['u2']):
+            continue
+        tried += 1
+        for side, pos in (('a', p['u1'] + p['width'] - 1), ('b', p['u2'] + p['width'] - 1)):
+            at = ctx.js('window.__skep.scene.at(%s, %d, 1)' % (json.dumps(side), pos))
+            if at and at['line']:
+                ctx.js('document.getElementById(%s).scrollTop += %f' % (json.dumps('scene' + side.upper()), at['line']['y'] - at['pane']['y'] - 100))
+        ctx.frames(2)
+        strokes = ctx.js('window.__skep.scene.strokes()')
+        if strokes:
+            return strokes, tried
+    return [], tried
+
+
+def stroke_holds(ctx, r, name, s, ties, panes):
+    """one stroke as the last draw drew it (issue #331's design decision): at the edge the band before it and the band
+    after it share on each side, as `scene.ties` draws them; drawn in the gutter's half beside each pane holding
+    characters between them, as the gate reads those characters (`scene.text`); its button centred on its point in the
+    gutter, under the pointer there, named by each change's characters on each side in ST's words — unread where a change
+    touches an item, whose characters the DOM does not give as the item rule names them — its count where it stands for two
+    changes or more; its figures"""
+    bands = [t for t in ties if t['kind'] == 'band']
+    first, last = s['changes'][0], s['changes'][-1]
+    before = next((t for t in bands if t['a']['pos'] + t['a']['width'] == first['a']['from'] and t['b']['pos'] + t['b']['width'] == first['b']['from']), None)
+    after = next((t for t in bands if t['a']['pos'] == last['a']['to'] and t['b']['pos'] == last['b']['to']), None)
+    edge = bool(before and after) and all(abs(s[x]['y'] - before[x]['bottom']) <= TIE_TOL_PX and abs(s[x]['y'] - after[x]['top']) <= TIE_TOL_PX for x in ('a', 'b'))
+    r.check(edge, f'{name}: the stroke stands at the edge the band before it and the band after it share on both sides',
+            {'stroke': {k: s[k] for k in ('key', 'a', 'b')}, 'before': before and [before['a'], before['b']], 'after': after and [after['a'], after['b']]})
+    texts = [{x: (ctx.js('window.__skep.scene.text(%s, %d, %d)' % (json.dumps(x), c[x]['from'], c[x]['to'])) or '') if c[x]['to'] > c[x]['from'] else '' for x in ('a', 'b')} for c in s['changes']]
+    halves = [any(t['a'] for t in texts), any(t['b'] for t in texts)]
+    r.check([s['halfA'], s['halfB']] == halves, f'{name}: the stroke drawn in the gutter\'s half beside each pane holding characters between the runs, and in no other',
+            {'halves': [s['halfA'], s['halfB']], 'texts': texts})
+    rect, at = s['rect'], s['at']
+    hit = ctx.js('''((id, x, y) => { const e = document.elementFromPoint(x, y); return !!e && !!e.closest && !!e.closest('[id="' + id + '"]'); })(%s, %f, %f)''' % (json.dumps(s['id'] or ''), at['x'], at['y']))
+    placed = bool(rect) and abs(rect['x'] + rect['w'] / 2 - at['x']) <= 1 and abs(rect['y'] + rect['h'] / 2 - at['y']) <= 1 and s['a']['x'] <= at['x'] <= s['b']['x'] and hit
+    r.check(placed and s['count'] == ('' if len(s['changes']) == 1 else str(len(s['changes']))),
+            f'{name}: the stroke\'s button stands centred on it in the gutter, under the pointer there, its count where it stands for two changes or more',
+            {'rect': rect, 'at': at, 'hit': hit, 'count': s['count'], 'changes': len(s['changes'])})
+    items = [b for x in ('a', 'b') for b in (panes.get(x) or {}).get('blocks', []) for c in s['changes'] if b['kind'] != 'para' and b['pos'] < c[x]['to'] and c[x]['from'] < b['pos'] + b['width']]
+    want = None if items else ctx.js('''(async (texts, A, B) => { const {t} = await import('./strings.js');
+      const side = (x) => (x ? t('L.scene.change.text', {text: x}) : t('L.scene.change.none'));
+      const changes = texts.map((c) => t('L.scene.change', {a: A, one: side(c.a), b: B, other: side(c.b)})).join(' · ');
+      return t('L.scene.stroke.name', {count: t(texts.length > 1 ? 'L.scene.stroke' : 'L.scene.stroke.1', {n: texts.length}), changes}); })(%s, %s, %s)''' % (json.dumps(texts), json.dumps(panes['a']['shows']), json.dumps(panes['b']['shows'])))
+    if want is not None:
+        r.check(s['name'] == want, f'{name}: the stroke\'s button is named by each change\'s characters on each side, as the gate reads them, in ST\'s words', {'name': s['name'], 'want': want})
+    else:
+        r.note(f'{name}: the stroke\'s name against the characters the DOM gives: unmeasured — a change touches an item (FP-18)')
+    return {'key': s['key'], 'changes': len(s['changes']), 'halves': halves, 'texts': texts}
+
+
+def scene_strokes_hold(ctx, r):
+    """THE STROKES BETWEEN BANDS (issue #331's design decision: "When two runs that are consecutive in both documents meet
+    on both sides, the difference has no drawn height. Draw their shared edge as a stroke in the half of the gutter beside
+    each document that holds characters between them"): the scene on VERSIONED's first member beside its latest, at its
+    plain address — every band at its extent (`ties_hold`) and every run a band (`every_run_banded`); each pane scrolled
+    to where two runs consecutive in both documents part, until a stroke stands in view (`stroke_at_junction`), the
+    stroke holding (`stroke_holds`); a person's click on its button showing its list at it, the focus left on the
+    button, and Esc closing the list there; Enter at it showing the list with the focus on its first row, and Esc
+    returning the focus to the button (FP-20). Unmeasured where no stroke stands (FP-18); the measure's own figures, the
+    runs it read and its time on this machine. Its figures"""
+    first = VERSIONED + '.1'
+    name = f'the scene on {first} beside {VERSIONED}'
+    ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(first), json.dumps(VERSIONED)))
+    wait_for(ctx, 'window.__skep.scene.isOpen()')
+    v = scene_level(ctx)
+    ties = ctx.js('window.__skep.scene.ties()')
+    figures = {'runs': every_run_banded(r, name, v, ties), 'ties': ties_hold(r, name, ties, 0), 'measured': ctx.js('window.__skep.scene.measured()')}
+    strokes, figures['junctions'] = stroke_at_junction(ctx, (v or {}).get('pairs') or [])
+    if not strokes:
+        r.note(f'{name}: a stroke between two bands: unmeasured — no two runs consecutive in both documents meet on both sides here, in view at any junction ({figures["junctions"]} tried) (FP-18)')
+        ctx.js('window.__skep.scene.close()')
+        ctx.frames(2)
+        return figures
+    ties = ctx.js('window.__skep.scene.ties()')
+    figures['ties_at_stroke'] = ties_hold(r, f'{name}, scrolled to a stroke', ties, 0)
+    panes = ctx.js('window.__skep.scene.panes()') or {}
+    figures['strokes'] = [stroke_holds(ctx, r, name, s, ties, panes) for s in strokes]
+    s = strokes[0]
+    sel = '[id="%s"]' % s['id']
+    hit = click_on(ctx, sel)
+    ctx.frames(2)
+    shown = ctx.js('({overlay: window.__skep.overlay(), focus: document.activeElement && document.activeElement.id, rows: [...document.querySelectorAll("#overlay .changes li")].length})')
+    r.check(bool(hit) and hit['hits'] and shown['overlay']['id'] == 'stroke:' + s['key'] and shown['rows'] == len(s['changes']) and shown['focus'] == s['id'],
+            f'{name}: a person\'s click on the stroke shows its list at it, a row for each change, the focus left on the stroke', dict(shown, hit=hit))
+    ctx.drv.key('Escape')
+    ctx.frames(2)
+    closed = ctx.js('({overlay: window.__skep.overlay().id, scene: window.__skep.scene.isOpen(), focus: document.activeElement && document.activeElement.id})')
+    r.check(closed == {'overlay': None, 'scene': True, 'focus': s['id']}, f'{name}: Esc closes the list, the scene standing and the focus on the stroke', closed)
+    ctx.drv.key('Enter')
+    ctx.frames(2)
+    keyed = ctx.js('({overlay: window.__skep.overlay().id, row: !!document.activeElement && !!document.activeElement.closest && !!document.activeElement.closest("#overlay .changes li")})')
+    ctx.drv.key('Escape')
+    ctx.frames(2)
+    back = ctx.js('document.activeElement && document.activeElement.id')
+    r.check(keyed == {'overlay': 'stroke:' + s['key'], 'row': True} and back == s['id'],
+            f'{name}: Enter at the stroke shows its list with the focus on its first row, and Esc returns the focus to the stroke (FP-20)', dict(keyed, back=back))
+    ctx.js('window.__skep.scene.close()')
+    ctx.frames(2)
+    return figures
 
 
 def whole_edges_hold(ctx, r, name, lines):
@@ -1310,7 +1520,8 @@ def scrolled_past(ctx, p):
 def stop_holds(ctx, r, near, s, at_open, shows, at_first):
     """THE STOP AT A BAND'S CLIPPED END (issue #59's design decision), the reading scene standing with the near passage
     `near` in pane A and the stop shown, `s` as the gate reads it: a native button at pane B's facing edge on the band's
-    bearing, at the end of the near passage's band to the passage it stands for where that band is clipped, named by
+    bearing, at the end of the near passage's band to the passage it stands for where that band's extent passes the
+    pane's edge, held there, named by
     ST's words, its count where the passages holding the near passage's material are several; a person's click on it
     bringing that passage into pane B, its first line level with the near passage's where that line stands in pane A's
     view, else STOP_AT_PX below pane B's top, pane A unmoved; where it was the one passage, the stop gone and the focus
@@ -1324,9 +1535,11 @@ def stop_holds(ctx, r, near, s, at_open, shows, at_first):
     below = abs(rect['y'] + rect['h'] - (pane['y'] + pane['h'])) <= TIE_TOL_PX
     edge = pane['y'] if above else pane['y'] + pane['h'] if below else None
     band = next((t for t in ctx.js('window.__skep.scene.ties()') if t['kind'] == 'band' and t['b']['pos'] <= first['pos'] < t['b']['pos'] + t['b']['width']), None)
-    r.check(abs(rect['x'] + rect['w'] - pane['x']) <= TIE_TOL_PX and edge is not None and bool(band) and band['b']['clipped'] and abs(band['b']['y'] - edge) <= TIE_TOL_PX
+    # the band at its extent (issue #331): passing pane B's visible top, held at it, or its bottom, on the stop's bearing
+    held = bool(band) and ((above and band['b']['above'] and abs(band['b']['top'] - edge) <= TIE_TOL_PX) or (below and band['b']['below'] and abs(band['b']['bottom'] - edge) <= TIE_TOL_PX))
+    r.check(abs(rect['x'] + rect['w'] - pane['x']) <= TIE_TOL_PX and edge is not None and held
             and s['name'] == name and s['count'] == (str(n) if n > 1 else ''),
-            'the stop stands at pane B\'s facing edge, at the end of the near passage\'s band to the passage it stands for where that band is clipped on its bearing, named by ST\'s words, its count where the passages holding its material are several (issue #59)',
+            'the stop stands at pane B\'s facing edge, at the end of the near passage\'s band to the passage it stands for where that band passes the pane\'s edge on its bearing and is held there, named by ST\'s words, its count where the passages holding its material are several (issue #59)',
             {'stop': s, 'pane': pane, 'band': band and band['b'], 'want': name})
     hit = click_on(ctx, '#scenestop')
     ctx.frames(2)
@@ -1571,8 +1784,10 @@ def scene_holds(ctx, r):
     v = scene_level(ctx)
     r.check(bool(v) and v['level']['a'] == WINDOW[0] and v['level']['b'] is not None, 'the scene on the window and its origin, nothing held: the ends set level are the window run\'s first position and its counterpart in the origin', v and v['level'])
     level_holds(r, 'the scene on the window and its origin', v)
-    # the window run's band: both its ends are the lines set level, in view
-    seen['origin'] = {'level': v and v['level'], 'ties': ties_hold(r, 'the scene on the window and its origin', ctx.js('window.__skep.scene.ties()'), 2)}
+    # the window run's band: both its ends at the lines set level, in view; every run a band
+    ties = ctx.js('window.__skep.scene.ties()')
+    seen['origin'] = {'level': v and v['level'], 'ties': ties_hold(r, 'the scene on the window and its origin', ties, 2),
+                      'runs': every_run_banded(r, 'the scene on the window and its origin', v, ties), 'measured': ctx.js('window.__skep.scene.measured()')}
     ctx.js('window.__skep.scene.close()')
     ctx.frames(2)
     seen['whole'] = scene_whole_holds(ctx, r)
@@ -1619,8 +1834,9 @@ def scene_holds(ctx, r):
     want = run and {'a': max(para['pos'], run['u1']), 'b': run['u2'] + max(para['pos'], run['u1']) - run['u1']}
     r.check(bool(v) and run is not None and want['a'] == para['pos'] and v['level'] == want, 'from the versions list, the paragraph held: the first pane\'s end is the held paragraph\'s first position, and the latest member\'s is its counterpart in the run that holds it, never the first pair\'s', {'level': v and v['level'], 'want': want})
     level_holds(r, 'the versions list\'s read side by side', v)
-    # a member that holds all of its edition shares it as one run, its first line above both panes: its band clipped at their edges
-    seen['versions'] = {'level': v and v['level'], 'ties': ties_hold(r, 'the versions list\'s read side by side', ctx.js('window.__skep.scene.ties()'), 0)}
+    # a member that holds all of its edition shares it as one run, from its first line above both panes: its band held at their visible tops
+    ties = ctx.js('window.__skep.scene.ties()')
+    seen['versions'] = {'level': v and v['level'], 'ties': ties_hold(r, 'the versions list\'s read side by side', ties, 0), 'runs': every_run_banded(r, 'the versions list\'s read side by side', v, ties)}
     # the version statement's click cue is the plane's corner's, whose act it is (K-57): a pane's corner is shown, not acted on
     corner = ctx.js('''(() => { const cue = (sel) => [...document.querySelectorAll(sel)].map((e) => { const s = getComputedStyle(e); return {cursor: s.cursor, line: s.textDecorationLine}; });
       return {pane: cue('.pane .corner .version'), plane: cue('#corners .corner .version')}; })()''')
@@ -3360,5 +3576,6 @@ def run(ctx):
     r.figures['bare'] = bare_holds(ctx, r)
     r.figures['longest'] = longest_holds(ctx, r)
     r.figures['walk'] = walk_holds(ctx, r)
+    r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

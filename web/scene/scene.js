@@ -1,8 +1,9 @@
 // SC — the reading scene (the structure record §3.2; B1-S9; foundations
 // §2.5; law 12). Layer 2. ENGINE-BOUND. State (FP-10): the pair, the two
 // ends it sets level, whether the far end names pane B's document whole, the
-// bands' and lines' ends and the passages shared with the near one as
-// measured in the panes, the stop's next passage and whether its appearance
+// bands' extents, the lines' ends, the strokes and the passages shared with
+// the near one as measured in the panes, the last measure's figures, the
+// stroke whose list stands, the stop's next passage and whether its appearance
 // was said, the panes' scrolls, each pane's text — the record it was made
 // from, the version it reads and the address it names, the links and far
 // ends it was set with — the settings reading and the acts waiting on them,
@@ -37,13 +38,39 @@
 // that pane (FP-30), inked as BM inks a beam's ends, and where the two
 // differ the line changing colour once, at the middle of the gap
 // (`drawTie`), so opening the scene never recolours the link it opened on —
-// and shared identity as bands from `compare`'s pairs, each run of
-// contiguous pairs one band (`merged`). Each tie leaves its pane at its
-// passage's first line — measured through T-LAYER's byte-span mapping over
-// the pane's article and the blocks it was made from when the scene is set
-// level, a pane is set again or the panes change size (`measure`), and moved
-// with each pane's scroll (`draw`) — and one whose end has left its pane is
-// clipped at the pane's edge with the stub's triangle, in that end's hue.
+// and shared identity as bands from `compare`'s pairs, each run of pairs
+// adjoining in both documents one band (`merged`), its runs exact, so no
+// band spans a difference and runs in another order cross. Each line leaves
+// its pane at its passage's first line; each band is drawn at its extent on
+// each pane's facing edge (FP-26; `banded`, `drawBand`): from the top of the
+// box its run's first byte stands in to the bottom of its last byte's
+// (`boxesIn`) — a character's line box, a blank line's, an item's own — two
+// bands consecutive on a side meeting where the bytes between them there
+// take no whole line, at the middle of a line they share or at the edge
+// between their lines, and leaving an unbanded stretch where they take one;
+// runs holding one identity twice share nothing. Every end is measured
+// through T-LAYER's byte-span mapping over the pane's article and the blocks
+// it was made from when the scene is set level, a pane is set again or the
+// panes change size (`measure`), and moved with each pane's scroll (`draw`);
+// an end that has left its pane is clipped at the pane's edge with the
+// stub's triangle, in that end's hue, a band's held inside the pane's
+// visible height.
+// Where two runs consecutive in both documents meet on both sides, the
+// difference between them has no drawn height: their shared edge is a
+// stroke, drawn in the gutter's half beside each pane holding bytes between
+// them (`drawStroke`), strokes at one place one stroke with their count
+// (`banded`). Each stroke in view is a native button in the gutter
+// (`#scenestrokes`; `placeStrokes`), its count shown where it stands for two
+// changes or more, named by each change's characters on each side, read
+// from the text its panes were set with by T-ARTICLE's item rule
+// (`copyText`), white space kept and an item by its stand-in; its act — a
+// click, Enter or Space — shows those words whole in a list at it (O-HOST's;
+// `showChanges`), which a setting of the panes draws again from the stroke
+// standing at the same bytes, or, where none stands, leaves standing and
+// saying so (FP-28), and which the scene's own end dismisses. A stroke is
+// keyed by the permanent address of the byte before its first change
+// (`strokeKey`), so its button, its list and the stop the scene's record
+// names follow it across a setting.
 // A far end naming its pane's document whole, in either pane, is that whole
 // document (FP-30): it stands at no line, its line meeting the pane's facing
 // edge level with the line's other end, held inside the pane's visible
@@ -156,9 +183,11 @@
 // (`toShared`) scrolls pane B alone, the passage's first line level with the
 // near passage's where that line is in view, else LEVEL_AT px below the
 // pane's top; a stop that leaves while it holds the focus hands it to pane B,
-// and the re-level starts it at the first again. It is one of the scene's
-// stops after pane A's corner and before pane B, and its keys are a button's
-// own, as the bar's acts' are. The panes
+// and the re-level starts it at the first again. The strokes in view, top to
+// bottom, then the stop, are the scene's stops after pane A's corner and
+// before pane B; a stroke that leaves view while it holds the focus hands it
+// to pane B; and their keys are a button's own, as the bar's acts' are. The
+// panes
 // borrow T-LAYER's mount (FP-12; the structure record §3.4 (vii)):
 // `sceneArticle` makes each pane's article from the record and the view the
 // scene keeps, `madeOf` and `rangeIn` map a position through the blocks it
@@ -186,16 +215,21 @@
 // it shows, in the identifier's face (P-REG's FACE). The scene's acts are its bar's
 // buttons — re-level (K-62, its chord drawn for the platform, rule 19) and
 // the dismissal, the scene's own end — each pressed by a click anywhere on
-// it, by Enter or by Space, and a pane's corner's act.
+// it, by Enter or by Space, a pane's corner's act, and a stroke's.
 // A face that arrives once the panes are set refits them and measures their
 // ties again (`refaced`).
-// Figures: the ends level LEVEL_AT px below the panes' tops; MAX_BANDS bands drawn at
-// most; a band 6 px wide at 0.7 alpha, a line 1.6 px at the link's value; a
-// stub's triangle 8 by 4 px, 6 px inside the pane's edge; a whole document's
-// edge EDGE_W px wide, in the gap against the pane, at its mark's value; the
-// stop 16 px tall over the stub's triangle, its count before it.
+// Figures: the ends level LEVEL_AT px below the panes' tops; every run a
+// band; a band's ground sameness's texture and its edges BAND_EDGE_W px of
+// its boundary, a line 1.6 px at the link's value; a stroke STROKE_W px in
+// sameness's boundary; strokes at one place where their heights lie within
+// PLACE_TOL px on both sides; a stub's triangle 8 by 4 px, 6 px inside the
+// pane's edge; a whole document's edge EDGE_W px wide, in the gap against
+// the pane, at its mark's value; the stop 16 px tall over the stub's
+// triangle, its count before it; a stroke's button 26 px tall, centred on
+// the middle of the halves drawn, its count in its top 11 px, clear of the
+// stroke.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24,
-// FP-28, FP-29, FP-30, FP-34.
+// FP-26, FP-28, FP-29, FP-30, FP-31, FP-34.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -206,12 +240,14 @@ import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
-import { inkOf, strokeOf, strokeIn } from '../beams/beams.js';
+import { copyText } from '../text/article.js';
+import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
 import { SAMENESS } from '../plane/register.js';
+import { LINE_H } from '../plane/layout.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
 import { documentOf, homeOf, memberOf, versionAddress, isTrunkMember } from '../model/address.js';
-import { t } from '../strings.js';
-import { esc } from '../util.js';
+import { t, tHTML } from '../strings.js';
+import { esc, byteOffsets } from '../util.js';
 
 /** @typedef {import('../model/frames.js').ComparePair} ComparePair */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -242,12 +278,51 @@ import { esc } from '../util.js';
  */
 
 /**
- * @typedef {Object} End — one end of a band or a line: its passage, and where the passage's first line stands in its pane's scrolled content
+ * @typedef {Object} End — one end of a link's line between the panes: its passage, and where the passage's first line stands in its pane's scrolled content
  * @property {number} pos the passage's first position
  * @property {number} width its positions
  * @property {number} y the first line's middle, px below the pane's content top — at a cover, its head's withheld statement's; at a whole document, 0, the end standing at no line
  * @property {boolean} [cover] it ends at its pane's cover (`Passage`)
  * @property {boolean} [whole] it is its pane's document whole (`Passage`)
+ */
+
+/**
+ * @typedef {Object} Box — the stretch of its pane's facing edge a byte of the pane's text stands in, px below the pane's content top (`boxesIn`): a character's line box, a blank line's, an item's own; at a newline ending a line, that line's bottom, none tall
+ * @property {number} top
+ * @property {number} bottom
+ */
+
+/**
+ * @typedef {Object} Measured — a run of shared identity as its panes set it: the boxes its first and last bytes stand in on each side (`boxesIn`)
+ * @property {ComparePair} run
+ * @property {{first: Box, last: Box}} a
+ * @property {{first: Box, last: Box}} b
+ */
+
+/**
+ * @typedef {Object} BandEnd — one end of a band: its run in its pane's document, and the stretch of the pane's facing edge it covers, px below the pane's content top (`banded`)
+ * @property {number} pos the run's first position
+ * @property {number} width its positions
+ * @property {number} top
+ * @property {number} bottom
+ */
+
+/** @typedef {{a: BandEnd, b: BandEnd}} Band a run of shared identity drawn at its extent on each pane's facing edge (`banded`) */
+
+/**
+ * @typedef {Object} Change — one difference a stroke stands for: the positions between two runs consecutive in both documents on each side, `from` equal to `to` where that side holds none
+ * @property {{from: number, to: number}} a
+ * @property {{from: number, to: number}} b
+ */
+
+/**
+ * @typedef {Object} Stroke — where two runs consecutive in both documents meet on both sides (`banded`): the heights of their shared edge, px below each pane's content top, the gutter's halves it is drawn in, and the changes it stands for in the documents' order — several where strokes met at one place
+ * @property {number} a its height on pane A's facing edge
+ * @property {number} b its height on pane B's
+ * @property {boolean} halfA pane A holds bytes between the runs: it is drawn in the gutter's half beside pane A
+ * @property {boolean} halfB pane B holds bytes between them
+ * @property {Change[]} changes
+ * @property {string} [key] its key (`strokeKey`), set as the scene measures it
  */
 
 /**
@@ -259,19 +334,29 @@ import { esc } from '../util.js';
  */
 
 /**
- * @typedef {Object} Tie — a band or a line between the panes, its ends measured
- * @property {'band' | 'link'} kind a run of shared identity, or a link drawn at one pane's document whose far end lies in the other's
- * @property {string | null} link the link's address, for a line
+ * @typedef {Object} Tie — a link's line between the panes, its ends measured
+ * @property {string} link the link's address
  * @property {End} a its end in pane A
  * @property {End} b its end in pane B
+ * @property {{a: Ink, b: Ink}} ink each end's (`Line`)
+ * @property {{a: Mark, b: Mark}} marks each end's mark (`Line`)
+ * @property {number} value the link's own
  */
 
+/** @typedef {{pos: number, width: number, x: number, top: number, bottom: number, above: boolean, below: boolean, clipped: boolean}} BandDrawn a band's end as the last draw drew it, on screen: its extent held inside its pane's visible height, and whether it passes the visible top (`above`) or bottom (`below`) */
+/** @typedef {{pos: number, width: number, x: number, y: number, clipped: boolean, cover: boolean, whole: boolean}} LineDrawn a line's end as the last draw drew it, on screen */
+
+/** @typedef {{kind: 'band', link: null, a: BandDrawn, b: BandDrawn} | {kind: 'link', link: string, a: LineDrawn, b: LineDrawn}} Drawn a band or a line as the last draw drew it, its ends on screen */
+
 /**
- * @typedef {Object} Drawn — a tie as the last draw drew it, its ends on screen
- * @property {'band' | 'link'} kind
- * @property {string | null} link
- * @property {{pos: number, width: number, x: number, y: number, clipped: boolean, cover: boolean, whole: boolean}} a
- * @property {{pos: number, width: number, x: number, y: number, clipped: boolean, cover: boolean, whole: boolean}} b
+ * @typedef {Object} StrokeDrawn — a stroke as the last draw drew it, on screen
+ * @property {string} key its key (`strokeKey`)
+ * @property {{x: number, y: number}} a its end at pane A's facing edge
+ * @property {{x: number, y: number}} b its end at pane B's
+ * @property {boolean} halfA
+ * @property {boolean} halfB
+ * @property {Change[]} changes
+ * @property {{x: number, y: number}} at the point its button stands centred on: the middle of the halves drawn
  */
 
 /**
@@ -357,7 +442,10 @@ import { esc } from '../util.js';
  * @property {Level} level
  * @property {boolean} whole the far end of the link it was opened from names pane B's document whole (`Held.wholeB`)
  * @property {number} widthA the positions of the passage held in pane A, from `level.a`: the near passage, whose material the stop finds in pane B
- * @property {Array<Tie & {ink: {a: Ink, b: Ink}, value: number, marks?: {a: Mark, b: Mark}}>} ties
+ * @property {Band[]} bands every run of shared identity at its extent, as measured
+ * @property {Tie[]} lines the links' lines between the panes, as measured
+ * @property {Stroke[]} strokes where runs consecutive in both documents meet on both sides, as measured, in the documents' order
+ * @property {{key: string, caption: string, rows: string[]} | null} listing the stroke whose list stands (`showChanges`): its key, and its caption and its rows' markup as last drawn; null where none stands
  * @property {Shared[]} shared where the scene is whole, the passages of pane B holding the near passage's material, in pane B's order, as measured; none elsewhere
  * @property {number} next the shared passage the stop's next act goes to first, an index into `shared`
  * @property {number | null} at the shared passage the stop stands for as the last draw placed it, an index into `shared`; null where it stands hidden
@@ -388,7 +476,7 @@ import { esc } from '../util.js';
  * @property {number | null} lacks what the pane's corner said the version it read lacks (`Pane.lacks`)
  */
 
-/** @typedef {'a' | 'b' | 'a:corner' | 'b:corner' | 'relevel' | 'x'} Stop a stop of the scene's the platform's focus stands on: a pane, a pane's corner, or one of the bar's acts */
+/** @typedef {'a' | 'b' | 'a:corner' | 'b:corner' | 'relevel' | 'x' | `stroke ${string}`} Stop a stop of the scene's the platform's focus stands on: a pane, a pane's corner, one of the bar's acts, or a stroke's button by its key (`strokeKey`) */
 
 /**
  * @typedef {Object} Left — the scene as the reader left it (`asLeft`; see the head): what its trail entry records, by value, and what reopens it (`reopen`)
@@ -399,10 +487,14 @@ import { esc } from '../util.js';
 
 /** how far below the panes' tops the two ends are set level (px), where both can stand there */
 const LEVEL_AT = 40;
-/** the bands drawn at most */
-const MAX_BANDS = 400;
-/** @type {Ink} a band's ink at both its ends: sameness's boundary, never a linker's hue (P-REG) */
+/** @type {Ink} a band's ink, its edges' and its strokes': sameness's boundary, never a linker's hue (P-REG) */
 const BAND_INK = { hue: SAMENESS.boundary, dash: [] };
+/** a band's edges' stroke (px) */
+const BAND_EDGE_W = 1;
+/** a stroke's width (px): heavier than a band's edge, so it reads apart from the edge it lies on */
+const STROKE_W = 3;
+/** how near two strokes' heights lie on both sides for them to stand at one place (px) */
+const PLACE_TOL = 0.5;
 /** the keys a pane takes, moving it alone (K-60) */
 const MOVES = ['PageDown', 'PageUp', '↓', '↑', 'Home', 'End'];
 const SIDES = /** @type {const} */ (['a', 'b']);
@@ -413,12 +505,16 @@ const WHOLE_ID = 'sceneB-whole';
 
 /** @type {Scene | null} */
 let scene = null;
-/** @type {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement} | null} */
+/** @type {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement, strokes: HTMLElement} | null} */
 let els = null;
 /** @type {Drawn[]} what the last draw drew */
 let drawnTies = [];
 /** @type {Edge[]} the facing edges the last draw drew */
 let drawnEdges = [];
+/** @type {StrokeDrawn[]} the strokes the last draw drew, in view */
+let drawnStrokes = [];
+/** @type {{runs: number, bands: number, strokes: number, ms: number}} the last measure's figures: the runs it read, the bands and strokes it made of them, and the time it took by the platform's clock (FP-18) */
+let lastMeasure = { runs: 0, bands: 0, strokes: 0, ms: 0 };
 /** the scene's own end — a Back from its entry, the app's to hand in (`attach`); until it does, the scene ended where it stands */
 let ending = (/** @type {boolean} */ _byKey) => close();
 
@@ -464,8 +560,8 @@ function namePanes(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} *
 /**
  * Attach the scene's elements, and the act its own end runs (see the head):
  * the bar's ×, told whether a key pressed it by the focus owner's one
- * reading (FP-20); the stop's act (`toShared`).
- * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement}} e
+ * reading (FP-20); the stop's act (`toShared`); a stroke's (`showChanges`).
+ * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement, strokes: HTMLElement}} e `strokes` the gutter's layer the strokes' buttons stand in
  * @param {{end?: (byKey: boolean) => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it
  */
 export function attach(e, acts = {}) {
@@ -473,6 +569,10 @@ export function attach(e, acts = {}) {
   if (acts.end) ending = acts.end;
   e.root.setAttribute('aria-label', t('L.scene-label'));
   e.stop.addEventListener('click', () => toShared());
+  e.strokes.addEventListener('click', (ev) => {
+    const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest('[data-stroke]'));
+    if (b && b.dataset.stroke) strokeAct(b.dataset.stroke, FOCUS.byKey(ev));
+  });
   /** is an event's target a pane's corner's act? */
   const onAct = (/** @type {Event} */ ev) => { const tg = /** @type {HTMLElement | null} */ (ev.target); return !!tg && !!tg.closest && !!tg.closest('.corner [data-read]'); };
   for (const p of [e.paneA, e.paneB]) {
@@ -490,10 +590,27 @@ export const isOpen = () => scene !== null;
 export const pair = () => (scene ? { a: scene.a.names, b: scene.b.names } : null);
 /** the scene's runs of shared identity and the two ends it sets level, read-only (the gate reads them) */
 export const pairs = () => (scene ? { pairs: scene.pairs.map((p) => ({ ...p })), level: { ...scene.level } } : null);
-/** the bands and lines the last draw drew, their ends on screen (the gate holds each to its passage's line) */
-export const ties = () => drawnTies.map((d) => ({ ...d, a: { ...d.a }, b: { ...d.b } }));
+/** the last measure's figures (the gate records them; FP-18): the runs it read, the bands and strokes it made of them, and its time in ms */
+export const measured = () => ({ ...lastMeasure });
+/** the bands and lines the last draw drew, their ends on screen (the gate holds each band to its run's lines and each line to its passage's line) */
+export const ties = () => drawnTies.map((d) => /** @type {Drawn} */ ({ ...d, a: { ...d.a }, b: { ...d.b } }));
 /** the facing edges the last draw drew for the whole-document ends meeting them, on screen (the gate holds each to its pane's visible height) */
 export const edges = () => drawnEdges.map((e) => ({ ...e, links: [...e.links] }));
+/**
+ * The strokes the last draw drew, in view, on screen (the gate reads them):
+ * each its key, its two ends, its halves, its changes, the point its button
+ * stands centred on, and its button's id, name, count and rect.
+ */
+export function strokes() {
+  const E = els;
+  return drawnStrokes.map((s) => {
+    const btn = E ? buttonOf(E, s.key) : null, r = btn ? btn.getBoundingClientRect() : null;
+    return {
+      key: s.key, a: { ...s.a }, b: { ...s.b }, halfA: s.halfA, halfB: s.halfB, at: { ...s.at }, changes: s.changes.map((c) => ({ a: { ...c.a }, b: { ...c.b } })),
+      id: btn ? btn.id : null, name: btn ? btn.getAttribute('aria-label') : null, count: btn ? btn.textContent || '' : '', rect: r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null,
+    };
+  });
+}
 /**
  * The stop as the last draw placed it (the gate reads it): whether it stands,
  * the shared passages it reaches, the one it stands for and the one its next
@@ -621,6 +738,86 @@ export function levels(runs, held = {}) {
   if (posA == null) { const first = [...runs].sort((x, y) => x.u1 - y.u1)[0]; return first ? { a: first.u1, b: first.u2 } : { a: null, b: null }; }
   const c = counterpart(runs, posA, held.widthA ?? 1);
   return c ? { a: c.a, b: c.b } : { a: posA, b: null };
+}
+
+/**
+ * Where two runs consecutive on one side meet there (see the head): the
+ * middle of a line the last byte of the one and the first byte of the other
+ * share; else, where no whole line stands between those bytes' boxes, the
+ * edge between them; null where one does — the unbanded stretch a
+ * difference taking a whole line leaves.
+ * @param {Box} last the box of the earlier run's last byte
+ * @param {Box} first the box of the later run's first byte
+ * @param {number} lb its pane's line box, px
+ * @returns {number | null}
+ */
+function meetAt(last, first, lb) {
+  const top = Math.max(last.top, first.top), bottom = Math.min(last.bottom, first.bottom);
+  if (bottom - top > lb / 2) return (top + bottom) / 2;
+  return first.top - last.bottom < lb / 2 ? (last.bottom + first.top) / 2 : null;
+}
+
+/**
+ * The bands and the strokes between the panes, from the runs as their panes
+ * set them (see the head): each run a band from the top of its first byte's
+ * box to the bottom of its last byte's on each side; two runs consecutive on
+ * a side, holding no byte of each other there, meeting where `meetAt` places
+ * them — each band's edge there at that height — and runs holding one
+ * identity twice sharing nothing. Where two runs consecutive in both
+ * documents meet on both sides, a stroke at the two heights they meet at,
+ * drawn in the gutter's half beside each side holding bytes between them;
+ * strokes whose heights lie within PLACE_TOL px of each other on both sides
+ * one stroke, its changes in the documents' order and its halves joined.
+ * Runs adjoining on both sides — which `merged` has joined — stand no
+ * stroke, nothing lying between them.
+ * @param {Measured[]} runs
+ * @param {{a: number, b: number}} lineBox each pane's line box, px
+ * @returns {{bands: Band[], strokes: Stroke[]}} `bands` in the order the runs are named
+ */
+export function banded(runs, lineBox) {
+  const ext = runs.map((m) => ({ a: { top: m.a.first.top, bottom: m.a.last.bottom }, b: { top: m.b.first.top, bottom: m.b.last.bottom } }));
+  /** @type {{a: Map<number, number>, b: Map<number, number>}} the height each run meets the run after it at, on each side, by its index */
+  const meets = { a: new Map(), b: new Map() };
+  /** @type {{a: number[], b: number[]}} each side's order of the runs, by index */
+  const order = { a: [], b: [] };
+  for (const side of SIDES) {
+    const here = (/** @type {number} */ i) => (side === 'a' ? runs[i].run.u1 : runs[i].run.u2);
+    const there = (/** @type {number} */ i) => (side === 'a' ? runs[i].run.u2 : runs[i].run.u1);
+    const ord = order[side] = runs.map((_, i) => i).sort((i, j) => here(i) - here(j) || there(i) - there(j));
+    for (let k = 0; k + 1 < ord.length; k++) {
+      const i = ord[k], j = ord[k + 1];
+      if (here(j) < here(i) + runs[i].run.width) continue;
+      const y = meetAt(runs[i][side].last, runs[j][side].first, lineBox[side]);
+      if (y == null) continue;
+      meets[side].set(i, y);
+      ext[i][side].bottom = y;
+      ext[j][side].top = y;
+    }
+  }
+  /** @type {Map<number, number | undefined>} each run's successor in pane B's order */
+  const nextB = new Map(order.b.map((i, k) => [i, order.b[k + 1]]));
+  /** @type {Stroke[]} */
+  const strokes = [];
+  for (let k = 0; k + 1 < order.a.length; k++) {
+    const i = order.a[k], j = order.a[k + 1], ya = meets.a.get(i), yb = meets.b.get(i);
+    if (nextB.get(i) !== j || ya === undefined || yb === undefined) continue;
+    const r = runs[i].run, s = runs[j].run;
+    /** @type {Change} */
+    const change = { a: { from: r.u1 + r.width, to: s.u1 }, b: { from: r.u2 + r.width, to: s.u2 } };
+    const halfA = change.a.to > change.a.from, halfB = change.b.to > change.b.from;
+    if (!halfA && !halfB) continue;
+    const same = strokes.find((x) => Math.abs(x.a - ya) <= PLACE_TOL && Math.abs(x.b - yb) <= PLACE_TOL);
+    if (same) { same.halfA = same.halfA || halfA; same.halfB = same.halfB || halfB; same.changes.push(change); }
+    else strokes.push({ a: ya, b: yb, halfA, halfB, changes: [change] });
+  }
+  const bands = runs.map((m, i) => {
+    const e = ext[i];
+    return {
+      a: { pos: m.run.u1, width: m.run.width, top: e.a.top, bottom: Math.max(e.a.top, e.a.bottom) },
+      b: { pos: m.run.u2, width: m.run.width, top: e.b.top, bottom: Math.max(e.b.top, e.b.bottom) },
+    };
+  });
+  return { bands, strokes };
 }
 
 /** the positions from a position to the end of the block holding it, of the blocks named; one where none holds it */
@@ -927,7 +1124,7 @@ export async function open(a, b, held = {}, as = {}) {
  */
 const sceneOf = (pa, pb, pairs, held) => ({
   a: pa, b: pb, pairs, level: levels(pairs, held), whole: !!held.wholeB, widthA: Math.max(1, held.widthA ?? 1),
-  ties: [], shared: [], next: 0, at: null, told: false, size: '', updating: 0, waiting: [],
+  bands: [], lines: [], strokes: [], listing: null, shared: [], next: 0, at: null, told: false, size: '', updating: 0, waiting: [],
 });
 
 /**
@@ -987,6 +1184,7 @@ function stand(E, S, face) {
   S.b.placed = placedInto(S.b.src, [...S.a.view.marks, ...S.b.view.marks]);
   coverPlane(true);
   E.root.classList.add('on');
+  E.strokes.innerHTML = '';
   if (face) E.bar.dataset.face = face; else delete E.bar.dataset.face;
   E.bar.innerHTML = `<b class="id" data-name="a">${esc(S.a.shows)}</b> │ <b class="id" data-name="b">${esc(S.b.shows)}</b> <span class="dim">${esc(t('F.scene.sameness'))} · ${esc(t('F.scene.link'))}</span>` +
     (face ? ` <span class="face-text">${esc(faceWords(face))}</span>` : '') +
@@ -1048,7 +1246,10 @@ export async function reopen(o, as = {}) {
     }
     level();
     if (spots) placeAgain(E, S, spots);
-    FOCUS.open('scene', { el: E.root, from, byKey: true, first: stopIn(E, was.stop) || E.paneB });
+    // the far end's pane the scene's first control, which a region closing over it falls back to; the stop it stood on the focus's
+    FOCUS.open('scene', { el: E.root, from, byKey: true, first: E.paneB });
+    const stood = stopIn(E, was.stop);
+    if (stood && stood !== E.paneB) FOCUS.land(stood, {});
     FOCUS.say(`${t('L.scene-label')} · ${S.a.shows} │ ${S.b.shows}`);
     out.shown = true;
     markDirty();
@@ -1129,8 +1330,13 @@ export function asLeft() {
   return { panes: { a: version(S.a), b: version(S.b) }, spots: { a: spot(S.a), b: spot(S.b) }, stop: stopOf(E) };
 }
 
-/** the scene's stop the platform's focus stands on (`Stop`); null where it stands outside the scene */
-function stopOf(/** @type {NonNullable<typeof els>} */ E) {
+/**
+ * The scene's stop the platform's focus stands on; null where it stands
+ * outside the scene.
+ * @param {NonNullable<typeof els>} E
+ * @returns {Stop | null}
+ */
+function stopOf(E) {
   const at = typeof document !== 'undefined' ? document.activeElement : null;
   if (!at) return null;
   for (const side of SIDES) {
@@ -1138,13 +1344,16 @@ function stopOf(/** @type {NonNullable<typeof els>} */ E) {
     if (corner && corner.contains(at)) return /** @type {Stop} */ (side + ':corner');
     if (pane.contains(at)) return side;
   }
+  const stroke = E.strokes.contains(at) ? /** @type {HTMLElement} */ (at).dataset.stroke : undefined;
+  if (stroke) return /** @type {Stop} */ (`stroke ${stroke}`);
   return at === E.bar.querySelector('[data-relevel]') ? 'relevel' : at === E.bar.querySelector('[data-x]') ? 'x' : null;
 }
 
-/** the element a stop names (`Stop`) as the scene stands now; null where it names none */
+/** the element a stop names (`Stop`) as the scene stands now — a stroke's button only while its stroke stands in view; null where it names none */
 function stopIn(/** @type {NonNullable<typeof els>} */ E, /** @type {Stop | null} */ stop) {
   if (stop === 'a' || stop === 'b') return paneEl(E, stop);
   if (stop === 'a:corner' || stop === 'b:corner') return paneEl(E, stop === 'a:corner' ? 'a' : 'b').querySelector(':scope > .corner');
+  if (stop && stop.startsWith('stroke ')) return buttonOf(E, stop.slice('stroke '.length));
   return stop === 'relevel' ? E.bar.querySelector('[data-relevel]') : stop === 'x' ? E.bar.querySelector('[data-x]') : null;
 }
 
@@ -1286,31 +1495,133 @@ function coverIn(pane) {
  */
 const endIn = (/** @type {HTMLElement} */ pane, /** @type {string} */ names, /** @type {Passage} */ e) => (e.whole ? { top: 0, y: 0 } : e.cover ? coverIn(pane) : lineIn(pane, names, e.pos, e.width));
 
+/** the index of the block holding a position, of blocks in position order; −1 where none holds it */
+function indexIn(/** @type {Block[]} */ blocks, /** @type {number} */ pos) {
+  let lo = 0, hi = blocks.length - 1;
+  while (lo <= hi) {
+    const m = (lo + hi) >> 1, b = blocks[m];
+    if (pos < b.pos) hi = m - 1; else if (pos >= b.pos + b.width) lo = m + 1; else return m;
+  }
+  return -1;
+}
+
+/** the pitch of a block's lines as laid out, px: its box's height over the lines it holds — the line box the engine sets, which the computed line height only approaches */
+const pitchOf = (/** @type {number} */ h, /** @type {number} */ lb) => h / Math.max(1, Math.round(h / lb));
+
 /**
- * Measure the ties: each run of shared identity, and each link between the
- * two documents once per pair of its ends (`linesBetween`), its ends at
- * their passages' first lines in the panes' content, or at a pane's cover —
- * every one from what the panes were set with, never the model's now; a tie
- * an end of which lies in none of its pane's blocks is left out. Where the
- * scene is whole, the passages the stop reaches with them: the near passage's
- * `counterparts` in pane B, in pane B's order, each at its first line there,
- * the stop's next passage the first again where it names one no more.
+ * A reader of the boxes a pane's bytes stand in (`Box`; see the head),
+ * through the blocks its article was made from and the elements standing for
+ * them: a character's line box — the line of its block's box its glyph's
+ * middle stands in, through T-LAYER's byte-span mapping, each line the
+ * block's pitch tall; a newline after its block's characters, past the one
+ * ending their line, the blank line box it makes below them — each newline
+ * of a block holding no character one, save the one ending an item's line
+ * right before it; a newline ending a line, that line's bottom, none tall; an
+ * item's own box. Null where the pane holds no article; `at` null for a byte
+ * the article's blocks hold none of, or a character that sets no glyph.
+ * @param {HTMLElement} pane
+ * @param {string} names the address the pane's article is made as (`Pane.names`)
+ * @returns {{at: (pos: number) => Box | null, lb: number} | null} `lb` the article's line box as laid out, px
+ */
+function boxesIn(pane, names) {
+  const art = articleIn(pane);
+  if (!art) return null;
+  const cs = getComputedStyle(art.el), computed = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * LINE_H;
+  const origin = pane.getBoundingClientRect().top + pane.clientTop - pane.scrollTop, blocks = art.made.blocks;
+  /** @type {Map<number, HTMLElement>} each block's element, by its first position */
+  const parts = new Map();
+  for (const e of /** @type {NodeListOf<HTMLElement>} */ (art.el.querySelectorAll('.run > .sp, .run > .withheld'))) parts.set(Number(e.dataset.pos), e);
+  /** the article's line box as laid out: the pitch of its first block of characters, else the computed line height */
+  let lb = computed;
+  for (const b of blocks) {
+    const el = b.kind === 'para' && b.text ? parts.get(b.pos) : undefined, h = el ? el.getBoundingClientRect().height : 0;
+    if (h > 0) { lb = pitchOf(h, computed); break; }
+  }
+  /** @type {(pos: number) => Box | null} */
+  const at = (pos) => {
+    const i = indexIn(blocks, pos), b = i < 0 ? null : blocks[i], el = b ? parts.get(b.pos) : undefined;
+    if (!b || !el) return null;
+    const q = el.getBoundingClientRect(), top = q.top - origin, bottom = q.bottom - origin;
+    if (b.kind !== 'para') return { top, bottom };
+    const offs = byteOffsets(b.text), off = pos - b.pos, n = offs[offs.length - 1], pitch = bottom > top ? pitchOf(bottom - top, computed) : lb;
+    if (off < n) {
+      let lo = 0, hi = offs.length - 2;
+      while (lo < hi) { const m = (lo + hi + 1) >> 1; if (offs[m] <= off) lo = m; else hi = m - 1; }
+      const range = LAYER.rangeIn(art.el, { addr: names, pos: b.pos + offs[lo], width: offs[lo + 1] - offs[lo] });
+      const r = range ? [...range.getClientRects()].find((x) => x.height > 0) : null;
+      if (!r) return null;
+      const line = Math.max(0, Math.floor((r.top + r.height / 2 - origin - top) / pitch));
+      return { top: top + line * pitch, bottom: top + (line + 1) * pitch };
+    }
+    const k = off - n;
+    if (b.text) return k === 0 ? { top: bottom, bottom } : { top: bottom + (k - 1) * pitch, bottom: bottom + k * pitch };
+    const prev = i > 0 ? blocks[i - 1] : null, ends = prev && prev.kind !== 'para' && prev.pos + prev.width === b.pos ? 1 : 0;
+    return k < ends ? { top, bottom: top } : { top: top + (k - ends) * lb, bottom: top + (k - ends + 1) * lb };
+  };
+  return { at, lb };
+}
+
+/**
+ * A stroke's key (see the head): the permanent address of the byte before
+ * its first change — the last of the run it follows, the same on both sides —
+ * through the image pane A's article was made from; where that image does
+ * not cover it, the change's positions on each side.
+ * @param {Stroke} s
+ * @param {import('../model/records.js').ImageRun[]} image pane A's article's
+ * @returns {string}
+ */
+function strokeKey(s, image) {
+  const c = s.changes[0], at = REC.identityIn(image, c.a.from - 1, 1)[0];
+  return at ? `${at.prefix}.${at.ordinal}` : `${c.a.from}-${c.b.from}`;
+}
+
+/**
+ * Measure the ties: each run of shared identity as a band at its extent and
+ * the strokes where runs consecutive in both documents meet on both sides
+ * (`banded`, each run's first and last bytes' boxes read by `boxesIn`), each
+ * stroke keyed (`strokeKey`), a run a byte of which none of its pane's
+ * blocks holds left out; and each link between the two documents once per
+ * pair of its ends (`linesBetween`), its ends at their passages' first lines
+ * in the panes' content, or at a pane's cover, a line an end of which lies
+ * in none of its pane's blocks left out — every one from what the panes were
+ * set with, never the model's now. Where the scene is whole, the passages
+ * the stop reaches with them: the near passage's `counterparts` in pane B, in
+ * pane B's order, each at its first line there, the stop's next passage the
+ * first again where it names one no more.
  */
 function measure() {
   const S = scene, E = els;
   if (!S || !E) return;
-  /** @type {Scene['ties']} */
-  const out = [];
-  for (const p of S.pairs.slice(0, MAX_BANDS)) {
-    const la = lineIn(E.paneA, S.a.names, p.u1, p.width), lb = lineIn(E.paneB, S.b.names, p.u2, p.width);
-    if (la && lb) out.push({ kind: 'band', link: null, a: { pos: p.u1, width: p.width, y: la.y }, b: { pos: p.u2, width: p.width, y: lb.y }, ink: { a: BAND_INK, b: BAND_INK }, value: 0.7 });
+  const t0 = performance.now();
+  const ra = boxesIn(E.paneA, S.a.names), rb = boxesIn(E.paneB, S.b.names);
+  /** @type {Measured[]} */
+  const runs = [];
+  if (ra && rb) {
+    for (const p of S.pairs) {
+      const fa = ra.at(p.u1), la = ra.at(p.u1 + p.width - 1), fb = rb.at(p.u2), lb = rb.at(p.u2 + p.width - 1);
+      if (fa && la && fb && lb) runs.push({ run: p, a: { first: fa, last: la }, b: { first: fb, last: lb } });
+    }
   }
+  const drawn = banded(runs, { a: ra ? ra.lb : 0, b: rb ? rb.lb : 0 });
+  const made = S.a.el ? LAYER.madeOf(S.a.el) : null, image = made ? made.image : [];
+  /** @type {Map<string, number>} the strokes keyed so far, by key: a key met again takes the count after it */
+  const seen = new Map();
+  for (const s of drawn.strokes) {
+    const key = strokeKey(s, image), n = seen.get(key) || 0;
+    seen.set(key, n + 1);
+    s.key = n ? `${key}~${n}` : key;
+  }
+  S.bands = drawn.bands;
+  S.strokes = drawn.strokes;
+  lastMeasure = { runs: S.pairs.length, bands: drawn.bands.length, strokes: drawn.strokes.length, ms: performance.now() - t0 };
+  /** @type {Tie[]} */
+  const lines = [];
   // the link lines between the panes — the set LK gave at each pane's document as it was set (the seam)
   for (const l of linesBetween(linksOf(S.a), linksOf(S.b))) {
     const la = endIn(E.paneA, S.a.names, l.a), lb = endIn(E.paneB, S.b.names, l.b);
-    if (la && lb) out.push({ kind: 'link', link: l.link, a: { ...l.a, y: la.y }, b: { ...l.b, y: lb.y }, ink: l.ink, marks: l.marks, value: l.value });
+    if (la && lb) lines.push({ link: l.link, a: { ...l.a, y: la.y }, b: { ...l.b, y: lb.y }, ink: l.ink, marks: l.marks, value: l.value });
   }
-  S.ties = out;
+  S.lines = lines;
   const near = S.level.a;
   S.shared = !S.whole || near == null ? [] : counterparts(S.pairs, near, S.widthA).sort((p, q) => p.b - q.b).flatMap((c) => {
     const line = lineIn(E.paneB, S.b.names, c.b, c.width);
@@ -1331,9 +1642,9 @@ function measure() {
  * passage by the position that act names — the runs of shared identity
  * between the panes taken, the far ends crossing into each kept, and the ties
  * measured anew and drawn, so no tie is drawn over text it was not measured
- * on. A pane taken down at the death carries nothing into the text it takes:
- * its reader's place is kept for the read at the guest's class that sets it
- * again.
+ * on; a stroke's list standing checked again (`recheckList`). A pane taken
+ * down at the death carries nothing into the text it takes: its reader's
+ * place is kept for the read at the guest's class that sets it again.
  * @param {Scene} S
  * @param {Array<{side: 'a' | 'b', next: Next}>} sets
  * @param {ComparePair[] | null} pairs the runs of shared identity between the panes now; null where they stand as they were
@@ -1390,6 +1701,7 @@ function setPanes(S, sets, pairs, opts = {}) {
   }
   measure();
   draw();
+  recheckList(S);
 }
 
 /**
@@ -1666,11 +1978,14 @@ function level() {
 }
 
 /**
- * Draw the bands and the lines on the scene's canvas, each end where its
- * passage's line stands at the panes' scrolls now — a whole document's at its
- * pane's facing edge, level with the line's other end — then each facing edge
- * whole-document ends meet (`wholeEdges`, `drawEdge`), and the stop placed
- * (`placeStop`).
+ * Draw the bands, the strokes and the lines on the scene's canvas at the
+ * panes' scrolls now: each band at its extent (`drawBand`), held inside each
+ * pane's visible height; each stroke whose two heights stand in their panes'
+ * visible heights (`drawStroke`); each line's end where its passage's line
+ * stands — a whole document's at its pane's facing edge, level with the
+ * line's other end — then each facing edge whole-document ends meet
+ * (`wholeEdges`, `drawEdge`); the strokes' buttons and the stop placed
+ * (`placeStrokes`, `placeStop`).
  */
 export function draw() {
   const S = scene, E = els;
@@ -1693,23 +2008,45 @@ export function draw() {
   };
   /** a whole document's end on the canvas: level with the line's other end, held inside its pane's visible height */
   const meet = (/** @type {ReturnType<typeof frame>} */ f, /** @type {{y: number} | null} */ o) => ({ y: Math.max(f.top, Math.min(f.bottom, o ? o.y : f.top)), clipped: false, above: false });
+  /** a band's end on the canvas: its extent held inside its pane's visible height, and whether it passes the visible top or bottom */
+  const span = (/** @type {ReturnType<typeof frame>} */ f, /** @type {BandEnd} */ e) => {
+    const top = f.origin + e.top, bottom = f.origin + e.bottom, hold = (/** @type {number} */ y) => Math.max(f.top, Math.min(f.bottom, y));
+    return { top: hold(top), bottom: hold(bottom), above: top < f.top, below: bottom > f.bottom };
+  };
   const fa = frame(E.paneA), fb = frame(E.paneB), x0 = fa.x1, x1 = fb.x0;
   /** @type {Drawn[]} */
   const out = [];
-  for (const tie of S.ties) {
+  /** a band's end on screen */
+  const bandOnScreen = (/** @type {ReturnType<typeof span>} */ e, /** @type {number} */ x, /** @type {BandEnd} */ end) => ({ pos: end.pos, width: end.width, x: x + c.left, top: e.top + c.top, bottom: e.bottom + c.top, above: e.above, below: e.below, clipped: e.above || e.below });
+  ctx.globalAlpha = 1;
+  for (const band of S.bands) {
+    const ea = span(fa, band.a), eb = span(fb, band.b);
+    drawBand(ctx, { x: x0, ...ea }, { x: x1, ...eb });
+    out.push({ kind: 'band', link: null, a: bandOnScreen(ea, x0, band.a), b: bandOnScreen(eb, x1, band.b) });
+  }
+  /** @type {StrokeDrawn[]} */
+  const struck = [];
+  for (const s of S.strokes) {
+    const a = { x: x0, y: fa.origin + s.a }, b = { x: x1, y: fb.origin + s.b };
+    if (!s.key || a.y < fa.top || a.y > fa.bottom || b.y < fb.top || b.y > fb.bottom) continue;
+    drawStroke(ctx, a, b, s);
+    const p = pointOn(strokeOf(a, b), s.halfA && s.halfB ? GAP_MIDDLE : s.halfA ? GAP_MIDDLE / 2 : (1 + GAP_MIDDLE) / 2);
+    struck.push({ key: s.key, a: { x: a.x + c.left, y: a.y + c.top }, b: { x: b.x + c.left, y: b.y + c.top }, halfA: s.halfA, halfB: s.halfB, changes: s.changes, at: { x: p.x + c.left, y: p.y + c.top } });
+  }
+  for (const tie of S.lines) {
     const ta = tie.a.whole ? null : at(fa, tie.a), tb = tie.b.whole ? null : at(fb, tie.b);
     const ea = ta || meet(fa, tb), eb = tb || meet(fb, ta);
-    ctx.globalAlpha = tie.value; ctx.lineWidth = tie.kind === 'band' ? 6 : 1.6;
+    ctx.globalAlpha = tie.value; ctx.lineWidth = 1.6;
     drawTie(ctx, { x: x0, ...ea }, { x: x1, ...eb }, tie.ink);
     out.push({
-      kind: tie.kind, link: tie.link,
+      kind: 'link', link: tie.link,
       a: { pos: tie.a.pos, width: tie.a.width, x: x0 + c.left, y: ea.y + c.top, clipped: ea.clipped, cover: !!tie.a.cover, whole: !!tie.a.whole },
       b: { pos: tie.b.pos, width: tie.b.width, x: x1 + c.left, y: eb.y + c.top, clipped: eb.clipped, cover: !!tie.b.cover, whole: !!tie.b.whole },
     });
   }
   /** @type {Edge[]} */
   const edged = [];
-  for (const e of wholeEdges(S.ties)) {
+  for (const e of wholeEdges(S.lines)) {
     const f = e.side === 'a' ? fa : fb, x = e.side === 'a' ? x0 + EDGE_W / 2 : x1 - EDGE_W / 2, ink = inkOf(e.mark);
     ctx.globalAlpha = e.mark.value; ctx.lineWidth = EDGE_W;
     drawEdge(ctx, x, f.top, f.bottom, ink);
@@ -1718,7 +2055,213 @@ export function draw() {
   ctx.globalAlpha = 1;
   drawnTies = out;
   drawnEdges = edged;
+  drawnStrokes = struck;
+  placeStrokes(E, S);
   placeStop(E, S);
+}
+
+/**
+ * Draw one band between the panes (`draw`; see the head): its ground — the
+ * region between BM's curve joining its two ends' tops and the one joining
+ * their bottoms — in sameness's texture, and those two curves its edges in
+ * sameness's boundary, BAND_EDGE_W px, one where it stands no taller than a
+ * line at either end (P-REG); where an end passes its pane's visible top or
+ * bottom, the stub's triangle at that edge, on that side, pointing the way it
+ * passes.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{x: number, top: number, bottom: number, above: boolean, below: boolean}} a its end at pane A's inner edge, on the canvas, held inside the pane's visible height
+ * @param {{x: number, top: number, bottom: number, above: boolean, below: boolean}} b its end at pane B's
+ */
+export function drawBand(ctx, a, b) {
+  const top = strokeOf({ x: a.x, y: a.top }, { x: b.x, y: b.top }), bottom = strokeOf({ x: a.x, y: a.bottom }, { x: b.x, y: b.bottom });
+  ctx.beginPath();
+  ctx.moveTo(top[0].x, top[0].y);
+  ctx.bezierCurveTo(top[1].x, top[1].y, top[2].x, top[2].y, top[3].x, top[3].y);
+  ctx.lineTo(bottom[3].x, bottom[3].y);
+  ctx.bezierCurveTo(bottom[2].x, bottom[2].y, bottom[1].x, bottom[1].y, bottom[0].x, bottom[0].y);
+  ctx.closePath();
+  ctx.fillStyle = SAMENESS.texture;
+  ctx.fill();
+  ctx.lineWidth = BAND_EDGE_W;
+  strokeIn(ctx, top, BAND_INK, BAND_INK, null);
+  if (a.bottom !== a.top || b.bottom !== b.top) strokeIn(ctx, bottom, BAND_INK, BAND_INK, null);
+  for (const [e, x] of /** @type {Array<[typeof a, number]>} */ ([[a, a.x + 6], [b, b.x - 6]])) {
+    if (e.above) stub(ctx, x, e.top, -1, BAND_INK.hue);
+    if (e.below) stub(ctx, x, e.bottom, 1, BAND_INK.hue);
+  }
+}
+
+/**
+ * Draw one stroke between the panes (`draw`; see the head): the bands'
+ * shared edge — BM's curve joining its two heights — cut at the gutter's
+ * middle, each half beside a pane holding bytes between the runs drawn in
+ * sameness's boundary, STROKE_W px, and a half beside a pane holding none
+ * not at all.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {{x: number, y: number}} a its end at pane A's inner edge, on the canvas
+ * @param {{x: number, y: number}} b its end at pane B's
+ * @param {{halfA: boolean, halfB: boolean}} halves
+ */
+export function drawStroke(ctx, a, b, halves) {
+  const [left, right] = cutAt(strokeOf(a, b), GAP_MIDDLE);
+  ctx.lineWidth = STROKE_W;
+  if (halves.halfA) strokeIn(ctx, left, BAND_INK, BAND_INK, null);
+  if (halves.halfB) strokeIn(ctx, right, BAND_INK, BAND_INK, null);
+}
+
+/** a stroke's button standing in the gutter, by the stroke's key; null where none stands */
+const buttonOf = (/** @type {NonNullable<typeof els>} */ E, /** @type {string} */ key) => /** @type {HTMLElement | null} */ ([...E.strokes.children].find((b) => /** @type {HTMLElement} */ (b).dataset.stroke === key) || null);
+
+/** @typedef {{shows: string, made: import('../text/article.js').Copied | null}} Side a pane as a change's words read it: the address it shows, and what its article was made from (T-LAYER's `madeOf`) */
+
+/** each pane as a change's words read it (`Side`): the text it was set with */
+const sidesOf = (/** @type {Scene} */ S) => SIDES.map((side) => ({ shows: S[side].shows, made: S[side].el ? LAYER.madeOf(S[side].el) : null }));
+
+/**
+ * A change's words (see the head): what each pane holds there — each pane
+ * named by the address it shows, its characters, read from what its article
+ * was made from by T-ARTICLE's item rule (`copyText`) — white space kept, an
+ * item by its stand-in — quoted (`L.scene.change.text`), or, where it holds
+ * no bytes there, nothing (`L.scene.change.none`). As markup where `html`,
+ * the characters set in their own class (`chars`), every address in the
+ * rest in the identifier's face.
+ * @param {Change} c
+ * @param {Side} A pane A
+ * @param {Side} B pane B
+ * @param {(doc: string) => string} ownerOf the owner account of a document, by the one owner rule (T-LAYER's `originOwner`)
+ * @param {boolean} [html]
+ * @returns {string}
+ */
+export function changeWords(c, A, B, ownerOf, html = false) {
+  /** the characters a side holds over a change's positions there; none where it holds no bytes */
+  const chars = (/** @type {Side} */ P, /** @type {{from: number, to: number}} */ r) => (P.made && r.to > r.from ? copyText(P.made, { addr: P.made.addr, pos: r.from, width: r.to - r.from }, ownerOf) : '');
+  const ta = chars(A, c.a), tb = chars(B, c.b);
+  const vals = { a: A.shows, one: ta ? t('L.scene.change.text', { text: ta }) : t('L.scene.change.none'), b: B.shows, other: tb ? t('L.scene.change.text', { text: tb }) : t('L.scene.change.none') };
+  if (!html) return t('L.scene.change', vals);
+  /** @type {Record<string, string>} */
+  const wrap = {};
+  if (ta) wrap.one = 'chars';
+  if (tb) wrap.other = 'chars';
+  return tHTML('L.scene.change', vals, wrap);
+}
+
+/** what a stroke stands for, counted (see the head) */
+const countOf = (/** @type {Stroke} */ s) => t(s.changes.length > 1 ? 'L.scene.stroke' : 'L.scene.stroke.1', { n: s.changes.length });
+
+/**
+ * A stroke's name's words (see the head; `L.scene.stroke.name`): what it
+ * stands for counted, then each change in words (`changeWords`), in the
+ * documents' order.
+ * @param {Stroke} s
+ * @param {Side} A pane A
+ * @param {Side} B pane B
+ * @param {(doc: string) => string} ownerOf
+ * @returns {{count: string, changes: string}}
+ */
+export const strokeWords = (s, A, B, ownerOf) => ({ count: countOf(s), changes: s.changes.map((c) => changeWords(c, A, B, ownerOf)).join(' · ') });
+
+/**
+ * The strokes' buttons placed at the panes' scrolls now (see the head): one
+ * native button for each stroke the last draw drew, in the gutter centred on
+ * its point, keyed by the stroke, named by what it stands for, its count
+ * shown where it stands for two changes or more; each made as its stroke
+ * comes into view and taken down as it leaves, the rest moved in place so a
+ * focus standing on one stays, and those in view in the order they stand,
+ * top to bottom, which is the documents' order. One taken down while it held
+ * the focus hands it to pane B (FP-20).
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ */
+function placeStrokes(E, S) {
+  const box = E.strokes, held = typeof document !== 'undefined' ? document.activeElement : null;
+  const want = new Set(drawnStrokes.map((d) => d.key));
+  for (const b of /** @type {HTMLElement[]} */ ([...box.children])) {
+    if (want.has(b.dataset.stroke || '')) continue;
+    b.remove();
+    if (b === held) FOCUS.land(E.paneB, {});
+  }
+  const root = E.root.getBoundingClientRect(), [A, B] = sidesOf(S);
+  /** @type {Element | null} the button standing after the last placed, before which one coming into view is set */
+  let next = box.firstElementChild;
+  for (const d of drawnStrokes) {
+    const s = S.strokes.find((x) => x.key === d.key);
+    if (!s) continue;
+    let btn = buttonOf(E, d.key);
+    if (btn) next = btn.nextElementSibling;
+    else {
+      btn = document.createElement('button');
+      btn.setAttribute('type', 'button');
+      btn.id = 'scenestroke-' + d.key;
+      btn.dataset.stroke = d.key;
+      box.insertBefore(btn, next);
+    }
+    const words = strokeWords(s, A, B, LAYER.originOwner);
+    if (btn.getAttribute('aria-label') !== t('L.scene.stroke.name', words)) btn.setAttribute('aria-label', t('L.scene.stroke.name', words));
+    const n = s.changes.length > 1 ? String(s.changes.length) : '';
+    if (btn.textContent !== n) btn.innerHTML = n ? `<span class="n">${esc(n)}</span>` : '';
+    btn.style.left = d.at.x - root.left - E.root.clientLeft + 'px';
+    btn.style.top = d.at.y - root.top - E.root.clientTop + 'px';
+  }
+}
+
+/**
+ * A stroke's act (see the head), its button pressed: its changes shown
+ * whole in a list at the button (`showChanges`), taking the focus where a
+ * key pressed it.
+ * @param {string} key the stroke's
+ * @param {boolean} byKey
+ */
+function strokeAct(key, byKey) {
+  const S = scene, E = els, s = S ? S.strokes.find((x) => x.key === key) : undefined, btn = E ? buttonOf(E, key) : null;
+  if (!S || !s || !btn) return;
+  showChanges(S, key, countOf(s), rowsOf(S, s), btn, byKey);
+}
+
+/** a stroke's list's rows (see the head): each change in words as markup (`changeWords`), read from the text the panes were set with */
+function rowsOf(/** @type {Scene} */ S, /** @type {Stroke} */ s) {
+  const [A, B] = sidesOf(S);
+  return s.changes.map((c) => changeWords(c, A, B, LAYER.originOwner, true));
+}
+
+/**
+ * A stroke's list, shown at its button or drawn again in its place (see the
+ * head; O-HOST's): its caption what it stands for counted, a row for each
+ * change in words, the rows the focus steps through, and, where `gone`, the
+ * line saying the stroke is drawn no more; where the button has left the
+ * page, at the point it stood beneath. Taking the focus on its first row
+ * where a key opened it; its end lets the scene forget it.
+ * @param {Scene} S
+ * @param {string} key the stroke's
+ * @param {string} caption
+ * @param {string[]} rows each row's markup
+ * @param {HTMLElement | null} btn the stroke's button; null where it stands no more
+ * @param {boolean} byKey
+ * @param {{redraw?: boolean, gone?: boolean}} [how] `redraw` the list standing drawn again in its place, by no act; `gone` no stroke stands at its bytes now
+ */
+function showChanges(S, key, caption, rows, btn, byKey, how = {}) {
+  const id = 'stroke:' + key, r = btn ? btn.getBoundingClientRect() : null;
+  const anchor = btn && r ? { el: btn, screen: { x: r.left, y: r.bottom + 4 } } : how.redraw && HOST.currentIs(id) ? (/** @type {import('../overlays/host.js').Overlay} */ (HOST.current())).anchor : null;
+  const html = `<span class="label">${esc(caption)}</span><ul class="rows changes">${rows.map((row) => `<li tabindex="0">${row}</li>`).join('')}</ul>` +
+    (how.gone ? `<span class="note" data-string="L.scene.stroke.gone">${esc(t('L.scene.stroke.gone'))}</span>` : '');
+  S.listing = { key, caption, rows };
+  /** @type {import('../overlays/host.js').Overlay} */
+  const o = { kind: 'list', id, anchor, html, takeFocus: byKey, onDismiss: () => { if (S.listing && S.listing.key === key) S.listing = null; } };
+  if (how.redraw) { if (!HOST.redraw(o)) S.listing = null; } else HOST.show(o);
+}
+
+/**
+ * A stroke's list standing, checked again once the panes are set again (see
+ * the head; FP-28): drawn again from the stroke now standing at the same
+ * bytes — its key — or, where none stands, as it was, saying so.
+ * @param {Scene} S
+ */
+function recheckList(S) {
+  const l = S.listing, E = els;
+  if (!l || !E) return;
+  if (!HOST.currentIs('stroke:' + l.key)) { S.listing = null; return; }
+  const s = S.strokes.find((x) => x.key === l.key);
+  if (s) showChanges(S, l.key, countOf(s), rowsOf(S, s), buttonOf(E, l.key), false, { redraw: true });
+  else showChanges(S, l.key, l.caption, l.rows, buttonOf(E, l.key), false, { redraw: true, gone: true });
 }
 
 /**
@@ -1822,12 +2365,12 @@ function toShared() {
   draw();
 }
 
-/** where along a tie's stroke its ends' inks meet: the half of its parameter, where BM's curve between the panes' inner edges stands at the middle of the gap (`strokeOf`) */
+/** where along a line's stroke its ends' inks meet, and where a stroke between bands is cut into its halves: the half of its parameter, where BM's curve between the panes' inner edges stands at the middle of the gap (`strokeOf`) */
 const GAP_MIDDLE = 0.5;
 
 /**
- * Draw one tie between the panes (`draw`), its width and alpha set on the
- * context: BM's curve from its end at pane A's inner edge to its end at pane
+ * Draw one link's line between the panes (`draw`), its width and alpha set on
+ * the context: BM's curve from its end at pane A's inner edge to its end at pane
  * B's, each end in its own pane's ink, a line whose two differ changing
  * colour once at the middle of the gap, one stroke with no dot or break at
  * the change (FP-30; BM's `strokeIn`); an end whose line has left its pane
@@ -1851,20 +2394,23 @@ function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */
 /**
  * End the scene where it stands, as a navigation act's departure ends it —
  * its own end, a Back from its entry, among them (§2.5; see the head): the
- * plane as it was, and no trail move of its own; a pane being set again sets
- * nothing once it ends, and an act waiting on it is dropped. The plane is put
- * back in the page's order before the focus returns, for the element the
- * scene was opened from — the walk's item, a corner — takes no focus while
- * the scene covers it; the focus's owner takes a focus the scene held off it
- * and returns it.
+ * plane as it was, and no trail move of its own; a stroke's list standing
+ * dismissed first, its focus handed back to the stroke; a pane being set
+ * again sets nothing once it ends, and an act waiting on it is dropped. The
+ * plane is put back in the page's order before the focus returns, for the
+ * element the scene was opened from — the walk's item, a corner — takes no
+ * focus while the scene covers it; the focus's owner takes a focus the scene
+ * held off it and returns it.
  */
 export function close() {
   if (!scene || !els) return;
+  if (scene.listing && HOST.currentIs('stroke:' + scene.listing.key)) HOST.dismiss();
   scene = null;
   drawnTies = [];
   drawnEdges = [];
+  drawnStrokes = [];
   coverPlane(false);
-  els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; delete els.bar.dataset.face;
+  els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; els.strokes.innerHTML = ''; delete els.bar.dataset.face;
   els.stop.hidden = true;
   FOCUS.close('scene');
   markDirty();

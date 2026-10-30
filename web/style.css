@@ -359,3 +359,12 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    the pane's visible edge */
 #scenestop { position:absolute; z-index:1; height:16px; min-width:16px; padding:0 11px 0 3px; margin:0; border:0; border-radius:2px; background:transparent; color:var(--ink); font:11px/16px var(--face-client); cursor:pointer; }
 #scenestop:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+/* the strokes' buttons (SC's): a layer at the scene's corner each button is placed in, centred on the middle of its stroke's
+   halves drawn, over the canvas — its box the stroke's target, its count, where the stroke stands for two changes or more,
+   in its top 11 px on the scene's ground, clear of the stroke (FP-26, FP-31); SC places them */
+#scenestrokes { position:absolute; left:0; top:0; width:0; height:0; }
+#scenestrokes button { position:absolute; z-index:1; height:26px; min-width:16px; padding:0 3px 15px; margin:0; border:0; border-radius:2px; background:transparent; color:var(--ink); font:11px/11px var(--face-client); font-variant-numeric:tabular-nums; cursor:pointer; transform:translate(-50%, -50%); }
+#scenestrokes button .n { background:var(--bg); padding:0 2px; }
+#scenestrokes button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+/* a stroke's list (SC's, at O-HOST's): each change's characters in the reading face, their white space kept */
+#overlay .changes .chars { font-family:var(--face-reading); white-space:pre-wrap; }

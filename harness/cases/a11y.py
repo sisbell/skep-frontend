@@ -32,8 +32,9 @@ K-8 was pressed at; a focus moved from the card to the corner stays on the
 corner; the ring's later stops (D5 §4 rule 5) — a card standing without the
 focus reached after the plane's stop and the corner, Shift+Tab from it back
 to the corner; the reading scene's stops in the place of the plane's and the
-corner's, pane, its corner, pane, its corner, the scene's acts (K-61; issue
-#160), with nothing the scene covers in the ring, nothing inside a pane's
+corner's, pane, its corner, the strokes between its bands in view, pane, its
+corner, the scene's acts (K-61; issues #160 and #331), with nothing the scene
+covers in the ring, nothing inside a pane's
 article a control or a stop in the AX tree (SC: the panes are read, never
 pressed), each pane's corner a group there named by its own words, which say
 what the pane shows, and Shift+Tab walking it back to the
@@ -539,6 +540,7 @@ def run(ctx):
           if (e.id === 'sceneA' || e.id === 'sceneB') return 'pane ' + e.id.slice(-1);
           if (e.classList.contains('corner') && e.closest('#sceneA, #sceneB')) return 'pane ' + e.closest('#sceneA, #sceneB').id.slice(-1) + "'s corner";
           if (e.closest('#scenebar')) return 'the scene: ' + (e.dataset.relevel ? 're-level' : e.dataset.x ? 'x' : e.tagName.toLowerCase());
+          if (e.closest('#scenestrokes')) return 'the scene: stroke';
           if (e.closest('#scene')) return 'the scene: ' + (e.className || e.tagName.toLowerCase());
           return e.id || e.tagName.toLowerCase(); })()''')
 
@@ -617,15 +619,17 @@ def run(ctx):
             break
     under = [s for s in ring if s.startswith(('the item', 'the mirror', 'the corner'))]
     own = [s for s in ring if s.startswith(('pane ', 'the scene'))]
+    # the strokes between the bands in view: each its own stop, top to bottom, after pane A's corner (issue #331)
+    struck = ['the scene: stroke'] * (ctx.js('document.querySelectorAll("#scenestrokes button").length') or 0)
     r.check(ring[-1:] == ['pane B'] and not under, 'Tab from the far end\'s pane goes once round the ring and back to it, reaching nothing the scene covers — neither the mirror\'s item nor the plane\'s corner', {'ring': ring})
-    r.check(own == ['pane B\'s corner', 'the scene: re-level', 'the scene: x', 'pane A', 'pane A\'s corner', 'pane B'] and ring[:3] == own[:3],
-            'the scene\'s own stops in D5\'s order — pane, its corner, pane, its corner, the scene\'s acts (K-61; issue #160): from the far end\'s pane Tab reaches its corner, then the acts, and no stop lies inside a pane\'s article', {'scene_stops': own, 'ring': ring})
+    r.check(own == ['pane B\'s corner', 'the scene: re-level', 'the scene: x', 'pane A', 'pane A\'s corner'] + struck + ['pane B'] and ring[:3] == own[:3],
+            'the scene\'s own stops in D5\'s order — pane, its corner, the strokes between its bands in view, pane, its corner, the scene\'s acts (K-61; issues #160 and #331): from the far end\'s pane Tab reaches its corner, then the acts, and no stop lies inside a pane\'s article', {'scene_stops': own, 'ring': ring, 'strokes': len(struck)})
     r.figures['ring']['scene_from_pane_b'] = ring
     ring = []
     for _ in range(3):
         press('Tab', mods=('Shift',))
         ring.append(stop())
-    r.check(ring == ['pane A\'s corner', 'pane A', 'the line'], 'Shift+Tab walks the ring back: from the far end\'s pane to the other\'s corner, the other pane, and from there to the one line', {'ring': ring})
+    r.check(ring == (struck + ['pane A\'s corner', 'pane A', 'the line'])[:3], 'Shift+Tab walks the ring back: from the far end\'s pane to the strokes in view, the other\'s corner, the other pane, and from there to the one line', {'ring': ring})
     r.figures['ring']['scene_back_from_pane_b'] = ring
     ctx.js('document.getElementById("sceneB").focus({preventScroll: true})')
     ctx.frames(1)
