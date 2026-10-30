@@ -29,8 +29,8 @@ test('the calls are the generated Bridge\'s rows in its order, the two answers t
 });
 
 test('the publication family goes out under its dotted names, each answer handed up as it came, the moment\'s cancel apart', async () => {
-  const open = { session: 's-1', draft: DRAFT }, switched = { session: 's-1', switches: { on: [] } }, confirm = { session: 's-1', switches: { on: [] }, answers: {} }, stop = { session: 's-1' };
-  const panel = { result: { rows: [], formatting: { marks: [], cut: 0, removals: [] }, read_with: {}, count: COUNT, price: PRICE, windows: [] } };
+  const open = { session: 's-1', draft: DRAFT, doc: '1.0.1.0.1', base: '1.0.1.0.1.1', also: ['1.0.1.0.1014'] }, switched = { session: 's-1', switches: { on: [] } }, confirm = { session: 's-1', switches: { on: [] }, answers: {} }, stop = { session: 's-1' };
+  const panel = { result: { rows: [], formatting: { marks: [], cut: 0, removals: [] }, read_with: {}, count: COUNT, price: PRICE, windows: [], inherited: [{ draft: '1.0.1.0.1014', passages: 1 }] } };
   const counted = { result: { count: COUNT, price: PRICE } };
   const acknowledged = { result: { outcome: 'acknowledged', member: DRAFT + '.1', edition: null, claim: false, at: 12, via: 'answer' } };
   const cancelled = { result: {} }, declined = { result: {} };

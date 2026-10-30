@@ -388,7 +388,7 @@ export interface Run {
   width: number;
 }
 
-/** `publication.open(session, {draft, doc?, mint?, claim?, selection?, notes?, readable_drafts?, published?})` — THE PANEL: the composition's first steps run by the shell (`enumerate` → `panel` → the price), every member DATA with a code or a kind and never a string a person reads; `rows` the sets in the RULED order — own, notes, private, public by address; `read_with` per published document of the person's whether the edition is read with it now; `count` at the switches' DEFAULT — every private row OFF; `price` the five terms against their caps, as the request would stand with every window kept private; `windows` the own-origin windows the three answers are asked for; `hold` where a HELD publication of this draft stood and is re-opened as it stands, with the switches and answers the page last sent it (item 1 (a)) */
+/** `publication.open(session, {draft, also?, base?, doc?, mint?, claim?, selection?, notes?, readable_drafts?, published?})` — THE PANEL: the composition's first steps run by the shell (`enumerate` → `panel` → the price), every member DATA with a code or a kind and never a string a person reads; `draft` the RENDERING draft, `also` the OTHER private drafts of the person's own whose words this publication re-mints as the document's own beside it (the Nelson way — the family: the staging draft and the alternatives made from it, never the notes), each keeping its own records; `base`, for a draft BEHIND the head, the member it was staged from or last re-windowed to, the page's own (the shell reads the head where it is absent) — so the shot lands a daughter under its own base; `rows` the sets in the RULED order — own, notes, private, public by address; `read_with` per published document of the person's whether the edition is read with it now; `count` at the switches' DEFAULT — every private row OFF; `price` the five terms against their caps, as the request would stand with every window kept private; `windows` the own-origin windows the three answers are asked for, the drafts `also` names EXCLUDED; `inherited` per draft `also` names, in its order, THE STATEMENT's count — the passages first written in it (B3-S11 P2 (i)); `hold` where a HELD publication of this draft stood and is re-opened as it stands, with the switches and answers the page last sent it (item 1 (a)) */
 export interface PublicationPanel {
   rows: PublicationRow[];
   formatting: Formatting;
@@ -396,6 +396,7 @@ export interface PublicationPanel {
   count: Count;
   price: Price;
   windows: Window[];
+  inherited: Inherited[];
   hold?: Hold;
 }
 
@@ -483,7 +484,7 @@ export interface PriceOver {
   by: number;
 }
 
-/** one own-origin window P2 (i) asks the three answers for: a run of the selection that windows an unpublished draft of the person's own — `run` the run's index in the selection (the key `answers` take), `origin` and `width` the run's own, `owner` the origin's account, `i_start` WHERE IN ⟨origin⟩ THE PASSAGE WAS WRITTEN (the run's first ordinal in ⟨origin⟩'s I-space), `counterpart` where a record of a draft the person reads names the run's words as published, offered FIRST and re-read at every open; NO ANSWER PRE-SELECTED (P50) */
+/** one own-origin window P2 (i) asks the three answers for: a run of the selection that windows an unpublished draft of the person's own — the drafts `also` names EXCLUDED, their runs re-minted as the document's own words and not windowed (their count is `inherited`) — `run` the run's index in the selection (the key `answers` take), `origin` and `width` the run's own, `owner` the origin's account, `i_start` WHERE IN ⟨origin⟩ THE PASSAGE WAS WRITTEN (the run's first ordinal in ⟨origin⟩'s I-space), `counterpart` where a record of a draft the person reads names the run's words as published, offered FIRST and re-read at every open; NO ANSWER PRE-SELECTED (P50) */
 export interface Window {
   run: number;
   origin: string;
@@ -491,6 +492,12 @@ export interface Window {
   i_start: number;
   width: number;
   counterpart?: Counterpart;
+}
+
+/** THE STATEMENT's count for one draft `also` names (B3-S11 P2 (i)'s statement before the act — "⟨n⟩ passages first written in ⟨D⟩ publish as ⟨E⟩'s own words; ⟨D⟩ keeps a record of where they went" — the statement itself the page's): `draft` the draft, `passages` ⟨n⟩ — the selection's runs of that origin, consecutive runs of one origin in the selection's V-order counted once; the rendering draft's own words are counted nowhere */
+export interface Inherited {
+  draft: string;
+  passages: number;
 }
 
 /** the counterpart offered first at a window: `record` the record of `draft`, a draft the person reads, that names the run's words as published — `from` the part of the run it covers, on the run's own chain, `to` the published span that part became */
@@ -583,7 +590,7 @@ export interface Bridge {
   health(args: { board: string }): Promise<Outcome<Health>>;
   probe(args: {}): Promise<Outcome<Probe>>;
   op(args: { session: string; frame: unknown } | { guest: true; board?: string; origin?: string; frame: unknown }): Promise<Outcome<unknown>>;
-  'publication.open'(args: { session: string; draft: string; doc?: string; mint?: string; claim?: boolean; selection?: Run[]; notes?: string[]; readable_drafts?: string[]; published?: string[] }): Promise<Outcome<PublicationPanel>>;
+  'publication.open'(args: { session: string; draft: string; also?: string[]; base?: string; doc?: string; mint?: string; claim?: boolean; selection?: Run[]; notes?: string[]; readable_drafts?: string[]; published?: string[] }): Promise<Outcome<PublicationPanel>>;
   'publication.count'(args: { session: string; switches?: Switches; answers?: Record<string, OriginAnswer> }): Promise<Outcome<{ count: Count; price: Price }>>;
   'publication.confirm'(args: { session: string; switches?: Switches; answers?: Record<string, OriginAnswer> }): Promise<Outcome<Acknowledged | Restated | PublicationRefused>>;
   'publication.cancel'(args: { session: string }): Promise<Outcome<Empty>>;
