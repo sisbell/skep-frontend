@@ -9,9 +9,10 @@
 // and sent nowhere else, admits the page to the provider and grants nothing
 // at the board, and the page holds no token (FP-14). The answer, `{result}`
 // or `{refused}`, is handed up opaque: this module composes no frame, decodes
-// no answer, refuses no call and replays no fixture. The seven events come
-// off one `EventSource` on `/bridge/events?provider=<secret>` (an
-// `EventSource` sends no custom header), re-emitted by name. `close(session)`
+// no answer, refuses no call and replays no fixture. Every event comes off
+// one `EventSource` on `/bridge/events?provider=<secret>` (an `EventSource`
+// sends no custom header), one listener per `EventName`, re-emitted by name;
+// an event the declarations do not name is heard by none. `close(session)`
 // at `pagehide` rides a `keepalive` fetch, best-effort, the browser's.
 // State: the provider's origin and the secret, the stream, and its own call
 // log (name, bytes, ms, outcome), which the gate holds equal to `GET
@@ -23,7 +24,9 @@
 /** @typedef {import('./shapes').Refusal} Refusal */
 
 export const DEFAULT_PROVIDER = 'http://127.0.0.1:8742';
-const EVENT_NAMES = /** @type {EventName[]} */ (['mode', 'session-died', 'daemon', 'feed', 'index', 'moment', 'held']);
+/** @type {Record<EventName, null>} every `EventName` of the generated declarations, the checker refusing one missed (FP-16) */
+const EVENT_ROWS = { mode: null, 'session-died': null, daemon: null, feed: null, index: null, moment: null, held: null, publication: null };
+const EVENT_NAMES = /** @type {EventName[]} */ (Object.keys(EVENT_ROWS));
 
 /**
  * @typedef {Object} CallEntry

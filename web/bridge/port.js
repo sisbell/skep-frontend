@@ -1,20 +1,22 @@
 // B-PORT — the page's one interface to the shell (the structure record §3.2;
 // client.md §4b.1's calls and §4b.2's events; FP-14, FP-15). Layer 0,
-// engine-bound only through its adapter. The twenty-three calls (§4b.1's
-// twenty, `held`, `resolve` and `places`) and the two answers to a moment
-// (`answer`, `cancel`) as functions, the seven events as a subscription, and
-// the adapter beneath, handed to `boot` (S-14 (b)). State: the event
-// subscribers and the session watchers alone — no copy of any record. The
-// port composes no frame, decodes no answer and refuses no call: every
-// answer is the adapter's `Outcome` handed up as it came, in the one refusal
-// shape (`{kind, name, …}`, §4.4). The session's notices (FP-28): a call
-// crossing the port that names a session is told to the session watchers —
-// where the page's own `close(session)` goes out, the person's sign-out, and
-// where an answer is refused as from a session the shell does not hold
-// (`lostSession`), the refusal handed up unchanged after the notice. The
-// write calls and the ceremonial rows are declared here and called by no
-// screen (S-35 (a)).
-// Types: the generated declarations in `./shapes.d.ts` (S-16 (a); FP-16).
+// engine-bound only through its adapter. Every row of the generated `Bridge`
+// as a function: the calls (`CALLS`), the `publication` family's four among
+// them on one `publication` object, each sent under its dotted name, and the
+// two answers to a moment (`answer`, `cancel`); every event (`EVENTS`) as a
+// subscription; and the adapter beneath, handed to `boot` (S-14 (b)). State:
+// the event subscribers and the session watchers alone — no copy of any
+// record. The port composes no frame, decodes no answer and refuses no call:
+// every answer is the adapter's `Outcome` handed up as it came, in the one
+// refusal shape (`{kind, name, …}`, §4.4). The session's notices (FP-28): a
+// call crossing the port that names a session is told to the session
+// watchers — where the page's own `close(session)` goes out, the person's
+// sign-out, and where an answer is refused as from a session the shell does
+// not hold (`lostSession`), the refusal handed up unchanged after the notice.
+// The write calls, the `publication` family and the ceremonial rows are
+// declared here and called by no screen (S-35 (a)).
+// Types: the generated declarations in `./shapes.d.ts` (S-16 (a); FP-16),
+// which the checker holds the port's rows and its events to.
 
 /** @typedef {import('./shapes').Bridge} Bridge */
 /** @typedef {import('./shapes').EventName} EventName */
@@ -23,24 +25,22 @@
  * @template T
  * @typedef {import('./shapes').Outcome<T>} Outcome
  */
+/** @typedef {Exclude<keyof Bridge, 'answer' | 'cancel'>} CallName — a call's name: every row of `Bridge` but the two answers to a moment */
 
 /**
  * @typedef {Object} Adapter — what an adapter beneath the port provides
  * @property {string} name 'dev' | 'shell'
  * @property {(name: string, args: unknown) => Promise<Outcome<unknown>>} call one call, posted; the answer opaque
- * @property {(fn: (name: EventName, data: unknown) => void) => void} subscribe the seven events, by name
+ * @property {(fn: (name: EventName, data: unknown) => void) => void} subscribe every event, by name
  * @property {() => Array<{name: string, bytesIn: number, bytesOut: number, ms: number, outcome: string, at: number}>} calls the adapter's own call log
  * @property {(session: string) => void} closeAtUnload a best-effort `close(session)` as the page hides
  * @property {() => string} streamState the event stream's state
  */
 
-/** the call names in `skep-shell`'s `CALLS` order plus `places`; the two answers to a moment, `answer` and `cancel`, stand apart */
-export const CALLS = Object.freeze([
-  'boards', 'session', 'close', 'keygen', 'fingerprint', 'claim', 'enroll', 'bind', 'recover', 'rotate', 'retire',
-  'handoff', 'accept', 'health', 'probe', 'op', 'upload', 'fetch', 'restore', 'search', 'places', 'held', 'resolve',
-]);
-/** the seven events */
-export const EVENTS = Object.freeze(['mode', 'session-died', 'daemon', 'feed', 'index', 'moment', 'held']);
+/** @type {Record<EventName, null>} every `EventName` of the generated declarations, the checker refusing one missed (FP-16) */
+const EVENT_ROWS = { mode: null, 'session-died': null, daemon: null, feed: null, index: null, moment: null, held: null, publication: null };
+/** the events, by name */
+export const EVENTS = Object.freeze(/** @type {EventName[]} */ (Object.keys(EVENT_ROWS)));
 
 /** the shell's names for an answer to a call made under a session it does not hold (client.md §4b.1): `session_ended` — no session under that reference, one from before the shell's own restart among them — and `session_died`, the death's reason beside it */
 const LOST = Object.freeze(['session_ended', 'session_died']);
@@ -89,7 +89,7 @@ export const hasAdapter = () => adapter !== null;
  * does not hold before it is handed up, so its caller meets what the
  * watchers made of it.
  * @template T
- * @param {string} name
+ * @param {keyof Bridge} name
  * @param {unknown} args
  * @returns {Promise<Outcome<T>>}
  */
@@ -123,12 +123,12 @@ function tell(n) { for (const fn of sessionWatchers) fn(n); }
 export function onSession(fn) { sessionWatchers.push(fn); }
 
 /**
- * Subscribe to one of the seven events (or `*` for every event).
+ * Subscribe to one event (or `*` for every event).
  * @param {EventName | '*'} name
  * @param {(data: unknown) => void} fn
  */
 export function on(name, fn) {
-  if (name === '*') { for (const n of EVENTS) on(/** @type {EventName} */ (n), (d) => fn({ name: n, data: d })); return; }
+  if (name === '*') { for (const n of EVENTS) on(n, (d) => fn({ name: n, data: d })); return; }
   if (!subs.has(name)) subs.set(name, []);
   /** @type {Array<(data: unknown) => void>} */ (subs.get(name)).push(fn);
 }
@@ -167,6 +167,17 @@ export const health = (args) => call('health', args);
 export const probe = (args = {}) => call('probe', args);
 /** @type {Bridge['op']} */
 export const op = (args) => call('op', args);
+/** the `publication` family, each row sent under its dotted name */
+export const publication = Object.freeze({
+  /** @type {Bridge['publication.open']} */
+  open: (args) => call('publication.open', args),
+  /** @type {Bridge['publication.count']} */
+  count: (args) => call('publication.count', args),
+  /** @type {Bridge['publication.confirm']} */
+  confirm: (args) => call('publication.confirm', args),
+  /** @type {Bridge['publication.cancel']} */
+  cancel: (args) => call('publication.cancel', args),
+});
 /** @type {Bridge['upload']} */
 export const upload = (args) => call('upload', args);
 /** @type {Bridge['fetch']} */
@@ -181,10 +192,25 @@ export const places = (args) => call('places', args);
 export const held = (args) => call('held', args);
 /** @type {Bridge['resolve']} */
 export const resolve = (args) => call('resolve', args);
+/** @type {Bridge['changes']} */
+export const changes = (args) => call('changes', args);
 /** @type {Bridge['answer']} */
 export const answer = (args) => call('answer', args);
 /** @type {Bridge['cancel']} */
 export const cancel = (args) => call('cancel', args);
+
+/**
+ * Every row of the generated `Bridge` by its name, as the function this
+ * module exports for it; the checker refuses a row the port lacks (FP-16).
+ * @type {Bridge}
+ */
+const ROWS = {
+  boards, session, close, keygen, fingerprint, claim, enroll, bind, recover, rotate, retire, handoff, accept, health, probe, op,
+  'publication.open': publication.open, 'publication.count': publication.count, 'publication.confirm': publication.confirm, 'publication.cancel': publication.cancel,
+  upload, fetch, restore, search, places, held, resolve, changes, answer, cancel,
+};
+/** the call names, in the generated `Bridge`'s order; the two answers to a moment, `answer` and `cancel`, stand apart */
+export const CALLS = Object.freeze(/** @type {CallName[]} */ (Object.keys(ROWS).filter((n) => n !== 'answer' && n !== 'cancel')));
 
 /** the adapter's own call log (the gate holds it equal to `GET /bridge/log`'s calls and to the ledger's fetch count) */
 export const callLog = () => (adapter ? adapter.calls() : []);

@@ -128,6 +128,7 @@ import { t, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+/** @typedef {import('../bridge/shapes').RefusedByBoard} RefusedByBoard */
 /** @typedef {import('../bridge/shapes').DeathReason} DeathReason */
 /** @typedef {import('../bridge/shapes').MomentEvent} MomentEvent */
 /** @typedef {import('../nav/trail.js').View} View */
@@ -344,7 +345,9 @@ function toAnchor(a) {
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] the reference's site; null where an address was typed
  */
 export function unregistered(addr, anchor = null) {
-  showRefusal(anchor, /** @type {Refusal} */ ({ kind: 'refused', name: 'doc_not_registered', status: 200, code: 'doc_not_registered', detail: null, op: 'doc_metadata', body: null }), addr);
+  /** @type {RefusedByBoard} the board's `doc_not_registered`, as the shell hands it up: no site named */
+  const answer = { kind: 'refused', name: 'doc_not_registered', status: 200, code: 'doc_not_registered', detail: null, op: 'doc_metadata', body: null, site: {} };
+  showRefusal(anchor, answer, addr);
 }
 
 /**
