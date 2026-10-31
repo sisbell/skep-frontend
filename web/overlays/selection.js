@@ -44,8 +44,13 @@
 // (`asLeft`), its card and the "which" list by what they are about (O-HOST's
 // `about`); the return puts it back over the bytes it holds in the text then
 // (`restore`) — the card where it stood, the list over the links counted
-// again — each taking the focus on the control it was left holding it on.
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-36.
+// again — each taking the focus on the control it was left holding it on. A
+// version move leaves no place: the selection stands beside it, and once its
+// box shows another version N-GO's re-check carries it — its card or its list
+// drawn again with it — over the bytes that version holds of it (`restore`),
+// saying nothing where the move's own landing says it (N-GO's
+// `surfacesAcross`; FP-22).
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-22, FP-36.
 
 import * as HOST from './host.js';
 import * as REC from '../model/records.js';
@@ -85,23 +90,26 @@ export const selected = () => sel;
 export const asLeft = () => (sel ? { addr: sel.addr, pos: sel.pos, width: sel.width, ids: REC.identityOf(sel.addr, sel.pos, sel.width) } : null);
 
 /**
- * The selection put back on the reader's return to its place (see the head;
- * N-GO's): over the span its bytes hold in the text now, the platform's
- * highlight with it, said through the status region as a selection made is;
- * its card where it stood over it, or its "which" list over the links
- * counted again at it — the list where they are two or more, else the card —
- * each taking the focus on the control it was left holding it on.
+ * The selection put back over the span its bytes hold in the text now — on
+ * the reader's return to its place, or carried to the version its box shows
+ * after a version change (see the head; N-GO's) — the platform's highlight
+ * with it, said through the status region as a selection made is, save
+ * where `say` is false; its card where it stood over it, or its "which" list
+ * over the links counted again at it — the list where they are two or more,
+ * else the card — each taking the focus on the control it was left holding
+ * it on.
  * @param {Span} span
  * @param {import('./host.js').Left | null} left the card or the list standing over it as the reader left it; null where none of the selection's stood
+ * @param {boolean} [say] the status region says where it stands: false where the landing that carried it says it
  */
-export function restore(span, left) {
+export function restore(span, left, say = true) {
   sel = span;
   LAYER.placeSelection(span);
   markDirty();
   const a = left ? left.about : null, focus = left ? left.focus : null;
   if (a && a.kind === 'which') { const drawn = LK.shownAt(span.addr, span); if (drawn.length > 1) which_(drawn, a.what, false, focus); else render(); }
   else if (a && a.kind === 'selection') render(focus);
-  FOCUS.say(`${span.addr} · ${t('F.position', { p: span.pos })}`);
+  if (say) FOCUS.say(`${span.addr} · ${t('F.position', { p: span.pos })}`);
 }
 
 /** the block holding a position, whole; a position in no delivered block names one position */

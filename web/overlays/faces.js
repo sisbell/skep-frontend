@@ -74,9 +74,11 @@
 // tell (FP-21); a jump reading and a jump reaching (FP-25) — an act on such a
 // stop made while the read that draws it is out among the latter — their
 // overlays named `reading:⟨address⟩` and `reaching:⟨address⟩` and never
-// `face:…`, the prefix a notice's face carries — a jump's anchored, as every
-// face N-GO shows for a jump is, with the document it stands at, out of the
-// visible view of which the one line carries its words (O-HOST's `sign`). A face
+// `face:…`, the prefix every other face carries; a version move's reading
+// face shown as a notice (O-HOST's), the move leaving no place (FP-36) — a
+// jump's anchored, as every face N-GO shows for a jump is, with the document
+// it stands at, out of the visible view of which the one line carries its
+// words (O-HOST's `sign`). A face
 // never takes the focus (D5 §4 rule 4; K-58): it is heard through the one
 // status region (D4, O-HOST's), and a face offered by a key's act takes none
 // either; a walk's moment alone takes it. A refusal's face that answers an
@@ -597,12 +599,16 @@ const REACHING = 'reaching:';
  * its words — and heard through the one status region as every face is; gone
  * with the next act, replaced by the face its read brings, or ended as the
  * read answers (`endReading`); shown again where a cursor move reaches its
- * entry while the read is out (N-GO). It offers no act.
+ * entry while the read is out (N-GO). A version move's, which leaves no place
+ * (N-GO's `toVersion`; FP-36), is a notice (O-HOST's): it stands below a
+ * card, a list or a moment the reader opened, covering neither it nor its
+ * focus, and ends no opening still reading. It offers no act.
  * @param {string} addr the place the jump named
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] where the camera went
+ * @param {boolean} [notice] it is a version move's: shown as O-HOST's notice
  */
-export function reading(addr, anchor = null) {
-  HOST.show({ kind: 'face', id: READING + addr, anchor: toAnchor(anchor), html: faceHTML({ id: 'L.reading', text: t('L.reading', { address: addr }), acts: [] }) });
+export function reading(addr, anchor = null, notice = false) {
+  HOST.show({ kind: 'face', id: READING + addr, anchor: toAnchor(anchor), notice, html: faceHTML({ id: 'L.reading', text: t('L.reading', { address: addr }), acts: [] }) });
 }
 
 /**
@@ -644,10 +650,9 @@ export function held(said, anchor, again = null, told = false) {
     html: faceHTML({ id, text: lineOf(said), acts: again ? [{ label: t('B1.try-again') }] : [] }) });
 }
 
-/** the reading face ends where it still stands — its jump's read answered, its own completion (O-HOST's `complete`): an overlay shown since stands, and a card asked since still opens */
+/** the reading face ends where it still stands — in the overlay's place, or below it as a notice — its jump's read answered, its own completion (O-HOST's `complete`): an overlay shown since stands, and a card asked since still opens */
 export function endReading() {
-  const o = HOST.currentState();
-  if (o && o.id && o.id.startsWith(READING)) HOST.complete(o.id);
+  for (const o of [HOST.currentState(), HOST.notice()]) if (o && o.id && o.id.startsWith(READING)) HOST.complete(o.id);
 }
 
 /** the `invalid` follow: no such link or slot */

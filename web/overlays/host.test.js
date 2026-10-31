@@ -20,11 +20,13 @@
 // departure keeps of the overlay standing — a card or a list by what it is
 // about with the control the focus stands on, a card a return reopens while
 // it reads, nothing for a face, a moment or the trail's list (FP-36); and a
-// notice — a face a read brought once it answered — no act on the chrome,
+// notice — a face a read brought once it answered, a version move's reading
+// face — no act on the chrome,
 // standing below the card, the list or the moment the reader opened, placed
 // under its box and carried by the one line out of view, closed first by
-// Esc and an empty click, raised alone as the overlay above it ends, and
-// taken down by leaving the place and a change of class (FP-36).
+// Esc and an empty click, raised alone as the overlay above it ends, ended
+// below it by its own completion, and taken down by leaving the place, by a
+// version move with the faces alone, and by a change of class (FP-36).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -587,6 +589,36 @@ test('a face an act shows takes the place of a notice standing alone, and a jump
     aNotice('face:a', 'its passage is not here');
     HOST.classChanged();
     assert.deepEqual([standing(), HOST.notice()], [null, null], 'a change of class takes the notice down and dismisses the card');
+  });
+});
+
+test('a version move\'s reading face is a notice: it stands below the card the reader opened, ends no card still reading, and its completion takes it down there; the faces taken down as a version move leaves its landing — the notice below, a face in the overlay\'s place — leave a card, a list and a moment standing and a card still reading reading on (issue #266; FP-36)', async () => {
+  await stacking(() => {
+    HOST.show({ kind: 'list', id: 'versions:1.0.1.0.3', anchor: null, html: '<span class="label">versions</span>', acts: {} });
+    const r = slow();
+    const o = HOST.opening(() => r.read, card('provenance:wrote'));
+    FACES.reading('1.0.1.0.3.2', null, true);
+    assert.deepEqual([standing(), HOST.notice()?.id, HOST.pending()], ['versions:1.0.1.0.3', 'reading:1.0.1.0.3.2', true], 'below the list, the card asked still reading');
+    FACES.endReading();
+    assert.deepEqual([standing(), HOST.notice(), HOST.pending()], ['versions:1.0.1.0.3', null, true], 'its completion takes it down below the list, the card still reading');
+    aNotice('face:a', 'its passage is not here');
+    HOST.takeDownFaces();
+    assert.deepEqual([standing(), HOST.notice(), HOST.pending()], ['versions:1.0.1.0.3', null, true], 'the faces taken down: the notice below, the list standing, the card still reading');
+    r.answer('its origin');
+    return o.then(() => {
+      assert.equal(standing(), 'provenance:wrote', 'its answer shows');
+      FACES.reading('1.0.1.0.3.2', null, true);
+      HOST.dismiss();
+      assert.deepEqual([standing(), HOST.notice()], ['reading:1.0.1.0.3.2', null], 'the card dismissed: the reading face raised into its place, alone');
+      FACES.endReading();
+      assert.equal(standing(), null, 'its completion takes it down there too');
+      FACES.invalidFollow(null);
+      HOST.takeDownFaces();
+      assert.equal(standing(), null, 'a face in the overlay\'s place taken down');
+      FACES.moment({ id: 'm-266', kind: 'ask', data: { text: 'name this' }, walk: 'w-266', board: null, answerable: true });
+      HOST.takeDownFaces();
+      assert.equal(standing(), 'moment:m-266', 'a moment standing');
+    });
   });
 });
 

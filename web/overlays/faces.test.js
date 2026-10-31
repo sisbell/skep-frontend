@@ -347,7 +347,7 @@ test('a jump reading says so in its own words, as a face is heard, and offers no
   FACES.reading(D, at);
   const f = faceShown(), o = HOST.currentState();
   assert.deepEqual([f?.id, f?.words, f?.acts, o?.anchor, o?.takeFocus], ['reading:' + D, ['L.reading', t('L.reading', { address: D })], [], at, undefined], 'its words at the site it is shown at, no act, no focus taken');
-  assert.ok(!f?.id.startsWith('face:'), 'never named as a notice\'s face is');
+  assert.ok(!f?.id.startsWith('face:'), 'never named as every other face is');
   assert.equal(live.textContent, t('L.reading', { address: D }), 'heard through the one status region, as a face is');
   FACES.endReading();
   assert.equal(HOST.currentState(), null, 'ended where it stands');

@@ -6,8 +6,9 @@
 // by `compare` over the member's own extent and by the rule a landing reads
 // (FP-21) — whole, part, all of it in pieces, couldn't tell by the refusal
 // met; each read act a version move carrying the passage held and landing in
-// place, the box taking the member, and a list opened at the version its box
-// shows holding the passage in that version (FP-22); the open end — the
+// place, the box taking the member, the list standing through it and read
+// again at the member, and a list opened at the version its box
+// shows holding the passage in that version (FP-22, FP-36); the open end — the
 // head's row marked latest and the caption counting the chain only where the
 // board ended it, a list whose probe stopped keeping every member read and
 // saying how far it read, "try again" going on from there, the version being
@@ -36,6 +37,8 @@ const T = '1.0.1.0.43', T1 = T + '.1', T2 = T + '.2';
 const TEXT = 'First.\n\nSecond paragraph.', PROLOGUE = 'Prologue added before.\n\n', TEXT2 = PROLOGUE + TEXT;
 /** the second paragraph, the passage held: its first position and its positions, in the edition */
 const HELD = { pos: TEXT.indexOf('Second') + 1, width: 'Second paragraph.'.length };
+/** the second paragraph as the second member sets it: the passage held, read in that member */
+const HELD2 = { pos: HELD.pos + PROLOGUE.length, width: HELD.width };
 
 /** the day the board says a member `D.k` was published: noon on the 10+k-th of March 2026, in this machine's own time zone, its feed row standing; a trunk the 1st's */
 const publishedAt = (/** @type {string} */ doc) => new Date(2026, 2, 10 + (memberOf(doc) ?? -9), 12).getTime();
@@ -80,10 +83,15 @@ const NOT_REGISTERED = { refused: { kind: 'refused', name: 'doc_not_registered',
 const y = (/** @type {number} */ k) => Y + '.' + k;
 const script = {
   ...reads(T, TEXT), ...reads(T1, TEXT), ...reads(T2, TEXT2),
+  // the second member's bytes as its text sets them: its prologue its own, then the edition's
+  [FAKE.keyOf('op', { frame: F.image(T2, 1, TEXT2.length) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: T2 + '.0.1.1', width: String(PROLOGUE.length) }, { i_start: T + '.0.1.1', width: String(TEXT.length) }] } },
   ...compared(T1, TEXT.length, [[HELD.pos, HELD.pos, HELD.width]]),
   ...compared(T2, TEXT2.length, [[HELD.pos, HELD.pos + PROLOGUE.length, HELD.width]]),
   // the second member's first positions, as long as the edition: its prologue and its first paragraph, none of the passage
   ...compared(T2, TEXT.length, []),
+  // the passage held in the second member, and in the first, against each: where a list standing over a version move is read again
+  ...compared(T1, TEXT.length, [[HELD2.pos, HELD.pos, HELD.width]], T2, HELD2), ...compared(T2, TEXT2.length, [[HELD2.pos, HELD2.pos, HELD.width]], T2, HELD2),
+  ...compared(T1, TEXT.length, [[HELD.pos, HELD.pos, HELD.width]], T1), ...compared(T2, TEXT2.length, [[HELD.pos, HELD2.pos, HELD.width]], T1),
   ...reads(U, TEXT, U), ...reads(U1, TEXT, U), ...reads(U2, TEXT, U),
   ...compared(U1, TEXT.length, [[1, 1, FIRST.width]], U, FIRST), ...compared(U2, TEXT.length, [[1, 1, FIRST.width]], U, FIRST),
   [FAKE.keyOf('op', { frame: F.docMetadata(U + '.3') })]: { refused: { kind: 'refused', name: 'doc_not_registered', code: 'doc_not_registered' } },
@@ -214,7 +222,7 @@ test('each row reads its member by the rule a landing reads (issue #153): whole,
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a member\'s read act is a version move carrying the passage held (issue #154): it lands in place, never flying, the box taking the member and the landing marked at the passage\'s counterpart there, never at the edition\'s position', async () => {
+test('a member\'s read act is a version move carrying the passage held (issue #154): it lands in place, never flying, the box taking the member and the landing marked at the passage\'s counterpart there, never at the edition\'s position; the list stands through it, read again at the member over the passage there, the member current (issue #266)', async () => {
   await VERSIONS.open(T, HELD.pos, null);
   const o = HOST.currentState();
   const read = o && o.acts ? o.acts['read2'] : null;
@@ -227,13 +235,13 @@ test('a member\'s read act is a version move carrying the passage held (issue #1
   const v = CAM.view();
   assert.ok(!flew && v.x === at.x && v.y === at.y && v.scale === at.scale, 'no flight: the camera where it stood');
   assert.equal(GO.shownIn(T), T2, 'the box takes the member');
+  await listedAt(T2);
+  assert.deepEqual([HOST.currentState()?.id, rows(), current(), caption()], ['versions:' + T, [[1, 'whole'], [2, 'whole']], [2], `${T} · ${t('F.version-of', { k: 2, n: 2 })}`], 'the list standing, read again at the member: version 2 current');
+  assert.deepEqual(/** @type {VERSIONS.About} */ (HOST.currentState()?.about).held, { ...HELD2, ids: [{ prefix: T + '.0.1', ordinal: HELD.pos, width: HELD.width }] }, 'over the passage where the member holds its bytes');
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('the list opened at the version its box shows holds the passage in that version (issue #154): its rows compare the passage from it, and its read acts carry it from it — never the trunk\'s positions', async () => {
-  /** the second paragraph as the second member sets it: the passage held, read in that member */
-  const HELD2 = { pos: HELD.pos + PROLOGUE.length, width: HELD.width };
-  Object.assign(script, compared(T1, TEXT.length, [[HELD2.pos, HELD.pos, HELD.width]], T2, HELD2), compared(T2, TEXT2.length, [[HELD2.pos, HELD2.pos, HELD.width]], T2, HELD2));
+test('the list opened at the version its box shows holds the passage in that version (issue #154): its rows compare the passage from it, and its read acts carry it from it — never the trunk\'s positions; the list read again at the version moved to (issue #266)', async () => {
   await run(GO.leapTo(T2));
   assert.equal(GO.shownIn(T), T2, 'a LEAP to the member: its box shows it');
   await VERSIONS.open(T2, HELD2.pos, null);
@@ -244,6 +252,9 @@ test('the list opened at the version its box shows holds the passage in that ver
   read(/** @type {any} */ (hostEl), false);
   for (let i = 0; i < 200 && GO.arrivalMark()?.addr !== T1; i++) await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual([GO.arrivalMark(), GO.shownIn(T)], [{ addr: T1, pos: HELD.pos, runs: [{ pos: HELD.pos, width: HELD.width }], link: null }, T1], 'carried from the member: its counterpart in the first');
+  await listedAt(T1);
+  assert.deepEqual([rows(), current(), caption()], [[[1, 'whole'], [2, 'whole']], [1], `${T} · ${t('F.version-of', { k: 1, n: 2 })}`], 'the list read again at the first: version 1 current');
+  HOST.dismiss();
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -330,6 +341,12 @@ async function run(/** @type {Promise<unknown>} */ act) {
 async function opened() {
   for (let i = 0; i < 200 && HOST.pending(); i++) await new Promise((r) => setTimeout(r, 0));
   assert.equal(HOST.pending(), false, 'the list\'s reads answered');
+}
+/** the list standing read again at a version, as the re-check after a version move shows it (N-GO's `surfacesAcross`) */
+async function listedAt(/** @type {string} */ addr) {
+  const about = () => /** @type {VERSIONS.About | undefined} */ (HOST.currentState()?.about);
+  for (let i = 0; i < 200 && (about()?.addr !== addr || HOST.pending()); i++) await new Promise((r) => setTimeout(r, 0));
+  assert.equal(about()?.addr, addr, 'the list stands read again at ' + addr);
 }
 
 test('opened by the corner\'s act at its version statement, the list stands at it, the document\'s box beside it — its top-left, the side the corner stands on — where it stands once the corner is rewritten or taken down', async () => {

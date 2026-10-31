@@ -60,9 +60,10 @@
 // or layer revision, a flight, an overlay standing, a phase — run T-LAYER's
 // frame first, so what stands is decided before anything is drawn (FP-8),
 // then the landing rule at an arrival whose text was set again (N-GO's
-// `recheck`; FP-21), mark the mirror's documents, Back's light and the
-// landing's description in place (N-WALK's `markExpanded`, `markLocated`,
-// `markDescribed`), then
+// `recheck`; FP-21) and at every surface standing on a version its box no
+// longer shows (N-GO's `surfacesAcross`; FP-36), mark the mirror's
+// documents, Back's light and the landing's description in place (N-WALK's
+// `markExpanded`, `markLocated`, `markDescribed`), then
 // P-RENDER, BM, O-HOST's place, the landing's line (O-LAND's `render`), the
 // scene's ties where the scene is open (SC's `draw`), then the press
 // APP-INPUT holds at reading scale, acted on the text the frame set
@@ -92,7 +93,7 @@
 // on; the failure reporter (a line in the page, posted nowhere). No write is
 // composed or sent anywhere in this page (S-35 (a)).
 // Rules: FP-1, FP-2, FP-4, FP-5, FP-8, FP-9, FP-10, FP-11, FP-14, FP-15,
-// FP-20, FP-22, FP-23, FP-25, FP-26, FP-28, FP-29, FP-34, FP-35.
+// FP-20, FP-22, FP-23, FP-25, FP-26, FP-28, FP-29, FP-34, FP-35, FP-36.
 
 import * as PORT from '../bridge/port.js';
 import * as DEV from '../bridge/dev.js';
@@ -190,6 +191,7 @@ function loop(/** @type {number} */ now) {
     if (!bootInfo.firstFrame) bootInfo.firstFrame = SHIPPED.map((f) => [f, document.fonts.check(f)]);
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
     GO.recheck();
+    GO.surfacesAcross();
     WALK.markExpanded();
     WALK.markLocated();
     WALK.markDescribed();

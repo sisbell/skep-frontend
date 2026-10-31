@@ -18,9 +18,10 @@
 // the person has left never opens over the next one, nor over chrome made
 // after it was asked, and Esc closes what the person sees, never an opening
 // they cannot. An overlay's own completion is no act on the chrome
-// (`complete`): a jump's reading face taken down as its read answers ends no
-// opening asked while it stood, whose answer then shows where the camera is
-// (FP-25). Nor is an overlay drawn again in its place by the module that
+// (`complete`): a jump's reading face taken down as its read answers — in the
+// overlay's place, or below it as a notice — ends no opening asked while it
+// stood, whose answer then shows where the camera is (FP-25). Nor is an
+// overlay drawn again in its place by the module that
 // showed it, from what its reads found since (`redraw`): the dead end's face
 // taking its version offer (O-FACES') ends no opening, and what it changed is
 // its owner's to say; nor is a notice shown. Until it shows or ends it is
@@ -34,8 +35,9 @@
 // (`Overlay.notice`; N-GO's) — a failure a jump's reads learned in the air,
 // the dead end or the withheld document a landing meets, a refusal a reach or
 // a reading scene's opening met, an entry's notice shown again on a return —
-// is no act on the chrome, so it ends no opening and a card still reading
-// shows its answer. It takes the overlay's place only where nothing the
+// and a version move's reading face, the move leaving no place (O-FACES'
+// `reading`), is no act on the chrome, so it ends no opening and a card still
+// reading shows its answer. It takes the overlay's place only where nothing the
 // reader opened stands there — nothing, a jump's reading or reaching face, an
 // earlier notice; over anything else — a card, a list, a moment, a face that
 // answered the reader's act — it stands below that overlay in its own element
@@ -56,7 +58,10 @@
 // (`dismissInnermost`). Where the overlay above it ends any other way the
 // notice stays, alone in the overlay's place at its own anchor (`raise`);
 // leaving the place takes both down (`leave`), and so does a change of the
-// page's class.
+// page's class. A version move leaves no place (FP-36): it takes down the
+// faces alone — the notice below and a face in the overlay's place — every
+// card, list and moment standing, an opening still reading reading on
+// (`takeDownFaces`).
 // A surface leaves and returns with its place (FP-36, FP-25): a card or a
 // list shows carrying what it is about (`about`) — a link's end, a span's
 // bytes, a document, a mark — by value, its owner's, never its words; the
@@ -171,7 +176,7 @@ import { esc } from '../util.js';
  * @property {boolean} [told] a face whose words the landing that met it says where the focus lands (N-WALK's description): the status region does not repeat them
  * @property {string} [id] a name the gate reads
  * @property {About} [about] what a card or a list is about (see the head): what a departure keeps of it; none for a face, a moment and the trail's list
- * @property {boolean} [notice] a face a read brought once it answered (see the head): no act on the chrome, standing below what the reader opened; it never takes the focus
+ * @property {boolean} [notice] a face a read brought once it answered, or a version move's reading face (see the head): no act on the chrome, standing below what the reader opened; it never takes the focus
  */
 
 /** @type {HTMLElement | null} */
@@ -550,14 +555,27 @@ export function leave() {
 }
 
 /**
- * The overlay standing ends by its own completion — a jump's reading face,
- * its read answered (O-FACES' `endReading`): taken down as a dismissal takes
- * it, but no act on the chrome, so an opening asked while it stood still
- * shows its answer (see the head). Nothing where another overlay stands.
+ * A face ends by its own completion — a jump's reading face, its read
+ * answered (O-FACES' `endReading`): taken down as a dismissal takes it,
+ * whether it stands in the overlay's place or below it as a notice, but no
+ * act on the chrome, so an opening asked while it stood still shows its
+ * answer (see the head). Nothing where it stands in neither.
  * @param {string} id the overlay that completed
  */
 export function complete(id) {
   if (current && current.id === id) takeDown();
+  else if (stacked && stacked.id === id) takeDownStacked();
+}
+
+/**
+ * The faces standing taken down as a version move leaves the landing they
+ * answered (N-GO's; FP-36), no act on the chrome: the notice below the
+ * overlay, and a face in the overlay's place — a card, a list or a moment
+ * standing as it is, and an opening still reading reading on (see the head).
+ */
+export function takeDownFaces() {
+  takeDownStacked();
+  if (current && current.kind === 'face') takeDown();
 }
 
 /** the current overlay taken down: its end run while its element still holds what it wrote — a walk's moment folds with the text typed in its field (O-FACES') — then its element emptied and the focus returned through the controller, and a notice below it raised into its place (`raise`) */

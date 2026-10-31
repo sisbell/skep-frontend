@@ -2635,7 +2635,8 @@ def version_holds(ctx, r):
     (a) the versions list holding a passage both versions hold, version 1's read act pressed: no frame flies, the
     passage's first line stands at the height it stood at on screen, at its em, in version 1's text; the box shows version 1 alone —
     its article and its corner, the corner reading "version 1 of n" — the one line naming the version's address, its marker
-    lit, and the trail one entry on, at the passage's counterpart;
+    lit, and the trail one entry on, at the passage's counterpart; the list standing through the move, read again at
+    version 1, its read act the current one;
     (b) Mod+- until mid scale, the box's article down: it still shows version 1, its one label the version's address past the region's prefix,
     the mirror listing the box once, by the version; Mod+= as many times back: the box, the line and the camera as they
     were, the trail unmoved;
@@ -2643,8 +2644,8 @@ def version_holds(ctx, r):
     stood, the marker unlit; Mod+]: version 1 again, at the view Back left; then a click on the box at mid scale, as a
     person clicks a document there: the teleport lands in version 1, the box still pinned;
     (d) the first stretch of the trunk's text version 1 holds none of — decided from the harness's own reads of the board —
-    held by the list and version 1's read act pressed: the box shows version 1, nothing outlined, the dead end's face
-    saying the passage is not in version 1, and the line holding the counterpart of the nearest shared position stands
+    held by the list and version 1's read act pressed: the box shows version 1, nothing outlined, the list standing and
+    the dead end's face below it saying the passage is not in version 1, and the line holding the counterpart of the nearest shared position stands
     where the stretch's first line stood; unmeasured where version 1 holds all of the trunk's text.
     The edition is left at its plain address; its figures"""
     seen = {}
@@ -2690,7 +2691,13 @@ def version_holds(ctx, r):
             'the one line names the version\'s address, its version marker lit (issue #154; foundations §3.2)', {'address': at1['address'], 'marker': at1['marker']})
     r.check(at1['trail']['cursor'] == t0['cursor'] + 1 and newest['addr'] == m1 and bool(a) and newest['pos'] == a['pos'],
             'the move takes one trail entry, at the passage\'s counterpart in version 1 (issue #154)', {'cursor': [t0['cursor'], at1['trail']['cursor']], 'newest': {k: newest.get(k) for k in ('addr', 'pos')}})
-    seen['in_place'] = {'para': para['pos'], 'counterpart': a and a['pos'], 'fly': fly, 'line': [before['line'], after and after['line']]}
+    ctx.settle()
+    ctx.frames(2)
+    listed = ctx.js('''(() => { const o = window.__skep.overlay(), b = document.querySelector('#overlay [data-run="read1"]');
+      return {id: o.id, notice: o.notice ? o.notice.id : null, current: b ? b.getAttribute('aria-current') : null}; })()''')
+    r.check(listed['id'] == 'versions:' + VERSIONED and listed['current'] == 'true' and listed['notice'] is None,
+            'the versions list stands through the move, read again at version 1 — its read act the current one — with no face left below it (issue #266)', listed)
+    seen['in_place'] = {'para': para['pos'], 'counterpart': a and a['pos'], 'fly': fly, 'line': [before['line'], after and after['line']], 'list': listed}
     # (b) zoomed out to mid scale, the box drawn on the canvas, its article down, and in again: the version stands
     ctx.esc()
     ours = lambda x: x == VERSIONED or x.startswith(VERSIONED + '.')
@@ -2776,15 +2783,18 @@ def version_holds(ctx, r):
         ctx.js('window.__skep.cards.versions(%s, %d, %d)' % (json.dumps(VERSIONED), gap['lo'], gap['hi'] - gap['lo']))
         wait_for(ctx, 'document.querySelector(%s) !== null' % json.dumps('#overlay [data-run="read1"]'))
         at = click_on(ctx, '#overlay [data-run="read1"]')
-        wait_for(ctx, 'window.__skep.go.shownIn(%s) === %s && window.__skep.overlay().id === "face:floating"' % (json.dumps(VERSIONED), json.dumps(m1)))
+        wait_for(ctx, 'window.__skep.go.shownIn(%s) === %s && (window.__skep.overlay().notice || {}).id === "face:floating"' % (json.dumps(VERSIONED), json.dumps(m1)))
+        ctx.settle()
         ctx.frames(3)
-        face, said = ctx.overlay_shown(), ctx.js('import("./strings.js").then(({t}) => t("F.floating.member", {k: 1}))')
+        face = ctx.js('(() => { const n = window.__skep.overlay().notice; return {id: n ? n.id : null, text: n ? n.text : "", acts: document.querySelectorAll("#notice [data-run]").length}; })()')
+        said = ctx.js('import("./strings.js").then(({t}) => t("F.floating.member", {k: 1}))')
         landed, nowhere = box_of(ctx, VERSIONED), ctx.js('window.__skep.go.arrival()')
         stood = line_of(ctx, m1, gap['at'])
         entry = landed['trail']['entries'][landed['trail']['cursor']]
-        r.check(bool(at) and at['hits'] and ctx.js('window.__skep.overlay().id') == 'face:floating' and said in face['text'] and face['acts'] == 0 and landed['shown'] == m1 and landed['mounted'] == [m1] and nowhere is None,
-                'a passage version 1 holds none of, carried by its read act: the box shows version 1, nothing outlined, and the face says "%s", offering no act (issue #154)' % said,
-                {'gap': gap, 'face': face, 'shown': landed['shown'], 'arrival': nowhere})
+        r.check(bool(at) and at['hits'] and ctx.js('window.__skep.overlay().id') == 'versions:' + VERSIONED and face['id'] == 'face:floating' and said in face['text'] and face['acts'] == 0
+                and landed['shown'] == m1 and landed['mounted'] == [m1] and nowhere is None,
+                'a passage version 1 holds none of, carried by its read act: the box shows version 1, nothing outlined, the versions list standing and the dead end\'s face below it saying "%s", offering no act (issues #154, #266)' % said,
+                {'gap': gap, 'face': face, 'overlay': ctx.js('window.__skep.overlay().id'), 'shown': landed['shown'], 'arrival': nowhere})
         r.check(bool(held['line']) and bool(stood['line']) and abs(stood['line']['y'] - held['line']['y']) <= DRIFT_TOL_PX and entry['addr'] == m1 and entry['pos'] == gap['at'],
                 f'the nearest shared position\'s counterpart in version 1 keeps the line the passage stood on, {DRIFT_TOL_PX} px either way, and the move\'s entry stands there (issue #154)',
                 {'gap': gap, 'held': held['line'], 'stood': stood['line'], 'entry': {k: entry.get(k) for k in ('addr', 'pos')}})

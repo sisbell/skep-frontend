@@ -14,8 +14,10 @@
 // the selection, a card, a list — ended as the reader leaves and reopened as
 // left on a return, their subjects placed again by their bytes, and a text
 // set again under the reader — an arrival placed again by its runs' bytes,
-// and the passage being read gone from it (FP-20, FP-21, FP-22, FP-25,
-// FP-29, FP-35, FP-36). The overlay host stands on stand-in elements — the
+// and the passage being read gone from it — and the surfaces standing
+// through a version move or a newer version's arrival, the selection, a card
+// and a list re-checked against the version their box shows then (FP-20,
+// FP-21, FP-22, FP-25, FP-29, FP-35, FP-36). The overlay host stands on stand-in elements — the
 // overlay's and the notice's below it — the platform's document a stand-in
 // beside them, so a face a landing shows is read back from what the host
 // wrote.
@@ -2320,9 +2322,26 @@ Object.assign(script, {
   // FAR whole against its first member whole: its second paragraph shared, its first not; against its second member, nothing
   [FAKE.keyOf('op', { frame: carried({ addr: FAR, pos: 1, width: FAR_EXTENT }, FAR1, FAR_EXTENT) })]: between(FAR, FAR1, [[FAR_HELD.pos, FAR_HELD.pos, FAR_HELD.width]]),
   [FAKE.keyOf('op', { frame: carried({ addr: FAR, pos: 1, width: FAR_EXTENT }, FAR2, FAR_EXTENT) })]: between(FAR, FAR2, []),
-  // the second paragraph held in FAR's second member, against its first: there whole
+  // the second paragraph held in FAR's second member, against its first and against itself: there whole
   [FAKE.keyOf('op', { frame: carried({ addr: FAR2, ...FAR_HELD }, FAR1, FAR_EXTENT) })]: between(FAR2, FAR1, [[FAR_HELD.pos, FAR_HELD.pos, FAR_HELD.width]]),
+  [FAKE.keyOf('op', { frame: carried({ addr: FAR2, ...FAR_HELD }, FAR2, FAR_EXTENT) })]: between(FAR2, FAR2, [[FAR_HELD.pos, FAR_HELD.pos, FAR_HELD.width]]),
+  // who wrote FAR's passage at 20, asked again over FAR's second member, which holds it there
+  [FAKE.keyOf('op', { frame: F.showOrigin(FAR2, 20, 5) })]: { result: { as_of: 1, resp: 'addrs', addrs: [FAR] } },
 });
+
+/** FAR's second member's bytes FAR's own, as a member minted against FAR shares them — its text held first, so no read sets them back: what the re-check across a version places a surface's bytes by */
+async function sharedBytes() { await PUMP.loadWhole(FAR2); REC.takeImage(FAR2, 1, [{ iStart: FAR + '.0.1.1', width: FAR_EXTENT }]); }
+/** FAR's second member's bytes its own again, as the script answers them */
+const ownBytes = () => REC.takeImage(FAR2, 1, [{ iStart: FAR2 + '.0.1.1', width: FAR_EXTENT }]);
+/** the status region stubbed: what it was given to say, each in turn */
+function statusSaid() {
+  /** @type {string[]} */
+  const said = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); } }) });
+  return said;
+}
+/** does the notice below the overlay carry these words, said through the status region as a face no landing tells is (O-HOST's `stack`)? */
+const saidBelow = (/** @type {string} */ words) => { const n = HOST.notice(); return !!n && !n.told && n.html.includes(esc(words)); };
 Object.defineProperty(script, FAKE.keyOf('op', { frame: carried(FAR_TEN, FAR1, FAR_EXTENT) }), {
   enumerable: true,
   get: () => (versionOutage ? { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } } : between(FAR, FAR1, [[FAR_TEN.pos, FAR_TEN.pos, FAR_TEN.width]])),
@@ -2337,33 +2356,49 @@ async function inPlace(/** @type {unknown} */ act) {
   return flew;
 }
 
-test('a version move lands in place (issue #154): the versions list\'s read act never flies — the camera stands where it stood — and the box takes the member, its entry pushed recording the passage carried, the arrival at its counterpart there and the walk on it; Back restores the earlier version and its view, lighting the passage where the move was made, the list the move was made from reopened over the same passage, its rows read again (issue #264), and Forward takes the member again', async () => {
+test('a version move lands in place (issue #154): the versions list\'s read act never flies — the camera stands where it stood — and the box takes the member, its entry pushed recording the passage carried, the arrival at its counterpart there and the walk on it; the list stands through the move, its reading face below it until the read answers, and is read again at the member over the passage there, version 2 current (issue #266); Back restores the earlier version and its view, lighting the passage where the move was made, the list reopened there over the same passage, its rows read again (issue #264), and Forward takes the member again, the list it left standing there reopened with it', async () => {
   await run(GO.leapTo(FAR));
   assert.equal(GO.shownIn(FAR), FAR, 'FAR\'s box shows its plain address, the trunk head');
   REC.takeMembers(FAR, 2);
-  await VERSIONS.open(FAR, FAR_HELD.pos, null);
-  const read = HOST.currentState()?.acts?.read2;
-  assert.ok(read, 'the second member\'s row offers its read act');
-  const at = CAM.view(), n = TRAIL.length();
-  assert.equal(await inPlace(read(/** @type {any} */ (hostEl), false)), false, 'no flight at any turn of it');
-  assert.ok(same(CAM.view(), at), 'the camera where it stood');
-  assert.deepEqual([GO.shownIn(FAR), GO.shownIn(FAR2), GO.shownIn(FAR1)], [FAR2, FAR2, FAR2], 'the box shows the member, whichever version names it');
-  const e = TRAIL.current();
-  assert.deepEqual([TRAIL.length(), e && [e.addr, e.pos, e.width]], [n + 1, [FAR2, FAR_HELD.pos, FAR_HELD.width]], 'one entry pushed, at the counterpart');
-  assert.deepEqual(departed()?.step, { kind: 'carry', from: FAR, to: FAR2, spans: [{ prefix: FAR + '.0.1', ordinal: FAR_HELD.pos, width: FAR_HELD.width }] }, 'the entry departed records the passage carried, by identity');
-  assert.deepEqual(GO.arrivalMark(), { addr: FAR2, pos: FAR_HELD.pos, runs: [{ pos: FAR_HELD.pos, width: FAR_HELD.width }], link: null }, 'its counterpart outlined in the member');
-  assert.deepEqual([walkAt(), WALK.landedAt()], [['block', FAR2, FAR_HELD.pos], FAR_HELD.pos], 'the walk on the member\'s span holding it');
-  const asked = fake.asked.length;
-  await run(GO.back()); await reopening();
-  assert.deepEqual([GO.shownIn(FAR), TRAIL.current()?.addr, walkAt()?.[1]], [FAR, FAR, FAR], 'Back restores the earlier version');
-  assert.ok(same(CAM.view(), at), 'and its view');
-  assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: FAR_HELD.pos, runs: [{ pos: FAR_HELD.pos, width: FAR_HELD.width }], link: null }, 'lighting the passage where the move was made (issue #152)');
-  const list = HOST.currentState(), about = /** @type {VERSIONS.About} */ (list?.about);
-  assert.deepEqual([list?.id, about.addr, about.held && [about.held.pos, about.held.width]], ['versions:' + FAR, FAR, [FAR_HELD.pos, FAR_HELD.width]], 'the list the move was made from, reopened over the passage it held');
-  assert.ok(fake.asked.slice(asked).includes(FAKE.keyOf('op', { frame: heldIn(FAR2) })), 'its rows read again: what each member holds of the passage');
-  await run(GO.forward());
-  assert.deepEqual([GO.shownIn(FAR), TRAIL.current()?.addr, HOST.currentState()], [FAR2, FAR2, null], 'Forward takes the member again, the list ended as it leaves');
-  await run(GO.leapTo(FAR));
+  await sharedBytes();
+  try {
+    await VERSIONS.open(FAR, FAR_HELD.pos, null);
+    const read = HOST.currentState()?.acts?.read2;
+    assert.ok(read, 'the second member\'s row offers its read act');
+    const at = CAM.view(), n = TRAIL.length();
+    const release = fake.hold('op', { frame: heldIn(FAR2) });
+    const moving = Promise.resolve(read(/** @type {any} */ (hostEl), false));
+    let flew = false;
+    for (let i = 0; i < 20; i++) { await new Promise((r) => setTimeout(r, 0)); flew = flew || CAM.flying(); }
+    assert.deepEqual([HOST.currentState()?.id, HOST.notice()?.id], ['versions:' + FAR, 'reading:' + FAR2], 'the list standing while the move reads, its reading face the notice below it');
+    let asked = fake.asked.length;
+    release();
+    assert.equal((await inPlace(moving)) || flew, false, 'no flight at any turn of it');
+    assert.ok(same(CAM.view(), at), 'the camera where it stood');
+    assert.deepEqual([GO.shownIn(FAR), GO.shownIn(FAR2), GO.shownIn(FAR1)], [FAR2, FAR2, FAR2], 'the box shows the member, whichever version names it');
+    const e = TRAIL.current();
+    assert.deepEqual([TRAIL.length(), e && [e.addr, e.pos, e.width]], [n + 1, [FAR2, FAR_HELD.pos, FAR_HELD.width]], 'one entry pushed, at the counterpart');
+    assert.deepEqual(departed()?.step, { kind: 'carry', from: FAR, to: FAR2, spans: [{ prefix: FAR + '.0.1', ordinal: FAR_HELD.pos, width: FAR_HELD.width }] }, 'the entry departed records the passage carried, by identity');
+    assert.deepEqual(GO.arrivalMark(), { addr: FAR2, pos: FAR_HELD.pos, runs: [{ pos: FAR_HELD.pos, width: FAR_HELD.width }], link: null }, 'its counterpart outlined in the member');
+    assert.deepEqual([walkAt(), WALK.landedAt()], [['block', FAR2, FAR_HELD.pos], FAR_HELD.pos], 'the walk on the member\'s span holding it');
+    await reopening();
+    const kept = HOST.currentState(), keptAbout = /** @type {VERSIONS.About} */ (kept?.about);
+    assert.deepEqual([kept?.id, keptAbout.addr, keptAbout.held && [keptAbout.held.pos, keptAbout.held.width], HOST.notice()], ['versions:' + FAR, FAR2, [FAR_HELD.pos, FAR_HELD.width], null], 'the list standing, read again at the member over the passage there, no face below it');
+    assert.ok(hostEl.innerHTML.includes('data-run="read2" aria-current="true"'), `version 2 current: ${hostEl.innerHTML}`);
+    assert.ok(fake.asked.slice(asked).includes(FAKE.keyOf('op', { frame: carried({ addr: FAR2, ...FAR_HELD }, FAR1, FAR_EXTENT) })), 'its rows read again from the member');
+    asked = fake.asked.length;
+    await run(GO.back()); await reopening();
+    assert.deepEqual([GO.shownIn(FAR), TRAIL.current()?.addr, walkAt()?.[1]], [FAR, FAR, FAR], 'Back restores the earlier version');
+    assert.ok(same(CAM.view(), at), 'and its view');
+    assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: FAR_HELD.pos, runs: [{ pos: FAR_HELD.pos, width: FAR_HELD.width }], link: null }, 'lighting the passage where the move was made (issue #152)');
+    const list = HOST.currentState(), about = /** @type {VERSIONS.About} */ (list?.about);
+    assert.deepEqual([list?.id, about.addr, about.held && [about.held.pos, about.held.width]], ['versions:' + FAR, FAR, [FAR_HELD.pos, FAR_HELD.width]], 'the list the move was made from, reopened over the passage it held');
+    assert.ok(fake.asked.slice(asked).includes(FAKE.keyOf('op', { frame: heldIn(FAR2) })), 'its rows read again: what each member holds of the passage');
+    await run(GO.forward()); await reopening();
+    const ahead = HOST.currentState();
+    assert.deepEqual([GO.shownIn(FAR), TRAIL.current()?.addr, ahead?.id, /** @type {VERSIONS.About} */ (ahead?.about).addr], [FAR2, FAR2, 'versions:' + FAR, FAR2], 'Forward takes the member again, the list it left standing there reopened with it');
+    await run(GO.leapTo(FAR));
+  } finally { ownBytes(); }
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -2404,17 +2439,77 @@ test('a version move whose compare the board does not answer lands in place at t
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a version move ends a selection standing in the version it leaves, its text gone from the box (issue #154)', async () => {
+test('a version move keeps the selection standing (issue #266\'s design decision: "`landInPlace` stops clearing the selection"): carried with its own card open, it moves to its counterpart in the version moved to, its card drawn again over it and nothing said of it, the landing saying it; carried under the versions list, it moves so, the list read again at the member; on a passage the version moved to holds none of, carried by no move, it stays on the version it names, its card standing, the dead end\'s face below the card, said', async () => {
   const platform = { window: globalThis.window };
   globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const said = statusSaid(), member = { addr: FAR2, pos: FAR_HELD.pos, width: FAR_HELD.width };
+  REC.takeMembers(FAR, 2);
+  await sharedBytes();
   try {
     await run(GO.leapTo(FAR));
     SEL.select(FAR, FAR_HELD.pos, FAR_HELD.width);
-    assert.deepEqual(SEL.selected(), { addr: FAR, pos: FAR_HELD.pos, width: FAR_HELD.width });
+    assert.deepEqual([SEL.selected(), HOST.currentState()?.id], [{ addr: FAR, pos: FAR_HELD.pos, width: FAR_HELD.width }, 'selection'], 'the selection, its card open');
+    said.length = 0;
     await inPlace(GO.toVersion(FAR2, { carry: { addr: FAR, ...FAR_HELD, selected: true } }));
-    assert.equal(SEL.selected(), null, 'the selection ended with the text it stood in');
+    assert.deepEqual([SEL.selected(), HOST.currentState()?.id, HOST.currentState()?.anchor], [member, 'selection', { span: member }], 'carried with its own card open: on its counterpart in the member, its card drawn again over it');
+    assert.ok(!said.includes(`${FAR2} · ${t('F.position', { p: FAR_HELD.pos })}`), `nothing said of where it stands: the landing says it — ${said}`);
     await run(GO.leapTo(FAR));
-  } finally { globalThis.window = platform.window; }
+    SEL.select(FAR, FAR_HELD.pos, FAR_HELD.width);
+    await VERSIONS.open(FAR, FAR_HELD.pos, null, FAR_HELD.width);
+    assert.deepEqual([HOST.currentState()?.id, SEL.selected()?.addr], ['versions:' + FAR, FAR], 'the versions list over the selection');
+    await inPlace(HOST.currentState()?.acts?.read2(/** @type {any} */ (hostEl), false));
+    await reopening();
+    assert.deepEqual([SEL.selected(), HOST.currentState()?.id, /** @type {VERSIONS.About} */ (HOST.currentState()?.about).addr], [member, 'versions:' + FAR, FAR2], 'carried under the list: on its counterpart, the list read again at the member');
+    await run(GO.leapTo(FAR));
+    SEL.select(FAR, FAR_FIRST.pos, FAR_FIRST.width);
+    await inPlace(GO.toVersion(FAR1));
+    assert.deepEqual([GO.shownIn(FAR), SEL.selected(), HOST.currentState()?.id, HOST.notice()?.id], [FAR1, { ...FAR_FIRST }, 'selection', 'face:floating'], 'a passage the first member holds none of: the selection stays on the version it names, its card standing, the dead end\'s face below the card');
+    assert.ok(saidBelow(t('F.floating.member', { k: 1 })), `"its passage is not in version 1", said: ${HOST.notice()?.html}`);
+    await run(GO.leapTo(FAR));
+  } finally { SEL.clear(); HOST.dismiss(); ownBytes(); globalThis.window = platform.window; }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a card stands through a version move however early it was opened (issue #266\'s design decision: "open cards alike, however early they were opened"): one open as the move is made stands while it reads, the move\'s reading face the notice below it until the read answers; one opened while the move reads stands over that face; each, once the move lands, is asked again over the version moved to; one whose span the version moved to holds none of stays on the version it names, said, the dead end\'s face below it', async () => {
+  const origin = (/** @type {string} */ doc) => FAKE.keyOf('op', { frame: F.showOrigin(doc, 20, 5) });
+  const about = () => /** @type {PROV.About | undefined} */ (HOST.currentState()?.about);
+  REC.takeMembers(FAR, 2);
+  await sharedBytes();
+  try {
+    // open as the move is made
+    await run(GO.leapTo(FAR));
+    await PROV.wrote(FAR, 20, 5);
+    assert.equal(HOST.currentState()?.id, 'provenance:wrote', 'who wrote this? open at FAR');
+    let release = fake.hold('op', { frame: heldIn(FAR2) });
+    let moving = GO.toVersion(FAR2, { carry: { addr: FAR, ...FAR_HELD } });
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([HOST.currentState()?.id, HOST.notice()?.id, about()?.addr], ['provenance:wrote', 'reading:' + FAR2, FAR], 'the card stands while the move reads, its reading face the notice below it');
+    let from = fake.asked.length;
+    release();
+    await inPlace(moving); await reopening();
+    assert.deepEqual([HOST.currentState()?.id, about()?.addr, about()?.pos, HOST.notice()], ['provenance:wrote', FAR2, 20, null], 'landed: the card asked again over the member, the reading face gone');
+    assert.ok(fake.asked.slice(from).includes(origin(FAR2)), '`show_origin` asked over the member');
+    // opened while the move reads, over its reading face
+    await run(GO.leapTo(FAR));
+    release = fake.hold('op', { frame: heldIn(FAR2) });
+    moving = GO.toVersion(FAR2, { carry: { addr: FAR, ...FAR_HELD } });
+    for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+    assert.deepEqual([HOST.currentState()?.id, HOST.notice()], ['reading:' + FAR2, null], 'the move reading, its face alone where nothing stands');
+    await PROV.wrote(FAR, 20, 5);
+    assert.deepEqual([HOST.currentState()?.id, HOST.notice()?.id, about()?.addr], ['provenance:wrote', 'reading:' + FAR2, FAR], 'the card opened on the version left, standing over the reading face');
+    from = fake.asked.length;
+    release();
+    await inPlace(moving); await reopening();
+    assert.deepEqual([HOST.currentState()?.id, about()?.addr, HOST.notice()], ['provenance:wrote', FAR2, null], 'landed: the card asked again over the member — never left describing a text gone from the box');
+    assert.ok(fake.asked.slice(from).includes(origin(FAR2)), '`show_origin` asked over the member');
+    // a span the version moved to holds none of
+    await run(GO.leapTo(FAR));
+    await PROV.wrote(FAR, 20, 5);
+    await inPlace(GO.toVersion(FAR1)); await reopening();
+    assert.deepEqual([GO.shownIn(FAR), HOST.currentState()?.id, about()?.addr, HOST.notice()?.id], [FAR1, 'provenance:wrote', FAR, 'face:floating'], 'a span the first member holds none of: the card stays on the version it names, the dead end\'s face below it');
+    assert.ok(saidBelow(t('F.floating.member', { k: 1 })), `"its passage is not in version 1", said: ${HOST.notice()?.html}`);
+    await run(GO.leapTo(FAR));
+  } finally { ownBytes(); }
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -2459,6 +2554,34 @@ test('a newer version\'s arrival never changes what a box shows (issue #154; fou
   unread();
   GO.arrived(C + '.2');
   assert.equal(GO.shownIn(C), C, 'the page holds none of C\'s text: nothing');
+  await run(GO.leapTo(FAR));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a newer version\'s arrival carries the selection standing in the trunk to the member its box is pinned on, its card with it, at the same positions once that member holds the text — by the bytes it held as the version arrived, never those the bare address reads after, the newer head\'s (FP-23: its acts naming that member; issue #266)', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  try {
+    await run(GO.leapTo(FAR, { pos: FAR_HELD.pos }));
+    REC.takeMembers(FAR, 2);
+    SEL.select(FAR, FAR_HELD.pos, FAR_HELD.width);
+    REC.invalidate(FAR2); // the member holds no text of its own: the arrival hands it the trunk's
+    GO.arrived(FAR + '.3');
+    assert.equal(GO.shownIn(FAR), FAR2, 'the box pinned on the member being read');
+    assert.equal(REC.takeAsMember(FAR, FAR2), true, 'the member takes the trunk\'s text, as M-PUMP hands it on');
+    // the bare address read again, as the newer head: other bytes at the selection's positions
+    REC.takeSpanSet(FAR, [{ subspace: 1, ordinal: 1, positions: FAR_EXTENT }]);
+    REC.takeDelivery(FAR, [{ pos: 1, width: FAR_EXTENT, kind: 'content', text: FAR_TEXT, ref: null, origin: null }]);
+    REC.takeImage(FAR, 1, [{ iStart: '1.0.1.0.99.0.1.1', width: FAR_EXTENT }]);
+    GO.surfacesAcross();
+    const card = HOST.currentState();
+    assert.deepEqual([SEL.selected(), card?.id, card?.anchor], [{ addr: FAR2, pos: FAR_HELD.pos, width: FAR_HELD.width }, 'selection', { span: { addr: FAR2, pos: FAR_HELD.pos, width: FAR_HELD.width } }], 'the selection on the member at the same positions, its card drawn again over it');
+  } finally {
+    SEL.clear(); HOST.dismiss();
+    globalThis.window = platform.window;
+    REC.invalidate(FAR); REC.invalidate(FAR2);
+    await PUMP.loadWhole(FAR); await PUMP.loadWhole(FAR2);
+  }
   await run(GO.leapTo(FAR));
   assert.deepEqual(fake.unanswered, []);
 });
