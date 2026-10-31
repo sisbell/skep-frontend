@@ -50,13 +50,14 @@
 // chain it counted past the member shown; and a scene opened on a document a
 // far end names whole — the far pane that version or the latest, named as
 // the link's whole end and current, its `compare` answering after it shows
-// and adding bands alone, moving no pane and no focus (FP-20, FP-30); and a
-// stop only that `compare` draws, left from and returned to — standing with
-// the landing and taking the focus, its count being read, recorded again by
-// what it stood for; answered all, part, none, refused or with no text to
-// read, the focus kept and its words FP-21's; an act on it waiting for the
-// answer, made, abandoned, or dropped once the reader moved on (FP-20,
-// FP-25, FP-34).
+// and adding bands alone, moving no pane and no focus (FP-20, FP-30), and so
+// again as Back returns to it left from a pane or a pane's corner, the focus
+// on the stop it was left from (FP-25); and a stop only that `compare` draws,
+// left from and returned to — standing with the landing and taking the focus,
+// its count being read, recorded again by what it stood for; answered all,
+// part, none, refused or with no text to read, the focus kept and its words
+// FP-21's; an act on it waiting for the answer, made, abandoned, or dropped
+// once the reader moved on (FP-20, FP-25, FP-34).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -1070,6 +1071,39 @@ test('a scene opened on a document a far end names whole shows without waiting o
     assert.deepEqual(SCENE.pairs()?.pairs.map((x) => [x.u1, x.u2, x.width]), [[14, 14, 7]], 'answered: its band the scene\'s');
     assert.deepEqual([p.paneB.scrollTop, p.at(), SCENE.updating(), SCENE.pairs()?.level], [77, 'pane A\'s corner', false, { a: 14, b: null }], 'pane B where the reader scrolled it, the focus where they put it, nothing set level with pane B');
   } finally { release(); Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('a scene on a document a far end names whole, left from a pane or a pane\'s corner by WHOLE BOARD and returned to by Back with its `compare` held, shows again without waiting on it, the focus on the stop it was left from; answered, its band the scene\'s alone — the panes where the reader scrolled them, the focus where it stood', () => onPage(async (p) => {
+  const key = FAKE.keyOf('op', { frame: BOTH }), was = script[key], unanswered = fake.unanswered.length;
+  await onTrail(p);
+  /** @type {Array<[import('./scene.js').Stop, {focus: () => void}, string]>} each stop a pane holds, its stand-in, and its name where the platform's focus stands on it */
+  const stops = [['a', p.paneA, 'pane A'], ['b', p.paneB, 'pane B'], ['a:corner', p.cornerA, 'pane A\'s corner'], ['b:corner', p.cornerB, 'pane B\'s corner']];
+  for (const [stop, el, at] of stops) {
+    let release = () => {};
+    try {
+      assert.equal(await GO.toScene(A, B, { ...NEAR, wholeB: true }), true, `${stop}: the scene shows`);
+      await flown();
+      el.focus();
+      const board = GO.wholeBoard(); await flown(); await board;
+      const left = TRAIL.all()[TRAIL.cursorIndex() - 1].scene;
+      assert.deepEqual([SCENE.isOpen(), left?.held, left?.left?.stop], [false, { ...NEAR, wholeB: true }, stop], `${stop}: WHOLE BOARD ends the scene, its entry recording the far end named whole and the stop it was left from`);
+      release = fake.hold('op', { frame: BOTH });
+      const from = fake.asked.length;
+      const back = GO.back(); await flown(); await back;
+      assert.deepEqual([SCENE.isOpen(), p.at(), SCENE.pairs()?.pairs, SCENE.returned(), p.covered()], [true, at, [], null, [true, true]], `${stop}: Back reopens it while its compare is held, the focus on the stop it was left from, no band yet and no stop returned with it, the plane under it out of the page's order`);
+      assert.ok(fake.asked.slice(from).includes(key), `${stop}: its compare asked as it shows`);
+      p.paneA.scrollTop = 55;
+      p.paneB.scrollTop = 77;
+      Object.assign(script, SHARED);
+      release();
+      for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+      assert.deepEqual([SCENE.pairs()?.pairs.map((x) => [x.u1, x.u2, x.width]), p.paneA.scrollTop, p.paneB.scrollTop, p.at(), SCENE.updating(), SCENE.pairs()?.level], [[[14, 14, 7]], 55, 77, at, false, { a: 14, b: null }],
+        `${stop}: answered, its band the scene's alone — each pane where the reader scrolled it, the focus on the stop it was left from, nothing set level with pane B`);
+      GO.closeScene(); await flown();
+      assert.equal(SCENE.isOpen(), false, `${stop}: its own end, a Back`);
+    } finally { release(); Object.assign(script, { [key]: was }); }
+  }
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
 }));
 

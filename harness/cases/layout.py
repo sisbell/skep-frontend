@@ -350,6 +350,14 @@ on first — the focus kept, or left where they put it, the stop filled in or
 saying so in FP-21's words at its site; Enter made before the answer
 waiting, abandoned by Esc, made by a whole answer; a stop this board stands
 none of said unmeasured.
+A WHOLE-DOCUMENT SCENE LEFT FROM A PANE, RETURNED TO (FP-20, FP-25): the
+first edition's window run beside the draft it windows, named whole, its
+panes scrolled away from where the scene set them, left from each pane and
+each pane's corner by WHOLE BOARD and returned to by Back with its `compare`
+held at its answer: before the answer the scene stands with no band, the
+focus on the stop it was left from, the mirror out of the page's order
+holding none, the AX tree's focused node that stop by its role, each pane
+where the reader left it; after it, the bands added and nothing else moved.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `tailAnchors`, `arrivalAnchors`, `spanRects`, `visible`, `barsOf`, `labels`,
 `scene.at`, `scene.ties`, `scene.edges`, `scene.stop`, `scene.returned`, `scene.strokes`, `scene.text`, `scene.measured`, the frame buffer, `beamLabels`, `connections`, `tails`,
@@ -1615,6 +1623,71 @@ def scene_return_holds(ctx, r):
             figures['stroke'] = 'unmeasured'
         ctx.js('window.__skep.scene.close()')
         ctx.frames(2)
+    finally:
+        ctx.drv.unhold()
+    return figures
+
+
+# a reading scene's pane scrolled down `by` px at the most, the top of its last block kept 10 px or more below the pane's
+# visible top, so the place the scene records as the reader leaves it names a block of it; its scroll after, null where the
+# pane holds no block
+SCROLL_AWAY = '''((side, by) => { const p = document.getElementById(side === 'a' ? 'sceneA' : 'sceneB'), art = p && p.querySelector(':scope > article.dtext');
+  const blocks = art ? [...art.querySelectorAll('.run > .sp, .run > .withheld')] : [], last = blocks[blocks.length - 1];
+  if (!last) return null;
+  p.scrollTop += Math.max(0, Math.min(by, last.getBoundingClientRect().top - (p.getBoundingClientRect().top + p.clientTop) - 10));
+  return p.scrollTop; })(%s, %d)'''
+
+
+def scene_pane_return_holds(ctx, r):
+    """A WHOLE-DOCUMENT SCENE LEFT FROM A PANE, RETURNED TO (FP-20, FP-25): the first edition's window run beside the draft
+    it windows, the far end naming the draft whole, opened anew for each pane and each pane's corner; its panes scrolled
+    away from where the scene set them (`SCROLL_AWAY`), the focus put on the stop, the scene left by WHOLE BOARD and
+    returned to by Back with its `compare` held at its answer (`back_to`): before the answer the scene stands with no band
+    and no stop returned with it, the focus on the stop it was left from, the mirror out of the page's order holding none,
+    the AX tree's focused node that stop by its role, each pane where the reader left it, 1 px either way; the answer
+    released whole, its bands added and nothing else moved — each pane's scroll, 0.5 px either way, and the focus. The
+    driver's hold is lifted after; its figures, by stop"""
+    figures = {}
+    held = {'posA': WINDOW[0], 'widthA': WINDOW[1], 'wholeB': True}
+    banded = 'window.__skep.scene.isOpen() && window.__skep.scene.pairs().pairs.length > 0'
+    stops = (('a', '#sceneA', 'sceneA', 'region'), ('b', '#sceneB', 'sceneB', 'region'),
+             ('a:corner', '#sceneA > .corner', 'sceneA-corner', 'group'), ('b:corner', '#sceneB > .corner', 'sceneB-corner', 'group'))
+    try:
+        ctx.leap(DOC, WINDOW[0])
+        for stop, sel, at, role in stops:
+            name = f'a whole-document scene left from {at}'
+            ctx.js('window.__skep.scene.open(%s, %s, %s)' % (json.dumps(DOC), json.dumps(WINDOW[2]), json.dumps(held)))
+            wait_for(ctx, banded)
+            set_at = ctx.js(SCENE_SCROLLS)
+            ctx.js(SCROLL_AWAY % (json.dumps('a'), 200))
+            ctx.js(SCROLL_AWAY % (json.dumps('b'), 300))
+            ctx.js('document.querySelector(%s).focus()' % json.dumps(sel))
+            ctx.frames(2)
+            left, on = ctx.js(SCENE_SCROLLS), where_focus(ctx)
+            r.check(left['a'] != set_at['a'] and left['b'] > 0 and on['at'] == at,
+                    f'{name}: each pane scrolled away from where the scene set it, pane B past its top, the focus on the stop', {'set': set_at, 'left': left, 'focus': on})
+            ret = back_to(ctx)
+            now = ctx.js('({open: window.__skep.scene.isOpen(), pairs: (window.__skep.scene.pairs() || {pairs: null}).pairs, scrolls: %s})' % SCENE_SCROLLS)
+            before, ax = where_focus(ctx), focused_ax(ctx)
+            r.check(now['open'] and now['pairs'] == [] and ret is None and before['at'] == at and before['inert'] and not before['holds']
+                    and all(abs(now['scrolls'][s] - left[s]) <= 1 for s in 'ab'),
+                    f'{name}, returned to by Back: before its `compare` answers, the scene stands with no band and no stop returned with it, the focus on the stop it was left from — the mirror out of the page\'s order, holding none — and each pane where the reader left it, 1 px either way',
+                    {'scene': now, 'returned': ret, 'focus': before, 'left': left})
+            if ax is not None:
+                r.check(ax['role'] == role, f'{name}, returned to: the AX tree\'s focused node is the stop it was left from, a {role}', ax)
+            released = ctx.drv.answer_op('whole')
+            wait_for(ctx, banded)
+            after = ctx.js('({pairs: (window.__skep.scene.pairs() || {pairs: []}).pairs.length, bands: (window.__skep.scene.ties() || []).filter((t) => t.kind === "band").length, scrolls: %s})' % SCENE_SCROLLS)
+            then, ax2 = where_focus(ctx), focused_ax(ctx)
+            r.check(released and after['pairs'] > 0 and after['bands'] > 0 and all(abs(after['scrolls'][s] - now['scrolls'][s]) <= 0.5 for s in 'ab')
+                    and then['at'] == at and then['inert'] and not then['holds'] and (ax2 is None or ax2['role'] == role),
+                    f'{name}: its `compare` answered, its bands added and nothing else moved — each pane\'s scroll, 0.5 px either way, and the focus on the stop it was left from, the mirror still out of the page\'s order',
+                    {'released': released, 'scene': after, 'returned': now['scrolls'], 'focus': then, 'ax': ax2})
+            figures[stop] = {'set': set_at, 'left': left, 'returned': now['scrolls'], 'answered': after['scrolls'], 'focus': then['at'],
+                             'pairs': after['pairs'], 'bands': after['bands'], 'ax': ax}
+            ctx.js('window.__skep.scene.close()')
+            ctx.settle()
+            ctx.frames(2)
     finally:
         ctx.drv.unhold()
     return figures
@@ -3797,5 +3870,6 @@ def run(ctx):
     r.figures['walk'] = walk_holds(ctx, r)
     r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)
     r.figures['scene_return'] = scene_return_holds(ctx, r)
+    r.figures['scene_pane_return'] = scene_pane_return_holds(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()
