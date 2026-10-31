@@ -34,7 +34,8 @@
 // for the navigation checks; the camera paths (`runPath`) and the frame
 // buffer, each frame's counts (`Frame`), for the frame-cost checks; the
 // bridge client's call log, the pump's counts and the settle signal
-// (`settled`, `settle`); the trail, the one line's and the overlay's text, a
+// (`settled`, `settle`); the trail, the one line's and the overlay's text
+// with the notice standing below it (`overlay`), a
 // walk's moment raised and the folded moments (`moments`); the selection
 // beside the platform's own (`platformSelection`) and the copy door (`copy`);
 // the reveal's state and setters (`reveal`, `links`), each end `links.shown`
@@ -638,7 +639,8 @@ export function install(deps) {
     lineAct: () => LINE.act(),
     trail: () => ({ entries: TRAIL.all(), cursor: TRAIL.cursorIndex(), numbered: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, pos: r.entry.pos, current: r.current })) }),
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay() }),
-    overlay: () => ({ id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text() }),
+    /** the overlay standing — its id, its kind, its text — and the notice standing below it (O-HOST's; FP-36): its id and its text, null where none stands there */
+    overlay: () => { const n = HOST.notice(); return { id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text(), notice: n ? { id: n.id ?? null, text: HOST.noticeText() } : null }; },
     /** a walk's moment raised as the shell's `moment` event raises one (O-FACES' `moment`; FP-36), and the folded moments the one line's walks' segments are, each its walk and its words (`folded`) */
     moments: { raise: (/** @type {import('../bridge/shapes').MomentEvent} */ m) => { FACES.moment(m); return true; }, folded: () => FACES.folded() },
     selection: () => SEL.selected(),

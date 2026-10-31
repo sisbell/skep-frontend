@@ -5,7 +5,8 @@
 // field keeping its caret through a move the page makes, a rebuild keeping
 // the focus, and the host's cases: which control an overlay gives the focus
 // as a key or a pointer opens it, as a rebuild, a replacement or a face takes
-// its place, and as it is dismissed (FP-20; the focus record's rules 10–16).
+// its place, and as it is dismissed, and a notice below it, which takes none
+// and closes first (FP-20, FP-36; the focus record's rules 10–16).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -274,14 +275,16 @@ test('cover: a region chrome stands over is inert while it does', () => {
 // ---- the host's cases (rules 11, 13, 16), on a stand-in of its element whose markup is read for its controls ----------
 
 /**
- * A stand-in element for the host: its `innerHTML` is parsed for the
- * elements the host and the controller ask it for — the acts, the native
- * controls, the caption — each a stand-in the platform's focus can land on;
- * a rewrite replaces them and drops a focus that stood on one to the body.
+ * A stand-in element for the host — the overlay's, or the notice's below it,
+ * by its name: its `innerHTML` is parsed for the elements the host and the
+ * controller ask it for — the acts, the native controls, the caption — each a
+ * stand-in the platform's focus can land on; a rewrite replaces them and
+ * drops a focus that stood on one to the body.
  * @param {ReturnType<typeof page>} p
+ * @param {string} [name]
  */
-function hostElement(p) {
-  const host = p.element('the overlay');
+function hostElement(p, name = 'the overlay') {
+  const host = p.element(name);
   /** @type {Array<ReturnType<typeof p.element> & {tag: string, classes: string[], text: string}>} */
   let kids = [];
   let html = '';
@@ -292,7 +295,7 @@ function hostElement(p) {
     while ((m = re.exec(src))) {
       const attrs = /** @type {Record<string, string>} */ ({});
       for (const a of m[2].matchAll(/([\w-]+)(?:="([^"]*)")?/g)) attrs[a[1]] = a[2] ?? '';
-      const e = Object.assign(p.element('the overlay: ' + (attrs['data-run'] || (attrs['data-x'] ? 'x' : attrs.class || m[1]))), { tag: m[1], classes: (attrs.class || '').split(/\s+/).filter(Boolean), text: m[3] });
+      const e = Object.assign(p.element(name + ': ' + (attrs['data-run'] || (attrs['data-x'] ? 'x' : attrs.class || m[1]))), { tag: m[1], classes: (attrs.class || '').split(/\s+/).filter(Boolean), text: m[3] });
       e.attrs = attrs; e.disabled = 'disabled' in attrs;
       for (const [k, v] of Object.entries(attrs)) if (k.startsWith('data-')) e.dataset[k.slice(5)] = v;
       Object.defineProperty(e, 'textContent', { get: () => e.text });
@@ -399,4 +402,29 @@ test('the host: a rebuild with the same id keeps the focus on the control presse
   HOST.dismiss();
   assert.equal(p.at(), 'the item', 'its dismissal moves nothing: the focus was not on nothing');
   assert.deepEqual(FOCUS.standing(), []);
+});
+
+test('the host: a notice a read brought stands below the card in its own element and takes no focus — the card\'s control keeps it; a focus tabbed into the notice returns to that control as the notice closes first, and the card\'s close then returns it to the card\'s opener (issue #265\'s design decision: "covering neither the card nor its focus. Esc closes the face first")', () => {
+  const p = page();
+  const h = hostElement(p), n = hostElement(p, 'the notice');
+  const item = p.element('the item');
+  FOCUS.attach({ home: () => /** @type {any} */ (item) });
+  HOST.attach(/** @type {any} */ (h.host), /** @type {any} */ (n.host));
+  try {
+    item.focus();
+    HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span><button data-run="first">first</button>', acts: {}, takeFocus: true });
+    assert.equal(p.at(), 'the overlay: first', 'a key\'s card takes the focus on its first act');
+    HOST.show({ kind: 'face', id: 'face:floating', anchor: null, html: '<div class="face-text">its words</div><button data-run="a0">read version 1</button>', acts: {}, notice: true });
+    assert.deepEqual([p.at(), HOST.currentState()?.id, HOST.notice()?.id, FOCUS.standing()], ['the overlay: first', 'a card', 'face:floating', ['overlay', 'notice']], 'the notice below the card, a focus region of its own, taking no focus');
+    const act = n.kid('a0');
+    assert.ok(act, 'the notice\'s act stands in its own element');
+    act.focus();
+    assert.equal(p.at(), 'the notice: a0', 'Tab into the notice\'s act');
+    HOST.dismissInnermost();
+    assert.deepEqual([p.at(), HOST.currentState()?.id, HOST.notice()], ['the overlay: first', 'a card', null], 'the notice closes first, the focus back on the card\'s control it stood on as the notice took its place below');
+    HOST.dismissInnermost();
+    assert.deepEqual([p.at(), FOCUS.standing()], ['the item', []], 'the card\'s close returns the focus to its opener');
+  } finally {
+    HOST.attach(/** @type {any} */ (h.host));
+  }
 });

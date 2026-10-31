@@ -16,10 +16,15 @@
 // the one line carrying its words (FP-25); a face shown while the standing
 // overlay's field holds the caret taking nothing's place (FP-20); a change
 // of the page's class dismissing the card standing and ending the opening, a
-// jump's reading face and a moment's standing through it (FP-29); and what a
+// jump's reading face and a moment's standing through it (FP-29); what a
 // departure keeps of the overlay standing — a card or a list by what it is
 // about with the control the focus stands on, a card a return reopens while
-// it reads, nothing for a face, a moment or the trail's list (FP-36).
+// it reads, nothing for a face, a moment or the trail's list (FP-36); and a
+// notice — a face a read brought once it answered — no act on the chrome,
+// standing below the card, the list or the moment the reader opened, placed
+// under its box and carried by the one line out of view, closed first by
+// Esc and an empty click, raised alone as the overlay above it ends, and
+// taken down by leaving the place and a change of class (FP-36).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -477,4 +482,129 @@ test('what a departure keeps of the overlay standing (issue #264\'s design decis
   } finally {
     hostEl.contains = was.contains; doc.activeElement = was.active;
   }
+});
+
+// ---- a notice: a face a read brought once it answered (issue #265's design decision; FP-36) ----------------------------
+
+/**
+ * A stand-in of one of the host's elements, `w` by `h` px where the host
+ * placed it: its attributes kept, its face's parts read from the markup the
+ * host wrote (`faceParts`).
+ * @param {number} w
+ * @param {number} h
+ */
+function boxEl(w, h) {
+  /** @type {Record<string, string>} */
+  const attrs = {};
+  const e = {
+    className: '', innerHTML: '', style: /** @type {Record<string, string>} */ ({}), attrs, addEventListener() {}, contains: (/** @type {unknown} */ _x) => false,
+    setAttribute: (/** @type {string} */ k, /** @type {string} */ v) => { attrs[k] = v; }, removeAttribute: (/** @type {string} */ k) => { delete attrs[k]; },
+    querySelector: (/** @type {string} */ sel) => faceParts(e.innerHTML, sel)[0] || null, querySelectorAll: (/** @type {string} */ sel) => faceParts(e.innerHTML, sel),
+    getBoundingClientRect: () => { const x = parseFloat(e.style.left) || 0, y = parseFloat(e.style.top) || 0; return { left: x, top: y, right: x + w, bottom: y + h, width: w, height: h }; },
+  };
+  return e;
+}
+
+/** a notice, as N-GO shows one through O-FACES: a face its id names, its words those given, standing at `anchor` */
+const aNotice = (/** @type {string} */ id, /** @type {string} */ words, /** @type {import('./host.js').Anchor | null} */ anchor = null, told = false) =>
+  HOST.show({ kind: 'face', id, anchor, told, notice: true, html: `<div class="face-text" data-string="F.floating">${words}</div>` });
+
+/** the host attached to its two stand-ins for the run of `body`, then to the file's own again */
+async function stacking(/** @type {(main: ReturnType<typeof boxEl>, under: ReturnType<typeof boxEl>) => (void | Promise<void>)} */ body) {
+  const main = boxEl(300, 120), under = boxEl(280, 60);
+  HOST.attach(/** @type {any} */ (main), /** @type {any} */ (under));
+  try { await body(main, under); } finally { HOST.leave(); HOST.attach(/** @type {any} */ (hostEl)); }
+}
+
+test('a notice is no act on the chrome: shown while a card still reads it ends no opening, and the card\'s answer shows over it, the notice moving below; a later notice takes its place below, the card standing, its end never run (issue #265\'s design decision: "The face stacks below the card, covering neither the card nor its focus")', async () => {
+  await stacking(() => {
+    const r = slow();
+    const o = HOST.opening(() => r.read, card('provenance:wrote'));
+    aNotice('face:a', 'its passage is not here');
+    assert.deepEqual([HOST.pending(), standing(), HOST.notice()], [true, 'face:a', null], 'the notice alone in the overlay\'s place, the card still reading');
+    r.answer('its origin');
+    return o.then(() => {
+      assert.deepEqual([standing(), HOST.notice()?.id], ['provenance:wrote', 'face:a'], 'the card\'s answer over it, the notice below');
+      /** @type {boolean | null} */
+      let ended = null;
+      HOST.show({ kind: 'list', id: 'trail-list', anchor: null, html: '<span class="label">the trail</span>', acts: {}, onDismiss: (replaced) => { ended = replaced; } });
+      aNotice('face:b', 'board unreachable');
+      assert.deepEqual([standing(), HOST.notice()?.id, ended], ['trail-list', 'face:b', null], 'a later notice takes the first\'s place below, the list standing, its end never run');
+    });
+  });
+});
+
+test('the notice below closes first — Esc\'s innermost thing and an empty click\'s — then the overlay; where the overlay above it ends by its own dismiss, the notice stays, alone in its place (issue #265\'s design decision: "Esc closes the face first")', async () => {
+  await stacking(() => {
+    for (const close of [() => KEYS.esc(), () => HOST.dismissInnermost()]) {
+      HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span>', acts: {} });
+      aNotice('face:a', 'its passage is not here');
+      close();
+      assert.deepEqual([standing(), HOST.notice()], ['a card', null], 'the notice closes first, the card standing');
+      close();
+      assert.equal(standing(), null, 'then the card');
+    }
+    /** @type {boolean | null} */
+    let ended = null;
+    HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span>', acts: {}, onDismiss: (replaced) => { ended = replaced; } });
+    aNotice('face:a', 'its passage is not here');
+    HOST.dismiss();
+    assert.deepEqual([ended, standing(), HOST.notice()], [false, 'face:a', null], 'the card\'s own dismiss: its end run, the notice raised into its place, alone');
+  });
+});
+
+test('a face an act shows takes the place of a notice standing alone, and a jump\'s reading face that of one standing below; leaving the place takes the notice down with the card, a moment holding the caret standing through it, the notice\'s words said; a change of the page\'s class takes the notice down (FP-25, FP-29, FP-36)', async () => {
+  /** @type {string[]} what the status region was given to say */
+  const said = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); } }) });
+  const doc = /** @type {any} */ (globalThis.document), field = { id: 'the answer', matches: (/** @type {string} */ sel) => sel.split(',').map((s) => s.trim()).includes('input'), blur() {}, focus() {} };
+  await stacking((main) => {
+    aNotice('face:a', 'its passage is not here');
+    FACES.invalidFollow(null);
+    assert.deepEqual([standing(), HOST.notice()], ['face:invalid', null], 'an act\'s face in the place of the notice standing alone');
+    HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span>', acts: {} });
+    aNotice('face:a', 'its passage is not here');
+    FACES.reading('1.0.1.0.3', null);
+    assert.deepEqual([standing(), HOST.notice()], ['reading:1.0.1.0.3', null], 'a jump\'s reading face takes the place of the card and of the notice below it');
+    HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span>', acts: {} });
+    aNotice('face:a', 'its passage is not here');
+    HOST.leave();
+    assert.deepEqual([standing(), HOST.notice()], [null, null], 'leaving the place takes both down');
+    FACES.moment({ id: 'm-265', kind: 'ask', data: { text: 'name this' }, walk: 'w-265', board: null, answerable: true });
+    main.contains = (x) => x === field;
+    doc.activeElement = field;
+    try {
+      said.length = 0;
+      aNotice('face:a', 'its passage is not here', null, true);
+      assert.deepEqual([standing(), HOST.notice()?.id, doc.activeElement, said], ['moment:m-265', 'face:a', field, ['its passage is not here']], 'below the moment holding the caret, its field keeping it, the notice said, a told one too');
+      HOST.leave();
+      assert.deepEqual([standing(), HOST.notice(), doc.activeElement], ['moment:m-265', null, field], 'leaving the place takes the notice down, the moment standing with its caret');
+      aNotice('face:a', 'its passage is not here');
+      HOST.classChanged();
+      assert.deepEqual([standing(), HOST.notice()], ['moment:m-265', null], 'a change of class takes the notice down, the moment the shell\'s standing');
+    } finally { main.contains = () => false; doc.activeElement = null; HOST.dismiss(); }
+    HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span>', acts: {} });
+    aNotice('face:a', 'its passage is not here');
+    HOST.classChanged();
+    assert.deepEqual([standing(), HOST.notice()], [null, null], 'a change of class takes the notice down and dismisses the card');
+  });
+});
+
+test('the notice below stands under the overlay\'s box at its left, the two clamped into the viewport together, named by its own words under its own ids; hidden while its document is out of the visible view, the one line carrying its words (FP-25, FP-36)', async () => {
+  const D = '1.0.1.0.3', b = docBox(D), scale = Math.min(600 / b.w, 600 / b.h);
+  CAM.setViewport(1440, 900);
+  CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale });
+  await stacking((main, under) => {
+    const at = (/** @type {ReturnType<typeof boxEl>} */ e) => ({ x: parseFloat(e.style.left), y: parseFloat(e.style.top) });
+    HOST.show({ kind: 'card', id: 'a card', anchor: { screen: { x: 100, y: 200 } }, html: '<span class="label">a card</span>', acts: {} });
+    aNotice('face:floating', 'its passage is not here', { span: { addr: D, pos: 1 }, sign: D });
+    assert.deepEqual([at(main), at(under), under.style.visibility], [{ x: 100, y: 200 }, { x: 100, y: 326 }, ''], 'the card at its anchor, the notice under its box, at its left');
+    assert.deepEqual([under.attrs['aria-labelledby'], main.attrs['aria-labelledby']], ['notice-name', undefined], 'the notice named by its own words, under its own id');
+    HOST.show({ kind: 'card', id: 'a card', anchor: { screen: { x: 1400, y: 850 } }, html: '<span class="label">a card</span>', acts: {} });
+    assert.deepEqual([at(main), at(under)], [{ x: 1134, y: 708 }, { x: 1134, y: 834 }], 'near the viewport\'s corner the two held inside it together');
+    assert.equal(HOST.aside(), null, 'its document in view: nothing aside');
+    CAM.set({ x: b.x - 20 * b.w, y: b.y - 20 * b.h, scale });
+    HOST.place();
+    assert.deepEqual([under.style.visibility, HOST.aside(), at(main)], ['hidden', { id: 'F.floating', text: 'its passage is not here' }, { x: 1134, y: 774 }], 'its document out of view: hidden, the line carrying its words, the card held in the viewport by its own height');
+  });
 });

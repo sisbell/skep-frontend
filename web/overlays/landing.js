@@ -8,8 +8,9 @@
 // the block holding the line of the run the landing stands at, its top level
 // with that line's (BM's `leaveAt`, the point a beam leaves the text by) —
 // where that text is not laid out, beside its document's box — stacked
-// beneath the standing overlay where the two would meet, held inside the
-// visible view's height, and never moved left onto the text: where the view
+// beneath the standing overlay, and the notice below it, where they would
+// meet, held inside the visible view's height, and never moved left onto
+// the text: where the view
 // leaves it less room than its widest, it narrows into the room there. Where
 // the passage stands in several runs (FP-21), the line's words are the label
 // of the run the landing stands at — and every other run's label stands at
@@ -276,9 +277,9 @@ export function render() {
  * past the right edge of the part of the block holding the line of the run
  * it stands at, its top level with that line's — where that text is not laid
  * out, past its document's box's right edge at its top; moved below the
- * standing overlay where the two would meet; held inside the visible view's
- * height, never moved left of its place, its width the room the view leaves
- * it there.
+ * standing overlay, and the notice below it, where the two would meet
+ * (O-HOST's `elements`); held inside the visible view's height, never moved
+ * left of its place, its width the room the view leaves it there.
  * @param {Anchor | null} anchor the run the landing stands at, where its passage stands in several
  */
 function place(anchor) {
@@ -291,8 +292,10 @@ function place(anchor) {
   const vw = seen.x + seen.w;
   el.style.maxWidth = Math.max(10 * LINE_FACE.ch, Math.min(LINE_FACE.max, 0.4 * vw, vw - x - 6)) + 'px';
   const r = el.getBoundingClientRect();
-  const o = HOST.hasCurrent() ? HOST.element() : null, or = o ? o.getBoundingClientRect() : null;
-  if (or && x < or.right && or.left < x + r.width && y < or.bottom && or.top < y + r.height) y = or.bottom + GAP;
+  for (const o of HOST.elements()) {
+    const or = o.getBoundingClientRect();
+    if (x < or.right && or.left < x + r.width && y < or.bottom && or.top < y + r.height) y = or.bottom + GAP;
+  }
   x = Math.max(seen.x + 6, x);
   y = Math.max(seen.y + 6, Math.min(seen.y + seen.h - r.height - 6, y));
   el.style.left = x + 'px'; el.style.top = y + 'px';

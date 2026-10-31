@@ -16,7 +16,12 @@ faced where the camera went, keeping its entry, Mod+[ undoing that jump
 alone, the camera back where it stood, and Mod+] returning there, its
 notice shown again (issue #136's design decision; FP-25) — and the same
 address, known now, never leaving: no entry, the camera where it stood,
-its face standing (FP-25; issue #137); the focus ring drawn
+its face standing (FP-25; issue #137); the same address's read, the page
+holding nothing of it again, failing under the trail's list the reader opened
+while it read: the face standing below the list — under its box, apart from
+it, inside the viewport — taking no focus, Esc closing the face first, the
+focus kept on the list's row, then the list (issue #265's design decision;
+FP-36); the focus ring drawn
 at the focus every teleport a key made lands — the box's Enter, Mod+[ and Mod+],
 Mod+0, Mod+Shift+H, Enter on the line's ‹ back (K-22), Mod+3, Enter on a
 trail list row (K-41), Enter on a document (K-7) — and at the focus
@@ -1906,6 +1911,42 @@ def box_through_landing(ctx, r):
     r.check(not state(ctx)['leap'], 'Esc closes the box that took the new address')
 
 
+def stacked_notice(ctx, r):
+    """issue #265's design decision (FP-36): a face a jump's read brings once it answers stands below a card the reader opened
+    while the read was out, covering neither it nor its focus, and Esc closes the face first, then the card. In one turn, the
+    LEAP to an address the board says nothing about — the page holding nothing of it, the gate's invalidation door (reads
+    alone) dropping what the run learned — and the trail's list opened over it before its read answers: once settled the list
+    stands and the face below it — under its box, at its left, apart from it, inside the viewport, in the strings table's
+    words — no face holding the focus; a row of the list focused, Esc closes the face and leaves the focus on that row, and the
+    next Esc closes the list"""
+    ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(GHOST))
+    ctx.js('(() => { window.__skep.go.leapTo(%s, null); window.__skep.cards.trailList(); return true; })()' % json.dumps(GHOST))
+    ctx.js('new Promise((res) => { const t0 = performance.now(); const tick = () => (window.__skep.overlay().notice || performance.now() - t0 > 10000 ? res(true) : setTimeout(tick, 50)); tick(); })')
+    ctx.settle()
+    ctx.frames(2)
+    o, words = ctx.js('window.__skep.overlay()'), strings(ctx, 'B1.doc_not_registered', {'address': GHOST})
+    geo = ctx.js('''(() => { const box = (id) => { const e = document.getElementById(id); if (!e) return null; const q = e.getBoundingClientRect(), s = getComputedStyle(e);
+        return {x: q.left, y: q.top, w: q.width, h: q.height, shown: s.display !== 'none' && s.visibility !== 'hidden'}; };
+      const p = window.__skep.view.viewport(), a = document.activeElement;
+      return {list: box('overlay'), face: box('notice'), vw: p.VW, vh: p.VH, in_face: !!a && !!a.closest && !!a.closest('#notice')}; })()''')
+    lst, face = geo['list'], geo['face']
+    below = bool(lst) and bool(face) and face['y'] >= lst['y'] + lst['h'] and abs(face['x'] - lst['x']) <= 0.5
+    inside = all(b and b['x'] >= 0 and b['y'] >= 0 and b['x'] + b['w'] <= geo['vw'] and b['y'] + b['h'] <= geo['vh'] for b in (lst, face))
+    notice = o.get('notice') or {}
+    r.check(o['id'] == 'trail-list' and notice.get('id') == 'face:doc_not_registered' and words in (notice.get('text') or '')
+            and below and inside and lst['shown'] and face['shown'] and not geo['in_face'],
+            'a LEAP whose read the board answers with nothing, made with the trail\'s list opened over it in the same turn, faces below the list — under its box, at its left, apart from it, inside the viewport, in the strings table\'s words — the list standing and no face taking the focus (issue #265\'s design decision: "The face stacks below the card, covering neither the card nor its focus")',
+            {'overlay': o, 'words': words, 'geometry': geo})
+    row = ctx.js('(() => { const b = document.querySelector(\'#overlay [data-run^="j"]\'); if (b) b.focus(); return !!b && document.activeElement === b ? b.dataset.run : null; })()')
+    chord(ctx, 'Escape')
+    first, at = ctx.js('window.__skep.overlay()'), ctx.js('(() => { const a = document.activeElement; return a && a.closest && a.closest("#overlay") ? a.dataset.run || null : null; })()')
+    r.check(bool(row) and first['id'] == 'trail-list' and first.get('notice') is None and at == row,
+            'Esc closes the face first: the list stands, the focus on the row it stood on (issue #265\'s design decision: "Esc closes the face first")',
+            {'row': row, 'overlay': first, 'focus': at})
+    chord(ctx, 'Escape')
+    r.check(ctx.js('window.__skep.overlay().id') is None, 'the next Esc closes the list', ctx.js('window.__skep.overlay()'))
+
+
 def run(ctx):
     r = Result()
     ctx.leap(DOC, WINDOW[0])
@@ -2143,6 +2184,8 @@ def run(ctx):
     r.check(focused and s['overlay'] is None and t1['cursor'] == len(t0['entries']) - 2 and len(t1['entries']) == len(t0['entries']),
             'Enter on the trail list\'s second row jumps to the second-newest entry: the list closes, nothing pushed', {'focused': focused, 'overlay': s['overlay'], 'cursor': [t0['cursor'], t1['cursor']], 'entries': len(t1['entries'])})
     ring_drawn(ctx, r, 'Enter on a trail list row')
+    # ---- a face a read brings stands below a card the reader opened while it read (issue #265's design decision; FP-36) ----
+    stacked_notice(ctx, r)
     # ---- a document below its own reading scale: named alone, collapsed, → its Enter (issue #140) ------------
     collapsed_document(ctx, r)
     # ---- a walk step onto a document from below its reading scale stops short of it, → there its Enter (issue #55) ------

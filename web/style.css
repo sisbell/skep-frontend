@@ -271,25 +271,26 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #pieces { position:fixed; left:0; top:0; width:0; height:0; z-index:24; pointer-events:none; }
 #pieces .piece { position:absolute; font-size:10px; line-height:13px; color:var(--hue-you); white-space:normal; overflow-wrap:break-word; }
 
-/* THE OVERLAYS — one at a time, conjured by an act, dismissed by its end */
-#overlay { position:fixed; left:0; top:0; z-index:30; display:none; max-width:min(560px, 92vw); background:#1b1f25;
+/* THE OVERLAYS — one at a time, conjured by an act, dismissed by its end; and below it the notice a read brought while it
+   stood (O-HOST's; FP-36), placed under its box, drawn as a face is wherever it stands */
+#overlay, #notice { position:fixed; left:0; top:0; z-index:30; display:none; max-width:min(560px, 92vw); background:#1b1f25;
   border:1px solid #6b7382; border-radius:4px; padding:8px 24px 8px 10px; box-shadow:0 2px 12px rgba(0,0,0,.5); font-size:11.5px; }
-#overlay.on { display:block; }
-#overlay.face { border-color:var(--warn); }
+#overlay.on, #notice.on { display:block; }
+#overlay.face, #notice.face { border-color:var(--warn); }
 #overlay.moment { border-style:double; border-width:3px; }
-#overlay .label { display:block; font-size:9.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--dim); margin:0 0 4px; }
+:is(#overlay, #notice) .label { display:block; font-size:9.5px; letter-spacing:.05em; text-transform:uppercase; color:var(--dim); margin:0 0 4px; }
 /* the dismiss: a native button placed after the content in the order (the ring's last stop in the overlay; rule 13), drawn at the top right corner, sized to be pressed */
-#overlay .x { position:absolute; top:3px; right:4px; margin:0; padding:0 5px; min-width:18px; min-height:18px; line-height:1; background:none; border:0; color:var(--dim); cursor:pointer; font-size:13px; }
-#overlay .x:hover { color:var(--ink); background:none; }
+:is(#overlay, #notice) .x { position:absolute; top:3px; right:4px; margin:0; padding:0 5px; min-width:18px; min-height:18px; line-height:1; background:none; border:0; color:var(--dim); cursor:pointer; font-size:13px; }
+:is(#overlay, #notice) .x:hover { color:var(--ink); background:none; }
 #overlay .reason[hidden] { display:none; }
-#overlay .face-text { color:#ffe2b8; margin:4px 0; }
+:is(#overlay, #notice) .face-text { color:#ffe2b8; margin:4px 0; }
 /* a withheld document's own words (issue #179's design decision): its address before them where the face stands away from
    it; its head the disclosure whose act opens the rest and folds it, drawn as the words with the disclosure's mark, which
    assistive technology does not read — the button's state says it */
-#overlay .face-addr { color:var(--dim); margin:2px 0 0; }
-#overlay button.face-text { display:block; background:none; border:0; padding:0; text-align:left; white-space:normal; font-size:inherit; }
-#overlay button.face-text::before { content:'▸ ' / ''; color:var(--dim); }
-#overlay button.face-text[aria-expanded="true"]::before { content:'▾ ' / ''; }
+:is(#overlay, #notice) .face-addr { color:var(--dim); margin:2px 0 0; }
+:is(#overlay, #notice) button.face-text { display:block; background:none; border:0; padding:0; text-align:left; white-space:normal; font-size:inherit; }
+:is(#overlay, #notice) button.face-text::before { content:'▸ ' / ''; color:var(--dim); }
+:is(#overlay, #notice) button.face-text[aria-expanded="true"]::before { content:'▾ ' / ''; }
 #overlay .quoted { color:#cfd6df; border-left:2px solid #6b7382; padding-left:.5em; margin:3px 0; max-height:6em; overflow:hidden; }
 #overlay .kv b { color:#cfd6df; font-weight:600; display:inline-block; min-width:8em; }
 #overlay .ends { display:flex; gap:10px; margin-bottom:6px; }
@@ -316,7 +317,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #overlay .lens-label { color:var(--dim); margin:0 6px 0 2px; }
 #overlay button[aria-pressed="true"] { background:#22303f; border-color:var(--accent); }
 #overlay .slots button { margin:2px 2px 2px 0; }
-#overlay .clause, #overlay .note { color:var(--dim); font-size:10.5px; margin-top:6px; }
+:is(#overlay, #notice) :is(.clause, .note) { color:var(--dim); font-size:10.5px; margin-top:6px; }
 /* a refusal of a walk's moment's own answer, drawn inside its face (issue #182) */
 #overlay .note.refused { color:var(--warn); }
 #overlay .k { color:var(--warn); }

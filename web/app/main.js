@@ -84,7 +84,8 @@
 // whether a key
 // made it by N-FOCUS's one reading (FP-20): a chord the LEAP box closed on
 // is read at the focus the close returned (M-1); in the scene the scene's
-// keys go first (SC's `key`); ↓ and ↑ in an overlay move among its controls
+// keys go first (SC's `key`); ↓ and ↑ in an overlay, or in the notice below
+// it (O-HOST's), move among the controls of the one holding the focus
 // through the controller; every key but Tab and Shift is the line's next
 // act. The pointer → APP-INPUT; the copy event → T-LAYER's `onCopy`; the
 // events `moment` → a walk's moment (O-FACES'), `held` → logged, not acted
@@ -233,7 +234,7 @@ function whereIs(/** @type {EventTarget | null} */ target) {
   if (!t || !t.closest) return /** @type {const} */ ('plane');
   if (t.closest('#leap')) return /** @type {const} */ ('field');
   if (FOCUS.isField(t)) return /** @type {const} */ ('field');
-  if (t.closest('#overlay')) return /** @type {const} */ ('overlay');
+  if (t.closest('#overlay, #notice')) return /** @type {const} */ ('overlay');
   if (t.closest('#landing')) return /** @type {const} */ ('landing');
   if (t.closest('#line')) return /** @type {const} */ ('line');
   if (t.closest('#scenebar, #scenestop, #scenestrokes')) return /** @type {const} */ ('scene-acts');
@@ -266,7 +267,7 @@ async function boot() {
   const faces = facesLoaded();
   const plane = /** @type {HTMLCanvasElement} */ (el('plane'));
   RENDER.attach(plane); LAYER.attach(el('domlayer'), el('corners'), { measure: true }); BM.attach(/** @type {HTMLCanvasElement} */ (el('beams')));
-  HOST.attach(el('overlay'));
+  HOST.attach(el('overlay'), el('notice'));
   FOCUS.attach({ live: el('live') });
   WALK.attach(el('mirror'));
   LANDING.attach(el('landing'), { handOff: () => WALK.focusItem(), pieces: el('pieces') });
@@ -286,7 +287,10 @@ async function boot() {
     const where = whereIs(target && target.closest && target.closest('#leap') && !LEAP.isOpen() ? document.activeElement : e.target);
     const byKey = FOCUS.byKey(e);
     if (where === 'scene' && SCENE.isOpen() && SCENE.key(KEYS.chordOf(e))) { e.preventDefault(); return; }
-    if (where === 'overlay' && !e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { const items = /** @type {HTMLElement[]} */ ([...el('overlay').querySelectorAll('button:not([disabled]), input, [tabindex="0"]')]); const i = items.indexOf(/** @type {HTMLElement} */ (document.activeElement)); const n = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) FOCUS.land(n, { byKey }); e.preventDefault(); return; }
+    if (where === 'overlay' && !e.shiftKey && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      const box = /** @type {HTMLElement | null} */ (document.activeElement && document.activeElement.closest('#overlay, #notice')) || el('overlay');
+      const items = /** @type {HTMLElement[]} */ ([...box.querySelectorAll('button:not([disabled]), input, [tabindex="0"]')]); const i = items.indexOf(/** @type {HTMLElement} */ (document.activeElement)); const n = items[Math.max(0, Math.min(items.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))]; if (n) FOCUS.land(n, { byKey }); e.preventDefault(); return;
+    }
     if (e.key !== 'Tab' && e.key !== 'Shift') LINE.act();
     const took = await KEYS.dispatch(e, { where, byKey });
     if (took) e.preventDefault();

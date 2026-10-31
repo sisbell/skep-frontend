@@ -58,19 +58,20 @@
 // an account at far is a teleport to its region, on the board the page
 // holds — where it holds none the click is an empty one (FP-35); an empty
 // click ends a card or scene still reading (O-HOST's opening), else
-// dismisses the overlay, else clears the selection. At the readable
-// threshold and above the text takes the click (`clickText`): a symbol opens
-// the anatomy card of the link's end it stands for, and a stretch links
-// mark that of the first end marking it — each mark carries its ends by
-// their links and their keys (LK's `endKey`; `endAt`), so of a link with two
-// ends in one article the card is the clicked end's (B1-S5); the one symbol
-// a withheld run's ends merge into opens its one end's card or lists its
-// several (O-ANATOMY's `fromSymbol`; FP-30), a target of its own beside the
-// run; the presence indicator's ⟡ asks to see the links; a byline's cut
-// label opens whole, and the act again closes it (T-LAYER's `openLabel`;
-// FP-34); a run's hairline label goes to its source carrying the run
-// (foundations §2.3; P43); the scene-offer opens the scene, a step on the
-// trail (N-GO's `toScene`); C-67's pointer
+// dismisses the notice standing below the overlay, else the overlay
+// (O-HOST's `dismissInnermost`; FP-36), else clears the selection. At the
+// readable threshold and above the text takes the click (`clickText`): a
+// symbol opens the anatomy card of the link's end it stands for, and a
+// stretch links mark that of the first end marking it — each mark carries
+// its ends by their links and their keys (LK's `endKey`; `endAt`), so of a
+// link with two ends in one article the card is the clicked end's (B1-S5);
+// the one symbol a withheld run's ends merge into opens its one end's card
+// or lists its several (O-ANATOMY's `fromSymbol`; FP-30), a target of its
+// own beside the run; the presence indicator's ⟡ asks to see the links; a
+// byline's cut label opens whole, and the act again closes it (T-LAYER's
+// `openLabel`; FP-34); a run's hairline label goes to its source carrying
+// the run (foundations §2.3; P43); the scene-offer opens the scene, a step on
+// the trail (N-GO's `toScene`); C-67's pointer
 // beneath a withheld run's arm is a LEAP to the claim's home, the edition,
 // landed in whole (B1-S7 → S6) — it carries no passage, for an edition's
 // bytes are fresh identity and no span of it resolves to the origin
@@ -406,7 +407,7 @@ function takeSelection() {
   SEL.select(span.addr, span.pos, span.width);
 }
 
-/** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes; an account at far goes to its region, where a board is held; else a card or scene still reading ends, the overlay standing under it standing, or else the overlay dismisses */
+/** a click on the plane: a tail lists its links; an outlined run of an arrival in several, below its document's reading scale, is a step to it; a continuation's mark's newest label goes to that member, and the rest of the mark opens its list; a place goes; an account at far goes to its region, where a board is held; else a card or scene still reading ends, the overlay standing under it standing, or else the notice below the overlay dismisses, else the overlay */
 function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
   LINE.act();
   const tail = RENDER.tailAtScreen(px, py);
@@ -429,6 +430,6 @@ function clickPlane(/** @type {number} */ px, /** @type {number} */ py) {
     if (acct) { GO.toAccount(acct); return; }
   }
   if (HOST.pending()) HOST.endOpening();
-  else if (HOST.hasCurrent()) HOST.dismiss();
+  else if (HOST.hasCurrent()) HOST.dismissInnermost();
   else if (SEL.selected()) SEL.clear();
 }

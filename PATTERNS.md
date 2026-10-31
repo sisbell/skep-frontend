@@ -530,6 +530,7 @@ last. Each stands until a later decision says it changes it.
 - **#272**: a withheld run's first read shows its gap, then its face with its clause once every read the clause waits on answers, and a link write drops only the edition claims it writes, retracts or supersedes, a face standing keeping its clause until their reads again set it in one step → FP-33, FP-34, FP-23
 - **#274**: a covered document's face sets C-67's clause, read at the class the page reads at now, beneath the ending's words, the two shown together once every read the clause waits on answers, and a change of the page's class keeps what was read as published until its reads at the new class set it in one step, covering at once each draft the view stands on and each run from a draft and taking links homed in drafts out of view, a cover lifting where its read returns its material → FP-29, FP-33, FP-23
 - **#264**: leaving a place keeps in its trail entry the selection by its bytes and the card or list standing by what it is about, with the control the focus stood on, and a return reopens them as left — their counts and claims read again, a span's subject placed again by its bytes, a stroke's list with its scene → FP-36, FP-25, FP-20, FP-29
+- **#265**: a face a read brings once it answers ends no card still reading and stands under the card, list or moment the reader opened meanwhile, placed below its box, closed first by Esc or an empty click and left standing alone once that surface closes, leaving the place taking both down → FP-36
 
 ## What these rule out
 

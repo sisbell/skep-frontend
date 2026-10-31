@@ -24,10 +24,12 @@
 // quit, minimize, hide, preferences — are never taken (K-92, K-93). No key is
 // dispatched while an input method's composition is open (the IME guard).
 // Esc closes the innermost thing, in one order (`esc`; §4 rule 7; D7): the
-// box, a card or scene still reading, the overlay, a jump reaching, the
-// scene — its close a Back from its entry (N-GO's `closeScene`) — the
-// selection, and after them all the arrival (FP-21; N-GO's `endArrival`). Mod+L and Mod+K open the LEAP box (K-30), Mod+Y the trail's
-// list (K-41), Mod+= and Mod+- zoom the camera by 1.25 about the view's
+// box, a card or scene still reading, the notice standing below the overlay
+// (FP-36; O-HOST's), the overlay, a jump reaching, the scene — its close a
+// Back from its entry (N-GO's `closeScene`) — the selection, and after them
+// all the arrival (FP-21; N-GO's `endArrival`). Mod+L and Mod+K open the
+// LEAP box (K-30), Mod+Y the trail's list (K-41), Mod+= and Mod+- zoom the
+// camera by 1.25 about the view's
 // centre and re-take the focus (K-11), Mod+Shift+P shows the one line's strip
 // (K-23), and the selection's slot chords (K-47 … K-52) and K-8's
 // select-by-span act from the plane and from a standing overlay alike. Mod+G
@@ -356,18 +358,19 @@ function swallow(/** @type {KeyboardEvent} */ e) {
 /**
  * Esc's one order (§4 rule 7; D7): the most recently opened thing closes —
  * the box, the card or scene still reading (O-HOST's opening, ended alone:
- * the overlay standing under it stands), the overlay — a jump's reaching
- * face among them, whose dismissal abandons the jump — then a jump reaching
- * whose face another overlay took the place of (FP-25; N-GO's `abandon`),
- * the scene — its close a Back from its entry (N-GO's `closeScene`), which
- * brings back the selection the place it opened over kept — then the
- * selection, then the arrival — its outline, its labels and its line (FP-21;
- * N-GO's `endArrival`); on the bare plane nothing.
+ * the overlay standing under it stands), the notice standing below the
+ * overlay, then the overlay (O-HOST's `dismissInnermost`; FP-36) — a jump's
+ * reaching face among them, whose dismissal abandons the jump — then a jump
+ * reaching whose face another overlay took the place of (FP-25; N-GO's
+ * `abandon`), the scene — its close a Back from its entry (N-GO's
+ * `closeScene`), which brings back the selection the place it opened over
+ * kept — then the selection, then the arrival — its outline, its labels and
+ * its line (FP-21; N-GO's `endArrival`); on the bare plane nothing.
  */
 export function esc() {
   if (LEAP.isOpen()) { LEAP.close(); return; }
   if (HOST.pending()) { HOST.endOpening(); return; }
-  if (HOST.current()) { HOST.dismiss(); return; }
+  if (HOST.current()) { HOST.dismissInnermost(); return; }
   if (GO.abandon()) return;
   if (SCENE.isOpen()) { GO.closeScene(true); return; }
   if (SEL.selected()) { SEL.clear(); return; }

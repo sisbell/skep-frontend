@@ -200,8 +200,15 @@
 // to the place it left for and flies there (`leave`), and is in the air
 // (`inAir`) until it lands. No landing ends chrome: a card shown while the
 // jump is in the air stands over its landing, and one asked then opens
-// there. Its reads run beside the flight: where they answer first, the
-// camera goes on from where it is to the passage they placed (`goOn`); where
+// there. Nor does a failure: every face a read brings once it answered — a
+// failure learned in the air, the dead end or the withheld document a landing
+// meets, a refusal met reaching, an entry's notice shown again on a return —
+// is O-HOST's notice (`showFound`, `asNotice`; FP-36), no act on the chrome,
+// which ends no card still reading and stands below a card, a list or a
+// moment the reader opened, covering neither it nor its focus; a face shown
+// at the act stands in the place of what stands there. Its reads run beside
+// the flight: where they answer first, the camera goes on from where it is
+// to the passage they placed (`goOn`); where
 // the reader takes the camera over first (`takeOver`; APP-INPUT's), the jump
 // lands where the camera is and its read, answering, only marks its passage
 // where it falls, the entry keeping the view the reader leaves it at. While
@@ -950,20 +957,20 @@ export function stepTo(i, byKey = false) {
  * stands at (FP-25) — at the act, save where only a read can place the
  * destination: the arrival, kept in the entry it stood at (`leaveHere`), the
  * entry the act moves to the one the landing's arrival stands at from now;
- * the standing overlay — save one whose field holds the caret, an answer the
- * reader is typing, which stands through the jump (FP-20; O-HOST's `typing`)
- * — and a card or scene still reading, which
- * then opens nothing (O-HOST's opening); the selection, which the entry
- * keeps (O-SELECTION's `clear`), save at a version move, which stands beside
- * it (FP-36); and the scene, which the act's
- * departure recorded in its entry and whose end moves no trail entry of its
- * own — so the act's own trail move is its one.
+ * the notice standing below the overlay, and the standing overlay — save one
+ * whose field holds the caret, an answer the reader is typing, which stands
+ * through the jump (FP-20; O-HOST's `leave`) — and a card or scene still
+ * reading, which then opens nothing (O-HOST's opening); the selection, which
+ * the entry keeps (O-SELECTION's `clear`), save at a version move, which
+ * stands beside it (FP-36); and the scene, which the act's departure
+ * recorded in its entry and whose end moves no trail entry of its own — so
+ * the act's own trail move is its one.
  * @param {Entry | null} to the entry the act moves to; null where it takes none
  * @param {boolean} [beside] the act is a version move: the selection stands
  */
 function dismissChrome(to, beside = false) {
   leaveHere(); here = to;
-  if (HOST.typing()) HOST.endOpening(); else HOST.dismiss();
+  HOST.leave();
   if (!beside) SEL.clear();
   SCENE.close();
 }
@@ -978,20 +985,36 @@ function dismissChrome(to, beside = false) {
  * as well (`told`). The dead end's face offers the landing's version offer
  * where one stands (`floatOffer`); a withheld document's offers C-67's
  * pointer as a LEAP from its site (`pointTo`), and one known at the act
- * carries the act's caption.
+ * carries the act's caption. Every face but the reading face stands as
+ * O-HOST's notice where a read brought it once it answered (`found`;
+ * `showFound`).
  * @param {Notice} n
  * @param {boolean} [told] the landing that met it says its words (`described`)
  * @param {string | null} [caption] the act's caption, where the face answers it at its site
+ * @param {boolean} [found] a read brought it once it answered: shown as O-HOST's notice (`asNotice`)
  */
-function showNotice(n, told = false, caption = null) {
-  const asked = { caption, follow: pointTo(n.site), told };
+function showNotice(n, told = false, caption = null, found = false) {
+  const asked = { caption, follow: pointTo(n.site), told, ...(found ? asNotice(made) : {}) };
   if (n.face === 'reading') FACES.reading(n.addr, n.site);
-  else if (n.face === 'unregistered') FACES.unregistered(n.addr, n.site);
+  else if (n.face === 'unregistered') FACES.unregistered(n.addr, n.site, asked);
   else if (n.face === 'withheld') FACES.withheld(n.addr, n.site, asked);
   else if (n.face === 'refused' && n.refusal) FACES.showRefusal(n.site, n.refusal, n.addr, asked);
-  else if (n.face === 'floating') FACES.floating(n.addr, n.site, floatOffer(n.addr), told);
+  else if (n.face === 'floating') FACES.floating(n.addr, n.site, floatOffer(n.addr), told, found);
   CAM.markDirty();
 }
+
+/**
+ * An entry's notice a read brought once it answered (see the head; FP-36):
+ * shown as O-HOST's notice — no act on the chrome, it ends no card still
+ * reading and stands below a card, a list or a moment the reader opened
+ * meanwhile, covering neither it nor its focus (`showNotice`).
+ * @param {Notice} n
+ * @param {boolean} [told] the landing that met it says its words (`described`)
+ */
+const showFound = (n, told = false) => showNotice(n, told, null, true);
+
+/** what a face a read brought for an act is shown with (O-FACES' `Asked`): O-HOST's notice, still standing to be shown while no act was made after `act` — a withheld document's, whose clause's reads answer after it, shows nothing once one was */
+const asNotice = (/** @type {number} */ act) => ({ notice: true, stands: () => made === act });
 
 /** the version offer the dead end's face at a document carries (see the head): the floating landing's there, once its reads found it (`offerVersion`); null where none stands */
 const floatOffer = (/** @type {string} */ addr) => (landed && landed.floating && landed.addr === addr && landed.version != null && versionOffer ? { k: landed.version, go: versionOffer } : null);
@@ -1053,9 +1076,9 @@ function placeable(addr) {
  * in the place
  * of what stands there, the camera still, its read made. Where the jump was
  * abandoned meanwhile, nothing; where its read answered, the camera may
- * leave; where the board refused it, the refusal faced at the site — the
- * fifth cell, the withheld face, a refusal's by its name — and the entry
- * given back.
+ * leave; where the board refused it, the refusal faced at the site as
+ * O-HOST's notice (`asNotice`) — the fifth cell, the withheld face, a
+ * refusal's by its name — and the entry given back.
  * @param {number} act
  * @param {string} addr
  * @param {Entry | null} entry
@@ -1071,7 +1094,7 @@ async function reachFor(act, addr, entry, site) {
   reach = null;
   if (placeable(addr) || !w.refused) return { refused: w.refused };
   if (entry) TRAIL.giveBack(entry);
-  FACES.showRefusal(at, w.refused, addr);
+  FACES.showRefusal(at, w.refused, addr, asNotice(act));
   return null;
 }
 
@@ -1117,9 +1140,10 @@ async function goOn(act, first, at, byKey, ms) {
  * the board answers for with nothing,
  * a follow's far end projected into one: its entry holding the face as its
  * notice where the camera went; then, where no act was made since, the face
- * shown there, the walk re-taken on the place — save where the reader took
- * the camera over — so the mirror names what the read learned, the ring as
- * the act left it, and the jump ended, never landed.
+ * shown there as O-HOST's notice (`showFound`), the walk re-taken on the
+ * place without the platform's focus — save where the reader took the camera
+ * over — so the mirror names what the read learned, the ring as the act left
+ * it, and the jump ended, never landed.
  * @param {number} act
  * @param {Entry | null} entry
  * @param {Notice} n
@@ -1129,7 +1153,7 @@ async function goOn(act, first, at, byKey, ms) {
 function failed(act, entry, n, byKey) {
   if (entry) TRAIL.settle(entry, { notice: n });
   if (act !== made) return false;
-  showNotice(n);
+  showFound(n);
   if (takenAt !== act) void WALK.focusTo(n.addr, null, !!byKey, false);
   endAir(act, false);
   return true;
@@ -1514,7 +1538,7 @@ async function againCarried(c, carried, addr, entry, link, asked, byKey) {
   arrival = withBytes(link || placed.runs ? { addr, pos: placed.pos ?? 1, runs: placed.runs, link } : null);
   sayCarried(act, c, carried, d, placed, entry, link);
   const flight = land({ addr, pos: placed.pos, view: v }, byKey, 620);
-  if (notice) showNotice(notice, true);
+  if (notice) showFound(notice, true);
   await flight;
 }
 
@@ -1551,10 +1575,10 @@ async function landFollowed(act, s, entry, placed, byKey, first = null) {
   arrival = withBytes(runs && placed.marked ? { addr: far, pos, runs: marked, link: l.addr } : null);
   lit = [l.addr];
   sayFollowed(act, s, entry, placed, pos);
-  if (first && takenAt === act) { if (notice) showNotice(notice); return; }
+  if (first && takenAt === act) { if (notice) showFound(notice); return; }
   const at = { addr: far, pos, view: v };
   const flight = first ? goOn(act, first, at, byKey, 620) : land(at, byKey, 620);
-  if (notice) showNotice(notice, true);
+  if (notice) showFound(notice, true);
   await flight;
 }
 
@@ -1591,9 +1615,9 @@ async function landWithheld(act, s, entry, byKey, first) {
   lit = [s.link.addr];
   landed = { addr: far, pos: headOf(REC.doc(far)), said: null, pieces: null, current: 0, floating: false, withheld: true, beside: null, version: null };
   retry = null; versionOffer = null;
-  if (takenAt === act) { showNotice(notice); return; }
+  if (takenAt === act) { showFound(notice); return; }
   const flight = goOn(act, first, { addr: far, pos: null, view: v }, byKey, 620);
-  showNotice(notice, true);
+  showFound(notice, true);
   await flight;
 }
 
@@ -1742,9 +1766,9 @@ export async function leapTo(addr, opts = {}) {
   lit = link ? [link] : [];
   if (c && placed) sayCarried(act, c, carried, d, placed, entry, link);
   else if (named && pos != null) sayNamed(addr, pos, named);
-  if (takenAt === act) { if (notice) showNotice(notice); return null; }
+  if (takenAt === act) { if (notice) showFound(notice); return null; }
   const flight = goOn(act, first, { addr, pos, view: v }, opts.byKey, ms);
-  if (notice) showNotice(notice, true);
+  if (notice) showFound(notice, true);
   return (await flight) ? d : null;
 }
 
@@ -1880,7 +1904,7 @@ export async function toVersion(addr, opts = {}) {
     /** @type {Notice} */
     const notice = { face: 'unregistered', addr, refusal: null, site };
     TRAIL.settle(entry, { notice });
-    if (act === made) showNotice(notice);
+    if (act === made) showFound(notice);
     endAir(act, false);
     return null;
   }
@@ -1892,7 +1916,7 @@ export async function toVersion(addr, opts = {}) {
   FACES.endReading();
   if (c && !given) sayCarried(act, c, spans, d, placed, entry, null, (byKey) => againVersion(c, spans, was, addr, entry, byKey));
   const landing = landInPlace(was, d, placed, given ? given.link : null, opts.byKey, takenAt !== act);
-  if (notice) showNotice(notice, true);
+  if (notice) showFound(notice, true);
   await landing;
   endAir(act, true);
   return d;
@@ -1922,7 +1946,7 @@ async function againVersion(c, spans, was, addr, entry, byKey) {
   if (act !== made) return;
   sayCarried(act, c, spans, d, placed, entry, null, (k) => againVersion(c, spans, was, addr, entry, k));
   const landing = landInPlace(addr, d, { ...placed, from: stood }, null, byKey);
-  if (notice) showNotice(notice, true);
+  if (notice) showFound(notice, true);
   await landing;
 }
 
@@ -2072,8 +2096,8 @@ function sceneStep(from) {
  * ended (`dismissChrome`), the entry the one the reader stands at from now.
  * Where a later act took its place or its opening ended, its entry is given
  * back; where its reads were refused, given back too, the refusal faced at
- * the act's site. Where no board is held, the act answered where it was made
- * (FP-35).
+ * the act's site as O-HOST's notice (`asNotice`). Where no board is held, the
+ * act answered where it was made (FP-35).
  * @param {string} a the document its first pane opens on: the reader's, save at a landing's line, the source of the passage landed
  * @param {string} b the one its second pane opens on
  * @param {import('../scene/scene.js').Held} [held] the passage the opener holds, which the scene sets level
@@ -2091,7 +2115,7 @@ export async function toScene(a, b, held = {}, opts = {}) {
   if (!reach || reach.act !== act) return false;
   reach = null;
   TRAIL.giveBack(entry);
-  if (out.refused) FACES.showRefusal(signed(opts.site ?? null), out.refused, addr);
+  if (out.refused) FACES.showRefusal(signed(opts.site ?? null), out.refused, addr, asNotice(act));
   return false;
 }
 
@@ -2268,8 +2292,9 @@ function returnTo(l, view) {
  * document it read was set since (`returning`), the walk where Back's light
  * returns it (`returnTo`), else on the run the restored landing stood at,
  * else where it stood as the reader left the entry, placed again likewise,
- * else on its place, and its notice shown again — a failure's where the
- * camera went, the dead end's told by the restored landing's description
+ * else on its place, and its notice shown again as O-HOST's notice, so a
+ * surface the return reopens stands over it (`showFound`) — a failure's where
+ * the camera went, the dead end's told by the restored landing's description
  * where it describes it; the move's light lit (`lightOf`), and no link of the
  * entry's own: the one the move crossed alone. Where the page holds none of
  * the text the entry's view read or its walk stood in — a feed row dropped it
@@ -2306,7 +2331,7 @@ async function landAtCursor(e, act, byKey, l) {
   const at = answer || cover ? null : returning(e), view = at ? at.view : e.view;
   const back = l && l.back ? returnTo(l, view) : null;
   const first = leave(act, e, cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view } : { ...walkOf(e, at), view }, byKey, 500);
-  if (e.notice) showNotice(e.notice, !!landed && (landed.floating || landed.withheld) && landed.addr === e.notice.addr);
+  if (e.notice) showFound(e.notice, !!landed && (landed.floating || landed.withheld) && landed.addr === e.notice.addr);
   if (cover === 'covered') showCover(e.addr);
   if (!answer) {
     if (cover === 'unread') await coverRead(act, e, first, byKey);
@@ -2320,10 +2345,10 @@ async function landAtCursor(e, act, byKey, l) {
   const n = e.notice;
   if (n && n.face !== 'floating' && n.face !== 'withheld') { failed(act, null, n, byKey); return; }
   pinTo(e.addr);
-  if (takenAt === act) { if (n) showNotice(n); return; }
+  if (takenAt === act) { if (n) showFound(n); return; }
   const then = returning(e);
   const flight = goOn(act, first, { ...walkOf(e, then), view: then ? then.view : e.view }, byKey, 500);
-  if (n) showNotice(n);
+  if (n) showFound(n);
   void restore(e, act);
   await flight;
 }
@@ -2336,7 +2361,8 @@ async function landAtCursor(e, act, byKey, l) {
  * stood without the platform's focus; and the scene reopened as the reader
  * left it beside the flight (SC's `reopen`), which takes the focus — save
  * where an act was made after the move, which ends it there; a refusal its
- * reads met faced at the viewport's corner, the entry standing.
+ * reads met faced at the viewport's corner as O-HOST's notice (`asNotice`),
+ * the entry standing.
  * @param {Entry} e the entry the move reached
  * @param {number} act the move's count
  * @param {boolean} byKey a key made the move
@@ -2348,7 +2374,7 @@ async function sceneAt(e, act, byKey) {
   const first = leave(act, e, { ...walkOf(e, at), view, take: false }, byKey, 500);
   const out = await SCENE.reopen(o);
   if (act !== made) return;
-  if (!out.shown && out.refused) FACES.showRefusal(null, out.refused, e.addr);
+  if (!out.shown && out.refused) FACES.showRefusal(null, out.refused, e.addr, asNotice(act));
   endAir(act, await first);
 }
 
@@ -2452,8 +2478,15 @@ function coverOf(e) {
 
 /** a covered document's landing (see the head): its box framed whole at the reading size — the entry's view frames columns the cover does not draw — the walk on the document */
 const coveredAt = (/** @type {string} */ addr) => ({ addr, pos: null, view: viewFor(addr, null) });
-/** a covered document's face at its box's head (see the head): the document-level withheld face, its sign-in act the way back (O-FACES' `withheld`), standing there whatever the camera does */
-function showCover(/** @type {string} */ addr) { const site = placeAt(addr); FACES.withheld(addr, site, { follow: pointTo(site) }); CAM.markDirty(); }
+/**
+ * A covered document's face at its box's head (see the head): the
+ * document-level withheld face, its sign-in act the way back (O-FACES'
+ * `withheld`), standing there whatever the camera does — O-HOST's notice
+ * where the read that tells the cover answered after the act (`coverRead`).
+ * @param {string} addr
+ * @param {boolean} [found] a read brought it once it answered (`asNotice`)
+ */
+function showCover(addr, found = false) { const site = placeAt(addr); FACES.withheld(addr, site, { follow: pointTo(site), ...(found ? asNotice(made) : {}) }); CAM.markDirty(); }
 
 /**
  * A cursor move reaching an entry whose document a read must tell first —
@@ -2461,9 +2494,10 @@ function showCover(/** @type {string} */ addr) { const site = placeAt(addr); FAC
  * the page holds nothing of yet (see the head; `coverOf`): its read made
  * beside the flight, as a LEAP to an unread document makes it; where it
  * answers the document covered and no act was made meanwhile, the camera
- * going on to the covered box framed whole, its face standing there — the
- * face alone where the reader took the camera over — else the move landing
- * where its flight lands, the surfaces the entry keeps reopened (`restore`).
+ * going on to the covered box framed whole, its face standing there as
+ * O-HOST's notice — the face alone where the reader took the camera over —
+ * else the move landing where its flight lands, the surfaces the entry keeps
+ * reopened (`restore`).
  * @param {number} act the move's count
  * @param {Entry} e the entry the move reached
  * @param {Promise<boolean>} first the move's flight
@@ -2473,9 +2507,9 @@ async function coverRead(act, e, first, byKey) {
   await PUMP.wholeOf(e.addr);
   if (act !== made) return;
   if (!REC.covered(e.addr)) { void restore(e, act); endAir(act, await first); return; }
-  if (takenAt === act) { showCover(e.addr); return; }
+  if (takenAt === act) { showCover(e.addr, true); return; }
   const flight = goOn(act, first, coveredAt(e.addr), byKey, 500);
-  showCover(e.addr);
+  showCover(e.addr, true);
   await flight;
 }
 

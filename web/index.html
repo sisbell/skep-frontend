@@ -17,7 +17,8 @@
   Their order here is the Tab ring's (D5 §4 rule 5): the one line (one
   stop; the LEAP box after it, while open — the line's stop, opened), the
   plane's stop, the focused document's corner, a landing's line's acts
-  while it stands, the standing overlay, and the line again; the scene,
+  while it stands, the standing overlay, the notice below it, and the line
+  again; the scene,
   while it stands, in the place of the plane's stop, its corner and the
   landing's line. The focus has one owner (FP-20, N-FOCUS), and one status
   region (#live) it alone writes; the canvases are hidden from assistive
@@ -58,6 +59,8 @@
 <div id="pieces" aria-hidden="true"></div>
 <!-- the overlay (O-HOST's): after the corners, so a standing overlay is the ring's stop after the plane and its corner, and the one line's after it (D5 §4 rule 5); its stacking draws it over them all; named by its own caption as each opens; no live region of its own — a face is said through #live -->
 <div id="overlay" role="dialog"></div>
+<!-- the notice below the overlay (O-HOST's; FP-36): a face a read brought while a card, a list or a moment of the reader's stood, standing under it; right after the overlay, so Tab reaches it after the card; named by its own words; no live region of its own -->
+<div id="notice" role="dialog"></div>
 <!-- the one status region (D4; N-FOCUS's): polite for the selection, a face and the line's transients, assertive for the session's death and halted writes -->
 <div id="live" role="status" aria-live="polite" aria-atomic="true"></div>
 <pre id="fail"></pre>

@@ -7,16 +7,18 @@
 // the order of acts, the jump in the air and the keys it holds, a jump
 // reaching, failures known at the act and learned in the air, a follow to a
 // withheld document, the chrome a landing leaves standing and a field that
-// keeps its caret, cards opened while an act reads, Enter at a withheld run
-// and a tail pressed, the box's version, a change of the page's class, where
-// no board is held, the passage Back lands on, the surfaces a place keeps —
+// keeps its caret, cards opened while an act reads, a face a read brings
+// standing below a card the reader opened, Enter at a withheld run and a
+// tail pressed, the box's version, a change of the page's class, where no
+// board is held, the passage Back lands on, the surfaces a place keeps —
 // the selection, a card, a list — ended as the reader leaves and reopened as
 // left on a return, their subjects placed again by their bytes, and a text
 // set again under the reader — an arrival placed again by its runs' bytes,
 // and the passage being read gone from it (FP-20, FP-21, FP-22, FP-25,
-// FP-29, FP-35, FP-36). The overlay host stands on a stand-in element, the
-// platform's document a stand-in beside it, so a face a landing shows is read
-// back from what the host wrote.
+// FP-29, FP-35, FP-36). The overlay host stands on stand-in elements — the
+// overlay's and the notice's below it — the platform's document a stand-in
+// beside them, so a face a landing shows is read back from what the host
+// wrote.
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -317,6 +319,8 @@ const addrs = () => TRAIL.all().map((e) => e.addr);
 const unread = () => REC.invalidate(C);
 /** the overlay host's stand-in element: what the host writes into it is what a person meets */
 const hostEl = { className: '', innerHTML: '', style: {}, setAttribute() {}, removeAttribute() {}, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getBoundingClientRect: () => ({ left: 0, top: 0, width: 0, height: 0 }), contains: () => false };
+/** the stand-in of the element a notice stands in below the overlay (O-HOST's) */
+const noticeEl = { ...hostEl, style: {}, contains: (/** @type {unknown} */ _x) => false };
 /** the face the host shows: its name and its words, and whether it offers an act; null where no face stands */
 const faceShown = () => { const o = HOST.currentState(); return o && o.kind === 'face' ? { id: o.id, html: hostEl.innerHTML, acts: hostEl.innerHTML.includes('data-run') } : null; };
 
@@ -324,7 +328,7 @@ before(async () => {
   REC._reset(); LK._reset(); TRAIL._reset();
   globalThis.document = /** @type {any} */ ({ activeElement: null, body: null });
   globalThis.HTMLElement = /** @type {any} */ (class {});
-  HOST.attach(/** @type {any} */ (hostEl));
+  HOST.attach(/** @type {any} */ (hostEl), /** @type {any} */ (noticeEl));
   fake = FAKE.create(script);
   PORT.boot(fake);
   PUMP.start({ onDirty: () => {} });
@@ -2043,7 +2047,7 @@ test('no landing ends chrome (issue #171\'s design decision: "a card ends when t
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a face a navigation act shows stands over a card asked at the place it leaves, whether the card was asked while the act read or before it', async () => {
+test('a face a read brings once it answered never covers a card asked while the read was out (issue #265\'s design decision: "The face stacks below the card, covering neither the card nor its focus. Esc closes the face first"): the card still reading through the face, its answer shown over it, the face below; Esc closes the face, then the card. A card asked before a navigation act is ended by the act, and the face it meets stands alone', async () => {
   takeDead();
   /** @type {Array<{what: string, act: () => Promise<unknown>, face: string, held: object | null, during: boolean}>} each act that faces, the face it shows, the read it faces on, and whether the card is asked while that read is out */
   const rows = [
@@ -2062,12 +2066,110 @@ test('a face a navigation act shows stands over a card asked at the place it lea
     if (during) asked = PROV.wrote(D, 11, 5);
     read();
     await run(acting);
-    assert.equal(HOST.currentState()?.id, face, `${what}: its face`);
+    assert.deepEqual([HOST.currentState()?.id, HOST.pending()], [face, during], `${what}: its face, ${during ? 'the card still reading through it' : 'the card ended by the act'}`);
     card();
     await asked;
-    assert.equal(HOST.currentState()?.id, face, `${what}: the card's answer shows nothing over the face`);
+    if (during) {
+      assert.deepEqual([HOST.currentState()?.id, HOST.notice()?.id], ['provenance:wrote', face], `${what}: the card's answer shown, the face below it`);
+      KEYS.esc();
+      assert.deepEqual([HOST.currentState()?.id, HOST.notice()], ['provenance:wrote', null], `${what}: Esc closes the face first, the card standing`);
+      KEYS.esc();
+      assert.equal(HOST.currentState(), null, `${what}: the next Esc closes the card`);
+    } else {
+      assert.deepEqual([HOST.currentState()?.id, HOST.notice()], [face, null], `${what}: the card's answer shows nothing, the face alone`);
+      HOST.dismiss();
+    }
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a card the reader opened while a jump\'s read was out stands, its focus with it, whatever the read brings (issue #265\'s design decision; FP-36): the face stands below the card — a LEAP to an address the board says nothing about, a follow of a dead reference, a follow landing at a dead end, whose version offer is drawn there once its reads find it, a follow landing at a withheld document, a reach for another board the board refuses — the card\'s end never runs, no face takes the focus, a failure leaving it on the card\'s control, and Esc closes the face first, then the card', async () => {
+  takeDead(); takeFloat(); takeLocked();
+  const doc = /** @type {any} */ (globalThis.document), was = { contains: hostEl.contains, active: doc.activeElement };
+  /** the card's act, holding the platform's focus */
+  const control = { id: 'the card\'s act', focus() { doc.activeElement = control; }, blur() { if (doc.activeElement === control) doc.activeElement = null; } };
+  hostEl.contains = /** @type {any} */ ((/** @type {unknown} */ x) => x === control);
+  /** @type {Array<{what: string, prepare: () => void, held: object, jump: () => Promise<unknown>, face: string, failure: boolean}>} each jump, what the page holds before it, the read held while the card opens, the face it brings, and whether it is a failure the camera stays at */
+  const rows = [
+    { what: 'a LEAP to an address the board says nothing about', prepare: () => REC.invalidate(GONE), held: F.retrieveDocVSpanSet(GONE), jump: () => GO.leapTo(GONE), face: 'face:doc_not_registered', failure: true },
+    { what: 'a follow of a dead reference', prepare: () => REC.invalidate(GONE), held: F.retrieveDocVSpanSet(GONE), jump: () => GO.follow(drawn(DEAD)), face: 'face:doc_not_registered', failure: true },
+    { what: 'a follow landing at a dead end', prepare: () => memberUnread(), held: F.project(FLOAT, 2, FAR), jump: () => GO.follow(drawn(FLOAT)), face: 'face:floating', failure: false },
+    { what: 'a follow landing at a withheld document', prepare: () => REC.invalidate(PRIVATE), held: F.retrieveDocVSpanSet(PRIVATE), jump: () => GO.follow(drawn(LOCKED)), face: 'face:withheld', failure: false },
+    { what: 'a reach for another board the board refuses', prepare: () => REC.invalidate(REACH_GONE), held: F.retrieveDocVSpanSet(REACH_GONE), jump: () => GO.leapTo(REACH_GONE, { site: { span: { addr: D, pos: 11, width: 5 } } }), face: 'face:doc_not_registered', failure: true },
+  ];
+  try {
+    for (const { what, prepare, held, jump, face, failure } of rows) {
+      await run(GO.leapTo(D));
+      prepare();
+      const release = fake.hold('op', { frame: held });
+      const jumping = jump();
+      /** @type {boolean | null} how the card's end ran: replaced, or dismissed; null while it never did */
+      let ended = null;
+      HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span><button data-run="act">act</button>', acts: {}, onDismiss: (replaced) => { ended = replaced; } });
+      control.focus();
+      release();
+      await run(jumping);
+      assert.deepEqual([HOST.currentState()?.id, ended, HOST.notice()?.id], ['a card', null, face], `${what}: the card stands, its end never run, the face below it`);
+      assert.ok(!noticeEl.contains(doc.activeElement), `${what}: the face takes no focus`);
+      if (failure) assert.equal(doc.activeElement, control, `${what}: the focus on the card's control, where the reader left it`);
+      if (face === 'face:floating') {
+        for (let i = 0; i < 50 && !HOST.notice()?.acts?.a0; i++) await new Promise((r) => setTimeout(r, 0));
+        assert.ok(HOST.notice()?.acts?.a0 && noticeEl.innerHTML.includes(esc(t('F.floating.read', { k: 1 }))), `${what}: its version offer drawn on the face where it stands, below the card: ${noticeEl.innerHTML}`);
+      }
+      KEYS.esc();
+      assert.deepEqual([HOST.currentState()?.id, HOST.notice(), ended], ['a card', null, null], `${what}: Esc closes the face first, the card standing`);
+      if (failure) assert.equal(doc.activeElement, control, `${what}: the face's close moves no focus`);
+      KEYS.esc();
+      assert.deepEqual([HOST.currentState(), ended], [null, false], `${what}: the next Esc dismisses the card`);
+    }
+  } finally {
+    hostEl.contains = was.contains; doc.activeElement = was.active;
     HOST.dismiss();
   }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a withheld document\'s face a return shows again while its clause\'s reads are out is no act on the chrome: a card asked while they read ends nothing of it, and once both have answered the card stands over the face (issue #265\'s design decision; FP-33, FP-36)', async () => {
+  takeLocked();
+  REC.invalidate(PRIVATE);
+  await run(GO.leapTo(D));
+  await run(GO.follow(drawn(LOCKED)));
+  assert.equal(faceShown()?.id, 'face:withheld', 'the follow landed at the withheld document, its face at its place');
+  await run(GO.leapTo(D));
+  REC.claimsChanged(PRIVATE, false); // the claims on it changed while the reader was away: its face reads them again
+  const claims = fake.hold('op', { frame: F.editionClaimsAt(PRIVATE) }), key = FAKE.keyOf('op', { frame: F.editionClaimsAt(PRIVATE) }), from = fake.asked.length;
+  const back = GO.back();
+  for (let i = 0; i < 50 && !fake.asked.slice(from).includes(key); i++) await new Promise((r) => setTimeout(r, 0));
+  assert.ok(fake.asked.slice(from).includes(key), 'the face shown again reads its clause first');
+  /** @type {(v: boolean) => void} */
+  let answer = () => {};
+  const asked = HOST.opening(() => new Promise((r) => { answer = r; }), () => HOST.show({ kind: 'card', id: 'a card', anchor: null, html: '<span class="label">a card</span>', acts: {} }));
+  claims();
+  await run(back);
+  for (let i = 0; i < 50 && !HOST.currentIs('face:withheld'); i++) await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([HOST.currentState()?.id, HOST.pending()], ['face:withheld', true], 'its clause read: the face shows, the card still reading');
+  answer(true);
+  await asked;
+  assert.deepEqual([HOST.currentState()?.id, HOST.notice()?.id], ['a card', 'face:withheld'], 'the card over it, the face below');
+  KEYS.esc(); KEYS.esc();
+  assert.deepEqual([HOST.currentState(), HOST.notice()], [null, null]);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a card shown over a face a read brought, standing alone, takes the place over it and the face moves below it; one a return reopens stands over the entry\'s notice shown again (issue #265\'s design decision): a follow landing at a dead end, the links card opened there, a LEAP away and Back', async () => {
+  takeFloat();
+  memberUnread();
+  await run(GO.leapTo(D));
+  await run(GO.follow(drawn(FLOAT)));
+  assert.deepEqual([HOST.currentState()?.id, HOST.notice()], ['face:floating', null], 'the dead end\'s face alone at the landing');
+  LINKS.show(FAR);
+  assert.deepEqual([HOST.currentState()?.id, HOST.notice()?.id], ['links:' + FAR, 'face:floating'], 'the links card over it, the face below');
+  await run(GO.leapTo(D));
+  assert.deepEqual([HOST.currentState(), HOST.notice()], [null, null], 'leaving the place takes both down');
+  await run(GO.back()); await reopening();
+  assert.deepEqual([TRAIL.current()?.addr, HOST.currentState()?.id, HOST.notice()?.id], [FAR, 'links:' + FAR, 'face:floating'], 'Back: the links card reopened over the dead end\'s face shown again');
+  KEYS.esc(); KEYS.esc();
+  assert.deepEqual([HOST.currentState(), HOST.notice()], [null, null]);
   assert.deepEqual(fake.unanswered, []);
 });
 

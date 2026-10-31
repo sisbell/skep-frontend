@@ -42,7 +42,11 @@
 // withheld origin — this one, whichever words stand above the clause, and a
 // withheld run's — makes the reads its clause waits on before it shows,
 // where the page holds no answer to one, and shows once the clause is
-// decided, so the clause is in its first frame (`whenRead`; FP-33). Its own
+// decided, so the clause is in its first frame (`whenRead`; FP-33): as chrome
+// opening on those reads where it answers an act; beside them where it is a
+// notice, a face a read brought once it answered (`Asked.notice`; O-HOST's),
+// which is no act on the chrome, stands below what the reader opened
+// meanwhile, and shows where it still stands (`Asked.stands`). Its own
 // words stand whole the first time
 // a face shows them in the page's session, compact after (FP-26): the
 // address and the head, the head a disclosure whose act opens the rest, and
@@ -158,6 +162,8 @@ import { esc } from '../util.js';
  * @property {string | null} [caption] the act's own caption, the words its card names itself by: the face is named by it, the act's answer; none where a landing's item's description ties the face instead
  * @property {(home: string, byKey: boolean) => void} [follow] C-67's pointer's act, handed in by its caller: the LEAP to the edition its claim names; the pointer stands only where one is handed in
  * @property {boolean} [told] the landing that met the face says its words where the focus lands (N-GO's `described`): the status region does not repeat them
+ * @property {boolean} [notice] the face is one a read brought once it answered (O-HOST's notice): no act on the chrome, standing below what the reader opened, its clause's reads made beside it (`whenRead`)
+ * @property {() => boolean} [stands] a notice still stands to be shown — no act made since its read answered (N-GO's): one whose clause's reads answer after it no longer stands shows nothing
  */
 
 /**
@@ -237,25 +243,34 @@ export function prepare(addr) {
  * A face stating a withheld origin, shown with C-67's clause in its first
  * frame (see the head; FP-33): at once where the page holds an answer to
  * every read the clause waits on (M-PUMP's
- * `claimsToRead`); else as chrome opening on those reads (O-HOST's
- * `opening`; `prepare`), asked again while drops overtake them and leave the
- * clause undecided — at most DROP_ATTEMPTS times, so a run of rows never
- * holds the act — and shown once they answer where no act was made on the
- * chrome meanwhile, with the clause they decide, "edition claims not read"
- * where one failed. Where `first` is handed in, it is read before them, and
- * nothing shows where it answers that the face no longer stands.
+ * `claimsToRead`); else once those reads answer (`prepare`), asked again
+ * while drops overtake them and leave the clause undecided — at most
+ * DROP_ATTEMPTS times, so a run of rows never holds the act — with the
+ * clause they decide, "edition claims not read" where one failed: a face
+ * that answers an act as chrome opening on those reads (O-HOST's `opening`),
+ * shown where no act was made on the chrome meanwhile; a notice (`stands`
+ * handed in) with its reads made beside it, no act on the chrome, shown
+ * where it still stands as they answer. Where `first` is handed in, it is
+ * read before them, and nothing shows where it answers that the face no
+ * longer stands.
  * @param {string} origin
  * @param {() => void} show
  * @param {(() => Promise<boolean>) | null} [first] a read the face waits on before the clause's: whether the face still stands once it answers
+ * @param {(() => boolean) | null} [stands] the face is a notice, which still stands to be shown while this holds (`Asked.stands`)
  */
-function whenRead(origin, show, first = null) {
+function whenRead(origin, show, first = null, stands = null) {
   if (!first && !PUMP.claimsToRead(origin)) { show(); return; }
-  void HOST.opening(async () => {
+  const reads = async () => {
     if (first && !(await first())) return null;
-    for (let i = 0; i < PUMP.DROP_ATTEMPTS && (i === 0 || LAYER.clauseOf(origin) === CLAUSE_READING); i++) await prepare(origin);
+    for (let i = 0; i < PUMP.DROP_ATTEMPTS && (!stands || stands()) && (i === 0 || LAYER.clauseOf(origin) === CLAUSE_READING); i++) await prepare(origin);
     return true;
-  }, show);
+  };
+  if (stands) void reads().then((ok) => { if (ok && stands()) show(); });
+  else void HOST.opening(reads, show);
 }
+
+/** whether a face is a notice, and while it still stands to be shown (`whenRead`): null where it answers an act */
+const noticeStands = (/** @type {Asked} */ asked) => (asked.notice ? asked.stands || (() => true) : null);
 
 /**
  * A change of the page's class (see the head; FP-29), told by the app as
@@ -348,7 +363,7 @@ export function showRefusal(anchor, r, addr, asked = {}) {
   /** @type {Record<string, import('./host.js').Act>} */
   const handlers = {};
   face.acts.forEach((a, i) => { handlers['a' + i] = () => { if (a.run) a.run(); }; });
-  HOST.show({ kind: 'face', id: 'face:' + r.name, anchor: toAnchor(anchor), html: captionHTML(asked.caption) + faceHTML(face), acts: handlers });
+  HOST.show({ kind: 'face', id: 'face:' + r.name, anchor: toAnchor(anchor), html: captionHTML(asked.caption) + faceHTML(face), acts: handlers, notice: !!asked.notice });
 }
 
 /** @param {Anchor | HTMLElement | {x: number, y: number} | null} a */
@@ -368,11 +383,12 @@ function toAnchor(a) {
  * never-held, and the model keeps it as a fact.
  * @param {string} addr
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} [anchor] the reference's site; null where an address was typed
+ * @param {Asked} [asked] a notice where a read brought it once it answered
  */
-export function unregistered(addr, anchor = null) {
+export function unregistered(addr, anchor = null, asked = {}) {
   /** @type {RefusedByBoard} the board's `doc_not_registered`, as the shell hands it up: no site named */
   const answer = { kind: 'refused', name: 'doc_not_registered', status: 200, code: 'doc_not_registered', detail: null, op: 'doc_metadata', body: null, site: {} };
-  showRefusal(anchor, answer, addr);
+  showRefusal(anchor, answer, addr, asked);
 }
 
 /**
@@ -404,9 +420,9 @@ export function withheld(addr, anchor = null, asked = {}) {
     const acts = { head: () => show(!open, false) };
     if (open && clause.follow) acts.follow = clause.follow;
     if (open) seenWhole.add(addr);
-    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, told, acts, html: captionHTML(asked.caption) + ownHTML(w, open, clause.html) });
+    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, told, acts, html: captionHTML(asked.caption) + ownHTML(w, open, clause.html), notice: !!asked.notice });
   };
-  whenRead(addr, () => show(!seenWhole.has(addr), asked.told));
+  whenRead(addr, () => show(!seenWhole.has(addr), asked.told), null, noticeStands(asked));
 }
 
 /**
@@ -434,9 +450,9 @@ function coveredFace(addr, at, asked) {
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = { a0: () => signIn(at) };
     if (clause.follow) acts.follow = clause.follow;
-    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, told: asked.told, acts, html: captionHTML(asked.caption) + faceHTML({ ...box, acts: [{ label: t('F.sign-in') }] }, armHTML(ending) + clause.html) });
+    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, told: asked.told, acts, html: captionHTML(asked.caption) + faceHTML({ ...box, acts: [{ label: t('F.sign-in') }] }, armHTML(ending) + clause.html), notice: !!asked.notice });
   };
-  whenRead(addr, show, REC.owed(addr) ? async () => { await PUMP.wholeOf(addr); return REC.covered(addr); } : null);
+  whenRead(addr, show, REC.owed(addr) ? async () => { await PUMP.wholeOf(addr); return REC.covered(addr); } : null, noticeStands(asked));
 }
 
 /**
@@ -666,11 +682,12 @@ export function floatingWords(far) {
  * @param {Anchor | null} at
  * @param {Offer | null} offer
  * @param {boolean} told
+ * @param {boolean} notice a read brought it once it answered (O-HOST's notice)
  * @returns {import('./host.js').Overlay}
  */
-function floatingFace(far, at, offer, told) {
+function floatingFace(far, at, offer, told, notice) {
   return {
-    kind: 'face', id: 'face:floating', anchor: at, told, acts: offer ? { a0: (_el, byKey) => offer.go(byKey) } : {},
+    kind: 'face', id: 'face:floating', anchor: at, told, notice, acts: offer ? { a0: (_el, byKey) => offer.go(byKey) } : {},
     html: faceHTML({ ...floatingWords(far), acts: offer ? [{ label: t('F.floating.read', { k: offer.k }) }] : [] }),
   };
 }
@@ -687,30 +704,33 @@ function floatingFace(far, at, offer, told) {
  * passage's landing. Shown at the landing that met it, its words are that
  * landing's description, said where the focus lands (`told`; N-WALK), and
  * the status region does not repeat them (D4: a landing is told by the focus
- * move); shown again at a cursor move, they are said there.
+ * move); shown again at a cursor move, they are said there. A landing's,
+ * met once its reads answered, is a notice (O-HOST's): it stands below a
+ * card, a list or a moment the reader opened meanwhile.
  * @param {string} far the document whose text holds none of the passage
  * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the head landed on: where the face stands
  * @param {Offer | null} [offer] the version offer the landing's reads found; null where none stands
  * @param {boolean} [told] the landing's description says its words
+ * @param {boolean} [notice] a read brought it once it answered (O-HOST's notice)
  */
-export function floating(far, anchor, offer = null, told = false) {
-  HOST.show(floatingFace(far, toAnchor(anchor), offer, told));
+export function floating(far, anchor, offer = null, told = false, notice = false) {
+  HOST.show(floatingFace(far, toAnchor(anchor), offer, told, notice));
 }
 
 /**
- * The dead end's face standing at `far` takes the version offer its
- * landing's reads found (see the head): drawn again in its place with the
- * offer's act, no act on the chrome (O-HOST's `redraw`), its words not said
- * again and the act's said through the status region (FP-36). Nothing where
- * that face no longer stands — one the reader dismissed, or an act took the
- * place of, stays gone.
+ * The dead end's face standing at `far` — in the overlay's place, or below it
+ * as a notice — takes the version offer its landing's reads found (see the
+ * head): drawn again in its place with the offer's act, no act on the chrome
+ * (O-HOST's `redraw`), its words not said again and the act's said through
+ * the status region (FP-36). Nothing where that face no longer stands — one
+ * the reader dismissed, or an act took the place of, stays gone.
  * @param {string} far the document the face names
  * @param {Offer} offer
  */
 export function offered(far, offer) {
-  const o = HOST.currentState();
-  if (!o || o.id !== 'face:floating' || !o.anchor || !o.anchor.span || o.anchor.span.addr !== far) return;
-  if (HOST.redraw(floatingFace(far, o.anchor, offer, !!o.told))) FOCUS.say(t('F.floating.read', { k: offer.k }));
+  const o = HOST.standingAs('face:floating');
+  if (!o || !o.anchor || !o.anchor.span || o.anchor.span.addr !== far) return;
+  if (HOST.redraw(floatingFace(far, o.anchor, offer, !!o.told, !!o.notice))) FOCUS.say(t('F.floating.read', { k: offer.k }));
 }
 
 /**
