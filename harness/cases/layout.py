@@ -314,7 +314,13 @@ handed to the page together through the gate's feed door, reads alone: no
 read goes out as they come; then one refresh counts the edition's chain, each
 member asked once, and reads its text window again once where the member its
 text is can be told, its article standing in every frame, the line under the
-view's centre where it stood on screen. THE LONGEST EDITION the claimant's index lists, found by the case's
+view's centre where it stood on screen. A ROW NAMING A DOCUMENT THE VIEW SHOWS
+(issue #285's design decision: "Nothing is taken down to wait"): at em 12.5
+over the first edition, a published row naming it through the gate's feed
+door, reads alone: the model holds its text and its article, its corner and
+its beams stand in every frame until its read again lands, its text window
+read again once with its image, the line under the view's centre where it
+stood on screen. THE LONGEST EDITION the claimant's index lists, found by the case's
 own reads of each edition's span set: LEAPt to, its article mounted at the
 measure, its columns inside its room and every row inside its column and its
 room; standing BY LINE (issue #122's design decision: the cost bounded by the
@@ -3286,6 +3292,55 @@ def bare_holds(ctx, r):
             'reads': sorted(set(f.get('op') for f in frames))}
 
 
+def named_holds(ctx, r):
+    """A ROW NAMING A DOCUMENT THE VIEW SHOWS (issue #285's design decision: "Nothing is taken down to wait. Everything last
+    set stays, unmarked: text, marks, beams, corner, faces, clauses"; "`pump.js` stops dropping shown documents. `layer.js`
+    keeps them until the re-read sets them"): the first edition at em 12.5 over a paragraph of its own; a published row
+    naming it, handed to the page through the gate's feed door as the feed hands rows, reads alone: the model holds its
+    text in every frame from the row to the settle, and its article and its corner stand in every one, its beams as many
+    as stood before; its text window read again once, its image with it; the line under the view's centre where it stood
+    on screen, DRIFT_TOL_PX either way, at its em; its figures"""
+    ctx.leap(DOC)
+    ctx.view_doc_em(DOC, 12.5)
+    blocks = [b for b in ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC)) if b['kind'] == 'para' and b['text'].strip()]
+    ctx.view_at(DOC, blocks[len(blocks) // 2]['pos'])
+    ctx.settle()
+    ctx.frames(2)
+    cam = ctx.camera()
+    pos = ctx.js('window.__skep.posAt(%s, %s, %s)' % (json.dumps(DOC), cam['x'], cam['y']))
+
+    def seen():
+        """where the passage under the view's centre stands now: its line on screen, and the article's em"""
+        return ctx.js('''((a, p) => { const S = window.__skep, q = (S.spanRects(a, p, 1) || []).find((x) => x.w > 0 && x.h > 0), m = S.mounted(a);
+          return {line: q || null, em: m ? m.fs * S.view.camera().scale : null}; })(%s, %s)''' % (json.dumps(DOC), json.dumps(pos)))
+    before = seen()
+    row = {'position': 0, 'at': 0, 'op': 'insert', 'docs': [DOC], 'class': 'published'}
+    came = ctx.js('''((row, a) => { const S = window.__skep, n = S.bridge.calls().length, beams = S.beams();
+      window.__gateNamed = {frames: 0, standing: 0, held: 0, cornered: 0, beamed: 0, beams, stop: false};
+      const watch = () => { const g = window.__gateNamed; if (g.stop) return; g.frames++; const m = S.mounted(a);
+        if (m && m.text) g.standing++; if (S.model.doc(a).from >= 0) g.held++; if (S.corner(a)) g.cornered++; if (S.beams() >= g.beams) g.beamed++;
+        requestAnimationFrame(watch); };
+      requestAnimationFrame(watch);
+      S.model.feed(row);
+      return {n, beams, from: S.model.doc(a).from, corner: !!S.corner(a)}; })(%s, %s)''' % (json.dumps(row), json.dumps(DOC)))
+    ctx.settle()
+    ctx.frames(3)
+    watched = ctx.js('(() => { const g = window.__gateNamed; g.stop = true; return {frames: g.frames, standing: g.standing, held: g.held, cornered: g.cornered, beamed: g.beamed, beams: g.beams}; })()')
+    after = seen()
+    calls = [c for c in ctx.js('window.__skep.bridge.calls()')[came['n']:] if c.get('frame')]
+    frames = [json.loads(c['frame']) for c in calls]
+    texts = [f for f in frames if f.get('op') == 'retrieve_v' and (f.get('specs') or [{}])[0].get('doc') == DOC]
+    images = [f for f in frames if f.get('op') == 'image' and f.get('d') == DOC]
+    every = watched['frames'] > 0
+    r.check(came['from'] >= 0 and every and watched['held'] == watched['frames'], 'a row naming the first edition, which the view shows: the model holds its text as the row is taken and in every frame until its read again lands (issue #285)', dict(watched, at_row=came['from']))
+    r.check(every and watched['standing'] == watched['frames'] and (not came['corner'] or watched['cornered'] == watched['frames']) and watched['beamed'] == watched['frames'],
+            'its article stands in every frame from the row to the settle, its corner beside it, and as many beams as stood before: nothing taken down to wait', dict(watched, corner_before=came['corner']))
+    r.check(len(texts) == 1 and len(images) >= 1, 'its text window read again once, its image with it: one read again, setting it in one step', {'texts': len(texts), 'images': len(images), 'reads': sorted(set(f.get('op') for f in frames))})
+    kept = bool(before['line'] and after['line']) and abs(after['line']['y'] - before['line']['y']) <= DRIFT_TOL_PX and before['em'] and after['em'] and abs(after['em'] - before['em']) <= 1e-6
+    r.check(pos is not None and kept, f'the line under the view\'s centre stands where it stood on screen, {DRIFT_TOL_PX} px either way, at its em', {'pos': pos, 'before': before, 'after': after})
+    return {'pos': pos, 'frames': watched, 'texts': len(texts), 'images': len(images), 'before': before, 'after': after, 'reads': sorted(set(f.get('op') for f in frames))}
+
+
 def longest_holds(ctx, r):
     """THE LONGEST EDITION the claimant's index lists (the typography review's finding 7: under a size fitted to its
     length its line ran wider than the window) — found by the harness's own reads of each edition's span set — shown at
@@ -3866,6 +3921,7 @@ def run(ctx):
     r.figures['stub'] = stub_holds(ctx, r)
     r.figures['hold'] = hold_holds(ctx, r)
     r.figures['bare'] = bare_holds(ctx, r)
+    r.figures['named'] = named_holds(ctx, r)
     r.figures['longest'] = longest_holds(ctx, r)
     r.figures['walk'] = walk_holds(ctx, r)
     r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)

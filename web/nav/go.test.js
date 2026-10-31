@@ -9,8 +9,9 @@
 // withheld document, the chrome a landing leaves standing and a field that
 // keeps its caret, cards opened while an act reads, Enter at a withheld run
 // and a tail pressed, the box's version, a change of the page's class, where
-// no board is held, and the passage Back lands on (FP-20, FP-21, FP-22,
-// FP-25, FP-29, FP-35). The overlay host stands on a stand-in element, the
+// no board is held, the passage Back lands on, and a text set again under
+// the reader — an arrival placed again by its runs' bytes, and the passage
+// being read gone from it (FP-20, FP-21, FP-22, FP-25, FP-29, FP-35, FP-36). The overlay host stands on a stand-in element, the
 // platform's document a stand-in beside it, so a face a landing shows is read
 // back from what the host wrote.
 import { test, before } from 'node:test';
@@ -43,6 +44,7 @@ import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
 import * as KEYS from './keys.js';
 import * as GO from './go.js';
+import * as FOCUS from './focus.js';
 
 const D = '1.0.1.0.3', FAR = '1.0.1.0.127', CITE = '1.1.0.1.0.1.0.3.13';
 const NEAR_TEXT = 'Tumbler.\n\nThe first field.', FAR_TEXT = 'The far edition.\n\nIts cited passage stands here.';
@@ -2470,6 +2472,65 @@ test('a failure a jump\'s read learns in the air rebuilds the mirror where the w
 });
 
 // placed last: the death empties the model every test above reads
+// ---- A TEXT SET AGAIN UNDER THE READER (FP-21, FP-36) ---------------------------------------------------------------
+
+/** a document the tests below land in and set again, read whole on the LEAP: its own bytes, 1 to its length */
+const SETA = '1.0.1.0.23', SETA_TEXT = 'A note set again.\n\nIts passage stands here.\n\nA last line.';
+/** SETA set again as its reads land (M-REC's `setAgain`): its text and its image, each run `[ordinal, width]` of SETA's own I-space */
+const setSeta = (/** @type {string} */ text, /** @type {Array<[number, number]>} */ image) => REC.setAgain(SETA, {
+  spans: [{ subspace: 1, ordinal: 1, positions: text.length }], text: { runs: [{ pos: 1, width: text.length, kind: 'content', text, ref: null, origin: null }], asOf: 9 },
+  image: { from: 1, runs: image.map(([ordinal, width]) => ({ iStart: `${SETA}.0.1.${ordinal}`, width })) },
+});
+
+test('an arrival whose document\'s text is set again is placed again by its runs\' bytes (the landing rule): all of them standing, the outline moves with them; part, the outline on what stands and the landing\'s line saying only part of the passage is there; none, nothing outlined and the dead end\'s face at the landing\'s place (FP-21; issue #285)', async () => {
+  Object.assign(script, reads(SETA, SETA_TEXT, []), noClaims(SETA));
+  const at = SETA_TEXT.indexOf('Its passage') + 1, width = 'Its passage'.length, n = SETA_TEXT.length;
+  try {
+    await run(GO.leapTo(SETA, { pos: at, runs: [{ pos: at, width }], passage: { prefix: SETA + '.0.1', ordinal: at, width }, how: 'leap' }));
+    assert.deepEqual(GO.arrivalMark(), { addr: SETA, pos: at, runs: [{ pos: at, width }], link: null }, 'the passage outlined where the LEAP named it');
+    // twelve bytes minted since set before the text: every byte of it twelve on
+    setSeta('A new lead.\n' + SETA_TEXT, [[n + 1, 12], [1, n]]);
+    assert.deepEqual(GO.arrivalMark(), { addr: SETA, pos: at + 12, runs: [{ pos: at + 12, width }], link: null }, 'placed again by its bytes at once, never left on the positions it stood at');
+    GO.recheck();
+    assert.deepEqual([GO.landing(), faceShown()], [null, null], 'all of it in one piece: the outline alone says it');
+    // the passage's last five bytes gone
+    setSeta(SETA_TEXT.slice(0, at + width - 6) + SETA_TEXT.slice(at + width - 1), [[1, at + width - 6], [at + width, n - at - width + 1]]);
+    GO.recheck();
+    assert.deepEqual(GO.arrivalMark()?.runs, [{ pos: at, width: width - 5 }], 'part: the outline on what stands');
+    assert.deepEqual([GO.landing()?.said?.state, GO.landingLine()], ['part', t('L.held.part', { subject: t('L.held.reading'), where: t('L.held.current', { D: SETA }) })], 'and the line says only part of it is there');
+    // none of it: the text set again of bytes minted since
+    setSeta('Other words.', [[n + 20, 12]]);
+    GO.recheck();
+    const f = faceShown();
+    assert.deepEqual([GO.arrivalMark(), GO.landing()?.floating, f?.id], [null, true, 'face:floating'], 'none: nothing outlined, the dead end\'s face');
+    assert.ok(f && f.html.includes(addressedHTML(t('F.floating', { D: SETA }))) && HOST.currentState()?.anchor?.span?.addr === SETA, `its words, at the landing's place: ${f && f.html}`);
+    GO.recheck();
+    assert.equal(faceShown()?.id, 'face:floating', 'once for each setting of the text');
+  } finally { GO.endArrival(); HOST.dismiss(); }
+});
+
+test('the passage being read gone from the text its document is set again as lands in place in the none state: the dead end\'s face at the line kept, said in the status region, no camera move and no trail entry, the arrival standing elsewhere put out; where a surface of the reader\'s stands it takes nothing\'s place, its words said alone (FP-21, FP-36; issue #285)', async () => {
+  /** @type {string[]} the status region, as it was told */
+  const said = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); } }) });
+  try {
+    await run(GO.follow(drawn(PASSAGE)));
+    assert.deepEqual(marks(), [{ addr: FAR, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }, [PASSAGE]], 'an arrival standing at FAR');
+    const view = CAM.view(), entries = TRAIL.all().length;
+    GO.vanished(D, 11, [{ prefix: D + '.0.1', ordinal: 11, width: 5 }]);
+    const f = faceShown();
+    assert.ok(f && f.id === 'face:floating' && f.html.includes(addressedHTML(t('F.floating', { D }))), `the dead end's face, naming the document set again: ${f && f.html}`);
+    assert.deepEqual([HOST.currentState()?.anchor, HOST.currentState()?.told], [{ span: { addr: D, pos: 11 }, sign: D }, false], 'at the line kept, said in the status region');
+    assert.deepEqual([GO.arrivalMark(), GO.litLinks(), GO.landing()?.addr, GO.landing()?.floating], [null, [], D, true], 'the arrival at FAR put out; a landing in the none state at the document set again');
+    assert.ok(same(CAM.view(), view) && TRAIL.all().length === entries, 'no camera move and no trail entry');
+    HOST.dismiss();
+    // a card of the reader's standing: it stands, the face's words said alone
+    HOST.show({ kind: 'card', id: 'card:standing', html: '' });
+    GO.vanished(D, 11, [{ prefix: D + '.0.1', ordinal: 11, width: 5 }]);
+    assert.deepEqual([HOST.currentState()?.id, said[said.length - 1]], ['card:standing', t('F.floating', { D })], 'the card stands; the words said in the status region');
+  } finally { HOST.dismiss(); GO.endArrival(); }
+});
+
 test('a change of the page\'s class (issue #177: "Keep every place, and cover the material"): the arrival goes — its outline, its labels, its line, its descriptions — and no entry keeps it or a notice, so Back and Forward restore none of it; no entry holds a document\'s words, each read from the model as it is shown — nothing for the draft the session read until a read answers it, then "[withheld · ⟨owner⟩]" — and Back to the draft\'s entry reads it first, then lands on its covered box framed whole, the walk on it and its withheld face there, offering the sign-in in the ending\'s words; once covered, the face at once', async () => {
   const DR = '1.0.1.0.21', DR_TEXT = 'The draft the session reads.\n\nIts second paragraph.';
   const platform = { getElementById: globalThis.document.getElementById };

@@ -91,9 +91,10 @@ twice then Shift+← (K-71, the platform's own keys) taking back the second
 step, the start unmoved; the focus ring following the walk to the block Enter
 selects — with figures for where Chrome moves a selection with Shift+→; and the press holds
 what the drag is anchored in — a feed row naming the document with the
-button down (the gate's `model.invalidate` door, reads alone) leaves the
-half-dragged bytes reading back and the drag's article standing while the
-text arrives again, the release takes the whole phrase, a context menu ends
+button down (the gate's `model.feed` door, reads alone) keeps its text as
+held and leaves the half-dragged bytes reading back and the drag's article
+standing while the text is read and set again (issue #285), the release
+takes the whole phrase, a context menu ends
 the press, and the document holding the selection keeps the lines holding it
 out of view, and, its text dropped and the view back on it under a press in
 another, mounts afresh with no range placed over the drag (issue #122).
@@ -125,7 +126,8 @@ bare address naming the member its text is, by the harness's own reads of its
 chain (issue #160) — and makes no selection of the page's. A feed row naming
 the draft in a pane, sent to the page's session (the gate's feed door, reads
 alone), reaches the pane (issue #160): until its read lands the pane's copy is
-its own bytes though the model holds none of them; then the pane is set again
+its own bytes, whatever the model holds of them — none where the plane does
+not show the draft, what it held where it does (issue #285); then the pane is set again
 in one step — its article rebuilt, the platform's selection on the same words,
 the first span in view where it stood, the bands on their lines — and a
 re-level clicked while a second row's read is out waits for it, then sets the
@@ -445,17 +447,23 @@ def whole_again(ctx):
     chord(ctx, 'Escape')
 
 
+def fed_row(addr):
+    """a published feed row naming `addr`, as the shell hands one: what the gate's feed door hands the page, reads alone"""
+    return {'position': 0, 'at': 0, 'op': 'insert', 'docs': [addr], 'class': 'published'}
+
+
 def press_holds(ctx, r):
-    """the press holds what the drag is anchored in (R11; foundations §2.4). The gate's door `model.invalidate` does to the
-    first edition what a feed row naming it does — what the page held of it dropped, its reads asked again, reads alone —
-    here with the button down halfway along a phrase: the half-dragged bytes still read back, through the blocks the
-    article was made from; the article the drag started in stands while the text arrives again; and the release takes the
-    whole phrase, its highlight over the article rebuilt after the press. A context menu, which takes the button's release
-    on some platforms, ends the press, and the frame after the end rebuilds what the press held. And under a press a
-    document still mounts as the view asks, but no range is placed over the drag (issue #122): the document holding the
-    selection, panned out of view, keeps the lines holding it; its text dropped by the same door, it is taken down, and
-    brought back into view under a press in another it mounts afresh with the platform's selection still the drag's,
-    which the release takes"""
+    """the press holds what the drag is anchored in (R11; foundations §2.4). A feed row naming the first edition, handed to
+    the page through the gate's feed door — reads alone — keeps what the page holds of it while its reads go out again and
+    sets it again in one step as they land (issue #285), here with the button down halfway along a phrase: its text held
+    throughout, the half-dragged bytes still read back, through the blocks the article was made from; the article the drag
+    started in stands while the text is set again; and the release takes the whole phrase, its highlight over the article
+    rebuilt after the press. A context menu, which takes the button's release on some platforms, ends the press, and the
+    frame after the end rebuilds what the press held. And under a press a document still mounts as the view asks, but no
+    range is placed over the drag (issue #122): the document holding the selection, panned out of view, keeps the lines
+    holding it; its text dropped by the gate's door `model.invalidate`, as a row naming a document out of view drops it,
+    it is taken down, and brought back into view under a press in another it mounts afresh with the platform's selection
+    still the drag's, which the release takes"""
     figures = {}
     art = article(DOC)
     ctx.leap(DOC, WINDOW[0])
@@ -465,17 +473,17 @@ def press_holds(ctx, r):
         ctx.drv.press(*ph['start'])
         ctx.drv.move(*ph['start'], *ph['half'])
         ctx.frames(2)
-        # the door and both reads in one evaluation: no frame and no answer comes between them
-        torn = ctx.js('(() => { window.__gateArt = %s; const before = window.__skep.platformSelection().span; window.__skep.model.invalidate(%s); '
-                      'return {before, after: window.__skep.platformSelection().span}; })()' % (art, json.dumps(DOC)))
+        # the row and both reads in one evaluation: no frame and no answer comes between them
+        torn = ctx.js('((row, a) => { window.__gateArt = %s; const S = window.__skep, before = S.platformSelection().span; S.model.feed(row); '
+                      'return {before, after: S.platformSelection().span, from: S.model.doc(a).from}; })(%s, %s)' % (art, json.dumps(fed_row(DOC)), json.dumps(DOC)))
         half = torn['after']
-        r.check(bool(half) and half == torn['before'] and half['addr'] == DOC and abs(half['pos'] - ph['p0']) <= 3 and abs(half['pos'] + half['width'] - ph['ph']) <= 3,
-                'a feed row naming the document under a press: the half-dragged bytes still read back, through the blocks the article was made from',
+        r.check(bool(half) and half == torn['before'] and torn['from'] >= 0 and half['addr'] == DOC and abs(half['pos'] - ph['p0']) <= 3 and abs(half['pos'] + half['width'] - ph['ph']) <= 3,
+                'a feed row naming the document under a press (issue #285): its text kept as held while it is read again, and the half-dragged bytes still read back, through the blocks the article was made from',
                 dict(torn, phrase=(ph['p0'], ph['ph'], ph['p1'])))
         ctx.settle()
         ctx.frames(2)
         held = ctx.js('({same: %s === window.__gateArt, from: window.__skep.model.doc(%s).from})' % (art, json.dumps(DOC)))
-        r.check(held['same'] and held['from'] >= 0, 'its text arrived again with the button down, and the article the drag is anchored in stands: nothing is rebuilt under a press', held)
+        r.check(held['same'] and held['from'] >= 0, 'its text set again with the button down, and the article the drag is anchored in stands: nothing is rebuilt under a press', held)
         ctx.drv.move(*ph['half'], *ph['end'])
         ctx.drv.release(*ph['end'])
         ctx.frames(3)
@@ -488,18 +496,18 @@ def press_holds(ctx, r):
                 {'sel': sel, 'phrase': (ph['p0'], ph['p1']), 'platform': plat, 'rebuilt': rebuilt})
         figures['delivery'] = {'phrase': (ph['p0'], ph['ph'], ph['p1']), 'half': half, 'held': held, 'selected': sel}
         whole_again(ctx)
-    # a context menu ends the press: a press that has not moved holds the article through the text arriving again, as a drag
+    # a context menu ends the press: a press that has not moved holds the article through the text set again, as a drag
     # does; then, the button still down and nothing else asking for a frame, the context menu's end of the press has the
     # next frame rebuild what was held
     ph, seen = phrase_at(ctx, DOC)
     r.check(ph is not None, 'a phrase of the first edition is shown at the landing, for the context menu', seen)
     if ph:
         ctx.drv.press(*ph['start'])
-        ctx.js('(() => { window.__gateArt = %s; window.__skep.model.invalidate(%s); })()' % (art, json.dumps(DOC)))
+        ctx.js('((row) => { window.__gateArt = %s; window.__skep.model.feed(row); })(%s)' % (art, json.dumps(fed_row(DOC))))
         ctx.settle()
         ctx.frames(2)
         held = ctx.js('({same: %s === window.__gateArt, from: window.__skep.model.doc(%s).from})' % (art, json.dumps(DOC)))
-        r.check(held['same'] and held['from'] >= 0, 'a press that has not moved holds the article too, while the text arrives again', held)
+        r.check(held['same'] and held['from'] >= 0, 'a press that has not moved holds the article too, while the text is set again', held)
         # at what stands under the pointer, as the platform sends it
         ctx.js('(document.elementFromPoint(%r, %r) || document.body).dispatchEvent(new MouseEvent("contextmenu", {bubbles: true, cancelable: true}))' % ph['start'])
         ctx.frames(2)
@@ -511,8 +519,9 @@ def press_holds(ctx, r):
     # a fresh mount under a press places no range over the drag: the selection stands in another document mounted beside the first edition —
     # the view built at em 8.5, past the readable em where an article takes the pointer, between the first edition's
     # outline and the room of the document after it in its row, the one in view with the largest face past the mount
-    # threshold; the least pan takes it out of the layer's view (the viewport and 40 px about it, 10 px clear), a feed row
-    # drops its text, a press in the first edition, then the camera back brings it into view with the button down
+    # threshold; the least pan takes it out of the layer's view (the viewport and 40 px about it, 10 px clear), the gate's
+    # door drops its text as a row naming a document out of view does, a press in the first edition, then the camera back
+    # brings it into view with the button down
     ctx.leap(DOC, WINDOW[0])
     f3, b4 = ctx.js('window.__skep.fold(%s)' % json.dumps(DOC)), ctx.js('window.__skep.boxOf("1.0.1.0.4")')
     ctx.set_view((f3['outline']['x'] + f3['outline']['w'] + b4['x']) / 2, f3['columns'][0]['y'] + f3['columns'][0]['h'] / 2, ctx.js('window.__skep.scaleFor(%s, "em", 8.5)' % json.dumps(DOC)))
@@ -549,12 +558,12 @@ def press_holds(ctx, r):
         r.check(other in mounted and bool(kept) and DOC in mounted and ph is not None,
                 'the least pan takes the document holding the selection out of the view: its article stands for the lines holding the selection (issue #122), and the first edition shows a phrase',
                 dict(seen, mounted=mounted, kept=kept, other=other, pan_px=(dx, dy)))
-        # a feed row naming it (the gate's door, reads alone) drops its text: its article is taken down, out of view
+        # the gate's door drops its text, as a row naming a document out of view does (reads alone): its article is taken down, out of view
         ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(other))
         ctx.settle()
         ctx.frames(2)
         gone = ctx.js('window.__skep.mounted(%s)' % json.dumps(other)) is None
-        r.check(gone, 'a feed row naming it takes its article down, out of view: no line of it stands', {'other': other})
+        r.check(gone, 'its text dropped, its article is taken down, out of view: no line of it stands', {'other': other})
         if gone and ph:
             ctx.drv.press(*ph['start'])
             ctx.drv.move(*ph['start'], *ph['half'])
@@ -1026,7 +1035,8 @@ def scene_copy(ctx, r):
         head's words never in it;
     (c) a drag over a phrase of pane B, then a feed row naming the draft, sent to the page's session, through the gate's
         feed door (reads alone, as the feed hands a row): in the same evaluation the pane is being set again and its
-        copy still carries the phrase's bytes as the pane shows them, though the model holds none of them now; once its
+        copy still carries the phrase's bytes as the pane shows them, the model holding none of them where the plane does
+        not show the draft and holding them as they stood where it does (issue #285); once its
         read lands the pane's article is rebuilt, the platform's selection on the same words in it, the first span in
         view at the top it stood at on screen, the copy naming the same bytes, and the bands between the panes on their
         lines;
@@ -1101,8 +1111,8 @@ def scene_copy(ctx, r):
         data = torn['post'].get('data') or {}
         flavor = data.get('application/x-skep-passage')
         mid = {'span': torn['post'].get('span'), 'flavor': json.loads(flavor) if flavor else None, 'plain': data.get('text/plain')}
-        r.check(torn['updating'] and names(ctx, mid, B, ph['p0'], ph['p1']) and mid['span'] == pre['span'] and bool(pre['plain']) and bare(mid, pre['plain']) and torn['now'] == '',
-                '(c) a feed row naming the draft reaches pane B (issue #160): the pane is being set again, and until its read lands the copy names the dragged bytes and carries them as the pane shows them, though the model holds none of them now',
+        r.check(torn['updating'] and names(ctx, mid, B, ph['p0'], ph['p1']) and mid['span'] == pre['span'] and bool(pre['plain']) and bare(mid, pre['plain']) and torn['now'] in ('', pre['plain']),
+                '(c) a feed row naming the draft reaches pane B (issue #160): the pane is being set again, and until its read lands the copy names the dragged bytes and carries them as the pane shows them — the model holding none of them where the plane does not show the draft, and holding them as they stood where it does (issue #285)',
                 dict(mid, phrase=[ph['p0'], ph['p1'], ph['text']], pre=pre['span'], updating=torn['updating'], now=torn['now']))
         landed = scene_set(ctx)
         after = ctx.js(PANE_NOW % json.dumps('b'))
@@ -1347,17 +1357,18 @@ def selection_held_elsewhere(ctx, r):
     "the SELECTION is the platform's own"): the platform holds one selection, and the page's goes back over a rebuilt
     article only where the platform's is collapsed, absent or in the text layer, so the copy is of what the person chose.
     A phrase of the first edition shown at the landing is selected as the page selects it, the span S:
-    (o) the provenance card standing over S, a drag over its caption, then the gate's door `model.invalidate` doing to the
-        first edition what a feed row naming it does (reads alone), the article rebuilt: the caption's text stays
-        selected, no highlight stands over the plane, and the page's selection is S;
+    (o) the provenance card standing over S, a drag over its caption, then a feed row naming the first edition handed to
+        the page through the gate's feed door (reads alone), its text held while it is read again and the article set
+        again from its reads (issue #285): the caption's text stays selected, no highlight stands over the plane, and the
+        page's selection is S;
     then S is selected again and the scene opened over it through the card that took the selection's card's place (D7's
     path), S's highlight standing on the plane under the scene:
     (a) the camera at em 5 under the scene, below the mount: the lines holding S stand, S's highlight on them, its article
         outside the mount band (issue #122); a drag over a phrase of pane B, then the camera back, the article in the
         band again: the copy names the draft and the phrase's own bytes, no highlight stands over the plane, and the
         page's selection is S;
-    (b) a click in pane B, a caret alone, then the door, the article rebuilt: S's highlight is put back on the plane;
-    (c) S's highlight standing, a drag over the phrase of pane B, then the door, the article rebuilt: as after (a).
+    (b) a click in pane B, a caret alone, then such a row, the article set again: S's highlight is put back on the plane;
+    (c) S's highlight standing, a drag over the phrase of pane B, then such a row, the article set again: as after (a).
     The first edition is read whole again, and the scene and the selection ended after them. The Safari pass repeats a
     drag in a pane and a feed row by hand (FP-19): the gate runs Chrome alone"""
     figures = {}
@@ -1382,13 +1393,14 @@ def selection_held_elsewhere(ctx, r):
         return ctx.js('window.__skep.overlay().id') == 'provenance:wrote' and ctx.js('window.__skep.selection()') == span
 
     def fed():
-        """the gate's door does to the first edition what a feed row naming it does — its article taken down, its text read
-        again; whether its article stands again, rebuilt"""
+        """a feed row naming the first edition, handed to the page through the gate's feed door: its text held as it is
+        read again, then set again in one step as its reads land (issue #285); whether its text stood as the row was taken
+        and its article stands again, rebuilt"""
         ctx.js('window.__gateArt = %s' % art)
-        ctx.js('window.__skep.model.invalidate(%s)' % json.dumps(DOC))
+        kept = ctx.js('((row, a) => { window.__skep.model.feed(row); return window.__skep.model.doc(a).from >= 0; })(%s, %s)' % (json.dumps(fed_row(DOC)), json.dumps(DOC)))
         ctx.settle()
         ctx.frames(2)
-        return ctx.js('!!%s && %s !== window.__gateArt' % (art, art))
+        return kept and ctx.js('!!%s && %s !== window.__gateArt' % (art, art))
 
     def stood(pb, c, after, rebuilt, what):
         """the check that a drag over the phrase `pb` of pane B stood through the remount `what`: `c` the copy after it"""

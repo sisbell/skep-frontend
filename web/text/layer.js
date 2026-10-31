@@ -118,14 +118,17 @@
 // canvas draws or yields each line by the lines standing this frame
 // (`standing`), and outlines an arrival's runs on the fold's own lines where
 // no part of them stands (`foldBoxes`; FP-21). When a document is set again
-// while it is read — its article rebuilt in another fold, or taken down for
-// a feed row and mounted again — the passage at the visible view's centre
-// keeps its place and its size on screen (`hold`, `keepPlace`): the
-// passage's own bytes, carried by their identity through the image the
-// article was made from into the text set again, so an edit above the view
-// moves no word the reader reads (FP-8, FP-23), its position where that
-// image places none of them, and by position where the text comes before its
-// image, the bytes kept for the re-set the image's arrival makes (`still`).
+// while it is read — its article rebuilt in another fold, set again from the
+// reads a feed row naming it made, standing as it was until they land
+// (FP-23), or mounted again after a drop — the passage at the visible view's centre
+// keeps its place and its size on screen (`hold`, `keepPlace`): the line's
+// own bytes, carried by their identity through the image the article was
+// made from into the text set again, so an edit above the view moves no word
+// the reader reads (FP-8, FP-23), its position where that image places none
+// of them — where the image covers the text set again whole, the passage
+// gone from it, which the reader is told (`vanished`; FP-21) — and by
+// position where the text comes before its image, the bytes kept for the
+// re-set the image's arrival makes (`still`).
 // A view the reader leaves and comes back to by the trail is placed again
 // the same way (foundations §2.2): what a view reads — the passage at its
 // visible centre in the document at its own reading scale there, by its
@@ -419,13 +422,13 @@ import { t, facedHTML, CLIENT_CLOSE } from '../strings.js';
  */
 
 /**
- * @typedef {Object} Hold — the passage being read as its box's article was taken down to be set again (see the head): the one at the visible view's centre, or the line a version move names
+ * @typedef {Object} Hold — the passage being read as its box's article was taken down to be set again (see the head): the line at the visible view's centre, or the line a version move names
  * @property {string} addr the document whose article, mounted fresh, takes it: the same document set again, or the version its box takes
  * @property {Fold} fold the fold it stood in
  * @property {{x: number, y: number}} p where it stood, in world units relative to the room
  * @property {{from: number, to: number} | null} pair the position of `fold` whose line it stood on and the position of `addr`'s that takes that line (a version move); null where its bytes' identity names it (`ids`), else the same position (P-LAY's `holdOf`)
  * @property {number | null} pos the position whose line it stood on: the one that line opens at (P-LAY's `posAt`), or, carried from a re-set by position, the one whose line that re-set placed (`still`) — the one `ids` is read from
- * @property {ISpan[]} ids the byte `pos` names, by identity, read through the image the article was made from (M-REC's `identityIn`): where the text set again holds it now is the line that takes the passage's (FP-8, FP-23) — none where that image did not cover it
+ * @property {ISpan[]} ids the bytes of the line `pos` opens, by identity, read through the image the article was made from (M-REC's `identityIn`): where the text set again holds the first of them now is the line that takes the passage's (FP-8, FP-23) — none where that image did not cover it
  * @property {{x: number, y: number, scale: number} | null} left the camera as a re-set whose text came before its image left it, by position: `ids` kept for the re-set the image's arrival makes, while the camera stands there (`still`); null where it is no such hold
  */
 /**
@@ -449,6 +452,7 @@ import { t, facedHTML, CLIENT_CLOSE } from '../strings.js';
  * @property {(addr: string) => string} shown the version a document's box shows (N-GO's `shownIn`): the one version whose article stands there
  * @property {() => (string | null)} named the document the one line names, by its box (L-LINE's `named`): the one whose label is never held over its text; null where it names none
  * @property {(account: string) => boolean} region is an account named in view: the one line names it, or the canvas's last frame set its label (P-RENDER's `regionNamed`) — a held label's address drops its prefix there alone (P-LABEL's region rule)
+ * @property {(addr: string, pos: number, ids: ISpan[]) => void} vanished told where the text a document is set again as holds none of the passage being read (`keepPlace`): the document, the position whose line keeps the passage's place, and the passage by identity (N-GO's `vanished`; FP-21)
  */
 
 /** the corner's distance from the text column, and from the edge of the room it stands in (px): P-REG's */
@@ -504,7 +508,7 @@ let hold = null;
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
 /** the readers until the app hands its owners' in: no selection and no focus, the line at the viewport's top, nowhere navigated, every box showing its plain address, no document and no account named */
-const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false });
+const noReaders = () => /** @type {Readers} */ ({ selection: () => null, focus: () => null, top: () => 0, handOff: () => {}, navigated: () => null, shown: boxOf, named: () => null, region: () => false, vanished: () => {} });
 /** @type {Readers} */
 let read = noReaders();
 /** is a version the one its box shows (see the head)? */
@@ -1981,10 +1985,10 @@ function viewNow() {
 /**
  * The passage being read: the mounted article at its readable em or above
  * whose outline holds the visible view's centre, where in its room that
- * centre stands, the position the line there opens at and that position's
- * byte by identity through the image the article was made from — what the
- * text set again holds of it is where the passage stands then (`keepPlace`);
- * null where none does.
+ * centre stands, the position the line there opens at and that line's bytes
+ * by identity through the image the article was made from (`lineOf`) — what
+ * the text set again holds of them is where the passage stands then
+ * (`keepPlace`); null where none does.
  * @returns {Hold | null}
  */
 function readingNow() {
@@ -1992,9 +1996,29 @@ function readingNow() {
   for (const rec of mounted.values()) {
     if (!readsAt(rec.fs) || !holds(shapeAt(rec.d.addr, rec.fold), c)) continue;
     const box = docBox(rec.d.addr), p = { x: c.x - box.x, y: c.y - box.y }, pos = posIn(rec.fold, p.x, p.y);
-    return { addr: rec.d.addr, fold: rec.fold, p, pair: null, pos, ids: pos != null ? REC.identityIn(rec.made.image, pos, 1) : [], left: null };
+    const line = pos != null ? lineOf(rec.fold, rec.made.blocks, pos) : null;
+    return { addr: rec.d.addr, fold: rec.fold, p, pair: null, pos, ids: line ? REC.identityIn(rec.made.image, line.pos, line.width) : [], left: null };
   }
   return null;
+}
+
+/**
+ * The positions of a fold's line that opens at a position: from that
+ * position to the one the next line of its block opens at, else to its
+ * block's end — the passage a view reads (`readingNow`); the one position
+ * where the fold sets no line there.
+ * @param {Fold} f
+ * @param {Block[]} blocks the blocks its article was made from
+ * @param {number} pos
+ * @returns {{pos: number, width: number}}
+ */
+function lineOf(f, blocks, pos) {
+  const i = placeIn(f, pos).line;
+  if (i == null) return { pos, width: 1 };
+  const l = f.lines[i];
+  for (let k = i + 1; k < f.lines.length && f.lines[k].pos === l.pos; k++) { const a = f.lines[k].at; if (a != null && a > pos) return { pos, width: a - pos }; }
+  const b = blocks.find((x) => x.pos === l.pos);
+  return { pos, width: b ? Math.max(1, b.pos + b.width - pos) : 1 };
 }
 
 /** the camera as it stands: where a re-set by position left it (`Hold.left`) */
@@ -2019,11 +2043,11 @@ function still(h, reading) {
 }
 
 /**
- * Where the text set again holds the byte a hold names by identity (`ids`):
+ * Where the text set again holds the bytes a hold names by identity (`ids`):
  * the position its line opened at in the fold it stood in, and the one where
- * the image the article stands again from places that byte now; null where
- * the hold names none, or that image places none of it — the image not read
- * yet, or the text without the byte.
+ * the image the article stands again from places the first of them it holds
+ * now; null where the hold names none, or that image places none of them —
+ * the image not read yet, or the text without the passage.
  * @param {Hold} h
  * @param {Mounted} rec the article standing again
  * @returns {{from: number, to: number} | null}
@@ -2034,19 +2058,26 @@ function carried(h, rec) {
   return now.length ? { from: h.pos, to: now[0].pos } : null;
 }
 
+/** does a document's held image cover its whole text, so a passage it places none of is in none of it? */
+const imageCovers = (/** @type {Doc} */ d) => !!d.imageFor && d.extent != null && d.imageFor[0] <= 1 && d.imageFor[1] >= d.extent + 1;
+
 /**
  * The passage held as its document's article was taken down, set again: the
  * camera re-anchored so it keeps its place and its size on screen (P-LAY's
  * `holdOf`, P-CAM's `reanchor`), a flight bound into the document with it —
  * the passage's own bytes, where the text set again places them (`carried`;
  * FP-8: an edit above the view moves no word the reader reads), else its
- * position.
+ * position. Where the text set again holds none of those bytes and its image
+ * covers it whole, the passage is gone from it: its line kept by position,
+ * the reader told (`vanished`; FP-21's landing rule).
  * @param {Hold} h
  * @param {Mounted} rec the article standing again
  * @returns {boolean} whether the camera moved
  */
 function keepPlace(h, rec) {
-  const at = holdOf(h.fold, rec.fold, h.p, h.pair || carried(h, rec));
+  const by = h.pair || carried(h, rec);
+  if (!by && h.pos != null && h.ids.length && imageCovers(rec.d)) read.vanished(rec.d.addr, h.pos, h.ids);
+  const at = holdOf(h.fold, rec.fold, h.p, by);
   if (!at) return false;
   const box = docBox(rec.d.addr);
   const a = { x: box.x + h.p.x, y: box.y + h.p.y }, b = { x: box.x + at.to.x, y: box.y + at.to.y };

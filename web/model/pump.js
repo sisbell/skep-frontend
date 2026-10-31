@@ -8,7 +8,9 @@
 // the acquire out (`attempt`); the index reads out (`indexing`); a record of
 // the events taken while each read of the board's state is out (`whileOut`);
 // the places the view stood on at the last change of class (`standing`); the
-// refresh armed or out, and the changes of class taken; how the board was
+// documents the view shows that a feed row named, each read again until it
+// is set (`again`); the refresh armed or out, and the changes of class
+// taken; how the board was
 // opened; and the readers the app hands in at `start` — the version each box
 // shows (N-GO's `shownIn`), who is told of a member's arrival (N-GO's
 // `arrived`) and of each drop (SC's `dropped`), the places the view's state
@@ -74,8 +76,13 @@
 // before the board is known. A feed row the page takes (`takeRow`; a
 // `drafts` row only where it names the page's own session) hands a `publish`
 // row's member to the app before anything is dropped (`arrive`), then goes to
-// M-REC's index and invalidation, the view's answers for each address dropped
-// forgotten, and what it dropped told after the drop (`onDrop`; FP-23). A
+// M-REC's index and invalidation — every document it touches dropped, but
+// those the view shows (`shownNow`), which stand as held while they are read
+// again and are set in one step as their reads land (`readAgain`; M-REC's
+// `setAgain`), a row naming one while they are out queueing one more read —
+// the view's answers for each address dropped forgotten, and what it touched
+// told after the drop (`onDrop`; FP-23), a whole read of a document read
+// again waiting for those reads first (`wholeOf`). A
 // row naming no document and no link marks the board, and once the run is in
 // — no row for RUN_QUIET_MS, at the latest RUN_MAX_MS after its first bare
 // row — one refresh runs (`refresh`): each edition held at its bare address
@@ -258,16 +265,31 @@ let refreshing = false;
 let classes = 0;
 
 /**
+ * @typedef {Object} Again — a document the view shows that a feed row named, being read again (`readAgain`)
+ * @property {boolean} more one more read follows the one out: a refresh reached it while it was out
+ * @property {boolean} paused the board did not answer one of the last reads, which set nothing: the next waits for UNREACHED_MS or the daemon's `running`, the view counting nothing missing meanwhile
+ * @property {Promise<void>} landed settled as the read out lands — setting the document, or overtaken — and made anew for the next
+ */
+/** @type {Map<string, Again>} the documents the view shows that a feed row named, each read again until it is set (`readAgain`): while one is, the view asks nothing of it */
+const again = new Map();
+/** @type {Set<() => void>} the reads again waiting on the board, each woken at the daemon's `running` */
+const waking = new Set();
+
+/**
  * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, a refresh's, or every record at a change of the page's class — its session's death among them (`classChanged`)
  * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for a refresh and a change of class
- * @property {string[] | null} addrs the addresses the row dropped, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`) — or those a refresh dropped or set again; null for a change of class, which drops every record
+ * @property {string[] | null} addrs the addresses the row touched, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`), every one dropped but those the view shows, which are read again (`readAgain`) — or those a refresh dropped or set again; null for a change of class, which drops every record
  * @property {Map<string, Chain>} [chains] a refresh's alone (`refresh`): the chain of each edition it counted, by its trunk — what a reading scene's pane at a bare address is pinned by
  */
+
+/** the model is subscribed to the port's events: a start made again hands in its readers alone */
+let subscribed = false;
 
 /**
  * Start the pump: subscribe the model to the port's events, every board
  * event through `onBoard`, and to the sessions the calls name as they cross
- * the port (B-PORT's `onSession`).
+ * the port (B-PORT's `onSession`) — once, however often it starts, so each
+ * event is taken once, under the readers the latest start handed in.
  * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `onOpen` told once a board the list read again found is open (`retryBoards`)
  */
 export function start(opts) {
@@ -279,12 +301,14 @@ export function start(opts) {
   onOpen = opts.onOpen || (() => {});
   standing = new Set();
   started = true;
+  if (subscribed) return;
+  subscribed = true;
   onBoard('feed', (ev) => { if (ev.update) takeRow(ev.update); });
   onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); for (const m of whileOut) m.state = true; dirty(); } });
   onBoard('mode', (ev) => { REC.setMode(ev); for (const m of whileOut) m.mode = ev; dirty(); });
   onBoard('daemon', (ev) => {
     REC.setDaemon(ev.state); for (const m of whileOut) m.daemon = true;
-    if (ev.state === 'running') { unreached.clear(); if (attempt && !attempt.made) void make(attempt); }
+    if (ev.state === 'running') { unreached.clear(); for (const wake of [...waking]) wake(); if (attempt && !attempt.made) void make(attempt); }
     dirty();
   });
   PORT.on('session-died', (d) => { const ev = /** @type {SessionDiedEvent | null} */ (d); if (ev) takeEnd(ev.session, ev.reason); dirty(); });
@@ -311,24 +335,118 @@ const takesRow = (/** @type {FeedUpdate} */ u) => { const s = REC.session(); ret
 /**
  * A feed row the page takes (`takesRow`): the member a
  * `publish` names arriving first (`arrive`), while the page still holds the
- * trunk's text; then the row laid into M-REC's index and invalidation, every
- * read out of the board's state given it, and the view's answers for each
- * address it dropped forgotten, so the view asks them again; then what it
- * dropped told to `onDrop`, after the drop, so a reader reading again reads
- * fresh; and, while a row naming nothing has the board marked, the refresh
- * armed again (`arm`), the run not yet in. The gate's door hands it a row as
- * the feed would (`model.feed`).
+ * trunk's text; then the row laid into M-REC's index and invalidation — each
+ * document it touches that the view shows, with the box pins the arrival
+ * took (`shownNow`), kept as held and read again (`readAgain`), every other
+ * dropped — every read out of the board's state given it, and the view's
+ * answers for each address dropped forgotten, so the view asks them again;
+ * then what it touched told to `onDrop`, after the drop, so a reader reading
+ * again reads fresh — a whole read of a document read again reading what its
+ * reads set (`wholeOf`); and, while a row naming nothing has the board
+ * marked, the refresh armed again (`arm`), the run not yet in. The gate's
+ * door hands it a row as the feed would (`model.feed`).
  * @param {FeedUpdate} u
  */
 export function takeRow(u) {
   if (!takesRow(u)) return;
   if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) arrive(named);
-  const dropped = REC.applyFeedUpdate(u);
+  const keep = new Set(shownNow());
+  const touched = REC.applyFeedUpdate(u, keep);
   for (const m of whileOut) m.rows.push(u);
-  for (const addr of dropped) forget(addr);
-  onDrop({ row: u, addrs: dropped });
+  for (const addr of touched) { if (keep.has(addr)) readAgain(addr); else forget(addr); }
+  onDrop({ row: u, addrs: touched });
   if (REC.bare()) arm(RUN_QUIET_MS);
   dirty();
+}
+
+/** the documents the view shows: those in view (`visibleDocs`) — each box's document, and the version it shows — nearer than far scale, where the view reads */
+const shownNow = () => (started && lodOf(cam.scale).name !== 'far' ? visibleDocs().map((d) => d.addr) : []);
+
+/**
+ * A document the view shows that a feed row named, read again (FP-23):
+ * what the page holds of it stands as held while its reads are out — the view
+ * asks nothing of it meanwhile (`pump`) — and is set in one step as they land
+ * (M-REC's `setAgain`), the view's answers for it then forgotten, so it asks
+ * again what the document holds none of. A row naming it while they are out
+ * counts its drop (M-REC's `dropsOf`), and a refresh reaching it marks it
+ * (`Again.more`): either queues one more read — the reads out land setting
+ * nothing and are made again where the view still shows it, else it is
+ * dropped as a row drops a document out of view, to be read when it is
+ * shown (`dropUnshown`). Where the board did not answer one of the reads,
+ * nothing is set — the document is set from its reads' answers alone, all
+ * of them — and the reads are made again once UNREACHED_MS has passed or at
+ * the daemon's `running` where the view still shows it, else it is dropped
+ * so; a change of the page's class ends them, the reads at the new class
+ * making the page whole. A row naming the document while its reads are out
+ * joins them.
+ * @param {string} addr
+ */
+function readAgain(addr) {
+  if (again.has(addr)) return;
+  /** @type {() => void} */
+  let land = () => {};
+  /** @type {Again} */
+  const a = { more: false, paused: false, landed: new Promise((/** @type {(v: void) => void} */ r) => { land = r; }) };
+  again.set(addr, a);
+  const cls = classes, ended = () => classes !== cls;
+  void (async () => {
+    try {
+      for (;;) {
+        a.more = false;
+        const gone = watchDrops(addr), claimsGone = watchClaims(), causes = REC.keyDrops();
+        const r = await readFresh(addr, new Map(), new Map());
+        if (ended()) return;
+        const landed = land;
+        a.landed = new Promise((/** @type {(v: void) => void} */ res) => { land = res; });
+        if (gone() || a.more) {
+          landed();
+          if (shownNow().includes(addr)) continue;
+          dropUnshown(addr);
+          return;
+        }
+        if (!r.unheard) {
+          if (claimsGone()) delete r.fresh.claims;
+          if (r.fresh.byline && 'cause' in r.fresh.byline.facts && REC.keyDrops() !== causes) delete r.fresh.byline;
+          REC.setAgain(addr, r.fresh);
+          forget(addr);
+          landed();
+          return;
+        }
+        landed();
+        a.paused = true;
+        await new Promise((res) => {
+          const wake = () => { clearTimeout(timer); waking.delete(wake); a.paused = false; res(undefined); };
+          const timer = setTimeout(wake, UNREACHED_MS);
+          waking.add(wake);
+        });
+        if (ended()) return;
+        if (!shownNow().includes(addr)) { dropUnshown(addr); return; }
+      }
+    } finally {
+      if (again.get(addr) === a) again.delete(addr);
+      land();
+      dirty();
+    }
+  })();
+}
+
+/** a document a feed row named that the view does not show now, its reads again ended unset: dropped as the row drops a document out of view, and its answers forgotten, so the view reads it when it is shown */
+const dropUnshown = (/** @type {string} */ addr) => { REC.invalidate(addr); forget(addr); };
+
+/**
+ * A whole read waits for the reads again of a document the view shows that
+ * a feed row named (`readAgain`) — at most DROP_ATTEMPTS of them land, so a
+ * run of rows never holds the act it reads for — so it reads what they set;
+ * at once where none are out, or they wait on the board.
+ * @param {string} addr
+ * @returns {Promise<void>}
+ */
+async function readAgainFirst(addr) {
+  for (let i = 0; i < DROP_ATTEMPTS; i++) {
+    const a = again.get(addr);
+    if (!a || a.paused) return;
+    await a.landed;
+  }
 }
 
 /**
@@ -496,13 +614,15 @@ async function make(a) {
  * places the view stood on asked again at that class (`reread`), and the drop
  * of every record told to `onDrop`, so what a reader holds apart from the
  * model — a reading scene's pane — is read again at that class too; a refresh
- * armed or out ended, the reads at the new class making it whole.
+ * armed or out, and every read again of a document a feed row named
+ * (`readAgain`), ended, the reads at the new class making it whole.
  * @param {string[]} stood the places the view stood on as the change was taken, before anything was dropped (`stoodOn`)
  */
 function classChanged(stood) {
   classes++;
   if (armed != null) { clearTimeout(armed); armed = null; }
   asked.clear(); retryAt.clear(); unreached.clear();
+  again.clear(); for (const wake of [...waking]) wake();
   for (const m of whileOut) { m.rows = []; m.state = false; }
   standing = new Set(stood);
   void readIndex();
@@ -517,8 +637,7 @@ function classChanged(stood) {
  * @returns {string[]}
  */
 function stoodOn() {
-  const inView = started && lodOf(cam.scale).name !== 'far' ? visibleDocs().map((d) => d.addr) : [];
-  return [...new Set([...inView, ...stands().filter((a) => kindOf(a) === 'document')])];
+  return [...new Set([...shownNow(), ...stands().filter((a) => kindOf(a) === 'document')])];
 }
 
 /**
@@ -1015,7 +1134,9 @@ function holdsSpan(/** @type {Doc} */ d, /** @type {number} */ from, /** @type {
  * The reads the view needs now, issued within the budget — none while the
  * index is read (`readIndex`), which counts as a need missing; the places the
  * view stood on as the page's class last changed first (`reread`), at any
- * scale; a refresh armed or out (`refresh`) counted missing. Returns the count
+ * scale; a refresh armed or out (`refresh`) counted missing, and a document a
+ * feed row named while its reads again are out (`readAgain`), nothing asked
+ * of it meanwhile. Returns the count
  * of needs still missing — the gate's settle signal with `inflight()`.
  * @returns {number}
  */
@@ -1031,6 +1152,9 @@ export function pump() {
   vis.sort((a, b) => { const ba = docBox(a.addr), bb = docBox(b.addr); return Math.hypot(ba.x + ba.w / 2 - cx, ba.y + ba.h / 2 - cy) - Math.hypot(bb.x + bb.w / 2 - cx, bb.y + bb.h / 2 - cy); });
   const budgetDocs = vis.slice(0, 60);
   for (const d of budgetDocs) {
+    // a document a feed row named, read again: nothing asked of it until its reads set it (`readAgain`)
+    const out = again.get(d.addr);
+    if (out) { if (!out.paused) missing++; continue; }
     if (d.refused) continue;
     const box = docBox(d.addr);
     const docPx = box.w * cam.scale;
@@ -1353,9 +1477,12 @@ export async function probeChain(trunk, stands = () => true, from = 0) {
  * of it: the extent, every position, the image — in parts where the board
  * refuses it whole for its size (`imageParts`) — the links and their types,
  * and the edition claims on each origin its withheld runs name (`readClaims`).
- * A pass the document was dropped under (`readWhole`) is begun again, and
- * reads again exactly what the drop took, at most DROP_ATTEMPTS passes; past
- * them, the record as it stands, holding nothing read before its last drop.
+ * Each pass waits first for the reads again of a document the view shows that
+ * a feed row named (`readAgainFirst`), so it reads what they set, never the
+ * text the row left standing. A pass the document was dropped under
+ * (`readWhole`) is begun again, and reads again exactly what the drop took,
+ * at most DROP_ATTEMPTS passes; past them, the record as it stands, holding
+ * nothing read before its last drop.
  * @param {string} addr
  * @returns {Promise<Doc | null>} the record; null where the board refused its extent
  */
@@ -1372,6 +1499,7 @@ export async function loadWhole(addr) { return (await wholeOf(addr)).doc; }
  */
 export async function wholeOf(addr) {
   for (let pass = 1; ; pass++) {
+    await readAgainFirst(addr);
     const out = await readWhole(addr, watchDrops(addr));
     if (out !== 'dropped') return out;
     if (pass >= DROP_ATTEMPTS) { dirty(); return { doc: REC.doc(addr), refused: null }; }
@@ -1491,11 +1619,12 @@ export async function readClaims(origin) {
  * which keeps the text — the box holding the view's centre last, so the
  * passage being read there is held across its move (T-LAYER's `holdAcross`) —
  * one whose member cannot be told, or whose box the app did not pin, left as
- * it stands; (2) what the view shows, nearer than far scale and with
+ * it stands; (2) what the view shows (`shownNow`), with
  * the pins taken, kept with the members a text was handed to and the editions
  * left as they stand, and everything else dropped (M-REC's `takeRefresh`), the
  * view's answers for each forgotten; (3) each shown document read again
- * (`readFresh`), at most MAX_INFLIGHT at once, and set in one step as its
+ * (`readFresh`) — one a feed row named that is being read again already
+ * (`readAgain`) by those reads, once more — at most MAX_INFLIGHT at once, and set in one step as its
  * reads land (M-REC's `setAgain`) — none a drop overtook (`watchDrops`), which
  * the view reads again, its claims left out where a drop of the claims
  * overtook them (`watchClaims`), and its owner's byline cause where a drop of
@@ -1537,12 +1666,14 @@ export async function refresh() {
       arrive(versionAddress(doc, s + 1));
       if (shown(doc) === member) handed.add(member); else left.add(doc);
     }
-    const showing = lodOf(cam.scale).name !== 'far' ? visibleDocs().map((d) => d.addr).filter((a) => !left.has(a)) : [];
+    const showing = shownNow().filter((a) => !left.has(a));
     const dropped = REC.takeRefresh(new Set([...showing, ...handed, ...left]));
     for (const a of dropped) forget(a);
     /** @type {Map<string, Promise<AccountFacts>>} each owner's byline facts, read once for the refresh */
     const facts = new Map();
-    await bounded(showing, async (addr) => {
+    // a document a feed row named, being read again, is read once more by its own reads, the run's changes among them
+    const reads = showing.filter((a) => { const x = again.get(a); if (x) x.more = true; return !x; });
+    await bounded(reads, async (addr) => {
       const gone = watchDrops(addr), claimsGone = watchClaims(), causes = REC.keyDrops();
       const r = await readFresh(addr, chains, facts);
       if (out() || gone()) return;
@@ -1641,14 +1772,17 @@ function memberShown(d, c) {
 }
 
 /**
- * What a shown document's refresh reads, as the view reads it
+ * What reading a shown document again reads — a refresh's, or a feed row's
+ * naming it (`readAgain`) — as the view reads it
  * (`pump`) — each part the record holds asked again: its extent, its
  * metadata, its links — within the view's scan permits, a scan the board kept
  * busy said unheard — and each one's value, and, where its box shows it, its
- * text over the window it holds — from the first position where the text is
- * now shorter than the window's start — with its image there; where the slots
- * of the links touching it project, each projection held (M-REC's
- * `projectionsOf`); the edition claims on its withheld runs' origins where
+ * text over the window it holds, as many positions longer as the text grew —
+ * from the first position where the text is now shorter than the window's
+ * start — with its image there; where the slots
+ * of the links touching it project, and where every link's slot projects into
+ * it, a floating end's among them, each projection held (M-REC's
+ * `projectionsOf`, `projectionsInto`); the edition claims on its withheld runs' origins where
  * held, with the reads each claim's admission waits on (`claimsFresh`); its
  * owner's byline facts where a cause is held, read once an account
  * (`facts`); its chain from what the refresh counted, else counted again. A
@@ -1702,7 +1836,9 @@ async function readFresh(addr, chains, facts) {
     }
   }
   if (drawn && d.from >= 0) {
-    const from = d.from <= extent ? d.from : 1, to = Math.min(extent + 1, from + d.to - d.from);
+    // the window held, from its first position, as many positions longer as the text grew, so a window to its end reaches the new end
+    const grew = Math.max(0, extent - (d.extent ?? extent));
+    const from = d.from <= extent ? d.from : 1, to = Math.min(extent + 1, from + d.to - d.from + grew);
     if (to > from) {
       const a = await ask(F.retrieveV(addr, from, to - from), true);
       if (f.refused) return { fresh: f, unheard };
@@ -1716,7 +1852,9 @@ async function readFresh(addr, chains, facts) {
   }
   /** @type {NonNullable<Fresh['projections']>} */
   const projections = [];
-  await bounded(REC.projectionsOf(new Set(f.links ?? d.links)), async (p) => {
+  const into = REC.projectionsInto(addr), key = (/** @type {{link: string, slot: number, addr: string}} */ p) => `${p.link} ${p.slot} ${p.addr}`;
+  const projected = [...new Map([...REC.projectionsOf(new Set(f.links ?? d.links)), ...into].map((p) => [key(p), p])).values()];
+  await bounded(projected, async (p) => {
     const out = await read(F.project(p.link, p.slot, p.addr));
     if (!('refused' in out)) projections.push({ ...p, runs: stretchesOf(out.answer).sort((x, y) => x.pos - y.pos) });
     else if (unanswered(out.refused)) unheard = true;

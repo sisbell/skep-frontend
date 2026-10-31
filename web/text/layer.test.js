@@ -7,9 +7,11 @@
 // view framing its column with both margins; the measure in force and a
 // resize re-setting the article being read with the passage held; a
 // document's region and the view's window over it; the passage in view
-// keeping its place through a reveal, a feed row's take-down, a version move
+// keeping its place through a reveal, a feed row naming its document — the
+// article standing until the reads it makes again set it — a version move
 // and an edit above the view, by its bytes' identity, the view's centre on an
-// empty line typed below it as well; what stands — every
+// empty line typed below it as well, and the reader told where a text set
+// again holds none of it; what stands — every
 // readable document in the one frame, the limit's order below it, by line,
 // the selection's and the focus's lines held, hysteresis, stale articles set
 // again and a press holding them; the owner a withheld run names; C-67's
@@ -73,6 +75,9 @@ beforeEach(() => {
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: EXTENT }]);
 });
+
+/** a feed row naming D, which the view shows (M-PUMP's `takeRow`): what the page holds of it kept as held, its drop counted */
+const fedKept = () => REC.applyFeedUpdate(/** @type {any} */ ({ position: 9, at: 9, op: 'insert', docs: [D], class: 'published' }), new Set([D]));
 
 /** D's text delivered whole — its image its own bytes, where nothing has moved them — the owner's PER_BLOCK links at each of its paragraphs */
 function deliver() {
@@ -426,7 +431,7 @@ function onLayer(/** @type {(held: Set<unknown>) => void} */ body, w = VW, h = V
   try { body(held); } finally { LAYER.press(false); LAYER.clear(); readers(null); globalThis.document = platform.document; globalThis.window = platform.window; }
 }
 
-test('a reveal that re-breaks the article while a later column is read leaves the line under the view\'s centre where it stood on screen, at its size; a feed row\'s take-down holds it until the article stands again', () => onLayer(() => {
+test('a reveal that re-breaks the article while a later column is read leaves the line under the view\'s centre where it stood on screen, at its size; a feed row naming it keeps the article standing on its element until its reads again set it, the line held through that setting (issue #285)', () => onLayer(() => {
   deliver();
   const d = REC.doc(D), box = docBox(D);
   const f0 = LAYER.foldOf(d), c = f0.columns[6];
@@ -444,20 +449,18 @@ test('a reveal that re-breaks the article while a later column is read leaves th
   const now = screen();
   assert.ok(Math.abs(now.x - was.x) < 1e-6 && Math.abs(now.y - was.y) < 1e-6, `the line where it stood: ${JSON.stringify(was)} → ${JSON.stringify(now)}`);
   assert.equal(CAM.cam.scale, scale, 'at its size: the step stands, the scale with it');
-  // a feed row naming the document drops its text and its links: the article is taken down, and the passage under the
-  // view's centre — its line's position in the fold it stands in now — held until it stands again, in the size its text
-  // sets without those links
-  const under = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y)), held = screen(under);
-  REC.invalidate(D);
-  LAYER.frame();
-  assert.ok(!LAYER.isMounted(D), 'taken down while its text is read anew');
-  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: EXTENT }]);
-  REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
-  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: EXTENT }]);
+  // a feed row naming the document, which the view shows: its article stands on its element while it is read again; the
+  // reads land with its links gone, and set in one step it is set at the size its text sets without them, the passage under
+  // the view's centre — its line's position in the fold it stands in now — held where it stood
+  const under = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y)), held = screen(under), el = LAYER.mountedSet().get(D)?.el;
+  fedKept();
+  for (let i = 0; i < 3; i++) LAYER.frame();
+  assert.ok(LAYER.isMounted(D) && LAYER.mountedSet().get(D)?.el === el && together(screen(under), held), 'kept standing on its element, its line where it stood, while its reads are out');
+  REC.setAgain(D, { spans: [{ subspace: 1, ordinal: 1, positions: EXTENT }], links: [], text: { runs: [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }], asOf: 9 }, image: { from: 1, runs: [{ iStart: D + '.0.1.1', width: EXTENT }] } });
   const reset = LAYER.foldOf(REC.doc(D));
-  assert.ok(reset.step === 0 && reset.fs > f0.fs, 'its links unread, it is set at the standard size: a re-set');
+  assert.ok(reset.step === 0 && reset.fs > f0.fs, 'its links gone, it is set at the standard size: a re-set');
   LAYER.frame();
-  assert.ok(LAYER.isMounted(D), 'standing again');
+  assert.ok(LAYER.isMounted(D) && LAYER.mountedSet().get(D)?.el !== el, 'set again in its place, on an element of its own');
   const back = screen(under);
   assert.ok(Math.abs(back.x - held.x) < 1e-6 && Math.abs(back.y - held.y) < 1e-6, `the passage where it stood: ${JSON.stringify(held)} → ${JSON.stringify(back)}`);
   assert.ok(Math.abs(CAM.cam.scale * reset.fs - scale * f0.fs) < 1e-9, 'at its size on screen: the scale by the ratio of its sizes');
@@ -523,13 +526,13 @@ test('a box taking another version keeps the line being read in place (issue #15
 
 /** D's text with the prologue set before it, its bytes minted after the old text's: every old byte stands SHIFT later, its identity kept */
 const EDITED_IMAGE = [{ iStart: `${D}.0.1.${EXTENT + 1}`, width: SHIFT }, { iStart: D + '.0.1.1', width: EXTENT }];
-/** D's edited text delivered whole — its image with it, or after it */
-function deliverEdited(withImage = true) {
-  const n = new TextEncoder().encode(TEXT2).length;
-  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
-  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text: TEXT2, ref: null, origin: null }]);
-  if (withImage) REC.takeImage(D, 1, EDITED_IMAGE);
-}
+/** D set again in one step as the reads a feed row naming it made land (M-REC's `setAgain`): a text, and the image read with it, or none where its read failed */
+const setD = (/** @type {string} */ text, /** @type {Array<{iStart: string, width: number}> | null} */ image) => {
+  const n = new TextEncoder().encode(text).length;
+  REC.setAgain(D, { spans: [{ subspace: 1, ordinal: 1, positions: n }], text: { runs: [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }], asOf: 9 }, ...(image ? { image: { from: 1, runs: image } } : {}) });
+};
+/** D's edited text set again — its image with it, or after it */
+const setEdited = (withImage = true) => setD(TEXT2, withImage ? EDITED_IMAGE : null);
 /** D read at em 12 over its seventh column, its article standing: the position the line under the view's centre opens at, and where a position's line stands on screen in the fold D is set in now */
 function readLater() {
   deliver();
@@ -544,44 +547,43 @@ function readLater() {
 /** do two points on screen stand together? */
 const together = (/** @type {{x: number, y: number}} */ a, /** @type {{x: number, y: number}} */ b) => Math.abs(a.x - b.x) < 1e-6 && Math.abs(a.y - b.y) < 1e-6;
 
-test('a document edited above the view, taken down for the feed row and set again, keeps the line the reader read on the same words, never the same position: the passage\'s bytes carried by their identity through the image its article was made from into the text set again (issue #160)', () => onLayer(() => {
+test('a document edited above the view, kept standing through the feed row naming it and set again in one step from its reads, keeps the line the reader read on the same words, never the same position: the passage\'s bytes carried by their identity through the image its article was made from into the text set again (issues #160, #285)', () => onLayer(() => {
   const { pos, screen } = readLater();
-  const was = screen(pos);
-  REC.invalidate(D);
+  const was = screen(pos), el = LAYER.mountedSet().get(D)?.el;
+  fedKept();
   LAYER.frame();
-  assert.ok(!LAYER.isMounted(D), 'taken down while its text is read anew');
-  deliverEdited();
+  assert.ok(LAYER.mountedSet().get(D)?.el === el && together(screen(pos), was), 'kept standing on its element while its text is read anew');
+  setEdited();
   assert.equal(REC.textBetween(D, pos + SHIFT, pos + SHIFT + 12), TEXT.slice(pos - 1, pos + 11), 'the words the reader read stand SHIFT later in the edited text');
   LAYER.frame();
-  assert.ok(LAYER.isMounted(D), 'standing again');
+  assert.ok(LAYER.isMounted(D) && LAYER.mountedSet().get(D)?.el !== el, 'set again in its place');
   assert.ok(together(screen(pos + SHIFT), was), `the same words' line where it stood: ${JSON.stringify(was)} → ${JSON.stringify(screen(pos + SHIFT))}`);
   assert.ok(Math.abs(screen(pos).y - was.y) > 1, 'never the same position\'s line, which holds other words now');
 }, 1440, 900));
 
-test('where the edited text comes before its image, the line is held by its position until the image arrives, the re-set the image makes then standing the same words\' line where the reader read it; a camera the reader moved meanwhile stands as they left it (issue #160)', () => onLayer(() => {
+test('where the edited text is set again before its image — the image\'s read failed with it — the line is held by its position until the view reads the image, the re-set the image makes then standing the same words\' line where the reader read it; a camera the reader moved meanwhile stands as they left it (issues #160, #285)', () => onLayer(() => {
   const { pos, screen } = readLater();
   const was = screen(pos);
-  REC.invalidate(D);
+  fedKept();
   LAYER.frame();
-  deliverEdited(false);
+  setEdited(false);
   LAYER.frame();
   assert.ok(LAYER.isMounted(D) && together(screen(pos), was), 'set again from its text alone: by position for now, no image placing its bytes');
   REC.takeImage(D, 1, EDITED_IMAGE);
   LAYER.frame();
   assert.ok(together(screen(pos + SHIFT), was), `the image arrived: the same words' line where the reader read it — ${JSON.stringify(was)} → ${JSON.stringify(screen(pos + SHIFT))}`);
   // edited above the view again, its text first; the reader pans before its image arrives
-  const lead = 'Another line set first.\n\n', more = new TextEncoder().encode(lead).length, n = new TextEncoder().encode(lead + TEXT2).length;
-  REC.invalidate(D);
+  const lead = 'Another line set first.\n\n', more = new TextEncoder().encode(lead).length;
+  fedKept();
   LAYER.frame();
-  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
-  REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text: lead + TEXT2, ref: null, origin: null }]);
+  setD(lead + TEXT2, null);
   LAYER.frame();
   CAM.set({ ...CAM.view(), y: CAM.cam.y + 40 / CAM.cam.scale });
-  const panned = CAM.view();
   LAYER.frame();
+  const under = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y)), stood = screen(under), words = screen(pos + more + SHIFT);
   REC.takeImage(D, 1, [{ iStart: `${D}.0.1.${EXTENT + SHIFT + 1}`, width: more }, ...EDITED_IMAGE]);
   LAYER.frame();
-  assert.deepEqual(CAM.view(), panned, 'the reader moved the camera before the image arrived: it stands where they left it, never pulled back to the words');
+  assert.ok(together(screen(under), stood) && !together(screen(pos + more + SHIFT), was) && together(screen(pos + more + SHIFT), words), 'the reader moved the camera before the image arrived: the line they left under the view\'s centre stands where they left it, the words never pulled back to where they were read');
 }, 1440, 900));
 
 test('read with the view\'s centre on the empty line typed below a line, a document edited above the view whose text comes before its image keeps that line\'s words where they stood: the re-set by position and the one the image makes hold the one line (FP-8, FP-23)', () => onLayer(() => {
@@ -599,14 +601,38 @@ test('read with the view\'s centre on the empty line typed below a line, a docum
   assert.equal(pos, l.at, 'the view\'s centre on the empty line: the line above it read');
   const screen = (/** @type {number} */ at) => { const p = placeOf(LAYER.foldOf(REC.doc(D)), at); return { x: CAM.sx(box.x + p.x), y: CAM.sy(box.y + p.y) }; };
   const was = screen(pos);
-  REC.invalidate(D);
+  fedKept();
   LAYER.frame();
-  deliverEdited(false);
+  setEdited(false);
   LAYER.frame();
   assert.ok(together(screen(pos), was), 'set again from its text alone: the line by position where it stood');
   REC.takeImage(D, 1, EDITED_IMAGE);
   LAYER.frame();
   assert.ok(together(screen(pos + SHIFT), was), `the image arrived: the same words' line where it stood, never the line the view's centre fell on — ${JSON.stringify(was)} → ${JSON.stringify(screen(pos + SHIFT))}`);
+}, 1440, 900));
+
+test('a text set again holding none of the line being read, its image covering it whole, keeps that line\'s place by position and tells the reader once (FP-21\'s landing rule); one that holds its bytes elsewhere, or whose image covers less of it, tells nothing (issue #285)', () => onLayer(() => {
+  /** @type {Array<[string, number, number]>} each telling: the document, the position whose line keeps the place, the passage's spans */
+  const told = [];
+  LAYER.readers({ vanished: (addr, pos, ids) => { told.push([addr, pos, ids.length]); } });
+  const { pos, screen } = readLater();
+  // an edit above the view: the line's bytes SHIFT on, held
+  fedKept(); LAYER.frame(); setEdited(); LAYER.frame();
+  assert.deepEqual(told, [], 'its bytes stand elsewhere: nothing told');
+  const at = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y)), here = screen(at), n = new TextEncoder().encode(TEXT2).length;
+  assert.equal(at, pos + SHIFT, 'the line read now opens SHIFT on');
+  // set again as bytes minted since, its image covering only its first half: the page cannot tell where the passage stands
+  fedKept(); LAYER.frame(); setD(TEXT2, [{ iStart: `${D}.0.1.${2 * n + 1}`, width: Math.floor(n / 2) }]); LAYER.frame();
+  assert.deepEqual(told, [], 'its image covering less than the text: nothing told');
+  assert.ok(together(screen(at), here), 'the line read kept by its position');
+  // its bytes as they stand read again whole, then set again as bytes minted since, its image whole: the passage is in none of it
+  fedKept(); LAYER.frame(); setEdited(); LAYER.frame();
+  const at2 = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y)), here2 = screen(at2);
+  fedKept(); LAYER.frame(); setD(TEXT2, [{ iStart: `${D}.0.1.${3 * n + 1}`, width: n }]); LAYER.frame();
+  assert.deepEqual(told.map(([a, p]) => [a, p]), [[D, at2]], 'gone: the reader told once, at the position whose line keeps its place');
+  assert.ok(told[0][2] > 0 && together(screen(at2), here2), 'the passage named by its bytes, its line kept by position');
+  LAYER.frame();
+  assert.equal(told.length, 1, 'told once for the setting');
 }, 1440, 900));
 
 test('every document in view at the readable em stands in the frame it gets there, however many: no count holds one back', () => onLayer((held) => {
@@ -849,7 +875,7 @@ test('C-67\'s clause beneath a withheld origin reads the model whole: where a re
 
 // ---- what an article was made from -------------------------------------------------------------------------------------
 
-test('an article keeps what it was made from — its document\'s blocks, runs and image as the model held them — through a feed row and a new delivery: a reading scene\'s pane\'s as a mounted one\'s', () => onLayer(() => {
+test('an article keeps what it was made from — its document\'s blocks, runs and image as the model held them — through a feed row naming it and the text its reads set again: a reading scene\'s pane\'s as a mounted one\'s', () => onLayer(() => {
   const text = 'Tumbler.\n\nThe passage a reader selected.', n = new TextEncoder().encode(text).length;
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n }]);
   REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }]);
@@ -865,11 +891,10 @@ test('an article keeps what it was made from — its document\'s blocks, runs an
   /** @type {Array<[string, HTMLElement]>} */
   const made = [['on the plane', rec.el], ['in a pane', pane]];
   for (const [where, el] of made) assert.deepEqual(LAYER.madeOf(el), { addr: D, blocks, runs, image }, `${where}: made from the document's blocks, runs and image as the model held them`);
-  // a feed row naming the document drops what the model held of it; its reads deliver other text
-  REC.invalidate(D);
-  const edited = 'Tumbler.\n\nAnother passage now.', m = new TextEncoder().encode(edited).length;
-  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: m }]);
-  REC.takeDelivery(D, [{ pos: 1, width: m, kind: 'content', text: edited, ref: null, origin: null }]);
+  // a feed row naming the document; the reads it makes again set other text in its place
+  fedKept();
+  const edited = 'Tumbler.\n\nAnother passage now.';
+  setD(edited, [{ iStart: D + '.0.1.40', width: new TextEncoder().encode(edited).length }]);
   assert.equal(REC.textBetween(D, 11, 22), 'Another pas', 'the model holds the new text');
   for (const [where, el] of made) {
     const kept = LAYER.madeOf(el);
@@ -881,7 +906,7 @@ test('an article keeps what it was made from — its document\'s blocks, runs an
 
 // ---- the zoom-in bound -------------------------------------------------------------------------------------------------
 
-test('a document set smaller than its place\'s standard raises the zoom-in bound to read it, and no size read after lowers it: a feed row dropping the document\'s text takes no scale from under its reader', () => {
+test('a document set smaller than its place\'s standard raises the zoom-in bound to read it, and no size read after lowers it: a change of the page\'s class dropping the document\'s text takes no scale from under its reader', () => {
   const RES = `1.0.1.0.${48 * (DEPTH_SOUND + 1) + 1}`, box = docBox(RES);
   CAM._reset(); CAM.setViewport(1440, 900);
   CAM.setDeepest(depthOfDoc(RES)); // the bound the app sets at boot over an index listing it
@@ -894,8 +919,8 @@ test('a document set smaller than its place\'s standard raises the zoom-in bound
   const reading = CAM.viewAt(LAYER.centreOf(RES, null), fs, 12.5);
   CAM.set(reading);
   assert.equal(CAM.view().scale, reading.scale, 'its reader at 12.5 px an em');
-  REC.invalidate(RES);
-  assert.ok(LAYER.foldOf(REC.doc(RES)).fs > 2.5 * fs, 'a feed row drops its text: its size its place\'s standard again until the text is read anew');
+  REC.sessionDied({ arm: 'closed' });
+  assert.ok(LAYER.foldOf(REC.doc(RES)).fs > 2.5 * fs, 'a change of the page\'s class drops its text: its size its place\'s standard again until the text is read anew');
   CAM.panBy(1, 0);
   assert.equal(CAM.view().scale, reading.scale, 'the next pan keeps its reader\'s scale');
   CAM._reset();

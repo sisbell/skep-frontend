@@ -41,7 +41,8 @@
 // before the pane is set (FP-12, FP-34); the opening ended by a navigation
 // act's dismissal, Esc or an overlay shown, asking no `compare` after it and
 // opening nothing; and a pane kept fresh by its kind (FP-23) — a draft read
-// again in place, an edition at its bare address pinned at once to the
+// again in place, from the reads the plane makes of it again where it shows
+// it too, an edition at its bare address pinned at once to the
 // member its text is and set again from it, its corner's act reading
 // another version in the pane's place with the passage held, a version
 // counting its chain alone, a link row re-reading the text, acts made while
@@ -77,6 +78,7 @@ import { byteLength } from '../util.js';
 import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
+import { accountCell } from '../plane/projection.js';
 import { t, tHTML } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
@@ -1044,6 +1046,28 @@ test('a refresh after a row naming nothing reaches every pane: an edition read a
   assert.ok(asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(RE2, 1, RE_TEXT.length) })), 'the member read whole, the pane set again from it');
   assert.ok(asked.includes(FAKE.keyOf('op', { frame: F.retrieveV(DR9, 1, DR9_TEXT.length) })) && paneState('b')?.kind === 'draft', 'the draft read again in its place');
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('a row naming a pane\'s document the plane shows too — kept there while the plane reads it again — sets the pane from that read\'s answer, never from the text the row left standing, the pane reading none of its text again itself (issue #285)', () => onPage(async (p) => {
+  const DK = '1.0.1.0.17', DK_V1 = 'A kept note.\n\nIts first words.', DK_V2 = 'A kept note.\n\nWords set first.\n\nIts first words.';
+  Object.assign(script, reads(DK, DK_V1, { published: false }), compared(VE1, VE_TEXT, DK, DK_V1));
+  await SCENE.open(VE1, DK);
+  // the plane under the scene: the account's documents in view, the note among them
+  CAM.setViewport(1440, 900);
+  CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  try {
+    assert.ok(PUMP.visibleDocs().some((d) => d.addr === DK), 'the plane shows the note');
+    Object.assign(script, reads(DK, DK_V2, { published: false }), compared(VE1, VE_TEXT, DK, DK_V2));
+    const text = FAKE.keyOf('op', { frame: F.retrieveV(DK, 1, DK_V2.length) }), from = fake.asked.length;
+    fake.fire('feed', row(40, 'insert', [DK], 'drafts'));
+    assert.equal(REC.textBetween(DK, 1, DK_V1.length + 1), DK_V1, 'the model keeps the note\'s text while the plane reads it again');
+    await landed();
+    const d = REC.doc(DK);
+    assert.ok(d.blocks.some((x) => x.text === 'Words set first.'), 'the model holds the edited text');
+    assert.deepEqual(LAYER.madeOf(shownIn(p.paneB, 'b')), { addr: DK, blocks: d.blocks, runs: d.runs, image: d.image }, 'pane B made from the text the plane\'s read again set');
+    assert.equal(fake.asked.slice(from).filter((k) => k === text).length, 1, 'its text read once, by the plane\'s read again: the pane waited on it and read none itself');
+    assert.deepEqual(fake.unanswered, []);
+  } finally { CAM._reset(); }
 }));
 
 // ---- a far end naming its document whole -------------------------------------------------------------------------------

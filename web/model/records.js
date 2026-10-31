@@ -49,11 +49,15 @@
 // byline's cause — never its value, which is the same at every class — is
 // dropped at every feed row naming a doc 1 (AUTH-2.127) and at every change
 // of class.
-// A bare row, its `docs` null and naming no link, drops nothing and marks
-// its board (`bare`; FP-23); M-PUMP's one refresh after the run takes the
-// mark (`unmarkBare`), hands an advanced edition's text to the member it is
-// (`takeAsMember`), drops what no shown document reads through
-// (`takeRefresh`) and sets each shown document again in one step
+// A row naming a document the view shows drops nothing of it (FP-23): its
+// drop is counted, and what it holds stands as held until M-PUMP's reads of
+// it again set it in one step (`applyFeedUpdate`'s `keep`, `setAgain`) —
+// what it holds of where every link's slot projects into it among them
+// (`projectionsInto`). A bare row, its `docs` null and naming no link, drops
+// nothing and marks its board (`bare`; FP-23); M-PUMP's one refresh after
+// the run takes the mark (`unmarkBare`), hands an advanced edition's text to
+// the member it is (`takeAsMember`), drops what no shown document reads
+// through (`takeRefresh`) and sets each shown document again in one step
 // (`setAgain`), each standing as held until its reads land.
 // The class: the page's own session's death (`sessionDied`), a lost session
 // not regained (`sessionLost`) or one regained as another principal
@@ -1013,7 +1017,7 @@ export function takeMemberAge(member, age) { state.memberAges.set(member, age); 
 /** a version member's age as held (`takeMemberAge`); undefined where no read of it answered at the page's class */
 export const memberAge = (/** @type {string} */ member) => state.memberAges.get(member);
 
-/** drop a document's delivered state (a feed row named it; the viewport asks again), and where every link's slot projects into it, whether or not the page holds its record — the drop counted first (`dropsOf`), no record made for it — and a failed read of it or of a link homed in it (`takeFailedRead`), which is asked again; where it is an edition claim's home, each document windowing the claim's origin is made again */
+/** drop a document's delivered state (a feed row named it out of the view's sight; the viewport asks again), and where every link's slot projects into it, whether or not the page holds its record — the drop counted first (`dropsOf`), no record made for it — and a failed read of it or of a link homed in it (`takeFailedRead`), which is asked again; where it is an edition claim's home, each document windowing the claim's origin is made again */
 export function invalidate(/** @type {string} */ addr) {
   counted(addr);
   const d = state.docs.get(addr);
@@ -1027,12 +1031,13 @@ export function invalidate(/** @type {string} */ addr) {
 
 /**
  * How many times what the page held of an address has been dropped: by
- * `invalidate`, its record held or not, by a refresh's drop and its setting
- * again (`takeRefresh`, `setAgain`), by an arrival taking a trunk's text
- * (`takeAsMember`), and by every drop of the class
- * (`dropClass`), which drops every record. It never falls, so a read that
- * finds it moved between going out and landing was learned of what the page
- * does not hold.
+ * `invalidate`, its record held or not, by a feed row naming a document the
+ * view shows, which drops nothing of it (`applyFeedUpdate`'s `keep`), by a
+ * refresh's drop and its setting again (`takeRefresh`, `setAgain`), by an
+ * arrival taking a trunk's text (`takeAsMember`), and by every drop of the
+ * class (`dropClass`), which drops every record. It never falls, so a read
+ * that finds it moved between going out and landing was learned of what the
+ * page does not hold, or holds as a row left it to be read again.
  * @param {string} addr
  * @returns {number}
  */
@@ -1289,7 +1294,12 @@ const inDocOne = (/** @type {string} */ addr) => { const a = accountOf(addr), tr
  * row verbatim plus `position` and `class`. The index takes its part
  * (`listRow`). A write drops what the viewport held of every document it
  * touched, each once: each document the row names, with the trunk of a member
- * among them, and the home of the link the row names, with the home's trunk.
+ * among them, and the home of the link the row names, with the home's trunk —
+ * save each one `keep` names, a document the view shows, whose drop is
+ * counted (`dropsOf`), so no read out from before the row is taken, and
+ * nothing of which is dropped: it stands as held, where the slots of every
+ * link project into it among it, until M-PUMP's reads of it again set it in
+ * one step (`setAgain`; FP-23).
  * A bare row — lost testimony, its `docs` reading `null` (wire.md §The change
  * feed) — names its home by its `link` alone, the one link the journal says
  * the write deposited, whether its op is named or `null`; where the journal
@@ -1304,9 +1314,10 @@ const inDocOne = (/** @type {string} */ addr) => { const a = accountOf(addr), tr
  * (`CLAIM_WRITES`, a `null` op among them) drops every one held; a row
  * touching a doc 1 drops every byline cause held (`dropKeyCauses`).
  * @param {FeedUpdate} u
- * @returns {string[]} the addresses dropped, each once: what the view asks again (M-PUMP)
+ * @param {ReadonlySet<string>} [keep] the documents the view shows (M-PUMP's): each the row touches counted dropped and kept as held
+ * @returns {string[]} the addresses the row touched, each once: those dropped, which the view asks again, and those `keep` names, which M-PUMP reads again
  */
-export function applyFeedUpdate(u) {
+export function applyFeedUpdate(u, keep = new Set()) {
   const docsNamed = Array.isArray(u.docs) ? u.docs : [];
   state.feed.push({ position: u.position, op: u.op, docs: docsNamed, cls: u.class, time: typeof u.time === 'number' ? u.time : null });
   if (state.feed.length > 2000) state.feed.shift();
@@ -1316,7 +1327,7 @@ export function applyFeedUpdate(u) {
   /** @type {Set<string>} */
   const touched = new Set();
   for (const named of home ? [...docsNamed, home] : docsNamed) { touched.add(documentOf(named) || named); touched.add(named); }
-  for (const addr of touched) invalidate(addr);
+  for (const addr of touched) { if (keep.has(addr)) counted(addr); else invalidate(addr); }
   if (u.op == null || CLAIM_WRITES.has(u.op)) dropClaims();
   if ([...touched].some(inDocOne)) dropKeyCauses();
   bump();
@@ -1435,18 +1446,34 @@ export function takeAsMember(trunk, member) {
   return true;
 }
 
+/** a held projection's key read back: its link and its slot, and the document it was asked into */
+const projectionAt = (/** @type {string} */ key, /** @type {string} */ addr) => { const [link, slot] = key.split(' '); return { link, slot: /** @type {1 | 2} */ (slot === '1' ? 1 : 2), addr }; };
+
 /**
  * Every held projection of a slot of one of these links: the link, the slot
- * and the document it was asked into — what a refresh asks again (M-PUMP's
- * `refresh`).
+ * and the document it was asked into — what reading a shown document again
+ * asks again (M-PUMP's `readFresh`).
  * @param {Set<string>} links
  * @returns {Array<{link: string, slot: 1 | 2, addr: string}>}
  */
 export function projectionsOf(links) {
   /** @type {Array<{link: string, slot: 1 | 2, addr: string}>} */
   const out = [];
-  for (const [addr, m] of state.projections) for (const k of m.keys()) { const [link, slot] = k.split(' '); if (links.has(link)) out.push({ link, slot: slot === '1' ? 1 : 2, addr }); }
+  for (const [addr, m] of state.projections) for (const k of m.keys()) { const p = projectionAt(k, addr); if (links.has(p.link)) out.push(p); }
   return out;
+}
+
+/**
+ * Every held projection of a link's slot into a document: the link, the slot
+ * and the document — what reading the document again asks again (M-PUMP's
+ * `readFresh`), a floating end's among them, whose link is not among the
+ * document's own (`Doc.links`).
+ * @param {string} addr
+ * @returns {Array<{link: string, slot: 1 | 2, addr: string}>}
+ */
+export function projectionsInto(addr) {
+  const m = state.projections.get(addr);
+  return m ? [...m.keys()].map((k) => projectionAt(k, addr)) : [];
 }
 
 /**
@@ -1495,15 +1522,21 @@ export function takeRefresh(keep) {
 }
 
 /**
- * A shown document set again from a refresh's fresh reads (FP-23), in one
+ * A shown document set again from the fresh reads of it a refresh or a feed
+ * row naming it made (FP-23), in one
  * step: each part the reads carried replacing what the record held of it —
  * its text and its image whole
  * over the window read, never merged with what they replace, given new arrays
  * as a delivery gives them, so an article made from the old keeps it and
- * carries the words being read by their bytes' identity (T-LAYER) — each part
+ * carries the words being read by their bytes' identity (T-LAYER); a text
+ * carried with no image leaving none held, for the image held is the old
+ * text's, until the view reads the new one's — each part
  * they did not carry standing as held, and the drop counted (`dropsOf`), so no
  * read out from before it is taken; a document refused as withheld or not
- * registered dropped whole, the refusal held. With it, in the same step, the
+ * registered dropped whole, the refusal held. Where its metadata or a refusal
+ * is set and it is an edition claim's home, each document windowing the
+ * claim's origin is made again, as `takeMetadata` and `takeRefused` make it.
+ * With it, in the same step, the
  * values of its links read, where their slots project, the edition claims on
  * its withheld runs' origins with the reads each claim's admission waits on,
  * and its owner's byline facts.
@@ -1518,11 +1551,13 @@ export function setAgain(addr, fresh) {
     if (fresh.spans) spanSetInto(d, fresh.spans);
     if (fresh.meta) metaInto(d, fresh.meta);
     if (fresh.text) { d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.readAt = null; deliverInto(d, fresh.text.runs, fresh.text.asOf); }
-    if (fresh.image) { d.image = []; d.origins = []; imageInto(d, fresh.image.from, fresh.image.runs); }
+    if (fresh.image || fresh.text) { d.image = []; d.origins = []; d.imageFor = null; }
+    if (fresh.image) imageInto(d, fresh.image.from, fresh.image.runs);
     if (fresh.links) { d.links = new Set(fresh.links); d.linksRead = true; }
     if (fresh.members) { d.members = fresh.members.n; d.ended = fresh.members.ended; }
     if (fresh.spans || fresh.meta || fresh.text) d.refused = null;
   }
+  if (fresh.refused || fresh.meta) reclause(claiming((c) => homeOf(c) === addr));
   d.rev++;
   for (const v of fresh.values ?? []) takeLink(v);
   for (const p of fresh.projections ?? []) takeProjection(p.link, p.slot, p.addr, p.runs);

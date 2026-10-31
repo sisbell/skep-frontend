@@ -9,8 +9,10 @@
 // refusal or a `scan_busy` does to each; the acquire, a session's end and the
 // page's own death, every read asked again at the page's class; a listing,
 // the health and the daemon laid under the events that overtook them; the
-// board opened in the boot's order and read again at "try again"; and the
-// one refresh a run of bare rows earns. With SKEP_REPLAY naming a script the
+// board opened in the boot's order and read again at "try again"; the one
+// refresh a run of bare rows earns; and a row naming a document the view
+// shows, which keeps it as held until its reads again set it in one step,
+// rows meanwhile queueing one more read. With SKEP_REPLAY naming a script the
 // harness recorded, the model's snapshot is printed for the gate.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -47,7 +49,7 @@ const script = {
 /** the byline's facts of 1.0.1, the owner of the documents the tests read, held from the start: the reads a test holds the view to are its documents' own — the byline's reads are held by the tests that make them (`readAccount`) */
 const OWN_FACTS = { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' };
 
-beforeEach(() => { REC._reset(); REC.takeAccountKey('1.0.1', OWN_FACTS); });
+beforeEach(() => { REC._reset(); CAM._reset(); REC.takeAccountKey('1.0.1', OWN_FACTS); });
 
 test('the model after a scripted cold open and a whole read, over the fake port', async () => {
   const fake = FAKE.create(script);
@@ -1272,10 +1274,14 @@ test('an image asked for a window a text read widens before it lands is placed f
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a bare feed row — its docs null — names the home of the link it deposited by its link alone: the view asks again what it read of the home, whatever the row\'s op, and reads the new link', async () => {
+test('a bare feed row — its docs null — names the home of the link it deposited by its link alone, whatever the row\'s op: the home the view shows stands as held while it is read again — its extent, and its links with the new one — and the new link is read', async () => {
   const [L1, L2, L3] = [1, 2, 3].map((k) => `${D}.0.2.${k}`);
   const toFar = [{ start: '1.0.1.0.127', width: '0.0.0.0.1' }];
-  const s = { ...script, [FAKE.keyOf('op', { frame: F.readLink(L2) })]: citation(14, toFar), [FAKE.keyOf('op', { frame: F.readLink(L3) })]: citation(17, toFar), [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: NOT_REGISTERED };
+  const s = {
+    ...script, [FAKE.keyOf('op', { frame: F.readLink(L2) })]: citation(14, toFar), [FAKE.keyOf('op', { frame: F.readLink(L3) })]: citation(17, toFar),
+    // D's chain, counted from its first member as it is read again: one member, the second not registered
+    [FAKE.keyOf('op', { frame: F.docMetadata(D + '.1') })]: script[FAKE.keyOf('op', { frame: F.docMetadata(D) })], [FAKE.keyOf('op', { frame: F.docMetadata(D + '.2') })]: NOT_REGISTERED,
+  };
   const span = inTurn(s, F.retrieveDocVSpanSet(D), script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]);
   const touching = (/** @type {string[]} */ addrs) => ({ result: { as_of: 1, resp: 'addrs', addrs } });
   // D's links before each write and after it
@@ -1285,13 +1291,14 @@ test('a bare feed row — its docs null — names the home of the link it deposi
   assert.deepEqual([span.asks(), [...REC.doc(D).links]], [1, [L1]], 'D read at its reading em, its one link');
   // a replacing make_link served bare: its op and its link, its docs lost (wire.md §The change feed)
   fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'make_link', docs: null, key: null, time: null, link: L2, class: 'published' } });
-  assert.equal(REC.doc(D).extent, null, 'the link\'s home dropped');
+  assert.deepEqual([REC.doc(D).extent, REC.textBetween(D, 1, 9), [...REC.doc(D).links]], [30, 'Tumbler.', [L1]], 'the link\'s home, in view, stands as held');
   await settle();
-  assert.deepEqual([span.asks(), REC.doc(D).extent, [...REC.doc(D).links]], [2, 30, [L1, L2]], 'asked again: its extent, and its links with the new one');
+  assert.deepEqual([span.asks(), REC.doc(D).extent, [...REC.doc(D).links], REC.link(L2)?.addr], [2, 30, [L1, L2], L2], 'read again: its extent, and its links with the new one, read');
   // a plain make_link, an emit or an assert_sup served bare: the link alone, the op unnamed
   fake.fire('feed', { board: 'b-1', update: { position: 5, at: 5, op: null, docs: null, key: null, time: null, link: L3, class: 'published' } });
+  assert.deepEqual([REC.doc(D).extent, [...REC.doc(D).links]], [30, [L1, L2]], 'a row naming no op keeps the home as held as well');
   await settle();
-  assert.deepEqual([span.asks(), REC.doc(D).extent, [...REC.doc(D).links]], [3, 30, [L1, L2, L3]], 'a row naming no op drops the home as well, and the view asks again');
+  assert.deepEqual([span.asks(), REC.doc(D).extent, [...REC.doc(D).links]], [3, 30, [L1, L2, L3]], 'and reads it again');
   assert.deepEqual(fake.unanswered, []);
 });
 
@@ -1539,7 +1546,7 @@ const showing = (/** @type {Record<string, string>} */ pins) => (/** @type {stri
 /** pump `n` times, each read answered between */
 async function pumped(n = 4) { for (let i = 0; i < n; i++) { PUMP.pump(); await new Promise((r) => setTimeout(r, 0)); } }
 
-test('a box showing another of its versions reads that version for its text and its image, and its document for its extent, metadata, links and chain alone; read again after a feed row drops it (issue #154)', async () => {
+test('a box showing another of its versions reads that version for its text and its image, and its document for its extent, metadata, links and chain alone; both read again as at first after a feed row names the version, standing as held until their reads land (issue #154)', async () => {
   const M = D + '.1';
   /** @type {Record<string, unknown>} */
   const s = {
@@ -1567,10 +1574,10 @@ test('a box showing another of its versions reads that version for its text and 
   const shownReads = [key(F.retrieveDocVSpanSet(M)), key(F.docMetadata(M)), key(F.findLinksV(M, 1, 20)), key(F.retrieveV(M, 1, 20)), key(F.image(M, 1, 20))];
   assert.deepEqual([...new Set(fake.asked)].sort(), [...own, ...shownReads].sort(), 'the document read for its extent, metadata, links and chain; the version shown for its own and its text and image; the document\'s text never, nor the version\'s chain');
   assert.deepEqual([REC.doc(D).from, REC.doc(D).members, REC.doc(M).from, REC.doc(M).to, REC.doc(M).imageFor, REC.doc(M).members], [-1, 2, 1, 21, [1, 21], null], 'the model holds the version\'s text and image and the document\'s chain, none of the document\'s text, and no chain probed from the version');
-  // a feed row naming the version shown drops it and its document: both read again as at first, the version kept in view through its box
+  // a feed row naming the version shown: it and its document, both shown through its box, stand as held and are read again as at first
   fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'make_link', docs: [M], class: 'published' } });
-  assert.deepEqual([REC.doc(M).from, REC.doc(M).extent], [-1, null], 'dropped by the row');
-  await pumped();
+  assert.deepEqual([REC.doc(M).from, REC.doc(M).extent, REC.doc(D).extent, REC.doc(D).members], [1, 20, 30, 2], 'kept by the row while they are read');
+  await settle();
   const count = (/** @type {string} */ k) => fake.asked.filter((x) => x === k).length;
   assert.deepEqual(shownReads.map(count), [2, 2, 2, 2, 2], 'the version shown read again, its text and its image among it');
   assert.deepEqual([REC.doc(M).from, REC.doc(M).to], [1, 21], 'its text held again');
@@ -1977,6 +1984,119 @@ test('a publish row\'s member arriving where the box showed its plain address ta
   assert.deepEqual([pins[D], m.runs === runs, m.image === image, m.from, m.to, REC.textBetween(D + '.1', 1, 27)], [D + '.1', true, true, 1, 31, 'Tumbler.\n\nThe first field.'], 'the box pinned on D.1, which holds the text and image D held');
   assert.deepEqual([t.from, t.runs], [-1, []], 'D holds none of it');
   assert.deepEqual(fake.asked.slice(from), [], 'nothing read');
+});
+
+// ---- a row naming a document the view shows -------------------------------------------------------------------------
+
+/** a published feed row of `op` naming the documents `docs`, at `position` */
+const writing = (/** @type {number} */ position, /** @type {string[]} */ docs, op = 'insert') => ({ board: 'b-1', update: { position, at: position, op, docs, class: 'published' } });
+/** D's chain as a read again counts it from its first member: one member, the second not registered */
+const ONE_MEMBER = { [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.2'))]: NOT_REGISTERED };
+/** how many times the fake port was asked a frame */
+const timesAsked = (/** @type {ReturnType<typeof FAKE.create>} */ fake, /** @type {object} */ frame) => fake.asked.filter((k) => k === opKeyOf(frame)).length;
+
+test('a feed row naming a document the view shows keeps what the page holds of it — its text, its image, its extent and its links — while it is read again, the view asking nothing of it meanwhile, then sets it in one step from what that read answers; a document the row names out of view is dropped (issue #285)', async () => {
+  const OUT = '1.0.2.0.7';
+  const s = { ...script, ...ONE_MEMBER };
+  // D's text read at 5 before the row and at 9 after it
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9));
+  const fake = readingD(s);
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).readAt, [...REC.doc(D).links]], [BEFORE, 5, [D + '.0.2.1']], 'D read at its reading em');
+  // a document of another account's read before, out of view
+  REC.takeDelivery(OUT, [{ pos: 1, width: 5, kind: 'content', text: 'other', ref: null, origin: null }], 5);
+  const d = REC.doc(D), runs = d.runs, image = d.image, drops = REC.dropsOf(D), from = fake.asked.length;
+  /** whether a frame met D emptied, from the row until its read again lands */
+  let emptied = false;
+  REC.watch(() => { if (REC.doc(D).from < 0 || REC.doc(D).extent == null) emptied = true; });
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  fake.fire('feed', writing(20, [D, OUT]));
+  assert.deepEqual([d.runs === runs, d.image === image, d.extent, [...d.links], REC.dropsOf(D)], [true, true, 30, [D + '.0.2.1'], drops + 1], 'at the row: D stands as held, its drop counted');
+  assert.equal(REC.doc(OUT).from, -1, 'the document out of view dropped');
+  await untilAsked(fake, F.retrieveV(D, 1, 30));
+  for (let i = 0; i < 5; i++) { PUMP.pump(); await flush(); }
+  assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.settled()], [BEFORE, false], 'while its read is out: D as held, the page not settled');
+  release();
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).readAt, REC.doc(D).runs !== runs, emptied], [AFTER, 9, true, false], 'set in one step from its read again, never emptied meanwhile');
+  assert.deepEqual([timesAsked(fake, F.retrieveV(D, 1, 30)), timesAsked(fake, F.image(D, 1, 30))], [2, 2], 'its text and its image read again once');
+  assert.ok(!fake.asked.slice(from).some((k) => k.includes(JSON.stringify(OUT))), 'nothing read of the document out of view');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('rows naming a shown document while its read again is out queue one more read: the read out lands setting nothing, the next sets the text read after the last row, and the rows together read it once more, never once a row (issue #285)', async () => {
+  const MIDDLE = 'Tumbler.\n\nThe first field, mid';
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(MIDDLE, 7), deliveredAt(AFTER, 9));
+  const fake = readingD(s);
+  await settle();
+  let sawMiddle = false;
+  REC.watch(() => { if (REC.textBetween(D, 1, 31) === MIDDLE) sawMiddle = true; });
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  fake.fire('feed', writing(20, [D]));
+  for (let i = 0; i < 20 && timesAsked(fake, F.retrieveV(D, 1, 30)) < 2; i++) await flush();
+  fake.fire('feed', writing(21, [D]));
+  fake.fire('feed', writing(22, [D]));
+  assert.equal(REC.textBetween(D, 1, 31), BEFORE, 'D as held while its read is out');
+  release();
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), REC.doc(D).readAt, sawMiddle], [AFTER, 9, false], 'set from the read after the last row; the read the rows overtook set nothing');
+  assert.equal(timesAsked(fake, F.retrieveV(D, 1, 30)), 3, 'two reads again: the one the rows overtook, and one more');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a shown document\'s read again one part of which the board did not answer sets nothing — every part as held, the text among it, the view asking nothing of it — and is made again at the daemon\'s running, set then from its answers alone (issue #285)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), UNREACHABLE, deliveredAt(AFTER, 9));
+  // its links read again answering a second, which is set only once every read has answered
+  const [L1, L2] = [D + '.0.2.1', D + '.0.2.2'], touching = (/** @type {string[]} */ addrs) => ({ result: { as_of: 7, resp: 'addrs', addrs } });
+  inTurn(s, F.findLinksV(D, 1, 30), touching([L1]), touching([L1, L2]));
+  s[opKeyOf(F.readLink(L2))] = citation(14, [{ start: '1.0.1.0.127', width: '0.0.0.0.1' }]);
+  const fake = readingD(s);
+  await settle();
+  const rev = REC.doc(D).rev;
+  fake.fire('feed', writing(20, [D]));
+  await settle();
+  assert.deepEqual([timesAsked(fake, F.retrieveV(D, 1, 30)), REC.textBetween(D, 1, 31), [...REC.doc(D).links], REC.doc(D).rev], [2, BEFORE, [L1], rev], 'its text not answered: nothing set — its links as held, though their read again answered another');
+  for (let i = 0; i < 5; i++) { PUMP.pump(); await flush(); }
+  assert.equal(timesAsked(fake, F.retrieveV(D, 1, 30)), 2, 'nothing asked of it while the board is out');
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  await settle();
+  assert.deepEqual([timesAsked(fake, F.retrieveV(D, 1, 30)), REC.textBetween(D, 1, 31), REC.doc(D).readAt, [...REC.doc(D).links]], [3, AFTER, 9, [L1, L2]], 'made again at running, and set in one step');
+  assert.deepEqual(fake.unanswered.filter((k) => k !== opKeyOf(F.retrieveV(D, 1, 30))), []);
+});
+
+test('a shown document whose read again the board did not answer, the view leaving it meanwhile, is dropped as a document out of view is — never left as it stood with nothing to read it again — and read as the view reads it once it is shown again (issue #285)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), UNREACHABLE, deliveredAt(AFTER, 9));
+  const fake = readingD(s);
+  await settle();
+  fake.fire('feed', writing(20, [D]));
+  await settle();
+  assert.equal(REC.textBetween(D, 1, 31), BEFORE, 'its text not answered: held');
+  CAM._reset();
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  await settle();
+  assert.deepEqual([REC.doc(D).from, timesAsked(fake, F.retrieveV(D, 1, 30))], [-1, 2], 'the view gone from it: dropped, and not read');
+  readAt(D, 30);
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), timesAsked(fake, F.retrieveV(D, 1, 30))], [AFTER, 3], 'shown again: read as the view reads it');
+});
+
+test('a shown document a feed row named whose read again is refused as withheld from the reader keeps its text until that answer, then stands as the withheld box the refusal makes it (issue #285)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveDocVSpanSet(D), script[opKeyOf(F.retrieveDocVSpanSet(D))], WITHHELD_READ);
+  const fake = readingD(s);
+  await settle();
+  const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(D) });
+  fake.fire('feed', writing(20, [D]));
+  await untilAsked(fake, F.retrieveDocVSpanSet(D));
+  await flush();
+  assert.deepEqual([REC.textBetween(D, 1, 27), REC.doc(D).refused], ['Tumbler.\n\nThe first field.', null], 'its text as held while its read is out');
+  release();
+  await settle();
+  const d = REC.doc(D);
+  assert.deepEqual([d.refused, d.from, d.extent, REC.known().includes(D)], ['withheld', -1, null, true], 'withheld: nothing of its text held, the withheld box the model knows standing in its place');
 });
 
 test('the board opened as the boot opens it: `boards()` first, then for the board it holds the key store, the session where one is asked, the health, the daemon and the index, in that order; an empty list or a refusal holds none, why kept, nothing asked past the list; "try again" reads the list again, one read for presses made while it is out, a board it finds opened as the boot opened one and the app told once (issue #215\'s design decision; FP-35)', async () => {

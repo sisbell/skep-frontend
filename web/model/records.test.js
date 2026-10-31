@@ -6,8 +6,10 @@
 // end held by the trunk its address lies under or by the text that places
 // it; a stretch named by identity and placed back through any image;
 // projections, edition claims and failed reads held until their drops, every
-// drop counted; a bare row's mark, a newer member taking a trunk's text, a
-// refresh's drop and a shown document set again in one step; the key store,
+// drop counted; a row naming a document the view shows dropping nothing of
+// it; a bare row's mark, a newer member taking a trunk's text, a refresh's
+// drop and a shown document set again in one step — its text without an
+// image holding none, a claim's home making its origin's windows again; the key store,
 // the session's key and the byline's facts; the death dropping every read
 // held at the session's class, and the cover it leaves.
 import { test, beforeEach } from 'node:test';
@@ -481,6 +483,49 @@ test('a shown document set again from a refresh\'s reads in one step: each part 
   assert.deepEqual([d.rev, REC.dropsOf(D), REC.textOf(runs, 1, 11)], [rev + 1, drops + 1, 'old words.'], 'one revision, the drop counted, and the runs an article was made from as they were');
   REC.setAgain(D, { refused: 'withheld' });
   assert.deepEqual([d.refused, d.from, d.extent, d.meta, [...d.links]], ['withheld', -1, null, null, []], 'refused: dropped whole, the refusal held');
+});
+
+test('a document set again with its text and no image holds no image — the one held is the old text\'s — until the view reads the new one\'s; set with both, the new image over the window read (issue #285)', () => {
+  const D = '1.0.1.0.3', S = '1.0.1.0.1003';
+  REC.takeDelivery(D, [{ pos: 1, width: 10, kind: 'content', text: 'old words.', ref: null, origin: null }], 5);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 6 }, { iStart: S + '.0.1.1', width: 4 }]);
+  const d = REC.doc(D);
+  REC.setAgain(D, { text: { runs: [{ pos: 1, width: 14, kind: 'content', text: 'new old words.', ref: null, origin: null }], asOf: 9 } });
+  assert.deepEqual([REC.textBetween(D, 1, 15), d.image, d.origins, d.imageFor, REC.placedIdentity(D, [{ prefix: D + '.0.1', ordinal: 1, width: 3 }])], ['new old words.', [], [], null, []], 'its text set, no image held: no byte placed at a position the old image named');
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.11', width: 4 }, { iStart: D + '.0.1.1', width: 10 }]);
+  assert.deepEqual(REC.placedIdentity(D, [{ prefix: D + '.0.1', ordinal: 1, width: 3 }]), [{ pos: 5, width: 3 }], 'the view\'s read of the new image places its bytes where they stand now');
+  REC.setAgain(D, { text: { runs: [{ pos: 1, width: 5, kind: 'content', text: 'brief', ref: null, origin: null }], asOf: 11 }, image: { from: 1, runs: [{ iStart: D + '.0.1.20', width: 5 }] } });
+  assert.deepEqual([d.image.map((r) => [r.pos, r.width, r.ordinal]), d.imageFor], [[[1, 5, 20]], [1, 6]], 'set with both: the new image alone');
+});
+
+test('a claim\'s home set again — its metadata, or a refusal of it — makes again each document windowing the claim\'s origin, as its metadata\'s arrival does, and no other (issue #285)', () => {
+  const W = '1.0.1.0.3', O = '1.0.1.0.1003', H = '1.0.1.0.9', C = H + '.0.2.1', PLAIN = '1.0.1.0.5';
+  REC.takeDelivery(W, [{ pos: 1, width: 10, kind: 'content', text: 'Tumbler.\n\n', ref: null, origin: null }, { pos: 11, width: 4, kind: 'withheld', text: '', ref: null, origin: O }]);
+  REC.takeDelivery(PLAIN, [{ pos: 1, width: 5, kind: 'content', text: 'plain', ref: null, origin: null }]);
+  REC.takeEditionClaims(O, [C]);
+  const made = (/** @type {() => void} */ act) => { const at = [REC.doc(W).rev, REC.doc(PLAIN).rev]; act(); return [REC.doc(W).rev - at[0], REC.doc(PLAIN).rev - at[1]]; };
+  const meta = (/** @type {boolean} */ published) => ({ doc: H, published, owner: '1.0.1', birth: published ? H + '.1' : null, birthExtent: null, placed: null, baseExtent: null, source: null, age: { at: 3, time: null, from: null }, asOf: 9 });
+  assert.deepEqual(made(() => REC.setAgain(H, { meta: meta(true) })), [1, 0], 'its metadata set again: the windowing document made again, no other');
+  assert.deepEqual(made(() => REC.setAgain(H, { refused: 'withheld' })), [1, 0], 'a refusal of it set again');
+  assert.deepEqual(made(() => REC.setAgain(PLAIN, { meta: { ...meta(true), doc: PLAIN } })), [0, 1], 'a document no claim is homed in: none windowing an origin made again');
+});
+
+test('a feed row naming a document the view shows drops nothing of it — its text, its image, its extent, its links and where the slots of every link project into it standing as held, its drop counted — and drops every other document it names (issue #285)', () => {
+  const D = '1.0.1.0.3', OUT = '1.0.1.0.4', L = D + '.0.2.1', IN = '1.0.2.0.5.0.2.1';
+  REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: 10 }]);
+  REC.takeDelivery(D, [{ pos: 1, width: 10, kind: 'content', text: 'Tumbler.\n\n', ref: null, origin: null }], 5);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: 10 }]);
+  REC.takeLinks(D, [L]); REC.takeLink({ addr: L, from: [], to: [], type: null });
+  // a far end another document's link sends into D, which no longer touches it
+  REC.takeProjection(IN, 2, D, [{ pos: 3, width: 4 }]);
+  REC.takeDelivery(OUT, [{ pos: 1, width: 5, kind: 'content', text: 'other', ref: null, origin: null }], 5);
+  const d = REC.doc(D), runs = d.runs, image = d.image, rev = d.rev, drops = REC.dropsOf(D);
+  const touched = REC.applyFeedUpdate(/** @type {any} */ ({ position: 20, at: 20, op: 'insert', docs: [D, OUT], class: 'published' }), new Set([D]));
+  assert.deepEqual(touched, [D, OUT], 'the addresses the row touched, the kept one among them');
+  assert.deepEqual([d.runs === runs, d.image === image, d.extent, [...d.links], d.rev, REC.projection(IN, 2, D)], [true, true, 10, [L], rev, [{ pos: 3, width: 4 }]], 'D stands as held, made again for nothing, the projection into it held');
+  assert.deepEqual(REC.projectionsInto(D), [{ link: IN, slot: 2, addr: D }], 'and named for its read again');
+  assert.equal(REC.dropsOf(D), drops + 1, 'its drop counted: no read out from before the row is taken');
+  assert.deepEqual([REC.doc(OUT).from, REC.textBetween(OUT, 1, 6)], [-1, ''], 'the document out of view dropped');
 });
 
 test('a feed row names a document: the place is kept, what was held is dropped; a system row is marked', () => {

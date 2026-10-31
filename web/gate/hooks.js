@@ -4,8 +4,8 @@
 // (`install`); nothing here is shipped chrome, and nothing posts anywhere.
 // What they expose, for the harness's cases: the model's held records, a
 // stretch of a held text by identity (`model.identity`), what a feed row
-// naming a document does to the model alone (`model.invalidate`) and a row
-// taken as the feed hands one (`model.feed`); the mounted articles' text and
+// naming a document out of view does to the model alone (`model.invalidate`)
+// and a row taken as the feed hands one (`model.feed`); the mounted articles' text and
 // what stands of each by line (`mountedLines`); the mirror's items; the
 // camera, the focus and its owner's state, the focus ring the canvas drew
 // (`view.ring`) and the bounds it is clamped to (`view.ringBounds`); the
@@ -595,7 +595,7 @@ export function install(deps) {
       loadWhole: (/** @type {string} */ addr) => PUMP.loadWhole(addr).then((d) => !!d),
       /** a stretch of a held text by identity, through its held image (M-REC's `identityOf`): none where the image does not cover it */
       identity: (/** @type {string} */ addr, /** @type {number} */ pos, /** @type {number} */ width) => REC.identityOf(addr, pos, width),
-      /** what a feed row naming a document does to the model alone: its delivered state dropped and its reads asked again — reads alone, nothing written, no reader told */
+      /** what a feed row naming a document out of view does to the model alone: its delivered state dropped and its reads asked again — reads alone, nothing written, no reader told */
       invalidate: (/** @type {string} */ addr) => { REC.invalidate(addr); PUMP.forget(addr); CAM.markDirty(); },
       /** a feed row taken as the feed hands one (M-PUMP's `takeRow`): the model, the view and a reading scene's panes kept fresh from it — reads alone, nothing written */
       feed: (/** @type {import('../bridge/shapes').FeedUpdate} */ update) => { PUMP.takeRow(update); CAM.markDirty(); },

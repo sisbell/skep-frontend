@@ -35,8 +35,10 @@
 // boots (FP-10, FP-11): T-LAYER's readers (the selection, the walk's focus,
 // the line's bottom, the trail's current entry, the version each box shows
 // — N-GO's `shownIn`, FP-22 — the document the line names — L-LINE's
-// `named`, FP-26 — and whether an account is named in view: the line names
-// it, or the canvas's last frame set its label, P-RENDER's `regionNamed`);
+// `named`, FP-26 — whether an account is named in view: the line names
+// it, or the canvas's last frame set its label, P-RENDER's `regionNamed` —
+// and who is told the passage being read is gone from the text its document
+// is set again as, N-GO's `vanished`, FP-21);
 // LK's (the links lit, P-RENDER's `drawsDoc`, T-LAYER's
 // owner rule, `shownIn`, and a far document's first line, T-LAYER's
 // `firstOfFar` by T-ARTICLE's one rule); N-WALK's (Back's light, what a landing says,
@@ -57,8 +59,10 @@
 // pump every 90 ms, and on a dirty frame — the mark, a camera move, a model
 // or layer revision, a flight, an overlay standing, a phase — run T-LAYER's
 // frame first, so what stands is decided before anything is drawn (FP-8),
-// mark the mirror's documents, Back's light and the landing's description in
-// place (N-WALK's `markExpanded`, `markLocated`, `markDescribed`), then
+// then the landing rule at an arrival whose text was set again (N-GO's
+// `recheck`; FP-21), mark the mirror's documents, Back's light and the
+// landing's description in place (N-WALK's `markExpanded`, `markLocated`,
+// `markDescribed`), then
 // P-RENDER, BM, O-HOST's place, the landing's line (O-LAND's `render`), the
 // scene's ties where the scene is open (SC's `draw`), then the press
 // APP-INPUT holds at reading scale, acted on the text the frame set
@@ -184,6 +188,7 @@ function loop(/** @type {number} */ now) {
     const t0 = performance.now();
     if (!bootInfo.firstFrame) bootInfo.firstFrame = SHIPPED.map((f) => [f, document.fonts.check(f)]);
     LAYER.frame((addr) => { const f = WALK.current(); return !!f && f.addr === addr; });
+    GO.recheck();
     WALK.markExpanded();
     WALK.markLocated();
     WALK.markDescribed();
@@ -269,7 +274,7 @@ async function boot() {
     { end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, at, told) => FACES.floating(far, at, null, told), held: FACES.held } });
   LEAP.attach({ box: el('leap'), input: /** @type {HTMLInputElement} */ (el('leapq')), rows: el('leaphits'), note: el('leapnote') }, () => LINE.currentAddress());
   LINE.attach(el('line'), { open: () => LEAP.open(), back: (byKey) => GO.back(byKey), forward: (byKey) => GO.forward(byKey), trailList: (byKey) => TRAILLIST.open(byKey), signIn: (b) => FACES.signIn(b), again: () => { void FACES.tryBoardsAgain(); }, aside: () => HOST.aside(), pieces: () => { const l = GO.landing(); return l && l.pieces ? { addr: l.addr, runs: l.pieces.runs, current: l.current } : null; }, walks: () => FACES.folded(), walk: (key, byKey) => FACES.unfold(key, byKey), closed: () => GO.closed() });
-  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a) });
+  LAYER.readers({ selection: () => SEL.selected(), focus: () => WALK.focusedSpan(), top: () => LINE.bottom(), handOff: () => WALK.focusItem(), navigated: () => { const e = TRAIL.current(); return e ? e.addr : null; }, shown: GO.shownIn, named: () => LINE.named().doc, region: (a) => LINE.named().account === a || RENDER.regionNamed(a), vanished: GO.vanished });
   LK.readers({ lit: () => GO.litLinks(), drawn: RENDER.drawsDoc, owner: LAYER.originOwner, shown: GO.shownIn, first: LAYER.firstOfFar });
   WALK.readers({ located: () => GO.backLight(), described: () => GO.described(), shown: GO.shownIn, noBoard: () => FACES.noBoardWords() });
   INPUT.attach({ plane, layer: el('domlayer'), corners: el('corners') });
