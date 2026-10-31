@@ -1,6 +1,7 @@
 // BM-HELD's test: the four states a text holds a passage in, read by
 // position and by the identity of each run's bytes, a passage named by spans
-// of several I-spaces one passage; the line's words by subject — what a
+// of several I-spaces one passage, in its pieces and in its stretches; the
+// line's words by subject — what a
 // returned stop stood for among them — and by the text's address, the places
 // counted at a far end alone;
 // why a line could not tell, keyed on the refusal's name and kind, never its
@@ -159,6 +160,15 @@ test('a text\'s runs are cut where their bytes break the passage\'s order, bytes
   assert.deepEqual(stretchesOf(passage, runs, ids), [{ pos: 20, width: 5, at: 5 }, { pos: 25, width: 3, at: 0 }, { pos: 42, width: 2, at: 3 }], 'the first run cut at its break, the second\'s foreign bytes holding none of it');
   assert.deepEqual(stretchesOf(passage, [{ pos: 7, width: 10 }], [[{ prefix: P, ordinal: 1, width: 6 }, { prefix: P, ordinal: 7, width: 4 }]]), [{ pos: 9, width: 8, at: 0 }],
     'two image runs following on in the text and in the passage: one stretch, from the passage\'s first byte');
+});
+
+test('a passage named by several spans is one passage, each span after the one before it in its order: a run crossing from one span into the next one stretch, a run of a later span alone at its place in the passage (issue #297)', () => {
+  // the line a view read: four of its own document's bytes, then six transcluded from another
+  const P = '1.0.1.0.3.0.1', Q = '1.0.2.0.5.0.1', passage = [{ prefix: P, ordinal: 10, width: 4 }, { prefix: Q, ordinal: 1, width: 6 }];
+  const runs = [{ pos: 30, width: 10 }, { pos: 50, width: 3 }];
+  const ids = [[{ prefix: P, ordinal: 10, width: 4 }, { prefix: Q, ordinal: 1, width: 6 }], [{ prefix: Q, ordinal: 4, width: 3 }]];
+  assert.deepEqual(stretchesOf(passage, runs, ids), [{ pos: 30, width: 10, at: 0 }, { pos: 50, width: 3, at: 7 }], 'the first run the whole passage, in one stretch; the second its last three positions');
+  assert.deepEqual(stretchesOf(passage, [{ pos: 5, width: 6 }], [[{ prefix: Q, ordinal: 1, width: 6 }]]), [{ pos: 5, width: 6, at: 4 }], 'the second span alone: at its place after the first');
 });
 
 test('an arrival\'s runs labelled: pieces of different material numbered in the passage\'s own order — never the text\'s — a repeat "again" and the first of its material "again later"; the run the landing stands at adding how much of the passage the runs hold and "in another order"; no label counting places (FP-21; issue #158)', () => {

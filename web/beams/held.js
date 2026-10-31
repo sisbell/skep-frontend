@@ -9,9 +9,9 @@
 // part, the stretches together holding less; none, no stretch — the dead
 // end's face says it (foundations §2.3). A passage named by identity — a
 // followed far end, its slot's stored span, the passage a reading scene's
-// stop stood for, which may cross several runs of an image — is read through
-// the identity of the bytes of each run its text holds it in (`piecesOf`),
-// each run cut where
+// stop stood for, the words a trail entry's view read, any of which may
+// cross several runs of an image — is read through the identity of the
+// bytes of each run its text holds it in (`piecesOf`), each run cut where
 // its bytes break the passage's order into the stretches an arrival
 // outlines (`stretchesOf`). Where no answer told — a read refused by any
 // name but a size's, or still refused for its size once asked in parts
@@ -174,24 +174,32 @@ export function piecesOf(passage, runs) {
  * head): each run's bytes, by identity in the text's order, cut to the
  * passage's own and cut again wherever they break the passage's order —
  * bytes that follow on in the text and in the passage both one stretch —
- * each at its own positions in the text. Bytes of another I-space, or past
- * the passage, hold none of it.
- * @param {ISpan} passage
+ * each at its own positions in the text. A passage named by several spans is
+ * one passage, each span after the one before it in the passage's order.
+ * Bytes of another I-space, or past the passage, hold none of it.
+ * @param {ISpan | ISpan[]} passage
  * @param {Array<{pos: number, width: number}>} runs the runs of the text, in its order
  * @param {ISpan[][]} ids each run's bytes by identity, in the text's order, as many positions as the run
  * @returns {Stretch[]} in the text's order
  */
 export function stretchesOf(passage, runs, ids) {
+  /** @type {Array<ISpan & {from: number}>} each span of the passage, with where it begins in the passage, counted from 0 */
+  const spans = [];
+  let o = 0;
+  for (const p of Array.isArray(passage) ? passage : [passage]) { spans.push({ ...p, from: o }); o += p.width; }
   /** @type {Stretch[]} */
   const out = [];
   runs.forEach((r, k) => {
     let p = r.pos;
     for (const s of ids[k] || []) {
-      const lo = Math.max(s.ordinal, passage.ordinal), hi = Math.min(s.ordinal + s.width, passage.ordinal + passage.width);
-      if (s.prefix === passage.prefix && lo < hi) {
-        const pos = p + (lo - s.ordinal), at = lo - passage.ordinal, last = out[out.length - 1];
-        if (last && last.pos + last.width === pos && last.at + last.width === at) last.width += hi - lo;
-        else out.push({ pos, width: hi - lo, at });
+      const hits = spans.flatMap((q) => {
+        const lo = Math.max(s.ordinal, q.ordinal), hi = Math.min(s.ordinal + s.width, q.ordinal + q.width);
+        return q.prefix === s.prefix && lo < hi ? [{ lo, hi, at: q.from + lo - q.ordinal }] : [];
+      }).sort((x, y) => x.lo - y.lo);
+      for (const h of hits) {
+        const pos = p + (h.lo - s.ordinal), last = out[out.length - 1];
+        if (last && last.pos + last.width === pos && last.at + last.width === h.at) last.width += h.hi - h.lo;
+        else out.push({ pos, width: h.hi - h.lo, at: h.at });
       }
       p += s.width;
     }

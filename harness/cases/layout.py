@@ -2455,7 +2455,9 @@ def pieces_hold(ctx, r):
     first, the mirror's descriptions every run's label; both runs outlined — the second out of the visible view too — and
     both again with the edition framed whole below its reading scale; Mod+G steps to piece 2 at the reading size, its line in
     view, the line its label, both runs still outlined and the trail untouched; one Mod+[ returns where the door was made, at
-    its view; Mod+] restores the arrival as left, at piece 2. Then two runs of the first edition both in view: the other
+    its view; Mod+] reads the arrival again from the text it reaches (issue #297), and the edition holds the passage the door
+    named whole — its bytes run unbroken from the first run to the second's end — so its one piece stands outlined alone,
+    at the view the reader left, the walk on the line they left it on. Then two runs of the first edition both in view: the other
     run's label at the text's edge beside its first line, inside the visible view, meeting no outlined line and not the line;
     its figures"""
     seen = {}
@@ -2517,8 +2519,12 @@ def pieces_hold(ctx, r):
         ctx.settle()
         ctx.frames(3)
         fw = pieces_view(ctx, longest)
-        r.check((fw['landing'] or {}).get('current') == 1 and (fw['line'] or {}).get('words') == words['two'] + ' · ' + words['part'] and bool(mine(0, fw)) and bool(mine(1, fw)),
-                f'the runs, {name}: Mod+] restores the arrival as the reader left it — both runs outlined, the landing at piece 2, its label the line\'s', {'landing': fw['landing'], 'line': (fw['line'] or {}).get('words')})
+        whole = [{'pos': runs[0]['pos'], 'width': runs[1]['pos'] + runs[1]['width'] - runs[0]['pos']}]
+        walk = ctx.js('window.__skep.view.focus()') or {}
+        r.check(fw['runs'] == whole and fw['line'] is None and (fw['landing'] or {}).get('runs') is None and bool(mine(0, fw)) and not mine(1, fw)
+                and same_view(fw['camera'], s['camera']) and (walk.get('kind'), walk.get('pos')) == ('block', runs[1]['pos']),
+                f'the runs, {name}: Mod+] reads the arrival again from the text it reaches — the passage the door named, every byte from the first run to the end of the second, stands whole there: its one piece outlined alone, no labels and no line — the camera at the view the reader left and the walk on the line they left it on (issue #297)',
+                {'runs': fw['runs'], 'want': whole, 'landing': fw['landing'], 'line': (fw['line'] or {}).get('words'), 'camera': [fw['camera'], s['camera']], 'walk': walk})
         seen[name] = {'doc': longest, 'runs': runs, 'stepped_em': round(s['em'], 3), 'framed_em': round(far['em'], 3)}
         ctx.resize(*was)
     # two runs both in view, in the first edition's own bytes before its window run, their first lines in one column four body

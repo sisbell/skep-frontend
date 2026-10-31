@@ -130,12 +130,15 @@
 // position where the text comes before its image, the bytes kept for the
 // re-set the image's arrival makes (`still`).
 // A view the reader leaves and comes back to by the trail is placed again
-// the same way (foundations §2.2): what a view reads — the passage at its
-// visible centre in the document at its own reading scale there, by its
-// position, its byte's identity and its place in the fold (`readAt`) —
-// N-TRAIL keeps beside the view, and a return lands at the view that keeps
-// that passage at its place and its size on screen in the fold its document
-// stands in then, its lines set as the platform sets them first (`keptAt`).
+// the same way (foundations §2.2): what a view reads — the line at its
+// visible centre in the document at its own reading scale there, the words
+// the live hold keeps still, and the view around it, each by its positions
+// and its bytes' identity, and the line's place in the fold (`readAt`) —
+// N-TRAIL keeps beside the view; a return finds those words in the text it
+// reaches (N-GO's) and lands at the view that sets the line it names there in
+// the place and at the size on screen of the line read, in the fold its
+// document stands in then, its lines set as the platform sets them first
+// (`keptAt`).
 // The paging key continues at the next column's top at reading scale
 // (`pageTarget`). A document's region is its outline's bounds widened
 // leftward by the strip its corner stands in (`regionOf`); whether it meets
@@ -435,15 +438,18 @@ import { t, facedHTML, CLIENT_CLOSE } from '../strings.js';
  * @property {{x: number, y: number, scale: number} | null} left the camera as a re-set whose text came before its image left it, by position: `ids` kept for the re-set the image's arrival makes, while the camera stands there (`still`); null where it is no such hold
  */
 /**
- * @typedef {Object} Reading — the passage a view reads (`readAt`), by value — positions, a byte's identity and a place, no fold and no words: what N-TRAIL keeps beside an entry's view, so a return lands on that passage wherever its document was set since (`keptAt`)
+ * @typedef {Object} Reading — what a view reads (`readAt`), by value — positions, bytes by identity and a place, no fold and no words: what N-TRAIL keeps beside an entry's view, so a return finds those words wherever its document was set since (N-GO's) and lands at the view that keeps the line it finds them at where the line read stood (`keptAt`)
  * @property {string} addr the document: the version its box showed
  * @property {number} pos the position the line under the view's visible centre opens at (P-LAY's `posAt`)
- * @property {ISpan[]} ids that position's byte by identity, through the document's held image (M-REC's `identityOf`); none where the image did not cover it
+ * @property {number} width that line's positions (`lineOf`): the words the live hold keeps still
+ * @property {ISpan[]} ids that line's bytes by identity, in its order, through the document's held image (M-REC's `identityOf`); none where the image did not cover them
+ * @property {ImageRun[]} around the view around them: the held image's runs cut to the positions the view showed of the document (P-LAY's `windowIn`), each at its position then — what a text holding none of the words is placed nearest by (N-GO's); none where the image covered none of them
  * @property {{x: number, y: number}} p the visible centre, in world units relative to the room
  * @property {{x: number, y: number}} line where the fold set that position's line, in world units relative to the room (P-LAY's `placeOf`)
  * @property {number} fs the fold's em, in world units
  */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
+/** @typedef {import('../model/records.js').ImageRun} ImageRun */
 
 /**
  * @typedef {Object} Readers — what the layer reads of other owners' state, handed in once by the app (FP-10: through the owners' exports)
@@ -2009,8 +2015,8 @@ function readingNow() {
 /**
  * The positions of a fold's line that opens at a position: from that
  * position to the one the next line of its block opens at, else to its
- * block's end — the passage a view reads (`readingNow`); the one position
- * where the fold sets no line there.
+ * block's end — the passage a view reads (`readingNow`, `readAt`); the one
+ * position where the fold sets no line there.
  * @param {Fold} f
  * @param {Block[]} blocks the blocks its article was made from
  * @param {number} pos
@@ -2123,9 +2129,10 @@ export function holdAcross(from, to, at = null) {
  * a mounted article: the document whose outline holds the view's visible
  * centre at its own reading scale there, a version only where its box shows
  * it and only where the page holds its text; the position the line under that
- * centre opens at (P-LAY's `posAt`), that position's byte by identity through
- * the document's held image, and where the fold sets that line and the
- * centre. Null where the view reads no document so.
+ * centre opens at (P-LAY's `posAt`) and that line's positions (`lineOf`), its
+ * bytes by identity through the document's held image, the image's runs the
+ * view shows (`aroundOf`), and where the fold sets that line and the centre.
+ * Null where the view reads no document so.
  * @param {{x: number, y: number, scale: number}} view
  * @returns {Reading | null}
  */
@@ -2137,33 +2144,53 @@ export function readAt(view) {
     if (!readsAt(f.fs, view.scale)) continue;
     const box = docBox(d.addr), p = { x: c.x - box.x, y: c.y - box.y }, pos = posIn(f, p.x, p.y);
     if (pos == null) continue;
-    const line = placeIn(f, pos);
-    return { addr: d.addr, pos, ids: REC.identityOf(d.addr, pos, 1), p, line: { x: line.x, y: line.y }, fs: f.fs };
+    const at = placeIn(f, pos), width = lineOf(f, d.blocks, pos).width;
+    return { addr: d.addr, pos, width, ids: REC.identityOf(d.addr, pos, width), around: aroundOf(d, f, view), p, line: { x: at.x, y: at.y }, fs: f.fs };
   }
   return null;
 }
 
 /**
+ * The held image's runs a view shows of a document (`Reading.around`): cut
+ * to its window's positions (P-LAY's `windowIn`), from the position the first
+ * line in the visible view opens at to the end of the last, each at its
+ * position; none where no line in view names a position.
+ * @param {Doc} d
+ * @param {Fold} f the fold it stands in
+ * @param {{x: number, y: number, scale: number}} view
+ * @returns {ImageRun[]}
+ */
+function aroundOf(d, f, view) {
+  const box = docBox(d.addr), v = seenWorld(view);
+  const w = foldWindow(f, { x0: v.x0 - box.x, y0: v.y0 - box.y, x1: v.x1 - box.x, y1: v.y1 - box.y });
+  if (!w) return [];
+  const last = lineOf(f, d.blocks, w.to), end = last.pos + last.width;
+  return d.image.flatMap((r) => {
+    const lo = Math.max(r.pos, w.from), hi = Math.min(r.pos + r.width, end);
+    return lo < hi ? [{ pos: lo, width: hi - lo, prefix: r.prefix, ordinal: r.ordinal + (lo - r.pos) }] : [];
+  });
+}
+
+/**
  * The view that keeps what a view read where it stood (see the head): the
- * view moved so the passage it
- * read keeps its place and its size on screen in the fold its document stands
- * in now — `keepPlace`'s arithmetic (P-LAY's `holdOf`, P-CAM's `reanchored`) —
- * in the version its box shows now, by the passage's byte where that text's
- * held image places it, else by its position; that fold's lines set as the
- * platform sets them first where they are not set at the measure in force
- * (`measureAside`), so the view is placed on the lines the reader will meet.
- * The view itself where the passage stands where it stood. Null where the
- * page holds none of that document's text: a read must bring it first.
+ * view moved so the line holding `to`, in the fold its document stands in now
+ * — the version its box shows now — takes the place and the size on screen of
+ * the line the view read: `keepPlace`'s arithmetic (P-LAY's `holdOf`, P-CAM's
+ * `reanchored`); that fold's lines set as the platform sets them first where
+ * they are not set at the measure in force (`measureAside`), so the view is
+ * placed on the lines the reader will meet. The view itself where that line
+ * stands where the line read stood. Null where the page holds none of that
+ * document's text: a read must bring it first.
  * @param {{x: number, y: number, scale: number}} view
  * @param {Reading} r what it read
+ * @param {number} to the position, in the text its box shows now, whose line takes the line read's place: where N-GO finds the words read there, else the passage it lands at in their place
  * @returns {{x: number, y: number, scale: number} | null}
  */
-export function keptAt(view, r) {
+export function keptAt(view, r, to) {
   const addr = read.shown(r.addr), d = REC.has(addr) ? REC.doc(addr) : null;
   if (!d || d.from < 0) return null;
   if (engine && layer) { foldOf(d); if (!(folds.get(addr) || { set: true }).set) { setMeasure(); measureAside(d); } }
-  const f = foldOf(d), at = r.ids.length ? REC.placedIdentity(addr, r.ids) : [];
-  const now = placeIn(f, at.length ? at[0].pos : r.pos), s = f.fs / r.fs;
+  const f = foldOf(d), now = placeIn(f, to), s = f.fs / r.fs;
   if (now.x === r.line.x && now.y === r.line.y && s === 1) return view;
   const box = docBox(addr);
   const a = { x: box.x + r.p.x, y: box.y + r.p.y }, b = { x: box.x + now.x + (r.p.x - r.line.x) * s, y: box.y + now.y + (r.p.y - r.line.y) * s };

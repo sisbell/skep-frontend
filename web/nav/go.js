@@ -132,10 +132,13 @@
 // or a version move lands in place, or until Esc ends it once nothing nearer
 // stands (`endArrival`); an act that never leaves keeps it whole, a follow
 // known to fail at the act lighting its own link; a camera move makes no act
-// here. A cursor move restores the arrival the entry it reaches keeps
-// (`landAtCursor`): its outline and its labels as the reader left them, the
-// run it stood at, the link lit the one the move crossed, and none of its
-// offers that read.
+// here. A cursor move reads the arrival the entry it reaches keeps again
+// from the text it reaches (`keptAgain`): its outline on every stretch that
+// text holds its passage in, and its labels, the run it stood at found by its
+// first byte, what its line says read again, the link lit the one the move
+// crossed, and none of its offers that read — an arrival naming no bytes
+// restored as the reader left it, and a landing that outlined nothing only
+// where the entry's notice says it.
 // The surfaces' return (FP-36): a cursor move reaching an entry that keeps
 // surfaces owes them to it (`owed`) and, once the walk has landed there and
 // the text its view reads is held, reopens them as the reader left them
@@ -175,8 +178,9 @@
 // reopened while a card the reader asked for still reads, for the reopen
 // would end it: a later frame re-checks it once that opening shows or ends.
 // A text set again under the reader (FP-21's landing rule; FP-36): an
-// arrival keeps its runs' bytes by identity as they were outlined
-// (`withBytes`), and where its document's text is set again since — the
+// arrival keeps its passage by identity, in the passage's own order — the
+// passage its act names, else its runs' bytes as they were outlined
+// (`withBytes`) — and where its document's text is set again since — the
 // reads a feed row naming it made, a refresh's — it is placed again by them
 // (`placedAgain`), the landing re-checked once the page holds that text and
 // its image whole (`recheck`, on each dirty frame): all of it standing, the
@@ -264,16 +268,41 @@
 // entry given back (`giveUp`; N-TRAIL's `giveBack`); its read refused, it
 // faces at the site and gives its entry back; answered, the camera leaves as
 // above.
-// A cursor move (`moveCursor`; `back`, `forward`, `toTrailEntry`) flies at
-// once for what the entry holds — its view, placed again where the document
-// it read was set since (`returning`; T-LAYER's `keptAt`), that text read
-// first beside the flight where the page holds none of it (`placeRead`) —
-// the walk where Back's light returns it, else on the run the restored
-// landing stood at, else where it stood as the reader left the entry, else
-// on its place (`walkOf`), on a span only where the view reads its document
-// at its reading scale, and shows the entry's notice again; reaching an
-// entry still reading, it shows that entry's reading face and goes on once
-// the read answers, where no act was made and the reader took nothing over.
+// A cursor move (`moveCursor`; `back`, `forward`, `toTrailEntry`) is a
+// return, never an arrival by address (FP-21, FP-25): it finds the words its
+// entry's view read — the line the live hold keeps still, by its bytes
+// (T-LAYER's `Reading`) — in the text the entry's box shows now by BM-HELD's
+// rule (`foundIn`, `holdsIn`), and lands in that rule's states, shown where
+// any landing's are (`markReturn`, `sayReturn`): all of them in one stretch,
+// the line holding it set where the line read stood, at its size (T-LAYER's
+// `keptAt`), and nothing added; part of them, or all of them in several runs,
+// every run outlined and labelled, the line holding piece 1 set there, the
+// landing's line saying what the text holds, and at a published text the
+// latest member holding them whole offered (`offerVersion`); none of them,
+// the line holding the position the two texts share nearest them set there
+// (`sharedNearest`), else the text's head's, the dead end's face at it; no
+// answer told, the couldn't-tell line at their own position, with "try
+// again" where a retry may tell (`againReturn`). The arrival the entry keeps
+// is read again from that text by the same rule (`keptAgain`); where it
+// stands, or a light outlines a passage in that text, or the entry holds a
+// notice — a failure its jump's read met, a dead end, a withheld document —
+// the words only place the view and the walk; and no entry keeps a landing a
+// return made of its words (`leaveHere`). The camera flies at once to that
+// view — where the page cannot tell yet, to the line holding the first of the
+// words the held text places, else to the line at their own position, else,
+// the page holding none of that text, to the view the entry was left at, that
+// text read whole, its image with it, beside the flight and the camera going
+// on once it answers (`readTexts`, `placeRead`) — the walk where Back's light
+// returns it, else on the run the landing stands at where that landing says
+// anything, so the item it lands on carries what it says, else where it stood
+// as the reader left the entry, or where a read placed its landing, placed
+// again by its byte, else on the run a landing saying nothing stands at, else,
+// where it stood in the text the words were found in, where the return lands
+// there, else on the entry's place (`walkOf`), on a span only where the view
+// reads its document at its reading scale; and it shows the entry's notice
+// again. Reaching an entry still reading, it shows that entry's reading face
+// and goes on once the read answers, where no act was made and the reader
+// took nothing over.
 // The cover (FP-29): a trail entry holds no document's words — HOME and WHOLE
 // BOARD push their act's name, the strings table's, a reading scene's entry
 // is named by its act's and its two documents' addresses (`scenePair`), and
@@ -360,7 +389,7 @@ import { esc } from '../util.js';
 /**
  * @typedef {Object} Landing — what a landing says of the passage it carried or followed, while its arrival stands (see the head)
  * @property {string} addr the document landed in
- * @property {number} pos where it stands: the run it stands at — piece 1 as it lands, the one a step took it to after — or the landing point: the place as asked, or the document's head
+ * @property {number} pos where it stands: the run it stands at — piece 1 as it lands, the one a step took it to after — or the landing point: the place as asked, the document's head, or where a return lands (`Found.to`)
  * @property {Said | null} said what the text holds of the passage: part of it, all of it in pieces, or no answer told — the line itself where the passage stands in one run; null where it holds all of it in one piece, which the outline alone says, or none of it
  * @property {Pieces | null} pieces where the passage stands in several runs, each one's label (BM-HELD's `piecesIn`), the line the label of the run it stands at; null where it stands in one, or where the bytes of its runs could not be read
  * @property {number} current the run it stands at, an index into `pieces.runs`; 0 where no pieces stand
@@ -376,7 +405,7 @@ import { esc } from '../util.js';
  * @property {number} pos the landing's position: the first position of the run it stands at; where `runs` is null, the position whose block the mark stands on
  * @property {Run[] | null} runs every run of the span, in the text's order, the one at `pos` among them, each outlined — a far end's projection, or what of a carried passage the text holds, each cut where its bytes break the passage's order, the landing's labelled runs (`Landing.pieces`) where it stands in several; null where the link names the far document whole, the mark then on the block holding `pos` — the far article's first, where the beams and the scene anchor such an end
  * @property {string | null} link the link followed; null where the landing re-projected a carried passage, or the light outlines one
- * @property {{ids: ISpan[], at: number}} [held] its runs' bytes by identity as they were outlined, and its document's drops then (M-REC's `dropsOf`): what it is placed again by where that document's text is set since (`placedAgain`, `recheck`); absent where the held image did not cover its runs
+ * @property {{ids: ISpan[], at: number}} [held] its passage by identity, in the passage's own order, and its document's drops as it was outlined (M-REC's `dropsOf`): what it is placed again by where that document's text is set since (`placedAgain`, `recheck`), and what a return reads it again by (`keptAgain`); absent where neither the act nor the held image named its bytes
  */
 
 /** @typedef {{addr: string, spans: ISpan[] | null}} Passage a passage by identity in the document it is drawn in: its bytes' permanent addresses; null where it names the document whole, drawn at the block at its head */
@@ -434,6 +463,8 @@ let owed = null;
 let walking = Promise.resolve();
 /** the returns reopening their surfaces now (`restore`) */
 let restores = 0;
+/** the landing standing is the one a return made of the words its entry's view read (`markReturn`): kept by no entry, for every return finds them again (`leaveHere`) */
+let words = false;
 
 /**
  * @typedef {Object} Across — the surfaces re-checked across their box's versions (see the head; `surfacesAcross`)
@@ -562,15 +593,19 @@ function stoodIn(view, r) {
   return { addr: f.addr, pos, ids: pos != null ? REC.identityOf(f.addr, pos, 1) : [], end: f.kind === 'link' && f.link ? { link: f.link.link.addr, key: f.link.key } : null };
 }
 
-/** a view as an entry's landing writes it (N-TRAIL's `settle`): with the passage it reads (T-LAYER's `readAt`) */
-const seen = (/** @type {View} */ view) => ({ view, reading: LAYER.readAt(view) });
+/** a landing's view as an entry's landing writes it (N-TRAIL's `settle`): with the passage it reads (T-LAYER's `readAt`) and where the walk lands there (`landsAt`) */
+const seen = (/** @type {View} */ view, /** @type {string} */ addr, /** @type {number | null} */ pos) => ({ view, reading: LAYER.readAt(view), stood: landsAt(addr, pos) });
+
+/** where the walk lands at a landing, as an entry keeps it (N-TRAIL's `Stood`): the document landed in, at the position the landing names and that position's byte by identity (M-REC's `identityOf`); on the document whole where it names none */
+const landsAt = (/** @type {string} */ addr, /** @type {number | null} */ pos) => /** @type {Stood} */ ({ addr, pos, ids: pos != null ? REC.identityOf(addr, pos, 1) : [], end: null });
 
 /**
  * A passage as its text holds it now: every stretch of it the
  * document's held text places (M-REC's `placedIdentity`), in the text's
- * order, the mark at the first; a far end naming its document whole at the
- * block at the document's head; null where the text holds none of it, or
- * the page none of the text — no mark, and no face.
+ * order, the mark at the first, its bytes with it (`Arrival.held`); a far
+ * end naming its document whole at the block at the document's head; null
+ * where the text holds none of it, or the page none of the text — no mark,
+ * and no face.
  * @param {Passage} p
  * @param {string | null} link
  * @returns {Arrival | null}
@@ -578,7 +613,7 @@ const seen = (/** @type {View} */ view) => ({ view, reading: LAYER.readAt(view) 
 function placedMark(p, link) {
   if (!p.spans) { const d = REC.has(p.addr) ? REC.doc(p.addr) : null; return d && d.blocks.length ? { addr: p.addr, pos: headOf(d), runs: null, link } : null; }
   const runs = REC.placedIdentity(p.addr, p.spans);
-  return runs.length ? { addr: p.addr, pos: runs[0].pos, runs, link } : null;
+  return runs.length ? { addr: p.addr, pos: runs[0].pos, runs, link, held: { ids: p.spans, at: REC.dropsOf(p.addr) } } : null;
 }
 
 /**
@@ -595,32 +630,36 @@ function runMark(end, link) {
   return s && s.run ? { addr: end.addr, pos: s.run.pos, runs: [{ pos: s.run.pos, width: s.run.width }], link } : null;
 }
 
-/** the arrival mark while it stands, with its runs' bytes (`Arrival.held`): a landing's, as its reads placed it, or the one a return restored — placed again by those bytes where its document's text was set since (`placedAgain`); else a one-step move's light, its passage placed in its text as it is read (`placedMark`), or Back's at a link's end drawn at a withheld run, the run (`runMark`); null where neither stands */
+/** the arrival mark while it stands, with its passage's bytes (`Arrival.held`): a landing's, as its reads placed it, or the one a return read again — placed again by those bytes where its document's text was set since (`placedAgain`); else a one-step move's light, its passage placed in its text as it is read, its bytes with it (`placedMark`), or Back's at a link's end drawn at a withheld run, the run (`runMark`); null where neither stands */
 const markHeld = () => (arrival ? placedAgain(arrival) : light && light.passage ? placedMark(light.passage, light.link) : light && light.end ? runMark(light.end, light.link) : null);
 
 /** the arrival mark while it stands (see the head; `markHeld`), as the surfaces that draw and name it read it: its document, its position, its runs and its link */
 export const arrivalMark = () => { const m = markHeld(); if (!m || !m.held) return m; const { held: _, ...mark } = m; return mark; };
 
 /**
- * An arrival with its runs' bytes by identity as its document's held image
- * places them now (`Arrival.held`), so it is placed again by them where that
- * text is set again; as it is where it outlines no runs, or the image does
- * not cover every run.
+ * An arrival with its passage by identity, in the passage's own order
+ * (`Arrival.held`): the passage the act names, else its runs' bytes as its
+ * document's held image places them now, in the text's order — what it is
+ * placed again by where that text is set again (`placedAgain`, `recheck`),
+ * and what a return reads it again by (`keptAgain`); as it is where it
+ * outlines no runs, or neither names every byte.
  * @param {Arrival | null} a
+ * @param {ISpan[]} spans the passage by identity, as the act names it; none where it names none
  * @returns {Arrival | null}
  */
-function withBytes(a) {
+function withBytes(a, spans) {
   if (!a || !a.runs) return a;
-  const ids = a.runs.map((r) => REC.identityOf(a.addr, r.pos, r.width));
-  return ids.every((x) => x.length) ? { ...a, held: { ids: ids.flat(), at: REC.dropsOf(a.addr) } } : a;
+  const runs = a.runs.map((r) => REC.identityOf(a.addr, r.pos, r.width));
+  const ids = spans.length ? spans : runs.every((x) => x.length) ? runs.flat() : [];
+  return ids.length ? { ...a, held: { ids, at: REC.dropsOf(a.addr) } } : a;
 }
 
 /**
  * An arrival placed again where its document's text was set since its runs
- * were outlined (see the head; FP-21): every stretch of their bytes that text
- * holds now (M-REC's `placedIdentity`), the mark at the first; none where it
- * holds none, or the page holds none of the text; as it stands where the text
- * was not set since.
+ * were outlined (see the head; FP-21): every stretch of its passage's bytes
+ * that text holds now (M-REC's `placedIdentity`), the mark at the first; none
+ * where it holds none, or the page holds none of the text; as it stands where
+ * the text was not set since.
  * @param {Arrival} a
  * @returns {Arrival | null}
  */
@@ -633,7 +672,8 @@ function placedAgain(a) {
 /**
  * The landing rule at an arrival whose document's text was set again since
  * its runs were outlined (FP-21, FP-36), once the page holds that text and
- * its image whole: its runs placed again by their bytes (`placedAgain`) —
+ * its image whole: its runs placed again by its passage's bytes
+ * (`placedAgain`) —
  * all of them standing, the outline moves there; part, the outline on what
  * stands and the landing's line saying only part of its passage is in that
  * text; none, nothing outlined and the dead end's face at the landing's
@@ -767,23 +807,37 @@ function nextAct(ends = true) {
 }
 
 /** the arrival put out: its outline, the light a one-step move made, the links lit, its line and its offers */
-function putOut() { arrival = null; light = null; lit = []; landed = null; retry = null; versionOffer = null; CAM.markDirty(); }
+function putOut() { arrival = null; light = null; lit = []; landed = null; retry = null; versionOffer = null; words = false; CAM.markDirty(); }
 
 /**
  * The reader leaves the place they stand at (see the head; FP-25, FP-36):
- * the arrival standing there — its outline as it stands, a light's
- * among them, and what its landing said, its runs' labels and the run it
- * stands at — and the surfaces standing as the act was made (`nextAct`),
- * kept in that place's trail entry by value for a return to it (N-TRAIL's
- * `keep`), then put out with the links lit and its offers, and what a
- * return still owed the place dropped. The entry left keeps nothing where
- * nothing stood.
+ * the arrival standing there — its outline as it stands and its passage by
+ * identity, a light's among them, and what its landing said, its runs'
+ * labels and the run it stands at, by that run's first byte too
+ * (`currentByte`) — save the landing a return made of the words its view
+ * read, which every return finds again (`words`) — and the surfaces standing
+ * as the act was made (`nextAct`), kept in that place's trail entry by value
+ * for a return to it (N-TRAIL's `keep`), then put out with the links lit and
+ * its offers, and what a return still owed the place dropped. The entry left
+ * keeps nothing where nothing stood.
  */
 function leaveHere() {
-  const mark = markHeld(), surfaces = surfacesLeft;
-  if (here) TRAIL.keep(here, mark || landed || surfaces ? { arrival: mark, landed, surfaces } : null);
+  const mark = words ? null : markHeld(), stands = words ? null : landed, surfaces = surfacesLeft;
+  if (here) TRAIL.keep(here, mark || stands || surfaces ? { arrival: mark, landed: stands, current: currentByte(mark), surfaces } : null);
   surfacesLeft = null; owed = null;
   putOut();
+}
+
+/**
+ * The first byte, by identity, of the run an arrival's landing stands at
+ * (N-TRAIL's `Kept.current`): the landing's position where it stands in the
+ * arrival's document, else the arrival's own; none where it outlines no runs.
+ * @param {Arrival | null} m
+ * @returns {ISpan[]}
+ */
+function currentByte(m) {
+  if (!m || !m.runs) return [];
+  return REC.identityOf(m.addr, landed && landed.addr === m.addr ? landed.pos : m.pos, 1);
 }
 
 /**
@@ -1578,10 +1632,10 @@ async function againCarried(c, carried, addr, entry, link, asked, byKey) {
   const placed = carriedLanding(c, d, await reproject(c, d, met), asked);
   const v = viewFor(addr, placed.pos);
   const notice = placed.none ? floatingNotice(addr, headOf(d)) : null;
-  if (entry) TRAIL.settle(entry, { ...seen(v), pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
+  if (entry) TRAIL.settle(entry, { ...seen(v, addr, placed.pos), pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
   if (act !== made) return;
   pinTo(addr);
-  arrival = withBytes(link || placed.runs ? { addr, pos: placed.pos ?? 1, runs: placed.runs, link } : null);
+  arrival = withBytes(link || placed.runs ? { addr, pos: placed.pos ?? 1, runs: placed.runs, link } : null, carried);
   sayCarried(act, c, carried, d, placed, entry, link);
   const flight = land({ addr, pos: placed.pos, view: v }, byKey, 620);
   if (notice) showFound(notice, true);
@@ -1614,11 +1668,12 @@ async function landFollowed(act, s, entry, placed, byKey, first = null) {
   const v = viewFor(far, pos);
   /** @type {Notice | null} a floating end: the dead end's face beside the head landed on */
   const notice = placed.runs && !placed.runs.length ? floatingNotice(far, pos) : null;
-  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(v)), pos, width: widthAt(marked, pos), notice });
+  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(v, far, pos)), pos, width: widthAt(marked, pos), notice });
   if (act !== made) return;
   FACES.endReading();
   pinTo(far);
-  arrival = withBytes(runs && placed.marked ? { addr: far, pos, runs: marked, link: l.addr } : null);
+  const passage = !s.farWhole && s.farEnd ? REC.identityOfEnd(s.farEnd) : null;
+  arrival = withBytes(runs && placed.marked ? { addr: far, pos, runs: marked, link: l.addr } : null, passage ? [passage] : []);
   lit = [l.addr];
   sayFollowed(act, s, entry, placed, pos);
   if (first && takenAt === act) { if (notice) showFound(notice); return; }
@@ -1653,7 +1708,7 @@ async function landWithheld(act, s, entry, byKey, first) {
   const v = viewFor(far, null);
   /** @type {Notice} the document's own withheld words at its place */
   const notice = { face: 'withheld', addr: far, refusal: null, site: placeAt(far) };
-  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(v)), pos: null, width: null, notice });
+  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(v, far, null)), pos: null, width: null, notice });
   if (act !== made) return;
   FACES.endReading();
   pinTo(far);
@@ -1782,9 +1837,9 @@ export async function leapTo(addr, opts = {}) {
   const v0 = viewFor(addr, pos);
   if (!unread && !c) {
     // nothing to read: the landing as the act is made
-    if (entry) TRAIL.settle(entry, { ...seen(v0), pos, width: widthAt(runs, pos), notice: null });
+    if (entry) TRAIL.settle(entry, { ...seen(v0, addr, pos), pos, width: widthAt(runs, pos), notice: null });
     pinTo(addr);
-    if (link || named) arrival = withBytes({ addr, pos: pos ?? 1, runs, link });
+    if (link || named) arrival = withBytes({ addr, pos: pos ?? 1, runs, link }, passage ? [passage] : []);
     lit = link ? [link] : [];
     if (named && pos != null) sayNamed(addr, pos, named);
     const ok = await leave(act, entry, { addr, pos, view: v0 }, opts.byKey, ms);
@@ -1804,11 +1859,11 @@ export async function leapTo(addr, opts = {}) {
   const v = viewFor(addr, pos);
   /** @type {Notice | null} a carried passage the text holds none of: the dead end's face beside the head landed on, offering no act */
   const notice = placed && placed.none ? floatingNotice(addr, headOf(d)) : null;
-  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(v)), pos, width: widthAt(runs, pos), notice });
+  if (entry) TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : seen(v, addr, pos)), pos, width: widthAt(runs, pos), notice });
   if (act !== made) return null;
   FACES.endReading();
   pinTo(addr);
-  if (link || named || (placed && placed.runs)) arrival = withBytes({ addr, pos: pos ?? 1, runs, link });
+  if (link || named || (placed && placed.runs)) arrival = withBytes({ addr, pos: pos ?? 1, runs, link }, c ? carried : passage ? [passage] : []);
   lit = link ? [link] : [];
   if (c && placed) sayCarried(act, c, carried, d, placed, entry, link);
   else if (named && pos != null) sayNamed(addr, pos, named);
@@ -1894,15 +1949,16 @@ async function swapped(c, was, d, met) {
  * @param {Doc} d the version moved to
  * @param {{from: number, pos: number, runs: Run[] | null, none?: boolean}} placed
  * @param {string | null} link
+ * @param {ISpan[]} spans the passage held by identity, which the outline is placed again and read again by (`withBytes`)
  * @param {boolean | undefined} byKey
  * @param {boolean} [take] the landing takes the platform's focus wherever it stood
  * @param {Carry | null} [carry] the passage the move carried, in the version it was carried from
  */
-async function landInPlace(was, d, placed, link, byKey, take = true, carry = null) {
+async function landInPlace(was, d, placed, link, spans, byKey, take = true, carry = null) {
   const addr = d.addr;
   LAYER.holdAcross(was, addr, { from: placed.from, to: placed.pos });
   pinTo(addr);
-  arrival = withBytes(placed.runs || link ? { addr, pos: placed.pos, runs: placed.runs, link } : null);
+  arrival = withBytes(placed.runs || link ? { addr, pos: placed.pos, runs: placed.runs, link } : null, spans);
   lit = link ? [link] : [];
   if (carry) carrySelection(carry, addr, placed);
   CAM.markDirty();
@@ -1965,11 +2021,11 @@ export async function toVersion(addr, opts = {}) {
   const head = { from: headOf(REC.doc(was)), pos: headOf(d), at: null, runs: null, said: null, pieces: null, none: false };
   const placed = given ? { from: given.from, pos: given.to, at: null, runs: inTextOrder(given.runs), said: null, pieces: null, none: false } : c ? await swapped(c, was, d, met) : head;
   const notice = placed.none ? floatingNotice(addr, placed.pos) : null;
-  TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : { view: departed.view, reading: departed.reading }), pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
+  TRAIL.settle(entry, { ...(takenOver.has(entry) ? {} : { view: departed.view, reading: departed.reading, stood: landsAt(addr, placed.pos) }), pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
   if (act !== made) return null;
   FACES.endReading();
   if (c && !given) sayCarried(act, c, spans, d, placed, entry, null, (byKey) => againVersion(c, spans, was, addr, entry, byKey));
-  const landing = landInPlace(was, d, placed, given ? given.link : null, opts.byKey, takenAt !== act, c);
+  const landing = landInPlace(was, d, placed, given ? given.link : null, spans, opts.byKey, takenAt !== act, c);
   if (notice) showFound(notice, true);
   await landing;
   endAir(act, true);
@@ -1996,10 +2052,10 @@ async function againVersion(c, spans, was, addr, entry, byKey) {
   if (d.extent == null || d.from < 0) { const w = await PUMP.wholeOf(addr); met = w.refused; d = REC.doc(addr); }
   const placed = await swapped(c, was, d, met);
   const notice = placed.none ? floatingNotice(addr, placed.pos) : null;
-  TRAIL.settle(entry, { ...seen(CAM.destination()), pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
+  TRAIL.settle(entry, { ...seen(CAM.destination(), addr, placed.pos), pos: placed.pos, width: widthAt(placed.runs, placed.pos), notice });
   if (act !== made) return;
   sayCarried(act, c, spans, d, placed, entry, null, (k) => againVersion(c, spans, was, addr, entry, k));
-  const landing = landInPlace(addr, d, { ...placed, from: stood }, null, byKey, true, c);
+  const landing = landInPlace(addr, d, { ...placed, from: stood }, null, spans, byKey, true, c);
   if (notice) showFound(notice, true);
   await landing;
 }
@@ -2344,26 +2400,31 @@ function returnTo(l, view) {
 
 /**
  * A cursor move's landing — Back, Forward, a jump — at what the entry the
- * move reached holds (FP-25): the arrival the entry keeps restored as the
- * reader left it (see the head; FP-21) — its outline, what its landing
- * said, its runs' labels and the run it stood at, and none of its offers that
- * read — the camera leaving at once for its view, placed again where the
- * document it read was set since (`returning`), the walk where Back's light
- * returns it (`returnTo`), else on the run the restored landing stood at,
- * else where it stood as the reader left the entry, placed again likewise,
- * else on its place, and its notice shown again as O-HOST's notice, so a
- * surface the return reopens stands over it (`showFound`) — a failure's where
- * the camera went, the dead end's told by the restored landing's description
- * where it describes it; the move's light lit (`lightOf`), and no link of the
- * entry's own: the one the move crossed alone. Where the page holds none of
- * the text the entry's view read or its walk stood in — a feed row dropped it
- * while the reader was away — the camera leaves for the view the entry was
- * left at and goes on once that text's read answers (`placeRead`). An entry
- * still reading shows its reading face at the place the camera left for, and
- * once its read is answered the move goes on to what it brought — the place
- * it placed, or the face it met, faced there as a failure learned in the air
+ * move reached holds (FP-25), a return (see the head; FP-21): the words its
+ * view read found in the text its box shows now and the arrival it keeps
+ * read again from it (`returning`), marked in the landing rule's states
+ * (`markReturn`) — the camera leaving at once for the view that sets the line
+ * they are found at where the line read stood, the walk where Back's light
+ * returns it (`returnTo`), else in `walkOf`'s order — on the run a landing
+ * that says anything stands at, else where it stood as the reader left the
+ * entry, placed again by its byte, else where the return lands in the text it
+ * stood in, else on the entry's place — and its notice shown again as
+ * O-HOST's notice,
+ * so a surface the return reopens stands over it (`showFound`) — a failure's
+ * where the camera went, the dead end's told by the landing's description
+ * where it describes it — then what the return says beyond its marks
+ * (`sayReturn`); the move's light lit (`lightOf`), and no link of the entry's
+ * own: the one the move crossed alone. Where the page cannot tell yet what
+ * the text holds — a feed row dropped it while the reader was away, or its
+ * image covers too little — the camera leaves for the line holding the first
+ * of the words the held text places, else the line at their own position,
+ * else, the page holding none of that text, the view the entry was left at,
+ * and goes on once that text's read answers (`placeRead`). An entry still
+ * reading shows its reading face at the place the camera left for, and once
+ * its read is answered the move goes on to what it brought — the place it
+ * placed, or the face it met, faced there as a failure learned in the air
  * is — save where an act was made after the move, which ends it there, and
- * where the reader took the camera over meanwhile, which shows what it
+ * where the reader took the camera over meanwhile, which marks what it
  * brought and moves nothing. An entry whose document is covered lands on the
  * covered box framed whole, its withheld face standing there (see the head;
  * `coverOf`), the read that tells it made first beside the flight where the
@@ -2381,21 +2442,21 @@ function returnTo(l, view) {
 async function landAtCursor(e, act, byKey, l) {
   if (e.scene) { await sceneAt(e, act, byKey); return; }
   const answer = TRAIL.pending(e);
-  arrival = e.kept ? e.kept.arrival : null; landed = e.kept ? e.kept.landed : null;
   const kept = e.kept ? e.kept.surfaces : null;
   owed = kept ? { entry: e, ...kept } : null;
   light = l; lit = l && l.link ? [l.link] : [];
   if (!answer) pinTo(e.addr);
   const cover = answer ? null : coverOf(e);
-  const at = answer || cover ? null : returning(e), view = at ? at.view : e.view;
+  const at = answer || cover ? null : returning(e), told = at && !at.reads.length ? markReturn(at, e.notice) : null;
+  const view = at ? at.view : e.view;
   const back = l && l.back ? returnTo(l, view) : null;
   const first = leave(act, e, cover === 'covered' ? coveredAt(e.addr) : back ? { ...back, view } : { ...walkOf(e, at), view }, byKey, 500);
   if (e.notice) showFound(e.notice, !!landed && (landed.floating || landed.withheld) && landed.addr === e.notice.addr);
   if (cover === 'covered') showCover(e.addr);
   if (!answer) {
     if (cover === 'unread') await coverRead(act, e, first, byKey);
-    else if (!cover && !at) await placeRead(act, e, first, byKey);
-    else { if (!cover) void restore(e, act); endAir(act, await first); }
+    else if (at && at.reads.length) await placeRead(act, e, at.reads, first, byKey);
+    else { if (!cover) { sayReturn(act, e, told); void restore(e, act); } endAir(act, await first); }
     return;
   }
   await answer;
@@ -2404,24 +2465,19 @@ async function landAtCursor(e, act, byKey, l) {
   const n = e.notice;
   if (n && n.face !== 'floating' && n.face !== 'withheld') { failed(act, null, n, byKey); return; }
   pinTo(e.addr);
-  if (takenAt === act) { if (n) showFound(n); return; }
-  const then = returning(e);
-  const flight = goOn(act, first, { ...walkOf(e, then), view: then ? then.view : e.view }, byKey, 500);
-  if (n) showFound(n);
-  void restore(e, act);
-  await flight;
+  await placeRead(act, e, returning(e).reads, first, byKey, n);
 }
 
 /**
  * A cursor move reaching the entry a reading scene was opened as (see the
  * head): nothing marked or lit, no box's version changed (FP-22); the camera
- * leaving at once for the view under the scene, placed again where the
- * document it read was set since (`returning`), the walk re-taken where it
- * stood without the platform's focus; and the scene reopened as the reader
- * left it beside the flight (SC's `reopen`), which takes the focus — save
- * where an act was made after the move, which ends it there; a refusal its
- * reads met faced at the viewport's corner as O-HOST's notice (`asNotice`),
- * the entry standing.
+ * leaving at once for the view under the scene, the words its view read
+ * placing it as a return's place it, no state of theirs shown (`returning`),
+ * the walk re-taken where it stood without the platform's focus; and the
+ * scene reopened as the reader left it beside the flight (SC's `reopen`),
+ * which takes the focus — save where an act was made after the move, which
+ * ends it there; a refusal its reads met faced at the viewport's corner as
+ * O-HOST's notice (`asNotice`), the entry standing.
  * @param {Entry} e the entry the move reached
  * @param {number} act the move's count
  * @param {boolean} byKey a key made the move
@@ -2429,7 +2485,7 @@ async function landAtCursor(e, act, byKey, l) {
 async function sceneAt(e, act, byKey) {
   const o = /** @type {import('./trail.js').Opened} */ (e.scene);
   arrival = null; landed = null; light = null; lit = [];
-  const at = returning(e), view = at ? at.view : e.view;
+  const at = returning(e), view = at.view;
   const first = leave(act, e, { ...walkOf(e, at), view, take: false }, byKey, 500);
   const out = await SCENE.reopen(o);
   if (act !== made) return;
@@ -2440,77 +2496,367 @@ async function sceneAt(e, act, byKey) {
 /** @typedef {{addr: string, pos: number | null, end: End | null}} WalkTo where a cursor move puts the walk: a place, the position in it, and the link's end there */
 
 /**
- * Where a cursor move reaching an entry lands (see `landAtCursor`): the
- * view the entry was left at, placed again where the document that view read
- * was set since — a measure that moved, a text an edit or a feed row
- * changed, another version its box shows — so the passage the reader left
- * keeps its place and its size on screen, and the view itself where it stands
- * where it stood (T-LAYER's `keptAt`); and where the walk stood as the reader
- * left it, placed again likewise (`stoodAgain`). Null where the page holds
- * none of the text either names: a read brings it first (`placeRead`).
- * @param {Entry} e
- * @returns {{view: View, walk: WalkTo | null} | null}
+ * @typedef {Object} Found — the words an entry's view read (T-LAYER's `Reading`), found in the text its box shows now by BM-HELD's rule (see the head; `foundIn`)
+ * @property {string} addr that text: the version its box shows now
+ * @property {number} to the position whose line takes the place of the line read: the stretch holding all of the words, else their first run — piece 1, where they stand in several; where the text holds none of them, the position the two texts share nearest them, else the text's head; their own position where no answer told, or the view named no bytes
+ * @property {import('../beams/held.js').Holds | 'unknown' | null} holds what the text holds of them; null where the view named no bytes: nothing found, nothing said
+ * @property {Run[] | null} runs every stretch of the text holding them, in its order, where it holds part of them or all of them in several; null otherwise
+ * @property {Pieces | null} pieces those runs' labels, where they are two or more
+ * @property {Said | null} said the landing's line: part of them, all of them in several runs, or no answer told
+ * @property {ISpan[]} ids the words by identity, in their own order
  */
-function returning(e) {
-  const view = e.reading ? LAYER.keptAt(e.view, e.reading) : e.view;
+
+/**
+ * @typedef {Object} Told — what a return says beyond the marks it stands (`markReturn`, `sayReturn`)
+ * @property {string} addr the text its landing stands in
+ * @property {number} to where its landing stands
+ * @property {ISpan[]} ids the passage by identity: the words its view read, or the passage the arrival it keeps outlined
+ * @property {'part' | 'pieces' | 'none' | 'unknown'} holds what that text holds of it
+ * @property {boolean} offers the latest member holding the passage whole is sought (`offerVersion`): for the words a return finds, never for an arrival it keeps, whose offers that read it makes no more (see the head)
+ */
+
+/**
+ * @typedef {Object} Again — the arrival an entry keeps (N-TRAIL's `Kept`), read again from the text its box shows now (`keptAgain`)
+ * @property {Arrival | null} arrival its outline, where that text holds any of its passage
+ * @property {Landing | null} landed what its landing says now
+ * @property {Told | null} told what the return says of it beyond its outline and its line: the dead end's face where none of it stands, "try again" where no answer told; null otherwise
+ */
+
+/**
+ * @typedef {Object} Return — where a cursor move reaching an entry lands, from what the page holds now (`returning`)
+ * @property {View} view the view it lands at: the entry's, the line the words its view read are found at set where the line read stood (T-LAYER's `keptAt`); while a read must tell first, the line holding the first of them the held text places, else their own position's; the view the entry was left at where the page holds none of that text
+ * @property {WalkTo | null} walk where the walk stood as the reader left the entry, or where a read placed its landing since, placed again by its byte (`stoodAgain`); null where it stood nowhere the text it reaches holds
+ * @property {Found | null} found the words its view read, found; null where it read none, or a read must tell first
+ * @property {Again | null} again the arrival it keeps, read again; null where it keeps none, or a read must tell first
+ * @property {string[]} reads the texts the page must read whole before it can tell what they hold (`placeRead`); none where it can tell now
+ */
+
+/**
+ * Where a cursor move reaching an entry lands (see `landAtCursor`), from
+ * what the page holds now: the words its view read found in the text its box
+ * shows now (`foundIn`) and the view that sets the line they are found at —
+ * else the line the return lands at in their place — where the line read
+ * stood, at its size, the view itself where that line stands where it stood
+ * (T-LAYER's `keptAt`); the arrival it keeps read again from that text
+ * (`keptAgain`), its landing in the none state where the return lands there;
+ * and where the walk stood as the reader left the entry, or where a read
+ * placed its landing, placed again by its byte (`stoodAgain`). Where the page
+ * cannot tell yet what a text holds — it
+ * holds none of it, or an image covering too little — that text is named for
+ * a read to bring first (`Return.reads`), and the view placed by what is held;
+ * once those reads have answered (`settled`), what the page still cannot tell
+ * is couldn't tell, by the refusal they met.
+ * @param {Entry} e
+ * @param {boolean} [settled] the reads a return makes have answered
+ * @param {Refusal | null} [met] the refusal they met
+ * @returns {Return}
+ */
+function returning(e, settled = false, met = null) {
+  const r = e.reading, k = e.kept;
+  /** @type {Set<string>} */
+  const reads = new Set();
+  const found = r ? foundIn(r, settled, met) : null;
+  if (r && !found) reads.add(shownIn(r.addr));
+  const toIn = (/** @type {string} */ addr) => (found && found.addr === addr ? found.to : headOf(REC.doc(addr)));
+  const again = k && (k.arrival || k.landed) ? keptAgain(k, toIn, settled, met, e.notice) : null;
+  if (k && k.arrival && !again) reads.add(shownIn(k.arrival.addr));
   const walk = e.stood ? stoodAgain(e.stood) : null;
-  return view && (walk || !e.stood) ? { view, walk } : null;
+  if (reads.size) {
+    const held = r ? REC.placedIdentity(shownIn(r.addr), r.ids) : [];
+    return { view: (r && LAYER.keptAt(e.view, r, held.length ? held[0].pos : r.pos)) || e.view, walk, found: null, again: null, reads: [...reads] };
+  }
+  return { view: (r && found && LAYER.keptAt(e.view, r, found.to)) || e.view, walk, found, again, reads: [] };
 }
 
 /**
- * Where the walk stood as the reader left an entry (`Stood`), in the text its
- * box shows now: its byte where that text's held image places it (M-REC's
- * `placedIdentity`), else its position, at the link's end it stood on; the
- * document whole where it stood on it so; null where the page holds none of
- * that text.
+ * What a text holds of a passage named by identity, from what the page holds
+ * of it now (BM-HELD's rule; see the head): each stretch its held image
+ * places the passage's bytes in, cut where they break the passage's order
+ * (`stretchesOf`), what those hold of it (`heldOf`) and their labels where
+ * they are two or more (`piecesIn`). Null where the page cannot tell from
+ * what it holds: none of the text, or an image covering less than all of it
+ * that places less than all of the passage in one stretch — a read must
+ * bring the rest first.
+ * @param {string} addr the text: the version a box shows
+ * @param {ISpan[]} spans the passage by identity, in its own order
+ * @returns {{held: Held, stretches: Stretch[], pieces: Pieces | null} | null}
+ */
+function holdsIn(addr, spans) {
+  const d = REC.has(addr) ? REC.doc(addr) : null;
+  if (!d || d.from < 0) return null;
+  const width = spans.reduce((n, s) => n + s.width, 0), placed = REC.placedIdentity(addr, spans);
+  const stretches = HELD.stretchesOf(spans, placed, placed.map((x) => REC.identityOf(addr, x.pos, x.width)));
+  const held = HELD.heldOf(stretches.map((s) => ({ at: s.at, width: s.width })), width, stretches.length);
+  if (held.holds !== 'all' && !imageCovers(d)) return null;
+  return { held, stretches, pieces: HELD.piecesIn(stretches, width, showsWithheld(d)) };
+}
+
+/**
+ * The words an entry's view read found in the text its box shows now (see
+ * the head; FP-21), by what that text holds of them (`holdsIn`): all of them
+ * in one stretch, the line holding it takes theirs and nothing is said;
+ * part, or all of them in several runs, every run outlined and labelled
+ * where they are two or more, the line holding piece 1 — else the first —
+ * taking theirs, the landing's line saying what the text holds; none, the
+ * position the two texts share nearest them (`sharedNearest`), else the
+ * text's head. Null where the page cannot tell yet; once its reads have
+ * answered (`settled`), couldn't tell, by the refusal they met, at the words'
+ * own position. A view that named no bytes is placed by its position, and
+ * nothing is said: there is nothing to find.
+ * @param {import('../text/layer.js').Reading} r
+ * @param {boolean} settled the reads a return makes have answered
+ * @param {Refusal | null} met the refusal they met
+ * @returns {Found | null}
+ */
+function foundIn(r, settled, met) {
+  const addr = shownIn(r.addr), d = REC.has(addr) ? REC.doc(addr) : null;
+  /** @type {Found} */
+  const base = { addr, to: r.pos, holds: null, runs: null, pieces: null, said: null, ids: r.ids };
+  if (!r.ids.length) return settled || (!!d && d.from >= 0) ? base : null;
+  const h = holdsIn(addr, r.ids);
+  if (!h) return settled ? { ...base, holds: 'unknown', said: HELD.unknownOf(met, 'reading', addr) } : null;
+  const width = r.ids.reduce((n, s) => n + s.width, 0), holds = h.held.holds;
+  if (holds === 'none') return { ...base, to: sharedNearest(r, addr) ?? headOf(REC.doc(addr)), holds };
+  if (holds === 'all') return { ...base, to: (h.stretches.find((s) => s.at <= 0 && s.at + s.width >= width) || h.stretches[0]).pos, holds };
+  const runs = h.stretches.map((s) => ({ pos: s.pos, width: s.width }));
+  return { ...base, to: firstOf(runs, h.pieces), holds, runs, pieces: h.pieces, said: HELD.saidOf(h.held, 'reading', addr, showsWithheld(REC.doc(addr))) };
+}
+
+/**
+ * The position the text its box shows now shares nearest the words a view
+ * read, where it holds none of them (see the head; SC's `nearest`): the
+ * bytes the view showed around them (T-LAYER's `Reading.around`) paired with
+ * where that text's held image places them now, and the counterpart of the
+ * shared position nearest the words' first; null where it shares none of
+ * them.
+ * @param {import('../text/layer.js').Reading} r
+ * @param {string} addr the text
+ * @returns {number | null}
+ */
+function sharedNearest(r, addr) {
+  /** @type {import('../model/frames.js').ComparePair[]} */
+  const pairs = [];
+  for (const k of r.around) for (const i of REC.doc(addr).image) {
+    const lo = Math.max(k.ordinal, i.ordinal), hi = Math.min(k.ordinal + k.width, i.ordinal + i.width);
+    if (k.prefix === i.prefix && lo < hi) pairs.push({ d1: r.addr, d2: addr, u1: k.pos + lo - k.ordinal, u2: i.pos + lo - i.ordinal, width: hi - lo });
+  }
+  const near = SCENE.nearest(pairs, r.pos);
+  return near ? near.b : null;
+}
+
+/**
+ * The arrival an entry keeps (N-TRAIL's `Kept`), read again from the text its
+ * box shows now (see the head; FP-21): its passage by identity
+ * (`Arrival.held`) found there by what that text holds of it (`holdsIn`) —
+ * outlined on every stretch it stands in, labelled where they are two or
+ * more, the landing at the run whose first byte it stood at as the reader
+ * left it (`Kept.current`), else piece 1, else the first; its line what the
+ * text holds of it, by what it was to the reader; the scene and the version
+ * it offered kept only where it holds all of it, and none of its offers that
+ * read made again; none of it, its landing in the none state where the
+ * return lands in that text. An arrival naming no bytes — a far end naming
+ * its document whole — is restored as the reader left it, its landing with
+ * it; a landing that outlined nothing, only where the entry's notice says it
+ * — a dead end, a withheld document — for any other is the return's to say
+ * again from the words its view read. Null where the page cannot tell yet;
+ * once its reads have answered (`settled`), couldn't tell, by the refusal
+ * they met.
+ * @param {Kept} k
+ * @param {(addr: string) => number} toIn where the return lands in a text
+ * @param {boolean} settled the reads a return makes have answered
+ * @param {Refusal | null} met the refusal they met
+ * @param {Notice | null} notice the entry's notice
+ * @returns {Again | null}
+ */
+function keptAgain(k, toIn, settled, met, notice) {
+  const a = k.arrival, l = k.landed;
+  if (!a) return { arrival: null, landed: l && (l.floating || l.withheld) && !!notice && boxOf(notice.addr) === boxOf(l.addr) ? l : null, told: null };
+  if (!a.runs || !a.held) return { arrival: a, landed: l, told: null };
+  const addr = shownIn(a.addr), ids = a.held.ids, h = holdsIn(addr, ids);
+  const subject = l && l.said ? l.said.subject : a.link ? 'followed' : 'reading';
+  /** @type {Landing} */
+  const bare = { addr, pos: a.pos, said: null, pieces: null, current: 0, floating: false, withheld: false, beside: null, version: null };
+  if (!h || h.held.holds === 'none') {
+    if (!h && !settled) return null;
+    const to = toIn(addr), said = h ? null : HELD.unknownOf(met, subject, addr);
+    return { arrival: null, landed: { ...bare, pos: to, said, floating: !said }, told: { addr, to, ids, holds: said ? 'unknown' : 'none', offers: false } };
+  }
+  const runs = h.stretches.map((s) => ({ pos: s.pos, width: s.width })), p = h.pieces;
+  const byte = k.current.length ? REC.placedIdentity(addr, k.current) : [];
+  const stood = byte.length ? runs.findIndex((x) => byte[0].pos >= x.pos && byte[0].pos < x.pos + x.width) : -1;
+  const i = stood >= 0 ? stood : p ? p.order[0] : 0, pos = runs[i].pos;
+  const said = HELD.saidOf(h.held, subject, addr, showsWithheld(REC.doc(addr))), whole = h.held.holds !== 'part';
+  const landing = l || said || p ? { ...(l || bare), addr, pos, said, pieces: p, current: p ? i : 0, floating: false, withheld: false, beside: l && whole ? l.beside : null, version: l && whole ? l.version : null } : null;
+  return { arrival: { ...a, addr, pos, runs, held: { ids, at: REC.dropsOf(addr) } }, landed: landing, told: null };
+}
+
+/**
+ * Where the walk stood as the reader left an entry, or where a read placed
+ * its landing (`Stood`), in the text its box shows now: its byte where that
+ * text's held image places it (M-REC's `placedIdentity`), at the link's end
+ * it stood on — by its position where no byte of it was named; the document
+ * whole where it stood on it so; null where the image places that byte
+ * nowhere — the walk then lands where the return lands in that text, else on
+ * its document whole (`walkOf`).
  * @param {Stood} s
  * @returns {WalkTo | null}
  */
 function stoodAgain(s) {
   const addr = shownIn(s.addr);
   if (s.pos == null) return { addr, pos: null, end: null };
-  const d = REC.has(addr) ? REC.doc(addr) : null;
-  if (!d || d.from < 0) return null;
-  const at = s.ids.length ? REC.placedIdentity(addr, s.ids) : [];
-  return { addr, pos: at.length ? at[0].pos : s.pos, end: s.end };
+  if (!s.ids.length) return { addr, pos: s.pos, end: s.end };
+  const at = REC.placedIdentity(addr, s.ids);
+  return at.length ? { addr, pos: at[0].pos, end: s.end } : null;
 }
 
 /**
  * Where a cursor move puts the walk, Back's light apart (`returnTo`): on the
- * run the restored landing stood at, else where it stood as the reader left
- * the entry, placed again (`returning`), else on the entry's place.
+ * run the landing stands at — the arrival the entry keeps, read again, or
+ * the words its view read, found — where that landing says anything, so the
+ * item the walk lands on carries what it says (`described`; FP-21); else
+ * where it stood as the reader left the entry, placed again (`returning`);
+ * else on the run a landing that says nothing stands at; else, where the
+ * walk stood in the text the words were found in — or stood nowhere, at an
+ * entry whose place is that text — where the return lands there
+ * (`Found.to`); else, where the byte it stood on is gone, on its document
+ * whole; else on the entry's place, at its position, whatever document the
+ * view read beside it — the address a jump's failure faced among them.
+ * Where the move has not yet read what the entry holds (`at` null), the
+ * landing's run, else the entry's place.
  * @param {Entry} e
- * @param {{walk: WalkTo | null} | null} at
+ * @param {Return | null} at
  * @returns {WalkTo}
  */
 function walkOf(e, at) {
-  if (landed && landed.addr === shownIn(e.addr)) return { addr: e.addr, pos: landed.pos, end: null };
-  return at && at.walk ? at.walk : { addr: e.addr, pos: e.pos, end: null };
+  const f = at ? at.found : null, s = e.stood;
+  const on = landed && (landed.addr === shownIn(e.addr) || (!!f && landed.addr === f.addr)) ? { addr: landed.addr, pos: landed.pos, end: null } : null;
+  if (on && described()) return on;
+  if (at && at.walk) return at.walk;
+  if (on) return on;
+  if (f && boxOf(s ? s.addr : e.addr) === boxOf(f.addr)) return { addr: f.addr, pos: f.to, end: null };
+  if (at && s) return { addr: shownIn(s.addr), pos: null, end: null };
+  return { addr: e.addr, pos: e.pos, end: null };
 }
 
 /**
- * A cursor move reaching an entry whose view read, or whose walk stood in, a
- * document the page holds none of the text of now (see `landAtCursor`): its
- * read made beside the flight to the view the entry was left at, as a LEAP to
- * an unread document makes it; once it answers, where no act was made and
- * the reader took nothing over meanwhile, the camera going on to that view
- * placed again and the walk to where it stood (`returning`); else the move
- * landing where its flight lands — the surfaces the entry keeps reopened
- * once the read has answered (`restore`).
+ * A return's marks (see the head; FP-21): the arrival its entry keeps, read
+ * again (`Return.again`); else, where the words its view read stand in the
+ * text it reaches in part or in several runs, every run outlined and
+ * labelled and the landing's line saying what the text holds; none of them,
+ * the landing in the none state; no answer told, the couldn't-tell line —
+ * nothing where all of them stand in one piece, or a landing stands already —
+ * the arrival the entry keeps — or an outline in that text, a light's, or the
+ * entry holds a notice, which says what its return says: the words then only
+ * placing the view and the walk.
+ * @param {Return} at
+ * @param {Notice | null} notice the entry's notice
+ * @returns {Told | null} what the return says beyond its marks (`sayReturn`)
+ */
+function markReturn(at, notice) {
+  const g = at.again, f = at.found;
+  if (g) { arrival = g.arrival; landed = g.landed; CAM.markDirty(); if (g.told) return g.told; }
+  if (!f || f.holds == null || f.holds === 'all' || landed || notice) return null;
+  const m = arrivalMark();
+  if (m && boxOf(m.addr) === boxOf(f.addr)) return null;
+  if (f.runs) arrival = withBytes({ addr: f.addr, pos: f.to, runs: f.runs, link: null }, f.ids);
+  landed = { addr: f.addr, pos: f.to, said: f.said, pieces: f.pieces, current: f.pieces ? f.pieces.order[0] : 0, floating: f.holds === 'none', withheld: false, beside: null, version: null };
+  words = true;
+  CAM.markDirty();
+  return { addr: f.addr, to: f.to, ids: f.ids, holds: f.holds, offers: f.holds !== 'unknown' };
+}
+
+/**
+ * What a return says beyond its marks (see the head), where no act was made
+ * since: the dead end's face at a landing in the none state, told by the
+ * landing's description, as O-HOST's notice; at a published text, the latest
+ * member holding the words its view read whole offered once its reads find
+ * one (`offerVersion`, `holdingWhole`); "try again" where no answer told and
+ * a retry may tell (`againReturn`).
+ * @param {number} act the return's act
+ * @param {Entry} e the entry it reached
+ * @param {Told | null} told
+ */
+function sayReturn(act, e, told) {
+  if (!told || act !== made) return;
+  if (told.holds === 'none') showFound(floatingNotice(told.addr, told.to), true);
+  if (told.holds === 'unknown') retry = landed && landed.said && landed.said.again ? (byKey) => againReturn(e, byKey) : null;
+  else if (told.offers) void offerVersion(act, told.addr, holdingWhole(told.addr, told.to, told.ids));
+}
+
+/**
+ * A return's landing made again — its line's "try again" (see the head):
+ * the texts it could not tell from read whole again (`readTexts`), then what
+ * they hold (`returning`), and, where no act was made meanwhile, the return's
+ * marks and its line set again from that, the walk and the camera moved
+ * there and what it says said (`sayReturn`), with no trail move of its own.
+ * @param {Entry} e the entry the return reached
+ * @param {boolean} byKey a key pressed "try again"
+ */
+async function againReturn(e, byKey) {
+  const act = made, now = returning(e);
+  const met = await readTexts(now.reads);
+  if (act !== made) return;
+  const at = now.reads.length ? returning(e, true, met) : now;
+  arrival = null; landed = null; retry = null; versionOffer = null; words = false;
+  const told = markReturn(at, e.notice);
+  const flight = land({ ...walkOf(e, at), view: at.view }, byKey, 500);
+  sayReturn(act, e, told);
+  await flight;
+}
+
+/**
+ * The texts a return cannot tell from yet (`Return.reads`), read one after
+ * another: each read whole (M-PUMP's `wholeOf`), then its image over its
+ * whole text, in parts where the board refuses it for its size (M-PUMP's
+ * `imageParts`), where the text stands held without an image covering it — a
+ * refresh that set the text again with no image leaves it so — for a text's
+ * bytes are found by that image alone; an image whose text was dropped while
+ * it was read is not taken (M-REC's `dropsOf`).
+ * @param {string[]} texts
+ * @returns {Promise<Refusal | null>} the first refusal the reads met; null where none did
+ */
+async function readTexts(texts) {
+  /** @type {Refusal | null} */
+  let met = null;
+  for (const addr of texts) {
+    const w = await PUMP.wholeOf(addr);
+    met = met || w.refused;
+    const d = w.doc;
+    if (w.refused || !d || d.from < 0 || d.extent == null || d.extent < 1 || imageCovers(d)) continue;
+    const drops = REC.dropsOf(addr), im = await PUMP.imageParts(addr, 1, d.extent);
+    if (!('runs' in im)) met = met || im.refused;
+    else if (REC.dropsOf(addr) === drops) REC.takeImage(addr, 1, im.runs);
+  }
+  return met;
+}
+
+/**
+ * A cursor move reaching an entry whose words, or the arrival it keeps,
+ * stand in a text the page cannot tell from yet (see `landAtCursor`): each
+ * such text read whole beside the flight, its image with it (`readTexts`),
+ * as a LEAP to an unread document reads it; once they answer, where no act
+ * was made meanwhile, the return's
+ * marks set from what they hold (`returning`, `markReturn`) — those alone
+ * where the reader took the camera over — and the camera going on to the
+ * view that sets the line the words are found at where the line read stood,
+ * the walk with it (`walkOf`), the entry's notice shown again where its read
+ * brought one, what the return says said (`sayReturn`) and the surfaces the
+ * entry keeps reopened (`restore`).
  * @param {number} act the move's count
  * @param {Entry} e the entry the move reached
+ * @param {string[]} texts the texts to read whole first (`Return.reads`)
  * @param {Promise<boolean>} first the move's flight
  * @param {boolean} byKey a key made the move
+ * @param {Notice | null} [n] the entry's notice its read brought once it answered
  */
-async function placeRead(act, e, first, byKey) {
-  for (const addr of new Set([e.reading, e.stood].flatMap((x) => (x ? [shownIn(x.addr)] : [])))) {
-    const d = REC.has(addr) ? REC.doc(addr) : null;
-    if (!d || d.from < 0) await PUMP.wholeOf(addr);
-  }
-  if (act !== made || takenAt === act) return;
-  const at = returning(e);
-  if (!at) { void restore(e, act); endAir(act, await first); return; }
+async function placeRead(act, e, texts, first, byKey, n = null) {
+  const met = await readTexts(texts);
+  if (act !== made) return;
+  const at = returning(e, true, met), told = markReturn(at, e.notice);
+  if (takenAt === act) { if (n) showFound(n); sayReturn(act, e, told); return; }
   const flight = goOn(act, first, { ...walkOf(e, at), view: at.view }, byKey, 500);
+  if (n) showFound(n);
+  sayReturn(act, e, told);
   void restore(e, act);
   await flight;
 }
@@ -2555,8 +2901,8 @@ function showCover(addr, found = false) { const site = placeAt(addr); FACES.with
  * answers the document covered and no act was made meanwhile, the camera
  * going on to the covered box framed whole, its face standing there as
  * O-HOST's notice — the face alone where the reader took the camera over —
- * else the move landing where its flight lands, the surfaces the entry keeps
- * reopened (`restore`).
+ * else the return landing as any return does once its texts are read
+ * (`placeRead`), the surfaces the entry keeps reopened.
  * @param {number} act the move's count
  * @param {Entry} e the entry the move reached
  * @param {Promise<boolean>} first the move's flight
@@ -2565,7 +2911,7 @@ function showCover(addr, found = false) { const site = placeAt(addr); FACES.with
 async function coverRead(act, e, first, byKey) {
   await PUMP.wholeOf(e.addr);
   if (act !== made) return;
-  if (!REC.covered(e.addr)) { void restore(e, act); endAir(act, await first); return; }
+  if (!REC.covered(e.addr)) { await placeRead(act, e, returning(e).reads, first, byKey); return; }
   if (takenAt === act) { showCover(e.addr, true); return; }
   const flight = goOn(act, first, coveredAt(e.addr), byKey, 500);
   showCover(e.addr, true);

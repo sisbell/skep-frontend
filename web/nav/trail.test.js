@@ -2,8 +2,9 @@
 // view, what it reads and where the walk stood on the entry it leaves; Back,
 // Forward and a jump moving the cursor and dropping nothing, a push behind
 // the cursor dropping the entries ahead; a claim standing where it was
-// pushed, re-taken by every departure, settled with a place — its reading
-// notice taken off, what its push dropped staying dropped — or with no view
+// pushed, re-taken by every departure, settled with a place and where the
+// walk lands there — its reading notice taken off, what its push dropped
+// staying dropped — or with no view
 // where the reader took the camera over, or with a notice, keeping its place
 // and its number either way; the step a push writes on the entry it departs
 // and a cursor move writes nowhere; a jump whose camera never left giving its
@@ -26,8 +27,8 @@ const e = (/** @type {string} */ addr, /** @type {number} */ n) => ({ addr, pos:
 const addrs = () => T.all().map((x) => x.addr);
 /** a departure at the view n, which reads no passage, the walk in no document read */
 const at = (/** @type {number} */ n) => ({ view: v(n), reading: null, stood: null });
-/** what the view n reads: the passage at its centre, its position n */
-const readOf = (/** @type {number} */ n) => ({ addr: 'd', pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], p: { x: n, y: n }, line: { x: 0, y: n }, fs: 1 });
+/** what the view n reads: the line at its centre, its position n, one position wide, and the view around it */
+const readOf = (/** @type {number} */ n) => ({ addr: 'd', pos: n, width: 1, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], around: [{ pos: n, width: 1, prefix: 'd.0.1', ordinal: n }], p: { x: n, y: n }, line: { x: 0, y: n }, fs: 1 });
 /** a departure at the view n, which reads the passage at n, the walk standing there */
 const away = (/** @type {number} */ n) => ({ view: v(n), reading: readOf(n), stood: { addr: 'd', pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null } });
 /** what an entry keeps of the departure from it: its view's x, what that view reads, where the walk stood */
@@ -184,17 +185,17 @@ test('every departure re-takes what its view reads and where the walk stood besi
   assert.deepEqual(kept(r), [80, null, null], 'a departure from a view that reads nothing: neither kept');
 });
 
-test('a landing that writes a view writes what that view reads and drops where the walk stood — the walk lands on the place the read placed; one that writes no view keeps all three (issue #221)', () => {
+test('a landing that writes a view writes what that view reads and where the walk lands there, in the place of where it stood; one that writes no view keeps all three (issues #221, #297)', () => {
   T.push(e('a', 1), null);
   const claim = T.push({ ...e('x', 2), notice: reading }, at(10), true);
   T.back(away(20));
   assert.deepEqual(kept(claim), [20, 20, 20], 'departed while it reads');
   T.settle(claim, { pos: 5, width: 1 });
   assert.deepEqual(kept(claim), [20, 20, 20], 'settled with no view — the reader took the camera over there: the view, what it read and where the walk stood kept');
-  T.settle(claim, { view: v(30), reading: readOf(30), pos: 7, width: 1 });
-  assert.deepEqual(kept(claim), [30, 30, null], 'settled with a view: that view and what it reads, and no longer where the walk stood');
+  T.settle(claim, { view: v(30), reading: readOf(30), stood: { addr: 'd', pos: 7, ids: [{ prefix: 'd.0.1', ordinal: 7, width: 1 }], end: null }, pos: 7, width: 1 });
+  assert.deepEqual(kept(claim), [30, 30, 7], 'settled with a view: that view, what it reads and where the walk lands there, by its byte');
   T.settle(claim, { view: v(40), pos: 8, width: 1 });
-  assert.deepEqual(kept(claim), [40, null, null], 'a view written with nothing it reads reads nothing');
+  assert.deepEqual(kept(claim), [40, null, null], 'a view written with nothing it reads and no place for the walk: neither kept');
 });
 
 test('a change of the page\'s class drops what each entry\'s view read and where the walk stood, keeping its view and its place (FP-29; issue #221)', () => {

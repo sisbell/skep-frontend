@@ -7,26 +7,28 @@
 // entry is departed, so Back lands on the passage left; its place re-taken
 // with it where the box it names shows another version as it is departed
 // (`retakePlace`; N-GO's `departure`), so Back restores the version read
-// there (FP-22); beside the view, by value, what that view reads — the
-// passage at its visible centre, by its position, its byte's identity and
-// where it stood in its fold (T-LAYER's `Reading`) — written with every view
-// the trail writes: a departure's, a jump's camera leaving (`leaveFrom`), a
-// landing's (`settle`); and where the walk stood in that passage's document
-// — or the document it stood on whole, where the view read none — as the
-// entry was departed, by position and identity (`Stood`), until a
-// read places the entry's landing (`settle`), so a return lands on that
-// passage and that place wherever its document was set again since (N-GO's
-// `landAtCursor`). An entry records the step that left it for the entry
-// after it (`Step`), written as a push departs it: the link followed for a
-// follow, the passage carried for a carrying LEAP or a version move — by
-// identity, the permanent addresses of its bytes, never its positions — the
-// link's end or the passage a reading scene was opened from, and none for
-// any other move; a cursor move writes none. It keeps the arrival standing
-// at it as the reader leaves it — its outline, what its landing said, its
-// runs' labels and the run it stood at — and the surfaces standing there —
-// the selection by its bytes, the card or the list by what it is about and
-// the control the focus stood on in it — written on it by value (`keep`;
-// N-GO's), which a return restores (FP-25, FP-21, FP-36). An entry a reading
+// there (FP-22); beside the view, by value, what that view reads — the line
+// at its visible centre and the view around it, by their positions and their
+// bytes' identity, and where the line stood in its fold (T-LAYER's
+// `Reading`) — written with every view the trail writes: a departure's, a
+// jump's camera leaving (`leaveFrom`), a landing's (`settle`); and where the
+// walk stood in that line's document — or the document it stood on whole,
+// where the view read none — as the entry was departed, or where a read
+// placed its landing since (`settle`), by position and identity (`Stood`),
+// so a return finds those words and that place wherever its document was set
+// again since (N-GO's `landAtCursor`). An entry records the step that left
+// it for the entry after it (`Step`), written as a push departs it: the link
+// followed for a follow, the passage carried for a carrying LEAP or a version
+// move — by identity, the permanent addresses of its bytes, never its
+// positions — the link's end or the passage a reading scene was opened from,
+// and none for any other move; a cursor move writes none. It keeps the
+// arrival standing at it as the reader leaves it — its outline and its
+// passage by identity, what its landing said, its runs' labels and the run it
+// stood at, that run's first byte by identity — and the surfaces standing
+// there — the selection by its bytes, the card or the list by what it is
+// about and the control the focus stood on in it — written on it by value
+// (`keep`; N-GO's), which a return reads again from the text it reaches and
+// reopens (FP-25, FP-21, FP-36). An entry a reading
 // scene was opened as holds the pair it opened on and the passage held, and the
 // scene as the reader last left the entry (`Opened`; SC's `Left`), by value,
 // re-taken with every departure from it while the scene stands, which a
@@ -135,8 +137,9 @@
 
 /**
  * @typedef {Object} Kept — the arrival and the surfaces as the reader left an entry (see the head): N-GO's, by value
- * @property {import('./go.js').Arrival | null} arrival its outline, where its runs stood as the reader left
+ * @property {import('./go.js').Arrival | null} arrival its outline, where its runs stood as the reader left, and its passage by identity
  * @property {import('./go.js').Landing | null} landed what its landing said, its runs' labels and the run it stood at among them
+ * @property {ISpan[]} current the first byte of the run the landing stood at, by identity (M-REC's `identityOf`): what a return finds that run again by; none where it stood at no run
  * @property {import('./go.js').Surfaces | null} surfaces the selection and the card or the list standing there; null where none stood
  */
 
@@ -161,8 +164,8 @@
  * @property {number | null} pos the position landed on, where one was
  * @property {number | null} width the positions of the run landed on from `pos`, where the landing named a span: the first run in the text of a follow's projected far end, or a carried passage's counterpart — one of the runs its landing outlined
  * @property {View} view the view at the entry — the landing's, re-taken at departure; where the camera went, where its read brought no place
- * @property {Reading | null} reading what its view reads, written with the view (see the head): a return re-places the view by it; null where it reads no passage
- * @property {Stood | null} stood where the walk stood as the entry was last departed (see the head): a return puts it back there; null where the departure that left it held none (`Departure`), or a read has placed the entry's landing since
+ * @property {Reading | null} reading what its view reads, written with the view (see the head): the words a return finds in the text it reaches, and places the view by; null where it reads no passage
+ * @property {Stood | null} stood where the walk stood as the entry was last departed, or where a read placed the entry's landing since (`settle`) (see the head): a return puts it back there; null where neither held one (`Departure`)
  * @property {Step | null} step the step that left it for the entry after it, written as a push departed it; none while nothing has, and none where the push took no step this module records
  * @property {string | null} label the act's name where HOME or WHOLE BOARD pushed the entry, the strings table's; null for every other entry, whose document's words are read from the model as it is shown (see the head)
  * @property {Notice | null} notice the face the entry shows: its jump's reading face while the read is out, then the face the read brought; null where it shows none
@@ -248,20 +251,19 @@ export function push(e, departed, claim = false, step = null) {
 }
 
 /**
- * A claim answered with what its read brought (FP-25): a place — its view
- * and what that view reads, where the reader did not take the camera over
- * at the entry, the walk then landing on the place rather than where it
- * stood, and the position and the positions where the read placed them — or
- * a notice, the face the entry shows on
- * every return to it, the entry standing where the camera went; the reading
- * notice the claim held is taken off either way. The entry keeps its place
- * and its number, and what its push dropped stays dropped; every cursor move
- * waiting on it is woken.
+ * A claim answered with what its read brought (FP-25): a place — its view,
+ * what that view reads and where the walk lands there, in the place of where
+ * it stood, where the reader did not take the camera over at the entry, and
+ * the position and the positions where the read placed them — or a notice,
+ * the face the entry shows on every return to it, the entry standing where
+ * the camera went; the reading notice the claim held is taken off either way.
+ * The entry keeps its place and its number, and what its push dropped stays
+ * dropped; every cursor move waiting on it is woken.
  * @param {Entry} e
- * @param {{view?: View, reading?: Reading | null, pos?: number | null, width?: number | null, notice?: Notice | null}} landing `view` left out, the entry keeps the view it stands at, what it reads and where the walk stood
+ * @param {{view?: View, reading?: Reading | null, stood?: Stood | null, pos?: number | null, width?: number | null, notice?: Notice | null}} landing `stood` where the walk lands at the place, by its byte (N-GO's); `view` left out, the entry keeps the view it stands at, what it reads and where the walk stood
  */
 export function settle(e, landing) {
-  if (landing.view) { e.view = { ...landing.view }; e.reading = landing.reading ?? null; e.stood = null; }
+  if (landing.view) { e.view = { ...landing.view }; e.reading = landing.reading ?? null; e.stood = landing.stood ?? null; }
   if (landing.pos !== undefined) e.pos = landing.pos;
   if (landing.width !== undefined) e.width = landing.width;
   e.notice = landing.notice ?? null;
