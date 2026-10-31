@@ -3,9 +3,10 @@
 // keeps no DOM of its own, moving the focus of elements their owners hand it.
 // State (FP-10): whether a key made the last move of the focus (the ring's
 // rule), the last input's kind, and the opener stack — which region took the
-// focus, and from which element. The page has one focus, the platform's
-// (`document.activeElement`; rule 10), and no `.focus()` call stands outside
-// this module: five entries, which every module calls and none bypasses —
+// focus, from which element, and the region each waits on to take it next.
+// The page has one focus, the platform's (`document.activeElement`; rule 10),
+// and no `.focus()` call stands outside this module: five entries, which
+// every module calls and none bypasses —
 //   land(el, {byKey})      an act moved the focus to an element (rule 12),
 //                          wherever the key was pressed; `byKey` sets the
 //                          ring's rule, and left out the rule stands (a
@@ -15,15 +16,22 @@
 //   open(region, {…})      a region took the focus from an element,
 //                          remembered once on one stack: a second opening of
 //                          a standing region keeps the first opener (rules
-//                          11, 13, 16). `byKey` alone decides whether the
-//                          region's `first` control takes the focus.
+//                          11, 13, 16). `byKey` decides whether the region's
+//                          `first` control takes the focus — save where a
+//                          field the reader types in outside the region holds
+//                          the caret: the region then stands without it, said
+//                          by its own name, and each region holding the field
+//                          waits on it (FP-20, FP-36). An opening no key made
+//                          is waited on by none.
 //   close(region)          the region ends: a focus standing on nothing, or
-//                          still inside the region, returns to the opener
-//                          where that takes it, else to the walk's element,
-//                          else to the first control of the innermost region
-//                          still standing — a scene the walk stands under —
-//                          never lost, never to the top (rule 4); one the
-//                          person moved elsewhere stays where they put it.
+//                          still inside the region, goes to the first control
+//                          of the region it waits on, as that control stands
+//                          then, else returns to the opener where that takes
+//                          it, else to the walk's element, else to the first
+//                          control of the innermost region still standing — a
+//                          scene the walk stands under — never lost, never to
+//                          the top (rule 4); one the person moved elsewhere
+//                          stays where they put it.
 //   keep(region, keyOf, rebuild)  a control redrawn from state while it holds
 //                          the focus (FP-13): the focus returns, after the
 //                          redraw, to the element bearing the same key, else
@@ -43,14 +51,15 @@
 // key-made landing is told by the focus move alone (rule 12), never repeated
 // here. N-WALK registers the plane's stop and the walk's element, the app the
 // status region (`attach`).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-20.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-20, FP-36.
 
 /**
  * @typedef {Object} Entry — a region holding the focus, and where it took it from
  * @property {string} region `overlay`, `box`, `scene`
  * @property {Element} el the region's element: a focus inside it is the region's
  * @property {Element | null} opener the element the focus stood on as the region opened; null where it stood on nothing, or where a move passed over a field the region holds (`land`)
- * @property {Element | null} first the control its opening named first: where a region closing over it returns the focus when neither that region's opener nor the walk's element takes it (`close`)
+ * @property {Element | null} first the control its opening named first: where the focus goes as a region waiting on it closes (`waiting`), and where a region closing over it returns the focus when neither that region's opener nor the walk's element takes it (`close`)
+ * @property {Entry | null} waiting the region a key opened while a field this region holds kept the caret (`open`), standing: this region's close gives it the focus first; null where none was, or it has closed
  */
 
 /** @type {Element | null} the plane's stop's region: the ARIA mirror (N-WALK's), registered as it attaches */
@@ -79,7 +88,7 @@ const onNothing = (/** @type {Element | null} */ e) => !e || (typeof document !=
 /**
  * One reading of a field the reader types in (FP-20): an input or a
  * textarea — the address box, a moment's answer — whose caret no move the
- * page makes takes (`land`).
+ * page makes takes (`land`, `open`).
  * @param {Element | null} e
  */
 export const isField = (e) => !!e && typeof e.matches === 'function' && e.matches('input, textarea');
@@ -149,8 +158,9 @@ export function byKey(e) {
  * that carries no focus puts the ring out). A focus standing in a field the
  * reader types in stays there, its caret and its text with it (see the
  * head): the move sets the rule alone, and every region holding the
- * field forgets its opener, so the field's close gives the focus to the walk's
- * element — where the move put the walk.
+ * field forgets its opener, so the field's close gives the focus to the
+ * region it waits on, else to the walk's element — where the move put the
+ * walk (`close`).
  * @param {Element | null} el
  * @param {{byKey?: boolean}} [opts]
  * @returns {boolean} the focus stands on the element
@@ -173,6 +183,12 @@ export function land(el, opts = {}) {
  * region already standing keeps the first opener, so a replacement, a
  * rebuild or a scene over a scene returns where the first opening came from —
  * and its first control focused where a key made the act, never otherwise.
+ * Where a field the reader types in outside the region holds the caret, a
+ * key's opening takes none of it (FP-20): the region stands without the
+ * focus, said through the status region by its own name (FP-36), and every
+ * region holding the field waits on it where it names a first control, so
+ * the field's close gives the focus there (`close`). An opening no key made —
+ * a face taking the region's place — is waited on by none.
  * @param {string} region
  * @param {{el: Element, from?: Element | null, byKey?: boolean, first?: Element | null}} o `from` the element the act found the focus on, read by the caller before its markup replaced it (the focus now, where left out); `first` the control the focus goes to by a key, kept for a region closing over this one (`close`)
  */
@@ -180,22 +196,40 @@ export function open(region, o) {
   let e = stack.find((s) => s.region === region);
   if (!e) {
     const from = o.from === undefined ? active() : o.from;
-    e = { region, el: o.el, opener: onNothing(from) ? null : from, first: o.first ?? null };
+    e = { region, el: o.el, opener: onNothing(from) ? null : from, first: o.first ?? null, waiting: null };
     stack.push(e);
   } else { e.el = o.el; if (o.first !== undefined) e.first = o.first; }
-  if (o.byKey && o.first) focusEl(o.first);
+  const at = active();
+  if (!o.byKey) for (const s of stack) { if (s.waiting === e) s.waiting = null; }
+  else if (at && isField(at) && !o.el.contains(at)) {
+    if (o.first) for (const s of stack) { if (s.el.contains(at)) s.waiting = e; }
+    const name = nameOf(o.el);
+    if (name) say(name);
+  } else if (o.first) focusEl(o.first);
   changed();
 }
 
+/** a region's own name, as its element carries it: its `aria-label`, else the words of the elements its `aria-labelledby` names */
+function nameOf(/** @type {Element} */ el) {
+  const label = el.getAttribute('aria-label');
+  if (label) return label;
+  const ids = el.getAttribute('aria-labelledby');
+  if (!ids || typeof document === 'undefined' || typeof document.getElementById !== 'function') return '';
+  return ids.split(/\s+/).map((id) => { const n = document.getElementById(id); return n ? n.textContent || '' : ''; }).join(' ').trim();
+}
+
 /**
- * A region ends (rule 4; rule 16): the focus returns to the opener where that
- * still takes it — an item a rebuild replaced, a corner the walk has left, do
- * not — else to the walk's element, else, where a region still standing
- * covers the walk (a scene, its plane inert), to the first control the
- * innermost such region's opening named; never lost, never to the top. The
- * return runs only where the focus stands on nothing, or still inside the
- * region (taken off it first); one the person moved out stays where they put
- * it.
+ * A region ends (rule 4; rule 16): the focus goes to the region it waits on,
+ * on its first control as it stands then — the one its opening named, else
+ * its first in the order, a redraw having replaced that one (`firstOf`) —
+ * else returns to the opener where that still takes it — an item a rebuild
+ * replaced, a corner the walk has left, do not — else to the walk's element,
+ * else, where a region still standing covers the walk (a scene, its plane
+ * inert), to the first control the innermost such region's opening named;
+ * never lost, never to the top. The return runs only where the focus stands
+ * on nothing, or still inside the region (taken off it first); one the person
+ * moved out stays where they put it. A region waiting on this one waits on
+ * none from now.
  * @param {string} region
  */
 export function close(region) {
@@ -203,11 +237,13 @@ export function close(region) {
   for (let k = stack.length - 1; k >= 0; k--) if (stack[k].region === region) { i = k; break; }
   if (i < 0) return;
   const [e] = stack.splice(i, 1);
+  for (const s of stack) { if (s.waiting === e) s.waiting = null; }
   const at = active();
   const inside = !onNothing(at) && !!at && e.el.contains(at);
   if (!onNothing(at) && !inside) { changed(); return; }
   if (inside && at) /** @type {HTMLElement} */ (at).blur();
-  if (!(e.opener && e.opener.isConnected && focusEl(e.opener))) {
+  const w = e.waiting, next = w ? (w.first && w.first.isConnected ? w.first : firstOf(w.el)) : null;
+  if (!(next && focusEl(next)) && !(e.opener && e.opener.isConnected && focusEl(e.opener))) {
     const h = home();
     if (!(h && focusEl(h))) for (let k = stack.length - 1; k >= 0; k--) { const f = stack[k].first; if (f && f.isConnected && focusEl(f)) break; }
   }
@@ -217,6 +253,10 @@ export function close(region) {
 /** the controls a region's rebuild may restore the focus to */
 const CONTROLS = 'button, input, [tabindex]';
 const usable = (/** @type {Element} */ e) => !(/** @type {HTMLButtonElement} */ (e)).disabled;
+/** a region's controls the focus may be put on, in the order: none disabled */
+const controlsIn = (/** @type {Element} */ region) => /** @type {Element[]} */ ([...region.querySelectorAll(CONTROLS)]).filter(usable);
+/** a region's first control: the first of its controls in the page's order, else the region itself where it is a stop of its own */
+const firstOf = (/** @type {Element} */ region, all = controlsIn(region)) => all.find((e) => e.getAttribute('tabindex') !== '-1') || (region.getAttribute('tabindex') === '0' ? region : null);
 
 /**
  * A control redraws itself from state while it holds the focus (FP-13; rule
@@ -235,10 +275,9 @@ export function keep(region, keyOf, rebuild) {
   const key = held && at ? keyOf(at) : null;
   rebuild();
   if (!held) return null;
-  const all = /** @type {Element[]} */ ([...region.querySelectorAll(CONTROLS)]).filter(usable);
+  const all = controlsIn(region);
   const same = key != null ? all.find((e) => keyOf(e) === key) || null : null;
-  const first = all.find((e) => e.getAttribute('tabindex') !== '-1') || null;
-  const to = same || first || (region.getAttribute('tabindex') === '0' ? region : null);
+  const to = same || firstOf(region, all);
   if (to) focusEl(to);
   return to;
 }

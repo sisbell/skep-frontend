@@ -2,11 +2,12 @@
 // platform's would: one owner — no `.focus()` call stands in any module of
 // the page outside the controller — one reading of "a key made it", the
 // ring's rule, the opener stack remembered once and its close's return, a
-// field keeping its caret through a move the page makes, a rebuild keeping
-// the focus, and the host's cases: which control an overlay gives the focus
-// as a key or a pointer opens it, as a rebuild, a replacement or a face takes
-// its place, and as it is dismissed, and a notice below it, which takes none
-// and closes first (FP-20, FP-36; the focus record's rules 10–16).
+// field keeping its caret through a move the page makes and through a key's
+// opening beside it, whose region its close then gives the focus, a rebuild
+// keeping the focus, and the host's cases: which control an overlay gives
+// the focus as a key or a pointer opens it, as a rebuild, a replacement or a
+// face takes its place, and as it is dismissed, and a notice below it, which
+// takes none and closes first (FP-20, FP-36; the focus record's rules 10–16).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -113,6 +114,64 @@ test('a field the reader types in keeps the caret through a move the page makes:
   FOCUS.land(/** @type {any} */ (item), { byKey: true });
   assert.equal(p.at(), 'the item', 'no field holds the focus: the move takes it');
   FOCUS.close('box');
+});
+
+test('a key\'s opening beside a field the reader types in takes none of its caret: the region stands without the focus, said by its own name, and the field\'s close gives it the focus on its first control as that stands then — the region gone, or a face in its place, the walk\'s element (issue #267\'s design decision: "Esc in that field then gives the surface the focus")', () => {
+  const p = page();
+  /** @type {string[]} what the status region was given to say */
+  const said = [];
+  /** @type {any} */ (p.doc).getElementById = (/** @type {string} */ id) => (id === 'overlay-name' ? { textContent: 'the trail' } : null);
+  let shown = false;
+  const plane = p.element('the tree'), item = p.element('the item'), landed = p.element('the landing\'s item'), box = p.element('the box');
+  const field = Object.assign(p.element('the box\'s input', () => shown), { matches: (/** @type {string} */ sel) => sel.split(',').map((s) => s.trim()).includes('input') });
+  box.contains = (x) => x === field;
+  plane.contains = (x) => x === item || x === landed || x === plane;
+  const list = p.element('the list'), row = p.element('its newest row'), redrawn = p.element('its newest row, redrawn');
+  let rows = [row];
+  list.contains = (x) => rows.includes(/** @type {any} */ (x));
+  list.querySelectorAll = () => rows;
+  list.attrs['aria-labelledby'] = 'overlay-name';
+  const scene = p.element('the scene'), pane = p.element('pane B');
+  scene.contains = (x) => x === pane;
+  scene.attrs['aria-label'] = 'the reading scene';
+  let walk = item;
+  FOCUS.attach({ plane: /** @type {any} */ (plane), home: () => /** @type {any} */ (walk), live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); } }) });
+  /** the box opened from the walk's item, its input taking the caret, and a landing passing over it */
+  const typing = () => {
+    walk = item; item.focus(); shown = true;
+    FOCUS.open('box', { el: /** @type {any} */ (box), byKey: true, first: /** @type {any} */ (field) });
+    walk = landed; FOCUS.land(/** @type {any} */ (landed), { byKey: true });
+    assert.equal(p.at(), 'the box\'s input', 'the landing\'s move leaves the caret in the field');
+  };
+  /** the box closed as Esc in its input closes it: hidden, its input taking no focus from then */
+  const shut = () => { shown = false; FOCUS.close('box'); };
+  typing();
+  FOCUS.open('overlay', { el: /** @type {any} */ (list), byKey: true, first: /** @type {any} */ (row) });
+  assert.deepEqual([p.at(), FOCUS.standing(), said[said.length - 1]], ['the box\'s input', ['box', 'overlay'], 'the trail'], 'a key\'s list beside the field: the caret stays in the field, the list standing, said by the name its caption gives it');
+  rows = [redrawn]; row.isConnected = false; // its owner draws it again
+  shut();
+  assert.deepEqual([p.at(), FOCUS.standing()], ['its newest row, redrawn', ['overlay']], 'the field\'s close gives the list the focus, on its first control as it stands then');
+  FOCUS.close('overlay');
+  assert.equal(p.at(), 'the landing\'s item', 'the list\'s close: its opener, the field, takes no focus once the box is shut — the walk\'s element');
+  typing();
+  FOCUS.open('overlay', { el: /** @type {any} */ (list), byKey: true, first: /** @type {any} */ (redrawn) });
+  FOCUS.close('overlay');
+  assert.equal(p.at(), 'the box\'s input', 'the list closing beside the field moves no focus');
+  shut();
+  assert.equal(p.at(), 'the landing\'s item', 'the list gone: the field\'s close goes to the walk\'s element');
+  typing();
+  FOCUS.open('overlay', { el: /** @type {any} */ (list), byKey: true, first: /** @type {any} */ (redrawn) });
+  FOCUS.open('overlay', { el: /** @type {any} */ (list), byKey: false });
+  shut();
+  assert.equal(p.at(), 'the landing\'s item', 'a face taking the list\'s place, an opening no key made: the field\'s close goes to the walk\'s element');
+  FOCUS.close('overlay');
+  typing();
+  FOCUS.open('scene', { el: /** @type {any} */ (scene), byKey: true, first: /** @type {any} */ (pane) });
+  assert.deepEqual([p.at(), said[said.length - 1]], ['the box\'s input', 'the reading scene'], 'a key\'s scene beside the field: the caret stays, the scene said by its own label');
+  shut();
+  assert.equal(p.at(), 'pane B', 'the field\'s close gives the scene the focus, on the pane its opening named');
+  FOCUS.close('scene');
+  assert.deepEqual(FOCUS.standing(), []);
 });
 
 test('a region\'s opener is remembered once: a second opening keeps the first, and the close returns the focus there', () => {

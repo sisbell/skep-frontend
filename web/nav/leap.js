@@ -26,10 +26,15 @@
 // hands the focus back through N-FOCUS (K-34; FP-20) — to the element it
 // was opened from where that takes it, else to the walk's element. A landing
 // never closes the box (FP-20): a jump's landing, a version move's or a key
-// made at one leaves its text, its caret and its focus as they stand, and
-// its close then gives the focus to the walk's element; the box as opened
-// takes the address the line names as that changes (`takeAddress`), so it
-// never holds a place the line does not show (K-30). The box is gone with
+// made at one leaves its text, its caret and its focus as they stand — a
+// surface such a key opens standing beside the box without the caret
+// (N-FOCUS's `open`), and an opening of the box leaving it as it stands
+// (`open`) — and its close then gives the focus to that surface where it
+// stands, else to the walk's element; the box as opened takes the address
+// the line names as that changes (`takeAddress`), so it never holds a place
+// the line does not show (K-30). The box stands over the overlay and the
+// notice below it, so nothing shown while the reader types in it covers its
+// input or its rows (FP-36). The box is gone with
 // the next act (M-1): a chord inside it acts as anywhere, the box closed
 // first and the chord read at the focus the close returned; the field's own
 // chords — select all, copy, paste, cut, undo, the caret's — stay the
@@ -62,7 +67,7 @@
 // copies and typing replaces (D5 K-30; §4 rule 4). The answer and the
 // index's state are the box's own status region (D4), written only when its
 // words change, so an arrow or a further keystroke repeats nothing.
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-29, FP-35.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-29, FP-35, FP-36.
 
 import * as REC from '../model/records.js';
 import * as TRAIL from './trail.js';
@@ -162,9 +167,16 @@ function comboState() {
   else els.input.removeAttribute('aria-activedescendant');
 }
 
-/** open the box holding the current address, selected (K-30) — a card or scene still reading ended first, what stands staying (O-HOST's opening); its input takes the focus, the opener remembered by the focus's owner */
+/**
+ * Open the box holding the current address, selected (K-30) — a card or
+ * scene still reading ended first, what stands staying (O-HOST's opening);
+ * its input takes the focus, the opener remembered by the focus's owner. A
+ * box standing open with its input holding the caret stands as it is, its
+ * text, its caret and its rows with it (FP-20).
+ */
 export function open(prefill = currentAddress() || '') {
   if (!els) return;
+  if (openState && document.activeElement === els.input) return;
   HOST.endOpening();
   const from = document.activeElement;
   openState = true; asOpened = true;
@@ -246,7 +258,7 @@ function cellsOf(r) {
   return [id(r.addr), title, sub];
 }
 
-/** close the box: the focus back through the focus's owner — to the opener, else the walk's element, the walk's element alone where a landing passed over the box; one that left the box already stays where it went */
+/** close the box: the focus back through the focus's owner — to the surface a key made at a landing opened beside it, where that stands, else to the opener where no landing passed over the box, else to the walk's element; one that left the box already stays where it went */
 export function close() {
   if (!els || !openState) return;
   openState = false; inRows = false; els.box.classList.remove('on');

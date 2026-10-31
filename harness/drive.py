@@ -11,7 +11,8 @@ cases (one module per fence class under cases/), each writing
 results/<class>.json. Every browser claim the structure record left
 unverified (§10 items 16–21) is settled by what these runs observe and
 recorded in results/browser.json. A case may hold the page's next `op` call
-of a kind at its answer (`hold_op`, CDP's Fetch domain), every other call to
+of a kind — of one document, where it names one — at its answer (`hold_op`,
+CDP's Fetch domain), every other call to
 the provider passing as it comes, and answer it as it chooses — its own
 answer, that answer cut, a refusal in the bridge's envelope, or no answer
 (`answer_op`) — reads alone, the provider answering every call as asked; the
@@ -133,10 +134,10 @@ class Driver:
             return
         self._send('Fetch.continueRequest', {'requestId': p['requestId']})
 
-    def hold_op(self, op):
-        """the page's next `op` call of the kind named held at its answer until `answer_op`; every other call to the provider's
-        `/bridge/op` passes as it comes"""
-        self.held = {'match': lambda post: ('"op":"%s"' % op) in post, 'paused': None}
+    def hold_op(self, op, doc=None):
+        """the page's next `op` call of the kind named — of the document named, where `doc` names one — held at its answer
+        until `answer_op`; every other call to the provider's `/bridge/op` passes as it comes"""
+        self.held = {'match': lambda post: ('"op":"%s"' % op) in post and (doc is None or ('"doc":"%s"' % doc) in post), 'paused': None}
         self.call('Fetch.enable', {'patterns': [{'urlPattern': '*/bridge/op', 'requestStage': 'Response'}]})
 
     def answer_op(self, how='whole', cut=None, refusal=None, wait_s=20):

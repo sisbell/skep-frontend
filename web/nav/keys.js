@@ -10,11 +10,14 @@
 // would act on while N-GO's jump is in the air, or while held keys are being
 // made, is held (`hold`), its platform default prevented as it is pressed,
 // and made at the jump's landing (`replay`) in the order pressed, with the
-// context it was pressed in, its act read again where the focus is then
-// (`route`), so a key means the same however slowly the board answers; a
-// jump that never lands drops the keys it held. The keys a control takes as
-// its own stay its own: a field's, the line's ← and → among its acts, an
-// overlay's and a landing's line's buttons.
+// context it was pressed in, marked as made there, its act read again where
+// the focus is then (`route`), so a key means the same however slowly the
+// board answers; a jump that never lands drops the keys it held. A key made
+// at the landing takes nothing from a field the reader types in (FP-20): a
+// surface it opens stands beside the field, which keeps the caret (N-FOCUS's
+// `open`), and Esc passes over the chrome the field stands in (`esc`). The
+// keys a control takes as its own stay its own: a field's, the line's ← and →
+// among its acts, an overlay's and a landing's line's buttons.
 // No plane command rides a printable key (§2.7): every command is a chord
 // (Mod = ⌘ on macOS, Ctrl elsewhere; D5 §0) or a navigation key with the
 // platform's meaning; a printable key on the plane is swallowed, never
@@ -27,9 +30,11 @@
 // box, a card or scene still reading, the notice standing below the overlay
 // (FP-36; O-HOST's), the overlay, a jump reaching, the scene — its close a
 // Back from its entry (N-GO's `closeScene`) — the selection, and after them
-// all the arrival (FP-21; N-GO's `endArrival`). Mod+L and Mod+K open the
-// LEAP box (K-30), Mod+Y the trail's list (K-41), Mod+= and Mod+- zoom the
-// camera by 1.25 about the view's
+// all the arrival (FP-21; N-GO's `endArrival`); made at a landing, it passes
+// over the box and over an overlay whose own field holds the caret, the
+// notice below that overlay still closing first (FP-20). Mod+L and Mod+K
+// open the LEAP box (K-30), Mod+Y the trail's list (K-41), Mod+= and Mod+-
+// zoom the camera by 1.25 about the view's
 // centre and re-take the focus (K-11), Mod+Shift+P shows the one line's strip
 // (K-23), and the selection's slot chords (K-47 … K-52) and K-8's
 // select-by-span act from the plane and from a standing overlay alike. Mod+G
@@ -164,6 +169,7 @@ export const drawChord = (/** @type {string} */ chord) => (MAC ? chord.replace('
  * @typedef {Object} Ctx — where the focus is, and whether a key made the act
  * @property {'plane' | 'line' | 'box' | 'overlay' | 'landing' | 'corner' | 'scene' | 'scene-acts' | 'field'} where `scene` a reading scene's pane, `scene-acts` its bar's buttons, `landing` a landing's line's acts (O-LAND)
  * @property {boolean} byKey a key made the act (the focus owner's one reading, `FOCUS.byKey`)
+ * @property {boolean} [landed] the key is made at a jump's landing, held while the jump was in the air (`replay`): Esc passes over the chrome a field the reader types in stands in (`esc`)
  */
 
 /** @typedef {() => (boolean | Promise<boolean>)} Act a key's act, made: true where the page took the key */
@@ -233,7 +239,7 @@ export async function dispatch(e, ctx) {
 function route(e, chord, ctx) {
   const byKey = ctx.byKey;
   // Esc: the innermost thing, one order
-  if (chord === 'Esc') return () => { esc(); return true; };
+  if (chord === 'Esc') return () => { esc(!!ctx.landed); return true; };
   // the LEAP box
   if (chord === 'Mod+L' || chord === 'Mod+K') return () => { LEAP.open(); return true; };
   // the trail's list (K-41)
@@ -286,9 +292,10 @@ function route(e, chord, ctx) {
 
 /**
  * A key a jump in the air finds is held for its landing (see the head; FP-25):
- * made there, in the order pressed, with the context it was pressed in, each
- * read where the focus is then (`route`); dropped, with every other key held
- * for the same jump, where the jump never lands.
+ * made there, in the order pressed, with the context it was pressed in, marked
+ * as made there (`Ctx.landed`), each read where the focus is then (`route`);
+ * dropped, with every other key held for the same jump, where the jump never
+ * lands.
  * @param {KeyboardEvent} e
  * @param {Ctx} ctx
  */
@@ -305,7 +312,7 @@ async function replay() {
       const k = held[0];
       if (!(await k.jump)) { while (held.length && held[0].jump === k.jump) held.shift(); continue; }
       held.shift();
-      const run = route(k.e, chordOf(k.e), k.ctx);
+      const run = route(k.e, chordOf(k.e), { ...k.ctx, landed: true });
       if (!run) continue;
       making = true;
       try { await run(); } finally { making = false; }
@@ -365,12 +372,17 @@ function swallow(/** @type {KeyboardEvent} */ e) {
  * `abandon`), the scene — its close a Back from its entry (N-GO's
  * `closeScene`), which brings back the selection the place it opened over
  * kept — then the selection, then the arrival — its outline, its labels and
- * its line (FP-21; N-GO's `endArrival`); on the bare plane nothing.
+ * its line (FP-21; N-GO's `endArrival`); on the bare plane nothing. Made at a
+ * jump's landing, it ends no chrome a field the reader types in stands in
+ * (FP-20): it passes over the box, and over an overlay whose own field holds
+ * the caret (O-HOST's `typing`) — the notice below that overlay closing first
+ * all the same — and closes the next thing in the order.
+ * @param {boolean} [landed] a key held while a jump was in the air made it at the landing (`Ctx.landed`)
  */
-export function esc() {
-  if (LEAP.isOpen()) { LEAP.close(); return; }
+export function esc(landed = false) {
+  if (LEAP.isOpen() && !landed) { LEAP.close(); return; }
   if (HOST.pending()) { HOST.endOpening(); return; }
-  if (HOST.current()) { HOST.dismissInnermost(); return; }
+  if (HOST.current() && !(landed && HOST.typing() && !HOST.notice())) { HOST.dismissInnermost(); return; }
   if (GO.abandon()) return;
   if (SCENE.isOpen()) { GO.closeScene(true); return; }
   if (SEL.selected()) { SEL.clear(); return; }

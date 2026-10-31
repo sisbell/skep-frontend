@@ -250,7 +250,10 @@
 // selection standing outside the layer — a drag in a reading scene's pane,
 // over an overlay's text — is theirs, whenever they made it, and the page's
 // goes back only where the platform's is collapsed, absent or in the layer,
-// so the copy is of what the person chose (`placeAgain`).
+// so the copy is of what the person chose (`placeAgain`). Nor does a range
+// take a caret: while a field the reader types in holds the focus no range is
+// placed, the page's span owed until a frame finds the field let it go
+// (FP-20; N-FOCUS's `isField`).
 // The reading scene's panes borrow the mount (`sceneArticle`; FP-12; the
 // structure record §3.4 (vii)): each pane's article is made here,
 // T-ARTICLE's scene-mode variant laid out by the pane's own style — one
@@ -2870,6 +2873,8 @@ let placed = null;
 
 /** does a platform range lie in the plane's text layer, where the page's selection is drawn? */
 const inLayer = (/** @type {Range} */ r) => !!layer && layer.contains(r.commonAncestorContainer);
+/** does a field the reader types in hold the focus (N-FOCUS's `isField`)? A range placed then would take its caret (FP-20) */
+const typing = () => typeof document !== 'undefined' && FOCUS.isField(document.activeElement);
 
 /**
  * Place the platform's selection over a span as the page selects it — a
@@ -2883,7 +2888,9 @@ const inLayer = (/** @type {Range} */ r) => !!layer && layer.contains(r.commonAn
  * clears a selection that lies in the layer and never touches one outside
  * it, as the remount's put-back never does. Either way the selection kept
  * from an article taken down (`kept`) is dropped: the page's selection is
- * this one now.
+ * this one now. While a field the reader types in holds the focus the span
+ * is owed its range and nothing is placed, the caret being the reader's
+ * (`typing`; FP-20).
  * @param {Span | null} span
  */
 export function placeSelection(span) {
@@ -2892,6 +2899,7 @@ export function placeSelection(span) {
   const s = window.getSelection(); if (!s) return;
   const standing = s.rangeCount ? s.getRangeAt(0) : null;
   if (!span) { placed = null; if (standing && inLayer(standing)) s.removeAllRanges(); return; }
+  if (typing()) { owed = span; return; }
   const have = standing && !standing.collapsed ? spanOfRange(standing) : null;
   if (have && sameSpan(have, span)) { placed = have; return; }
   const r = rangeOf(span);
@@ -2909,15 +2917,19 @@ export function placeSelection(span) {
  * layer: one standing outside the layer — a drag in a reading scene's pane,
  * over an overlay's text, made before the take-down or after it — is the
  * person's, and stands as they made it, so the copy is of it (`onCopy`). A
- * caret, wherever it stands, holds nothing they chose. `kept` decides the
- * anchor's end alone: taking an article down leaves a selection that stood
- * in it collapsed in the layer, where the put-back takes it. The span owed its
+ * caret in the page's text, wherever it stands, holds nothing they chose;
+ * the caret of a field the reader types in is theirs, and while one holds
+ * the focus the span stays owed, `kept` with it (`typing`; FP-20). `kept`
+ * decides the anchor's end alone: taking an article down leaves a selection
+ * that stood in it collapsed in the layer, where the put-back takes it. The
+ * span owed its
  * range (`placeSelection`) goes on so; it stays owed while its first or last
  * line stands in no part, and stops being owed once the person holds a
  * selection of their own outside the layer.
  * @param {Span} span
  */
 function placeAgain(span) {
+  if (typing()) { owed = span; return; }
   const backward = !!kept && kept.backward && sameSpan(kept.span, span);
   kept = null;
   const s = window.getSelection();

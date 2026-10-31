@@ -50,6 +50,7 @@ import { esc } from '../util.js';
 import * as TRAIL from './trail.js';
 import * as WALK from './walk.js';
 import * as KEYS from './keys.js';
+import * as LEAP from './leap.js';
 import * as GO from './go.js';
 import * as FOCUS from './focus.js';
 
@@ -2209,6 +2210,71 @@ test('an overlay whose field holds the caret — a walk\'s moment being answered
   } finally {
     hostEl.contains = was;
     globalThis.document.activeElement = /** @type {any} */ (null);
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+/** the LEAP box's stand-ins, its input a field the platform's focus lands on: what N-LEAP is attached to */
+function leapBox() {
+  const part = () => ({ innerHTML: '', value: '', setAttribute() {}, removeAttribute() {}, addEventListener() {}, contains: (/** @type {unknown} */ _x) => false, classList: { add() {}, remove() {} } });
+  const doc = /** @type {any} */ (globalThis.document);
+  const input = Object.assign(part(), {
+    selected: /** @type {[number, number] | null} */ (null),
+    focus() { doc.activeElement = input; },
+    blur() { if (doc.activeElement === input) doc.activeElement = null; },
+    select() { input.selected = [0, input.value.length]; },
+    matches: (/** @type {string} */ sel) => sel.split(',').map((s) => s.trim()).includes('input'),
+  });
+  return { box: { ...part(), contains: (/** @type {unknown} */ x) => x === input }, input, rows: part(), note: part() };
+}
+
+test('a key held while a jump is in the air and made at its landing takes nothing from a field the reader typed in meanwhile (issue #267\'s design decision; FP-20): an Esc made there passes over the LEAP box, which stands with its text, its caret and its focus, and over a walk\'s moment whose answer holds the caret, a notice below the moment closing first; a Mod+L made there leaves the box as it stands; the reader\'s own Esc closes the box', async () => {
+  const doc = /** @type {any} */ (globalThis.document), b = leapBox(), was = hostEl.contains;
+  LEAP.attach(/** @type {any} */ (b), () => D);
+  /** the moment's answer field, the platform's focus in it: inside the overlay's element */
+  const field = { id: 'the answer', matches: (/** @type {string} */ sel) => sel.split(',').map((s) => s.trim()).includes('input'), blur() {}, focus() {} };
+  try {
+    for (const [what, key] of /** @type {Array<[string, any]>} */ ([['Esc', keyOf('Escape')], ['Mod+L', keyOf('l', MOD)]])) {
+      unread();
+      await run(GO.leapTo(D));
+      doc.activeElement = null;
+      const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(C) });
+      const leap = GO.leapTo(C);
+      assert.deepEqual([await KEYS.dispatch(key, PLANE), KEYS.holding()], [true, 1], `${what}: held as it is pressed in the air`);
+      LEAP.open();
+      b.input.value = 'typed'; b.input.selected = [5, 5];
+      release();
+      await run(leap);
+      await drained();
+      assert.deepEqual([LEAP.isOpen(), b.input.value, b.input.selected, doc.activeElement === b.input], [true, 'typed', [5, 5], true], `${what} made at the landing: the box stands with its text, its caret and its focus`);
+      KEYS.esc();
+      assert.equal(LEAP.isOpen(), false, `${what}: the reader's own Esc closes the box`);
+    }
+    hostEl.contains = /** @type {any} */ ((/** @type {unknown} */ x) => x === field);
+    takeFloat();
+    for (const [what, follows] of /** @type {Array<[string, boolean]>} */ ([['a LEAP landing', false], ['a follow landing at a dead end, its face a notice below the moment', true]])) {
+      unread(); memberUnread();
+      await run(GO.leapTo(D));
+      doc.activeElement = null;
+      const id = 'm-267-' + Number(follows);
+      FACES.moment({ id, kind: 'ask', data: { text: 'name this' }, walk: 'w-267-' + Number(follows), board: null, answerable: true });
+      doc.activeElement = field;
+      const release = fake.hold('op', { frame: follows ? F.project(FLOAT, 2, FAR) : F.retrieveDocVSpanSet(C) });
+      const jump = follows ? GO.follow(drawn(FLOAT)) : GO.leapTo(C);
+      assert.deepEqual([await KEYS.dispatch(keyOf('Escape'), PLANE), KEYS.holding()], [true, 1], `${what}: Esc held as it is pressed in the air`);
+      release();
+      await run(jump);
+      await drained();
+      assert.deepEqual([HOST.currentState()?.id, HOST.notice(), doc.activeElement === field], ['moment:' + id, null, true], `${what}: the Esc made at the landing ${follows ? 'closes the notice below the moment, which' : 'passes over the moment, which'} stands with its field holding the caret`);
+      doc.activeElement = null;
+      HOST.dismiss();
+    }
+    for (let i = 0; i < 50; i++) await new Promise((r) => setTimeout(r, 0));
+  } finally {
+    hostEl.contains = was;
+    doc.activeElement = null;
+    LEAP.close();
+    HOST.dismiss();
   }
   assert.deepEqual(fake.unanswered, []);
 });

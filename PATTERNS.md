@@ -532,6 +532,7 @@ last. Each stands until a later decision says it changes it.
 - **#264**: leaving a place keeps in its trail entry the selection by its bytes and the card or list standing by what it is about, with the control the focus stood on, and a return reopens them as left — their counts and claims read again, a span's subject placed again by its bytes, a stroke's list with its scene → FP-36, FP-25, FP-20, FP-29
 - **#265**: a face a read brings once it answers ends no card still reading and stands under the card, list or moment the reader opened meanwhile, placed below its box, closed first by Esc or an empty click and left standing alone once that surface closes, leaving the place taking both down → FP-36
 - **#266**: a version move closes no card, list, selection or moment, however early opened, taking down only the faces of the landing it leaves and standing its reading face below the reader's card, and as it lands — as a newer version's arrival pins a box on its member too — each surface on the version left is placed by its bytes in the version shown and moves there, moves onto what stands with the line said, or stays with the dead end's face below it offering the version that holds it → FP-36, FP-22
+- **#267**: a key replayed at a landing opens its surface without the caret of a field the reader is typing in, the field and its text standing, and Esc in that field then gives that surface the focus (changes #171) → FP-20, FP-36
 
 ## What these rule out
 

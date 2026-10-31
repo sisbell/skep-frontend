@@ -10,7 +10,12 @@ with its trail entry (foundations §2.2, §2.3; K-31); a landing arriving
 under the box the reader is typing in leaving it open with its text, its
 caret and its focus, Esc then closing it onto the landing, and the box as
 opened taking the address the line names once a landing changes it (#171's
-rule 2); an address the board
+rule 2); a key pressed while a jump is in the air and made at its landing
+taking nothing from the box the reader opened from the one line and typed in
+meanwhile — Mod+Y's list opening beside it, said by its own name and standing
+under it, Esc in the box giving the list the focus, Mod+Shift+O's selection
+placing no range until the box closes, an Esc and a Mod+L made there leaving
+the box as it stands (issue #267's design decision; FP-20, FP-36); an address the board
 says nothing about, the page holding nothing of it, flown to at once and
 faced where the camera went, keeping its entry, Mod+[ undoing that jump
 alone, the camera back where it stood, and Mod+] returning there, its
@@ -1911,6 +1916,106 @@ def box_through_landing(ctx, r):
     r.check(not state(ctx)['leap'], 'Esc closes the box that took the new address')
 
 
+def keys_through_landing(ctx, r):
+    """issue #267's design decision (FP-20, FP-36): a key pressed on the plane while a jump is in the air is made at its
+    landing, after the reader has opened the LEAP box from the one line's address segment and typed in it — the far edition's
+    text dropped through the gate's invalidation door (reads alone) and the jump's read of its span set held at its answer by
+    the driver (`hold_op`) meanwhile — and takes nothing from the box. Mod+Y's trail list opens beside it, said through the
+    status region by its own name and standing under it where the two meet, the box standing with its text, its caret and
+    its focus, a character typed after the landing landing in it; Esc in the box then gives the list the focus on its newest
+    row, and the next Esc closes the list onto the walk's element. Mod+Shift+O, made there with no selection standing,
+    selects the walk's block and asks who wrote it, the box keeping its caret: no range is placed in the plane's text until
+    the box closes. An Esc made there passes over the box; a Mod+L made there leaves it as it stands"""
+    box = lambda: ctx.js('''(() => { const q = document.getElementById('leapq');
+      return {open: window.__skep.leap.isOpen(), focused: document.activeElement === q, value: q.value, caret: [q.selectionStart, q.selectionEnd]}; })()''')
+    platform = lambda: ctx.js('''(() => { const s = window.getSelection(), n = s && s.anchorNode;
+      return {leap: window.__skep.leap.isOpen(), layer: !!n && document.getElementById('domlayer').contains(n), text: s ? String(s) : ''}; })()''')
+    typed = {'open': True, 'focused': True, 'value': NO_MATCH, 'caret': [len(NO_MATCH), len(NO_MATCH)]}
+
+    def flown(key, mods=(), pos=None):
+        """the far edition's LEAP, made with its text dropped and its span set's read held; `key` pressed on the plane while it
+        is in the air; the box opened by a click on the line's address segment and NO_MATCH typed over the address it opened
+        holding; then the read answered and the landing let settle. What the page showed in the air"""
+        ctx.leap(DOC, WINDOW[0])
+        ctx.drv.hold_op('retrieve_doc_v_span_set', doc=FAR_LEAP)
+        try:
+            ctx.js('(() => { window.__skep.model.invalidate(%s); window.__skep.go.leapTo(%s, %s); return true; })()' % (json.dumps(FAR_LEAP), json.dumps(FAR_LEAP), json.dumps(pos)))
+            ctx.drv.key(key, mods=mods)
+            air = ctx.js('({air: window.__skep.go.inAir(), overlay: window.__skep.overlay().id})')
+            seg = ctx.js('(() => { const q = document.querySelector("#line [data-act=address]").getBoundingClientRect(); return {x: q.left + q.width / 2, y: q.top + q.height / 2}; })()')
+            ctx.drv.mouse(seg['x'], seg['y'])
+            ctx.drv.ime(NO_MATCH)
+            ctx.frames(2)
+            air['box'] = box()
+            air['answered'] = ctx.drv.answer_op('whole')
+        finally:
+            ctx.drv.unhold()
+        ctx.settle()
+        ctx.frames(4)
+        return air
+
+    # Mod+Y: a surface with controls, its name said, the box over it, Esc in the box giving it the focus
+    name = strings(ctx, 'F.trail-list')
+    air = flown('y', mods=('Meta',))
+    landed = box()
+    s = ctx.js('({overlay: window.__skep.overlay().id, live: document.getElementById("live").textContent, standing: window.__skep.focus().standing})')
+    r.check(air['air'] and air['overlay'] != 'trail-list' and air['box'] == typed and air['answered'],
+            'Mod+Y pressed on the plane while the jump is in the air is held, the box opened from the one line and typed in meanwhile (what the checks after it stand on)', air)
+    r.check(landed == typed and s['overlay'] == 'trail-list' and s['live'] == name and set(s['standing']) == {'box', 'overlay'},
+            'Mod+Y made at the landing opens the trail list beside the box, said through the status region by its own name, and takes nothing from the box: its text, its caret and its focus stand (issue #267\'s design decision: "FOCUS.open leaves the caret in a field being typed in and opens the key\'s surface without it")',
+            dict(s, box=landed, name=name))
+    ctx.drv.ime('!')
+    ctx.frames(2)
+    more = box()
+    r.check(more['focused'] and more['value'] == NO_MATCH + '!', 'a character typed after the landing lands in the box: the caret is the box\'s', more)
+    geo = ctx.js('''(() => { const z = (id) => Number(getComputedStyle(document.getElementById(id)).zIndex);
+      const a = document.getElementById('leap').getBoundingClientRect(), b = document.getElementById('overlay').getBoundingClientRect();
+      const x0 = Math.max(a.left, b.left), x1 = Math.min(a.right, b.right), y0 = Math.max(a.top, b.top), y1 = Math.min(a.bottom, b.bottom);
+      const meet = x1 > x0 && y1 > y0, e = meet ? document.elementFromPoint((x0 + x1) / 2, (y0 + y1) / 2) : null;
+      return {z: {leap: z('leap'), overlay: z('overlay'), notice: z('notice')}, meet, top: e ? (e.closest('#leap') ? 'leap' : e.closest('#overlay') ? 'overlay' : e.id || e.tagName) : null}; })()''')
+    r.figures['box_over_list'] = geo
+    r.check(geo['z']['leap'] > geo['z']['overlay'] and geo['z']['leap'] > geo['z']['notice'] and (not geo['meet'] or geo['top'] == 'leap'),
+            'the box stands over the overlay and the notice below it: where the list meets the box, the box is what stands there (FP-36: what arrives never covers a field being typed in)', geo)
+    chord(ctx, 'Escape')
+    at = ctx.js('(() => { const a = document.activeElement; return {leap: window.__skep.leap.isOpen(), overlay: window.__skep.overlay().id, run: a && a.closest && a.closest("#overlay") ? a.dataset.run || null : null}; })()')
+    r.check(not at['leap'] and at['overlay'] == 'trail-list' and at['run'] == 'j1',
+            'Esc in the box closes it and gives the list the focus, on its newest row (issue #267\'s design decision: "Esc in that field then gives the surface the focus, not the landing as #171 said")', at)
+    chord(ctx, 'Escape')
+    home = ctx.js('''(() => { const a = document.activeElement;
+      return {overlay: window.__skep.overlay().id, item: !!a && a.getAttribute('role') === 'treeitem' && !!a.closest('#mirror'), id: a ? a.id : null, current: 'walk-' + window.__skep.mirror.index()}; })()''')
+    r.check(home['overlay'] is None and home['item'] and home['id'] == home['current'], 'the next Esc closes the list onto the walk\'s element', home)
+    # Mod+Shift+O, no selection standing: the walk's block selected, the caret the box's — no range placed until it closes
+    air = flown('O', mods=('Meta', 'Shift'), pos=1)
+    overlay_up(ctx, 'provenance:')
+    landed, sel, walk, plat = box(), ctx.js('window.__skep.selection()'), ctx.js('window.__skep.view.focus()'), platform()
+    ctx.drv.ime('!')
+    ctx.frames(2)
+    more = box()
+    r.check(air['air'] and air['box'] == typed and air['answered'],
+            'Mod+Shift+O pressed on the plane while the jump is in the air is held, the box opened and typed in meanwhile (what the next check stands on)', air)
+    r.check(landed == typed and more['focused'] and more['value'] == NO_MATCH + '!' and bool(sel) and bool(walk) and walk['kind'] == 'block' and sel['addr'] == FAR_LEAP and sel['pos'] == walk['pos']
+            and ctx.js('window.__skep.overlay().id') == 'provenance:wrote' and not plat['layer'],
+            'Mod+Shift+O made at the landing, no selection standing, selects the walk\'s block and asks who wrote it, the box keeping its text and its caret: a character typed after it lands in the box, and no range stands in the plane\'s text (FP-20: "A field the reader types in keeps the caret through every move the page makes")',
+            {'box': [landed, more], 'selection': sel, 'walk': walk, 'platform': plat, 'overlay': ctx.js('window.__skep.overlay().id')})
+    chord(ctx, 'Escape')
+    placed = platform()
+    r.check(not placed['leap'] and placed['layer'] and bool(placed['text']), 'Esc closes the box, and the platform\'s range is placed over the block in the plane\'s text then', placed)
+    for _ in range(3):
+        if ctx.js('window.__skep.overlay().id') is None and not ctx.js('window.__skep.selection()'):
+            break
+        chord(ctx, 'Escape')
+    # an Esc and a Mod+L made at the landing: the box as the reader left it
+    for what, key, mods in (('an Esc', 'Escape', ()), ('a Mod+L', 'l', ('Meta',))):
+        air = flown(key, mods=mods)
+        landed = box()
+        r.check(air['air'] and air['box'] == typed and air['answered'] and landed == typed,
+                '%s pressed on the plane while the jump is in the air, made at the landing, leaves the box the reader opened and typed in meanwhile as it stands: its text, its caret and its focus (FP-20: a key made at a landing never "ends the chrome it stands in")' % what,
+                {'air': air, 'landed': landed})
+        chord(ctx, 'Escape')
+        r.check(not state(ctx)['leap'], 'the reader\'s own Esc then closes the box')
+    ctx.leap(DOC, WINDOW[0])
+
+
 def stacked_notice(ctx, r):
     """issue #265's design decision (FP-36): a face a jump's read brings once it answers stands below a card the reader opened
     while the read was out, covering neither it nor its focus, and Esc closes the face first, then the card. In one turn, the
@@ -2074,6 +2179,8 @@ def run(ctx):
     ring_drawn(ctx, r, 'Mod+[ from the account')
     # ---- a landing never closes the LEAP box the reader is typing in (#171's rule 2) --------------------------------
     box_through_landing(ctx, r)
+    # ---- a key made at a landing takes nothing from the box typed in meanwhile (issue #267's design decision) ----------
+    keys_through_landing(ctx, r)
     # ---- WHOLE BOARD and HOME (K-13, K-14) --------------------------------------------------------
     chord(ctx, '0', mods=('Meta',))
     s = state(ctx)

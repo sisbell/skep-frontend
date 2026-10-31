@@ -74,8 +74,10 @@
 // control it was left holding it on (`controlOf`), else none.
 // The focus is N-FOCUS's (FP-20; D5 §4 rule 4): an overlay takes the focus
 // only where a key made the act that opened it — `takeFocus` is that act's
-// `byKey` and nothing else decides it — and takes it on its first act, never
-// the dismiss (rule 13): a card's first act, a list's current row where one
+// `byKey` — and no field the reader types in outside it holds the caret,
+// which keeps it, the overlay standing beside the field (N-FOCUS's `open`);
+// it takes it on its first act, never the dismiss (rule 13): a card's first
+// act, a list's current row where one
 // is current (`first` names it), else its first row; a walk's moment, which
 // takes it whatever made it stand (K-80), its first control as it arrives and
 // its first words as it is unfolded (O-FACES'). The dismiss is a native
@@ -171,7 +173,7 @@ import { esc } from '../util.js';
  * @property {string} html
  * @property {Record<string, Act>} [acts] handlers by `data-run` name
  * @property {(replaced: boolean) => void} [onDismiss] its end, run while the element still holds what it wrote: `replaced` where the next act's overlay took its place, so what stands behind it (the selection) stands on; false where it was dismissed
- * @property {boolean} [takeFocus] a key made the act that opened it (the act's `byKey`), or it is reopened where the focus stood in it: the focus goes to its first act
+ * @property {boolean} [takeFocus] a key made the act that opened it (the act's `byKey`), or it is reopened where the focus stood in it: the focus goes to its first act, save where a field the reader types in outside it holds the caret (N-FOCUS's `open`)
  * @property {string} [first] a selector for the control the focus goes to first where it is not the first in order — a list's current row; a reopened surface's control it was left holding the focus on (`controlOf`)
  * @property {boolean} [told] a face whose words the landing that met it says where the focus lands (N-WALK's description): the status region does not repeat them
  * @property {string} [id] a name the gate reads

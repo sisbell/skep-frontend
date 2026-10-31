@@ -2,7 +2,8 @@
 // the platform's would: the box as opened holds the current address and
 // takes the new one the line names as a landing changes it, while a box
 // typed in or with a row chosen keeps its text and its rows and a closed box
-// is written nothing; a landing never closes the box, whose close then gives
+// is written nothing; an opening of the box standing with the caret leaves
+// it as it stands; a landing never closes the box, whose close then gives
 // the focus to the walk's element; a change of the page's class computes the
 // rows standing in the box again from the model, at once and as the new
 // class's index answers, its text, its caret and its focus as they stood;
@@ -120,6 +121,21 @@ test('a box typed in, or with a row chosen, keeps its text and its rows as the a
   line = '1.0.1.0.127';
   LEAP.takeAddress();
   assert.equal(input.value, 'left as it closed', 'closed: nothing written');
+});
+
+test('an opening of the box standing open with its input holding the caret leaves it as it stands — its text, its caret, its rows and its focus — as a Mod+L made at a landing opens it (issue #267\'s design decision; FP-20); closed, it opens holding the current address', () => {
+  LEAP.open();
+  input.value = 'artifact';
+  input.fire('input');
+  input.selected = [3, 3];
+  const rows = LEAP.currentRows();
+  line = '1.0.2.0.9';
+  LEAP.open();
+  assert.deepEqual([LEAP.isOpen(), input.value, input.selected, LEAP.currentRows(), globalThis.document.activeElement], [true, 'artifact', [3, 3], rows, /** @type {any} */ (input)], 'the box as it stood');
+  LEAP.close();
+  LEAP.open();
+  const s = shown();
+  assert.deepEqual([s.open, s.value, s.selected], [true, '1.0.2.0.9', true], 'closed, it opens holding the current address, selected');
 });
 
 test('a landing never closes the box: a move the page makes leaves the focus in its input, and its close gives the focus to the landing, never to the element it was opened from (#171\'s rule 2; FP-20)', () => {
