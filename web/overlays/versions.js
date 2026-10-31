@@ -65,7 +65,13 @@
 // its first (rule 11). It opens on its reads (O-HOST's `opening`): where an
 // act was made on the chrome while they read, nothing shows, and no member
 // is asked about after it.
-// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-22, FP-34.
+// The list leaves and returns with its place (FP-36): it shows naming what
+// it is about (O-HOST's `about`) — the version it was opened for and the
+// passage it held there, by position and identity, and whether that passage
+// was a span named — and a return reopens it from that (`reopen`), at the
+// version its box shows then, over the passage where its bytes stand,
+// standing at the document's box, its rows read again.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-22, FP-34, FP-36.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -83,6 +89,15 @@ import { esc, dayOf } from '../util.js';
 /** @typedef {import('./host.js').Anchor} Anchor */
 /** @typedef {import('../model/pump.js').Chain} Chain */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+/** @typedef {import('../model/records.js').ISpan} ISpan */
+
+/**
+ * @typedef {Object} About — what the list is about (see the head)
+ * @property {'versions'} kind
+ * @property {string} addr the version it was opened for: the version its box showed
+ * @property {{pos: number, width: number, ids: ISpan[]} | null} held the passage it held there, by position and identity (M-REC's `identityOf`); null where that version held no block
+ * @property {boolean} named the passage was a span named — the selection's bytes — never the block a position named
+ */
 
 /**
  * @typedef {Object} Row — a member's row: when it was published, and what its text holds of the passage held
@@ -262,14 +277,16 @@ function captionOf(l) {
  * `addressedHTML`); "published" over the dates; each row its read act, the
  * head's carrying the latest version's mark where the board ended the chain
  * there, its date and its strip (`cellsOf`) and its side-by-side act; the
- * open end's line beneath, where the chain was not ended.
+ * open end's line beneath, where the chain was not ended; the list naming
+ * what it is about (`About`).
  * @param {Listing} l
  * @param {Anchor | null} anchor
  * @param {number | null} pos
  * @param {number | null} width
  * @param {boolean} byKey
+ * @param {string | null} [focus] a reopened list's control the focus was left on (O-HOST's `keyOf`): it takes the focus there
  */
-function showList(l, anchor, pos, width, byKey) {
+function showList(l, anchor, pos, width, byKey, focus = null) {
   const { trunk, addr, held, chain, rows } = l;
   const cur = memberOf(addr), end = openEnd(l);
   const latest = `<span class="latest" role="img" aria-label="${esc(t('L.versions.latest'))}" data-string="L.versions.latest-mark">${esc(t('L.versions.latest-mark'))}</span>`;
@@ -289,7 +306,9 @@ function showList(l, anchor, pos, width, byKey) {
     acts['beside' + r.k] = () => GO.toScene(addr, versionAddress(trunk, r.k), { posA: held ? held.pos : null, widthA: held ? held.width : null, posB: null }, { from: held ? { passage: { addr, pos: held.pos, width: held.width } } : null, site });
   }
   if (end && end.again) acts.again = (_el, byKey) => { void HOST.opening((stands) => listed(addr, pos, width, stands, l), (next) => showList(next, anchor, pos, width, byKey)); };
-  HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor, html, acts, takeFocus: byKey, first: '[data-run][aria-current="true"]' });
+  /** @type {About} */
+  const about = { kind: 'versions', addr, held: held ? { ...held, ids: REC.identityOf(addr, held.pos, held.width) } : null, named: selected };
+  HOST.show({ kind: 'list', id: 'versions:' + trunk, anchor, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : '[data-run][aria-current="true"]', about });
 }
 
 /**
@@ -305,6 +324,23 @@ function showList(l, anchor, pos, width, byKey) {
  */
 export function open(addr, pos, anchor, width = null, byKey = false) {
   return HOST.opening((stands) => listed(addr, pos, width, stands, null), (l) => showList(l, anchor, pos, width, byKey));
+}
+
+/**
+ * The list reopened on a return to its place (see the head; N-GO's), its
+ * rows read again: at the version its box shows now (N-GO's `shownIn`), over
+ * the passage it held where its bytes stand there (`at`, the landing rule's
+ * placing) — a span named held as named, else the block holding its first
+ * position — standing at the document's box, the side its corner stands on,
+ * and taking the focus on the control it was left holding it on, else none.
+ * @param {{about: About, focus: string | null}} left
+ * @param {{addr: string, pos: number, width: number} | null} at where the passage it held stands now; null where it held none
+ * @returns {Promise<void>} settled once the list shows, or nothing will
+ */
+export function reopen(left, at) {
+  const a = left.about, addr = at ? at.addr : GO.shownIn(a.addr), box = docBox(documentOf(addr) || addr);
+  const pos = at ? at.pos : null, width = at && a.named ? at.width : null;
+  return HOST.opening((stands) => listed(addr, pos, width, stands, null), (l) => showList(l, { world: { x: box.x, y: box.y } }, pos, width, false, left.focus), left);
 }
 
 /**

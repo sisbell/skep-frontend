@@ -359,10 +359,10 @@ function swallow(/** @type {KeyboardEvent} */ e) {
  * the overlay standing under it stands), the overlay — a jump's reaching
  * face among them, whose dismissal abandons the jump — then a jump reaching
  * whose face another overlay took the place of (FP-25; N-GO's `abandon`),
- * the scene — its close a Back from its entry (N-GO's `closeScene`) — then
- * the selection, which a scene stands over and which outlives it, then the
- * arrival — its outline, its labels and its line (FP-21; N-GO's
- * `endArrival`); on the bare plane nothing.
+ * the scene — its close a Back from its entry (N-GO's `closeScene`), which
+ * brings back the selection the place it opened over kept — then the
+ * selection, then the arrival — its outline, its labels and its line (FP-21;
+ * N-GO's `endArrival`); on the bare plane nothing.
  */
 export function esc() {
   if (LEAP.isOpen()) { LEAP.close(); return; }

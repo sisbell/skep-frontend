@@ -14,9 +14,12 @@
 // answers an act named by the act's caption and described by its words; a
 // jump's face hidden exactly while its document is out of the visible view,
 // the one line carrying its words (FP-25); a face shown while the standing
-// overlay's field holds the caret taking nothing's place (FP-20); and a
-// change of the page's class dismissing the card standing and ending the
-// opening, a jump's reading face and a moment's standing through it (FP-29).
+// overlay's field holds the caret taking nothing's place (FP-20); a change
+// of the page's class dismissing the card standing and ending the opening, a
+// jump's reading face and a moment's standing through it (FP-29); and what a
+// departure keeps of the overlay standing — a card or a list by what it is
+// about with the control the focus stands on, a card a return reopens while
+// it reads, nothing for a face, a moment or the trail's list (FP-36).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -427,5 +430,51 @@ test('a change of the page\'s class takes down what the host wrote from what the
     HOST.dismiss();
   } finally {
     hostEl.contains = was.contains; doc.activeElement = was.active; FOCUS.attach({ home: () => null });
+  }
+});
+
+test('what a departure keeps of the overlay standing (issue #264\'s design decision: "`leaveHere` also saves the standing surfaces and the focus"): a card or a list by what it is about, with the key of the control the focus stands on in it — the dismiss\'s too — and none where the focus stands outside it; a card a return still reopens, by the same, while its opening reads, and nothing once it ends; a face, a moment, the trail\'s list and a card asked afresh name nothing (FP-36)', async () => {
+  const doc = /** @type {any} */ (globalThis.document);
+  /** controls of the overlay standing: its follow, its dismiss */
+  const follow = { dataset: { run: 'follow' } }, dismiss = { dataset: { x: '1' } };
+  const was = { contains: hostEl.contains, active: doc.activeElement };
+  hostEl.contains = /** @type {any} */ ((/** @type {unknown} */ x) => x === follow || x === dismiss);
+  /** @type {import('./host.js').About} */
+  const about = { kind: 'anatomy', near: '1.0.1.0.3', link: '1.0.1.0.3.0.2.1', key: '1.0.1.0.3.0.1.11+0.0.0.0.0.0.0.5', pos: 11, width: 5, ids: [{ prefix: '1.0.1.0.3.0.1', ordinal: 11, width: 5 }], others: false };
+  try {
+    HOST.show({ kind: 'card', id: 'anatomy:' + about.link, anchor: null, html: '<span class="label">its passage</span>', acts: {}, about });
+    doc.activeElement = follow;
+    assert.deepEqual(HOST.asLeft(), { about, focus: 'follow' }, 'the card by what it is about, the focus on its follow');
+    doc.activeElement = dismiss;
+    assert.deepEqual(HOST.asLeft(), { about, focus: 'x' }, 'on its dismiss');
+    doc.activeElement = null;
+    assert.deepEqual(HOST.asLeft(), { about, focus: null }, 'the focus outside it: none named');
+    assert.equal(HOST.controlOf('follow'), '[data-run="follow"]', 'the control a reopened surface takes the focus on, by its key');
+    assert.equal(HOST.controlOf('x'), '[data-x]', 'the dismiss');
+    HOST.dismiss();
+    assert.equal(HOST.asLeft(), null, 'dismissed: nothing');
+    const r = slow();
+    const left = { about, focus: 'follow' };
+    const reopening = HOST.opening(() => r.read, card('anatomy:' + about.link), left);
+    assert.equal(HOST.asLeft(), left, 'a card a return reopens, while its opening reads: as the reader left it');
+    HOST.endOpening();
+    assert.equal(HOST.asLeft(), null, 'its opening ended: nothing');
+    r.answer('its passage');
+    await reopening;
+    const fresh = slow();
+    const asked = HOST.opening(() => fresh.read, card('provenance:wrote'));
+    assert.equal(HOST.asLeft(), null, 'a card asked afresh, still reading: nothing');
+    fresh.answer('its origin');
+    await asked;
+    assert.equal(HOST.asLeft(), null, 'shown with nothing it is about: nothing');
+    FACES.floating('1.0.1.0.127', null, null);
+    assert.equal(HOST.asLeft(), null, 'a face: nothing');
+    TRAILLIST.open();
+    assert.equal(HOST.asLeft(), null, 'the trail\'s list: nothing');
+    FACES.moment({ id: 'm-264', kind: 'label', data: { title: 'name this device', statements: [], default: null }, walk: 'w-264', board: null, answerable: true });
+    assert.equal(HOST.asLeft(), null, 'a moment: nothing');
+    HOST.dismiss();
+  } finally {
+    hostEl.contains = was.contains; doc.activeElement = was.active;
   }
 });

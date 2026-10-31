@@ -23,8 +23,13 @@
 // `caption`): a `withheld` one the document-level withheld face of the
 // document the board names, read for before it shows — the edition claims on
 // it, which decide C-67's pointer (O-FACES' `prepare`), its act a LEAP from
-// the span asked over. Faces: `too_much_coverage`.
-// Rules: FP-1, FP-2, FP-13, FP-20, FP-21.
+// the span asked over. Faces: `too_much_coverage`. Each card leaves and
+// returns with its place (FP-36): it shows naming what it is about (O-HOST's
+// `about`) — the span asked over, by position and identity, and whether it
+// was the selection's bytes — and a return asks it again over that span where
+// its bytes stand then (`reopen`), taking the focus on the control it was
+// left holding it on.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-36.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -35,6 +40,23 @@ import * as FACES from './faces.js';
 import { t, tHTML, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
 import { accountOf } from '../model/address.js';
+
+/**
+ * @typedef {Object} About — what a card is about (see the head)
+ * @property {'wrote' | 'uses'} kind which card
+ * @property {string} addr the span's document: the version its box showed
+ * @property {number} pos the span's first position there
+ * @property {number} width its positions
+ * @property {import('../model/records.js').ISpan[]} ids its bytes by identity (M-REC's `identityOf`); none where the held image did not cover them
+ * @property {boolean} selected the span was the selection's bytes, which an act's landing names as what the reader selected
+ */
+
+/**
+ * @typedef {Object} How — how a card is asked: the act's, or a return's
+ * @property {boolean} byKey a key made the act: the card takes the focus on its first act
+ * @property {string | null} focus a reopened card's control the focus was left on (O-HOST's `keyOf`): it takes the focus there
+ * @property {import('./host.js').Left | null} left the card a return reopens, as the reader left it
+ */
 
 /**
  * The span asked over: the bytes named; with no width, the block holding
@@ -90,6 +112,26 @@ const asking = (addr, frame) => async (stands) => {
  */
 const answering = (caption, anchor) => ({ caption, follow: (home, byKey) => { void GO.leapTo(home, { how: 'leap', byKey, site: anchor }); } });
 
+/** a card's own focus and what it is about, as `HOST.show` takes them (see the head): the focus on its first act where a key asked, on the control a return reopens it holding it on */
+const shownAs = (/** @type {About} */ about, /** @type {How} */ how) => ({ takeFocus: how.byKey || how.focus != null, first: how.focus != null ? HOST.controlOf(how.focus) : undefined, about });
+
+/** what a card asked over a span is about (`About`): the span, by position and identity */
+const aboutOf = (/** @type {'wrote' | 'uses'} */ kind, /** @type {string} */ addr, /** @type {{ordinal: number, positions: number}} */ sp, /** @type {boolean} */ selected) =>
+  /** @type {About} */ ({ kind, addr, pos: sp.ordinal, width: sp.positions, ids: REC.identityOf(addr, sp.ordinal, sp.positions), selected });
+
+/**
+ * A card asked again on a return to its place (see the head; N-GO's), over
+ * the span its bytes hold now (`at`, the landing rule's placing), its read
+ * made again, taking the focus on the control it was left holding it on.
+ * @param {{about: About, focus: string | null}} left
+ * @param {{addr: string, pos: number, width: number}} at
+ * @returns {Promise<void>} settled once the card or its face shows, or nothing will
+ */
+export function reopen(left, at) {
+  const sp = { ordinal: at.pos, positions: Math.max(1, at.width) }, how = { byKey: false, focus: left.focus, left };
+  return left.about.kind === 'wrote' ? wroteOver(at.addr, sp, left.about.selected, how) : usesOver(at.addr, sp, left.about.selected, how);
+}
+
 /**
  * who wrote this? (A-41, R29)
  * @param {string} addr
@@ -99,7 +141,18 @@ const answering = (caption, anchor) => ({ caption, follow: (home, byKey) => { vo
  * @returns {Promise<void>} settled once the card or its face shows, or nothing will
  */
 export function wrote(addr, pos, width = null, byKey = false) {
-  const sp = spanOf(addr, pos, width);
+  return wroteOver(addr, spanOf(addr, pos, width), isSelection(width), { byKey, focus: null, left: null });
+}
+
+/**
+ * who wrote this? over a span (`wrote`, `reopen`).
+ * @param {string} addr
+ * @param {{ordinal: number, positions: number}} sp the span asked over
+ * @param {boolean} selected it is the selection's bytes
+ * @param {How} how
+ * @returns {Promise<void>}
+ */
+function wroteOver(addr, sp, selected, how) {
   const anchor = { span: { addr, pos: sp.ordinal, width: sp.positions } };
   const caption = `${t('B1.who-wrote')} · ${addr} · ${t('F.position', { p: sp.ordinal })}`;
   return HOST.opening(asking(addr, F.showOrigin(addr, sp.ordinal, sp.positions)), (out) => {
@@ -115,9 +168,9 @@ export function wrote(addr, pos, width = null, byKey = false) {
       rows.map((r, i) => `<div class="answer" data-string="${r.same ? 'B1.wrote' : 'B1.wrote.here'}">${r.html}${r.same ? ` <button class="id" data-run="src${i}">${esc(r.o)}</button><button data-run="beside${i}">${esc(t('B1.side-by-side'))}</button>` : ''}</div>`).join('');
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
-    rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => carried(r.o, addr, sp, isSelection(width), byKey); acts['beside' + i] = () => GO.toScene(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }, { from: { passage: { addr, pos: sp.ordinal, width: sp.positions } }, site: anchor }); });
-    HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts, takeFocus: byKey });
-  });
+    rows.forEach((r, i) => { acts['src' + i] = (_el, byKey) => carried(r.o, addr, sp, selected, byKey); acts['beside' + i] = () => GO.toScene(addr, r.o, { posA: sp.ordinal, widthA: sp.positions, posB: null }, { from: { passage: { addr, pos: sp.ordinal, width: sp.positions } }, site: anchor }); });
+    HOST.show({ kind: 'card', id: 'provenance:wrote', anchor, html, acts, ...shownAs(aboutOf('wrote', addr, sp, selected), how) });
+  }, how.left);
 }
 
 /**
@@ -129,7 +182,18 @@ export function wrote(addr, pos, width = null, byKey = false) {
  * @returns {Promise<void>} settled once the card or its face shows, or nothing will
  */
 export function uses(addr, pos, width = null, byKey = false) {
-  const sp = spanOf(addr, pos, width);
+  return usesOver(addr, spanOf(addr, pos, width), isSelection(width), { byKey, focus: null, left: null });
+}
+
+/**
+ * who uses this? over a span (`uses`, `reopen`).
+ * @param {string} addr
+ * @param {{ordinal: number, positions: number}} sp the span asked over
+ * @param {boolean} selected it is the selection's bytes
+ * @param {How} how
+ * @returns {Promise<void>}
+ */
+function usesOver(addr, sp, selected, how) {
   const anchor = { span: { addr, pos: sp.ordinal, width: sp.positions } };
   const caption = `${t('B1.who-uses')} · ${addr} · ${t('F.position', { p: sp.ordinal })}`;
   return HOST.opening(asking(addr, F.findDocsContaining([{ doc: addr, spans: [sp] }])), (out) => {
@@ -142,7 +206,7 @@ export function uses(addr, pos, width = null, byKey = false) {
       `<div class="clause" data-string="B1.C-72">${esc(t('B1.C-72'))}</div>`;
     /** @type {Record<string, import('./host.js').Act>} */
     const acts = {};
-    users.forEach((u, i) => { acts['u' + i] = (_el, byKey) => carried(u, addr, sp, isSelection(width), byKey); });
-    HOST.show({ kind: 'card', id: 'provenance:uses', anchor, html, acts, takeFocus: byKey });
-  });
+    users.forEach((u, i) => { acts['u' + i] = (_el, byKey) => carried(u, addr, sp, selected, byKey); });
+    HOST.show({ kind: 'card', id: 'provenance:uses', anchor, html, acts, ...shownAs(aboutOf('uses', addr, sp, selected), how) });
+  }, how.left);
 }

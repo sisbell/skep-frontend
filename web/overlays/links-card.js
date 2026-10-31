@@ -20,8 +20,13 @@
 // focus on its first act where a key asked for it and never otherwise (the
 // focus record's rule 16); rebuilt by its own act, it keeps the focus on the
 // control pressed (rule 11, O-HOST's); a row's card takes the focus as the
-// row's act was made (rule 11). Figures: twelve rows a page.
-// Rules: FP-1, FP-2, FP-10, FP-13, FP-20.
+// row's act was made (rule 11). The card leaves and returns with its place
+// (FP-36): it shows naming what it is about (O-HOST's `about`) — its
+// document, the chain's stage and the pages it shows — and a return reopens
+// it from that (`reopen`), the chain raised to its stage again, taking the
+// focus on the control it was left holding it on. Figures: twelve rows a
+// page.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-36.
 
 import * as HOST from './host.js';
 import * as ANATOMY from './anatomy-card.js';
@@ -33,6 +38,14 @@ import { docBox } from '../plane/projection.js';
 import { markDirty } from '../plane/camera.js';
 
 const PAGE = 12;
+
+/**
+ * @typedef {Object} About — what the card is about (see the head)
+ * @property {'links'} kind
+ * @property {string} addr its document: the version its box showed
+ * @property {1 | 2 | 3} stage the chain's stage there (LK's)
+ * @property {number} page the pages of rows it showed
+ */
 
 /** @type {{addr: string, page: number} | null} */
 let open = null;
@@ -73,8 +86,27 @@ export function othersSwitch(on, n) {
     `<span id="links-others-name">${esc(name)}</span>${esc(before.slice(name.length))}${on ? 'on' : 'off'}${esc(after.slice(0, after.length - count.length))}<span id="links-others-count">${esc(count)}</span></button>`;
 }
 
-/** rebuild the card from LK's state (FP-13) */
-export function render(byKey = false) {
+/**
+ * The card reopened on a return to its place (see the head; N-GO's): the
+ * chain raised again to the stage it stood at — the symbols at least — at the
+ * version its box shows now, the pages of rows it showed, the focus on the
+ * control it was left holding it on, else none.
+ * @param {{about: About, focus: string | null}} left
+ * @param {string} addr the version its document's box shows now
+ */
+export function reopen(left, addr) {
+  LK.reveal(addr, left.about.stage >= 3 ? 3 : 2);
+  open = { addr, page: left.about.page };
+  LAYER.bump(); markDirty();
+  render(false, left.focus);
+}
+
+/**
+ * Rebuild the card from LK's state (FP-13), naming what it is about.
+ * @param {boolean} [byKey] a key asked for it: the focus goes to its first act
+ * @param {string | null} [focus] a reopened card's control the focus was left on (O-HOST's `keyOf`): it takes the focus there
+ */
+export function render(byKey = false, focus = null) {
   if (!open) return;
   const addr = open.addr;
   const r = LK.state(addr);
@@ -110,7 +142,8 @@ export function render(byKey = false) {
   for (const ty of rows.types) acts['type:' + ty] = () => { const cur = LK.state(addr).lens.types; const set = new Set(cur || []); if (set.has(ty)) set.delete(ty); else set.add(ty); LK.lens(addr, { types: set.size ? set : null }); LAYER.bump(); markDirty(); render(); };
   listed.forEach((s, i) => { acts['row:' + i] = (_el, byKey) => ANATOMY.open(s, null, byKey); });
   HOST.show({
-    kind: 'card', id: 'links:' + addr, anchor: { world: { x: box.x + box.w, y: box.y } }, html, acts, takeFocus: byKey,
+    kind: 'card', id: 'links:' + addr, anchor: { world: { x: box.x + box.w, y: box.y } }, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : undefined,
+    about: { kind: 'links', addr, stage: r.stage, page: open.page },
     onDismiss: (replaced) => {
       if (!open || open.addr !== addr) return;
       open = null;

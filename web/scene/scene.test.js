@@ -36,7 +36,8 @@
 // Back lighting the passage it was opened from, the scene recorded as left
 // and reopened so by Forward and by Back after a teleport out, the focus on
 // the stop it stood on, an opening abandoned or refused giving its entry
-// back (FP-25); each pane's article
+// back (FP-25), the card it was opened from reopened by its close (FP-36);
+// each pane's article
 // T-LAYER's mount on the inner side of its corner, its byline's facts read
 // before the pane is set (FP-12, FP-34); the opening ended by a navigation
 // act's dismissal, Esc or an overlay shown, asking no `compare` after it and
@@ -60,7 +61,9 @@
 // its count being read, recorded again by what it stood for; answered all,
 // part, none, refused or with no text to read, the focus kept and its words
 // FP-21's; an act on it waiting for the answer, made, abandoned, or dropped
-// once the reader moved on (FP-20, FP-25, FP-34).
+// once the reader moved on (FP-20, FP-25, FP-34); and a stroke's list kept by
+// its stroke's key as the reader leaves the scene and carried back by its
+// reopening (FP-36).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -87,6 +90,7 @@ import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA, SAMENESS } from '../plane/register.js';
 import * as ANATOMY from '../overlays/anatomy-card.js';
+import * as PROV from '../overlays/provenance.js';
 import { recorder } from '../test/canvas.js';
 
 /** @returns {import('../model/frames.js').ComparePair} */
@@ -793,6 +797,24 @@ test('a reading scene\'s opening reaches as a jump only a read can place does (F
   assert.deepEqual(fake.unanswered, []);
 }));
 
+test('the scene opened from a card\'s "read side by side", its own close — Esc, a Back — reopens the card over the place it was opened over, its read made again (issue #264\'s design decision: "Back and Forward reopen them as left"; FP-36)', () => onPage(async (p) => {
+  await onTrail(p);
+  const origin = FAKE.keyOf('op', { frame: F.showOrigin(A, 1, 3) });
+  Object.assign(script, { [origin]: { result: { as_of: 1, resp: 'addrs', addrs: [B] } } });
+  await PROV.wrote(A, 1, 3);
+  const card = HOST.currentState();
+  assert.equal(card?.id, 'provenance:wrote', 'the card at the first edition, its origin the second');
+  card?.acts?.beside0(/** @type {any} */ (null), false);
+  await flown();
+  assert.deepEqual([SCENE.isOpen(), HOST.currentState()], [true, null], 'the scene opened beside it, the card ended as it showed');
+  const from = fake.asked.length;
+  KEYS.esc(); await flown();
+  assert.deepEqual([SCENE.isOpen(), TRAIL.current()?.addr, HOST.currentState()?.id], [false, A, 'provenance:wrote'], 'Esc: the scene\'s Back, onto the entry it opened over, the card reopened there');
+  assert.ok(fake.asked.slice(from).includes(origin), 'its read made again');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+}));
+
 // ---- the panes' articles: T-LAYER's mount ------------------------------------------------------------------------------
 
 test('each pane holds T-LAYER\'s article of its document, made from the text the scene read, on the inner side of its corner — an edition read at its bare address made as the member its text is', () => onPage(async (p) => {
@@ -1433,4 +1455,28 @@ test('an act on a returned stop made while its `compare` is read waits for the a
     SCENE.close();
   } finally { Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('the scene as the reader leaves it keeps a stroke\'s list standing, by its stroke\'s key and whether the focus stood in it, and a reopening carries it back to that stroke — saying the list\'s gone line where no stroke bears its key in the texts read again (issue #264\'s design decision: "Back and Forward reopen them as left, the scene with its panes\' versions"; FP-36)', () => onPage(async (p) => {
+  const was = script[FAKE.keyOf('op', { frame: BOTH })];
+  try {
+    p.item.focus();
+    const release = fake.hold('op', { frame: BOTH });
+    await SCENE.reopen(leftFrom(STROKE_STOP));
+    p.enter(STROKE_KEY);
+    Object.assign(script, compareAs(ANSWERS.stroke.all));
+    release();
+    await answered();
+    assert.equal(HOST.currentState()?.id, 'stroke:' + STROKE_KEY, 'the stroke\'s list shown at it');
+    const left = SCENE.asLeft();
+    assert.deepEqual(left?.list, { key: STROKE_KEY, focus: false }, 'as the reader leaves the scene: the list, by its stroke\'s key, the focus outside it');
+    SCENE.close();
+    assert.equal(HOST.currentState(), null, 'the scene\'s end takes the list down with it');
+    // the texts read again share nothing: no stroke stands, none bearing the list's key
+    Object.assign(script, compareAs([]));
+    const told = p.said.length;
+    await SCENE.reopen({ a: A, b: B, held: NEAR, left: /** @type {import('./scene.js').Left} */ (left) });
+    assert.deepEqual([SCENE.isOpen(), HOST.currentState(), p.said.slice(told).includes(t('L.scene.stroke.gone'))], [true, null, true], 'reopened: no stroke bears its key, so no list stands, and its gone line is said');
+    SCENE.close();
+  } finally { Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
 }));

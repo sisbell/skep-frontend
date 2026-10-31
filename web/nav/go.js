@@ -42,10 +42,14 @@
 // entry's box shows, and a reading scene standing over it as the reader
 // leaves it (SC's `asLeft`).
 // As its camera leaves, an act ends the chrome of the place it leaves
-// (`dismissChrome`; FP-25): the arrival, kept by value in the entry left for
-// a return (`leaveHere`; N-TRAIL's `keep`), the standing overlay — save one
-// whose field holds the caret, which stands through the jump (FP-20; O-HOST's
-// `typing`) — and the scene, which its departure has recorded. The camera is
+// (`dismissChrome`; FP-25): the arrival and the surfaces standing as the act
+// was made (`nextAct`) — the selection by its bytes, the card or the list by
+// what it is about and the control the focus stood on in it (O-SELECTION's
+// and O-HOST's `asLeft`) — kept by value in the entry left for a return
+// (`leaveHere`; N-TRAIL's `keep`); the standing overlay — save one whose
+// field holds the caret, which stands through the jump (FP-20; O-HOST's
+// `typing`) — the selection, save at a version move, which stands beside it
+// (FP-36), and the scene, which its departure has recorded. The camera is
 // flown (P-CAM's `fly`) and the walk moved to the landing (N-WALK's `focusTo`), the
 // ring drawn there where a key made the act, which only the caller knows, so
 // every act takes `byKey` from it (D5 §4 rules 2 and 8); a LEAP and a follow
@@ -125,6 +129,24 @@
 // (`landAtCursor`): its outline and its labels as the reader left them, the
 // run it stood at, the link lit the one the move crossed, and none of its
 // offers that read.
+// The surfaces' return (FP-36): a cursor move reaching an entry that keeps
+// surfaces owes them to it (`owed`) and, once the walk has landed there and
+// the text its view reads is held, reopens them as the reader left them
+// (`restore`) — the selection over the bytes it holds in the text its box
+// shows then, its own card or list with it where one stood over it
+// (O-SELECTION's `restore`); then the card or the list by its owner, from
+// what it is about, its reads — counts and claims — made again, taking the
+// focus on the control it was left holding it on (`reopen`). A subject that
+// is a span's bytes — the selection, a provenance card's span, the versions
+// list's passage held, a card's link's end — is placed by the landing rule
+// (`placedNow`): all of it standing, the surface moves there; part, it stands
+// on what stands, the line saying so in the status region — and, where no
+// arrival's line stands, beside the landing, the latest member holding it
+// whole offered (`heldPart`); none, the dead end's face in its place, said,
+// with the same offer (`heldNone`). A departure before they show keeps what
+// is still owed, so a second move made at once loses nothing; a surface the
+// reader made meanwhile stands in their place. A covered place reopens
+// none, and a change of the page's class drops every entry's kept surfaces.
 // A text set again under the reader (FP-21's landing rule; FP-36): an
 // arrival keeps its runs' bytes by identity as they were outlined
 // (`withBytes`), and where its document's text is set again since — the
@@ -248,6 +270,11 @@ import * as FACES from '../overlays/faces.js';
 import * as LAYER from '../text/layer.js';
 import * as HELD from '../beams/held.js';
 import * as SEL from '../overlays/selection.js';
+import * as ANATOMY from '../overlays/anatomy-card.js';
+import * as VERSIONS from '../overlays/versions.js';
+import * as LINKS from '../overlays/links-card.js';
+import * as PROV from '../overlays/provenance.js';
+import * as MARKLIST from '../overlays/mark-list.js';
 import * as FOCUS from './focus.js';
 import { accountCell, boardCell } from '../plane/projection.js';
 import { documentOf, memberOf, versionAddress, kindOf, isTrunkMember, boardOf } from '../model/address.js';
@@ -336,6 +363,18 @@ import { esc } from '../util.js';
  * @property {Passage | null} passage the passage it outlines, placed in its text at every read (`arrivalMark`): the passage carried, at either end; the far end followed, Forward's; null where it outlines none
  */
 
+/**
+ * @typedef {Object} Surfaces — the surfaces standing at a place as the reader leaves it (see the head; FP-36), by value: what its trail entry keeps beside the arrival (N-TRAIL's `Kept`), and what a return reopens
+ * @property {import('../overlays/selection.js').Left | null} selection the selection, by its bytes
+ * @property {import('../overlays/host.js').Left | null} overlay the card or the list standing, by what it is about, and the control the focus stood on in it
+ */
+
+/** @typedef {{addr: string, pos: number, width: number, ids: ISpan[]}} Subject a surface's subject where it is a span's bytes (see the head): where they stood as the reader left them, by position and identity */
+
+/** @typedef {{holds: 'all' | 'part' | 'none', span: Span | null, places: number}} Placed a subject placed by the landing rule (`placedNow`): what the text its box shows now holds of it, the span from its first stretch there to the end of its last — none where it holds none — and its stretches */
+
+/** @typedef {Surfaces & {entry: Entry}} Owed the surfaces a return owes the entry it reached, each until it shows (see the head) */
+
 /** @type {Arrival | null} the arrival a landing marked, as its reads placed it */
 let arrival = null;
 /** @type {Light | null} the light a one-step move made */
@@ -352,6 +391,14 @@ let versionOffer = null;
 let here = null;
 /** @type {Map<string, string>} each box's version where one is pinned, by its document: a box absent shows its plain address, the trunk head (see the head) */
 const pins = new Map();
+/** @type {Surfaces | null} the surfaces standing at the place the reader stands at as the latest act was made (`nextAct`): what that act's departure keeps (`leaveHere`) */
+let surfacesLeft = null;
+/** @type {Owed | null} what the latest return owes the entry it reached (see the head) */
+let owed = null;
+/** @type {Promise<void>} the walk's latest move to a landing (`focusOn`): a surface a return reopens shows once it has landed, so the walk moves no focus it takes */
+let walking = Promise.resolve();
+/** the returns reopening their surfaces now (`restore`) */
+let restores = 0;
 
 /**
  * @typedef {Object} Air — a jump in the air (see the head; FP-25): from the act its camera leaves at until it lands, the reader takes the camera over, its read fails, or a later act overtakes it
@@ -651,7 +698,9 @@ export function backLight() {
 let made = 0;
 
 /**
- * The next act, made: a card or scene still reading ended, what stands
+ * The next act, made: the surfaces standing at the place taken as its
+ * departure keeps them (`surfacesNow`) — a card a return still reopens among
+ * them — then a card or scene still reading ended, what stands
  * staying for the act to dismiss (O-HOST's opening), a jump reaching given
  * back and a jump in the air abandoned, never landed (FP-25), and the act
  * counted. Every navigation act begins with
@@ -662,6 +711,7 @@ let made = 0;
  * @returns {number} the act's count
  */
 function nextAct() {
+  surfacesLeft = surfacesNow();
   HOST.endOpening();
   giveUp();
   if (air) endAir(air.act, false);
@@ -672,17 +722,33 @@ function nextAct() {
 function putOut() { arrival = null; light = null; lit = []; landed = null; retry = null; versionOffer = null; CAM.markDirty(); }
 
 /**
- * The reader leaves the place they stand at (see the head; FP-25): the
- * arrival standing there — its outline as it stands, a light's
+ * The reader leaves the place they stand at (see the head; FP-25, FP-36):
+ * the arrival standing there — its outline as it stands, a light's
  * among them, and what its landing said, its runs' labels and the run it
- * stands at — kept in that place's trail entry by value for a return to it
- * (N-TRAIL's `keep`), then put out with the links lit and its offers. The
- * entry left keeps nothing where nothing stood.
+ * stands at — and the surfaces standing as the act was made (`nextAct`),
+ * kept in that place's trail entry by value for a return to it (N-TRAIL's
+ * `keep`), then put out with the links lit and its offers, and what a
+ * return still owed the place dropped. The entry left keeps nothing where
+ * nothing stood.
  */
 function leaveHere() {
-  const mark = markHeld();
-  if (here) TRAIL.keep(here, mark || landed ? { arrival: mark, landed } : null);
+  const mark = markHeld(), surfaces = surfacesLeft;
+  if (here) TRAIL.keep(here, mark || landed || surfaces ? { arrival: mark, landed, surfaces } : null);
+  surfacesLeft = null; owed = null;
   putOut();
+}
+
+/**
+ * The surfaces standing at the place the reader stands at now (see the
+ * head): the selection and the card or the list standing — or the one an
+ * opening still reading reopens (O-HOST's `asLeft`) — and what a return still
+ * owes the place of either; null where none stands.
+ * @returns {Surfaces | null}
+ */
+function surfacesNow() {
+  const o = owed && owed.entry === here ? owed : null;
+  const selection = SEL.asLeft() || (o ? o.selection : null), overlay = HOST.asLeft() || (o ? o.overlay : null);
+  return selection || overlay ? { selection, overlay } : null;
 }
 
 /**
@@ -701,13 +767,15 @@ export function endArrival() {
  * A change of the page's class (see the head; FP-21, FP-23), told by the app
  * as M-PUMP tells it: the arrival put out — its outline, its labels, its line, its
  * offers, the light and the links lit — the place's entry keeping none of
- * it, and every entry's notice and kept arrival dropped (N-TRAIL's
- * `classChanged`), so nothing the class the page left measured is drawn,
- * described or restored.
+ * it, every entry's notice, kept arrival and kept surfaces dropped (N-TRAIL's
+ * `classChanged`), and what a return still owed or an act took as its
+ * departure's dropped with them, so nothing the class the page left measured
+ * is drawn, described or restored.
  */
 export function classChanged() {
   putOut();
   TRAIL.classChanged();
+  owed = null; surfacesLeft = null;
 }
 
 /** is a jump in the air (see the head; FP-25)? */
@@ -885,12 +953,20 @@ export function stepTo(i, byKey = false) {
  * the standing overlay — save one whose field holds the caret, an answer the
  * reader is typing, which stands through the jump (FP-20; O-HOST's `typing`)
  * — and a card or scene still reading, which
- * then opens nothing (O-HOST's opening); and the scene, which the act's
+ * then opens nothing (O-HOST's opening); the selection, which the entry
+ * keeps (O-SELECTION's `clear`), save at a version move, which stands beside
+ * it (FP-36); and the scene, which the act's
  * departure recorded in its entry and whose end moves no trail entry of its
  * own — so the act's own trail move is its one.
  * @param {Entry | null} to the entry the act moves to; null where it takes none
+ * @param {boolean} [beside] the act is a version move: the selection stands
  */
-function dismissChrome(to) { leaveHere(); here = to; if (HOST.typing()) HOST.endOpening(); else HOST.dismiss(); SCENE.close(); }
+function dismissChrome(to, beside = false) {
+  leaveHere(); here = to;
+  if (HOST.typing()) HOST.endOpening(); else HOST.dismiss();
+  if (!beside) SEL.clear();
+  SCENE.close();
+}
 
 /**
  * An entry's notice shown (O-FACES): its jump's reading face while its read
@@ -1140,12 +1216,13 @@ const headOf = (/** @type {import('../model/records.js').Doc} */ d) => (d.blocks
  * only where its view reads the document at its reading scale, else to the
  * document whole (see the head), to the link's end it names where it names
  * one — the platform's focus with it, save where the place says it stays
- * where it is, and the ring drawn at it where a key made the act.
+ * where it is, and the ring drawn at it where a key made the act; the move
+ * kept (`walking`) for the surfaces a return reopens to wait on.
  * @param {Destination} at
  * @param {boolean | undefined} byKey
  */
 function focusOn(at, byKey) {
-  void WALK.focusTo(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, byKey, at.take ?? true, at.end ?? null);
+  walking = WALK.focusTo(at.addr, at.pos != null && LAYER.atReadingScale(at.addr, at.view.scale) ? at.pos : null, byKey, at.take ?? true, at.end ?? null);
   CAM.markDirty();
 }
 
@@ -1794,7 +1871,7 @@ export async function toVersion(addr, opts = {}) {
   /** @type {Notice} */
   const waiting = { face: 'reading', addr, refusal: null, site };
   const entry = TRAIL.push({ addr, pos: null, width: null, view: departed.view, label: null, notice: waiting }, departed, true, step);
-  dismissChrome(entry);
+  dismissChrome(entry, true);
   takeOff(act, entry);
   showNotice(waiting);
   let d = REC.doc(addr), met = null;
@@ -2207,8 +2284,11 @@ function returnTo(l, view) {
  * covered box framed whole, its withheld face standing there (see the head;
  * `coverOf`), the read that tells it made first beside the flight where the
  * page holds nothing yet of a document the class it left could read
- * (`coverRead`). An entry a reading scene was opened as reopens the scene
- * (`sceneAt`).
+ * (`coverRead`). The surfaces the entry keeps are owed to it from the move,
+ * and reopened beside the flight once the place is landed at (`restore`) —
+ * never at a covered place, nor where the reader took the camera over or the
+ * entry's read met a failure. An entry a reading scene was opened as reopens
+ * the scene (`sceneAt`).
  * @param {Entry} e the entry the move reached
  * @param {number} act the move's count
  * @param {boolean} byKey a key made the move
@@ -2218,6 +2298,8 @@ async function landAtCursor(e, act, byKey, l) {
   if (e.scene) { await sceneAt(e, act, byKey); return; }
   const answer = TRAIL.pending(e);
   arrival = e.kept ? e.kept.arrival : null; landed = e.kept ? e.kept.landed : null;
+  const kept = e.kept ? e.kept.surfaces : null;
+  owed = kept ? { entry: e, ...kept } : null;
   light = l; lit = l && l.link ? [l.link] : [];
   if (!answer) pinTo(e.addr);
   const cover = answer ? null : coverOf(e);
@@ -2229,7 +2311,7 @@ async function landAtCursor(e, act, byKey, l) {
   if (!answer) {
     if (cover === 'unread') await coverRead(act, e, first, byKey);
     else if (!cover && !at) await placeRead(act, e, first, byKey);
-    else endAir(act, await first);
+    else { if (!cover) void restore(e, act); endAir(act, await first); }
     return;
   }
   await answer;
@@ -2242,6 +2324,7 @@ async function landAtCursor(e, act, byKey, l) {
   const then = returning(e);
   const flight = goOn(act, first, { ...walkOf(e, then), view: then ? then.view : e.view }, byKey, 500);
   if (n) showNotice(n);
+  void restore(e, act);
   await flight;
 }
 
@@ -2327,7 +2410,8 @@ function walkOf(e, at) {
  * an unread document makes it; once it answers, where no act was made and
  * the reader took nothing over meanwhile, the camera going on to that view
  * placed again and the walk to where it stood (`returning`); else the move
- * landing where its flight lands.
+ * landing where its flight lands — the surfaces the entry keeps reopened
+ * once the read has answered (`restore`).
  * @param {number} act the move's count
  * @param {Entry} e the entry the move reached
  * @param {Promise<boolean>} first the move's flight
@@ -2340,8 +2424,10 @@ async function placeRead(act, e, first, byKey) {
   }
   if (act !== made || takenAt === act) return;
   const at = returning(e);
-  if (!at) { endAir(act, await first); return; }
-  await goOn(act, first, { ...walkOf(e, at), view: at.view }, byKey, 500);
+  if (!at) { void restore(e, act); endAir(act, await first); return; }
+  const flight = goOn(act, first, { ...walkOf(e, at), view: at.view }, byKey, 500);
+  void restore(e, act);
+  await flight;
 }
 
 /**
@@ -2377,7 +2463,7 @@ function showCover(/** @type {string} */ addr) { const site = placeAt(addr); FAC
  * answers the document covered and no act was made meanwhile, the camera
  * going on to the covered box framed whole, its face standing there — the
  * face alone where the reader took the camera over — else the move landing
- * where its flight lands.
+ * where its flight lands, the surfaces the entry keeps reopened (`restore`).
  * @param {number} act the move's count
  * @param {Entry} e the entry the move reached
  * @param {Promise<boolean>} first the move's flight
@@ -2386,11 +2472,149 @@ function showCover(/** @type {string} */ addr) { const site = placeAt(addr); FAC
 async function coverRead(act, e, first, byKey) {
   await PUMP.wholeOf(e.addr);
   if (act !== made) return;
-  if (!REC.covered(e.addr)) { endAir(act, await first); return; }
+  if (!REC.covered(e.addr)) { void restore(e, act); endAir(act, await first); return; }
   if (takenAt === act) { showCover(e.addr); return; }
   const flight = goOn(act, first, coveredAt(e.addr), byKey, 500);
   showCover(e.addr);
   await flight;
+}
+
+/**
+ * The surfaces an entry keeps reopened as the reader left them (see the
+ * head; FP-36), once the walk has landed there (`walking`), so the walk moves
+ * no focus a surface takes: the selection put back over the bytes it holds in
+ * the text its box shows then (`placedNow`), its own card or list with it
+ * where one stood over it (O-SELECTION's `restore`) — the dead end's face in
+ * its place where the text holds none of it (`heldNone`), the line said where
+ * it holds part (`heldPart`); then the card or the list standing over it
+ * reopened by its owner (`reopen`). What a return owes the entry stays owed
+ * until each shows, a departure meanwhile keeping it (`surfacesNow`).
+ * Nothing where an act was made since; a selection the reader made meanwhile
+ * stands in the place of the one owed.
+ * @param {Entry} e
+ * @param {number} act the move's count
+ * @returns {Promise<void>}
+ */
+async function restore(e, act) {
+  const o = owed;
+  if (!o || o.entry !== e) return;
+  restores++;
+  try {
+    await walking;
+    if (act !== made || owed !== o) return;
+    const sel = o.selection, on = o.overlay, mine = on && (on.about.kind === 'selection' || on.about.kind === 'which') ? on : null;
+    if (sel) {
+      const at = await placedNow(sel);
+      if (act !== made || owed !== o) return;
+      o.selection = null;
+      if (mine) o.overlay = null;
+      if (!SEL.selected()) {
+        if (!at.span) heldNone(sel);
+        else { SEL.restore(at.span, mine); if (at.holds === 'part') heldPart(at, sel, 'selected'); }
+      }
+    }
+    if (o.overlay) await reopen(o.overlay, act, o);
+    if (owed === o) owed = null;
+  } finally { restores--; }
+}
+
+/** is a return reopening its surfaces now (see the head; `restore`) — the gate's settle waits on it */
+export const restoring = () => restores > 0;
+
+/**
+ * A card or a list an entry keeps reopened by its owner from what it is about
+ * (see the head; `restore`), its reads made again: a subject that is a span's
+ * bytes placed by the landing rule first (`placedNow`) — none of them
+ * standing, the dead end's face in its place (`heldNone`) and no surface;
+ * part, the line said (`heldPart`) — the owner handed where it stands now.
+ * The surface owed until its owner's opening begins, which keeps it from
+ * then (O-HOST's `asLeft`). Nothing where an act was made since, or a card or
+ * a list of the reader's own stands or reads.
+ * @param {import('../overlays/host.js').Left} left
+ * @param {number} act the move's count
+ * @param {Owed} o what the return owes
+ * @returns {Promise<void>}
+ */
+async function reopen(left, act, o) {
+  const a = left.about, focus = left.focus;
+  /** @type {Subject | null} */
+  const subject = a.kind === 'anatomy' || a.kind === 'ends' ? { addr: a.near, pos: a.pos, width: a.width, ids: a.ids }
+    : a.kind === 'wrote' || a.kind === 'uses' ? { addr: a.addr, pos: a.pos, width: a.width, ids: a.ids }
+      : a.kind === 'versions' && a.held ? { addr: a.addr, ...a.held } : null;
+  const at = subject ? await placedNow(subject) : null;
+  if (act !== made || owed !== o) return;
+  o.overlay = null;
+  if (HOST.asLeft() || HOST.pending()) return;
+  /** @type {HELD.Subject} what the line names the subject as: a link's passage, else the selection where it was the selection's bytes, else the text read */
+  const word = a.kind === 'anatomy' || a.kind === 'ends' ? 'followed' : (a.kind === 'versions' ? a.named : a.kind === 'wrote' || a.kind === 'uses' ? a.selected : false) ? 'selected' : 'reading';
+  if (subject && at && !at.span) { heldNone(subject); return; }
+  if (subject && at && at.holds === 'part') heldPart(at, subject, word);
+  const span = at ? at.span : null;
+  if (a.kind === 'anatomy' || a.kind === 'ends' || a.kind === 'tail') await ANATOMY.reopen({ about: a, focus });
+  else if (a.kind === 'versions') await VERSIONS.reopen({ about: a, focus }, span);
+  else if ((a.kind === 'wrote' || a.kind === 'uses') && span) await PROV.reopen({ about: a, focus }, span);
+  else if (a.kind === 'links') LINKS.reopen({ about: a, focus }, shownIn(a.addr));
+  else if (a.kind === 'mark') await MARKLIST.reopen({ about: a, focus });
+}
+
+/**
+ * A subject placed by the landing rule (see the head; FP-36): its bytes by
+ * identity in the text its box shows now (M-REC's `placedIdentity`) — that
+ * text read whole first where the page holds none of it — all of them
+ * standing, part, or none, and the span from their first stretch to the end
+ * of their last; where its bytes were not named — the held image did not
+ * cover them as it was left — where it stood, by position.
+ * @param {Subject} s
+ * @returns {Promise<Placed>}
+ */
+async function placedNow(s) {
+  const addr = shownIn(s.addr), d = REC.has(addr) ? REC.doc(addr) : null;
+  if (!d || d.from < 0) await PUMP.loadWhole(addr);
+  const width = s.ids.reduce((n, x) => n + x.width, 0);
+  if (!width) return { holds: 'all', span: { addr, pos: s.pos, width: s.width }, places: 1 };
+  const runs = REC.placedIdentity(addr, s.ids);
+  if (!runs.length) return { holds: 'none', span: null, places: 0 };
+  const first = runs[0], last = runs[runs.length - 1], stands = runs.reduce((n, r) => n + r.width, 0);
+  return { holds: stands < width ? 'part' : 'all', span: { addr, pos: first.pos, width: last.pos + last.width - first.pos }, places: runs.length };
+}
+
+/**
+ * A surface's subject its text holds only part of on a return (see the head;
+ * FP-21's line, FP-36): said in the status region, the surface standing on
+ * what stands; and where no arrival's line stands, beside the landing too,
+ * the latest member holding it whole offered once its reads find one
+ * (`offerVersion`, `holdingWhole`), a version move.
+ * @param {Placed} at
+ * @param {Subject} s
+ * @param {HELD.Subject} word what the line names it as
+ */
+function heldPart(at, s, word) {
+  const span = /** @type {Span} */ (at.span), said = HELD.saidOf({ holds: 'part', places: at.places }, word, span.addr, showsWithheld(REC.doc(span.addr)));
+  if (!said) return;
+  FOCUS.say(HELD.lineOf(said, false));
+  if (landed) return;
+  landed = { addr: span.addr, pos: span.pos, said, pieces: null, current: 0, floating: false, withheld: false, beside: null, version: null };
+  CAM.markDirty();
+  void offerVersion(made, span.addr, holdingWhole(span.addr, span.pos, s.ids));
+}
+
+/**
+ * A surface's subject its text holds none of on a return (see the head;
+ * FP-21, FP-36): the dead end's face at the place it stood, said through the
+ * status region, and, where no arrival's line stands, the latest member
+ * holding it whole offered on the face once its reads find one
+ * (`offerVersion`, `holdingWhole`); its words said alone where a surface of
+ * the reader's stands, and nothing where that face stands there already.
+ * @param {Subject} s
+ */
+function heldNone(s) {
+  const addr = shownIn(s.addr);
+  if (HOST.currentIs('face:floating')) return;
+  if (HOST.asLeft()) { FOCUS.say(FACES.floatingWords(addr).text); return; }
+  const mine = !landed;
+  if (mine) { landed = { addr, pos: s.pos, said: null, pieces: null, current: 0, floating: true, withheld: false, beside: null, version: null }; CAM.markDirty(); }
+  FACES.floating(addr, siteAt(addr, s.pos), null, false);
+  if (mine) void offerVersion(made, addr, holdingWhole(addr, s.pos, s.ids));
 }
 
 /**

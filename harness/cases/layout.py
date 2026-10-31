@@ -1384,8 +1384,9 @@ def scene_strokes_hold(ctx, r):
     to where two runs consecutive in both documents part, until a stroke stands in view (`stroke_at_junction`), the
     stroke holding (`stroke_holds`); a person's click on its button showing its list at it, the focus left on the
     button, and Esc closing the list there; Enter at it showing the list with the focus on its first row, and Esc
-    returning the focus to the button (FP-20). Unmeasured where no stroke stands (FP-18); the measure's own figures, the
-    runs it read and its time on this machine. Its figures"""
+    returning the focus to the button (FP-20); the list leaving with the scene by Mod+0 and reopened with it by Mod+[,
+    the focus on its first row (issue #264; FP-36). Unmeasured where no stroke stands (FP-18); the measure's own figures,
+    the runs it read and its time on this machine. Its figures"""
     first = VERSIONED + '.1'
     name = f'the scene on {first} beside {VERSIONED}'
     ctx.js('window.__skep.scene.open(%s, %s)' % (json.dumps(first), json.dumps(VERSIONED)))
@@ -1422,6 +1423,26 @@ def scene_strokes_hold(ctx, r):
     back = ctx.js('document.activeElement && document.activeElement.id')
     r.check(keyed == {'overlay': 'stroke:' + s['key'], 'row': True} and back == s['id'],
             f'{name}: Enter at the stroke shows its list with the focus on its first row, and Esc returns the focus to the stroke (FP-20)', dict(keyed, back=back))
+    # the list leaves and returns with the scene (issue #264's design decision: "Back and Forward reopen them as left, the
+    # scene with its panes' versions"): Enter at the stroke shows it, the focus on its first row; Mod+0 leaves the scene,
+    # and Mod+[ reopens it with the list over the stroke again, the focus on its first row (FP-36, FP-20)
+    ctx.drv.key('Enter')
+    ctx.frames(2)
+    ctx.drv.key('0', code='Digit0', mods=('Meta',))
+    ctx.settle()
+    ctx.frames(2)
+    away = ctx.js('({scene: window.__skep.scene.isOpen(), overlay: window.__skep.overlay().id})')
+    ctx.drv.key('[', code='BracketLeft', mods=('Meta',))
+    ctx.settle()
+    wait_for(ctx, '(window.__skep.overlay().id || "") === %s' % json.dumps('stroke:' + s['key']))
+    ctx.frames(2)
+    again = ctx.js('''({scene: window.__skep.scene.isOpen(), overlay: window.__skep.overlay().id, rows: [...document.querySelectorAll("#overlay .changes li")].length,
+      row: !!document.activeElement && !!document.activeElement.closest && !!document.activeElement.closest("#overlay .changes li")})''')
+    r.check(away == {'scene': False, 'overlay': None} and again == {'scene': True, 'overlay': 'stroke:' + s['key'], 'rows': len(s['changes']), 'row': True},
+            f'{name}: the stroke\'s list leaves with the scene, and Mod+[ reopens the scene with the list over the stroke again, a row for each change, the focus on its first row (issue #264; FP-36)',
+            {'away': away, 'again': again})
+    ctx.drv.key('Escape')
+    ctx.frames(2)
     ctx.js('window.__skep.scene.close()')
     ctx.frames(2)
     return figures

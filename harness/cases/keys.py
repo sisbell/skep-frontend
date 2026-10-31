@@ -75,7 +75,9 @@ follow pressed, its far document known to say nothing — faced at the
 followed link's own bytes, the face taking the place of the list or card it
 was pressed on (foundations §3.1, F-G3), the link joining no visited set,
 for its camera never left, while a follow that leaves — a citation of the
-far edition — joins it (D-3; FP-25);
+far edition — joins it (D-3; FP-25); Enter on the anatomy card's follow
+landing in the far edition and Mod+[ reopening the card at the place the
+follow was made, its follow holding the focus again (issue #264; FP-36);
 Mod+Shift+O with no selection standing selecting the
 walk's block whole and answering over it — the page's own placement of the
 platform's selection never read back as the person's, whose card, shown
@@ -1361,16 +1363,16 @@ def selection_held_elsewhere(ctx, r):
         the page through the gate's feed door (reads alone), its text held while it is read again and the article set
         again from its reads (issue #285): the caption's text stays selected, no highlight stands over the plane, and the
         page's selection is S;
-    then S is selected again and the scene opened over it through the card that took the selection's card's place (D7's
-    path), S's highlight standing on the plane under the scene:
-    (a) the camera at em 5 under the scene, below the mount: the lines holding S stand, S's highlight on them, its article
-        outside the mount band (issue #122); a drag over a phrase of pane B, then the camera back, the article in the
-        band again: the copy names the draft and the phrase's own bytes, no highlight stands over the plane, and the
-        page's selection is S;
-    (b) a click in pane B, a caret alone, then such a row, the article set again: S's highlight is put back on the plane;
-    (c) S's highlight standing, a drag over the phrase of pane B, then such a row, the article set again: as after (a).
-    The first edition is read whole again, and the scene and the selection ended after them. The Safari pass repeats a
-    drag in a pane and a feed row by hand (FP-19): the gate runs Chrome alone"""
+    then S is selected again and the scene opened through the card that took the selection's card's place, which leaves
+    their place: S ends as the scene shows, no highlight on the plane under it (issue #264; FP-36):
+    (a) a drag over a phrase of pane B, the camera at em 5 under the scene, below the mount, then back, the article in the
+        band again: the copy names the draft and the phrase's own bytes, no highlight stands over the plane, and the page
+        holds no selection;
+    (b) a click in pane B, a caret alone, then such a row, the article set again: nothing is put on the plane;
+    (c) a drag over the phrase of pane B, then such a row, the article set again: as after (a).
+    The first edition is read whole again, then the scene's close, a Back, brings S back with the card over it; the camera
+    at em 5, below the mount, the lines holding S stand, its highlight on them (issue #122); and the two are ended after
+    them. The Safari pass repeats a drag in a pane and a feed row by hand (FP-19): the gate runs Chrome alone"""
     figures = {}
     art = article(DOC)
     held = lambda: ctx.js(HELD)
@@ -1404,9 +1406,9 @@ def selection_held_elsewhere(ctx, r):
 
     def stood(pb, c, after, rebuilt, what):
         """the check that a drag over the phrase `pb` of pane B stood through the remount `what`: `c` the copy after it"""
-        r.check(rebuilt and names(ctx, c, WINDOW[2], pb['p0'], pb['p1']) and bare(c, own(ctx, c['span'])) and after['span'] is None and after['sel'] == span,
-                '%s: the copy names the draft and the phrase\'s own bytes the person dragged, no highlight stands over the plane, and the page\'s selection is S' % what,
-                dict(c, held=after, rebuilt=rebuilt, phrase=[pb['p0'], pb['p1'], pb['text']], S=span))
+        r.check(rebuilt and names(ctx, c, WINDOW[2], pb['p0'], pb['p1']) and bare(c, own(ctx, c['span'])) and after['span'] is None and after['sel'] is None,
+                '%s: the copy names the draft and the phrase\'s own bytes the person dragged, no highlight stands over the plane, and the page holds no selection' % what,
+                dict(c, held=after, rebuilt=rebuilt, phrase=[pb['p0'], pb['p1'], pb['text']]))
 
     if span:
         # (o) a drag over the provenance card's caption, the article rebuilt under it
@@ -1426,33 +1428,33 @@ def selection_held_elsewhere(ctx, r):
                     '(o) a feed row naming the first edition, its article rebuilt: the caption\'s text stays selected as the person made it, no highlight stands over the plane, and the page\'s selection is S',
                     dict(after, rebuilt=rebuilt, before=before['text']))
             figures['o'] = {'caption': cap['text'], 'selected': before['text'], 'after': after}
-        # the scene over S, opened through the card that took the selection's card's place (D7): S's highlight under it
+        # the scene opened through the card over S leaves their place, which keeps both (issue #264; FP-36): S ends as it shows,
+        # no highlight on the plane under it and no selection of the page's
         card = select()
         open_scene(ctx)
         under = held()
         pb = pane_phrase(ctx, 'b')
-        r.check(card and ctx.js('window.__skep.scene.isOpen()') and under['anchor'] == 'the layer' and under['span'] == span and under['sel'] == span,
-                'the scene stands over S, opened through the card that took the selection\'s card\'s place (D7): S\'s highlight stands on the plane under it', dict(under, card=card))
+        r.check(card and ctx.js('window.__skep.scene.isOpen()') and under['span'] is None and under['sel'] is None,
+                'the scene opened through the card over S leaves their place: S ends as it shows, no highlight stands on the plane under it and the page holds no selection (issue #264; FP-36)', dict(under, card=card))
         r.check(pb is not None, 'pane B shows a phrase of the draft\'s own text on one line, for a drag', ctx.js('window.__skep.scene.pairs()'))
-        if under['span'] == span and pb:
-            # (a) the camera at em 5, below the mount: the lines holding S stand (issue #122), S's highlight on them; a drag in
-            # pane B; then the camera back, the article in the mount band again, set again for none of S's lines
-            ctx.set_view(cam0['x'], cam0['y'], ctx.js('window.__skep.scaleFor(%s, "em", 5)' % json.dumps(DOC)))
-            down = dict(held(), mounted=DOC in ctx.js('window.__skep.mountedAddrs()'), article=ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC)) is not None)
+        if pb:
+            # (a) a drag in pane B; the camera at em 5 under the scene, below the mount, then back, the article in the mount band
+            # again: the remount takes nothing the person holds in the pane
             ctx.drv.drag(*pb['start'], *pb['end'])
             ctx.frames(2)
             dragged = held()
+            ctx.set_view(cam0['x'], cam0['y'], ctx.js('window.__skep.scaleFor(%s, "em", 5)' % json.dumps(DOC)))
+            down = dict(held(), mounted=DOC in ctx.js('window.__skep.mountedAddrs()'))
             ctx.set_view(cam0['x'], cam0['y'], cam0['scale'])
             after = held()
-            r.check(not down['mounted'] and down['article'] and not down['collapsed'] and down['anchor'] == 'the layer' and down['span'] == span
-                    and not dragged['collapsed'] and dragged['anchor'] == dragged['focus'] == 'pane B',
-                    '(a) at em 5, below the mount, the lines holding S stand, its article outside the mount band, S\'s highlight on them; and a drag in pane B selects the phrase',
-                    {'down': down, 'dragged': dragged})
+            r.check(not dragged['collapsed'] and dragged['anchor'] == dragged['focus'] == 'pane B' and not down['mounted'] and down['span'] is None,
+                    '(a) a drag in pane B selects the phrase; at em 5, below the mount, the first edition outside the mount band, no highlight on the plane',
+                    {'dragged': dragged, 'down': down})
             stood(pb, copied(ctx), after, DOC in ctx.js('window.__skep.mountedAddrs()'), '(a) the camera back, the article in the mount band again')
             figures['a'] = {'down': down, 'after': after}
-            # (b) a caret alone in pane B holds nothing the person chose: the rebuilt article takes S's highlight back. A
-            # click there leaves this machine's Chrome no range at all; where it leaves none, a caret is placed by script
-            # where the click fell, as a platform that leaves one there does
+            # (b) a caret alone in pane B holds nothing the person chose, and the page holds no selection to put back: a feed row
+            # rebuilding the article puts nothing on the plane. A click there leaves this machine's Chrome no range at all; where
+            # it leaves none, a caret is placed by script where the click fell, as a platform that leaves one there does
             ctx.drv.mouse(*pb['start'])
             ctx.frames(2)
             left = held()
@@ -1463,21 +1465,36 @@ def selection_held_elsewhere(ctx, r):
             after = held()
             r.check(left['collapsed'] and left['anchor'] in (None, 'pane B') and caret['collapsed'] and caret['anchor'] == 'pane B',
                     '(b) a click in pane B selects nothing: a caret alone there, at most', {'click': left, 'caret': caret})
-            r.check(rebuilt and not after['collapsed'] and after['anchor'] == 'the layer' and after['span'] == span and after['sel'] == span,
-                    '(b) a feed row naming the first edition, its article rebuilt over a caret: S\'s highlight is put back on the plane', dict(after, rebuilt=rebuilt))
+            r.check(rebuilt and after['span'] is None and after['sel'] is None and after['anchor'] in (None, 'pane B'),
+                    '(b) a feed row naming the first edition, its article rebuilt over a caret: nothing is put on the plane, the page holding no selection', dict(after, rebuilt=rebuilt))
             figures['b'] = {'click_left_a_range': left['anchor'] is not None, 'caret': caret, 'after': after}
-            # (c) S's highlight standing on the plane, a drag in pane B, then a feed row naming the first edition
+            # (c) a drag in pane B, then a feed row naming the first edition
             ctx.drv.drag(*pb['start'], *pb['end'])
             ctx.frames(2)
             dragged = held()
             rebuilt = fed()
             after = held()
-            r.check(not dragged['collapsed'] and dragged['anchor'] == dragged['focus'] == 'pane B', '(c) with S\'s highlight standing on the plane, a drag in pane B selects the phrase', dragged)
+            r.check(not dragged['collapsed'] and dragged['anchor'] == dragged['focus'] == 'pane B', '(c) a drag in pane B selects the phrase', dragged)
             stood(pb, copied(ctx), after, rebuilt, '(c) a feed row naming the first edition, its article rebuilt')
             figures['c'] = {'dragged': dragged, 'after': after}
         ctx.js('window.__skep.model.loadWhole(%s)' % json.dumps(DOC))
         ctx.settle()
     ctx.js('window.__skep.scene.close()')
+    ctx.settle()
+    if span:
+        # the scene's close, a Back onto the place it left, brings S back as the reader left it, the card over it (issue #264)
+        overlay_up(ctx, 'provenance:')
+        back = dict(held(), overlay=ctx.js('window.__skep.overlay().id'))
+        r.check(not ctx.js('window.__skep.scene.isOpen()') and back['sel'] == span and back['overlay'] == 'provenance:wrote',
+                'the scene\'s close, a Back onto the place it left, brings S back and the card over it, as the reader left them (issue #264; FP-36)', back)
+        # the camera at em 5, below the mount: the lines holding S stand, its highlight on them, its article outside the mount
+        # band (issue #122)
+        ctx.set_view(cam0['x'], cam0['y'], ctx.js('window.__skep.scaleFor(%s, "em", 5)' % json.dumps(DOC)))
+        down = dict(held(), mounted=DOC in ctx.js('window.__skep.mountedAddrs()'), article=ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC)) is not None)
+        ctx.set_view(cam0['x'], cam0['y'], cam0['scale'])
+        r.check(not down['mounted'] and down['article'] and not down['collapsed'] and down['anchor'] == 'the layer' and down['span'] == span,
+                'at em 5, below the mount, the lines holding S stand, its article outside the mount band, S\'s highlight on them (issue #122)', down)
+        figures['em5'] = down
     ctx.js('(() => { const s = window.getSelection(); if (s) s.removeAllRanges(); const e = document.activeElement; if (e && e.blur) e.blur(); })()')
     chord(ctx, 'Escape')
     chord(ctx, 'Escape')
@@ -1733,7 +1750,8 @@ def focus_rules(ctx, r):
     in a pane brings the next block's top to the pane's top, not a fixed 48 px (#121, K-60); Mod+L in the scene opens
     the box over it (#118) and Mod+[ inside the box closes it and goes back (rule 18, M-1); a camera-key drag over an
     article pans and selects nothing (#88, K-10); the focused block is lit only while a key drew the ring and goes dark
-    after a click (D3); one Esc closes a scene standing over a selection, the selection outliving it (D7)."""
+    after a click (D3); a scene opened through a card standing over a selection ends both, its close — one Esc, a Back —
+    bringing both back, and Esc then closing the card before the selection (issue #264; D7)."""
     # #102 / #119: the address segment and the overlay's × are native buttons — Enter and Space act
     ctx.leap(DOC, WINDOW[0])
     seg = ctx.js('(() => { const b = document.querySelector("#line [data-act=address]"); return b ? b.tagName.toLowerCase() : null; })()')
@@ -1822,21 +1840,30 @@ def focus_rules(ctx, r):
     chord(ctx, '[', mods=('Meta',))
     s, t1 = state(ctx), trail(ctx)
     r.check(box_open and not s['leap'] and t1['cursor'] == t0['cursor'] - 1, 'rule 18: Mod+[ inside the open box acts as anywhere, the box closed first — it goes back one entry (M-1)', {'box_open': box_open, 'still_open': s['leap'], 'cursor': [t0['cursor'], t1['cursor']]})
-    # D7: one Esc closes a scene standing over a selection (recency), the selection outliving it
+    # the scene opened through a card standing over a selection leaves their place, which keeps both (issue #264; FP-36): the
+    # scene's close — one Esc, a Back — brings both back as the reader left them; Esc then closes the last thing opened, the
+    # card, and the next the selection (D7's recency)
     ctx.leap(DOC, WINDOW[0])
     blocks = ctx.js('window.__skep.model.doc(%s).blocks' % json.dumps(DOC))
     para = next((b for b in blocks if b['kind'] == 'para' and (b['text'] or '').strip()), blocks[0])
     ctx.js('window.__skep.select(%s, %d)' % (json.dumps(DOC), para['pos'])); ctx.frames(2)
     ctx.js('window.__skep.cards.wrote(%s, %d)' % (json.dumps(DOC), para['pos']))  # replaces the selection's card; the selection stands under it
     ctx.settle(); ctx.frames(2)
-    open_scene(ctx)  # dismisses the provenance card (the selection stands), the scene over the selection
+    held = state(ctx)['sel']
+    open_scene(ctx)
     mid = state(ctx)
-    r.check(bool(mid['sel']) and mid['scene'], 'D7 setup: a scene stands over a standing selection (opened through a card that replaced the selection\'s)', {'sel': mid['sel'], 'scene': mid['scene']})
+    r.check(bool(held) and mid['scene'] and mid['sel'] is None and mid['overlay'] is None,
+            'the scene opened through the card standing over a selection ends both as it leaves their place (issue #264; FP-36)', {'held': held, 'sel': mid['sel'], 'scene': mid['scene'], 'overlay': mid['overlay']})
+    chord(ctx, 'Escape')
+    overlay_up(ctx, 'provenance:')
+    s = state(ctx)
+    r.check(not s['scene'] and s['sel'] == held and ctx.js('window.__skep.overlay().id') == 'provenance:wrote',
+            'one Esc closes the scene, a Back, and brings back the selection and the card over it as the reader left them (issue #264)', {'scene': s['scene'], 'sel': s['sel'], 'overlay': ctx.js('window.__skep.overlay().id')})
     chord(ctx, 'Escape')
     s = state(ctx)
-    r.check(not s['scene'] and bool(s['sel']), 'D7: one Esc closes the scene standing over the selection, and the selection outlives it (recency, not the list order)', {'scene': s['scene'], 'sel': s['sel']})
+    r.check(s['overlay'] is None and s['sel'] == held, 'the next Esc closes the card, the last thing opened, the selection standing (D7\'s recency)', {'overlay': s['overlay'], 'sel': s['sel']})
     chord(ctx, 'Escape')
-    r.check(state(ctx)['sel'] is None, 'a second Esc clears the selection the scene stood over')
+    r.check(state(ctx)['sel'] is None, 'the next clears the selection')
     ctx.leap(DOC, WINDOW[0])
 
 
@@ -2312,6 +2339,25 @@ def run(ctx):
         landed = ctx.js('window.__skep.trail()')
         r.check(ctx.js('window.__skep.links.visited(%s)' % json.dumps(cite['link'])) and landed['entries'][landed['cursor']]['addr'] == FAR_LEAP,
                 'a follow that leaves — a citation of the far edition — joins LK\'s visited set, landed in the far edition (D-3; FP-25)', {'link': cite['link'], 'at': landed['entries'][landed['cursor']]['addr']})
+        # the anatomy card leaves and returns with its place (issue #264's design decision: "Back and Forward reopen them
+        # as left"): Enter on its follow, focused by script, lands in the far edition, and Mod+[ reopens the card at the
+        # place the follow was made, its follow holding the platform's focus again (FP-36, FP-20)
+        ctx.leap(BEAMED, None)
+        ctx.js('window.__skep.links.reveal(%s, 3)' % json.dumps(BEAMED))
+        ctx.frames(2)
+        ctx.js('window.__skep.cards.anatomy(%s, %s)' % (json.dumps(BEAMED), json.dumps(cite['link'])))
+        overlay_up(ctx, 'anatomy:')
+        focused = ctx.js('(() => { const b = document.querySelector(\'#overlay [data-run="follow"]\'); if (b) b.focus(); return !!b && document.activeElement === b; })()')
+        chord(ctx, 'Enter')
+        went = ctx.js('(() => { const t = window.__skep.trail(); return t.entries[t.cursor].addr; })()')
+        chord(ctx, '[', mods=('Meta',))
+        overlay_up(ctx, 'anatomy:')
+        back = ctx.js('''(() => { const e = document.activeElement, t = window.__skep.trail();
+          return {overlay: window.__skep.overlay().id, focus: !!e && !!e.closest && !!e.closest('#overlay') ? (e.dataset.run || null) : null, at: t.entries[t.cursor].addr}; })()''')
+        r.check(focused and went == FAR_LEAP and back == {'overlay': 'anatomy:' + cite['link'], 'focus': 'follow', 'at': BEAMED},
+                'Enter on the anatomy card\'s follow lands in the far edition, and Mod+[ reopens the card at the place the follow was made, its follow holding the focus again (issue #264; FP-36)',
+                {'focused': focused, 'went': went, 'back': back})
+        chord(ctx, 'Escape')
     ctx.js('window.__skep.links.hide(%s)' % json.dumps(BEAMED))
     ctx.frames(2)
     # a slot's chord with no selection standing selects the walk's block whole and asks over it (D5 §1.6). The platform's

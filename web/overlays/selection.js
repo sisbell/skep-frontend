@@ -39,7 +39,13 @@
 // selection; an act's card taking the acts' place is a replacement, not a
 // dismissal, and the selection stands under it. The focus and the mirror
 // stay at block grain (D5-F11).
-// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20.
+// The selection is a surface of its place (FP-36): leaving the place ends
+// it (N-GO's departure, `clear`), which keeps it by its bytes' identity
+// (`asLeft`), its card and the "which" list by what they are about (O-HOST's
+// `about`); the return puts it back over the bytes it holds in the text then
+// (`restore`) — the card where it stood, the list over the links counted
+// again — each taking the focus on the control it was left holding it on.
+// Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-36.
 
 import * as HOST from './host.js';
 import * as REC from '../model/records.js';
@@ -57,12 +63,46 @@ import { markDirty } from '../plane/camera.js';
 import { drawChord } from '../nav/keys.js';
 
 /** @typedef {import('../text/span.js').Span} Span */
+/** @typedef {import('../model/records.js').ISpan} ISpan */
+
+/** @typedef {{kind: 'selection'} | {kind: 'which', what: 'follow' | 'scene'}} About what the selection's card and its "which" list are about (O-HOST's): the selection, which a departure keeps by its bytes (`asLeft`) */
+
+/**
+ * @typedef {Object} Left — the selection as the reader leaves its place (see the head; `asLeft`)
+ * @property {string} addr the document it stood in: the version its box showed
+ * @property {number} pos its first position there
+ * @property {number} width its positions
+ * @property {ISpan[]} ids its bytes by identity (M-REC's `identityOf`), which a return places in the text then; none where the held image did not cover them
+ */
 
 /** @type {Span | null} */
 let sel = null;
 
 /** the selection, read-only (T-LAYER's reader) */
 export const selected = () => sel;
+
+/** the selection as the reader leaves its place (see the head): by its bytes' identity; null where none stands */
+export const asLeft = () => (sel ? { addr: sel.addr, pos: sel.pos, width: sel.width, ids: REC.identityOf(sel.addr, sel.pos, sel.width) } : null);
+
+/**
+ * The selection put back on the reader's return to its place (see the head;
+ * N-GO's): over the span its bytes hold in the text now, the platform's
+ * highlight with it, said through the status region as a selection made is;
+ * its card where it stood over it, or its "which" list over the links
+ * counted again at it — the list where they are two or more, else the card —
+ * each taking the focus on the control it was left holding it on.
+ * @param {Span} span
+ * @param {import('./host.js').Left | null} left the card or the list standing over it as the reader left it; null where none of the selection's stood
+ */
+export function restore(span, left) {
+  sel = span;
+  LAYER.placeSelection(span);
+  markDirty();
+  const a = left ? left.about : null, focus = left ? left.focus : null;
+  if (a && a.kind === 'which') { const drawn = LK.shownAt(span.addr, span); if (drawn.length > 1) which_(drawn, a.what, false, focus); else render(); }
+  else if (a && a.kind === 'selection') render(focus);
+  FOCUS.say(`${span.addr} · ${t('F.position', { p: span.pos })}`);
+}
 
 /** the block holding a position, whole; a position in no delivered block names one position */
 function wholeBlock(/** @type {string} */ addr, /** @type {number} */ pos) {
@@ -141,8 +181,13 @@ function inertAct(el, id) {
   FOCUS.say(t(id));
 }
 
-/** rebuild the acts card at the selected span (FP-13); the card takes no focus (rule 15) */
-export function render() {
+/**
+ * Rebuild the acts card at the selected span (FP-13); the card takes no focus
+ * (rule 15), save a card a return reopens on the control it was left holding
+ * it on.
+ * @param {string | null} [focus] that control's key (O-HOST's `keyOf`)
+ */
+export function render(focus = null) {
   if (!sel) return;
   const span = sel;
   const { addr, pos } = span;
@@ -158,7 +203,7 @@ export function render() {
   }).join('');
   const html = `<div class="selection-card"><span class="label"><span class="id">${esc(addr)}</span> · ${esc(t('F.position', { p: pos }))}</span><div class="slots">${buttons}</div><div class="note reason" hidden></div></div>`;
   HOST.show({
-    kind: 'card', id: 'selection', anchor: { span }, html, takeFocus: false,
+    kind: 'card', id: 'selection', anchor: { span }, html, takeFocus: focus != null, first: focus != null ? HOST.controlOf(focus) : undefined, about: { kind: 'selection' },
     acts: {
       annotate: (el) => inertAct(el, INERT_REASON.annotate),
       quote: (el) => inertAct(el, INERT_REASON.quote),
@@ -194,11 +239,21 @@ export function act(which, byKey = false) {
   if (which === 'scene') { if (drawn.length === 1 && drawn[0].far) void GO.toScene(addr, LK.besideAt(drawn[0]), { posA: pos, widthA: width, posB: LK.farPos(drawn[0]), wholeB: drawn[0].farWhole }, { from: { shown: drawn[0] }, site: { span } }); else if (drawn.length > 1) which_(drawn, 'scene', byKey); }
 }
 
-/** the "which" list at two or more: each choice by its type, its linker and its far document (foundations §2.3), named as its tail and its mirror item name it, each address in the identifier's face (LK's `farLabelHTML`); it takes the focus on its first row where a key asked */
-function which_(/** @type {import('../links/links.js').Shown[]} */ drawn, /** @type {'follow' | 'scene'} */ what, /** @type {boolean} */ byKey) {
+/**
+ * The "which" list at two or more: each choice by its type, its linker and
+ * its far document (foundations §2.3), named as its tail and its mirror item
+ * name it, each address in the identifier's face (LK's `farLabelHTML`); it
+ * takes the focus on its first row where a key asked, and on the control a
+ * return reopens it holding it on.
+ * @param {import('../links/links.js').Shown[]} drawn
+ * @param {'follow' | 'scene'} what
+ * @param {boolean} byKey
+ * @param {string | null} [focus] the reopened list's control's key
+ */
+function which_(drawn, what, byKey, focus = null) {
   const html = `<span class="label">${esc(t(what === 'follow' ? 'B1.follow' : 'B1.side-by-side'))}</span><ul class="rows">${drawn.map((s, i) => `<li><button data-run="w${i}" style="--mark-hue:${s.mark.hue}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · <span class="id">${esc(s.link.owner || '')}</span> · ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   drawn.forEach((s, i) => { acts['w' + i] = (_el, byKey) => { if (what === 'follow') GO.follow(s, byKey); else if (s.far && sel) void GO.toScene(sel.addr, LK.besideAt(s), { posA: sel.pos, widthA: sel.width, posB: LK.farPos(s), wholeB: s.farWhole }, { from: { shown: s }, site: { span: sel } }); }; });
-  HOST.show({ kind: 'list', id: 'which', anchor: sel ? { span: sel } : null, html, acts, takeFocus: byKey });
+  HOST.show({ kind: 'list', id: 'which', anchor: sel ? { span: sel } : null, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : undefined, about: { kind: 'which', what } });
 }

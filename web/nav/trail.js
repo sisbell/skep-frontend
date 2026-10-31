@@ -23,9 +23,11 @@
 // link's end or the passage a reading scene was opened from, and none for
 // any other move; a cursor move writes none. It keeps the arrival standing
 // at it as the reader leaves it — its outline, what its landing said, its
-// runs' labels and the run it stood at — written on it by value (`keep`;
-// N-GO's), which a return restores (FP-25, FP-21). An entry a reading scene
-// was opened as holds the pair it opened on and the passage held, and the
+// runs' labels and the run it stood at — and the surfaces standing there —
+// the selection by its bytes, the card or the list by what it is about and
+// the control the focus stood on in it — written on it by value (`keep`;
+// N-GO's), which a return restores (FP-25, FP-21, FP-36). An entry a reading
+// scene was opened as holds the pair it opened on and the passage held, and the
 // scene as the reader last left the entry (`Opened`; SC's `Left`), by value,
 // re-taken with every departure from it while the scene stands, which a
 // return reopens.
@@ -62,16 +64,17 @@
 // step it wrote standing again (FP-25).
 // An entry holds no document's words (FP-29): its address, its positions,
 // its view, what that view reads and where the walk stood — each by
-// positions and identity — its step, the step's passage by identity, a
-// reading scene's pair, its panes' versions and where the reader stood in
-// each, and an act's name where HOME or WHOLE BOARD pushed it; whoever shows
+// positions and identity — its step, the step's passage by identity, the
+// surfaces it keeps by what they are about, a reading scene's pair, its
+// panes' versions and where the reader stood in each, and an act's name
+// where HOME or WHOLE BOARD pushed it; whoever shows
 // an entry reads what its document says from the model as it shows it
 // (N-GO's `wordsOf`). A change of the page's class keeps every entry, its
 // number and its address, and drops what the class it left read there: its
-// notice, save a claim's still reading, the arrival it kept, what its view
-// read, where the walk stood, and where the reader stood in a reading scene
-// it holds (`classChanged`).
-// Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-22, FP-25, FP-29.
+// notice, save a claim's still reading, the arrival and the surfaces it
+// kept, what its view read, where the walk stood, and where the reader stood
+// in a reading scene it holds (`classChanged`).
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-22, FP-25, FP-29, FP-36.
 
 /** @typedef {{x: number, y: number, scale: number}} View */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
@@ -131,9 +134,10 @@
 /** @typedef {FollowStep | CarryStep | SceneStep} Step the step that left an entry for the one after it: a follow, a LEAP carrying a passage, or a reading scene opened from a link's end or a passage — any other move leaves none */
 
 /**
- * @typedef {Object} Kept — the arrival as the reader left an entry (see the head): N-GO's, by value
+ * @typedef {Object} Kept — the arrival and the surfaces as the reader left an entry (see the head): N-GO's, by value
  * @property {import('./go.js').Arrival | null} arrival its outline, where its runs stood as the reader left
  * @property {import('./go.js').Landing | null} landed what its landing said, its runs' labels and the run it stood at among them
+ * @property {import('./go.js').Surfaces | null} surfaces the selection and the card or the list standing there; null where none stood
  */
 
 /**
@@ -268,9 +272,9 @@ export function settle(e, landing) {
 }
 
 /**
- * The arrival as the reader leaves an entry, written on it by value (see the
- * head; N-GO's departure), in the place of any it held: what a return to it
- * restores. Null where none stood there.
+ * The arrival and the surfaces as the reader leaves an entry, written on it
+ * by value (see the head; N-GO's departure), in the place of any it held:
+ * what a return to it restores. Null where none stood there.
  * @param {Entry} e
  * @param {Kept | null} kept
  */
@@ -280,10 +284,10 @@ export function keep(e, kept) { e.kept = kept; }
  * A change of the page's class (see the head; FP-23, FP-29): every entry
  * keeps its place, its number, its address, its positions, its view and its
  * step, and drops the notice the class it left met there — save a claim's,
- * its read still out, which the new class answers — the arrival it kept,
- * what its view read and where the walk stood; a reading scene's keeps its
- * pair and its panes' versions, and drops where the reader stood in each
- * pane (SC's `Left.spots`).
+ * its read still out, which the new class answers — the arrival and the
+ * surfaces it kept, what its view read and where the walk stood; a reading
+ * scene's keeps its pair and its panes' versions, and drops where the reader
+ * stood in each pane (SC's `Left.spots`).
  */
 export function classChanged() {
   for (const e of entries) {

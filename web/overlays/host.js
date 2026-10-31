@@ -2,8 +2,9 @@
 // §3.1): an HTML layer positioned over the plane at the act's site, following
 // its place as the camera moves, gone with Esc, the next act or its own
 // completion, never a fixed region. Layer 2. ENGINE-BOUND. State (FP-10):
-// the current overlay, and the opening still reading with the count of the
-// acts made on the chrome.
+// the current overlay, and the opening still reading — with the surface it
+// reopens, where it reopens one — and the count of the acts made on the
+// chrome.
 // The opening: chrome that opens on its reads — the reading scene, the
 // versions list, the provenance cards, the anatomy card, a face stating a
 // withheld origin whose clause's reads are out (O-FACES; FP-33) — opens
@@ -28,6 +29,16 @@
 // its gate's by `import()` (S-22 (a)), for an act made while a module loaded
 // would end no opening, and the chrome would open over the place that act
 // reached.
+// A surface leaves and returns with its place (FP-36, FP-25): a card or a
+// list shows carrying what it is about (`about`) — a link's end, a span's
+// bytes, a document, a mark — by value, its owner's, never its words; the
+// standing one, and the control the platform's focus stands on in it by its
+// key, is what a departure keeps (`asLeft`; N-GO's), and so is a surface an
+// opening still reading reopens on a return (`opening`'s `left`), for the act
+// that leaves is what ends it. Faces, moments and the trail's list carry
+// none: a notice returns with its entry, a moment is the shell's, and the
+// trail's list is about the trail. A surface reopened takes the focus on the
+// control it was left holding it on (`controlOf`), else none.
 // The focus is N-FOCUS's (FP-20; D5 §4 rule 4): an overlay takes the focus
 // only where a key made the act that opened it — `takeFocus` is that act's
 // `byKey` and nothing else decides it — and takes it on its first act, never
@@ -110,6 +121,14 @@ import { esc } from '../util.js';
 
 /** @typedef {(el: HTMLElement, byKey: boolean) => void} Act an overlay's act, run on the element that bears its `data-run`; `byKey` a key ran it */
 
+/** @typedef {import('./anatomy-card.js').About | import('./versions.js').About | import('./links-card.js').About | import('./provenance.js').About | import('./mark-list.js').About | import('./selection.js').About} About what a card or a list is about, by value (see the head): its owner's, which reopens it from it */
+
+/**
+ * @typedef {Object} Left — a surface as the reader leaves its place (see the head; `asLeft`)
+ * @property {About} about what it is about
+ * @property {string | null} focus the key (`keyOf`) of the control the platform's focus stood on in it; null where the focus stood outside it
+ */
+
 /**
  * @typedef {Object} Overlay
  * @property {'card' | 'face' | 'list' | 'moment'} kind
@@ -117,10 +136,11 @@ import { esc } from '../util.js';
  * @property {string} html
  * @property {Record<string, Act>} [acts] handlers by `data-run` name
  * @property {(replaced: boolean) => void} [onDismiss] its end, run while the element still holds what it wrote: `replaced` where the next act's overlay took its place, so what stands behind it (the selection) stands on; false where it was dismissed
- * @property {boolean} [takeFocus] a key made the act that opened it (the act's `byKey`): the focus goes to its first act
- * @property {string} [first] a selector for the control the focus goes to first where it is not the first in order — a list's current row
+ * @property {boolean} [takeFocus] a key made the act that opened it (the act's `byKey`), or it is reopened where the focus stood in it: the focus goes to its first act
+ * @property {string} [first] a selector for the control the focus goes to first where it is not the first in order — a list's current row; a reopened surface's control it was left holding the focus on (`controlOf`)
  * @property {boolean} [told] a face whose words the landing that met it says where the focus lands (N-WALK's description): the status region does not repeat them
  * @property {string} [id] a name the gate reads
+ * @property {About} [about] what a card or a list is about (see the head): what a departure keeps of it; none for a face, a moment and the trail's list
  */
 
 /** @type {HTMLElement | null} */
@@ -131,9 +151,31 @@ let current = null;
 let made = 0;
 /** the act of the opening whose reads are out, nothing yet shown for it; 0 where none reads */
 let reading = 0;
+/** @type {Left | null} the surface the opening still reading reopens, as the reader left it (`opening`'s `left`); read only while `reading` stands */
+let reopening = null;
 
 /** the key a control of the overlay bears: its `data-run`, or `x` for the dismiss */
 const keyOf = (/** @type {Element} */ e) => /** @type {HTMLElement} */ (e).dataset.run || (/** @type {HTMLElement} */ (e).dataset.x ? 'x' : null);
+
+/** the selector naming the control that bears a key (`keyOf`): where a surface reopened takes the focus it was left holding (see the head) */
+export const controlOf = (/** @type {string} */ key) => (key === 'x' ? '[data-x]' : `[data-run="${key.replace(/["\\]/g, '\\$&')}"]`);
+
+/**
+ * The surface standing as the reader leaves its place (see the head): the
+ * card or the list shown, by what it is about, with the key of the control
+ * the platform's focus stands on in it; else the surface an opening still
+ * reading reopens; null where neither stands — a face, a moment, the trail's
+ * list, an opening asked afresh.
+ * @returns {Left | null}
+ */
+export function asLeft() {
+  if (current) {
+    if (!current.about) return null;
+    const a = document.activeElement;
+    return { about: current.about, focus: el && a && el.contains(a) ? keyOf(a) : null };
+  }
+  return reading ? reopening : null;
+}
 /** the controls the focus may go to first: the acts, the native controls, never the dismiss */
 const FIRST = '[data-run], button:not([data-x]), input, [tabindex="0"]';
 
@@ -357,15 +399,19 @@ function takeDown() {
  * reads false once another act is made on the chrome, so reads that consult
  * it between them ask no more; its answer — null where it gives up — is
  * handed to `show` where the opening still stands, and nothing shows where
- * it does not. Pending from its first read to its show or its end.
+ * it does not. Pending from its first read to its show or its end; one that
+ * reopens a surface on a return names it (`left`), which a departure keeps
+ * while it reads (`asLeft`).
  * @template T
  * @param {(stands: () => boolean) => Promise<T | null>} reads
  * @param {(answer: T) => void} show
+ * @param {Left | null} [left] the surface it reopens, as the reader left it
  * @returns {Promise<void>} settled once the answer is shown, or nothing will be
  */
-export async function opening(reads, show) {
+export async function opening(reads, show, left = null) {
   const act = ++made;
   reading = act;
+  reopening = left;
   const stands = () => act === made;
   try {
     const answer = await reads(stands);

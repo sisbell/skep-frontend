@@ -9,9 +9,12 @@
 // withheld document, the chrome a landing leaves standing and a field that
 // keeps its caret, cards opened while an act reads, Enter at a withheld run
 // and a tail pressed, the box's version, a change of the page's class, where
-// no board is held, the passage Back lands on, and a text set again under
-// the reader — an arrival placed again by its runs' bytes, and the passage
-// being read gone from it (FP-20, FP-21, FP-22, FP-25, FP-29, FP-35, FP-36). The overlay host stands on a stand-in element, the
+// no board is held, the passage Back lands on, the surfaces a place keeps —
+// the selection, a card, a list — ended as the reader leaves and reopened as
+// left on a return, their subjects placed again by their bytes, and a text
+// set again under the reader — an arrival placed again by its runs' bytes,
+// and the passage being read gone from it (FP-20, FP-21, FP-22, FP-25,
+// FP-29, FP-35, FP-36). The overlay host stands on a stand-in element, the
 // platform's document a stand-in beside it, so a face a landing shows is read
 // back from what the host wrote.
 import { test, before } from 'node:test';
@@ -297,6 +300,10 @@ async function run(/** @type {Promise<unknown>} */ act) {
   act.then(() => { done = true; });
   for (let i = 0; i < 200 && !done; i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
   assert.ok(done, 'the act ran to its end');
+}
+/** a return's reopening let finish: every read it set going answered and every flight stepped — the surfaces it reopens shown */
+async function reopening() {
+  for (let i = 0; i < 60; i++) { await new Promise((r) => setTimeout(r, 0)); if (CAM.flying()) CAM.step(Infinity); }
 }
 /** a citation as LK draws it at the first edition */
 const drawn = (/** @type {string} */ link) => /** @type {import('../links/links.js').Shown} */ (LK.shown(D).find((s) => s.link.addr === link));
@@ -2228,7 +2235,7 @@ async function inPlace(/** @type {unknown} */ act) {
   return flew;
 }
 
-test('a version move lands in place (issue #154): the versions list\'s read act never flies — the camera stands where it stood — and the box takes the member, its entry pushed recording the passage carried, the arrival at its counterpart there and the walk on it; Back restores the earlier version and its view, lighting the passage where the move was made, and Forward takes the member again', async () => {
+test('a version move lands in place (issue #154): the versions list\'s read act never flies — the camera stands where it stood — and the box takes the member, its entry pushed recording the passage carried, the arrival at its counterpart there and the walk on it; Back restores the earlier version and its view, lighting the passage where the move was made, the list the move was made from reopened over the same passage, its rows read again (issue #264), and Forward takes the member again', async () => {
   await run(GO.leapTo(FAR));
   assert.equal(GO.shownIn(FAR), FAR, 'FAR\'s box shows its plain address, the trunk head');
   REC.takeMembers(FAR, 2);
@@ -2244,12 +2251,16 @@ test('a version move lands in place (issue #154): the versions list\'s read act 
   assert.deepEqual(departed()?.step, { kind: 'carry', from: FAR, to: FAR2, spans: [{ prefix: FAR + '.0.1', ordinal: FAR_HELD.pos, width: FAR_HELD.width }] }, 'the entry departed records the passage carried, by identity');
   assert.deepEqual(GO.arrivalMark(), { addr: FAR2, pos: FAR_HELD.pos, runs: [{ pos: FAR_HELD.pos, width: FAR_HELD.width }], link: null }, 'its counterpart outlined in the member');
   assert.deepEqual([walkAt(), WALK.landedAt()], [['block', FAR2, FAR_HELD.pos], FAR_HELD.pos], 'the walk on the member\'s span holding it');
-  await run(GO.back());
+  const asked = fake.asked.length;
+  await run(GO.back()); await reopening();
   assert.deepEqual([GO.shownIn(FAR), TRAIL.current()?.addr, walkAt()?.[1]], [FAR, FAR, FAR], 'Back restores the earlier version');
   assert.ok(same(CAM.view(), at), 'and its view');
   assert.deepEqual(GO.arrivalMark(), { addr: FAR, pos: FAR_HELD.pos, runs: [{ pos: FAR_HELD.pos, width: FAR_HELD.width }], link: null }, 'lighting the passage where the move was made (issue #152)');
+  const list = HOST.currentState(), about = /** @type {VERSIONS.About} */ (list?.about);
+  assert.deepEqual([list?.id, about.addr, about.held && [about.held.pos, about.held.width]], ['versions:' + FAR, FAR, [FAR_HELD.pos, FAR_HELD.width]], 'the list the move was made from, reopened over the passage it held');
+  assert.ok(fake.asked.slice(asked).includes(FAKE.keyOf('op', { frame: heldIn(FAR2) })), 'its rows read again: what each member holds of the passage');
   await run(GO.forward());
-  assert.deepEqual([GO.shownIn(FAR), TRAIL.current()?.addr], [FAR2, FAR2], 'Forward takes the member again');
+  assert.deepEqual([GO.shownIn(FAR), TRAIL.current()?.addr, HOST.currentState()], [FAR2, FAR2, null], 'Forward takes the member again, the list ended as it leaves');
   await run(GO.leapTo(FAR));
   assert.deepEqual(fake.unanswered, []);
 });
@@ -2450,6 +2461,149 @@ test('Back puts the walk where it stood as the reader left the entry, never on t
   await run(GO.back());
   assert.ok(same(CAM.view(), left), 'Back at the view left: nothing set again');
   assert.deepEqual(walkAt(), ['block', LONG, spans[43].pos], 'the walk on the span it stood on');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- THE SURFACES' RETURN (FP-36) ----------------------------------------------------------------------------------
+
+test('Back to the place a follow was made from the anatomy card reopens the card as the reader left it (issue #264\'s design decision: "Back and Forward reopen them as left … and re-read counts and claims"): at the link\'s own bytes, its lineage asked again, the focus on its follow where Enter on it left the focus there; Forward ends it, and Back reopens it again (FP-36)', async () => {
+  const doc = /** @type {any} */ (globalThis.document), was = hostEl.contains;
+  /** the card's follow holding the platform's focus, as Enter on it leaves it */
+  const follow = { dataset: { run: 'follow' }, blur() { doc.activeElement = null; }, focus() {} };
+  /** the platform's focus on the card's follow while `act` is made */
+  const onFollow = async (/** @type {() => Promise<unknown>} */ act) => {
+    hostEl.contains = /** @type {any} */ ((/** @type {unknown} */ x) => x === follow);
+    doc.activeElement = follow;
+    try { await run(act()); } finally { hostEl.contains = was; doc.activeElement = null; }
+  };
+  const lineage = FAKE.keyOf('op', { frame: F.outClaims(PASSAGE, 'audit') });
+  await run(GO.leapTo(D));
+  await ANATOMY.open(drawn(PASSAGE), null);
+  const card = HOST.currentState();
+  assert.equal(card?.id, 'anatomy:' + PASSAGE, 'the card at D');
+  await onFollow(() => Promise.resolve(card?.acts?.follow(/** @type {any} */ (follow), true)));
+  assert.deepEqual([TRAIL.current()?.addr, HOST.currentState()], [FAR, null], 'the follow landed at FAR, the card ended as its camera left');
+  let from = fake.asked.length;
+  await run(GO.back()); await reopening();
+  const back = HOST.currentState();
+  assert.deepEqual([TRAIL.current()?.addr, back?.id, back?.anchor, back?.takeFocus, back?.first], [D, 'anatomy:' + PASSAGE, { span: { addr: D, pos: 11, width: 5 } }, true, '[data-run="follow"]'],
+    'Back to D: the card reopened at the link\'s own bytes, taking the focus on its follow');
+  assert.ok(fake.asked.slice(from).includes(lineage), 'its lineage asked again');
+  await onFollow(() => GO.forward());
+  assert.deepEqual([TRAIL.current()?.addr, HOST.currentState()], [FAR, null], 'Forward ends it: FAR kept no card');
+  from = fake.asked.length;
+  await run(GO.back()); await reopening();
+  assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.takeFocus, HOST.currentState()?.first], ['anatomy:' + PASSAGE, true, '[data-run="follow"]'], 'Back reopens it again, the focus on its follow as it was left');
+  assert.ok(fake.asked.slice(from).includes(lineage), 'its lineage asked again');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a place left with the links card at its content stage reopens the card there, the chain raised to its content again — the card\'s dismissal returning it to hidden as the reader leaves (issue #264; FP-36)', async () => {
+  await run(GO.leapTo(D));
+  LINKS.show(D);
+  HOST.currentState()?.acts?.stage3(/** @type {any} */ (hostEl), false);
+  assert.deepEqual([HOST.currentState()?.id, LK.state(D).stage], ['links:' + D, 3], 'the card at D, the chain at its content');
+  await run(GO.leapTo(FAR));
+  assert.deepEqual([HOST.currentState(), LK.state(D).stage], [null, 1], 'leaving: the card ended, the chain hidden');
+  await run(GO.back()); await reopening();
+  assert.deepEqual([HOST.currentState()?.id, LK.state(D).stage], ['links:' + D, 3], 'Back: the card reopened, the chain at its content again');
+  HOST.dismiss();
+  assert.equal(LK.state(D).stage, 1);
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a second move made at once, while a return still reopens the card it owes, loses nothing: the departure keeps the card as the reader left it, and Forward reopens it (issue #264)', async () => {
+  await run(GO.leapTo(FAR));
+  await run(GO.leapTo(D));
+  await ANATOMY.open(drawn(PASSAGE), null);
+  const card = HOST.currentState();
+  await run(Promise.resolve(card?.acts?.follow(/** @type {any} */ (hostEl), false)));
+  assert.equal(TRAIL.current()?.addr, FAR, 'the follow from the card landed at FAR');
+  const release = fake.hold('op', { frame: F.inClaims(PASSAGE, 'audit') });
+  const back = GO.back();
+  for (let i = 0; i < 40 && !HOST.pending(); i++) await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([TRAIL.current()?.addr, HOST.pending()], [D, true], 'Back to D: the card reopening, its lineage\'s read held');
+  await run(GO.back());
+  release(); await run(back); await reopening();
+  assert.deepEqual([TRAIL.current()?.addr, HOST.currentState()], [FAR, null], 'a second Back at once: at the entry before D\'s, nothing over it');
+  await run(GO.forward()); await reopening();
+  assert.deepEqual([TRAIL.current()?.addr, HOST.currentState()?.id], [D, 'anatomy:' + PASSAGE], 'Forward to D: the card the first Back still owed, reopened');
+  HOST.dismiss();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a selection standing under the card one of its acts opened ends as a jump leaves its place, and Back brings both back (issue #264): "who wrote this?" over the selection, then its origin\'s row — the selection gone at the landing, Esc ending the arrival; Back to the place, the selection over its bytes and the card asked again over them (FP-36)', async () => {
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  const origin = FAKE.keyOf('op', { frame: F.showOrigin(D, 11, 5) });
+  try {
+    await run(GO.leapTo(D));
+    SEL.select(D, 11, 5);
+    SEL.act('wrote'); await reopening();
+    const card = HOST.currentState();
+    assert.deepEqual([card?.id, SEL.selected()], ['provenance:wrote', { addr: D, pos: 11, width: 5 }], 'the card over the selection, which stands under it');
+    await run(Promise.resolve(card?.acts?.src0(/** @type {any} */ (hostEl), false)));
+    assert.deepEqual([TRAIL.current()?.addr, SEL.selected(), HOST.currentState()], [FAR, null, null], 'the origin\'s LEAP landed at FAR: the selection ended with the card');
+    assert.ok(GO.arrivalMark(), 'the passage carried outlined there');
+    KEYS.esc();
+    assert.equal(GO.arrivalMark(), null, 'Esc ends the arrival: no selection stands nearer');
+    const from = fake.asked.length;
+    await run(GO.back()); await reopening();
+    assert.deepEqual([TRAIL.current()?.addr, SEL.selected(), HOST.currentState()?.id], [D, { addr: D, pos: 11, width: 5 }, 'provenance:wrote'], 'Back to D: the selection over its bytes, the card over it again');
+    assert.ok(fake.asked.slice(from).includes(origin), '`show_origin` asked again');
+  } finally { HOST.dismiss(); SEL.clear(); globalThis.window = platform.window; }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a place left with a selection standing puts it back over its bytes wherever an edit set them while the reader was away: moved, where they stand; in part, on what stands, the line said in the status region and standing beside the landing; none, the dead end\'s face at its place, said, and nothing selected (issue #264\'s design decision: "the landing rule re-checks it whenever the text under it changes"; FP-36)', async () => {
+  Object.assign(script, reads(SETA, SETA_TEXT, []), noClaims(SETA));
+  const platform = { window: globalThis.window };
+  globalThis.window = /** @type {any} */ ({ addEventListener() {}, getSelection: () => null });
+  /** @type {string[]} the status region, as it was told */
+  const said = [];
+  FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); } }) });
+  const at = SETA_TEXT.indexOf('Its passage') + 1, width = 'Its passage'.length, n = SETA_TEXT.length;
+  /** a LEAP away from SETA with the passage selected there, its text set again while the reader is away, then Back: what stands, and what was said */
+  const away = async (/** @type {() => void} */ edit) => {
+    await run(GO.leapTo(FAR));
+    assert.equal(SEL.selected(), null, 'leaving: the selection ended with its card');
+    edit();
+    const told = said.length;
+    await run(GO.back()); await reopening();
+    return { sel: SEL.selected(), overlay: HOST.currentState()?.id ?? null, said: said.slice(told) };
+  };
+  try {
+    REC.invalidate(SETA);
+    await run(GO.leapTo(SETA, { pos: at }));
+    REC.takeMembers(SETA, 1);
+    SEL.select(SETA, at, width);
+    // twelve bytes minted since set before the text: every byte of it twelve on
+    const moved = await away(() => setSeta('A new lead.\n' + SETA_TEXT, [[n + 1, 12], [1, n]]));
+    assert.deepEqual([moved.sel, moved.overlay], [{ addr: SETA, pos: at + 12, width }, 'selection'], 'moved: the selection over its bytes, twelve on, its card with it');
+    // the passage's last five bytes gone, as the reader left it in the text set again
+    SEL.select(SETA, at + 12, width);
+    const part = await away(() => setSeta(SETA_TEXT.slice(0, at + width - 6) + SETA_TEXT.slice(at + width - 1), [[1, at + width - 6], [at + width, n - at - width + 1]]));
+    const line = t('L.held.part', { subject: t('L.held.selected'), where: t('L.held.current', { D: SETA }) });
+    assert.deepEqual([part.sel, part.overlay, part.said.includes(line), GO.landingLine()], [{ addr: SETA, pos: at, width: width - 5 }, 'selection', true, line], 'in part: the selection on what stands, its card with it, the line said and beside the landing');
+    GO.endArrival();
+    // none of it: the text set again of bytes minted since
+    const none = await away(() => setSeta('Other words.', [[n + 20, 12]]));
+    assert.deepEqual([none.sel, none.overlay, HOST.currentState()?.told, HOST.currentState()?.anchor], [null, 'face:floating', false, { span: { addr: SETA, pos: at }, sign: SETA }], 'none: nothing selected, the dead end\'s face at the place it stood, said in the status region');
+  } finally { HOST.dismiss(); SEL.clear(); GO.endArrival(); REC.invalidate(SETA); globalThis.window = platform.window; }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a change of the page\'s class drops what every entry keeps of its surfaces: Back to a place left with a card standing reopens nothing and asks nothing for it (FP-29; issue #264)', async () => {
+  await run(GO.leapTo(D));
+  await PROV.wrote(D, 11, 5);
+  assert.equal(HOST.currentState()?.id, 'provenance:wrote', 'the card at D');
+  await run(GO.leapTo(FAR));
+  GO.classChanged();
+  const from = fake.asked.length;
+  await run(GO.back()); await reopening();
+  assert.deepEqual([TRAIL.current()?.addr, HOST.currentState()], [D, null], 'Back to D: no card');
+  assert.ok(!fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.showOrigin(D, 11, 5) })), 'nothing asked for it');
   assert.deepEqual(fake.unanswered, []);
 });
 

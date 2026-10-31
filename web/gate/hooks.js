@@ -569,11 +569,12 @@ export function install(deps) {
   }
   /**
    * Settled: the view's needs met, nothing read for it, the camera still, no
-   * jump in the air or reaching (FP-25), no chrome opening on its reads
-   * (O-HOST's `pending`: a card, or a face reading its clause before it
-   * shows; FP-33), and no key held for a landing or being made there.
+   * jump in the air or reaching (FP-25), no return reopening its surfaces
+   * (N-GO's `restoring`; FP-36), no chrome opening on its reads (O-HOST's
+   * `pending`: a card, or a face reading its clause before it shows; FP-33),
+   * and no key held for a landing or being made there.
    */
-  const settled = () => PUMP.inflightCount() === 0 && PUMP.pump() === 0 && !CAM.flying() && !GO.inAir() && !GO.isReaching() && !HOST.pending() && KEYS.holding() === 0;
+  const settled = () => PUMP.inflightCount() === 0 && PUMP.pump() === 0 && !CAM.flying() && !GO.inAir() && !GO.isReaching() && !GO.restoring() && !HOST.pending() && KEYS.holding() === 0;
   /** wait until the view's needs are met */
   async function settle(maxMs = 8000) {
     const t0 = performance.now();

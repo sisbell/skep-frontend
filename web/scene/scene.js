@@ -161,13 +161,18 @@
 // and its positions where the text is published, never a draft's — the
 // stop's passage of pane B and the one its act last went to (`sharedStop`),
 // a stroke's runs' facing bytes and each change's bytes on each side
-// (`strokeStop`) — with where it stood. A cursor move back onto the entry
-// reopens it so (`reopen`): each pane's record read again — an edition read
-// at its bare address whose chain went past the member its text was, pinned
-// to that member (FP-23) — the two ends set level, each pane whose text
-// holds its place's bytes brought back to them, any other left where the
-// re-level set it, its selection put back on the same bytes, the focus on
-// the stop it stood on and the pair named in the status region.
+// (`strokeStop`) — with where it stood; and a stroke's list standing, by its
+// stroke's key, with whether the focus stood in it (`Listed`; FP-36). A
+// cursor move back onto the entry reopens it so (`reopen`): each pane's
+// record read again — an edition read at its bare address whose chain went
+// past the member its text was, pinned to that member (FP-23) — the two ends
+// set level, each pane whose text holds its place's bytes brought back to
+// them, any other left where the re-level set it, its selection put back on
+// the same bytes, the focus on the stop it stood on and the pair named in
+// the status region; the stroke's list shown again over the stroke bearing
+// its key once the strokes are measured, its rows read from the panes' texts
+// then, the focus on its first row where it stood in the list — the gone
+// line said where no stroke bears the key (`relisted`).
 // A stop only the panes' `compare` draws, the reader left from, stands with
 // the landing as the scene reopens and takes the focus, other keys acting
 // from it (`returning`; FP-20): drawn, never hidden, where what it stood for
@@ -493,6 +498,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {Tie[]} lines the links' lines between the panes, as measured
  * @property {Stroke[]} strokes where runs consecutive in both documents meet on both sides, as measured, in the documents' order
  * @property {{key: string, caption: string, rows: string[]} | null} listing the stroke whose list stands (`showChanges`): its key, and its caption and its rows' markup as last drawn; null where none stands
+ * @property {Listed | null} relist the stroke's list a reopening owes (`Left.list`), shown once the panes' `compare` has measured the strokes (`relisted`); null where none is owed
  * @property {Shared[]} shared where the scene is whole, the passages of pane B holding the near passage's material, in pane B's order, as measured; none elsewhere
  * @property {number} next the shared passage the stop's next act goes to first, an index into `shared`
  * @property {number | null} at the shared passage the stop stands for as the last draw placed it, an index into `shared`; null where it stands hidden
@@ -585,11 +591,14 @@ import { esc, byteOffsets } from '../util.js';
  * @property {(said: Said, anchor: Anchor, again: (() => void) | null, told: boolean) => void} held the line's words (FP-21), "try again" where a retry may tell; `told` as `floating`'s
  */
 
+/** @typedef {{key: string, focus: boolean}} Listed a stroke's list standing as the reader left the scene (`Left.list`): the stroke's key (`strokeKey`), and whether the platform's focus stood in the list */
+
 /**
  * @typedef {Object} Left — the scene as the reader left it (`asLeft`; see the head): what its trail entry records, by value, and what reopens it (`reopen`)
  * @property {{a: Version, b: Version}} panes each pane's text
  * @property {{a: Spot, b: Spot} | null} spots where the reader stood in each pane; null where none is kept — a change of the page's class drops them (N-TRAIL's)
  * @property {Stop | null} stop the stop the platform's focus stood on — one the panes' `compare` draws by what it stood for, which a change of the page's class keeps (N-TRAIL's); null where it stood outside the scene, or on such a stop whose bytes its pane's image did not name
+ * @property {Listed | null} [list] the stroke's list standing; null, or absent, where none stood
  */
 
 /** how far below the panes' tops the two ends are set level (px), where both can stand there */
@@ -1247,7 +1256,7 @@ export async function open(a, b, held = {}, as = {}) {
  */
 const sceneOf = (pa, pb, pairs, held) => ({
   a: pa, b: pb, pairs, level: levels(pairs, held), whole: !!held.wholeB, widthA: Math.max(1, held.widthA ?? 1),
-  bands: [], lines: [], strokes: [], listing: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null, size: '', updating: 0, waiting: [],
+  bands: [], lines: [], strokes: [], listing: null, relist: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null, size: '', updating: 0, waiting: [],
 });
 
 /**
@@ -1255,10 +1264,12 @@ const sceneOf = (pa, pb, pairs, held) => ({
  * texts' `compare`, asked as the scene shows; its answer, where the scene
  * still stands and neither pane was set again meanwhile — a setting reads its
  * own — taken: the runs of shared identity measured and drawn, the passages
- * the stop reaches with them, a refusal said (`sayFace`), and a stop the
- * reader returned to answered (`answer`); no pane scrolled and no focus
- * moved by it, and no act of the panes' held waiting on it — only one made on
- * that stop, which waits for this answer.
+ * the stop reaches with them, a refusal said (`sayFace`), a stop the
+ * reader returned to answered (`answer`), and a stroke's list a reopening
+ * owes shown (`relisted`); no pane scrolled, no focus moved by it save onto
+ * that list where it was left holding the focus, and no act of the panes'
+ * held waiting on it — only one made on that stop, which waits for this
+ * answer.
  * @param {Scene} S
  * @returns {Promise<void>}
  */
@@ -1272,6 +1283,7 @@ async function addBands(S) {
   measure();
   answer(S, got);
   draw();
+  relisted(S);
 }
 
 /** the bar's words for the refusal the panes' `compare` met, by its name */
@@ -1385,11 +1397,35 @@ export async function reopen(o, as = {}) {
     FOCUS.say(`${t('L.scene-label')} · ${S.a.shows} │ ${S.b.shows}`);
     // a scene that read its `compare` before showing answers the stop at once: its name says it where the focus lands
     if (!S.whole) answer(S, between, true);
+    // the stroke's list as the reader left it, over its stroke once the panes' `compare` has measured the strokes
+    S.relist = was.list || null;
+    if (!S.whole) relisted(S);
     out.shown = true;
     markDirty();
     if (S.whole) void addBands(S);
   });
   return out;
+}
+
+/**
+ * The stroke's list a reopening owes (see the head; FP-36), shown over the
+ * stroke bearing its key once the panes' `compare` has measured the strokes:
+ * its changes read from the panes' texts now, the stroke's button its opener,
+ * and the focus on its first row where the focus stood in it as the reader
+ * left it and stands in the scene still; where no stroke bears the key, the
+ * gone line said through the status region. Nothing where none is owed, or
+ * an overlay stands.
+ * @param {Scene} S
+ */
+function relisted(S) {
+  const l = S.relist, E = els;
+  S.relist = null;
+  if (!l || !E || HOST.hasCurrent()) return;
+  const s = S.strokes.find((x) => x.key === l.key);
+  if (!s) { FOCUS.say(t('L.scene.stroke.gone')); return; }
+  const btn = buttonOf(E, l.key), at = document.activeElement, take = l.focus && !!at && E.root.contains(at);
+  if (btn && take) FOCUS.land(btn, {});
+  showChanges(S, l.key, countOf(s), rowsOf(S, s), btn, take);
 }
 
 /**
@@ -1441,9 +1477,11 @@ function placeAgain(E, S, spots) {
  * The scene as the reader leaves it (see the head), by value: each pane's
  * text; where they stood in it, its selection and the end set level in it,
  * each by its bytes' identity through the image its article was made from;
- * and the stop the platform's focus stands on (`stopOf`) — a stop the panes'
- * `compare` draws by what it stood for. What N-GO records in the scene's
- * trail entry as the reader leaves it; null where the scene does not stand.
+ * the stop the platform's focus stands on (`stopOf`) — a stop the panes'
+ * `compare` draws by what it stood for; and the stroke's list standing, by
+ * its stroke's key, with whether the focus stood in it — or the one a
+ * reopening still owes. What N-GO records in the scene's trail entry as the
+ * reader leaves it; null where the scene does not stand.
  * @returns {Left | null}
  */
 export function asLeft() {
@@ -1461,7 +1499,9 @@ export function asLeft() {
       lacks: P.lacks,
     };
   };
-  return { panes: { a: version(S.a), b: version(S.b) }, spots: { a: spot(S.a), b: spot(S.b) }, stop: stopOf(E, S) };
+  const host = HOST.element(), at = document.activeElement;
+  const list = S.listing && HOST.currentIs('stroke:' + S.listing.key) ? { key: S.listing.key, focus: !!host && !!at && host.contains(at) } : S.relist;
+  return { panes: { a: version(S.a), b: version(S.b) }, spots: { a: spot(S.a), b: spot(S.b) }, stop: stopOf(E, S), list };
 }
 
 /**

@@ -16,9 +16,13 @@
 // the act (N-GO's `leapTo`), the list ending as the camera leaves; a failure
 // known at the act faces at the mark. Its caption is the mark's count in what
 // it counts (ST's `markCount`) and its account. Opened by a key it takes the
-// focus on its newest row, its first; by a press, none (O-HOST's).
+// focus on its newest row, its first; by a press, none (O-HOST's). The list
+// leaves and returns with its place (FP-36): it shows naming what it is
+// about (O-HOST's `about`) — the mark and the pages it shows — and a return
+// reopens it from that (`reopen`), at the mark as the plane draws it then,
+// taking the focus on the control it was left holding it on.
 // Figures: twelve rows a page.
-// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-25.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-25, FP-36.
 
 import * as HOST from './host.js';
 import * as WALK from '../nav/walk.js';
@@ -31,6 +35,8 @@ import { t, markCount } from '../strings.js';
 import { esc } from '../util.js';
 
 const PAGE = 12;
+
+/** @typedef {{kind: 'mark', key: string, page: number}} About what the list is about (see the head): the mark, by its name (P-PROJ's `markKey`), and the pages it showed */
 
 /** @type {{key: string, page: number} | null} the list standing: the mark it lists, by its name, and the pages it shows */
 let listing = null;
@@ -52,20 +58,48 @@ const newestFirst = (/** @type {{account: string, k: number}} */ c) => [...(memb
  * @returns {Promise<void>} settled once the list shows, or nothing will
  */
 export function open(key, byKey = false) {
+  return opened(key, 1, byKey, null, null);
+}
+
+/**
+ * The list reopened on a return to its place (see the head; N-GO's): the
+ * walk on the mark's stop, then the pages it showed, the focus on the
+ * control it was left holding it on, else none — nothing where the mark is
+ * not drawn at the scale the camera is bound for.
+ * @param {{about: About, focus: string | null}} left
+ * @returns {Promise<void>} settled once the list shows, or nothing will
+ */
+export function reopen(left) {
+  return opened(left.about.key, left.about.page, false, left.focus, left);
+}
+
+/**
+ * The list's opening (`open`, `reopen`): the walk put on the mark's stop,
+ * then the list shown with its pages where the walk stands there.
+ * @param {string} key
+ * @param {number} page
+ * @param {boolean} byKey
+ * @param {string | null} focus
+ * @param {import('./host.js').Left | null} left the list a return reopens, as the reader left it
+ * @returns {Promise<void>}
+ */
+function opened(key, page, byKey, focus, left) {
   return HOST.opening(async (stands) => {
     if (!continuationOf(key)) return null;
     await WALK.focusTo(key, null, byKey, true);
     const f = WALK.current();
     return stands() && f && f.kind === 'mark' && f.addr === key ? key : null;
-  }, () => { listing = { key, page: 1 }; render(byKey); });
+  }, () => { listing = { key, page }; render(byKey, focus); }, left);
 }
 
 /**
  * Rebuild the list from state (FP-13): its caption, its rows a page more at
- * each "show more", the end marked once every member is listed.
+ * each "show more", the end marked once every member is listed; the list
+ * naming what it is about.
  * @param {boolean} [byKey] a key opened it: the focus goes to its newest row
+ * @param {string | null} [focus] a reopened list's control the focus was left on (O-HOST's `keyOf`): it takes the focus there
  */
-export function render(byKey = false) {
+export function render(byKey = false, focus = null) {
   if (!listing) return;
   const { key, page } = listing, c = continuationOf(key);
   if (!c) return;
@@ -78,7 +112,8 @@ export function render(byKey = false) {
   const acts = { more: () => { if (listing) listing.page++; render(); } };
   rows.forEach((doc, i) => { acts['m' + i] = (_el, byKey) => { void GO.leapTo(GO.shownIn(doc), { how: 'leap', byKey, site: { world: at } }); }; });
   HOST.show({
-    kind: 'list', id: 'mark:' + key, anchor: { world: { x: cell.x + cell.w, y: cell.y } }, html, acts, takeFocus: byKey,
+    kind: 'list', id: 'mark:' + key, anchor: { world: { x: cell.x + cell.w, y: cell.y } }, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : undefined,
+    about: { kind: 'mark', key, page },
     onDismiss: () => { if (listing && listing.key === key) listing = null; },
   });
 }

@@ -72,7 +72,15 @@
 // listed, each row naming its link by its type and its far end (LK's
 // `farLabel`) and opening that link's card; the one symbol a withheld run's
 // ends merge into, pressed, lists them so at the symbol (`fromSymbol`; P44).
-// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-30, FP-33, FP-34.
+// The card and its lists leave and return with their place (FP-36): each
+// shows naming what it is about (O-HOST's `about`) — the link's end, in the
+// document it is drawn at, by position and identity, and whether the claims
+// behind the lineage's line stood listed; a tail's documents, links and
+// point; a run's ends — and a return reopens it from that (`reopen`), its
+// reads made again: the card at the end LK draws now at that document, as the
+// version its box shows reads it (N-GO's `shownIn`), the claims listed where
+// they stood so; nothing where LK draws no end the surface named.
+// Rules: FP-1, FP-2, FP-13, FP-20, FP-21, FP-30, FP-33, FP-34, FP-36.
 
 import * as HOST from './host.js';
 import * as PUMP from '../model/pump.js';
@@ -90,6 +98,33 @@ import { accountOf, isUnder } from '../model/address.js';
 /** @typedef {import('../links/links.js').Shown} Shown */
 /** @typedef {import('../model/pump.js').Lineage} Lineage */
 /** @typedef {import('../model/frames.js').Claim} Claim */
+/** @typedef {import('../model/records.js').ISpan} ISpan */
+
+/**
+ * @typedef {Object} EndAbout — what the card is about (see the head)
+ * @property {'anatomy'} kind
+ * @property {string} near the document the link is drawn at: the version its box showed
+ * @property {string} link the link
+ * @property {string} key its end's key there (LK's `endKey`)
+ * @property {number} pos where the end's bytes stood there: its first position
+ * @property {number} width its positions
+ * @property {ISpan[]} ids its bytes by identity (M-REC's `identityOf`); none where the held image did not cover them
+ * @property {boolean} others the claims behind the lineage's line stood listed in its place
+ */
+
+/** @typedef {{kind: 'tail', docs: string[], links: string[], world: {x: number, y: number}}} TailAbout what a tail's list is about (see the head): P-RENDER's `DrawnTail` */
+
+/**
+ * @typedef {Object} EndsAbout — what a withheld run's symbol's list is about (see the head)
+ * @property {'ends'} kind
+ * @property {string} near the document the run stands in: the version its box showed
+ * @property {number} pos the run's first position there
+ * @property {number} width its positions
+ * @property {ISpan[]} ids its bytes by identity
+ * @property {Array<{link: string, key: string}>} ends the ends it listed, each its link and its key there
+ */
+
+/** @typedef {EndAbout | TailAbout | EndsAbout} About what the card and its lists are about (O-HOST's `about`) */
 /** @typedef {[string | null, {runs: Array<{pos: number, width: number}> | null, words: string | null}, Lineage]} Read what the card is made from: the near end's words, where the far end's passage stands and its words — each stretch of words marked with its face (P-LABEL's `inFace`) — the link's lineage */
 
 /**
@@ -296,14 +331,16 @@ export function open(s, anchorEl, byKey = false) {
  * pieces, or no answer told, BM-HELD's line (`farHolds`); the
  * lineage's claims named against this link's owner and the reader
  * (`supersessionRows`), and the line's act made from the same reads, the
- * card shown again under its id with the claims behind the line in its place.
+ * card shown again under its id with the claims behind the line in its place;
+ * the card naming what it is about (`EndAbout`).
  * @param {Shown} s
  * @param {Read} read
  * @param {HTMLElement | null} anchorEl
  * @param {boolean} byKey
  * @param {boolean} [others] the line's act made: the claims behind it listed in its place
+ * @param {string | null} [focus] a reopened card's control the focus was left on (O-HOST's `keyOf`): it takes the focus there
  */
-function showCard(s, read, anchorEl, byKey, others = false) {
+function showCard(s, read, anchorEl, byKey, others = false, focus = null) {
   const [nearText, farEnd, lineage] = read;
   const l = s.link;
   const near = s.near, nearPos = s.pos, nearWidth = s.width;
@@ -336,8 +373,10 @@ function showCard(s, read, anchorEl, byKey, others = false) {
     `<div class="kv made"><b>${esc(t('L.card.made'))}</b> ${esc(dated(l.age))}</div>` +
     supersessionRows(lineage, who, others) +
     `<div class="acts"><button data-run="follow">${esc(t('B1.follow'))} → ${far ? `<span class="id">${esc(far)}</span>` : ''}</button><button data-run="beside" ${dead || !far ? 'class="inert"' : ''}>${esc(t('B1.side-by-side'))}</button></div>`;
+  /** @type {EndAbout} */
+  const about = { kind: 'anatomy', near, link: l.addr, key: s.key, pos: nearPos, width: nearWidth, ids: REC.identityOf(near, nearPos, nearWidth), others };
   HOST.show({
-    kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl, span: bytes } : { span: bytes }, html, takeFocus: byKey, first: '[data-run="follow"]',
+    kind: 'card', id: 'anatomy:' + l.addr, anchor: anchorEl ? { el: anchorEl, span: bytes } : { span: bytes }, html, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : '[data-run="follow"]', about,
     acts: {
       follow: (_el, byKey) => GO.follow(s, byKey),
       beside: () => { if (far && !dead) void GO.toScene(near, LK.besideAt(s), { posA: nearPos, widthA: nearWidth, posB: farRuns && farRuns.length ? farRuns[0].pos : null, wholeB: s.farWhole }, { from: { shown: s }, site: { span: bytes } }); },
@@ -359,6 +398,21 @@ function showCard(s, read, anchorEl, byKey, others = false) {
  * @returns {Promise<void>} settled once the card or the list shows, or nothing will
  */
 export function fromTail(tail, byKey = false) {
+  return tailOpening(tail, byKey, null, null);
+}
+
+/**
+ * A tail's opening (`fromTail`), or its list reopened on a return (`reopen`):
+ * its documents read whole, its links' ends found as LK draws them there, the
+ * card or the list shown, taking the focus on its first act where a key
+ * pressed the tail, on the control a reopened list was left holding it on.
+ * @param {{docs: string[], links: string[], world: {x: number, y: number}}} tail
+ * @param {boolean} byKey
+ * @param {string | null} focus
+ * @param {import('./host.js').Left | null} left the list it reopens, as the reader left it
+ * @returns {Promise<void>}
+ */
+function tailOpening(tail, byKey, focus, left) {
   /** @typedef {{one: Shown, read: Read} | {many: Shown[]}} Pressed its one link's end with the card's reads, or its several ends */
   return HOST.opening(/** @returns {Promise<Pressed | null>} */ async (stands) => {
     for (const d of tail.docs) { if (!stands()) return null; await PUMP.loadWhole(d); }
@@ -370,8 +424,39 @@ export function fromTail(tail, byKey = false) {
     for (const l of tail.links) { const s = met.get(l); if (s) ends.push(s); }
     if (!ends.length || !stands()) return null;
     return ends.length === 1 ? { one: ends[0], read: await cardReads(ends[0]) } : { many: ends };
-  }, (r) => { if ('one' in r) showCard(r.one, r.read, null, byKey); else listEnds(r.many, { world: tail.world }, 'tail', byKey); });
+  }, (r) => {
+    if ('one' in r) showCard(r.one, r.read, null, byKey, false, focus);
+    else listEnds(r.many, { world: tail.world }, 'tail', byKey, { kind: 'tail', docs: tail.docs, links: tail.links, world: tail.world }, focus);
+  }, left);
 }
+
+/**
+ * The card or a list of ends reopened on a return to its place (see the
+ * head; N-GO's), from what it is about, its reads made again: the card at the
+ * end LK draws now at its document, as the version its box shows reads it
+ * (N-GO's `shownIn`), its claims listed where they stood so; a tail's list,
+ * its documents read whole first; a run's ends at the run — two or more
+ * listed, one its card. Each takes the focus on the control it was left
+ * holding it on, else none. Nothing shows where LK draws no end it named.
+ * @param {{about: About, focus: string | null}} left
+ * @returns {Promise<void>} settled once it shows, or nothing will
+ */
+export function reopen(left) {
+  const a = left.about, focus = left.focus;
+  if (a.kind === 'tail') return tailOpening(a, false, focus, left);
+  const shown = LK.shown(GO.shownIn(a.near));
+  if (a.kind === 'ends') {
+    const ends = a.ends.flatMap((e) => shown.filter((s) => s.link.addr === e.link && s.key === e.key).slice(0, 1));
+    const [s] = ends;
+    if (ends.length > 1) listEnds(ends, { span: { addr: s.near, pos: s.pos, width: s.width } }, `ends:${s.near}:${s.pos}`, false, endsAbout(ends), focus);
+    return s && ends.length === 1 ? HOST.opening(() => cardReads(s), (r) => showCard(s, r, null, false, false, focus), left) : Promise.resolve();
+  }
+  const s = shown.find((x) => x.link.addr === a.link && x.key === a.key);
+  return s ? HOST.opening(() => cardReads(s), (r) => showCard(s, r, null, false, a.others, focus), left) : Promise.resolve();
+}
+
+/** what a run's ends' list is about (`EndsAbout`): the run, where the first end stands, by position and identity, and each end */
+const endsAbout = (/** @type {Shown[]} */ ends) => /** @type {EndsAbout} */ ({ kind: 'ends', near: ends[0].near, pos: ends[0].pos, width: ends[0].width, ids: REC.identityOf(ends[0].near, ends[0].pos, ends[0].width), ends: ends.map((s) => ({ link: s.link.addr, key: s.key })) });
 
 /**
  * The one symbol a withheld run's ends merge into, pressed where it stands
@@ -385,25 +470,28 @@ export function fromTail(tail, byKey = false) {
  */
 export function fromSymbol(ends, el, byKey = false) {
   const [s] = ends;
-  listEnds(ends, { el, span: { addr: s.near, pos: s.pos, width: s.width } }, `ends:${s.near}:${s.pos}`, byKey);
+  listEnds(ends, { el, span: { addr: s.near, pos: s.pos, width: s.width } }, `ends:${s.near}:${s.pos}`, byKey, endsAbout(ends));
 }
 
 /**
  * Ends listed — a tail's (`fromTail`), at the tail; a withheld run's symbol's
  * (`fromSymbol`), at the symbol: each row its link's type and its far end
  * named in the words its tail carries (LK's `farLabel`), in its mark, opening
- * that link's card as a links-card row does.
+ * that link's card as a links-card row does; the list naming what it is
+ * about.
  * @param {Shown[]} ends
  * @param {import('./host.js').Anchor} anchor where the list stands
  * @param {string} id
  * @param {boolean} byKey
+ * @param {TailAbout | EndsAbout} about
+ * @param {string | null} [focus] a reopened list's control the focus was left on: it takes the focus there
  */
-function listEnds(ends, anchor, id, byKey) {
+function listEnds(ends, anchor, id, byKey, about, focus = null) {
   const near = [...new Set(ends.map((s) => s.near))].map((a) => `<span class="id">${esc(a)}</span>`).join(', ');
   const html = `<span class="label">${esc(t('B1.see-links'))} · ${near}</span><ul class="rows">${ends.map((s, i) =>
     `<li><button data-run="t${i}" style="--mark-hue:${s.mark.hue};--mark-value:${s.mark.value}"><span class="sym-mark">⟡</span> ${esc(typeName(s.link.type))} · ${esc(s.end === 'from' ? '→' : '←')} ${LK.farLabelHTML(s)}</button></li>`).join('')}</ul>`;
   /** @type {Record<string, import('./host.js').Act>} */
   const acts = {};
   ends.forEach((s, i) => { acts['t' + i] = (_el, byKey) => open(s, null, byKey); });
-  HOST.show({ kind: 'list', id, anchor, html, acts, takeFocus: byKey });
+  HOST.show({ kind: 'list', id, anchor, html, acts, takeFocus: byKey || focus != null, first: focus != null ? HOST.controlOf(focus) : undefined, about });
 }
