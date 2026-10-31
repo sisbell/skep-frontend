@@ -2,7 +2,8 @@
 // tall as its bars, holding its face, its head, its owner or the origin's
 // mark by what its full lines hold as its words are measured in their faces,
 // never counted, the face compact in the column's edge otherwise and a
-// control on the plane alone; an item not rendered a gap of its positions,
+// control on the plane alone; an item not rendered — one of a kind the page
+// does not know among them, as a delivery hands it — a gap of its positions,
 // its words in it or in the edge; every address the article sets in the
 // identifier's face, a record's keys and a face's arm and clause at the
 // run's size; the entitlement arm by the
@@ -39,6 +40,7 @@ import { t, tHTML, bracketed, CLIENT_CLOSE } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { accountOf, homeOf, resolveSpan } from '../model/address.js';
 import { deriveBlocks, textOf } from '../model/records.js';
+import { decodeDelivery } from '../model/frames.js';
 
 /** @typedef {import('../model/records.js').Reader} Reader */
 /** the readers the arm is decided for: signed in, with a key bound at this board and with none; a guest with a key here; a guest with none */
@@ -858,6 +860,21 @@ test('items one after another of one kind and one owner share one stand-in, thei
   // text between two items of one kind and owner: a stand-in each, the text in its place
   const between = textMade(D, [['ref', ''], ['content', '\n\n'], ['ref', '']]);
   assert.equal(copyText(between, whole(between), owner), standIn.reference() + '\n\n' + standIn.reference());
+});
+
+test('an item of a kind the page does not know, as a delivery hands it, stands at its own place as an item this client cannot show: a gap of its width with its words, its plan row and its bar the gap\'s, the text after it at its own positions, and a copy\'s stand-in in its place, never the two texts joined (wire.md §Value encodings)', () => {
+  const D = '1.0.1.0.3';
+  const runs = decodeDelivery({ as_of: 9, items: [{ content: 'Before.\n' }, { later: { origin: '1.0.1.0.2', width: '3' } }, { content: 'After.' }], resp: 'delivery' }, 1);
+  const blocks = deriveBlocks(runs), d = doc({ runs, blocks, extent: 17, to: 18, whole: 17 });
+  assert.deepEqual(blocks.map((b) => [b.pos, b.width, b.kind, itemOf(b)]), [[1, 8, 'para', null], [9, 3, 'unknown', 'unshown'], [12, 6, 'para', null]], 'its block an item this client cannot show, between the two texts');
+  const html = articleHTML(d, view(), '1.0.1');
+  const gap = new RegExp(`<span class="sp blk-unknown gap" data-addr="${D}" data-pos="9" data-width="3" style="height:([\\d.]+)em;--wh-last:3"><span class="unshown edge"[^>]*>([^<]*)</span></span>`).exec(html);
+  assert.ok(gap && Math.abs(Number(gap[1]) - LINE_H) < 1e-9 && gap[2] === esc(t('F.not-rendered', { width: 3 })), `one line three advances long, its words in the edge: ${html}`);
+  assert.ok(html.includes(`<p class="sp blk-para" data-addr="${D}" data-pos="12" data-width="6">After.</p>`), `the text after it at its own positions, on the item's line: ${html}`);
+  const plan = articlePlan(d, view(), '1.0.1');
+  assert.deepEqual(plan.filter((r) => r.pos != null).map((r) => [r.pos, r.kind, r.width]), [[1, 'text', 0], [9, 'gap', 3], [12, 'text', 0]], 'its row the gap\'s, carrying its width');
+  assert.deepEqual(layoutOf(plan).lines.filter((l) => l.pos === 9).map((l) => [l.w, l.at]), [[3, 9]], 'its bar a line of its three positions');
+  assert.equal(copyText({ addr: D, runs, blocks, image: [] }, { addr: D, pos: 1, width: 17 }, (a) => accountOf(a) || ''), `Before.\n${standIn.unshown(3)}After.`, 'its stand-in in its place, its length its own');
 });
 
 test('the ends drawn at a withheld run stand as ONE symbol at the start of its gap\'s first line, before the notice\'s words — every end\'s key on it, its count where it stands for two or more — at every stage of the reveal, no stretch of the gap marked; another\'s counted in the column\'s edge, below the face\'s compact mark; the plan unmoved (issue #202)', () => {

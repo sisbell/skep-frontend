@@ -72,7 +72,19 @@ def decode_delivery(answer, start):
             runs.append({'pos': pos, 'width': 1, 'kind': 'atom', 'text': it.get('atom', '')}); pos += 1
         elif 'withheld' in it:
             w = int(it['withheld'].get('width', 0)); runs.append({'pos': pos, 'width': w, 'kind': 'withheld', 'text': '', 'origin': it['withheld'].get('origin')}); pos += w
+        else:
+            w = unknown_width(it); runs.append({'pos': pos, 'width': w, 'kind': 'unknown', 'text': ''}); pos += w
     return runs
+
+
+def unknown_width(it):
+    """the positions an item of a kind the wire does not name here spans, as frames.js reads it: the `width` its one member's
+    object carries, as a withheld item's does, where that is a whole number of positions; else one (wire.md §Value encodings)"""
+    one = next(iter(it.values())) if len(it) == 1 else None
+    w = one.get('width') if isinstance(one, dict) else None
+    if isinstance(w, str) and re.fullmatch(r'[0-9]+', w):
+        w = int(w)
+    return w if isinstance(w, int) and not isinstance(w, bool) and 1 <= w < 2 ** 53 else 1
 
 
 def tails_home(ctx, r):

@@ -13,13 +13,15 @@
 // two-slot lookup too (`enrollmentsOf`; AUTH-2.113, AUTH-5.68). `count_v` is
 // not composed (E17 (a)).
 // The answers decoded: the delivery's items (`content`, `hex`, `atom`,
-// `atom_hex`, `ref`, `withheld`), a span set, an `addrs` list, a link value,
-// a follow, the V→I runs, a compare report, `doc_metadata`,
-// `effective_owner`'s pair, `maybe_addr`, `key_set`, the lineage's `claims`
-// (A-82), and a `rejected` document. A link value and `doc_metadata` each
-// carry the age of the address asked (`Age`): the position of the commit
-// that minted it and the board's testimony of when that commit was made,
-// the testimony's time and its source taken together or not at all.
+// `atom_hex`, `ref`, `withheld`, and an item of a kind this module does not
+// know, kept at its own place — wire.md §Value encodings), a span set, an
+// `addrs` list, a link value, a follow, the V→I runs, a compare report,
+// `doc_metadata`, `effective_owner`'s pair, `maybe_addr`, `key_set`, the
+// lineage's `claims` (A-82), and a `rejected` document. A link value and
+// `doc_metadata` each carry the age of the address asked (`Age`): the
+// position of the commit that minted it and the board's testimony of when
+// that commit was made, the testimony's time and its source taken together
+// or not at all.
 // Rules: FP-1, FP-2, FP-6, FP-16 (this module's test pins every frame to the
 // wire document's examples).
 
@@ -49,7 +51,7 @@ export const SIZE_REFUSALS = Object.freeze(['too_many_blocks', 'too_many_pairs',
  * @typedef {Object} Run — one delivered item, placed at its positions
  * @property {number} pos the first V-position (1-based)
  * @property {number} width positions
- * @property {'content' | 'hex' | 'atom' | 'atom_hex' | 'ref' | 'withheld'} kind
+ * @property {'content' | 'hex' | 'atom' | 'atom_hex' | 'ref' | 'withheld' | 'unknown'} kind `unknown` an item of a kind this module does not know (`decodeDelivery`)
  * @property {string} text the content text, the atom's text, the hex, or ''
  * @property {string | null} ref a link position's address
  * @property {string | null} origin a withheld run's origin document
@@ -237,7 +239,10 @@ export const asOf = (/** @type {unknown} */ answer) => {
  * A delivery's items placed at their positions from the spec's first
  * ordinal: a `content` item is a run of as many positions as it has UTF-8
  * bytes; `hex` two characters per position; an `atom`/`atom_hex`/`ref` one
- * position; a `withheld` item its stated width.
+ * position; a `withheld` item its stated width; every other item, a kind
+ * this module does not know, an `unknown` run at its own place, never
+ * dropped, of the width it carries (`unknownWidth`), so each item after it
+ * stands at its own positions (wire.md §Value encodings).
  * @param {unknown} answer the `delivery` document
  * @param {number} startOrdinal the spec's first ordinal
  * @returns {Run[]}
@@ -260,8 +265,25 @@ export function decodeDelivery(answer, startOrdinal) {
       const w = Number(wh.width || 0);
       runs.push({ pos, width: w, kind: 'withheld', text: '', ref: null, origin: wh.origin || null }); pos += w;
     }
+    else { const w = unknownWidth(it); runs.push({ pos, width: w, kind: 'unknown', text: '', ref: null, origin: null }); pos += w; }
   }
   return runs;
+}
+
+/**
+ * The positions an item of a kind this module does not know spans: the
+ * `width` its one member's object carries, as a `withheld` item's does
+ * (wire.md §Value encodings), where that is a whole number of positions
+ * spelled as a nat or a number; else one, the least any item of the read
+ * form spans.
+ * @param {Record<string, unknown>} it
+ * @returns {number}
+ */
+function unknownWidth(it) {
+  const members = Object.values(it), one = members.length === 1 ? members[0] : null;
+  const w = one && typeof one === 'object' ? /** @type {{width?: unknown}} */ (one).width : null;
+  const n = typeof w === 'string' && /^[0-9]+$/.test(w) ? Number(w) : w;
+  return typeof n === 'number' && Number.isSafeInteger(n) && n >= 1 ? n : 1;
 }
 
 /**

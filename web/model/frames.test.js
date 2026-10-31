@@ -1,9 +1,9 @@
 // M-FRAMES's test: every composer spells its frame as `docs/wire.md`'s
 // request examples spell it (FP-16), the edition-claim and enrollment
 // lookups take `find_links_ftt`'s two-slot shape and never the audit view's
-// `edition_claims`, no write composer exists, and every decoder reads the
-// wire's example answers, the age a link value and `doc_metadata` carry among
-// them.
+// `edition_claims`, no write composer exists, every decoder reads the wire's
+// example answers, the age a link value and `doc_metadata` carry among them,
+// and a delivery keeps an item of a kind it does not know at its own place.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as F from './frames.js';
@@ -90,6 +90,18 @@ test('a delivery places its items at byte positions; a withheld item its width',
   assert.deepEqual(atom.map((r) => [r.pos, r.width, r.kind]), [[1, 2, 'content'], [3, 1, 'atom']]);
   const ref = F.decodeDelivery({ as_of: 9, items: [{ content: 'hello' }, { ref: '1.0.1.0.1.0.2.1' }], resp: 'delivery' }, 1);
   assert.equal(ref[1].kind, 'ref'); assert.equal(ref[1].ref, '1.0.1.0.1.0.2.1');
+});
+
+test('an item of a kind this module does not know stands at its own place, never dropped — as wide as the `width` its one member\'s object carries, as a withheld item\'s does, else one position — and every item after it at its own positions (wire.md §Value encodings)', () => {
+  const runs = F.decodeDelivery({ as_of: 9, items: [{ content: 'ab' }, { later: { origin: '1.0.1.0.2', width: '3' } }, { content: 'cd' }, { later: 'x' }, { ref: '1.0.1.0.1.0.2.1' }], resp: 'delivery' }, 1);
+  assert.deepEqual(runs.map((r) => [r.pos, r.width, r.kind]), [[1, 2, 'content'], [3, 3, 'unknown'], [6, 2, 'content'], [8, 1, 'unknown'], [9, 1, 'ref']]);
+  assert.deepEqual(runs.filter((r) => r.kind === 'unknown').map((r) => [r.text, r.ref, r.origin]), [['', null, null], ['', null, null]], 'nothing it carries read as text, a reference or an origin');
+  assert.deepEqual(F.decodeDelivery({ as_of: 9, items: [{ later: { width: 4 } }, { content: 'e' }], resp: 'delivery' }, 7).map((r) => [r.pos, r.width]), [[7, 4], [11, 1]], 'a width spelled as a number, from the spec\'s first ordinal');
+  const carriesNone = [{ later: { width: '0' } }, { later: { width: 0 } }, { later: { width: '-2' } }, { later: { width: '2.5' } }, { later: { width: 2.5 } }, { later: {} }, { later: null }, { later: [3] }, { later: { width: '3' }, beside: { width: '4' } }, {}];
+  for (const item of carriesNone) {
+    const [, u, after] = F.decodeDelivery({ as_of: 9, items: [{ content: 'a' }, item, { content: 'b' }], resp: 'delivery' }, 1);
+    assert.deepEqual([u.pos, u.width, u.kind, after.pos], [2, 1, 'unknown', 3], `${JSON.stringify(item)}: no whole number of positions in one member's object — one position, never none`);
+  }
 });
 
 test('the answers decode as the wire gives them', () => {

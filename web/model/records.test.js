@@ -1,14 +1,15 @@
 // M-REC's test: the index built from `places` and kept by the feed, each
 // listing replacing the last whole with the rows taken meanwhile laid over
-// it; deliveries into blocks that tile their bytes, each typed line one, runs
-// and blocks replaced whole and never edited in place; a link's stored span placed through the
-// held V→I image, and an end held by the trunk its address lies under or by
-// the text that places it; a stretch named by identity and placed back
-// through any image; projections, edition claims and failed reads held until
-// their drops, every drop counted; a bare row's mark, a newer member taking a
-// trunk's text, a refresh's drop and a shown document set again in one step;
-// the key store, the session's key and the byline's facts; the death
-// dropping every read held at the session's class, and the cover it leaves.
+// it; deliveries into blocks that tile their bytes, each typed line one and
+// each item one of its kind, runs and blocks replaced whole and never edited
+// in place; a link's stored span placed through the held V→I image, and an
+// end held by the trunk its address lies under or by the text that places
+// it; a stretch named by identity and placed back through any image;
+// projections, edition claims and failed reads held until their drops, every
+// drop counted; a bare row's mark, a newer member taking a trunk's text, a
+// refresh's drop and a shown document set again in one step; the key store,
+// the session's key and the byline's facts; the death dropping every read
+// held at the session's class, and the cover it leaves.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -147,6 +148,16 @@ test('a content run splits at every newline: each typed line that holds a charac
   const lead = REC.deriveBlocks([run(7, '\n\nabc\né\n')]);
   assert.deepEqual(lead.map((b) => [b.pos, b.text, b.width]), [[7, '', 2], [9, 'abc', 4], [13, 'é', 3]], 'the newlines leading the run one block of no text; a typed line\'s bytes, a two-byte character among them');
   for (const blocks of [typed, lead]) for (let i = 1; i < blocks.length; i++) assert.equal(blocks[i].pos, blocks[i - 1].pos + blocks[i - 1].width, 'the blocks tile the run');
+});
+
+test('every run that is not content is a block of its own, of its kind — a composite value\'s either form an atom, an item of a kind the page does not know its own kind, never an atom — the blocks tiling the runs', () => {
+  const item = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {import('./frames.js').Run['kind']} */ kind, text = '') => ({ pos, width, kind, text, ref: null, origin: null });
+  const blocks = REC.deriveBlocks([
+    item(1, 3, 'content', 'ab\n'), item(4, 3, 'unknown'), item(7, 2, 'content', 'cd'), item(9, 1, 'atom', '{}'),
+    item(10, 1, 'atom_hex', 'fffe'), item(11, 2, 'hex', 'abcd'), item(13, 1, 'ref'), item(14, 4, 'withheld'),
+  ]);
+  assert.deepEqual(blocks.map((b) => [b.pos, b.width, b.kind]), [[1, 3, 'para'], [4, 3, 'unknown'], [7, 2, 'para'], [9, 1, 'atom'], [10, 1, 'atom'], [11, 2, 'hex'], [13, 1, 'ref'], [14, 4, 'withheld']]);
+  for (let i = 1; i < blocks.length; i++) assert.equal(blocks[i].pos, blocks[i - 1].pos + blocks[i - 1].width, 'the blocks tile the runs');
 });
 
 test('a document\'s blocks and runs are replaced whole, never edited in place: the ones a reader took stand as they were', () => {

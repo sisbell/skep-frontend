@@ -114,7 +114,7 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
  * @typedef {Object} Block — a typed line of delivered text, or an item, the span grain the walk and the mirror use (the selection is a byte span, which a click takes as the whole block)
  * @property {number} pos the first V-position (1-based) — the block's stable key
  * @property {number} width positions (bytes), its newline and the empty lines after it included
- * @property {'para' | 'withheld' | 'atom' | 'ref' | 'hex'} kind
+ * @property {'para' | 'withheld' | 'atom' | 'ref' | 'hex' | 'unknown'} kind `unknown` an item of a kind the page does not know (M-FRAMES's `decodeDelivery`)
  * @property {string} text the typed line's characters (its newlines apart), the atom's JSON, or ''
  * @property {string | null} origin a withheld run's origin document
  */
@@ -704,12 +704,23 @@ function deliverInto(/** @type {Doc} */ d, /** @type {Run[]} */ runs, /** @type 
 const overlaps = (a, b) => a.pos < b.pos + b.width && b.pos < a.pos + a.width;
 
 /**
+ * The block kind each run that is not content derives (`deriveBlocks`): its
+ * own kind, a composite value's either form an atom — the one kind whose
+ * value the record rule reads (`recordValue`), which an item of a kind the
+ * page does not know never is.
+ * @type {Record<Exclude<Run['kind'], 'content'>, Exclude<Block['kind'], 'para'>>}
+ */
+const ITEM_BLOCK = { withheld: 'withheld', ref: 'ref', hex: 'hex', atom: 'atom', atom_hex: 'atom', unknown: 'unknown' };
+
+/**
  * The blocks of a document's runs: a content run splits at every newline,
  * each typed line that holds a character — a line of spaces among them — one
  * block of its characters, its width running through its newline and the
  * newline of each empty line after it; the newlines before a run's first
- * typed line one block of no text; a withheld, atom, ref or hex run a block
- * of its own. The blocks tile the run's positions in bytes.
+ * typed line one block of no text; every other run — a withheld run, an atom
+ * of either form, a reference, hex, an item of a kind the page does not know
+ * — a block of its own, of its kind (`ITEM_BLOCK`). The blocks tile the
+ * run's positions in bytes.
  * @param {Run[]} runs
  * @returns {Block[]}
  */
@@ -717,7 +728,7 @@ export function deriveBlocks(runs) {
   /** @type {Block[]} */
   const out = [];
   for (const r of runs) {
-    if (r.kind !== 'content') { out.push({ pos: r.pos, width: r.width, kind: r.kind === 'withheld' ? 'withheld' : r.kind === 'ref' ? 'ref' : r.kind === 'hex' ? 'hex' : 'atom', text: r.text, origin: r.origin }); continue; }
+    if (r.kind !== 'content') { out.push({ pos: r.pos, width: r.width, kind: ITEM_BLOCK[r.kind], text: r.text, origin: r.origin }); continue; }
     const offs = byteOffsets(r.text), s = r.text;
     const block = (/** @type {number} */ from, /** @type {number} */ to, /** @type {string} */ text) => out.push({ pos: r.pos + offs[from], width: offs[to] - offs[from], kind: 'para', text, origin: null });
     /** past the newlines from `i` on */
@@ -774,8 +785,9 @@ export function recordValue(item) {
 /**
  * The text of a set of delivered runs between two positions (bytes): the
  * characters whose first byte lies in [p0, p1), a run that is not content (a
- * withheld run, an atom, a reference, hex) adding none. A document's runs as
- * the model holds them (`textBetween`), or the ones an article was made from.
+ * withheld run, an atom, a reference, hex, an item of a kind the page does not
+ * know) adding none. A document's runs as the model holds them
+ * (`textBetween`), or the ones an article was made from.
  * @param {Run[]} runs
  * @param {number} p0
  * @param {number} p1

@@ -113,15 +113,15 @@
 // The item rule (`itemOf`; FP-24): every block that holds no text is an
 // item of one kind — a record the record rule renders, a reference, a
 // withheld run, or an item this client cannot show (hex, an atom of any
-// other value) — named in the strings table's words (`itemWords`), the one
-// entry the ARIA mirror announces at the item (N-WALK) and a copy's stand-in
-// names it by. The copy's plain text (`copyText`; FP-24) is made here from
-// what an article was made from: a span's items in the text's order, each
-// stretch of text its own characters and each item a stand-in in square
-// brackets in its place — a withheld run's owner and length, an unshown
-// item's length, a record's own plain contents (`recordContents`) — never
-// what the plane renders for whoever is looking, so a paste never joins text
-// across an item.
+// other value, an item of a kind the page does not know) — named in the
+// strings table's words (`itemWords`), the one entry the ARIA mirror
+// announces at the item (N-WALK) and a copy's stand-in names it by. The
+// copy's plain text (`copyText`; FP-24) is made here from what an article
+// was made from: a span's items in the text's order, each stretch of text its
+// own characters and each item a stand-in in square brackets in its place — a
+// withheld run's owner and length, an unshown item's length, a record's own
+// plain contents (`recordContents`) — never what the plane renders for
+// whoever is looking, so a paste never joins text across an item.
 // The first-line rule (`firstLineOf`): the one rule a document's first line
 // is read by wherever the page names the document — its label on the plane,
 // a far end's words, a bundle's, a list row's, the one line's, the ARIA
@@ -583,12 +583,12 @@ const ITEM_WORDS = /** @type {const} */ ({ record: 'L.item.record', reference: '
  * The item rule (FP-24): the kind of a block
  * that holds no text — a record, an atom whose value the record rule renders
  * as one (`recordOf`); a reference, a link position's item; a withheld run;
- * else an item this client cannot show, hex or an atom of any other value —
- * and null for a typed line, whose text is the document's own. The ARIA
- * mirror's item at the block (N-WALK) and a copy's stand-in in its place
- * (`copyText`) both read it, so what is announced and what is pasted never
- * part; its record is the one the plane renders as a record (M-REC's
- * `recordValue`).
+ * else an item this client cannot show — hex, an atom of any other value, an
+ * item of a kind the page does not know — and null for a typed line, whose
+ * text is the document's own. The ARIA mirror's item at the block (N-WALK)
+ * and a copy's stand-in in its place (`copyText`) both read it, so what is
+ * announced and what is pasted never part; its record is the one the plane
+ * renders as a record (M-REC's `recordValue`).
  * @param {Block} b
  * @returns {ItemKind | null}
  */

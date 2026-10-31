@@ -217,7 +217,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 /* an item that holds no text — a record, a reference, an item this client cannot show, a withheld run's face — is selected
    whole wherever a selection touches it, and drawn so: the span takes it whole, and a copy writes its stand-in in its place
    (FP-24; issue #161). On the plane a press on a withheld run's face starts no selection: its click is its act's (APP-INPUT) */
-.dtext .sp.blk-atom, .dtext .sp.blk-ref, .dtext .sp.blk-hex, .dtext .withheld { user-select:all; -webkit-user-select:all; }
+.dtext .sp.blk-atom, .dtext .sp.blk-ref, .dtext .sp.blk-hex, .dtext .sp.blk-unknown, .dtext .withheld { user-select:all; -webkit-user-select:all; }
 .dtext .rec { display:block; color:#cfd6df; }
 .dtext .rec .derived { display:block; color:#8b8f96; }
 .dtext .offer { display:block; margin:var(--offer-gap) 0; color:#8b8f96; font-size:var(--offer); cursor:pointer; text-decoration:underline dotted; }
