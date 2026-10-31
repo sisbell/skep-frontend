@@ -16,8 +16,10 @@
 // image holding none, a claim's home making its origin's windows again; the key store,
 // the session's key and the byline's facts; a change of class keeping what
 // the class it left read as published — a draft's run in it withheld from
-// that moment — and dropping the rest, and the cover it leaves on a draft the
-// view stood on, confirmed or lifted by its read.
+// that moment — and dropping the rest, every other box it knew left owed its
+// read at the new class whatever the view stood on — covered at once where
+// the change ends the session, else waiting to be read — that read alone
+// covering, confirming or lifting it, a drop keeping it owed.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -78,7 +80,7 @@ test('an index replaces the one before it whole: a record the new one does not l
   assert.deepEqual(rowOf('1.0.1.0.3'), ['edition', '# skep-ux-design', 'public'], 'a record the new index lists, its row');
 });
 
-test('the death keeps the editions\' rows and drops the rest of what the session\'s class read — the drafts\' rows, the counts and the state, each document\'s delivered state the view did not stand on and its row where no edition row stands on it, the link homed in a draft and where the links project, the owners and key sets, the drafts rows — and the runs a reader took stand as they were', () => {
+test('the death keeps the editions\' rows and drops the rest of what the session\'s class read — the drafts\' rows, the counts and the state, each document\'s delivered state the view did not stand on and its row where no edition row stands on it, the link homed in a draft and where the links project, the owners and key sets, the drafts rows — each draft it could read covered at once though the view stood on none, and the runs a reader took stand as they were (issue #350)', () => {
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeSpanSet('1.0.1.0.2', [{ subspace: 1, ordinal: 1, positions: 12 }, { subspace: 2, ordinal: 1, positions: 1 }]);
@@ -99,10 +101,14 @@ test('the death keeps the editions\' rows and drops the rest of what the session
   assert.deepEqual([REC.session(), REC.deathReason()], [null, { arm: 'closed' }]);
   const editions = ['1.0.1.0.3', '1.0.1.0.4', '1.0.2.0.1', '1.1.0.1.0.2'];
   assert.deepEqual([REC.places().map((p) => p.doc), REC.indexState(), REC.countOf('1.0.1')], [editions, null, { documents: 2, exact: false }], 'the editions\' rows, read as published, stand; the drafts\' rows — the listed one and the one a row minted — the counts and the state go, the count the rows give a lower bound');
+  const drafts = ['1.0.1.0.2', '1.0.1.0.1013'];
   for (const d of REC.docs()) {
-    assert.deepEqual([d.from, d.runs, d.blocks, d.extent, d.whole, d.linkPositions, d.meta, d.image, d.origins, d.imageFor, [...d.links], d.linksRead, d.members, d.ended, d.refused], [-1, [], [], null, null, null, null, [], [], null, [], false, null, false, null], d.addr + '\'s delivered state, the view standing on none');
+    assert.deepEqual([d.from, d.runs, d.blocks, d.extent, d.whole, d.linkPositions, d.meta, d.image, d.origins, d.imageFor, [...d.links], d.linksRead, d.members, d.ended, d.refused], [-1, [], [], null, null, null, null, [], [], null, [], false, null, false, drafts.includes(d.addr) ? 'withheld' : null], d.addr + '\'s delivered state, the view standing on none');
     if (!editions.includes(d.addr)) assert.deepEqual(rowOf(d.addr), ['unknown', null, null], d.addr + '\'s row');
   }
+  assert.deepEqual([drafts.map(REC.covered), drafts.map(REC.owed), drafts.map((a) => REC.known().includes(a)), REC.coveredDocs()], [[true, true], [true, true], [true, true], drafts],
+    'each draft the session could read — the one it read and the one a row minted — covered at once, its read owed at the guest\'s class, a box the model knows');
+  assert.deepEqual(editions.map(REC.owed), [false, false, false, false], 'no edition read as published is owed a read: the one withheld from the session among them');
   assert.deepEqual(rowOf('1.0.1.0.3'), ['edition', '# skep-ux-design', 'public'], 'an edition keeps its row');
   assert.deepEqual([REC.links(), REC.projection('1.0.1.0.2.0.2.1', 2, '1.0.1.0.4'), REC.ownerOf('1.0.1.1'), REC.keySetOf('1.0.1')], [[], undefined, undefined, undefined], 'the link homed in the draft and where it projects, the owners and the key sets');
   assert.deepEqual(REC.feedRows().map((r) => r.cls), ['published'], 'the published row held, the drafts row dropped');
@@ -156,7 +162,7 @@ test('a change of class keeps each document the view stood on that the class it 
   assert.deepEqual([REC.doc(DR).refused, REC.covered(DR), REC.owed(DR), REC.doc(DR).extent], [null, false, false, 60], 'a read answering it: the cover lifted');
 });
 
-test('a document is covered where the class the page left could read it — its text, metadata or extent held, or its index listing it — and a read at the new class answers it `withheld`: never one the page never read, nor one withheld before the change; each is a box the model knows, none read at the new class before its answer (issue #177)', () => {
+test('a document is covered where the class the page left could read it — its text, metadata or extent held, or its index listing it — and the change ending the session withholds it at once, or a read at the new class answers it `withheld`: never one the page never read, nor one withheld before the change, which waits on its read; each is a box the model knows (issues #177, #350)', () => {
   const READ = '1.0.1.0.2', LISTED = '1.0.1.0.4', HELD = '1.0.2.0.7', NEVER = '1.0.3.0.9';
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
@@ -165,14 +171,57 @@ test('a document is covered where the class the page left could read it — its 
   assert.deepEqual([REC.couldRead(READ), REC.coveredDocs()], [false, []], 'before any change of class: nothing could be read before, nothing covered');
   REC.sessionDied({ arm: 'closed' });
   assert.deepEqual([READ, LISTED, HELD, NEVER].map(REC.couldRead), [true, true, false, false], 'the class it left could read the draft it read and the edition its index listed; neither the document withheld from it nor one it never met');
-  assert.equal(REC.known().includes(READ), false, 'dropped, the draft is no box the model knows until a read answers for it');
+  assert.deepEqual([REC.covered(READ), REC.owed(READ), REC.known().includes(READ), REC.coveredDocs()], [true, true, true, [READ]], 'the draft it read covered at once, though the view stood on none, owed its read at the new class: a box the model knows');
+  assert.deepEqual([REC.doc(HELD).refused, REC.covered(HELD), REC.owed(HELD), REC.known().includes(HELD)], [null, false, true, true], 'the document withheld from the class it left: that class\'s refusal gone with it, waiting on its read, a box the model knows still');
+  assert.deepEqual([REC.owed(LISTED), REC.owed(NEVER)], [false, false], 'neither the edition read as published nor one never met is owed a read');
   for (const a of [READ, LISTED, HELD, NEVER]) REC.takeRefused(a, 'withheld');
   assert.deepEqual([READ, LISTED, HELD, NEVER].map(REC.covered), [true, true, false, false], 'each a read at the new class withholds: covered where the class it left could read it');
   assert.deepEqual(REC.coveredDocs(), [READ, LISTED]);
   assert.ok([READ, LISTED, HELD, NEVER].every((a) => REC.known().includes(a)), 'each withheld one a box the model knows: existence and owner');
   REC.setSession({ session: 's-2', principal: 1, account: '1.0.1' });
   REC.sessionDied({ arm: 'closed' });
-  assert.deepEqual([REC.couldRead(READ), REC.coveredDocs()], [false, []], 'a later change: what was withheld from the class it leaves is no longer its to cover');
+  assert.deepEqual([REC.couldRead(READ), REC.coveredDocs(), REC.owed(READ), REC.known().includes(READ)], [false, [], true, true], 'a later change: what was withheld from the class it leaves is no longer its to cover — it waits on its read, a box the model knows');
+});
+
+test('a session regained as another principal leaves every draft the class it left held a box waiting to be read, whatever the view stood on — none of its text, no refusal, its read owed, a box the model knows — and covers none before a read says so: a read withholding one covers it, one answering lifts the wait (issue #350\'s design decision: "the face shown straight after the change is \'waiting to be read\', except when signed out")', () => {
+  const STOOD = '1.0.1.0.2', AWAY = '1.0.1.0.1013', HELD = '1.0.2.0.7';
+  REC.takeIndex(/** @type {any} */ (PLACES));
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeSpanSet(STOOD, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+  REC.takeDelivery(STOOD, [{ pos: 1, width: 12, kind: 'content', text: 'draft words.', ref: null, origin: null }]);
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12324, at: 12324, op: 'create_new_document', docs: [AWAY], class: 'drafts', session: 's-1' }));
+  REC.takeRefused(HELD, 'withheld');
+  assert.equal(REC.sessionRegained({ session: 's-2', principal: 2, account: '1.0.2', writes: true }, [STOOD]), true, 'another principal: the class changed');
+  for (const a of [STOOD, AWAY, HELD]) {
+    const d = REC.doc(a);
+    assert.deepEqual([d.from, d.extent, d.refused, REC.covered(a), REC.owed(a), REC.known().includes(a)], [-1, null, null, false, true, true], a + ': waiting to be read — the draft the view stood on, one it did not, and one withheld from the class it left alike');
+  }
+  assert.deepEqual([REC.coveredDocs(), REC.owed('1.0.1.0.3')], [[], false], 'nothing covered before a read says so; no edition owed a read');
+  REC.takeRefused(STOOD, 'withheld');
+  assert.deepEqual([REC.covered(STOOD), REC.owed(STOOD), REC.coveredDocs()], [true, false, [STOOD]], 'a read withholding the draft the class it left read: covered');
+  REC.takeSpanSet(AWAY, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+  assert.deepEqual([REC.doc(AWAY).refused, REC.covered(AWAY), REC.owed(AWAY), REC.doc(AWAY).extent], [null, false, false, 12], 'a read answering the other: the wait lifted, its extent held');
+});
+
+test('only a read\'s answer settles what a box the change of class left is owed: a feed row\'s drop and a refresh\'s keep it owed and a box the model knows — a cover made at once waiting from then on — and a refresh setting it again from reads that answered nothing keeps it covered; a refusal it sets, an extent or a refusal read settles it (issue #350)', () => {
+  const A = '1.0.1.0.2', B = '1.0.1.0.1013', C = '1.0.1.0.5';
+  REC.takeIndex(/** @type {any} */ (PLACES));
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12324, at: 12324, op: 'create_new_document', docs: [B], class: 'drafts', session: 's-1' }));
+  REC.takeSpanSet(C, [{ subspace: 1, ordinal: 1, positions: 9 }]);
+  REC.sessionDied({ arm: 'closed' });
+  const state = (/** @type {string} */ a) => [REC.doc(a).refused, REC.owed(a), REC.known().includes(a)];
+  assert.deepEqual([A, B, C].map(state), [['withheld', true, true], ['withheld', true, true], ['withheld', true, true]], 'the listed draft, the one a row minted and the one held unlisted: covered at once, each owed its read');
+  REC.setAgain(C, {});
+  assert.deepEqual(state(C), ['withheld', true, true], 'set again from reads that answered nothing: covered, owed still');
+  REC.invalidate(A);
+  assert.deepEqual([state(A), REC.covered(A)], [[null, true, true], false], 'a feed row\'s drop: the cover goes, the box stays owed its read — waiting — a box the model knows');
+  REC.takeRefresh(new Set([C]));
+  assert.deepEqual([state(B), state(C)], [[null, true, true], ['withheld', true, true]], 'a refresh\'s drop: the box it does not keep waiting, owed still; the one it keeps as it stood');
+  REC.setAgain(C, { refused: 'withheld' });
+  REC.takeSpanSet(A, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+  REC.takeRefused(B, 'withheld');
+  assert.deepEqual([[A, B, C].map(REC.owed), [A, B, C].map(REC.covered)], [[false, false, false], [false, true, true]], 'settled each: a refresh\'s refusal and a read\'s refusal covering, an extent read lifting');
 });
 
 test('the system account\'s rows are held and marked, never a landmark', () => {

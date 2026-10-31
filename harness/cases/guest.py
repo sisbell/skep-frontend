@@ -110,15 +110,16 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     wait, the window run a withheld block at 1467, 240 positions, and none
     of the owner's bytes over it anywhere in the page; the draft it read
     holding no text, nothing
-    mounted for it — the draft the trail names, and each in view, read again
-    at the guest's class and COVERED (issue #177's design decision), said once with the
-    ending, its trail row the cover's words, "[withheld · ⟨owner⟩]", never its
-    first line, Back to it its withheld face with the ending's words, C-67's
-    clause beneath them as the claims on the draft the page read at the
-    guest's class decide it, decided here from those reads (issue #274), and
-    the sign-in its act, the walk on it; no label or mark drawing a draft at HOME
-    but that cover, counted in its continuation's mark; the window run
-    a withheld block with none of its text; none of the owner's bytes
+    mounted for it — every draft the session could read COVERED at once,
+    whatever the view stood on (issue #177's design decision; issue #350's),
+    the one the trail names alone read again at the guest's class, said once
+    with the ending, its trail row the cover's words, "[withheld · ⟨owner⟩]",
+    never its first line, Back to it its withheld face with the ending's
+    words, C-67's clause beneath them as the claims on the draft the page read
+    at the guest's class decide it, decided here from those reads (issue
+    #274), and the sign-in its act, the walk on it; no label or mark drawing a
+    draft at HOME but those covers, counted in their continuation's mark; the
+    window run a withheld block with none of its text; none of the owner's bytes
     anywhere in the page;
 (h) the owner's page opened once more stands a reading scene on the first
     edition and that draft, each pane showing the owner's bytes over the
@@ -858,16 +859,21 @@ def run(ctx):
             {'frames': len(frames), 'first': frames[:1], 'off': [f for f in frames if f not in held_up][:2]})
     r.check(card == 'provenance:wrote' and ctx.js('window.__skep.overlay().id') is None,
             '(g) the card standing over the draft\'s run as the session ends — made from what the session read — is taken down with it (issue #177: "Cards on covered material close onto the cover")', {'before': card, 'after': ctx.js('window.__skep.overlay().id')})
-    # THE COVER (issue #177): the draft the trail names, read again at the guest's class and covered — its trail row the cover's
-    # words, never its first line; the change said once, its ending and what it covered; Back to its entry its withheld face,
-    # the ending's words and the sign-in its act, the walk on it — then Forward to where the reader stood
-    covered = [d for d in drafts if ctx.js('window.__skep.model.doc(%s).refused' % json.dumps(d)) == 'withheld']
+    # THE COVER (issues #177, #350): every draft the session could read covered at once as it ends, whatever the view stood
+    # on — the one the trail names alone read again at the guest's class, its cover confirmed, the rest owed their reads
+    # until the view or an act reaches them; its trail row the cover's words, never its first line; the change said once,
+    # its ending and what it covered; Back to its entry its withheld face, the ending's words and the sign-in its act, the
+    # walk on it — then Forward to where the reader stood
+    covered = ctx.js('%s.filter((d) => window.__skep.model.doc(d).refused === "withheld")' % json.dumps(sorted(owner_docs, key=num)))
     cover_words = t(ctx, 'F.corner.withheld', {'owner': OWNER})
-    # what the change covered: each a draft of the claimant's the view stood on — in view, or named by the trail — the one the trail names among them
+    # what the change covered: every document the session's index listed that it could read and the guest may not
     said = t(ctx, 'L.covered', {'ending': t(ctx, 'C-137.signed-out'), 'documents': ', '.join(covered[:5]) + (' ' + t(ctx, 'F.others-count', {'n': len(covered) - 5}) if len(covered) > 5 else '')})
     told = wait_for(ctx, 'document.getElementById("live").textContent === %s' % json.dumps(said), 5)
-    r.check(WINDOW[2] in covered and told, '(g) the draft the trail names is read again at the guest\'s class and covered — withheld from the reader now, as is each draft in view — and the change is said once: the ending, then what it covered (issue #177)',
-            {'covered': covered, 'live': ctx.js('document.getElementById("live").textContent'), 'want': said})
+    extents_read = [f['doc'] for f in (json.loads(c['frame']) for c in ctx.js('window.__skep.bridge.calls()')[n0:] if c.get('frame')) if f.get('op') == 'retrieve_doc_v_span_set']
+    drafts_read = sorted({d for d in extents_read if d in drafts}, key=num)
+    r.check(set(drafts) <= set(covered) and drafts_read == [WINDOW[2]] and told,
+            '(g) every draft the session could read is covered at once as it ends, though the view stood on none of them but the one the trail names — that one alone read again at the guest\'s class, its cover confirmed, the rest owed their reads — and the change is said once: the ending, then what it covered (issues #177, #350)',
+            {'drafts': drafts, 'covered': covered, 'drafts_read': drafts_read, 'live': ctx.js('document.getElementById("live").textContent'), 'want': said})
     ctx.js('window.__skep.cards.trailList()'); ctx.frames(1)
     rows = ctx.js('''[...document.querySelectorAll('#overlay [data-run]')].map((b) => ({text: b.textContent, words: (b.querySelector('.dim') || {}).textContent || ''}))''')
     ctx.esc()

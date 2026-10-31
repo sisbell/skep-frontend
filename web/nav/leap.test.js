@@ -148,7 +148,7 @@ test('a landing never closes the box: a move the page makes leaves the focus in 
   assert.deepEqual([LEAP.isOpen(), globalThis.document.activeElement], [false, /** @type {any} */ (landed)], 'Esc closes the box onto the landing, the walk\'s element, though the item it was opened from still takes the focus');
 });
 
-test('a change of the page\'s class computes the rows standing in the box again from the model at once — none naming a document only the class it left could read, an edition read as published standing — its text, its caret and its focus as they stood, and once more as the new class\'s index answers; a trail entry\'s row reads its document\'s words from the model, the cover\'s once a read withholds it (issues #177, #274)', () => {
+test('a change of the page\'s class computes the rows standing in the box again from the model at once — none naming a document only the class it left could read, an edition read as published standing — its text, its caret and its focus as they stood, and once more as the new class\'s index answers; a trail entry\'s row reads its document\'s words from the model — the cover\'s at once where the change ends the session, none where the draft waits on its read, the cover\'s once a read withholds it (issues #177, #274, #350)', () => {
   const listing = (/** @type {Array<{doc: string, kind: string, label: string}>} */ docs) => /** @type {any} */ ({ docs: docs.map((d) => ({ ...d, standing: 'public' })), counts: [{ account: '1.0.1', documents: docs.length }], state: { arm: 'complete' } });
   const DRAFT = { doc: '1.0.1.0.1003', kind: 'draft', label: 'notes the draft holds' }, EDITION = { doc: '1.0.1.0.3', kind: 'edition', label: 'notes on tumblers' };
   /** the session reading both, the draft's entry on the trail */
@@ -160,13 +160,25 @@ test('a change of the page\'s class computes the rows standing in the box again 
     signedIn();
     LEAP.open();
     assert.equal(trailRow(), `${DRAFT.label} · ${t('F.label.draft')}`, 'the draft\'s trail row: its box\'s first line, read from the model');
+    const cover = t('L.client-words', { words: t('F.corner.withheld', { owner: '1.0.1' }) });
     REC.sessionDied({ arm: 'closed' });
     LEAP.classChanged();
-    assert.equal(trailRow(), '', 'at once: nothing answered of the draft, nothing said of it');
+    assert.equal(trailRow(), cover, 'at once: the session ended, the draft it could read covered — the cover\'s words, bracketed');
     REC.takeRefused(DRAFT.doc, 'withheld');
     REC.takeIndex(listing([EDITION]));
     LEAP.takeIndex();
-    assert.equal(trailRow(), t('L.client-words', { words: t('F.corner.withheld', { owner: '1.0.1' }) }), 'the guest\'s read withholds it: the cover\'s words, bracketed');
+    assert.equal(trailRow(), cover, 'the guest\'s read withholds it: the cover confirmed, its words as they stood');
+    LEAP.close();
+    // regained as another principal: the draft waits on its read
+    signedIn();
+    LEAP.open();
+    REC.sessionRegained({ session: 's-2', principal: 2, account: '1.0.2', writes: true });
+    LEAP.classChanged();
+    assert.equal(trailRow(), '', 'at once: nothing answered of the draft at the new class, nothing said of it');
+    REC.takeRefused(DRAFT.doc, 'withheld');
+    REC.takeIndex(listing([EDITION]));
+    LEAP.takeIndex();
+    assert.equal(trailRow(), cover, 'the new principal\'s read withholds it: the cover\'s words, bracketed');
     LEAP.close();
     // typed in
     signedIn();

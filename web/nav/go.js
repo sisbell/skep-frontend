@@ -323,8 +323,9 @@
 // measured surviving, and drops what the entries kept (N-TRAIL's); a cursor
 // move reaching an entry whose document is covered (M-REC's `covered`) lands
 // on the covered box framed whole, its withheld face standing there, whose
-// sign-in act is the way back — a cover still owed its read at the page's
-// class (M-REC's `owed`) read first (`coverOf`, `coverRead`, `showCover`).
+// sign-in act is the way back — a box still owed its read at the page's
+// class (M-REC's `owed`), covered or waiting, read first (`coverOf`,
+// `coverRead`, `showCover`).
 // Figures: a click's flight 420 ms, every other LEAP's and a follow's 620,
 // HOME's and WHOLE BOARD's 700, an account's and a moment's view's 400, a
 // cursor move's 500, a step's 420; a second leg SECOND_LEG_MS (unmeasured).
@@ -2911,11 +2912,11 @@ async function placeRead(act, e, texts, first, byKey, n = null) {
  * Where a cursor move reaching an entry meets a cover (see the head): the
  * entry's document covered — held `withheld` of a document the class the
  * page left could read (M-REC's `covered`), its read at the page's class
- * answered — or one a read must tell first ('unread'): a cover the change of
- * class made whose read is still owed (M-REC's `owed`), which that read
- * confirms or lifts, or one the class it left could read that the page holds
- * nothing of yet; null for every other entry, and for one holding a notice,
- * which shows its own face.
+ * answered — or one a read must tell first ('unread'): a box the change of
+ * class left whose read is still owed (M-REC's `owed`) — covered at once, or
+ * waiting to be read — which that read covers, confirms or lifts, or one the
+ * class it left could read that the page holds nothing of yet; null for every
+ * other entry, and for one holding a notice, which shows its own face.
  * @param {Entry} e
  * @returns {'covered' | 'unread' | null}
  */
@@ -2941,8 +2942,9 @@ function showCover(addr, found = false) { const site = placeAt(addr); FACES.with
 
 /**
  * A cursor move reaching an entry whose document a read must tell first —
- * a cover still owed its read, or one the class the page left could read and
- * the page holds nothing of yet (see the head; `coverOf`): its read made
+ * a box still owed its read, covered or waiting, or one the class the page
+ * left could read and the page holds nothing of yet (see the head;
+ * `coverOf`): its read made
  * beside the flight, as a LEAP to an unread document makes it; where it
  * answers the document covered and no act was made meanwhile, the camera
  * going on to the covered box framed whole, its face standing there as

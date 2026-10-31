@@ -1024,12 +1024,12 @@ test('the count, the article\'s symbols and the mirror name the same ends, two l
   }
 });
 
-test('the page\'s own death takes the mirror down at once where the view stood on nothing — no item quoting what the dead session read, no document only it could list, the editions read as published listed still — and takes the walk again on the span it stood on once its document is read at the guest\'s class (FP-23; issue #160)', async () => {
+test('the page\'s own death takes the mirror down at once where the view stood on nothing — no item quoting what the dead session read, the draft it could read listed as its cover, the editions read as published listed still — and takes the walk again on the span it stood on once its document is read at the guest\'s class (FP-23; issues #160, #350)', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });
   const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
-  // the session's index: the two editions, and a draft of the account's
-  const DRAFT = '1.0.1.0.11';
+  // the session's index: the two editions, and a draft of the account's no read has answered for
+  const DRAFT = '1.0.1.0.21';
   REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: E, kind: 'edition', label: 'e', standing: 'public' }, { doc: DRAFT, kind: 'draft', label: 'the draft', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 3 }], state: { arm: 'complete' } }));
   try {
     WALK.attach(/** @type {any} */ (mirror));
@@ -1045,7 +1045,9 @@ test('the page\'s own death takes the mirror down at once where the view stood o
     for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
     assert.ok(!mirror.innerHTML.includes('The first field.'), `at once: no item quotes what the dead session read: ${mirror.innerHTML}`);
     assert.deepEqual(walkAt(), ['document', D, null], 'the walk on its document whole');
-    assert.ok(!mirror.innerHTML.includes(`data-addr="${DRAFT}"`) && mirror.innerHTML.includes(`data-addr="${E}"`), 'the mirror lists no document only the dead session could list — the draft — and the edition still');
+    const box = t('F.corner.withheld', { owner: '1.0.1' }), at = WALK.siblingsNow().findIndex((n) => n.addr === DRAFT), item = at < 0 ? '' : WALK.mirrorItem(at) || '';
+    assert.ok(item.includes(box) && !item.includes('the draft') && mirror.innerHTML.includes(`data-addr="${E}"`),
+      `the mirror lists the draft the dead session could read as its cover — in its withheld box's words, none of its first line — and the edition still: ${item}`);
     release();
     await taken;
     assert.deepEqual(walkAt(), ['block', D, 11], 'its document read at the guest\'s class: the walk on the span holding the position it stood at');

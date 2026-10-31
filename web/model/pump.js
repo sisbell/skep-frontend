@@ -142,12 +142,15 @@
 // class changes as at a death.
 // A change of class (`classChanged`; FP-29, FP-23) takes the documents in
 // view and those the view's state names before anything goes (`stoodOn`),
-// hands them to M-REC, which keeps those read as published and covers the
-// drafts among them at once, reads the index again, reads each document it
-// kept again at the new class to be set in one step (`readAgain`), asks each
-// other one's extent again — a cover's until a read confirms or lifts it —
-// in view first and nearest the centre (`reread`), and tells every reader of
-// the change.
+// hands them to M-REC, which keeps those read as published and leaves every
+// other box it knew owed its read at the new class — covered at once where
+// the change ends the session — reads the index again, reads each document
+// it kept again at the new class to be set in one step (`readAgain`), asks
+// each other one it stood on its extent again at once, at any scale — an
+// owed box's until a read covers, confirms or lifts it — in view first and
+// nearest the centre (`reread`), and tells every reader of the change. Every
+// other box owed its read is read as the view's needs reach it, nearer than
+// far scale (`pump`), and none at far.
 // Rules: FP-1, FP-2, FP-6, FP-9, FP-11, FP-21, FP-22, FP-23, FP-28, FP-29,
 // FP-34, FP-35.
 
@@ -329,7 +332,7 @@ const waking = new Set();
 /**
  * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, a refresh's, or what a change of the page's class left — its session's death among them (`classChanged`)
  * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for a refresh, a change of class, and a clause decided anew
- * @property {string[] | null} addrs the addresses the row touched, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`), every one dropped but those the view keeps, which are read again (`readAgain`) — or those a refresh dropped or set again; or, its `row` null, the documents windowing an origin whose clause may be decided anew — its edition claims set again or dropped, a claim's home dropped by a row or read again; null for a change of class, which reaches every record: each one M-REC kept read again, every other dropped or covered
+ * @property {string[] | null} addrs the addresses the row touched, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`), every one dropped but those the view keeps, which are read again (`readAgain`) — or those a refresh dropped or set again; or, its `row` null, the documents windowing an origin whose clause may be decided anew — its edition claims set again or dropped, a claim's home dropped by a row or read again; null for a change of class, which reaches every record: each one M-REC kept read again, every other dropped, a box among them owed its read
  * @property {Map<string, Chain>} [chains] a refresh's alone (`refresh`): the chain of each edition it counted, by its trunk — what a reading scene's pane at a bare address is pinned by
  */
 
@@ -811,8 +814,9 @@ function drain(read) {
 /**
  * What follows M-REC's change of the page's class — a death, a session lost
  * and not regained, or one regained as another principal — which kept what
- * the class it left read as published and covered the drafts the view stood
- * on (M-REC's `dropClass`): every need answered or held asked again, every
+ * the class it left read as published and left every other box it knew owed
+ * its read at the new class (M-REC's `dropClass`): every need answered or
+ * held asked again, every
  * read of the board's state out left holding no feed row and no `index`
  * state taken before the change — so a listing out across it, asked again at
  * the new class (`atClass`), lays none of the class it left over the new
@@ -843,7 +847,7 @@ function classChanged(stood) {
   onDrop({ row: null, addrs: null });
 }
 
-/** did a change of the page's class keep a document (M-REC's `dropClass`): it holds what it was read for, and no refusal — every other document it dropped or covered */
+/** did a change of the page's class keep a document (M-REC's `dropClass`): it holds what it was read for, and no refusal — every other document it dropped, a box among them owed its read */
 function keptAtChange(/** @type {string} */ addr) {
   const d = REC.has(addr) ? REC.doc(addr) : null;
   return !!d && !d.refused && (d.from >= 0 || !!d.meta || d.extent != null);
@@ -865,7 +869,8 @@ function stoodOn() {
  * at the page's current class: each one's extent
  * (`retrieve_doc_v_span_set`), in view first and nearest the view's centre,
  * a refusal held of the document as any view's read's is (`refuseDoc`), an
- * answer lifting a cover the change made (M-REC's `takeSpanSet`). A place
+ * answer lifting the cover or the wait the change left it (M-REC's
+ * `takeSpanSet`). A place
  * answered for leaves the set (`pending`); one the board did not answer
  * stands held until its pause ends.
  * @returns {number} the needs still missing
@@ -889,7 +894,7 @@ function reread() {
 /**
  * Is a place the view stood on still to be answered for at the page's class
  * (`reread`): no read of its extent answered or refused since the change; and
- * a cover the change made, owed that read (M-REC's `owed`), else no extent
+ * a box the change left owed that read (M-REC's `owed`), else no extent
  * read, no refusal held and no listing by the index the page reads at now,
  * which that class reads as it reads every place it lists.
  * @param {string} addr
@@ -1290,8 +1295,10 @@ const nameOf = (/** @type {Refusal} */ r) => r.name;
 /**
  * The documents in view: every indexed or held document whose box meets the
  * viewport (the system account's rows left out) and stands shallower than
- * the continuation the scale draws as one mark (P-LOD's `residueDepth`) —
- * each box's document, and beside it the version its box shows where that is
+ * the continuation the scale draws as one mark (P-LOD's `residueDepth`) — a
+ * held one holding what a read brought, a `withheld` refusal, or its read
+ * owed at the page's class (M-REC's `owed`), each a box M-REC knows (`known`)
+ * — each box's document, and beside it the version its box shows where that is
  * another, whether the model holds that version's text or a
  * drop has emptied it; a version the box does not show none. The mark draws
  * its members' count and its newest's label from the index, which no read
@@ -1321,7 +1328,7 @@ export function visibleDocs(pad = 80) {
     if (seen.has(d.addr) || d.system || withinContinuation(d.addr, k)) continue;
     const doc = plain(d.addr);
     if (doc !== d.addr) { if (shown(doc) === d.addr && !seen.has(doc) && intersects(docBox(doc), v)) take(REC.doc(doc)); continue; }
-    if ((d.from >= 0 || d.meta || d.extent != null) && intersects(docBox(d.addr), v)) take(d);
+    if ((d.from >= 0 || d.meta || d.extent != null || d.refused === 'withheld' || REC.owed(d.addr)) && intersects(docBox(d.addr), v)) take(d);
   }
   return out;
 }
@@ -1374,7 +1381,9 @@ function holdsSpan(/** @type {Doc} */ d, /** @type {number} */ from, /** @type {
  * of an acquire for a lost session or its catch-up is out (`rowsHeld`) counted
  * missing, and a document a
  * feed row named while its reads again are out (`readAgain`), nothing asked
- * of it meanwhile. Returns the count
+ * of it meanwhile; nothing asked of a document a refusal is held of, save a
+ * box owed its read at the page's class (M-REC's `owed`), whose extent is
+ * asked, nearer than far scale alone. Returns the count
  * of needs still missing — the gate's settle signal with `inflight()`.
  * @returns {number}
  */
@@ -1394,7 +1403,7 @@ export function pump() {
     // a document a feed row named, read again: nothing asked of it until its reads set it (`readAgain`)
     const out = again.get(d.addr);
     if (out) { if (!out.paused) missing++; continue; }
-    if (d.refused) continue;
+    if (d.refused && !REC.owed(d.addr)) continue;
     const box = docBox(d.addr);
     const docPx = box.w * cam.scale;
     /** the version its box shows, read for its text and what it is placed through; else the box's document, read for what its box draws of it alone */
@@ -2021,8 +2030,10 @@ function memberShown(d, c) {
 /**
  * What reading a shown document again reads — a refresh's, or a feed row's
  * naming it (`readAgain`) — as the view reads it
- * (`pump`) — each part the record holds asked again: its extent, its
- * metadata, its links — within the view's scan permits, a scan the board kept
+ * (`pump`) — each part the record holds asked again: its extent — asked too
+ * where a refusal is held of it, or its read is owed at the page's class
+ * (M-REC's `owed`) — its metadata, its links — within the view's scan
+ * permits, a scan the board kept
  * busy said unheard — and each one's value, and, where its box shows it, its
  * text over the window it holds, as many positions longer as the text grew —
  * from the first position where the text is now shorter than the window's
@@ -2056,7 +2067,7 @@ async function readFresh(addr, chains, facts) {
     else if (own && out.refused.name === 'doc_not_registered') f.refused = 'unregistered';
     return null;
   };
-  if (d.extent != null || d.refused) {
+  if (d.extent != null || d.refused || REC.owed(addr)) {
     const a = await ask(F.retrieveDocVSpanSet(addr), true);
     if (f.refused) return { fresh: f, unheard };
     if (a) f.spans = F.decodeSpanSet(a);

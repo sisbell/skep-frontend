@@ -417,12 +417,14 @@ function firstBar(/** @type {import('./layout.js').Bar[]} */ B, /** @type {numbe
  * of the version it shows (N-GO's `shownIn`): every document the model knows
  * exists (M-REC's `known`, the one list the walk's accounts read too) — the
  * index's places, and the documents the model holds that the index does not
- * list — a version of theirs with its text or its metadata delivered, or a
- * read of them answered `withheld`: existence and owner, never bytes (B1-S2),
+ * list — a version of theirs with its text or its metadata delivered, a read
+ * of them answered `withheld`: existence and owner, never bytes (B1-S2),
  * drawn as the withheld box where it stands whole and counted in its
- * continuation's mark where one holds it (the index at guest class lists no
- * draft; a LEAP to one learns it exists, and a change of class covers one the
- * view stood on) — the system account's rows left out.
+ * continuation's mark where one holds it, or one a change of class left owed
+ * its read, drawn covered or as a box no read has answered for (the index at
+ * guest class lists no draft; a LEAP to one learns it exists, and a change of
+ * class leaves every draft it drops owed its read, M-REC's `owed`) — the
+ * system account's rows left out.
  * @returns {Doc[]}
  */
 function drawable() {

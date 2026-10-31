@@ -7,8 +7,11 @@
 // members' ages kept as its probe reads them — and what
 // a read the board did not answer, a drop that overtook a read, a size
 // refusal or a `scan_busy` does to each; the acquire, a session's end and the
-// page's own death — what it kept read again and set in one step, a draft's
-// cover confirmed or lifted by its read — every read asked again at the
+// page's own death — what it kept read again and set in one step, every other
+// draft it could read covered at once where the change ends the session and
+// else left waiting, read at once where the view stood on it and else as the
+// view comes nearer than far, never at far, that read covering, confirming or
+// lifting it, a refresh keeping each such box — every read asked again at the
 // page's class; a session got back catching up — what was written while it
 // was out read by `changes` and taken with the rows held meanwhile, once
 // and in position order, before any read waiting on it goes out, its face
@@ -36,7 +39,8 @@ import * as PUMP from './pump.js';
 import * as F from './frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
-import { accountCell, docBox } from '../plane/projection.js';
+import { accountCell, docBox, DOC_W } from '../plane/projection.js';
+import { lodOf, LOD_FAR_LO } from '../plane/lod.js';
 import { estimate, estimatedSpan, MEASURE_CPL } from '../plane/layout.js';
 import { documentOf, memberOf, unitSpan, versionAddress } from './address.js';
 import { clauseOf } from '../text/layer.js';
@@ -2480,6 +2484,107 @@ test('the board opened as the boot opens it: `boards()` first, then for the boar
   PORT.boot(fake);
   const guest = await PUMP.openBoard({ session: false });
   assert.deepEqual([names(fake), REC.session(), guest.places && 'result' in guest.places], [['boards', 'fingerprint', 'health', 'probe', 'places'], null, true], 'a guest: the board\'s reads but the session');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- the boxes a change of class leaves owed their read --------------------------------------------------------------
+
+/** the board's listing at the class after the change: nothing the tests' drafts stand among */
+const NONE_LISTED = { [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [], counts: [], state: { arm: 'complete' } } } };
+/** the session's listing: each of `drafts` a draft of its account's the session may read */
+const draftsListed = (/** @type {string[]} */ drafts) => /** @type {any} */ ({ docs: drafts.map((doc) => ({ doc, kind: 'draft', label: 'the draft ' + doc, standing: 'yours_to_read' })), counts: [], state: { arm: 'building' } });
+/** a draft the session read: its extent and its text, the view's answers for it forgotten */
+const readDraft = (/** @type {string} */ doc) => {
+  REC.takeSpanSet(doc, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+  REC.takeDelivery(doc, [{ pos: 1, width: 12, kind: 'content', text: 'draft words.', ref: null, origin: null }]);
+  PUMP.forget(doc);
+};
+/** the camera over an account's HOME cell, at mid scale */
+const atHome = (/** @type {string} */ account) => { CAM.setViewport(1440, 900); CAM.set(CAM.viewForCell(accountCell(account), 0.85)); };
+/** the camera over an account's HOME cell at far scale: its documents' boxes half LOD_FAR_LO px across */
+const farOver = (/** @type {string} */ account) => { CAM.setViewport(1440, 900); CAM.set({ ...CAM.viewForCell(accountCell(account), 0.85), scale: (LOD_FAR_LO / DOC_W) * 0.5 }); };
+/** how many times the fake port was asked a document's extent */
+const extentAsks = (/** @type {ReturnType<typeof FAKE.create>} */ fake, /** @type {string} */ doc) => fake.asked.filter((k) => k === opKeyOf(F.retrieveDocVSpanSet(doc))).length;
+
+test('a session ending with the view at far scale covers at once each draft the session could read — a box the model knows, nothing read of it there — and the view reads it as it comes nearer, once, in the guest form, the guest\'s refusal confirming the cover (issue #350\'s design decision: "No draft is read at far scale … it is read when the view comes nearer")', async () => {
+  const DR = '1.0.1.0.5';
+  const fake = FAKE.create({ ...NONE_LISTED, [opKeyOf(F.retrieveDocVSpanSet(DR))]: WITHHELD_READ });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeIndex(draftsListed([DR]));
+  readDraft(DR);
+  farOver('1.0.1');
+  assert.equal(lodOf(CAM.cam.scale).name, 'far', 'the view at far scale over the draft\'s account');
+  const sent = sessionsSent(fake);
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  const dr = REC.doc(DR);
+  assert.deepEqual([dr.from, dr.extent, dr.refused, REC.covered(DR), REC.owed(DR), REC.known().includes(DR)], [-1, null, 'withheld', true, true, true], 'at once: none of its text, covered, owed its read at the guest\'s class, a box the model knows');
+  await pumped(6);
+  assert.deepEqual([extentAsks(fake, DR), sent, PUMP.rereading(), PUMP.settled()], [0, [], false, true], 'at far scale: nothing read of it, the change\'s reads answered, the page settled');
+  atHome('1.0.1');
+  await pumped(6);
+  assert.deepEqual([extentAsks(fake, DR), sent], [1, ['guest']], 'nearer than far: its extent asked once, in the guest form');
+  assert.deepEqual([REC.doc(DR).refused, REC.covered(DR), REC.owed(DR), REC.known().includes(DR)], ['withheld', true, false, true], 'the guest\'s read withholds it: the cover confirmed, a box the model knows');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a session got back as another principal leaves each draft the lost one could read waiting to be read — never withheld before a read says so, a box the model knows — the draft the view stood on asked its extent at once under the new session, one out of view asked nothing until the view reaches it (issue #350\'s design decision: "the face shown straight after the change is \'waiting to be read\', except when signed out")', async () => {
+  const DR = '1.0.1.0.5', OUT = '1.0.3.0.5';
+  const fake = FAKE.create({
+    ...opened('s-2', { principal: 2, account: '1.0.2' }), ...caughtUp('s-2', 3), ...NONE_LISTED,
+    // the draft the view stands on, readable by the principal got back; the one out of view withheld from it
+    [opKeyOf(F.retrieveDocVSpanSet(DR))]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.12' }] } },
+    [opKeyOf(F.docMetadata(DR))]: { result: { as_of: 1, resp: 'doc_metadata', doc: DR, published: false, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } },
+    [opKeyOf(F.findLinksV(DR, 1, 12))]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+    [opKeyOf(F.retrieveDocVSpanSet(OUT))]: WITHHELD_READ,
+  });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  readHead(3);
+  REC.takeIndex(draftsListed([DR, OUT]));
+  readDraft(DR); readDraft(OUT);
+  atHome('1.0.1');
+  assert.deepEqual(PUMP.visibleDocs().map((d) => d.addr), [DR], 'the draft DR in view, OUT out of it');
+  const sent = sessionsSent(fake), listing = fake.hold('places', { board: 'b-1' });
+  fake.fire('session-died', { session: 's-1', reason: UNOPENED });
+  await until(() => REC.session()?.session === 's-2', 'the session got back');
+  for (const a of [DR, OUT]) {
+    const d = REC.doc(a);
+    assert.deepEqual([d.from, d.extent, d.refused, REC.covered(a), REC.owed(a), REC.known().includes(a)], [-1, null, null, false, true, true], `at once: ${a} holds none of its text and waits on its read, never withheld before a read says so, a box the model knows`);
+  }
+  listing();
+  await pumped(6);
+  assert.deepEqual([extentAsks(fake, DR), extentAsks(fake, OUT), sent.length > 0 && sent.every((x) => x === 's-2')], [1, 0, true], 'the draft the view stood on asked its extent at once, under the new session; the one out of view asked nothing');
+  assert.deepEqual([REC.doc(DR).refused, REC.owed(DR), REC.doc(DR).extent, REC.owed(OUT), REC.known().includes(OUT)], [null, false, 12, true, true], 'its answer lifts the wait; the other waits still, a box the model knows');
+  atHome('1.0.3');
+  await pumped(6);
+  assert.deepEqual([extentAsks(fake, OUT), sent.every((x) => x === 's-2'), REC.doc(OUT).refused, REC.covered(OUT), REC.owed(OUT)], [1, true, 'withheld', true, false], 'the view at it: its extent asked under the new session, which withholds it — covered');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a refresh after a change of class keeps each box the change left: a cover in view read again and covered still, a box owed its read out of view waiting — its cover dropped with the rest, a box the model knows, nothing read of it — and read in the refresh that finds it in view, set in one step (issue #350)', async () => {
+  const DR = '1.0.1.0.5', OUT = '1.0.3.0.5';
+  const fake = FAKE.create({ ...NONE_LISTED, [opKeyOf(F.retrieveDocVSpanSet(DR))]: WITHHELD_READ, [opKeyOf(F.retrieveDocVSpanSet(OUT))]: WITHHELD_READ });
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeIndex(draftsListed([DR, OUT]));
+  readDraft(DR); readDraft(OUT);
+  atHome('1.0.1');
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  await pumped(6);
+  assert.deepEqual([extentAsks(fake, DR), REC.covered(DR), REC.owed(DR), extentAsks(fake, OUT), REC.covered(OUT), REC.owed(OUT)], [1, true, false, 0, true, true], 'the draft the view stood on read at the guest\'s class, its cover confirmed; the one out of view covered at once and owed its read, nothing read of it');
+  fake.fire('feed', naming(20, null));
+  await PUMP.refresh();
+  await pumped(6);
+  assert.deepEqual([extentAsks(fake, DR), REC.doc(DR).refused, REC.covered(DR), REC.known().includes(DR)], [2, 'withheld', true, true], 'the refresh reads the cover in view again: covered still, a box the model knows');
+  assert.deepEqual([extentAsks(fake, OUT), REC.doc(OUT).refused, REC.owed(OUT), REC.known().includes(OUT)], [0, null, true, true], 'the box out of view: its cover dropped with the rest, owed its read still, a box the model knows, nothing read of it');
+  atHome('1.0.3');
+  fake.fire('feed', naming(21, null));
+  await PUMP.refresh();
+  assert.deepEqual([extentAsks(fake, OUT), REC.covered(OUT), REC.owed(OUT)], [1, true, false], 'the next refresh, the view at it: read in that refresh and set in one step, covered');
   assert.deepEqual(fake.unanswered, []);
 });
 
