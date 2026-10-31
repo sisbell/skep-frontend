@@ -15,7 +15,8 @@
 // page's class, where no
 // board is held, the passage Back lands on — a return finding the words its
 // entry's view read in the text it reaches, and the arrival it keeps read
-// again there, landing in the landing rule's states — the surfaces a place keeps —
+// again there, one whose bytes were never named kept only on the text it was
+// outlined on, landing in the landing rule's states — the surfaces a place keeps —
 // the selection, a card, a list — ended as the reader leaves and reopened as
 // left on a return, their subjects placed again by their bytes, and a text
 // set again under the reader — an arrival placed again by its runs' bytes,
@@ -491,6 +492,41 @@ test('Back across a follow made at a link\'s end drawn at a withheld run marks t
   } finally {
     GO.endArrival();
     REC.invalidate(RD);
+  }
+});
+
+test('Back to the place where Back\'s light outlined a withheld run, an edit setting bytes before the run while the reader was away, outlines the run where its bytes stand now — never the positions it was outlined at — the walk on it (issue #294)', async () => {
+  // RW, a draft held whole: its first paragraph, then eight of a draft's bytes withheld from the reader; the person's citation of FAR whole on three of them
+  const RW = '1.0.1.0.46', O = '1.0.2.0.31', RL = RW + '.0.2.1', text = 'Tumbler.\n\n', lead = 'A new lead.\n', RUN = text.length + 1, k = lead.length;
+  /** RW set again as its words, then the withheld run, and the image over both, each run `[the document whose I-space it lies in, ordinal, width]` */
+  const setRW = (/** @type {string} */ words, /** @type {Array<[string, number, number]>} */ image) => REC.setAgain(RW, {
+    spans: [{ subspace: 1, ordinal: 1, positions: words.length + 8 }],
+    text: { runs: [{ pos: 1, width: words.length, kind: 'content', text: words, ref: null, origin: null }, { pos: words.length + 1, width: 8, kind: 'withheld', text: '', ref: null, origin: O }], asOf: 1 },
+    image: { from: 1, runs: [...image, [O, 1, 8]].map(([doc, ordinal, width]) => ({ iStart: `${doc}.0.1.${ordinal}`, width })) },
+  });
+  setRW(text, [[RW, 1, text.length]]);
+  REC.takeMetadata(RW, { doc: RW, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(RW, [RL]);
+  REC.takeLink({ addr: RL, from: [span(O, 3, 3)], to: [whole(FAR)], type: CITE });
+  REC.takeEditionClaims(O, []);
+  script[FAKE.keyOf('op', { frame: F.project(RL, 2, FAR) })] = { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + FAR_EXTENT }] } };
+  const was = fake.unanswered.length;
+  try {
+    const s = /** @type {import('../links/links.js').Shown} */ (LK.shown(RW).find((x) => x.link.addr === RL));
+    assert.deepEqual([s.pos, s.run && s.run.pos], [RUN, RUN], 'drawn at the run\'s start');
+    await run(GO.leapTo(RW, { pos: RUN }));
+    await run(GO.follow(s));
+    await run(GO.back());
+    assert.deepEqual(marks(), [{ addr: RW, pos: RUN, runs: [{ pos: RUN, width: 8 }], link: RL }, [RL]], 'Back\'s light: the whole run outlined from its start');
+    await run(GO.leapTo(D));
+    setRW(lead + text, [['1.0.1.0.99', 1, k], [RW, 1, text.length]]);
+    await run(GO.back());
+    assert.deepEqual(marks(), [{ addr: RW, pos: RUN + k, runs: [{ pos: RUN + k, width: 8 }], link: RL }, []], 'Back to it: the run outlined where its bytes stand now, the move lighting nothing of its own');
+    assert.deepEqual(walkAt(), ['block', RW, RUN + k], 'the walk on the run where it stands');
+    assert.equal(fake.unanswered.length, was, 'nothing asked the script does not answer');
+  } finally {
+    GO.endArrival();
+    REC.invalidate(RW);
   }
 });
 
@@ -2809,6 +2845,21 @@ test('Forward across a follow into an edition read at its bare address lights it
   assert.deepEqual(fake.unanswered, []);
 });
 
+test('Forward onto a follow\'s landing at an edition its link names whole, read at its bare address, outlines the head of the member read there once a newer version arrived — the version its box shows, its landing there too — never the bare address, which holds that text no more (issue #294)', async () => {
+  await farAfresh();
+  await run(GO.leapTo(D));
+  await run(GO.follow(drawn(WHOLE)));
+  assert.deepEqual(marks(), [{ addr: FAR, pos: 1, runs: null, link: WHOLE }, [WHOLE]], 'the follow outlined FAR\'s head');
+  await run(GO.back());
+  publishFar3();
+  await run(GO.forward());
+  assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR), marks(), GO.landing()?.addr], [FAR2, FAR2, [{ addr: FAR2, pos: 1, runs: null, link: WHOLE }, [WHOLE]], FAR2], 'Forward: version 2\'s head outlined, its landing there, the link lit');
+  assert.ok(REC.blockAt(FAR2, 1) && !REC.blockAt(FAR, 1), 'the block the outline stands on held in version 2, the bare address holding none');
+  GO.endArrival();
+  await farAgain();
+  assert.deepEqual(fake.unanswered, []);
+});
+
 test('a return restores the version its entry\'s view read beside its place: an entry at D whose view the reader moved onto FAR\'s text read at its bare address, version 3 arriving once that text was dropped — Back pins FAR\'s box on version 2 and D\'s on its own (issue #298\'s design decision: "each one restores the kept versions")', async () => {
   const put = memberAsFar();
   try {
@@ -3147,6 +3198,51 @@ test('Back across a carry made from a draft whose line an edit cut lights the pa
   assert.ok(samePassage(under(CUT, CAM.view()), { ...was, pos: k + at.pos }), `the line holding what stands of the line read where it stood: ${JSON.stringify([under(CUT, CAM.view()), was])}`);
   GO.endArrival();
   assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a draft where a landing outlined and labelled a passage in two pieces, an edit setting a paragraph before it while the reader was away, outlines and labels those pieces where their bytes stand now — never the positions they were outlined at — the landing and the walk on piece 1 (issue #294)', async () => {
+  // line 10's first eighteen bytes the passage, a word an edit set after its eighth holding it in two pieces
+  const at = EIGHTY.indexOf('Line 10 ') + 1, width = 'Line 10 of a draft'.length, cut = at - 1 + 8, word = 'new ', w = word.length, k = INSERTED.length;
+  const pieced = EIGHTY.slice(0, cut) + word + EIGHTY.slice(cut);
+  setDraft(CUT, pieced, [[CUT, 1, cut], [FOREIGN, 1, w], [CUT, cut + 1, EIGHTY.length - cut]]);
+  await PUMP.loadWhole(CUT);
+  const runs = [{ pos: at, width: 8 }, { pos: at + 8 + w, width: width - 8 }];
+  await run(GO.leapTo(CUT, { pos: at, runs, passage: { prefix: CUT + '.0.1', ordinal: at, width }, how: 'leap' }));
+  const piece = (/** @type {number} */ n) => t('L.piece', { k: n, n: 2 }), words = piece(1) + ' · ' + t('L.piece.all');
+  /** the landing as its description reads it, its runs from `from` */
+  const labelled = (/** @type {number} */ from) => ({ addr: CUT, pos: from, words, runs: [{ pos: from, width: 8, words: piece(1) }, { pos: from + 8 + w, width: width - 8, words: piece(2) }] });
+  assert.deepEqual([GO.arrivalMark()?.runs, GO.described()], [runs, labelled(at)], 'both pieces outlined and labelled where the LEAP named them, the landing at piece 1');
+  await run(GO.leapTo(FAR));
+  setDraft(CUT, INSERTED + pieced, [['1.0.1.0.99', 1, k], [CUT, 1, cut], [FOREIGN, 1, w], [CUT, cut + 1, EIGHTY.length - cut]]);
+  await run(GO.back());
+  assert.deepEqual(GO.arrivalMark(), { addr: CUT, pos: at + k, runs: runs.map((r) => ({ pos: r.pos + k, width: r.width })), link: null }, 'Back: both pieces outlined where their bytes stand now');
+  assert.deepEqual([GO.described(), GO.landingLine(), walkAt()], [labelled(at + k), words, ['block', CUT, at + k]], 'their labels on them there, the landing and the walk on piece 1');
+  GO.endArrival();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to a place whose outline named no bytes — the door\'s link landing on a draft held with no image — outlines it as the reader left it while that text stands as it was, and nothing once the text is set again, never the positions it was outlined at (issue #294)', async () => {
+  const DW = '1.0.1.0.47', LINK = DW + '.0.2.1', text = 'A note held with no image.\n\nIts outlined words stand here.\n\nA last line.', lead = 'A new lead.\n';
+  const P = text.indexOf('outlined') + 1, W = 'outlined'.length, outlined = { addr: DW, pos: P, runs: [{ pos: P, width: W }], link: LINK };
+  setDraft(DW, text, []);
+  REC.takeMetadata(DW, { doc: DW, published: false, owner: '1.0.1', birth: null, birthExtent: null, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeLinks(DW, []);
+  const was = fake.unanswered.length;
+  try {
+    await run(GO.leapTo(DW, { pos: P, runs: [{ pos: P, width: W }], link: LINK, how: 'leap' }));
+    assert.deepEqual([marks(), REC.identityOf(DW, P, W)], [[outlined, [LINK]], []], 'the door\'s landing outlined, its bytes named by nothing');
+    await run(GO.leapTo(D));
+    await run(GO.back());
+    assert.deepEqual(marks(), [outlined, []], 'Back, its text standing as it was: the outline as the reader left it');
+    await run(GO.leapTo(D));
+    setDraft(DW, lead + text, [[FOREIGN, 1, lead.length], [DW, 1, text.length]]);
+    await run(GO.back());
+    assert.deepEqual([marks(), GO.landing()], [[null, []], null], 'Back, its text set again since: nothing outlined, never the positions it was outlined at, which hold other words now');
+    assert.equal(fake.unanswered.length, was, 'nothing asked the script does not answer');
+  } finally {
+    GO.endArrival();
+    REC.invalidate(DW);
+  }
 });
 
 // NEIGHBOUR: a draft past the sound depth, in the room every document there shares; GHOSTED: an address in that room the board

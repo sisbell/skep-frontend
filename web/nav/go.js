@@ -142,9 +142,10 @@
 // from the text it reaches (`keptAgain`): its outline on every stretch that
 // text holds its passage in, and its labels, the run it stood at found by its
 // first byte, what its line says read again, the link lit the one the move
-// crossed, and none of its offers that read — an arrival naming no bytes
-// restored as the reader left it, and a landing that outlined nothing only
-// where the entry's notice says it.
+// crossed, and none of its offers that read — a far end naming its document
+// whole restored in the version its box shows, an outline whose bytes were
+// never named only on the text it was outlined on, not set since, and a
+// landing that outlined nothing only where the entry's notice says it.
 // The surfaces' return (FP-36): a cursor move reaching an entry that keeps
 // surfaces owes them to it (`owed`) and, once the walk has landed there and
 // the text its view reads is held, reopens them as the reader left them
@@ -414,7 +415,8 @@ import { esc } from '../util.js';
  * @property {number} pos the landing's position: the first position of the run it stands at; where `runs` is null, the position whose block the mark stands on
  * @property {Run[] | null} runs every run of the span, in the text's order, the one at `pos` among them, each outlined — a far end's projection, or what of a carried passage the text holds, each cut where its bytes break the passage's order, the landing's labelled runs (`Landing.pieces`) where it stands in several; null where the link names the far document whole, the mark then on the block holding `pos` — the far article's first, where the beams and the scene anchor such an end
  * @property {string | null} link the link followed; null where the landing re-projected a carried passage, or the light outlines one
- * @property {{ids: ISpan[], at: number}} [held] its passage by identity, in the passage's own order, and its document's drops as it was outlined (M-REC's `dropsOf`): what it is placed again by where that document's text is set since (`placedAgain`, `recheck`), and what a return reads it again by (`keptAgain`); absent where neither the act nor the held image named its bytes
+ * @property {number} drops its document's drops as its positions were placed (M-REC's `dropsOf`): its runs stand on the bytes they were placed on while that count stands
+ * @property {ISpan[]} [held] its passage by identity, in the passage's own order: what it is placed again by where its document's text is set since (`placedAgain`, `recheck`), and what a return reads it again by (`keptAgain`); absent where neither the act nor the held image named its bytes
  */
 
 /** @typedef {{addr: string, spans: ISpan[] | null}} Passage a passage by identity in the document it is drawn in: its bytes' permanent addresses; null where it names the document whole, drawn at the block at its head */
@@ -621,62 +623,65 @@ const landsAt = (/** @type {string} */ addr, /** @type {number | null} */ pos) =
  * @returns {Arrival | null}
  */
 function placedMark(p, link) {
-  const addr = shownIn(p.addr);
-  if (!p.spans) { const d = REC.has(addr) ? REC.doc(addr) : null; return d && d.blocks.length ? { addr, pos: headOf(d), runs: null, link } : null; }
+  const addr = shownIn(p.addr), drops = REC.dropsOf(addr);
+  if (!p.spans) { const d = REC.has(addr) ? REC.doc(addr) : null; return d && d.blocks.length ? { addr, pos: headOf(d), runs: null, link, drops } : null; }
   const runs = REC.placedIdentity(addr, p.spans);
-  return runs.length ? { addr, pos: runs[0].pos, runs, link, held: { ids: p.spans, at: REC.dropsOf(addr) } } : null;
+  return runs.length ? { addr, pos: runs[0].pos, runs, link, drops, held: p.spans } : null;
 }
 
 /**
  * Back's light at a link's end LK draws at a withheld run (see the head):
- * the run outlined whole, the mark at its start, its link the one lit; null
- * where LK draws the end on text, where Back lights its link alone, or draws
- * it nowhere now.
+ * the run outlined whole, the mark at its start, the run's bytes with it
+ * (`withBytes`), its link the one lit; null where LK draws the end on text,
+ * where Back lights its link alone, or draws it nowhere now.
  * @param {End & {addr: string}} end the end the follow was made at, in its document
  * @param {string | null} link
  * @returns {Arrival | null}
  */
 function runMark(end, link) {
   const s = LK.shown(end.addr).find((x) => x.link.addr === end.link && x.key === end.key);
-  return s && s.run ? { addr: end.addr, pos: s.run.pos, runs: [{ pos: s.run.pos, width: s.run.width }], link } : null;
+  return s && s.run ? withBytes({ addr: end.addr, pos: s.run.pos, runs: [{ pos: s.run.pos, width: s.run.width }], link }, []) : null;
 }
 
-/** the arrival mark while it stands, with its passage's bytes (`Arrival.held`): a landing's, as its reads placed it, or the one a return read again — placed again by those bytes where its document's text was set since (`placedAgain`); else a one-step move's light, its passage placed in its text as it is read, its bytes with it (`placedMark`), or Back's at a link's end drawn at a withheld run, the run (`runMark`); null where neither stands */
+/** the arrival mark while it stands, with its passage's bytes (`Arrival.held`): a landing's, as its reads placed it, or the one a return read again — placed again by those bytes where its document's text was set since (`placedAgain`); else a one-step move's light, its passage placed in its text as it is read, its bytes with it (`placedMark`), or Back's at a link's end drawn at a withheld run, the run with its bytes (`runMark`); null where neither stands */
 const markHeld = () => (arrival ? placedAgain(arrival) : light && light.passage ? placedMark(light.passage, light.link) : light && light.end ? runMark(light.end, light.link) : null);
 
 /** the arrival mark while it stands (see the head; `markHeld`), as the surfaces that draw and name it read it: its document, its position, its runs and its link */
-export const arrivalMark = () => { const m = markHeld(); if (!m || !m.held) return m; const { held: _, ...mark } = m; return mark; };
+export const arrivalMark = () => { const m = markHeld(); if (!m) return m; const { held: _, drops: __, ...mark } = m; return mark; };
 
 /**
- * An arrival with its passage by identity, in the passage's own order
- * (`Arrival.held`): the passage the act names, else its runs' bytes as its
+ * An arrival as its act places it: its document's drops as it is placed
+ * (`Arrival.drops`), and its passage by identity, in the passage's own order
+ * (`Arrival.held`) — the passage the act names, else its runs' bytes as its
  * document's held image places them now, in the text's order — what it is
  * placed again by where that text is set again (`placedAgain`, `recheck`),
- * and what a return reads it again by (`keptAgain`); as it is where it
+ * and what a return reads it again by (`keptAgain`); no passage where it
  * outlines no runs, or neither names every byte.
- * @param {Arrival | null} a
+ * @param {Omit<Arrival, 'drops' | 'held'> | null} a
  * @param {ISpan[]} spans the passage by identity, as the act names it; none where it names none
  * @returns {Arrival | null}
  */
 function withBytes(a, spans) {
-  if (!a || !a.runs) return a;
+  if (!a) return null;
+  const drops = REC.dropsOf(a.addr);
+  if (!a.runs) return { ...a, drops };
   const runs = a.runs.map((r) => REC.identityOf(a.addr, r.pos, r.width));
   const ids = spans.length ? spans : runs.every((x) => x.length) ? runs.flat() : [];
-  return ids.length ? { ...a, held: { ids, at: REC.dropsOf(a.addr) } } : a;
+  return ids.length ? { ...a, drops, held: ids } : { ...a, drops };
 }
 
 /**
  * An arrival placed again where its document's text was set since its runs
- * were outlined (see the head; FP-21): every stretch of its passage's bytes
- * that text holds now (M-REC's `placedIdentity`), the mark at the first; none
- * where it holds none, or the page holds none of the text; as it stands where
- * the text was not set since.
+ * were placed (`Arrival.drops`; see the head; FP-21): every stretch of its
+ * passage's bytes that text holds now (M-REC's `placedIdentity`), the mark at
+ * the first; none where it holds none, or the page holds none of the text; as
+ * it stands where the text was not set since, or its bytes were never named.
  * @param {Arrival} a
  * @returns {Arrival | null}
  */
 function placedAgain(a) {
-  if (!a.held || REC.dropsOf(a.addr) === a.held.at) return a;
-  const runs = REC.has(a.addr) && REC.doc(a.addr).from >= 0 ? REC.placedIdentity(a.addr, a.held.ids) : [];
+  if (!a.held || REC.dropsOf(a.addr) === a.drops) return a;
+  const runs = REC.has(a.addr) && REC.doc(a.addr).from >= 0 ? REC.placedIdentity(a.addr, a.held) : [];
   return runs.length ? { ...a, pos: runs[0].pos, runs } : null;
 }
 
@@ -696,12 +701,12 @@ function placedAgain(a) {
  */
 export function recheck() {
   const a = arrival;
-  if (!a || !a.held || REC.dropsOf(a.addr) === a.held.at) return;
+  if (!a || !a.held || REC.dropsOf(a.addr) === a.drops) return;
   const d = REC.has(a.addr) ? REC.doc(a.addr) : null;
   if (!d || d.from < 0 || !imageCovers(d)) return;
-  const runs = REC.placedIdentity(a.addr, a.held.ids);
-  const width = a.held.ids.reduce((n, x) => n + x.width, 0), stands = runs.reduce((n, r) => n + r.width, 0);
-  arrival = runs.length ? { ...a, pos: runs[0].pos, runs, held: { ids: a.held.ids, at: REC.dropsOf(a.addr) } } : null;
+  const runs = REC.placedIdentity(a.addr, a.held);
+  const width = a.held.reduce((n, x) => n + x.width, 0), stands = runs.reduce((n, r) => n + r.width, 0);
+  arrival = runs.length ? { ...a, pos: runs[0].pos, runs, drops: REC.dropsOf(a.addr) } : null;
   const prior = landed && boxOf(landed.addr) === boxOf(a.addr) ? landed : null;
   const subject = prior && prior.said ? prior.said.subject : a.link ? 'followed' : 'reading';
   const holds = !runs.length ? 'none' : stands < width ? 'part' : runs.length > 1 ? 'pieces' : 'all';
@@ -2691,13 +2696,15 @@ function sharedNearest(r, addr) {
  * text holds of it, by what it was to the reader; the scene and the version
  * it offered kept only where it holds all of it, and none of its offers that
  * read made again; none of it, its landing in the none state where the
- * return lands in that text. An arrival naming no bytes — a far end naming
- * its document whole — is restored as the reader left it, its landing with
- * it; a landing that outlined nothing, only where the entry's notice says it
- * — a dead end, a withheld document — for any other is the return's to say
- * again from the words its view read. Null where the page cannot tell yet;
- * once its reads have answered (`settled`), couldn't tell, by the refusal
- * they met.
+ * return lands in that text. A far end naming its document whole is restored
+ * in the version its box shows, its landing with it; an outline whose bytes
+ * were never named is restored as the reader left it, its landing with it,
+ * only where its box shows the text it was outlined on, not set since
+ * (`Arrival.drops`), else neither; a landing that outlined nothing, only
+ * where the entry's notice says it — a dead end, a withheld document — for
+ * any other is the return's to say again from the words its view read. Null
+ * where the page cannot tell yet; once its reads have answered (`settled`),
+ * couldn't tell, by the refusal they met.
  * @param {Kept} k
  * @param {(addr: string) => number} toIn where the return lands in a text
  * @param {boolean} settled the reads a return makes have answered
@@ -2708,8 +2715,10 @@ function sharedNearest(r, addr) {
 function keptAgain(k, toIn, settled, met, notice) {
   const a = k.arrival, l = k.landed;
   if (!a) return { arrival: null, landed: l && (l.floating || l.withheld) && !!notice && boxOf(notice.addr) === boxOf(l.addr) ? l : null, told: null };
-  if (!a.runs || !a.held) return { arrival: a, landed: l, told: null };
-  const addr = shownIn(a.addr), ids = a.held.ids, h = holdsIn(addr, ids);
+  const addr = shownIn(a.addr);
+  if (!a.runs) return { arrival: { ...a, addr, drops: REC.dropsOf(addr) }, landed: l && { ...l, addr: shownIn(l.addr) }, told: null };
+  if (!a.held) return addr === a.addr && REC.dropsOf(addr) === a.drops ? { arrival: a, landed: l, told: null } : { arrival: null, landed: null, told: null };
+  const ids = a.held, h = holdsIn(addr, ids);
   const subject = l && l.said ? l.said.subject : a.link ? 'followed' : 'reading';
   /** @type {Landing} */
   const bare = { addr, pos: a.pos, said: null, pieces: null, current: 0, floating: false, withheld: false, beside: null, version: null };
@@ -2724,7 +2733,7 @@ function keptAgain(k, toIn, settled, met, notice) {
   const i = stood >= 0 ? stood : p ? p.order[0] : 0, pos = runs[i].pos;
   const said = HELD.saidOf(h.held, subject, addr, showsWithheld(REC.doc(addr))), whole = h.held.holds !== 'part';
   const landing = l || said || p ? { ...(l || bare), addr, pos, said, pieces: p, current: p ? i : 0, floating: false, withheld: false, beside: l && whole ? l.beside : null, version: l && whole ? l.version : null } : null;
-  return { arrival: { ...a, addr, pos, runs, held: { ids, at: REC.dropsOf(addr) } }, landed: landing, told: null };
+  return { arrival: { ...a, addr, pos, runs, drops: REC.dropsOf(addr) }, landed: landing, told: null };
 }
 
 /**
