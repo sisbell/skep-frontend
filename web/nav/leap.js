@@ -202,10 +202,10 @@ function relist() {
 
 /**
  * A change of the page's class (see the head; FP-23), told by the app as
- * M-PUMP tells the drop of every record: the rows standing in the box
- * computed again from the model now (`relist`), so none names what the class
- * the page left could read, and once more as the index the new class reads
- * answers (`takeIndex`).
+ * M-PUMP tells it: the rows standing in the box computed again from the
+ * model now (`relist`), so none names a document only the class the page
+ * left could read, and once more as the index the new class reads answers
+ * (`takeIndex`).
  */
 export function classChanged() {
   if (!els || !openState) return;

@@ -110,9 +110,12 @@
 // saying so where the version lacks it, and the version left one act away —
 // the pane's own state, never a box's: N-GO's pins are never touched
 // (FP-22). The page's own death reaches every pane at once, as does every
-// other change of its class (M-PUMP's `classChanged`): each is taken down to
-// what the drop left of its record — nothing of the session's text or links,
-// the ties with them — and read again at the class the page reads at then,
+// other change of its class (M-PUMP's `classChanged`): each is set again from
+// what the change left of its record — a text read as published standing,
+// its runs from drafts withheld runs and the links homed in drafts gone with
+// their ties, the reader's place and the selection carried into it; any
+// other taken down to its cover — no band standing; then each is read again
+// at the class the page reads at then,
 // a document withheld from a guest standing as its head alone; a pane on a
 // covered draft stays open (FP-29), its head's withheld statement its cover,
 // the bands of shared identity gone with its text, and every line homed in
@@ -457,7 +460,7 @@ import { esc, byteOffsets } from '../util.js';
  * @property {Doc} d the record it was set from, as the model held it: kept whole, its arrays the model's own, which the model replaces and never edits (M-REC), so the pane is set again from it with no read
  * @property {ArticleView} view the view its article draws, as read when it was set: the links its marks and its lines are drawn from
  * @property {Map<string, Stretch[] | Declined>} placed where the far ends of the links crossing into it stood in its text as it was set, by `⟨link⟩ ⟨slot⟩`
- * @property {Place | null} place the reader's place as the death took it down, kept for the read at the guest's class that sets it again
+ * @property {Place | null} place the reader's place as a change of the page's class took the pane down to its cover, kept for the read at the new class that sets it again
  * @property {HTMLElement | null} el the article it shows
  * @property {number} serial the settings asked of it: one sets it only where no later one was asked meanwhile
  * @property {number} sets the settings made of it: a `compare` read against its text before one is read again
@@ -2283,21 +2286,21 @@ function measure() {
  * between the panes taken, the far ends crossing into each kept, and the ties
  * measured anew and drawn, so no tie is drawn over text it was not measured
  * on; a stroke's list standing checked again (`recheckList`). A pane taken
- * down at the death carries nothing into the text it takes: its reader's
- * place is kept for the read at the guest's class that sets it again.
+ * down to its cover at a change of the page's class carries nothing into the
+ * text it takes: its reader's place is kept for the read at the new class
+ * that sets it again.
  * @param {Scene} S
- * @param {Array<{side: 'a' | 'b', next: Next}>} sets
+ * @param {Array<{side: 'a' | 'b', next: Next, down?: boolean}>} sets `down` the pane taken down to its cover at a change of the page's class
  * @param {ComparePair[] | null} pairs the runs of shared identity between the panes now; null where they stand as they were
- * @param {{down?: boolean}} [opts] `down` the panes are taken down at the death
  */
-function setPanes(S, sets, pairs, opts = {}) {
+function setPanes(S, sets, pairs) {
   const E = els;
   if (!E) return;
   const set = new Set(sets.map((x) => x.side));
-  const carried = sets.map(({ side, next }) => {
+  const carried = sets.map(({ side, next, down }) => {
     const P = S[side], made = P.el ? LAYER.madeOf(P.el) : null, image = made ? made.image : [];
     const here = placeAt(P, next.hold ? next.hold.from : firstInView(paneEl(E, side)));
-    if (opts.down) { P.place = P.place || here; return { side, next, place: null, sel: null, level: null }; }
+    if (down) { P.place = P.place || here; return { side, next, place: null, sel: null, level: null }; }
     const place = P.place || here;
     P.place = null;
     const sel = P.el ? LAYER.selectionIn(P.el) : null, lv = S.level[side];
@@ -2513,8 +2516,12 @@ function newest(row, src) {
  * What one of the board's events dropped, told by M-PUMP after the drop
  * (its `onDrop`; see the head): each pane the drop reached kept fresh by its
  * kind — at the page's own death, or any other change of its class, every
- * pane taken down at once and read again at the class the page reads at then;
- * a refresh reaching every pane (`refreshed`); a row naming a newer member
+ * pane set again at once from what the change left of its record (M-REC's
+ * `dropClass`), no band standing — one whose text was read as published
+ * standing on that text, its runs from drafts covered, the reader's place
+ * and the selection carried into it; one the change dropped or covered taken
+ * down to its cover — and read again at the class the page reads at then; a
+ * refresh reaching every pane (`refreshed`); a row naming a newer member
  * pinning an edition at its bare address at once, or counting a version's
  * chain again; any other row reaching a pane's text, and a clause decided
  * anew at an origin its text windows, reading it again in its place.
@@ -2524,7 +2531,10 @@ export function dropped(x) {
   const S = scene;
   if (!S) return;
   if (!x.addrs) {
-    setPanes(S, SIDES.map((side) => { const P = S[side]; return { side, next: { d: REC.doc(P.src), kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold: null } }; }), [], { down: true });
+    setPanes(S, SIDES.map((side) => {
+      const P = S[side], d = REC.doc(P.src);
+      return { side, down: d.from < 0 || !!d.refused, next: { d, kind: P.kind, src: P.src, names: P.names, shows: P.shows, k: P.k, n: P.n, read: P.read, lacks: P.lacks, hold: null } };
+    }), []);
     for (const side of SIDES) void update(side);
     return;
   }

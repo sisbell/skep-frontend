@@ -125,10 +125,12 @@
 // the mirror holds no item. The panel is shown while the ring is drawn.
 // While chrome stands over the plane the tree is inert (`cover`), out of the
 // order and of the accessibility tree.
-// The page's own death (FP-23) takes the walk again where it stood, at once
-// from the model the death left, and again once its document is read at the
-// guest's class (`dropped`) — on that document still where the guest may not
-// read it, named by its withheld box's words, its cover (FP-29).
+// The page's own death, and every other change of its class (FP-23, FP-29),
+// takes the walk again where it stood, at once from the model the change
+// left — on the span it stood on where its document kept its text, else on
+// the document — and again once its document is read at the new class
+// (`dropped`) — on that document still where the new class may not read it,
+// named by its withheld box's words, its cover.
 // Rules: FP-1, FP-2, FP-7, FP-9, FP-10, FP-13, FP-20, FP-21, FP-22, FP-23,
 // FP-24, FP-29, FP-35.
 
@@ -302,16 +304,18 @@ export async function childrenOf(node) {
     if (k != null && first >= 0) out.splice(first, 0, { kind: 'mark', addr: markKey(node.addr, k), pos: null, link: null });
     return out;
   }
-  if (node.kind === 'document') {
-    const d = await PUMP.loadWhole(node.addr); if (!d) return [];
-    /** @type {Node[]} */
-    const out = d.blocks.filter(isElement).map((b) => ({ kind: /** @type {const} */ ('block'), addr: node.addr, pos: b.pos, link: null }));
-    for (const s of LK.shown(node.addr)) if (!s.run) out.push({ kind: 'link', addr: node.addr, pos: s.pos, link: s });
-    return out;
-  }
+  if (node.kind === 'document') return (await PUMP.loadWhole(node.addr)) ? elementsOf(node.addr) : [];
   // a withheld run's: the ends drawn at it (see the head)
   if (node.kind === 'block' && node.pos != null) return runEnds(node.addr, node.pos).map((s) => ({ kind: /** @type {const} */ ('link'), addr: node.addr, pos: s.pos, link: s }));
   return [];
+}
+
+/** a document's elements of the walk as the model holds its text now: its blocks that are elements, then the ends LK draws in its text — a document's children once it is read whole (`childrenOf`) */
+function elementsOf(/** @type {string} */ addr) {
+  /** @type {Node[]} */
+  const out = REC.doc(addr).blocks.filter(isElement).map((b) => ({ kind: /** @type {const} */ ('block'), addr, pos: b.pos, link: null }));
+  for (const s of LK.shown(addr)) if (!s.run) out.push({ kind: 'link', addr, pos: s.pos, link: s });
+  return out;
 }
 
 /** the ends LK draws at the withheld run a document's block at `pos` is, in the order it draws them; none for any other block */
@@ -734,14 +738,17 @@ export async function enter() {
  * crossed): the walk stands on that link's item where the document's
  * elements list it, else on the span holding the position. A mark's name
  * stands it on the mark's stop where the plane draws that mark at the scale
- * the camera is bound for, else on the mark's account.
+ * the camera is bound for, else on the mark's account. A re-take from what a
+ * change of the page's class left (`asHeld`) reads no text: a span's levels are
+ * its document's elements as the model holds them (`elementsOf`).
  * @param {string} addr a document, an account or a board; a mark's name (P-PROJ's `markKey`)
  * @param {number | null} pos
  * @param {boolean} [byKey] a key made the act
  * @param {boolean} [take] the platform's focus goes to the landing's item wherever it stood (an act); false carries it only where the mirror held it (a camera's re-take)
  * @param {End | null} [end] the link's end to stand on, at `pos`
+ * @param {boolean} [asHeld] a span's levels taken as the model holds them, its document's text read for none (`dropped`)
  */
-export async function focusTo(addr, pos, byKey = false, take = true, end = null) {
+export async function focusTo(addr, pos, byKey = false, take = true, end = null, asHeld = false) {
   const move = ++moves;
   const held = mirrorHolds();
   // a mark's name is no address: read before any address is taken from it
@@ -759,7 +766,7 @@ export async function focusTo(addr, pos, byKey = false, take = true, end = null)
     // the levels above the landing, each holding ITS OWN place in its siblings (so ← walks out to this document, this account)
     const A = among(await childrenOf(BOARD), { kind: 'account', addr: acct || '', pos: null, link: null });
     const D = among(await childrenOf({ kind: 'account', addr: acct || '', pos: null, link: null }), { kind: 'document', addr: doc, pos: null, link: null });
-    const kids = pos != null && d.blocks.length ? await childrenOf({ kind: 'document', addr: doc, pos: null, link: null }) : [];
+    const kids = pos != null && d.blocks.length ? (asHeld ? elementsOf(doc) : await childrenOf({ kind: 'document', addr: doc, pos: null, link: null })) : [];
     if (move !== moves) return;
     if (pos != null && kids.length) {
       const b = REC.blockAt(doc, pos);
@@ -905,17 +912,19 @@ export async function retakeFromView(byKey = false) {
 }
 
 /**
- * The page's own death (FP-23), told by M-PUMP once it has emptied the model
- * (its `onDrop`, naming no
- * address): the walk taken again where it stood, at once, from the model the
- * death left — its levels and every item named from what a guest's page holds
- * now, so the mirror quotes nothing the dead session read and lists no
- * document it alone could list — the walk's document standing whole; then,
- * once that document is read at the guest's class, taken again there, on the
- * span holding the position it stood at, or the link's end it stood on. A
- * move made meanwhile overtakes it (the order of moves). Like a camera-made
- * re-take, it carries the platform's focus only where the mirror held it.
- * A feed row names what it dropped and leaves the walk where it stands.
+ * A change of the page's class — its own death among them (FP-23, FP-29) —
+ * told by M-PUMP once the model holds what the change left (its `onDrop`,
+ * naming no address): the walk taken again where it stood, at once, from that
+ * model — its levels and every item named from what the page holds now, so
+ * the mirror quotes nothing only the class it left could read and lists no
+ * document only that class could list — on the span holding the position it
+ * stood at, or the link's end it stood on, where its document kept its text
+ * (M-REC's `dropClass`), else on its document whole; then, once that
+ * document is read at the new class, taken again there, on that span or that
+ * end. A move made meanwhile overtakes it (the order of moves). Like a
+ * camera-made re-take, it carries the platform's focus only where the mirror
+ * held it. A feed row names what it dropped and leaves the walk where it
+ * stands.
  * @param {import('../model/pump.js').Dropped} x
  * @returns {Promise<void>}
  */
@@ -924,7 +933,8 @@ export async function dropped(x) {
   if (x.addrs || !f) return;
   const at = landed ?? f.pos, doc = inDocument(f) ? f.addr : null;
   const end = f.kind === 'link' && f.link ? { link: f.link.link.addr, key: f.link.key } : null;
-  await focusTo(f.addr, null, false, false);
+  const kept = !!doc && f.kind !== 'document' && REC.has(doc) && REC.doc(doc).blocks.length > 0;
+  await focusTo(f.addr, kept ? at : null, false, false, kept ? end : null, kept);
   if (!doc) return;
   const move = moves;
   await PUMP.loadWhole(doc);

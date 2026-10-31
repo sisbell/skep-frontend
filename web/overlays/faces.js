@@ -24,8 +24,12 @@
 // else the document the act named), by the first case that holds: its text
 // on screen, the page holding its text or having held it under the class it
 // left (`accessChanged`; M-REC's `covered`) — where the session's ending
-// stands, the one line's words for that ending in the arm's place
-// (`endingWords`) and its sign-in act, the line's own (`signIn`; FP-29);
+// stands, the withheld box's words, the one line's words for that ending in
+// the arm's place (`endingWords`), C-67's clause beneath them as the edition
+// claims read at the class the page reads at now decide it, and its sign-in
+// act, the line's own (`signIn`; FP-29) — a cover the change of class made
+// whose read is still owed (M-REC's `owed`) read first, the face standing
+// only where that read leaves it withheld (`coveredFace`);
 // else, and at every other document, its own withheld words (`ownWords`):
 // its full address, save where the face stands at the document's own place;
 // the withheld box's words (T-LAYER's `withheldBox`), its owner by the one
@@ -35,10 +39,11 @@
 // carries, in the same words (FP-33): the pointer, its act the LEAP its
 // caller hands in; the quoting sibling; "edition claims not read" where a
 // read of them failed; nothing where they decide none. A face stating a
-// withheld origin — this one, and a withheld run's — makes the reads its
-// clause waits on before it shows, where the page holds no answer to one, and
-// shows once the clause is decided, so the clause is in its first frame
-// (`whenRead`; FP-33). Whole the first time
+// withheld origin — this one, whichever words stand above the clause, and a
+// withheld run's — makes the reads its clause waits on before it shows,
+// where the page holds no answer to one, and shows once the clause is
+// decided, so the clause is in its first frame (`whenRead`; FP-33). Its own
+// words stand whole the first time
 // a face shows them in the page's session, compact after (FP-26): the
 // address and the head, the head a disclosure whose act opens the rest, and
 // folds it again. Never C-39, whose words are a link address's alone;
@@ -237,13 +242,16 @@ export function prepare(addr) {
  * clause undecided — at most DROP_ATTEMPTS times, so a run of rows never
  * holds the act — and shown once they answer where no act was made on the
  * chrome meanwhile, with the clause they decide, "edition claims not read"
- * where one failed.
+ * where one failed. Where `first` is handed in, it is read before them, and
+ * nothing shows where it answers that the face no longer stands.
  * @param {string} origin
  * @param {() => void} show
+ * @param {(() => Promise<boolean>) | null} [first] a read the face waits on before the clause's: whether the face still stands once it answers
  */
-function whenRead(origin, show) {
-  if (!PUMP.claimsToRead(origin)) { show(); return; }
+function whenRead(origin, show, first = null) {
+  if (!first && !PUMP.claimsToRead(origin)) { show(); return; }
   void HOST.opening(async () => {
+    if (first && !(await first())) return null;
     for (let i = 0; i < PUMP.DROP_ATTEMPTS && (i === 0 || LAYER.clauseOf(origin) === CLAUSE_READING); i++) await prepare(origin);
     return true;
   }, show);
@@ -374,10 +382,8 @@ export function unregistered(addr, anchor = null) {
  * end — named by existence and owner, never bytes (R56), by the first case
  * that holds (see the head). Its text on screen (`accessChanged`) while the
  * session's ending stands — a covered document a cursor move's landing
- * reaches among them (N-GO) — the withheld box's words, "withheld · ⟨owner⟩"
- * (T-LAYER's `withheldBox`), the one line's words for that ending beneath
- * them (`endingWords`), and its one act the line's sign-in (`signIn`), faced
- * where this face stood: the way back. Else its own withheld words
+ * reaches among them (N-GO) — its cover's face (`coveredFace`). Else its own
+ * withheld words
  * (`ownWords`): whole the first time a face shows them in the page's
  * session, compact after, its head the disclosure that opens the rest and
  * folds it again, said through the status region as the reader's act changes
@@ -391,12 +397,7 @@ export function unregistered(addr, anchor = null) {
  */
 export function withheld(addr, anchor = null, asked = {}) {
   const at = toAnchor(anchor);
-  const ending = accessChanged(addr) ? endingWords() : null;
-  if (ending) {
-    const box = { id: 'F.corner.withheld', text: LAYER.withheldBox(REC.doc(addr)) };
-    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, told: asked.told, acts: { a0: () => signIn(at) }, html: captionHTML(asked.caption) + faceHTML({ ...box, acts: [{ label: t('F.sign-in') }] }, armHTML(ending)) });
-    return;
-  }
+  if (accessChanged(addr) && endingWords()) { coveredFace(addr, at, asked); return; }
   const show = (/** @type {boolean} */ open, /** @type {boolean | undefined} */ told) => {
     const w = ownWords(addr, at), clause = clauseFace(w.clause, asked.follow);
     /** @type {Record<string, import('./host.js').Act>} */
@@ -406,6 +407,36 @@ export function withheld(addr, anchor = null, asked = {}) {
     HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, told, acts, html: captionHTML(asked.caption) + ownHTML(w, open, clause.html) });
   };
   whenRead(addr, () => show(!seenWhole.has(addr), asked.told));
+}
+
+/**
+ * A covered document's face while the session's ending stands (see the head;
+ * FP-29, FP-33): the withheld box's words, "withheld · ⟨owner⟩" (T-LAYER's
+ * `withheldBox`); beneath them the one line's words for that ending in the
+ * arm's place (`endingWords`), then C-67's clause as the edition claims on
+ * the document, read at the class the page reads at now, decide it
+ * (`clauseFace`) — the pointer, where a LEAP is handed in for it, an act
+ * beside the line's sign-in (`signIn`), faced where this face stood: the way
+ * back. It shows once the reads its clause waits on answer (`whenRead`), a
+ * cover still owed its read at the page's class (M-REC's `owed`) read first
+ * (M-PUMP's `wholeOf`) — nothing shown where that read lifts the cover, the
+ * document no longer withheld from the reader — and nothing where the ending
+ * no longer stands as it would show.
+ * @param {string} addr the document withheld
+ * @param {Anchor | null} at where the face stands
+ * @param {Asked} asked
+ */
+function coveredFace(addr, at, asked) {
+  const show = () => {
+    const ending = accessChanged(addr) ? endingWords() : null;
+    if (!ending) return;
+    const box = { id: 'F.corner.withheld', text: LAYER.withheldBox(REC.doc(addr)) }, clause = clauseFace(LAYER.clauseOf(addr), asked.follow);
+    /** @type {Record<string, import('./host.js').Act>} */
+    const acts = { a0: () => signIn(at) };
+    if (clause.follow) acts.follow = clause.follow;
+    HOST.show({ kind: 'face', id: 'face:withheld', anchor: at, told: asked.told, acts, html: captionHTML(asked.caption) + faceHTML({ ...box, acts: [{ label: t('F.sign-in') }] }, armHTML(ending) + clause.html) });
+  };
+  whenRead(addr, show, REC.owed(addr) ? async () => { await PUMP.wholeOf(addr); return REC.covered(addr); } : null);
 }
 
 /**
@@ -445,16 +476,16 @@ function ownHTML(w, open, clause) {
 /**
  * The words a withheld document's face says whole at the document's own
  * place, as the ARIA mirror reads them (FP-26; see the head): the withheld
- * box's words, then the ending's words
- * where its text was on screen as the session ended, else the arm and C-67's
- * clause where one stands — the description of the item a follow's landing
- * there stands on (N-GO's `described`), whose face offers the pointer's act.
+ * box's words, then the ending's words where its text was on screen as the
+ * session ended, else the arm, then C-67's clause where one stands — the
+ * description of the item a follow's landing there stands on (N-GO's
+ * `described`), whose face offers the pointer's act.
  * @param {string} addr
  * @returns {string}
  */
 export function withheldText(addr) {
   const ending = accessChanged(addr) ? endingWords() : null, w = ownWords(addr, { span: { addr, pos: 1 } });
-  return [w.head.text, ...(ending ? [ending.text] : [w.arm.text, ...(w.clause && w.clause !== CLAUSE_READING ? [w.clause.text] : [])])].join(' ');
+  return [w.head.text, ending ? ending.text : w.arm.text, ...(w.clause && w.clause !== CLAUSE_READING ? [w.clause.text] : [])].join(' ');
 }
 
 /**

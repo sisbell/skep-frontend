@@ -257,7 +257,7 @@ function closedSaid() {
 
 /**
  * A change of the page's class (see the head; FP-23, FP-29), told by the app
- * as M-PUMP tells the drop of every record: the transient segment and
+ * as M-PUMP tells it: the transient segment and
  * forward ›'s close label taken down — the strip's act quotes the text it was
  * made at — a scene's next close said whole again, the page's session being
  * a new one, and the change's one message held until the reads it asked

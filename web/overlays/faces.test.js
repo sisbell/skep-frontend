@@ -14,7 +14,9 @@
 // (FP-25); the dead end's face and the version offer it takes as it is found
 // (FP-21); a death's face saying its arm's words, "signed out" the page's own
 // close's alone (FP-28); the withheld face at a covered document while the
-// ending stands saying the ending's words and offering sign-in (FP-29); a
+// ending stands saying the ending's words, C-67's clause beneath them read at
+// the class the page reads at now, and offering sign-in — a cover still owed
+// its read read first (FP-29, FP-33); a
 // walk's moment as the walk's state (FP-36) — folded by every way the page
 // ends an overlay with its typed text kept, unfolded over the view it was
 // left over, drawn by its kind, its refusal drawn inside it, only its own
@@ -719,6 +721,7 @@ test('the withheld face at a COVERED document — one the class the page left re
       REC.takeSpanSet(Y, [{ subspace: 1, ordinal: 1, positions: 12 }]);
       end();
       REC.takeRefused(Y, 'withheld');
+      REC.takeEditionClaims(Y, []);
       assert.equal(REC.covered(Y), true, `${what}: the draft the session read, withheld now, is covered`);
       FACES.withheld(Y, at);
       const f = faceShown(), o = HOST.currentState();
@@ -735,6 +738,7 @@ test('the withheld face at a COVERED document — one the class the page left re
     REC.takeSpanSet(Z, [{ subspace: 1, ordinal: 1, positions: 4 }]);
     REC.takeDelivery(Z, [{ pos: 1, width: 4, kind: 'content', text: 'Seen', ref: null, origin: null }]);
     REC.takeRefused(Z, 'withheld');
+    REC.takeEditionClaims(Z, []);
     assert.deepEqual([REC.covered(Z), FACES.accessChanged(Z)], [false, true], 'never covered, its text held: its access changed after it was read');
     FACES.withheld(Z, { span: { addr: Z, pos: 1 } });
     assert.deepEqual([faceShown()?.arm, faceShown()?.acts], [['C-137.signed-out', t('C-137.signed-out')], ['a0']], 'its text on screen as the session ended: the ending\'s words and the line\'s sign-in, never its own withheld words');
@@ -746,6 +750,84 @@ test('the withheld face at a COVERED document — one the class the page left re
     assert.deepEqual(faceShown()?.arm?.[0], entitlementArm({ account: '1.0.1', keyPresent: true }, '1.0.1').id, 'no ending standing: the entitlement arm, as at any withheld document');
     HOST.dismiss();
   } finally { REC.setSessionRefused(null); REC.takeOwner('1.0.2.1', { prefix: OWNER, principal: 901 }); REC.takeRefused(X, 'withheld'); }
+});
+
+test('the withheld face at a covered document carries C-67\'s clause beneath the ending\'s words, read at the class the page reads at now: nothing stands while the claims are read, then the box\'s words, the ending\'s and the clause together — the pointer an act beside the sign-in, the QUOTING sibling, "edition claims not read", nothing where the lookup was refused as withheld from the reader — the description a landing there says carrying the clause too; a cover the change made whose read is still owed is read first, nothing shown where that read lifts it (issue #274\'s design decision: "the ending\'s words, and beneath them the clause read at the new class, appear together")', async () => {
+  // drafts of 1.0.1's the session read, each withheld at the guest's class; E, 1.0.1's published edition, claiming the first from E's own bytes and quoting the second
+  const [POINTED, QUOTED, REFUSED, HIDDEN, LIFTED, CONFIRMED] = ['1.0.1.0.21', '1.0.1.0.22', '1.0.1.0.23', '1.0.1.0.24', '1.0.1.0.25', '1.0.1.0.26'];
+  const E = '1.0.1.0.27', OWN = E + '.0.2.1', QUOTES = E + '.0.2.2', R20 = '1.1.0.1.0.1.0.3.14';
+  const lookup = (/** @type {string} */ origin) => FAKE.keyOf('op', { frame: F.editionClaimsAt(origin) });
+  /** a claim's link as `read_link` answers it: from twenty bytes at `from`, to the origin whole, typed R20 */
+  const claimLink = (/** @type {string} */ from, /** @type {string} */ origin) => ({ result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: from, width: '0.0.0.0.0.0.0.20' }], [{ start: origin, width: '0.0.0.0.0.1' }], [{ start: R20, width: '0.0.0.0.0.0.0.0.1' }]] } } });
+  const fake = FAKE.create({
+    [lookup(POINTED)]: { result: { as_of: 1, resp: 'addrs', addrs: [OWN] } },
+    [FAKE.keyOf('op', { frame: F.readLink(OWN) })]: claimLink(E + '.0.1.1', POINTED),
+    [lookup(QUOTED)]: { result: { as_of: 1, resp: 'addrs', addrs: [QUOTES] } },
+    [FAKE.keyOf('op', { frame: F.readLink(QUOTES) })]: claimLink(QUOTED + '.0.1.1', QUOTED),
+    [FAKE.keyOf('op', { frame: F.docMetadata(E) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: E, published: true, owner: '1.0.1', birth: E + '.1', birth_extent: '20', placed: null, base_extent: null, source: null } },
+    [lookup(REFUSED)]: { refused: { kind: 'refused', name: 'busy', code: 'busy' } },
+    [lookup(HIDDEN)]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+    [lookup(CONFIRMED)]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(CONFIRMED) })]: { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } },
+    // a draft its owner grants every reader: the guest's read returns its extent, holding no text, and its metadata
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(LIFTED) })]: { result: { as_of: 1, resp: 'span_set', set: [] } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(LIFTED) })]: { result: { as_of: 1, resp: 'doc_metadata', doc: LIFTED, published: false, owner: '1.0.1', birth: null, birth_extent: null, placed: null, base_extent: null, source: null } },
+  });
+  PORT.boot(fake);
+  const at = (/** @type {string} */ addr) => ({ span: { addr, pos: 1 }, sign: addr });
+  /** @type {Array<[string, boolean]>} the LEAPs the pointer's act asked for: the home, and whether a key made it */
+  const leaps = [];
+  const asked = { follow: (/** @type {string} */ home, /** @type {boolean} */ byKey) => { leaps.push([home, byKey]); } };
+  const settle = async () => { for (let i = 0; i < 50 && HOST.pending(); i++) await new Promise((r) => setTimeout(r, 0)); };
+  try {
+    readAs(READERS[0]);
+    for (const d of [POINTED, QUOTED, REFUSED, HIDDEN, LIFTED, CONFIRMED]) REC.takeSpanSet(d, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+    REC.takeEditionClaims(POINTED, []);
+    REC.sessionDied({ arm: 'closed' }, [LIFTED, CONFIRMED]);
+    FACES.classChanged();
+    for (const d of [POINTED, QUOTED, REFUSED, HIDDEN]) REC.takeRefused(d, 'withheld');
+    assert.equal(REC.editionClaimsOf(POINTED), undefined, 'the lookup the class the page left held went with it');
+    const ending = t('C-137.signed-out'), box = t('F.corner.withheld', { owner: '1.0.1' });
+    // the pointer: nothing while the lookup is out, then the face whole, the clause between the ending and the sign-in
+    const release = fake.hold('op', { frame: F.editionClaimsAt(POINTED) });
+    FACES.withheld(POINTED, at(POINTED), asked);
+    assert.deepEqual([HOST.currentState(), HOST.pending()], [null, true], 'nothing stands while the claims are read: the face opens on its reads');
+    release();
+    await settle();
+    const f = faceShown(), o = HOST.currentState();
+    const pointer = `<div class="clause" data-string="C-67.pointer"><button data-run="follow" data-claim="${OWN}" data-home="${E}">${esc(t('C-67.pointer'))}</button></div>`;
+    assert.deepEqual([f?.id, f?.words, f?.arm, f?.acts], ['face:withheld', ['F.corner.withheld', box], ['C-137.signed-out', ending], ['follow', 'a0']], 'the box\'s words, the ending\'s beneath them, the pointer and the sign-in its acts');
+    assert.ok(o && o.html.includes(`<div class="arm" data-string="C-137.signed-out">${addressedHTML(ending)}</div>${pointer}<div class="acts"><button data-run="a0" class="">${esc(t('F.sign-in'))}</button></div>`), `the clause beneath the ending and above the sign-in, in its first frame: ${o && o.html}`);
+    assert.equal(live.textContent, [box, ending, t('C-67.pointer')].join(' '), 'said whole, the clause among it');
+    o?.acts?.follow(/** @type {any} */ ({}), true);
+    assert.deepEqual(leaps, [[E, true]], 'the pointer\'s act the LEAP to the edition its claim names');
+    o?.acts?.a0(/** @type {any} */ ({}), false);
+    assert.deepEqual([HOST.currentState()?.id, HOST.currentState()?.anchor], ['face:session:closed', at(POINTED)], 'the sign-in faces what the line\'s sign-in faces, where the face stood');
+    HOST.dismiss();
+    assert.equal(FACES.withheldText(POINTED), [box, ending, t('C-67.pointer')].join(' '), 'the description a landing there says: the clause after the ending');
+    /** @type {Array<[string, string | null]>} each origin, and the clause its claims decide: its string, or none */
+    const cases = [[QUOTED, 'C-67.quoting'], [REFUSED, 'L.clause.unread'], [HIDDEN, null]];
+    for (const [origin, id] of cases) {
+      FACES.withheld(origin, at(origin), asked);
+      await settle();
+      const g = HOST.currentState(), words = id ? t(id, { claimant: '1.0.1' }) : null;
+      const clause = id ? `<div class="clause" data-string="${id}">${addressedHTML(words || '')}</div>` : '';
+      assert.ok(g?.id === 'face:withheld' && g.html.includes(`<div class="arm" data-string="C-137.signed-out">${addressedHTML(ending)}</div>${clause}<div class="acts">`), `${origin}: ${id ? `"${words}" beneath the ending` : 'nothing beneath the ending'}: ${g?.html}`);
+      assert.deepEqual(Object.keys(g?.acts || {}), ['a0'], `${origin}: the sign-in its one act`);
+      HOST.dismiss();
+      assert.equal(FACES.withheldText(origin), [box, ending, ...(words ? [words] : [])].join(' '), `${origin}: the description a landing there says`);
+    }
+    // a cover the change made, its read still owed: read first — lifted, nothing stands; confirmed, its face
+    assert.deepEqual([REC.owed(LIFTED), REC.owed(CONFIRMED)], [true, true], 'the drafts the view stood on: covered at once, each owed its read');
+    FACES.withheld(LIFTED, at(LIFTED), asked);
+    await settle();
+    assert.deepEqual([HOST.currentState(), REC.covered(LIFTED), REC.doc(LIFTED).refused], [null, false, null], 'the guest\'s read answered the draft: the cover lifted, and no withheld face stands over it');
+    FACES.withheld(CONFIRMED, at(CONFIRMED), asked);
+    await settle();
+    assert.deepEqual([faceShown()?.id, faceShown()?.arm?.[0], REC.owed(CONFIRMED)], ['face:withheld', 'C-137.signed-out', false], 'the guest\'s read withheld it: its cover confirmed, then its face');
+    HOST.dismiss();
+    assert.deepEqual(fake.unanswered, []);
+  } finally { REC.setSession(READERS[0].session); REC.takeOwner('1.0.2.1', { prefix: OWNER, principal: 901 }); REC.takeRefused(X, 'withheld'); REC.takeEditionClaims(X, []); }
 });
 
 test('why no board is held is one entry — no shell and no provider, the list empty, the list refused — "try again" offered only where a retry may tell; an act needing a board answers at its site with a face of those words and what still works — at the empty list that beginning a notebook isn\'t built yet, at a list the board did not answer "try again", which reads the list again: refused again, the face shown again where it stood and said; a board found, the face gone (issue #215\'s design decision: "an act that needs a board the reader lacks answers where it is taken and names what still works"; FP-35)', async () => {

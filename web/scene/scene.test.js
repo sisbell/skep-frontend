@@ -47,8 +47,9 @@
 // another version in the pane's place with the passage held, a version
 // counting its chain alone, a link row re-reading the text, a row writing
 // an edition claim on the origin of a run a pane windows setting it again,
-// acts made while a pane reads waiting in order, the page's death taking every pane down and
-// reading each again as a guest, and a refresh pinning an edition whose
+// acts made while a pane reads waiting in order, the page's death keeping a pane on a text
+// read as published — a draft's run in it withheld from that moment — and taking every other
+// down to its cover, reading each again as a guest, and a refresh pinning an edition whose
 // chain it counted past the member shown; and a scene opened on a document a
 // far end names whole — the far pane that version or the latest, named as
 // the link's whole end and current, its `compare` answering after it shows
@@ -1006,13 +1007,17 @@ test('the re-level and a pane\'s key made while a pane is being set again wait f
   assert.deepEqual(fake.unanswered, []);
 }));
 
-test('the page\'s own death takes every pane down at once — nothing of the dead session\'s text, no tie — and reads each again at the guest\'s class, a draft withheld from the guest standing as its head alone (issue #160)', () => onPage(async (p) => {
+/** the camera at far scale over the board's first account: the plane stands on no document, so a change of class keeps none */
+const standOnNothing = () => { CAM.setViewport(1440, 900); const v = CAM.viewForCell(accountCell('1.0.1'), 0.85); CAM.set({ ...v, scale: v.scale / 100 }); };
+
+test('the page\'s own death takes down at once every pane whose document the view did not stand on — nothing of the dead session\'s text, no tie — and reads each again at the guest\'s class, a draft withheld from the guest standing as its head alone (issue #160)', () => onPage(async (p) => {
   await SCENE.open(VE1, DR);
   assert.ok(LAYER.madeOf(shownIn(p.paneB, 'b'))?.blocks.length, 'the draft\'s text stands in pane B');
   Object.assign(script, {
     [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })]: WITHHELD,
     [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [], counts: [], state: { arm: 'complete' } } },
   });
+  standOnNothing();
   try {
     fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
     assert.deepEqual([shownIn(p.paneA, 'a'), shownIn(p.paneB, 'b')].map((el) => LAYER.madeOf(el)?.blocks), [[], []], 'at once: no pane holds any of its text');
@@ -1023,7 +1028,43 @@ test('the page\'s own death takes every pane down at once — nothing of the dea
     assert.ok(String(b.innerHTML).includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })), `its head alone, withheld: ${b.innerHTML}`);
     assert.deepEqual(LAYER.madeOf(a)?.blocks.map((x) => x.text), ['A version.', 'Its words.'], 'the version read again as the guest reads it');
     assert.deepEqual(fake.unanswered, []);
-  } finally { REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' }); }
+  } finally { REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' }); CAM._reset(); }
+}));
+
+test('the page\'s own death keeps a pane whose document the view stood on and the session read as published standing on its text at once — the run of a draft\'s bytes it windows a withheld run from that moment, none of the draft\'s bytes, no tie — and takes the draft\'s pane down to its cover at once; each read again at the guest\'s class and set from that read (issue #274\'s design decision: "Drafts and runs from drafts go to covers")', () => onPage(async (p) => {
+  // KE, an edition windowing a run of the draft DR2's bytes, its image placing them in DR2's I-space; both on the trail
+  const KE = '1.0.1.0.30', DR2 = '1.0.1.0.31';
+  const KE_HEAD = 'Kept words.\n\n', RUN = 'The draft says this.', KE_TAIL = '\n\nAfter it.', KE_TEXT = KE_HEAD + RUN + KE_TAIL, DR2_TEXT = RUN + '\n\nMore of the draft.';
+  const image = [{ i_start: KE + '.0.1.1', width: String(KE_HEAD.length) }, { i_start: DR2 + '.0.1.1', width: String(RUN.length) }, { i_start: `${KE}.0.1.${KE_HEAD.length + 1}`, width: String(KE_TAIL.length) }];
+  Object.assign(script, reads(KE, KE_TEXT, { image }), { [FAKE.keyOf('op', { frame: F.docMetadata(KE + '.1') })]: metadata(KE + '.1', true, KE_TEXT.length) }, reads(DR2, DR2_TEXT, { published: false }), compared(KE, KE_TEXT, DR2, DR2_TEXT));
+  PUMP.start({ onDirty: () => {}, onDrop: SCENE.dropped, stands: () => [KE, DR2] });
+  await SCENE.open(KE, DR2);
+  const textOf = (/** @type {'a' | 'b'} */ side) => { const m = LAYER.madeOf(shownIn(side === 'a' ? p.paneA : p.paneB, side)); return m ? REC.textOf(m.runs, 1, 1e9) : ''; };
+  assert.ok(textOf('a').includes(RUN) && textOf('b').includes(RUN), 'before the death both panes hold the draft\'s bytes, the session reading them');
+  // at the guest's class the edition's delivery withholds the run, and the draft is withheld whole
+  Object.assign(script, {
+    [FAKE.keyOf('op', { frame: F.retrieveV(KE, 1, KE_TEXT.length) })]: { result: { as_of: 2, resp: 'delivery', items: [{ content: KE_HEAD }, { withheld: { origin: DR2, width: String(RUN.length) } }, { content: KE_TAIL }] } },
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR2) })]: WITHHELD,
+    [FAKE.keyOf('op', { frame: F.editionClaimsAt(DR2) })]: { result: { as_of: 2, resp: 'addrs', addrs: [] } },
+    [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [], counts: [], state: { arm: 'complete' } } },
+  });
+  standOnNothing();
+  /** each pane's blocks as its article was made from them: position, kind and, for a withheld run, its origin */
+  const blocks = (/** @type {'a' | 'b'} */ side) => (LAYER.madeOf(shownIn(side === 'a' ? p.paneA : p.paneB, side))?.blocks || []).map((b) => [b.pos, b.kind, b.origin]);
+  const kept = [[1, 'para', null], [KE_HEAD.length + 1, 'withheld', DR2], [KE_HEAD.length + RUN.length + 1, 'para', null], [KE_HEAD.length + RUN.length + 3, 'para', null]];
+  try {
+    fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+    assert.ok(SCENE.isOpen(), 'the scene stands');
+    assert.deepEqual(blocks('a'), kept, 'at once: pane A stands on the edition\'s text, the draft\'s run a withheld run naming the draft');
+    assert.ok(!textOf('a').includes(RUN) && !String(shownIn(p.paneA, 'a').innerHTML).includes(RUN) && textOf('a').includes('Kept words.'), 'none of the draft\'s bytes in pane A, the edition\'s own standing');
+    assert.deepEqual([blocks('b'), String(shownIn(p.paneB, 'b').innerHTML).includes(RUN)], [[], false], 'pane B taken down to its cover at once, none of the draft\'s bytes');
+    assert.deepEqual(SCENE.ties(), [], 'and no tie stands');
+    await landed();
+    assert.deepEqual(blocks('a'), kept, 'read again at the guest\'s class: the run the guest\'s delivery withholds, set from that read');
+    assert.equal(LAYER.madeOf(shownIn(p.paneA, 'a'))?.runs.find((r) => r.kind === 'withheld')?.width, RUN.length);
+    assert.ok(String(shownIn(p.paneB, 'b').innerHTML).includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' })), `the draft, withheld from the guest, its head alone: ${shownIn(p.paneB, 'b').innerHTML}`);
+    assert.deepEqual(fake.unanswered, []);
+  } finally { REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' }); PUMP.start({ onDirty: () => {}, onDrop: SCENE.dropped }); CAM._reset(); }
 }));
 
 test('a refresh after a row naming nothing reaches every pane: an edition read at its bare address whose chain the refresh counted past the member its text is pinned at once — "version 2 of 3", the arrival said once — and read nowhere at its bare address; the draft beside it read again in its place (issue #212)', () => onPage(async (p) => {

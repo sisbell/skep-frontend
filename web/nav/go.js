@@ -228,7 +228,8 @@
 // measured surviving, and drops what the entries kept (N-TRAIL's); a cursor
 // move reaching an entry whose document is covered (M-REC's `covered`) lands
 // on the covered box framed whole, its withheld face standing there, whose
-// sign-in act is the way back (`coverOf`, `coverRead`, `showCover`).
+// sign-in act is the way back — a cover still owed its read at the page's
+// class (M-REC's `owed`) read first (`coverOf`, `coverRead`, `showCover`).
 // Figures: a click's flight 420 ms, every other LEAP's and a follow's 620,
 // HOME's and WHOLE BOARD's 700, an account's and a moment's view's 400, a
 // cursor move's 500, a step's 420; a second leg SECOND_LEG_MS (unmeasured).
@@ -698,8 +699,7 @@ export function endArrival() {
 
 /**
  * A change of the page's class (see the head; FP-21, FP-23), told by the app
- * as M-PUMP tells the drop of
- * every record: the arrival put out — its outline, its labels, its line, its
+ * as M-PUMP tells it: the arrival put out — its outline, its labels, its line, its
  * offers, the light and the links lit — the place's entry keeping none of
  * it, and every entry's notice and kept arrival dropped (N-TRAIL's
  * `classChanged`), so nothing the class the page left measured is drawn,
@@ -2346,16 +2346,19 @@ async function placeRead(act, e, first, byKey) {
 
 /**
  * Where a cursor move reaching an entry meets a cover (see the head): the
- * entry's document covered — a read at the page's class answered `withheld`
- * of a document the class it left could read (M-REC's `covered`) — or one
- * that class could read the page holds nothing of yet, which a read must tell
- * first ('unread'); null for every other entry, and for one holding a
- * notice, which shows its own face.
+ * entry's document covered — held `withheld` of a document the class the
+ * page left could read (M-REC's `covered`), its read at the page's class
+ * answered — or one a read must tell first ('unread'): a cover the change of
+ * class made whose read is still owed (M-REC's `owed`), which that read
+ * confirms or lifts, or one the class it left could read that the page holds
+ * nothing of yet; null for every other entry, and for one holding a notice,
+ * which shows its own face.
  * @param {Entry} e
  * @returns {'covered' | 'unread' | null}
  */
 function coverOf(e) {
   if (e.notice || kindOf(e.addr) !== 'document') return null;
+  if (REC.owed(e.addr)) return 'unread';
   if (REC.covered(e.addr)) return 'covered';
   const d = REC.has(e.addr) ? REC.doc(e.addr) : null;
   return REC.couldRead(e.addr) && (!d || (d.extent == null && !d.refused)) ? 'unread' : null;
@@ -2367,8 +2370,9 @@ const coveredAt = (/** @type {string} */ addr) => ({ addr, pos: null, view: view
 function showCover(/** @type {string} */ addr) { const site = placeAt(addr); FACES.withheld(addr, site, { follow: pointTo(site) }); CAM.markDirty(); }
 
 /**
- * A cursor move reaching an entry whose document the class the page left
- * could read and the page holds nothing of yet (see the head): its read made
+ * A cursor move reaching an entry whose document a read must tell first —
+ * a cover still owed its read, or one the class the page left could read and
+ * the page holds nothing of yet (see the head; `coverOf`): its read made
  * beside the flight, as a LEAP to an unread document makes it; where it
  * answers the document covered and no act was made meanwhile, the camera
  * going on to the covered box framed whole, its face standing there — the

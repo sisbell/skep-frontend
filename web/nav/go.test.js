@@ -2551,8 +2551,9 @@ test('a change of the page\'s class (issue #177: "Keep every place, and cover th
     assert.ok(GO.landing() && GO.landingLine() && GO.described() && GO.arrivalMark(), 'the follow landed: its outline, its labels, its line');
     assert.deepEqual([wordsAt(DR), TRAIL.all().every((e) => e.label == null || [t('F.level.home'), t('L.whole-board')].includes(e.label))], ['The draft the session reads. · ' + t('F.label.draft'), true], 'the draft\'s entry read from the model as its box\'s first line — its own text\'s, which the model holds; no entry keeps a document\'s words, HOME\'s and WHOLE BOARD\'s their act\'s name alone');
     assert.ok(listed().includes('The draft the session reads.'), 'the trail list names the draft while the session reads it');
-    // the session ends: the model emptied, then the app tells N-GO, as M-PUMP tells the drop of every record; the guest may not read the draft
+    // the session ends: the class changes in the model, then the app tells N-GO, as M-PUMP tells it; the guest may not read the draft
     script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })] = { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } };
+    script[FAKE.keyOf('op', { frame: F.editionClaimsAt(DR) })] = { result: { as_of: 1, resp: 'addrs', addrs: [] } };
     REC.sessionDied({ arm: 'closed' });
     GO.classChanged();
     assert.deepEqual([GO.landing(), GO.landingLine(), GO.described(), GO.arrivalMark(), GO.litLinks()], [null, null, null, null, []], 'the arrival gone: nothing the dead session measured drawn or described');
@@ -2564,7 +2565,7 @@ test('a change of the page\'s class (issue #177: "Keep every place, and cover th
     await run(GO.back());
     const covered = t('L.client-words', { words: t('F.corner.withheld', { owner: '1.0.1' }) });
     assert.deepEqual([asks() - before, REC.covered(DR), TRAIL.current()?.addr], [1, true, DR], 'Back to the draft\'s entry reads it first: covered');
-    assert.ok(HOST.currentIs('face:withheld') && hostEl.innerHTML.includes(esc(t('C-137.signed-out'))) && hostEl.innerHTML.includes(esc(t('F.sign-in'))), `its withheld face there, the ending's words and the sign-in its act: ${hostEl.innerHTML}`);
+    assert.ok(HOST.currentIs('face:withheld') && hostEl.innerHTML.includes(esc(t('C-137.signed-out'))) && hostEl.innerHTML.includes(esc(t('F.sign-in'))) && !hostEl.innerHTML.includes('class="clause"'), `its withheld face there, the ending's words, no clause where the claims read at the guest's class decide none, and the sign-in its act: ${hostEl.innerHTML}`);
     assert.deepEqual([walkAt(), same(CAM.view(), GO.viewFor(DR, null))], [['document', DR, null], true], 'the walk on the covered draft, its box framed whole');
     assert.deepEqual([wordsAt(DR), listed().includes(tHTML('F.corner.withheld', { owner: '1.0.1' }, { owner: 'id' }))], [covered, true], 'its entry\'s words the cover\'s, bracketed, in the trail list too, its owner in the identifier\'s face');
     await run(GO.forward());

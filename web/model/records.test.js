@@ -13,8 +13,10 @@
 // it; a bare row's mark, a newer member taking a trunk's text, a refresh's
 // drop and a shown document set again in one step — its text without an
 // image holding none, a claim's home making its origin's windows again; the key store,
-// the session's key and the byline's facts; the death dropping every read
-// held at the session's class, and the cover it leaves.
+// the session's key and the byline's facts; a change of class keeping what
+// the class it left read as published — a draft's run in it withheld from
+// that moment — and dropping the rest, and the cover it leaves on a draft the
+// view stood on, confirmed or lifted by its read.
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from './records.js';
@@ -75,7 +77,7 @@ test('an index replaces the one before it whole: a record the new one does not l
   assert.deepEqual(rowOf('1.0.1.0.3'), ['edition', '# skep-ux-design', 'public'], 'a record the new index lists, its row');
 });
 
-test('the death drops every read held at the session\'s class — the index, each document\'s delivered state and row, the links and where they project, the owners and key sets, the drafts rows — and the runs a reader took stand as they were', () => {
+test('the death keeps the editions\' rows and drops the rest of what the session\'s class read — the drafts\' rows, the counts and the state, each document\'s delivered state the view did not stand on and its row where no edition row stands on it, the link homed in a draft and where the links project, the owners and key sets, the drafts rows — and the runs a reader took stand as they were', () => {
   REC.takeIndex(/** @type {any} */ (PLACES));
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.takeSpanSet('1.0.1.0.2', [{ subspace: 1, ordinal: 1, positions: 12 }, { subspace: 2, ordinal: 1, positions: 1 }]);
@@ -94,14 +96,63 @@ test('the death drops every read held at the session\'s class — the index, eac
   const taken = REC.doc('1.0.1.0.2').runs;
   REC.sessionDied({ arm: 'closed' });
   assert.deepEqual([REC.session(), REC.deathReason()], [null, { arm: 'closed' }]);
-  assert.deepEqual([REC.places(), REC.accounts(), REC.indexState(), REC.countOf('1.0.1').documents], [[], [], null, 0], 'the index, its counts and its state');
+  const editions = ['1.0.1.0.3', '1.0.1.0.4', '1.0.2.0.1', '1.1.0.1.0.2'];
+  assert.deepEqual([REC.places().map((p) => p.doc), REC.indexState(), REC.countOf('1.0.1')], [editions, null, { documents: 2, exact: false }], 'the editions\' rows, read as published, stand; the drafts\' rows — the listed one and the one a row minted — the counts and the state go, the count the rows give a lower bound');
   for (const d of REC.docs()) {
-    assert.deepEqual([d.from, d.runs, d.blocks, d.extent, d.whole, d.linkPositions, d.meta, d.image, d.origins, d.imageFor, [...d.links], d.linksRead, d.members, d.ended, d.refused], [-1, [], [], null, null, null, null, [], [], null, [], false, null, false, null], d.addr + '\'s delivered state');
-    assert.deepEqual(rowOf(d.addr), ['unknown', null, null], d.addr + '\'s row');
+    assert.deepEqual([d.from, d.runs, d.blocks, d.extent, d.whole, d.linkPositions, d.meta, d.image, d.origins, d.imageFor, [...d.links], d.linksRead, d.members, d.ended, d.refused], [-1, [], [], null, null, null, null, [], [], null, [], false, null, false, null], d.addr + '\'s delivered state, the view standing on none');
+    if (!editions.includes(d.addr)) assert.deepEqual(rowOf(d.addr), ['unknown', null, null], d.addr + '\'s row');
   }
-  assert.deepEqual([REC.links(), REC.projection('1.0.1.0.2.0.2.1', 2, '1.0.1.0.4'), REC.ownerOf('1.0.1.1'), REC.keySetOf('1.0.1')], [[], undefined, undefined, undefined], 'the links and where they project, the owners and the key sets');
+  assert.deepEqual(rowOf('1.0.1.0.3'), ['edition', '# skep-ux-design', 'public'], 'an edition keeps its row');
+  assert.deepEqual([REC.links(), REC.projection('1.0.1.0.2.0.2.1', 2, '1.0.1.0.4'), REC.ownerOf('1.0.1.1'), REC.keySetOf('1.0.1')], [[], undefined, undefined, undefined], 'the link homed in the draft and where it projects, the owners and the key sets');
   assert.deepEqual(REC.feedRows().map((r) => r.cls), ['published'], 'the published row held, the drafts row dropped');
   assert.equal(REC.textOf(taken, 1, 13), 'draft words.', 'the runs a reader took before the death read as they stood');
+});
+
+test('a change of class keeps each document the view stood on that the class it left read as published — its text, its image, its metadata, its extent, its chain, the links homed in published documents and where they project — save the runs whose bytes its image places in a draft, each a withheld run naming the draft from that moment, its image and origins there gone; one whose image does not place its whole text keeps none of its text; a draft it stood on is covered at once, its read owed, a refusal confirming the cover and an answer lifting it (issue #274\'s design decision: "everything not read as published goes at once. Drafts and runs from drafts go to covers; links homed in drafts leave view. A cover lifts if the new read returns its material")', () => {
+  const E = '1.0.1.0.3', P = '1.0.1.0.4', DR = '1.0.1.0.2', HALF = '1.0.2.0.1', OTHER = '1.0.3.0.9';
+  const OWN = 'Tumbler.\n\n', THEIRS = 'draft bytes', AFTER = '\n\nThe end.';
+  const n = (/** @type {string} */ s) => new TextEncoder().encode(s).length;
+  const at1 = n(OWN) + 1, at2 = at1 + n(THEIRS), end = at2 + n(AFTER);
+  REC.takeIndex(/** @type {any} */ (PLACES));
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  // the edition E: its own bytes, a run of the draft's, its own again; its image placing every position
+  REC.takeSpanSet(E, [{ subspace: 1, ordinal: 1, positions: end - 1 }]);
+  REC.takeMetadata(E, { doc: E, published: true, owner: '1.0.1', birth: E + '.1', birthExtent: end - 1, placed: null, baseExtent: null, source: null, asOf: 1 });
+  REC.takeMembers(E, 2);
+  REC.takeDelivery(E, [{ pos: 1, width: end - 1, kind: 'content', text: OWN + THEIRS + AFTER, ref: null, origin: null }]);
+  REC.takeImage(E, 1, [{ iStart: E + '.0.1.1', width: n(OWN) }, { iStart: DR + '.0.1.40', width: n(THEIRS) }, { iStart: E + '.0.1.' + at1, width: n(AFTER) }]);
+  // the edition P, a run of the edition HALF's bytes in it — its image read over the first half of its text alone
+  REC.takeSpanSet(HALF, [{ subspace: 1, ordinal: 1, positions: 8 }]);
+  REC.takeDelivery(HALF, [{ pos: 1, width: 8, kind: 'content', text: 'Its text', ref: null, origin: null }]);
+  REC.takeDelivery(P, [{ pos: 1, width: 8, kind: 'content', text: 'abcdefgh', ref: null, origin: null }]);
+  REC.takeImage(P, 1, [{ iStart: P + '.0.1.1', width: 4 }]);
+  // the draft, read; a link homed in it and one homed in the edition, both touching E, and where each projects into E
+  REC.takeSpanSet(DR, [{ subspace: 1, ordinal: 1, positions: 60 }]);
+  REC.takeDelivery(DR, [{ pos: 1, width: 12, kind: 'content', text: 'draft words.', ref: null, origin: null }]);
+  const IN_DRAFT = DR + '.0.2.1', IN_EDITION = E + '.0.2.1';
+  REC.takeLinks(E, [IN_DRAFT, IN_EDITION]);
+  for (const a of [IN_DRAFT, IN_EDITION]) { REC.takeLink({ addr: a, from: [], to: [], type: null }); REC.takeProjection(a, 2, E, [{ pos: 1, width: 4 }]); }
+  const held = REC.doc(E).runs;
+  REC.sessionDied({ arm: 'closed' }, [E, P, DR, OTHER]);
+  const e = REC.doc(E);
+  assert.deepEqual(e.runs.map((r) => [r.pos, r.width, r.kind, r.text, r.origin]), [[1, n(OWN), 'content', OWN, null], [at1, n(THEIRS), 'withheld', '', DR], [at2, n(AFTER), 'content', AFTER, null]], 'its own bytes stand; the draft\'s run a withheld run at its positions, naming the draft');
+  assert.deepEqual(e.blocks.map((b) => [b.pos, b.kind]), [[1, 'para'], [at1, 'withheld'], [at2, 'para'], [at2 + 2, 'para']], 'its blocks derived again');
+  assert.deepEqual([e.image.map((r) => r.prefix), e.extent, e.meta?.published, e.members, e.refused], [[E + '.0.1', DR + '.0.1', E + '.0.1'], end - 1, true, 2, null], 'its image standing whole, as the board places a withheld run\'s permanent addresses; its extent, its metadata and its chain stand');
+  assert.ok(e.runs !== held && REC.textOf(held, at1, at2) === THEIRS, 'given new runs: the ones a reader took read as they stood');
+  assert.deepEqual([[...e.links], REC.link(IN_DRAFT), !!REC.link(IN_EDITION), REC.projection(IN_DRAFT, 2, E), REC.projection(IN_EDITION, 2, E)], [[IN_EDITION], undefined, true, undefined, [{ pos: 1, width: 4 }]], 'the link homed in the draft gone, and where it projects; the edition\'s link and where it projects stand');
+  assert.deepEqual([REC.doc(P).from, REC.doc(P).runs, REC.doc(P).image, REC.doc(P).extent], [-1, [], [], null], 'an edition whose image does not place its whole text: none of its text stands');
+  assert.deepEqual([REC.doc(HALF).from, REC.doc(HALF).extent], [-1, null], 'an edition the view did not stand on: its delivered state gone, its row standing');
+  const dr = REC.doc(DR);
+  assert.deepEqual([dr.from, dr.extent, dr.refused, REC.covered(DR), REC.owed(DR), REC.known().includes(DR)], [-1, null, 'withheld', true, true, true], 'the draft the view stood on: none of its text, covered at once, its read owed, a box the model knows');
+  assert.deepEqual([REC.doc(OTHER).refused, REC.owed(OTHER)], [null, false], 'a document the class it left could not read: no cover');
+  REC.takeRefused(DR, 'withheld');
+  assert.deepEqual([REC.covered(DR), REC.owed(DR)], [true, false], 'a read refusing it withheld: the cover confirmed');
+  REC.setSession({ session: 's-2', principal: 1, account: '1.0.1' });
+  REC.takeDelivery(DR, [{ pos: 1, width: 12, kind: 'content', text: 'draft words.', ref: null, origin: null }]);
+  REC.sessionDied({ arm: 'closed' }, [DR]);
+  assert.deepEqual([REC.covered(DR), REC.owed(DR)], [true, true], 'covered again at the next change');
+  REC.takeSpanSet(DR, [{ subspace: 1, ordinal: 1, positions: 60 }]);
+  assert.deepEqual([REC.doc(DR).refused, REC.covered(DR), REC.owed(DR), REC.doc(DR).extent], [null, false, false, 60], 'a read answering it: the cover lifted');
 });
 
 test('a document is covered where the class the page left could read it — its text, metadata or extent held, or its index listing it — and a read at the new class answers it `withheld`: never one the page never read, nor one withheld before the change; each is a box the model knows, none read at the new class before its answer (issue #177)', () => {

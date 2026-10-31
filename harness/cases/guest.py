@@ -104,19 +104,29 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     and (e): its index read again in the guest form, every read after the
     close a guest's or refused; no draft listed, none of the claimant's; each
     count the places listed; the card standing over the draft's run taken
-    down; the draft it read holding no text, nothing
+    down; from the first frame after the close (issue #274's design
+    decision: "everything not read as published goes at once"), the first
+    edition's own text standing, its article mounted, never taken down to
+    wait, the window run a withheld block at 1467, 240 positions, and none
+    of the owner's bytes over it anywhere in the page; the draft it read
+    holding no text, nothing
     mounted for it — the draft the trail names, and each in view, read again
     at the guest's class and COVERED (issue #177's design decision), said once with the
     ending, its trail row the cover's words, "[withheld · ⟨owner⟩]", never its
-    first line, Back to it its withheld face with the ending's words and the
-    sign-in its act, the walk on it; no label or mark drawing a draft at HOME
+    first line, Back to it its withheld face with the ending's words, C-67's
+    clause beneath them as the claims on the draft the page read at the
+    guest's class decide it, decided here from those reads (issue #274), and
+    the sign-in its act, the walk on it; no label or mark drawing a draft at HOME
     but that cover, counted in its continuation's mark; the window run
     a withheld block with none of its text; none of the owner's bytes
     anywhere in the page;
 (h) the owner's page opened once more stands a reading scene on the first
     edition and that draft, each pane showing the owner's bytes over the
     run, and its session is closed the same way with the scene standing over
-    the end (issue #160): its panes read again at the guest's class — the
+    the end (issue #160): from the first frame after the close, the first
+    edition's pane standing on its own text, never taken down to wait, the
+    window run withheld there and none of the owner's bytes over it anywhere
+    in the page (issue #274); its panes read again at the guest's class — the
     draft's pane its head alone, the first edition's window run a withheld
     block — and none of the owner's bytes anywhere in the page, the panes
     and the mirror among it, the region holding any named. A step of its
@@ -142,6 +152,30 @@ GUEST_CALLS = ['boards', 'fingerprint', 'health', 'probe', 'places']
 PLACEHOLDER = '#domlayer article[data-addr="%s"] .withheld[data-pos="%d"]' % (DOC, WINDOW[0])
 # how far the space between two blocks may stand from the margin P-LAY lays there, in px at the layout size
 GAP_TOL_PX = 0.5
+# the frames a close is watched for once the page holds no session
+WATCHED_FRAMES = 30
+# every frame from the page's own close, once it holds no session, up to `frames` of them (issue #274): the first edition's
+# text over the window run and before it in the model, the model's withheld blocks at the run, whether its article stands
+# mounted, each pane's article's characters with white space folded, and the stretches of the owner's bytes over the run
+# the page's body holds — read after the app's own frame has set the page, for the watch's frame is asked for after the
+# app's, which asks for its next first thing in each frame
+FRAME_WATCH = '''((doc, at, width, probes, frames) => {
+  const S = window.__skep, squash = (s) => (s || '').replace(/\\s+/g, ''), out = [];
+  window.__skep_watch = out;
+  const pane = (id) => { const a = document.querySelector('#' + id + ' article.dtext'); return a ? squash(a.textContent) : null; };
+  let left = 900;
+  const tick = () => {
+    if (S.model.session() === null) {
+      const d = S.model.doc(doc), body = squash(document.body.textContent);
+      out.push({run: S.model.text(doc, at, at + width), own: S.model.text(doc, 1, at).length, mounted: S.mountedAddrs().includes(doc),
+                blocks: d.blocks.filter((b) => b.kind === 'withheld' && b.pos <= at && at < b.pos + b.width).map((b) => [b.pos, b.width, b.origin]),
+                paneA: pane('sceneA'), paneB: pane('sceneB'), leaks: probes.filter((p) => body.includes(p))});
+    }
+    if (out.length < frames && --left > 0) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
+  return true;
+})(%s, %d, %d, %s, %d)'''
 # the first edition's mounted article after the run as the person meets it, beside the canvas's own bars for it
 # (`barsOf`), in px at the layout size: the block after the placeholder — its position, its text, its height, the lines
 # P-LAY sets it — the block after that, and the space between the placeholder's bottom and that block's top, in the
@@ -430,6 +464,15 @@ def run(ctx):
         """the page's own `close(session)` — the call it makes at every `pagehide`, which writes nothing to the board —
         over the session it holds; whether the provider answered it"""
         return ctx.js('(async () => { const P = await import("./bridge/port.js"); return "result" in await P.close({session: window.__skep.model.session().session}); })()')
+
+    def watch_close():
+        """the frames from the page's own close watched (`FRAME_WATCH`), asked for before the close goes out"""
+        ctx.js(FRAME_WATCH % (json.dumps(DOC), WINDOW[0], WINDOW[1], json.dumps(sorted(stretches)), WATCHED_FRAMES))
+
+    def watched():
+        """the frames watched from the close, once as many as the watch takes have passed"""
+        wait_for(ctx, 'window.__skep_watch && window.__skep_watch.length >= %d' % WATCHED_FRAMES, 10)
+        return ctx.js('window.__skep_watch || []')
 
     # ---- the guest's page ----------------------------------------------------------------------------------
     log = ctx.provider_log()
@@ -801,12 +844,18 @@ def run(ctx):
     ctx.js('window.__skep.cards.wrote(%s, %d)' % (json.dumps(DOC), WINDOW[0])); ctx.settle(); ctx.frames(2)
     card = ctx.js('window.__skep.overlay().id')
     n0 = len(calls(ctx))
+    watch_close()
     closed = close_session()
     fell = wait_for(ctx, 'window.__skep.model.session() === null && window.__skep.line().state === 5')
+    frames = watched()
     ctx.settle(); ctx.frames(2)
     ids = ctx.js('[...document.querySelectorAll("#line [data-string]")].map((e) => e.dataset.string)')
     r.check(closed and fell and 'C-137.signed-out' in ids, '(g) the page\'s own `close(session)` ends its session: the page takes the end, the line in its signed-out state',
             {'closed': closed, 'fell': fell, 'strings': ids})
+    held_up = [f for f in frames if f['own'] > 0 and f['mounted'] and f['run'] == '' and f['blocks'] == [[WINDOW[0], WINDOW[1], WINDOW[2]]] and not f['leaks']]
+    r.check(len(frames) >= WATCHED_FRAMES and len(held_up) == len(frames),
+            '(g) from the first frame after the close the first edition\'s own text stands, its article mounted — never taken down to wait — the window run a withheld block at 1467, 240 positions, its origin 1.0.1.0.1003, none of its text held, and none of the owner\'s bytes over it anywhere in the page (issue #274\'s design decision: "everything not read as published goes at once")',
+            {'frames': len(frames), 'first': frames[:1], 'off': [f for f in frames if f not in held_up][:2]})
     r.check(card == 'provenance:wrote' and ctx.js('window.__skep.overlay().id') is None,
             '(g) the card standing over the draft\'s run as the session ends — made from what the session read — is taken down with it (issue #177: "Cards on covered material close onto the cover")', {'before': card, 'after': ctx.js('window.__skep.overlay().id')})
     # THE COVER (issue #177): the draft the trail names, read again at the guest's class and covered — its trail row the cover's
@@ -828,11 +877,20 @@ def run(ctx):
     r.check(bool(row) and row['words'] == row_words and (not first_line or first_line not in row['text']),
             '(g) the draft\'s trail row keeps its number and its address and says "%s", the client\'s words bracketed in its first line\'s place, never its first line (issues #177, #23)' % row_words, {'row': row, 'first_line': first_line})
     ctx.js('window.__skep.go.back()'); ctx.settle(); ctx.frames(2)
-    back = ctx.js('''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm'), b = o.querySelector('[data-run]'), T = window.__skep.trail();
-      return {id: window.__skep.overlay().id, words: w ? w.textContent : null, arm: a ? a.dataset.string : null, act: b ? b.textContent : null, focus: window.__skep.view.focus(), entry: T.entries[T.cursor].addr}; })()''')
+    back = ctx.js('''(() => { const o = document.getElementById('overlay'), w = o.querySelector('.face-text'), a = o.querySelector('.arm'), b = o.querySelector('[data-run="a0"]'), c = o.querySelector('.clause'), T = window.__skep.trail();
+      const order = [...o.querySelectorAll('.face-text, .arm, .clause, [data-run="a0"]')].map((e) => e.matches('[data-run="a0"]') ? 'sign-in' : e.className.split(' ')[0]);
+      return {id: window.__skep.overlay().id, words: w ? w.textContent : null, arm: a ? a.dataset.string : null, act: b ? b.textContent : null, clause: c ? c.dataset.string : null,
+              claim: c && c.querySelector('[data-claim]') ? c.querySelector('[data-claim]').dataset.claim : null, order, focus: window.__skep.view.focus(), entry: T.entries[T.cursor].addr}; })()''')
+    # C-67's clause the claims on the draft decide, from the reads the fallen page made of them at the guest's class
+    clause_id, cover_decided = ctx.edition_clause(WINDOW[2], OWNER)
+    want = None if clause_id in (None, CLAUSE_READING) else clause_id
     r.check(back['id'] == 'face:withheld' and back['words'] == cover_words and back['arm'] == 'C-137.signed-out' and back['act'] == t(ctx, 'F.sign-in')
+            and clause_id != CLAUSE_READING and back['clause'] == want and (want != 'C-67.pointer' or back['claim'] == cover_decided.get('claim'))
+            and back['order'] == ['face-text', 'arm'] + (['clause'] if want else []) + ['sign-in']
             and bool(back['focus']) and back['focus']['kind'] == 'document' and back['focus']['addr'] == WINDOW[2] and back['entry'] == WINDOW[2],
-            '(g) Back to the draft\'s entry lands on its cover: the withheld face, "%s", the ending\'s words beneath and the sign-in its act; the walk on the draft, never on nothing (issue #177)' % cover_words, back)
+            '(g) Back to the draft\'s entry lands on its cover: the withheld face, "%s", the ending\'s words beneath, C-67\'s clause beneath them as the claims the page read at the guest\'s class decide it (%s), and the sign-in its act; the walk on the draft, never on nothing (issues #177, #274)' % (cover_words, want),
+            {'face': back, 'decided': clause_id, 'reads': cover_decided})
+    r.figures['cover_clause'] = {'decided': clause_id, 'reads': cover_decided}
     r.figures['shots'].append(ctx.shot('guest/fallen-cover.png'))
     ctx.esc()
     ctx.js('window.__skep.go.forward()'); ctx.settle(); ctx.frames(2)
@@ -868,9 +926,16 @@ def run(ctx):
     held = {side: sum(1 for s in stretches if s in pane_text(side)) for side in ('A', 'B')}
     r.check(ctx.js('window.__skep.scene.isOpen()') and bool((shown.get('b') or {}).get('blocks')) and held['A'] > 0 and held['B'] > 0,
             '(h) before its end the owner\'s page stands a reading scene on the first edition and the draft it windows, each pane showing the owner\'s bytes over the run', {'stretches_held': held})
+    own_before = squash(ctx.js('window.__skep.model.text(%s, 1, %d)' % (json.dumps(DOC), WINDOW[0])))[-STRETCH:]
+    watch_close()
     closed = close_session()
     fell = wait_for(ctx, 'window.__skep.model.session() === null && window.__skep.line().state === 5')
+    frames = watched()
     landed = scene_set(ctx)
+    stood = [f for f in frames if f['paneA'] and own_before in f['paneA'] and f['run'] == '' and not f['leaks'] and not any(x in (f['paneB'] or '') for x in stretches)]
+    r.check(len(own_before) == STRETCH and len(frames) >= WATCHED_FRAMES and len(stood) == len(frames),
+            '(h) from the first frame after the close the first edition\'s pane stands on its own text — never taken down to wait — the window run withheld there, and none of the owner\'s bytes over the run anywhere in the page, the panes among it (issue #274)',
+            {'frames': len(frames), 'own': own_before, 'off': [{k: (v[:80] if isinstance(v, str) else v) for k, v in f.items()} for f in frames if f not in stood][:2]})
     panes = ctx.js('window.__skep.scene.panes()') or {}
     pa, pb = panes.get('a') or {}, panes.get('b') or {}
     run_face = [b for b in pa.get('blocks') or [] if b['kind'] == 'withheld' and b['pos'] == WINDOW[0]]

@@ -383,7 +383,7 @@ const outlasts = (/** @type {Overlay} */ o) => o.kind === 'moment' || /^(reading
 
 /**
  * A change of the page's class (see the head), told by the app as M-PUMP
- * tells the drop of every record: the opening still reading ended, and the
+ * tells it: the opening still reading ended, and the
  * standing overlay dismissed — its end run, the focus returned through the
  * controller — save one that stands through it (`outlasts`).
  */

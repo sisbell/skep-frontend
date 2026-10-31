@@ -20,7 +20,9 @@
 // re-take over it takes the mark or keeps a member, never the member under
 // the centre; each box is
 // walked as the version it shows; the page's own death takes the mirror down
-// and the walk stays on a covered draft; a withheld run's ends stand a level
+// where the view stood on nothing, the walk staying on a covered draft, and a
+// change of class keeps the walk on the span its document kept, a draft's
+// run there named as the withheld run it is now; a withheld run's ends stand a level
 // below its item, counted and marked as the symbols are; and where no board
 // is held the root says why and the re-take stands on it alone (FP-20,
 // FP-21, FP-22, FP-23, FP-24, FP-29, FP-35).
@@ -1022,25 +1024,28 @@ test('the count, the article\'s symbols and the mirror name the same ends, two l
   }
 });
 
-test('the page\'s own death takes the mirror down at once — no item quoting what the dead session read, no document only it could list — and takes the walk again on the span it stood on once its document is read at the guest\'s class (FP-23; issue #160)', async () => {
+test('the page\'s own death takes the mirror down at once where the view stood on nothing — no item quoting what the dead session read, no document only it could list, the editions read as published listed still — and takes the walk again on the span it stood on once its document is read at the guest\'s class (FP-23; issue #160)', async () => {
   const platform = globalThis.document;
   globalThis.document = /** @type {any} */ ({ activeElement: null });
   const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
+  // the session's index: the two editions, and a draft of the account's
+  const DRAFT = '1.0.1.0.11';
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }, { doc: E, kind: 'edition', label: 'e', standing: 'public' }, { doc: DRAFT, kind: 'draft', label: 'the draft', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 3 }], state: { arm: 'complete' } }));
   try {
     WALK.attach(/** @type {any} */ (mirror));
     await WALK.focusTo(D, 15);
     assert.ok(mirror.innerHTML.includes('The first field.') && mirror.innerHTML.includes(`data-addr="${E}"`) === false, 'the mirror quotes the span the session read');
     await WALK.focusTo(D, null);
-    assert.ok(mirror.innerHTML.includes(`data-addr="${E}"`), 'the account\'s level lists E, which the session\'s index lists');
+    assert.ok(mirror.innerHTML.includes(`data-addr="${E}"`) && mirror.innerHTML.includes(`data-addr="${DRAFT}"`), 'the account\'s level lists E and the draft, which the session\'s index lists');
     await WALK.focusTo(D, 15);
-    // the guest's read of D held, so nothing it brings stands yet; the death empties the model, as M-PUMP's end does, then tells the walk
+    // the guest's read of D held, so nothing it brings stands yet; the death keeps nothing the view stood on, as M-PUMP's end hands it none here, then tells the walk
     const release = fake.hold('op', { frame: F.retrieveDocVSpanSet(D) });
     REC.sessionDied({ arm: 'closed' });
     const taken = WALK.dropped({ row: null, addrs: null });
     for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
     assert.ok(!mirror.innerHTML.includes('The first field.'), `at once: no item quotes what the dead session read: ${mirror.innerHTML}`);
     assert.deepEqual(walkAt(), ['document', D, null], 'the walk on its document whole');
-    assert.ok(!mirror.innerHTML.includes(`data-addr="${E}"`), 'and the mirror lists no document the dead session\'s index listed');
+    assert.ok(!mirror.innerHTML.includes(`data-addr="${DRAFT}"`) && mirror.innerHTML.includes(`data-addr="${E}"`), 'the mirror lists no document only the dead session could list — the draft — and the edition still');
     release();
     await taken;
     assert.deepEqual(walkAt(), ['block', D, 11], 'its document read at the guest\'s class: the walk on the span holding the position it stood at');
@@ -1078,6 +1083,38 @@ test('the walk on a draft the session read stays on it once the guest\'s read an
   } finally {
     globalThis.document = platform;
     REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  }
+});
+
+test('a change of the page\'s class keeps the walk on the span it stood on where its document kept its text: at once, from the model the change left — the run of a draft\'s bytes there named as the withheld run it is now, none of its words quoted — and again there once its document is read at the new class (issue #274\'s design decision: "Nothing is taken down to wait"; "runs from drafts go to covers")', async () => {
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  const mirror = { innerHTML: '', tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} } };
+  // K, an edition windowing a run of the draft DF's bytes, its image placing them in DF's I-space
+  const K = '1.0.1.0.9', DF = '1.0.1.0.12', HEAD = 'Kept.\n\n', RUN = 'Draft words here.', TAIL = '\n\nEnd.', TEXT = HEAD + RUN + TAIL, AT = HEAD.length + 1;
+  Object.assign(script, reads(K, [{ content: TEXT }], TEXT.length, [{ i_start: K + '.0.1.1', width: String(HEAD.length) }, { i_start: DF + '.0.1.1', width: String(RUN.length) }, { i_start: `${K}.0.1.${AT}`, width: String(TAIL.length) }]), {
+    [FAKE.keyOf('op', { frame: F.editionClaimsAt(DF) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+  });
+  try {
+    WALK.attach(/** @type {any} */ (mirror));
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    REC.invalidate(K);
+    await PUMP.loadWhole(K);
+    await WALK.focusTo(K, AT + 3);
+    assert.ok(walkAt()?.[2] === AT && mirror.innerHTML.includes(RUN), 'the walk on the span of the draft\'s bytes, the mirror quoting them');
+    REC.sessionDied({ arm: 'closed' }, [K]);
+    const taken = WALK.dropped({ row: null, addrs: null });
+    for (let i = 0; i < 5; i++) await new Promise((r) => setImmediate(r));
+    assert.deepEqual(walkAt(), ['block', K, AT], 'at once: the walk on the span it stood on, never its document whole');
+    assert.ok(!mirror.innerHTML.includes(RUN) && mirror.innerHTML.includes('Kept.'), `no item quotes the draft's bytes, the edition's own quoted still: ${mirror.innerHTML}`);
+    assert.ok((WALK.mirrorItem(WALK.mirrorIndex()) || '').startsWith(t('L.item.withheld')), `the walk's item names the withheld run it is now: ${WALK.mirrorItem(WALK.mirrorIndex())}`);
+    await taken;
+    assert.deepEqual(walkAt(), ['block', K, AT], 'its document read at the new class: the walk on that span still');
+    assert.deepEqual(fake.unanswered, []);
+  } finally {
+    globalThis.document = platform;
+    REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+    REC.invalidate(K);
   }
 });
 

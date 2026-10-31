@@ -66,13 +66,25 @@
 // (`setAgain`), each standing as held until its reads land.
 // The class: the page's own session's death (`sessionDied`), a lost session
 // not regained (`sessionLost`) or one regained as another principal
-// (`sessionRegained`) drops every record (`dropClass`), keeping only which
-// documents the class it left could read (`couldRead`); a document one of
-// them that a read at the new class answers `withheld` is covered
-// (`covered`; FP-29): its place stands, drawn and named as the withheld box
-// a guest meets. Every document the model knows exists — listed, or
-// answered for — is one box (`known`). The system account's rows are held
-// and marked `system` for the drawing modules to leave out. The model knows
+// (`sessionRegained`) changes the page's class (`dropClass`; FP-29, FP-23).
+// What the class it left read as published (`publishedAt`: a trunk member,
+// its trunk listed as an edition or its metadata read published) stands: the
+// index's edition rows, the links homed in such a document, and each
+// document the view stood on that is one — M-PUMP reads it again at the new
+// class and sets it in one step — save each run of its text whose bytes its
+// held image places in a document not read as published, which is a
+// withheld run of its own from that moment, its whole text going where the
+// image does not place it all. Everything else goes at once — the drafts'
+// rows, the counts, every other record's delivered state, the links homed in
+// drafts with their place in every raw set — keeping only which documents
+// the class it left could read (`couldRead`); each draft of those the view
+// stood on is covered at once (`covered`), owed the read at the new class
+// that confirms it (`owed`): its place stands, drawn and named as the
+// withheld box a guest meets, a read refusing it `withheld` confirming the
+// cover and one that answers lifting it. Every document the model knows
+// exists — listed, or answered for — is one box (`known`). The system
+// account's rows are held and marked `system` for the drawing modules to
+// leave out. The model knows
 // nothing of pixels, zoom, selection or lenses: the links touching an
 // address are the raw set as delivered, and which of them show, and how, is
 // LK's.
@@ -80,7 +92,7 @@
 // FP-35.
 
 import { accountOf, documentOf, homeOf, cmpAddr, elementOf, memberOf, isUnder, isTrunkMember, docOneOf } from './address.js';
-import { byteOffsets } from '../util.js';
+import { byteOffsets, sliceBytes } from '../util.js';
 
 /** @typedef {import('./frames.js').Run} Run */
 /** @typedef {import('./frames.js').DocMeta} DocMeta */
@@ -318,6 +330,8 @@ const state = {
   classDrops: 0,
   /** @type {Set<string>} the documents the class the page last left could read, as the change found them (`dropClass`, `couldRead`) */
   readBefore: new Set(),
+  /** @type {Set<string>} the documents the last change of class covered at once, owed the read at the new class that confirms or lifts each cover (`dropClass`, `owed`) */
+  owed: new Set(),
   /** @type {Map<string, OwnerRow>} */
   owners: new Map(),
   /** @type {Map<string, {enrolled: Array<{fingerprint: string, anchor: boolean}>, retired: Array<{fingerprint: string}>}>} */
@@ -366,36 +380,152 @@ export const session = () => state.session;
 export function setSessionRefused(r) { state.sessionRefused = r; bump(); }
 export const sessionRefused = () => state.sessionRefused;
 /**
- * Every read held at the page's class dropped with it (THE CLASS): the
- * index (its rows, counts and state), each document's delivered state and
- * the index's row on it, the links and where their slots project, the
- * edition claims and the failed reads of them, the owners and key sets, the
- * byline causes (`dropKeyCauses`), the feed's drafts rows and a bare row's
- * mark, whose refresh the reads at the new class make whole — so no
- * frame after it draws, lists or counts what the class could read and the
- * next cannot. Every address is counted dropped once more (`dropsOf`), so no
+ * A change of the page's class (THE CLASS; see the head): what the class it
+ * left read as published stands — decided before anything goes
+ * (`publishedAt`) — and everything else goes at once, so no frame after it
+ * draws, lists or counts what that class alone could read. Standing: the
+ * index's edition rows; each document the view stood on that holds what it
+ * read and was read as published, its text as `keepPublished` keeps it, its
+ * links but those homed in a document not read as published, and where the
+ * slots of the links it keeps project into it; every link homed in a
+ * document read as published. Going: the index's other rows, its counts and
+ * its state; every other document's delivered state and, where no edition
+ * row stands on it, its row; the links homed in documents not read as
+ * published and their place in every raw set; every other projection; the
+ * members' ages, the edition claims and the failed reads of them, the owners
+ * and key sets, the byline causes (`dropKeyCauses`), the feed's drafts rows
+ * and a bare row's mark, whose refresh the reads at the new class make whole.
+ * Each document the view stood on that the class it left could read and did
+ * not read as published is covered at once, owed its read at the new class
+ * (`owed`). Every address is counted dropped once more (`dropsOf`), so no
  * read out across the change is taken. What the class could read is kept by
- * address alone (`couldRead`), for the cover (see the head). M-PUMP reads
- * the index again at the class the page reads at now, and the view asks the
- * rest.
+ * address alone (`couldRead`). M-PUMP reads the index again at the class the
+ * page reads at now, each document standing again, and each cover's extent;
+ * the view asks the rest.
+ * @param {readonly string[]} stood the documents the view stood on as the change was taken (M-PUMP's `stoodOn`)
  */
-function dropClass() {
+function dropClass(stood) {
+  const published = publishedAt();
   state.classDrops++;
   state.bare = false;
   state.readBefore = new Set([...state.index.keys(), ...[...state.docs.values()].filter((d) => !d.refused && (d.from >= 0 || d.meta || d.extent != null)).map((d) => d.addr)]);
-  state.index.clear(); state.counts.clear(); state.indexState = null;
-  for (const d of state.docs.values()) { drop(d); unlist(d); }
-  state.links.clear(); state.memberAges.clear(); state.projections.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.owners.clear(); state.keySets.clear();
+  state.owed.clear();
+  const homed = (/** @type {string} */ link) => published(homeOf(link) || link);
+  /** @type {Set<string>} */
+  const kept = new Set(stood.filter((a) => { const d = state.docs.get(a); return !!d && !d.refused && (d.from >= 0 || !!d.meta || d.extent != null) && published(a); }));
+  for (const [doc, p] of [...state.index]) if (p.kind !== 'edition') state.index.delete(doc);
+  state.counts.clear(); state.indexState = null;
+  for (const d of state.docs.values()) {
+    if (kept.has(d.addr)) {
+      keepPublished(d, published);
+      for (const a of [...d.links]) if (!homed(a)) d.links.delete(a);
+      d.rev++;
+    } else drop(d);
+    if (!state.index.has(d.addr)) unlist(d);
+  }
+  for (const addr of stood) {
+    if (kept.has(addr) || published(addr) || !state.readBefore.has(addr)) continue;
+    const d = doc(addr);
+    d.refused = 'withheld'; state.owed.add(addr); d.rev++;
+  }
+  for (const [a, l] of [...state.links]) if (!published(l.home)) state.links.delete(a);
+  for (const [addr, m] of [...state.projections]) {
+    if (kept.has(addr)) for (const k of [...m.keys()]) { if (!homed(k.split(' ')[0])) m.delete(k); }
+    if (!kept.has(addr) || !m.size) state.projections.delete(addr);
+  }
+  state.memberAges.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.owners.clear(); state.keySets.clear();
   dropKeyCauses();
   state.feed = state.feed.filter((r) => r.cls !== 'drafts');
 }
+
 /**
- * The death signal: the session goes, and every read held at its class with
- * it (`dropClass`).
- * @param {DeathReason} reason
+ * The test of what the page's class as it stands reads as published (see the
+ * head), its index and its metadata taken now, so a change of class decides
+ * it before anything goes: a trunk member — a version chain is a published
+ * document's alone — or a document whose trunk the index lists as an edition
+ * or whose trunk's metadata reads published.
+ * @returns {(addr: string) => boolean}
  */
-export function sessionDied(reason) {
-  dropClass();
+function publishedAt() {
+  const editions = new Set([...state.index.values()].filter((p) => p.kind === 'edition').map((p) => p.doc));
+  const metaPublished = new Set([...state.docs.values()].filter((d) => !!d.meta && d.meta.published).map((d) => d.addr));
+  return (addr) => { const trunk = documentOf(addr) || addr; return isTrunkMember(addr) || editions.has(trunk) || metaPublished.has(trunk); };
+}
+
+/**
+ * A document read as published, its text as a change of class keeps it (see
+ * the head): each run whose bytes its held image places in a document that
+ * is neither its own trunk nor read as published (`published`) — a draft's
+ * bytes it windows — a withheld run at those positions naming that document
+ * its origin, as a delivery at a class that may not read them names it,
+ * adjacent ones of one origin one run, the blocks derived again; its image
+ * and its origins standing whole, as the board places a withheld run's
+ * permanent addresses at any class, so a passage carried through them keeps
+ * its place. Where its held image does not place every position of a run it
+ * holds, none of its text stands: what the bytes there are cannot be told.
+ * Its runs and blocks are given new arrays, as a delivery gives them.
+ * @param {Doc} d
+ * @param {(addr: string) => boolean} published
+ */
+function keepPublished(d, published) {
+  if (d.from < 0) return;
+  const own = documentOf(d.addr) || d.addr;
+  const readable = (/** @type {string} */ i) => { const o = documentOf(i) || i; return o === own || published(o); };
+  /** @type {Run[]} */
+  const out = [];
+  for (const r of d.runs) {
+    if (r.kind === 'withheld') { out.push(r); continue; }
+    const over = tiles(d.image, r.pos, r.width);
+    if (!over) { d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.readAt = null; d.image = []; d.origins = []; d.imageFor = null; return; }
+    if (over.every((x) => readable(x.prefix))) { out.push(r); continue; }
+    if (r.kind !== 'content') { const x = /** @type {{prefix: string}} */ (over.find((y) => !readable(y.prefix))); out.push(withheldRun(r.pos, r.width, x.prefix)); continue; }
+    for (const x of over) out.push(readable(x.prefix) ? { ...r, pos: x.pos, width: x.width, text: sliceBytes(r.text, x.pos - r.pos, x.pos - r.pos + x.width) } : withheldRun(x.pos, x.width, x.prefix));
+  }
+  /** @type {Run[]} */
+  const runs = [];
+  for (const r of out) {
+    const last = runs[runs.length - 1];
+    if (last && last.pos + last.width === r.pos && last.kind === r.kind && (r.kind === 'content' || (r.kind === 'withheld' && last.origin === r.origin))) runs[runs.length - 1] = { ...last, width: last.width + r.width, text: last.text + r.text };
+    else runs.push(r);
+  }
+  d.runs = runs; d.blocks = deriveBlocks(runs);
+}
+
+/** a withheld run at positions whose bytes lie in the I-space `prefix` names: its origin that I-space's document, as a delivery names it */
+const withheldRun = (/** @type {number} */ pos, /** @type {number} */ width, /** @type {string} */ prefix) => /** @type {Run} */ ({ pos, width, kind: 'withheld', text: '', ref: null, origin: documentOf(prefix) || prefix });
+
+/**
+ * The runs of an image placing each position of a stretch, cut to it, in
+ * the text's order: each one's I-space and the positions it places; null
+ * where the image leaves a position of it unplaced.
+ * @param {ImageRun[]} image
+ * @param {number} pos
+ * @param {number} width
+ * @returns {Array<{pos: number, width: number, prefix: string}> | null}
+ */
+function tiles(image, pos, width) {
+  const end = pos + width;
+  /** @type {Array<{pos: number, width: number, prefix: string}>} */
+  const out = [];
+  let at = pos;
+  for (const r of image) {
+    if (r.pos + r.width <= at) continue;
+    if (r.pos > at || at >= end) break;
+    const hi = Math.min(end, r.pos + r.width);
+    out.push({ pos: at, width: hi - at, prefix: r.prefix });
+    at = hi;
+  }
+  return at >= end ? out : null;
+}
+
+/**
+ * The death signal: the session goes, and the page's class changes with it
+ * (`dropClass`).
+ * @param {DeathReason} reason
+ * @param {readonly string[]} [stood] the documents the view stood on as the death was taken (M-PUMP's `stoodOn`): none where none is handed in
+ */
+export function sessionDied(reason, stood = []) {
+  dropClass(stood);
   state.sessionDied = reason; state.session = null; state.reconnect = null;
   bump();
 }
@@ -411,31 +541,31 @@ export function setReconnecting() {
   state.reconnect = { as: state.session.account, refused: false }; bump();
 }
 /**
- * The re-acquire of a session a restart lost, refused (FP-28): every read
- * held at the session's class goes with it (`dropClass`), as at a death —
- * but no death is recorded, for the shell named none — the refusal
- * `session()` met kept as boot keeps it, and the account the page could not
- * reconnect as kept.
+ * The re-acquire of a session a restart lost, refused (FP-28): the page's
+ * class changes with it (`dropClass`), as at a death — but no death is
+ * recorded, for the shell named none — the refusal `session()` met kept as
+ * boot keeps it, and the account the page could not reconnect as kept.
  * @param {{kind: string, name: string}} r the refusal the re-acquire met
+ * @param {readonly string[]} [stood] the documents the view stood on as the loss was taken (M-PUMP's `stoodOn`): none where none is handed in
  */
-export function sessionLost(r) {
+export function sessionLost(r, stood = []) {
   const as = state.session ? state.session.account : null;
-  dropClass();
+  dropClass(stood);
   state.session = null; state.sessionRefused = r; state.reconnect = { as, refused: true };
   bump();
 }
 /**
  * A session the re-acquire opened in the place of one a restart lost
- * (FP-28), taken as `setSession` takes it — every read held at the lost
- * session's class dropped first (`dropClass`) where the new one acts as
- * another principal, so nothing read at one principal's class is held under
- * another's.
+ * (FP-28), taken as `setSession` takes it — the page's class changed first
+ * (`dropClass`) where the new one acts as another principal, so nothing one
+ * principal's class alone could read is held under another's.
  * @param {SessionOpened} s
- * @returns {boolean} the principal another: every read dropped
+ * @param {readonly string[]} [stood] the documents the view stood on as the session was regained (M-PUMP's `stoodOn`): none where none is handed in
+ * @returns {boolean} the principal another: the class changed
  */
-export function sessionRegained(s) {
+export function sessionRegained(s, stood = []) {
   const other = !!state.session && state.session.principal !== s.principal;
-  if (other) dropClass();
+  if (other) dropClass(stood);
   setSession(s);
   return other;
 }
@@ -630,20 +760,24 @@ export function known() {
 /** could the class the page last left read a document — its record holding its text, its metadata or its extent, or its index listing it, as the change found them (see the head)? None before the page's class first changes */
 export const couldRead = (/** @type {string} */ addr) => state.readBefore.has(addr);
 /**
- * Is a document COVERED (see the head; FP-29): a read at the page's class
- * answered `withheld` of a document the class it last left could read
- * (`couldRead`) — its place kept, its material withheld from the reader now.
+ * Is a document COVERED (see the head; FP-29): one the class the page last
+ * left could read (`couldRead`) held `withheld` — covered by the change at
+ * once, its read at the new class owed (`owed`), or confirmed by that read's
+ * answer — its place kept, its material withheld from the reader now.
  * @param {string} addr
  * @returns {boolean}
  */
 export const covered = (addr) => { const d = state.docs.get(addr); return !!d && d.refused === 'withheld' && state.readBefore.has(addr); };
+/** is a cover the last change of class made still owed its read at the page's class (see the head): no read of the document has answered or refused since */
+export const owed = (/** @type {string} */ addr) => state.owed.has(addr);
 /** every document covered now (`covered`), in address order */
 export const coveredDocs = () => [...state.docs.keys()].filter(covered).sort(cmpAddr);
 
-/** the span set: the content extent (subspace 1) and the link positions (subspace 2) */
+/** the span set: the content extent (subspace 1) and the link positions (subspace 2) — an answer at the page's class, so a refusal of the document held before it, a cover among them, is lifted */
 export function takeSpanSet(/** @type {string} */ addr, /** @type {Array<{subspace: number, ordinal: number, positions: number}>} */ set) {
   const d = doc(addr);
   spanSetInto(d, set);
+  d.refused = null; state.owed.delete(addr);
   d.rev++; bump();
 }
 
@@ -668,9 +802,9 @@ function metaInto(/** @type {Doc} */ d, /** @type {DocMeta} */ meta) {
   state.failedReads.delete(d.addr);
 }
 
-/** a read of this document refused: `doc_not_registered` or `withheld` — an answer, a failed read of it before answered; where it is an edition claim's home, each document windowing the claim's origin is made again */
+/** a read of this document refused: `doc_not_registered` or `withheld` — an answer, a failed read of it before answered, a cover owed it confirmed (`owed`); where it is an edition claim's home, each document windowing the claim's origin is made again */
 export function takeRefused(/** @type {string} */ addr, /** @type {'unregistered' | 'withheld'} */ what) {
-  const d = doc(addr); d.refused = what; state.failedReads.delete(addr); d.rev++; reclause(claiming((c) => homeOf(c) === addr)); bump();
+  const d = doc(addr); d.refused = what; state.failedReads.delete(addr); state.owed.delete(addr); d.rev++; reclause(claiming((c) => homeOf(c) === addr)); bump();
 }
 
 /**
@@ -708,7 +842,7 @@ function deliverInto(/** @type {Doc} */ d, /** @type {Run[]} */ runs, /** @type 
   d.to = merged[merged.length - 1].pos + merged[merged.length - 1].width;
   d.readAt = asOf;
   d.blocks = deriveBlocks(merged);
-  d.refused = null;
+  d.refused = null; state.owed.delete(d.addr);
 }
 
 /** @param {Run} a @param {Run} b */
@@ -1041,8 +1175,8 @@ export function invalidate(/** @type {string} */ addr) {
  * `invalidate`, its record held or not, by a feed row naming a document the
  * view shows, which drops nothing of it (`applyFeedUpdate`'s `keep`), by a
  * refresh's drop and its setting again (`takeRefresh`, `setAgain`), by an
- * arrival taking a trunk's text (`takeAsMember`), and by every drop of the
- * class (`dropClass`), which drops every record. It never falls, so a read
+ * arrival taking a trunk's text (`takeAsMember`), and by every change of the
+ * class (`dropClass`), which counts every address. It never falls, so a read
  * that finds it moved between going out and landing was learned of what the
  * page does not hold, or holds as a row left it to be read again.
  * @param {string} addr
@@ -1053,10 +1187,10 @@ export const dropsOf = (addr) => (state.drops.get(addr) ?? 0) + state.classDrops
 /** count one more drop of an address (`dropsOf`) */
 const counted = (/** @type {string} */ addr) => { state.drops.set(addr, (state.drops.get(addr) ?? 0) + 1); };
 
-/** a document's delivered state dropped — everything its reads brought; the record stands, its runs and blocks given new empty ones as a delivery gives new ones */
+/** a document's delivered state dropped — everything its reads brought, a cover among it; the record stands, its runs and blocks given new empty ones as a delivery gives new ones */
 function drop(/** @type {Doc} */ d) {
   d.runs = []; d.blocks = []; d.from = -1; d.to = -1; d.readAt = null; d.extent = null; d.whole = null; d.linkPositions = null; d.meta = null; d.image = []; d.origins = []; d.imageFor = null;
-  d.links.clear(); d.linksRead = false; d.members = null; d.ended = false; d.refused = null; d.rev++;
+  d.links.clear(); d.linksRead = false; d.members = null; d.ended = false; d.refused = null; state.owed.delete(d.addr); d.rev++;
 }
 
 // ---- links ---------------------------------------------------------------------
@@ -1164,7 +1298,7 @@ export const editionClaimsOf = (/** @type {string} */ origin) => state.editionCl
  * (`doc_metadata`) — a claim's home's — refused for a reason that says
  * nothing of what it reads, or not answered. Held until a read of it answers
  * (`takeLink`, `takeMetadata`, `takeRefused`), what the page held of it is
- * dropped (`invalidate`), or the class drops every read; each held document
+ * dropped (`invalidate`), or the class changes (`dropClass`); each held document
  * windowing the origin of a claim it decides is made again.
  * @param {string} addr the link, or the document
  */
@@ -1504,7 +1638,7 @@ export function takeAsMember(trunk, member) {
   if (!t || t.from < 0 || (held && held.from >= 0)) return false;
   const m = doc(member);
   m.runs = t.runs; m.blocks = t.blocks; m.from = t.from; m.to = t.to; m.readAt = t.readAt;
-  m.image = t.image; m.origins = t.origins; m.imageFor = t.imageFor; m.refused = null;
+  m.image = t.image; m.origins = t.origins; m.imageFor = t.imageFor; m.refused = null; state.owed.delete(member);
   if (m.extent == null) { m.extent = t.extent; m.whole = t.whole; m.linkPositions = t.linkPositions; }
   t.runs = []; t.blocks = []; t.from = -1; t.to = -1; t.readAt = null; t.image = []; t.origins = []; t.imageFor = null;
   counted(trunk);
@@ -1622,7 +1756,7 @@ export function setAgain(addr, fresh) {
     if (fresh.image) imageInto(d, fresh.image.from, fresh.image.runs);
     if (fresh.links) { d.links = new Set(fresh.links); d.linksRead = true; }
     if (fresh.members) { d.members = fresh.members.n; d.ended = fresh.members.ended; }
-    if (fresh.spans || fresh.meta || fresh.text) d.refused = null;
+    if (fresh.spans || fresh.meta || fresh.text) { d.refused = null; state.owed.delete(addr); }
   }
   if (fresh.refused || fresh.meta) reclause(claiming((c) => homeOf(c) === addr));
   d.rev++;
@@ -1636,7 +1770,7 @@ export function setAgain(addr, fresh) {
 export function _reset() {
   state.board = null; state.noBoard = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
   state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
-  state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
+  state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.owed.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.rev = 0;
 }
 

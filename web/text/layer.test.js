@@ -612,6 +612,27 @@ test('read with the view\'s centre on the empty line typed below a line, a docum
   assert.ok(together(screen(pos + SHIFT), was), `the image arrived: the same words' line where it stood, never the line the view's centre fell on — ${JSON.stringify(was)} → ${JSON.stringify(screen(pos + SHIFT))}`);
 }, 1440, 900));
 
+test('a change of the page\'s class keeps the document the view reads standing, set again from what the change kept: the line under the view\'s centre — in a run of a draft\'s bytes, a withheld run now — keeps its place, and nothing is told vanished, for the passage is covered, never gone (issue #274)', () => onLayer(() => {
+  /** @type {string[]} */
+  const told = [];
+  LAYER.readers({ vanished: (addr) => { told.push(addr); } });
+  // D's later half a run of the draft's bytes, its image placing them in the draft's I-space
+  const DRAFT = '1.0.1.0.1003', CUT = Math.floor(EXTENT / 2);
+  REC.takeDelivery(D, [{ pos: 1, width: EXTENT, kind: 'content', text: TEXT, ref: null, origin: null }]);
+  REC.takeImage(D, 1, [{ iStart: D + '.0.1.1', width: CUT }, { iStart: DRAFT + '.0.1.1', width: EXTENT - CUT }]);
+  const box = docBox(D), f0 = LAYER.foldOf(REC.doc(D)), c = f0.columns[f0.columns.length - 2];
+  CAM.set({ x: box.x + c.x + c.w / 2, y: box.y + c.y + c.h * 0.4, scale: 12 / f0.fs });
+  LAYER.frame();
+  const pos = /** @type {number} */ (LAYER.posAt(D, CAM.cam.x, CAM.cam.y));
+  assert.ok(LAYER.isMounted(D) && pos > CUT, `its article stands at em 12, the view's centre on a line of the draft's bytes: ${pos}`);
+  const screen = () => { const p = placeOf(LAYER.foldOf(REC.doc(D)), pos); return { x: CAM.sx(box.x + p.x), y: CAM.sy(box.y + p.y) }; };
+  const was = screen();
+  REC.sessionDied({ arm: 'closed' }, [D]);
+  LAYER.frame();
+  assert.deepEqual([LAYER.isMounted(D), REC.textBetween(D, CUT + 1, EXTENT + 1), told], [true, '', []], 'set again from what the change kept: the draft\'s run withheld, nothing told vanished');
+  assert.ok(together(screen(), was), `the line read where it stood: ${JSON.stringify(was)} → ${JSON.stringify(screen())}`);
+}, 1440, 900));
+
 test('a text set again holding none of the line being read, its image covering it whole, keeps that line\'s place by position and tells the reader once (FP-21\'s landing rule); one that holds its bytes elsewhere, or whose image covers less of it, tells nothing (issue #285)', () => onLayer(() => {
   /** @type {Array<[string, number, number]>} each telling: the document, the position whose line keeps the place, the passage's spans */
   const told = [];

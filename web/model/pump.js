@@ -112,20 +112,22 @@
 // is taken where it names the page's own session: the shell's own restart is
 // no death — the page goes on under the session the reason names, or, where
 // it re-opened none, the session is lost — and every other end is M-REC's
-// death, which drops every read at the class (`classChanged`).
+// death, which changes the page's class (`classChanged`).
 // The acquire (FP-28): the page's session is opened by one routine
 // (`acquireSession`), at boot and for a session lost — one attempt per lost
 // session, a loss told while it is out joining it, made once the board
 // answers, none after a refused one. While it is out every read waits; past
 // RECONNECTING_MS the line reads that the page is reconnecting. An answer
 // after the attempt settled is stale, a session it opened closed. Regained
-// as another principal, or refused, what was read is dropped as at a death.
-// A change of class (`classChanged`; FP-29) takes the documents in view and
-// those the view's state names before anything is dropped (`stoodOn`), reads
-// the index again, asks each one's extent again at the new class, in view
-// first and nearest the centre (`reread`), and tells every reader of the
-// drop; a document the new class may not read is held `withheld`, M-REC's
-// cover.
+// as another principal, or refused, the class changes as at a death.
+// A change of class (`classChanged`; FP-29, FP-23) takes the documents in
+// view and those the view's state names before anything goes (`stoodOn`),
+// hands them to M-REC, which keeps those read as published and covers the
+// drafts among them at once, reads the index again, reads each document it
+// kept again at the new class to be set in one step (`readAgain`), asks each
+// other one's extent again — a cover's until a read confirms or lifts it —
+// in view first and nearest the centre (`reread`), and tells every reader of
+// the change.
 // Rules: FP-1, FP-2, FP-6, FP-9, FP-11, FP-21, FP-22, FP-23, FP-28, FP-29,
 // FP-34, FP-35.
 
@@ -277,7 +279,7 @@ let armed = null;
 let runFrom = 0;
 /** a refresh is out (`refresh`) */
 let refreshing = false;
-/** the changes of the page's class taken (`classChanged`): a refresh begun under another ends */
+/** the changes of the page's class taken (`classChanged`), and the pump's starts (`start`): a refresh or a read again begun under another ends */
 let classes = 0;
 
 /**
@@ -296,9 +298,9 @@ let searching = 0;
 const waking = new Set();
 
 /**
- * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, a refresh's, or every record at a change of the page's class — its session's death among them (`classChanged`)
+ * @typedef {Object} Dropped — what one of the board's events dropped of what the page held, told after the drop, so a reader of it reads fresh: a feed row's addresses, a refresh's, or what a change of the page's class left — its session's death among them (`classChanged`)
  * @property {FeedUpdate | null} row the feed row, its `op` among it — `null` where the journal could not name it (wire.md §The change feed); null for a refresh, a change of class, and a clause decided anew
- * @property {string[] | null} addrs the addresses the row touched, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`), every one dropped but those the view keeps, which are read again (`readAgain`) — or those a refresh dropped or set again; or, its `row` null, the documents windowing an origin whose clause may be decided anew — its edition claims set again or dropped, a claim's home dropped by a row or read again; null for a change of class, which drops every record
+ * @property {string[] | null} addrs the addresses the row touched, each once — the documents it names, the trunk of a member among them, the home of the link it names with the home's trunk (M-REC's `applyFeedUpdate`), every one dropped but those the view keeps, which are read again (`readAgain`) — or those a refresh dropped or set again; or, its `row` null, the documents windowing an origin whose clause may be decided anew — its edition claims set again or dropped, a claim's home dropped by a row or read again; null for a change of class, which reaches every record: each one M-REC kept read again, every other dropped or covered
  * @property {Map<string, Chain>} [chains] a refresh's alone (`refresh`): the chain of each edition it counted, by its trunk — what a reading scene's pane at a bare address is pinned by
  */
 
@@ -309,7 +311,8 @@ let subscribed = false;
  * Start the pump: subscribe the model to the port's events, every board
  * event through `onBoard`, and to the sessions the calls name as they cross
  * the port (B-PORT's `onSession`) — once, however often it starts, so each
- * event is taken once, under the readers the latest start handed in.
+ * event is taken once, under the readers the latest start handed in. A start
+ * ends every refresh and read again a start before it left out (`classes`).
  * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `onOpen` told once a board the list read again found is open (`retryBoards`)
  */
 export function start(opts) {
@@ -320,6 +323,7 @@ export function start(opts) {
   stands = opts.stands || (() => []);
   onOpen = opts.onOpen || (() => {});
   standing = new Set();
+  classes++; again.clear(); claimsOut.clear();
   started = true;
   if (subscribed) return;
   subscribed = true;
@@ -415,7 +419,8 @@ function decidedAnew(origins) {
 }
 
 /**
- * A document the view keeps that a feed row named, read again (FP-23):
+ * A document the view keeps that a feed row named, or one a change of the
+ * page's class kept (`classChanged`), read again (FP-23):
  * what the page holds of it stands as held while its reads are out — the view
  * asks nothing of it meanwhile (`pump`) — and is set in one step as they land
  * (M-REC's `setAgain`), the view's answers for it then forgotten, so it asks
@@ -554,9 +559,9 @@ function ofFace(ev) {
  * (client.md §4b.2): where its reason names the session the shell
  * re-opened, the page goes on under that reference, the principal and the
  * account the same, with no face; where it names none, the session is lost
- * (`lose`). Every other end is M-REC's death (`sessionDied`), its class's
- * reads dropped (`classChanged`). Either settles an acquire out for the
- * session, its answer then stale.
+ * (`lose`). Every other end is M-REC's death (`sessionDied`), the page's
+ * class changing with it (`classChanged`). Either settles an acquire out for
+ * the session, its answer then stale.
  * @param {string} ended the session the end names
  * @param {DeathReason} reason
  */
@@ -567,7 +572,7 @@ function takeEnd(ended, reason) {
   if (reason.arm === 'restart' && reopened == null) { lose(ended); return; }
   if (attempt && attempt.lost === ended) attempt.settle();
   if (reopened != null) REC.setSession({ ...s, session: reopened });
-  else { const stood = stoodOn(); REC.sessionDied(reason); classChanged(stood); }
+  else { const stood = stoodOn(); REC.sessionDied(reason, stood); classChanged(stood); }
 }
 
 /**
@@ -632,11 +637,11 @@ const answers = () => { const d = REC.daemon(); return d !== 'stopped' && d !== 
 /**
  * An attempt's one call, `session(board)`, and its answer taken: at boot,
  * the session opened or the refusal met; for a session lost,
- * the session taken in its place (M-REC's `sessionRegained`) — what was read
- * dropped and read again where it acts as another principal — or the refusal
- * taken (M-REC's `sessionLost`), what was read dropped and the index read
- * again as a guest; then the attempt settled. An answer that lands after the
- * attempt settled is stale and taken nowhere, a session it opened closed.
+ * the session taken in its place (M-REC's `sessionRegained`) — the class
+ * changed where it acts as another principal — or the refusal taken (M-REC's
+ * `sessionLost`), the class changed and the index read again as a guest;
+ * then the attempt settled. An answer that lands after the attempt settled
+ * is stale and taken nowhere, a session it opened closed.
  * @param {Attempt} a
  */
 async function make(a) {
@@ -647,11 +652,11 @@ async function make(a) {
   if (out) {
     if ('result' in out) {
       if (a.lost == null) REC.setSession(out.result);
-      else { const stood = stoodOn(); if (REC.sessionRegained(out.result)) classChanged(stood); }
+      else { const stood = stoodOn(); if (REC.sessionRegained(out.result, stood)) classChanged(stood); }
     } else {
       const r = { kind: out.refused.kind, name: out.refused.name };
       if (a.lost == null) REC.setSessionRefused(r);
-      else { const stood = stoodOn(); REC.sessionLost(r); classChanged(stood); }
+      else { const stood = stoodOn(); REC.sessionLost(r, stood); classChanged(stood); }
     }
   }
   a.settle();
@@ -659,21 +664,24 @@ async function make(a) {
 }
 
 /**
- * What follows every record M-REC held being dropped at a change of the
- * page's class — a death, a session lost and not regained, or one regained
- * as another principal: every need answered or held asked again, every read
- * of the board's state out left holding no feed row and no `index` state
- * taken before the change — so a listing out across it, asked again at the
- * new class (`atClass`), lays none of the class it left over the new one's —
- * the index read again at the class the page reads at now (`readIndex`), the
- * places the view stood on asked again at that class (`reread`), and the drop
- * of every record told to `onDrop`, so what a reader holds apart from the
- * model — a reading scene's pane — is read again at that class too; a refresh
- * armed or out, every read again of a document a feed row named
- * (`readAgain`) or of the edition claims a row changed (`claimsAgain`), and
- * every search of what a row changed of them (`searchClaims`), ended, the
- * reads at the new class making it whole.
- * @param {string[]} stood the places the view stood on as the change was taken, before anything was dropped (`stoodOn`)
+ * What follows M-REC's change of the page's class — a death, a session lost
+ * and not regained, or one regained as another principal — which kept what
+ * the class it left read as published and covered the drafts the view stood
+ * on (M-REC's `dropClass`): every need answered or held asked again, every
+ * read of the board's state out left holding no feed row and no `index`
+ * state taken before the change — so a listing out across it, asked again at
+ * the new class (`atClass`), lays none of the class it left over the new
+ * one's — the index read again at the class the page reads at now
+ * (`readIndex`), each document the view stood on that M-REC kept read again
+ * at that class and set in one step as its reads land (`readAgain`), the
+ * other places it stood on asked again at that class (`reread`), and the
+ * change told to `onDrop`, so what a reader holds apart from the model — a
+ * reading scene's pane — is set again from what the change left and read
+ * again at that class too; a refresh armed or out, every read again of a
+ * document a feed row named (`readAgain`) or of the edition claims a row
+ * changed (`claimsAgain`), and every search of what a row changed of them
+ * (`searchClaims`), ended, the reads at the new class making it whole.
+ * @param {string[]} stood the places the view stood on as the change was taken, before anything went (`stoodOn`)
  */
 function classChanged(stood) {
   classes++;
@@ -683,14 +691,21 @@ function classChanged(stood) {
   for (const m of whileOut) { m.rows = []; m.state = false; }
   standing = new Set(stood);
   void readIndex();
+  for (const addr of stood) if (keptAtChange(addr)) readAgain(addr);
   onDrop({ row: null, addrs: null });
+}
+
+/** did a change of the page's class keep a document (M-REC's `dropClass`): it holds what it was read for, and no refusal — every other document it dropped or covered */
+function keptAtChange(/** @type {string} */ addr) {
+  const d = REC.has(addr) ? REC.doc(addr) : null;
+  return !!d && !d.refused && (d.from >= 0 || !!d.meta || d.extent != null);
 }
 
 /**
  * The places the view stands on: the documents in view —
  * nearer than far scale, where the view reads — and the documents the view's
  * state names beside them (`stands`), each once. Taken as a change of the
- * page's class is taken, before anything is dropped.
+ * page's class is taken, before anything goes.
  * @returns {string[]}
  */
 function stoodOn() {
@@ -701,11 +716,10 @@ function stoodOn() {
  * The places the view stood on as the page's class last changed, asked again
  * at the page's current class: each one's extent
  * (`retrieve_doc_v_span_set`), in view first and nearest the view's centre,
- * a refusal held of the document as any view's read's is (`refuseDoc`). A
- * place answered for leaves the set: its extent read, a refusal held, a read
- * answered and not asked again, or a listing by the index the page reads at
- * now, which that class reads as it reads every place it lists; one the board
- * did not answer stands held until its pause ends.
+ * a refusal held of the document as any view's read's is (`refuseDoc`), an
+ * answer lifting a cover the change made (M-REC's `takeSpanSet`). A place
+ * answered for leaves the set (`pending`); one the board did not answer
+ * stands held until its pause ends.
  * @returns {number} the needs still missing
  */
 function reread() {
@@ -724,10 +738,20 @@ function reread() {
   return missing;
 }
 
-/** is a place the view stood on still to be answered for at the page's class (`reread`): no extent read, no refusal held, no read answered, and no listing by the index the page reads at now */
-function pending(/** @type {string} */ addr) {
+/**
+ * Is a place the view stood on still to be answered for at the page's class
+ * (`reread`): no read of its extent answered or refused since the change; and
+ * a cover the change made, owed that read (M-REC's `owed`), else no extent
+ * read, no refusal held and no listing by the index the page reads at now,
+ * which that class reads as it reads every place it lists.
+ * @param {string} addr
+ * @returns {boolean}
+ */
+function pending(addr) {
+  if (asked.has('s:' + addr)) return false;
+  if (REC.owed(addr)) return true;
   const d = REC.has(addr) ? REC.doc(addr) : null;
-  return !REC.place(addr) && !asked.has('s:' + addr) && (!d || (d.extent == null && !d.refused));
+  return !REC.place(addr) && (!d || (d.extent == null && !d.refused));
 }
 
 /**

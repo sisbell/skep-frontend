@@ -7,7 +7,9 @@
 // members' ages kept as its probe reads them — and what
 // a read the board did not answer, a drop that overtook a read, a size
 // refusal or a `scan_busy` does to each; the acquire, a session's end and the
-// page's own death, every read asked again at the page's class; a listing,
+// page's own death — what it kept read again and set in one step, a draft's
+// cover confirmed or lifted by its read — every read asked again at the
+// page's class; a listing,
 // the health and the daemon laid under the events that overtook them; the
 // board opened in the boot's order and read again at "try again"; the one
 // refresh a run of bare rows earns; a row naming a document the view
@@ -85,9 +87,9 @@ test('the model after a scripted cold open and a whole read, over the fake port'
   assert.equal(REC.doc(D).from, -1);
   fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
   assert.equal(REC.session(), null);
-  assert.equal(REC.snapshot().index.length, 0, 'the death drops the index read at the session\'s class');
+  assert.deepEqual([REC.snapshot().index.map((p) => p[0]), REC.indexState()], [[D, '1.0.1.0.127'], null], 'the death keeps the editions the session\'s index listed, read as published, its state gone');
   await new Promise((r) => setTimeout(r, 0));
-  assert.equal(REC.snapshot().index.length, 2, 'the listing read again in the guest form names the board\'s two editions');
+  assert.deepEqual([REC.snapshot().index.length, REC.indexState()?.arm], [2, 'at_the_floor'], 'the listing read again in the guest form names the board\'s two editions, its state the guest\'s');
 });
 
 test('a session-died ends the page\'s own session alone: a guest, or a page signed in under another session, takes no death', () => {
@@ -384,7 +386,7 @@ test('a read out under the session when the page takes its death is asked once m
   assert.deepEqual('answer' in out ? F.decodeDelivery(out.answer, 1).map((r) => r.kind) : out, ['content', 'withheld'], 'the guest\'s answer, the run withheld — never the session\'s bytes');
 });
 
-test('the page\'s own death drops what it read at the session\'s class and reads the index again in the guest form, the view asking nothing until it answers and then asking again as a guest — the edition, and the draft the view stood on, which the guest may not read: held `withheld`, a box the model knows, covered at its own place (issue #177)', async () => {
+test('the page\'s own death keeps what the session read as published and covers the draft the view stood on at once — the edition\'s row and extent standing while they are read again in the guest form and set in one step, the draft\'s text, metadata and row and the link homed in it gone at once, the draft the withheld box a guest meets, its read owed — and reads the index again in the guest form, the draft\'s cover confirmed once the guest\'s read of it answers it withheld (issues #177, #274)', async () => {
   const DR = '1.0.1.0.5', L = DR + '.0.2.1';
   const edition = { doc: D, kind: 'edition', label: 'd', standing: 'public' };
   /** @type {Record<string, unknown>} */
@@ -392,6 +394,8 @@ test('the page\'s own death drops what it read at the session\'s class and reads
     // the listing keys on the board alone, in either form: the session's is set by hand below, so this one is the guest's
     [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [edition], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } } },
     [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })]: script[FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) })],
+    [FAKE.keyOf('op', { frame: F.findLinksV(D, 1, 30) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(D) })]: script[FAKE.keyOf('op', { frame: F.docMetadata(D) })],
   };
   // the draft's extent under the session; withheld from the guest
   inTurn(s, F.retrieveDocVSpanSet(DR), { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.12' }] } }, { refused: { kind: 'refused', name: 'withheld', code: 'withheld' } });
@@ -414,21 +418,50 @@ test('the page\'s own death drops what it read at the session\'s class and reads
   REC.takeLinks(D, [L]);
   REC.takeLink({ addr: L, from: [], to: [], type: '1.1.0.1.0.1.0.3.13' });
   const release = fake.hold('places', { board: 'b-1' });
+  const drafted = FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) }), editionRead = FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(D) });
+  const asks = (/** @type {string} */ k) => fake.asked.filter((x) => x === k).length, before = { draft: asks(drafted), edition: asks(editionRead), ops: ops.length };
   fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
   const dr = REC.doc(DR);
-  assert.deepEqual([REC.places(), REC.countOf('1.0.1').documents, REC.indexState()], [[], 0, null], 'at once: the session\'s index, its counts and its state dropped');
-  assert.deepEqual([dr.from, dr.runs, dr.meta, dr.extent, dr.kind, dr.label, dr.standing], [-1, [], null, null, 'unknown', null, null], 'the draft\'s text, metadata, extent and row dropped');
-  assert.deepEqual([REC.doc(D).extent, [...REC.doc(D).links], REC.link(L)], [null, [], undefined], 'the edition\'s extent and the draft-homed link dropped');
-  assert.deepEqual([listings, PUMP.visibleDocs(), PUMP.settled(), PUMP.rereading()], [['guest'], [], false, true], 'the index asked again in the guest form; while it is out nothing is read for the view, the page is not settled and the change\'s reads are out');
+  assert.deepEqual([REC.places().map((p) => p.doc), REC.countOf('1.0.1'), REC.indexState()], [[D], { documents: 1, exact: false }, null], 'at once: the edition\'s row stands, read as published, the count it gives a lower bound; the draft\'s row, the counts and the state gone');
+  assert.deepEqual([dr.from, dr.runs, dr.meta, dr.extent, dr.kind, dr.label, dr.standing], [-1, [], null, null, 'unknown', null, null], 'the draft\'s text, metadata, extent and row gone');
+  assert.deepEqual([dr.refused, REC.covered(DR), REC.owed(DR), REC.known()], ['withheld', true, true, [D, DR]], 'the draft the view stood on covered at once, its read at the guest\'s class owed: a box the model knows, existence and owner');
+  assert.deepEqual([REC.doc(D).extent, [...REC.doc(D).links], REC.link(L)], [30, [], undefined], 'the edition\'s extent stands; the link homed in the draft gone from its raw set and from the model');
+  assert.deepEqual([listings, PUMP.settled(), PUMP.rereading()], [['guest'], false, true], 'the index asked again in the guest form; while it is out the page is not settled and the change\'s reads are out');
   release();
-  await new Promise((r) => setTimeout(r, 0));
+  for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
   assert.deepEqual(REC.places().map((p) => p.doc), [D], 'the guest\'s index: the edition alone');
   assert.deepEqual([REC.countOf('1.0.1').documents, REC.countsExact()], [1, true], 'its count and its state the guest\'s listing\'s');
-  assert.deepEqual([PUMP.visibleDocs().map((d) => d.addr), PUMP.rereading()], [[D], true], 'the draft unlisted and holding nothing, its place still to be read again');
+  assert.deepEqual([asks(editionRead) - before.edition, REC.doc(D).extent, PUMP.rereading()], [1, 30, true], 'the edition read again in the guest form and set from that read; the draft\'s cover still owed its read');
   PUMP.pump();
-  await new Promise((r) => setTimeout(r, 0));
-  assert.deepEqual([ops, REC.doc(D).extent, listings], [['s-1', 's-1', 'guest', 'guest'], 30, ['guest']], 'each place the view stood on — the edition and the draft — asked again in the guest form; the index read once');
-  assert.deepEqual([REC.doc(DR).refused, REC.covered(DR), REC.covered(D), REC.known(), PUMP.rereading()], ['withheld', true, false, [D, DR], false], 'the draft withheld from the guest: covered, a box the model knows — the edition the guest reads none — and the change\'s reads answered');
+  for (let i = 0; i < 5; i++) await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual([asks(drafted) - before.draft, listings], [1, ['guest']], 'the draft the view stood on asked again in the guest form; the index read once');
+  assert.ok(ops.slice(before.ops).every((x) => x === 'guest'), `every read after the death in the guest form: ${ops}`);
+  assert.deepEqual([REC.doc(DR).refused, REC.covered(DR), REC.owed(DR), REC.covered(D), REC.known(), PUMP.rereading()], ['withheld', true, false, false, [D, DR], false], 'the draft withheld from the guest: its cover confirmed, a box the model knows — the edition the guest reads none — and the change\'s reads answered');
+});
+
+test('a cover the change of class made lifts where the read at the new class returns its material: a draft the view stood on that the new class may read holds its extent again, no longer withheld, and the change\'s reads answered (issue #274\'s design decision: "A cover lifts if the new read returns its material")', async () => {
+  const DR = '1.0.1.0.5';
+  /** @type {Record<string, unknown>} */
+  const s = {
+    [FAKE.keyOf('places', { board: 'b-1' })]: { result: { docs: [{ doc: D, kind: 'edition', label: 'd', standing: 'public' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'complete' } } },
+    // the draft's extent, under the session and at the guest's class alike: a draft its owner grants every reader
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(DR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.12' }] } },
+  };
+  const fake = FAKE.create(s);
+  PORT.boot(fake);
+  PUMP.start({ onDirty: () => {} });
+  REC.setBoard({ board: 'b-1', name: '', origin: '' }); REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.takeIndex(/** @type {any} */ ({ docs: [{ doc: DR, kind: 'draft', label: 'the draft', standing: 'yours_to_read' }], counts: [{ account: '1.0.1', documents: 1 }], state: { arm: 'building' } }));
+  REC.takeSpanSet(DR, [{ subspace: 1, ordinal: 1, positions: 12 }]);
+  REC.takeDelivery(DR, [{ pos: 1, width: 12, kind: 'content', text: 'draft words.', ref: null, origin: null }]);
+  PUMP.forget(DR);
+  CAM.setViewport(1440, 900);
+  CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  assert.ok(PUMP.visibleDocs().some((d) => d.addr === DR), 'at HOME the draft stands in view');
+  fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
+  assert.deepEqual([REC.doc(DR).refused, REC.owed(DR), REC.textBetween(DR, 1, 13)], ['withheld', true, ''], 'at once: covered, its read owed, none of its text');
+  for (let i = 0; i < 5; i++) { PUMP.pump(); await new Promise((r) => setTimeout(r, 0)); }
+  assert.deepEqual([REC.doc(DR).refused, REC.covered(DR), REC.owed(DR), REC.doc(DR).extent, PUMP.rereading()], [null, false, false, 12, false], 'the guest\'s read answered it: the cover lifted, its extent held, the change\'s reads answered');
 });
 
 test('a listing read while the feed brings a row and an index state lays them over its answer: the document the row mints listed and counted, the state the event\'s — the shell emits each once, and its listing may not hold the row yet', async () => {
@@ -1795,7 +1828,7 @@ test('a feed row publishing a trunk\'s member is handed to the app before it dro
   assert.deepEqual(told, [], 'neither a row of another op nor a publish naming a document whole');
 });
 
-test('what each feed row the page takes dropped is told to the app after the drop, the row\'s op with it, and the page\'s own death as a drop of every record, after it — so a reader reading again reads fresh (issue #160)', async () => {
+test('what each feed row the page takes dropped is told to the app after the drop, the row\'s op with it, and the page\'s own death as a change of its class, naming no address, after it — so a reader reading again reads fresh (issue #160)', async () => {
   const fake = FAKE.create(script);
   PORT.boot(fake);
   /** @type {Array<{op: string | null, addrs: string[] | null, held: boolean, signed: boolean}>} */
@@ -1815,7 +1848,7 @@ test('what each feed row the page takes dropped is told to the app after the dro
   assert.ok(told.length > 0 && told.every((x) => x.op === 'publish' && JSON.stringify(x.addrs) === JSON.stringify([D, D + '.2']) && !x.held), `a publish, the member and its trunk dropped, told after: ${JSON.stringify(told)}`);
   told.length = 0;
   fake.fire('session-died', { session: 's-1', reason: { arm: 'closed' } });
-  assert.ok(told.length > 0 && told.every((x) => x.op === null && x.addrs === null && !x.signed), `the page's own death told as a drop of every record, after the death: ${JSON.stringify(told)}`);
+  assert.ok(told.length > 0 && told.every((x) => x.op === null && x.addrs === null && !x.signed), `the page's own death told as a change of its class, after the death: ${JSON.stringify(told)}`);
   await new Promise((r) => setTimeout(r, 0));
 });
 
