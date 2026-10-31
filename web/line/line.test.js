@@ -589,6 +589,9 @@ test('a restart that re-opened none leaves the acting-as segment as it stood for
   LINE.render(true);
   live.textContent = '';
   script[FAKE.keyOf('session', { board: 'b-1' })] = { result: { ...s, session: 's-11' } };
+  // the page's place on its board's feed, and nothing written there while the session was out
+  REC.reachFeed(3);
+  script[FAKE.keyOf('changes', { session: 's-11', since: 3 })] = { result: { entries: [], next: 3, head: 3 } };
   const call = fake.hold('session', { board: 'b-1' });
   fake.fire('session-died', { session: s.session, reason: { arm: 'restart', reopened: false } });
   assert.deepEqual(LINE.actingSegment(), was, 'within the first second: as it stood');

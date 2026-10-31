@@ -5,7 +5,10 @@
 // State: the in-flight set and the view's scans among it; the keys answered
 // (`asked`), refused retry-class with the time they may go again (`retryAt`),
 // and held while the board did not answer (`unreached`); the refusals met;
-// the acquire out (`attempt`); the index reads out (`indexing`); a record of
+// the acquire out (`attempt`), the feed rows held while one is out for a
+// session lost (`rowsHeld`), the `index` states naming another session
+// kept while its call is out (`faces`), and the positions the last catch-up
+// read (`caught`); the index reads out (`indexing`); a record of
 // the events taken while each read of the board's state is out (`whileOut`);
 // the places the view stood on at the last change of class (`standing`); the
 // documents the view shows that a feed row named, each read again until it
@@ -43,7 +46,9 @@
 // and, for the board held, in this order, the device's key store
 // (`fingerprint`, before the session, so the key the session is opened with
 // is known with it — FP-34), the session, its health, its daemon and its
-// index; the page's session (`acquireSession`); the client index
+// index; the page's session (`acquireSession`), and, got back for one lost,
+// what was written on its board while it was out (`changes`; `catchUp`);
+// the client index
 // (`readIndex`: `places`, at boot and at every change of class, the view
 // asking nothing while it is out); a whole document (`loadWhole`, `wholeOf`);
 // the reads a face stating a withheld origin needs before it shows
@@ -77,8 +82,12 @@
 // answer: a probe records the whole chain only where the board answered that
 // no member follows; a count it stopped short at is recorded as read so far.
 // The events: a board event is taken where it names the page's board, none
-// before the board is known. A feed row the page takes (`takeRow`; a
-// `drafts` row only where it names the page's own session) hands a `publish`
+// before the board is known. While an acquire for a lost session is out,
+// every feed row is held as it comes (`rowsHeld`) and taken once the
+// catch-up lands (`drain`); a row at a position the last catch-up read is
+// left (`caught`), for the catch-up took it. A feed row the page takes
+// (`takeRow`, `applyRow`; a `drafts` row only where it names the page's own
+// session, or, held, the one the page held as it came) hands a `publish`
 // row's member to the app with the row's position before anything is dropped
 // (`arrive`), then goes to M-REC's index and invalidation — every document it
 // touches dropped, but
@@ -108,7 +117,10 @@
 // again (`readFresh`) and set in one step (M-REC's `setAgain`), the rest
 // dropped (M-REC's `takeRefresh`); every reader is told. An `index` state is
 // taken where it is the face the page reads, a signed-in page's named by its
-// own session (`ofFace`). A session's end (`takeEnd`) — `session-died`, a
+// own session (`ofFace`); one naming another session while the call of an
+// acquire for a lost session is out is kept (`faces`), the one naming the
+// session that call opens taken as the page goes on under it as the same
+// principal (`takeFace`). A session's end (`takeEnd`) — `session-died`, a
 // read's `session_died`, or the page's own `close(session)`, its sign-out —
 // is taken where it names the page's own session: the shell's own restart is
 // no death — the page goes on under the session the reason names, or, where
@@ -117,10 +129,17 @@
 // The acquire (FP-28): the page's session is opened by one routine
 // (`acquireSession`), at boot and for a session lost — one attempt per lost
 // session, a loss told while it is out joining it, made once the board
-// answers, none after a refused one. While it is out every read waits; past
-// RECONNECTING_MS the line reads that the page is reconnecting. An answer
-// after the attempt settled is stale, a session it opened closed. Regained
-// as another principal, or refused, the class changes as at a death.
+// answers, none after a refused one. While it is out every read waits, and
+// for a session lost every feed row is held; while its call is unanswered
+// past RECONNECTING_MS the line reads that the page is reconnecting. An
+// answer after the attempt settled is stale, a session it opened closed.
+// Got back for a session lost, the session is taken and, before the attempt
+// settles, what was written on the board while it was out is read by
+// `changes` from the last position the page took there (M-REC's `feedAt`)
+// and taken with the rows held, each row once and in position order
+// (`catchUp`, `drain`), a catch-up that cannot be done marking the board as
+// a row naming nothing does. Regained as another principal, or refused, the
+// class changes as at a death.
 // A change of class (`classChanged`; FP-29, FP-23) takes the documents in
 // view and those the view's state names before anything goes (`stoodOn`),
 // hands them to M-REC, which keeps those read as published and covers the
@@ -159,6 +178,7 @@ import { keyFingerprint } from '../util.js';
 /** @typedef {import('../bridge/shapes').FeedEvent} FeedEvent */
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 /** @typedef {import('../bridge/shapes').IndexEvent} IndexEvent */
+/** @typedef {import('../bridge/shapes').IndexState} IndexState */
 /** @typedef {import('../bridge/shapes').ModeEvent} ModeEvent */
 /** @typedef {import('../bridge/shapes').DaemonEvent} DaemonEvent */
 /** @typedef {import('../bridge/shapes').SessionDiedEvent} SessionDiedEvent */
@@ -245,11 +265,19 @@ const refusalWatchers = [];
  * @typedef {Object} Attempt — one call of `session(board)` the page makes (`acquireSession`): at boot, or for its session lost
  * @property {string | null} lost the reference of the session it is made for, lost; null at boot
  * @property {boolean} made its call made — false while it waits for the board to answer
+ * @property {boolean} answered its call answered: the line reads no reconnecting after, and no face is kept (`faces`)
  * @property {Promise<void>} settled resolved as it settles
- * @property {() => void} settle settles it: its answer, the shell's re-open or a death taken, any answer after it stale
+ * @property {() => void} settle settles it: its answer and its catch-up taken, another acquire taking its place, or the shell's re-open or a death taken; any answer after it stale
  */
 /** @type {Attempt | null} the acquire out, else null */
 let attempt = null;
+/** @typedef {{u: FeedUpdate, taken: boolean}} HeldRow — a feed row held while an acquire for a lost session is out (`takeRow`), with whether the page took it under the session it held as the row came — none once the page's class changes (`classChanged`) */
+/** @type {HeldRow[] | null} the feed rows held from a lost session's acquire until its catch-up lands or none can (`drain`), in the order they came; null while none are held */
+let rowsHeld = null;
+/** @type {{since: number, next: number} | null} the positions the last catch-up read, `(since, next]`: a row the feed brings there after it is one the catch-up took (`takeRow`) */
+let caught = null;
+/** @type {Map<string, IndexState>} the last `index` state naming each session `ofFace` refused while the call of an acquire for a lost session was out: the face the session it opens is sent before its answer (`takeFace`) */
+const faces = new Map();
 /** the client index's reads out (`readIndex`): while one is, the view asks nothing and `pump` counts it missing */
 let indexing = 0;
 /** @type {Set<Meanwhile>} one record for each read of the board's state out — two listings at once where a change of class meets the boot's */
@@ -313,7 +341,9 @@ let subscribed = false;
  * event through `onBoard`, and to the sessions the calls name as they cross
  * the port (B-PORT's `onSession`) — once, however often it starts, so each
  * event is taken once, under the readers the latest start handed in. A start
- * ends every refresh and read again a start before it left out (`classes`).
+ * ends every refresh and read again a start before it left out (`classes`),
+ * lets go of the rows held and the faces kept, and forgets the positions the
+ * last catch-up read.
  * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `onOpen` told once a board the list read again found is open (`retryBoards`)
  */
 export function start(opts) {
@@ -325,11 +355,16 @@ export function start(opts) {
   onOpen = opts.onOpen || (() => {});
   standing = new Set();
   classes++; again.clear(); claimsOut.clear();
+  rowsHeld = null; caught = null; faces.clear();
   started = true;
   if (subscribed) return;
   subscribed = true;
   onBoard('feed', (ev) => { if (ev.update) takeRow(ev.update); });
-  onBoard('index', (ev) => { if (ev.state && ofFace(ev)) { REC.setIndexState(ev.state); for (const m of whileOut) m.state = true; dirty(); } });
+  onBoard('index', (ev) => {
+    if (!ev.state) return;
+    if (ofFace(ev)) { REC.setIndexState(ev.state); for (const m of whileOut) m.state = true; dirty(); }
+    else if (ev.session != null && attempt && attempt.lost != null && !attempt.answered) faces.set(ev.session, ev.state);
+  });
   onBoard('mode', (ev) => { REC.setMode(ev); for (const m of whileOut) m.mode = ev; dirty(); });
   onBoard('daemon', (ev) => {
     REC.setDaemon(ev.state); for (const m of whileOut) m.daemon = true;
@@ -358,7 +393,23 @@ function onBoard(name, take) {
 const takesRow = (/** @type {FeedUpdate} */ u) => { const s = REC.session(); return u.class !== 'drafts' || (!!s && u.session === s.session); };
 
 /**
- * A feed row the page takes (`takesRow`): the member a
+ * A feed row as the feed hands it: held while an acquire for a lost session
+ * is out (`rowsHeld`), with whether the page takes it under the session it
+ * holds as the row comes, to be taken as the acquire ends (`drain`); else
+ * left where it stands at a position the last catch-up read
+ * (`caught`), which took it, or where the page does not take it
+ * (`takesRow`); else taken (`applyRow`). The gate's door hands it a row as
+ * the feed would (`model.feed`).
+ * @param {FeedUpdate} u
+ */
+export function takeRow(u) {
+  if (rowsHeld) { rowsHeld.push({ u, taken: takesRow(u) }); return; }
+  if (caught && u.position > caught.since && u.position <= caught.next) return;
+  if (takesRow(u)) applyRow(u);
+}
+
+/**
+ * A feed row the page takes: the member a
  * `publish` names arriving first, at the row's position (`arrive`), while the
  * page still holds the trunk's text; then the row laid into M-REC's index and
  * invalidation — each document it touches that the view keeps, the view's
@@ -372,12 +423,10 @@ const takesRow = (/** @type {FeedUpdate} */ u) => { const s = REC.session(); ret
  * reads set (`wholeOf`) — and, where it dropped a claim's home, the documents
  * windowing the origins it claims; then the origins whose edition claims it
  * changed read from it (`searchClaims`); and, while a row naming nothing has
- * the board marked, the refresh armed again (`arm`), the run not yet in. The
- * gate's door hands it a row as the feed would (`model.feed`).
+ * the board marked, the refresh armed again (`arm`), the run not yet in.
  * @param {FeedUpdate} u
  */
-export function takeRow(u) {
-  if (!takesRow(u)) return;
+function applyRow(u) {
   if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) arrive(named, u.position);
   const keep = new Set(keptNow());
   const touched = REC.applyFeedUpdate(u, keep);
@@ -565,7 +614,9 @@ function ofFace(ev) {
  * account the same, with no face; where it names none, the session is lost
  * (`lose`). Every other end is M-REC's death (`sessionDied`), the page's
  * class changing with it (`classChanged`). Either settles an acquire out for
- * the session, its answer then stale.
+ * the session, its answer then stale, and takes the rows it held once the
+ * page goes on (`drain`): the shell's re-open keeps the principal's place on
+ * the feed, and a death's reads at the new class make the page whole.
  * @param {string} ended the session the end names
  * @param {DeathReason} reason
  */
@@ -574,9 +625,11 @@ function takeEnd(ended, reason) {
   if (!s || s.session !== ended) return;
   const reopened = reason.arm === 'restart' && reason.reopened === true && typeof reason.session === 'string' ? reason.session : null;
   if (reason.arm === 'restart' && reopened == null) { lose(ended); return; }
-  if (attempt && attempt.lost === ended) attempt.settle();
+  const out = attempt && attempt.lost === ended ? attempt : null;
+  if (out) out.settle();
   if (reopened != null) REC.setSession({ ...s, session: reopened });
   else { const stood = stoodOn(); REC.sessionDied(reason, stood); classChanged(stood); }
+  if (out) drain(null);
 }
 
 /**
@@ -616,8 +669,10 @@ export function acquireSession() { return attempt ? attempt.settled : begin(null
 /**
  * One attempt begun: its call made at once where the board
  * answers as far as the page knows, else at the board's `running`; for a
- * session lost, the line made to read that the page is reconnecting where it
- * is still out past RECONNECTING_MS.
+ * session lost, every feed row held from now until its catch-up lands
+ * (`rowsHeld`) — those held for an attempt it takes the place of kept — and
+ * the line made to read that the page is reconnecting where its call is
+ * still unanswered past RECONNECTING_MS.
  * @param {string | null} lost the lost session's reference; null at boot
  * @returns {Promise<void>} settled as it settles
  */
@@ -626,11 +681,12 @@ function begin(lost) {
   const settled = new Promise((/** @type {(v: void) => void} */ r) => { resolve = r; });
   /** @type {Attempt} */
   const a = {
-    lost, made: false, settled,
-    settle: () => { if (timer) clearTimeout(timer); if (attempt === a) attempt = null; resolve(); },
+    lost, made: false, answered: false, settled,
+    settle: () => { if (timer) clearTimeout(timer); if (attempt === a) { attempt = null; faces.clear(); } resolve(); },
   };
-  const timer = lost == null ? null : setTimeout(() => { if (attempt === a) REC.setReconnecting(); }, RECONNECTING_MS);
+  const timer = lost == null ? null : setTimeout(() => { if (attempt === a && !a.answered) REC.setReconnecting(); }, RECONNECTING_MS);
   attempt = a;
+  if (lost != null && !rowsHeld) rowsHeld = [];
   if (answers()) void make(a);
   return settled;
 }
@@ -642,10 +698,13 @@ const answers = () => { const d = REC.daemon(); return d !== 'stopped' && d !== 
  * An attempt's one call, `session(board)`, and its answer taken: at boot,
  * the session opened or the refusal met; for a session lost,
  * the session taken in its place (M-REC's `sessionRegained`) — the class
- * changed where it acts as another principal — or the refusal taken (M-REC's
- * `sessionLost`), the class changed and the index read again as a guest;
- * then the attempt settled. An answer that lands after the attempt settled
- * is stale and taken nowhere, a session it opened closed.
+ * changed where it acts as another principal, else the face kept for it
+ * taken (`takeFace`) — and what was written while it was out caught up
+ * (`catchUp`), or the refusal taken (M-REC's `sessionLost`), the class
+ * changed and the index read again as a guest, the rows held taken at that
+ * class (`drain`); then the attempt settled, which the reads waiting on the
+ * session wait for (`atClass`). An answer that lands after the attempt
+ * settled is stale and taken nowhere, a session it opened closed.
  * @param {Attempt} a
  */
 async function make(a) {
@@ -653,18 +712,100 @@ async function make(a) {
   const b = REC.board();
   const out = b ? await PORT.session({ board: b.board }) : null;
   if (attempt !== a) { if (out && 'result' in out) void PORT.close({ session: out.result.session }); return; }
-  if (out) {
-    if ('result' in out) {
-      if (a.lost == null) REC.setSession(out.result);
-      else { const stood = stoodOn(); if (REC.sessionRegained(out.result, stood)) classChanged(stood); }
-    } else {
-      const r = { kind: out.refused.kind, name: out.refused.name };
-      if (a.lost == null) REC.setSessionRefused(r);
-      else { const stood = stoodOn(); REC.sessionLost(r, stood); classChanged(stood); }
-    }
+  a.answered = true;
+  if (a.lost == null) {
+    if (out && 'result' in out) REC.setSession(out.result);
+    else if (out) REC.setSessionRefused({ kind: out.refused.kind, name: out.refused.name });
+  } else if (out && 'result' in out) {
+    const stood = stoodOn();
+    if (REC.sessionRegained(out.result, stood)) classChanged(stood); else takeFace(out.result.session);
+    await catchUp(a, out.result.session);
+  } else {
+    if (out) { const stood = stoodOn(); REC.sessionLost({ kind: out.refused.kind, name: out.refused.name }, stood); classChanged(stood); }
+    drain(null);
   }
   a.settle();
   dirty();
+}
+
+/**
+ * The face of a session got back as the same principal, sent before the
+ * call that opened it answered and kept (`faces`), set as the face's state
+ * (M-REC's `setIndexState`) — no listing is read for it — and every face
+ * kept let go.
+ * @param {string} ref the session got back
+ */
+function takeFace(ref) {
+  const state = faces.get(ref);
+  faces.clear();
+  if (state) REC.setIndexState(state);
+}
+
+/**
+ * The catch-up (FP-28, FP-23): what was written on the page's board while
+ * its session was out, read by `changes` under the session got back from
+ * the last position the page took there (M-REC's `feedAt`) — page after
+ * page, each from the one before's `next`, until one reaches its `head`; a
+ * page refused as from a session the shell re-opened meanwhile asked again
+ * under the re-opened one — and taken with the rows held since the loss
+ * (`drain`), before the attempt settles. Where none can be done — no
+ * position held, `changes` refused, or a page that does not move past where
+ * it began — the rows held are taken alone and the board marked as a row
+ * naming nothing marks it (M-REC's `markBare`), the refresh armed. Where the
+ * page's class changes while it is out, the rows held are taken at the new
+ * class and none of its pages, whose class the page has left; the reads that
+ * change makes leave the page whole. Where another acquire takes the
+ * attempt's place, nothing is taken: the rows stay held for that acquire,
+ * whose catch-up reads from the same position.
+ * @param {Attempt} a the acquire the session was got back by
+ * @param {string} ref the session got back
+ */
+async function catchUp(a, ref) {
+  const cls = classes, since = REC.feedAt();
+  /** @type {FeedUpdate[]} */
+  const entries = [];
+  /** @type {number | null} the `next` of the page that reached its `head` */
+  let reach = null;
+  for (let from = since; from != null && reach == null;) {
+    const out = await PORT.changes({ session: ref, since: from });
+    if (attempt !== a) return;
+    if (classes !== cls) { drain(null); return; }
+    if ('refused' in out) {
+      const now = REC.session();
+      if (!PORT.lostSession(out.refused) || !now || now.session === ref) break;
+      ref = now.session;
+      continue;
+    }
+    entries.push(...out.result.entries);
+    if (out.result.next >= out.result.head) reach = out.result.next;
+    else if (out.result.next > from) from = out.result.next;
+    else break;
+  }
+  if (since != null && reach != null) drain({ since, next: reach, entries });
+  else { drain(null); REC.markBare(); arm(RUN_QUIET_MS); }
+}
+
+/**
+ * The rows held since a session was lost taken (FP-23), with the rows the
+ * catch-up read where it landed: each row once, in position order — a row
+ * held at a position the catch-up read left for the catch-up's — and each as
+ * the feed hands one (`applyRow`): every row the catch-up read, read under
+ * the page's own session at its class, and a row held where the page took it
+ * under the session it held as the row came or takes it under the session it
+ * holds now (`takesRow`). The positions the catch-up read are kept
+ * (`caught`) and the page's place on the feed raised through them (M-REC's
+ * `reachFeed`). Nothing is held after.
+ * @param {{since: number, next: number, entries: FeedUpdate[]} | null} read the catch-up's: the positions it read, `(since, next]`, and the rows it read there; null where none landed
+ */
+function drain(read) {
+  const rows = rowsHeld ?? [];
+  rowsHeld = null;
+  const within = (/** @type {number} */ p) => !!read && p > read.since && p <= read.next;
+  /** @type {HeldRow[]} */
+  const take = [...(read ? read.entries.map((u) => ({ u, taken: true })) : []), ...rows.filter((h) => !within(h.u.position))];
+  if (read) caught = { since: read.since, next: read.next };
+  for (const h of take.sort((x, y) => x.u.position - y.u.position)) if (h.taken || takesRow(h.u)) applyRow(h.u);
+  if (read) REC.reachFeed(read.next);
 }
 
 /**
@@ -675,7 +816,9 @@ async function make(a) {
  * read of the board's state out left holding no feed row and no `index`
  * state taken before the change — so a listing out across it, asked again at
  * the new class (`atClass`), lays none of the class it left over the new
- * one's — the index read again at the class the page reads at now
+ * one's — every feed row held taken from then on only where the page takes
+ * it at the new class (`HeldRow.taken`), the index read again at the class
+ * the page reads at now
  * (`readIndex`), each document the view stood on that M-REC kept read again
  * at that class and set in one step as its reads land (`readAgain`), the
  * other places it stood on asked again at that class (`reread`), and the
@@ -693,6 +836,7 @@ function classChanged(stood) {
   asked.clear(); retryAt.clear(); unreached.clear();
   again.clear(); claimsOut.clear(); for (const wake of [...waking]) wake();
   for (const m of whileOut) { m.rows = []; m.state = false; }
+  if (rowsHeld) for (const h of rowsHeld) h.taken = false;
   standing = new Set(stood);
   void readIndex();
   for (const addr of stood) if (keptAtChange(addr)) readAgain(addr);
@@ -781,7 +925,8 @@ export function read(frame) { return atClass((s) => ask(s, frame)); }
 /**
  * One call at the page's class: made under the page's session, or in the
  * guest form where none stands (`call` composes the form from the session it
- * is handed), once the acquire out, if one is, has settled.
+ * is handed), once no acquire is out — the one out settled, its catch-up
+ * taken, and any that took its place.
  * It is made again, in the form the page takes then, where the page's class
  * — its principal, or guest — changed while it was out, so no answer to a
  * class the page has left is handed up: a death, or a session not regained,
@@ -797,19 +942,22 @@ export function read(frame) { return atClass((s) => ask(s, frame)); }
  * @returns {Promise<T | {refused: Refusal}>}
  */
 async function atClass(call) {
-  if (attempt) await attempt.settled;
+  if (attempt) await noAcquire();
   let s = REC.session();
   let out = await call(s);
   for (;;) {
     const r = 'refused' in out ? /** @type {{refused: Refusal}} */ (out).refused : null;
     const ended = !!s && !!r && PORT.lostSession(r);
-    if (attempt) await attempt.settled;
+    if (attempt) await noAcquire();
     const now = REC.session();
     if (classOf(now) === classOf(s) && !(ended && !!now && now.session !== s?.session)) return out;
     s = now;
     out = await call(s);
   }
 }
+
+/** settled once no acquire is out: the one out, its catch-up taken, and any that took its place */
+async function noAcquire() { while (attempt) await attempt.settled; }
 
 /** the class a page reads at: its session's principal; a guest's none */
 const classOf = (/** @type {{principal: number} | null} */ s) => (s ? s.principal : null);
@@ -1221,8 +1369,10 @@ function holdsSpan(/** @type {Doc} */ d, /** @type {number} */ from, /** @type {
  * index is read (`readIndex`), which counts as a need missing; the places the
  * view stood on as the page's class last changed first (`reread`), at any
  * scale; a refresh armed or out (`refresh`), each search of what a row
- * changed of the edition claims (`searchClaims`) and each read again of them
- * not waiting on the board (`claimsAgain`) counted missing, and a document a
+ * changed of the edition claims (`searchClaims`), each read again of them
+ * not waiting on the board (`claimsAgain`), and the rows held while the call
+ * of an acquire for a lost session or its catch-up is out (`rowsHeld`) counted
+ * missing, and a document a
  * feed row named while its reads again are out (`readAgain`), nothing asked
  * of it meanwhile. Returns the count
  * of needs still missing — the gate's settle signal with `inflight()`.
@@ -1232,7 +1382,7 @@ export function pump() {
   if (!started) return 0;
   if (indexing) return 1;
   const lod = lodOf(cam.scale);
-  let missing = reread() + (armed != null || refreshing ? 1 : 0) + searching;
+  let missing = reread() + (armed != null || refreshing ? 1 : 0) + searching + (rowsHeld && attempt && attempt.made ? 1 : 0);
   for (const a of claimsOut.values()) if (!a.paused) missing++;
   if (lod.name === 'far') return missing;
   const vis = visibleDocs();

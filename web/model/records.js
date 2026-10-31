@@ -11,8 +11,8 @@
 // built from `places` — the documents per account with their labels, kinds
 // and standing, the counts per account, the index's state and floor — each
 // answer replacing it whole with the feed rows taken meanwhile laid over it
-// (`takeIndex`), and kept by the feed's rows, never from `/changes` nor by
-// enumerating documents; documents — their index row, extent, delivered
+// (`takeIndex`), and kept by the feed's rows, never by enumerating
+// documents; documents — their index row, extent, delivered
 // runs and the blocks derived from them, metadata, V→I image as read with
 // the transclusion origins it shows, the raw set of links touching them,
 // their chain's count and whether the board ended it there, the position
@@ -26,7 +26,10 @@
 // or failed (`Lookup`; PUB-5.124), and the failed reads a listed claim's
 // admission waits on (`takeFailedRead`); the owners and key sets; the
 // byline's facts per account, its device key or why it names none
-// (`AccountFacts`; FP-34); the feed's rows as they arrived; and a bare row's
+// (`AccountFacts`; FP-34); the feed's rows as they arrived; the last
+// position the page took on its board's feed (`feedAt`) — the `/health`
+// head as read, raised by each row taken and each catch-up's reach
+// (M-PUMP), never lowered, a change of class keeping it; and a bare row's
 // mark on the board (`bare`).
 // A link's slot names bytes, never a place (wire.md §Links): where a stored
 // span stands in a document's text is read through that document's held V→I
@@ -342,6 +345,8 @@ const state = {
   keyDrops: 0,
   /** @type {Array<{position: number, op: string | null, docs: string[], cls: string, time: number | null}>} the feed's rows as they arrived (the newest last), each with its commit's wall-clock unix milliseconds where the row carries them (wire.md §The change feed, `time`) */
   feed: [],
+  /** @type {number | null} the last position the page took on its board's feed (`feedAt`); null where no head was read and no row taken */
+  feedAt: null,
   rev: 0,
   /** @type {Array<() => void>} */
   watchers: [],
@@ -572,7 +577,7 @@ export function sessionRegained(s, stood = []) {
 /** the page's session lost at a restart and not regained, where the line says so; null where it is not */
 export const reconnect = () => state.reconnect;
 /** @param {unknown} h @param {Mode | null} mode */
-export function setHealth(h, mode) { state.health = h; state.mode = mode; bump(); }
+export function setHealth(h, mode) { state.health = h; state.mode = mode; reach(/** @type {{log_position?: unknown} | null} */ (h)?.log_position); bump(); }
 export const health = () => /** @type {{auth?: {claimant?: string | null, local_trust?: boolean}, log_position?: number, writes?: {halted?: boolean}} | null} */ (state.health);
 export const mode = () => state.mode;
 /** @param {{mode: Mode, claimant: string | null, local_trust: boolean}} ev */
@@ -1492,7 +1497,8 @@ const inDocOne = (/** @type {string} */ addr) => { const a = accountOf(addr), tr
 
 /**
  * A `feed` update as the shell crate defines it (S-24 (b)): the `/changes`
- * row verbatim plus `position` and `class`. The index takes its part
+ * row verbatim plus `position` and `class`. The page's place on its board's
+ * feed is raised to its position (`feedAt`), and the index takes its part
  * (`listRow`). A write drops what the viewport held of every document it
  * touched, each once: each document the row names, with the trunk of a member
  * among them, and the home of the link the row names, with the home's trunk —
@@ -1520,6 +1526,7 @@ const inDocOne = (/** @type {string} */ addr) => { const a = accountOf(addr), tr
  */
 export function applyFeedUpdate(u, keep = new Set()) {
   const docsNamed = Array.isArray(u.docs) ? u.docs : [];
+  reach(u.position);
   state.feed.push({ position: u.position, op: u.op, docs: docsNamed, cls: u.class, time: typeof u.time === 'number' ? u.time : null });
   if (state.feed.length > 2000) state.feed.shift();
   listRow(u);
@@ -1560,6 +1567,24 @@ function listRow(u) {
 }
 /** the feed rows held (the newest last) */
 export const feedRows = () => state.feed.slice();
+
+/** the page's place on its board's feed raised to a position it has taken through; never lowered */
+const reach = (/** @type {unknown} */ at) => { if (typeof at === 'number' && (state.feedAt == null || at > state.feedAt)) state.feedAt = at; };
+/**
+ * The last position the page took on its board's feed: the `/health` head
+ * as read (`setHealth`), raised by each row taken (`applyFeedUpdate`) and
+ * each catch-up's reach (`reachFeed`), never lowered — a change of class
+ * keeps it; null where no head was read and no row taken. M-PUMP's catch-up
+ * reads from it.
+ * @returns {number | null}
+ */
+export const feedAt = () => state.feedAt;
+/**
+ * A catch-up's reach taken (M-PUMP): every position through `next` taken
+ * from `changes`, the page's place on the feed raised to it (`feedAt`).
+ * @param {number} next
+ */
+export function reachFeed(next) { reach(next); bump(); }
 
 /**
  * The highest member of a trunk's own chain a held feed row names — a
@@ -1771,7 +1796,7 @@ export function _reset() {
   state.board = null; state.noBoard = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
   state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
   state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.owed.clear(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
-  state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.rev = 0;
+  state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.feedAt = null; state.rev = 0;
 }
 
 /** a deep, serializable picture of the model for the gate and the fake-port test */

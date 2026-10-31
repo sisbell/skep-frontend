@@ -10,7 +10,8 @@
 // change of one origin's dropping that origin's alone or keeping them as
 // held, a read of them setting them again in one step unless a change
 // overtook it; a row naming a document the view shows dropping nothing of
-// it; a bare row's mark, a newer member taking a trunk's text, a refresh's
+// it; the page's place on its board's feed, raised and never lowered; a bare
+// row's mark, a newer member taking a trunk's text, a refresh's
 // drop and a shown document set again in one step — its text without an
 // image holding none, a claim's home making its origin's windows again; the key store,
 // the session's key and the byline's facts; a change of class keeping what
@@ -623,6 +624,29 @@ test('the feed\'s rows keep their commit times and name the members of a trunk\'
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 3, at: 3, op: 'publish', docs: ['1.0.1.0.4.7'], class: 'published', time: null }));
   REC.applyFeedUpdate(/** @type {any} */ ({ position: 4, at: 4, op: 'make_link', docs: [D + '.3'], class: 'published', link: D + '.3.0.2.1' }));
   assert.deepEqual([REC.feedMember(D), REC.feedMember('1.0.1.0.4'), REC.feedTime()], [3, 7, 1792683857000], 'D.3, the home of a link, past D.2; D.4.1 a daughter of D.4, no member of D\'s own chain; the second row\'s time, the newest carried');
+});
+
+test('the page\'s place on its board\'s feed is the `/health` head as read, raised by each row taken and each catch-up\'s reach, never lowered — a change of class keeping it — and none before either (issue #326)', () => {
+  /** a published row at `position` writing the edition */
+  const at = (/** @type {number} */ position) => /** @type {import('../bridge/shapes').FeedUpdate} */ ({ position, at: position, op: 'insert', docs: ['1.0.1.0.3'], class: 'published' });
+  assert.equal(REC.feedAt(), null, 'none before a head or a row');
+  REC.setHealth({ log_position: 8 }, null);
+  assert.equal(REC.feedAt(), 8, 'the head as read');
+  REC.applyFeedUpdate(at(6));
+  assert.equal(REC.feedAt(), 8, 'a row below it lowers nothing');
+  REC.applyFeedUpdate(at(11));
+  assert.equal(REC.feedAt(), 11, 'a row past it raises it');
+  REC.reachFeed(9);
+  assert.equal(REC.feedAt(), 11, 'a reach below it lowers nothing');
+  REC.reachFeed(14);
+  assert.equal(REC.feedAt(), 14, 'a catch-up\'s reach past it raises it');
+  REC.setHealth({ log_position: 12 }, null);
+  assert.equal(REC.feedAt(), 14, 'a head read below it lowers nothing');
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
+  REC.sessionDied({ arm: 'closed' });
+  assert.equal(REC.feedAt(), 14, 'a change of class keeps it');
+  REC._reset();
+  assert.equal(REC.feedAt(), null, 'a reset forgets it');
 });
 
 test('the key store is read for this board: a key is present only where a binding names its origin whole, and the reader keeps it through a session\'s death', () => {
