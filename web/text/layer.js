@@ -187,7 +187,7 @@
 // label held there. A reading view frames the column it reads with the
 // corner and the edge beside it, at the landing's em (`frameOf`; P-CAM's
 // `landingPx`) — a document read whole, its first column where the visible
-// view holds it, else its head at the top of the visible view (FP-29). The element outlives its
+// view holds it, else its head at the top of the visible view (FP-37). The element outlives its
 // article's remounts and its items are rewritten only where they change, so
 // a focus on it survives them; the focused document's corner is the plane's
 // next Tab stop, named by its own words, and every other is out of the order
@@ -271,7 +271,7 @@
 // the mount log (`mountedSet`, `mounts`); APP records each frame's counts
 // (`frameStats`).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-24,
-// FP-26, FP-29, FP-30, FP-34.
+// FP-26, FP-29, FP-30, FP-34, FP-37.
 
 import * as REC from '../model/records.js';
 import * as LK from '../links/links.js';
@@ -883,7 +883,7 @@ export function centreOf(addr, pos) {
  * and its edge on its right stand centred together; where none is named and
  * the visible view below the one line holds less than the first column's
  * depth, moved down so the column's outline tops the visible view and the
- * document's head stands in it, never under the line (FP-29). N-GO's landing
+ * document's head stands in it, never under the line (FP-37). N-GO's landing
  * and N-WALK's flight to a span read it; the measure in force is one the view
  * holds them at, at the landing's em (P-LAY's `fitFor`, P-CAM's `landingPx`).
  * @param {string} addr

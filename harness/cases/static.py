@@ -16,7 +16,11 @@
 (vi) the shipped faces (issue #16): every `@font-face` in `style.css` loads a
     WOFF2 file under `web/fonts/` that is there — Charter in its four styles
     and Atkinson Hyperlegible Mono — never `local()`, each face beside its
-    licence.
+    licence;
+(vii) the rules' numbers: each number `PATTERNS.md` gives a rule heads one
+    bullet, FP-1 to the highest without a gap; every rule cited under
+    `web/` and `harness/` and in the documents at the root is one of them;
+    and `AGENTS.md` states their range to the highest.
 No page is needed: this case reads the tree."""
 import os
 import re
@@ -37,6 +41,12 @@ LAYER = [
 ]
 DRAWERS = ['beams/beams.js', 'text/layer.js', 'plane/render.js', 'scene/scene.js', 'overlays/anatomy-card.js']
 SETTERS = ['reveal', 'hide', 'setOthers', 'lens', 'clearLens']
+# the rules: the bullet each heads in PATTERNS.md, a citation of one, and the range AGENTS.md states
+RULE = re.compile(r'^- \*\*FP-(\d+) ', re.M)
+CITE = re.compile(r'\bFP-(\d+)')
+RANGE = re.compile(r'\(FP-1\s*…\s*FP-(\d+)\)')
+DOCS = ['README.md', 'AGENTS.md', 'PATTERNS.md']
+CITING = ('.js', '.html', '.css', '.py', '.sh')
 
 
 def files():
@@ -60,6 +70,24 @@ def layer_of(rel):
 def imports_of(src):
     """the static import targets of a module (relative paths)"""
     return re.findall(r"""^\s*import\s+(?:[^'"]*?\s+from\s+)?['"]([^'"]+)['"]""", src, re.M)
+
+
+def rule_heads(patterns):
+    """each number PATTERNS.md gives a rule, with the lines of the bullets it heads"""
+    heads = {}
+    for m in RULE.finditer(patterns):
+        heads.setdefault(int(m.group(1)), []).append(patterns.count('\n', 0, m.start()) + 1)
+    return heads
+
+
+def citing():
+    """every file that may cite a rule by its number — the page's and the gate's sources and the documents at the root —
+    by its path from the root"""
+    out = list(DOCS)
+    for folder in ('web', 'harness'):
+        for dp, _, fns in os.walk(os.path.join(ROOT, folder)):
+            out += [os.path.relpath(os.path.join(dp, fn), ROOT).replace(os.sep, '/') for fn in fns if fn.endswith(CITING)]
+    return sorted(out)
 
 
 def run(ctx):
@@ -163,6 +191,26 @@ def run(ctx):
             'the two shipped faces: Charter in its four styles, Atkinson Hyperlegible Mono (issue #16)', {'families': sorted(families), 'charter': styles})
     licences = [n for n in ('charter-license.txt', 'atkinson-hyperlegible-mono-OFL.txt') if not os.path.isfile(os.path.join(WEB, 'fonts', n))]
     r.check(not licences, 'each shipped face beside its licence (issue #16)', licences)
+    # (vii) the rules' numbers: each heads one bullet, every citation names one, AGENTS.md's range ends at the highest
+    heads = rule_heads(open(os.path.join(ROOT, 'PATTERNS.md'), encoding='utf8').read())
+    top = max(heads, default=0)
+    twice = {f'FP-{n}': at for n, at in sorted(heads.items()) if len(at) > 1}
+    gaps = [f'FP-{n}' for n in range(1, top + 1) if n not in heads]
+    r.check(bool(heads) and not twice and not gaps, 'PATTERNS.md numbers each rule once, from FP-1 to the highest without a gap',
+            {'highest': top, 'twice': twice, 'missing': gaps})
+    unknown, cites = [], 0
+    for rel in citing():
+        for i, line in enumerate(open(os.path.join(ROOT, rel), encoding='utf8').read().split('\n'), 1):
+            for n in CITE.findall(line):
+                cites += 1
+                if int(n) not in heads:
+                    unknown.append(f'{rel}:{i}: FP-{n}')
+    r.check(not unknown, 'every rule cited under web/ and harness/ and in the documents at the root is one PATTERNS.md numbers', unknown)
+    stated = RANGE.search(open(os.path.join(ROOT, 'AGENTS.md'), encoding='utf8').read())
+    r.check(stated is not None and int(stated.group(1)) == top, "AGENTS.md states the rules' range to the highest PATTERNS.md numbers",
+            {'stated': stated.group(0) if stated else None, 'highest': top})
+    r.figures['rules'] = top
+    r.figures['rule_citations'] = cites
     r.figures['faces'] = srcs
     r.figures['files'] = len(allf)
     return r.out()

@@ -15,7 +15,7 @@
 // (FP-21); a death's face saying its arm's words, "signed out" the page's own
 // close's alone (FP-28); the withheld face at a covered document while the
 // ending stands saying the ending's words and offering sign-in (FP-29); a
-// walk's moment as the walk's state (FP-28) — folded by every way the page
+// walk's moment as the walk's state (FP-36) — folded by every way the page
 // ends an overlay with its typed text kept, unfolded over the view it was
 // left over, drawn by its kind, its refusal drawn inside it, only its own
 // cancel cancelling, its walk's next moment opening as the last was left,
@@ -660,7 +660,7 @@ test('the walk\'s next moment opens as the last was left: folded, its segment up
   } finally { page.restore(); }
 });
 
-test('a walk\'s moment the shell raises where the reader stands at a surface of their own — a card they opened, the LEAP box\'s field holding the caret — opens folded, said, the card standing and the caret where it was; over nothing, it opens whole, the focus on its first control (FP-28; FP-20)', () => {
+test('a walk\'s moment the shell raises where the reader stands at a surface of their own — a card they opened, the LEAP box\'s field holding the caret — opens folded, said, the card standing and the caret where it was; over nothing, it opens whole, the focus on its first control (FP-36; FP-20)', () => {
   const page = momentPage(), fake = FAKE.create({});
   PORT.boot(fake);
   HOST.attach(/** @type {any} */ (page.host));

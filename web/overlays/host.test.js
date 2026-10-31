@@ -4,7 +4,7 @@
 // opening, an overlay shown whatever conjures it, the LEAP box opened or
 // Esc's one order, its reads told it no longer stands, and pending no more
 // where it gives up or throws; a walk's moment raised while one reads opening
-// folded (FP-28); an overlay's end running while its element still holds
+// folded (FP-36); an overlay's end running while its element still holds
 // what it wrote; an overlay's own completion, and its owner drawing it again
 // in its place, no act on the chrome; no module of the page loading another
 // by `import()` (S-22 (a)); the anchor — beneath its element while that
@@ -175,7 +175,7 @@ test('an overlay shown while an opening reads ends it, whatever conjures it: its
   }
 });
 
-test('a walk\'s moment the shell raises while an opening reads takes nothing\'s place (issue #182; FP-28): it opens folded, its segment said, and the card asked shows its answer', async () => {
+test('a walk\'s moment the shell raises while an opening reads takes nothing\'s place (issue #182; FP-36): it opens folded, its segment said, and the card asked shows its answer', async () => {
   /** @type {string[]} what the status region was given to say */
   const said = [];
   FOCUS.attach({ live: /** @type {any} */ ({ setAttribute() {}, set textContent(/** @type {string} */ v) { said.push(v); } }) });

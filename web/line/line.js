@@ -86,7 +86,7 @@
 // visible view, in a segment of their own while the plane hides the face
 // (O-HOST's `aside`, read through the reader the app hands in), said already
 // through the status region as the face was shown. A walk's folded moment
-// (FP-28, FP-20; `walkSegments`): after the acting-as segment, one segment
+// (FP-36, FP-20; `walkSegments`): after the acting-as segment, one segment
 // for each walk whose moment stands folded — its walk, its step and that it
 // waits on the reader (O-FACES' `folded`), said through the status region as
 // it folds — its act, inside the line's one stop, unfolding it (O-FACES'
@@ -117,7 +117,7 @@
 // another module hands it (ST's `addressedHTML`) — and its other words in
 // the interface face (P-REG's FACE). The chip is no segment (ux-T2: the document's corner).
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28,
-// FP-29, FP-34, FP-35.
+// FP-29, FP-34, FP-35, FP-36.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';

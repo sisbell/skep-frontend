@@ -638,7 +638,7 @@ export function install(deps) {
     trail: () => ({ entries: TRAIL.all(), cursor: TRAIL.cursorIndex(), numbered: TRAIL.numbered().map((r) => ({ n: r.n, addr: r.entry.addr, pos: r.entry.pos, current: r.current })) }),
     line: () => ({ text: LINE.text(), state: LINE.state(), address: LINE.addressDisplay() }),
     overlay: () => ({ id: HOST.currentState() ? HOST.currentState()?.id : null, kind: HOST.currentKind(), text: HOST.text() }),
-    /** a walk's moment raised as the shell's `moment` event raises one (O-FACES' `moment`; FP-28), and the folded moments the one line's walks' segments are, each its walk and its words (`folded`) */
+    /** a walk's moment raised as the shell's `moment` event raises one (O-FACES' `moment`; FP-36), and the folded moments the one line's walks' segments are, each its walk and its words (`folded`) */
     moments: { raise: (/** @type {import('../bridge/shapes').MomentEvent} */ m) => { FACES.moment(m); return true; }, folded: () => FACES.folded() },
     selection: () => SEL.selected(),
     /** the platform's own selection: whether it is collapsed, whether it runs backward (its focus point before its anchor, read from the platform, never from the page), and the span it covers in a mounted article (null outside one) */

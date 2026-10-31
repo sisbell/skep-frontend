@@ -1972,7 +1972,7 @@ const atView = (/** @type {View} */ v) => { const d = CAM.destination(); return 
 
 /**
  * A walk's moment unfolded over the view its walk showed it over (O-FACES'
- * `unfold`; FP-28): the act counted as it is made — a card or scene
+ * `unfold`; FP-36): the act counted as it is made — a card or scene
  * still reading ended, a jump in the air abandoned, so no read it left
  * answers over the face — and, where the camera is bound elsewhere, a
  * teleport there as an account's is: its trail entry taken at the act, the

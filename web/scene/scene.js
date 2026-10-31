@@ -69,7 +69,7 @@
 // click, Enter or Space — shows those words whole in a list at it (O-HOST's;
 // `showChanges`), which a setting of the panes draws again from the stroke
 // standing at the same bytes, or, where none stands, leaves standing and
-// saying so (FP-28), and which the scene's own end dismisses. A stroke is
+// saying so (FP-36), and which the scene's own end dismisses. A stroke is
 // keyed by the permanent address of the byte before its first change
 // (`strokeKey`), so its button, its list and the stop the scene's record
 // names follow it across a setting.
@@ -216,7 +216,7 @@
 // the first in pane B's order, then the one after the last it went to, round
 // again (`stopFor`) — its count shown where they are two or more, named by
 // ST's `L.scene.shared` words, its appearance said once, politely, in the
-// status region (FP-28), and hidden while every one is in view. Its act
+// status region (FP-36), and hidden while every one is in view. Its act
 // (`toShared`) scrolls pane B alone, the passage's first line level with the
 // near passage's where that line is in view, else LEVEL_AT px below the
 // pane's top, the passage gone to kept by its bytes' identity; a stop that
@@ -268,7 +268,7 @@
 // stroke; a returned stop's passage named by its first 48 characters at
 // most, cut on a word.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-21, FP-22, FP-23,
-// FP-24, FP-25, FP-26, FP-27, FP-28, FP-29, FP-30, FP-31, FP-34.
+// FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-34, FP-36.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -1277,7 +1277,7 @@ const faceWords = (/** @type {string} */ face) => t(face === 'too_many_pairs' ? 
  * A refusal the `compare` met after the scene showed (`addBands`), said where
  * the bar says one, before its acts — which stand as they are, so a focus on
  * one stays — and in the status region, for it changed away from the focus
- * without the reader's act (FP-28).
+ * without the reader's act (FP-36).
  * @param {NonNullable<typeof els>} E
  * @param {string} face the refusal, by its name
  */
@@ -2911,7 +2911,7 @@ function showChanges(S, key, caption, rows, btn, byKey, how = {}) {
 
 /**
  * A stroke's list standing, checked again once the panes are set again (see
- * the head; FP-28): drawn again from the stroke now standing at the same
+ * the head; FP-36): drawn again from the stroke now standing at the same
  * bytes — its key — or, where none stands, as it was, saying so.
  * @param {Scene} S
  */
@@ -2983,7 +2983,7 @@ export function stopFor(shared, next, view) {
  * stands it, at pane B's facing edge, at the pane's visible top or bottom on
  * the passage's bearing, over the stub's triangle, its count shown where the
  * shared passages are two or more and its name ST's words; its first
- * appearance in the scene said in the status region (FP-28); hidden where
+ * appearance in the scene said in the status region (FP-36); hidden where
  * every one stands in view, the focus it held handed to pane B (FP-20). A
  * returned stop stands where what it stood for stands (`placeReturned`),
  * named as its answer tells, never hidden.

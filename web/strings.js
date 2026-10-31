@@ -237,7 +237,7 @@ export const STRINGS = {
   // the one status message at a session's ending (FP-29): the ending's words — the one line's — then the documents the
   // view stood on that the reader can no longer read, each now its withheld box, "withheld · ⟨owner⟩"
   'L.covered': { text: '⟨ending⟩ — withheld from you now: ⟨documents⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
-  // a walk's moment (FP-28): its face's caption by its kind, its answers, its cancel named by its walk and beside it that
+  // a walk's moment (FP-36): its face's caption by its kind, its answers, its cancel named by its walk and beside it that
   // what cancelling leaves behind is not told to the page, a label box's default and its empty field flagged, a moment the
   // shell no longer holds; and the walk's segment of the one line
   'L.moment.label': { text: 'the shell asks for a name', cls: 'DRAFT', source: '', screen: 'a walk\'s moment', lane: true },

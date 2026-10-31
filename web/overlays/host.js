@@ -89,7 +89,7 @@
 // showing nothing, and the standing overlay dismissed, the focus returning
 // through the controller — save a jump's reading or reaching face, whose
 // read the new class answers, and a moment's face, which is the shell's.
-// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-25, FP-28, FP-29.
+// Rules: FP-1, FP-2, FP-9, FP-10, FP-13, FP-20, FP-25, FP-29, FP-36.
 
 import { sx, sy, viewport, markDirty } from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';

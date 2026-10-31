@@ -286,7 +286,7 @@ test('a reading view frames its column with both its margins: the corner on its 
   } finally { CAM._reset(); }
 });
 
-test('a document read whole whose first column the visible view below the one line holds is framed on that column\'s middle; one it does not hold, on its head: the column\'s outline at the top of the visible view, never under the line (FP-29; issue #16)', () => {
+test('a document read whole whose first column the visible view below the one line holds is framed on that column\'s middle; one it does not hold, on its head: the column\'s outline at the top of the visible view, never under the line (FP-37; issue #16)', () => {
   deliver();
   CAM._reset(); CAM.setViewport(1440, 900);
   const f = LAYER.foldOf(REC.doc(D)), box = docBox(D), c = f.columns[0], g = (GUTTER / 2) * f.fs;

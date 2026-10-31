@@ -74,7 +74,7 @@
 // (`caption`), so O-HOST names it as the act's answer and says the caption
 // before its words; a landing's face is tied by the item's description where
 // the focus lands instead (`told`).
-// A walk's moment is the walk's state (FP-28): a public `moment` is drawn by
+// A walk's moment is the walk's state (FP-36): a public `moment` is drawn by
 // its kind — a label box its title, its statements, its field and the default
 // it offers; a question its words and its field; a yes-or-no question its
 // words and its two answers; a statement its words alone — and what ends any
@@ -94,7 +94,7 @@
 // shell ends it: its answer or its cancel accepted, or its walk's next
 // moment, which opens as the last was left — whole, or folded, the segment
 // said and the camera unmoved. One arriving where the reader stands at a
-// surface of their own (FP-28) — an overlay, an opening still reading, the
+// surface of their own (FP-36) — an overlay, an opening still reading, the
 // reading scene, a field holding the caret — opens folded; else whole, taking
 // the focus on its first control (K-80). A statement, which no walk waits on,
 // never folds: what its walk does after it, and the walk's end, the shell
@@ -113,7 +113,7 @@
 // M-PUMP's `retryBoards`): a board found, the page launches there and the
 // face goes; a refusal again said, so no press is silent.
 // Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-25, FP-26, FP-28, FP-29,
-// FP-33, FP-35.
+// FP-33, FP-35, FP-36.
 
 import * as HOST from './host.js';
 import * as PORT from '../bridge/port.js';
@@ -657,7 +657,7 @@ export function floating(far, anchor, offer = null, told = false) {
  * The dead end's face standing at `far` takes the version offer its
  * landing's reads found (see the head): drawn again in its place with the
  * offer's act, no act on the chrome (O-HOST's `redraw`), its words not said
- * again and the act's said through the status region (FP-28). Nothing where
+ * again and the act's said through the status region (FP-36). Nothing where
  * that face no longer stands — one the reader dismissed, or an act took the
  * place of, stays gone.
  * @param {string} far the document the face names
@@ -796,7 +796,7 @@ const segmentWords = (/** @type {Walk} */ w) => t('L.walk.waits', { walk: w.m.wa
 
 /**
  * Does the reader stand at a surface of their own a moment's face would take
- * the place of (see the head; FP-28)? An overlay other than the
+ * the place of (see the head; FP-36)? An overlay other than the
  * face of the walk's moment before, an opening still reading, the reading
  * scene, or a field holding the caret — the LEAP box's, or that face's own.
  * @param {Walk | undefined} prev the walk's moment before

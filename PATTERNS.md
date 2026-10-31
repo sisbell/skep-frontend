@@ -129,7 +129,7 @@ fix; nothing here depends on their names.
   sign whole. A document drawn smaller than its neighbours is framed
   and says so.
 
-- **FP-29 The strip under the top line follows one rule; draw order
+- **FP-37 The strip under the top line follows one rule; draw order
   never decides what shows there.** Upward stubs — the plane's, the
   beams' and their labels — keep the border on one row, and while a
   name holds, its place's ground runs up to the line with the stubs
@@ -207,6 +207,9 @@ fix; nothing here depends on their names.
   "Signed out" names the person's own sign-out alone, on every
   surface.
 
+FP-28 names this rule alone; a citation of FP-28 for a surface that
+ends only by the reader's act means FP-36.
+
 ## The cover
 
 - **FP-29 A change of the page's class keeps every place and covers
@@ -222,6 +225,9 @@ fix; nothing here depends on their names.
   it — a length, a position, a window, an arrival, a notice, a card —
   survives. The change is said once, its ending and what it covered,
   as the reads it asked answer.
+
+FP-29 names this rule alone; a citation of FP-29 for the strip under
+the top line means FP-37.
 
 ## The gate
 
@@ -286,7 +292,7 @@ fix; nothing here depends on their names.
 
 ## What stands
 
-- **FP-28 A surface ends only by the reader's act.** A card, a list, a
+- **FP-36 A surface ends only by the reader's act.** A card, a list, a
   selection, a reading scene or a field being typed in ends when the
   reader closes it, replaces it, or leaves its place, and by nothing
   else: a read that lands or fails, a version move and a replayed key
@@ -504,7 +510,7 @@ last. Each stands until a later decision says it changes it.
 - **#175**: a session a restart lost is asked for again by the boot's own `session(board)`, the page's own `close(session)` is the one end to read "signed out", past a second still out the line reads "reconnecting as ⟨account⟩ after a restart", got back it says nothing, and refused it shows the guest state boot shows for that refusal led by "could not reconnect as ⟨account⟩ after a restart" → FP-28
 - **#177**: at a session's ending the documents in view and on the trail are read again, and one the reader can no longer read stands in place as a guest's withheld box, its face offering sign-in in the one line's words for that ending, the walk, the panes and the trail standing on it, cards on covered material closing, and one status message saying the ending and what is covered → FP-29, FP-21
 - **#179**: a `withheld` refusal describes the document the board names in `site.addr` by the first case that holds — the text on screen showing the change where the session ended, a follow's destination landed at like any jump, a link address inside it keeping C-39's words, else its own withheld words at the act, whole the first time a session shows them and compact after — each face the act's answer, reached by keyboard while it stands → FP-25, FP-26
-- **#182**: a folded moment is one segment of the one line naming its walk, its step and that it waits on the reader, never cut short of room and the shell told nothing, its act unfolding the moment as it was left over the view its walk showed it over, only its own cancel sending `cancel(id)`, and a statement never folding → FP-28 (What stands), FP-20
+- **#182**: a folded moment is one segment of the one line naming its walk, its step and that it waits on the reader, never cut short of room and the shell told nothing, its act unfolding the moment as it was left over the view its walk showed it over, only its own cancel sending `cancel(id)`, and a statement never folding → FP-36, FP-20
 - **#184**: the versions list keeps every member its probe read and says at its open end whether the board ended the chain there — the head's row marked latest only where the board answered that no member follows, else one line saying how far it read and that it is not known to be complete, with "try again" going on from there — and while it is not known to be complete nothing built from it claims a total or a latest
 - **#186**: a withheld origin's edition claims decide one clause beneath the arm of every face naming that origin — a withheld run's and the document's own (changes #179), never a link address inside it — the pointer as a working link, the quoting form, or nothing where no claim is admitted, a failed read of them worded "edition claims not read" → FP-33
 - **#202**: the ends drawn at a withheld run stand as one symbol beside its notice at every stage, a count after it where they are two or more and others' ends counted in its column's edge, the symbol opening the one card or listing the several, and Back across a follow made there outlining the whole run, lighting its symbol and standing on the run's item → FP-30, FP-21
@@ -516,7 +522,7 @@ last. Each stands until a later decision says it changes it.
 - **#22**: the anatomy card says the day its link was made, after its owner, and each versions row the day its member was published under "published" said once at the list's head — each the day the board's own record gives the commit that made it, as day, month in words and year, never a relative age or a log position, and "not recorded" where the board holds no reading → FP-34
 - **#23**: a document's label is one contents line — its own first line, a pinned version's its own, set where those words stand when its text mounts and cut on a word, the client's words in its place bracketed, and its address at one small size at the row's end, past its region's prefix only while that region is named in view and whole first wherever it is not — and the one line follows each exact field with its label, the label giving way first → FP-26, FP-22
 - **#42**: a continuation's mark is two targets — its newest member's label going to that member, and the rest of the mark, its count saying what it counts, opening its members' list newest first at the mark, each row a LEAP — the whole mark the list's where it is too small for two, the walk stopping once at the mark before its members and ringing a member on the mark with its name and place, and a re-take over the mark keeping a focus on one of its members, else taking the mark and never the member under the centre (changes #141) → FP-20
-- **#50**: a reading scene is a step on the trail — its opening pushes one entry at the act, its own close is Back onto the entry it opened over with the step it was opened from lit, leaving its entry records it by its panes' versions and bytes and the focus's stop so a return reopens it as left, and the one line says a close until the next act → FP-25, FP-28, FP-23, FP-20
+- **#50**: a reading scene is a step on the trail — its opening pushes one entry at the act, its own close is Back onto the entry it opened over with the step it was opened from lit, leaving its entry records it by its panes' versions and bytes and the focus's stop so a return reopens it as left, and the one line says a close until the next act → FP-25, FP-36, FP-23, FP-20
 - **#59**: "read side by side" at a link whose far end names a document whole opens that document at its start — the version the end names, else the latest — beside the near passage, levelled with nothing of it and shown without waiting on `compare`, whose answer only adds bands; the link's line meets the far pane's facing edge, drawn whole in the end's colour; the far pane is named as the link's end and is the current location; the near passage's band's clipped end is a stop stepping through the passages holding its material, with a count where they are several; and the card describes the end by the document's label → FP-30, FP-20
 - **#331**: scenes merge only pairs touching in both documents; each band is drawn at its extent on each pane's facing edge, two bands sharing a line dividing it at its middle, and where two runs consecutive in both documents meet on both sides their shared edge is a stroke in the gutter's half beside each document holding characters between them, strokes at one place one stroke with their count, its act and the mirror naming each difference's characters on each side → FP-26
 - **#339**: a stop only the panes' `compare` draws that the reader left from is recorded by its kind and what it stood for, stands at the return where its material stands and takes the focus, its count and bearing being read until that `compare` answers, which fills it in under the kept focus or leaves it standing in FP-21's words where part, none or nothing is told, an act on it waiting for the answer and the answer moving nothing once the reader has moved on → FP-20, FP-21, FP-25, FP-27, FP-34
