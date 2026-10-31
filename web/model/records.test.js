@@ -5,8 +5,11 @@
 // in place; a link's stored span placed through the held V→I image, and an
 // end held by the trunk its address lies under or by the text that places
 // it; a stretch named by identity and placed back through any image;
-// projections, edition claims and failed reads held until their drops, every
-// drop counted; a row naming a document the view shows dropping nothing of
+// projections and failed reads held until their drops, every drop counted;
+// edition claims held and counted by origin — no feed row dropping them, a
+// change of one origin's dropping that origin's alone or keeping them as
+// held, a read of them setting them again in one step unless a change
+// overtook it; a row naming a document the view shows dropping nothing of
 // it; a bare row's mark, a newer member taking a trunk's text, a refresh's
 // drop and a shown document set again in one step — its text without an
 // image holding none, a claim's home making its origin's windows again; the key store,
@@ -275,8 +278,8 @@ test('where a link\'s slot projects is held in the text\'s order until the docum
   assert.equal(REC.projection(D + '.0.2.2', 2, '1.0.1.0.9'), undefined, 'the death drops the rest');
 });
 
-test('the edition claims on an origin are held until a feed row that may change them, or the death, drops them all, the drop counted; each document windowing the origin is made again as they, a listed claim\'s link or its home\'s metadata arrive and go, and no other', () => {
-  const W = '1.0.1.0.3', O = '1.0.1.0.1003', C = '1.0.1.0.9.0.2.1', H = '1.0.1.0.9', PLAIN = '1.0.1.0.5';
+test('the edition claims on an origin are held until a change of them drops that origin\'s alone — a feed row drops none — or the death drops them all, each change counted by origin; kept where the view shows a document windowing it, a change counted and the claims standing as held; each document windowing the origin is made again as they, a listed claim\'s link or its home\'s metadata arrive and go, and no other (issue #272)', () => {
+  const W = '1.0.1.0.3', O = '1.0.1.0.1003', P = '1.0.1.0.1004', C = '1.0.1.0.9.0.2.1', H = '1.0.1.0.9', PLAIN = '1.0.1.0.5';
   REC.takeDelivery(W, [{ pos: 1, width: 10, kind: 'content', text: 'Tumbler.\n\n', ref: null, origin: null }, { pos: 11, width: 4, kind: 'withheld', text: '', ref: null, origin: O }]);
   REC.takeDelivery(PLAIN, [{ pos: 1, width: 5, kind: 'content', text: 'plain', ref: null, origin: null }]);
   assert.deepEqual([REC.withheldOrigins(W), REC.withheldOrigins(PLAIN)], [[O], []]);
@@ -288,21 +291,42 @@ test('the edition claims on an origin are held until a feed row that may change 
   assert.deepEqual(made(() => REC.takeMetadata(H, { doc: H, published: true, owner: '1.0.1', birth: H + '.1', birthExtent: 5, placed: null, baseExtent: null, source: null, asOf: 1 })), [1, 0], 'the claim\'s home\'s metadata lands');
   assert.deepEqual(made(() => REC.invalidate(H)), [1, 0], 'the home dropped: the clause decided again from less');
   assert.deepEqual(made(() => REC.takeRefused(H, 'withheld')), [1, 0], 'a read of the home refused');
-  const drops = REC.claimDrops();
-  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, op: 'insert', docs: [PLAIN], class: 'published' }));
-  assert.deepEqual([REC.editionClaimsOf(O), REC.claimDrops()], [[C], drops], 'a row that writes no link and publishes nothing leaves them held');
-  assert.deepEqual(made(() => REC.applyFeedUpdate(/** @type {any} */ ({ position: 12331, at: 12331, op: 'make_link', docs: ['1.0.2.0.5'], class: 'published', link: '1.0.2.0.5.0.2.1' }))), [1, 0], 'a link written anywhere: the windowing document made again');
-  assert.deepEqual([REC.editionClaimsOf(O), REC.claimDrops()], [undefined, drops + 1], 'every claim held dropped, the drop counted');
+  REC.takeEditionClaims(P, []);
+  const [o, p] = [REC.claimDropsOf(O), REC.claimDropsOf(P)];
+  for (const row of [{ op: 'insert', docs: ['1.0.2.0.7'] }, { op: 'make_link', docs: ['1.0.2.0.5'], link: '1.0.2.0.5.0.2.1' }, { op: 'nullify', docs: ['1.0.2.0.5'] }, { op: 'publish', docs: ['1.0.2.0.6.1'] }, { op: null, docs: null, link: '1.0.2.0.5.0.2.2' }]) {
+    assert.deepEqual(made(() => REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, class: 'published', ...row }))), [0, 0], `a ${row.op ?? 'bare'} row: nothing windowing the origin made again`);
+    assert.deepEqual([REC.editionClaimsOf(O), REC.claimDropsOf(O)], [[C], o], `a ${row.op ?? 'bare'} row: the claims held, no change counted — which origins a row changed is M-PUMP\'s to read`);
+  }
+  assert.deepEqual(made(() => REC.claimsChanged(O, true)), [0, 0], 'a change kept, the view showing a document windowing the origin: nothing made again');
+  assert.deepEqual([REC.editionClaimsOf(O), REC.claimDropsOf(O), REC.claimDropsOf(P)], [[C], o + 1, p], 'the claims standing as held, the change counted of that origin alone');
+  assert.deepEqual(made(() => REC.claimsChanged(O, false)), [1, 0], 'a change dropping them: the windowing document made again, no other');
+  assert.deepEqual([REC.editionClaimsOf(O), REC.claimDropsOf(O), REC.editionClaimsOf(P), REC.claimDropsOf(P)], [undefined, o + 2, [], p], 'that origin\'s claims dropped and the change counted; another origin\'s held');
   assert.deepEqual(made(() => REC.takeEditionClaims(O, 'withheld')), [1, 0], 'a lookup refused as withheld from the reader: the windowing document made again');
   assert.equal(REC.editionClaimsOf(O), 'withheld', 'held as withheld');
   REC.takeEditionClaims(O, 'unread');
   assert.equal(REC.editionClaimsOf(O), 'unread', 'a lookup that failed any other way is held unread');
+  assert.deepEqual([REC.claimOrigins().sort(), REC.windowing(new Set([O])), REC.windowing(new Set([P])), [...REC.originsClaimedIn([PLAIN])]], [[O, P], [W], [], []], 'the origins a change can concern: those held and those a held document windows; the documents windowing each');
   REC.setSession({ session: 's-1', principal: 1, account: '1.0.1' });
   REC.sessionDied({ arm: 'closed' });
-  assert.deepEqual([REC.editionClaimsOf(O), REC.claimDrops()], [undefined, drops + 2], 'the death drops them with every read at the session\'s class, and is counted');
+  assert.deepEqual([REC.editionClaimsOf(O), REC.editionClaimsOf(P), REC.claimDropsOf(O), REC.claimDropsOf(P)], [undefined, undefined, o + 3, p + 1], 'the death drops them all with every read at the session\'s class, and is counted for each');
 });
 
-test('a failed read of a listed claim\'s link or its home\'s metadata is held — through a drop of the claims — until a read of it answers, what the page held of it is dropped, or the death; each document windowing an origin whose claim it decides is made again as it lands and as it goes, and no other (issue #186)', () => {
+test('a read of the edition claims on an origin sets them again in one step — the homes\' metadata or refusals, the claims\' links, the reads that failed, then the lookup — and sets nothing where a change of them overtook it (issue #272)', () => {
+  const W = '1.0.1.0.3', O = '1.0.1.0.1003', H = '1.0.1.0.9', C = H + '.0.2.1', G = '1.0.1.0.11', D = G + '.0.2.1';
+  REC.takeDelivery(W, [{ pos: 1, width: 10, kind: 'content', text: 'Tumbler.\n\n', ref: null, origin: null }, { pos: 11, width: 4, kind: 'withheld', text: '', ref: null, origin: O }]);
+  REC.takeEditionClaims(O, []);
+  const meta = { doc: H, published: true, owner: '1.0.1', birth: H + '.1', birthExtent: 5, placed: null, baseExtent: null, source: null, age: { at: 3, time: null, from: null }, asOf: 9 };
+  const fresh = () => ({ origin: O, at: REC.claimDropsOf(O), lookup: [C, D], values: [{ addr: C, from: [], to: [], type: '1.1.0.1.0.1.0.3.14', age: { at: 3, time: null, from: null } }], homes: [{ home: H, meta, refused: null }, { home: G, meta: null, refused: /** @type {'withheld'} */ ('withheld') }], failed: [D] });
+  const stale = fresh();
+  REC.claimsChanged(O, true);
+  const rev = REC.doc(W).rev;
+  assert.deepEqual([REC.setClaims(stale), REC.editionClaimsOf(O), REC.doc(W).rev], [false, [], rev], 'a read a change overtook: nothing set, nothing made again');
+  assert.equal(REC.setClaims(fresh()), true, 'a read after the change: set');
+  assert.deepEqual([REC.editionClaimsOf(O), REC.link(C)?.addr, REC.doc(H).meta?.published, REC.doc(G).refused, REC.readFailed(D)], [[C, D], C, true, 'withheld', true], 'the lookup, the claim\'s link, its home\'s metadata, the other home\'s refusal and the failed read, together');
+  assert.ok(REC.doc(W).rev > rev, 'the document windowing the origin made again');
+});
+
+test('a failed read of a listed claim\'s link or its home\'s metadata is held — through a change dropping the claims — until a read of it answers, what the page held of it is dropped, or the death; each document windowing an origin whose claim it decides is made again as it lands and as it goes, and no other (issue #186)', () => {
   const W = '1.0.1.0.3', O = '1.0.1.0.1003', C = '1.0.1.0.9.0.2.1', H = '1.0.1.0.9', PLAIN = '1.0.1.0.5';
   REC.takeDelivery(W, [{ pos: 1, width: 10, kind: 'content', text: 'Tumbler.\n\n', ref: null, origin: null }, { pos: 11, width: 4, kind: 'withheld', text: '', ref: null, origin: O }]);
   REC.takeDelivery(PLAIN, [{ pos: 1, width: 5, kind: 'content', text: 'plain', ref: null, origin: null }]);
@@ -311,7 +335,7 @@ test('a failed read of a listed claim\'s link or its home\'s metadata is held �
   assert.deepEqual(made(() => REC.takeFailedRead(C)), [1, 0], 'the claim\'s link\'s read failed: the windowing document made again, no other');
   assert.deepEqual(made(() => REC.takeFailedRead(H)), [1, 0], 'its home\'s metadata read failed');
   assert.deepEqual([REC.readFailed(C), REC.readFailed(H), REC.readFailed(O)], [true, true, false], 'each held, and nothing else');
-  REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, op: 'make_link', docs: ['1.0.2.0.5'], class: 'published', link: '1.0.2.0.5.0.2.1' }));
+  REC.claimsChanged(O, false);
   assert.deepEqual([REC.editionClaimsOf(O), REC.readFailed(C), REC.readFailed(H)], [undefined, true, true], 'the claims dropped, the failed reads of the link and the home held: facts of those reads');
   REC.takeEditionClaims(O, [C]);
   assert.deepEqual(made(() => REC.takeLink({ addr: C, from: [], to: [], type: '1.1.0.1.0.1.0.3.14' })), [1, 0], 'the link read again and answered');
@@ -374,7 +398,7 @@ test('a link homed at a version member keeps the member as its home, never its t
   assert.deepEqual([REC.doc(D).from, REC.doc(M).from], [-1, -1], 'the row naming neither: the member the new link is homed at and its trunk both dropped');
 });
 
-test('a bare row — its docs null, lost testimony — drops the home of the link it names and the home\'s trunk whatever its op, and answers what it dropped, a null op dropping the edition claims; one naming no link drops nothing, the claims included, and marks the board (issue #212)', () => {
+test('a bare row — its docs null, lost testimony — drops the home of the link it names and the home\'s trunk whatever its op, and answers what it dropped, the edition claims held; one naming no link drops nothing, the claims included, and marks the board (issue #212)', () => {
   const D = '1.0.1.0.2', M = D + '.2', W = '1.0.1.0.3', O = '1.0.1.0.1003', C = '1.0.1.0.9.0.2.1';
   for (const addr of [D, M, W]) REC.takeDelivery(addr, [{ pos: 1, width: 5, kind: 'content', text: 'hello', ref: null, origin: null }]);
   REC.takeEditionClaims(O, [C]);
@@ -382,8 +406,7 @@ test('a bare row — its docs null, lost testimony — drops the home of the lin
   const dropped = REC.applyFeedUpdate(/** @type {any} */ ({ position: 12330, at: 12330, op: null, docs: null, key: null, time: null, link: M + '.0.2.3', class: 'published' }));
   assert.deepEqual([REC.doc(D).from, REC.doc(M).from, REC.doc(W).from], [-1, -1, 1], 'the member the link is homed at and its trunk dropped, no other document');
   assert.deepEqual(dropped, [D, M], 'answered, the trunk then the member: what the view asks again');
-  assert.equal(REC.editionClaimsOf(O), undefined, 'its op unnamed, it may be any link write: the edition claims dropped');
-  REC.takeEditionClaims(O, [C]);
+  assert.deepEqual(REC.editionClaimsOf(O), [C], 'the edition claims held: whether the link it names is a claim is M-PUMP\'s to read');
   assert.equal(REC.bare(), false, 'a row naming a link marks nothing');
   // a write the journal decides nothing of: every term null
   const undecided = REC.applyFeedUpdate(/** @type {any} */ ({ position: 12331, at: 12331, op: null, docs: null, key: null, time: null, link: null, new_prefix: null, new_id: null, placed: null, base_extent: null, class: 'published' }));
@@ -452,14 +475,14 @@ test('a refresh\'s drop keeps the documents shown and what they read through —
   REC.takeLink({ addr: C, from: [], to: [], type: '1.1.0.1.0.1.0.3.14' });
   REC.takeMetadata(H, meta(H, '1.0.1')); REC.takeMetadata(FAR, meta(FAR, '1.0.1'));
   REC.takeAccountKey('1.0.1', { cause: 'unsigned' }); REC.takeAccountKey('1.0.2', { cause: 'unsigned' }); REC.takeAccountKey('1.0.9', { label: 'k', fingerprint: 'ab' });
-  const [claims, keys, a, b, rev] = [REC.claimDrops(), REC.keyDrops(), REC.dropsOf(A), REC.dropsOf(B), REC.doc(A).rev];
+  const [claims, keys, a, b, rev] = [REC.claimDropsOf(O2), REC.keyDrops(), REC.dropsOf(A), REC.dropsOf(B), REC.doc(A).rev];
   assert.deepEqual(REC.projectionsOf(new Set([L1])), [{ link: L1, slot: 2, addr: FAR }], 'the projections held of a link\'s slots: what a refresh asks again');
   const dropped = REC.takeRefresh(new Set([A]));
   assert.deepEqual([REC.textBetween(A, 1, 6), [...REC.doc(A).links], REC.dropsOf(A), REC.doc(A).rev], ['hello', [L1], a, rev], 'the document shown stands as held, its drop not counted: its setting again counts it');
   assert.deepEqual([REC.doc(B).from, REC.dropsOf(B), dropped.includes(B), dropped.includes(FAR), REC.doc(FAR).meta], [-1, b + 1, true, true, null], 'one not shown dropped and counted, a far document as any other');
   assert.deepEqual([REC.link(L1)?.addr, REC.link(C)?.addr, REC.link(L2)], [L1, C, undefined], 'the values of its links and of the claims on its origins kept; another\'s dropped');
   assert.deepEqual([REC.projection(L1, 2, FAR), REC.projection(L2, 1, A)], [[{ pos: 3, width: 2 }], undefined], 'where its links project kept, into a document dropped too; another link\'s gone');
-  assert.deepEqual([REC.editionClaimsOf(O), REC.editionClaimsOf(O2), REC.claimDrops(), REC.doc(H).meta?.published], [[C], undefined, claims + 1, true], 'the claims on its origins and their homes kept; others dropped, the drop counted');
+  assert.deepEqual([REC.editionClaimsOf(O), REC.editionClaimsOf(O2), REC.claimDropsOf(O2), REC.claimDropsOf(O) - REC.claimDropsOf(O2), REC.doc(H).meta?.published], [[C], undefined, claims + 1, 0, true], 'the claims on its origins and their homes kept; others dropped, the drop counted for every origin');
   assert.deepEqual([REC.accountKey('1.0.1'), REC.accountKey('1.0.2'), REC.accountKey('1.0.9'), REC.keyDrops()], [{ cause: 'unsigned' }, undefined, { label: 'k', fingerprint: 'ab' }, keys + 1], 'its owner\'s cause kept, another\'s dropped and counted, a value kept');
   assert.deepEqual([REC.places().length, REC.countOf('1.0.1').documents, REC.feedRows().length], [5, 3, 1], 'the index, its counts and the feed\'s rows stand');
 });

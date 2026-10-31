@@ -4,7 +4,8 @@
 // re-take and put out by any other; a block of white space alone is no
 // element of the walk; a landing the index does not list stands on its own
 // node among the listed siblings; the mirror is one Tab stop, named from ST
-// with each level's group, its items naming a withheld run's placeholder,
+// with each level's group, its items naming a withheld run's placeholder —
+// its kind and length alone while its clause is read —
 // each block that holds no text by its kind, a withheld or untold document by
 // its state and a link's far end as its tail does, its descriptions and
 // Back's light written at the rebuild and marked again in place, and its
@@ -32,7 +33,7 @@ import * as F from '../model/frames.js';
 import * as FAKE from '../test/fake-port.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
-import { withheldBlockHTML, entitlementArm, articleHTML, copyText } from '../text/article.js';
+import { withheldBlockHTML, entitlementArm, articleHTML, copyText, CLAUSE_READING } from '../text/article.js';
 import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, continuationCell, DOC_W } from '../plane/projection.js';
 import { lodOf, residueDepth, markScale, LOD_TXT_LO } from '../plane/lod.js';
 import { placeOf, STANDARD_FS, EDGE } from '../plane/layout.js';
@@ -297,7 +298,7 @@ test('a walk step onto a document from below its reading scale frames it just sh
   assert.ok(Math.abs(em(E) - reading) < 1e-6, `E at the reading size, ${reading} px an em: ${em(E)}`);
 });
 
-test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin\'s owner, the entitlement arm for the reader and C-67\'s clause where the origin\'s edition claims decide one, as the plane\'s placeholder shows them (R56; R94; PUB-5.124)', () => {
+test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin\'s owner, the entitlement arm for the reader and C-67\'s clause where the origin\'s edition claims decide one, as the plane\'s placeholder shows them — and while their reads are out, its kind, where it stands and its length alone, as the plane\'s gap shows its ground alone (R56; R94; PUB-5.124; issue #272)', () => {
   // a document of 1.0.2's windowing a run of 1.0.1.1's: an unallocated sub-account, whose owner is the seat above it
   const W = '1.0.2.0.5', O = '1.0.1.1.0.2', owner = '1.0.1';
   REC.takeOwner('1.0.1.1', { prefix: owner, principal: 900 });
@@ -315,9 +316,9 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
     const home = /** @type {string} */ (homeOf(c));
     REC.takeMetadata(home, { doc: home, published: true, owner, birth: home + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
   }
-  /** @type {Array<[string, () => void, string | null, string]>} each state of the origin's claims the page holds, the words of the clause it decides, and what the plane's clause carries besides them: the pointer the claim it follows and that claim's home, a control */
+  /** @type {Array<[string, () => void, string | null, string]>} each state of the origin's claims the page holds, the words of the clause it decides — `CLAUSE_READING` while their reads are out — and what the plane's clause carries besides them: the pointer the claim it follows and that claim's home, a control */
   const states = [
-    ['no claim read', () => REC.applyFeedUpdate({ position: 9, at: 9, op: 'nullify', docs: [], class: 'published' }), null, ''],
+    ['no claim read', () => REC.claimsChanged(O, false), CLAUSE_READING, ''],
     ['no claim on the origin', () => REC.takeEditionClaims(O, []), null, ''],
     ['the owner\'s edition over its own bytes', () => REC.takeEditionClaims(O, [QUOTES, OWN]), t('C-67.pointer'), ` data-claim="${OWN}" data-home="1.0.1.0.9" role="button" tabindex="-1"`],
     ['an edition quoting the draft alone', () => REC.takeEditionClaims(O, [QUOTES]), t('C-67.quoting', { claimant: owner }), ''],
@@ -338,6 +339,13 @@ test('the mirror\'s item at a withheld run is the run\'s placeholder: its origin
       for (const [state, hold, clause, follows] of states) {
         hold();
         const item = WALK.nameOf({ kind: 'block', addr: W, pos: run.pos, link: null }, 1, 2);
+        if (clause === CLAUSE_READING) {
+          assert.equal(item, t('L.mirror.no-text', { kind: t('L.item.withheld'), p: run.pos, extent: n + 240, document: W, same: '', shown: t('L.mirror.shows', { shown: t('L.item.positions', { n: 240 }) }) }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
+            `${who}, ${state}: its kind, where it stands and its length — no owner, arm or clause before the reads they wait on answer`);
+          const html = withheldBlockHTML(run, d, LAYER.viewFor(d));
+          assert.ok(html.includes(' data-holds="reading"') && !html.includes('class="arm"') && !html.includes('wh-mark') && !html.includes('wh-head'), `${who}, ${state}: the plane's gap its ground alone: ${html}`);
+          continue;
+        }
         assert.equal(item, t('L.mirror.withheld', { kind: t('L.item.withheld'), document: W, length: t('L.item.positions', { n: 240 }), owner, origin: O, arm, clause: clause ? t('L.mirror.clause', { clause }) : '' }) + ' ' + t('L.mirror.item', { i: 2, n: 2 }),
           `${who}, ${state}: the owner of the run's origin, ${owner} — never ${W}'s account, nor ${O}'s — the arm for that owner and this reader, and the clause the claims decide`);
         assert.ok(clause ? item.includes(`${arm}. ${clause}. `) : item.includes(`${arm}. `) && !/\.\s+\./.test(item), `${who}, ${state}: the clause a sentence of its own after the arm, or nothing in its place: ${item}`);

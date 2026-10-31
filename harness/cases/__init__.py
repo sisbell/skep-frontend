@@ -43,6 +43,7 @@ VERSIONED = '1.0.1.0.43'     # an edition with two members, the latest holding a
 NO_MATCH = 'qzx no label holds this'  # LEAP text no address, share form, URL, label or address prefix answers
 EDITION_CLASS = '1.1.0.1.0.1.0.3.14'  # R20's edition claim: every edition claim's type, its descriptive subtypes beneath it by prefix
 CLAUSE_UNREAD = 'L.clause.unread'     # C-67's place where a read of the edition claims failed: "edition claims not read" (issue #186)
+CLAUSE_READING = 'reading'           # C-67's clause undecided: a read it waits on not yet answered, the run's gap its ground alone
 HOME = '1.0.1.0.1'           # the claimant's home document: its key record, one atom at position 1
 
 
@@ -507,14 +508,16 @@ class Context:
         admitted nowhere; it passes where its FROM holds a span and none lies in the origin. Decided over the whole
         admitted set (RES-164): the pointer where any passes, following the passing claim PUB-3.107's origin-keyed
         order picks (RES-152) — one whose claimant is `owner` first, the lowest-addressed of several as tumblers, else
-        the lowest-addressed passing claim — named in what it was decided from (`claim`, its `home`); nothing — None —
-        while a listed claim's read is not answered, unless one passes; "edition claims not read" (`CLAUSE_UNREAD`)
-        where a listed claim's admission waits on a read the board refused for a reason that says nothing of what it
-        reads — any but `withheld` for its link, any but `withheld` and `doc_not_registered` for its home — or did not
-        answer (issue #186's design decision); the QUOTING sibling, naming the lowest-addressed claimant, where every
-        admitted one quotes; nothing where none is admitted. The lookup not answered decides nothing — None — refused
-        as `withheld` from the reader, nothing either, and refused any other way, or not answered by the board,
-        "edition claims not read". Answers the string id, or None, and what it was decided from"""
+        the lowest-addressed passing claim — named in what it was decided from (`claim`, its `home`); undecided —
+        `CLAUSE_READING` — while a listed claim's read is not answered, whatever else passes (issue #272's design
+        decision: "Its words appear only when all their reads answer"); "edition claims not read" (`CLAUSE_UNREAD`)
+        where no admitted claim passes and a listed claim's admission waits on a read the board refused for a reason
+        that says nothing of what it reads — any but `withheld` for its link, any but `withheld` and
+        `doc_not_registered` for its home — or did not answer (issue #186's design decision); the QUOTING sibling,
+        naming the lowest-addressed claimant, where every admitted one quotes; nothing where none is admitted. The
+        lookup not answered decides nothing — `CLAUSE_READING` — refused as `withheld` from the reader, nothing —
+        None — and refused any other way, or not answered by the board, "edition claims not read". Answers the string
+        id, `CLAUSE_READING`, or None, and what it was decided from"""
         owner = owner or account_of(origin)
         calls = self.recorded_ops()
         lookup = {'op': 'find_links_ftt', 'q': {'from': 'any', 'home': 'any', 'to': [unit_span(origin)], 'ty': [unit_span(EDITION_CLASS)]}}
@@ -534,7 +537,7 @@ class Context:
             return (None if refused(answer) == 'withheld' else CLAUSE_UNREAD), seen
         listed = (answer or {}).get('result')
         if not isinstance(listed, dict) or listed.get('resp') != 'addrs':
-            return None, seen
+            return CLAUSE_READING, seen
         passing, quoting, waiting, failed = [], [], False, False
         for claim in listed.get('addrs') or []:
             home = home_of(claim) or claim
@@ -565,14 +568,14 @@ class Context:
                 passing.append((claim, claimant))
             else:
                 quoting.append(claimant)
+        if waiting:
+            return CLAUSE_READING, seen
         tumbler = lambda a: [int(x) for x in a.split('.')]
         if passing:
             own = [c for c, claimant in passing if claimant == owner]
             seen['claim'] = min(own or [c for c, _ in passing], key=tumbler)
             seen['home'] = home_of(seen['claim'])
             return 'C-67.pointer', seen
-        if waiting:
-            return None, seen
         if failed:
             return CLAUSE_UNREAD, seen
         if not quoting:

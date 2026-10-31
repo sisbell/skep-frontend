@@ -7,8 +7,10 @@
 // the supersession lineage `in_claims` and `out_claims` (A-56, A-57), and
 // the `/op-at` form `{at, frame}` around any read — each spelled as
 // `docs/wire.md` spells it. The edition claims on a withheld run's origin
-// (PUB-5.124) are `find_links_ftt`'s active-view lookup (`editionClaimsAt`);
-// the audit view's `edition_claims` is not composed (PUB-8.46). The
+// (PUB-5.124) are `find_links_ftt`'s active-view lookup (`editionClaimsAt`),
+// and the edition-class links homed in a document its lookup by home
+// (`editionLinksIn`); the audit view's `edition_claims` is not composed
+// (PUB-8.46). The
 // enrollment records naming an account (R22; FP-34) are `find_links_ftt`'s
 // two-slot lookup too (`enrollmentsOf`; AUTH-2.113, AUTH-5.68). `count_v` is
 // not composed (E17 (a)).
@@ -159,6 +161,17 @@ export const EDITION_CLASS = '1.1.0.1.0.1.0.3.14';
  * @param {string} origin
  */
 export const editionClaimsAt = (origin) => findLinksFtt({ from: 'any', home: 'any', to: [unitSpan(origin)], ty: [unitSpan(EDITION_CLASS)] });
+/**
+ * The links of the edition class homed in a document (R20): `find_links_ftt`
+ * constrained in two slots, the document's unit span in `home` and the
+ * edition class's in `ty`, `from` and `to` `"any"` — a `home` naming a
+ * document or a version member reads that home's links alone and takes no
+ * class-scan permit (wire.md §Link discovery reads). M-PUMP reads it at the
+ * homes a link write names, to tell which origins' edition claims the write
+ * changed.
+ * @param {string} home a document or a version member, never an account
+ */
+export const editionLinksIn = (home) => findLinksFtt({ from: 'any', home: [unitSpan(home)], to: 'any', ty: [unitSpan(EDITION_CLASS)] });
 /** the enrollment class (AUTH-5.4): the commons type every credential enrollment record's deposit is typed under (skep-client's `T_ENROLL`) */
 export const ENROLL_CLASS = '1.1.0.1.0.1.0.3.1';
 /**

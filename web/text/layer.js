@@ -1627,12 +1627,13 @@ export function originOwner(addr) { return REC.ownerAccount(REC.doc(addr)); }
  * state and owner — the owner by the one owner rule (M-REC's `ownerAccount`), as the
  * origin's (`originOwner`), so the pointer follows the claim whose home the
  * origin's owner owns first — and whether a read of either failed, unanswered
- * since (M-REC's `readFailed`). The plane's placeholder, a pane's, the ARIA
- * mirror's item at the run, the run's face whole and the document's own
- * withheld face all read it (T-ARTICLE's `placeholderOf`, O-FACES), so none
- * of them part (R94; FP-33).
+ * since (M-REC's `readFailed`) — undecided (T-ARTICLE's `CLAUSE_READING`) while the
+ * lookup or a read a listed claim's admission waits on is out. The plane's
+ * placeholder, a pane's, the ARIA mirror's item at the run, the run's face
+ * whole and the document's own withheld face all read it (T-ARTICLE's
+ * `placeholderOf`, O-FACES), so none of them part (R94; FP-33).
  * @param {string} origin
- * @returns {import('./article.js').Clause | null}
+ * @returns {import('./article.js').Decided}
  */
 export function clauseOf(origin) {
   const listed = REC.editionClaimsOf(origin);

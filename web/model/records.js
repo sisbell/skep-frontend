@@ -38,18 +38,23 @@
 // named the same way, by the permanent addresses of its bytes read through
 // the held image (`identityOf`), and read back by a slot's rule
 // (`placedIdentity`).
-// Every drop is counted and the counts never fall (`dropsOf`, `claimDrops`,
+// Every drop is counted and the counts never fall (`dropsOf`, `claimDropsOf`,
 // `keyDrops`): the board's answers come by one channel and the feed's rows
 // by another, so a read can land after the row of a write it was read
 // before; M-PUMP reads a count as a read goes out and again as it lands, and
-// takes nothing learned across a drop. The edition claims held are dropped
-// together — a feed row names a claim's home, never the origin it claims —
-// and a failed read of a claim's link or home stands through those drops
-// until a read of it answers or what the page held of it is dropped. A
+// takes nothing learned across a drop. The edition claims are held and
+// counted by origin, and a feed row drops none of them: a change of one
+// origin's claims M-PUMP reads from a row (`claimsChanged`) drops that
+// origin's alone, or, where the view shows a document windowing it, counts
+// the change and keeps them as held until a read of them again sets them in
+// one step (`setClaims`), a read a change overtook setting nothing; a failed
+// read of a claim's link or home stands through those changes until a read
+// of it answers or what the page held of it is dropped. A
 // byline's cause — never its value, which is the same at every class — is
 // dropped at every feed row naming a doc 1 (AUTH-2.127) and at every change
 // of class.
-// A row naming a document the view shows drops nothing of it (FP-23): its
+// A row naming a document M-PUMP keeps — one the view shows, or the home of
+// an edition claim on an origin one windows — drops nothing of it (FP-23): its
 // drop is counted, and what it holds stands as held until M-PUMP's reads of
 // it again set it in one step (`applyFeedUpdate`'s `keep`, `setAgain`) —
 // what it holds of where every link's slot projects into it among them
@@ -303,8 +308,10 @@ const state = {
   editionClaims: new Map(),
   /** @type {Set<string>} the links and documents whose read an edition claim's admission waits on failed, unanswered since (`takeFailedRead`) */
   failedReads: new Set(),
-  /** how many times the edition claims held have been dropped together at a feed row (`claimDrops`) */
-  claimDrops: 0,
+  /** @type {Map<string, number>} how many times each origin's edition claims have changed (`claimsChanged`), by origin (`claimDropsOf`) */
+  claimDrops: new Map(),
+  /** how many times a refresh has dropped the edition claims on every origin its kept documents do not window (`takeRefresh`): a count every origin's takes (`claimDropsOf`) */
+  claimsRefreshed: 0,
   /** @type {Map<string, number>} how many times each address's delivered state has been dropped (`invalidate`), its record held or not */
   drops: new Map(),
   /** how many times a change of the page's class has dropped every record (`dropClass`) */
@@ -1130,22 +1137,11 @@ function unproject(/** @type {string} */ addr) {
 // ---- the edition claims on an origin ---------------------------------------------
 
 /**
- * The feed rows after which the edition claims standing on any origin, or the
- * ones a reader may see, may be others: the five link writes — a claim
- * deposited, its successor, a retraction, a supersession (wire.md §Links
- * (writes)) — and a `publish`, which may publish a claim's home (PUB-5.99) and
- * make a claim homed in it one the reader may read. A bare row whose op the
- * journal could not name serves `op: null` (wire.md §The change feed) and may
- * be any of the six, so `applyFeedUpdate` drops the claims at one naming its
- * link too; one naming nothing marks the board instead (see the head).
- */
-const CLAIM_WRITES = new Set(['make_link', 'emit', 'edit_link', 'nullify', 'assert_sup', 'publish']);
-
-/**
  * The edition-claim lookup's answer for an origin (PUB-5.124; M-FRAMES's
  * `editionClaimsAt`), as the page holds it (`Lookup`): the claims listed,
- * 'withheld' or 'unread'. Held until a feed row may have changed them
- * (`applyFeedUpdate`) or the session's death; each listed claim's link
+ * 'withheld' or 'unread'. Held until a change of them drops them
+ * (`claimsChanged`), a refresh drops them (`takeRefresh`), or the session's
+ * death; each listed claim's link
  * (`takeLink`) and its home's metadata (`takeMetadata`) are the page's own
  * reads of them, held beside it, and a failed one of those reads too
  * (`takeFailedRead`). Every held document windowing the origin is made again,
@@ -1180,19 +1176,98 @@ export function takeFailedRead(addr) {
 /** has a read of a link, or of a document's metadata, failed, unanswered since (`takeFailedRead`)? */
 export const readFailed = (/** @type {string} */ addr) => state.failedReads.has(addr);
 /**
- * How many times the edition claims held have been dropped — together, at a
- * feed row that may have changed them, and at every drop of the class — so a
- * lookup that finds the count moved between going out and landing was
- * answered of claims the page does not hold. It never falls.
+ * How many times an origin's edition claims have changed — a change M-PUMP
+ * reads from a feed row (`claimsChanged`), every refresh's drop
+ * (`takeRefresh`) and every drop of the class — so a lookup of them that
+ * finds the count moved between going out and landing was answered of claims
+ * the page does not hold, and a read of them a change overtook sets nothing
+ * (`setClaims`). It never falls.
+ * @param {string} origin
  * @returns {number}
  */
-export const claimDrops = () => state.claimDrops + state.classDrops;
+export const claimDropsOf = (origin) => (state.claimDrops.get(origin) ?? 0) + state.claimsRefreshed + state.classDrops;
+
+/**
+ * An origin's edition claims changed at the board — a feed row M-PUMP reads
+ * as writing, retracting or superseding one of them (PUB-5.124): the change
+ * counted (`claimDropsOf`), so a lookup of them out across it takes nothing
+ * and a read of them out across it sets nothing (`setClaims`); and the claims
+ * held dropped, each held document windowing the origin made again — save
+ * where `kept`, the view showing a document that windows it: they then stand
+ * as held until a read of them again sets them in one step (FP-23).
+ * @param {string} origin
+ * @param {boolean} kept
+ */
+export function claimsChanged(origin, kept) {
+  state.claimDrops.set(origin, (state.claimDrops.get(origin) ?? 0) + 1);
+  if (kept || !state.editionClaims.delete(origin)) return;
+  reclause(new Set([origin]));
+  bump();
+}
+
+/**
+ * The edition claims on an origin set again in one step from a read of them
+ * (FP-23): each listed claim's home's metadata or what a refusal of it says
+ * of the home, each claim's link, the reads that failed, then the lookup's
+ * answer — every held document windowing the origin made again with them.
+ * Nothing where the origin's claims changed since the read went out
+ * (`FreshClaims.at`, `claimDropsOf`): that read is of claims the page does not
+ * hold.
+ * @param {FreshClaims} c
+ * @returns {boolean} whether it set them
+ */
+export function setClaims(c) {
+  if (claimDropsOf(c.origin) !== c.at) return false;
+  for (const h of c.homes) { if (h.meta) takeMetadata(h.home, h.meta); else if (h.refused) takeRefused(h.home, h.refused); }
+  for (const v of c.values) takeLink(v);
+  for (const a of c.failed) takeFailedRead(a);
+  takeEditionClaims(c.origin, c.lookup);
+  return true;
+}
 
 /** the origins a document's delivered withheld runs name, each once, in position order */
 export function withheldOrigins(/** @type {string} */ addr) {
   const d = state.docs.get(addr);
-  return d ? [...new Set(d.blocks.flatMap((b) => (b.kind === 'withheld' && b.origin ? [b.origin] : [])))] : [];
+  return d ? [...new Set(originsIn(d))] : [];
 }
+
+/**
+ * Every origin a change of the edition claims can concern: those the page
+ * holds the lookup's answer on, and those a held document's withheld runs
+ * name — M-PUMP reads which of them a feed row changed.
+ * @returns {string[]}
+ */
+export function claimOrigins() {
+  const out = new Set(state.editionClaims.keys());
+  for (const d of state.docs.values()) for (const o of originsIn(d)) out.add(o);
+  return [...out];
+}
+
+/**
+ * The held documents whose delivered withheld runs name one of these origins,
+ * in the order first held: those the origins' edition claims decide a
+ * placeholder's clause in.
+ * @param {ReadonlySet<string>} origins
+ * @returns {string[]}
+ */
+export function windowing(origins) {
+  if (!origins.size) return [];
+  return [...state.docs.values()].filter((d) => windows(d, origins)).map((d) => d.addr);
+}
+
+/**
+ * The origins whose held edition claims list one homed at one of these
+ * addresses (M-ADDR's `homeOf`): those whose clause a change of the homes'
+ * metadata decides again.
+ * @param {Iterable<string>} addrs
+ * @returns {Set<string>}
+ */
+export function originsClaimedIn(addrs) { const at = new Set(addrs); return claiming((c) => at.has(homeOf(c) || c)); }
+
+/** the origins a document's delivered withheld runs name, in position order */
+const originsIn = (/** @type {Doc} */ d) => d.blocks.flatMap((b) => (b.kind === 'withheld' && b.origin ? [b.origin] : []));
+/** does one of a document's delivered withheld runs name one of these origins? */
+const windows = (/** @type {Doc} */ d, /** @type {ReadonlySet<string>} */ origins) => d.blocks.some((b) => b.kind === 'withheld' && b.origin !== null && origins.has(b.origin));
 
 /** the origins whose held edition claims list one the test names */
 function claiming(/** @type {(claim: string) => boolean} */ named) {
@@ -1205,15 +1280,7 @@ function claiming(/** @type {(claim: string) => boolean} */ named) {
 /** every held document windowing one of these origins in a withheld run gains a revision: its placeholder's clause is decided again from what the page holds now */
 function reclause(/** @type {Set<string>} */ origins) {
   if (!origins.size) return;
-  for (const d of state.docs.values()) if (d.blocks.some((b) => b.kind === 'withheld' && b.origin !== null && origins.has(b.origin))) d.rev++;
-}
-
-/** every edition claim held dropped, the drop counted (`claimDrops`); each held document windowing an origin whose claims were held is made again */
-function dropClaims() {
-  state.claimDrops++;
-  const origins = new Set(state.editionClaims.keys());
-  state.editionClaims.clear();
-  reclause(origins);
+  for (const d of state.docs.values()) if (windows(d, origins)) d.rev++;
 }
 
 // ---- owners, key sets ----------------------------------------------------------
@@ -1310,11 +1377,11 @@ const inDocOne = (/** @type {string} */ addr) => { const a = accountOf(addr), tr
  * works out what such a write touched and serves none of it: it drops
  * nothing and marks the board (`bare`), the
  * refresh after the run giving everything held what a row naming it gets (see
- * the head). A row after which the edition claims may be others
- * (`CLAIM_WRITES`, a `null` op among them) drops every one held; a row
- * touching a doc 1 drops every byline cause held (`dropKeyCauses`).
+ * the head). A row drops no edition claim: which origins' claims it changed
+ * M-PUMP reads from it (`claimsChanged`). A row touching a doc 1 drops every
+ * byline cause held (`dropKeyCauses`).
  * @param {FeedUpdate} u
- * @param {ReadonlySet<string>} [keep] the documents the view shows (M-PUMP's): each the row touches counted dropped and kept as held
+ * @param {ReadonlySet<string>} [keep] what M-PUMP keeps as held: each address the row touches it names counted dropped and kept as held
  * @returns {string[]} the addresses the row touched, each once: those dropped, which the view asks again, and those `keep` names, which M-PUMP reads again
  */
 export function applyFeedUpdate(u, keep = new Set()) {
@@ -1328,7 +1395,6 @@ export function applyFeedUpdate(u, keep = new Set()) {
   const touched = new Set();
   for (const named of home ? [...docsNamed, home] : docsNamed) { touched.add(documentOf(named) || named); touched.add(named); }
   for (const addr of touched) { if (keep.has(addr)) counted(addr); else invalidate(addr); }
-  if (u.op == null || CLAIM_WRITES.has(u.op)) dropClaims();
   if ([...touched].some(inDocOne)) dropKeyCauses();
   bump();
   return [...touched];
@@ -1399,13 +1465,13 @@ export function feedTime() {
  * @property {Array<{link: string, slot: 1 | 2, addr: string, runs: Stretch[] | Declined}>} [projections] where each
  * held projection of a slot of those links stands now, in the document it was asked into
  * @property {{n: number, ended: boolean}} [members] its chain, counted
- * @property {FreshClaims[]} [claims] the edition claims on its withheld runs' origins
  * @property {{account: string, facts: AccountFacts}} [byline] its owner's byline facts, read again where a cause was held
  */
 
 /**
- * @typedef {Object} FreshClaims — the edition claims on one origin as a refresh read them (`Fresh.claims`)
+ * @typedef {Object} FreshClaims — the edition claims on one origin as a read of them again answered them, which `setClaims` sets
  * @property {string} origin
+ * @property {number} at the count of the origin's claims' changes as the read went out (`claimDropsOf`): `setClaims` sets nothing where it has moved since
  * @property {Lookup} lookup the lookup's answer
  * @property {LinkValue[]} values each listed claim's link, read
  * @property {Array<{home: string, meta: DocMeta | null, refused: 'withheld' | 'unregistered' | null}>} homes each listed
@@ -1485,7 +1551,8 @@ export function projectionsInto(addr) {
  * withheld runs' origins kept, whose metadata decides the clause there
  * (T-ARTICLE's `editionClause`); every link value no kept document lists and no
  * kept claim is; where the slots of every other link project; the edition
- * claims on every other origin, the drop counted (`claimDrops`); a failed read
+ * claims on every other origin, the drop counted for every origin
+ * (`claimDropsOf`), so no lookup out from before it is taken; a failed read
  * of anything not kept; every byline cause but a kept document's owner's, the
  * drop counted (`keyDrops`). The index, its counts and its state, the feed's
  * rows, the owners and the key sets, which no row drops, stand. M-PUMP reads
@@ -1513,7 +1580,7 @@ export function takeRefresh(keep) {
     if (!m.size) state.projections.delete(addr);
   }
   for (const o of [...state.editionClaims.keys()]) if (!origins.has(o)) state.editionClaims.delete(o);
-  state.claimDrops++;
+  state.claimsRefreshed++;
   for (const a of [...state.failedReads]) if (!named.has(a) && !homes.has(a)) state.failedReads.delete(a);
   state.keyDrops++;
   for (const [account, facts] of [...state.accountKeys]) if ('cause' in facts && !owners.has(account)) state.accountKeys.delete(account);
@@ -1537,9 +1604,9 @@ export function takeRefresh(keep) {
  * is set and it is an edition claim's home, each document windowing the
  * claim's origin is made again, as `takeMetadata` and `takeRefused` make it.
  * With it, in the same step, the
- * values of its links read, where their slots project, the edition claims on
- * its withheld runs' origins with the reads each claim's admission waits on,
- * and its owner's byline facts.
+ * values of its links read, where their slots project, and its owner's byline
+ * facts; the edition claims on its withheld runs' origins are set apart
+ * (`setClaims`).
  * @param {string} addr
  * @param {Fresh} fresh
  */
@@ -1561,12 +1628,6 @@ export function setAgain(addr, fresh) {
   d.rev++;
   for (const v of fresh.values ?? []) takeLink(v);
   for (const p of fresh.projections ?? []) takeProjection(p.link, p.slot, p.addr, p.runs);
-  for (const c of fresh.claims ?? []) {
-    for (const h of c.homes) { if (h.meta) takeMetadata(h.home, h.meta); else if (h.refused) takeRefused(h.home, h.refused); }
-    for (const v of c.values) takeLink(v);
-    for (const a of c.failed) takeFailedRead(a);
-    takeEditionClaims(c.origin, c.lookup);
-  }
   if (fresh.byline) takeAccountKey(fresh.byline.account, fresh.byline.facts);
   bump();
 }
@@ -1575,7 +1636,7 @@ export function setAgain(addr, fresh) {
 export function _reset() {
   state.board = null; state.noBoard = null; state.session = null; state.sessionDied = null; state.sessionRefused = null; state.reconnect = null; state.health = null; state.mode = null;
   state.keys = null; state.daemon = null; state.index.clear(); state.counts.clear(); state.indexState = null; state.bare = false; state.docs.clear(); state.memberAges.clear();
-  state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops = 0;
+  state.links.clear(); state.projections.clear(); state.drops.clear(); state.classDrops = 0; state.readBefore = new Set(); state.editionClaims.clear(); state.failedReads.clear(); state.claimDrops.clear(); state.claimsRefreshed = 0;
   state.owners.clear(); state.keySets.clear(); state.accountKeys.clear(); state.keyDrops = 0; state.feed = []; state.rev = 0;
 }
 

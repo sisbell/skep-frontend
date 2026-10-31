@@ -2,12 +2,14 @@
 // tall as its bars, holding its face, its head, its owner or the origin's
 // mark by what its full lines hold as its words are measured in their faces,
 // never counted, the face compact in the column's edge otherwise and a
-// control on the plane alone; an item not rendered — one of a kind the page
+// control on the plane alone, and its ground alone while its clause is read;
+// an item not rendered — one of a kind the page
 // does not know among them, as a delivery hands it — a gap of its positions,
 // its words in it or in the edge; every address the article sets in the
 // identifier's face, a record's keys and a face's arm and clause at the
 // run's size; the entitlement arm by the
 // reader; C-67's clause decided over the origin's whole admitted-claim set,
+// undecided while a read it is decided from is out,
 // the pointer a control on the plane and a line in a pane; links marked at
 // their spans in the one mark they merge into; the selection's and the
 // focus's marks by the one rule; a run's hairline and C-33's mark once per
@@ -32,7 +34,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -189,9 +191,9 @@ const quotingHTML = (/** @type {string} */ claimant) => tHTML('C-67.quoting', { 
 /** C-67's unread place: a read the clause is decided from failed */
 const unread = () => ({ id: 'L.clause.unread', text: t('L.clause.unread') });
 
-test('C-67\'s clause is the empty place where the origin carries no edition claim, where its lookup has not answered, or where the board refused the lookup as withheld from the reader; "edition claims not read" where the lookup failed any other way (RES-85; issue #186\'s design decision: "If the board refuses the read for documents withheld from the reader, no face carries the clause. Otherwise, a face whose read failed says \'edition claims not read\'")', () => {
+test('C-67\'s clause is the empty place where the origin carries no edition claim, or where the board refused the lookup as withheld from the reader; undecided while the lookup has not answered; "edition claims not read" where the lookup failed any other way (RES-85; issue #186\'s design decision: "If the board refuses the read for documents withheld from the reader, no face carries the clause. Otherwise, a face whose read failed says \'edition claims not read\'"; issue #272\'s: "Its words appear only when all their reads answer")', () => {
   assert.equal(editionClause(ORIGIN, OWNER, []), null, 'no claim on the origin: nothing in the clause\'s place');
-  assert.equal(editionClause(ORIGIN, OWNER, null), null, 'the lookup not answered: nothing');
+  assert.equal(editionClause(ORIGIN, OWNER, null), CLAUSE_READING, 'the lookup not answered: not decided, so no face stands with a part missing');
   assert.equal(editionClause(ORIGIN, OWNER, 'withheld'), null, 'the lookup refused as withheld from the reader: nothing');
   assert.deepEqual(editionClause(ORIGIN, OWNER, 'unread'), unread(), 'the lookup failed any other way: "edition claims not read", never a blank that reads as no claim');
 });
@@ -227,12 +229,13 @@ test('a claim failing admission — its home a draft or its claimant\'s own doc 
   assert.deepEqual(editionClause(ORIGIN, OWNER, [...failing.map(([, c]) => c), claim('1.0.1.0.11.0.2.1', { from: [] })]), quoting(OWNER), 'beside one admitted claim that quotes: QUOTING, the claims failing admission never counted');
 });
 
-test('a claim whose link or whose home the page has not read leaves the clause the empty place, unless an admitted claim known already passes', () => {
+test('a claim whose link or whose home the page has not read leaves the clause undecided, an admitted claim known to pass beside it among them: the pointer never follows one claim only to follow another as the rest answer (issue #272\'s design decision: "Its words appear only when all their reads answer")', () => {
   const linkless = claim('1.0.1.0.9.0.2.1', { link: null }), homeless = claim('1.0.1.0.10.0.2.1', { published: null });
-  assert.equal(editionClause(ORIGIN, OWNER, [linkless]), null, 'its link not read yet');
-  assert.equal(editionClause(ORIGIN, OWNER, [homeless]), null, 'its home not read yet');
-  assert.equal(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.11.0.2.1', { from: [] }), linkless]), null, 'a quoting claim beside one not read yet: never QUOTING on reads not made');
-  assert.deepEqual(editionClause(ORIGIN, OWNER, [linkless, homeless, claim('1.0.1.0.12.0.2.1')]), pointer('1.0.1.0.12.0.2.1'), 'an admitted claim known to pass: the pointer, whatever the others turn out to be');
+  assert.equal(editionClause(ORIGIN, OWNER, [linkless]), CLAUSE_READING, 'its link not read yet');
+  assert.equal(editionClause(ORIGIN, OWNER, [homeless]), CLAUSE_READING, 'its home not read yet');
+  assert.equal(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.11.0.2.1', { from: [] }), linkless]), CLAUSE_READING, 'a quoting claim beside one not read yet: never QUOTING on reads not made');
+  assert.equal(editionClause(ORIGIN, OWNER, [linkless, homeless, claim('1.0.1.0.12.0.2.1')]), CLAUSE_READING, 'an admitted claim known to pass beside two not read yet: undecided, for the owner\'s lower-addressed claim may be among them');
+  assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.12.0.2.1')]), pointer('1.0.1.0.12.0.2.1'), 'every read answered: the pointer');
 });
 
 test('a claim whose admission waits on a read that failed — its link\'s, or its home\'s metadata — leaves "edition claims not read" where no admitted claim known passes and none waits on a read still out; never QUOTING, nor a blank, over it (issue #186\'s design decision: "A blank there would read as \'no claim\'")', () => {
@@ -241,7 +244,7 @@ test('a claim whose admission waits on a read that failed — its link\'s, or it
   assert.deepEqual(editionClause(ORIGIN, OWNER, [homeFailed]), unread(), 'its home\'s metadata read failed');
   assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.11.0.2.1', { from: [] }), linkFailed]), unread(), 'beside a claim that quotes: never QUOTING on a read that failed');
   assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.2.0.5.0.2.1'), homeFailed]), unread(), 'beside a claim admitted nowhere');
-  assert.equal(editionClause(ORIGIN, OWNER, [linkFailed, claim('1.0.1.0.12.0.2.1', { link: null })]), null, 'beside a claim whose read is still out: the empty place until it answers');
+  assert.equal(editionClause(ORIGIN, OWNER, [linkFailed, claim('1.0.1.0.12.0.2.1', { link: null })]), CLAUSE_READING, 'beside a claim whose read is still out: undecided until it answers');
   assert.deepEqual(editionClause(ORIGIN, OWNER, [linkFailed, homeFailed, claim('1.0.1.0.12.0.2.1')]), pointer('1.0.1.0.12.0.2.1'), 'an admitted claim known to pass: the pointer, whatever the failed reads would have said');
   assert.deepEqual(editionClause(ORIGIN, OWNER, [claim('1.0.1.0.9.0.2.1', { published: false, failed: true })]), null, 'a failed read of a claim the page knows admitted nowhere — its home refused — changes nothing');
 });
@@ -906,6 +909,24 @@ test('the ends drawn at a withheld run stand as ONE symbol at the start of its g
   assert.deepEqual([gapHolds(p, 5, MEASURE_CPL, advances), gapHolds(p, 5, MEASURE_CPL, advances, 2)], ['owner', 'mark'], 'five positions hold the owner\'s address alone; with the symbol before it, the origin\'s mark');
   const five = withheldBlockHTML(runOf(5), d, view(), { ends: [a, b], count: { n: 0, social: false } });
   assert.ok(five.includes('data-holds="mark"') && five.includes('>⟡2</span>' + esc(t('L.origin-mark')) + '</span>'), `the symbol stands, before the origin's mark: ${five}`);
+});
+
+test('while a read its clause waits on is out, a withheld run\'s gap stands on its bars holding its ground alone — the symbol its ends merge into first in it, no head, owner, origin\'s mark, arm or clause, and nothing in its column\'s edge, the others\' count among it — its face and every sign of it standing together once the clause is decided; the plan the same in either state (issue #272\'s design decision: "a first read shows the gap, then the face with its clause")', () => {
+  const O = '1.0.1.0.1003', run = runOf(240, 11), RUN = { pos: 11, width: 240, origin: O };
+  const d = doc({ blocks: [{ pos: 1, width: 10, kind: 'para', text: 'Tumbler.', origin: null }, run] });
+  const end = { ...shown(11, 240), link: { addr: 'R1', type: null }, key: 'k1', run: RUN, runs: [{ pos: 11, width: 240 }], mark: { hue: HUE.you, linker: 'you', form: [], value: 1, own: true } };
+  const at = { ends: [end], count: { n: 2, social: false } };
+  const as = (/** @type {() => import('./article.js').Decided} */ clauseOf) => view({ reader: KEYLESS, clauseOf, marks: [end], countAt: (b) => ({ n: b.kind === 'withheld' ? 2 : 0, social: false }) });
+  const reading = withheldBlockHTML(run, d, as(() => CLAUSE_READING), at), decided = withheldBlockHTML(run, d, as(() => null), at);
+  assert.ok(/^<span class="withheld" [^>]*data-holds="reading"[^>]*><span class="sym at-run [^"]*"[^>]*>⟡<\/span><\/span>$/.test(reading), `its ground and its one symbol, nothing else: ${reading}`);
+  for (const cls of ['wh-head', 'wh-owner', 'wh-origin', 'arm', 'clause', 'wh-mark', 'others']) assert.ok(!reading.includes(`class="${cls}`), `no ${cls} while the clause is read`);
+  assert.equal(gapHolds(placeholderOf(run, KEYLESS, (a) => accountOf(a) || '', () => CLAUSE_READING), 240, MEASURE_CPL, advances, 1), 'reading');
+  assert.ok(['wh-head', 'wh-mark edge', 'others edge'].every((cls) => decided.includes(`class="${cls}`)), `decided: its head in the gap, its mark and its count in the edge together: ${decided}`);
+  const height = (/** @type {string} */ html) => (/^<span class="withheld" [^>]* style="([^"]*)"/.exec(html) || [])[1];
+  assert.equal(height(reading), height(decided), 'the gap as tall as its bars in either state, its last line its remainder');
+  const plan = (/** @type {() => import('./article.js').Decided} */ clauseOf) => JSON.stringify(articlePlan(d, as(clauseOf), '1.0.1'));
+  assert.equal(plan(() => CLAUSE_READING), plan(() => null), 'the plan the same: the face arriving moves no line');
+  assert.ok(articleHTML(d, as(() => CLAUSE_READING), '1.0.1').includes('data-holds="reading"'), 'the article draws the gap so');
 });
 
 test('a symbol stands after the last of its stretches a paragraph holds — an end whose last stretch lies in an item that holds no text keeps its symbol in the text (issue #202)', () => {

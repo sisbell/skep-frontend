@@ -32,6 +32,7 @@ import { CORNER, ADDRESS, COL, cornerWidth } from '../plane/register.js';
 import { holdTop, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
+import { CLAUSE_READING } from './article.js';
 import { t, tHTML } from '../strings.js';
 import { esc } from '../util.js';
 
@@ -830,9 +831,11 @@ test('while a press stands no standing article is set again, but a document reac
 
 // ---- the owner a withheld run names ------------------------------------------------------------------------------------
 
-test('a guest meets a withheld run named for its origin\'s owner, whoever owns the document windowing it: on the plane\'s mounted article and in a reading scene\'s pane alike — in its gap\'s face where the gap holds it (issue #151)', () => onLayer(() => {
+test('a guest meets a withheld run named for its origin\'s owner, whoever owns the document windowing it: on the plane\'s mounted article and in a reading scene\'s pane alike — in its gap\'s face where the gap holds it, its clause decided (issue #151)', () => onLayer(() => {
   const O = '1.0.2.0.2', text = 'Tumbler.\n\n', width = 12 * 66, n = new TextEncoder().encode(text).length;
   REC.setSession(null);
+  // the lookup of the edition claims on the run's origin answered: none
+  REC.takeEditionClaims(O, []);
   REC.takeSpanSet(D, [{ subspace: 1, ordinal: 1, positions: n + width }]);
   REC.takeDelivery(D, [{ pos: 1, width: n, kind: 'content', text, ref: null, origin: null }, { pos: n + 1, width, kind: 'withheld', text: '', ref: null, origin: O }]);
   const d = REC.doc(D);
@@ -854,15 +857,16 @@ test('a guest meets a withheld run named for its origin\'s owner, whoever owns t
 
 // ---- C-67's clause, from what the model holds ---------------------------------------------------------------------------
 
-test('C-67\'s clause beneath a withheld origin reads the model whole: where a read a listed claim\'s admission waits on failed — its home\'s metadata, or its link — "edition claims not read"; while one is out, the empty place; and the read that answers it decides the clause again (issue #186\'s design decision: "A blank there would read as \'no claim\'")', () => {
+test('C-67\'s clause beneath a withheld origin reads the model whole: undecided while the lookup or a read a listed claim\'s admission waits on is out; where such a read failed — its home\'s metadata, or its link — "edition claims not read"; and the read that answers it decides the clause again (issue #186\'s design decision: "A blank there would read as \'no claim\'"; issue #272\'s: "Its words appear only when all their reads answer")', () => {
   const O = '1.0.1.0.1003', H = '1.0.1.0.9', C = H + '.0.2.1', R20 = '1.1.0.1.0.1.0.3.14';
   const notRead = { id: 'L.clause.unread', text: t('L.clause.unread') };
+  assert.equal(LAYER.clauseOf(O), CLAUSE_READING, 'the lookup not answered: undecided');
   REC.takeEditionClaims(O, [C]);
-  assert.equal(LAYER.clauseOf(O), null, 'the claim listed, its reads out: the empty place');
+  assert.equal(LAYER.clauseOf(O), CLAUSE_READING, 'the claim listed, its reads out: undecided');
   REC.takeFailedRead(H);
   assert.deepEqual(LAYER.clauseOf(O), notRead, 'its home\'s metadata read failed');
   REC.takeMetadata(H, { doc: H, published: true, owner: '1.0.1', birth: H + '.1', birthExtent: 20, placed: null, baseExtent: null, source: null, asOf: 1 });
-  assert.equal(LAYER.clauseOf(O), null, 'the home answered, its link out: the empty place');
+  assert.equal(LAYER.clauseOf(O), CLAUSE_READING, 'the home answered, its link out: undecided');
   REC.takeFailedRead(C);
   assert.deepEqual(LAYER.clauseOf(O), notRead, 'its link\'s read failed');
   REC.takeLink({ addr: C, from: [span(H, 1, 20)], to: [whole(O)], type: R20 });

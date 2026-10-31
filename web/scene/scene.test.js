@@ -45,8 +45,9 @@
 // it too, an edition at its bare address pinned at once to the
 // member its text is and set again from it, its corner's act reading
 // another version in the pane's place with the passage held, a version
-// counting its chain alone, a link row re-reading the text, acts made while
-// a pane reads waiting in order, the page's death taking every pane down and
+// counting its chain alone, a link row re-reading the text, a row writing
+// an edition claim on the origin of a run a pane windows setting it again,
+// acts made while a pane reads waiting in order, the page's death taking every pane down and
 // reading each again as a guest, and a refresh pinning an edition whose
 // chain it counted past the member shown; and a scene opened on a document a
 // far end names whole — the far pane that version or the latest, named as
@@ -1068,6 +1069,35 @@ test('a row naming a pane\'s document the plane shows too — kept there while t
     assert.equal(fake.asked.slice(from).filter((k) => k === text).length, 1, 'its text read once, by the plane\'s read again: the pane waited on it and read none itself');
     assert.deepEqual(fake.unanswered, []);
   } finally { CAM._reset(); }
+}));
+
+test('a row writing an edition claim on the origin of a withheld run a pane shows sets the pane again, its clause the one the claims decide now, though the row names neither the pane\'s document nor the origin (issue #272)', () => onPage(async (p) => {
+  // a draft windowing a run withheld from the reader, wide enough that its gap holds its face whole; the claim a row writes later
+  const WR = '1.0.1.0.21', OW = '1.0.1.0.1005', HOME = '1.0.1.0.22', CLAIM = HOME + '.0.2.1', WR_HEAD = 'A window.\n\n', RUN = 12 * 66, N = WR_HEAD.length + RUN;
+  const lookup = FAKE.keyOf('op', { frame: F.editionClaimsAt(OW) }), claims = (/** @type {string[]} */ addrs) => ({ result: { as_of: 1, resp: 'addrs', addrs } });
+  Object.assign(script, reads(VE1, VE_TEXT), {
+    [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(WR) })]: { result: { as_of: 1, resp: 'span_set', set: [{ start: '1.1', width: '0.' + N }] } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(WR) })]: metadata(WR, false, N),
+    [FAKE.keyOf('op', { frame: F.retrieveV(WR, 1, N) })]: { result: { as_of: 1, resp: 'delivery', items: [{ content: WR_HEAD }, { withheld: { origin: OW, width: String(RUN) } }] } },
+    [FAKE.keyOf('op', { frame: F.image(WR, 1, N) })]: { result: { as_of: 1, resp: 'runs', runs: [{ i_start: WR + '.0.1.1', width: String(WR_HEAD.length) }, { i_start: OW + '.0.1.1', width: String(RUN) }] } },
+    [FAKE.keyOf('op', { frame: F.findLinksV(WR, 1, N) })]: { result: { as_of: 1, resp: 'addrs', addrs: [] } },
+    [FAKE.keyOf('op', { frame: F.compare([{ doc: VE1, spans: [{ ordinal: 1, positions: VE_TEXT.length }] }], [{ doc: WR, spans: [{ ordinal: 1, positions: N }] }]) })]: { result: { as_of: 1, resp: 'compare', pairs: [] } },
+    [lookup]: claims([]),
+    // the claim: the edition class's, from twenty of its home's own bytes to the origin whole; its home an edition of the origin's owner
+    [FAKE.keyOf('op', { frame: F.readLink(CLAIM) })]: { result: { as_of: 1, resp: 'link_value', link: { slots: [[{ start: HOME + '.0.1.1', width: '0.0.0.0.0.0.0.20' }], [{ start: OW, width: '0.0.0.0.1' }], [{ start: F.EDITION_CLASS, width: '0.0.0.0.0.0.0.0.1' }]] } } },
+    [FAKE.keyOf('op', { frame: F.docMetadata(HOME) })]: metadata(HOME, true, 20),
+  });
+  await SCENE.open(VE1, WR);
+  const pane = () => String(shownIn(p.paneB, 'b').innerHTML);
+  assert.ok(pane().includes('data-holds="face"') && !pane().includes('class="clause"'), `no claim on the origin: the face whole, its arm alone: ${pane()}`);
+  script[lookup] = claims([CLAIM]);
+  fake.fire('feed', row(50, 'make_link', [HOME], 'published', CLAIM));
+  const pointer = `<span class="clause">${esc(t('C-67.pointer'))}</span>`;
+  for (let i = 0; i < 400 && !pane().includes(pointer); i++) await new Promise((r) => setTimeout(r, 0));
+  await landed();
+  assert.ok(pane().includes(pointer), `the pane set again: the pointer beneath the arm, a line in a pane: ${pane()}`);
+  assert.equal(paneState('b')?.src, WR, 'the same document in its place');
+  assert.deepEqual(fake.unanswered, []);
 }));
 
 // ---- a far end naming its document whole -------------------------------------------------------------------------------

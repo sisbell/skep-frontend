@@ -93,7 +93,10 @@
 // made from the record the plane's placeholder is (T-ARTICLE's
 // `placeholderOf`: the owner of its origin, the entitlement arm for this
 // reader, C-67's clause where the origin's edition claims decide one and
-// nothing in its place where they do not — R56, B1-S7, PUB-5.124); a
+// nothing in its place where they do not — R56, B1-S7, PUB-5.124), and while
+// a read its clause waits on is out says what needs no read alone — its kind,
+// where it stands and its length, as the plane's gap shows its ground alone
+// (FP-33); a
 // document is named by its address, then the first line its box's label sets
 // (T-LAYER's `firstOf`), the version's own — its words quoted, the client's
 // words in their place bracketed — then its state (T-LAYER's `stateWords`):
@@ -135,7 +138,7 @@ import * as PUMP from '../model/pump.js';
 import * as CAM from '../plane/camera.js';
 import * as LAYER from '../text/layer.js';
 import * as FOCUS from './focus.js';
-import { placeholderOf, itemOf, itemWords, itemLength, recordOf } from '../text/article.js';
+import { placeholderOf, itemOf, itemWords, itemLength, recordOf, CLAUSE_READING } from '../text/article.js';
 import { farSays } from '../beams/held.js';
 import { docBox, accountCell, boardCell, accountAt, clearLeftOf, continuationCell, withinContinuation, membersAt, markKey, continuationOf } from '../plane/projection.js';
 import { lodOf, residueDepth, markScale } from '../plane/lod.js';
@@ -366,6 +369,8 @@ function named(n, i, total) {
     if (kind === 'withheld') {
       const w = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), ends = runEnds(n.addr, b.pos).length;
       const links = ends ? t('L.mirror.run-links', { links: ends === 1 ? t('F.label.links.1') : t('F.label.links', { n: ends }) }) : '';
+      // its clause not decided: what needs no read alone, as the plane's gap shows its ground alone (FP-33)
+      if (w.clause === CLAUSE_READING) return then(then(said('L.mirror.no-text', { kind: itemWords(kind), p: b.pos, extent: d.extent ?? '?', document: n.addr, same: '', shown: t('L.mirror.shows', { shown: itemLength(b.width) }) }, { document: 'id' }), plainly(links)));
       return then(then(said('L.mirror.withheld', { kind: itemWords(kind), document: n.addr, length: itemLength(b.width), owner: w.owner, origin: b.origin || '', arm: w.arm.text, clause: w.clause ? t('L.mirror.clause', { clause: w.clause.text }) : '' }, { document: 'id', owner: 'id', origin: 'id' }), plainly(links)));
     }
     const org = d.origins.find((o) => o.pos < b.pos + b.width && b.pos < o.pos + o.width);

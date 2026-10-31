@@ -36,8 +36,9 @@
 // caller hands in; the quoting sibling; "edition claims not read" where a
 // read of them failed; nothing where they decide none. A face stating a
 // withheld origin — this one, and a withheld run's — makes the reads its
-// clause waits on before it shows, where the page holds no answer to one, so
-// the clause is in its first frame (`whenRead`; FP-33). Whole the first time
+// clause waits on before it shows, where the page holds no answer to one, and
+// shows once the clause is decided, so the clause is in its first frame
+// (`whenRead`; FP-33). Whole the first time
 // a face shows them in the page's session, compact after (FP-26): the
 // address and the head, the head a disclosure whose act opens the rest, and
 // folds it again. Never C-39, whose words are a link address's alone;
@@ -125,7 +126,7 @@ import * as TRAIL from '../nav/trail.js';
 import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
 import * as CAM from '../plane/camera.js';
-import { entitlementArm, placeholderOf } from '../text/article.js';
+import { entitlementArm, placeholderOf, CLAUSE_READING } from '../text/article.js';
 import { retries, lineOf } from '../beams/held.js';
 import { memberOf } from '../model/address.js';
 import { t, addressedHTML } from '../strings.js';
@@ -138,7 +139,7 @@ import { esc } from '../util.js';
 /** @typedef {import('../nav/trail.js').View} View */
 /** @typedef {import('./host.js').Anchor} Anchor */
 /** @typedef {import('../model/records.js').Reader} Reader */
-/** @typedef {import('../text/article.js').Clause} Clause */
+/** @typedef {import('../text/article.js').Decided} Decided */
 
 /**
  * @typedef {Object} Face
@@ -159,7 +160,7 @@ import { esc } from '../util.js';
  * @property {string | null} addr its full address, before its words; null where the face stands at the document's own place
  * @property {{id: string, text: string}} head the withheld box's words, "withheld · ⟨owner⟩" (T-LAYER's `withheldBox`)
  * @property {{id: string, text: string}} arm the entitlement arm for its owner and this reader (T-ARTICLE's `entitlementArm`)
- * @property {Clause | null} clause C-67's clause as the edition claims on the document decide it (T-LAYER's `clauseOf`); null where they decide none
+ * @property {Decided} clause C-67's clause as the edition claims on the document decide it (T-LAYER's `clauseOf`); null where they decide none
  */
 
 /**
@@ -172,7 +173,7 @@ import { esc } from '../util.js';
 
 /** @type {Set<string>} the documents whose own withheld words a face has shown whole in the page's session (see the head) */
 const seenWhole = new Set();
-/** @type {Map<string, Promise<void>>} the reads of the edition claims on a withheld origin a face asked, by the drops of the claims held and the origin: each asked once until the claims held drop (M-REC's `claimDrops`) */
+/** @type {Map<string, Promise<void>>} the reads of the edition claims on a withheld origin a face asked, by the origin and the count of its claims' changes: each asked once until they change (M-REC's `claimDropsOf`) */
 const claimReads = new Map();
 
 /**
@@ -206,19 +207,24 @@ export const accessChanged = (addr) => REC.covered(addr) || (REC.has(addr) && RE
 /**
  * The reads C-67's clause beneath a face stating a withheld origin waits on
  * (M-PUMP's `readClaims`), made where the page holds no answer to one
- * (M-PUMP's `claimsToRead`) — a failed one asked again — once for each drop
- * of the claims held (M-REC's `claimDrops`), so the acts meeting one origin
- * between two drops ask them once. An act that shows its face once its own
- * reads answer awaits it — the provenance cards' openings, a follow in the
- * air; every face stating the origin makes them as it opens (`whenRead`).
+ * (M-PUMP's `claimsToRead`) — a failed one asked again — once for each change
+ * of the origin's claims (M-REC's `claimDropsOf`), so the acts meeting one
+ * origin between two changes ask them once; asked again by the next act where
+ * a drop overtook them and left the clause undecided (T-ARTICLE's `CLAUSE_READING`).
+ * An act that shows its face once its own reads answer awaits it — the
+ * provenance cards' openings, a follow in the air; every face stating the
+ * origin makes them as it opens (`whenRead`).
  * @param {string} addr the withheld origin
  * @returns {Promise<void>}
  */
 export function prepare(addr) {
   if (!PUMP.claimsToRead(addr)) return Promise.resolve();
-  const key = REC.claimDrops() + ':' + addr;
+  const key = REC.claimDropsOf(addr) + ':' + addr;
   let asked = claimReads.get(key);
-  if (!asked) { asked = PUMP.readClaims(addr); claimReads.set(key, asked); }
+  if (!asked) {
+    asked = PUMP.readClaims(addr).then(() => { if (LAYER.clauseOf(addr) === CLAUSE_READING) claimReads.delete(key); });
+    claimReads.set(key, asked);
+  }
   return asked;
 }
 
@@ -227,15 +233,20 @@ export function prepare(addr) {
  * frame (see the head; FP-33): at once where the page holds an answer to
  * every read the clause waits on (M-PUMP's
  * `claimsToRead`); else as chrome opening on those reads (O-HOST's
- * `opening`; `prepare`), shown once they answer where no act was made on the
- * chrome meanwhile — with the clause they decide, "edition claims not read"
+ * `opening`; `prepare`), asked again while drops overtake them and leave the
+ * clause undecided — at most DROP_ATTEMPTS times, so a run of rows never
+ * holds the act — and shown once they answer where no act was made on the
+ * chrome meanwhile, with the clause they decide, "edition claims not read"
  * where one failed.
  * @param {string} origin
  * @param {() => void} show
  */
 function whenRead(origin, show) {
   if (!PUMP.claimsToRead(origin)) { show(); return; }
-  void HOST.opening(async () => { await prepare(origin); return true; }, show);
+  void HOST.opening(async () => {
+    for (let i = 0; i < PUMP.DROP_ATTEMPTS && (i === 0 || LAYER.clauseOf(origin) === CLAUSE_READING); i++) await prepare(origin);
+    return true;
+  }, show);
 }
 
 /**
@@ -257,13 +268,15 @@ const captionHTML = (/** @type {string | null | undefined} */ caption) => (capti
  * face and the document's: the pointer a button following the claim it names
  * to the edition its home is — the face's act, the LEAP its caller hands in,
  * and nothing where none is handed in; the QUOTING sibling and the unread
- * place each a line in its own words; nothing where no clause stands.
- * @param {Clause | null} c
+ * place each a line in its own words; nothing where no clause stands, nor
+ * where it is not decided (`whenRead` shows a face once it is, but where a run
+ * of drops left it so).
+ * @param {Decided} c
  * @param {((home: string, byKey: boolean) => void) | undefined} follow
  * @returns {{html: string, follow: import('./host.js').Act | null}}
  */
 function clauseFace(c, follow) {
-  if (!c) return { html: '', follow: null };
+  if (!c || c === CLAUSE_READING) return { html: '', follow: null };
   const line = (/** @type {string} */ inner) => `<div class="clause" data-string="${esc(c.id)}">${inner}</div>`;
   if (c.id !== 'C-67.pointer') return { html: line(addressedHTML(c.text)), follow: null };
   if (!follow) return { html: '', follow: null };
@@ -441,7 +454,7 @@ function ownHTML(w, open, clause) {
  */
 export function withheldText(addr) {
   const ending = accessChanged(addr) ? endingWords() : null, w = ownWords(addr, { span: { addr, pos: 1 } });
-  return [w.head.text, ...(ending ? [ending.text] : [w.arm.text, ...(w.clause ? [w.clause.text] : [])])].join(' ');
+  return [w.head.text, ...(ending ? [ending.text] : [w.arm.text, ...(w.clause && w.clause !== CLAUSE_READING ? [w.clause.text] : [])])].join(' ');
 }
 
 /**

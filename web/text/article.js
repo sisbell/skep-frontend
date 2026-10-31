@@ -58,21 +58,25 @@
 // each position one advance (F2.1-i), naming the owner of its run's origin,
 // whoever owns the document windowing it (R56; B1-S7) — its face in it where
 // the gap holds it as measured, else compact in its column's edge, so no face
-// reflows the text (`gapHolds`; foundations §2.1; FP-26). An item this client
-// cannot show is a gap of its positions too, its words in it where the gap
-// holds them, else in its column's edge (`unshownHTML`; FP-26). The face: the
-// entitlement arm for that owner and
+// reflows the text (`gapHolds`; foundations §2.1; FP-26) — and, while a read
+// its clause waits on is out, its ground alone, the symbol its ends merge
+// into in it, its face and its edge's signs standing in the frame every such
+// read has answered in, so no face stands with a part missing (FP-33). An
+// item this client cannot show is a gap of its positions too, its words in
+// it where the gap holds them, else in its column's edge (`unshownHTML`;
+// FP-26). The face: the entitlement arm for that owner and
 // this reader (`entitlementArm`; PUB-5.121, PUB-5.97) and C-67's clause
 // beneath, decided over the origin's whole admitted-claim set
-// (`editionClause`; PUB-5.124, RES-164): the pointer where an admitted
+// (`editionClause`; PUB-5.124, RES-164), undecided (`CLAUSE_READING`)
+// while a read it is decided from is out: the pointer where an admitted
 // claim's edition holds bytes the reader can reach, naming the one claim it
 // follows (PUB-3.107; RES-152) — on the plane a control whose act is a LEAP
 // to that claim's home, the edition (B1-S7 → S6; APP-INPUT), in a reading
 // scene's pane a line, as every mark there is (SC) — the quoting sibling
 // where every admitted claim quotes the draft, the unread place where a read
 // they are decided from failed (FP-33), and nothing — the arm's own copy
-// alone — where none is admitted, where the board refused their lookup as
-// withheld from the reader, or where they are not yet read. The placeholder
+// alone — where none is admitted or the board refused their lookup as
+// withheld from the reader. The placeholder
 // is one record (`placeholderOf`), which the ARIA mirror's item at the run
 // (N-WALK) and the run's face whole (O-FACES's `withheldRun`) read too, so
 // the run a sighted reader sees and the one a screen reader hears never part
@@ -176,7 +180,7 @@ import { MEASURE, BORDER, MEASURE_CPL, EDGE, EDGE_GAP, LINE_H, CHAR_W, borderEm,
  * @property {boolean} scene the scene-mode variant: a reading scene's pane's article — no scene-offer, and no mark a control
  * @property {Map<string, 'edition' | 'draft' | 'unknown'>} originKinds the kind of each origin document (for C-33)
  * @property {(doc: string) => string} originOwner the owner account of an origin document, by the one rule the byline's owner is found by (M-REC's `ownerAccount`): the owner a withheld run's placeholder names (R56)
- * @property {(doc: string) => (Clause | null)} clauseOf C-67's clause beneath a withheld run of an origin document, decided over what the page holds of the origin's edition claims (T-LAYER's `clauseOf`, by `editionClause`); null where nothing renders in its place
+ * @property {(doc: string) => Decided} clauseOf C-67's clause beneath a withheld run of an origin document, decided over what the page holds of the origin's edition claims (T-LAYER's `clauseOf`, by `editionClause`); null where nothing renders in its place, `CLAUSE_READING` while a read it is decided from is out
  * @property {(account: string) => (AccountFacts | undefined)} keyOf an account's byline facts as the page holds them (M-REC's `accountKey`): its device key, or why its byline names none; undefined while they are read
  * @property {number | null} [members] the chain's member count as its box's document holds it (M-PUMP's probe records it there, every version sharing the count): what the corner's version statement reads at a version, its own record holding none; absent, the document's own
  * @property {number | null} [read] a reading scene's pane's corner act, the one its Enter takes: the version it reads in the pane's place (SC; FP-23) — the newer one arrived, or the one the act left; absent or null, none
@@ -711,6 +715,11 @@ export function entitlementArm(reader, owner) {
 
 /** @typedef {Pointer | Quoting | Unread} Clause — C-67's clause as it renders: its string id and its words, and, where it is the pointer, the claim it follows */
 
+/** C-67's clause while a read it is decided from is out (`editionClause`): a face stands only once it is decided, so none stands with a part missing (FP-33) */
+export const CLAUSE_READING = /** @type {const} */ ('reading');
+
+/** @typedef {Clause | null | typeof CLAUSE_READING} Decided — C-67's clause as the page holds its reads (`editionClause`): the clause; null, nothing in its place; `CLAUSE_READING`, not decided while a read is out */
+
 /**
  * @typedef {Object} ClaimSeen — one edition claim the lookup on an origin listed, as the page holds its two reads of it (PUB-7.50)
  * @property {string} claim the claim's address — a link
@@ -756,12 +765,14 @@ function admitted(c, owner) {
 /**
  * C-67's clause beneath a withheld run of `origin` (PUB-5.124; FP-33), its
  * answers decided over the origin's whole admitted-claim set, never per
- * claim (RES-164): the pointer where any admitted claim passes the
- * resolution test — its FROM holds a span, and none of its spans lies in the
- * origin (the span's document, `homeOf`: the board's `document_of`
- * arithmetic), so its edition holds bytes the reader can reach — following
- * the passing claim PUB-3.107's origin-keyed order picks (RES-152): a
- * passing claim whose home the origin's owner owns first, the
+ * claim (RES-164): undecided — `CLAUSE_READING` — while the lookup has not
+ * answered or a listed claim's admission waits on a read not yet answered, a
+ * read that failed counting as answered; else the pointer where any admitted
+ * claim passes the resolution test — its FROM holds a span, and none of its spans
+ * lies in the origin (the span's document, `homeOf`: the board's
+ * `document_of` arithmetic), so its edition holds bytes the reader can reach
+ * — following the passing claim PUB-3.107's origin-keyed order picks
+ * (RES-152): a passing claim whose home the origin's owner owns first, the
  * lowest-addressed among several (PUB-4.7), else the lowest-addressed
  * passing claim, a delegate's edition being bytes this reader can reach as
  * they stand; the quoting sibling where every admitted claim quotes — a FROM
@@ -770,24 +781,22 @@ function admitted(c, owner) {
  * arm's own copy then standing alone. The board refusing the lookup as a
  * read withheld from the reader leaves the empty place too; the lookup
  * failing any other way, or a listed claim's admission waiting on a read
- * that failed (`ClaimSeen.failed`) where no admitted claim known passes and
- * none waits on a read still to answer, leaves the unread place (`unread`),
- * for a blank there would read as no claim. Undecided — the lookup not
- * answered, or a listed claim waiting on a read not yet made — the clause is
- * the empty place, unless an admitted claim already known passes, the
- * pointer then following the pick among the claims known (the article is
- * made again as the rest are read): no reader is pointed at an edition, told
- * nothing published carries the bytes, or told the claims were not read, on
- * reads the page has not made. Addresses are ordered as tumblers (`cmpAddr`),
- * never as strings.
+ * that failed (`ClaimSeen.failed`) where no admitted claim known passes,
+ * leaves the unread place (`unread`), for a blank there would read as no
+ * claim. So no reader is pointed at an edition, told nothing published
+ * carries the bytes, or told the claims were not read, on reads the page has
+ * not made, and the pointer never follows one claim only to follow another
+ * as the rest answer. Addresses are ordered as tumblers (`cmpAddr`), never as
+ * strings.
  * @param {string} origin the withheld run's origin document
  * @param {string} owner the origin's owner (T-LAYER's `originOwner`)
  * @param {ClaimsSeen} claims what the page holds of the lookup on the origin
- * @returns {Clause | null}
+ * @returns {Decided}
  */
 export function editionClause(origin, owner, claims) {
   if (claims === 'unread') return unread();
-  if (!Array.isArray(claims)) return null;
+  if (claims === 'withheld') return null;
+  if (!Array.isArray(claims)) return CLAUSE_READING;
   /** @type {ClaimSeen[]} the admitted claims whose edition holds bytes the reader can reach */
   const passing = [];
   /** @type {string[]} the claimants of the admitted claims that quote */
@@ -800,10 +809,10 @@ export function editionClause(origin, owner, claims) {
     if (c.link.from.length && !c.link.from.some((e) => homeOf(e.start) === origin)) passing.push(c);
     else quoting.push(c.claimant);
   }
+  if (waiting) return CLAUSE_READING;
   const own = passing.filter((c) => c.claimant === owner);
   const [pick] = (own.length ? own : passing).sort((x, y) => cmpAddr(x.claim, y.claim));
   if (pick) return { id: 'C-67.pointer', text: t('C-67.pointer'), claim: pick.claim, home: pick.home };
-  if (waiting) return null;
   if (failed) return unread();
   if (!quoting.length) return null;
   const claimant = quoting.sort(cmpAddr)[0];
@@ -819,7 +828,7 @@ const unread = () => /** @type {Unread} */ ({ id: 'L.clause.unread', text: t('L.
  * @property {string} head B1-S7's head: that owner, the run's width and its origin
  * @property {Record<string, string | number>} vals the values B1-S7's head is filled with, by token: what its words and its markup are made of (`headHTML`, `headRuns`)
  * @property {{id: string, text: string}} arm the entitlement arm for that owner and this reader (`entitlementArm`)
- * @property {Clause | null} clause C-67's clause beneath the arm (`editionClause`), the pointer naming the claim it follows; null where nothing renders in its place
+ * @property {Decided} clause C-67's clause beneath the arm (`editionClause`), the pointer naming the claim it follows; null where nothing renders in its place; `CLAUSE_READING` while a read it is decided from is out
  */
 
 /** the faces of B1-S7's head's tokens: the owner, the account and the origin addresses */
@@ -842,14 +851,16 @@ const clauseRuns = (/** @type {Clause} */ c) => (c.id === 'C-67.quoting' ? faced
  * B1-S7's ⟨owner⟩ is always derivable (A-289); the head naming that owner,
  * the entitlement arm (`entitlementArm`) the one for it, then C-67's clause
  * as the origin's edition claims decide it (`clauseOf`), or nothing in its
- * place (R56). The plane's and a pane's placeholder
+ * place (R56) — `CLAUSE_READING` while a read it is decided from is out,
+ * and none of the face stands then (FP-33). The plane's and a pane's
+ * placeholder
  * (`withheldBlockHTML`), the ARIA mirror's item at the run (N-WALK) and the
  * run's face whole (O-FACES's `withheldRun`, D5 K-7) are all made from it:
  * R94's one record, never a second rendering that can drift.
  * @param {Block} b the withheld run
  * @param {Reader} reader who reads (M-REC's `reader`)
  * @param {(doc: string) => string} originOwner the owner account of an origin document, by the one owner rule (T-LAYER's `originOwner`)
- * @param {(doc: string) => (Clause | null)} clauseOf C-67's clause beneath a run of an origin document (T-LAYER's `clauseOf`)
+ * @param {(doc: string) => Decided} clauseOf C-67's clause beneath a run of an origin document (T-LAYER's `clauseOf`)
  * @returns {Placeholder}
  */
 export function placeholderOf(b, reader, originOwner, clauseOf) {
@@ -865,23 +876,25 @@ export function placeholderOf(b, reader, originOwner, clauseOf) {
 }
 
 /**
- * @typedef {'face' | 'head' | 'owner' | 'mark'} GapHolds what a withheld run's gap holds (`gapHolds`): its face whole; its head; the owner of its origin; the origin's mark
+ * @typedef {'reading' | 'face' | 'head' | 'owner' | 'mark'} GapHolds what a withheld run's gap holds (`gapHolds`): its ground alone, its clause not decided yet; its face whole; its head; the owner of its origin; the origin's mark
  */
 
 /**
  * What a withheld run's gap holds at a measure (foundations §2.1; FP-26), so
- * the gap keeps encoding the width and no face reflows the text: the run's
- * face whole — its head, the arm and the clause beneath it, each at the run's
- * size, the room above the arm and the clause — where the gap's full lines
- * (P-LAY's `gapOf`) hold it, its words wrapped across the measure as they are
- * set in their faces (`linesAt`); else its head where they hold that; else
+ * the gap keeps encoding the width and no face reflows the text: while its
+ * clause is not decided (`CLAUSE_READING`), its ground alone (FP-33); else
+ * the run's face whole — its head, the arm and the clause beneath it, each
+ * at the run's size, the room above the arm and the clause — where the gap's
+ * full lines (P-LAY's `gapOf`) hold it, its words wrapped across the measure
+ * as they are set in their faces (`linesAt`); else its head where they hold
+ * that; else
  * its origin's owner, where a line of the gap holds the address; else the
  * origin's mark — each measured with the symbol the ends drawn at the run
  * merge into standing first in its first line (`runSymbol`; FP-30), so a
  * symbol there steps the notice to a smaller form and is never dropped.
- * Whatever it holds, the gap stands on the run's bars, and where its face is
- * not in it the face stands compact in the column's edge
- * (`withheldBlockHTML`).
+ * Whatever it holds, the gap stands on the run's bars, and where its clause
+ * is decided and its face is not in it the face stands compact in the
+ * column's edge (`withheldBlockHTML`).
  * @param {Placeholder} p
  * @param {number} width the run's positions
  * @param {number} cpl the measure
@@ -890,6 +903,7 @@ export function placeholderOf(b, reader, originOwner, clauseOf) {
  * @returns {GapHolds}
  */
 export function gapHolds(p, width, cpl, measure, ends = 0) {
+  if (p.clause === CLAUSE_READING) return 'reading';
   const gap = gapOf(width, cpl), full = gap.filter((w) => w >= cpl).length, room = cpl * CHAR_W;
   const lead = ends ? boxWidth(runSymbol(1, ends)) * CHAR_W : 0, head = linesAt(headRuns(p), room, measure, lead);
   const below = (/** @type {Faced[]} */ words) => MEASURE.faceGap + linesAt(words, room, measure) * LINE_H;
@@ -903,13 +917,17 @@ export function gapHolds(p, width, cpl, measure, ends = 0) {
 /**
  * The gap occupying a withheld run (`placeholderOf`; F2.1-i): as tall as its
  * bars, its ground drawn over the run's own lines — the last its remainder
- * (`--wh-last`) — holding what `gapHolds` says it holds: its face whole, its
- * head, arm and, where one renders, clause (`clauseHTML`); else its head, its
- * origin's owner or the origin's mark, the face compact in the column's edge
- * level with the run's first line — the owner with a mark that opens it
- * whole (foundations §2.1), its act the run's face whole on the plane
- * (APP-INPUT; O-FACES's `withheldRun`), a line in a reading scene's pane,
- * where nothing is acted on (SC). Every address it names is set in the
+ * (`--wh-last`) — holding what `gapHolds` says it holds: while its clause is
+ * not decided, nothing but the symbol its ends merge into, its face and every
+ * sign of it in the column's edge — the others' count among them — standing
+ * once each read the clause waits on has answered, so none stands with a part
+ * missing and no sign in the edge moves as they land (FP-33); else its face
+ * whole, its head, arm and, where one renders, clause (`clauseHTML`); else
+ * its head, its origin's owner or the origin's mark, the face compact in the
+ * column's edge level with the run's first line — the owner with a mark that
+ * opens it whole (foundations §2.1), its act the run's face whole on the
+ * plane (APP-INPUT; O-FACES's `withheldRun`), a line in a reading scene's
+ * pane, where nothing is acted on (SC). Every address it names is set in the
  * identifier's face. The ends drawn at the run (`Part.ends`;
  * FP-30) stand as the one symbol they merge into, first in the gap's first
  * line, before whatever it holds (`runSymHTML`), and the others' links drawn
@@ -927,6 +945,8 @@ export function withheldBlockHTML(b, d, v, at = { ends: [], count: { n: 0, socia
   const cpl = v.cpl ?? MEASURE_CPL, gap = gapOf(b.width, cpl), holds = gapHolds(p, b.width, cpl, v.measure, at.ends.length);
   const [one, ...more] = at.ends;
   const sym = one ? runSymHTML([one, ...more], v) : '';
+  const open = `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}" data-holds="${holds}" style="height:${gap.length * LINE_H}em;--wh-last:${gap[gap.length - 1]}">`;
+  if (p.clause === CLAUSE_READING) return `${open}${sym}</span>`;
   const inside = holds === 'face' ? `<span class="wh-head">${sym}${headHTML(p)}</span><span class="arm">${armHTML(p)}</span>${clauseHTML(p.clause, v.scene)}`
     : holds === 'head' ? `<span class="wh-head">${sym}${headHTML(p)}</span>`
     : holds === 'owner' ? `<span class="wh-owner">${sym}<span class="${ID}">${esc(p.owner)}</span></span>`
@@ -934,8 +954,7 @@ export function withheldBlockHTML(b, d, v, at = { ends: [], count: { n: 0, socia
   const marked = /** @type {Record<string, Face>} */ ({ owner: 'ident' });
   const mark = holds === 'face' ? '' : `<span class="wh-mark edge" data-mark="withheld"${control(v.scene)} style="${edgeStyle(1)}">${htmlIn('L.withheld.mark', { owner: p.owner }, marked)}</span>`;
   const count = countHTML(at.count, 1, mark ? edgeLines(facedIn('L.withheld.mark', { owner: p.owner }, marked), 1, v.measure) : 0);
-  return `<span class="withheld" data-pos="${b.pos}" data-width="${b.width}" data-withheld="1" data-origin="${esc(b.origin || '')}" data-owner="${esc(p.owner)}" data-holds="${holds}" style="height:${gap.length * LINE_H}em;--wh-last:${gap[gap.length - 1]}">` +
-    `${mark}${count}${inside}</span>`;
+  return `${open}${mark}${count}${inside}</span>`;
 }
 
 /**

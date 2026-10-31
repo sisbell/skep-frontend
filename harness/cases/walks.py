@@ -18,7 +18,7 @@ switch's own words among it, the toggle's B1-S4 words in the state LK
 holds. What each step could not have on this lane is said in its note."""
 import json
 
-from . import AGENT_SPACE, DOC, FAR_LEAP, GHOST, WINDOW, Result
+from . import AGENT_SPACE, CLAUSE_READING, DOC, FAR_LEAP, GHOST, WINDOW, Result
 
 # C-33's mark at the window run's opening: the run's first stretch, where its hairline is labelled whole (the run crosses
 # a paragraph break, so a second block opens it again, compact, in a later column the view at its first line need not hold)
@@ -95,7 +95,8 @@ def run(ctx):
     clause_id, decided = ctx.edition_clause(WINDOW[2])
     clause = {'C-67.pointer': 'then C-67\'s pointer, "a published edition may exist — follow the edition claim"',
               'C-67.quoting': 'then C-67\'s QUOTING sibling, naming %s' % decided.get('claimant'),
-              'L.clause.unread': 'then "edition claims not read" in the place of C-67\'s clause — a read of the claims on %s failed' % WINDOW[2]}.get(
+              'L.clause.unread': 'then "edition claims not read" in the place of C-67\'s clause — a read of the claims on %s failed' % WINDOW[2],
+              CLAUSE_READING: 'and its words not yet shown — a read C-67\'s clause on %s waits on is still out' % WINDOW[2]}.get(
         clause_id, 'and nothing in the place of C-67\'s clause — the board admits no edition claim on %s' % WINDOW[2])
     step(ctx, r, 'W-01', 6, 'the withheld item at the window run', 'W-01 step 6: "Where the published page WINDOWS a draft origin the guest meets a WITHHELD ITEM at that run, carrying the origin and the width." B1-S7\'s gap occupies the run, as tall as its bars, never its bytes — its head, "withheld · 1.0.1 (1.0.1) · 240 positions · origin 1.0.1.0.1003", in it — and the run\'s face holds the guest\'s entitlement arm, %s, %s: whole in the gap where its lines hold it, else compact at its column\'s edge, its mark opening it whole (issue #151); the act at it, C-39\'s face, is the guest case\'s.' % (arm, clause), 'window-run-withheld',
          claims=[(PLACEHOLDER, 'the withheld run\'s gap', None)])

@@ -59,7 +59,11 @@ where none is — "the guest's arm" below. Then, on the guest's page:
     PUB-3.107's order picks, "edition claims not read" where a read of them
     failed (issue #186), and nothing in its place where they decide none,
     in the gap where it holds the face and else in the face its mark opens
-    whole; the mirror's item the run's face whole — its kind in the words a
+    whole, every read the clause waits on answered (issue #272); a link
+    write homed elsewhere, its link no edition claim on the origin, handed
+    to the page through the gate's feed door — reads alone — leaving the
+    gap as it stood in every frame and asking no lookup of the claims
+    again, the row's link read once; the mirror's item the run's face whole — its kind in the words a
     copy's stand-in names it by, its owner, its origin, the arm, and the
     clause where the claims decide one (R94; FP-26); the gap shown; and under
     R56's key-absent arm, the deepest a guest meets — where the page holds a
@@ -126,7 +130,7 @@ import re
 import time
 from collections import Counter
 
-from . import DOC, FAR_LEAP, SECOND_ACCOUNT, SELECTED_WHOLE, WINDOW, WITHHELD, Result, item_words
+from . import CLAUSE_READING, DOC, FAR_LEAP, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, WITHHELD, Result, item_words, unit_span
 from .keys import copied, placed_at, placed_at_box, placed_under, rebuilt_away, scene_set, stands_at
 
 OWNER = '1.0.1'
@@ -198,6 +202,39 @@ def gaps(ctx):
       return {pos: Number(e.dataset.pos), width: Number(e.dataset.width), origin: e.dataset.origin, owner: e.dataset.owner, holds: e.dataset.holds || null,
               head: words(q('.wh-head')), arm: (q('.arm') || {}).textContent || null, clause: (q('.clause') || {}).textContent || null,
               claim: (q('.clause') || {dataset: {}}).dataset.claim || null, mark: (q(':scope > .wh-mark') || {}).textContent || null}; })''' % json.dumps('#domlayer article[data-addr="%s"] .withheld' % DOC))
+
+
+# the window run's gap as a frame shows it — what it holds, its clause and the mark its column's edge holds — in one string, or
+# None where no gap stands at the run
+GAP_NOW = '''(() => { const e = document.querySelector(%s); if (!e) return null;
+  return [e.dataset.holds || '', (e.querySelector('.clause') || {}).textContent || '', (e.querySelector(':scope > .wh-mark') || {}).textContent || ''].join('|'); })()''' % json.dumps(PLACEHOLDER)
+
+
+def claims_kept(ctx, r):
+    """a link write changing no edition claim on the window run's origin (issue #272's design decision: "A write invalidates
+    only what it can change"): a `make_link` homed in VERSIONED, its link an address past that home's frontier, handed to the
+    page through the gate's feed door as the feed hands rows — reads alone. The page reads the row's link, which names no
+    edition claim, and leaves the claims on the origin held: the gap at the run as it stood in every frame from the row to
+    the settle, no lookup of the claims on the origin asked again, the row's link read once. Its figures"""
+    row = {'position': 0, 'at': 0, 'op': 'make_link', 'docs': [VERSIONED], 'link': VERSIONED + '.0.2.999999', 'class': 'published'}
+    came = ctx.js('''((row) => { const S = window.__skep, n = S.bridge.calls().length, at = () => %s;
+      window.__gateClaims = {frames: 0, kept: 0, was: at(), stop: false};
+      const watch = () => { const g = window.__gateClaims; if (g.stop) return; g.frames++; if (at() === g.was) g.kept++; requestAnimationFrame(watch); };
+      requestAnimationFrame(watch);
+      S.model.feed(row);
+      return {n, was: window.__gateClaims.was}; })(%s)''' % (GAP_NOW, json.dumps(row)))
+    ctx.settle()
+    ctx.frames(3)
+    watched = ctx.js('(() => { const g = window.__gateClaims; g.stop = true; return {frames: g.frames, kept: g.kept, was: g.was, now: %s}; })()' % GAP_NOW)
+    frames = [json.loads(c['frame']) for c in ctx.js('window.__skep.bridge.calls()')[came['n']:] if c.get('frame')]
+    lookups = [f for f in frames if f.get('op') == 'find_links_ftt' and (f.get('q') or {}).get('to') == [unit_span(WINDOW[2])]]
+    links = [f for f in frames if f.get('op') == 'read_link' and f.get('a') == row['link']]
+    r.check(watched['was'] is not None and watched['frames'] > 0 and watched['kept'] == watched['frames'] and watched['now'] == watched['was'],
+            '(e) a link write homed elsewhere, its link no edition claim on %s: the run\'s gap as it stood — what it holds, its clause, its edge\'s mark — in every frame from the row to the settle (issue #272)' % WINDOW[2], watched)
+    r.check(not lookups and len(links) == 1,
+            '(e) the page reads the row\'s link once and asks no lookup of the edition claims on %s again: a link write drops only the claims it writes, retracts or supersedes (issue #272)' % WINDOW[2],
+            {'lookups': len(lookups), 'links_read': len(links), 'reads': sorted(set(f.get('op') for f in frames))})
+    return {'row': row, 'frames': watched, 'lookups': len(lookups), 'links_read': len(links), 'reads': sorted(set(f.get('op') for f in frames))}
 
 
 def mark_face(ctx):
@@ -485,17 +522,18 @@ def run(ctx):
     # not read — and where they decide none, nothing stands in its place: in the gap where it holds the face, else in the
     # face its edge's mark opens whole
     clause_id, decided = ctx.edition_clause(WINDOW[2], OWNER)
-    clause = t(ctx, clause_id, {'claimant': decided.get('claimant', '')}) if clause_id else None
+    clause = t(ctx, clause_id, {'claimant': decided.get('claimant', '')}) if clause_id not in (None, CLAUSE_READING) else None
     shown_clause = g.get('clause') if face_in else None
     shown_claim = g.get('claim') if face_in else None
     if not face_in:
         opened = mark_face(ctx)
         shown_clause, shown_claim = opened['clause'], opened['claim']
         ctx.esc()
-    r.check(decided['lookups'] >= 1 and not decided['audit'] and len(ph) == 1 and shown_clause == clause and shown_claim == decided.get('claim'),
-            '(e) C-67\'s clause beneath the arm is the one the origin\'s edition claims decide — read with the active view\'s lookup, never the audit view\'s edition_claims — the pointer following the claim PUB-3.107\'s order picks, and nothing stands in its place where they decide none (PUB-5.124)',
+    r.check(decided['lookups'] >= 1 and not decided['audit'] and clause_id != CLAUSE_READING and len(ph) == 1 and shown_clause == clause and shown_claim == decided.get('claim'),
+            '(e) C-67\'s clause beneath the arm is the one the origin\'s edition claims decide, every read it waits on answered — read with the active view\'s lookup, never the audit view\'s edition_claims — the pointer following the claim PUB-3.107\'s order picks, and nothing stands in its place where they decide none (PUB-5.124; issue #272)',
             {'decided': clause_id, 'shown': shown_clause, 'claim': shown_claim, 'in_the_gap': face_in, 'reads': decided})
     r.figures['edition_clause'] = {'origin': WINDOW[2], 'decided': clause_id, 'reads': decided}
+    r.figures['claims_kept'] = claims_kept(ctx, r)
     # the mirror's item at the run says the face whole (FP-26: "the mirror reads every sign whole"): its words filled from the
     # gap's own owner, the guest's arm and the clause the claims decide, the clause a sentence after the arm where one stands and
     # nothing where none does, and the arm and the clause standing in it whole
@@ -706,10 +744,10 @@ def run(ctx):
     guests_arm = t(ctx, arm_id, {'owner': SECOND_ACCOUNT})
     caption = '%s · %s · %s' % (t(ctx, 'B1.who-wrote'), WITHHELD, t(ctx, 'F.position', {'p': 1}))
     own_clause_id, own_decided = ctx.edition_clause(WITHHELD, SECOND_ACCOUNT)
-    own_clause = t(ctx, own_clause_id, {'claimant': own_decided.get('claimant', '')}) if own_clause_id else None
+    own_clause = t(ctx, own_clause_id, {'claimant': own_decided.get('claimant', '')}) if own_clause_id not in (None, CLAUSE_READING) else None
     acts = ['head'] + (['follow'] if own_clause_id == 'C-67.pointer' else [])
     r.check(face['id'] == 'face:withheld' and face['words_id'] == 'F.corner.withheld' and face['words'] == want[1] and face['open'] == 'true' and face['arm_id'] == arm_id and face['arm'] == guests_arm
-            and not face['address'] and '⟨' not in face['text'] and face['acts'] == acts and face['clause_id'] == own_clause_id and face['clause'] == own_clause,
+            and not face['address'] and '⟨' not in face['text'] and face['acts'] == acts and own_clause_id != CLAUSE_READING and face['clause_id'] == own_clause_id and face['clause'] == own_clause,
             '(d) "who wrote this?" asked of the withheld document faces it as its box names it — "%s" — whole, the guest\'s arm for this device\'s key store beneath, %s for %s, then C-67\'s clause as the edition claims on it decide it, in the words a run of it carries, no address before it at its own place, no token unfilled, and no act but its head\'s and the pointer where the claims decide one (A-170; issues #179, #186)' % (want[1], arm_id, SECOND_ACCOUNT),
             {'face': face, 'guests_arm': guests_arm[:80], 'key_here': store['key_here'], 'clause': own_clause_id, 'decided_from': own_decided})
     r.check(face['caption'] == caption and face['named_by'] == face['caption_id'] and bool(face['words_el']) and face['words_el'] in (face['described_by'] or '').split()

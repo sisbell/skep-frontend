@@ -321,8 +321,9 @@ export const STRINGS = {
   'L.mirror.same': { text: ' (the same material as ⟨origin⟩)', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // ⟨kind⟩ a withheld run's kind (L.item.withheld) and ⟨length⟩ its positions (L.item.positions), as a copy's stand-in names them
   'L.mirror.withheld': { text: '⟨kind⟩ in ⟨document⟩: ⟨length⟩, owner ⟨owner⟩, origin ⟨origin⟩. ⟨arm⟩.⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // a block that holds no text, a withheld run apart (FP-24): its kind (L.item.*), where it stands, then what the plane
-  // shows of it — a record's words and keys, an item this client cannot show's length — never its raw value
+  // a block that holds no text, a withheld run apart where its clause is decided (FP-24, FP-33): its kind (L.item.*), where it
+  // stands, then what the plane shows of it — a record's words and keys, the length of an item this client cannot show or of
+  // a withheld run whose clause is read — never its raw value
   'L.mirror.no-text': { text: '⟨kind⟩ at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩⟨shown⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.shows': { text: ': ⟨shown⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // C-67's clause after a withheld run's arm, where the origin's edition claims decide one (PUB-5.124); the empty place says nothing

@@ -83,8 +83,9 @@
 // model's now: a read that drops a pane's document moves no tie off its text.
 // A pane is kept fresh by its kind (FP-23): each feed row M-PUMP takes
 // reaches the panes after it drops what it named (`dropped`, its `onDrop`),
-// a pane reached where the row named its document's box, and none offers a
-// reload. A draft — any text no publication fixes — is read again whole and
+// a pane reached where the row named its document's box, or where M-PUMP
+// names its document as windowing an origin whose clause may be decided
+// anew, and none offers a reload. A draft — any text no publication fixes — is read again whole and
 // set in its place, the first span in view holding still and the platform's
 // selection put back on the same words. An edition read at its bare address
 // keeps the version it opened on: its acts name the member its text is
@@ -2515,8 +2516,8 @@ function newest(row, src) {
  * pane taken down at once and read again at the class the page reads at then;
  * a refresh reaching every pane (`refreshed`); a row naming a newer member
  * pinning an edition at its bare address at once, or counting a version's
- * chain again; any other row reaching a pane's text reading it again in its
- * place.
+ * chain again; any other row reaching a pane's text, and a clause decided
+ * anew at an origin its text windows, reading it again in its place.
  * @param {Dropped} x
  */
 export function dropped(x) {

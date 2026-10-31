@@ -1,6 +1,7 @@
 // M-FRAMES's test: every composer spells its frame as `docs/wire.md`'s
 // request examples spell it (FP-16), the edition-claim and enrollment
-// lookups take `find_links_ftt`'s two-slot shape and never the audit view's
+// lookups and the edition-class links homed in a document take
+// `find_links_ftt`'s two-slot shape and never the audit view's
 // `edition_claims`, no write composer exists, every decoder reads the wire's
 // example answers, the age a link value and `doc_metadata` carry among them,
 // and a delivery keeps an item of a kind it does not know at its own place.
@@ -68,6 +69,13 @@ test('the edition claims on an origin are the active view\'s lookup in the wire\
     '{"op":"find_links_ftt","q":{"from":"any","home":"any","to":[{"start":"1.0.1.0.1003","width":"0.0.0.0.1"}],"ty":[{"start":"1.1.0.1.0.1.0.3.14","width":"0.0.0.0.0.0.0.0.1"}]}}');
   assert.equal(F.EDITION_CLASS, '1.1.0.1.0.1.0.3.14');
   assert.ok(!F.READ_OPS.includes('edition_claims'), 'edition_claims is no read this module composes (the static gate holds every `op` literal to READ_OPS)');
+});
+
+test('the edition-class links homed in a document are `find_links_ftt` in the wire\'s two-slot shape — the document\'s unit span in `home`, the edition class\'s in `ty` — a home slot naming a document, which takes no class-scan permit (wire.md §Link discovery reads)', () => {
+  assert.equal(canon(F.editionLinksIn('1.0.1.0.30')),
+    '{"op":"find_links_ftt","q":{"from":"any","home":[{"start":"1.0.1.0.30","width":"0.0.0.0.1"}],"to":"any","ty":[{"start":"1.1.0.1.0.1.0.3.14","width":"0.0.0.0.0.0.0.0.1"}]}}');
+  assert.equal(canon(F.editionLinksIn('1.0.1.0.30.2')),
+    '{"op":"find_links_ftt","q":{"from":"any","home":[{"start":"1.0.1.0.30.2","width":"0.0.0.0.0.1"}],"to":"any","ty":[{"start":"1.1.0.1.0.1.0.3.14","width":"0.0.0.0.0.0.0.0.1"}]}}', 'a version member\'s, its own home');
 });
 
 test('the enrollment records naming an account are the lookup of their type in the wire\'s two-slot shape — the account\'s unit span in `to`, the enroll class\'s in `ty` (wire.md §Credentials: enroll `1.1.0.1.0.1.0.3.1`, `to` the subject account)', () => {
