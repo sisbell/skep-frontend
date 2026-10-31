@@ -6,10 +6,15 @@
 // An entry is an address and a view (S3 Q7), its view re-taken whenever the
 // entry is departed, so Back lands on the passage left; its place re-taken
 // with it where the box it names shows another version as it is departed
-// (`retakePlace`; N-GO's `departure`), so Back restores the version read
-// there (FP-22); beside the view, by value, what that view reads — the line
-// at its visible centre and the view around it, by their positions and their
-// bytes' identity, and where the line stood in its fold (T-LAYER's
+// (`retakePlace`; N-GO's `departure`), and, on every entry the reader has
+// left, a newer version's arrival at a trunk the entry names at its plain
+// address re-taking the member that text was — its place, the document its
+// view read and the one its walk stood in — save where its view read that
+// text after the member was published (`arrivedAt`, `readBefore`), so a
+// return restores the version read there (FP-22); beside the view, by value,
+// what that view reads — the line at its visible centre and the view around
+// it, by their positions and their bytes' identity, where the line stood in
+// its fold, and the position its text was read at (T-LAYER's
 // `Reading`) — written with every view the trail writes: a departure's, a
 // jump's camera leaving (`leaveFrom`), a landing's (`settle`); and where the
 // walk stood in that line's document — or the document it stood on whole,
@@ -76,7 +81,7 @@
 // notice, save a claim's still reading, the arrival and the surfaces it
 // kept, what its view read, where the walk stood, and where the reader stood
 // in a reading scene it holds (`classChanged`).
-// Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-22, FP-25, FP-29, FP-36.
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-21, FP-22, FP-23, FP-25, FP-29, FP-36.
 
 /** @typedef {{x: number, y: number, scale: number}} View */
 /** @typedef {import('../model/records.js').ISpan} ISpan */
@@ -160,7 +165,7 @@
 
 /**
  * @typedef {Object} Entry
- * @property {string} addr the place teleported to — the place a jump named, whatever its read brought; at a document, the version its box showed as the entry was last departed (`retakePlace`); at a reading scene's, the document opened beside the reader's
+ * @property {string} addr the place teleported to — the place a jump named, whatever its read brought; at a document, the version its box showed as the entry was last departed (`retakePlace`), or the member that text was where a newer version arrived since (`arrivedAt`); at a reading scene's, the document opened beside the reader's
  * @property {number | null} pos the position landed on, where one was
  * @property {number | null} width the positions of the run landed on from `pos`, where the landing named a span: the first run in the text of a follow's projected far end, or a carried passage's counterpart — one of the runs its landing outlined
  * @property {View} view the view at the entry — the landing's, re-taken at departure; where the camera went, where its read brought no place
@@ -217,6 +222,38 @@ function retake(/** @type {Departure | null} */ departed) {
  */
 export function retakePlace(addr) {
   if (cursor >= 0 && !claims.has(entries[cursor]) && !entries[cursor].scene) entries[cursor].addr = addr;
+}
+
+/**
+ * Was a text read before a member was published: the position it was read
+ * at before the one the member was published at, where both are known
+ * (wire.md §Arrangement). Either unknown counts as before.
+ * @param {number | null} readAt the position the text was read at (M-REC's `Doc.readAt`)
+ * @param {number | null} at the position the member was published at
+ * @returns {boolean}
+ */
+export const readBefore = (readAt, at) => readAt == null || at == null || readAt < at;
+
+/**
+ * A newer version's arrival at a trunk (see the head; N-GO's `arrived`;
+ * FP-22, FP-23): every entry the reader has left whose record names the
+ * trunk at its plain address re-takes the member its text was — its place,
+ * save a claim's while its read is out, the document its view read, and the
+ * one its walk stood in — as the box the reader stands at takes it; none
+ * whose view read the trunk's text after the newer member was published
+ * (`readBefore`), for that text was the newer member's. The cursor's entry
+ * is left to its departure, and a reading scene's entry to its panes.
+ * @param {string} trunk the trunk's plain address
+ * @param {string} member the member before the one published: the one a text read before it was
+ * @param {number | null} at the position the newer member was published at; null where not known
+ */
+export function arrivedAt(trunk, member, at) {
+  entries.forEach((e, i) => {
+    if (i === cursor || e.scene || (e.reading && e.reading.addr === trunk && !readBefore(e.reading.at, at))) return;
+    if (e.addr === trunk && !claims.has(e)) e.addr = member;
+    if (e.reading && e.reading.addr === trunk) e.reading = { ...e.reading, addr: member };
+    if (e.stood && e.stood.addr === trunk) e.stood = { ...e.stood, addr: member };
+  });
 }
 
 /**

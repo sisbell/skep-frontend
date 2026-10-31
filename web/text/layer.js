@@ -133,8 +133,9 @@
 // the same way (foundations §2.2): what a view reads — the line at its
 // visible centre in the document at its own reading scale there, the words
 // the live hold keeps still, and the view around it, each by its positions
-// and its bytes' identity, and the line's place in the fold (`readAt`) —
-// N-TRAIL keeps beside the view; a return finds those words in the text it
+// and its bytes' identity, the line's place in the fold, and the position its
+// text was read at (`readAt`) — N-TRAIL keeps beside the view; a return
+// finds those words in the text it
 // reaches (N-GO's) and lands at the view that sets the line it names there in
 // the place and at the size on screen of the line read, in the fold its
 // document stands in then, its lines set as the platform sets them first
@@ -440,6 +441,7 @@ import { t, facedHTML, CLIENT_CLOSE } from '../strings.js';
 /**
  * @typedef {Object} Reading — what a view reads (`readAt`), by value — positions, bytes by identity and a place, no fold and no words: what N-TRAIL keeps beside an entry's view, so a return finds those words wherever its document was set since (N-GO's) and lands at the view that keeps the line it finds them at where the line read stood (`keptAt`)
  * @property {string} addr the document: the version its box showed
+ * @property {number | null} at the position its text was read at (M-REC's `Doc.readAt`): at a bare address, what tells the member that text was from a newer one published after it (N-TRAIL's `arrivedAt`); null where no delivery said
  * @property {number} pos the position the line under the view's visible centre opens at (P-LAY's `posAt`)
  * @property {number} width that line's positions (`lineOf`): the words the live hold keeps still
  * @property {ISpan[]} ids that line's bytes by identity, in its order, through the document's held image (M-REC's `identityOf`); none where the image did not cover them
@@ -2128,11 +2130,12 @@ export function holdAcross(from, to, at = null) {
  * flight's destination — against the fold each document stands in now, never
  * a mounted article: the document whose outline holds the view's visible
  * centre at its own reading scale there, a version only where its box shows
- * it and only where the page holds its text; the position the line under that
- * centre opens at (P-LAY's `posAt`) and that line's positions (`lineOf`), its
- * bytes by identity through the document's held image, the image's runs the
- * view shows (`aroundOf`), and where the fold sets that line and the centre.
- * Null where the view reads no document so.
+ * it and only where the page holds its text, with the position that text was
+ * read at; the position the line under that centre opens at (P-LAY's `posAt`)
+ * and that line's positions (`lineOf`), its bytes by identity through the
+ * document's held image, the image's runs the view shows (`aroundOf`), and
+ * where the fold sets that line and the centre. Null where the view reads no
+ * document so.
  * @param {{x: number, y: number, scale: number}} view
  * @returns {Reading | null}
  */
@@ -2145,7 +2148,7 @@ export function readAt(view) {
     const box = docBox(d.addr), p = { x: c.x - box.x, y: c.y - box.y }, pos = posIn(f, p.x, p.y);
     if (pos == null) continue;
     const at = placeIn(f, pos), width = lineOf(f, d.blocks, pos).width;
-    return { addr: d.addr, pos, width, ids: REC.identityOf(d.addr, pos, width), around: aroundOf(d, f, view), p, line: { x: at.x, y: at.y }, fs: f.fs };
+    return { addr: d.addr, at: d.readAt, pos, width, ids: REC.identityOf(d.addr, pos, width), around: aroundOf(d, f, view), p, line: { x: at.x, y: at.y }, fs: f.fs };
   }
   return null;
 }

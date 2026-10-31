@@ -9,7 +9,10 @@
 // withheld document, the chrome a landing leaves standing and a field that
 // keeps its caret, cards opened while an act reads, a face a read brings
 // standing below a card the reader opened, Enter at a withheld run and a
-// tail pressed, the box's version, a change of the page's class, where no
+// tail pressed, the box's version — a return restoring the versions its
+// entry kept, the member a newer version's arrival found a bare address's
+// text was among them, by the position its row names — a change of the
+// page's class, where no
 // board is held, the passage Back lands on — a return finding the words its
 // entry's view read in the text it reaches, and the arrival it keeps read
 // again there, landing in the landing rule's states — the surfaces a place keeps —
@@ -2696,6 +2699,150 @@ test('a newer version\'s arrival carries the selection standing in the trunk to 
     REC.invalidate(FAR); REC.invalidate(FAR2);
     await PUMP.loadWhole(FAR); await PUMP.loadWhole(FAR2);
   }
+  await run(GO.leapTo(FAR));
+  assert.deepEqual(fake.unanswered, []);
+});
+
+// ---- THE VERSION READ: a return restores the version its entry kept (issue #298) ------------------------------------
+
+/** FAR and its second member read whole as the board answers them, and a LEAP to FAR's plain address, its box showing the trunk head */
+async function farAfresh() {
+  REC.invalidate(FAR); REC.invalidate(FAR2);
+  await PUMP.loadWhole(FAR); await PUMP.loadWhole(FAR2);
+  await run(GO.leapTo(FAR));
+}
+/** FAR's third member's arrival as M-PUMP hands it on (`arrive`): N-GO told, at the position given, then, where FAR's box took its second member, that member handed FAR's text, holding none of its own */
+function publishFar3(/** @type {number | null} */ at = null) {
+  REC.invalidate(FAR2);
+  GO.arrived(FAR + '.3', at);
+  if (GO.shownIn(FAR) === FAR2) REC.takeAsMember(FAR, FAR2);
+}
+/** FAR's second member answered by FAR's own bytes, as the board's member holds the text it was published with: put back by the function it answers */
+function memberAsFar() {
+  const key = FAKE.keyOf('op', { frame: F.image(FAR2, 1, FAR_EXTENT) }), was = script[key];
+  /** @type {any} */ (script)[key] = { result: { as_of: 1, resp: 'runs', runs: [{ i_start: FAR + '.0.1.1', width: String(FAR_EXTENT) }] } };
+  return () => { /** @type {any} */ (script)[key] = was; };
+}
+/** FAR and its second member read whole again as the board answers them, after a test handed FAR's text to the member */
+async function farAgain() {
+  REC.invalidate(FAR); REC.invalidate(FAR2);
+  await PUMP.loadWhole(FAR); await PUMP.loadWhole(FAR2);
+  await run(GO.leapTo(FAR));
+}
+
+test('Back to an edition read at its bare address shows the member read there once a newer version arrived while the reader was away — its entry, the trail list and the box naming it, the words read where they stood, nothing said — and the bare address while nothing has (issue #298\'s design decision: "Back pins the version that was read again")', async () => {
+  const platform = { getElementById: globalThis.document.getElementById };
+  /** @type {any} */ (globalThis.document).getElementById = () => null;
+  try {
+    await farAfresh();
+    await run(GO.leapTo(FAR, { pos: FAR_HELD.pos }));
+    await run(GO.leapTo(D));
+    await run(GO.back());
+    assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR)], [FAR, FAR], 'nothing published since: the bare address');
+    const left = CAM.view();
+    await run(GO.leapTo(D));
+    publishFar3();
+    assert.deepEqual([TRAIL.all()[TRAIL.cursorIndex() - 1].addr, GO.shownIn(FAR)], [FAR2, FAR2], 'version 3 arrived: the entry the reader left re-takes version 2, as the box does');
+    await run(GO.back());
+    assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR), walkAt()], [FAR2, FAR2, ['block', FAR2, FAR_HELD.pos]], 'Back: version 2, the walk on the span it stood on — never the newer head');
+    assert.deepEqual([same(CAM.view(), left), GO.landing(), faceShown()], [true, null, null], 'the words read where they stood, nothing said');
+    TRAILLIST.open();
+    const row = (hostEl.innerHTML.match(/aria-current="true"><span class="k">[^<]*<\/span> (.*?)<\/button>/) || [])[1] || '';
+    HOST.dismiss();
+    assert.ok(row.startsWith(`<span class="id">${FAR2}</span> · ${esc(t('F.position', { p: FAR_HELD.pos }))}`), `the trail list's row for the entry names version 2: ${row}`);
+  } finally {
+    /** @type {any} */ (globalThis.document).getElementById = platform.getElementById;
+    HOST.dismiss();
+    await farAgain();
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Back to an edition the reader left at its bare address shows the member read there where its text was dropped before a newer version arrived, the box beside then showing the newer head: version 2 read and the words found in it (issue #298)', async () => {
+  const put = memberAsFar();
+  try {
+    await farAfresh();
+    await run(GO.leapTo(FAR, { pos: FAR_HELD.pos }));
+    await run(GO.leapTo(D));
+    REC.invalidate(FAR);
+    publishFar3();
+    assert.deepEqual([GO.shownIn(FAR), TRAIL.all()[TRAIL.cursorIndex() - 1].addr], [FAR, FAR2], 'the page held none of FAR\'s text: the box beside shows the trunk head, the entry left version 2');
+    const from = fake.asked.length;
+    await run(GO.back());
+    assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR), walkAt(), GO.landing(), faceShown()], [FAR2, FAR2, ['block', FAR2, FAR_HELD.pos], null, null], 'Back: version 2, the words read found in it whole, nothing said');
+    assert.ok(fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.retrieveV(FAR2, 1, FAR_EXTENT) })) && !fake.asked.slice(from).includes(FAKE.keyOf('op', { frame: F.retrieveV(FAR, 1, FAR_EXTENT) })), 'version 2\'s text read beside the flight, never the bare address\'s');
+  } finally {
+    put();
+    await farAgain();
+  }
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Forward and a trail jump to an entry left at an edition\'s bare address show the member read there once a newer version arrived (issue #298\'s design decision: "Forward and the trail list do the same")', async () => {
+  await farAfresh();
+  await run(GO.leapTo(D));
+  await run(GO.leapTo(FAR, { pos: FAR_HELD.pos }));
+  await run(GO.back());
+  publishFar3();
+  const ahead = TRAIL.all()[TRAIL.cursorIndex() + 1];
+  assert.deepEqual([ahead.addr, GO.shownIn(FAR)], [FAR2, FAR2], 'the entry ahead of the cursor re-takes version 2, as the box does');
+  await run(GO.forward());
+  assert.deepEqual([TRAIL.current() === ahead, GO.shownIn(FAR), walkAt()], [true, FAR2, ['block', FAR2, FAR_HELD.pos]], 'Forward: version 2, the walk on the span it stood on — never the newer head');
+  await run(GO.back());
+  await run(GO.toTrailEntry(/** @type {number} */ (TRAIL.numbered().find((r) => r.entry === ahead)?.n)));
+  assert.deepEqual([TRAIL.current() === ahead, TRAIL.current()?.addr, GO.shownIn(FAR)], [true, FAR2, FAR2], 'a trail jump onto it: version 2');
+  await farAgain();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('Forward across a follow into an edition read at its bare address lights its far end in the member read there once a newer version arrived — the version its box shows, never the bare address, which holds that text no more (issue #298)', async () => {
+  await farAfresh();
+  await run(GO.leapTo(D));
+  await run(GO.follow(drawn(PASSAGE)));
+  GO.endArrival();
+  await run(GO.back());
+  publishFar3();
+  await run(GO.forward());
+  assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(FAR), marks()], [FAR2, FAR2, [{ addr: FAR2, pos: 20, runs: [{ pos: 20, width: 5 }], link: PASSAGE }, [PASSAGE]]], 'Forward: version 2, the far end outlined in it and the link lit');
+  GO.endArrival();
+  await farAgain();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a return restores the version its entry\'s view read beside its place: an entry at D whose view the reader moved onto FAR\'s text read at its bare address, version 3 arriving once that text was dropped — Back pins FAR\'s box on version 2 and D\'s on its own (issue #298\'s design decision: "each one restores the kept versions")', async () => {
+  const put = memberAsFar();
+  try {
+    await farAfresh();
+    await run(GO.leapTo(FAR, { pos: FAR_HELD.pos }));
+    const far = CAM.view();
+    await run(GO.leapTo(D));
+    CAM.set(far);
+    await run(GO.leapTo(C));
+    const e = /** @type {import('./trail.js').Entry} */ (TRAIL.all()[TRAIL.cursorIndex() - 1]);
+    assert.deepEqual([e.addr, e.reading?.addr], [D, FAR], 'the entry\'s place D, its view reading FAR');
+    REC.invalidate(FAR);
+    publishFar3();
+    assert.deepEqual([e.addr, e.reading?.addr, GO.shownIn(FAR)], [D, FAR2, FAR], 'version 3 arrived: what its view read re-takes version 2, its place D; FAR\'s box the trunk head');
+    await run(GO.back());
+    assert.deepEqual([TRAIL.current()?.addr, GO.shownIn(D), GO.shownIn(FAR), GO.landing(), faceShown()], [D, D, FAR2, null, null], 'Back: D at its own, FAR\'s box on version 2, the words read found in it, nothing said');
+  } finally {
+    put();
+    await farAgain();
+  }
+  unread();
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a newer version\'s arrival takes its member\'s position from its feed row (issue #298): FAR\'s text read at the row\'s position or after is the newer member\'s own — no pin, no entry re-taken — and read before it the member before\'s', async () => {
+  await farAfresh();
+  await run(GO.leapTo(FAR, { pos: FAR_HELD.pos }));
+  await run(GO.leapTo(D));
+  const readAt = /** @type {number} */ (REC.doc(FAR).readAt), e = TRAIL.all()[TRAIL.cursorIndex() - 1];
+  assert.deepEqual([readAt, e.reading?.at], [1, 1], 'FAR\'s text read at 1, its entry\'s view with it');
+  GO.arrived(FAR + '.3', readAt);
+  assert.deepEqual([GO.shownIn(FAR), e.addr, e.reading?.addr], [FAR, FAR, FAR], 'published at 1, where the text was read: the newer member\'s text — nothing pinned, nothing re-taken');
+  GO.arrived(FAR + '.3', readAt + 1);
+  assert.deepEqual([GO.shownIn(FAR), e.addr, e.reading?.addr], [FAR2, FAR2, FAR2], 'published at 2, after it: version 2\'s — the box pinned on it and the entry re-taking it');
   await run(GO.leapTo(FAR));
   assert.deepEqual(fake.unanswered, []);
 });

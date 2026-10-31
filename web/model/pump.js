@@ -79,8 +79,9 @@
 // The events: a board event is taken where it names the page's board, none
 // before the board is known. A feed row the page takes (`takeRow`; a
 // `drafts` row only where it names the page's own session) hands a `publish`
-// row's member to the app before anything is dropped (`arrive`), then goes to
-// M-REC's index and invalidation — every document it touches dropped, but
+// row's member to the app with the row's position before anything is dropped
+// (`arrive`), then goes to M-REC's index and invalidation — every document it
+// touches dropped, but
 // those the view shows and the homes of the edition claims on the origins
 // those window, whose metadata decides the clause there (`keptNow`), which
 // stand as held while they are read again and are set in one step as their
@@ -259,7 +260,7 @@ let started = false;
 const plain = (/** @type {string} */ addr) => documentOf(addr) || addr;
 /** @type {(addr: string) => string} the version a document's box shows (N-GO's `shownIn`, handed in at `start`) */
 let shown = plain;
-/** @type {(member: string) => void} told of a feed row publishing a trunk's next member, before the row drops anything (N-GO's `arrived`, handed in at `start`) */
+/** @type {(member: string, at: number | null) => void} told of a trunk's next member arriving — a feed row publishing it, before the row drops anything, with the row's position; a refresh's, its member found from the text, with none (N-GO's `arrived`, handed in at `start`) */
 let onPublish = () => {};
 /** @type {(d: Dropped) => void} told of what each feed row the page takes, and every change of its class, dropped of what it held, after the drop (SC's `dropped`, handed in at `start`) */
 let onDrop = () => {};
@@ -313,7 +314,7 @@ let subscribed = false;
  * the port (B-PORT's `onSession`) — once, however often it starts, so each
  * event is taken once, under the readers the latest start handed in. A start
  * ends every refresh and read again a start before it left out (`classes`).
- * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, before the row drops what the page held of `D`; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `onOpen` told once a board the list read again found is open (`retryBoards`)
+ * @param {{onDirty: () => void, shown?: (addr: string) => string, onPublish?: (member: string, at: number | null) => void, onDrop?: (d: Dropped) => void, stands?: () => string[], onOpen?: () => void}} opts `shown` the version each box shows, which the view reads; `onPublish` told of each trunk member `D.k+1` a `publish` row names, with the row's position, before the row drops what the page held of `D`, and of each a refresh finds past the member a text is, with none; `onDrop` told of what each row the page takes, and every change of its class, dropped, after the drop; `stands` the places the view's state names beside the view — the trail's entries — which a change of the page's class reads again with the documents in view; `onOpen` told once a board the list read again found is open (`retryBoards`)
  */
 export function start(opts) {
   dirty = opts.onDirty;
@@ -358,9 +359,10 @@ const takesRow = (/** @type {FeedUpdate} */ u) => { const s = REC.session(); ret
 
 /**
  * A feed row the page takes (`takesRow`): the member a
- * `publish` names arriving first (`arrive`), while the page still holds the
- * trunk's text; then the row laid into M-REC's index and invalidation — each
- * document it touches that the view keeps, the view's with the box pins the
+ * `publish` names arriving first, at the row's position (`arrive`), while the
+ * page still holds the trunk's text; then the row laid into M-REC's index and
+ * invalidation — each document it touches that the view keeps, the view's
+ * with the box pins the
  * arrival took and the homes of the edition claims on the origins those
  * window (`keptNow`), kept as held and read again (`readAgain`), every other
  * dropped — every read out of the board's state given it, and the view's
@@ -376,7 +378,7 @@ const takesRow = (/** @type {FeedUpdate} */ u) => { const s = REC.session(); ret
  */
 export function takeRow(u) {
   if (!takesRow(u)) return;
-  if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) arrive(named);
+  if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) arrive(named, u.position);
   const keep = new Set(keptNow());
   const touched = REC.applyFeedUpdate(u, keep);
   for (const m of whileOut) m.rows.push(u);
@@ -511,14 +513,16 @@ async function readAgainFirst(addr) {
 
 /**
  * A newer member's arrival at its trunk (FP-22, FP-23): told
- * to the app (`onPublish`, N-GO's `arrived`), which pins the trunk's box on
- * the member its text is where the box shows its plain address and the page
- * holds that text; where it did, that member takes the trunk's text (M-REC's
+ * to the app with the position it was published at (`onPublish`, N-GO's
+ * `arrived`), which pins the trunk's box on the member its text is where the
+ * box shows its plain address and the page holds that text, read before that
+ * position; where it did, that member takes the trunk's text (M-REC's
  * `takeAsMember`), so the box keeps it standing and no read of it is made.
  * @param {string} member the trunk's newer member, `D.k+1`
+ * @param {number | null} [at] the position a feed row published it at; null for a refresh's, whose `D.k` is the member the text was read as (`memberShown`)
  */
-function arrive(member) {
-  onPublish(member);
+function arrive(member, at = null) {
+  onPublish(member, at);
   const trunk = documentOf(member), k = memberOf(member);
   if (!trunk || k == null || k < 2) return;
   const read = versionAddress(trunk, k - 1);

@@ -1,8 +1,9 @@
 // O-TRAIL-LIST's test, on a stand-in of the host's element: each row names
-// where its entry stands — an entry a reading scene was opened as both its
-// documents, in its panes' order, as the reader last left it, each address
-// in the identifier's face, beside the act's name — and holds no document's
-// words of its own (FP-29).
+// where its entry stands — the version its entry keeps, the member a newer
+// version's arrival found its text was among them; an entry a reading scene
+// was opened as both its documents, in its panes' order, as the reader last
+// left it, each address in the identifier's face, beside the act's name — and
+// holds no document's words of its own (FP-22, FP-29).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as TRAILLIST from './trail-list.js';
@@ -33,5 +34,22 @@ test('an entry a reading scene was opened as names both its documents in its pan
   TRAIL.back({ view, reading: null, stood: null, scene: { panes: { a: version(D + '.2'), b: version(O) }, spots: null, stop: null } });
   TRAILLIST.open();
   assert.deepEqual(rows()[0], [1, named(D + '.2', O)], 'left with pane A on another version: the version its pane showed');
+  HOST.dismiss();
+});
+
+test('a row names the version its entry keeps: an entry left at an edition\'s bare address names the member its text was once a newer version arrived (issue #298\'s design decision: "a list row names its entry\'s version")', () => {
+  globalThis.document = /** @type {any} */ ({ activeElement: null, body: null, getElementById: () => null });
+  HOST.attach(/** @type {any} */ (hostEl));
+  TRAIL._reset();
+  const view = { x: 0, y: 0, scale: 1 }, E = '1.0.1.0.43', O = '1.0.1.0.3';
+  TRAIL.push({ addr: E, pos: 11, width: null, view, label: null, notice: null }, null);
+  TRAIL.push({ addr: O, pos: null, width: null, view, label: null, notice: null }, { view, reading: null, stood: null });
+  const row = (/** @type {string} */ a) => [2, `<span class="id">${a}</span> · ${esc(t('F.position', { p: 11 }))} <span class="dim"></span>`];
+  TRAILLIST.open();
+  assert.deepEqual(rows()[1], row(E), 'its bare address while nothing has arrived');
+  HOST.dismiss();
+  TRAIL.arrivedAt(E, E + '.2', null);
+  TRAILLIST.open();
+  assert.deepEqual(rows()[1], row(E + '.2'), 'version 3 arrived: the member its text was, version 2');
   HOST.dismiss();
 });

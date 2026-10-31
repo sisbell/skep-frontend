@@ -11,7 +11,9 @@
 // cover confirmed or lifted by its read — every read asked again at the
 // page's class; a listing,
 // the health and the daemon laid under the events that overtook them; the
-// board opened in the boot's order and read again at "try again"; the one
+// board opened in the boot's order and read again at "try again"; a publish
+// row's member handed to the app at the row's position before anything is
+// dropped, and a refresh's at none; the one
 // refresh a run of bare rows earns; a row naming a document the view
 // shows, which keeps it as held until its reads again set it in one step,
 // rows meanwhile queueing one more read; and the edition claims a row
@@ -1808,19 +1810,19 @@ test('a far end is placed in the version its far document\'s box shows: `project
   assert.deepEqual(fake.unanswered, []);
 });
 
-test('a feed row publishing a trunk\'s member is handed to the app before it drops anything of the trunk; no row of another op, and no publish naming no member, is (issue #154: a box at its plain address keeps the version being read)', async () => {
+test('a feed row publishing a trunk\'s member is handed to the app with the row\'s position before it drops anything of the trunk; no row of another op, and no publish naming no member, is (issues #154, #298: a box at its plain address keeps the version being read)', async () => {
   const fake = FAKE.create(script);
   PORT.boot(fake);
-  /** @type {Array<{member: string, held: boolean}>} */
+  /** @type {Array<{member: string, at: number | null, held: boolean}>} */
   const told = [];
-  PUMP.start({ onDirty: () => {}, onPublish: (member) => told.push({ member, held: REC.doc(D).from >= 0 }) });
+  PUMP.start({ onDirty: () => {}, onPublish: (member, at) => told.push({ member, at, held: REC.doc(D).from >= 0 }) });
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.takeIndex(indexAt('complete'));
   PUMP.forget(D);
   await PUMP.loadWhole(D);
   assert.ok(REC.doc(D).from >= 0, 'the trunk\'s text held');
   fake.fire('feed', { board: 'b-1', update: { position: 3, at: 3, op: 'publish', docs: [D + '.3'], class: 'published' } });
-  assert.deepEqual([[...new Set(told.map((x) => x.member))], told[0]?.held], [[D + '.3'], true], 'the member the row publishes handed over while the trunk\'s text stood');
+  assert.deepEqual([[...new Set(told.map((x) => x.member))], told[0]?.at, told[0]?.held], [[D + '.3'], 3, true], 'the member the row publishes handed over at the row\'s position while the trunk\'s text stood');
   assert.equal(REC.doc(D).from, -1, 'the row dropped the trunk after');
   told.length = 0;
   fake.fire('feed', { board: 'b-1', update: { position: 4, at: 4, op: 'make_link', docs: [D + '.4'], class: 'published' } });
@@ -2062,9 +2064,9 @@ test('an edition whose chain the refresh counts past the member its text is — 
   PORT.boot(fake);
   /** @type {Record<string, string>} */
   const pins = {};
-  /** @type {string[]} */
+  /** @type {Array<[string, number | null]>} */
   const told = [];
-  PUMP.start({ onDirty: () => {}, shown: showing(pins), onPublish: (member) => { told.push(member); const k = memberOf(member); if (k != null && k >= 2) pins[D] = versionAddress(D, k - 1); } });
+  PUMP.start({ onDirty: () => {}, shown: showing(pins), onPublish: (member, at) => { told.push([member, at]); const k = memberOf(member); if (k != null && k >= 2) pins[D] = versionAddress(D, k - 1); } });
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.takeIndex(indexAt('complete'));
   PUMP.forget(D);
@@ -2077,7 +2079,7 @@ test('an edition whose chain the refresh counts past the member its text is — 
   await settle();
   const asked = fake.asked.slice(from);
   assert.ok(asked.includes(opKeyOf(F.docMetadata(M))), 'counted from the end held, D.2 minted past the text\'s position: D.1 asked below it');
-  assert.deepEqual([told, pins[D], REC.textBetween(M, 1, 31), REC.doc(D).from], [[NEXT], M, BEFORE, -1], 'D.2, minted after the text was read, arrives: the box pinned on D.1, which holds the text, D holding none');
+  assert.deepEqual([told, pins[D], REC.textBetween(M, 1, 31), REC.doc(D).from], [[[NEXT, null]], M, BEFORE, -1], 'D.2, minted after the text was read, arrives with no position, the member the text is found already: the box pinned on D.1, which holds the text, D holding none');
   assert.ok(REC.doc(M).runs !== runs && !asked.includes(opKeyOf(F.retrieveV(D, 1, 30))), 'D.1 set again from its own read; nothing read at the bare address');
   assert.deepEqual([asked.filter((k) => k === opKeyOf(F.retrieveV(M, 1, 30))).length, REC.doc(D).members], [1, 2], 'D.1 read once at its own address; the box\'s document counted to its two members');
   assert.deepEqual(fake.unanswered, []);

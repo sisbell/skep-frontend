@@ -158,11 +158,18 @@ the scene standing over the page's selection, each stand through the first
 edition's article taken down and mounted again — by the camera, or by the
 same door — the copy naming the pane's phrase and no highlight standing over
 the plane, while a caret alone in a pane gives the page's selection its
-highlight back. Each step leaves the page as it found it."""
+highlight back. Mod+[ to the entry the reader left at an edition's plain
+address, after a `publish` row naming the member past its newest is handed to
+the page through the gate's feed door — reads alone — shows the member read
+there: the entry and the trail list's row name it and the paragraph read
+stands where it stood, Mod+] and Mod+[ again the same (issue #298's design
+decision); that row names a member the board never minted, so it comes after
+every check here that reads the edition's chain, and the page keeps its
+record. Every other step leaves the page as it found it."""
 import json
 
 from . import BEAMED, DOC, FAR_LEAP, GHOST, HOME, NO_MATCH, SECOND_ACCOUNT, SELECTED_WHOLE, VERSIONED, WINDOW, Result, item_words, key_fingerprint
-from .layout import click_on, inside, lacking_of, level_holds, scene_level, ties_hold
+from .layout import DRIFT_TOL_PX, box_of, click_on, inside, lacking_of, level_holds, line_of, passage_at, scene_level, ties_hold
 
 # the gutter between two columns, in the body's em — the fold's (issue #15), held apart from the page's GUTTER
 GUTTER_EM = 2
@@ -937,6 +944,66 @@ def member_of(ctx, addr):
             break
         k = j
     return '%s.%d' % (addr, k) if k else None
+
+
+def back_after_publish(ctx, r):
+    """BACK AFTER A NEWER VERSION (issue #298's design decision: "Back pins the version that was read again … Forward and
+    the trail list do the same, and a list row names its entry's version"): the edition with two members at its plain
+    address, its box showing its trunk head — the member the harness's own reads of its chain find newest — with a
+    paragraph under the view's centre, then a LEAP away; a `publish` row naming the member after that one, at a position
+    past every one the board has journalled, handed to the page through the gate's feed door — reads alone, nothing
+    written; then Mod+[: the box shows the member read there, its article alone, the trail's entry and the trail list's
+    row naming it, the paragraph's first line where it stood on screen at its em; Mod+] and Mod+[ again, the same. It
+    runs after every check on this page that reads the edition's chain, for the row names a member the board never
+    minted. The edition is left at its plain address; its figures"""
+    seen = {}
+    V = VERSIONED
+    newest = member_of(ctx, V)
+    k = int(newest.rsplit('.', 1)[1]) if newest else 0
+    chord(ctx, 'Escape')
+    chord(ctx, 'Escape')
+    ctx.leap(V, None)
+    para = passage_at(ctx.js('window.__skep.model.doc(%s)' % json.dumps(V)), 600, 40)
+    at0 = box_of(ctx, V)
+    r.check(k >= 1 and para is not None and at0['shown'] == V, f'{V} at its plain address, its box showing the trunk head, {newest} its newest member by the harness\'s own reads, a paragraph past its six hundredth position for the return',
+            {'newest': newest, 'para': para, 'shown': at0['shown']})
+    if k < 1 or para is None:
+        return seen
+    ctx.view_at(V, para['pos'])
+    before = line_of(ctx, V, para['pos'])
+    ctx.leap(DOC, WINDOW[0])
+    t0 = trail(ctx)
+    left = t0['entries'][t0['cursor'] - 1]
+    pos = ctx.health()['log_position'] + 1
+    row = {'position': pos, 'at': pos, 'op': 'publish', 'docs': ['%s.%d' % (V, k + 1)], 'class': 'published'}
+    ctx.js('window.__skep.model.feed(%s)' % json.dumps(row))
+    ctx.settle()
+    taken = trail(ctx)['entries'][t0['cursor'] - 1]
+    r.check(left['addr'] == V and (left.get('reading') or {}).get('addr') == V and taken['addr'] == newest and (taken.get('reading') or {}).get('addr') == newest,
+            f'a publish row naming {V}.{k + 1} past the text read: the entry the reader left at {V}\'s plain address, its view reading it, re-takes {newest} — the member its text was — at its place and what its view read (issue #298)',
+            {'left': [left['addr'], (left.get('reading') or {}).get('addr')], 'taken': [taken['addr'], (taken.get('reading') or {}).get('addr')], 'row': row})
+    chord(ctx, '[', mods=('Meta',))
+    b = box_of(ctx, V)
+    again = line_of(ctx, newest, para['pos'])
+    current = b['trail']['entries'][b['trail']['cursor']]
+    r.check(b['trail']['cursor'] == t0['cursor'] - 1 and current['addr'] == newest and b['shown'] == newest and b['mounted'] == [newest],
+            f'Mod+[ to the entry left at {V}\'s plain address after {V}.{k + 1} arrived: the box shows {newest}, the member read there, its article alone, and the entry names it — never the newer head (issue #298)',
+            {'cursor': [t0['cursor'], b['trail']['cursor']], 'entry': current['addr'], 'shown': b['shown'], 'mounted': b['mounted']})
+    r.check(bool(before['line']) and bool(again['line']) and abs(again['line']['y'] - before['line']['y']) <= DRIFT_TOL_PX and abs(again['em'] - before['em']) <= 1e-6 * before['em'],
+            f'the paragraph read there stands where it stood on screen, {DRIFT_TOL_PX} px either way, at its em (issue #298)', {'before': before, 'after': again})
+    ctx.js('window.__skep.cards.trailList()')
+    ctx.frames(2)
+    listed = ctx.js('(() => { const e = document.querySelector(\'#overlay [aria-current="true"] .id\'); return e ? e.textContent : null; })()')
+    chord(ctx, 'Escape')
+    r.check(listed == newest, f'the trail list\'s row for the entry names {newest}, the version it keeps (issue #298)', listed)
+    chord(ctx, ']', mods=('Meta',))
+    chord(ctx, '[', mods=('Meta',))
+    b2 = box_of(ctx, V)
+    r.check(b2['trail']['cursor'] == t0['cursor'] - 1 and b2['shown'] == newest and b2['trail']['entries'][b2['trail']['cursor']]['addr'] == newest,
+            f'Mod+] then Mod+[: {newest} again (issue #298)', {'cursor': b2['trail']['cursor'], 'shown': b2['shown']})
+    seen = {'member': newest, 'row': row, 'line': [before['line'], again['line']], 'listed': listed}
+    ctx.leap(V, None)
+    return seen
 
 
 def scene_set(ctx, s=10):
@@ -2691,6 +2758,8 @@ def run(ctx):
     chord(ctx, 'c', mods=('Meta',))
     s1 = state(ctx)
     r.check(same_view(s0, s1) and s1['overlay'] == s0['overlay'] and not s1['leap'], 'Mod+C is the platform\'s: nothing happens on the plane')
-    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C']
+    # ---- Back to an edition's bare address after a newer version arrived: the version read (issue #298) -----------
+    r.figures['back_after_publish'] = back_after_publish(ctx, r)
+    r.figures['chords_dispatched'] = ['t', '/', '0', 'k', 'h', '?', '+', 'g', 'Space', 'Process(229)', 'IME commit', '↓/Enter/Esc(229) in the LEAP box', 'Mod+L', 'Esc', 'Mod+L Enter', 'Mod+L ↓ Enter', 'Mod+K', 'Enter', 'Enter on an account address', 'Mod+0', 'Mod+Shift+H', 'Mod+[', 'Mod+]', 'Enter on ‹ back', 'a click on ‹ back', 'Mod+3', 'Mod+Y', 'Enter on a trail list row', 'Mod+- below a document\'s reading scale', '→ at a collapsed document', '→ at its reading scale', '↓', '↑', '←', 'Enter on a document', '→', 'End', 'Home', 'Shift+↓', 'Shift+↑', 'Mod+Shift+L', 'a links card row\'s press', 'Mod+Shift+O', 'Mod+Shift+R', 'Mod+Enter', 'a pointer drag', 'Shift+→', 'Shift+←', 'a click and a drag below reading scale, a click and a drag above it', 'Mod+=', 'Mod+-', 'PageDown', 'PageUp', 'Mod+R', 'Esc, Mod+-, ← and Mod+[ ending the scene as Back, Mod+] reopening it', 'Mod+0 in the scene, then Mod+[ twice', '→, Enter, Shift+↓ and Mod+Shift+O in a pane', '↓ with the focus on nothing under the scene', 'Enter on the scene\'s re-level and ×', 'Enter at a key record, then the copy', 'a drag over part of a key record', 'a drag in each pane of the scene, then the copy', 'a click on a pane\'s corner\'s act', 'a drag over a card\'s caption and in a pane, and a click in a pane, each with the article remounted under it', 'Mod+C', 'Mod+[, the trail list and Mod+] after a newer version\'s arrival']
     ctx.leap(DOC, WINDOW[0])
     return r.out()

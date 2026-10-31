@@ -9,12 +9,15 @@
 // and its number either way; the step a push writes on the entry it departs
 // and a cursor move writes nowhere; a jump whose camera never left giving its
 // entry back; the place of the cursor's entry re-taken and never a claim's;
-// a change of the page's class dropping what each entry's view read; an
+// a newer version's arrival re-taking the member read on every entry the
+// reader left at its trunk's plain address, but a claim's place, a scene's
+// entry, the cursor's and one whose text was read after the member was
+// published; a change of the page's class dropping what each entry's view read; an
 // entry a reading scene was opened as re-taking the scene as the reader
 // leaves it, its place never re-taken, and a change of class dropping where
 // they stood in it and keeping the stop they stood on, a stop the panes'
 // `compare` draws by its bytes' identity; and a reset waking every move
-// waiting on a claim (FP-22, FP-25, FP-27, FP-29).
+// waiting on a claim (FP-22, FP-23, FP-25, FP-27, FP-29).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from './trail.js';
@@ -27,8 +30,8 @@ const e = (/** @type {string} */ addr, /** @type {number} */ n) => ({ addr, pos:
 const addrs = () => T.all().map((x) => x.addr);
 /** a departure at the view n, which reads no passage, the walk in no document read */
 const at = (/** @type {number} */ n) => ({ view: v(n), reading: null, stood: null });
-/** what the view n reads: the line at its centre, its position n, one position wide, and the view around it */
-const readOf = (/** @type {number} */ n) => ({ addr: 'd', pos: n, width: 1, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], around: [{ pos: n, width: 1, prefix: 'd.0.1', ordinal: n }], p: { x: n, y: n }, line: { x: 0, y: n }, fs: 1 });
+/** what the view n reads: the line at its centre, its position n, one position wide, and the view around it, its text read at no known position */
+const readOf = (/** @type {number} */ n) => ({ addr: 'd', at: null, pos: n, width: 1, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], around: [{ pos: n, width: 1, prefix: 'd.0.1', ordinal: n }], p: { x: n, y: n }, line: { x: 0, y: n }, fs: 1 });
 /** a departure at the view n, which reads the passage at n, the walk standing there */
 const away = (/** @type {number} */ n) => ({ view: v(n), reading: readOf(n), stood: { addr: 'd', pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null } });
 /** what an entry keeps of the departure from it: its view's x, what that view reads, where the walk stood */
@@ -169,6 +172,45 @@ test('the cursor\'s entry\'s place re-taken as it is departed — the version it
   T.push({ ...e('f', 2), notice: reading }, at(1), true);
   T.retakePlace('f.3');
   assert.deepEqual(addrs(), ['d.2', 'f'], 'a claim keeps the place its jump named');
+});
+
+/** a departure at the view n whose view read the document `addr`, its text read at `readAt`, the walk standing in it */
+const awayIn = (/** @type {string} */ addr, /** @type {number} */ n, /** @type {number | null} */ readAt) => ({ view: v(n), reading: { ...readOf(n), addr, at: readAt }, stood: { addr, pos: n, ids: [{ prefix: 'd.0.1', ordinal: n, width: 1 }], end: null } });
+/** what an entry's record names: its place, the document its view read and the one its walk stood in */
+const named = (/** @type {Entry} */ x) => [x.addr, x.reading && x.reading.addr, x.stood && x.stood.addr];
+
+test('a text counts as read before a member was published where it was read at an earlier position, and wherever either position is not known (issue #298)', () => {
+  assert.deepEqual([T.readBefore(4, 5), T.readBefore(5, 5), T.readBefore(6, 5), T.readBefore(null, 5), T.readBefore(5, null)], [true, false, false, true, true]);
+});
+
+test('a newer version\'s arrival re-takes the member the trunk\'s text was on every entry the reader has left that names the trunk at its plain address — behind the cursor and ahead of it, at its place, the document its view read and the one its walk stood in — never the cursor\'s entry, a claim\'s place while it reads, a reading scene\'s entry, an entry on a member or another trunk, or one whose view read the trunk\'s text after the newer member was published (issue #298; FP-22, FP-23)', () => {
+  T.push(e('d', 1), null);
+  T.push({ ...e('d', 2), notice: reading }, awayIn('d', 10, 5), true);
+  T.push(e('x', 3), awayIn('d', 20, 5));
+  T.push(e('d', 4), awayIn('d', 30, 5));
+  T.push(e('d.1', 5), awayIn('d', 40, 9));
+  T.push(e('f', 6), awayIn('d.1', 50, 5));
+  T.push({ ...e('d', 7), scene: { a: 'f', b: 'd', held: {}, left: null } }, awayIn('f', 60, 5));
+  T.push(e('d', 8), awayIn('d', 70, 5));
+  T.push(e('d', 9), awayIn('d', 80, 5));
+  T.back(awayIn('d', 90, 5));
+  // the entries, oldest first: d read at 5; a claim at d; x, its view reading d; d, read at 9; d.1; f; a scene's entry; d — the cursor's; d, ahead of it
+  T.arrivedAt('d', 'd.2', 8);
+  assert.deepEqual(T.all().map(named), [
+    ['d.2', 'd.2', 'd.2'],
+    ['d', 'd.2', 'd.2'],
+    ['x', 'd.2', 'd.2'],
+    ['d', 'd', 'd'],
+    ['d.1', 'd.1', 'd.1'],
+    ['f', 'f', 'f'],
+    ['d', 'd', 'd'],
+    ['d', 'd', 'd'],
+    ['d.2', 'd.2', 'd.2'],
+  ], 'the member read: on every entry behind and ahead naming d, a claim\'s place kept; none on the entry whose view read d after the member was published, on d.1, on f, on the scene\'s entry or on the cursor\'s');
+  assert.equal(T.all()[0].reading?.at, 5, 'what the view read kept beside the member: its position and when its text was read');
+  T.arrivedAt('d', 'd.3', null);
+  assert.deepEqual(named(T.all()[3]), ['d.3', 'd.3', 'd.3'], 'the newer member\'s position not known: a text read at any position counts as read before it');
+  assert.deepEqual([named(T.all()[1]), named(T.all()[6]), named(T.all()[7])], [['d', 'd.2', 'd.2'], ['d', 'd', 'd'], ['d', 'd', 'd']], 'a claim\'s place, a scene\'s entry and the cursor\'s left as they stand');
 });
 
 test('every departure re-takes what its view reads and where the walk stood beside the view — a push\'s, Back\'s, Forward\'s, a jump\'s and a jump\'s camera leaving; the entry pushed holds neither until one does (issue #221)', () => {

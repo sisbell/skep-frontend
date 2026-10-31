@@ -12,15 +12,20 @@
 // the box shows one of them — the version pinned there, else its plain
 // address, the trunk head (`shownIn`) — which every surface reads through
 // the reader the app hands it. Only an act aimed at the box changes it
-// (`pinTo`): a version move, or arriving by an address — a LEAP's landing at
-// the address it names, a follow's at the address its link names, a cursor
-// move's at its entry's — never a pan, a zoom, the scene, HOME, WHOLE BOARD
-// or a click on a place; and a newer version's arrival changes no box
-// (`arrived`): a box read at its plain address is pinned on the member being
-// read, its text standing (foundations §3.2), the entry re-taking that
-// version as it is departed (N-TRAIL's `retakePlace`). A version move never
-// flies (`toVersion`): the camera stays and the text alone is replaced, the
-// passage held — the selection, else the first passage in view — found in
+// (`pinTo`): a version move, arriving by an address — a LEAP's landing at
+// the address it names, a follow's at the address its link names — or a
+// return to a trail entry, which restores each version the entry kept
+// (`restoreVersions`; see the cursor move, below); never a pan, a zoom, the
+// scene, HOME, WHOLE BOARD or a click on a place; and a newer version's
+// arrival changes no box (`arrived`; FP-23): a box read at its plain address
+// whose text was read before the newer member was published is pinned on the
+// member being read, its text standing (foundations §3.2), the entry
+// re-taking that version as it is departed (N-TRAIL's `retakePlace`), and
+// every entry the reader left there re-taking the member its text was
+// (N-TRAIL's `arrivedAt`), whether or not the page holds that text now. A
+// version move never flies (`toVersion`): the camera stays and the text
+// alone is replaced, the passage held — the selection, else the first
+// passage in view — found in
 // the version moved to by `compare` (`heldIn`, `swapped`) and keeping its
 // screen line there (T-LAYER's `holdAcross`; FP-8), what survives of it
 // marked by the four states below; where that version lacks it, the nearest
@@ -123,9 +128,10 @@
 // (`backLight`), a link's end LK draws at a withheld run outlining the whole
 // run, the walk on the run's item (`runMark`); Forward what the step marked
 // on arrival; a jump across two entries or more nothing. One move lights one
-// link, the one it crossed. A light's passage is placed in its text again at
-// every read (`placedMark`; M-REC's `placedIdentity`), whatever part the text
-// still holds, none where it holds none, with no face.
+// link, the one it crossed. A light's passage is placed again at every read
+// in the text its document's box shows (`placedMark`; M-REC's
+// `placedIdentity`), whatever part the text still holds, none where it holds
+// none, with no face.
 // The arrival's life (FP-21, FP-25): the arrival — its outline, its labels,
 // its line and its offers, the light, the link lit — stands until the camera
 // leaves the place for another landing, as a jump flies, a cursor move leaves
@@ -269,9 +275,12 @@
 // faces at the site and gives its entry back; answered, the camera leaves as
 // above.
 // A cursor move (`moveCursor`; `back`, `forward`, `toTrailEntry`) is a
-// return, never an arrival by address (FP-21, FP-25): it finds the words its
-// entry's view read — the line the live hold keeps still, by its bytes
-// (T-LAYER's `Reading`) — in the text the entry's box shows now by BM-HELD's
+// return, never an arrival by address (FP-21, FP-25): it restores each
+// version the entry kept — the one its walk stood in, the one its view read,
+// then its place's, which keeps its own box where two of them share one
+// (`restoreVersions`; FP-22) — then finds the words its entry's view read —
+// the line the live hold keeps still, by its bytes (T-LAYER's `Reading`) —
+// in the text the entry's box shows now by BM-HELD's
 // rule (`foundIn`, `holdsIn`), and lands in that rule's states, shown where
 // any landing's are (`markReturn`, `sayReturn`): all of them in one stretch,
 // the line holding it set where the line read stood, at its size (T-LAYER's
@@ -519,9 +528,10 @@ const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
 export const shownIn = (addr) => { const box = boxOf(addr); return pins.get(box) ?? box; };
 
 /**
- * A box takes the version an act aimed at it arrives at (see the head): a
- * version address pins it there; the plain address unpins it, to the trunk
- * head. An address that names no document changes nothing.
+ * A box takes the version an act aimed at it arrives at, or a return
+ * restores (see the head): a version address pins it there; the plain address
+ * unpins it, to the trunk head. An address that names no document changes
+ * nothing.
  * @param {string} addr
  */
 function pinTo(addr) {
@@ -600,20 +610,21 @@ const seen = (/** @type {View} */ view, /** @type {string} */ addr, /** @type {n
 const landsAt = (/** @type {string} */ addr, /** @type {number | null} */ pos) => /** @type {Stood} */ ({ addr, pos, ids: pos != null ? REC.identityOf(addr, pos, 1) : [], end: null });
 
 /**
- * A passage as its text holds it now: every stretch of it the
- * document's held text places (M-REC's `placedIdentity`), in the text's
- * order, the mark at the first, its bytes with it (`Arrival.held`); a far
- * end naming its document whole at the block at the document's head; null
- * where the text holds none of it, or the page none of the text — no mark,
- * and no face.
+ * A passage as the text its document's box shows holds it now (`shownIn`):
+ * every stretch of it that version's held text places (M-REC's
+ * `placedIdentity`), in the text's order, the mark at the first, its bytes
+ * with it (`Arrival.held`); a far end naming its document whole at the block
+ * at the version's head; null where the text holds none of it, or the page
+ * none of the text — no mark, and no face.
  * @param {Passage} p
  * @param {string | null} link
  * @returns {Arrival | null}
  */
 function placedMark(p, link) {
-  if (!p.spans) { const d = REC.has(p.addr) ? REC.doc(p.addr) : null; return d && d.blocks.length ? { addr: p.addr, pos: headOf(d), runs: null, link } : null; }
-  const runs = REC.placedIdentity(p.addr, p.spans);
-  return runs.length ? { addr: p.addr, pos: runs[0].pos, runs, link, held: { ids: p.spans, at: REC.dropsOf(p.addr) } } : null;
+  const addr = shownIn(p.addr);
+  if (!p.spans) { const d = REC.has(addr) ? REC.doc(addr) : null; return d && d.blocks.length ? { addr, pos: headOf(d), runs: null, link } : null; }
+  const runs = REC.placedIdentity(addr, p.spans);
+  return runs.length ? { addr, pos: runs[0].pos, runs, link, held: { ids: p.spans, at: REC.dropsOf(addr) } } : null;
 }
 
 /**
@@ -2061,26 +2072,36 @@ async function againVersion(c, spans, was, addr, entry, byKey) {
 }
 
 /**
- * A newer version's arrival (see the head; foundations §3.2; FP-22): a feed
- * row publishing `D.(k+1)`, the
- * trunk's next member and so its head, where `D`'s box shows its plain
- * address and the page holds the text it shows — `D.k`'s — pins the box on
- * `D.k`, its article set again as that member with the passage being read
- * kept in place (T-LAYER's `holdAcross`), the walk standing there with it,
- * and the box's version then named by the one line and the corner; the
- * selection standing in `D` has its bytes named now, through the text the
- * page holds, so the re-check carries it — and every card on `D`, which
- * names its own — to `D.k` once `D.k` holds that text (`surfacesAcross`;
- * FP-23's acts naming the member). Nothing
- * where no member held the text before it (k = 0), where the box shows a
- * pinned version already, or where the page holds none of the text. M-PUMP
+ * A newer version's arrival (see the head; foundations §3.2; FP-22, FP-23):
+ * a feed row publishing `D.(k+1)`, the trunk's next member and so its head,
+ * first has every trail entry the reader left at `D`'s plain address re-take
+ * `D.k`, save one whose view read `D`'s text after `D.(k+1)` was published
+ * (N-TRAIL's `arrivedAt`), whatever the box shows now and whether or not the
+ * page holds that text; then, where `D`'s box shows its plain address and the
+ * page holds the text it shows, read before `D.(k+1)` was published — so
+ * `D.k`'s (N-TRAIL's `readBefore`) — pins the box on `D.k`, its article set
+ * again as that member with the passage being read kept in place (T-LAYER's
+ * `holdAcross`), the walk standing there with it, and the box's version then
+ * named by the one line and the corner; the selection standing in `D` has its
+ * bytes named now, through the text the page holds, so the re-check carries
+ * it — and every card on `D`, which names its own — to `D.k` once `D.k` holds
+ * that text (`surfacesAcross`; FP-23's acts naming the member). Nothing where
+ * no member held the text before it (k = 0); no pin where the box shows a
+ * pinned version already, where the page holds none of the text, or where
+ * that text was read after `D.(k+1)` was published, which is `D.(k+1)`'s own.
+ * Where either position is not known, the text counts as read before. M-PUMP
  * hands it each such row before the row drops what the page held of `D`.
  * @param {string} member the member the row publishes
+ * @param {number | null} [at] the position the row published it at; null where not known — a refresh's arrival, whose member is the one the text was read as
  */
-export function arrived(member) {
+export function arrived(member, at = null) {
   const doc = documentOf(member), k = memberOf(member);
-  if (!doc || k == null || k < 2 || !isTrunkMember(member) || pins.has(doc) || !REC.has(doc) || REC.doc(doc).from < 0) return;
-  const read = versionAddress(doc, k - 1), s = SEL.selected();
+  if (!doc || k == null || k < 2 || !isTrunkMember(member)) return;
+  const read = versionAddress(doc, k - 1);
+  TRAIL.arrivedAt(doc, read, at);
+  const d = !pins.has(doc) && REC.has(doc) ? REC.doc(doc) : null;
+  if (!d || d.from < 0 || !TRAIL.readBefore(d.readAt, at)) return;
+  const s = SEL.selected();
   if (s && s.addr === doc) across.bytes = { span: s, ids: REC.identityOf(doc, s.pos, s.width) };
   LAYER.holdAcross(doc, read);
   pinTo(read);
@@ -2400,7 +2421,8 @@ function returnTo(l, view) {
 
 /**
  * A cursor move's landing — Back, Forward, a jump — at what the entry the
- * move reached holds (FP-25), a return (see the head; FP-21): the words its
+ * move reached holds (FP-25), a return (see the head; FP-21): each version
+ * the entry kept restored (`restoreVersions`; FP-22), then the words its
  * view read found in the text its box shows now and the arrival it keeps
  * read again from it (`returning`), marked in the landing rule's states
  * (`markReturn`) — the camera leaving at once for the view that sets the line
@@ -2421,9 +2443,10 @@ function returnTo(l, view) {
  * else, the page holding none of that text, the view the entry was left at,
  * and goes on once that text's read answers (`placeRead`). An entry still
  * reading shows its reading face at the place the camera left for, and once
- * its read is answered the move goes on to what it brought — the place it
- * placed, or the face it met, faced there as a failure learned in the air
- * is — save where an act was made after the move, which ends it there, and
+ * its read is answered the move restores the versions it kept and goes on to
+ * what it brought — the place it placed, or the face it met, faced there as
+ * a failure learned in the air is — save where an act was made after the
+ * move, which ends it there, and
  * where the reader took the camera over meanwhile, which marks what it
  * brought and moves nothing. An entry whose document is covered lands on the
  * covered box framed whole, its withheld face standing there (see the head;
@@ -2445,7 +2468,7 @@ async function landAtCursor(e, act, byKey, l) {
   const kept = e.kept ? e.kept.surfaces : null;
   owed = kept ? { entry: e, ...kept } : null;
   light = l; lit = l && l.link ? [l.link] : [];
-  if (!answer) pinTo(e.addr);
+  if (!answer) restoreVersions(e);
   const cover = answer ? null : coverOf(e);
   const at = answer || cover ? null : returning(e), told = at && !at.reads.length ? markReturn(at, e.notice) : null;
   const view = at ? at.view : e.view;
@@ -2464,8 +2487,22 @@ async function landAtCursor(e, act, byKey, l) {
   FACES.endReading();
   const n = e.notice;
   if (n && n.face !== 'floating' && n.face !== 'withheld') { failed(act, null, n, byKey); return; }
-  pinTo(e.addr);
+  restoreVersions(e);
   await placeRead(act, e, returning(e).reads, first, byKey, n);
+}
+
+/**
+ * The versions a return restores (see the head; FP-22): each box the entry's
+ * record names takes the version the entry kept there — the document its
+ * walk stood in, the one its view read, then its place — its place's version
+ * where two of them name one box.
+ * @param {Entry} e
+ */
+function restoreVersions(e) {
+  /** @type {Map<string, string>} each box's version, by the box */
+  const kept = new Map();
+  for (const addr of [e.stood && e.stood.addr, e.reading && e.reading.addr, e.addr]) if (addr && kindOf(addr) === 'document') kept.set(boxOf(addr), addr);
+  for (const addr of kept.values()) pinTo(addr);
 }
 
 /**
