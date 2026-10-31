@@ -22,8 +22,13 @@
 // ends there merge into, a floating one at its pane's first block, a far end
 // where `project` places it in the version the pane holds, a line ending at
 // a covered pane's cover (FP-29, FP-30) — the stop picking the next shared
-// passage out of view, and the opening asking each crossing far end once.
-// Then, against the fake port and a page of stand-ins: the scene's focus —
+// passage out of view, and the opening asking each crossing far end once;
+// what the panes' runs hold of what a stop the reader left from stood for —
+// the passage of pane B the stop at a band's clipped end stood for, the
+// change a stroke stood for, read by bytes' identity (FP-21).
+// Then, against the fake port and a page of stand-ins — whose stop and
+// strokes' buttons take the focus only while they stand shown, as the
+// platform's do: the scene's focus —
 // the plane covered while it stands, uncovered before the focus returns to
 // the opener, the first opener kept across a scene opened over another, a
 // focus moved out of the scene left alone (FP-20); the scene a step on the
@@ -45,7 +50,13 @@
 // chain it counted past the member shown; and a scene opened on a document a
 // far end names whole — the far pane that version or the latest, named as
 // the link's whole end and current, its `compare` answering after it shows
-// and adding bands alone, moving no pane and no focus (FP-20, FP-30).
+// and adding bands alone, moving no pane and no focus (FP-20, FP-30); and a
+// stop only that `compare` draws, left from and returned to — standing with
+// the landing and taking the focus, its count being read, recorded again by
+// what it stood for; answered all, part, none, refused or with no text to
+// read, the focus kept and its words FP-21's; an act on it waiting for the
+// answer, made, abandoned, or dropped once the reader moved on (FP-20,
+// FP-25, FP-34).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -60,7 +71,7 @@ import * as FACES from '../overlays/faces.js';
 import * as FOCUS from '../nav/focus.js';
 import * as KEYS from '../nav/keys.js';
 import * as SCENE from './scene.js';
-import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo, wholeEdges, drawEdge, stopFor, banded, drawBand, drawStroke, changeWords, strokeWords } from './scene.js';
+import { levels, merged, counterpart, counterparts, nearest, linesBetween, carriedTo, wholeEdges, drawEdge, stopFor, banded, drawBand, drawStroke, changeWords, strokeWords, sharedHeld, junctionsOf, strokeHeld, sameBytes } from './scene.js';
 import { byteLength } from '../util.js';
 import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
@@ -511,33 +522,48 @@ before(() => {
 /**
  * A page of stand-ins: the platform's focus — the body where it stands on nothing — and the elements the scene, the
  * walk, the layer and the overlay host hold, attached to their owners. Each takes the focus only where the platform's
- * would: a pane or the bar while the scene is shown, the walk's item and a corner while their region is not inert, the
+ * would: a pane or the bar while the scene is shown, the stop and a stroke's button while shown and not hidden — a
+ * button only while it stands in the strokes' layer — the walk's item and a corner while their region is not inert, the
  * one line's act always. The platform's own `focus()` on an element that takes none moves nothing. Each pane's corner,
  * the address its head names, the bar's name for each pane and the stop stand as elements the scene writes again in
- * place, every element keeping the attributes set on it (`attrs`); the status region keeps what it was told, in order
- * (`said`).
+ * place, every element keeping the attributes set on it (`attrs`), its text its markup's (`textContent`); the strokes'
+ * layer holds the buttons put in it, in order, as the platform's element does; the scene's canvas draws on a recording
+ * context, so the scene's draw places its stop and its strokes' buttons; the status region keeps what it was told, in
+ * order (`said`).
  */
 function page() {
   const body = { id: 'the body', focus() {} };
-  const doc = { body, activeElement: /** @type {{id: string}} */ (body), createElement: (/** @type {string} */ tag) => element('a new ' + tag) };
+  /** a button the scene makes: in the page while the strokes' layer holds it, taking the focus while it stands there and the scene is shown */
+  const button = (/** @type {string} */ tag) => {
+    const b = element('a new ' + tag, () => tag !== 'button' || (shown() && !!b.parent && !b.hidden));
+    if (tag === 'button') Object.defineProperty(b, 'isConnected', { get: () => !!b.parent });
+    return b;
+  };
+  const doc = { body, activeElement: /** @type {{id: string}} */ (body), createElement: button };
   /** an element; `takes` whether the platform's focus lands on it now; `placed` the elements put in it, each with how */
   const element = (/** @type {string} */ id, takes = () => true) => {
     /** @type {Array<{how: 'append' | 'prepend', el: unknown}>} */
     const placed = [];
     /** @type {Record<string, string>} */
     const attrs = {};
+    let html = '';
     const e = {
-      id, isConnected: true, innerHTML: '', textContent: '', dataset: /** @type {Record<string, string>} */ ({}), style: {}, inert: false, hidden: false, tabIndex: -1,
-      scrollTop: 0, scrollHeight: 0, clientTop: 0, clientWidth: 600, clientHeight: 400, placed, attrs,
+      id, isConnected: true, dataset: /** @type {Record<string, string>} */ ({}), style: {}, inert: false, hidden: false, tabIndex: -1,
+      scrollTop: 0, scrollHeight: 0, clientTop: 0, clientLeft: 0, clientWidth: 600, clientHeight: 400, placed, attrs,
+      /** @type {any} the layer holding it, where one does */ parent: null,
+      get innerHTML() { return html; }, set innerHTML(/** @type {string} */ v) { html = String(v); },
+      get textContent() { return html.replace(/<[^>]*>/g, ''); }, set textContent(/** @type {string} */ v) { html = esc(String(v)); },
+      get nextElementSibling() { const kin = e.parent ? e.parent.children : []; return kin[kin.indexOf(e) + 1] || null; },
       focus() { if (takes()) doc.activeElement = e; },
       blur() { if (doc.activeElement === e) doc.activeElement = body; },
+      remove() { if (e.parent) e.parent.removeChild(e); },
       append(/** @type {unknown} */ el) { placed.push({ how: 'append', el }); }, prepend(/** @type {unknown} */ el) { placed.unshift({ how: 'prepend', el }); },
       setAttribute(/** @type {string} */ k, /** @type {string} */ v) { attrs[k] = String(v); },
       removeAttribute(/** @type {string} */ k) { delete attrs[k]; },
       getAttribute: (/** @type {string} */ k) => attrs[k] ?? null,
       addEventListener() {}, getContext: () => null,
       getBoundingClientRect: () => ({ top: 0, left: 0, right: 600, bottom: 400, width: 600, height: 400 }),
-      /** @type {(s: string) => unknown} */ querySelector: () => null,
+      /** @type {(s: string) => unknown} */ querySelector: (s) => (s === '.reading' && html.includes('class="n reading"') ? {} : null),
       /** @type {(s: string) => unknown[]} */ querySelectorAll: () => [],
       /** @type {(x: unknown) => boolean} */ contains: (x) => x === e,
       classList: { toggle() {} },
@@ -555,18 +581,32 @@ function page() {
   const headA = element('the address pane A\'s head names'), headB = element('the address pane B\'s head names');
   paneA.querySelector = (s) => (s === ':scope > .corner' ? cornerA : s === '.hd .addr' ? headA : null);
   paneB.querySelector = (s) => (s === ':scope > .corner' ? cornerB : s === '.hd .addr' ? headB : null);
-  /** @type {Array<() => void>} the stop's click listeners, as the scene attaches them */
+  /** @type {Array<(ev: any) => void>} the stop's click listeners, as the scene attaches them */
   const stopOn = [];
-  const stop = Object.assign(element('the stop', shown), { hidden: true, addEventListener: (/** @type {string} */ type, /** @type {() => void} */ fn) => { if (type === 'click') stopOn.push(fn); } });
+  const stop = Object.assign(element('the stop', () => shown() && !stop.hidden), { hidden: true, addEventListener: (/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) => { if (type === 'click') stopOn.push(fn); } });
   const names = { a: element('the bar\'s name for pane A'), b: element('the bar\'s name for pane B') };
   bar.querySelector = (s) => (s === '[data-name="a"]' ? names.a : s === '[data-name="b"]' ? names.b : null);
-  const strokes = Object.assign(element('the strokes\' layer', shown), { children: [] });
+  /** @type {Array<(ev: any) => void>} the strokes' layer's click listeners, as the scene attaches them */
+  const strokesOn = [];
+  /** @type {any[]} the buttons the strokes' layer holds, in order */
+  const kin = [];
+  const strokes = element('the strokes\' layer', shown);
+  Object.defineProperty(strokes, 'children', { get: () => kin.slice() });
+  Object.defineProperty(strokes, 'firstElementChild', { get: () => kin[0] || null });
+  Object.defineProperty(strokes, 'innerHTML', { get: () => '', set: (/** @type {string} */ v) => { if (v === '') for (const k of kin.splice(0)) k.parent = null; } });
+  Object.assign(strokes, {
+    insertBefore: (/** @type {any} */ k, /** @type {any} */ ref) => { if (k.parent) k.remove(); const i = ref ? kin.indexOf(ref) : -1; kin.splice(i < 0 ? kin.length : i, 0, k); k.parent = strokes; return k; },
+    appendChild: (/** @type {any} */ k) => strokes.insertBefore(k, null),
+    removeChild: (/** @type {any} */ k) => { const i = kin.indexOf(k); if (i >= 0) kin.splice(i, 1); k.parent = null; return k; },
+    contains: (/** @type {unknown} */ x) => x === strokes || kin.includes(x),
+    addEventListener: (/** @type {string} */ type, /** @type {(ev: any) => void} */ fn) => { if (type === 'click') strokesOn.push(fn); },
+  });
   /** @type {string[]} what the status region was told, in order */
   const said = [];
   const live = element('the status region');
   Object.defineProperty(live, 'textContent', { get: () => said[said.length - 1] ?? '', set: (/** @type {string} */ v) => { said.push(v); } });
   FOCUS.attach({ live: /** @type {any} */ (live) });
-  root.contains = (x) => [root, bar, paneA, paneB, cornerA, cornerB, stop, strokes].includes(/** @type {any} */ (x));
+  root.contains = (x) => [root, bar, paneA, paneB, cornerA, cornerB, stop].includes(/** @type {any} */ (x)) || strokes.contains(x);
   paneA.contains = (x) => x === paneA || x === cornerA;
   paneB.contains = (x) => x === paneB || x === cornerB;
   const mirror = element('the tree', () => !mirror.inert);
@@ -580,7 +620,10 @@ function page() {
   globalThis.document = /** @type {any} */ (doc);
   WALK.attach(/** @type {any} */ (mirror), /** @type {any} */ (element('the live region')));
   LAYER.attach(/** @type {any} */ (element('the text layer')), /** @type {any} */ (corners));
-  SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas: element('the scene\'s canvas'), stop, strokes }), { end: (byKey) => GO.closeScene(byKey) });
+  const canvas = Object.assign(element('the scene\'s canvas'), { getContext: () => recorder().ctx });
+  SCENE.attach(/** @type {any} */ ({ root, bar, paneA, paneB, canvas, stop, strokes }), {
+    end: (byKey) => GO.closeScene(byKey), faces: { reaching: FACES.reaching, floating: (far, a, told) => FACES.floating(far, a, null, told), held: FACES.held },
+  });
   HOST.attach(/** @type {any} */ (overlay));
   /** where the platform's focus stands */
   const at = () => doc.activeElement.id;
@@ -588,7 +631,13 @@ function page() {
   const covered = () => [mirror.inert, corners.inert];
   /** a pointer's press on the bar's act a selector names, as the platform hands its click to the bar */
   const press = (/** @type {string} */ sel) => { if (barOn.click) barOn.click({ type: 'click', detail: 1, target: { closest: (/** @type {string} */ s) => (s === sel ? {} : null) } }); };
-  return { doc, item, corner, line, bar, paneA, paneB, cornerA, cornerB, headA, headB, stop, stopOn, names, said, at, covered, press };
+  /** Enter on a stop the scene draws, as the platform makes its click from the key: the stop at a band's clipped end, else the stroke's button bearing a key */
+  const enter = (/** @type {string | null} */ key = null) => {
+    const b = key == null ? stop : kin.find((k) => k.dataset.stroke === key);
+    const ev = { type: 'click', detail: 0, target: { closest: (/** @type {string} */ s) => (s === '[data-stroke]' ? b : null) } };
+    for (const fn of key == null ? stopOn : strokesOn) fn(ev);
+  };
+  return { doc, item, corner, line, bar, paneA, paneB, cornerA, cornerB, headA, headB, stop, stopOn, strokes, names, said, at, covered, press, enter };
 }
 
 /** the test run on a page of stand-ins, the platform's `document` put back after it */
@@ -1059,5 +1108,200 @@ test('"read side by side" from the card of a link whose far end names a document
     await flown();
     assert.deepEqual([SCENE.isOpen(), SCENE.panes()?.b.src, SCENE.panes()?.b.names, SCENE.pairs()?.level], [true, B, B + '.1', { a: 14, b: null }], 'pane B the address the end names, read as its latest member; pane A at the near passage, pane B at its top');
   } finally { LK._reset(); }
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+// ---- a stop drawn only by `compare`, returned to ---------------------------------------------------------------------
+
+/** bytes of a document's own text by identity: `width` of them from `ordinal`, as its image places them */
+const own = (/** @type {string} */ doc, /** @type {number} */ ordinal, /** @type {number} */ width) => (width ? [{ prefix: doc + '.0.1', ordinal, width }] : []);
+/** an image of a document's own text: its bytes at their own positions */
+const ownImage = (/** @type {string} */ doc, /** @type {number} */ extent) => [{ pos: 1, width: extent, prefix: doc + '.0.1', ordinal: 1 }];
+
+test('what pane B\'s passages holding the near passage\'s material hold of the passage a stop stood for: all of it in one of them, the first in pane B\'s order holding it; part; none; and a passage named by bytes of two I-spaces held whole by one run of them', () => {
+  const image = ownImage('1.0.1.0.4', 40), stood = own('1.0.1.0.4', 14, 7);
+  assert.deepEqual(sharedHeld([pair(14, 14, 7)], { pos: 14, width: 7 }, image, stood), { held: { holds: 'all', places: 1 }, at: 14, count: 1 }, 'its own counterpart holds all of it');
+  assert.deepEqual(sharedHeld([pair(14, 30, 7), pair(14, 14, 7)], { pos: 14, width: 7 }, image, stood), { held: { holds: 'all', places: 1 }, at: 14, count: 2 }, 'two passages hold the near passage\'s material: the one holding the stop\'s passage, wherever it stands in pane B\'s order');
+  assert.deepEqual(sharedHeld([pair(14, 14, 3)], { pos: 14, width: 7 }, image, stood), { held: { holds: 'part', places: 1 }, at: 14, count: 1 }, 'part of it');
+  assert.deepEqual(sharedHeld([pair(14, 1, 7)], { pos: 14, width: 7 }, image, stood), { held: { holds: 'none', places: 0 }, at: null, count: 1 }, 'none of it: another passage holds the material');
+  assert.deepEqual(sharedHeld([], { pos: 14, width: 7 }, image, stood), { held: { holds: 'none', places: 0 }, at: null, count: 0 }, 'nothing shared');
+  // a passage crossing from a transcluded run into the document's own bytes, held by one run of the text
+  const crossed = [{ pos: 1, width: 10, prefix: '1.0.1.0.9.0.1', ordinal: 50 }, { pos: 11, width: 10, prefix: '1.0.1.0.4.0.1', ordinal: 1 }];
+  const passage = [{ prefix: '1.0.1.0.9.0.1', ordinal: 55, width: 5 }, { prefix: '1.0.1.0.4.0.1', ordinal: 1, width: 3 }];
+  assert.deepEqual(sharedHeld([pair(1, 6, 8)], { pos: 1, width: 8 }, crossed, passage).held, { holds: 'all', places: 1 }, 'its two spans one passage, held whole by the run holding both');
+});
+
+test('the changes two texts\' runs stand between: runs consecutive in both documents with bytes between them on either side; runs adjoining, crossing, or holding one another\'s bytes stand none', () => {
+  assert.deepEqual(junctionsOf([pair(1, 1, 12), pair(15, 13, 23)]), [{ a: { from: 13, to: 15 }, b: { from: 13, to: 13 } }], 'bytes between them in the first document alone');
+  assert.deepEqual(junctionsOf([pair(1, 1, 12), pair(13, 13, 5)]), [], 'adjoining in both: one run, nothing between');
+  assert.deepEqual(junctionsOf([pair(1, 11, 10), pair(11, 1, 10)]), [], 'in another order: no change between them');
+  assert.deepEqual(junctionsOf([pair(1, 1, 10), pair(1, 11, 10)]), [], 'one identity held twice: none');
+});
+
+test('two namings of bytes by identity name the same bytes however their runs are cut, and never others', () => {
+  const x = [{ prefix: 'p', ordinal: 1, width: 4 }, { prefix: 'p', ordinal: 5, width: 2 }];
+  assert.ok(sameBytes(x, [{ prefix: 'p', ordinal: 1, width: 6 }]), 'cut in two or whole');
+  assert.ok(!sameBytes(x, [{ prefix: 'p', ordinal: 1, width: 5 }]) && !sameBytes(x, [{ prefix: 'q', ordinal: 1, width: 6 }]) && sameBytes([], []), 'fewer bytes, another I-space; none are none');
+});
+
+test('what two texts hold of the change a stroke stood for: all of it where the same change stands after the same byte and before the same; part where a change stands after its first byte or before its last; none where no change touches it', () => {
+  const A1 = '1.0.1.0.3', B1 = '1.0.1.0.4', images = { a: ownImage(A1, 37), b: ownImage(B1, 37) };
+  /** the stroke between the runs [1, 13) and [15, …) of the first text, its bytes 13 and 14 — the second holding none there */
+  const stop = /** @type {import('./scene.js').StrokeStop} */ ({ kind: 'stroke', key: A1 + '.0.1.12', before: own(A1, 12, 1), after: own(A1, 15, 1),
+    changes: [{ a: { board: '', doc: A1, member: null, plain: false, pos: null, width: null, ids: own(A1, 13, 2) }, b: { board: '', doc: B1, member: null, plain: false, pos: null, width: null, ids: [] } }], place: { x: 0, y: 0 } });
+  assert.deepEqual(strokeHeld([pair(1, 1, 12), pair(15, 13, 23)], images, stop), { holds: 'all', changes: [{ a: { from: 13, to: 15 }, b: { from: 13, to: 13 } }] });
+  assert.deepEqual(strokeHeld([pair(1, 1, 12), pair(16, 14, 22)], images, stop), { holds: 'part', changes: [{ a: { from: 13, to: 16 }, b: { from: 13, to: 14 } }] }, 'the run after it moved: a change after its first byte, not the same');
+  assert.deepEqual(strokeHeld([pair(1, 1, 11), pair(16, 14, 22)], images, stop), { holds: 'none', changes: [] }, 'neither facing byte stands at a change');
+  assert.deepEqual(strokeHeld([pair(1, 1, 37)], images, stop), { holds: 'none', changes: [] }, 'the texts alike there: no change');
+});
+
+/** a pane's text as SC records it: an edition of one member read at its bare address */
+const bareText = (/** @type {string} */ doc) => ({ doc, src: doc, names: doc + '.1', shows: doc, kind: /** @type {const} */ ('bare'), k: 1, n: 1, read: null });
+/** a passage named as SC names it (FP-27): an edition's member, read at its plain address, by its bytes */
+const namedAs = (/** @type {string} */ doc, /** @type {import('../model/records.js').ISpan[]} */ ids) => ({ board: '', doc, member: doc + '.1', plain: true, pos: null, width: null, ids });
+/** the stop at a band's clipped end as the reader left it: standing for pane B's bytes 14 to 20, "Its pas" */
+const SHARED_STOP = /** @type {import('./scene.js').SharedStop} */ ({ kind: 'shared', at: namedAs(B, own(B, 14, 7)), stepped: null, place: { x: 300, y: 120 } });
+/** a stroke as the reader left it: the change between the first edition's runs [1, 13) and [15, …), its bytes 13 and 14, pane B holding none there */
+const STROKE_KEY = A + '.0.1.12';
+const STROKE_STOP = /** @type {import('./scene.js').StrokeStop} */ ({ kind: 'stroke', key: STROKE_KEY, before: own(A, 12, 1), after: own(A, 15, 1), changes: [{ a: namedAs(A, own(A, 13, 2)), b: namedAs(B, []) }], place: { x: 300, y: 140 } });
+/** the scene on the first edition beside the origin, opened on the far end naming the origin whole (`wholeB`), as the reader left it from a stop */
+const leftFrom = (/** @type {import('./scene.js').Stop} */ stop, whole = true) => ({ a: A, b: B, held: { ...NEAR, wholeB: whole }, left: { panes: { a: bareText(A), b: bareText(B) }, spots: null, stop } });
+/** the answers the panes' `compare` gives, by what they hold of each stop */
+const ANSWERS = {
+  shared: { all: [[14, 14, 7]], part: [[14, 14, 3]], none: [[14, 1, 7]] },
+  stroke: { all: [[1, 1, 12], [15, 13, 23]], part: [[1, 1, 12], [16, 14, 22]], none: [[1, 1, 11], [16, 14, 22]] },
+};
+/** the board busy: a refusal a retry may tell past */
+const BUSY = { refused: { kind: 'refused', name: 'busy', status: 503, code: 'busy', detail: null, op: 'compare', body: null, site: {} } };
+/** the panes' `compare` as the script answers it */
+const compareAs = (/** @type {Array<[number, number, number]> | null} */ shared) => (shared ? compared(A, A_TEXT, B, B_TEXT, shared) : { [FAKE.keyOf('op', { frame: BOTH })]: BUSY });
+/** every read a release set going let answer */
+const answered = async () => { for (let i = 0; i < 30; i++) await new Promise((r) => setTimeout(r, 0)); };
+/** the element a returned stop stands as, by its id */
+const elOf = (/** @type {import('./scene.js').Stop} */ stop) => (typeof stop === 'object' && stop.kind === 'stroke' ? 'scenestroke-' + stop.key : 'the stop');
+/** what this stop stood for's FP-21 words, in pane B's current text */
+const where = t('L.held.current', { D: B }), subject = t('L.held.stop');
+
+test('a stop drawn only by the panes\' `compare` that the reader left from stands with the landing as its whole-document scene reopens and takes the focus, named for its kind and what it stood for, its count being read; recorded again as left by what it stood for; the stand-in refusing the stop the focus while it is hidden, as the platform does', () => onPage(async (p) => {
+  const was = script[FAKE.keyOf('op', { frame: BOTH })], unanswered = fake.unanswered.length;
+  try {
+    p.item.focus();
+    await SCENE.open(A, B);
+    assert.equal(p.stop.hidden, true, 'a scene standing no band\'s clipped end: its stop hidden');
+    p.stop.focus();
+    assert.equal(p.at(), 'pane B', 'the stop, hidden, takes no focus');
+    SCENE.close();
+    for (const stop of [SHARED_STOP, STROKE_STOP]) {
+      p.item.focus();
+      const release = fake.hold('op', { frame: BOTH });
+      await SCENE.reopen(leftFrom(stop));
+      const r = SCENE.returned(), shared = stop.kind === 'shared';
+      const name = shared ? t('L.scene.shared.returned', { D: B, text: 'Its pas' }) : null;
+      assert.deepEqual([p.at(), r?.kind, r?.shown, r?.reading, r?.answer, r?.waiting], [elOf(stop), stop.kind, true, true, null, false], `${stop.kind}: shown with the landing, the focus on it, its count being read, nothing answered`);
+      assert.ok(shared ? r?.name === name : !!r?.name && r.name.startsWith(t('L.scene.stroke.returned', { changes: '' })), `${stop.kind}: named for its kind and what it stood for: ${r?.name}`);
+      assert.equal(SCENE.asLeft()?.stop, stop, `${stop.kind}: recorded again as left by what it stood for`);
+      Object.assign(script, compareAs(ANSWERS[stop.kind].all));
+      release();
+      await answered();
+      SCENE.close();
+    }
+  } finally { Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('the panes\' `compare` answering a stop the reader returned to keeps the focus on it and fills it in: all of it holding, the stop it stands for now, said politely; part of it, none, or the board refusing — "try again" offered where a retry may tell — the stop stays and says so in FP-21\'s words, at its site', () => onPage(async (p) => {
+  const was = script[FAKE.keyOf('op', { frame: BOTH })], unanswered = fake.unanswered.length;
+  /** each stop's kind's words */
+  const kinds = { shared: t('L.scene.shared.1', { D: B }), stroke: t('L.scene.stroke.kind') };
+  const part = t('L.held.part', { subject, where }), none = t('F.floating', { D: B }), busy = t('L.held.unknown', { subject, where, reason: t('L.held.why.busy') });
+  try {
+    for (const stop of [SHARED_STOP, STROKE_STOP]) {
+      const kind = kinds[stop.kind];
+      /** @type {Array<[string, Array<[number, number, number]> | null, string, string | null, string | null]>} each answer: what it holds, the name it leaves, the face it shows */
+      const cases = [
+        ['all', ANSWERS[stop.kind].all, 'all', null, null],
+        ['part', ANSWERS[stop.kind].part, 'part', t('L.scene.stop.said', { stop: kind, said: part }), 'face:held'],
+        ['none', ANSWERS[stop.kind].none, 'none', t('L.scene.stop.said', { stop: kind, said: none }), 'face:floating'],
+        ['refused', null, 'unknown', t('L.scene.stop.said', { stop: kind, said: busy }), 'face:held'],
+      ];
+      for (const [what, answer, holds, name, face] of cases) {
+        p.item.focus();
+        const release = fake.hold('op', { frame: BOTH });
+        await SCENE.reopen(leftFrom(stop));
+        const told = p.said.length;
+        Object.assign(script, compareAs(answer));
+        release();
+        await answered();
+        const r = SCENE.returned();
+        assert.deepEqual([p.at(), r?.answer?.holds, r?.reading, r?.shown], [elOf(stop), holds, false, true], `${stop.kind}, ${what}: the focus kept on it, answered, no longer being read, standing`);
+        if (holds === 'all') {
+          assert.ok(stop.kind === 'shared' ? r?.name === t('L.scene.shared.1', { D: B }) : !!r?.name && r.name.startsWith(t('L.scene.stroke.1', { n: 1 }) + ': '), `${stop.kind}, all of it: the name of the stop it is now: ${r?.name}`);
+          assert.deepEqual([p.said.slice(told), HOST.currentState()], [[r?.name], null], `${stop.kind}, all of it: said politely, no face`);
+        } else {
+          assert.equal(r?.name, name, `${stop.kind}, ${what}: its kind's words and FP-21's`);
+          assert.equal(HOST.currentState()?.id, face, `${stop.kind}, ${what}: said at its site`);
+          assert.deepEqual(Object.keys(HOST.currentState()?.acts || {}), what === 'refused' ? ['a0'] : [], `${stop.kind}, ${what}: "try again" offered where a retry may tell, else nothing`);
+        }
+        SCENE.close();
+      }
+    }
+  } finally { Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
+  assert.deepEqual(fake.unanswered.slice(unanswered), []);
+}));
+
+test('a returned stop whose pane holds no text — withheld from the reader — is answered at once that nothing could tell, in FP-21\'s words, the focus kept on it; a scene that read its `compare` before showing answers its stroke as it shows', () => onPage(async (p) => {
+  const WH = '1.0.1.0.13', was = script[FAKE.keyOf('op', { frame: BOTH })];
+  Object.assign(script, { [FAKE.keyOf('op', { frame: F.retrieveDocVSpanSet(WH) })]: WITHHELD });
+  const draft = { doc: WH, src: WH, names: WH, shows: WH, kind: /** @type {const} */ ('draft'), k: null, n: null, read: null };
+  const stop = { ...SHARED_STOP, at: { board: '', doc: WH, member: null, plain: false, pos: null, width: null, ids: own(WH, 14, 7) } };
+  try {
+    p.item.focus();
+    await SCENE.reopen({ a: A, b: WH, held: { ...NEAR, wholeB: true }, left: { panes: { a: bareText(A), b: draft }, spots: null, stop } });
+    await answered();
+    const r = SCENE.returned(), said = t('L.held.unknown', { subject, where: t('L.held.current', { D: WH }), reason: t('L.held.why.withheld') });
+    assert.deepEqual([p.at(), r?.answer?.holds, r?.name, HOST.currentState()?.id, Object.keys(HOST.currentState()?.acts || {})],
+      ['the stop', 'unknown', t('L.scene.stop.said', { stop: t('L.scene.shared.1', { D: WH }), said }), 'face:held', []], 'couldn\'t tell, by the refusal its text met: no "try again", which tells nothing more');
+    SCENE.close();
+    Object.assign(script, compareAs(ANSWERS.stroke.all));
+    p.item.focus();
+    await SCENE.reopen(leftFrom(STROKE_STOP, false));
+    assert.deepEqual([p.at(), SCENE.returned()?.answer?.holds, HOST.currentState()], [elOf(STROKE_STOP), 'all', null], 'answered as it shows: the stroke it is now, the focus on it');
+    SCENE.close();
+  } finally { Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
+}));
+
+test('an act on a returned stop made while its `compare` is read waits for the answer, said at the stop: made on a whole answer — a stroke\'s list shown — abandoned where its face is dismissed, and dropped where the reader moved on first, the answer then moving nothing (FP-25)', () => onPage(async (p) => {
+  const was = script[FAKE.keyOf('op', { frame: BOTH })], unanswered = fake.unanswered.length;
+  const button = elOf(STROKE_STOP);
+  /** the scene reopened from the stroke with its `compare` held, and Enter made on the stroke's button: the release */
+  const waiting = async () => {
+    p.item.focus();
+    const release = fake.hold('op', { frame: BOTH });
+    await SCENE.reopen(leftFrom(STROKE_STOP));
+    p.enter(STROKE_KEY);
+    assert.deepEqual([HOST.currentState()?.id, SCENE.returned()?.waiting, p.at()], ['reaching:' + B, true, button], 'the act waits, its reaching face at the stop, the focus kept');
+    Object.assign(script, compareAs(ANSWERS.stroke.all));
+    return release;
+  };
+  try {
+    let release = await waiting();
+    release();
+    await answered();
+    assert.deepEqual([HOST.currentState()?.id, SCENE.returned()], ['stroke:' + STROKE_KEY, null], 'made on a whole answer: the stroke\'s list at it, the stop the stroke it stands for');
+    SCENE.close();
+    release = await waiting();
+    KEYS.esc();
+    assert.deepEqual([HOST.currentState(), SCENE.returned()?.waiting, SCENE.isOpen()], [null, false, true], 'Esc dismisses its face and abandons it, the scene standing');
+    release();
+    await answered();
+    assert.deepEqual([HOST.currentState(), SCENE.returned()?.answer?.holds, p.at()], [null, 'all', button], 'answered after it was abandoned: nothing made, the stop filled in, the focus on it');
+    SCENE.close();
+    release = await waiting();
+    p.paneB.focus();
+    release();
+    await answered();
+    assert.deepEqual([HOST.currentState(), SCENE.returned(), p.at()], [null, null, 'pane B'], 'the reader moved on first: its face taken down, nothing made, the focus where they put it, the stop answered and back under the scene\'s own rules');
+    SCENE.close();
+  } finally { Object.assign(script, { [FAKE.keyOf('op', { frame: BOTH })]: was }); }
   assert.deepEqual(fake.unanswered.slice(unanswered), []);
 }));

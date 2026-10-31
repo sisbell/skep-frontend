@@ -57,12 +57,16 @@
 // act; the dead end's face at the head a landing stands at (`floating`;
 // FP-21), its act, where N-GO hands one in, the version move its reads found
 // to the last member that holds the passage whole, the face standing drawn
-// again with it, no act on the chrome, as those reads answer (`offered`); a
-// jump reading and a jump reaching (FP-25), their overlays named
-// `reading:⟨address⟩` and `reaching:⟨address⟩` and never `face:…`, the
-// prefix a notice's face carries — each anchored, as every face N-GO shows
-// for a jump is, with the document it stands at, out of the visible view of
-// which the one line carries its words (O-HOST's `sign`). A face
+// again with it, no act on the chrome, as those reads answer (`offered`);
+// what a text holds of what a reading scene's stop the reader returned to
+// stood for, where it holds only part, all of it in pieces, or no answer
+// told, in BM-HELD's line at the stop (`held`), "try again" where a retry may
+// tell (FP-21); a jump reading and a jump reaching (FP-25) — an act on such a
+// stop made while the read that draws it is out among the latter — their
+// overlays named `reading:⟨address⟩` and `reaching:⟨address⟩` and never
+// `face:…`, the prefix a notice's face carries — a jump's anchored, as every
+// face N-GO shows for a jump is, with the document it stands at, out of the
+// visible view of which the one line carries its words (O-HOST's `sign`). A face
 // never takes the focus (D5 §4 rule 4; K-58): it is heard through the one
 // status region (D4, O-HOST's), and a face offered by a key's act takes none
 // either; a walk's moment alone takes it. A refusal's face that answers an
@@ -122,7 +126,7 @@ import * as FOCUS from '../nav/focus.js';
 import * as SCENE from '../scene/scene.js';
 import * as CAM from '../plane/camera.js';
 import { entitlementArm, placeholderOf } from '../text/article.js';
-import { retries } from '../beams/held.js';
+import { retries, lineOf } from '../beams/held.js';
 import { memberOf } from '../model/address.js';
 import { t, addressedHTML } from '../strings.js';
 import { esc } from '../util.js';
@@ -543,7 +547,9 @@ export function reading(addr, anchor = null) {
 
 /**
  * A jump reaching (FP-25): its destination one only a read can place — a
- * board the plane does not draw — said at the act's
+ * board the plane does not draw; the passage a reading scene's stop the
+ * reader returned to stands for, pressed while the read that draws it is out
+ * (SC's) — said at the act's
  * site in the place of what stands there, the camera still, and heard through
  * the one status region as every face is. Its dismissal — Esc's, the
  * innermost thing — abandons the jump (`abandon`); a replacement does not,
@@ -555,6 +561,27 @@ export function reading(addr, anchor = null) {
  */
 export function reaching(addr, anchor, abandon) {
   HOST.show({ kind: 'face', id: REACHING + addr, anchor: toAnchor(anchor), html: faceHTML({ id: 'L.reaching', text: t('L.reaching', { address: addr }), acts: [] }), onDismiss: (replaced) => { if (!replaced) abandon(); } });
+}
+
+/**
+ * What a text holds of a passage, at the site of the control that stood for
+ * it (see the head; FP-21): a reading scene's stop the reader returned to,
+ * whose read told that only part of what it stood for holds, all of it in
+ * pieces, or nothing — BM-HELD's line (`lineOf`), the places it holds in
+ * counted, and "try again" where a retry may tell and the stop's owner hands
+ * one in. It offers nothing else: the stop it stands at is what still works.
+ * It takes no focus, and is heard through the status region as every face is
+ * — save where the stop's own name says its words where the focus lands on it
+ * (`told`), which is heard there once.
+ * @param {import('../beams/held.js').Said} said
+ * @param {Anchor | HTMLElement | {x: number, y: number} | null} anchor the stop
+ * @param {(() => void) | null} [again] the read asked again
+ * @param {boolean} [told] the stop's name says the words where the focus lands
+ */
+export function held(said, anchor, again = null, told = false) {
+  const id = said.state === 'unknown' ? 'L.held.unknown' : said.state === 'pieces' ? 'L.held.pieces' : 'L.held.part';
+  HOST.show({ kind: 'face', id: 'face:held', anchor: toAnchor(anchor), told, acts: again ? { a0: () => again() } : {},
+    html: faceHTML({ id, text: lineOf(said), acts: again ? [{ label: t('B1.try-again') }] : [] }) });
 }
 
 /** the reading face ends where it still stands — its jump's read answered, its own completion (O-HOST's `complete`): an overlay shown since stands, and a card asked since still opens */

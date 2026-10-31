@@ -3,12 +3,14 @@
 // ends it sets level, whether the far end names pane B's document whole, the
 // bands' extents, the lines' ends, the strokes and the passages shared with
 // the near one as measured in the panes, the last measure's figures, the
-// stroke whose list stands, the stop's next passage and whether its appearance
-// was said, the panes' scrolls, each pane's text — the record it was made
-// from, the version it reads and the address it names, the links and far
-// ends it was set with — the settings reading and the acts waiting on them,
-// the element it was opened from, and its own end, the app's to hand in;
-// view state, never written (FP-7).
+// stroke whose list stands, the stop's next passage, the passage its act last
+// went to and whether its appearance was said, a stop the reader returned to
+// with what its answer told and an act waiting on it, the panes' scrolls,
+// each pane's text — the record it was made from, the version it reads and
+// the address it names, the links and far ends it was set with — the
+// settings reading and the acts waiting on them, the element it was opened
+// from, and its own end and the faces a returned stop shows, the app's to
+// hand in; view state, never written (FP-7).
 // Two documents at reading scale side by side over the plane, each pane
 // scrolling on its own (R3); the places unmoved, nothing written; the dialog
 // named as it attaches by ST's `L.scene-label`. It sets the two ends level
@@ -136,9 +138,10 @@
 // pane B's document whole, the opening waits on no `compare`: the scene shows
 // on the two texts and where the far ends crossing between them stand, the
 // `compare` asked as it shows, and its answer, where the scene stands and
-// neither pane was set again meanwhile, adds the bands and says a refusal in
-// the bar and the status region — moving no pane and no focus, and holding
-// no act (`addBands`). The scene is a step on
+// neither pane was set again meanwhile, adds the bands, says a refusal in
+// the bar and the status region and answers a stop the reader returned to —
+// moving no pane and no focus, and holding no act of the panes' (`addBands`).
+// The scene is a step on
 // the trail, which N-GO keeps (`toScene`, `closeScene`): its own end —
 // zoom-out, Esc, ←, the bar's × — is a Back from its entry, the bar's handed
 // in by the app (`attach`), and `close` ends it as a navigation act's
@@ -147,13 +150,47 @@
 // left it (`asLeft`): each pane's version; where the reader stood in it, its
 // selection and the end set level in it, each by its bytes' identity
 // through the image its article was made from, never a scroll offset; and
-// the stop the platform's focus stood on. A cursor move back onto the entry
+// the stop the platform's focus stood on (`stopOf`) — the stop at a band's
+// clipped end and a stroke's button, which only the panes' `compare` draws,
+// by its kind and what it stood for, named as FP-27 names a copy (`Named`):
+// the board and the document read, the bytes by identity, and the member
+// and its positions where the text is published, never a draft's — the
+// stop's passage of pane B and the one its act last went to (`sharedStop`),
+// a stroke's runs' facing bytes and each change's bytes on each side
+// (`strokeStop`) — with where it stood. A cursor move back onto the entry
 // reopens it so (`reopen`): each pane's record read again — an edition read
 // at its bare address whose chain went past the member its text was, pinned
 // to that member (FP-23) — the two ends set level, each pane whose text
 // holds its place's bytes brought back to them, any other left where the
 // re-level set it, its selection put back on the same bytes, the focus on
 // the stop it stood on and the pair named in the status region.
+// A stop only the panes' `compare` draws, the reader left from, stands with
+// the landing as the scene reopens and takes the focus, other keys acting
+// from it (`returning`; FP-20): drawn, never hidden, where what it stood for
+// stands in the panes' texts — the stop at pane B's facing edge level with
+// its passage's first line, a stroke's button where its runs' facing bytes
+// meet in each pane — held inside the panes' visible heights, else where it
+// stood (`placeReturned`); named for its kind and what it stood for, its
+// count — what only that read gives, with the stub's triangle, its bearing,
+// which no band stands to draw — an empty box of its own width, being read
+// (`nameReturned`; FP-34). The `compare` answering it (`answer`), what it
+// stood for is read against the runs by BM-HELD's one rule (`sharedHeld`,
+// `strokeHeld`; FP-21) and the stop drawn again in its place under the kept
+// focus: all of it holding, the stop the one standing for it, its count
+// filled, said politely; part, all of it in pieces, none, or nothing told —
+// the board refusing, not answering, or a pane holding no text — it stays,
+// saying so in FP-21's words, in its name and at its site through O-FACES
+// (`showSaid`), "try again" offered where a retry may tell (`again`). An act
+// made on it while it is read waits for the answer, said at the stop by
+// O-FACES' reaching face, whose dismissal — Esc, Back — abandons it (`wait`;
+// FP-25); answered, it is made where what it stood for holds, at the part
+// held where only part does (`madeAct`), and dropped where none does,
+// nothing told, or the reader moved on first — the focus left the stop, or
+// they acted in the scene (`movedOn`, `actedIn`) — so the answer moves
+// nothing. It stands so until it is answered and the reader has moved on,
+// then under the scene's own rules (`draw`). A scene that read its `compare`
+// before showing answers its stroke as it shows, the stop's name saying the
+// answer where the focus lands.
 // The focus (D5 §4 rules 5 and 8; K-61, K-63; the focus record's rule 17;
 // FP-20): shown, the scene puts the focus in the far end's pane — reopened,
 // on the stop it stood on — and takes the plane it stands over out of the
@@ -182,8 +219,9 @@
 // status region (FP-28), and hidden while every one is in view. Its act
 // (`toShared`) scrolls pane B alone, the passage's first line level with the
 // near passage's where that line is in view, else LEVEL_AT px below the
-// pane's top; a stop that leaves while it holds the focus hands it to pane B,
-// and the re-level starts it at the first again. The strokes in view, top to
+// pane's top, the passage gone to kept by its bytes' identity; a stop that
+// leaves while it holds the focus hands it to pane B, and the re-level starts
+// it at the first again, none gone to. The strokes in view, top to
 // bottom, then the stop, are the scene's stops after pane A's corner and
 // before pane B; a stroke that leaves view while it holds the focus hands it
 // to pane B; and their keys are a button's own, as the bar's acts' are. The
@@ -227,9 +265,10 @@
 // the pane, at its mark's value; the stop 16 px tall over the stub's
 // triangle, its count before it; a stroke's button 26 px tall, centred on
 // the middle of the halves drawn, its count in its top 11 px, clear of the
-// stroke.
-// Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-22, FP-23, FP-24,
-// FP-26, FP-28, FP-29, FP-30, FP-31, FP-34.
+// stroke; a returned stop's passage named by its first 48 characters at
+// most, cut on a word.
+// Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-21, FP-22, FP-23,
+// FP-24, FP-25, FP-26, FP-27, FP-28, FP-29, FP-30, FP-31, FP-34.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -242,6 +281,7 @@ import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
 import { copyText } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
+import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingOf } from '../beams/held.js';
 import { SAMENESS } from '../plane/register.js';
 import { LINE_H } from '../plane/layout.js';
 import { markDirty, READING_PX } from '../plane/camera.js';
@@ -262,6 +302,9 @@ import { esc, byteOffsets } from '../util.js';
 /** @typedef {import('../text/article.js').ArticleView} ArticleView */
 /** @typedef {import('../bridge/shapes').FeedUpdate} FeedUpdate */
 /** @typedef {import('../bridge/shapes').Refusal} Refusal */
+/** @typedef {import('../beams/held.js').Met} Met */
+/** @typedef {import('../beams/held.js').Said} Said */
+/** @typedef {import('../overlays/host.js').Anchor} Anchor */
 
 /**
  * @typedef {Object} Level — the two ends the scene sets level, a position in each pane's document; null where that pane stands at its top
@@ -450,6 +493,8 @@ import { esc, byteOffsets } from '../util.js';
  * @property {number} next the shared passage the stop's next act goes to first, an index into `shared`
  * @property {number | null} at the shared passage the stop stands for as the last draw placed it, an index into `shared`; null where it stands hidden
  * @property {boolean} told the stop's appearance was said in the status region
+ * @property {ISpan[] | null} stepped the passage of pane B the stop's act last went to (`toShared`), by identity through the image pane B's article was made from; null where it went to none since the scene was set level
+ * @property {Returned | null} returned the stop drawn only by the panes' `compare` the reader left from, standing with the landing until its answer is taken and the reader has moved on (see the head); null where none stands
  * @property {string} size the panes' sizes the ties were measured at
  * @property {number} updating the settings reading
  * @property {Array<() => void>} waiting the acts made while one reads, in the order made (`whenSet`)
@@ -476,13 +521,71 @@ import { esc, byteOffsets } from '../util.js';
  * @property {number | null} lacks what the pane's corner said the version it read lacks (`Pane.lacks`)
  */
 
-/** @typedef {'a' | 'b' | 'a:corner' | 'b:corner' | 'relevel' | 'x' | `stroke ${string}`} Stop a stop of the scene's the platform's focus stands on: a pane, a pane's corner, one of the bar's acts, or a stroke's button by its key (`strokeKey`) */
+/**
+ * @typedef {Object} Named — a passage of a pane's text named as FP-27 names a copy (see the head): where its words were read, by board and document, its bytes by identity, and, where the text is a published member, that member and its positions there — never a draft's, which move
+ * @property {string} board the board's origin
+ * @property {string} doc the document read: the address the pane shows
+ * @property {string | null} member the member the text is, by its version address; null for a draft, and for an edition whose member is not known
+ * @property {boolean} plain the words were read at the plain address: an edition at its bare address
+ * @property {number | null} pos its first position in `member`; null where no member is named, or the passage stands in no one stretch of it
+ * @property {number | null} width its positions there; null with `pos`
+ * @property {ISpan[]} ids its bytes by identity, through the image the pane's article was made from (M-REC's `identityIn`); none where the passage holds no byte, or that image does not cover it
+ */
+
+/**
+ * @typedef {Object} SharedStop — the stop at a band's clipped end, as the reader left it (`stopOf`)
+ * @property {'shared'} kind
+ * @property {Named} at the passage of pane B it stood for
+ * @property {Named | null} stepped the passage of pane B its act last went to (`Scene.stepped`); null where it went to none
+ * @property {{x: number, y: number}} place where it stood: its right edge and its middle, px from the scene's box
+ */
+
+/**
+ * @typedef {Object} StrokeStop — a stroke's button, as the reader left it (`stopOf`)
+ * @property {'stroke'} kind
+ * @property {string} key its key (`strokeKey`), which its button bears
+ * @property {ISpan[]} before the last byte of the run before its first change, by identity — the same in both panes
+ * @property {ISpan[]} after the first byte of the run after its last change, by identity
+ * @property {Array<{a: Named, b: Named}>} changes each change it stood for, in the documents' order: the bytes between its two runs in each pane, none on a side holding no byte there
+ * @property {{x: number, y: number}} place where it stood: its middle, px from the scene's box
+ */
+
+/** @typedef {SharedStop | StrokeStop} Material a stop drawn only by the panes' `compare` as the reader left it: what it stood for, by its kind */
+
+/** @typedef {'a' | 'b' | 'a:corner' | 'b:corner' | 'relevel' | 'x' | Material} Stop a stop of the scene's the platform's focus stands on: a pane, a pane's corner, one of the bar's acts, or a stop the panes' `compare` draws — the stop at a band's clipped end, a stroke's button — by what it stood for */
+
+/**
+ * @typedef {Object} Answered — what the panes' `compare` told of what a returned stop stood for (`answerOf`)
+ * @property {'all' | 'pieces' | 'part' | 'none' | 'unknown'} holds what the panes' texts hold of it, by BM-HELD's states; `unknown` where no answer told
+ * @property {Said | null} said the line's words for pieces, part and couldn't tell (BM-HELD's `saidOf`, `unknownOf`); null for all and none
+ * @property {number | null} at the stop at a band's clipped end: the passage of pane B holding what it stood for — all of it, else the first holding any — an index into the shared passages measured; null where none does, or none is measured
+ * @property {number} count the stop at a band's clipped end: the passages of pane B holding the near passage's material; a stroke: the changes it stands for now
+ * @property {Change[]} changes a stroke: the changes standing where it stood, those holding what it stood for; none for the stop at a band's clipped end
+ */
+
+/**
+ * @typedef {Object} Returned — a stop drawn only by the panes' `compare` the reader left from, standing with the landing as the scene reopens (see the head)
+ * @property {Material} stop what it stood for, as the reader left it
+ * @property {HTMLElement} el its element: the stop, or a stroke's button
+ * @property {Answered | null} answer what the panes' `compare` told of it; null while it is read
+ * @property {boolean} landed the platform's focus has stood on it since the return
+ * @property {boolean} moved the reader moved on: the focus left it, or they acted in the scene (`movedOn`)
+ * @property {{byKey: boolean} | null} waiting an act made on it while it was read, waiting for the answer; null where none waits
+ * @property {string | null} face the overlay it shows at its site — its act's reaching face, or the line's — by id; null where none
+ */
+
+/**
+ * @typedef {Object} Faces — the faces a returned stop shows at its site (O-FACES', the app's to hand in: O-FACES imports this module)
+ * @property {(addr: string, anchor: Anchor, abandon: () => void) => void} reaching an act on it waiting for the answer, which the face's dismissal abandons (FP-25)
+ * @property {(far: string, anchor: Anchor, told: boolean) => void} floating the texts hold none of what it stood for, in the dead end's words; `told` its name says them where the focus lands
+ * @property {(said: Said, anchor: Anchor, again: (() => void) | null, told: boolean) => void} held the line's words (FP-21), "try again" where a retry may tell; `told` as `floating`'s
+ */
 
 /**
  * @typedef {Object} Left — the scene as the reader left it (`asLeft`; see the head): what its trail entry records, by value, and what reopens it (`reopen`)
  * @property {{a: Version, b: Version}} panes each pane's text
  * @property {{a: Spot, b: Spot} | null} spots where the reader stood in each pane; null where none is kept — a change of the page's class drops them (N-TRAIL's)
- * @property {Stop | null} stop the stop the platform's focus stood on; null where it stood outside the scene
+ * @property {Stop | null} stop the stop the platform's focus stood on — one the panes' `compare` draws by what it stood for, which a change of the page's class keeps (N-TRAIL's); null where it stood outside the scene, or on such a stop whose bytes its pane's image did not name
  */
 
 /** how far below the panes' tops the two ends are set level (px), where both can stand there */
@@ -517,6 +620,8 @@ let drawnStrokes = [];
 let lastMeasure = { runs: 0, bands: 0, strokes: 0, ms: 0 };
 /** the scene's own end — a Back from its entry, the app's to hand in (`attach`); until it does, the scene ended where it stands */
 let ending = (/** @type {boolean} */ _byKey) => close();
+/** @type {Faces | null} the faces a returned stop shows at its site, the app's to hand in (`attach`); none until it does */
+let faces = null;
 
 /** the box an address stands in: its document's, which every version of it shares */
 const boxOf = (/** @type {string} */ addr) => documentOf(addr) || addr;
@@ -560,15 +665,17 @@ function namePanes(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} *
 /**
  * Attach the scene's elements, and the act its own end runs (see the head):
  * the bar's ×, told whether a key pressed it by the focus owner's one
- * reading (FP-20); the stop's act (`toShared`); a stroke's (`showChanges`).
+ * reading (FP-20); the stop's act (`toShared`); a stroke's (`showChanges`);
+ * each, on a stop the reader returned to, that stop's (`returnedAct`).
  * @param {{root: HTMLElement, bar: HTMLElement, paneA: HTMLElement, paneB: HTMLElement, canvas: HTMLCanvasElement, stop: HTMLButtonElement, strokes: HTMLElement}} e `strokes` the gutter's layer the strokes' buttons stand in
- * @param {{end?: (byKey: boolean) => void}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it
+ * @param {{end?: (byKey: boolean) => void, faces?: Faces}} [acts] `end` the scene's own end: N-GO's `closeScene`, as Esc, zoom-out and ← take it; `faces` the faces a returned stop shows at its site (O-FACES')
  */
 export function attach(e, acts = {}) {
   els = e;
   if (acts.end) ending = acts.end;
+  if (acts.faces) faces = acts.faces;
   e.root.setAttribute('aria-label', t('L.scene-label'));
-  e.stop.addEventListener('click', () => toShared());
+  e.stop.addEventListener('click', (ev) => stopAct(FOCUS.byKey(ev)));
   e.strokes.addEventListener('click', (ev) => {
     const b = /** @type {HTMLElement | null} */ (/** @type {HTMLElement} */ (ev.target).closest('[data-stroke]'));
     if (b && b.dataset.stroke) strokeAct(b.dataset.stroke, FOCUS.byKey(ev));
@@ -979,11 +1086,21 @@ async function readPane(src, stands = () => true) {
   return { d: REC.doc(src), n, whole: !!w.doc, refused: w.refused };
 }
 
-/** @typedef {{pairs: ComparePair[], refused: string | null}} Compared the runs of shared identity between the panes (`merged`), and the refusal their `compare` met by its name, which the bar says */
+/**
+ * @typedef {Object} Compared — the two texts' `compare` (`compareBetween`)
+ * @property {ComparePair[]} pairs the runs of shared identity between them (`merged`); none where it told nothing
+ * @property {boolean} told it answered
+ * @property {Met | null} refused the refusal it met, by its kind and its name, which the bar says; null where it answered or was not asked
+ * @property {Met | null} why where it told nothing, the refusal that kept it from telling — its own, or the one a pane's text was refused for, which asks none; null where it told, or where a pane's text could not be read and no refusal was met
+ */
+
+/** a record's refusal as a met refusal is read (BM-HELD's `whyOf`): `withheld`, or `doc_not_registered` for a document the board says nothing of; null where none was met */
+const metOf = (/** @type {Doc} */ d) => (d.refused ? { kind: 'refused', name: d.refused === 'unregistered' ? 'doc_not_registered' : d.refused } : null);
 
 /**
- * The two texts' `compare` whole (see the head): the runs of shared identity,
- * none where either holds no text, and the refusal it met by its name.
+ * The two texts' `compare` whole (see the head): the runs of shared identity;
+ * none, and no `compare` asked, where either holds no text, which tells
+ * nothing for the refusal its text met; the refusal it met.
  * @param {Pick<Text, 'src' | 'd'>} A
  * @param {Pick<Text, 'src' | 'd'>} B
  * @returns {Promise<Compared>}
@@ -991,10 +1108,10 @@ async function readPane(src, stands = () => true) {
 async function compareBetween(A, B) {
   const holds = (/** @type {Doc} */ d) => !d.refused && d.extent != null;
   const whole = (/** @type {Pick<Text, 'src' | 'd'>} */ x) => [{ doc: x.src, spans: [{ ordinal: 1, positions: Math.max(1, x.d.extent || 1) }] }];
-  if (!holds(A.d) || !holds(B.d)) return { pairs: [], refused: null };
+  if (!holds(A.d) || !holds(B.d)) return { pairs: [], told: false, refused: null, why: metOf(!holds(A.d) ? A.d : B.d) };
   const cmp = await PUMP.read(F.compare(whole(A), whole(B)));
-  if ('refused' in cmp) return { pairs: [], refused: cmp.refused.name };
-  return { pairs: merged(F.decodeCompare(cmp.answer)), refused: null };
+  if ('refused' in cmp) { const r = { kind: cmp.refused.kind, name: cmp.refused.name }; return { pairs: [], told: false, refused: r, why: r }; }
+  return { pairs: merged(F.decodeCompare(cmp.answer)), told: true, refused: null, why: null };
 }
 
 /** where each far end crossing between the panes stands, read (`unplaced`, M-PUMP's `projectEnd`) */
@@ -1012,7 +1129,9 @@ const placeBetween = (/** @type {Text} */ A, /** @type {Text} */ B) => Promise.a
  * @returns {Promise<Compared>}
  */
 async function readBetween(A, B, compare = true) {
-  const [cmp] = await Promise.all([compare ? compareBetween(A, B) : Promise.resolve({ pairs: [], refused: null }), placeBetween(A, B)]);
+  /** @type {Compared} */
+  const none = { pairs: [], told: false, refused: null, why: null };
+  const [cmp] = await Promise.all([compare ? compareBetween(A, B) : Promise.resolve(none), placeBetween(A, B)]);
   return cmp;
 }
 
@@ -1101,7 +1220,7 @@ export async function open(a, b, held = {}, as = {}) {
     // scene shown over one standing keeps that one's (the controller's one memory)
     const from = document.activeElement;
     const S = sceneOf(pa, pb, between.pairs, held);
-    stand(E, S, between.refused);
+    stand(E, S, between.refused ? between.refused.name : null);
     relevel();
     FOCUS.open('scene', { el: E.root, from, byKey: true, first: E.paneB });
     out.shown = true;
@@ -1124,7 +1243,7 @@ export async function open(a, b, held = {}, as = {}) {
  */
 const sceneOf = (pa, pb, pairs, held) => ({
   a: pa, b: pb, pairs, level: levels(pairs, held), whole: !!held.wholeB, widthA: Math.max(1, held.widthA ?? 1),
-  bands: [], lines: [], strokes: [], listing: null, shared: [], next: 0, at: null, told: false, size: '', updating: 0, waiting: [],
+  bands: [], lines: [], strokes: [], listing: null, shared: [], next: 0, at: null, told: false, stepped: null, returned: null, size: '', updating: 0, waiting: [],
 });
 
 /**
@@ -1132,8 +1251,10 @@ const sceneOf = (pa, pb, pairs, held) => ({
  * texts' `compare`, asked as the scene shows; its answer, where the scene
  * still stands and neither pane was set again meanwhile — a setting reads its
  * own — taken: the runs of shared identity measured and drawn, the passages
- * the stop reaches with them, and a refusal said (`sayFace`); no pane
- * scrolled, no focus moved, and no act held waiting on it.
+ * the stop reaches with them, a refusal said (`sayFace`), and a stop the
+ * reader returned to answered (`answer`); no pane scrolled and no focus
+ * moved by it, and no act of the panes' held waiting on it — only one made on
+ * that stop, which waits for this answer.
  * @param {Scene} S
  * @returns {Promise<void>}
  */
@@ -1143,8 +1264,9 @@ async function addBands(S) {
   const E = els;
   if (scene !== S || !E || S.a.sets !== sets[0] || S.b.sets !== sets[1]) return;
   S.pairs = got.pairs;
-  if (got.refused) sayFace(E, got.refused);
+  if (got.refused) sayFace(E, got.refused.name);
   measure();
+  answer(S, got);
   draw();
 }
 
@@ -1207,8 +1329,10 @@ function stand(E, S, face) {
  * as it shows, the act's `leaving` first; the ends set level where their
  * bytes stand now, else where the panes' `compare` sets the passage held;
  * each pane brought back to its place and its selection (`placeAgain`); the
- * focus on the stop it stood on, else in the far end's pane, and the pair
- * named in the status region. A pane the board refused the text of for what
+ * focus on the stop it stood on — one the panes' `compare` draws standing
+ * with the landing (`returning`), answered as that read answers (`answer`) —
+ * else in the far end's pane, and the pair named in the status region. A
+ * pane the board refused the text of for what
  * it says of the document stands as that refusal, its head alone — a cover
  * (FP-29). Where the far end names pane B's document whole, it waits on no
  * `compare`, as an opening does (`addBands`). Opened anew where the reader
@@ -1237,20 +1361,26 @@ export async function reopen(o, as = {}) {
     const from = document.activeElement, spots = was.spots;
     for (const P of [pa, pb]) P.lacks = spots && P.src === was.panes[P.side].src ? spots[P.side].lacks : null;
     const S = sceneOf(pa, pb, between.pairs, o.held);
-    stand(E, S, between.refused);
+    stand(E, S, between.refused ? between.refused.name : null);
     if (spots) {
       for (const side of SIDES) {
         const lv = spots[side].level, at = lv ? REC.placedIn(S[side].d.image, lv.ids) : [];
         S.level[side] = !lv ? null : at.length ? at[0].pos : S.level[side];
       }
     }
+    // a stop the panes' `compare` draws stands with the landing, the stop at a band's clipped end in a scene that shows one
+    const left = was.stop && typeof was.stop === 'object' ? was.stop : null;
+    if (left && (S.whole || left.kind === 'stroke')) S.returned = returning(E, S, left);
     level();
     if (spots) placeAgain(E, S, spots);
     // the far end's pane the scene's first control, which a region closing over it falls back to; the stop it stood on the focus's
     FOCUS.open('scene', { el: E.root, from, byKey: true, first: E.paneB });
     const stood = stopIn(E, was.stop);
     if (stood && stood !== E.paneB) FOCUS.land(stood, {});
+    if (S.returned) S.returned.landed = document.activeElement === S.returned.el;
     FOCUS.say(`${t('L.scene-label')} · ${S.a.shows} │ ${S.b.shows}`);
+    // a scene that read its `compare` before showing answers the stop at once: its name says it where the focus lands
+    if (!S.whole) answer(S, between, true);
     out.shown = true;
     markDirty();
     if (S.whole) void addBands(S);
@@ -1307,9 +1437,9 @@ function placeAgain(E, S, spots) {
  * The scene as the reader leaves it (see the head), by value: each pane's
  * text; where they stood in it, its selection and the end set level in it,
  * each by its bytes' identity through the image its article was made from;
- * and the stop the platform's focus stands on. What N-GO records in the
- * scene's trail entry as the reader leaves it; null where the scene does not
- * stand.
+ * and the stop the platform's focus stands on (`stopOf`) — a stop the panes'
+ * `compare` draws by what it stood for. What N-GO records in the scene's
+ * trail entry as the reader leaves it; null where the scene does not stand.
  * @returns {Left | null}
  */
 export function asLeft() {
@@ -1327,16 +1457,21 @@ export function asLeft() {
       lacks: P.lacks,
     };
   };
-  return { panes: { a: version(S.a), b: version(S.b) }, spots: { a: spot(S.a), b: spot(S.b) }, stop: stopOf(E) };
+  return { panes: { a: version(S.a), b: version(S.b) }, spots: { a: spot(S.a), b: spot(S.b) }, stop: stopOf(E, S) };
 }
 
 /**
- * The scene's stop the platform's focus stands on; null where it stands
- * outside the scene.
+ * The scene's stop the platform's focus stands on: a pane, a pane's corner,
+ * one of the bar's acts; the stop at a band's clipped end and a stroke's
+ * button by what they stand for (`sharedStop`, `strokeStop`); a stop the
+ * reader returned to by what it stood for as they left it. Null where it
+ * stands outside the scene, or on a stop whose bytes the image its pane's
+ * article was made from does not name.
  * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
  * @returns {Stop | null}
  */
-function stopOf(E) {
+function stopOf(E, S) {
   const at = typeof document !== 'undefined' ? document.activeElement : null;
   if (!at) return null;
   for (const side of SIDES) {
@@ -1344,17 +1479,521 @@ function stopOf(E) {
     if (corner && corner.contains(at)) return /** @type {Stop} */ (side + ':corner');
     if (pane.contains(at)) return side;
   }
+  if (S.returned && at === S.returned.el) return S.returned.stop;
+  if (at === E.stop) return sharedStop(E, S);
   const stroke = E.strokes.contains(at) ? /** @type {HTMLElement} */ (at).dataset.stroke : undefined;
-  if (stroke) return /** @type {Stop} */ (`stroke ${stroke}`);
+  if (stroke) return strokeStop(E, S, stroke);
   return at === E.bar.querySelector('[data-relevel]') ? 'relevel' : at === E.bar.querySelector('[data-x]') ? 'x' : null;
 }
 
-/** the element a stop names (`Stop`) as the scene stands now — a stroke's button only while its stroke stands in view; null where it names none */
+/** the element a stop names (`Stop`) as the scene stands now — a stop the panes' `compare` draws, the one standing returned (`returning`); null where it names none */
 function stopIn(/** @type {NonNullable<typeof els>} */ E, /** @type {Stop | null} */ stop) {
   if (stop === 'a' || stop === 'b') return paneEl(E, stop);
   if (stop === 'a:corner' || stop === 'b:corner') return paneEl(E, stop === 'a:corner' ? 'a' : 'b').querySelector(':scope > .corner');
-  if (stop && stop.startsWith('stroke ')) return buttonOf(E, stop.slice('stroke '.length));
+  if (stop && typeof stop === 'object') return scene && scene.returned ? scene.returned.el : null;
   return stop === 'relevel' ? E.bar.querySelector('[data-relevel]') : stop === 'x' ? E.bar.querySelector('[data-x]') : null;
+}
+
+/** the image a pane's article was made from (T-LAYER's `madeOf`): every position of the text it shows by identity; none where it holds no article */
+const imageOf = (/** @type {Pane} */ P) => { const made = P.el ? LAYER.madeOf(P.el) : null; return made ? made.image : []; };
+/** a stretch of a pane's text by identity, through the image its article was made from (M-REC's `identityIn`) */
+const idsIn = (/** @type {Pane} */ P, /** @type {number} */ pos, /** @type {number} */ width) => REC.identityIn(imageOf(P), pos, width);
+/** bytes named by identity, counted */
+const bytesIn = (/** @type {ISpan[]} */ ids) => ids.reduce((n, s) => n + s.width, 0);
+
+/**
+ * A passage of a pane's text named as FP-27 names a copy (`Named`; see the
+ * head): the board and the document the pane shows; where its text is a
+ * published member — a version, or an edition at its bare address whose
+ * member is known — that member, whether it was read at the plain address,
+ * and the passage's positions there where it stands in one stretch of it;
+ * its bytes by identity. A draft's positions are never named.
+ * @param {Pane} P
+ * @param {ISpan[]} ids
+ * @returns {Named}
+ */
+function named(P, ids) {
+  const member = P.kind !== 'draft' && memberOf(P.names) != null ? P.names : null;
+  const at = member ? REC.placedIn(imageOf(P), ids) : [];
+  const one = at.length === 1 && at[0].width === bytesIn(ids) ? at[0] : null;
+  const b = REC.board();
+  return { board: b ? b.origin : '', doc: P.shows, member, plain: P.kind === 'bare', pos: one ? one.pos : null, width: one ? one.width : null, ids };
+}
+
+/** where an element of the scene stands, px from the scene's box: its right edge — the stop's, against pane B's facing edge — else its middle across, and its middle down */
+function placeIn(/** @type {NonNullable<typeof els>} */ E, /** @type {HTMLElement} */ el, /** @type {'edge' | 'middle'} */ how) {
+  const r = el.getBoundingClientRect(), root = E.root.getBoundingClientRect();
+  const x0 = root.left + E.root.clientLeft, y0 = root.top + E.root.clientTop;
+  return { x: (how === 'edge' ? r.right : r.left + r.width / 2) - x0, y: r.top + r.height / 2 - y0 };
+}
+
+/**
+ * The stop at a band's clipped end as the reader leaves it (`SharedStop`):
+ * the passage of pane B it stands for, the passage its act last went to,
+ * each named (`named`), and where it stands. Null where it stands for none,
+ * or the image pane B's article was made from does not name its bytes.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @returns {SharedStop | null}
+ */
+function sharedStop(E, S) {
+  const p = S.at != null ? S.shared[S.at] : null, ids = p ? idsIn(S.b, p.pos, p.width) : [];
+  if (!p || !ids.length) return null;
+  return { kind: 'shared', at: named(S.b, ids), stepped: S.stepped ? named(S.b, S.stepped) : null, place: placeIn(E, E.stop, 'edge') };
+}
+
+/**
+ * A stroke's button as the reader leaves it (`StrokeStop`): its key, the
+ * runs' facing bytes by identity, each change's bytes in each pane named
+ * (`named`), and where it stands. Null where no stroke bears the key, or the
+ * image pane A's article was made from does not name the facing bytes — its
+ * key then the changes' positions, which a draft's never are.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {string} key
+ * @returns {StrokeStop | null}
+ */
+function strokeStop(E, S, key) {
+  const s = S.strokes.find((x) => x.key === key), btn = buttonOf(E, key);
+  if (!s || !btn) return null;
+  const first = s.changes[0], last = s.changes[s.changes.length - 1];
+  const before = idsIn(S.a, first.a.from - 1, 1), after = idsIn(S.a, last.a.to, 1);
+  if (!before.length || !after.length) return null;
+  const changes = s.changes.map((c) => ({ a: named(S.a, idsIn(S.a, c.a.from, c.a.to - c.a.from)), b: named(S.b, idsIn(S.b, c.b.from, c.b.to - c.b.from)) }));
+  return { kind: 'stroke', key, before, after, changes, place: placeIn(E, btn, 'middle') };
+}
+
+/** the box a returned stop's count stands as while the panes' `compare` is read (FP-34): empty, its own width */
+const READING = '<span class="n reading" aria-hidden="true"></span>';
+
+/**
+ * A stop the reader left from that the panes' `compare` draws, standing with
+ * the landing as the scene reopens (see the head; FP-20, FP-34): its element
+ * — the stop, or a stroke's button bearing its key — shown, never hidden,
+ * named for its kind and what it stood for (`nameReturned`), its count being
+ * read, and placed where what it stood for stands (`placeReturned`), until
+ * the read answers (`answer`).
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {Material} stop
+ * @returns {Returned}
+ */
+function returning(E, S, stop) {
+  /** @type {HTMLElement} */
+  let el = E.stop;
+  if (stop.kind === 'stroke') {
+    const btn = buttonOf(E, stop.key);
+    if (btn) el = btn;
+    else {
+      el = document.createElement('button');
+      el.setAttribute('type', 'button');
+      el.id = 'scenestroke-' + stop.key;
+      el.dataset.stroke = stop.key;
+      E.strokes.appendChild(el);
+    }
+  }
+  /** @type {Returned} */
+  const R = { stop, el, answer: null, landed: false, moved: false, waiting: null, face: null };
+  el.hidden = false;
+  nameReturned(E, S, R);
+  placeReturned(E, S, R);
+  return R;
+}
+
+/** a passage's opening words where a pane's text holds it, read by T-ARTICLE's item rule (`copyText`) and cut on a word; null where the text holds none of it */
+function wordsAt(/** @type {Pane} */ P, /** @type {ISpan[]} */ ids) {
+  const made = P.el ? LAYER.madeOf(P.el) : null, at = made ? REC.placedIn(made.image, ids)[0] : undefined;
+  if (!made || !at) return null;
+  const text = copyText(made, { addr: made.addr, pos: at.pos, width: Math.min(at.width, 160) }, LAYER.originOwner).replace(/\s+/g, ' ').trim();
+  if (text.length <= 48) return text;
+  const cut = text.slice(0, 48), space = cut.lastIndexOf(' ');
+  return (space > 16 ? cut.slice(0, space) : cut) + '…';
+}
+
+/** a returned stroke's changes in words (`changeWords`), each side's characters where the pane's text holds its bytes, a side holding none "nothing"; null where a pane's text holds no longer the bytes of a side that held some */
+function changesAt(/** @type {Scene} */ S, /** @type {StrokeStop} */ stop) {
+  const [A, B] = sidesOf(S);
+  /** where a change's side stands in its pane's text: none, where it held no byte */
+  const side = (/** @type {Pane} */ P, /** @type {Named} */ n) => {
+    if (!n.ids.length) return { from: 0, to: 0 };
+    const at = REC.placedIn(imageOf(P), n.ids);
+    return at.length === 1 && at[0].width === bytesIn(n.ids) ? { from: at[0].pos, to: at[0].pos + at[0].width } : null;
+  };
+  const changes = stop.changes.map((c) => ({ a: side(S.a, c.a), b: side(S.b, c.b) }));
+  if (changes.some((c) => !c.a || !c.b)) return null;
+  return changes.map((c) => changeWords(/** @type {Change} */ (c), A, B, LAYER.originOwner)).join(' · ');
+}
+
+/** what the answer said of a returned stop in FP-21's words: the dead end's where the text holds none of it, else the line's */
+const saidWords = (/** @type {Scene} */ S, /** @type {Answered} */ a) => (a.holds === 'none' ? floatingOf(S.b.shows) : a.said ? lineOf(a.said) : '');
+
+/**
+ * A returned stop's name and count drawn from what it stood for and what the
+ * answer told (see the head; FP-34): while it is read, its kind's words and
+ * what it stood for — the stop at a band's clipped end the passage's opening
+ * words where pane B's text holds it, a stroke its changes in words where the
+ * panes' texts hold them — its count an empty box of its own width; all of it
+ * holding, the name and the count of the stop it is then; else its kind's
+ * words and the answer's (FP-21), no count.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {Returned} R
+ */
+function nameReturned(E, S, R) {
+  const a = R.answer, D = S.b.shows, stop = R.stop;
+  /** @type {[string, Record<string, string | number>]} its name's string, and the values its tokens take */
+  let name;
+  if (stop.kind === 'shared') {
+    const text = a ? null : wordsAt(S.b, stop.at.ids);
+    name = !a ? (text ? ['L.scene.shared.returned', { D, text }] : ['L.scene.shared.returned.away', { D }])
+      : a.holds === 'all' ? [a.count > 1 ? 'L.scene.shared' : 'L.scene.shared.1', { D, n: a.count }]
+        : ['L.scene.stop.said', { stop: t('L.scene.shared.1', { D }), said: saidWords(S, a) }];
+    R.el.setAttribute('aria-label', t(name[0], name[1]));
+    if (!a) R.el.innerHTML = READING;
+    else R.el.textContent = a.holds !== 'none' && a.holds !== 'unknown' && a.count > 1 ? String(a.count) : '';
+    return;
+  }
+  const changes = a ? null : changesAt(S, stop), [A, B] = sidesOf(S), s = a && a.holds === 'all' ? strokeFor(S, R) : null;
+  name = !a ? (changes != null ? ['L.scene.stroke.returned', { changes }] : ['L.scene.stroke.returned.away', {}])
+    : s ? ['L.scene.stroke.name', strokeWords(s, A, B, LAYER.originOwner)]
+      : ['L.scene.stop.said', { stop: t('L.scene.stroke.kind'), said: saidWords(S, a) }];
+  R.el.setAttribute('aria-label', t(name[0], name[1]));
+  R.el.innerHTML = !a ? READING : s && s.changes.length > 1 ? `<span class="n">${s.changes.length}</span>` : '';
+}
+
+/**
+ * Where a returned stop stands (see the head): where what it stood for stands
+ * in the panes' texts now, held inside the panes' visible heights — the stop
+ * at a band's clipped end against pane B's facing edge, level with its
+ * passage's first line (`sharedAt`); a stroke's button at the middle of the
+ * halves its change takes, where its runs' facing bytes meet in each pane
+ * (`strokeAt`) — else where it stood as the reader left it.
+ * @param {NonNullable<typeof els>} E
+ * @param {Scene} S
+ * @param {Returned} R
+ */
+function placeReturned(E, S, R) {
+  const root = E.root.getBoundingClientRect(), x0 = root.left + E.root.clientLeft, y0 = root.top + E.root.clientTop;
+  const p = R.stop.kind === 'shared' ? sharedAt(E, S, R.stop) : strokeAt(E, S, R.stop);
+  const at = p ? { x: p.x - x0, y: p.y - y0 } : R.stop.place;
+  R.el.style.left = at.x + 'px';
+  R.el.style.top = at.y + 'px';
+  if (R.stop.kind === 'shared') R.el.style.transform = 'translate(-100%, -50%)';
+  R.el.hidden = false;
+}
+
+/** where the passage a returned stop at a band's clipped end stood for stands, on screen: pane B's facing edge, level with its first line, held inside the pane's visible height; null where pane B's text holds none of it */
+function sharedAt(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */ S, /** @type {SharedStop} */ stop) {
+  const pane = E.paneB, at = REC.placedIn(imageOf(S.b), stop.at.ids)[0];
+  const line = at ? lineIn(pane, S.b.names, at.pos, at.width) : null;
+  if (!line) return null;
+  const r = pane.getBoundingClientRect(), top = r.top + pane.clientTop, half = E.stop.getBoundingClientRect().height / 2 || 8;
+  return { x: r.left, y: Math.max(top + half, Math.min(top + pane.clientHeight - half, top - pane.scrollTop + line.y)) };
+}
+
+/** where a returned stroke's runs meet, on screen: the middle of the halves its change takes, between the heights its runs' facing bytes meet at in each pane (`meetAt`), held inside the panes' visible heights; null where a pane's text holds no longer both facing bytes */
+function strokeAt(/** @type {NonNullable<typeof els>} */ E, /** @type {Scene} */ S, /** @type {StrokeStop} */ stop) {
+  /** the height a pane's runs meet at, px below its content top */
+  const meet = (/** @type {Pane} */ P, /** @type {HTMLElement} */ pane) => {
+    const boxes = boxesIn(pane, P.names), image = imageOf(P);
+    const b = REC.placedIn(image, stop.before)[0], f = REC.placedIn(image, stop.after)[0];
+    const last = boxes && b ? boxes.at(b.pos) : null, first = boxes && f ? boxes.at(f.pos) : null;
+    return boxes && last && first ? meetAt(last, first, boxes.lb) ?? (last.bottom + first.top) / 2 : null;
+  };
+  const ya = meet(S.a, E.paneA), yb = meet(S.b, E.paneB);
+  if (ya == null || yb == null) return null;
+  /** a height in a pane, on screen, held inside its visible height */
+  const held = (/** @type {HTMLElement} */ pane, /** @type {number} */ y) => {
+    const top = pane.getBoundingClientRect().top + pane.clientTop;
+    return Math.max(top, Math.min(top + pane.clientHeight, top - pane.scrollTop + y));
+  };
+  const a = { x: E.paneA.getBoundingClientRect().right, y: held(E.paneA, ya) }, b = { x: E.paneB.getBoundingClientRect().left, y: held(E.paneB, yb) };
+  const halfA = stop.changes.some((c) => c.a.ids.length > 0), halfB = stop.changes.some((c) => c.b.ids.length > 0);
+  return pointOn(strokeOf(a, b), halfA && halfB ? GAP_MIDDLE : halfA ? GAP_MIDDLE / 2 : (1 + GAP_MIDDLE) / 2);
+}
+
+/**
+ * What the passages of pane B holding the near passage's material hold of a
+ * passage a returned stop stood for (see the head; FP-21): the near
+ * passage's counterparts in pane B (`counterparts`), in pane B's order, each
+ * one's bytes by identity through pane B's image, read by BM-HELD's one rule
+ * (`piecesOf`, `heldOf`); and the first of them in pane B's order holding all
+ * of it, else any of it.
+ * @param {ComparePair[]} pairs `compare`'s pairs, `u1` in pane A's text
+ * @param {{pos: number, width: number}} near the near passage, in pane A's text
+ * @param {import('../model/records.js').ImageRun[]} image the image pane B's article was made from
+ * @param {ISpan[]} passage what the stop stood for, by identity
+ * @returns {{held: import('../beams/held.js').Held, at: number | null, count: number}} `at` that counterpart's first position in pane B's text, null where none holds any; `count` the counterparts
+ */
+export function sharedHeld(pairs, near, image, passage) {
+  const cs = counterparts(pairs, near.pos, near.width).sort((p, q) => p.b - q.b);
+  const runs = cs.map((c) => REC.identityIn(image, c.b, c.width)), width = bytesIn(passage);
+  const { pieces, places } = piecesOf(passage, runs), held = heldOf(pieces, width, places);
+  const whole = runs.findIndex((r) => heldOf(piecesOf(passage, [r]).pieces, width).holds === 'all');
+  const any = whole >= 0 ? whole : runs.findIndex((r) => piecesOf(passage, [r]).pieces.length > 0);
+  return { held, at: any >= 0 ? cs[any].b : null, count: cs.length };
+}
+
+/**
+ * The changes two texts' runs of shared identity stand between (see the
+ * head): each two runs consecutive in both documents, neither holding a byte
+ * of the other, with bytes between them on either side — a stroke where their
+ * panes set them on one line, an unbanded stretch where not — in the first
+ * document's order.
+ * @param {ComparePair[]} pairs `compare`'s pairs, `u1` in the first document
+ * @returns {Change[]}
+ */
+export function junctionsOf(pairs) {
+  const runs = merged(pairs), byB = [...runs].sort((x, y) => x.u2 - y.u2 || x.u1 - y.u1);
+  /** @type {Map<ComparePair, ComparePair | undefined>} each run's successor in the second document's order */
+  const nextB = new Map(byB.map((r, k) => [r, byB[k + 1]]));
+  /** @type {Change[]} */
+  const out = [];
+  for (let k = 0; k + 1 < runs.length; k++) {
+    const r = runs[k], s = runs[k + 1];
+    if (nextB.get(r) !== s || s.u1 < r.u1 + r.width || s.u2 < r.u2 + r.width) continue;
+    const c = { a: { from: r.u1 + r.width, to: s.u1 }, b: { from: r.u2 + r.width, to: s.u2 } };
+    if (c.a.to > c.a.from || c.b.to > c.b.from) out.push(c);
+  }
+  return out;
+}
+
+/** do two namings of bytes by identity name the same bytes: the same permanent addresses in the same order, however their runs are cut */
+export function sameBytes(/** @type {ISpan[]} */ x, /** @type {ISpan[]} */ y) {
+  /** runs of one I-space whose addresses follow on joined */
+  const joined = (/** @type {ISpan[]} */ ids) => ids.reduce((/** @type {ISpan[]} */ out, s) => {
+    const last = out[out.length - 1];
+    if (last && last.prefix === s.prefix && last.ordinal + last.width === s.ordinal) last.width += s.width; else out.push({ ...s });
+    return out;
+  }, []);
+  const a = joined(x), b = joined(y);
+  return a.length === b.length && a.every((s, i) => s.prefix === b[i].prefix && s.ordinal === b[i].ordinal && s.width === b[i].width);
+}
+
+/**
+ * What two texts hold of the change a returned stroke stood for (see the
+ * head; FP-21): every change it stood for standing between runs consecutive in
+ * both documents (`junctionsOf`) with the same bytes on each side, the first
+ * after the same facing byte and the last before the same, all of it; one of
+ * them standing so, or a change standing after its first facing byte or
+ * before its last, part of it; else none. The changes standing where it stood
+ * with it.
+ * @param {ComparePair[]} pairs `compare`'s pairs, `u1` in pane A's text
+ * @param {{a: import('../model/records.js').ImageRun[], b: import('../model/records.js').ImageRun[]}} images the images the panes' articles were made from
+ * @param {StrokeStop} stop
+ * @returns {{holds: 'all' | 'part' | 'none', changes: Change[]}}
+ */
+export function strokeHeld(pairs, images, stop) {
+  const now = junctionsOf(pairs).map((c) => ({
+    c, before: REC.identityIn(images.a, c.a.from - 1, 1), after: REC.identityIn(images.a, c.a.to, 1),
+    a: REC.identityIn(images.a, c.a.from, c.a.to - c.a.from), b: REC.identityIn(images.b, c.b.from, c.b.to - c.b.from),
+  }));
+  /** does a change standing now hold a change the stroke stood for, its bytes on each side the same */
+  const exact = (/** @type {typeof now[number]} */ j, /** @type {StrokeStop['changes'][number]} */ c) => sameBytes(j.a, c.a.ids) && sameBytes(j.b, c.b.ids);
+  const found = stop.changes.map((c) => now.find((j) => exact(j, c)) || null);
+  const first = found[0], last = found[found.length - 1];
+  if (found.every(Boolean) && first && last && sameBytes(first.before, stop.before) && sameBytes(last.after, stop.after)) return { holds: 'all', changes: found.map((j) => /** @type {typeof now[number]} */ (j).c) };
+  const touched = now.filter((j) => found.includes(j) || sameBytes(j.before, stop.before) || sameBytes(j.after, stop.after)
+    || stop.changes.some((c) => (c.a.ids.length > 0 && sameBytes(j.a, c.a.ids)) || (c.b.ids.length > 0 && sameBytes(j.b, c.b.ids))));
+  return touched.length ? { holds: 'part', changes: touched.map((j) => j.c) } : { holds: 'none', changes: [] };
+}
+
+/** does a pane's text show withheld text, under which the rest of a passage may stand (BM-HELD's `saidOf`) */
+const withheldIn = (/** @type {Pane} */ P) => P.d.blocks.some((b) => b.kind === 'withheld');
+
+/**
+ * What the panes' `compare` told of what a returned stop stood for (see the
+ * head; FP-21): where it told nothing, couldn't tell, by the refusal that kept
+ * it from telling — the same where the stop named no bytes; else, the stop at
+ * a band's clipped end, what pane B's passages holding the near passage's
+ * material hold of its passage (`sharedHeld`) and the one standing for it
+ * among those measured; a stroke, what the texts hold of its change
+ * (`strokeHeld`). The line's words for pieces, part and couldn't tell — the
+ * text pane B shows its "where".
+ * @param {Scene} S
+ * @param {Material} stop
+ * @param {Compared} cmp
+ * @returns {Answered}
+ */
+function answerOf(S, stop, cmp) {
+  const D = S.b.shows;
+  const unknown = (/** @type {Met | null} */ r) => /** @type {Answered} */ ({ holds: 'unknown', said: unknownOf(r, 'stop', D), at: null, count: 0, changes: [] });
+  if (!cmp.told) return unknown(cmp.why);
+  if (stop.kind === 'shared') {
+    if (!stop.at.ids.length || S.level.a == null) return unknown(null);
+    const h = sharedHeld(S.pairs, { pos: S.level.a, width: S.widthA }, imageOf(S.b), stop.at.ids), holds = h.held.holds;
+    const at = h.at == null ? -1 : S.shared.findIndex((p) => p.pos === h.at);
+    return { holds, said: holds === 'all' || holds === 'none' ? null : saidOf(h.held, 'stop', D, withheldIn(S.b)), at: at >= 0 ? at : null, count: h.count, changes: [] };
+  }
+  const h = strokeHeld(S.pairs, { a: imageOf(S.a), b: imageOf(S.b) }, stop);
+  return { holds: h.holds, said: h.holds === 'part' ? saidOf({ holds: 'part', places: h.changes.length }, 'stop', D, withheldIn(S.b)) : null, at: null, count: h.changes.length, changes: h.changes };
+}
+
+/** the stroke a returned stroke's button stands for once answered: the one measured bearing its key, else the changes the answer found standing where it stood; null where none stands */
+function strokeFor(/** @type {Scene} */ S, /** @type {Returned} */ R) {
+  if (R.stop.kind !== 'stroke') return null;
+  const key = R.stop.key, s = S.strokes.find((x) => x.key === key);
+  if (s) return s;
+  const changes = R.answer ? R.answer.changes : [];
+  return changes.length ? { a: 0, b: 0, halfA: changes.some((c) => c.a.to > c.a.from), halfB: changes.some((c) => c.b.to > c.b.from), changes, key } : null;
+}
+
+/** the shared passage after the one a returned stop's act last went to, where the stop's next act goes first; the stop's own where it went to none */
+function nextAfter(/** @type {Scene} */ S, /** @type {SharedStop} */ stop) {
+  const p = stop.stepped ? REC.placedIn(imageOf(S.b), stop.stepped.ids)[0] : undefined;
+  const i = p ? S.shared.findIndex((q) => q.pos <= p.pos && p.pos < q.pos + q.width) : -1;
+  return i >= 0 ? (i + 1) % S.shared.length : S.next;
+}
+
+/** has the reader moved on from a returned stop (see the head): the focus left it once it had stood on it, or they acted in the scene — once, for good */
+function movedOn(/** @type {Returned} */ R) {
+  if (!R.moved && R.landed && typeof document !== 'undefined' && document.activeElement !== R.el) R.moved = true;
+  return R.moved;
+}
+
+/** the reader acted in the scene: a stop they returned to is moved on from (`movedOn`) */
+function actedIn(/** @type {Scene | null} */ S) { if (S && S.returned) S.returned.moved = true; }
+
+/**
+ * The panes' `compare` answering a stop the reader returned to (see the head;
+ * FP-20, FP-21, FP-25): what it stood for read against the runs (`answerOf`)
+ * and the stop drawn again in its place — the same element, the focus kept —
+ * named by what it told (`nameReturned`). All of it holding: the stop the one
+ * standing for the passage holding it, its count filled, the change said
+ * politely. Part of it, none, or nothing told: the stop staying, saying so in
+ * FP-21's words — at its site where the reader still stands on it and no
+ * overlay of theirs stands (`showSaid`), else politely. An act made on it
+ * while it was read (`wait`) made now where what it stood for holds, at the
+ * part held where only part does; dropped where none does, nothing told, or
+ * the reader moved on first, so the answer moves nothing (FP-25). Nothing
+ * where no stop stands returned, or it is answered.
+ * @param {Scene} S
+ * @param {Compared} cmp
+ * @param {boolean} [told] the answer stands as the scene shows: the stop's name says it where the focus lands, and the status region does not say it again
+ */
+function answer(S, cmp, told = false) {
+  const R = S.returned, E = els;
+  if (!R || R.answer || !E) return;
+  const moved = movedOn(R), waiting = R.waiting;
+  R.waiting = null;
+  const a = R.answer = answerOf(S, R.stop, cmp);
+  if (R.stop.kind === 'shared' && (a.holds === 'all' || a.holds === 'pieces' || a.holds === 'part')) { S.at = a.at; S.next = nextAfter(S, R.stop); }
+  nameReturned(E, S, R);
+  if (R.face && R.face.startsWith('reaching:') && HOST.currentIs(R.face)) HOST.complete(R.face);
+  R.face = null;
+  const acts = !!waiting && !moved && a.holds !== 'none' && a.holds !== 'unknown';
+  if (acts && waiting) madeAct(S, R, waiting.byKey);
+  if (a.holds === 'all') {
+    S.told = true;
+    if (!told) FOCUS.say(R.el.getAttribute('aria-label') || '');
+    if (acts && S.returned === R) S.returned = null;
+  } else if (!(acts && R.stop.kind === 'stroke')) showSaid(S, R, moved, told);
+  markDirty();
+}
+
+/**
+ * What the answer said of a returned stop, in FP-21's words (see the head):
+ * a face at its site — the dead end's where the texts hold none of it, else
+ * the line's, "try again" where a retry may tell (`again`) — where the reader
+ * still stands on it and no overlay of theirs stands; else said politely.
+ * @param {Scene} S
+ * @param {Returned} R
+ * @param {boolean} moved the reader moved on from it
+ * @param {boolean} told its name says it where the focus lands: the face says it nowhere else, and nothing is said of it again
+ */
+function showSaid(S, R, moved, told) {
+  const a = R.answer;
+  if (!a || a.holds === 'all') return;
+  const ours = !HOST.hasCurrent() || (R.face != null && HOST.currentIs(R.face));
+  if (!moved && ours && faces) {
+    if (a.holds === 'none') { faces.floating(S.b.shows, { el: R.el }, told); R.face = 'face:floating'; }
+    else if (a.said) { const said = a.said; faces.held(said, { el: R.el }, said.again ? () => again(S, R) : null, told); R.face = 'face:held'; }
+    return;
+  }
+  if (!told) FOCUS.say(saidWords(S, a));
+}
+
+/** "try again" at a returned stop no answer told of (see the head): the stop being read again, its face taken down, and the panes' `compare` asked again (`addBands`) */
+function again(/** @type {Scene} */ S, /** @type {Returned} */ R) {
+  const E = els;
+  if (scene !== S || S.returned !== R || !E) return;
+  R.answer = null;
+  if (R.face && HOST.currentIs(R.face)) HOST.complete(R.face);
+  R.face = null;
+  nameReturned(E, S, R);
+  markDirty();
+  void addBands(S);
+}
+
+/**
+ * An act made on a returned stop while the panes' `compare` is read (see the
+ * head; FP-25): it waits for the answer (`answer`), said where it was made by
+ * O-FACES' reaching face, whose dismissal — Esc's, or the scene's end —
+ * abandons it. A second act while one waits adds nothing.
+ * @param {Scene} S
+ * @param {Returned} R
+ * @param {boolean} byKey a key made the act
+ */
+function wait(S, R, byKey) {
+  if (R.waiting) return;
+  R.waiting = { byKey };
+  if (!faces) return;
+  faces.reaching(S.b.shows, { el: R.el }, () => { if (scene === S && S.returned === R) R.waiting = null; });
+  R.face = 'reaching:' + S.b.shows;
+}
+
+/** a returned stop's own act, made where what it stood for holds (see the head): the stop at a band's clipped end goes to the passage holding it (`toShared`); a stroke's button shows the changes standing where it stood (`showChanges`) */
+function madeAct(/** @type {Scene} */ S, /** @type {Returned} */ R, /** @type {boolean} */ byKey) {
+  if (R.stop.kind === 'shared') { toShared(); return; }
+  const s = strokeFor(S, R);
+  if (s) showChanges(S, R.stop.key, countOf(s), rowsOf(S, s), R.el, byKey);
+}
+
+/**
+ * The act on a returned stop (see the head), pressed — a click, Enter or
+ * Space: while it is read, it waits (`wait`); answered, made where what it
+ * stood for holds (`madeAct`), the stop then, where all of it held, the one
+ * it stands for, under the scene's own rules; where none holds or nothing
+ * told, its words shown again at its site, so no press is silent.
+ * @param {Scene} S
+ * @param {Returned} R
+ * @param {boolean} byKey a key made the act
+ */
+function returnedAct(S, R, byKey) {
+  const a = R.answer;
+  if (!a) { wait(S, R, byKey); return; }
+  if (a.holds === 'none' || a.holds === 'unknown') { showSaid(S, R, false, false); return; }
+  madeAct(S, R, byKey);
+  if (a.holds === 'all' && S.returned === R) S.returned = null;
+}
+
+/** the stop at a band's clipped end pressed (FP-20): a returned one's act (`returnedAct`), else its own (`toShared`), an act in the scene moving the reader on from a stroke they returned to */
+function stopAct(/** @type {boolean} */ byKey) {
+  const S = scene, R = S ? S.returned : null;
+  if (S && R && els && R.el === els.stop) { returnedAct(S, R, byKey); return; }
+  actedIn(S);
+  toShared();
+}
+
+/**
+ * The stop the reader returned to as it stands (the gate reads it): its kind
+ * and key, its element's id, whether it is shown, its name, the count it
+ * shows and whether that count is being read, its rect on screen, what the
+ * answer told — its state, the passage holding it, the count and its words —
+ * whether an act on it waits for the answer, whether the reader moved on, and
+ * the overlay it shows at its site; null where none stands.
+ */
+export function returned() {
+  const S = scene, R = S ? S.returned : null;
+  if (!S || !R) return null;
+  const r = R.el.getBoundingClientRect(), a = R.answer;
+  return {
+    kind: R.stop.kind, key: R.stop.kind === 'stroke' ? R.stop.key : null, id: R.el.id, shown: !R.el.hidden && R.el.isConnected,
+    name: R.el.getAttribute('aria-label'), count: R.el.textContent || '', reading: !!R.el.querySelector('.reading'),
+    rect: { x: r.left, y: r.top, w: r.width, h: r.height },
+    answer: a ? { holds: a.holds, at: a.at, count: a.count, words: a.holds === 'all' ? null : saidWords(S, a) } : null,
+    waiting: !!R.waiting, moved: R.moved, face: R.face,
+  };
 }
 
 /**
@@ -1723,7 +2362,8 @@ function whenSet(fn) {
  * the panes; then, where the scene still stands and no later setting was
  * asked of the pane, the one step (`setPanes`) — its `compare` read again
  * where the other pane was set meanwhile, so the bands stand on both texts as
- * they are. A newer member found where a row naming it was not seen pins an
+ * they are — and a stop the reader returned to answered by that `compare`
+ * (`answer`). A newer member found where a row naming it was not seen pins an
  * edition at its bare address instead (`pin`). Where the board did not
  * answer, the pane keeps what it shows.
  * @param {'a' | 'b'} side
@@ -1764,6 +2404,7 @@ async function update(side, how = {}) {
       if (Q.sets !== seen) continue;
       const read = how.read !== undefined ? how.read : P.read;
       setPanes(S, [{ side, next: { d, kind, src, names, shows: kind === 'bare' ? src : names, k, n, read, lacks, hold } }], between.pairs);
+      answer(S, between);
       return;
     }
   } finally {
@@ -1930,6 +2571,7 @@ function refreshed(S, side, chains) {
  * @param {{pos: number, width: number} | null} [passage] the passage held, in the text the pane shows; read from the pane where none is given
  */
 export function act(side, passage = null) {
+  actedIn(scene);
   whenSet(() => { const S = scene; if (S && S[side].read != null) readIn(side, S[side].read, passage); });
 }
 
@@ -1946,6 +2588,7 @@ export function act(side, passage = null) {
  * @param {{pos: number, width: number} | null} [passage] the passage held, in the text the pane shows; read from the pane where none is given
  */
 export function readIn(side, k, passage = null) {
+  actedIn(scene);
   whenSet(() => {
     const S = scene, E = els;
     if (!S || !E) return;
@@ -1958,14 +2601,15 @@ export function readIn(side, k, passage = null) {
   });
 }
 
-/** set the two ends level — each pane's matched line at one height, the bands' and lines' ends measured anew — once no pane is being set again (`whenSet`) */
-export function relevel() { whenSet(level); }
+/** set the two ends level — each pane's matched line at one height, the bands' and lines' ends measured anew — once no pane is being set again (`whenSet`); an act in the scene (`actedIn`) */
+export function relevel() { actedIn(scene); whenSet(level); }
 
-/** the two ends set level now (`relevel`), the stop's next act going to its first passage again */
+/** the two ends set level now (`relevel`), the stop's next act going to its first passage again, none gone to */
 function level() {
   const S = scene, E = els;
   if (!S || !E) return;
   S.next = 0;
+  S.stepped = null;
   roomBelow(E);
   const la = S.level.a != null ? lineIn(E.paneA, S.a.names, S.level.a, restIn(S.a.d.blocks, S.level.a)) : null;
   const lb = S.level.b != null ? lineIn(E.paneB, S.b.names, S.level.b, restIn(S.b.d.blocks, S.level.b)) : null;
@@ -1985,15 +2629,18 @@ function level() {
  * stands — a whole document's at its pane's facing edge, level with the
  * line's other end — then each facing edge whole-document ends meet
  * (`wholeEdges`, `drawEdge`); the strokes' buttons and the stop placed
- * (`placeStrokes`, `placeStop`).
+ * (`placeStrokes`, `placeStop`) — a stop the reader returned to standing
+ * until it is answered and they have moved on from it, then under the
+ * scene's own rules.
  */
 export function draw() {
   const S = scene, E = els;
   if (!S || !E) return;
+  if (S.returned && S.returned.answer && movedOn(S.returned)) S.returned = null;
   if (sizeOf(E) !== S.size) { fitMeasure(E); roomBelow(E); measure(); }
   const cv = E.canvas, ctx = cv.getContext('2d'); if (!ctx) return;
   const c = cv.getBoundingClientRect();
-  const DPR = Math.min(2, window.devicePixelRatio || 1);
+  const DPR = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
   cv.width = Math.round(c.width * DPR); cv.height = Math.round(c.height * DPR);
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0); ctx.clearRect(0, 0, c.width, c.height);
   /** a pane on the canvas: its inner edges, its visible content's top and bottom, its content's top */
@@ -2168,21 +2815,25 @@ export const strokeWords = (s, A, B, ownerOf) => ({ count: countOf(s), changes: 
  * comes into view and taken down as it leaves, the rest moved in place so a
  * focus standing on one stays, and those in view in the order they stand,
  * top to bottom, which is the documents' order. One taken down while it held
- * the focus hands it to pane B (FP-20).
+ * the focus hands it to pane B (FP-20). A returned stroke's button stands
+ * whatever the draw drew, named as its answer tells until all of it holds
+ * (`nameReturned`), placed at its stroke where the draw drew it, else where
+ * what it stood for stands (`placeReturned`).
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  */
 function placeStrokes(E, S) {
   const box = E.strokes, held = typeof document !== 'undefined' ? document.activeElement : null;
+  const R = S.returned && S.returned.stop.kind === 'stroke' ? S.returned : null;
   const want = new Set(drawnStrokes.map((d) => d.key));
   for (const b of /** @type {HTMLElement[]} */ ([...box.children])) {
-    if (want.has(b.dataset.stroke || '')) continue;
+    if (want.has(b.dataset.stroke || '') || (R && b === R.el)) continue;
     b.remove();
     if (b === held) FOCUS.land(E.paneB, {});
   }
   const root = E.root.getBoundingClientRect(), [A, B] = sidesOf(S);
   /** @type {Element | null} the button standing after the last placed, before which one coming into view is set */
-  let next = box.firstElementChild;
+  let next = box.firstElementChild, placed = false;
   for (const d of drawnStrokes) {
     const s = S.strokes.find((x) => x.key === d.key);
     if (!s) continue;
@@ -2195,24 +2846,33 @@ function placeStrokes(E, S) {
       btn.dataset.stroke = d.key;
       box.insertBefore(btn, next);
     }
-    const words = strokeWords(s, A, B, LAYER.originOwner);
-    if (btn.getAttribute('aria-label') !== t('L.scene.stroke.name', words)) btn.setAttribute('aria-label', t('L.scene.stroke.name', words));
-    const n = s.changes.length > 1 ? String(s.changes.length) : '';
-    if (btn.textContent !== n) btn.innerHTML = n ? `<span class="n">${esc(n)}</span>` : '';
+    const mine = !!R && btn === R.el;
+    placed = placed || mine;
+    if (!mine || (R && R.answer && R.answer.holds === 'all')) {
+      const words = strokeWords(s, A, B, LAYER.originOwner);
+      if (btn.getAttribute('aria-label') !== t('L.scene.stroke.name', words)) btn.setAttribute('aria-label', t('L.scene.stroke.name', words));
+      const n = s.changes.length > 1 ? String(s.changes.length) : '';
+      if (btn.textContent !== n) btn.innerHTML = n ? `<span class="n">${esc(n)}</span>` : '';
+    }
     btn.style.left = d.at.x - root.left - E.root.clientLeft + 'px';
     btn.style.top = d.at.y - root.top - E.root.clientTop + 'px';
   }
+  if (R && !placed) placeReturned(E, S, R);
 }
 
 /**
  * A stroke's act (see the head), its button pressed: its changes shown
  * whole in a list at the button (`showChanges`), taking the focus where a
- * key pressed it.
+ * key pressed it; a returned stroke's, its own (`returnedAct`) — any other an
+ * act in the scene, moving the reader on from a stop they returned to.
  * @param {string} key the stroke's
  * @param {boolean} byKey
  */
 function strokeAct(key, byKey) {
-  const S = scene, E = els, s = S ? S.strokes.find((x) => x.key === key) : undefined, btn = E ? buttonOf(E, key) : null;
+  const S = scene, R = S ? S.returned : null;
+  if (S && R && R.stop.kind === 'stroke' && R.stop.key === key) { returnedAct(S, R, byKey); return; }
+  actedIn(S);
+  const E = els, s = S ? S.strokes.find((x) => x.key === key) : undefined, btn = E ? buttonOf(E, key) : null;
   if (!S || !s || !btn) return;
   showChanges(S, key, countOf(s), rowsOf(S, s), btn, byKey);
 }
@@ -2324,11 +2984,14 @@ export function stopFor(shared, next, view) {
  * the passage's bearing, over the stub's triangle, its count shown where the
  * shared passages are two or more and its name ST's words; its first
  * appearance in the scene said in the status region (FP-28); hidden where
- * every one stands in view, the focus it held handed to pane B (FP-20).
+ * every one stands in view, the focus it held handed to pane B (FP-20). A
+ * returned stop stands where what it stood for stands (`placeReturned`),
+ * named as its answer tells, never hidden.
  * @param {NonNullable<typeof els>} E
  * @param {Scene} S
  */
 function placeStop(E, S) {
+  if (S.returned && S.returned.stop.kind === 'shared') { placeReturned(E, S, S.returned); return; }
   const pane = E.paneB, stop = E.stop, held = typeof document !== 'undefined' && document.activeElement === stop;
   const to = stopFor(S.shared, S.next, { top: pane.scrollTop, h: pane.clientHeight });
   S.at = to ? to.i : null;
@@ -2351,8 +3014,8 @@ function placeStop(E, S) {
  * The stop's act (see the head): pane B scrolled so the shared passage the
  * stop stands for has its first line level with the near passage's, where
  * that line stands in pane A's view, else LEVEL_AT px below the pane's top;
- * the next act going to the passage after it, round again. Nothing else
- * moves.
+ * the next act going to the passage after it, round again, the passage gone
+ * to kept by its bytes' identity. Nothing else moves.
  */
 function toShared() {
   const S = scene, E = els;
@@ -2362,6 +3025,7 @@ function toShared() {
   const seen = la ? la.y - E.paneA.scrollTop : -1;
   E.paneB.scrollTop = p.top - (la && seen >= 0 && seen <= E.paneA.clientHeight ? la.top - E.paneA.scrollTop : LEVEL_AT);
   S.next = (S.at + 1) % S.shared.length;
+  S.stepped = idsIn(S.b, p.pos, p.width);
   draw();
 }
 
@@ -2395,7 +3059,9 @@ function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */
  * End the scene where it stands, as a navigation act's departure ends it —
  * its own end, a Back from its entry, among them (§2.5; see the head): the
  * plane as it was, and no trail move of its own; a stroke's list standing
- * dismissed first, its focus handed back to the stroke; a pane being set
+ * dismissed first, its focus handed back to the stroke, and the face a stop
+ * the reader returned to shows at its site — an act waiting on its answer
+ * abandoned with it; a pane being set
  * again sets nothing once it ends, and an act waiting on it is dropped. The
  * plane is put back in the page's order before the focus returns, for the
  * element the scene was opened from — the walk's item, a corner — takes no
@@ -2405,6 +3071,7 @@ function stub(/** @type {CanvasRenderingContext2D} */ ctx, /** @type {number} */
 export function close() {
   if (!scene || !els) return;
   if (scene.listing && HOST.currentIs('stroke:' + scene.listing.key)) HOST.dismiss();
+  if (scene.returned && scene.returned.face && HOST.currentIs(scene.returned.face)) HOST.dismiss();
   scene = null;
   drawnTies = [];
   drawnEdges = [];
@@ -2412,6 +3079,7 @@ export function close() {
   coverPlane(false);
   els.root.classList.remove('on'); els.paneA.innerHTML = ''; els.paneB.innerHTML = ''; els.strokes.innerHTML = ''; delete els.bar.dataset.face;
   els.stop.hidden = true;
+  els.stop.textContent = '';
   FOCUS.close('scene');
   markDirty();
 }
@@ -2466,6 +3134,7 @@ export function key(k) {
     return true;
   }
   if (!MOVES.includes(k)) return false;
+  actedIn(S);
   if (!S.updating) return move(pane, k);
   S.waiting.push(() => move(pane, k));
   return true;

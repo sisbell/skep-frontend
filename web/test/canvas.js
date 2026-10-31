@@ -62,7 +62,7 @@ export function recorder() {
     lineTo: (/** @type {number} */ x, /** @type {number} */ y) => { line = { x, y }; path.push({ op: 'line', at: [line] }); },
     closePath: () => { path.push({ op: 'close', at: [] }); },
     save: none, restore: none, translate: none, rotate: none,
-    setTransform: none, strokeRect: none, arc: none, arcTo: none,
+    setTransform: none, clearRect: none, strokeRect: none, arc: none, arcTo: none,
     fillRect: (/** @type {number} */ x, /** @type {number} */ y, /** @type {number} */ w, /** @type {number} */ h) => { rects.push({ x, y, w, h, fill: ctx.fillStyle }); },
     stroke: () => { strokes.push({ hue: ctx.strokeStyle, dash, cap: ctx.lineCap, width: ctx.lineWidth, start, curve, line, path: [...path] }); },
     fill: () => { fills.push(ctx.fillStyle); filled.push({ fill: ctx.fillStyle, path: [...path] }); },

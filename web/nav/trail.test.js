@@ -11,8 +11,9 @@
 // a change of the page's class dropping what each entry's view read; an
 // entry a reading scene was opened as re-taking the scene as the reader
 // leaves it, its place never re-taken, and a change of class dropping where
-// they stood in it; and a reset waking every move waiting on a claim (FP-22,
-// FP-25, FP-29).
+// they stood in it and keeping the stop they stood on, a stop the panes'
+// `compare` draws by its bytes' identity; and a reset waking every move
+// waiting on a claim (FP-22, FP-25, FP-27, FP-29).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as T from './trail.js';
@@ -231,6 +232,16 @@ test('a change of the page\'s class drops where the reader stood in each pane of
   T.back({ ...at(20), scene: leftAt(5, 'a:corner') });
   T.classChanged();
   assert.deepEqual(s.scene, { a: 'd', b: 'f', held: {}, left: { panes: { a: version('d'), b: version('f') }, spots: null, stop: 'a:corner' } });
+});
+
+test('a change of the page\'s class keeps a stop the panes\' `compare` draws as the reader left it, named by its bytes\' identity alone — a draft\'s positions never named (FP-27, FP-29)', () => {
+  /** the stop at a band's clipped end, standing for a passage of the draft f by its bytes */
+  const stop = /** @type {import('../scene/scene.js').SharedStop} */ ({ kind: 'shared', at: { board: '', doc: 'f', member: null, plain: false, pos: null, width: null, ids: [{ prefix: 'f.0.1', ordinal: 14, width: 7 }] }, stepped: null, place: { x: 300, y: 120 } });
+  T.push(e('d', 1), null);
+  const s = T.push({ ...e('f', 2), scene: { a: 'd', b: 'f', held: { wholeB: true }, left: null } }, at(10));
+  T.back({ ...at(20), scene: leftAt(5, stop) });
+  T.classChanged();
+  assert.deepEqual(s.scene?.left, { panes: { a: version('d'), b: version('f') }, spots: null, stop });
 });
 
 test('a reset wakes every move waiting on a claim', async () => {

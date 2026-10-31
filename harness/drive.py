@@ -10,7 +10,12 @@ navigates to the gate URL, settles on the page's own signal, and runs the
 cases (one module per fence class under cases/), each writing
 results/<class>.json. Every browser claim the structure record left
 unverified (§10 items 16–21) is settled by what these runs observe and
-recorded in results/browser.json. Kills the Chrome it started."""
+recorded in results/browser.json. A case may hold the page's next `op` call
+of a kind at its answer (`hold_op`, CDP's Fetch domain), every other call to
+the provider passing as it comes, and answer it as it chooses — its own
+answer, that answer cut, a refusal in the bridge's envelope, or no answer
+(`answer_op`) — reads alone, the provider answering every call as asked; the
+domain off again (`unhold`). Kills the Chrome it started."""
 import argparse, base64, json, os, shutil, subprocess, sys, tempfile, time, urllib.request, urllib.error
 import websocket
 
@@ -37,6 +42,7 @@ class Driver:
         self.exceptions = []
         self.requests = []
         self._extra = {}  # raw request/response headers (Network.*ExtraInfo) that arrived before their request
+        self.held = None  # the call held at its answer (`hold_op`): what it matches, and the paused request once the page makes it
 
     def launch(self):
         self.proc = subprocess.Popen([self.chrome] + self.flags + ['about:blank'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -110,6 +116,65 @@ class Driver:
             for r in self.requests:
                 if r['id'] == rid:
                     r['failed'] = p.get('errorText'); r['blocked'] = p.get('blockedReason'); r['cors'] = p.get('corsErrorStatus')
+        elif meth == 'Fetch.requestPaused':
+            self._paused(p)
+
+    def _send(self, method, params):
+        """a command sent with no wait for its reply: the receive loops pass a reply that is no call's over"""
+        self.n += 1
+        self.ws.send(json.dumps({'id': self.n, 'method': method, 'params': params}))
+
+    def _paused(self, p):
+        """a call the Fetch domain paused at its answer: the held call's first match kept until `answer_op`, every other passed
+        at once — sent, never awaited, for this runs inside another call's receive loop"""
+        h = self.held
+        if h and h['paused'] is None and h['match']((p.get('request') or {}).get('postData') or ''):
+            h['paused'] = p
+            return
+        self._send('Fetch.continueRequest', {'requestId': p['requestId']})
+
+    def hold_op(self, op):
+        """the page's next `op` call of the kind named held at its answer until `answer_op`; every other call to the provider's
+        `/bridge/op` passes as it comes"""
+        self.held = {'match': lambda post: ('"op":"%s"' % op) in post, 'paused': None}
+        self.call('Fetch.enable', {'patterns': [{'urlPattern': '*/bridge/op', 'requestStage': 'Response'}]})
+
+    def answer_op(self, how='whole', cut=None, refusal=None, wait_s=20):
+        """the held call answered: `whole` its own answer; `cut` its own answer's body as the function `cut` returns it from
+        the body parsed; `refused` the bridge's envelope holding `refusal`; `fails` no answer, the request failed as a closed
+        port fails it. Waits `wait_s` at most for the page to make the call; false where it made none. Every call after it
+        passes as it comes"""
+        h = self.held
+        t0 = time.time()
+        while h and h['paused'] is None and time.time() - t0 < wait_s:
+            self.pump_events(0.1)
+        p = h and h['paused']
+        self.held = None
+        if not p:
+            return False
+        rid = p['requestId']
+        if how == 'whole':
+            self.call('Fetch.continueRequest', {'requestId': rid})
+        elif how == 'fails':
+            self.call('Fetch.failRequest', {'requestId': rid, 'errorReason': 'Failed'})
+        else:
+            if how == 'refused':
+                body = {'refused': refusal}
+            else:
+                got = self.call('Fetch.getResponseBody', {'requestId': rid})
+                body = cut(json.loads(base64.b64decode(got['body']) if got.get('base64Encoded') else got['body']))
+            headers = [x for x in p.get('responseHeaders') or [] if x['name'].lower() not in ('content-length', 'content-encoding')]
+            self.call('Fetch.fulfillRequest', {'requestId': rid, 'responseCode': p.get('responseStatusCode') or 200, 'responseHeaders': headers,
+                                               'body': base64.b64encode(json.dumps(body).encode()).decode()})
+        return True
+
+    def unhold(self):
+        """the Fetch domain off: a call still held answered whole, and every call after it passes as it comes"""
+        p = self.held and self.held['paused']
+        self.held = None
+        if p:
+            self._send('Fetch.continueRequest', {'requestId': p['requestId']})
+        self.call('Fetch.disable')
 
     def pump_events(self, seconds=0.2):
         """drain pending events for a while"""

@@ -8,8 +8,10 @@
 // the stretches together holding every position, none of them all of it;
 // part, the stretches together holding less; none, no stretch — the dead
 // end's face says it (foundations §2.3). A passage named by identity — a
-// followed far end, its slot's stored span — is read through the identity of
-// the bytes of each run its text holds it in (`piecesOf`), each run cut where
+// followed far end, its slot's stored span, the passage a reading scene's
+// stop stood for, which may cross several runs of an image — is read through
+// the identity of the bytes of each run its text holds it in (`piecesOf`),
+// each run cut where
 // its bytes break the passage's order into the stretches an arrival
 // outlines (`stretchesOf`). Where no answer told — a read refused by any
 // name but a size's, or still refused for its size once asked in parts
@@ -30,7 +32,8 @@
 // (`stepFrom`); the landing stands at the first (`Pieces.order`).
 // The line (`lineOf`), for part, pieces and couldn't tell, names the passage
 // by what it was to the reader — the selection, the text they were reading,
-// a followed link's passage — and the text by F.floating's two forms, a
+// a followed link's passage, what a reading scene's stop the reader returned
+// to stood for — and the text by F.floating's two forms, a
 // member or a bare address's current text (`whereOf`); where the landing
 // shows withheld text a part's line says the rest may be under it. A landing
 // in one run says it so (N-GO's `landing`), counting no runs; a landing in
@@ -84,7 +87,7 @@ import { t } from '../strings.js';
  * @property {number} places the stretches of the text holding any of it
  */
 
-/** @typedef {'selected' | 'reading' | 'followed'} Subject the passage as the reader had it: the selection, carried; the text they were reading, carried with nothing selected; a followed link's far end */
+/** @typedef {'selected' | 'reading' | 'followed' | 'stop'} Subject the passage as the reader had it: the selection, carried; the text they were reading, carried with nothing selected; a followed link's far end; what a reading scene's stop stood for as the reader left it (SC's) */
 
 /** @typedef {{kind: string, name: string}} Met a refusal as its reason is read: its kind and its one name (O-FACES' key) */
 
@@ -124,31 +127,42 @@ export function heldOf(pieces, width, places = pieces.length) {
  * the head): each run's bytes, by identity in the text's order, cut to the
  * passage's own, one piece where they meet it — bytes that follow on in the
  * text and in the passage both extending the piece before them — and the
- * runs holding any of it, its places. A run whose bytes are not named counts
- * as none.
- * @param {ISpan} passage
+ * runs holding any of it, its places. A passage named by several spans is
+ * one passage, each span after the one before it in the passage's order. A
+ * run whose bytes are not named counts as none.
+ * @param {ISpan | ISpan[]} passage
  * @param {ISpan[][]} runs each run of the text, its bytes by identity in the text's order
  * @returns {{pieces: Piece[], places: number}}
  */
 export function piecesOf(passage, runs) {
+  /** each span of the passage, with where it begins in the passage, counted from 0 */
+  const spans = [];
+  let o = 0;
+  for (const p of Array.isArray(passage) ? passage : [passage]) { spans.push({ ...p, from: o }); o += p.width; }
   /** @type {Piece[]} */
   const pieces = [];
   let places = 0;
   for (const ids of runs) {
-    let holds = false;
-    /** @type {{piece: Piece, end: number} | null} the last piece, where its bytes reached the end of their own run of the image, and the permanent ordinal they end at */
+    let holds = false, text = 0;
+    /** @type {{piece: Piece, text: number} | null} the last piece, and where in the run's text its bytes end */
     let last = null;
     for (const s of ids) {
-      const lo = Math.max(s.ordinal, passage.ordinal), hi = Math.min(s.ordinal + s.width, passage.ordinal + passage.width);
-      if (s.prefix !== passage.prefix || lo >= hi) { last = null; continue; }
-      holds = true;
-      /** @type {Piece | null} the piece these bytes follow on from */
-      const on = last && lo === s.ordinal && last.end === lo ? last.piece : null;
-      if (on) on.width += hi - lo;
-      /** @type {Piece} */
-      const piece = on || { at: lo - passage.ordinal, width: hi - lo };
-      if (!on) pieces.push(piece);
-      last = hi === s.ordinal + s.width ? { piece, end: hi } : null;
+      const hits = spans.flatMap((p) => {
+        const lo = Math.max(s.ordinal, p.ordinal), hi = Math.min(s.ordinal + s.width, p.ordinal + p.width);
+        return p.prefix === s.prefix && lo < hi ? [{ lo, hi, at: p.from + lo - p.ordinal }] : [];
+      }).sort((x, y) => x.lo - y.lo);
+      for (const h of hits) {
+        holds = true;
+        const at = text + h.lo - s.ordinal, width = h.hi - h.lo;
+        /** @type {Piece | null} the piece these bytes follow on from */
+        const on = last && last.text === at && last.piece.at + last.piece.width === h.at ? last.piece : null;
+        if (on) on.width += width;
+        /** @type {Piece} */
+        const piece = on || { at: h.at, width };
+        if (!on) pieces.push(piece);
+        last = { piece, text: at + width };
+      }
+      text += s.width;
     }
     if (holds) places++;
   }
@@ -345,7 +359,7 @@ export const retries = (r) => !r || r.kind === 'unreachable' || lostSession(r) |
 export const whereOf = (/** @type {string} */ addr) => { const k = memberOf(addr); return k != null ? t('L.held.member', { k }) : t('L.held.current', { D: addr }); };
 
 /** each subject's words */
-const SUBJECTS = { selected: 'L.held.selected', reading: 'L.held.reading', followed: 'L.held.followed' };
+const SUBJECTS = { selected: 'L.held.selected', reading: 'L.held.reading', followed: 'L.held.followed', stop: 'L.held.stop' };
 
 /**
  * What the line says of what a text holds (see the head): part, the rest

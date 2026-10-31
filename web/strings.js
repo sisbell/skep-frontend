@@ -84,7 +84,7 @@ export const STRINGS = {
   'B1.doc_not_registered': { text: '⟨address⟩ — nothing this board will say about this address; whether a document exists, is published or is being withheld, nothing here asserts', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S8' },
   'B1.invalid': { text: 'no such link or slot', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S6' },
   'B1.unreachable': { text: '⟨address⟩ — the node ⟨node⟩ is not answering; the address is real', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S8' },
-  'B1.try-again': { text: 'try again', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S8' },
+  'B1.try-again': { text: 'try again', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S8; B1-S9: a stop returned to' },
   'B1.unregistered': { text: '⟨prefix⟩ — an unregistered prefix; unknown is a visible state', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S8' },
   'B1.C-72': { text: 'named here: the documents you can read whose arrangement holds this passage; a copy pasted as fresh bytes, and any document you may not read, are not counted', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S10' },
   'B1.guest-line': { text: 'reading as a guest', cls: 'DRAFT', source: 'designs/B1-reader.md', screen: 'B1-S1' },
@@ -115,7 +115,7 @@ export const STRINGS = {
   'F.venue.org': { text: 'PUBLIC org board', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
   'F.daemon.running': { text: 'board running', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
   'F.daemon.stopped': { text: 'board stopped — nothing is lost; the operator\'s restart brings it back', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
-  'F.daemon.unreachable': { text: 'board unreachable', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
+  'F.daemon.unreachable': { text: 'board unreachable', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line; B1-S9: a stop returned to' },
   'F.daemon.notebook.stopped': { text: 'your notebook has stopped — what was kept is safe; start it here', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
   'F.daemon.notebook.halted': { text: 'writes stopped on your notebook — reading continues; stop it and start it again here to clear this', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the one line' },
   'F.others-count': { text: '+⟨n⟩ others', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S1' },
@@ -134,9 +134,9 @@ export const STRINGS = {
   // the arrival said once in the status region where a reading scene's pane pins to the version it shows (FP-23):
   // F.arrival's first two clauses, its act the pane's corner's "read version ⟨n⟩" (F.versions.read) and no "show what changed"
   'F.arrival.pane': { text: 'you are reading version ⟨k⟩ — a newer version has arrived', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S9' },
-  'F.floating': { text: 'its passage is not in ⟨D⟩\'s current text', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6, B1-S4' },
+  'F.floating': { text: 'its passage is not in ⟨D⟩\'s current text', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6, B1-S4; B1-S9: a stop returned to' },
   'F.floating.read': { text: 'read version ⟨k⟩, the last that holds it', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6' },
-  'F.floating.member': { text: 'its passage is not in version ⟨k⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6' },
+  'F.floating.member': { text: 'its passage is not in version ⟨k⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S6; B1-S9: a stop returned to' },
   'F.swallow': { text: 'typing goes nowhere here — to go somewhere, the address line: ⟨LEAP chord⟩', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the plane (K-9)' },
   'F.swallow.space': { text: 'Space does not page here — ⟨paging key⟩ does', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'the plane (K-9)' },
   'F.board-residue': { text: 'not counted here: drafts you may not read, links homed on other boards — counted from ⟨floor⟩; documents unchanged since then are not shown', cls: 'DRAFT', source: 'designs/foundations.md', screen: 'B1-S3' },
@@ -266,6 +266,15 @@ export const STRINGS = {
   'L.scene.change.text': { text: '“⟨text⟩”', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
   'L.scene.change.none': { text: 'nothing', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke between two bands', lane: true },
   'L.scene.stroke.gone': { text: 'no longer drawn here — the text was set again', cls: 'DRAFT', source: '', screen: 'B1-S9: a stroke\'s list', lane: true },
+  // a stop drawn only by the panes' `compare` that the reader left from, returned to (SC's): it stands with the landing,
+  // named for its kind and what it stood for, what only that read gives — its count — being read until it answers; then,
+  // where what it stood for holds only in part, nowhere, or no answer told, its kind's words before the line's (FP-21)
+  'L.scene.shared.returned': { text: 'show where ⟨D⟩ holds the same material, “⟨text⟩” — how many passages hold it is being read', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
+  'L.scene.shared.returned.away': { text: 'show where ⟨D⟩ held the same material — how many passages hold it is being read', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
+  'L.scene.stroke.kind': { text: 'a change between two shared passages', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
+  'L.scene.stroke.returned': { text: 'a change between two shared passages — how many it stands for is being read: ⟨changes⟩', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
+  'L.scene.stroke.returned.away': { text: 'a change between two shared passages the texts no longer hold where it stood — how many it stands for is being read', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
+  'L.scene.stop.said': { text: '⟨stop⟩ — ⟨said⟩', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
   'L.at-position': { text: 'at position ⟨p⟩', cls: 'DRAFT', source: '', screen: 'B1-S5', lane: true },
   // a continuation's mark (`markCount`): its count in what it counts — the words of the target that opens its list, its stop's
   // in the ARIA mirror and its list's caption; and the name and place of the member the walk's ring stands on, on the mark
@@ -335,27 +344,28 @@ export const STRINGS = {
   // a jump reading, said where the camera is until its read answers; a jump reaching, said at the act's site while only a read
   // can place its destination, the camera still (FP-25)
   'L.reading': { text: 'reading ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reading: where the camera is, else the one line', lane: true },
-  'L.reaching': { text: 'reaching ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reaching: at the act\'s site, else the one line', lane: true },
+  'L.reaching': { text: 'reaching ⟨address⟩…', cls: 'DRAFT', source: '', screen: 'a jump reaching: at the act\'s site, else the one line; B1-S9: a stop returned to, pressed while its count is read', lane: true },
   // a landing's line (FP-21): what of the passage carried or followed the text landed in holds, where it stands in one run
   // and that is not all of it, or where no answer told — the passage named by what it was to the reader, the text by
   // F.floating's two forms, the withheld text after it; the same words at a drawn link's far end before departure, the
   // places it stands in counted there alone (BM-HELD's `lineOf`)
-  'L.held.part': { text: 'only part of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
-  'L.held.pieces': { text: 'all of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
+  'L.held.part': { text: 'only part of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
+  'L.held.pieces': { text: 'all of ⟨subject⟩ is in ⟨where⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
   'L.held.places': { text: ' — in ⟨n⟩ places', cls: 'DRAFT', source: '', screen: 'a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
   'L.held.withheld': { text: '; the rest may be under the withheld text here', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
-  'L.held.unknown': { text: 'couldn\'t tell whether ⟨where⟩ holds ⟨subject⟩: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
+  'L.held.unknown': { text: 'couldn\'t tell whether ⟨where⟩ holds ⟨subject⟩: ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror; B1-S9: a stop returned to', lane: true },
   'L.held.selected': { text: 'what you selected', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
   'L.held.reading': { text: 'the text you were reading', cls: 'DRAFT', source: '', screen: 'a landing\'s line', lane: true },
   'L.held.followed': { text: 'its passage', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end: its stub, its symbol, B1-S5, the ARIA mirror', lane: true },
-  'L.held.member': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end', lane: true },
-  'L.held.current': { text: '⟨D⟩\'s current text', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end', lane: true },
+  'L.held.stop': { text: 'what this stop stood for', cls: 'DRAFT', source: '', screen: 'B1-S9: a stop the reader left from, returned to', lane: true },
+  'L.held.member': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end; B1-S9: a stop returned to', lane: true },
+  'L.held.current': { text: '⟨D⟩\'s current text', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a link\'s far end; B1-S9: a stop returned to', lane: true },
   // why no answer told (BM-HELD's `whyOf`), where no entry above already says it: never the refusal's token, never "compare"
-  'L.held.why.busy': { text: 'the board was busy', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
-  'L.held.why.size': { text: 'it is too large to check, even in parts', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
-  'L.held.why.withheld': { text: 'some of it is withheld from you', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
-  'L.held.why.unread': { text: 'its text could not be read', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row', lane: true },
-  'L.held.why.other': { text: 'the board did not say', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row; a link\'s far end', lane: true },
+  'L.held.why.busy': { text: 'the board was busy', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row; B1-S9: a stop returned to', lane: true },
+  'L.held.why.size': { text: 'it is too large to check, even in parts', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row; B1-S9: a stop returned to', lane: true },
+  'L.held.why.withheld': { text: 'some of it is withheld from you', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row; B1-S9: a stop returned to', lane: true },
+  'L.held.why.unread': { text: 'its text could not be read', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row; B1-S9: a stop returned to', lane: true },
+  'L.held.why.other': { text: 'the board did not say', cls: 'DRAFT', source: '', screen: 'a landing\'s line; a versions row; a link\'s far end; B1-S9: a stop returned to', lane: true },
   // the runs' labels (FP-21): an arrival in several runs labels each at the text's edge — its piece in the passage's own
   // order, a repeat's word, and at the run the landing stands at how much of the passage the runs hold and whether the
   // text holds it in another order (BM-HELD's `labelOf`, `mergedLabel`); the landing's line steps among them

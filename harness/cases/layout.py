@@ -338,9 +338,21 @@ the line runs short"): a moment raised through the gate's door and folded by
 Esc stands as its segment of the one line, whole inside the line in a window
 WALK_PX wide while the acting-as segment before it is cut short, its act
 unfolding it, the shell told nothing.
+A STOP ONLY THE PANES' `compare` DRAWS, LEFT FROM AND RETURNED TO (FP-20,
+FP-21, FP-25, FP-34): a whole-document scene left from the stop at a band's
+clipped end, and from a stroke's button, by WHOLE BOARD, and returned to by
+Back with its `compare` held at its answer by the driver (`hold_op`): before
+the answer the stop stands with the landing holding the focus, named for its
+kind, its count being read, the mirror out of the page's order holding no
+focus, the AX tree's focused node the stop; after it — whole, cut to part or
+to none of what the stop stood for, refused, and whole with the reader moved
+on first — the focus kept, or left where they put it, the stop filled in or
+saying so in FP-21's words at its site; Enter made before the answer
+waiting, abandoned by Esc, made by a whole answer; a stop this board stands
+none of said unmeasured.
 The measuring code is the page's (`driftSample`, `overlapCheck`,
 `beamAnchors`, `tailAnchors`, `arrivalAnchors`, `spanRects`, `visible`, `barsOf`, `labels`,
-`scene.at`, `scene.ties`, `scene.edges`, `scene.stop`, `scene.strokes`, `scene.text`, `scene.measured`, the frame buffer, `beamLabels`, `connections`, `tails`,
+`scene.at`, `scene.ties`, `scene.edges`, `scene.stop`, `scene.returned`, `scene.strokes`, `scene.text`, `scene.measured`, the frame buffer, `beamLabels`, `connections`, `tails`,
 `fold`, `centreOf`, `posAt`) save the trail's, the stub's triangle's and the
 followed link's beam's, which read the canvases' pixels here, the stub's
 places, which the projection gives here, the symbols', which reads the
@@ -1398,6 +1410,213 @@ def scene_strokes_hold(ctx, r):
             f'{name}: Enter at the stroke shows its list with the focus on its first row, and Esc returns the focus to the stroke (FP-20)', dict(keyed, back=back))
     ctx.js('window.__skep.scene.close()')
     ctx.frames(2)
+    return figures
+
+
+# the board busy, as the bridge hands a refusal up: one a retry may tell past
+BUSY = {'kind': 'refused', 'name': 'busy', 'status': 503, 'code': 'busy', 'detail': None, 'op': 'compare', 'body': None, 'site': {}}
+
+
+def without(pairs, side, lo, hi):
+    """`compare`'s pairs as the board answers them, the positions [lo, hi) of one side's text (`u1` or `u2`) taken out of
+    every run — a run crossing them cut in two — so the answer holds none of those bytes"""
+    other, out = ('u2' if side == 'u1' else 'u1'), []
+    for q in pairs:
+        if q[side].get('subspace') != '1':
+            out.append(q)
+            continue
+        at, w = int(q[side]['ordinal']), int(q['width'])
+        for a, b in ((at, min(at + w, lo)), (max(at, hi), at + w)):
+            if b > a:
+                out.append(dict(q, width=str(b - a), **{side: dict(q[side], ordinal=str(a)), other: dict(q[other], ordinal=str(int(q[other]['ordinal']) + a - at))}))
+    return out
+
+
+def cutting(*cuts):
+    """the provider's `compare` answer cut, for the driver's `answer_op`: its pairs without the positions each `(side, lo, hi)`
+    names"""
+    def cut(body):
+        res = dict(body.get('result') or {})
+        for side, lo, hi in cuts:
+            res['pairs'] = without(res.get('pairs') or [], side, lo, hi)
+        return dict(body, result=res)
+    return cut
+
+
+def where_focus(ctx):
+    """where the platform's focus stands, the ARIA mirror beside it: the focused element's id, whether the mirror is out of the
+    page's order and holds the focus, and its current item"""
+    return ctx.js('''(() => { const e = document.activeElement, m = document.getElementById('mirror');
+      return {at: e ? e.id || e.tagName.toLowerCase() : null, inert: !!m.inert, holds: !!e && m.contains(e), item: window.__skep.mirror.index()}; })()''')
+
+
+def focused_ax(ctx):
+    """the node the AX tree holds the focus on, past the document's own: its role and its name; None where CDP does not answer"""
+    ax = ctx.drv.ax_tree()
+    if 'error' in ax:
+        return None
+    on = [n for n in ax.get('nodes', []) if (n.get('role') or {}).get('value') != 'RootWebArea'
+          and any(p['name'] == 'focused' and (p.get('value') or {}).get('value') for p in n.get('properties', []))]
+    n = on[-1] if on else {}
+    return {'role': (n.get('role') or {}).get('value'), 'name': (n.get('name') or {}).get('value')}
+
+
+def back_to(ctx):
+    """the reading scene left by WHOLE BOARD and returned to by Back, its `compare` held at its answer (the driver's
+    `hold_op`): the stop the reader returned to as it stands"""
+    ctx.drv.hold_op('compare')
+    ctx.drv.key('0', code='Digit0', mods=('Meta',))
+    ctx.settle()
+    ctx.frames(2)
+    ctx.drv.key('[', code='BracketLeft', mods=('Meta',))
+    ctx.settle()
+    ctx.frames(3)
+    return ctx.js('window.__skep.scene.returned()')
+
+
+def answered_now(ctx):
+    """the stop the reader returned to once the page took the held `compare`'s answer; None where the scene let it go"""
+    wait_for(ctx, '(() => { const r = window.__skep.scene.returned(); return !r || !!r.answer; })()')
+    return ctx.js('window.__skep.scene.returned()')
+
+
+def stop_returns(ctx, r, name, sel, kind, cuts, made):
+    """THE RETURNS to a stop only the panes' `compare` draws (see `scene_return_holds`), from the stop `sel` names: the scene
+    left by WHOLE BOARD and returned to by Back once for each answer — whole, part, none, refused, and whole with the reader
+    moved on first by Tab — the focus, the mirror and the AX tree held before the answer and after it; then Enter made
+    before the answer and abandoned by Esc, and Enter made before a whole answer, which makes it (`made`, a page expression
+    whose value the act changes). Its figures"""
+    seen = {}
+    D = ctx.js('window.__skep.scene.panes().b.shows')
+    tr = lambda sid, vals: ctx.js('(async () => (await import("./strings.js")).t(%s, %s))()' % (json.dumps(sid), json.dumps(vals)))
+    kind_words = tr('L.scene.shared.1', {'D': D}) if kind == 'shared' else tr('L.scene.stroke.kind', {})
+    focus = 'document.querySelector(%s).focus()' % json.dumps(sel)
+    ctx.js(focus)
+    ctx.frames(1)
+    for outcome in ('whole', 'part', 'none', 'refused', 'moved on first'):
+        ret, before, ax = back_to(ctx), where_focus(ctx), None
+        ax = focused_ax(ctx)
+        r.check(bool(ret) and ret['kind'] == kind and ret['answer'] is None and ret['shown'] and ret['reading'] and before['at'] == ret['id']
+                and before['inert'] and not before['holds'] and (ret['name'] or '').startswith(kind_words),
+                f'{name}, returned to ({outcome}): before its `compare` answers, the stop stands with the landing and holds the focus — the mirror out of the page\'s order, holding none — named for its kind, its count being read',
+                {'returned': ret, 'focus': before})
+        if ax is not None:
+            r.check(bool(ret) and ax['name'] == ret['name'], f'{name}, returned to ({outcome}): the AX tree\'s focused node is the stop, named for its kind with its count being read', {'ax': ax, 'name': ret and ret['name']})
+        tabbed = None
+        if outcome == 'moved on first':
+            ctx.drv.key('Tab')
+            ctx.frames(2)
+            tabbed = where_focus(ctx)
+        how = {'whole': 'whole', 'moved on first': 'whole', 'part': 'cut', 'none': 'cut', 'refused': 'refused'}[outcome]
+        released = ctx.drv.answer_op(how, cut=cuts.get(outcome), refusal=BUSY)
+        after = answered_now(ctx)
+        ctx.frames(2)
+        now, ax2, face = where_focus(ctx), focused_ax(ctx), ctx.overlay_shown()
+        o = ctx.js('window.__skep.overlay().id')
+        a = (after or {}).get('answer') or {}
+        held = now['inert'] and not now['holds'] and now['item'] == before['item']
+        if outcome == 'moved on first':
+            r.check(released and bool(tabbed) and tabbed['at'] != before['at'] and now['at'] == tabbed['at'] and o is None and held,
+                    f'{name}, the reader moved on first: the answer moves nothing — the focus where Tab put it, no face, the mirror as the return left it', {'tabbed': tabbed, 'now': now, 'overlay': o, 'returned': after})
+        else:
+            want = {'whole': ('all',), 'part': ('part', 'pieces'), 'none': ('none',), 'refused': ('unknown',)}[outcome]
+            words = tr('L.scene.stop.said', {'stop': kind_words, 'said': a.get('words') or ''}) if outcome != 'whole' else None
+            face_ok = o is None if outcome == 'whole' else (o == ('face:floating' if outcome == 'none' else 'face:held') and (a.get('words') or '') in face['text'] and face['acts'] == (1 if outcome == 'refused' else 0))
+            r.check(released and bool(after) and a.get('holds') in want and now['at'] == before['at'] and held and not after['reading'] and (outcome == 'whole' or after['name'] == words) and face_ok,
+                    f'{name}, answered {outcome}: the focus kept on the stop, the mirror as the return left it, its count no longer read'
+                    + ('' if outcome == 'whole' else ' — it stays, saying so in FP-21\'s words in its name and at its site' + (', "try again" offered' if outcome == 'refused' else '')),
+                    {'returned': after, 'focus': now, 'overlay': o, 'face': face, 'want': words})
+            if ax2 is not None and after:
+                r.check(ax2['name'] == after['name'], f'{name}, answered {outcome}: the AX tree\'s focused node is still the stop, named as it is now', {'ax': ax2, 'name': after['name']})
+        seen[outcome] = {'answer': a, 'focus': now['at'], 'overlay': o}
+        if o:
+            ctx.js('window.__skep.dismiss()')
+        ctx.js(focus)
+        ctx.frames(1)
+    # Enter made before the answer, then Esc: abandoned, and the whole answer then moves nothing
+    back_to(ctx)
+    ctx.drv.key('Enter')
+    ctx.frames(2)
+    waits = ctx.js('({o: window.__skep.overlay().id, r: window.__skep.scene.returned()})')
+    ctx.drv.key('Escape')
+    ctx.frames(2)
+    gone = ctx.js('({o: window.__skep.overlay().id, r: window.__skep.scene.returned(), open: window.__skep.scene.isOpen()})')
+    was = ctx.js(made)
+    ctx.drv.answer_op('whole')
+    after = answered_now(ctx)
+    ctx.frames(2)
+    r.check((waits['o'] or '').startswith('reaching:') and bool(waits['r']) and waits['r']['waiting'] and gone['o'] is None and gone['open'] and bool(gone['r']) and not gone['r']['waiting']
+            and ctx.js(made) == was and bool(after) and (after.get('answer') or {}).get('holds') == 'all' and where_focus(ctx)['at'] == after['id'],
+            f'{name}: Enter made while its `compare` is read waits, its reaching face at the stop; Esc dismisses the face and abandons it, the scene standing; the whole answer then moves nothing, the focus on the stop',
+            {'waiting': waits, 'after_esc': gone, 'answered': after, 'made': [was, ctx.js(made)]})
+    # Enter made before a whole answer: made as it answers
+    ctx.js(focus)
+    back_to(ctx)
+    ctx.drv.key('Enter')
+    ctx.frames(2)
+    was = ctx.js(made)
+    ctx.drv.answer_op('whole')
+    answered_now(ctx)
+    ctx.frames(3)
+    o = ctx.js('window.__skep.overlay().id')
+    r.check(ctx.js(made) != was and not (o or '').startswith('reaching:'), f'{name}: Enter made while its `compare` is read is made as the whole answer comes, its reaching face gone', {'made': [was, ctx.js(made)], 'overlay': o})
+    seen['enter'] = {'made': [was, ctx.js(made)]}
+    if o:
+        ctx.js('window.__skep.dismiss()')
+    return seen
+
+
+def scene_return_holds(ctx, r):
+    """A STOP ONLY THE PANES' `compare` DRAWS, LEFT FROM AND RETURNED TO (FP-20, FP-21, FP-25, FP-34): a whole-document scene
+    — the far end naming pane B's document whole, which shows before its `compare` answers — left from the stop at a band's
+    clipped end, and from a stroke's button, by WHOLE BOARD, and returned to by Back with that `compare` held at its answer
+    (the driver's `hold_op`): before the answer the stop stands with the landing and holds the focus, named for its kind,
+    its count being read, the mirror out of the page's order holding no focus, the AX tree's focused node the stop; the
+    answer released whole, cut to part of what the stop stood for or none of it (`cutting`), refused — the board busy —
+    and whole with the reader moved on first: the focus kept, or where they put it, the stop filled in or saying so in
+    FP-21's words; Enter made before the answer waiting, Esc abandoning it, a whole answer making it (`stop_returns`).
+    Where this board stands no such stop it is said unmeasured (FP-18). The driver's hold is lifted after; its figures"""
+    figures = {}
+    try:
+        # the stop at a band's clipped end: the draft's passage holding the window run's material beside the first edition,
+        # whose passage holding it stands below pane B's view
+        ctx.leap(WINDOW[2], 1)
+        ctx.js('window.__skep.scene.open(%s, %s, %s)' % (json.dumps(WINDOW[2]), json.dumps(DOC), json.dumps({'posA': 1, 'widthA': WINDOW[1], 'wholeB': True})))
+        wait_for(ctx, 'window.__skep.scene.isOpen() && window.__skep.scene.pairs().pairs.length > 0')
+        s = ctx.js('window.__skep.scene.stop()') or {}
+        if s.get('shared') and not s.get('shown'):
+            s = scrolled_past(ctx, s['shared'][0])
+        at = s.get('at')
+        if s.get('shown') and at and at['width'] >= 2:
+            half = at['pos'] + at['width'] // 2
+            figures['shared'] = stop_returns(ctx, r, 'the stop at a band\'s clipped end', '#scenestop', 'shared',
+                                             {'part': cutting(('u2', half, at['pos'] + at['width'])), 'none': cutting(('u2', at['pos'], at['pos'] + at['width']))},
+                                             'document.getElementById("sceneB").scrollTop')
+        else:
+            r.note('a return to the stop at a band\'s clipped end: unmeasured — no scene here stands one (FP-18)')
+            figures['shared'] = 'unmeasured'
+        ctx.js('window.__skep.scene.close()')
+        ctx.frames(2)
+        # a stroke's button: the edition with two members' first member beside its latest, the latest named whole
+        first = VERSIONED + '.1'
+        ctx.leap(first, None)
+        ctx.js('window.__skep.scene.open(%s, %s, %s)' % (json.dumps(first), json.dumps(VERSIONED), json.dumps({'wholeB': True})))
+        wait_for(ctx, 'window.__skep.scene.isOpen() && window.__skep.scene.pairs().pairs.length > 0')
+        strokes, tried = stroke_at_junction(ctx, (scene_level(ctx) or {}).get('pairs') or [])
+        one = next((x for x in strokes if len(x['changes']) == 1), strokes[0] if strokes else None)
+        if one:
+            c0, c1 = one['changes'][0], one['changes'][-1]
+            before, after = c0['a']['from'] - 1, c1['a']['to']
+            figures['stroke'] = stop_returns(ctx, r, 'a stroke\'s button', '[id="%s"]' % one['id'], 'stroke',
+                                             {'part': cutting(('u1', after, after + 1)), 'none': cutting(('u1', before, before + 1), ('u1', after, after + 1))},
+                                             'window.__skep.overlay().id')
+        else:
+            r.note(f'a return to a stroke\'s button: unmeasured — no stroke stands in this board\'s whole-document scene ({tried} junctions tried) (FP-18)')
+            figures['stroke'] = 'unmeasured'
+        ctx.js('window.__skep.scene.close()')
+        ctx.frames(2)
+    finally:
+        ctx.drv.unhold()
     return figures
 
 
@@ -3577,5 +3796,6 @@ def run(ctx):
     r.figures['longest'] = longest_holds(ctx, r)
     r.figures['walk'] = walk_holds(ctx, r)
     r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)
+    r.figures['scene_return'] = scene_return_holds(ctx, r)
     ctx.leap(DOC, WINDOW[0])
     return r.out()

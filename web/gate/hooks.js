@@ -45,7 +45,8 @@
 // (`scene.at`), its bands beside their runs' lines and its lines beside their
 // passages' lines, and their panes' facing edges (`scene.ties`), the facing
 // edges a whole document's ends meet (`scene.edges`), the stop at a band's
-// clipped end (`scene.stop`), the strokes between its bands and a stretch of
+// clipped end (`scene.stop`), a stop the reader returned to that only the
+// panes' `compare` draws (`scene.returned`), the strokes between its bands and a stretch of
 // a pane's characters read from the DOM (`scene.strokes`, `scene.text`), each pane
 // as it stands and whether one is being set again (`scene.panes`,
 // `scene.updating`), a version read in a pane's place (`scene.read`); and the
@@ -701,6 +702,8 @@ export function install(deps) {
       edges: () => SCENE.edges(),
       /** the stop at a band's clipped end, as the last draw placed it (FP-20): whether it stands, the shared passages it steps through, the one it goes to now and the one after, its name, its count and its rect on screen; null where no scene stands */
       stop: () => SCENE.stop(),
+      /** a stop drawn only by the panes' `compare` the reader left from, as it stands returned (FP-20, FP-34, FP-21): its kind and key, its element's id, whether it is shown, its name, its count and whether that is being read, its rect on screen, what the answer told and its words, whether an act on it waits, whether the reader moved on, the overlay it shows; null where none stands */
+      returned: () => SCENE.returned(),
       /** the strokes between the bands in view, as the last draw drew them (FP-26): each its key, its ends and halves on screen, its changes, its button's point, id, name, count and rect */
       strokes: () => SCENE.strokes(),
       /** a stretch of a pane's characters read from the DOM, apart from the scene's own reading (`sceneText`) */

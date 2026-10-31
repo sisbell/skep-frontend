@@ -1,6 +1,8 @@
 // BM-HELD's test: the four states a text holds a passage in, read by
-// position and by the identity of each run's bytes; the line's words by
-// subject and by the text's address, the places counted at a far end alone;
+// position and by the identity of each run's bytes, a passage named by spans
+// of several I-spaces one passage; the line's words by subject — what a
+// returned stop stood for among them — and by the text's address, the places
+// counted at a far end alone;
 // why a line could not tell, keyed on the refusal's name and kind, never its
 // token, a lost session the text that could not be read (FP-28), and "try
 // again" only where a retry can change the answer; a drawn link's far end's
@@ -45,6 +47,20 @@ test('a passage named by identity is read through each run\'s bytes: bytes follo
   assert.deepEqual(piecesOf(passage, [[{ prefix: P, ordinal: 13, width: 12 }, { prefix: P, ordinal: 3, width: 10 }]]), { pieces: [{ at: 10, width: 12 }, { at: 0, width: 10 }], places: 1 }, 'its halves swapped in one run: two pieces, one place');
   assert.deepEqual(piecesOf(passage, [[{ prefix: '1.0.1.0.3.0.1', ordinal: 3, width: 22 }]]), { pieces: [], places: 0 }, 'another document\'s bytes at those ordinals: none of it');
   assert.equal(heldOf(piecesOf(passage, [[{ prefix: P, ordinal: 3, width: 4 }], [{ prefix: P, ordinal: 20, width: 5 }]]).pieces, 22).holds, 'part');
+});
+
+test('a passage named by spans of two I-spaces is one passage, each span after the one before it: a run following on through both holds it in one piece, the spans swapped two pieces, either alone part', () => {
+  const P = '1.0.1.0.9.0.1', Q = '1.0.1.0.4.0.1', passage = [{ prefix: P, ordinal: 55, width: 5 }, { prefix: Q, ordinal: 1, width: 3 }];
+  const both = piecesOf(passage, [[{ prefix: P, ordinal: 50, width: 10 }, { prefix: Q, ordinal: 1, width: 10 }]]);
+  assert.deepEqual([both, heldOf(both.pieces, 8).holds], [{ pieces: [{ at: 0, width: 8 }], places: 1 }, 'all'], 'through both, in one run: all of it');
+  const swapped = piecesOf(passage, [[{ prefix: Q, ordinal: 1, width: 3 }, { prefix: P, ordinal: 55, width: 5 }]]);
+  assert.deepEqual([swapped, heldOf(swapped.pieces, 8).holds], [{ pieces: [{ at: 5, width: 3 }, { at: 0, width: 5 }], places: 1 }, 'pieces'], 'the spans swapped in the text: two pieces');
+  assert.equal(heldOf(piecesOf(passage, [[{ prefix: Q, ordinal: 1, width: 3 }]]).pieces, 8).holds, 'part', 'the second span alone: part');
+});
+
+test('the line names what a stop the reader returned to stood for', () => {
+  const said = /** @type {import('./held.js').Said} */ (saidOf({ holds: 'part', places: 1 }, 'stop', '1.0.1.0.4'));
+  assert.equal(lineOf(said), t('L.held.part', { subject: t('L.held.stop'), where: t('L.held.current', { D: '1.0.1.0.4' }) }));
 });
 
 test('the line in the decision\'s words: a part with its places, the text a member\'s version or a bare address\'s current text, pieces, the withheld text\'s clause on a part alone; never "missing", "removed", "deleted" or "compare"', () => {

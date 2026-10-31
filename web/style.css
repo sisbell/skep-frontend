@@ -366,5 +366,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #scenestrokes button { position:absolute; z-index:1; height:26px; min-width:16px; padding:0 3px 15px; margin:0; border:0; border-radius:2px; background:transparent; color:var(--ink); font:11px/11px var(--face-client); font-variant-numeric:tabular-nums; cursor:pointer; transform:translate(-50%, -50%); }
 #scenestrokes button .n { background:var(--bg); padding:0 2px; }
 #scenestrokes button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+/* a stop the reader returned to while the panes' compare is read (SC's; FP-34): its count an empty box of its own width */
+#scenestop .n.reading, #scenestrokes button .n.reading { display:inline-block; width:1ch; height:.8em; padding:0; border:1px solid var(--line); background:transparent; vertical-align:middle; }
 /* a stroke's list (SC's, at O-HOST's): each change's characters in the reading face, their white space kept */
 #overlay .changes .chars { font-family:var(--face-reading); white-space:pre-wrap; }
