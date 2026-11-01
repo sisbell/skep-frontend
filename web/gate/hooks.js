@@ -739,7 +739,7 @@ export function install(deps) {
     firstLine: (/** @type {string} */ addr) => ({ first: LAYER.firstOf(REC.doc(addr)).map((r) => r.text).join(''), lead: LAYER.firstLine(REC.doc(addr)) }),
     /** P-REG's address size and weight, at which the harness measures an address's dots apart (FP-18) */
     address: () => ({ ...ADDRESS }),
-    /** where a reading view of a document at a position centres, framing the column with its corner and its edge (T-LAYER's `frameOf`) */
+    /** where a reading view of a document at a position centres, framing the column with its corner and its edge, and the document's em there — on its lines as rendered, set first where they are not (T-LAYER's `frameOf`) */
     frameOf: (/** @type {string} */ addr, /** @type {number | null} */ pos = null) => LAYER.frameOf(addr, pos),
     refresh: async () => { const ts = /** @type {number[]} */ ([]); await new Promise((res) => { const step = (/** @type {number} */ t) => { ts.push(t); if (ts.length < 60) requestAnimationFrame(step); else res(undefined); }; requestAnimationFrame(step); }); const iv = []; for (let i = 1; i < ts.length; i++) iv.push(ts[i] - ts[i - 1]); return r2(1000 / Math.max(0.1, pct(iv, 50))); },
   };

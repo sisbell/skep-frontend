@@ -24,7 +24,12 @@ window put back the full measure again, the line under the view's centre at
 the height it stood; and Back made once the window is put back lands on the
 passage left in the narrow one, which the view left there no longer reads —
 the same line under the visible view's centre, at the height it stood and at
-its em (issue #221); the corner (foundations §3.1: every mounted document at reading scale carries
+its em (issue #221); and a LEAP into the first edition at the window run's
+first position, its lines set at no measure in force there — the view away
+at the far edition as the window narrowed, its fold P-LAY's prediction, half
+a line or more off at that position — lands on its lines as rendered, the
+camera at that line's frame, 1 px either way, at the landing's em (issue
+#296); the corner (foundations §3.1: every mounted document at reading scale carries
 one beside its article, clipped by no box of the page and reaching into no
 other document's box, mounted or only drawn; the first edition's in view
 below the one line at each level, held there while its first column's top
@@ -3712,6 +3717,45 @@ def back_after_resize(ctx, r):
     return {'window': NARROW_PX, 'pos': under, 'dy_from_the_view_left': stale, 'before': before, 'after': after}
 
 
+def leap_onto_rendered(ctx, r):
+    """THE LINES A LEAP LANDS ON (issue #296: "The flight lands on the line the passage is actually on"): the first edition
+    set at the full measure, the view away at the far edition and the window set NARROW_PX wide — the first edition's lines
+    set at no measure in force, its fold P-LAY's prediction, which places the line holding the window run's first position
+    half a line or more from where the platform sets it; a LEAP there lands on its lines as rendered: the camera at the
+    frame of that line in the fold the first edition stands mounted in, 1 px either way, its em the landing's; its
+    figures"""
+    pos = WINDOW[0]
+    ctx.leap(DOC, pos)
+    ctx.leap(FAR_LEAP)
+    was = ctx.resize(NARROW_PX, 900)
+    try:
+        ctx.settle()
+        ctx.frames(3)
+        # the line's middle as the first edition's fold stands unmounted, read by the hook that sets no line
+        predicted = ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), pos))
+        ctx.leap(DOC, pos)
+        ctx.frames(3)
+        cam, fit = ctx.camera(), ctx.js('window.__skep.measure()')
+        at = ctx.js('window.__skep.frameOf(%s, %d)' % (json.dumps(DOC), pos))
+        rendered = ctx.js('window.__skep.centreOf(%s, %d)' % (json.dumps(DOC), pos))
+        mounted = ctx.js('window.__skep.mounted(%s)' % json.dumps(DOC))
+    finally:
+        ctx.resize(*was)
+    ctx.settle()
+    ctx.frames(3)
+    line_px = fit['px'] * LINE_RATIO
+    apart = math.hypot(rendered['x'] - predicted['x'], rendered['y'] - predicted['y']) * cam['scale']
+    r.check(apart >= line_px / 2,
+            f'a {NARROW_PX} px window, the view away: the first edition\'s fold, its lines set at no measure in force, places the line holding the window run\'s first position half a line or more from where the platform sets it',
+            {'pos': pos, 'predicted': predicted, 'rendered': rendered, 'apart_px': apart, 'line_px': line_px})
+    off = {'dx': (at['x'] - cam['x']) * cam['scale'], 'dy': (at['y'] - cam['y']) * cam['scale']}
+    em = mounted['fs'] * cam['scale'] if mounted else None
+    r.check(mounted is not None and abs(off['dx']) <= 1 and abs(off['dy']) <= 1 and abs(em - fit['px']) < 1e-6,
+            f'a LEAP into the first edition there lands on its lines as rendered: the camera at the frame of the line holding that position in the fold it stands mounted in, 1 px either way, at the landing\'s em, {fit["px"]} px (issue #296)',
+            {'pos': pos, 'camera': cam, 'frame': at, 'off_px': off, 'em': em, 'landing_px': fit['px']})
+    return {'window': NARROW_PX, 'pos': pos, 'apart_px': apart, 'line_px': line_px, 'off_px': off, 'em': em}
+
+
 def step(ctx, em):
     """the camera over the first edition at an em, and what the frames that step drew show: the most documents any of
     them drew as bars under their own mounted text (`both`), and yielded to text that was not mounted (`neither`)"""
@@ -3803,6 +3847,8 @@ def run(ctx):
     r.figures['measure_narrows'] = measure_narrows(ctx, r)
     # Back after the window was put back from a narrow one lands on the passage left there (issue #221)
     r.figures['back_after_resize'] = back_after_resize(ctx, r)
+    # a LEAP into a document whose lines are set at no measure in force lands on its lines as rendered (issue #296)
+    r.figures['leap_onto_rendered'] = leap_onto_rendered(ctx, r)
     # a continuous zoom: drift sampled across a sweep, about the first column
     first = ctx.js('window.__skep.centreOf(%s, null)' % json.dumps(DOC))
     s_lo = ctx.js('window.__skep.scaleFor(%s, "em", 7)' % json.dumps(DOC))

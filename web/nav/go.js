@@ -1277,17 +1277,18 @@ function failed(act, entry, n, byKey) {
 }
 
 /**
- * The view that reads a document at a position: its size (T-LAYER's fold) at
- * the landing's em — the reading size, smaller only where even a column of
- * one character is wider than the view (P-CAM's `landingPx`) — on the line
- * holding the position, framing its column with both its margins — the
- * corner on its left, the edge on its right (T-LAYER's `frameOf`; FP-26) —
- * the first column where none is named.
+ * The view that reads a document at a position: its size (the fold T-LAYER
+ * frames it in) at the landing's em — the reading size, smaller only where
+ * even a column of one character is wider than the view (P-CAM's
+ * `landingPx`) — on the line holding the position, framing its column with
+ * both its margins — the corner on its left, the edge on its right
+ * (T-LAYER's `frameOf`; FP-26) — the first column where none is named.
  * @param {string} addr
  * @param {number | null} pos
  */
 export function viewFor(addr, pos) {
-  return CAM.viewAt(LAYER.frameOf(addr, pos), LAYER.foldOf(REC.doc(addr)).fs, CAM.landingPx());
+  const at = LAYER.frameOf(addr, pos);
+  return CAM.viewAt(at, at.fs, CAM.landingPx());
 }
 
 /**

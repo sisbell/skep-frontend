@@ -113,9 +113,10 @@
 // the same fold's lines, measured where the document's text has been set in
 // view (`measureInView`: a frame's
 // budget of MEASURE_BUDGET_MS, nearest the view's centre first, no document
-// below BARS_EM), so mid scale greeks the columns the mount sets and no word
-// moves at the hand-off; the loop runs `frame` before P-RENDER draws, so the
-// canvas draws or yields each line by the lines standing this frame
+// below BARS_EM) or a view is placed on it (`renderedFold`), so mid scale
+// greeks the columns the mount sets and no word moves at the hand-off; the
+// loop runs `frame` before P-RENDER draws, so the canvas draws or yields
+// each line by the lines standing this frame
 // (`standing`), and outlines an arrival's runs on the fold's own lines where
 // no part of them stands (`foldBoxes`; FP-21). When a document is set again
 // while it is read — its article rebuilt in another fold, set again from the
@@ -139,7 +140,7 @@
 // reaches (N-GO's) and lands at the view that sets the line it names there in
 // the place and at the size on screen of the line read, in the fold its
 // document stands in then, its lines set as the platform sets them first
-// (`keptAt`).
+// (`keptAt`, `renderedFold`).
 // The paging key continues at the next column's top at reading scale
 // (`pageTarget`). A document's region is its outline's bounds widened
 // leftward by the strip its corner stands in (`regionOf`); whether it meets
@@ -194,7 +195,10 @@
 // label held there. A reading view frames the column it reads with the
 // corner and the edge beside it, at the landing's em (`frameOf`; P-CAM's
 // `landingPx`) — a document read whole, its first column where the visible
-// view holds it, else its head at the top of the visible view (FP-37). A
+// view holds it, else its head at the top of the visible view (FP-37) — on
+// the document's lines as rendered, set first where its fold does not stand
+// on them at the measure in force (`renderedFold`; FP-12, FP-25), so a
+// camera bound there lands on the line its mounted text sets. A
 // kept document — one M-PUMP holds as it stands past a second while it reads
 // it again (M-PUMP's `kept`; FP-23) — says so once, wherever its name is, in
 // one clause (`keptIn` by `keptWords`, which the one line and the ARIA mirror
@@ -292,7 +296,7 @@
 // the mount log (`mountedSet`, `mounts`); APP records each frame's counts
 // (`frameStats`).
 // Rules: FP-1, FP-2, FP-8, FP-10, FP-12, FP-20, FP-21, FP-22, FP-23, FP-24,
-// FP-26, FP-29, FP-30, FP-34, FP-37.
+// FP-25, FP-26, FP-29, FP-30, FP-34, FP-37.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -903,30 +907,33 @@ export function centreOf(addr, pos) {
 
 /**
  * Where a reading view of a document at a position centres so that it frames
- * the column (FP-26): the line holding the
- * position (`centreOf`) — the first column's middle where none is named —
- * moved across so the column's text, the corner beside it on its left in the
- * form its room and the view's fit hold at that size (`roomBeside`,
- * `formFor`; none where the corner stands by its row's first column instead)
- * and its edge on its right stand centred together; where none is named and
- * the visible view below the one line holds less than the first column's
- * depth, moved down so the column's outline tops the visible view and the
- * document's head stands in it, never under the line (FP-37). N-GO's landing
- * and N-WALK's flight to a span read it; the measure in force is one the view
- * holds them at, at the landing's em (P-LAY's `fitFor`, P-CAM's `landingPx`).
+ * the column (FP-26), and the em of the fold it frames: the line holding the
+ * position (`centreOf`) — the first column's middle where none is named — in
+ * the document's lines as rendered, set first where they are not
+ * (`renderedFold`), moved across so the column's text, the corner beside it
+ * on its left in the form its room and the view's fit hold at that size
+ * (`roomBeside`, `formFor`; none where the corner stands by its row's first
+ * column instead) and its edge on its right stand centred together; where
+ * none is named and the visible view below the one line holds less than the
+ * first column's depth, moved down so the column's outline tops the visible
+ * view and the document's head stands in it, never under the line (FP-37).
+ * N-GO's landing and N-WALK's flight to a span read it, the view's scale from
+ * its em (P-CAM's `viewAt`), so the place and the size are one fold's; the
+ * measure in force is one the view holds them at, at the landing's em (P-LAY's
+ * `fitFor`, P-CAM's `landingPx`).
  * @param {string} addr
  * @param {number | null} pos
  * @param {number} [fsPx] the em the view reads the document at, in px: the landing's where none is given
- * @returns {{x: number, y: number}}
+ * @returns {{x: number, y: number, fs: number}} the view's centre, and the document's em in the fold it frames, in world units
  */
 export function frameOf(addr, pos, fsPx = landingPx()) {
-  const f = foldOf(REC.doc(addr)), c = centreOf(addr, pos), scale = fsPx / f.fs;
+  const f = renderedFold(REC.doc(addr)), c = centreOf(addr, pos), scale = fsPx / f.fs;
   const at = roomBeside(f, clearLeftOf(addr), pos == null ? 0 : Math.max(0, placeIn(f, pos).column), scale);
   const corner = at.first || at.room >= cornerWidth(true) ? cornerWidth(formFor(at.room, false, fit().compact) === 'compact') + CORNER_GAP : 0;
   const x = c.x + (EDGE * fsPx - corner) / 2 / scale, seen = visibleView(read.top()), first = f.columns[0];
-  if (pos != null || first.h * scale <= seen.h) return { x, y: c.y };
+  if (pos != null || first.h * scale <= seen.h) return { x, y: c.y, fs: f.fs };
   const { VH } = viewport();
-  return { x, y: docBox(addr).y + first.y - (GUTTER / 2) * f.fs + (VH / 2 - seen.y) / scale };
+  return { x, y: docBox(addr).y + first.y - (GUTTER / 2) * f.fs + (VH / 2 - seen.y) / scale, fs: f.fs };
 }
 
 /**
@@ -1634,6 +1641,25 @@ function measureAside(d) {
 }
 
 /**
+ * A document's fold on its lines as rendered (see the head): its lines set as
+ * the platform sets them first where its fold does not stand on them at the
+ * measure in force — the layer's style set to that measure (`setMeasure`),
+ * its article laid out aside (`measureAside`) — so a view placed on it now is
+ * placed on the lines its article mounts in (`frameOf`, `keptAt`). The fold
+ * as it stands where the platform does not set the articles, or the page
+ * holds none of the document's text.
+ * @param {Doc} d
+ * @returns {Fold}
+ */
+function renderedFold(d) {
+  const f = foldOf(d);
+  if (!engine || !layer || d.from < 0 || (folds.get(d.addr) || { set: true }).set) return f;
+  setMeasure();
+  measureAside(d);
+  return foldOf(d);
+}
+
+/**
  * The owner account of an origin document, by the one owner rule
  * (M-REC's `ownerAccount`): the owner a withheld run's placeholder names
  * (T-ARTICLE's `placeholderOf`) — on the plane, in a pane, and in the ARIA
@@ -2305,7 +2331,7 @@ function aroundOf(d, f, view) {
  * — the version its box shows now — takes the place and the size on screen of
  * the line the view read: `keepPlace`'s arithmetic (P-LAY's `holdOf`, P-CAM's
  * `reanchored`); that fold's lines set as the platform sets them first where
- * they are not set at the measure in force (`measureAside`), so the view is
+ * they are not set at the measure in force (`renderedFold`), so the view is
  * placed on the lines the reader will meet. The view itself where that line
  * stands where the line read stood. Null where the page holds none of that
  * document's text: a read must bring it first.
@@ -2317,8 +2343,7 @@ function aroundOf(d, f, view) {
 export function keptAt(view, r, to) {
   const addr = read.shown(r.addr), d = REC.has(addr) ? REC.doc(addr) : null;
   if (!d || d.from < 0) return null;
-  if (engine && layer) { foldOf(d); if (!(folds.get(addr) || { set: true }).set) { setMeasure(); measureAside(d); } }
-  const f = foldOf(d), now = placeIn(f, to), s = f.fs / r.fs;
+  const f = renderedFold(d), now = placeIn(f, to), s = f.fs / r.fs;
   if (now.x === r.line.x && now.y === r.line.y && s === 1) return view;
   const box = docBox(addr);
   const a = { x: box.x + r.p.x, y: box.y + r.p.y }, b = { x: box.x + now.x + (r.p.x - r.line.x) * s, y: box.y + now.y + (r.p.y - r.line.y) * s };

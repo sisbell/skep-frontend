@@ -274,7 +274,7 @@ test('a held label\'s line never meets its corner: where the corner\'s box meets
   for (const s of LAYER.besideCorner(line, band, { x: 300, y: 50, w: 77, h: 60 })) assert.ok(s.x + s.w <= 300 - g || s.x >= 377 + g, `${JSON.stringify(s)} a gap clear of the corner`);
 });
 
-test('a reading view frames its column with both its margins: the corner on its left in the form its room holds at the reading size, the edge on its right, the three centred in the view together (issue #151: "The landing frames the column, not the middle of a line")', () => {
+test('a reading view frames its column with both its margins: the corner on its left in the form its room holds at the reading size, the edge on its right, the three centred in the view together, the frame carrying the em of the fold it frames (issue #151: "The landing frames the column, not the middle of a line")', () => {
   deliver();
   CAM._reset(); CAM.setViewport(1440, 900);
   try {
@@ -290,6 +290,7 @@ test('a reading view frames its column with both its margins: the corner on its 
       assert.ok(Math.abs((left + right) / 2 - 720) < 1e-6, `${what}: the corner, the column and its edge centred together — ${left} … ${right}`);
       assert.ok(left >= 0 && right <= 1440 && Math.abs(CAM.cam.scale * fs - read) < 1e-9, `${what}: all in view, at the reading size, ${read} px an em`);
       assert.equal(LAYER.frameOf(D, pos).y, LAYER.centreOf(D, pos).y, `${what}: on the line holding it`);
+      assert.equal(LAYER.frameOf(D, pos).fs, fs, `${what}: the em of the fold it frames`);
     }
   } finally { CAM._reset(); }
 });

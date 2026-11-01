@@ -717,8 +717,8 @@ async function flyToFocus(move) {
     const most = LAYER.atReadingScale(addr, from) ? CAM.landingPx() / LAYER.foldOf(REC.doc(addr)).fs : LAYER.scaleBelowReading(addr);
     await CAM.fly({ ...v, scale: Math.min(v.scale, most) }, 300);
   } else {
-    const d = REC.doc(focus.addr);
-    await CAM.fly(CAM.viewAt(LAYER.frameOf(focus.addr, focus.pos), LAYER.foldOf(d).fs), 260);
+    const at = LAYER.frameOf(focus.addr, focus.pos);
+    await CAM.fly(CAM.viewAt(at, at.fs), 260);
   }
   CAM.markDirty();
 }
