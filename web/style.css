@@ -93,6 +93,8 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 #line > .seg { flex:0 1000 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; }
 #line > button.address { flex:0 1 auto; }
 #line > .seg.walk { flex:none; overflow:visible; color:var(--warn); }
+/* a kept document's clause beside the address that names it (FP-23): its words whole, never cut short of room */
+#line > .seg.kept { flex:none; overflow:visible; color:#cfd6df; }
 
 /* LEAP — the address segment opened (K-30); above the reading scene, which it may open over, and above the overlay and the
    notice below it, so nothing shown while the reader types in it covers its input or its rows (FP-36) */
@@ -205,6 +207,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
    item's words its gap does not hold — a run's count stacked below its mark by the `top` T-ARTICLE sets */
 .dtext .edge { position:absolute; top:0; left:calc(100% + var(--edge-in)); width:var(--edge-w); font-size:var(--count); font-weight:400; color:var(--dim); white-space:normal; text-indent:0; }
 .dtext .wh-mark { color:#cfd6df; }
+/* a withheld run's kept sign, below its mark and its count: empty, until the origin's edition claims stand held as they are
+   read again (T-LAYER fills it in place), so it sets no line */
+.dtext .wh-kept { color:#cfd6df; }
 .dtext .withheld { display:block; position:relative; isolation:isolate; margin:0; color:#cfd6df; }
 .dtext .withheld::before { content:''; position:absolute; inset:0; z-index:-1;
   background: repeating-linear-gradient(45deg, #1b1f25, #1b1f25 6px, #22272f 6px, #22272f 12px);
@@ -251,6 +256,9 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 .corner .chip { display:inline-block; border:1px solid #4a5260; border-radius:3px; padding:0 .4em; color:#e8e6e1; margin-top:.3em; }
 .corner .chip.glyph { border:0; padding:0; }
 .corner .whole-links { display:block; margin-top:.3em; }
+/* a kept document's clause, the corner's last item on a line of its own: its words whole in either form, wrapped and never
+   cut, the room above it its own padding, so the corner is placed by the items above it alone (T-LAYER) */
+.corner .kept { display:block; padding-top:.3em; color:#cfd6df; white-space:normal; }
 /* A LABEL HELD BELOW THE ONE LINE over a mounted article's text (issue #169's design decision: "Held below the line"): one line
    of its type across the box's visible part, on the box's ground T-LAYER sets, with no rule, shadow, tint or border, so the box
    reads as continuing above; each part where P-LABEL's held line sets it, each run of it in its face. It takes the pointer where its
@@ -285,6 +293,7 @@ kbd { color:var(--dim); font-size:.9em; margin-left:.3em; }
 :is(#overlay, #notice) .x:hover { color:var(--ink); background:none; }
 #overlay .reason[hidden] { display:none; }
 :is(#overlay, #notice) .face-text { color:#ffe2b8; margin:4px 0; }
+:is(#overlay, #notice) .kept { color:#cfd6df; margin:4px 0 0; }
 /* a withheld document's own words (issue #179's design decision): its address before them where the face stands away from
    it; its head the disclosure whose act opens the rest and folds it, drawn as the words with the disclosure's mark, which
    assistive technology does not read — the button's state says it */

@@ -17,10 +17,11 @@
 // address" alone; a jump's face out of view and a walk's folded moment as
 // segments; a reading scene's close said after it until the next act, whole
 // once a session and as forward ›'s label after; the places the line names;
-// and the cover — no position at a
-// refused document, the transient taken down and the class change said once
-// with what it covered (FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28,
-// FP-29, FP-34, FP-35, FP-36).
+// a kept document's clause in a segment of its own beside the address that
+// names it, said once as it appears and once as it lifts; and the cover — no
+// position at a refused document, the transient taken down and the class
+// change said once with what it covered (FP-13, FP-20, FP-21, FP-22, FP-23,
+// FP-25, FP-26, FP-28, FP-29, FP-33, FP-34, FP-35, FP-36).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -33,7 +34,7 @@ import * as LAYER from '../text/layer.js';
 import { docBox, accountCell, boardCell, depthOfDoc, DOC_W } from '../plane/projection.js';
 import { STANDARD_FS } from '../plane/layout.js';
 import { lodOf, LOD_TXT_LO } from '../plane/lod.js';
-import { t, tHTML, addressedHTML } from '../strings.js';
+import { t, tHTML, addressedHTML, lastRead } from '../strings.js';
 import { esc } from '../util.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
@@ -670,6 +671,44 @@ test('at a document a read refused — a covered draft among them — the line n
 });
 
 // placed last: the death empties the model every test above reads
+test('a kept document the line names carries its clause in a segment of its own right after the address segment — an edition\'s its links\' stamp — and none while the line names no document; the clause said politely once as it appears and once as it lifts, in the step its read sets the document (issue #345\'s design decision)', async (ctx) => {
+  // D read whole again, its links among it, where a test before this one dropped what it held
+  const unasked = fake.unanswered.length;
+  await PUMP.loadWhole(D);
+  assert.ok(REC.doc(D).linksRead, 'D\'s links read');
+  ctx.mock.timers.enable({ apis: ['setTimeout'] });
+  const flush = () => new Promise((r) => setImmediate(r));
+  const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };
+  FOCUS.attach({ live: /** @type {any} */ (live) });
+  LINE.attach(/** @type {any} */ (host), { open() {}, back() {}, forward() {}, trailList() {}, signIn() {} });
+  over(D, 14 / STANDARD_FS);
+  await WALK.focusTo(D, 15);
+  LINE.render(true);
+  live.textContent = '';
+  const text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  fake.fire('feed', { board: 'b-1', update: { position: 40, at: 40, op: 'insert', docs: [D], class: 'published' } });
+  LINE.render();
+  assert.ok(!host.innerHTML.includes('seg kept'), 'within the second: no clause');
+  ctx.mock.timers.tick(PUMP.KEPT_MS);
+  const clause = t('L.kept.links', { when: lastRead(/** @type {number} */ (REC.doc(D).linksAt)) });
+  LINE.render();
+  const seg = `<span class="sep">│</span><span class="seg kept" data-string="L.kept.links">${esc(clause)}</span>`;
+  assert.ok(host.innerHTML.includes(`</button>${seg}<span class="sep">│</span><span class="seg acting"`), `beside the address segment, before the acting-as segment: ${host.innerHTML}`);
+  assert.deepEqual([live.textContent, live.live], [t('L.kept.said', { what: D, clause }), 'polite'], 'said politely as it appears');
+  live.textContent = '';
+  LINE.render(true);
+  assert.equal(live.textContent, '', 'said once');
+  over(D, MID);
+  LINE.render();
+  assert.ok(!host.innerHTML.includes('seg kept') && live.textContent === '', 'the line naming the account: no clause in it, nothing said, the document still kept');
+  over(D, 14 / STANDARD_FS);
+  text();
+  for (let i = 0; i < 50 && PUMP.kept(D); i++) await flush();
+  LINE.render();
+  assert.deepEqual([PUMP.kept(D), host.innerHTML.includes('seg kept'), live.textContent], [null, false, t('L.kept.lifted', { what: D })], 'set: the clause lifted, said once as it lifts');
+  assert.deepEqual(fake.unanswered.slice(unasked), []);
+});
+
 test('a change of the page\'s class is said once, as the reads it asked answer: the ending\'s words, then the documents it covered — never the ending alone first, and nothing while they read (issue #177: "One status message says the session ended and what is covered")', async () => {
   const DR = '1.0.1.0.6', flush = () => new Promise((r) => setTimeout(r, 0));
   const host = { innerHTML: '', setAttribute() {}, addEventListener() {}, querySelectorAll: () => [] };

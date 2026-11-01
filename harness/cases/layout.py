@@ -320,7 +320,14 @@ over the first edition, a published row naming it through the gate's feed
 door, reads alone: the model holds its text and its article, its corner and
 its beams stand in every frame until its read again lands, its text window
 read again once with its image, the line under the view's centre where it
-stood on screen. THE LONGEST EDITION the claimant's index lists, found by the case's
+stood on screen. A KEPT DOCUMENT SAYS SO ONCE, WHERE ITS NAME IS (issue
+#345's design decision): such a row, its text window's read again held at its
+answer by the driver (`hold_op`) past a second — while the one line names the
+first edition, the line carries the clause beside its address and its mirror
+item the same words, its corner none; while the line names its account, its
+corner carries it as its last item, every item above it where it stood; the
+read answered, no clause stands in the frame its text is set, and each
+appearing and each lifting is said once. THE LONGEST EDITION the claimant's index lists, found by the case's
 own reads of each edition's span set: LEAPt to, its article mounted at the
 measure, its columns inside its room and every row inside its column and its
 room; standing BY LINE (issue #122's design decision: the cost bounded by the
@@ -3378,6 +3385,102 @@ def named_holds(ctx, r):
     return {'pos': pos, 'frames': watched, 'texts': len(texts), 'images': len(images), 'before': before, 'after': after, 'reads': sorted(set(f.get('op') for f in frames))}
 
 
+# a second, and the frames a kept clause takes to stand once it has passed (PUMP's KEPT_MS, unmeasured margin)
+KEPT_WAIT_S = 1.4
+
+
+def kept_holds(ctx, r):
+    """A KEPT DOCUMENT SAYS SO ONCE, WHERE ITS NAME IS (issue #345's design decision: "Once the re-read has been out for a
+    second, the clause goes wherever the document's name is"; "It lifts in the same frame that the fresh read sets the
+    document"): the first edition at em 12.5, the walk on it whole; a published row naming it handed to the page through the
+    gate's feed door, its text window's read again held at its answer past a second — the one line, naming it, carries
+    "links as last read ⟨when⟩" (an edition's words never change) in a segment of its own right after the address segment,
+    its mirror item the same words, its corner none; the walk stepped out to its account, the camera put back, a second
+    such row: its corner carries the words as its last item, every item above it where it stood before; each read answered,
+    no clause stands in the frame the model's text is set; each appearing and each lifting said once; reads alone"""
+    # a LEAP to the edition with no position stands the walk on it whole
+    ctx.leap(DOC)
+    ctx.view_doc_em(DOC, 12.5)
+    ctx.settle()
+    ctx.frames(2)
+    cam = ctx.camera()
+    ctx.js('''(async () => { const K = window.__gateKept = {REC: await import('./model/records.js'), PUMP: await import('./model/pump.js'), ST: await import('./strings.js'), said: [], lift: null};
+      const live = document.getElementById('live');
+      new MutationObserver(() => K.said.push(live.textContent)).observe(live, {childList: true, characterData: true, subtree: true});
+      return true; })()''')
+    seen = '''((a) => { const K = window.__gateKept, d = K.REC.doc(a), seg = document.querySelector('#line .seg.kept');
+      const c = document.querySelector(`#corners .corner[data-corner="${a}"]`), k = c && c.querySelector('.kept'), li = document.querySelector(`#mirror li[data-addr="${a}"]`);
+      const box = (e) => { const q = e.getBoundingClientRect(); return {x: q.left, y: q.top, w: q.width, h: q.height}; };
+      const sep = seg && seg.previousElementSibling, before = sep && sep.previousElementSibling;
+      return {words: d.linksAt != null ? K.ST.t('L.kept.links', {when: K.ST.lastRead(d.linksAt)}) : null, kept: !!K.PUMP.kept(a), named: window.__skep.named(),
+        seg: seg && {text: seg.textContent, id: seg.dataset.string, beside: !!before && before.matches('button.address')},
+        corner: c && {kept: k ? {text: k.textContent, id: k.dataset.string, last: c.lastElementChild === k} : null, top: c.getBoundingClientRect().top, items: [...c.children].filter((e) => e !== k).map(box)},
+        mirror: li && {kept: li.dataset.kept || '', text: li.textContent}}; })(%s)''' % json.dumps(DOC)
+    # every frame watched from now until the one whose model holds the text set again: what stands in that frame
+    lift = '''((a) => { const K = window.__gateKept, t0 = K.REC.doc(a).textAt; K.lift = null;
+      const watch = () => { if (K.lift) return; const d = K.REC.doc(a);
+        if (d.textAt !== t0) { const c = document.querySelector(`#corners .corner[data-corner="${a}"]`), li = document.querySelector(`#mirror li[data-addr="${a}"]`);
+          K.lift = {seg: !!document.querySelector('#line .seg.kept'), corner: !!(c && c.querySelector('.kept')), mirror: li ? li.dataset.kept || '' : null, kept: !!K.PUMP.kept(a)}; return; }
+        requestAnimationFrame(watch); };
+      requestAnimationFrame(watch); return true; })(%s)''' % json.dumps(DOC)
+    row = {'position': 0, 'at': 0, 'op': 'insert', 'docs': [DOC], 'class': 'published'}
+
+    def kept_round():
+        """a row naming the first edition, its text window's read again held at its answer; a second let pass: what stands then,
+        and, the read answered, what stands in the frame its text is set and what the status region said meanwhile"""
+        ctx.js('window.__gateKept.said = []')
+        was = ctx.js(seen)
+        ctx.drv.hold_op('retrieve_v', DOC)
+        ctx.js('window.__skep.model.feed(%s)' % json.dumps(row))
+        ctx.drv.pump_events(KEPT_WAIT_S)
+        ctx.frames(3)
+        held = ctx.js(seen)
+        ctx.js(lift)
+        answered = ctx.drv.answer_op('whole')
+        ctx.settle()
+        ctx.frames(3)
+        return {'before': was, 'held': held, 'answered': answered, 'lift': ctx.js('window.__gateKept.lift'), 'after': ctx.js(seen), 'said': ctx.js('window.__gateKept.said')}
+
+    def said_once(said, words):
+        """how many times the status region was told `words`"""
+        return sum(1 for x in said if x == words)
+
+    named = kept_round()
+    h, words = named['held'], named['held']['words']
+    clause = ' %s.' % words if words else None
+    appear = ctx.js('window.__gateKept.ST.t("L.kept.said", %s)' % json.dumps({'what': DOC, 'clause': words or ''}))
+    lifted = ctx.js('window.__gateKept.ST.t("L.kept.lifted", %s)' % json.dumps({'what': DOC}))
+    r.check(named['answered'] and h['kept'] and (h['named'] or {}).get('doc') == DOC and bool(words) and bool(h['seg']) and h['seg']['text'] == words and h['seg']['id'] == 'L.kept.links' and h['seg']['beside']
+            and bool(h['corner']) and h['corner']['kept'] is None,
+            'the line naming the first edition, its read again out past a second: "links as last read ⟨when⟩" in a segment of its own right after the address segment, its corner carrying none (issue #345)',
+            {'named': h['named'], 'seg': h['seg'], 'words': words, 'corner': h['corner'] and h['corner']['kept']})
+    r.check(bool(h['mirror']) and h['mirror']['kept'] == clause and clause in h['mirror']['text'],
+            'its mirror item carries the same words, a sentence of its own after its words (FP-33)', {'mirror': h['mirror'], 'clause': clause})
+    nl = named['lift'] or {}
+    r.check(bool(named['lift']) and not nl['seg'] and not nl['corner'] and nl['mirror'] == '' and not nl['kept'],
+            'the read answered: in the frame the model\'s text is set, no clause stands in the line, the corner or the mirror item', named['lift'])
+    r.check(said_once(named['said'], appear) == 1 and said_once(named['said'], lifted) == 1,
+            'the status region said its appearing once and its lifting once (FP-36)', {'said': named['said'], 'appear': appear, 'lifted': lifted})
+    ctx.js('window.__skep.walk.key("out")')
+    ctx.settle()
+    ctx.set_view(cam['x'], cam['y'], cam['scale'])
+    cornered = kept_round()
+    b, h2, w2 = cornered['before'], cornered['held'], cornered['held']['words']
+    moved = None
+    if b['corner'] and h2['corner'] and len(b['corner']['items']) == len(h2['corner']['items']):
+        moved = max([abs(b['corner']['top'] - h2['corner']['top'])] + [max(abs(p[k] - q[k]) for k in ('x', 'y', 'w', 'h')) for p, q in zip(b['corner']['items'], h2['corner']['items'])])
+    r.check(cornered['answered'] and h2['kept'] and (h2['named'] or {}).get('doc') is None and not h2['seg'] and bool(h2['corner']) and bool(h2['corner']['kept'])
+            and h2['corner']['kept']['text'] == w2 and h2['corner']['kept']['id'] == 'L.kept.links' and h2['corner']['kept']['last'],
+            'the line naming its account: the first edition\'s corner carries the words as its last item, the line none',
+            {'named': h2['named'], 'seg': h2['seg'], 'corner': h2['corner'] and h2['corner']['kept'], 'words': w2})
+    r.check(b['corner'] is not None and b['corner']['kept'] is None and moved is not None and moved <= DRIFT_TOL_PX,
+            f'its arrival moves nothing else: the corner\'s top and every item above the clause where it stood, {DRIFT_TOL_PX} px either way', {'moved_px': moved, 'before': b['corner'], 'after': h2['corner']})
+    cl = cornered['lift'] or {}
+    r.check(bool(cornered['lift']) and not cl['corner'] and not cl['seg'] and not cl['kept'],
+            'the read answered: in the frame the model\'s text is set, the corner carries no clause', cornered['lift'])
+    return {'named': named, 'cornered': {k: cornered[k] for k in ('held', 'lift', 'said')}, 'moved_px': moved}
+
+
 def longest_holds(ctx, r):
     """THE LONGEST EDITION the claimant's index lists (the typography review's finding 7: under a size fitted to its
     length its line ran wider than the window) — found by the harness's own reads of each edition's span set — shown at
@@ -3959,6 +4062,7 @@ def run(ctx):
     r.figures['hold'] = hold_holds(ctx, r)
     r.figures['bare'] = bare_holds(ctx, r)
     r.figures['named'] = named_holds(ctx, r)
+    r.figures['kept'] = kept_holds(ctx, r)
     r.figures['longest'] = longest_holds(ctx, r)
     r.figures['walk'] = walk_holds(ctx, r)
     r.figures['scene_strokes'] = scene_strokes_hold(ctx, r)

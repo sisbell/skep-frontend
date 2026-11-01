@@ -1240,11 +1240,11 @@ async function untilAsked(/** @type {ReturnType<typeof FAKE.create>} */ fake, /*
   assert.ok(fake.asked.includes(key), 'asked: ' + key);
 }
 
-/** the page a guest reads D at its reading em, the board's one edition, over a board answering `s` */
-function readingD(/** @type {Record<string, unknown>} */ s) {
+/** the page a guest reads D at its reading em, the board's one edition, over a board answering `s`, each drop told to `onDrop` */
+function readingD(/** @type {Record<string, unknown>} */ s, /** @type {(d: PUMP.Dropped) => void} */ onDrop = () => {}) {
   const fake = FAKE.create(s);
   PORT.boot(fake);
-  PUMP.start({ onDirty: () => {} });
+  PUMP.start({ onDirty: () => {}, onDrop });
   REC.setBoard({ board: 'b-1', name: '', origin: '' });
   REC.takeIndex(indexAt('complete'));
   PUMP.forget(D);
@@ -2441,6 +2441,100 @@ test('a shown document a feed row named whose read again is refused as withheld 
   await settle();
   const d = REC.doc(D);
   assert.deepEqual([d.refused, d.from, d.extent, REC.known().includes(D)], ['withheld', -1, null, true], 'withheld: nothing of its text held, the withheld box the model knows standing in its place');
+});
+
+/** long enough for what stands held while it is read again to have stood KEPT_MS */
+const pastTheSecond = () => new Promise((r) => setTimeout(r, PUMP.KEPT_MS + 20));
+
+test('a shown document a feed row named stands kept once its read again has been out KEPT_MS — nothing before, then the document with no refusal while its read is out — and is kept no more from the step its read sets it, each change counted (issue #345)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9));
+  const fake = readingD(s);
+  await settle();
+  const release = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+  fake.fire('feed', writing(20, [D]));
+  await untilAsked(fake, F.retrieveV(D, 1, 30));
+  const rev = PUMP.keptRevision();
+  assert.deepEqual([PUMP.kept(D), PUMP.keptAll().docs], [null, []], 'before the second: not kept');
+  await pastTheSecond();
+  assert.deepEqual([PUMP.kept(D), PUMP.keptAll().docs, PUMP.keptRevision()], [{ met: null }, [D], rev + 1], 'past the second: kept, no refusal met while its read is out');
+  let watching = true, lagged = false;
+  REC.watch(() => { if (watching && REC.textBetween(D, 1, 31) === AFTER && PUMP.kept(D)) lagged = true; });
+  release();
+  await settle();
+  watching = false;
+  assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.kept(D), lagged, PUMP.keptRevision()], [AFTER, null, false, rev + 2], 'set: kept no more, in no step that holds its new text');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a shown document\'s read again the board does not answer leaves it kept, saying the refusal its read met, until the read made at running sets it; then its readers are told again, for one that read it in the wait read what stood (issue #345)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), UNREACHABLE, deliveredAt(AFTER, 9));
+  /** @type {PUMP.Dropped[]} */
+  const told = [];
+  const fake = readingD(s, (x) => { told.push(x); });
+  await settle();
+  fake.fire('feed', writing(20, [D]));
+  await settle();
+  await pastTheSecond();
+  assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.kept(D)], [BEFORE, { met: UNREACHABLE.refused }], 'its text not answered: held, kept, the refusal named');
+  const whole = await PUMP.wholeOf(D);
+  assert.equal(REC.textBetween(D, 1, 31), BEFORE, 'a whole read in the wait reads what stands');
+  assert.ok(whole.doc);
+  const before = told.length;
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), PUMP.kept(D)], [AFTER, null], 'made again at running and set: kept no more');
+  assert.deepEqual(told.slice(before).map((x) => [x.row, x.addrs]), [[null, [D]]], 'its readers told again once it is set');
+  assert.deepEqual(fake.unanswered.filter((k) => k !== opKeyOf(F.retrieveV(D, 1, 30))), []);
+});
+
+test('a shown document a read again sets with no wait tells its readers nothing more: a reader of it then waited on that read (issue #345)', async () => {
+  const s = { ...script, ...ONE_MEMBER };
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9));
+  /** @type {PUMP.Dropped[]} */
+  const told = [];
+  const fake = readingD(s, (x) => { told.push(x); });
+  await settle();
+  fake.fire('feed', writing(20, [D]));
+  const after = told.length;
+  await settle();
+  assert.deepEqual([REC.textBetween(D, 1, 31), told.slice(after)], [AFTER, []], 'set, the row\'s drop the one telling');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('a document a refresh reads again stands kept past KEPT_MS while that read is out, and, where the board left a part of it unheard, until the next refresh\'s read of it answers (issue #345)', async () => {
+  const s = { ...script, [opKeyOf(F.docMetadata(D + '.1'))]: mintedAt(3), [opKeyOf(F.docMetadata(D + '.2'))]: NOT_REGISTERED };
+  inTurn(s, F.findLinksV(D, 1, 30), script[opKeyOf(F.findLinksV(D, 1, 30))], UNREACHABLE, script[opKeyOf(F.findLinksV(D, 1, 30))]);
+  const fake = readingD(s);
+  await settle();
+  fake.fire('feed', naming(20, null));
+  await PUMP.refresh();
+  await settle();
+  await pastTheSecond();
+  assert.deepEqual(PUMP.kept(D), { met: UNREACHABLE.refused }, 'its links unheard: kept past the refresh that set the rest');
+  await PUMP.refresh();
+  await settle();
+  assert.equal(PUMP.kept(D), null, 'the next refresh\'s read answered: kept no more');
+  assert.deepEqual(fake.unanswered, []);
+});
+
+test('the edition claims a row changed on an origin a shown document windows stand kept once their read again has been out KEPT_MS, saying the refusal the lookup met where the board does not answer, until the read made at running sets them (issue #345)', async () => {
+  const NEW_HOME = '1.0.1.0.31', NEW = NEW_HOME + '.0.2.1';
+  const s = claimed({ ...script, ...claimAt(NEW_HOME) });
+  inTurn(s, F.editionClaimsAt(O), claimsOn([EDITION, FORK]), UNREACHABLE, claimsOn([EDITION, FORK, NEW]));
+  const fake = readingD(s);
+  forgetClaims();
+  await settle();
+  fake.fire('feed', { board: 'b-1', update: { position: 10, at: 10, class: 'published', op: 'make_link', docs: [NEW_HOME], link: NEW } });
+  await until(() => askedOf(fake, F.editionClaimsAt(O)) === 2, 'the claims read again');
+  await settle();
+  assert.deepEqual([REC.editionClaimsOf(O), PUMP.claimsKept(O)], [[EDITION, FORK], null], 'the lookup not answered: the claims held, not kept before the second');
+  await pastTheSecond();
+  assert.deepEqual([PUMP.claimsKept(O), PUMP.keptAll().origins], [{ met: UNREACHABLE.refused }, [O]], 'past the second: kept, the refusal the lookup met');
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  await settle();
+  assert.deepEqual([REC.editionClaimsOf(O), PUMP.claimsKept(O), PUMP.keptAll().origins], [[EDITION, FORK, NEW], null, []], 'read again at running and set: kept no more');
 });
 
 test('the board opened as the boot opens it: `boards()` first, then for the board it holds the key store, the session where one is asked, the health, the daemon and the index, in that order; an empty list or a refusal holds none, why kept, nothing asked past the list; "try again" reads the list again, one read for presses made while it is out, a board it finds opened as the boot opened one and the app told once (issue #215\'s design decision; FP-35)', async () => {

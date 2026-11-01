@@ -56,7 +56,11 @@
 // segment is LEAP's box's act (a click, Enter or Mod+L; the chord drawn for
 // the platform in its title, rule 19), which opens holding the address the
 // display names (K-30; `currentAddress`), so the box never opens on a place
-// the line does not show, and empty where no board is held.
+// the line does not show, and empty where no board is held. A kept document
+// the display names — one M-PUMP holds as it stands past a second while it
+// reads it again (FP-23) — carries its clause in a segment of its own right
+// after the address segment (T-LAYER's `keptIn`, so its corner carries none;
+// FP-33), never cut short of room (the style's).
 // The acting-as segment (`actingSegment`), its state among foundations §3.3's
 // seven: state 2 through the signed session, the one a write may go out
 // under (`F.acting-as`), its device label a slot (FP-34; `deviceSlot`) —
@@ -107,7 +111,10 @@
 // reader is told (D4): a transient segment and the mode line politely; the
 // session's death, a session a restart lost that the acquire could not get
 // back, and halted writes assertively, once as they arrive — nothing while
-// it reconnects nor as it returns — through the one status region; a change
+// it reconnects nor as it returns — through the one status region; each
+// kept clause on the plane, a document's or a withheld run's, politely once
+// as it appears and once as it lifts (`keptSaid`; FP-36), a change of the
+// page's class taking down what was heard unsaid; a change
 // of the page's class is said once (FP-29), as the reads it asked answer
 // (M-PUMP's `rereading`), UNREACHED_MS at the most after it: the ending's
 // words, then the documents it covered (M-REC's `coveredDocs`), the first
@@ -116,8 +123,8 @@
 // address segment's, the account its session words name, one in the words
 // another module hands it (ST's `addressedHTML`) — and its other words in
 // the interface face (P-REG's FACE). The chip is no segment (ux-T2: the document's corner).
-// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-25, FP-26, FP-28,
-// FP-29, FP-34, FP-35, FP-36.
+// Rules: FP-1, FP-2, FP-10, FP-13, FP-20, FP-21, FP-22, FP-23, FP-25, FP-26,
+// FP-28, FP-29, FP-33, FP-34, FP-35, FP-36.
 
 import * as REC from '../model/records.js';
 import * as PUMP from '../model/pump.js';
@@ -159,6 +166,8 @@ let closesTaken = 0;
 let closedWhole = false;
 /** forward ›'s label carries the close's words, until the next act (`closedSaid`) */
 let forwardSays = false;
+/** @type {Map<string, string>} the kept clauses said through the status region as they appeared, by what each names (`keptSaid`) */
+let keptHeard = new Map();
 /**
  * @typedef {Object} Acts — the line's acts, and what it reads of the owners that import it, handed in once by the app (FP-10, FP-11)
  * @property {(byKey: boolean) => void} open the address segment's act: the LEAP box
@@ -263,7 +272,7 @@ function closedSaid() {
  * a new one, and the change's one message held until the reads it asked
  * answer (`render`).
  */
-export function classChanged() { transientSeg = null; forwardSays = false; closedWhole = false; changedAt = performance.now(); render(true); }
+export function classChanged() { transientSeg = null; forwardSays = false; closedWhole = false; changedAt = performance.now(); keptHeard = new Map(); render(true); }
 
 /**
  * The change's one message (see the head): the ending's words, then the
@@ -277,6 +286,23 @@ function endingSaid(ending) {
   if (!docs.length) return ending;
   const named = docs.slice(0, COVERED_NAMED).join(', ') + (docs.length > COVERED_NAMED ? ' ' + t('F.others-count', { n: docs.length - COVERED_NAMED }) : '');
   return t('L.covered', { ending, documents: named });
+}
+
+/**
+ * What the status region says of the plane's kept clauses (see the head;
+ * FP-36): each box M-PUMP holds as it stands past a second whose clause
+ * appears (T-LAYER's `keptIn`), and each origin's withheld text whose
+ * edition claims stand so (`claimsKeptIn`), said politely once as its clause
+ * appears and once as it lifts — a new time or a failure's words while it
+ * stands said nothing — all a render finds in one message.
+ */
+function keptSaid() {
+  const now = PUMP.keptAll(), heard = new Map();
+  for (const addr of now.docs) { const box = documentOf(addr) || addr, k = LAYER.keptIn(box); if (k) heard.set(box, k.text); }
+  for (const origin of now.origins) { const k = LAYER.claimsKeptIn(origin); if (k) heard.set(t('L.kept.run', { origin }), k.text); }
+  const said = [...[...heard].filter(([what]) => !keptHeard.has(what)).map(([what, clause]) => t('L.kept.said', { what, clause })), ...[...keptHeard.keys()].filter((what) => !heard.has(what)).map((what) => t('L.kept.lifted', { what }))];
+  keptHeard = heard;
+  if (said.length) FOCUS.say(said.join('; '));
 }
 
 /**
@@ -623,9 +649,12 @@ export function render(force = false) {
   } else if (acting.alarm && lastAlarm !== null && acting.words !== lastAlarm) FOCUS.say(acting.words, true);
   if (daemon.halted && !lastHalted) FOCUS.say(daemon.words, true);
   lastAlarm = acting.alarm ? acting.words : ''; lastHalted = daemon.halted;
+  keptSaid();
+  const kept = a.doc ? LAYER.keptIn(a.doc) : null;
   const html =
     `<span class="acts"><button id="line-back" data-act="back" ${TRAIL.canBack() ? '' : 'disabled'}>${esc(t('F.back'))}</button><button data-act="forward" ${TRAIL.canForward() ? '' : 'disabled'}${forwardSays ? ` title="${esc(t('L.scene.closed'))}" aria-label="${esc(t('L.scene.closed'))}"` : ''}>${esc(t('F.forward'))}</button><button data-act="trail" title="${esc(drawChord('Mod+Y'))}">${esc(t('F.trail-list'))}</button></span>` +
     `<span class="sep">│</span><button class="seg address" data-act="address" title="${esc(drawChord('Mod+L'))}" aria-label="${esc(t('L.address.name', addressName(a)))}" style="--words:${WORDS_CH}"><b>${esc(a.place)}</b>${labelHTML(a)}${slot(a)}<span class="marker${a.member ? ' lit' : ''}${a.doc ? '' : ' none'}" title="${a.member ? esc(t('L.version', { k: a.member })) : ''}">${a.member ? '●' : '○'}</span></button>` +
+    (kept ? `<span class="sep">│</span><span class="seg kept" data-string="${esc(kept.id)}">${esc(kept.text)}</span>` : '') +
     `<span class="sep">│</span><span class="seg acting" data-state="${acting.state}">${acting.html}</span>` +
     walkSegments() +
     (daemon.html ? `<span class="sep">│</span><span class="seg daemon">${daemon.html}</span>` : '') +

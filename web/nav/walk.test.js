@@ -23,9 +23,11 @@
 // where the view stood on nothing, the walk staying on a covered draft, and a
 // change of class keeps the walk on the span its document kept, a draft's
 // run there named as the withheld run it is now; a withheld run's ends stand a level
-// below its item, counted and marked as the symbols are; and where no board
-// is held the root says why and the re-take stands on it alone (FP-20,
-// FP-21, FP-22, FP-23, FP-24, FP-29, FP-35).
+// below its item, counted and marked as the symbols are; a kept document's
+// item carrying the clause its corner or the one line shows, marked in place
+// as it lifts; and where no board is held the root says why and the re-take
+// stands on it alone (FP-20, FP-21, FP-22, FP-23, FP-24, FP-29, FP-33,
+// FP-35).
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
 import * as PORT from '../bridge/port.js';
@@ -40,7 +42,7 @@ import { accountCell, boardCell, boardLabelCell, docBox, clearLeftOf, continuati
 import { lodOf, residueDepth, markScale, LOD_TXT_LO } from '../plane/lod.js';
 import { placeOf, STANDARD_FS, EDGE } from '../plane/layout.js';
 import { CORNER, cornerWidth } from '../plane/register.js';
-import { STRINGS, t, tHTML, markCount } from '../strings.js';
+import { STRINGS, t, tHTML, markCount, lastRead } from '../strings.js';
 import { esc, byteLength } from '../util.js';
 import { homeOf, resolveSpan, unitSpan } from '../model/address.js';
 import * as WALK from './walk.js';
@@ -1022,6 +1024,58 @@ test('the count, the article\'s symbols and the mirror name the same ends, two l
     LK.hide(W);
     REC.invalidate(W);
   }
+});
+
+test('a kept document\'s mirror item carries the clause its corner or the one line shows — an edition\'s its links\' stamp — as a sentence of its own after its words, and the item is written again in place as it lifts, nothing rebuilt (issue #345\'s design decision)', async (ctx) => {
+  const unasked = fake.unanswered.length;
+  await PUMP.loadWhole(D);
+  const platform = globalThis.document;
+  globalThis.document = /** @type {any} */ ({ activeElement: null });
+  /** @typedef {{attrs: Record<string, string>, dataset: Record<string, string>, innerHTML: string}} Item */
+  /** @type {Item[]} the items the last rebuild wrote, each an element whose words are written again in place */
+  let items = [];
+  let rebuilds = 0;
+  const mirror = {
+    tabIndex: 0, contains: () => false, setAttribute() {}, classList: { toggle() {} },
+    get innerHTML() { return ''; },
+    set innerHTML(/** @type {string} */ html) {
+      rebuilds++;
+      items = [...html.matchAll(/<li\b([^>]*)>(.*?)<\/li>/g)].map((m) => {
+        /** @type {Record<string, string>} */
+        const attrs = Object.fromEntries([...m[1].matchAll(/ ([\w-]+)="([^"]*)"/g)].map((a) => [a[1], a[2]]));
+        return { attrs, dataset: { i: attrs['data-i'], kept: attrs['data-kept'] }, innerHTML: m[2] };
+      });
+    },
+    querySelectorAll: (/** @type {string} */ sel) => (sel === 'li[role="treeitem"]' ? items : []),
+  };
+  /** D's item's words as the mirror holds them */
+  const item = () => items.find((i) => i.attrs['data-addr'] === D)?.innerHTML ?? '';
+  /** D's text read again, held until the test answers it */
+  let text = () => {};
+  try {
+    // at mid, the walk's grain the document whole, D shown
+    const b = docBox(D);
+    CAM.set({ x: b.x + b.w / 2, y: b.y + b.h / 2, scale: 120 / DOC_W });
+    WALK.attach(/** @type {any} */ (mirror));
+    await WALK.focusTo(D, null);
+    assert.ok(item() && !item().includes(t('L.kept.links', { when: '' }).trim()), `not kept: no clause — ${item()}`);
+    ctx.mock.timers.enable({ apis: ['setTimeout'] });
+    text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) });
+    fake.fire('feed', { board: 'b-1', update: { position: 40, at: 40, op: 'insert', docs: [D], class: 'published' } });
+    ctx.mock.timers.tick(PUMP.KEPT_MS);
+    const clause = t('L.mirror.clause', { clause: t('L.kept.links', { when: lastRead(/** @type {number} */ (REC.doc(D).linksAt)) }) });
+    const was = rebuilds;
+    WALK.markKept();
+    const at = WALK.siblingsNow().findIndex((n) => n.addr === D), named = WALK.mirrorItem(at) || '';
+    assert.ok(item().includes(esc(clause)) && named.includes(clause + ' ' + t('L.mirror.item', { i: at + 1, n: WALK.siblingsNow().length })), `its clause a sentence after its words, before its place in the level: ${named}`);
+    assert.ok(named.startsWith(t('L.mirror.document', { document: D, label: '"Tumbler."', state: t('F.published'), extent: t('L.mirror.positions', { n: 30 }) })), named);
+    assert.equal(rebuilds, was, 'written in place, nothing rebuilt');
+    text();
+    for (let i = 0; i < 50 && PUMP.kept(D); i++) await new Promise((r) => setImmediate(r));
+    WALK.markKept();
+    assert.ok(!item().includes(esc(clause)) && rebuilds === was, 'set: the clause gone from the item in place');
+    assert.deepEqual(fake.unanswered.slice(unasked), []);
+  } finally { text(); globalThis.document = platform; }
 });
 
 test('the page\'s own death takes the mirror down at once where the view stood on nothing — no item quoting what the dead session read, the draft it could read listed as its cover, the editions read as published listed still — and takes the walk again on the span it stood on once its document is read at the guest\'s class (FP-23; issues #160, #350)', async () => {

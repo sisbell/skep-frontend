@@ -121,7 +121,14 @@
 // the bands of shared identity gone with its text, and every line homed in
 // the readable pane whose far end lies in it ending at the cover
 // (`farEndIn`, `coverIn`), clipped and stubbed as any end whose line has
-// left its pane.
+// left its pane. A pane being set again by the board's events stands kept as
+// it shows until a setting of it lands (`Pane.kept`), and says so once it has
+// stood a second, or while M-PUMP holds its record so as it reads it again
+// (M-PUMP's `kept`): its corner's last item the clause a box's corner carries,
+// by the one rule (T-LAYER's `keptWords`), the refusal its read met after it
+// where the board did not answer, lifting in the step that sets the pane; a
+// withheld run's kept sign set in its article as the plane's are; and each
+// said once as it appears and once as it lifts (`markKept`; FP-33, FP-36).
 // Every setting is one step (`setPanes`; FP-23): the reads first — the text
 // whole, the two texts' `compare`, where each far end crossing between them
 // stands (`readPane`, `readBetween`) — then, where the scene still stands
@@ -277,7 +284,7 @@
 // stroke; a returned stop's passage named by its first 48 characters at
 // most, cut on a word.
 // Rules: FP-1, FP-2, FP-7, FP-10, FP-12, FP-13, FP-20, FP-21, FP-22, FP-23,
-// FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-34, FP-36.
+// FP-24, FP-25, FP-26, FP-27, FP-29, FP-30, FP-31, FP-33, FP-34, FP-36.
 
 import * as PUMP from '../model/pump.js';
 import * as REC from '../model/records.js';
@@ -288,7 +295,7 @@ import * as HOST from '../overlays/host.js';
 import * as WALK from '../nav/walk.js';
 import * as FOCUS from '../nav/focus.js';
 import { drawChord } from '../nav/keys.js';
-import { copyText } from '../text/article.js';
+import { copyText, keptHTML } from '../text/article.js';
 import { inkOf, strokeOf, strokeIn, cutAt, pointOn } from '../beams/beams.js';
 import { piecesOf, heldOf, saidOf, unknownOf, lineOf, floatingOf } from '../beams/held.js';
 import { SAMENESS } from '../plane/register.js';
@@ -469,6 +476,9 @@ import { esc, byteOffsets } from '../util.js';
  * @property {HTMLElement | null} el the article it shows
  * @property {number} serial the settings asked of it: one sets it only where no later one was asked meanwhile
  * @property {number} sets the settings made of it: a `compare` read against its text before one is read again
+ * @property {{since: number, met: Refusal | null} | null} kept a setting the board's events asked of it, out (`update`): when it began, by the platform's clock, and the refusal its read met where the board did not answer, the pane standing as it shows; null where none is out
+ * @property {string} heard its kept clause as the status region last said it (`markKept`); '' where none
+ * @property {string | null} signs what the edition claims held as they are read again said as its article's withheld runs' kept signs were last set (T-LAYER's `keptRunsKey`); null where its article was set since
  */
 
 /**
@@ -1164,12 +1174,53 @@ function paneAt(side, src, r) {
   const names = kind === 'bare' && r.n ? versionAddress(src, r.n) : src;
   return {
     side, doc: src, src, names, shows: kind === 'bare' ? src : names, kind, k, n: kind === 'draft' ? null : r.n, read: null, lacks: null,
-    d: { ...r.d }, view: LAYER.sceneView(r.d), placed: new Map(), place: null, el: null, serial: 0, sets: 0,
+    d: { ...r.d }, view: LAYER.sceneView(r.d), placed: new Map(), place: null, el: null, serial: 0, sets: 0, kept: null, heard: '', signs: null,
   };
 }
 
-/** a pane's corner's items: T-ARTICLE's (`sceneCorner`), naming the version it shows, the chain's count as the pane knows it, the act it offers and what it says the version it reads lacks */
-const cornerItems = (/** @type {Pane} */ P) => LAYER.sceneCorner(P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows }, { ...P.view, members: P.n, read: P.read, lacks: P.lacks });
+/** a pane's corner's items: T-ARTICLE's (`sceneCorner`), naming the version it shows, the chain's count as the pane knows it, the act it offers and what it says the version it reads lacks; its kept clause after them, where it stands kept (`paneKept`) */
+const cornerItems = (/** @type {Pane} */ P) => LAYER.sceneCorner(P.shows === P.d.addr ? P.d : { ...P.d, addr: P.shows }, { ...P.view, members: P.n, read: P.read, lacks: P.lacks }) + keptHTML(paneKept(P));
+
+/**
+ * A pane's kept clause (see the head; FP-23): the rule a box's is said by
+ * (T-LAYER's `keptWords`), over the record the pane was set from, while the
+ * setting the board's events asked of it has been out KEPT_MS (`Pane.kept`)
+ * or M-PUMP has held that record past a second as it reads it again
+ * (M-PUMP's `kept`); none else.
+ * @param {Pane} P
+ */
+function paneKept(P) {
+  const own = P.kept && performance.now() - P.kept.since >= PUMP.KEPT_MS ? { met: P.kept.met } : null;
+  return LAYER.keptWords(P.d, P.d, own || PUMP.kept(P.src));
+}
+
+/**
+ * Each pane's kept clause marked in place (see the head): its corner written
+ * again where the clause it carries changed (`paneKept`), the element kept
+ * so a focus on it stays, the withheld runs' kept signs in its article set
+ * where what the edition claims held say changed since they were set, or its
+ * article was set since (T-LAYER's `keptRunsKey`, `markKeptSigns`), and each
+ * clause said politely once as it
+ * appears and once as it lifts, both panes' in one message (FP-36). The
+ * app's loop runs it on each dirty frame while the scene stands.
+ */
+export function markKept() {
+  const S = scene, E = els;
+  if (!S || !E) return;
+  /** @type {string[]} */
+  const said = [];
+  const signs = LAYER.keptRunsKey();
+  for (const side of SIDES) {
+    const P = S[side], k = paneKept(P), words = k ? k.text : '';
+    const c = paneEl(E, side).querySelector(':scope > .corner'), now = c ? c.querySelector('.kept') : null;
+    if (c && (now ? now.textContent : '') !== words) writeCorner(E, P);
+    if (P.el && P.signs !== signs) { LAYER.markKeptSigns(P.el); P.signs = signs; }
+    if (words && !P.heard) said.push(t('L.kept.said', { what: P.shows, clause: words }));
+    else if (!words && P.heard) said.push(t('L.kept.lifted', { what: P.shows }));
+    P.heard = words;
+  }
+  if (said.length) FOCUS.say(said.join('; '));
+}
 /** a pane's corner's id: the group is named by its own words */
 const cornerId = (/** @type {'a' | 'b'} */ side) => (side === 'a' ? 'sceneA' : 'sceneB') + '-corner';
 /** a pane's corner's markup (see the head): its one Tab stop, a group named by its own words, as the plane's corner is (D5 K-57) */
@@ -1189,12 +1240,12 @@ function nameBar(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P
   if (b) b.textContent = P.shows;
 }
 
-/** a pane's article put in its place: the one it shows replaced, else placed — pane A's after its corner, pane B's before it, so each corner stands on its pane's outer side */
+/** a pane's article put in its place: the one it shows replaced, else placed — pane A's after its corner, pane B's before it, so each corner stands on its pane's outer side — its withheld runs' kept signs to be set (`markKept`) */
 function swap(/** @type {NonNullable<typeof els>} */ E, /** @type {Pane} */ P, /** @type {HTMLElement} */ el) {
   const pane = paneEl(E, P.side);
   if (P.el && pane.contains(P.el)) P.el.replaceWith(el);
   else if (P.side === 'a') pane.append(el); else pane.prepend(el);
-  P.el = el;
+  P.el = el; P.signs = null;
 }
 
 /**
@@ -2419,10 +2470,14 @@ async function update(side, how = {}) {
   if (!S) return;
   const P = S[side], Q = S[otherSide(side)], serial = ++P.serial;
   const stale = () => scene !== S || P.serial !== serial;
+  // the board's events ask it: the pane stands kept as it shows until a setting of it lands, saying so once it has stood a second
+  if (!how.src && !P.kept) { P.kept = { since: performance.now(), met: null }; setTimeout(markDirty, PUMP.KEPT_MS); }
   S.updating++;
   try {
     const src = how.src ?? P.src;
     const r = await readPane(src), d = r.d;
+    // the board not answering leaves the pane as it shows, kept, saying why
+    if (!stale() && !d && P.kept && r.refused) { P.kept.met = r.refused; markDirty(); }
     // a version the corner's act could not read whole leaves the pane as it shows
     if (stale() || !d || (how.src && !r.whole)) return;
     if (P.kind === 'bare' && !how.src && P.k != null && r.n != null && r.n > P.k) { pin(S, side, P.k, r.n); return; }
@@ -2447,6 +2502,8 @@ async function update(side, how = {}) {
       if (stale()) return;
       if (Q.sets !== seen) continue;
       const read = how.read !== undefined ? how.read : P.read;
+      // set from its reads: kept no more, from the step that sets it
+      P.kept = null;
       setPanes(S, [{ side, next: { d, kind, src, names, shows: kind === 'bare' ? src : names, k, n, read, lacks, hold } }], between.pairs);
       answer(S, between);
       return;

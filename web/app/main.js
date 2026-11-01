@@ -56,16 +56,19 @@
 // scene's entry its two documents (N-GO's `scenePair`) — which a change reads
 // again beside the view's — FP-23, FP-29).
 // The loop (`loop`, on `requestAnimationFrame`): step the camera's flight,
-// pump every 90 ms, and on a dirty frame — the mark, a camera move, a model
-// or layer revision, a flight, an overlay standing, a phase — run T-LAYER's
+// pump every 90 ms, and on a dirty frame — the mark, a camera move, a model,
+// layer or kept revision, a flight, an overlay standing, a phase — run T-LAYER's
 // frame first, so what stands is decided before anything is drawn (FP-8),
 // then the landing rule at an arrival whose text was set again (N-GO's
 // `recheck`; FP-21) and at every surface standing on a version its box no
 // longer shows (N-GO's `surfacesAcross`; FP-36), mark the mirror's
-// documents, Back's light and the landing's description in place (N-WALK's
-// `markExpanded`, `markLocated`, `markDescribed`), then
-// P-RENDER, BM, O-HOST's place, the landing's line (O-LAND's `render`), the
-// scene's ties where the scene is open (SC's `draw`), then the press
+// documents, Back's light, the landing's description and the kept clauses in
+// place (N-WALK's `markExpanded`, `markLocated`, `markDescribed`,
+// `markKept`), then P-RENDER, BM, O-HOST's place, the landing's line
+// (O-LAND's `render`), the scene's ties and its panes' kept clauses where the
+// scene is open (SC's `draw`, `markKept`), the one line where what M-PUMP
+// holds as it stands while it reads it again moved (`keptRevision`), so a
+// kept clause appears and lifts on every surface in one frame (FP-23), then the press
 // APP-INPUT holds at reading scale, acted on the text the frame set
 // (`afterFrame`); and record the frame: its interval, its draw time, the
 // documents the canvas drew a label or a bar for that stand as text (`both`),
@@ -139,7 +142,7 @@ const phase = { name: '' };
 /** @type {Record<string, unknown>} what boot found, for the report */
 const bootInfo = {};
 let lastT = performance.now(), pumpT = 0, lineT = 0;
-let lastRev = -1, lastLayerRev = -1;
+let lastRev = -1, lastLayerRev = -1, lastKeptRev = -1;
 let lastCam = { x: NaN, y: NaN, scale: NaN };
 
 /** @param {string} kind @param {string} msg @param {string} [stack] */
@@ -184,8 +187,8 @@ function loop(/** @type {number} */ now) {
   const anim = CAM.step(now);
   if (now - pumpT > 90) { pumpT = now; if (PUMP.pump()) CAM.markDirty(); }
   const camMoved = CAM.cam.x !== lastCam.x || CAM.cam.y !== lastCam.y || CAM.cam.scale !== lastCam.scale;
-  const rev = REC.rev(), lrev = LAYER.revision();
-  const dirty = CAM.takeDirty() || camMoved || rev !== lastRev || lrev !== lastLayerRev || anim || HOST.hasCurrent() || phase.name;
+  const rev = REC.rev(), lrev = LAYER.revision(), krev = PUMP.keptRevision();
+  const dirty = CAM.takeDirty() || camMoved || rev !== lastRev || lrev !== lastLayerRev || krev !== lastKeptRev || anim || HOST.hasCurrent() || phase.name;
   if (dirty) {
     const t0 = performance.now();
     if (!bootInfo.firstFrame) bootInfo.firstFrame = SHIPPED.map((f) => [f, document.fonts.check(f)]);
@@ -195,11 +198,14 @@ function loop(/** @type {number} */ now) {
     WALK.markExpanded();
     WALK.markLocated();
     WALK.markDescribed();
+    WALK.markKept();
     const lod = RENDER.draw();
     BM.draw();
     HOST.place();
     LANDING.render();
-    if (SCENE.isOpen()) SCENE.draw();
+    if (SCENE.isOpen()) { SCENE.draw(); SCENE.markKept(); }
+    // the one line in the frame what is kept moved, so a kept clause appears and lifts there with the corners and the mirror
+    if (krev !== lastKeptRev) LINE.render();
     INPUT.afterFrame();
     const drawMs = performance.now() - t0;
     const S = RENDER.stats, stood = LAYER.frameStats();
@@ -207,7 +213,7 @@ function loop(/** @type {number} */ now) {
     const neither = new Set([...S.yielded.filter((a) => !LAYER.standing(a)), ...S.yieldedLines.filter(([a, i]) => !LAYER.lineStands(a, i)).map(([a]) => a)]).size;
     frames.push({ t: now, interval: now - lastT, drawMs, lod: lod.name, docs: S.docsDrawn, both, neither, barred: S.barred, mounted: stood.mounted, standing: stood.standing, lines: stood.lines, phase: phase.name || undefined });
     if (frames.length > FRAME_CAP) frames.splice(0, frames.length - FRAME_CAP);
-    lastRev = rev; lastLayerRev = lrev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
+    lastRev = rev; lastLayerRev = lrev; lastKeptRev = krev; lastCam = { x: CAM.cam.x, y: CAM.cam.y, scale: CAM.cam.scale };
   }
   lastT = now;
   if (now - lineT > 120) { lineT = now; LINE.render(); LEAP.takeAddress(); LEAP.takeIndex(); }

@@ -4,7 +4,9 @@
 // words made elsewhere set as markup in their faces, each address M-ADDR
 // reads in them the identifier's and nothing else; a time said in the one
 // form of a date, "not recorded" or "on or before" where the board's
-// testimony leaves it so; a continuation's mark's count in what it counts;
+// testimony leaves it so; when the page last read what it keeps, by its own
+// clock, the hour and the minute, the day first where it was not today; a
+// continuation's mark's count in what it counts;
 // the entries no design document carries are listed; and every accessible name the page
 // sets is read from ST — none stands in the markup, and none is written as a
 // literal in a module.
@@ -12,7 +14,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { sep } from 'node:path';
-import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, markCount } from './strings.js';
+import { STRINGS, t, tHTML, addressedHTML, facedHTML, pinned, lacking, isPinned, dated, lastRead, markCount } from './strings.js';
 
 test('every entry is classed and sourced', () => {
   for (const [id, e] of Object.entries(STRINGS)) {
@@ -60,6 +62,17 @@ test('a time is said in one form of a date — the day, the month in words, the 
   assert.equal(dated({ at: 8, time: late, from: 'anchor' }), t('L.time.on-or-before', { date: '13 March 2026' }), 'the hour after 23:30 ends on the 13th');
   assert.equal(dated({ at: 9, time: null, from: null }), t('F.slot.not-recorded'));
   assert.equal(dated({ at: null, time: null, from: null }), 'not recorded');
+});
+
+test('when the page last read what it keeps is said by its own clock: the hour and the minute where the read landed today, the day first in the one form of a date where it did not — never an age (issue #345\'s design decision)', () => {
+  // in this machine's own time zone: five past nine on the 12th of March 2026, read then and at noon that day, and on the 13th
+  const read = new Date(2026, 2, 12, 9, 5).getTime(), noon = new Date(2026, 2, 12, 12).getTime(), next = new Date(2026, 2, 13, 0, 1).getTime();
+  assert.equal(lastRead(read, noon), '09:05');
+  assert.equal(lastRead(read, read), '09:05', 'the read\'s own moment');
+  assert.equal(lastRead(read, next), t('L.time.day-time', { day: '12 March 2026', time: '09:05' }), 'a minute past midnight: the day first');
+  assert.equal(t('L.kept.text', { when: lastRead(read, noon) }), 'as last read 09:05');
+  assert.equal(t('L.kept.links', { when: lastRead(read, next) }), 'links as last read 12 March 2026, 09:05');
+  assert.ok(!/ago|minutes?|hours?|days?/.test(lastRead(read, noon) + lastRead(read, next)), 'never a relative age');
 });
 
 test('a continuation\'s mark\'s count says what it counts — "152 newer documents", one in its own words — and is a lower bound where the counts are (issue #42\'s design decision)', () => {

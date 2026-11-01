@@ -84,7 +84,7 @@ import * as GO from '../nav/go.js';
 import * as TRAIL from '../nav/trail.js';
 import * as CAM from '../plane/camera.js';
 import { accountCell } from '../plane/projection.js';
-import { t, tHTML } from '../strings.js';
+import { t, tHTML, lastRead } from '../strings.js';
 import { esc } from '../util.js';
 import * as LK from '../links/links.js';
 import { inkOf } from '../beams/beams.js';
@@ -1131,6 +1131,42 @@ test('a row naming a pane\'s document the plane shows too — kept there while t
     assert.deepEqual(LAYER.madeOf(shownIn(p.paneB, 'b')), { addr: DK, blocks: d.blocks, runs: d.runs, image: d.image }, 'pane B made from the text the plane\'s read again set');
     assert.equal(fake.asked.slice(from).filter((k) => k === text).length, 1, 'its text read once, by the plane\'s read again: the pane waited on it and read none itself');
     assert.deepEqual(fake.unanswered, []);
+  } finally { CAM._reset(); }
+}));
+
+test('a pane set while the plane\'s read again of its document waits on the board is set again from the read made at the daemon\'s running, its corner saying until then that it is as last read and why — never left on the text the row left standing (issue #345)', () => onPage(async (p) => {
+  const DQ = '1.0.1.0.19', DQ_V1 = 'A waiting note.\n\nIts first words.', DQ_V2 = 'A waiting note.\n\nWords set later.\n\nIts first words.';
+  const UNREACHABLE = { refused: { kind: 'unreachable', name: 'unreachable', text: 'the board is not answering' } };
+  Object.assign(script, reads(DQ, DQ_V1, { published: false }), compared(VE1, VE_TEXT, DQ, DQ_V1));
+  await SCENE.open(VE1, DQ);
+  // the plane under the scene: the account's documents in view, the note among them
+  CAM.setViewport(1440, 900);
+  CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  try {
+    assert.ok(PUMP.visibleDocs().some((d) => d.addr === DQ), 'the plane shows the note');
+    Object.assign(script, reads(DQ, DQ_V2, { published: false }), compared(VE1, VE_TEXT, DQ, DQ_V2));
+    // the board not answering the note's text as the plane reads it again, then answering it
+    const text = FAKE.keyOf('op', { frame: F.retrieveV(DQ, 1, DQ_V2.length) }), answer = script[text];
+    let out = true;
+    Object.defineProperty(script, text, { enumerable: true, configurable: true, get: () => (out ? UNREACHABLE : answer) });
+    fake.fire('feed', row(41, 'insert', [DQ], 'drafts'));
+    await landed();
+    assert.equal(REC.textBetween(DQ, 1, DQ_V1.length + 1), DQ_V1, 'the plane\'s read not answered: the note held');
+    assert.equal(LAYER.madeOf(shownIn(p.paneB, 'b')).blocks.some((/** @type {{text: string}} */ x) => x.text === 'Words set later.'), false, 'pane B set from what stood');
+    await new Promise((r) => setTimeout(r, PUMP.KEPT_MS + 20));
+    SCENE.markKept();
+    const clause = t('L.kept.failed', { clause: t('L.kept.text', { when: lastRead(/** @type {number} */ (REC.doc(DQ).textAt)) }), reason: t('F.daemon.unreachable') });
+    assert.ok(p.cornerB.innerHTML.includes(`<span class="kept" data-string="L.kept.text">${esc(clause)}</span>`), `pane B's corner: as last read, and why — ${p.cornerB.innerHTML}`);
+    assert.ok(p.said.includes(t('L.kept.said', { what: DQ, clause })), 'said as it appears');
+    out = false;
+    fake.fire('daemon', { board: 'b-1', state: 'running' });
+    for (let i = 0; i < 100 && PUMP.kept(DQ); i++) await new Promise((r) => setTimeout(r, 0));
+    await landed();
+    const d = REC.doc(DQ);
+    assert.ok(d.blocks.some((x) => x.text === 'Words set later.'), 'the plane\'s read made again at running set the note');
+    assert.deepEqual(LAYER.madeOf(shownIn(p.paneB, 'b')), { addr: DQ, blocks: d.blocks, runs: d.runs, image: d.image }, 'pane B set again from the text that read set');
+    SCENE.markKept();
+    assert.ok(!p.cornerB.innerHTML.includes('class="kept"') && p.said.includes(t('L.kept.lifted', { what: DQ })), 'the clause lifted with the setting, and said so');
   } finally { CAM._reset(); }
 }));
 

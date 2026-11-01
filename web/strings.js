@@ -13,13 +13,16 @@
 // identifier's face (`addressedHTML`); the client's words standing in a
 // document's first line's place are bracketed (`bracketed`, `withheldLine`);
 // when a thing was made is said by `dated`, from the board's own testimony and
-// never from the reader's clock, in one form of a date on every surface; a
-// continuation's mark's count is said in what it counts by `markCount`;
+// never from the reader's clock, in one form of a date on every surface; when
+// the page last read what it keeps standing is said by `lastRead`, from the
+// page's own clock — the hour and the minute, the day first where it was not
+// today — and never as an age; a continuation's mark's count is said in what
+// it counts by `markCount`;
 // `pinned` lists the pinned entries for the gate's text case, which holds each
 // to its source.
 // Rules: FP-1, FP-2, FP-13, FP-32, FP-34.
 
-import { fill, esc, dayOf } from './util.js';
+import { fill, esc, dayOf, timeOf } from './util.js';
 import { commonsType, isAddress } from './model/address.js';
 
 /**
@@ -326,7 +329,8 @@ export const STRINGS = {
   // a withheld run whose clause is read — never its raw value
   'L.mirror.no-text': { text: '⟨kind⟩ at position ⟨p⟩ of ⟨extent⟩ in ⟨document⟩⟨same⟩⟨shown⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   'L.mirror.shows': { text: ': ⟨shown⟩', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
-  // C-67's clause after a withheld run's arm, where the origin's edition claims decide one (PUB-5.124); the empty place says nothing
+  // C-67's clause after a withheld run's arm, where the origin's edition claims decide one (PUB-5.124), and a kept clause
+  // after an item's words (L.kept.*); the empty place says nothing
   'L.mirror.clause': { text: ' ⟨clause⟩.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
   // after a withheld run's face, the links drawn at the run, its item's children (FP-30): ⟨links⟩ their count (F.label.links)
   'L.mirror.run-links': { text: ' ⟨links⟩ ending in it.', cls: 'DRAFT', source: '', screen: 'the ARIA mirror', lane: true },
@@ -395,6 +399,18 @@ export const STRINGS = {
   'L.versions.as-of': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.latest': { text: 'the latest version', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
   'L.versions.latest-mark': { text: '▲', cls: 'DRAFT', source: '', screen: 'the versions list', lane: true },
+  // a kept document's clause (FP-23, FP-33): what the view shows standing as held past a second while it is read again —
+  // a draft's text, else the links drawn with it, or an origin's edition claims at a withheld run of it — said once beside
+  // the document's name, ⟨when⟩ when the read that set it landed by the page's own clock (`lastRead`), a failed read's words
+  // after it — a mirror item carrying it as its own sentence (L.mirror.clause); and what the status region says as it
+  // appears and as it lifts, ⟨what⟩ the document, or the withheld text of an origin in it
+  'L.kept.text': { text: 'as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S9: a pane\'s corner', lane: true },
+  'L.kept.links': { text: 'links as last read ⟨when⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S7: a column\'s edge, the run\'s face; B1-S9: a pane\'s corner', lane: true },
+  'L.kept.failed': { text: '⟨clause⟩ — ⟨reason⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
+  'L.kept.said': { text: '⟨what⟩ — ⟨clause⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  'L.kept.lifted': { text: '⟨what⟩ — read again', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  'L.kept.run': { text: 'the withheld text from ⟨origin⟩', cls: 'DRAFT', source: '', screen: 'the status region', lane: true },
+  'L.time.day-time': { text: '⟨day⟩, ⟨time⟩', cls: 'DRAFT', source: '', screen: 'the one line; the corner; the ARIA mirror; B1-S7; B1-S9: a pane\'s corner', lane: true },
   // the shown chords' words (D5-F8; the focus record's rule 19): the dismiss's title, the version marker's
   'L.dismiss': { text: 'dismiss (⟨chord⟩)', cls: 'DRAFT', source: '', screen: 'the overlay', lane: true },
   'L.version': { text: 'version ⟨k⟩', cls: 'DRAFT', source: '', screen: 'the one line; the versions list', lane: true },
@@ -596,4 +612,18 @@ export function dated(age) {
   if (age.from !== 'anchor') return day;
   const latest = dayOf(age.time + HOUR_MS - 1);
   return latest === day ? day : t('L.time.on-or-before', { date: latest });
+}
+
+/**
+ * When the page last read what it keeps standing (FP-23), by the page's own
+ * clock: the hour and the minute its read landed at (U's `timeOf`), the day
+ * first in the page's one form of a date (U's `dayOf`) where that was not
+ * the day it is now — never an age.
+ * @param {number} ms when the read landed, by the page's clock (M-REC's stamps)
+ * @param {number} [now] the page's clock now
+ * @returns {string}
+ */
+export function lastRead(ms, now = Date.now()) {
+  const day = dayOf(ms), time = timeOf(ms);
+  return day === dayOf(now) ? time : t('L.time.day-time', { day, time });
 }

@@ -194,7 +194,18 @@
 // label held there. A reading view frames the column it reads with the
 // corner and the edge beside it, at the landing's em (`frameOf`; P-CAM's
 // `landingPx`) — a document read whole, its first column where the visible
-// view holds it, else its head at the top of the visible view (FP-37). The element outlives its
+// view holds it, else its head at the top of the visible view (FP-37). A
+// kept document — one M-PUMP holds as it stands past a second while it reads
+// it again (M-PUMP's `kept`; FP-23) — says so once, wherever its name is, in
+// one clause (`keptIn` by `keptWords`, which the one line and the ARIA mirror
+// read too; FP-33): a draft holding its text that text's stamp, else its
+// links' (M-REC's stamps), a failed read's words after it; the corner
+// carries it as its last item, a line of its own its placing leaves apart, so
+// its arrival moves no item, save where the one line names the document,
+// which carries it beside the address instead; and a withheld run's kept
+// sign at the first run of its origin, in its column's edge, is filled in
+// place while the origin's edition claims stand held so (`markKeptRuns`,
+// `claimsKeptIn`; FP-31). The element outlives its
 // article's remounts and its items are rewritten only where they change, so
 // a focus on it survives them; the focused document's corner is the plane's
 // next Tab stop, named by its own words, and every other is out of the order
@@ -284,6 +295,7 @@
 // FP-26, FP-29, FP-30, FP-34, FP-37.
 
 import * as REC from '../model/records.js';
+import * as PUMP from '../model/pump.js';
 import * as LK from '../links/links.js';
 import * as FOCUS from '../nav/focus.js';
 import { cam, sx, sy, wx, wy, viewport, visibleView, markDirty, reach, reanchor, reanchored, measure, fit, landingPx } from '../plane/camera.js';
@@ -292,12 +304,12 @@ import { docBox, intersects, clearLeftOf } from '../plane/projection.js';
 import { layoutOf, fold, estimate, slot, boundsOf, padded, outlineRects, firstRow, placeOf as placeIn, posAt as posIn, pageTarget as pageIn, windowIn as foldWindow, holdOf, isSpace, columnOfLine, columnAt, MEASURE_CPL, LAY_FS, LINE_H, EDGE, GUTTER, CHAR_W } from '../plane/layout.js';
 import { CORNER, HOLD, COL, ADDRESS, cornerWidth } from '../plane/register.js';
 import { holdTop, heldContents, apartTexts, across, lineHeight, face, inFace, plain, runsOf, figuresOf, figureCell, runWidth } from '../plane/labels.js';
-import { articleHTML, articlePlan, cornerHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf } from './article.js';
-import { farSays } from '../beams/held.js';
+import { articleHTML, articlePlan, cornerHTML, keptHTML, blockMarks, symbolLit, editionClause, copyText, firstLineOf } from './article.js';
+import { farSays, whyOf } from '../beams/held.js';
 import { homeOf, documentOf, memberOf } from '../model/address.js';
 import { posOfChar, charOfPos, sameSpan, CHROME } from './span.js';
 import { esc } from '../util.js';
-import { t, facedHTML, CLIENT_CLOSE } from '../strings.js';
+import { t, facedHTML, lastRead, CLIENT_CLOSE } from '../strings.js';
 
 /** @typedef {import('../model/records.js').Doc} Doc */
 /** @typedef {import('../model/records.js').Block} Block */
@@ -378,6 +390,7 @@ import { t, facedHTML, CLIENT_CLOSE } from '../strings.js';
  * @property {string} markedFor the selection and the focus its blocks are marked for (`marksKey`); '' where a part set since awaits its marks
  * @property {string | null} litFor the links lit its symbols are marked heavier for (`markLit`); null where a part set since awaits its marks
  * @property {boolean | null} labelFor whether its byline's cut label is marked open (`markLabel`); null where a part set since awaits its mark
+ * @property {string} keptFor what the edition claims held as they are read again said as its withheld runs' kept signs, its template's with them, were last marked (`keptRunsKey`, `markKeptRuns`); '' where none were kept
  * @property {boolean} legible it takes the pointer: its em stood at P-LOD's readable threshold or above at the last frame no press stood through (`markLegible`)
  */
 
@@ -389,7 +402,7 @@ import { t, facedHTML, CLIENT_CLOSE } from '../strings.js';
  * @property {number} column the column it stands beside, an index into the fold's columns
  * @property {number} cap the widest it may stand (px): the room beside the column's text, gaps taken; Infinity where its form's width fits there
  * @property {number} w its width as laid out (px)
- * @property {number} h its height as laid out (px)
+ * @property {number} h its items' height as laid out (px), a kept clause below them apart (`keptHTML`): what it is placed by, so the clause's arrival moves none of them
  * @property {number} x its left edge as last placed, on screen (px): its document's held label stands clear of it
  * @property {number} y its top as last placed, on screen (px)
  * @property {boolean} stale its items or its cap changed since it was measured
@@ -1572,7 +1585,7 @@ function mount(d, v, span, banded) {
   /** @type {Mounted} */
   const rec = {
     el, d, lay, runFrom: d.from, runTo: d.to, rev: d.rev, made, grev, fold: f, fs: f.fs, corner: { whole: cornerHTML(d, view), compact: cornerHTML(d, view, true) },
-    template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', litFor: null, labelFor: null, legible: false,
+    template, units: unitsOf(f.lines, made.blocks), cuts: new Map(), parts: [], lines: new Set(), banded, scale: 1, blockTops: [], marked: [], markedFor: '', litFor: null, labelFor: null, keptFor: '', legible: false,
   };
   mounted.set(d.addr, rec);
   const t2 = performance.now();
@@ -1747,6 +1760,74 @@ export function stateWords(d) {
 }
 
 /**
+ * @typedef {Object} KeptClause — what a kept document, or a kept part of one, says beside its sign (FP-23, FP-33): its string's id and its words
+ * @property {'L.kept.text' | 'L.kept.links'} id
+ * @property {string} text
+ */
+
+/**
+ * The clause a kept document carries while it stands held past a second as
+ * it is read again (see the head; FP-23, FP-33): a draft holding its text
+ * "as last read" at its text's stamp; else, where its links are read, "links
+ * as last read" at theirs — an edition's words never change, so its text
+ * takes none — the failed read's words after it, keyed on the refusal that
+ * left it standing (BM-HELD's `whyOf`), with no act, for its reads go again
+ * of themselves (FP-23). None where it is not kept, a read refused it, or it
+ * holds neither.
+ * @param {Doc} d the record whose text the surface shows: the version a box shows, a pane's
+ * @param {Doc} links the record whose links it draws: the box's document (FP-22), a pane's own
+ * @param {{met: import('../bridge/shapes').Refusal | null} | null} kept why its reads left it standing (M-PUMP's `kept`); null where it is not kept
+ * @param {number} [now] the page's clock
+ * @returns {KeptClause | null}
+ */
+export function keptWords(d, links, kept, now = Date.now()) {
+  if (!kept || d.refused) return null;
+  if (isDraft(d) && d.from >= 0 && d.textAt != null) return keptClause('L.kept.text', d.textAt, kept.met, now);
+  return links.linksAt != null ? keptClause('L.kept.links', links.linksAt, kept.met, now) : null;
+}
+
+/**
+ * A kept clause's words (`keptWords`): ⟨when⟩ its stamp as the page names
+ * it (ST's `lastRead`), the failed read's words after it.
+ * @param {KeptClause['id']} id
+ * @param {number} at the stamp of the read that set what stands
+ * @param {import('../bridge/shapes').Refusal | null} met
+ * @param {number} now
+ * @returns {KeptClause}
+ */
+function keptClause(id, at, met, now) {
+  const clause = t(id, { when: lastRead(at, now) });
+  return { id, text: met ? t('L.kept.failed', { clause, reason: t(whyOf(met)) }) : clause };
+}
+
+/**
+ * A box's kept clause (`keptWords`) wherever the page names the box — the
+ * one line, its corner, its mirror item, so they never part: the version it
+ * shows (the reader `shown`), its links its document's (FP-22); kept while
+ * M-PUMP reads it again past a second (`kept`) — a draft by its own record,
+ * an edition by its box's document, whose links alone can change.
+ * @param {string} addr the box, or the version it shows
+ * @returns {KeptClause | null}
+ */
+export function keptIn(addr) {
+  const box = boxOf(addr), shows = read.shown(box), d = REC.doc(shows);
+  return keptWords(d, REC.doc(box), PUMP.kept(isDraft(d) ? shows : box));
+}
+
+/**
+ * The clause a withheld run's sign carries while the edition claims on its
+ * origin stand held past a second as they are read again (see the head;
+ * FP-23, FP-33): "links as last read" at their lookup's stamp, the failed
+ * read's words after it (`keptClause`); none where they are not kept.
+ * @param {string} origin
+ * @returns {KeptClause | null}
+ */
+export function claimsKeptIn(origin) {
+  const k = PUMP.claimsKept(origin), at = REC.claimsReadAt(origin);
+  return k && at != null ? keptClause('L.kept.links', at, k.met, Date.now()) : null;
+}
+
+/**
  * @typedef {Object} DocLabel — a document's label on the plane (`docLabel`): its contents line and its parts beneath it
  * @property {import('../plane/labels.js').Part | null} lead its first line (`leadPart`); null where none is known
  * @property {import('../plane/labels.js').Part} address the address of the version its box shows, its fields past its region's prefix, whole where the region is not named in view (`Part.whole`)
@@ -1865,6 +1946,50 @@ function markLit(rec, lit) {
   for (const el of /** @type {HTMLElement[]} */ ([...rec.el.querySelectorAll('.sym[data-link], .sym[data-links]')])) {
     const links = el.dataset.link ? [el.dataset.link] : (el.dataset.links || '').split(' ').filter(Boolean);
     el.classList.toggle('heavier', symbolLit(links, lit));
+  }
+}
+
+/**
+ * What the edition claims held as they are read again say now, every
+ * origin's (`claimsKeptIn`), as one key: a standing article's kept signs are
+ * marked again where it changed (`markKeptRuns`); '' where none are kept.
+ * @returns {string}
+ */
+export function keptRunsKey() {
+  return PUMP.keptAll().origins.map((o) => { const k = claimsKeptIn(o); return k ? o + ' ' + k.text : ''; }).join('\n');
+}
+
+/**
+ * Mark a standing article's withheld runs' kept signs (see the head; FP-23,
+ * FP-31): where what the edition claims held as they are read again say
+ * changed since it was last marked (`keptRunsKey`), each sign in its parts
+ * and in the template its parts are cut from set to its origin's words, so a
+ * part cut later stands marked too; words in the column's edge, which set no
+ * line, so nothing is rebuilt.
+ * @param {Mounted} rec
+ * @param {string} key the frame's `keptRunsKey`
+ */
+function markKeptRuns(rec, key) {
+  if (key === rec.keptFor) return;
+  rec.keptFor = key;
+  markKeptSigns(rec.el);
+  if (rec.template) markKeptSigns(rec.template);
+}
+
+/**
+ * Each withheld run's kept sign under an element set to the clause its
+ * origin's edition claims carry while they stand held as they are read again
+ * (`claimsKeptIn`), else emptied — the plane's articles (`markKeptRuns`) and
+ * a reading scene's panes (SC) — the sign's words in the edge, setting no
+ * line.
+ * @param {Element} root
+ */
+export function markKeptSigns(root) {
+  for (const el of /** @type {HTMLElement[]} */ ([...root.querySelectorAll('.wh-kept[data-kept]')])) {
+    const k = claimsKeptIn(el.dataset.kept || ''), words = k ? k.text : '';
+    if (el.textContent === words) continue;
+    el.textContent = words;
+    if (k) el.dataset.string = k.id; else delete el.dataset.string;
   }
 }
 
@@ -2273,8 +2398,8 @@ export function frame(focused = () => false) {
     if (!rec.parts.length && !(rec.banded && intersects(shapeAt(addr, rec.fold), v))) unmount(addr);
   }
   for (const rec of mounted.values()) place(rec);
-  const focus = litFocus(), lit = LK.lit();
-  for (const rec of mounted.values()) { markBlocks(rec, span, focus); markLit(rec, lit); markLabel(rec); if (!pressed || fresh.includes(rec.d.addr)) markLegible(rec); }
+  const focus = litFocus(), lit = LK.lit(), kept = keptRunsKey();
+  for (const rec of mounted.values()) { markBlocks(rec, span, focus); markLit(rec, lit); markLabel(rec); markKeptRuns(rec, kept); if (!pressed || fresh.includes(rec.d.addr)) markLegible(rec); }
   placeCorners(focused);
   placeHeld();
   if (span && !pressed && (fresh.includes(span.addr) || (owed && sameSpan(owed, span)))) placeAgain(span);
@@ -2398,7 +2523,9 @@ function signsIn(/** @type {Mounted} */ rec, /** @type {number} */ ci) {
 
 /**
  * The corners' pass, after the articles are placed: each mounted document at
- * reading scale whose corner has items carries it, the rest are removed. The
+ * reading scale whose corner has items carries it — a kept document's clause
+ * its last item where the one line does not name it (`keptIn`, `keptHTML`),
+ * the corner placed by its items' height alone — the rest are removed. The
  * writes come first (an element, its form and items where they changed, a cap
  * that binds), the reads together after them (one layout for every corner
  * that changed, none in a frame where none did, and the signs in the edges the
@@ -2424,7 +2551,8 @@ function placeCorners(focused) {
     // a column the signs before it left no room beside is tried again once the view's centre has left it
     if (c.blockedAt !== columnAt(rec.fold, p.x, p.y)) c.blockedAt = -1;
     const at = besideOf(rec.fold, clearLeftOf(addr), p, cam.scale, c.blockedAt);
-    const form = formFor(at.room, open, fit().compact), html = rec.corner[form];
+    // a kept document's clause its last item, where the one line does not name it (`keptIn`)
+    const form = formFor(at.room, open, fit().compact), html = rec.corner[form] + keptHTML(boxOf(addr) === read.named() ? null : keptIn(addr));
     if (c.html !== html) { c.el.innerHTML = html; c.html = html; c.stale = true; }
     if ((form === 'compact') !== c.compact) { c.compact = form === 'compact'; c.el.classList.toggle('compact', c.compact); c.stale = true; }
     // the room caps the corner only where not even its form's width fits there, a corner opened whole never
@@ -2437,7 +2565,7 @@ function placeCorners(focused) {
   let lost = false;
   for (const addr of [...corners.keys()]) if (!here.has(addr)) lost = dropCorner(addr) || lost;
   if (shown.length) {
-    for (const { c } of shown) if (c.stale) { c.w = c.el.offsetWidth; c.h = c.el.offsetHeight; c.stale = false; }
+    for (const { c } of shown) if (c.stale) { const k = /** @type {HTMLElement | null} */ (c.el.querySelector('.kept')); c.w = c.el.offsetWidth; c.h = c.el.offsetHeight - (k ? k.offsetHeight : 0); c.stale = false; }
     const signs = shown.map(({ rec, at }) => (at.first ? [] : signsIn(rec, at.column - 1)));
     const top = read.top() + HOLD.gap;
     shown.forEach(({ c, rec, at }, k) => {

@@ -16,9 +16,11 @@
 // run; each symbol at its span, after its last word and after a run's chrome,
 // titled with what its far end holds; each mark carrying the ends it draws;
 // the others' count in the column's edge, setting no line, and a withheld
-// run's below its mark by the lines the mark's words take as measured; the corner's
-// items, whole and compact, outside the article, a pane's with its read act
-// and its lacking line; the record rule; a typed line set as typed in the
+// run's below its mark by the lines the mark's words take as measured, and
+// the first run of an origin carrying its kept sign below them, empty, setting
+// no line; the corner's items, whole and compact, outside the article, a
+// pane's with its read act and its lacking line, a kept clause after them on a
+// line of its own; the record rule; a typed line set as typed in the
 // body's type, a heading's marks its own characters, on its indent where it
 // opens a typed line, the empty lines typed after it whole line boxes below
 // it and no other room between blocks; the plan the bars are
@@ -34,7 +36,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
+import { articleHTML, articlePlan, withheldBlockHTML, entitlementArm, editionClause, placeholderOf, gapHolds, cornerHTML, keptHTML, blockMarks, symbolLit, itemOf, recordContents, copyText, cutTo, firstLineOf, LABEL_CH, CUE_CH, CLAUSE_READING } from './article.js';
 import { MEASURE, MEASURE_CPL, LINE_H, CHAR_W, layoutOf } from '../plane/layout.js';
 import { HUE, NEUTRAL_HUE, VISITED_ALPHA } from '../plane/register.js';
 import { mergedMark } from '../links/links.js';
@@ -147,6 +149,29 @@ test('a withheld run\'s count stands below its mark in its column\'s edge by the
     return m && html.includes('class="wh-mark edge"') ? Math.round(Number(m[1]) / (LINE_H / MEASURE.count) * 1e9) / 1e9 : null;
   };
   assert.deepEqual([below(view({ reader: KEYLESS })), below(view({ reader: KEYLESS, measure: wide }))], [1, 2], 'under R56\'s arm, which no three lines hold: the mark on one edge line at the advance, on two set wide, the count stacked below it each time');
+});
+
+test('the first withheld run of an origin in a document carries the origin\'s kept sign in its column\'s edge, empty and below its mark and its count by the lines their words take; a later run of that origin carries none; the plan holding no row for it (issue #345)', () => {
+  const at = { ends: [], count: { n: 2, social: false } }, second = runOf(240, 251);
+  const d = doc({ blocks: [runOf(240), second] }), v = view({ reader: KEYLESS });
+  /** the kept sign's top below the run's first line, in the edge's lines; null where none stands */
+  const keptAt = (/** @type {string} */ html) => {
+    const m = /<span class="wh-kept edge" data-kept="1\.0\.1\.0\.1003" style="([^"]*)"><\/span>/.exec(html);
+    return m ? Math.round(Number((/top:([\d.]+)em/.exec(m[1]) || [0, 0])[1]) / (LINE_H / MEASURE.count) * 1e9) / 1e9 : null;
+  };
+  const first = withheldBlockHTML(runOf(240), d, v, at);
+  assert.ok(first.includes('class="wh-mark edge"') && first.includes('class="others edge"'), 'the face compact in the edge, the count below it');
+  assert.equal(keptAt(first), 2, 'the kept sign below the mark\'s line and the count\'s, empty');
+  assert.equal(keptAt(withheldBlockHTML(second, d, v, at)), null, 'a later run of the origin: none');
+  assert.equal(keptAt(withheldBlockHTML(runOf(WIDE), doc({ blocks: [runOf(WIDE)] }), v)), 0, 'its face in the gap, no other sign in the edge: at the run\'s first line');
+  assert.ok(!JSON.stringify(articlePlan(d, v, '1.0.1')).includes('wh-kept'), 'the sign is no row of the plan: it sets no line');
+});
+
+test('a kept clause stands as the corner\'s last item, its own words whole, the same in either form; none where nothing is kept (issue #345)', () => {
+  const k = { id: 'L.kept.text', text: t('L.kept.text', { when: '09:05' }) };
+  assert.equal(keptHTML(k), `<span class="kept" data-string="L.kept.text">${esc('as last read 09:05')}</span>`);
+  assert.equal(keptHTML({ id: 'L.kept.links', text: '<b>' }), '<span class="kept" data-string="L.kept.links">&lt;b&gt;</span>', 'escaped');
+  assert.equal(keptHTML(null), '');
 });
 
 test('the entitlement arm is one rule, by the reader, and the gap holding the face carries what it answers', () => {
@@ -894,7 +919,7 @@ test('the ends drawn at a withheld run stand as ONE symbol at the start of its g
   const syms = [...gap.matchAll(/<span class="sym at-run [^"]*" data-links="([^"]*)" data-ends="([^"]*)" style="([^"]*)" role="button" tabindex="-1" title="[^"]*">([^<]*)<\/span>/g)].map((m) => m.slice(1));
   assert.deepEqual(syms.map((m) => [m[0], m[1], m[3]]), [['R1 R2', 'k1 k2', '⟡2']], `one symbol at the run, carrying both ends and their count, a control on the plane, at stage 1: ${gap}`);
   assert.ok(syms[0][2].includes(`--mark-hue:${HUE.you}`) && syms[0][2].includes('--sym-chars:2'), 'in the mark its links merge into, its width its ⟡ and its count');
-  assert.ok(new RegExp(`^<span class="wh-mark edge"[^>]*>${INNER}</span><span class="others edge"[^>]*>[^<]*</span><span class="wh-head"><span class="sym at-run `).test(gap), `first in the gap's first line, before the notice's words, after the edge's signs: ${gap}`);
+  assert.ok(new RegExp(`^<span class="wh-mark edge"[^>]*>${INNER}</span><span class="others edge"[^>]*>[^<]*</span><span class="wh-kept edge"[^>]*></span><span class="wh-head"><span class="sym at-run `).test(gap), `first in the gap's first line, before the notice's words, after the edge's signs: ${gap}`);
   assert.ok(!/class="[^"]*\blip\b/.test(gap) && !gap.includes('depth'), 'no stretch of the gap marked: it still reads as empty');
   const count = /<span class="others edge" data-count="(\d+)" style="([^"]*)">([^<]*)<\/span>/.exec(gap);
   assert.deepEqual(count && [count[1], count[3]], ['1', esc(t('F.others-count', { n: 1 }))], 'another\'s end there counted in the edge');

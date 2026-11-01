@@ -3,11 +3,12 @@
 // is SHA-256 over AUTH-1.12's framing of its alg token and its raw bytes
 // under `skep-key-v1` (AUTH-1.8), the hex read case-insensitively and a
 // value that is no hex deriving none — the digest and fingerprint a copy of
-// a key record carries (FP-24).
+// a key record carries (FP-24); and a moment's hour and minute in the page's
+// one form of a time, a 24-hour clock's.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { sha256Hex, keyFingerprint } from './util.js';
+import { sha256Hex, keyFingerprint, timeOf } from './util.js';
 
 /** n bytes of a fixed pattern */
 const bytes = (/** @type {number} */ n) => Uint8Array.from({ length: n }, (_, i) => (i * 131 + 7) & 0xff);
@@ -28,4 +29,8 @@ test('a key\'s fingerprint is SHA-256 over the tag and each field framed by its 
   assert.equal(keyFingerprint(alg, raw.toString('hex').toUpperCase()), want, 'upper-case hex reads as the same bytes (AUTH-1.3)');
   assert.equal(keyFingerprint(alg, 'abc'), null, 'an odd count of digits');
   assert.equal(keyFingerprint(alg, 'zz'), null, 'a digit that is no hex');
+});
+
+test('a moment\'s hour and minute are a 24-hour clock\'s, two figures each, in this machine\'s own time zone', () => {
+  assert.deepEqual([new Date(2026, 2, 12, 9, 5), new Date(2026, 2, 12, 0, 0), new Date(2026, 2, 12, 23, 59)].map((d) => timeOf(d.getTime())), ['09:05', '00:00', '23:59']);
 });

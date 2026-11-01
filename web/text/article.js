@@ -435,6 +435,9 @@ const edgeLines = (runs, k, measure) => linesAt(runs, (EDGE - EDGE_GAP) / (MEASU
 const countHTML = (c, k, below = 0) => (c.n > 0 ? `<span class="others edge" data-count="${c.n}" style="${edgeStyle(k, below)}">${esc(t('F.others-count', { n: c.n }))}</span>`
   : c.social ? `<span class="others edge social" data-count="0" style="${edgeStyle(k, below)}">◦</span>` : '');
 
+/** the others' count's words, as `countHTML` sets them: what the edge's lines below it are counted from; none where it stands for nothing */
+const countRuns = (/** @type {{n: number, social: boolean}} */ c) => /** @type {Faced[]} */ (c.n > 0 ? [{ text: t('F.others-count', { n: c.n }), face: 'client' }] : c.social ? [{ text: '◦', face: 'client' }] : []);
+
 /** the stretches of a drawn link's end that meet a block */
 const runsIn = (/** @type {Shown} */ m, /** @type {{pos: number, width: number}} */ b) => m.runs.filter((r) => touches(b, r));
 
@@ -933,8 +936,13 @@ export function gapHolds(p, width, cpl, measure, ends = 0) {
  * line, before whatever it holds (`runSymHTML`), and the others' links drawn
  * there are counted in the column's edge, below the face's compact mark where
  * that stands there, as many of the edge's lines down as the mark's words
- * take, measured (`countHTML`, `edgeLines`). The owner it names is carried
- * (`data-owner`) for C-39's face at the run, which names the same.
+ * take, measured (`countHTML`, `edgeLines`). The first run of its origin in
+ * the document carries the origin's kept sign in the edge below those, empty,
+ * which T-LAYER fills in place while the origin's edition claims stand held
+ * as they are read again (`data-kept`; T-LAYER's `claimsKeptIn`), so the kept
+ * part says so once at its own sign and sets no line (FP-23, FP-31). The
+ * owner it names is carried (`data-owner`) for C-39's face at the run, which
+ * names the same.
  * @param {Block} b the withheld run
  * @param {Doc} d
  * @param {ArticleView} v
@@ -953,8 +961,11 @@ export function withheldBlockHTML(b, d, v, at = { ends: [], count: { n: 0, socia
     : `<span class="wh-origin">${sym}${esc(t('L.origin-mark'))}</span>`;
   const marked = /** @type {Record<string, Face>} */ ({ owner: 'ident' });
   const mark = holds === 'face' ? '' : `<span class="wh-mark edge" data-mark="withheld"${control(v.scene)} style="${edgeStyle(1)}">${htmlIn('L.withheld.mark', { owner: p.owner }, marked)}</span>`;
-  const count = countHTML(at.count, 1, mark ? edgeLines(facedIn('L.withheld.mark', { owner: p.owner }, marked), 1, v.measure) : 0);
-  return `${open}${mark}${count}${inside}</span>`;
+  const above = mark ? edgeLines(facedIn('L.withheld.mark', { owner: p.owner }, marked), 1, v.measure) : 0;
+  const count = countHTML(at.count, 1, above);
+  const first = !!b.origin && d.blocks.find((x) => x.kind === 'withheld' && x.origin === b.origin)?.pos === b.pos;
+  const kept = first ? `<span class="wh-kept edge" data-kept="${esc(b.origin || '')}" style="${edgeStyle(1, above + (count ? edgeLines(countRuns(at.count), 1, v.measure) : 0))}"></span>` : '';
+  return `${open}${mark}${count}${kept}${inside}</span>`;
 }
 
 /**
@@ -1037,6 +1048,17 @@ export function cornerHTML(d, v, compact = false) {
   if (v.wholeLinks > 0) parts.push(`<span class="whole-links">${esc(v.wholeLinks === 1 ? t('F.whole-links.1') : t('F.whole-links', { n: v.wholeLinks }))}</span>`);
   return parts.join('');
 }
+
+/**
+ * A kept clause as the corner's last item (FP-23; T-LAYER's `keptWords`): a
+ * line of its own after every item, its words whole in either form — never a
+ * glyph, never cut — so the corner names it once and its arrival moves none
+ * of the items before it; nothing where none is kept. The holder adds it
+ * after the corner's items.
+ * @param {{id: string, text: string} | null} k
+ * @returns {string}
+ */
+export const keptHTML = (k) => (k ? `<span class="kept" data-string="${esc(k.id)}">${esc(k.text)}</span>` : '');
 
 /** is a UTF-16 code unit the second half of a surrogate pair? */
 const isLow = (/** @type {number} */ u) => u >= 0xdc00 && u <= 0xdfff;

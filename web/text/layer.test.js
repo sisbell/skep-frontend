@@ -19,8 +19,10 @@
 // symbols marked heavier in place and a span inside a withheld run at the
 // run's boxes; a byline's facts arriving and its cut label opening in
 // place; a face arriving after the first layout setting every standing
-// article again, the passage held; and a box's label and first line in their
-// faces (FP-8, FP-12, FP-20, FP-22, FP-23, FP-26, FP-30, FP-34).
+// article again, the passage held; a box's label and first line in their
+// faces; and a kept document's one clause — a draft's text by its stamp, else
+// its links', an edition's links alone, the failed read's words after it
+// (FP-8, FP-12, FP-20, FP-22, FP-23, FP-26, FP-30, FP-33, FP-34).
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as REC from '../model/records.js';
@@ -33,7 +35,7 @@ import { holdTop, runsOf } from '../plane/labels.js';
 import { docBox, intersects, depthOfDoc, clearLeftOf, DOC_CELL_W, DEPTH_SOUND } from '../plane/projection.js';
 import { MOUNTS_PER_FRAME } from '../plane/lod.js';
 import { CLAUSE_READING } from './article.js';
-import { t, tHTML } from '../strings.js';
+import { t, tHTML, lastRead } from '../strings.js';
 import { esc } from '../util.js';
 
 /** @typedef {import('../plane/layout.js').Fold} Fold */
@@ -1070,4 +1072,33 @@ test('where the platform sets no words — the node tests — the article\'s mea
   assert.equal(LAYER.widthOf('1.0.1.0.3', 'ident'), 9 * CHAR_W);
   assert.equal(LAYER.widthOf('not rendered', 'client'), 12 * CHAR_W);
   assert.equal(LAYER.viewFor(REC.doc(D)).measure, LAYER.widthOf, 'the article\'s view measures by it');
+});
+
+test('a kept document carries one clause by one rule: a draft holding its text "as last read" at its text\'s stamp, else "links as last read" at its links\' — an edition\'s words never change, so its links\' alone, a pinned box\'s its document\'s — the failed read\'s words after it; none where it is not kept, a read refused it, or it holds neither (issue #345\'s design decision)', () => {
+  const at = new Date(2026, 2, 12, 9, 5).getTime(), later = new Date(2026, 2, 12, 9, 7).getTime(), now = new Date(2026, 2, 12, 12).getTime();
+  const draft = { ...REC.doc('1.0.1.0.2'), kind: /** @type {const} */ ('draft'), from: 1, to: 5, textAt: at, linksRead: true, linksAt: later };
+  const kept = { met: null }, unreachable = { met: /** @type {any} */ ({ kind: 'unreachable', name: 'unreachable', text: '' }) }, busy = { met: /** @type {any} */ ({ kind: 'refused', name: 'scan_busy' }) };
+  assert.deepEqual(LAYER.keptWords(draft, draft, kept, now), { id: 'L.kept.text', text: t('L.kept.text', { when: lastRead(at, now) }) }, 'a draft holding its text: its text\'s stamp');
+  assert.equal(LAYER.keptWords(draft, draft, kept, now)?.text, 'as last read 09:05');
+  assert.equal(LAYER.keptWords(draft, draft, unreachable, now)?.text, t('L.kept.failed', { clause: 'as last read 09:05', reason: t('F.daemon.unreachable') }), 'the board not answering: its words after the clause');
+  assert.equal(LAYER.keptWords(draft, draft, busy, now)?.text, t('L.kept.failed', { clause: 'as last read 09:05', reason: t('L.held.why.busy') }), 'a scan the board kept busy');
+  assert.deepEqual(LAYER.keptWords({ ...draft, from: -1, textAt: null }, draft, kept, now), { id: 'L.kept.links', text: 'links as last read 09:07' }, 'a draft holding no text: its links\' stamp');
+  const edition = { ...REC.doc(D), from: 1, to: 5, textAt: at, linksRead: true, linksAt: later };
+  assert.deepEqual(LAYER.keptWords(edition, edition, kept, now), { id: 'L.kept.links', text: 'links as last read 09:07' }, 'an edition holding its text: its links alone');
+  const member = { ...REC.doc(D + '.2'), kind: /** @type {const} */ ('edition'), from: 1, to: 5, textAt: at };
+  assert.equal(LAYER.keptWords(member, edition, kept, now)?.text, 'links as last read 09:07', 'a pinned box: its document\'s links');
+  assert.equal(LAYER.keptWords(draft, draft, null, now), null, 'not kept: none');
+  assert.equal(LAYER.keptWords({ ...draft, refused: 'withheld' }, draft, kept, now), null, 'a read refused it: none');
+  assert.equal(LAYER.keptWords({ ...edition, linksRead: false, linksAt: null }, { ...edition, linksRead: false, linksAt: null }, kept, now), null, 'an edition whose links are not read: none');
+  assert.equal(LAYER.keptWords(draft, draft, kept, new Date(2026, 2, 13, 8).getTime())?.text, 'as last read 12 March 2026, 09:05', 'read another day: the day first');
+});
+
+test('a withheld run\'s kept sign carries nothing while no origin\'s edition claims stand kept, and a standing article\'s signs are emptied in place (issue #345)', () => {
+  const O = '1.0.1.0.1003';
+  REC.takeEditionClaims(O, []);
+  assert.equal(LAYER.claimsKeptIn(O), null, 'claims held, none kept: no clause');
+  /** a kept sign in an article: its origin, its words and the string they are */
+  const sign = { dataset: /** @type {Record<string, string>} */ ({ kept: O, string: 'L.kept.links' }), textContent: 'links as last read 09:05' };
+  LAYER.markKeptSigns(/** @type {any} */ ({ querySelectorAll: (/** @type {string} */ sel) => (sel === '.wh-kept[data-kept]' ? [sign] : []) }));
+  assert.deepEqual([sign.textContent, sign.dataset.string], ['', undefined], 'the claims kept no more: the sign emptied');
 });

@@ -191,6 +191,17 @@ const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', ye
  */
 export const dayOf = (ms) => DAY.format(new Date(ms));
 
+/** the page's one form of a time of day: the hour of a 24-hour clock and the minute, "09:05" */
+const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+
+/**
+ * The hour and minute a moment fell at, as the page names it to a person:
+ * a 24-hour clock's, in the reader's own time zone.
+ * @param {number} ms unix milliseconds
+ * @returns {string}
+ */
+export const timeOf = (ms) => TIME.format(new Date(ms));
+
 /**
  * Replace ⟨tokens⟩ in a design string with values; a token left unfilled
  * stays as the design writes it.

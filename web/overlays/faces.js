@@ -64,7 +64,9 @@
 // never a restart's (FP-28); a withheld run's face whole, Enter's act at the
 // run (D5 K-7), made from the run's placeholder record (T-ARTICLE's
 // `placeholderOf`) once its clause's reads answer, C-67's pointer its offered
-// act; the dead end's face at the head a landing stands at (`floating`;
+// act, and, where the origin's edition claims stand held as they are read
+// again, the clause its kept sign shows after it (T-LAYER's `claimsKeptIn`;
+// FP-23, FP-33); the dead end's face at the head a landing stands at (`floating`;
 // FP-21), its act, where N-GO hands one in, the version move its reads found
 // to the last member that holds the passage whole, the face standing drawn
 // again with it, no act on the chrome, as those reads answer (`offered`);
@@ -747,8 +749,11 @@ export function offered(far, offer) {
  * it (`clauseFace`) — the pointer the face's offered act, in its own words,
  * which LEAPs to the edition its claim names (B1-S7 → S6); the QUOTING
  * sibling and the unread place lines that offer nothing — and nothing past
- * the arm where they decide none; shown once the reads the clause waits on
- * answer, where the page holds no answer to one (`whenRead`). It stands at
+ * the arm where they decide none; then, while those claims stand held as
+ * they are read again, the clause the run's kept sign shows (T-LAYER's
+ * `claimsKeptIn`), as it stands when the face shows; shown once the reads the
+ * clause waits on answer, where the page holds no answer to one
+ * (`whenRead`). It stands at
  * the run's own positions and takes no focus: it is heard through the status
  * region, and its act is reached by Tab (K-58).
  * @param {string} addr the document the run stands in
@@ -758,8 +763,9 @@ export function offered(far, offer) {
 export function withheldRun(addr, b, follow) {
   const show = () => {
     const p = placeholderOf(b, REC.reader(), LAYER.originOwner, LAYER.clauseOf), clause = clauseFace(p.clause, follow);
+    const k = b.origin ? LAYER.claimsKeptIn(b.origin) : null, kept = k ? `<div class="kept" data-string="${esc(k.id)}">${esc(k.text)}</div>` : '';
     HOST.show({ kind: 'face', id: 'face:withheld-run', anchor: { span: { addr, pos: b.pos, width: b.width } }, acts: clause.follow ? { follow: clause.follow } : {},
-      html: faceHTML({ id: 'B1.withheld-run', text: p.head, acts: [] }, armHTML(p.arm) + clause.html) });
+      html: faceHTML({ id: 'B1.withheld-run', text: p.head, acts: [] }, armHTML(p.arm) + clause.html + kept) });
   };
   if (b.origin) whenRead(b.origin, show);
   else show();
