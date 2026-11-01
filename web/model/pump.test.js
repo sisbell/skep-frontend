@@ -25,7 +25,9 @@
 // board answers in part read again as a row naming it is, and a change of
 // class ending its reads where they stand; a row naming a document the view
 // shows, which keeps it as held until its reads again set it in one step,
-// rows meanwhile queueing one more read; and the edition claims a row
+// rows meanwhile queueing one more read; a row touching a doc 1, which keeps
+// the byline cause of each shown document's owner as held until a read of it
+// again lands, the board's silence leaving it standing; and the edition claims a row
 // changes — read from its link and from the edition-class links homed in the
 // documents it names — kept as held where a document the view shows windows
 // their origin until their read again sets them in one step, the homes their
@@ -2615,6 +2617,61 @@ test('the edition claims a row changed on an origin a shown document windows sta
   fake.fire('daemon', { board: 'b-1', state: 'running' });
   await settle();
   assert.deepEqual([REC.editionClaimsOf(O), PUMP.claimsKept(O), PUMP.keptAll().origins], [[EDITION, FORK, NEW], null, []], 'read again at running and set: kept no more');
+});
+
+test('a row touching a doc 1 keeps the byline cause of the owner of a document the view shows as held, never emptied: the view reads it again at once, missing while out, the cause standing meanwhile and through a read the board does not answer until the read made at running; a row naming the shown document too reads it with that document\'s reads, set with them in one step; another account\'s cause is dropped (FP-23, FP-34; AUTH-2.127)', async (t) => {
+  t.mock.method(performance, 'now', () => 1000);
+  REC._reset();
+  const s = { ...script, ...ONE_MEMBER, [opKeyOf(F.enrollmentsOf('1.0.1'))]: { result: { as_of: 1, resp: 'addrs', addrs: [] } } };
+  // D's owner's byline as the board answers it in turn: unsigned; not recorded; not answered; unsigned; not recorded
+  inTurn(s, F.keySet('1.0.1'), keySetOf([]), keySetOf(ONE_KEY), UNREACHABLE, keySetOf([]), keySetOf(ONE_KEY));
+  inTurn(s, F.retrieveV(D, 1, 30), deliveredAt(BEFORE, 5), deliveredAt(AFTER, 9));
+  /** a feed row of a credential record's link made in another account's doc 1, the board answering the link as one */
+  const enrolling = (/** @type {number} */ position) => {
+    const link = `1.0.7.0.1.0.2.${position}`;
+    s[opKeyOf(F.readLink(link))] = enrollment(`1.0.7.0.1.0.1.${position}`, '1.0.7');
+    return { board: 'b-1', update: { position, at: position, op: 'make_link', docs: ['1.0.7.0.1'], class: 'published', link } };
+  };
+  /** the cause the page holds of an account's byline, else null */
+  const causeOf = (/** @type {string} */ account) => { const f = REC.accountKey(account); return f && 'cause' in f ? f.cause : null; };
+  const fake = readingD(s);
+  await settle();
+  assert.deepEqual([causeOf('1.0.1'), asksOf(fake, F.keySet('1.0.1')), REC.textBetween(D, 1, 31)], ['unsigned', 1, BEFORE], 'D read at its reading em, its owner\'s byline with it');
+  REC.takeAccountKey('1.0.2', { cause: 'unsigned' });
+  /** whether a frame met D's owner's byline emptied, or, once a row names D, set before D's text */
+  let watching = true, alongD = false, emptied = false, early = false;
+  REC.watch(() => {
+    if (!watching) return;
+    if (causeOf('1.0.1') === null) emptied = true;
+    if (alongD && causeOf('1.0.1') === 'not-recorded' && REC.textBetween(D, 1, 31) === BEFORE) early = true;
+  });
+  const rev = REC.doc(D).rev, release = fake.hold('op', { frame: F.keySet('1.0.1') });
+  fake.fire('feed', enrolling(20));
+  assert.deepEqual([causeOf('1.0.1'), REC.causeOwed('1.0.1'), REC.doc(D).rev, REC.accountKey('1.0.2')], ['unsigned', true, rev, undefined], 'at the row: the shown document\'s owner\'s cause stands as held, owed its read again, D made again for nothing; another account\'s cause dropped');
+  await settle();
+  assert.deepEqual([asksOf(fake, F.keySet('1.0.1')), PUMP.settled(), causeOf('1.0.1')], [2, false, 'unsigned'], 'the view reads it again at once, missing while out, the cause standing meanwhile');
+  release();
+  await settle();
+  assert.deepEqual([causeOf('1.0.1'), REC.causeOwed('1.0.1'), asksOf(fake, F.keySet('1.0.1'))], ['not-recorded', false, 2], 'answered: taken, owed no more, and not asked again');
+  fake.fire('feed', enrolling(21));
+  await settle();
+  assert.deepEqual([causeOf('1.0.1'), REC.causeOwed('1.0.1'), asksOf(fake, F.keySet('1.0.1')), PUMP.settled(), PUMP.factsUnheard('1.0.1')], ['not-recorded', true, 3, true, true], 'read again after the next row, the board not answering: the cause stands, owed still, its read held and said unheard, nothing missing in its pause');
+  fake.fire('daemon', { board: 'b-1', state: 'running' });
+  await settle();
+  assert.deepEqual([causeOf('1.0.1'), REC.causeOwed('1.0.1'), asksOf(fake, F.keySet('1.0.1')), PUMP.factsUnheard('1.0.1')], ['unsigned', false, 4, false], 'asked again at running, and taken');
+  // a row naming D and a doc 1: D read again, its owner's byline among its reads
+  const text = fake.hold('op', { frame: F.retrieveV(D, 1, 30) }), held = REC.doc(D).rev;
+  alongD = true;
+  fake.fire('feed', writing(30, [D, '1.0.7.0.1']));
+  for (let i = 0; i < 20 && timesAsked(fake, F.retrieveV(D, 1, 30)) < 2; i++) await flush();
+  for (let i = 0; i < 5; i++) { PUMP.pump(); await flush(); }
+  assert.deepEqual([causeOf('1.0.1'), REC.causeOwed('1.0.1'), REC.doc(D).rev, REC.textBetween(D, 1, 31), asksOf(fake, F.keySet('1.0.1'))], ['unsigned', true, held, BEFORE, 4], 'while D\'s reads are out: its byline and its text as held, D made again for nothing, the byline asked of nothing but D\'s reads');
+  text();
+  await settle();
+  watching = false;
+  assert.deepEqual([REC.textBetween(D, 1, 31), causeOf('1.0.1'), REC.causeOwed('1.0.1'), asksOf(fake, F.keySet('1.0.1'))], [AFTER, 'not-recorded', false, 5], 'set in one step from D\'s reads, its owner\'s byline read once among them');
+  assert.deepEqual([emptied, early], [false, false], 'the byline never emptied, and never set before D\'s text');
+  assert.deepEqual(fake.unanswered, []);
 });
 
 test('the board opened as the boot opens it: `boards()` first, then for the board it holds the key store, the session where one is asked, the health, the daemon and the index, in that order; an empty list or a refusal holds none, why kept, nothing asked past the list; "try again" reads the list again, one read for presses made while it is out, a board it finds opened as the boot opened one and the app told once (issue #215\'s design decision; FP-35)', async () => {

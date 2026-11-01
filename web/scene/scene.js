@@ -1116,8 +1116,7 @@ async function readPane(src, stands = () => true) {
   if ((!w.doc || w.refused) && !REC.doc(src).refused) return { d: null, n: null, whole: false, refused: w.refused, unheard };
   const owner = REC.ownerAccount(REC.doc(src));
   await PUMP.readAccount(owner);
-  const facts = owner ? REC.accountKey(owner) : undefined;
-  if (!unheard && facts && 'cause' in facts && facts.cause === 'unreachable') unheard = PUMP.NOT_ANSWERED;
+  if (!unheard && owner && PUMP.factsUnheard(owner)) unheard = PUMP.NOT_ANSWERED;
   const box = REC.has(boxOf(src)) ? REC.doc(boxOf(src)) : null;
   let n = box && box.ended ? box.members : null;
   if (w.doc && kindAt(src, w.doc) === 'bare' && n == null && stands()) {

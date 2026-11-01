@@ -14,7 +14,9 @@
 // row's mark, a newer member taking a trunk's text, a refresh's
 // drop and a shown document set again in one step — its text without an
 // image holding none, a claim's home making its origin's windows again; the key store,
-// the session's key and the byline's facts; a change of class keeping what
+// the session's key and the byline's facts, a row touching a doc 1 keeping
+// the causes of the owners it is handed as held, each owed its read again; a
+// change of class keeping what
 // the class it left read as published — a draft's run in it withheld from
 // that moment — and dropping the rest, every other box it knew left owed its
 // read at the new class whatever the view stood on — covered at once where
@@ -871,6 +873,39 @@ test('an account\'s byline facts are held as read: every held document it owns m
   REC.takeAccountKey('1.0.2', { cause: 'withheld', owner: '1.0.2' });
   REC.sessionDied({ arm: 'closed' });
   assert.deepEqual([REC.keyDrops(), REC.accountKey('1.0.2'), REC.accountKey('1.0.1')], [n0 + 3, undefined, { label: 'dev-notebook', fingerprint: 'e4272902a11439e5' }], 'a change of class: the cause dropped, counted, the value kept — a value never changes');
+});
+
+test('a row touching a doc 1 keeps the byline causes of the owners it is handed as held — their documents made again for nothing, each owed its read again until a read of its facts lands — and drops every other, the drop counted and a value kept; a refresh owes none, and a row handed none or a change of class drops a kept cause with its mark (FP-23, FP-34; AUTH-2.127)', () => {
+  const MINE = '1.0.1.0.3', ONE = '1.0.1.0.1', OTHER = '1.0.2.0.5';
+  /** a credential record's link made in another account's doc 1, at `position` */
+  const enrolling = (/** @type {number} */ position) => /** @type {any} */ ({ position, at: position, op: 'make_link', docs: ['1.0.3.0.1'], class: 'published', link: `1.0.3.0.1.0.2.${position}` });
+  const shown = new Set(['1.0.1']);
+  REC.setSession({ session: 's-1', principal: 1, account: '1.0.1', writes: true });
+  for (const d of [MINE, ONE, OTHER]) REC.takeSpanSet(d, [{ subspace: 1, ordinal: 1, positions: 4 }]);
+  REC.takeAccountKey('1.0.1', { cause: 'unsigned' });
+  REC.takeAccountKey('1.0.2', { cause: 'not-recorded' });
+  REC.takeAccountKey('1.0.9', { label: 'k', fingerprint: 'ab' });
+  const revs = () => [MINE, ONE, OTHER].map((d) => REC.doc(d).rev);
+  const [mine, one, other] = revs(), n = REC.keyDrops();
+  assert.deepEqual(['1.0.1', '1.0.2', '1.0.9'].map(REC.causeOwed), [false, false, false], 'facts read: none owed');
+  REC.applyFeedUpdate(enrolling(1), new Set(), shown);
+  assert.deepEqual([REC.accountKey('1.0.1'), REC.causeOwed('1.0.1'), revs()[0], revs()[1]], [{ cause: 'unsigned' }, true, mine, one], 'the owner handed in: its cause standing as held, owed its read again, its documents made again for nothing');
+  assert.deepEqual([REC.accountKey('1.0.2'), REC.causeOwed('1.0.2'), revs()[2]], [undefined, false, other + 1], 'another account: its cause dropped, its document made again so the view asks its facts');
+  assert.deepEqual([REC.keyDrops(), REC.accountKey('1.0.9'), REC.causeOwed('1.0.9')], [n + 1, { label: 'k', fingerprint: 'ab' }, false], 'the drop counted, so a cause read out across it is never taken; a value kept and never owed');
+  REC.applyFeedUpdate(/** @type {any} */ ({ position: 2, at: 2, op: 'insert', docs: [ONE], class: 'published' }), new Set([ONE]), shown);
+  assert.deepEqual([revs()[1], REC.accountKey('1.0.1'), REC.causeOwed('1.0.1')], [one, { cause: 'unsigned' }, true], 'a row naming the doc 1 the view shows, kept as held: its byline stands with it, the document made again for nothing');
+  REC.takeAccountKey('1.0.1', { cause: 'not-recorded' });
+  assert.deepEqual([REC.accountKey('1.0.1'), REC.causeOwed('1.0.1')], [{ cause: 'not-recorded' }, false], 'a read of its facts landing: owed no more');
+  REC.applyFeedUpdate(enrolling(3), new Set(), shown);
+  REC.takeAccountKey('1.0.2', { cause: 'unsigned' });
+  REC.takeRefresh(new Set([MINE, OTHER]));
+  assert.deepEqual([REC.causeOwed('1.0.1'), REC.accountKey('1.0.2'), REC.causeOwed('1.0.2')], [true, { cause: 'unsigned' }, false], 'a refresh\'s drop keeps its documents\' owners\' causes as they were owed, and owes none: its own reads read them again');
+  REC.applyFeedUpdate(enrolling(4));
+  assert.deepEqual([REC.accountKey('1.0.1'), REC.causeOwed('1.0.1')], [undefined, false], 'a row handed no owners: the cause and its mark dropped together');
+  REC.takeAccountKey('1.0.1', { cause: 'unsigned' });
+  REC.applyFeedUpdate(enrolling(5), new Set(), shown);
+  REC.sessionDied({ arm: 'closed' });
+  assert.deepEqual([REC.accountKey('1.0.1'), REC.causeOwed('1.0.1'), REC.accountKey('1.0.9')], [undefined, false, { label: 'k', fingerprint: 'ab' }], 'a change of class: the kept cause and its mark dropped, the value kept');
 });
 
 test('a session is a reference, never a token; the death signal drops it', () => {

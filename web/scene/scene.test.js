@@ -52,7 +52,8 @@
 // read as published — a draft's run in it withheld from that moment — and taking every other
 // down to its cover, reading each again as a guest, and a refresh pinning an edition whose
 // chain it counted past the member shown; a setting whose reads the board did not answer —
-// the text, the chain, the owner's byline facts, the `compare` — setting nothing, the pane
+// the text, the chain, the owner's byline facts, a cause a row kept as held among them, the
+// `compare` — setting nothing, the pane
 // kept on its text and saying why until the read made at the daemon's running, or past the
 // pause, sets it, and an opening on a text the board did not answer opening nothing; and a
 // scene opened on a document a
@@ -1327,6 +1328,28 @@ test('a setting whose owner\'s byline facts the board did not answer sets nothin
     await until(() => wordsIn(p.paneB, 'b').includes('Words written since.'), 'read again at running');
     await landed();
     assert.ok(String(shownIn(p.paneB, 'b').innerHTML).includes('data-slot="label" data-string="F.slot.unsigned"'), 'set with its owner\'s facts read then');
+  } finally { CAM._reset(); }
+}));
+
+test('a setting whose owner\'s byline cause a row touching a doc 1 kept as held, its read again not answered, sets nothing — never the cause standing taken as read — until the read made at the daemon\'s running sets it (FP-23, FP-34)', () => onPage(async (p) => {
+  const DK = '1.0.1.0.37', V1 = 'A kept byline.\n\nIts first words.', V2 = 'A kept byline.\n\nWords written since.\n\nIts first words.';
+  const keys = FAKE.keyOf('op', { frame: F.keySet('1.0.1') }), answer = script[keys];
+  Object.assign(script, reads(VE1, VE_TEXT), reads(DK, V1, { published: false }), compared(VE1, VE_TEXT, DK, V1));
+  await SCENE.open(VE1, DK);
+  // the plane at the panes' owner's account, the documents it owns in view: a row touching a doc 1 keeps that owner's cause
+  CAM.setViewport(1440, 900); CAM.set(CAM.viewForCell(accountCell('1.0.1'), 0.85));
+  try {
+    Object.assign(script, reads(DK, V2, { published: false }), compared(VE1, VE_TEXT, DK, V2), { [keys]: UNREACHABLE });
+    fake.fire('feed', row(70, 'insert', ['1.0.9.0.1'], 'published'));
+    assert.deepEqual([REC.accountKey('1.0.1'), REC.causeOwed('1.0.1')], [{ cause: 'unsigned' }, true], 'the panes\' owner\'s cause kept as held, owed its read again');
+    fake.fire('feed', row(71, 'insert', [DK], 'drafts'));
+    await landed();
+    assert.deepEqual([wordsIn(p.paneB, 'b'), p.paneB.placed.length, PUMP.factsUnheard('1.0.1')], [['A kept byline.', 'Its first words.'], 1, true], 'its owner\'s facts read again and not answered: pane B on its text, set nowhere again');
+    script[keys] = answer;
+    running();
+    await until(() => wordsIn(p.paneB, 'b').includes('Words written since.'), 'read again at running');
+    await landed();
+    assert.deepEqual([REC.accountKey('1.0.1'), REC.causeOwed('1.0.1')], [{ cause: 'unsigned' }, false], 'set with its owner\'s facts read then, owed no more');
   } finally { CAM._reset(); }
 }));
 

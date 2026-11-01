@@ -43,8 +43,10 @@
 // shows, from every passage end the document holds (M-REC's `holdsEnd`), the
 // edition claims on each origin its withheld runs name (`editionClaimsAt`,
 // then each listed claim's link and its home's metadata; PUB-5.124) and the
-// byline's facts of its owner (`readAccount`; FP-34), read once per account
-// for the page's life; and, from LOD_TXT_LO up at the box's document alone,
+// byline's facts of its owner (`readAccount`; FP-34) — a value read once per
+// account for the page's life, a cause again wherever a feed row naming a
+// doc 1 dropped it or kept it as held, owed its read again (M-REC's
+// `causeOwed`); and, from LOD_TXT_LO up at the box's document alone,
 // the chain's members up to MEMBER_PROBE_CAP (`probeMembers`).
 // Asked by an act: the board (`openBoard`, `retryBoards`; FP-35) — `boards()`
 // and, for the board held, in this order, the device's key store
@@ -106,7 +108,11 @@
 // are out queueing one more read — the view's answers for each address
 // dropped forgotten, and what it touched told after the drop (`onDrop`;
 // FP-23), a whole read of a document read again waiting for those reads first
-// (`wholeOf`). A row drops no edition claim (PUB-5.124): which origins'
+// (`wholeOf`). A row touching a doc 1 keeps the byline cause of each owner of
+// a document the view shows as held, owed its read again — read as the view
+// draws the text, or with a document's other reads where it is read again —
+// and drops every other (M-REC's `causeOwed`; FP-34). A row drops no edition
+// claim (PUB-5.124): which origins'
 // claims it wrote, retracted or superseded is read from it (`searchClaims`,
 // `claimsWritten`) — the link it names, or the edition-class links homed in
 // each document it names (M-FRAMES's `editionLinksIn`), every origin where
@@ -516,8 +522,11 @@ export function takeRow(u) {
  * with the box pins the
  * arrival took and the homes of the edition claims on the origins those
  * window (`keptNow`), kept as held and read again (`readAgain`), every other
- * dropped — every read out of the board's state given it, and the view's
- * answers for each address dropped forgotten, so the view asks them again;
+ * dropped; where it touches a doc 1, the byline cause of each owner of a
+ * document the view shows kept as held, owed its read again (M-REC's
+ * `causeOwed`), every other dropped — every read out of the board's state
+ * given it, and the view's answers for each address dropped forgotten, so the
+ * view asks them again;
  * then what it touched told to `onDrop`, after the drop, so a reader reading
  * again reads fresh — a whole read of a document read again reading what its
  * reads set (`wholeOf`) — and, where it dropped a claim's home, the documents
@@ -528,8 +537,8 @@ export function takeRow(u) {
  */
 function applyRow(u) {
   if (u.op === 'publish') for (const named of Array.isArray(u.docs) ? u.docs : []) if (isTrunkMember(named)) arrive(named, u.position);
-  const keep = new Set(keptNow());
-  const touched = REC.applyFeedUpdate(u, keep);
+  const shown = shownNow(), keep = new Set(keptNow(shown));
+  const touched = REC.applyFeedUpdate(u, keep, new Set(shown.map((a) => REC.ownerAccount(REC.doc(a)))));
   for (const m of whileOut) m.rows.push(u);
   for (const addr of touched) { if (keep.has(addr)) readAgain(addr); else forget(addr); }
   onDrop({ row: u, addrs: touched });
@@ -550,10 +559,11 @@ const originsShown = () => new Set(shownNow().flatMap((a) => REC.withheldOrigins
  * documents the view shows (`shownNow`), and the homes of the edition claims
  * held on the origins their withheld runs name, whose publication and owner
  * decide the clause there (PUB-5.99; T-ARTICLE's `editionClause`).
+ * @param {string[]} [shown] the documents the view shows, where the caller has read them
  * @returns {string[]}
  */
-function keptNow() {
-  const shown = shownNow(), origins = new Set(shown.flatMap((a) => REC.withheldOrigins(a)));
+function keptNow(shown = shownNow()) {
+  const origins = new Set(shown.flatMap((a) => REC.withheldOrigins(a)));
   const homes = [...origins].flatMap((o) => { const c = REC.editionClaimsOf(o); return Array.isArray(c) ? c.map((x) => homeOf(x) || x) : []; });
   return [...new Set([...shown, ...homes])];
 }
@@ -2478,17 +2488,18 @@ async function claimsAgainFirst(origin) {
 /** the key an account's byline read is held under while the board does not answer it (`hold`) */
 const accountKeyOf = (/** @type {string} */ account) => 'a:' + account;
 
-/** are an account's byline facts to be read: none held, or the board not answering held and its pause ended? */
+/** are an account's byline facts to be read: none held; or a cause owed its read again (M-REC's `causeOwed`) or the board not answering held, either once the pause a read the board did not answer holds it for has ended? */
 function accountWanted(/** @type {string} */ account) {
   const f = REC.accountKey(account);
-  return f === undefined || ('cause' in f && f.cause === 'unreachable' && !held(accountKeyOf(account)));
+  return f === undefined || ('cause' in f && (f.cause === 'unreachable' || REC.causeOwed(account)) && !held(accountKeyOf(account)));
 }
 
 /**
  * The view's read of an account's byline facts (`readAccount`): missing
- * while it is out, or while the page holds none and
- * can ask; not missing once held — a cause the board's silence left held
- * included, for nothing will arrive for it until its pause ends.
+ * while it is out, or while they are to be read and it can ask
+ * (`accountWanted`) — none held, or a cause owed its read again; not missing
+ * once held as they stand — a cause held while the board's silence holds its
+ * read included, for nothing will arrive for it until its pause ends.
  * @param {string} account
  * @returns {number} the needs still missing
  */
@@ -2501,13 +2512,17 @@ function needAccount(account) {
 }
 
 /**
- * The byline's facts for an account (FP-34): read where the
- * page holds none, or holds that the board did not answer and the pause it
- * holds that for has ended — once for every reader of them, a read out
- * joined. A value is taken always, for it never changes; a cause only where
- * no drop of the byline causes overtook it (M-REC's `keyDrops`), else it is
- * asked again as the view next needs it; the board not answering held for
- * UNREACHED_MS (`hold`), asked again past it or at the daemon's `running`.
+ * The byline's facts for an account (FP-34): read where the page holds none,
+ * holds a cause owed its read again (M-REC's `causeOwed`), or holds that the
+ * board did not answer — either of the last two once the pause a read the
+ * board did not answer holds them for has ended — once for every reader of
+ * them, a read out joined. A value is taken always, for it never changes; a
+ * cause only where no drop of the byline causes overtook it (M-REC's
+ * `keyDrops`), else it is asked again as the view next needs it; the board
+ * not answering held for UNREACHED_MS (`hold`), asked again past it or at the
+ * daemon's `running`, and taken only where the page holds nothing else of
+ * them: facts held stand through such a read, a cause owed its read again
+ * still (FP-23).
  * @param {string} account
  * @returns {Promise<void>} settled once what was read is taken, or nothing is
  */
@@ -2519,11 +2534,29 @@ export function readAccount(account) {
     const at = REC.keyDrops();
     const facts = await factsOf(account);
     if ('cause' in facts && REC.keyDrops() !== at) return;
-    if ('cause' in facts && facts.cause === 'unreachable') hold(accountKeyOf(account)); else unreached.delete(accountKeyOf(account));
+    if (!('cause' in facts) || facts.cause !== 'unreachable') unreached.delete(accountKeyOf(account));
+    else {
+      hold(accountKeyOf(account));
+      const was = REC.accountKey(account);
+      if (was && !('cause' in was && was.cause === 'unreachable')) return;
+    }
     REC.takeAccountKey(account, facts);
   })().finally(() => { accountsOut.delete(account); dirty(); });
   accountsOut.set(account, p);
   return p;
+}
+
+/**
+ * Did the board leave the last read of an account's byline facts unanswered
+ * (`readAccount`): the pause that read is held for stands (`hold`), or the
+ * page holds that the board did not answer? Facts held stand through such a
+ * read, so what the page holds of them alone does not tell (SC's `readPane`).
+ * @param {string} account
+ * @returns {boolean}
+ */
+export function factsUnheard(account) {
+  const f = REC.accountKey(account);
+  return held(accountKeyOf(account)) || (!!f && 'cause' in f && f.cause === 'unreachable');
 }
 
 /**

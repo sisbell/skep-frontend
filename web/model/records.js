@@ -30,7 +30,8 @@
 // or failed (`Lookup`; PUB-5.124), and the failed reads a listed claim's
 // admission waits on (`takeFailedRead`); the owners and key sets; the
 // byline's facts per account, its device key or why it names none
-// (`AccountFacts`; FP-34); the feed's rows as they arrived; the last
+// (`AccountFacts`; FP-34), a cause a feed row kept as held marked owed its
+// read again (`causeOwed`); the feed's rows as they arrived; the last
 // position the page took on its board's feed (`feedAt`) — the `/health`
 // head as read, raised by each row taken and each catch-up's reach
 // (M-PUMP), never lowered, a change of class keeping it; and a bare row's
@@ -58,8 +59,10 @@
 // read of a claim's link or home stands through those changes until a read
 // of it answers or what the page held of it is dropped. A
 // byline's cause — never its value, which is the same at every class — is
-// dropped at every feed row naming a doc 1 (AUTH-2.127) and at every change
-// of class.
+// dropped at every feed row naming a doc 1 (AUTH-2.127), save the causes of
+// the accounts M-PUMP keeps — the owners of the documents the view shows —
+// which stand as held, each owed its read again until a read of its
+// account's facts lands (`causeOwed`; FP-23); and at every change of class.
 // A row naming a document M-PUMP keeps — one the view shows, or the home of
 // an edition claim on an origin one windows — drops nothing of it (FP-23): its
 // drop is counted, and what it holds stands as held until M-PUMP's reads of
@@ -283,6 +286,12 @@ export const SYSTEM_ACCOUNT = '1.1.0.1';
 /** @typedef {AccountKey | KeyCause} AccountFacts — what the page holds of an account's byline: its device key, or why it names none */
 
 /**
+ * @typedef {Object} HeldFacts — an account's byline facts as the model holds them (`takeAccountKey`)
+ * @property {AccountFacts} facts
+ * @property {boolean} owed a cause a feed row kept as held, owed its read again until a read of the account's facts lands (`causeOwed`); never a value, which is never read again
+ */
+
+/**
  * @typedef {Object} RecordValue — a record atom's value, where its type is one the record rule renders (D13)
  * @property {'skep-enroll' | 'skep-head'} type
  * @property {Array<{alg?: unknown, key?: unknown, label?: unknown, anchor?: unknown}>} keys a genesis record's keys, in the record's own order; none for the head record
@@ -349,7 +358,7 @@ const state = {
   owners: new Map(),
   /** @type {Map<string, {enrolled: Array<{fingerprint: string, anchor: boolean}>, retired: Array<{fingerprint: string}>}>} */
   keySets: new Map(),
-  /** @type {Map<string, AccountFacts>} the byline's facts per account (`takeAccountKey`) */
+  /** @type {Map<string, HeldFacts>} the byline's facts per account (`takeAccountKey`), a cause with whether it is owed its read again (`causeOwed`) */
   accountKeys: new Map(),
   /** how many times the byline causes held have been dropped (`keyDrops`) */
   keyDrops: 0,
@@ -1479,25 +1488,36 @@ export function ownerAccount(d) {
 // ---- the byline's facts --------------------------------------------------------
 
 /**
- * An account's byline facts, read (M-PUMP's `readAccount`): its device key,
- * or why its byline names none (`AccountFacts`). Every held document the
+ * An account's byline facts, read (M-PUMP's `readAccount`, or a shown
+ * document's read again): its device key, or why its byline names none
+ * (`AccountFacts`), owed no read again (`causeOwed`). Every held document the
  * account owns (`ownerAccount`) is made again: its byline is decided again
  * from what the page holds now.
  * @param {string} account
  * @param {AccountFacts} facts
  */
 export function takeAccountKey(account, facts) {
-  state.accountKeys.set(account, facts);
+  state.accountKeys.set(account, { facts, owed: false });
   rebyline(new Set([account]));
   bump();
 }
 /** an account's byline facts as the page holds them (`takeAccountKey`); undefined while they are not read */
-export const accountKey = (/** @type {string} */ account) => state.accountKeys.get(account);
+export const accountKey = (/** @type {string} */ account) => state.accountKeys.get(account)?.facts;
+/**
+ * Is an account's byline cause owed its read again: a feed row naming a doc 1
+ * kept it as held (`applyFeedUpdate`'s `owners`), and no read of the
+ * account's facts has landed since (`takeAccountKey`)? Never a value, and
+ * never a cause dropped.
+ * @param {string} account
+ * @returns {boolean}
+ */
+export const causeOwed = (account) => !!state.accountKeys.get(account)?.owed;
 /**
  * How many times the byline causes held have been dropped (`dropKeyCauses`),
- * so a read of an account's facts that finds the count moved between going
- * out and landing learned a cause that may not hold at the board by then. A
- * value never changes, and is taken whatever the count. It never falls.
+ * the causes kept as held at the drop among them, so a read of an account's
+ * facts that finds the count moved between going out and landing learned a
+ * cause that may not hold at the board by then. A value never changes, and
+ * is taken whatever the count. It never falls.
  * @returns {number}
  */
 export const keyDrops = () => state.keyDrops;
@@ -1509,18 +1529,30 @@ function rebyline(/** @type {Set<string>} */ accounts) {
 }
 
 /**
- * Every byline cause held dropped — never a value, which never changes — and
- * the drop counted (`keyDrops`); each held document whose owner's cause was
- * held made again, so the view asks its facts again. At a feed row naming a
- * doc 1 (`applyFeedUpdate`), where a credential record is homed (AUTH-2.127):
- * an account that had no genesis may enroll one; and at a change of class.
+ * Every byline cause held dropped but those of the accounts `keep` names —
+ * never a value, which never changes — and the drop counted (`keyDrops`);
+ * each held document whose owner's cause was dropped made again, so the view
+ * asks its facts again, and each whose owner's cause is kept standing as it
+ * is. At a feed row naming a doc 1 (`applyFeedUpdate`), where a credential
+ * record is homed (AUTH-2.127): an account that had no genesis may enroll
+ * one; at a refresh's drop (`takeRefresh`); and at a change of class, which
+ * keeps none.
+ * @param {ReadonlySet<string>} [keep] the accounts whose causes stand as held
+ * @returns {HeldFacts[]} the causes kept, each as it is held
  */
-function dropKeyCauses() {
+function dropKeyCauses(keep = new Set()) {
   state.keyDrops++;
   /** @type {Set<string>} */
   const dropped = new Set();
-  for (const [account, facts] of state.accountKeys) if ('cause' in facts) { state.accountKeys.delete(account); dropped.add(account); }
+  /** @type {HeldFacts[]} */
+  const kept = [];
+  for (const [account, held] of state.accountKeys) {
+    if (!('cause' in held.facts)) continue;
+    if (keep.has(account)) kept.push(held);
+    else { state.accountKeys.delete(account); dropped.add(account); }
+  }
   rebyline(dropped);
+  return kept;
 }
 
 /** is an address an account's doc 1, or under it — a member of it, an element of it (`docOneOf`)? */
@@ -1552,12 +1584,15 @@ const inDocOne = (/** @type {string} */ addr) => { const a = accountOf(addr), tr
  * refresh after the run giving everything held what a row naming it gets (see
  * the head). A row drops no edition claim: which origins' claims it changed
  * M-PUMP reads from it (`claimsChanged`). A row touching a doc 1 drops every
- * byline cause held (`dropKeyCauses`).
+ * byline cause held but those of the accounts `owners` names, each of which
+ * stands as held, its documents made again for nothing, owed its read again
+ * (`dropKeyCauses`, `causeOwed`).
  * @param {FeedUpdate} u
  * @param {ReadonlySet<string>} [keep] what M-PUMP keeps as held: each address the row touches it names counted dropped and kept as held
+ * @param {ReadonlySet<string>} [owners] the accounts whose byline causes M-PUMP keeps as held at a row touching a doc 1: the owners of the documents the view shows
  * @returns {string[]} the addresses the row touched, each once: those dropped, which the view asks again, and those `keep` names, which M-PUMP reads again
  */
-export function applyFeedUpdate(u, keep = new Set()) {
+export function applyFeedUpdate(u, keep = new Set(), owners = new Set()) {
   const docsNamed = Array.isArray(u.docs) ? u.docs : [];
   reach(u.position);
   state.feed.push({ position: u.position, op: u.op, docs: docsNamed, cls: u.class, time: typeof u.time === 'number' ? u.time : null });
@@ -1569,7 +1604,7 @@ export function applyFeedUpdate(u, keep = new Set()) {
   const touched = new Set();
   for (const named of home ? [...docsNamed, home] : docsNamed) { touched.add(documentOf(named) || named); touched.add(named); }
   for (const addr of touched) { if (keep.has(addr)) counted(addr); else invalidate(addr); }
-  if ([...touched].some(inDocOne)) dropKeyCauses();
+  if ([...touched].some(inDocOne)) for (const held of dropKeyCauses(owners)) held.owed = true;
   bump();
   return [...touched];
 }
@@ -1746,10 +1781,12 @@ export function projectionsInto(addr) {
  * kept claim is; where the slots of every other link project; the edition
  * claims on every other origin, the drop counted for every origin
  * (`claimDropsOf`), so no lookup out from before it is taken; a failed read
- * of anything not kept; every byline cause but a kept document's owner's, the
- * drop counted (`keyDrops`). The index, its counts and its state, the feed's
- * rows, the owners and the key sets, which no row drops, stand. M-PUMP reads
- * again what each shown document holds and sets it again (`setAgain`).
+ * of anything not kept; every byline cause but a kept document's owner's
+ * (`dropKeyCauses`), the drop counted (`keyDrops`), a kept one owed its read
+ * again only where a row left it so (`causeOwed`). The index, its counts and
+ * its state, the feed's rows, the owners and the key sets, which no row
+ * drops, stand. M-PUMP reads again what each shown document holds and sets it
+ * again (`setAgain`).
  * @param {Set<string>} keep
  * @returns {string[]} the documents dropped
  */
@@ -1775,8 +1812,7 @@ export function takeRefresh(keep) {
   for (const o of [...state.editionClaims.keys()]) if (!origins.has(o)) state.editionClaims.delete(o);
   state.claimsRefreshed++;
   for (const a of [...state.failedReads]) if (!named.has(a) && !homes.has(a)) state.failedReads.delete(a);
-  state.keyDrops++;
-  for (const [account, facts] of [...state.accountKeys]) if ('cause' in facts && !owners.has(account)) state.accountKeys.delete(account);
+  dropKeyCauses(owners);
   bump();
   return dropped;
 }
